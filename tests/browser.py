@@ -72,33 +72,114 @@ class Browser:
         self.port = _free_port()
         self.profile = tempfile.mkdtemp(prefix="bga-geometry-")
         self.process = None
+        #: Held apart from `self.process` so it survives `_stop` and can
+        #: be drained after the writer is gone (see `_why_it_failed`).
+        self._stderr = None
 
-    def __enter__(self):
+    #: How long one launch may take to answer on its port, and how many
+    #: launches are tried. `UX-456`: measured on CI, where the same
+    #: suite passes in `test (3.x)` in 5m33s and takes ~10 minutes in
+    #: `bst-tests` because that job runs the `bst` tier first - and
+    #: where 18 setup errors, all this one, landed on one xdist worker
+    #: in two of ten runs. Both figures are here rather than inline so
+    #: the message below can name what it waited for.
+    START_TIMEOUT_S = 30
+    START_ATTEMPTS = 2
+
+    def _launch(self):
+        """One attempt, on a **freshly chosen** port. True if it answers.
+
+        The port is re-rolled per attempt on purpose. `_free_port`
+        binds a socket, reads the number and closes it, so between that
+        close and Chrome's own bind the port is anyone's - and under
+        `-n auto` the other things racing for it are this suite's own
+        workers. A retry on the same port would re-run the collision;
+        a retry on a new one does not.
+        """
+        self.port = _free_port()
         self.process = subprocess.Popen(
             [self.binary, "--headless=new", "--no-sandbox", "--disable-gpu",
              "--disable-dev-shm-usage", f"--remote-debugging-port={self.port}",
              f"--user-data-dir={self.profile}", "about:blank"],
-            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        deadline = time.time() + 30
+            stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+        self._stderr = self.process.stderr
+        deadline = time.time() + self.START_TIMEOUT_S
         while time.time() < deadline:
             try:
                 import urllib.request
                 with urllib.request.urlopen(
                         f"http://127.0.0.1:{self.port}/json/version",
                         timeout=1):
-                    return self
+                    return True
             except Exception:                            # noqa: BLE001
+                # A Chrome that has already exited will never answer, so
+                # there is nothing to wait out - and *that it exited* is
+                # the fact that distinguishes a taken port from a slow
+                # runner. Both used to arrive as the same sentence.
+                if self.process.poll() is not None:
+                    return False
                 time.sleep(0.2)
-        self.__exit__(None, None, None)
-        raise RuntimeError(f"{self.binary} did not open a debugging port")
+        return False
 
-    def __exit__(self, *_):
+    def __enter__(self):
+        last = None
+        for attempt in range(1, self.START_ATTEMPTS + 1):
+            if self._launch():
+                return self
+            # Order matters, and the falsification is why it is written
+            # down: `_why_it_failed` reads the process's stderr, and a
+            # read on a pipe whose writer is still alive blocks until
+            # EOF. Asking before stopping hung the whole suite on the
+            # one case this retry exists for - a browser that runs and
+            # never listens. The code is taken first, the process is
+            # stopped, and only then is the pipe drained.
+            code = (self.process.poll() if self.process is not None
+                    else None)
+            self._stop()
+            last = self._why_it_failed(attempt, code)
+        raise RuntimeError(
+            f"{self.binary} did not open a debugging port in "
+            f"{self.START_ATTEMPTS} attempts of {self.START_TIMEOUT_S}s. "
+            f"Last: {last}")
+
+    def _why_it_failed(self, attempt, code):
+        """One line saying which of the two it was, for the message.
+
+        `UX-456`: the old error named the binary and nothing else, so
+        eighteen identical copies of it said no more than one. A reader
+        needs to know whether the process died - which is a port or a
+        sandbox problem - or was still running, which is the runner.
+
+        `code` is read by the caller **before** the process is stopped,
+        because after `_stop` every exit code is the signal we sent.
+        The stderr is drained here, after, when the pipe is at EOF.
+        """
+        said = b""
+        if self._stderr is not None:
+            try:
+                said = self._stderr.read() or b""
+            except Exception:                            # noqa: BLE001
+                said = b""
+            finally:
+                self._stderr.close()
+                self._stderr = None
+        tail = said.decode("utf-8", "replace").strip().splitlines()[-1:]
+        return (f"attempt {attempt} on port {self.port} "
+                + (f"exited {code}" if code is not None
+                   else f"was still running after {self.START_TIMEOUT_S}s")
+                + (f": {tail[0]}" if tail else ""))
+
+    def _stop(self):
         if self.process is not None:
             self.process.terminate()
             try:
                 self.process.wait(timeout=10)
             except subprocess.TimeoutExpired:            # pragma: no cover
                 self.process.kill()
+            self.process = None
+
+    def __exit__(self, *_):
+        self._stop()
         shutil.rmtree(self.profile, ignore_errors=True)
 
     def _drive(self, url, expression, width, height, extra=()):

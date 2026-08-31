@@ -88,6 +88,35 @@ an excursion once still prints it, marked as unconfirmed.
 `make test` before you mark anything done. A tier run is not evidence
 about the suite.
 
+### When CI's drift step is red and the file really did get slower
+
+`UX-447`: the route, because `--record` on your own machine writes
+**your** seconds and `UX-418` established those cannot be compared to
+CI's in any form. The numbers to commit exist only in CI's own run:
+
+1. Open the red `test (3.11)` job's summary on that run.
+2. Download its **`ci-reference-candidate`** artifact - one file,
+   `ci_reference.candidate.json`, written by the same tool with
+   `--record` and kept for 30 days. It is the whole document, not a
+   diff.
+3. Replace `tests/ci_reference.json` with it.
+4. Commit it in the same commit as the change that made the file
+   slower, with a line in the task file's Outcome saying which run it
+   came from and why the file now costs what it does.
+
+Appending one row by hand is the other shape, and it is the one this
+repository has used more often - the gate prints `N.Ns` for the file it
+is complaining about, and that figure **divided by the run's printed
+shift** is the number to put in `files`. Divided, because
+`expected = known x shift` is the arithmetic the gate does: a raw
+append bakes that run's slowness into the row as permanent slack.
+`tests/ci_reference.json`'s own `note` carries every append made that
+way, with the run id and the shift each was taken from.
+
+Do not run `--record` locally and commit the result. It is not the same
+document: it is 380 files of this machine's clock replacing 380 files
+of CI's, and the gate will be quiet for the wrong reason.
+
 ## 4. The two copies of the status marker
 
 The row in `docs/backlog/scenarios/README.md` and the `**Status:**`

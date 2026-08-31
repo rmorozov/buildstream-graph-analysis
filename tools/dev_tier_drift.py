@@ -121,6 +121,21 @@ RANK = {"small": 0, "medium": 1, "large": 2}
 #:    holds it.
 CI_REFERENCE = REPO / "tests" / "ci_reference.json"
 
+#: `UX-447`: **where a refreshed reference comes from.**
+#:
+#: `--record` on a contributor's own machine writes *that machine's*
+#: seconds, and `UX-418` established those cannot be compared to CI's in
+#: any form. So every message below that says "re-record" also says from
+#: what: this is the artifact `ci.yml` uploads on every `test (3.11)`
+#: run, holding the same document `--record` writes, taken on the runner
+#: whose clock the reference is in.
+#:
+#: Named here rather than spelled into four strings, and
+#: `tests/unit/test_the_refresh_route_is_written_down.py` holds it equal
+#: to the workflow's own `name:` - so a rename cannot leave the advice
+#: pointing at nothing, which is what the item was filed on.
+CI_CANDIDATE_ARTIFACT = "ci-reference-candidate"
+
 #: How much slower than its own CI reference a file may run before it is
 #: reported, *after* the run's median shift is divided out.
 CI_DRIFT_FACTOR = 1.5
@@ -364,7 +379,10 @@ def record(times, source="unknown", reference=None):
         "note": ("UX-420: one CI run's per-file totals, so a later CI run "
                  "can be read against CI rather than against the floors in "
                  "tests/tiers.py, which describe a developer machine. "
-                 "Refresh with tools/dev_tier_drift.py --record."),
+                 f"Refresh from a CI run's {CI_CANDIDATE_ARTIFACT} "
+                 f"artifact, which is this same tool's --record taken on "
+                 f"the runner whose clock this document is in - not from "
+                 f"a local --record (UX-418, UX-447)."),
         "files": {name: round(seconds, 2)
                   for name, seconds in sorted(times.items())},
     }
@@ -551,13 +569,16 @@ def _against(times, path, args):
     if verdict == "empty":
         print(f"{path} names none of the {len(times)} file(s) this run "
               f"measured, so it cannot be a reference for it. Re-record "
-              f"with --record.", file=sys.stderr)
+              f"with --record - from CI's own "
+              f"{CI_CANDIDATE_ARTIFACT} artifact, not from this machine.",
+              file=sys.stderr)
         return 2
     if verdict == "stale":
         print(f"this run is x{shift:.2f} the reference recorded on "
               f"{where}, outside the {IMAGE_BAND[0]}-{IMAGE_BAND[1]} band. "
               f"That is the whole runner moving, not one file drifting - "
-              f"re-record with --record and commit it, rather than "
+              f"re-record with --record and commit it - from this "
+              f"run's {CI_CANDIDATE_ARTIFACT} artifact - rather than "
               f"reading the per-file numbers below.", file=sys.stderr)
         return 1
     known = reference.get("files") or {}
@@ -606,9 +627,12 @@ def _against(times, path, args):
         print("\nThis run was given no --carry, so one sample decided it. "
               "CI restores and saves one; a local run has no series to "
               "read (UX-442).", file=sys.stderr)
-    print("\nMake it faster, or - if it is meant to cost this - re-record "
-          "with --record and commit, which is how the reference stays "
-          "true rather than becoming an alarm nobody reads.",
+    print(f"\nMake it faster, or - if it is meant to cost this - refresh "
+          f"the reference and commit it, which is how it stays true rather "
+          f"than becoming an alarm nobody reads. The document to commit is "
+          f"this run's {CI_CANDIDATE_ARTIFACT} artifact, or this file's "
+          f"printed seconds divided by the shift above; `--record` on your "
+          f"own machine writes the wrong clock (UX-418, UX-447).",
           file=sys.stderr)
     return 1
 
@@ -620,7 +644,11 @@ def main(argv=None):
                         help="print nothing when there is no drift")
     parser.add_argument("--record", metavar="PATH", nargs="?", const="-",
                         help="write this report as the CI reference "
-                             "(`-` prints it), instead of checking")
+                             "(`-` prints it), instead of checking. CI "
+                             "runs this and uploads the result as the "
+                             f"{CI_CANDIDATE_ARTIFACT} artifact; that is "
+                             "what to commit, because a local run writes "
+                             "this machine's clock and not CI's")
     parser.add_argument("--against", metavar="PATH", nargs="?",
                         const=str(CI_REFERENCE),
                         help="check against a CI reference rather than "

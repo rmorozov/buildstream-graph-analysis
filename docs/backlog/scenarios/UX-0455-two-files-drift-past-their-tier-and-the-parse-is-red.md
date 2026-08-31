@@ -149,6 +149,46 @@ was rewritten to observe the `subprocess.run` call itself — its argv
 and its environment are where the quantity is decided — and C4 then
 reddened it.
 
+### The guard committed this item's own defect, and CI caught it
+
+`2eb706d` went red on **all four interpreters**, on the clause added
+here:
+
+```text
+FAILED tests/unit/test_a_candidate_is_confirmed_alone.py::test_the_measurement_is_a_real_single_process_run
+AssertionError: tests/unit/test_the_agent_configuration_holds.py measured 1.47s
+alone, at or over the 1.0s medium floor - either the file grew and belongs in
+MEDIUM now, or this machine is loaded
+assert 1.4749999999999959 < 1.0
+```
+
+That clause asserted `alone < MEDIUM_FLOOR_S` — **a wall-clock number
+against a threshold, on a machine the guard does not control**, and
+running inside `make test`'s own `-n auto` suite, so the "alone"
+subprocess had three workers for company. It is precisely the defect
+this item exists to fix, committed in the guard written to fix it, and
+its own failure message says so: *"or this machine is loaded"*. It was.
+
+Which side of a floor a file lands on is a fact about a runner. It
+belongs to `confirm()`'s caller — which prints it — and never to an
+assertion. The clause was replaced by two that no runner can decide:
+
+- the measurement **happened and was timed** (`is not None`, `> 0`);
+- a file that cannot be run comes back `None` **for real** rather than
+  monkeypatched — the un-mocked half of the exit-code fix below, and
+  deterministic.
+
+| # | mutation | clause that went red |
+|---|---|---|
+| C5 | `alone_seconds` always returns `None` | `..._returns_seconds`, `..._is_really_single_process` |
+| C6 | the exit-code guard removed, so an empty junit reads as 0.0s | `..._comes_back_unmeasurable` |
+
+Worth stating plainly: local `make test` was green on the commit that
+shipped this. The suite here runs on a machine where that file costs
+0.72s; CI's costs 1.47s under load. A guard that passes on one clock
+and fails on another is the same finding one level up, and the reason
+`UX-418`'s rule about clocks is a rule.
+
 ### Two defects the existing guards found, both real
 
 `make test-tiers` went red on the first attempt, on two guards this
@@ -176,6 +216,10 @@ that says there is no such margin to state, and by a confirmation step
 instead.
 
 ### Verification
+
+The figures below are from the first landing; the clause above was
+replaced afterwards and re-verified at `make test` **5506 passed, 28
+skipped in 283.00s** with `make test-tiers` still `exit 0`.
 
 ```console
 $ make test-tiers

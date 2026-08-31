@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-454 scenarios: **5 open**, 449 closed.
+454 scenarios: **4 open**, 450 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -26,7 +26,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | viewer | 0 | 134 |
 | cli | 0 | 5 |
 | store | 2 | 28 |
-| docs | 2 | 40 |
+| docs | 1 | 40 |
 | guards | 1 | 70 |
 
 ## Open scenarios
@@ -38,7 +38,6 @@ task file, which is the only place it ever lived twice.
 |---|---|---|---|---|---|
 | UX-92 | [cache effectiveness — hits, misses, churn, trends — is invisible to the tool](UX-0092-cache-effectiveness-is-invisible-to-the-tool.md) | store | Medium | — | 🟡 |
 | UX-96 | [the baseline set exists, but assembling it is a scavenger hunt](UX-0096-the-baseline-set-exists-but-assembling-it-is-a-scavenger-hunt.md) | store | Medium | — | 🟡 |
-| UX-446 | [a third ceiling, and no reader-facing document has it](UX-0446-a-third-ceiling-no-reader-facing-document-has.md) | docs | Medium | anyone whose export drops the timeline and goes looking for the reason | 🔴 |
 | UX-447 | [the reference-refresh route is in no contributor document](UX-0447-the-reference-refresh-route-is-in-no-contributor-document.md) | docs | Medium | the contributor whose PR the drift gate stops, who is told to re-record and not where from | 🔴 |
 | UX-455 | [two files have grown past the tier they are listed in](UX-0455-two-files-drift-past-their-tier-and-the-parse-is-red.md) | guards | Low | the contributor whose `make test-medium` quietly costs a minute more than the tier says | 🔴 |
 

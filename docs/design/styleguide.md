@@ -1106,7 +1106,8 @@ emits reddens exactly as an undocumented one does.
 
 ## 3g. A budget counts what its consumer spends (round 69)
 
-`tools/bga_view.py:601` carries the only bound the Perfetto handoff has:
+`tools/bga_view.py` carried **one** bound on the Perfetto handoff when
+this section was written:
 
 ```python
 TRACE_BUDGET_B = 4 * 1024 * 1024
@@ -1142,6 +1143,16 @@ for — transfer, and whether the export inlines. It simply is not a
 measurement of what the reader is complaining about. That is the
 fixing guide's §5 arriving on the design side, where the tell is not a
 bad number but a good number answering an unasked question.
+
+**Closed, and where.** `UX-430` added `TRACE_TRACK_BUDGET`, the bound
+in the unit above; `UX-446` put all three in
+[`cli.md`](../guides/cli.md)'s ceilings table and derived that table
+from `bga_view.CEILINGS`, so a fourth bound in a fourth unit reddens a
+guard rather than waiting for a reader to be stuck. What is still open
+is the bound's *value*: `UX-445` measured the emitter's curve, could
+not reach Perfetto's UI to measure the drawing cost, and left the
+number where it was rather than re-siting it on the wrong evidence -
+which is this section's own rule, applied to its own fix.
 
 The test to apply to any bound on this page: *name the thing that goes
 wrong when it is exceeded, then check the budget counts that thing.*

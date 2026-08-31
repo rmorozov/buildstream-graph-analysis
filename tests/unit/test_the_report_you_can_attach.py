@@ -439,29 +439,56 @@ END pid=101 ppid=1 ts=1002.500000 element=work-a.bst cmd=cc -c main.c
 # side (no declaration changed) and the data half moves only with
 # `run_instance`, which is why the two totals move by exactly what the
 # page did.
-# `UX-431`: 284,584 -> 285,704, leaving 296 B of headroom, and the
-# budget was deliberately left where it was: it is `UX-360`'s judgement
-# about what a reader downloads, not a high-water mark.
+# `UX-431`: 284,584 -> 285,704. `UX-434`: -> 285,928, after 286,195
+# tripped this and 267 B of prose and whitespace came back out.
 #
-# `UX-434`: 285,704 -> 285,928. It reached **286,195** first and this
-# budget refused it - which is what a budget is for. The corrected
-# `graph-levels` query projects its annotations in a subquery, because
-# the old one grouped by a name the `slice` table also defines and
-# collapsed a nine-level graph into one row. What was trimmed to fit was
-# **prose and whitespace** - two sentences of `returns` that the trace
-# dictionary now carries instead, and one alias per line folded onto
-# two - and never the query's meaning: a wrong query that fits is worse
-# than a right one that does not.
+# `UX-444` is why it moves now, and it is not that the page grew. The
+# budget had a companion - the ratio in
+# `test_the_data_dwarfs_the_page_on_a_report_worth_measuring` - and the
+# procedure for that companion was "the largest round number the claim
+# still carries against the *permitted* page". Applied literally, that
+# is `floor(run_data / PAGE_BUDGET_B)`: a derived quantity, restated by
+# hand every time this number moved, and written out in **three**
+# places. It moved 4.0 -> 3.9 -> 3.3 -> 2.9 -> 2.8 -> 2.6 -> 2.5 -> 2.4
+# over eight rounds, and every one of those was a transcription rather
+# than a judgement.
 #
-# **72 bytes of headroom, and this number is no longer the binding
-# one.** `test_only_one_number_bounds_the_page` derives a second ceiling
-# from `test_the_data_dwarfs_the_page`'s 2.4x ratio against the scale
-# run's data, and that ceiling is 286,040 - 112 B above where the page
-# sits. The two have converged, so the next source addition of any size
-# trips both, and choosing between them is a decision about what the
-# page is for rather than a number to nudge. `UX-444` holds it, with
-# these measurements.
-PAGE_BUDGET_B = 286_000
+# So the two now say different things. This is the **ceiling**: what a
+# reader downloads, `UX-360`'s judgement, moved with a measurement and a
+# record. `DATA_DWARFS_PAGE` below is the **claim**, a round number
+# chosen once for what "dwarfs" means, which no longer has to be
+# rewritten when this one moves.
+#
+#     page today                285,928 B   (288,862 with UX-433)
+#     growth over rounds 69-70    +4,898 B  across two rounds
+#     this budget                300,000 B  ~4 rounds of headroom
+#
+# Sized so a change is measured against a budget rather than negotiating
+# with it, and so a framework arriving - hundreds of kilobytes at once,
+# which is what the pair of guards is for - still trips it immediately.
+PAGE_BUDGET_B = 300_000
+
+#: `UX-444`: the claim, stated once. **The run's data is at least twice
+#: the page a reader is permitted to download.**
+#:
+#: Direction 7's sentence is that the data is what an export weighs.
+#: Two is where "dwarfs" stops being the right word for it, and that is
+#: a judgement about the word rather than a transcription of this
+#: quarter's measurement - which is what the eight previous values of
+#: this constant were.
+#:
+#: Measured at 1,000 elements: **686,497 B of data against 2.0 x
+#: 300,000 = 600,000**, with 86,497 B to spare. `PAGE_BUDGET_B` can
+#: reach 343,248 before this needs revisiting, which is the point - the
+#: ceiling moves on its own schedule and the claim does not follow it.
+#:
+#: What it still catches, and what already catches it better: a
+#: framework arriving is hundreds of kilobytes of vendor code landing at
+#: once, which `test_no_module_looks_like_a_vendored_library` finds *by
+#: shape* - long lines, no comments - and does not need a threshold for.
+#: This is the same event by weight, kept because two instruments for
+#: one event is cheap and the shape one can be evaded by inlining.
+DATA_DWARFS_PAGE = 2.0
 MACRO_MICRO = "tests/fixtures/macro_micro/run"
 COMMITTED_EXPORTS = [
     # `UX-299` moved both of these by ~300 B: `run.json` now publishes
@@ -961,11 +988,12 @@ class TestTheSizeDiscipline:
         import inspect
 
         _code, _contract, run_data = self._weigh(tmp_path)
-        # `UX-390`: 2.4, matching the clause below. This number is a
-        # *copy* of the ratio's constant and always was - it exists so
-        # the two ceilings cannot drift apart silently, which means it
-        # moves whenever that one does.
-        implied = run_data / 2.4
+        # `UX-444`: the constant, not a copy of it. It was a copy for
+        # eight rounds - "it exists so the two ceilings cannot drift
+        # apart silently, which means it moves whenever that one does" -
+        # and a number kept in step by hand in three places is the drift
+        # this repository fixes more often than anything else.
+        implied = run_data / DATA_DWARFS_PAGE
         assert implied >= PAGE_BUDGET_B, (
             f"the ratio clause permits a page of {implied:,.0f} B while "
             f"PAGE_BUDGET_B permits {PAGE_BUDGET_B:,} B - the ratio is "
@@ -1161,10 +1189,17 @@ class TestTheSizeDiscipline:
         # follows the backstop rather than the backstop being trimmed
         # to fit a ratio nobody argued, and `UX-367`'s clause below
         # holds the two from becoming two ceilings again.
-        assert run_data > 2.4 * PAGE_BUDGET_B, (
+        #
+        # `UX-444` stopped applying that procedure. Eight restatements
+        # in, every one of them `floor(run_data / PAGE_BUDGET_B)`, the
+        # number was a transcription rather than a claim. It is now
+        # `DATA_DWARFS_PAGE` - argued once, for what "dwarfs" means, and
+        # not rewritten when the ceiling moves.
+        assert run_data > DATA_DWARFS_PAGE * PAGE_BUDGET_B, (
             f"{run_data} B of this run's data against a page permitted "
             f"{PAGE_BUDGET_B} B ({run_data / PAGE_BUDGET_B:.3f}x, bound "
-            f"2.4x) - Direction 7's rule is that the data is what an "
+            f"{DATA_DWARFS_PAGE}x) - Direction 7's rule is that the data is "
+            f"what an "
             f"export weighs, and at this scale it should not be close. "
             f"The page here measures {code} B and the embedded contract "
             f"{contract} B, which this ratio deliberately does not "

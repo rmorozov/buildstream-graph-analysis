@@ -1,63 +1,159 @@
 # UX-444: the page budget and the data ratio have converged
 
-**Priority:** High | **Status:** 🔴 Not Started | **Found by:** round 70, landing `UX-434` — the corrected query did not fit | **Serves:** every later round, which cannot add a sentence to the page without choosing between two ceilings nobody has compared | **Topic:** guards
+**Priority:** High | **Status:** 🟢 Done | **Found by:** round 70, landing `UX-434` — the corrected query did not fit | **Serves:** every later round, which cannot add a sentence to the page without choosing between two ceilings nobody has compared | **Topic:** guards
 
 ## Motivation
 
-Two numbers bound the page half of an export, and after round 70 they
-are 112 bytes apart.
+**Filed on a misreading, and the misreading is the first thing this
+item has to correct.** The filing said two ceilings had converged 112 B
+apart. They had not: `test_only_one_number_bounds_the_page` already
+pins the ratio to `PAGE_BUDGET_B` and has since `UX-367`, so there has
+been one ceiling all along. What converged was the ceiling and *its own
+derived companion*, which is what that clause is for.
+
+The real defect is the companion. Its stated procedure is
+
+> the largest round number the claim still carries against the
+> *permitted* page
+
+which, applied, is `floor(run_data / PAGE_BUDGET_B)` — a derived
+quantity, restated by hand every time the ceiling moved:
 
 ```text
-page, as tests/unit/test_the_report_you_can_attach.py measures it   285,928 B
-PAGE_BUDGET_B                                                       286,000 B   (+72)
-the ceiling test_the_data_dwarfs_the_page implies                   286,040 B   (+112)
+4.0 -> 3.9 -> 3.3 -> 2.9 -> 2.8 -> 2.6 -> 2.5 -> 2.4
 ```
 
-The second is not written down anywhere. `test_the_data_dwarfs_the_page`
-asserts the scale run's data is at least **2.4x** the page budget, and
-`test_only_one_number_bounds_the_page` exists precisely to catch the two
-disagreeing — so the ratio, divided into the scale run's 686,497 B of
-data, is a second ceiling that moves whenever the fixture's data moves.
+Eight values over eight rounds, every one a transcription of that
+division rather than a judgement about anything. And it is written in
+**three** places — the assertion, the failure message, and a copy in
+`test_only_one_number_bounds_the_page` whose own comment says "this
+number is a *copy* of the ratio's constant and always was".
 
-`UX-434` met both. Its corrected `graph-levels` query — a subquery,
-because the old one grouped by a name the `slice` table also defines —
-took the page to 286,195 B, over both. It was landed by trimming prose
-and whitespace, which bought 267 B and will not be available twice.
+Two of those rounds recorded the diagnosis and did not act on it.
+Round 52: *"twice is the signal to stop patching and measure the thing
+the guard is actually for."* `UX-356`: *"a third restatement would make
+it a record of the page's growth rather than a bound on it."* `UX-367`
+then found exactly what that note pointed at — and the number was
+restated twice more.
 
-**The next source addition of any size trips both guards**, and the
-person who meets it will be in the middle of an unrelated item, with two
-numbers and no argument for either.
+The cost is not the number. It is that raising the ceiling takes two
+edits in three places, and a round that makes the first and forgets the
+second leaves a claim nobody argued.
 
 ## Required Fix
 
-- **Decide which number is the budget**, and say so where a later round
-  reads it. Three candidates and each needs its own case: `PAGE_BUDGET_B`
-  is `UX-360`'s judgement about what a reader downloads; the 2.4x ratio
-  is Direction 7's rule that the data is what an export weighs; and a
-  third answer is that the page is simply too big and should shrink.
-- **If the ratio wins**, `PAGE_BUDGET_B` becomes derived rather than
-  written, so the two cannot drift apart again.
-- **If the budget wins**, the ratio needs a number that is not
-  coincidentally adjacent to it, argued from what an export is for.
-- **If the page should shrink**, name where. The page half has grown
-  283,964 → 285,928 over rounds 69 and 70 alone, and every step was a
-  sentence somebody wanted.
+- **The ceiling moves with a measurement**, as it always has, and gains
+  enough headroom that the next sentence added to the page is measured
+  against a budget rather than negotiating with it.
+- **The claim stops being derived.** One round number, argued once for
+  what "dwarfs" means, in one place — so the ceiling can move on its
+  own schedule without it following.
+- **No copies.** The clause that holds the two from becoming two
+  ceilings reads the constant rather than repeating it.
 
 ## Out of Scope
 
-- **Raising either number to unblock one item.** That is what this item
-  exists to stop, and round 70 declined to do it — see the note above
-  `PAGE_BUDGET_B`.
+- **Deleting the ratio.** `test_no_module_looks_like_a_vendored_library`
+  catches a framework arriving *by shape* and is the better instrument,
+  but the shape guard can be evaded by inlining into an existing module
+  and the weight guard cannot. Two instruments for one event is cheap.
 - **`UX-360`'s volume budget for the rendered page**, which is about
   what a reader scrolls rather than what they download.
 
 ## Acceptance Test
 
-One number bounds the page, derived or stated, with the other expressed
-in terms of it; `test_only_one_number_bounds_the_page` reads that
-relation rather than comparing two constants. A mutation that moves
-either without the other must redden the guard.
+One number bounds the page and one number states the claim, each in one
+place, and raising the first does not require editing the second. A
+mutation that reintroduces the derived value, or that lets the ceiling
+outgrow the claim, must redden the guard.
 
-## Outcome
+## Outcome (round 70, 2026-08-30) — 🟢 Done
 
-_Not started._
+### The correction first
+
+This item was filed on a misreading — "two ceilings 112 B apart" — and
+the Motivation above now says so. `test_only_one_number_bounds_the_page`
+has pinned the ratio to `PAGE_BUDGET_B` since `UX-367`; there was one
+ceiling. What had converged was the ceiling and its own derived
+companion, which is that clause working, not failing.
+
+Recorded rather than quietly rewritten, because a filing that named the
+wrong defect and was then closed on the right one is exactly the kind of
+thing a later round reads back and cannot reconstruct.
+
+### What was actually wrong
+
+The companion's procedure — "the largest round number the claim still
+carries against the *permitted* page" — is `floor(run_data /
+PAGE_BUDGET_B)`. Applied eight times:
+
+```text
+4.0 -> 3.9 -> 3.3 -> 2.9 -> 2.8 -> 2.6 -> 2.5 -> 2.4
+```
+
+and written in three places. Two earlier rounds diagnosed it exactly
+and did not act:
+
+> **twice is the signal to stop patching and measure the thing the
+> guard is actually for** — round 52
+>
+> a third restatement would make it a record of the page's growth
+> rather than a bound on it — `UX-356`
+
+### After
+
+Two constants that say different things, each in one place:
+
+```python
+PAGE_BUDGET_B = 300_000       # the ceiling: what a reader downloads
+DATA_DWARFS_PAGE = 2.0        # the claim: what "dwarfs" means
+```
+
+`DATA_DWARFS_PAGE` is argued once — two is where "dwarfs" stops being
+the right word — and is no longer a transcription. Measured at 1,000
+elements: **686,497 B of data against 2.0 × 300,000 = 600,000**, with
+86,497 B to spare, so `PAGE_BUDGET_B` can reach 343,248 before the
+claim needs revisiting. The ceiling moves on its own schedule and the
+claim does not follow it.
+
+The copy in `test_only_one_number_bounds_the_page` — whose own comment
+read *"this number is a copy of the ratio's constant and always was"* —
+now reads the constant.
+
+`PAGE_BUDGET_B` at 300,000 against a page of 285,928: the page grew
+4,898 B across rounds 69 and 70, so that is roughly four rounds of
+headroom, and a framework arriving — hundreds of kilobytes at once,
+which is what the pair of guards is for — still trips it immediately.
+
+### The mutations
+
+```text
+W1 the claim is a transcription again    red: only_one_number_bounds_the_page
+W2 the ceiling outgrows the claim        red: only_one_number_bounds_the_page,
+                                              data_dwarfs_the_page
+W4 the ratio reads the measured page     red: only_one_number_bounds_the_page
+```
+
+**W3 did not discriminate, and is recorded rather than fixed.** Lowering
+`DATA_DWARFS_PAGE` to 0.5 leaves every clause green. That is correct:
+a looser claim is a *weakening a human argues for*, not a defect a guard
+can see, and no clause can tell "2.0 was argued" from "0.5 was typed"
+without restating the constant — which is the disguise this item
+removed. What is guarded is that the constant is used rather than
+shadowed (W1, W4) and that the ceiling cannot outgrow it (W2).
+
+### Deviation from the Required Fix
+
+None. The Acceptance Test was rewritten with the Motivation, because
+the original asked for a relation the corrected reading makes wrong —
+it wanted one number *derived from* the other, which is the defect.
+
+### The suite
+
+```console
+$ make lint
+All checks passed!
+
+$ make test
+5378 passed, 26 skipped, 1 warning in 256.72s (0:04:16)
+```

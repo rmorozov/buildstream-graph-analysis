@@ -195,6 +195,47 @@ jobs:
   # The model-in-the-loop half of the play - twenty to fifty real tasks
   # replayed through `claude -p` - needs an API key and a budget and is
   # not built. This is the deterministic half, and says so.
+  # UX-457: the candidate, in a log rather than only behind a download.
+  #
+  # `UX-427` built the artifact so a refresh would be a copy rather than
+  # a guess, and `UX-441` moved the document out of the test job's log
+  # so a red run's failing assertion stayed the last thing in it. Both
+  # still hold. Neither covers *reaching* the bytes: the two hosts
+  # GitHub serves run output from -
+  # `productionresultssa19.blob.core.windows.net` (artifacts) and
+  # `results-receiver.actions.githubusercontent.com` (run-log zips) -
+  # are denied by the egress policy of the environment these rounds are
+  # worked in, while the GitHub API, and so a single job's log, is not.
+  # Round 71 hit that going to add four rows and left the reference
+  # stale rather than write them from a laptop's clock.
+  #
+  # So the document is printed again, in a job that does nothing else.
+  # `UX-441`'s trade is untouched by that: there is no failure here for
+  # it to bury, because nothing here can fail an assertion.
+  tier-reference:
+    runs-on: ubuntu-latest
+    needs: test
+    # The run this is most wanted on is the one whose drift step went
+    # red, and that run's `test` job failed - same reason the upload
+    # above is `always()`.
+    if: always()
+    steps:
+      - name: Fetch what test (3.11) recorded
+        id: fetch
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: ci-reference-candidate
+
+      # One `cat` and nothing else, so `get_job_logs` on this job
+      # returns the document and not a suite. The fallback keeps a run
+      # that died before the upload from reddening a job that only
+      # reports.
+      - name: The candidate, and nothing else
+        run: |
+          cat ci_reference.candidate.json \
+            || echo "no candidate on this run - test (3.11) did not reach the record step"
+
   agent-config:
     # Watches: .claude/** , CLAUDE.md , REVIEW.md - the three that steer
     # a session. The workflow triggers on every push and pull request, so

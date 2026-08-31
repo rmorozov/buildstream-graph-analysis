@@ -40,7 +40,7 @@ task file, which is the only place it ever lived twice.
 | UX-96 | [the baseline set exists, but assembling it is a scavenger hunt](UX-0096-the-baseline-set-exists-but-assembling-it-is-a-scavenger-hunt.md) | store | Medium | — | 🟡 |
 | UX-455 | [two files have grown past the tier they are listed in](UX-0455-two-files-drift-past-their-tier-and-the-parse-is-red.md) | guards | Low | the contributor whose `make test-medium` quietly costs a minute more than the tier says | 🔴 |
 | UX-456 | [two bst-gated guards fail on the runner and not on the diff](UX-0456-two-bst-gated-guards-are-at-the-noise-floor.md) | guards | Medium | the contributor whose PR goes red on a job their diff cannot have touched | 🟡 |
-| UX-457 | [the reference can only be refreshed from a host the round cannot reach](UX-0457-the-reference-refresh-artifact-is-unreachable.md) | guards | Low | the contributor who is told to refresh the reference and cannot fetch the thing to refresh from | 🔴 |
+| UX-457 | [the reference can only be refreshed from a host the round cannot reach](UX-0457-the-reference-refresh-artifact-is-unreachable.md) | guards | Low | the contributor who is told to refresh the reference and cannot fetch the thing to refresh from | 🟡 |
 
 ## UX-398..UX-410: the sixty-fourth round — the walk that judged the answers (2026-08-29)
 

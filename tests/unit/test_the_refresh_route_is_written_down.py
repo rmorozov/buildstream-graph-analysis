@@ -157,6 +157,15 @@ def test_the_tool_says_where_from_wherever_it_says_re_record():
             f"this message tells a reader to re-record without saying from "
             f"what, which is the state UX-447 was filed on:\n  "
             f"{text.strip()[:120]}")
+        # `UX-457`: and the second door. The artifact is the right
+        # document and the wrong host for a reader behind an egress
+        # policy that refuses GitHub's blob storage - a message naming
+        # only the download sends that reader nowhere, which is the
+        # same failure one host over.
+        assert "CI_CANDIDATE_JOB" in names, (
+            f"this message names the artifact and not the job whose log "
+            f"carries the same bytes, so a reader who cannot download it "
+            f"is told nothing (UX-457):\n  {text.strip()[:120]}")
 
 
 if __name__ == "__main__":  # pragma: no cover

@@ -1,87 +1,87 @@
-# UX-459: seven of nine examples keep nothing a reader or a guard can analyse
+# UX-459: eight findings are reachable by nothing a clone has
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Found by:** round 72, building the findings-to-captures census | **Serves:** the reader who opens `examples/` to see what a real finding looks like, and the guard that cannot check a finding no fixture produces | **Topic:** guards
+**Priority:** Medium | **Status:** 🔴 Not Started | **Found by:** round 72, tracing the heuristics in `bga analyze` to the fixtures that reach them | **Serves:** the round that adds a heuristic and has no fixture that can exercise it | **Topic:** guards
 
 ## Motivation
 
-`examples/` holds nine projects, each built to plant a distinct
-pathology — contention, a deep mixed-kind chain, a git-sourced identity,
-a critical path with two independent opportunities, a real C++
-toolchain, the macro/micro pair, declared-vs-used, a process storm,
-fine-grained siblings. Two of them keep a capture:
+`FINDING_READERS` is the registry of what `analyze` can conclude — 21
+findings. A fresh clone carries **two** analysable captures, and they
+reach eleven of them:
 
 ```console
-$ for d in examples/0*/; do
-    [ -d "$d/.bga/runs" ] && echo "HAS  ${d%/}" || echo "none ${d%/}"; done
-none examples/01-resource-contention
-none examples/02-deep-chain-mixed-kinds
-none examples/03-project-refs-identity
-none examples/04-critical-path-optimization
-none examples/05-cmake-cpp-toolchain
-HAS  examples/06-macro-micro-optimization
-none examples/07-declared-vs-used-dependencies
-HAS  examples/08-process-storm
-none examples/09-fine-grained-siblings
+$ python3 tools/dev_finding_coverage.py
+blast-radius-ranking     *** NOTHING PRODUCES THIS ***
+blast-radius-structural  *** NOTHING PRODUCES THIS ***
+build-failed             declared unreachable: every committed capture is of a build that succeeded (UX-156)
+cache-transfer-cost      *** NOTHING PRODUCES THIS ***
+certified-headroom       *** NOTHING PRODUCES THIS ***
+criticality              *** NOTHING PRODUCES THIS ***
+execution-bound          *** NOTHING PRODUCES THIS ***
+failed-task-time         declared unreachable: no committed capture has a failed task
+run-mode-incremental     *** NOTHING PRODUCES THIS ***
+shared-source-blast      *** NOTHING PRODUCES THIS ***
+(a clone) 21 findings | 11 produced by a capture | 2 declared unreachable | 8 neither
 ```
 
-`bst-examples` builds 01-06 on every CI run and throws the result away.
-So the pathology each project was written to demonstrate is
-demonstrated **nowhere a reader or a test can look** — the projects are
-build inputs, not evidence.
+The two are `tests/fixtures/macro_micro` and
+`tests/fixtures/with_timeline`. **Eight findings are reachable by
+nothing a clone has**, so every guard that touches them builds its own
+synthetic payload and the suite stays green whatever the analyzer does
+to real data.
 
-What that costs, measured by running `analyze` over every committed
-capture and collecting the finding ids:
+### The correction this item exists because of
 
-```text
-21 findings in FINDING_READERS | 7 produced by no committed capture
-
-  cache-transfer-cost   certified-headroom   shared-source-blast
-  criticality           execution-bound      build-failed
-  failed-task-time
-```
-
-A probe says the repair is cheap and real. Building `02` here and
-analysing it took one command and produced **`certified-headroom`**,
-one of the seven, for **152 KB** on disk:
+The first version of this row said "seven of nine examples keep no
+committed capture" and proposed committing one per example. Both halves
+were wrong, and the same way:
 
 ```console
-$ bga snapshot -- bst build all.bst      # examples/02, isolated cache
-This snapshot: 90.9K.
-$ bga analyze <run> --format json | jq '[.findings[].id]|sort|unique'
-blast-radius-ranking, blast-radius-structural, cache-hit-ratio,
-certified-headroom, confidence, efficiency-score, wait-category
+$ git ls-files 'examples/*/.bga' | wc -l
+0
+$ cat examples/06-macro-micro-optimization/.bga/.gitignore
+# Written by `bga snapshot` (UX-126) ...
+*
 ```
 
-Everything the harder ones need is on this machine — `bst` 2.7.0,
-`bwrap`, `buildstream-plugins`, `cmake`, `make`, `gcc`, `git`,
-`busybox` — so the toolchain is not what has been stopping this.
+**No example capture has ever been committed.** Every `.bga` carries a
+`.gitignore` holding `*`, and `UX-189` decided a clone should not ship
+the capture archive. The captures under `examples/06` and
+`examples/08` that the first census counted exist only on a machine
+that has built them — this container had, from an earlier round.
+
+So the census measured the working tree and reported it as the
+repository. That is fixing guide §5 inside the census written to find
+§5 gaps, and it inflated the answer twice over: it said 7 uncovered,
+then 3 after building six more captures locally; a clone's answer is
+**8**, and building captures locally changes it by nothing at all.
+`tools/dev_finding_coverage.py` defaults to `git ls-files` for exactly
+this reason and takes `--local` to show the difference.
 
 ## Required Fix
 
-- **Commit one capture per example** for 01, 02, 03, 04, 05, 07 and 09,
-  each built the way `bst-examples` builds it and captured with
-  `bga snapshot` into an isolated cache.
-- **Each capture says what it is for.** The example's README section
-  gains the finding ids that capture actually produces, read off
-  `analyze` rather than asserted — so a later round can see when a
-  project stops demonstrating what it was written for.
-- **Watch the store's weight.** `UX-300` measured what a big snapshot
-  does to a store; state the total the repository gains and check it
-  against `UX-189`'s rule that a clone should not ship a capture
-  archive.
+The fix is **not** to commit captures — `UX-189` settled that, and
+`examples/*/.bga/.gitignore` enforces it. Two routes remain, and this
+item is to pick one with a measurement rather than a preference:
+
+- **Curated fixtures**, the shape already in the tree: `tests/fixtures/`
+  carries 65 tracked files including the two captures that work. Derive
+  small fixtures from the example builds for the eight, sized against
+  what `macro_micro` and `with_timeline` cost.
+- **Or CI does the reaching**: `bst-examples` already builds 01-06 on
+  every run and throws the analysis away. Running
+  `dev_finding_coverage.py --local` there would exercise the eight on
+  real data without a byte entering the repository — at the price of a
+  guard that only runs in one job.
+
+Either way, `UX-460`'s guard is what freezes the answer.
 
 ## Out of Scope
 
-- **A new example holding every defect at once**: possible later, and
-  premature now — seven projects that already plant distinct
-  pathologies are being thrown away, and using them is cheaper than
-  authoring a tenth. Revisit once the census below says what is still
-  uncovered.
-- **`build-failed` and `failed-task-time`**: a capture of a *successful*
-  build cannot produce them by construction. They belong in `UX-460`'s
-  declared-unreachable list, not in a capture.
-- **Re-running the examples in CI to refresh these captures**: they are
-  fixtures, and a fixture that regenerates is not a fixture.
+- **Committing `examples/*/.bga`**: refused above, with the decision
+  and the mechanism that enforces it.
+- **`build-failed`, `failed-task-time`**: declared unreachable in
+  `dev_finding_coverage.UNREACHABLE`, with reasons.
+- **`examples/09`**: cannot build at all — `UX-461`.
 
 ## Acceptance Test
 
@@ -89,9 +89,8 @@ Everything the harder ones need is on this machine — `bst` 2.7.0,
 python3 tools/dev_finding_coverage.py
 ```
 
-names every committed capture and the findings it produces, and the
-count of findings with no capture has fallen — with the before and
-after pasted, and each example's README section naming its own.
+reports zero in the `neither` column on a clean checkout, with the
+route chosen and its cost recorded here.
 
 ## Outcome
 

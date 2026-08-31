@@ -443,3 +443,33 @@ export function rowsMarkdown(rows, specs) {
   }
   return lines.join("\n");
 }
+
+// `UX-450`: moved here from `structured.js`. This file is the
+// table's *behaviour* - filters, bounds, presets, copy - and sorting
+// is behaviour. It was in the DOM builder only because that is where
+// it was first written.
+export function sortable(table, specs = []) {
+  const body = table.querySelector("tbody");
+  table.querySelectorAll("th").forEach((th, index) => {
+    // UX-201: a column the schema declares unsortable stays unsortable,
+    // whatever its values happen to look like.
+    if (specs[index] && specs[index].sortable === false) return;
+    th.addEventListener("click", () => {
+      const ascending = th.getAttribute("aria-sort") !== "ascending";
+      table.querySelectorAll("th").forEach((other) =>
+        other.removeAttribute("aria-sort"));
+      th.setAttribute("aria-sort", ascending ? "ascending" : "descending");
+      const rows = [...body.querySelectorAll("tr")];
+      rows.sort((a, b) => {
+        const x = a.children[index]?.dataset.raw ?? "";
+        const y = b.children[index]?.dataset.raw ?? "";
+        const nx = Number(x), ny = Number(y);
+        const numeric = x !== "" && y !== "" && !Number.isNaN(nx) && !Number.isNaN(ny);
+        const order = numeric ? nx - ny : String(x).localeCompare(String(y));
+        return ascending ? order : -order;
+      });
+      rows.forEach((row) => body.append(row));
+    });
+  });
+}
+

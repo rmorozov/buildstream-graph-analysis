@@ -36,7 +36,9 @@ REPO = pathlib.Path(__file__).resolve().parents[2]
 # clauses are about what the viewer declares, not about which file
 # declares it, so they read all three; pointing them at `app.js` alone
 # would have quietly stopped seeing the constants they defend.
-APP_MODULES = ("app.js", "format.js", "structured.js")
+# `UX-450` added a fourth: the section walk left `app.js` for
+# `sections.js`, and `liftedCriticalPath`'s caller went with it.
+APP_MODULES = ("app.js", "sections.js", "format.js", "structured.js")
 APP = "\n".join((REPO / "bga/viewer" / _name).read_text(encoding="utf-8")
                 for _name in APP_MODULES)
 NAV = (REPO / "bga/viewer/nav.js").read_text(encoding="utf-8")

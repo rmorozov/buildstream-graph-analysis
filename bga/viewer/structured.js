@@ -30,12 +30,12 @@ import { sparkline, strip, columnStrip, SERIES_MIN_POINTS,
 // between them lives there, so that "raw JSON unless deliberate" is a
 // rule with one enforcement point rather than a habit.
 import { CONTROLS, UNMAPPED, classify, noteUnmapped, depthSentence,
-         shapeOf } from "./shapes.js";
+         distributionStrip, shapeOf } from "./shapes.js";
 import { enterTableFocus, focusedTable, leaveTableFocus, registerFocusTarget }
   from "./tablefocus.js";
 import { parseThreshold, applyFilters, badgeText, rowJson, cellText,
          copy, presetColumns, applyPreset, openingBound, plural,
-         boundPairs,
+         boundPairs, sortable,
          rowsMarkdown } from "./tables.js";
 import { PATH_HEAD, PATH_TAIL } from "./views.js";
 
@@ -334,6 +334,15 @@ export function renderStructured(key, value, hint = {}, node = undefined,
       format: (n) => quantity(n, quantityFor(node, key)),
     });
   }
+  // `UX-429`: one line, monospace, with the copy control beside it.
+  // `commandLine` returns `[code, button]` and this branch is a
+  // *cell*, so it takes the code alone - the button belongs where
+  // there is room for it, which is the two step lists in
+  // `decision.js` and `views.js`.
+  //
+  // Restored by `UX-450`. It was deleted to buy `UX-429` four
+  // lines under the 1,500 ceiling, which left one branch of a §1
+  // table bare where every branch around it carries a note.
   if (control === CONTROLS.COMMAND) return commandLine(value)[0];
   if (control === CONTROLS.DENSITY_STRIP) {
     return strip(value, {
@@ -928,81 +937,6 @@ export function interrogable(table, specs, total, depth = 0) {
   return tools;
 }
 
-/**
- * The density strip for a long table's primary quantity column, or
- * `null` when the table is short or has no quantity to have a shape.
- *
- * Clicking it sets that column's threshold to the **nearest actual row
- * value** - a published number, never the position the click landed
- * on, which would be a derived figure entering the page through a
- * mouse. Served only: an export is a file, and `UX-194`'s rule is that
- * an affordance whose precondition is absent is not shown as a dead
- * one. The strip itself renders in both, because the *shape* is the
- * point and the click is a convenience.
- */
-function distributionStrip(table, specs, total, state, refresh) {
-  // `UX-350`: **at any length.** The row cap decides whether a table is
-  // *paged*, not whether its shape is worth showing - and gating the
-  // strip on it meant the report's central table, eleven rows on one
-  // fixture and four on the other, never drew the one §2 names.
-  // Measured before this: one sparkline and zero strips on golden, in
-  // a twenty-screen document. `columnStrip` already states rather than
-  // draws below `SERIES_MIN_POINTS`, so a two-row table is still a
-  // sentence.
-  const spec = specs.find((s) => s && s.quantity && s.numeric !== false);
-  if (!spec) return null;
-  // The column key, not `cssId`: that normalises an *element uid* into
-  // an anchor, and a column key is already a schema identifier.
-  const raw = [...table.querySelectorAll(`td[data-column="${spec.key}"]`)]
-    .map((td) => Number(td.getAttribute("data-raw")))
-    .filter((n) => Number.isFinite(n));
-  if (!raw.length) return null;
-
-  const drawn = columnStrip(raw, {
-    grade: GRADE_ANNOTATION,
-    format: (n) => quantity(n, spec.quantity),
-    label: `${spec.title ?? title(spec.key, spec.quantity)} across all ${
-      total.toLocaleString("en-US")} rows`,
-  });
-  drawn.setAttribute("data-column", spec.key);
-  drawn.setAttribute("data-interactive", String(served()));
-  if (!served()) return drawn;
-
-  const sorted = raw.slice().sort((a, b) => a - b);
-  const svg = drawn.querySelector?.("svg");
-  svg?.addEventListener?.("click", (event) => {
-    // Where in the range the click landed, as a fraction. A shim and a
-    // browser both give `offsetX`/`clientWidth`; without them the
-    // click simply does nothing rather than guessing a threshold.
-    const width = event?.currentTarget?.clientWidth;
-    if (!width) return;
-    const fraction = Math.min(1, Math.max(0, (event.offsetX ?? 0) / width));
-    const low = sorted[0];
-    const high = sorted[sorted.length - 1];
-    const wanted = low + fraction * (high - low);
-    // The nearest value a row actually has, so the threshold is a
-    // published number.
-    const chosen = sorted.reduce((best, value) =>
-      Math.abs(value - wanted) < Math.abs(best - wanted) ? value : best,
-      sorted[0]);
-    const input = table.querySelector(
-      `.th-filter[data-column="${spec.key}"]`);
-    if (!input) return;
-    // Raw units, no suffix - `parseThreshold` reads a bare number as
-    // the published one, so this round-trips exactly rather than
-    // through a formatted string.
-    input.value = `>= ${chosen}`;
-    input.dispatchEvent?.(new Event("input", { bubbles: true }));
-    if (!input.listeners?.input?.length) {
-      // A shim with no bubbling: set the state directly so the guard
-      // measures the filter rather than the event system.
-      state.thresholds[spec.key] = { op: ">=", value: chosen };
-      refresh();
-    }
-  });
-  return drawn;
-}
-
 // UX-280: which form the reader last chose, remembered for them alone.
 //
 // `localStorage` is the right channel and `UX-211` says why: it
@@ -1036,31 +970,6 @@ const PLACEHOLDER = {
   megabytes: "> 512mb", kilobytes: "> 512mb", share: "> 10%", percent: "> 10%",
   count: "> 10", ratio: "> 1",
 };
-
-function sortable(table, specs = []) {
-  const body = table.querySelector("tbody");
-  table.querySelectorAll("th").forEach((th, index) => {
-    // UX-201: a column the schema declares unsortable stays unsortable,
-    // whatever its values happen to look like.
-    if (specs[index] && specs[index].sortable === false) return;
-    th.addEventListener("click", () => {
-      const ascending = th.getAttribute("aria-sort") !== "ascending";
-      table.querySelectorAll("th").forEach((other) =>
-        other.removeAttribute("aria-sort"));
-      th.setAttribute("aria-sort", ascending ? "ascending" : "descending");
-      const rows = [...body.querySelectorAll("tr")];
-      rows.sort((a, b) => {
-        const x = a.children[index]?.dataset.raw ?? "";
-        const y = b.children[index]?.dataset.raw ?? "";
-        const nx = Number(x), ny = Number(y);
-        const numeric = x !== "" && y !== "" && !Number.isNaN(nx) && !Number.isNaN(ny);
-        const order = numeric ? nx - ny : String(x).localeCompare(String(y));
-        return ascending ? order : -order;
-      });
-      rows.forEach((row) => body.append(row));
-    });
-  });
-}
 
 // UX-270: the critical path is a section of its own.
 //

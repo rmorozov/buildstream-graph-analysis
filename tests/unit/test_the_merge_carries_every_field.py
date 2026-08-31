@@ -126,7 +126,11 @@ def _payload():
 
 def _drawn_elsewhere():
     """`app.js`'s declaration, read out of the module that holds it."""
-    source = (REPO / "bga/viewer/app.js").read_text(encoding="utf-8")
+# `UX-450` split the section walk out of `app.js` when that file sat
+# exactly on `UX-337`'s ceiling. What this reads - the section
+# router and its declarations - moved to `sections.js`; the name
+# here follows the code rather than the file it used to be in.
+    source = (REPO / "bga/viewer/sections.js").read_text(encoding="utf-8")
     found = re.search(r"export const DRAWN_ELSEWHERE = \{(.*?)\n\};",
                       source, re.S)
     assert found, "app.js no longer declares DRAWN_ELSEWHERE"

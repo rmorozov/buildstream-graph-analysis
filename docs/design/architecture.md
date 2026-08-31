@@ -852,6 +852,7 @@ description, and this table's job is only to say which one to open.
 | `perfetto.js` | the handoff transports: `postMessage`, the `?url=` deep link, and what Perfetto's CSP will fetch (`UX-314`) |
 | `perfetto_page.js` | the standalone handoff page `bga view --perfetto` lands on — and, since `UX-373`, the query library under it, which was `sql.js` |
 | `trace_context.js` | the finding→query mapping that gives an investigate button its question (`UX-229`) |
+| `sections.js` | the section walk: a payload and a schema become DOM — findings, verdicts, the empty-population sentence, the section router and the summary. Draws and returns; never touches the document, the URL or an event, which is `app.js` (`UX-450`) |
 | `style.css` | every colour, the two token grades, and dark as the design surface (`UX-304`) |
 
 `tests/unit/test_the_viewer_modules_have_a_home.py` holds this table

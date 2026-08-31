@@ -92,7 +92,11 @@ console.log("CENSUS " + JSON.stringify({
 
 def _declarations(name):
     """A declaration table read out of `app.js`, as {key: reason}."""
-    source = (REPO / "bga/viewer/app.js").read_text(encoding="utf-8")
+# `UX-450` split the section walk out of `app.js` when that file sat
+# exactly on `UX-337`'s ceiling. What this reads - the section
+# router and its declarations - moved to `sections.js`; the name
+# here follows the code rather than the file it used to be in.
+    source = (REPO / "bga/viewer/sections.js").read_text(encoding="utf-8")
     found = re.search(rf"export const {name} = \{{(.*?)\}};", source, re.S)
     assert found, f"app.js no longer declares {name}"
     body = found.group(1)

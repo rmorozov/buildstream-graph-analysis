@@ -665,10 +665,34 @@ TRACE_BUDGET_B = 4 * 1024 * 1024
 #: 16,832 that fixture draws, because that is the population the field
 #: report came from and the only evidence anybody has; it is not a
 #: prediction of what Perfetto can draw. Its job is to make the reader
-#: choose - `--planes 1` is a fourteenfold reduction on the same run -
-#: rather than to be right about a viewer this repository does not
-#: measure. `UX-445` is the item that would replace it with a
-#: measurement of the drawing cost itself.
+#: choose rather than to be right about a viewer this repository does
+#: not measure.
+#:
+#: `UX-445` went to replace it and could measure **half** of what it
+#: needed. What this repository emits is now a curve rather than a
+#: point - four process densities on the seeded scale run:
+#:
+#:     per element   tracks   slices     bytes   render s   --planes 1
+#:               1    3,610    2,406   138,489        0.3        1,205
+#:               4    7,216    6,012   240,398        0.6        1,205
+#:              12   16,832   15,628   491,397        1.4        1,205
+#:              24   31,256   30,052   865,529        2.5        1,205
+#:
+#: `tracks = 2,407 + 1,202 x per_element`, exactly, at all four - and
+#: Plane 1's own count does not move, so `--planes 1` is a 3.0x
+#: reduction at one process an element and **25.9x** at twenty-four.
+#: The narrowing control gets better where the reader needs it most.
+#: `test_the_identity_holds_at_another_density` holds that shape.
+#:
+#: What is still unmeasured is the half the number stands for: what
+#: **Perfetto** costs per track. That needs its UI in a browser, and
+#: the environment `UX-445` was worked in cannot reach it -
+#: `ui.perfetto.dev` answers `CONNECT tunnel failed, response 403`
+#: through the egress proxy, and no Perfetto package is on the one
+#: registry that is reachable. So the constant is **left where it
+#: was**: sizing it from an emitter curve would be a real number
+#: measuring a different thing, which is the §5 defect the item exists
+#: to prevent. `UX-445` stays open for a machine that can open the UI.
 TRACE_TRACK_BUDGET = 8_000
 
 

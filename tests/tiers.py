@@ -468,6 +468,11 @@ LARGE = (
 )
 
 MEDIUM = (
+    # `UX-436`, tiered on landing. One `gen-synthetic` run, two
+    # exports and one browser reading the computed appearance of every
+    # button on both - 1,591 of them on the scale page, which is where
+    # the fourth grade appears at all. 6.7s.
+    "tests/unit/test_every_control_has_a_resting_appearance.py",   #  6.7s
     # `UX-433`, tiered on landing. One `gen-synthetic` run and one
     # render of a 1,202-element two-plane snapshot, then the pivot
     # queries against a SQLite table. 1.6s.

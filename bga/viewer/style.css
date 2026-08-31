@@ -138,6 +138,49 @@ body {
   color: var(--fg); background: var(--bg);
 }
 
+/* `UX-436` (styleguide §6d): **every control has a resting
+   appearance, and this file states it.**
+
+   There was no base `button` rule. Controls were styled where a
+   section happened to need one, and the rest got the browser's
+   default - measured on the booted export of `macro_micro`, at
+   1440x900, before this: 429 buttons, 11 distinct computed looks,
+   and 52 of them on `rgb(239,239,239)` with a `2px outset` bevel.
+   That is the 1995 UA button inside a page that otherwise runs on a
+   declared token palette, and the "dull" of the field report.
+
+   Three grades, because three are what the page actually has:
+
+   - **standing** (this rule) - a control with a surface, for
+     something you press on purpose;
+   - **quiet** (`.control-quiet`) - an inline toggle beside a value it
+     must not compete with;
+   - **door** (`button.describe`) - `UX-317`'s circular `?`.
+
+   No transition and no shadow: §6a refuses motion and ornament on the
+   export constraint, and this item leaves that refusal standing. A
+   control that looks like the page it is in needs neither. */
+button {
+  font: inherit; font-size: .82rem; line-height: 1.35; cursor: pointer;
+  color: var(--fg); background: var(--muted-bg);
+  border: 1px solid var(--line); border-radius: 3px;
+  padding: .1rem .45rem;
+}
+button:hover { border-color: var(--accent); }
+/* `UX-257`'s focus states stay visible: the ring is the one place a
+   control may outrank the emphasis budget, because a reader who cannot
+   see focus cannot use a keyboard. */
+button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+/* The quiet grade. Every one of these is a toggle that sits inside or
+   beside something it annotates - a fold, a chapter, a JSON door - and
+   a surface on it would read as the page's next action. */
+button.collapse, button.fold-more, button.json-toggle, button.twin-toggle,
+button.focus-back, button.expand-table, button.chapter-open,
+.control-quiet {
+  background: transparent; color: var(--muted);
+}
+
 /* UX-254: two panes once there is room for two.
    `.toc` used to be a sticky block *inside* the reading column, which
    cost 573px twice over - once pushing every section down, and again
@@ -355,12 +398,11 @@ p.empty-population { margin: .35rem 0 0; color: var(--muted); max-width: 62ch; }
 .toc a[data-current] { font-weight: 600; color: var(--fg); }
 .toc a[data-current]::before { content: "\25b8\00a0"; }
 .toc-controls { margin: .5rem 0 0; display: flex; gap: .5rem; }
-.toc-controls button, button.collapse {
-  font: inherit; font-size: .82rem; cursor: pointer;
-  background: transparent; color: var(--muted);
-  border: 1px solid var(--line); border-radius: 3px; padding: .1rem .45rem;
-}
-button.collapse { border: none; margin-right: .4rem; padding: 0 .3rem; }
+.toc-controls button { background: transparent; color: var(--muted); }
+/* `UX-436`: it had `border: none`, which is the same "no resting
+   appearance" this item is about, one scale down - a control inside a
+   heading is still a control. */
+button.collapse { margin-right: .4rem; }
 button.collapse:hover { color: var(--fg); }
 
 #jump { font: inherit; font-size: .88rem; margin-top: .5rem;
@@ -370,9 +412,6 @@ button.collapse:hover { color: var(--fg); }
 .jump-hits { list-style: none; margin: .3rem 0 0; padding: 0;
              display: flex; flex-wrap: wrap; gap: .3rem; }
 .jump-hits button {
-  font: inherit; font-size: .82rem; cursor: pointer;
-  background: var(--bg); color: var(--fg);
-  border: 1px solid var(--line); border-radius: 3px; padding: .1rem .45rem;
 }
 
 /* UX-286: the chapters. A rule, a name and the space a heading earns -
@@ -432,12 +471,7 @@ p.chapter-answer {
   margin: .35rem 0 0; color: var(--muted); font-size: .95rem;
   max-width: 62ch;
 }
-button.chapter-open {
-  font: inherit; font-size: .8rem; cursor: pointer; margin-left: .6rem;
-  vertical-align: middle;
-  background: transparent; color: var(--muted);
-  border: 1px solid var(--line); border-radius: .35rem; padding: .1rem .5rem;
-}
+button.chapter-open { margin-left: .6rem; vertical-align: middle; }
 button.chapter-open:hover, button.chapter-open[aria-expanded="true"] {
   color: var(--fg); border-color: var(--fg);
 }
@@ -530,10 +564,9 @@ input.table-filter { max-width: 100%; }
 
 /* UX-204: the investigate button and the paste it leaves behind. */
 .investigate { margin: .5rem 0 .2rem; }
-.investigate button { font: inherit; font-size: .85rem; padding: .2rem .6rem;
-                      background: var(--panel); color: inherit;
-                      border: 1px solid var(--line); border-radius: 3px;
-                      cursor: pointer; }
+/* `UX-436`: standing grade, from the base rule. What was here was the
+   base rule written out by hand, at a different size. */
+.investigate button { }
 .investigate button:hover { border-color: var(--accent); }
 .investigate .handoff { margin-left: .6rem; font-size: .82rem; }
 .investigate .query { margin: .4rem 0 0; font-size: .8rem; }
@@ -554,10 +587,7 @@ h3.category { text-transform: capitalize; letter-spacing: .04em;
                    report stops scrolling sideways. */
                 min-width: min(12rem, 100%); max-width: 100%; }
 .table-tools .badge { font-size: .8rem; color: var(--muted); }
-.copy-rows { font: inherit; font-size: .8rem; padding: .15rem .5rem;
-             background: var(--panel); color: inherit;
-             border: 1px solid var(--line); border-radius: 3px;
-             cursor: pointer; }
+.copy-rows { }
 th .th-filter { display: block; width: 100%; margin-top: .2rem;
                 font: inherit; font-size: .75rem; font-weight: normal;
                 padding: .05rem .25rem; background: var(--bg); color: inherit;
@@ -578,10 +608,7 @@ th .th-filter.unparsed { border-color: var(--bad); border-style: dashed; }
 .path-box:hover { border-color: var(--accent); }
 .path-name { font-size: .82rem; overflow-wrap: anywhere; }
 .path-time { font-size: .78rem; color: var(--muted); }
-.path-more { align-self: center; font: inherit; font-size: .8rem;
-             padding: .2rem .5rem; background: var(--panel); color: inherit;
-             border: 1px dashed var(--line); border-radius: 3px;
-             cursor: pointer; }
+.path-more { align-self: center; }
 
 /* And the blast answer as an indented hierarchy - padding is the
    published depth. */
@@ -621,9 +648,7 @@ th .th-filter.unparsed { border-color: var(--bad); border-style: dashed; }
 .section-key { margin-left: .5rem; font-size: .8rem; font-weight: normal; }
 .inspect { margin-left: .35rem; text-decoration: none; opacity: .55; }
 .inspect:hover { opacity: 1; }
-.copy-sql { font: inherit; font-size: .78rem; padding: .1rem .45rem;
-            margin-top: .25rem; background: var(--panel); color: inherit;
-            border: 1px solid var(--line); border-radius: 3px; cursor: pointer; }
+.copy-sql { margin-top: .25rem; }
 /* UX-369: the query builder's one substitution. Inline with its label
    so it reads as a sentence the reader completes, not as a form. The
    select itself is a `.top-n`: the same control, drawn the same way. */
@@ -686,7 +711,8 @@ section[data-section][data-unfocused="true"] > h2 { opacity: 0.32; }
   background: var(--muted-bg);
 }
 .element-controls { display: flex; gap: 0.35rem; margin: 0.2rem 0 0.6rem; }
-.element-controls button { font-size: 0.85em; }
+/* `UX-436`: was `0.85em`, which resolved differently per parent. */
+.element-controls button { }
 
 /* UX-225: a mark annotates, it never hides. An element marked done is
    still ranked and still in the horizon - a ranking that quietly drops
@@ -754,11 +780,12 @@ main .map-table { display: block; }
    counted. One row, spanning the table, holding one control that says
    how many and out of how many. */
 tr.fold-row td { text-align: center; padding: .3rem 0; }
-button.fold-more {
-  font: inherit; font-size: .82rem; cursor: pointer;
-  background: transparent; color: var(--muted);
-  border: 1px dashed var(--line); border-radius: 3px;
-  padding: .1rem .6rem;
+/* `UX-436`: the **reveal** grade. Dashed rather than solid, because
+   these two show more of what is already on the page rather than
+   acting on it - and there are exactly two, so it is a grade rather
+   than one control's exception. */
+button.fold-more, .path-more {
+  background: transparent; color: var(--muted); border-style: dashed;
 }
 button.fold-more:hover { color: var(--fg); }
 
@@ -920,12 +947,7 @@ section > .table-tools { top: var(--head, 5.5rem); }
    site, and the only one the reader opens on purpose. Quiet in the
    heading (it is a debugging affordance, not a finding) and monospace
    when open, because what it shows is meant to be pasted. */
-button.json-toggle {
-  font: inherit; font-size: .74rem; cursor: pointer;
-  background: transparent; color: var(--muted);
-  border: 1px solid var(--line); border-radius: 3px;
-  padding: 0 .35rem; margin-left: .5rem; vertical-align: middle;
-}
+button.json-toggle { margin-left: .5rem; vertical-align: middle; }
 button.json-toggle:hover { color: var(--fg); }
 .section-json pre {
   margin: .5rem 0 0;
@@ -1042,11 +1064,7 @@ button.json-toggle:hover { color: var(--fg); }
    table is the same answer as rows - and it survives the export,
    because a toggle is DOM and needs no server (`UX-195`). */
 .draw-twin { margin: .3rem 0 0; }
-button.twin-toggle {
-  background: none; border: 1px solid var(--line); border-radius: 3px;
-  color: var(--muted); font-size: .75rem; cursor: pointer;
-  padding: .1rem .4rem;
-}
+button.twin-toggle { }
 button.twin-toggle:hover { color: var(--fg); }
 table.twin-table { margin-top: .3rem; font-size: .82rem; }
 table.twin-table td { font-variant-numeric: tabular-nums; }
@@ -1077,11 +1095,7 @@ p.run-advice {
   gap: .25rem;
   margin: .35rem 0 .6rem;
 }
-.toc-steps button {
-  flex: 1;
-  font-size: .85em;
-  padding: .2rem .3rem;
-}
+.toc-steps button { flex: 1; }
 
 /* `UX-397`: the Perfetto handoff, in the rail rather than in a header
    row that scrolls away unused. Narrow, so it wraps rather than
@@ -1099,8 +1113,4 @@ p.run-advice {
    that leave this page sit together. */
 .run-picker { margin: .4rem 0 .6rem; }
 .run-picker select { width: 100%; margin-top: .15rem; }
-.run-picker button {
-  margin-top: .25rem;
-  margin-right: .25rem;
-  font-size: .85em;
-}
+.run-picker button { margin-top: .25rem; margin-right: .25rem; }

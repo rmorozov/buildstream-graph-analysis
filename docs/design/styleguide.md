@@ -969,6 +969,47 @@ marker, never a tone: §4's emphasis budget is spent on findings, and
 orientation is not severity. `aria-current="location"` carries the same
 fact to a screen reader.
 
+## 6d. Every control has a resting appearance (round 70)
+
+`style.css` had **no base `button` rule**. Controls were styled where a
+section happened to need one and everything else got the browser's
+default. Counted over the booted export at 1440x900:
+
+| | before | after |
+|---|---|---|
+| buttons (`macro_micro`) | 429 | 429 |
+| distinct computed looks | 11 | 3 |
+| on the UA's beveled grey | 52 | 0 |
+| distinct looks at 1,202 elements | — | 4 |
+
+`2px outset` on `rgb(239,239,239)` is the 1995 UA button, inside a page
+that otherwise runs on a declared token palette. That is not a matter of
+taste: it is a control no rule in this repository has ever described.
+
+**The four grades**, keyed on the part of the appearance that carries
+them — background, border style, radius. A control is one of these or
+it is a defect, and
+`tests/unit/test_every_control_has_a_resting_appearance.py` reads them
+out of a real browser rather than out of this file.
+
+| grade | look | what it is for |
+|---|---|---|
+| **standing** | `--muted-bg`, solid, 3px | a control you press on purpose — copy, investigate, the rail's steps |
+| **quiet** | transparent, solid, 3px | an inline toggle beside something it must not compete with — a fold, a chapter, a JSON door |
+| **reveal** | transparent, **dashed**, 3px | shows more of what is already here rather than acting: `fold-more`, `path-more` |
+| **door** | transparent, solid, **50%** | `UX-317`'s circular `?` |
+
+`UX-436` asked for three. There are four, because **reveal** is a real
+distinction with exactly two members that now match each other, and
+deleting it to reach a number would be the number driving the design.
+
+Two things this section does **not** do. It spends nothing on motion or
+ornament: §6a refuses those on the export constraint and that refusal
+stands — zero transitions, zero shadows, both asserted. And it is not
+§4's emphasis budget, which bounds *tone* per block and says nothing
+about whether a control has a resting appearance at all; a button can be
+entirely un-emphasised and still not be the browser's.
+
 ## 2e. A ranked map is a table's question, not a fifth shape (round 65)
 
 §2d says the vocabulary grows *only where an existing shape cannot make

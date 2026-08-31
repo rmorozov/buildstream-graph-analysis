@@ -103,14 +103,15 @@ class TestTheRendererPublishesWhatItRendered:
         from tools import bga_view
 
         run = pages.two_plane_snapshot(tmp_path)
-        trace, planes, _losses = bga_view.trace_with_planes(str(run))
+        trace, planes, _losses, _tracks = bga_view.trace_with_planes(
+            str(run))
         assert trace, "the constructed two-plane snapshot renders nothing"
         assert planes == ["1", "2"], planes
 
     def test_a_plane_one_capture_renders_one(self):
         from tools import bga_view
 
-        trace, planes, _losses = bga_view.trace_with_planes(
+        trace, planes, _losses, _tracks = bga_view.trace_with_planes(
             str(pages.WITH_TIMELINE))
         assert trace, "the committed Plane 1 capture renders nothing"
         assert planes == ["1"], planes
@@ -121,9 +122,8 @@ class TestTheRendererPublishesWhatItRendered:
         from tools import bga_view
 
         for label, fixture in pages.FIXTURES.items():
-            trace, planes, losses = bga_view.trace_with_planes(str(fixture))
-            assert (trace, planes, losses) == (None, None, None), (
-                label, planes)
+            got = bga_view.trace_with_planes(str(fixture))
+            assert got == (None, None, None, None), (label, got)
 
 
 class TestTheAbsenceSentenceIsNotThePredicate:
@@ -143,7 +143,7 @@ class TestTheAbsenceSentenceIsNotThePredicate:
 
         run = pages.two_plane_snapshot(tmp_path)
         said = plane2.absence(str(run))
-        _, planes, _losses = bga_view.trace_with_planes(str(run))
+        _, planes, _losses, _tracks = bga_view.trace_with_planes(str(run))
         assert planes == ["1", "2"], planes
         assert said == plane2.NOT_CAPTURED, said
         # Both are right about their own question, which is the point:

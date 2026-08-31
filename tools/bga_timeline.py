@@ -1059,7 +1059,8 @@ def _plane1_offset_us(plane1_events, spans, anchor_element) -> float:
 
 
 def _write_trackevent(plane1_events, raw_log, spans, anchor_element, output,
-                      kinds=None, edges=(), snapshot=None, structure=None):
+                      kinds=None, edges=(), snapshot=None, structure=None,
+                      only_element=None):
     """The trace, packet by packet - nothing accumulates but the rows.
 
     Plane 1 is a handful of tasks and goes in first from the list the
@@ -1199,6 +1200,15 @@ def _write_trackevent(plane1_events, raw_log, spans, anchor_element, output,
             # `UX-309`: the exec chain needs each record's parent, which
             # is a lookup over the list the sort already materialized -
             # no second read of the log, and no second copy of it.
+            # `UX-430`: the narrowing, applied to the record list every
+            # other Plane 2 number is derived from - the lanes, the exec
+            # flows and the concurrency counter all fold from `records`,
+            # so filtering here keeps them consistent with each other
+            # rather than showing one element's lanes under the whole
+            # build's counter.
+            if only_element is not None:
+                records = [record for record in records
+                           if record.get("element") == only_element]
             plane2_flows, next_flow = _plane2_flows(records, next_flow)
             flow_count = next_flow - 1
             # `UX-310`: the series, folded from the records already in
@@ -1288,9 +1298,35 @@ def _write_trackevent(plane1_events, raw_log, spans, anchor_element, output,
                 "counter_peak": max((v for _t, v in series), default=None)}
 
 
+#: `UX-430`: what a caller may ask the timeline to leave out.
+#:
+#: The byte budget was the only bound the handoff had, and bytes are not
+#: what Perfetto spends - it draws a **row per track**. Measured on the
+#: seeded scale run (`bga gen-synthetic --seed 1`, 1,202 elements) with
+#: twelve processes an element:
+#:
+#: ```text
+#:                  measured      TRACE_BUDGET_B
+#:   trace bytes      486,165           4,194,304    11.6% of it
+#:   slices            15,628                   -
+#:   tracks            16,832                   -    more tracks than slices
+#:   counters           2,000                   -
+#: ```
+#:
+#: So a capture can sit at an eighth of its byte budget and still open a
+#: viewer with sixteen thousand rows in it. `PLANE1_ONLY` drops the
+#: process lanes, which is the whole of the growth: the same run renders
+#: 1,204 tracks that way. `only_element` keeps one element's, for the
+#: reader who already knows which element they are investigating.
+PLANES_BOTH = "both"
+PLANE1_ONLY = "1"
+PLANE_CHOICES = (PLANES_BOTH, PLANE1_ONLY)
+
+
 def render(snapshot: str, output: str,
            anchor_element: Optional[str] = None, quiet: bool = False,
-           fmt: str = FORMAT_TRACKEVENT) -> dict:
+           fmt: str = FORMAT_TRACKEVENT, planes: str = PLANES_BOTH,
+           only_element: Optional[str] = None) -> dict:
     """Write the timeline. Returns what went into it, for the caller to say.
 
     `quiet` for a caller rendering into a scratch path it will delete -
@@ -1326,6 +1362,16 @@ def render(snapshot: str, output: str,
             raise RuntimeError(f"rendering Plane 1 failed (exit {code})")
 
         raw = _raw_log(snapshot)
+        # `UX-430`: asked for Plane 1 alone, the raw log is simply not
+        # read - the same path a snapshot without one takes, so there is
+        # one shape of Plane-1-only trace rather than two.
+        narrowed = None
+        if planes == PLANE1_ONLY and raw is not None:
+            narrowed = ("Plane 1 only, because --planes 1 was asked for. "
+                        "The process lanes are what the track count grows "
+                        "with; this run's raw log is still beside the "
+                        "snapshot")
+            raw = None
         with open(plane1, "r", encoding="utf-8") as handle:
             plane1_events = json.load(handle)
         spans = element_spans(raw) if raw else {}
@@ -1336,10 +1382,15 @@ def render(snapshot: str, output: str,
                 plane1_events, raw if anchor else None, spans, anchor, output,
                 kinds=element_kinds(snapshot),
                 edges=dependency_edges(snapshot), snapshot=snapshot,
-                structure=element_structure(snapshot))
+                structure=element_structure(snapshot),
+                only_element=only_element)
             result = {"planes": ["1", "2"] if (raw and anchor) else ["1"],
                       "anchor": anchor, "raw_log": raw, "format": fmt}
             result.update(written)
+            if narrowed:
+                result["omitted"] = narrowed
+            if only_element:
+                result["only_element"] = only_element
             if raw and not anchor:
                 result["omitted"] = (
                     "the Plane 2 capture attributes no span to an element, so "
@@ -1476,6 +1527,19 @@ def describe(result: dict, output: str) -> str:
                      "Perfetto (https://ui.perfetto.dev), which reads this "
                      "format natively; `bga timeline --format chrome` writes "
                      "the legacy JSON for chrome://tracing.")
+        # `UX-430`: the track count is what the viewer spends, and the
+        # byte budget cannot see it - measured on the seeded scale run,
+        # 16,832 tracks in 486 KB, an eighth of the byte bound. So the
+        # narrowing that reduces it is named here rather than left for
+        # the reader to find in `--help` after the file will not open.
+        if result.get("only_element"):
+            lines.append(f"  Plane 2 narrowed to {result['only_element']}: "
+                         f"its lanes, its exec arrows and its share of the "
+                         f"counter, and no other element's.")
+        elif "2" in (result.get("planes") or ()):
+            lines.append("  `--planes 1` leaves the process lanes out and "
+                         "`--only-element` keeps one element's, if this is "
+                         "more rows than Perfetto will draw.")
     # `UX-431`: after the totals, whatever the graph's edges became. The
     # chrome format drops flows entirely (`UX-395`), so this is where a
     # reader who ran the default command is told - and it is printed on
@@ -1505,6 +1569,19 @@ def main(argv: Optional[List[str]] = None) -> int:
         help="Align the two planes on this element instead of the "
              "longest-running one Plane 2 traced.")
     parser.add_argument(
+        "--planes", default=PLANES_BOTH, choices=list(PLANE_CHOICES),
+        help="`both` (the default) draws Plane 1's element spans and "
+             "Plane 2's process lanes. `1` leaves the process lanes out - "
+             "Perfetto draws a row per track and the process lanes are "
+             "where the count grows, so this is what to reach for when a "
+             "big capture will not open (UX-430).")
+    parser.add_argument(
+        "--only-element", default=None, metavar="ELEMENT",
+        help="Keep Plane 2's lanes for this element alone. Its slices, its "
+             "exec-chain arrows and the concurrency counter all narrow "
+             "together, so the counter reads this element rather than the "
+             "whole build.")
+    parser.add_argument(
         "--format", default=FORMAT_TRACKEVENT, choices=list(FORMATS),
         help="`trackevent` (the default) writes Perfetto's own protobuf "
              "trace, gzipped and written as a stream, with the dependency "
@@ -1531,7 +1608,8 @@ def main(argv: Optional[List[str]] = None) -> int:
     output = args.output or os.path.join(snapshot, DEFAULT_OUTPUT[args.format])
     try:
         result = render(snapshot, output, anchor_element=args.anchor_element,
-                        fmt=args.format)
+                        fmt=args.format, planes=args.planes,
+                        only_element=args.only_element)
     except (FileNotFoundError, RuntimeError) as error:
         print(f"Error: {error}", file=sys.stderr)
         return 2

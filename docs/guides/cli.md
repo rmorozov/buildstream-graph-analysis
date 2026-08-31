@@ -547,6 +547,8 @@ need.
 bga timeline @last              # -> <snapshot>/timeline.perfetto-trace.gz
 bga timeline @last --format chrome          # -> <snapshot>/timeline.json
 bga timeline @last -o /tmp/t.gz --anchor-element components/openssl.bst
+bga timeline @last --planes 1               # no process lanes
+bga timeline @last --only-element core.bst  # one element's process lanes
 ```
 
 Plane 1's element schedule always; Plane 2's process lanes underneath it
@@ -566,6 +568,24 @@ disk 10,000 slices before the writer closes.
 and for a pipeline that already parses it. Both read the same two logs
 and align on the same anchor, so the choice is about what will open the
 file, not about what is in it.
+
+**When the trace is too big to open** (`UX-430`): Perfetto draws a row
+per track, and the process lanes are where that count grows — one per
+element plus one per traced pid. Measured on the seeded scale run
+(`bga gen-synthetic --seed 1`, 1,202 elements, twelve processes each):
+
+```text
+                  tracks   slices     bytes
+  both planes     16,832   15,628   486,167
+  --planes 1       1,205    1,204    72,080
+  --only-element   1,219    1,216    73,017
+```
+
+`--planes 1` leaves the process lanes out; `--only-element` keeps one
+element's, and narrows its exec arrows and the concurrency counter with
+them, so the lanes and the counter agree about what is being shown. The
+byte size never noticed: 486 KB is an eighth of the 4 MiB the handoff
+bounds transfer at.
 
 The two planes are aligned on one element that appears in both; without
 `--anchor-element` that is the longest-running element **both planes

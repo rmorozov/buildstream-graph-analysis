@@ -169,6 +169,69 @@ def scale_run(into) -> pathlib.Path:
     return run
 
 
+def scale_two_plane_snapshot(into, per_element=12) -> pathlib.Path:
+    """`UX-430`: the scale run, wrapped as a two-plane **snapshot**.
+
+    `scale_run` gives 1,202 elements as a run directory; a timeline needs
+    the snapshot around it - the wrapped BuildStream log Plane 1 is read
+    from, and the raw Plane 2 log the merge reads. Both are generated
+    from the run's own `graph.json`, so the populations agree with the
+    analysis rather than being invented beside it.
+
+    `per_element` processes per element, because the track count is what
+    `UX-430` is about and it rises with the process population: one
+    process track per element and one thread track per traced pid
+    (`_write_trackevent`). Twelve is a plausible compile job - a shell
+    and eleven children - and the caller can ask for another number,
+    which is what makes the bound measurable rather than asserted.
+
+    Returns the **snapshot**, not the run: `bga timeline` takes it.
+    """
+    import gzip
+    import json
+
+    run = scale_run(into)
+    snapshot = pathlib.Path(into) / "20260821T120000Z"
+    snapshot.mkdir(parents=True, exist_ok=True)
+    shutil.copytree(run, snapshot / "run", dirs_exist_ok=True)
+    with open(snapshot / "run" / "graph.json", encoding="utf-8") as handle:
+        elements = [row["uid"] for row in json.load(handle)["elements"]]
+
+    def stamp(seconds):
+        whole = int(seconds)
+        return (f"2026-08-21 12:{whole // 60:02d}:{whole % 60:02d},"
+                f"{int((seconds - whole) * 1000):03d}")
+
+    lines = [f"[wrapper][{stamp(0)}] INFO: Executing command: bst build "
+             f"all.bst"]
+    raw, pid = [], 100
+    for index, uid in enumerate(elements):
+        # One second each, laid end to end. The *shape* of the timeline
+        # is not what this fixture is for - the population is.
+        start, end = 1.0 + index, 1.9 + index
+        digest = f"{index:08x}"
+        lines.append(f"[wrapper][{stamp(start)}] INFO: [00:00:00][{digest}]"
+                     f"[   build:{uid}] START Building")
+        lines.append(f"[wrapper][{stamp(end)}] INFO: [00:00:00][{digest}]"
+                     f"[   build:{uid}] SUCCESS Building")
+        for child in range(per_element):
+            pid += 1
+            began = 1000.0 + index + child / 100.0
+            raw.append(f"START pid={pid} ppid=1 ts={began:.6f} element={uid} "
+                       f"inv=inv-{index} src=spine cmd=cc -c f{child}.c\n")
+            raw.append(f"END pid={pid} ppid=1 ts={began + 0.05:.6f} "
+                       f"element={uid} inv=inv-{index} src=spine exit=0 "
+                       f"utime=0.01 stime=0.01 maxrss_kb=1024 "
+                       f"cmd=cc -c f{child}.c\n")
+    lines.append(f"[wrapper][{stamp(2.0 + len(elements))}] INFO: Return "
+                 f"code: 0")
+    (snapshot / "build.log").write_text("\n".join(lines) + "\n",
+                                        encoding="utf-8")
+    with gzip.open(snapshot / "plane2.log.gz", "wt", encoding="utf-8") as out:
+        out.write("".join(raw))
+    return snapshot
+
+
 def snapshot_copy(fixture, into) -> pathlib.Path:
     """Copy the fixture's whole **snapshot** and return the run inside it.
 

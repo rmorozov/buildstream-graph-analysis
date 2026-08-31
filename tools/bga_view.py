@@ -484,7 +484,7 @@ def trace_bytes(run: str) -> Optional[bytes]:
 
 
 def trace_with_planes(run: str):
-    """`(bytes, planes, flow_losses)` - and what the edges became.
+    """`(bytes, planes, flow_losses, tracks)` - and what it will draw.
 
     `UX-364`. `trace_bytes` is the same call with the rest dropped; the
     export wants all of it, because the section that pitches the handoff
@@ -495,17 +495,21 @@ def trace_with_planes(run: str):
     arrows on a mostly-cached build and used to say nothing about it,
     which reads as "your graph has no edges" rather than "nothing in
     this run was built".
+
+    `UX-430` adds the fourth: the **track** count, which is what Perfetto
+    spends and what `TRACE_BUDGET_B` cannot see. See `TRACE_TRACK_BUDGET`
+    for the measurement.
     """
     scratch = tempfile.mkdtemp(prefix="bga-view-")
     try:
         rendered = trace_render(run, os.path.join(scratch, "timeline.json.gz"))
         if rendered is None:
-            return None, None, None
+            return None, None, None, None
         with open(rendered["path"], "rb") as handle:
             return (handle.read(), list(rendered.get("planes") or []),
-                    rendered.get("flow_losses"))
+                    rendered.get("flow_losses"), rendered.get("tracks"))
     except OSError:
-        return None, None, None
+        return None, None, None, None
     finally:
         shutil.rmtree(scratch, ignore_errors=True)
 
@@ -606,6 +610,43 @@ EXPORT_BUDGET_B = 8 * 1024 * 1024
 # end - comfortable. It is also the number a mail client will still
 # take, which is the export half of the same constant.
 TRACE_BUDGET_B = 4 * 1024 * 1024
+
+#: `UX-430`: the bound in the unit the **consumer** spends.
+#:
+#: `TRACE_BUDGET_B` above bounds transfer, and it bounds it correctly.
+#: Perfetto does not draw bytes; it draws a **row per track**, and
+#: `_write_trackevent` opens one process track per element and one
+#: thread track per traced pid - so the track count rises with the
+#: process population, which is what a build worth tracing has a lot of.
+#:
+#: Measured on the seeded scale run, `bga gen-synthetic --seed 1` at
+#: 1,202 elements with twelve processes an element
+#: (`tests/pages.py::scale_two_plane_snapshot`):
+#:
+#: ```text
+#:                       tracks   slices     bytes   share of TRACE_BUDGET_B
+#:   both planes         16,832   15,628   486,167   11.6%
+#:   --planes 1           1,205    1,204    72,080    1.7%
+#:   --only-element       1,219    1,216    73,017    1.7%
+#: ```
+#:
+#: **More tracks than slices, at an eighth of the byte bound.** Scaled
+#: from that measurement, the byte bound first bites at roughly 145,000
+#: tracks - nine times the population a field report already described
+#: as freezing the UI. The one number `bga` had could not see the
+#: quantity that decides whether the handoff opens at all, which is the
+#: fixing guide's §5 on the design side: a real number, honestly
+#: reported, measuring a different thing.
+#:
+#: **This bound is one sample, and says so.** It is sized under the
+#: 16,832 that fixture draws, because that is the population the field
+#: report came from and the only evidence anybody has; it is not a
+#: prediction of what Perfetto can draw. Its job is to make the reader
+#: choose - `--planes 1` is a fourteenfold reduction on the same run -
+#: rather than to be right about a viewer this repository does not
+#: measure. `UX-445` is the item that would replace it with a
+#: measurement of the drawing cost itself.
+TRACE_TRACK_BUDGET = 8_000
 
 
 # One relative `import` statement, however its specifier list is
@@ -882,8 +923,8 @@ def export(run: str, path: str, with_trace: bool = True) -> dict:
                         # that gets tested on one side only.
                         "payloads": _offered(documents)}
 
-    trace, trace_planes, flow_losses = (trace_with_planes(run) if with_trace
-                                        else (None, None, None))
+    trace, trace_planes, flow_losses, trace_tracks = (
+        trace_with_planes(run) if with_trace else (None, None, None, None))
     omitted = None
     if trace is None:
         # UX-329: which absence, from `bga.plane2` - the same sentence
@@ -896,14 +937,29 @@ def export(run: str, path: str, with_trace: bool = True) -> dict:
         omitted = plane2_shape.absence(run) or (
             "this run kept no raw Plane 2 log, so there is no timeline "
             "to carry")
-    elif len(trace) * 4 / 3 > TRACE_BUDGET_B:
-        omitted = (f"the timeline is {len(trace) / 1048576:.1f} MiB "
-                   f"compressed, over this export's "
-                   f"{TRACE_BUDGET_B / 1048576:.0f} MiB ceiling for it")
+    else:
+        # Two bounds, each named in its own unit. `UX-299` set the byte
+        # one; `UX-430` added the track one, because Perfetto draws a row
+        # per track and a capture can sit at an eighth of the byte bound
+        # with sixteen thousand rows in it. A refusal reading "4 MiB"
+        # when the problem is the rows sends the reader to compress
+        # something that is not the cost.
+        if len(trace) * 4 / 3 > TRACE_BUDGET_B:
+            omitted = (f"the timeline is {len(trace) / 1048576:.1f} MiB "
+                       f"compressed, over this export's "
+                       f"{TRACE_BUDGET_B / 1048576:.0f} MiB ceiling for it")
+        elif (trace_tracks or 0) > TRACE_TRACK_BUDGET:
+            omitted = (f"the timeline draws {trace_tracks:,} tracks, over "
+                       f"this export's {TRACE_TRACK_BUDGET:,}-track "
+                       f"ceiling - Perfetto draws a row per track, and the "
+                       f"byte size ({len(trace) / 1048576:.1f} MiB) is well "
+                       f"inside its own ceiling")
+    if omitted and trace is not None:
         # UX-299: and what to do instead, because "the timeline is not
         # in this file" is a dead end without it. The blast box's
         # honesty pattern: name the command that produces what the page
-        # cannot carry.
+        # cannot carry - and, since `UX-430`, the two flags that make it
+        # smaller in the unit that was actually exceeded.
         documents["run"]["timeline_recipe"] = {
             "command": f"bga view {os.path.dirname(os.path.abspath(run))} "
                        f"--perfetto",
@@ -911,7 +967,10 @@ def export(run: str, path: str, with_trace: bool = True) -> dict:
                     "Perfetto over a deep link, which streams it from the "
                     "server instead of copying it through the page. "
                     "`bga timeline` writes the same trace to a file if "
-                    "you would rather open it yourself.",
+                    "you would rather open it yourself, and "
+                    "`--planes 1` or `--only-element ELEMENT` write a "
+                    "smaller one: the process lanes are where the track "
+                    "count grows.",
         }
         trace = None
     documents["run"]["has_timeline"] = trace is not None

@@ -150,3 +150,67 @@ class TestNoCheckPinsAContractTheToolMoved:
 
 if __name__ == "__main__":  # pragma: no cover
     raise SystemExit(pytest.main([__file__, "-v"]))
+
+
+# `UX-450` found the same shape one field over. The packaging step
+# fetches a viewer module from the installed wheel and greps it for a
+# symbol, to prove the asset arrived whole. That symbol is a **pin on
+# where the code lives**, and round 71 moved `renderSection` out of
+# `app.js` into `sections.js` - so the step went red for a marker that
+# had moved, in the one file the suite does not scan, twice.
+#
+# The clause below derives the pairs from the workflow itself rather
+# than listing them, so a step that starts grepping a third module is
+# covered without an edit here.
+_VIEWER_GREP = re.compile(
+    r'^\s*grep -q "([^"]+)" /tmp/([A-Za-z_]+)\.js\s*$', re.M)
+
+
+def _viewer_greps():
+    """`[(pattern, module)]` the packaging step asserts on a viewer file."""
+    text = (REPO / ".github/workflows/ci.yml").read_text(encoding="utf-8")
+    return _VIEWER_GREP.findall(text)
+
+
+def test_the_packaging_step_greps_a_symbol_the_module_still_has():
+    """The marker has to be in the module the step fetches.
+
+    `grep -q "renderSection" /tmp/app.js` was true for rounds and then
+    silently was not, because the symbol moved and nothing here
+    compared the two. This is that comparison.
+    """
+    pairs = _viewer_greps()
+    assert pairs, (
+        "the packaging step no longer greps a viewer module, so this "
+        "guard is watching a door that is gone - delete it or point it "
+        "at what replaced it")
+    missing = []
+    for pattern, module in pairs:
+        source = REPO / "bga/viewer" / f"{module}.js"
+        if not source.is_file():
+            missing.append(f"{module}.js is not a viewer module at all")
+            continue
+        text = source.read_text(encoding="utf-8")
+        # The step's patterns are `a\|b` alternations; any one hit is
+        # what `grep -q` needs, so any one hit is what this needs.
+        if not any(part and part in text for part in pattern.split("\\|")):
+            missing.append(
+                f"{pattern!r} is grepped in /tmp/{module}.js and appears "
+                f"nowhere in bga/viewer/{module}.js")
+    assert missing == [], (
+        "the packaging job greps the installed wheel for a symbol that "
+        "has moved or been renamed. It will go red in CI and nowhere "
+        "else, which is what UX-450 spent a round-trip on:\n  "
+        + "\n  ".join(missing))
+
+
+def test_every_viewer_module_the_step_fetches_is_also_served():
+    """A marker in a module `bga view` does not serve is a step that
+    cannot pass: the `curl` fails before the grep runs."""
+    from tools.bga_view import ASSETS
+
+    unserved = sorted({f"{module}.js" for _pattern, module in _viewer_greps()
+                       if f"{module}.js" not in ASSETS})
+    assert unserved == [], (
+        f"the packaging step fetches {unserved} from the served viewer, "
+        f"and tools/bga_view.py's ASSETS does not offer it")

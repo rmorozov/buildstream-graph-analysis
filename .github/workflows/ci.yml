@@ -326,14 +326,25 @@ jobs:
             exit 1
           fi
           echo "serving at $URL"
-          # The page, one asset and the payload - an asset is the half
+          # The page, two assets and the payload - an asset is the half
           # that package-data governs, and the payload is the half that
           # the imports govern.
-          curl -fsS "${URL}index.html"  > /tmp/index.html
-          curl -fsS "${URL}app.js"      > /tmp/app.js
-          curl -fsS "${URL}report.json" > /tmp/report.json
+          #
+          # `UX-450` is why there are two. This step fetched `app.js`
+          # alone and grepped it for `renderSection`, which that item
+          # moved to `sections.js` when `app.js` hit `UX-337`'s
+          # 1,500-line ceiling - so the step went red for a marker that
+          # had moved, in the one file the suite does not scan. The
+          # markers below are each grepped in the module that owns
+          # them, and a second asset is fetched because the entry
+          # module alone no longer proves the viewer arrived whole.
+          curl -fsS "${URL}index.html"    > /tmp/index.html
+          curl -fsS "${URL}app.js"        > /tmp/app.js
+          curl -fsS "${URL}sections.js"   > /tmp/sections.js
+          curl -fsS "${URL}report.json"   > /tmp/report.json
           grep -q "bga-report\|id=\"report\"" /tmp/index.html
-          grep -q "renderSection\|bga:quantity" /tmp/app.js
+          grep -q "async function boot" /tmp/app.js
+          grep -q "export function renderSection" /tmp/sections.js
           # UX-293: the expected contract is *read from the tree*, not
           # pinned here. This step asserted the contract literally and
           # went red the moment `UX-288` bumped it - a check failing

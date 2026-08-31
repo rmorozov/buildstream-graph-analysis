@@ -472,9 +472,27 @@ LARGE = (
     # cost is the whole point of the item - a budget that never met the
     # page is cheaper and worth nothing.
     "tests/unit/test_the_page_has_a_volume_budget.py",                #   22.3s
+    # `UX-455`. Listed medium at 13.5s when `UX-394` wrote it - a
+    # three-snapshot store, served, four browser boots and one export.
+    # Nothing since has been *about* it; it is the browser boots that
+    # have grown under it. Re-measured alone in one process, three
+    # runs: 18.30 / 18.33 / 18.28s, so it is past the 15.0s large floor
+    # by three seconds rather than by a hair.
+    "tests/unit/test_the_page_moves_between_runs.py",                #   18.3s
 )
 
 MEDIUM = (
+    # `UX-455`, tiered on landing, and it earned the tier the way the
+    # item is about: one clause runs the confirmation for real, which
+    # is a pytest subprocess over another file. Three single-process
+    # runs: 1.10 / 1.07 / 1.08s.
+    "tests/unit/test_a_candidate_is_confirmed_alone.py",            # 1.1s
+    # `UX-455`. Was in the default tier and never listed. Re-measured
+    # alone in one process, three runs: 1.35 / 1.34 / 1.37s, over the
+    # 1.0s medium floor on every one. It renders every documented
+    # command and parses each back, which is a subprocess per command
+    # rather than anything a browser does.
+    "tests/unit/test_a_command_renders_as_a_command.py",            # 1.4s
     # `UX-443`, tiered on landing. Two real servers on a socket and
     # two full trace renders over a committed capture. 2.8s.
     "tests/unit/test_the_served_handoff_counts_its_edges.py",       # 2.8s
@@ -692,9 +710,6 @@ MEDIUM = (
     # `UX-397`: two browser boots - the export scrolled to its end and
     # a served two-plane snapshot where the button is drawn. 4.6s.
     "tests/unit/test_the_handoff_rides_the_rail.py",                 #    4.6s
-    # `UX-394`: builds a three-snapshot store, serves it and boots a
-    # browser four times, plus one export. 13.5s.
-    "tests/unit/test_the_page_moves_between_runs.py",                #   13.5s
     # `UX-400`: one `analyze` subprocess and one node sweep that renders
     # ten populations at three sizes each - the subprocess is all of it.
     "tests/unit/test_every_population_at_zero_one_and_many.py",      #    1.3s

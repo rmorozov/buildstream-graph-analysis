@@ -152,12 +152,38 @@ class TestItFailsNamingTheFile:
 
     def test_the_message_carries_the_name_and_the_seconds(self, tmp_path,
                                                           capsys):
+        """`--no-confirm`, because the seconds here are fabricated.
+
+        `UX-455` made the floors branch re-run each accused file by
+        itself before reporting it - the report it parses is `-n auto`
+        and the floors are single-process. This clause is about the
+        *message*, and its 51.0s is a number written into a synthetic
+        junit document for a file that really costs hundredths. The
+        confirmation correctly clears it, which is the flag's whole
+        reason for existing: read what the parallel report alone said.
+        The clause below it, and
+        `tests/unit/test_a_candidate_is_confirmed_alone.py`, are where
+        the confirmation itself is exercised.
+        """
         report = _report(tmp_path, {**tiers.recorded(), SMALL_FILE: 51.0})
-        assert drift.main([str(report)]) == 1
+        assert drift.main([str(report), "--no-confirm"]) == 1
         said = capsys.readouterr().err
         assert SMALL_FILE in said, said
         assert "51.0s" in said, said
         assert "listed small, measured large" in said, said
+
+    def test_the_same_report_confirmed_clears_it(self, tmp_path, capsys):
+        """And the other half, so `--no-confirm` is not a way past the
+        gate that nothing notices. The same fabricated 51.0s, run
+        through the shipped path, comes back cleared and *said so* -
+        exit 0, with the file named on stderr as over a floor in the
+        parallel report and under it alone."""
+        report = _report(tmp_path, {**tiers.recorded(), SMALL_FILE: 51.0})
+        assert drift.main([str(report)]) == 0
+        said = capsys.readouterr().err
+        assert SMALL_FILE in said, said
+        assert "51.0s under -n auto" in said, said
+        assert "alone" in said, said
 
     def test_a_file_inside_its_tier_is_not_named(self, tmp_path):
         report = _report(tmp_path, {SMALL_FILE: tiers.MEDIUM_FLOOR_S - 0.1})

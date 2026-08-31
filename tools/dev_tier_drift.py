@@ -79,9 +79,12 @@ Run it after a full run, which `make test-tiers` does in one command:
 import argparse
 import collections
 import json
+import os
 import pathlib
 import statistics
+import subprocess
 import sys
+import tempfile
 import xml.etree.ElementTree as ET
 
 REPO = pathlib.Path(__file__).resolve().parents[1]
@@ -350,6 +353,96 @@ def drift(times):
         if RANK[now] > RANK[was]:
             found.append((name, seconds, was, now))
     return sorted(found, key=lambda row: -row[1])
+
+
+#: `UX-455`: how a candidate is re-measured before it is reported.
+#:
+#: The floors in `tests/tiers.py` are seconds a file costs with nothing
+#: else on the CPU. The report this tool parses is a `-n auto` run. For
+#: most files those are the same number - measured over the 145 files
+#: whose `tiers.py` comment records their seconds, the median
+#: parallel/recorded ratio on an unchanged tree is **1.010** (q1 0.916,
+#: q3 1.099), so there is no factor to divide out and nothing to widen.
+#:
+#: For some files they are not. `test_the_agent_configuration_holds.py`
+#: measured **0.72s** alone (three runs, 0.72/0.73/0.72) and **1.31s**
+#: in the same parallel run - a ratio of 1.82, outside that q3 - and
+#: 1.0 is the medium floor, so the parse named a file nobody should
+#: move. Round 71 met that as one of three rows in a red
+#: `make test-tiers`, and a parse that reports a file nobody should
+#: move is a parse people learn to skim.
+#:
+#: So a candidate is re-measured **alone, in one process** before it is
+#: reported. That is the quantity the floors are in, and it is an upper
+#: bound on the file's cost inside a single-process suite - a file run
+#: alone pays all of its own imports. For a gate that only reports
+#: files as *too slow*, an upper bound is the conservative direction:
+#: a candidate the confirmation clears is under the floor in the
+#: stricter reading too.
+#:
+#: It costs a re-run of the named files only, which is normally none
+#: and was 21s on the run that found this. `--no-confirm` skips it, for
+#: reading what the parallel report alone said.
+CONFIRM_TIMEOUT_S = 600
+
+
+def confirm(rows, python=None):
+    """`(kept, cleared)` - candidates re-measured alone, single process.
+
+    `cleared` is `[(file, parallel_seconds, alone_seconds)]`, reported
+    rather than dropped silently: a file the parallel run accused and
+    the confirmation cleared is exactly what `UX-455` was filed on, and
+    a reader who is told nothing learns nothing about their own runner.
+    """
+    kept, cleared = [], []
+    for row in rows:
+        name, seconds, was, _now = row
+        alone = alone_seconds(name, python)
+        if alone is None:                                # pragma: no cover
+            kept.append(row)                             # cannot confirm
+            continue
+        if RANK[tier_for(alone)] > RANK[was]:
+            kept.append((name, alone, was, tier_for(alone)))
+        else:
+            cleared.append((name, seconds, alone))
+    return kept, cleared
+
+
+def alone_seconds(name, python=None):
+    """One file's setup+call+teardown, run by itself in one process.
+
+    `None` when the run could not be made - a missing file, a pytest
+    that would not start. The caller keeps such a row rather than
+    dropping it: a confirmation that did not happen is not a clearance.
+    """
+    with tempfile.TemporaryDirectory() as scratch:
+        report = pathlib.Path(scratch) / "alone.xml"
+        environment = dict(os.environ, PYTEST_XDIST="")
+        try:
+            done = subprocess.run(
+                [python or sys.executable, "-m", "pytest", name, "-q", "-p",
+                 "no:xdist", f"--junitxml={report}"],
+                cwd=str(REPO), env=environment, capture_output=True,
+                timeout=CONFIRM_TIMEOUT_S)
+        except (OSError, subprocess.SubprocessError):    # pragma: no cover
+            return None
+        # Only pytest's "tests ran" codes carry a measurement: 0 all
+        # passed, 1 some failed - both mean the bodies executed and were
+        # timed. 5 is *collected nothing*, 4 a usage error, and both of
+        # those still write a junit document, an empty one that sums to
+        # 0.0s. Read as a measurement that would clear every candidate
+        # the re-run could not reach, which is a confirmation that
+        # confirms by failing.
+        if done.returncode not in (0, 1):
+            return None
+        if not report.is_file():                         # pragma: no cover
+            return None
+        try:
+            root = ET.parse(report).getroot()
+        except ET.ParseError:                            # pragma: no cover
+            return None
+    return sum(float(case.get("time") or 0.0)
+               for case in root.iter("testcase"))
 
 
 def spread(times, reference):
@@ -669,6 +762,11 @@ def main(argv=None):
                              f"the {CI_CANDIDATE_JOB} job; that is "
                              "what to commit, because a local run writes "
                              "this machine's clock and not CI's")
+    parser.add_argument("--no-confirm", action="store_true",
+                        help="report what the parallel report said, "
+                             "without re-running each named file alone "
+                             "to check it against the floors' own "
+                             "quantity (UX-455)")
     parser.add_argument("--against", metavar="PATH", nargs="?",
                         const=str(CI_REFERENCE),
                         help="check against a CI reference rather than "
@@ -709,6 +807,22 @@ def main(argv=None):
     found = drift(times)
     line = (f"{len(times)} file(s) measured against the declared floors "
             f"(medium {tiers.MEDIUM_FLOOR_S}s, large {tiers.LARGE_FLOOR_S}s)")
+    cleared = []
+    if found and not args.no_confirm:
+        # `UX-455`. The report above is a `-n auto` run and the floors
+        # are single-process seconds; for most files those agree, and
+        # for some they do not. Only the accused are re-run, so this
+        # costs nothing on a green tree.
+        found, cleared = confirm(found)
+    if cleared:
+        # Printed on a green run too. A file the parallel report accused
+        # and the confirmation cleared is the finding `UX-455` was filed
+        # on, and it is about the reader's runner rather than their diff.
+        print(f"{len(cleared)} file(s) over a floor in the parallel report "
+              f"and under it measured alone - not drift:", file=sys.stderr)
+        for name, parallel, alone in cleared:
+            print(f"  {name}  {parallel:.1f}s under -n auto, "
+                  f"{alone:.1f}s alone", file=sys.stderr)
     if not found:
         if not args.quiet:
             print(f"tiers ok: {line}")
@@ -717,13 +831,14 @@ def main(argv=None):
     print(f"{len(found)} file(s) measured above the tier tests/tiers.py "
           f"lists them in:", file=sys.stderr)
     for name, seconds, was, now in found:
-        print(f"  {name}  {seconds:.1f}s  listed {was}, measured {now}",
+        print(f"  {name}  {seconds:.1f}s  listed {was}, measured {now}"
+              + ("" if args.no_confirm else " (alone, single process)"),
               file=sys.stderr)
-    print("\nRe-measure each and move it in tests/tiers.py with its "
-          "seconds, or make it faster. The floors are the authority; this "
-          "only reads them - and it reads them against a report from this "
-          "machine, which is the only report they mean anything about.",
-          file=sys.stderr)
+    print("\nMove each in tests/tiers.py with the seconds above, or make "
+          "it faster. The seconds are already the quantity the floors are "
+          "in - each named file was re-run by itself in one process, "
+          "because the report this parsed is a `-n auto` run and the "
+          "floors are not (UX-455).", file=sys.stderr)
     return 1
 
 

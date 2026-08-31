@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-454 scenarios: **4 open**, 450 closed.
+454 scenarios: **3 open**, 451 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -26,7 +26,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | viewer | 0 | 134 |
 | cli | 0 | 5 |
 | store | 2 | 28 |
-| docs | 1 | 40 |
+| docs | 0 | 40 |
 | guards | 1 | 70 |
 
 ## Open scenarios
@@ -38,7 +38,6 @@ task file, which is the only place it ever lived twice.
 |---|---|---|---|---|---|
 | UX-92 | [cache effectiveness — hits, misses, churn, trends — is invisible to the tool](UX-0092-cache-effectiveness-is-invisible-to-the-tool.md) | store | Medium | — | 🟡 |
 | UX-96 | [the baseline set exists, but assembling it is a scavenger hunt](UX-0096-the-baseline-set-exists-but-assembling-it-is-a-scavenger-hunt.md) | store | Medium | — | 🟡 |
-| UX-447 | [the reference-refresh route is in no contributor document](UX-0447-the-reference-refresh-route-is-in-no-contributor-document.md) | docs | Medium | the contributor whose PR the drift gate stops, who is told to re-record and not where from | 🔴 |
 | UX-455 | [two files have grown past the tier they are listed in](UX-0455-two-files-drift-past-their-tier-and-the-parse-is-red.md) | guards | Low | the contributor whose `make test-medium` quietly costs a minute more than the tier says | 🔴 |
 
 ## UX-398..UX-410: the sixty-fourth round — the walk that judged the answers (2026-08-29)

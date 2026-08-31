@@ -48,7 +48,23 @@ import pytest
 REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 
+from bga.findings import CHAIN_BOUND_RATIO                      # noqa: E402
+
 EXAMPLE = REPO / "examples/06-macro-micro-optimization"
+
+#: `UX-456`: how chain-dominated this fixture's cold build has to stay,
+#: as against `CHAIN_BOUND_RATIO`, which is what the *verdict* turns on
+#: and is not a thing a guard can assert of a measured build. Twenty
+#: cold builds of `examples/06` on one machine:
+#:
+#: ```text
+#: n=20   min 0.853143   median 0.859264   max 0.916457
+#: below the 0.9 line: 19 of 20
+#: ```
+#:
+#: plus CI's two lowest, 0.888 and 0.897. 0.75 sits 0.103 under the
+#: lowest of those twenty-two and 1.6 whole observed ranges below it.
+CHAIN_BOUND_FLOOR = 0.75
 
 node = shutil.which("node")
 
@@ -211,10 +227,82 @@ class TestTheJourneyRuns:
 class TestTheMacroAnswer:
     """1 and 2 of the answer key: the chain, and the edge nobody reads."""
 
-    def test_the_headline_names_the_chain(self, cold):
+    def test_the_headline_follows_its_own_published_numbers(self, cold):
+        """`UX-456`. This clause used to read
+
+            assert headline["diagnosis"] == "chain_bound"
+
+        which asserts which side of `CHAIN_BOUND_RATIO` a **measured**
+        `bst build` landed on. It went red twice in round 71, on heads
+        whose diffs could not have moved it:
+
+            ea122e5   chain_share 0.897052541648868   -> scheduler_bound
+            799b144   chain_share 0.888022115348203   -> scheduler_bound
+
+        and twenty cold builds of this same fixture, measured for the
+        item, say the clause was not near the line at all - it was on
+        the wrong side of it and passing on load:
+
+            n=20   min 0.853143   median 0.859264   max 0.916457
+            below the 0.9 line: 19 of 20
+
+        Nineteen. What kept it green was the runner: CI's two
+        excursions are *higher* than this machine's median, so the
+        share moves with the load rather than with the build. That is
+        the fixing guide's "ratio at the noise floor" in a guard rather
+        than an instrument, and worse than the filing supposed.
+
+        What is asserted instead is the **rule**, which is a function of
+        two numbers the headline publishes and cannot be decided by a
+        runner: the verdict follows the share against the line, whatever
+        the build did. `test_the_first_screen_is_a_decision.py` is where
+        the two branches are held against fixtures whose numbers are
+        fixed - the golden run at 0.875 and `examples/06` at 0.936 - so
+        moving this clause off the threshold loses no coverage of the
+        classification itself.
+        """
         headline = cold["headline"]
-        assert headline["diagnosis"] == "chain_bound", headline
-        assert "chain" in headline["sentence"], headline["sentence"]
+        share, line = headline["chain_share"], headline["chain_bound_share"]
+        assert share is not None, headline
+        assert line == CHAIN_BOUND_RATIO, headline
+        expected = "chain_bound" if share >= line else "scheduler_bound"
+        assert headline["diagnosis"] == expected, headline
+
+    def test_the_headline_sentence_carries_the_share_it_decided_on(
+            self, cold):
+        """`UX-220`'s rule on the same field, and side-independent: both
+        sentences quote the measured share and the line, so a reader can
+        see how close this run sat without re-deriving anything."""
+        headline = cold["headline"]
+        said = headline["sentence"]
+        assert f"{headline['chain_share']:.0%}" in said, said
+        assert f"{CHAIN_BOUND_RATIO:.0%}" in said, said
+        assert "chain" in said, said
+
+    def test_the_fixture_is_still_a_chain_dominated_build(self, cold):
+        """What the answer key actually needs from this build, stated
+        with room the runner cannot cross.
+
+        The chain share is *the* property `examples/06` exists to have -
+        an answer key drawn on a build whose critical path was a third
+        of wall-clock would be answering a different question - so it
+        has to be asserted, and asserting nothing about it would make
+        the clause above satisfiable by any build at all.
+
+        `CHAIN_BOUND_FLOOR` is sized from the measurement rather than
+        chosen: twenty cold builds spanned **0.853 to 0.916**, a range
+        of 0.063, and CI's two lowest were 0.888 and 0.897. 0.75 is
+        0.103 below the lowest of the twenty-two - about 1.6 times the
+        whole observed range - so a loaded runner cannot reach it and a
+        round that really does drain the chain still will.
+        """
+        share = cold["headline"]["chain_share"]
+        assert share >= CHAIN_BOUND_FLOOR, (
+            f"the cold fixture's critical path is {share:.1%} of "
+            f"wall-clock, under the {CHAIN_BOUND_FLOOR:.0%} this fixture "
+            f"is kept above; UX-456 measured 0.853-0.916 over twenty cold "
+            f"builds, so this is a change in the fixture rather than in "
+            f"the runner")
 
     def test_the_first_thing_to_fix_is_core(self, cold):
         """`core.bst` is what the six libraries all wait for, so a

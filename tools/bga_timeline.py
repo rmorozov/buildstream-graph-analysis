@@ -445,6 +445,70 @@ CONCURRENCY_UNIT = "processes"
 # stride) while still drawing the shape rather than an envelope.
 COUNTER_WINDOWS = 1000
 
+#: `UX-437`: the host's own series, and where it goes.
+#:
+#: `bga snapshot` has sampled the host every two seconds since `UX-378`
+#: and written `host-samples.jsonl` beside the run. Eight rounds later
+#: nothing read it: `read_host_samples()` was called by its own test and
+#: by nothing else, and the series reached no payload, no terminal line
+#: and no trace.
+#:
+#: **The trace, as counter tracks**, of the three destinations the item
+#: weighed. A sample every two seconds is a time series, and the trace
+#: is the only surface in this tool with the build's own time axis to
+#: draw it against - the page has sections, not seconds. `UX-310`
+#: already built the counter machinery for exactly this shape. Naming a
+#: host as starved stays a finding and stays out, which is the split
+#: `UX-378` made and this keeps.
+#:
+#: Bytes, not kB, because §1a's rule is that a value says what it is and
+#: `duration_us`-style suffixes do not survive a Perfetto axis: the
+#: sampler writes `*_kb` and this multiplies once, here, so the counter
+#: a reader sees is in the unit its label claims.
+HOST_SAMPLES_NAME = "host-samples.jsonl"
+KB = 1024
+HOST_COUNTERS = (
+    ("mem_available_kb", "host memory available", "bytes", KB),
+    ("swap_free_kb", "host swap free", "bytes", KB),
+    ("pgmajfault", "host major faults", "faults", 1),
+    ("pswpin", "host pages swapped in", "pages", 1),
+    ("pswpout", "host pages swapped out", "pages", 1),
+)
+
+
+def host_series(snapshot: str) -> List[tuple]:
+    """`(wall-clock microseconds, {key: value})` per sample.
+
+    Each row is stamped on `CLOCK_MONOTONIC`, which means nothing beside
+    a slice; the header carries the **pair** the sampler read at the
+    same instant - `monotonic_at_start` and `wall_at_start` - so the
+    walk from one clock to the other is a subtraction and an addition
+    and needs no anchor element. That matters: `offset_us` exists to put
+    *Plane 2* on Plane 1's clock and is 0 on a capture with no Plane 2,
+    while the host was sampled on every capture. Placing the series with
+    it would have drawn the host at the epoch on exactly the traces that
+    have nothing else to read.
+
+    A capture whose header is missing either half - an interrupted one,
+    or a host with no `/proc/meminfo` - yields nothing rather than a
+    series on an arbitrary epoch.
+    """
+    from tools.bst_native_build_tracer import read_host_samples
+
+    read = read_host_samples(os.path.join(snapshot, HOST_SAMPLES_NAME))
+    header = read.get("header") or {}
+    start = header.get("monotonic_at_start")
+    wall = header.get("wall_at_start")
+    if start is None or wall is None:
+        return []
+    out = []
+    for sample in read.get("samples") or []:
+        at = sample.get("t")
+        if at is None:
+            continue
+        out.append(((float(wall) + float(at) - float(start)) * 1e6, sample))
+    return out
+
 
 def concurrency_series(records, windows: int = COUNTER_WINDOWS):
     """`(timestamp_s, running processes)` over the build, strided.
@@ -1156,6 +1220,35 @@ def _write_trackevent(plane1_events, raw_log, spans, anchor_element, output,
         # the convention `bst_log_to_chrome_trace` already writes.
         plane1_track = trace.process_track("Plane 1: BuildStream", pid=1,
                                            rank=1)
+
+        host_tracks = {}
+        host_points = 0
+        # `UX-437`: the host's series, against the build that ran on it.
+        #
+        # Hung off the Plane 1 lane and emitted here rather than beside
+        # the concurrency counter below, because the host was sampled
+        # whether or not the build was traced: gating it on `records`
+        # would make the one series that says "the machine ran out of
+        # memory" visible only on captures that already had Plane 2.
+        #
+        # Counted separately from `trace.counters` on purpose. That
+        # number is `UX-310`'s concurrency series and three guards read
+        # it as such; folding a second population into it would make
+        # `one["counters"] < whole["counters"]` (`UX-430`) pass on a
+        # difference that is no longer concurrency at all.
+        for at_us, sample in host_series(snapshot):
+            for key, label, unit, scale in HOST_COUNTERS:
+                value = sample.get(key)
+                if value is None:
+                    continue
+                track = host_tracks.get(label)
+                if track is None:
+                    track = host_tracks[label] = trace.counter_track(
+                        label, parent=plane1_track, unit_name=unit)
+                trace.counter(int(round(at_us * NS_PER_US)),
+                              track, value * scale)
+                host_points += 1
+
         threads = {}
         names = {}
         for event in plane1_events:
@@ -1187,7 +1280,9 @@ def _write_trackevent(plane1_events, raw_log, spans, anchor_element, output,
                     "tracks": trace.tracks, "flows": flow_count,
                     "flow_losses": accounting, "incomplete_reason": reason,
                     "lane_order": LANE_ORDER_RULE, "counters": 0,
-                    "counter_peak": None}
+                    "counter_peak": None,
+                    "host_counters": host_points,
+                    "host_series": sorted(host_tracks)}
 
         # Plane 2: one process lane per element, one thread lane per
         # traced pid inside it.
@@ -1334,8 +1429,10 @@ def _write_trackevent(plane1_events, raw_log, spans, anchor_element, output,
                 "tracks": trace.tracks, "flows": flow_count,
                 "flow_losses": accounting, "incomplete_reason": reason,
                 "lane_order": LANE_ORDER_RULE,
-                "counters": trace.counters,
-                "counter_peak": max((v for _t, v in series), default=None)}
+                "counters": len(series),
+                "counter_peak": max((v for _t, v in series), default=None),
+                "host_counters": host_points,
+                "host_series": sorted(host_tracks)}
 
 
 #: `UX-430`: what a caller may ask the timeline to leave out.
@@ -1567,6 +1664,20 @@ def describe(result: dict, output: str) -> str:
                      "Perfetto (https://ui.perfetto.dev), which reads this "
                      "format natively; `bga timeline --format chrome` writes "
                      "the legacy JSON for chrome://tracing.")
+        # `UX-437`: the host series, named here and not folded into the
+        # counter total above, because it answers a different question -
+        # what the machine was doing - and because a capture that has
+        # none should say so rather than leave a reader to assume it
+        # was drawn (`UX-395`'s rule about printed zeroes).
+        series_names = result.get("host_series") or ()
+        if series_names:
+            lines.append(f"  {result.get('host_counters', 0)} host counters on "
+                         f"{len(series_names)} tracks: "
+                         f"{', '.join(series_names)}.")
+        else:
+            lines.append(f"  No host series: this snapshot has no "
+                         f"{HOST_SAMPLES_NAME}. `bga snapshot` writes one; "
+                         f"a capture taken before `UX-378` has none.")
         # `UX-430`: the track count is what the viewer spends, and the
         # byte budget cannot see it - measured on the seeded scale run,
         # 16,832 tracks in 486 KB, an eighth of the byte bound. So the

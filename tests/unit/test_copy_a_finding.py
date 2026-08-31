@@ -138,7 +138,8 @@ class TestThePageCopiesRatherThanWords:
     def test_the_viewer_never_builds_the_text(self):
         """Clause 2, asserted by reading the source rather than by the
         two happening to agree today - UX-214's lesson."""
-        source = open(os.path.join(REPO, "bga/viewer/app.js"),
+        # `UX-450`: the section walk moved to `sections.js`.
+        source = open(os.path.join(REPO, "bga/viewer/sections.js"),
                       encoding="utf-8").read()
         assert "finding.copy_text" in source
         assert "BGA finding:" not in source, (

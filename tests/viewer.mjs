@@ -42,4 +42,5 @@ export * from "../bga/viewer/focus.js";
 export * from "../bga/viewer/viewstate.js";
 export * from "../bga/viewer/questions.js";
 export * from "../bga/viewer/trace_context.js";
+export * from "../bga/viewer/sections.js";
 export * from "../bga/viewer/app.js";

@@ -24,6 +24,15 @@
 // This module imports nothing. It is a pure classification over a
 // value plus its hints, so a guard can drive it without a DOM, and
 // `app.js` can import it without a cycle.
+//
+// `UX-450` qualified that: the *classification* still imports nothing,
+// and the three imports below serve `distributionStrip` alone - the
+// density strip moved here from `structured.js`, which draws and so
+// needs a formatter and a drawing. `classify` and its table are
+// untouched and remain callable with no DOM.
+import { served } from "./primitives.js";
+import { quantity, title } from "./format.js";
+import { GRADE_ANNOTATION, columnStrip } from "./drawings.js";
 
 /** The controls §1 names. The value is the guide's own wording. */
 export const CONTROLS = Object.freeze({
@@ -200,3 +209,88 @@ export function depthSentence(value) {
   const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
   return `${plural(levels, "level")}, ${plural(rows, "row")}`;
 }
+
+// `UX-450`: moved here from `structured.js`, which was sitting
+// exactly on `UX-337`'s 1,500-line ceiling. A density strip is a
+// **shape**, and this file is where the shapes live - so the move
+// is to the module that already owns the concern rather than to a
+// new one invented to hold the overflow.
+//
+// It is exported because `buildTable` draws it; nothing here reads
+// anything back from `structured.js`, which is what makes the edge
+// one-directional and the inline order unchanged.
+/**
+ * The density strip for a long table's primary quantity column, or
+ * `null` when the table is short or has no quantity to have a shape.
+ *
+ * Clicking it sets that column's threshold to the **nearest actual row
+ * value** - a published number, never the position the click landed
+ * on, which would be a derived figure entering the page through a
+ * mouse. Served only: an export is a file, and `UX-194`'s rule is that
+ * an affordance whose precondition is absent is not shown as a dead
+ * one. The strip itself renders in both, because the *shape* is the
+ * point and the click is a convenience.
+ */
+export function distributionStrip(table, specs, total, state, refresh) {
+  // `UX-350`: **at any length.** The row cap decides whether a table is
+  // *paged*, not whether its shape is worth showing - and gating the
+  // strip on it meant the report's central table, eleven rows on one
+  // fixture and four on the other, never drew the one §2 names.
+  // Measured before this: one sparkline and zero strips on golden, in
+  // a twenty-screen document. `columnStrip` already states rather than
+  // draws below `SERIES_MIN_POINTS`, so a two-row table is still a
+  // sentence.
+  const spec = specs.find((s) => s && s.quantity && s.numeric !== false);
+  if (!spec) return null;
+  // The column key, not `cssId`: that normalises an *element uid* into
+  // an anchor, and a column key is already a schema identifier.
+  const raw = [...table.querySelectorAll(`td[data-column="${spec.key}"]`)]
+    .map((td) => Number(td.getAttribute("data-raw")))
+    .filter((n) => Number.isFinite(n));
+  if (!raw.length) return null;
+
+  const drawn = columnStrip(raw, {
+    grade: GRADE_ANNOTATION,
+    format: (n) => quantity(n, spec.quantity),
+    label: `${spec.title ?? title(spec.key, spec.quantity)} across all ${
+      total.toLocaleString("en-US")} rows`,
+  });
+  drawn.setAttribute("data-column", spec.key);
+  drawn.setAttribute("data-interactive", String(served()));
+  if (!served()) return drawn;
+
+  const sorted = raw.slice().sort((a, b) => a - b);
+  const svg = drawn.querySelector?.("svg");
+  svg?.addEventListener?.("click", (event) => {
+    // Where in the range the click landed, as a fraction. A shim and a
+    // browser both give `offsetX`/`clientWidth`; without them the
+    // click simply does nothing rather than guessing a threshold.
+    const width = event?.currentTarget?.clientWidth;
+    if (!width) return;
+    const fraction = Math.min(1, Math.max(0, (event.offsetX ?? 0) / width));
+    const low = sorted[0];
+    const high = sorted[sorted.length - 1];
+    const wanted = low + fraction * (high - low);
+    // The nearest value a row actually has, so the threshold is a
+    // published number.
+    const chosen = sorted.reduce((best, value) =>
+      Math.abs(value - wanted) < Math.abs(best - wanted) ? value : best,
+      sorted[0]);
+    const input = table.querySelector(
+      `.th-filter[data-column="${spec.key}"]`);
+    if (!input) return;
+    // Raw units, no suffix - `parseThreshold` reads a bare number as
+    // the published one, so this round-trips exactly rather than
+    // through a formatted string.
+    input.value = `>= ${chosen}`;
+    input.dispatchEvent?.(new Event("input", { bubbles: true }));
+    if (!input.listeners?.input?.length) {
+      // A shim with no bubbling: set the state directly so the guard
+      // measures the filter rather than the event system.
+      state.thresholds[spec.key] = { op: ">=", value: chosen };
+      refresh();
+    }
+  });
+  return drawn;
+}
+

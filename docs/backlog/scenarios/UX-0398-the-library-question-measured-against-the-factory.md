@@ -1,6 +1,6 @@
 # UX-398: the library question, measured against the factory
 
-**Priority:** High | **Status:** 🟢 Done Done | **Depends on:** UX-397 (the filed question), UX-392 (the filters it would buy), UX-367 (the volume budget that arbitrates) | **Serves:** R8, and anyone deciding what this page may depend on | **Topic:** viewer
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-397 (the filed question), UX-392 (the filters it would buy), UX-367 (the volume budget that arbitrates) | **Serves:** R8, and anyone deciding what this page may depend on | **Topic:** viewer
 
 ## Motivation
 

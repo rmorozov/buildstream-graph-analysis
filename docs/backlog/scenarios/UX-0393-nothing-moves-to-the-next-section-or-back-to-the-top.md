@@ -1,6 +1,6 @@
 # UX-393: nothing moves to the next section, or back to the top
 
-**Priority:** Medium | **Status:** 🟢 Done Done | **Depends on:** UX-199 (a report you can find your way around), UX-286 (the report has chapters), UX-347 (the distance budget), UX-209 (the rail) | **Serves:** anyone reading past the first screen | **Topic:** viewer
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-199 (a report you can find your way around), UX-286 (the report has chapters), UX-347 (the distance budget), UX-209 (the rail) | **Serves:** anyone reading past the first screen | **Topic:** viewer
 
 ## Motivation
 

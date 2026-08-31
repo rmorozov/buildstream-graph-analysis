@@ -1,6 +1,6 @@
 # UX-329: the terminal and the viewer disagree about Plane 2
 
-**Priority:** High | **Status:** 🟢 Done Done | **Depends on:** UX-202 (plane2_coverage), UX-297 (the report beside the run) | **Serves:** R1, R2 | **Topic:** analysis
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-202 (plane2_coverage), UX-297 (the report beside the run) | **Serves:** R1, R2 | **Topic:** analysis
 
 ## Motivation
 

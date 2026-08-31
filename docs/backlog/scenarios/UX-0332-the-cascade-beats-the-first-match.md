@@ -1,6 +1,6 @@
 # UX-332: the cascade beats the first match, and two record nits
 
-**Priority:** Medium | **Status:** 🟢 Done Done | **Depends on:** UX-318 (the guard it repairs) | **Serves:** the maintainers | **Topic:** guards
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-318 (the guard it repairs) | **Serves:** the maintainers | **Topic:** guards
 
 ## Motivation
 

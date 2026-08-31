@@ -1,6 +1,6 @@
 # UX-410: a `--project` that is not a project builds one anyway
 
-**Priority:** Medium | **Status:** 🟢 Done Done | **Depends on:** UX-324 (the refuse-before-writing precedent) | **Serves:** R1, on a mistyped path | **Topic:** capture
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-324 (the refuse-before-writing precedent) | **Serves:** R1, on a mistyped path | **Topic:** capture
 
 ## Motivation
 

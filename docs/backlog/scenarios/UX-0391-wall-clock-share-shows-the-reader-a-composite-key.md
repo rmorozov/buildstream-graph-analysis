@@ -1,6 +1,6 @@
 # UX-391: `wall_clock_share_us` shows the reader a composite key
 
-**Priority:** Medium | **Status:** 🟢 Done Done | **Depends on:** UX-374 (the page renames the reader's elements and programs), UX-216 (every element is one object) | **Serves:** anyone searching the page for an element they built | **Topic:** viewer
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-374 (the page renames the reader's elements and programs), UX-216 (every element is one object) | **Serves:** anyone searching the page for an element they built | **Topic:** viewer
 
 ## Motivation
 

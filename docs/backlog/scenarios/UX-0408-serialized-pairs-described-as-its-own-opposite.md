@@ -1,6 +1,6 @@
 # UX-408: `serialized_pairs` is described as its own opposite
 
-**Priority:** Medium | **Status:** 🟢 Done Done | **Depends on:** UX-341 (the declared-description discipline this slipped past) | **Serves:** anyone reading the batching section on the page | **Topic:** contracts
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-341 (the declared-description discipline this slipped past) | **Serves:** anyone reading the batching section on the page | **Topic:** contracts
 
 ## Motivation
 

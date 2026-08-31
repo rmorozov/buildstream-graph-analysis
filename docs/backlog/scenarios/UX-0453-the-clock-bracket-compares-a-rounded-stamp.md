@@ -1,6 +1,6 @@
 # UX-453: the host sampler's clock guard brackets a rounded stamp with unrounded readings
 
-**Priority:** Medium | **Status:** 🟢 Done Done | **Found by:** round 70, one red in a full `-n auto` run with nothing wrong | **Serves:** every later round, which would otherwise learn to re-run this guard | **Topic:** guards
+**Priority:** Medium | **Status:** 🟢 Done | **Found by:** round 70, one red in a full `-n auto` run with nothing wrong | **Serves:** every later round, which would otherwise learn to re-run this guard | **Topic:** guards
 
 ## Motivation
 

@@ -472,6 +472,11 @@ MEDIUM = (
     # four measurements of the rail - two viewports in the served mode,
     # which is the whole point of the file. 14.2s, just under the large
     # floor.
+    # `UX-449`, tiered on landing. It parses every test source in the
+    # suite - 195 skip call sites over ~380 files - which is why it is
+    # seconds rather than milliseconds despite running no build and
+    # opening no browser. 3.2s.
+    "tests/unit/test_every_skip_reason_is_declared.py",            # 3.2s
     "tests/unit/test_the_handoff_box_is_measured_served.py",       # 14.2s
     # `UX-436`, tiered on landing. One `gen-synthetic` run, two
     # exports and one browser reading the computed appearance of every

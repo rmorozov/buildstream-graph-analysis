@@ -58,7 +58,7 @@ def test_the_spine_measures_sleep_3_as_three_seconds_of_nothing(tmp_path):
 
     project = os.path.join(REPO_ROOT, "examples", "01-resource-contention")
     if not os.path.isfile(os.path.join(project, "files", "runtime", "bin", "sh")):
-        pytest.skip("examples/01's runtime is not staged - run examples/stage_runtimes.sh")
+        pytest.skip("examples/01 is not staged - run examples/stage_runtimes.sh")
 
     home = tmp_path / "home"
     home.mkdir()
@@ -129,7 +129,7 @@ def test_the_two_planes_agree_on_how_long_each_element_took(tmp_path):
 
     project = os.path.join(REPO_ROOT, "examples", "01-resource-contention")
     if not os.path.isfile(os.path.join(project, "files", "runtime", "bin", "sh")):
-        pytest.skip("examples/01's runtime is not staged - run examples/stage_runtimes.sh")
+        pytest.skip("examples/01 is not staged - run examples/stage_runtimes.sh")
 
     home = tmp_path / "home"
     home.mkdir()

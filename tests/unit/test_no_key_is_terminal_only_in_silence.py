@@ -47,7 +47,7 @@ sys.path.insert(0, str(REPO))
 from bga import plane2                                        # noqa: E402
 
 node = shutil.which("node")
-needs_node = pytest.mark.skipif(node is None, reason="node is required")
+needs_node = pytest.mark.skipif(node is None, reason="node is not installed")
 
 #: Two planes, so the census sees the keys a single-plane run does not
 #: publish - which is the half `UX-389` was about.

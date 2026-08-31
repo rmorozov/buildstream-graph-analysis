@@ -293,7 +293,7 @@ console.log(JSON.stringify({
 @pytest.fixture(scope="module")
 def drawn():
     if node is None:
-        pytest.skip("node is required")
+        pytest.skip("node is not installed")
     done = subprocess.run(
         [node, "--input-type=module", "-e", _RECORD],
         capture_output=True, text=True, cwd=REPO, timeout=60,
@@ -303,7 +303,7 @@ def drawn():
     return json.loads(done.stdout)
 
 
-@pytest.mark.skipif(node is None, reason="node is required")
+@pytest.mark.skipif(node is None, reason="node is not installed")
 class TestTheUnitsSurviveTheCell:
     """The two renderings that had to change, driven rather than read.
 

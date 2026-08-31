@@ -64,7 +64,7 @@ REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 
 node = shutil.which("node")
-needs_node = pytest.mark.skipif(node is None, reason="node is required")
+needs_node = pytest.mark.skipif(node is None, reason="node is not installed")
 
 #: Two planes, so the sweep reaches the sections a single-plane fixture
 #: does not publish - which is how it found the two below.

@@ -271,7 +271,7 @@ def test_a_real_static_build_is_invisible_to_the_hook_and_visible_to_the_spine(t
 
     project = os.path.join(REPO_ROOT, "examples", "01-resource-contention")
     if not os.path.isfile(os.path.join(project, "files", "runtime", "bin", "sh")):
-        pytest.skip("examples/01's runtime is not staged - run examples/stage_runtimes.sh")
+        pytest.skip("examples/01 is not staged - run examples/stage_runtimes.sh")
 
     def _capture(name, trace_spine):
         home = tmp_path / f"home-{name}"

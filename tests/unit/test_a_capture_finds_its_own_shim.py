@@ -50,7 +50,7 @@ from tools.bst_native_build_tracer import (        # noqa: E402
 )
 
 #: One string each, so `UX-213`'s skip census counts them once.
-NO_CC = "no C compiler for the trace hook"
+NO_CC = "no C compiler on PATH"
 #: `install_bwrap_shim` writes a shim that *falls back* to the real
 #: `bwrap`, and refuses when there is none to fall back to. This clause
 #: reaches that call before it reaches anything it is about, so on a

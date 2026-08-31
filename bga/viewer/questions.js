@@ -108,8 +108,9 @@ limit 25;`,
     // `UX-380`: the keys this asks on are new, and `UX-368`'s rule is
     // that a key nothing asks about is a key nobody finds.
     returns: [
-      ["depth", "the level - the longest path in edges from a source, "
-                + "which is what `parallelism.levels` decomposes by"],
+      ["graph_depth", "the level - the longest path in edges from a "
+                      + "source, which is what `parallelism.levels` "
+                      + "decomposes by"],
       ["elements", "how many distinct elements sit at that level"],
       ["seconds", "their total task duration"],
       ["on_path", "how many of them are on the critical path"],
@@ -122,15 +123,37 @@ limit 25;`,
       "waits on, and the elements in it are where widening the graph " +
       "would pay. Absent on a trace rendered from a snapshot with no " +
       "analysis beside it.",
-    sql: `select extract_arg(s.arg_set_id, 'debug.depth') as depth,
-       count(distinct extract_arg(s.arg_set_id, 'debug.element')) as elements,
-       sum(s.dur) / 1e9 as seconds,
-       sum(extract_arg(s.arg_set_id, 'debug.on_critical_path')) as on_path
-from slice s
-where s.category glob '*bst-builder*'
-  and extract_arg(s.arg_set_id, 'debug.depth') is not null
-group by depth
-order by depth;`,
+    // `UX-434`: the annotations are projected in a subquery and grouped
+    // by the projected name. Two defects, both found only by running
+    // this against a real capture:
+    //
+    // 1. `group by depth` bound to **`slice.depth`** - the slice's
+    //    nesting depth, which every builder slice has as 0 - and not to
+    //    the `extract_arg(...) as depth` alias, which it shadows. One
+    //    group, and the `depth` printed beside it was whichever row
+    //    SQLite happened to keep. `graph_depth` cannot collide.
+    // 2. `on_critical_path` is emitted as the **string** `'true'` /
+    //    `'false'` (Plane 1's booleans are strings in the arg table), so
+    //    `sum(...)` was 0 on every capture, including one where eight of
+    //    ten elements were on the path. Compared as the string it is.
+    //
+    // And counted over **distinct elements**, like the column beside it:
+    // an element can produce more than one task in a run - which is why
+    // `_plane1_flows` has a last-ending and a first-beginning rule - and
+    // summing slices would report a level of one element as two.
+    sql: `select graph_depth,
+       count(distinct element) as elements,
+       sum(dur) / 1e9 as seconds,
+       count(distinct case when on_path = 'true' then element end) as on_path
+from (select extract_arg(s.arg_set_id, 'debug.depth') as graph_depth,
+             extract_arg(s.arg_set_id, 'debug.element') as element,
+             extract_arg(s.arg_set_id, 'debug.on_critical_path') as on_path,
+             s.dur
+      from slice s
+      where s.category glob '*bst-builder*'
+        and extract_arg(s.arg_set_id, 'debug.depth') is not null)
+group by graph_depth
+order by graph_depth;`,
   },
   {
     id: "process-storm",

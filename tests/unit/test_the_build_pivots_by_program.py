@@ -179,20 +179,27 @@ class TestThePivotAnswersPerProgram:
         by_exe = {row[0]: row for row in self._run("cost-by-executable")}
         assert by_exe["/usr/bin/cc"][4] == 4096, by_exe
 
-    def test_the_element_scoped_twin_is_not_in_the_library(self):
-        """`UX-368`'s rule, applied against this item's own draft.
+    def test_the_element_scoped_twin_answers_at_the_program_grain(self):
+        """`UX-448` shipped what `UX-433` held back.
 
-        The first version of `UX-433` shipped `executables-in-element`
-        beside the pivot - the same question inside one sandbox. It has
-        no finding to arrive from: there are 22 claims and 20 already
-        carry a query, and none of the two spare ones is about what an
-        element ran. A question no finding points at is a question
-        nobody finds, so it waits for the finding rather than sitting
-        in the library being unreachable.
+        The clause here used to be its opposite - the pivot was kept
+        *out* of the library, because `UX-368`'s rule is that a
+        question no finding points at is a question nobody arrives at,
+        and at the time no claim was about what an element ran.
+        `latent-heavies` carries both grains now, so the absence guard
+        would be asserting a state the page has deliberately left; it
+        is replaced by the clause that says the query is right rather
+        than deleted outright.
+
+        `ROWS` gives `a.bst` two `cc` invocations and one `ld`: the
+        distinction the whole pivot is for, and the one that tells a
+        query grouping by program from one grouping by command line.
         """
-        assert "executables-in-element" not in _library(), (
-            "the element-scoped pivot is back in the library; it needs a "
-            "claim in `TRACE_QUERIES` first (UX-448)")
+        answer = self._run("executables-in-element", "a.bst")
+        assert [row[0] for row in answer] == ["/usr/bin/cc"], (
+            f"the element-scoped pivot is answering per invocation, or "
+            f"reaching outside the element it was aimed at: {answer}")
+        assert answer[0][1] == 2, f"two invocations, one program: {answer}"
 
     def test_a_slice_with_no_executable_is_not_a_program(self):
         """A record that carried no command would otherwise group as a

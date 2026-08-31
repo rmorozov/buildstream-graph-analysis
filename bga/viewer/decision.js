@@ -61,6 +61,14 @@ export function renderProvenance(provenance, options = {}) {
   if (provenance.trace_query) {
     details.setAttribute("data-query", provenance.trace_query);
   }
+  // `UX-448`: the other grains, where the claim reads at more than
+  // one. Published only then, so the attribute is absent on the
+  // nineteen claims with a single grain rather than repeating
+  // `data-query` - which is the shape of the field it draws.
+  if (Array.isArray(provenance.trace_queries)
+      && provenance.trace_queries.length) {
+    details.setAttribute("data-queries", provenance.trace_queries.join(" "));
+  }
   // `UX-357` (§3a.1): the fold says how much is behind it. One level -
   // the sentence, the rule, the evidence rows and the unpublished
   // note are all siblings inside it - and the rows are the evidence

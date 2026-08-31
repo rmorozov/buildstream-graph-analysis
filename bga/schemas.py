@@ -876,6 +876,17 @@ _PROVENANCE = {
         "trace_query": {"description": "The `questions.js` query id that "
                                        "deepens this claim in the timeline, "
                                        "or null where none does."},
+        # `UX-448`: the other grains, where the claim has any. Omitted
+        # rather than restated on the nineteen claims that offer one
+        # query - its absence is the fact "this claim has one grain",
+        # and publishing `[trace_query]` on every record would be the
+        # field beside it spelled twice.
+        "trace_queries": {
+            "type": "array",
+            "description": "Every query that deepens this claim, best "
+                           "first, when there is more than one. "
+                           "`trace_query` is its first entry. Absent "
+                           "where the claim offers a single grain."},
         "unpublished_inputs": {
             "description": "Fields this claim was genuinely drawn from "
                            "that this document does not carry. Named "
@@ -3006,6 +3017,23 @@ _ANALYZE_HINTS = {
                                    "`provenance[].trace_query` "
                                    "carries, on the object a reader "
                                    "is looking at."},
+                # `UX-448`: one claim reads at two grains, and the
+                # button opens the first. `latent-heavies` asks what a
+                # heavy element is made of; `element-commands` answers
+                # per invocation and `executables-in-element` per
+                # program, and which one helps depends on whether the
+                # command lines differ in a way that matters. Absent
+                # where there is one grain, for the reason the
+                # provenance record's copy of this key gives.
+                "trace_queries": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Every query that shows this "
+                                   "finding in the timeline, best "
+                                   "first, when there is more than "
+                                   "one. `trace_query` is its first "
+                                   "entry. Absent where this finding "
+                                   "offers a single grain."},
                 # `UX-372`: which of `docs/design/roles.md`'s readers
                 # this finding is for. Declared, never derived: the
                 # page routes by lookup, and a consumer asking what

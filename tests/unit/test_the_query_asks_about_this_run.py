@@ -157,7 +157,11 @@ class TestNoFixtureNameIsCompiledIn:
             "console.log(JSON.stringify({ n: asks.length,"
             "  rendered: asks.map((x) => q.renderedSql(x)),"
             "  token: q.ELEMENT_TOKEN }));")
-        assert out["n"] == 3, out["n"]
+        # Four since `UX-448` added `executables-in-element`; three
+        # before it. A count rather than a floor, so a query that stops
+        # taking an element is a red rather than a silence - which is
+        # what this clause is for.
+        assert out["n"] == 4, out["n"]
         for sql in out["rendered"]:
             assert out["token"] in sql, sql
             assert FOREIGN not in sql, sql

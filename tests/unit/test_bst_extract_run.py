@@ -352,3 +352,99 @@ def test_pipeline_overhead_extracted_from_a_real_cached_rebuild(tmp_path):
     from bga.report.text import format_text
     result = analyze_run(out_dir)
     assert "Pipeline Overhead" in format_text(result)
+
+
+# --------------------------------------------------------------- UX-452
+
+REPO = Path(__file__).resolve().parents[2]
+
+#: What one extraction leaves in a run directory. `chrome_trace.json`
+#: was a fifth until `UX-452`; the whole point of asserting the *set*
+#: rather than one absence is that adding a file back is as visible as
+#: dropping one.
+EXTRACTED = {"graph.json", "trace.json", "run-context.json", "sources.json"}
+
+
+def _extracted(tmp_path):
+    """One real `extract_run`, with only `bst show` stubbed.
+
+    `bst` is not on this machine and the end-to-end tests above are
+    gated on it, which would leave `UX-452`'s claim checkable only
+    where BuildStream is installed - the exact shape `UX-449` is about.
+    Everything the extraction does with the log, the graph and the
+    output directory runs here for real; the one thing replaced is the
+    subprocess that fetches the element list, and it is replaced with
+    the committed fixture's own graph rendered back into `bst show`'s
+    format, so the extraction parses what it would have parsed.
+    """
+    from tools.bst_show_to_graph import FIELD_SEP, RECORD_SEP
+
+    graph = json.loads(
+        (REPO / "tests/fixtures/with_timeline/run/graph.json").read_text(
+            encoding="utf-8"))
+    deps = {}
+    for edge in graph["dependencies"]:
+        deps.setdefault(edge["successor"], []).append(edge["predecessor"])
+    records = []
+    for element in graph["elements"]:
+        uid = element["uid"]
+        listed = deps.get(uid)
+        rendered = "[]" if not listed else "\n".join(f"- {d}" for d in listed)
+        records.append(FIELD_SEP.join([
+            uid, element["cache_key"], element["element_kind"], rendered,
+            "[]", "{}", "{}"]))
+    (tmp_path / "show.txt").write_text(
+        RECORD_SEP.join(records) + RECORD_SEP, encoding="utf-8")
+    fake = tmp_path / "bst"
+    fake.write_text(f'#!/bin/sh\ncat "{tmp_path / "show.txt"}"\n',
+                    encoding="utf-8")
+    fake.chmod(0o755)
+
+    project = tmp_path / "project"
+    (project / "elements").mkdir(parents=True)
+    (project / "project.conf").write_text(
+        "name: t\nmin-version: 2.0\nelement-path: elements\n",
+        encoding="utf-8")
+    out = tmp_path / "snapshot" / "run"
+    summary = extract_run(
+        str(project), str(REPO / "tests/fixtures/with_timeline/build.log"),
+        str(out), bst_bin=str(fake), log_format="auto")
+    assert summary["elements"] == 11 and summary["spans"] == 11, summary
+    return out
+
+
+class TestTheExtractionKeepsNoLegacyTrace:
+    """`UX-452`: the file `UX-437`'s census found nobody opens.
+
+    It was written for one named consumer - a person dragging it into
+    perfetto.dev - and that reader now has `bga timeline`'s Perfetto
+    form, with both planes and the flows in it. The legacy shape is
+    still reachable, on demand, from `trace.json`; what is gone is the
+    copy in every capture.
+    """
+
+    def test_one_extraction_writes_exactly_four_files(self, tmp_path):
+        out = _extracted(tmp_path)
+        assert {p.name for p in out.iterdir()} == EXTRACTED, sorted(
+            p.name for p in out.iterdir())
+
+    def test_the_legacy_shape_is_still_one_command_away(self, tmp_path):
+        """The half that makes the removal a move rather than a loss.
+
+        Without this, "the extraction stopped writing it" and "bga can
+        no longer produce it" look identical from the outside, and the
+        second would be a capability quietly dropped.
+        """
+        out = _extracted(tmp_path)
+        shutil.copy(REPO / "tests/fixtures/with_timeline/build.log",
+                    out.parent / "build.log")
+        rendered = tmp_path / "legacy.json"
+        from tools.bga_timeline import render
+
+        render(str(out.parent), str(rendered), quiet=True, fmt="chrome")
+        events = json.loads(rendered.read_text(encoding="utf-8"))
+        assert isinstance(events, list) and events, type(events)
+        assert {e.get("ph") for e in events} & {"B", "E"}, (
+            "the rendered file is not the legacy Chrome shape - the "
+            "on-demand route this item relies on does not produce what "
+            "the extraction used to write")

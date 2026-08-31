@@ -544,15 +544,28 @@ def extract_run(
     (out_dir / "graph.json").write_text(json.dumps(graph, indent=2))
     (out_dir / "trace.json").write_text(json.dumps(trace, indent=2))
     (out_dir / "run-context.json").write_text(json.dumps(run_context, indent=2))
-    # Also keep the intermediate Chrome Trace JSON - not part of bga's
-    # input contract, but the same real, human-inspectable artifact the
-    # user's own existing personal workflow (visualizing a real build
-    # timeline in perfetto.dev) already relies on tools/bst_log_to_chrome_trace.py
-    # for; producing it here for free means one extraction run serves
-    # both purposes.
-    (out_dir / "chrome_trace.json").write_text(
-        json.dumps(converter.trace_events, indent=2)
-    )
+    # `UX-452`: **the intermediate Chrome Trace JSON is no longer kept.**
+    #
+    # It was written here for one named consumer - a person dragging it
+    # into perfetto.dev, which is what this repository's own workflow
+    # did before `bga` had a timeline of its own. `UX-437`'s census
+    # wraps `open` and runs every reader over a complete capture; on its
+    # first run this file was one of two nothing opened. The consumer
+    # the comment named is now served twice over and better: `bga
+    # timeline` writes the Perfetto-native form with both planes, the
+    # flows and the counters in it, and `bga timeline --format chrome`
+    # still renders this exact legacy shape **on demand, from
+    # `trace.json`** - so nothing is lost, and the thing that is lost is
+    # a copy.
+    #
+    # What it cost, measured on the two committed captures that have
+    # one: 7,957 B against a 94,166 B snapshot (8.4% of it) and 2,369 B
+    # against 111,772 B (2.1%), which is 296-331 B per event at 2.18-2.67
+    # events per Plane 1 span. At `gen-synthetic --seed 1`'s 1,202 spans
+    # that projects to 776 KB - 1.06 MB, against a whole snapshot of
+    # 760,076 B: the convenience copy would outweigh the capture it sits
+    # in. A projection, from two measured rates rather than a guess -
+    # this environment has no `bst` to extract a real build of that size.
     # UX-171: which repository feeds which elements. Written here
     # because this is the one moment both the project and the run are in
     # hand - `bga analyze` reads a run directory and nothing else, and

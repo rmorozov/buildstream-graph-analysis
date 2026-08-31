@@ -108,15 +108,21 @@ NO_CONSUMER_DECLARED = {
     "runs/<stamp>/capture-context.txt":
         "prose for a person. The capture layout's own row says `Never "
         "parsed`, which is a decision rather than a gap (`UX-146`).",
-    "runs/<stamp>/run/chrome_trace.json":
-        "`UX-452`: what this census found on its first run. The layout "
-        "row already says nothing on a read path requires it; whether it "
-        "should still be written is that item's question, not this one's.",
 }
 
 #: Capture-layout file rows this fixture does not carry, with the reason.
 #: Without this the census could shrink to one file and stay green.
-NOT_IN_THE_FIXTURE = {}
+NOT_IN_THE_FIXTURE = {
+    "runs/<stamp>/run/chrome_trace.json":
+        "`UX-452`: the extraction stopped writing it, so a capture taken "
+        "now has none. The layout still names it as `derived` because a "
+        "capture taken before that item has one and still satisfies the "
+        "contract - and because `bga timeline --format chrome` renders "
+        "the same shape on demand. This is the entry that used to be in "
+        "`NO_CONSUMER_DECLARED`: a file with no consumer became a file "
+        "with no writer, which is the only way that list gets shorter "
+        "without the census being weakened.",
+}
 
 
 def _store(into) -> pathlib.Path:
@@ -137,6 +143,14 @@ def _store(into) -> pathlib.Path:
     snapshot = snapshot / "20260821T170128Z"
     snapshot.parent.mkdir(parents=True, exist_ok=True)
     shutil.copytree(FIXTURE, snapshot)
+    # `UX-452`: the committed fixture was extracted before that item and
+    # carries a `chrome_trace.json`; a capture taken now does not. The
+    # census's population is "what a capture written by this `bga`
+    # holds", so leaving it in would have this file measuring a file
+    # nothing writes any more - and it is the entry that used to be in
+    # `NO_CONSUMER_DECLARED` above. The layout still names the path,
+    # which is why it is in `NOT_IN_THE_FIXTURE` rather than gone.
+    (snapshot / "run" / "chrome_trace.json").unlink()
 
     with open(snapshot / HOST_SAMPLES_NAME, "w", encoding="utf-8") as out:
         for row in [HEADER] + _samples():

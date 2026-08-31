@@ -15,14 +15,14 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-454 scenarios: **7 open**, 447 closed.
+454 scenarios: **6 open**, 448 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
 | capture | 0 | 69 |
 | analysis | 0 | 55 |
-| contracts | 1 | 50 |
+| contracts | 0 | 50 |
 | viewer | 0 | 134 |
 | cli | 0 | 5 |
 | store | 2 | 28 |
@@ -41,7 +41,6 @@ task file, which is the only place it ever lived twice.
 | UX-445 | [the track bound is one sample, and nothing has measured the cost it stands for](UX-0445-the-track-bound-is-one-sample.md) | guards | Medium | anyone whose capture the handoff refuses, and the round that has to decide whether it was right to | 🔴 |
 | UX-446 | [a third ceiling, and no reader-facing document has it](UX-0446-a-third-ceiling-no-reader-facing-document-has.md) | docs | Medium | anyone whose export drops the timeline and goes looking for the reason | 🔴 |
 | UX-447 | [the reference-refresh route is in no contributor document](UX-0447-the-reference-refresh-route-is-in-no-contributor-document.md) | docs | Medium | the contributor whose PR the drift gate stops, who is told to re-record and not where from | 🔴 |
-| UX-452 | [every capture writes a legacy Chrome trace that no reader opens](UX-0452-the-legacy-chrome-trace-is-written-and-never-read.md) | contracts | Low | the reader who tars a capture up for an issue, and pays for a file nobody reads | 🔴 |
 | UX-455 | [two files have grown past the tier they are listed in](UX-0455-two-files-drift-past-their-tier-and-the-parse-is-red.md) | guards | Low | the contributor whose `make test-medium` quietly costs a minute more than the tier says | 🔴 |
 
 ## UX-398..UX-410: the sixty-fourth round — the walk that judged the answers (2026-08-29)

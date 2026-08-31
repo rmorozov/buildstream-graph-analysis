@@ -622,11 +622,14 @@ CAPTURE_LAYOUT = (
      "what the run was: identity, host manifest (`host/v2` inside it), "
      "scheduler configuration, and the resolved `native_max_jobs` "
      "(`UX-377`)."),
-    (f"{STORE_DIRNAME}/{RUNS_DIRNAME}/<stamp>/{RUN_SUBDIR}/chrome_trace.json", CONDITIONAL,
+    (f"{STORE_DIRNAME}/{RUNS_DIRNAME}/<stamp>/{RUN_SUBDIR}/chrome_trace.json", DERIVED,
      None,
-     "the Plane 1 trace in the legacy Chrome JSON shape. Written by "
-     "the extraction; `bga timeline` writes the Perfetto form instead "
-     "and nothing on a read path requires this."),
+     "the Plane 1 trace in the legacy Chrome JSON shape. Present only "
+     "on a capture taken before `UX-452`: the extraction wrote it for "
+     "a person to drag into perfetto.dev, `UX-437`'s census measured "
+     "that no reader opens it, and `bga timeline --format chrome` "
+     "renders the same shape on demand from `trace.json`. Safe to "
+     "delete; nothing rewrites it."),
     (f"{STORE_DIRNAME}/{RUNS_DIRNAME}/<stamp>/{RUN_SUBDIR}/sources.json", CONDITIONAL,
      "sources/v1",
      "the source inventory (`UX-171`), read by `bga blast`. Absent "

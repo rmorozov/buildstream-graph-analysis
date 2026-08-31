@@ -6,9 +6,10 @@ that can merge timeline from plane 1 and plane 2."*
 
 Round 20 ground-truthed it and found the pieces already there:
 `bga log-to-chrome` renders a snapshot's Plane 1 log, every extraction
-writes `run/chrome_trace.json`, and `bga native-to-chrome combined
-<plane1_chrome> <raw_log> <out> --anchor-element X` is precisely the
-plane merge the field asked for. Three things kept a user from reaching
+wrote `run/chrome_trace.json` (`UX-452` stopped it - nothing read the
+copy, and `--format chrome` below renders the same shape on demand),
+and `bga native-to-chrome combined <plane1_chrome> <raw_log> <out>
+--anchor-element X` is precisely the plane merge the field asked for. Three things kept a user from reaching
 it, and none of them was the merge:
 
 1. Snapshots did not retain the raw Plane 2 log the combined mode reads

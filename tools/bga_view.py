@@ -695,6 +695,37 @@ TRACE_BUDGET_B = 4 * 1024 * 1024
 #: to prevent. `UX-445` stays open for a machine that can open the UI.
 TRACE_TRACK_BUDGET = 8_000
 
+#: `UX-446`: **every ceiling the hand-off has, declared once.**
+#:
+#: There were two when `docs/guides/cli.md` wrote its ceilings table and
+#: three when `UX-430` landed, and the table was still at two a round
+#: later - a reader whose export refused for 16,832 tracks read a table
+#: of byte ceilings, found the trace comfortably under the one it named,
+#: and had nowhere to go. `git grep TRACE_TRACK_BUDGET -- docs` returned
+#: nothing.
+#:
+#: So the document is checked against this rather than maintained beside
+#: it. Each entry is `(constant name, the unit it is in, what a reader
+#: does when it is the one that bit)`, and
+#: `tests/unit/test_the_ceilings_reach_a_reader.py` asserts three things
+#: at once: that every `*_BUDGET*` this module exports is in here, that
+#: every entry has a row in the table, and that the table has no rows
+#: beyond them. A fourth bound in a fourth unit reddens on the first of
+#: those before anyone has to notice the document.
+CEILINGS = (
+    ("EXPORT_BUDGET_B", "bytes",
+     "nothing - it is said and not enforced. A report that large is "
+     "still your report; the note tells you an attachment may not "
+     "survive it"),
+    ("TRACE_BUDGET_B", "bytes",
+     "nothing you have to do - the trace is left out and the page says "
+     "which bound it hit. `bga timeline` renders one beside the "
+     "snapshot"),
+    ("TRACE_TRACK_BUDGET", "tracks",
+     "`bga timeline --planes 1` or `--only-element`, which narrow what "
+     "is drawn rather than what is carried"),
+)
+
 
 # One relative `import` statement, however its specifier list is
 # wrapped. `.*?` under `re.S` so a `{ a, b }` list broken across lines is

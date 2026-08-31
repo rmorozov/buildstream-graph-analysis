@@ -155,3 +155,11 @@ moves the same single-run report from one snapshot to another.
   Perfetto fetches the trace rather than receiving it by
   `postMessage`. The rule for *when to press the button* does not
   change; only the transport does.
+- **Above 8,000 tracks it is refused** (`UX-430`), and that one is not
+  about transport. Perfetto draws a row per track, and a big capture
+  reaches the track bound while its byte figure still looks
+  comfortable — 491 KB against 4 MiB at 16,832 tracks. `bga timeline
+  --planes 1` is the answer, and [`cli.md`](cli.md)'s ceilings table
+  is where all three bounds are listed. This is the one case where the
+  rule above *does* change: the answer is still in the trace, and the
+  trip has to be made with fewer lanes.

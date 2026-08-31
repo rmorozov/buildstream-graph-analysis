@@ -1275,13 +1275,30 @@ rule is about.
 > the rails, the chapters, the table tools, the shape channel, the
 > query library) and the embedded contract is new since round 51.
 
-Two ceilings, both **reported and never enforced** — a report that large
-is still your report. They are read against different halves:
+Three ceilings, and they are not all in the same unit. Two are byte
+bounds on what is *carried*; the third is on what Perfetto has to
+**draw**, which is what actually decides whether a big capture opens
+(`UX-430`). None is enforced by refusing to write your report — a
+report that large is still your report — and each says which one it
+was:
 
-| | | measured against |
-| --- | --- | --- |
-| the file | 8 MiB, past which an attachment starts being refused | the whole written file: source + contract + data |
-| the timeline alone | 4 MiB, and it is dropped with the reason said | the **gzipped trace** before it is base64-encoded — one part of the data half, and the only part either ceiling singles out |
+| constant | the bound | measured against | when it is the one that bit |
+| --- | --- | --- | --- |
+| `EXPORT_BUDGET_B` | 8 MiB | the whole written file: source + contract + data | nothing to do; the note says an attachment may not survive it |
+| `TRACE_BUDGET_B` | 4 MiB | the **gzipped trace** before it is base64-encoded — one part of the data half | the trace is left out and the page names the bound; `bga timeline` renders one beside the snapshot |
+| `TRACE_TRACK_BUDGET` | 8,000 tracks | the rows Perfetto opens: one process track per element, one thread track per traced pid | `bga timeline --planes 1` or `--only-element`, above — they narrow what is *drawn* rather than what is carried |
+
+The third is the one a reader is least likely to guess at, because the
+byte figure looks fine when it bites: measured on the seeded scale run
+at twelve processes an element, the trace is **491 KB against a 4 MiB
+bound and 16,832 tracks**. `--planes 1` drops the process lanes and is
+a 14x reduction there — and 26x at twenty-four processes an element,
+since Plane 1's own track count does not move with the process
+population (`UX-445`).
+
+`TRACE_TRACK_BUDGET`'s value is one sample and says so — see its
+docstring in `tools/bga_view.py`, and `UX-445` for what is still
+unmeasured about it.
 
 For CI, put it beside the comment step — see
 [`ci-comment.md`](ci-comment.md).

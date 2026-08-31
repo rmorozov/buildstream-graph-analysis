@@ -64,6 +64,12 @@ from tools.bst_native_build_tracer import (    # noqa: E402
     read_host_samples,
 )
 
+#: `UX-453`: the resolution `HostSampler._run` stamps each sample at -
+#: `round(time.monotonic(), 3)`, one millisecond. Written here because
+#: the clause below brackets a rounded value with unrounded readings and
+#: has to say how far a stamp may legitimately have moved.
+T_QUANTUM_S = 0.001
+
 
 def _record(element="a.bst", **extra):
     record = {"element": element, "cmd": "cc -c x.c", "open": False,
@@ -118,17 +124,32 @@ class TestTheHostIsSampled:
         """`hook.c` uses `clock_gettime(CLOCK_MONOTONIC)`; so does
         `time.monotonic()`. Asserted by bracketing, because the point is
         that no offset is needed - a sample taken between two readings
-        of `time.monotonic()` must fall between them."""
+        of `time.monotonic()` must fall between them.
+
+        `UX-453`: the bracket is widened by half of the sampler's own
+        rounding quantum, and by nothing else. `_run` writes
+        `round(time.monotonic(), 3)`; the readings around it are not
+        rounded, so a sample taken within half a millisecond of an edge
+        can round across it and this clause reddened once in a full
+        `-n auto` run with nothing wrong. Measured over 400 sampled
+        series at `interval_s=0.05`: worst excursion **0.000245 s**,
+        inside `T_QUANTUM_S / 2` and nowhere near a real clock skew.
+        The tolerance is tied to the sampler's resolution rather than
+        set as slack - coarsen the `round` and this reddens again.
+        """
         before, after = sampled["before"], sampled["after"]
         back = sampled["back"]
         if not back["samples"]:
             pytest.skip("this host exposes no /proc/meminfo")
         assert back["header"]["clock"] == "CLOCK_MONOTONIC"
+        edge = T_QUANTUM_S / 2
         for sample in back["samples"]:
-            assert before <= sample["t"] <= after, (
-                f"sample at {sample['t']} is outside [{before}, {after}] - "
-                f"the series is not on the trace's clock and every join "
-                f"against a process record would be silently wrong")
+            assert before - edge <= sample["t"] <= after + edge, (
+                f"sample at {sample['t']} is outside "
+                f"[{before}, {after}] by more than the {T_QUANTUM_S}s "
+                f"stamp resolution - the series is not on the trace's "
+                f"clock and every join against a process record would be "
+                f"silently wrong")
 
     def test_the_header_carries_the_pair_that_reaches_wall_time(self, sampled):
         """`UX-185`'s `bga-clocks` shape: a monotonic series is useless

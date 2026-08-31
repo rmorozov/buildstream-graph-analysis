@@ -1,6 +1,6 @@
 # UX-457: the reference can only be refreshed from a host the round cannot reach
 
-**Priority:** Low | **Status:** 🟡 In Progress | **Found by:** round 71, going to add the missing `tests/ci_reference.json` rows for the round's four new files | **Serves:** the contributor who is told to refresh the reference and cannot fetch the thing to refresh from | **Topic:** guards
+**Priority:** Low | **Status:** 🟢 Done | **Found by:** round 71, going to add the missing `tests/ci_reference.json` rows for the round's four new files | **Serves:** the contributor who is told to refresh the reference and cannot fetch the thing to refresh from | **Topic:** guards
 
 ## Motivation
 
@@ -77,7 +77,7 @@ run from a round's own environment, against a reference whose newest
 rows came from a CI run and not from a laptop — with the command that
 fetched them pasted here.
 
-## Outcome (round 71, 2026-08-31) — 🟡 the route is built, not yet walked
+## Outcome (round 71, 2026-08-31)
 
 ### Which of the three, and why the third was not enough
 
@@ -141,9 +141,73 @@ of the two is reachable depends on who is reading. Mutated by deleting
 FAILED tests/unit/test_the_refresh_route_is_written_down.py::test_the_tool_says_where_from_wherever_it_says_re_record
 ```
 
-### What is not done
+### The route, walked
 
-The route has not been walked. Its first run is this commit's own, and
-the acceptance test — a `tier-reference` log fetched over the API,
-pasted, and `tests/ci_reference.json` refreshed from it — is what
-closes this row.
+`tier-reference` on run 33413312096 (head `c41a27e`), four steps,
+**four seconds** end to end:
+
+```text
+Fetch what test (3.11) recorded    16:26:39 -> 16:26:39
+The candidate, and nothing else    16:26:39 -> 16:26:40
+```
+
+and its log is the document, from `{` to `}`:
+
+```text
+{
+  "measured_on": "github-actions ubuntu-latest, test (3.11), -n auto",
+  "note": "UX-420: one CI run's per-file totals, ...",
+  "files": {
+    "tests/test_cli.py": 1.94,
+    ...
+    "tests/unit/test_width_uniformity.py": 0.01
+  },
+  "spread": { "files": 314, "shift": 1.34, "min": 0.105,
+              "p25": 0.796, "p75": 1.269, "max": 7.257 }
+}
+```
+
+`tests/ci_reference.json` is that document: **376 files -> 385**, a
+whole re-record rather than a seventh hand-append, and the four files
+round 71 added are in it.
+
+### The measurement that sharpens the item
+
+A direct fetch from this environment is refused *at the same redirect*,
+even with the API reachable and a token in hand — so it is the
+redirect target, not the API, that is closed:
+
+```console
+$ curl -sS -o /dev/null -w "%{http_code}\n" https://api.github.com/rate_limit
+200
+$ curl -sSL -H "Authorization: Bearer $GITHUB_TOKEN" \
+    https://api.github.com/repos/.../actions/jobs/99560544815/logs
+curl: (56) CONNECT tunnel failed, response 403
+- productionresultssa14.blob.core.windows.net:443 - connect_rejected
+```
+
+The route works because the GitHub tooling a round has fetches the log
+**server-side** and hands back its text. That is a real route and it is
+the one a round actually has; it is not a claim that the blob host
+became reachable, and this Outcome says so rather than letting the
+green result imply it.
+
+### What the refreshed document then answered
+
+The open question this item started from — why the drift gate had never
+named `test_the_served_handoff_counts_its_edges.py`, a 2.8s file with
+no reference row — has an answer in the numbers rather than in a theory
+about the gate:
+
+```text
+tests/unit/test_the_served_handoff_counts_its_edges.py   0.01
+tests/unit/test_the_journey_has_an_answer_key.py         0.00
+```
+
+It **skips** in `test (3.11)`. The gate was right to say nothing.
+
+### Deviation from the Required Fix
+
+None. The second option was taken, with `UX-441`'s objection removed
+rather than accepted; the choice is recorded above the job in
+`ci.yml`.

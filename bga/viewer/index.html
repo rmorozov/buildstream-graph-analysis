@@ -39,23 +39,35 @@
     <!-- `UX-373`: the questions live under the button that opens the
          trace they ask about. This was `sql.html`. -->
     <a href="perfetto.html">Questions to ask it</a>
+    <!-- `UX-435`: the two fallbacks are **routes, not paragraphs.**
+         They were two `<p>`s of prose under the control, and served -
+         the mode `bga view` opens by default - they cost 112px of a
+         208px-wide rail against the 45px the controls themselves
+         take. Measured on `with_timeline` at 1440x900: the group was
+         157px served against 39px exported, and 64.2% of the rail at
+         390x844.
+
+         Each is still its own hideable element with its own id, so
+         `wireTheHandoff` unhides exactly what it unhid before -
+         `perfetto-link.parentElement` is still `#actions-fallback`,
+         `trace-download.parentElement` is still `#actions-download`.
+         What changed is that they are inline spans on the control's
+         own line rather than blocks under it, and that each reads as
+         what it does rather than as a sentence about when to do it.
+         `UX-198` and `UX-314` added them for measured failures and
+         both are still here; this moves them, it does not drop
+         either. -->
+    <span id="actions-fallback" class="muted" hidden>
+      · <a id="perfetto-link" href="#"
+           title="Open ui.perfetto.dev on this trace, if the tab-to-tab
+                  hand-off did not">ui.perfetto.dev</a>
+    </span>
+    <span id="actions-download" class="muted" hidden>
+      · <a id="trace-download" href="#" download
+           title="Save the trace and drag it into ui.perfetto.dev -
+                  the route no policy can refuse">save trace</a>
+    </span>
     <span id="handoff" class="muted"></span>
-  </p>
-  <!-- UX-198: pop-up policy will change again, so there is always a
-       plain link. Unhidden only when a server is behind the trace. -->
-  <p id="actions-fallback" class="muted" hidden>
-    Nothing opened? <a id="perfetto-link" href="#">open ui.perfetto.dev
-    with this trace</a>.
-  </p>
-  <!-- UX-314: the transport that needs no permission from anybody.
-       Perfetto's connect-src decides whether the deep link may be
-       used, and postMessage has a size ceiling, so the reader always
-       has the file itself and Perfetto's own drag-and-drop.
-       UX-317: and it renders here, under the control it explains,
-       rather than in the header two blocks above it. -->
-  <p id="actions-download" class="muted" hidden>
-    Or <a id="trace-download" href="#" download>save the trace</a> and
-    drag it into <span class="mono">ui.perfetto.dev</span>.
   </p>
 </div>
 <main id="report" aria-busy="true">

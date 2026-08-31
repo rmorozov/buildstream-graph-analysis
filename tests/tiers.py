@@ -468,6 +468,11 @@ LARGE = (
 )
 
 MEDIUM = (
+    # `UX-435`, tiered on landing. One http server, one browser, and
+    # four measurements of the rail - two viewports in the served mode,
+    # which is the whole point of the file. 14.2s, just under the large
+    # floor.
+    "tests/unit/test_the_handoff_box_is_measured_served.py",       # 14.2s
     # `UX-436`, tiered on landing. One `gen-synthetic` run, two
     # exports and one browser reading the computed appearance of every
     # button on both - 1,591 of them on the scale page, which is where

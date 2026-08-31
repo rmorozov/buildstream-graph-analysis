@@ -521,10 +521,25 @@ class TestThePageDoesNotOpenAnythingUninvited:
         assert 'id="open"' in page, "there is no button to click"
 
     def test_both_modes_offer_a_way_out_when_nothing_opens(self):
-        """Item 3: pop-up policy will change again."""
-        for name in ("perfetto.html", "index.html"):
+        """Item 3: pop-up policy will change again.
+
+        `UX-435` re-worded the rail's copy of this - the fallback is a
+        route on the control's own line now rather than a paragraph of
+        prose under it - and this clause was reading for the sentence
+        `"Nothing opened?"`, so it went red on a change that kept the
+        way out and moved it. It reads for the **route** now: the
+        hideable element and the link inside it, which is what "offers
+        a way out" actually means and what a re-wording must not break.
+        """
+        routes = {
+            # page: (what holds the fallback, the link inside it)
+            "perfetto.html": ("handoff-fallback", 'id="deep"'),
+            "index.html": ('id="actions-fallback"', 'id="perfetto-link"'),
+        }
+        for name, (holder, link) in routes.items():
             page = open(f"bga/viewer/{name}", encoding="utf-8").read()
-            assert "Nothing opened?" in page, name
+            assert holder in page, f"{name}: nothing holds the plain link"
+            assert link in page, f"{name}: the plain link is gone"
 
 
 class TestTheDeepLink:

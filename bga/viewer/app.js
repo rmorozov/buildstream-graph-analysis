@@ -254,6 +254,49 @@ export function wireJumpBox(nav, root, payload, context = {}) {
  * threshold in it, so the page applies the server's number rather than
  * keeping a second copy of it.
  */
+/**
+ * `UX-451`: where a hand-off state is drawn depends on how long it is.
+ *
+ * `#handoff` lives inside `#actions-group`, which `app.js` moves into
+ * the 240px sticky rail at boot - 208px of column. The short states
+ * ("sent 42.1 KiB") belong there, beside the control they are about.
+ * The two refusals do not: they are ~300 characters, which is twenty
+ * lines in that column, on the screen of the reader who has just had
+ * something fail. Measured served on `with_timeline` with the refusal
+ * forced, the group went from 106px to **408px** at 1440x900 and from
+ * 62px to 248px at 390x844 - 80% of the rail on a phone.
+ *
+ * So they are drawn in `#handoff-refusal`, a sibling of the group and
+ * therefore left behind in the content column when the group travels.
+ * `UX-326` makes the sentence a contract: this decides *where* it is
+ * drawn and never a word of it. Nothing is split between the two -
+ * exactly one of them holds the state at a time, which is why the
+ * short path clears the banner and the long path clears the line.
+ *
+ * The classification is the call site's, not a character count. The
+ * code knows which branch is a refusal; a threshold on `length` would
+ * be a number nobody could argue.
+ */
+export function announceHandoff(status, text, { refused = false } = {}) {
+  const banner = document.getElementById("handoff-refusal");
+  if (!banner) {
+    // A page from before this element existed. One line, in the rail,
+    // is what it had - a refusal that renders nowhere is worse than a
+    // refusal that renders badly.
+    status.textContent = text;
+    return;
+  }
+  if (refused) {
+    banner.textContent = text;
+    banner.hidden = false;
+    status.textContent = "";
+  } else {
+    banner.textContent = "";
+    banner.hidden = true;
+    status.textContent = text;
+  }
+}
+
 export function wireTheHandoff(run = {}) {
   const actions = document.getElementById("actions");
   const button = document.getElementById("perfetto");
@@ -299,7 +342,8 @@ export function wireTheHandoff(run = {}) {
   const inlineMax = Number(run?.trace_inline_max_bytes ?? Infinity);
 
   button.addEventListener("click", async () => {
-    status.textContent = "opening ui.perfetto.dev — sent tab to tab, not uploaded…";
+    announceHandoff(
+      status, "opening ui.perfetto.dev — sent tab to tab, not uploaded…");
     // `handOff` opens the tab before its first `await` (UX-198), so
     // this must call it without one - no `await` may come first in
     // this handler, or the click's activation is gone before the open.
@@ -320,21 +364,26 @@ export function wireTheHandoff(run = {}) {
           // is the failure this whole path existed to avoid.
           if (fetchable) {
             tab.location = deepLink(absolute.href);
-            status.textContent =
+            // Not a refusal: the trace is opening, by the other
+            // transport. Short, and it belongs beside the control.
+            announceHandoff(
+              status,
               `${(size / 1048576).toFixed(1)} MiB — over the ` +
               `${(inlineMax / 1048576).toFixed(0)} MiB this page will copy, ` +
-              `so Perfetto is fetching it from here directly.`;
+              `so Perfetto is fetching it from here directly.`);
             return;
           }
           tab.close?.();
-          status.textContent =
+          announceHandoff(
+            status,
             `${(size / 1048576).toFixed(1)} MiB — over the ` +
             `${(inlineMax / 1048576).toFixed(0)} MiB this page will copy, ` +
             `and ui.perfetto.dev may not fetch ${absolute.origin} ` +
             `(its own connect-src allows https, 127.0.0.1:9001 and ` +
             `localhost:8080 only). Re-run with --port 8080 and open ` +
             `${PERFETTO_FRIENDLY_URL} — or save the trace below and drag ` +
-            `it into ui.perfetto.dev.`;
+            `it into ui.perfetto.dev.`,
+            { refused: true });
           return;
         }
       }
@@ -343,10 +392,14 @@ export function wireTheHandoff(run = {}) {
       // pop-up a browser blocks (`UX-198`).
       const { bytes } = await handOff(url, "bga timeline",
                                       tab ? { tab } : {});
-      status.textContent = `sent ${(bytes / 1024).toFixed(1)} KiB`;
+      announceHandoff(status, `sent ${(bytes / 1024).toFixed(1)} KiB`);
     } catch (error) {
       tab?.close?.();
-      status.textContent = String(error.message ?? error);
+      // A thrown message is whatever threw it - unbounded, and always
+      // a failure. It goes where the other refusal goes rather than
+      // being sorted by how long it happens to be this time.
+      announceHandoff(status, String(error.message ?? error),
+                      { refused: true });
     }
   });
 }

@@ -98,7 +98,12 @@ CI's in any form. The numbers to commit exist only in CI's own run:
 2. Download its **`ci-reference-candidate`** artifact - one file,
    `ci_reference.candidate.json`, written by the same tool with
    `--record` and kept for 30 days. It is the whole document, not a
-   diff.
+   diff. `UX-457`: if you cannot reach GitHub's artifact host - an
+   agent session behind an egress policy gets `403 CONNECT tunnel
+   failed` from it and from the run-log host both - read the
+   **`tier-reference`** job's log on the same run instead. That job
+   downloads this artifact and `cat`s it, and does nothing else, so
+   its log *is* the document.
 3. Replace `tests/ci_reference.json` with it.
 4. Commit it in the same commit as the change that made the file
    slower, with a line in the task file's Outcome saying which run it

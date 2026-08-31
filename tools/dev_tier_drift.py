@@ -136,6 +136,21 @@ CI_REFERENCE = REPO / "tests" / "ci_reference.json"
 #: pointing at nothing, which is what the item was filed on.
 CI_CANDIDATE_ARTIFACT = "ci-reference-candidate"
 
+#: And the job whose whole log **is** that document - `UX-457`.
+#:
+#: The artifact above is the right thing to download and the wrong
+#: thing to reach: GitHub serves artifact bytes from
+#: `productionresultssa19.blob.core.windows.net` and run-log zips from
+#: `results-receiver.actions.githubusercontent.com`, and round 71 was
+#: refused by both (403, CONNECT rejected) from the environment the
+#: round was worked in - while the API that reads one job's log was
+#: not. So `ci.yml` has a job that downloads the artifact and `cat`s
+#: it, and a reader who cannot download can read that job instead.
+#:
+#: Both names, in every message, because which one is reachable depends
+#: on who is reading.
+CI_CANDIDATE_JOB = "tier-reference"
+
 #: How much slower than its own CI reference a file may run before it is
 #: reported, *after* the run's median shift is divided out.
 CI_DRIFT_FACTOR = 1.5
@@ -380,7 +395,8 @@ def record(times, source="unknown", reference=None):
                  "can be read against CI rather than against the floors in "
                  "tests/tiers.py, which describe a developer machine. "
                  f"Refresh from a CI run's {CI_CANDIDATE_ARTIFACT} "
-                 f"artifact, which is this same tool's --record taken on "
+                 f"artifact, or the log of its {CI_CANDIDATE_JOB} job, "
+                 f"which is this same tool's --record taken on "
                  f"the runner whose clock this document is in - not from "
                  f"a local --record (UX-418, UX-447)."),
         "files": {name: round(seconds, 2)
@@ -570,7 +586,8 @@ def _against(times, path, args):
         print(f"{path} names none of the {len(times)} file(s) this run "
               f"measured, so it cannot be a reference for it. Re-record "
               f"with --record - from CI's own "
-              f"{CI_CANDIDATE_ARTIFACT} artifact, not from this machine.",
+              f"{CI_CANDIDATE_ARTIFACT} artifact or its "
+              f"{CI_CANDIDATE_JOB} job's log, not from this machine.",
               file=sys.stderr)
         return 2
     if verdict == "stale":
@@ -578,7 +595,8 @@ def _against(times, path, args):
               f"{where}, outside the {IMAGE_BAND[0]}-{IMAGE_BAND[1]} band. "
               f"That is the whole runner moving, not one file drifting - "
               f"re-record with --record and commit it - from this "
-              f"run's {CI_CANDIDATE_ARTIFACT} artifact - rather than "
+              f"run's {CI_CANDIDATE_ARTIFACT} artifact, or its "
+              f"{CI_CANDIDATE_JOB} job's log - rather than "
               f"reading the per-file numbers below.", file=sys.stderr)
         return 1
     known = reference.get("files") or {}
@@ -630,7 +648,8 @@ def _against(times, path, args):
     print(f"\nMake it faster, or - if it is meant to cost this - refresh "
           f"the reference and commit it, which is how it stays true rather "
           f"than becoming an alarm nobody reads. The document to commit is "
-          f"this run's {CI_CANDIDATE_ARTIFACT} artifact, or this file's "
+          f"this run's {CI_CANDIDATE_ARTIFACT} artifact, its "
+          f"{CI_CANDIDATE_JOB} job's log, or this file's "
           f"printed seconds divided by the shift above; `--record` on your "
           f"own machine writes the wrong clock (UX-418, UX-447).",
           file=sys.stderr)
@@ -646,7 +665,8 @@ def main(argv=None):
                         help="write this report as the CI reference "
                              "(`-` prints it), instead of checking. CI "
                              "runs this and uploads the result as the "
-                             f"{CI_CANDIDATE_ARTIFACT} artifact; that is "
+                             f"{CI_CANDIDATE_ARTIFACT} artifact and prints it in "
+                             f"the {CI_CANDIDATE_JOB} job; that is "
                              "what to commit, because a local run writes "
                              "this machine's clock and not CI's")
     parser.add_argument("--against", metavar="PATH", nargs="?",

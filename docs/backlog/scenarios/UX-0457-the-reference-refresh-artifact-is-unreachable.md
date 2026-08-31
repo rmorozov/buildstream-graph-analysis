@@ -1,6 +1,6 @@
 # UX-457: the reference can only be refreshed from a host the round cannot reach
 
-**Priority:** Low | **Status:** 🔴 Not Started | **Found by:** round 71, going to add the missing `tests/ci_reference.json` rows for the round's four new files | **Serves:** the contributor who is told to refresh the reference and cannot fetch the thing to refresh from | **Topic:** guards
+**Priority:** Low | **Status:** 🟡 In Progress | **Found by:** round 71, going to add the missing `tests/ci_reference.json` rows for the round's four new files | **Serves:** the contributor who is told to refresh the reference and cannot fetch the thing to refresh from | **Topic:** guards
 
 ## Motivation
 
@@ -55,6 +55,9 @@ Pick one, and record which:
   reach GitHub's artifact host, so a reader who cannot stops looking
   instead of concluding the artifact is missing.
 
+**Chosen: the second, with the trade avoided rather than accepted** —
+see the Outcome.
+
 ## Out of Scope
 
 - **The egress policy.** It is the environment's, not this
@@ -74,6 +77,73 @@ run from a round's own environment, against a reference whose newest
 rows came from a CI run and not from a laptop — with the command that
 fetched them pasted here.
 
-## Outcome
+## Outcome (round 71, 2026-08-31) — 🟡 the route is built, not yet walked
 
-_Not started._
+### Which of the three, and why the third was not enough
+
+The third option — say in the advice that the download needs a host
+some readers cannot reach — tells a reader they are stuck. It does not
+get them the numbers, and the numbers are the point.
+
+The second was taken with the reason `UX-441` rejected it removed. That
+item did not object to *printing* the document; it objected to printing
+370 lines of it in the tail of the job whose failing assertion the
+reader was looking for. So the print happens in a job of its own:
+
+```yaml
+  tier-reference:
+    runs-on: ubuntu-latest
+    needs: test
+    if: always()
+    steps:
+      - name: Fetch what test (3.11) recorded
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: ci-reference-candidate
+      - name: The candidate, and nothing else
+        run: cat ci_reference.candidate.json || echo "no candidate ..."
+```
+
+Nothing there can fail an assertion, so there is no failure for the
+document to bury — and `get_job_logs` on that job returns the document
+and not a suite. `download-artifact` runs *inside* CI, which reaches
+the blob host fine; only the reader outside does not.
+
+It downloads rather than re-records on purpose. A job that ran
+`--record` again would print a different run's clock and look
+identical.
+
+### What holds it
+
+`tests/unit/test_the_candidate_reaches_a_log.py`, five clauses, each
+mutated:
+
+| # | mutation | clause that went red |
+|---|---|---|
+| M1 | rename the job to `tier-ref` | all five (the job is gone) |
+| M2 | download `bst-examples-run-data` instead | `..._fetches_the_artifact_the_tool_names` |
+| M3 | `--record` writes `reference.json` | `..._prints_the_file_the_record_step_wrote` |
+| M4 | add a `pytest` step to the job | `..._cannot_fail_an_assertion` |
+| M5 | drop `if: always()` | `..._runs_on_the_red_runs_too` |
+
+M3 is the one worth naming: the recorded path is read out of the
+workflow's own `--record` step rather than compared against a constant
+here, so the clause holds the two real sites equal instead of holding
+both against a third copy.
+
+`UX-447`'s guard gained the matching clause — every message that says
+"re-record" now names the job as well as the artifact, because which
+of the two is reachable depends on who is reading. Mutated by deleting
+`CI_CANDIDATE_JOB` from one of the four messages:
+
+```console
+FAILED tests/unit/test_the_refresh_route_is_written_down.py::test_the_tool_says_where_from_wherever_it_says_re_record
+```
+
+### What is not done
+
+The route has not been walked. Its first run is this commit's own, and
+the acceptance test — a `tier-reference` log fetched over the API,
+pasted, and `tests/ci_reference.json` refreshed from it — is what
+closes this row.

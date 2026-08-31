@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-452 scenarios: **11 open**, 441 closed.
+453 scenarios: **12 open**, 441 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -27,7 +27,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | cli | 0 | 5 |
 | store | 2 | 28 |
 | docs | 2 | 40 |
-| guards | 3 | 69 |
+| guards | 4 | 69 |
 
 ## Open scenarios
 
@@ -47,6 +47,7 @@ task file, which is the only place it ever lived twice.
 | UX-450 | [two viewer modules sit exactly on the line-count ceiling](UX-0450-two-viewer-modules-sit-exactly-on-the-ceiling.md) | guards | Medium | the next round that adds anything to the viewer's two largest modules | 🔴 |
 | UX-451 | [the hand-off's refusal sentence is written into a 208px column](UX-0451-the-handoff-refusal-sentence-has-the-rails-width.md) | viewer | Medium | the reader whose hand-off failed - the only reader who ever sees this sentence | 🔴 |
 | UX-452 | [every capture writes a legacy Chrome trace that no reader opens](UX-0452-the-legacy-chrome-trace-is-written-and-never-read.md) | contracts | Low | the reader who tars a capture up for an issue, and pays for a file nobody reads | 🔴 |
+| UX-454 | [closing a task twice doubles its status word](UX-0454-closing-a-task-twice-doubles-its-status-word.md) | guards | Low | anyone reading a task file's header, and the next round that greps the status line | 🔴 |
 
 ## UX-398..UX-410: the sixty-fourth round — the walk that judged the answers (2026-08-29)
 

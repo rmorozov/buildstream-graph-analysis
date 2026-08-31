@@ -1,6 +1,6 @@
 # UX-429: a command is rendered as a list of its words
 
-**Priority:** High | **Status:** 🔴 Not Started | **Found by:** round 69, an outside walk of `bga snapshot` → `bga view` → Perfetto | **Serves:** every reader who is handed a command and expected to run it | **Topic:** viewer
+**Priority:** High | **Status:** 🟢 Done | **Found by:** round 69, an outside walk of `bga snapshot` → `bga view` → Perfetto | **Serves:** every reader who is handed a command and expected to run it | **Topic:** viewer
 
 ## Motivation
 
@@ -91,4 +91,110 @@ the generic array path must redden it.
 
 ## Outcome
 
-_Not started._
+**Round 70, 2026-08-31.** All four bullets, and the shape landed in §1
+before it landed in the code.
+
+### The gap, through the page's own resolution
+
+Measured on `macro_micro`, driving `renderStructured` under the DOM
+shim with the schema node as it was:
+
+```text
+classify without the hint: inline code list
+cell tag: span class: ""
+cell text: "bga, blast, core.bst, tests/fixtures/macro_micro/run"
+```
+
+and after:
+
+```text
+hint on argv: "shell"
+classify says: command line + copy
+cell tag: code class: next-command
+cell text: "bga blast core.bst tests/fixtures/macro_micro/run"
+data-argv: "bga blast core.bst tests/fixtures/macro_micro/run"
+```
+
+### What was built
+
+- **`bga:command`** on `next_steps[].argv`, valued `"shell"` — declared,
+  never guessed, because `["cmake", "ninja"]` is the same measured shape
+  and genuinely is a list.
+- **§1 gained the row and §1a the hint**, sixteen hints to seventeen.
+  They had to land together: `test_the_contract_names_its_vocabulary.py`
+  holds the emitted and documented sets equal in both directions, and it
+  went red on the first run naming `bga:command` — the guard doing
+  exactly what `UX-306` built it for.
+- **`controls.js:commandLine`**, the one control. `classify` returns
+  `CONTROLS.COMMAND` for it; `structured.js`, `decision.js` and
+  `views.js` all call it. The two hand-rolled copy buttons are gone.
+- It returns **nodes rather than a wrapper**, so the DOM every existing
+  guard reads for `.next-command` and `.copy-step` is unchanged.
+
+### Where it lives, and why
+
+`controls.js` inlines third; `questions.js`, which holds the query
+library's own `copyButton`, inlines after `decision.js`. A command
+control living there could not be imported by `decision.js` without
+reordering the export, which `test_the_viewer_splits_along_its_seams.py`
+would have caught. `test_the_control_lives_where_every_site_can_reach_it`
+pins that.
+
+### The guard
+
+`tests/unit/test_a_command_renders_as_a_command.py`, sixteen clauses,
+1.30s (small by measurement): the hint is declared and only on arrays;
+the table cell is a monospace command; no argv is ever drawn
+comma-separated, read against the payload's own join so an empty cell
+cannot pass it; all four sites draw the identical element; both sections
+keep their copy button; and the export still gets the line.
+
+### A clause of mine that did not discriminate
+
+The first cut of "one control, not three" scanned the three modules'
+**source** for `next-command` and `copy-step`. It failed — on a
+*comment* in `structured.js` mentioning `copy-step` by name. That is
+fixing guide §5's own example, a text scan that cannot tell code from
+data, written into this item's own guard. Replaced by
+`test_all_three_sites_draw_the_same_element`, which renders
+`renderBlastOffline` and `renderDecision` for real and compares the
+elements they build. An earlier cut scanning for `argv.join(" ")` was
+wrong for a different reason: two joins survive and both are right —
+the decision panel's pasteable text block, and `views.js` asking
+whether a step exists at all.
+
+### Falsification
+
+| # | mutation | result |
+|---|---|---|
+| M1 | drop `bga:command` from `argv` (the item's own acceptance mutation) | **red** — 7 clauses |
+| M2 | the table path stops consulting the hint | **red** — 6 |
+| M3 | `decision.js` hand-rolls a comma-joined span again | **red** — 5, including the same-element clause |
+| M4 | `commandLine` drops the copy button | **red** — 4 |
+
+### Deviation from the Required Fix
+
+One, stated: **the table cell gets the line without a copy button of
+its own.** Inside a table §4c's affordance is the table's — double-click
+a cell, or Copy rows — and a fourth copy control per row is the clutter
+`UX-284` measured rather than a fix. The two sections that had a button
+keep it, and a clause holds them to it.
+
+### What this cost, and what it surfaced
+
+`structured.js` was at **exactly** 1,500 lines, `UX-337`'s ceiling. The
+four lines this needed had to be paid for by folding two `classify`
+options onto one line and deleting the dispatch branch's comment, which
+is now in `controls.js` instead. `app.js` is also at exactly 1,500.
+Two modules pinned on the ceiling, each paying in comments, is filed as
+**`UX-450`** rather than absorbed silently again.
+
+### The suite
+
+```console
+$ make lint
+All checks passed!
+
+$ make test
+5415 passed, 28 skipped, 1 warning in 270.04s (0:04:30)
+```

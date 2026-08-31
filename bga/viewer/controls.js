@@ -25,6 +25,8 @@
 const taken = new Set();
 
 /** A sanitized, document-unique id from `stem`. */
+import { el } from "./format.js";
+
 export function uniqueId(stem) {
   const base = `bga-${String(stem)}`.replace(/[^A-Za-z0-9_-]+/g, "-")
                                     .replace(/-+/g, "-")
@@ -123,4 +125,45 @@ export function contained(doc, name, payload, build) {
     console.error(`bga: section "${name}" failed on ${payload}:`, error);
     return sectionFailure(doc, name, payload, error);
   }
+}
+
+
+/**
+ * `UX-429` (§1's command row): one command line, wherever one is drawn.
+ *
+ * Three sites rendered `next_steps[].argv`: `decision.js` and
+ * `views.js` each hand-joined it with a space and hand-rolled a copy
+ * button, and the table path did neither - so the same field read as a
+ * runnable command in two places and as `bga, blast, elem.bst` in the
+ * third. That is the drift a shared control exists to prevent, so all
+ * three call this.
+ *
+ * Returns the **nodes**, not a wrapper: the three callers append into
+ * three different parents, and a wrapper element would change the DOM
+ * that existing guards read for `.next-command` and `.copy-step`.
+ *
+ * `copy` is the page's clipboard writer, absent in the export where
+ * there is none - and then the line still renders, because a command
+ * you can select is worth more than no command. The table path passes
+ * none deliberately: inside a table §4c's affordance is the table's
+ * own (double-click a cell, or Copy rows), and a fourth copy control
+ * per row is the clutter `UX-284` measured rather than a fix.
+ */
+export function commandLine(argv, { make = el, copy = null, deps = {} } = {}) {
+  const text = Array.isArray(argv) ? argv.join(" ") : String(argv ?? "");
+  if (!text) return [];
+  const code = make("code", { class: "next-command", "data-argv": text });
+  code.textContent = text;
+  if (!copy) return [code];
+  const label = "Copy command";
+  const button = make("button", {
+    type: "button", class: "copy-step", "data-copies": "command",
+    title: "Copy this command to the clipboard, ready to run" });
+  button.textContent = label;
+  button.addEventListener?.("click", () => {
+    copy(text);
+    button.textContent = "\u2713 copied";
+    (deps.setTimeout ?? setTimeout)(() => { button.textContent = label; }, 1200);
+  });
+  return [code, button];
 }

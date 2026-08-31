@@ -493,7 +493,13 @@ def host_series(snapshot: str) -> List[tuple]:
     or a host with no `/proc/meminfo` - yields nothing rather than a
     series on an arbitrary epoch.
     """
-    from tools.bst_native_build_tracer import read_host_samples
+    # Relative, like every other import in this module: installed, this
+    # file is `bga._tools.bga_timeline` and there is no top-level
+    # `tools` package at all. An absolute `tools.` import here passed
+    # every local test - the tree has one - and the packaging job's
+    # command sweep caught it on the first push (`ModuleNotFoundError:
+    # No module named 'tools'`, from `bga timeline`).
+    from .bst_native_build_tracer import read_host_samples
 
     read = read_host_samples(os.path.join(snapshot, HOST_SAMPLES_NAME))
     header = read.get("header") or {}

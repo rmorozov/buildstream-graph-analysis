@@ -307,3 +307,39 @@ All checks passed!
 $ make test
 5367 passed, 26 skipped, 1 warning in 296.62s (0:04:56)
 ```
+
+### What that green run could not see (round 70, 2026-08-31)
+
+The two clauses of `TestTheQueryAnswersARealTrace` coined their own
+wording for "Perfetto's shell is not installed" instead of asking
+`tests/trace_processor.py`, which `UX-321` built to be the one gate.
+This machine has the binary, so the clauses **ran** and the skip census
+never saw the reason. Every CI runner has no binary, so they skipped,
+and the census failed all four interpreters after every test had passed:
+
+```text
+5260 passed, 144 skipped in 334.53s (0:05:34)
+================================= skip census ==================================
+2 test(s) skipped for a reason this suite has never declared: 'no
+trace_processor_shell (tools/dev_perfetto_queries.py --fetch)'. Add it
+to KNOWN_SKIP_REASONS in tests/conftest.py …
+make: *** [Makefile:51: test] Error 1
+```
+
+Fixed by asking the shared gate — `trace_processor.shell()` and
+`trace_processor.REASON` — which also gives these clauses the
+`BGA_TRACE_PROCESSOR` override the hardcoded path did not honour. The
+declared baseline moved with the measurement:
+
+```console
+$ PYTEST_XDIST= python3 -m pytest tests/unit/test_the_real_reader_agrees.py \
+    tests/unit/test_the_perfetto_handoff.py \
+    tests/unit/test_the_graph_shape_query_answers.py -q -rs \
+  | grep -c "trace_processor_shell is not installed"
+16
+```
+
+14 -> 16 in `KNOWN_SKIP_REASONS`. That the census can only check a
+reason on a machine where the skip fires — the reason this was green
+here and red there, and the second time this exact shape has landed
+(`tests/conftest.py:116` records round 50's) — is filed as **`UX-449`**.

@@ -34,7 +34,6 @@ real reader when this machine has one, so the emulation is anchored
 rather than trusted.
 """
 import json
-import os
 import pathlib
 import shutil
 import sqlite3
@@ -45,6 +44,9 @@ import pytest
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
+sys.path.insert(0, str(REPO / "tests"))
+
+import trace_processor  # noqa: E402
 
 node = shutil.which("node")
 needs_node = pytest.mark.skipif(node is None, reason="node is not installed")
@@ -204,11 +206,14 @@ class TestTheGraphShapeQueryIsRun:
             f"{offenders}")
 
 
-READER = os.environ.get("BGA_TRACE_PROCESSOR") or str(
-    pathlib.Path.home() / ".cache/bga/trace_processor_shell-v57.2")
+#: `UX-321` made this one gate, asked in one place, because the skip
+#: census counts by reason and a second wording for "the same optional
+#: tool is absent" splits one family in two. The wording this file first
+#: coined did exactly that, and CI is where it showed: undeclared, the
+#: census failed all four interpreters while every test passed.
+READER = trace_processor.shell()
 needs_reader = pytest.mark.skipif(
-    not os.path.isfile(READER),
-    reason="no trace_processor_shell (tools/dev_perfetto_queries.py --fetch)")
+    READER is None, reason=trace_processor.REASON)
 
 
 @needs_node

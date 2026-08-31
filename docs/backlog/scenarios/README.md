@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-447 scenarios: **13 open**, 434 closed.
+448 scenarios: **14 open**, 434 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -27,7 +27,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | cli | 0 | 5 |
 | store | 2 | 28 |
 | docs | 2 | 40 |
-| guards | 1 | 66 |
+| guards | 2 | 67 |
 
 ## Open scenarios
 
@@ -49,6 +49,7 @@ task file, which is the only place it ever lived twice.
 | UX-446 | [a third ceiling, and no reader-facing document has it](UX-0446-a-third-ceiling-no-reader-facing-document-has.md) | docs | Medium | anyone whose export drops the timeline and goes looking for the reason | 🔴 |
 | UX-447 | [the reference-refresh route is in no contributor document](UX-0447-the-reference-refresh-route-is-in-no-contributor-document.md) | docs | Medium | the contributor whose PR the drift gate stops, who is told to re-record and not where from | 🔴 |
 | UX-448 | [the element-scoped pivot has no finding to arrive from](UX-0448-the-element-scoped-pivot-has-no-finding-to-arrive-from.md) | viewer | Low | the reader who has picked an element and wants to know what it is made of | 🔴 |
+| UX-449 | [a skip reason is only checked where the skip happens](UX-0449-a-skip-reason-is-only-checked-where-the-skip-happens.md) | guards | Medium | the contributor whose new guard skips for a reason nobody declared, who finds out from CI rather than from `make test` | 🔴 |
 
 ## UX-398..UX-410: the sixty-fourth round — the walk that judged the answers (2026-08-29)
 

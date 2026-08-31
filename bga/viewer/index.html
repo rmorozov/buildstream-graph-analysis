@@ -70,6 +70,25 @@
     <span id="handoff" class="muted"></span>
   </p>
 </div>
+<!-- `UX-451`: **the refusal is not written into the rail's column.**
+
+     `#handoff` above is the hand-off's status line, and `app.js` moves
+     `#actions-group` into the 240px sticky rail at boot - where the
+     group measures 208px. Two of the states it can carry are refusals
+     of ~300 characters (Perfetto's connect-src, or a thrown error),
+     and 300 characters in a 204px column is twenty lines. Measured on
+     `with_timeline`, served, with the refusal forced:
+
+         1440x900   group 408px, 50.7% of the rail (resting: 106px)
+          390x844   group 248px, 80.0% of the rail (resting:  62px)
+
+     So the long states are drawn here instead, at the content
+     column's width, and the rail keeps the short ones. Same element
+     set, same strings - `UX-326` makes the sentence a contract and
+     this moves where it is drawn, never its wording. It stays a
+     sibling of `#actions-group` rather than a child, because the
+     child would travel into the rail with it. -->
+<p id="handoff-refusal" class="handoff-refusal" role="status" hidden></p>
 <main id="report" aria-busy="true">
   <p class="muted">Loading…</p>
 </main>

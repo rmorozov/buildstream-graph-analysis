@@ -403,6 +403,13 @@ SMALL_TIER_BACKSTOP_1P_S = 120.0  # the single-process step's timeout
 # divides the runner out before it looks at any file.
 
 LARGE = (
+    # `UX-435`, then `UX-451`. It was medium at 14.2s - "just under the
+    # large floor", which is a note about a file one clause from
+    # crossing it. `UX-451` added the refused state: a second served
+    # page, a second browser, and eight clauses over two viewports.
+    # Measured on the same machine either side, 14.22s -> 28.78s, so it
+    # is large now by its own measurement rather than by feel.
+    "tests/unit/test_the_handoff_box_is_measured_served.py",         #   28.8s
     # `UX-402`: the documented journey, walked. One cold `bst build`
     # against an isolated artifact cache (so the durations are real),
     # one incremental, then analyze, correlate, export and a browser.
@@ -468,10 +475,6 @@ LARGE = (
 )
 
 MEDIUM = (
-    # `UX-435`, tiered on landing. One http server, one browser, and
-    # four measurements of the rail - two viewports in the served mode,
-    # which is the whole point of the file. 14.2s, just under the large
-    # floor.
     # `UX-443`, tiered on landing. Two real servers on a socket and
     # two full trace renders over a committed capture. 2.8s.
     "tests/unit/test_the_served_handoff_counts_its_edges.py",       # 2.8s
@@ -480,7 +483,6 @@ MEDIUM = (
     # seconds rather than milliseconds despite running no build and
     # opening no browser. 3.2s.
     "tests/unit/test_every_skip_reason_is_declared.py",            # 3.2s
-    "tests/unit/test_the_handoff_box_is_measured_served.py",       # 14.2s
     # `UX-436`, tiered on landing. One `gen-synthetic` run, two
     # exports and one browser reading the computed appearance of every
     # button on both - 1,591 of them on the scale page, which is where

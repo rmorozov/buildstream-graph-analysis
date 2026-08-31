@@ -195,7 +195,8 @@ body[data-has-toc] {
   max-width: 84rem;
   display: grid;
   grid-template-columns: minmax(11rem, 15rem) minmax(0, 1fr);
-  grid-template-areas: "head head" "acts acts" "rail main" "rail foot";
+  grid-template-areas:
+    "head head" "acts acts" "warn warn" "rail main" "rail foot";
   align-items: start;
   column-gap: 2rem;
 }
@@ -203,6 +204,13 @@ body[data-has-toc] > header { grid-area: head; }
 /* UX-317: its own band under the identity, spanning both panes - the
    controls are about the whole run, not about the rail or one section. */
 body[data-has-toc] > .actions-group { grid-area: acts; }
+/* `UX-451`: a band of its own, spanning both panes. Without an area
+   the auto-placement put it in the **rail's** column - 240px, which
+   is the width this item exists to get the refusal out of, and the
+   `max-width` below cannot widen a track. Measured that way at
+   1440x900: 240x315px. The row collapses when the element is
+   `hidden`, which is every state but a refusal. */
+body[data-has-toc] > .handoff-refusal { grid-area: warn; }
 body[data-has-toc] > nav.toc { grid-area: rail; }
 body[data-has-toc] > main    { grid-area: main; min-width: 0; }
 body[data-has-toc] > footer  { grid-area: foot; }
@@ -775,6 +783,17 @@ main .map-table { display: block; }
    the save-the-trace sentence was breaking from inside the header. */
 .actions-group { margin: 0 0 .6rem; }
 .actions-group > p { margin: .25rem 0; }
+
+/* UX-451: the hand-off's refusal, at a measure it can be read at.
+   `max-width` in `ch` rather than a pixel figure - the constraint is
+   how many characters a line may hold, and 68 is this stylesheet's
+   reading measure. It is a sibling of `.actions-group`, so the rail
+   never gets it: `app.js` moves the group and leaves this behind. */
+.handoff-refusal {
+  max-width: 68ch; margin: .3rem 0 .8rem;
+  border-left: 3px solid var(--warn); padding: .4rem .8rem;
+  background: var(--panel); color: var(--muted); border-radius: 3px;
+}
 
 /* UX-319 (styleguide §3a.1 + UX-187): the chain's middle, folded and
    counted. One row, spanning the table, holding one control that says

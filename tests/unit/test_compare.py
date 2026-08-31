@@ -182,7 +182,7 @@ def test_cli_compare_missing_directory_exits_one(cli_run_dirs):
     assert proc.returncode == 1
 
 
-@pytest.mark.skipif(not JQ_AVAILABLE, reason="jq not installed")
+@pytest.mark.skipif(not JQ_AVAILABLE, reason="jq not found on PATH")
 def test_cli_compare_json_round_trips_through_jq(cli_run_dirs):
     baseline_dir, candidate_dir = cli_run_dirs
     proc = subprocess.run(

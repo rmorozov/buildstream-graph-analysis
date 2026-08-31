@@ -47,7 +47,7 @@ REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 
 node = __import__("shutil").which("node")
-needs_node = pytest.mark.skipif(node is None, reason="node is required")
+needs_node = pytest.mark.skipif(node is None, reason="node is not installed")
 
 #: The three shapes an empty population arrives in, and the two that
 #: must stay invisible. `joint_saving` really is `null` when its input

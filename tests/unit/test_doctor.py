@@ -173,7 +173,7 @@ class TestTwoProblemsWearingOneErrorGetDifferentRemedies:
     def test_the_package_missing_says_install_it(self, undeclared_cmake, monkeypatch):
         import shutil
         if not shutil.which("bst"):
-            pytest.skip("bst not on PATH")
+            pytest.skip("bst not found on PATH")
 
         remedy = self._remedy(undeclared_cmake, False, monkeypatch)
 
@@ -183,7 +183,7 @@ class TestTwoProblemsWearingOneErrorGetDifferentRemedies:
     def test_the_package_present_says_declare_it(self, undeclared_cmake, monkeypatch):
         import shutil
         if not shutil.which("bst"):
-            pytest.skip("bst not on PATH")
+            pytest.skip("bst not found on PATH")
 
         remedy = self._remedy(undeclared_cmake, True, monkeypatch)
 
@@ -334,7 +334,7 @@ class TestTheLoadProbeUsesTheProjectsOwnElements:
         """The acceptance: `examples/06` with `all.bst` renamed."""
         import shutil
         if not shutil.which("bst"):
-            pytest.skip("bst not on PATH")
+            pytest.skip("bst not found on PATH")
         source = os.path.join(REPO, "examples", "06-macro-micro-optimization")
         if not os.path.isfile(
                 os.path.join(source, "files", "toolchain", "usr", "bin", "gcc")):
@@ -357,7 +357,7 @@ class TestTheLoadProbeUsesTheProjectsOwnElements:
         element. The probe falls through to the next one."""
         import shutil
         if not shutil.which("bst"):
-            pytest.skip("bst not on PATH")
+            pytest.skip("bst not found on PATH")
 
         project = tmp_path / "mixed"
         (project / "elements").mkdir(parents=True)
@@ -513,7 +513,7 @@ class TestTheWholeChainProbe:
             if not shutil.which(tool):
                 pytest.skip(f"{tool} not on PATH")
         if doctor._find_stageable_runtime() is None:
-            pytest.skip("no staged runtime - run examples/stage_runtimes.sh")
+            pytest.skip("examples/01 is not staged - run examples/stage_runtimes.sh")
 
         findings = doctor.check_capture_chain()
 

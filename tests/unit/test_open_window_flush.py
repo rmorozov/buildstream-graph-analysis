@@ -31,7 +31,7 @@ from tools.bst_native_build_tracer import _HOOK_C, parse_open_records
 
 pytestmark = pytest.mark.skipif(
     shutil.which("cc") is None and shutil.which("gcc") is None,
-    reason="no C compiler available to build the hook",
+    reason="no C compiler on PATH",
 )
 
 # UX-56 added `inv=` between the element and the counts; optional here

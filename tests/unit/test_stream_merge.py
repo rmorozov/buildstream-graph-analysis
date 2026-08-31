@@ -479,7 +479,7 @@ def test_a_static_build_reports_itself_unmeasurable_rather_than_clean(tmp_path):
 
     project = os.path.join(REPO_ROOT, "examples", "01-resource-contention")
     if not os.path.isfile(os.path.join(project, "files", "runtime", "bin", "sh")):
-        pytest.skip("examples/01's runtime is not staged - run examples/stage_runtimes.sh")
+        pytest.skip("examples/01 is not staged - run examples/stage_runtimes.sh")
 
     home = tmp_path / "home"
     home.mkdir()

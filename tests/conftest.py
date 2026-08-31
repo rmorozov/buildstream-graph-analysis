@@ -232,6 +232,67 @@ KNOWN_SKIP_REASONS = {
     "(files/toolchain, written by generate_sources.py)": (
         "UX-402's whole-journey arm; it runs where bst, bwrap and the "
         "staged toolchain are all present", 14),
+
+    # `UX-449`. Everything below was **found by the static scan in
+    # `tests/skip_reasons.py`**, not by a run: eighteen reasons written
+    # into the suite that this dictionary had never heard of, on a tree
+    # where every session was green.
+    #
+    # They were invisible for two independent reasons, and the counts
+    # here say which. Sixteen of the eighteen are raised by
+    # `pytest.skip()` in a **test body**, and the hook above counts
+    # `report.when == "setup"` - so the runtime census cannot see them
+    # at all, on any machine, ever. Measured directly, on a two-test
+    # probe where both tests skipped:
+    #
+    #     CENSUS SAW: {'a setup-phase reason': 1}
+    #
+    # The other two ride a `skipif` marker over a tool this machine
+    # happens to have, which is the blind spot `UX-449` was filed for.
+    #
+    # All of them are 0 because none fired in `make test` here or in
+    # round 70's CI (144 skips, every one declared). A count that turns
+    # out to be wrong is the census doing its job, and is a measurement
+    # to correct rather than a reason not to declare.
+    "bst or a staged runtime is missing": (
+        "the capture chain needs both, and reports which is absent", 0),
+    "examples/01 is not staged - run examples/stage_runtimes.sh": (
+        "example 01's runtime is generated, not committed (`UX-189`)", 0),
+    "examples/05-cmake-cpp-toolchain's toolchain isn't staged - run "
+    "stage_cpp_toolchain.sh first": (
+        "example 05's toolchain is generated, not committed", 0),
+    "examples/06 is not staged - run examples/stage_cpp_toolchain.sh": (
+        "example 06's toolchain is generated, not committed", 0),
+    "golden has no Plane 2 sibling to lose": (
+        "a fixture-shape gate: the clause needs a run with both planes", 0),
+    "jq not found on PATH": (
+        "the docs' own examples pipe through jq; it is not a dependency", 0),
+    "no C compiler on PATH": (
+        "the LD_PRELOAD hook and the spine's fixtures are compiled here", 0),
+    "no PATH": (
+        "the doctor's remedy text is about resolving a command, so an "
+        "environment with no PATH at all has nothing to assert", 0),
+    "no block declares a join destination": (
+        "a payload-shape gate over the committed fixtures", 0),
+    "no busybox on PATH to exercise a static binary with": (
+        "the static-binary blind spot needs a real static binary", 0),
+    "no snapshot store in this checkout": (
+        "a store is written by a capture and `UX-189` keeps it out of "
+        "a clone", 0),
+    "this fixture's evidence carries no structured value": (
+        "a payload-shape gate over the committed fixtures", 0),
+    "this fixture's findings name no elements": (
+        "a payload-shape gate over the committed fixtures", 0),
+    "this host exposes no /proc/meminfo": (
+        "the host sampler reads Linux's own files", 0),
+    "this run published no joint-saving signal": (
+        "a payload-shape gate over the committed fixtures", 0),
+    "this run rendered no anchored section": (
+        "a geometry gate: the page has to have drawn one first", 0),
+    "this run rendered no rail": (
+        "a geometry gate: the page has to have drawn one first", 0),
+    "tomllib is 3.11+; CI's packaging job covers this everywhere": (
+        "the one reason here that names its own coverage elsewhere", 0),
 }
 
 # One file going quiet is what this exists to catch, and it is also the

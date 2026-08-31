@@ -54,7 +54,7 @@ node = shutil.which("node")
 
 #: One string each, so `UX-213`'s skip census counts them once.
 NO_NODE = "node is not installed"
-NO_CHROME = "a Chrome/Chromium binary is required"
+NO_CHROME = "no chrome/chromium for the geometry guards (set BGA_CHROME)"
 
 #: The tail this file appends to the shared probe. The probe boots the
 #: export's own inline module; this reads back the two facts `UX-388`

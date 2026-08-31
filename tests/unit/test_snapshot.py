@@ -371,7 +371,7 @@ def test_the_two_line_loop_on_a_real_build(tmp_path):
         if not shutil.which(tool):
             pytest.skip(f"{tool} not on PATH")
     if not (shutil.which("cc") or shutil.which("gcc")):
-        pytest.skip("no cc/gcc on PATH")
+        pytest.skip("no C compiler on PATH")
     repo = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     source = os.path.join(repo, "examples", "01-resource-contention")
     if not os.path.isfile(os.path.join(source, "files", "runtime", "bin", "sh")):

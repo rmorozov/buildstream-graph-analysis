@@ -39,7 +39,7 @@ from tests import pages                                       # noqa: E402
 from tests.browser import NO_BROWSER, Browser, find_chrome     # noqa: E402
 
 node = __import__("shutil").which("node")
-needs_node = pytest.mark.skipif(node is None, reason="node is required")
+needs_node = pytest.mark.skipif(node is None, reason="node is not installed")
 
 _SPLIT = """
 globalThis._makeNode ??= (await import(process.env.BGA_DOM_SHIM)).makeNode;

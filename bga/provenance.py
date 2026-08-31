@@ -177,7 +177,14 @@ TRACE_QUERIES = {
     "wait-category": "stalls",
     "capacity-recommendation": "stalls",
     # Execution: the finding names elements; the query opens them.
-    "time-concentration": "element-time",
+    #
+    # `UX-433`: **which programs**, not which elements. The claim is that
+    # a few elements hold most of the time, and the first thing a reader
+    # asks next is what those elements were *running* - `cost-by-
+    # executable` is that question and nothing could answer it until
+    # `debug.exe` existed. "Which elements" is still one click away:
+    # `diagnosis` points at `element-time`, which is the same query.
+    "time-concentration": "cost-by-executable",
     # `UX-312`: `execution-bound` is a claim about how much of the
     # build was *running processes*, so the count is the drill-down and
     # `latent-heavies` keeps the command list - which is the question

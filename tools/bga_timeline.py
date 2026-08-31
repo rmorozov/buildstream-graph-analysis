@@ -116,6 +116,27 @@ PLANE2_ANNOTATIONS = (
                 "for on Plane 1, the sandbox the process ran in on Plane 2. "
                 "The same uid on both, which is what lets one query join "
                 "them"),
+    # `UX-433`: the key a **pivot** needs. `s.name` is the whole command
+    # line - 14,424 near-unique strings on the audited capture - so
+    # `group by s.name` yields one row per invocation and never one per
+    # program. Nothing else on a Plane 2 slice names the executable.
+    #
+    # **The path as exec'd, not the basename.** `/usr/bin/cc` and
+    # `/usr/lib/gcc/x86_64-linux-gnu/12/cc1` are different answers to
+    # "which program", and a query can take the basename from a path
+    # (`substr(exe, ...)` after the last `/`) while nothing can recover
+    # a path from a basename. The `by-executable` question groups on the
+    # path and the reader who wants the coarser answer trims it.
+    #
+    # Not `debug.cmd` restored: `UX-333` measured the full argv at +75.1%
+    # when kept beside the interned name, and that decision stands. An
+    # executable path is short and low-cardinality - a build uses tens of
+    # distinct programs against tens of thousands of command lines - so
+    # it interns almost for free. Measured in this item's Outcome.
+    ("exe", "the program this process ran, argv stripped - the path as it "
+            "was exec'd, so `/usr/bin/cc` and a compiler's own `cc1` stay "
+            "different programs. What to pivot on when the question is "
+            "which *program* the build spends its time in"),
     ("src", "which mechanism recorded it: `hook` (the LD_PRELOAD hook, "
             "loaded at exec) or `spine` (the ptrace supervisor)"),
     ("cpu_us", "CPU microseconds this process itself used, from its own "
@@ -204,6 +225,24 @@ CATEGORY_PLANE2 = "native-process"
 CATEGORY_RUN = "bst-invocation"
 
 
+def _executable(cmd) -> Optional[str]:
+    """`UX-433`: argv[0] of a recorded command, or `None`.
+
+    The capture writes the command as one string, so this is a split on
+    the first space rather than a shell parse - a path with a space in
+    it would be cut short, which is a wrong answer this cannot detect
+    and a path with a space in it is not something a toolchain has.
+    Recorded here rather than pretended away: the alternative is a
+    parser for a quoting convention the capture does not use.
+
+    `None` for an empty command, so the key is **absent** on a record
+    that has none rather than present and meaningless - the rule every
+    annotation beside it follows.
+    """
+    first = (cmd or "").strip().split(" ", 1)[0]
+    return first or None
+
+
 def _plane2_annotations(record: dict):
     """`PLANE2_ANNOTATIONS`, filled from one record.
 
@@ -217,6 +256,7 @@ def _plane2_annotations(record: dict):
         # the record has none - a query that matched `unknown` would be
         # answering about a bucket rather than about an element.
         "element": record.get("element") or None,
+        "exe": _executable(record.get("cmd")),
         "src": record.get("src"),
         "cpu_us": record.get("cpu_us"),
         "max_rss_kb": record.get("max_rss_kb"),

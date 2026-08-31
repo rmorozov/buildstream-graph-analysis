@@ -71,7 +71,7 @@
       },
       "reader": "local-optimizer",
       "copy_text": "BGA finding: Where the time is: 4 element(s) are 71.9% of the 43.2s critical path - this build is chain-bound, not scheduler-bound\n      core.bst       19.1s (44.1% of path)  -> fixing it saves 12.1s (26.1% of the build)\n      lib-b.bst       4.0s ( 9.3% of path)  -> fixing it saves 4.0s (8.7% of the build)\n      lib-d.bst       4.0s ( 9.3% of path)  -> fixing it saves 4.0s (8.7% of the build)\n      lib-f.bst       4.0s ( 9.3% of path)  -> fixing it saves 4.0s (8.7% of the build)\n  path_us 43.2s\n  share_of_path 72%\n  chain_bound True\n  Elements: core.bst, lib-b.bst, lib-d.bst, lib-f.bst\n  Next: bga blast core.bst <fixture>/run\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
-      "trace_query": "element-time"
+      "trace_query": "cost-by-executable"
     },
     {
       "id": "mesh-graph",
@@ -1242,7 +1242,7 @@
         "sentence": "Published whenever the critical path has measured elements on it; which elements, and their share, are the finding's own `evidence.rows`.",
         "module": "bga/findings.py"
       },
-      "trace_query": "element-time",
+      "trace_query": "cost-by-executable",
       "unpublished_inputs": []
     },
     {

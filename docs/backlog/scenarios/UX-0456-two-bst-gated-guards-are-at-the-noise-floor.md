@@ -1,6 +1,6 @@
 # UX-456: two bst-gated guards fail on the runner and not on the diff
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Found by:** round 71, driving PR #190 to green — two red `bst-tests` jobs on superseded heads | **Serves:** the contributor whose PR goes red on a job their diff cannot have touched | **Topic:** guards
+**Priority:** Medium | **Status:** 🟡 In Progress | **Found by:** round 71, driving PR #190 to green — two red `bst-tests` jobs on superseded heads | **Serves:** the contributor whose PR goes red on a job their diff cannot have touched | **Topic:** guards
 
 ## Motivation
 
@@ -84,6 +84,86 @@ without flipping, with the fixture's measured chain share pasted and
 its distance from 0.9 stated; and `tests/browser.py`'s failure names
 the wait it gave up after.
 
-## Outcome
+## Outcome (round 71, 2026-08-31) — 🟡 the browser half is fixed
 
-_Not started._
+### Why the browser half was done now rather than filed
+
+It recurred on `76648d4` while this row was being written: the same
+eighteen setup errors, same file, same worker, `614.66s (0:10:14)`.
+Two of ten runs on one PR is not a flake to wait out, and the failing
+thing is a **fixture that never started a process** - so there was no
+test to quarantine and nothing to weaken.
+
+The discriminating measurement is which job it happens in. On
+`9acb5fb` every other job was green, including `test (3.11)`, which
+runs the same `make test` in **5m33s**. `bst-tests` runs the `bst`
+tier first and then the same suite in **~10 minutes**, on a runner
+already loaded. Chrome dies there and nowhere else.
+
+### Two real defects in the launcher
+
+**The port was a race.** `_free_port()` binds a socket, reads the
+number and closes it; Chrome binds it later. Between those two moments
+the port belongs to whoever asks, and under `-n auto` the things
+asking are this suite's own workers. That is why load is the variable.
+The retry re-rolls the port rather than re-trying the same one, which
+is the only version of a retry that fixes a collision:
+
+```console
+G3 ports tried: [55773, 46813] | all distinct: True
+```
+
+**The error said nothing.** It named the binary. Eighteen identical
+copies of it carried no more information than one - not the port, not
+the wait, not whether Chrome was even alive. The two causes are now
+distinguished, because they need different fixes:
+
+```console
+G1 exits at once (port/sandbox class): raised after 0.2s
+    /bin/false did not open a debugging port in 2 attempts of 3s.
+    Last: attempt 2 on port 39719 exited 1
+G2 runs and never listens (runner class): raised after 4.0s
+    .../hang.sh did not open a debugging port in 2 attempts of 2s.
+    Last: attempt 2 on port 34277 was still running after 2s
+```
+
+G1 returns in 0.2s rather than burning the 30s wait, because a process
+that has already exited will never answer.
+
+### The falsification caught a hang I had just written
+
+`_why_it_failed` drains the process's stderr. Called **before**
+`_stop()`, that read blocks until EOF - and on the one case the retry
+exists for, a browser that runs and never listens, EOF never comes.
+G2 hung for the full two minutes instead of raising.
+
+That would have been a suite hang in CI, which is worse than the flake
+being fixed. The exit code is now read before the process is stopped
+(after `_stop` every code is the signal we sent) and the pipe is
+drained after, when the writer is gone. The order is commented in the
+code, because it is not obvious and it is load-bearing.
+
+### What is not done
+
+**The `chain_share` half.** Its Acceptance Test is twenty runs of a
+real `bst build` against the cold fixture, and `bst` is not on this
+machine. Nothing about it changed; the row stays open for it, and the
+Motivation above is unedited.
+
+### Verification
+
+```console
+$ python3 -m pytest tests/unit/test_a_control_acts_on_what_it_names.py -q
+18 passed in 37.04s          <- the file whose 18 errors this is about
+
+$ make lint
+All checks passed!
+
+$ make test
+5490 passed, 28 skipped, 1 warning in 308.22s (0:05:08)
+```
+
+Neither figure proves the CI flake is gone - it never reproduced here,
+which is the whole difficulty. What is proved is that both failure
+classes now report which one they were, that a collision gets a second
+port, and that neither path hangs.

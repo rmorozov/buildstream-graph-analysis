@@ -1977,7 +1977,13 @@ _SIGNALS_TABLES = {
                        "worth, in order. The savings stop adding "
                        "up because each fix lets other elements "
                        "onto the path - which is why this is a "
-                       "sequence and not a sum.",
+                       "sequence and not a sum, and why the second "
+                       "entry is the best fix *after* the first "
+                       "rather than today's second-best. Ranked by "
+                       "realizable saving at each step, which is a "
+                       "different question from "
+                       "`elements.top_blast_radius` and gives a "
+                       "different order (`UX-440`).",
         COLUMNS: [
             {"key": "element_uid", "title": "Element",
              "role": "element", "sortable": True},
@@ -3778,11 +3784,25 @@ _ELEMENTS = {
         # no node renders from `guessQuantity`'s name-sniff, which is
         # the gap `UX-343` closed everywhere else - and the census
         # caught both the moment they moved.
+        # `UX-440`: and what it is *not*. The two ranked element lists
+        # this document publishes answer different questions and give
+        # different orders, which a reader meeting one of them has no
+        # way to know. Measured: on a graph where `P` has four
+        # dependents and a 1s build and `Q` has none and a 100s build,
+        # this list ranks `P` above `Q` and `optimization_horizon`
+        # ranks `Q` above `P`.
         "top_blast_radius": {
             "description": "The elements whose change rebuilds the most, "
                            "in that order. A ranking over the population "
                            "below, so the order is the information - the "
-                           "records themselves are in `blast_radius`."},
+                           "records themselves are in `blast_radius`. "
+                           "Not the order to fix things in: that is "
+                           "`optimization_horizon`, which ranks by what "
+                           "a fix saves rather than by what a change "
+                           "costs downstream. The two legitimately "
+                           "disagree - an element with many dependents "
+                           "and a short build of its own leads here and "
+                           "trails there."},
         "blast_radius_ranked_by": {
             "description": "What the ranking above was computed from: "
                            "`measured-rebuild-time` weights each "

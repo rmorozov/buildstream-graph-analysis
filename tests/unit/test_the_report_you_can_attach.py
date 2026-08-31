@@ -439,12 +439,28 @@ END pid=101 ppid=1 ts=1002.500000 element=work-a.bst cmd=cc -c main.c
 # side (no declaration changed) and the data half moves only with
 # `run_instance`, which is why the two totals move by exactly what the
 # page did.
-# `UX-431`: 284,584 -> 285,704, so the page half now sits 296 B under
-# this budget. Left where it is on purpose - the budget is `UX-360`'s
-# judgement about what a reader downloads, not a high-water mark, and
-# raising it needs that argument rather than a diff that happened to
-# arrive next. The next source addition trips this, which is what a
-# budget is for.
+# `UX-431`: 284,584 -> 285,704, leaving 296 B of headroom, and the
+# budget was deliberately left where it was: it is `UX-360`'s judgement
+# about what a reader downloads, not a high-water mark.
+#
+# `UX-434`: 285,704 -> 285,928. It reached **286,195** first and this
+# budget refused it - which is what a budget is for. The corrected
+# `graph-levels` query projects its annotations in a subquery, because
+# the old one grouped by a name the `slice` table also defines and
+# collapsed a nine-level graph into one row. What was trimmed to fit was
+# **prose and whitespace** - two sentences of `returns` that the trace
+# dictionary now carries instead, and one alias per line folded onto
+# two - and never the query's meaning: a wrong query that fits is worse
+# than a right one that does not.
+#
+# **72 bytes of headroom, and this number is no longer the binding
+# one.** `test_only_one_number_bounds_the_page` derives a second ceiling
+# from `test_the_data_dwarfs_the_page`'s 2.4x ratio against the scale
+# run's data, and that ceiling is 286,040 - 112 B above where the page
+# sits. The two have converged, so the next source addition of any size
+# trips both, and choosing between them is a decision about what the
+# page is for rather than a number to nudge. `UX-444` holds it, with
+# these measurements.
 PAGE_BUDGET_B = 286_000
 MACRO_MICRO = "tests/fixtures/macro_micro/run"
 COMMITTED_EXPORTS = [
@@ -558,7 +574,9 @@ COMMITTED_EXPORTS = [
     # that exercises it is `TestTheLostEdgesAreAccountedFor`, on
     # `with_timeline`, which is the only committed fixture with a
     # `build.log`.
-    ("golden", GOLDEN, 387_500),                       #  385,968 B
+    # `UX-434`: +320 B on both, all source - see the note on
+    # `PAGE_BUDGET_B` above for what the query bought and what it cost.
+    ("golden", GOLDEN, 387_500),                       #  386,192 B
     # `UX-297` moved this one by 385 B before that: the two-plane run
     # publishes `plane2_coverage.source`, which says which shape of
     # Plane 2 report served its numbers and what that costs to open. A
@@ -609,7 +627,7 @@ COMMITTED_EXPORTS = [
     # 120 keys, not by a fixture.
     # `UX-431`: +1,120 B, all source - the same paragraph as golden;
     # the split is in the note above that bound.
-    ("macro_micro", MACRO_MICRO, 443_000),             #  441,321 B
+    ("macro_micro", MACRO_MICRO, 443_000),             #  441,545 B
 ]
 
 

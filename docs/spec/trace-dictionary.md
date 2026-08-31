@@ -36,8 +36,8 @@ TrackEvent format does not. Verified against Perfetto v49.0 on
 | `element_kind` | Plane 1 | its kind from the run's own graph (`cmake`, `import`, `manual`, ...), or `unknown` where the capture recorded none |
 | `task_type` | Plane 1 | what the scheduler was doing: `build`, `fetch`, `pull`, `push`, `track` |
 | `outcome` | Plane 1 | the status BuildStream's log closed the task with - `SUCCESS`, `FAILURE`, `CACHED` or `SKIPPED`. The cache outcome is the last two, and only where the log states it |
-| `depth` | Plane 1 | how far down the dependency graph this element sits - the longest path in edges from a source, which is the level `parallelism.levels` decomposes the build by. Absent where the snapshot carries no analysis |
-| `on_critical_path` | Plane 1 | whether this element is on the chain that sets the build's finish time. The set every finding in the report is ranked against |
+| `depth` | Plane 1 | how far down the dependency graph this element sits - the longest path in edges from a source, which is the level `parallelism.levels` decomposes the build by. Absent where the snapshot carries no analysis. **`slice` has a `depth` column of its own** - the slice's nesting depth - so a query must project this into a subquery under another name before it groups by it, or the alias is shadowed and every row falls into one group (`UX-434`) |
+| `on_critical_path` | Plane 1 | whether this element is on the chain that sets the build's finish time. The set every finding in the report is ranked against. **The value is the text `true` or `false`**, not a number - Plane 1's booleans reach the arg table as strings, so `sum(...)` over this column is 0 on every capture and a query has to compare it (`UX-434`) |
 | `downstream_count` | Plane 1 | how many elements rebuild when this one changes - its blast radius in elements |
 | `src` | Plane 2 | which mechanism recorded it: `hook` (the LD_PRELOAD hook, loaded at exec) or `spine` (the ptrace supervisor) |
 | `cpu_us` | Plane 2 | CPU microseconds this process itself used, from its own `getrusage` at exit or the spine's read at the exit-stop |

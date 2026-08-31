@@ -860,6 +860,56 @@ def _first_to_begin(spans):
     return min(spans, key=lambda pair: pair[0]["ts"])[0] if spans else None
 
 
+def flow_accounting(snapshot: str):
+    """`UX-431`'s accounting, without rendering the trace. `None` if it
+    cannot be computed.
+
+    `UX-443`: the served page could not have this. `UX-296` moved the
+    render off the startup path - building it there put a 30 GB
+    projected read between the user and the socket on a field capture -
+    and `flow_losses` was a fact only the render knew, so `run.json`
+    was written without it and the section drew nothing.
+
+    It does not need the render. The accounting is a function of the
+    **build log and the dependency graph**, both of which are small and
+    both of which are parsed elsewhere already. What is expensive is
+    Plane 2, and this never opens it. Measured by wrapping `open` while
+    each path ran over a capture with a real raw log:
+
+        plane-1 only opens:  build.log, run/graph.json
+        full render opens:   analyze.json, build.log, host-samples.jsonl,
+                             plane2.log.gz, run/graph.json,
+                             run/run-context.json
+
+    That is the property, not the timing: `plane2.log.gz` is the file
+    `UX-296`'s measurement was about, and it is absent from the first
+    list. The timing agrees anyway - 0.005s against 0.090s on that
+    capture - but a time on a 56 KB log would not have settled it.
+
+    The numbers are the same ones the render publishes; the guard holds
+    the two equal rather than trusting that.
+    """
+    wrapped = os.path.join(snapshot, WRAPPED_LOG_NAME)
+    if not os.path.exists(wrapped):
+        return None
+    scratch = tempfile.mkdtemp(prefix="bga-flows-")
+    try:
+        from .bst_log_to_chrome_trace import main as plane1_main
+
+        plane1 = os.path.join(scratch, "plane1.json")
+        if plane1_main([wrapped, plane1], quiet=True):
+            return None
+        with open(plane1, "r", encoding="utf-8") as handle:
+            events = json.load(handle)
+        edges = dependency_edges(snapshot)
+        _flows, losses, next_flow = _plane1_flows(events, edges, 1)
+        return {"edges": len(edges), "drawn": next_flow - 1, **losses}
+    except (OSError, ValueError):
+        return None
+    finally:
+        shutil.rmtree(scratch, ignore_errors=True)
+
+
 def _plane1_flows(plane1_events, edges, first_flow_id):
     """Which begin-event carries which flow id, for the graph's edges.
 

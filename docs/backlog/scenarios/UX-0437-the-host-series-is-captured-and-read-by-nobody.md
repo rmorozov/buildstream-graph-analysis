@@ -240,6 +240,36 @@ apart" is a proxy for "the samples are on the build's axis", and an
 interval is the same on any epoch. M11 passed too, until the clause
 stopped believing that a reader which returned `1` had read anything.
 
+### The import that only CI could see
+
+The first push of this item used `from tools.bst_native_build_tracer
+import read_host_samples`. Every import beside it in the module is
+relative, and installed there is no top-level `tools` package at all -
+this file is `bga._tools.bga_timeline`. The whole suite passed, because
+a checkout has a `tools/` directory; `UX-77`'s packaging job did not:
+
+```text
+File ".../bga/_tools/bga_timeline.py", line 496, in host_series
+    from tools.bst_native_build_tracer import read_host_samples
+ModuleNotFoundError: No module named 'tools'
+```
+
+Fixed to the relative form and re-checked the way that job does it - a
+built wheel in a clean venv, run from an empty directory:
+
+```console
+$ python3 -m build --wheel --outdir dist/ && python3 -m venv /tmp/pkgvenv
+$ /tmp/pkgvenv/bin/pip install dist/*.whl
+$ cd /tmp/empty && BGA_EXPECT_DEV=1 python3 tests/installed_command_sweep.py \
+      --bga /tmp/pkgvenv/bin/bga
+  ok      bga timeline /tmp/tmpsh_7jh0e/20260101T000000Z ... -> 0
+```
+
+Worth recording because it is the census's own blind spot in miniature:
+the census asks whether a file has a reader **in this checkout**, and
+`bga timeline` was that reader here and a traceback in the shape a user
+installs. The packaging sweep is the guard that covers it, and it did.
+
 ### Filed rather than fixed
 
 - **`UX-452`** (contracts, Low): `run/chrome_trace.json`, the second
@@ -270,5 +300,5 @@ $ make lint
 All checks passed!
 
 $ make test
-5442 passed, 28 skipped, 1 warning in 268.05s (0:04:28)
+5442 passed, 28 skipped, 1 warning in 270.50s (0:04:30)
 ```

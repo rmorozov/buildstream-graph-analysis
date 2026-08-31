@@ -287,6 +287,43 @@ def write_run_dir(tmp_path: Path, topology: Topology, name: str = "run") -> Path
     return run_dir
 
 
+def blast_radius_disagrees_with_horizon(
+    hub_us: int = 1_000_000, heavy_us: int = 100_000_000,
+    leaf_us: int = 5_000_000, leaves: int = 3,
+) -> Topology:
+    """`UX-440`: the shape where the document's two ranked lists invert.
+
+    `hub` is built first and everything depends on it; `heavy` is one of
+    those dependents and is a hundred times longer than the hub. So
+    `hub` has the whole graph downstream of it and `heavy` has nothing,
+    while `heavy` is the entire critical path and `hub` is a rounding
+    error on it.
+
+    `elements.top_blast_radius` therefore ranks `hub` first and
+    `optimization_horizon` ranks `heavy` first, on one honest capture.
+    Nothing here is degenerate: it is a build with a cheap common
+    ancestor and one expensive leaf, which is the ordinary shape of a
+    project with a toolchain at the bottom.
+
+    What carries the inversion is the duration contrast, not the fan:
+    found by mutation, `leaves=0` still inverts, while swapping
+    `hub_us` and `heavy_us` does not. The leaves stay because they give
+    the blast ranking more than two entries to be in order, which the
+    ordered-by-its-own-key clause reads.
+    """
+    hub, heavy = "hub.bst", "heavy.bst"
+    leaf_uids = [f"leaf{i}.bst" for i in range(leaves)]
+    elements = ([_element(hub)]
+                + [_element(uid, requested_target=True)
+                   for uid in [heavy] + leaf_uids])
+    dependencies = [_dependency(hub, uid) for uid in [heavy] + leaf_uids]
+    spans = [_span(hub, 0, hub_us)]
+    spans += [_span(heavy, hub_us, heavy_us)]
+    spans += [_span(uid, hub_us, leaf_us) for uid in leaf_uids]
+    return _build(elements, dependencies, spans,
+                  wall_end_us=hub_us + heavy_us, max_jobs=8)
+
+
 def build_analyzer(tmp_path: Path, topology: Topology, name: str = "run", **kwargs) -> BuildEfficiencyAnalyzer:
     """Write a topology to disk and return a loaded (but not yet
     analyzed) `BuildEfficiencyAnalyzer` - `**kwargs` are forwarded to

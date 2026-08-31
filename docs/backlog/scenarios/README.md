@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-446 scenarios: **14 open**, 432 closed.
+446 scenarios: **13 open**, 433 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -27,7 +27,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | cli | 0 | 5 |
 | store | 2 | 28 |
 | docs | 2 | 40 |
-| guards | 2 | 66 |
+| guards | 1 | 66 |
 
 ## Open scenarios
 
@@ -46,7 +46,6 @@ task file, which is the only place it ever lived twice.
 | UX-438 | [the page guesses a unit on a real capture, and says so on the console](UX-0438-the-page-guesses-a-unit-and-says-so.md) | contracts | Medium | every reader, and the next round that trusts a clean console | 🔴 |
 | UX-440 | [two rankings over one order, and nothing says why there are two](UX-0440-two-rankings-over-one-order.md) | contracts | Low | anyone comparing the page's ranked list against the terminal's | 🔴 |
 | UX-443 | [the served handoff cannot count its own edges](UX-0443-the-served-handoff-cannot-count-its-own-edges.md) | viewer | Medium | anyone who runs `bga view` and opens the handoff page instead of exporting a report | 🔴 |
-| UX-444 | [the page budget and the data ratio have converged](UX-0444-the-page-budget-and-the-data-ratio-have-converged.md) | guards | High | every later round, which cannot add a sentence to the page without choosing between two ceilings nobody has compared | 🔴 |
 | UX-445 | [the track bound is one sample, and nothing has measured the cost it stands for](UX-0445-the-track-bound-is-one-sample.md) | guards | Medium | anyone whose capture the handoff refuses, and the round that has to decide whether it was right to | 🔴 |
 | UX-446 | [a third ceiling, and no reader-facing document has it](UX-0446-a-third-ceiling-no-reader-facing-document-has.md) | docs | Medium | anyone whose export drops the timeline and goes looking for the reason | 🔴 |
 | UX-447 | [the reference-refresh route is in no contributor document](UX-0447-the-reference-refresh-route-is-in-no-contributor-document.md) | docs | Medium | the contributor whose PR the drift gate stops, who is told to re-record and not where from | 🔴 |

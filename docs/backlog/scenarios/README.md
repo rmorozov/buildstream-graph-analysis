@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-443 scenarios: **12 open**, 431 closed.
+444 scenarios: **12 open**, 432 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -23,11 +23,11 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | capture | 0 | 69 |
 | analysis | 0 | 55 |
 | contracts | 2 | 49 |
-| viewer | 7 | 132 |
+| viewer | 6 | 132 |
 | cli | 0 | 5 |
 | store | 2 | 28 |
 | docs | 0 | 38 |
-| guards | 1 | 65 |
+| guards | 2 | 66 |
 
 ## Open scenarios
 
@@ -39,7 +39,6 @@ task file, which is the only place it ever lived twice.
 | UX-92 | [cache effectiveness — hits, misses, churn, trends — is invisible to the tool](UX-0092-cache-effectiveness-is-invisible-to-the-tool.md) | store | Medium | — | 🟡 |
 | UX-96 | [the baseline set exists, but assembling it is a scavenger hunt](UX-0096-the-baseline-set-exists-but-assembling-it-is-a-scavenger-hunt.md) | store | Medium | — | 🟡 |
 | UX-429 | [a command is rendered as a list of its words](UX-0429-a-command-is-rendered-as-a-list-of-its-words.md) | viewer | High | every reader who is handed a command and expected to run it | 🔴 |
-| UX-430 | [the trace budget counts bytes, and Perfetto spends tracks](UX-0430-the-trace-budget-counts-bytes-and-perfetto-spends-tracks.md) | viewer | High | anyone who clicks "Open timeline in Perfetto" on a build big enough to be worth analysing | 🔴 |
 | UX-433 | [nothing pivots by executable, because no annotation names one](UX-0433-nothing-pivots-by-executable.md) | viewer | Medium | anyone asking which program their build spends its time and memory in | 🔴 |
 | UX-435 | [the handoff box is measured in the mode where it is smallest](UX-0435-the-handoff-box-is-measured-in-the-mode-it-is-smallest.md) | viewer | Medium | anyone reading the rail while a server is behind the page | 🔴 |
 | UX-436 | [forty-four controls are the browser's, not the page's](UX-0436-the-page-has-no-control-style.md) | viewer | Medium | every reader, on every screen of the report | 🔴 |
@@ -48,6 +47,7 @@ task file, which is the only place it ever lived twice.
 | UX-440 | [two rankings over one order, and nothing says why there are two](UX-0440-two-rankings-over-one-order.md) | contracts | Low | anyone comparing the page's ranked list against the terminal's | 🔴 |
 | UX-443 | [the served handoff cannot count its own edges](UX-0443-the-served-handoff-cannot-count-its-own-edges.md) | viewer | Medium | anyone who runs `bga view` and opens the handoff page instead of exporting a report | 🔴 |
 | UX-444 | [the page budget and the data ratio have converged](UX-0444-the-page-budget-and-the-data-ratio-have-converged.md) | guards | High | every later round, which cannot add a sentence to the page without choosing between two ceilings nobody has compared | 🔴 |
+| UX-445 | [the track bound is one sample, and nothing has measured the cost it stands for](UX-0445-the-track-bound-is-one-sample.md) | guards | Medium | anyone whose capture the handoff refuses, and the round that has to decide whether it was right to | 🔴 |
 
 ## UX-398..UX-410: the sixty-fourth round — the walk that judged the answers (2026-08-29)
 

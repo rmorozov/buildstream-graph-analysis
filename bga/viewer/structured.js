@@ -14,12 +14,12 @@
  * comments and strings stripped and then read, rather than trusted.
  */
 import { served, safeStorage } from "./primitives.js";
-import { QUANTITY, COLUMNS, DIRECTION, SERIES, DISTRIBUTION, QUESTION,
+import { COMMAND, QUANTITY, COLUMNS, DIRECTION, SERIES, DISTRIBUTION, QUESTION,
          PRESETS, INLINE, bytes, childNode, cssId, dataKeyed,
          describedTerm, el, elementColumn, guessQuantity, heading, hintsOf,
          adviceFor, keyAsShown, quantity, quantityFor, sectionHead,
          title } from "./format.js";
-import { identify, labelFor } from "./controls.js";
+import { commandLine, identify, labelFor } from "./controls.js";
 // UX-303: §2's two drawings. They import nothing and take their
 // formatter, so the quantity table stays here and the geometry stays
 // there.
@@ -311,10 +311,9 @@ export function renderStructured(key, value, hint = {}, node = undefined,
   // acquire a rendering by someone adding an `if` to this function.
   const declared = hintsOf(node);
   const control = classify(value, {
-    columns: declared[COLUMNS] ?? null,
-    series: declared[SERIES] ?? null,
+    columns: declared[COLUMNS] ?? null, series: declared[SERIES] ?? null,
     distribution: declared[DISTRIBUTION] ?? null,
-    depth, nestLimit: CELL_NEST_LIMIT,
+    command: declared[COMMAND] ?? null, depth, nestLimit: CELL_NEST_LIMIT,
     inlineFields: OBJECT_INLINE_FIELDS, inlineItems: ARRAY_INLINE_ITEMS,
   });
   // `UX-303`: a series and a distribution draw as their shape, at any
@@ -335,6 +334,7 @@ export function renderStructured(key, value, hint = {}, node = undefined,
       format: (n) => quantity(n, quantityFor(node, key)),
     });
   }
+  if (control === CONTROLS.COMMAND) return commandLine(value)[0];
   if (control === CONTROLS.DENSITY_STRIP) {
     return strip(value, {
       countKey: String(declared[DISTRIBUTION]), grade: GRADE_EXHIBIT,

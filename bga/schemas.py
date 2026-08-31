@@ -321,6 +321,7 @@ KEYED_BY_TASK_UID = "task_uid"
 #: run at all. So the hint is not a description, and declaring where it
 #: lives is what lets the page draw both on one row without sniffing a
 #: key named `<something>_hints`.
+COMMAND = "bga:command"            # a scalar array that is one command line
 EXPLAINED_BY = "bga:explained_by"
 
 PRESET_DIRECTIONS = ("asc", "desc")
@@ -3185,7 +3186,12 @@ _ANALYZE_HINTS = {
                 "reason": {"type": "string",
                            "description": "Why this step, in terms of "
                                           "the values that chose it."},
-                "argv": {"type": "array",
+                # `UX-429`: a scalar array §1 would otherwise draw as
+                # an inline code *list* - `bga, blast, elem.bst, /tmp/x`,
+                # which is not a command and does not run. Declared,
+                # never guessed: an array is argv because a schema said
+                # so, the same rule `bga:series` follows.
+                "argv": {"type": "array", COMMAND: "shell",
                          "description": "The command, with the run and "
                                         "the element already "
                                         "substituted. Executable as "

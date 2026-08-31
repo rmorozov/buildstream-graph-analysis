@@ -83,6 +83,16 @@ export const KEYED_BY = "bga:keyed_by";
 export const EXPLAINED_BY = "bga:explained_by";
 
 /**
+ * `UX-429`: this scalar array is one command line, not a list.
+ *
+ * `["bga", "blast", "x.bst"]` and `["cmake", "ninja"]` are the same
+ * measured shape and §1 draws the second as an inline code list, which
+ * is right. Only the schema knows the first is argv - so it says so,
+ * and `classify` reads it rather than sniffing for a verb.
+ */
+export const COMMAND = "bga:command";
+
+/**
  * `UX-390`: the run's advice about one key of an explained map.
  *
  * `attribution` and `attribution_hints` were the same eight bucket
@@ -454,7 +464,7 @@ export function hintsOf(node) {
   for (const name of [QUANTITY, SEVERITY, COLUMNS, DIRECTION, QUESTION,
                       RAIL, PRESETS, SERIES, DISTRIBUTION, INLINE,
                       DECOMPOSITION, INTERVAL, KEYED_BY,
-                      EXPLAINED_BY]) {
+                      EXPLAINED_BY, COMMAND]) {
     if (name in node) hint[name] = node[name];
   }
   if (node.description) hint.description = node.description;

@@ -40,6 +40,7 @@ side is the only control that may render it.
 | array of objects | table (§3) | declared columns; distribution strip when §2 applies |
 | array of arrays | table of positional columns | `UX-290`; declared `bga:columns` name them, otherwise `#1`/`#2` |
 | short scalar array (≤ inline cap) | inline `code` list | existing rule, kept |
+| scalar array + `bga:command` | **one monospace command line + copy** | `UX-429`; the same measured shape as the row above, and only the schema knows which it is — a joined-by-comma argv does not run |
 | long scalar array | count + folded list | count visible, fold labeled |
 | object map, one key per element | table of key/value rows | Direction 12's rule — never a `<pre>` |
 | small keyed object | definition list | the `pairs` pattern |
@@ -78,7 +79,7 @@ per-section "view as JSON" toggle's `data-raw-json`;
 
 ## 1a. The hint vocabulary
 
-Sixteen hints, and this table is the one place they are all written
+Seventeen hints, and this table is the one place they are all written
 down (`UX-306`). Each names what a schema *declares* about a value;
 §1 above is what the page does with it. A hint the schemas emit and
 this table does not name is a hint whose meaning lives only in code,
@@ -104,6 +105,7 @@ sets equal in both directions.
 | `bga:interval` | that a set of published values compare on one axis, each named by its path | the interval and its sentence (§2d) |
 | `bga:keyed_by` | what a map's own **keys** are, where they are not names — `task_uid` today | the row's label (the element) and its `data-key` (the composite), `UX-391` |
 | `bga:explained_by` | the payload key holding this map's **per-key advice for this run** — computed, so not a `description` | the advice on the row of the key it explains, and no second section over the same names, `UX-390` |
+| `bga:command` | that a scalar array is one command line rather than a list of values — the shell it is spelled for | `classify`, which returns §1's command control for it (`UX-429`) |
 
 Two properties this table is here to keep. **A hint is a declaration,
 never a guess**: the page reads what the schema says a value is and

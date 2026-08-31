@@ -10,7 +10,7 @@
  *
  * A move, asserted as one: see `element.js`'s header.
  */
-import { identify, labelFor } from "./controls.js";
+import { commandLine, identify, labelFor } from "./controls.js";
 import {
   SVG, svg, seconds, mib, bar, OVERVIEW_SHOWN, elementAnchor,
 } from "./primitives.js";
@@ -734,28 +734,10 @@ function nextStepRow(step, copy) {
   why.textContent = step.reason ?? "";
   row.append(why);
 
-  const argv = Array.isArray(step.argv) ? step.argv.join(" ") : "";
-  const command = document.createElement("code");
-  command.className = "next-command";
-  command.setAttribute("data-argv", argv);
-  command.textContent = argv;
-  row.append(command);
-
-  if (copy && argv) {
-    const button = document.createElement("button");
-    button.setAttribute("type", "button");
-    button.className = "copy-step";
-    // UX-279: a command, and it says so - this one pastes into a shell.
-    button.textContent = "Copy command";
-    button.title = "Copy this command to the clipboard, ready to run";
-    button.setAttribute("data-copies", "command");
-    button.addEventListener("click", () => {
-      copy(argv);
-      button.textContent = "\u2713 copied";
-      setTimeout(() => { button.textContent = "Copy command"; }, 1200);
-    });
-    row.append(button);
-  }
+  // `UX-429`: through the shared control. `UX-279`'s "Copy command"
+  // wording lives there now, with the join and the monospace line, so
+  // this site and the two others cannot drift apart again.
+  row.append(...commandLine(step.argv, { copy }));
   return row;
 }
 

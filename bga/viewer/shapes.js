@@ -40,6 +40,11 @@ export const CONTROLS = Object.freeze({
   SPARKLINE: "sparkline + one sentence",
   DENSITY_STRIP: "density strip + stated n",
   FOLD: "the labeled fold",
+  // `UX-429`: a scalar array that is one command line rather than a
+  // list of values. Declared like the two above, for the same reason -
+  // `["bga", "blast", …]` and `["cmake", "ninja"]` are the same shape
+  // and only the schema knows which is which.
+  COMMAND: "command line + copy",
 });
 
 /**
@@ -67,7 +72,7 @@ const isPlainObject = (value) =>
  */
 export function classify(value, {
   severity = false, columns = null, depth = 0, series = null,
-  distribution = null,
+  distribution = null, command = null,
   nestLimit = Infinity, inlineFields = 4, inlineItems = 6,
 } = {}) {
   if (isScalar(value)) return UNMAPPED;          // scalars are §1's top rows,
@@ -80,6 +85,13 @@ export function classify(value, {
   // strip anyway would hide it.
   if (series && Array.isArray(value)) return CONTROLS.SPARKLINE;
   if (distribution && isPlainObject(value)) return CONTROLS.DENSITY_STRIP;
+  // `UX-429`: and it outranks the nesting cap for the same reason a
+  // sparkline does - a command is one line wide however deep the
+  // value sits, and folding it would hide the thing the reader came
+  // to copy.
+  if (command && Array.isArray(value) && value.every(isScalar)) {
+    return CONTROLS.COMMAND;
+  }
   if (depth >= nestLimit) return CONTROLS.FOLD;
 
   if (Array.isArray(value)) {

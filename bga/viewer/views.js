@@ -22,7 +22,7 @@ import {
 // UX-334: `name`/`id` on every control, and a `<label>` that points at
 // one. `controls.js` imports nothing, which is why this module may use
 // it where it may not use `app.js` - see the note below.
-import { identify, labelFor } from "./controls.js";
+import { commandLine, identify, labelFor } from "./controls.js";
 // `UX-337`: the primitives the chapters share. Extracted because the
 // chapters were *not* acyclic without them - see `primitives.js`.
 import {
@@ -514,22 +514,8 @@ export function renderBlastOffline(payload, copy, make) {
       section.append(make("p", { class: "muted", "data-role": "blast-why" },
                           step.reason));
     }
-    const command = make("code", { class: "next-command",
-                                   "data-argv": argv }, argv);
-    section.append(command);
-    if (copy) {
-      const button = make("button", { type: "button", class: "copy-step",
-                                      "data-copies": "command",
-                                      title: "Copy this command to the "
-                                             + "clipboard, ready to run" },
-                          "Copy command");
-      button.addEventListener?.("click", () => {
-        copy(argv);
-        button.textContent = "\u2713 copied";
-        setTimeout(() => { button.textContent = "Copy command"; }, 1200);
-      });
-      section.append(button);
-    }
+    // `UX-429`: the same control the decision panel and the table use.
+    section.append(...commandLine(step.argv, { make, copy }));
   }
   return section;
 }

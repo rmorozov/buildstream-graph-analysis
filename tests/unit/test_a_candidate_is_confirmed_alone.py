@@ -37,7 +37,6 @@ import sys
 REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 
-from tests import tiers                                        # noqa: E402
 from tools import dev_tier_drift as drift                      # noqa: E402
 
 #: A file listed small that the parallel report puts over the medium
@@ -133,20 +132,42 @@ def test_the_re_run_is_really_single_process(monkeypatch):
         "`-n auto` into this run: " + repr(seen["env"].get("PYTEST_XDIST")))
 
 
-def test_the_measurement_is_a_real_single_process_run():
-    """Not a mock: the function this file mocks elsewhere has to work.
+def test_the_measurement_is_a_real_run_that_returns_seconds():
+    """Not a mock: the function the clauses above mock has to work.
 
-    Run on the file the whole item is about, and asserted against the
-    floor rather than against a fixed second-count - the point is which
-    side of 1.0 it lands on, and a pinned number would make this a
-    timing test that fails on a slower laptop.
+    It asserts that the run **happened and was timed**, and nothing
+    about the number. The first cut asserted `alone < MEDIUM_FLOOR_S`,
+    on the theory that the point was which side of 1.0 this file lands
+    on - and it went red on all four interpreters in CI:
+
+        AssertionError: tests/unit/test_the_agent_configuration_holds.py
+        measured 1.47s alone, at or over the 1.0s medium floor
+
+    which is this item's own defect, in the guard written to fix it. A
+    wall-clock number compared against a threshold on a machine the
+    guard does not control, run *inside* an `-n auto` suite where the
+    "alone" subprocess had three workers for company. The message even
+    said "or this machine is loaded" - and it was.
+
+    Which side of the floor a file lands on is a fact about a runner
+    and belongs to `confirm()`'s caller, never to an assertion.
     """
     alone = drift.alone_seconds(CONTENDED)
     assert alone is not None, "the confirmation could not be run at all"
-    assert alone < tiers.MEDIUM_FLOOR_S, (
-        f"{CONTENDED} measured {alone:.2f}s alone, at or over the "
-        f"{tiers.MEDIUM_FLOOR_S}s medium floor - either the file grew and "
-        f"belongs in MEDIUM now, or this machine is loaded")
+    assert alone > 0, alone
+
+
+def test_a_file_that_cannot_be_run_comes_back_unmeasurable():
+    """The `None` path for real rather than monkeypatched.
+
+    `alone_seconds` returning 0.0 here instead would clear every
+    candidate the re-run could not reach - pytest writes an empty junit
+    document on a collection error, and 0.0 is under every floor. This
+    is the un-mocked half of `..._could_not_run_is_not_a_clearance`,
+    and it is deterministic: no timing, no threshold.
+    """
+    assert drift.alone_seconds("tests/unit/test_there_is_no_such_file.py") \
+        is None
 
 
 if __name__ == "__main__":  # pragma: no cover

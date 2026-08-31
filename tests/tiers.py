@@ -483,10 +483,10 @@ LARGE = (
 
 MEDIUM = (
     # `UX-455`, tiered on landing, and it earned the tier the way the
-    # item is about: one clause runs the confirmation for real, which
-    # is a pytest subprocess over another file. Three single-process
-    # runs: 1.10 / 1.07 / 1.08s.
-    "tests/unit/test_a_candidate_is_confirmed_alone.py",            # 1.1s
+    # item is about: two clauses run the confirmation for real, which
+    # is a pytest subprocess each. Three single-process runs:
+    # 1.22 / 1.25 / 1.24s.
+    "tests/unit/test_a_candidate_is_confirmed_alone.py",            # 1.2s
     # `UX-455`. Was in the default tier and never listed. Re-measured
     # alone in one process, three runs: 1.35 / 1.34 / 1.37s, over the
     # 1.0s medium floor on every one. It renders every documented

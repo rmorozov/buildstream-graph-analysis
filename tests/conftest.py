@@ -105,8 +105,14 @@ KNOWN_SKIP_REASONS = {
     # unrelated to the code). Measured on this container: 12 from
     # `test_the_real_reader_agrees.py`, 1 from the handoff guard.
     # Re-measured 2026-08-29: 14. 13 -> 14.
+    # Round 70 added `UX-434`'s two real-reader clauses, which first
+    # coined a second wording for this same absence and so skipped
+    # undeclared - failing the census on all four interpreters in CI
+    # while every test passed. They ask `tests/trace_processor.py` now.
+    # Re-measured 2026-08-31 (the three files that use the gate,
+    # `-rs`): 16. 14 -> 16.
     "trace_processor_shell is not installed": (
-        "Perfetto's shell is an optional local tool, not a dependency", 14),
+        "Perfetto's shell is an optional local tool, not a dependency", 16),
     # UX-313 reads the committed dual-plane capture of `examples/06` to
     # show that every element leaves a record whose exit was never
     # observed - the fact that makes the reorder window the whole record

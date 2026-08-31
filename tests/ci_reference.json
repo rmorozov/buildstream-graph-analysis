@@ -1,11 +1,12 @@
 {
   "measured_on": "github-actions ubuntu-latest, test (3.11), -n auto",
-  "note": "UX-420: one CI run's per-file totals, so a later CI run can be read against CI rather than against the floors in tests/tiers.py, which describe a developer machine. Refresh from a CI run's ci-reference-candidate artifact, or the log of its tier-reference job, which is this same tool's --record taken on the runner whose clock this document is in - not from a local --record (UX-418, UX-447). UX-457: this document is a whole re-record, taken from run 33413312096's tier-reference job (head c41a27e) rather than appended to; the six hand-appends recorded in rounds 67-71 are retired with it.",
+  "note": "UX-420: one CI run's per-file totals, so a later CI run can be read against CI rather than against the floors in tests/tiers.py, which describe a developer machine. Refresh from a CI run's ci-reference-candidate artifact, or the log of its tier-reference job, which is this same tool's --record taken on the runner whose clock this document is in - not from a local --record (UX-418, UX-447). UX-457: this document is a whole re-record, taken from run 33413312096's tier-reference job (head c41a27e) rather than appended to; the six hand-appends recorded in rounds 67-71 are retired with it. One append since, on the same terms as those six: test_a_candidate_is_confirmed_alone.py landed after that record and run 33422781976's gate named it at 2.3s with the run at x0.99 shift, so 2.32 = 2.3 / 0.99.",
   "files": {
     "tests/test_cli.py": 1.94,
     "tests/test_e2e.py": 0.04,
     "tests/test_golden.py": 0.96,
     "tests/test_synthetic_multi_subproject.py": 0.73,
+    "tests/unit/test_a_candidate_is_confirmed_alone.py": 2.32,
     "tests/unit/test_a_capture_can_say_what_it_never_saw.py": 0.02,
     "tests/unit/test_a_capture_finds_its_own_shim.py": 0.01,
     "tests/unit/test_a_capture_that_cannot_start.py": 1.62,

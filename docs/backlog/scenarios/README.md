@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-456 scenarios: **2 open**, 454 closed.
+457 scenarios: **3 open**, 454 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -27,7 +27,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | cli | 0 | 5 |
 | store | 2 | 28 |
 | docs | 0 | 40 |
-| guards | 0 | 72 |
+| guards | 1 | 73 |
 
 ## Open scenarios
 
@@ -38,6 +38,7 @@ task file, which is the only place it ever lived twice.
 |---|---|---|---|---|---|
 | UX-92 | [cache effectiveness — hits, misses, churn, trends — is invisible to the tool](UX-0092-cache-effectiveness-is-invisible-to-the-tool.md) | store | Medium | — | 🟡 |
 | UX-96 | [the baseline set exists, but assembling it is a scavenger hunt](UX-0096-the-baseline-set-exists-but-assembling-it-is-a-scavenger-hunt.md) | store | Medium | — | 🟡 |
+| UX-458 | [the drift factor is a starting value nothing has re-measured](UX-0458-the-drift-factor-was-never-sized-from-data.md) | guards | Low | the contributor whose PR is stopped by a gate whose tolerance nobody has checked against the noise it is meant to tolerate | 🔴 |
 
 ## UX-398..UX-410: the sixty-fourth round — the walk that judged the answers (2026-08-29)
 

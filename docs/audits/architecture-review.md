@@ -77,6 +77,7 @@ would have caught it; a bound at it would only just have.
 | 5 | 2026-08-28 | 346 | `UX-352`, `UX-353` |
 | 6 | 2026-08-29 | 379 | `UX-386`, `UX-387` |
 | 7 | 2026-08-29 | 406 | `UX-416`, `UX-417` |
+| 8 | 2026-08-30 | 432 | `UX-446`, `UX-447` |
 
 ### Review 3 — 2026-08-25
 
@@ -560,3 +561,80 @@ that document.
 
 **No code was produced by this review**, per the rule at the top. Both
 findings are filings.
+
+## Review 8 — 2026-08-30, at 432 closed rows
+
+Input: the twenty-six rows closed since review 7 — round 68's tail
+(`UX-411`–`UX-420`), round 69 (`UX-421`–`UX-428`, `UX-432`, `UX-439`)
+and round 70 so far (`UX-441`, `UX-442`, `UX-431`, `UX-434`, `UX-430`).
+Two axes: **the instrument that checks the suite** (the drift gate, its
+reference, its log) and **the trace the handoff carries**.
+
+**1. Does the code still do what it says?** The chapters these rounds
+moved under are the viewer/Perfetto boundary and the published
+contracts. Opened `tools/bga_timeline.py` against the flow paragraph at
+`architecture.md:1117`, which names `dependency_edges` /
+`_plane1_flows` / `_plane2_flows`: all three still exist and still do
+what the paragraph says, and `_plane1_flows`'s return changed shape
+this round (`UX-431`) without changing what the paragraph claims about
+it. The streaming-render paragraph at line 663 — "the timeline is
+*offered* from a file test and rendered at the first request for its
+bytes" — is still exactly true, and is the reason `UX-443` had to be
+filed rather than fixed.
+
+**2. Does every published contract have a home?**
+`test_the_documents_keep_up_with_the_contracts.py` is green over eight
+schemas. The prose: `docs/spec/trace-dictionary.md` gained two
+sentences this round (`UX-434`) stating that `depth` collides with
+`slice.depth` and that `on_critical_path` is the text `true`/`false` —
+both are facts a reader writing a query needs and neither was there
+before, which is the half a mechanical guard cannot check.
+
+**3. Is any figure invalidated?** One, and it is this round's own debt.
+`docs/design/styleguide.md` §3g opens "`tools/bga_view.py:601` carries
+**the only bound** the Perfetto handoff has", and `docs/guides/cli.md`
+publishes the export ceilings as a two-row table whose second row calls
+the trace's byte figure "the only part either ceiling singles out".
+`UX-430` added a third bound, in tracks, five hours earlier. Both
+sentences were true when written; neither is now. Filed as **`UX-446`**
+rather than annotated in place, because the fix is a table that cannot
+fall behind the constants again rather than one more sentence.
+
+`git grep` over the other figures round 70 moved — the two export
+bounds, the page half, `flows_dropped` — finds each quoted only where
+it was measured, and §4e's `flows_dropped` example is a quotation of
+the defect with a "closed in round 70" note beside it.
+
+**4. What shipped since the last review that no document names?**
+`bga --help`'s twelve subcommands are all in `cli.md`; `schemas.names()`
+is eight and all eight are homed. Two mechanisms are not:
+
+- `TRACE_TRACK_BUDGET` — part of `UX-446` above, since the ceiling and
+  the table are one fix.
+- **The route by which `tests/ci_reference.json` gets refreshed.**
+  `UX-420` built the reference, `UX-427` made CI print the numbers and
+  `UX-441` moved them into an artifact — and `git grep
+  ci-reference-candidate -- docs .claude` returns nothing. The tool
+  tells a contributor to "re-record with `--record` and commit" on a
+  machine whose seconds `UX-418` established cannot be compared to
+  CI's. Filed as **`UX-447`**.
+
+`bga timeline --planes` / `--only-element` are documented (`cli.md`, by
+the item that added them); `CI_DRIFT_RUNS`'s rule is in the `verify`
+skill; `graph_depth` is a column name inside one query and needs no
+home beyond the dictionary row that explains why it exists.
+
+**5. Does each document's "last updated" claim match reality?**
+`architecture.md`'s Verification Log is still the only document making
+the claim, and its newest dated entry is 2026-08-26 (after `UX-309`)
+against a file that moved 2026-08-30. Same reading as review 7's:
+`UX-247`'s guard asserts the newest entry is not in the future rather
+than that every edit adds one, the entries are re-groundings rather
+than a changelog, and this round re-grounded nothing in that document.
+Recorded here rather than filed, for the second review running - if a
+third repeats it, the convention itself is what needs deciding.
+
+**No code was produced by this review.** Both findings are filings, and
+the one that is this round's own §3.10 debt is filed rather than
+quietly fixed, so the next round can see that the debt existed.
+

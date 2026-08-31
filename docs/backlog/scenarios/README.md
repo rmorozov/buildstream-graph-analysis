@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-444 scenarios: **12 open**, 432 closed.
+446 scenarios: **14 open**, 432 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -26,7 +26,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | viewer | 6 | 132 |
 | cli | 0 | 5 |
 | store | 2 | 28 |
-| docs | 0 | 38 |
+| docs | 2 | 40 |
 | guards | 2 | 66 |
 
 ## Open scenarios
@@ -48,6 +48,8 @@ task file, which is the only place it ever lived twice.
 | UX-443 | [the served handoff cannot count its own edges](UX-0443-the-served-handoff-cannot-count-its-own-edges.md) | viewer | Medium | anyone who runs `bga view` and opens the handoff page instead of exporting a report | 🔴 |
 | UX-444 | [the page budget and the data ratio have converged](UX-0444-the-page-budget-and-the-data-ratio-have-converged.md) | guards | High | every later round, which cannot add a sentence to the page without choosing between two ceilings nobody has compared | 🔴 |
 | UX-445 | [the track bound is one sample, and nothing has measured the cost it stands for](UX-0445-the-track-bound-is-one-sample.md) | guards | Medium | anyone whose capture the handoff refuses, and the round that has to decide whether it was right to | 🔴 |
+| UX-446 | [a third ceiling, and no reader-facing document has it](UX-0446-a-third-ceiling-no-reader-facing-document-has.md) | docs | Medium | anyone whose export drops the timeline and goes looking for the reason | 🔴 |
+| UX-447 | [the reference-refresh route is in no contributor document](UX-0447-the-reference-refresh-route-is-in-no-contributor-document.md) | docs | Medium | the contributor whose PR the drift gate stops, who is told to re-record and not where from | 🔴 |
 
 ## UX-398..UX-410: the sixty-fourth round — the walk that judged the answers (2026-08-29)
 

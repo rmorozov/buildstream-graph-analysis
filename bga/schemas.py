@@ -2131,10 +2131,48 @@ _SIGNALS_TABLES = {
                         "description": "Artifacts already local "
                                        "over artifacts "
                                        "considered."}}},
+            # `UX-438`: the two fields `compute_cache_accounting`
+            # adds only when the run moved artifacts. Undeclared since
+            # they were written, and invisible because **no committed
+            # fixture has both a Pipeline Summary and a transfer
+            # span** - `golden` has the span and no summary,
+            # `macro_micro` the summary and no span. A real capture of
+            # `examples/06` said so on the console: `bga:
+            # transfer_share has no bga:quantity; guessed share`. The
+            # map beside it was worse than guessed - no unit at all.
+            "transfer_us": {
+                "additionalProperties": {
+                    QUANTITY: "duration_us",
+                    "description": "Wall-clock this run spent moving "
+                                   "artifacts in this direction."},
+                "description": "Wall-clock spent moving artifacts "
+                               "rather than making them, keyed by the "
+                               "transfer's direction. Summed over task "
+                               "duration rather than over a resource "
+                               "timeline, so two concurrent pulls "
+                               "count twice: the question is how much "
+                               "pulling this build did, not how long "
+                               "the pull window was."},
+            "transfer_share": {
+                QUANTITY: "share",
+                "description": "The sum of `transfer_us` over the "
+                               "run's wall-clock - how much of this "
+                               "build was moving artifacts."},
             "target_closure": {
                 "description": "The same question restricted to "
                                "what the target actually needs.",
                 "properties": {
+                    # `UX-438`: emitted since the closure was, and
+                    # declared by nothing. A list of names carries no
+                    # quantity to guess wrong, so no console message
+                    # ever named it - which is why the fix walks every
+                    # key the emitter can produce rather than the one
+                    # key that warned.
+                    "targets": {
+                        "description": "The elements this run was "
+                                       "asked for, whose closure the "
+                                       "numbers below are restricted "
+                                       "to."},
                     "elements": {
                         QUANTITY: "count",
                         "description": "Elements in the target's "

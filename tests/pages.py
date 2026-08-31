@@ -35,6 +35,7 @@ is why the copy is still made rather than exporting in place.
 `test_the_guards_measure_the_page.py` holds the two to the same
 rendering.
 """
+import json
 import os
 import pathlib
 import shutil
@@ -239,6 +240,49 @@ def scale_two_plane_snapshot(into, per_element=12,
     with gzip.open(snapshot / "plane2.log.gz", "wt", encoding="utf-8") as out:
         out.write("".join(raw))
     return snapshot
+
+
+#: `UX-438`: what a run with artifact transfer in it looks like.
+#:
+#: `compute_cache_accounting` publishes `transfer_us` and
+#: `transfer_share` only when the run has spans whose primary resource
+#: is `DOWNLOAD` or `UPLOAD`, and **no committed fixture has one** with
+#: a Pipeline Summary beside it - `golden` has a DOWNLOAD span and no
+#: summary, `macro_micro` has the summary and no DOWNLOAD span. So two
+#: published fields were undeclared for as long as they have existed
+#: and every guard passed, because the shape that produces them was the
+#: shape nothing tested.
+#:
+#: Injected into a copy rather than added to the fixture: the committed
+#: runs are the population a dozen other guards state numbers about,
+#: and moving one to close a schema gap would move those too.
+TRANSFER_SPANS = (("PULL", "DOWNLOAD", 4_000_000),
+                  ("PUSH", "UPLOAD", 1_500_000))
+
+
+def transfer_run(fixture, into) -> pathlib.Path:
+    """`snapshot_copy`, plus a transfer span per entry above.
+
+    The run it returns publishes a `cache` block carrying `transfer_us`
+    and `transfer_share`, which is what makes those two fields
+    reachable by a guard at all.
+    """
+    run = snapshot_copy(fixture, into)
+    trace = run / "trace.json"
+    doc = json.loads(trace.read_text(encoding="utf-8"))
+    spans = doc["spans"]
+    # Anchored on a span the run already has, so the injected work sits
+    # inside the run's own window and `transfer_share` is a share of
+    # this run rather than of a wall-clock nobody measured.
+    first = min(span["ts_us"] for span in spans)
+    element = spans[0]["task_key"].split("|", 1)[0]
+    for index, (kind, resource, duration) in enumerate(TRANSFER_SPANS):
+        spans.append({"task_key": f"{element}|{kind}|{kind}|{index}",
+                      "ts_us": first, "dur_us": duration,
+                      "resources": [resource], "primary_resource": resource,
+                      "status": "SUCCESS"})
+    trace.write_text(json.dumps(doc), encoding="utf-8")
+    return run
 
 
 def snapshot_copy(fixture, into) -> pathlib.Path:

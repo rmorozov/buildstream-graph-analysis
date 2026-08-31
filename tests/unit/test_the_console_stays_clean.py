@@ -9,11 +9,13 @@ boot that three stylesheets were refused and four files are missing.
 
 So this is not a fix's test. It is the net for the class: any
 error-severity console message, any `securitypolicyviolation`, and the
-form-control complaints the Issues panel raises, on **both** fixture
-runs in **both** shapes the report is read in - served over the local
-http server, and exported to one file opened from disk. A `TypeError`
-thrown during boot lands here too, which is why `UX-335`'s class needs
-no second instrument.
+form-control complaints the Issues panel raises, on **three** runs in
+**both** shapes the report is read in - served over the local http
+server, and exported to one file opened from disk. (`UX-438` added the
+third: `macro_micro` with transfer spans injected, because the message
+that item is named for is one neither committed fixture can raise.)
+A `TypeError` thrown during boot lands here too, which is why
+`UX-335`'s class needs no second instrument.
 
 **What was measured before the fix** (golden fixture, headless
 Chromium 141, this harness):
@@ -59,7 +61,7 @@ import pytest
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 
 from browser import NO_BROWSER, Browser, find_chrome    # noqa: E402
-from pages import snapshot_copy    # noqa: E402
+from pages import snapshot_copy, transfer_run    # noqa: E402
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
@@ -85,11 +87,15 @@ FORM_ISSUES = ("FormEmptyIdAndNameAttributesForInputError",
 BAD_LEVELS = ("error", "assert")
 
 
-def _boot(run_dir, out_dir):
-    """The two shapes of one run: `(exported file url, served url)`."""
+def _boot(run_dir, out_dir, make=snapshot_copy):
+    """The two shapes of one run: `(exported file url, served url)`.
+
+    `make` is how the run reaches `out_dir`, because one of the boots
+    below needs a run neither committed fixture is (`UX-438`).
+    """
     from tools.bga_view import export, serve
 
-    run = snapshot_copy(run_dir, out_dir)
+    run = make(run_dir, out_dir)
     page = out_dir / "report.html"
     export(str(run), str(page))
 
@@ -100,12 +106,23 @@ def _boot(run_dir, out_dir):
 
 @pytest.fixture(scope="module")
 def observed(tmp_path_factory):
-    """`{page name: observation}` for four boots, one browser."""
+    """`{page name: observation}` for six boots, one browser."""
     if chrome is None or shutil.which("node") is None:    # pragma: no cover
         pytest.skip(NO_BROWSER)
     servers, urls = [], {}
-    for name, run in (("golden", GOLDEN), ("macro_micro", MACRO)):
-        exported, served, httpd = _boot(run, tmp_path_factory.mktemp(name))
+    # `UX-438`: the third run is `macro_micro` with transfer spans in
+    # it. The message this guard is named for - `transfer_share has no
+    # bga:quantity; guessed share` - was raised by a real capture and
+    # could not be raised by either committed fixture, because
+    # `compute_cache_accounting` publishes that field only for a run
+    # that both has a Pipeline Summary and moved artifacts, and neither
+    # fixture has both. A guard whose setup excludes what it tests
+    # passes whatever the thing under test does.
+    for name, run, make in (("golden", GOLDEN, snapshot_copy),
+                            ("macro_micro", MACRO, snapshot_copy),
+                            ("transfer", MACRO, transfer_run)):
+        exported, served, httpd = _boot(run, tmp_path_factory.mktemp(name),
+                                        make)
         servers.append(httpd)
         urls[f"{name} exported"] = exported
         urls[f"{name} served"] = served
@@ -194,7 +211,7 @@ class TestTheConsoleStaysClean:
         `BGA_STRICT_HINTS` whenever it had to name-sniff a unit the
         schema never declared, and `tests/cdp.mjs` now sets that flag
         before the document exists - so this is the page's own account
-        of what it had to guess about, on the four boots above.
+        of what it had to guess about, on the six boots above.
 
         It is a `warning`, not an error, which is why it needs a clause
         of its own: `BAD_LEVELS` deliberately excludes warnings so a

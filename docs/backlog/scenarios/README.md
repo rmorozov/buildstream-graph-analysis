@@ -15,14 +15,14 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-448 scenarios: **14 open**, 434 closed.
+448 scenarios: **13 open**, 435 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
 | capture | 0 | 69 |
 | analysis | 0 | 55 |
-| contracts | 2 | 49 |
+| contracts | 1 | 49 |
 | viewer | 6 | 133 |
 | cli | 0 | 5 |
 | store | 2 | 28 |
@@ -42,7 +42,6 @@ task file, which is the only place it ever lived twice.
 | UX-435 | [the handoff box is measured in the mode where it is smallest](UX-0435-the-handoff-box-is-measured-in-the-mode-it-is-smallest.md) | viewer | Medium | anyone reading the rail while a server is behind the page | 🔴 |
 | UX-436 | [forty-four controls are the browser's, not the page's](UX-0436-the-page-has-no-control-style.md) | viewer | Medium | every reader, on every screen of the report | 🔴 |
 | UX-437 | [the host memory series is captured every run and read by nobody](UX-0437-the-host-series-is-captured-and-read-by-nobody.md) | viewer | High | anyone whose build was slow because the host ran out of memory | 🔴 |
-| UX-438 | [the page guesses a unit on a real capture, and says so on the console](UX-0438-the-page-guesses-a-unit-and-says-so.md) | contracts | Medium | every reader, and the next round that trusts a clean console | 🔴 |
 | UX-440 | [two rankings over one order, and nothing says why there are two](UX-0440-two-rankings-over-one-order.md) | contracts | Low | anyone comparing the page's ranked list against the terminal's | 🔴 |
 | UX-443 | [the served handoff cannot count its own edges](UX-0443-the-served-handoff-cannot-count-its-own-edges.md) | viewer | Medium | anyone who runs `bga view` and opens the handoff page instead of exporting a report | 🔴 |
 | UX-445 | [the track bound is one sample, and nothing has measured the cost it stands for](UX-0445-the-track-bound-is-one-sample.md) | guards | Medium | anyone whose capture the handoff refuses, and the round that has to decide whether it was right to | 🔴 |

@@ -936,16 +936,25 @@ keeps two hand-maintained copies of one fact together.
 
 ## Verification Log
 
-Updated 2026-08-30 (after `UX-416`), re-grounded in the contracts
+Updated 2026-08-31 (after `UX-450`), re-grounded in the contracts
 table above against `bga.contracts`'s derived inventory — **21 ids, 8
 of them marked superseded**, 8 printable and 13 not — and the keys
 `bga analyze --schema` actually prints: **56 top-level properties**.
-Round 65 changed this document in one place only, the viewer chapter's
-document table, which gained `?run=<stamp>` beside the two endpoints
-that already took a parameter (`UX-394` shipped it in round 64 and no
-document named it; `UX-416` is that gap). The counts above moved with
-rounds 64's contract additions, not with this round's edit, and are
+Both figures are unchanged from the round-65 grounding below and are
 re-read here rather than carried forward.
+
+Round 71 changed this document in one place only, the viewer chapter's
+module table, which gained `sections.js`: `UX-450` split the section
+walk out of `app.js`, which sat exactly on `UX-337`'s 1,500-line
+ceiling. The directory is **22 modules** now and the table names all
+of them — `test_the_viewer_modules_have_a_home.py` holds the two equal
+in both directions, and is what failed when the row was missing.
+
+The round-65 grounding, kept for what it settled: round 65 changed
+this document in one place only, the viewer chapter's document table,
+which gained `?run=<stamp>` beside the two endpoints that already took
+a parameter (`UX-394` shipped it in round 64 and no document named it;
+`UX-416` is that gap).
 
 The paragraph below is round 62's grounding and is kept for what it
 records about the v4 move.

@@ -437,6 +437,22 @@ def has_timeline(run: str) -> bool:
     return os.path.isfile(os.path.join(snapshot, WRAPPED_LOG_NAME))
 
 
+def timeline_flow_accounting(run: str):
+    """`UX-431`'s edge accounting for a served run, or `None`.
+
+    `UX-443`. Takes the same `run` directory `has_timeline` does and
+    resolves the snapshot the same way, so the two cannot disagree
+    about which capture they are answering for.
+
+    The work is in `bga_timeline.flow_accounting`, which reads the build
+    log and the dependency graph and nothing else - in particular not
+    the raw Plane 2 log, which is what `UX-296` moved off this path.
+    """
+    from .bga_timeline import flow_accounting
+
+    return flow_accounting(os.path.dirname(os.path.abspath(run)))
+
+
 def trace_file(run: str, destination: str) -> Optional[str]:
     """Render this run's timeline to `destination`, gzipped. Path or None.
 
@@ -1392,6 +1408,20 @@ def serve(run: str, port: int = 0,
         # asks for the headers when the user asks for the timeline.
         "trace_inline_max_bytes": TRACE_BUDGET_B,
     })
+
+    # `UX-443`: and what the graph's edges became - the third reader of
+    # `UX-431`'s accounting, after the terminal and the export.
+    #
+    # The *size* above cannot be known without rendering, and this can:
+    # the accounting is a function of the build log and the dependency
+    # graph, and `flow_accounting` reads only those two. It never opens
+    # the raw Plane 2 log, which is the file `UX-296`'s 30 GB
+    # measurement was about, so the startup path is unchanged in the
+    # only way that measurement cared about.
+    if offered:
+        accounting = timeline_flow_accounting(run)
+        if accounting:
+            documents["run.json"]["trace_flow_losses"] = accounting
 
     # `UX-394`: the store's other runs, so `?run=<stamp>` can reach
     # them. Read from the listing the page is already given, so the

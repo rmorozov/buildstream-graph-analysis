@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-456 scenarios: **4 open**, 452 closed.
+456 scenarios: **3 open**, 453 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -27,7 +27,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | cli | 0 | 5 |
 | store | 2 | 28 |
 | docs | 0 | 40 |
-| guards | 2 | 72 |
+| guards | 1 | 72 |
 
 ## Open scenarios
 
@@ -38,7 +38,6 @@ task file, which is the only place it ever lived twice.
 |---|---|---|---|---|---|
 | UX-92 | [cache effectiveness — hits, misses, churn, trends — is invisible to the tool](UX-0092-cache-effectiveness-is-invisible-to-the-tool.md) | store | Medium | — | 🟡 |
 | UX-96 | [the baseline set exists, but assembling it is a scavenger hunt](UX-0096-the-baseline-set-exists-but-assembling-it-is-a-scavenger-hunt.md) | store | Medium | — | 🟡 |
-| UX-455 | [two files have grown past the tier they are listed in](UX-0455-two-files-drift-past-their-tier-and-the-parse-is-red.md) | guards | Low | the contributor whose `make test-medium` quietly costs a minute more than the tier says | 🔴 |
 | UX-456 | [two bst-gated guards fail on the runner and not on the diff](UX-0456-two-bst-gated-guards-are-at-the-noise-floor.md) | guards | Medium | the contributor whose PR goes red on a job their diff cannot have touched | 🟡 |
 
 ## UX-398..UX-410: the sixty-fourth round — the walk that judged the answers (2026-08-29)

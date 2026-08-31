@@ -69,6 +69,12 @@ make test-tiers   # the same run, plus which files outgrew their tier
 `UX-418`: the suite with a junit report, then
 [`tools/dev_tier_drift.py`](../../../tools/dev_tier_drift.py) against
 the floors in `tests/tiers.py`. It costs a parse, not a second suite.
+`UX-455`: plus a re-run of each file it is about to name, **alone and
+single-process**, because the report is `-n auto` and the floors are
+not - so the seconds it prints are already the ones to put in
+`tiers.py`, and a file the parallel run accused and the confirmation
+cleared is printed as that rather than as drift. `--no-confirm` reads
+the parallel report on its own.
 **Here and not in CI** — the floors are seconds measured on this kind of
 machine, and CI's runner differs from it per file rather than by a
 factor, which three CI runs established the hard way. CI runs its own

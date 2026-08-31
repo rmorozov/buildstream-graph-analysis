@@ -1,6 +1,6 @@
 # UX-338: the page draws the element population twice
 
-**Priority:** Medium | **Status:** 🟢 Done Done | **Depends on:** UX-289 (one element table, many presets — this is its unfinished half), UX-215 (the join that added the second table), UX-329 (which made it visible) | **Serves:** R1 — whoever reads the page | **Topic:** viewer
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-289 (one element table, many presets — this is its unfinished half), UX-215 (the join that added the second table), UX-329 (which made it visible) | **Serves:** R1 — whoever reads the page | **Topic:** viewer
 
 ## Motivation
 

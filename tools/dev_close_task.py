@@ -116,9 +116,66 @@ def backlog_files():
     return (INDEX, CLOSED)
 
 
+#: `UX-454`: the words a status line may carry after its glyph.
+#:
+#: `move()` below rewrites the glyph **and the word**, keeping whatever
+#: verdict prose follows an em-dash. It has to name every word it might
+#: be replacing, including the closed ones - a pattern that names only
+#: the open words matches the glyph alone against an already-closed
+#: line and leaves the old word standing, which is how twenty-four
+#: files came to say `🟢 Done Done`. `Fixed & Verified` is in the list
+#: because 54 files use it and it would double the same way; `Done\.?`
+#: because eight write a full stop.
+STATUS_WORDS = ("Not Started", "In Progress", "Fixed & Verified", "Done")
+_STATUS_WORD = re.compile(
+    r"(?: (?:" + "|".join(re.escape(w) for w in STATUS_WORDS) + r")\.?)*")
+_ONE_STATUS_WORD = re.compile(
+    r"(?:" + "|".join(re.escape(w) for w in STATUS_WORDS) + r")\.?")
+_STATUS_LINE = re.compile(
+    r"\*\*Status:\*\* (\S+)((?: (?:"
+    + "|".join(re.escape(w) for w in STATUS_WORDS) + r")\.?)*)")
+
+
 def status_marker(text):
     """The status glyph in a cell or a header line, or `None`."""
     return next((emoji for emoji in STATUS_EMOJI if emoji in text), None)
+
+
+def status_words(text):
+    """The word(s) a status line carries after its glyph, or `None`.
+
+    `UX-454`: `status_marker` above answers with the **glyph**, which is
+    the only thing the two copies of the marker have to agree on - and
+    is therefore blind to a line that says its word twice. This reads
+    the other half, so a guard can assert the line rather than its
+    parse. Returns a list, because the whole point is that there can
+    wrongly be more than one.
+    """
+    found = _STATUS_LINE.search(text)
+    if not found:
+        return None
+    # Matched as whole words, never split on spaces: `Fixed & Verified`
+    # is one word and splitting would make every one of its 54 files
+    # look like three, which is the shape the caller is counting.
+    return [word.rstrip(".")
+            for word in _ONE_STATUS_WORD.findall(found.group(2))]
+
+
+def close_status_line(body):
+    """`body` with its first status line flipped to `🟢 Done`.
+
+    `UX-454`: lifted out of `move()` so the guard can exercise **this**
+    rather than a copy of it - `UX-387`'s lesson, that two readings of
+    one property is how they came to disagree.
+
+    Idempotent, because `_STATUS_WORD` repeats: applied to a line that
+    already says `🟢 Done` it says it once, and applied to one that says
+    it twice it repairs it. The pattern it replaced named only the two
+    *open* words, so against an already-closed line it matched the glyph
+    alone and left the old word standing - twenty-five files.
+    """
+    return re.sub(r"\*\*Status:\*\* \S+" + _STATUS_WORD.pattern,
+                  "**Status:** 🟢 Done", body, count=1)
 
 
 def table_statuses():
@@ -253,8 +310,7 @@ def move(uid: str, note: str) -> int:
               file=sys.stderr)
         return 2
 
-    body = re.sub(r"\*\*Status:\*\* \S+( Not Started| In Progress)?",
-                  "**Status:** 🟢 Done", body, count=1)
+    body = close_status_line(body)
     path.write_text(body, encoding="utf-8")
 
     cells = [c for c in line.split("|")]

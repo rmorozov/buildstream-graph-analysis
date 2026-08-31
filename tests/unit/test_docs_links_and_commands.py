@@ -428,8 +428,10 @@ _FILE_ID = re.compile(r"^UX-0*(\d+)-")
 # came to disagree, so there is now one: the tool's, imported here.
 from tools.dev_close_task import (  # noqa: E402
     backlog_files as _backlog_files,
+    close_status_line as _close_status_line,
     file_statuses as _file_statuses,
     status_marker as _status_marker,
+    status_words as _status_words,
     table_statuses as _table_statuses,
 )
 
@@ -917,3 +919,64 @@ def test_every_out_of_scope_entry_names_a_task_or_states_a_decline():
     assert unjustified == [], (
         f"an Out of Scope entry must reference a task or state why it is "
         f"declined, or the idea is lost again: {unjustified}")
+
+
+# `UX-454`. The guard above compares the two copies of the marker by
+# `status_marker`, which answers with the **glyph** - the only thing the
+# two halves have to agree on, and therefore blind to a line that says
+# its word twice. Twenty-five files said `🟢 Done Done` under a green
+# suite. These two read the other half.
+#
+# They are deliberately a pair, and neither alone would have caught it:
+# the first sees damage in the tree and stays green under the defect
+# until someone re-closes a task; the second sees the *mechanism* and
+# reddens the moment the substitution stops naming the closed words.
+
+
+def test_no_task_file_repeats_its_status_word():
+    """The tree, read rather than parsed."""
+    doubled = []
+    for _number, (name, line) in sorted(_file_statuses().items()):
+        words = _status_words(line or "")
+        if words and len(words) > 1:
+            doubled.append(f"{name}: {' '.join(words)}")
+    assert doubled == [], (
+        "task file(s) whose status line says its word more than once - "
+        "`--move` run against a file whose own marker was already set by "
+        "hand, with a substitution that did not name the word it was "
+        "replacing:\n  "
+        + "\n  ".join(doubled)
+    )
+
+
+def test_closing_a_task_twice_says_done_once():
+    """The mechanism, which is what a mutation has to redden.
+
+    Every status the tree actually uses, closed twice. A substitution
+    naming only the open words passes the first line here and doubles
+    the other four, which is the defect `UX-454` was filed for.
+    """
+    doubled = {}
+    for start in ("**Status:** 🔴 Not Started |",
+                  "**Status:** 🟢 Done |",
+                  "**Status:** 🟢 Done. |",
+                  "**Status:** 🟢 Fixed & Verified |",
+                  "**Status:** 🟡 In Progress — stages 1 and 2 done |"):
+        once = _close_status_line(start)
+        twice = _close_status_line(once)
+        if _status_words(twice) != ["Done"] or twice != once:
+            doubled[start] = (once, twice)
+    assert doubled == {}, (
+        f"closing is not idempotent: {doubled}")
+
+
+def test_the_verdict_prose_survives_a_close():
+    """The other half of the same substitution, so a pattern made
+    idempotent by swallowing the whole line would not pass.
+
+    `move()` replaces the status *word* and keeps whatever verdict
+    follows an em-dash - eleven closed rows carry one.
+    """
+    closed = _close_status_line(
+        "**Status:** 🟡 In Progress — stages 1 and 2 done |")
+    assert closed == "**Status:** 🟢 Done — stages 1 and 2 done |", closed

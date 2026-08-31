@@ -60,8 +60,15 @@ def _map():
     """
     from bga.provenance import TRACE_QUERIES
 
-    return {"map": dict(TRACE_QUERIES),
-            "referenced": sorted(set(TRACE_QUERIES.values()))}
+    # `UX-448`: the table is `{claim: (query, ...)}` - a tuple even
+    # where there is one - so `referenced` is the union rather than the
+    # values. Reading `.values()` here would put tuples in the set and
+    # the reachability clause below would report every library entry as
+    # an orphan, which is a red nobody could act on.
+    return {"map": {claim: list(queries)
+                    for claim, queries in TRACE_QUERIES.items()},
+            "referenced": sorted({query for queries in TRACE_QUERIES.values()
+                                  for query in queries})}
 
 
 @needs_node
@@ -182,8 +189,9 @@ class TestTheLibraryAndTheFindingsAgree:
 
     def test_every_mapped_finding_id_names_a_real_query(self):
         library, mapping = _library(), _map()
-        for finding, query in mapping["map"].items():
-            assert query in library["ids"], f"{finding} -> {query}"
+        for finding, queries in mapping["map"].items():
+            for query in queries:
+                assert query in library["ids"], f"{finding} -> {query}"
 
     def test_the_library_covers_every_declared_category(self):
         library = _library()
@@ -231,13 +239,23 @@ class TestTheShapeIsThePayloadsShape:
     def test_the_mapping_reaches_the_finding_not_only_the_record(
             self, label):
         """The join, closed. `provenance[].trace_query` carried this
-        for four rounds and no consumer of the *finding* could see it."""
-        from bga.provenance import TRACE_QUERIES
+        for four rounds and no consumer of the *finding* could see it.
+
+        `UX-448`: both published keys, against the one table. Checking
+        `trace_query` alone would pass on a finding whose second grain
+        the pipeline forgot - the page reads `trace_queries` for it,
+        and a missing key there draws one paste rather than none, which
+        is the failure that looks like success.
+        """
+        from bga.provenance import queries_for
 
         published = self._findings(pages.FIXTURES[label])
-        wrong = [(f["id"], f.get("trace_query"))
+        wrong = [(f["id"], f.get("trace_query"), f.get("trace_queries"))
                  for f in published
-                 if f.get("trace_query") != TRACE_QUERIES.get(f["id"])]
+                 if (f.get("trace_query"), f.get("trace_queries"))
+                 != (queries_for(f["id"])[0] if queries_for(f["id"]) else None,
+                     list(queries_for(f["id"]))
+                     if len(queries_for(f["id"])) > 1 else None)]
         assert wrong == [], (
             f"{label}: finding(s) disagreeing with the published table: "
             f"{wrong}")
@@ -300,6 +318,49 @@ class TestTheButtonsInThePage:
         assert out["revealed"], "the query stayed hidden after the click"
         assert out["revealed"][0].strip().lower().startswith("select")
 
+    def test_a_two_grain_claim_pastes_both_and_still_opens_one_tab(self):
+        """`UX-448`, at the seam that matters.
+
+        The handoff sends one trace into one tab whichever grain the
+        reader came for, so the second grain cannot be a second button
+        - it is a second paste. Both halves are asserted here because
+        either alone passes a wrong implementation: two buttons would
+        satisfy "both queries reach the reader", and one paste would
+        satisfy "one tab".
+        """
+        out = self._render()
+        box = [b for b in out["buttons"]
+               if b["queryId"] == "element-commands"][0]
+        assert [p["queryId"] for p in box["pastes"]] == [
+            "element-commands", "executables-in-element"], box["pastes"]
+        for paste in box["pastes"]:
+            assert paste["sql"].strip().lower().startswith("select"), paste
+            assert "core.bst" in paste["sql"], (
+                f"the paste for {paste['queryId']} was not aimed at the "
+                f"element the finding names: {paste['sql']}")
+        # One handoff per *finding*, not per grain. Counting them all
+        # would count the one-grain finding below as well, so this asks
+        # the discriminating question directly: nothing hands off the
+        # second grain, because the second grain never got a button.
+        sent = [h["queryId"] for h in out["handedOff"]]
+        assert "executables-in-element" not in sent, (
+            f"the second grain handed the trace off on its own - it drew "
+            f"a second button rather than a second paste: {sent}")
+        assert sent.count("element-commands") == 1, sent
+
+    def test_a_one_grain_claim_still_pastes_exactly_one(self):
+        """The other half of the same measurement.
+
+        Without it "both grains are pasted" is satisfied by a page that
+        pastes the whole library under every finding, and the clause
+        above could not tell the difference.
+        """
+        out = self._render()
+        box = [b for b in out["buttons"]
+               if b["queryId"] == "cost-by-executable"][0]
+        assert [p["queryId"] for p in box["pastes"]] == [
+            "cost-by-executable"], box["pastes"]
+
     def test_no_timeline_means_no_buttons(self):
         """`UX-194`'s dead-button rule, applied to ten more buttons than
         it was written for."""
@@ -331,7 +392,18 @@ const findings = [
     // `UX-368`: the finding's own key, which is what the pipeline
     // publishes. The nested `provenance.trace_query` this used to
     // carry was removed from the finding by `UX-344`.
-    trace_query: "element-commands" },
+    // `UX-448`: both keys, the way `provenance.attach` stamps them.
+    // A harness carrying only `trace_query` would exercise the
+    // one-grain path and report the second paste as working.
+    trace_query: "element-commands",
+    trace_queries: ["element-commands", "executables-in-element"] },
+  { id: "time-concentration", severity: "high",
+    title: "Where the time is: 4 elements are 71.9% of the path",
+    detail: [], elements: ["core.bst"],
+    // One grain, and `trace_queries` absent rather than a one-element
+    // list - which is what the pipeline publishes for the nineteen
+    // claims that read at a single grain.
+    trace_query: "cost-by-executable" },
   { id: "confidence", severity: "info", title: "Confidence: 0.97",
     detail: [], elements: [], trace_query: null },
 ];
@@ -341,14 +413,22 @@ const buttons = [], revealed = [];
 (function walk(n) {
   if (!n) return;
   if (n.className === "investigate") {
-    buttons.push({ queryId: n.attrs["data-query-id"] ?? null,
-                   element: n.attrs["data-element"] || null });
+    const box = { queryId: n.attrs["data-query-id"] ?? null,
+                  element: n.attrs["data-element"] || null, pastes: [] };
+    buttons.push(box);
     for (const child of n.children) {
       if (child.tagName === "button") (child.listeners.click ?? []).forEach((f) => f());
     }
     for (const child of n.children) {
       if (child.className === "query" && child.hidden === false) {
-        revealed.push(child.children.map((c) => c.textContent).join(""));
+        // `UX-448`: the paste's own query id, so a second block that
+        // repeated the first grain's SQL is not counted as a second
+        // question. `code` last, whatever label precedes it.
+        const code = child.children.find((c) => c.tagName === "code");
+        const paste = code ? code.textContent : "";
+        box.pastes.push({ queryId: child.attrs["data-query-id"] ?? null,
+                          sql: paste });
+        revealed.push(paste);
       }
     }
   }

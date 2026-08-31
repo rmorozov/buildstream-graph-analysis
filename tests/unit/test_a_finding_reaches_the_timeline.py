@@ -112,9 +112,17 @@ class TestTheMappingReachesTheFinding:
         answered = [f for f in found if f["id"] in TRACE_QUERIES]
         assert answered, "the fixture publishes no finding the table maps"
         for finding in answered:
-            assert finding.get("trace_query") == TRACE_QUERIES[finding["id"]], (
+            # `UX-448`: the table's value is a tuple of grains, and
+            # `trace_query` is its first - what the button opens.
+            declared = TRACE_QUERIES[finding["id"]]
+            assert finding.get("trace_query") == declared[0], (
                 f"{finding['id']} carries {finding.get('trace_query')!r} and "
-                f"the table says {TRACE_QUERIES[finding['id']]!r}")
+                f"the table says {declared!r}")
+            assert finding.get("trace_queries") == (
+                list(declared) if len(declared) > 1 else None), (
+                f"{finding['id']} carries "
+                f"{finding.get('trace_queries')!r} for its other grains "
+                f"and the table says {declared!r}")
 
     def test_a_finding_nothing_answers_says_so_rather_than_guessing(self):
         """`UX-321`: null is published, not omitted, and no query is

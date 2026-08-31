@@ -50,7 +50,7 @@ because the page cannot answer it.
 
 ## The canned questions, sorted by whether you needed to leave
 
-`bga view` serves thirteen questions under the handoff on its
+`bga view` serves sixteen questions under the handoff on its
 `perfetto.html` page, ready to paste into Perfetto's query box. Sorted
 against the rule above:
 
@@ -64,6 +64,8 @@ against the rule above:
 | `failed-processes` | the page reports that an element failed; this reports which command did |
 | `process-storm` | needs the per-process count *and* their durations together |
 | `cpu-versus-wall` | per-process `debug.cpu_us` against each slice's own wall time |
+| `cost-by-executable` | the page has `by_binary`, which is counts; this is wall, CPU and peak RSS per program |
+| `executables-in-element` | the same pivot inside one sandbox: `binary_cost` has that element's CPU per binary, this adds the wall time and the peak resident set |
 
 **Does not need Perfetto — the page answers it, and the query is for
 slicing further:**
@@ -77,11 +79,21 @@ slicing further:**
 | `waited-on-flow` | the declared graph, in `structural` |
 | `sandbox-tax` | the sandbox-tax section (Plane 3) |
 | `which-run-is-this` | the identity header |
+| `graph-levels` | `parallelism.levels`, and the level decomposition it draws |
 
-Six of thirteen genuinely require the trip. The other seven are
+Eight of sixteen genuinely require the trip. The other eight are
 sharper instruments for something the page already told you — which is
 the right ratio for a library of *follow-up* questions, and worth
 knowing before assuming a reader who opened Perfetto had to.
+
+Three of these arrived after this section was first written and were
+not added to it — `graph-levels` (`UX-380`), `cost-by-executable`
+(`UX-433`) and `executables-in-element` (`UX-448`), which is what
+turned the count above from thirteen into sixteen. Nothing noticed,
+because the guard on this section read the library for the questions
+the guide *lists* and never the other way round. It reads both
+directions now
+(`test_the_viewer_perfetto_boundary.py::test_the_guide_sorts_every_question_the_library_serves`).
 
 ## By role
 

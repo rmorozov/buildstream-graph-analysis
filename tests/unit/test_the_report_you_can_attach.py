@@ -459,9 +459,9 @@ END pid=101 ppid=1 ts=1002.500000 element=work-a.bst cmd=cc -c main.c
 # chosen once for what "dwarfs" means, which no longer has to be
 # rewritten when this one moves.
 #
-#     page today                285,928 B   (288,862 with UX-433)
-#     growth over rounds 69-70    +4,898 B  across two rounds
-#     this budget                300,000 B  ~4 rounds of headroom
+#     page today                289,551 B   (after UX-448)
+#     growth over rounds 69-71    +8,521 B  across three rounds
+#     this budget                300,000 B  ~3 rounds of headroom
 #
 # Sized so a change is measured against a budget rather than negotiating
 # with it, and so a framework arriving - hundreds of kilobytes at once,
@@ -607,7 +607,24 @@ COMMITTED_EXPORTS = [
     # `cost-by-executable` pivot it made possible. No payload: neither
     # committed export carries a timeline, so neither has a Plane 2
     # slice to annotate.
-    ("golden", GOLDEN, 390_000),                       #  388,033 B
+    # `UX-448`: +3,284 B (golden) and +3,415 B (macro_micro), split
+    # by measurement rather than by assertion:
+    #
+    #                        page      golden data   macro_micro data
+    #     before          286,739 B      101,520 B          156,885 B
+    #     after           289,551 B      101,992 B          157,488 B
+    #                      +2,812 B         +472 B             +603 B
+    #
+    # The page half is the `executables-in-element` entry, `queriesFor`
+    # and `investigationsFor`, and the paste loop that draws one query
+    # block per grain. The +472 B both exports share is the two
+    # `trace_queries` declarations in the embedded contract; the extra
+    # 131 B on `macro_micro` is the published array itself, on the one
+    # `latent-heavies` finding and its provenance record. Golden has no
+    # such finding, which is why its data moves by the contract alone -
+    # the two numbers differing by exactly the payload is what says the
+    # split is measured and not apportioned.
+    ("golden", GOLDEN, 394_000),                       #  391,543 B
     # `UX-297` moved this one by 385 B before that: the two-plane run
     # publishes `plane2_coverage.source`, which says which shape of
     # Plane 2 report served its numbers and what that costs to open. A
@@ -658,7 +675,8 @@ COMMITTED_EXPORTS = [
     # 120 keys, not by a fixture.
     # `UX-431`: +1,120 B, all source - the same paragraph as golden;
     # the split is in the note above that bound.
-    ("macro_micro", MACRO_MICRO, 445_000),             #  443,386 B
+    # `UX-448`: the split is in the note above golden's bound.
+    ("macro_micro", MACRO_MICRO, 450_000),             #  447,039 B
 ]
 
 

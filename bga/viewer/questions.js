@@ -280,6 +280,57 @@ order by wall_seconds desc
 limit 40;`,
   },
   {
+    // `UX-448`: the same pivot inside one sandbox.
+    //
+    // Drafted with `cost-by-executable` in `UX-433` and dropped rather
+    // than shipped unreachable - `UX-368`'s rule is that a question no
+    // finding points at is a question nobody arrives at, and at the
+    // time no claim was about what an element ran. `latent-heavies`
+    // now offers both grains: `element-commands` above lists that
+    // element's invocations, and this collapses them to the programs
+    // that produced them. On `examples/06`'s captured `app.bst` that is
+    // 70 invocations against 5 programs.
+    id: "executables-in-element",
+    category: "execution",
+    plane: "Plane 2",
+    title: "Which programs is one element made of?",
+    returns: [
+      ["exe", "the program, argv stripped - the path as it was exec'd"],
+      ["runs", "how many times this element ran it"],
+      ["wall_seconds", "wall time summed over those runs"],
+      ["cpu_seconds", "CPU time summed over them, which exceeds wall "
+                      + "where they overlapped"],
+      ["peak_rss_kb", "the largest single resident set any one of them "
+                      + "reached - never a sum, which no moment held"],
+    ],
+    why:
+      "The micro half of `cost-by-executable`. A heavy element is "
+      + "usually one program run many times, and the question a reader "
+      + "who has picked an element asks next is which one - a compiler "
+      + "and a shell loop are the same seconds and different fixes. "
+      + "`element-commands` answers the same question one row per "
+      + "invocation, which is the grain to use when the command lines "
+      + "differ in a way that matters; this is the grain to use when "
+      + "they do not. Group on the path rather than the basename, for "
+      + "the reason `cost-by-executable` gives.",
+    sql: `select exe,
+       count(*) as runs,
+       sum(dur) / 1e9 as wall_seconds,
+       sum(cpu_us) / 1e6 as cpu_seconds,
+       max(rss_kb) as peak_rss_kb
+from (select extract_arg(s.arg_set_id, 'debug.exe') as exe,
+             extract_arg(s.arg_set_id, 'debug.cpu_us') as cpu_us,
+             extract_arg(s.arg_set_id, 'debug.max_rss_kb') as rss_kb,
+             s.dur
+      from slice s
+      where s.category glob '*native-process*'
+        and extract_arg(s.arg_set_id, 'debug.element') = '{element}'
+        and extract_arg(s.arg_set_id, 'debug.exe') is not null)
+group by exe
+order by wall_seconds desc
+limit 40;`,
+  },
+  {
     id: "dependency-wait",
     category: "dependencies",
     plane: "Plane 1",

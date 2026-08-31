@@ -29,12 +29,12 @@ import { COLUMNS, DECOMPOSITION, DISTRIBUTION, INLINE, INTERVAL, QUANTITY, SERIE
 import { matches } from "./nav.js";
 import { handOff } from "./perfetto.js";
 import { served } from "./primitives.js";
-import { copyButton } from "./questions.js";
+import { byId, copyButton } from "./questions.js";
 import { recordSource } from "./rawjson.js";
 import { CONTROLS, classify } from "./shapes.js";
 import { ARRAY_INLINE_ITEMS, CELL_NEST_LIMIT, LIFTED_SECTION, OBJECT_INLINE_FIELDS, TABLE_OPENS_BOUNDED_ABOVE, liftedCriticalPath, renderPairs, renderStructured, renderTable } from "./structured.js";
 import { boundCards } from "./tables.js";
-import { investigationFor } from "./trace_context.js";
+import { investigationsFor } from "./trace_context.js";
 import { INCOMPLETE, renderEvidence } from "./views.js";
 
 /**
@@ -162,34 +162,51 @@ export function renderFindings(findings, investigate = null, node = undefined) {
  * blocked pop-up is exactly when the reader needs the SQL most.
  */
 export function investigateButton(finding, investigate) {
-  const context = investigationFor(finding);
+  const contexts = investigationsFor(finding);
+  const context = contexts[0];
   if (!context) return null;
   const wrapper = el("div", { class: "investigate",
                               "data-query-id": context.queryId,
                               "data-element": context.element ?? "" });
   const button = el("button", { type: "button" }, "Investigate in Perfetto");
+  // `UX-448`: one paste per grain the claim offers, not one button
+  // per grain. The handoff opens one trace into one tab whichever
+  // question the reader came with, so a second button would send the
+  // same trace twice; a second paste is the second question, which is
+  // the thing that actually differs. Labelled only where there is more
+  // than one - a lone `<pre>` needs no heading saying which of one it
+  // is (`UX-371`, the page's repeated text).
+  //
   // `hidden` through `el` lands as a *property* (it is not a
   // `data-` attribute), so it is cleared as one: `removeAttribute`
   // would not touch it, and the paste would never appear.
-  const paste = el("pre", { class: "query", hidden: true },
-                   el("code", {}, context.sql));
+  const pastes = contexts.map((entry) => el(
+    "pre", { class: "query", hidden: true, "data-query-id": entry.queryId },
+    contexts.length > 1
+      ? el("span", { class: "muted query-grain" }, byId(entry.queryId)?.title
+                                                   ?? entry.queryId)
+      : null,
+    el("code", {}, entry.sql)));
   const status = el("span", { class: "muted handoff" });
   button.addEventListener("click", () => {
     // No `await` before the handoff: the click's transient activation
     // is what opens the tab (`UX-198`), and it is gone by the time one
     // resolves.
-    paste.hidden = false;
+    for (const node of pastes) node.hidden = false;
     const sent = investigate(context);
-    status.textContent = "opening ui.perfetto.dev — the query is below…";
+    status.textContent = pastes.length > 1
+      ? "opening ui.perfetto.dev — the queries are below…"
+      : "opening ui.perfetto.dev — the query is below…";
     Promise.resolve(sent).then(
       ({ bytes } = {}) => {
+        const noun = pastes.length > 1 ? "queries" : "query";
         status.textContent = bytes
-          ? `sent ${(bytes / 1024).toFixed(1)} KiB — paste the query below`
-          : "paste the query below";
+          ? `sent ${(bytes / 1024).toFixed(1)} KiB — paste the ${noun} below`
+          : `paste the ${noun} below`;
       },
       (error) => { status.textContent = String(error.message ?? error); });
   });
-  wrapper.append(button, status, paste);
+  wrapper.append(button, status, ...pastes);
   return wrapper;
 }
 

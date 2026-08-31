@@ -46,11 +46,26 @@ needs_node = pytest.mark.skipif(node is None, reason="node is not installed")
 # these disappears the guide's table is wrong.
 CROSSINGS = ("peak_rss_bytes", "dominant_binary")
 
-# The questions the guide sorts as genuinely needing the trace.
-NEEDS_PERFETTO = frozenset((
-    "element-commands", "peak-rss", "concurrency-curve",
-    "failed-processes", "process-storm", "cpu-versus-wall",
-))
+def _guide_tables():
+    """The two question tables of the guide, as `{id}` sets.
+
+    Read out of the document rather than restated here. The first cut
+    of this file wrote the "needs Perfetto" list as a literal, which
+    made the guard a check that the *library* still had six named
+    questions - not that the guide sorted the library. Three questions
+    were added over three rounds and none of them reached the guide;
+    the count in its own prose said thirteen while the library served
+    sixteen, and every clause in this file was green.
+    """
+    text = GUIDE.read_text(encoding="utf-8")
+    body = text.split("## The canned questions", 1)[1].split("\n## ", 1)[0]
+    needs, rest = body.split("**Does not need Perfetto", 1)
+    return (frozenset(re.findall(r"^\| `([a-z-]+)` \|", needs, re.M)),
+            frozenset(re.findall(r"^\| `([a-z-]+)` \|", rest, re.M)))
+
+
+#: The questions the guide sorts as genuinely needing the trace.
+NEEDS_PERFETTO, ANSWERED_BY_THE_PAGE = _guide_tables()
 
 # What makes a query need the trace: it resolves to one row **per
 # process** or per instant, which the report never does.
@@ -152,6 +167,52 @@ class TestTheQuestionsThatNeedTheTraceReallyDo:
                 f"{qid} is listed as needing the trace, but its SQL reads "
                 "nothing per-process and no counter track. Either the query "
                 "changed or it belongs in the other table.")
+
+
+    def test_the_guide_sorts_every_question_the_library_serves(self):
+        """The direction that was missing, and the reason it mattered.
+
+        The clause above asks whether every question the guide *names*
+        is in the library. That cannot see a question the library
+        gained and the guide never heard of - which is exactly what
+        happened three times, and left the guide's own count three
+        short of the library it describes.
+
+        Sorting is still the guide's judgement and is not asserted
+        here; only that a judgement was made at all.
+        """
+        script = ('const { QUESTIONS } = await import('
+                  '"./bga/viewer/questions.js");'
+                  'console.log(JSON.stringify(QUESTIONS.map((q) => q.id)));')
+        done = subprocess.run([node, "--input-type=module", "-e", script],
+                              capture_output=True, text=True, cwd=REPO,
+                              timeout=60)
+        assert done.returncode == 0, done.stderr
+        served = set(json.loads(done.stdout))
+        sorted_ = NEEDS_PERFETTO | ANSWERED_BY_THE_PAGE
+        assert not served - sorted_, (
+            f"the library serves {sorted(served - sorted_)} and the guide's "
+            f"two tables sort neither into 'needs Perfetto' nor into 'the "
+            f"page answers it' - a reader of the guide cannot tell the "
+            f"question exists")
+        assert not sorted_ - served, (
+            f"the guide sorts {sorted(sorted_ - served)}, which the library "
+            f"no longer serves")
+
+    def test_the_count_in_the_prose_is_the_count_in_the_tables(self):
+        """`UX-326`: the tool's own sentences are contracts, and a
+        number written in words is one. "thirteen questions" stayed in
+        this guide across three additions."""
+        words = {13: "thirteen", 14: "fourteen", 15: "fifteen",
+                 16: "sixteen", 17: "seventeen", 18: "eighteen"}
+        total = len(NEEDS_PERFETTO | ANSWERED_BY_THE_PAGE)
+        assert total in words, (
+            f"{total} questions, and this clause has no word for it - add "
+            f"one rather than letting the prose go unchecked")
+        guide = GUIDE.read_text(encoding="utf-8")
+        assert f"serves {words[total]} questions" in guide, (
+            f"the guide's prose does not say it serves {words[total]} "
+            f"questions, and its two tables sort {total}")
 
 
 class TestTheGuideAndTheRolesAgree:

@@ -55,7 +55,7 @@ from browser import NO_BROWSER, Browser, find_chrome    # noqa: E402
 chrome = find_chrome()
 needs_browser = pytest.mark.skipif(chrome is None, reason=NO_BROWSER)
 
-#: The one field this rule does not reach, and why it is not a finding.
+#: The fields this rule does not reach, and why they are not findings.
 #:
 #: `trace_query` is a Perfetto query id (`element-time`), and what it
 #: names is a query in the handoff's own library - so it belongs beside
@@ -63,7 +63,14 @@ needs_browser = pytest.mark.skipif(chrome is None, reason=NO_BROWSER)
 #: block as `data-query` so the handoff can find it, which is a
 #: machine's channel and not a reader's; this file counts it withheld
 #: and exempts it here rather than pretending an attribute is rendered.
-EXEMPT = {"trace_query"}
+#:
+#: `UX-448` added `trace_queries` - the other grains, where a claim
+#: reads at more than one - and it is exempt for the same reason and
+#: on the same terms: `data-queries` beside `data-query`. The reader
+#: does get both grains, on the Investigate button, which pastes one
+#: query block per grain; what neither reaches is the *reason* fold,
+#: which is about the rule and not about where to look next.
+EXEMPT = {"trace_query", "trace_queries"}
 
 _LOOK = """
 (() => {
@@ -176,6 +183,10 @@ class TestEveryPublishedFieldReachesAReader:
         out = browser.measure(booted[label], _LOOK, 1440, 900)
         queries = {record.get("trace_query") for record in _records(label)
                    if record.get("trace_query")}
+        # `UX-448`: both exempt fields, or the second one could start
+        # rendering under an exemption written for the first.
+        queries |= {query for record in _records(label)
+                    for query in record.get("trace_queries") or []}
         assert queries, f"{label}: no record carries a trace_query"
         shown = [query for query in queries if query in out["text"]]
         assert len(shown) < len(queries), (

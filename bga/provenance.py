@@ -169,13 +169,21 @@ def _segments(path: str):
 # id `findings.py` assigns, so a renamed finding loses its query rather
 # than silently pointing at the wrong one - and the coverage guard
 # still asserts both directions, now across the language boundary.
+#
+# `UX-448`: a **tuple** per claim, and uniformly a tuple even where
+# there is one. The table was `{claim: query}` and one claim now offers
+# two grains; a dict where nineteen values are strings and one is a
+# sequence is a shape the next reader indexes wrongly. `queries_for` is
+# how the pipeline reads it, `TRACE_QUERIES[claim][0]` is what the
+# Investigate button opens, and the rest are the alternatives it lists
+# beside it.
 TRACE_QUERIES = {
     # The diagnosis is a claim about the chain, so the query opens it.
-    "diagnosis": "element-time",
+    "diagnosis": ("element-time",),
     # Scheduling: the finding says time was spent waiting; the query
     # shows where the gaps are.
-    "wait-category": "stalls",
-    "capacity-recommendation": "stalls",
+    "wait-category": ("stalls",),
+    "capacity-recommendation": ("stalls",),
     # Execution: the finding names elements; the query opens them.
     #
     # `UX-433`: **which programs**, not which elements. The claim is that
@@ -184,21 +192,35 @@ TRACE_QUERIES = {
     # executable` is that question and nothing could answer it until
     # `debug.exe` existed. "Which elements" is still one click away:
     # `diagnosis` points at `element-time`, which is the same query.
-    "time-concentration": "cost-by-executable",
+    "time-concentration": ("cost-by-executable",),
     # `UX-312`: `execution-bound` is a claim about how much of the
     # build was *running processes*, so the count is the drill-down and
     # `latent-heavies` keeps the command list - which is the question
     # about which commands, not how many.
-    "execution-bound": "process-storm",
-    "latent-heavies": "element-commands",
+    "execution-bound": ("process-storm",),
+    # `UX-448`: the claim that carries two grains, and the reason the
+    # table is one-to-many at all. `latent-heavies` names elements that
+    # are heavy off the critical path; "what is it made of" has two
+    # honest answers, and which one helps depends on the element.
+    # `element-commands` is one row per invocation - the grain to read
+    # when the command lines differ in a way that matters -
+    # `executables-in-element` collapses them to programs, which on
+    # `examples/06`'s `app.bst` is 70 rows against 5.
+    #
+    # The alternative considered and rejected was a **new claim** for
+    # the pivot to hang off ("this element's time is one program").
+    # Measured on every capture in the tree, the top program holds
+    # 0.71-1.00 of an element's CPU on 10 of 10 elements - a finding
+    # that fires on every element is not a finding.
+    "latent-heavies": ("element-commands", "executables-in-element"),
     # Dependencies: the finding is about shape, not speed.
-    "criticality": "dependency-wait",
-    "blast-radius-ranking": "dependency-wait",
-    "blast-radius-structural": "dependency-wait",
-    "shared-source-blast": "dependency-wait",
+    "criticality": ("dependency-wait",),
+    "blast-radius-ranking": ("dependency-wait",),
+    "blast-radius-structural": ("dependency-wait",),
+    "shared-source-blast": ("dependency-wait",),
     # Resources: what the processes inside the sandbox cost.
-    "memory-envelope": "peak-rss",
-    "cache-transfer-cost": "sandbox-tax",
+    "memory-envelope": ("peak-rss",),
+    "cache-transfer-cost": ("sandbox-tax",),
     # `UX-312`. The vocabulary `UX-308`..`UX-311` put on the trace made
     # seven more questions answerable, and a question no finding points
     # at is a question nobody arrives at - the page is where it lives,
@@ -208,21 +230,49 @@ TRACE_QUERIES = {
     # it is a claim about *peak* memory, and `peak-rss` reads the same
     # per-process maximum the claim is computed from, where
     # `process-storm` answers a question about counts.
-    "build-failed": "failed-processes",
-    "failed-task-time": "failed-processes",
-    "efficiency-score": "cpu-versus-wall",
-    "certified-headroom": "concurrency-curve",
-    "optimization-horizon": "time-by-kind",
-    "run-mode-incremental": "which-run-is-this",
-    "joint-saving": "waited-on-flow",
+    "build-failed": ("failed-processes",),
+    "failed-task-time": ("failed-processes",),
+    "efficiency-score": ("cpu-versus-wall",),
+    "certified-headroom": ("concurrency-curve",),
+    "optimization-horizon": ("time-by-kind",),
+    "run-mode-incremental": ("which-run-is-this",),
+    "joint-saving": ("waited-on-flow",),
     # `UX-380`: the level decomposition, opened from the claim it
     # explains. `mesh-graph` says the graph is near-equal chains whose
     # savings cap each other; `graph-levels` is that statement drawn -
     # which level is wide and quick, which is narrow and slow, and
     # which elements sit in the narrow one. `UX-368`'s rule again: a
     # question no finding points at is a question nobody arrives at.
-    "mesh-graph": "graph-levels",
+    "mesh-graph": ("graph-levels",),
 }
+
+
+def queries_for(claim_id) -> Tuple[str, ...]:
+    """Every library question that deepens `claim_id`, best first.
+
+    `UX-448`. The first is what the Investigate button opens; the rest
+    are the other grains the same claim can be read at, listed beside
+    it. An unknown claim answers `()` rather than `None`, so a caller
+    can iterate without asking.
+    """
+    return tuple(TRACE_QUERIES.get(claim_id) or ())
+
+
+def _published_queries(claim_id) -> dict:
+    """The two published keys for `claim_id`, ready to merge.
+
+    `trace_query` is the first and is unchanged from before this item -
+    the field every existing consumer reads. `trace_queries` carries
+    the whole list and is **omitted where there is only one**, because
+    on nineteen of twenty claims it would restate the field beside it,
+    and its absence is the fact "this claim has one grain" (`UX-249`'s
+    rule about absence).
+    """
+    queries = queries_for(claim_id)
+    published = {"trace_query": queries[0] if queries else None}
+    if len(queries) > 1:
+        published["trace_queries"] = list(queries)
+    return published
 
 
 def _rule(name, threshold, comparison, observed_path, sentence,
@@ -527,7 +577,7 @@ def record(claim: dict, claim_id: str, kind: str, document: dict) -> dict:
             "rule": _unconditional(
                 "No rule is recorded for this claim - it is published "
                 "without one rather than with an invented one."),
-            "trace_query": TRACE_QUERIES.get(claim_id),
+            **_published_queries(claim_id),
             "unpublished_inputs": [],
         }
     paths, rule, unpublished = spec
@@ -567,7 +617,7 @@ def record(claim: dict, claim_id: str, kind: str, document: dict) -> dict:
         "document": ANALYZE_DOCUMENT,
         "evidence": evidence,
         "rule": dict(rule),
-        "trace_query": TRACE_QUERIES.get(claim_id),
+        **_published_queries(claim_id),
         "unpublished_inputs": list(unpublished),
     }
 
@@ -603,7 +653,7 @@ def attach(document: dict) -> dict:
     # one module and the record and the finding cannot disagree about
     # which query answers a claim.
     for finding in document.get("findings") or []:
-        finding["trace_query"] = TRACE_QUERIES.get(finding.get("id"))
+        finding.update(_published_queries(finding.get("id")))
     return document
 
 
@@ -679,6 +729,12 @@ def render(provenance: dict, indent: str = "    ") -> List[str]:
         lines.append(f"{indent}  {entry['path']} = {entry['value']}{mark}")
     for path in provenance.get("unpublished_inputs") or []:
         lines.append(f"{indent}  {path} = (computed, not published)")
-    if provenance.get("trace_query"):
-        lines.append(f"{indent}deeper: trace query `{provenance['trace_query']}`")
+    # `UX-448`: every grain, not only the first. A terminal reader who
+    # is told one query exists has no way to learn the second one does.
+    deeper = provenance.get("trace_queries") or (
+        [provenance["trace_query"]] if provenance.get("trace_query") else [])
+    if deeper:
+        named = ", ".join(f"`{query}`" for query in deeper)
+        lines.append(f"{indent}deeper: trace "
+                     f"{'queries' if len(deeper) > 1 else 'query'} {named}")
     return lines

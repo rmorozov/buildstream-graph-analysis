@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-473 scenarios: **12 open**, 461 closed.
+474 scenarios: **13 open**, 461 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -27,7 +27,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | cli | 0 | 5 |
 | store | 2 | 28 |
 | docs | 3 | 43 |
-| guards | 3 | 79 |
+| guards | 4 | 80 |
 
 ## Open scenarios
 
@@ -48,6 +48,7 @@ task file, which is the only place it ever lived twice.
 | UX-473 | [nothing in CI builds a generated project](UX-0473-ci-never-builds-a-generated-project.md) | guards | Medium | the round whose spec change breaks a build nobody runs until someone runs it by hand | 🔴 |
 | UX-474 | ["Elements Most Worth Optimizing First (by blast radius)" ranks three elements whose blast radius is zero](UX-0474-the-blast-ranking-publishes-a-list-of-zeros.md) | analysis | Medium | the local-optimizer told which three elements to fix first, by a quantity that is zero for all three | 🔴 |
 | UX-475 | [`mesh-graph` calls a five-element linear chain "a mesh of near-equal chains"](UX-0475-mesh-graph-calls-a-linear-chain-a-mesh.md) | analysis | Medium | the graph-owner told their chain is a mesh, and that savings are capped by "the next chain" when there is only one | 🔴 |
+| UX-476 | [the falsifier `UX-458` named arrived on the very next run](UX-0476-an-untouched-file-crossed-on-two-consecutive-runs.md) | guards | Medium | the contributor whose PR is red for a file they did not write | 🔴 |
 
 ## UX-398..UX-410: the sixty-fourth round — the walk that judged the answers (2026-08-29)
 

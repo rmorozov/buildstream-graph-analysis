@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-493 scenarios: **8 open**, 485 closed.
+494 scenarios: **9 open**, 485 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -27,7 +27,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | cli | 0 | 5 |
 | store | 2 | 28 |
 | docs | 2 | 43 |
-| guards | 4 | 87 |
+| guards | 5 | 87 |
 
 ## Open scenarios
 
@@ -44,6 +44,7 @@ task file, which is the only place it ever lived twice.
 | UX-492 | [the README's "verbatim" real-project block prints a sentence the tool can no longer produce](UX-0492-the-readme-verbatim-block-is-no-longer-verbatim.md) | docs | Medium | the outside reader whose first sight of `bga` is a block that says "verbatim" and is not | 🔴 |
 | UX-493 | [a bound moved and the task file that presents it as current was not annotated](UX-0493-a-moved-bound-left-an-earlier-task-file-asserting-the-old-one.md) | docs | Low | the round that reads `UX-479`'s Outcome for the export bound and gets a number the tree no longer has | 🔴 |
 | UX-495 | [three browser guards swing 1.5-2.3x under parallel load](UX-0495-three-browser-guards-swing-under-parallel-load.md) | guards | Medium | the round that reads a browser guard's drift reading and cannot tell an excursion from a regression | 🔴 |
+| UX-496 | [a wholesale re-record samples every file once, and the drift factor has never been sized against that](UX-0496-a-one-run-re-record-bakes-in-one-sample-per-file.md) | guards | Medium | the round whose gate is red on a file nobody touched, and cannot tell a stale reference entry from a real regression | 🔴 |
 
 ## UX-398..UX-410: the sixty-fourth round — the walk that judged the answers (2026-08-29)
 

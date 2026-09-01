@@ -48,7 +48,7 @@ with `-x` or under `pdb`.
 bga/            analysis, report, schemas · bga/viewer/  the page's modules
 tools/          capture, the LD_PRELOAD hook, the spine, dev helpers
 tests/unit/     one file per item, named for its claim
-docs/backlog/scenarios/   421 task files; README.md open, closed.md closed
+docs/backlog/scenarios/   one file per task; README.md open, closed.md closed
 ```
 
 Section 6 of the fixing guide is the full map. Don't re-derive it.
@@ -59,10 +59,11 @@ Section 6 of the fixing guide is the full map. Don't re-derive it.
   the gate, and skipping it shipped a slack budget in round 66.
 - **`git add -A` / `git add .`** — forbidden by §4a.1; stage paths.
 - **Builds an instrument that reads a proxy** for the thing it names —
-  ~30 sightings in ~26 items, in four shapes: a text scan that cannot
-  tell code from data, a ratio at the noise floor, a comparison across
-  machines, the wrong population. The rule is fixing guide §5; the
-  three questions that catch it are in the `measure` skill.
+  the most-sighted defect in this repository, in four shapes: a text
+  scan that cannot tell code from data, a ratio at the noise floor, a
+  comparison across machines, the wrong population. The rule is fixing
+  guide §5; the three questions that catch it are in the `measure`
+  skill.
 - **Writes a guard whose setup another gate already excludes**, so it
   passes whatever the gate under test does. Five found in `UX-420`
   alone. Mutate it; do not read it.

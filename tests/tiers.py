@@ -695,6 +695,9 @@ MEDIUM = (
     # `UX-466`: draws a real timeline per committed capture with
     # `bga timeline` in a subprocess, seven of them.
     "tests/unit/test_the_trace_census_reads_both_ends.py",           #    4.9s
+    # `UX-465`: two real `bst build` runs where bst is installed,
+    # and the spec/YAML half everywhere.
+    "tests/unit/test_a_generated_project_builds.py",                 #    6.5s
     "tests/unit/test_the_printed_sentences_are_contracts.py",        #    1.6s
     "tests/unit/test_a_capture_that_cannot_start.py",                #    1.5s
     "tests/unit/test_the_handoff_does_not_carry_the_trace.py",       #    1.3s

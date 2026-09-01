@@ -234,6 +234,8 @@ tools/dev_finding_coverage.py  which findings a committed capture really
                              produces, read off analyze (UX-460)
 tools/dev_trace_coverage.py  which captured field reaches the emitted
                              trace, and which Perfetto carriers it uses (UX-466)
+tools/bga_gen_project.py     a BuildStream project `bst build` accepts,
+                             from a topology spec (UX-465)
 ```
 
 **Tests and docs:**

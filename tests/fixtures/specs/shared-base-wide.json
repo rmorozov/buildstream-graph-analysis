@@ -1,0 +1,108 @@
+{
+  "spec_version": 1,
+  "name": "shared-base-wide",
+  "graph": {
+    "elements": [
+      {
+        "uid": "toolchain.bst",
+        "cache_key": null,
+        "requested_target": false,
+        "element_kind": "import"
+      },
+      {
+        "uid": "mod0.bst",
+        "cache_key": null,
+        "requested_target": true,
+        "element_kind": "manual"
+      },
+      {
+        "uid": "mod1.bst",
+        "cache_key": null,
+        "requested_target": true,
+        "element_kind": "manual"
+      },
+      {
+        "uid": "mod2.bst",
+        "cache_key": null,
+        "requested_target": true,
+        "element_kind": "manual"
+      },
+      {
+        "uid": "mod3.bst",
+        "cache_key": null,
+        "requested_target": true,
+        "element_kind": "manual"
+      },
+      {
+        "uid": "mod4.bst",
+        "cache_key": null,
+        "requested_target": true,
+        "element_kind": "manual"
+      },
+      {
+        "uid": "mod5.bst",
+        "cache_key": null,
+        "requested_target": true,
+        "element_kind": "manual"
+      }
+    ],
+    "dependencies": [
+      {
+        "predecessor": "toolchain.bst",
+        "successor": "mod0.bst",
+        "dependency_type": "build"
+      },
+      {
+        "predecessor": "toolchain.bst",
+        "successor": "mod1.bst",
+        "dependency_type": "build"
+      },
+      {
+        "predecessor": "toolchain.bst",
+        "successor": "mod2.bst",
+        "dependency_type": "build"
+      },
+      {
+        "predecessor": "toolchain.bst",
+        "successor": "mod3.bst",
+        "dependency_type": "build"
+      },
+      {
+        "predecessor": "toolchain.bst",
+        "successor": "mod4.bst",
+        "dependency_type": "build"
+      },
+      {
+        "predecessor": "toolchain.bst",
+        "successor": "mod5.bst",
+        "dependency_type": "build"
+      }
+    ]
+  },
+  "work": {
+    "toolchain.bst": {
+      "seconds": 0.02
+    },
+    "mod0.bst": {
+      "seconds": 0.6,
+      "processes": 8
+    },
+    "mod1.bst": {
+      "seconds": 0.58,
+      "files": 2000
+    },
+    "mod2.bst": {
+      "seconds": 0.3
+    },
+    "mod3.bst": {
+      "seconds": 0.27
+    },
+    "mod4.bst": {
+      "seconds": 0.24
+    },
+    "mod5.bst": {
+      "seconds": 0.21
+    }
+  },
+  "note": "UX-465's acceptance spec. shared_base_wide's graph and weights at a tenth of its seconds, plus axis F on the two heaviest elements - a process storm on mod0 and 2,000 staged files on mod1, so a capture of this project has something for Plane 2 to see."
+}

@@ -828,7 +828,20 @@ _PROVENANCE = {
                                        "path names something the schema "
                                        "does not describe."},
                     "value": {"description": "What that path held when the "
-                                             "report was written."},
+                                             "report was written. Present "
+                                             "for a scalar only - see "
+                                             "`elided`."},
+                    "elided": {
+                        "description": "The shape of what the path held, "
+                                       "where that was a container - "
+                                       "`object[1202]`, `array[15]` - and "
+                                       "`value` is absent. A record cites "
+                                       "this document; copying a "
+                                       "population into it would publish "
+                                       "that population twice, which is "
+                                       "the defect `UX-288` fixed one "
+                                       "level up and `UX-483` fixed here. "
+                                       "Follow the path (`UX-483`)."},
                     "resolved": {"description": "False where the path did "
                                                 "not resolve - published "
                                                 "rather than dropped, so a "

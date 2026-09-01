@@ -694,9 +694,15 @@ jobs:
             exit 1
           fi
           # Not anchored to column 0: pyproject's `addopts = "-v"` makes
-          # the summary line `===== 43 passed, 1215 deselected in ... =====`.
-          # Bounded on both sides so "143 passed" cannot satisfy it.
-          grep -qE "(^|[[:space:]=])43 passed([[:space:],]|$)" /tmp/bst-tier.txt || {
+          # the summary line `===== 45 passed, 5543 deselected in ... =====`.
+          # Bounded on both sides so "145 passed" cannot satisfy it.
+          #
+          # The number here and the number in the `echo` below are the
+          # same pin written twice, and round 72 shipped them disagreeing
+          # - grep 43, echo 45 - for two commits, because
+          # `test_the_bst_tier_pin_matches_what_collects` read the echo
+          # and nothing read the grep. It now reads both (`UX-480`).
+          grep -qE "(^|[[:space:]=])45 passed([[:space:],]|$)" /tmp/bst-tier.txt || {
             echo "Expected exactly 45 bst-gated tests to run. Got:" >&2
             tail -3 /tmp/bst-tier.txt >&2
             exit 1

@@ -1,1502 +1,1628 @@
 {
-  "schema": "analyze/v4",
-  "run_id": "054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec",
-  "total_duration_us": 46133000,
-  "section": null,
-  "findings": [
-    {
-      "id": "wait-category",
-      "severity": "high",
-      "title": "Biggest wait category: 5.9% of wall-clock time is UNTRACKED HEAD (2.72s)",
-      "detail": [
-        "    -> real time before the tracked-task window started (BuildStream startup, cache query, sandbox staging) - see Pipeline Overhead, not a scheduling issue"
-      ],
-      "elements": [],
-      "evidence": {
-        "category": "untracked_head_us",
-        "category_us": 2717000,
-        "share": 0.058894934211952396,
-        "hint": "real time before the tracked-task window started (BuildStream startup, cache query, sandbox staging) - see Pipeline Overhead, not a scheduling issue"
-      },
-      "reader": "local-optimizer",
-      "copy_text": "BGA finding: Biggest wait category: 5.9% of wall-clock time is UNTRACKED HEAD (2.72s)\n      -> real time before the tracked-task window started (BuildStream startup, cache query, sandbox staging) - see Pipeline Overhead, not a scheduling issue\n  category untracked_head_us\n  category_us 2.7s\n  share 6%\n  hint real time before the tracked-task window started (BuildStream startup, cache query, sandbox staging) - see Pipeline Overhead, not a scheduling issue\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
-      "trace_query": "resource-queues",
-      "trace_queries": [
-        "resource-queues",
-        "stalls"
-      ]
+    "schema": "analyze/v4",
+    "run_id": "054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec",
+    "total_duration_us": 46133000,
+    "section": null,
+    "findings": [
+        {
+            "id": "wait-category",
+            "severity": "high",
+            "title": "Biggest wait category: 5.9% of wall-clock time is UNTRACKED HEAD (2.72s)",
+            "detail": [
+                "    -> real time before the tracked-task window started (BuildStream startup, cache query, sandbox staging) - see Pipeline Overhead, not a scheduling issue"
+            ],
+            "elements": [],
+            "evidence": {
+                "category": "untracked_head_us",
+                "category_us": 2717000,
+                "share": 0.058894934211952396,
+                "hint": "real time before the tracked-task window started (BuildStream startup, cache query, sandbox staging) - see Pipeline Overhead, not a scheduling issue"
+            },
+            "reader": "local-optimizer",
+            "copy_text": "BGA finding: Biggest wait category: 5.9% of wall-clock time is UNTRACKED HEAD (2.72s)\n      -> real time before the tracked-task window started (BuildStream startup, cache query, sandbox staging) - see Pipeline Overhead, not a scheduling issue\n  category untracked_head_us\n  category_us 2.7s\n  share 6%\n  hint real time before the tracked-task window started (BuildStream startup, cache query, sandbox staging) - see Pipeline Overhead, not a scheduling issue\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
+            "trace_query": "resource-queues",
+            "trace_queries": [
+                "resource-queues",
+                "stalls"
+            ]
+        },
+        {
+            "id": "time-concentration",
+            "severity": "high",
+            "title": "Where the time is: 4 element(s) are 71.9% of the 43.2s critical path - this build is chain-bound, not scheduler-bound",
+            "detail": [
+                "    core.bst       19.1s (44.1% of path)  -> fixing it saves 12.1s (26.1% of the build)",
+                "    lib-b.bst       4.0s ( 9.3% of path)  -> fixing it saves 4.0s (8.7% of the build)",
+                "    lib-d.bst       4.0s ( 9.3% of path)  -> fixing it saves 4.0s (8.7% of the build)",
+                "    lib-f.bst       4.0s ( 9.3% of path)  -> fixing it saves 4.0s (8.7% of the build)"
+            ],
+            "elements": [
+                "core.bst",
+                "lib-b.bst",
+                "lib-d.bst",
+                "lib-f.bst"
+            ],
+            "evidence": {
+                "path_us": 43200000,
+                "share_of_path": 0.71875,
+                "chain_bound": true,
+                "rows": [
+                    {
+                        "element_uid": "core.bst",
+                        "duration_us": 19050000,
+                        "share_of_path": 0.4409722222222222,
+                        "realizable_saving_us": 12050000
+                    },
+                    {
+                        "element_uid": "lib-b.bst",
+                        "duration_us": 4000000,
+                        "share_of_path": 0.09259259259259259,
+                        "realizable_saving_us": 4000000
+                    },
+                    {
+                        "element_uid": "lib-d.bst",
+                        "duration_us": 4000000,
+                        "share_of_path": 0.09259259259259259,
+                        "realizable_saving_us": 4000000
+                    },
+                    {
+                        "element_uid": "lib-f.bst",
+                        "duration_us": 4000000,
+                        "share_of_path": 0.09259259259259259,
+                        "realizable_saving_us": 4000000
+                    }
+                ]
+            },
+            "reader": "local-optimizer",
+            "copy_text": "BGA finding: Where the time is: 4 element(s) are 71.9% of the 43.2s critical path - this build is chain-bound, not scheduler-bound\n      core.bst       19.1s (44.1% of path)  -> fixing it saves 12.1s (26.1% of the build)\n      lib-b.bst       4.0s ( 9.3% of path)  -> fixing it saves 4.0s (8.7% of the build)\n      lib-d.bst       4.0s ( 9.3% of path)  -> fixing it saves 4.0s (8.7% of the build)\n      lib-f.bst       4.0s ( 9.3% of path)  -> fixing it saves 4.0s (8.7% of the build)\n  path_us 43.2s\n  share_of_path 72%\n  chain_bound True\n  Elements: core.bst, lib-b.bst, lib-d.bst, lib-f.bst\n  Next: bga blast core.bst <fixture>/run\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
+            "trace_query": "cost-by-executable"
+        },
+        {
+            "id": "chain-graph",
+            "severity": "info",
+            "title": "Note: 91% of elements have zero slack, all on the critical path - no second chain of equal length, so a saving on any of them is worth its own duration",
+            "detail": [],
+            "elements": [],
+            "evidence": {
+                "zero_slack_share": 0.9090909090909091,
+                "zero_slack_off_path": 0
+            },
+            "indent": "    ",
+            "reader": "graph-owner",
+            "copy_text": "BGA finding: Note: 91% of elements have zero slack, all on the critical path - no second chain of equal length, so a saving on any of them is worth its own duration\n  zero_slack_share 91%\n  zero_slack_off_path 0\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
+            "trace_query": "graph-levels"
+        },
+        {
+            "id": "blast-radius-reach",
+            "severity": "medium",
+            "title": "What a change to these rebuilds: core.bst (8 downstream), codegen.bst (8 downstream), lib-a.bst (7 downstream) - the cost of touching them is not their own duration but everything downstream that has to be built again",
+            "detail": [],
+            "elements": [
+                "core.bst",
+                "codegen.bst",
+                "lib-a.bst"
+            ],
+            "evidence": {},
+            "reader": "recipe-author",
+            "copy_text": "BGA finding: What a change to these rebuilds: core.bst (8 downstream), codegen.bst (8 downstream), lib-a.bst (7 downstream) - the cost of touching them is not their own duration but everything downstream that has to be built again\n  Elements: core.bst, codegen.bst, lib-a.bst\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
+            "trace_query": "dependency-wait"
+        },
+        {
+            "id": "blast-radius-structural",
+            "severity": "info",
+            "title": "Reaching most of the graph by design: toolchain.bst (10 downstream) - structural elements (import) whose dependents are the graph's shape, not a task",
+            "detail": [],
+            "elements": [
+                "toolchain.bst"
+            ],
+            "evidence": {},
+            "reader": "recipe-author",
+            "copy_text": "BGA finding: Reaching most of the graph by design: toolchain.bst (10 downstream) - structural elements (import) whose dependents are the graph's shape, not a task\n  Elements: toolchain.bst\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
+            "trace_query": "dependency-wait"
+        },
+        {
+            "id": "graph-width",
+            "severity": "info",
+            "title": "The graph is 11 elements in 10 dependency stages, and its widest stage holds 2 - so no more than 2 can ever be building at once, whatever the capacity",
+            "detail": [],
+            "elements": [],
+            "evidence": {
+                "element_count": 11,
+                "dependency_stages": 10,
+                "widest_stage": 2
+            },
+            "reader": "graph-owner",
+            "copy_text": "BGA finding: The graph is 11 elements in 10 dependency stages, and its widest stage holds 2 - so no more than 2 can ever be building at once, whatever the capacity\n  element_count 11\n  dependency_stages 10\n  widest_stage 2\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
+            "trace_query": "graph-levels"
+        },
+        {
+            "id": "joint-saving",
+            "severity": "high",
+            "title": "Together, the top 3 are worth 23.1s (50% of the build) - exactly the sum of their individual savings, so they are three separate pieces of work that do not overlap",
+            "detail": [],
+            "elements": [
+                "core.bst",
+                "codegen.bst",
+                "lib-b.bst"
+            ],
+            "evidence": {
+                "joint_saving_us": 23050000,
+                "sum_of_individual_us": 23050000,
+                "savings_add": true
+            },
+            "reader": "local-optimizer",
+            "copy_text": "BGA finding: Together, the top 3 are worth 23.1s (50% of the build) - exactly the sum of their individual savings, so they are three separate pieces of work that do not overlap\n  joint_saving_us 23.1s\n  sum_of_individual_us 23.1s\n  savings_add True\n  Elements: core.bst, codegen.bst, lib-b.bst\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
+            "trace_query": "waited-on-flow"
+        },
+        {
+            "id": "optimization-horizon",
+            "severity": "high",
+            "title": "Work them in this order (by what a fix is worth, not by size), with what the build drops to: core.bst (31s) -> codegen.bst (24s) -> lib-b.bst (20s)",
+            "detail": [
+                "    - the last of those leaves 50% of the build removed, projected from this run without building again"
+            ],
+            "elements": [
+                "core.bst",
+                "codegen.bst",
+                "lib-b.bst"
+            ],
+            "evidence": {
+                "steps": [
+                    {
+                        "element_uid": "core.bst",
+                        "saving_us": 12050000,
+                        "makespan_after_us": 31150000,
+                        "cumulative_saving_us": 12050000,
+                        "entering": [
+                            "codegen.bst"
+                        ]
+                    },
+                    {
+                        "element_uid": "codegen.bst",
+                        "saving_us": 7000000,
+                        "makespan_after_us": 24150000,
+                        "cumulative_saving_us": 19050000,
+                        "entering": []
+                    },
+                    {
+                        "element_uid": "lib-b.bst",
+                        "saving_us": 4000000,
+                        "makespan_after_us": 20150000,
+                        "cumulative_saving_us": 23050000,
+                        "entering": []
+                    }
+                ]
+            },
+            "reader": "local-optimizer",
+            "copy_text": "BGA finding: Work them in this order (by what a fix is worth, not by size), with what the build drops to: core.bst (31s) -> codegen.bst (24s) -> lib-b.bst (20s)\n      - the last of those leaves 50% of the build removed, projected from this run without building again\n  Elements: core.bst, codegen.bst, lib-b.bst\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
+            "trace_query": "time-by-kind"
+        },
+        {
+            "id": "latent-heavies",
+            "severity": "medium",
+            "title": "Waiting off the critical path, worth nothing to fix today: codegen.bst (7s) - they bound how far shortening the chain can go",
+            "detail": [
+                "    (structural projections over this run's measured durations, where \"fixed\" means the element becomes instant - a re-capture is still the ground truth)"
+            ],
+            "elements": [
+                "codegen.bst"
+            ],
+            "evidence": {
+                "latent_heavies": [
+                    {
+                        "element_uid": "codegen.bst",
+                        "duration_us": 7000000
+                    }
+                ]
+            },
+            "reader": "recipe-author",
+            "copy_text": "BGA finding: Waiting off the critical path, worth nothing to fix today: codegen.bst (7s) - they bound how far shortening the chain can go\n      (structural projections over this run's measured durations, where \"fixed\" means the element becomes instant - a re-capture is still the ground truth)\n  Elements: codegen.bst\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
+            "trace_query": "element-commands",
+            "trace_queries": [
+                "element-commands",
+                "executables-in-element"
+            ]
+        },
+        {
+            "id": "cache-hit-ratio",
+            "severity": "info",
+            "title": "Caches off: all 11 element(s) built from source, none reused - this is the nightly scenario, so a 0% hit ratio is the intent rather than a finding",
+            "detail": [
+                "    -> for all.bst's own closure it is 0% (0 of 11 elements cached)"
+            ],
+            "elements": [],
+            "evidence": {
+                "hit_share": 0.0,
+                "built_elements": 11,
+                "cached_elements": 0,
+                "run_mode": "full"
+            },
+            "reader": "ci-gatekeeper",
+            "copy_text": "BGA finding: Caches off: all 11 element(s) built from source, none reused - this is the nightly scenario, so a 0% hit ratio is the intent rather than a finding\n      -> for all.bst's own closure it is 0% (0 of 11 elements cached)\n  hit_share 0%\n  built_elements 11\n  cached_elements 0\n  run_mode full\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
+            "trace_query": null
+        },
+        {
+            "id": "confidence",
+            "severity": "info",
+            "title": "Confidence: 0.97 (high)",
+            "detail": [],
+            "elements": [],
+            "evidence": {
+                "primary": 0.9676587258578457,
+                "band": "high",
+                "violation_count": 0
+            },
+            "reader": "ci-gatekeeper",
+            "copy_text": "BGA finding: Confidence: 0.97 (high)\n  primary 97%\n  band high\n  violation_count 0\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
+            "trace_query": null
+        },
+        {
+            "id": "efficiency-score",
+            "severity": "info",
+            "title": "Efficiency Score: 1.00 (scheduling is near the certified floor for this graph - further gains need the graph or the work itself to change, not the scheduler (see Dispatch Occupancy and Critical Path))",
+            "detail": [],
+            "elements": [],
+            "evidence": {
+                "efficiency_score": 1.0,
+                "low_confidence": false
+            },
+            "reader": "ci-gatekeeper",
+            "copy_text": "BGA finding: Efficiency Score: 1.00 (scheduling is near the certified floor for this graph - further gains need the graph or the work itself to change, not the scheduler (see Dispatch Occupancy and Critical Path))\n  efficiency_score 100%\n  low_confidence False\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
+            "trace_query": "cpu-versus-wall"
+        }
+    ],
+    "headline": {
+        "diagnosis": "chain_bound",
+        "chain_share": 1.0,
+        "chain_bound_share": 0.9,
+        "chain_share_of": "task_horizon",
+        "sentence": "This build is chain-bound, not scheduler-bound: the critical path is 100% of the time tasks were running, at or above the 90% chain-bound line, so the way to a shorter build is a shorter chain.",
+        "certified_headroom_us": 0,
+        "scheduling_gap_us": 2933000,
+        "top_actions": [
+            {
+                "finding_id": "time-concentration",
+                "element_uid": "core.bst",
+                "saving_us": 12050000
+            },
+            {
+                "finding_id": "time-concentration",
+                "element_uid": "lib-b.bst",
+                "saving_us": 4000000
+            },
+            {
+                "finding_id": "time-concentration",
+                "element_uid": "lib-d.bst",
+                "saving_us": 4000000
+            }
+        ],
+        "graph_shape": "Half of this graph's 11 elements reach 5 others or fewer; the top tenth reach 8 others or more, up to 10. Reach is spread across many elements - there is no single choke point to fix."
     },
-    {
-      "id": "time-concentration",
-      "severity": "high",
-      "title": "Where the time is: 4 element(s) are 71.9% of the 43.2s critical path - this build is chain-bound, not scheduler-bound",
-      "detail": [
-        "    core.bst       19.1s (44.1% of path)  -> fixing it saves 12.1s (26.1% of the build)",
-        "    lib-b.bst       4.0s ( 9.3% of path)  -> fixing it saves 4.0s (8.7% of the build)",
-        "    lib-d.bst       4.0s ( 9.3% of path)  -> fixing it saves 4.0s (8.7% of the build)",
-        "    lib-f.bst       4.0s ( 9.3% of path)  -> fixing it saves 4.0s (8.7% of the build)"
-      ],
-      "elements": [
-        "core.bst",
-        "lib-b.bst",
-        "lib-d.bst",
-        "lib-f.bst"
-      ],
-      "evidence": {
-        "path_us": 43200000,
-        "share_of_path": 0.71875,
-        "chain_bound": true,
-        "rows": [
-          {
+    "readers": [
+        {
+            "id": "local-optimizer",
+            "role": "R1",
+            "label": "I can change these elements",
+            "question": "Which element should I shorten first?",
+            "leads_with": "time-concentration",
+            "findings": [
+                "wait-category",
+                "time-concentration",
+                "joint-saving",
+                "optimization-horizon"
+            ]
+        },
+        {
+            "id": "recipe-author",
+            "role": "R2",
+            "label": "I own one element's recipe",
+            "question": "Is my element a problem, and what does changing it cost?",
+            "leads_with": "blast-radius-reach",
+            "findings": [
+                "blast-radius-reach",
+                "blast-radius-structural",
+                "latent-heavies"
+            ]
+        },
+        {
+            "id": "graph-owner",
+            "role": "R3",
+            "label": "I own the dependency graph",
+            "question": "What does the shape of this graph make impossible?",
+            "leads_with": "chain-graph",
+            "findings": [
+                "chain-graph",
+                "graph-width"
+            ]
+        },
+        {
+            "id": "ci-gatekeeper",
+            "role": "R4",
+            "label": "I decide whether this build passes",
+            "question": "Is this number trustworthy, and is it normal?",
+            "leads_with": "cache-hit-ratio",
+            "findings": [
+                "cache-hit-ratio",
+                "confidence",
+                "efficiency-score"
+            ]
+        }
+    ],
+    "next_steps": [
+        {
+            "id": "shorten-what-the-build-waits-for",
+            "reason": "core.bst is the longest thing on the critical path at 19.1s, 44% of it - the build cannot finish sooner than this chain.",
+            "argv": [
+                "bga",
+                "blast",
+                "core.bst",
+                "<fixture>/run"
+            ],
+            "follows_from": "critical_path_detail"
+        },
+        {
+            "id": "blast-the-top-element",
+            "reason": "core.bst is the first thing to fix, worth 12.1s - this is what changing it rebuilds.",
+            "argv": [
+                "bga",
+                "blast",
+                "core.bst",
+                "<fixture>/run"
+            ],
+            "follows_from": "time-concentration"
+        }
+    ],
+    "floors": {
+        "t_infinity_observed": 43200000,
+        "lb": 43200000,
+        "certified_headroom": 0,
+        "t_c": 43200000,
+        "model_slack": 0,
+        "efficiency_score": 1.0,
+        "t_infinity_cold": null,
+        "occupancy_share": 0.29050925925925924,
+        "cold_partial": false,
+        "cold_confidence": null,
+        "cold_duration_sources": {},
+        "cold_critical_path_duration_sources": {},
+        "capacity_model_note": "LB/Efficiency Score certify against this run's recorded resource capacities (builders/fetchers/pushers), not real host CPU cores or any declared CPU budget - native build-system parallelism (--max-jobs) is a separate, currently unmodeled axis (see UX-09/UX-15). Capacity checks (over/under-subscription, memory) did not run for this run - missing: native_max_jobs. They are inert here, not passing; a wrapped log records --max-jobs on its own first line (UX-29), or declare the missing value explicitly at extraction time."
+    },
+    "capacity_verdict": {
+        "oversubscribed": false,
+        "undersubscribed": false,
+        "checks_ran": false,
+        "skipped_inputs": [
+            "native_max_jobs"
+        ]
+    },
+    "plane2_absence": "Plane 2 was not captured for this run, so there is no per-process detail. `bga snapshot -- bst build TARGET` captures both planes.",
+    "attribution": {
+        "execution_on_chain_us": 43200000,
+        "dependency_wait_us": 0,
+        "resource_wait_us": 0,
+        "scheduler_wait_us": 0,
+        "idle_us": 0,
+        "retry_wait_us": 0,
+        "untracked_head_us": 2717000,
+        "untracked_tail_us": 216000
+    },
+    "attribution_hints": {
+        "execution_on_chain_us": "real work on the critical path - the only way to reduce this is to reduce the work itself",
+        "dependency_wait_us": "waiting on an upstream element to finish - shorten or parallelize that dependency chain",
+        "resource_wait_us": "a resource (PROCESS/DOWNLOAD/UPLOAD) was saturated - whether raising capacity would help depends on how loaded this host already is, and this run's capacity checks could not run (see the Certified Floors note), so this hint is unconditioned; `bga sweep` shows the shape of the curve either way",
+        "scheduler_wait_us": "capacity was available but nothing was dispatched - try a different --heuristic in `bga replay`",
+        "idle_us": "nothing was dependency-ready at all - likely a critical-path/graph-shape issue, not a capacity one; check Critical Path",
+        "retry_wait_us": "this element needed a retry - investigate why the first attempt failed/was discarded",
+        "untracked_head_us": "real time before the tracked-task window started (BuildStream startup, cache query, sandbox staging) - see Pipeline Overhead, not a scheduling issue",
+        "untracked_tail_us": "real time after the last tracked task finished - outside per-task tracking, not a scheduling issue"
+    },
+    "occupancy": {
+        "average_concurrency": 1.162037037037037,
+        "peak_concurrency": 2,
+        "horizon_start_us": 1787331691200000,
+        "horizon_end_us": 1787331734400000,
+        "horizon_us": 43200000,
+        "idle_us": 0,
+        "resource_occupancy": {
+            "Resource.PROCESS": 1.162037037037037
+        },
+        "peak_resource_occupancy": {
+            "Resource.PROCESS": 2
+        }
+    },
+    "elements": {
+        "element_durations": {
+            "codegen.bst": 7000000,
+            "core.bst": 19050000,
+            "toolchain.bst": 0,
+            "lib-a.bst": 3000000,
+            "lib-b.bst": 4000000,
+            "lib-c.bst": 3000000,
+            "lib-d.bst": 4000000,
+            "lib-e.bst": 3000000,
+            "lib-f.bst": 4000000,
+            "app.bst": 3150000,
+            "all.bst": 0
+        },
+        "slack": {
+            "toolchain.bst": 0,
+            "core.bst": 0,
+            "codegen.bst": 12050000,
+            "lib-a.bst": 0,
+            "lib-b.bst": 0,
+            "lib-c.bst": 0,
+            "lib-d.bst": 0,
+            "lib-e.bst": 0,
+            "lib-f.bst": 0,
+            "app.bst": 0,
+            "all.bst": 0
+        },
+        "downstream_count": {
+            "all.bst": 0,
+            "app.bst": 1,
+            "lib-f.bst": 2,
+            "lib-e.bst": 3,
+            "lib-d.bst": 4,
+            "lib-c.bst": 5,
+            "lib-b.bst": 6,
+            "lib-a.bst": 7,
+            "codegen.bst": 8,
+            "core.bst": 8,
+            "toolchain.bst": 10
+        },
+        "unweighted_depth": {
+            "toolchain.bst": 0,
+            "core.bst": 1,
+            "codegen.bst": 1,
+            "lib-a.bst": 2,
+            "lib-b.bst": 3,
+            "lib-c.bst": 4,
+            "lib-d.bst": 5,
+            "lib-e.bst": 6,
+            "lib-f.bst": 7,
+            "app.bst": 8,
+            "all.bst": 9
+        },
+        "blast_radius": {
+            "toolchain.bst": {
+                "downstream_count": 10,
+                "weighted_duration_us": 50200000,
+                "is_leaf": false,
+                "risk_score": 10,
+                "element_kind": "import",
+                "is_structural_kind": true
+            },
+            "core.bst": {
+                "downstream_count": 8,
+                "weighted_duration_us": 24150000,
+                "is_leaf": false,
+                "risk_score": 8,
+                "element_kind": "cmake",
+                "is_structural_kind": false
+            },
+            "codegen.bst": {
+                "downstream_count": 8,
+                "weighted_duration_us": 24150000,
+                "is_leaf": false,
+                "risk_score": 0,
+                "element_kind": "cmake",
+                "is_structural_kind": false
+            },
+            "lib-a.bst": {
+                "downstream_count": 7,
+                "weighted_duration_us": 21150000,
+                "is_leaf": false,
+                "risk_score": 7,
+                "element_kind": "cmake",
+                "is_structural_kind": false
+            },
+            "lib-b.bst": {
+                "downstream_count": 6,
+                "weighted_duration_us": 17150000,
+                "is_leaf": false,
+                "risk_score": 6,
+                "element_kind": "cmake",
+                "is_structural_kind": false
+            },
+            "lib-c.bst": {
+                "downstream_count": 5,
+                "weighted_duration_us": 14150000,
+                "is_leaf": false,
+                "risk_score": 5,
+                "element_kind": "cmake",
+                "is_structural_kind": false
+            },
+            "lib-d.bst": {
+                "downstream_count": 4,
+                "weighted_duration_us": 10150000,
+                "is_leaf": false,
+                "risk_score": 4,
+                "element_kind": "cmake",
+                "is_structural_kind": false
+            },
+            "lib-e.bst": {
+                "downstream_count": 3,
+                "weighted_duration_us": 7150000,
+                "is_leaf": false,
+                "risk_score": 3,
+                "element_kind": "cmake",
+                "is_structural_kind": false
+            },
+            "lib-f.bst": {
+                "downstream_count": 2,
+                "weighted_duration_us": 3150000,
+                "is_leaf": false,
+                "risk_score": 2,
+                "element_kind": "cmake",
+                "is_structural_kind": false
+            },
+            "app.bst": {
+                "downstream_count": 1,
+                "weighted_duration_us": 0,
+                "is_leaf": false,
+                "risk_score": 1,
+                "element_kind": "cmake",
+                "is_structural_kind": false
+            },
+            "all.bst": {
+                "downstream_count": 0,
+                "weighted_duration_us": 0,
+                "is_leaf": true,
+                "risk_score": 0,
+                "element_kind": "stack",
+                "is_structural_kind": true
+            }
+        },
+        "criticality_probability": {
+            "codegen.bst": {
+                "probability": 0.0,
+                "observed_critical": false,
+                "slack_us": 0,
+                "element_kind": "cmake",
+                "is_structural_kind": false
+            },
+            "core.bst": {
+                "probability": 1.0,
+                "observed_critical": true,
+                "slack_us": 0,
+                "element_kind": "cmake",
+                "is_structural_kind": false
+            },
+            "toolchain.bst": {
+                "probability": 1.0,
+                "observed_critical": true,
+                "slack_us": 0,
+                "element_kind": "import",
+                "is_structural_kind": true
+            },
+            "lib-a.bst": {
+                "probability": 1.0,
+                "observed_critical": true,
+                "slack_us": 0,
+                "element_kind": "cmake",
+                "is_structural_kind": false
+            },
+            "lib-b.bst": {
+                "probability": 1.0,
+                "observed_critical": true,
+                "slack_us": 0,
+                "element_kind": "cmake",
+                "is_structural_kind": false
+            },
+            "lib-c.bst": {
+                "probability": 1.0,
+                "observed_critical": true,
+                "slack_us": 0,
+                "element_kind": "cmake",
+                "is_structural_kind": false
+            },
+            "lib-d.bst": {
+                "probability": 1.0,
+                "observed_critical": true,
+                "slack_us": 0,
+                "element_kind": "cmake",
+                "is_structural_kind": false
+            },
+            "lib-e.bst": {
+                "probability": 1.0,
+                "observed_critical": true,
+                "slack_us": 0,
+                "element_kind": "cmake",
+                "is_structural_kind": false
+            },
+            "lib-f.bst": {
+                "probability": 1.0,
+                "observed_critical": true,
+                "slack_us": 0,
+                "element_kind": "cmake",
+                "is_structural_kind": false
+            },
+            "app.bst": {
+                "probability": 1.0,
+                "observed_critical": true,
+                "slack_us": 0,
+                "element_kind": "cmake",
+                "is_structural_kind": false
+            },
+            "all.bst": {
+                "probability": 1.0,
+                "observed_critical": true,
+                "slack_us": 0,
+                "element_kind": "stack",
+                "is_structural_kind": true
+            }
+        },
+        "zero_slack_share": 0.9090909090909091,
+        "top_blast_radius": [
+            "toolchain.bst",
+            "core.bst",
+            "codegen.bst",
+            "lib-a.bst",
+            "lib-b.bst"
+        ],
+        "blast_radius_ranked_by": "measured-rebuild-time"
+    },
+    "critical_path_detail": [
+        {
+            "element_uid": "toolchain.bst",
+            "element_kind": "import",
+            "is_structural_kind": true,
+            "duration_us": 0,
+            "share_of_path": 0.0,
+            "realizable_saving_us": null
+        },
+        {
             "element_uid": "core.bst",
+            "element_kind": "cmake",
+            "is_structural_kind": false,
             "duration_us": 19050000,
             "share_of_path": 0.4409722222222222,
             "realizable_saving_us": 12050000
-          },
-          {
+        },
+        {
+            "element_uid": "lib-a.bst",
+            "element_kind": "cmake",
+            "is_structural_kind": false,
+            "duration_us": 3000000,
+            "share_of_path": 0.06944444444444445,
+            "realizable_saving_us": 3000000
+        },
+        {
             "element_uid": "lib-b.bst",
+            "element_kind": "cmake",
+            "is_structural_kind": false,
             "duration_us": 4000000,
             "share_of_path": 0.09259259259259259,
             "realizable_saving_us": 4000000
-          },
-          {
+        },
+        {
+            "element_uid": "lib-c.bst",
+            "element_kind": "cmake",
+            "is_structural_kind": false,
+            "duration_us": 3000000,
+            "share_of_path": 0.06944444444444445,
+            "realizable_saving_us": 3000000
+        },
+        {
             "element_uid": "lib-d.bst",
+            "element_kind": "cmake",
+            "is_structural_kind": false,
             "duration_us": 4000000,
             "share_of_path": 0.09259259259259259,
             "realizable_saving_us": 4000000
-          },
-          {
+        },
+        {
+            "element_uid": "lib-e.bst",
+            "element_kind": "cmake",
+            "is_structural_kind": false,
+            "duration_us": 3000000,
+            "share_of_path": 0.06944444444444445,
+            "realizable_saving_us": 3000000
+        },
+        {
             "element_uid": "lib-f.bst",
+            "element_kind": "cmake",
+            "is_structural_kind": false,
             "duration_us": 4000000,
             "share_of_path": 0.09259259259259259,
             "realizable_saving_us": 4000000
-          }
-        ]
-      },
-      "reader": "local-optimizer",
-      "copy_text": "BGA finding: Where the time is: 4 element(s) are 71.9% of the 43.2s critical path - this build is chain-bound, not scheduler-bound\n      core.bst       19.1s (44.1% of path)  -> fixing it saves 12.1s (26.1% of the build)\n      lib-b.bst       4.0s ( 9.3% of path)  -> fixing it saves 4.0s (8.7% of the build)\n      lib-d.bst       4.0s ( 9.3% of path)  -> fixing it saves 4.0s (8.7% of the build)\n      lib-f.bst       4.0s ( 9.3% of path)  -> fixing it saves 4.0s (8.7% of the build)\n  path_us 43.2s\n  share_of_path 72%\n  chain_bound True\n  Elements: core.bst, lib-b.bst, lib-d.bst, lib-f.bst\n  Next: bga blast core.bst <fixture>/run\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
-      "trace_query": "cost-by-executable"
+        },
+        {
+            "element_uid": "app.bst",
+            "element_kind": "cmake",
+            "is_structural_kind": false,
+            "duration_us": 3150000,
+            "share_of_path": 0.07291666666666667,
+            "realizable_saving_us": 3150000
+        },
+        {
+            "element_uid": "all.bst",
+            "element_kind": "stack",
+            "is_structural_kind": true,
+            "duration_us": 0,
+            "share_of_path": 0.0,
+            "realizable_saving_us": null
+        }
+    ],
+    "element_duration_distribution": {
+        "n": 11,
+        "min": 0,
+        "max": 19050000,
+        "deciles": {
+            "p10": 0,
+            "p20": 3000000,
+            "p30": 3000000,
+            "p40": 3000000,
+            "p50": 3150000,
+            "p60": 4000000,
+            "p70": 4000000,
+            "p80": 4000000,
+            "p90": 7000000
+        },
+        "p95": 19050000,
+        "p99": 19050000,
+        "is_flat": false
     },
-    {
-      "id": "mesh-graph",
-      "severity": "info",
-      "title": "Note: 91% of elements have zero slack - this graph is a mesh of near-equal chains, so savings on one element are often capped by the next chain rather than by its own duration",
-      "detail": [],
-      "elements": [],
-      "evidence": {
-        "zero_slack_share": 0.9090909090909091
-      },
-      "indent": "    ",
-      "reader": "graph-owner",
-      "copy_text": "BGA finding: Note: 91% of elements have zero slack - this graph is a mesh of near-equal chains, so savings on one element are often capped by the next chain rather than by its own duration\n  zero_slack_share 91%\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
-      "trace_query": "graph-levels"
-    },
-    {
-      "id": "joint-saving",
-      "severity": "high",
-      "title": "Together, the top 3 are worth 23.1s (50% of the build) - exactly the sum of their individual savings, so they are three separate pieces of work that do not overlap",
-      "detail": [],
-      "elements": [
-        "core.bst",
-        "codegen.bst",
-        "lib-b.bst"
-      ],
-      "evidence": {
-        "joint_saving_us": 23050000,
-        "sum_of_individual_us": 23050000,
-        "savings_add": true
-      },
-      "reader": "local-optimizer",
-      "copy_text": "BGA finding: Together, the top 3 are worth 23.1s (50% of the build) - exactly the sum of their individual savings, so they are three separate pieces of work that do not overlap\n  joint_saving_us 23.1s\n  sum_of_individual_us 23.1s\n  savings_add True\n  Elements: core.bst, codegen.bst, lib-b.bst\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
-      "trace_query": "waited-on-flow"
-    },
-    {
-      "id": "optimization-horizon",
-      "severity": "high",
-      "title": "Work them in this order (by what a fix is worth, not by size), with what the build drops to: core.bst (31s) -> codegen.bst (24s) -> lib-b.bst (20s)",
-      "detail": [
-        "    - the last of those leaves 50% of the build removed, projected from this run without building again"
-      ],
-      "elements": [
-        "core.bst",
-        "codegen.bst",
-        "lib-b.bst"
-      ],
-      "evidence": {
-        "steps": [
-          {
+    "optimization_horizon": [
+        {
             "element_uid": "core.bst",
             "saving_us": 12050000,
             "makespan_after_us": 31150000,
             "cumulative_saving_us": 12050000,
             "entering": [
-              "codegen.bst"
+                "codegen.bst"
             ]
-          },
-          {
+        },
+        {
             "element_uid": "codegen.bst",
             "saving_us": 7000000,
             "makespan_after_us": 24150000,
             "cumulative_saving_us": 19050000,
             "entering": []
-          },
-          {
+        },
+        {
             "element_uid": "lib-b.bst",
             "saving_us": 4000000,
             "makespan_after_us": 20150000,
             "cumulative_saving_us": 23050000,
             "entering": []
-          }
-        ]
-      },
-      "reader": "local-optimizer",
-      "copy_text": "BGA finding: Work them in this order (by what a fix is worth, not by size), with what the build drops to: core.bst (31s) -> codegen.bst (24s) -> lib-b.bst (20s)\n      - the last of those leaves 50% of the build removed, projected from this run without building again\n  Elements: core.bst, codegen.bst, lib-b.bst\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
-      "trace_query": "time-by-kind"
+        },
+        {
+            "element_uid": "lib-d.bst",
+            "saving_us": 4000000,
+            "makespan_after_us": 16150000,
+            "cumulative_saving_us": 27050000,
+            "entering": []
+        },
+        {
+            "element_uid": "lib-f.bst",
+            "saving_us": 4000000,
+            "makespan_after_us": 12150000,
+            "cumulative_saving_us": 31050000,
+            "entering": []
+        }
+    ],
+    "joint_saving": {
+        "elements": [
+            "core.bst",
+            "codegen.bst",
+            "lib-b.bst"
+        ],
+        "joint_saving_us": 23050000,
+        "sum_of_individual_us": 23050000,
+        "savings_add": true
     },
-    {
-      "id": "latent-heavies",
-      "severity": "medium",
-      "title": "Waiting off the critical path, worth nothing to fix today: codegen.bst (7s) - they bound how far shortening the chain can go",
-      "detail": [
-        "    (structural projections over this run's measured durations, where \"fixed\" means the element becomes instant - a re-capture is still the ground truth)"
-      ],
-      "elements": [
-        "codegen.bst"
-      ],
-      "evidence": {
-        "latent_heavies": [
-          {
+    "latent_heavies": [
+        {
             "element_uid": "codegen.bst",
             "duration_us": 7000000
-          }
-        ]
-      },
-      "reader": "recipe-author",
-      "copy_text": "BGA finding: Waiting off the critical path, worth nothing to fix today: codegen.bst (7s) - they bound how far shortening the chain can go\n      (structural projections over this run's measured durations, where \"fixed\" means the element becomes instant - a re-capture is still the ground truth)\n  Elements: codegen.bst\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
-      "trace_query": "element-commands",
-      "trace_queries": [
-        "element-commands",
-        "executables-in-element"
-      ]
-    },
-    {
-      "id": "cache-hit-ratio",
-      "severity": "info",
-      "title": "Caches off: all 11 element(s) built from source, none reused - this is the nightly scenario, so a 0% hit ratio is the intent rather than a finding",
-      "detail": [
-        "    -> for all.bst's own closure it is 0% (0 of 11 elements cached)"
-      ],
-      "elements": [],
-      "evidence": {
-        "hit_share": 0.0,
+        }
+    ],
+    "cache": {
         "built_elements": 11,
         "cached_elements": 0,
-        "run_mode": "full"
-      },
-      "reader": "ci-gatekeeper",
-      "copy_text": "BGA finding: Caches off: all 11 element(s) built from source, none reused - this is the nightly scenario, so a 0% hit ratio is the intent rather than a finding\n      -> for all.bst's own closure it is 0% (0 of 11 elements cached)\n  hit_share 0%\n  built_elements 11\n  cached_elements 0\n  run_mode full\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
-      "trace_query": null
+        "hit_share": 0.0,
+        "fetch": {
+            "fetched": 0,
+            "already_present": 11,
+            "hit_share": 1.0
+        },
+        "target_closure": {
+            "targets": [
+                "all.bst"
+            ],
+            "elements": 11,
+            "built": 11,
+            "cached": 0,
+            "hit_share": 0.0
+        }
     },
-    {
-      "id": "confidence",
-      "severity": "info",
-      "title": "Confidence: 0.97 (high)",
-      "detail": [],
-      "elements": [],
-      "evidence": {
+    "wall_clock_share_us": {
+        "codegen.bst|BUILD|BUILD|0": 2333333.3333333335,
+        "core.bst|BUILD|BUILD|0": 8358333.333333334,
+        "toolchain.bst|BUILD|BUILD|0": 20433333.333333336,
+        "lib-a.bst|BUILD|BUILD|0": 1500000.0,
+        "lib-b.bst|BUILD|BUILD|0": 2000000.0,
+        "lib-c.bst|BUILD|BUILD|0": 1500000.0,
+        "lib-d.bst|BUILD|BUILD|0": 2000000.0,
+        "lib-e.bst|BUILD|BUILD|0": 1500000.0,
+        "lib-f.bst|BUILD|BUILD|0": 2000000.0,
+        "app.bst|BUILD|BUILD|0": 1575000.0,
+        "all.bst|BUILD|BUILD|0": 0.0
+    },
+    "ready_queue": {
+        "average_depth": 0.0,
+        "peak_depth": 0,
+        "nonzero_fraction": 0.0
+    },
+    "blast_radius_distribution": {
+        "n": 11,
+        "min": 0,
+        "max": 10,
+        "deciles": {
+            "p10": 1,
+            "p20": 2,
+            "p30": 3,
+            "p40": 4,
+            "p50": 5,
+            "p60": 6,
+            "p70": 7,
+            "p80": 8,
+            "p90": 8
+        },
+        "p95": 10,
+        "p99": 10,
+        "is_flat": false
+    },
+    "leaf_analysis": {
+        "deferrable_count": 0,
+        "leaves_detail": {
+            "all.bst": {
+                "element_kind": "stack",
+                "is_structural_kind": true,
+                "is_potentially_deferrable": false,
+                "deferral_risk": "medium"
+            }
+        }
+    },
+    "graph_metrics": {
+        "num_elements": 11,
+        "num_edges": 34,
+        "max_depth": 9,
+        "avg_fanout": 3.090909090909091,
+        "avg_fanin": 3.090909090909091,
+        "critical_path_length": 10,
+        "critical_path_share": 0.9090909090909091,
+        "max_parallelism": 2,
+        "avg_parallelism": 1.1,
+        "cyclomatic_complexity": 24,
+        "serialization_share": 0.8181818181818182
+    },
+    "bottleneck": {
+        "choke_points": [
+            {
+                "element_uid": "toolchain.bst",
+                "downstream_count": 10
+            },
+            {
+                "element_uid": "lib-a.bst",
+                "downstream_count": 7
+            },
+            {
+                "element_uid": "lib-b.bst",
+                "downstream_count": 6
+            },
+            {
+                "element_uid": "lib-c.bst",
+                "downstream_count": 5
+            },
+            {
+                "element_uid": "lib-d.bst",
+                "downstream_count": 4
+            },
+            {
+                "element_uid": "lib-e.bst",
+                "downstream_count": 3
+            },
+            {
+                "element_uid": "lib-f.bst",
+                "downstream_count": 2
+            },
+            {
+                "element_uid": "app.bst",
+                "downstream_count": 1
+            },
+            {
+                "element_uid": "all.bst",
+                "downstream_count": 0
+            }
+        ],
+        "resource_contention": {},
+        "longest_serial_chain": [
+            "toolchain.bst"
+        ],
+        "serial_chain_length": 1,
+        "high_fanin_elements": [
+            {
+                "element_uid": "app.bst",
+                "fan_in": 8
+            },
+            {
+                "element_uid": "lib-b.bst",
+                "fan_in": 4
+            },
+            {
+                "element_uid": "lib-c.bst",
+                "fan_in": 4
+            },
+            {
+                "element_uid": "lib-d.bst",
+                "fan_in": 4
+            },
+            {
+                "element_uid": "lib-e.bst",
+                "fan_in": 4
+            }
+        ],
+        "high_fanout_elements": [
+            {
+                "element_uid": "toolchain.bst",
+                "fan_out": 9
+            },
+            {
+                "element_uid": "core.bst",
+                "fan_out": 7
+            },
+            {
+                "element_uid": "codegen.bst",
+                "fan_out": 6
+            }
+        ]
+    },
+    "parallelism": {
+        "levels": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9
+        ],
+        "width_at_level": [
+            1,
+            2,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1
+        ],
+        "max_width": 2,
+        "min_width": 1,
+        "mean_width": 1.1,
+        "width_uniformity": 0.55
+    },
+    "sensitivity": {
+        "top_opportunities": [
+            {
+                "element_uid": "core.bst",
+                "sensitivity": 0.2789351851851852,
+                "saving_us": 12050000
+            },
+            {
+                "element_uid": "lib-b.bst",
+                "sensitivity": 0.09259259259259259,
+                "saving_us": 4000000
+            },
+            {
+                "element_uid": "lib-d.bst",
+                "sensitivity": 0.09259259259259259,
+                "saving_us": 4000000
+            },
+            {
+                "element_uid": "lib-f.bst",
+                "sensitivity": 0.09259259259259259,
+                "saving_us": 4000000
+            },
+            {
+                "element_uid": "app.bst",
+                "sensitivity": 0.07291666666666667,
+                "saving_us": 3150000
+            }
+        ],
+        "omitted_structural_opportunities": [],
+        "total_improvable_time_us": 36200000,
+        "best_case_speedup": 6.171428571428572,
+        "critical_path_us": 43200000
+    },
+    "batch_opportunities": {
+        "groups": [],
+        "omitted_zero_savings_groups": [],
+        "serialized_pairs": [
+            [
+                "core.bst",
+                "lib-b.bst"
+            ],
+            [
+                "core.bst",
+                "lib-d.bst"
+            ],
+            [
+                "core.bst",
+                "lib-f.bst"
+            ],
+            [
+                "core.bst",
+                "app.bst"
+            ],
+            [
+                "lib-b.bst",
+                "lib-d.bst"
+            ],
+            [
+                "lib-b.bst",
+                "lib-f.bst"
+            ],
+            [
+                "lib-b.bst",
+                "app.bst"
+            ],
+            [
+                "lib-d.bst",
+                "lib-f.bst"
+            ],
+            [
+                "lib-d.bst",
+                "app.bst"
+            ],
+            [
+                "lib-f.bst",
+                "app.bst"
+            ]
+        ]
+    },
+    "serialization_point_risks": [
+        {
+            "pinned_elements": [
+                {
+                    "element_uid": "core.bst",
+                    "max_jobs": 1,
+                    "duration_us": 19050000
+                }
+            ],
+            "builders": 4,
+            "governing_cores": 4,
+            "notparallel": true,
+            "typical_max_jobs": 4,
+            "downstream_count": 8,
+            "hint": "core.bst runs its own build system at 1 job(s) - `variables: notparallel: True` - while the rest of this build runs at 4, and it is the longest kind of task here (19.1s) with 8 element(s) waiting behind it. If its sources can handle parallelism, removing the pin is a single-line change; if they genuinely cannot, it is a real synchronization point worth splitting up"
+        }
+    ],
+    "deferrability": {
+        "recommended_deferrals": [],
+        "total_deferrable_work_us": 0
+    },
+    "graph_summary": {
+        "total_elements": 11,
+        "critical_path_length": 10,
+        "max_parallelism": 2,
+        "bottleneck_count": 9,
+        "deferrable_leaves": 1,
+        "best_case_speedup": 6.171428571428572
+    },
+    "consolidation_candidates": [],
+    "utilisation": {
+        "cpu_accounting_available": true,
+        "effective_cpus": 4.0,
+        "effective_cpus_source": "detected_host_cpu_count",
+        "wall_clock_us": 46133000,
+        "capacity_cpu_us": 184532000,
+        "buckets": {
+            "useful": 50200000,
+            "idle_no_tasks": 134332000,
+            "idle_underparallel": 0,
+            "wasted_retry": 0,
+            "wasted_rebuild": 0,
+            "untracked": 0
+        },
+        "total_accounted_us": 184532000,
+        "unaccounted_us": 0,
+        "reconciliation_error_share": 0.0,
+        "potential_oversubscription": false,
+        "oversubscription_evidence": "INSUFFICIENT_EVIDENCE",
+        "max_observed_concurrency": 1,
+        "useful_share": 0.2720395378579325,
+        "idle_share": 0.7279604621420676,
+        "wasted_share": 0.0
+    },
+    "confidence": {
         "primary": 0.9676587258578457,
-        "band": "high",
-        "violation_count": 0
-      },
-      "reader": "ci-gatekeeper",
-      "copy_text": "BGA finding: Confidence: 0.97 (high)\n  primary 97%\n  band high\n  violation_count 0\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
-      "trace_query": null
-    },
-    {
-      "id": "efficiency-score",
-      "severity": "info",
-      "title": "Efficiency Score: 1.00 (scheduling is near the certified floor for this graph - further gains need the graph or the work itself to change, not the scheduler (see Dispatch Occupancy and Critical Path))",
-      "detail": [],
-      "elements": [],
-      "evidence": {
-        "efficiency_score": 1.0,
-        "low_confidence": false
-      },
-      "reader": "ci-gatekeeper",
-      "copy_text": "BGA finding: Efficiency Score: 1.00 (scheduling is near the certified floor for this graph - further gains need the graph or the work itself to change, not the scheduler (see Dispatch Occupancy and Critical Path))\n  efficiency_score 100%\n  low_confidence False\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
-      "trace_query": "cpu-versus-wall"
-    }
-  ],
-  "headline": {
-    "diagnosis": "chain_bound",
-    "chain_share": 0.9364229510328832,
-    "chain_bound_share": 0.9,
-    "sentence": "This build is chain-bound, not scheduler-bound: the critical path is 94% of wall-clock, at or above the 90% chain-bound line, so the way to a shorter build is a shorter chain.",
-    "certified_headroom_us": 0,
-    "scheduling_gap_us": 2933000,
-    "top_actions": [
-      {
-        "finding_id": "time-concentration",
-        "element_uid": "core.bst",
-        "saving_us": 12050000
-      },
-      {
-        "finding_id": "time-concentration",
-        "element_uid": "lib-b.bst",
-        "saving_us": 4000000
-      },
-      {
-        "finding_id": "time-concentration",
-        "element_uid": "lib-d.bst",
-        "saving_us": 4000000
-      }
-    ],
-    "graph_shape": "Half of this graph's 11 elements reach 5 others or fewer; the top tenth reach 8 others or more, up to 10. Reach is spread across many elements - there is no single choke point to fix."
-  },
-  "readers": [
-    {
-      "id": "local-optimizer",
-      "role": "R1",
-      "label": "I can change these elements",
-      "question": "Which element should I shorten first?",
-      "leads_with": "time-concentration",
-      "findings": [
-        "wait-category",
-        "time-concentration",
-        "joint-saving",
-        "optimization-horizon"
-      ]
-    },
-    {
-      "id": "recipe-author",
-      "role": "R2",
-      "label": "I own one element's recipe",
-      "question": "Is my element a problem, and what does changing it cost?",
-      "leads_with": "latent-heavies",
-      "findings": [
-        "latent-heavies"
-      ]
-    },
-    {
-      "id": "graph-owner",
-      "role": "R3",
-      "label": "I own the dependency graph",
-      "question": "What does the shape of this graph make impossible?",
-      "leads_with": "mesh-graph",
-      "findings": [
-        "mesh-graph"
-      ]
-    },
-    {
-      "id": "ci-gatekeeper",
-      "role": "R4",
-      "label": "I decide whether this build passes",
-      "question": "Is this number trustworthy, and is it normal?",
-      "leads_with": "cache-hit-ratio",
-      "findings": [
-        "cache-hit-ratio",
-        "confidence",
-        "efficiency-score"
-      ]
-    }
-  ],
-  "next_steps": [
-    {
-      "id": "shorten-what-the-build-waits-for",
-      "reason": "core.bst is the longest thing on the critical path at 19.1s, 44% of it - the build cannot finish sooner than this chain.",
-      "argv": [
-        "bga",
-        "blast",
-        "core.bst",
-        "<fixture>/run"
-      ],
-      "follows_from": "critical_path_detail"
-    },
-    {
-      "id": "blast-the-top-element",
-      "reason": "core.bst is the first thing to fix, worth 12.1s - this is what changing it rebuilds.",
-      "argv": [
-        "bga",
-        "blast",
-        "core.bst",
-        "<fixture>/run"
-      ],
-      "follows_from": "time-concentration"
-    }
-  ],
-  "floors": {
-    "t_infinity_observed": 43200000,
-    "lb": 43200000,
-    "certified_headroom": 0,
-    "t_c": 43200000,
-    "model_slack": 0,
-    "efficiency_score": 1.0,
-    "t_infinity_cold": null,
-    "occupancy_share": 0.29050925925925924,
-    "cold_partial": false,
-    "cold_confidence": null,
-    "cold_duration_sources": {},
-    "cold_critical_path_duration_sources": {},
-    "capacity_model_note": "LB/Efficiency Score certify against this run's recorded resource capacities (builders/fetchers/pushers), not real host CPU cores or any declared CPU budget - native build-system parallelism (--max-jobs) is a separate, currently unmodeled axis (see UX-09/UX-15). Capacity checks (over/under-subscription, memory) did not run for this run - missing: native_max_jobs. They are inert here, not passing; a wrapped log records --max-jobs on its own first line (UX-29), or declare the missing value explicitly at extraction time."
-  },
-  "capacity_verdict": {
-    "oversubscribed": false,
-    "undersubscribed": false,
-    "checks_ran": false,
-    "skipped_inputs": [
-      "native_max_jobs"
-    ]
-  },
-  "plane2_absence": "Plane 2 was not captured for this run, so there is no per-process detail. `bga snapshot -- bst build TARGET` captures both planes.",
-  "attribution": {
-    "execution_on_chain_us": 43200000,
-    "dependency_wait_us": 0,
-    "resource_wait_us": 0,
-    "scheduler_wait_us": 0,
-    "idle_us": 0,
-    "retry_wait_us": 0,
-    "untracked_head_us": 2717000,
-    "untracked_tail_us": 216000
-  },
-  "attribution_hints": {
-    "execution_on_chain_us": "real work on the critical path - the only way to reduce this is to reduce the work itself",
-    "dependency_wait_us": "waiting on an upstream element to finish - shorten or parallelize that dependency chain",
-    "resource_wait_us": "a resource (PROCESS/DOWNLOAD/UPLOAD) was saturated - whether raising capacity would help depends on how loaded this host already is, and this run's capacity checks could not run (see the Certified Floors note), so this hint is unconditioned; `bga sweep` shows the shape of the curve either way",
-    "scheduler_wait_us": "capacity was available but nothing was dispatched - try a different --heuristic in `bga replay`",
-    "idle_us": "nothing was dependency-ready at all - likely a critical-path/graph-shape issue, not a capacity one; check Critical Path",
-    "retry_wait_us": "this element needed a retry - investigate why the first attempt failed/was discarded",
-    "untracked_head_us": "real time before the tracked-task window started (BuildStream startup, cache query, sandbox staging) - see Pipeline Overhead, not a scheduling issue",
-    "untracked_tail_us": "real time after the last tracked task finished - outside per-task tracking, not a scheduling issue"
-  },
-  "occupancy": {
-    "average_concurrency": 1.162037037037037,
-    "peak_concurrency": 2,
-    "horizon_start_us": 1787331691200000,
-    "horizon_end_us": 1787331734400000,
-    "horizon_us": 43200000,
-    "idle_us": 0,
-    "resource_occupancy": {
-      "Resource.PROCESS": 1.162037037037037
-    },
-    "peak_resource_occupancy": {
-      "Resource.PROCESS": 2
-    }
-  },
-  "elements": {
-    "element_durations": {
-      "codegen.bst": 7000000,
-      "core.bst": 19050000,
-      "toolchain.bst": 0,
-      "lib-a.bst": 3000000,
-      "lib-b.bst": 4000000,
-      "lib-c.bst": 3000000,
-      "lib-d.bst": 4000000,
-      "lib-e.bst": 3000000,
-      "lib-f.bst": 4000000,
-      "app.bst": 3150000,
-      "all.bst": 0
-    },
-    "slack": {
-      "toolchain.bst": 0,
-      "core.bst": 0,
-      "codegen.bst": 12050000,
-      "lib-a.bst": 0,
-      "lib-b.bst": 0,
-      "lib-c.bst": 0,
-      "lib-d.bst": 0,
-      "lib-e.bst": 0,
-      "lib-f.bst": 0,
-      "app.bst": 0,
-      "all.bst": 0
-    },
-    "downstream_count": {
-      "all.bst": 0,
-      "app.bst": 1,
-      "lib-f.bst": 2,
-      "lib-e.bst": 3,
-      "lib-d.bst": 4,
-      "lib-c.bst": 5,
-      "lib-b.bst": 6,
-      "lib-a.bst": 7,
-      "codegen.bst": 8,
-      "core.bst": 8,
-      "toolchain.bst": 10
-    },
-    "unweighted_depth": {
-      "toolchain.bst": 0,
-      "core.bst": 1,
-      "codegen.bst": 1,
-      "lib-a.bst": 2,
-      "lib-b.bst": 3,
-      "lib-c.bst": 4,
-      "lib-d.bst": 5,
-      "lib-e.bst": 6,
-      "lib-f.bst": 7,
-      "app.bst": 8,
-      "all.bst": 9
-    },
-    "blast_radius": {
-      "toolchain.bst": {
-        "downstream_count": 10,
-        "weighted_duration_us": 50200000,
-        "is_leaf": false,
-        "risk_score": 10,
-        "element_kind": "import",
-        "is_structural_kind": true
-      },
-      "core.bst": {
-        "downstream_count": 8,
-        "weighted_duration_us": 24150000,
-        "is_leaf": false,
-        "risk_score": 8,
-        "element_kind": "cmake",
-        "is_structural_kind": false
-      },
-      "codegen.bst": {
-        "downstream_count": 8,
-        "weighted_duration_us": 24150000,
-        "is_leaf": false,
-        "risk_score": 0,
-        "element_kind": "cmake",
-        "is_structural_kind": false
-      },
-      "lib-a.bst": {
-        "downstream_count": 7,
-        "weighted_duration_us": 21150000,
-        "is_leaf": false,
-        "risk_score": 7,
-        "element_kind": "cmake",
-        "is_structural_kind": false
-      },
-      "lib-b.bst": {
-        "downstream_count": 6,
-        "weighted_duration_us": 17150000,
-        "is_leaf": false,
-        "risk_score": 6,
-        "element_kind": "cmake",
-        "is_structural_kind": false
-      },
-      "lib-c.bst": {
-        "downstream_count": 5,
-        "weighted_duration_us": 14150000,
-        "is_leaf": false,
-        "risk_score": 5,
-        "element_kind": "cmake",
-        "is_structural_kind": false
-      },
-      "lib-d.bst": {
-        "downstream_count": 4,
-        "weighted_duration_us": 10150000,
-        "is_leaf": false,
-        "risk_score": 4,
-        "element_kind": "cmake",
-        "is_structural_kind": false
-      },
-      "lib-e.bst": {
-        "downstream_count": 3,
-        "weighted_duration_us": 7150000,
-        "is_leaf": false,
-        "risk_score": 3,
-        "element_kind": "cmake",
-        "is_structural_kind": false
-      },
-      "lib-f.bst": {
-        "downstream_count": 2,
-        "weighted_duration_us": 3150000,
-        "is_leaf": false,
-        "risk_score": 2,
-        "element_kind": "cmake",
-        "is_structural_kind": false
-      },
-      "app.bst": {
-        "downstream_count": 1,
-        "weighted_duration_us": 0,
-        "is_leaf": false,
-        "risk_score": 1,
-        "element_kind": "cmake",
-        "is_structural_kind": false
-      },
-      "all.bst": {
-        "downstream_count": 0,
-        "weighted_duration_us": 0,
-        "is_leaf": true,
-        "risk_score": 0,
-        "element_kind": "stack",
-        "is_structural_kind": true
-      }
-    },
-    "criticality_probability": {
-      "codegen.bst": {
-        "probability": 0.0,
-        "observed_critical": false,
-        "slack_us": 0,
-        "element_kind": "cmake",
-        "is_structural_kind": false
-      },
-      "core.bst": {
-        "probability": 1.0,
-        "observed_critical": true,
-        "slack_us": 0,
-        "element_kind": "cmake",
-        "is_structural_kind": false
-      },
-      "toolchain.bst": {
-        "probability": 1.0,
-        "observed_critical": true,
-        "slack_us": 0,
-        "element_kind": "import",
-        "is_structural_kind": true
-      },
-      "lib-a.bst": {
-        "probability": 1.0,
-        "observed_critical": true,
-        "slack_us": 0,
-        "element_kind": "cmake",
-        "is_structural_kind": false
-      },
-      "lib-b.bst": {
-        "probability": 1.0,
-        "observed_critical": true,
-        "slack_us": 0,
-        "element_kind": "cmake",
-        "is_structural_kind": false
-      },
-      "lib-c.bst": {
-        "probability": 1.0,
-        "observed_critical": true,
-        "slack_us": 0,
-        "element_kind": "cmake",
-        "is_structural_kind": false
-      },
-      "lib-d.bst": {
-        "probability": 1.0,
-        "observed_critical": true,
-        "slack_us": 0,
-        "element_kind": "cmake",
-        "is_structural_kind": false
-      },
-      "lib-e.bst": {
-        "probability": 1.0,
-        "observed_critical": true,
-        "slack_us": 0,
-        "element_kind": "cmake",
-        "is_structural_kind": false
-      },
-      "lib-f.bst": {
-        "probability": 1.0,
-        "observed_critical": true,
-        "slack_us": 0,
-        "element_kind": "cmake",
-        "is_structural_kind": false
-      },
-      "app.bst": {
-        "probability": 1.0,
-        "observed_critical": true,
-        "slack_us": 0,
-        "element_kind": "cmake",
-        "is_structural_kind": false
-      },
-      "all.bst": {
-        "probability": 1.0,
-        "observed_critical": true,
-        "slack_us": 0,
-        "element_kind": "stack",
-        "is_structural_kind": true
-      }
-    },
-    "zero_slack_share": 0.9090909090909091,
-    "top_blast_radius": [
-      "toolchain.bst",
-      "core.bst",
-      "codegen.bst",
-      "lib-a.bst",
-      "lib-b.bst"
-    ],
-    "blast_radius_ranked_by": "measured-rebuild-time"
-  },
-  "critical_path_detail": [
-    {
-      "element_uid": "toolchain.bst",
-      "element_kind": "import",
-      "is_structural_kind": true,
-      "duration_us": 0,
-      "share_of_path": 0.0,
-      "realizable_saving_us": null
-    },
-    {
-      "element_uid": "core.bst",
-      "element_kind": "cmake",
-      "is_structural_kind": false,
-      "duration_us": 19050000,
-      "share_of_path": 0.4409722222222222,
-      "realizable_saving_us": 12050000
-    },
-    {
-      "element_uid": "lib-a.bst",
-      "element_kind": "cmake",
-      "is_structural_kind": false,
-      "duration_us": 3000000,
-      "share_of_path": 0.06944444444444445,
-      "realizable_saving_us": 3000000
-    },
-    {
-      "element_uid": "lib-b.bst",
-      "element_kind": "cmake",
-      "is_structural_kind": false,
-      "duration_us": 4000000,
-      "share_of_path": 0.09259259259259259,
-      "realizable_saving_us": 4000000
-    },
-    {
-      "element_uid": "lib-c.bst",
-      "element_kind": "cmake",
-      "is_structural_kind": false,
-      "duration_us": 3000000,
-      "share_of_path": 0.06944444444444445,
-      "realizable_saving_us": 3000000
-    },
-    {
-      "element_uid": "lib-d.bst",
-      "element_kind": "cmake",
-      "is_structural_kind": false,
-      "duration_us": 4000000,
-      "share_of_path": 0.09259259259259259,
-      "realizable_saving_us": 4000000
-    },
-    {
-      "element_uid": "lib-e.bst",
-      "element_kind": "cmake",
-      "is_structural_kind": false,
-      "duration_us": 3000000,
-      "share_of_path": 0.06944444444444445,
-      "realizable_saving_us": 3000000
-    },
-    {
-      "element_uid": "lib-f.bst",
-      "element_kind": "cmake",
-      "is_structural_kind": false,
-      "duration_us": 4000000,
-      "share_of_path": 0.09259259259259259,
-      "realizable_saving_us": 4000000
-    },
-    {
-      "element_uid": "app.bst",
-      "element_kind": "cmake",
-      "is_structural_kind": false,
-      "duration_us": 3150000,
-      "share_of_path": 0.07291666666666667,
-      "realizable_saving_us": 3150000
-    },
-    {
-      "element_uid": "all.bst",
-      "element_kind": "stack",
-      "is_structural_kind": true,
-      "duration_us": 0,
-      "share_of_path": 0.0,
-      "realizable_saving_us": null
-    }
-  ],
-  "element_duration_distribution": {
-    "n": 11,
-    "min": 0,
-    "max": 19050000,
-    "deciles": {
-      "p10": 0,
-      "p20": 3000000,
-      "p30": 3000000,
-      "p40": 3000000,
-      "p50": 3150000,
-      "p60": 4000000,
-      "p70": 4000000,
-      "p80": 4000000,
-      "p90": 7000000
-    },
-    "p95": 19050000,
-    "p99": 19050000,
-    "is_flat": false
-  },
-  "optimization_horizon": [
-    {
-      "element_uid": "core.bst",
-      "saving_us": 12050000,
-      "makespan_after_us": 31150000,
-      "cumulative_saving_us": 12050000,
-      "entering": [
-        "codegen.bst"
-      ]
-    },
-    {
-      "element_uid": "codegen.bst",
-      "saving_us": 7000000,
-      "makespan_after_us": 24150000,
-      "cumulative_saving_us": 19050000,
-      "entering": []
-    },
-    {
-      "element_uid": "lib-b.bst",
-      "saving_us": 4000000,
-      "makespan_after_us": 20150000,
-      "cumulative_saving_us": 23050000,
-      "entering": []
-    },
-    {
-      "element_uid": "lib-d.bst",
-      "saving_us": 4000000,
-      "makespan_after_us": 16150000,
-      "cumulative_saving_us": 27050000,
-      "entering": []
-    },
-    {
-      "element_uid": "lib-f.bst",
-      "saving_us": 4000000,
-      "makespan_after_us": 12150000,
-      "cumulative_saving_us": 31050000,
-      "entering": []
-    }
-  ],
-  "joint_saving": {
-    "elements": [
-      "core.bst",
-      "codegen.bst",
-      "lib-b.bst"
-    ],
-    "joint_saving_us": 23050000,
-    "sum_of_individual_us": 23050000,
-    "savings_add": true
-  },
-  "latent_heavies": [
-    {
-      "element_uid": "codegen.bst",
-      "duration_us": 7000000
-    }
-  ],
-  "cache": {
-    "built_elements": 11,
-    "cached_elements": 0,
-    "hit_share": 0.0,
-    "fetch": {
-      "fetched": 0,
-      "already_present": 11,
-      "hit_share": 1.0
-    },
-    "target_closure": {
-      "targets": [
-        "all.bst"
-      ],
-      "elements": 11,
-      "built": 11,
-      "cached": 0,
-      "hit_share": 0.0
-    }
-  },
-  "wall_clock_share_us": {
-    "codegen.bst|BUILD|BUILD|0": 2333333.3333333335,
-    "core.bst|BUILD|BUILD|0": 8358333.333333334,
-    "toolchain.bst|BUILD|BUILD|0": 20433333.333333336,
-    "lib-a.bst|BUILD|BUILD|0": 1500000.0,
-    "lib-b.bst|BUILD|BUILD|0": 2000000.0,
-    "lib-c.bst|BUILD|BUILD|0": 1500000.0,
-    "lib-d.bst|BUILD|BUILD|0": 2000000.0,
-    "lib-e.bst|BUILD|BUILD|0": 1500000.0,
-    "lib-f.bst|BUILD|BUILD|0": 2000000.0,
-    "app.bst|BUILD|BUILD|0": 1575000.0,
-    "all.bst|BUILD|BUILD|0": 0.0
-  },
-  "ready_queue": {
-    "average_depth": 0.0,
-    "peak_depth": 0,
-    "nonzero_fraction": 0.0
-  },
-  "blast_radius_distribution": {
-    "n": 11,
-    "min": 0,
-    "max": 10,
-    "deciles": {
-      "p10": 1,
-      "p20": 2,
-      "p30": 3,
-      "p40": 4,
-      "p50": 5,
-      "p60": 6,
-      "p70": 7,
-      "p80": 8,
-      "p90": 8
-    },
-    "p95": 10,
-    "p99": 10,
-    "is_flat": false
-  },
-  "leaf_analysis": {
-    "deferrable_count": 0,
-    "leaves_detail": {
-      "all.bst": {
-        "element_kind": "stack",
-        "is_structural_kind": true,
-        "is_potentially_deferrable": false,
-        "deferral_risk": "medium"
-      }
-    }
-  },
-  "graph_metrics": {
-    "num_elements": 11,
-    "num_edges": 34,
-    "max_depth": 9,
-    "avg_fanout": 3.090909090909091,
-    "avg_fanin": 3.090909090909091,
-    "critical_path_length": 10,
-    "critical_path_share": 0.9090909090909091,
-    "max_parallelism": 2,
-    "avg_parallelism": 1.1,
-    "cyclomatic_complexity": 24,
-    "serialization_share": 0.8181818181818182
-  },
-  "bottleneck": {
-    "choke_points": [
-      {
-        "element_uid": "toolchain.bst",
-        "downstream_count": 10
-      },
-      {
-        "element_uid": "lib-a.bst",
-        "downstream_count": 7
-      },
-      {
-        "element_uid": "lib-b.bst",
-        "downstream_count": 6
-      },
-      {
-        "element_uid": "lib-c.bst",
-        "downstream_count": 5
-      },
-      {
-        "element_uid": "lib-d.bst",
-        "downstream_count": 4
-      },
-      {
-        "element_uid": "lib-e.bst",
-        "downstream_count": 3
-      },
-      {
-        "element_uid": "lib-f.bst",
-        "downstream_count": 2
-      },
-      {
-        "element_uid": "app.bst",
-        "downstream_count": 1
-      },
-      {
-        "element_uid": "all.bst",
-        "downstream_count": 0
-      }
-    ],
-    "resource_contention": {},
-    "longest_serial_chain": [
-      "toolchain.bst"
-    ],
-    "serial_chain_length": 1,
-    "high_fanin_elements": [
-      {
-        "element_uid": "app.bst",
-        "fan_in": 8
-      },
-      {
-        "element_uid": "lib-b.bst",
-        "fan_in": 4
-      },
-      {
-        "element_uid": "lib-c.bst",
-        "fan_in": 4
-      },
-      {
-        "element_uid": "lib-d.bst",
-        "fan_in": 4
-      },
-      {
-        "element_uid": "lib-e.bst",
-        "fan_in": 4
-      }
-    ],
-    "high_fanout_elements": [
-      {
-        "element_uid": "toolchain.bst",
-        "fan_out": 9
-      },
-      {
-        "element_uid": "core.bst",
-        "fan_out": 7
-      },
-      {
-        "element_uid": "codegen.bst",
-        "fan_out": 6
-      }
-    ]
-  },
-  "parallelism": {
-    "levels": [
-      0,
-      1,
-      2,
-      3,
-      4,
-      5,
-      6,
-      7,
-      8,
-      9
-    ],
-    "width_at_level": [
-      1,
-      2,
-      1,
-      1,
-      1,
-      1,
-      1,
-      1,
-      1,
-      1
-    ],
-    "max_width": 2,
-    "min_width": 1,
-    "mean_width": 1.1,
-    "width_uniformity": 0.55
-  },
-  "sensitivity": {
-    "top_opportunities": [
-      {
-        "element_uid": "core.bst",
-        "sensitivity": 0.2789351851851852,
-        "saving_us": 12050000
-      },
-      {
-        "element_uid": "lib-b.bst",
-        "sensitivity": 0.09259259259259259,
-        "saving_us": 4000000
-      },
-      {
-        "element_uid": "lib-d.bst",
-        "sensitivity": 0.09259259259259259,
-        "saving_us": 4000000
-      },
-      {
-        "element_uid": "lib-f.bst",
-        "sensitivity": 0.09259259259259259,
-        "saving_us": 4000000
-      },
-      {
-        "element_uid": "app.bst",
-        "sensitivity": 0.07291666666666667,
-        "saving_us": 3150000
-      }
-    ],
-    "omitted_structural_opportunities": [],
-    "total_improvable_time_us": 36200000,
-    "best_case_speedup": 6.171428571428572,
-    "critical_path_us": 43200000
-  },
-  "batch_opportunities": {
-    "groups": [],
-    "omitted_zero_savings_groups": [],
-    "serialized_pairs": [
-      [
-        "core.bst",
-        "lib-b.bst"
-      ],
-      [
-        "core.bst",
-        "lib-d.bst"
-      ],
-      [
-        "core.bst",
-        "lib-f.bst"
-      ],
-      [
-        "core.bst",
-        "app.bst"
-      ],
-      [
-        "lib-b.bst",
-        "lib-d.bst"
-      ],
-      [
-        "lib-b.bst",
-        "lib-f.bst"
-      ],
-      [
-        "lib-b.bst",
-        "app.bst"
-      ],
-      [
-        "lib-d.bst",
-        "lib-f.bst"
-      ],
-      [
-        "lib-d.bst",
-        "app.bst"
-      ],
-      [
-        "lib-f.bst",
-        "app.bst"
-      ]
-    ]
-  },
-  "serialization_point_risks": [
-    {
-      "pinned_elements": [
-        {
-          "element_uid": "core.bst",
-          "max_jobs": 1,
-          "duration_us": 19050000
-        }
-      ],
-      "builders": 4,
-      "governing_cores": 4,
-      "notparallel": true,
-      "typical_max_jobs": 4,
-      "downstream_count": 8,
-      "hint": "core.bst runs its own build system at 1 job(s) - `variables: notparallel: True` - while the rest of this build runs at 4, and it is the longest kind of task here (19.1s) with 8 element(s) waiting behind it. If its sources can handle parallelism, removing the pin is a single-line change; if they genuinely cannot, it is a real synchronization point worth splitting up"
-    }
-  ],
-  "deferrability": {
-    "recommended_deferrals": [],
-    "total_deferrable_work_us": 0
-  },
-  "graph_summary": {
-    "total_elements": 11,
-    "critical_path_length": 10,
-    "max_parallelism": 2,
-    "bottleneck_count": 9,
-    "deferrable_leaves": 1,
-    "best_case_speedup": 6.171428571428572
-  },
-  "consolidation_candidates": [],
-  "utilisation": {
-    "cpu_accounting_available": true,
-    "effective_cpus": 4.0,
-    "effective_cpus_source": "detected_host_cpu_count",
-    "wall_clock_us": 46133000,
-    "capacity_cpu_us": 184532000,
-    "buckets": {
-      "useful": 50200000,
-      "idle_no_tasks": 134332000,
-      "idle_underparallel": 0,
-      "wasted_retry": 0,
-      "wasted_rebuild": 0,
-      "untracked": 0
-    },
-    "total_accounted_us": 184532000,
-    "unaccounted_us": 0,
-    "reconciliation_error_share": 0.0,
-    "potential_oversubscription": false,
-    "oversubscription_evidence": "INSUFFICIENT_EVIDENCE",
-    "max_observed_concurrency": 1,
-    "useful_share": 0.2720395378579325,
-    "idle_share": 0.7279604621420676,
-    "wasted_share": 0.0
-  },
-  "confidence": {
-    "primary": 0.9676587258578457,
-    "provenance_score": 1.0,
-    "coverage_score": 1.0,
-    "model_score": 1.0,
-    "attribution_score": 0.9676587258578457,
-    "explained_untracked_us": 1441000,
-    "critical_path_coverage": 1.0,
-    "run_mode": "full",
-    "failed_task_count": 0,
-    "failed_task_us": 0,
-    "critical_path_cached": [],
-    "dominator_coverage": 1.0,
-    "blame_chain_coverage": 1.0,
-    "task_coverage": 1.0,
-    "duration_coverage": 1.0,
-    "hard_gates": {
-      "ordering_violations_zero": true,
-      "critical_path_coverage_full": true,
-      "dominator_coverage_full": true,
-      "blame_chain_coverage_full": true,
-      "run_identity_consistent": true
-    },
-    "ordering_violations": 0,
-    "task_count": 11,
-    "run_identity_available": true,
-    "band": "high"
-  },
-  "violations": [],
-  "pipeline_overhead": {
-    "phases": [
-      {
-        "phase": "Loading elements",
-        "elapsed_us": 3000
-      },
-      {
-        "phase": "Resolving elements",
-        "elapsed_us": 1023000
-      },
-      {
-        "phase": "Initializing remote caches",
-        "elapsed_us": 1000
-      },
-      {
-        "phase": "Query cache",
-        "elapsed_us": 414000
-      }
-    ],
-    "total_us": 1441000,
-    "fraction_of_horizon": 0.03123577482496261,
-    "note": "Not attributable to individual elements - BuildStream logs these as pipeline-level operations, not per-element tasks."
-  },
-  "timestamp_agreement": {
-    "tasks_compared": 11,
-    "tasks_shorter_than_bst": 0,
-    "shorter_than_bst": [],
-    "worst_shortfall_us": 0,
-    "worst_excess_us": 1006000,
-    "resolution_us": 1006000,
-    "shortest_task_us": 3004000,
-    "tasks_measured": 9,
-    "tasks_where_material": 9,
-    "material_share": 0.05
-  },
-  "provenance": [
-    {
-      "claim": "diagnosis",
-      "kind": "diagnosis",
-      "document": "analyze/v4",
-      "evidence": [
-        {
-          "path": "floors.t_infinity_observed",
-          "value": 43200000,
-          "resolved": true,
-          "quantity": "duration_us"
+        "provenance_score": 1.0,
+        "coverage_score": 1.0,
+        "model_score": 1.0,
+        "attribution_score": 0.9676587258578457,
+        "explained_untracked_us": 1441000,
+        "critical_path_coverage": 1.0,
+        "run_mode": "full",
+        "failed_task_count": 0,
+        "failed_task_us": 0,
+        "critical_path_cached": [],
+        "dominator_coverage": 1.0,
+        "blame_chain_coverage": 1.0,
+        "task_coverage": 1.0,
+        "duration_coverage": 1.0,
+        "hard_gates": {
+            "ordering_violations_zero": true,
+            "critical_path_coverage_full": true,
+            "dominator_coverage_full": true,
+            "blame_chain_coverage_full": true,
+            "run_identity_consistent": true
         },
-        {
-          "path": "total_duration_us",
-          "value": 46133000,
-          "resolved": true,
-          "quantity": "duration_us"
-        },
-        {
-          "path": "headline.chain_share",
-          "value": 0.9364229510328832,
-          "resolved": true,
-          "quantity": "share"
-        }
-      ],
-      "rule": {
-        "name": "CHAIN_BOUND_RATIO",
-        "threshold": 0.9,
-        "comparison": ">=",
-        "observed_path": "headline.chain_share",
-        "sentence": "The critical path is 93.6% of wall-clock, which is >= the 90% at which the chain rather than the scheduler is called the constraint - so chain_bound.",
-        "module": "bga/findings.py",
-        "threshold_quantity": "share"
-      },
-      "trace_query": "element-time",
-      "unpublished_inputs": []
+        "ordering_violations": 0,
+        "task_count": 11,
+        "run_identity_available": true,
+        "band": "high"
     },
-    {
-      "claim": "wait-category",
-      "kind": "finding",
-      "document": "analyze/v4",
-      "evidence": [
-        {
-          "path": "attribution.untracked_head_us",
-          "value": 2717000,
-          "resolved": true,
-          "quantity": "duration_us"
-        },
-        {
-          "path": "total_duration_us",
-          "value": 46133000,
-          "resolved": true,
-          "quantity": "duration_us"
-        }
-      ],
-      "rule": {
-        "name": "OPPORTUNITY_FLOOR_PCT",
-        "threshold": 0.01,
-        "comparison": ">=",
-        "observed_path": null,
-        "sentence": "The largest non-execution category is 5.9% of wall-clock, at or above the 1% floor below which the largest of the remainder is rounding rather than an opportunity.",
-        "module": "bga/findings.py"
-      },
-      "trace_query": "stalls",
-      "unpublished_inputs": []
-    },
-    {
-      "claim": "time-concentration",
-      "kind": "finding",
-      "document": "analyze/v4",
-      "evidence": [
-        {
-          "path": "total_duration_us",
-          "value": 46133000,
-          "resolved": true,
-          "quantity": "duration_us"
-        },
-        {
-          "path": "floors.t_infinity_observed",
-          "value": 43200000,
-          "resolved": true,
-          "quantity": "duration_us"
-        }
-      ],
-      "rule": {
-        "name": null,
-        "threshold": null,
-        "comparison": "present",
-        "observed_path": null,
-        "sentence": "Published whenever the critical path has measured elements on it; which elements, and their share, are the finding's own `evidence.rows`.",
-        "module": "bga/findings.py"
-      },
-      "trace_query": "cost-by-executable",
-      "unpublished_inputs": []
-    },
-    {
-      "claim": "mesh-graph",
-      "kind": "finding",
-      "document": "analyze/v4",
-      "evidence": [
-        {
-          "path": "elements.zero_slack_share",
-          "value": 0.9090909090909091,
-          "resolved": true,
-          "quantity": "share"
-        }
-      ],
-      "rule": {
-        "name": "MESH_ZERO_SLACK_SHARE",
-        "threshold": 0.5,
-        "comparison": ">=",
-        "observed_path": "elements.zero_slack_share",
-        "sentence": "91% of elements have zero slack, at or above the 50% at which the graph is called a mesh rather than a chain.",
-        "module": "bga/findings.py",
-        "threshold_quantity": "share"
-      },
-      "trace_query": "graph-levels",
-      "unpublished_inputs": []
-    },
-    {
-      "claim": "joint-saving",
-      "kind": "finding",
-      "document": "analyze/v4",
-      "evidence": [
-        {
-          "path": "joint_saving.joint_saving_us",
-          "value": 23050000,
-          "resolved": true,
-          "quantity": "duration_us"
-        },
-        {
-          "path": "joint_saving.sum_of_individual_us",
-          "value": 23050000,
-          "resolved": true,
-          "quantity": "duration_us"
-        },
-        {
-          "path": "joint_saving.savings_add",
-          "value": true,
-          "resolved": true
-        },
-        {
-          "path": "total_duration_us",
-          "value": 46133000,
-          "resolved": true,
-          "quantity": "duration_us"
-        }
-      ],
-      "rule": {
-        "name": null,
-        "threshold": null,
-        "comparison": "present",
-        "observed_path": null,
-        "sentence": "Published whenever the top elements have a joint projection; whether the savings add is the finding, not its gate.",
-        "module": "bga/findings.py"
-      },
-      "trace_query": "waited-on-flow",
-      "unpublished_inputs": []
-    },
-    {
-      "claim": "optimization-horizon",
-      "kind": "finding",
-      "document": "analyze/v4",
-      "evidence": [
-        {
-          "path": "optimization_horizon[0].makespan_after_us",
-          "value": 31150000,
-          "resolved": true,
-          "quantity": "duration_us"
-        },
-        {
-          "path": "optimization_horizon[0].cumulative_saving_us",
-          "value": 12050000,
-          "resolved": true,
-          "quantity": "duration_us"
-        },
-        {
-          "path": "total_duration_us",
-          "value": 46133000,
-          "resolved": true,
-          "quantity": "duration_us"
-        }
-      ],
-      "rule": {
-        "name": null,
-        "threshold": null,
-        "comparison": "present",
-        "observed_path": null,
-        "sentence": "Published when the horizon has more than one step - a single-step horizon is the first fix, which is already named.",
-        "module": "bga/findings.py"
-      },
-      "trace_query": "time-by-kind",
-      "unpublished_inputs": []
-    },
-    {
-      "claim": "latent-heavies",
-      "kind": "finding",
-      "document": "analyze/v4",
-      "evidence": [
-        {
-          "path": "latent_heavies[0].duration_us",
-          "value": 7000000,
-          "resolved": true,
-          "quantity": "duration_us"
-        }
-      ],
-      "rule": {
-        "name": null,
-        "threshold": null,
-        "comparison": "present",
-        "observed_path": null,
-        "sentence": "Published whenever elements off the critical path are heavy enough to bound how far shortening the chain can go.",
-        "module": "bga/findings.py"
-      },
-      "trace_query": "element-commands",
-      "trace_queries": [
-        "element-commands",
-        "executables-in-element"
-      ],
-      "unpublished_inputs": []
-    },
-    {
-      "claim": "cache-hit-ratio",
-      "kind": "finding",
-      "document": "analyze/v4",
-      "evidence": [
-        {
-          "path": "cache.hit_share",
-          "value": 0.0,
-          "resolved": true,
-          "quantity": "share"
-        },
-        {
-          "path": "cache.built_elements",
-          "value": 11,
-          "resolved": true,
-          "quantity": "count"
-        },
-        {
-          "path": "cache.cached_elements",
-          "value": 0,
-          "resolved": true,
-          "quantity": "count"
-        },
-        {
-          "path": "confidence.run_mode",
-          "value": "full",
-          "resolved": true
-        }
-      ],
-      "rule": {
-        "name": null,
-        "threshold": null,
-        "comparison": "present",
-        "observed_path": "confidence.run_mode",
-        "sentence": "Caches were off for this run, so the hit ratio is the intent rather than a finding and no band is applied.",
-        "module": "bga/findings.py"
-      },
-      "trace_query": null,
-      "unpublished_inputs": []
-    },
-    {
-      "claim": "confidence",
-      "kind": "finding",
-      "document": "analyze/v4",
-      "evidence": [
-        {
-          "path": "confidence.primary",
-          "value": 0.9676587258578457,
-          "resolved": true,
-          "quantity": "share"
-        },
-        {
-          "path": "confidence.coverage_score",
-          "value": 1.0,
-          "resolved": true,
-          "quantity": "share"
-        },
-        {
-          "path": "confidence.task_coverage",
-          "value": 1.0,
-          "resolved": true,
-          "quantity": "share"
-        }
-      ],
-      "rule": {
-        "name": "_CONFIDENCE_HIGH/_CONFIDENCE_MEDIUM",
-        "threshold": [
-          0.5,
-          0.8
+    "violations": [],
+    "pipeline_overhead": {
+        "phases": [
+            {
+                "phase": "Loading elements",
+                "elapsed_us": 3000
+            },
+            {
+                "phase": "Resolving elements",
+                "elapsed_us": 1023000
+            },
+            {
+                "phase": "Initializing remote caches",
+                "elapsed_us": 1000
+            },
+            {
+                "phase": "Query cache",
+                "elapsed_us": 414000
+            }
         ],
-        "comparison": "banded",
-        "observed_path": "confidence.primary",
-        "sentence": "0.97 bands as high against 0.50/0.80.",
-        "module": "bga/findings.py",
-        "threshold_quantity": "share"
-      },
-      "trace_query": null,
-      "unpublished_inputs": []
+        "total_us": 1441000,
+        "fraction_of_horizon": 0.03123577482496261,
+        "note": "Not attributable to individual elements - BuildStream logs these as pipeline-level operations, not per-element tasks."
     },
-    {
-      "claim": "efficiency-score",
-      "kind": "finding",
-      "document": "analyze/v4",
-      "evidence": [
+    "timestamp_agreement": {
+        "tasks_compared": 11,
+        "tasks_shorter_than_bst": 0,
+        "shorter_than_bst": [],
+        "worst_shortfall_us": 0,
+        "worst_excess_us": 1006000,
+        "resolution_us": 1006000,
+        "shortest_task_us": 3004000,
+        "tasks_measured": 9,
+        "tasks_where_material": 9,
+        "material_share": 0.05
+    },
+    "provenance": [
         {
-          "path": "floors.efficiency_score",
-          "value": 1.0,
-          "resolved": true,
-          "quantity": "share"
+            "claim": "diagnosis",
+            "kind": "diagnosis",
+            "document": "analyze/v4",
+            "evidence": [
+                {
+                    "path": "floors.t_infinity_observed",
+                    "value": 43200000,
+                    "resolved": true,
+                    "quantity": "duration_us"
+                },
+                {
+                    "path": "total_duration_us",
+                    "value": 46133000,
+                    "resolved": true,
+                    "quantity": "duration_us"
+                },
+                {
+                    "path": "headline.chain_share",
+                    "value": 1.0,
+                    "resolved": true,
+                    "quantity": "share"
+                }
+            ],
+            "rule": {
+                "name": "CHAIN_BOUND_RATIO",
+                "threshold": 0.9,
+                "comparison": ">=",
+                "observed_path": "headline.chain_share",
+                "sentence": "The critical path is 100.0% of the task horizon - the span from the first task's start to the last one's finish, which excludes BuildStream's own startup - and that is >= the 90% at which the chain rather than the scheduler is called the constraint, so chain_bound.",
+                "module": "bga/findings.py",
+                "threshold_quantity": "share"
+            },
+            "trace_query": "element-time",
+            "unpublished_inputs": []
         },
         {
-          "path": "confidence.primary",
-          "value": 0.9676587258578457,
-          "resolved": true,
-          "quantity": "share"
+            "claim": "wait-category",
+            "kind": "finding",
+            "document": "analyze/v4",
+            "evidence": [
+                {
+                    "path": "attribution.untracked_head_us",
+                    "value": 2717000,
+                    "resolved": true,
+                    "quantity": "duration_us"
+                },
+                {
+                    "path": "total_duration_us",
+                    "value": 46133000,
+                    "resolved": true,
+                    "quantity": "duration_us"
+                }
+            ],
+            "rule": {
+                "name": "OPPORTUNITY_FLOOR_PCT",
+                "threshold": 0.01,
+                "comparison": ">=",
+                "observed_path": null,
+                "sentence": "The largest non-execution category is 5.9% of wall-clock, at or above the 1% floor below which the largest of the remainder is rounding rather than an opportunity.",
+                "module": "bga/findings.py"
+            },
+            "trace_query": "resource-queues",
+            "trace_queries": [
+                "resource-queues",
+                "stalls"
+            ],
+            "unpublished_inputs": []
+        },
+        {
+            "claim": "time-concentration",
+            "kind": "finding",
+            "document": "analyze/v4",
+            "evidence": [
+                {
+                    "path": "total_duration_us",
+                    "value": 46133000,
+                    "resolved": true,
+                    "quantity": "duration_us"
+                },
+                {
+                    "path": "floors.t_infinity_observed",
+                    "value": 43200000,
+                    "resolved": true,
+                    "quantity": "duration_us"
+                }
+            ],
+            "rule": {
+                "name": null,
+                "threshold": null,
+                "comparison": "present",
+                "observed_path": null,
+                "sentence": "Published whenever the critical path has measured elements on it; which elements, and their share, are the finding's own `evidence.rows`.",
+                "module": "bga/findings.py"
+            },
+            "trace_query": "cost-by-executable",
+            "unpublished_inputs": []
+        },
+        {
+            "claim": "chain-graph",
+            "kind": "finding",
+            "document": "analyze/v4",
+            "evidence": [
+                {
+                    "path": "elements.zero_slack_share",
+                    "value": 0.9090909090909091,
+                    "resolved": true,
+                    "quantity": "share"
+                }
+            ],
+            "rule": {
+                "name": "MESH_ZERO_SLACK_SHARE",
+                "threshold": 0.5,
+                "comparison": ">=",
+                "observed_path": "elements.zero_slack_share",
+                "sentence": "91% of elements have zero slack and none is off the critical path, so the graph is one chain.",
+                "module": "bga/findings.py",
+                "threshold_quantity": "share"
+            },
+            "trace_query": "graph-levels",
+            "unpublished_inputs": []
+        },
+        {
+            "claim": "blast-radius-reach",
+            "kind": "finding",
+            "document": "analyze/v4",
+            "evidence": [
+                {
+                    "path": "elements.blast_radius[core.bst].downstream_count",
+                    "value": 8,
+                    "resolved": true,
+                    "quantity": "count"
+                },
+                {
+                    "path": "elements.blast_radius[codegen.bst].downstream_count",
+                    "value": 8,
+                    "resolved": true,
+                    "quantity": "count"
+                },
+                {
+                    "path": "elements.blast_radius[lib-a.bst].downstream_count",
+                    "value": 7,
+                    "resolved": true,
+                    "quantity": "count"
+                }
+            ],
+            "rule": {
+                "name": null,
+                "threshold": null,
+                "comparison": "present",
+                "observed_path": null,
+                "sentence": "Published for every non-structural element something actually depends on. Not a ranking - `UX-65`'s who-depends-on-me ordering is a different claim and stays on the scheduler-bound arm - but the answer to the recipe-author's own question, which is true whichever way the build is bound (`UX-479`). Elements with no dependents are left out rather than listed at zero: a row reading \"0 downstream\" answers the question with a number meaning nobody.",
+                "module": "bga/findings.py"
+            },
+            "trace_query": "dependency-wait",
+            "unpublished_inputs": []
+        },
+        {
+            "claim": "blast-radius-structural",
+            "kind": "finding",
+            "document": "analyze/v4",
+            "evidence": [
+                {
+                    "path": "elements.blast_radius[toolchain.bst].downstream_count",
+                    "value": 10,
+                    "resolved": true,
+                    "quantity": "count"
+                }
+            ],
+            "rule": {
+                "name": null,
+                "threshold": null,
+                "comparison": "present",
+                "observed_path": null,
+                "sentence": "Published when the elements with the widest reach are structural kinds - a base image, a toolchain, a stack. Their dependents are the graph's shape rather than a task, which is why UX-258 reports them here instead of ranking them as work (the rule UX-76 already applied to criticality).",
+                "module": "bga/findings.py"
+            },
+            "trace_query": "dependency-wait",
+            "unpublished_inputs": []
+        },
+        {
+            "claim": "graph-width",
+            "kind": "finding",
+            "document": "analyze/v4",
+            "evidence": [],
+            "rule": {
+                "name": null,
+                "threshold": null,
+                "comparison": "present",
+                "observed_path": null,
+                "sentence": "11 elements group into 10 dependency stages by their dependencies alone; the widest holds 2, and nothing in a stage can start before the stage above it finishes. Published whenever there is more than one stage - with one, the widest stage is the whole graph and the shape forbids nothing.",
+                "module": "bga/findings.py"
+            },
+            "trace_query": "graph-levels",
+            "unpublished_inputs": []
+        },
+        {
+            "claim": "joint-saving",
+            "kind": "finding",
+            "document": "analyze/v4",
+            "evidence": [
+                {
+                    "path": "joint_saving.joint_saving_us",
+                    "value": 23050000,
+                    "resolved": true,
+                    "quantity": "duration_us"
+                },
+                {
+                    "path": "joint_saving.sum_of_individual_us",
+                    "value": 23050000,
+                    "resolved": true,
+                    "quantity": "duration_us"
+                },
+                {
+                    "path": "joint_saving.savings_add",
+                    "value": true,
+                    "resolved": true
+                },
+                {
+                    "path": "total_duration_us",
+                    "value": 46133000,
+                    "resolved": true,
+                    "quantity": "duration_us"
+                }
+            ],
+            "rule": {
+                "name": null,
+                "threshold": null,
+                "comparison": "present",
+                "observed_path": null,
+                "sentence": "Published whenever the top elements have a joint projection; whether the savings add is the finding, not its gate.",
+                "module": "bga/findings.py"
+            },
+            "trace_query": "waited-on-flow",
+            "unpublished_inputs": []
+        },
+        {
+            "claim": "optimization-horizon",
+            "kind": "finding",
+            "document": "analyze/v4",
+            "evidence": [
+                {
+                    "path": "optimization_horizon[0].makespan_after_us",
+                    "value": 31150000,
+                    "resolved": true,
+                    "quantity": "duration_us"
+                },
+                {
+                    "path": "optimization_horizon[0].cumulative_saving_us",
+                    "value": 12050000,
+                    "resolved": true,
+                    "quantity": "duration_us"
+                },
+                {
+                    "path": "total_duration_us",
+                    "value": 46133000,
+                    "resolved": true,
+                    "quantity": "duration_us"
+                }
+            ],
+            "rule": {
+                "name": null,
+                "threshold": null,
+                "comparison": "present",
+                "observed_path": null,
+                "sentence": "Published when the horizon has more than one step - a single-step horizon is the first fix, which is already named.",
+                "module": "bga/findings.py"
+            },
+            "trace_query": "time-by-kind",
+            "unpublished_inputs": []
+        },
+        {
+            "claim": "latent-heavies",
+            "kind": "finding",
+            "document": "analyze/v4",
+            "evidence": [
+                {
+                    "path": "latent_heavies[0].duration_us",
+                    "value": 7000000,
+                    "resolved": true,
+                    "quantity": "duration_us"
+                }
+            ],
+            "rule": {
+                "name": null,
+                "threshold": null,
+                "comparison": "present",
+                "observed_path": null,
+                "sentence": "Published whenever elements off the critical path are heavy enough to bound how far shortening the chain can go.",
+                "module": "bga/findings.py"
+            },
+            "trace_query": "element-commands",
+            "trace_queries": [
+                "element-commands",
+                "executables-in-element"
+            ],
+            "unpublished_inputs": []
+        },
+        {
+            "claim": "cache-hit-ratio",
+            "kind": "finding",
+            "document": "analyze/v4",
+            "evidence": [
+                {
+                    "path": "cache.hit_share",
+                    "value": 0.0,
+                    "resolved": true,
+                    "quantity": "share"
+                },
+                {
+                    "path": "cache.built_elements",
+                    "value": 11,
+                    "resolved": true,
+                    "quantity": "count"
+                },
+                {
+                    "path": "cache.cached_elements",
+                    "value": 0,
+                    "resolved": true,
+                    "quantity": "count"
+                },
+                {
+                    "path": "confidence.run_mode",
+                    "value": "full",
+                    "resolved": true
+                }
+            ],
+            "rule": {
+                "name": null,
+                "threshold": null,
+                "comparison": "present",
+                "observed_path": "confidence.run_mode",
+                "sentence": "Caches were off for this run, so the hit ratio is the intent rather than a finding and no band is applied.",
+                "module": "bga/findings.py"
+            },
+            "trace_query": null,
+            "unpublished_inputs": []
+        },
+        {
+            "claim": "confidence",
+            "kind": "finding",
+            "document": "analyze/v4",
+            "evidence": [
+                {
+                    "path": "confidence.primary",
+                    "value": 0.9676587258578457,
+                    "resolved": true,
+                    "quantity": "share"
+                },
+                {
+                    "path": "confidence.coverage_score",
+                    "value": 1.0,
+                    "resolved": true,
+                    "quantity": "share"
+                },
+                {
+                    "path": "confidence.task_coverage",
+                    "value": 1.0,
+                    "resolved": true,
+                    "quantity": "share"
+                }
+            ],
+            "rule": {
+                "name": "_CONFIDENCE_HIGH/_CONFIDENCE_MEDIUM",
+                "threshold": [
+                    0.5,
+                    0.8
+                ],
+                "comparison": "banded",
+                "observed_path": "confidence.primary",
+                "sentence": "0.97 bands as high against 0.50/0.80.",
+                "module": "bga/findings.py",
+                "threshold_quantity": "share"
+            },
+            "trace_query": null,
+            "unpublished_inputs": []
+        },
+        {
+            "claim": "efficiency-score",
+            "kind": "finding",
+            "document": "analyze/v4",
+            "evidence": [
+                {
+                    "path": "floors.efficiency_score",
+                    "value": 1.0,
+                    "resolved": true,
+                    "quantity": "share"
+                },
+                {
+                    "path": "confidence.primary",
+                    "value": 0.9676587258578457,
+                    "resolved": true,
+                    "quantity": "share"
+                }
+            ],
+            "rule": {
+                "name": "_EFFICIENCY_HIGH/_EFFICIENCY_MEDIUM",
+                "threshold": [
+                    0.7,
+                    0.9
+                ],
+                "comparison": "banded",
+                "observed_path": "floors.efficiency_score",
+                "sentence": "1.00 is at or above 0.90 and at or above 0.70, which is what chooses the sentence beside it; the caveat below 0.8 confidence is a second rule, not this one.",
+                "module": "bga/findings.py",
+                "threshold_quantity": "share"
+            },
+            "trace_query": "cpu-versus-wall",
+            "unpublished_inputs": []
         }
-      ],
-      "rule": {
-        "name": "_EFFICIENCY_HIGH/_EFFICIENCY_MEDIUM",
-        "threshold": [
-          0.7,
-          0.9
-        ],
-        "comparison": "banded",
-        "observed_path": "floors.efficiency_score",
-        "sentence": "1.00 is at or above 0.90 and at or above 0.70, which is what chooses the sentence beside it; the caveat below 0.8 confidence is a second rule, not this one.",
-        "module": "bga/findings.py",
-        "threshold_quantity": "share"
-      },
-      "trace_query": "cpu-versus-wall",
-      "unpublished_inputs": []
+    ],
+    "document_shape": {
+        "leaves": 1067,
+        "deepest_depth": 7,
+        "deepest_path": "findings.[].evidence.steps.[].entering.[]",
+        "deeper_than_three": 524,
+        "deeper_than_three_share": 0.49109653233364575
     }
-  ],
-  "document_shape": {
-    "leaves": 987,
-    "deepest_depth": 7,
-    "deepest_path": "findings.[].evidence.steps.[].entering.[]",
-    "deeper_than_three": 475,
-    "deeper_than_three_share": 0.48125633232016213
-  }
 }

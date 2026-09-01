@@ -1,6 +1,6 @@
 # UX-486: a committed analysis fixture drifts from the analyzer, and one clause out of many noticed
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Found by:** round 73, closing `UX-469` | **Serves:** the round whose guards pass against an analysis the current code would never emit | **Topic:** guards
+**Priority:** Medium | **Status:** 🟢 Done | **Found by:** round 73, closing `UX-469` | **Serves:** the round whose guards pass against an analysis the current code would never emit | **Topic:** guards
 
 ## Motivation
 
@@ -79,3 +79,111 @@ comparison pasted before and after.
 ## Outcome
 
 _Not started._
+
+## Outcome (round 73, 2026-09-01) — 🟢 Done
+
+### The gap, from the instrument that now reports it
+
+```text
+python3 tools/dev_refresh_analysis.py
+
+  ok    tests/fixtures/golden/mixed_task_kinds
+  DRIFT tests/fixtures/with_timeline
+          findings: committed ['wait-category', 'time-concentration',
+              'mesh-graph', 'joint-saving', 'optimization-horizon',
+              'latent-heavies', 'cache-hit-ratio', 'confidence',
+              'efficiency-score']
+            analyzer  ['wait-category', 'time-concentration', 'chain-graph',
+              'blast-radius-reach', 'blast-radius-structural', 'graph-width',
+              'joint-saving', 'optimization-horizon', 'latent-heavies',
+              'cache-hit-ratio', 'confidence', 'efficiency-score']
+          document_shape: differs
+          headline: differs
+          provenance: differs
+          readers: differs
+1 of 2 committed analysis document(s) disagree with the analyzer
+```
+
+The golden reads `ok` **on the first run of the new tool**, which is
+the check that matters: the rule was reconstructed from three scattered
+copies and it reproduces a snapshot nobody touched, byte for byte.
+
+### After
+
+```text
+python3 tools/dev_refresh_analysis.py --write tests/fixtures/with_timeline
+python3 tools/dev_refresh_analysis.py
+
+  ok    tests/fixtures/golden/mixed_task_kinds
+  ok    tests/fixtures/with_timeline
+0 of 2 committed analysis document(s) disagree with the analyzer
+```
+
+### The rule, once
+
+`tools/dev_refresh_analysis.py` owns what a committed analysis holds:
+`run_instance` (`UX-95`, the capture and the machine), `producer`
+(`UX-249`, which build of bga), and the fixture's own path — rewritten
+to a token because `UX-218`'s next-step commands name the run
+directory, and the commands are still compared. It was in three places
+before — a shell pipeline in `tests/test_golden.py`'s docstring, a
+Python helper below it, and a third copy in the `measure` skill — and
+the fixture that had none of them is the one that drifted.
+
+`tests/test_golden.py` calls the tool now rather than carrying its own
+copy, so the two committed analyses are compared under one rule; the
+`measure` skill's recipe is the command.
+
+### Deviation from the Required Fix
+
+- **The refreshed file is re-indented**, 2 spaces to 4, which is most
+  of a 2,956-line diff. Not cosmetic drift for its own sake: it is what
+  makes the two committed analyses the same shape, written by the same
+  writer, so the next refresh of either is a content diff. Said here
+  because a reviewer seeing 1,541 insertions should know 1,415 of them
+  are the same lines re-indented.
+- The item asked for "a guard that compares the file's finding ids with
+  the analyzer's". The guard compares the **whole document** and
+  *reports* the finding ids first, because the ids are the shape a
+  reader can check at a glance and everything else is what a golden
+  test is for.
+
+### Mutations verified red and reverted (3)
+
+Counts are what the run printed, not what was expected of it.
+
+| # | mutation | reddened |
+|---|---|---|
+| R1 | `MACHINE_KEYS = ()`, so the machine's own keys stay in | 3 of 8 — both fixtures' drift clauses and the golden snapshot |
+| R2 | the fixture's path is not rewritten to its token | 3 of 8 — the same three |
+| R3 | `differences` stops comparing finding ids | 1 of 8 — `test_a_missing_finding_is_named_rather_than_counted` |
+
+Each was proved to have landed with a `grep -c` before the run, and
+reverted from a copy after it.
+
+### Two clauses this moved, and one row it found
+
+- `test_an_artifact_says_what_wrote_it.py` asserted the producer stamp
+  is dropped by **grepping `tests/test_golden.py` for the line that
+  pops it**. The pop moved, so the clause is re-pointed at
+  `MACHINE_KEYS` — read from the module rather than scanned out of a
+  file, which is one fewer text scan reading a proxy for a rule.
+- `test_a_guard_reads_only_what_a_clone_has.py` refused the new guard
+  while `dev_refresh_analysis.py` was still untracked. Working exactly
+  as designed, and worth recording as a sighting rather than a nuisance.
+- `test_the_journey_has_an_answer_key.py::test_the_first_thing_to_fix_is_core`
+  went red once during this work, on a real build under `-n auto`
+  load — `assert 'lib-c.bst' == 'core.bst'` — and passed three times
+  after, once with the diff stashed. It asserts an exact first place
+  with no margin over a live build. Filed as `UX-489`; not touched here.
+
+### The runs
+
+```text
+python3 -m pytest tests/unit/test_a_committed_analysis_matches_the_analyzer.py \
+                 tests/test_golden.py -q          8 passed in 1.73s
+make test-touching                                595 passed in 62.79s
+make test                                         5,675 passed, 27 skipped
+                                                  in 322.39s (0:05:22)
+make lint                                         ruff + PyMarkdown, clean
+```

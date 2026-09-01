@@ -15,69 +15,47 @@ correctness assertions here; add them to the targeted test files instead.
 
 ## Regenerating the expected output after a deliberate behavior change
 
-    PYTHONPATH=. python3 -m bga.cli analyze \\
-        "$PWD/tests/fixtures/golden/mixed_task_kinds" \\
-        --format json --diagnostics \\
-        | sed "s|$PWD/tests/fixtures/golden/mixed_task_kinds|<run>|g" \\
-        | python3 -c 'import json,sys; d=json.load(sys.stdin); \\
-              d.pop("run_instance", None); d.pop("producer", None); \\
-              print(json.dumps(d, indent=4))' \\
-        > tests/fixtures/golden/mixed_task_kinds/expected_output.json
+    python3 tools/dev_refresh_analysis.py --write \\
+        tests/fixtures/golden/mixed_task_kinds
 
-The recipe passes the fixture as an *absolute* path and rewrites it to
-`<run>`, because that is exactly what `_run_analyze` below does; a recipe
-that skipped either step writes a snapshot this file can never match.
-`run_instance` and `UX-249`'s `producer` stamp are dropped for the
-same reason: both name the machine or the build, not the analysis.
+Then confirm the diff you expected is the only change
+(`git diff tests/fixtures/golden/mixed_task_kinds/expected_output.json`).
 
-Then re-run this file and confirm the diff you expected is the only
-change (`git diff tests/fixtures/golden/mixed_task_kinds/expected_output.json`).
+`UX-486`: that command **is** what this file compares against, because
+both call `dev_refresh_analysis.Fixture.analysed`. The recipe used to
+be a shell pipeline in this docstring and a Python function below it,
+and the second committed analysis in the tree - `with_timeline` - had
+neither and drifted four findings behind the analyzer. Which keys are
+the machine rather than the analysis, and why each is dropped, is
+stated once in that tool.
 """
-import json
-import subprocess
 import sys
 from pathlib import Path
 
-GOLDEN_DIR = Path(__file__).parent / "fixtures" / "golden"
+REPO = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPO))
+
+from tools import dev_refresh_analysis as refresh  # noqa: E402
 
 
-def _run_analyze(fixture_dir: Path) -> dict:
-    cmd = [
-        sys.executable, "-m", "bga.cli", "analyze", str(fixture_dir),
-        "--format", "json", "--diagnostics",
-    ]
-    proc = subprocess.run(cmd, capture_output=True, text=True)
-    assert proc.returncode == 0, f"stdout={proc.stdout}\nstderr={proc.stderr}"
-    # `UX-218`'s next-step commands name the run directory, because a
-    # command that did not name it would not be runnable. That makes the
-    # path a property of the machine that ran the analysis - the same
-    # reason `run_instance` is dropped below - so it is replaced with one
-    # fixed token rather than being compared. The *commands* still are:
-    # only the directory they point at is neutralised.
-    payload = json.loads(proc.stdout.replace(str(fixture_dir), "<run>"))
-    # `UX-95`'s run-instance block names *which capture* this is - a
-    # wall-clock stamp and the absolute path it was read from. Both are
-    # properties of the machine that ran it, not of the analysis, so
-    # they cannot live in a committed snapshot. Removed here rather than
-    # withheld from the report: the identity hash, which is what a
-    # snapshot is about, is untouched and still compared.
-    payload.pop("run_instance", None)
-    # `UX-249`'s producer stamp is a property of *which build* ran the
-    # analysis, not of the analysis. Committing it would make this file
-    # fail on the first release rather than on the first regression,
-    # which is the opposite of what a golden test is for. Dropped for
-    # exactly the reason `run_instance` is - and the drop is a
-    # measurement, not a convenience: the stamp is still asserted, by
-    # `tests/unit/test_an_artifact_says_what_wrote_it.py`.
-    payload.pop("producer", None)
-    return payload
+def _fixture():
+    """The golden's entry in the one list of committed analyses.
+
+    Looked up rather than constructed, so a fixture this file compares
+    and the tool cannot regenerate is impossible - which is the state
+    `with_timeline` was in for four rounds.
+    """
+    for fixture in refresh.FIXTURES:
+        if fixture.name.endswith("golden/mixed_task_kinds"):
+            return fixture
+    raise AssertionError(
+        "the golden fixture is not in dev_refresh_analysis.FIXTURES, so "
+        "nothing can regenerate what this file compares against")
 
 
 def test_mixed_task_kinds_golden_snapshot():
-    fixture_dir = GOLDEN_DIR / "mixed_task_kinds"
-    expected = json.loads((fixture_dir / "expected_output.json").read_text())
-    actual = _run_analyze(fixture_dir)
-    assert actual == expected
+    fixture = _fixture()
+    assert fixture.analysed() == fixture.committed()
 
 
 def test_mixed_task_kinds_golden_snapshot_is_deterministic_across_runs():
@@ -86,7 +64,5 @@ def test_mixed_task_kinds_golden_snapshot_is_deterministic_across_runs():
     complementary check to the fixed-snapshot comparison above, since it
     can't be fooled by an expected_output.json that was itself captured
     from a nondeterministic run."""
-    fixture_dir = GOLDEN_DIR / "mixed_task_kinds"
-    first = _run_analyze(fixture_dir)
-    second = _run_analyze(fixture_dir)
-    assert first == second
+    fixture = _fixture()
+    assert fixture.analysed() == fixture.analysed()

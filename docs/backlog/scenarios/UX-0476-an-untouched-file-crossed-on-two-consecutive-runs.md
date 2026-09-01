@@ -62,6 +62,31 @@ count is now three distinct untouched files reported on this one branch:
 and `test_the_page_has_a_reader.py`. All three are browser-booting files,
 which is the population `UX-442`'s own four readings came from.
 
+### The third file, measured for a third run — and it went back
+
+This one is the sharpest evidence the row has, because it was followed
+one more run.
+
+```text
+run 33505406758 (fe89e0a)   test_the_page_has_a_reader.py  13.7s vs 8.8s recorded
+                            x1.70 after this run's x0.91 shift        REPORTED
+run 33508941693 (91e4e12)   the whole suite at x1.00 shift, IQR 0.18
+                            1 file(s) slower ... and it is not this one   SILENT
+```
+
+`CI_DRIFT_RUNS = 2` means the report on `fe89e0a` is already two
+consecutive crossings. The next run put the file back inside its band
+at its recorded 8.8s, with the run's own shift at 1.00 — so the series
+is **cross, cross, back**, and 8.8s is what the file costs.
+
+Round 73 followed the gate's own advice and appended 15.05s
+(= 13.7 / 0.91) to `tests/ci_reference.json`, then **reverted it** when
+this run arrived. That is the concrete cost of the defect: obeying the
+message would have raised one file's baseline by 71% permanently, on
+the strength of an excursion that the next run did not reproduce. A
+reader who trusts the message cannot tell that from a real regression,
+because the message is identical in both cases.
+
 `UX-442` filed `CI_DRIFT_RUNS` on a file that read 7.1 / 7.1 / 7.5 /
 13.9 across four runs, and reasoned that **an excursion does not
 repeat**. This is the same kind of file — the emphasis budget boots the
@@ -147,9 +172,12 @@ Four things. The first is what the round went red on.
    expects `spread`'s shift to move with it is what holds this.
 3. **A message that names the remedy that applies.** The current text
    tells the reader to re-record, which for an untouched file is asking
-   them to launder someone else's noise into the baseline. When the
-   named file is untouched by the diff, say so, or say what else to
-   look at.
+   them to launder someone else's noise into the baseline — and round
+   73 did exactly that, appending 15.05s for a file whose next run said
+   8.8s, then reverting. When the named file is untouched by the diff,
+   say so, or say what else to look at. A message that cannot tell a
+   regression from an excursion must not offer the same one-line remedy
+   for both.
 4. **Then the wholesale re-record**, from one green run's
    `tier-reference` job, retiring the hand-appends this round added
    (`test_emphasis_is_a_budget.py` 16.86,

@@ -90,7 +90,7 @@ from tools.bga_timeline import (
     CATEGORY_PLANE2,  # noqa: E402
     ANNOTATION_CONTRACT, CATEGORY_FAILED, DEFAULT_OUTPUT, EXIT_STATUS_OK,
     FORMAT_TRACKEVENT, PLANE1_ANNOTATIONS, PLANE2_ANNOTATIONS, element_kinds,
-    render)
+    render, task_resources)
 from tools.bst_native_build_tracer import (  # noqa: E402
     parse_trace_lines, stream_records)
 from tools.native_trace import trackevent  # noqa: E402
@@ -205,6 +205,27 @@ def _snapshot(tmp_path, kinds=True):
         "element_join": [
             {"element": "work-a.bst", "on_critical_path": True},
             {"element": "all.bst", "on_critical_path": False},
+        ],
+    }), encoding="utf-8")
+    # `UX-469`: the queue each task held, which is a fact of the run's
+    # own `trace.json` rather than of its log. The golden one copied in
+    # above is keyed on `base/lib/app` - the same mismatch the analysis
+    # above is written out for - so a slice of `work-a.bst` would carry
+    # no `resource` and the emitted-equals-documented clause would be
+    # measuring a fixture that cannot produce the key.
+    #
+    # Two spans for **one** element, holding different queues, with the
+    # fetch written *after* the build: the log runs only the build, so
+    # the annotation must read `PROCESS`, and a map keyed on the uid
+    # alone answers `DOWNLOAD` here.
+    (snapshot / "run" / "trace.json").write_text(json.dumps({
+        "spans": [
+            {"task_key": "work-a.bst|BUILD|BUILD|0", "ts_us": 0,
+             "dur_us": 3_000_000, "resources": ["PROCESS"],
+             "primary_resource": "PROCESS"},
+            {"task_key": "work-a.bst|FETCH|FETCH|0", "ts_us": 0,
+             "dur_us": 1000, "resources": ["DOWNLOAD"],
+             "primary_resource": "DOWNLOAD"},
         ],
     }), encoding="utf-8")
     with gzip.open(snapshot / "plane2.log.gz", "wt", encoding="utf-8") as out:
@@ -642,6 +663,50 @@ class TestThePlane1TaskSaysWhatItWas:
         snapshot = _snapshot(tmp_path)
         (snapshot / "run" / "graph.json").unlink()
         assert element_kinds(str(snapshot)) == {}
+
+
+class TestTheTaskSaysWhichQueueItHeld:
+    """`UX-469`: the scheduler resource reaches a slice.
+
+    `attribution.resource_wait_us` is one figure over the whole build -
+    "time work was ready and the capacity to run it was not free" - and
+    BuildStream limits each of its queues separately, so a reader who
+    is told a queue was full is not told *which*. The capture has held
+    the answer all along, in `run/trace.json`'s `primary_resource`; it
+    reached no carrier, so it reached no reader.
+    """
+
+    def test_the_slice_carries_the_queue_the_task_held(self, rendered):
+        assert rendered["plane1"], "no Plane 1 slice was annotated"
+        for event in rendered["plane1"]:
+            assert event["args"]["resource"] == "PROCESS", event["args"]
+
+    def test_the_queue_is_the_tasks_and_not_the_elements(self, tmp_path):
+        """The discriminating half.
+
+        One element, two tasks, two queues: the fixture's `work-a.bst`
+        holds `PROCESS` for its build and `DOWNLOAD` for its fetch, and
+        a map keyed on the uid alone answers whichever span it read
+        last - which the fixture writes as the fetch, on purpose.
+        """
+        resources = task_resources(str(_snapshot(tmp_path)))
+        assert resources[("work-a.bst", "BUILD")] == "PROCESS"
+        assert resources[("work-a.bst", "FETCH")] == "DOWNLOAD"
+
+    def test_a_snapshot_with_no_trace_at_all_is_not_an_error(self, tmp_path):
+        """The rule every annotation in the module follows: absent
+        rather than guessed. A `bga timeline` run against a snapshot
+        that kept only the logs still has to write a trace."""
+        snapshot = _snapshot(tmp_path)
+        (snapshot / "run" / "trace.json").unlink()
+        assert task_resources(str(snapshot)) == {}
+        out = tmp_path / "no-trace.gz"
+        assert render(str(snapshot), str(out))["slices"] > 0
+        drawn = [e for e in decode(out)["events"]
+                 if "element_kind" in e["args"]]
+        assert drawn, "no Plane 1 slice was drawn at all"
+        for event in drawn:
+            assert "resource" not in event["args"], event["args"]
 
 
 class TestTheAnnotationsRideTheSamePass:

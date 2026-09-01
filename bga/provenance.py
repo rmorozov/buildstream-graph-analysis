@@ -182,8 +182,14 @@ TRACE_QUERIES = {
     "diagnosis": ("element-time",),
     # Scheduling: the finding says time was spent waiting; the query
     # shows where the gaps are.
-    "wait-category": ("stalls",),
-    "capacity-recommendation": ("stalls",),
+    # `UX-469`: `resource-queues` first for both. The finding names the
+    # largest wait category and the recommendation names a number to
+    # raise, and neither can say *which queue* was the full one - the
+    # attribution sums the waiting over all of them. `stalls` stays as
+    # the alternative: it answers where the gaps are, once you know
+    # which queue you are asking about.
+    "wait-category": ("resource-queues", "stalls"),
+    "capacity-recommendation": ("resource-queues", "stalls"),
     # Execution: the finding names elements; the query opens them.
     #
     # `UX-433`: **which programs**, not which elements. The claim is that

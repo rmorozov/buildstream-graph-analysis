@@ -39,6 +39,20 @@ What it cannot assess, declared rather than guessed
   that way on purpose - "the composite does not arrive" is true, and
   guessing which parts did from substrings would be the text scan this
   instrument exists to avoid.
+- **Declined fields.** A field somebody looked at and decided should
+  not have a carrier is reported under `declined`, with the reason in
+  `DECLINED` beside it. `UX-469` is where the four in that list were
+  decided. Two verdicts that look alike from the output alone -
+  "nothing carries this" and "nothing carries this on purpose" - and
+  the whole value of a census is telling them apart.
+
+  The declaration is also what keeps one of them honest: the census
+  matches *values*, so `trace.spans[].resources[]` reads `reached` the
+  moment `primary_resource` has a carrier, because the two hold the
+  same strings. The instrument cannot tell a field that arrived from
+  one whose values another field brought (`UX-485`), and a `reached`
+  it cannot justify is worse than a stated decline.
+
 - **Field numbers.** The decoder takes its field numbers from
   `tools/native_trace/trackevent.py`, the emitter's own module, so it
   catches a value written into the wrong field but not a field number
@@ -85,6 +99,49 @@ CARRIERS = {
 #: vocabulary is in here cannot discriminate.
 NOISE = {"", "true", "false", "none", "null", "0", "1", "yes", "no",
          "unknown", "n/a"}
+
+
+#: Fields decided to stay out of the trace, and why (`UX-469`). The
+#: same shape as `dev_finding_coverage.UNREACHABLE` and for the same
+#: reason: a declaration, not an exemption - the reason is the reviewed
+#: part, and the census reports these under `declined` rather than
+#: under `DROPPED`, so a reader can tell "nobody looked" from "somebody
+#: looked and said no".
+#:
+#: `UX-360`'s volume budget is the argument on the other side of each
+#: of these. A trace with an annotation per captured field is a trace
+#: nobody can read, and every annotation is paid for on every slice.
+DECLINED = {
+    "trace.spans[].resources[]":
+        "the list carries nothing its own `primary_resource` does not. "
+        "Measured on a two-queue capture: every span's list is the "
+        "one-element list holding exactly its primary resource "
+        "(DOWNLOAD x9, PROCESS x9), so a second annotation would cost a "
+        "key on every slice and answer the same question (UX-469)",
+    "graph.elements[].cache_key":
+        "a cache key is only meaningful against another run's, and one "
+        "trace holds one run - so the comparison it enables is the one "
+        "thing a Perfetto query on this trace cannot do. `bga compare` "
+        "is where two runs meet (UX-469)",
+    "plane2.static_census.static_executables[]":
+        "the static census names the programs the hook cannot see, "
+        "which is exactly the set with no slice to hang them on. The "
+        "*conclusion* reaches the trace - `elements_at_risk` and the "
+        "per-element keys are `reached` - and the program names belong "
+        "to the report, which is where a reader who wants them is "
+        "already looking (UX-469)",
+    "plane2.static_census.per_element.{}.static_executables[]":
+        "the same list, split per element - and the same reason: the "
+        "per-element key reaches the trace and the program names stay "
+        "in the report (UX-469)",
+    "plane2.static_census.per_element.{}.own_static[]":
+        "the same list, split by whether the element staged the binary "
+        "itself - and the same reason (UX-469)",
+    "plane2.static_census.per_element.{}.staged_by_dependencies."
+    "runtime.bst[]":
+        "the same list, split by which dependency staged the binary - "
+        "and the same reason (UX-469)",
+}
 
 
 # --- the capture side -------------------------------------------------
@@ -342,6 +399,9 @@ def coverage(capture, vocabulary):
     for plane, found in sorted(capture_fields(capture).items()):
         buckets = collections.defaultdict(list)
         for field, values in sorted(found.items()):
+            if field in DECLINED:
+                buckets["declined"].append((field, DECLINED[field]))
+                continue
             verdict, detail = assess(values)
             if verdict == "unassessable":
                 buckets["unassessable"].append((field, detail))
@@ -363,12 +423,15 @@ def render(capture, report, used, show_fields=True):
         reached = buckets.get("reached", [])
         dropped = buckets.get("dropped", [])
         unassessable = buckets.get("unassessable", [])
+        declined = buckets.get("declined", [])
         lines.append(
             f"\nPlane {plane}: {len(reached)} reached, {len(dropped)} dropped, "
-            f"{len(unassessable)} unassessable")
+            f"{len(declined)} declined, {len(unassessable)} unassessable")
         if show_fields:
             for field, detail in dropped:
                 lines.append(f"    DROPPED   {field}  ({detail})")
+            for field, _why in declined:
+                lines.append(f"    declined  {field}")
             for field, detail in reached:
                 lines.append(f"    reached   {field}  ({detail})")
     lines.append("\nPerfetto carriers this trace uses:")

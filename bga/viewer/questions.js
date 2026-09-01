@@ -218,6 +218,60 @@ order by gap_after desc
 limit 20;`,
   },
   {
+    // `UX-469`: the queue the report cannot name. `attribution`'s
+    // `resource_wait_us` is one number over the whole build - "time
+    // work was ready and the capacity to run it was not free" - and
+    // BuildStream's scheduler has several queues with separate limits,
+    // so that figure says a queue was full without saying which. The
+    // trace carries `debug.resource` now; this is the question it was
+    // added for.
+    id: "resource-queues",
+    category: "scheduling",
+    plane: "Plane 1",
+    title: "Which scheduler queue was the build waiting in?",
+    returns: [
+      ["resource", "the queue the tasks held: PROCESS for a build slot, "
+                   + "DOWNLOAD for a fetch or pull, UPLOAD for a push, "
+                   + "CACHE for a cache query"],
+      ["tasks", "how many tasks passed through it"],
+      ["elements", "how many distinct elements they belong to"],
+      ["seconds", "their total occupancy - the time slots of this queue "
+                  + "were held for"],
+      ["window_seconds", "wall-clock from the queue's first task starting "
+                         + "to its last one finishing"],
+      ["mean_in_flight", "occupancy over that window: how many slots of "
+                         + "this queue were held at once, on average. Read "
+                         + "it against the limit that queue is configured "
+                         + "with - at the limit is a saturated queue, well "
+                         + "under it is one nothing was waiting on"],
+    ],
+    why:
+      "Plane 1 only - the queue rides the scheduler's task, and a " +
+      "Plane 2 process holds no scheduler slot. When the report says " +
+      "the biggest wait category is RESOURCE WAIT, this is the " +
+      "question that says which resource: raising a limit only helps " +
+      "for the queue that was actually full, and the report's single " +
+      "figure sums every queue at once.",
+    // Projected in a subquery and grouped by the projected name, for
+    // `graph-levels`'s reason - and `nullif` on the divisor because a
+    // queue whose whole occupancy is one instantaneous task has a zero
+    // window, which is a null row rather than a failed query.
+    sql: `select resource,
+       count(*) as tasks,
+       count(distinct element) as elements,
+       sum(dur) / 1e9 as seconds,
+       (max(ts + dur) - min(ts)) / 1e9 as window_seconds,
+       sum(dur) * 1.0 / nullif(max(ts + dur) - min(ts), 0) as mean_in_flight
+from (select extract_arg(s.arg_set_id, 'debug.resource') as resource,
+             extract_arg(s.arg_set_id, 'debug.element') as element,
+             s.ts, s.dur
+      from slice s
+      where s.category glob '*bst-builder*'
+        and extract_arg(s.arg_set_id, 'debug.resource') is not null)
+group by resource
+order by seconds desc;`,
+  },
+  {
     id: "element-commands",
     category: "execution",
     plane: "Plane 2",

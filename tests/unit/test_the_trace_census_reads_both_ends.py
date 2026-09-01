@@ -130,6 +130,64 @@ class TestItDeclaresWhatItCannotAssess:
         assert values == {"app.bst", "core.bst"}
 
 
+class TestADeclinedFieldIsDeclaredAndNotJustAbsent:
+    """`UX-469`: "nothing carries this" and "nothing carries this on
+    purpose" are different answers, and a census that cannot tell them
+    apart makes every decision look like an oversight.
+
+    `DECLINED` is the declaration. The clauses below hold it to the
+    same standard `dev_finding_coverage.UNREACHABLE` is held to: every
+    entry names a real field, carries a real reason, and is reported
+    under its own verdict rather than quietly dropped from the count.
+    """
+
+    def test_a_declined_field_is_never_reached_or_dropped(self,
+                                                          tmp_path_factory):
+        trace, complaint = census.emit_trace(
+            WITH_TIMELINE, tmp_path_factory.mktemp("declined"))
+        assert trace is not None, complaint
+        vocabulary, _used = census.decode(trace)
+        report = census.coverage(WITH_TIMELINE, vocabulary)
+
+        seen = set()
+        for buckets in report.values():
+            for verdict in ("reached", "dropped", "unassessable"):
+                for field, _detail in buckets.get(verdict, []):
+                    assert field not in census.DECLINED, (
+                        f"{field} is declared declined and is reported "
+                        f"{verdict}")
+            seen |= {f for f, _why in buckets.get("declined", [])}
+
+        assert seen, "no declined field was reported at all"
+
+    def test_every_reason_says_who_decided_it(self):
+        for field, why in census.DECLINED.items():
+            assert len(why) > 40, (field, why)
+            assert "UX-" in why, (
+                f"{field}'s reason names no item that decided it: {why}")
+
+    def test_the_declared_paths_are_paths_a_capture_really_holds(self):
+        """A declaration keyed on a path nothing writes is a
+        declaration about nothing, and it goes quiet the day a field is
+        renamed - which is exactly when it should speak.
+
+        Only the two a clone can see: the static-census lists come from
+        a Plane 2 report no committed capture carries beside a log
+        (`UX-466` stage 3), so this asserts what it can and names what
+        it cannot rather than asserting nothing.
+        """
+        held = set()
+        for capture in (WITH_TIMELINE, REPO / "tests/fixtures/macro_micro"):
+            for _plane, fields in census.capture_fields(capture).items():
+                held |= set(fields)
+
+        assert "trace.spans[].resources[]" in held
+        assert "graph.elements[].cache_key" in held
+        unseen = {f for f in census.DECLINED if f not in held}
+        assert unseen == {f for f in census.DECLINED
+                          if f.startswith("plane2.static_census.")}, unseen
+
+
 class TestTheCensusOverTheCommittedCaptures:
     def test_it_names_the_captures_it_could_not_draw(self):
         """The population it can speak about is smaller than the

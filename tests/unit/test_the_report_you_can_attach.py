@@ -646,7 +646,23 @@ COMMITTED_EXPORTS = [
     # (see the note on `macro_micro`'s bound below). The recorded
     # 401,512 B was 152 B stale, so the bound had 4,336 B of headroom
     # rather than 4,488, and has 2,682 B now.
-    ("golden", GOLDEN, 406_000),                       #  403,318 B
+    # `UX-469` moved both by 2,228 B - 2,114 of **source** and 114 of
+    # payload. The source is the `resource-queues` question, its
+    # `returns` table and the note above it, which the page carries as
+    # a module; the payload is `resource-queues` joining `stalls` in
+    # the `trace_queries` of two findings, `wait-category` and
+    # `capacity-recommendation`. Measured with this module's own
+    # instrument, before and after:
+    #
+    #     page            291,588 -> 293,702   (+2,114, source)
+    #     golden          405,037 -> 407,265   (data 113,449 -> 113,563)
+    #     macro_micro     454,942 -> 457,284   (data 163,354 -> 163,582)
+    #
+    # The recorded 403,318 B was 1,719 B stale - rounds 73's four
+    # finding items grew it inside the bound and none of them restated
+    # it - so the old bound had 963 B of headroom rather than 2,682.
+    # 411,000 leaves 3,735 B.
+    ("golden", GOLDEN, 411_000),                       #  407,265 B
     # `UX-297` moved this one by 385 B before that: the two-plane run
     # publishes `plane2_coverage.source`, which says which shape of
     # Plane 2 report served its numbers and what that costs to open. A
@@ -728,7 +744,13 @@ COMMITTED_EXPORTS = [
     # change it was 449,864 B, so the bound it was riding had 136 B of
     # headroom, not the ~3 KB the number claimed. 458,000 leaves
     # 4,820 B, which is what "moved with a measurement" means here.
-    ("macro_micro", MACRO_MICRO, 458_000),             #  453,180 B
+    # `UX-469`'s +2,228 B (the note on `golden` above has the split)
+    # leaves this one at 457,284 B and **716 B of headroom**. Not moved
+    # here because it is not tripped, and a bound moved without a
+    # measurement that forced it is the negotiation this file exists to
+    # prevent - but the next round to add a module will trip it, and
+    # the figure it needs is this one rather than the stale 453,180.
+    ("macro_micro", MACRO_MICRO, 458_000),             #  457,284 B
 ]
 
 

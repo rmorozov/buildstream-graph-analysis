@@ -1279,8 +1279,32 @@ def _ranking_findings(result: AnalysisResult, chain_bound: bool) -> List[dict]:
     actionable = [u for u in top_blast_radius
                   if not (blast_radius.get(u) or {}).get('is_structural_kind')]
 
+    # `UX-474`: rank only elements that reach something.
+    #
+    # On `shared_base_wide` - a shared base with six dependents, the
+    # shape the blast findings exist for - the structural exclusion
+    # above leaves six elements that reach nothing, and this finding
+    # ranked three of them and called them the ones "Most Worth
+    # Optimizing First (by blast radius)":
+    #
+    #     1. mod0.bst (0 downstream elements)
+    #     2. mod1.bst (0 downstream elements)
+    #     3. mod2.bst (0 downstream elements)
+    #
+    # An ordering over a constant is not a ranking, and the finding's
+    # own hedge was switched off by the same fact: with every count
+    # equal there is no `blast_radius_distribution`, so neither
+    # `_blast_scale`'s tag nor `_density_sentence` appeared.
+    #
+    # Silence rather than a sentence saying there is nothing to rank -
+    # `UX-194`'s dead-control rule, and `UX-365`'s "the list opens with
+    # an action". `blast-radius-structural` still names the base on
+    # that shape, which is the true thing to say about it.
+    reaching = [u for u in actionable
+                if ((blast_radius.get(u) or {}).get('downstream_count') or 0) > 0]
+
     findings = []
-    shown = [] if chain_bound else actionable[:BLAST_RADIUS_SHOWN]
+    shown = [] if chain_bound else reaching[:BLAST_RADIUS_SHOWN]
     if shown:
         detail = []
         for i, elem_uid in enumerate(shown, start=1):
@@ -1318,12 +1342,9 @@ def _ranking_findings(result: AnalysisResult, chain_bound: bool) -> List[dict]:
     # `UX-479`: what a change to one of these rebuilds - the
     # recipe-author's own question, published on either arm because it
     # is not a ranking and does not compete with `time-concentration`
-    # for the same screen. Only elements something actually depends on:
-    # a row reading "0 downstream" answers the question with a number
-    # that means "nobody", and a list of those is `UX-474`'s defect,
-    # which this finding is born without.
-    reaching = [u for u in actionable
-                if ((blast_radius.get(u) or {}).get('downstream_count') or 0) > 0]
+    # for the same screen. It reads the same `reaching` list as the
+    # ranking above, so `shown` is a subset of it and `not shown` still
+    # separates the two arms exactly.
     if reaching and not shown:
         named = ", ".join(
             f"{u} ({(blast_radius.get(u) or {}).get('downstream_count')} "

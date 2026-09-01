@@ -1,0 +1,111 @@
+{
+  "elements": [
+    {
+      "uid": "lib0.bst",
+      "cache_key": null,
+      "requested_target": false,
+      "element_kind": "cmake"
+    },
+    {
+      "uid": "lib1.bst",
+      "cache_key": null,
+      "requested_target": false,
+      "element_kind": "cmake"
+    },
+    {
+      "uid": "lib2.bst",
+      "cache_key": null,
+      "requested_target": false,
+      "element_kind": "cmake"
+    },
+    {
+      "uid": "lib3.bst",
+      "cache_key": null,
+      "requested_target": true,
+      "element_kind": "cmake"
+    },
+    {
+      "uid": "app0.bst",
+      "cache_key": null,
+      "requested_target": true,
+      "element_kind": "manual"
+    },
+    {
+      "uid": "app1.bst",
+      "cache_key": null,
+      "requested_target": true,
+      "element_kind": "manual"
+    },
+    {
+      "uid": "app2.bst",
+      "cache_key": null,
+      "requested_target": true,
+      "element_kind": "manual"
+    },
+    {
+      "uid": "app3.bst",
+      "cache_key": null,
+      "requested_target": true,
+      "element_kind": "manual"
+    },
+    {
+      "uid": "app4.bst",
+      "cache_key": null,
+      "requested_target": true,
+      "element_kind": "manual"
+    },
+    {
+      "uid": "app5.bst",
+      "cache_key": null,
+      "requested_target": true,
+      "element_kind": "manual"
+    }
+  ],
+  "dependencies": [
+    {
+      "predecessor": "lib0.bst",
+      "successor": "lib1.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "lib1.bst",
+      "successor": "lib2.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "lib2.bst",
+      "successor": "lib3.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "lib0.bst",
+      "successor": "app0.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "lib0.bst",
+      "successor": "app1.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "lib0.bst",
+      "successor": "app2.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "lib0.bst",
+      "successor": "app3.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "lib0.bst",
+      "successor": "app4.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "lib0.bst",
+      "successor": "app5.bst",
+      "dependency_type": "build"
+    }
+  ]
+}

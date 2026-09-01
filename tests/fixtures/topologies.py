@@ -534,6 +534,76 @@ def a_build_that_pulls(
 
 # --- Helpers for tests that consume the above ---
 
+def a_chain_beside_a_crowd(
+    chain: int = 4, crowd: int = 6, chain_us: int = 2_000_000,
+    crowd_us: int = 3_000_000, lanes: int = 2,
+) -> Topology:
+    """T7: the one shape a blast-radius *ranking* is worth reading on.
+
+    `UX-474` stopped `blast-radius-ranking` from ordering elements whose
+    reach is zero, and doing so made it unreachable from every other
+    committed capture. That is the census guard working: the covering
+    set had no shape where an ordering by reach carries information.
+    Three conditions have to hold at once, and no other fixture holds
+    all three.
+
+    - **The reach has to vary among elements someone owns.** `lib0.bst`
+      is depended on by everything (9), `lib1.bst` by two, `lib2.bst` by
+      one, and the crowd by nothing - so the ranking orders three
+      different numbers. `shared_base_wide`'s six dependents are all
+      zero and its only reaching element is the `import` that `UX-258`
+      excludes from ranking on purpose.
+    - **The run has to be scheduler-bound**, because `UX-65` gates the
+      ranking there: on a chain the concentration table already orders
+      the same names (`UX-76`). A chain alone cannot be - it *is* its
+      own critical path - so the crowd runs beside it through `lanes`
+      lanes and wall-clock comes out well above the path.
+    - **A wait category has to dominate**, which is what makes this the
+      only committed capture where `headline.top_actions` comes from
+      the blast ranking at all. `_opportunity_findings` emits
+      `time-concentration` only when no category clears
+      `OPPORTUNITY_FLOOR_PCT`, and `_top_actions` prefers concentration
+      wherever it exists. The crowd waiting behind `lib0.bst` for two
+      lanes is that category.
+
+    It is also the only committed capture that produces a
+    `blast_radius_distribution`, so it is the one that exercises
+    `_blast_scale`'s percentile tag and `_density_sentence`. On
+    `shared_base_wide` those were absent, switched off by the same flat
+    counts that made the ranking wrong - the finding's hedge failing
+    exactly where it was needed, which is half of what `UX-474`
+    recorded.
+    """
+    elements: List[dict] = []
+    dependencies: List[dict] = []
+    spans: List[dict] = []
+
+    uids = [f"lib{i}.bst" for i in range(chain)]
+    for i, uid in enumerate(uids):
+        elements.append(dict(_element(uid, requested_target=(i == chain - 1)),
+                             element_kind="cmake"))
+        if i:
+            dependencies.append(_dependency(uids[i - 1], uid))
+    at = 0
+    for uid in uids:
+        spans.append(_span(uid, at, chain_us))
+        at += chain_us
+
+    # Lane 0 is the chain; every other lane is free the moment the head
+    # finishes, which is when the crowd becomes ready.
+    lane_free = [at] + [chain_us] * (lanes - 1)
+    for i in range(crowd):
+        uid = f"app{i}.bst"
+        elements.append(dict(_element(uid, requested_target=True),
+                             element_kind="manual"))
+        dependencies.append(_dependency(uids[0], uid))
+        lane = lane_free.index(min(lane_free))
+        spans.append(_span(uid, lane_free[lane], crowd_us))
+        lane_free[lane] += crowd_us
+    return _build(elements, dependencies, spans,
+                  wall_end_us=max(lane_free), max_jobs=lanes)
+
+
 def write_run_dir(tmp_path: Path, topology: Topology, name: str = "run",
                   sources: Optional[dict] = None, indent: Optional[int] = None) -> Path:
     """Write a `(run_context, graph, trace)` topology to disk in the
@@ -619,6 +689,7 @@ COVERING_SET = {
     "shared_base_wide": (shared_base_wide, None),
     "ample_capacity": (ample_capacity, None),
     "a_build_that_pulls": (a_build_that_pulls, None),
+    "a_chain_beside_a_crowd": (a_chain_beside_a_crowd, None),
 }
 
 

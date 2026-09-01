@@ -66,6 +66,16 @@ def chain(tmp_path_factory):
 
 
 @pytest.fixture(scope="module")
+def crowd(tmp_path_factory):
+    """`UX-474`'s T7: a chain whose elements reach 3, 2, 1, 0, beside a
+    crowd of independent work that makes the run scheduler-bound. The
+    only committed shape on which a blast-radius *ranking* orders
+    anything."""
+    return _payload(tmp_path_factory.mktemp("crowd"),
+                    topo.a_chain_beside_a_crowd(), "crowd")
+
+
+@pytest.fixture(scope="module")
 def flat(tmp_path_factory):
     """Independent elements, capacity above demand: nothing waits on
     anything, so no shape question has an answer."""
@@ -103,16 +113,41 @@ class TestTheConclusionFollowsFromThePublishedNumbers:
             assert radius[uid]["is_structural_kind"], uid
             assert radius[uid]["downstream_count"] > 0, uid
 
-    def test_the_ranking_shows_the_counts_the_payload_holds(self, wide):
-        """Self-consistency, which is the half that holds today. Whether
-        a ranking of *zeros* should be published at all is `UX-474`."""
-        finding = _by_id(wide)["blast-radius-ranking"]
-        radius = wide["elements"]["blast_radius"]
+    def test_the_ranking_shows_the_counts_the_payload_holds(self, crowd):
+        """Self-consistency. It used to be asked of `wide`, where every
+        published count was zero and the clause held vacuously - `UX-474`
+        is the row that was; the ranking is silent there now and this is
+        asked of the shape where it orders something."""
+        finding = _by_id(crowd)["blast-radius-ranking"]
+        radius = crowd["elements"]["blast_radius"]
 
         for uid in finding["elements"]:
             assert uid in radius, uid
             assert f"{radius[uid]['downstream_count']} downstream" in \
                 " ".join(finding["detail"])
+
+    def test_the_ranking_orders_counts_that_actually_differ(self, crowd):
+        """What `UX-474` was filed for, as a positive: three rows whose
+        numbers are three different numbers, in descending order. An
+        ordering over a constant is not a ranking."""
+        finding = _by_id(crowd)["blast-radius-ranking"]
+        radius = crowd["elements"]["blast_radius"]
+        counts = [radius[uid]["downstream_count"]
+                  for uid in finding["elements"]]
+
+        assert counts == sorted(counts, reverse=True), counts
+        assert len(set(counts)) == len(counts) > 1, counts
+        assert all(count > 0 for count in counts), counts
+
+    def test_the_hedge_is_on_where_the_ranking_is(self, crowd):
+        """The other half `UX-474` recorded: on `wide` the counts were
+        flat, so there was no `blast_radius_distribution` and neither
+        `_blast_scale`'s percentile tag nor `_density_sentence`
+        appeared - the finding's own hedge switched off by the same
+        fact that made it wrong. Here both are published."""
+        detail = " ".join(_by_id(crowd)["blast-radius-ranking"]["detail"])
+        assert "of this run" in detail, detail
+        assert "Shape:" in detail, detail
 
 
 class TestTheShapeThatOffersNothing:
@@ -187,7 +222,12 @@ class TestTheShapeThatOffersNothing:
 
         assert fired == {
             "criticality": {"wide", "flat"},
-            "blast-radius-ranking": {"wide"},
+            # `UX-474`: none of the three. `wide`'s only reaching
+            # element is the `import` `UX-258` excludes, so what is
+            # left ranks nothing; the chain is gated by `UX-65`; the
+            # flat set reaches nothing at all. The shape where it does
+            # fire is `crowd`, asserted above.
+            "blast-radius-ranking": set(),
             "blast-radius-structural": {"wide"},
             "chain-graph": {"chain"},
             "mesh-graph": set(),
@@ -214,17 +254,36 @@ class TestThePreconditionsTheFiledRowsRestOn:
     """`UX-474` and `UX-475` are rows, not fixes, so their evidence has
     to keep existing or the rows become unreproducible."""
 
-    def test_the_only_element_with_reach_on_t1_is_structural(self, wide):
-        """`UX-474`'s precondition: the ranking excludes structural
-        elements, and on this shape that leaves only zeros to rank."""
+    def test_nothing_is_ranked_where_every_candidate_reaches_nothing(
+            self, wide):
+        """`UX-474`, closed. This clause used to pin the defect: the
+        ranking excluded structural elements - correctly, `UX-258` - and
+        published the six that were left, every one of them at zero:
+
+        ```text
+        1. mod0.bst (0 downstream elements)
+        2. mod1.bst (0 downstream elements)
+        3. mod2.bst (0 downstream elements)
+        ```
+
+        The precondition is unchanged and still asserted: the only
+        element on this shape with any reach is the `import`. What
+        changed is that an ordering over a constant is no longer
+        published as "Most Worth Optimizing First".
+        """
         radius = wide["elements"]["blast_radius"]
         with_reach = [uid for uid, r in radius.items()
                       if r["downstream_count"] > 0]
 
         assert with_reach == ["toolchain.bst"]
         assert radius["toolchain.bst"]["is_structural_kind"]
-        assert all(radius[uid]["downstream_count"] == 0
-                   for uid in _by_id(wide)["blast-radius-ranking"]["elements"])
+        found = _by_id(wide)
+        assert "blast-radius-ranking" not in found, sorted(found)
+        # And silence rather than a different sentence about the same
+        # nothing: the reach finding is off too, because it reads the
+        # same list. What is still said is the true thing.
+        assert "blast-radius-reach" not in found, sorted(found)
+        assert found["blast-radius-structural"]["elements"] == ["toolchain.bst"]
 
     def test_the_chain_is_not_called_a_mesh(self, chain):
         """`UX-475`, closed. This clause used to pin the defect - the

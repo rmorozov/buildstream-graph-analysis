@@ -78,11 +78,41 @@ class TestTheStepIsThereAndDoesTheWork:
     def test_a_failing_build_does_not_fail_the_step_on_its_exit_status(self):
         """The spec's build is *meant* to fail - that is how it reaches
         `build-failed` - so `bga snapshot` exits non-zero and the step
-        must not treat that as its own failure. `set -e` would."""
+        must not treat that as its own failure.
+
+        **This clause used to read the wrong half, and `UX-484` is what
+        that cost.** It asserted `set -uo pipefail` was in the body and
+        `set -euo pipefail` was not - a text scan for the spelling of a
+        line, standing in for "does a non-zero exit end this step".
+        Those are different questions, and the distance between them is
+        that GitHub starts every `run:` block with
+        `shell: /usr/bin/bash -e {0}`: the body sets three options and
+        clears none, so `-e` was live and the step died on the failing
+        build for five consecutive runs while this clause passed.
+
+        What is asserted now is the mechanism: the snapshot's status is
+        **captured**, which makes it a handled failure that `-e` does
+        not act on, and the step is then correct whichever shell the
+        runner picks. The `set` line stays asserted as a second belt,
+        not as the claim.
+        """
         run = _the_step()["run"]
-        assert "set -euo pipefail" not in run, (
-            "the step uses `set -e`, so the deliberately failing build "
-            "ends it before the census runs")
+        snapshot = next((line for line in run.splitlines()
+                         if "bga snapshot" in line), "")
+        assert snapshot, run
+        # The command and its handler may be split across a continuation,
+        # so the test is over the joined body rather than the one line.
+        joined = run.replace("\\\n", " ")
+        handled = next((line for line in joined.splitlines()
+                        if "bga snapshot" in line), "")
+        assert "|| status=$?" in handled, (
+            "the snapshot's exit status is not captured, so a `-e` shell "
+            "- which is what the runner gives every `run:` block - ends "
+            "the step on the build this step exists to make fail: "
+            + handled)
+        assert "$status" in run, (
+            "the captured status is never printed, so a reader of the "
+            "log cannot tell a failing build from a broken step")
         assert "set -uo pipefail" in run, run
 
     def test_it_prints_rather_than_gating_on_a_bound(self):

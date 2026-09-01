@@ -239,13 +239,14 @@ DIAGNOSES = (DIAGNOSIS_CHAIN_BOUND, DIAGNOSIS_SCHEDULER_BOUND,
 DIAGNOSIS_SENTENCES = {
     DIAGNOSIS_CHAIN_BOUND:
         "This build is chain-bound, not scheduler-bound: the critical path "
-        "is {ratio:.0%} of wall-clock, at or above the {bound:.0%} "
-        "chain-bound line, so the way to a shorter build is a shorter "
-        "chain.",
+        "is {ratio:.0%} of the time tasks were running, at or above the "
+        "{bound:.0%} chain-bound line, so the way to a shorter build is a "
+        "shorter chain.",
     DIAGNOSIS_SCHEDULER_BOUND:
         "This build is scheduler-bound, not chain-bound: the critical path "
-        "is {ratio:.0%} of wall-clock, below the {bound:.0%} chain-bound "
-        "line, so the time is going somewhere other than the chain.",
+        "is {ratio:.0%} of the time tasks were running, below the {bound:.0%} "
+        "chain-bound line, so the time is going somewhere other than the "
+        "chain.",
     DIAGNOSIS_INCONCLUSIVE:
         "Neither the chain nor the scheduler can be named the constraint: "
         "this run did not record the durations the comparison needs.",
@@ -1362,6 +1363,59 @@ def compute_findings(result: AnalysisResult) -> List[dict]:
     return findings
 
 
+def _diagnosis_denominator(result, total):
+    """`(microseconds, which)` the critical path is a share **of**.
+
+    `UX-477`. This was wall-clock, and wall-clock carries a constant the
+    graph cannot explain: BuildStream's startup, cache query and initial
+    staging, before the first task begins. The run's own `wait-category`
+    finding names it and says it is *"not a scheduling issue"* — and the
+    diagnosis then divided by it anyway.
+
+    What that cost is a verdict that follows how **long** a build is
+    rather than what shape it is. One graph, six elements in a strict
+    line, with only the per-element seconds changed:
+
+    ```text
+      per link   critical path   old (wall)   new (horizon)   old verdict
+        1.5s        8.95s          0.865         1.000        scheduler_bound
+        4.5s       26.90s          0.950         1.000        chain_bound
+    ```
+
+    So the denominator is the **task horizon** — `wall_clock` minus the
+    untracked head and tail, which is Part 12's own identity
+    (`UNTRACKED_HEAD + task-horizon attribution + UNTRACKED_TAIL ==
+    wall_clock`) read the other way round. It is the span the graph is
+    actually responsible for, and it is what the scheduler could have
+    compressed.
+
+    The subtraction is skipped, and `wall_clock` used, only where the
+    attribution is absent or the arithmetic would produce a
+    non-positive span — a capture with no wall bounds already has
+    `total_duration_us == horizon` (`analyzer.py`), so the two agree
+    there and nothing is silently lost. Which one was used is published
+    as `headline.chain_share_of`, because a share whose denominator a
+    reader has to guess is `UX-345`'s defect.
+    """
+    attribution = getattr(result, 'attribution', None) or {}
+    if 'untracked_head_us' not in attribution:
+        # Not "the head was zero" - *we could not look*. A run whose
+        # attribution never ran might have any head at all, and saying
+        # `task_horizon` over a subtraction that did not happen is the
+        # overclaim this field exists to prevent.
+        return total, 'wall_clock'
+    head = attribution.get('untracked_head_us') or 0
+    tail = attribution.get('untracked_tail_us') or 0
+    horizon = total - head - tail
+    if horizon > 0:
+        return horizon, 'task_horizon'
+    # A corrupted capture can report a head longer than its own
+    # wall-clock (`analyzer.py` reports that containment violation
+    # separately). Dividing by a non-positive span is a crash or a
+    # negative share; neither is an answer.
+    return total, 'wall_clock'
+
+
 def diagnose(result: AnalysisResult) -> dict:
     """Chain-bound, scheduler-bound, or neither - with the ratio and the
     sentence, so nobody downstream re-derives any of the three.
@@ -1380,12 +1434,15 @@ def diagnose(result: AnalysisResult) -> dict:
     if not total or not t_infinity:
         return {'diagnosis': DIAGNOSIS_INCONCLUSIVE, 'chain_share': None,
                 'chain_bound_share': CHAIN_BOUND_RATIO,
+                'chain_share_of': None,
                 'sentence': DIAGNOSIS_SENTENCES[DIAGNOSIS_INCONCLUSIVE]}
-    ratio = t_infinity / total
+    against, source = _diagnosis_denominator(result, total)
+    ratio = t_infinity / against
     name = (DIAGNOSIS_CHAIN_BOUND if ratio >= CHAIN_BOUND_RATIO
             else DIAGNOSIS_SCHEDULER_BOUND)
     return {'diagnosis': name, 'chain_share': ratio,
             'chain_bound_share': CHAIN_BOUND_RATIO,
+            'chain_share_of': source,
             'sentence': DIAGNOSIS_SENTENCES[name].format(
                 ratio=ratio, bound=CHAIN_BOUND_RATIO)}
 

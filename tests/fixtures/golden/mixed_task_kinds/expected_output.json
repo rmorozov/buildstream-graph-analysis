@@ -23,23 +23,149 @@
             "trace_query": "stalls"
         },
         {
-            "id": "blast-radius-ranking",
-            "severity": "medium",
-            "title": "Elements Most Worth Optimizing First (by blast radius):",
+            "id": "time-concentration",
+            "severity": "high",
+            "title": "Where the time is: 3 element(s) are 100.0% of the 0.0s critical path - this build is chain-bound, not scheduler-bound",
             "detail": [
-                "    1. base.bst (2 downstream elements)",
-                "    2. lib.bst (1 downstream elements)",
-                "    3. extra.bst (0 downstream elements)"
+                "    base.bst       0.0s (42.9% of path)  -> fixing it saves 0.0s (37.5% of the build)",
+                "    lib.bst        0.0s (35.7% of path)  -> fixing it saves 0.0s (31.2% of the build)",
+                "    app.bst        0.0s (21.4% of path)  -> fixing it saves 0.0s (18.8% of the build)"
+            ],
+            "elements": [
+                "base.bst",
+                "lib.bst",
+                "app.bst"
+            ],
+            "evidence": {
+                "path_us": 14000,
+                "share_of_path": 1.0,
+                "chain_bound": true,
+                "rows": [
+                    {
+                        "element_uid": "base.bst",
+                        "duration_us": 6000,
+                        "share_of_path": 0.42857142857142855,
+                        "realizable_saving_us": 6000
+                    },
+                    {
+                        "element_uid": "lib.bst",
+                        "duration_us": 5000,
+                        "share_of_path": 0.35714285714285715,
+                        "realizable_saving_us": 5000
+                    },
+                    {
+                        "element_uid": "app.bst",
+                        "duration_us": 3000,
+                        "share_of_path": 0.21428571428571427,
+                        "realizable_saving_us": 3000
+                    }
+                ]
+            },
+            "reader": "local-optimizer",
+            "copy_text": "BGA finding: Where the time is: 3 element(s) are 100.0% of the 0.0s critical path - this build is chain-bound, not scheduler-bound\n      base.bst       0.0s (42.9% of path)  -> fixing it saves 0.0s (37.5% of the build)\n      lib.bst        0.0s (35.7% of path)  -> fixing it saves 0.0s (31.2% of the build)\n      app.bst        0.0s (21.4% of path)  -> fixing it saves 0.0s (18.8% of the build)\n  path_us 0.0s\n  share_of_path 100%\n  chain_bound True\n  Elements: base.bst, lib.bst, app.bst\n  Next: bga blast base.bst <run>\n  Run: golden-fixture-manifest-hash-v1",
+            "trace_query": "cost-by-executable"
+        },
+        {
+            "id": "mesh-graph",
+            "severity": "info",
+            "title": "Note: 75% of elements have zero slack - this graph is a mesh of near-equal chains, so savings on one element are often capped by the next chain rather than by its own duration",
+            "detail": [],
+            "elements": [],
+            "evidence": {
+                "zero_slack_share": 0.75
+            },
+            "indent": "    ",
+            "reader": "graph-owner",
+            "copy_text": "BGA finding: Note: 75% of elements have zero slack - this graph is a mesh of near-equal chains, so savings on one element are often capped by the next chain rather than by its own duration\n  zero_slack_share 75%\n  Run: golden-fixture-manifest-hash-v1",
+            "trace_query": "graph-levels"
+        },
+        {
+            "id": "joint-saving",
+            "severity": "high",
+            "title": "Together, the top 3 are worth 0.0s (69% of the build) - exactly the sum of their individual savings, so they are three separate pieces of work that do not overlap",
+            "detail": [],
+            "elements": [
+                "base.bst",
+                "lib.bst",
+                "extra.bst"
+            ],
+            "evidence": {
+                "joint_saving_us": 11000,
+                "sum_of_individual_us": 11000,
+                "savings_add": true
+            },
+            "reader": "local-optimizer",
+            "copy_text": "BGA finding: Together, the top 3 are worth 0.0s (69% of the build) - exactly the sum of their individual savings, so they are three separate pieces of work that do not overlap\n  joint_saving_us 0.0s\n  sum_of_individual_us 0.0s\n  savings_add True\n  Elements: base.bst, lib.bst, extra.bst\n  Run: golden-fixture-manifest-hash-v1",
+            "trace_query": "waited-on-flow"
+        },
+        {
+            "id": "optimization-horizon",
+            "severity": "high",
+            "title": "Work them in this order (by what a fix is worth, not by size), with what the build drops to: base.bst (0s) -> lib.bst (0s) -> extra.bst (0s)",
+            "detail": [
+                "    - the last of those leaves 69% of the build removed, projected from this run without building again"
             ],
             "elements": [
                 "base.bst",
                 "lib.bst",
                 "extra.bst"
             ],
-            "evidence": {},
+            "evidence": {
+                "steps": [
+                    {
+                        "element_uid": "base.bst",
+                        "saving_us": 6000,
+                        "makespan_after_us": 8000,
+                        "cumulative_saving_us": 6000,
+                        "entering": []
+                    },
+                    {
+                        "element_uid": "lib.bst",
+                        "saving_us": 4000,
+                        "makespan_after_us": 4000,
+                        "cumulative_saving_us": 10000,
+                        "entering": [
+                            "extra.bst"
+                        ]
+                    },
+                    {
+                        "element_uid": "extra.bst",
+                        "saving_us": 1000,
+                        "makespan_after_us": 3000,
+                        "cumulative_saving_us": 11000,
+                        "entering": []
+                    }
+                ]
+            },
             "reader": "local-optimizer",
-            "copy_text": "BGA finding: Elements Most Worth Optimizing First (by blast radius):\n      1. base.bst (2 downstream elements)\n      2. lib.bst (1 downstream elements)\n      3. extra.bst (0 downstream elements)\n  Elements: base.bst, lib.bst, extra.bst\n  Next: bga blast base.bst <run>\n  Run: golden-fixture-manifest-hash-v1",
-            "trace_query": "dependency-wait"
+            "copy_text": "BGA finding: Work them in this order (by what a fix is worth, not by size), with what the build drops to: base.bst (0s) -> lib.bst (0s) -> extra.bst (0s)\n      - the last of those leaves 69% of the build removed, projected from this run without building again\n  Elements: base.bst, lib.bst, extra.bst\n  Run: golden-fixture-manifest-hash-v1",
+            "trace_query": "time-by-kind"
+        },
+        {
+            "id": "latent-heavies",
+            "severity": "medium",
+            "title": "Waiting off the critical path, worth nothing to fix today: extra.bst (0s) - they bound how far shortening the chain can go",
+            "detail": [
+                "    (structural projections over this run's measured durations, where \"fixed\" means the element becomes instant - a re-capture is still the ground truth)"
+            ],
+            "elements": [
+                "extra.bst"
+            ],
+            "evidence": {
+                "latent_heavies": [
+                    {
+                        "element_uid": "extra.bst",
+                        "duration_us": 4000
+                    }
+                ]
+            },
+            "reader": "recipe-author",
+            "copy_text": "BGA finding: Waiting off the critical path, worth nothing to fix today: extra.bst (0s) - they bound how far shortening the chain can go\n      (structural projections over this run's measured durations, where \"fixed\" means the element becomes instant - a re-capture is still the ground truth)\n  Elements: extra.bst\n  Run: golden-fixture-manifest-hash-v1",
+            "trace_query": "element-commands",
+            "trace_queries": [
+                "element-commands",
+                "executables-in-element"
+            ]
         },
         {
             "id": "confidence",
@@ -72,27 +198,28 @@
         }
     ],
     "headline": {
-        "diagnosis": "scheduler_bound",
-        "chain_share": 0.875,
+        "diagnosis": "chain_bound",
+        "chain_share": 1.0,
         "chain_bound_share": 0.9,
-        "sentence": "This build is scheduler-bound, not chain-bound: the critical path is 88% of wall-clock, below the 90% chain-bound line, so the time is going somewhere other than the chain.",
+        "chain_share_of": "task_horizon",
+        "sentence": "This build is chain-bound, not scheduler-bound: the critical path is 100% of the time tasks were running, at or above the 90% chain-bound line, so the way to a shorter build is a shorter chain.",
         "certified_headroom_us": 0,
         "scheduling_gap_us": 2000,
         "top_actions": [
             {
-                "finding_id": "blast-radius-ranking",
+                "finding_id": "time-concentration",
                 "element_uid": "base.bst",
-                "downstream_count": 2
+                "saving_us": 6000
             },
             {
-                "finding_id": "blast-radius-ranking",
+                "finding_id": "time-concentration",
                 "element_uid": "lib.bst",
-                "downstream_count": 1
+                "saving_us": 5000
             },
             {
-                "finding_id": "blast-radius-ranking",
-                "element_uid": "extra.bst",
-                "downstream_count": 0
+                "finding_id": "time-concentration",
+                "element_uid": "app.bst",
+                "saving_us": 3000
             }
         ]
     },
@@ -102,10 +229,32 @@
             "role": "R1",
             "label": "I can change these elements",
             "question": "Which element should I shorten first?",
-            "leads_with": "blast-radius-ranking",
+            "leads_with": "time-concentration",
             "findings": [
                 "wait-category",
-                "blast-radius-ranking"
+                "time-concentration",
+                "joint-saving",
+                "optimization-horizon"
+            ]
+        },
+        {
+            "id": "recipe-author",
+            "role": "R2",
+            "label": "I own one element's recipe",
+            "question": "Is my element a problem, and what does changing it cost?",
+            "leads_with": "latent-heavies",
+            "findings": [
+                "latent-heavies"
+            ]
+        },
+        {
+            "id": "graph-owner",
+            "role": "R3",
+            "label": "I own the dependency graph",
+            "question": "What does the shape of this graph make impossible?",
+            "leads_with": "mesh-graph",
+            "findings": [
+                "mesh-graph"
             ]
         },
         {
@@ -141,17 +290,7 @@
                 "base.bst",
                 "<run>"
             ],
-            "follows_from": "blast-radius-ranking"
-        },
-        {
-            "id": "sweep-the-capacity",
-            "reason": "This build is scheduler-bound - the sweep says what more builders would buy.",
-            "argv": [
-                "bga",
-                "sweep",
-                "<run>"
-            ],
-            "follows_from": "headline.diagnosis"
+            "follows_from": "time-concentration"
         }
     ],
     "floors": {
@@ -590,7 +729,7 @@
                 },
                 {
                     "path": "headline.chain_share",
-                    "value": 0.875,
+                    "value": 1.0,
                     "resolved": true,
                     "quantity": "share"
                 }
@@ -598,9 +737,9 @@
             "rule": {
                 "name": "CHAIN_BOUND_RATIO",
                 "threshold": 0.9,
-                "comparison": "<",
+                "comparison": ">=",
                 "observed_path": "headline.chain_share",
-                "sentence": "The critical path is 87.5% of wall-clock, which is < the 90% at which the chain rather than the scheduler is called the constraint - so scheduler_bound.",
+                "sentence": "The critical path is 100.0% of the task horizon - the span from the first task's start to the last one's finish, which excludes BuildStream's own startup - and that is >= the 90% at which the chain rather than the scheduler is called the constraint, so chain_bound.",
                 "module": "bga/findings.py",
                 "threshold_quantity": "share"
             },
@@ -637,27 +776,158 @@
             "unpublished_inputs": []
         },
         {
-            "claim": "blast-radius-ranking",
+            "claim": "time-concentration",
             "kind": "finding",
             "document": "analyze/v4",
             "evidence": [
                 {
-                    "path": "headline.chain_share",
-                    "value": 0.875,
+                    "path": "total_duration_us",
+                    "value": 16000,
+                    "resolved": true,
+                    "quantity": "duration_us"
+                },
+                {
+                    "path": "floors.t_infinity_observed",
+                    "value": 14000,
+                    "resolved": true,
+                    "quantity": "duration_us"
+                }
+            ],
+            "rule": {
+                "name": null,
+                "threshold": null,
+                "comparison": "present",
+                "observed_path": null,
+                "sentence": "Published whenever the critical path has measured elements on it; which elements, and their share, are the finding's own `evidence.rows`.",
+                "module": "bga/findings.py"
+            },
+            "trace_query": "cost-by-executable",
+            "unpublished_inputs": []
+        },
+        {
+            "claim": "mesh-graph",
+            "kind": "finding",
+            "document": "analyze/v4",
+            "evidence": [
+                {
+                    "path": "elements.zero_slack_share",
+                    "value": 0.75,
                     "resolved": true,
                     "quantity": "share"
                 }
             ],
             "rule": {
-                "name": "CHAIN_BOUND_RATIO",
-                "threshold": 0.9,
-                "comparison": "<",
-                "observed_path": "headline.chain_share",
-                "sentence": "Who-depends-on-me is ranked only on a build the chain does not already constrain; above the threshold the ranking that matters is how long each element takes.",
+                "name": "MESH_ZERO_SLACK_SHARE",
+                "threshold": 0.5,
+                "comparison": ">=",
+                "observed_path": "elements.zero_slack_share",
+                "sentence": "75% of elements have zero slack, at or above the 50% at which the graph is called a mesh rather than a chain.",
                 "module": "bga/findings.py",
                 "threshold_quantity": "share"
             },
-            "trace_query": "dependency-wait",
+            "trace_query": "graph-levels",
+            "unpublished_inputs": []
+        },
+        {
+            "claim": "joint-saving",
+            "kind": "finding",
+            "document": "analyze/v4",
+            "evidence": [
+                {
+                    "path": "joint_saving.joint_saving_us",
+                    "value": 11000,
+                    "resolved": true,
+                    "quantity": "duration_us"
+                },
+                {
+                    "path": "joint_saving.sum_of_individual_us",
+                    "value": 11000,
+                    "resolved": true,
+                    "quantity": "duration_us"
+                },
+                {
+                    "path": "joint_saving.savings_add",
+                    "value": true,
+                    "resolved": true
+                },
+                {
+                    "path": "total_duration_us",
+                    "value": 16000,
+                    "resolved": true,
+                    "quantity": "duration_us"
+                }
+            ],
+            "rule": {
+                "name": null,
+                "threshold": null,
+                "comparison": "present",
+                "observed_path": null,
+                "sentence": "Published whenever the top elements have a joint projection; whether the savings add is the finding, not its gate.",
+                "module": "bga/findings.py"
+            },
+            "trace_query": "waited-on-flow",
+            "unpublished_inputs": []
+        },
+        {
+            "claim": "optimization-horizon",
+            "kind": "finding",
+            "document": "analyze/v4",
+            "evidence": [
+                {
+                    "path": "optimization_horizon[0].makespan_after_us",
+                    "value": 8000,
+                    "resolved": true,
+                    "quantity": "duration_us"
+                },
+                {
+                    "path": "optimization_horizon[0].cumulative_saving_us",
+                    "value": 6000,
+                    "resolved": true,
+                    "quantity": "duration_us"
+                },
+                {
+                    "path": "total_duration_us",
+                    "value": 16000,
+                    "resolved": true,
+                    "quantity": "duration_us"
+                }
+            ],
+            "rule": {
+                "name": null,
+                "threshold": null,
+                "comparison": "present",
+                "observed_path": null,
+                "sentence": "Published when the horizon has more than one step - a single-step horizon is the first fix, which is already named.",
+                "module": "bga/findings.py"
+            },
+            "trace_query": "time-by-kind",
+            "unpublished_inputs": []
+        },
+        {
+            "claim": "latent-heavies",
+            "kind": "finding",
+            "document": "analyze/v4",
+            "evidence": [
+                {
+                    "path": "latent_heavies[0].duration_us",
+                    "value": 4000,
+                    "resolved": true,
+                    "quantity": "duration_us"
+                }
+            ],
+            "rule": {
+                "name": null,
+                "threshold": null,
+                "comparison": "present",
+                "observed_path": null,
+                "sentence": "Published whenever elements off the critical path are heavy enough to bound how far shortening the chain can go.",
+                "module": "bga/findings.py"
+            },
+            "trace_query": "element-commands",
+            "trace_queries": [
+                "element-commands",
+                "executables-in-element"
+            ],
             "unpublished_inputs": []
         },
         {
@@ -734,10 +1004,10 @@
         }
     ],
     "document_shape": {
-        "leaves": 487,
-        "deepest_depth": 5,
-        "deepest_path": "provenance.[].evidence.[].path",
-        "deeper_than_three": 188,
-        "deeper_than_three_share": 0.3860369609856263
+        "leaves": 647,
+        "deepest_depth": 7,
+        "deepest_path": "findings.[].evidence.steps.[].entering.[]",
+        "deeper_than_three": 299,
+        "deeper_than_three_share": 0.46213292117465227
     }
 }

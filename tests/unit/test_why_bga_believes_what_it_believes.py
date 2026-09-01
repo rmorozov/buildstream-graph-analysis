@@ -122,12 +122,16 @@ class TestTheRuleIsTheLiveConstant:
             return build_document(analyzer.analyze(Path(GOLDEN)))
 
         before = provenance.for_claim(analyse(), "diagnosis")["rule"]
-        monkeypatch.setattr(findings_mod, "CHAIN_BOUND_RATIO", 0.5)
+        monkeypatch.setattr(findings_mod, "CHAIN_BOUND_RATIO", 1.5)
         after = provenance.for_claim(analyse(), "diagnosis")["rule"]
-        assert before["threshold"] == 0.9 and after["threshold"] == 0.5
-        # And the comparison flips with it: 0.875 is below 0.9 and above
-        # 0.5, so the same run is diagnosed the other way.
-        assert before["comparison"] == "<" and after["comparison"] == ">="
+        assert before["threshold"] == 0.9 and after["threshold"] == 1.5
+        # And the comparison flips with it. The moved threshold is 1.5
+        # rather than `UX-229`'s original 0.5 because `UX-477` changed
+        # what the ratio is a share *of*: against the task horizon this
+        # run reads 1.000, so 0.5 no longer straddles it and a mutation
+        # to 0.5 would not flip anything - which is the mutation not
+        # discriminating, not the guard passing.
+        assert before["comparison"] == ">=" and after["comparison"] == "<"
 
 
 class TestTheTableCoversTheFindings:
@@ -237,7 +241,10 @@ def comparison():
 class TestTheComparisonCitesTheCandidatesChain:
     def test_the_comparison_publishes_the_candidates_diagnosis(self, comparison):
         record = comparison.to_dict()["candidate_diagnosis"]
-        assert record["diagnosis"] == "scheduler_bound"
+        # `chain_bound` since `UX-477`: four back-to-back tasks are a
+        # chain, and the old `scheduler_bound` came from BuildStream's
+        # startup sitting in the denominator.
+        assert record["diagnosis"] == "chain_bound"
         assert record["provenance"]["rule"]["name"] == "CHAIN_BOUND_RATIO"
 
     def test_it_says_which_document_its_paths_walk(self, comparison, golden):
@@ -382,6 +389,17 @@ class TestThePageDrawsTheObject:
         for entry in record["evidence"]:
             published.add(str(entry["path"]))
             published.add(str(entry["value"]))
+            # Python and JavaScript disagree about how to spell a whole
+            # float: `str(1.0)` is "1.0" and `String(1.0)` is "1". The
+            # claim here is that the page shows no *value* the record
+            # does not hold, and 1 and 1.0 are one value - so the
+            # renderer's own spelling of each number is admitted, and
+            # nothing else is. Reachable since `UX-477` made a
+            # `chain_share` of exactly 1.000 ordinary; before that no
+            # evidence value on this fixture was ever whole.
+            value = entry["value"]
+            if isinstance(value, float) and value.is_integer():
+                published.add(str(int(value)))
 
         # Layout, named one string at a time rather than allowed by a
         # pattern. `UX-357` put the depth count on the summary (§3a.1)
@@ -411,10 +429,28 @@ class TestThePageDrawsTheObject:
             f"the page shows text no field of the record holds: {unaccounted}")
 
     def test_the_reference_paths_and_values_are_the_records_own(self, golden):
+        """Compared as *values*, not as spellings. Python writes a whole
+        float `1.0` and JavaScript writes it `1`; a guard that demanded
+        the page reproduce `str()` would be asserting Python's number
+        formatting about a page written in another language. What must
+        hold is that the page shows the record's own number and not a
+        rounding or a re-derivation of it - so each raw cell is parsed
+        back and compared numerically where the record holds a number,
+        and compared exactly where it does not.
+
+        `UX-477` is what made this reachable: a `chain_share` of exactly
+        1.000 is ordinary against the task horizon, and no evidence
+        value on this fixture had ever been whole before."""
         record = provenance.for_claim(golden, "diagnosis")
         out = self._render(record)
         assert out["paths"] == [e["path"] for e in record["evidence"]]
-        assert out["raw"] == [str(e["value"]) for e in record["evidence"]]
+        assert len(out["raw"]) == len(record["evidence"])
+        for shown, entry in zip(out["raw"], record["evidence"]):
+            value = entry["value"]
+            if isinstance(value, (int, float)) and not isinstance(value, bool):
+                assert float(shown) == value, (shown, value)
+            else:
+                assert shown == str(value), (shown, value)
 
     def test_the_threshold_is_carried_not_recomputed(self, golden):
         out = self._render(provenance.for_claim(golden, "diagnosis"))

@@ -315,9 +315,11 @@ def _diagnosis_rule(claim, document):
     return _rule(
         "CHAIN_BOUND_RATIO", _findings.CHAIN_BOUND_RATIO, fired,
         "headline.chain_share",
-        f"The critical path is {ratio:.1%} of wall-clock, which is {fired} "
-        f"the {_findings.CHAIN_BOUND_RATIO:.0%} at which the chain rather "
-        f"than the scheduler is called the constraint - so {name}.")
+        f"The critical path is {ratio:.1%} of the task horizon - the span "
+        f"from the first task's start to the last one's finish, which "
+        f"excludes BuildStream's own startup - and that is {fired} the "
+        f"{_findings.CHAIN_BOUND_RATIO:.0%} at which the chain rather than "
+        f"the scheduler is called the constraint, so {name}.")
 
 
 def _wait_category_rule(claim, document):

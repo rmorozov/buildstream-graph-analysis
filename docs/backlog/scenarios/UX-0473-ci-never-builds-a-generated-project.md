@@ -92,6 +92,18 @@ each has a clause:
 - `set -uo pipefail`, **not** `set -e`. The build is *meant* to fail —
   that is how it reaches `build-failed` — so `bga snapshot` exits 255
   and `set -e` would end the step before the census ran.
+
+  > **Round 73, `UX-484`: this was wrong, and the step never once ran
+  > the census.** `set -uo pipefail` sets three options and clears
+  > none, and GitHub starts every `run:` block with
+  > `shell: /usr/bin/bash -e {0}`, so `-e` was live regardless. The
+  > step died on the failing build on every run from the day it landed
+  > — five consecutive reds on PR #191 — printing only the generator's
+  > line. The claim below that a capture is built in CI is **not
+  > supported by any run**; the census figures in this Outcome are the
+  > local ones, which stand. `UX-484` captures the status instead
+  > (`|| status=$?`) and repoints the clause; N3 below mutated the
+  > half that never decided.
 - the generator runs first, or the census prints the number a clone
   already prints;
 - `--also` joins the two halves.

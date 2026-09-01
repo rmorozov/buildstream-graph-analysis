@@ -1018,6 +1018,16 @@ jobs:
         # status is what this step reports, and it is non-zero only when
         # a finding is neither produced nor declared.
         #
+        # `UX-484`: **recorded by capturing it**, not by leaving `-e`
+        # off. The body's `set -uo pipefail` sets three options and
+        # clears none, and GitHub starts every `run:` block with
+        # `shell: /usr/bin/bash -e {0}` - so `-e` was live and the
+        # deliberately failing build ended this step on its own exit
+        # status for five consecutive runs, before the `echo` below it,
+        # let alone the census. `|| status=$?` makes it a handled
+        # failure, which `-e` does not act on, so the step is correct
+        # under either shell.
+        #
         # **Printed, not gated on a bound.** The count over a generated
         # capture has never run twice on the same runner, and a threshold
         # nobody has measured is `UX-458`'s open question one axis over.
@@ -1030,8 +1040,10 @@ jobs:
           mkdir -p "$OUT"
           python3 tools/bga_gen_project.py \
             --spec tests/fixtures/specs/a-build-that-fails.json --out "$OUT/project"
-          (cd "$OUT/project" && bga snapshot -- bst build all.bst) > "$OUT/snapshot.txt" 2>&1
-          echo "bga snapshot exited $? (the build is meant to fail)"
+          status=0
+          (cd "$OUT/project" && bga snapshot -- bst build all.bst) \
+            > "$OUT/snapshot.txt" 2>&1 || status=$?
+          echo "bga snapshot exited $status (the build is meant to fail)"
           RUN=$(echo "$OUT"/project/.bga/runs/*/run)
           test -d "$RUN" || { echo "no capture at $RUN" >&2; exit 1; }
           python3 tools/dev_finding_coverage.py --also "$RUN"

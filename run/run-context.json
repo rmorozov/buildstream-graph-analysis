@@ -1,0 +1,166 @@
+{
+  "trace_epsilon_us": 50000,
+  "resource_capacities": {
+    "PROCESS": 4,
+    "DOWNLOAD": 10,
+    "UPLOAD": 4
+  },
+  "max_jobs": 4,
+  "native_max_jobs": 4,
+  "native_max_jobs_source": "operator_declared",
+  "host_cpu_count": 4,
+  "host_memory_mb": 15989,
+  "host_manifest": {
+    "schema": "host/v2",
+    "cpu_model": "AMD EPYC 7763 64-Core Processor",
+    "cpu_count": 4,
+    "memory_bytes": 16765681664,
+    "kernel_release": "6.17.0-1022-azure",
+    "distro_id": "ubuntu 24.04",
+    "toolchain": {
+      "bst": "2.7.0",
+      "bwrap": "bubblewrap 0.9.0",
+      "buildbox-run": null,
+      "cc": "cc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0"
+    }
+  },
+  "producer": {
+    "tool": "bga",
+    "version": "0.3.0",
+    "contracts": [
+      "analyze/v2",
+      "analyze/v3",
+      "analyze/v4",
+      "blast/v1",
+      "blast/v2",
+      "capture-layout/v1",
+      "compare/v1",
+      "compare/v2",
+      "correlate/v1",
+      "correlate/v2",
+      "host-samples/v1",
+      "host/v1",
+      "host/v2",
+      "plane2/v1",
+      "plane2/v2",
+      "plane2/v3",
+      "sources/v1",
+      "store-aggregate/v1",
+      "store/v1",
+      "sweep/v1",
+      "whatif/v1"
+    ]
+  },
+  "wall_clock": {
+    "start_us": 1788254017377000,
+    "end_us": 1788267577994000
+  },
+  "pipeline_overhead": [
+    {
+      "phase": "Loading elements",
+      "elapsed_us": 357000
+    },
+    {
+      "phase": "Resolving elements",
+      "elapsed_us": 230000
+    },
+    {
+      "phase": "Initializing remote caches",
+      "elapsed_us": 0
+    },
+    {
+      "phase": "Query cache",
+      "elapsed_us": 5783000
+    }
+  ],
+  "build_outcome": {
+    "failed_elements": [],
+    "failed_count": 0,
+    "interrupted": false
+  },
+  "queue_summary": {
+    "fetch": {
+      "processed": 0,
+      "skipped": 126,
+      "failed": 0
+    },
+    "build": {
+      "processed": 126,
+      "skipped": 0,
+      "failed": 0
+    }
+  },
+  "timestamp_agreement": {
+    "tasks_compared": 126,
+    "tasks_shorter_than_bst": 7,
+    "shorter_than_bst": [
+      {
+        "element": "bootstrap/build/coreutils-manpages.bst",
+        "action": "build",
+        "span_s": 250.434,
+        "bst_elapsed_s": 251.0,
+        "shortfall_s": 0.566
+      },
+      {
+        "element": "bootstrap/elfutils.bst",
+        "action": "build",
+        "span_s": 168.51,
+        "bst_elapsed_s": 169.0,
+        "shortfall_s": 0.49
+      },
+      {
+        "element": "bootstrap/dwz.bst",
+        "action": "build",
+        "span_s": 28.7,
+        "bst_elapsed_s": 29.0,
+        "shortfall_s": 0.3
+      },
+      {
+        "element": "components/ninja.bst",
+        "action": "build",
+        "span_s": 139.466,
+        "bst_elapsed_s": 140.0,
+        "shortfall_s": 0.534
+      },
+      {
+        "element": "components/_private/cmake-stage1.bst",
+        "action": "build",
+        "span_s": 1533.682,
+        "bst_elapsed_s": 1534.0,
+        "shortfall_s": 0.318
+      },
+      {
+        "element": "components/_private/git-minimal.bst",
+        "action": "build",
+        "span_s": 525.631,
+        "bst_elapsed_s": 526.0,
+        "shortfall_s": 0.369
+      },
+      {
+        "element": "components/libxml2.bst",
+        "action": "build",
+        "span_s": 40.373,
+        "bst_elapsed_s": 41.0,
+        "shortfall_s": 0.627
+      }
+    ],
+    "worst_shortfall_s": -0.627,
+    "worst_excess_s": 1.727,
+    "note": "Each task's duration measured twice: the wrapped log's own timestamps, which are stamped when the wrapper read each line, against BuildStream's `[HH:MM:SS]` elapsed prefix, which is its own timing truncated to whole seconds. The difference is the wrapper's read-lag, and it bounds the resolution of every Plane 1 duration in this run. A task reported as shorter than BuildStream's own figure is provably short, not merely imprecise (UX-110)."
+  },
+  "run_identity": {
+    "manifest_hash": "f12a845e2327de7a0101a227aaf602b15b8b45a3cfc78185af3485d3472cace8",
+    "project_identity": ".",
+    "targets": [
+      "components/libxml2.bst"
+    ],
+    "scheduler": {
+      "builders": 4,
+      "fetchers": 10,
+      "pushers": 4,
+      "native_max_jobs": 4
+    },
+    "project_git_commit": "953683fb96b82cdf6d7941c4ba9859378942f22b",
+    "project_refs_sha256": null
+  }
+}

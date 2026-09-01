@@ -697,11 +697,11 @@ jobs:
           # the summary line `===== 43 passed, 1215 deselected in ... =====`.
           # Bounded on both sides so "143 passed" cannot satisfy it.
           grep -qE "(^|[[:space:]=])43 passed([[:space:],]|$)" /tmp/bst-tier.txt || {
-            echo "Expected exactly 43 bst-gated tests to run. Got:" >&2
+            echo "Expected exactly 45 bst-gated tests to run. Got:" >&2
             tail -3 /tmp/bst-tier.txt >&2
             exit 1
           }
-          echo "43 bst-gated tests ran, none skipped."
+          echo "45 bst-gated tests ran, none skipped."
 
       - name: The whole suite, with bst present
         # The tier does not live in isolation: an extraction change can

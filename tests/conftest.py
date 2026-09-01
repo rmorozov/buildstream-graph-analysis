@@ -205,6 +205,10 @@ KNOWN_SKIP_REASONS = {
     "bst/bwrap/bga not all found on PATH - "
     "see docs/spec/ingestion-pipeline.md": (
         "the full-capture arm; `installed-capture` is where it runs", 2),
+    "bst/bwrap/busybox not all found on PATH - "
+    "see docs/spec/ingestion-pipeline.md": (
+        "`UX-465`'s generated-project arm; busybox is the static shell the "
+        "generated project stages, as examples/stage_runtimes.sh does", 2),
     "bst/bwrap/cc not all found on PATH - "
     "see docs/spec/ingestion-pipeline.md": (
         "the full-capture arm; `installed-capture` is where it runs", 6),

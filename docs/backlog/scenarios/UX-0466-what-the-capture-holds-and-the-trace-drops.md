@@ -1,6 +1,6 @@
 # UX-466: nothing measures which captured field reaches a Perfetto slice
 
-**Priority:** Medium | **Status:** 🟡 In Progress (stages 1-2 done) | **Depends on:** stage 3 needs `UX-465` · independent of `UX-464` | **Found by:** round 72, thread 1 of the audit — whether the maximum information Perfetto and `bga view` could analyse is captured, and whether the mapping to Perfetto's format is right | **Serves:** the reader who opens the trace expecting a field the capture holds and finds the track empty | **Topic:** contracts
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** stage 3 needs `UX-465` · independent of `UX-464` | **Found by:** round 72, thread 1 of the audit — whether the maximum information Perfetto and `bga view` could analyse is captured, and whether the mapping to Perfetto's format is right | **Serves:** the reader who opens the trace expecting a field the capture holds and finds the track empty | **Topic:** contracts
 
 ## Motivation
 
@@ -62,7 +62,7 @@ census names what it could not assess.
 
 ## Outcome
 
-**Round 72 · 2026-09-01 · Status: 🟡 Stages 1-2 done, stage 3 open**
+**Round 72 · 2026-09-01 · Status: 🟢 Done** (stages 1-2 below, stage 3 after)
 
 Stages 1 and 2 landed. Stage 3 — what the planes could capture and do
 not — still needs `UX-465`, and this round's own measurement is the
@@ -226,3 +226,79 @@ $ make test
 $ make lint
 All checks passed!
 ```
+
+## Outcome, stage 3
+
+**Round 72 · 2026-09-01 · Status: 🟢 Done**
+
+`UX-465` landed in the same round, so stage 3 could be answered from a
+build this repository controls rather than from a capture it happens
+to have. Generated, built cold and captured with both planes, then run
+through the same census:
+
+```text
+$ python3 tools/dev_trace_coverage.py <the generated capture>
+
+Plane 1: 4 reached, 6 dropped, 56 unassessable
+    DROPPED   graph.elements[].cache_key             (0/9 value(s) in the trace)
+    DROPPED   run-context.pipeline_overhead[].phase  (0/4 value(s) in the trace)
+    DROPPED   run-context.producer.contracts[]       (0/21 value(s) in the trace)
+    DROPPED   trace.spans[].primary_resource         (0/2 value(s) in the trace)
+    DROPPED   trace.spans[].resources[]              (0/2 value(s) in the trace)
+    DROPPED   trace.spans[].task_key                 (0/18 value(s) in the trace)
+    reached   graph.dependencies[].predecessor       (8/8)
+    reached   graph.dependencies[].successor         (7/7)
+    reached   graph.elements[].element_kind          (3/3)
+    reached   graph.elements[].uid                   (9/9)
+
+Plane 2: 17 reached, 7 dropped, 116 unassessable
+    DROPPED   plane2.commands_not_observed.per_element.{}.named_not_observed[]
+    DROPPED   plane2.declared_vs_used.uncovered_elements[].reason
+    DROPPED   plane2.invocation_correlation.unmatched[]
+    DROPPED   plane2.static_census.per_element.{}.own_static[]
+    DROPPED   plane2.static_census.per_element.{}.staged_by_dependencies.runtime.bst[]
+    DROPPED   plane2.static_census.per_element.{}.static_executables[]
+    DROPPED   plane2.static_census.static_executables[]
+    ... 17 reached, including every per-element key
+```
+
+### What the generated build showed that no committed capture could
+
+**Two Plane 1 drops appear only here.** `trace.spans[].primary_resource`
+and `trace.spans[].resources[]` — the resource a task held, `PROCESS`
+or `DOWNLOAD` — reach no carrier. `with_timeline` could not show it:
+its spans carry one resource value, so the field was `unassessable`
+rather than dropped, and it took a build with both a FETCH and a BUILD
+queue to give the field two values and make it answerable at all.
+
+That is a mapping gap with an obvious carrier: Perfetto categories
+already tag slices `bst-builder` and `bst-invocation`, and a reader who
+wants "which tasks were waiting on DOWNLOAD" has no way to filter for
+them. Filed rather than fixed here.
+
+**Plane 2's shape is the mirror of Plane 1's.** Seventeen fields reach
+the trace and seven do not, and the seven are one family: the static
+census's *binary* lists (`static_executables`, `own_static`,
+`staged_by_dependencies`). Every per-element key arrives; no list of
+program names does. Whether that is a gap or a decision is a question
+for whoever owns `UX-105`'s static-binary work, and it gets a row
+rather than an answer here.
+
+### What stage 3 did not answer
+
+The stage as written asked "what the planes **could** capture and do
+not". This measured what they **do** capture and the trace drops, which
+is a different question and the one the census can answer honestly.
+The other half needs a comparison between the hook's *capability* — the
+syscalls it interposes, the `rusage` fields it reads — and the records
+it writes, which is a third instrument over `tools/` rather than over
+emitted artifacts. Named here rather than quietly folded in; a round
+that wants it should file it.
+
+### Deviation from the Required Fix
+
+Stage 3 is answered for the half a census can answer and declared for
+the half it cannot, per the paragraph above. No new guard: the clauses
+`TestTheCensusOverTheCommittedCaptures` carries are about the clone's
+population and stay true; a generated capture is not committed
+(`UX-189`) and so cannot be asserted over from a clone.

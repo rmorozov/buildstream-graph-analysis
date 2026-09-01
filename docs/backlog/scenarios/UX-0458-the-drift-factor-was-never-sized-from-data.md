@@ -185,6 +185,25 @@ p75 materially above 1.3, or a run where two consecutive runs agree on
 a file nobody touched — the second would falsify the premise the whole
 gate rests on, and is worth watching for rather than assuming away.
 
+> **Annotated round 72, 2026-09-01 (`UX-476`), the same day this was
+> written.** The second falsifier arrived on the next run.
+> `test_emphasis_is_a_budget.py`, which no commit on this branch
+> touches, read 22.5s on run 33493747354 and 16.9s on run 33495069593
+> — ×1.78 and ×1.66 over both gates, consecutively — and was reported,
+> while the same file on the same branch costs 11.74s on a developer
+> machine against 12.58 recorded. **So per-file noise does repeat on
+> the same file, and the sentence above that the two-run rule "does the
+> actual discriminating" is false as written.** The reason is in
+> `UX-476`: both runs are compared against the *same* recording run, so
+> the two crossings are not independent evidence. The reading of the
+> factor itself — that this distribution has no separating value, and
+> that 1.5 is a shortlist width rather than a threshold — is not
+> affected; what is wrong is the claim about what the shortlist is
+> handed to. `UX-476` also records that the `spread` history this item
+> reads is normalised by a median over a different population than the
+> gate's shift (0.677 against 0.81 on the same run), so the
+> distribution quoted above is not quite the one the gate applies.
+
 ### Deliberately not done
 
 No guard. The claim here is about a distribution measured twice, and a

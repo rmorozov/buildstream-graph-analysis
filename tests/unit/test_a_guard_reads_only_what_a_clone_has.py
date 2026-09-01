@@ -37,8 +37,10 @@ was **not** added, or building a path they then create.
 """
 import pathlib
 import ast
+import os
 import re
 import subprocess
+import tempfile
 
 import pytest
 
@@ -172,6 +174,55 @@ def _guards_absence(text):
     return False
 
 
+def _compared_not_opened(text):
+    """Path literals every occurrence of which is a comparison operand.
+
+    `UX-462`. The third shape this guard could not see, and the first
+    one in the other direction — a false positive rather than a miss.
+    `tests/unit/test_fine_grained_fixture.py` names the generated bulk
+    tree exactly once:
+
+    ```python
+    assert "examples/09-fine-grained-siblings/files/bulk/" in ignored
+    ```
+
+    which asserts the string is a *line of `.gitignore`*. The file
+    never opens it. But `examples/README.md` tells the reader to
+    generate that tree, so on any machine that followed the guide the
+    path exists and is untracked, and this guard reported the file as
+    resting on it — red from machine state, with nothing in the diff.
+
+    A comparison operand is the one position in which a literal
+    provably cannot reach the filesystem: nothing downstream of `in`,
+    `==` or `!=` opens anything. That is why the rule is stated over
+    AST position and not over the spelling. A trailing slash, or the
+    word `gitignore` on the line, would be a proxy for "this is not a
+    read" — fixing guide §5, in the guard whose subject is §5's cousin.
+
+    Every occurrence, not any: a file that compares the path on one
+    line and opens it on another still depends on it, and is still
+    reported.
+    """
+    try:
+        tree = ast.parse(text)
+    except SyntaxError:
+        return set()
+    literals, compared = {}, set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Compare):
+            for operand in (node.left, *node.comparators):
+                compared.add(id(operand))
+        if isinstance(node, ast.Constant) and isinstance(node.value, str):
+            literals.setdefault(node.value, []).append(id(node))
+    names = set()
+    for value, occurrences in literals.items():
+        if not all(where in compared for where in occurrences):
+            continue
+        for match in PATH_LITERAL.finditer(f'"{value}"'):
+            names.add(match.group(1).rstrip("/"))
+    return names
+
+
 def _cited_paths(path):
     """Repository paths a test file names, minus the ones it creates."""
     text = path.read_text(encoding="utf-8")
@@ -185,7 +236,19 @@ def _cited_paths(path):
     # see. Not filtered by `WRITTEN_NOT_READ`: a join that builds a
     # path under `tmp_path` has a non-constant first argument, so it
     # never reaches `ROOTS` in the first place.
-    return cited | _joined_paths(text)
+    return (cited | _joined_paths(text)) - _compared_not_opened(text)
+
+
+def _cited_paths_of(source, tmp=None):
+    """`_cited_paths` over a source string, for the checks below."""
+    handle = tempfile.NamedTemporaryFile(
+        "w", suffix=".py", delete=False, encoding="utf-8")
+    with handle:
+        handle.write(source)
+    try:
+        return _cited_paths(pathlib.Path(handle.name))
+    finally:
+        os.unlink(handle.name)
 
 
 def _untracked_but_present(cited, tracked):
@@ -326,6 +389,50 @@ class TestTheCheckItselfDiscriminates:
             'import pytest, shutil\n'
             'M = pytest.mark.skipif(shutil.which("node") is None, reason="x")\n')
         assert not _guards_absence('x = 1\n')
+
+    def test_a_path_only_ever_compared_as_text_is_not_a_citation(self):
+        """`UX-462`. The gitignore-membership assertion, in miniature:
+        the literal reaches no filesystem call, so whether it exists on
+        this machine cannot change the outcome."""
+        source = ('with open(".gitignore") as handle:\n'
+                  '    ignored = handle.read()\n'
+                  'assert "examples/09-fine-grained-siblings/files/bulk/"'
+                  ' in ignored\n')
+        assert PATH_LITERAL.search(source), (
+            "the extractor no longer reads this literal at all, so this "
+            "test no longer shows what the comparison filter is for")
+        assert "examples/09-fine-grained-siblings/files/bulk" not in \
+            _cited_paths_of(source)
+
+    def test_a_path_compared_on_one_line_and_opened_on_another_still_counts(self):
+        """Every occurrence, not any. A file that also opens the path
+        depends on it, and the comparison must not buy it an exemption."""
+        source = ('assert "tests/fixtures/macro_micro/run" in ignored\n'
+                  'open("tests/fixtures/macro_micro/run")\n')
+        assert "tests/fixtures/macro_micro/run" in _cited_paths_of(source)
+
+    def test_the_filter_does_not_swallow_a_different_path(self):
+        """Two literals, one compared and one opened. Only the compared
+        one is dropped - a filter keyed on the file rather than on the
+        literal would clear both."""
+        source = ('assert "docs/spec/specification.md" in text\n'
+                  'open("tests/fixtures/macro_micro/run")\n')
+        cited = _cited_paths_of(source)
+        assert "docs/spec/specification.md" not in cited
+        assert "tests/fixtures/macro_micro/run" in cited
+
+    def test_the_case_this_was_filed_on_is_not_reported(self):
+        """The real file, against the real tree. Only observable where
+        the generated tree is present; in a clone there is nothing
+        untracked to mis-report, so this **skips with the reason**."""
+        bulk = REPO / "examples/09-fine-grained-siblings/files/bulk"
+        if not bulk.is_dir():
+            pytest.skip(
+                "no bulk tree in this checkout - examples/README.md says "
+                "how to make one")
+        target = REPO / "tests/unit/test_fine_grained_fixture.py"
+        assert "examples/09-fine-grained-siblings/files/bulk" not in \
+            _untracked_but_present(_cited_paths(target), _tracked())
 
     def test_it_would_have_flagged_the_original(self):
         """The literal that shipped, checked against the tree."""

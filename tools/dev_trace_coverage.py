@@ -46,12 +46,33 @@ What it cannot assess, declared rather than guessed
   "nothing carries this" and "nothing carries this on purpose" - and
   the whole value of a census is telling them apart.
 
-  The declaration is also what keeps one of them honest: the census
-  matches *values*, so `trace.spans[].resources[]` reads `reached` the
-  moment `primary_resource` has a carrier, because the two hold the
-  same strings. The instrument cannot tell a field that arrived from
-  one whose values another field brought (`UX-485`), and a `reached`
-  it cannot justify is worse than a stated decline.
+  A declaration is a *design* decision and not a patch over what the
+  census cannot see - which it briefly was. `UX-485` is why: see
+  **shared** below.
+
+- **Shared values.** The census matches *values*, so two fields
+  holding the same strings are two fields it cannot attribute. It
+  names them rather than crediting both: a field whose matched set is
+  exactly another's is reported `shared`, with the ones it collides
+  with. Measured on a two-queue capture, with nothing declared away:
+  **13 of 17** Plane 2 `reached` verdicts were collisions - eleven
+  element-uid-keyed fields plus a `redundant_operations` pair - and on
+  Plane 1, `trace.spans[].primary_resource` and
+  `trace.spans[].resources[]` are indistinguishable, which is what
+  `UX-469` had to state in `DECLINED` because nothing measured it.
+
+  A **declined** field still counts as a collision partner. Skipping
+  it would let a `DECLINED` entry hide the coincidence, which is
+  exactly what that entry was doing before this rule existed.
+
+  Which of two colliding fields the emitter actually read is a fact
+  about the emitter's *code*, and this census reads emitted artifacts
+  on purpose - so the collision is reported and the decision stays
+  where a human wrote it down.
+
+- **Where a value arrived.** Every matched value carries its site -
+  `debug-annotation:resource`, `slice-name`, `category` - so `reached`
+  says which carrier brought it rather than only that something did.
 
 - **Field numbers.** The decoder takes its field numbers from
   `tools/native_trace/trackevent.py`, the emitter's own module, so it
@@ -267,6 +288,13 @@ def decode(path):
     can see it - slice and track names, category names, annotation keys
     and their string values. That is the set a captured field's values
     have to land in to have arrived.
+
+    `UX-485`: it is a **map from value to the sites it arrived at**,
+    not a set. A site is a carrier and, where the carrier has one, its
+    name: `debug-annotation:resource`, `slice-name`, `category`. Two
+    fields whose values both land at `debug-annotation:resource` are
+    two fields this census cannot tell apart, and saying *where* a
+    value arrived is what lets it say so.
     """
     raw = (gzip.open(path, "rb").read() if _gzipped(path)
            else path.read_bytes())
@@ -275,8 +303,12 @@ def decode(path):
     interned = {trackevent.INTERNED_EVENT_NAMES: {},
                 trackevent.INTERNED_EVENT_CATEGORIES: {},
                 trackevent.INTERNED_DEBUG_ANNOTATION_NAMES: {}}
-    vocabulary, used = set(), set()
+    vocabulary, used = collections.defaultdict(set), set()
     annotation_iids, name_iids, category_iids = [], [], []
+    # `(annotation name iid, string value)` in emission order, so an
+    # annotation's *value* can be named by the key it arrived under
+    # once the interning table is complete.
+    annotation_values = []
 
     for packet in packets:
         for field, _wire, value in _wire_fields(packet):
@@ -285,18 +317,27 @@ def decode(path):
             elif field == trackevent.PACKET_TRACK_DESCRIPTOR:
                 _read_track(value, vocabulary, used)
             elif field == trackevent.PACKET_TRACK_EVENT:
-                _read_event(value, vocabulary, used,
-                            annotation_iids, name_iids, category_iids)
+                _read_event(value, vocabulary, used, annotation_iids,
+                            name_iids, category_iids, annotation_values)
 
     names = interned[trackevent.INTERNED_EVENT_NAMES]
     categories = interned[trackevent.INTERNED_EVENT_CATEGORIES]
     annotations = interned[trackevent.INTERNED_DEBUG_ANNOTATION_NAMES]
-    vocabulary |= {names[i] for i in name_iids if i in names}
-    vocabulary |= {categories[i] for i in category_iids if i in categories}
-    vocabulary |= {annotations[i] for i in annotation_iids if i in annotations}
+    for iid in name_iids:
+        if iid in names:
+            vocabulary[names[iid]].add("slice-name")
+    for iid in category_iids:
+        if iid in categories:
+            vocabulary[categories[iid]].add("category")
+    for iid in annotation_iids:
+        if iid in annotations:
+            vocabulary[annotations[iid]].add("annotation-key")
+    for iid, text in annotation_values:
+        vocabulary[text].add(f"debug-annotation:{annotations.get(iid, '?')}")
     if any(i in categories for i in category_iids):
         used.add("category")
-    return {v for v in vocabulary if v}, used
+    return ({value: frozenset(sites) for value, sites in vocabulary.items()
+             if value}, used)
 
 
 def _gzipped(path):
@@ -323,27 +364,30 @@ def _read_track(buf, vocabulary, used):
     used.add("track")
     for field, _wire, value in _wire_fields(buf):
         if field == trackevent.TRACK_NAME:
-            vocabulary.add(value.decode("utf-8", "replace"))
+            vocabulary[value.decode("utf-8", "replace")].add("track-name")
         elif field == trackevent.TRACK_PROCESS:
             used.add("process-track")
             for inner, _w, payload in _wire_fields(value):
                 if inner == trackevent.PROCESS_NAME:
-                    vocabulary.add(payload.decode("utf-8", "replace"))
+                    vocabulary[payload.decode("utf-8", "replace")].add(
+                        "process-name")
         elif field == trackevent.TRACK_THREAD:
             used.add("thread-track")
             for inner, _w, payload in _wire_fields(value):
                 if inner == trackevent.THREAD_NAME:
-                    vocabulary.add(payload.decode("utf-8", "replace"))
+                    vocabulary[payload.decode("utf-8", "replace")].add(
+                        "thread-name")
         elif field == trackevent.TRACK_COUNTER:
             used.add("counter")
             for inner, _w, payload in _wire_fields(value):
                 if inner == trackevent.COUNTER_UNIT_NAME:
                     used.add("counter-unit")
-                    vocabulary.add(payload.decode("utf-8", "replace"))
+                    vocabulary[payload.decode("utf-8", "replace")].add(
+                        "counter-unit")
 
 
 def _read_event(buf, vocabulary, used, annotation_iids, name_iids,
-                category_iids):
+                category_iids, annotation_values):
     for field, _wire, value in _wire_fields(buf):
         if field == trackevent.EVENT_TYPE:
             if value == trackevent.TYPE_SLICE_BEGIN:
@@ -361,11 +405,18 @@ def _read_event(buf, vocabulary, used, annotation_iids, name_iids,
             used.add("flow")
         elif field == trackevent.EVENT_DEBUG_ANNOTATIONS:
             used.add("debug-annotation")
+            # One annotation's key and value are two fields of the same
+            # sub-message, so they are paired here rather than
+            # accumulated separately - which is what lets a value be
+            # named by the key it arrived under (`UX-485`).
+            key = None
             for inner, _w, payload in _wire_fields(value):
                 if inner == trackevent.ANNOTATION_NAME_IID:
                     annotation_iids.append(payload)
+                    key = payload
                 elif inner == trackevent.ANNOTATION_STRING_VALUE:
-                    vocabulary.add(payload.decode("utf-8", "replace"))
+                    annotation_values.append(
+                        (key, payload.decode("utf-8", "replace")))
 
 
 def emit_trace(capture, out_dir):
@@ -393,26 +444,87 @@ def assess(values):
     return "assessable", strings
 
 
+def sites_of(landed, vocabulary):
+    """Where a field's matched values arrived, as a sorted list."""
+    sites = set()
+    for value in landed:
+        sites |= vocabulary.get(value, frozenset())
+    return sorted(sites)
+
+
+def indistinguishable(matched):
+    """`{field: [the other fields it cannot be told apart from]}`.
+
+    `UX-485`. The census matches **values**, so a field whose matched
+    set is exactly another's is a field this instrument cannot
+    attribute: `trace.spans[].resources[]` reads `reached` the moment
+    `primary_resource` has a carrier, because the two hold the same
+    strings and they arrive at the same site.
+
+    Named rather than resolved. Which of two colliding fields the
+    emitter actually read is a fact about the emitter's *code*, and
+    this census reads emitted artifacts on purpose (fixing guide §5) -
+    so it reports the collision and leaves the decision to `DECLINED`,
+    where a human wrote down which one was declined and why.
+    """
+    same = collections.defaultdict(list)
+    fields = sorted(matched)
+    for i, one in enumerate(fields):
+        for other in fields[i + 1:]:
+            if matched[one] and matched[one] == matched[other]:
+                same[one].append(other)
+                same[other].append(one)
+    return dict(same)
+
+
 def coverage(capture, vocabulary):
     """`{plane: {verdict: [(field, detail)]}}` for one capture."""
     report = {}
     for plane, found in sorted(capture_fields(capture).items()):
         buckets = collections.defaultdict(list)
+        reached, matched = {}, {}
         for field, values in sorted(found.items()):
+            verdict, detail = assess(values)
+            # `UX-485`: a **declared** field is still measured, and
+            # still counts as a collision partner. Skipping it here
+            # would let a `DECLINED` entry hide the very coincidence
+            # this census exists to report - which is what that entry
+            # was doing before the collision rule existed.
+            if verdict == "assessable" and (detail & set(vocabulary)):
+                matched[field] = frozenset(detail & set(vocabulary))
             if field in DECLINED:
                 buckets["declined"].append((field, DECLINED[field]))
                 continue
-            verdict, detail = assess(values)
             if verdict == "unassessable":
                 buckets["unassessable"].append((field, detail))
                 continue
-            landed = detail & vocabulary
+            landed = matched.get(field)
             if landed:
-                buckets["reached"].append(
-                    (field, f"{len(landed)}/{len(detail)} value(s) in the trace"))
+                reached[field] = (
+                    f"{len(landed)}/{len(detail)} value(s) via "
+                    f"{', '.join(sites_of(landed, vocabulary))}")
             else:
                 buckets["dropped"].append(
                     (field, f"0/{len(detail)} value(s) in the trace"))
+        # `UX-485`: a field whose matched values are exactly another's
+        # is reported as *shared* rather than reached, because "these
+        # values are in the trace" is all this census measured about
+        # it - not "this field is what put them there".
+        collisions = indistinguishable(matched)
+        for field, detail in reached.items():
+            others = collisions.get(field)
+            if others:
+                # Two names and a count: eleven element-keyed fields
+                # collide on one capture, and printing all of them on
+                # each of their eleven lines is a paragraph nobody
+                # reads.
+                named = ", ".join(others[:2])
+                more = f" and {len(others) - 2} more" if len(others) > 2 else ""
+                buckets["shared"].append(
+                    (field, f"{detail}; indistinguishable from "
+                            f"{named}{more}"))
+            else:
+                buckets["reached"].append((field, detail))
         report[plane] = dict(buckets)
     return report
 
@@ -424,14 +536,18 @@ def render(capture, report, used, show_fields=True):
         dropped = buckets.get("dropped", [])
         unassessable = buckets.get("unassessable", [])
         declined = buckets.get("declined", [])
+        shared = buckets.get("shared", [])
         lines.append(
-            f"\nPlane {plane}: {len(reached)} reached, {len(dropped)} dropped, "
-            f"{len(declined)} declined, {len(unassessable)} unassessable")
+            f"\nPlane {plane}: {len(reached)} reached, {len(shared)} shared, "
+            f"{len(dropped)} dropped, {len(declined)} declined, "
+            f"{len(unassessable)} unassessable")
         if show_fields:
             for field, detail in dropped:
                 lines.append(f"    DROPPED   {field}  ({detail})")
             for field, _why in declined:
                 lines.append(f"    declined  {field}")
+            for field, detail in shared:
+                lines.append(f"    shared    {field}  ({detail})")
             for field, detail in reached:
                 lines.append(f"    reached   {field}  ({detail})")
     lines.append("\nPerfetto carriers this trace uses:")

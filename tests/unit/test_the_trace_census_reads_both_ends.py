@@ -13,7 +13,9 @@ The three ways it could go quiet, and the clause for each:
 - the assessability rule stops excluding what it cannot judge, so a
   boolean field is reported as reached or dropped on a coincidence.
 """
+import json
 import pathlib
+import shutil
 
 import pytest
 
@@ -57,7 +59,7 @@ class TestTheTraceSideIsReallyRead:
         # A category: only the interned category table has these.
         assert "bst-builder" in vocabulary, sorted(vocabulary)[:8]
         # A debug-annotation key: not an element, not a category.
-        assert {"on_critical_path", "downstream_count"} <= vocabulary
+        assert {"on_critical_path", "downstream_count"} <= set(vocabulary)
 
     def test_the_carriers_it_reports_are_the_ones_in_the_bytes(self, emitted):
         """`bga timeline` draws Plane 1 slices on named tracks with
@@ -128,6 +130,115 @@ class TestItDeclaresWhatItCannotAssess:
         verdict, values = census.assess({"app.bst", "core.bst"})
         assert verdict == "assessable"
         assert values == {"app.bst", "core.bst"}
+
+
+class TestAValueIsCreditedToOneFieldOrToNone:
+    """`UX-485`: the census matches values, so two fields holding the
+    same strings are two fields it cannot attribute.
+
+    `UX-469` found this the hard way: `trace.spans[].resources[]` read
+    `reached` the moment `primary_resource` got a carrier, because the
+    two hold exactly the same two strings. It was handled by declaring
+    `resources[]` away - a statement about one field rather than a
+    property of the instrument, and one that *hid* the coincidence
+    instead of reporting it.
+
+    Measured on a two-queue capture with nothing declared away: **13 of
+    17** Plane 2 `reached` verdicts were collisions, eleven of them
+    element-uid-keyed fields that all match the uid the slice name
+    carries.
+    """
+
+    def test_two_fields_with_one_value_set_are_both_reported_shared(self):
+        matched = {"a.field": frozenset({"X", "Y"}),
+                   "b.field": frozenset({"X", "Y"}),
+                   "c.field": frozenset({"X", "Z"})}
+        same = census.indistinguishable(matched)
+        assert same == {"a.field": ["b.field"], "b.field": ["a.field"]}, same
+
+    def test_a_field_with_its_own_values_is_not_shared(self):
+        matched = {"a.field": frozenset({"X"}), "b.field": frozenset({"Y"})}
+        assert census.indistinguishable(matched) == {}
+
+    def test_the_two_queue_capture_names_the_collision_UX_469_declared(
+            self, tmp_path):
+        """The row's own case, end to end. `primary_resource` is
+        carried and `resources[]` is not, and no artifact says which -
+        so the census says it cannot tell them apart, and `DECLINED`
+        says which one a human decided about."""
+        report, _vocab = self._two_queue(tmp_path)
+        shared = dict(report.get("1", {}).get("shared", []))
+        assert "trace.spans[].primary_resource" in shared, report.get("1")
+        assert "trace.spans[].resources[]" in (
+            shared["trace.spans[].primary_resource"]), shared
+
+    def test_a_declined_field_still_counts_as_a_collision_partner(
+            self, tmp_path, monkeypatch):
+        """The defect this row is about, in one clause. With
+        `resources[]` declared away, skipping it would leave
+        `primary_resource` reading a clean `reached` - the declaration
+        hiding the coincidence rather than deciding about it."""
+        monkeypatch.setattr(census, "DECLINED", {})
+        report, _vocab = self._two_queue(tmp_path)
+        with_none = {f for f, _d in report.get("1", {}).get("shared", [])}
+        assert {"trace.spans[].primary_resource",
+                "trace.spans[].resources[]"} <= with_none, with_none
+
+    def test_a_reached_field_says_which_carrier_brought_its_values(
+            self, tmp_path):
+        """The second axis. `reached` on its own cannot be checked by a
+        reader; the site can - so the site has to be the **real** one
+        and not a shape the message happens to have. `element_kind`'s
+        values arrive under the annotation of that name and nowhere
+        else, which is what this pins."""
+        report, _vocab = self._two_queue(tmp_path)
+        reached = dict(report.get("1", {}).get("reached", []))
+        assert reached, report.get("1")
+        for field, detail in reached.items():
+            assert " via " in detail, (field, detail)
+        kinds = reached.get("graph.elements[].element_kind")
+        assert kinds and kinds.endswith(
+            "via debug-annotation:element_kind"), kinds
+
+    def test_the_vocabulary_maps_a_value_to_where_it_arrived(self,
+                                                             tmp_path):
+        _report, vocabulary = self._two_queue(tmp_path)
+        assert vocabulary["PROCESS"] == frozenset(
+            {"debug-annotation:resource"}), vocabulary.get("PROCESS")
+        assert "category" in vocabulary["bst-builder"], vocabulary.get(
+            "bst-builder")
+
+    def _two_queue(self, tmp_path):
+        """A capture whose spans hold **two** resources.
+
+        `with_timeline` holds one - every span is `PROCESS` - and the
+        assessability rule excludes a one-valued field before any of
+        this can be reached (`"one distinct value cannot
+        discriminate"`). No committed capture has two, and the round
+        that found this read one out of `/tmp`, which is a guard that
+        skips on every machine but the one that wrote it. So the shape
+        is built here: half the spans are moved to `DOWNLOAD`, in both
+        `primary_resource` and `resources[]`, which is exactly the
+        collision `UX-469` walked into.
+        """
+        capture = tmp_path / "two-queue"
+        shutil.copytree(WITH_TIMELINE, capture)
+        spans_file = capture / "run/trace.json"
+        document = json.loads(spans_file.read_text())
+        spans = document["spans"]
+        assert len(spans) > 3, len(spans)
+        for at, span in enumerate(spans):
+            held = "DOWNLOAD" if at % 2 else "PROCESS"
+            span["primary_resource"] = held
+            span["resources"] = [held]
+        spans_file.write_text(json.dumps(document, indent=2))
+
+        into = tmp_path / "emit"
+        into.mkdir()
+        trace, complaint = census.emit_trace(capture, into)
+        assert trace is not None, complaint
+        vocabulary, _used = census.decode(trace)
+        return census.coverage(capture, vocabulary), vocabulary
 
 
 class TestADeclinedFieldIsDeclaredAndNotJustAbsent:

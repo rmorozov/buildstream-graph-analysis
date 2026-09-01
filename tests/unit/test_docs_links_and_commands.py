@@ -181,6 +181,14 @@ def test_the_pinned_bst_tier_count_matches_the_number_of_marked_tests():
     status-parity check, three scripts) made the decorator count say 24
     where CI's own `N passed` said 26. CI greps the number pytest
     prints, so the pin has to mean what pytest means.
+
+    `UX-480`: the number is written **twice** in that step - once in the
+    `grep -qE` that decides, and once in the `echo` that explains - and
+    this guard read only the echo. Round 72 raised the tier from 43 to
+    45, edited the echo, missed the grep, and this stayed green over two
+    commits while `bst-tests` failed on a suite where all 45 passed. Both
+    are read now, and against each other as well as against pytest: the
+    one that decides is the grep.
     """
     collected = subprocess.run(
         [sys.executable, "-m", "pytest", "-m", "bst", "--collect-only", "-q",
@@ -196,12 +204,25 @@ def test_the_pinned_bst_tier_count_matches_the_number_of_marked_tests():
     assert marked, "collected no bst-marked tests at all - the marker or the path moved"
 
     workflow = (REPO / ".github/workflows/ci.yml").read_text(encoding="utf-8")
-    pinned = re.search(r"Expected exactly (\d+) bst-gated tests to run", workflow)
-    assert pinned, "the bst-tests job no longer pins a count - that pin is the guard"
-    assert int(pinned.group(1)) == marked, (
-        f"{marked} bst-gated test(s) collect but .github/workflows/ci.yml pins "
-        f"{pinned.group(1)}. Update the pin deliberately - it is what stops a skipped "
-        f"tier reading as a pass."
+    said = re.search(r"Expected exactly (\d+) bst-gated tests to run", workflow)
+    assert said, "the bst-tests job no longer pins a count - that pin is the guard"
+    # The one that actually decides the step's exit status.
+    asserted = re.search(r"grep -qE \"\(\^\|\[\[:space:\]=\]\)(\d+) passed",
+                         workflow)
+    assert asserted, (
+        "the bst-tests job no longer greps for `N passed` - that grep is what "
+        "fails the step, and this guard cannot read a pin that is not there"
+    )
+    assert int(asserted.group(1)) == int(said.group(1)), (
+        f"the bst-tests job greps for {asserted.group(1)} passed and its message "
+        f"says {said.group(1)}. The grep is what decides, so a reader who trusts "
+        f"the message is told the wrong number - and this is exactly how round 72 "
+        f"shipped a red job on a green tier (UX-480)."
+    )
+    assert int(asserted.group(1)) == marked, (
+        f"{marked} bst-gated test(s) collect but .github/workflows/ci.yml greps for "
+        f"{asserted.group(1)}. Update the pin deliberately - it is what stops a "
+        f"skipped tier reading as a pass."
     )
 
 

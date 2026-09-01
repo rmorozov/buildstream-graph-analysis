@@ -1,6 +1,6 @@
 # UX-488: the reference is five hand-appends deep, and the re-record has to come after the rule change
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** `UX-476` items 1-3, which are what a candidate must be taken *after* | **Found by:** round 73, closing `UX-476` | **Serves:** the round that reads `spread`'s history off the reference's git log and finds one entry repeated five times | **Topic:** guards
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-476` items 1-3, which are what a candidate must be taken *after* | **Found by:** round 73, closing `UX-476` | **Serves:** the round that reads `spread`'s history off the reference's git log and finds one entry repeated five times | **Topic:** guards
 
 ## Motivation
 
@@ -70,6 +70,72 @@ one in the document's history, with `shift_files` present — and
 `git log -- tests/ci_reference.json` showing the append commits behind
 it rather than beside it.
 
-## Outcome
+## Outcome (round 73, 2026-09-01) — 🟢 Done
 
-_Not started._
+### The document, whole
+
+`tests/ci_reference.json` is replaced by run **33544888654**'s
+`test (3.11)` candidate (head `3dd6e03`), read out of the
+`::group::the same document, for a reader without the artifact` block
+`UX-476` added — which is the route this row named, and its first real
+use.
+
+```console
+$ python3 -c "import json;print(json.load(open('tests/ci_reference.json'))['spread'])"
+{'files': 377, 'shift_files': 138, 'shift': 1.069, 'min': 0.094,
+ 'p25': 0.765, 'p75': 1.107, 'max': 5.709}
+```
+
+against what every commit since `UX-457` carried:
+
+```console
+{'files': 314, 'shift': 1.34, 'min': 0.105, 'p25': 0.796,
+ 'p75': 1.269, 'max': 7.257}
+```
+
+**The second distinct spread**, which is what `UX-458`'s Acceptance
+Test could not be given by appending, and the first one carrying
+`shift_files`. 390 files -> 397; the seven the appends never reached
+are in it, including `test_the_capability_census_discriminates.py`,
+which is the file the gate was failing on.
+
+### The two shifts, and that they are one number now
+
+`UX-476` measured the gate's shift and the recorded `spread`'s 24%
+apart before item 2. Paired on run **33540660861**, whose gate line and
+whose candidate can both be read:
+
+```text
+gate       396 file(s) measured against ci_reference.json (github-actions ubuntu-latest,
+           test (3.11), -n auto), this run x1.04 from 138 file(s) over 1s, IQR 0.24
+candidate  {'files': 375, 'shift_files': 138, 'shift': 1.039, ...}
+```
+
+`x1.04` and `1.039` — the same quantity over the same 138 files, which
+is the identity item 2 was for.
+
+### Deviation from the Required Fix
+
+- **The candidate comes from a run that was red, not green.** The row
+  says "from a green run's candidate", and that cannot be satisfied as
+  written: the run is red *because* the reference is missing entries,
+  and the reference cannot be refreshed without a run. The deadlock is
+  in the wording rather than in the evidence — what "green" is standing
+  in for is *the timings are trustworthy*, and on run 33544888654 the
+  suite ran to completion and recorded all 397 files; the step that
+  failed is the gate reading this document. Written down rather than
+  worked around, because the next round will meet the same deadlock the
+  next time a test file is added.
+- **The re-recording run's own gate line is not quoted.** The API
+  returns only a log tail and the drift step sits above it on that job,
+  so the pairing above is from the immediately preceding run instead.
+  `UX-476` built the `::group::` route so a reader without artifact
+  access could get the *candidate*; the gate's own line has no such
+  route, and that is worth a row of its own.
+
+### The runs
+
+```text
+make test  5,688 passed, 27 skipped in 326.10s (0:05:26)
+make lint  ruff + PyMarkdown, both clean
+```

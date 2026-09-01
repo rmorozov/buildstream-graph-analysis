@@ -236,6 +236,8 @@ tools/dev_trace_coverage.py  which captured field reaches the emitted
                              trace, and which Perfetto carriers it uses (UX-466)
 tools/bga_gen_project.py     a BuildStream project `bst build` accepts,
                              from a topology spec (UX-465)
+tools/dev_plane_capability.py  what Plane 2 and Plane 3 could record and
+                             do not, both sides run rather than read (UX-470)
 ```
 
 **Tests and docs:**

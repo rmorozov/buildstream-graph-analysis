@@ -195,10 +195,22 @@ def multiple_equal_predecessors(duration_us: int = 10000) -> Topology:
     return _build(elements, dependencies, spans, wall_end_us=tie_us + duration_us, max_jobs=2)
 
 
-def deep_unequal_predecessors(duration_us: int = 10000, chain_length: int = 3) -> Topology:
+def deep_unequal_predecessors(
+    duration_us: int = 10000, chain_length: int = 3,
+    shallow_us: Optional[int] = None,
+) -> Topology:
     """target depends on a shallow predecessor that finishes early and a
     `chain_length`-deep chain that finishes later - target's ready time
-    is governed by the deep chain, not the shallow one."""
+    is governed by the deep chain, not the shallow one.
+
+    `shallow_us` inverts that, and `UX-478` is why it exists. Make the
+    shallow predecessor heavy enough and the **critical path** runs
+    through it - two elements - while the **graph** still has
+    `chain_length + 1` dependency stages. Every other committed shape
+    has those two numbers equal, which is what let a mutation reading
+    the measured path instead of the graph pass unnoticed; here they
+    differ by construction.
+    """
     shallow = "shallow.bst"
     chain_uids = [f"deep{i}.bst" for i in range(chain_length)]
     target = "target.bst"
@@ -210,15 +222,18 @@ def deep_unequal_predecessors(duration_us: int = 10000, chain_length: int = 3) -
     dependencies.append(_dependency(shallow, target))
     dependencies.append(_dependency(chain_uids[-1], target))
 
-    spans = [_span(shallow, 0, duration_us)]
+    shallow_dur = duration_us if shallow_us is None else shallow_us
+    spans = [_span(shallow, 0, shallow_dur)]
     t = 0
     for uid in chain_uids:
         spans.append(_span(uid, t, duration_us))
         t += duration_us
     target_dur = duration_us
-    spans.append(_span(target, t, target_dur))
+    start = max(t, shallow_dur)
+    spans.append(_span(target, start, target_dur))
 
-    return _build(elements, dependencies, spans, wall_end_us=t + target_dur, max_jobs=2)
+    return _build(elements, dependencies, spans,
+                  wall_end_us=start + target_dur, max_jobs=2)
 
 
 def independent_branches(

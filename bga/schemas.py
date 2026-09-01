@@ -1430,6 +1430,14 @@ _EVIDENCE_FIELDS = {
     # Counts.
     "blast_count": ("count",
         "Elements a change here rebuilds, transitively."),
+    "dependency_stages": ("count",
+        "Levels the graph's elements group into by their dependencies "
+        "alone - nothing in a stage can start before the stage above it "
+        "finishes, whatever the capacity (`UX-478`)."),
+    "widest_stage": ("count",
+        "Elements in the largest dependency stage - the ceiling on how "
+        "many can ever build at once, which no number of builders lifts "
+        "(`UX-478`)."),
     "zero_slack_off_path": ("count",
         "Zero-slack elements that are not on the critical path this run "
         "reported - each one is a second path of the same length. Zero "

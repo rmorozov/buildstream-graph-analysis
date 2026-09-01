@@ -55,7 +55,23 @@ FIXTURES = {"golden": REPO / "tests/fixtures/golden/mixed_task_kinds",
 # about the document got deeper: the golden reached a shape the tree
 # already carries. Measured after: 0.462, against 0.574 when `UX-344`
 # was filed, so this fixture is still well below where it started.
-DEEPER_THAN_THREE = {"golden": (0.574, 0.47), "macro_micro": (0.671, 0.58)}
+#
+# Round 73 added two findings - `blast-radius-reach` (`UX-479`) and
+# `graph-width` (`UX-478`) - and each one costs the golden document a
+# `provenance[]` record whose `rule` block is six leaves, every one of
+# them four deep. Nothing new is nested: the record has exactly the
+# shape every other claim's has, and the ratio moves because a
+# 695-leaf document gained deep leaves without gaining shallow ones.
+# Measured after: golden 0.4705 (695 leaves, 327 deep), macro_micro
+# 0.4121 (2,138 leaves, 881 deep). Both still far below the 0.574 and
+# 0.671 `UX-344` was filed on, and the golden's bound moves 0.47 ->
+# 0.48 with that reading rather than the record being reshaped to fit
+# a number.
+#
+# The right fix if this keeps climbing is not a looser bound: it is
+# `UX-483`, since a provenance record is where most of this document's
+# depth lives.
+DEEPER_THAN_THREE = {"golden": (0.574, 0.48), "macro_micro": (0.671, 0.58)}
 
 #: `macro_micro` keeps a seventh level, argued in the item: a step's
 #: `entering` list is four real relations, not a namespace.

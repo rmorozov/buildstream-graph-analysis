@@ -30,8 +30,9 @@ import pytest
 
 from tests.fixtures import topologies as topo
 
-SHAPE_FINDINGS = {"mesh-graph", "chain-graph", "criticality",
-                  "blast-radius-ranking", "blast-radius-structural"}
+SHAPE_FINDINGS = {"mesh-graph", "chain-graph", "graph-width",
+                  "criticality", "blast-radius-ranking",
+                  "blast-radius-structural"}
 
 
 def _payload(tmp_path, topology, name):
@@ -190,6 +191,11 @@ class TestTheShapeThatOffersNothing:
             "blast-radius-structural": {"wide"},
             "chain-graph": {"chain"},
             "mesh-graph": set(),
+            # `UX-478`. The flat set is the negative case, and it is the
+            # only one: with every element independent there is one
+            # dependency stage, the widest stage is the whole graph and
+            # the shape forbids nothing.
+            "graph-width": {"wide", "chain"},
         }
 
     def test_no_shape_finding_speaks_about_every_shape(self, wide, chain, flat):
@@ -323,3 +329,96 @@ class TestTheChainAndTheMeshGetDifferentSentences:
                            if r["id"] == "graph-owner"), None)
             assert reader is not None, [r["id"] for r in payload["readers"]]
             assert name in reader["findings"], reader
+
+
+class TestTheGraphOwnerHasAFindingThatReadsNoDuration:
+    """`UX-478`. R3's question is *"What does the shape of this graph
+    make impossible?"*, and until this item every finding that reached
+    that reader was a function of measured durations - `criticality`
+    needs a contested path, `mesh-graph`/`chain-graph` read the slack
+    the durations produce. So on `UX-468`'s six-element serial chain,
+    the one project whose entire defect *is* the graph, the reader
+    index dropped R3:
+
+    ```text
+    ['local-optimizer', 'recipe-author', 'ci-gatekeeper', 'capacity-operator']
+    ```
+
+    and the same graph with the per-element seconds tripled brought it
+    back. A reader whose presence turns on how long the build took is
+    not a reader about shape.
+
+    `graph-width` reads `elements.unweighted_depth` and nothing else.
+    """
+
+    def test_the_same_graph_at_two_speeds_says_the_same_thing(
+            self, tmp_path_factory):
+        """The clause that carries the file. One graph, durations an
+        order of magnitude apart - which is the pair that made `UX-478`
+        reproducible - and the shape claim is identical.
+
+        The diagnosis and the concentration table move; this does not.
+        """
+        seen = {}
+        for label, us in (("slow", 30_000_000), ("fast", 1_000_000)):
+            payload = _payload(tmp_path_factory.mktemp(f"speed_{label}"),
+                               topo.linear_chain(n=5, duration_us=us),
+                               f"speed_{label}")
+            found = _by_id(payload)
+            assert "graph-width" in found, sorted(found)
+            seen[label] = found["graph-width"]["evidence"]
+        assert seen["slow"] == seen["fast"] == {
+            "element_count": 5, "dependency_stages": 5, "widest_stage": 1}, seen
+
+    def test_it_names_the_ceiling_no_capacity_lifts(self, chain):
+        finding = _by_id(chain)["graph-width"]
+        assert "5 dependency stages" in finding["title"], finding["title"]
+        assert "no more than 1" in finding["title"], finding["title"]
+        assert finding["reader"] == "graph-owner", finding
+
+    def test_the_flat_set_is_told_nothing(self, flat):
+        """The negative case `UX-478` asked for. Every element
+        independent: one stage, the widest stage is the whole graph, and
+        a finding here would be describing the *absence* of a
+        constraint as if it were one."""
+        assert "graph-width" not in _by_id(flat), sorted(_by_id(flat))
+
+    def test_the_wide_graph_names_its_own_ceiling(self, wide):
+        """Not just "it fires on more than one shape": the number has to
+        be this graph's, or the finding is a constant with a sentence
+        around it."""
+        finding = _by_id(wide)["graph-width"]
+        assert finding["evidence"] == {
+            "element_count": 7, "dependency_stages": 2, "widest_stage": 6}
+
+    def test_the_graph_owner_is_offered_on_every_shape_that_has_one(
+            self, wide, chain, flat, mesh):
+        """The defect as the reader saw it. R3 is now offered on all
+        four - three by `graph-width`, the flat set by `criticality`,
+        which is the shape where a ceiling would be a lie."""
+        for label, payload in (("wide", wide), ("chain", chain),
+                               ("flat", flat), ("mesh", mesh)):
+            ids = [r["id"] for r in payload["readers"]]
+            assert "graph-owner" in ids, (label, ids)
+
+    def test_the_stages_are_the_graph_and_not_the_measured_path(
+            self, tmp_path_factory):
+        """The clause a mutation asked for. Reading the critical path's
+        length instead of the graph's depth passed every clause above,
+        because on every other committed shape the two numbers are
+        equal - the deepest chain is also the heaviest.
+
+        `deep_unequal_predecessors(shallow_us=...)` separates them by
+        construction: the graph is four stages deep and the critical
+        path is two elements, because the shallow predecessor was made
+        heavy enough to carry it.
+        """
+        payload = _payload(tmp_path_factory.mktemp("deep"),
+                           topo.deep_unequal_predecessors(shallow_us=90_000),
+                           "deep")
+        path = [row["element_uid"] for row
+                in _by_id(payload)["time-concentration"]["evidence"]["rows"]]
+        assert path[:2] == ["shallow.bst", "target.bst"], path
+        evidence = _by_id(payload)["graph-width"]["evidence"]
+        assert evidence["dependency_stages"] == 4, evidence
+        assert evidence["element_count"] == 5, evidence

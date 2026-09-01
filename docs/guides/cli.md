@@ -305,6 +305,7 @@ The JSON carries a **`findings` array** — the same conclusions the text report
 | `efficiency-score` | varies | how close the scheduler got to the certified floor |
 | `time-concentration` | varies | which elements the critical path's duration is actually in |
 | `mesh-graph` | info | most elements have zero slack **and some are off the critical path** — several chains of equal length, so a saving on one is capped by the next (`UX-475`) |
+| `graph-width` | info | how many dependency stages the graph has and how many elements its widest holds — the ceiling on concurrency the shape imposes, read from the dependencies alone and from no duration (`UX-478`) |
 | `chain-graph` | info | most elements have zero slack and all of them are on the critical path — one chain, so a saving on any of them is worth its own duration (`UX-475`) |
 | `blast-radius-reach` | medium | elements a change to which rebuilds something else, named with their downstream count. Published whatever the diagnosis says — a chain-bound build has a blast radius too (`UX-479`) |
 | `blast-radius-ranking` | varies | elements worth fixing first by downstream reach (needs `--diagnostics`) |

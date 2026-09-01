@@ -12,7 +12,7 @@ the rule.
 
 | | |
 |---|---|
-| `make test` | the whole suite, ~4m45s at `-n auto`. **Required before marking anything done.** |
+| `make test` | the whole suite, ~5m30s at `-n auto`. **Required before marking anything done.** |
 | `make test-touching` | just the files naming the modules your diff touched (~4s) |
 | `make test-small` \| `-medium` \| `-large` \| `-fast` | tiers, from measured duration in `tests/tiers.py` |
 | `make test-tiers` | the suite plus a tier-drift parse, in one run |
@@ -20,8 +20,14 @@ the rule.
 | `make check-clean` | fails if an ignored path is tracked |
 | `python tools/dev_close_task.py UX-NNN --move --note "…"` | the four mechanical edits that close a task |
 
-`PYTEST_XDIST= make test-small` turns parallelism off — what you want
-with `-x` or under `pdb`.
+`PYTEST_XDIST= make test-small` turns parallelism off (for `-x` or `pdb`).
+
+## Skills, in the order a task uses them
+
+`orient` (where is it) → `decompose` (surfaces, input classes, tracks,
+the batch gate) → `measure` → `falsify` → `verify` (close it).
+`derive` before moving viewer code. Send wide reading to the
+`researcher` agent and a finished change to the `verifier` agent.
 
 ## Conventions
 
@@ -37,10 +43,19 @@ with `-x` or under `pdb`.
   index row. `dev_close_task.py` edits both.
 - `docs/spec/specification.md` is ground truth — read line ranges,
   never the whole file, and never edit it outside the Part 32 registry.
-- **Send wide reading to a subagent.** A backlog sweep, a "where is
-  this" question, a large log — `.claude/agents/researcher.md` reads it
-  and returns the conclusion, so the reading never enters the main
-  session's context. One CI job log ran to 63 KB in round 66.
+
+## Register
+
+Terse. The *why* is one sentence; the history lives in the task file
+and `git log`, never in a comment or docstring. Numbers, not narrative.
+`tests/unit/test_the_register_is_terse.py` holds the first two rows.
+
+| | |
+|---|---|
+| module docstring | ≤ 25 lines — the dev tools under `tools/` and the hooks; older ones only shrink |
+| Outcome section | ≤ 80 lines from `UX-497` on: the gap measured, the close measured, the mutation table, the deviation |
+| code comment | one line of why; rejected alternatives and rationale go in the task file |
+| commit body | ≤ 8 lines; the task file is the record |
 
 ## Architecture
 
@@ -59,11 +74,7 @@ Section 6 of the fixing guide is the full map. Don't re-derive it.
   the gate, and skipping it shipped a slack budget in round 66.
 - **`git add -A` / `git add .`** — forbidden by §4a.1; stage paths.
 - **Builds an instrument that reads a proxy** for the thing it names —
-  the most-sighted defect in this repository, in four shapes: a text
-  scan that cannot tell code from data, a ratio at the noise floor, a
-  comparison across machines, the wrong population. The rule is fixing
-  guide §5; the three questions that catch it are in the `measure`
-  skill.
+  four shapes, fixing guide §5; the three questions are in `measure`.
 - **Writes a guard whose setup another gate already excludes**, so it
-  passes whatever the gate under test does. Five found in `UX-420`
-  alone. Mutate it; do not read it.
+  passes whatever the gate under test does. Mutate it; do not read it.
+- **Writes the round's story into the docstring.** The register above.

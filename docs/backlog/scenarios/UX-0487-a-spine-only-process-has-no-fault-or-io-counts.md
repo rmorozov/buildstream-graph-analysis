@@ -250,3 +250,76 @@ make test-touching   334 passed in 30.52s
 make test            5,669 passed, 27 skipped in 316.55s (0:05:16)
 make lint            ruff + PyMarkdown, both clean
 ```
+
+### Follow-up (round 73, same day): CI falsified the agreement clause
+
+`TestTheTwoMechanismsAgree` asserted the two mechanisms produce
+**identical** figures. CI falsified it on the first run that carried
+it, on two interpreters:
+
+```text
+tests/unit/test_a_spine_record_carries_what_the_hook_would_have.py:131
+E   AssertionError: minflt: hook 353, spine 354
+FAILED ...::TestTheTwoMechanismsAgree::test_the_fault_counts_are_identical
+```
+
+It is not a different quantity, it is a different **instant**. The
+hook calls `getrusage` from its destructor; the spine reads
+`/proc/<pid>/task/<pid>/stat` on the exit event, strictly after it —
+the same read-order asymmetry this file already documents for
+`oublock` in `test_the_shell_that_spawned_it_is_not_charged_for_it`.
+A minor fault taken in between makes the spine's count larger by one,
+and never smaller. The clause was written from twelve local runs that
+all came out equal:
+
+```text
+python3 /tmp/skew_probe.py     # 12 runs, this container
+minflt    spine-hook: min 0 max 0 [(0, 12)]
+majflt    spine-hook: min 0 max 0 [(0, 12)]
+inblock   spine-hook: min 0 max 0 [(0, 12)]
+oublock   spine-hook: min 0 max 0 [(0, 12)]
+```
+
+Twelve agreeing runs are not a proof of equality, and the guard turned
+that into an assertion. **This is the shape `UX-213` is about with the
+axis swapped**: not one machine's data, one machine's *timing*.
+
+A tolerance would have been a number nothing measured. A comparison
+was available instead — measured over 5 runs on this container:
+
+```text
+worker hook/spine minflt 340 340 | shell spine minflt 91 | other spine minflt ['340', '82', '91']
+worker hook/spine minflt 339 339 | shell spine minflt 91 | other spine minflt ['339', '82', '91']
+worker hook/spine minflt 340 340 | shell spine minflt 90 | other spine minflt ['340', '81', '90']
+worker hook/spine minflt 340 340 | shell spine minflt 90 | other spine minflt ['340', '83', '90']
+worker hook/spine minflt 339 339 | shell spine minflt 91 | other spine minflt ['339', '82', '91']
+```
+
+So the clauses now say: `hook <= spine` (the read order), and the two
+mechanisms are either **equal** or closer to each other than the worker
+is to any other process the spine recorded — a ~250-fault margin, with
+no constant in it. `majflt` is 0 on both and the helper says so rather
+than counting 0 == 0 as agreement.
+
+#### Mutations verified red and reverted (4), all on `spine.c`
+
+| # | mutation | reddened |
+|---|---|---|
+| M1 | the spine writes no fault counts at all — the state this item was filed for | 3 of 7 |
+| M2 | `/proc/<pid>/io` again, the whole-process file that folds in reaped children | 5 of 7 |
+| M3 | the spine reports one fault fewer than it read | 1 of 7 — the read-order clause |
+| M4 | the spine reads the right field of the **wrong process** | 1 of 7 |
+
+#### The guard of mine that did not discriminate
+
+**M4 passed on the first rewrite.** The helper returned early when every
+spine record carried the same value — which is exactly what reading one
+wrong process for all of them produces, so the clause stopped asserting
+at the moment it was needed. The early return is now narrowed to the
+genuinely degenerate case (the counter is zero on both sides), and the
+absence of a comparison population is an assertion failure rather than
+a silent return. M4 then reddens:
+
+```text
+E   assert (10939 == 340 or (10939 - 340) < 10599)
+```

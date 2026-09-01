@@ -46,6 +46,22 @@ added). They are consecutive. So `CI_DRIFT_RUNS = 2` reported it:
       x1.66 after this run's x0.81 shift
 ```
 
+### And again, on a third file, two commits later
+
+```text
+2 file(s) slower than CI's own record of them:
+  tests/unit/test_the_page_has_a_reader.py  13.7s  against 8.8s recorded,
+      x1.70 after this run's x0.91 shift
+```
+
+Run 33505406758, head `fe89e0a`. `git log origin/main..HEAD --` on that
+file and on `bga/viewer/` is empty, and the suite itself **passed** —
+`make test` was green and the job was failed by the gate alone. So the
+count is now three distinct untouched files reported on this one branch:
+`test_emphasis_is_a_budget.py`, `test_why_bga_believes_what_it_believes.py`
+and `test_the_page_has_a_reader.py`. All three are browser-booting files,
+which is the population `UX-442`'s own four readings came from.
+
 `UX-442` filed `CI_DRIFT_RUNS` on a file that read 7.1 / 7.1 / 7.5 /
 13.9 across four runs, and reasoned that **an excursion does not
 repeat**. This is the same kind of file — the emphasis budget boots the

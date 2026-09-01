@@ -130,9 +130,43 @@ await send("Emulation.setDeviceMetricsOverride", {
 if (observing) await new Promise((resolve) => setTimeout(resolve, 300));
 recording = true;
 await send("Page.navigate", { url });
-// The page is one file with inlined payloads and no network, so a fixed
-// settle is enough and a load-event race is not worth the machinery.
-await new Promise((resolve) => setTimeout(resolve, 1200));
+// `UX-482`: this was a fixed 1,200ms settle, on the reasoning that the
+// page is one file with inlined payloads and no network. That is a
+// *duration* standing in for a *condition* - fixing guide s5 - and it
+// lost on a loaded two-core runner: the first boot of a module observed
+// a page mid-render and counted 40 of its 47 sections, while the second
+// boot in the same module, with the browser already warm, counted all
+// 47. The guard comparing the two then reported a difference the page
+// does not have.
+//
+// So the wait is now the condition it always meant: the rendered size
+// of `#report` has stopped changing. Two consecutive equal samples
+// 150ms apart, with the old 1,200ms kept as a floor so nothing observes
+// earlier than it used to, and a ceiling so a page that never settles
+// fails on its assertion rather than hanging here.
+const SETTLE_FLOOR_MS = 1200;
+const SETTLE_STEP_MS = 150;
+const SETTLE_CEILING_MS = 20000;
+await new Promise((resolve) => setTimeout(resolve, SETTLE_FLOOR_MS));
+{
+  const size = async () => {
+    const got = await send("Runtime.evaluate", {
+      expression: `(() => {
+        const root = document.getElementById("report") || document.body;
+        return root ? root.innerHTML.length : 0;
+      })()`,
+      returnByValue: true,
+    });
+    return got.result?.value ?? 0;
+  };
+  let previous = await size();
+  for (let waited = 0; waited < SETTLE_CEILING_MS; waited += SETTLE_STEP_MS) {
+    await new Promise((resolve) => setTimeout(resolve, SETTLE_STEP_MS));
+    const now = await size();
+    if (now === previous) break;
+    previous = now;
+  }
+}
 
 const result = await send("Runtime.evaluate", {
   expression, returnByValue: true, awaitPromise: true,

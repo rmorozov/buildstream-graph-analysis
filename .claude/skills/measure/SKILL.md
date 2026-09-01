@@ -9,24 +9,26 @@ Every claim here is a pasted measurement (style guide rule 4,
 [`docs/contributing/style-guide.md`](../../../docs/contributing/style-guide.md)).
 These are the four that get rediscovered from a docstring each round.
 
-## The golden snapshot, after a deliberate behaviour change
+## A committed analysis, after a deliberate behaviour change
 
 ```bash
-PYTHONPATH=. python3 -m bga.cli analyze \
-    "$PWD/tests/fixtures/golden/mixed_task_kinds" \
-    --format json --diagnostics \
-  | sed "s|$PWD/tests/fixtures/golden/mixed_task_kinds|<run>|g" \
-  | python3 -c 'import json,sys; d=json.load(sys.stdin); d.pop("run_instance", None); d.pop("producer", None); print(json.dumps(d, indent=4))' \
-  > tests/fixtures/golden/mixed_task_kinds/expected_output.json
-git diff tests/fixtures/golden/mixed_task_kinds/expected_output.json
+python3 tools/dev_refresh_analysis.py            # what disagrees, and how
+python3 tools/dev_refresh_analysis.py --write tests/fixtures/with_timeline
+git diff tests/fixtures/with_timeline/analyze.json
 ```
 
-The absolute path and the `<run>` rewrite are both load-bearing —
-`tests/test_golden.py::_run_analyze` does exactly this, and a recipe
-that skips either writes a snapshot the test can never match. So is
-dropping `run_instance` and `producer` — both name the machine or the
-build rather than the analysis. Then read the diff and confirm the change you
-intended is the *only* one.
+Two fixtures hold an analysis the tool produced — the golden snapshot
+and `with_timeline` — and `--write` with no argument refreshes both.
+Then read the diff and confirm the change you intended is the *only*
+one.
+
+This used to be a shell pipeline here, a second copy in
+`tests/test_golden.py`'s docstring and a third in its helper. The
+rewrite of the fixture's path and the dropping of `run_instance` and
+`producer` are all load-bearing, and the fixture that had no recipe at
+all drifted four findings behind the analyzer before anything noticed
+(`UX-486`). The rule is stated once now, in the tool, and both guards
+call it.
 
 ## A run at scale, byte-reproducible
 

@@ -74,15 +74,25 @@ class TestTheStampIsWritten:
 
         assert producer.read(json.loads(out.stdout)) is not None
 
-    def test_the_stamp_the_golden_file_drops_is_asserted_here(self):
-        """`tests/test_golden.py` pops `producer` so the snapshot does
-        not fail on the first release. That is correct and it is also a
-        hole: a dropped field nothing else checks is a field that can
-        stop being written unnoticed. This is the other half."""
-        golden = (REPO / "tests/test_golden.py").read_text(encoding="utf-8")
-        assert 'payload.pop("producer", None)' in golden, (
-            "the golden harness no longer drops the stamp - if that is "
-            "deliberate this test is what should change, not this comment")
+    def test_the_stamp_the_committed_fixtures_drop_is_asserted_here(self):
+        """Every committed analysis drops `producer` so it does not fail
+        on the first release. That is correct and it is also a hole: a
+        dropped field nothing else checks is a field that can stop being
+        written unnoticed. This is the other half.
+
+        `UX-486` moved the drop out of `tests/test_golden.py`'s helper
+        and into `tools/dev_refresh_analysis.MACHINE_KEYS`, which every
+        committed analysis is now written under. Read from the module
+        rather than grepped out of a file: the list is the declaration,
+        and a text scan of a harness cannot tell a line that runs from a
+        line in a comment.
+        """
+        from tools import dev_refresh_analysis as refresh
+
+        assert "producer" in refresh.MACHINE_KEYS, (
+            f"no committed analysis drops the stamp any more - if that is "
+            f"deliberate this test is what should change, not this "
+            f"comment: {refresh.MACHINE_KEYS}")
 
 
 class TestTheAbsenceHasAName:

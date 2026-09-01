@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-487 scenarios: **4 open**, 483 closed.
+489 scenarios: **5 open**, 484 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -27,7 +27,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | cli | 0 | 5 |
 | store | 2 | 28 |
 | docs | 0 | 43 |
-| guards | 2 | 86 |
+| guards | 3 | 86 |
 
 ## Open scenarios
 
@@ -38,8 +38,9 @@ task file, which is the only place it ever lived twice.
 |---|---|---|---|---|---|
 | UX-92 | [cache effectiveness — hits, misses, churn, trends — is invisible to the tool](UX-0092-cache-effectiveness-is-invisible-to-the-tool.md) | store | Medium | — | 🟡 |
 | UX-96 | [the baseline set exists, but assembling it is a scavenger hunt](UX-0096-the-baseline-set-exists-but-assembling-it-is-a-scavenger-hunt.md) | store | Medium | — | 🟡 |
-| UX-488 | [the reference is five hand-appends deep, and the re-record has to come after the rule change](UX-0488-the-wholesale-re-record-the-drift-rule-change-has-to-follow.md) | guards | Medium | the round that reads `spread`'s history off the reference's git log and finds one entry repeated five times | 🔴 |
 | UX-489 | [the answer key asserts a ranking with no margin, on a build it runs for real](UX-0489-the-answer-key-asserts-a-ranking-with-no-margin.md) | guards | Medium | the contributor whose unrelated diff is red because a real build ranked two elements the other way round | 🔴 |
+| UX-490 | [the guard against one-machine data cannot see an absolute path](UX-0490-the-clone-guard-cannot-see-an-absolute-path.md) | guards | Medium | the round whose new guard rests on a capture in `/tmp` and passes here, green, for one session | 🔴 |
+| UX-491 | [the drift gate's own line has no route a reader can reach](UX-0491-the-gate-line-has-no-route-for-a-reader-without-the-log.md) | guards | Low | the round that has to pair a run's printed shift with the spread it recorded and cannot read the first one | 🔴 |
 
 ## UX-398..UX-410: the sixty-fourth round — the walk that judged the answers (2026-08-29)
 

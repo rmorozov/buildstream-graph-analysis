@@ -50,7 +50,7 @@ For every task, before marking it done:
 
 1. Run the exact command(s) given in the task's **Acceptance Test** section.
 2. Paste the actual command and actual output into the task file's **Verification Log** section (append, don't overwrite prior entries).
-3. **While you work, run the tests that touch what you changed** (`UX-336`): `make test-touching` maps the working diff to the test files that name it - measured at 4s on a one-module diff. Wider than one module, run the tier (`UX-238`). Every target runs `-n auto`; the whole suite is ~3m15s at that (10m40s single-process) and the small tier is 11s:
+3. **While you work, run the tests that touch what you changed** (`UX-336`): `make test-touching` maps the working diff to the test files that name it - measured at 4s on a one-module diff. Wider than one module, run the tier (`UX-238`). Every target runs `-n auto`; the whole suite is ~5m30s at that with the bst tier (re-measured round 74: 5,635 passed, 81 skipped, 328s on 4 cores; round 46 read 3m15s, 10m40s single-process) and the small tier is 11s:
 
    | target | measured at `-n auto` | what is in it |
    |---|---|---|

@@ -1426,6 +1426,7 @@ the other rounds now:
 | [46](../audits/round-46.md) | three field errors measured to mechanisms — the trim that interns 3,000 compiles to two names, the CSP that silently breaks tick labels on served pages, the TypeError that was never bga's — and the implementation loop re-tooled with a measured 2.5× (`UX-333`..`UX-336`) |
 | [63](../audits/round-63.md) | seventeen implementation rounds (47-62) recorded in the backlog's own sections, then the sibling's outsider walk run twice: six populations vanish between a cold and an incremental run, fourteen Plane 2 blocks reach no browser, and the Tabulator question filed as a product decision (`UX-388`..`UX-397`) |
 | [64](../audits/round-64.md) | the walk that judged the answers: against example 06's `optimized/` answer key, Plane 2 names every intended fix and correlate compresses them into one 12.9 s paragraph that reaches no page; the rounds 47-63 landing held eleven-of-twelve under falsification; the library question answered with a factory measurement, and the test plan built from the escape ledger (`UX-398`..`UX-410`) |
+| [74](../audits/round-74.md) | rounds 65-73 reviewed as a workflow and measured — a 5m30s suite gated per item, 60 KB read before every task file, Outcomes at a median 114 lines, 12 % of commits housekeeping; a Register section and its guard, the `decompose` and `orient` skills landed, and the lifecycle's remaining steps filed (`UX-497`..`UX-506`) |
 
 ## Verification Log
 

@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-494 scenarios: **9 open**, 485 closed.
+504 scenarios: **16 open**, 488 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -26,8 +26,8 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | viewer | 0 | 134 |
 | cli | 0 | 5 |
 | store | 2 | 28 |
-| docs | 2 | 43 |
-| guards | 5 | 87 |
+| docs | 7 | 50 |
+| guards | 7 | 90 |
 
 ## Open scenarios
 
@@ -45,6 +45,43 @@ task file, which is the only place it ever lived twice.
 | UX-493 | [a bound moved and the task file that presents it as current was not annotated](UX-0493-a-moved-bound-left-an-earlier-task-file-asserting-the-old-one.md) | docs | Low | the round that reads `UX-479`'s Outcome for the export bound and gets a number the tree no longer has | 🔴 |
 | UX-495 | [three browser guards swing 1.5-2.3x under parallel load](UX-0495-three-browser-guards-swing-under-parallel-load.md) | guards | Medium | the round that reads a browser guard's drift reading and cannot tell an excursion from a regression | 🔴 |
 | UX-496 | [a wholesale re-record samples every file once, and the drift factor has never been sized against that](UX-0496-a-one-run-re-record-bakes-in-one-sample-per-file.md) | guards | Medium | the round whose gate is red on a file nobody touched, and cannot tell a stale reference entry from a real regression | 🔴 |
+| UX-500 | [the batch gate, measured against the per-item suite](UX-0500-the-batch-gate-measured-against-the-per-item-suite.md) | docs | High | the implementing session's wall clock; the maintainer's subscription | 🔴 |
+| UX-501 | [the index is derived, not merged](UX-0501-the-index-is-derived-not-merged.md) | docs | High | two sessions on one slate; the orchestrator who merges them | 🔴 |
+| UX-502 | [the comment that tells the story](UX-0502-the-comment-that-tells-the-story.md) | docs | Medium | every session that opens a dev tool to use it, not to relive it | 🔴 |
+| UX-503 | [a new test file records itself in the CI reference](UX-0503-a-new-test-file-records-itself.md) | guards | High | the session that adds a guard and does not want a second commit for it | 🔴 |
+| UX-504 | [an implementer agent that may edit, in a worktree only](UX-0504-an-implementer-agent-that-may-edit-in-a-worktree.md) | guards | Medium | the orchestrating session that has two independent tracks and one context window | 🔴 |
+| UX-505 | [the rules card — the guide's rules on one page, its reasons behind it](UX-0505-the-rules-card.md) | docs | High | every session's first read; the maintainer's subscription | 🔴 |
+| UX-506 | [the Outcome skeleton fits the register](UX-0506-the-outcome-skeleton-fits-the-register.md) | docs | Medium | the session closing a task, and the round that reads it later | 🔴 |
+
+## UX-497..UX-506: the seventy-fourth round — the workflow, measured (2026-09-01)
+
+The brief: deduce the agents' workflow from what the repository holds
+and make it faster and lighter — the slow-down as tests grow,
+decomposition into parallel tracks, test analysis as a practice, a
+lifecycle sized for this project, context economy, and the sibling's
+register. The round is [`docs/audits/round-74.md`](../../audits/round-74.md).
+
+**Measured, not felt.** The suite is 5m30s at `-n auto` with the bst
+tier (three documents said 3m15s or 4m45s); a session reads 60 KB of
+process documents before its task file; Outcomes run a median 114
+lines; tests and task files grew five times faster than code since
+round 64; 19 of 162 commits were CI-reference or index housekeeping.
+
+**Landed and closed in the round:** `UX-497` (a Register section in
+`CLAUDE.md` and the guard that holds the tree to it — five mutations
+red), `UX-498` (the `decompose` skill: surfaces, the input-class
+partition, tracks, the batch gate), `UX-499` (the `orient` skill: ten
+one-command lookups below the context map).
+
+**Filed for the implementing session:** the batch gate measured
+against the per-item suite so `UX-426`'s open question gets its
+number (`UX-500`); the index counts derived rather than merged
+(`UX-501`); the dev tools' story-comments moved to the task files
+that already hold them (`UX-502`); a new test file recording itself
+in the CI reference instead of costing a second commit (`UX-503`); an
+implementer agent that may edit, in a worktree only (`UX-504`); the
+rules card — the guide's twelve rules on one page (`UX-505`); the
+Outcome skeleton slimmed to what a later round reads (`UX-506`).
 
 ## UX-398..UX-410: the sixty-fourth round — the walk that judged the answers (2026-08-29)
 

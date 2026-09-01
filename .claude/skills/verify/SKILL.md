@@ -55,7 +55,7 @@ python3 -m pytest tests/unit/test_<file>.py -q -k <substring>
 ## 3. The whole suite, and lint
 
 ```bash
-make test    # ~3m15s at -n auto (10m40s single-process)
+make test    # ~5m30s at -n auto with the bst tier (round 74: 5,635 tests, 4 cores); 10m40s single-process was round 46
 make lint    # ruff + PyMarkdown; both must be clean
 ```
 

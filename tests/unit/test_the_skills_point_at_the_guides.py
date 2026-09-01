@@ -31,6 +31,11 @@ OWNERS = {
     # order - `_module_order` walking `import` lines, and `UX-199`'s
     # empty page when that premise breaks.
     "derive": "docs/design/architecture.md",
+    # `UX-498`/`UX-499`: the step before the first edit, and the lookups
+    # below the context map; both are entry points to the guide's §2-§3
+    # and §6.
+    "decompose": "docs/contributing/fixing-guide.md",
+    "orient": "docs/contributing/fixing-guide.md",
 }
 
 _FRONTMATTER = re.compile(r"\A---\n(.*?)\n---\n", re.S)

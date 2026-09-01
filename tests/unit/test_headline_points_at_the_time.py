@@ -88,15 +88,60 @@ def test_the_headline_names_the_heaviest_elements_and_their_share():
     assert "94.0% of the" in text
 
 
+# `UX-479`: the ranked rows, not everything after the heading.
+#
+# Both guards below asserted a structural element's name was absent
+# from the whole block, as a proxy for "it is not ranked". That held
+# only while `blast-radius-structural` could not fire here: it was
+# behind the `chain_bound` gate `UX-479` removed, and both these
+# fixtures are chain-bound. The proxy now catches the *report* -
+# "Reaching most of the graph by design" - which is the sentence
+# `UX-258` added on purpose, so the guard was reading one claim and
+# judging another (fixing guide section 5).
+#
+# The rows of the table are indented four spaces under the heading;
+# the report and everything after it are indented two. So the slice is
+# the table, and each guard asserts both halves of `UX-258`'s split:
+# not in the ranking, and named in the report.
+def _ranked_rows(text):
+    lines = text.split("\n")
+    start = next(i for i, line in enumerate(lines)
+                 if line.lstrip().startswith("Where the time is"))
+    rows = []
+    for line in lines[start + 1:]:
+        if not line.startswith("    "):
+            break
+        rows.append(line)
+    return "\n".join(rows)
+
+
 def test_structural_elements_are_excluded_not_merely_tagged():
     """`UX-34` tagged them; here they must not be ranked at all, since a
     `stack` or `import` has no build commands to make faster."""
     text = _key_findings(_result(**CHAIN_BOUND))
     # UX-76: the two headline rankings became one table, so the block to
-    # look inside is the one that names where the time is.
-    ranking = text.split("Where the time is")[1]
+    # look inside is the one that names where the time is - and
+    # `UX-479` narrowed it to the table's own rows, for the reason in
+    # the note above `_ranked_rows`.
+    ranking = _ranked_rows(text)
 
+    assert "components/_private/cmake-stage1.bst" in ranking
     assert "symlinks.bst" not in ranking
+    # Reported, with its reach, rather than merely missing.
+    #
+    # **Only this half discriminates on this fixture**, and it is
+    # written down rather than quietly relied on. Mutating the ranking
+    # to stop excluding structural kinds -
+    # `real = [d for d in detail if d.get('duration_us')]` - leaves the
+    # clause above green, because `bootstrap/symlinks.bst` appears in
+    # this fixture's `blast` map and in no element's duration detail,
+    # so nothing could have ranked it. The same mutation reddens
+    # `test_element_kind_heuristics.py`, whose `root.bst` does carry a
+    # duration. Re-gating `_ranking_findings` on `chain_bound` reddens
+    # the assertion below, which is what makes this clause worth
+    # running at all.
+    assert ("Reaching most of the graph by design: "
+            "bootstrap/symlinks.bst (124 downstream)" in text)
 
 
 def test_a_chain_bound_build_ranks_by_critical_path_share():

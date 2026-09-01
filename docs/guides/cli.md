@@ -305,6 +305,7 @@ The JSON carries a **`findings` array** — the same conclusions the text report
 | `efficiency-score` | varies | how close the scheduler got to the certified floor |
 | `time-concentration` | varies | which elements the critical path's duration is actually in |
 | `mesh-graph` | info | the critical path is a small share of total duration — the graph, not the chain, is the constraint |
+| `blast-radius-reach` | medium | elements a change to which rebuilds something else, named with their downstream count. Published whatever the diagnosis says — a chain-bound build has a blast radius too (`UX-479`) |
 | `blast-radius-ranking` | varies | elements worth fixing first by downstream reach (needs `--diagnostics`) |
 | `blast-radius-structural` | info | elements whose reach is the graph's shape rather than a task — a base image, a toolchain, a stack. Reported, not ranked (`UX-258`) |
 | `criticality` | varies | elements most likely to be on the critical path under duration variance (needs `--diagnostics`) |

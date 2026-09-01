@@ -216,6 +216,7 @@ TRACE_QUERIES = {
     # Dependencies: the finding is about shape, not speed.
     "criticality": ("dependency-wait",),
     "blast-radius-ranking": ("dependency-wait",),
+    "blast-radius-reach": ("dependency-wait",),
     "blast-radius-structural": ("dependency-wait",),
     "shared-source-blast": ("dependency-wait",),
     # Resources: what the processes inside the sandbox cost.
@@ -414,6 +415,38 @@ def _mesh_rule(claim, document):
 #
 # `UX-275` emptied the other one: `capacity_recommendation` is published
 # now, so its paths moved up into the evidence they always were.
+def _blast_paths(claim: dict, document: dict) -> Tuple[str, ...]:
+    """`UX-479`: one scalar per element the sentence names.
+
+    Both blast claims used to cite `elements.blast_radius` - the whole
+    map - and `record` inlines whatever a path resolves to, so the
+    record carried a copy of the entire population beside the one it
+    published. Nothing caught it because neither committed fixture ever
+    produced a blast finding: both are chain-bound, and the arm that
+    published these was closed until this item opened it. Measured the
+    moment it opened - `macro_micro`'s provenance grew 4,955 B against
+    the finding's own 1,485 B, and fifteen guards reddened, among them
+    "every numeric leaf declares a unit" and "no map is keyed by data it
+    cannot describe". Both were right: `downstream_count` under a uid
+    key is a leaf the schema describes at
+    `elements.blast_radius.*.downstream_count` and cannot describe
+    under `provenance[].evidence[].value.<uid>`.
+
+    The bracket form is what makes the narrow citation expressible at
+    all - a uid contains dots, so `elements.blast_radius[base.bst]`
+    addresses it and the dotted form cannot. `UX-227` put that in the
+    grammar for the page's own paths.
+
+    One row per named element, in the order the sentence names them, so
+    a reader checking the claim reads exactly the numbers it quotes.
+    `UX-483` is the general form of this: the builder still inlines
+    whatever any path resolves to, and only convention keeps the next
+    claim from citing a population.
+    """
+    return tuple(f"elements.blast_radius[{uid}].downstream_count"
+                 for uid in (claim.get("elements") or ()))
+
+
 _CLAIMS = {
     "diagnosis": (
         ("floors.t_infinity_observed", "total_duration_us",
@@ -536,8 +569,20 @@ _CLAIMS = {
               "Who-depends-on-me is ranked only on a build the chain does "
               "not already constrain; above the threshold the ranking that "
               "matters is how long each element takes."), ()),
+    "blast-radius-reach": (
+        _blast_paths,
+        _unconditional(
+            "Published for every non-structural element something "
+            "actually depends on. Not a ranking - `UX-65`'s "
+            "who-depends-on-me ordering is a different claim and stays "
+            "on the scheduler-bound arm - but the answer to the "
+            "recipe-author's own question, which is true whichever way "
+            "the build is bound (`UX-479`). Elements with no dependents "
+            "are left out rather than listed at zero: a row reading "
+            "\"0 downstream\" answers the question with a number "
+            "meaning nobody."), ()),
     "blast-radius-structural": (
-        ("elements.blast_radius",),
+        _blast_paths,
         _unconditional(
             "Published when the elements with the widest reach are "
             "structural kinds - a base image, a toolchain, a stack. Their "

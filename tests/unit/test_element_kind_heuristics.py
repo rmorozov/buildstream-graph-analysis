@@ -116,6 +116,33 @@ def test_blast_radius_signal_carries_kind_and_structural_flag(analyzed_result):
     assert blast_radius["a.bst"]["is_structural_kind"] is False
 
 
+# `UX-479`: the ranked rows, not everything after the heading.
+#
+# Both guards below asserted a structural element's name was absent
+# from the whole block, as a proxy for "it is not ranked". That held
+# only while `blast-radius-structural` could not fire here: it was
+# behind the `chain_bound` gate `UX-479` removed, and both these
+# fixtures are chain-bound. The proxy now catches the *report* -
+# "Reaching most of the graph by design" - which is the sentence
+# `UX-258` added on purpose, so the guard was reading one claim and
+# judging another (fixing guide section 5).
+#
+# The rows of the table are indented four spaces under the heading;
+# the report and everything after it are indented two. So the slice is
+# the table, and each guard asserts both halves of `UX-258`'s split:
+# not in the ranking, and named in the report.
+def _ranked_rows(text):
+    lines = text.split("\n")
+    start = next(i for i, line in enumerate(lines)
+                 if line.lstrip().startswith("Where the time is"))
+    rows = []
+    for line in lines[start + 1:]:
+        if not line.startswith("    "):
+            break
+        rows.append(line)
+    return "\n".join(rows)
+
+
 def test_key_findings_tags_structural_top_element_but_not_real_work_one(analyzed_result):
     output = format_text(analyzed_result)
     key_findings = output.split("Certified Floors:")[0]
@@ -134,7 +161,13 @@ def test_key_findings_tags_structural_top_element_but_not_real_work_one(analyzed
     # is satisfied by not ranking it at all.
     assert "Where the time is:" in key_findings
     assert "manual.bst" in key_findings
-    assert "root.bst" not in key_findings
+    ranked = _ranked_rows(key_findings)
+    assert "manual.bst" in ranked
+    assert "root.bst" not in ranked
+    # `UX-258`'s other half, asserted rather than left to the absence
+    # above: it is *reported*, with its reach, as the graph's shape.
+    assert ("Reaching most of the graph by design: root.bst (2 downstream)"
+            in key_findings)
     # Wherever any line does mention these elements, a structural tag
     # must never be attached to the one that does real work.
     assert "manual.bst [structural" not in key_findings

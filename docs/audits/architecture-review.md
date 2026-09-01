@@ -78,6 +78,7 @@ would have caught it; a bound at it would only just have.
 | 6 | 2026-08-29 | 379 | `UX-386`, `UX-387` |
 | 7 | 2026-08-29 | 406 | `UX-416`, `UX-417` |
 | 8 | 2026-08-30 | 432 | `UX-446`, `UX-447` |
+| 9 | 2026-09-01 | 458 | `UX-471`, `UX-472` |
 
 ### Review 3 — 2026-08-25
 
@@ -638,3 +639,69 @@ third repeats it, the convention itself is what needs deciding.
 the one that is this round's own §3.10 debt is filed rather than
 quietly fixed, so the next round can see that the debt existed.
 
+## Review 9 — 2026-09-01, at 458 closed rows
+
+Input: the twenty-six rows closed since review 8 — round 70's tail
+(`UX-441`, `UX-442`, `UX-444`, `UX-445`, `UX-440`, `UX-453`), round 71
+(`UX-454`, `UX-449`, `UX-450`, `UX-443`, `UX-448`, `UX-451`, `UX-452`,
+`UX-446`, `UX-447`) and round 72 (`UX-457`, `UX-455`, `UX-456`,
+`UX-462`, `UX-463`, `UX-464`, `UX-466`). One axis dominates: **where
+fixtures come from**, and the instruments that say whether they cover
+anything.
+
+**1. Does the code still do what it says?** The chapter these rounds
+moved under is the one at `architecture.md:91`, which opens *"One
+script in `tools/` is not part of that pipeline and needs no `bst` at
+all"* and then describes `gen_synthetic_scale_run.py`. Opened the
+module: everything the paragraph says about it is still true — 1202
+elements, 14 levels, 16 builders, byte-reproducible under `--seed`.
+What is no longer true is the sentence's *first six words*. Round 72
+added `tools/bga_gen_project.py`, which is in `tools/`, is not part of
+that pipeline, and needs `bst` to build what it writes — the opposite
+of the property the sentence generalises. Filed as `UX-472`.
+
+**2. Does every published contract have a home?**
+`test_the_documents_keep_up_with_the_contracts.py` is green over eight
+schemas. The prose: round 72 nearly added a ninth by accident.
+`tools/bga_gen_project.py` first stamped `project-spec/v1`, and
+`test_the_contract_inventory_is_derived.py` reddened — `bga.contracts`
+walks the `bga` package, so an id in `tools/` needs an owner there
+(`UX-248`, and `run_store.OWNED` is the precedent). The right answer
+turned out to be that a dev tool's *input* format is not part of the
+release surface at all, so it takes a plain `spec_version: 1` and
+claims no contract id. That is the mechanical guard doing exactly what
+the review is meant to check by hand, one round earlier.
+
+**3. Is any figure invalidated?** One, and it is in the first file
+every session reads. `CLAUDE.md`'s tree map says
+`docs/backlog/scenarios/   421 task files`; the tree has **468**, and
+`closed.md` has 458 rows. Forty-seven out — `UX-132`'s defect in the
+day-one summary. Filed as `UX-471`, with the observation that it is
+the only figure in that file which decays on every close, so the fix
+is probably to remove it rather than to guard it.
+
+Checked and *not* invalidated: `UX-463`'s covering-set table, which
+`UX-464` corrected in the same round rather than leaving to a review
+(`certified-headroom` moved from T3 to T1, and "five specs for ten
+findings" was annotated as looser than it read); and the census
+figures, which live only in the rows that measured them.
+
+**4. What shipped since the last review that no document names?**
+Four tools: `dev_finding_coverage.py`, `dev_trace_coverage.py`,
+`bga_gen_project.py` and `tests/fixtures/topologies.py`'s covering
+set. All four are on the fixing guide's §6 context map — that guard
+held. None is in `docs/design/architecture.md`, which is the second
+half of `UX-472`. `bga --help` gained nothing: all four are dev
+instruments, correctly outside the CLI.
+
+**5. Does each document's own "last updated" claim match reality?**
+Only this document carries dated rows, and its last row is the one
+above. `docs/design/architecture.md` last changed 2026-08-31 and makes
+no dated claim about itself. No drift.
+
+**Deliberately not filed.** The trace census reports
+`trace.spans[].task_key` as dropped because the trace decomposes it;
+that reads like a finding and is not one, and `UX-466`'s docstring
+already declares it. A review that filed it would be filing against a
+declared limit, which is how a backlog fills with rows nobody can
+close.

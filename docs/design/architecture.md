@@ -269,7 +269,13 @@ empty.
   They are joined on `(invocation, pid)` and a START inside a tolerance,
   every entry carries `spine+hook` / `spine-only` / `hook-only`, and
   coverage stops being a footnote and becomes a count. Verified at scale:
-  **127,632 processes on freedesktop-sdk, all one class**.
+  **127,632 processes on freedesktop-sdk, all one class**. `UX-487`
+  made the two streams carry the same *counters* as well as the same
+  identities: the spine records `minflt`/`majflt` from the `/proc`
+  read it already did, and `inblock`/`oublock` from the task's own
+  `/proc/<pid>/task/<pid>/io` — the hook's key names and units, so a
+  spine-only process reaches every reader a hook-recorded one does.
+  On one workload traced by both at once the two agree exactly.
 - **One counter, and two refusals** (`UX-310`). `UX-298` pinned
   `TYPE_COUNTER` as "reserved rather than used" under the rule that an
   event stream may carry only what a capture measured; this is its

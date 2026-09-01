@@ -247,13 +247,28 @@ static void read_cmdline(pid_t pid, char *out, size_t size)
         out[i] = '\0';
 }
 
-/* utime+stime in seconds from `/proc/<pid>/stat` fields 14 and 15.
+/* utime+stime in seconds, and the fault counts, from `/proc/<pid>/stat`
+ * fields 10, 12, 14 and 15.
  *
  * Parsed from the last ')' rather than from the start, because field 2
  * is the executable name in parentheses and may itself contain spaces
  * and parentheses - a comm of "(sh -c)" is legal and would break any
- * field-counting parser that starts at the beginning. */
-static int read_cpu_times(pid_t pid, double *utime, double *stime)
+ * field-counting parser that starts at the beginning.
+ *
+ * UX-487: the faults were being **skipped** by this function's own
+ * `sscanf`, with `%*u`, on the way to the CPU times - in a buffer it
+ * had already read. `hook.c` records `minflt` and `majflt` for every
+ * process it can see (UX-379); the spine exists for the ones it cannot,
+ * so exactly the population Plane 2 is blindest about had no fault
+ * counts at all. Measured on a real mixed capture: 71 of 71 hook
+ * records carried `minflt` and 0 of 87 spine records did.
+ *
+ * Self only, not the `c`-prefixed children's totals, because every
+ * child is traced too and reports its own - the same rule `hook.c`
+ * states for `RUSAGE_CHILDREN`. */
+static int read_cpu_times(pid_t pid, double *utime, double *stime,
+                          unsigned long long *minflt,
+                          unsigned long long *majflt)
 {
     char path[64], buf[2048];
     snprintf(path, sizeof(path), "/proc/%d/stat", (int)pid);
@@ -271,16 +286,99 @@ static int read_cpu_times(pid_t pid, double *utime, double *stime)
     long ticks = sysconf(_SC_CLK_TCK);
     if (ticks <= 0)
         ticks = 100;
-    unsigned long long ut = 0, st = 0;
-    /* After ") " comes field 3 (state); utime is field 14 and stime 15,
-     * i.e. the 11th and 12th values after the state. */
+    unsigned long long ut = 0, st = 0, mn = 0, mj = 0;
+    /* After ") " comes field 3 (state); then ppid, pgrp, session,
+     * tty_nr, tpgid (5 ints), flags, **minflt**, cminflt, **majflt**,
+     * cmajflt, and then utime (14) and stime (15). */
     int scanned = sscanf(tail + 2,
-                         "%*c %*d %*d %*d %*d %*d %*u %*u %*u %*u %*u %llu %llu",
-                         &ut, &st);
-    if (scanned != 2)
+                         "%*c %*d %*d %*d %*d %*d %*u %llu %*u %llu %*u %llu %llu",
+                         &mn, &mj, &ut, &st);
+    if (scanned != 4)
         return 0;
     *utime = (double)ut / (double)ticks;
     *stime = (double)st / (double)ticks;
+    *minflt = mn;
+    *majflt = mj;
+    return 1;
+}
+
+/* Block-layer bytes this process read and wrote, as the 512-byte block
+ * counts `hook.c` writes - `UX-487`.
+ *
+ * **The same kernel counter, not an approximation.** `getrusage`'s
+ * `ru_inblock` is `p->ioac.read_bytes >> 9` and `ru_oublock` is
+ * `write_bytes >> 9`, which is what `/proc/<pid>/io` publishes for
+ * another process. Measured in one process at one instant:
+ *
+ *     read_bytes   8388608  >>9 =  16384   ru_inblock  16384
+ *     write_bytes 16797696  >>9 =  32808   ru_oublock  32808
+ *
+ * So the spine writes the hook's own keys in the hook's own units and
+ * `bst_native_build_tracer` needs no second vocabulary.
+ *
+ * **`/proc/<pid>/task/<pid>/io`, not `/proc/<pid>/io`.** The second
+ * folds in *reaped children*, the way `RUSAGE_CHILDREN` does, and the
+ * first is the task's own. Reading the wrong one credited a shell that
+ * wrote nothing with everything its children wrote - caught by running
+ * one workload under both planes and comparing:
+ *
+ *     pid 1261 spine  oublock=16408   sh -c dd ...; sync    <- wrong
+ *     pid 1262 hook   oublock=16392   dd ...
+ *     pid 1262 spine  oublock=16392   dd ...                <- agrees
+ *
+ * 16408 = 16392 + 16, the two children's blocks charged to a shell
+ * that did no I/O. Proved directly: fork a child that writes 8 MiB,
+ * reap it, and read both files -
+ *
+ *     /proc/<pid>/io           write_bytes 8409088   (the child's)
+ *     /proc/<pid>/task/<t>/io  write_bytes       0   = RUSAGE_SELF
+ *
+ * **What the per-task file does not carry**, stated: for a
+ * multi-threaded process it is the *named task's* bytes, where the
+ * hook's `getrusage(RUSAGE_SELF)` is the whole thread group's. That is
+ * the right grain here rather than a shortfall - the spine seizes with
+ * `PTRACE_O_TRACECLONE`, so every thread is a tracee with its own
+ * exit-stop and its own record, and the group's total is the sum of
+ * them.
+ *
+ * This is a **third** `/proc` file per process, beside the two already
+ * read at this stop. Measured over 800 processes doing nothing but
+ * exec and exit - the pessimal case for a fixed per-process cost, since
+ * a real build's processes do work:
+ *
+ *     as shipped        median 1220.5 ms
+ *     with the io read  median 1248.3 ms   (+27.8 ms, +2.3%)
+ *
+ * ~35 us per process, for the only I/O measurement Plane 3 can have.
+ *
+ * `rchar`/`wchar` are in the same file and are **not** taken: they are
+ * syscall-level bytes, an axis neither plane has, and giving it to the
+ * spine alone would put a column in the record that is populated for
+ * the processes the hook could not see and empty for the rest. */
+static int read_io_blocks(pid_t pid, unsigned long long *inblock,
+                          unsigned long long *oublock)
+{
+    char path[80], buf[512];
+    snprintf(path, sizeof(path), "/proc/%d/task/%d/io", (int)pid, (int)pid);
+    int fd = open(path, O_RDONLY | O_CLOEXEC);
+    if (fd < 0)
+        return 0;
+    ssize_t n = read(fd, buf, sizeof(buf) - 1);
+    close(fd);
+    if (n <= 0)
+        return 0;
+    buf[n] = '\0';
+    const char *read_at = strstr(buf, "read_bytes: ");
+    const char *write_at = strstr(buf, "write_bytes: ");
+    if (!read_at || !write_at)
+        return 0;
+    unsigned long long rb = 0, wb = 0;
+    if (sscanf(read_at + 12, "%llu", &rb) != 1)
+        return 0;
+    if (sscanf(write_at + 13, "%llu", &wb) != 1)
+        return 0;
+    *inblock = rb >> 9;
+    *oublock = wb >> 9;
     return 1;
 }
 
@@ -359,19 +457,42 @@ static void write_end(pid_t pid, pid_t ppid, const char *cmdline, int have_exit,
                       unsigned long exit_msg)
 {
     double utime = 0.0, stime = 0.0;
-    int have_cpu = read_cpu_times(pid, &utime, &stime);
+    unsigned long long minflt = 0, majflt = 0;
+    int have_cpu = read_cpu_times(pid, &utime, &stime, &minflt, &majflt);
     long rss = read_peak_rss_kb(pid);
-    char extra[128];
+    unsigned long long inblock = 0, oublock = 0;
+    int have_io = read_io_blocks(pid, &inblock, &oublock);
+    char extra[256];
     extra[0] = '\0';
+    size_t used = 0;
     /* Same rule as `hook.c`: an unmeasured CPU time and a genuinely-zero
-     * one are different claims, so the fields are omitted rather than
-     * written as zero when /proc could not be read. */
+     * one are different claims, so each group is omitted rather than
+     * written as zero when the `/proc` file behind it could not be read.
+     * `UX-487` gave the spine two more groups and the same rule governs
+     * all three - which is why this appends rather than branching. */
     if (have_cpu) {
-        int n = snprintf(extra, sizeof(extra), " utime=%.6f stime=%.6f", utime, stime);
-        if (n > 0 && rss >= 0 && (size_t)n < sizeof(extra))
-            snprintf(extra + n, sizeof(extra) - (size_t)n, " maxrss_kb=%ld", rss);
-    } else if (rss >= 0) {
-        snprintf(extra, sizeof(extra), " maxrss_kb=%ld", rss);
+        int n = snprintf(extra + used, sizeof(extra) - used,
+                         " utime=%.6f stime=%.6f", utime, stime);
+        if (n > 0 && (size_t)n < sizeof(extra) - used)
+            used += (size_t)n;
+    }
+    if (rss >= 0) {
+        int n = snprintf(extra + used, sizeof(extra) - used,
+                         " maxrss_kb=%ld", rss);
+        if (n > 0 && (size_t)n < sizeof(extra) - used)
+            used += (size_t)n;
+    }
+    if (have_cpu) {
+        int n = snprintf(extra + used, sizeof(extra) - used,
+                         " minflt=%llu majflt=%llu", minflt, majflt);
+        if (n > 0 && (size_t)n < sizeof(extra) - used)
+            used += (size_t)n;
+    }
+    if (have_io) {
+        int n = snprintf(extra + used, sizeof(extra) - used,
+                         " inblock=%llu oublock=%llu", inblock, oublock);
+        if (n > 0 && (size_t)n < sizeof(extra) - used)
+            used += (size_t)n;
     }
     /* The exit status, from the event message the kernel hands over at
      * the exit-stop - a wait(2)-encoded status, so a process killed by a

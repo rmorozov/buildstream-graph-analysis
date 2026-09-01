@@ -13,11 +13,20 @@ the same build. So the diagnosis, the ratio it came from, the
 opportunity split and the ranked actions are decided in `findings.py`
 and published as `headline`; the panel reads fields.
 
-The two committed fixtures answer *differently*, which is what makes
-them worth having: the golden run is `scheduler_bound` at 0.875 and
-falls back to the blast-radius ranking, and `examples/06` is
-`chain_bound` at 0.936 with realizable savings. A guard that only ever
-saw one branch would not be guarding the branch.
+Two committed fixtures answer *differently*, which is what makes them
+worth having: `shared_base_wide` is `scheduler_bound` at 0.549
+and falls back to the blast-radius ranking, and the golden run is
+`chain_bound` at 1.000. A guard that only ever saw one branch would not
+be guarding the branch.
+
+**`UX-477` moved which fixture is which, and the reason is the point.**
+The scheduler-bound case used to be the golden run at 0.875 — a verdict
+it only had because `chain_share`'s denominator was wall-clock, and
+wall-clock carries BuildStream's own ~2.5ms startup. Four back-to-back
+tasks are not scheduler-bound; they are a chain with a head in front of
+them. So the branch is now exercised by a graph that really is
+scheduler-bound: six modules over one base, eleven seconds of horizon
+over a six-second critical path, on two lanes.
 """
 import contextlib
 import io
@@ -34,6 +43,9 @@ from bga.findings import (CHAIN_BOUND_RATIO, DIAGNOSES, DIAGNOSIS_CHAIN_BOUND,
                           DIAGNOSIS_INCONCLUSIVE, DIAGNOSIS_SCHEDULER_BOUND)
 
 GOLDEN = "tests/fixtures/golden/mixed_task_kinds"
+# `UX-477`: a committed capture whose *graph* is scheduler-bound, rather
+# than one whose verdict came from the startup in its denominator.
+SCHEDULED = "tests/fixtures/shared_base_wide/run"
 REAL = "examples/06-macro-micro-optimization/.bga/runs/20260821T170127Z/run"
 node = shutil.which("node")
 needs_node = pytest.mark.skipif(node is None, reason="node is not installed")
@@ -43,7 +55,8 @@ needs_node = pytest.mark.skipif(node is None, reason="node is not installed")
 _needs_real = pytest.mark.skipif(not os.path.isdir(REAL),
                                  reason="no real capture here")
 RUNS = [
-    pytest.param(GOLDEN, DIAGNOSIS_SCHEDULER_BOUND, id="committed"),
+    pytest.param(GOLDEN, DIAGNOSIS_CHAIN_BOUND, id="committed"),
+    pytest.param(SCHEDULED, DIAGNOSIS_SCHEDULER_BOUND, id="scheduler-bound"),
     pytest.param(REAL, DIAGNOSIS_CHAIN_BOUND, id="real-capture",
                  marks=_needs_real),
 ]
@@ -109,15 +122,44 @@ class TestTheDiagnosisIsDecidedOnce:
             assert ratio < CHAIN_BOUND_RATIO, ratio
 
     @pytest.mark.parametrize("run,expected", RUNS)
-    def test_the_ratio_is_the_published_floors_over_the_published_total(
+    def test_the_ratio_is_the_published_floors_over_the_published_horizon(
             self, run, expected):
         """The one arithmetic claim, checked against its own inputs -
         so nobody can quietly change what the diagnosis is a ratio
-        *of*."""
+        *of*.
+
+        `UX-477`: the denominator is the **task horizon**, and every
+        term of it is published - `total_duration_us` minus the two
+        untracked spans the attribution already names. Recomputed from
+        those three fields rather than read from one, so a change to
+        the denominator has to change this line too."""
         payload = _report(run)
-        expected_ratio = (payload["floors"]["t_infinity_observed"]
-                          / payload["total_duration_us"])
+        attribution = payload["attribution"]
+        horizon = (payload["total_duration_us"]
+                   - attribution["untracked_head_us"]
+                   - attribution["untracked_tail_us"])
+        expected_ratio = payload["floors"]["t_infinity_observed"] / horizon
         assert payload["headline"]["chain_share"] == pytest.approx(expected_ratio)
+        assert payload["headline"]["chain_share_of"] == "task_horizon"
+
+    @pytest.mark.parametrize("run,expected", RUNS)
+    def test_the_head_is_out_of_the_denominator(self, run, expected):
+        """The defect `UX-477` is about, stated as its own clause: a
+        share taken against wall-clock is a share against a span that
+        carries BuildStream's startup, which the same report calls "not
+        a scheduling issue". Where a run has a head at all, the two
+        answers must differ - and if they ever agree on a run that has
+        one, the subtraction has stopped happening."""
+        payload = _report(run)
+        head = payload["attribution"]["untracked_head_us"]
+        tail = payload["attribution"]["untracked_tail_us"]
+        against_wall = (payload["floors"]["t_infinity_observed"]
+                        / payload["total_duration_us"])
+        if head + tail == 0:
+            assert payload["headline"]["chain_share"] == pytest.approx(against_wall)
+        else:
+            assert payload["headline"]["chain_share"] > against_wall, (
+                head, tail, payload["headline"]["chain_share"], against_wall)
 
     def test_the_findings_read_the_same_decision(self):
         """`compute_findings` used to recompute the ratio itself. Two
@@ -195,14 +237,19 @@ class TestTheActionsAreReferencesNotCopies:
     def test_a_scheduler_bound_run_ranks_by_who_depends_on_it(self):
         """The other branch, and the reason it is a different question:
         blast radius answers "who depends on me", which matters when the
-        graph is the constraint rather than the chain."""
-        actions = _report(GOLDEN)["headline"]["top_actions"]
+        graph is the constraint rather than the chain.
+
+        Read on `SCHEDULED` rather than on the golden run since
+        `UX-477` - the golden run's four back-to-back tasks are a chain,
+        and only the startup in the old denominator made it look like
+        anything else."""
+        actions = _report(SCHEDULED)["headline"]["top_actions"]
         assert all(a["finding_id"] == "blast-radius-ranking" for a in actions)
         counts = [a["downstream_count"] for a in actions]
         assert counts == sorted(counts, reverse=True), counts
 
     def test_a_saving_nobody_projected_is_absent_rather_than_zero(self):
-        for action in _report(GOLDEN)["headline"]["top_actions"]:
+        for action in _report(SCHEDULED)["headline"]["top_actions"]:
             assert "saving_us" not in action, (
                 "a zero saving claims a projection that was never made")
 

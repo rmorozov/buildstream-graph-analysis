@@ -30,16 +30,34 @@ node = shutil.which("node")
 needs_node = pytest.mark.skipif(node is None, reason="node is not installed")
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 GOLDEN = os.path.join(REPO, "tests", "fixtures", "golden", "mixed_task_kinds")
+# `UX-477`: the clauses about `blast-radius-ranking` need a run that
+# takes the ranking branch, and the golden run stopped taking it. Not
+# because anything about the ranking changed - because the golden run
+# was only ever `scheduler_bound` thanks to BuildStream's startup
+# sitting in `chain_share`'s denominator, and four back-to-back tasks
+# are a chain. `shared_base_wide` is scheduler-bound by shape: six
+# modules over one base on two lanes.
+RANKING = os.path.join(REPO, "tests", "fixtures", "shared_base_wide", "run")
 
 
-@pytest.fixture(scope="module")
-def report():
+def _analyze(run):
     proc = subprocess.run(
-        [sys.executable, "-m", "bga.cli", "analyze", GOLDEN,
+        [sys.executable, "-m", "bga.cli", "analyze", run,
          "--format", "json", "--diagnostics"],
         capture_output=True, text=True, cwd=REPO)
     assert proc.returncode == 0, proc.stderr
     return json.loads(proc.stdout)
+
+
+@pytest.fixture(scope="module")
+def report():
+    return _analyze(GOLDEN)
+
+
+@pytest.fixture(scope="module")
+def ranking():
+    """A run that takes the blast-radius branch - see `RANKING`."""
+    return _analyze(RANKING)
 
 
 def _finding(report, uid):
@@ -62,8 +80,8 @@ class TestEveryFindingCarriesItsText:
         assert "copy_text" in items
         assert items["copy_text"]["description"]
 
-    def test_it_opens_with_the_finding(self, report):
-        finding = _finding(report, "blast-radius-ranking")
+    def test_it_opens_with_the_finding(self, ranking):
+        finding = _finding(ranking, "blast-radius-ranking")
         assert finding["copy_text"].startswith("BGA finding: ")
         assert finding["title"].splitlines()[0] in finding["copy_text"]
 
@@ -91,10 +109,10 @@ class TestTheEvidenceIsInItsDeclaredUnit:
         assert "\n  category " in text
         assert text.count("category") >= 2
 
-    def test_a_nested_value_is_left_out_rather_than_dumped(self, report):
+    def test_a_nested_value_is_left_out_rather_than_dumped(self, ranking):
         """`blast_radius` is a dict of dicts. A first draft rendered it
         as 400 characters of `repr` into the middle of a paste."""
-        text = _finding(report, "blast-radius-ranking")["copy_text"]
+        text = _finding(ranking, "blast-radius-ranking")["copy_text"]
         assert "blast_radius" not in text
         assert "{" not in text and "}" not in text
 
@@ -109,15 +127,15 @@ class TestTheEvidenceIsInItsDeclaredUnit:
 
 class TestItCarriesWhatAReaderWouldRetype:
 
-    def test_the_elements_it_names(self, report):
-        finding = _finding(report, "blast-radius-ranking")
+    def test_the_elements_it_names(self, ranking):
+        finding = _finding(ranking, "blast-radius-ranking")
         assert finding["elements"]
         for uid in finding["elements"]:
             assert uid in finding["copy_text"]
 
-    def test_the_published_next_step_for_that_finding(self, report):
-        finding = _finding(report, "blast-radius-ranking")
-        step = next(s for s in report["next_steps"]
+    def test_the_published_next_step_for_that_finding(self, ranking):
+        finding = _finding(ranking, "blast-radius-ranking")
+        step = next(s for s in ranking["next_steps"]
                     if s["follows_from"] == "blast-radius-ranking")
         assert f"Next: {' '.join(step['argv'])}" in finding["copy_text"]
 
@@ -153,8 +171,8 @@ class TestThePageCopiesRatherThanWords:
             assert "BGA finding:" not in source, name
 
     @needs_node
-    def test_the_button_carries_the_published_string(self, report):
-        finding = _finding(report, "blast-radius-ranking")
+    def test_the_button_carries_the_published_string(self, ranking):
+        finding = _finding(ranking, "blast-radius-ranking")
         out = subprocess.run(
             [node, "--input-type=module", "-e", '''
               const calls = [];

@@ -48,11 +48,21 @@ FIXTURES = {"golden": REPO / "tests/fixtures/golden/mixed_task_kinds",
 
 #: What the shape was when this item was filed, and the bound each
 #: fixture is held to now. Measured after the lift: 0.398 and 0.533.
-DEEPER_THAN_THREE = {"golden": (0.574, 0.45), "macro_micro": (0.671, 0.58)}
+# `UX-477` moved the golden run from the scheduler-bound branch to the
+# chain-bound one - its old verdict came from BuildStream startup in
+# the denominator, not from its graph - so it now publishes the same
+# `optimization-horizon` evidence `macro_micro` always has. Nothing
+# about the document got deeper: the golden reached a shape the tree
+# already carries. Measured after: 0.462, against 0.574 when `UX-344`
+# was filed, so this fixture is still well below where it started.
+DEEPER_THAN_THREE = {"golden": (0.574, 0.47), "macro_micro": (0.671, 0.58)}
 
 #: `macro_micro` keeps a seventh level, argued in the item: a step's
 #: `entering` list is four real relations, not a namespace.
-DEEPEST = {"golden": 5, "macro_micro": 7}
+# Both 7 since `UX-477`, and for the same reason as the ratio above:
+# `findings.[].evidence.steps.[].entering.[]` is the chain-bound
+# branch's own shape, which `macro_micro` has always published.
+DEEPEST = {"golden": 7, "macro_micro": 7}
 
 
 def _document(label):

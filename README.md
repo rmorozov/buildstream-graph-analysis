@@ -31,20 +31,20 @@ Tab completion — subcommands, flags, and `@last`/`@prev`/stamps wherever a run
 bga analyze tests/fixtures/golden/mixed_task_kinds --diagnostics   # or: make dev-run
 ```
 
-A three-element fixture that runs instantly. The report is **86 lines**;
+A three-element fixture that runs instantly. The report is **90 lines**;
 its two headline sections are below, verbatim, with every cut marked —
 `UX-192` is on file for a block that claimed to be full output and was
 not:
 
 ```text
 Key Findings:
-  This build is scheduler-bound, not chain-bound: the critical path is 88% of wall-clock, below the 90% chain-bound line, so the time is going somewhere other than the chain.
+  This build is chain-bound, not scheduler-bound: the critical path is 100% of the time tasks were running, at or above the 90% chain-bound line, so the way to a shorter build is a shorter chain.
   Biggest wait category: 12.5% of wall-clock time is UNTRACKED TAIL (0.00s)
     -> real time after the last tracked task finished - outside per-task tracking, not a scheduling issue
-  Elements Most Worth Optimizing First (by blast radius):
-    1. base.bst (2 downstream elements)
-    2. lib.bst (1 downstream elements)
-    3. extra.bst (0 downstream elements)
+  Where the time is: 3 element(s) are 100.0% of the 0.0s critical path - this build is chain-bound, not scheduler-bound
+
+[... elided: the three ranked elements, the mesh note, the joint saving, the work order and the latent heavies ...]
+
   Confidence: 0.88 (high)
   Efficiency Score: 1.00 (scheduling is near the certified floor for this graph - further gains need the graph or the work itself to change, not the scheduler (see Dispatch Occupancy and Critical Path))
 
@@ -56,10 +56,15 @@ Critical Path Length: 3 elements
 [... elided: CPU Utilisation, Advanced Diagnostics ...]
 ```
 
-The first line repays a second read: **88% sounds chain-bound**, and
-the sentence says the opposite. The 90% line it names is what flips
-it — below that, shortening the chain buys nothing. `--explain` prints
-the same constant from the same place (`UX-331`).
+The first two lines repay a second read, because they name **two
+different denominators on purpose**. The critical path is 100% of *the
+time tasks were running*; 12.5% of wall-clock is untracked tail, which
+is time no task was running and no scheduler could have compressed.
+`UX-477` is on file for the round when the first line divided by the
+second's denominator too, and called a strict chain "scheduler-bound"
+because BuildStream's own startup was in the divisor. The 90% line the
+sentence names is what flips it, and `--explain` prints that constant
+from the same place (`UX-331`).
 
 Bigger fixtures need no BuildStream either: `make dev-run ARGS=--large` runs a 14-element sample, and `bga gen-synthetic /tmp/scale --seed 1` a byte-reproducible 1202-element one — which is how [round 2](docs/audits/round-2.md) found four defects invisible at eleven elements.
 
@@ -287,8 +292,11 @@ make lint                 # ruff + markdown (`make dev-run` prints a real report
      the hunt. Round 50 takes it to 301 lines: the Quick start block claimed to be the full
      report over a sixth of it, and honest output costs the lines the elision markers and the
      restored diagnosis line take, and `UX-330`'s no-BuildStream seed paragraph is the rest -
-     a stranger had no committed path into two thirds of the tool. The budget is a measured
-     target, not a law - but exceeding it
+     a stranger had no committed path into two thirds of the tool. Round 73 takes it to
+     309 lines: `UX-477` changed which branch the Quick start's fixture takes, so the pasted
+     block is the chain-bound one, needing an extra elision marker for the four findings that
+     arm publishes and a paragraph on why the two lines above it name two different
+     denominators. The budget is a measured target, not a law - but exceeding it
      silently is what turned 420 into "430" once before, so the number is here rather than in a
      commit message. -->
 

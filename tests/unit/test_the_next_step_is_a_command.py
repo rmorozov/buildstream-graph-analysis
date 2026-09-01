@@ -38,6 +38,8 @@ from bga.findings import compute_next_steps
 
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 GOLDEN = os.path.join(REPO, "tests", "fixtures", "golden", "mixed_task_kinds")
+# `UX-477`: scheduler-bound by graph shape rather than by startup.
+SCHEDULED = os.path.join(REPO, "tests", "fixtures", "shared_base_wide", "run")
 REAL = os.path.join(
     REPO, "examples", "06-macro-micro-optimization", ".bga", "runs",
     "20260821T170127Z")
@@ -72,16 +74,31 @@ class TestTheStepIsDecidedInThePipeline:
         jsonschema.validate(_report(), schemas.schema(schemas.ANALYZE))
 
     def test_two_fixtures_that_measured_differently_answer_differently(self):
-        """Asserted by value, not by presence. The golden run is
+        """Asserted by value, not by presence. `shared_base_wide` is
         `scheduler_bound` and outside a store; `examples/06` is
         `chain_bound`, inside one, with a Plane 2 report - so the two
         should not share a first step, and a table that returned the
-        same list for both would be no branch at all."""
-        golden = {s["id"] for s in _report()["next_steps"]}
-        assert "sweep-the-capacity" in golden, golden
-        assert "measure-again" not in golden, (
-            "the golden run is not in a store; a step it cannot run "
+        same list for both would be no branch at all.
+
+        `UX-477` moved the scheduler-bound half off the golden run.
+        `UX-468`'s walk 3 is why it matters: the sweep was being offered
+        on graphs that are strictly serial, because their verdict came
+        from BuildStream's startup rather than from their shape. The
+        golden run is one of those - four back-to-back tasks - and
+        offering "more builders would help" on it was the defect, not
+        the fixture."""
+        scheduled = {s["id"] for s in _report(SCHEDULED)["next_steps"]}
+        assert "sweep-the-capacity" in scheduled, scheduled
+        assert "measure-again" not in scheduled, (
+            "this fixture is not in a store; a step it cannot run "
             "must not be offered")
+
+    def test_the_sweep_is_not_offered_on_a_chain(self):
+        """`UX-468`'s walk 3, as a clause. More builders buy nothing on
+        a graph whose elements run one after another, and the golden run
+        is that graph."""
+        golden = {s["id"] for s in _report()["next_steps"]}
+        assert "sweep-the-capacity" not in golden, golden
 
     @has_capture
     def test_the_other_fixture_answers_the_other_way(self):

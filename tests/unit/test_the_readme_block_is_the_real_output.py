@@ -210,10 +210,19 @@ class TestTheBoundSentenceNamesItsThreshold:
         number in prose. That is fine, and this says why it is fine:
         the record carries `threshold` as a **field** on every rule, so
         a sentence saying "above the threshold" is still reachable. The
-        clause exists so a future rule that carries neither reddens."""
+        clause exists so a future rule that carries neither reddens.
+
+        Read across two runs since `UX-477`. The two rules are on
+        opposite sides of the same branch - the ranking fires only when
+        the run is *not* chain-bound - so no single capture publishes
+        both, and the golden run used to publish both only because its
+        verdict came from BuildStream's startup rather than its graph.
+        `shared_base_wide` is scheduler-bound by shape."""
         from bga import findings
 
-        rules = [rule for rule in _rules_for_the_fixture()
+        rules = [rule for rule in
+                 _rules_for_the_fixture()
+                 + _rules_for_the_fixture("tests/fixtures/shared_base_wide/run")
                  if rule.get("name") == "CHAIN_BOUND_RATIO"]
         assert len(rules) >= 2, ("the fixture no longer exercises both "
                                  "rules that gate on this constant", rules)
@@ -238,13 +247,13 @@ def _headline_rule():
                 if entry["claim"] == "diagnosis")["rule"]
 
 
-def _rules_for_the_fixture():
-    """Every provenance rule the golden run publishes."""
+def _rules_for_the_fixture(run="tests/fixtures/golden/mixed_task_kinds"):
+    """Every provenance rule one run publishes."""
     import json
 
     done = subprocess.run(
         [sys.executable, "-m", "bga.cli", "analyze",
-         "tests/fixtures/golden/mixed_task_kinds", "--format", "json",
+         run, "--format", "json",
          "--diagnostics", "--explain"],
         capture_output=True, text=True, cwd=str(REPO), timeout=180)
     assert done.returncode == 0, done.stderr

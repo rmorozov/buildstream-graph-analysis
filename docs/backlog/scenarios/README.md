@@ -15,13 +15,13 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-479 scenarios: **13 open**, 466 closed.
+479 scenarios: **12 open**, 467 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
 | capture | 1 | 71 |
-| analysis | 6 | 62 |
+| analysis | 5 | 62 |
 | contracts | 1 | 52 |
 | viewer | 0 | 134 |
 | cli | 0 | 5 |
@@ -45,7 +45,6 @@ task file, which is the only place it ever lived twice.
 | UX-474 | ["Elements Most Worth Optimizing First (by blast radius)" ranks three elements whose blast radius is zero](UX-0474-the-blast-ranking-publishes-a-list-of-zeros.md) | analysis | Medium | the local-optimizer told which three elements to fix first, by a quantity that is zero for all three | 🔴 |
 | UX-475 | [`mesh-graph` calls a five-element linear chain "a mesh of near-equal chains"](UX-0475-mesh-graph-calls-a-linear-chain-a-mesh.md) | analysis | Medium | the graph-owner told their chain is a mesh, and that savings are capped by "the next chain" when there is only one | 🔴 |
 | UX-476 | [the falsifier `UX-458` named arrived on the very next run](UX-0476-an-untouched-file-crossed-on-two-consecutive-runs.md) | guards | Medium | the contributor whose PR is red for a file they did not write | 🔴 |
-| UX-477 | [one graph, two verdicts — the chain-bound line is decided by how long the build is](UX-0477-the-chain-share-denominator-carries-a-constant.md) | analysis | Medium | the graph-owner whose build really is a chain and is told the time is going somewhere else | 🔴 |
 | UX-478 | [the graph-owner is not offered a reader on the one build whose defect is the graph](UX-0478-the-graph-owner-vanishes-on-a-graph-problem.md) | analysis | Medium | the graph-owner who opens the report on a strict chain and finds their reader is not there | 🔴 |
 | UX-479 | [a chain-bound build publishes no blast radius, so the recipe-author never learns what their element reaches](UX-0479-a-chain-bound-build-publishes-no-blast-radius.md) | analysis | Medium | the recipe-author who owns the element every other element waits for | 🔴 |
 | UX-481 | [the replay starts a build before the artifacts it consumes have been pulled](UX-0481-the-replay-lets-a-build-start-before-its-dependency-is-pulled.md) | analysis | Medium | the reader of a cache-hit build, whose certified floor comes from a schedule that could not have happened | 🔴 |

@@ -624,7 +624,21 @@ COMMITTED_EXPORTS = [
     # such finding, which is why its data moves by the contract alone -
     # the two numbers differing by exactly the payload is what says the
     # split is measured and not apportioned.
-    ("golden", GOLDEN, 394_000),                       #  391,543 B
+    # `UX-477` moved this one by 7,932 B, and **the page half did not
+    # move at all** - 291,588 B before and after, measured by this
+    # file's own splitter. The whole of it is data, because the golden
+    # run changed which branch it takes: `chain_share`'s denominator is
+    # the task horizon now, and four back-to-back tasks that used to
+    # read `scheduler_bound` at 0.875 (on BuildStream's startup, not on
+    # their graph) read `chain_bound` at 1.000. The chain-bound arm
+    # publishes `time-concentration`, `joint-saving`,
+    # `optimization-horizon` and `latent-heavies` with their evidence
+    # where the other published one `blast-radius-ranking`. Rows rather
+    # than prose, which is the half an export is supposed to be made
+    # of. The recorded 391,543 B was itself 2,037 B stale; measured
+    # before this change it was 393,580 B, so the old bound had 420 B
+    # of headroom rather than the ~4 KB the note above claims.
+    ("golden", GOLDEN, 406_000),                       #  401,512 B
     # `UX-297` moved this one by 385 B before that: the two-plane run
     # publishes `plane2_coverage.source`, which says which shape of
     # Plane 2 report served its numbers and what that costs to open. A

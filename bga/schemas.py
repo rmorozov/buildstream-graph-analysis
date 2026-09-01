@@ -3250,12 +3250,24 @@ _ANALYZE_HINTS = {
                                          "record enough to say."},
             "chain_share": {
                 QUANTITY: "share",
-                "description": "The critical path as a share of wall-clock - "
-                               "the number the diagnosis is decided by."},
+                "description": "The critical path as a share of the task "
+                               "horizon - the span from the first task's "
+                               "start to the last one's finish, which is "
+                               "the time the graph is responsible for. The "
+                               "number the diagnosis is decided by."},
             "chain_bound_share": {
                 QUANTITY: "share",
                 "description": "The threshold `chain_share` is compared "
                                "against."},
+            "chain_share_of": {
+                "enum": ["task_horizon", "wall_clock", None],
+                "description": "Which span `chain_share` is a share of. "
+                               "`task_horizon` always, except on a capture "
+                               "whose attribution is missing, where the two "
+                               "are equal anyway - published rather than "
+                               "assumed, because a share whose denominator "
+                               "a reader has to guess is UX-345's defect "
+                               "(UX-477)."},
             "certified_headroom_us": {
                 QUANTITY: "duration_us",
                 "description": "What scheduling alone could still recover, "

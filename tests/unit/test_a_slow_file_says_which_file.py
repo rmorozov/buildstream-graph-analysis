@@ -21,6 +21,7 @@ it. The real run is in CI; what is checked here is that the rule reads
 the floors, names the file, and can fail.
 """
 import json
+import statistics
 import pathlib
 import re
 import subprocess
@@ -820,8 +821,9 @@ class TestAnExcursionMustRepeat:
         code, _said = self._run(tmp_path, capsys, [self.STEADY])
         assert code == 0, (
             "an unreadable carry failed the build over its own absence")
-        assert drift.carried(tmp_path / "carry.json") == [
-            {self.STEADY}], (
+        assert [sorted(one) for one in
+                drift.carried(tmp_path / "carry.json")] == [
+            [self.STEADY]], (
             "the unreadable carry was not replaced by this run's finding, "
             "so the next run has nothing to agree with either")
 
@@ -842,11 +844,15 @@ class TestAnExcursionMustRepeat:
         drifted through all of them - and if the constant is ever raised,
         this is the clause that already says what raising it means."""
         row = (self.STEADY, 20.0, 10.0, 2.0)
-        both = [{self.STEADY}, {self.STEADY}]
-        gap = [{self.STEADY}, {self.FLAKY}]
-        assert drift.repeated([row], both) == ([row], []), (
+        both = [{self.STEADY: 2.0}, {self.STEADY: 2.0}]
+        gap = [{self.STEADY: 2.0}, {self.FLAKY: 2.0}]
+        # `explained=None` is "the diff could not be read", which is
+        # where agreement decides alone - `UX-442`'s rule, which this
+        # clause is about. What agreement decides *with* a readable
+        # diff is `TestAgreementIsNotEvidenceOnItsOwn` below.
+        assert drift.repeated([row], both) == ([row], [], []), (
             "a file every run behind this one found was not confirmed")
-        assert drift.repeated([row], gap) == ([], [row]), (
+        assert drift.repeated([row], gap) == ([], [], [row]), (
             "one run in the history was enough to confirm, so the rule "
             "is 'ever' rather than 'consecutively'")
 
@@ -861,6 +867,165 @@ class TestAnExcursionMustRepeat:
         held = json.loads((tmp_path / "carry.json").read_text(
             encoding="utf-8"))
         assert len(held["runs"]) == drift.CI_DRIFT_RUNS - 1, held["runs"]
+
+
+class TestAgreementIsNotEvidenceOnItsOwn:
+    """`UX-476`: what `UX-442`'s two-run rule was actually doing.
+
+    Both runs are read against the **same** recording run, so a file
+    whose record was taken on a lucky run crosses on every subsequent
+    run and "twice in a row" is guaranteed rather than improbable.
+    Three untouched files on one branch were reported that way; the
+    readings that opened the row are the fixture below.
+
+    So confirming needs evidence of a different kind - something in the
+    diff that could account for the cost - and `explained` is where it
+    comes from.
+    """
+
+    #: The three readings from `UX-476`'s own evidence, on
+    #: `test_emphasis_is_a_budget.py`: 12.58s recorded, then two CI runs
+    #: at 22.5s (x1.006 shift) and 16.9s (x0.81), which normalise to
+    #: x1.78 and x1.66. Both clear both gates; they are consecutive; the
+    #: branch touches neither the file nor `bga/viewer/`, which is what
+    #: it renders. The file cost x0.93 of its record on a developer
+    #: machine the same afternoon.
+    NAME = "tests/unit/test_emphasis_is_a_budget.py"
+    ROW = (NAME, 16.9, 12.58, 1.66)
+    HISTORY = [{NAME: 1.78}]
+
+    def test_the_untouched_file_is_not_confirmed(self):
+        """The acceptance test's clause. The diff explains nothing, so
+        two agreeing runs report and do not fail."""
+        confirmed, unexplained, waiting = drift.repeated(
+            [self.ROW], self.HISTORY, explained=set())
+        assert confirmed == [], (
+            "a file nothing in the diff names was confirmed as drift on "
+            "two runs read against one record - which is UX-476's defect")
+        assert unexplained == [self.ROW], (unexplained, waiting)
+
+    def test_a_file_the_diff_names_is_still_confirmed(self):
+        """The other direction, so the change is a distinction rather
+        than a wider gate. `UX-418`'s defect - a real tier change
+        shipping unseen - stays caught, because a real tier change has a
+        cause in the diff."""
+        confirmed, unexplained, _waiting = drift.repeated(
+            [self.ROW], self.HISTORY, explained={self.NAME})
+        assert confirmed == [self.ROW], (
+            "a file the diff touches was not confirmed, so a real tier "
+            "change would ship unseen (UX-418)")
+        assert unexplained == []
+
+    def test_a_base_that_does_not_resolve_is_no_evidence_at_all(self):
+        """The trap under this whole change. `changed_files` swallows
+        git's error and returns an empty diff, and an empty diff reads
+        as "the branch explains nothing" - which would downgrade every
+        row to `unexplained` on a failed fetch and silence the gate
+        exactly when its evidence is missing. Measured before the
+        `rev-parse` check: `--base nope/nothing` returned `set()`."""
+        assert drift.explained_by("nope/nothing") is None, (
+            "an unresolvable base read as a diff that explains nothing, "
+            "so a failed fetch turns the gate off rather than falling "
+            "back to agreement")
+        assert drift.explained_by(None) is None
+        assert isinstance(drift.explained_by("HEAD"), set)
+
+    def test_an_unreadable_diff_confirms_on_agreement_alone(self):
+        """`explained=None` is "the diff could not be read" - a shallow
+        checkout, a failed fetch. Then the gate is exactly what UX-442
+        left, because a gate that went quiet over its own missing
+        evidence would be worse than one that reports."""
+        confirmed, unexplained, _waiting = drift.repeated(
+            [self.ROW], self.HISTORY, explained=None)
+        assert confirmed == [self.ROW], confirmed
+        assert unexplained == []
+
+    def test_the_readings_are_carried_so_the_message_can_show_them(
+            self, tmp_path):
+        """The series is what a reader judges: two runs agreeing at
+        x1.78 and x1.66 against a record of 12.6s say the record is the
+        odd one out, and two wild readings say the runner is. The tool
+        reports it rather than deciding it (`shift_spread`'s rule)."""
+        path = tmp_path / "carry.json"
+        drift.carry(path, {self.NAME: 1.66}, "probe", self.HISTORY)
+        # What the *next* run restores is this run's reading, and the
+        # series it then shows is that one under its own.
+        assert drift.carried(path) == [{self.NAME: 1.66}]
+        assert drift.series(self.NAME, 1.51, drift.carried(path)) == [
+            1.51, 1.66]
+        assert drift.series(self.NAME, 1.66, self.HISTORY) == [1.66, 1.78]
+
+    def test_a_carry_from_before_this_change_still_remembers(self,
+                                                             tmp_path):
+        """CI restores a cache written by the previous run, which on the
+        commit this lands in was written in the old shape. Names with no
+        readings, rather than a discarded memory: a run that lost its
+        history would confirm nothing and the gate would go quiet for
+        one run."""
+        path = tmp_path / "carry.json"
+        path.write_text(json.dumps({"runs": [[self.NAME]]}),
+                        encoding="utf-8")
+        held = drift.carried(path)
+        assert [sorted(one) for one in held] == [[self.NAME]]
+        assert drift.series(self.NAME, 1.66, held) == [1.66]
+
+
+class TestTheSpreadIsTheShiftTheGateUses:
+    """`UX-476` item 2. `spread` wrote a history the gate never
+    applied: its median was over every shared file and the gate's is
+    over `shift_population` only. Measured sixteen minutes apart on one
+    reference, the same run read 0.677 one way and 0.81 the other.
+    """
+
+    #: `tiers.recorded()` is every file at or over the medium floor, so
+    #: on it the two populations are the same set and the two medians
+    #: are the same number - a fixture that cannot tell them apart. A
+    #: real suite is 42% sub-floor files (`SHIFT_FLOOR_S`'s own
+    #: measurement), and those are added here so it can.
+    def _mixed(self):
+        times = dict(tiers.recorded())
+        times.update({f"tests/unit/test_tiny_{i}.py": 0.05
+                      for i in range(200)})
+        return times
+
+    def test_the_recorded_shift_is_the_gates_own(self):
+        times = self._mixed()
+        reference = drift.record(dict(times))
+        # Every sub-floor file twice as slow, every file over it
+        # unchanged. The two medians now differ *because* the
+        # populations differ, which is the whole finding: a spread taken
+        # over everything cannot equal the gate's shift.
+        for name, seconds in list(times.items()):
+            if seconds < drift.SHIFT_FLOOR_S:
+                times[name] = seconds * 2
+        known = reference["files"]
+        ratios = {n: times[n] / known[n] for n in known if known[n] > 0}
+        over_everything = statistics.median(ratios.values())
+        gate = drift.shift_of(ratios, known)
+        assert round(over_everything, 3) != round(gate, 3), (
+            f"the fixture cannot tell the two medians apart "
+            f"({over_everything} vs {gate}), so this clause proves "
+            f"nothing about which one `spread` takes")
+        saw = drift.spread(times, reference)
+        assert saw["shift"] == round(gate, 3), (
+            f"the spread's shift is {saw['shift']} and the one `against` "
+            f"divides by is {round(gate, 3)}, so the history "
+            f"accumulating in the reference describes a quantity the "
+            f"gate never applies (UX-476)")
+
+    def test_it_says_how_many_files_voted_on_that_shift(self):
+        """`files` and `shift_files` are different numbers, and the
+        document carries both - `UX-423`'s floor excluded 42% of the
+        population from the estimate and the recorded `files: 314` said
+        nothing about that."""
+        times = self._mixed()
+        reference = drift.record(dict(times))
+        saw = drift.spread(times, reference)
+        known = reference["files"]
+        ratios = {n: times[n] / known[n] for n in known if known[n] > 0}
+        assert saw["shift_files"] == len(
+            drift.shift_population(ratios, known))
+        assert saw["shift_files"] < saw["files"], saw
 
 
 class TestCiSuppliesTheMemoryTheRuleNeeds:
@@ -881,6 +1046,24 @@ class TestCiSuppliesTheMemoryTheRuleNeeds:
         assert "--carry" in step, (
             f"CI's drift step has no run-to-run memory, so one sample "
             f"decides it again - which is UX-442 undone: {step!r}")
+
+    def test_the_drift_step_is_given_the_branchs_base(self):
+        """`UX-476`: without `--base` the step confirms on agreement
+        alone, which is the rule that reported three untouched files."""
+        text = self._text()
+        step = text.split("--against", 1)[1].split("\n\n", 1)[0]
+        assert "--base" in step, (
+            f"CI's drift step is given no base, so two runs against one "
+            f"record decide it again - UX-476 undone: {step!r}")
+
+    def test_the_base_is_fetched_before_the_step_reads_it(self):
+        """The checkout is shallow. A base that does not resolve makes
+        `explained_by` return None, and the gate falls back to
+        agreement - loud rather than silent, but not what the step is
+        for."""
+        text = self._text()
+        assert "git fetch" in text and "default_branch" in text, (
+            "nothing fetches the base the drift step diffs against")
 
     def test_the_carry_is_restored_and_saved_around_it(self):
         text = self._text()

@@ -1,6 +1,6 @@
 # UX-476: the falsifier `UX-458` named arrived on the very next run
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Found by:** round 72, driving PR #191 to green — the drift gate named a file no commit on the branch touches, twice in a row | **Serves:** the contributor whose PR is red for a file they did not write, and whose only offered remedy is to re-record a reference they have no reason to distrust | **Topic:** guards
+**Priority:** Medium | **Status:** 🟢 Done | **Found by:** round 72, driving PR #191 to green — the drift gate named a file no commit on the branch touches, twice in a row | **Serves:** the contributor whose PR is red for a file they did not write, and whose only offered remedy is to re-record a reference they have no reason to distrust | **Topic:** guards
 
 ## Motivation
 
@@ -226,3 +226,154 @@ showing a spread taken from the re-recording run, not `1.34`'s.
 ## Outcome
 
 _Not started._
+
+## Outcome (round 73, 2026-09-01) — 🟢 Done
+
+Three of the four items. The fourth is `UX-488`, and the reason it is
+a separate row is ordering rather than effort — see **Deviation**.
+
+### Item 1: what the two-run rule was actually doing
+
+Both runs are read against the **same** recording run. So a file whose
+record was taken on a lucky run crosses on *every* subsequent run, and
+"twice in a row" is guaranteed rather than improbable: two runs against
+one record are not two pieces of evidence, they are one measurement
+counted twice.
+
+Confirming now needs evidence of a **different kind** — something in
+the diff that could account for the cost. `explained_by` asks
+`tools/dev_touching.select`, the same map `make test-touching` runs on,
+and `repeated` returns three buckets instead of two:
+
+- **confirmed** — agreed across the window *and* the diff names it;
+- **unexplained** — agreed and the diff does not: printed with its
+  readings, not failed on;
+- **waiting** — did not agree across the window (unchanged).
+
+Run against this row's own numbers — 12.58s recorded, then 22.5s on a
+run whose shift was 1.006 and 16.9s on one whose shift was 0.81:
+
+```text
+=== run 1: test_emphasis_is_a_budget.py at 22.5s, runner x1.006 ===
+1 file(s) over both gates on this run only, and 2 consecutive runs are
+what reports (UX-442):
+  tests/unit/test_emphasis_is_a_budget.py  22.5s  against 12.6s
+      recorded, x1.78 after this run's x1.01 shift
+exit 0
+
+=== run 2: test_emphasis_is_a_budget.py at 16.9s, runner x0.81 ===
+1 file(s) over both gates on 2 consecutive runs, with nothing in this
+branch's diff that names them (UX-476):
+  tests/unit/test_emphasis_is_a_budget.py  16.9s  against 12.6s
+      recorded, x1.66 after this run's x0.81 shift   readings: x1.66, x1.78
+exit 0
+```
+
+x1.78 and x1.66 — the two figures the row was filed on, reproduced —
+and **exit 0** where the branch went red.
+
+**What a real tier change looks like against it**, which the item asked
+to be argued rather than assumed: a commit that makes a file slower
+touches that file or a module it names, `dev_touching` selects it, the
+row is *confirmed*, and the build is red. `UX-418`'s defect stays
+caught. What this stops failing on is a file that really got slower
+with nothing in the diff naming it — it is printed under `unexplained`
+rather than being silent, and on the branch that opened this row that
+population was three files and all three were false alarms.
+
+### Item 2: `spread` and the gate now use one shift
+
+`spread()` took its median over every file both documents named;
+`shift_of` takes it over `shift_population` — files at or over
+`SHIFT_FLOOR_S` in the reference. Measured sixteen minutes apart on one
+reference, the same run read **0.677** one way and **0.81** the other.
+So the quartiles accumulating in the document described a distribution
+the gate never applied, and `UX-458` sized `CI_DRIFT_FACTOR` from them.
+
+`spread` calls `shift_of` now, and reports `shift_files` beside
+`files` so the two populations are both visible — `UX-423`'s floor
+excludes 42% of a real suite and `files: 314` said nothing about that.
+
+The guard needed a fixture that can tell the two medians apart:
+`tiers.recorded()` is entirely at or over the floor, so on it they are
+the same number and the first version of the clause **passed against
+the mutation**. It adds 200 sub-floor files now and asserts the two
+medians differ before asserting which one `spread` took.
+
+### Item 3: the message names the remedy that applies
+
+The old text told the reader to re-record, which for an untouched file
+is asking them to launder someone else's noise into the baseline —
+round 73 did exactly that, appended 15.05s for a file whose next run
+said 8.8s, and reverted it. The `unexplained` block says what is true
+instead: every run is read against the one recording run, so agreeing
+runs are evidence the *reference entry* is unrepresentative as much as
+evidence the file got slower; `git diff <base>` touches neither these
+files nor anything they name; if the readings agree, refresh that
+entry, and if they do not, the next run will say so. **Either way this
+is not a failure.**
+
+The readings are what makes that judgeable, so the carry file holds
+them now — `{name: normalised}` rather than a bare name list. A carry
+written in the old shape still restores as names with no readings, so
+the run that lands this keeps its memory instead of going quiet for one
+run.
+
+### The trap under it, found by mutation
+
+`dev_touching.changed_files` swallows git's error and returns an empty
+diff, and an empty diff reads as "the branch explains nothing" — which
+would downgrade every row to `unexplained` on a failed fetch and
+silence the gate exactly when its evidence is missing. Measured:
+`explained_by("nope/nothing")` returned `set()`. It resolves the base
+with `git rev-parse --verify` first now and returns `None`, which falls
+back to `UX-442`'s agreement rule — loud rather than silent.
+
+### Mutations verified red and reverted (4)
+
+Counts are what the run printed, not what was expected of it.
+
+| # | mutation | reddened |
+|---|---|---|
+| P1 | `repeated` confirms on agreement alone again | 1 of 81 — `test_the_untouched_file_is_not_confirmed` |
+| P2 | `spread`'s median back over every shared file | 1 of 82 — `test_the_recorded_shift_is_the_gates_own` |
+| P3 | an unresolvable base returns `set()` instead of `None` | 1 of 82 — `test_a_base_that_does_not_resolve_is_no_evidence_at_all` |
+| P4 | the CI step drops `--base` | 1 of 82 — `test_the_drift_step_is_given_the_branchs_base` |
+
+**Two of these passed on their first writing** and are the reason the
+clauses are what they are: P2 against a fixture with no sub-floor files
+(the two medians were both 1.0), and P3 against no clause at all. Both
+are recorded here rather than quietly fixed.
+
+### Deviation from the Required Fix
+
+- **Item 1 is neither of the two shapes the item proposed.** It asked
+  for "compare the runs with each other as well as with the record, or
+  hold a rolling per-file band". Neither discriminates on this row's
+  own data: the two readings 22.4 and 20.9 *agree with each other*, so
+  a mutual-consistency rule would confirm exactly the false alarm the
+  row is about. What separates a bad record from a real regression is
+  whether anything in the diff can account for it, so that is the rule.
+  The readings are carried and printed — the item's first shape, kept
+  as evidence for the reader rather than as the verdict.
+- **Item 4 is `UX-488`.** Item 2 changed what `--record` writes, so a
+  candidate taken from a run predating it carries the old quantity —
+  the proxy this row was filed about. The re-record has to come from a
+  run that already has the fix, and the commit that lands the fix
+  cannot contain that run's output.
+- **The candidate is now in the log too**, inside a `::group::` block,
+  which the item did not ask for. It is what makes `UX-488` doable from
+  a terminal or an API client: this session could reach the artifact's
+  redirect and not its blob host (`connect_rejected` by the egress
+  proxy), and `UX-441`'s rule that the failure stays last in the log
+  holds because the group is collapsed.
+
+### The runs
+
+```text
+python3 -m pytest tests/unit/test_a_slow_file_says_which_file.py -q
+                     82 passed in 0.96s
+make test-touching   537 passed in 14.41s
+make test            5,661 passed, 27 skipped in 321.50s (0:05:21)
+make lint            ruff + PyMarkdown, both clean
+```

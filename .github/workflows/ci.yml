@@ -102,10 +102,25 @@ jobs:
             tier-carry-${{ github.ref }}-
         if: matrix.python-version == '3.11'
 
+      # UX-476: `--base` is the other half of the rule. Two runs read
+      # against one recording run are one measurement counted twice, so
+      # confirming a file needs something in the diff that could account
+      # for it - `tools/dev_touching.select`, over `origin/<default>`.
+      # The checkout is shallow, so the base is fetched here; a fetch
+      # that fails leaves no base, and the tool then decides on
+      # agreement alone, which is exactly what it did before.
+      - name: The branch's own diff, so a reported file can have a cause
+        run: |
+          git fetch --no-tags --depth=200 origin \
+            "${{ github.event.repository.default_branch }}" || true
+        if: always() && matrix.python-version == '3.11'
+        continue-on-error: true
+
       - name: Tiers match CI's own record of them
         run: |
           python tools/dev_tier_drift.py "${{ runner.temp }}/junit.xml" \
             --against --carry "${{ runner.temp }}/tier_carry.json" \
+            --base "origin/${{ github.event.repository.default_branch }}" \
             --source "github-actions ubuntu-latest, test (3.11), -n auto"
         if: matrix.python-version == '3.11'
 
@@ -147,6 +162,14 @@ jobs:
             --source "github-actions ubuntu-latest, test (3.11), -n auto"
           echo "Refresh tests/ci_reference.json from the" \
                "ci-reference-candidate artifact on this run."
+          # UX-476: and from the log, for a reader who has the log and
+          # not the artifact - a terminal, an API client, a proxy that
+          # blocks the artifact's blob host. Inside a collapsed group,
+          # so UX-441's rule holds: the failure above is still the last
+          # thing anyone scrolls to.
+          echo "::group::the same document, for a reader without the artifact"
+          cat "${{ runner.temp }}/ci_reference.candidate.json"
+          echo "::endgroup::"
         if: always() && matrix.python-version == '3.11'
 
       - name: Upload it, so refreshing the reference needs no scrolling

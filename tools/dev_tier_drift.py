@@ -448,10 +448,13 @@ def alone_seconds(name, python=None):
 def spread(times, reference):
     """What this run said about CI's own run-to-run noise, or None.
 
-    The quartiles of `measured / recorded` with the run's median shift
-    divided out - so a value of 1.0 is a file that moved exactly as much
-    as the whole runner did, and `max` is the widest one file departed
-    from its peers. That is the quantity `CI_DRIFT_FACTOR` should be
+    The quartiles of `measured / recorded` with the run's shift divided
+    out - so a value of 1.0 is a file that moved exactly as much as the
+    whole runner did, and `max` is the widest one file departed from its
+    peers. **The shift is `shift_of`'s**, the one the gate uses, so
+    `files` (every file both documents name) and `shift_files` (the ones
+    that voted on the shift) are both reported and are different
+    numbers. That is the quantity `CI_DRIFT_FACTOR` should be
     sized against, and there is no measurement of it yet: it is stated
     as the starting value it is. So the command that records writes the
     spread beside the numbers, and a later round reads a history of it
@@ -459,14 +462,25 @@ def spread(times, reference):
     on purpose.
     """
     known = reference.get("files") or {}
-    ratios = sorted(times[name] / known[name] for name in known
-                    if times.get(name) and known[name] > 0)
-    if len(ratios) < 4:
+    by_name = {name: times[name] / known[name] for name in known
+               if times.get(name) and known[name] > 0}
+    if len(by_name) < 4:
         return None
-    middle = statistics.median(ratios)
+    # `UX-476`: the median is taken over `shift_population` - the same
+    # files the **gate** divides by - and not over everything. They are
+    # different numbers on a real run: measured on the two runs that
+    # opened that row, `spread` recorded 0.677 while the gate normalised
+    # by 0.81, sixteen minutes apart on one reference. So the quartiles
+    # accumulating in this document described a distribution the gate
+    # never applied, and `UX-458` sized `CI_DRIFT_FACTOR` from them -
+    # fixing guide §5, an instrument reading a proxy for the thing it
+    # names.
+    middle = shift_of(by_name, known)
+    ratios = sorted(by_name.values())
     normalised = [ratio / middle for ratio in ratios]
     quarter = len(normalised) // 4
     return {"files": len(normalised),
+            "shift_files": len(shift_population(by_name, known)),
             "shift": round(middle, 3),
             "min": round(normalised[0], 3),
             "p25": round(normalised[quarter], 3),
@@ -590,12 +604,19 @@ def against(times, reference):
 def carried(path):
     """`UX-442`: what the runs before this one found over both gates.
 
-    A list of name-sets, most recent first, at most `CI_DRIFT_RUNS - 1`
-    long - which is exactly the memory the rule needs and no more.
+    A list of `{name: normalised reading}` maps, most recent first, at
+    most `CI_DRIFT_RUNS - 1` long - which is exactly the memory the rule
+    needs and no more.
 
     A missing or unreadable carry is an empty history rather than an
     error: the first run on a branch has no previous run, and a cache
     that did not restore must not fail the build over its own absence.
+
+    `UX-476` gave each name its **reading**. A carry written by the
+    older shape is a list of names, and is read as names with no
+    readings rather than discarded - the run that restores a cache from
+    before this change still has its memory, and only loses the numbers
+    it never wrote.
     """
     try:
         held = json.loads(pathlib.Path(path).read_text(encoding="utf-8"))
@@ -604,35 +625,105 @@ def carried(path):
     runs = held.get("runs")
     if not isinstance(runs, list):
         return []
-    return [set(one) for one in runs[:CI_DRIFT_RUNS - 1]
-            if isinstance(one, list)]
+    out = []
+    for one in runs[:CI_DRIFT_RUNS - 1]:
+        if isinstance(one, dict):
+            out.append(dict(one))
+        elif isinstance(one, list):
+            out.append({name: None for name in one})
+    return out
 
 
-def carry(path, names, source, history):
+def carry(path, readings, source, history):
     """Write what this run found, for the next run to agree or disagree.
 
     Written on **every** `--against` run, including the runs that find
     nothing: a file that excurses, recovers and excurses again has not
     drifted twice in a row, and an empty run is what says so.
     """
-    runs = [sorted(names)] + [sorted(one) for one in history]
+    runs = [dict(readings)] + [dict(one) for one in history]
     pathlib.Path(path).write_text(json.dumps(
         {"runs": runs[:CI_DRIFT_RUNS - 1], "measured_on": source},
         indent=2) + "\n", encoding="utf-8")
 
 
-def repeated(rows, history):
-    """Split `against`'s rows into the confirmed and the ones waiting.
+def explained_by(base):
+    """The test files this branch's diff could plausibly have slowed.
 
-    A row is confirmed when every one of the `CI_DRIFT_RUNS - 1` runs
-    behind this one found the same file over both gates. A history
-    shorter than that confirms nothing - the branch has not run enough
-    times to tell an excursion from drift, and saying so is the point.
+    `tools/dev_touching.select` maps a diff to the test files that
+    *name* what it changed - the selector `make test-touching` runs on.
+    Here it answers a different question with the same map: **is there
+    anything in the diff that could account for this file costing
+    more?**
 
-    `history` is `None` when the run was given no carry at all. Then
-    nothing can be confirmed by agreement and every row decides on its
-    single sample, which is the behaviour this item replaced; it is kept
-    so that a missing `--carry` is loud rather than silently green.
+    `None` where it cannot be computed - no base given, or git could not
+    resolve one. That is the honest answer on a shallow CI checkout, and
+    `repeated` treats it as "no evidence either way" and confirms on
+    agreement alone, which is the behaviour before `UX-476`. A gate that
+    went quiet because a fetch failed would be worse than one that
+    reports.
+    """
+    if not base:
+        return None
+    # The base has to *resolve* first. `dev_touching.changed_files`
+    # swallows git's error and returns an empty diff, and an empty diff
+    # reads as "nothing in the branch explains anything" - which would
+    # downgrade every row to `unexplained` precisely when the evidence
+    # is missing, silencing the gate on a failed fetch. Measured: a
+    # `--base nope/nothing` returned `set()` before this check.
+    resolved = subprocess.run(["git", "rev-parse", "--verify", "--quiet",
+                               f"{base}^{{commit}}"],
+                              capture_output=True, text=True, cwd=REPO)
+    if resolved.returncode != 0:
+        return None
+    try:
+        from tools import dev_touching
+        chosen, _why = dev_touching.select(dev_touching.changed_files(base))
+        return set(chosen)
+    except Exception:                                # pragma: no cover
+        return None
+
+
+def repeated(rows, history, explained=None):
+    """Split `against`'s rows into confirmed, unexplained and waiting.
+
+    `UX-442` confirmed a row when every one of the `CI_DRIFT_RUNS - 1`
+    runs behind this one found the same file over both gates, reasoning
+    that an excursion does not repeat.
+
+    **`UX-476` found that it does, and why it must.** Every run is
+    compared against the *same* recording run, so a file whose record
+    was taken on a lucky run crosses on every subsequent run and "twice
+    in a row" is guaranteed rather than improbable. Three untouched
+    files on one branch were reported that way, one of them at x1.78
+    and x1.66 on consecutive runs while the same file cost x0.93 of its
+    record on a developer machine. Two runs against one record are not
+    two pieces of evidence; they are one measurement counted twice.
+
+    So confirming now needs evidence of a **different kind**: something
+    in the diff that could account for the cost. `explained` is the set
+    of test files `dev_touching` selects for this branch's changes, and
+    a row is:
+
+    - **confirmed** when it agreed across the window *and* the diff
+      names it - a real tier change has a cause, and this is what keeps
+      `UX-418`'s defect caught;
+    - **unexplained** when it agreed and the diff does not - reported
+      with its readings, because "two runs say 21s and the reference
+      says 12.6s" is a fact worth printing, but not failed on: the
+      remedy for it is re-recording that entry, not making a file
+      faster that nobody made slower;
+    - **waiting** when it did not agree across the window.
+
+    `explained` is `None` when the diff could not be read at all, and
+    then every agreed row is confirmed - `UX-442`'s behaviour, kept so
+    that a failed fetch is loud rather than silently green.
+
+    What this stops catching, stated: a file that really did get slower
+    with nothing in the diff naming it. It is printed under
+    `unexplained` rather than failing the build, so it is visible; and
+    on the branch that opened this row that population was three files
+    and all three were false alarms.
 
     **A file with no reference entry is never held back.** It is not an
     excursion - it is a file the reference does not describe, which is
@@ -640,13 +731,32 @@ def repeated(rows, history):
     run to say so buys nothing.
     """
     if history is None:
-        return list(rows), []
+        return list(rows), [], []
     enough = len(history) >= CI_DRIFT_RUNS - 1
-    confirmed, waiting = [], []
+    confirmed, unexplained, waiting = [], [], []
     for row in rows:
-        agreed = enough and all(row[0] in one for one in history)
-        (confirmed if row[2] is None or agreed else waiting).append(row)
-    return confirmed, waiting
+        if row[2] is None:                    # not in the reference at all
+            confirmed.append(row)
+            continue
+        if not (enough and all(row[0] in one for one in history)):
+            waiting.append(row)
+        elif explained is None or row[0] in explained:
+            confirmed.append(row)
+        else:
+            unexplained.append(row)
+    return confirmed, unexplained, waiting
+
+
+def series(name, reading, history):
+    """This run's reading and the ones behind it, oldest last.
+
+    The numbers `repeated` decided on, so the message can show them
+    rather than assert a verdict. A run that carried names and no
+    readings contributes nothing here, which is what a pre-`UX-476`
+    carry does.
+    """
+    seen = [reading] + [one.get(name) for one in history]
+    return [value for value in seen if value is not None]
 
 
 def _against(times, path, args):
@@ -673,7 +783,11 @@ def _against(times, path, args):
     # exactly as it should.
     history = carried(args.carry) if args.carry else None
     if args.carry:
-        over = {name for name, _s, was, _r in rows if was is not None}
+        # `UX-476`: the reading as well as the name. `repeated` decides
+        # on agreement and on the diff; the readings are what let the
+        # message show the series a reader has to judge.
+        over = {name: round(ratio, 2)
+                for name, _s, was, ratio in rows if was is not None}
         carry(args.carry, over, args.source, history or [])
     if verdict == "empty":
         print(f"{path} names none of the {len(times)} file(s) this run "
@@ -707,7 +821,8 @@ def _against(times, path, args):
         if not args.quiet:
             print(f"tiers ok: {line}")
         return 0
-    confirmed, waiting = repeated(rows, history)
+    explained = explained_by(args.base)
+    confirmed, unexplained, waiting = repeated(rows, history, explained)
 
     def say(row):
         name, seconds, was, ratio = row
@@ -715,6 +830,11 @@ def _against(times, path, args):
                 + (f"  against {was:.1f}s recorded, x{ratio:.2f} after "
                    f"this run's x{shift:.2f} shift" if was is not None
                    else "  and not in the reference at all"))
+
+    def readings(row):
+        """The series behind a row, newest first, as `x1.66, x1.78`."""
+        seen = series(row[0], row[3], history or [])
+        return ", ".join(f"x{value:.2f}" for value in seen)
 
     if waiting:
         # Not a failure and not silence. One sample does not separate a
@@ -725,6 +845,25 @@ def _against(times, path, args):
               f"(UX-442):", file=sys.stderr)
         for row in waiting:
             print(say(row), file=sys.stderr)
+    if unexplained:
+        # `UX-476`. Reported with its numbers and not failed on: every
+        # run compares against the same recording run, so agreement
+        # across runs is evidence about the *record* as much as about
+        # the file, and nothing in the diff names this one.
+        print(f"\n{len(unexplained)} file(s) over both gates on "
+              f"{CI_DRIFT_RUNS} consecutive runs, with nothing in this "
+              f"branch's diff that names them (UX-476):", file=sys.stderr)
+        for row in unexplained:
+            print(f"{say(row)}   readings: {readings(row)}", file=sys.stderr)
+        print(f"\nEvery run is read against the one recording run, so "
+              f"agreeing runs are evidence the reference entry is "
+              f"unrepresentative as much as evidence the file got slower "
+              f"- and `git diff {args.base}` touches neither these files "
+              f"nor anything they name. If the readings above agree with "
+              f"each other, refresh the reference from this run's "
+              f"{CI_CANDIDATE_ARTIFACT} artifact; if they do not, it is "
+              f"one runner's afternoon and the next run will say so. "
+              f"Either way this is not a failure.", file=sys.stderr)
     if not confirmed:
         if not args.quiet:
             print(f"tiers ok: {line}")
@@ -754,6 +893,12 @@ def main(argv=None):
     parser.add_argument("report", help="a pytest --junitxml report")
     parser.add_argument("--quiet", action="store_true",
                         help="print nothing when there is no drift")
+    parser.add_argument("--base", metavar="REF", default=None,
+                        help="the ref this branch is diffed against, so a "
+                             "reported file can be checked for a cause in "
+                             "the diff (UX-476). Without it, agreement "
+                             "across runs decides alone, which is what "
+                             "UX-442 did.")
     parser.add_argument("--record", metavar="PATH", nargs="?", const="-",
                         help="write this report as the CI reference "
                              "(`-` prints it), instead of checking. CI "

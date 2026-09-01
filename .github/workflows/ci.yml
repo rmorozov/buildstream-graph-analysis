@@ -1002,6 +1002,40 @@ jobs:
             examples/01-resource-contention "$OUT/native-spine.json" \
             -- bst --builders 2 build all.bst > "$OUT/native-spine.txt" 2>&1
 
+      - name: A generated project is built, and the finding census counts it
+        # `UX-473`. Two findings - `build-failed` and `failed-task-time` -
+        # cannot come from a committed capture, because every committed
+        # capture is of a build that succeeded and `UX-189` says a clone
+        # ships no capture at all. The only thing that produces one is
+        # `tools/bga_gen_project.py`, and until this step nothing ran it
+        # on a schedule: they were reachable by a command somebody had to
+        # remember, which is the "true on one machine" shape `UX-213` and
+        # `UX-459` are both about.
+        #
+        # `bga snapshot` exits non-zero here because the build it wraps
+        # really does fail - that is the point of the spec - so the exit
+        # status is recorded rather than obeyed. The census's own exit
+        # status is what this step reports, and it is non-zero only when
+        # a finding is neither produced nor declared.
+        #
+        # **Printed, not gated on a bound.** The count over a generated
+        # capture has never run twice on the same runner, and a threshold
+        # nobody has measured is `UX-458`'s open question one axis over.
+        # A drop shows up in this log; turning it into a gate is a row of
+        # its own when there is a spread to size it from.
+        if: always()
+        run: |
+          set -uo pipefail
+          OUT=artifacts/generated-a-build-that-fails
+          mkdir -p "$OUT"
+          python3 tools/bga_gen_project.py \
+            --spec tests/fixtures/specs/a-build-that-fails.json --out "$OUT/project"
+          (cd "$OUT/project" && bga snapshot -- bst build all.bst) > "$OUT/snapshot.txt" 2>&1
+          echo "bga snapshot exited $? (the build is meant to fail)"
+          RUN=$(echo "$OUT"/project/.bga/runs/*/run)
+          test -d "$RUN" || { echo "no capture at $RUN" >&2; exit 1; }
+          python3 tools/dev_finding_coverage.py --also "$RUN"
+
       - name: Upload real-build artifacts
         if: always()
         uses: actions/upload-artifact@v4

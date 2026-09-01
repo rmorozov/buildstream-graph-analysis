@@ -67,21 +67,29 @@ def _guide_tables():
 #: The questions the guide sorts as genuinely needing the trace.
 NEEDS_PERFETTO, ANSWERED_BY_THE_PAGE = _guide_tables()
 
-# What makes a query need the trace: it resolves to one row **per
-# process** or per instant, which the report never does.
+# What makes a query need the trace: it reads something finer than any
+# population the report publishes.
 #
-# Two ways that shows up, and the first draft of this guard only had the
-# second. `element-commands` reads `s.name` and `s.dur` - the process
-# *slice itself* - and no `debug.` annotation at all, so a pattern
-# looking only for annotations called it a Plane 1 question. Scoping to
-# the Plane 2 category is the real marker: one row per process.
+# Usually that is one row **per process** or per instant, and two ways
+# that shows up - the first draft of this guard only had the second.
+# `element-commands` reads `s.name` and `s.dur` - the process *slice
+# itself* - and no `debug.` annotation at all, so a pattern looking
+# only for annotations called it a Plane 1 question. Scoping to the
+# Plane 2 category is the real marker: one row per process.
+#
+# `debug.resource` is the one Plane 1 entry, and it is here for the
+# same reason rather than as an exception (`UX-469`): the report's
+# `attribution.resource_wait_us` is the waiting summed over every
+# scheduler queue at once and `floors.lb` is the max over their
+# ratios, so no published population is per queue. The trace is where
+# that granularity exists.
 #
 # `debug.element` and `debug.kind` are deliberately absent - `UX-321`
 # put `element` on both planes, so reading it says nothing about
 # granularity.
-PER_PROCESS = re.compile(
+ONLY_THE_TRACE = re.compile(
     r"category\s+glob\s+'\*native-process\*'"
-    r"|debug\.(cmd|max_rss_kb|cpu_us|exit_status)\b"
+    r"|debug\.(cmd|max_rss_kb|cpu_us|exit_status|resource)\b"
     r"|counter")
 
 
@@ -163,10 +171,10 @@ class TestTheQuestionsThatNeedTheTraceReallyDo:
 
         for qid in sorted(NEEDS_PERFETTO):
             sql = questions[qid]["sql"]
-            assert PER_PROCESS.search(sql), (
+            assert ONLY_THE_TRACE.search(sql), (
                 f"{qid} is listed as needing the trace, but its SQL reads "
-                "nothing per-process and no counter track. Either the query "
-                "changed or it belongs in the other table.")
+                "nothing the report does not already publish. Either the "
+                "query changed or it belongs in the other table.")
 
 
     def test_the_guide_sorts_every_question_the_library_serves(self):

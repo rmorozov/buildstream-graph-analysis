@@ -195,6 +195,20 @@ PLANE1_ANNOTATIONS = (
                          "report is ranked against"),
     ("downstream_count", "how many elements rebuild when this one changes - "
                          "its blast radius in elements"),
+    # `UX-469`: **which queue** the task occupied. `attribution`'s
+    # `resource_wait_us` is "time work was ready and the capacity to run
+    # it was not free" over the whole build, and the report cannot say
+    # which of BuildStream's queues was the contended one - the
+    # scheduler has several, with separate limits. Every slice carried
+    # the plane it came from and nothing about the queue, so that
+    # question died at the report's edge.
+    ("resource", "the scheduler resource this task held while it ran - "
+                 "`PROCESS` for a build slot, `DOWNLOAD` for a fetch or "
+                 "pull, `UPLOAD` for a push, `CACHE` for a cache query. "
+                 "BuildStream limits each separately, so this is the queue "
+                 "`attribution.resource_wait_us` is time spent waiting in - "
+                 "which that figure, summed over every queue at once, "
+                 "cannot name"),
 )
 
 # The one category, and the one already-pinned constant it earns
@@ -317,6 +331,52 @@ def element_kinds(snapshot: str) -> dict:
         if uid:
             kinds[uid] = element.get("element_kind") or "unknown"
     return kinds
+
+
+def task_resources(snapshot: str) -> dict:
+    """`(element uid, task kind)` -> the scheduler resource it held.
+
+    `UX-469`. Read from `run/trace.json`, which the capture already
+    wrote, in the same shape `element_kinds` reads `graph.json` and
+    `element_structure` reads `analyze.json` - the wrapped log is a
+    Plane 1 *log* and states none of these three.
+
+    Keyed by both halves because the resource is a fact about the
+    **task**, not the element: `lib0.bst`'s fetch held a DOWNLOAD slot
+    and its build held a PROCESS one, and a map keyed on the uid alone
+    would answer whichever of them it read last.
+
+    `primary_resource` rather than `resources[]`: measured on a
+    two-queue capture, every span's list is a one-element list holding
+    exactly its `primary_resource` -
+
+        primary_resource: {'DOWNLOAD': 9, 'PROCESS': 9}
+        resources:        {('DOWNLOAD',): 9, ('PROCESS',): 9}
+
+    so a second annotation would carry no value the first does not, at
+    one more key on every slice. `UX-360`'s volume budget is about the
+    page and the argument is the same here.
+
+    `{}` where the snapshot has no trace or one this cannot parse, and
+    the key is then simply absent from every slice - the rule every
+    annotation in this module follows.
+    """
+    path = os.path.join(snapshot, RUN_SUBDIR, "trace.json")
+    try:
+        with open(path, "r", encoding="utf-8") as handle:
+            trace = json.load(handle)
+    except (OSError, ValueError):
+        return {}
+    resources = {}
+    for span in trace.get("spans") or ():
+        # `uid|kind|phase|attempt` - the composite `UX-466`'s census
+        # reports dropped because the trace decomposes it, read here as
+        # the two parts that name a task.
+        parts = str(span.get("task_key") or "").split("|")
+        held = span.get("primary_resource")
+        if len(parts) >= 2 and parts[0] and parts[1] and held:
+            resources[(parts[0], parts[1].upper())] = held
+    return resources
 
 
 def element_structure(snapshot: str) -> dict:
@@ -1024,7 +1084,8 @@ def _plane2_flows(records, first_flow_id):
 
 
 def _plane1_annotations(event: dict, kinds: dict, outcome,
-                        structure: Optional[dict] = None) -> list:
+                        structure: Optional[dict] = None,
+                        resources: Optional[dict] = None) -> list:
     args = event.get("args") or {}
     element = args.get("element")
     # `UX-380`: where this element sits, not only what it is. Absent
@@ -1040,6 +1101,10 @@ def _plane1_annotations(event: dict, kinds: dict, outcome,
         "depth": place.get("depth"),
         "on_critical_path": place.get("on_critical_path"),
         "downstream_count": place.get("downstream_count"),
+        # `UX-469`: keyed by the task, not the element - one element's
+        # fetch and its build hold different slots.
+        "resource": (resources or {}).get(
+            (element, str(args.get("action") or "").upper())),
     }
     return [(key, values[key]) for key, _ in PLANE1_ANNOTATIONS
             if values[key] is not None]
@@ -1221,7 +1286,7 @@ def _plane1_offset_us(plane1_events, spans, anchor_element) -> float:
 
 def _write_trackevent(plane1_events, raw_log, spans, anchor_element, output,
                       kinds=None, edges=(), snapshot=None, structure=None,
-                      only_element=None):
+                      only_element=None, resources=None):
     """The trace, packet by packet - nothing accumulates but the rows.
 
     Plane 1 is a handful of tasks and goes in first from the list the
@@ -1242,6 +1307,7 @@ def _write_trackevent(plane1_events, raw_log, spans, anchor_element, output,
     offset_us = (_plane1_offset_us(plane1_events, spans, anchor_element)
                  if anchor_element else 0.0)
     kinds = kinds or {}
+    resources = resources or {}
     outcomes = _plane1_outcomes(plane1_events)
     # `UX-309`: flow ids are global within a trace, so one counter runs
     # through both planes. Plane 1's are assigned first because Plane 1
@@ -1326,7 +1392,8 @@ def _write_trackevent(plane1_events, raw_log, spans, anchor_element, output,
                 trace.slice_begin(
                     timestamp, track, event.get("name") or "task",
                     annotations=_plane1_annotations(
-                        event, kinds, outcomes.get(id(event)), structure),
+                        event, kinds, outcomes.get(id(event)), structure,
+                        resources),
                     categories=(CATEGORY_PLANE1,),
                     flows=sources, terminating_flows=sinks)
             else:
@@ -1577,6 +1644,7 @@ def render(snapshot: str, output: str,
                 kinds=element_kinds(snapshot),
                 edges=dependency_edges(snapshot), snapshot=snapshot,
                 structure=element_structure(snapshot),
+                resources=task_resources(snapshot),
                 only_element=only_element)
             result = {"planes": ["1", "2"] if (raw and anchor) else ["1"],
                       "anchor": anchor, "raw_log": raw, "format": fmt}

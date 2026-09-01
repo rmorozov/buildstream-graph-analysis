@@ -50,7 +50,7 @@ because the page cannot answer it.
 
 ## The canned questions, sorted by whether you needed to leave
 
-`bga view` serves sixteen questions under the handoff on its
+`bga view` serves seventeen questions under the handoff on its
 `perfetto.html` page, ready to paste into Perfetto's query box. Sorted
 against the rule above:
 
@@ -66,6 +66,7 @@ against the rule above:
 | `cpu-versus-wall` | per-process `debug.cpu_us` against each slice's own wall time |
 | `cost-by-executable` | the page has `by_binary`, which is counts; this is wall, CPU and peak RSS per program |
 | `executables-in-element` | the same pivot inside one sandbox: `binary_cost` has that element's CPU per binary, this adds the wall time and the peak resident set |
+| `resource-queues` | `attribution.resource_wait_us` is the waiting summed over every scheduler queue at once; this is per queue, and only the per-queue figure says which limit to raise |
 
 **Does not need Perfetto — the page answers it, and the query is for
 slicing further:**
@@ -81,7 +82,7 @@ slicing further:**
 | `which-run-is-this` | the identity header |
 | `graph-levels` | `parallelism.levels`, and the level decomposition it draws |
 
-Eight of sixteen genuinely require the trip. The other eight are
+Nine of seventeen genuinely require the trip. The other eight are
 sharper instruments for something the page already told you — which is
 the right ratio for a library of *follow-up* questions, and worth
 knowing before assuming a reader who opened Perfetto had to.

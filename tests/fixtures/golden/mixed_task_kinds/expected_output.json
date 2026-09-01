@@ -20,7 +20,11 @@
             },
             "reader": "local-optimizer",
             "copy_text": "BGA finding: Biggest wait category: 12.5% of wall-clock time is UNTRACKED TAIL (0.00s)\n      -> real time after the last tracked task finished - outside per-task tracking, not a scheduling issue\n  category untracked_tail_us\n  category_us 0.0s\n  share 12%\n  hint real time after the last tracked task finished - outside per-task tracking, not a scheduling issue\n  Run: golden-fixture-manifest-hash-v1",
-            "trace_query": "stalls"
+            "trace_query": "resource-queues",
+            "trace_queries": [
+                "resource-queues",
+                "stalls"
+            ]
         },
         {
             "id": "time-concentration",
@@ -804,7 +808,11 @@
                 "sentence": "The largest non-execution category is 12.5% of wall-clock, at or above the 1% floor below which the largest of the remainder is rounding rather than an opportunity.",
                 "module": "bga/findings.py"
             },
-            "trace_query": "stalls",
+            "trace_query": "resource-queues",
+            "trace_queries": [
+                "resource-queues",
+                "stalls"
+            ],
             "unpublished_inputs": []
         },
         {
@@ -1081,10 +1089,10 @@
         }
     ],
     "document_shape": {
-        "leaves": 695,
+        "leaves": 699,
         "deepest_depth": 7,
         "deepest_path": "findings.[].evidence.steps.[].entering.[]",
-        "deeper_than_three": 327,
-        "deeper_than_three_share": 0.47050359712230216
+        "deeper_than_three": 331,
+        "deeper_than_three_share": 0.47353361945636624
     }
 }

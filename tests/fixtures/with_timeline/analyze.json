@@ -20,7 +20,11 @@
       },
       "reader": "local-optimizer",
       "copy_text": "BGA finding: Biggest wait category: 5.9% of wall-clock time is UNTRACKED HEAD (2.72s)\n      -> real time before the tracked-task window started (BuildStream startup, cache query, sandbox staging) - see Pipeline Overhead, not a scheduling issue\n  category untracked_head_us\n  category_us 2.7s\n  share 6%\n  hint real time before the tracked-task window started (BuildStream startup, cache query, sandbox staging) - see Pipeline Overhead, not a scheduling issue\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
-      "trace_query": "stalls"
+      "trace_query": "resource-queues",
+      "trace_queries": [
+        "resource-queues",
+        "stalls"
+      ]
     },
     {
       "id": "time-concentration",

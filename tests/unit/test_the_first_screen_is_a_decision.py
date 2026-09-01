@@ -14,19 +14,27 @@ opportunity split and the ranked actions are decided in `findings.py`
 and published as `headline`; the panel reads fields.
 
 Two committed fixtures answer *differently*, which is what makes them
-worth having: `shared_base_wide` is `scheduler_bound` at 0.549
-and falls back to the blast-radius ranking, and the golden run is
-`chain_bound` at 1.000. A guard that only ever saw one branch would not
-be guarding the branch.
+worth having: `a_chain_beside_a_crowd` is `scheduler_bound` at 0.571
+and the golden run is `chain_bound` at 1.000. A guard that only ever
+saw one branch would not be guarding the branch.
 
 **`UX-477` moved which fixture is which, and the reason is the point.**
 The scheduler-bound case used to be the golden run at 0.875 — a verdict
 it only had because `chain_share`'s denominator was wall-clock, and
 wall-clock carries BuildStream's own ~2.5ms startup. Four back-to-back
 tasks are not scheduler-bound; they are a chain with a head in front of
-them. So the branch is now exercised by a graph that really is
-scheduler-bound: six modules over one base, eleven seconds of horizon
-over a six-second critical path, on two lanes.
+them. So the branch is exercised by a graph that really is
+scheduler-bound.
+
+**`UX-474` moved it again, one fixture along, for a related reason.**
+It was `shared_base_wide`, and that run's `top_actions` came from the
+blast-radius ranking — a ranking of three elements whose blast radius
+was zero, which is the defect `UX-474` closed. With the ranking
+silent there, the run has no actions at all and this clause had
+nothing to read: a guard standing on a published defect. It now reads
+`a_chain_beside_a_crowd`, `UX-474`'s own T7 — a four-element chain
+whose reach really is 3, 2, 1, 0, beside a crowd of independent work
+that puts wall-clock several times above the path.
 """
 import contextlib
 import io
@@ -45,7 +53,9 @@ from bga.findings import (CHAIN_BOUND_RATIO, DIAGNOSES, DIAGNOSIS_CHAIN_BOUND,
 GOLDEN = "tests/fixtures/golden/mixed_task_kinds"
 # `UX-477`: a committed capture whose *graph* is scheduler-bound, rather
 # than one whose verdict came from the startup in its denominator.
-SCHEDULED = "tests/fixtures/shared_base_wide/run"
+# `UX-474`: and one whose actions are a ranking of something, rather
+# than of three zeros - see the note above.
+SCHEDULED = "tests/fixtures/a_chain_beside_a_crowd/run"
 REAL = "examples/06-macro-micro-optimization/.bga/runs/20260821T170127Z/run"
 node = shutil.which("node")
 needs_node = pytest.mark.skipif(node is None, reason="node is not installed")

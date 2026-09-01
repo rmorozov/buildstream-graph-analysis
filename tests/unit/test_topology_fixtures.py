@@ -171,7 +171,11 @@ def test_the_covering_set_writes_the_same_bytes_twice(tmp_path):
     assert set(topo.covering_set()) == {
         "shared_base_wide", "ample_capacity", "one_source_many_elements",
         "same_build_twice_cold", "same_build_twice_incremental",
-        "a_build_that_pulls"}
+        "a_build_that_pulls",
+        # `UX-474`. Added because stopping the blast ranking from
+        # ordering zeros left it produced by nothing: the covering set
+        # had no shape where a ranking by reach carries information.
+        "a_chain_beside_a_crowd"}
 
 
 def test_only_the_source_fixture_writes_an_inventory(tmp_path):

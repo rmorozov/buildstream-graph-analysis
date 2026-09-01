@@ -35,9 +35,18 @@ GOLDEN = os.path.join(REPO, "tests", "fixtures", "golden", "mixed_task_kinds")
 # because anything about the ranking changed - because the golden run
 # was only ever `scheduler_bound` thanks to BuildStream's startup
 # sitting in `chain_share`'s denominator, and four back-to-back tasks
-# are a chain. `shared_base_wide` is scheduler-bound by shape: six
-# modules over one base on two lanes.
-RANKING = os.path.join(REPO, "tests", "fixtures", "shared_base_wide", "run")
+# are a chain.
+#
+# `UX-474` moved it one fixture further along. It was
+# `shared_base_wide`, whose six modules over one base are
+# scheduler-bound by shape - but every one of those modules reaches
+# nothing, and the ranking there was an ordering of three zeros, which
+# is the defect that row closed. The copy text those clauses read was
+# the copy text of a finding that should not have been published.
+# `a_chain_beside_a_crowd` is the shape a ranking is worth reading on:
+# `lib0.bst` reaches nine, `lib1.bst` two, `lib2.bst` one.
+RANKING = os.path.join(REPO, "tests", "fixtures",
+                       "a_chain_beside_a_crowd", "run")
 
 
 def _analyze(run):

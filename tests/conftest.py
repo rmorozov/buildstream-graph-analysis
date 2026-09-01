@@ -274,6 +274,9 @@ KNOWN_SKIP_REASONS = {
         "environment with no PATH at all has nothing to assert", 0),
     "no block declares a join destination": (
         "a payload-shape gate over the committed fixtures", 0),
+    "no bulk tree in this checkout - examples/README.md says how to make one": (
+        "`UX-462`'s clause needs the generated tree the guide tells a "
+        "reader to make; the root `.gitignore` keeps it out of a clone", 0),
     "no busybox on PATH to exercise a static binary with": (
         "the static-binary blind spot needs a real static binary", 0),
     "no snapshot store in this checkout": (

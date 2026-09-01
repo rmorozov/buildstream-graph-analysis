@@ -236,6 +236,41 @@ class TestClaudeMdIsTrueAndShort:
                          if not (REPO / p.rstrip("/")).exists())
         assert missing == [], f"CLAUDE.md names path(s) that do not exist: {missing}"
 
+    def test_no_line_carries_a_count_that_a_close_makes_wrong(self):
+        """`UX-471`. The tree map said **421 task files** against 482 on
+        disk - 61 out, and drifting further on every close.
+
+        Every other figure in this file is a command's runtime or a
+        rule, and neither moves when a row closes. This one moved on
+        every commit, and the review that found it could not name a
+        decision it informs. So the number is gone rather than guarded:
+        a count nobody acts on, kept true by a test somebody has to
+        edit each round, is upkeep bought for nothing.
+
+        This clause is the other shape - it asserts the **absence** and
+        so never needs editing. It reads the counted nouns rather than
+        every digit, because `CLAUDE.md` legitimately carries `~4m45s`,
+        `-n auto` and section numbers, and a clause that banned digits
+        outright would be banning the sentences this file is for.
+
+        It found a second one on its first run, which the review that
+        filed `UX-471` had passed over: *"~30 sightings in ~26 items"*
+        about the proxy defect. A running tally of how often something
+        has been sighted decays exactly like a file count, and round 73
+        alone added four. Gone the same way.
+
+        What it deliberately does **not** catch is a figure frozen to a
+        closed item - *"Five found in `UX-420` alone"* is a fact about
+        `UX-420` and cannot go stale, which is why that sentence spells
+        its number and this one reads digits.
+        """
+        countable = r"(?:task file|scenario|item|row|test file|guard|skill)s?"
+        found = re.findall(rf"\b(\d[\d,]*)\s+{countable}\b", self._text())
+        assert found == [], (
+            f"CLAUDE.md counts {found} of something the backlog changes on "
+            f"every close - the count decays on its own, and `UX-471` "
+            f"removed the last one rather than guard it")
+
     def test_it_points_at_the_guide_rather_than_restating_it(self):
         """`UX-240`'s rule for skills, and it holds here for the same
         reason: two copies of one rule is how the copies disagree."""

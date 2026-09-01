@@ -88,7 +88,56 @@ report/       -> text/JSON rendering (presentation only, since UX-75)
 
 `tools/` is a separate, deliberately-not-`bga`-internal set of scripts that turn a real `bst` invocation into `bga`-ingestible input (needs a live `bst`+`bwrap` install; `bga` itself never does) — full data-flow diagram in `docs/spec/ingestion-pipeline.md`. `tools/bst_native_build_tracer.py` (+ `tools/native_trace/`) is Plane 2 — see below.
 
-One script in `tools/` is not part of that pipeline and needs no `bst` at all: `tools/gen_synthetic_scale_run.py` emits a synthetic run directory (`graph.json`/`trace.json`/`run-context.json`) at a scale no example project in this repo reaches — by default 1202 elements over 14 real levels, scheduled onto 16 builders by a real dependency-respecting greedy pass so the trace satisfies the same ordering and capacity properties a real capture does. It exists because the second audit round found four defects that were invisible at eleven elements (`UX-41`–`UX-44`), and their acceptance tests all cite this fixture; running it with the same `--seed` reproduces the directory byte-for-byte. It exercises `bga`'s **analysis** side only — nothing about a synthesized run directory says whether the capture tools survive a thousand-element build.
+### Where fixtures come from
+
+Nothing in `tools/` above answers *"give me a build of this shape"* —
+they all wrap a build somebody already has, or read one. Two things do,
+and they split the question rather than competing for it. `UX-463`
+settled the split by asking which axes each half can reach:
+
+| | curated fixtures | generated projects |
+|---|---|---|
+| written by | `tests/fixtures/topologies.py` | `tools/bga_gen_project.py` |
+| produces | an ingested triple: `graph.json`, `trace.json`, `run-context.json` | a BuildStream project `bst build` accepts |
+| needs `bst` | no | to *build* what it writes, yes |
+| owns | graph shape, where the wall-clock sits, run mode, source topology | outcome, sandbox profile, scale |
+
+The line between them is not convenience. A curated triple is
+deterministic to the microsecond, and that is the **only** way to build
+a fixture whose two longest paths are within a few percent of each
+other — a real build cannot be asked for a near-tie critical path, and
+`blast_radius_disagrees_with_horizon` and `shared_base_wide`'s
+`tie_ratio` both exist because of it. Going the other way, a synthesised
+trace can only assert what its author already believed: a process storm
+or inode-count staging is something the `LD_PRELOAD` hook and the ptrace
+spine *observe*, so **that axis does not exist above `bst`** and no
+amount of writing JSON reaches it. A real failed build is the same
+argument in one instance — it is the only thing that shows the capture
+path survives one (`UX-156`, `UX-148`).
+
+`tools/gen_synthetic_scale_run.py` is the curated half at a scale
+nobody hand-writes: a synthetic run directory, by default 1202 elements
+over 14 real levels, scheduled onto 16 builders by a real
+dependency-respecting greedy pass so the trace satisfies the same
+ordering and capacity properties a real capture does. It exists because
+the second audit round found four defects invisible at eleven elements
+(`UX-41`–`UX-44`), and their acceptance tests all cite this fixture;
+running it with the same `--seed` reproduces the directory byte for
+byte. Like every curated fixture it exercises the **analysis** side
+only — nothing about a synthesised run directory says whether the
+capture tools survive a thousand-element build, which is the sentence
+`bga_gen_project.py` exists to stop this document from having to
+hedge.
+
+Captures are never committed (`UX-189`): every `examples/*/.bga/` is
+git-ignored, so a clone carries the fixtures above and no run of a real
+build at all. That is why two censuses exist to say what a clone can
+actually reach — `tools/dev_finding_coverage.py` for findings and
+`tools/dev_trace_coverage.py` for trace carriers. Both are dev
+instruments and are listed with the rest in the fixing guide's §6
+context map rather than here; this section is about where a *shape*
+comes from, and a reader who wants the instrument list is one link
+away.
 
 ## Plane 2: intra-element native-build-system tracing (`UX-11`)
 

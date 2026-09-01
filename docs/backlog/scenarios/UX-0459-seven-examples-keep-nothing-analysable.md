@@ -97,6 +97,21 @@ Either way, `UX-460`'s guard is what freezes the answer.
   succeeds. The row was withdrawn. Reading one glob instead of the
   document beside it is how a working thing gets filed as broken.
 
+## The decision, made in UX-463
+
+This row was filed with two arms and no measurement between them:
+curated fixtures, or a CI job running the census on builds it already
+discards. `UX-463` inventoried the generation tooling and found the
+arms do not overlap - curated fixtures own graph shape, timing and run
+mode, because a real build cannot be asked for two longest paths within
+a few percent; a generator owns outcome, sandbox profile and scale,
+because those live below `bst` and a synthesised trace can only assert
+what its author already believed. So both, split by axis.
+
+Six of the eight uncovered findings close under `UX-464`; T5's two need
+`UX-465`; `cache-transfer-cost` is declared uncovered for want of a
+remote CAS.
+
 ## Acceptance Test
 
 ```bash

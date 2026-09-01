@@ -109,19 +109,42 @@ class TestTheRecordKindsAreKindsAndNotPaths:
 
 
 class TestBothVerdictsAreReachable:
-    """A census that can only say one thing says nothing. Both of these
-    are negative clauses about the tree as it is, and both must fail
-    the day that stops being true - the gap one because the gaps were
-    closed, which is the point of filing them."""
+    """A census that can only say one thing says nothing.
 
-    def test_the_census_finds_a_gap_and_an_unmaintained_field(self, report):
+    `UX-470` found six gaps and this class asserted one existed.
+    `UX-487` closed four of them and declined two, so **the tree has no
+    gaps left** - which is the outcome, and which takes the easy
+    version of this clause away with it. What replaces it asks the
+    harder question: can the census still *produce* a gap? A field
+    stripped from the name map, over the same real run, must come back
+    reported rather than quietly recorded.
+    """
+
+    def test_the_verdicts_the_tree_earns_are_the_ones_it_reports(self, report):
         verdicts = {v for _f, v, _d in report["plane2"]}
         verdicts |= {v for _n, v, _d in (report["plane3"] or [])}
-        assert "unmaintained" in verdicts, verdicts
-        assert "gap" in verdicts, (
-            "the census reports no gap at all. Either the six UX-470 found "
-            "were closed - in which case say so here - or the instrument "
-            "stopped discriminating")
+        assert {"recorded", "unmaintained", "declined"} <= verdicts, verdicts
+        assert "gap" not in verdicts, (
+            f"a gap is reported again. UX-487 closed the four the spine "
+            f"could reach and declined `rchar`/`wchar`, so a new one is "
+            f"either a field that stopped being recorded or a plane that "
+            f"grew a capability: {verdicts}")
+
+    def test_a_field_that_stops_being_recorded_comes_back_as_a_gap(
+            self, tmp_path, monkeypatch):
+        """The discriminating half, and the reason the clause above can
+        assert *no* gaps without going quiet. `minflt` is recorded, so
+        the census says `recorded`; with the map no longer claiming a
+        key for it, the same run has to say `gap`."""
+        patched = dict(capability.PROC_KEYS)
+        patched[("stat", "minflt")] = None
+        monkeypatch.setattr(capability, "PROC_KEYS", patched)
+        after = capability.census(str(tmp_path))
+        gaps = {name for name, verdict, _d in (after["plane3"] or [])
+                if verdict == "gap"}
+        assert gaps == {"/proc/<pid>/stat:minflt"}, (
+            f"a field the record no longer carries was not reported as a "
+            f"gap, so the census cannot find one at all: {gaps}")
 
     def test_the_hook_interposes_the_open_family_and_nothing_else(self, report):
         """What the hook can see about a process is what it interposes,

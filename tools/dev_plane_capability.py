@@ -36,6 +36,11 @@ key it names is not one the hook actually writes.
 The verdict a field can get
 ---------------------------
 - **recorded** - the record carries it.
+- **declined** - somebody looked at it and decided it should not be
+  recorded, with the reason in `DECLINED` beside it. The same shape
+  and the same argument as `dev_trace_coverage.DECLINED`: "nothing
+  records this" and "nothing records this on purpose" are different
+  answers, and telling them apart is the whole value of a census.
 - **gap** - this kernel maintains the field (the probe moved it) and
   no record carries it. The output a round is meant to act on.
 - **unmaintained** - the probe below *exercised* the field and this
@@ -146,12 +151,35 @@ PROC_KEYS = {
     ("stat", "utime"): "utime",
     ("stat", "stime"): "stime",
     ("status", "VmHWM"): "maxrss_kb",
-    ("stat", "minflt"): None,
-    ("stat", "majflt"): None,
-    ("io", "read_bytes"): None,
-    ("io", "write_bytes"): None,
+    # `UX-487` closed these four. The fault counts were being skipped
+    # by `%*u` in the `sscanf` that reads the CPU times, and the block
+    # counts come from `/proc/<pid>/task/<pid>/io` - the task's own,
+    # not `/proc/<pid>/io`, which folds in reaped children. Under the
+    # hook's own key names and units, so the parser needs no second
+    # vocabulary.
+    ("stat", "minflt"): "minflt",
+    ("stat", "majflt"): "majflt",
+    ("io", "read_bytes"): "inblock",
+    ("io", "write_bytes"): "oublock",
     ("io", "rchar"): None,
     ("io", "wchar"): None,
+}
+
+#: What a plane could record and deliberately does not, and why - the
+#: same shape and the same argument as `dev_trace_coverage.DECLINED`. A
+#: declaration, not an exemption: the reason is the reviewed part, and
+#: the census reports these under `declined` so a reader can tell
+#: "nobody looked" from "somebody looked and said no".
+DECLINED = {
+    ("io", "rchar"):
+        "syscall-level bytes, an axis neither plane has. The hook's "
+        "`ru_inblock`/`ru_oublock` are block-layer counts, so giving "
+        "this to the spine alone would put a column in the record that "
+        "is populated for the processes the hook could not see and "
+        "empty for the rest (UX-487)",
+    ("io", "wchar"):
+        "the same, in the other direction - and the same reason "
+        "(UX-487)",
 }
 
 #: `/proc/<pid>/stat`'s fields are positional, so a name needs an
@@ -296,6 +324,8 @@ def census(build_dir):
             name = f"/proc/<pid>/{where[0]}:{where[1]}"
             if key is not None:
                 plane3.append((name, "recorded", key))
+            elif where in DECLINED:
+                plane3.append((name, "declined", DECLINED[where]))
             elif offers.get(where) is not None:
                 plane3.append((name, "gap",
                                f"exposed here (read as {offers[where]}) and "

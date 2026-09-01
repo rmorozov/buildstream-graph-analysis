@@ -15,12 +15,12 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-486 scenarios: **7 open**, 479 closed.
+486 scenarios: **6 open**, 480 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
-| capture | 1 | 72 |
+| capture | 0 | 72 |
 | analysis | 0 | 62 |
 | contracts | 2 | 54 |
 | viewer | 0 | 134 |
@@ -41,7 +41,6 @@ task file, which is the only place it ever lived twice.
 | UX-483 | [a provenance record inlines whatever its path resolves to, and only convention keeps that from being a whole population](UX-0483-a-provenance-record-inlines-the-whole-population-it-cites.md) | contracts | Medium | the round that adds a claim, cites the map its finding is about, and ships a report carrying that population once per claim | 🔴 |
 | UX-485 | [the trace census cannot tell a field that arrived from one whose values another field brought](UX-0485-the-census-cannot-tell-a-carried-value-from-a-borrowed-one.md) | contracts | Low | the round that reads a `reached` verdict and believes a field has a carrier of its own | 🔴 |
 | UX-486 | [a committed analysis fixture drifts from the analyzer, and one clause out of many noticed](UX-0486-a-committed-analysis-fixture-drifts-from-the-analyzer.md) | guards | Medium | the round whose guards pass against an analysis the current code would never emit | 🔴 |
-| UX-487 | [a spine-only process has no fault counts and no I/O, from a /proc read the spine already does](UX-0487-a-spine-only-process-has-no-fault-or-io-counts.md) | capture | Medium | the reader whose slow element is a static binary, for whom Plane 2's I/O and fault columns are empty and nothing says why | 🔴 |
 | UX-488 | [the reference is five hand-appends deep, and the re-record has to come after the rule change](UX-0488-the-wholesale-re-record-the-drift-rule-change-has-to-follow.md) | guards | Medium | the round that reads `spread`'s history off the reference's git log and finds one entry repeated five times | 🔴 |
 
 ## UX-398..UX-410: the sixty-fourth round — the walk that judged the answers (2026-08-29)

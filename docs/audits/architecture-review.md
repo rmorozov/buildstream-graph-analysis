@@ -79,6 +79,7 @@ would have caught it; a bound at it would only just have.
 | 7 | 2026-08-29 | 406 | `UX-416`, `UX-417` |
 | 8 | 2026-08-30 | 432 | `UX-446`, `UX-447` |
 | 9 | 2026-09-01 | 458 | `UX-471`, `UX-472` |
+| 10 | 2026-09-01 | 484 | `UX-492`, `UX-493` |
 
 ### Review 3 — 2026-08-25
 
@@ -705,3 +706,93 @@ that reads like a finding and is not one, and `UX-466`'s docstring
 already declares it. A review that filed it would be filing against a
 declared limit, which is how a backlog fills with rows nobody can
 close.
+
+## Review 10 — 2026-09-01, at 484 closed rows
+
+Input: the twenty-six rows closed since review 9 — round 72's tail
+(`UX-465`, `UX-467`, `UX-458`, `UX-468`, `UX-480`, `UX-482`) and round
+73 (`UX-459`, `UX-460`, `UX-473`, `UX-477`, `UX-479`, `UX-475`,
+`UX-478`, `UX-474`, `UX-484`, `UX-471`, `UX-472`, `UX-481`, `UX-469`,
+`UX-470`, `UX-476`, `UX-487`, `UX-486`, `UX-483`, `UX-485`, `UX-488`).
+Two axes: **what a plane can capture and what its records carry**, and
+**the sentences the graph-shape findings print**. The second is where
+both findings are.
+
+**1. Does the code still do what it says?** Three chapters moved under
+this round and all three were checked against the modules:
+
+- the spine's counters, `architecture.md:274` — *"the spine records
+  `minflt`/`majflt` from the `/proc` read it already did, and
+  `inblock`/`oublock` from the task's own"*. Opened `spine.c`:
+  `read_cpu_times` parses both fault counts out of the `stat` buffer it
+  already read, and `read_io_blocks` reads `/proc/%d/task/%d/io`. True,
+  including the word *task's own*, which is the distinction `UX-487`
+  had to make after `/proc/<pid>/io` folded in reaped children.
+- the trace dictionary's `resource` row against `bga_timeline.py`'s
+  `task_resources`: the four queue names and the `UX-469` reference
+  are what the emitter writes.
+- `what-the-viewer-answers.md` says *seventeen questions*;
+  `bga/viewer/questions.js` holds 17. No drift.
+
+**2. Does every published contract have a home?**
+`test_the_documents_keep_up_with_the_contracts.py` — 8 passed. The
+prose: this round published no new contract id. `dev_plane_capability.py`
+and `dev_refresh_analysis.py` claim none, correctly — they are dev
+instruments over `tools/` and `tests/fixtures/`, and neither emits a
+document anybody consumes.
+
+**3. Is any figure invalidated?** Yes, and by this round's own work.
+`UX-0479`'s Outcome says *"golden's 406,000 stands"*; `UX-0469` moved
+it to 411,000 hours later in the same round and did not annotate the
+earlier file, which fixing guide §3.6 asks for and
+`git grep 406,000 docs/backlog/scenarios` would have found. Filed as
+`UX-493`.
+
+Checked and *not* invalidated: `CLAUDE.md`'s task-file count, which
+`UX-471` removed rather than guarded — the grep is empty, and the fix
+held; `macro_micro`'s 458,000, which the tree still carries; and the
+finding-census lines, which live only in the rows that measured them
+and are dated by the row they sit in.
+
+**4. What shipped since the last review that no document names?** Two
+tools, `dev_plane_capability.py` and `dev_refresh_analysis.py`. Both
+are on the fixing guide's §6 context map. Neither is in
+`architecture.md`, and that is the *stated* policy there — the census
+paragraph at `architecture.md:134` says dev instruments "are listed
+with the rest in the fixing guide's §6 context map rather than here".
+Checked whether the same paragraph's *count* had gone stale, since
+that is the shape `UX-472` was filed for one review earlier: it says
+"two censuses exist to say what a clone can actually reach" and names
+the finding and trace censuses. `dev_plane_capability.py` does not
+answer that question — it compares a plane's capability with its
+records — so the sentence is still true and is **not** filed. `bga
+--help` gained nothing.
+
+**5. Does each document's own "last updated" claim match reality?**
+No document outside this one carries a dated self-claim; this one's
+last row is the one above. No drift.
+
+**The finding that matters most is in the front door.** `README.md`
+introduces its real-project block as *"verbatim"* and then prints, at
+line 170:
+
+```text
+    Note: 77% of elements have zero slack - this graph is a mesh of near-equal chains, so
+```
+
+`UX-475` closed this round and split that slot in two, and **neither**
+branch can produce that line any more: `mesh-graph` now carries
+`{off_path} of them off the critical path`, and a graph with none
+prints `chain-graph` and a different sentence entirely. `UX-326` made
+printed sentences contracts; this is one, quoted as evidence, in the
+file an outside reader meets first. Filed as `UX-492`. Nothing caught
+it because the block came from a real 3614-second freedesktop-sdk run
+that no guard can re-run — which is also the hard part of fixing it.
+
+**Deliberately not filed.** `UX-0075` and `UX-0076` quote the same old
+sentence, and `planted-defect-walk-round-72.md` quotes it as the defect
+it was reporting. All three are inside closed history, where the
+sentence is correct as history; §3.6 is about a figure a document
+presents as *current*. A review that filed those would be asking a
+later round to rewrite the record of what was true when it was
+written.

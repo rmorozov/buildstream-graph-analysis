@@ -251,7 +251,9 @@ tests/tiers.py             which tier each file is in, from measurement (UX-238)
 tests/conftest.py          the tier hook and the skip census (UX-235)
 tests/ci_reference.json    one CI run's per-file seconds, so drift is CI against CI (UX-420);
                            refreshed from CI's ci-reference-candidate artifact, never from a
-                           local --record - the `verify` skill's §3 has the four steps (UX-447)
+                           local --record - the `verify` skill's §3 has the four steps (UX-447).
+                           A file it does not carry is adopted by the default branch's own run,
+                           not failed on - `--adopt`, and no commit of yours (UX-503)
 tests/dom_shim.mjs         the one DOM every viewer guard runs on (UX-264)
 tests/viewer.mjs           the viewer's exports as one namespace, so a guard names a symbol not a module (UX-337)
 tests/cdp.mjs              headless Chrome over CDP, no dependencies (UX-257)

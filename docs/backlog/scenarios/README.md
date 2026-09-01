@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-504 scenarios: **16 open**, 488 closed.
+504 scenarios: **15 open**, 489 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -27,7 +27,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | cli | 0 | 5 |
 | store | 2 | 28 |
 | docs | 7 | 50 |
-| guards | 7 | 90 |
+| guards | 6 | 90 |
 
 ## Open scenarios
 
@@ -48,7 +48,6 @@ task file, which is the only place it ever lived twice.
 | UX-500 | [the batch gate, measured against the per-item suite](UX-0500-the-batch-gate-measured-against-the-per-item-suite.md) | docs | High | the implementing session's wall clock; the maintainer's subscription | 🔴 |
 | UX-501 | [the index is derived, not merged](UX-0501-the-index-is-derived-not-merged.md) | docs | High | two sessions on one slate; the orchestrator who merges them | 🔴 |
 | UX-502 | [the comment that tells the story](UX-0502-the-comment-that-tells-the-story.md) | docs | Medium | every session that opens a dev tool to use it, not to relive it | 🔴 |
-| UX-503 | [a new test file records itself in the CI reference](UX-0503-a-new-test-file-records-itself.md) | guards | High | the session that adds a guard and does not want a second commit for it | 🔴 |
 | UX-504 | [an implementer agent that may edit, in a worktree only](UX-0504-an-implementer-agent-that-may-edit-in-a-worktree.md) | guards | Medium | the orchestrating session that has two independent tracks and one context window | 🔴 |
 | UX-505 | [the rules card — the guide's rules on one page, its reasons behind it](UX-0505-the-rules-card.md) | docs | High | every session's first read; the maintainer's subscription | 🔴 |
 | UX-506 | [the Outcome skeleton fits the register](UX-0506-the-outcome-skeleton-fits-the-register.md) | docs | Medium | the session closing a task, and the round that reads it later | 🔴 |

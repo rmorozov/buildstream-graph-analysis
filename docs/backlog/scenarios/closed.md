@@ -499,6 +499,7 @@ is open, on what topic, for whom — is the other file's.
 | UX-497 | [the register is a budget, not a preference](UX-0497-the-register-is-a-budget.md) | High | every session, on every file it reads; the maintainer's subscription | 🟢 Done — round 74 | [UX-497](UX-0497-the-register-is-a-budget.md) |
 | UX-498 | [a filing is decomposed before it is coded](UX-0498-a-filing-is-decomposed-before-it-is-coded.md) | High | the implementing session, before its first edit; the round that wants two sessions on one slate | 🟢 Done — round 74 | [UX-498](UX-0498-a-filing-is-decomposed-before-it-is-coded.md) |
 | UX-499 | ["where is it" costs one line, not one file](UX-0499-where-is-it-costs-one-line-not-one-file.md) | Medium | every session's first ten minutes | 🟢 Done — round 74 | [UX-499](UX-0499-where-is-it-costs-one-line-not-one-file.md) |
+| UX-503 | [a new test file records itself in the CI reference](UX-0503-a-new-test-file-records-itself.md) | High | the session that adds a guard and does not want a second commit for it | 🟢 Done — the drift gate records a file the reference does not carry instead of failing on it, and the default branch adopts the row | [UX-503](UX-0503-a-new-test-file-records-itself.md) |
 
 ## UX-207..UX-212: the twenty-third audit round — the report learns to answer first (2026-08-22)
 

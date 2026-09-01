@@ -515,6 +515,58 @@ def record(times, source="unknown", reference=None):
     return document
 
 
+def adopt(reference, candidate):
+    """`UX-503`: the rows the reference does not carry yet, added to it.
+
+    `(document, added)` - the reference with the new names in it, and
+    what was added. **Only names the reference lacks.** An entry it
+    already holds is never rewritten here: changing one is a refresh,
+    which is a human's decision about whether a file is meant to cost
+    what it now costs, and this runs unattended.
+
+    The candidate's seconds are the *candidate run's* clock, so each
+    added row is divided by the shift between the two documents before
+    it lands - the same normalisation `against` applies when reading,
+    put in once at write time so the reference stays one clock. Without
+    it a run 1.3x slow writes a row 30 % high and the file is
+    unjudgeable against it for as long as it stands, which is the
+    cross-clock comparison `UX-418` ruled out arriving by the back door.
+
+    Two states refuse rather than guess, both returning no additions:
+
+    - **the two documents share no file**, so there is no shift to
+      divide by and the candidate cannot be placed on this clock;
+    - **the shift is outside `IMAGE_BAND`**, which is `against`'s
+      `stale` - the reference is not describing this runner any more,
+      and rows adopted into it would be measured against a document
+      that is about to be replaced wholesale.
+    """
+    known = reference.get("files") or {}
+    times = candidate.get("files") or {}
+    ratios = {name: times[name] / known[name] for name in known
+              if times.get(name) and known[name] > 0}
+    if not ratios:
+        return reference, {}
+    shift = shift_of(ratios, known)
+    if not IMAGE_BAND[0] <= shift <= IMAGE_BAND[1]:
+        return reference, {}
+    added = {name: round(seconds / shift, 2)
+             for name, seconds in times.items() if name not in known}
+    if not added:
+        return reference, {}
+    document = dict(reference)
+    document["files"] = {name: seconds for name, seconds
+                         in sorted({**known, **added}.items())}
+    # Which rows are *not* from the recording run `measured_on` names,
+    # accumulated over adoptions and dropped by the next wholesale
+    # `record` - a reader comparing two rows deserves to know one of
+    # them was placed on this clock by division rather than measured on
+    # it.
+    document["adopted"] = sorted(
+        set(reference.get("adopted") or []) & set(known) | set(added))
+    return document, added
+
+
 def shift_population(ratios, known):
     """The names whose ratio is allowed to estimate the runner's shift.
 
@@ -592,7 +644,10 @@ def against(times, reference):
             rows.append((name, times[name], known[name], ratio / shift))
     # A file with no reference at all is checked by nothing, which is
     # the silence this whole item is about - but only where there is
-    # something at stake. A new fast file needs no entry.
+    # something at stake. A new fast file needs no entry. `UX-503`:
+    # such a row is carried out with `was` None and split off by
+    # `repeated` into `recorded`, so it is printed rather than failed
+    # on - there is no recorded number for it to be slower than.
     floor = tiers.MEDIUM_FLOOR_S * shift
     for name, seconds in times.items():
         if name not in known and seconds >= floor:
@@ -743,26 +798,36 @@ def repeated(rows, history, explained=None):
     on the branch that opened this row that population was three files
     and all three were false alarms.
 
-    **A file with no reference entry is never held back.** It is not an
-    excursion - it is a file the reference does not describe, which is
-    true of every run until the reference is refreshed, and waiting a
-    run to say so buys nothing.
+    **A file with no reference entry is `recorded`, not confirmed.**
+    `UX-503`: it is not an excursion and it is not drift - it is a file
+    the reference does not describe yet, which is true of every run
+    between a guard landing and the next refresh. The run that meets it
+    already has the only number anybody wants, and `--record` has
+    already written that number into this run's candidate; failing the
+    build on it bought a second commit and a forty-line skill section,
+    and caught nothing. Judged for drift on the run *after* the
+    reference carries it, like every other file.
     """
+    # `UX-503`: split first, so an absent file never reaches the drift
+    # decision at all. It has no reference entry to be slower *than*,
+    # which is what made confirming it - and the old branch below
+    # confirmed it on the **first** run, ahead of `UX-442`'s window -
+    # a statement about the reference's coverage rather than about the
+    # file.
+    recorded = [row for row in rows if row[2] is None]
+    rows = [row for row in rows if row[2] is not None]
     if history is None:
-        return list(rows), [], []
+        return list(rows), [], [], recorded
     enough = len(history) >= CI_DRIFT_RUNS - 1
     confirmed, unexplained, waiting = [], [], []
     for row in rows:
-        if row[2] is None:                    # not in the reference at all
-            confirmed.append(row)
-            continue
         if not (enough and all(row[0] in one for one in history)):
             waiting.append(row)
         elif explained is None or row[0] in explained:
             confirmed.append(row)
         else:
             unexplained.append(row)
-    return confirmed, unexplained, waiting
+    return confirmed, unexplained, waiting, recorded
 
 
 def series(name, reading, history):
@@ -840,14 +905,16 @@ def _against(times, path, args):
             print(f"tiers ok: {line}")
         return 0
     explained = explained_by(args.base)
-    confirmed, unexplained, waiting = repeated(rows, history, explained)
+    confirmed, unexplained, waiting, recorded = repeated(
+        rows, history, explained)
 
     def say(row):
+        # `UX-503` split the reference-less rows out into `recorded`
+        # above, so every row reaching here has a number to be read
+        # against.
         name, seconds, was, ratio = row
-        return (f"  {name}  {seconds:.1f}s"
-                + (f"  against {was:.1f}s recorded, x{ratio:.2f} after "
-                   f"this run's x{shift:.2f} shift" if was is not None
-                   else "  and not in the reference at all"))
+        return (f"  {name}  {seconds:.1f}s  against {was:.1f}s recorded, "
+                f"x{ratio:.2f} after this run's x{shift:.2f} shift")
 
     def readings(row):
         """The series behind a row, newest first, as `x1.66, x1.78`."""
@@ -882,6 +949,21 @@ def _against(times, path, args):
               f"{CI_CANDIDATE_ARTIFACT} artifact; if they do not, it is "
               f"one runner's afternoon and the next run will say so. "
               f"Either way this is not a failure.", file=sys.stderr)
+    if recorded:
+        # `UX-503`. Not a failure: the reference does not describe this
+        # file yet, so there is no number it is slower *than*. The run
+        # that meets it is the run that measures it, and `--record` has
+        # already written that measurement into this run's candidate.
+        print(f"\n{len(recorded)} file(s) over "
+              f"{tiers.MEDIUM_FLOOR_S:g}s that the reference does not "
+              f"carry yet - measured here, not judged (UX-503):",
+              file=sys.stderr)
+        for row in recorded:
+            print(f"  {row[0]}  {row[1]:.1f}s", file=sys.stderr)
+        print(f"Commit this run's {CI_CANDIDATE_ARTIFACT} artifact (or its "
+              f"{CI_CANDIDATE_JOB} job's log) to give them a reference "
+              f"entry; the run after that judges them for drift like "
+              f"every other file.", file=sys.stderr)
     if not confirmed:
         if not args.quiet:
             print(f"tiers ok: {line}")
@@ -906,9 +988,42 @@ def _against(times, path, args):
     return 1
 
 
+def _adopt(candidate):
+    """`--adopt`: give the reference the rows it does not carry yet.
+
+    `UX-503`. Runs unattended after a merge, so every refusal below
+    prints why and exits **0**: the reference staying as it is costs one
+    stale row, and a red job on the default branch over a bookkeeping
+    step costs everybody's attention.
+    """
+    if not candidate.is_file():
+        print(f"{candidate}: no candidate document to adopt from - the run "
+              f"that would have written it did not reach its record step",
+              file=sys.stderr)
+        return 0
+    reference = (json.loads(CI_REFERENCE.read_text(encoding="utf-8"))
+                 if CI_REFERENCE.is_file() else {})
+    document, added = adopt(reference,
+                            json.loads(candidate.read_text(encoding="utf-8")))
+    if not added:
+        print(f"{CI_REFERENCE.name} carries every file this run measured; "
+              f"nothing to adopt")
+        return 0
+    CI_REFERENCE.write_text(json.dumps(document, indent=2) + "\n",
+                            encoding="utf-8")
+    print(f"adopted {len(added)} file(s) into {CI_REFERENCE.name}, on its "
+          f"own clock:")
+    for name, seconds in sorted(added.items()):
+        print(f"  {name}  {seconds:.2f}s")
+    return 0
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("report", help="a pytest --junitxml report")
+    parser.add_argument("report", nargs="?",
+                        help="a pytest --junitxml report. Optional only "
+                             "with --adopt, which reads a recorded "
+                             "document rather than a report")
     parser.add_argument("--quiet", action="store_true",
                         help="print nothing when there is no drift")
     parser.add_argument("--base", metavar="REF", default=None,
@@ -925,6 +1040,12 @@ def main(argv=None):
                              f"the {CI_CANDIDATE_JOB} job; that is "
                              "what to commit, because a local run writes "
                              "this machine's clock and not CI's")
+    parser.add_argument("--adopt", metavar="CANDIDATE",
+                        help=f"merge the rows {CI_REFERENCE.name} does not "
+                             f"carry yet out of a recorded document (a "
+                             f"{CI_CANDIDATE_ARTIFACT} artifact) into it, "
+                             f"on the reference's own clock, and touch no "
+                             f"entry it already holds (UX-503)")
     parser.add_argument("--no-confirm", action="store_true",
                         help="report what the parallel report said, "
                              "without re-running each named file alone "
@@ -944,6 +1065,10 @@ def main(argv=None):
                         help="what produced this report, recorded with it")
     args = parser.parse_args(argv)
 
+    if args.adopt:
+        return _adopt(pathlib.Path(args.adopt))
+    if not args.report:
+        parser.error("a junit report is required without --adopt")
     times = measured(args.report)
     if not times:
         print(f"{args.report}: no testcase named a file under {REPO} - "

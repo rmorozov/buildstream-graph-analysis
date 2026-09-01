@@ -128,14 +128,9 @@ Do not run `--record` locally and commit the result. It is not the same
 document: it is 380 files of this machine's clock replacing 380 files
 of CI's, and the gate will be quiet for the wrong reason.
 
-**Expect this after adding a test file.** A new file over the medium
-floor is *not in the reference at all*, and the gate says so on the run
-after it lands — round 71 paid for that three times (`UX-449`'s file at
-13.7s, `UX-455`'s at 2.3s, and a refresh in between that was already a
-commit behind). It is the gate working, not a flake: the run that
-names the file also uploads the document that fixes it. Either refresh
-from that run, or append the one row by the division above, and say in
-the Outcome which run the number came from.
+**After adding a test file, do nothing.** `UX-503`: a file the
+reference does not carry is printed as *recorded*, not failed on, and
+the default branch's own run adopts the row after the merge.
 
 ## 4. The two copies of the status marker
 

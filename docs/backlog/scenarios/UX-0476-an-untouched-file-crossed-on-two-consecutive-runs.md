@@ -377,3 +377,19 @@ make test-touching   537 passed in 14.41s
 make test            5,661 passed, 27 skipped in 321.50s (0:05:21)
 make lint            ruff + PyMarkdown, both clean
 ```
+
+### Annotation (round 73, same day): the `unexplained` bucket was empty
+
+`UX-494` found that `explained_by` reads `dev_touching.select`'s
+**shared-harness fallback** as a diff that names every test file. Any
+branch that has touched `tests/conftest.py` or `tests/tiers.py` — most
+rounds — therefore explains all 397 files, so every row lands in
+`confirmed` and the gate fails on **one** run. The behaviour this
+Outcome describes, and the `unexplained` message it added, were
+unreachable on this branch from the moment they landed; item 3's
+clauses passed because they call `repeated` with a hand-built
+`explained` set rather than through `explained_by`.
+
+Fixed in `UX-494`: the fallback reads as `None`. The figures and the
+reasoning above are unaffected — what changed is which branches ever
+reach them.

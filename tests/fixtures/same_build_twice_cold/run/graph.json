@@ -1,0 +1,45 @@
+{
+  "elements": [
+    {
+      "uid": "lib0.bst",
+      "cache_key": "cachekey0",
+      "requested_target": false,
+      "element_kind": "manual"
+    },
+    {
+      "uid": "lib1.bst",
+      "cache_key": "cachekey1",
+      "requested_target": false,
+      "element_kind": "manual"
+    },
+    {
+      "uid": "lib2.bst",
+      "cache_key": "cachekey2",
+      "requested_target": false,
+      "element_kind": "manual"
+    },
+    {
+      "uid": "lib3.bst",
+      "cache_key": "cachekey3",
+      "requested_target": true,
+      "element_kind": "manual"
+    }
+  ],
+  "dependencies": [
+    {
+      "predecessor": "lib0.bst",
+      "successor": "lib1.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "lib1.bst",
+      "successor": "lib2.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "lib2.bst",
+      "successor": "lib3.bst",
+      "dependency_type": "build"
+    }
+  ]
+}

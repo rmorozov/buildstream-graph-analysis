@@ -112,6 +112,12 @@ Six of the eight uncovered findings close under `UX-464`; T5's two need
 `UX-465`; `cache-transfer-cost` is declared uncovered for want of a
 remote CAS.
 
+`UX-464` landed in the same round and moved the census from **11
+produced to 18**, leaving `cache-transfer-cost` as the only finding
+nothing in a clone reaches. This row stays open on its last clause -
+T5's `build-failed` and `failed-task-time`, which need `UX-465`'s
+failed build - and closes with it.
+
 ## Acceptance Test
 
 ```bash

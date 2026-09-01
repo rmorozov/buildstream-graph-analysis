@@ -152,6 +152,26 @@ that gives **five specs for ten findings**:
 C's remote-transfer level, which is a remote CAS this repository has
 never stood up. Declared, not covered — see Out of Scope.
 
+**Two corrections from building it (`UX-464`, same round).** The table
+above is the design; the census is the measurement, and it disagrees
+twice:
+
+- `certified-headroom` is produced by **T1**, not T3. Backwards in the
+  table: headroom is what a run that queued leaves on the table, so
+  the one shape that cannot have any is the fixture built never to
+  queue.
+- **The set is not minimal.** Only four of the seven findings have a
+  single producer; `criticality` and `execution-bound` each come out
+  of three or four of the five captures. Any run whose elements do not
+  wait on each other is execution-bound whether designed to be or not,
+  and criticality goes fractional on any handful of independent
+  same-ish tasks. So "five specs for ten findings" was a covering set,
+  but a much looser one than the fold suggested — the axes here are
+  coarser than the findings' real gates.
+
+`UX-464`'s Outcome carries the per-capture attribution and the
+mutations that establish it.
+
 T1 folds three findings because all three read axis A and no other;
 T2 stays separate from T1 even though a shared base could also be one
 source, because a fixture that varies two axes at once cannot say

@@ -272,18 +272,190 @@ def graph_with_terminal_and_nonterminal_tasks(duration_us: int = 10000) -> Topol
     return _build(elements, dependencies, spans, wall_end_us=2 * duration_us, max_jobs=2)
 
 
+# --- UX-464's covering set: the four specs UX-463 assigned to curated
+# --- fixtures, one factory each. Each exists to make a finding no
+# --- committed capture could produce reachable from a clone; the
+# --- finding it is for is named in its docstring, and the census
+# --- (`tools/dev_finding_coverage.py`) is what says whether it worked.
+
+def shared_base_wide(
+    dependents: int = 6, base_us: int = 200_000, heavy_us: int = 6_000_000,
+    tie_ratio: float = 0.97, lanes: int = 2,
+) -> Topology:
+    """T1: one structural base, N dependents of unequal weight.
+
+    Reaches `blast-radius-ranking`, `blast-radius-structural` and
+    `criticality`.
+
+    Three properties carry it, and each is load-bearing:
+
+    - `toolchain.bst` is an `import`, which is in
+      `STRUCTURAL_ELEMENT_KINDS`, so it is *reported* as the graph's
+      shape rather than ranked as an action (`UX-258`/`UX-76`). That
+      split is what produces two blast findings instead of one.
+    - `lanes` is below `dependents`, so wall-clock is several times the
+      critical path and the run is **not** chain-bound.
+      `_ranking_findings` returns nothing at all on a chain-bound run,
+      which is why the existing `blast_radius_disagrees_with_horizon`
+      fixture - one hub, one dominant leaf - produces no blast finding
+      despite being about blast radius.
+    - `tie_ratio` puts the two heaviest dependents within 3% of each
+      other, inside the Monte-Carlo sampler's +/-10% perturbation
+      (`DEFAULT_PERTURBATION_PCT`), so criticality comes out fractional
+      here. A deterministic replay scores every element 1.0 and
+      `_criticality_findings` drops a list that ranks nothing.
+
+      Narrowly: **the near-tie is not what makes `criticality`
+      reachable from a clone.** Measured by mutation - replacing
+      `tie_ratio` with an ordinary tail weight leaves the census at 18
+      produced, because `ample_capacity` and `one_source_many_elements`
+      each produce it too, on independent same-ish tasks. What the
+      near-tie buys is a *named, minimal* case where the contest is the
+      point rather than a side effect, which is what makes it
+      debuggable when the ranking changes.
+    """
+    base = "toolchain.bst"
+    elements = [dict(_element(base), element_kind="import")]
+    dependencies: List[dict] = []
+    spans = [_span(base, 0, base_us)]
+    # Heaviest, its near-tie, then a decreasing tail - so the ranking
+    # has more than two entries to be in order over.
+    weights = [1.0, tie_ratio] + [0.5 - 0.05 * i for i in range(dependents - 2)]
+    uids = [f"mod{i}.bst" for i in range(dependents)]
+    lane_free = [base_us] * lanes
+    for i, uid in enumerate(uids):
+        elements.append(dict(_element(uid, requested_target=True),
+                             element_kind="manual"))
+        dependencies.append(_dependency(base, uid))
+        lane = lane_free.index(min(lane_free))
+        duration = int(heavy_us * weights[i])
+        spans.append(_span(uid, lane_free[lane], duration))
+        lane_free[lane] += duration
+    return _build(elements, dependencies, spans,
+                  wall_end_us=max(lane_free), max_jobs=lanes)
+
+
+def one_source_many_elements(
+    elements: int = 4, duration_us: int = 4_000_000,
+    url: str = "https://example.invalid/mono.git",
+) -> Tuple[Topology, dict]:
+    """T2: one repository sourced by N elements.
+
+    Reaches `shared-source-blast`, and returns
+    `(topology, inventory)` rather than a bare `Topology` because that
+    finding is computed from `sources.json` - a fourth file, written by
+    `bga extract`, that no other factory has. Pass the inventory to
+    `write_run_dir(..., sources=...)`.
+    """
+    uids = [f"pkg{i}.bst" for i in range(elements)]
+    els = [dict(_element(uid, requested_target=True), element_kind="manual")
+           for uid in uids]
+    spans: List[dict] = []
+    t = 0
+    for uid in uids:
+        spans.append(_span(uid, t, duration_us))
+        t += duration_us
+    topology = _build(els, [], spans, wall_end_us=t, max_jobs=1)
+    inventory = {
+        "schema": "sources/v1",
+        "elements": {uid: [{"kind": "git", "identity": url, "keying": "url"}]
+                     for uid in uids},
+        "unreadable": {},
+    }
+    return topology, inventory
+
+
+def ample_capacity(
+    elements: int = 8, capacity: int = 16, duration_us: int = 3_000_000,
+    stagger_us: int = 100_000,
+) -> Topology:
+    """T3: capacity above demand, so nothing ever queues.
+
+    Reaches `execution-bound` - though not uniquely; three of the five
+    covering-set captures produce it, because any run whose elements do
+    not wait on each other is execution-bound whether or not it was
+    built to be. `UX-463`'s table also assigned `certified-headroom`
+    here and that was backwards: headroom is what a run that *did*
+    queue leaves on the table, so it comes from `shared_base_wide`.
+
+    Every element is independent and starts
+    at once, so no wait category exists at all - which is the gate:
+    `_opportunity_findings` publishes `execution-bound` only when the
+    largest non-execution category is under `OPPORTUNITY_FLOOR_PCT`
+    (1%) of wall-clock.
+
+    The stagger gives the durations a spread, so the concentration
+    findings this one is published beside have something to rank.
+    """
+    uids = [f"task{i}.bst" for i in range(elements)]
+    els = [dict(_element(uid, requested_target=True), element_kind="manual")
+           for uid in uids]
+    spans = [_span(uid, 0, duration_us + i * stagger_us)
+             for i, uid in enumerate(uids)]
+    return _build(els, [], spans,
+                  wall_end_us=duration_us + (elements - 1) * stagger_us,
+                  max_jobs=capacity,
+                  resource_capacities={"PROCESS": capacity})
+
+
+def the_same_build_twice(
+    chain: int = 4, duration_us: int = 2_000_000,
+) -> Tuple[Topology, Topology]:
+    """T4: `(cold, incremental)` over one graph.
+
+    The incremental half reaches `run-mode-incremental`. What decides
+    it is `queue_summary.build.skipped` - `RunContext.run_mode` reads
+    that and nothing else, returning `'incremental'` when it is above
+    zero, `'full'` when it is zero and `'unknown'` when the capture has
+    no Pipeline Summary at all. So the two runs share elements,
+    dependencies and per-element durations, and differ only in which
+    elements produced a span and in that one count.
+    """
+    uids = [f"lib{i}.bst" for i in range(chain)]
+    els = [dict(_element(uid, cache_key=f"cachekey{i}",
+                         requested_target=(i == chain - 1)),
+                element_kind="manual")
+           for i, uid in enumerate(uids)]
+    dependencies = [_dependency(uids[i - 1], uids[i]) for i in range(1, chain)]
+
+    def one_run(built: List[str], skipped: int) -> Topology:
+        spans: List[dict] = []
+        t = 0
+        for uid in built:
+            spans.append(_span(uid, t, duration_us))
+            t += duration_us
+        run_context, graph, trace = _build(
+            els, dependencies, spans, wall_end_us=t, max_jobs=1)
+        run_context["queue_summary"] = {
+            "build": {"processed": len(built), "skipped": skipped, "failed": 0},
+        }
+        return run_context, graph, trace
+
+    return one_run(uids, 0), one_run(uids[-1:], chain - 1)
+
+
 # --- Helpers for tests that consume the above ---
 
-def write_run_dir(tmp_path: Path, topology: Topology, name: str = "run") -> Path:
+def write_run_dir(tmp_path: Path, topology: Topology, name: str = "run",
+                  sources: Optional[dict] = None, indent: Optional[int] = None) -> Path:
     """Write a `(run_context, graph, trace)` topology to disk in the
     run-context.json/graph.json/trace.json layout `bga.ingest.loader`
-    expects, and return the run directory path."""
+    expects, and return the run directory path.
+
+    `sources` writes a fourth file, `sources.json` - the `sources/v1`
+    inventory `bga extract` produces when the project directory is in
+    hand. Only `one_source_many_elements` needs it, and it is optional
+    rather than a fourth tuple slot because every other factory would
+    then carry a `None` for a file it does not have (`UX-464`).
+    """
     run_context, graph, trace = topology
     run_dir = tmp_path / name
     run_dir.mkdir(parents=True, exist_ok=True)
-    (run_dir / "run-context.json").write_text(json.dumps(run_context))
-    (run_dir / "graph.json").write_text(json.dumps(graph))
-    (run_dir / "trace.json").write_text(json.dumps(trace))
+    (run_dir / "run-context.json").write_text(json.dumps(run_context, indent=indent))
+    (run_dir / "graph.json").write_text(json.dumps(graph, indent=indent))
+    (run_dir / "trace.json").write_text(json.dumps(trace, indent=indent))
+    if sources is not None:
+        (run_dir / "sources.json").write_text(json.dumps(sources, indent=indent))
     return run_dir
 
 
@@ -332,3 +504,58 @@ def build_analyzer(tmp_path: Path, topology: Topology, name: str = "run", **kwar
     analyzer = BuildEfficiencyAnalyzer(run_dir, **kwargs)
     analyzer.load()
     return analyzer
+
+
+# --- Writing the covering set as committed captures ---
+#
+# `UX-459`'s gap is about a *clone*: `tools/dev_finding_coverage.py`
+# reads run directories git tracks, so a factory alone closes nothing.
+# These five directories under `tests/fixtures/` are what the census
+# can see, and this is the command that regenerates them - byte-stable,
+# so a re-run with no code change produces no diff.
+#
+#     python3 -m tests.fixtures.topologies --write
+#
+COVERING_SET = {
+    # name                        -> (topology, sources or None)
+    "shared_base_wide": (shared_base_wide, None),
+    "ample_capacity": (ample_capacity, None),
+}
+
+
+def covering_set() -> Dict[str, Tuple[Topology, Optional[dict]]]:
+    """`{directory name: (topology, sources)}` for every committed
+    capture `UX-464` added, including the two that are not a bare
+    factory call - `one_source_many_elements` returns an inventory
+    beside its topology, and `the_same_build_twice` returns a pair."""
+    built: Dict[str, Tuple[Topology, Optional[dict]]] = {
+        name: (factory(), sources)
+        for name, (factory, sources) in COVERING_SET.items()
+    }
+    topology, inventory = one_source_many_elements()
+    built["one_source_many_elements"] = (topology, inventory)
+    cold, incremental = the_same_build_twice()
+    built["same_build_twice_cold"] = (cold, None)
+    built["same_build_twice_incremental"] = (incremental, None)
+    return built
+
+
+def write_covering_set(root: Path) -> List[Path]:
+    """Write every covering-set capture under `root`, one directory
+    each, and return the run directories in name order."""
+    written = []
+    for name, (topology, sources) in sorted(covering_set().items()):
+        directory = root / name
+        directory.mkdir(parents=True, exist_ok=True)
+        written.append(write_run_dir(directory, topology, name="run",
+                                     sources=sources, indent=2))
+    return written
+
+
+if __name__ == "__main__":                               # pragma: no cover
+    import sys
+
+    if "--write" not in sys.argv[1:]:
+        raise SystemExit(f"usage: python3 -m {__name__} --write")
+    for run in write_covering_set(Path(__file__).resolve().parent):
+        print(run)

@@ -1,0 +1,68 @@
+{
+  "spans": [
+    {
+      "task_key": "toolchain.bst|BUILD|BUILD|0",
+      "ts_us": 0,
+      "dur_us": 200000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS"
+    },
+    {
+      "task_key": "mod0.bst|BUILD|BUILD|0",
+      "ts_us": 200000,
+      "dur_us": 6000000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS"
+    },
+    {
+      "task_key": "mod1.bst|BUILD|BUILD|0",
+      "ts_us": 200000,
+      "dur_us": 5820000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS"
+    },
+    {
+      "task_key": "mod2.bst|BUILD|BUILD|0",
+      "ts_us": 6020000,
+      "dur_us": 3000000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS"
+    },
+    {
+      "task_key": "mod3.bst|BUILD|BUILD|0",
+      "ts_us": 6200000,
+      "dur_us": 2700000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS"
+    },
+    {
+      "task_key": "mod4.bst|BUILD|BUILD|0",
+      "ts_us": 8900000,
+      "dur_us": 2400000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS"
+    },
+    {
+      "task_key": "mod5.bst|BUILD|BUILD|0",
+      "ts_us": 9020000,
+      "dur_us": 2100000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS"
+    }
+  ],
+  "phases": []
+}

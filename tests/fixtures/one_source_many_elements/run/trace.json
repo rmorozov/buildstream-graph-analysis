@@ -1,0 +1,41 @@
+{
+  "spans": [
+    {
+      "task_key": "pkg0.bst|BUILD|BUILD|0",
+      "ts_us": 0,
+      "dur_us": 4000000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS"
+    },
+    {
+      "task_key": "pkg1.bst|BUILD|BUILD|0",
+      "ts_us": 4000000,
+      "dur_us": 4000000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS"
+    },
+    {
+      "task_key": "pkg2.bst|BUILD|BUILD|0",
+      "ts_us": 8000000,
+      "dur_us": 4000000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS"
+    },
+    {
+      "task_key": "pkg3.bst|BUILD|BUILD|0",
+      "ts_us": 12000000,
+      "dur_us": 4000000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS"
+    }
+  ],
+  "phases": []
+}

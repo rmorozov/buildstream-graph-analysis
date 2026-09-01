@@ -1,0 +1,77 @@
+{
+  "spans": [
+    {
+      "task_key": "task0.bst|BUILD|BUILD|0",
+      "ts_us": 0,
+      "dur_us": 3000000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS"
+    },
+    {
+      "task_key": "task1.bst|BUILD|BUILD|0",
+      "ts_us": 0,
+      "dur_us": 3100000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS"
+    },
+    {
+      "task_key": "task2.bst|BUILD|BUILD|0",
+      "ts_us": 0,
+      "dur_us": 3200000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS"
+    },
+    {
+      "task_key": "task3.bst|BUILD|BUILD|0",
+      "ts_us": 0,
+      "dur_us": 3300000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS"
+    },
+    {
+      "task_key": "task4.bst|BUILD|BUILD|0",
+      "ts_us": 0,
+      "dur_us": 3400000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS"
+    },
+    {
+      "task_key": "task5.bst|BUILD|BUILD|0",
+      "ts_us": 0,
+      "dur_us": 3500000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS"
+    },
+    {
+      "task_key": "task6.bst|BUILD|BUILD|0",
+      "ts_us": 0,
+      "dur_us": 3600000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS"
+    },
+    {
+      "task_key": "task7.bst|BUILD|BUILD|0",
+      "ts_us": 0,
+      "dur_us": 3700000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS"
+    }
+  ],
+  "phases": []
+}

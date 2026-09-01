@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-466 scenarios: **10 open**, 456 closed.
+466 scenarios: **9 open**, 457 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -27,7 +27,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | cli | 0 | 5 |
 | store | 2 | 28 |
 | docs | 1 | 41 |
-| guards | 4 | 78 |
+| guards | 3 | 78 |
 
 ## Open scenarios
 
@@ -41,7 +41,6 @@ task file, which is the only place it ever lived twice.
 | UX-458 | [the drift factor is a starting value nothing has re-measured](UX-0458-the-drift-factor-was-never-sized-from-data.md) | guards | Low | the contributor whose PR is stopped by a gate whose tolerance nobody has checked against the noise it is meant to tolerate | 🔴 |
 | UX-459 | [eight findings are reachable by nothing a clone has](UX-0459-seven-examples-keep-nothing-analysable.md) | guards | Medium | the round that adds a heuristic and has no fixture that can exercise it | 🔴 |
 | UX-460 | [nothing says which findings the fixtures can actually produce](UX-0460-no-guard-says-which-findings-a-fixture-produces.md) | guards | Medium | the round that adds a heuristic and has no way to tell whether anything exercises it | 🔴 |
-| UX-464 | [the curated covering set — T1, T2, T3 and half of T4](UX-0464-the-curated-covering-set.md) | guards | Medium | the round that adds a heuristic to a reader whose fixtures cannot exercise it | 🔴 |
 | UX-465 | [nothing generates a BuildStream project, so axes D, F and G are hand-authored or absent](UX-0465-a-project-generator-for-real-builds.md) | capture | Medium | the round that needs a build with a known answer and has to hand-write a tenth example to get one | 🔴 |
 | UX-466 | [nothing measures which captured field reaches a Perfetto slice](UX-0466-what-the-capture-holds-and-the-trace-drops.md) | contracts | Medium | the reader who opens the trace expecting a field the capture holds and finds the track empty | 🔴 |
 | UX-467 | [the graph-shape conclusions have no negative case](UX-0467-does-the-shape-conclusion-support-a-decision.md) | analysis | Medium | the reader who acts on a structural finding that would have fired on any graph | 🔴 |

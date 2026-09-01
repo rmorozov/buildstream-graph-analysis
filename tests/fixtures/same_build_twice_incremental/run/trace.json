@@ -1,0 +1,14 @@
+{
+  "spans": [
+    {
+      "task_key": "lib3.bst|BUILD|BUILD|0",
+      "ts_us": 0,
+      "dur_us": 2000000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS"
+    }
+  ],
+  "phases": []
+}

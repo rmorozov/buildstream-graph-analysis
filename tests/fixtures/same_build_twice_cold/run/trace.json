@@ -1,0 +1,41 @@
+{
+  "spans": [
+    {
+      "task_key": "lib0.bst|BUILD|BUILD|0",
+      "ts_us": 0,
+      "dur_us": 2000000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS"
+    },
+    {
+      "task_key": "lib1.bst|BUILD|BUILD|0",
+      "ts_us": 2000000,
+      "dur_us": 2000000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS"
+    },
+    {
+      "task_key": "lib2.bst|BUILD|BUILD|0",
+      "ts_us": 4000000,
+      "dur_us": 2000000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS"
+    },
+    {
+      "task_key": "lib3.bst|BUILD|BUILD|0",
+      "ts_us": 6000000,
+      "dur_us": 2000000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS"
+    }
+  ],
+  "phases": []
+}

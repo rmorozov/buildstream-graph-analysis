@@ -232,6 +232,8 @@ tools/dev_perfetto_queries.py  the canned questions, run against a real
                              trace with Perfetto's own reader (UX-432)
 tools/dev_finding_coverage.py  which findings a committed capture really
                              produces, read off analyze (UX-460)
+tools/dev_trace_coverage.py  which captured field reaches the emitted
+                             trace, and which Perfetto carriers it uses (UX-466)
 ```
 
 **Tests and docs:**

@@ -692,6 +692,9 @@ MEDIUM = (
     "tests/unit/test_the_mapping_is_law.py",                         #    2.2s
     "tests/unit/test_the_page_conforms_to_its_sections.py",          #    2.1s
     "tests/unit/test_a_guard_reads_only_what_a_clone_has.py",        #    3.5s
+    # `UX-466`: draws a real timeline per committed capture with
+    # `bga timeline` in a subprocess, seven of them.
+    "tests/unit/test_the_trace_census_reads_both_ends.py",           #    4.9s
     "tests/unit/test_the_printed_sentences_are_contracts.py",        #    1.6s
     "tests/unit/test_a_capture_that_cannot_start.py",                #    1.5s
     "tests/unit/test_the_handoff_does_not_carry_the_trace.py",       #    1.3s

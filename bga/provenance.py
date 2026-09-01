@@ -245,6 +245,7 @@ TRACE_QUERIES = {
     # which elements sit in the narrow one. `UX-368`'s rule again: a
     # question no finding points at is a question nobody arrives at.
     "mesh-graph": ("graph-levels",),
+    "chain-graph": ("graph-levels",),
 }
 
 
@@ -399,6 +400,26 @@ def _mesh_rule(claim, document):
         "The zero-slack share cleared the mesh threshold.")
 
 
+def _chain_rule(claim, document):
+    """`UX-475`: the same threshold, the other side of the split.
+
+    `_mesh_rule` names `MESH_ZERO_SLACK_SHARE` because that is what
+    decides whether either sentence is printed. What decides *which* is
+    the count beside it, so this rule names that instead - a reader
+    asking "why does it say chain" is asking about the zero, not about
+    the density.
+    """
+    density = (claim.get("evidence") or {}).get("zero_slack_share")
+    return _rule(
+        "MESH_ZERO_SLACK_SHARE", _findings.MESH_ZERO_SLACK_SHARE, ">=",
+        "elements.zero_slack_share",
+        f"{density:.0%} of elements have zero slack and none is off the "
+        f"critical path, so the graph is one chain."
+        if isinstance(density, (int, float)) else
+        "The zero-slack share cleared the threshold with nothing off the "
+        "critical path.")
+
+
 # claim id -> (evidence paths, rule, unpublished inputs)
 #
 # `evidence` and `rule` may be callables taking `(claim, document)` when
@@ -496,6 +517,8 @@ _CLAIMS = {
             "`evidence.rows`."), ()),
     "mesh-graph": (
         ("elements.zero_slack_share",), _mesh_rule, ()),
+    "chain-graph": (
+        ("elements.zero_slack_share",), _chain_rule, ()),
     "shared-source-blast": (
         ("resource_blast.element_count",),
         _unconditional(

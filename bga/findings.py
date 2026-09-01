@@ -107,6 +107,7 @@ FINDING_READERS = {
     "cache-transfer-cost": "recipe-author",
     # R3 - the structural answers.
     "mesh-graph": "graph-owner",
+    "chain-graph": "graph-owner",
     "criticality": "graph-owner",
     # R4 - whether the number can be trusted and whether it is normal.
     "confidence": "ci-gatekeeper",
@@ -675,18 +676,79 @@ def _time_concentration_findings(
 
     # UX-70: chain or mesh? This decides whether "optimize the top
     # element" is meaningful advice at all.
+    #
+    # `UX-475`: the share alone cannot tell them apart, and said so
+    # about the least mesh-like graph there is. `linear_chain(n=5)` -
+    # five elements, one path, four edges - reported
+    # `zero_slack_share: 1.0` and was called "a mesh of near-equal
+    # chains", because on a single-path graph **every** element has
+    # zero slack by construction: with one path there is nowhere for
+    # any of them to move. Fixing guide section 5, in a shipped
+    # sentence, and not a cosmetic one - it told the reader their
+    # saving would be "capped by the next chain" when the saving is
+    # exactly the element's own duration.
+    #
+    # The discriminator is not a second proxy. An element with zero
+    # slack lies on *some* longest path; if it is not on the critical
+    # path this run reported, then a second path of the same length
+    # exists - which is what "near-equal chains" means and what makes
+    # the capping advice true. So: count the zero-slack elements that
+    # are off the reported path.
+    #
+    #     linear_chain(5)     share 1.000   off-path 0   <- a chain
+    #     macro_micro         share 0.909   off-path 0   <- a chain
+    #     a_build_that_pulls  share 1.000   off-path 0   <- a chain
+    #     diamond             share 1.000   off-path 1   <- two chains
+    #     fan_in / fan_out    share 1.000   off-path 3   <- a mesh
+    #     one_source_many     share 1.000   off-path 3   <- a mesh
+    #
+    # The density threshold stays in front of both: below it the graph
+    # has slack everywhere and neither sentence is worth printing.
     density = (result.signals or {}).get('zero_slack_share')
     if density is not None and density >= MESH_ZERO_SLACK_SHARE:
-        findings.append(_finding(
-            'mesh-graph', SEVERITY_INFO,
-            f"Note: {density:.0%} of elements have zero slack - this graph "
-            "is a mesh of near-equal chains, so savings on one element are "
-            "often capped by the next chain rather than by its own duration",
-            evidence={'zero_slack_share': density},
-        ))
+        off_path = _zero_slack_off_path(result)
+        if off_path:
+            findings.append(_finding(
+                'mesh-graph', SEVERITY_INFO,
+                f"Note: {density:.0%} of elements have zero slack, "
+                f"{off_path} of them off the critical path - this graph is "
+                "a mesh of near-equal chains, so savings on one element are "
+                "often capped by the next chain rather than by its own "
+                "duration",
+                evidence={'zero_slack_share': density,
+                          'zero_slack_off_path': off_path},
+            ))
+        else:
+            findings.append(_finding(
+                'chain-graph', SEVERITY_INFO,
+                f"Note: {density:.0%} of elements have zero slack, all on "
+                "the critical path - no second chain of equal length, so a "
+                "saving on any of them is worth its own duration",
+                evidence={'zero_slack_share': density,
+                          'zero_slack_off_path': 0},
+            ))
         # Rendered inside the table it qualifies, where it has always been.
         findings[-1]['indent'] = '    '
     return findings
+
+
+def _zero_slack_off_path(result: AnalysisResult) -> int:
+    """How many zero-slack elements are **not** on the reported path.
+
+    Zero is the chain: every element with no room to move is on the one
+    path, so there is no other chain to cap a saving. Any number above
+    it is a second path of the same length - `UX-475`.
+
+    Both inputs are already published: `elements.slack` and the
+    critical path detail the table above is drawn from. Nothing new is
+    computed and nothing new is stored.
+    """
+    signals = result.signals or {}
+    slack = signals.get('slack') or {}
+    on_path = {row.get('element_uid')
+               for row in (signals.get('critical_path_detail') or [])}
+    return sum(1 for uid, value in slack.items()
+               if value == 0 and uid not in on_path)
 
 
 def _memory_envelope_findings(result: AnalysisResult) -> List[str]:

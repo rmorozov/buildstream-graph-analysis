@@ -15,13 +15,13 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-481 scenarios: **12 open**, 469 closed.
+481 scenarios: **11 open**, 470 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
 | capture | 1 | 71 |
-| analysis | 4 | 62 |
+| analysis | 3 | 62 |
 | contracts | 2 | 53 |
 | viewer | 0 | 134 |
 | cli | 0 | 5 |
@@ -43,7 +43,6 @@ task file, which is the only place it ever lived twice.
 | UX-471 | [the day-one summary counts 421 task files and the tree has 468](UX-0471-the-day-one-summary-counts-421-of-468.md) | docs | Low | the session whose first reading of this repository is a number 47 rows out of date | 🔴 |
 | UX-472 | [the architecture says one script needs no `bst`, and now three tools do not fit the sentence](UX-0472-the-architecture-has-no-paragraph-for-the-generators.md) | docs | Medium | the round that asks the architecture where fixtures come from and finds one paragraph about one script | 🔴 |
 | UX-474 | ["Elements Most Worth Optimizing First (by blast radius)" ranks three elements whose blast radius is zero](UX-0474-the-blast-ranking-publishes-a-list-of-zeros.md) | analysis | Medium | the local-optimizer told which three elements to fix first, by a quantity that is zero for all three | 🔴 |
-| UX-475 | [`mesh-graph` calls a five-element linear chain "a mesh of near-equal chains"](UX-0475-mesh-graph-calls-a-linear-chain-a-mesh.md) | analysis | Medium | the graph-owner told their chain is a mesh, and that savings are capped by "the next chain" when there is only one | 🔴 |
 | UX-476 | [the falsifier `UX-458` named arrived on the very next run](UX-0476-an-untouched-file-crossed-on-two-consecutive-runs.md) | guards | Medium | the contributor whose PR is red for a file they did not write | 🔴 |
 | UX-478 | [the graph-owner is not offered a reader on the one build whose defect is the graph](UX-0478-the-graph-owner-vanishes-on-a-graph-problem.md) | analysis | Medium | the graph-owner who opens the report on a strict chain and finds their reader is not there | 🔴 |
 | UX-481 | [the replay starts a build before the artifacts it consumes have been pulled](UX-0481-the-replay-lets-a-build-start-before-its-dependency-is-pulled.md) | analysis | Medium | the reader of a cache-hit build, whose certified floor comes from a schedule that could not have happened | 🔴 |

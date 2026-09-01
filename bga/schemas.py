@@ -1430,6 +1430,10 @@ _EVIDENCE_FIELDS = {
     # Counts.
     "blast_count": ("count",
         "Elements a change here rebuilds, transitively."),
+    "zero_slack_off_path": ("count",
+        "Zero-slack elements that are not on the critical path this run "
+        "reported - each one is a second path of the same length. Zero "
+        "means one chain (`UX-475`)."),
     "builders": ("count",
         "Builder slots this run recorded. BuildStream's scheduler slots, "
         "not host cores."),

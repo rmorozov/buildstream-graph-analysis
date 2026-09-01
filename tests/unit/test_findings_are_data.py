@@ -136,7 +136,14 @@ def test_severity_marks_the_hedged_conclusions_as_such():
 
     assert by_id["time-concentration"]["severity"] == "high"
     assert by_id["run-mode-incremental"]["severity"] == "info"
-    assert by_id["mesh-graph"]["severity"] == "info"
+    # `UX-475` split the one graph-shape sentence into two - a mesh has
+    # other chains to cap a saving, a chain has none - and this fixture
+    # is the chain. Both are the same kind of statement and carry the
+    # same severity, so the clause asserts the pair rather than
+    # following the fixture around.
+    shape = [name for name in ("mesh-graph", "chain-graph") if name in by_id]
+    assert shape == ["chain-graph"], sorted(by_id)
+    assert by_id[shape[0]]["severity"] == "info"
 
 
 def test_a_failed_build_is_the_first_finding_and_is_critical():

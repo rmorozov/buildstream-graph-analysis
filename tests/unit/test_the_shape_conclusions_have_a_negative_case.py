@@ -30,7 +30,7 @@ import pytest
 
 from tests.fixtures import topologies as topo
 
-SHAPE_FINDINGS = {"mesh-graph", "criticality",
+SHAPE_FINDINGS = {"mesh-graph", "chain-graph", "criticality",
                   "blast-radius-ranking", "blast-radius-structural"}
 
 
@@ -167,8 +167,14 @@ class TestTheShapeThatOffersNothing:
           one (several independent tasks of similar length really do
           contest the longest path) and is silent on the chain;
         - both blast findings speak only about the shape with a base;
-        - `mesh-graph` speaks only about the chain, which is the shape
-          least like a mesh there is. That is `UX-475`.
+        - `mesh-graph` spoke only about the chain, which is the shape
+          least like a mesh there is. That was `UX-475`, and it is
+          fixed: the chain gets `chain-graph` and `mesh-graph` fires on
+          none of these three. The negative is the point - none of
+          these fixtures has two paths of equal length, so a mesh
+          finding here would be the inert detector `UX-120` found.
+          `TestTheChainAndTheMeshGetDifferentSentences` below carries
+          the positive case.
 
         A change to this map is a change to what the tool says about
         shape, and should be read rather than re-recorded.
@@ -182,7 +188,8 @@ class TestTheShapeThatOffersNothing:
             "criticality": {"wide", "flat"},
             "blast-radius-ranking": {"wide"},
             "blast-radius-structural": {"wide"},
-            "mesh-graph": {"chain"},
+            "chain-graph": {"chain"},
+            "mesh-graph": set(),
         }
 
     def test_no_shape_finding_speaks_about_every_shape(self, wide, chain, flat):
@@ -213,11 +220,106 @@ class TestThePreconditionsTheFiledRowsRestOn:
         assert all(radius[uid]["downstream_count"] == 0
                    for uid in _by_id(wide)["blast-radius-ranking"]["elements"])
 
-    def test_mesh_graph_reads_a_zero_slack_share(self, chain):
-        """`UX-475`'s precondition: the finding's evidence is
-        `zero_slack_share`, and on a single path that is 1.0 by
-        construction - one path means no element can move."""
-        finding = _by_id(chain)["mesh-graph"]
+    def test_the_chain_is_not_called_a_mesh(self, chain):
+        """`UX-475`, closed. This clause used to pin the defect - the
+        finding was `mesh-graph`, its evidence was
+        `{"zero_slack_share": 1.0}`, and its title said "mesh" about
+        five elements on one path.
 
-        assert finding["evidence"] == {"zero_slack_share": 1.0}
-        assert "mesh" in finding["title"]
+        `zero_slack_share` is still 1.0 and still 1.0 **by
+        construction**: one path means no element can move. What is
+        published beside it now is the count that tells the two shapes
+        apart."""
+        found = _by_id(chain)
+        assert "mesh-graph" not in found, sorted(found)
+        finding = found["chain-graph"]
+
+        assert finding["evidence"] == {"zero_slack_share": 1.0,
+                                       "zero_slack_off_path": 0}
+        assert "mesh" not in finding["title"], finding["title"]
+        assert "its own duration" in finding["title"], finding["title"]
+
+
+@pytest.fixture(scope="module")
+def mesh(tmp_path_factory):
+    """`UX-475`: four predecessors of equal weight converging on one
+    target - four chains, all the same length, none of which can be
+    shortened alone. The shape the mesh sentence was written for."""
+    return _payload(tmp_path_factory.mktemp("mesh"), topo.fan_in(), "mesh")
+
+
+@pytest.fixture(scope="module")
+def two_paths(tmp_path_factory):
+    """The minimum mesh: `a -> {b, c} -> d`, `b` and `c` equal. One of
+    the two is off whichever path is reported."""
+    return _payload(tmp_path_factory.mktemp("two_paths"),
+                    topo.diamond(), "two_paths")
+
+
+class TestTheChainAndTheMeshGetDifferentSentences:
+    """`UX-475`. Zero slack is necessary and not sufficient.
+
+    On a single-path graph `zero_slack_share` is **1.0 by
+    construction** - with one path no element has anywhere to move - so
+    a mesh detector that reads only the share fires on the least
+    mesh-like graph there is, and tells its reader the saving will be
+    "capped by the next chain" when there is no next chain and the
+    saving is exactly the element's own duration.
+
+    The discriminator is not a second proxy for the same thing. An
+    element with zero slack lies on *some* longest path; if it is not
+    on the path this run reported, a second path of the same length
+    exists, which is what "near-equal chains" means. So the count of
+    zero-slack elements off the reported path is the thing itself.
+
+    Measured across the factories, which is what says the split is a
+    property of the shape rather than of one fixture:
+
+    ```text
+    linear_chain(5)                 share 1.000   off-path 0
+    deep_unequal_predecessors       share 0.800   off-path 0
+    a_build_that_pulls              share 1.000   off-path 0
+    diamond                         share 1.000   off-path 1
+    multiple_equal_predecessors     share 1.000   off-path 2
+    fan_in / fan_out                share 1.000   off-path 3
+    one_source_many_elements        share 1.000   off-path 3
+    ```
+    """
+
+    def test_the_mesh_is_called_a_mesh(self, mesh):
+        found = _by_id(mesh)
+        assert "chain-graph" not in found, sorted(found)
+        finding = found["mesh-graph"]
+        assert "mesh of near-equal chains" in finding["title"]
+        assert finding["evidence"]["zero_slack_off_path"] == 3, finding
+
+    def test_two_equal_paths_are_already_a_mesh(self, two_paths):
+        """One element off the reported path is one other chain, and the
+        capping sentence is true of it. The floor is 1, not a share."""
+        found = _by_id(two_paths)
+        assert "chain-graph" not in found, sorted(found)
+        assert found["mesh-graph"]["evidence"]["zero_slack_off_path"] == 1
+
+    def test_the_two_shapes_agree_on_the_share_and_differ_on_the_count(
+            self, mesh, chain):
+        """The pair that carries the file. Both graphs report
+        `zero_slack_share: 1.0` - the number the old detector read - and
+        the tool now says opposite things about them."""
+        mesh_finding = _by_id(mesh)["mesh-graph"]
+        chain_finding = _by_id(chain)["chain-graph"]
+
+        assert (mesh_finding["evidence"]["zero_slack_share"]
+                == chain_finding["evidence"]["zero_slack_share"] == 1.0)
+        assert mesh_finding["evidence"]["zero_slack_off_path"] > 0
+        assert chain_finding["evidence"]["zero_slack_off_path"] == 0
+        assert "capped by the next chain" in mesh_finding["title"]
+        assert "its own duration" in chain_finding["title"]
+
+    def test_both_go_to_the_graph_owner(self, mesh, chain):
+        """`UX-478` is the row about that reader being absent; this
+        keeps the split from costing it the one finding it had."""
+        for payload, name in ((mesh, "mesh-graph"), (chain, "chain-graph")):
+            reader = next((r for r in payload["readers"]
+                           if r["id"] == "graph-owner"), None)
+            assert reader is not None, [r["id"] for r in payload["readers"]]
+            assert name in reader["findings"], reader

@@ -23,6 +23,27 @@ Three sightings in one session, all in the Chrome-driven guards:
 
 3. Nothing in that run's branch diff can reach the three that moved.
 
+**A fourth run says the excursion did not repeat.** Run `33554592057`
+(`3ab9e76`), the first green one after `UX-494`:
+
+```text
+test_emphasis_is_a_budget.py               15.22   (was 15.66, 15.52, 36.34)
+test_the_page_has_geometry.py              67.47   (was 68.57, 68.85, 68.29)
+test_the_two_capabilities_are_offered.py   30.41   (was 31.38, 31.32, 31.97)
+```
+
+So `test_emphasis_is_a_budget.py` came back to its own level, and the
+2.34x reading stands as a single excursion — which is exactly what
+`UX-476`'s two-run rule assumes and what `UX-494` restored the gate's
+ability to say. The other two files that moved could not be read from
+this run: the log tail the API returns starts partway through the
+candidate document and does not reach the `test_a_*` entries, which is
+`UX-491` obstructing the same measurement a second time.
+
+That does not close this row. One file returning to level is evidence
+about that file on that run, not about the family's spread, and the
+row still wants the population measured rather than sampled.
+
 The last two rows are what make this worth a row rather than a shrug:
 the runner was **not** uniformly slow, so "CI was busy" does not
 explain it, and the two stable files are the same weight and the same

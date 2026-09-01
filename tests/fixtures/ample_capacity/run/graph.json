@@ -1,0 +1,53 @@
+{
+  "elements": [
+    {
+      "uid": "task0.bst",
+      "cache_key": null,
+      "requested_target": true,
+      "element_kind": "manual"
+    },
+    {
+      "uid": "task1.bst",
+      "cache_key": null,
+      "requested_target": true,
+      "element_kind": "manual"
+    },
+    {
+      "uid": "task2.bst",
+      "cache_key": null,
+      "requested_target": true,
+      "element_kind": "manual"
+    },
+    {
+      "uid": "task3.bst",
+      "cache_key": null,
+      "requested_target": true,
+      "element_kind": "manual"
+    },
+    {
+      "uid": "task4.bst",
+      "cache_key": null,
+      "requested_target": true,
+      "element_kind": "manual"
+    },
+    {
+      "uid": "task5.bst",
+      "cache_key": null,
+      "requested_target": true,
+      "element_kind": "manual"
+    },
+    {
+      "uid": "task6.bst",
+      "cache_key": null,
+      "requested_target": true,
+      "element_kind": "manual"
+    },
+    {
+      "uid": "task7.bst",
+      "cache_key": null,
+      "requested_target": true,
+      "element_kind": "manual"
+    }
+  ],
+  "dependencies": []
+}

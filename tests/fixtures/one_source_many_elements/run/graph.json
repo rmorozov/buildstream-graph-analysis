@@ -1,0 +1,29 @@
+{
+  "elements": [
+    {
+      "uid": "pkg0.bst",
+      "cache_key": null,
+      "requested_target": true,
+      "element_kind": "manual"
+    },
+    {
+      "uid": "pkg1.bst",
+      "cache_key": null,
+      "requested_target": true,
+      "element_kind": "manual"
+    },
+    {
+      "uid": "pkg2.bst",
+      "cache_key": null,
+      "requested_target": true,
+      "element_kind": "manual"
+    },
+    {
+      "uid": "pkg3.bst",
+      "cache_key": null,
+      "requested_target": true,
+      "element_kind": "manual"
+    }
+  ],
+  "dependencies": []
+}

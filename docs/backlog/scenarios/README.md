@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-505 scenarios: **13 open**, 492 closed.
+506 scenarios: **13 open**, 493 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -27,7 +27,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | cli | 0 | 1 |
 | store | 2 | 5 |
 | docs | 5 | 46 |
-| guards | 6 | 64 |
+| guards | 6 | 65 |
 | testing | 0 | 1 |
 | unclassified | 0 | 223 |
 

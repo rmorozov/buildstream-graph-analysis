@@ -1265,6 +1265,124 @@ class TestTheReferenceAdoptsWhatItDoesNotCarry:
         assert "no candidate" in capsys.readouterr().err
 
 
+class TestTheRunnerVerdictNeedsASeriesToo:
+    """`UX-508`: `stale` was the third one-sample verdict in this tool.
+
+    Round 75's fourth push went red with nothing in its diff that could
+    have caused it - a dev tool, a guard file, three documents:
+
+    ```text
+    run 33571888677, cdf912b, the record step's own spread block
+      "shift_files": 142,
+      "shift": 0.581          <- IMAGE_BAND is (0.6, 1.7)
+    ```
+
+    `spread`'s shift *is* `shift_of`, so the gate read `stale` and
+    exited 1. The three pushes before it were green and the reference
+    was recorded on an ordinary run (its own `spread.shift` is 1.069):
+    one runner ran the suite about 1.7x faster, and that single reading
+    failed the build.
+
+    `against`'s own docstring already says one run cannot decide -
+    *"whether that is drift or one slow afternoon needs the run before
+    it"* - and then the band was applied to one run anyway. `UX-442`
+    made that argument about a file and `UX-503` about an absent file;
+    this is the same argument about the runner.
+    """
+
+    def _reference(self, tmp_path):
+        path = tmp_path / "ref.json"
+        path.write_text(json.dumps(drift.record(dict(tiers.recorded()))),
+                        encoding="utf-8")
+        return path
+
+    def _run(self, tmp_path, capsys, image, carry=True):
+        """One CI run on a runner `image` times the reference's clock."""
+        times = {name: seconds * image
+                 for name, seconds in tiers.recorded().items()}
+        argv = [str(_report(tmp_path, times)),
+                "--against", str(self._reference(tmp_path))]
+        if carry:
+            argv += ["--carry", str(tmp_path / "carry.json")]
+        code = drift.main(argv)
+        said = capsys.readouterr()
+        return code, said.out + said.err
+
+    #: Half the reference's clock - well outside `IMAGE_BAND`'s 0.6, and
+    #: the direction the real failure came from.
+    FAST = 0.5
+
+    def test_one_fast_runner_does_not_fail_the_build(self, tmp_path,
+                                                     capsys):
+        """The acceptance test's first half, and the red this item was
+        filed on."""
+        code, said = self._run(tmp_path, capsys, self.FAST)
+        assert code == 0, (
+            f"one runner outside the band failed the build - the red "
+            f"UX-508 was filed for:\n{said}")
+        assert "one runner's afternoon" in said, said
+
+    def test_two_agreeing_runs_still_say_the_reference_is_stale(
+            self, tmp_path, capsys):
+        """The other half, so this is a distinction and not a wider
+        gate. A reference that really has stopped describing the runner
+        must still be reported, or `UX-420`'s comparison is off."""
+        first, _said = self._run(tmp_path, capsys, self.FAST)
+        second, said = self._run(tmp_path, capsys, self.FAST)
+        assert first == 0, first
+        assert second == 1, (
+            f"two consecutive runs agreed the reference does not "
+            f"describe this runner and nothing reported it:\n{said}")
+        assert "re-record" in said, said
+
+    def test_a_runner_that_recovers_breaks_the_chain(self, tmp_path,
+                                                    capsys):
+        """`UX-442`'s rule, on this quantity: two excursions with a
+        normal run between them are not two consecutive ones, and only
+        a carry written on the quiet run says so."""
+        self._run(tmp_path, capsys, self.FAST)
+        ordinary, _said = self._run(tmp_path, capsys, 1.0)
+        third, said = self._run(tmp_path, capsys, self.FAST)
+        assert ordinary == 0, ordinary
+        assert third == 0, (
+            f"the run between them was inside the band, so this is one "
+            f"excursion and not two in a row:\n{said}")
+
+    def test_without_a_carry_one_sample_still_decides(self, tmp_path,
+                                                     capsys):
+        """`UX-442` left this shape deliberately and it holds here: a
+        gate that went quiet because a flag was forgotten would be worse
+        than one that reports."""
+        code, said = self._run(tmp_path, capsys, self.FAST, carry=False)
+        assert code == 1, said
+        assert "re-record" in said, said
+
+    def test_the_shift_is_what_crosses_runs(self):
+        """`carry`/`shifted` directly. The exit code above would pass for
+        the wrong reason - a run that failed to write its shift also
+        never confirms, and would look like the fix working."""
+        import tempfile
+        with tempfile.TemporaryDirectory() as where:
+            path = pathlib.Path(where) / "carry.json"
+            drift.carry(path, {}, "probe", [], shift=0.58, shifts=[])
+            assert drift.shifted(path) == [0.58], drift.shifted(path)
+            assert drift.out_of_band(0.55, [0.58]) is True
+            assert drift.out_of_band(0.55, []) is False, (
+                "a run with no memory confirmed on its own reading")
+            assert drift.out_of_band(1.0, [0.58]) is False
+
+    def test_a_carry_from_before_this_change_has_no_shifts(self):
+        """CI restores the previous run's cache, which on the commit
+        this lands in was written without the key. No memory rather than
+        a crash, and the run after it decides alone."""
+        import tempfile
+        with tempfile.TemporaryDirectory() as where:
+            path = pathlib.Path(where) / "carry.json"
+            path.write_text(json.dumps({"runs": [{}], "measured_on": "old"}),
+                            encoding="utf-8")
+            assert drift.shifted(path) == []
+
+
 class TestTheSpreadIsTheShiftTheGateUses:
     """`UX-476` item 2. `spread` wrote a history the gate never
     applied: its median was over every shared file and the gate's is

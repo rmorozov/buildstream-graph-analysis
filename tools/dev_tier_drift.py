@@ -689,17 +689,57 @@ def carried(path):
     return out
 
 
-def carry(path, readings, source, history):
+def carry(path, readings, source, history, shift=None, shifts=()):
     """Write what this run found, for the next run to agree or disagree.
 
     Written on **every** `--against` run, including the runs that find
     nothing: a file that excurses, recovers and excurses again has not
     drifted twice in a row, and an empty run is what says so.
+
+    `UX-508`: the run's own **shift** rides along, in its own list. The
+    band that decides `stale` is a statement about the runner, and one
+    reading of a runner is not one either - the same argument `UX-442`
+    made about a file, on the third quantity in this tool.
     """
     runs = [dict(readings)] + [dict(one) for one in history]
+    seen = ([shift] if shift is not None else []) + list(shifts)
     pathlib.Path(path).write_text(json.dumps(
-        {"runs": runs[:CI_DRIFT_RUNS - 1], "measured_on": source},
+        {"runs": runs[:CI_DRIFT_RUNS - 1], "measured_on": source,
+         "shifts": seen[:CI_DRIFT_RUNS - 1]},
         indent=2) + "\n", encoding="utf-8")
+
+
+def shifted(path):
+    """`UX-508`: the shifts the runs before this one measured.
+
+    Most recent first, at most `CI_DRIFT_RUNS - 1` long. A carry written
+    before this key existed has no `shifts`, and reads as no evidence -
+    the first run after the change decides alone, exactly as every run
+    did before it.
+    """
+    try:
+        held = json.loads(pathlib.Path(path).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return []
+    seen = held.get("shifts")
+    if not isinstance(seen, list):
+        return []
+    return [value for value in seen[:CI_DRIFT_RUNS - 1]
+            if isinstance(value, (int, float))]
+
+
+def out_of_band(shift, before):
+    """`UX-508`: whether a `stale` reading has agreement behind it.
+
+    `True` only when this run and the `CI_DRIFT_RUNS - 1` runs behind it
+    all read outside `IMAGE_BAND`. `before` shorter than that window is
+    a run with no memory - the first run of a branch, or a cache that
+    did not restore - and it waits rather than failing.
+    """
+    if len(before) < CI_DRIFT_RUNS - 1:
+        return False
+    return all(not IMAGE_BAND[0] <= one <= IMAGE_BAND[1]
+               for one in [shift] + list(before))
 
 
 def explained_by(base):
@@ -865,13 +905,16 @@ def _against(times, path, args):
     # whatever this run decides - a `stale` or `ok` run breaks the chain
     # exactly as it should.
     history = carried(args.carry) if args.carry else None
+    before = shifted(args.carry) if args.carry else []
     if args.carry:
         # `UX-476`: the reading as well as the name. `repeated` decides
         # on agreement and on the diff; the readings are what let the
         # message show the series a reader has to judge.
         over = {name: round(ratio, 2)
                 for name, _s, was, ratio in rows if was is not None}
-        carry(args.carry, over, args.source, history or [])
+        carry(args.carry, over, args.source, history or [],
+              shift=None if shift is None else round(shift, 3),
+              shifts=before)
     if verdict == "empty":
         print(f"{path} names none of the {len(times)} file(s) this run "
               f"measured, so it cannot be a reference for it. Re-record "
@@ -881,14 +924,28 @@ def _against(times, path, args):
               file=sys.stderr)
         return 2
     if verdict == "stale":
-        print(f"this run is x{shift:.2f} the reference recorded on "
-              f"{where}, outside the {IMAGE_BAND[0]}-{IMAGE_BAND[1]} band. "
-              f"That is the whole runner moving, not one file drifting - "
-              f"re-record with --record and commit it - from this "
-              f"run's {CI_CANDIDATE_ARTIFACT} artifact, or its "
-              f"{CI_CANDIDATE_JOB} job's log - rather than "
-              f"reading the per-file numbers below.", file=sys.stderr)
-        return 1
+        # `UX-508`: one reading of a runner is not evidence about the
+        # runner, the same way one reading of a file was not evidence
+        # about the file (`UX-442`). A run with no `--carry` has no
+        # memory to consult and decides alone, as it always did.
+        agreed = out_of_band(shift, before) if args.carry else True
+        series = ", ".join(f"x{one:.2f}" for one in [shift] + list(before))
+        opening = (f"this run is x{shift:.2f} the reference recorded on "
+                   f"{where}, outside the "
+                   f"{IMAGE_BAND[0]}-{IMAGE_BAND[1]} band.")
+        if agreed:
+            print(f"{opening} So were the run(s) behind it ({series}). "
+                  f"That is the whole runner moving, not one file "
+                  f"drifting - re-record with --record and commit it, "
+                  f"from this run's {CI_CANDIDATE_ARTIFACT} artifact or "
+                  f"its {CI_CANDIDATE_JOB} job's log, rather than "
+                  f"reading the per-file numbers.", file=sys.stderr)
+            return 1
+        print(f"{opening} The run(s) behind it read "
+              f"{series or 'nothing'}, so this is one runner's afternoon "
+              f"until the next run agrees (UX-508). Nothing is being "
+              f"failed on it.", file=sys.stderr)
+        return 0
     known = reference.get("files") or {}
     ratios = {name: times[name] / known[name] for name in known
               if times.get(name) and known[name] > 0}

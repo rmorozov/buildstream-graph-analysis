@@ -503,6 +503,7 @@ is open, on what topic, for whom — is the other file's.
 | UX-501 | [the index is derived, not merged](UX-0501-the-index-is-derived-not-merged.md) | High | two sessions on one slate; the orchestrator who merges them | 🟢 Done — the counts sentence and topic table are derived by --check --write; --move touches only the rows | [UX-501](UX-0501-the-index-is-derived-not-merged.md) |
 | UX-505 | [the rules card — the guide's rules on one page, its reasons behind it](UX-0505-the-rules-card.md) | High | every session's first read; the maintainer's subscription | 🟢 Done — docs/contributing/rules.md: every rule with its guard, 4 KB against the guide's 34 KB; the guide keeps the incidents | [UX-505](UX-0505-the-rules-card.md) |
 | UX-506 | [the Outcome skeleton fits the register](UX-0506-the-outcome-skeleton-fits-the-register.md) | Medium | the session closing a task, and the round that reads it later | 🟢 Done — the skeleton names the four measurements and states the cap; the why-that-shape heading is gone | [UX-506](UX-0506-the-outcome-skeleton-fits-the-register.md) |
+| UX-508 | [the whole-runner verdict fires on one sample](UX-0508-a-stale-verdict-fires-on-one-sample.md) | High | the branch whose CI is red because one runner was fast | 🟢 Done — a stale verdict reports on one run and fails only when two consecutive runs agree the reference no longer describes the runner | [UX-508](UX-0508-a-stale-verdict-fires-on-one-sample.md) |
 
 ## UX-207..UX-212: the twenty-third audit round — the report learns to answer first (2026-08-22)
 

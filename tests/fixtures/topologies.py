@@ -434,6 +434,76 @@ def the_same_build_twice(
     return one_run(uids, 0), one_run(uids[-1:], chain - 1)
 
 
+def a_build_that_pulls(
+    chain: int = 4, pulled: int = 3,
+    pull_us: int = 1_000_000, build_us: int = 9_000_000,
+) -> Topology:
+    """T6: a build most of whose elements came off a remote cache.
+
+    `cache-transfer-cost` is the one finding in `FINDING_READERS` that
+    nothing in a clone reached (`UX-459`), and it needs two things at
+    once that no other fixture has together. `compute_cache_accounting`
+    returns `{}` unless the capture records a Pipeline Summary, and
+    `_transfer_us` only counts tasks whose `primary_resource` is
+    `DOWNLOAD` or `UPLOAD`. The golden fixture has the second and not
+    the first - one `FETCH|DOWNLOAD` span and no `queue_summary` - so
+    it publishes no cache block at all.
+
+    So the pulled elements carry a real `PULL` task on `DOWNLOAD`
+    (`TaskKind.PULL`, `Resource.DOWNLOAD`, both first-class in
+    `bga/ingest/models.py`), the built one a `BUILD` on `PROCESS`, and
+    the queue summary says which is which. Serial on purpose:
+    `_transfer_us` sums over task duration rather than over a resource
+    timeline - its docstring says two concurrent pulls count twice -
+    and a fixture whose transfer share exceeds 1.0 would be arguing
+    with the thing it is meant to exercise.
+
+    The defaults put the transfer share at 3.0s of 12.0s = **0.250**,
+    against `TRANSFER_SHARE_NOTABLE = 0.1` - clear of the threshold
+    without being a build that does nothing but download. Measured at
+    three shapes while choosing them:
+
+    ```text
+      pull    build   share   cache-transfer-cost
+      3.0s     4.0s   0.692   fires
+      1.0s     9.0s   0.250   fires        <- the defaults
+      0.5s    20.0s   0.070   silent
+    ```
+
+    Analysing it prints `Model score reduced: T_C (9000000) < LB
+    (12000000)`, and that line is `UX-60`'s decided model meeting its
+    first committed capture with material non-BUILD time: `T∞` counts
+    the `head` (FETCH) plus the longest of everything else, a `PULL` is
+    neither, and the replay is free to start `lib3`'s build at t=0
+    although the artifacts it consumes arrive at 3.0s. `UX-60` fixed
+    exactly this for an element's *own* FETCH; the dependency's PULL is
+    the same hole one edge over, and is `UX-481`.
+    """
+    uids = [f"lib{i}.bst" for i in range(chain)]
+    els = [dict(_element(uid, cache_key=f"cachekey{i}",
+                         requested_target=(i == chain - 1)),
+                element_kind="manual")
+           for i, uid in enumerate(uids)]
+    dependencies = [_dependency(uids[i - 1], uids[i]) for i in range(1, chain)]
+
+    spans, t = [], 0
+    for uid in uids[:pulled]:
+        spans.append(_span(uid, t, pull_us, kind="PULL", phase="PULL",
+                           resources=("DOWNLOAD",)))
+        t += pull_us
+    for uid in uids[pulled:]:
+        spans.append(_span(uid, t, build_us))
+        t += build_us
+
+    run_context, graph, trace = _build(
+        els, dependencies, spans, wall_end_us=t, max_jobs=1)
+    run_context["queue_summary"] = {
+        "build": {"processed": chain - pulled, "skipped": pulled, "failed": 0},
+        "pull": {"processed": pulled, "skipped": 0, "failed": 0},
+    }
+    return run_context, graph, trace
+
+
 # --- Helpers for tests that consume the above ---
 
 def write_run_dir(tmp_path: Path, topology: Topology, name: str = "run",
@@ -520,6 +590,7 @@ COVERING_SET = {
     # name                        -> (topology, sources or None)
     "shared_base_wide": (shared_base_wide, None),
     "ample_capacity": (ample_capacity, None),
+    "a_build_that_pulls": (a_build_that_pulls, None),
 }
 
 

@@ -1,0 +1,41 @@
+{
+  "spans": [
+    {
+      "task_key": "lib0.bst|PULL|PULL|0",
+      "ts_us": 0,
+      "dur_us": 1000000,
+      "resources": [
+        "DOWNLOAD"
+      ],
+      "primary_resource": "DOWNLOAD"
+    },
+    {
+      "task_key": "lib1.bst|PULL|PULL|0",
+      "ts_us": 1000000,
+      "dur_us": 1000000,
+      "resources": [
+        "DOWNLOAD"
+      ],
+      "primary_resource": "DOWNLOAD"
+    },
+    {
+      "task_key": "lib2.bst|PULL|PULL|0",
+      "ts_us": 2000000,
+      "dur_us": 1000000,
+      "resources": [
+        "DOWNLOAD"
+      ],
+      "primary_resource": "DOWNLOAD"
+    },
+    {
+      "task_key": "lib3.bst|BUILD|BUILD|0",
+      "ts_us": 3000000,
+      "dur_us": 9000000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS"
+    }
+  ],
+  "phases": []
+}

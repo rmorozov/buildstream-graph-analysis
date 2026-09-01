@@ -1,0 +1,26 @@
+{
+  "trace_epsilon_us": 1000,
+  "wall_clock": {
+    "start_us": 0,
+    "end_us": 12000000
+  },
+  "max_jobs": 1,
+  "resource_capacities": {
+    "PROCESS": 1
+  },
+  "cpu_accounting": {
+    "effective_cpus": 1
+  },
+  "queue_summary": {
+    "build": {
+      "processed": 1,
+      "skipped": 3,
+      "failed": 0
+    },
+    "pull": {
+      "processed": 3,
+      "skipped": 0,
+      "failed": 0
+    }
+  }
+}

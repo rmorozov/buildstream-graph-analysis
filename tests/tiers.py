@@ -487,6 +487,11 @@ MEDIUM = (
     # is a pytest subprocess each. Three single-process runs:
     # 1.22 / 1.25 / 1.24s.
     "tests/unit/test_a_candidate_is_confirmed_alone.py",            # 1.2s
+    # `UX-460`, tiered on landing. It runs `analyze` in-process over
+    # every committed capture in the tree - seven of them now - which
+    # is the census itself and not overhead. Three single-process runs:
+    # 1.09 / 1.22 / 1.14s, over the 1.0s medium floor on every one.
+    "tests/unit/test_every_finding_reaches_a_fixture.py",           # 1.2s
     # `UX-455`. Was in the default tier and never listed. Re-measured
     # alone in one process, three runs: 1.35 / 1.34 / 1.37s, over the
     # 1.0s medium floor on every one. It renders every documented

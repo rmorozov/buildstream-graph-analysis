@@ -1,6 +1,6 @@
 # UX-459: eight findings are reachable by nothing a clone has
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Found by:** round 72, tracing the heuristics in `bga analyze` to the fixtures that reach them | **Serves:** the round that adds a heuristic and has no fixture that can exercise it | **Topic:** guards
+**Priority:** Medium | **Status:** 🟢 Done | **Found by:** round 72, tracing the heuristics in `bga analyze` to the fixtures that reach them | **Serves:** the round that adds a heuristic and has no fixture that can exercise it | **Topic:** guards
 
 ## Motivation
 
@@ -129,4 +129,107 @@ route chosen and its cost recorded here.
 
 ## Outcome
 
-_Not started._
+**Round 73 · 2026-09-01 · Status: 🟢 Done — zero in the `neither` column, and the fixture that closed it found an unfixed defect**
+
+### The gap, and what closed it
+
+```console
+$ python3 tools/dev_finding_coverage.py | tail -2
+(a clone) 21 findings | 18 produced by a capture | 2 declared unreachable | 1 neither
+  neither: cache-transfer-cost
+```
+
+`cache-transfer-cost` was the last one, and this row had proposed
+declaring it uncovered "for want of a remote CAS". That turned out to
+be the wrong call, and the reason is worth having written down: **the
+finding does not need a remote CAS, it needs a capture whose Plane 1
+log records `PULL` tasks** — which is exactly the ingested form a
+curated fixture is for (`UX-463`'s split: curated fixtures own graph
+shape, timing and run mode; a generator owns outcome, sandbox profile
+and scale). A pulled artifact is Plane 1 scheduler data, not something
+below `bst`.
+
+Two things have to be true at once, and no existing fixture had both:
+
+- `compute_cache_accounting` returns `{}` unless the capture records a
+  Pipeline Summary;
+- `_transfer_us` counts only tasks whose `primary_resource` is
+  `DOWNLOAD` or `UPLOAD`.
+
+`tests/fixtures/golden/mixed_task_kinds` has the second and not the
+first — one `FETCH|DOWNLOAD` span, no `queue_summary` — so it publishes
+no cache block at all:
+
+```console
+$ bga analyze tests/fixtures/golden/mixed_task_kinds --diagnostics --format json | jq -c '.cache'
+{}
+```
+
+So `tests/fixtures/topologies.py` gained `a_build_that_pulls`: three
+elements pulled (`PULL` on `DOWNLOAD`, `TaskKind.PULL` and
+`Resource.DOWNLOAD` are both first-class in `bga/ingest/models.py`),
+one built, and a queue summary that says which is which.
+
+### Sizing it, rather than picking a number
+
+```text
+  pull    build   transfer share   cache-transfer-cost
+  3.0s     4.0s       0.692        fires
+  1.0s     9.0s       0.250        fires        <- the defaults
+  0.5s    20.0s       0.070        silent
+```
+
+`TRANSFER_SHARE_NOTABLE` is 0.1. 0.250 clears it with margin without
+being a build that does nothing but download. Serial on purpose:
+`_transfer_us`' own docstring says two concurrent pulls count twice, so
+a concurrent fixture could report a share above 1.0 and would be
+arguing with the thing it exercises.
+
+```console
+$ bga analyze tests/fixtures/a_build_that_pulls/run --diagnostics --format json | jq -r '.findings[] | select(.id=="cache-transfer-cost") | .title'
+25% of wall-clock was artifact transfer (download 3.0s) - this build spent it moving artifacts rather than making them
+
+$ python3 tools/dev_finding_coverage.py | tail -1
+(a clone) 21 findings | 19 produced by a capture | 2 declared unreachable | 0 neither
+```
+
+### What the fixture found on its first run
+
+```text
+WARNING bga.validation.invariants: Model score reduced: T_C (9000000) < LB (12000000)
+```
+
+`UX-60` used that exact line: applying its own decision revealed that
+"a BUILD task carried no dependency on its own element's FETCH", and it
+closed that hole. The hole is open one edge over — a dependency's
+`PULL` — and this is the first committed capture to walk into it.
+`lib3` builds for 9.0s on top of three pulls that finish at 3.0s, and
+the replay starts it at `t=0`. No other committed capture reports the
+warning (measured, four of them, all `0`), because none has a `PULL`.
+Filed as `UX-481` rather than fixed here: it moves a certified floor,
+which is a task with its own measurement.
+
+### Deviation from the Required Fix
+
+The Required Fix offered two routes — curated fixtures, or CI running
+`--local` on builds it already discards — and said to pick one with a
+measurement. The measurement picked the first: the finding's trigger is
+a Plane 1 task kind, so a curated capture reaches it deterministically
+in **1.2s**, where the CI route would reach it only on a runner with a
+remote cache configured, which no job has. The CI route is not
+abandoned — it is `UX-473`, for the two findings a curated capture
+genuinely cannot reach.
+
+The row also proposed declaring `cache-transfer-cost` uncovered. That
+proposal is withdrawn above, with the reason: a declaration would have
+been a wrong sentence in the record, and the guard `UX-460` adds
+(`test_a_declared_finding_is_not_also_produced`) would now be failing
+on it.
+
+### Verification
+
+```text
+python3 tools/dev_finding_coverage.py     0 neither
+make lint                                  clean
+make test                                  5567 passed, 28 skipped in 303.15s
+```

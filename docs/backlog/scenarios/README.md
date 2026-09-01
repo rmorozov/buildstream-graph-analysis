@@ -15,13 +15,13 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-481 scenarios: **11 open**, 470 closed.
+481 scenarios: **10 open**, 471 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
 | capture | 1 | 71 |
-| analysis | 3 | 62 |
+| analysis | 2 | 62 |
 | contracts | 2 | 53 |
 | viewer | 0 | 134 |
 | cli | 0 | 5 |
@@ -44,7 +44,6 @@ task file, which is the only place it ever lived twice.
 | UX-472 | [the architecture says one script needs no `bst`, and now three tools do not fit the sentence](UX-0472-the-architecture-has-no-paragraph-for-the-generators.md) | docs | Medium | the round that asks the architecture where fixtures come from and finds one paragraph about one script | 🔴 |
 | UX-474 | ["Elements Most Worth Optimizing First (by blast radius)" ranks three elements whose blast radius is zero](UX-0474-the-blast-ranking-publishes-a-list-of-zeros.md) | analysis | Medium | the local-optimizer told which three elements to fix first, by a quantity that is zero for all three | 🔴 |
 | UX-476 | [the falsifier `UX-458` named arrived on the very next run](UX-0476-an-untouched-file-crossed-on-two-consecutive-runs.md) | guards | Medium | the contributor whose PR is red for a file they did not write | 🔴 |
-| UX-478 | [the graph-owner is not offered a reader on the one build whose defect is the graph](UX-0478-the-graph-owner-vanishes-on-a-graph-problem.md) | analysis | Medium | the graph-owner who opens the report on a strict chain and finds their reader is not there | 🔴 |
 | UX-481 | [the replay starts a build before the artifacts it consumes have been pulled](UX-0481-the-replay-lets-a-build-start-before-its-dependency-is-pulled.md) | analysis | Medium | the reader of a cache-hit build, whose certified floor comes from a schedule that could not have happened | 🔴 |
 | UX-483 | [a provenance record inlines whatever its path resolves to, and only convention keeps that from being a whole population](UX-0483-a-provenance-record-inlines-the-whole-population-it-cites.md) | contracts | Medium | the round that adds a claim, cites the map its finding is about, and ships a report carrying that population once per claim | 🔴 |
 

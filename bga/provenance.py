@@ -246,6 +246,7 @@ TRACE_QUERIES = {
     # question no finding points at is a question nobody arrives at.
     "mesh-graph": ("graph-levels",),
     "chain-graph": ("graph-levels",),
+    "graph-width": ("graph-levels",),
 }
 
 
@@ -400,6 +401,31 @@ def _mesh_rule(claim, document):
         "The zero-slack share cleared the mesh threshold.")
 
 
+def _width_rule(claim, document):
+    """`UX-478`: the shape's own arithmetic, restated.
+
+    No threshold: any graph with more than one dependency stage has a
+    ceiling on how much of it can run at once, and the ceiling is a
+    fact rather than a judgement. The one graph this is silent about is
+    the one with a single stage, where the widest stage is the whole
+    graph and nothing is forbidden.
+    """
+    evidence = claim.get("evidence") or {}
+    stages = evidence.get("dependency_stages")
+    widest = evidence.get("widest_stage")
+    count = evidence.get("element_count")
+    if not isinstance(stages, int) or not isinstance(widest, int):
+        return _unconditional(
+            "Published for any graph whose elements do not all sit in one "
+            "dependency stage.")
+    return _unconditional(
+        f"{count} elements group into {stages} dependency stages by their "
+        f"dependencies alone; the widest holds {widest}, and nothing in a "
+        f"stage can start before the stage above it finishes. Published "
+        f"whenever there is more than one stage - with one, the widest "
+        f"stage is the whole graph and the shape forbids nothing.")
+
+
 def _chain_rule(claim, document):
     """`UX-475`: the same threshold, the other side of the split.
 
@@ -519,6 +545,16 @@ _CLAIMS = {
         ("elements.zero_slack_share",), _mesh_rule, ()),
     "chain-graph": (
         ("elements.zero_slack_share",), _chain_rule, ()),
+    # `UX-478`: **no evidence path**, and deliberately.
+    #
+    # What this claim reads is `elements.unweighted_depth`, which is a
+    # map keyed by element uid - and `record` inlines whatever a path
+    # resolves to, so citing it would put a copy of that population in
+    # the record. `UX-479` measured what that costs and `UX-483` is the
+    # row for the builder that allows it. The three numbers the claim
+    # stands on are in the finding's own `evidence`, and the rule below
+    # says which they are, which is what a reader checking it needs.
+    "graph-width": ((), _width_rule, ()),
     "shared-source-blast": (
         ("resource_blast.element_count",),
         _unconditional(

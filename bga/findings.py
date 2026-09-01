@@ -29,6 +29,7 @@ keys on and what a diff between two runs joins on, so it is part of the
 contract and does not change with wording. `evidence` carries the raw
 numbers behind the sentence, so a consumer never has to parse `title`.
 """
+import collections
 import os
 from typing import Dict, List, Optional
 
@@ -108,6 +109,7 @@ FINDING_READERS = {
     # R3 - the structural answers.
     "mesh-graph": "graph-owner",
     "chain-graph": "graph-owner",
+    "graph-width": "graph-owner",
     "criticality": "graph-owner",
     # R4 - whether the number can be trusted and whether it is normal.
     "confidence": "ci-gatekeeper",
@@ -749,6 +751,60 @@ def _zero_slack_off_path(result: AnalysisResult) -> int:
                for row in (signals.get('critical_path_detail') or [])}
     return sum(1 for uid, value in slack.items()
                if value == 0 and uid not in on_path)
+
+
+
+def _graph_shape_findings(result: AnalysisResult) -> List[dict]:
+    """`UX-478`: what the shape makes impossible, from the shape alone.
+
+    The graph-owner's published question is *"What does the shape of
+    this graph make impossible?"* and until this item every finding
+    that reached that reader was a function of measured durations:
+    `criticality` needs a contested path, and `mesh-graph`/`chain-graph`
+    read the slack the durations produce. So on `UX-468`'s six-element
+    serial chain - the one project whose entire defect *is* the graph -
+    the reader index dropped R3 entirely:
+
+    ```text
+    ['local-optimizer', 'recipe-author', 'ci-gatekeeper', 'capacity-operator']
+    ```
+
+    and the same graph with the per-element seconds tripled brought it
+    back. A reader whose presence turns on how long the build took is
+    not a reader about shape.
+
+    This one reads `elements.unweighted_depth` and nothing else. Group
+    the elements by depth and you have the dependency stages: nothing
+    in a stage can start before the stage above it finishes, whatever
+    the capacity, so the widest stage is a **ceiling on concurrency
+    that no number of builders can lift**. That is the shape making
+    something impossible, stated as the number it is.
+
+    It is silent on the one shape that imposes nothing - a single stage,
+    where every element is independent and the widest stage is the whole
+    graph. `UX-467`'s census file holds that negative case, and
+    `test_no_shape_finding_speaks_about_every_shape` is what makes it
+    load-bearing rather than decorative.
+    """
+    depth = (result.signals or {}).get('unweighted_depth') or {}
+    if not depth:
+        return []
+    stages = max(depth.values()) + 1
+    if stages <= 1:
+        # Every element independent: the graph forbids nothing, and a
+        # finding that fired here would be describing the absence of a
+        # constraint as if it were one.
+        return []
+    widest = max(collections.Counter(depth.values()).values())
+    return [_finding(
+        'graph-width', SEVERITY_INFO,
+        f"The graph is {len(depth)} elements in {stages} dependency "
+        f"stages, and its widest stage holds {widest} - so no more than "
+        f"{widest} can ever be building at once, whatever the capacity",
+        evidence={'element_count': len(depth),
+                  'dependency_stages': stages,
+                  'widest_stage': widest},
+    )]
 
 
 def _memory_envelope_findings(result: AnalysisResult) -> List[str]:
@@ -1447,6 +1503,10 @@ def compute_findings(result: AnalysisResult) -> List[dict]:
     # ranking's competitor - `_ranking_findings` gates the one claim
     # that competes and publishes the other two either way.
     findings.extend(_ranking_findings(result, chain_bound))
+    # `UX-478`: the one claim about the graph that reads no duration and
+    # no capacity, so it is emitted here rather than inside the
+    # concentration table - it has to survive a run that has no table.
+    findings.extend(_graph_shape_findings(result))
     if concentration_emitted:
         findings.extend(_outlook_findings(result))
     # `UX-365`: the run's own description, after the actions it frames

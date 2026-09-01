@@ -172,15 +172,27 @@ is written as a block quote inside the sentence it falsifies rather
 than appended at the end, so a reader of that claim meets the
 correction with it.
 
-### What is still unproven
+### The step works — the line it could not reach, from CI
 
-**That the step now works.** Everything above is measured locally and
-from the failed logs; the only thing that can show the census running
-in CI is a green `bst-examples` with
-`(a clone + 1 generated) N findings | ...` in its log, and that is one
-push away rather than in hand. The row closes on the fix and its
-guard; the log line is the next run's to produce, and if it does not,
-this row reopens rather than a new one being filed.
+This section read "what is still unproven" when the row closed,
+because the only thing that could show the census running in CI was a
+green `bst-examples`, and that was one push away. It arrived on the
+next run and on the two after it. From run 33530513813, job
+`bst-examples` (head `e4372b1`), the step's last three lines:
+
+```text
+bga snapshot exited 255 (the build is meant to fail)
+...
+(a clone + 1 generated) 24 findings | 24 produced by a capture | 2 declared unreachable | 0 neither
+```
+
+Two things that line settles. The `|| status=$?` handler is what let
+the step survive exit 255 and reach its own last command — under the
+runner's `-e` it ended at the `bga snapshot` line for five consecutive
+runs. And **24 of 24**: the generated failing build produces
+`build-failed` and `failed-task-time`, the two `UNREACHABLE` entries a
+clone cannot reach, so the `--also` route closes the census rather
+than only counting it.
 
 ### The runs
 

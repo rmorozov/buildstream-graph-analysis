@@ -933,6 +933,135 @@ class TestTheTimeline:
         assert 'id="bga-trace"' not in (tmp_path / "r.html").read_text()
 
 
+class TestNoRecordCarriesAPopulationTwice:
+    """`UX-483`: an embedded provenance record cites this document; it
+    must not copy a population out of it.
+
+    `record` used to inline whatever a path resolved to. For a scalar
+    that is right and reads better for it. For a population it is a
+    second publication of a document the report already carries, and
+    `UX-479` measured what that costs the moment a claim does it:
+    `macro_micro`'s provenance grew **4,955 B** against the finding's
+    own 1,485, and fifteen guards - unit declarations, the leaf-depth
+    ceiling, the golden snapshot - went red together.
+
+    Those two claims were narrowed. This is the rule underneath, and it
+    **counts rather than reads**: no clause here knows which paths the
+    claims cite, only that no row carries a container and that the
+    whole record list stays a small fraction of what it explains.
+    """
+
+    #: The largest scalar any evidence row carries today, with room.
+    #: Measured over every cited path on both scales - 26 on
+    #: `macro_micro` and 11 at 1,202 elements - where the widest is
+    #: **18 B** (`elements.zero_slack_share`, a float). 400 leaves room
+    #: for a claim that cites a sentence rather than a number, and is
+    #: still two orders below the population that opened `UX-483`.
+    EVIDENCE_VALUE_MAX_B = 400
+
+    #: **One record**, not the list and not its share of the report.
+    #: Measured on three runs, largest record each:
+    #:
+    #:     golden         11 records,  7,671 B  (26.7% of the report)
+    #:                    largest   959 B  blast-radius-reach
+    #:     macro_micro    15 records, 10,676 B  (13.6%)
+    #:                    largest 1,077 B  blast-radius-reach
+    #:     scale (1,202)   9 records,  6,153 B  ( 1.0%)
+    #:                    largest   902 B  diagnosis
+    #:
+    #: The *share* is 26.7% to 1.0% across those three and measures the
+    #: report's size, not the records'. The largest single record is
+    #: 902-1,077 B on all of them and does not move with the graph,
+    #: which is the quantity that explodes when one record inlines a
+    #: population: `UX-479` measured **+4,955 B on one record** the
+    #: moment two claims cited `elements.blast_radius`. 2,000 leaves
+    #: room for a claim that cites a sentence and is still less than
+    #: half of that.
+    RECORD_MAX_B = 2_000
+
+    def _records(self, run):
+        from tools.bga_view import payloads
+
+        return payloads(str(run))["report.json"].get("provenance") or []
+
+    @pytest.mark.parametrize("label,run", [(l, r) for l, r, _b
+                                           in COMMITTED_EXPORTS])
+    def test_no_evidence_row_carries_a_container(self, label, run):
+        carried = []
+        for record in self._records(run):
+            for row in record.get("evidence") or []:
+                if isinstance(row.get("value"), (dict, list)):
+                    carried.append((record["claim"], row["path"],
+                                    len(json.dumps(row["value"]))))
+        assert carried == [], (
+            f"{label}: provenance row(s) carrying a whole container - the "
+            f"record cites this document and a copy publishes that "
+            f"population twice (UX-483): {carried}")
+
+    @pytest.mark.parametrize("label,run", [(l, r) for l, r, _b
+                                           in COMMITTED_EXPORTS])
+    def test_no_evidence_value_is_bigger_than_a_number(self, label, run):
+        """The size half, which catches by weight what the shape clause
+        catches by type - a very long *string* is not a container and is
+        still not a citation."""
+        heavy = []
+        for record in self._records(run):
+            for row in record.get("evidence") or []:
+                if "value" not in row:
+                    continue
+                size = len(json.dumps(row["value"]))
+                if size > self.EVIDENCE_VALUE_MAX_B:
+                    heavy.append((record["claim"], row["path"], size))
+        assert heavy == [], (
+            f"{label}: evidence value(s) over {self.EVIDENCE_VALUE_MAX_B} B; "
+            f"the widest one measured when this was written was 18 B: "
+            f"{heavy}")
+
+    @pytest.mark.parametrize("label,run", [(l, r) for l, r, _b
+                                           in COMMITTED_EXPORTS])
+    def test_no_single_record_weighs_what_a_population_weighs(
+            self, label, run):
+        """Counting rather than reading: no clause here knows which
+        paths the claims cite, only that no one record grew to the size
+        of the thing it is supposed to be citing."""
+        heavy = sorted(
+            ((len(json.dumps(record)), record["claim"])
+             for record in self._records(run)), reverse=True)
+        assert heavy, f"{label}: the report publishes no provenance at all"
+        size, claim = heavy[0]
+        assert size <= self.RECORD_MAX_B, (
+            f"{label}: the `{claim}` record is {size:,} B, over the "
+            f"{self.RECORD_MAX_B:,} this is kept to. The largest measured "
+            f"when this was written was 1,077 B, and the one population "
+            f"UX-479 inlined added 4,955 B to a single record")
+
+    def test_a_cited_container_is_thinned_rather_than_dropped(self):
+        """The other direction, so the rule is a distinction and not a
+        deletion: a path that resolves to a container is still
+        *published* - path, `resolved: true` and the shape it found -
+        because a reader following the chain has to know the rule read
+        something rather than nothing."""
+        from bga import provenance
+
+        document = {"elements": {"blast_radius": {
+            f"e{i}.bst": {"downstream_count": i} for i in range(40)}}}
+        assert isinstance(
+            provenance.resolve(document, "elements.blast_radius"), dict)
+        # Through `record` itself, with a claim whose only path is that
+        # map - the real builder, not a re-implementation of its rule.
+        provenance._CLAIMS["probe-483"] = (
+            ("elements.blast_radius",),
+            provenance._unconditional("probe"), ())
+        try:
+            built = provenance.record({}, "probe-483", "finding", document)
+        finally:
+            del provenance._CLAIMS["probe-483"]
+        [only] = built["evidence"]
+        assert only["resolved"] is True, only
+        assert "value" not in only, only
+        assert only["elided"] == "dict[40]", only
+
+
 class TestTheSizeDiscipline:
     """Direction 7's rule is a *ratio*: "the data, not the page, is what
     an export weighs". It was guarded by an absolute byte ceiling, and

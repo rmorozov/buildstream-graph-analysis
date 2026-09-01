@@ -702,11 +702,38 @@ def record(claim: dict, claim_id: str, kind: str, document: dict) -> dict:
     evidence = []
     for path in paths:
         value = resolve(document, path)
-        row = {
-            "path": path,
-            "value": None if value is UNRESOLVED else value,
-            "resolved": value is not UNRESOLVED,
-        }
+        row = {"path": path, "resolved": value is not UNRESOLVED}
+        if isinstance(value, (dict, list)):
+            # `UX-483`: **cite, do not copy.** A path is whatever the
+            # rule read, and `value` used to be whatever it resolved to
+            # - which for a scalar is right and reads better for it,
+            # and for a population is a second copy of a document this
+            # report already publishes (`UX-288`'s rule, applied to the
+            # record beside the finding rather than to the finding).
+            #
+            # `UX-479` walked into it: two blast claims cited
+            # `elements.blast_radius`, the whole map, and the moment the
+            # arm that publishes them opened, `macro_micro`'s provenance
+            # grew 4,955 B against the finding's own 1,485 and fifteen
+            # guards reddened. Those two claims were narrowed to name a
+            # scalar each; this is the rule that makes the next one
+            # impossible rather than conventional.
+            #
+            # **Any container, not one over a size.** Measured over
+            # every path the claims actually cite: 26 on `macro_micro`
+            # and 11 at 1,202 elements, and every one of them resolves
+            # to a scalar - 154 B and 91 B if all of them were inlined.
+            # So a size threshold would be a constant with no
+            # measurement behind it, and there is nothing to lose by
+            # refusing the whole class.
+            #
+            # Thinned rather than refused outright: `paths` can be
+            # computed from the run (`_blast_paths`), so a path that
+            # resolves to a container on some graph nobody has yet must
+            # not raise inside a user's `bga analyze`.
+            row["elided"] = f"{type(value).__name__}[{len(value)}]"
+        else:
+            row["value"] = None if value is UNRESOLVED else value
         # `UX-343`: the unit of `value`, resolved from the `path` beside
         # it. This is the one shape in the report that genuinely cannot
         # declare a unit on the key - `value` is whatever field the rule

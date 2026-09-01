@@ -165,8 +165,15 @@ export function renderProvenance(provenance, options = {}) {
       // An unresolved reference says so rather than rendering as a
       // blank cell: "the path is broken" and "the field is null" are
       // different, and the published record already distinguishes them.
+      // `UX-483`: a row whose path resolved to a *container* carries
+      // its shape and not a copy of it - the record cites this
+      // document, and inlining a population would publish it twice.
+      // Rendered as what it is rather than as `undefined`, which is
+      // what `String(ref.value)` produces for an absent key.
       value.textContent = ref.resolved === false
-        ? "unresolved" : String(ref.value);
+        ? "unresolved"
+        : (ref.elided ? `${ref.elided} - follow the path`
+                      : String(ref.value));
       list.append(term, value);
     }
     details.append(list);

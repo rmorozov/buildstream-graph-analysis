@@ -15,13 +15,13 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-482 scenarios: **7 open**, 475 closed.
+482 scenarios: **6 open**, 476 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
 | capture | 1 | 71 |
-| analysis | 1 | 62 |
+| analysis | 0 | 62 |
 | contracts | 2 | 53 |
 | viewer | 0 | 134 |
 | cli | 0 | 5 |
@@ -41,7 +41,6 @@ task file, which is the only place it ever lived twice.
 | UX-469 | [the resource a task held reaches no Perfetto carrier](UX-0469-fields-the-capture-holds-and-the-trace-drops.md) | contracts | Medium | the reader who opens the trace to ask which tasks were waiting on DOWNLOAD and cannot filter for them | 🔴 |
 | UX-470 | [nothing compares a plane's capability with the records it writes](UX-0470-what-the-planes-could-capture-and-do-not.md) | capture | Low | the round that wants a signal the hook could already have produced and has no way to know it | 🔴 |
 | UX-476 | [the falsifier `UX-458` named arrived on the very next run](UX-0476-an-untouched-file-crossed-on-two-consecutive-runs.md) | guards | Medium | the contributor whose PR is red for a file they did not write | 🔴 |
-| UX-481 | [the replay starts a build before the artifacts it consumes have been pulled](UX-0481-the-replay-lets-a-build-start-before-its-dependency-is-pulled.md) | analysis | Medium | the reader of a cache-hit build, whose certified floor comes from a schedule that could not have happened | 🔴 |
 | UX-483 | [a provenance record inlines whatever its path resolves to, and only convention keeps that from being a whole population](UX-0483-a-provenance-record-inlines-the-whole-population-it-cites.md) | contracts | Medium | the round that adds a claim, cites the map its finding is about, and ships a report carrying that population once per claim | 🔴 |
 
 ## UX-398..UX-410: the sixty-fourth round — the walk that judged the answers (2026-08-29)

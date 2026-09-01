@@ -930,6 +930,41 @@ class TestAgreementIsNotEvidenceOnItsOwn:
         assert drift.explained_by(None) is None
         assert isinstance(drift.explained_by("HEAD"), set)
 
+    def test_a_selector_that_names_everything_is_no_explanation(
+            self, monkeypatch):
+        """`UX-494`: the defect this whole mechanism shipped with.
+
+        `dev_touching.select` returns the entire suite under the single
+        reason `"*"` when `tests/conftest.py` or `tests/tiers.py`
+        changed. That is right for *which tests to run* - missing one
+        is the only failure that matters there - and it is no answer to
+        *what could have made this file slower*. Read as one, it says
+        the diff explains every file in the suite, so every excursion
+        is confirmed on a single run and `unexplained` can never be
+        reached. Measured on the branch that found it: **397 of 397**
+        files "explained", from two harness files touched earlier in
+        the round, and a real CI run went red on one sample because of
+        it.
+
+        The fallback has to read as `None` - no evidence either way.
+        The first version of this clause asserted the fallback's own
+        shape and then called `explained_by` on a base with an *empty*
+        diff, where the fallback never fires: it passed with the defect
+        reintroduced.
+        """
+        from tools import dev_touching
+        monkeypatch.setattr(dev_touching, "changed_files",
+                            lambda base: ["tests/conftest.py"])
+        chosen, why = dev_touching.select(["tests/conftest.py"])
+        assert "*" in why and len(chosen) > 100, (
+            "the shared-harness fallback no longer reports itself as "
+            "'*', so explained_by cannot detect it and UX-494 is back")
+
+        assert drift.explained_by("HEAD") is None, (
+            "the whole-suite fallback was read as a diff that names "
+            "every test file, so every excursion reads as caused by "
+            "the branch and the gate confirms on one sample (UX-494)")
+
     def test_an_unreadable_diff_confirms_on_agreement_alone(self):
         """`explained=None` is "the diff could not be read" - a shallow
         checkout, a failed fetch. Then the gate is exactly what UX-442

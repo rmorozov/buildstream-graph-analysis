@@ -678,7 +678,25 @@ def explained_by(base):
         return None
     try:
         from tools import dev_touching
-        chosen, _why = dev_touching.select(dev_touching.changed_files(base))
+        chosen, why = dev_touching.select(dev_touching.changed_files(base))
+        if "*" in why:
+            # `dev_touching`'s shared-harness fallback: `conftest.py` or
+            # `tiers.py` changed, so `select` returns the **whole
+            # suite** under the single reason `"*"`. That is right for
+            # the question it was built for - which tests to *run*,
+            # where missing one is the only real failure - and it is no
+            # answer at all to this one. A set that names every file
+            # explains every excursion, so the gate confirms on one
+            # sample and `UX-476`'s `unexplained` bucket is empty by
+            # construction. Measured on this branch: 397 of 397 test
+            # files "explained", from two harness files touched earlier
+            # in the round.
+            #
+            # `None` is the honest answer - no evidence either way -
+            # and `repeated` then confirms on agreement across runs,
+            # which is `UX-442`'s behaviour and the documented meaning
+            # of `None` above. `UX-494`.
+            return None
         return set(chosen)
     except Exception:                                # pragma: no cover
         return None

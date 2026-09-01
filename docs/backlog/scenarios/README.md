@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-491 scenarios: **7 open**, 484 closed.
+493 scenarios: **8 open**, 485 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -27,7 +27,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | cli | 0 | 5 |
 | store | 2 | 28 |
 | docs | 2 | 43 |
-| guards | 3 | 86 |
+| guards | 4 | 87 |
 
 ## Open scenarios
 
@@ -43,6 +43,7 @@ task file, which is the only place it ever lived twice.
 | UX-491 | [the drift gate's own line has no route a reader can reach](UX-0491-the-gate-line-has-no-route-for-a-reader-without-the-log.md) | guards | Low | the round that has to pair a run's printed shift with the spread it recorded and cannot read the first one | 🔴 |
 | UX-492 | [the README's "verbatim" real-project block prints a sentence the tool can no longer produce](UX-0492-the-readme-verbatim-block-is-no-longer-verbatim.md) | docs | Medium | the outside reader whose first sight of `bga` is a block that says "verbatim" and is not | 🔴 |
 | UX-493 | [a bound moved and the task file that presents it as current was not annotated](UX-0493-a-moved-bound-left-an-earlier-task-file-asserting-the-old-one.md) | docs | Low | the round that reads `UX-479`'s Outcome for the export bound and gets a number the tree no longer has | 🔴 |
+| UX-495 | [three browser guards swing 1.5-2.3x under parallel load](UX-0495-three-browser-guards-swing-under-parallel-load.md) | guards | Medium | the round that reads a browser guard's drift reading and cannot tell an excursion from a regression | 🔴 |
 
 ## UX-398..UX-410: the sixty-fourth round — the walk that judged the answers (2026-08-29)
 

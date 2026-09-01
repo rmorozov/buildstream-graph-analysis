@@ -1,6 +1,6 @@
 # UX-458: the drift factor is a starting value nothing has re-measured
 
-**Priority:** Low | **Status:** 🔴 Not Started | **Found by:** round 71, asked why CI does not simply apply a fixed 1.25x or 1.5x ratio per tier | **Serves:** the contributor whose PR is stopped by a gate whose tolerance nobody has checked against the noise it is meant to tolerate | **Topic:** guards
+**Priority:** Low | **Status:** 🟢 Done | **Found by:** round 71, asked why CI does not simply apply a fixed 1.25x or 1.5x ratio per tier | **Serves:** the contributor whose PR is stopped by a gate whose tolerance nobody has checked against the noise it is meant to tolerate | **Topic:** guards
 
 ## Motivation
 
@@ -109,3 +109,86 @@ that currently says there is no measurement of it yet.
 ## Outcome
 
 _Not started._
+
+## Outcome
+
+**Round 72 · 2026-09-01 · Status: 🟢 Done — sized, and the answer is that the factor is not the thing doing the work**
+
+### The second sample this row was waiting for
+
+`UX-426`'s CI-first loop, applied deliberately: PR #191 was opened
+early so runs would accumulate while other items were worked. Run
+33493747354 produced the second `spread` record this repository has.
+
+```text
+recorded (c41a27e)   files 314  shift 1.34   min 0.105  p25 0.796  p75 1.269  max 7.257
+run 33493747354      files 373  shift 1.006  min 0.099  p25 0.876  p75 1.193  max 2.783
+```
+
+Two runs, two very different median shifts (1.34 and 1.01), and the
+**per-file spread after the shift is divided out is almost identical**:
+p25 ≈ 0.80/0.88, p75 ≈ 1.27/1.19. That is the first thing worth
+knowing — the per-run shift really does absorb the machine-wide
+component, which is what `UX-418` designed it to do, and what is left
+is per-file noise that does not move between runs.
+
+### Where `CI_DRIFT_FACTOR = 1.5` actually sits
+
+Between p75 (≈1.2) and max (2.8–7.3). Concretely, on the run above,
+three files crossed it on an unchanged suite:
+
+```text
+3 file(s) over both gates on this run only, and 2 consecutive runs are what reports (UX-442):
+  tests/unit/test_emphasis_is_a_budget.py               22.5s vs 12.6s  x1.78
+  tests/unit/test_why_bga_believes_what_it_believes.py  12.6s vs  7.1s  x1.76
+  tests/unit/test_a_guard_reads_only_what_a_clone_has.py 10.8s vs 5.5s  x1.97
+```
+
+The third is real — this round added clauses to it. **The first two
+were not touched by any commit on the branch.** Two untouched files at
+×1.78 and ×1.76, after a ×1.006 shift.
+
+### The answer
+
+**The factor cannot be sized to eliminate false alarms, and should not
+be.** To admit nothing on an unchanged suite it would have to clear
+the observed maximum — 2.78 on one run and 7.26 on the other — and a
+gate at ×3 to ×7 would let a genuine tier change through unnoticed,
+which is the defect `UX-418` exists to prevent.
+
+So `1.5` is not a threshold separating signal from noise; there is no
+such threshold in this distribution. It is a **shortlist width**: it
+keeps the per-run candidate list to about three files out of 373
+(≈0.8%), which is short enough for `UX-442`'s two-consecutive-runs
+rule to do the actual discriminating. The two runs a file must cross
+in are what make a false alarm unlikely, because per-file noise does
+not repeat on the same file; the factor only decides how much work
+that rule is given.
+
+Measured against that job description, 1.5 is defensible and is left
+where it is. Raising it to ~1.9 would have suppressed all three of
+this run's candidates including the real one; lowering it to p75
+(1.2) would have put roughly a quarter of 373 files on the shortlist
+and made the two-run rule the only thing standing between CI and
+noise.
+
+### Deviation from the Required Fix
+
+The Required Fix asked for the factor to be *sized from data*, with
+the implication that the number would move. It does not move, and the
+reason is the finding: the distribution has no separating value, so
+the number's job is not what the row assumed. Recorded as the answer
+rather than as a failure to answer.
+
+**What would change this.** A third and fourth spread record with a
+p75 materially above 1.3, or a run where two consecutive runs agree on
+a file nobody touched — the second would falsify the premise the whole
+gate rests on, and is worth watching for rather than assuming away.
+
+### Deliberately not done
+
+No guard. The claim here is about a distribution measured twice, and a
+test that pinned 1.5 against those two samples would be `UX-420`'s own
+mistake — a threshold sized on one round's data, which its first armed
+run then contradicted by naming thirty-one files. The number stays a
+constant with an argument beside it.

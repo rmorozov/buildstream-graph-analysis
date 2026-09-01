@@ -15,19 +15,19 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-478 scenarios: **15 open**, 463 closed.
+479 scenarios: **14 open**, 465 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
 | capture | 1 | 71 |
-| analysis | 5 | 61 |
+| analysis | 6 | 62 |
 | contracts | 1 | 52 |
 | viewer | 0 | 134 |
 | cli | 0 | 5 |
 | store | 2 | 28 |
 | docs | 2 | 43 |
-| guards | 4 | 81 |
+| guards | 2 | 81 |
 
 ## Open scenarios
 
@@ -38,8 +38,6 @@ task file, which is the only place it ever lived twice.
 |---|---|---|---|---|---|
 | UX-92 | [cache effectiveness — hits, misses, churn, trends — is invisible to the tool](UX-0092-cache-effectiveness-is-invisible-to-the-tool.md) | store | Medium | — | 🟡 |
 | UX-96 | [the baseline set exists, but assembling it is a scavenger hunt](UX-0096-the-baseline-set-exists-but-assembling-it-is-a-scavenger-hunt.md) | store | Medium | — | 🟡 |
-| UX-459 | [eight findings are reachable by nothing a clone has](UX-0459-seven-examples-keep-nothing-analysable.md) | guards | Medium | the round that adds a heuristic and has no fixture that can exercise it | 🔴 |
-| UX-460 | [nothing says which findings the fixtures can actually produce](UX-0460-no-guard-says-which-findings-a-fixture-produces.md) | guards | Medium | the round that adds a heuristic and has no way to tell whether anything exercises it | 🔴 |
 | UX-469 | [the resource a task held reaches no Perfetto carrier](UX-0469-fields-the-capture-holds-and-the-trace-drops.md) | contracts | Medium | the reader who opens the trace to ask which tasks were waiting on DOWNLOAD and cannot filter for them | 🔴 |
 | UX-470 | [nothing compares a plane's capability with the records it writes](UX-0470-what-the-planes-could-capture-and-do-not.md) | capture | Low | the round that wants a signal the hook could already have produced and has no way to know it | 🔴 |
 | UX-471 | [the day-one summary counts 421 task files and the tree has 468](UX-0471-the-day-one-summary-counts-421-of-468.md) | docs | Low | the session whose first reading of this repository is a number 47 rows out of date | 🔴 |
@@ -51,6 +49,7 @@ task file, which is the only place it ever lived twice.
 | UX-477 | [one graph, two verdicts — the chain-bound line is decided by how long the build is](UX-0477-the-chain-share-denominator-carries-a-constant.md) | analysis | Medium | the graph-owner whose build really is a chain and is told the time is going somewhere else | 🔴 |
 | UX-478 | [the graph-owner is not offered a reader on the one build whose defect is the graph](UX-0478-the-graph-owner-vanishes-on-a-graph-problem.md) | analysis | Medium | the graph-owner who opens the report on a strict chain and finds their reader is not there | 🔴 |
 | UX-479 | [a chain-bound build publishes no blast radius, so the recipe-author never learns what their element reaches](UX-0479-a-chain-bound-build-publishes-no-blast-radius.md) | analysis | Medium | the recipe-author who owns the element every other element waits for | 🔴 |
+| UX-481 | [the replay starts a build before the artifacts it consumes have been pulled](UX-0481-the-replay-lets-a-build-start-before-its-dependency-is-pulled.md) | analysis | Medium | the reader of a cache-hit build, whose certified floor comes from a schedule that could not have happened | 🔴 |
 
 ## UX-398..UX-410: the sixty-fourth round — the walk that judged the answers (2026-08-29)
 

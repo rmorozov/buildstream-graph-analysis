@@ -170,7 +170,8 @@ def test_the_covering_set_writes_the_same_bytes_twice(tmp_path):
     assert first == second
     assert set(topo.covering_set()) == {
         "shared_base_wide", "ample_capacity", "one_source_many_elements",
-        "same_build_twice_cold", "same_build_twice_incremental"}
+        "same_build_twice_cold", "same_build_twice_incremental",
+        "a_build_that_pulls"}
 
 
 def test_only_the_source_fixture_writes_an_inventory(tmp_path):

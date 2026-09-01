@@ -985,12 +985,24 @@ keeps two hand-maintained copies of one fact together.
 
 ## Verification Log
 
-Updated 2026-08-31 (after `UX-450`), re-grounded in the contracts
+Updated 2026-09-01 (after `UX-472`), re-grounded in the contracts
 table above against `bga.contracts`'s derived inventory — **21 ids, 8
 of them marked superseded**, 8 printable and 13 not — and the keys
 `bga analyze --schema` actually prints: **56 top-level properties**.
-Both figures are unchanged from the round-65 grounding below and are
-re-read here rather than carried forward.
+Both figures are unchanged from the round-65 grounding below and from
+`UX-450`'s, and are re-read here rather than carried forward.
+
+Round 73 changed this document in one place: the "One script in
+`tools/`" sentence became a **Where fixtures come from** section.
+`UX-472` filed it because that sentence claimed uniqueness — one script
+outside the capture pipeline needing no `bst` — and round 72 shipped
+three more tools it cannot hold. What replaces it is `UX-463`'s split
+between curated fixtures and generated projects, which was settled in a
+backlog row and lived nowhere a reader of the architecture would find
+it. The two censuses added in the same round are named but not listed:
+they are in the fixing guide's §6 with every other dev instrument, and
+`dev_js_deps.py` and `dev_perfetto_queries.py` were already the
+precedent for that being their only home.
 
 Round 71 changed this document in one place only, the viewer chapter's
 module table, which gained `sections.js`: `UX-450` split the section

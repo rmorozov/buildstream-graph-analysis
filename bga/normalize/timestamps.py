@@ -24,27 +24,76 @@ from ..ingest.models import (
 logger = logging.getLogger(__name__)
 
 
+#: `UX-481`: the task kinds that put an element's artifact on this
+#: machine, in the order they win when an element has both.
+#:
+#: A `depends:` edge means the downstream element's work needs the
+#: upstream element's artifact to *exist locally*, and there are two
+#: ways that happens: BuildStream built it, or BuildStream pulled it
+#: from a remote cache. A cache hit produces a `PULL` and **no**
+#: `BUILD` at all, so a map keyed on `BUILD` alone silently drops the
+#: edge for every pulled dependency - which is the common case in CI
+#: and the shape `run-mode-incremental` exists to name.
+#:
+#: BUILD wins where both exist: a pull that was followed by a build did
+#: not produce the artifact the dependent consumed.
+#:
+#: Every other kind stays out, for the reason `P1-27` recorded: a
+#: trailing `PUSH` finishes after the artifact exists and gating on it
+#: over-constrains ready times, and `TRACK`/`FETCH` are about sources
+#: rather than artifacts.
+_ARTIFACT_TASK_KINDS = (TaskKind.BUILD, TaskKind.PULL)
+
+
+def _element_artifact_task(
+    normalized_spans: List[Tuple[TaskSpan, int, int]],
+) -> Dict[str, Tuple[TaskSpan, int]]:
+    """Map element_uid -> the span that put its artifact here, and its
+    quantized finish.
+
+    One source of truth for both questions the module asks about an
+    upstream element - *when* was its artifact ready
+    (`_element_build_finish`, for ready times) and *which task key*
+    should a dependent wait on (`clamp_task_starts`, for replay). They
+    were two maps built from one `if` each, and `UX-481` found them
+    wrong in the same way at the same time.
+    """
+    best: Dict[str, Tuple[TaskSpan, int]] = {}
+    for span, _q_start, q_finish in normalized_spans:
+        kind = span.task_key.task_kind
+        if kind not in _ARTIFACT_TASK_KINDS:
+            continue
+        uid = span.task_key.element_uid
+        held = best.get(uid)
+        if held is None or _ARTIFACT_TASK_KINDS.index(kind) < \
+                _ARTIFACT_TASK_KINDS.index(held[0].task_key.task_kind):
+            best[uid] = (span, q_finish)
+    return best
+
+
 def _element_build_finish(normalized_spans: List[Tuple[TaskSpan, int, int]]) -> Dict[str, int]:
     """
-    Map element_uid -> its own BUILD task's (quantized) finish time
-    (Part 32.2's `depends:` semantics: a downstream element's work
-    needs the upstream element's BUILD to have completed, not any of
-    its other task kinds - the same real-world semantics
+    Map element_uid -> the (quantized) finish of the task that produced
+    its artifact here (Part 32.2's `depends:` semantics: a downstream
+    element's work needs the upstream element's artifact to exist, not
+    any of its other task kinds - the same real-world semantics
     bga/analyzer.py::_compute_attribution's explicit_predecessors
     (P1-03) and this module's own clamp_task_starts (P1-26) already
-    use). An element with no BUILD task contributes no entry, rather
+    use). An element with no such task contributes no entry, rather
     than a wrong one - shared by compute_ready_times and
     validate_ordering so both apply the identical predecessor source
     (P1-27: they previously each independently computed a max-across-
     every-task-kind finish, which could be later than the element's
     own BUILD finish - e.g. a trailing PUSH - over-constraining
     ready times for tasks that don't actually depend on it).
+
+    `UX-481` widened "its own BUILD" to "the task that produced its
+    artifact" - see `_ARTIFACT_TASK_KINDS`. The name is kept because
+    every caller reads it as "when could a dependent start", which is
+    what it has always meant and now answers on a cache hit too.
     """
-    element_build_finish: Dict[str, int] = {}
-    for span, _q_start, q_finish in normalized_spans:
-        if span.task_key.task_kind == TaskKind.BUILD:
-            element_build_finish[span.task_key.element_uid] = q_finish
-    return element_build_finish
+    return {uid: finish
+            for uid, (_span, finish) in _element_artifact_task(normalized_spans).items()}
 
 
 def quantize_timestamp(ts_us: int, epsilon_us: int) -> int:
@@ -300,7 +349,19 @@ def clamp_task_starts(
     # dependency doesn't need to be staged before the successor's build
     # starts (see compute_ready_times's identical filter), so replay
     # must not gate the successor's readiness on it either.
-    build_task_by_element: Dict[str, str] = {}
+    # `UX-481`: the task that put each element's artifact here, which is
+    # its BUILD where it was built and its PULL where it was pulled -
+    # see `_ARTIFACT_TASK_KINDS`. This was keyed on BUILD alone, so a
+    # dependency that came off the cache offered no task to wait for and
+    # the edge vanished: on `tests/fixtures/a_build_that_pulls` the
+    # replay started `lib3`'s 9s build at t=0, before the three 1s pulls
+    # it consumes had finished, and scored `T_C (9000000) < LB
+    # (12000000)` - the same under-constraint this comment warns about,
+    # one edge over from the one `UX-60` closed.
+    build_task_by_element: Dict[str, str] = {
+        uid: str(span.task_key)
+        for uid, (span, _finish) in _element_artifact_task(normalized_spans).items()
+    }
     # UX-60: an element's own FETCH, which its BUILD must wait for.
     # BuildStream cannot run build commands before the element's sources
     # are staged, and until now nothing in the replay's readiness model
@@ -314,9 +375,7 @@ def clamp_task_starts(
     # disagreeing with it.
     fetch_task_by_element: Dict[str, str] = {}
     for span, _q_start, _q_finish in normalized_spans:
-        if span.task_key.task_kind == TaskKind.BUILD:
-            build_task_by_element[span.task_key.element_uid] = str(span.task_key)
-        elif span.task_key.task_kind == TaskKind.FETCH:
+        if span.task_key.task_kind == TaskKind.FETCH:
             fetch_task_by_element[span.task_key.element_uid] = str(span.task_key)
 
     result = []

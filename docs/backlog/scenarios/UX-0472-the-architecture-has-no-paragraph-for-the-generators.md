@@ -152,6 +152,24 @@ here are already held: `test_docs_links_and_commands.py` checks every
 path and link the new section names, and the uniqueness claim that went
 stale is gone rather than restated in a form that could go stale again.
 
+### One thing this row missed, found one commit later
+
+`test_the_verification_log_is_true.py::test_the_claimed_date_is_not_older_than_the_last_change`
+reddened on the **next** commit, not this one:
+
+```text
+the Verification Log claims 2026-08-31 (after UX-450), and
+architecture.md was last changed 2026-09-01.
+```
+
+It reads `git log` for the document, so while the edit was uncommitted
+the log still said 2026-08-31 and `make test` was green — the guard can
+only speak once the commit exists. Fixing guide §3.10 wanted the
+re-grounding in this commit and it went into the next one; the log now
+carries a round-73 entry naming what changed and why, with both
+grounding figures re-read (**21 ids, 8 superseded**; **56 top-level
+properties**) rather than carried forward.
+
 ### The runs
 
 ```text

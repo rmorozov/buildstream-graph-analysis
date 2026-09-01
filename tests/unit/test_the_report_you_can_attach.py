@@ -638,7 +638,15 @@ COMMITTED_EXPORTS = [
     # of. The recorded 391,543 B was itself 2,037 B stale; measured
     # before this change it was 393,580 B, so the old bound had 420 B
     # of headroom rather than the ~4 KB the note above claims.
-    ("golden", GOLDEN, 406_000),                       #  401,512 B
+    # `UX-479` moved this one by 1,654 B and **the page half did not
+    # move at all** - 291,588 B before and after. Golden gains
+    # `blast-radius-reach`, which the chain-bound arm published nothing
+    # in place of: 1,485 B of it is the finding and 169 B its
+    # provenance record, which cites two scalars rather than the map
+    # (see the note on `macro_micro`'s bound below). The recorded
+    # 401,512 B was 152 B stale, so the bound had 4,336 B of headroom
+    # rather than 4,488, and has 2,682 B now.
+    ("golden", GOLDEN, 406_000),                       #  403,318 B
     # `UX-297` moved this one by 385 B before that: the two-plane run
     # publishes `plane2_coverage.source`, which says which shape of
     # Plane 2 report served its numbers and what that costs to open. A
@@ -690,7 +698,37 @@ COMMITTED_EXPORTS = [
     # `UX-431`: +1,120 B, all source - the same paragraph as golden;
     # the split is in the note above that bound.
     # `UX-448`: the split is in the note above golden's bound.
-    ("macro_micro", MACRO_MICRO, 450_000),             #  447,039 B
+    # `UX-479` moved this one by 3,316 B, past the 450,000 bound, and
+    # again **the page half did not move** - 291,588 B before and
+    # after. Measured with this file's own splitter:
+    #
+    #                        page      golden data   macro_micro data
+    #     before          291,588 B      110,076 B          158,276 B
+    #     after           291,588 B      111,730 B          161,592 B
+    #                          +0 B       +1,654 B           +3,316 B
+    #
+    # Split by payload key on `macro_micro`: findings +1,485 B,
+    # provenance +1,777 B, readers +53 B, document_shape +1 B.
+    #
+    # The provenance half was **+4,955 B** on the first attempt, three
+    # times the finding it explains, because both blast claims cited
+    # `elements.blast_radius` - the whole map - and `record` inlines
+    # whatever a path resolves to. Neither claim had ever fired on a
+    # committed capture (both fixtures are chain-bound; that arm was
+    # closed), so the duplication was latent and this item's first run
+    # reddened fifteen guards with it, among them "every numeric leaf
+    # declares a unit" and "no map is keyed by data it cannot
+    # describe". Both blast claims now cite one scalar per element they
+    # name - `elements.blast_radius[base.bst].downstream_count` - which
+    # is `UX-288`'s rule kept rather than negotiated. The general form,
+    # a builder that will inline the next population just as happily,
+    # is `UX-483`.
+    #
+    # The recorded 447,039 B was 2,825 B stale: measured before this
+    # change it was 449,864 B, so the bound it was riding had 136 B of
+    # headroom, not the ~3 KB the number claimed. 458,000 leaves
+    # 4,820 B, which is what "moved with a measurement" means here.
+    ("macro_micro", MACRO_MICRO, 458_000),             #  453,180 B
 ]
 
 

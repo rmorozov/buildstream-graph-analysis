@@ -15,14 +15,14 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-480 scenarios: **12 open**, 468 closed.
+481 scenarios: **12 open**, 469 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
 | capture | 1 | 71 |
-| analysis | 5 | 62 |
-| contracts | 1 | 52 |
+| analysis | 4 | 62 |
+| contracts | 2 | 53 |
 | viewer | 0 | 134 |
 | cli | 0 | 5 |
 | store | 2 | 28 |
@@ -46,8 +46,8 @@ task file, which is the only place it ever lived twice.
 | UX-475 | [`mesh-graph` calls a five-element linear chain "a mesh of near-equal chains"](UX-0475-mesh-graph-calls-a-linear-chain-a-mesh.md) | analysis | Medium | the graph-owner told their chain is a mesh, and that savings are capped by "the next chain" when there is only one | 🔴 |
 | UX-476 | [the falsifier `UX-458` named arrived on the very next run](UX-0476-an-untouched-file-crossed-on-two-consecutive-runs.md) | guards | Medium | the contributor whose PR is red for a file they did not write | 🔴 |
 | UX-478 | [the graph-owner is not offered a reader on the one build whose defect is the graph](UX-0478-the-graph-owner-vanishes-on-a-graph-problem.md) | analysis | Medium | the graph-owner who opens the report on a strict chain and finds their reader is not there | 🔴 |
-| UX-479 | [a chain-bound build publishes no blast radius, so the recipe-author never learns what their element reaches](UX-0479-a-chain-bound-build-publishes-no-blast-radius.md) | analysis | Medium | the recipe-author who owns the element every other element waits for | 🔴 |
 | UX-481 | [the replay starts a build before the artifacts it consumes have been pulled](UX-0481-the-replay-lets-a-build-start-before-its-dependency-is-pulled.md) | analysis | Medium | the reader of a cache-hit build, whose certified floor comes from a schedule that could not have happened | 🔴 |
+| UX-483 | [a provenance record inlines whatever its path resolves to, and only convention keeps that from being a whole population](UX-0483-a-provenance-record-inlines-the-whole-population-it-cites.md) | contracts | Medium | the round that adds a claim, cites the map its finding is about, and ships a report carrying that population once per claim | 🔴 |
 
 ## UX-398..UX-410: the sixty-fourth round — the walk that judged the answers (2026-08-29)
 

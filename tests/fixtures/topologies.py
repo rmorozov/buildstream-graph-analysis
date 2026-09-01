@@ -280,7 +280,7 @@ def graph_with_terminal_and_nonterminal_tasks(duration_us: int = 10000) -> Topol
 
 def shared_base_wide(
     dependents: int = 6, base_us: int = 200_000, heavy_us: int = 6_000_000,
-    tie_ratio: float = 0.97, lanes: int = 2,
+    tie_ratio: float = 0.97, lanes: int = 2, base_kind: str = "import",
 ) -> Topology:
     """T1: one structural base, N dependents of unequal weight.
 
@@ -294,11 +294,24 @@ def shared_base_wide(
       shape rather than ranked as an action (`UX-258`/`UX-76`). That
       split is what produces two blast findings instead of one.
     - `lanes` is below `dependents`, so wall-clock is several times the
-      critical path and the run is **not** chain-bound.
-      `_ranking_findings` returns nothing at all on a chain-bound run,
-      which is why the existing `blast_radius_disagrees_with_horizon`
-      fixture - one hub, one dominant leaf - produces no blast finding
-      despite being about blast radius.
+      critical path and the run is **not** chain-bound. That is what
+      makes `blast-radius-ranking` - the ordered list - reachable:
+      `_ranking_findings` ranks only on a scheduler-bound run
+      (`UX-65`), because on a chain the concentration table already
+      orders the same names (`UX-76`).
+
+      Until `UX-479` the whole function returned nothing on a
+      chain-bound run, ranking and reach alike. Raising `lanes` to
+      `dependents` now gives the second shape this factory can make: a
+      chain-bound wide base, which publishes `blast-radius-reach` and
+      no ranking. `test_a_chain_bound_build_still_has_a_blast_radius`
+      builds it that way.
+    - `base_kind` decides which of the two blast findings the base
+      lands in, and nothing else. `import` is in
+      `STRUCTURAL_ELEMENT_KINDS`, so the base is reported as shape;
+      any other kind makes it an element someone owns and edits, which
+      is the `UX-468` planted project's shape (`base.bst`, a
+      `compose`) rather than this one's.
     - `tie_ratio` puts the two heaviest dependents within 3% of each
       other, inside the Monte-Carlo sampler's +/-10% perturbation
       (`DEFAULT_PERTURBATION_PCT`), so criticality comes out fractional
@@ -315,7 +328,7 @@ def shared_base_wide(
       debuggable when the ranking changes.
     """
     base = "toolchain.bst"
-    elements = [dict(_element(base), element_kind="import")]
+    elements = [dict(_element(base), element_kind=base_kind)]
     dependencies: List[dict] = []
     spans = [_span(base, 0, base_us)]
     # Heaviest, its near-tie, then a decreasing tail - so the ranking

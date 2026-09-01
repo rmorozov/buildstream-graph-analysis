@@ -101,6 +101,7 @@ FINDING_READERS = {
     "execution-bound": "local-optimizer",
     # R2 - the cost of *their* element, and what a change to it reaches.
     "latent-heavies": "recipe-author",
+    "blast-radius-reach": "recipe-author",
     "blast-radius-structural": "recipe-author",
     "shared-source-blast": "recipe-author",
     "cache-transfer-cost": "recipe-author",
@@ -1107,13 +1108,36 @@ def _outlook_findings(result: AnalysisResult) -> List[dict]:
 
 
 def _ranking_findings(result: AnalysisResult, chain_bound: bool) -> List[dict]:
+    """Everything the run has to say about **reach** - who depends on me.
+
+    Three claims, and `UX-479` is the round that separated them, because
+    one `chain_bound` gate in front of all three meant a chain-bound
+    build published none:
+
+    - `blast-radius-ranking` - *which element to shorten first*. `UX-65`:
+      that is the right question when the **graph** constrains the build
+      and the wrong one when the chain does, so it stays gated.
+    - `blast-radius-reach` - *what a change to this element rebuilds*.
+      A different question from the one above, asked by a different
+      reader, and true whichever way the build is bound. `UX-479` was
+      filed because the recipe-author who owns the fat shared base was
+      offered `latent-heavies` - "worth nothing to fix today" about
+      three other elements - and nothing at all about their own.
+    - `blast-radius-structural` - *these reach most of the graph by
+      design*. A fact about the shape of the graph. Whether the chain or
+      the scheduler binds this particular run has nothing to do with it,
+      and gating it on that was never argued for anywhere.
+
+    The old early return also carried `chain_bound` a second time, and
+    `UX-474` found that inner half unreachable - `compute_findings`
+    branched on the same value and only called this in the `else`. Both
+    copies are gone; the one gate that remains is on the one claim
+    `UX-65` argued for.
+    """
     signals = result.signals or {}
     top_blast_radius = signals.get('top_blast_radius') or []
-    if chain_bound or not top_blast_radius:
+    if not top_blast_radius:
         return []
-    # UX-65: blast radius answers "who depends on me", which is the right
-    # question when the *graph* constrains the build, not when the chain
-    # does.
     blast_radius = signals.get('blast_radius') or {}
     distribution = signals.get('blast_radius_distribution')
 
@@ -1138,7 +1162,7 @@ def _ranking_findings(result: AnalysisResult, chain_bound: bool) -> List[dict]:
                   if not (blast_radius.get(u) or {}).get('is_structural_kind')]
 
     findings = []
-    shown = actionable[:BLAST_RADIUS_SHOWN]
+    shown = [] if chain_bound else actionable[:BLAST_RADIUS_SHOWN]
     if shown:
         detail = []
         for i, elem_uid in enumerate(shown, start=1):
@@ -1171,6 +1195,28 @@ def _ranking_findings(result: AnalysisResult, chain_bound: bool) -> List[dict]:
             # deepest shape in the document for the sake of it.
             evidence=({'blast_radius_distribution': distribution}
                       if distribution else {}),
+        ))
+
+    # `UX-479`: what a change to one of these rebuilds - the
+    # recipe-author's own question, published on either arm because it
+    # is not a ranking and does not compete with `time-concentration`
+    # for the same screen. Only elements something actually depends on:
+    # a row reading "0 downstream" answers the question with a number
+    # that means "nobody", and a list of those is `UX-474`'s defect,
+    # which this finding is born without.
+    reaching = [u for u in actionable
+                if ((blast_radius.get(u) or {}).get('downstream_count') or 0) > 0]
+    if reaching and not shown:
+        named = ", ".join(
+            f"{u} ({(blast_radius.get(u) or {}).get('downstream_count')} "
+            f"downstream)"
+            for u in reaching[:BLAST_RADIUS_SHOWN])
+        findings.append(_finding(
+            'blast-radius-reach', SEVERITY_MEDIUM,
+            f"What a change to these rebuilds: {named} - the cost of "
+            f"touching them is not their own duration but everything "
+            f"downstream that has to be built again",
+            elements=list(reaching[:BLAST_RADIUS_SHOWN]),
         ))
 
     if structural:
@@ -1335,8 +1381,10 @@ def compute_findings(result: AnalysisResult) -> List[dict]:
             )
             findings.extend(concentration)
             concentration_emitted = bool(concentration)
-    else:
-        findings.extend(_ranking_findings(result, chain_bound))
+    # `UX-479`: outside the branch. Reach is not the concentration
+    # ranking's competitor - `_ranking_findings` gates the one claim
+    # that competes and publishes the other two either way.
+    findings.extend(_ranking_findings(result, chain_bound))
     if concentration_emitted:
         findings.extend(_outlook_findings(result))
     # `UX-365`: the run's own description, after the actions it frames

@@ -80,6 +80,20 @@
             "trace_query": "graph-levels"
         },
         {
+            "id": "blast-radius-reach",
+            "severity": "medium",
+            "title": "What a change to these rebuilds: base.bst (2 downstream), lib.bst (1 downstream) - the cost of touching them is not their own duration but everything downstream that has to be built again",
+            "detail": [],
+            "elements": [
+                "base.bst",
+                "lib.bst"
+            ],
+            "evidence": {},
+            "reader": "recipe-author",
+            "copy_text": "BGA finding: What a change to these rebuilds: base.bst (2 downstream), lib.bst (1 downstream) - the cost of touching them is not their own duration but everything downstream that has to be built again\n  Elements: base.bst, lib.bst\n  Run: golden-fixture-manifest-hash-v1",
+            "trace_query": "dependency-wait"
+        },
+        {
             "id": "joint-saving",
             "severity": "high",
             "title": "Together, the top 3 are worth 0.0s (69% of the build) - exactly the sum of their individual savings, so they are three separate pieces of work that do not overlap",
@@ -242,8 +256,9 @@
             "role": "R2",
             "label": "I own one element's recipe",
             "question": "Is my element a problem, and what does changing it cost?",
-            "leads_with": "latent-heavies",
+            "leads_with": "blast-radius-reach",
             "findings": [
+                "blast-radius-reach",
                 "latent-heavies"
             ]
         },
@@ -829,6 +844,35 @@
             "unpublished_inputs": []
         },
         {
+            "claim": "blast-radius-reach",
+            "kind": "finding",
+            "document": "analyze/v4",
+            "evidence": [
+                {
+                    "path": "elements.blast_radius[base.bst].downstream_count",
+                    "value": 2,
+                    "resolved": true,
+                    "quantity": "count"
+                },
+                {
+                    "path": "elements.blast_radius[lib.bst].downstream_count",
+                    "value": 1,
+                    "resolved": true,
+                    "quantity": "count"
+                }
+            ],
+            "rule": {
+                "name": null,
+                "threshold": null,
+                "comparison": "present",
+                "observed_path": null,
+                "sentence": "Published for every non-structural element something actually depends on. Not a ranking - `UX-65`'s who-depends-on-me ordering is a different claim and stays on the scheduler-bound arm - but the answer to the recipe-author's own question, which is true whichever way the build is bound (`UX-479`). Elements with no dependents are left out rather than listed at zero: a row reading \"0 downstream\" answers the question with a number meaning nobody.",
+                "module": "bga/findings.py"
+            },
+            "trace_query": "dependency-wait",
+            "unpublished_inputs": []
+        },
+        {
             "claim": "joint-saving",
             "kind": "finding",
             "document": "analyze/v4",
@@ -1004,10 +1048,10 @@
         }
     ],
     "document_shape": {
-        "leaves": 647,
+        "leaves": 674,
         "deepest_depth": 7,
         "deepest_path": "findings.[].evidence.steps.[].entering.[]",
-        "deeper_than_three": 299,
-        "deeper_than_three_share": 0.46213292117465227
+        "deeper_than_three": 316,
+        "deeper_than_three_share": 0.4688427299703264
     }
 }

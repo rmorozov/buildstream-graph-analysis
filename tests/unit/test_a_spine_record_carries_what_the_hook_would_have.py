@@ -116,21 +116,73 @@ class TestTheTwoMechanismsAgree:
             f"blocks, so this file is asserting nothing: {both}")
         return both[did_work[0]]
 
-    def test_the_block_counts_are_identical(self, traced):
-        seen = self._worker(traced)
-        for key in ("inblock", "oublock"):
-            assert seen["hook"][key] == seen["spine"][key], (
-                f"{key}: hook {seen['hook'][key]}, spine "
-                f"{seen['spine'][key]}. `ru_inblock` is "
-                f"`read_bytes >> 9` and the spine reads the same "
-                f"counter, so a difference is a different quantity")
+    def _elsewhere(self, traced, key, worker):
+        """The same counter on every *other* process the spine saw.
 
-    def test_the_fault_counts_are_identical(self, traced):
+        The yardstick the clauses below measure the two mechanisms
+        against, so that "they agree" is a comparison with something
+        measured rather than a tolerance someone chose.
+        """
+        return [int(keys[key])
+                for (_pid, src), keys in traced["ends"].items()
+                if src == "spine" and keys is not worker and key in keys]
+
+    def _agrees(self, traced, key):
+        """`hook <= spine`, and closer than any two processes are.
+
+        The first version of these clauses asserted **equality**, and
+        CI falsified it: `minflt: hook 353, spine 354`. That is not a
+        different quantity, it is a different *instant*. The hook calls
+        `getrusage` from its destructor; the spine reads
+        `/proc/<pid>/task/<pid>/stat` on the exit event, strictly after
+        - the same read-order asymmetry
+        `test_the_shell_that_spawned_it_is_not_charged_for_it` already
+        documents for `oublock`. A fault taken in between makes the
+        spine's count larger by one, and never smaller.
+
+        A tolerance here would be a number nothing measured. A
+        comparison is available instead: on this container over 5 runs
+        the worker read `minflt` 339-340 under **both** mechanisms
+        while the next-nearest spine record on any other process read
+        81-91. So "the two mechanisms differ by less than any two
+        processes do" carries a ~250-fault margin, needs no constant,
+        and still reddens for a spine that reads the wrong process,
+        the wrong `/proc` field, or nothing at all.
+        """
         seen = self._worker(traced)
+        hook, spine = int(seen["hook"][key]), int(seen["spine"][key])
+        assert hook <= spine, (
+            f"{key}: hook {hook}, spine {spine}. The spine reads after "
+            f"the hook's destructor, so it can only be the larger of "
+            f"the two; smaller means it is not the same counter")
+        if hook == 0 and spine == 0:
+            # The counter this workload never moves - `majflt`. Said
+            # rather than asserted around: 0 == 0 discriminates
+            # nothing, which is the census's own `unassessable`, and
+            # `test_every_spine_end_carries_the_fault_counts` is what
+            # holds the key present.
+            return
+        others = self._elsewhere(traced, key, seen["spine"])
+        assert others, (
+            f"{key}: the spine recorded no other process, so there is "
+            f"no between-process distance to measure the two mechanisms "
+            f"against and this clause is asserting nothing")
+        nearest = min(abs(other - hook) for other in others)
+        assert spine == hook or spine - hook < nearest, (
+            f"{key}: the two mechanisms differ by {spine - hook} on the "
+            f"worker (hook {hook}, spine {spine}) and the nearest other "
+            f"process the spine recorded is {nearest} away - so they are "
+            f"no closer to each other than to a different process")
+
+    def test_the_block_counts_agree(self, traced):
+        """`ru_inblock` is `read_bytes >> 9` and the spine reads the
+        same counter, so a disagreement is a different quantity."""
+        for key in ("inblock", "oublock"):
+            self._agrees(traced, key)
+
+    def test_the_fault_counts_agree(self, traced):
         for key in ("minflt", "majflt"):
-            assert seen["hook"][key] == seen["spine"][key], (
-                f"{key}: hook {seen['hook'][key]}, spine "
-                f"{seen['spine'][key]}")
+            self._agrees(traced, key)
 
     def test_the_shell_that_spawned_it_is_not_charged_for_it(self, traced):
         """The defect the comparison caught before it shipped.

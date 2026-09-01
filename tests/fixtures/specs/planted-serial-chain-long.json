@@ -1,0 +1,106 @@
+{
+  "spec_version": 1,
+  "name": "planted-serial-chain-long",
+  "graph": {
+    "elements": [
+      {
+        "uid": "toolchain.bst",
+        "cache_key": null,
+        "requested_target": false,
+        "element_kind": "import"
+      },
+      {
+        "uid": "link0.bst",
+        "cache_key": null,
+        "requested_target": false,
+        "element_kind": "manual"
+      },
+      {
+        "uid": "link1.bst",
+        "cache_key": null,
+        "requested_target": false,
+        "element_kind": "manual"
+      },
+      {
+        "uid": "link2.bst",
+        "cache_key": null,
+        "requested_target": false,
+        "element_kind": "manual"
+      },
+      {
+        "uid": "link3.bst",
+        "cache_key": null,
+        "requested_target": false,
+        "element_kind": "manual"
+      },
+      {
+        "uid": "link4.bst",
+        "cache_key": null,
+        "requested_target": false,
+        "element_kind": "manual"
+      },
+      {
+        "uid": "link5.bst",
+        "cache_key": null,
+        "requested_target": true,
+        "element_kind": "manual"
+      }
+    ],
+    "dependencies": [
+      {
+        "predecessor": "toolchain.bst",
+        "successor": "link0.bst",
+        "dependency_type": "build"
+      },
+      {
+        "predecessor": "link0.bst",
+        "successor": "link1.bst",
+        "dependency_type": "build"
+      },
+      {
+        "predecessor": "link1.bst",
+        "successor": "link2.bst",
+        "dependency_type": "build"
+      },
+      {
+        "predecessor": "link2.bst",
+        "successor": "link3.bst",
+        "dependency_type": "build"
+      },
+      {
+        "predecessor": "link3.bst",
+        "successor": "link4.bst",
+        "dependency_type": "build"
+      },
+      {
+        "predecessor": "link4.bst",
+        "successor": "link5.bst",
+        "dependency_type": "build"
+      }
+    ]
+  },
+  "work": {
+    "toolchain.bst": {
+      "seconds": 0.02
+    },
+    "link0.bst": {
+      "seconds": 4.5
+    },
+    "link1.bst": {
+      "seconds": 4.5
+    },
+    "link2.bst": {
+      "seconds": 4.5
+    },
+    "link3.bst": {
+      "seconds": 4.5
+    },
+    "link4.bst": {
+      "seconds": 4.5
+    },
+    "link5.bst": {
+      "seconds": 4.5
+    }
+  },
+  "note": "UX-477's falsifier: planted-serial-chain's graph byte for byte, with only the per-element seconds changed 1.5 -> 4.5. The shape is identical and the diagnosis is not - 0.865 scheduler_bound against 0.950 chain_bound - which is the measurement that says the chain-bound line is decided by how long the build is."
+}

@@ -137,6 +137,7 @@ ones to run today (`UX-139`).
 |---|---|
 | [`audits/case-study-06-macro-micro.md`](audits/case-study-06-macro-micro.md) | the macro-then-micro cycle, **including where the tool did not guide the user** |
 | [`audits/optimization-walkthrough-04.md`](audits/optimization-walkthrough-04.md) | the retired `sleep N` proxy walkthrough, kept for provenance |
+| [`audits/planted-defect-walk-round-72.md`](audits/planted-defect-walk-round-72.md) | three defects **chosen first**, generated into real projects, and how far the front door gets each reader towards the planted answer (`UX-468`) |
 
 ## Specification and contracts
 

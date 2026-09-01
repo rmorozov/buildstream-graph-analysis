@@ -1,0 +1,151 @@
+{
+  "spec_version": 1,
+  "name": "planted-fat-shared-base",
+  "graph": {
+    "elements": [
+      {
+        "uid": "toolchain.bst",
+        "cache_key": null,
+        "requested_target": false,
+        "element_kind": "import"
+      },
+      {
+        "uid": "base.bst",
+        "cache_key": null,
+        "requested_target": false,
+        "element_kind": "manual"
+      },
+      {
+        "uid": "app0.bst",
+        "cache_key": null,
+        "requested_target": true,
+        "element_kind": "manual"
+      },
+      {
+        "uid": "app1.bst",
+        "cache_key": null,
+        "requested_target": true,
+        "element_kind": "manual"
+      },
+      {
+        "uid": "app2.bst",
+        "cache_key": null,
+        "requested_target": true,
+        "element_kind": "manual"
+      },
+      {
+        "uid": "app3.bst",
+        "cache_key": null,
+        "requested_target": true,
+        "element_kind": "manual"
+      },
+      {
+        "uid": "app4.bst",
+        "cache_key": null,
+        "requested_target": true,
+        "element_kind": "manual"
+      },
+      {
+        "uid": "app5.bst",
+        "cache_key": null,
+        "requested_target": true,
+        "element_kind": "manual"
+      }
+    ],
+    "dependencies": [
+      {
+        "predecessor": "toolchain.bst",
+        "successor": "base.bst",
+        "dependency_type": "build"
+      },
+      {
+        "predecessor": "base.bst",
+        "successor": "app0.bst",
+        "dependency_type": "build"
+      },
+      {
+        "predecessor": "base.bst",
+        "successor": "app1.bst",
+        "dependency_type": "build"
+      },
+      {
+        "predecessor": "base.bst",
+        "successor": "app2.bst",
+        "dependency_type": "build"
+      },
+      {
+        "predecessor": "base.bst",
+        "successor": "app3.bst",
+        "dependency_type": "build"
+      },
+      {
+        "predecessor": "base.bst",
+        "successor": "app4.bst",
+        "dependency_type": "build"
+      },
+      {
+        "predecessor": "base.bst",
+        "successor": "app5.bst",
+        "dependency_type": "build"
+      },
+      {
+        "predecessor": "toolchain.bst",
+        "successor": "app0.bst",
+        "dependency_type": "build"
+      },
+      {
+        "predecessor": "toolchain.bst",
+        "successor": "app1.bst",
+        "dependency_type": "build"
+      },
+      {
+        "predecessor": "toolchain.bst",
+        "successor": "app2.bst",
+        "dependency_type": "build"
+      },
+      {
+        "predecessor": "toolchain.bst",
+        "successor": "app3.bst",
+        "dependency_type": "build"
+      },
+      {
+        "predecessor": "toolchain.bst",
+        "successor": "app4.bst",
+        "dependency_type": "build"
+      },
+      {
+        "predecessor": "toolchain.bst",
+        "successor": "app5.bst",
+        "dependency_type": "build"
+      }
+    ]
+  },
+  "work": {
+    "toolchain.bst": {
+      "seconds": 0.02
+    },
+    "base.bst": {
+      "seconds": 2.5,
+      "files": 20000
+    },
+    "app0.bst": {
+      "seconds": 0.4
+    },
+    "app1.bst": {
+      "seconds": 0.4
+    },
+    "app2.bst": {
+      "seconds": 0.4
+    },
+    "app3.bst": {
+      "seconds": 0.4
+    },
+    "app4.bst": {
+      "seconds": 0.4
+    },
+    "app5.bst": {
+      "seconds": 0.4
+    }
+  },
+  "note": "UX-468 walk 2, the recipe-author's planted defect: base.bst is a build dependency of all six apps and stages 20,000 files, so every one of them pays for it and a change to it rebuilds all six. The answer key is 'base.bst', and the sentence the walk is looking for has to say the reach, not only the seconds."
+}

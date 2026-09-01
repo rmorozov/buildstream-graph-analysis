@@ -15,13 +15,13 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-471 scenarios: **12 open**, 459 closed.
+473 scenarios: **13 open**, 460 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
 | capture | 1 | 71 |
-| analysis | 1 | 56 |
+| analysis | 2 | 58 |
 | contracts | 1 | 52 |
 | viewer | 0 | 134 |
 | cli | 0 | 5 |
@@ -41,13 +41,14 @@ task file, which is the only place it ever lived twice.
 | UX-458 | [the drift factor is a starting value nothing has re-measured](UX-0458-the-drift-factor-was-never-sized-from-data.md) | guards | Low | the contributor whose PR is stopped by a gate whose tolerance nobody has checked against the noise it is meant to tolerate | 🔴 |
 | UX-459 | [eight findings are reachable by nothing a clone has](UX-0459-seven-examples-keep-nothing-analysable.md) | guards | Medium | the round that adds a heuristic and has no fixture that can exercise it | 🔴 |
 | UX-460 | [nothing says which findings the fixtures can actually produce](UX-0460-no-guard-says-which-findings-a-fixture-produces.md) | guards | Medium | the round that adds a heuristic and has no way to tell whether anything exercises it | 🔴 |
-| UX-467 | [the graph-shape conclusions have no negative case](UX-0467-does-the-shape-conclusion-support-a-decision.md) | analysis | Medium | the reader who acts on a structural finding that would have fired on any graph | 🔴 |
 | UX-468 | [no walk of the guides has ever started from a defect somebody planted](UX-0468-the-guided-walk-against-a-planted-defect.md) | docs | Medium | the reader who follows the front door end to end and arrives somewhere other than the problem | 🔴 |
 | UX-469 | [the resource a task held reaches no Perfetto carrier](UX-0469-fields-the-capture-holds-and-the-trace-drops.md) | contracts | Medium | the reader who opens the trace to ask which tasks were waiting on DOWNLOAD and cannot filter for them | 🔴 |
 | UX-470 | [nothing compares a plane's capability with the records it writes](UX-0470-what-the-planes-could-capture-and-do-not.md) | capture | Low | the round that wants a signal the hook could already have produced and has no way to know it | 🔴 |
 | UX-471 | [the day-one summary counts 421 task files and the tree has 468](UX-0471-the-day-one-summary-counts-421-of-468.md) | docs | Low | the session whose first reading of this repository is a number 47 rows out of date | 🔴 |
 | UX-472 | [the architecture says one script needs no `bst`, and now three tools do not fit the sentence](UX-0472-the-architecture-has-no-paragraph-for-the-generators.md) | docs | Medium | the round that asks the architecture where fixtures come from and finds one paragraph about one script | 🔴 |
 | UX-473 | [nothing in CI builds a generated project](UX-0473-ci-never-builds-a-generated-project.md) | guards | Medium | the round whose spec change breaks a build nobody runs until someone runs it by hand | 🔴 |
+| UX-474 | ["Elements Most Worth Optimizing First (by blast radius)" ranks three elements whose blast radius is zero](UX-0474-the-blast-ranking-publishes-a-list-of-zeros.md) | analysis | Medium | the local-optimizer told which three elements to fix first, by a quantity that is zero for all three | 🔴 |
+| UX-475 | [`mesh-graph` calls a five-element linear chain "a mesh of near-equal chains"](UX-0475-mesh-graph-calls-a-linear-chain-a-mesh.md) | analysis | Medium | the graph-owner told their chain is a mesh, and that savings are capped by "the next chain" when there is only one | 🔴 |
 
 ## UX-398..UX-410: the sixty-fourth round — the walk that judged the answers (2026-08-29)
 

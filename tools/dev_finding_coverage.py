@@ -72,7 +72,7 @@ def tracked_paths(root=REPO):
     return set(done.stdout.split())
 
 
-def captures(root=REPO, tracked_only=True):
+def captures(root=REPO, tracked_only=True, also=()):
     """Run directories this repository carries, or all of them locally.
 
     `tracked_only` is the default because the question the guard asks -
@@ -80,20 +80,36 @@ def captures(root=REPO, tracked_only=True):
     to see what this machine has in addition, which is what a
     contributor who has built the examples will find and a fresh
     checkout will not.
+
+    `also` is run directories from outside the tree entirely, and it
+    exists for `UX-473`: the two findings a curated capture cannot reach
+    (`build-failed`, `failed-task-time`) need a build that *failed*, and
+    the only thing that produces one is `tools/bga_gen_project.py` into
+    a scratch directory. Nothing about such a run belongs in the
+    repository (`UX-189`), so the census is told where it is rather than
+    going looking.
     """
     found = set(root.glob("examples/*/.bga/runs/*/run"))
     found |= set(root.glob("tests/fixtures/*/run"))
-    if not tracked_only:
-        return sorted(found)
-    tracked = tracked_paths(root)
-    return sorted(run for run in found
-                  if any(t.startswith(str(run.relative_to(root)))
-                         for t in tracked))
+    if tracked_only:
+        tracked = tracked_paths(root)
+        found = {run for run in found
+                 if any(t.startswith(str(run.relative_to(root)))
+                        for t in tracked)}
+    return sorted(found) + [pathlib.Path(run).resolve() for run in also]
 
 
 def label(run, root=REPO):
-    """A short name for a capture: the project, not the timestamp."""
-    rel = run.relative_to(root)
+    """A short name for a capture: the project, not the timestamp.
+
+    A run from `--also` is outside the tree and has no relative path, so
+    it is named by the directory that holds it - which is the generated
+    project's name, and the only part a reader of a job log needs."""
+    try:
+        rel = run.relative_to(root)
+    except ValueError:
+        parts = run.parts
+        return parts[parts.index(".bga") - 1] if ".bga" in parts else run.name
     parts = rel.parts
     if ".bga" in parts:
         return parts[1] if parts[0] == "examples" else parts[0]
@@ -120,10 +136,10 @@ def findings_of(run):
         return None
 
 
-def coverage(root=REPO, tracked_only=True):
+def coverage(root=REPO, tracked_only=True, also=()):
     """`{finding id: sorted [capture label]}` over the runs a clone has."""
     produced = {name: set() for name in FINDING_READERS}
-    for run in captures(root, tracked_only):
+    for run in captures(root, tracked_only, also):
         ids = findings_of(run)
         if ids is None:
             continue
@@ -132,9 +148,9 @@ def coverage(root=REPO, tracked_only=True):
     return {name: sorted(where) for name, where in produced.items()}
 
 
-def uncovered(root=REPO, tracked_only=True):
+def uncovered(root=REPO, tracked_only=True, also=()):
     """The findings that are neither produced nor declared unreachable."""
-    got = coverage(root, tracked_only)
+    got = coverage(root, tracked_only, also)
     return sorted(name for name, where in got.items()
                   if not where and name not in UNREACHABLE)
 
@@ -146,9 +162,13 @@ def main(argv=None):
     parser.add_argument("--local", action="store_true",
                         help="count untracked captures under examples/ too - "
                              "what this machine has, not what a clone does")
+    parser.add_argument("--also", action="append", default=[],
+                        metavar="RUN",
+                        help="a run directory outside the tree, repeatable - "
+                             "for a generated project's capture (UX-473)")
     args = parser.parse_args(argv)
 
-    got = coverage(tracked_only=not args.local)
+    got = coverage(tracked_only=not args.local, also=args.also)
     if not args.quiet:
         width = max(len(name) for name in got)
         for name in sorted(got):
@@ -161,8 +181,11 @@ def main(argv=None):
                 shown = "*** NOTHING PRODUCES THIS ***"
             print(f"{name:{width}s}  {shown}")
         print()
-    missing = uncovered(tracked_only=not args.local)
-    print(f"({'this machine' if args.local else 'a clone'}) "
+    missing = uncovered(tracked_only=not args.local, also=args.also)
+    scope = "this machine" if args.local else "a clone"
+    if args.also:
+        scope += f" + {len(args.also)} generated"
+    print(f"({scope}) "
           f"{len(got)} findings | "
           f"{sum(1 for w in got.values() if w)} produced by a capture | "
           f"{len(UNREACHABLE)} declared unreachable | "

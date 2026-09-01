@@ -271,10 +271,19 @@ class TestClaudeMdIsTrueAndShort:
             f"every close - the count decays on its own, and `UX-471` "
             f"removed the last one rather than guard it")
 
-    def test_it_points_at_the_guide_rather_than_restating_it(self):
+    def test_it_points_at_the_card_rather_than_restating_it(self):
         """`UX-240`'s rule for skills, and it holds here for the same
-        reason: two copies of one rule is how the copies disagree."""
+        reason: two copies of one rule is how the copies disagree.
+
+        `UX-505` made the card the entry point, so this asserts the
+        card. The guide is still named — for the argument behind a rule
+        — but a session that reads only what `CLAUDE.md` sends it to
+        must land on the rules, not on 34 KB of the incidents that
+        produced them.
+        """
         text = self._text()
+        assert "docs/contributing/rules.md" in text, (
+            "CLAUDE.md does not send a session to the rules card")
         assert "docs/contributing/fixing-guide.md" in text
         assert len(text.splitlines()) < len(
             (REPO / "docs/contributing/fixing-guide.md").read_text(
@@ -578,3 +587,93 @@ class TestTheCiFirstAdviceStaysTrue:
         assert "draft" not in rules.lower(), (
             "the PR-first loop was promoted into the hard rules; it has "
             "not been measured against the alternative even once")
+
+
+class TestTheRulesCardIsTheEntryPoint:
+    """`UX-505`: the rules on one page, the incidents behind it.
+
+    The fixing guide opens with "if you have limited context budget:
+    read only this file" and is 34,400 bytes — the file *is* the
+    budget. Every rule is stated once and then argued with the incident
+    that produced it, which is why the rules are trusted and also why a
+    session paid 34 KB to learn twelve of them.
+
+    Split by register: the card carries the rules, the guide keeps every
+    incident. So the card has two ways to rot — it can grow back into a
+    second guide, and it can carry a rule the guide does not argue —
+    and one clause each.
+    """
+
+    CARD = REPO / "docs/contributing/rules.md"
+    GUIDE = REPO / "docs/contributing/fixing-guide.md"
+
+    #: The card's budget. Not "smaller than the guide" - that would let
+    #: it reach 300 lines and still pass, which is the state this item
+    #: is about.
+    CAP = 80
+
+    def test_the_card_stays_a_card(self):
+        lines = self.CARD.read_text(encoding="utf-8").splitlines()
+        assert len(lines) <= self.CAP, (
+            f"{self.CARD.name} is {len(lines)} lines, cap is {self.CAP} - "
+            f"a card that grows back into a guide is a second guide, and "
+            f"two copies of a rule is how the copies disagree")
+
+    def test_it_is_a_fraction_of_what_it_replaces(self):
+        """The measurement the filing asks for, as a property: what a
+        session reads first is a small multiple smaller than the
+        argument behind it. Ten is not a magic number - it is the order
+        of magnitude that makes reading the card first worth doing."""
+        card, guide = (len(p.read_bytes()) for p in (self.CARD, self.GUIDE))
+        assert card * 5 < guide, (
+            f"the card is {card} B against the guide's {guide} B; at that "
+            f"ratio a session may as well read the guide")
+
+    def test_every_section_of_the_card_names_the_guide_section(self):
+        """The card cannot carry a rule the guide does not argue. Read
+        per **section**, because the rule sentences are deliberately
+        rewritten short - a clause matching sentences would be asserting
+        the card is a copy, which is the thing it must not be."""
+        import re
+        text = self.CARD.read_text(encoding="utf-8")
+        cited = set()
+        for heading in re.findall(r"^## .*$", text, re.M):
+            cited.update(re.findall(r"§(\d+[a-z]?)", heading))
+        assert cited, "no section of the card names a guide section"
+        headings = self.GUIDE.read_text(encoding="utf-8")
+        for section in sorted(cited):
+            assert re.search(rf"^## {re.escape(section)}\.", headings, re.M), (
+                f"the card cites the guide's §{section} and the guide has "
+                f"no such section - the card is carrying a rule nothing "
+                f"argues")
+
+    def test_the_guide_says_the_card_is_the_entry_point(self):
+        """Otherwise a session that opens the guide first - which is
+        what every document still linking to it does - never learns the
+        card exists."""
+        head = "\n".join(self.GUIDE.read_text(encoding="utf-8").splitlines()[:12])
+        assert "rules.md" in head, (
+            "the guide's opening does not send a reader to the card")
+
+    def test_the_card_names_a_guard_for_the_rules_that_have_one(self):
+        """A rule with no guard is a rule kept by attention alone, and
+        the card is where that is visible. Not every rule can have one -
+        "never widen scope" is judgement - so this asserts the column is
+        populated rather than full.
+
+        Reads the **rule** tables only, by their two columns. The first
+        writing counted every row on the page, and the §6a stream table
+        has a third column of prose that is never empty: emptying every
+        real guard cell left it green, on eight rows that are not rules
+        at all.
+        """
+        rows = [line for line in self.CARD.read_text(encoding="utf-8")
+                .splitlines()
+                if line.startswith("| ") and line.count("|") == 3
+                and "---" not in line]
+        assert len(rows) > 20, f"the card has {len(rows)} rule rows"
+        guarded = [row for row in rows
+                   if row.split("|")[2].strip() not in ("", "-", "—", "guard")]
+        assert len(guarded) >= 8, (
+            f"only {len(guarded)} of {len(rows)} rule rows name a guard; "
+            f"the column is what makes an unguarded rule visible")

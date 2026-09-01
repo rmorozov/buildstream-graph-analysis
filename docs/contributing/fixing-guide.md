@@ -2,7 +2,12 @@
 
 This is the mandatory entry point for any agent (human or LLM) picking up a task on this repository. It exists because a prior fixing session, working with limited context, marked several tasks "🟢 Fixed" that were not actually fixed — including `classify_scheduler_wait()` in `bga/attribution/blame_chain.py`, which still unconditionally `return False` after being marked complete. This guide's rules exist specifically to prevent that failure mode from repeating - the discipline below applies to any backlog in this repo, not just the one it was originally written for.
 
-**If you have limited context budget: read only this file, then only the one task file you selected. Do not read `docs/spec/specification.md` end-to-end. Do not read the whole codebase. Every task file tells you exactly which line ranges to open.**
+**Start at [`rules.md`](rules.md)** — every rule below as one line with
+its guard, 4 KB against this file's 34 KB (`UX-505`). Come here for the
+paragraph behind the rule you are about to break: each one carries the
+incident that produced it, and that is why it is trusted, not padding.
+
+**If you have limited context budget: read the card, then only the one task file you selected. Do not read `docs/spec/specification.md` end-to-end. Do not read the whole codebase. Every task file tells you exactly which line ranges to open.**
 
 > **Two backlogs exist.** `docs/backlog/progress-tracker.md` / `docs/backlog/tasks/` is the original spec-compliance backlog - **closed**, every row 🟢 Done, kept as a historical record. `docs/backlog/scenarios/` is the active backlog (usability, optimization-workflow, and other non-spec-compliance work) - **start there** for anything new. The rest of this guide applies to either.
 

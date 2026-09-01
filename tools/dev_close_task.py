@@ -34,36 +34,56 @@ SCENARIOS = REPO / "docs/backlog/scenarios"
 INDEX = SCENARIOS / "README.md"
 CLOSED = SCENARIOS / "closed.md"
 
+#: `UX-497`'s budget, printed under the skeleton so a session sees it
+#: while writing rather than when the guard reds. One copy:
+#: `test_the_register_is_terse.py` reads this constant.
+OUTCOME_CAP = 80
+
 OUTCOME_SKELETON = """
 ## Outcome (round {round}, {date}) — 🟢 Done
 
 ### The gap, measured
 
 ```text
-<paste the command and its real output - what was wrong, before>
+<the command, and its real output - what was wrong, before>
 ```
+
+<one paragraph: what that output says. Not how it was found.>
 
 ### After
 
 ```text
-<paste the same command, after>
+<the same command, after>
 ```
 
-### <what the fix had to be, and why that shape>
+<one paragraph: what changed, and the number that shows it.>
 
 ### Mutations verified red and reverted ({n})
 
-Counts are what the run printed, not what was expected of it.
-
 | # | mutation | reddened |
 |---|---|---|
-| A1 | <the exact defect this item was filed for, reintroduced> | <clause(s), with the count> |
-| A2 | <the opposite direction, so the fix is a distinction and not a rename> | <clause(s)> |
+| A1 | <the defect this item was filed for, reintroduced> | <clause(s), count> |
+| A2 | <the opposite direction, so the fix is a distinction> | <clause(s), count> |
+
+<any guard of your own that turned out not to discriminate, and why.
+This repository has found several and each was worth writing down.>
 
 ### Deviation from the Required Fix
 
-- <"None." is a valid answer and has to be written, not omitted>
+<one line. "None." is a valid answer and has to be written, not
+omitted. A design you rejected is one line with the number that
+rejected it - not a paragraph about the alternatives.>
+
+```text
+<make test, make lint - the real lines>
+```
+
+<!-- {cap} lines, held by
+     test_the_register_is_terse.py::TestOutcomes. The four
+     measurements are the point; the room around them is not. -->
 """
+
+
 
 
 def task_file(uid: str) -> pathlib.Path:
@@ -546,7 +566,7 @@ def main(argv=None) -> int:
         parser.error("a UX id is required unless --check is given")
     if args.outcome:
         print(OUTCOME_SKELETON.format(round=args.round, date=args.date,
-                                      n=args.mutations))
+                                      n=args.mutations, cap=OUTCOME_CAP))
         return 0
     if args.move:
         if not args.note:

@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-505 scenarios: **14 open**, 491 closed.
+505 scenarios: **13 open**, 492 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -26,7 +26,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | viewer | 0 | 99 |
 | cli | 0 | 1 |
 | store | 2 | 5 |
-| docs | 6 | 46 |
+| docs | 5 | 46 |
 | guards | 6 | 64 |
 | testing | 0 | 1 |
 | unclassified | 0 | 223 |
@@ -50,7 +50,6 @@ task file, which is the only place it ever lived twice.
 | UX-500 | [the batch gate, measured against the per-item suite](UX-0500-the-batch-gate-measured-against-the-per-item-suite.md) | docs | High | the implementing session's wall clock; the maintainer's subscription | 🔴 |
 | UX-502 | [the comment that tells the story](UX-0502-the-comment-that-tells-the-story.md) | docs | Medium | every session that opens a dev tool to use it, not to relive it | 🔴 |
 | UX-504 | [an implementer agent that may edit, in a worktree only](UX-0504-an-implementer-agent-that-may-edit-in-a-worktree.md) | guards | Medium | the orchestrating session that has two independent tracks and one context window | 🔴 |
-| UX-506 | [the Outcome skeleton fits the register](UX-0506-the-outcome-skeleton-fits-the-register.md) | docs | Medium | the session closing a task, and the round that reads it later | 🔴 |
 | UX-507 | [223 closed rows are in no topic](UX-0507-the-unclassified-bucket.md) | docs | Low | the round that asks "how much of the backlog was viewer work" and gets an answer that is 44 % blank | 🔴 |
 
 ## UX-497..UX-506: the seventy-fourth round — the workflow, measured (2026-09-01)

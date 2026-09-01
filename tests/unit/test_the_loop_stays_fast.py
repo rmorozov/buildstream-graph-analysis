@@ -113,11 +113,23 @@ class TestTheCloseHelperRefusesTheJudgementParts:
         assert done.returncode == 0, done.stdout + done.stderr
 
     def test_the_outcome_skeleton_leaves_every_measurement_blank(self):
+        """A pre-filled figure is an invitation to the unmeasured claim
+        the `verify` skill exists to prevent.
+
+        `UX-506` restated this from one literal phrase to the property:
+        **every fenced block is a placeholder**. The literal made the
+        clause a copy of the skeleton's wording, so rewording it reddened
+        a guard about measurement for a reason that had nothing to do
+        with one.
+        """
+        import re
         done = self._run("UX-336", "--outcome", "--round", "47")
         assert done.returncode == 0, done.stderr
-        assert "<paste the command and its real output" in done.stdout, (
-            "the skeleton pre-fills a measurement, which is an invitation to "
-            "the unmeasured claim the verify skill exists to prevent")
+        fences = re.findall(r"```text\n(.*?)```", done.stdout, re.S)
+        assert fences, "the skeleton asks for no pasted output at all"
+        for body in fences:
+            assert body.strip().startswith("<") and body.strip().endswith(">"), (
+                f"the skeleton pre-fills a measurement: {body.strip()!r}")
         for heading in ("## Outcome", "Mutations verified red and reverted",
                         "Deviation from the Required Fix"):
             assert heading in done.stdout, heading
@@ -311,3 +323,81 @@ class TestTheIndexIsDerivedNotMerged:
         assert "--check --write" in skill, (
             "the decompose skill's shared-files section does not name the "
             "command that resolves the counts")
+
+
+class TestTheSkeletonFitsTheRegister:
+    """`UX-506`: the shape the skeleton asks for is the shape that fits.
+
+    Counted over round 74's range (`UX-440`..`UX-496`), under the
+    skeleton `UX-336` printed:
+
+    ```text
+    Outcomes written              56
+    median length                117 lines
+    longest                      284
+    over the 80-line cap         45   (80 %)
+    ```
+
+    The skeleton was never over the cap - the prose under it was - but
+    it *invited* the prose: a heading reading "what the fix had to be,
+    and why that shape" asks for a narrative and gets one. It is gone;
+    what the headings now name is what a later round reads.
+
+    Two things the skeleton must keep, and a clause each. It seeds
+    `dev_process_bands.py`'s census - the phrases that tool counts are
+    printed by this skeleton and by nothing else - and it states the cap,
+    so a session sees the budget while writing rather than when the
+    guard reds.
+    """
+
+    def _printed(self):
+        return close_task.OUTCOME_SKELETON.format(
+            round="NN", date="YYYY-MM-DD", n=2,
+            cap=close_task.OUTCOME_CAP)
+
+    def test_the_skeleton_seeds_the_process_census(self):
+        """`dev_process_bands.py` counts phrases this repository already
+        writes by convention rather than fields anyone fills in - and the
+        convention is this skeleton. A reworded heading silently drops a
+        row of a census over 288 closed items to zero, and nothing else
+        would say so."""
+        import dev_process_bands as bands
+        printed = self._printed()
+        for key in ("falsified",):
+            pattern = next(p for k, _h, p in bands.SIGNALS if k == key)
+            assert pattern.search(printed), (
+                f"the skeleton no longer prints what `{key}` counts; "
+                f"dev_process_bands.py reads the committed record for "
+                f"this phrase and would report 0 %")
+        assert "Deviation from the Required Fix" in printed, (
+            "the deviation heading is what `deviated` is measured from, "
+            "in both directions")
+
+    def test_it_leaves_room_under_the_cap(self):
+        """A skeleton that filled the budget would make the cap
+        unreachable, which is a different defect from the one this item
+        is about."""
+        printed = len(self._printed().strip().splitlines())
+        assert printed < close_task.OUTCOME_CAP * 0.6, (
+            f"the skeleton is {printed} lines of a {close_task.OUTCOME_CAP}-"
+            f"line budget; there is no room left for the measurements")
+
+    def test_it_states_the_cap_the_guard_holds(self):
+        """One copy. A skeleton that names a different number than the
+        guard enforces sends every session to the wrong budget."""
+        assert str(close_task.OUTCOME_CAP) in self._printed(), (
+            "the skeleton does not tell a session what the budget is")
+        source = (REPO / "tests/unit/test_the_register_is_terse.py").read_text(
+            encoding="utf-8")
+        assert f"OUTCOME_CAP = {close_task.OUTCOME_CAP}" in source, (
+            f"the tool prints a cap of {close_task.OUTCOME_CAP} and the "
+            f"guard holds a different one")
+
+    def test_it_asks_for_no_narrative(self):
+        """The heading this item removed, by name. A skeleton that asks
+        "why that shape" gets a page of design history, and the task
+        file is not where design history goes - the register is."""
+        printed = self._printed()
+        for asked in ("why that shape", "Counts are what the run printed"):
+            assert asked not in printed, (
+                f"the skeleton still asks for {asked!r}")

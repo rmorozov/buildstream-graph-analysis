@@ -167,8 +167,43 @@ LANDED_HEIGHT_PX = 7_000
 #: of the two once the 1,202-element one stops drawing 1,202 of
 #: anything. The other four large-class bounds are still met from below
 #: and are left where they are.
+#: `UX-479` and `UX-475` moved the small class's **words** and nothing
+#: else, and the pair is worth reading together because they are two
+#: kinds of addition:
+#:
+#: ```text
+#:                golden words   macro_micro words
+#: before round          6,882              11,616
+#: after UX-479          7,121              11,979   (+239, +363)
+#: after UX-475          7,144              12,002   (+23,  +23)
+#: ```
+#:
+#: The two are different kinds of addition, and the sizes say so.
+#: `UX-479` is a **finding that did not exist** - what a change to an
+#: element rebuilds, for the reader whose question that is - and a
+#: finding is not one sentence: it is the sentence, its provenance
+#: record with a cited path per element, its row in the reader's block
+#: and its copy text. Hence 363 words on the eleven-element page for
+#: one claim, which is the number to remember the next time a finding
+#: is proposed. `UX-475` is a sentence that got **longer by one
+#: number**: the graph-shape claim now says how many zero-slack
+#: elements are off the critical path, which is what tells a mesh from
+#: a chain. Twenty-three words, and it replaced a claim rather than
+#: adding one.
+#:
+#: Both were trimmed as far as they read well before this bound moved -
+#: the first draft of the chain sentence and its provenance rule
+#: measured 12,031, and 29 words came out of it. Two more would have
+#: fitted under 12,000, which is exactly the negotiating this file's
+#: own note on `PAGE_BUDGET_B`-style bounds warns about, so the number
+#: moves instead.
+#:
+#: 12,600 leaves 598 words. `test_the_budgets_are_not_slack` is
+#: satisfied at 2 x 12,002 = 24,004 > 12,600, so this is still a bound
+#: something can reach - and at 363 words a finding, it is not room for
+#: two more.
 BUDGETS = (
-    (50, 34_000, 12_000, 800, 7_900),
+    (50, 34_000, 12_600, 800, 7_900),
     (4_000, 32_000, 41_000, 2_300, 27_500),
 )
 

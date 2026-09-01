@@ -572,17 +572,38 @@ part that moved. So the distance budget gains a sibling:
 Measured on the finished page at 1440x900, and the bounds set from it
 with roughly a fifth of headroom on the largest run in each class.
 Round 59 (`UX-367`) added the third row and split the bounds by size;
-the readings below are round 66's, taken after `UX-419`:
+the readings below are round 66's, taken after `UX-419`, with the words
+column re-read in round 73:
 
 ```text
                  elements   landed   opened    words   controls    nodes
-golden                  4    3,800   15,618    5,565        427    2,498
-macro_micro            11    5,965   31,804   11,127        750    5,686
-budget, to 50 elts             7,000   34,000   12,000        800    7,900
+golden                  4    3,800   15,618    7,144        427    2,498
+macro_micro            11    5,965   31,804   12,002        750    5,686
+budget, to 50 elts             7,000   34,000   12,600        800    7,900
 
 scale               1,202    4,763   26,242   36,542      1,941   24,294
 budget, to 4,000 elts          7,000   32,000   41,000      2,300   27,500
 ```
+
+The small class's words bound moved 12,000 -> 12,600 in round 73, and
+only that one:
+
+```text
+                golden   macro_micro
+before round     6,882        11,616
+after UX-479     7,121        11,979   (+239, +363)
+after UX-475     7,144        12,002   (+23,  +23)
+```
+
+`UX-479` added a finding the recipe-author had no answer without, and
+a finding is not one sentence — it is the sentence, its provenance
+record, its row in the reader's block and its copy text, which is why
+one claim is 363 words on an eleven-element page. `UX-475` made the
+graph-shape sentence carry the count that tells a mesh from a chain,
+and replaced a claim rather than adding one, which is why it is 23.
+Height, controls and nodes did not move at all — two sentences are not
+a table. The trimming that came first, and what is left of the
+headroom, are in the note above `BUDGETS`.
 
 **`nodes` is the fifth column because the other four are blind to a
 table.** `UX-366` lifted the element table's cap, putting 1,177 more

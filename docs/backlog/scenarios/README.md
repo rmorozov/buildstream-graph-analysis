@@ -15,19 +15,21 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-504 scenarios: **15 open**, 489 closed.
+505 scenarios: **15 open**, 490 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
-| capture | 0 | 72 |
-| analysis | 0 | 62 |
-| contracts | 0 | 54 |
-| viewer | 0 | 134 |
-| cli | 0 | 5 |
-| store | 2 | 28 |
-| docs | 7 | 50 |
-| guards | 6 | 90 |
+| capture | 0 | 22 |
+| analysis | 0 | 13 |
+| contracts | 0 | 31 |
+| viewer | 0 | 99 |
+| cli | 0 | 1 |
+| store | 2 | 5 |
+| docs | 7 | 46 |
+| guards | 6 | 64 |
+| testing | 0 | 1 |
+| unclassified | 0 | 223 |
 
 ## Open scenarios
 
@@ -46,11 +48,11 @@ task file, which is the only place it ever lived twice.
 | UX-495 | [three browser guards swing 1.5-2.3x under parallel load](UX-0495-three-browser-guards-swing-under-parallel-load.md) | guards | Medium | the round that reads a browser guard's drift reading and cannot tell an excursion from a regression | 🔴 |
 | UX-496 | [a wholesale re-record samples every file once, and the drift factor has never been sized against that](UX-0496-a-one-run-re-record-bakes-in-one-sample-per-file.md) | guards | Medium | the round whose gate is red on a file nobody touched, and cannot tell a stale reference entry from a real regression | 🔴 |
 | UX-500 | [the batch gate, measured against the per-item suite](UX-0500-the-batch-gate-measured-against-the-per-item-suite.md) | docs | High | the implementing session's wall clock; the maintainer's subscription | 🔴 |
-| UX-501 | [the index is derived, not merged](UX-0501-the-index-is-derived-not-merged.md) | docs | High | two sessions on one slate; the orchestrator who merges them | 🔴 |
 | UX-502 | [the comment that tells the story](UX-0502-the-comment-that-tells-the-story.md) | docs | Medium | every session that opens a dev tool to use it, not to relive it | 🔴 |
 | UX-504 | [an implementer agent that may edit, in a worktree only](UX-0504-an-implementer-agent-that-may-edit-in-a-worktree.md) | guards | Medium | the orchestrating session that has two independent tracks and one context window | 🔴 |
 | UX-505 | [the rules card — the guide's rules on one page, its reasons behind it](UX-0505-the-rules-card.md) | docs | High | every session's first read; the maintainer's subscription | 🔴 |
 | UX-506 | [the Outcome skeleton fits the register](UX-0506-the-outcome-skeleton-fits-the-register.md) | docs | Medium | the session closing a task, and the round that reads it later | 🔴 |
+| UX-507 | [223 closed rows are in no topic](UX-0507-the-unclassified-bucket.md) | docs | Low | the round that asks "how much of the backlog was viewer work" and gets an answer that is 44 % blank | 🔴 |
 
 ## UX-497..UX-506: the seventy-fourth round — the workflow, measured (2026-09-01)
 

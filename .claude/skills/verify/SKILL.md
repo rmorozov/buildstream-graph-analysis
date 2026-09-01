@@ -148,11 +148,16 @@ fails naming the item if you miss one, and
 
 ```bash
 python tools/dev_close_task.py UX-NNN --move --note "one line for closed.md"
-python tools/dev_close_task.py --check
+python tools/dev_close_task.py --check --write
 ```
 
-does the four mechanical edits and reports what disagrees (`UX-336`).
+does the mechanical edits and reports what disagrees (`UX-336`).
 `--move` refuses when the task file has no Outcome section.
+
+`UX-501`: `--move` touches only the rows. The counts sentence and the
+topic table above them are *derived* - `--check --write` regenerates
+them from the rows, which is also how two merged tracks get one right
+answer instead of a conflict on a line neither of them meant to touch.
 
 ## 5. The Outcome section
 

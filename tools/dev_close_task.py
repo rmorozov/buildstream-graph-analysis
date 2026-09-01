@@ -240,6 +240,123 @@ def status_disagreements():
 #: fourth is not implemented" - and a contributor cannot tell those
 #: apart, which is how the missing one went unnoticed for as long as it
 #: did.
+#: The order the topic table has always been written in. A derived
+#: table still has to be *read*, and alphabetical would reshuffle it
+#: every time a topic appears. Anything not listed sorts after these.
+TOPIC_ORDER = ("capture", "analysis", "contracts", "viewer", "cli",
+               "store", "docs", "guards")
+
+#: `UX-501`: 223 of the 489 closed rows predate the `**Topic:**` header
+#: and are in no historical index either, so no topic can be *derived*
+#: for them. They go here rather than being distributed by guesswork -
+#: a bucket that shrinks as they are classified, and a table that sums
+#: to the row count instead of to 495 of 504.
+TOPIC_UNKNOWN = "unclassified"
+
+
+def row_ids(path):
+    """The `UX-NNN` ids of a row list, in file order."""
+    return re.findall(r"^\| (UX-\d+) \|", path.read_text(encoding="utf-8"),
+                      re.M)
+
+
+def _declared_topics():
+    """`{uid: topic}` from the open table's own Topic column.
+
+    The open row carries it and the closed row does not, so this is
+    what a row *about to close* is read for - `move` copies it into the
+    task file if the file has no header, and the count survives the
+    move.
+    """
+    found = {}
+    for line in INDEX.read_text(encoding="utf-8").splitlines():
+        cells = [cell.strip() for cell in line.split("|")]
+        if len(cells) > 4 and re.fullmatch(r"UX-\d+", cells[1]):
+            found[cells[1]] = cells[3]
+    return found
+
+
+def topics():
+    """`{uid: topic}` for every row in both lists.
+
+    The task file's `**Topic:**` header first - one authority, and the
+    only one a closed row still has. The open table's own column is the
+    fallback for the handful of open items filed before the header
+    existed. Everything else is `TOPIC_UNKNOWN`, said out loud.
+    """
+    declared = _declared_topics()
+    found = {}
+    for uid in row_ids(INDEX) + row_ids(CLOSED):
+        header = re.search(r"\*\*Topic:\*\*\s*([a-z]+)",
+                           task_file(uid).read_text(encoding="utf-8"))
+        found[uid] = (header.group(1) if header
+                      else declared.get(uid) or TOPIC_UNKNOWN)
+    return found
+
+
+def index_header():
+    """The counts sentence and the topic table, derived from the rows.
+
+    `UX-501`. Both are aggregates of the row lists, and being hand-typed
+    made them the line two parallel tracks collide on even when neither
+    touched the other's row.
+    """
+    open_ids, closed_ids = row_ids(INDEX), row_ids(CLOSED)
+    of = topics()
+    every = sorted({of[uid] for uid in of},
+                   key=lambda name: (name == TOPIC_UNKNOWN,
+                                     TOPIC_ORDER.index(name)
+                                     if name in TOPIC_ORDER else len(TOPIC_ORDER),
+                                     name))
+    rows = ["| Topic | Open | Total |", "|---|---|---|"]
+    for topic in every:
+        rows.append("| %s | %d | %d |" % (
+            topic,
+            sum(1 for uid in open_ids if of[uid] == topic),
+            sum(1 for uid in of if of[uid] == topic)))
+    sentence = ("%d scenarios: **%d open**, %d closed."
+                % (len(open_ids) + len(closed_ids), len(open_ids),
+                   len(closed_ids)))
+    return sentence, "\n".join(rows)
+
+
+#: The counts sentence, and the topic table, as they sit in the index.
+SENTENCE = re.compile(r"^\d+ scenarios: \*\*\d+ open\*\*, \d+ closed\.$",
+                      re.M)
+TOPIC_TABLE = re.compile(r"^\| Topic \| Open \| Total \|\n\|[-| ]+\|\n"
+                         r"(?:\|.*\n)+", re.M)
+
+
+def _index_is_derived():
+    """`UX-501`: the two aggregates against the rows they summarise."""
+    text = INDEX.read_text(encoding="utf-8")
+    sentence, table = index_header()
+    problems = []
+    written = SENTENCE.search(text)
+    if not written:
+        problems.append("the index has no counts sentence to check")
+    elif written.group(0) != sentence:
+        problems.append("the counts sentence says %r; the rows say %r "
+                        "- `--check --write` rewrites it"
+                        % (written.group(0), sentence))
+    block = TOPIC_TABLE.search(text)
+    if not block:
+        problems.append("the index has no topic table to check")
+    elif block.group(0).strip() != table:
+        problems.append("the topic table disagrees with the rows "
+                        "- `--check --write` rewrites it")
+    return problems
+
+
+def write_index():
+    """Put the derived sentence and table into the index."""
+    text = INDEX.read_text(encoding="utf-8")
+    sentence, table = index_header()
+    text = SENTENCE.sub(lambda _m: sentence, text, count=1)
+    text = TOPIC_TABLE.sub(lambda _m: table + "\n", text, count=1)
+    INDEX.write_text(text, encoding="utf-8")
+
+
 CHECKS = (
     ("every row's status glyph matches its task file's",
      lambda: status_disagreements()),
@@ -247,6 +364,8 @@ CHECKS = (
      lambda: _closed_rows_left_open()),
     ("the index's open count matches its table",
      lambda: _open_count_disagreement()),
+    ("the counts sentence and topic table are what the rows say",
+     lambda: _index_is_derived()),
 )
 
 
@@ -311,6 +430,14 @@ def move(uid: str, note: str) -> int:
         return 2
 
     body = close_status_line(body)
+    # `UX-501`: the topic travels with the item. The open row carries a
+    # Topic column and the closed row does not, so an item filed before
+    # the `**Topic:**` header existed lost its topic the moment it
+    # closed - which is 223 of the 489 closed rows, and why the derived
+    # table has an `unclassified` line at all.
+    if topic and not re.search(r"\*\*Topic:\*\*", body):
+        body = re.sub(r"^(\*\*Priority:.*?)$", r"\1 | **Topic:** " + topic,
+                      body, count=1, flags=re.M)
     path.write_text(body, encoding="utf-8")
 
     cells = [c for c in line.split("|")]
@@ -334,15 +461,6 @@ def move(uid: str, note: str) -> int:
 
     text = INDEX.read_text(encoding="utf-8")
     text = text.replace(line + "\n", "")
-    stated = re.search(r"\*\*(\d+) open\*\*, (\d+) closed", text)
-    if stated:
-        text = text.replace(stated.group(0),
-                            f"**{int(stated.group(1)) - 1} open**, "
-                            f"{int(stated.group(2)) + 1} closed")
-    row = re.search(rf"^\| {topic} \| (\d+) \| (\d+) \|$", text, re.M)
-    if row:
-        text = text.replace(row.group(0),
-                            f"| {topic} | {int(row.group(1)) - 1} | {row.group(2)} |")
     INDEX.write_text(text, encoding="utf-8")
 
     # After the **last table row**, not at the end of the file:
@@ -353,11 +471,20 @@ def move(uid: str, note: str) -> int:
     last = max(i for i, text in enumerate(closed) if text.startswith("| UX-"))
     closed.insert(last + 1, closed_row)
     CLOSED.write_text("\n".join(closed) + "\n", encoding="utf-8")
-    print(f"{uid}: status flipped, row moved, counts adjusted.\n"
+    # `UX-501`: the aggregates are deliberately **not** written here.
+    # Measured on two branches each closing one item: writing them made
+    # the topic table conflict - the two topics' rows are adjacent, so
+    # git reads them as one hunk - and auto-merged the counts sentence
+    # to a number neither branch meant, "16 open" over 14 rows. A close
+    # that edits only its own rows collides with nothing, and
+    # `--check --write` derives the header once, after the merge.
+    print(f"{uid}: status flipped, row moved.\n"
           f"  Read the row it just wrote. The scenario text is copied from "
           f"the open row and usually wants rewriting into what was *found*, "
           f"and this function's own first run produced a malformed row -\n"
-          f"    grep '^| {uid} |' {_shown(CLOSED)}")
+          f"    grep '^| {uid} |' {_shown(CLOSED)}\n"
+          f"  Then derive the index's counts from the rows (UX-501):\n"
+          f"    python tools/dev_close_task.py --check --write")
     return 0
 
 
@@ -375,6 +502,12 @@ def main(argv=None) -> int:
                         help="the one-line narrative for the closed.md row")
     parser.add_argument("--check", action="store_true",
                         help="report every status/count disagreement")
+    parser.add_argument("--write", action="store_true",
+                        help="with --check: regenerate the index's counts "
+                             "sentence and topic table from the rows, "
+                             "instead of reporting that they disagree. The "
+                             "rows stay hand-edited - they carry judgement "
+                             "- and the aggregates never do (UX-501)")
     # UX-336: so a guard can exercise `--move` against a copy. Found by
     # falsifying this file's own refusal: with the Outcome check removed
     # the clause *performed* the move, on the real backlog. A test that
@@ -391,7 +524,12 @@ def main(argv=None) -> int:
         INDEX = SCENARIOS / "README.md"
         CLOSED = SCENARIOS / "closed.md"
 
+    if args.write and not args.check:
+        parser.error("--write is what --check does instead of reporting; "
+                     "give both")
     if args.check:
+        if args.write:
+            write_index()
         problems = []
         for what, run in CHECKS:
             found = run()

@@ -17,6 +17,7 @@ REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 sys.path.insert(0, str(REPO / "tools"))
 
+import dev_close_task as close_task  # noqa: E402
 import dev_touching  # noqa: E402
 
 MAKEFILE = (REPO / "Makefile").read_text(encoding="utf-8")
@@ -178,3 +179,135 @@ class TestTheCloseHelperRefusesTheJudgementParts:
             encoding="utf-8")
         assert "dev_close_task.py" in skill
         assert "make test-touching" in skill
+
+
+class TestTheIndexIsDerivedNotMerged:
+    """`UX-501`: the two aggregates at the top of the backlog index.
+
+    The `N scenarios: **M open**` sentence and the per-topic table say
+    nothing the row lists do not already say. Hand-maintained, they were
+    the line every parallel track collided on. Measured on two branches
+    of a throwaway repository, each closing one item, with `--move`
+    writing the counts as it used to:
+
+    ```text
+    CONFLICT (content): Merge conflict in scenarios/README.md
+    506 scenarios: **16 open**, 490 closed.      <- 14 rows
+    ```
+
+    Both halves at once: the topic table conflicted (the two items'
+    topic rows are adjacent, so git reads them as one hunk) and the
+    counts sentence *auto-merged* - both sides had written the same
+    decrement from the same base - into a number neither branch meant
+    and nothing then checked.
+
+    So `move` stops writing them, `--check --write` derives them from
+    the rows once after the merge, and a fourth `--check` property
+    asserts the derivation ran.
+    """
+
+    def _run(self, *argv):
+        return subprocess.run(
+            [sys.executable, str(REPO / "tools/dev_close_task.py"), *argv],
+            capture_output=True, text=True, cwd=str(REPO), timeout=120)
+
+    def test_the_index_says_what_its_rows_say(self):
+        """The tree's own header against the derivation. This is the
+        clause that catches a header edited by hand, in either
+        direction."""
+        sentence, table = close_task.index_header()
+        text = (REPO / "docs/backlog/scenarios/README.md").read_text(
+            encoding="utf-8")
+        assert sentence in text, (
+            "the counts sentence is not what the rows say; run "
+            "`python tools/dev_close_task.py --check --write`")
+        assert table in text, (
+            "the topic table is not what the rows say; run "
+            "`python tools/dev_close_task.py --check --write`")
+
+    def test_the_totals_account_for_every_row(self):
+        """The property the hand-written table failed: its Total column
+        summed to **495** over 504 rows, so nine items were in no topic
+        at all and nothing said which. A derived table cannot lose one -
+        every row lands in a bucket, `unclassified` included."""
+        _sentence, table = close_task.index_header()
+        totals = [int(line.split("|")[3])
+                  for line in table.splitlines() if line.startswith("| ")
+                  and not line.startswith("| Topic")]
+        rows = (len(close_task.row_ids(close_task.INDEX))
+                + len(close_task.row_ids(close_task.CLOSED)))
+        assert sum(totals) == rows, (
+            f"the topic table accounts for {sum(totals)} of {rows} rows")
+
+    def test_the_bucket_for_what_cannot_be_derived_is_named(self):
+        """`unclassified` is not a topic anybody files under; it is the
+        223 closed rows whose topic no longer exists anywhere - the
+        closed row has no Topic column and they predate the
+        `**Topic:**` header. Named rather than distributed by guesswork,
+        so the number is visible and shrinks."""
+        of = close_task.topics()
+        unknown = [uid for uid, topic in of.items()
+                   if topic == close_task.TOPIC_UNKNOWN]
+        assert all(uid not in close_task.row_ids(close_task.INDEX)
+                   for uid in unknown), (
+            "an *open* row has no derivable topic - the open table has a "
+            "Topic column, so this is a malformed row rather than a "
+            "legacy one")
+
+    def test_a_hand_edited_count_is_reported_and_then_restored(
+            self, tmp_path):
+        """The acceptance test's mutation, on a copy. `--check` alone
+        must report and not repair: a checker that silently fixed what
+        it checks could never fail, which is the rot the whole `--check`
+        list exists to avoid."""
+        import shutil
+        scenarios = tmp_path / "scenarios"
+        shutil.copytree(REPO / "docs/backlog/scenarios", scenarios)
+        readme = scenarios / "README.md"
+        was = readme.read_text(encoding="utf-8")
+        readme.write_text(
+            re.sub(r"^\d+ scenarios: \*\*\d+ open\*\*", "999 scenarios: **7 open**",
+                   was, count=1, flags=re.M), encoding="utf-8")
+
+        told = self._run("--check", "--scenarios", str(scenarios))
+        assert told.returncode == 1, told.stdout
+        assert "the counts sentence says" in told.stdout, told.stdout
+        assert readme.read_text(encoding="utf-8") != was, (
+            "`--check` repaired the file it was asked to check")
+
+        fixed = self._run("--check", "--write", "--scenarios", str(scenarios))
+        assert fixed.returncode == 0, fixed.stdout
+        assert readme.read_text(encoding="utf-8") == was, (
+            "`--write` did not restore the header the rows imply")
+
+    def test_write_needs_check(self):
+        """`--write` on its own would be a command that edits the index
+        and says nothing about it."""
+        done = self._run("--write")
+        assert done.returncode != 0
+        assert "give both" in done.stderr, done.stderr
+
+    def test_closing_a_task_no_longer_writes_the_aggregates(self):
+        """The change itself, read off the source rather than run: a
+        `move` that writes the header puts both tracks on the same line
+        again, and the clause above would still pass because a single
+        close computes the right number.
+
+        Read as text because the discriminating case is a two-branch
+        merge, and this file is the fast tier."""
+        body = (REPO / "tools/dev_close_task.py").read_text(encoding="utf-8")
+        move = body.split("def move(", 1)[1].split("\ndef ", 1)[0]
+        assert "write_index()" not in move, (
+            "`move` writes the derived header again, so two tracks each "
+            "closing one item collide on it - UX-501's own measurement")
+        assert "--check --write" in move, (
+            "`move` neither writes the header nor says what does")
+
+    def test_the_merge_recipe_is_written_down(self):
+        """A tool nobody is told to run after a merge is a tool that
+        does not run after a merge."""
+        skill = (REPO / ".claude/skills/decompose/SKILL.md").read_text(
+            encoding="utf-8")
+        assert "--check --write" in skill, (
+            "the decompose skill's shared-files section does not name the "
+            "command that resolves the counts")

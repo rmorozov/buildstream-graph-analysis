@@ -18,7 +18,7 @@ the rule.
 | `make test-tiers` | the suite plus a tier-drift parse, in one run |
 | `make lint` | ruff + PyMarkdown; both must be clean |
 | `make check-clean` | fails if an ignored path is tracked |
-| `python tools/dev_close_task.py UX-NNN --move --note "…"` | the four mechanical edits that close a task |
+| `dev_close_task.py UX-NNN --move --note "…"` then `--check --write` | the row move and both markers, then the derived index counts |
 
 `PYTEST_XDIST= make test-small` turns parallelism off (for `-x` or `pdb`).
 
@@ -40,7 +40,7 @@ the batch gate) → `measure` → `falsify` → `verify` (close it).
 - **A new guard is not done until a mutation reddens it.** See the
   `falsify` skill.
 - Task status lives in **two** places: the `**Status:**` line and the
-  index row. `dev_close_task.py` edits both.
+  index row. `--move` edits both; the counts are derived, never typed.
 - `docs/spec/specification.md` is ground truth — read line ranges,
   never the whole file, and never edit it outside the Part 32 registry.
 

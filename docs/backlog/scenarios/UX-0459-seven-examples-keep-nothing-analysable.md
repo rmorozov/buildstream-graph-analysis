@@ -81,7 +81,21 @@ Either way, `UX-460`'s guard is what freezes the answer.
   and the mechanism that enforces it.
 - **`build-failed`, `failed-task-time`**: declared unreachable in
   `dev_finding_coverage.UNREACHABLE`, with reasons.
-- **`examples/09`**: cannot build at all — `UX-461`.
+- **`examples/09`**: builds fine. A first draft of this round filed a
+  row saying it could not, on the strength of `ls examples/*.sh`
+  showing no staging script for it. The script is not a `.sh` and is
+  not shared: `examples/09-fine-grained-siblings/generate_bulk.py` is
+  committed, the root `.gitignore` excludes `files/bulk/` deliberately
+  ("60,000 inodes whose only purpose is to make staging measurable"),
+  and `examples/README.md` says so two paragraphs below the text that
+  first draft quoted:
+
+  > Generate the bulk tree once (it is gitignored, like the toolchain):
+  > `examples/09-fine-grained-siblings/generate_bulk.py`
+
+  Run, it makes 60,000 files in 2.97s and `bst build all.bst`
+  succeeds. The row was withdrawn. Reading one glob instead of the
+  document beside it is how a working thing gets filed as broken.
 
 ## Acceptance Test
 

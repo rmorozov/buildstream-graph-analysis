@@ -108,15 +108,22 @@ filed (`UX-514`, `UX-515`, `UX-516`, `UX-517`; `UX-515` was filed and
 closed in the same round because it is red on `main`).
 
 ```text
-make test    5867 passed, 27 skipped, 475.88s (0:07:55)
+make test    5870 passed, 27 skipped, 418.41s (0:06:58)
 make lint    clean
 ```
 
-The one failure on the first full run was the cadence guard —
-26 rows closed since review 10 against a bound of 25 — which is the
-repository asking for a review rather than a defect. Review 11 is in
-`architecture-review.md`; it filed `UX-516` and `UX-517` and produced
-no code, per that document's rule.
+The suite ran twice. The first run was **5867 passed, 27 skipped, 1
+failed** in 475.88s, and the one failure was the cadence guard — 26 rows
+closed since review 10 against a bound of 25 — which is the repository
+asking for a review rather than a defect. Review 11 is in
+`architecture-review.md`; it filed `UX-516` and `UX-517` and produced no
+code, per that document's rule.
+
+The three tests between the two runs are not new guards: the cadence
+clause moved from the failed column to the passed one, and
+`TestOutcomes::test_a_budgeted_outcome_fits` is parametrised per task
+file from `UX-497` on, so review 11's two filings brought two more
+parameters with them.
 
 ## `UX-500`, Regime A round 2
 

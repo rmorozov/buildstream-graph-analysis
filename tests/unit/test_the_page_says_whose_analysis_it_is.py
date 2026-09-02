@@ -72,11 +72,20 @@ class TestWhichAnalysisThisIs:
         assert note["stale"] is False, note["contracts_moved"]
 
     def test_a_moved_contract_is_named_in_the_direction_it_moved(self):
+        """Derived, not spelled. The first draft named `analyze/v4`,
+        and `UX-535` bumped to v5 in the same round: the clause went
+        green because the id it dropped was no longer in the stamp at
+        all, which is the shape it exists to catch."""
+        from bga import schemas
+
         mine = producer.stamp()["contracts"]
-        theirs = [name for name in mine if name != "analyze/v4"]
+        current = schemas.ANALYZE
+        assert current in mine, (current, mine)
+        previous = f"{current.rsplit('/v', 1)[0]}/v{int(current.rsplit('/v', 1)[1]) - 1}"
+        theirs = [name for name in mine if name != current]
         note = view.analysis_source(_stamped(theirs), reanalysed=False)
         assert note["stale"] is True
-        assert "analyze/v3 → analyze/v4" in note["contracts_moved"], note
+        assert f"{previous} → {current}" in note["contracts_moved"], note
 
     def test_the_count_is_of_sections_this_build_always_publishes(self):
         """`ANALYZE_FULL_KEYS`, not the schema's 56 properties: a

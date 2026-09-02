@@ -580,7 +580,12 @@ MEDIUM = (
     # renders of a 1,202-element two-plane snapshot - the size the
     # track bound is measured at, which is the whole point of the
     # file. 4.6s.
-    "tests/unit/test_the_handoff_counts_what_perfetto_spends.py",  # 4.6s
+    #
+    # Re-measured by `UX-530`, which added a clause here: **10.97s**,
+    # of which 0.57s is that clause. The recorded 4.6s was 5.8s stale
+    # before this round touched it - the renders grew under it, which
+    # is `UX-455`'s shape. Still MEDIUM, and now by a measurement.
+    "tests/unit/test_the_handoff_counts_what_perfetto_spends.py",  # 11.0s
     # `UX-370`, tiered on landing. One boot of `macro_micro` - the only
     # committed fixture with a Plane 2 report beside its run - plus
     # four payload clauses that need no browser at all. 2.2s.

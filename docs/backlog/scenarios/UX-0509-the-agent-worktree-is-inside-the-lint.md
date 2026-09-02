@@ -64,11 +64,9 @@ that globs from the repository root
 
 ## Outcome
 
-**Round 75, 2026-09-02.** Found while three `implementer` tracks were in
-flight — the first time `UX-504`'s agent ran for real.
-
-**The gap, measured.** `make lint` on a tree whose own documents are
-clean:
+**Round 75, 2026-09-02.** Found with three `implementer` tracks in
+flight — the first time `UX-504`'s agent ran for real. `make lint` on a
+tree whose own documents are clean:
 
 ```text
 .../worktrees/agent-af3da166d3b53f87c/examples/README.md:248:1: MD040 ...
@@ -76,9 +74,9 @@ clean:
 make: *** [Makefile:102: lint-docs] Error 1
 ```
 
-and the same scan over this tree's own directories, `exit 0`. Three
-whole clones sat at `.claude/worktrees/agent-<id>/`, and `git status`
-carried `?? .claude/worktrees/` throughout.
+The same scan over this tree's own directories exits 0. Three whole
+clones sat under `.claude/worktrees/`, and `git status` carried
+`?? .claude/worktrees/` throughout.
 
 **The first fix was wrong, and CI found it.** `--respect-gitignore` says
 exactly the right thing and arrived in pymarkdown 0.9.34; the 3.9 lane
@@ -90,8 +88,8 @@ __main__.py: error: unrecognized arguments: --respect-gitignore
 make: *** [Makefile:102: lint-docs] Error 2      run 33581936314, test (3.9)
 ```
 
-Local `make lint` was green on 0.9.39. This is `UX-418`'s shape on a
-third axis: the local instrument and the runner's are not the same tool.
+Local `make lint` was green on 0.9.39 — `UX-418`'s shape on a third
+axis: the local instrument and the runner's are not the same tool.
 
 **The close.** The file list comes from git instead of from a walk:
 
@@ -101,11 +99,9 @@ git ls-files -z -- README.md CLAUDE.md REVIEW.md 'docs/*.md' '.claude/*.md' \
 ```
 
 A worktree is untracked, so `git ls-files` cannot name it, on any
-version of anything. The set is otherwise unchanged: **656 tracked
-files from git against the 655 the walk listed**, and the one difference
-is this round's three not-yet-added task files — which is the cost,
-stated: a brand-new `.md` is linted from its first `git add`, not
-before.
+version of anything. **656 tracked files against the walk's 655**, the
+difference being this round's three not-yet-added task files — which is
+also the cost: a new `.md` is linted from its first `git add`.
 
 ```text
 $ mkdir -p .claude/worktrees/agent-probe && printf '# probe\n\n```\nx\n```\n' \
@@ -116,6 +112,8 @@ exit=0
 ```
 
 **Mutations.** `PYTHONDONTWRITEBYTECODE=1`, `__pycache__` cleared.
+N3 exists only because CI found the first fix; N2 is the one a walk
+that skipped this single directory would pass, and does not.
 
 | # | mutation | reddened | count |
 |---|---|---|---|
@@ -124,18 +122,23 @@ exit=0
 | N3 | `--respect-gitignore` comes back | `..._a_flag_the_39_lane_lacks` | 1 failed, 3 passed |
 | N4 | the recipe stops reading `.claude/` | `..._not_listed` | 1 failed, 3 passed |
 
-N3 is the clause that exists only because CI found the first fix; N2 is
-the one that would pass a walk which skipped this single directory, and
-does not.
+**What it made wrong (§3.10).**
+`test_docs_links_and_commands.py::test_the_docs_lint_scans_the_tree_it_names`
+pinned `UX-109`'s `-r` flag on one recipe line. There is no `-r` any
+more, and the guard went red. It now asserts the *behaviour* the flag
+stood for — the file set the recipe really produces contains a document
+nested under each named root — which is what `UX-109` was about and is
+stronger than pinning a flag. Mutations: dropping `.claude/` from the
+pathspec, narrowing `docs/*.md` to `:(glob)` so it reaches only the top
+level, and reverting to the pre-`UX-109` two files each redden it.
 
-**Blast radius, checked rather than assumed.** One guard globs from the
-repository root — `test_the_register_is_terse.py`, scoped to
-`tools/dev_*.py` and `.claude/hooks/*.py` — and `dev_touching` reads
-`tests/` only. So `lint-docs` and `git status` were the whole of it.
+**Blast radius.** One guard globs from the repository root —
+`test_the_register_is_terse.py`, scoped to `tools/dev_*.py` and
+`.claude/hooks/*.py` — and `dev_touching` reads `tests/` only.
 
 **Deviation from the Required Fix:** the second clause asked for
 `--respect-gitignore` by name. It cannot run on the 3.9 lane; git's own
 list is the same rule by a mechanism every version has.
 
-**Tier.** New file `test_the_lint_reads_its_own_tree.py`, 0.30s — small
-by default, no `tiers.py` row.
+**Tier.** `test_the_lint_reads_its_own_tree.py`, 0.30s — small by
+default, no `tiers.py` row.

@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-510 scenarios: **11 open**, 499 closed.
+510 scenarios: **10 open**, 500 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -27,7 +27,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | cli | 0 | 1 |
 | store | 2 | 5 |
 | docs | 3 | 47 |
-| guards | 6 | 68 |
+| guards | 5 | 68 |
 | testing | 0 | 1 |
 | unclassified | 0 | 223 |
 
@@ -41,7 +41,6 @@ task file, which is the only place it ever lived twice.
 | UX-92 | [cache effectiveness — hits, misses, churn, trends — is invisible to the tool](UX-0092-cache-effectiveness-is-invisible-to-the-tool.md) | store | Medium | — | 🟡 |
 | UX-96 | [the baseline set exists, but assembling it is a scavenger hunt](UX-0096-the-baseline-set-exists-but-assembling-it-is-a-scavenger-hunt.md) | store | Medium | — | 🟡 |
 | UX-489 | [the answer key asserts a ranking with no margin, on a build it runs for real](UX-0489-the-answer-key-asserts-a-ranking-with-no-margin.md) | guards | Medium | the contributor whose unrelated diff is red because a real build ranked two elements the other way round | 🔴 |
-| UX-491 | [the drift gate's own line has no route a reader can reach](UX-0491-the-gate-line-has-no-route-for-a-reader-without-the-log.md) | guards | Low | the round that has to pair a run's printed shift with the spread it recorded and cannot read the first one | 🔴 |
 | UX-495 | [three browser guards swing 1.5-2.3x under parallel load](UX-0495-three-browser-guards-swing-under-parallel-load.md) | guards | Medium | the round that reads a browser guard's drift reading and cannot tell an excursion from a regression | 🔴 |
 | UX-496 | [a wholesale re-record samples every file once, and the drift factor has never been sized against that](UX-0496-a-one-run-re-record-bakes-in-one-sample-per-file.md) | guards | Medium | the round whose gate is red on a file nobody touched, and cannot tell a stale reference entry from a real regression | 🔴 |
 | UX-500 | [the batch gate, measured against the per-item suite](UX-0500-the-batch-gate-measured-against-the-per-item-suite.md) | docs | High | the implementing session's wall clock; the maintainer's subscription | 🔴 |

@@ -1238,12 +1238,25 @@ class TestTheReferenceAdoptsWhatItDoesNotCarry:
         assert added == {}, added
         assert document == reference
 
-    def test_nothing_new_writes_nothing(self):
-        """The state every run after the first is in. A step that
-        rewrote an identical document would commit on every push."""
+    def test_nothing_new_adds_no_row(self):
+        """The state every run after the first is in: `added` is empty,
+        because a run never *adds* a name the reference already has.
+
+        `UX-496` changed the other half. This used to assert the whole
+        document was untouched, so a step that rewrote it would commit
+        on every push; now every run leaves a **reading** on every file
+        it measured, and that accumulation is the point — a wholesale
+        `--record` happened twice in the reference's entire history, so
+        a document that only learned there would never hold more than
+        one reading of anything.
+        """
         reference, candidate = self._pair()
         document, added = drift.adopt(reference, candidate)
-        assert (document, added) == (reference, {})
+        assert added == {}, added
+        assert document["files"].keys() == reference["files"].keys()
+        grew = [name for name, seen in document["samples"].items()
+                if len(seen) > len((reference.get("samples") or {}).get(name, []))]
+        assert grew, "no file gained a reading, so the entry stays one sample"
 
     def test_the_adopted_rows_say_they_were_adopted(self):
         """A reader comparing two entries deserves to know one of them
@@ -1867,3 +1880,115 @@ class TestTheGateLineReachesALogTail:
                            "--against", str(ref)]) == 0
         capsys.readouterr()
         assert not list(tmp_path.glob("gate-*.txt"))
+
+
+class TestAReferenceEntryIsMoreThanOneSample:
+    """`UX-496`: one afternoon set the number a later run was judged by.
+
+    `UX-488` refreshed the reference wholesale from one run — the
+    documented route — and froze whichever end of each file's range that
+    run happened to hit. The two cases the row names are the test set
+    here, with their real readings:
+
+    ```text
+    test_why_bga_believes_what_it_believes.py   12.8  8.19  12.81  13.62
+    test_emphasis_is_a_budget.py               15.66 15.52  36.34  15.22
+    ```
+
+    The first is a **bad entry**: four of five runs read 12.8-13.6 and
+    the reference said 8.19, so the next run went red on a
+    documentation-only commit — correctly, against a number that was
+    never representative. The second is an **excursion**: the file came
+    back to its own level and the 36.34 stands alone.
+
+    Nothing in the pipeline told them apart, because both are one
+    number against one number. `samples` is the distinction: `files` is
+    the median of the last `CI_REFERENCE_SAMPLES`, and a file must beat
+    the **top of its own readings** as well as the two gates.
+    """
+
+    BAD = "tests/unit/test_why_bga_believes_what_it_believes.py"
+    SPIKE = "tests/unit/test_emphasis_is_a_budget.py"
+
+    def _grown(self, readings):
+        """A reference that has seen `readings` of each named file, the
+        rest of the suite steady so every run's shift is 1.0."""
+        steady = {f"tests/unit/test_steady_{i}.py": 2.0 + i * 0.5
+                  for i in range(30)}
+        document = None
+        for run in range(len(next(iter(readings.values())))):
+            times = dict(steady)
+            times.update({name: seen[run] for name, seen in readings.items()})
+            document = drift.record(times, f"run{run}", document)
+        return document, steady
+
+    def test_the_entry_is_the_median_not_the_last_run(self):
+        document, _ = self._grown({self.BAD: [12.8, 8.19, 12.81, 13.62]})
+        assert document["samples"][self.BAD] == [12.8, 8.19, 12.81, 13.62]
+        assert document["files"][self.BAD] == 12.8, (
+            f"the entry is {document['files'][self.BAD]}, so the outlier is "
+            f"still what a later run is read against")
+
+    def test_one_excursion_does_not_set_the_entry(self):
+        document, _ = self._grown({self.SPIKE: [15.66, 15.52, 36.34, 15.22]})
+        assert document["files"][self.SPIKE] == 15.52, document["files"][self.SPIKE]
+
+    def test_a_file_repeating_its_own_range_is_not_reported(self):
+        """The excursion case, read back: the run that spikes again is
+        inside what this file has already read, so it is a wide range
+        and not a change."""
+        document, steady = self._grown({self.SPIKE: [15.66, 15.52, 36.34, 15.22]})
+        times = dict(steady, **{self.SPIKE: 36.0})
+        verdict, _shift, rows = drift.against(times, document)
+        assert verdict == "ok", [row[0] for row in rows]
+
+    def test_a_file_that_has_never_moved_is_still_reported(self):
+        """And the other direction, which is what the clause above must
+        not cost: a file whose readings sit inside a few per cent and
+        which now doubles is a change, and reports."""
+        steady = {f"tests/unit/test_steady_{i}.py": 2.0 + i * 0.5
+                  for i in range(30)}
+        document = None
+        for run in range(4):
+            document = drift.record(dict(steady), f"run{run}", document)
+        subject = "tests/unit/test_steady_29.py"
+        times = dict(steady, **{subject: steady[subject] * 2.2})
+        verdict, _shift, rows = drift.against(times, document)
+        assert verdict == "drift" and rows[0][0] == subject, rows
+
+    def test_the_window_is_bounded(self):
+        readings = {self.BAD: [10.0] * (drift.CI_REFERENCE_SAMPLES + 3)}
+        document, _ = self._grown(readings)
+        assert len(document["samples"][self.BAD]) == drift.CI_REFERENCE_SAMPLES
+
+    def test_a_carried_reading_is_put_on_this_runs_clock(self):
+        """A list that mixed two runners' clocks is `UX-418`'s defect
+        inside a key. The rebase is the shift between the documents."""
+        steady = {f"tests/unit/test_steady_{i}.py": 2.0 + i * 0.5
+                  for i in range(30)}
+        first = drift.record(dict(steady), "run0")
+        slower = {name: seconds * 2.0 for name, seconds in steady.items()}
+        second = drift.record(slower, "run1", first)
+        seen = second["samples"]["tests/unit/test_steady_29.py"]
+        assert seen == [round(steady["tests/unit/test_steady_29.py"] * 2.0, 2),
+                        round(slower["tests/unit/test_steady_29.py"], 2)], seen
+
+    def test_a_shift_no_population_supports_drops_the_carried_readings(self):
+        """`SHIFT_MIN_FILES` exists because a median over a handful is
+        not a shift. A list nobody can rebase is worse than one reading,
+        so it is dropped rather than multiplied by a guess."""
+        thin = {"tests/unit/test_a.py": 10.0, "tests/unit/test_b.py": 2.0}
+        first = drift.record(dict(thin), "run0")
+        second = drift.record({"tests/unit/test_a.py": 30.0,
+                               "tests/unit/test_b.py": 2.0}, "run1", first)
+        assert second["samples"]["tests/unit/test_a.py"] == [30.0]
+
+    def test_adopt_leaves_a_reading_on_a_file_it_did_not_add(self):
+        """Where the samples actually come from: two wholesale records
+        in the reference's whole history, against one adopt per merge."""
+        steady = {f"tests/unit/test_steady_{i}.py": 2.0 + i * 0.5
+                  for i in range(30)}
+        reference = drift.record(dict(steady), "recorded")
+        document, added = drift.adopt(reference, drift.record(dict(steady), "ci"))
+        assert added == {}
+        assert len(document["samples"]["tests/unit/test_steady_29.py"]) == 2

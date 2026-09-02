@@ -11,18 +11,18 @@ tier, because `small` is the default. This reads the junit report
 `make test` already writes - not `--durations=0`, which hides every
 entry under 5 ms - against the floors in `tests/tiers.py`. **Those
 floors describe a developer machine, so CI compares against CI**:
-`--against` reads `tests/ci_reference.json`, one CI run's own totals.
-A fixed slack, a derived scale and a rank comparison each failed on the
-first foreign clock they met - `UX-418`'s Outcome has the three runs.
+`--against` reads `tests/ci_reference.json`, CI's own totals. A fixed
+slack, a derived scale and a rank comparison each failed on the first
+foreign clock they met - `UX-418`'s Outcome has the three runs.
 
-Five rules keep a verdict off one sample, each bought with a red round:
+Six rules keep a verdict off one sample, each bought with a red round:
 the **median ratio** is divided out over files at or above
 `SHIFT_FLOOR_S` (`UX-423`); a file must clear **both** a ratio and a
-number of seconds, since a ratio alone reported 31 files on an
-untouched suite (`UX-420`); a file is confirmed on **two consecutive
+number of seconds (`UX-420`); a file is confirmed on **two consecutive
 runs** whose diff could account for it (`UX-442`, `UX-476`); a file the
-reference does not carry is **recorded**, not failed on (`UX-503`); and
-a `stale` runner verdict needs two runs too (`UX-508`).
+reference does not carry is **recorded** (`UX-503`); a `stale` runner
+verdict needs two runs too (`UX-508`); and an entry is the **median of
+that file's last readings**, whose top it must beat (`UX-496`).
 """
 import argparse
 import collections
@@ -93,6 +93,18 @@ CI_DRIFT_SECONDS = 5.0
 #: three red rounds for that mistake). Memory lives in the `--carry`
 #: file; without one the tool says so and decides on one sample.
 CI_DRIFT_RUNS = 2
+
+#: `UX-496`: how many readings of a file the reference keeps, newest
+#: last. `files` is their **median**, so one afternoon cannot set the
+#: number a later run is judged against - which is the defect that
+#: closed `UX-488`: four of five runs read a file at 12.8-13.6 and the
+#: re-record happened to catch the 8.19, so the next run went red on a
+#: documentation-only commit, correctly, against an entry that was
+#: never representative. Five, because `UX-495` measured the excursions
+#: that matter as one-run events across six runs: a median over five
+#: survives one, and a longer window would take longer to notice a
+#: change that is real.
+CI_REFERENCE_SAMPLES = 5
 
 #: Outside this, the whole reference is stale rather than any one file
 #: drifting - a new runner image, a Python bump, a changed default
@@ -326,27 +338,69 @@ def spread(times, reference):
             "max": round(normalised[-1], 3)}
 
 
+def samples_for(times, reference, shift=None):
+    """`UX-496`: each file's last `CI_REFERENCE_SAMPLES` readings.
+
+    Newest last, **all on `times`' clock**: the ones carried over from
+    `reference` are multiplied by the shift between the two documents,
+    because a list that mixed two runners' clocks is the cross-machine
+    comparison `UX-418` ruled out, arriving inside a key instead of
+    across one.
+
+    A file the previous reference did not carry starts its list here
+    with one reading, and reads exactly as it did before until it has
+    more.
+    """
+    before = reference.get("samples") or {}
+    known = reference.get("files") or {}
+    ratios = {name: times[name] / known[name] for name in known
+              if times.get(name) and known[name] > 0}
+    if len(shift_population(ratios, known)) < SHIFT_MIN_FILES:
+        # No population to place the old readings on this run's clock
+        # with. A list nobody can rebase is worse than one reading, so
+        # the carried ones are dropped rather than multiplied by a
+        # number `SHIFT_MIN_FILES` exists to say is not a shift.
+        return {name: [round(seconds, 2)] for name, seconds in times.items()}
+    if shift is None:
+        shift = shift_of(ratios, known)
+    kept = {}
+    for name, seconds in times.items():
+        carried_over = [round(one * shift, 2) for one in before.get(name, [])]
+        kept[name] = (carried_over + [round(seconds, 2)])[-CI_REFERENCE_SAMPLES:]
+    return kept
+
+
 def record(times, source="unknown", reference=None):
     """The reference document a later run is read against.
 
-    `reference` is the one this replaces, and is only read to write the
-    `spread` this run saw against it - see `spread`. Absent on the first
-    record, and then the document simply has no spread rather than a
-    fabricated one.
+    `reference` is the one this replaces. It is read for the `spread`
+    this run saw against it - see `spread` - and, `UX-496`, for the
+    readings each file already has: `files` is the **median** of the
+    last `CI_REFERENCE_SAMPLES`, not this one run's number.
     """
     document = {
         "measured_on": source,
-        "note": ("UX-420: one CI run's per-file totals, so a later CI run "
+        "note": ("UX-420: CI's own per-file totals, so a later CI run "
                  "can be read against CI rather than against the floors in "
                  "tests/tiers.py, which describe a developer machine. "
+                 "UX-496: `files` is the median of `samples`, that file's "
+                 f"last {CI_REFERENCE_SAMPLES} readings on this document's "
+                 "clock, newest last - not one run's number. "
                  f"Refresh from a CI run's {CI_CANDIDATE_ARTIFACT} "
                  f"artifact, or the log of its {CI_CANDIDATE_JOB} job, "
                  f"which is this same tool's --record taken on "
                  f"the runner whose clock this document is in - not from "
                  f"a local --record (UX-418, UX-447)."),
-        "files": {name: round(seconds, 2)
-                  for name, seconds in sorted(times.items())},
+        "files": {},
     }
+    kept = samples_for(times, reference or {})
+    # `median_low`, not `median`: on an even count the mean of the two
+    # middles lets one excursion raise the bar a later run is judged
+    # against - with two readings it sets it halfway. The gate reports
+    # only *too slow*, so the lower middle is the conservative side.
+    document["files"] = {name: round(statistics.median_low(kept[name]), 2)
+                         for name in sorted(times)}
+    document["samples"] = {name: kept[name] for name in sorted(times)}
     saw = spread(times, reference or {})
     if saw:
         document["spread"] = saw
@@ -357,10 +411,14 @@ def adopt(reference, candidate):
     """`UX-503`: the rows the reference does not carry yet, added to it.
 
     `(document, added)` - the reference with the new names in it, and
-    what was added. **Only names the reference lacks.** An entry it
-    already holds is never rewritten here: changing one is a refresh,
-    which is a human's decision about whether a file is meant to cost
-    what it now costs, and this runs unattended.
+    what was added. `added` is still **only names the reference lacks**.
+
+    `UX-496` changed what happens to the rest: every name this run
+    measured contributes a reading to that name's `samples`, and
+    `files` is the median of the list. No single run sets a number, so
+    this is not the human refresh decision `UX-503` kept out of an
+    unattended job - it is the accumulation that makes the entry more
+    than one afternoon.
 
     The candidate's seconds are the *candidate run's* clock, so each
     added row is divided by the shift between the two documents before
@@ -390,11 +448,33 @@ def adopt(reference, candidate):
         return reference, {}
     added = {name: round(seconds / shift, 2)
              for name, seconds in times.items() if name not in known}
-    if not added:
-        return reference, {}
+    # `UX-496`: and a reading for every name it *does* carry, on the
+    # reference's clock. This is where the samples come from - a
+    # wholesale `--record` happened twice in the reference's whole
+    # history, so a document that only learned there would never have
+    # more than one reading of anything. The value a run contributes is
+    # still not a human's refresh decision: it joins a list, and `files`
+    # stays the median of that list.
+    before = reference.get("samples") or {}
+    kept = {}
+    for name in {**known, **added}:
+        seen = list(before.get(name, []))
+        if name not in known:
+            seen = []
+        elif not seen:
+            seen = [known[name]]
+        reading = times.get(name)
+        if reading:
+            seen = seen + [round(reading / shift, 2)]
+        kept[name] = (seen or [known.get(name, added.get(name))]
+                      )[-CI_REFERENCE_SAMPLES:]
+    for name, seconds in added.items():
+        kept[name] = [seconds]
     document = dict(reference)
-    document["files"] = {name: seconds for name, seconds
-                         in sorted({**known, **added}.items())}
+    document["samples"] = {name: kept[name] for name in sorted(kept)}
+    document["files"] = {
+        name: round(statistics.median_low(kept[name]), 2)
+        for name in sorted(kept)}
     # Which rows are *not* from the recording run `measured_on` names,
     # accumulated over adoptions and dropped by the next wholesale
     # `record` - a reader comparing two rows deserves to know one of
@@ -471,14 +551,25 @@ def against(times, reference):
     if not IMAGE_BAND[0] <= shift <= IMAGE_BAND[1]:
         return "stale", shift, []
 
+    # `UX-496`: what each file has actually read, on the reference's
+    # clock. A file with a recorded range must beat the **top** of it as
+    # well as the two gates below - that is the distinction the round-73
+    # cases both wanted and nothing made: a file whose own readings span
+    # 15.2-36.3 has a wide range, and a file that has never left 1.06 of
+    # its own median and now doubles has changed. Only ever wider than
+    # the factor alone, since `files` is a median of the same list, so
+    # it cannot invent a report the old rule would not have made.
+    band = reference.get("samples") or {}
     rows = []
     for name, ratio in ratios.items():
         # Both, not either: see CI_DRIFT_SECONDS. `expected` is what the
         # reference says this file costs *on this run's clock*, so the
         # seconds added are the ones the run really paid.
         expected = known[name] * shift
+        seen = band.get(name) or []
         if (ratio / shift > CI_DRIFT_FACTOR
-                and times[name] - expected >= CI_DRIFT_SECONDS):
+                and times[name] - expected >= CI_DRIFT_SECONDS
+                and (not seen or times[name] > max(seen) * shift)):
             rows.append((name, times[name], known[name], ratio / shift))
     # A file with no reference at all is checked by nothing, which is
     # the silence this whole item is about - but only where there is
@@ -929,14 +1020,20 @@ def _adopt(candidate):
                  if CI_REFERENCE.is_file() else {})
     document, added = adopt(reference,
                             json.loads(candidate.read_text(encoding="utf-8")))
-    if not added:
-        print(f"{CI_REFERENCE.name} carries every file this run measured; "
-              f"nothing to adopt")
+    if document == reference:
+        print(f"{CI_REFERENCE.name} is unchanged by this run - it shares no "
+              f"file with the candidate, or the shift between them is "
+              f"outside {IMAGE_BAND[0]}-{IMAGE_BAND[1]}")
         return 0
     CI_REFERENCE.write_text(json.dumps(document, indent=2) + "\n",
                             encoding="utf-8")
-    print(f"adopted {len(added)} file(s) into {CI_REFERENCE.name}, on its "
-          f"own clock:")
+    # `UX-496`: a run with nothing new to add still leaves a reading on
+    # every file it measured, and that is the point - the entry gets to
+    # be more than one afternoon without anyone deciding anything.
+    grew = sum(1 for name, seen in (document.get("samples") or {}).items()
+               if len(seen) > len((reference.get("samples") or {}).get(name, [])))
+    print(f"adopted {len(added)} new file(s) into {CI_REFERENCE.name} and "
+          f"left a reading on {grew}, on its own clock:")
     for name, seconds in sorted(added.items()):
         print(f"  {name}  {seconds:.2f}s")
     return 0

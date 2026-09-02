@@ -251,20 +251,59 @@ class TestTheIndexIsDerivedNotMerged:
         assert sum(totals) == rows, (
             f"the topic table accounts for {sum(totals)} of {rows} rows")
 
-    def test_the_bucket_for_what_cannot_be_derived_is_named(self):
-        """`unclassified` is not a topic anybody files under; it is the
-        223 closed rows whose topic no longer exists anywhere - the
-        closed row has no Topic column and they predate the
-        `**Topic:**` header. Named rather than distributed by guesswork,
-        so the number is visible and shrinks."""
+    def test_no_row_is_left_in_the_unclassified_bucket(self, monkeypatch):
+        """`UX-507`: the bucket is empty, and this is the clause that
+        says so.
+
+        The acceptance test named `test_the_totals_account_for_every_row`
+        for this, and that clause **does not discriminate**: its property
+        - every row lands in a bucket - holds *with* `unclassified`
+        present, by design, and its own docstring says so. Measured by
+        the track that classified the rows: dropping one `**Topic:**`
+        header left it green while the derived table grew
+        `| unclassified | 0 | 1 |`. So the bucket needs a clause of its
+        own, and this is it.
+        """
+        unknown = sorted(uid for uid, topic in close_task.topics().items()
+                         if topic == close_task.TOPIC_UNKNOWN)
+        assert unknown == [], (
+            f"{len(unknown)} row(s) are in no topic: {unknown[:5]}. Every "
+            f"task file carries a `**Topic:**` header from UX-507 on; a "
+            f"new one filed without it lands here")
+
+    def test_the_bucket_is_still_reachable(self, tmp_path, monkeypatch):
+        """The clause above passes on an empty set, which is how a guard
+        stops discriminating (`UX-512`, same round). This runs the
+        mutation the acceptance test asks for - drop one header - as a
+        standing clause rather than by hand, on a copy, and reads the
+        derived table for the bucket that must reappear.
+
+        `TOPIC_UNKNOWN` therefore stays in `dev_close_task.py`. `UX-507`'s
+        Required Fix said it "can go" and its Out of Scope forbade
+        touching the tool; the Out of Scope is right, and this is why -
+        the fallback is what reports a row filed without a header, and
+        deleting it would make the next such row silently uncounted.
+        """
+        import shutil
+        scenarios = tmp_path / "scenarios"
+        shutil.copytree(REPO / "docs/backlog/scenarios", scenarios)
+        victim = next(iter(sorted(scenarios.glob("UX-0001-*.md"))))
+        text = victim.read_text(encoding="utf-8")
+        assert "**Topic:**" in text, victim.name
+        victim.write_text(re.sub(r" \| \*\*Topic:\*\* [a-z]+", "", text,
+                                 count=1), encoding="utf-8")
+
+        monkeypatch.setattr(close_task, "SCENARIOS", scenarios)
+        monkeypatch.setattr(close_task, "INDEX", scenarios / "README.md")
+        monkeypatch.setattr(close_task, "CLOSED", scenarios / "closed.md")
         of = close_task.topics()
-        unknown = [uid for uid, topic in of.items()
-                   if topic == close_task.TOPIC_UNKNOWN]
-        assert all(uid not in close_task.row_ids(close_task.INDEX)
-                   for uid in unknown), (
-            "an *open* row has no derivable topic - the open table has a "
-            "Topic column, so this is a malformed row rather than a "
-            "legacy one")
+        assert [uid for uid, topic in of.items()
+                if topic == close_task.TOPIC_UNKNOWN] == ["UX-01"], (
+            "dropping a `**Topic:**` header did not put that row in the "
+            "unclassified bucket, so the clause above would pass over a "
+            "row nobody classified")
+        _sentence, table = close_task.index_header()
+        assert "| unclassified | 0 | 1 |" in table, table
 
     def test_a_hand_edited_count_is_reported_and_then_restored(
             self, tmp_path):

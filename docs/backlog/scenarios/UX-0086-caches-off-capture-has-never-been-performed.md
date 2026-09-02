@@ -1,6 +1,6 @@
 # UX-86: the caches-off scenario has never been captured, so half the product is untested on real data
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-81 (done), UX-55 (done)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-81 (done), UX-55 (done) | **Topic:** capture
 
 ## Motivation
 

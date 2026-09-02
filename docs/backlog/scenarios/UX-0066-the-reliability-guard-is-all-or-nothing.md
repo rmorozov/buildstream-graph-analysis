@@ -1,6 +1,6 @@
 # UX-66: the attribution guard demands 100% or nothing, so an 86.1%-correct join is refused — and a cancelled capture can overwrite a good one
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** `UX-64` (done — which raised real attribution to 86.1% and made this the blocker)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** `UX-64` (done — which raised real attribution to 86.1% and made this the blocker) | **Topic:** analysis
 
 ## Motivation
 

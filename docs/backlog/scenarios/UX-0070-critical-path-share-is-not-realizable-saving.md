@@ -1,6 +1,6 @@
 # UX-70: the report ranks by share of the critical path, but 82% of one element's share is not realizable — a user optimizing it would get 3% back, not 18%
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** `UX-65` (which introduced the ranking this corrects)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** `UX-65` (which introduced the ranking this corrects) | **Topic:** analysis
 
 ## Motivation
 

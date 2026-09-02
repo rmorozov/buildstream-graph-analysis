@@ -76,6 +76,21 @@ isolation, or `git worktree add`), commits on its own branch, and
 reports the surfaces it actually touched against the ones it declared.
 The `verifier` agent reads each track before it merges.
 
+**The brief names the base, because the worktree does not start where
+you are.** `UX-510`: round 75's three tracks were all created at
+`8585e7d`, nine commits behind the orchestrator, and two of them were
+told to read files that did not exist in their copy. Round 76's single
+track reproduced it at a different distance — seven commits — so it is
+the shape and not one round's accident. Put the sha in the brief and the
+track checks it with `git log --oneline -1` before reading anything.
+
+**What the merge costs, measured once.** Round 75, three tracks over
+nine commits: **three cherry-picks, one conflicted** — in
+`tools/dev_close_task.py` and `tests/unit/test_the_loop_stays_fast.py`,
+both edited inside those nine commits — resolved additively by keeping
+both sides. That is 1.33 commits per task against 1.0 serial, and it is
+this round's number and the only one on file.
+
 ## 4. The gate — what runs once for the batch
 
 Per item, the inner loop: `make test-touching`, then every new guard

@@ -1,6 +1,6 @@
 # UX-102: the configure tax is measured twice and totaled never
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-91 (Plane 3 phases), UX-45 (Plane 2 CPU per process)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-91 (Plane 3 phases), UX-45 (Plane 2 CPU per process) | **Topic:** analysis
 
 Direction 3, item 3 — see
 [`design/directions.md`](../../design/directions.md).

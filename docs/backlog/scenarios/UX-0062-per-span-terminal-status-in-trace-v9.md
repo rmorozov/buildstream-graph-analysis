@@ -1,6 +1,6 @@
 # UX-62: a task's terminal status is known at extraction and discarded, so attribution cannot tell work that succeeded from work that was thrown away
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-54` (done — which recorded the failure at run level)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-54` (done — which recorded the failure at run level) | **Topic:** contracts
 
 ## Motivation
 

@@ -1,6 +1,6 @@
 # UX-29: `native_max_jobs` is never auto-extracted, so the whole capacity-guard chain is inert on runs produced by the documented pipeline
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-12, UX-18 (both done)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-12, UX-18 (both done) | **Topic:** capture
 
 ## Motivation
 

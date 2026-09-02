@@ -1,6 +1,6 @@
 # UX-89: correlate prints the same finding seven times instead of once
 
-**Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-72 (done)
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-72 (done) | **Topic:** analysis
 
 ## Motivation
 

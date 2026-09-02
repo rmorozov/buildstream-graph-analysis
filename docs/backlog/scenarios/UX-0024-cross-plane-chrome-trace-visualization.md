@@ -1,6 +1,6 @@
 # UX-24: Chrome Trace export for Plane 2, and a combined two-plane view in perfetto.dev
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-11` (done), `UX-23` (done - element tagging, needed for the combined mode)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-11` (done), `UX-23` (done - element tagging, needed for the combined mode) | **Topic:** capture
 
 ## Motivation
 

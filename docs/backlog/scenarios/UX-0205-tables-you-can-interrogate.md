@@ -1,6 +1,6 @@
 # UX-205: tables you can interrogate
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-199 (between-sections navigation; this is within-section), UX-201 (the column metadata this uses), UX-187 (the scale that demands it)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-199 (between-sections navigation; this is within-section), UX-201 (the column metadata this uses), UX-187 (the scale that demands it) | **Topic:** viewer
 
 ## Motivation
 

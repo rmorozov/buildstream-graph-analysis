@@ -1,6 +1,6 @@
 # UX-43: "choke point" is `fan-in >= 2 and fan-out >= 2`, so 43% of a real-shaped 1200-element graph is reported as a bottleneck
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-33 (which made these names visible, and is how this became legible)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-33 (which made these names visible, and is how this became legible) | **Topic:** analysis
 
 ## Motivation
 

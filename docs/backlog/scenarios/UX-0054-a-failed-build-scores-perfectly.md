@@ -1,6 +1,6 @@
 # UX-54: a build in which every attempted element **failed** is scored 1.00, and nothing in the report says the build failed at all
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** — (pre-existing; `UX-39`/`UX-03` made it consequential by putting a gate on top of the score)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** — (pre-existing; `UX-39`/`UX-03` made it consequential by putting a gate on top of the score) | **Topic:** analysis
 
 ## Motivation
 

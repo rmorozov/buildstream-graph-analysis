@@ -1,6 +1,6 @@
 # UX-100: nothing answers whether the elements are the right size
 
-**Priority:** Medium | **Status:** 🟢 Done (reopened by round 12, closed by UX-120) | **Depends on:** UX-99 (the toll measurement), UX-82 (the replay-projection pattern)
+**Priority:** Medium | **Status:** 🟢 Done (reopened by round 12, closed by UX-120) | **Depends on:** UX-99 (the toll measurement), UX-82 (the replay-projection pattern) | **Topic:** analysis
 
 Direction 3, item 1 (second half) — see
 [`design/directions.md`](../../design/directions.md).

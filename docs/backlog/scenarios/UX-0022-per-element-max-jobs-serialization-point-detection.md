@@ -2,7 +2,7 @@
 
 # UX-22: per-element `max-jobs` variance and "large serialization point" detection
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-12`
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-12` | **Topic:** capture
 
 ## Motivation
 

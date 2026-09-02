@@ -1,6 +1,6 @@
 # UX-34: `Top Improvement Opportunities` ranks `stack`/`import` elements at sensitivity 1.00, above every element that does real work
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-20 (done - this is a ranking/filtering fix to the list it added), P4-12 (`STRUCTURAL_ELEMENT_KINDS`), UX-25 (the same tagging, already applied elsewhere)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-20 (done - this is a ranking/filtering fix to the list it added), P4-12 (`STRUCTURAL_ELEMENT_KINDS`), UX-25 (the same tagging, already applied elsewhere) | **Topic:** analysis
 
 ## Motivation
 

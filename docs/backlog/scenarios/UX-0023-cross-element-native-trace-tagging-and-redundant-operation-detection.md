@@ -1,6 +1,6 @@
 # UX-23: tag native-build traces with their owning element, and detect redundant cross-element operations
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-11` (done - supplies the real per-process trace this builds on)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-11` (done - supplies the real per-process trace this builds on) | **Topic:** capture
 
 ## Motivation
 

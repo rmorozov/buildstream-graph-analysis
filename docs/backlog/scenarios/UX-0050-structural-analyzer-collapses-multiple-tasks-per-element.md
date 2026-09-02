@@ -1,6 +1,6 @@
 # UX-50: the structural analyzer keeps one task per element, so an element whose FETCH sorts after its BUILD is seen as zero-duration
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** — (pre-existing; `UX-44` is what made it consequential and visible)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** — (pre-existing; `UX-44` is what made it consequential and visible) | **Topic:** analysis
 
 ## Motivation
 

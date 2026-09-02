@@ -1,6 +1,6 @@
 # UX-09: `--builders` and native `max-jobs` compete for the same CPU cores
 
-**Priority:** High | **Status:** 🟢 Done (documented + demonstrated for real) | **Depends on:** none
+**Priority:** High | **Status:** 🟢 Done (documented + demonstrated for real) | **Depends on:** none | **Topic:** analysis
 
 ## Motivation
 

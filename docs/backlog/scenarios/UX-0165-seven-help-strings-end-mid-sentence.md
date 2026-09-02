@@ -1,6 +1,6 @@
 # UX-165: ten help strings end mid-sentence
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-158 (the concision pass that cut them)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-158 (the concision pass that cut them) | **Topic:** cli
 
 ## Motivation
 

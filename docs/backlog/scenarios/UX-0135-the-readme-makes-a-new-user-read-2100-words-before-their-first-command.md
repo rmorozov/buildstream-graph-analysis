@@ -1,6 +1,6 @@
 # UX-135: the README makes a new user read 2,100 words before their first command
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-125/UX-126 (the flow it should lead with — both done)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-125/UX-126 (the flow it should lead with — both done) | **Topic:** docs
 
 Docs polish round (round 14): simple, concise, consistent. The full
 fresh-eyes read this and its siblings (`UX-136`..`UX-141`) come from is

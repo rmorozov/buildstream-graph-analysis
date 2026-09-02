@@ -1,6 +1,6 @@
 # UX-124: close UX-104's fdsdk clause with the capture that can
 
-**Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-104 (done, one clause honestly unattainable at the time), UX-108 (whose capture makes it attainable)
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-104 (done, one clause honestly unattainable at the time), UX-108 (whose capture makes it attainable) | **Topic:** docs
 
 ## Motivation
 

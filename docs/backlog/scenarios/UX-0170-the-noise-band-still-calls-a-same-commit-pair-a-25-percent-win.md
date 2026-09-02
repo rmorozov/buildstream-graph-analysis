@@ -1,6 +1,6 @@
 # UX-170: the noise band still calls a same-commit pair a 25% win
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-59 (the band), UX-96 (the set that feeds it), UX-92 (which measured the spread)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-59 (the band), UX-96 (the set that feeds it), UX-92 (which measured the spread) | **Topic:** analysis
 
 ## Motivation
 

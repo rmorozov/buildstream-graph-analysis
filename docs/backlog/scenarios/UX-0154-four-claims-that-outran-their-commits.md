@@ -1,6 +1,6 @@
 # UX-154: four claims that outran their commits
 
-**Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-136, UX-138, UX-141 (the logs this corrects)
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-136, UX-138, UX-141 (the logs this corrects) | **Topic:** docs
 
 ## Motivation
 

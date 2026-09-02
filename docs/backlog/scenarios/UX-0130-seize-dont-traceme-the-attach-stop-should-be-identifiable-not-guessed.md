@@ -1,6 +1,6 @@
 # UX-130: seize, don't TRACEME — the attach-stop should be identifiable, not guessed
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-118 (done — this is what its fix revealed)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-118 (done — this is what its fix revealed) | **Topic:** capture
 
 ## Motivation
 

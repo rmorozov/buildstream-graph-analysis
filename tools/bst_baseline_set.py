@@ -37,6 +37,7 @@ several comparable runs into the set `compare --baseline-run` judges against.
 Full background: docs/guides/ci-comment.md
 """
 import argparse
+import fnmatch
 import json
 import os
 import re
@@ -105,6 +106,15 @@ HOMOGENEOUS_FIELDS = {
     'trace_opens': 'true',
 }
 
+# UX-96 round 76: which of the fields above the ref name actually
+# carries. `<commit>-<mode>-b<builders>j<max_jobs>` is four of the seven,
+# so a `--glob` can separate a set that differs on those and cannot
+# separate one that differs on `target`, `trace_spine` or `trace_opens`.
+# The refusal used to name narrowing the glob as the only remedy, and on
+# the live refs it was the wrong one: seven published incrementals, all
+# one tuple, one of them `trace_spine=true`.
+NAMED_BY_THE_REF = ('fdsdk_ref', 'capture_mode', 'builders', 'max_jobs')
+
 # Reported, never enforced. Capture tooling changing between runs is a
 # real risk to a band and also a completely normal thing to happen in a
 # repository under development - refusing would make the helper unusable
@@ -135,6 +145,22 @@ def list_capture_refs(remote: str, glob: str, cwd: Optional[str] = None) -> List
             continue
         refs.append({'sha': sha, 'ref': name, **match.groupdict()})
     return sorted(refs, key=lambda r: -int(r['run_id']))
+
+
+def exclude_refs(refs: List[dict], patterns: List[str]) -> List[dict]:
+    """Drop the refs a caller has named, before `-n` takes the newest N.
+
+    A pattern is `fnmatch`ed against the full ref name and against the
+    run id on its own, so both `32223468993` and `*-cold-*` work.
+    """
+    if not patterns:
+        return refs
+    return [
+        ref for ref in refs
+        if not any(fnmatch.fnmatch(ref['ref'], pattern)
+                   or fnmatch.fnmatch(ref['run_id'], pattern)
+                   for pattern in patterns)
+    ]
 
 
 def _parse_context(text: str) -> Dict[str, str]:
@@ -383,13 +409,65 @@ def trend_order(path: str) -> List[str]:
     return [member['run_dir'] for member in reversed(document['members'])]
 
 
-def format_set_text(members: List[dict], homogeneity: dict) -> str:
+def refusal_remedy(mismatches: List[dict], members: List[dict]) -> str:
+    """The sentence after the refusal: what the caller can actually do.
+
+    Narrowing the glob only works for the four fields the ref name
+    carries. For the other three it is advice that cannot be followed,
+    so the odd captures are named and `--exclude` is.
+    """
+    invisible = [m['field'] for m in mismatches
+                 if m['field'] not in NAMED_BY_THE_REF]
+    if not invisible:
+        return "Narrow --glob to one <commit>-<mode>-b<builders>j<max_jobs> tuple."
+    verb = 'is' if len(invisible) == 1 else 'are'
+    odd = _minority_refs(mismatches, members)
+    remedy = (
+        f"{', '.join(invisible)} {verb} not in the ref name, so no --glob "
+        f"separates this set. Drop the odd capture(s) with --exclude "
+        f"<run-id or ref glob>."
+    )
+    if odd:
+        remedy += f" Here that is {_name_refs(odd)}."
+    return remedy
+
+
+def _minority_refs(mismatches: List[dict], members: List[dict]) -> List[str]:
+    """The refs holding the least common value of a field the ref name
+    cannot carry - a suggestion, not a verdict: the majority is not
+    automatically the right population, and the caller decides."""
+    odd = []
+    for mismatch in mismatches:
+        if mismatch['field'] in NAMED_BY_THE_REF:
+            continue
+        field = mismatch['field']
+        assumed = mismatch.get('assumed')
+        held = {}
+        for member in members:
+            value = member['context'].get(field) or assumed
+            if value is None:
+                continue
+            held.setdefault(value, []).append(member['ref']['ref'])
+        if len(held) < 2:
+            continue
+        smallest = min(held.values(), key=len)
+        odd += [ref for ref in smallest if ref not in odd]
+    return odd
+
+
+def format_set_text(members: List[dict], homogeneity: dict, excluded: int = 0) -> str:
     lines = [
         '=' * 60,
         'Baseline Set',
         '=' * 60,
         f"{len(members)} capture(s), newest first:",
     ]
+    if excluded:
+        # A set narrowed by hand says so, in the set's own listing: a
+        # band over a population the caller edited is a different
+        # claim from a band over everything published.
+        lines.insert(3, f"--exclude dropped {excluded} capture(s) before the newest "
+                        f"{len(members)} were taken.")
     for member in members:
         ref = member['ref']
         lines.append(
@@ -450,6 +528,12 @@ def main(argv: Optional[List[str]] = None) -> int:
     )
     parser.add_argument('-n', '--count', type=int, default=3,
                         help='How many of the newest captures to fetch. Default: 3.')
+    parser.add_argument('--exclude', action='append', default=[], metavar='PATTERN',
+                        help='Drop a capture before the newest N are taken. A run id '
+                             '(32223468993) or a glob over the ref name '
+                             "('*-cold-*'), repeatable. The remedy for a set that "
+                             'differs on target, trace_spine or trace_opens, none of '
+                             'which the ref name carries.')
     parser.add_argument('--workdir', default=None,
                         help='Where to materialise the run directories. Default: a '
                              'temporary directory, removed on exit.')
@@ -485,10 +569,14 @@ def main(argv: Optional[List[str]] = None) -> int:
     except RuntimeError as error:
         print(f"Error: {error}", file=sys.stderr)
         return 1
+    excluded = len(refs)
+    refs = exclude_refs(refs, args.exclude)
+    excluded -= len(refs)
     if not refs:
         print(
-            f"Error: no capture refs matched {args.glob!r} on {args.remote}. "
-            f"`git ls-remote --heads {args.remote} 'captures/*'` lists what exists.",
+            f"Error: no capture refs matched {args.glob!r} on {args.remote}"
+            + (f" after --exclude dropped {excluded}. " if excluded else ". ")
+            + f"`git ls-remote --heads {args.remote} 'captures/*'` lists what exists.",
             file=sys.stderr,
         )
         return 1
@@ -516,15 +604,16 @@ def main(argv: Optional[List[str]] = None) -> int:
                     {'ref': m['ref'], 'run_dir': m['run_dir'], 'context': m['context']}
                     for m in members
                 ],
+                'excluded': excluded,
                 **homogeneity,
             }, indent=2))
         else:
-            print(format_set_text(members, homogeneity))
+            print(format_set_text(members, homogeneity, excluded))
 
         if homogeneity['mismatches']:
             print(
                 "Refusing to compare against a set that is not internally comparable. "
-                "Narrow --glob to one <commit>-<mode>-b<builders>j<max_jobs> tuple.",
+                + refusal_remedy(homogeneity['mismatches'], members),
                 file=sys.stderr,
             )
             return 6  # the same exit code `bga compare` uses for "not comparable"

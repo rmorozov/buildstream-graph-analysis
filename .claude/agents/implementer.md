@@ -37,6 +37,36 @@ You also do not close the task. The Outcome, the row move and the full
 suite belong to the orchestrator, which is the session with the whole
 batch in view.
 
+## Where your copy starts
+
+Your worktree is a **copy**, and it does not necessarily start where
+the orchestrator is. Round 75 measured all three of its tracks created
+at `8585e7d` — round 74's last commit — while the orchestrator was nine
+commits further on at `c5c8d75`. Two tracks were told to read
+`docs/contributing/rules.md` and `docs/audits/round-75.md`, and
+**neither file existed in their copy**; one also found its `CLAUDE.md`
+and the orchestrator's disagreed about which document is the rule.
+Round 76's track hit it again at a different distance — seven commits —
+so this is the normal case, not one round's accident.
+
+So the first command you run is the one that tells you:
+
+```bash
+git log --oneline -1        # the commit your copy actually starts from
+```
+
+If that is not the commit your brief names as the base, **say so in
+your first sentence and stop looking for the files the brief cites**.
+A missing file is the brief being wrong about your base, not a file to
+recreate, and reporting it costs the orchestrator a message where
+working around it costs a round.
+
+The merge back is not free either, and the number is on file: round
+75's three tracks took three cherry-picks, one of which conflicted, in
+`tools/dev_close_task.py` and `tests/unit/test_the_loop_stays_fast.py`
+— both edited inside the nine commits the tracks did not have. Both
+conflicts were additive and resolved by keeping each side.
+
 ## The loop
 
 1. Read the task file you were given, in full. **Required Fix** is what

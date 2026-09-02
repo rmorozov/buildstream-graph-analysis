@@ -15,21 +15,19 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-511 scenarios: **8 open**, 503 closed.
+515 scenarios: **5 open**, 510 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
-| capture | 0 | 22 |
-| analysis | 0 | 13 |
-| contracts | 0 | 31 |
-| viewer | 0 | 99 |
-| cli | 0 | 1 |
-| store | 2 | 5 |
-| docs | 3 | 47 |
-| guards | 3 | 69 |
-| testing | 0 | 1 |
-| unclassified | 0 | 223 |
+| capture | 1 | 87 |
+| analysis | 0 | 83 |
+| contracts | 0 | 37 |
+| viewer | 0 | 126 |
+| cli | 0 | 19 |
+| store | 1 | 13 |
+| docs | 3 | 65 |
+| guards | 0 | 85 |
 
 ## Open scenarios
 
@@ -39,13 +37,10 @@ task file, which is the only place it ever lived twice.
 | ID | Scenario | Topic | Priority | Serves | Status |
 |---|---|---|---|---|---|
 | UX-92 | [cache effectiveness — hits, misses, churn, trends — is invisible to the tool](UX-0092-cache-effectiveness-is-invisible-to-the-tool.md) | store | Medium | — | 🟡 |
-| UX-96 | [the baseline set exists, but assembling it is a scavenger hunt](UX-0096-the-baseline-set-exists-but-assembling-it-is-a-scavenger-hunt.md) | store | Medium | — | 🟡 |
 | UX-500 | [the batch gate, measured against the per-item suite](UX-0500-the-batch-gate-measured-against-the-per-item-suite.md) | docs | High | the implementing session's wall clock; the maintainer's subscription | 🔴 |
-| UX-507 | [223 closed rows are in no topic](UX-0507-the-unclassified-bucket.md) | docs | Low | the round that asks "how much of the backlog was viewer work" and gets an answer that is 44 % blank | 🔴 |
-| UX-510 | [a parallel track starts from a base the orchestrator has left behind](UX-0510-a-track-starts-from-a-stale-base.md) | guards | Medium | the track told to read a file that does not exist in its copy | 🔴 |
-| UX-511 | [the guide the README sends readers to teaches a retired reading as current](UX-0511-the-real-project-guide-teaches-a-retired-reading.md) | docs | Medium | the reader who follows the README's link and gets the same stale output with prose built on it | 🔴 |
-| UX-512 | [a guard is red on any tree whose `__pycache__` was cleared](UX-0512-an-exemption-for-a-build-artifact.md) | guards | Low | the round that clears bytecode before a same-length mutation and reads the result as a flake | 🔴 |
-| UX-513 | [two guards are red while a tier edit is uncommitted](UX-0513-two-guards-are-red-until-you-commit.md) | guards | Low | the round re-tiering a file, which is the one time these two guards are red for no reason of its own | 🔴 |
+| UX-514 | [the capture schedule can never produce a second commit](UX-0514-the-schedule-can-never-capture-a-second-commit.md) | capture | Medium | `UX-92`'s gate, deferred four times on evidence that cannot arrive | 🔴 |
+| UX-516 | [the CI owner's page teaches a command that exits 6 on this repository's own refs](UX-0516-the-ci-owners-page-teaches-a-command-that-exits-6.md) | docs | Medium | the CI owner who copies the block, meets exit 6, and has no next line to type | 🔴 |
+| UX-517 | [a closed Outcome quotes a bucket that is now empty](UX-0517-a-closed-outcome-quotes-a-bucket-that-is-now-empty.md) | docs | Low | the round that reads `UX-501` and takes its 223 as current | 🔴 |
 
 ## UX-497..UX-506: the seventy-fourth round — the workflow, measured (2026-09-01)
 

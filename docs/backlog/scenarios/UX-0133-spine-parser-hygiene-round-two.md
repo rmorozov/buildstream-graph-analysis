@@ -1,6 +1,6 @@
 # UX-133: spine/parser hygiene, round two
 
-**Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-123 (done — these are its edges), UX-106
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-123 (done — these are its edges), UX-106 | **Topic:** capture
 
 ## Motivation
 

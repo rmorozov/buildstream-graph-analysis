@@ -1,6 +1,6 @@
 # UX-152: UX-143's group-stop fix has the bug it was filed against
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-143 (item 1 reopened), UX-130 (the SEIZE semantics)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-143 (item 1 reopened), UX-130 (the SEIZE semantics) | **Topic:** capture
 
 ## Motivation
 

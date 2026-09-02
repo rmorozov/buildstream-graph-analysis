@@ -1,6 +1,6 @@
 # UX-159: the quiet minutes and growing gigabytes of a big-project snapshot
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-126 (snapshot), UX-113 (the census), UX-155 (scratch, whose store this sizes)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-126 (snapshot), UX-113 (the census), UX-155 (scratch, whose store this sizes) | **Topic:** capture
 
 ## Motivation
 

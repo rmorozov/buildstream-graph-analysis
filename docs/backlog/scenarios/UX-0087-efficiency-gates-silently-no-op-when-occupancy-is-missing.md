@@ -1,6 +1,6 @@
 # UX-87: the efficiency gates silently stop gating when occupancy_ratio is absent
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-39, UX-40 (both done)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-39, UX-40 (both done) | **Topic:** analysis
 
 ## Motivation
 

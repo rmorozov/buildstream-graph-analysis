@@ -1,6 +1,6 @@
 # UX-211: a link that shows what I was looking at
 
-**Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-199 (the anchors), UX-205 (the filters), UX-208 (the top-N presets)
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-199 (the anchors), UX-205 (the filters), UX-208 (the top-N presets) | **Topic:** viewer
 
 ## Motivation
 

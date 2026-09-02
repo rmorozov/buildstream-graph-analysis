@@ -1,6 +1,6 @@
 # UX-36: the report's `CPU Utilisation` block prints task-occupancy seconds under a CPU label - the code says so, the report does not
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** P1-33 (which established the honest internal meaning), UX-13 (the same report-honesty fix, already applied to the floors block)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** P1-33 (which established the honest internal meaning), UX-13 (the same report-honesty fix, already applied to the floors block) | **Topic:** analysis
 
 ## Motivation
 

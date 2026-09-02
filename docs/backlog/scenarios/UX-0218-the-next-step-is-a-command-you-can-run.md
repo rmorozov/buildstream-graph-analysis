@@ -1,6 +1,6 @@
 # UX-218: the next step is a command you can run
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-207 (the diagnosis it branches on), UX-126 (the loop as one command run twice)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-207 (the diagnosis it branches on), UX-126 (the loop as one command run twice) | **Topic:** viewer
 
 ## Motivation
 

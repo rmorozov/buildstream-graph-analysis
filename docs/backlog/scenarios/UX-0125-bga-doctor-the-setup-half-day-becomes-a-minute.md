@@ -1,6 +1,6 @@
 # UX-125: `bga doctor` — the setup half-day becomes a minute
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-105 (the census, reused as one check)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-105 (the census, reused as one check) | **Topic:** cli
 
 Post-MVP polish, direction: simplify the user scenarios. The MVP bar
 (round 12) is "following only the documentation"; this task attacks the

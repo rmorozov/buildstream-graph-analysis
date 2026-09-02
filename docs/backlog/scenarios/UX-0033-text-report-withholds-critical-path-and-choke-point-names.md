@@ -1,6 +1,6 @@
 # UX-33: the text report hides the critical path when it is longer than 5 elements, and never names choke points at all
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** —
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — | **Topic:** analysis
 
 ## Motivation
 

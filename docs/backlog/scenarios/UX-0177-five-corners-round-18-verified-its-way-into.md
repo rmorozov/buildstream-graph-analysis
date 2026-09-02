@@ -1,6 +1,6 @@
 # UX-177: five corners round 18 verified its way into
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-164, UX-166, UX-168 (the landings these trail)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-164, UX-166, UX-168 (the landings these trail) | **Topic:** store
 
 ## Motivation
 

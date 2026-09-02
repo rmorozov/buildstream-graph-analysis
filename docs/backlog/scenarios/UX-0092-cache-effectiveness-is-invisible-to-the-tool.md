@@ -1,6 +1,6 @@
 # UX-92: cache effectiveness — hits, misses, churn, trends — is invisible to the tool
 
-**Priority:** Medium | **Status:** 🟡 In Progress — stages 1 and 2 done; stage 3's trend shipped as `UX-103`, its gate is deferred on evidence (re-checked at n=6 on 2026-08-25: still zero spread, still one commit) | **Depends on:** UX-55 (done), UX-81 (history to trend over)
+**Priority:** Medium | **Status:** 🟡 In Progress — stages 1 and 2 done; stage 3's trend shipped as `UX-103`, its gate is deferred on evidence (re-checked at n=7 on 2026-09-02: still zero spread, and the schedule is structurally incapable of a second commit - `UX-514`) | **Depends on:** UX-55 (done), UX-81 (history to trend over)
 
 ## Motivation
 
@@ -279,3 +279,73 @@ of their own duration on shared runners.
 Still deferred, and now with a date attached: the first capture of a
 different commit will not come from this schedule at all — see
 `UX-96`'s own re-check for where the cold cron stands.
+
+## Re-checked 2026-09-02 (round 76): still deferred, and now for a reason with a line number
+
+Two more captures since round 39 — `33302016575` (the weekly
+incremental cron) and `33490577715` (the **first firing of the monthly
+cold cron**, 2026-09-01, which `UX-96` was waiting for). Seven
+incrementals fetched and re-run rather than assumed:
+
+```text
+run                             hit  built  cached     xfer  /artifact   churn
+06-32064333551/run              72%     25      65        -          -       -
+05-32113933158/run              72%     25      65        -          -   0+25r
+04-32122941503/run              72%     25      65        -          -   0+25r
+03-32177690506/run              72%     25      65        -          -   0+25r
+02-32223468993/run              72%     25      65        -          -   0+25r
+01-32615919649/run              72%     25      65        -          -   0+25r
+00-33302016575/run              72%     25      65        -          -   0+25r
+```
+
+**Zero spread across seven runs**, unchanged from n=5 and n=6. Wall
+clock at n=7: 3614.22, 3434.43, 3405.78, 2712.39, 3261.22, 3639.19,
+3523.51 seconds — **34.2 % of the minimum**, 9.4 % coefficient of
+variation, against 34.2 % / 10.2 % at n=6.
+
+### The blocker stopped being a question of time
+
+Every re-check since n=3 has closed with a version of "a gate needs
+history across *different* commits and there is none", and each one
+implied the next capture might supply it. It cannot, and the reason is
+two lines of the workflow:
+
+```text
+.github/workflows/real-project-capture.yml:74    default: 953683fb96b8...
+.github/workflows/real-project-capture.yml:163   FDSDK_REF: ${{ github.event.inputs.fdsdk_ref || '953683fb96b8...' }}
+```
+
+`schedule:` cannot supply workflow inputs — the same fact `UX-96`'s
+cold cron works around by reading `github.event.schedule` — so every
+scheduled capture takes the hardcoded default. All nine published refs
+are `953683fb`. **No scheduled run will ever produce a second commit**,
+and waiting another month produces the eighth reading of the same
+number.
+
+That converts the deferral from "not yet" into a decision someone has
+to make: advancing the pin gives the gate the variation it needs and
+costs the band its meaning, since two captures of different project
+states are not repeated readings of one thing. Filed as `UX-514` rather
+than re-checked again.
+
+### The cold pair is not a series either
+
+The two cold captures are now fetchable, and they are the first
+cold-vs-cold comparison this repository has been able to run. It
+refuses, correctly:
+
+```text
+run                             hit  built  cached     xfer  /artifact   churn
+01-32133112003/run               0%     18       0        -          -       -
+00-33490577715/run               0%    126       0        -          -     n/a
+
+NOT COMPARABLE: 2 different projects or target sets in this series
+  01-32133112003/run           . bootstrap/build/gcc-stage1.bst
+  00-33490577715/run           . components/libxml2.bst
+```
+
+18 elements in 2052.89s against 126 in 13560.62s — a 6.6x difference
+that is a different target, not a cache reading. The `target` field
+`UX-96` added to `capture-context.txt` is what makes this legible: the
+older ref predates it and records nothing, and the ref name has never
+carried the target. Cold history for gating purposes is n=1, not n=2.

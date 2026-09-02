@@ -1,6 +1,6 @@
 # UX-97: the fix round broke five of its own claims in flight
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-84, UX-86, UX-88 (all done — this is their drift)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-84, UX-86, UX-88 (all done — this is their drift) | **Topic:** guards
 
 ## Motivation
 

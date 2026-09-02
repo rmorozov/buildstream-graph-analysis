@@ -1,6 +1,6 @@
 # UX-48: all idle capacity is booked to `IDLE_NO_TASKS`, so the bucket that means "raise `--builders`" is always 0.00s
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-36 (which correctly relabelled these buckets as occupancy - this is about which bucket the time lands in, not what the unit is)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-36 (which correctly relabelled these buckets as occupancy - this is about which bucket the time lands in, not what the unit is) | **Topic:** analysis
 
 ## Motivation
 

@@ -1,6 +1,6 @@
 # UX-225: the working set travels in the link
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-211 (the fragment channel), UX-216 (the element object)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-211 (the fragment channel), UX-216 (the element object) | **Topic:** viewer
 
 ## Motivation
 

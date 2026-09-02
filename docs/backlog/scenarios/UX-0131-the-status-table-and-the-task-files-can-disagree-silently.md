@@ -1,6 +1,6 @@
 # UX-131: the status table and the task files can disagree, silently
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — (third recurrence of the class)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — (third recurrence of the class) | **Topic:** guards
 
 ## Motivation
 

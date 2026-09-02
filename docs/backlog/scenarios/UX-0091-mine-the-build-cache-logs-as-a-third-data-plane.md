@@ -1,6 +1,6 @@
 # UX-91: BuildStream's own cached logs are an uningested third data plane
 
-**Priority:** Medium | **Status:** 🟢 Done — (1) and (2) shipped; (3) declined on a measurement | **Depends on:** — (new capability direction)
+**Priority:** Medium | **Status:** 🟢 Done — (1) and (2) shipped; (3) declined on a measurement | **Depends on:** — (new capability direction) | **Topic:** capture
 
 ## Motivation
 

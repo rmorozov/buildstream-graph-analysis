@@ -1,6 +1,6 @@
 # UX-149: doctor checks the parts, and nothing checks the chain
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-125/UX-142 (doctor), UX-146/UX-147/UX-148 (the diagnostics it composes)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-125/UX-142 (doctor), UX-146/UX-147/UX-148 (the diagnostics it composes) | **Topic:** capture
 
 ## Motivation
 

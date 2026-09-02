@@ -1,6 +1,6 @@
 # UX-163: the interrupt contract covers the build and not the minutes around it
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-157 (the contract this widens), UX-159 (which made the surrounding phases visible)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-157 (the contract this widens), UX-159 (which made the surrounding phases visible) | **Topic:** capture
 
 ## Motivation
 

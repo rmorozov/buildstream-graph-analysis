@@ -1,6 +1,6 @@
 # UX-65: on the only real build we have, both headline rankings point away from the answer — the tool leads with 3.47s and never names the element that is 43% of the build
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** — (blocked calling the tool an MVP)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** — (blocked calling the tool an MVP) | **Topic:** analysis
 
 ## Motivation
 

@@ -1,6 +1,6 @@
 # UX-104: the memory half of capacity advice is still an exercise for the reader
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-63 (measured per-task memory), UX-21 (the memory guard's threshold), UX-83 (the Plane 2 plumbing into analyze)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-63 (measured per-task memory), UX-21 (the memory guard's threshold), UX-83 (the Plane 2 plumbing into analyze) | **Topic:** analysis
 
 Direction 3, item 5 — see
 [`design/directions.md`](../../design/directions.md).

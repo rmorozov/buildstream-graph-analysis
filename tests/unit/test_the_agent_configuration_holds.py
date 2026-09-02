@@ -445,6 +445,54 @@ class TestTheSubagentsAreWellFormed:
             f"implementer.md does not tell the track to leave {missing} "
             f"alone - the files every track collides on (UX-501, UX-503)")
 
+    def test_the_implementer_is_told_to_check_the_base_it_got(self):
+        """`UX-510`: all three of round 75's worktrees started nine
+        commits behind the orchestrator, and two tracks were told to
+        read files that did not exist in their copy. The brief cannot
+        choose the base, so the track checks it - with the one command
+        that answers, named in the body because an agent reads its body.
+        """
+        body = (AGENTS / "implementer.md").read_text(encoding="utf-8")
+        assert "git log --oneline -1" in body, (
+            "implementer.md does not tell the track how to read the "
+            "commit its copy starts from (UX-510)")
+        assert "the commit your brief names" in body, (
+            "implementer.md says how to read the base but not what to "
+            "compare it against, so a track behind the orchestrator has "
+            "nothing to notice")
+
+    def test_the_implementer_is_told_to_report_rather_than_work_around(self):
+        """The half that decides what a track does with the answer. A
+        track that recreates a file the brief cited costs a round; one
+        that says "my base is X, the brief says Y" costs a message."""
+        body = (AGENTS / "implementer.md").read_text(encoding="utf-8")
+        assert "stop looking for the files the brief cites" in body, (
+            "implementer.md tells the track to check its base and not "
+            "what to do when it disagrees (UX-510)")
+
+    def test_the_merge_cost_is_a_measured_number_in_both_places(self):
+        """`UX-510`'s third bullet. "Parallel is cheaper" is the claim a
+        round makes when it splits, and the only measurement on file is
+        round 75's - three picks, one conflicted, over nine commits. It
+        lives in the brief the track reads and in the skill the
+        orchestrator reads, because they are different readers."""
+        for path in (AGENTS / "implementer.md",
+                     REPO / ".claude/skills/decompose/SKILL.md"):
+            body = " ".join(path.read_text(encoding="utf-8").split())
+            assert "three cherry-picks" in body, (
+                f"{path.name} does not say what merging a track cost the "
+                f"one round that measured it (UX-510)")
+            # Beside the count, not merely in the same file: three picks
+            # is a number only against the distance it was over, and
+            # both files say "nine commits" a paragraph earlier for a
+            # different reason - a clause reading the whole body, or a
+            # wide window, passes on that and checks nothing. Measured
+            # offsets on the two bodies: -801/+144 and -299/-16/+139.
+            at = body.index("three cherry-picks")
+            assert "nine commits" in body[max(0, at - 40):at + 200], (
+                f"{path.name} gives the pick count without the distance "
+                f"it was over, which is the half that makes it a number")
+
     def test_the_verifier_says_it_does_not_fix(self):
         body = (AGENTS / "verifier.md").read_text(encoding="utf-8")
         assert "Fix nothing" in body or "fix nothing" in body

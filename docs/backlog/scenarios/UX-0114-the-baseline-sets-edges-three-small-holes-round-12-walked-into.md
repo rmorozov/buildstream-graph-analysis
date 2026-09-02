@@ -1,6 +1,6 @@
 # UX-114: the baseline set's edges — three small holes round 12 walked into
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-96, UX-108 (both done — this is their edges)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-96, UX-108 (both done — this is their edges) | **Topic:** store
 
 ## Motivation
 

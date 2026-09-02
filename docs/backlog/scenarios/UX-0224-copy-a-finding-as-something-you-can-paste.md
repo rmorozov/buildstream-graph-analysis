@@ -1,6 +1,6 @@
 # UX-224: copy a finding as something you can paste
 
-**Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-217 (the evidence it carries), UX-115 (the CI comment renderer)
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-217 (the evidence it carries), UX-115 (the CI comment renderer) | **Topic:** viewer
 
 ## Motivation
 

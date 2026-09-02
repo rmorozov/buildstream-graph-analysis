@@ -1,6 +1,6 @@
 # UX-19: resource/scheduler/retry-wait attribution's known, already-documented gap shapes - independently reconfirmed
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `P1-31`, `P1-39`, `P1-30` (all already done - this task is about their own documented residual limitations)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `P1-31`, `P1-39`, `P1-30` (all already done - this task is about their own documented residual limitations) | **Topic:** analysis
 
 ## Motivation
 

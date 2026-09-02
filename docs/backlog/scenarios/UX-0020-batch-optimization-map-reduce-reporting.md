@@ -1,6 +1,6 @@
 # UX-20: single-critical-path framing forces many small iterations on large graphs
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** none
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** none | **Topic:** analysis
 
 ## Motivation
 

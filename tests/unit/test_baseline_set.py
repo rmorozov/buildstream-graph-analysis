@@ -12,7 +12,8 @@ import subprocess
 import pytest
 
 from tools.bst_baseline_set import (
-    _find_run_directory, check_homogeneity, fetch_run_directory, list_capture_refs,
+    _find_run_directory, check_homogeneity, exclude_refs, fetch_run_directory,
+    format_set_text, list_capture_refs, refusal_remedy,
 )
 
 
@@ -254,3 +255,130 @@ def test_a_spine_capture_does_not_silently_join_a_hook_only_band():
     result = check_homogeneity(members)
 
     assert [m["field"] for m in result["mismatches"]] == ["trace_spine"]
+
+
+# --- the refusal's remedy, and the option that carries it out -----------
+#
+# UX-96 round 76: the refusal named one remedy - narrow the glob - and
+# the ref name carries only four of the seven homogeneous fields. On the
+# seven published incrementals, all one tuple, the set refused on
+# `trace_spine` and no glob could separate it.
+
+def _ref(run_id, mode='incremental'):
+    return {'ref': f'captures/fdsdk/953683fb-{mode}-b4j4-{run_id}',
+            'run_id': run_id}
+
+
+class TestTheRefusalNamesARemedyThatCanBeCarriedOut:
+    """Input classes: the differing field is one the ref name carries ·
+    one it cannot · both at once."""
+
+    def test_a_ref_name_field_still_says_narrow_the_glob(self):
+        members = [_member('a', capture_mode='incremental'),
+                   _member('b', capture_mode='cold')]
+        remedy = refusal_remedy(check_homogeneity(members)['mismatches'], members)
+        assert remedy.startswith('Narrow --glob')
+        assert '--exclude' not in remedy
+
+    def test_a_field_the_ref_name_cannot_carry_says_exclude(self):
+        members = [_member('a', trace_spine='false'),
+                   _member('b', trace_spine='true')]
+        remedy = refusal_remedy(check_homogeneity(members)['mismatches'], members)
+        assert '--exclude' in remedy
+        assert 'not in the ref name' in remedy
+
+    def test_the_remedy_names_the_minority_capture(self):
+        """A caller who is told to exclude something needs to know what.
+        The minority is a suggestion - the majority is not automatically
+        the right population - but naming nothing is not advice."""
+        members = [
+            _member('captures/fdsdk/953683fb-incremental-b4j4-1', trace_spine='false'),
+            _member('captures/fdsdk/953683fb-incremental-b4j4-2', trace_spine='false'),
+            _member('captures/fdsdk/953683fb-incremental-b4j4-3', trace_spine='true'),
+        ]
+        remedy = refusal_remedy(check_homogeneity(members)['mismatches'], members)
+        assert remedy.endswith('Here that is 3.')
+
+    def test_a_ref_name_field_and_an_invisible_one_together_say_exclude(self):
+        """The glob cannot fix the invisible half, so the remedy that
+        can is the one printed."""
+        members = [_member('a', capture_mode='cold', trace_spine='true'),
+                   _member('b', capture_mode='incremental', trace_spine='false')]
+        remedy = refusal_remedy(check_homogeneity(members)['mismatches'], members)
+        assert '--exclude' in remedy
+
+    def test_two_invisible_fields_read_as_a_plural(self):
+        members = [_member('a', trace_spine='true', trace_opens='false'),
+                   _member('b', trace_spine='false', trace_opens='true')]
+        remedy = refusal_remedy(check_homogeneity(members)['mismatches'], members)
+        assert 'are not in the ref name' in remedy
+
+
+class TestExcludeNarrowsTheSetBeforeTheNewestNAreTaken:
+    """Input classes: no patterns · a run id · a ref glob · a pattern
+    matching nothing. Order matters - excluding after `-n` would leave
+    the set short instead of reaching further back."""
+
+    def test_no_patterns_is_the_whole_list(self):
+        refs = [_ref('3'), _ref('2'), _ref('1')]
+        assert exclude_refs(refs, []) == refs
+
+    def test_a_bare_run_id_drops_that_capture(self):
+        refs = [_ref('3'), _ref('2'), _ref('1')]
+        assert [r['run_id'] for r in exclude_refs(refs, ['2'])] == ['3', '1']
+
+    def test_a_glob_over_the_ref_name_drops_a_class(self):
+        refs = [_ref('3', 'cold'), _ref('2'), _ref('1', 'cold')]
+        kept = exclude_refs(refs, ['*-cold-*'])
+        assert [r['run_id'] for r in kept] == ['2']
+
+    def test_a_pattern_matching_nothing_changes_nothing(self):
+        refs = [_ref('3'), _ref('2')]
+        assert exclude_refs(refs, ['99999']) == refs
+
+    def test_patterns_accumulate(self):
+        refs = [_ref('3'), _ref('2'), _ref('1')]
+        assert [r['run_id'] for r in exclude_refs(refs, ['2', '1'])] == ['3']
+
+    def test_the_exclusion_happens_before_the_newest_n_are_taken(self, monkeypatch):
+        """Excluding after `-n` would hand back a set one short instead
+        of reaching one further into the history. Driven through `main`,
+        because the order of those two lines is the claim."""
+        import tools.bst_baseline_set as module
+
+        monkeypatch.setattr(module, 'list_capture_refs',
+                            lambda *a, **k: [_ref('3'), _ref('2'), _ref('1')])
+        fetched = []
+
+        def _fetch(remote, ref, dest, cwd=None):
+            fetched.append(ref['run_id'])
+            return {'ref': ref, 'run_dir': dest, 'context': _context()}
+
+        monkeypatch.setattr(module, 'fetch_run_directory', _fetch)
+        code = module.main(['--glob', 'captures/fdsdk/*', '-n', '2',
+                            '--exclude', '3', '-f', 'json'])
+        assert code == 0
+        assert fetched == ['2', '1']
+
+
+class TestASetNarrowedByHandSaysSo:
+    """A band over a population the caller edited is a different claim
+    from a band over everything published, so the listing says which."""
+
+    @staticmethod
+    def _one():
+        name = 'captures/fdsdk/953683fb-incremental-b4j4-1'
+        member = _member(name)
+        member['ref'] = {'ref': name, 'commit': '953683fb',
+                         'mode': 'incremental', 'builders': '4', 'max_jobs': '4'}
+        return [member]
+
+    def test_the_listing_states_how_many_were_dropped(self):
+        members = self._one()
+        text = format_set_text(members, check_homogeneity(members), excluded=2)
+        assert '--exclude dropped 2 capture(s)' in text
+
+    def test_an_unnarrowed_set_says_nothing(self):
+        members = self._one()
+        text = format_set_text(members, check_homogeneity(members))
+        assert '--exclude' not in text

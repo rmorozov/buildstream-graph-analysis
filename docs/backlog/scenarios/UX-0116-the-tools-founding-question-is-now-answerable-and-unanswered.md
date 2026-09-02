@@ -1,6 +1,6 @@
 # UX-116: the tool's founding question is now answerable, and unanswered
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-83 (Plane 2 into capacity advice), UX-104 (memory envelope), UX-14 (the contention caveat), UX-31 (pinning detection)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-83 (Plane 2 into capacity advice), UX-104 (memory envelope), UX-14 (the contention caveat), UX-31 (pinning detection) | **Topic:** analysis
 
 ## Motivation
 

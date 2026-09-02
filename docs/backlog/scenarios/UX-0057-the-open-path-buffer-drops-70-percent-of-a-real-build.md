@@ -1,6 +1,6 @@
 # UX-57: the hook's fixed path buffer drops 70% of a real build's opens, which silently excludes every heavy element from declared-vs-used analysis
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** `UX-46` (which introduced the buffer and the `dropped` counter that made this answerable)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** `UX-46` (which introduced the buffer and the `dropped` counter that made this answerable) | **Topic:** capture
 
 ## Motivation
 

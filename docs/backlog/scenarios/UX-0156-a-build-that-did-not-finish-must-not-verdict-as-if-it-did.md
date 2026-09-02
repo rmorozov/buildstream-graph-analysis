@@ -1,6 +1,6 @@
 # UX-156: a build that did not finish must not verdict as if it did
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-126 (snapshot's auto-compare), UX-78 (the refusal grammar this extends)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-126 (snapshot's auto-compare), UX-78 (the refusal grammar this extends) | **Topic:** analysis
 
 ## Motivation
 

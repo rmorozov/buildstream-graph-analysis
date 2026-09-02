@@ -1,6 +1,6 @@
 # UX-197: six seams round 21 verified into
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-183, UX-185, UX-188 (the landings these trail), UX-190 (whose guard the environment note concerns)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-183, UX-185, UX-188 (the landings these trail), UX-190 (whose guard the environment note concerns) | **Topic:** guards
 
 ## Motivation
 

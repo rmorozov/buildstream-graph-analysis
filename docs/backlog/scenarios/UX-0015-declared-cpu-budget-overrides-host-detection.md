@@ -1,6 +1,6 @@
 # UX-15: a declared CPU budget must govern `bga`'s capacity checks over raw host detection
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-12`
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-12` | **Topic:** analysis
 
 ## Motivation
 

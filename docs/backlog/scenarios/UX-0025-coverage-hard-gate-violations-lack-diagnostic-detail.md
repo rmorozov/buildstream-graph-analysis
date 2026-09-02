@@ -1,6 +1,6 @@
 # UX-25: `critical_path_coverage`/`dominator_coverage` hard-gate failures report a bare ratio, no diagnostic detail
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — (independent)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — (independent) | **Topic:** analysis
 
 ## Motivation
 

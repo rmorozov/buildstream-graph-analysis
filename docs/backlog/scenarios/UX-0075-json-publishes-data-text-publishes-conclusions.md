@@ -1,6 +1,6 @@
 # UX-75: the JSON report publishes every number and none of the conclusions; the text report publishes the conclusions and only some of the numbers
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-71`–`UX-74` (all done — they settled what the conclusions are, which is why this was sequenced last)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-71`–`UX-74` (all done — they settled what the conclusions are, which is why this was sequenced last) | **Topic:** contracts
 
 ## Motivation
 

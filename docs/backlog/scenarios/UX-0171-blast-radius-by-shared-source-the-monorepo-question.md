@@ -1,6 +1,6 @@
 # UX-171: blast radius by shared source — the monorepo question
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** Direction 6 (the argument), UX-168 (`read_element_yaml`, the reader this reuses)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** Direction 6 (the argument), UX-168 (`read_element_yaml`, the reader this reuses) | **Topic:** analysis
 
 ## Motivation
 

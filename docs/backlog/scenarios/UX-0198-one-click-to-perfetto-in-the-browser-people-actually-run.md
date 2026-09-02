@@ -1,6 +1,6 @@
 # UX-198: one click to Perfetto, in the browser people actually run
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-194 (the handoff this repairs)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-194 (the handoff this repairs) | **Topic:** viewer
 
 ## Motivation
 

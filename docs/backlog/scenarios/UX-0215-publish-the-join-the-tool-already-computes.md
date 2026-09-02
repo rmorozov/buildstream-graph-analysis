@@ -1,6 +1,6 @@
 # UX-215: publish the join the tool already computes
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-201 (the schema vocabulary), UX-190 (outputs that say what shape they are), UX-051 (`bga correlate`)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-201 (the schema vocabulary), UX-190 (outputs that say what shape they are), UX-051 (`bga correlate`) | **Topic:** contracts
 
 ## Motivation
 

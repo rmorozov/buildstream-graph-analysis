@@ -1,6 +1,6 @@
 # UX-196: the views that make the numbers self-evident
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-193 (the shell these views live in), UX-170 (the band), UX-171 (the blast table), UX-103 (cache-trend)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-193 (the shell these views live in), UX-170 (the band), UX-171 (the blast table), UX-103 (cache-trend) | **Topic:** viewer
 
 ## Motivation
 

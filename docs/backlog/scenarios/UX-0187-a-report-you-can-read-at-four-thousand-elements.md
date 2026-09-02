@@ -1,6 +1,6 @@
 # UX-187: a report you can read at four thousand elements
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-33 (the always-print rule this revisits), UX-168 (the synthetic scale fixture this renders)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-33 (the always-print rule this revisits), UX-168 (the synthetic scale fixture this renders) | **Topic:** analysis
 
 ## Motivation
 

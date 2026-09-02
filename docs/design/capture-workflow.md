@@ -183,11 +183,14 @@ The dispatch's choice is written into `capture-context.txt` as
 `trace_spine=`, and `bga baseline` refuses a set that mixes the two.
 
 A cold capture needs a target whose **entire closure** fits the job
-budget, and the default target's does not: freedesktop-sdk roots
-everything in a full compiler bootstrap. Choosing one is an empirical
-question the first cold dispatch answers, and the job fails fast if it
-starts with anything cached — a cold capture with a warm cache is not a
-cold capture.
+budget, and whether the default's does was an open empirical question
+— freedesktop-sdk roots everything in a full compiler bootstrap, so the
+first cold dispatch chose the narrower `bootstrap/build/gcc-stage1.bst`
+(18 elements, 2052.89s). The monthly cron settled it on 2026-09-01:
+run `33490577715` built the default `components/libxml2.bst` from cold,
+**126 elements in 13560.62s**, `traced_build_exit=0`. It fits. The job
+still fails fast if it starts with anything cached — a cold capture
+with a warm cache is not a cold capture.
 
 The weekly schedule exists because trend data cannot accumulate if a
 human has to click (`UX-81`), and because the tool's own documented CI
@@ -253,6 +256,17 @@ captures are not comparable, and band-compares:
 ```bash
 bga baseline --glob 'captures/fdsdk/953683fb-incremental-b4j4-*' -n 3 \
     --candidate candidate/run --band-k 3.0
+```
+
+The refusal names the remedy that applies. The ref name carries
+`<commit>-<mode>-b<builders>j<max_jobs>` and nothing else, so a set that
+differs on `target`, `trace_spine` or `trace_opens` cannot be separated
+by any `--glob` — those are dropped by name instead, and the listing
+says how many:
+
+```bash
+bga baseline --glob 'captures/fdsdk/953683fb-incremental-b4j4-*' -n 3 \
+    --exclude 32223468993 --candidate candidate/run
 ```
 
 <details>

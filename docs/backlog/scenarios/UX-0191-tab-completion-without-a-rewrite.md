@@ -1,6 +1,6 @@
 # UX-191: tab completion without a rewrite
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-158 (the help surface completion complements), UX-126 (the alias grammar worth completing)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-158 (the help surface completion complements), UX-126 (the alias grammar worth completing) | **Topic:** cli
 
 ## Motivation
 

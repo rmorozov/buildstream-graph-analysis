@@ -1,6 +1,6 @@
 # UX-221: which elements caused the regression
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-214 (one verdict vocabulary), UX-203 (the compare payload the page already loads), UX-215
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-214 (one verdict vocabulary), UX-203 (the compare payload the page already loads), UX-215 | **Topic:** analysis
 
 ## Motivation
 

@@ -1,6 +1,6 @@
 # UX-45: the Plane 2 hook is two `clock_gettime` calls away from real per-process CPU time, which would retire three standing "this is not CPU" caveats
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-11 (the hook), UX-23 (element tagging), UX-36 (which established the caveats this would let us retire), UX-27 (`occupancy_ratio`, the metric that most wants a CPU denominator)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-11 (the hook), UX-23 (element tagging), UX-36 (which established the caveats this would let us retire), UX-27 (`occupancy_ratio`, the metric that most wants a CPU denominator) | **Topic:** capture
 
 ## Motivation
 

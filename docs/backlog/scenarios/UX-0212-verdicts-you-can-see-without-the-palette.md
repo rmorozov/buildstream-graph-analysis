@@ -1,6 +1,6 @@
 # UX-212: verdicts you can see without the palette
 
-**Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-203 (the trend dots it re-encodes)
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-203 (the trend dots it re-encodes) | **Topic:** viewer
 
 ## Motivation
 

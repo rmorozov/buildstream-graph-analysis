@@ -1,6 +1,6 @@
 # UX-209: sections named as questions, and a rail, not a contents page
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-199 (the navigation it regroups), UX-201 (the schema vocabulary it extends), UX-207 (the ordering it assumes)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-199 (the navigation it regroups), UX-201 (the schema vocabulary it extends), UX-207 (the ordering it assumes) | **Topic:** viewer
 
 ## Motivation
 

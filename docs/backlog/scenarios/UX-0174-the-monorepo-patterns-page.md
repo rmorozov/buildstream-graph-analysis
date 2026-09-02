@@ -1,6 +1,6 @@
 # UX-174: the monorepo patterns page
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-171 (the numbers the page reads), Direction 6 (the argument it condenses)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-171 (the numbers the page reads), Direction 6 (the argument it condenses) | **Topic:** docs
 
 ## Motivation
 

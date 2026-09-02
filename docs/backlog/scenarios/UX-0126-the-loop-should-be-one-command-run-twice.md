@@ -1,6 +1,6 @@
 # UX-126: the loop should be one command, run twice
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-95 (instance identity), UX-78 (refusal semantics), UX-115 (the renderer it feeds)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-95 (instance identity), UX-78 (refusal semantics), UX-115 (the renderer it feeds) | **Topic:** store
 
 Post-MVP polish, direction: simplify the user scenarios. This is the
 local scenario's remaining friction, measured from the guide's own

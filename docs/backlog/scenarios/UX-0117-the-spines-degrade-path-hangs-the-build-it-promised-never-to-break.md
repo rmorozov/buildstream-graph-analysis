@@ -1,6 +1,6 @@
 # UX-117: the spine's degrade path hangs the build it promised never to break
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-106 (done — this is its S1)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-106 (done — this is its S1) | **Topic:** capture
 
 ## Motivation
 

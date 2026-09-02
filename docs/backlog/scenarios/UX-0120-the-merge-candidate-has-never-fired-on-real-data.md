@@ -1,6 +1,6 @@
 # UX-120: the merge candidate has never fired on real data
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-100 (reopened by this filing)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-100 (reopened by this filing) | **Topic:** guards
 
 ## Motivation
 

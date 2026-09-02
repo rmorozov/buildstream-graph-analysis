@@ -1,6 +1,6 @@
 # UX-44: "slack" is the placeholder `duration × 0.5`, so the improvement ranking is inverted and `best_case_speedup` is a constant
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-34 (which filtered structural elements out of this ranking - the filtering is right, what is being ranked is not)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-34 (which filtered structural elements out of this ranking - the filtering is right, what is being ranked is not) | **Topic:** analysis
 
 ## Motivation
 

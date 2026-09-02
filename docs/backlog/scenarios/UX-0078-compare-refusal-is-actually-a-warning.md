@@ -1,6 +1,6 @@
 # UX-78: the compare "refusal" the docs promise is actually a warning
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** —
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** — | **Topic:** cli
 
 ## Motivation
 

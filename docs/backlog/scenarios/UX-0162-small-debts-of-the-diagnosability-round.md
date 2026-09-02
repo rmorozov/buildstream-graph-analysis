@@ -1,6 +1,6 @@
 # UX-162: small debts of the diagnosability round
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-151, UX-152, UX-153, UX-149, UX-155 (the fixes these debts trail)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-151, UX-152, UX-153, UX-149, UX-155 (the fixes these debts trail) | **Topic:** capture
 
 ## Motivation
 

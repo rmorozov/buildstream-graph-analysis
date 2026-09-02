@@ -1,6 +1,6 @@
 # UX-115: the CI comment exists in a design doc and nowhere else
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-79 (marginal gate + element diff), UX-96 (baseline helper), UX-75 (findings as data)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-79 (marginal gate + element diff), UX-96 (baseline helper), UX-75 (findings as data) | **Topic:** cli
 
 ## Motivation
 

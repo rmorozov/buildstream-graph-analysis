@@ -1,6 +1,6 @@
 # UX-223: the jump box becomes a command palette
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-199 (the jump box), UX-216 (the actions it offers), UX-218
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-199 (the jump box), UX-216 (the actions it offers), UX-218 | **Topic:** viewer
 
 ## Motivation
 

@@ -1,6 +1,6 @@
 # UX-128: three more unguarded CONT sites reopen the hang, one branch over
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-117 (done — this is its perimeter, not its regression)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-117 (done — this is its perimeter, not its regression) | **Topic:** capture
 
 ## Motivation
 

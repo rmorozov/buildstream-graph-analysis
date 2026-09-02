@@ -1,6 +1,6 @@
 # UX-67: the workflow alternates between `bga <cmd>` and `python3 -m tools.<module>` at nearly every step
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** —
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — | **Topic:** cli
 
 ## Motivation
 

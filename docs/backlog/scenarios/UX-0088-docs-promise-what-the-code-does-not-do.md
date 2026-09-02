@@ -1,6 +1,6 @@
 # UX-88: a documentation-drift sweep — the docs promise things the code does not do
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-78 (the one behavioral item, filed separately)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-78 (the one behavioral item, filed separately) | **Topic:** docs
 
 ## Motivation
 

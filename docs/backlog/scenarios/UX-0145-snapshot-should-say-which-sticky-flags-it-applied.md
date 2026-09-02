@@ -1,6 +1,6 @@
 # UX-145: snapshot should say which sticky flags it applied
 
-**Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-126 (done — these are its surprise edges)
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-126 (done — these are its surprise edges) | **Topic:** cli
 
 ## Motivation
 

@@ -1,6 +1,6 @@
 # UX-203: the views nobody can reach
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-196 (the views), UX-193 (the command), UX-150 (the wheel-guard precedent)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-196 (the views), UX-193 (the command), UX-150 (the wheel-guard precedent) | **Topic:** viewer
 
 ## Motivation
 

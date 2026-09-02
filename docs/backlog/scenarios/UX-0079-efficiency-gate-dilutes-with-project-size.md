@@ -1,6 +1,6 @@
 # UX-79: the efficiency gate is a whole-build average, so a bad diff dilutes with project size
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-39, UX-74 (both done)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-39, UX-74 (both done) | **Topic:** analysis
 
 ## Motivation
 

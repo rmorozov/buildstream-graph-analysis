@@ -1,6 +1,6 @@
 # UX-02: No composite "how efficient is this build, is it good enough" signal
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** none (pairs naturally with `UX-01`, but is independently useful on a single run)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** none (pairs naturally with `UX-01`, but is independently useful on a single run) | **Topic:** analysis
 
 ## Motivation
 

@@ -1,6 +1,6 @@
 # UX-153: UX-142 fixed the headline and left its principle half-applied
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-142 (the fix this completes), UX-125 (doctor's probe principle)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-142 (the fix this completes), UX-125 (doctor's probe principle) | **Topic:** cli
 
 ## Motivation
 

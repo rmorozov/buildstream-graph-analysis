@@ -1,6 +1,6 @@
 # UX-82: the tool measures every fact of the macro fix and never states the macro fix
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-46, UX-74 (both done)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-46, UX-74 (both done) | **Topic:** analysis
 
 ## Motivation
 

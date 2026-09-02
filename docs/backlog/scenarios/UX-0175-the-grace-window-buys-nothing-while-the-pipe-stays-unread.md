@@ -1,6 +1,6 @@
 # UX-175: the grace window buys nothing while the pipe stays unread
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-163 (the lifecycle this completes), UX-157 (the salvage it protects)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-163 (the lifecycle this completes), UX-157 (the salvage it protects) | **Topic:** capture
 
 ## Motivation
 

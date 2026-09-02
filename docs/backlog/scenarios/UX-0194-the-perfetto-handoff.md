@@ -1,6 +1,6 @@
 # UX-194: the Perfetto handoff
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-193 (the page that hosts the button), UX-188 (`bga timeline`, the input)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-193 (the page that hosts the button), UX-188 (`bga timeline`, the input) | **Topic:** viewer
 
 ## Motivation
 

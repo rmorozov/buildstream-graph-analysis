@@ -1,6 +1,6 @@
 # UX-140: when SEIZE is unavailable, the spine must exec, not wrap
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-130 (done — this is its fallback path)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-130 (done — this is its fallback path) | **Topic:** capture
 
 ## Motivation
 

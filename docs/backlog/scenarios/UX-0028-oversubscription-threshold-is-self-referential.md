@@ -1,6 +1,6 @@
 # UX-28: the oversubscription check's bar is BuildStream's own defaults, so how sensitive it is depends on the host size rather than on the host
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-12, UX-15, UX-16 (all done - this is a threshold-semantics fix to the check they built)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-12, UX-15, UX-16 (all done - this is a threshold-semantics fix to the check they built) | **Topic:** analysis
 
 ## Motivation
 

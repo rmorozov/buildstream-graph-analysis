@@ -1,6 +1,6 @@
 # UX-150: the shape real users install in has zero capture coverage
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-77 (the packaging job this extends)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-77 (the packaging job this extends) | **Topic:** guards
 
 ## Motivation
 

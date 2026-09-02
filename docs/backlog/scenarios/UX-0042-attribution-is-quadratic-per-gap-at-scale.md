@@ -1,6 +1,6 @@
 # UX-42: attribution re-derives resource saturation from scratch per wait gap, so a 1200-element build takes 68s to analyze
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** — (P1-16/P1-21 did earlier performance work on different functions)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** — (P1-16/P1-21 did earlier performance work on different functions) | **Topic:** analysis
 
 ## Motivation
 

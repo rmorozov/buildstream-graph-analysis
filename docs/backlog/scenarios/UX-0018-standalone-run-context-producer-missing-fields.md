@@ -1,6 +1,6 @@
 # UX-18: `tools/bst_run_context.py` (the standalone producer) doesn't capture `native_max_jobs`/`cpu_budget`/`host_cpu_count`
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-12`, `UX-15`
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-12`, `UX-15` | **Topic:** capture
 
 ## Motivation
 

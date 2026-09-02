@@ -1,6 +1,6 @@
 # UX-112: the spine's price is quoted for a configuration the workflow never runs
 
-**Priority:** High | **Status:** 🟢 Done — and the interaction it was filed for is not there | **Depends on:** UX-108 (the per-mode measurement)
+**Priority:** High | **Status:** 🟢 Done — and the interaction it was filed for is not there | **Depends on:** UX-108 (the per-mode measurement) | **Topic:** capture
 
 ## Motivation
 

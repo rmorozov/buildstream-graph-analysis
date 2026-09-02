@@ -1,6 +1,6 @@
 # UX-98: markdown correctness is a prose rule, not a lint
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** —
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — | **Topic:** guards
 
 ## Motivation
 

@@ -1,6 +1,6 @@
 # UX-96: the baseline set exists, but assembling it is a scavenger hunt
 
-**Priority:** Medium | **Status:** 🟡 In Progress — the helper ships and is verified against the real refs; the second acceptance clause is a schedule whose first cold firing is 2026-09-01 (re-checked 2026-08-25 against the Actions ledger) | **Depends on:** UX-81 (done)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-81 (done) | **Topic:** store
 
 ## Motivation
 
@@ -148,8 +148,17 @@ capture builds a whole closure from source, and the question it answers
 The concern `UX-86` recorded, that the default target's closure might
 not fit a cold job's budget, is settled by measurement rather than by
 assumption: the cold capture published at
-`captures/fdsdk/953683fb-cold-b4j4-32133112003` ran the defaults to
+`captures/fdsdk/953683fb-cold-b4j4-32133112003` ran to
 `traced_build_exit=0`.
+
+> **Corrected 2026-09-02 (round 76, §3.6).** That capture did not run
+> the defaults. `bga cache-trend` reads its target set as
+> `bootstrap/build/gcc-stage1.bst` — 18 elements, 2052.89s — against the
+> workflow's default `components/libxml2.bst`, and its
+> `capture-context.txt` predates the `target` field so nothing said so.
+> The claim is true of a different capture: `33490577715`, the monthly
+> cron's first firing, built the default from cold — **126 elements in
+> 13560.62s**, `traced_build_exit=0`.
 
 ### Not yet discharged
 
@@ -233,3 +242,84 @@ Nothing to do and nothing to fix: item 1 shipped and is verified, item 2
 is a schedule that exists and is correct, and the clause is a
 measurement that time has not yet taken. Left 🟡 rather than closed,
 because a clause that has not been checked is not a clause that passed.
+
+## Outcome (round 76, 2026-09-02)
+
+Both clauses run against the live refs. The first was **red**: the
+population had drifted under a helper nobody had re-run since round 11.
+
+### The gap: a remedy that cannot be carried out
+
+```console
+$ bga baseline --glob '...-incremental-b4j4-*' -n 3
+  NOT COMPARABLE: trace_spine differs across the set (false, true)
+Narrow --glob to one <commit>-<mode>-b<builders>j<max_jobs> tuple.
+$ echo $?
+6
+```
+
+The refusal is right — `32223468993` is a spine capture, and `UX-108`
+says one must not join a hook-only band. The remedy is not: all seven
+published incrementals **are** one tuple, and the ref name carries four
+of the seven homogeneous fields.
+
+### The close
+
+`--exclude` (run id or ref glob, repeatable, applied before the newest
+N are taken), and a refusal naming whichever remedy applies:
+
+```console
+$ bga baseline --glob '...-incremental-b4j4-*' -n 3
+trace_spine is not in the ref name, so no --glob separates this set.
+Drop the odd capture(s) with --exclude <run-id or ref glob>.
+Here that is 32223468993.
+
+$ bga baseline --glob '...-incremental-b4j4-*' -n 3 \
+      --exclude 32223468993 --candidate <an older incremental>/run
+--exclude dropped 1 capture(s) before the newest 3 were taken.
+3 capture(s), newest first: 33302016575, 32615919649, 32177690506
+  DRIFT: 3 different bga_ref values across this baseline set ...
+Verdict: NO SIGNIFICANT CHANGE  (total duration -117.73s, -3.3%, 3523.51s -> 3405.78s)
+  Judged against a noise band from 3 baseline run(s): 3009.02s .. 4038.00s
+  - median 3523.51s +/- 3x171.50s (scaled MAD)
+$ echo $?
+0
+```
+
+The acceptance's first clause, on the real refs, drift warning included.
+
+### The second clause
+
+Three scheduled runs of `real-project-capture.yml` have fired —
+`32615919649`, `33302016575` (weekly incremental) and **`33490577715`,
+2026-09-01, a Tuesday, so only the monthly `0 4 1 * *` cron matches**.
+It published `captures/fdsdk/953683fb-cold-b4j4-33490577715`:
+`capture_mode=cold`, `target=components/libxml2.bst`,
+`traced_build_exit=0`, 126 elements, 13560.62s, dispatched by nobody.
+
+Round 39 read "two cycles" as two *cold* cycles and dated the clause to
+2026-10-01. That contradicts the clause's own "at least one", which is
+what makes the count a waiting period rather than a tally. Closed on the
+clause as written, with the stricter date on record.
+
+### Mutations
+
+| # | mutation | result |
+|---|---|---|
+| M1 | `trace_spine`/`trace_opens` added to `NAMED_BY_THE_REF` | 4 failed |
+| M2 | `invisible = []` — the remedy is always the glob sentence | 4 failed |
+| M3 | `exclude_refs` returns `refs` unchanged | 4 failed |
+| M4 | the `fnmatch(run_id, …)` arm removed | 3 failed |
+| M5 | the `--exclude dropped N` line not inserted | 1 failed |
+| M6 | `_minority_refs` result discarded | 1 failed |
+| M7 | exclusion moved after `refs[:args.count]` | 1 failed |
+
+M7 mattered: that clause first sliced `exclude_refs`'s result itself,
+so it would have passed whatever `main` did. Now driven through `main`.
+
+### Deviation from the Required Fix
+
+None on the two clauses. `--exclude` is beyond what the task file asked
+for and is what the first clause needed on today's population;
+`docs/design/capture-workflow.md` gains it (§3.10) and has its falsified
+cold-budget sentence corrected from the same measurement. Tests 22 → 30.

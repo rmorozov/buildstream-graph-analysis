@@ -1,6 +1,6 @@
 # UX-206: focused graphs, not a DAG viewer
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-202 (the overview these hang off), UX-199 (the anchors they link to), Direction 7 second iteration
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-202 (the overview these hang off), UX-199 (the anchors they link to), Direction 7 second iteration | **Topic:** viewer
 
 ## Motivation
 

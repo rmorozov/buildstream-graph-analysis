@@ -1,6 +1,6 @@
 # UX-189: a clone should not ship the capture archive
 
-**Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-77 (the capture-branch convention this documents around)
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-77 (the capture-branch convention this documents around) | **Topic:** docs
 
 ## Motivation
 

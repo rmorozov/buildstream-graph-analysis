@@ -1,6 +1,6 @@
 # UX-69: Plane 2 ranks binaries by invocation count, so the thing actually burning the CPU is invisible
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** `UX-45` (CPU time), `UX-64` (real per-element attribution)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** `UX-45` (CPU time), `UX-64` (real per-element attribution) | **Topic:** capture
 
 ## Motivation
 

@@ -1,6 +1,6 @@
 # UX-108: the spine proves itself on the builds that need it, and the ones that don't
 
-**Priority:** Medium | **Status:** 🟢 Done — the budget decided: `--trace-spine` stays opt-in | **Depends on:** UX-106, UX-107
+**Priority:** Medium | **Status:** 🟢 Done — the budget decided: `--trace-spine` stays opt-in | **Depends on:** UX-106, UX-107 | **Topic:** capture
 
 Direction 4, validation — see
 [`design/directions.md`](../../design/directions.md).

@@ -26,16 +26,14 @@ FIRST_BUDGETED_ID = 497
 
 #: Over the cap when the budget was set (round 74), at the count they had.
 #: An entry whose file now fits the cap is stale and must be removed.
-GRANDFATHERED = {
-    "tools/dev_perfetto_queries.py": 29,
-    "tools/dev_process_bands.py": 29,
-    ".claude/hooks/no_bulk_add.py": 33,
-    "tools/dev_refresh_analysis.py": 35,
-    "tools/dev_js_deps.py": 38,
-    "tools/dev_plane_capability.py": 55,
-    "tools/dev_tier_drift.py": 77,
-    "tools/dev_trace_coverage.py": 85,
-}
+#:
+#: `UX-502` emptied it: all eight were rewritten to a docstring of what
+#: the tool does, how it is invoked, and one sentence per non-obvious
+#: decision with the task id that holds the argument. Nothing was lost -
+#: every distinctive figure in the eight was already in the backlog, and
+#: that was checked before a line was cut. The dict stays so the next
+#: file over the cap has somewhere to be listed while it shrinks.
+GRANDFATHERED = {}
 
 
 def _budgeted_modules():
@@ -62,15 +60,22 @@ class TestModuleDocstrings:
             f"{DOCSTRING_CAP}. The why is one sentence; the history "
             f"lives in the task file and git log.")
 
-    @pytest.mark.parametrize("rel,recorded", sorted(GRANDFATHERED.items()))
-    def test_a_grandfathered_docstring_only_shrinks(self, rel, recorded):
-        path = REPO / rel
-        assert path.exists(), f"{rel} is grandfathered but gone - drop the entry"
-        n = _docstring_lines(path)
-        assert n <= recorded, f"{rel}: {n} lines, recorded {recorded} - it may only shrink"
-        assert n > DOCSTRING_CAP, (
-            f"{rel}: {n} lines now fits the cap of {DOCSTRING_CAP} - "
-            f"remove it from GRANDFATHERED so the table cannot rot")
+    def test_a_grandfathered_docstring_only_shrinks(self):
+        """`UX-502` emptied the table, so this loops rather than
+        parametrising: an empty parametrize emits a skip whose reason
+        `UX-449`'s census has never seen, and declaring "got empty
+        parameter set" as a known reason would be a fudge over a guard
+        with nothing left to guard."""
+        for rel, recorded in sorted(GRANDFATHERED.items()):
+            path = REPO / rel
+            assert path.exists(), (
+                f"{rel} is grandfathered but gone - drop the entry")
+            n = _docstring_lines(path)
+            assert n <= recorded, (
+                f"{rel}: {n} lines, recorded {recorded} - it may only shrink")
+            assert n > DOCSTRING_CAP, (
+                f"{rel}: {n} lines now fits the cap of {DOCSTRING_CAP} - "
+                f"remove it from GRANDFATHERED so the table cannot rot")
 
     def test_every_grandfathered_file_is_budgeted(self):
         budgeted = {_rel(p) for p in _budgeted_modules()}

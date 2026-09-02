@@ -1,80 +1,27 @@
-"""UX-418: a slow file is small until CI times out.
+"""`UX-418`: a slow file is small until CI times out.
 
-`UX-403`'s guard census mutated one guard per family and watched it go
-red. Ten of eleven did. The one that did not was
-`test_the_tiers_are_a_partition.py`, under the mutation *a large file
-demoted to no tier*:
+    make test-tiers                        # the floors, here
+    python3 tools/dev_tier_drift.py REPORT --against --carry PATH --base REF
+    python3 tools/dev_tier_drift.py REPORT --record PATH   # CI's own numbers
+    python3 tools/dev_tier_drift.py --adopt CANDIDATE      # UX-503
 
-```text
-tier partition               GREEN    14 passed in 0.58s
-```
+`test_the_tiers_are_a_partition.py` cannot catch a large file in no
+tier, because `small` is the default. This reads the junit report
+`make test` already writes - not `--durations=0`, which hides every
+entry under 5 ms - against the floors in `tests/tiers.py`. **Those
+floors describe a developer machine, so CI compares against CI**:
+`--against` reads `tests/ci_reference.json`, one CI run's own totals.
+A fixed slack, a derived scale and a rank comparison each failed on the
+first foreign clock they met - `UX-418`'s Outcome has the three runs.
 
-Deleting a **fifty-second** entry from `LARGE` changed nothing. Every
-clause in that file reads the two lists against each other or against
-the filesystem - *listed files exist*, *no file is in two tiers* - and
-`small` is the **default**, so a file that belongs in a tier and is
-absent from both is "small on purpose" and nothing says otherwise.
-
-`UX-403` fixed the half that is legible without measuring: a file that
-boots a real Chrome says so in its imports, and four were doing it from
-the small tier. The half that is left needs a measurement, and
-`test_the_tiers_are_a_partition.py` is right to refuse a wall-clock
-assertion inside a test - that goes flaky and then gets muted.
-
-So the measurement is taken where one already happens. `make test`
-already runs the whole suite in CI; this reads that run's own report
-and compares each file against the floors in `tests/tiers.py`. It costs
-a parse, not a second suite.
-
-**Why the junit report and not `--durations=0`.** The filing names
-`--durations=0`, and its output cannot be summed: pytest hides every
-entry under 0.005s behind a count -
-
-```text
-(30 durations < 0.005s hidden.  Use -vv to show these durations.)
-```
-
-- so a file of two hundred fast tests reads as nothing at all. The
-junit report carries every test's total (setup+call+teardown) with no
-threshold, which is the same measurement without the hole.
-
-**The floors stay the authority.** Nothing here decides what a tier is;
-it reads `LARGE_FLOOR_S` and `MEDIUM_FLOOR_S` and reports the files
-whose measurement disagrees with where they are listed.
-
-**It reads a report from this machine, and only this machine.** That is
-a deviation from `UX-418`'s filing, which asks for a CI step, and it was
-paid for with three CI runs:
-
-1. The step called three medium files large at 20.4-21.5s; here they are
-   11.3-13.5s. A fixed slack was the first answer - wrong by a factor on
-   the first foreign clock it met.
-2. A scale derived from the report was the second. Also wrong: on CI the
-   **median** listed file runs at 1.05x its recorded number while
-   `test_report_stays_readable_at_scale` runs at 1.61x and
-   `test_marginal_efficiency_gate` at 1.73x, neither having grown. The
-   difference is per file, so no single scale exists.
-3. Comparing **rank** rather than seconds was the third, on the argument
-   that the order survives a change of machine. It does not:
-   `test_report_stays_readable_at_scale` is recorded below all 22 large
-   files here, and on CI it read 25.3s - above 11 of them.
-
-Three measurements, one conclusion: **per-file timings from another
-runner cannot be compared to this repository's tier record in any form**
-- not absolute, not scaled, not ranked - because the runners differ per
-file rather than by a factor.
-
-`UX-420` is the other half, and it follows from the same conclusion:
-what CI *can* compare a run against is **CI's own previous numbers**.
-One machine against itself over time is the only comparison the three
-failures leave standing, so this tool also records and reads a CI-side
-reference (`--record`, `--against`). See `AGAINST` below for the four
-things that rule has to get right, which is the part `UX-420`'s filing
-says to design first.
-
-Run it after a full run, which `make test-tiers` does in one command:
-
-    python tools/dev_tier_drift.py <junit.xml>
+Five rules keep a verdict off one sample, each bought with a red round:
+the **median ratio** is divided out over files at or above
+`SHIFT_FLOOR_S` (`UX-423`); a file must clear **both** a ratio and a
+number of seconds, since a ratio alone reported 31 files on an
+untouched suite (`UX-420`); a file is confirmed on **two consecutive
+runs** whose diff could account for it (`UX-442`, `UX-476`); a file the
+reference does not carry is **recorded**, not failed on (`UX-503`); and
+a `stale` runner verdict needs two runs too (`UX-508`).
 """
 import argparse
 import collections
@@ -95,63 +42,28 @@ from tests import tiers                                        # noqa: E402
 #: Ordered, so "measured above where it is listed" is a comparison.
 RANK = {"small": 0, "medium": 1, "large": 2}
 
-#: `UX-420`: where CI's own numbers live, and what reads them.
-#:
-#: `UX-418` established that CI's seconds cannot be compared to the
-#: floors in `tests/tiers.py`, which describe a developer machine. What
-#: CI *can* be compared against is CI, so this file records one full
-#: run's per-file totals and later runs are read against it. One
-#: machine against itself over time.
-#:
-#: **The reference is the part that rots**, and `UX-420`'s filing says
-#: to design that first. Four ways it can, and what answers each:
-#:
-#: 1. **A new file arrives with no reference.** It would be checked by
-#:    nothing - the same silence `UX-418` was filed on, one level along.
-#:    So an unreferenced file *over the medium floor* is reported. A new
-#:    fast file needs no entry, because nothing about it is at risk.
-#: 2. **The runner image changes** and every file shifts together. Per
-#:    file that reads as drift everywhere. So the run's **median** ratio
-#:    to the reference is taken out first: a uniform shift is not drift,
-#:    and if the median leaves `IMAGE_BAND` the message says the
-#:    reference is stale rather than naming files.
-#: 3. **A file legitimately gets slower** and the reference is never
-#:    refreshed, so it alarms forever. `--record` writes a new reference
-#:    from a green run; the alarm names that as the answer.
-#: 4. **The reference is never taken at all.** Then the step would be a
-#:    guard that cannot fail. It says so, prints what to commit, and
-#:    `test_the_step_says_so_rather_than_passing_over_no_reference`
-#:    holds it.
+#: `UX-420`: one CI run's per-file totals - CI against CI over time.
+#: Its filing asks for the four ways it rots to be designed first, and
+#: each has an answer here: an unreferenced file over the medium floor
+#: is recorded (`UX-503`); a runner that moved is divided out by the
+#: median and, past `IMAGE_BAND`, reported as stale (`UX-508`); a file
+#: that is meant to cost more is answered by `--record`; and a missing
+#: reference says so rather than passing, which
+#: `test_the_step_says_so_rather_than_passing_over_no_reference` holds.
 CI_REFERENCE = REPO / "tests" / "ci_reference.json"
 
-#: `UX-447`: **where a refreshed reference comes from.**
-#:
-#: `--record` on a contributor's own machine writes *that machine's*
-#: seconds, and `UX-418` established those cannot be compared to CI's in
-#: any form. So every message below that says "re-record" also says from
-#: what: this is the artifact `ci.yml` uploads on every `test (3.11)`
-#: run, holding the same document `--record` writes, taken on the runner
-#: whose clock the reference is in.
-#:
-#: Named here rather than spelled into four strings, and
-#: `tests/unit/test_the_refresh_route_is_written_down.py` holds it equal
-#: to the workflow's own `name:` - so a rename cannot leave the advice
-#: pointing at nothing, which is what the item was filed on.
+#: `UX-447`: where a refreshed reference comes from. A local `--record`
+#: writes *this* machine's seconds, which `UX-418` ruled out, so every
+#: "re-record" message names this artifact instead. One constant rather
+#: than four strings, held equal to the workflow's own `name:` by
+#: `test_the_refresh_route_is_written_down.py`.
 CI_CANDIDATE_ARTIFACT = "ci-reference-candidate"
 
-#: And the job whose whole log **is** that document - `UX-457`.
-#:
-#: The artifact above is the right thing to download and the wrong
-#: thing to reach: GitHub serves artifact bytes from
-#: `productionresultssa19.blob.core.windows.net` and run-log zips from
-#: `results-receiver.actions.githubusercontent.com`, and round 71 was
-#: refused by both (403, CONNECT rejected) from the environment the
-#: round was worked in - while the API that reads one job's log was
-#: not. So `ci.yml` has a job that downloads the artifact and `cat`s
-#: it, and a reader who cannot download can read that job instead.
-#:
-#: Both names, in every message, because which one is reachable depends
-#: on who is reading.
+#: And the job whose whole log **is** that document - `UX-457`. The
+#: artifact is the right thing to download and the wrong thing to
+#: reach: round 71 was refused (403) by both hosts that serve it while
+#: the job-log API was not. Both names in every message, because which
+#: is reachable depends on who is reading.
 CI_CANDIDATE_JOB = "tier-reference"
 
 #: How much slower than its own CI reference a file may run before it is
@@ -159,82 +71,26 @@ CI_CANDIDATE_JOB = "tier-reference"
 CI_DRIFT_FACTOR = 1.5
 
 #: And how many seconds slower, which it must **also** be. A ratio alone
-#: was the first rule and the first armed run falsified it: 31 files
-#: reported on a suite that had not changed, 24 of them under a second.
-#:
-#: Run 33306283177, `test (3.11)`, against the reference recorded one
-#: run earlier - the same suite plus a JSON file and a document:
-#:
-#: ```text
-#:                                    measured  recorded  ratio  added
-#:   test_one_page_behind_the_button       5.9       4.3   1.66  +2.4s
-#:   test_one_click_from_investigation     4.4       3.1   1.74  +1.9s
-#:   test_plane_two_says_what_it_ran       3.8       2.7   1.77  +1.6s
-#:   test_doctor                           1.9       1.2   1.90  +0.9s
-#:   test_a_clone_without_the_archive      1.3       0.5   3.29  +0.9s
-#:   ... 26 more, all adding under a second
-#:   test_the_skills_point_at_the_guides   0.3       0.0  18.27  +0.3s
-#: ```
-#:
-#: **A ratio is meaningless at small magnitudes** - the x18 row is a
-#: file that went from 20ms to 300ms, and the x3.29 row added nine
-#: hundredths of a second more than the x1.66 row that leads the list.
-#: `UX-422` names the same defect in a different guard on the same day:
-#: a ratio judges a quantity the noise floor dominates.
-#:
-#: So a file is reported only when it is slower by **both** measures.
-#: The seconds floor is what makes the ratio mean something, and it is
-#: sized from the run above: the largest *addition* on an unchanged
-#: suite was 2.4s, so 5.0 is that with the margin a single sample
-#: deserves. It is still one sample - `spread` on each `--record` is
-#: what accumulates the rest.
-#:
-#: This is the same rule the unreferenced-file branch below already
-#: applied ("only where there is something at stake"), which the drift
-#: branch should have had from the start and did not.
+#: was the first rule and the first armed run falsified it: 31 files on
+#: an unchanged suite, 24 under a second, the worst row a file that went
+#: from 20 ms to 300 ms (run 33306283177; `UX-420`'s Outcome has the
+#: table, and `UX-422` is the same defect in another guard the same
+#: day). **A ratio is meaningless at small magnitudes.** Sized from that
+#: run: the largest addition on an unchanged suite was 2.4s, so 5.0 is
+#: that with the margin one sample deserves - `spread` on each
+#: `--record` accumulates the rest.
 CI_DRIFT_SECONDS = 5.0
 
 #: `UX-442`: how many **consecutive** runs a file must exceed both gates
-#: above in before it is reported. One is what shipped, and one is what
-#: this constant exists to stop.
-#:
-#: `test (3.11)` went red on `279900f`, whose diff is one backlog file
-#: and one index row. The suite passed; the drift step did not. The same
-#: file across four CI runs of that branch, read from the documents
-#: those runs recorded:
-#:
-#: ```text
-#:   run   test_the_page_has_a_reader.py   run's shift   run's spread max
-#:    1                   7.13                   -               -
-#:    2                   7.13                   -               -
-#:    3                   7.53                 1.227           5.87
-#:    4                  13.85                 1.180           4.872
-#: ```
-#:
-#: Three samples at 7.1-7.5 and one at 13.9, and **the outlier run was
-#: not a contended run**: its shift and spread are both lower than run
-#: 3's, which passed. `UX-423` measured the dispersion of the *shift*, so
-#: a globally slow runner is not read as drift. Nothing measured the
-#: dispersion of one file, and a file that boots a browser can swing six
-#: seconds once in four runs.
-#:
-#: **What two costs.** Real drift is reported one run later than it used
-#: to be, and a branch's first run reports nothing at all, because there
-#: is no previous run to agree with it. That is the price of not crying
-#: wolf, and it is the whole price - the gates themselves are unchanged
-#: (`UX-418` measured them; this adds a repetition rule rather than
-#: retuning either).
-#:
-#: **Why not a second, higher bound that trips on one sample.** It would
-#: need a number, and the only series anybody has is the four runs above.
-#: Sizing a constant from one excursion is the mistake `UX-420` paid
-#: three red CI rounds for. A hang is already caught by the small tier's
-#: `timeout 120` backstop; drift, by definition, repeats.
-#:
-#: An excursion is remembered between runs in the **carry** file
-#: (`--carry`), which CI restores and saves around the step. Without one
-#: the tool has no memory, says so, and decides on the single sample it
-#: has.
+#: in before it is reported. One shipped, and one file swung 7.1 to 13.9
+#: over four runs of a branch whose diff was a backlog row - on a run
+#: whose shift and spread were both *lower* than the run before it, so
+#: it was the file and not the runner. `UX-442`'s Outcome has the four
+#: readings. The price is that real drift reports one run later and a
+#: branch's first run reports nothing; a higher single-sample bound was
+#: rejected because sizing it needs a series nobody has (`UX-420` paid
+#: three red rounds for that mistake). Memory lives in the `--carry`
+#: file; without one the tool says so and decides on one sample.
 CI_DRIFT_RUNS = 2
 
 #: Outside this, the whole reference is stale rather than any one file
@@ -355,34 +211,15 @@ def drift(times):
     return sorted(found, key=lambda row: -row[1])
 
 
-#: `UX-455`: how a candidate is re-measured before it is reported.
-#:
-#: The floors in `tests/tiers.py` are seconds a file costs with nothing
-#: else on the CPU. The report this tool parses is a `-n auto` run. For
-#: most files those are the same number - measured over the 145 files
-#: whose `tiers.py` comment records their seconds, the median
-#: parallel/recorded ratio on an unchanged tree is **1.010** (q1 0.916,
-#: q3 1.099), so there is no factor to divide out and nothing to widen.
-#:
-#: For some files they are not. `test_the_agent_configuration_holds.py`
-#: measured **0.72s** alone (three runs, 0.72/0.73/0.72) and **1.31s**
-#: in the same parallel run - a ratio of 1.82, outside that q3 - and
-#: 1.0 is the medium floor, so the parse named a file nobody should
-#: move. Round 71 met that as one of three rows in a red
-#: `make test-tiers`, and a parse that reports a file nobody should
-#: move is a parse people learn to skim.
-#:
-#: So a candidate is re-measured **alone, in one process** before it is
-#: reported. That is the quantity the floors are in, and it is an upper
-#: bound on the file's cost inside a single-process suite - a file run
-#: alone pays all of its own imports. For a gate that only reports
-#: files as *too slow*, an upper bound is the conservative direction:
-#: a candidate the confirmation clears is under the floor in the
-#: stricter reading too.
-#:
-#: It costs a re-run of the named files only, which is normally none
-#: and was 21s on the run that found this. `--no-confirm` skips it, for
-#: reading what the parallel report alone said.
+#: `UX-455`: a candidate is re-measured **alone, in one process** before
+#: it is reported, because the floors are single-process seconds and the
+#: report is `-n auto`. For most files those agree (median ratio 1.010
+#: over 145 files); for some they do not, and one file at 0.72s alone
+#: read 1.31s in parallel against a 1.0 floor - a parse that names a
+#: file nobody should move is one people learn to skim. `UX-455`'s
+#: Outcome has both. An upper bound is the conservative direction for a
+#: gate that only reports files as too slow. Costs a re-run of the named
+#: files only; `--no-confirm` skips it.
 CONFIRM_TIMEOUT_S = 600
 
 

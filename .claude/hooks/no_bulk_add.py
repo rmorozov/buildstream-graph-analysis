@@ -1,36 +1,20 @@
 """Decide whether a Bash payload really runs a bulk `git add`.
 
-`UX-424`. The first version of this control matched the command's
-**text** with a regex, and a text scan cannot tell a command from a
-mention of one. It blocked its own commit three times in round 67,
-because a commit message quoting the rule is still a string containing
-the rule. Measured on the fourteen payloads in
-`tests/unit/test_the_agent_configuration_holds.py`, the regex was wrong
-on prose after a semicolon inside a heredoc, and on the pattern sitting
-inside a single-quoted argument - the shape that blocked the probe
-written to measure it.
+`UX-424`: a text scan cannot tell a command from a mention of one, and
+this control blocked its own commit three times in round 67. The fix is
+`UX-403`'s, for the same defect one file over - **tokenise, do not
+lengthen the regex.** Heredoc bodies are dropped, `shlex` splits the
+rest under shell quoting rules, and a match counts only where `git`
+stands in command position.
 
-The fix is the one `UX-403` used for the same defect one file over:
-**tokenise, do not lengthen the regex.** A longer pattern chases an
-unbounded class of confusions; a token stream simply does not have
-them. Heredoc bodies are dropped, then `shlex` splits the rest with
-shell quoting rules, and a match counts only where `git` stands in
-**command position** - first token, or straight after a separator.
-
-Two directions were considered and rejected:
-
-- Stripping quoted spans and re-running the regex. `git add "-A"` then
-  reads as `git add` with no operand and passes, which is a real bulk
-  add lost. Tokenising keeps it, because `shlex` removes the quotes and
-  leaves the word.
-- Accepting the false blocks and documenting them. Cheap, and it leaves
-  a control whose failure mode is "the agent stops writing about the
-  rule it is enforcing".
+Stripping quoted spans instead was rejected: `git add "-A"` then reads
+as `git add` with no operand and passes, which is a real bulk add lost.
 
 **When it cannot parse, it falls back to the raw-text regex.** An
-unbalanced quote is common in a real command line, and the conservative
-direction here is to block: a false block costs one retry with explicit
-paths, a missed one costs a tree somebody else unpicks.
+unbalanced quote is common on a real command line and the conservative
+direction is to block: a false block costs one retry with explicit
+paths, a missed one costs a tree somebody else unpicks. `UX-424`'s
+Outcome carries the fourteen payloads it was measured on.
 """
 import json
 import re

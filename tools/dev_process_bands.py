@@ -1,32 +1,20 @@
 """What the process did to itself, counted from the committed record.
 
-This repository measures its product obsessively and its process not at
-all. Round 66 alone produced numbers nobody collected: six filings
-resting on premises nobody had checked, five guards in one item that
-could not discriminate, three red CI rounds spent on three wrong
-designs for one check.
-
-The AI-native SDLC playbook's Maintenance stage watches a metric with a
-rolling baseline and acts when a control band is breached. Its own
-Plays preamble promises every play will cover "How you measure whether
-it worked" - and then no play does. This is the missing half, aimed at
-the one process whose record is complete enough to count: the 421 task
-files, whose Outcome sections have carried the same headings since
-`UX-336` printed the skeleton.
-
-**It reports; it does not verdict**, and the second reason is the one
-worth keeping. A band needs a baseline and one reading is not one -
-sizing a threshold on a single sample is what `UX-420` did with
-`CI_DRIFT_FACTOR`, and its first armed run reported thirty-one files on
-an unchanged suite. But the sharper problem is that half these rows are
-**ambiguous by direction**: "found a guard of its own that could not
-discriminate" rising means either more bad guards or better detection,
-and a band would fire on improvement. The falsify rate is the one row
-that reads the same way from both ends, and it is where a band should
-start.
-
     python tools/dev_process_bands.py
     python tools/dev_process_bands.py --window 40 --json
+
+This repository measures its product obsessively and its process not at
+all. `SIGNALS` counts phrases the Outcome sections already write by
+convention - a metric needing a new ritual stops being collected in
+three rounds.
+
+**It reports; it does not verdict.** A band needs a baseline and one
+reading is not one (`UX-420`, whose first armed run reported 31 files
+on an unchanged suite). The sharper reason is that half these rows are
+ambiguous by direction: a rising "found a guard that could not
+discriminate" means more bad guards *or* better detection, and a band
+would fire on improvement. The falsify rate reads the same from both
+ends and is where a band should start. `UX-497` has the argument.
 """
 import argparse
 import json

@@ -1,39 +1,26 @@
 #!/usr/bin/env python3
-"""UX-486: the rule a committed analysis document is written under.
+"""`UX-486`: the rule a committed analysis document is written under.
 
-Two fixtures in this tree hold an analysis the tool produced, and both
-are compared against a fresh run - `tests/fixtures/golden/
-mixed_task_kinds/expected_output.json` and
-`tests/fixtures/with_timeline/analyze.json`. Regenerating one is not
-`bga analyze > file`: parts of what `analyze` prints are properties of
-the **machine that ran it**, and committing those makes the fixture
-fail on the first release rather than on the first regression.
-
-The rule, in one place because it was in three:
-
-- **`run_instance`** (`UX-95`) names *which capture* this is - a
-  wall-clock stamp and the absolute path it was read from. Dropped.
-- **`producer`** (`UX-249`) names *which build of bga* ran it. Dropped;
-  it is still asserted, by
-  `tests/unit/test_an_artifact_says_what_wrote_it.py`.
-- **The fixture's own path**, which `UX-218`'s next-step commands name
-  because a command that did not name it would not be runnable.
-  Replaced with one fixed token. The commands are still compared; only
-  the directory they point at is neutralised.
-
-Everything else is the analysis and is compared exactly.
-
-`with_timeline/analyze.json` had no recipe and no guard, and drifted
-four findings behind the analyzer before anything noticed - `UX-486`.
-
-Usage
------
     python3 tools/dev_refresh_analysis.py --check
     python3 tools/dev_refresh_analysis.py --write tests/fixtures/with_timeline
 
+Two fixtures hold an analysis and are compared against a fresh run.
+Regenerating one is not `bga analyze > file`: parts of what `analyze`
+prints are properties of the **machine that ran it**, and committing
+those makes the fixture fail on the first release rather than on the
+first regression. Three are neutralised and everything else compared
+exactly:
+
+- **`run_instance`** (`UX-95`) - which capture: a stamp and an absolute
+  path. Dropped.
+- **`producer`** (`UX-249`) - which build of bga. Dropped; still
+  asserted by `test_an_artifact_says_what_wrote_it.py`.
+- **the fixture's own path**, which `UX-218`'s next-step commands must
+  name to be runnable. Replaced with one fixed token.
+
 `--check` is what the guard runs; `--write` is what a round runs after
-a deliberate behaviour change, and then reads `git diff` to confirm the
-change it intended is the only one.
+a deliberate change, then reads `git diff` to confirm the change it
+intended is the only one.
 """
 import argparse
 import json

@@ -26,10 +26,11 @@ import pytest
 # flags) without leaving room for a paragraph per flag.
 CAP = 45
 
-# The top level is a *list*: one line per command, and there are 22 of
+# The top level is a *list*: one line per command, and there are 23 of
 # them. Its length is the command count, not prose, so it gets its own
 # bound - the thing to guard here is that no entry grows to two lines.
-TOP_LEVEL_CAP = 50
+# Raised by one per command added: 50 -> 51 for `bundle` (`UX-520`).
+TOP_LEVEL_CAP = 51
 
 # UX-179: `blast` was outside this list, so neither the line cap nor the
 # terminator check ran over its help - a guard that does not cover the
@@ -39,7 +40,7 @@ SUBCOMMANDS = [
     "analyze", "graph", "floors", "replay", "sweep", "utilisation",
     "diagnostics", "correlate", "cache-trend", "compare", "blast",
     "extract", "capture", "snapshot", "cache-logs", "baseline", "doctor",
-    "whatif",
+    "whatif", "bundle",
 ]
 
 # UX-192: the `UX-67` aliases dispatch through `tools/` rather than

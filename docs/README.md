@@ -26,7 +26,9 @@ On a real project the two commands to know first are `bga doctor`
 cannot) and `bga snapshot` (`UX-126` — the whole local loop, run twice).
 Both are in [`guides/cli.md`](guides/cli.md#bga-snapshot--the-local-loop-ux-126).
 `bga view` (`UX-193`) opens the same report in a browser, and
-`bga view --export` writes it as one file you can attach. Three more
+`bga view --export` writes it as one file you can attach. `bga bundle`
+carries a whole capture to another machine in one file — `run/` is
+only half of it (`UX-520`). Three more
 answer questions the analysis alone does not: `bga whatif` prices a
 chosen set of fixes (`UX-230`), `bga analyze --explain` shows the
 evidence behind every claim (`UX-229`), and `bga snapshot --aggregate`
@@ -53,7 +55,7 @@ Every JSON document `bga` writes carries its schema id, and
 and the view-hints the browser report renders from (`UX-201`). Where a
 command emits two documents, the flag selects: `bga snapshot --list
 --schema` and `bga snapshot --aggregate --schema` print different
-contracts. Twenty-one ids, and what writes each:
+contracts. Twenty-two ids, and what writes each:
 
 | document | written by |
 |---|---|
@@ -70,6 +72,7 @@ contracts. Twenty-one ids, and what writes each:
 | `plane2/v3` | `bga capture`, at `plane2.json` beside a run — what Plane 2 measured about one build: run-level measurements, with the per-element reductions among them. Measured on the committed fixture, 21 of 24 top-level blocks are run-level and 3 are keyed by element uid, so a reader after the host's peak memory, the build's process count or whether the spine ran is in the right file (`UX-386`). The per-process record list `UX-297` retired is gone |
 | `host-samples/v1` | `bga capture`, at `host-samples.jsonl` beside a run — the host's memory and swap while the build ran, one object per line (`UX-378`) |
 | `capture-layout/v1` | the capture directory `.bga/` itself — every path it holds, what writes it, what reads it, and what an absence means. Specification 32.6 (`UX-381`) |
+| `bundle-manifest/v1` | `bga bundle --export`, inside `bundle.json` in the archive — each member's path, presence and contract version, plus the `bga` that packed it, so the receiving side refuses a bundle it cannot read in full rather than half-loading it (`UX-520`) |
 | `plane2/v2` | the same file as a capture before `UX-384` wrote it, with the element names of every redundancy finding embedded. Still read, never written |
 | `plane2/v1` | the same file as a capture before `UX-297` wrote it, with every per-process record embedded. Still read, never written |
 | `analyze/v3` | what `bga analyze` wrote before `UX-344` lifted the `signals` and `structural` namespaces. Still read, never written |
@@ -79,8 +82,9 @@ contracts. Twenty-one ids, and what writes each:
 | `correlate/v1` | the same, for the two-plane join. Still read, never written |
 | `host/v1` | the host manifest with `memory_mb` where `host/v2` has `memory_bytes`. Read and converted on the way in, so an old baseline still compares — never written |
 
-The last thirteen are written into a run directory rather than printed by
-a command, so no `--schema` invocation prints them, and eight of those
+The last fourteen are written into a run directory — or, for
+`bundle-manifest/v1`, into the bundle that carries one — rather than
+printed by a command, so no `--schema` invocation prints them, and eight of those
 are only ever *read* - they are the shapes an older store's artifacts
 are in (`plane2/v1` from `UX-297`, `plane2/v2` from `UX-384`, five from
 `UX-341`, and `analyze/v3` from `UX-344`). The other eight

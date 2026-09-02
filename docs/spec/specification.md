@@ -1525,6 +1525,7 @@ host/v2                                                       (the measuring mac
 sources/v1                                                    (the source inventory - UX-171)
 capture-layout/v1                                             (the capture directory - UX-381)
 host-samples/v1                                               (the host while it built - UX-378)
+bundle-manifest/v1                                            (a capture you can carry - UX-520)
 plane2/v3           plane2/v2     plane2/v1                   (the Plane 2 report - UX-384)
 analyze/v3          analyze/v2                                (read, never written - UX-344)
 compare/v1          blast/v1      correlate/v1                  (read, never written - UX-341)
@@ -1661,6 +1662,7 @@ key:
 | the Plane 2 report at `plane2.json` beside a run | `plane2/v3` | `bga.plane2` |
 | the capture directory `.bga/` itself - every path, what writes it, what reads it, and what an absence means (32.6) | `capture-layout/v1` | `bga.run_store` |
 | the host's memory and swap while the build ran, at `host-samples.jsonl` beside a run | `host-samples/v1` | `bga.run_store` names it (`OWNED`); `tools/bst_native_build_tracer.py` writes it |
+| the manifest inside a run bundle: each member's path, presence and contract version, and the `bga` that packed it, so the receiving side recognises and refuses a bundle it cannot read in full (`UX-520`) | `bundle-manifest/v1` | `bga.bundle` |
 | the Plane 2 report a capture before `UX-384` wrote - read, never written | `plane2/v2` | `bga.plane2.SUPERSEDED` |
 | the Plane 2 report a capture before `UX-297` wrote - read, never written | `plane2/v1` | `bga.plane2.SUPERSEDED` |
 | what `analyze`, `compare`, `blast` and `correlate` wrote before `UX-341` unified the units, and what `analyze` wrote before `UX-344` lifted its two namespaces - read, never written | `analyze/v3`, `analyze/v2`, `compare/v1`, `blast/v1`, `correlate/v1` | `bga.schemas.SUPERSEDED` |

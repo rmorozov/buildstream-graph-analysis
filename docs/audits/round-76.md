@@ -99,3 +99,48 @@ when it was written and is now held up by something outside the code**.
 `UX-512` (bytecode on disk), `UX-513` (the developer's uncommitted
 diff), `UX-515` (a file CI rewrites) and `UX-92`'s deferral (a schedule
 that cannot change) are the same failure at four distances.
+
+## The round, closed
+
+Seven rows closed — `UX-96`, `UX-507`, `UX-510`, `UX-511`, `UX-512`,
+`UX-513`, `UX-515` — one re-checked and left open (`UX-92`), and four
+filed (`UX-514`, `UX-515`, `UX-516`, `UX-517`; `UX-515` was filed and
+closed in the same round because it is red on `main`).
+
+```text
+make test    5867 passed, 27 skipped, 475.88s (0:07:55)
+make lint    clean
+```
+
+The one failure on the first full run was the cadence guard —
+26 rows closed since review 10 against a bound of 25 — which is the
+repository asking for a review rather than a defect. Review 11 is in
+`architecture-review.md`; it filed `UX-516` and `UX-517` and produced
+no code, per that document's rule.
+
+## `UX-500`, Regime A round 2
+
+| | round 75 | round 76 |
+|---|---|---|
+| items closed | 15 | 7 |
+| tracks in parallel | 3 | 1 |
+| commits | 20 | 10 |
+| commits per closed item | 1.33 | 1.43 |
+| track merges | 3 picks, 1 conflict | 1 pick, 0 conflicts |
+| defects the regime produced | 2 | 0 |
+| defects only CI could catch | 3 | 0 so far |
+
+The parallel track cost **two** commits for one item, not one: the pick,
+and then a commit the orchestrator had to add because `UX-507`'s
+acceptance named a guard that does not discriminate. That is not a track
+defect — the orchestrator would have found the same thing working
+serially — but it is where the 1.43 comes from, and a round with one
+track and one such follow-up is not evidence that parallel is dearer
+than serial. Round 3 decides.
+
+What is new and does not fit the table: **`main` was red at the start of
+this round from a commit no human wrote** (`UX-515`). The batch gate as
+`UX-500` frames it — one PR, one merge, one `make test` — assumes the
+merge base is green. It was not, and only running the suite here found
+it. Whatever round 3 concludes about the batch gate, it has to say what
+happens when CI's own commit is the thing that broke.

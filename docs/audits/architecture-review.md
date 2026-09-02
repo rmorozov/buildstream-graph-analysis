@@ -80,6 +80,65 @@ would have caught it; a bound at it would only just have.
 | 8 | 2026-08-30 | 432 | `UX-446`, `UX-447` |
 | 9 | 2026-09-01 | 458 | `UX-471`, `UX-472` |
 | 10 | 2026-09-01 | 484 | `UX-492`, `UX-493` |
+| 11 | 2026-09-02 | 510 | `UX-516`, `UX-517` |
+
+### Review 11 — 2026-09-02
+
+Twenty-six rows since review 10, which is what tripped the cadence —
+round 75's tail and all of round 76. Run against `architecture.md`, the
+three guides, and the eight published contracts.
+
+**1. Does the code still do what it says?** The window shipped one CLI
+change: `bga baseline --exclude` (`UX-96`). `architecture.md:56`
+describes the command as "refusing a set whose captures are not
+comparable", which is still what it does — the table carries one line
+per command, not per option, so it is not wrong. The chapters this
+window touched are `capture-workflow.md`'s cold-mode paragraph, which
+`UX-96` corrected from the same measurement that falsified it, and
+`real-project.md`'s Step 3, rewritten by `UX-511`.
+
+**2. Does every published contract have a home?** Eight schema ids
+against both inventories:
+
+```text
+analyze/v4   architecture=4 spec=4      store/v1            architecture=1 spec=2
+blast/v2     architecture=1 spec=2      store-aggregate/v1  architecture=1 spec=2
+compare/v2   architecture=1 spec=2      sweep/v1            architecture=1 spec=2
+correlate/v2 architecture=1 spec=2      whatif/v1           architecture=5 spec=2
+```
+
+None is zero, and no contract version moved this window.
+
+**3. Is any figure invalidated?** One, and it is this round's own doing.
+`UX-507` emptied the `unclassified` bucket, and `UX-501`'s Outcome
+states "**223 of the 489** closed rows predate the header" as a fact
+about the tree. Filed as `UX-517`. `git grep -n '223 ' -- docs README.md`
+returns one other hit and it is the task id `UX-223`.
+
+**4. What shipped since the last review that no document names?**
+`--exclude` reaches `docs/design/capture-workflow.md` and nothing else.
+That document's own header says it is *not* the usage guide and points
+a CI owner at `ci-comment.md` — which teaches a `bga baseline` block
+that exits 6 on this repository's published refs and offers no next
+line. Filed as `UX-516`.
+
+**5. Does each document's own "last updated" claim match reality?** No
+document carries one:
+
+```text
+architecture.md      claims: none   git: 2026-09-01
+ci-comment.md        claims: none   git: 2026-08-28
+real-project.md      claims: none   git: 2026-09-02
+capture-workflow.md  claims: none   git: 2026-09-02
+fixing-guide.md      claims: none   git: 2026-09-01
+README.md            claims: none   git: 2026-09-02
+```
+
+Nothing to contradict, which is the answer `UX-492` and `UX-511` chose
+deliberately: the blocks carry a capture's date rather than the file's.
+
+**Produced no code**, per this document's own rule. Both findings are
+filings.
 
 ### Review 3 — 2026-08-25
 

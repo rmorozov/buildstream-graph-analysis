@@ -66,7 +66,7 @@ import { decisionInvestigation, investigate, investigateButton, render,
  * because "we do not know which build wrote this" and "this build"
  * must not look alike.
  */
-export function stampHeader(doc, payload) {
+export function stampHeader(doc, payload, run) {
   const slot = doc.getElementById("run-producer");
   if (!slot) return;
   const stamp = payload?.producer;
@@ -75,7 +75,41 @@ export function stampHeader(doc, payload) {
   slot.textContent = version
     ? `measured by ${tool} ${version}`
     : "measured by an unrecorded build (written before bga stamped its version)";
+  // `UX-533`: and *which* analysis is on this page - the same question
+  // one step in, so it goes on the same line rather than in a banner.
+  const said = analysisSentence(run?.analysis);
+  if (said) {
+    slot.append(` \u2014 ${said}`);
+    slot.setAttribute("data-analysis-source", run.analysis.source);
+    slot.setAttribute("data-analysis-stale",
+                      run.analysis.stale ? "true" : "false");
+  }
   slot.hidden = false;
+}
+
+/**
+ * `UX-533`: the page says whose analysis it is showing.
+ *
+ * `bga view` served `published_analysis(run) or _analyze_now(run)` and
+ * the two rendered identically, so every payload key a later round
+ * added was missing from every existing run with nothing on the page to
+ * say so. The staleness test is `UX-249`'s contract set, computed in
+ * `tools/bga_view.py`; this only spells it.
+ */
+export function analysisSentence(note) {
+  if (!note?.source) return null;
+  if (note.source === "view") return `analysed here by bga ${note.this_build}`;
+  const by = note.stored_producer && note.stored_producer !== "unstamped"
+    ? `by bga ${note.stored_producer}` : "by an unrecorded build";
+  if (!note.stale) return `analysed at capture ${by}`;
+  const absent = note.sections_absent?.length ?? 0;
+  const moved = note.contracts_moved?.length ?? 0;
+  const why = moved
+    ? `${moved} of the contracts it records have moved since`
+    : "it records no contract set, so what it is missing cannot be checked";
+  return `analysed at capture ${by}; ${why}, and ${absent} of the `
+    + `${note.sections_declared} sections this build always publishes are `
+    + `absent \u2014 re-run with \`${note.reanalyse}\``;
 }
 
 /**
@@ -573,7 +607,7 @@ async function boot() {
     // this" (UX-249) is the first thing that decides whether the rest
     // is worth reading. Absent on a run written before the stamp
     // existed, and absent is shown as absent rather than guessed.
-    stampHeader(document, payload);
+    stampHeader(document, payload, run);
     document.title = `bga — ${run.name ?? "report"}`;
     // UX-204: the investigate buttons exist only when there is a
     // timeline to investigate - `UX-194`'s dead-button rule, applied to

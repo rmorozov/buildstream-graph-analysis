@@ -280,6 +280,66 @@ def _analyze_now(run: str) -> dict:
     return _capture(argv)
 
 
+#: `UX-533`: the two answers to "whose analysis is this page showing".
+ANALYSIS_FROM_CAPTURE = "capture"
+ANALYSIS_FROM_VIEW = "view"
+
+
+def _contract_heads(names) -> Dict[str, str]:
+    """`{"analyze": "analyze/v4"}` - the newest version of each contract."""
+    return {name.rsplit("/v", 1)[0]: name
+            for name in sorted(names or ()) if "/v" in name}
+
+
+def analysis_source(stored: Optional[dict], reanalysed: bool) -> dict:
+    """`UX-533`: which analysis the page has, and what it is missing.
+
+    `UX-249`'s contract set is the comparison, not a version number: a
+    build that moved nothing publishes the same set, and that is the
+    axis `producer.py` already records for exactly this reader.
+    `sections_absent` counts `ANALYZE_FULL_KEYS` - the keys this build
+    says *every* full report carries - so it never overstates by
+    counting a section the run has nothing to put in.
+    """
+    from bga import producer, schemas
+
+    theirs = producer.contracts_of(stored)
+    mine = _contract_heads(producer.stamp().get("contracts"))
+    moved: List[str] = []
+    if theirs is not None:
+        old = _contract_heads(theirs)
+        moved = sorted(
+            [f"{old[name]} \u2192 {mine[name]}"
+             for name in set(old) & set(mine) if old[name] != mine[name]]
+            + [f"{mine[name]} (new)" for name in set(mine) - set(old)])
+    declared = set(schemas.ANALYZE_FULL_KEYS)
+    return {
+        "source": ANALYSIS_FROM_VIEW if reanalysed else ANALYSIS_FROM_CAPTURE,
+        "stored_producer": producer.version_of(stored)
+        if stored is not None else None,
+        "this_build": producer.version_of({"producer": producer.stamp()}),
+        "contracts_moved": moved,
+        "sections_declared": len(declared),
+        "sections_absent": sorted(declared - set(stored or {})),
+        # Stale is the *producer* comparison and nothing else: an
+        # unstamped capture cannot be shown to agree with this build.
+        "stale": bool(not reanalysed and stored is not None
+                      and (theirs is None or moved)),
+        "reanalyse": "bga view RUN --reanalyse",
+    }
+
+
+def analysis_note(run: str, reanalyse: bool = False) -> dict:
+    """`analysis_source` for a run on disk - one small file read.
+
+    The same decision `payloads` makes, written once: a run whose
+    capture published nothing was analysed here whether or not the flag
+    was given.
+    """
+    stored = published_analysis(run)
+    return analysis_source(stored, reanalyse or stored is None)
+
+
 def _offered(documents: Dict[str, dict]) -> List[str]:
     """The payload names the page may load, from the table it will be given.
 
@@ -293,7 +353,8 @@ def _offered(documents: Dict[str, dict]) -> List[str]:
                   for name in documents)
 
 
-def payloads(run: str, baseline: Optional[str] = None) -> Dict[str, dict]:
+def payloads(run: str, baseline: Optional[str] = None,
+             reanalyse: bool = False) -> Dict[str, dict]:
     """Everything the page renders, keyed by the url it is served at.
 
     A refusal is data, not an error: `bga compare` exits 6 on runs it
@@ -306,7 +367,11 @@ def payloads(run: str, baseline: Optional[str] = None) -> Dict[str, dict]:
     # writes the report beside the run, so the page gets it for free
     # wherever the store put one, and silently goes without elsewhere.
 
-    documents = {"report.json": published_analysis(run) or _analyze_now(run)}
+    # `UX-533`: `--reanalyse` asks for *this* build's answer. The stored
+    # file is read, never written - it is the capture-time analysis the
+    # CI comment quotes, and overwriting it would delete that.
+    stored = None if reanalyse else published_analysis(run)
+    documents = {"report.json": stored or _analyze_now(run)}
     # `UX-203`: the comparison the user already has. `bga snapshot`
     # compares against the previous run automatically, so by the time
     # anyone runs `bga view` the answer usually exists - it was just
@@ -999,7 +1064,8 @@ def _uncommented_css(text: str) -> str:
         .splitlines() if line.strip())
 
 
-def export(run: str, path: str, with_trace: bool = True) -> dict:
+def export(run: str, path: str, with_trace: bool = True,
+           reanalyse: bool = False) -> dict:
     """Write one self-contained file. Returns what went into it."""
     # `payloads()` keys documents by the *url* they are served at, so
     # they arrive as "report.json". The inline blocks are keyed by name
@@ -1009,12 +1075,15 @@ def export(run: str, path: str, with_trace: bool = True) -> dict:
     # which works when served and fails on `file://` - so the export
     # looks fine everywhere except where it is used.
     documents = {name[:-len(".json")] if name.endswith(".json") else name: body
-                 for name, body in payloads(run).items()}
+                 for name, body in payloads(run, reanalyse=reanalyse)
+                 .items()}
     # `UX-342`: after the payloads and before the manifest - it has to
     # see what is being embedded, and `_offered` has to see it.
     documents["schemas"] = schemas_payload(documents)
     documents["run"] = {"run": os.path.abspath(run),
                         "name": os.path.basename(os.path.abspath(run)),
+                        # `UX-533`: which analysis is inlined above.
+                        "analysis": analysis_note(run, reanalyse),
                         # UX-334: the same manifest the server
                         # publishes. An export inlines every payload it
                         # has, so `load` never reaches the network here
@@ -1469,7 +1538,8 @@ class _Handler(http.server.BaseHTTPRequestHandler):
 def serve(run: str, port: int = 0,
           documents: Optional[Dict[str, dict]] = None,
           with_trace: bool = True,
-          baseline: Optional[str] = None):
+          baseline: Optional[str] = None,
+          reanalyse: bool = False):
     """A started server on 127.0.0.1. The caller closes it.
 
     Returns `(httpd, url)`. Port 0 means the kernel picks one, so two
@@ -1477,7 +1547,7 @@ def serve(run: str, port: int = 0,
     predictable port.
     """
     documents = dict(documents if documents is not None
-                     else payloads(run, baseline))
+                     else payloads(run, baseline, reanalyse))
     documents.setdefault("schemas.json", schemas_payload())
 
     store = store_payload(run)
@@ -1517,6 +1587,9 @@ def serve(run: str, port: int = 0,
         # lines of noise a real error has to be spotted among. The
         # server already knows the answer here; it just never said it.
         "payloads": _offered(documents),
+        # `UX-533`: which analysis is behind `report.json` - the stored
+        # one this capture published, or this build's.
+        "analysis": analysis_note(run, reanalyse),
         # So the page can offer the button only when there is something
         # behind it - a dead "Open in Perfetto" is worse than none.
         "has_timeline": offered,
@@ -1616,6 +1689,11 @@ def main(argv: Optional[List[str]] = None) -> int:
         help="Print the url instead of opening it - for a remote shell, or "
              "when you want to curl the payloads.")
     parser.add_argument(
+        "--reanalyse", action="store_true",
+        help="Analyse the run with *this* build instead of serving the "
+             "analysis its capture published. The stored file is read, "
+             "never written - it is what the CI comment quotes.")
+    parser.add_argument(
         "--compare", default=None, metavar="BASELINE",
         help="Draw the band against this run instead of the one before "
              "RUN in the same store. Same alias grammar.")
@@ -1641,7 +1719,8 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     if args.export:
         try:
-            written = export(run, args.export)
+            written = export(run, args.export,
+                             reanalyse=args.reanalyse)
         except (OSError, RuntimeError, ValueError,
                 json.JSONDecodeError) as error:
             print(f"Error: {error}", file=sys.stderr)
@@ -1664,7 +1743,8 @@ def main(argv: Optional[List[str]] = None) -> int:
         return 0
 
     try:
-        httpd, url = serve(run, port=args.port, baseline=baseline)
+        httpd, url = serve(run, port=args.port, baseline=baseline,
+                           reanalyse=args.reanalyse)
     except (OSError, RuntimeError, ValueError, json.JSONDecodeError) as error:
         print(f"Error: {error}", file=sys.stderr)
         return 2

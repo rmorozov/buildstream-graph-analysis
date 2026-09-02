@@ -242,8 +242,8 @@ console.log(JSON.stringify({
   ids: Object.keys(nodes).sort(),
   schema: report?.schema ?? null,
   elements: Object.keys(report?.elements?.element_durations ?? {}).length,
-  offered: app.offered(run, "report"),
   inlined: app.inlined("report") !== null,
+  runListed: run?.payloads ?? null,
   absent: await app.inflated("compare"),
 }));
 """
@@ -282,13 +282,13 @@ class TestThePageReadsIt:
         seen, _elements = probed
         assert seen["inlined"] is False
 
-    def test_the_manifest_answer_counts_the_compact_block(self, probed):
-        """`offered` decides whether to ask for an optional payload at
-        all (`UX-334`). Reading only `bga-report` would call a
-        compacted payload absent and put three fetches back on a
-        `file://` page."""
+    def test_the_plain_blocks_still_answer_beside_it(self, probed):
+        """One export, two forms. `run` is 1 KB and stays JSON text
+        while `report` compacts, so the loader has to answer both from
+        the same page - and the manifest it publishes is what every
+        optional payload is decided against."""
         seen, _elements = probed
-        assert seen["offered"] is True
+        assert "report" in (seen["runListed"] or []), seen["runListed"]
 
     def test_an_absent_compact_block_is_null_not_a_throw(self, probed):
         """`compare` is optional and this run has none. `inflated` is

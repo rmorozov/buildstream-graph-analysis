@@ -572,12 +572,10 @@ export async function inflated(name) {
  */
 export function offered(run, name) {
   if (inlined(name) !== null) return true;
-  // `UX-529`: a compacted block is the payload being here too. Only
-  // its presence is asked - inflating it to answer would be the fetch
-  // this function exists to avoid.
-  if ((document.getElementById(`bga-${name}-gz`)?.textContent ?? "").trim()) {
-    return true;
-  }
+  // `UX-529` added a `bga-<name>-gz` branch here and it was dead:
+  // `_offered` derives the manifest from the documents being
+  // embedded, so a compacted payload is listed exactly as a plain one
+  // is, and no mutation of the branch could redden anything.
   const listed = run?.payloads;
   if (!Array.isArray(listed)) return true;
   return listed.includes(name);

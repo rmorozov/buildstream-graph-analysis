@@ -249,6 +249,75 @@ export function wireJumpBox(nav, root, payload, context = {}) {
 
 // ------------------------------------------------------------------ boot
 
+//: `UX-521`: how often the page asks the server whether Perfetto has
+//: fetched, and for how long. Two seconds is slower than a spinner on
+//: purpose - the answer changes at most once - and the ceiling exists
+//: because a poll nobody stops is the console noise `UX-334` removed.
+export const FETCH_POLL_MS = 2000;
+export const FETCH_POLL_LIMIT = 150;   // 5 minutes at the interval above
+
+//: `UX-521`: the route that answers. Kept in step with
+//: `tools/bga_view.py`'s `TRACE_STATUS_NAME` by a guard, the way
+//: `PERFETTO_ORIGIN` is - nothing else would notice a drift, and the
+//: page would quietly go back to saying nothing.
+export const TRACE_STATUS_URL = "trace-status.json";
+
+/**
+ * Watch this server for Perfetto's own fetch of the trace, and say so.
+ *
+ * The deep link hands Perfetto a URL and returns, so the page has no
+ * callback and no `postMessage` - the only evidence that anything is
+ * happening is the `GET` arriving here. Two answers, and they are the
+ * two the reader cannot otherwise tell apart:
+ *
+ * - the fetch has not happened: keep the waiting sentence, because the
+ *   tab may still be starting up;
+ * - the fetch has completed: say so, and name what is left, which is
+ *   Perfetto's parse and not ours to predict.
+ *
+ * Stops on the first success, on an error, or at the ceiling. It does
+ * *not* stop when the tab is hidden: the reader watching Perfetto load
+ * is exactly the reader this sentence is for, and the tab they came
+ * back to would have stopped asking.
+ */
+export function watchTheFetch(status, mib, deps = {}) {
+  const {
+    fetchIt = (u) => fetch(u),
+    setLater = setTimeout,
+    announce = announceHandoff,
+    // Resolved against the document rather than left relative: `fetch`
+    // is the one call in this file that would read a bare relative URL
+    // differently from the `new URL(..., location.href)` every other
+    // route here goes through.
+    url = new URL(TRACE_STATUS_URL, location.href).href,
+    limit = FETCH_POLL_LIMIT,
+    every = FETCH_POLL_MS,
+  } = deps;
+  let tries = 0;
+  const ask = async () => {
+    if (tries++ >= limit) return;
+    let answered = null;
+    try {
+      const response = await fetchIt(url);
+      answered = await response.json();
+    } catch {
+      // The server is gone, or the page is being torn down. Neither is
+      // worth a console line: the sentence already on screen is still
+      // true, and this was only ever going to improve on it.
+      return;
+    }
+    if ((answered?.fetches ?? 0) > 0) {
+      announce(status,
+        `${mib} MiB — Perfetto has fetched the whole trace from here. ` +
+        `It is parsing now; the tab fills in when it finishes.`);
+      return;
+    }
+    setLater(ask, every);
+  };
+  setLater(ask, every);
+  return ask;
+}
+
 /**
  * `run` is the `run.json` payload: `UX-299` publishes the size
  * threshold in it, so the page applies the server's number rather than
@@ -366,11 +435,17 @@ export function wireTheHandoff(run = {}) {
             tab.location = deepLink(absolute.href);
             // Not a refusal: the trace is opening, by the other
             // transport. Short, and it belongs beside the control.
+            const mib = (size / 1048576).toFixed(1);
             announceHandoff(
               status,
-              `${(size / 1048576).toFixed(1)} MiB — over the ` +
+              `${mib} MiB — over the ` +
               `${(inlineMax / 1048576).toFixed(0)} MiB this page will copy, ` +
-              `so Perfetto is fetching it from here directly.`);
+              `so Perfetto is fetching it from here directly. A trace this ` +
+              `size takes minutes, and its tab stays blank until it has.`);
+            // `UX-521`: without this the sentence above is the page's
+            // last word, and it reads the same whether Perfetto is
+            // parsing gigabytes or never asked.
+            watchTheFetch(status, mib);
             return;
           }
           tab.close?.();

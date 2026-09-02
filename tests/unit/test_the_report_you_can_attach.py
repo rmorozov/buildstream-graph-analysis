@@ -662,7 +662,19 @@ COMMITTED_EXPORTS = [
     # finding items grew it inside the bound and none of them restated
     # it - so the old bound had 963 B of headroom rather than 2,682.
     # 411,000 leaves 3,735 B.
-    ("golden", GOLDEN, 411_000),                       #  407,265 B
+    # `UX-521` moved both by **+1,065 B, all of it page**: 293,783 B
+    # before and 294,848 B after, measured by this file's own splitter,
+    # with the embedded data byte-identical on both fixtures. The
+    # source is `watchTheFetch`, its two published constants and the
+    # route name the page and `tools/bga_view.py` share; neither
+    # committed fixture carries a timeline, so nothing new is
+    # published. The recorded figures were 465 B stale on both -
+    # measured before this change, `golden` was 407,730 B and
+    # `macro_micro` 457,749 B, so the latter had 251 B of headroom
+    # rather than the 716 the note above claims. `golden`'s 411,000
+    # still holds with 2,205 B; `macro_micro`'s does not, and 463,000
+    # leaves 4,186 B.
+    ("golden", GOLDEN, 411_000),                       #  408,795 B
     # `UX-297` moved this one by 385 B before that: the two-plane run
     # publishes `plane2_coverage.source`, which says which shape of
     # Plane 2 report served its numbers and what that costs to open. A
@@ -750,7 +762,7 @@ COMMITTED_EXPORTS = [
     # measurement that forced it is the negotiation this file exists to
     # prevent - but the next round to add a module will trip it, and
     # the figure it needs is this one rather than the stale 453,180.
-    ("macro_micro", MACRO_MICRO, 458_000),             #  457,284 B
+    ("macro_micro", MACRO_MICRO, 463_000),             #  458,814 B
 ]
 
 

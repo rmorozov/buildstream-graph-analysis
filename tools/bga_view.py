@@ -142,6 +142,9 @@ ASSETS = ("index.html", "app.js", "style.css", "views.js", "focus.js",
 # copies between tabs.
 TRACE_NAME = "timeline.json.gz"
 
+#: `UX-521`: what the page asks to learn whether Perfetto ever fetched.
+TRACE_STATUS_NAME = "trace-status.json"
+
 # `UX-198`: the only origin this server will hand a trace to
 # cross-origin, and the target of the `?url=` deep link. Kept in step
 # with `bga/viewer/perfetto.js`'s own constant by a guard.
@@ -1207,6 +1210,8 @@ class _Handler(http.server.BaseHTTPRequestHandler):
             # transparently-decoding fetch would undo the win.
             return self._send(200, "application/gzip", self.blobs[path],
                               cors=True)
+        if path == TRACE_STATUS_NAME:
+            return self._trace_status()
         if path == TRACE_NAME and getattr(self, "trace_run", None):
             return self._trace()
         if path in ASSETS:
@@ -1350,6 +1355,39 @@ class _Handler(http.server.BaseHTTPRequestHandler):
             self._begin(200, "application/gzip", size, cors=True)
             if self.command != "HEAD":
                 shutil.copyfileobj(handle, self.wfile, length=256 * 1024)
+                # `UX-521`: recorded only for a real body. A `HEAD` is
+                # the page measuring the trace before it decides how to
+                # hand it over (`UX-299`) - counting one as a fetch
+                # would tell the reader Perfetto had the bytes at the
+                # moment nothing had been sent.
+                with cls.trace_lock:
+                    cls.trace_served += 1
+                    cls.trace_served_bytes = size
+
+    def _trace_status(self):
+        """`UX-521`: has anything fetched the trace from this server yet?
+
+        The deep-link path hands Perfetto a URL and returns, so the page
+        has no way to tell *"Perfetto is fetching and parsing"* from
+        *"Perfetto never asked"* - two waits that want opposite actions
+        and render identically. This server sees the request, so it is
+        the one that knows.
+
+        Deliberately a count and a size rather than a percentage: what
+        happens after the bytes arrive is Perfetto's parse, which this
+        repository does not control and must not pretend to predict.
+
+        It declares no `schema`, and that is the point rather than an
+        omission. A schema id here would put a liveness fact - true for
+        one second of one server's life - in the registry beside the
+        analysis documents a reader can keep, cite and diff. This is
+        this page asking this server whether a request has happened
+        yet, and it is not a contract anyone else may build on.
+        """
+        cls = type(self)
+        with cls.trace_lock:
+            served, size = cls.trace_served, cls.trace_served_bytes
+        return self._json({"fetches": served, "bytes": size})
 
     def _asset(self, name):
         # `name` is already known to be in `ASSETS`, so this cannot be
@@ -1495,6 +1533,7 @@ def serve(run: str, port: int = 0,
                     "trace_run": os.path.abspath(run) if offered else None,
                     "trace_scratch": None, "trace_path": None,
                     "trace_lock": threading.Lock(),
+                    "trace_served": 0, "trace_served_bytes": 0,
                     "run_root": os.path.abspath(run)})
     httpd = http.server.ThreadingHTTPServer(("127.0.0.1", port), handler)
     return httpd, landing_url(httpd.server_address[1])

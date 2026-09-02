@@ -12,7 +12,7 @@ Derived per the `decompose` skill.
 | item | surfaces | guards (input classes) | track |
 |---|---|---|---|
 | `UX-518` | `tools/bst_native_build_tracer.py` (`read_artifact_contents`) | new file (0 elements · 1 · many · a group with one bad name · a whole-group failure) | first |
-| `UX-521` | `bga/viewer/app.js` · `tools/bga_view.py` (a served fact) | `test_the_handoff_box_is_measured_served.py` (under threshold · over · over-and-unfetchable · fetched · not-yet-fetched) | **serial after nothing**, but its own file |
+| `UX-521` | `bga/viewer/app.js` · `tools/bga_view.py` (a served fact) | new file (under threshold · over · over-and-unfetchable · fetched · not-yet-fetched · no answer at all) | **serial after nothing**, but its own file |
 | `UX-519` | `tools/bst_native_build_tracer.py` (same function) | the `UX-518` file, extended (TTY · piped) | **serial after `UX-518`** — same function |
 | `UX-520` | `tools/bga_snapshot.py` · `bga/run_store.py` | new file (every layout member · a missing conditional · `--without-plane2` · a stamp collision · an unreadable contract version) | last — it reads the layout the others do not touch |
 
@@ -23,6 +23,15 @@ freshly-captured baseline rather than an existing assertion.
 
 **gate:** one PR, opened before the first commit (`UX-426`, `verify`
 §7), one `make test` here.
+
+**surfaces touched against surfaces declared.** `UX-521` also edited
+`tests/unit/test_the_perfetto_handoff.py`: its two "no other document
+is readable / answers a pre-flight cross-origin" enumerations are the
+contract for a new served route, so `trace-status.json` joins the list
+rather than getting a second copy of the rule. Its guards went into a
+file of their own, not the `test_the_handoff_box_is_measured_served.py`
+the table first named — that file is `UX-435`'s *geometry*, and a
+liveness claim has nothing to mutate there.
 
 ## The batching contract, measured before it was relied on
 

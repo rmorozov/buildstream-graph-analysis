@@ -20,7 +20,7 @@
 // The default is `headline.top_actions[0]` now, which is `core.bst`
 // on that one fixture by coincidence rather than by compilation.
 
-import { labelFor } from "./controls.js";
+import { identify, labelFor } from "./controls.js";
 
 // `UX-210`: **every query says which plane it is asking.**
 //
@@ -806,6 +806,11 @@ export function renderQuestions(make, options = {}) {
   return section;
 }
 
+//: `UX-527`: how many of the population the control draws at once.
+//: The jump box's own limit (`nav.js`'s `matches`), because this is the
+//: same act - type part of a uid, get the few that match.
+const PICKER_SHOWN = 8;
+
 /**
  * `UX-369`: which element the three element-scoped queries ask about.
  *
@@ -814,6 +819,12 @@ export function renderQuestions(make, options = {}) {
  * element uids and `options.element` the default - `app.js` reads both
  * from the payload, so `sql.html`, which has no run behind it, gets no
  * control and renders the token instead.
+ *
+ * `UX-527`: a search box, not a menu. This was the only `<select>` on
+ * the page whose options were the project - 4,002 of them on a
+ * 4,002-element run, 4,119 of that page's 8,953 DOM elements - and a
+ * 4,002-entry dropdown is not a control anyone can use. The population
+ * it reaches is unchanged; what it *draws* is the eight that match.
  *
  * Returns the element chosen at render time, so the initial SQL and
  * the re-render agree on where they started.
@@ -848,22 +859,50 @@ function elementPicker(section, make, options) {
   // uniquifies the id, so two runs of the picker in one document
   // cannot collide.
   const label = make("label", {}, "Ask about element");
-  const select = make("select", { class: "top-n",
-                                  "data-role": "query-element",
-                                  "aria-label": "Ask about element" });
-  labelFor(label, select, "query-element");
-  for (const uid of population) {
-    const option = make("option", { value: uid }, uid);
-    if (uid === chosen) option.setAttribute("selected", "selected");
-    select.append(option);
-  }
-  note.textContent = `${lead}All ${population.length} of this run's `
-                   + "elements are here; the default is the one the "
-                   + "report's first action names.";
-  box.append(label, select, note);
+  const list = make("datalist", {});
+  const listId = identify(list, "query-element-list");
+  const search = make("input", {
+    type: "text", class: "table-filter",
+    autocomplete: "off", "data-role": "query-element",
+    "data-population": String(population.length),
+    "aria-label": "Ask about element",
+    placeholder: "type part of an element uid" });
+  // `setAttribute`, for `labelFor`'s reason one property over: `el`
+  // assigns any unhyphenated name as a property and `input.list` is
+  // read-only, so `{ list: id }` throws inside the module and takes the
+  // section with it. Measured - the `<code>` blocks stopped rendering.
+  search.setAttribute("list", listId);
+  search.value = chosen ?? "";
+  search.setAttribute("value", chosen ?? "");
+  labelFor(label, search, "query-element");
+  // The matched few, redrawn on every keystroke. `includes`, not a
+  // prefix: an element is `layer07/mod123.bst` and the part a reader
+  // remembers is rarely the layer.
+  const fill = (typed) => {
+    const needle = String(typed ?? "").trim().toLowerCase();
+    for (const node of [...(list.children ?? [])]) node.remove?.();
+    const hits = needle
+      ? population.filter((uid) => uid.toLowerCase().includes(needle))
+      : population;
+    for (const uid of hits.slice(0, PICKER_SHOWN)) {
+      list.append(make("option", { value: uid }, uid));
+    }
+  };
+  fill("");
+  note.textContent = `${lead}Type any part of a uid to search this run's `
+                   + `${population.length} elements; the box offers the `
+                   + `first ${PICKER_SHOWN} that match. The default is the `
+                   + "one the report's first action names.";
+  box.append(label, search, list, note);
   section.append(box);
-  select.addEventListener?.("change",
-                            () => applyElement(section, select.value));
+  const applyTyped = () => {
+    fill(search.value);
+    // Only a uid this run has reaches the query: a half-typed name is a
+    // reader still typing, not a request to substitute nothing.
+    if (population.includes(search.value)) applyElement(section, search.value);
+  };
+  search.addEventListener?.("input", applyTyped);
+  search.addEventListener?.("change", applyTyped);
   return chosen;
 }
 

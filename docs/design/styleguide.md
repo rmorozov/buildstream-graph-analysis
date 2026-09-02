@@ -595,15 +595,18 @@ in it hidden, and the class is bounded at both ends:
 
 ```text
                  elements   landed   opened    words   controls    nodes
-scale               1,202    5,007   26,576    8,247        787    5,925
-xl                  4,002    4,937   27,222    8,263        812    8,953
-budget, to 4,100 elts          7,000   32,000    9,000        900   10,000
+scale               1,202    5,007   26,584    8,259        787    4,732
+xl                  4,002    4,937   27,230    8,275        812    4,960
+budget, to 4,100 elts          7,000   32,000    9,000        900    5,500
 ```
 
 Height does not move at all — a bounded row costs no pixels, which is
 `UX-419`'s finding — and the other three fall by an order of magnitude,
 because at 4,002 elements 96,065 of the page's 107,352 words were the
-hidden half of one `dl`.
+hidden half of one `dl`. The nodes bound came down again one item
+later: `UX-527` replaced the Perfetto picker's one-`<option>`-per-element
+`<select>` with a search box drawing eight, 4,119 DOM elements to 126,
+and `test_the_budgets_are_not_slack` is what asked for the restatement.
 
 The small class's words bound moved 12,000 -> 12,600 in round 73, and
 only that one:

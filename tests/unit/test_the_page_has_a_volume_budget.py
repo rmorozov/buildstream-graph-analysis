@@ -221,9 +221,28 @@ LANDED_HEIGHT_PX = 7_000
 #: The class boundary moves 4,000 -> 4,100 so the run that measures it is
 #: inside it; `budget_for` refuses anything past that rather than
 #: inheriting, which is the clause `UX-367` wrote for this exact shape.
+#:
+#: `UX-527` moved the large class's **nodes** bound one item later,
+#: 10,000 -> 5,500, and `test_the_budgets_are_not_slack` is what asked
+#: for it - the second time that clause has restated a bound rather than
+#: a change being trusted to. The Perfetto picker drew one `<option>`
+#: per element; a search box draws the eight that match:
+#:
+#: ```text
+#:                nodes   of which perfetto-questions
+#: scale  before   5,925                        1,319
+#:        after    4,732                          126
+#: xl     before   8,953                        4,119
+#:        after    4,960                          126
+#: ```
+#:
+#: Words move by +12 (a longer sentence beside the control) and controls
+#: not at all: a `<select>` and an `<input>` are one control each, and an
+#: `<option>` was never counted as one. `nodes` is the measure that sees
+#: it, for `UX-366`'s reason.
 BUDGETS = (
     (50, 34_000, 12_600, 800, 7_900),
-    (4_100, 32_000, 9_000, 900, 10_000),
+    (4_100, 32_000, 9_000, 900, 5_500),
 )
 
 

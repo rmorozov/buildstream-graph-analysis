@@ -71,8 +71,10 @@ _LOOK = r"""
     questions: document.querySelectorAll("#questions h4").length,
     categories: [...document.querySelectorAll("#questions details")]
       .map((d) => d.getAttribute("data-category")),
-    options: [...document.querySelectorAll(
-      "[data-role=query-element] option")].map((o) => o.value),
+    // `UX-527`: the control is an `<input list>` and its options live
+    // in the datalist beside it, bounded at eight.
+    options: [...(picker?.list?.options ?? [])].map((o) => o.value),
+    population: picker ? Number(picker.getAttribute("data-population")) : 0,
     chosen: picker ? picker.value : null,
     sql: [...document.querySelectorAll("#questions code")]
       .map((c) => c.textContent || ""),
@@ -236,9 +238,10 @@ class TestTheServedPageCarriesBoth:
         picker had no population and the queries showed the bare token.
         This page is served beside `report.json`."""
         out = looked["with_timeline"]
-        assert len(out["options"]) > 1, (
-            f"the merged page offers {len(out['options'])} element(s); it is "
+        assert out["population"] > 1, (
+            f"the merged page searches {out['population']} element(s); it is "
             f"served beside report.json and should offer the run's own")
+        assert len(out["options"]) > 1, out["options"]
         assert out["chosen"] in out["options"], out
 
     def test_the_queries_name_the_chosen_element(self, looked):

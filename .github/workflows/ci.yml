@@ -66,7 +66,22 @@ jobs:
       # references to keep true.
       - name: Test
         run: make test
-        if: matrix.python-version != '3.11'
+        if: matrix.python-version != '3.11' && matrix.python-version != '3.12'
+
+      # UX-524: the touching map, measured rather than grepped. Coverage
+      # with `--cov-context=test` records which test files executed
+      # which module lines - the import chain `dev_touching`'s grep
+      # cannot see, which is the class `UX-500`'s round could not close.
+      #
+      # On 3.12 and never on 3.11: measured at **+20%** wall clock
+      # (33.2s -> 40.0s on a twelve-file subset here), and 3.11 is the
+      # interpreter whose seconds `UX-503`'s reference is made of. A
+      # timing record taken under coverage would move every row in it.
+      - name: Test (with a coverage-derived touching map)
+        run: |
+          make test PYTEST_ARGS="--cov=bga --cov=tools \
+            --cov-context=test --cov-report="
+        if: matrix.python-version == '3.12'
 
       - name: Test (with a timing report)
         run: make test PYTEST_ARGS="--junitxml=${{ runner.temp }}/junit.xml"
@@ -189,6 +204,25 @@ jobs:
         with:
           name: ci-reference-candidate
           path: ${{ runner.temp }}/ci_reference.candidate.json
+          retention-days: 30
+
+      # `UX-524`: the same shape one file over. `--write` reads the
+      # coverage database this run left and prints one line; the map
+      # itself travels as an artifact, because it is ~60 KB of rows no
+      # log reader wants after a failure (`UX-441`).
+      - name: This run's touching map, for adopting
+        run: |
+          python tools/dev_touch_map.py \
+            --write "${{ runner.temp }}/touch_map.candidate.json"
+        if: always() && matrix.python-version == '3.12'
+        continue-on-error: true
+
+      - name: Upload it, so the adopt job can merge it
+        if: always() && matrix.python-version == '3.12'
+        uses: actions/upload-artifact@v4
+        with:
+          name: touch-map-candidate
+          path: ${{ runner.temp }}/touch_map.candidate.json
           retention-days: 30
 
       # UX-336: `make test` runs `-n auto` (see the Makefile). CI is not
@@ -322,6 +356,51 @@ jobs:
           git commit -m "CI: adopt the tier rows this run measured (UX-503)"
           git push origin "HEAD:${{ github.ref }}" || \
             echo "::warning::the branch refused the update; the rows printed above need a hand"
+
+  # `UX-524`: the touching map gives itself the rows this run measured.
+  #
+  # `UX-503`'s route, one file over, and for the same reason: a map a
+  # human has to record by hand is a map that is stale the first time a
+  # round adds a module. Only on `push` to the default branch, because
+  # on a pull request the head is somebody's branch; `--adopt` adds
+  # edges and removes none, so a run that could not reach a module - no
+  # browser, no `bst` - narrows nothing. Every refusal exits 0: a
+  # bookkeeping job failing the default branch buys nothing.
+  touch-map-adopt:
+    needs: test
+    if: github.event_name == 'push' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Fetch what test (3.12) measured
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: touch-map-candidate
+      - name: Merge it into tests/touch_map.json
+        run: |
+          test -f touch_map.candidate.json || {
+            echo "no candidate on this run - test (3.12) did not reach it"
+            exit 0
+          }
+          python tools/dev_touch_map.py --adopt touch_map.candidate.json
+          if git diff --quiet -- tests/touch_map.json; then
+            echo "the map already carries every edge this run measured"
+            exit 0
+          fi
+          git diff --stat -- tests/touch_map.json
+          git config user.name "github-actions[bot]"
+          git config user.email \
+            "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tests/touch_map.json
+          git commit -m "CI: adopt the touching map this run measured (UX-524)"
+          git push origin "HEAD:${{ github.ref }}" || \
+            echo "::warning::the branch refused the update; re-run to retry"
 
   agent-config:
     # Watches: .claude/** , CLAUDE.md , REVIEW.md - the three that steer

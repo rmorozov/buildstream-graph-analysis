@@ -17,13 +17,12 @@ graph**. That choice is deliberate:
 * a grep over 200-odd test files costs milliseconds, and the whole point
   is to be faster than the thing it replaces.
 
-**It is a selector, not a gate.** A grep-derived set can miss a test
-that exercises a module without naming it, so `make test` before a
-commit is unchanged and the verify skill still requires it. What this
-buys is the twenty runs *before* that one.
-
-`UX-522`: a **census** guard reads the tree and names no module, so it
-is unioned in unconditionally; `--why` says which set chose each file.
+**It is a selector, not a gate.** `make test` before a commit is
+unchanged and the verify skill still requires it; what this buys is
+the twenty runs *before* that one. Three sets, unioned, `--why` naming
+which chose each: the **grep**; the **census** (`UX-522`), guards that
+read the tree and name no module; and the **map** (`UX-524`), what CI
+measured each test executing.
 """
 import argparse
 import os
@@ -40,6 +39,22 @@ TESTS = REPO / "tests"
 # matters most.
 EVERYTHING = ("tests/conftest.py", "tests/tiers.py", "pyproject.toml",
               "Makefile", "tests/support/", "tests/dom_shim.mjs")
+
+
+def touch_map():
+    """`UX-524`: `{module: [test files]}`, measured by CI's own run.
+
+    Empty when the file is absent, which is the honest answer on a
+    clone that has not fetched it: the selection falls back to the grep
+    and the census, and `--why` says so.
+    """
+    try:
+        import json
+
+        return json.loads((TESTS / "touch_map.json").read_text(
+            encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
 
 
 def census_set():
@@ -151,6 +166,10 @@ def select(changed, census=True):
         tokens = tokens_for(path)
         if not tokens:
             continue
+        for candidate in touch_map().get(path, ()):
+            if (REPO / candidate).exists():
+                chosen[candidate] = True
+                why.setdefault(candidate, []).append("map")
         pattern = re.compile("|".join(re.escape(t) for t in sorted(tokens)))
         for candidate in test_files():
             try:

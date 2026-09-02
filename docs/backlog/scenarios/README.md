@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-536 scenarios: **22 open**, 514 closed.
+536 scenarios: **21 open**, 515 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -27,7 +27,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | cli | 0 | 19 |
 | store | 2 | 14 |
 | docs | 4 | 66 |
-| guards | 4 | 91 |
+| guards | 3 | 91 |
 
 ## Open scenarios
 
@@ -43,7 +43,6 @@ task file, which is the only place it ever lived twice.
 | UX-517 | [a closed Outcome quotes a bucket that is now empty](UX-0517-a-closed-outcome-quotes-a-bucket-that-is-now-empty.md) | docs | Low | the round that reads `UX-501` and takes its 223 as current | 🔴 |
 | UX-519 | [the snapshot's tail goes quiet in the one phase that has no line](UX-0519-the-snapshot-tail-goes-quiet.md) | capture | Medium | the user watching a capture that has stopped saying anything | 🔴 |
 | UX-520 | [a capture you can carry to another machine in one command](UX-0520-a-run-bundle-you-can-carry.md) | store | Medium | the engineer who captured on a build runner and wants to read it on a laptop | 🔴 |
-| UX-524 | [the touching map is measured in CI, not grepped](UX-0524-the-touching-map-is-measured-in-ci.md) | guards | Medium | the session that wants `test-touching` to be a gate | 🔴 |
 | UX-525 | [a track costs 81k-131k tokens, and nobody knows where](UX-0525-a-track-costs-tokens-and-nobody-knows-where.md) | docs | Medium | the maintainer's subscription | 🔴 |
 | UX-526 | [the large budget class is measured at its bottom and breached at its top](UX-0526-the-large-budget-class-is-breached-at-its-top.md) | guards | High | anyone who opens a report of a project larger than the seeded run | 🔴 |
 | UX-527 | [one control has an option per element](UX-0527-one-control-has-an-option-per-element.md) | viewer | High | anyone asking Perfetto about one element of a large project | 🔴 |

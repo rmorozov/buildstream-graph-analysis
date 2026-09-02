@@ -227,7 +227,10 @@ tools/bga_release_notes.py  a release body, generated from the closed rows (UX-2
 tools/bga_cross_check.py, gen_synthetic_scale_run.py, chrome_trace_to_bga_trace.py,
 tools/native_trace_to_chrome_trace.py, bst_log_to_chrome_trace.py,
 tools/bst_run_context.py, _run_context_common.py
-tools/dev_touching.py        the tests that name what your diff touched (UX-336)
+tools/dev_touching.py        the tests that name what your diff touched, plus the census
+                             they can never name (UX-336, UX-522)
+tools/dev_touch_map.py       which test files executed which module, off CI's own
+                             coverage run - the import chain a grep cannot see (UX-524)
 tools/dev_close_task.py      the mechanical tail of closing a row (UX-336)
 tools/dev_refresh_analysis.py  the rule a committed analysis is written
                              under, and the command that rewrites one
@@ -259,6 +262,8 @@ tests/ci_reference.json    one CI run's per-file seconds, so drift is CI against
                            local --record - the `verify` skill's §3 has the four steps (UX-447).
                            A file it does not carry is adopted by the default branch's own run,
                            not failed on - `--adopt`, and no commit of yours (UX-503)
+tests/touch_map.json       module -> the test files CI measured executing it; adopted by
+                           the default branch's own run, never recorded locally (UX-524)
 tests/dom_shim.mjs         the one DOM every viewer guard runs on (UX-264)
 tests/viewer.mjs           the viewer's exports as one namespace, so a guard names a symbol not a module (UX-337)
 tests/cdp.mjs              headless Chrome over CDP, no dependencies (UX-257)

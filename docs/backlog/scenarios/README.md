@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-507 scenarios: **11 open**, 496 closed.
+510 scenarios: **11 open**, 499 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -26,8 +26,8 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | viewer | 0 | 99 |
 | cli | 0 | 1 |
 | store | 2 | 5 |
-| docs | 4 | 46 |
-| guards | 5 | 66 |
+| docs | 3 | 47 |
+| guards | 6 | 68 |
 | testing | 0 | 1 |
 | unclassified | 0 | 223 |
 
@@ -41,14 +41,14 @@ task file, which is the only place it ever lived twice.
 | UX-92 | [cache effectiveness — hits, misses, churn, trends — is invisible to the tool](UX-0092-cache-effectiveness-is-invisible-to-the-tool.md) | store | Medium | — | 🟡 |
 | UX-96 | [the baseline set exists, but assembling it is a scavenger hunt](UX-0096-the-baseline-set-exists-but-assembling-it-is-a-scavenger-hunt.md) | store | Medium | — | 🟡 |
 | UX-489 | [the answer key asserts a ranking with no margin, on a build it runs for real](UX-0489-the-answer-key-asserts-a-ranking-with-no-margin.md) | guards | Medium | the contributor whose unrelated diff is red because a real build ranked two elements the other way round | 🔴 |
-| UX-490 | [the guard against one-machine data cannot see an absolute path](UX-0490-the-clone-guard-cannot-see-an-absolute-path.md) | guards | Medium | the round whose new guard rests on a capture in `/tmp` and passes here, green, for one session | 🔴 |
 | UX-491 | [the drift gate's own line has no route a reader can reach](UX-0491-the-gate-line-has-no-route-for-a-reader-without-the-log.md) | guards | Low | the round that has to pair a run's printed shift with the spread it recorded and cannot read the first one | 🔴 |
-| UX-492 | [the README's "verbatim" real-project block prints a sentence the tool can no longer produce](UX-0492-the-readme-verbatim-block-is-no-longer-verbatim.md) | docs | Medium | the outside reader whose first sight of `bga` is a block that says "verbatim" and is not | 🔴 |
-| UX-493 | [a bound moved and the task file that presents it as current was not annotated](UX-0493-a-moved-bound-left-an-earlier-task-file-asserting-the-old-one.md) | docs | Low | the round that reads `UX-479`'s Outcome for the export bound and gets a number the tree no longer has | 🔴 |
 | UX-495 | [three browser guards swing 1.5-2.3x under parallel load](UX-0495-three-browser-guards-swing-under-parallel-load.md) | guards | Medium | the round that reads a browser guard's drift reading and cannot tell an excursion from a regression | 🔴 |
 | UX-496 | [a wholesale re-record samples every file once, and the drift factor has never been sized against that](UX-0496-a-one-run-re-record-bakes-in-one-sample-per-file.md) | guards | Medium | the round whose gate is red on a file nobody touched, and cannot tell a stale reference entry from a real regression | 🔴 |
 | UX-500 | [the batch gate, measured against the per-item suite](UX-0500-the-batch-gate-measured-against-the-per-item-suite.md) | docs | High | the implementing session's wall clock; the maintainer's subscription | 🔴 |
 | UX-507 | [223 closed rows are in no topic](UX-0507-the-unclassified-bucket.md) | docs | Low | the round that asks "how much of the backlog was viewer work" and gets an answer that is 44 % blank | 🔴 |
+| UX-510 | [a parallel track starts from a base the orchestrator has left behind](UX-0510-a-track-starts-from-a-stale-base.md) | guards | Medium | the track told to read a file that does not exist in its copy | 🔴 |
+| UX-511 | [the guide the README sends readers to teaches a retired reading as current](UX-0511-the-real-project-guide-teaches-a-retired-reading.md) | docs | Medium | the reader who follows the README's link and gets the same stale output with prose built on it | 🔴 |
+| UX-512 | [a guard is red on any tree whose `__pycache__` was cleared](UX-0512-an-exemption-for-a-build-artifact.md) | guards | Low | the round that clears bytecode before a same-length mutation and reads the result as a flake | 🔴 |
 
 ## UX-497..UX-506: the seventy-fourth round — the workflow, measured (2026-09-01)
 

@@ -63,6 +63,44 @@ track, so this is the batch where `UX-504`'s `implementer` agent has
 something to run — and the end-to-end track measurement its Acceptance
 Test is still missing.
 
+## The parallel batch, measured — `UX-504`'s first real use
+
+Three `implementer` tracks (`UX-490`, `UX-492`, `UX-493`) ran at once
+in worktrees while this session took the gate track. What it cost, from
+the run itself rather than from the design:
+
+| | |
+|---|---|
+| tracks | 3, one item each |
+| agent wall clock | 943s · 996s · 1,174s, overlapping — ~20 min for three items |
+| agent tokens | 81k · 123k · 131k |
+| merge | 3 cherry-picks, **1 conflicted** (`dev_close_task.py`, `test_the_loop_stays_fast.py`) |
+| commits per task | **1.33** — one per track, plus one close commit for all three |
+| defects the regime itself produced | **2**, `UX-509` and `UX-510` |
+
+Both new defects are the *worktree*, not the work: `.claude/worktrees/`
+is inside the tree the doc lint scans (`UX-509`), and all three copies
+started from round 74's last commit while this session was nine commits
+on (`UX-510`) — so two tracks were told to read `rules.md` and this
+document, and neither existed for them. The one merge conflict is the
+same cause: both files had been edited by `UX-501` and `UX-506` inside
+those nine commits.
+
+Against that, one track found something no serial pass had: `UX-492`'s
+declared guard list named three existing guards and **none of them
+reads the section the item is about**. A track that reports its surfaces
+against the ones it was given is what surfaced that; the orchestrator
+had asserted the coverage from a `dev_touching` selection, which
+answers "which guards name this file", not "which guards read this
+paragraph".
+
+`UX-500`'s commits-per-task row is therefore two numbers, not one: 1.0
+serial, 1.33 parallel. The extra third is the close, which the
+`implementer` is deliberately not allowed to write and which the
+orchestrator can do for the batch in one commit — the three items touch
+`README.md` and `closed.md`, so separating them would mean splitting
+hunks of two shared files for no gain.
+
 ## Regime A, round 1 — the figures `UX-500` asks for
 
 **Not Regime B.** The plan above said the batch gate would be *in

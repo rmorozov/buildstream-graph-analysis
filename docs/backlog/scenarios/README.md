@@ -15,17 +15,17 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-537 scenarios: **9 open**, 528 closed.
+538 scenarios: **9 open**, 529 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
 | capture | 1 | 90 |
 | analysis | 1 | 85 |
-| contracts | 0 | 37 |
+| contracts | 1 | 38 |
 | viewer | 3 | 135 |
 | cli | 0 | 19 |
-| store | 1 | 14 |
+| store | 0 | 14 |
 | docs | 1 | 66 |
 | guards | 2 | 91 |
 
@@ -37,7 +37,6 @@ task file, which is the only place it ever lived twice.
 | ID | Scenario | Topic | Priority | Serves | Status |
 |---|---|---|---|---|---|
 | UX-500 | [the batch gate, measured against the per-item suite](UX-0500-the-batch-gate-measured-against-the-per-item-suite.md) | docs | High | the implementing session's wall clock; the maintainer's subscription | 🔴 |
-| UX-520 | [a capture you can carry to another machine in one command](UX-0520-a-run-bundle-you-can-carry.md) | store | Medium | the engineer who captured on a build runner and wants to read it on a laptop | 🔴 |
 | UX-529 | [the export's data half is unbounded, and holds each row twice](UX-0529-the-export-data-half-is-unbounded-and-holds-each-row-twice.md) | viewer | Medium | anyone attaching a report of a large project | 🔴 |
 | UX-530 | [a real capture reaches the track ceiling, and the timeline is dropped whole](UX-0530-a-real-capture-reaches-the-track-ceiling-and-loses-the-timeline.md) | capture | Medium | anyone capturing a C++ project with a few hundred processes per element | 🔴 |
 | UX-533 | [the served page is the capture-time analysis, and cannot say so](UX-0533-the-served-page-is-the-capture-time-analysis.md) | viewer | High | anyone reading a run captured by an older `bga` | 🔴 |
@@ -45,6 +44,7 @@ task file, which is the only place it ever lived twice.
 | UX-537 | [forty-eight hand-built documents, and the shared shim they were to become](UX-0537-forty-eight-documents-and-one-shim.md) | guards | Medium | the next round that adds a standard DOM call to the viewer | 🔴 |
 | UX-538 | [a guard that ranks a real build's seconds cannot hold under load](UX-0538-a-ranking-guard-under-contention.md) | guards | Medium | the round that runs parallel tracks on one machine | 🔴 |
 | UX-539 | [the two superlinear terms UX-531 measured and did not take](UX-0539-two-superlinear-terms-analyze-still-has.md) | analysis | Medium | anyone opening a run of a few thousand elements | 🔴 |
+| UX-540 | [the three contracts `bga` reads and never registers](UX-0540-the-three-contracts-bga-reads-and-never-registers.md) | contracts | Medium | `UX-520`, whose first real bundle refused a healthy capture | 🔴 |
 
 ## UX-522..UX-536: the seventy-ninth round — the controls walked, the suite weighed (2026-09-02)
 

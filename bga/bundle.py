@@ -117,7 +117,7 @@ def readable_contracts() -> set:
     they are in neither. Measured while `UX-520` was built: the first
     real bundle was refused for carrying all three. `CAPTURE_LAYOUT` is
     the contract that says what a capture holds, so it is the authority
-    on what this build reads out of one. `UX-537` is the row for the
+    on what this build reads out of one. `UX-540` is the row for the
     registry gap itself.
     """
     from_layout = {contract for _relative, _presence, contract

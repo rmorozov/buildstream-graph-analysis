@@ -91,7 +91,7 @@ pre-export run — pasted both sides. Mutation: drop `plane2.json` from
 the archive — the loaded capture's report must say Plane 2 is absent
 rather than reporting as if it never had one.
 
-## Outcome
+## Outcome (round 80, 2026-09-02) — 🟢 Done
 
 `bga bundle --export STAMP [-o FILE] [--no-plane2]` and `bga bundle
 --load FILE`, with `bga/bundle.py` deriving its member list from
@@ -135,7 +135,7 @@ per-process detail.` rather than reporting as if it never had one.
 capture was **refused** for carrying `graph/v9`, `trace/v9` and
 `run-context/v9` — *input* shapes no `bga` module stamps, so in neither
 set. Worked around here by unioning the contracts `CAPTURE_LAYOUT` names;
-the registry gap itself is `UX-537`.
+the registry gap itself is `UX-540`.
 
 **Mutation table** (`tests/unit/test_a_run_bundle_you_can_carry.py`,
 19 clauses, 19 passed baseline):

@@ -540,6 +540,10 @@ MEDIUM = (
     # is what the quiet machine says, and the margin is small enough
     # that the next clause moves it.
     "tests/unit/test_the_store_section_takes_a_window.py",          #   13.4s
+    # `UX-520`, tiered on landing. Nineteen clauses, each packing and
+    # unpacking a real gzipped tar of a small capture, two driving the
+    # CLI end to end. Three single-process runs: 1.84 / 2.97 / 2.27s.
+    "tests/unit/test_a_run_bundle_you_can_carry.py",                #    2.3s
     "tests/unit/test_a_candidate_is_confirmed_alone.py",            # 1.2s
     # `UX-460`, tiered on landing. It runs `analyze` in-process over
     # every committed capture in the tree - seven of them now - which

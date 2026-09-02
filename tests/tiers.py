@@ -486,6 +486,7 @@ MEDIUM = (
     # item is about: two clauses run the confirmation for real, which
     # is a pytest subprocess each. Three single-process runs:
     # 1.22 / 1.25 / 1.24s.
+    "tests/unit/test_the_browser_waits_for_a_condition.py",         #    2.6s
     "tests/unit/test_a_candidate_is_confirmed_alone.py",            # 1.2s
     # `UX-460`, tiered on landing. It runs `analyze` in-process over
     # every committed capture in the tree - seven of them now - which

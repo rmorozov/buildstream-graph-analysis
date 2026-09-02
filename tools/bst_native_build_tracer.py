@@ -3328,22 +3328,85 @@ def read_artifact_contents(project_dir: str, elements: List[str]) -> Dict[str, S
     that as "unknown", never as "staged nothing" - the latter would make
     every dependency look unused.
     """
+    # Every requested element gets a key: `_list_contents` seeds the
+    # ones it was asked for, and the retry below assigns the rest. An
+    # element that ends up absent would read as "staged nothing" rather
+    # than "unknown", which is the one way this function can make every
+    # dependency look unused.
     contents: Dict[str, Set[str]] = {}
-    for element in elements:
-        result = subprocess.run(
-            ["bst", "artifact", "list-contents", element],
-            cwd=project_dir, capture_output=True, text=True,
-        )
-        paths: Set[str] = set()
-        if result.returncode == 0:
-            for line in result.stdout.splitlines():
-                stripped = line.strip()
-                # Skip the `<element>:` heading and blank lines.
-                if not stripped or stripped.endswith(":"):
-                    continue
-                paths.add("/" + stripped.lstrip("/"))
-        contents[element] = paths
+    for group in _chunks(list(elements), LIST_CONTENTS_CHUNK):
+        read = _list_contents(project_dir, group)
+        if read is None:
+            # `UX-518`: the group is all-or-nothing. One unresolvable
+            # name exits 255 with an empty stdout and takes every
+            # element beside it, where the per-element loop lost only
+            # that one - so a failed group is retried one at a time.
+            # That pays the old cost exactly when something is wrong,
+            # and never on the path this change exists to speed up.
+            for element in group:
+                alone = _list_contents(project_dir, [element])
+                contents[element] = (alone or {}).get(element, set())
+            continue
+        contents.update(read)
     return contents
+
+
+#: `UX-518`: elements per `bst artifact list-contents` call. The cost is
+#: per *invocation* - measured on `examples/06`, 11 cached elements one
+#: at a time took 14.82s against 1.59s in one call - so the ideal chunk
+#: is "all of them". It is bounded anyway because the output is held in
+#: memory: those same 11 elements print 8,425 lines, so a 1,000-element
+#: closure is a string nobody needs whole. 200 keeps the invocation
+#: count small (1,000 elements is 5 calls, not 1,000) while bounding
+#: the read.
+LIST_CONTENTS_CHUNK = 200
+
+
+def _chunks(items: List[str], size: int):
+    for start in range(0, len(items), size):
+        yield items[start:start + size]
+
+
+def _list_contents(project_dir: str,
+                   group: List[str]) -> Optional[Dict[str, Set[str]]]:
+    """One `bst artifact list-contents` call over `group`.
+
+    `None` when the call failed - which is *not* the same as "these
+    elements staged nothing", and the caller must not record it as one.
+
+    The `<element>:` heading is the record separator. The per-element
+    version discarded it, because with one element per call there was
+    nothing to attribute; batched, it is the only thing that says which
+    paths belong to whom. A heading is recognised by naming an element
+    that was *asked for* rather than by its trailing colon, so a staged
+    path that happens to end in one cannot open a new record.
+    """
+    if not group:
+        return {}
+    result = subprocess.run(
+        ["bst", "artifact", "list-contents", *group],
+        cwd=project_dir, capture_output=True, text=True,
+    )
+    if result.returncode != 0:
+        return None
+    wanted = set(group)
+    read: Dict[str, Set[str]] = {name: set() for name in group}
+    current: Optional[str] = None
+    for line in result.stdout.splitlines():
+        stripped = line.strip()
+        if not stripped:
+            continue
+        if stripped.endswith(":") and stripped[:-1] in wanted:
+            current = stripped[:-1]
+            continue
+        if current is None:
+            # Output before any heading. `bst` does not emit this today;
+            # dropping it is the honest reading, because there is no
+            # element to attribute it to and guessing would put one
+            # element's files in another's set.
+            continue
+        read[current].add("/" + stripped.lstrip("/"))
+    return read
 
 
 # UX-68: the number of staged files below which "none were opened" says

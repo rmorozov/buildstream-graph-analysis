@@ -229,13 +229,20 @@ KNOWN_SKIP_REASONS = {
     # `examples/06`, so it needs all three: a `bst` to build with, a
     # `bwrap` to build in, and the staged toolchain
     # `generate_sources.py` writes and `UX-189` keeps out of a clone.
-    # The `test` job has none of them and the whole file skips.
-    # Measured on `test (3.11)` of PR #181: 14, which is every clause
-    # in the file.
+    # The `test` job has none of them and the whole file skips, so this
+    # number is the file's clause count and moves when the file grows.
+    # PR #181's `test (3.11)`: 14. Round 80: **23** - `UX-536` and
+    # `UX-538` each added a clause and the 8 of headroom absorbed the
+    # first fourteen, so the number that finally reddened CI was one
+    # over the cap rather than one over the count.
+    #
+    # Invisible to any developer machine that has `bst` (this one does:
+    # the file runs, 23 passed in 103s, and skips nothing), which is
+    # fixing guide 7's class - a claim only CI can falsify.
     "the journey needs bst, bwrap and example 06's staged toolchain "
     "(files/toolchain, written by generate_sources.py)": (
         "UX-402's whole-journey arm; it runs where bst, bwrap and the "
-        "staged toolchain are all present", 14),
+        "staged toolchain are all present", 23),
 
     # `UX-449`. Everything below was **found by the static scan in
     # `tests/skip_reasons.py`**, not by a run: eighteen reasons written

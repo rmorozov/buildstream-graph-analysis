@@ -26,7 +26,7 @@
     "tests/unit/test_a_finding_reaches_the_timeline.py": 9.33,
     "tests/unit/test_a_format_says_what_it_drops.py": 0.01,
     "tests/unit/test_a_generated_project_builds.py": 0.14,
-    "tests/unit/test_a_guard_reads_only_what_a_clone_has.py": 9.87,
+    "tests/unit/test_a_guard_reads_only_what_a_clone_has.py": 16.75,
     "tests/unit/test_a_link_that_shows_what_i_was_looking_at.py": 1.97,
     "tests/unit/test_a_number_has_one_carrier.py": 0.81,
     "tests/unit/test_a_number_knows_its_population.py": 0.36,

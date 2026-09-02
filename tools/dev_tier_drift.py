@@ -998,9 +998,14 @@ def _against(times, path, args):
           f"printed seconds divided by the shift above; `--record` on your "
           f"own machine writes the wrong clock (UX-418, UX-447).",
           file=sys.stderr)
+    # The seconds too, not only the names: diagnosing round 75's own
+    # red run needed "16.0s against 9.9s recorded" and the tail carried
+    # neither, so the job log had to be fetched anyway - which is the
+    # errand `UX-491` exists to remove.
     return done(1, f"{line}, and {len(confirmed)} file(s) slower than "
                    f"{path.name} records: "
-                   + ", ".join(row[0] for row in confirmed))
+                   + "; ".join(f"{row[0]} {row[1]:.1f}s against {row[2]:.1f}s "
+                               f"recorded, x{row[3]:.2f}" for row in confirmed))
 
 
 def _adopt(candidate):

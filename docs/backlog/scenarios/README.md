@@ -41,7 +41,7 @@ task file, which is the only place it ever lived twice.
 | UX-92 | [cache effectiveness — hits, misses, churn, trends — is invisible to the tool](UX-0092-cache-effectiveness-is-invisible-to-the-tool.md) | store | Medium | — | 🟡 |
 | UX-500 | [the batch gate, measured against the per-item suite](UX-0500-the-batch-gate-measured-against-the-per-item-suite.md) | docs | High | the implementing session's wall clock; the maintainer's subscription | 🔴 |
 | UX-507 | [223 closed rows are in no topic](UX-0507-the-unclassified-bucket.md) | docs | Low | the round that asks "how much of the backlog was viewer work" and gets an answer that is 44 % blank | 🔴 |
-| UX-510 | [a parallel track starts from a base the orchestrator has left behind](UX-0510-a-track-starts-from-a-stale-base.md) | guards | Medium | the track told to read a file that does not exist in its copy | 🔴 |
+| UX-510 | [a parallel track starts from a base the orchestrator has left behind](UX-0510-a-track-starts-from-a-stale-base.md) | guards | Medium | the track told to read a file that does not exist in its copy | 🟡 |
 | UX-514 | [the capture schedule can never produce a second commit](UX-0514-the-schedule-can-never-capture-a-second-commit.md) | capture | Medium | `UX-92`'s gate, deferred four times on evidence that cannot arrive | 🔴 |
 
 ## UX-497..UX-506: the seventy-fourth round — the workflow, measured (2026-09-01)

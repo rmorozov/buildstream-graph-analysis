@@ -65,7 +65,8 @@ const nodes = {
 nodes["perfetto-link"].parentElement = nodes["actions-fallback"];
 nodes["trace-download"].parentElement = nodes["actions-download"];
 
-globalThis.document = { getElementById: (id) => nodes[id] ?? null };
+globalThis._installDocument ??= (await import(process.env.BGA_DOM_SHIM)).installDocument;
+_installDocument({ getElementById: (id) => nodes[id] ?? null });
 globalThis.location = { href: here + "index.html" };
 
 globalThis.fetch = async (url, init = {}) => {

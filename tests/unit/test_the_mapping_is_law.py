@@ -412,9 +412,8 @@ class TestAShapeTheGuideDoesNotCover:
 
     _PROBE = """
 globalThis._makeNode ??= (await import(process.env.BGA_DOM_SHIM)).makeNode;
-globalThis.document = { createElement: _makeNode,
-                        createElementNS: (_n, t) => _makeNode(t),
-                        getElementById: () => null };
+globalThis._installDocument ??= (await import(process.env.BGA_DOM_SHIM)).installDocument;
+_installDocument();
 const warnings = [];
 globalThis.console = { ...console, warn: (m) => warnings.push(String(m)) };
 const app = await import("./tests/viewer.mjs");

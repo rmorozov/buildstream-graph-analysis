@@ -197,11 +197,11 @@ class TestTheScaleThatDemandedIt:
 
 _SHIM = """
 globalThis._makeNode ??= (await import(process.env.BGA_DOM_SHIM)).makeNode;
+globalThis._installDocument ??= (await import(process.env.BGA_DOM_SHIM)).installDocument;
 function make(tag) {
   return _makeNode(tag);
 }
-globalThis.document = { createElement: make, createElementNS: (_n, t) => make(t),
-                        getElementById: () => null };
+_installDocument();
 """
 
 _HARNESS = _SHIM + """

@@ -68,9 +68,8 @@ def _js(body, protocol="file:"):
     """Run a snippet against the shared shim and parse what it printed."""
     source = """
 globalThis._makeNode ??= (await import(process.env.BGA_DOM_SHIM)).makeNode;
-globalThis.document = { createElement: _makeNode,
-                        createElementNS: (_n, t) => _makeNode(t),
-                        getElementById: () => null };
+globalThis._installDocument ??= (await import(process.env.BGA_DOM_SHIM)).installDocument;
+_installDocument();
 // `UX-415`: the second copy of the same inconsistency. This probe
 // calls render functions directly rather than booting, so no
 // consumer here resolves a URL today - which is exactly why it

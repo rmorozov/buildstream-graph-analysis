@@ -298,6 +298,7 @@ const throwing = protocol.endsWith("throwing");
 const writes = [];
 
 globalThis._makeNode ??= (await import(process.env.BGA_DOM_SHIM)).makeNode;
+globalThis._installDocument ??= (await import(process.env.BGA_DOM_SHIM)).installDocument;
 
 function make(tag) {
   const node = _makeNode(tag);
@@ -314,23 +315,9 @@ for (const m of page.matchAll(
 
 const named = {};
 const body = make("body");
-globalThis.document = {
+_installDocument({
   createElement: make, createElementNS: (_n, t) => make(t), body, title: "",
-  // UX-219: the shim was an incomplete model of the DOM, and the gap was
-  // latent rather than new - `views.js` has called `createTextNode` since
-  // UX-212, in paths a golden export never reaches (they need a compare
-  // or a store payload). The horizon renders on every analyze report, so
-  // it made the gap live: the exported page threw
-  // `document.createTextNode is not a function` inside `boot()` and the
-  // reader got the catch-all banner instead of their report - UX-199's
-  // defect, by a different route.
-  //
-  // Fixed here rather than by avoiding a standard DOM method in the
-  // viewer: every browser has it, two call sites already depended on it,
-  // and leaving the model short would keep the trap set for whoever next
-  // makes one of those paths run.
-  createTextNode: (t) => ({ nodeType: 3, textContent: String(t),
-                            attrs: {}, children: [] }),
+  // The page reads its payload out of `<script id="bga-*">` blocks.
   getElementById(id) {
     if (id.startsWith("bga-")) {
       const key = id.slice(4);
@@ -338,20 +325,6 @@ globalThis.document = {
     }
     return named[id] ??= make("div");
   },
-  // UX-254: `document.querySelector` exists in every browser, and this
-  // model did not have it at all - so `app.js` asking for `header`
-  // threw, the boot fell into its own error path, and twelve order
-  // guards reported "Could not load this run" rather than an order.
-  //
-  // Added for the reason the `createTextNode` note above records:
-  // fixed here rather than by avoiding a standard DOM method in the
-  // viewer, because leaving the model short keeps the trap set for
-  // whoever next makes one of those paths run.
-  //
-  // It models what the page asks for and returns `null` otherwise -
-  // which is a real browser's answer for a selector that matches
-  // nothing, and is what makes the caller take its documented
-  // fallback rather than crash.
   querySelector(sel) {
     if (sel === "header") {
       // Attached to `body`, because a real page's header is. Detached,
@@ -364,8 +337,7 @@ globalThis.document = {
     }
     return body.querySelector?.(sel) ?? null;
   },
-};
-// `UX-415`: one shape, read twice, and for six rounds the two copies
+});// `UX-415`: one shape, read twice, and for six rounds the two copies
 // disagreed. `protocol` followed `PROTOCOL` and `href` was the served
 // URL whatever it said, so every consumer that resolves a *URL* rather
 // than reading `location.protocol` measured the served page under an

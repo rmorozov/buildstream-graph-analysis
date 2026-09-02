@@ -254,15 +254,13 @@ def _node(script, timeout=120):
 
 _PANEL = """
 globalThis._makeNode ??= (await import(process.env.BGA_DOM_SHIM)).makeNode;
+globalThis._installDocument ??= (await import(process.env.BGA_DOM_SHIM)).installDocument;
 
 function make(tag) {
   const node = _makeNode(tag);
   return node;
 }
-globalThis.document = { createElement: make, createElementNS: (_n, t) => make(t),
-                        createTextNode: (t) => ({ nodeType: 3, textContent: t,
-                                                  attrs: {}, children: [] }),
-                        getElementById: () => null };
+_installDocument();
 globalThis.setTimeout = () => 0;
 const views = await import("./tests/viewer.mjs");
 const payload = %s;

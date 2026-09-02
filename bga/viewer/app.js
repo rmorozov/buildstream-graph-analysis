@@ -1001,12 +1001,7 @@ async function boot() {
     // 1,200ms sleep `UX-482` left in its place was covering that gap
     // rather than the one it named. In the `finally` so the failure
     // page counts as booted too: it is a finished page, not a slow one.
-    // Guarded because forty-eight guard files build their own document
-    // and none of them models `documentElement` (`UX-537`); a browser
-    // always has one, and the browser is this flag's only reader.
-    if (document.documentElement?.dataset) {
-      document.documentElement.dataset.bgaBooted = "1";
-    }
+    document.documentElement.dataset.bgaBooted = "1";
   }
 }
 

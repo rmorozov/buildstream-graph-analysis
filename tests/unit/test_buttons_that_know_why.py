@@ -370,14 +370,14 @@ class TestTheButtonsInThePage:
 
 _HARNESS = """
 globalThis._makeNode ??= (await import(process.env.BGA_DOM_SHIM)).makeNode;
+globalThis._installDocument ??= (await import(process.env.BGA_DOM_SHIM)).installDocument;
 
 function make(tag) {
   const node = _makeNode(tag);
   return node;
 }
 // `app.js` boots itself when `#report` exists; it must not here.
-globalThis.document = { createElement: make, createElementNS: (_n, t) => make(t),
-                        getElementById: () => null };
+_installDocument();
 
 const app = await import("./tests/viewer.mjs");
 

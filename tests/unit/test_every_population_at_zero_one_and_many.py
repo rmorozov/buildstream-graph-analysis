@@ -94,9 +94,8 @@ MANY = BOUND_AS_MEASURED * 3
 
 _SWEEP = r"""
 globalThis._makeNode = (await import(process.env.BGA_DOM_SHIM)).makeNode;
-globalThis.document = { createElement: _makeNode,
-                        createElementNS: (_n, t) => _makeNode(t),
-                        getElementById: () => null };
+globalThis._installDocument ??= (await import(process.env.BGA_DOM_SHIM)).installDocument;
+_installDocument();
 const app = await import(process.env.BGA_VIEWER);
 const chapters = await import(process.env.BGA_REPO + "/bga/viewer/chapters.js");
 const format = await import(process.env.BGA_REPO + "/bga/viewer/format.js");

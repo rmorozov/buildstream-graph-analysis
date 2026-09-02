@@ -286,12 +286,13 @@ class TestDescriptionsAreThePopovers:
         out = _js('''
           const { renderPairs } = await import("./tests/viewer.mjs");
           globalThis._makeNode ??= (await import(process.env.BGA_DOM_SHIM)).makeNode;
+globalThis._installDocument ??= (await import(process.env.BGA_DOM_SHIM)).installDocument;
 
 function make(tag) {
   const node = _makeNode(tag);
   return node;
 }
-          globalThis.document = { createElement: make };
+          _installDocument();
           const node = %s;
           const out = renderPairs("pipeline_overhead", { total_us: 1441000 }, {}, node);
           // `el()` assigns non-data attributes as *properties*

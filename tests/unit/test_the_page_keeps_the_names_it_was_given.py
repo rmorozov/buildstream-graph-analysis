@@ -295,10 +295,9 @@ class TestThePredicateIsTheSchemas:
 #: up for exactly this.
 _INLINE = """
 globalThis._makeNode ??= (await import(process.env.BGA_DOM_SHIM)).makeNode;
+globalThis._installDocument ??= (await import(process.env.BGA_DOM_SHIM)).installDocument;
 const make = (tag) => _makeNode(tag);
-globalThis.document = { createElement: make,
-                        createElementNS: (_n, t) => make(t),
-                        getElementById: () => null };
+_installDocument();
 const v = await import("./tests/viewer.mjs");
 const out = v.renderStructured("m", __VALUE__, {}, __NODE__, 0, "m");
 const keys = [];

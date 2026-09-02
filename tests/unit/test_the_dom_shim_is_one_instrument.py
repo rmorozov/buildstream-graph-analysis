@@ -56,12 +56,49 @@ def _run(script):
     return json.loads(done.stdout)
 
 
+#: `UX-537`: the hand-built document, spelled so this file does not
+#: contain the thing it forbids — the ninth-time problem, `UX-239`.
+HAND_BUILT = "globalThis.document" + " = {"
+
+
 class TestThereIsOnlyOneShim:
+    def test_no_harness_wires_its_own_document(self):
+        """`UX-537`. The `document` was the half `UX-264` left alone, and
+        it grew back to 54 literals across 50 files, none modelling
+        `documentElement`.
+
+        Measured before the move: 44 of 52 `getElementById` bodies were
+        `() => null` — the shim's own default — and the eight that
+        differed are what `installDocument(overrides)` exists for. So
+        the difference the copies bought was the trap, three times:
+
+        ```text
+        UX-219  createTextNode missing   the exported page threw in boot()
+        UX-254  querySelector missing    twelve order guards read a banner
+        UX-523  documentElement missing  ten setup errors at once
+        ```
+
+        Each was one file fixed and forty-seven copies still armed.
+        """
+        offenders = {}
+        for path in sorted((REPO / "tests/unit").glob("*.py")):
+            if path.name == pathlib.Path(__file__).name:
+                continue
+            source = path.read_text(encoding="utf-8")
+            for match in re.finditer(re.escape(HAND_BUILT), source):
+                offenders.setdefault(path.name, []).append(
+                    source[:match.start()].count("\n") + 1)
+        assert offenders == {}, (
+            f"these harnesses hand-build a `document` instead of calling "
+            f"`installDocument` from tests/dom_shim.mjs: {offenders}. "
+            f"Pass what legitimately differs as overrides — a hand-built "
+            f"one models only what its author thought of, which is how "
+            f"UX-219 (createTextNode), UX-254 (querySelector) and UX-523 "
+            f"(documentElement) each cost a round (UX-537).")
+
     def test_no_harness_builds_its_own_node(self):
-        """The census. A harness may wire its own `document` — that is
-        three lines and legitimately differs — but the *node* is the
-        thing whose fidelity was wrong three times, and it comes from
-        one place."""
+        """The census. The *node* is the thing whose fidelity was wrong
+        three times, and it comes from one place."""
         offenders = {}
         for path in _harness_files():
             # This file's own probes call `setAttribute` inside a

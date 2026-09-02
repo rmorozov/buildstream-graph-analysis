@@ -36,15 +36,13 @@ GOLDEN = os.path.join(REPO, "tests", "fixtures", "golden", "mixed_task_kinds")
 
 _SHIM = """
 globalThis._makeNode ??= (await import(process.env.BGA_DOM_SHIM)).makeNode;
+globalThis._installDocument ??= (await import(process.env.BGA_DOM_SHIM)).installDocument;
 
 function make(tag) {
   const node = _makeNode(tag);
   return node;
 }
-globalThis.document = { createElement: make, createElementNS: (_n, t) => make(t),
-                        createTextNode: (t) => ({ nodeType: 3, textContent: String(t),
-                                                  attrs: {}, children: [] }),
-                        getElementById: () => null };
+_installDocument();
 const all = (n, p, f = []) => { if (!n) return f; if (p(n)) f.push(n);
   (n.children ?? []).forEach((c) => all(c, p, f)); return f; };
 const text = (n) => (n.children ?? []).reduce(

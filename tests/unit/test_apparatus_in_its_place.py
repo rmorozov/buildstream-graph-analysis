@@ -341,9 +341,8 @@ class TestAnAriaAttributeIsAnAttribute:
         out = json.loads(subprocess.run(
             [node, "--input-type=module", "-e", """
 globalThis._makeNode ??= (await import(process.env.BGA_DOM_SHIM)).makeNode;
-globalThis.document = { createElement: _makeNode,
-                        createElementNS: (_n, t) => _makeNode(t),
-                        getElementById: () => null, querySelector: () => null };
+globalThis._installDocument ??= (await import(process.env.BGA_DOM_SHIM)).installDocument;
+_installDocument();
 globalThis.location = { protocol: "http:", href: "http://x/" };
 globalThis.window = { localStorage: { getItem: () => null, setItem: () => {} } };
 globalThis.CSS = { escape: (s) => s };

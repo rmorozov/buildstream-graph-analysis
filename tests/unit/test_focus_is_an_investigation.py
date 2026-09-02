@@ -153,13 +153,13 @@ class TestTheExportStaysAPlainDocument:
 
 _PANEL = """
 globalThis._makeNode ??= (await import(process.env.BGA_DOM_SHIM)).makeNode;
+globalThis._installDocument ??= (await import(process.env.BGA_DOM_SHIM)).installDocument;
 
 function make(tag) {
   const node = _makeNode(tag);
   return node;
 }
-globalThis.document = { createElement: make, createElementNS: (_n, t) => make(t),
-                        getElementById: () => null };
+_installDocument();
 const views = await import("./tests/viewer.mjs");
 const panel = views.renderInvestigation(__PAYLOAD__, __UID__,
                                         { store: __STORE__ });
@@ -220,13 +220,14 @@ function make(tag) {
   };
   return node;
 }
-globalThis.document = {
+globalThis._installDocument ??= (await import(process.env.BGA_DOM_SHIM)).installDocument;
+// `make` above is this file's own node, not the shim's - UX-537 moved
+// the *document* here and left that second instrument standing.
+_installDocument({
   createElement: make, createElementNS: (_n, t) => make(t),
-  // The shipped page calls this; a harness without it is more capable
-  // than the runtime and hides a real break (UX-219's lesson).
   createTextNode: (text) => ({ tagName: "#text", nodeType: 3, attrs: {},
                                children: [], textContent: text }),
-  getElementById: () => null, addEventListener() {} };
+});
 globalThis.Event = class { constructor(name) { this.type = name; } };
 const app = await import("./tests/viewer.mjs");
 const focus = await import("./bga/viewer/focus.js");

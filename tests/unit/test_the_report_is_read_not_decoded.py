@@ -101,7 +101,8 @@ def _media_blocks(query):
 
 _TEXT = """
 globalThis._makeNode ??= (await import(process.env.BGA_DOM_SHIM)).makeNode;
-globalThis.document = { createElement: _makeNode, getElementById: () => null };
+globalThis._installDocument ??= (await import(process.env.BGA_DOM_SHIM)).installDocument;
+_installDocument();
 const app = await import("./tests/viewer.mjs");
 const long = "word ".repeat(80);
 const out = {};

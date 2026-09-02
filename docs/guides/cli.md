@@ -223,6 +223,74 @@ captures excluded from the timing distributions for failing: a failed
 run is not a sample, and still occupies its disk. See [the real-project
 guide](real-project.md) for the store at big-project scale.
 
+### Carrying a capture to another machine (`UX-520`)
+
+**`run/` is not the capture.** It holds Plane 1 — `graph.json`,
+`trace.json`, `run-context.json` — and the Plane 2 report, the raw
+per-process trace, the host samples, the published analysis and the
+build log all sit *beside* it. A `tar` of `run/`, which is the directory
+every command's help names, arrives with Plane 2 missing; the far side
+then says so rather than lying, but that is a poor substitute for
+packing the right set:
+
+```bash
+bga bundle --export @last -o run.tar.gz
+scp run.tar.gz laptop:
+ssh laptop 'cd myproject && bga bundle --load run.tar.gz && bga analyze @last'
+```
+
+`--export` takes a stamp, `@last`/`@prev`, or a path, and writes one
+archive holding every member `capture-layout/v1` names that exists for
+that snapshot — derived from the contract, so a member added to the
+layout travels without anyone remembering it. Members the contract calls
+`derived` are skipped: that word means "absent means nothing; it is
+rebuilt on demand", so leaving them out cannot make the far report
+quieter.
+
+```console
+$ bga bundle --export @last -o run.tar.gz
+Wrote run.tar.gz
+  snapshot 20260902T101112Z: 7 member(s), 56.3K before compression
+  load it with: bga bundle --load run.tar.gz
+```
+
+**`--load` unpacks under the bundle's own stamp**, not a new one. The
+stamp is the capture's identity, so a run carried from a runner to a
+laptop keeps the name it was compared under at home — and `UX-186`'s
+host manifest rides inside `run-context.json` untouched, so `bga
+compare` on the far machine caps confidence and refuses exactly as it
+would have at the other end.
+
+**It refuses rather than half-loads.** Every member carries its contract
+version in the bundle's manifest, so a bundle packed by a newer `bga` is
+recognised and declined with nothing written:
+
+```console
+$ bga bundle --load newer.tar.gz
+Error: this bundle carries contract(s) this bga does not read: graph/v10.
+It was packed by bga 9.9.9; upgrade to read it. Nothing was written.
+```
+
+It refuses the same way when the stamp is already in the store and its
+contents differ — two different captures cannot share one identity.
+Loading the *same* bundle twice is a re-send, not a collision, and
+succeeds.
+
+**Everything ships by default.** `--no-plane2` trades the large member
+for a small bundle, says what it left out, and records the omission in
+the manifest so `--load` says so too — because "why is Plane 2 missing
+over there" is a worse question than a large file:
+
+```console
+$ bga bundle --export @last --no-plane2 -o small.tar.gz
+Wrote small.tar.gz
+  snapshot 20260902T101112Z: 6 member(s), 10.8K before compression
+  left out (--no-plane2): plane2.json
+```
+
+For the CI direction — publishing to a git ref rather than one file —
+see `bga baseline` and the capture-ref scheme below.
+
 ### The same job in CI
 
 Use published capture refs (`bga baseline`, `UX-96`) rather than the

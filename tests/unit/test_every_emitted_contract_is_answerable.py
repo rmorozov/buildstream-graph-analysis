@@ -101,6 +101,11 @@ FILE_WRITTEN = {
     # capture layout is the *only* one whose "file" is the tree.
     "capture-layout/v1": ".bga/ itself - specification 32.6",
     "host-samples/v1": "host-samples.jsonl (bga capture, UX-378)",
+    # `UX-520`: the manifest inside a run bundle. Written into the
+    # archive `bga bundle --export` produces, and read by `--load` to
+    # decide whether this build can read the capture at all - an
+    # on-disk shape with no command that prints it.
+    "bundle-manifest/v1": "bundle.json inside a bga bundle (UX-520)",
     # `UX-297` retired this one. Still read, never written - which is a
     # third state, and the reason `contracts.superseded()` exists.
     "plane2/v1": "plane2.json, as a capture before UX-297 wrote it",

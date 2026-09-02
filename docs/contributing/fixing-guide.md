@@ -240,6 +240,8 @@ tools/dev_perfetto_queries.py  the canned questions, run against a real
                              trace with Perfetto's own reader (UX-432)
 tools/dev_finding_coverage.py  which findings a committed capture really
                              produces, read off analyze (UX-460)
+tools/dev_track_cost.py      where an implementer track's tokens went,
+                             by phase, from the agent transcript (UX-525)
 tools/dev_trace_coverage.py  which captured field reaches the emitted
                              trace, and which Perfetto carriers it uses (UX-466)
 tools/bga_gen_project.py     a BuildStream project `bst build` accepts,

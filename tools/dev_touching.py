@@ -21,6 +21,9 @@ graph**. That choice is deliberate:
 that exercises a module without naming it, so `make test` before a
 commit is unchanged and the verify skill still requires it. What this
 buys is the twenty runs *before* that one.
+
+**A green run prints one line** (`UX-525`): pytest output is 10-16% of a
+track's tokens. Red prints everything; `--loud` restores the old shape.
 """
 import argparse
 import os
@@ -115,6 +118,12 @@ def select(changed):
     return sorted(chosen), why
 
 
+def last_line(text: str) -> str:
+    """Pytest's summary line - the last non-empty one it printed."""
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    return lines[-1].strip("= ") if lines else "no output"
+
+
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--base", default=None,
@@ -123,6 +132,8 @@ def main(argv=None) -> int:
                         help="print the selected files and exit")
     parser.add_argument("--why", action="store_true",
                         help="print what selected each file")
+    parser.add_argument("--loud", action="store_true",
+                        help="print pytest's output even when it passes")
     args, rest = parser.parse_known_args(argv)
 
     changed = changed_files(args.base)
@@ -149,11 +160,23 @@ def main(argv=None) -> int:
         print("\n".join(selected))
         return 0
 
-    print(f"{len(selected)} test file(s) name the {len(changed)} changed "
-          f"file(s); running them.", file=sys.stderr)
-    return subprocess.call(
-        [sys.executable, "-m", "pytest", *selected, "-q", "-n", "auto", *rest],
-        cwd=REPO, env={**os.environ, "BGA_TIER_ANY": "1"})
+    argv = [sys.executable, "-m", "pytest", *selected, "-q", "-n", "auto", *rest]
+    env = {**os.environ, "BGA_TIER_ANY": "1"}
+    if args.loud:
+        print(f"{len(selected)} test file(s) name the {len(changed)} changed "
+              f"file(s); running them.", file=sys.stderr)
+        return subprocess.call(argv, cwd=REPO, env=env)
+    done = subprocess.run(argv, cwd=REPO, env=env, capture_output=True, text=True)
+    if done.returncode:
+        # Red is the case a reader needs whole; only green is summarised.
+        print(f"{len(selected)} test file(s) name the {len(changed)} changed "
+              f"file(s); running them.", file=sys.stderr)
+        sys.stdout.write(done.stdout)
+        sys.stderr.write(done.stderr)
+        return done.returncode
+    print(f"{len(selected)} file(s) selected · {last_line(done.stdout)}",
+          file=sys.stderr)
+    return 0
 
 
 if __name__ == "__main__":

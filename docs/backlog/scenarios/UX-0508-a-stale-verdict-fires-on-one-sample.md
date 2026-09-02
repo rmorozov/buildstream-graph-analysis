@@ -133,3 +133,43 @@ None. Out of scope and untouched: the band's width (`UX-496`,
 make test-touching  483 passed in 15.80s;  make lint clean
 make test           5765 passed, 27 skipped in 317.64s
 ```
+
+## Follow-up (round 75, 2026-09-02) — the branch this shipped broken
+
+`UX-508` introduced a `NameError` and CI found it two pushes later, on
+run 33578729472:
+
+```text
+2 file(s) over both gates on 2 consecutive runs, with nothing in this
+branch's diff that names them (UX-476):
+NameError: cannot access free variable 'series' where it is not
+associated with a value in enclosing scope
+```
+
+The stale branch above assigns `series = ", ".join(...)`. Python binds
+a name assigned anywhere in a function as local to the **whole**
+function, so the nested `readings()` — which calls the *module-level*
+`series()` — resolved to that local and found it unassigned on every
+run that did not take the stale branch. The local is now
+`readings_so_far`.
+
+**Why nothing here caught it.** `TestAgreementIsNotEvidenceOnItsOwn`
+calls `repeated` directly; `TestAnExcursionMustRepeat` never passes
+`--base`, so `explained` is `None` and every agreed row is *confirmed*.
+The `unexplained` print — the only caller of `readings()` — had no
+clause driving it through `main` at all. Two full-suite runs were green
+here before the push.
+
+`TestEveryBranchOfTheMessageIsReached` now drives all three of
+`_against`'s per-file messages end to end. Mutation U1 restores the
+shadowing name and reproduces CI's `NameError` verbatim:
+
+```text
+E   NameError: cannot access free variable 'series' ...
+FAILED ...::TestEveryBranchOfTheMessageIsReached::test_the_unexplained_message_prints
+1 failed, 104 passed
+```
+
+The run that crashed read shift **x0.67** — inside `IMAGE_BAND`, so
+`stale` did not fire; the two files it was about to report were
+`unexplained`, which is exit 0. With the fix that run is green.

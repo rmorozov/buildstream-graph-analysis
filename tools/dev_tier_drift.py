@@ -766,12 +766,18 @@ def _against(times, path, args):
         # about the file (`UX-442`). A run with no `--carry` has no
         # memory to consult and decides alone, as it always did.
         agreed = out_of_band(shift, before) if args.carry else True
-        series = ", ".join(f"x{one:.2f}" for one in [shift] + list(before))
+        # Not `series`: that is the module-level function `readings()`
+        # below calls, and a local of the same name shadows it for the
+        # *whole* of `_against` - so the `unexplained` path raised
+        # `NameError` on every run that did not take this branch.
+        # `UX-508` shipped that and CI found it (run 33578729472).
+        readings_so_far = ", ".join(f"x{one:.2f}"
+                                    for one in [shift] + list(before))
         opening = (f"this run is x{shift:.2f} the reference recorded on "
                    f"{where}, outside the "
                    f"{IMAGE_BAND[0]}-{IMAGE_BAND[1]} band.")
         if agreed:
-            print(f"{opening} So were the run(s) behind it ({series}). "
+            print(f"{opening} So were the run(s) behind it ({readings_so_far}). "
                   f"That is the whole runner moving, not one file "
                   f"drifting - re-record with --record and commit it, "
                   f"from this run's {CI_CANDIDATE_ARTIFACT} artifact or "
@@ -779,7 +785,8 @@ def _against(times, path, args):
                   f"reading the per-file numbers.", file=sys.stderr)
             return 1
         print(f"{opening} The run(s) behind it read "
-              f"{series or 'nothing'}, so this is one runner's afternoon "
+              f"{readings_so_far or 'nothing'}, so this is one runner's "
+              f"afternoon "
               f"until the next run agrees (UX-508). Nothing is being "
               f"failed on it.", file=sys.stderr)
         return 0

@@ -1383,6 +1383,88 @@ class TestTheRunnerVerdictNeedsASeriesToo:
             assert drift.shifted(path) == []
 
 
+class TestEveryBranchOfTheMessageIsReached:
+    """`UX-508`'s own defect: a path no clause drove.
+
+    The suite was green here twice and CI raised, from `_against`:
+
+    ```text
+    2 file(s) over both gates on 2 consecutive runs, with nothing in
+    this branch's diff that names them (UX-476):
+    NameError: cannot access free variable 'series' where it is not
+    associated with a value in enclosing scope
+    ```
+
+    `UX-508` added `series = ", ".join(...)` inside the `stale` branch.
+    Python binds a name assigned anywhere in a function as local to the
+    **whole** function, so the nested `readings()` - which calls the
+    module-level `series()` - resolved to that local and found it
+    unassigned on every run that did not take the stale branch.
+
+    Nothing caught it because `TestAgreementIsNotEvidenceOnItsOwn` calls
+    `repeated` directly and `TestAnExcursionMustRepeat` never supplies a
+    `--base`, so `explained` is `None` there and every agreed row is
+    *confirmed*. The `unexplained` print - the one that calls
+    `readings()` - had no clause driving it through `main` at all.
+
+    So this drives each of `_against`'s three per-file messages once,
+    end to end. They are cheap; the branch that is never executed is the
+    one that ships a `NameError`.
+    """
+
+    FLAKY = "tests/unit/test_the_page_has_geometry.py"
+
+    def _run(self, tmp_path, capsys, times, base=None, carry=True):
+        reference = tmp_path / "ref.json"
+        reference.write_text(json.dumps(drift.record(dict(tiers.recorded()))),
+                             encoding="utf-8")
+        argv = [str(_report(tmp_path, times)), "--against", str(reference)]
+        if carry:
+            argv += ["--carry", str(tmp_path / "carry.json")]
+        if base:
+            argv += ["--base", base]
+        code = drift.main(argv)
+        said = capsys.readouterr()
+        return code, said.out + said.err
+
+    def _slower(self):
+        times = dict(tiers.recorded())
+        times[self.FLAKY] = times[self.FLAKY] * 2
+        return times
+
+    def test_the_waiting_message_prints(self, tmp_path, capsys):
+        """One run over both gates: `waiting`, and `say()` runs."""
+        code, said = self._run(tmp_path, capsys, self._slower())
+        assert code == 0, said
+        assert "on this run only" in said, said
+        assert self.FLAKY in said, said
+
+    def test_the_unexplained_message_prints(self, tmp_path, capsys):
+        """Two agreeing runs with a diff that names nothing: the branch
+        that raised in CI. `--base HEAD` on a clean tree is an empty
+        diff, which `explained_by` returns as an empty *set* - evidence
+        that explains nothing, rather than `None` for no evidence."""
+        times = self._slower()
+        self._run(tmp_path, capsys, times, base="HEAD")
+        code, said = self._run(tmp_path, capsys, times, base="HEAD")
+        assert code == 0, said
+        assert "nothing in this branch's diff that names them" in said, said
+        assert "readings:" in said, (
+            "the readings series never printed, so `readings()` - and the "
+            "module-level `series()` it calls - was not executed")
+        assert "x2.0" in said or "x1.9" in said, said
+
+    def test_the_confirmed_message_prints(self, tmp_path, capsys):
+        """Two agreeing runs with no `--base`: `explained` is None, so
+        agreement confirms and the failing message runs."""
+        times = self._slower()
+        self._run(tmp_path, capsys, times)
+        code, said = self._run(tmp_path, capsys, times)
+        assert code == 1, said
+        assert "slower than CI's own record" in said, said
+        assert self.FLAKY in said, said
+
+
 class TestTheSpreadIsTheShiftTheGateUses:
     """`UX-476` item 2. `spread` wrote a history the gate never
     applied: its median was over every shared file and the gate's is

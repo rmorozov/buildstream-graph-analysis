@@ -717,7 +717,26 @@ COMMITTED_EXPORTS = [
     #
     # The recorded figures were 3,564 B stale on golden and 3,564 on
     # macro_micro. 420,000 leaves 4,271 B.
-    ("golden", GOLDEN, 420_000),                       #  415,729 B
+    # `UX-533` moved both by **+1,852 B**: +1,096 of page
+    # (`analysisSentence` and the two lines `stampHeader` gained) and
+    # +756 of data, the `run.analysis` note - which analysis the page is
+    # showing, its producer, the contracts that moved and the sections
+    # this build always publishes that it lacks. Same instrument:
+    #
+    #     page         301,801 -> 302,897
+    #     golden       416,110 -> 417,962   (data 114,309 -> 115,065)
+    #     macro_micro  466,209 -> 468,061   (data 164,408 -> 165,164)
+    #
+    # The recorded figures were 381 B stale on golden and 461 on
+    # macro_micro. Both bounds still hold: 420,000 leaves 2,038 B and
+    # 470,000 leaves 1,939 B.
+    # `UX-530` moved both by **+220 B, all page** (302,897 -> 303,117):
+    # the degradation ladder, `_over_a_ceiling` and the sentence the
+    # handoff prints when a step was taken. The embedded data is
+    # byte-identical - neither committed fixture is over a ceiling, so
+    # neither publishes `timeline_degraded`. 420,000 leaves 1,818 B and
+    # 470,000 leaves 1,719 B.
+    ("golden", GOLDEN, 420_000),                       #  418,182 B
     # `UX-297` moved this one by 385 B before that: the two-plane run
     # publishes `plane2_coverage.source`, which says which shape of
     # Plane 2 report served its numbers and what that costs to open. A
@@ -805,7 +824,7 @@ COMMITTED_EXPORTS = [
     # measurement that forced it is the negotiation this file exists to
     # prevent - but the next round to add a module will trip it, and
     # the figure it needs is this one rather than the stale 453,180.
-    ("macro_micro", MACRO_MICRO, 470_000),             #  465,748 B
+    ("macro_micro", MACRO_MICRO, 470_000),             #  468,281 B
 ]
 
 
@@ -885,7 +904,7 @@ class TestItNeedsNothingButItself:
         """
         import tools.bga_view as view
 
-        monkeypatch.setattr(view, "payloads", lambda run: {
+        monkeypatch.setattr(view, "payloads", lambda run, **_kw: {
             "report.json": {"schema": "analyze/v2", "section": None,
                             "run_id": "a</script><script>alert(1)</script>",
                             "total_duration_us": 1}})

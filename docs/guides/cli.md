@@ -1357,7 +1357,7 @@ was:
 | --- | --- | --- | --- |
 | `EXPORT_BUDGET_B` | 8 MiB | the whole written file: source + contract + data | nothing to do; the note says an attachment may not survive it |
 | `TRACE_BUDGET_B` | 4 MiB | the **gzipped trace** before it is base64-encoded — one part of the data half | the trace is left out and the page names the bound; `bga timeline` renders one beside the snapshot |
-| `TRACE_TRACK_BUDGET` | 8,000 tracks | the rows Perfetto opens: one process track per element, one thread track per traced pid | `bga timeline --planes 1` or `--only-element`, above — they narrow what is *drawn* rather than what is carried |
+| `TRACE_TRACK_BUDGET` | 8,000 tracks | the rows Perfetto opens: one process track per element, one thread track per traced pid — **processes**, not slices, so the spine's second record of one process is not a second row (`UX-406`) | nothing, for an export: it renders again with `--planes 1` and the handoff sentence says it did (`UX-530`). For `bga timeline`, `--planes 1` or `--only-element` narrow what is *drawn* rather than what is carried |
 
 The third is the one a reader is least likely to guess at, because the
 byte figure looks fine when it bites: measured on the seeded scale run
@@ -1370,6 +1370,18 @@ population (`UX-445`).
 `TRACE_TRACK_BUDGET`'s value is one sample and says so — see its
 docstring in `tools/bga_view.py`, and `UX-445` for what is still
 unmeasured about it.
+
+Since `UX-530` an export **degrades before it refuses**: it renders the
+whole timeline, and if that is over either bound it renders again with
+`--planes 1` and carries that instead, saying which step it took and
+what the whole one would have drawn. Refusal is what is left when every
+step `bga timeline` offers is still over. Measured on a capture of the
+item's own shape — 8,140 processes over four elements:
+
+```text
+both planes    8,152 tracks   8,146 slices     over the 8,000 ceiling
+--planes 1         7 tracks       6 slices     carried
+```
 
 For CI, put it beside the comment step — see
 [`ci-comment.md`](ci-comment.md).

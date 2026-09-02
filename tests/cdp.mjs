@@ -157,19 +157,31 @@ await send("Page.navigate", { url });
 // on the sections while `boot()` is still wiring the controls after
 // them, which is what three run-switching guards and two
 // handoff-geometry guards then failed on. Both are the same mistake -
-// a proxy for "the page has finished" - so `boot()` says it now
-// (`data-bga-booted`), and this waits for the page's own word. A page
-// with no `#report` has no `boot()` either, and settles on `body`.
+// a proxy for "the page has finished" - so the page says it now
+// (`data-bga-booted`), and this waits for its own word.
+//
+// **Which pages** was the third miss, found on the merge of round 80's
+// tracks: the condition was `#report`, which is `index.html`'s section
+// and not `perfetto.html`'s - so the handoff page, whose entire state
+// is what its two `fetch`es found, went on settling on the heuristic.
+// Three clauses of `test_one_page_behind_the_button.py` red under the
+// full suite and green alone. The page declares it instead
+// (`data-bga-boots` on `<html>`), so a page that will speak is known
+// before it speaks and an exported one - which has neither attribute
+// until its own `boot()` runs - is not waited on forever.
 const SETTLE_STEP_MS = 150;
 const SETTLE_CEILING_MS = 20000;
 {
   const state = async () => {
     const got = await send("Runtime.evaluate", {
       expression: `(() => {
-        const report = document.getElementById("report");
-        if (report) {
-          return { booting: true,
-                   done: document.documentElement.dataset.bgaBooted === "1" };
+        const root = document.documentElement;
+        // #report too: an exported page is one file with no
+        // data-bga-boots on it, and boot() still stamps it.
+        // No backticks in here - this is inside a template literal.
+        if (root.dataset.bgaBoots === "1"
+            || document.getElementById("report")) {
+          return { booting: true, done: root.dataset.bgaBooted === "1" };
         }
         return { booting: false, n: document.body?.innerHTML.length ?? 0 };
       })()`,

@@ -106,6 +106,15 @@ async function questions() {
     // and the button stays - an unknown timeline is not an absent one.
   }
   document.getElementById("questions").append(renderQuestions(make, options));
+  // `UX-523`, one page over: this page fetches too, and it is the one
+  // whose whole state is what the fetch found. Without the flag the
+  // sampler falls back to "the markup stopped growing", which a cold
+  // start satisfies before `report.json` lands - three clauses of
+  // `test_one_page_behind_the_button.py` red under the full suite and
+  // green alone.
+  if (document.documentElement?.dataset) {
+    document.documentElement.dataset.bgaBooted = "1";
+  }
 }
 
 questions();

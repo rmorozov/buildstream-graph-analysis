@@ -55,46 +55,39 @@ only — the shared export is per fixture, not per suite.
 
 ### The gap, measured — and not where the filing put it
 
-Three browser files, serial, `_drive`/`_launch`/`export_page` counted:
+Three browser files, serial, `_drive`/`_launch`/`export_page`:
 
 ```text
 DRIVES 70 in 112.3s (85.5 %) | LAUNCHES 3 in 1.0s (0.8 %) | EXPORTS 3 in 5.0s (3.8 %)
                                     88 passed, 1 skipped in 131.28s
 ```
 
-The two cuts this item names are **4.6 %** between them. The seconds
-are in the drives, and 1.2s of each 1.6s drive was `SETTLE_FLOOR_MS` -
-the sleep `UX-482` left beside the condition that replaced it, "so
-nothing observes earlier than it used to". ~430 drives a run.
+The two cuts this item names are **4.6 %** between them. The seconds are
+in the drives: 1.2s of each 1.6s drive was `SETTLE_FLOOR_MS`, `UX-482`'s
+sleep beside the condition that replaced it, ~430 times a run.
 
 ### After
 
 ```text
-                                    before      after     cut
-37 browser files, serial           629.14s    247.70s    2.54x
-37 browser files, -n auto          192.77s    118.10s    1.63x
-the three above, serial            131.28s     55.04s    2.39x
-  of which drives            70 in 112.3s  70 in 39.8s
+                              before      after     cut
+37 browser files, serial     629.14s    247.70s    2.54x
+37 browser files, -n auto    192.77s    118.10s    1.63x
+the three above, serial      131.28s     55.04s    2.39x
+  of which drives      70 in 112.3s  70 in 39.8s
 ```
 
-`537 passed, 3 skipped` on both sides. Not `make test-large`
-before/after: a fresh worktree has no staged `examples/`, so 32 of its
-528 items skip there. These 37 files are the same set on both.
+`537 passed, 3 skipped` both sides; the same 37 files each time.
 
 ### What the floor was covering
 
-Two wrong answers before the right one. `#report || document.body`
-stops changing settles a **served** page on its static skeleton while
-the payload is fetching (three run-switching guards, two handoff
-guards, red); `#report` alone, non-empty and stable, settles on the
-sections while `boot()` is still wiring the controls after them (the
-same two handoff guards, red again). Both are proxies for "the page has
-finished", so `boot()` says it - `data-bga-booted`, in a `finally` so
-the failure page counts as finished - and the driver waits for that. A
-page with no `#report` has no `boot()` and settles on `body` as
-before.
+Two wrong answers first, both proxies for "the page has finished":
+`#report || document.body` settles a **served** page on its static
+skeleton while the payload fetches; `#report` alone settles on the
+sections while `boot()` still wires the controls after them - five
+guards red between them. So `boot()` says it, in a `finally` so the
+failure page counts as finished.
 
-### Mutations verified red and reverted (8)
+### Mutations verified red and reverted (11)
 
 | # | mutation | red |
 |---|---|---|
@@ -106,12 +99,23 @@ before.
 | M6 | a dead browser is handed out anyway | 1 |
 | M7 | nothing closes it at exit | 1 |
 | M8 | the page never says it booted | 1 |
+| M9 | the settle keys on `#report` again | 1 |
+| M10 | a page drops its declaration | 1 |
+| M11 | a module never stamps it | 1 |
 
-M5 was green on its first writing: the guard reused the module's
-shared browser, whose handle owns **no process**, so its `__exit__` is
-a no-op whatever it says. From an empty `_SHARED` it discriminates. M6
-found a real defect while being written - `shared.process` is `None`
-after a `_stop`, and the reuse check read `.poll()` on it.
+M5 was green on its first writing: the guard reused the module's shared
+browser, whose handle owns **no process**, so its `__exit__` is a no-op
+whatever it says; from an empty `_SHARED` it discriminates. M6 found a
+real defect while being written - `shared.process` is `None` after a
+`_stop` and the reuse check read `.poll()` on it.
+
+**M9-M11 are a third miss, found on round 80's merge.** The condition
+asked for `#report`, `index.html`'s section; `perfetto.html` has none
+and two `fetch`es, so the page whose whole state is what those fetches
+found kept the heuristic - three clauses of
+`test_one_page_behind_the_button.py` red under the suite, green alone.
+A page **declares** it will speak now (`data-bga-boots`) and both entry
+points stamp it.
 
 ### Deviation from the Required Fix
 
@@ -119,15 +123,11 @@ Two, both measured. **The export cache is not built**: 0.15-0.40s a
 call, 3.8 % of the tier, against a key that would have to cover the
 snapshot tree the caller is also given. **The shared browser lives in
 `tests/browser.py`, not a `conftest.py` fixture**: thirty-eight files
-construct `Browser(chrome)` directly, and reference-counting inside
-`__enter__` gets the same one browser in ten lines rather than
-thirty-eight files.
-
-Filed rather than fixed: `UX-537` - forty-eight guard files build their
-own `document`, none models `documentElement`, and that is why the
-marker is written through `?.`.
+construct `Browser(chrome)` directly, and reference-counting in
+`__enter__` gets one browser in ten lines. Filed not fixed: `UX-537` -
+forty-eight guards build their own `document`, none models
+`documentElement`, hence the `?.`.
 
 ```text
-=== 5910 passed, 27 skipped, 1 warning in 361.14s (0:06:01) ===
-ruff check bga/ tools/ tests/ .claude/hooks/   ->  All checks passed!
+=== 5910 passed, 27 skipped in 361.14s ===   ruff -> All checks passed!
 ```

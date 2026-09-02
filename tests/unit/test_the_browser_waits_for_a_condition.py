@@ -56,6 +56,24 @@ LATE_MS = 700
 #: Measured at 0.56s on the two committed exports; 4× that is the bound.
 PROMPT_S = 2.4
 
+#: The third miss, found on round 80's merge: the settle keyed on
+#: `#report`, which is `index.html`'s section. `perfetto.html` has no
+#: `#report` and two `fetch`es, so it went on settling on "the markup
+#: stopped growing" - green alone, red under the suite. A page declares
+#: it will speak (`data-bga-boots`) and this fixture has no `#report`,
+#: so only the declaration can make the driver wait for it.
+_HANDOFF = """<!doctype html><html lang="en" data-bga-boots="1">
+<meta charset="utf-8"><title>t</title>
+<body><div id="questions"></div>
+<script>
+  setTimeout(() => {
+    document.getElementById("questions").innerHTML =
+      Array.from({length: 40}, (_, i) => `<h4 id="q${i}">q ${i}</h4>`).join("");
+    document.documentElement.dataset.bgaBooted = "1";
+  }, %(late)d);
+</script>
+"""
+
 _PAGE = """<!doctype html><meta charset="utf-8"><title>t</title>
 <body><div id="report"></div>
 <script>
@@ -86,6 +104,9 @@ def pages(tmp_path_factory):
         path = tmp_path_factory.mktemp(f"settle-{label}") / "page.html"
         path.write_text(_PAGE % {"late": late}, encoding="utf-8")
         made[label] = path.as_uri()
+    path = tmp_path_factory.mktemp("settle-handoff") / "page.html"
+    path.write_text(_HANDOFF % {"late": LATE_MS}, encoding="utf-8")
+    made["handoff"] = path.as_uri()
     return made
 
 
@@ -96,6 +117,13 @@ class TestTheWaitIsAConditionAndNotADuration:
         the floor's removal, or the removal bought speed with truth."""
         assert browser.measure(
             pages["late"], "document.querySelectorAll('section').length") == 40
+
+    def test_a_page_with_no_report_is_waited_for_too(self, browser, pages):
+        """The same claim on the page that has no `#report`. Without
+        the declaration this measures 0 - the markup is stable and
+        empty for the whole 700ms."""
+        assert browser.measure(
+            pages["handoff"], "document.querySelectorAll('h4').length") == 40
 
     def test_a_page_that_boots_at_once_is_not_waited_out(self, browser, pages):
         """And the claim the floor broke. Without this the condition
@@ -194,3 +222,27 @@ class TestOneBrowserPerWorker:
                 fresh = opened
         finally:
             module._SHARED[chrome] = was if was is not None else fresh
+
+
+class TestBothShippedPagesSpeak:
+    """Read, not driven, and so **not** behind `needs_chrome`: a
+    machine with no Chrome is exactly where a page could quietly stop
+    declaring it, and the browser gate would hide that until CI."""
+
+    def test_both_shipped_pages_declare_it_and_stamp_it(self):
+        """Two pages boot from a module and both must speak. The
+        handoff page did not, and settled on the heuristic instead -
+        three clauses of `test_one_page_behind_the_button.py` red under
+        the full suite and green alone."""
+        for page, module in (("index.html", "app.js"),
+                             ("perfetto.html", "perfetto_page.js")):
+            markup = open(os.path.join(REPO, "bga/viewer", page),
+                          encoding="utf-8").read()
+            assert 'data-bga-boots="1"' in markup, (
+                f"{page} does not declare that it will say when it has "
+                f"booted, so the driver cannot know to wait")
+            source = open(os.path.join(REPO, "bga/viewer", module),
+                          encoding="utf-8").read()
+            assert "dataset.bgaBooted" in source, (
+                f"{module} never says it, so {page}'s declaration is a "
+                f"promise nothing keeps and every drive waits the ceiling")

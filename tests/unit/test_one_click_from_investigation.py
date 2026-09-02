@@ -29,6 +29,10 @@ GOLDEN = "tests/fixtures/golden/mixed_task_kinds"
 REAL = "examples/06-macro-micro-optimization/.bga/runs/20260821T170127Z/run"
 node = shutil.which("node")
 needs_node = pytest.mark.skipif(node is None, reason="node is not installed")
+#: `UX-544`: every harness in this file, and the ones importing
+#: `_node` from it, build their nodes with the one shim.
+SHIM = os.path.join(os.path.dirname(os.path.dirname(
+    os.path.abspath(__file__))), "dom_shim.mjs")
 
 
 def _report(run=GOLDEN):
@@ -43,7 +47,8 @@ def _report(run=GOLDEN):
 def _node(script, timeout=120):
     result = subprocess.run([node, "--input-type=module", "-e", script],
                             capture_output=True, text=True, cwd=os.getcwd(),
-                            timeout=timeout)
+                            timeout=timeout,
+                            env=dict(os.environ, BGA_DOM_SHIM=SHIM))
     assert result.returncode == 0, result.stderr
     return json.loads(result.stdout)
 
@@ -259,12 +264,10 @@ class TestInvestigationIsOneClickAway:
     def test_every_sql_block_carries_its_exact_text_to_copy(self):
         out = _node(
             'const q = await import("./bga/viewer/questions.js");'
-            'const make = (t, a = {}, ...c) => ({ tagName: t, attrs: {...a},'
-            '  children: [], textContent: c.join(""),'
-            '  setAttribute(k, v) { this.attrs[k] = v; },'
-            '  getAttribute(k) { return this.attrs[k] ?? null; },'
-            '  addEventListener() {}, append(...x) {'
-            '    for (const y of x) if (y) this.children.push(y); } });'
+            'const shim = await import(process.env.BGA_DOM_SHIM);'
+            'const make = (t, a = {}, ...c) => { const n = shim.makeNode(t);'
+            '  for (const [k, v] of Object.entries(a)) n.setAttribute(k, v);'
+            '  n.append(...c); return n; };'
             'const found = [];'
             '(function walk(n) { if (!n) return;'
             '  if (n.attrs && n.attrs["data-copy"]) found.push(n.attrs["data-copy"]);'
@@ -320,12 +323,10 @@ class TestTheWallOfQuestionsFolds:
         `<details>` hides pixels, not the DOM."""
         out = _node(
             'const q = await import("./bga/viewer/questions.js");'
-            'const make = (t, a = {}, ...c) => ({ tagName: t, attrs: {...a},'
-            '  children: [], textContent: c.join(""),'
-            '  setAttribute(k, v) { this.attrs[k] = v; },'
-            '  getAttribute(k) { return this.attrs[k] ?? null; },'
-            '  addEventListener() {}, append(...x) {'
-            '    for (const y of x) if (y) this.children.push(y); } });'
+            'const shim = await import(process.env.BGA_DOM_SHIM);'
+            'const make = (t, a = {}, ...c) => { const n = shim.makeNode(t);'
+            '  for (const [k, v] of Object.entries(a)) n.setAttribute(k, v);'
+            '  n.append(...c); return n; };'
             'const root = q.renderQuestions(make);'
             'const all = (n, p, f = []) => { if (!n) return f;'
             '  if (p(n)) f.push(n); (n.children ?? []).forEach((c) => all(c, p, f));'
@@ -495,11 +496,10 @@ console.log(JSON.stringify({ shown, visible,
 
 _CHIPS = """
 const views = await import("./tests/viewer.mjs");
-const make = (t, a = {}, ...c) => ({ tagName: t, attrs: {...a}, children: [],
-  textContent: c.join(""), setAttribute(k, v) { this.attrs[k] = v; },
-  getAttribute(k) { return this.attrs[k] ?? null; },
-  addEventListener() {}, append(...x) {
-    for (const y of x) if (y) this.children.push(y); } });
+const shim = await import(process.env.BGA_DOM_SHIM);
+const make = (t, a = {}, ...c) => { const n = shim.makeNode(t);
+  for (const [k, v] of Object.entries(a)) n.setAttribute(k, v);
+  n.append(...c); return n; };
 const node = views.blastChips(
   { elements: { top_blast_radius: %s } }, () => {}, make);
 const chips = node

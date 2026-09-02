@@ -573,12 +573,10 @@ class TestTheHandoffSectionNamesTheMissingArrows:
 
     SCRIPT = (
         'const q = await import("./bga/viewer/questions.js");'
-        'const make = (t, a = {}, ...c) => ({ tagName: t, attrs: {...a},'
-        '  children: [], textContent: c.join(""),'
-        '  setAttribute(k, v) { this.attrs[k] = v; },'
-        '  getAttribute(k) { return this.attrs[k] ?? null; },'
-        '  addEventListener() {}, append(...x) {'
-        '    for (const y of x) if (y) this.children.push(y); } });'
+        'const shim = await import(process.env.BGA_DOM_SHIM);'
+        'const make = (t, a = {}, ...c) => { const n = shim.makeNode(t);'
+        '  for (const [k, v] of Object.entries(a)) n.setAttribute(k, v);'
+        '  n.append(...c); return n; };'
         'const found = [];'
         '(function walk(n) { if (!n) return;'
         '  if (n.attrs && n.attrs["data-flow-accounting"] !== undefined)'

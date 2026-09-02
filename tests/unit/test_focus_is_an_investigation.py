@@ -190,40 +190,13 @@ console.log(JSON.stringify({ groups, rows }));
 """
 
 _ROUNDTRIP = """
-function make(tag) {
-  const node = {
-    tagName: tag, nodeType: 1, attrs: {}, children: [], textContent: "",
-    className: "", listeners: {},
-    setAttribute(k, v) { this.attrs[k] = String(v); },
-    getAttribute(k) { return this.attrs[k] ?? null; },
-    removeAttribute(k) { delete this.attrs[k]; },
-    addEventListener(name, fn) { (this.listeners[name] ??= []).push(fn); },
-    append(...xs) { for (const x of xs) { if (x == null) continue;
-      typeof x === "string" ? this.textContent += x
-        : (x.parentNode = this, this.children.push(x)); } },
-    prepend(...xs) { for (const x of xs) { if (x == null) continue;
-      x.parentNode = this; this.children.unshift(x); } },
-    removeChild(child) {
-      this.children = this.children.filter((c) => c !== child); return child; },
-    querySelectorAll(selector) {
-      const roles = [...selector.matchAll(/data-role=([a-z-]+)/g)]
-        .map((m) => m[1]);
-      const found = [];
-      (function walk(n) {
-        if (!n) return;
-        if (roles.includes(n.attrs["data-role"])) found.push(n);
-        (n.children ?? []).forEach(walk);
-      })(this);
-      return found;
-    },
-    dispatchEvent() { return true; },
-  };
-  return node;
-}
-globalThis._installDocument ??= (await import(process.env.BGA_DOM_SHIM)).installDocument;
-// `make` above is this file's own node, not the shim's - UX-537 moved
-// the *document* here and left that second instrument standing.
-_installDocument({
+const shim = await import(process.env.BGA_DOM_SHIM);
+// `UX-544`: the node is the shim's too now, not just the document.
+// This harness carried its own `prepend`, `removeChild` and a
+// `data-role`-only `querySelectorAll`; the shim has all three, and
+// its `prepend` is the one measured against a browser (`UX-235`).
+const make = shim.makeNode;
+shim.installDocument({
   createElement: make, createElementNS: (_n, t) => make(t),
   createTextNode: (text) => ({ tagName: "#text", nodeType: 3, attrs: {},
                                children: [], textContent: text }),

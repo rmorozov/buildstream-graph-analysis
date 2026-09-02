@@ -310,8 +310,7 @@ class TestCiIsReadAgainstItsOwnRecord:
             dict(tiers.recorded()), self._ref({"tests/unit/nope.py": 1.0}))
         assert (verdict, rows) == ("empty", []), (verdict, rows)
 
-    def test_recording_round_trips_and_says_where_it_came_from(self,
-                                                               tmp_path):
+    def test_recording_says_where_it_came_from(self, tmp_path):
         times = dict(tiers.recorded())
         report = _report(tmp_path, times)
         out = tmp_path / "ref.json"
@@ -320,7 +319,71 @@ class TestCiIsReadAgainstItsOwnRecord:
         written = json.loads(out.read_text(encoding="utf-8"))
         assert written["measured_on"] == "a named runner"
         assert set(written["files"]) == set(times)
+
+    def test_the_prior_is_the_committed_reference_not_the_output_path(
+            self, tmp_path):
+        """`UX-515`: the mechanism that turned `main` red had no clause
+        at all. `--record` reads `tests/ci_reference.json` as the
+        document it replaces - for the spread it states about itself,
+        and for the readings it carries - wherever the new one is
+        written. Nothing asserted that, so a mutation setting the prior
+        to `{}` left the whole file green.
+
+        Asserted through the spread, which is the half that exists
+        whether or not the committed reference carries `samples`."""
+        times = dict(tiers.recorded())
+        out = tmp_path / "ref.json"
+        assert drift.main([str(_report(tmp_path, times)), "--record",
+                           str(out)]) == 0
+        written = json.loads(out.read_text(encoding="utf-8"))
+        assert "spread" in written, (
+            "the recording states no spread, so it read no prior - "
+            "`--record` is not reading tests/ci_reference.json")
+
+    def test_a_first_recording_round_trips(self, tmp_path):
+        """`UX-515`. This used to run `--record` and read the result
+        back, and passed only while the committed reference carried no
+        `samples` key: `samples_for` then returned `[this run]` and
+        `files` was the report verbatim. `UX-496` made `files` the
+        median of the last five readings and `--record` carries them
+        from `tests/ci_reference.json`, so the first CI adopt turned
+        this red on a commit no human wrote.
+
+        The round trip is a claim about a **first** recording - one with
+        nothing to carry - and that is what it asserts now.
+        """
+        times = dict(tiers.recorded())
+        report = _report(tmp_path, times)
+        out = tmp_path / "ref.json"
+        out.write_text(json.dumps(drift.record(times, "a named runner")),
+                       encoding="utf-8")
         assert drift.main([str(report), "--against", str(out)]) == 0
+
+    def test_a_recording_against_a_prior_carries_its_readings(self, tmp_path):
+        """The case that broke the clause above, asserted rather than
+        left implicit: with a prior that carries readings, `files` is
+        their median and need not be this run's number."""
+        times = dict(tiers.recorded())
+        first = drift.record(times, "run one")
+        assert first["files"] == {n: round(s, 2) for n, s in times.items()}
+
+        # A uniform doubling is a *clock shift*, and the carried
+        # reading is rebased by exactly that - so it round-trips. One
+        # file made genuinely slower on top of the shift is what the
+        # median is for, and the first version of this clause doubled
+        # everything and asserted a difference it could not have.
+        slower = "tests/unit/test_snapshot.py"
+        assert slower in times
+        run_two = {name: seconds * 2 for name, seconds in times.items()}
+        run_two[slower] = times[slower] * 6
+
+        second = drift.record(run_two, "run two", first)
+        assert second["samples"][slower] == [
+            round(times[slower] * 2, 2), round(times[slower] * 6, 2)], (
+            "the readings were not carried and rebased by the shift")
+        assert second["files"][slower] == round(times[slower] * 2, 2), (
+            "one slow run set the bar a later run is judged against, "
+            "which is the single-sample reference UX-496 removed")
 
     @pytest.mark.parametrize("shape", ["absent", "unrecorded"])
     def test_the_step_says_so_rather_than_passing_over_no_reference(

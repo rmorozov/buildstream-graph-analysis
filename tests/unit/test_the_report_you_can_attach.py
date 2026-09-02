@@ -834,10 +834,16 @@ COMMITTED_EXPORTS = [
 
 
 def _embedded(path):
-    """The bytes of documents the page carries, so the rest is the page."""
+    """The bytes of documents the page carries, so the rest is the page.
+
+    `octet-stream` too: `UX-529` compacts a large payload into one, and
+    counting only `application/json` would book a 194 KB compacted
+    report as *page* - which is the half with the budget.
+    """
     text = pathlib.Path(path).read_text(encoding="utf-8")
     return sum(len(found) for found in re.findall(
-        r'<script type="application/json"[^>]*>(.*?)</script>', text, re.S))
+        r'<script type="application/(?:json|octet-stream)"[^>]*>(.*?)'
+        r'</script>', text, re.S))
 
 
 @pytest.fixture
@@ -1273,7 +1279,27 @@ class TestTheSizeDiscipline:
         # identical for every run of a given contract set, so they sit
         # beside the modules and the stylesheet rather than beside the
         # measurements.
-        return len(page), len(schemas), len(html) - len(page) - len(schemas)
+        #
+        # `UX-529`: the **documents**, not the bytes the file spends on
+        # them. Past `DATA_COMPACT_MIN_B` the export carries the report
+        # gzipped, and at 1,000 elements that is 686,497 B of run data
+        # in 77,768 B of block - so a ratio measured on the block would
+        # read the compaction as the page having grown to dwarf the
+        # data, which is the opposite of what happened. The claim below
+        # is about how much this run has to say against how much page a
+        # reader downloads to read it; the transport is `UX-529`'s.
+        import base64
+        import gzip
+
+        data = 0
+        for kind, ident, block in re.findall(
+                r'<script[^>]*type="application/(json|octet-stream)"[^>]*'
+                r'id="bga-([a-z-]+)"[^>]*>(.*?)</script>', html, re.S):
+            if ident == "schemas":
+                continue
+            data += len(gzip.decompress(base64.b64decode(block))
+                        if kind == "octet-stream" else block.encode("utf-8"))
+        return len(page), len(schemas), data
 
     def test_only_one_number_bounds_the_page(self, tmp_path):
         """`UX-367`: the clause the fix above is falsifiable by.
@@ -1611,16 +1637,23 @@ class TestTheSizeDiscipline:
         ceiling above is a measurement rather than an argument."""
         import json
 
+        import base64
+        import gzip
+
         html = open(exported[0], encoding="utf-8").read()
         blocks = re.findall(
-            r"<script[^>]*type=\"application/json\"[^>]*>(.*?)</script>",
-            html, flags=re.S)
+            r"<script[^>]*type=\"application/(json|octet-stream)\"[^>]*>"
+            r"(.*?)</script>", html, flags=re.S)
         assert blocks, "no data blocks - the export stopped embedding"
-        for block in blocks:
-            # Every one parses as JSON. A blob that is not a document
-            # would land here as something else.
-            json.loads(block)
-        data = sum(len(block) for block in blocks)
+        for kind, block in blocks:
+            # Every one parses as JSON, in whichever form it arrived
+            # (`UX-529`). A blob that is not a document lands here as
+            # something else either way.
+            if kind == "octet-stream":
+                json.loads(gzip.decompress(base64.b64decode(block)))
+            else:
+                json.loads(block)
+        data = sum(len(block) for _kind, block in blocks)
         page = re.sub(r"<script[^>]*type=\"application/(json|octet-stream)\"[^>]*>"
                       r".*?</script>", "", html, flags=re.S)
         assert len(html) - len(page) - data < 4_000, (

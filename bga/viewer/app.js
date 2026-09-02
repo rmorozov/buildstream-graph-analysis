@@ -529,6 +529,33 @@ export function inlined(name) {
 }
 
 /**
+ * `UX-529`: the same payload, compacted.
+ *
+ * The data half of an export is linear in the element population and
+ * `EXPORT_BUDGET_B` was the only bound above it - 628 KB at 1,202
+ * elements, 2.0 MB at 4,002. Past `DATA_COMPACT_MIN_B` the export
+ * writes one gzip'd, base64'd `application/octet-stream` block
+ * instead of JSON text, which is the same document at a tenth of the
+ * bytes and is what a per-class budget can be met with.
+ *
+ * `null`, never a throw: an absent block and an unreadable one are
+ * both "not here", which is what `load` below is asking.
+ */
+export async function inflated(name) {
+  const node = document.getElementById(`bga-${name}-gz`);
+  const packed = (node?.textContent ?? "").trim();
+  if (!packed) return null;
+  try {
+    const bytes = Uint8Array.from(atob(packed), (c) => c.charCodeAt(0));
+    const stream = new Response(bytes).body
+      .pipeThrough(new DecompressionStream("gzip"));
+    return JSON.parse(await new Response(stream).text());
+  } catch (error) {
+    return null;
+  }
+}
+
+/**
  * `UX-334`: does this page have that payload, without asking for it.
  *
  * `compare`, `store` and `store-aggregate` are optional by design -
@@ -545,6 +572,12 @@ export function inlined(name) {
  */
 export function offered(run, name) {
   if (inlined(name) !== null) return true;
+  // `UX-529`: a compacted block is the payload being here too. Only
+  // its presence is asked - inflating it to answer would be the fetch
+  // this function exists to avoid.
+  if ((document.getElementById(`bga-${name}-gz`)?.textContent ?? "").trim()) {
+    return true;
+  }
   const listed = run?.payloads;
   if (!Array.isArray(listed)) return true;
   return listed.includes(name);
@@ -577,6 +610,10 @@ export async function load(name, fallback = null) {
   const here = inlined(name);
   if (here !== null) return here;
   try {
+    // `UX-529`: before the network, because an export that compacted
+    // this document has no network to fall back to.
+    const packed = await inflated(name);
+    if (packed !== null) return packed;
     // `UX-394`: the run selection travels on every document fetch.
     // `?run=<stamp>` is the page's state (`UX-211`), and a page that
     // asked for `report.json` without it would render the run the

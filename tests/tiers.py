@@ -524,6 +524,13 @@ LARGE = (
     # landed, measured alone in one process. The prediction was right
     # and the row is where it belongs.
     "tests/unit/test_the_query_asks_about_this_run.py",              #   54.1s
+    # `UX-529`, large on landing and for one reason: the defect is
+    # invisible below a thousand elements, so the population is the two
+    # committed fixtures **and** the two seeded runs the volume budget
+    # uses. Two `gen-synthetic` calls and four exports, the 4,002 one
+    # 17s of them; no browser. Measured alone in one process, twice:
+    # 44.74 / 40.87s.
+    "tests/unit/test_the_exports_data_half_has_a_budget.py",         #   40.9s
 )
 
 MEDIUM = (

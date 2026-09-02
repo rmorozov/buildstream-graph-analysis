@@ -26,6 +26,7 @@ or a `..` cannot walk out.
 import argparse
 import base64
 import contextlib
+import gzip
 import http.server
 import io
 import json
@@ -728,6 +729,27 @@ EXPORT_BUDGET_B = 8 * 1024 * 1024
 # take, which is the export half of the same constant.
 TRACE_BUDGET_B = 4 * 1024 * 1024
 
+#: `UX-529`: past this many bytes of JSON, a document travels the
+#: export **compacted** - gzip, base64, one `application/octet-stream`
+#: block the page inflates - instead of as readable JSON text.
+#:
+#: Not a budget, so deliberately not named one: nothing is refused
+#: here and a reader does nothing about it. It is the size at which
+#: the export stops paying for a payload it can be read out of.
+#: `EXPORT_BUDGET_B` was the only thing above the data half and the
+#: data half is linear in the element population - measured on the two
+#: seeded runs, `bga gen-synthetic --seed 1` and the same with
+#: `--layers 20 --width 200`:
+#:
+#:     elements   report.json   gzip+base64   ratio
+#:        1,202       628,335        69,172   0.110
+#:        4,002     2,041,945       193,492   0.095
+#:
+#: Set above both committed fixtures (30 KB and 80 KB of data), so the
+#: small exports a person reads in an editor stay readable and the
+#: large ones a person mails stay mailable.
+DATA_COMPACT_MIN_B = 200_000
+
 #: `UX-430`: the bound in the unit the **consumer** spends.
 #:
 #: `TRACE_BUDGET_B` above bounds transfer, and it bounds it correctly.
@@ -1236,6 +1258,14 @@ def export(run: str, path: str, with_trace: bool = True,
         # string can carry one (an element named after an html file is
         # not hypothetical), so it is escaped rather than trusted.
         body = json.dumps(document).replace("</", "<\\/")
+        if len(body) > DATA_COMPACT_MIN_B:
+            # `UX-529`: base64 has no `<`, so the escape above is moot
+            # and the block cannot be ended early at all.
+            packed = base64.b64encode(gzip.compress(
+                json.dumps(document).encode("utf-8"), 9)).decode()
+            blocks.append('<script type="application/octet-stream" '
+                          f'id="bga-{name}-gz">{packed}</script>')
+            continue
         blocks.append(
             f'<script type="application/json" id="bga-{name}">{body}</script>')
     if trace is not None:

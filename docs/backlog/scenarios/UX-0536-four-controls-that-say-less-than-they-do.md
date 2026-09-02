@@ -37,24 +37,22 @@ section carries the not-captured sentence.
 
 ### The gap, measured
 
-Both committed fixtures, exported and booted at 1440x900, chapters
-opened. The Markdown box driven from a **known** start — every box
-unchecked first, since `Browser(chrome)` reuses one Chromium and the
-previous drive's `localStorage` preference would otherwise be inherited:
+Both fixtures, exported and booted at 1440x900, chapters opened; the
+Markdown box driven from a **known** start (every box unchecked first —
+one Chromium is reused and the previous drive's preference is inherited):
 
 ```text
-fixture       collapse   unnamed   type!=button   boxes   one click changes
-golden              46        46             46      14            1 of 14
-macro_micro         66        66             66      29            1 of 29
+fixture      collapse  unnamed  type!=button  boxes  one click changes
+golden             46       46            46     14           1 of 14
+macro_micro        66       66            66     29           1 of 29
 
 accelerators  no hint anywhere; the labels read "Previous section" /
               "Next section" and the [ ] keys are announced nowhere
 ```
 
 The fourth through the section renderer, the only instrument reaching
-the state (see the deviation): `{joined_elements: 0, plane1_elements:
-11, plane2_elements: 0}` drew `section, h2, dl, dt, dd, span` — six
-zeros under a heading naming two planes.
+the state (see the deviation): `plane2_elements: 0` drew six zeros under
+a heading naming two planes.
 
 ### After
 
@@ -63,53 +61,55 @@ fixture      unnamed  type!=button  one click changes  promising Markdown
 golden             0             0           14 of 14            14 of 14
 macro_micro        0             0           29 of 29            29 of 29
 
-step controls  "[ ] step" beside them; labels "Previous section, or the
-               [ key" / "Next section, or the ] key"
-zero coverage  -> section, h2, p  "Plane 2 not captured for this run, so
-   the two planes have nothing to agree on — these are not zeros that
-   were measured."  ·  data-empty="true", so the rail agrees
+step controls  "[ ] step" beside them; labels name the [ and ] keys
+zero coverage  -> section, h2, p  "Plane 2 not captured ... these are
+   not zeros that were measured."  ·  data-empty, so the rail agrees
 ```
 
-### Mutations verified red and reverted (5)
+### Mutations verified red and reverted (6)
 
-| # | mutation | reddened |
+| # | mutation | red |
 |---|---|---|
-| Q1 | the collapse button's `aria-label` removed | `…is_unnamed`, 2 — `66 == 0` |
-| Q2 | its `type="button"` removed | `…is_a_submit`, 2 |
-| Q3 | one box stops telling the other 28 | `…one_preference_is_one_state`, 2 — `1 == 29` |
-| Q4 | the `[ ] step` hint removed | `…accelerators_are_announced…`, 2 |
-| Q5 | the zero join renders its zeros again | `…carries_the_sentence` + `…draws_no_zeros…`, 2 |
+| Q1 | the collapse button's `aria-label` removed | 2 (`66 == 0`) |
+| Q2 | its `type="button"` removed | 2 |
+| Q3 | one box stops telling the other 28 | 2 (`1 == 29`) |
+| Q4 | the `[ ] step` hint removed | 2 |
+| Q5 | the zero join renders its zeros again | 2 |
+| M12 | an empty section draws no sentence at all | 1 |
 
 Each reddens its own clause and no other.
 
 **One guard of mine did not discriminate, and it was the whole page.**
 The mirror's first version wrote `addEventListener(MIRROR, label)` —
-`label` as a value **above** its own `const label = …`, a
-temporal-dead-zone `ReferenceError` at render time. The page booted to 0
-sections and 0 inputs, the drive read `0 collapse buttons, 0 unnamed`,
-and that *passes* a clause reading "no button is unnamed". Every clause
-now carries a population floor (`collapse > 20`, `boxes > 10`).
+`label` above its own `const label = …`, a temporal-dead-zone
+`ReferenceError` at render time. The page booted to 0 sections and 0
+inputs, the drive read `0 collapse buttons, 0 unnamed`, and that
+*passes* "no button is unnamed". Every clause now carries a population
+floor (`collapse > 20`, `boxes > 10`).
 
 ### Deviation from the Required Fix
 
 The Markdown box **mirrors** rather than moving to the rail; the Fix
 allowed either. `element_join_coverage` is guarded through the renderer
 rather than a fixture: neither committed run reaches `plane2_elements ==
-0` — `golden` publishes no coverage block, `macro_micro` joins 9 of 11 —
-and emptying `plane2.json`'s `by_element`, `element_attribution` and
-`declared_vs_used` leaves it at 9 of 11, the join being computed from
-the trace rather than from that report.
+0`, and emptying `plane2.json` leaves `macro_micro` at 9 of 11, the join
+coming from the trace rather than that report.
 
 **The export size bound is 142 B over and left alone** (another track
 owns it): round 80's four items add **2,305 B of page and 0 of data** to
-`golden` — page 294,848 → 297,153 B, data 114,424 → 114,399 (run-path
-noise) — of which this item is 1,185 B, all JS. Bound 411,000; the suite
-measures 411,142. **§3.6:** the other track grew the page from the same
-base, so the merged tree is 415,729 B and the bound is **420,000**.
+`golden` — 294,848 → 297,153 B, data 114,424 → 114,399 (run-path noise)
+— of which this item is 1,185 B, all JS. Bound 411,000, suite 411,142.
+**§3.6:** the merged tree is 415,729 B and the bound **420,000**.
+
+**The better sentence read as no sentence.** This item's wording -
+"these are not zeros that were measured" - does not contain "found
+none", and `test_the_journey_has_an_answer_key.py` tested that phrase as
+a proxy for "the empty section says so". Only the bst-and-example-06
+machine runs it, so the track never saw it. Both halves of that probe
+read the claim now: a real `.empty-population` sentence.
 
 ```text
 the two guard files  →  54 passed, 6 skipped in 50.70s
-conformance, palette, emphasis, resting appearance, labels  →  109 in 82s
-make test-touching   →  903 passed, 19 skipped (1 failed: the size bound)
-make lint            →  All checks passed!
+conformance, palette, emphasis, appearance, labels  →  109 in 82s
+make test-touching  →  903 passed (1 failed: the size bound) · lint clean
 ```

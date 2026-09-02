@@ -75,6 +75,10 @@ NO_CHROME = "no chrome/chromium for the geometry guards (set BGA_CHROME)"
 #: The tail this file appends to the shared probe. The probe boots the
 #: export's own inline module; this reads back the two facts `UX-388`
 #: is about - which sections were drawn empty, and whether each says so.
+#:
+#: "Says so" is the presence of a real `.empty-population` sentence,
+#: not one phrase. Round 80 measured why: `UX-536` gave one section a
+#: better sentence and the phrase test called it silent.
 _TAIL = """
 const found = [];
 // `report`, not `body`: the page appends its sections into the element
@@ -86,8 +90,20 @@ const found = [];
   for (const c of n.children ?? []) {
     if (String(c.tagName).toLowerCase() === "section"
         && c.attrs["data-empty"] !== undefined) {
-      found.push([c.attrs["data-section"] ?? null,
-                  (c.textContent || "").includes("found none")]);
+      // The **sentence**, not one wording of it. `UX-536` gave
+      // `element_join_coverage` its own - "these are not zeros that
+      // were measured", which is the truer thing to say and does not
+      // contain "found none" - and this clause read the phrase, so a
+      // section that said something better read as saying nothing.
+      let says = false;
+      (function sentence(m) {
+        for (const k of m.children ?? []) {
+          if (String(k.attrs?.class ?? "").includes("empty-population")
+              && (k.textContent || "").trim().length > 20) says = true;
+          sentence(k);
+        }
+      })(c);
+      found.push([c.attrs["data-section"] ?? null, says]);
     }
     walk(c);
   }
@@ -505,7 +521,9 @@ class TestTheIncrementalRunIsStillAReport:
         # sections.
         look = """(() => [...document.querySelectorAll('section[data-empty]')]
             .map((n) => [n.getAttribute('data-section'),
-                         n.textContent.includes('found none')]))()"""
+                         Boolean(n.querySelector('.empty-population')
+                           && n.querySelector('.empty-population')
+                                .textContent.trim().length > 20)]))()"""
         with Browser(chrome) as opened:
             seen = opened.measure(exported["page"].as_uri(), look, 1440, 900)
         assert sorted(map(tuple, seen)) == sorted(_empty_sections(

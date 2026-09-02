@@ -389,5 +389,107 @@ class TestFocusAnswersWhereTheHandIs:
             f"{label}: focus then unfocus left #report changed")
 
 
+#: `UX-536`: three of the four controls the census found saying less
+#: than they do, on the page an export produces.
+#:
+#: The Markdown box is driven from a **known** start - every box
+#: unchecked - rather than from whatever the shared Chromium's
+#: `localStorage` carries: `Browser(chrome)` reuses one profile across
+#: fixtures, so a previous drive's preference is a state this would
+#: otherwise inherit and read as a pass.
+_SAYS = r"""
+(() => {
+  for (const box of document.querySelectorAll("section.chapter")) {
+    box.setAttribute("data-open", "true");
+  }
+  const collapse = [...document.querySelectorAll("button.collapse")];
+  const boxes = [...document.querySelectorAll("input.copy-markdown")];
+  const promise = (box) => box.closest(".table-tools")
+    ?.querySelector(".copy-rows")?.title ?? "";
+  const named = (b) => (b.getAttribute("aria-label") || "").trim()
+    || (b.textContent || "").replace(/[\u25b8\u25be\s]/g, "");
+  const state = {
+    collapse: collapse.length,
+    unnamed: collapse.filter((b) => !named(b)).length,
+    notButton: collapse.filter((b) => b.getAttribute("type") !== "button")
+      .length,
+    boxes: boxes.length,
+    keys: (document.querySelector(".toc-steps [data-step-keys]") || {})
+      .textContent ?? null,
+    stepLabels: [...document.querySelectorAll(".toc-steps [data-step]")]
+      .map((b) => b.getAttribute("aria-label")),
+  };
+  for (const box of boxes) box.checked = false;
+  boxes[0].checked = true;
+  boxes[0].dispatchEvent(new Event("change", { bubbles: true }));
+  return { ...state,
+           checkedAfterOneClick: boxes.filter((b) => b.checked).length,
+           promisingMarkdown: boxes.filter(
+             (b) => /as Markdown/.test(promise(b))).length };
+})()
+"""
+
+
+@pytest.fixture(scope="module")
+def census(browser, booted):
+    """One drive per fixture, once."""
+    return {label: browser.measure(booted[label], _SAYS, 1440, 900)
+            for label in sorted(pages.FIXTURES)}
+
+
+@needs_browser
+@pytest.mark.medium
+@pytest.mark.parametrize("label", sorted(pages.FIXTURES))
+class TestTheControlsSayWhatTheyDo:
+    """`UX-536`, three of its four. Measured before the fix:
+
+    ```text
+    fixture       collapse   unnamed   type!=button   boxes   1 click changes
+    golden              46        46             46      14         1 of 14
+    macro_micro         66        66             66      29         1 of 29
+    accelerators   announced nowhere: no [ ] hint, and the labels read
+                   "Previous section" / "Next section"
+    ```
+    """
+
+    def test_no_collapse_button_is_unnamed(self, census, label):
+        out = census[label]
+        assert out["collapse"] > 20, out          # the walk found them
+        assert out["unnamed"] == 0, (
+            f"{label}: {out['unnamed']} of {out['collapse']} collapse "
+            f"buttons have no accessible name")
+
+    def test_no_collapse_button_is_a_submit(self, census, label):
+        """`type` defaults to `submit`, which is a different control."""
+        assert census[label]["notButton"] == 0, (
+            f"{label}: {census[label]['notButton']} of "
+            f"{census[label]['collapse']} default to type=submit")
+
+    def test_one_preference_is_one_state(self, census, label):
+        """One click on any Markdown box moves all of them - and moves
+        what the copy buttons *promise*, which is the half a reader
+        sees."""
+        out = census[label]
+        assert out["boxes"] > 10, out
+        assert out["checkedAfterOneClick"] == out["boxes"], (
+            f"{label}: one click checked {out['checkedAfterOneClick']} of "
+            f"{out['boxes']} boxes")
+        assert out["promisingMarkdown"] == out["boxes"], (
+            f"{label}: {out['promisingMarkdown']} of {out['boxes']} copy "
+            f"controls promise Markdown after the box was ticked")
+
+    def test_the_accelerators_are_announced_where_they_act(
+            self, census, label):
+        """`[` and `]` step the rail and were written down nowhere."""
+        out = census[label]
+        assert out["keys"] and "[" in out["keys"] and "]" in out["keys"], (
+            f"{label}: the step controls carry no accelerator hint: "
+            f"{out['keys']!r}")
+        labels = " ".join(filter(None, out["stepLabels"]))
+        assert "[" in labels and "]" in labels, (
+            f"{label}: neither step control names its key: "
+            f"{out['stepLabels']}")
+
+
 if __name__ == "__main__":  # pragma: no cover
     raise SystemExit(pytest.main([__file__, "-v"]))

@@ -844,9 +844,20 @@ export function interrogable(table, specs, total, depth = 0) {
   if (markdownBox) identify(markdownBox, `copy-markdown-${key}`);
   const remembered = readCopyFormat();
   if (markdownBox && remembered === "markdown") markdownBox.checked = true;
+  // `UX-536`: **one preference, one state.** 29 boxes shared one
+  // `localStorage` key that only a reload read back, so a click changed
+  // 1 of 29 and the other 28 went on promising the format the reader
+  // had just turned off.
+  markdownBox?.addEventListener?.(COPY_FORMAT_MIRROR, () => label());
   markdownBox?.addEventListener?.("change", () => {
     writeCopyFormat(markdownBox.checked ? "markdown" : "json");
     label();
+    for (const other of document.querySelectorAll?.("input.copy-markdown")
+                        ?? []) {
+      if (other === markdownBox) continue;
+      other.checked = markdownBox.checked;
+      other.dispatchEvent?.(new Event(COPY_FORMAT_MIRROR));
+    }
   });
 
   const copyRows = el("button", { type: "button", class: "copy-rows" });
@@ -944,6 +955,10 @@ export function interrogable(table, specs, total, depth = 0) {
 // the preference - so both sides are guarded and the default is what
 // the page did before.
 const COPY_FORMAT_KEY = "bga.copy-format";
+
+// `UX-536`: what one box tells the other 28. Its own event rather than
+// `change`, so mirroring cannot re-enter the handler that started it.
+const COPY_FORMAT_MIRROR = "bga:copy-format";
 
 export function readCopyFormat() {
   try {

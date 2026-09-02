@@ -1122,6 +1122,13 @@ p.run-advice {
   margin: .35rem 0 .6rem;
 }
 .toc-steps button { flex: 1; }
+/* `UX-536`: the two accelerators, said where the controls they drive
+   are. Muted and last, so it reads as a note rather than a fourth
+   control. */
+.toc-keys {
+  flex: 0 0 auto; align-self: center;
+  color: var(--muted); font-size: .78rem; white-space: nowrap;
+}
 
 /* `UX-397`: the Perfetto handoff, in the rail rather than in a header
    row that scrolls away unused. Narrow, so it wraps rather than

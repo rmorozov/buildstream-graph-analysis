@@ -17,6 +17,7 @@ some plausible shape.
 """
 import json
 import os
+import shutil
 import subprocess
 import sys
 
@@ -355,6 +356,89 @@ class TestOnePlaneIsNotAJoin:
         for row in unseen:
             assert "cores_busy" not in row or row["cores_busy"] is None
             assert row.get("element"), row
+
+
+#: `UX-536`: the section, rendered, over a coverage block the two
+#: committed fixtures cannot produce.
+#:
+#: Neither one reaches `plane2_elements == 0` - `golden` publishes no
+#: coverage block at all and `macro_micro` joins 9 of 11 - and editing
+#: `plane2.json`'s element lists does not move it, because the join is
+#: computed from the trace. So the renderer is fed the block directly,
+#: which is the only instrument that reaches this state.
+_RENDER = r"""
+const shim = await import(process.env.BGA_DOM_SHIM);
+shim.installDocument();
+const sections = await import("%(sections)s");
+const flat = (n, out = []) => {
+  out.push(n);
+  for (const c of n.children ?? []) flat(c, out);
+  return out;
+};
+const read = (value) => {
+  const s = sections.renderSection("element_join_coverage", value, {},
+                                   undefined);
+  if (!s) return { rendered: false };
+  const nodes = flat(s);
+  return { rendered: true, empty: s.attrs?.["data-empty"] ?? null,
+           sentence: nodes.filter((n) => n.className === "empty-population")
+             .map((n) => n.textContent)[0] ?? null,
+           tags: [...new Set(nodes.map((n) => n.tagName))] };
+};
+console.log(JSON.stringify({
+  noPlane2: read({ joined_elements: 0, plane1_elements: 11,
+                   plane2_elements: 0, aggregating_dependency_pairs: 0 }),
+  joined: read({ joined_elements: 9, plane1_elements: 11,
+                 plane2_elements: 9, aggregating_dependency_pairs: 0 }),
+}));
+"""
+
+_node = shutil.which("node")
+needs_node = pytest.mark.skipif(_node is None, reason="node is not installed")
+
+
+@pytest.fixture(scope="module")
+def rendered():
+    import pathlib as _pathlib
+
+    repo = _pathlib.Path(__file__).resolve().parents[2]
+    script = _RENDER % {
+        "sections": (repo / "bga/viewer/sections.js").as_uri()}
+    done = subprocess.run([_node, "--input-type=module", "-e", script],
+                          capture_output=True, text=True, cwd=str(repo),
+                          timeout=60)
+    assert done.returncode == 0, done.stderr[-2000:]
+    return json.loads(done.stdout)
+
+
+@needs_node
+class TestAJoinWithNoPlaneTwoSaysSo:
+    """`UX-536`. Before this the block rendered as a definition list of
+    zeros under a heading naming two planes - `joined_elements 0`,
+    `plane2_elements 0` - which reads as "measured, and nothing
+    matched". The evidence line already says the words on the same
+    condition (`views.js`), and now so does the section."""
+
+    def test_the_zero_coverage_block_carries_the_sentence(self, rendered):
+        out = rendered["noPlane2"]
+        assert out["rendered"], out
+        assert out["empty"] == "true", out
+        assert out["sentence"], "no sentence where the zeros were"
+        assert out["sentence"].startswith("Plane 2 not captured"), (
+            out["sentence"])
+
+    def test_it_draws_no_zeros_to_be_read_as_measurements(self, rendered):
+        """The other half: the numbers go, they are not annotated."""
+        assert "dd" not in rendered["noPlane2"]["tags"], (
+            rendered["noPlane2"]["tags"])
+
+    def test_a_real_join_is_untouched(self, rendered):
+        """So the rule is a distinction rather than a section that never
+        renders its numbers."""
+        out = rendered["joined"]
+        assert out["empty"] is None, out
+        assert out["sentence"] is None, out
+        assert "dd" in out["tags"], out["tags"]
 
 
 class TestTheUndeclaredGateIsLoadBearing:

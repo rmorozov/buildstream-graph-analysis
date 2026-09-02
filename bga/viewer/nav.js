@@ -189,6 +189,11 @@ export function collapsible(root, { document: doc, storage,
 
     const button = doc.createElement("button");
     button.className = "collapse";
+    // `UX-536`: 65 of these had no accessible name and defaulted to
+    // `type=submit`. The name is the heading's, read before the button
+    // joins it; `aria-expanded` beside it carries the state.
+    button.setAttribute("type", "button");
+    button.setAttribute("aria-label", (heading.textContent || key).trim());
     button.setAttribute("aria-expanded", String(!collapsed.has(key)));
     button.setAttribute("data-collapse", key);
     button.textContent = collapsed.has(key) ? "▸" : "▾";
@@ -569,8 +574,16 @@ export function stepper(root, nav, { document: doc, window: win } = {}) {
     // writes it, so there is still one authority on "here".
   };
   button("\u2191 Top", "top", "Back to the top", top);
-  button("\u2190 Prev", "previous", "Previous section", previous);
-  button("Next \u2192", "next", "Next section", next);
+  button("\u2190 Prev", "previous", "Previous section, or the [ key", previous);
+  button("Next \u2192", "next", "Next section, or the ] key", next);
+  // `UX-536`: the two accelerators were announced nowhere. Beside the
+  // controls they drive, which is where a reader looking for them is
+  // already looking.
+  const keys = owner.createElement("span");
+  keys.className = "toc-keys";
+  keys.setAttribute("data-step-keys", "[]");
+  keys.textContent = "[ ] step";
+  bar.append(keys);
 
   // `UX-393`: back to the top appears once there *is* a top to go
   // back to. Below the first screen it is a control that does nothing,

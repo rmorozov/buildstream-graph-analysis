@@ -112,9 +112,7 @@ async function questions() {
   // start satisfies before `report.json` lands - three clauses of
   // `test_one_page_behind_the_button.py` red under the full suite and
   // green alone.
-  if (document.documentElement?.dataset) {
-    document.documentElement.dataset.bgaBooted = "1";
-  }
+  document.documentElement.dataset.bgaBooted = "1";
 }
 
 questions();

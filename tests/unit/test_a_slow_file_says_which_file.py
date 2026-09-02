@@ -36,6 +36,21 @@ sys.path.insert(0, str(REPO))
 from tests import tiers                                        # noqa: E402
 from tools import dev_tier_drift as drift                      # noqa: E402
 
+def _pin_the_diff(monkeypatch, files):
+    """Pin the branch diff `explained_by` reads, instead of the tree's.
+
+    `UX-513`: `explained_by("HEAD")` runs `dev_touching.changed_files`
+    against this checkout, so a clause asserting its shape was really
+    asserting something about whatever the developer had uncommitted.
+    `tests/tiers.py` uncommitted is the one case that answers `None` -
+    `select` returns the whole suite under `"*"` and the refusal fires -
+    and that is exactly the tree a round re-tiering a file is working
+    in, so two clauses were red for no reason of their own.
+    """
+    from tools import dev_touching
+    monkeypatch.setattr(dev_touching, "changed_files", lambda base: list(files))
+
+
 def _a_small_file():
     """A real file in neither tier list, chosen rather than written in.
 
@@ -997,7 +1012,7 @@ class TestAgreementIsNotEvidenceOnItsOwn:
             "change would ship unseen (UX-418)")
         assert unexplained == []
 
-    def test_a_base_that_does_not_resolve_is_no_evidence_at_all(self):
+    def test_a_base_that_does_not_resolve_is_no_evidence_at_all(self, monkeypatch):
         """The trap under this whole change. `changed_files` swallows
         git's error and returns an empty diff, and an empty diff reads
         as "the branch explains nothing" - which would downgrade every
@@ -1009,6 +1024,9 @@ class TestAgreementIsNotEvidenceOnItsOwn:
             "so a failed fetch turns the gate off rather than falling "
             "back to agreement")
         assert drift.explained_by(None) is None
+        # The base that *does* resolve, against a diff this clause owns
+        # rather than the developer's (`UX-513`).
+        _pin_the_diff(monkeypatch, ["bga/report/text.py"])
         assert isinstance(drift.explained_by("HEAD"), set)
 
     def test_a_selector_that_names_everything_is_no_explanation(
@@ -1515,11 +1533,17 @@ class TestEveryBranchOfTheMessageIsReached:
         assert "on this run only" in said, said
         assert self.FLAKY in said, said
 
-    def test_the_unexplained_message_prints(self, tmp_path, capsys):
+    def test_the_unexplained_message_prints(self, tmp_path, capsys, monkeypatch):
         """Two agreeing runs with a diff that names nothing: the branch
-        that raised in CI. `--base HEAD` on a clean tree is an empty
-        diff, which `explained_by` returns as an empty *set* - evidence
-        that explains nothing, rather than `None` for no evidence."""
+        that raised in CI. A diff that names nothing is an empty *set* -
+        evidence that explains nothing, rather than `None` for no
+        evidence.
+
+        `UX-513`: this used to take "names nothing" from `--base HEAD`
+        on a clean checkout, so it was red whenever `tests/tiers.py` was
+        uncommitted. The empty diff is pinned now.
+        """
+        _pin_the_diff(monkeypatch, [])
         times = self._slower()
         self._run(tmp_path, capsys, times, base="HEAD")
         code, said = self._run(tmp_path, capsys, times, base="HEAD")
@@ -1539,6 +1563,45 @@ class TestEveryBranchOfTheMessageIsReached:
         assert code == 1, said
         assert "slower than CI's own record" in said, said
         assert self.FLAKY in said, said
+
+
+class TestTheVerdictDoesNotDependOnTheWorkingTree:
+    """`UX-513`. `explained_by` reads `git diff HEAD`, so a clause that
+    called it without pinning the diff was answering about whatever the
+    developer had uncommitted. Input classes: a one-module diff, an
+    empty one, and `tests/tiers.py` — the one a round re-tiering a file
+    is holding, and the one that answers `None`.
+    """
+
+    def test_a_one_module_diff_names_the_files_that_read_it(self, monkeypatch):
+        _pin_the_diff(monkeypatch, ["bga/report/text.py"])
+        explained = drift.explained_by("HEAD")
+        assert isinstance(explained, set) and explained
+
+    def test_an_empty_diff_is_an_empty_set_and_not_none(self, monkeypatch):
+        """The distinction the gate turns on: `set()` is "the branch
+        explains nothing", `None` is "no evidence either way"."""
+        _pin_the_diff(monkeypatch, [])
+        assert drift.explained_by("HEAD") == set()
+
+    def test_a_tiers_edit_is_no_evidence_either_way(self, monkeypatch):
+        """`tests/tiers.py` is in `dev_touching`'s shared-harness list,
+        so `select` returns the whole suite under `"*"` and
+        `explained_by` refuses. That refusal is right (`UX-494`) and is
+        not what `UX-513` changed — what changed is that the two clauses
+        above no longer depend on whether it fires."""
+        _pin_the_diff(monkeypatch, ["tests/tiers.py"])
+        assert drift.explained_by("HEAD") is None
+
+    def test_the_pin_is_what_makes_the_difference(self, monkeypatch):
+        """Without the pin these three would all answer the same thing
+        on one tree, which is the shape that made the guard read the
+        developer instead of the code."""
+        answers = []
+        for diff in (["bga/report/text.py"], [], ["tests/tiers.py"]):
+            _pin_the_diff(monkeypatch, diff)
+            answers.append(drift.explained_by("HEAD"))
+        assert len({repr(a) for a in answers}) == 3
 
 
 class TestTheSpreadIsTheShiftTheGateUses:

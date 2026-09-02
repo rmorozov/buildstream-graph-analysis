@@ -1,6 +1,6 @@
 # UX-513: two guards are red while a tier edit is uncommitted
 
-**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** `UX-476` wrote `explained_by`; `UX-336` put `tiers.py` in the shared-harness list | **Found by:** round 75, refreshing a reference entry CI had just reported | **Serves:** the round re-tiering a file, which is the one time these two guards are red for no reason of its own | **Topic:** guards
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** `UX-476` wrote `explained_by`; `UX-336` put `tiers.py` in the shared-harness list | **Found by:** round 75, refreshing a reference entry CI had just reported | **Serves:** the round re-tiering a file, which is the one time these two guards are red for no reason of its own | **Topic:** guards
 
 ## Motivation
 
@@ -63,6 +63,66 @@ red is not theirs.
 The file green with `tests/tiers.py` edited and uncommitted, and green
 with it clean, both pasted.
 
-## Outcome
+## Outcome (round 76, 2026-09-02)
 
-_Not started._
+### The gap, reproduced at this round's HEAD
+
+```console
+$ printf '\n# an uncommitted tier edit.\n' >> tests/tiers.py
+$ git status --short
+ M tests/tiers.py
+$ PYTHONDONTWRITEBYTECODE=1 python3 -m pytest \
+    tests/unit/test_a_slow_file_says_which_file.py -q -p no:cacheprovider \
+    -k "does_not_resolve or unexplained_message"
+FAILED ...::test_a_base_that_does_not_resolve_is_no_evidence_at_all
+FAILED ...::test_the_unexplained_message_prints
+2 failed, 123 deselected in 0.59s
+```
+
+### The close
+
+Both clauses called `explained_by("HEAD")` and took their answer from
+`git diff HEAD` in this checkout. `_pin_the_diff` replaces
+`dev_touching.changed_files` with a fixed list, so each clause names the
+diff its claim is about: a one-module diff for "this resolves to a set",
+an empty one for "an empty diff is an empty set, not `None`".
+
+`TestTheVerdictDoesNotDependOnTheWorkingTree` states the three input
+classes side by side — a one-module diff, an empty diff, and
+`tests/tiers.py` — with a fourth clause asserting the three answers are
+distinct, so a change collapsing them cannot pass quietly.
+
+```console
+$ git status --short tests/tiers.py            # clean
+$ python3 -m pytest tests/unit/test_a_slow_file_says_which_file.py -q -p no:cacheprovider
+129 passed in 2.09s
+
+$ printf '\n# an uncommitted tier edit.\n' >> tests/tiers.py
+$ git status --short tests/tiers.py
+ M tests/tiers.py
+$ PYTHONDONTWRITEBYTECODE=1 python3 -m pytest \
+    tests/unit/test_a_slow_file_says_which_file.py -q -p no:cacheprovider
+129 passed in 1.99s
+```
+
+### Mutations
+
+| # | mutation | result |
+|---|---|---|
+| M1 | the `"*"` refusal removed — `UX-494` back | 2 failed |
+| M2 | an unresolvable base reads as an empty diff | 1 failed |
+| M3 | `explained_by` always answers `None` | 5 failed |
+| M4 | an empty diff answers `None` instead of `set()` | 3 failed |
+
+M1 is the one the Required Fix asked for by name: the refusal is right
+and the clause holding it still reddens when it goes.
+
+### Deviation from the Required Fix
+
+None. `explained_by`'s `"*"` refusal is untouched — the change is
+entirely in what the clauses feed it. A fixture repository was the other
+option and was not built: `dev_touching.changed_files` is the one seam
+both clauses go through, and pinning it is smaller than a second
+checkout per clause.
+
+Tests: 125 → 129 in `tests/unit/test_a_slow_file_says_which_file.py`.

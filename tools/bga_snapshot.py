@@ -884,7 +884,7 @@ def _compare(baseline_snapshot: str, candidate_snapshot: str) -> int:
     return cli_main(argv)
 
 
-def store_listing(project: str) -> dict:
+def store_listing(project: str, window: Optional[int] = None) -> dict:
     """The store as data - one `store/v1` document.
 
     `UX-196`: the text listing and `--format json` are rendered from
@@ -892,6 +892,12 @@ def store_listing(project: str) -> dict:
     about what is on disk. Incomplete captures are listed rather than
     hidden - they occupy the disk the size warning is about - but they
     carry no alias, because they are not what `@last` resolves to.
+
+    `UX-528`: `window` keeps the last N rows for a caller that draws
+    them. `count` and `total_bytes` stay facts about the whole store -
+    they are what the page says it is showing a window of - and `shown`
+    is how many rows came back. A listing is O(N) by definition, so
+    `--list` passes no window; the page does.
     """
     from bga import schemas, store_aggregate
 
@@ -947,11 +953,15 @@ def store_listing(project: str) -> dict:
             "host_class": store_aggregate.host_class(
                 measured.get("host_manifest")),
         })
+    # Before the window, not after: a verdict compares a run with the
+    # one before it, and the first row of a window has a predecessor.
     _mark_verdicts(rows)
+    shown = rows if not window else rows[-window:]
     return schemas.stamp({
         "project": os.path.abspath(project),
-        "snapshots": rows,
+        "snapshots": shown,
         "count": len(rows),
+        "shown": len(shown),
         # Sum of file sizes, so it is a little under `du` (which also
         # counts directory entries) and matches `du --apparent-size`.
         "total_bytes": sum(row["bytes"] for row in rows),

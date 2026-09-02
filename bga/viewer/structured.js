@@ -35,7 +35,7 @@ import { enterTableFocus, focusedTable, leaveTableFocus, registerFocusTarget }
   from "./tablefocus.js";
 import { parseThreshold, applyFilters, badgeText, rowJson, cellText,
          copy, presetColumns, applyPreset, openingBound, plural,
-         boundPairs, sortable, showAlso,
+         boundPairs, sortable, showAlso, columnCells,
          rowsMarkdown } from "./tables.js";
 import { PATH_HEAD, PATH_TAIL } from "./views.js";
 
@@ -749,8 +749,7 @@ export function interrogable(table, specs, total, depth = 0) {
     // the same reading `distributionStrip` makes two hundred lines
     // down, and `CSS.escape` is a browser global the guards' shim does
     // not have.
-    const numeric = [...table.querySelectorAll(
-      `td[data-column="${spec.key}"]`)]
+    const numeric = columnCells(table, spec.key)
       .some((td) => Number.isFinite(Number(td.getAttribute("data-raw"))));
     if (!numeric) return;
     const input = el("input", {

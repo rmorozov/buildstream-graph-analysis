@@ -674,7 +674,24 @@ COMMITTED_EXPORTS = [
     # rather than the 716 the note above claims. `golden`'s 411,000
     # still holds with 2,205 B; `macro_micro`'s does not, and 463,000
     # leaves 4,186 B.
-    ("golden", GOLDEN, 411_000),                       #  408,795 B
+    # Round 80's three viewer items moved both bounds and **only the
+    # page**: the embedded data is byte-identical at every step, so all
+    # of it is source. One instrument, this file's own splitter, at each
+    # commit:
+    #
+    #     page                golden   macro_micro
+    #     before          294,848    408,787   458,782
+    #     UX-526          295,987    409,926   459,921   (+1,139)
+    #     UX-527          296,745    410,684   460,679   (+  758)
+    #     UX-528          299,497    413,436   463,431   (+2,752)
+    #
+    # `UX-526` is the held-row bookkeeping in `tables.js` and the
+    # `data-rows` a table now publishes; `UX-527` the search box that
+    # replaced a 4,002-option `<select>`; `UX-528` the store window, its
+    # sentence, the "show all" loader and the typed run id. The recorded
+    # figures were 8 B and 32 B stale on the two fixtures.
+    # 418,000 leaves 4,564 B and 468,000 leaves 4,569.
+    ("golden", GOLDEN, 418_000),                       #  413,436 B
     # `UX-297` moved this one by 385 B before that: the two-plane run
     # publishes `plane2_coverage.source`, which says which shape of
     # Plane 2 report served its numbers and what that costs to open. A
@@ -762,7 +779,7 @@ COMMITTED_EXPORTS = [
     # measurement that forced it is the negotiation this file exists to
     # prevent - but the next round to add a module will trip it, and
     # the figure it needs is this one rather than the stale 453,180.
-    ("macro_micro", MACRO_MICRO, 463_000),             #  458,814 B
+    ("macro_micro", MACRO_MICRO, 468_000),             #  463,431 B
 ]
 
 

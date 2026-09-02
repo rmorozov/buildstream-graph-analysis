@@ -123,6 +123,23 @@ export function showAlso(body, rows) {
 }
 
 /**
+ * One column's cells, over every row the table has - held or shown.
+ *
+ * `UX-526`: `querySelectorAll("td[data-column=…]")` used to be the same
+ * thing and stopped being it. A strip labelled "across all 1,202 rows"
+ * drawn from the 25 the bound shows is the wrong-population defect the
+ * fixing guide's §5 names, arriving through a change of mechanism.
+ */
+export function columnCells(table, key) {
+  const body = table?.querySelector?.("tbody");
+  if (!body) return [];
+  return everyRow(body)
+    .map((tr) => [...(tr.children ?? [])].find(
+      (td) => td.getAttribute?.("data-column") === key))
+    .filter(Boolean);
+}
+
+/**
  * Apply the text box and the per-column thresholds to a rendered table.
  * Returns how many rows survived, which is what the badge shows.
  */

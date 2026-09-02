@@ -712,7 +712,12 @@ async function boot() {
     // came from, drawn behind them from published figures only.
     const trend = store && contained(
       document, "store_trend", "store.json",
-      () => renderTrend(store, schemas[store.schema], aggregate));
+      // `UX-528`: the loader for the whole listing, injected the way
+      // `copy` is - `views.js` imports nothing. The server offers
+      // `store-all.json` only when the page's own copy is windowed, so
+      // this resolves to `null` on a store the page holds entire.
+      () => renderTrend(store, schemas[store.schema], aggregate,
+                        () => optional(run, "store-all")));
     if (trend) root.append(trend);
     // UX-199: the blast box is a *transport* - it asks the server. An
     // export is a `file://` document with no server, so the box could

@@ -13,7 +13,7 @@ Implements Parts 6-12:
 
 import logging
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Dict, Iterator, List, Optional, Set, Tuple
 from bisect import bisect_left, bisect_right
 from collections import defaultdict
 
@@ -570,18 +570,17 @@ class BlameChainAnalyzer:
         if wait_end <= wait_start:
             return False, None
 
-        intervals = self._resource_saturation_intervals(task, wait_start, wait_end, resource_capacity)
-        if not intervals or not intervals[0][0]:
-            return False, None
-
         # The maximal saturated *prefix* (this method's own contract) -
         # merge the leading run of saturated intervals. Multiple
         # consecutive saturated intervals can occur when the specific
         # holding task changes mid-saturation without the resource ever
-        # actually freeing up.
+        # actually freeing up. UX-539: nothing past that run is read, so
+        # nothing past it is built.
         saturated_until = wait_start
         holder_time_us: Dict[str, int] = defaultdict(int)
-        for is_saturated, t1, t2, interval_holder_time_us in intervals:
+        for is_saturated, t1, t2, interval_holder_time_us in self._iter_saturation_intervals(
+            task, wait_start, wait_end, resource_capacity
+        ):
             if not is_saturated:
                 break
             saturated_until = t2
@@ -615,14 +614,40 @@ class BlameChainAnalyzer:
         normalizing to a float share is deferred to whichever caller
         finishes accumulating across however many intervals it merges,
         via `_build_holder_info`), non-empty only when `is_saturated`.
+
+        UX-539: the whole list, for the oracle and for callers that want
+        it; production reads `_iter_saturation_intervals` and stops at
+        the leading run it actually consumes.
+        """
+        return list(
+            self._iter_saturation_intervals(
+                task, window_start, window_end, resource_capacity
+            )
+        )
+
+    def _iter_saturation_intervals(
+        self,
+        task: NormalizedTask,
+        window_start: int,
+        window_end: int,
+        resource_capacity: Dict[Resource, int],
+    ) -> Iterator[Tuple[bool, int, int, Dict[str, int]]]:
+        """`_resource_saturation_intervals`, yielded in order.
+
+        UX-539: both callers break at the end of the leading run, so
+        1,520,246 sub-intervals were built at 4,002 elements and 651,649
+        read. Yielding lets the rest go unbuilt, and lets each resource's
+        slice index advance with the sweep instead of being re-found by
+        binary search per (gap, boundary, resource).
         """
         if window_end <= window_start:
-            return []
+            return
         required_with_capacity = {
             r: resource_capacity[r] for r in task.resources if r in resource_capacity
         }
         if not required_with_capacity:
-            return [(False, window_start, window_end, {})]
+            yield (False, window_start, window_end, {})
+            return
 
         # UX-42: the per-resource occupancy timeline is a property of the
         # whole run, so it is built once (see `_resource_timeline`) and
@@ -668,41 +693,54 @@ class BlameChainAnalyzer:
         points = sorted(boundaries)
 
         self_key = str(task.task_key)
-        intervals: List[Tuple[bool, int, int, Dict[str, int]]] = []
+
+        # UX-539: `points` is ascending and so is each timeline's own
+        # point list, so the slice holding `t1` is found by advancing a
+        # cursor, not by a fresh binary search per (boundary, resource).
+        sweep = []
+        for resource, capacity in required_with_capacity.items():
+            timeline = timelines.get(resource)
+            if timeline is not None:
+                sweep.append(
+                    [timeline, capacity, bisect_right(timeline.points, points[0]) - 1]
+                )
+
         for t1, t2 in zip(points, points[1:]):
             # Within a sub-interval every relevant task either covers it
             # entirely or does not overlap it at all - that is what makes
             # the boundary set correct - so "holders throughout" and
             # "holders at t1" are the same set, and occupancy is a
             # single indexed lookup instead of a rescan.
-            holders_by_resource = {}
-            saturated_resources = set()
-            for resource, capacity in required_with_capacity.items():
-                timeline = timelines.get(resource)
-                if timeline is None:
-                    continue
-                # The task doing the waiting is excluded from its own
-                # saturation count, as before.
-                if timeline.occupancy_at(t1, self_key) >= capacity:
-                    saturated_resources.add(resource)
-                    holders_by_resource[resource] = timeline.holders_at(t1)
-
-            if not saturated_resources:
-                intervals.append((False, t1, t2, {}))
-                continue
-
+            #
             # A task holding two saturated resources is one holder, not
             # two - the original accumulated overlap per task, not per
-            # (task, resource) pair.
-            holder_time_us: Dict[str, int] = {}
-            width = t2 - t1
-            for holders in holders_by_resource.values():
-                for key_str, _ in holders:
-                    if key_str != self_key:
-                        holder_time_us[key_str] = width
-            intervals.append((True, t1, t2, holder_time_us))
+            # (task, resource) pair - so the holder key sets union.
+            holder_keys = None
+            for entry in sweep:
+                timeline, capacity, index = entry
+                tl_points = timeline.points
+                while index + 1 < len(tl_points) and tl_points[index + 1] <= t1:
+                    index += 1
+                entry[2] = index
+                active = timeline.active
+                if 0 <= index < len(active):
+                    keys = timeline.active_keys[index]
+                    # The task doing the waiting is excluded from its own
+                    # saturation count, as before.
+                    occupancy = len(active[index]) - (self_key in keys)
+                else:
+                    keys = frozenset()
+                    occupancy = 0
+                if occupancy >= capacity:
+                    holder_keys = keys if holder_keys is None else holder_keys | keys
 
-        return intervals
+            if holder_keys is None:
+                yield (False, t1, t2, {})
+                continue
+
+            holder_time_us: Dict[str, int] = dict.fromkeys(holder_keys, t2 - t1)
+            holder_time_us.pop(self_key, None)
+            yield (True, t1, t2, holder_time_us)
 
     def _build_holder_info(
         self,
@@ -1058,21 +1096,33 @@ class BlameChainAnalyzer:
 
         while cursor < gap_end:
             progressed = False
-            saturation_intervals: List[Tuple[bool, int, int, Dict[str, int]]] = []
+            # UX-539: one pass over the leading run - if it is saturated
+            # this loop wants its end and its holders, and if it is not
+            # this loop wants only where saturation next resumes. Neither
+            # reads past that, so the sweep stops there.
+            seg_end = cursor
+            holder_time_us: Dict[str, int] = defaultdict(int)
+            next_saturation_us: Optional[int] = None
+            starts_saturated = False
             if task.resources:
-                saturation_intervals = self._resource_saturation_intervals(
+                first = True
+                for is_saturated, t1, t2, interval_holder_time_us in self._iter_saturation_intervals(
                     task, cursor, gap_end, self.resource_capacity,
-                )
-
-            if saturation_intervals and saturation_intervals[0][0]:
-                seg_end = cursor
-                holder_time_us: Dict[str, int] = defaultdict(int)
-                for is_saturated, t1, t2, interval_holder_time_us in saturation_intervals:
-                    if not is_saturated:
+                ):
+                    if first:
+                        starts_saturated = is_saturated
+                        first = False
+                    if starts_saturated:
+                        if not is_saturated:
+                            break
+                        seg_end = t2
+                        for key, us in interval_holder_time_us.items():
+                            holder_time_us[key] += us
+                    elif is_saturated:
+                        next_saturation_us = t1
                         break
-                    seg_end = t2
-                    for key, us in interval_holder_time_us.items():
-                        holder_time_us[key] += us
+
+            if starts_saturated:
                 explained_us = seg_end - cursor
                 if explained_us > 0:
                     holder_info = self._build_holder_info(task, cursor, seg_end, holder_time_us, explained_us)
@@ -1085,11 +1135,8 @@ class BlameChainAnalyzer:
             if not progressed and cursor < gap_end:
                 # Bound scheduler-wait's own sweep to the next real
                 # re-saturation point (if any), not gap_end - see this
-                # method's own docstring, fix (1).
-                next_saturation_us = next(
-                    (t1 for is_saturated, t1, _t2, _h in saturation_intervals if is_saturated),
-                    None,
-                )
+                # method's own docstring, fix (1) - found by the sweep
+                # above, which stopped at exactly that point.
                 scheduler_window_end = next_saturation_us if next_saturation_us is not None else gap_end
 
                 resource_available = self._resource_available_at(task, cursor)

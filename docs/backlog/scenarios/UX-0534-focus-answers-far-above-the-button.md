@@ -1,6 +1,6 @@
 # UX-534: Focus answers 25,501 px above the button
 
-**Priority:** Medium | **Status:** 🟢 Fixed & Verified | **Depends on:** UX-228 (the investigation the button opens) | **Serves:** anyone who presses Focus on an element card | **Topic:** viewer
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-228 (the investigation the button opens) | **Serves:** anyone who presses Focus on an element card | **Topic:** viewer
 
 ## Motivation
 

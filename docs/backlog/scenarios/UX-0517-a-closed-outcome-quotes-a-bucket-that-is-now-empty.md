@@ -1,6 +1,6 @@
 # UX-517: a closed Outcome quotes a bucket that is now empty
 
-**Priority:** Low | **Status:** 🟢 Fixed & Verified | **Depends on:** `UX-507` (which emptied it), `UX-132` (the rule) | **Found by:** review 11, question 3 | **Serves:** the round that reads `UX-501` to learn what the derivation does and takes its 223 as current | **Topic:** docs
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** `UX-507` (which emptied it), `UX-132` (the rule) | **Found by:** review 11, question 3 | **Serves:** the round that reads `UX-501` to learn what the derivation does and takes its 223 as current | **Topic:** docs
 
 ## Motivation
 

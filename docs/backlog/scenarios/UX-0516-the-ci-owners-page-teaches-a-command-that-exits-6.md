@@ -1,6 +1,6 @@
 # UX-516: the CI owner's page teaches a command that exits 6 on this repository's own refs
 
-**Priority:** Medium | **Status:** 🟢 Fixed & Verified | **Depends on:** `UX-96` (which added the remedy) | **Found by:** review 11 | **Serves:** the CI owner who copies the block, meets exit 6, and has no next line to type | **Topic:** docs
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-96` (which added the remedy) | **Found by:** review 11 | **Serves:** the CI owner who copies the block, meets exit 6, and has no next line to type | **Topic:** docs
 
 ## Motivation
 

@@ -162,6 +162,25 @@ class TestTheSelectorRunsThem:
         selected, _ = dev_touching.select(["bga/findings.py"])
         assert set(tiers.CENSUS) <= set(selected)
 
+    def test_the_drift_tool_asks_for_the_grep_half(self, monkeypatch):
+        """`UX-476` asks the opposite question of the selector: not
+        "what should run" but "what does this diff account for". A
+        census guard runs whatever the diff is, so unioning it there
+        makes every reported slow file explained by every branch -
+        which is what `test_an_empty_diff_is_an_empty_set_and_not_none`
+        caught at this round's batch gate, after the union landed."""
+        from tools import dev_tier_drift, dev_touching as imported
+
+        # `dev_tier_drift` reaches it as `tools.dev_touching`, which is
+        # a different module object from this file's `dev_touching`.
+        asked = {}
+        monkeypatch.setattr(imported, "changed_files", lambda *a, **k: [])
+        monkeypatch.setattr(imported, "select",
+                            lambda changed, census=True: (
+                                asked.setdefault("census", census), ([], {}))[1])
+        dev_tier_drift.explained_by("HEAD")
+        assert asked["census"] is False
+
     def test_why_says_which_set_chose_it(self):
         """`--why` is the instrument a session reads when the selector
         surprises it; a set it cannot name is a set nobody can audit."""

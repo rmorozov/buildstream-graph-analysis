@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-536 scenarios: **21 open**, 515 closed.
+536 scenarios: **15 open**, 521 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -23,10 +23,10 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | capture | 3 | 90 |
 | analysis | 1 | 84 |
 | contracts | 0 | 37 |
-| viewer | 8 | 135 |
+| viewer | 5 | 135 |
 | cli | 0 | 19 |
 | store | 2 | 14 |
-| docs | 4 | 66 |
+| docs | 1 | 66 |
 | guards | 3 | 91 |
 
 ## Open scenarios
@@ -39,22 +39,16 @@ task file, which is the only place it ever lived twice.
 | UX-92 | [cache effectiveness — hits, misses, churn, trends — is invisible to the tool](UX-0092-cache-effectiveness-is-invisible-to-the-tool.md) | store | Medium | — | 🟡 |
 | UX-500 | [the batch gate, measured against the per-item suite](UX-0500-the-batch-gate-measured-against-the-per-item-suite.md) | docs | High | the implementing session's wall clock; the maintainer's subscription | 🔴 |
 | UX-514 | [the capture schedule can never produce a second commit](UX-0514-the-schedule-can-never-capture-a-second-commit.md) | capture | Medium | `UX-92`'s gate, deferred four times on evidence that cannot arrive | 🔴 |
-| UX-516 | [the CI owner's page teaches a command that exits 6 on this repository's own refs](UX-0516-the-ci-owners-page-teaches-a-command-that-exits-6.md) | docs | Medium | the CI owner who copies the block, meets exit 6, and has no next line to type | 🔴 |
-| UX-517 | [a closed Outcome quotes a bucket that is now empty](UX-0517-a-closed-outcome-quotes-a-bucket-that-is-now-empty.md) | docs | Low | the round that reads `UX-501` and takes its 223 as current | 🔴 |
 | UX-519 | [the snapshot's tail goes quiet in the one phase that has no line](UX-0519-the-snapshot-tail-goes-quiet.md) | capture | Medium | the user watching a capture that has stopped saying anything | 🔴 |
 | UX-520 | [a capture you can carry to another machine in one command](UX-0520-a-run-bundle-you-can-carry.md) | store | Medium | the engineer who captured on a build runner and wants to read it on a laptop | 🔴 |
-| UX-525 | [a track costs 81k-131k tokens, and nobody knows where](UX-0525-a-track-costs-tokens-and-nobody-knows-where.md) | docs | Medium | the maintainer's subscription | 🔴 |
 | UX-526 | [the large budget class is measured at its bottom and breached at its top](UX-0526-the-large-budget-class-is-breached-at-its-top.md) | guards | High | anyone who opens a report of a project larger than the seeded run | 🔴 |
 | UX-527 | [one control has an option per element](UX-0527-one-control-has-an-option-per-element.md) | viewer | High | anyone asking Perfetto about one element of a large project | 🔴 |
 | UX-528 | [the served store section and run picker grow with every snapshot](UX-0528-the-served-store-section-grows-with-every-snapshot.md) | viewer | High | the CI owner whose store holds a hundred runs | 🔴 |
 | UX-529 | [the export's data half is unbounded, and holds each row twice](UX-0529-the-export-data-half-is-unbounded-and-holds-each-row-twice.md) | viewer | Medium | anyone attaching a report of a large project | 🔴 |
 | UX-530 | [a real capture reaches the track ceiling, and the timeline is dropped whole](UX-0530-a-real-capture-reaches-the-track-ceiling-and-loses-the-timeline.md) | capture | Medium | anyone capturing a C++ project with a few hundred processes per element | 🔴 |
 | UX-531 | [`bga analyze` is superlinear, and the page pays for it](UX-0531-bga-analyze-is-superlinear-and-the-page-pays.md) | analysis | Medium | anyone opening a run of a few thousand elements | 🔴 |
-| UX-532 | [the table tools read the nested tables' rows as their own](UX-0532-the-table-tools-read-the-nested-tables-rows-as-their-own.md) | viewer | High | anyone pressing "All rows" on a table whose cells fold | 🔴 |
 | UX-533 | [the served page is the capture-time analysis, and cannot say so](UX-0533-the-served-page-is-the-capture-time-analysis.md) | viewer | High | anyone reading a run captured by an older `bga` | 🔴 |
-| UX-534 | [Focus answers 25,501 px above the button](UX-0534-focus-answers-far-above-the-button.md) | viewer | Medium | anyone who presses Focus on an element card | 🔴 |
-| UX-535 | [one fact published twice, drawn twice, listed twice](UX-0535-one-fact-published-twice-drawn-twice-listed-twice.md) | viewer | Medium | anyone reading the run's identity, or the rail | 🔴 |
-| UX-536 | [four controls that say less than they do](UX-0536-four-controls-that-say-less-than-they-do.md) | viewer | Low | the keyboard and screen-reader reader | 🔴 |
+| UX-535 | [one fact published twice, drawn twice, listed twice](UX-0535-one-fact-published-twice-drawn-twice-listed-twice.md) | viewer | Medium | anyone reading the run's identity, or the rail | 🟡 |
 | UX-537 | [forty-eight hand-built documents, and the shared shim they were to become](UX-0537-forty-eight-documents-and-one-shim.md) | guards | Medium | the next round that adds a standard DOM call to the viewer | 🔴 |
 | UX-538 | [a guard that ranks a real build's seconds cannot hold under load](UX-0538-a-ranking-guard-under-contention.md) | guards | Medium | the round that runs parallel tracks on one machine | 🔴 |
 

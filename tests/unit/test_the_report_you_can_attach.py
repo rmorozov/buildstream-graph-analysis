@@ -674,7 +674,17 @@ COMMITTED_EXPORTS = [
     # rather than the 716 the note above claims. `golden`'s 411,000
     # still holds with 2,205 B; `macro_micro`'s does not, and 463,000
     # leaves 4,186 B.
-    ("golden", GOLDEN, 411_000),                       #  408,795 B
+    # `UX-532`, `UX-534` and `UX-536` moved both by **+2,426 B, all of
+    # it page**: 294,848 -> 297,274 B by this file's own splitter, with
+    # the embedded data byte-identical on both fixtures. `ownRows` and
+    # its two siblings, the Focus reveal, `aria-pressed`, sixty-six
+    # collapse buttons that name what they open. Neither committed
+    # fixture publishes `resource_blast`, so none of it is payload.
+    #
+    # `golden`'s 411,000 no longer holds - 411,221 B, 221 over - and
+    # `PAGE_BUDGET_B`'s 300,000 has 2,726 B left, which is the figure
+    # the next viewer round should read before it starts.
+    ("golden", GOLDEN, 416_000),                       #  411,221 B
     # `UX-297` moved this one by 385 B before that: the two-plane run
     # publishes `plane2_coverage.source`, which says which shape of
     # Plane 2 report served its numbers and what that costs to open. A
@@ -762,7 +772,7 @@ COMMITTED_EXPORTS = [
     # measurement that forced it is the negotiation this file exists to
     # prevent - but the next round to add a module will trip it, and
     # the figure it needs is this one rather than the stale 453,180.
-    ("macro_micro", MACRO_MICRO, 463_000),             #  458,814 B
+    ("macro_micro", MACRO_MICRO, 466_000),             #  461,240 B
 ]
 
 

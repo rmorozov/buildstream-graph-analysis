@@ -70,7 +70,7 @@ RECORDS_KEY = "processes"
 #
 # ```text
 # plane2 blocks in the capture            25
-#   a key in analyze/v4                    6
+#   a key in analyze/v5                    6
 #   reaching the page through the join     6
 #   terminal only                         14
 # ```
@@ -92,7 +92,7 @@ RECORDS_KEY = "processes"
 # with no entry fails `test_every_plane2_block_has_a_destination.py`,
 # which is the whole point of writing the inventory down rather than
 # leaving it implied by what `bga/cli.py` happens to copy.
-PAYLOAD = "payload"          #: a named key of `analyze/v4`
+PAYLOAD = "payload"          #: a named key of `analyze/v5`
 JOIN = "join"                #: a field on an `element_join` row (`UX-382`)
 TERMINAL = "terminal"        #: deliberately terminal-only, with a reason
 

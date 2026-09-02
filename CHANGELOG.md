@@ -99,7 +99,7 @@ on the record rather than in someone's memory — `UX-92` and `UX-96`
 modules split along their seams).
 
 ```text state
-contracts: analyze/v2 analyze/v3 analyze/v4 blast/v1 blast/v2 capture-layout/v1 compare/v1 compare/v2 correlate/v1 correlate/v2 host-samples/v1 host/v1 host/v2 plane2/v1 plane2/v2 plane2/v3 sources/v1 store-aggregate/v1 store/v1 sweep/v1 whatif/v1
+contracts: analyze/v2 analyze/v3 analyze/v4 analyze/v5 blast/v1 blast/v2 capture-layout/v1 compare/v1 compare/v2 correlate/v1 correlate/v2 host-samples/v1 host/v1 host/v2 plane2/v1 plane2/v2 plane2/v3 sources/v1 store-aggregate/v1 store/v1 sweep/v1 whatif/v1
 commands: analyze baseline blast cache-logs cache-trend capture checkout-cost chrome-to-trace compare correlate cross-check diagnostics doctor extract floors gen-synthetic graph graph-from-show log-to-chrome native-to-chrome rebuild-set release-notes replay run-context snapshot sweep timeline utilisation view whatif wrap
 ```
 

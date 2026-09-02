@@ -1,5 +1,5 @@
 {
-    "schema": "analyze/v4",
+    "schema": "analyze/v5",
     "run_id": "054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec",
     "total_duration_us": 46133000,
     "section": null,
@@ -1110,9 +1110,6 @@
         "total_deferrable_work_us": 0
     },
     "graph_summary": {
-        "total_elements": 11,
-        "critical_path_length": 10,
-        "max_parallelism": 2,
         "bottleneck_count": 9,
         "deferrable_leaves": 1,
         "best_case_speedup": 6.171428571428572
@@ -1210,24 +1207,24 @@
         {
             "claim": "diagnosis",
             "kind": "diagnosis",
-            "document": "analyze/v4",
+            "document": "analyze/v5",
             "evidence": [
                 {
                     "path": "floors.t_infinity_observed",
-                    "value": 43200000,
                     "resolved": true,
+                    "value": 43200000,
                     "quantity": "duration_us"
                 },
                 {
                     "path": "total_duration_us",
-                    "value": 46133000,
                     "resolved": true,
+                    "value": 46133000,
                     "quantity": "duration_us"
                 },
                 {
                     "path": "headline.chain_share",
-                    "value": 1.0,
                     "resolved": true,
+                    "value": 1.0,
                     "quantity": "share"
                 }
             ],
@@ -1246,18 +1243,18 @@
         {
             "claim": "wait-category",
             "kind": "finding",
-            "document": "analyze/v4",
+            "document": "analyze/v5",
             "evidence": [
                 {
                     "path": "attribution.untracked_head_us",
-                    "value": 2717000,
                     "resolved": true,
+                    "value": 2717000,
                     "quantity": "duration_us"
                 },
                 {
                     "path": "total_duration_us",
-                    "value": 46133000,
                     "resolved": true,
+                    "value": 46133000,
                     "quantity": "duration_us"
                 }
             ],
@@ -1279,18 +1276,18 @@
         {
             "claim": "time-concentration",
             "kind": "finding",
-            "document": "analyze/v4",
+            "document": "analyze/v5",
             "evidence": [
                 {
                     "path": "total_duration_us",
-                    "value": 46133000,
                     "resolved": true,
+                    "value": 46133000,
                     "quantity": "duration_us"
                 },
                 {
                     "path": "floors.t_infinity_observed",
-                    "value": 43200000,
                     "resolved": true,
+                    "value": 43200000,
                     "quantity": "duration_us"
                 }
             ],
@@ -1308,12 +1305,12 @@
         {
             "claim": "chain-graph",
             "kind": "finding",
-            "document": "analyze/v4",
+            "document": "analyze/v5",
             "evidence": [
                 {
                     "path": "elements.zero_slack_share",
-                    "value": 0.9090909090909091,
                     "resolved": true,
+                    "value": 0.9090909090909091,
                     "quantity": "share"
                 }
             ],
@@ -1332,24 +1329,24 @@
         {
             "claim": "blast-radius-reach",
             "kind": "finding",
-            "document": "analyze/v4",
+            "document": "analyze/v5",
             "evidence": [
                 {
                     "path": "elements.blast_radius[core.bst].downstream_count",
-                    "value": 8,
                     "resolved": true,
+                    "value": 8,
                     "quantity": "count"
                 },
                 {
                     "path": "elements.blast_radius[codegen.bst].downstream_count",
-                    "value": 8,
                     "resolved": true,
+                    "value": 8,
                     "quantity": "count"
                 },
                 {
                     "path": "elements.blast_radius[lib-a.bst].downstream_count",
-                    "value": 7,
                     "resolved": true,
+                    "value": 7,
                     "quantity": "count"
                 }
             ],
@@ -1367,12 +1364,12 @@
         {
             "claim": "blast-radius-structural",
             "kind": "finding",
-            "document": "analyze/v4",
+            "document": "analyze/v5",
             "evidence": [
                 {
                     "path": "elements.blast_radius[toolchain.bst].downstream_count",
-                    "value": 10,
                     "resolved": true,
+                    "value": 10,
                     "quantity": "count"
                 }
             ],
@@ -1390,7 +1387,7 @@
         {
             "claim": "graph-width",
             "kind": "finding",
-            "document": "analyze/v4",
+            "document": "analyze/v5",
             "evidence": [],
             "rule": {
                 "name": null,
@@ -1406,29 +1403,29 @@
         {
             "claim": "joint-saving",
             "kind": "finding",
-            "document": "analyze/v4",
+            "document": "analyze/v5",
             "evidence": [
                 {
                     "path": "joint_saving.joint_saving_us",
-                    "value": 23050000,
                     "resolved": true,
+                    "value": 23050000,
                     "quantity": "duration_us"
                 },
                 {
                     "path": "joint_saving.sum_of_individual_us",
-                    "value": 23050000,
                     "resolved": true,
+                    "value": 23050000,
                     "quantity": "duration_us"
                 },
                 {
                     "path": "joint_saving.savings_add",
-                    "value": true,
-                    "resolved": true
+                    "resolved": true,
+                    "value": true
                 },
                 {
                     "path": "total_duration_us",
-                    "value": 46133000,
                     "resolved": true,
+                    "value": 46133000,
                     "quantity": "duration_us"
                 }
             ],
@@ -1446,24 +1443,24 @@
         {
             "claim": "optimization-horizon",
             "kind": "finding",
-            "document": "analyze/v4",
+            "document": "analyze/v5",
             "evidence": [
                 {
                     "path": "optimization_horizon[0].makespan_after_us",
-                    "value": 31150000,
                     "resolved": true,
+                    "value": 31150000,
                     "quantity": "duration_us"
                 },
                 {
                     "path": "optimization_horizon[0].cumulative_saving_us",
-                    "value": 12050000,
                     "resolved": true,
+                    "value": 12050000,
                     "quantity": "duration_us"
                 },
                 {
                     "path": "total_duration_us",
-                    "value": 46133000,
                     "resolved": true,
+                    "value": 46133000,
                     "quantity": "duration_us"
                 }
             ],
@@ -1481,12 +1478,12 @@
         {
             "claim": "latent-heavies",
             "kind": "finding",
-            "document": "analyze/v4",
+            "document": "analyze/v5",
             "evidence": [
                 {
                     "path": "latent_heavies[0].duration_us",
-                    "value": 7000000,
                     "resolved": true,
+                    "value": 7000000,
                     "quantity": "duration_us"
                 }
             ],
@@ -1508,30 +1505,30 @@
         {
             "claim": "cache-hit-ratio",
             "kind": "finding",
-            "document": "analyze/v4",
+            "document": "analyze/v5",
             "evidence": [
                 {
                     "path": "cache.hit_share",
-                    "value": 0.0,
                     "resolved": true,
+                    "value": 0.0,
                     "quantity": "share"
                 },
                 {
                     "path": "cache.built_elements",
-                    "value": 11,
                     "resolved": true,
+                    "value": 11,
                     "quantity": "count"
                 },
                 {
                     "path": "cache.cached_elements",
-                    "value": 0,
                     "resolved": true,
+                    "value": 0,
                     "quantity": "count"
                 },
                 {
                     "path": "confidence.run_mode",
-                    "value": "full",
-                    "resolved": true
+                    "resolved": true,
+                    "value": "full"
                 }
             ],
             "rule": {
@@ -1548,24 +1545,24 @@
         {
             "claim": "confidence",
             "kind": "finding",
-            "document": "analyze/v4",
+            "document": "analyze/v5",
             "evidence": [
                 {
                     "path": "confidence.primary",
-                    "value": 0.9676587258578457,
                     "resolved": true,
+                    "value": 0.9676587258578457,
                     "quantity": "share"
                 },
                 {
                     "path": "confidence.coverage_score",
-                    "value": 1.0,
                     "resolved": true,
+                    "value": 1.0,
                     "quantity": "share"
                 },
                 {
                     "path": "confidence.task_coverage",
-                    "value": 1.0,
                     "resolved": true,
+                    "value": 1.0,
                     "quantity": "share"
                 }
             ],
@@ -1587,18 +1584,18 @@
         {
             "claim": "efficiency-score",
             "kind": "finding",
-            "document": "analyze/v4",
+            "document": "analyze/v5",
             "evidence": [
                 {
                     "path": "floors.efficiency_score",
-                    "value": 1.0,
                     "resolved": true,
+                    "value": 1.0,
                     "quantity": "share"
                 },
                 {
                     "path": "confidence.primary",
-                    "value": 0.9676587258578457,
                     "resolved": true,
+                    "value": 0.9676587258578457,
                     "quantity": "share"
                 }
             ],
@@ -1619,10 +1616,10 @@
         }
     ],
     "document_shape": {
-        "leaves": 1067,
+        "leaves": 1065,
         "deepest_depth": 7,
         "deepest_path": "findings.[].evidence.steps.[].entering.[]",
         "deeper_than_three": 524,
-        "deeper_than_three_share": 0.49109653233364575
+        "deeper_than_three_share": 0.492018779342723
     }
 }

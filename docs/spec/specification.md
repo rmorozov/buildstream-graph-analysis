@@ -1518,7 +1518,7 @@ Schemas:
 
 ```text
 run-context/v9      graph/v9      trace/v9      analysis/v9   (inputs, and the analysis shape)
-analyze/v4          compare/v2    blast/v2      correlate/v2  (published outputs - 32.5)
+analyze/v5          compare/v2    blast/v2      correlate/v2  (published outputs - 32.5)
 store/v1            store-aggregate/v1          whatif/v1     (published outputs - 32.5)
 sweep/v1                                                      (what capacity buys - 32.5)
 host/v2                                                       (the measuring machine - UX-186)
@@ -1527,7 +1527,7 @@ capture-layout/v1                                             (the capture direc
 host-samples/v1                                               (the host while it built - UX-378)
 bundle-manifest/v1                                            (a capture you can carry - UX-520)
 plane2/v3           plane2/v2     plane2/v1                   (the Plane 2 report - UX-384)
-analyze/v3          analyze/v2                                (read, never written - UX-344)
+analyze/v4          analyze/v3    analyze/v2                  (read, never written - UX-535)
 compare/v1          blast/v1      correlate/v1                  (read, never written - UX-341)
 host/v1                                                       (read, normalised in - UX-341)
 ```
@@ -1649,7 +1649,7 @@ key:
 
 | output | schema | printed by |
 |---|---|---|
-| `bga analyze --format json` (and every section subcommand) | `analyze/v4` | `bga analyze --schema` |
+| `bga analyze --format json` (and every section subcommand) | `analyze/v5` | `bga analyze --schema` |
 | `bga compare --format json` | `compare/v2` | `bga compare --schema` |
 | `bga blast --format json` | `blast/v2` | `bga blast --schema` |
 | `bga correlate --format json` | `correlate/v2` | `bga correlate --schema` |
@@ -1665,7 +1665,7 @@ key:
 | the manifest inside a run bundle: each member's path, presence and contract version, and the `bga` that packed it, so the receiving side recognises and refuses a bundle it cannot read in full (`UX-520`) | `bundle-manifest/v1` | `bga.bundle` |
 | the Plane 2 report a capture before `UX-384` wrote - read, never written | `plane2/v2` | `bga.plane2.SUPERSEDED` |
 | the Plane 2 report a capture before `UX-297` wrote - read, never written | `plane2/v1` | `bga.plane2.SUPERSEDED` |
-| what `analyze`, `compare`, `blast` and `correlate` wrote before `UX-341` unified the units, and what `analyze` wrote before `UX-344` lifted its two namespaces - read, never written | `analyze/v3`, `analyze/v2`, `compare/v1`, `blast/v1`, `correlate/v1` | `bga.schemas.SUPERSEDED` |
+| what `analyze`, `compare`, `blast` and `correlate` wrote before `UX-341` unified the units, what `analyze` wrote before `UX-344` lifted its two namespaces, and what it wrote before `UX-535` published the graph's shape once - read, never written | `analyze/v4`, `analyze/v3`, `analyze/v2`, `compare/v1`, `blast/v1`, `correlate/v1` | `bga.schemas.SUPERSEDED` |
 | the host manifest with `memory_mb` where `host/v2` has `memory_bytes` - read and normalised, never written | `host/v1` | `bga.hostinfo.SUPERSEDED` |
 
 The last four are **written but not printable**: they are on-disk
@@ -1694,7 +1694,7 @@ and no document.
 
 **The versioning rule**: a field *rename or removal* bumps the version;
 an *addition* does not. So `additionalProperties` is true in all three,
-and a consumer that pins `analyze/v4` keeps working while the tool
+and a consumer that pins `analyze/v5` keeps working while the tool
 grows.
 
 The schemas live in one place, `bga/schemas.py`, which the renderers
@@ -1754,7 +1754,7 @@ cannot tell a broken capture from a cheap one:
 | `.bga/runs/<stamp>/plane2.log.gz` | conditional | — | the raw per-process trace the report was folded from, gzipped. `bga timeline` renders from this; absent means no timeline, which is a different absence from no report (`UX-329`). |
 | `.bga/runs/<stamp>/plane2-resource.json` | conditional | — | the two capacity scalars, beside the report so the aggregator never opens the big file for them (`UX-296`). Absent where the report is. |
 | `.bga/runs/<stamp>/host-samples.jsonl` | conditional | `host-samples/v1` | the host's memory and swap while the build ran, one JSON object per line (`UX-378`). Absent on a capture taken before that item or with sampling unavailable. |
-| `.bga/runs/<stamp>/analyze.json` | conditional | `analyze/v4` | the analysis this capture published, so `bga view` renders rather than re-deriving (`UX-296`). Absent means the viewer parses the run itself, and the trace carries no graph structure (`UX-380`). |
+| `.bga/runs/<stamp>/analyze.json` | conditional | `analyze/v5` | the analysis this capture published, so `bga view` renders rather than re-deriving (`UX-296`). Absent means the viewer parses the run itself, and the trace carries no graph structure (`UX-380`). |
 | `.bga/runs/<stamp>/build.log` | conditional | — | the wrapped BuildStream log, kept because its first line records the real invocation (`UX-29`). `bga timeline` needs it and refuses without it. |
 | `.bga/runs/<stamp>/element-slice.json` | conditional | — | which elements the capture was asked for, where it was asked for a slice rather than the whole project. |
 | `.bga/runs/<stamp>/capture-context.txt` | conditional | — | what the capture did and why, in prose - the diagnostics `UX-146` writes. Never parsed. |

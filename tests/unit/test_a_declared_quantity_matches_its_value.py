@@ -173,19 +173,17 @@ class TestAValueCanBeWhatItSaysItIs:
         assert bad == [], (
             f"{label}: leaves declared `share` outside 0..1: {bad[:6]}")
 
-    def test_the_summary_repeats_the_metrics_it_quotes(self, label):
-        """Found by a mutation that survived. `graph_summary` is
-        three numbers copied from `graph_metrics` under two of
-        their names, and a value that contradicts its declaration is
-        not the only way one number can be two things: `+ 1` at the
-        summary's own site changed a published count and reddened
-        nothing. Both sites declare `count` truthfully, so the checks
-        above cannot see it - `UX-288`'s rule can, and this is the
-        cheap half of it."""
+    def test_the_summary_quotes_no_metric_at_all(self, label):
+        """`UX-535` replaces the agreement this asserted. `graph_summary`
+        held three numbers assigned from the same `StructuralMetrics`
+        object `graph_metrics` publishes - two of them under a second
+        spelling - so a `+ 1` at the summary's own site changed a
+        published count and reddened nothing, and checking the two
+        copies agreed only caught the drift after both were written.
+        `analyze/v5` publishes each once, so the drift has nowhere to
+        happen; this asserts the absence rather than the agreement."""
         from tools.bga_view import payloads
 
-        # `UX-344`: two keys of the document, where they were two
-        # members of `structural`.
         document = payloads(str(FIXTURES[label]))["report.json"]
         metrics = document.get("graph_metrics") or {}
         summary = document.get("graph_summary") or {}
@@ -193,10 +191,9 @@ class TestAValueCanBeWhatItSaysItIs:
         for quoted, source in (("total_elements", "num_elements"),
                                ("critical_path_length", "critical_path_length"),
                                ("max_parallelism", "max_parallelism")):
-            assert summary[quoted] == metrics[source], (
-                f"{label}: graph_summary.{quoted} is "
-                f"{summary[quoted]} and graph_metrics.{source} is "
-                f"{metrics[source]}")
+            assert quoted not in summary, (
+                f"{label}: graph_summary.{quoted} is back, republishing "
+                f"graph_metrics.{source} ({metrics.get(source)!r})")
 
     def test_the_walk_reached_the_document(self, label):
         """A census that resolved nothing would pass both clauses above

@@ -741,7 +741,7 @@ Every machine-readable output declares its own shape as its **first
 key**:
 
 ```bash
-bga analyze RUN/ --format json | head -2      # "schema": "analyze/v4"
+bga analyze RUN/ --format json | head -2      # "schema": "analyze/v5"
 bga compare A B --format json                 # "schema": "compare/v2"
 bga blast TARGET --format json                # "schema": "blast/v2"
 bga correlate RUN/ --format json              # "schema": "correlate/v2"
@@ -757,11 +757,11 @@ bga compare --schema | jq '.required'
 ```
 
 **The versioning rule**: a field rename or removal bumps the version; an
-addition does not. Pin `analyze/v4` and your consumer keeps working
+addition does not. Pin `analyze/v5` and your consumer keeps working
 while the tool grows.
 
 A section subcommand (`bga floors`, `bga graph`, …) emits the same
-`analyze/v4` document restricted to its own keys, with a `section` key
+`analyze/v5` document restricted to its own keys, with a `section` key
 naming the restriction — so a missing key can be told from a removed
 one.
 
@@ -806,7 +806,7 @@ Three rules decide what it will and will not say:
   producer stamp counted separately as an explicit unknown. Unlike a
   host class, two contract sets are not two populations: what decides
   whether runs can be pooled is movement in the contracts this document
-  *reads* (`analyze/v4`, `store/v1`), never the package version — the
+  *reads* (`analyze/v5`, `store/v1`), never the package version — the
   rule `bga compare` already applies to a pair.
 
 Percentiles are **nearest-rank**: for `n` sorted samples, `p` is the
@@ -945,7 +945,7 @@ claim:
 - `document` — which schema the paths walk. Load-bearing when a record
   travels: `bga compare --format json` carries the candidate run's
   chain at `candidate_diagnosis`, and its paths resolve against that
-  run's `analyze/v4`, not against the comparison.
+  run's `analyze/v5`, not against the comparison.
 
 A top action's provenance is a **pointer** (`see`) at the finding's
 record, because the action is already a reference to that finding.
@@ -1052,7 +1052,7 @@ renders no picker at all.
 array, a table with these columns — and renders from that. Two things
 follow, and both are deliberate:
 
-- A field added to `analyze/v4` appears in the viewer with **no change
+- A field added to `analyze/v5` appears in the viewer with **no change
   to the viewer**.
 - Anything the viewer should show has to enter the published schema
   first, where `--format json`, CI and every external consumer get it
@@ -1110,7 +1110,7 @@ Above the sections, two things a list of tables could not say:
 
 **Every number in both is read from a published field.** Nothing is
 computed in the browser; the one division in the waterfall is a CSS
-width. A gap the JSON does not carry enters `analyze/v4` first, where
+width. A gap the JSON does not carry enters `analyze/v5` first, where
 `--format json`, CI and every other consumer get it too — which is why
 `confidence.band`, `run_instance.incomplete_reason` and
 `plane2_coverage` are fields rather than viewer logic.
@@ -1126,7 +1126,7 @@ export does not have one.
 ### What the page opens with (`UX-207`)
 
 The first screen is a **decision**, and everything below it is the
-evidence for that decision. `analyze/v4` publishes a `headline` block —
+evidence for that decision. `analyze/v5` publishes a `headline` block —
 the diagnosis (`chain_bound`, `scheduler_bound` or `inconclusive`), the
 ratio it was decided by, what the opportunity is worth, and the three
 elements to look at first, each pointing at the finding that reasons
@@ -1699,7 +1699,7 @@ rather than overlap. The CPU ceiling is `host_cores × builders ÷
 cores_busy` — measured draw per concurrently-building element, not an
 assumption — and the memory ceiling comes from the envelope below.
 
-**Reading it as data.** The block is a key of `analyze/v4`, so a CI job
+**Reading it as data.** The block is a key of `analyze/v5`, so a CI job
 asks for it the same way it asks for anything else:
 
 ```bash
@@ -1761,12 +1761,12 @@ bga sweep tests/fixtures/macro_micro/run --format json | jq '.knee_points'
 | `calibration_capacities` | the capacities that had real measurements behind them. Empty means every point is a projection — the difference between a curve with data in it and one without |
 
 It had **no `schema:` key at all** until `UX-339`, and `bga sweep
---schema` answered `analyze/v4` — a contract this document has none of
+--schema` answered the analyze contract — one this document has none of
 the required keys of. `UX-328` found that while enrolling three others,
 said what was true in the meantime, and filed the contract this is.
 
 **Where it appears.** In the text report, under the headline. It is
-**not** a key of `analyze/v4` — `bga analyze -f json` does not carry it
+**not** a key of `analyze/v5` — `bga analyze -f json` does not carry it
 (`UX-275`).
 
 ### The memory envelope (`UX-104`)

@@ -204,7 +204,7 @@ export const CHAPTERS = [
     // How many elements, and the one that costs the most - the row a
     // reader opening this chapter is looking for.
     answer(payload) {
-      const count = payload?.graph_summary?.total_elements;
+      const count = payload?.graph_metrics?.num_elements;
       const worst = largest(payload?.elements?.element_durations);
       if (typeof count !== "number") return null;
       return `${quantity(count, "count")} elements`

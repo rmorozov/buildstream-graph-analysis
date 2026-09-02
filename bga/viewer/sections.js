@@ -301,7 +301,7 @@ export const DRAWN_ELSEWHERE = {
 //: A key reaches a reader as its own section, as a `Run` row (every
 //: scalar), through `DRAWN_ELSEWHERE`, or declared here with the reason
 //: it stops at the terminal. Empty is the *measurement*: every key of
-//: `analyze/v4` reaches a reader today, and the slot exists so the next
+//: `analyze/v5` reaches a reader today, and the slot exists so the next
 //: one that cannot is written down rather than left to the next walk -
 //: which is what fourteen Plane 2 blocks were for six rounds.
 export const TERMINAL_ONLY = {};

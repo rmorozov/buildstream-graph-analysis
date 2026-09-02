@@ -1,7 +1,7 @@
 """UX-383: Plane 2's last three per-element blocks reach the page.
 
 `UX-370` moved `by_binary`, `binary_cost` and `configure_phase` into
-`analyze/v4` so the page could render what Plane 2 measured. Three
+`analyze/v5` so the page could render what Plane 2 measured. Three
 blocks were left where they were and a fourth joined them. Measured on
 `tests/fixtures/macro_micro/plane2.json` when this was filed:
 
@@ -77,7 +77,7 @@ class TestTheBlocksAreInTheContract:
     def test_it_is_typed_at_the_top_level(self, key):
         """A key the document publishes and the schema does not type is
         a value `--schema` cannot answer for (`UX-328`)."""
-        document = schemas.schema("analyze/v4")
+        document = schemas.schema(schemas.ANALYZE)
         assert key in document["properties"], key
 
     @pytest.mark.parametrize("field", sorted(

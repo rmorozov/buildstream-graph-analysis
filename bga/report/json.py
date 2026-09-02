@@ -406,7 +406,7 @@ def build_document(result: AnalysisResult, section: Optional[str] = None, by_kin
             # a whole restructuring - the never-read edges, the elements
             # they chain, and a replay of this run without them - and
             # publishes it as `restructuring` in `correlate/v2`. The
-            # page renders `analyze/v4` and embeds no other document, so
+            # page renders `analyze/v5` and embeds no other document, so
             # the largest single saving the analysis computes reached a
             # terminal and nothing else: on the round-64 walk, 12.9s
             # against a 6.0s headline card.

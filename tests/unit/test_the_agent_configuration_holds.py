@@ -365,16 +365,85 @@ class TestTheSubagentsAreWellFormed:
             declared = re.search(r"^name:\s*(\S+)", head, re.M).group(1)
             assert declared == path.stem, (path.name, declared)
 
-    def test_neither_can_edit_the_tree(self):
-        """Both are read-and-report. A verifier that could fix what it
-        found would be judging its own work, which is the one thing it
-        exists not to do."""
+    #: `UX-504`: the one agent that may edit, and the four files no
+    #: track writes. Named here rather than "everything except the
+    #: implementer", so adding a third editing agent is a decision
+    #: somebody makes in this list.
+    MAY_EDIT = {"implementer"}
+
+    #: The agents whose whole job is to read and report, named. Without
+    #: this the clause below reads "whoever is not on the editing list",
+    #: and widening that list would exempt them silently - which is what
+    #: `UX-504`'s fifth mutation did while every clause stayed green.
+    REPORTERS = {"researcher", "verifier"}
+    SHARED = ("docs/backlog/scenarios/README.md",
+              "docs/backlog/scenarios/closed.md",
+              "tests/tiers.py",
+              "tests/ci_reference.json")
+
+    def test_a_reporting_agent_cannot_edit_the_tree(self):
+        """A verifier that could fix what it found would be judging its
+        own work, which is the one thing it exists not to do; a
+        researcher that could edit is no longer reading."""
         for path in self._files():
+            if path.stem in self.MAY_EDIT:
+                continue
             head = _FRONTMATTER.match(path.read_text(encoding="utf-8")).group(1)
             tools = re.search(r"^tools:\s*(.+)$", head, re.M).group(1)
             for forbidden in ("Edit", "Write", "MultiEdit", "NotebookEdit"):
                 assert forbidden not in tools, (
-                    f"{path.name} may use {forbidden}; both agents report only")
+                    f"{path.name} may use {forbidden}; a reporting agent "
+                    f"reports only")
+
+    def test_a_reporter_is_never_put_on_the_editing_list(self):
+        """`UX-504`. The split is a *role*, not an exemption: a verifier
+        that could fix what it found would judge its own work, and
+        that must not become true by editing one set in this file. Each
+        reporter's body says so too, so the classification cannot be
+        dodged by rewording either end alone."""
+        assert self.MAY_EDIT.isdisjoint(self.REPORTERS), (
+            f"{sorted(self.MAY_EDIT & self.REPORTERS)} may edit, and they "
+            f"are the agents that exist to report")
+        said = ("report only", "fix nothing", "do not edit")
+        for name in sorted(self.REPORTERS):
+            body = (AGENTS / f"{name}.md").read_text(encoding="utf-8").lower()
+            assert any(one in body for one in said), (
+                f"{name}.md no longer says it does not edit, so nothing but "
+                f"this file's own list keeps it from doing so. The three "
+                f"phrasings above are the ones the bodies carry; a fourth "
+                f"is a decision, not a pattern to lengthen")
+
+    def test_the_implementer_may_edit(self):
+        """`UX-504`. Without this the split reads as an exemption rather
+        than a role: an implementer whose tools were trimmed back to
+        read-only would satisfy every other clause here and silently
+        stop being able to run a track."""
+        head = _FRONTMATTER.match(
+            (AGENTS / "implementer.md").read_text(encoding="utf-8")).group(1)
+        tools = re.search(r"^tools:\s*(.+)$", head, re.M).group(1)
+        for needed in ("Edit", "Write"):
+            assert needed in tools, (
+                f"implementer.md cannot {needed}, so it cannot run a track")
+
+    def test_the_implementer_says_where_it_runs(self):
+        """Its editing is bounded by *where* it runs, not by what it
+        promises. A body that does not say so is one an orchestrator
+        might launch in the tree itself."""
+        body = (AGENTS / "implementer.md").read_text(encoding="utf-8")
+        assert "worktree" in body, (
+            "implementer.md does not say it runs in a worktree, which is "
+            "the whole bound on its editing (UX-504)")
+
+    def test_the_implementer_names_the_files_no_track_touches(self):
+        """`UX-501` measured the collision: two branches each closing one
+        item conflicted on the topic table and silently auto-merged the
+        counts sentence to a number neither meant. The four are named in
+        the body because an agent reads its body, not this file."""
+        body = (AGENTS / "implementer.md").read_text(encoding="utf-8")
+        missing = [name for name in self.SHARED if name not in body]
+        assert missing == [], (
+            f"implementer.md does not tell the track to leave {missing} "
+            f"alone - the files every track collides on (UX-501, UX-503)")
 
     def test_the_verifier_says_it_does_not_fix(self):
         body = (AGENTS / "verifier.md").read_text(encoding="utf-8")

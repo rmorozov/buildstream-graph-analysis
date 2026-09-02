@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-506 scenarios: **12 open**, 494 closed.
+506 scenarios: **11 open**, 495 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -27,7 +27,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | cli | 0 | 1 |
 | store | 2 | 5 |
 | docs | 4 | 46 |
-| guards | 6 | 65 |
+| guards | 5 | 65 |
 | testing | 0 | 1 |
 | unclassified | 0 | 223 |
 
@@ -48,7 +48,6 @@ task file, which is the only place it ever lived twice.
 | UX-495 | [three browser guards swing 1.5-2.3x under parallel load](UX-0495-three-browser-guards-swing-under-parallel-load.md) | guards | Medium | the round that reads a browser guard's drift reading and cannot tell an excursion from a regression | 🔴 |
 | UX-496 | [a wholesale re-record samples every file once, and the drift factor has never been sized against that](UX-0496-a-one-run-re-record-bakes-in-one-sample-per-file.md) | guards | Medium | the round whose gate is red on a file nobody touched, and cannot tell a stale reference entry from a real regression | 🔴 |
 | UX-500 | [the batch gate, measured against the per-item suite](UX-0500-the-batch-gate-measured-against-the-per-item-suite.md) | docs | High | the implementing session's wall clock; the maintainer's subscription | 🔴 |
-| UX-504 | [an implementer agent that may edit, in a worktree only](UX-0504-an-implementer-agent-that-may-edit-in-a-worktree.md) | guards | Medium | the orchestrating session that has two independent tracks and one context window | 🔴 |
 | UX-507 | [223 closed rows are in no topic](UX-0507-the-unclassified-bucket.md) | docs | Low | the round that asks "how much of the backlog was viewer work" and gets an answer that is 44 % blank | 🔴 |
 
 ## UX-497..UX-506: the seventy-fourth round — the workflow, measured (2026-09-01)

@@ -1,6 +1,6 @@
 # UX-535: one fact published twice, drawn twice, listed twice
 
-**Priority:** Medium | **Status:** 🟡 In Progress | **Depends on:** UX-288 (the one-population rule), UX-285 (the grouping that moved without merging) | **Serves:** anyone reading the run's identity, or the rail | **Topic:** viewer
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-288 (the one-population rule), UX-285 (the grouping that moved without merging) | **Serves:** anyone reading the run's identity, or the rail | **Topic:** viewer
 
 ## Motivation
 

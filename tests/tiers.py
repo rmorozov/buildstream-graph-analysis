@@ -544,6 +544,9 @@ MEDIUM = (
     # unpacking a real gzipped tar of a small capture, two driving the
     # CLI end to end. Three single-process runs: 1.84 / 2.97 / 2.27s.
     "tests/unit/test_a_run_bundle_you_can_carry.py",                #    2.3s
+    # `UX-535`, tiered on landing. Eleven clauses, one of them a
+    # subprocess `analyze` over the golden fixture. 4.27s measured.
+    "tests/unit/test_one_fact_is_published_once.py",                #    4.3s
     "tests/unit/test_a_candidate_is_confirmed_alone.py",            # 1.2s
     # `UX-460`, tiered on landing. It runs `analyze` in-process over
     # every committed capture in the tree - seven of them now - which

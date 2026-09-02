@@ -96,6 +96,21 @@ console.log("EMPTY " + JSON.stringify({ found, error }));
 """
 
 
+def leads(ranked, uid):
+    """Whether `uid` is among the horizon rows tied for the top saving.
+
+    `UX-489`: not `ranked[0]["element_uid"] == uid`. Under load this
+    fixture's top two savings tie outright on 4 runs of 7, and which of
+    a tied pair sorts first is `max()`'s tie-break, not a fact about
+    the graph.
+    """
+    if not ranked:
+        return False
+    best = max(row.get("saving_us") or 0 for row in ranked)
+    return any(row["element_uid"] == uid and (row.get("saving_us") or 0) == best
+               for row in ranked)
+
+
 def _empty_sections(probe_output):
     """[(section, says "found none")], as the probe read them."""
     return sorted(tuple(row) for row in probe_output)
@@ -224,6 +239,44 @@ class TestTheJourneyRuns:
                 p.name for p in beside.iterdir())
 
 
+class TestWhatTheAnswerKeyMayAssertAboutALiveBuild:
+    """`UX-489`: `leads` is the predicate, exercised without a build.
+
+    The clause it serves runs a real `bst build` and cannot be driven
+    to its own edges - which is how an exact-first-place assertion
+    survived until a loaded run falsified it. These synthesise the
+    horizon instead, so the boundary between "tied for the top" and
+    "genuinely behind" is checkable in milliseconds.
+    """
+
+    @staticmethod
+    def _horizon(*pairs):
+        return [{"element_uid": uid, "saving_us": saving}
+                for uid, saving in pairs]
+
+    def test_a_clear_leader_leads(self):
+        assert leads(self._horizon(("core.bst", 6_000_000),
+                                   ("codegen.bst", 3_000_000)), "core.bst")
+
+    def test_a_tie_still_leads(self):
+        """4 of 7 loaded builds tied outright; on a tie the order is
+        `max()`'s tie-break, not a fact about the graph."""
+        assert leads(self._horizon(("lib-b.bst", 5_000_000),
+                                   ("core.bst", 5_000_000)), "core.bst")
+
+    def test_genuinely_behind_does_not_lead(self):
+        """The half that must still fail: an element really overtaking
+        `core.bst` is the fixture losing its shape, and reports."""
+        assert not leads(self._horizon(("lib-c.bst", 9_000_000),
+                                       ("core.bst", 5_000_000)), "core.bst")
+
+    def test_absent_does_not_lead(self):
+        assert not leads(self._horizon(("lib-c.bst", 9_000_000)), "core.bst")
+
+    def test_an_empty_horizon_does_not_lead(self):
+        assert not leads([], "core.bst")
+
+
 class TestTheMacroAnswer:
     """1 and 2 of the answer key: the chain, and the edge nobody reads."""
 
@@ -306,11 +359,37 @@ class TestTheMacroAnswer:
 
     def test_the_first_thing_to_fix_is_core(self, cold):
         """`core.bst` is what the six libraries all wait for, so a
-        ranking that puts anything else first has lost the graph."""
+        ranking that does not put it at the front has lost the graph.
+
+        **At the front, not strictly first** - `UX-489`. This asserted
+        an exact first place in a ranking computed from a build it
+        performs live, and went red once under `make test-touching` at
+        `-n auto` with 102 files in flight (`lib-c.bst` won). Twenty-seven
+        cold builds of this fixture say why:
+
+        ```text
+        unloaded, n=20   core 6.0-8.0s   runner-up 3.0-3.05s   margin >= 1.97
+        loaded,   n=7    core 4.0-6.0s   runner-up 4.0-5.0s    margin 1.00-1.48
+                                                               4 of 7 exact ties
+        ```
+
+        The savings quantise to whole seconds, and under load the field
+        closes: `core 5.00 vs lib-b 5.00`, `core 4.00 vs codegen 4.00`,
+        `core 5.00 vs codegen 5.00` twice. On a tie the order is
+        whatever `max()` breaks it to, which is the hair round 73 lost
+        by - `core.bst` still came out first in all 27 runs here, so the
+        old clause did not reproduce in 27 tries and is red at a rate
+        this fixture cannot bound.
+
+        So the claim is the one the fixture supports in **both**
+        regimes: `core.bst` is among the elements tied for the largest
+        saving. `UX-456`'s chain-share clause beside this one is the
+        model - a bound with its measurement written next to it.
+        """
         ranked = cold["optimization_horizon"]
         assert ranked, "the horizon is empty on a run with a 28s chain"
-        assert ranked[0]["element_uid"] == "core.bst", [
-            row["element_uid"] for row in ranked[:3]]
+        assert leads(ranked, "core.bst"), [
+            (row["element_uid"], row.get("saving_us")) for row in ranked[:3]]
 
     def test_the_terminal_says_it_too(self, walked):
         """The same answer, in the words a reader actually meets."""

@@ -1,89 +1,29 @@
 #!/usr/bin/env python3
-"""UX-466 stages 1-2: which captured field reaches the emitted trace.
+"""`UX-466` stages 1-2: which captured field reaches the emitted trace.
 
-Three planes write records and one trace is emitted from them. Nothing
-in the suite reads both ends and says which captured field arrives as a
-slice, a track, a debug annotation, a category or a counter - and which
-is held by the capture and dropped on the way. `UX-356` asked that
-question of the *element join* and found it worth a row; it has never
-been asked of the trace.
-
-**Both ends are emitted artifacts.** The sources are the capture's own
-JSON; the destination is the bytes `bga timeline` writes, decoded. No
-step reads a Python source file for the name of anything, which is the
-failure this instrument exists to avoid making - a text scan cannot
-tell a field the code emits from a field it merely mentions (fixing
-guide §5).
-
-What it cannot assess, declared rather than guessed
----------------------------------------------------
-- **Numeric fields.** The census matches *values*, and a number can
-  arrive by coincidence: the trace rebases every timestamp, so a
-  duration in microseconds may or may not appear as itself. Numeric
-  fields are counted and named under `unassessable`, never under
-  `reached` or `dropped`.
-- **Single-valued fields.** One distinct value cannot discriminate -
-  a field holding only `"BUILD"` matches any trace with a `BUILD`
-  anywhere. Also `unassessable`.
-- **Plane 3 on its own.** A committed capture carries the spine's
-  contribution folded into the Plane 2 report (`spine_policy`,
-  `stream_coverage.*_from_spine_only`), not as a separate record
-  stream. So this reports Plane 3 as the fields of that report which
-  name it, and says so - a real spine stream needs a real build, which
-  is `UX-466` stage 3 and `UX-465`.
-- **Composite fields.** The census matches whole values, so a field
-  the trace *decomposes* reads as dropped. `trace.spans[].task_key` is
-  the known instance: its value is `uid|kind|phase|attempt` and the
-  trace carries the uid as a slice name and the rest elsewhere, so no
-  whole task_key appears and the field is reported dropped. Reported
-  that way on purpose - "the composite does not arrive" is true, and
-  guessing which parts did from substrings would be the text scan this
-  instrument exists to avoid.
-- **Declined fields.** A field somebody looked at and decided should
-  not have a carrier is reported under `declined`, with the reason in
-  `DECLINED` beside it. `UX-469` is where the four in that list were
-  decided. Two verdicts that look alike from the output alone -
-  "nothing carries this" and "nothing carries this on purpose" - and
-  the whole value of a census is telling them apart.
-
-  A declaration is a *design* decision and not a patch over what the
-  census cannot see - which it briefly was. `UX-485` is why: see
-  **shared** below.
-
-- **Shared values.** The census matches *values*, so two fields
-  holding the same strings are two fields it cannot attribute. It
-  names them rather than crediting both: a field whose matched set is
-  exactly another's is reported `shared`, with the ones it collides
-  with. Measured on a two-queue capture, with nothing declared away:
-  **13 of 17** Plane 2 `reached` verdicts were collisions - eleven
-  element-uid-keyed fields plus a `redundant_operations` pair - and on
-  Plane 1, `trace.spans[].primary_resource` and
-  `trace.spans[].resources[]` are indistinguishable, which is what
-  `UX-469` had to state in `DECLINED` because nothing measured it.
-
-  A **declined** field still counts as a collision partner. Skipping
-  it would let a `DECLINED` entry hide the coincidence, which is
-  exactly what that entry was doing before this rule existed.
-
-  Which of two colliding fields the emitter actually read is a fact
-  about the emitter's *code*, and this census reads emitted artifacts
-  on purpose - so the collision is reported and the decision stays
-  where a human wrote it down.
-
-- **Where a value arrived.** Every matched value carries its site -
-  `debug-annotation:resource`, `slice-name`, `category` - so `reached`
-  says which carrier brought it rather than only that something did.
-
-- **Field numbers.** The decoder takes its field numbers from
-  `tools/native_trace/trackevent.py`, the emitter's own module, so it
-  catches a value written into the wrong field but not a field number
-  that is wrong in both. That is the same limit the test decoders
-  carry, and `UX-321`'s pinned fixture is what covers it.
-
-Usage
------
     python3 tools/dev_trace_coverage.py tests/fixtures/with_timeline
     python3 tools/dev_trace_coverage.py --carriers tests/fixtures/macro_micro
+
+**Both ends are emitted artifacts** - the capture's own JSON, and the
+bytes `bga timeline` writes, decoded. No step reads a Python source
+file for the name of anything: a text scan cannot tell a field the code
+emits from one it merely mentions (fixing guide §5).
+
+It matches **values**, and every limit below follows from that. A
+verdict is `reached` (with the carrier site that brought it),
+`dropped`, `declined` (a design decision, with its reason in
+`DECLINED`; `UX-469` decided the four there), `shared` (another field
+holds the same values, so neither can be attributed - measured at 13 of
+17 Plane 2 `reached` verdicts on a two-queue capture, `UX-485`), or
+`unassessable`: numeric (a number can arrive by coincidence),
+single-valued (one distinct value discriminates nothing), or composite
+(`task_key` is `uid|kind|phase|attempt` and the trace decomposes it).
+
+Plane 3 has no separate stream in a committed capture, so it is
+reported as the Plane 2 report's fields that name it - a real spine
+stream needs a real build (`UX-465`). Field numbers come from the
+emitter's own `trackevent.py`, so a number wrong in both ends is not
+caught; `UX-321`'s pinned fixture covers that.
 """
 import argparse
 import collections

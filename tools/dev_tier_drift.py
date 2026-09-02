@@ -1,80 +1,28 @@
-"""UX-418: a slow file is small until CI times out.
+"""`UX-418`: a slow file is small until CI times out.
 
-`UX-403`'s guard census mutated one guard per family and watched it go
-red. Ten of eleven did. The one that did not was
-`test_the_tiers_are_a_partition.py`, under the mutation *a large file
-demoted to no tier*:
+    make test-tiers                        # the floors, here
+    python3 tools/dev_tier_drift.py REPORT --against --carry PATH \
+        --base REF --summary PATH        # the line, for a log tail (UX-491)
+    python3 tools/dev_tier_drift.py REPORT --record PATH   # CI's own numbers
+    python3 tools/dev_tier_drift.py --adopt CANDIDATE      # UX-503
 
-```text
-tier partition               GREEN    14 passed in 0.58s
-```
+`test_the_tiers_are_a_partition.py` cannot catch a large file in no
+tier, because `small` is the default. This reads the junit report
+`make test` already writes - not `--durations=0`, which hides every
+entry under 5 ms - against the floors in `tests/tiers.py`. **Those
+floors describe a developer machine, so CI compares against CI**:
+`--against` reads `tests/ci_reference.json`, CI's own totals. A fixed
+slack, a derived scale and a rank comparison each failed on the first
+foreign clock they met - `UX-418`'s Outcome has the three runs.
 
-Deleting a **fifty-second** entry from `LARGE` changed nothing. Every
-clause in that file reads the two lists against each other or against
-the filesystem - *listed files exist*, *no file is in two tiers* - and
-`small` is the **default**, so a file that belongs in a tier and is
-absent from both is "small on purpose" and nothing says otherwise.
-
-`UX-403` fixed the half that is legible without measuring: a file that
-boots a real Chrome says so in its imports, and four were doing it from
-the small tier. The half that is left needs a measurement, and
-`test_the_tiers_are_a_partition.py` is right to refuse a wall-clock
-assertion inside a test - that goes flaky and then gets muted.
-
-So the measurement is taken where one already happens. `make test`
-already runs the whole suite in CI; this reads that run's own report
-and compares each file against the floors in `tests/tiers.py`. It costs
-a parse, not a second suite.
-
-**Why the junit report and not `--durations=0`.** The filing names
-`--durations=0`, and its output cannot be summed: pytest hides every
-entry under 0.005s behind a count -
-
-```text
-(30 durations < 0.005s hidden.  Use -vv to show these durations.)
-```
-
-- so a file of two hundred fast tests reads as nothing at all. The
-junit report carries every test's total (setup+call+teardown) with no
-threshold, which is the same measurement without the hole.
-
-**The floors stay the authority.** Nothing here decides what a tier is;
-it reads `LARGE_FLOOR_S` and `MEDIUM_FLOOR_S` and reports the files
-whose measurement disagrees with where they are listed.
-
-**It reads a report from this machine, and only this machine.** That is
-a deviation from `UX-418`'s filing, which asks for a CI step, and it was
-paid for with three CI runs:
-
-1. The step called three medium files large at 20.4-21.5s; here they are
-   11.3-13.5s. A fixed slack was the first answer - wrong by a factor on
-   the first foreign clock it met.
-2. A scale derived from the report was the second. Also wrong: on CI the
-   **median** listed file runs at 1.05x its recorded number while
-   `test_report_stays_readable_at_scale` runs at 1.61x and
-   `test_marginal_efficiency_gate` at 1.73x, neither having grown. The
-   difference is per file, so no single scale exists.
-3. Comparing **rank** rather than seconds was the third, on the argument
-   that the order survives a change of machine. It does not:
-   `test_report_stays_readable_at_scale` is recorded below all 22 large
-   files here, and on CI it read 25.3s - above 11 of them.
-
-Three measurements, one conclusion: **per-file timings from another
-runner cannot be compared to this repository's tier record in any form**
-- not absolute, not scaled, not ranked - because the runners differ per
-file rather than by a factor.
-
-`UX-420` is the other half, and it follows from the same conclusion:
-what CI *can* compare a run against is **CI's own previous numbers**.
-One machine against itself over time is the only comparison the three
-failures leave standing, so this tool also records and reads a CI-side
-reference (`--record`, `--against`). See `AGAINST` below for the four
-things that rule has to get right, which is the part `UX-420`'s filing
-says to design first.
-
-Run it after a full run, which `make test-tiers` does in one command:
-
-    python tools/dev_tier_drift.py <junit.xml>
+Six rules keep a verdict off one sample, each bought with a red round:
+the **median ratio** is divided out over files at or above
+`SHIFT_FLOOR_S` (`UX-423`); a file must clear **both** a ratio and a
+number of seconds (`UX-420`); a file is confirmed on **two consecutive
+runs** whose diff could account for it (`UX-442`, `UX-476`); a file the
+reference does not carry is **recorded** (`UX-503`); a `stale` runner
+verdict needs two runs too (`UX-508`); and an entry is the **median of
+that file's last readings**, whose top it must beat (`UX-496`).
 """
 import argparse
 import collections
@@ -95,63 +43,28 @@ from tests import tiers                                        # noqa: E402
 #: Ordered, so "measured above where it is listed" is a comparison.
 RANK = {"small": 0, "medium": 1, "large": 2}
 
-#: `UX-420`: where CI's own numbers live, and what reads them.
-#:
-#: `UX-418` established that CI's seconds cannot be compared to the
-#: floors in `tests/tiers.py`, which describe a developer machine. What
-#: CI *can* be compared against is CI, so this file records one full
-#: run's per-file totals and later runs are read against it. One
-#: machine against itself over time.
-#:
-#: **The reference is the part that rots**, and `UX-420`'s filing says
-#: to design that first. Four ways it can, and what answers each:
-#:
-#: 1. **A new file arrives with no reference.** It would be checked by
-#:    nothing - the same silence `UX-418` was filed on, one level along.
-#:    So an unreferenced file *over the medium floor* is reported. A new
-#:    fast file needs no entry, because nothing about it is at risk.
-#: 2. **The runner image changes** and every file shifts together. Per
-#:    file that reads as drift everywhere. So the run's **median** ratio
-#:    to the reference is taken out first: a uniform shift is not drift,
-#:    and if the median leaves `IMAGE_BAND` the message says the
-#:    reference is stale rather than naming files.
-#: 3. **A file legitimately gets slower** and the reference is never
-#:    refreshed, so it alarms forever. `--record` writes a new reference
-#:    from a green run; the alarm names that as the answer.
-#: 4. **The reference is never taken at all.** Then the step would be a
-#:    guard that cannot fail. It says so, prints what to commit, and
-#:    `test_the_step_says_so_rather_than_passing_over_no_reference`
-#:    holds it.
+#: `UX-420`: one CI run's per-file totals - CI against CI over time.
+#: Its filing asks for the four ways it rots to be designed first, and
+#: each has an answer here: an unreferenced file over the medium floor
+#: is recorded (`UX-503`); a runner that moved is divided out by the
+#: median and, past `IMAGE_BAND`, reported as stale (`UX-508`); a file
+#: that is meant to cost more is answered by `--record`; and a missing
+#: reference says so rather than passing, which
+#: `test_the_step_says_so_rather_than_passing_over_no_reference` holds.
 CI_REFERENCE = REPO / "tests" / "ci_reference.json"
 
-#: `UX-447`: **where a refreshed reference comes from.**
-#:
-#: `--record` on a contributor's own machine writes *that machine's*
-#: seconds, and `UX-418` established those cannot be compared to CI's in
-#: any form. So every message below that says "re-record" also says from
-#: what: this is the artifact `ci.yml` uploads on every `test (3.11)`
-#: run, holding the same document `--record` writes, taken on the runner
-#: whose clock the reference is in.
-#:
-#: Named here rather than spelled into four strings, and
-#: `tests/unit/test_the_refresh_route_is_written_down.py` holds it equal
-#: to the workflow's own `name:` - so a rename cannot leave the advice
-#: pointing at nothing, which is what the item was filed on.
+#: `UX-447`: where a refreshed reference comes from. A local `--record`
+#: writes *this* machine's seconds, which `UX-418` ruled out, so every
+#: "re-record" message names this artifact instead. One constant rather
+#: than four strings, held equal to the workflow's own `name:` by
+#: `test_the_refresh_route_is_written_down.py`.
 CI_CANDIDATE_ARTIFACT = "ci-reference-candidate"
 
-#: And the job whose whole log **is** that document - `UX-457`.
-#:
-#: The artifact above is the right thing to download and the wrong
-#: thing to reach: GitHub serves artifact bytes from
-#: `productionresultssa19.blob.core.windows.net` and run-log zips from
-#: `results-receiver.actions.githubusercontent.com`, and round 71 was
-#: refused by both (403, CONNECT rejected) from the environment the
-#: round was worked in - while the API that reads one job's log was
-#: not. So `ci.yml` has a job that downloads the artifact and `cat`s
-#: it, and a reader who cannot download can read that job instead.
-#:
-#: Both names, in every message, because which one is reachable depends
-#: on who is reading.
+#: And the job whose whole log **is** that document - `UX-457`. The
+#: artifact is the right thing to download and the wrong thing to
+#: reach: round 71 was refused (403) by both hosts that serve it while
+#: the job-log API was not. Both names in every message, because which
+#: is reachable depends on who is reading.
 CI_CANDIDATE_JOB = "tier-reference"
 
 #: How much slower than its own CI reference a file may run before it is
@@ -159,83 +72,39 @@ CI_CANDIDATE_JOB = "tier-reference"
 CI_DRIFT_FACTOR = 1.5
 
 #: And how many seconds slower, which it must **also** be. A ratio alone
-#: was the first rule and the first armed run falsified it: 31 files
-#: reported on a suite that had not changed, 24 of them under a second.
-#:
-#: Run 33306283177, `test (3.11)`, against the reference recorded one
-#: run earlier - the same suite plus a JSON file and a document:
-#:
-#: ```text
-#:                                    measured  recorded  ratio  added
-#:   test_one_page_behind_the_button       5.9       4.3   1.66  +2.4s
-#:   test_one_click_from_investigation     4.4       3.1   1.74  +1.9s
-#:   test_plane_two_says_what_it_ran       3.8       2.7   1.77  +1.6s
-#:   test_doctor                           1.9       1.2   1.90  +0.9s
-#:   test_a_clone_without_the_archive      1.3       0.5   3.29  +0.9s
-#:   ... 26 more, all adding under a second
-#:   test_the_skills_point_at_the_guides   0.3       0.0  18.27  +0.3s
-#: ```
-#:
-#: **A ratio is meaningless at small magnitudes** - the x18 row is a
-#: file that went from 20ms to 300ms, and the x3.29 row added nine
-#: hundredths of a second more than the x1.66 row that leads the list.
-#: `UX-422` names the same defect in a different guard on the same day:
-#: a ratio judges a quantity the noise floor dominates.
-#:
-#: So a file is reported only when it is slower by **both** measures.
-#: The seconds floor is what makes the ratio mean something, and it is
-#: sized from the run above: the largest *addition* on an unchanged
-#: suite was 2.4s, so 5.0 is that with the margin a single sample
-#: deserves. It is still one sample - `spread` on each `--record` is
-#: what accumulates the rest.
-#:
-#: This is the same rule the unreferenced-file branch below already
-#: applied ("only where there is something at stake"), which the drift
-#: branch should have had from the start and did not.
+#: was the first rule and the first armed run falsified it: 31 files on
+#: an unchanged suite, 24 under a second, the worst row a file that went
+#: from 20 ms to 300 ms (run 33306283177; `UX-420`'s Outcome has the
+#: table, and `UX-422` is the same defect in another guard the same
+#: day). **A ratio is meaningless at small magnitudes.** Sized from that
+#: run: the largest addition on an unchanged suite was 2.4s, so 5.0 is
+#: that with the margin one sample deserves - `spread` on each
+#: `--record` accumulates the rest.
 CI_DRIFT_SECONDS = 5.0
 
 #: `UX-442`: how many **consecutive** runs a file must exceed both gates
-#: above in before it is reported. One is what shipped, and one is what
-#: this constant exists to stop.
-#:
-#: `test (3.11)` went red on `279900f`, whose diff is one backlog file
-#: and one index row. The suite passed; the drift step did not. The same
-#: file across four CI runs of that branch, read from the documents
-#: those runs recorded:
-#:
-#: ```text
-#:   run   test_the_page_has_a_reader.py   run's shift   run's spread max
-#:    1                   7.13                   -               -
-#:    2                   7.13                   -               -
-#:    3                   7.53                 1.227           5.87
-#:    4                  13.85                 1.180           4.872
-#: ```
-#:
-#: Three samples at 7.1-7.5 and one at 13.9, and **the outlier run was
-#: not a contended run**: its shift and spread are both lower than run
-#: 3's, which passed. `UX-423` measured the dispersion of the *shift*, so
-#: a globally slow runner is not read as drift. Nothing measured the
-#: dispersion of one file, and a file that boots a browser can swing six
-#: seconds once in four runs.
-#:
-#: **What two costs.** Real drift is reported one run later than it used
-#: to be, and a branch's first run reports nothing at all, because there
-#: is no previous run to agree with it. That is the price of not crying
-#: wolf, and it is the whole price - the gates themselves are unchanged
-#: (`UX-418` measured them; this adds a repetition rule rather than
-#: retuning either).
-#:
-#: **Why not a second, higher bound that trips on one sample.** It would
-#: need a number, and the only series anybody has is the four runs above.
-#: Sizing a constant from one excursion is the mistake `UX-420` paid
-#: three red CI rounds for. A hang is already caught by the small tier's
-#: `timeout 120` backstop; drift, by definition, repeats.
-#:
-#: An excursion is remembered between runs in the **carry** file
-#: (`--carry`), which CI restores and saves around the step. Without one
-#: the tool has no memory, says so, and decides on the single sample it
-#: has.
+#: in before it is reported. One shipped, and one file swung 7.1 to 13.9
+#: over four runs of a branch whose diff was a backlog row - on a run
+#: whose shift and spread were both *lower* than the run before it, so
+#: it was the file and not the runner. `UX-442`'s Outcome has the four
+#: readings. The price is that real drift reports one run later and a
+#: branch's first run reports nothing; a higher single-sample bound was
+#: rejected because sizing it needs a series nobody has (`UX-420` paid
+#: three red rounds for that mistake). Memory lives in the `--carry`
+#: file; without one the tool says so and decides on one sample.
 CI_DRIFT_RUNS = 2
+
+#: `UX-496`: how many readings of a file the reference keeps, newest
+#: last. `files` is their **median**, so one afternoon cannot set the
+#: number a later run is judged against - which is the defect that
+#: closed `UX-488`: four of five runs read a file at 12.8-13.6 and the
+#: re-record happened to catch the 8.19, so the next run went red on a
+#: documentation-only commit, correctly, against an entry that was
+#: never representative. Five, because `UX-495` measured the excursions
+#: that matter as one-run events across six runs: a median over five
+#: survives one, and a longer window would take longer to notice a
+#: change that is real.
+CI_REFERENCE_SAMPLES = 5
 
 #: Outside this, the whole reference is stale rather than any one file
 #: drifting - a new runner image, a Python bump, a changed default
@@ -355,34 +224,15 @@ def drift(times):
     return sorted(found, key=lambda row: -row[1])
 
 
-#: `UX-455`: how a candidate is re-measured before it is reported.
-#:
-#: The floors in `tests/tiers.py` are seconds a file costs with nothing
-#: else on the CPU. The report this tool parses is a `-n auto` run. For
-#: most files those are the same number - measured over the 145 files
-#: whose `tiers.py` comment records their seconds, the median
-#: parallel/recorded ratio on an unchanged tree is **1.010** (q1 0.916,
-#: q3 1.099), so there is no factor to divide out and nothing to widen.
-#:
-#: For some files they are not. `test_the_agent_configuration_holds.py`
-#: measured **0.72s** alone (three runs, 0.72/0.73/0.72) and **1.31s**
-#: in the same parallel run - a ratio of 1.82, outside that q3 - and
-#: 1.0 is the medium floor, so the parse named a file nobody should
-#: move. Round 71 met that as one of three rows in a red
-#: `make test-tiers`, and a parse that reports a file nobody should
-#: move is a parse people learn to skim.
-#:
-#: So a candidate is re-measured **alone, in one process** before it is
-#: reported. That is the quantity the floors are in, and it is an upper
-#: bound on the file's cost inside a single-process suite - a file run
-#: alone pays all of its own imports. For a gate that only reports
-#: files as *too slow*, an upper bound is the conservative direction:
-#: a candidate the confirmation clears is under the floor in the
-#: stricter reading too.
-#:
-#: It costs a re-run of the named files only, which is normally none
-#: and was 21s on the run that found this. `--no-confirm` skips it, for
-#: reading what the parallel report alone said.
+#: `UX-455`: a candidate is re-measured **alone, in one process** before
+#: it is reported, because the floors are single-process seconds and the
+#: report is `-n auto`. For most files those agree (median ratio 1.010
+#: over 145 files); for some they do not, and one file at 0.72s alone
+#: read 1.31s in parallel against a 1.0 floor - a parse that names a
+#: file nobody should move is one people learn to skim. `UX-455`'s
+#: Outcome has both. An upper bound is the conservative direction for a
+#: gate that only reports files as too slow. Costs a re-run of the named
+#: files only; `--no-confirm` skips it.
 CONFIRM_TIMEOUT_S = 600
 
 
@@ -488,31 +338,151 @@ def spread(times, reference):
             "max": round(normalised[-1], 3)}
 
 
+def samples_for(times, reference, shift=None):
+    """`UX-496`: each file's last `CI_REFERENCE_SAMPLES` readings.
+
+    Newest last, **all on `times`' clock**: the ones carried over from
+    `reference` are multiplied by the shift between the two documents,
+    because a list that mixed two runners' clocks is the cross-machine
+    comparison `UX-418` ruled out, arriving inside a key instead of
+    across one.
+
+    A file the previous reference did not carry starts its list here
+    with one reading, and reads exactly as it did before until it has
+    more.
+    """
+    before = reference.get("samples") or {}
+    known = reference.get("files") or {}
+    ratios = {name: times[name] / known[name] for name in known
+              if times.get(name) and known[name] > 0}
+    if len(shift_population(ratios, known)) < SHIFT_MIN_FILES:
+        # No population to place the old readings on this run's clock
+        # with. A list nobody can rebase is worse than one reading, so
+        # the carried ones are dropped rather than multiplied by a
+        # number `SHIFT_MIN_FILES` exists to say is not a shift.
+        return {name: [round(seconds, 2)] for name, seconds in times.items()}
+    if shift is None:
+        shift = shift_of(ratios, known)
+    kept = {}
+    for name, seconds in times.items():
+        carried_over = [round(one * shift, 2) for one in before.get(name, [])]
+        kept[name] = (carried_over + [round(seconds, 2)])[-CI_REFERENCE_SAMPLES:]
+    return kept
+
+
 def record(times, source="unknown", reference=None):
     """The reference document a later run is read against.
 
-    `reference` is the one this replaces, and is only read to write the
-    `spread` this run saw against it - see `spread`. Absent on the first
-    record, and then the document simply has no spread rather than a
-    fabricated one.
+    `reference` is the one this replaces. It is read for the `spread`
+    this run saw against it - see `spread` - and, `UX-496`, for the
+    readings each file already has: `files` is the **median** of the
+    last `CI_REFERENCE_SAMPLES`, not this one run's number.
     """
     document = {
         "measured_on": source,
-        "note": ("UX-420: one CI run's per-file totals, so a later CI run "
+        "note": ("UX-420: CI's own per-file totals, so a later CI run "
                  "can be read against CI rather than against the floors in "
                  "tests/tiers.py, which describe a developer machine. "
+                 "UX-496: `files` is the median of `samples`, that file's "
+                 f"last {CI_REFERENCE_SAMPLES} readings on this document's "
+                 "clock, newest last - not one run's number. "
                  f"Refresh from a CI run's {CI_CANDIDATE_ARTIFACT} "
                  f"artifact, or the log of its {CI_CANDIDATE_JOB} job, "
                  f"which is this same tool's --record taken on "
                  f"the runner whose clock this document is in - not from "
                  f"a local --record (UX-418, UX-447)."),
-        "files": {name: round(seconds, 2)
-                  for name, seconds in sorted(times.items())},
+        "files": {},
     }
+    kept = samples_for(times, reference or {})
+    # `median_low`, not `median`: on an even count the mean of the two
+    # middles lets one excursion raise the bar a later run is judged
+    # against - with two readings it sets it halfway. The gate reports
+    # only *too slow*, so the lower middle is the conservative side.
+    document["files"] = {name: round(statistics.median_low(kept[name]), 2)
+                         for name in sorted(times)}
+    document["samples"] = {name: kept[name] for name in sorted(times)}
     saw = spread(times, reference or {})
     if saw:
         document["spread"] = saw
     return document
+
+
+def adopt(reference, candidate):
+    """`UX-503`: the rows the reference does not carry yet, added to it.
+
+    `(document, added)` - the reference with the new names in it, and
+    what was added. `added` is still **only names the reference lacks**.
+
+    `UX-496` changed what happens to the rest: every name this run
+    measured contributes a reading to that name's `samples`, and
+    `files` is the median of the list. No single run sets a number, so
+    this is not the human refresh decision `UX-503` kept out of an
+    unattended job - it is the accumulation that makes the entry more
+    than one afternoon.
+
+    The candidate's seconds are the *candidate run's* clock, so each
+    added row is divided by the shift between the two documents before
+    it lands - the same normalisation `against` applies when reading,
+    put in once at write time so the reference stays one clock. Without
+    it a run 1.3x slow writes a row 30 % high and the file is
+    unjudgeable against it for as long as it stands, which is the
+    cross-clock comparison `UX-418` ruled out arriving by the back door.
+
+    Two states refuse rather than guess, both returning no additions:
+
+    - **the two documents share no file**, so there is no shift to
+      divide by and the candidate cannot be placed on this clock;
+    - **the shift is outside `IMAGE_BAND`**, which is `against`'s
+      `stale` - the reference is not describing this runner any more,
+      and rows adopted into it would be measured against a document
+      that is about to be replaced wholesale.
+    """
+    known = reference.get("files") or {}
+    times = candidate.get("files") or {}
+    ratios = {name: times[name] / known[name] for name in known
+              if times.get(name) and known[name] > 0}
+    if not ratios:
+        return reference, {}
+    shift = shift_of(ratios, known)
+    if not IMAGE_BAND[0] <= shift <= IMAGE_BAND[1]:
+        return reference, {}
+    added = {name: round(seconds / shift, 2)
+             for name, seconds in times.items() if name not in known}
+    # `UX-496`: and a reading for every name it *does* carry, on the
+    # reference's clock. This is where the samples come from - a
+    # wholesale `--record` happened twice in the reference's whole
+    # history, so a document that only learned there would never have
+    # more than one reading of anything. The value a run contributes is
+    # still not a human's refresh decision: it joins a list, and `files`
+    # stays the median of that list.
+    before = reference.get("samples") or {}
+    kept = {}
+    for name in {**known, **added}:
+        seen = list(before.get(name, []))
+        if name not in known:
+            seen = []
+        elif not seen:
+            seen = [known[name]]
+        reading = times.get(name)
+        if reading:
+            seen = seen + [round(reading / shift, 2)]
+        kept[name] = (seen or [known.get(name, added.get(name))]
+                      )[-CI_REFERENCE_SAMPLES:]
+    for name, seconds in added.items():
+        kept[name] = [seconds]
+    document = dict(reference)
+    document["samples"] = {name: kept[name] for name in sorted(kept)}
+    document["files"] = {
+        name: round(statistics.median_low(kept[name]), 2)
+        for name in sorted(kept)}
+    # Which rows are *not* from the recording run `measured_on` names,
+    # accumulated over adoptions and dropped by the next wholesale
+    # `record` - a reader comparing two rows deserves to know one of
+    # them was placed on this clock by division rather than measured on
+    # it.
+    document["adopted"] = sorted(
+        set(reference.get("adopted") or []) & set(known) | set(added))
+    return document, added
 
 
 def shift_population(ratios, known):
@@ -581,18 +551,32 @@ def against(times, reference):
     if not IMAGE_BAND[0] <= shift <= IMAGE_BAND[1]:
         return "stale", shift, []
 
+    # `UX-496`: what each file has actually read, on the reference's
+    # clock. A file with a recorded range must beat the **top** of it as
+    # well as the two gates below - that is the distinction the round-73
+    # cases both wanted and nothing made: a file whose own readings span
+    # 15.2-36.3 has a wide range, and a file that has never left 1.06 of
+    # its own median and now doubles has changed. Only ever wider than
+    # the factor alone, since `files` is a median of the same list, so
+    # it cannot invent a report the old rule would not have made.
+    band = reference.get("samples") or {}
     rows = []
     for name, ratio in ratios.items():
         # Both, not either: see CI_DRIFT_SECONDS. `expected` is what the
         # reference says this file costs *on this run's clock*, so the
         # seconds added are the ones the run really paid.
         expected = known[name] * shift
+        seen = band.get(name) or []
         if (ratio / shift > CI_DRIFT_FACTOR
-                and times[name] - expected >= CI_DRIFT_SECONDS):
+                and times[name] - expected >= CI_DRIFT_SECONDS
+                and (not seen or times[name] > max(seen) * shift)):
             rows.append((name, times[name], known[name], ratio / shift))
     # A file with no reference at all is checked by nothing, which is
     # the silence this whole item is about - but only where there is
-    # something at stake. A new fast file needs no entry.
+    # something at stake. A new fast file needs no entry. `UX-503`:
+    # such a row is carried out with `was` None and split off by
+    # `repeated` into `recorded`, so it is printed rather than failed
+    # on - there is no recorded number for it to be slower than.
     floor = tiers.MEDIUM_FLOOR_S * shift
     for name, seconds in times.items():
         if name not in known and seconds >= floor:
@@ -634,17 +618,57 @@ def carried(path):
     return out
 
 
-def carry(path, readings, source, history):
+def carry(path, readings, source, history, shift=None, shifts=()):
     """Write what this run found, for the next run to agree or disagree.
 
     Written on **every** `--against` run, including the runs that find
     nothing: a file that excurses, recovers and excurses again has not
     drifted twice in a row, and an empty run is what says so.
+
+    `UX-508`: the run's own **shift** rides along, in its own list. The
+    band that decides `stale` is a statement about the runner, and one
+    reading of a runner is not one either - the same argument `UX-442`
+    made about a file, on the third quantity in this tool.
     """
     runs = [dict(readings)] + [dict(one) for one in history]
+    seen = ([shift] if shift is not None else []) + list(shifts)
     pathlib.Path(path).write_text(json.dumps(
-        {"runs": runs[:CI_DRIFT_RUNS - 1], "measured_on": source},
+        {"runs": runs[:CI_DRIFT_RUNS - 1], "measured_on": source,
+         "shifts": seen[:CI_DRIFT_RUNS - 1]},
         indent=2) + "\n", encoding="utf-8")
+
+
+def shifted(path):
+    """`UX-508`: the shifts the runs before this one measured.
+
+    Most recent first, at most `CI_DRIFT_RUNS - 1` long. A carry written
+    before this key existed has no `shifts`, and reads as no evidence -
+    the first run after the change decides alone, exactly as every run
+    did before it.
+    """
+    try:
+        held = json.loads(pathlib.Path(path).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return []
+    seen = held.get("shifts")
+    if not isinstance(seen, list):
+        return []
+    return [value for value in seen[:CI_DRIFT_RUNS - 1]
+            if isinstance(value, (int, float))]
+
+
+def out_of_band(shift, before):
+    """`UX-508`: whether a `stale` reading has agreement behind it.
+
+    `True` only when this run and the `CI_DRIFT_RUNS - 1` runs behind it
+    all read outside `IMAGE_BAND`. `before` shorter than that window is
+    a run with no memory - the first run of a branch, or a cache that
+    did not restore - and it waits rather than failing.
+    """
+    if len(before) < CI_DRIFT_RUNS - 1:
+        return False
+    return all(not IMAGE_BAND[0] <= one <= IMAGE_BAND[1]
+               for one in [shift] + list(before))
 
 
 def explained_by(base):
@@ -743,26 +767,36 @@ def repeated(rows, history, explained=None):
     on the branch that opened this row that population was three files
     and all three were false alarms.
 
-    **A file with no reference entry is never held back.** It is not an
-    excursion - it is a file the reference does not describe, which is
-    true of every run until the reference is refreshed, and waiting a
-    run to say so buys nothing.
+    **A file with no reference entry is `recorded`, not confirmed.**
+    `UX-503`: it is not an excursion and it is not drift - it is a file
+    the reference does not describe yet, which is true of every run
+    between a guard landing and the next refresh. The run that meets it
+    already has the only number anybody wants, and `--record` has
+    already written that number into this run's candidate; failing the
+    build on it bought a second commit and a forty-line skill section,
+    and caught nothing. Judged for drift on the run *after* the
+    reference carries it, like every other file.
     """
+    # `UX-503`: split first, so an absent file never reaches the drift
+    # decision at all. It has no reference entry to be slower *than*,
+    # which is what made confirming it - and the old branch below
+    # confirmed it on the **first** run, ahead of `UX-442`'s window -
+    # a statement about the reference's coverage rather than about the
+    # file.
+    recorded = [row for row in rows if row[2] is None]
+    rows = [row for row in rows if row[2] is not None]
     if history is None:
-        return list(rows), [], []
+        return list(rows), [], [], recorded
     enough = len(history) >= CI_DRIFT_RUNS - 1
     confirmed, unexplained, waiting = [], [], []
     for row in rows:
-        if row[2] is None:                    # not in the reference at all
-            confirmed.append(row)
-            continue
         if not (enough and all(row[0] in one for one in history)):
             waiting.append(row)
         elif explained is None or row[0] in explained:
             confirmed.append(row)
         else:
             unexplained.append(row)
-    return confirmed, unexplained, waiting
+    return confirmed, unexplained, waiting, recorded
 
 
 def series(name, reading, history):
@@ -779,6 +813,16 @@ def series(name, reading, history):
 
 def _against(times, path, args):
     """`--against`: this run read against CI's own recorded numbers."""
+
+    def done(code, summary):
+        # `UX-491`: every return leaves the gate's line in a file, so a
+        # step that runs later can print it into the log tail - which
+        # is all some readers of a run ever get.
+        if args.summary:
+            pathlib.Path(args.summary).write_text(summary + "\n",
+                                                  encoding="utf-8")
+        return code
+
     reference = (json.loads(path.read_text(encoding="utf-8"))
                  if path.is_file() else {})
     # Absent and present-but-unrecorded are the same state: nothing to
@@ -792,7 +836,9 @@ def _against(times, path, args):
               f"numbers, taken on this runner - and the next run compares "
               f"against it (UX-420).", file=sys.stderr)
         print(json.dumps(record(times, args.source), indent=2))
-        return 0
+        return done(0, f"{path.name} holds no recorded numbers yet, so "
+                       f"none of the {len(times)} file(s) this run "
+                       f"measured were checked.")
     verdict, shift, rows = against(times, reference)
     where = reference.get("measured_on", "unknown")
     # `UX-442`. Read before anything is printed and written before
@@ -800,13 +846,16 @@ def _against(times, path, args):
     # whatever this run decides - a `stale` or `ok` run breaks the chain
     # exactly as it should.
     history = carried(args.carry) if args.carry else None
+    before = shifted(args.carry) if args.carry else []
     if args.carry:
         # `UX-476`: the reading as well as the name. `repeated` decides
         # on agreement and on the diff; the readings are what let the
         # message show the series a reader has to judge.
         over = {name: round(ratio, 2)
                 for name, _s, was, ratio in rows if was is not None}
-        carry(args.carry, over, args.source, history or [])
+        carry(args.carry, over, args.source, history or [],
+              shift=None if shift is None else round(shift, 3),
+              shifts=before)
     if verdict == "empty":
         print(f"{path} names none of the {len(times)} file(s) this run "
               f"measured, so it cannot be a reference for it. Re-record "
@@ -814,16 +863,45 @@ def _against(times, path, args):
               f"{CI_CANDIDATE_ARTIFACT} artifact or its "
               f"{CI_CANDIDATE_JOB} job's log, not from this machine.",
               file=sys.stderr)
-        return 2
+        return done(2, f"{path.name} names none of the {len(times)} "
+                       f"file(s) this run measured.")
     if verdict == "stale":
-        print(f"this run is x{shift:.2f} the reference recorded on "
-              f"{where}, outside the {IMAGE_BAND[0]}-{IMAGE_BAND[1]} band. "
-              f"That is the whole runner moving, not one file drifting - "
-              f"re-record with --record and commit it - from this "
-              f"run's {CI_CANDIDATE_ARTIFACT} artifact, or its "
-              f"{CI_CANDIDATE_JOB} job's log - rather than "
-              f"reading the per-file numbers below.", file=sys.stderr)
-        return 1
+        # `UX-508`: one reading of a runner is not evidence about the
+        # runner, the same way one reading of a file was not evidence
+        # about the file (`UX-442`). A run with no `--carry` has no
+        # memory to consult and decides alone, as it always did.
+        agreed = out_of_band(shift, before) if args.carry else True
+        # Not `series`: that is the module-level function `readings()`
+        # below calls, and a local of the same name shadows it for the
+        # *whole* of `_against` - so the `unexplained` path raised
+        # `NameError` on every run that did not take this branch.
+        # `UX-508` shipped that and CI found it (run 33578729472).
+        readings_so_far = ", ".join(f"x{one:.2f}"
+                                    for one in [shift] + list(before))
+        opening = (f"this run is x{shift:.2f} the reference recorded on "
+                   f"{where}, outside the "
+                   f"{IMAGE_BAND[0]}-{IMAGE_BAND[1]} band.")
+        if agreed:
+            print(f"{opening} So were the run(s) behind it ({readings_so_far}). "
+                  f"That is the whole runner moving, not one file "
+                  f"drifting - re-record with --record and commit it, "
+                  f"from this run's {CI_CANDIDATE_ARTIFACT} artifact or "
+                  f"its {CI_CANDIDATE_JOB} job's log, rather than "
+                  f"reading the per-file numbers.", file=sys.stderr)
+            return done(1, f"{len(times)} file(s) measured against "
+                           f"{path.name} ({where}), this run x{shift:.2f} "
+                           f"- outside the band, and so were the run(s) "
+                           f"behind it ({readings_so_far}).")
+        print(f"{opening} The run(s) behind it read "
+              f"{readings_so_far or 'nothing'}, so this is one runner's "
+              f"afternoon "
+              f"until the next run agrees (UX-508). Nothing is being "
+              f"failed on it.", file=sys.stderr)
+        return done(0, f"{len(times)} file(s) measured against "
+                       f"{path.name} ({where}), this run x{shift:.2f} "
+                       f"- outside the band; the run(s) behind it read "
+                       f"{readings_so_far or 'nothing'}, so nothing was "
+                       f"failed on it.")
     known = reference.get("files") or {}
     ratios = {name: times[name] / known[name] for name in known
               if times.get(name) and known[name] > 0}
@@ -838,16 +916,18 @@ def _against(times, path, args):
     if verdict == "ok":
         if not args.quiet:
             print(f"tiers ok: {line}")
-        return 0
+        return done(0, f"tiers ok: {line}")
     explained = explained_by(args.base)
-    confirmed, unexplained, waiting = repeated(rows, history, explained)
+    confirmed, unexplained, waiting, recorded = repeated(
+        rows, history, explained)
 
     def say(row):
+        # `UX-503` split the reference-less rows out into `recorded`
+        # above, so every row reaching here has a number to be read
+        # against.
         name, seconds, was, ratio = row
-        return (f"  {name}  {seconds:.1f}s"
-                + (f"  against {was:.1f}s recorded, x{ratio:.2f} after "
-                   f"this run's x{shift:.2f} shift" if was is not None
-                   else "  and not in the reference at all"))
+        return (f"  {name}  {seconds:.1f}s  against {was:.1f}s recorded, "
+                f"x{ratio:.2f} after this run's x{shift:.2f} shift")
 
     def readings(row):
         """The series behind a row, newest first, as `x1.66, x1.78`."""
@@ -882,10 +962,25 @@ def _against(times, path, args):
               f"{CI_CANDIDATE_ARTIFACT} artifact; if they do not, it is "
               f"one runner's afternoon and the next run will say so. "
               f"Either way this is not a failure.", file=sys.stderr)
+    if recorded:
+        # `UX-503`. Not a failure: the reference does not describe this
+        # file yet, so there is no number it is slower *than*. The run
+        # that meets it is the run that measures it, and `--record` has
+        # already written that measurement into this run's candidate.
+        print(f"\n{len(recorded)} file(s) over "
+              f"{tiers.MEDIUM_FLOOR_S:g}s that the reference does not "
+              f"carry yet - measured here, not judged (UX-503):",
+              file=sys.stderr)
+        for row in recorded:
+            print(f"  {row[0]}  {row[1]:.1f}s", file=sys.stderr)
+        print(f"Commit this run's {CI_CANDIDATE_ARTIFACT} artifact (or its "
+              f"{CI_CANDIDATE_JOB} job's log) to give them a reference "
+              f"entry; the run after that judges them for drift like "
+              f"every other file.", file=sys.stderr)
     if not confirmed:
         if not args.quiet:
             print(f"tiers ok: {line}")
-        return 0
+        return done(0, f"tiers ok: {line}")
     print(line, file=sys.stderr)
     print(f"{len(confirmed)} file(s) slower than CI's own record of them:",
           file=sys.stderr)
@@ -903,12 +998,58 @@ def _against(times, path, args):
           f"printed seconds divided by the shift above; `--record` on your "
           f"own machine writes the wrong clock (UX-418, UX-447).",
           file=sys.stderr)
-    return 1
+    # The seconds too, not only the names: diagnosing round 75's own
+    # red run needed "16.0s against 9.9s recorded" and the tail carried
+    # neither, so the job log had to be fetched anyway - which is the
+    # errand `UX-491` exists to remove.
+    return done(1, f"{line}, and {len(confirmed)} file(s) slower than "
+                   f"{path.name} records: "
+                   + "; ".join(f"{row[0]} {row[1]:.1f}s against {row[2]:.1f}s "
+                               f"recorded, x{row[3]:.2f}" for row in confirmed))
+
+
+def _adopt(candidate):
+    """`--adopt`: give the reference the rows it does not carry yet.
+
+    `UX-503`. Runs unattended after a merge, so every refusal below
+    prints why and exits **0**: the reference staying as it is costs one
+    stale row, and a red job on the default branch over a bookkeeping
+    step costs everybody's attention.
+    """
+    if not candidate.is_file():
+        print(f"{candidate}: no candidate document to adopt from - the run "
+              f"that would have written it did not reach its record step",
+              file=sys.stderr)
+        return 0
+    reference = (json.loads(CI_REFERENCE.read_text(encoding="utf-8"))
+                 if CI_REFERENCE.is_file() else {})
+    document, added = adopt(reference,
+                            json.loads(candidate.read_text(encoding="utf-8")))
+    if document == reference:
+        print(f"{CI_REFERENCE.name} is unchanged by this run - it shares no "
+              f"file with the candidate, or the shift between them is "
+              f"outside {IMAGE_BAND[0]}-{IMAGE_BAND[1]}")
+        return 0
+    CI_REFERENCE.write_text(json.dumps(document, indent=2) + "\n",
+                            encoding="utf-8")
+    # `UX-496`: a run with nothing new to add still leaves a reading on
+    # every file it measured, and that is the point - the entry gets to
+    # be more than one afternoon without anyone deciding anything.
+    grew = sum(1 for name, seen in (document.get("samples") or {}).items()
+               if len(seen) > len((reference.get("samples") or {}).get(name, [])))
+    print(f"adopted {len(added)} new file(s) into {CI_REFERENCE.name} and "
+          f"left a reading on {grew}, on its own clock:")
+    for name, seconds in sorted(added.items()):
+        print(f"  {name}  {seconds:.2f}s")
+    return 0
 
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("report", help="a pytest --junitxml report")
+    parser.add_argument("report", nargs="?",
+                        help="a pytest --junitxml report. Optional only "
+                             "with --adopt, which reads a recorded "
+                             "document rather than a report")
     parser.add_argument("--quiet", action="store_true",
                         help="print nothing when there is no drift")
     parser.add_argument("--base", metavar="REF", default=None,
@@ -925,6 +1066,12 @@ def main(argv=None):
                              f"the {CI_CANDIDATE_JOB} job; that is "
                              "what to commit, because a local run writes "
                              "this machine's clock and not CI's")
+    parser.add_argument("--adopt", metavar="CANDIDATE",
+                        help=f"merge the rows {CI_REFERENCE.name} does not "
+                             f"carry yet out of a recorded document (a "
+                             f"{CI_CANDIDATE_ARTIFACT} artifact) into it, "
+                             f"on the reference's own clock, and touch no "
+                             f"entry it already holds (UX-503)")
     parser.add_argument("--no-confirm", action="store_true",
                         help="report what the parallel report said, "
                              "without re-running each named file alone "
@@ -940,10 +1087,17 @@ def main(argv=None):
                              f"next one; a file is reported only after "
                              f"{CI_DRIFT_RUNS} consecutive runs find it "
                              f"(UX-442). Without it one sample decides")
+    parser.add_argument("--summary", metavar="PATH", default=None,
+                        help="write --against's own summary line here, for "
+                             "a step that runs later to print (UX-491).")
     parser.add_argument("--source", default="unknown",
                         help="what produced this report, recorded with it")
     args = parser.parse_args(argv)
 
+    if args.adopt:
+        return _adopt(pathlib.Path(args.adopt))
+    if not args.report:
+        parser.error("a junit report is required without --adopt")
     times = measured(args.report)
     if not times:
         print(f"{args.report}: no testcase named a file under {REPO} - "

@@ -34,6 +34,12 @@ The trigger is "exists here and is untracked", not "is untracked": a
 path that exists nowhere cannot produce the green-here-red-there
 failure, and tests name plenty of those on purpose - asserting a module
 was **not** added, or building a path they then create.
+
+`UX-490`: the same defect one directory up. An **absolute** path
+outside the clone is untracked by construction, so a prefix scan over
+the clone's own directories cannot see it - `UX-485`'s first draft
+rested four clauses on `/tmp/ux469/.bga/runs/...` and passed. Those are
+read where they provably reach the filesystem, and only there.
 """
 import pathlib
 import ast
@@ -58,6 +64,21 @@ WRITTEN_NOT_READ = re.compile(r"tmp_path|tmpdir|mkdtemp|TemporaryDirectory")
 # Build output, not data. Untracked and present on every machine that has
 # run the suite once, which would make it a permanent false positive.
 NOT_DATA = ("__pycache__", ".egg-info", ".pytest_cache")
+
+# `NOT_DATA`'s case for absolute paths: the kernel supplies these on
+# every Linux machine, so their presence here says nothing about this
+# one. `tests/unit/test_process_spine.py` lists `/proc` to find pids.
+KERNEL_ROOTS = ("/proc", "/sys", "/dev")
+
+# Where an absolute literal is read. `PATH_CALLS` is the argument
+# position in which a string provably reaches the filesystem - the same
+# rule as `_compared_not_opened`'s, in the other direction. `"/tmp/x"`
+# in a `subprocess` argv is a value the test never opens, and the
+# argument list of `pathlib.Path`, `open` or `os.path.*` is not.
+PATH_CALLS = frozenset({
+    "Path", "PosixPath", "open", "join", "exists", "isdir", "isfile",
+    "is_dir", "is_file", "read_text", "read_bytes", "listdir", "iterdir",
+    "glob", "rglob", "stat", "realpath", "abspath"})
 
 # What makes an untracked citation acceptable: the file also reads
 # something a clone has. `tests/fixtures/` is where this repository keeps
@@ -223,6 +244,59 @@ def _compared_not_opened(text):
     return names
 
 
+def _absolute_paths(text):
+    """Absolute paths outside the clone that a file actually reads.
+
+    `UX-490`. `ROOTS` is a list of the clone's own directories, so an
+    absolute path is exempt from it by construction - and an absolute
+    path is exactly what nothing else can be tracked as. `UX-485`'s
+    first draft wrote
+
+    ```python
+    TWO_QUEUE = pathlib.Path("/tmp/ux469/.bga/runs/20260901T161438Z")
+    ```
+
+    and rested four clauses on it. Green here for one session; a skip
+    everywhere else, including here once the container is reclaimed.
+
+    "Reads" is stated over AST position rather than spelling, because
+    the tree is full of absolute strings that are *values*: `/bin/sh`
+    in a synthesised trace event, `/usr/bin/bwrap` in an expected
+    argv, `/tmp/x` as the option a usage-error test misplaces. 144
+    distinct absolute literals in `tests/`, of which this walk reads
+    one - `/proc`, which `KERNEL_ROOTS` then excludes. A constant in
+    the argument list of `PATH_CALLS` is the position in which it
+    cannot be anything but a path.
+
+    The `tmp_path` escape is per line, as it is for the relative scan:
+    a path built beside `tmp_path` is one the test creates.
+    """
+    try:
+        tree = ast.parse(text)
+    except SyntaxError:
+        return set()
+    lines = text.splitlines()
+    found = set()
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        name = getattr(node.func, "attr", None) or getattr(node.func, "id", "")
+        if name not in PATH_CALLS:
+            continue
+        for arg in node.args:
+            if not isinstance(arg, ast.Constant):
+                continue
+            if not isinstance(arg.value, str) or not arg.value.startswith("/"):
+                continue
+            if not arg.value.strip("/"):
+                continue
+            line = lines[arg.lineno - 1] if arg.lineno <= len(lines) else ""
+            if WRITTEN_NOT_READ.search(line):
+                continue
+            found.add(arg.value.rstrip("/"))
+    return found
+
+
 def _cited_paths(path):
     """Repository paths a test file names, minus the ones it creates."""
     text = path.read_text(encoding="utf-8")
@@ -236,28 +310,54 @@ def _cited_paths(path):
     # see. Not filtered by `WRITTEN_NOT_READ`: a join that builds a
     # path under `tmp_path` has a non-constant first argument, so it
     # never reaches `ROOTS` in the first place.
-    return (cited | _joined_paths(text)) - _compared_not_opened(text)
+    return ((cited | _joined_paths(text) | _absolute_paths(text))
+            - _compared_not_opened(text))
 
 
-def _cited_paths_of(source, tmp=None):
-    """`_cited_paths` over a source string, for the checks below."""
+def _over_source(source, check):
+    """Run a file-level check over a source string, for the checks below."""
     handle = tempfile.NamedTemporaryFile(
         "w", suffix=".py", delete=False, encoding="utf-8")
     with handle:
         handle.write(source)
     try:
-        return _cited_paths(pathlib.Path(handle.name))
+        return check(pathlib.Path(handle.name))
     finally:
         os.unlink(handle.name)
 
 
+def _cited_paths_of(source, tmp=None):
+    """`_cited_paths` over a source string, for the checks below."""
+    return _over_source(source, _cited_paths)
+
+
 def _untracked_but_present(cited, tracked):
-    """The dangerous class, and only it."""
+    """The dangerous class, and only it.
+
+    `REPO / name` is `name` itself when `name` is absolute, which is
+    what makes the same existence trigger serve both scans.
+    """
     return sorted(
         name for name in cited
         if name not in tracked
         and not any(part in name for part in NOT_DATA)
+        and not name.startswith(KERNEL_ROOTS)
         and (REPO / name).exists())
+
+
+def _rests_only_on_untracked(path, tracked):
+    """The whole rule over one file: risky citations, minus the escapes."""
+    text = path.read_text(encoding="utf-8")
+    cited = _cited_paths(path)
+    risky = _untracked_but_present(cited, tracked)
+    if not risky:
+        return []
+    if any(name.startswith(COMMITTED_DATA) and name in tracked
+           for name in cited):
+        return []
+    if _guards_absence(text):
+        return []
+    return risky
 
 
 class TestEveryPathAGuardNamesIsInTheClone:
@@ -265,13 +365,8 @@ class TestEveryPathAGuardNamesIsInTheClone:
         tracked = _tracked()
         offenders = []
         for path in _test_files():
-            cited = _cited_paths(path)
-            risky = _untracked_but_present(cited, tracked)
+            risky = _rests_only_on_untracked(path, tracked)
             if not risky:
-                continue
-            fallback = [name for name in cited
-                        if name.startswith(COMMITTED_DATA) and name in tracked]
-            if fallback or _guards_absence(path.read_text(encoding="utf-8")):
                 continue
             offenders.append(
                 f"{path.relative_to(REPO)} -> {risky} (and no committed "
@@ -443,6 +538,116 @@ class TestTheCheckItselfDiscriminates:
         assert original not in _tracked(), (
             "the snapshot store is tracked now, so this check no longer "
             "demonstrates anything - re-point it at a real ignored path")
+
+
+class TestAnAbsolutePathOutsideTheCloneIsSeen:
+    """`UX-490`. Outside the clone is where nothing can be tracked, so
+    "untracked" stops discriminating and "exists here" is the whole
+    trigger. The scan is narrowed by position instead: read only where
+    the literal reaches the filesystem."""
+
+    DRAFT = ('import pathlib\n'
+             'TWO_QUEUE = pathlib.Path('
+             '"/tmp/ux469/.bga/runs/20260901T161438Z")\n')
+
+    def test_the_draft_that_walked_into_the_hole_is_read(self):
+        """`UX-485`'s first draft, verbatim. The prefix scan cannot see
+        it at all, which is why this walk exists."""
+        assert not PATH_LITERAL.search(self.DRAFT), (
+            "the prefix scan now reads an absolute path on its own, so this "
+            "test no longer shows what the absolute walk is for")
+        assert _absolute_paths(self.DRAFT) == {
+            "/tmp/ux469/.bga/runs/20260901T161438Z"}
+
+    def test_an_absolute_path_that_is_here_and_untracked_is_reported(
+            self, tmp_path):
+        """The dangerous class: a capture no clone has."""
+        capture = tmp_path / "ux469/.bga/runs/20260901T161438Z"
+        capture.mkdir(parents=True)
+        source = f'import pathlib\nX = pathlib.Path("{capture}")\n'
+        assert _untracked_but_present(
+            _cited_paths_of(source), _tracked()) == [str(capture)]
+
+    def test_an_absolute_path_that_exists_nowhere_is_not_reported(
+            self, tmp_path):
+        """`UX-276`'s trigger, unchanged: a path no machine has cannot
+        fail on one machine and pass on another. The fixture a test
+        creates and then reads is this case."""
+        absent = tmp_path / "ux469/.bga/runs/20260901T161438Z"
+        assert _untracked_but_present(
+            _cited_paths_of(f'import pathlib\nX = pathlib.Path("{absent}")\n'),
+            _tracked()) == []
+
+    def test_an_absolute_string_in_an_argv_is_a_value_not_a_read(
+            self, tmp_path):
+        """`test_tracer_report_input_detection.py` passes `/tmp/x` as the
+        misplaced option of a usage-error test and never opens it. The
+        file exists on this machine; the clause cannot notice."""
+        option = tmp_path / "x"
+        option.write_text("", encoding="utf-8")
+        source = ('ARGV = ["tracer", "run", "P", "O", "--wrapped-log", '
+                  f'"{option}", "--", "bst", "build"]\n')
+        assert str(option) in source and option.exists()
+        assert _absolute_paths(source) == set()
+
+    def test_a_kernel_filesystem_is_not_one_machines_data(self):
+        """`/proc` is read, and excluded: the kernel puts it on every
+        Linux machine, so it is `NOT_DATA`'s permanent false positive."""
+        source = 'import os\nfor entry in os.listdir("/proc"):\n    pass\n'
+        assert "/proc" in _cited_paths_of(source)
+        assert _untracked_but_present(_cited_paths_of(source), _tracked()) == []
+        assert _absolute_paths('import pathlib\nX = pathlib.Path("/")\n') == set()
+
+    def test_a_path_built_beside_the_fixture_is_not_a_citation(self, tmp_path):
+        """The `tmp_path` escape, which must survive one directory up:
+        a test that *builds* under the fixture names paths that must not
+        be tracked. Both shapes - the non-constant argument, and the
+        line that falls back to the fixture."""
+        built = tmp_path / "out"
+        built.mkdir()
+        assert _cited_paths_of(
+            'import pathlib\nX = pathlib.Path(tmp_path / "out")\n') == set()
+        assert _absolute_paths(
+            f'import pathlib\nX = pathlib.Path("{built}") '
+            'if REAL else tmp_path\n') == set()
+
+    def test_a_committed_fixture_beside_it_is_still_the_escape(self, tmp_path):
+        """`UX-213`'s rule reaches the absolute case unchanged: extra
+        coverage where it exists, never the only data the file has."""
+        tracked = _tracked()
+        capture = tmp_path / "runs/20260901T161438Z"
+        capture.mkdir(parents=True)
+        alone = f'import pathlib\nX = pathlib.Path("{capture}")\n'
+        beside = alone + ('Y = open("tests/fixtures/macro_micro/'
+                          'plane2.json")\n')
+        assert _over_source(
+            alone, lambda p: _rests_only_on_untracked(p, tracked)
+        ) == [str(capture)]
+        assert _over_source(
+            beside, lambda p: _rests_only_on_untracked(p, tracked)) == []
+
+    def test_a_skipif_on_its_existence_is_still_the_escape(self, tmp_path):
+        """The other way to be safe: the clause does not run in a clone
+        rather than failing there."""
+        tracked = _tracked()
+        capture = tmp_path / "runs/20260901T161438Z"
+        capture.mkdir(parents=True)
+        source = ('import pathlib, pytest\n'
+                  f'X = pathlib.Path("{capture}")\n'
+                  'M = pytest.mark.skipif(not X.exists(), reason="gone")\n')
+        assert _over_source(
+            source, lambda p: _rests_only_on_untracked(p, tracked)) == []
+
+    def test_the_relative_scan_still_reads_what_it_read(self, tmp_path):
+        """Both scans in one file. A committed relative path and an
+        absolute capture are both citations - the new walk is a union
+        with the old one, not a replacement."""
+        capture = tmp_path / "runs/20260901T161438Z"
+        capture.mkdir(parents=True)
+        cited = _cited_paths_of(
+            f'import pathlib\nX = pathlib.Path("{capture}")\n'
+            'Y = open("tests/fixtures/macro_micro/plane2.json")\n')
+        assert cited == {str(capture), "tests/fixtures/macro_micro/plane2.json"}
 
 
 if __name__ == "__main__":  # pragma: no cover

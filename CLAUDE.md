@@ -4,9 +4,10 @@ Two planes joined on element uid: **Plane 1** is the BuildStream
 scheduler log, **Plane 2** an `LD_PRELOAD` hook plus an optional ptrace
 spine. `bga analyze` reads them; `bga view` draws the page.
 
-Read [`docs/contributing/fixing-guide.md`](docs/contributing/fixing-guide.md)
-before working a task — this file is the day-one summary, that one is
-the rule.
+[`docs/contributing/rules.md`](docs/contributing/rules.md) is the rule —
+every one on a page, with its guard. Read it before working a task; this
+file is the day-one summary, and
+[`fixing-guide.md`](docs/contributing/fixing-guide.md) the argument.
 
 ## Commands
 
@@ -18,7 +19,7 @@ the rule.
 | `make test-tiers` | the suite plus a tier-drift parse, in one run |
 | `make lint` | ruff + PyMarkdown; both must be clean |
 | `make check-clean` | fails if an ignored path is tracked |
-| `python tools/dev_close_task.py UX-NNN --move --note "…"` | the four mechanical edits that close a task |
+| `dev_close_task.py UX-NNN --move --note "…"` then `--check --write` | the row move and both markers, then the derived index counts |
 
 `PYTEST_XDIST= make test-small` turns parallelism off (for `-x` or `pdb`).
 
@@ -26,8 +27,8 @@ the rule.
 
 `orient` (where is it) → `decompose` (surfaces, input classes, tracks,
 the batch gate) → `measure` → `falsify` → `verify` (close it).
-`derive` before moving viewer code. Send wide reading to the
-`researcher` agent and a finished change to the `verifier` agent.
+`derive` before moving viewer code. Agents: `researcher` reads wide,
+`implementer` runs one track in a worktree, `verifier` checks the end.
 
 ## Conventions
 
@@ -40,7 +41,7 @@ the batch gate) → `measure` → `falsify` → `verify` (close it).
 - **A new guard is not done until a mutation reddens it.** See the
   `falsify` skill.
 - Task status lives in **two** places: the `**Status:**` line and the
-  index row. `dev_close_task.py` edits both.
+  index row. `--move` edits both; the counts are derived, never typed.
 - `docs/spec/specification.md` is ground truth — read line ranges,
   never the whole file, and never edit it outside the Part 32 registry.
 
@@ -66,13 +67,12 @@ tests/unit/     one file per item, named for its claim
 docs/backlog/scenarios/   one file per task; README.md open, closed.md closed
 ```
 
-Section 6 of the fixing guide is the full map. Don't re-derive it.
+Fixing guide §6 is the full map. Don't re-derive it.
 
 ## Things Claude gets wrong
 
 - **Runs a tier and commits.** A tier is a *selector*. `make test` is
   the gate, and skipping it shipped a slack budget in round 66.
-- **`git add -A` / `git add .`** — forbidden by §4a.1; stage paths.
 - **Builds an instrument that reads a proxy** for the thing it names —
   four shapes, fixing guide §5; the three questions are in `measure`.
 - **Writes a guard whose setup another gate already excludes**, so it

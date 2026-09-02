@@ -1,42 +1,29 @@
 #!/usr/bin/env python3
-"""UX-340: the viewer's dependency graph, derived rather than guessed.
+"""`UX-340`: the viewer's dependency graph, derived rather than guessed.
 
-`UX-337` moved half the viewer between modules, and its Required Fix
-opens *"the dependency graph between the chapters is derived (not
-guessed) before anything moves"*. The first derivation was wrong, and it
-was wrong in the way that does not announce itself: it reported a
-**cleaner** answer than the truth.
+    python3 tools/dev_js_deps.py --order bga/viewer
+    python3 tools/dev_js_deps.py --crossings bga/viewer/app.js --groups ...
 
-Counting which symbols cross a proposed cut means ignoring the ones that
-only appear in a comment or a string - a docstring naming `render` is
-not a call to `render`. That was done with regexes, and the
-template-literal pattern, written to skip `${…}` so an interpolated
-expression stayed visible, failed to match any template that had one.
-Its opening backtick then paired with some later backtick and everything
-between vanished:
+`UX-337` moved half the viewer between modules and asked for the graph
+to be derived first. The first derivation was wrong in the way that
+does not announce itself - it reported a **cleaner** answer than the
+truth. Regexes stripping comments and strings ate 87 % of `app.js`
+silently, and three real crossings went missing, each a
+`ReferenceError` in the concatenated export (`UX-199`'s empty page).
+`UX-340`'s Outcome has the four-line table.
 
-```text
-app.js's declarations, raw   1,124 lines
-after block comments         1,024
-after line comments          1,024
-after template literals        148     <- 87% of the file, silently
-```
+So the scanner below is a **character** scanner, not a pattern, and it
+is a tool rather than a scratch file because the next round to move a
+function will reach for regexes too.
 
-Three real crossings were missing - `PRESETS`, `elementColumn` and
-`safeStorage` - each a `ReferenceError` in the concatenated export,
-which is `UX-199`'s empty page.
+**What it reads:** the subset this repository writes - top-level
+`function` / `const` / `let` / `var` / `class`, one per seam, each
+owning the comment block above it. It is **not a JavaScript parser**
+and does not pretend to be one - a module that stopped looking like
+this would need a real one, and the failure would be loud because
+`--order` is asserted equal to what the export uses.
 
-So the scanner below is a character scanner, not a pattern. It exists as
-a tool rather than as a scratch file because the next round to move a
-function between viewer modules will reach for regexes too.
-
-**What it reads.** The subset this repository writes: ES modules whose
-top-level declarations are `function` / `const` / `let` / `var` /
-`class`, one per seam, each owning the comment block above it. It is not
-a JavaScript parser and does not pretend to be one - a module that
-stopped looking like this would need a real one, and the failure would
-be visible rather than silent, because `--order` is asserted equal to
-the function the export actually uses.
+See the `derive` skill for the procedure this serves.
 """
 import argparse
 import json

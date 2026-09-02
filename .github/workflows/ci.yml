@@ -121,6 +121,7 @@ jobs:
           python tools/dev_tier_drift.py "${{ runner.temp }}/junit.xml" \
             --against --carry "${{ runner.temp }}/tier_carry.json" \
             --base "origin/${{ github.event.repository.default_branch }}" \
+            --summary "${{ runner.temp }}/tier_gate.txt" \
             --source "github-actions ubuntu-latest, test (3.11), -n auto"
         if: matrix.python-version == '3.11'
 
@@ -170,6 +171,16 @@ jobs:
           echo "::group::the same document, for a reader without the artifact"
           cat "${{ runner.temp }}/ci_reference.candidate.json"
           echo "::endgroup::"
+          # UX-491: and the gate's own line last, outside the group. The
+          # document above is ~400 lines and a log-tail reader gets only
+          # the end of it, so the shift the gate printed - two steps and
+          # one collapsed document earlier - was out of reach of the
+          # spread recorded beside it. The line is the gate's own, read
+          # from the file that step wrote; recomputing it here would be
+          # the two numbers agreeing by construction (§5).
+          echo "the drift gate's line, repeated for a log-tail reader:"
+          cat "${{ runner.temp }}/tier_gate.txt" \
+            || echo "the gate step wrote no summary - it did not run."
         if: always() && matrix.python-version == '3.11'
 
       - name: Upload it, so refreshing the reference needs no scrolling
@@ -258,6 +269,59 @@ jobs:
         run: |
           cat ci_reference.candidate.json \
             || echo "no candidate on this run - test (3.11) did not reach the record step"
+
+  # UX-503: the reference gives itself the rows it does not carry yet.
+  #
+  # A new test file over the medium floor has no entry, so until round
+  # 75 the drift step named it and the session spent a second commit
+  # fetching the candidate and appending a row - 19 of the 162 commits
+  # since round 64 were that errand. The gate now *records* such a file
+  # instead of failing on it (`repeated`), and this is the other half:
+  # after the merge, the default branch's own run writes the row back,
+  # so the file is judged for drift from the next run on rather than
+  # never.
+  #
+  # Only on `push` to the default branch. On a pull request the head is
+  # somebody's branch and its numbers are not merged yet; on the default
+  # branch the run measured what is actually there.
+  #
+  # `--adopt` adds names the reference lacks and rewrites no entry it
+  # holds, so this can never quietly move a figure a human recorded - a
+  # refresh stays a human's decision (UX-447). Every refusal inside it
+  # exits 0, and a rejected push is a warning rather than a red: a
+  # bookkeeping job failing the default branch buys nothing.
+  tier-reference-adopt:
+    runs-on: ubuntu-latest
+    needs: test
+    if: >-
+      always() && github.event_name == 'push'
+      && github.ref == format('refs/heads/{0}',
+                              github.event.repository.default_branch)
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Fetch what test (3.11) recorded
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: ci-reference-candidate
+      - name: Give the reference the rows it does not carry yet
+        run: |
+          python tools/dev_tier_drift.py --adopt ci_reference.candidate.json
+          if git diff --quiet -- tests/ci_reference.json; then
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email \
+            "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tests/ci_reference.json
+          git commit -m "CI: adopt the tier rows this run measured (UX-503)"
+          git push origin "HEAD:${{ github.ref }}" || \
+            echo "::warning::the branch refused the update; the rows printed above need a hand"
 
   agent-config:
     # Watches: .claude/** , CLAUDE.md , REVIEW.md - the three that steer

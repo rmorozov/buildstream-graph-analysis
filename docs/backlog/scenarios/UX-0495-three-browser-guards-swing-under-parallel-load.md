@@ -1,6 +1,6 @@
 # UX-495: three browser guards swing 1.5-2.3x under parallel load, and nothing says whether that is the file or the runner
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** `UX-494` stopped it failing the build; `UX-458` is the sizing question | **Found by:** round 73, three sightings in one session | **Serves:** the round that reads a browser guard's drift reading and cannot tell an excursion from a regression | **Topic:** guards
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-494` stopped it failing the build; `UX-458` is the sizing question | **Found by:** round 73, three sightings in one session | **Serves:** the round that reads a browser guard's drift reading and cannot tell an excursion from a regression | **Topic:** guards
 
 ## Motivation
 
@@ -85,4 +85,76 @@ files that swing and the files that do not — named.
 
 ## Outcome
 
-_Not started._
+**Round 75, 2026-09-02.** Six CI runs on PR #193, read from each run's
+`tier-reference` job — whose whole log is the candidate document
+(`UX-457`). All nine files recorded in all six; nothing interpolated.
+
+**Acceptance Test — raw seconds, six runs:**
+
+```text
+run           shift  emphasis  sentence  control  geometry  two_caps  vocab
+33576331828   0.998    15.31     23.38    35.46     67.85     33.05   28.57
+33577533944   0.891    37.28     41.32    56.73     66.91     31.87   28.79
+33578729472   0.666    19.26     24.70    37.84     65.21     32.11   28.35
+33579959420   1.002    24.98     28.18    45.24     67.35     31.78   29.14
+33580330030   1.018    15.22     23.33    35.55     68.04     32.70   30.01
+33581936314   0.994    19.67     23.38    39.45     68.03     33.78   29.05
+spread                 x2.45     x1.77    x1.60     x1.04     x1.06   x1.06
+```
+
+**The two populations, named.** Swinging: `test_emphasis_is_a_budget`
+(x2.45), `test_a_sentence_lives_on_its_door` (x1.77),
+`test_a_control_acts_on_what_it_names` (x1.60). Stable:
+`test_the_page_has_geometry` (x1.04), `test_the_two_capabilities_are_offered`
+(x1.06), `test_the_vocabulary_has_the_shape` (x1.06). Three more read
+for control: `test_the_mapping_is_law` x3.69,
+`test_why_bga_believes_what_it_believes` x2.10,
+`test_a_guard_reads_only_what_a_clone_has` x1.47.
+
+**What separates them is not a property of the file.** The Required
+Fix's candidate — many short browser round-trips against one long
+render — is **falsified**: seconds per collected item is 1.02 for the
+worst swinger and 1.44 for the most stable file, and `geometry` has the
+most browser measurements (17 `.measure()` sites, 47 items) of any of
+them. Item count, `.measure()` sites, module-scoped `Browser`, and
+served-page against exported-file all fail to split the two sets:
+`control` (swings) and `two_caps` (does not) are the same shape.
+
+**What does separate them is that they move together.** Pearson
+correlation of the six readings, each file against its own quietest run:
+
+```text
+              emphasis  sentence   control  geometry  two_caps     vocab
+  emphasis        1.00      0.97      1.00     -0.23     -0.58     -0.21
+  sentence        0.97      1.00      0.97     -0.21     -0.60     -0.18
+   control        1.00      0.97      1.00     -0.16     -0.57     -0.16
+```
+
+0.97–1.00 inside the group, −0.16 to −0.60 across it. And on
+`33577533944` — the run whose **median file was 11 % faster** — they
+read 2.45x, 1.77x, 1.60x while the other three sat at 1.03, 1.00, 1.02.
+So "CI was busy" is refuted a second time, with six runs instead of
+three: a per-run event reaches one group of files and not their equals.
+
+**For the two readers.**
+
+- `tests/tiers.py`: no tier moves. Every file here is already at its
+  right tier by its quiet level, and the excursions do not cross a
+  floor — except `emphasis`, whose quiet 15.2s sits **on**
+  `LARGE_FLOOR_S = 15.0`, so its tier is decided by which run measured
+  it. That is a `UX-496` problem, not a tier problem.
+- `CI_DRIFT_FACTOR = 1.5`: this group crossed it on **2 of 6 runs**
+  (`33577533944`, `33579959420`) with nothing in either diff that names
+  them, and **never on two consecutive runs** — 1.01, 2.45, 1.27, 1.64,
+  1.00, 1.29 for `emphasis`. `CI_DRIFT_RUNS = 2` was the whole of the
+  protection, and it held by one run. A factor sized to sit above this
+  group would have to be x2.5, which would make the gate blind to a
+  real 2x regression anywhere else.
+
+**The conclusion this row was filed to reach:** the suite-wide shift
+cannot see this, because the runs where the group is highest are runs
+where the median file is *faster*. The gate needs a per-file history,
+which is `UX-496`.
+
+**Deviation from the Required Fix:** none. The candidate mechanism was
+measured and rejected rather than adopted; the row asked for that.

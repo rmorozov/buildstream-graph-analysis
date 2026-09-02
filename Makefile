@@ -98,8 +98,14 @@ lint: lint-docs
 # MD001-MD048 and the table rules are markdownlint v0.34+ additions with
 # no equivalent, so tests/unit/test_docs_links_and_commands.py owns that
 # one - which is the defect this repo actually shipped, five times.
+# UX-509: the file list comes from git, not from walking the tree - an
+# agent worktree under .claude/ is a whole second clone, and a walk
+# lints it. `--respect-gitignore` would say the same thing but only on
+# pymarkdown 0.9.34+, and the 3.9 lane resolves to 0.9.33. The cost is
+# that a brand-new .md is linted from its first `git add`, not before.
 lint-docs:
-	python3 -m pymarkdown --config .pymarkdown.json scan -r README.md CLAUDE.md REVIEW.md docs/ .claude/
+	git ls-files -z -- README.md CLAUDE.md REVIEW.md 'docs/*.md' '.claude/*.md' \
+	  | xargs -0 -r python3 -m pymarkdown --config .pymarkdown.json scan
 
 # Local dev convenience: analyze a checked-in sample fixture and print a
 # real report - one command from "I changed some code" to "I can see

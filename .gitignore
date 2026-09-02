@@ -193,3 +193,6 @@ examples/09-fine-grained-siblings/files/toolchain/
 examples/09-fine-grained-siblings/files/bulk/
 examples/09-fine-grained-siblings/merged/files/toolchain/
 examples/09-fine-grained-siblings/merged/files/bulk/
+
+# Agent worktrees: whole clones the Agent tool makes under the repo (UX-509).
+.claude/worktrees/

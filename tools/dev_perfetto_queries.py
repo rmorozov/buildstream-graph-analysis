@@ -1,32 +1,19 @@
 """Run the canned question library against a real trace.
 
-`tests/unit/test_the_questions_ask_what_the_trace_answers.py` holds the
-library's *vocabulary* against the emitter's: every `debug.` key a
-question names is one the trace writes. That is a static check and it
-is the right one, because it runs everywhere.
-
-What it cannot say is whether a question **returns anything**. A query
-whose keys all exist can still answer nothing - `graph-levels` did,
-for every capture in this repository, because the annotations it groups
-by are read from an `analyze.json` no fixture has. `extract_arg`
-returns null rather than failing, so the question came back empty in
-silence, which is the failure mode `UX-312` was written about happening
-one level further out.
-
-Answering that needs Perfetto's own reader and a capture with both
-planes in it. Round 69 found the reader had never been present: the
-optional gate skips when `trace_processor_shell` is absent, and it was
-absent on every machine this project had run on, so fourteen questions
-shipped to readers had never been executed once.
-
-This is that run, as a command:
-
     python tools/dev_perfetto_queries.py /tmp/two.pftrace
 
-`--fetch` downloads the pinned reader if it is not already on `PATH`
-or named by `BGA_TRACE_PROCESSOR`, which is the friction that kept the
-gate skipping. It writes into `--fetch-into` (default: a cache beside
-the repo) and prints where, so a later run finds it without asking.
+`test_the_questions_ask_what_the_trace_answers.py` checks the library's
+vocabulary against the emitter's statically, everywhere. It cannot say
+whether a question **returns anything**: `graph-levels` answered
+nothing for every capture here, in silence, because `extract_arg`
+returns null rather than failing (`UX-312`, one level out).
+
+Answering that needs Perfetto's own reader and a two-plane capture.
+Round 69 found the reader had never been present on any machine this
+project had run on, so fourteen shipped questions had never executed -
+`UX-465`'s Outcome has the run. `--fetch` downloads the pinned reader
+when `PATH` and `BGA_TRACE_PROCESSOR` have none, into `--fetch-into`,
+and prints where: that friction is what kept the gate skipping.
 """
 import argparse
 import csv

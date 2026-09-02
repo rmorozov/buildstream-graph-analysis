@@ -53,10 +53,23 @@ merge hotspots, so a track never touches them — the orchestrating
 session does, once, at the end:
 
 ```text
-docs/backlog/scenarios/README.md    the index counts and the row
+docs/backlog/scenarios/README.md    the row (the counts are derived - below)
 docs/backlog/scenarios/closed.md    the closed row
 tests/tiers.py, tests/ci_reference.json   a new file's tier and CI seconds
 ```
+
+Two of those four have stopped being merge hotspots. `UX-501`: the
+index's counts sentence and topic table are **derived**, `dev_close_task
+--move` no longer writes them, and the recipe after merging tracks is
+
+```bash
+python tools/dev_close_task.py --check --write   # then commit
+```
+
+— never a hand-resolved count. `UX-503`: a new test file's row in
+`tests/ci_reference.json` is adopted by the default branch's own run,
+so no track writes it either. What is left to merge is the rows, and a
+row conflict is "keep both".
 
 A parallel track runs in its own worktree (the Agent tool's worktree
 isolation, or `git worktree add`), commits on its own branch, and

@@ -376,6 +376,15 @@ def test_no_table_is_split_by_a_blank_line():
     assert fragments == [], "split markdown table(s):\n  " + "\n  ".join(fragments)
 
 
+def _lint_recipe():
+    """`lint-docs`'s command line, out of the Makefile rather than
+    restated here - the point is that the two agree."""
+    body = (REPO / "Makefile").read_text(encoding="utf-8")
+    found = re.search(r"^lint-docs:\n((?:\t.*\n)+)", body, flags=re.M)
+    assert found, "no lint-docs recipe in the Makefile any more"
+    return found.group(1).replace("\t", "").replace("\\\n", " ")
+
+
 def test_scenario_filenames_are_zero_padded_so_they_sort():
     """Backlog filenames sort the way a reader expects in `ls`.
 
@@ -410,24 +419,30 @@ def test_the_docs_lint_scans_the_tree_it_names():
     Same shape as `UX-84` (a whole test tier gated on a binary CI did
     not have) and `UX-97` (a count grep anchored at a column the output
     never used): a gate that cannot fail, in a repository written as
-    though it holds. This pins the flag rather than the behaviour
-    because the behaviour is what the flag *is*.
+    though it holds.
+
+    `UX-509` replaced the walk with `git ls-files`, so there is no `-r`
+    to pin any more - and the behaviour is now checkable directly,
+    which is better than pinning the flag that used to stand for it.
+    The claim is unchanged: a document nested under each named root is
+    in the set the lint really receives.
     """
-    makefile = (REPO / "Makefile").read_text(encoding="utf-8")
-    lint_line = next(
-        line for line in makefile.splitlines() if "pymarkdown" in line and "scan" in line
-    )
-    assert " -r " in lint_line, (
-        "the docs lint must recurse, or it scans README.md and docs/README.md "
-        f"and nothing else: {lint_line.strip()}"
-    )
-    # And it must still name every root, so a future edit cannot narrow
-    # the scope by dropping one instead of the flag. `CLAUDE.md` and
-    # `REVIEW.md` joined the list when they were written: both steer an
-    # agent, so an unlinted one is the same hole in a newer place.
-    for root in ("README.md", "docs/", "CLAUDE.md", "REVIEW.md", ".claude/"):
-        assert root in lint_line, (
-            f"the docs lint no longer scans {root}: {lint_line.strip()}")
+    recipe = _lint_recipe()
+    listing = recipe.split("|", 1)[0]
+    files = subprocess.run(listing, shell=True, cwd=REPO,
+                           capture_output=True, text=True).stdout.split("\0")
+    files = [name for name in files if name]
+    assert len(files) > 100, (
+        f"the docs lint receives {len(files)} file(s) - it scanned two "
+        f"before UX-109 and that is the state this guard exists to catch")
+    # One *nested* document per root: a listing that reached only the
+    # top of each would pass a name check and be UX-109 again.
+    for deep in ("README.md", "CLAUDE.md", "REVIEW.md",
+                 "docs/backlog/scenarios/README.md",
+                 ".claude/skills/verify/SKILL.md"):
+        assert deep in files, (
+            f"the docs lint no longer reaches {deep}: it received "
+            f"{len(files)} file(s)")
 
 
 # `**Status:** 🟢 Done | ...` on the task file's header line, and the

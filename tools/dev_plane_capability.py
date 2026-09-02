@@ -1,59 +1,28 @@
 #!/usr/bin/env python3
-"""UX-470: what a plane can observe, against what it records.
+"""`UX-470`: what a plane can observe, against what it records.
 
-`UX-466`'s census answers "what the planes *do* capture and the trace
-drops". This one answers the half it declared and declined to guess at:
-**what the planes could capture and do not**. `UX-379` is why the gap
-is worth an instrument - the hook was already reading `rusage` fields
-it did not record, and a round found that by reading the source.
+    python3 tools/dev_plane_capability.py [--format json]
 
-How it avoids being a text scan
--------------------------------
-The Required Fix expects a scan and warns about it, because a text
-scan cannot tell code from prose (fixing guide §5). Almost none of
-this is one, because both sides can be *run*:
+`UX-466`'s census answers what the planes capture and the trace drops;
+this answers the half it declined to guess at. `UX-379` is why it is
+worth an instrument - the hook was already reading `rusage` fields it
+did not record.
 
-- **What the hook can observe** is the `struct rusage` this kernel
-  fills, read through CPython's `resource` module - the same struct
-  `hook.c` calls `getrusage` into, not a list of field names copied
-  out of a header.
-- **What the hook records** comes from compiling `hook.c` and running
-  a real process under it. The keys are read off the record it writes.
-- **Which symbols it interposes** is `nm -D` over that compiled
-  object - the dynamic symbol table, not a grep for `int open(`.
-- **What the spine can observe** is the `/proc/<pid>` fields this
-  kernel exposes for a live process, read here.
-- **What the spine records** comes from compiling `spine.c` and
-  tracing a real process with it.
+**Almost none of this is a text scan** (fixing guide §5), because both
+sides can be *run*: the observable side is this kernel's `struct
+rusage` and `/proc/<pid>`, read here; the recorded side comes from
+compiling `hook.c` and `spine.c` and running a real process under each;
+the interposed symbols are `nm -D` over the compiled object. The one
+declaration is the **name map** (`maxrss_kb` is `ru_maxrss`) - a
+mapping between two vocabularies that no measurement can supply, and
+`_check_map` fails loudly if it names a key the hook does not write.
 
-The one declaration this module holds is the **name map**: that the
-record's `maxrss_kb` is `ru_maxrss` and its `inblock` is `ru_inblock`.
-That is a mapping between two vocabularies and no measurement can
-supply it - so it is written down here, and every entry of it is
-checked against a real record (`_check_map`), which fails loudly if a
-key it names is not one the hook actually writes.
-
-The verdict a field can get
----------------------------
-- **recorded** - the record carries it.
-- **declined** - somebody looked at it and decided it should not be
-  recorded, with the reason in `DECLINED` beside it. The same shape
-  and the same argument as `dev_trace_coverage.DECLINED`: "nothing
-  records this" and "nothing records this on purpose" are different
-  answers, and telling them apart is the whole value of a census.
-- **gap** - this kernel maintains the field (the probe moved it) and
-  no record carries it. The output a round is meant to act on.
-- **unmaintained** - the probe below *exercised* the field and this
-  kernel left it at zero. Not a gap: Linux documents several `rusage`
-  fields as unmaintained, and a record for them would carry zeros.
-- **unexercised** - the probe does not try to move it, so this cannot
-  judge it. `ru_nswap` is the case: forcing a host to swap is not
-  something an instrument should do.
-
-Usage
------
-    python3 tools/dev_plane_capability.py
-    python3 tools/dev_plane_capability.py --format json
+A field's verdict is `recorded`, `declined` (with the reason beside it
+in `DECLINED` - "nothing records this" and "nothing records this on
+purpose" are different answers), `gap` (the round acts on these),
+`unmaintained` (this kernel leaves it at zero), or `unexercised` (the
+probe does not move it; `ru_nswap`, because forcing a host to swap is
+not something an instrument should do).
 """
 import argparse
 import json

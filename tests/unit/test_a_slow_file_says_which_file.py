@@ -28,6 +28,7 @@ import subprocess
 import sys
 
 import pytest
+import yaml
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
@@ -692,20 +693,37 @@ class TestEachComparisonRunsWhereItMeansSomething:
             step = text.split(where, 1)[1].split("\n\n", 1)[0]
             assert "pytest" not in step, (where, step)
 
+    #: Every mode of the tool that is *not* a comparison against the
+    #: developer floors. A step running it with none of these is the
+    #: defect `UX-418`'s three failures bought the distinction for.
+    MODES = ("--against", "--record", "--adopt")
+
     def test_ci_reads_the_reference_and_not_the_floors(self):
         """The distinction the three failures bought. A CI step reading
         the floors is the defect; a CI step reading the reference is the
-        fix, and they are one flag apart."""
-        text = self.WORKFLOW.read_text(encoding="utf-8")
-        runs = [line for line in text.splitlines()
-                if "dev_tier_drift.py" in line and not
-                line.strip().startswith("#")]
-        assert runs, "CI runs no drift check at all"
-        for line in runs:
-            assert "--against" in line or "--against" in text.split(
-                line, 1)[1].split("\n\n", 1)[0], (
-                f"a CI step reads the developer floors: {line.strip()!r} - "
-                f"see UX-418's outcome for the three ways that fails")
+        fix, and they are one flag apart.
+
+        `UX-503`: read per **step**, out of the parsed workflow. The
+        first version of this clause read line by line and asked whether
+        `--against` appeared in `text.split(line, 1)[1]` - and the two
+        steps that run the tool open with the *same* line, so `split`
+        cut at the first one and the `--record` step was checked against
+        the `--against` step's script. It passed for a step it never
+        read. Adding a third step with neither flag is what surfaced it.
+        """
+        steps = [step.get("run") or ""
+                 for job in yaml.safe_load(self.WORKFLOW.read_text(
+                     encoding="utf-8"))["jobs"].values()
+                 for step in job.get("steps") or []
+                 if "dev_tier_drift.py" in (step.get("run") or "")]
+        assert steps, "CI runs no drift check at all"
+        for script in steps:
+            assert [flag for flag in self.MODES if flag in script], (
+                f"a CI step reads the developer floors: {script.strip()!r} "
+                f"- see UX-418's outcome for the three ways that fails")
+        assert any("--against" in script for script in steps), (
+            "no CI step compares this run against the reference, so the "
+            "comparison UX-420 built is not running anywhere")
 
     def test_ci_writes_the_report_the_step_reads(self):
         text = self.WORKFLOW.read_text(encoding="utf-8")
@@ -850,9 +868,9 @@ class TestAnExcursionMustRepeat:
         # where agreement decides alone - `UX-442`'s rule, which this
         # clause is about. What agreement decides *with* a readable
         # diff is `TestAgreementIsNotEvidenceOnItsOwn` below.
-        assert drift.repeated([row], both) == ([row], [], []), (
+        assert drift.repeated([row], both) == ([row], [], [], []), (
             "a file every run behind this one found was not confirmed")
-        assert drift.repeated([row], gap) == ([], [], [row]), (
+        assert drift.repeated([row], gap) == ([], [], [row], []), (
             "one run in the history was enough to confirm, so the rule "
             "is 'ever' rather than 'consecutively'")
 
@@ -897,7 +915,7 @@ class TestAgreementIsNotEvidenceOnItsOwn:
     def test_the_untouched_file_is_not_confirmed(self):
         """The acceptance test's clause. The diff explains nothing, so
         two agreeing runs report and do not fail."""
-        confirmed, unexplained, waiting = drift.repeated(
+        confirmed, unexplained, waiting, _new = drift.repeated(
             [self.ROW], self.HISTORY, explained=set())
         assert confirmed == [], (
             "a file nothing in the diff names was confirmed as drift on "
@@ -909,7 +927,7 @@ class TestAgreementIsNotEvidenceOnItsOwn:
         than a wider gate. `UX-418`'s defect - a real tier change
         shipping unseen - stays caught, because a real tier change has a
         cause in the diff."""
-        confirmed, unexplained, _waiting = drift.repeated(
+        confirmed, unexplained, _waiting, _new = drift.repeated(
             [self.ROW], self.HISTORY, explained={self.NAME})
         assert confirmed == [self.ROW], (
             "a file the diff touches was not confirmed, so a real tier "
@@ -970,7 +988,7 @@ class TestAgreementIsNotEvidenceOnItsOwn:
         checkout, a failed fetch. Then the gate is exactly what UX-442
         left, because a gate that went quiet over its own missing
         evidence would be worse than one that reports."""
-        confirmed, unexplained, _waiting = drift.repeated(
+        confirmed, unexplained, _waiting, _new = drift.repeated(
             [self.ROW], self.HISTORY, explained=None)
         assert confirmed == [self.ROW], confirmed
         assert unexplained == []
@@ -1003,6 +1021,461 @@ class TestAgreementIsNotEvidenceOnItsOwn:
         held = drift.carried(path)
         assert [sorted(one) for one in held] == [[self.NAME]]
         assert drift.series(self.NAME, 1.66, held) == [1.66]
+
+
+class TestANewFileRecordsItselfRatherThanFailing:
+    """`UX-503`: a file the reference does not carry is not drift.
+
+    Counted from the log, rounds 66-73: of 162 commits since round 64,
+    **19** (12 %) were "CI: ... reaches the tier reference", a re-tier,
+    a reference refresh, or a backlog row for one. The mechanism was
+    working as designed - a new file over `MEDIUM_FLOOR_S` has no entry,
+    the drift step names it on the run after it lands, and the session
+    spends a second commit appending the row.
+
+    The judgement underneath was wrong, and it is the shape fixing guide
+    §5 names: the gate compared a file against a reference entry that
+    **does not exist**. There is no number for it to be slower than, so
+    "confirmed on one run" was never a measurement of drift; it was a
+    measurement of the reference's coverage. `UX-442`'s two-run rule
+    could not apply either, because a file absent from the reference is
+    absent on every run.
+
+    So the three input classes, and what each one does now:
+
+    - **absent** from the reference: recorded and printed, exit 0. The
+      row is written back by `--adopt` on the default branch.
+    - **present and slower**: unchanged - `UX-442`'s two runs and
+      `UX-476`'s diff evidence, and the second run reds.
+    - **present and gone** from this run: contributes nothing, which is
+      what makes a *rename* (one gone, one absent) a green run rather
+      than a red one over bookkeeping.
+    """
+
+    #: A **real** file in neither tier list, so the reference built from
+    #: `tiers.recorded()` does not carry it. Real because `measured`
+    #: resolves each classname against the filesystem and drops what it
+    #: cannot find - an invented name is not a new file to this tool, it
+    #: is no file at all, and the first writing of the clause below
+    #: passed on a report that named nothing.
+    NEW = SMALL_FILE
+
+    def _reference(self, tmp_path):
+        path = tmp_path / "ref.json"
+        path.write_text(json.dumps(drift.record(dict(tiers.recorded()))),
+                        encoding="utf-8")
+        return path
+
+    def _run(self, tmp_path, capsys, times, carry=True):
+        argv = [str(_report(tmp_path, times)),
+                "--against", str(self._reference(tmp_path))]
+        if carry:
+            argv += ["--carry", str(tmp_path / "carry.json")]
+        code = drift.main(argv)
+        said = capsys.readouterr()
+        return code, said.out + said.err
+
+    def test_the_first_run_meeting_a_new_file_is_green(self, tmp_path,
+                                                       capsys):
+        """The acceptance test's first half. One medium-tier file the
+        reference has never seen, and the run that measures it passes."""
+        times = dict(tiers.recorded())
+        times[self.NEW] = tiers.MEDIUM_FLOOR_S * 30
+        code, said = self._run(tmp_path, capsys, times)
+        assert code == 0, (
+            f"the run that first measured {self.NEW} failed over the "
+            f"reference not carrying it yet - which is UX-503's defect:\n"
+            f"{said}")
+
+    def test_the_run_after_it_lands_is_green_too(self, tmp_path, capsys):
+        """The run that actually reported it. A file absent from the
+        reference was `waiting` on its first run and **confirmed** on
+        its second - `UX-442`'s window closing on a comparison that has
+        no left-hand side. That second run is where the 19 commits came
+        from, and it is the clause the mutation below reddens."""
+        times = dict(tiers.recorded())
+        times[self.NEW] = tiers.MEDIUM_FLOOR_S * 30
+        self._run(tmp_path, capsys, times)
+        second, said = self._run(tmp_path, capsys, times)
+        assert second == 0, (
+            f"the second run confirmed {self.NEW} as slower than a "
+            f"reference entry it does not have - two runs agreeing about "
+            f"nothing is not evidence (UX-503):\n{said}")
+
+    def test_it_is_printed_rather_than_passed_over(self, tmp_path, capsys):
+        """Green is not the same as silent. A file nothing judges has to
+        say so on the run that meets it, or `--adopt` failing later
+        would leave it unjudged and unmentioned for good."""
+        times = dict(tiers.recorded())
+        times[self.NEW] = tiers.MEDIUM_FLOOR_S * 30
+        _code, said = self._run(tmp_path, capsys, times)
+        assert self.NEW in said, said
+        assert "does not carry yet" in said, said
+
+    def test_a_file_the_reference_holds_still_reds_on_the_second_run(
+            self, tmp_path, capsys):
+        """The acceptance test's second half, and the reason this is a
+        distinction and not a wider gate. `UX-418`'s defect - a real tier
+        change shipping unseen - stays caught."""
+        victim = tiers.LARGE[0]
+        times = dict(tiers.recorded())
+        times[victim] *= drift.CI_DRIFT_FACTOR + 0.5
+        first, _said = self._run(tmp_path, capsys, times)
+        second, said = self._run(tmp_path, capsys, times)
+        assert first == 0, first
+        assert second == 1, (
+            f"{victim} was over both gates on two consecutive runs and "
+            f"the run passed - UX-503 widened the gate instead of "
+            f"narrowing what it judges:\n{said}")
+        assert victim in said.split("slower than CI's own record", 1)[1]
+
+    def test_a_recorded_file_that_vanished_is_not_a_new_file(
+            self, tmp_path, capsys):
+        """The third class, and the one a rename produces. The old name
+        is in the reference and not in this run; the new name is in this
+        run and not in the reference. Neither is drift, and reading the
+        pair as one file that got slower - or as one that vanished - is
+        how a rename would cost a red run and a commit."""
+        times = dict(tiers.recorded())
+        gone = tiers.LARGE[0]
+        times[self.NEW] = times.pop(gone)
+        code, said = self._run(tmp_path, capsys, times)
+        assert code == 0, (f"a rename reddened the drift step:\n{said}")
+        assert gone not in said, (
+            f"{gone} is in the reference and not in this run, and the "
+            f"step named it anyway - a file this run did not measure "
+            f"cannot have drifted:\n{said}")
+
+    def test_the_split_happens_before_the_drift_decision(self):
+        """`repeated` directly, because the exit code above would pass
+        for the wrong reason: an absent row that reached `waiting` is
+        also a green run, and would red on the next one. The bucket is
+        the claim."""
+        absent = (self.NEW, 30.0, None, None)
+        present = ("tests/unit/test_emphasis_is_a_budget.py", 16.9,
+                   12.58, 1.66)
+        history = [{present[0]: 1.78}]
+        confirmed, unexplained, waiting, recorded = drift.repeated(
+            [absent, present], history, explained={present[0]})
+        assert recorded == [absent], (
+            "a file with no reference entry reached the drift decision, "
+            "where the only verdicts are 'slower than' a number it does "
+            "not have (UX-503)")
+        assert (confirmed, unexplained, waiting) == ([present], [], []), (
+            confirmed, unexplained, waiting)
+
+
+class TestTheReferenceAdoptsWhatItDoesNotCarry:
+    """`UX-503`'s other half: the row reaches the file without a commit.
+
+    Recording is only half an answer - a file the gate records and never
+    writes down is a file nothing ever judges, which is `UX-418`'s
+    silence back again one step along. `--adopt` runs on the default
+    branch after the merge, when the run has measured what is actually
+    there.
+    """
+
+    #: `adopt` reads two documents and never a report, so this one only
+    #: has to be absent from `tiers.recorded()`.
+    NEW = SMALL_FILE
+
+    def _pair(self, image=1.0, extra=None):
+        """A reference, and a candidate taken `image` times its clock."""
+        reference = drift.record(dict(tiers.recorded()), "the recording run")
+        times = {name: seconds * image
+                 for name, seconds in tiers.recorded().items()}
+        times.update(extra or {})
+        return reference, drift.record(times, "a later run")
+
+    def test_the_new_row_lands_on_the_reference_clock(self):
+        """Not the candidate's. A run 1.3x slow that wrote its raw
+        seconds would put the row 30 % high, and the file would be
+        unjudgeable against it for as long as the entry stood - the
+        cross-clock comparison UX-418 ruled out, arriving through the
+        back door."""
+        reference, candidate = self._pair(image=1.3,
+                                          extra={self.NEW: 40.0 * 1.3})
+        document, added = drift.adopt(reference, candidate)
+        assert set(added) == {self.NEW}, added
+        assert added[self.NEW] == pytest.approx(40.0, rel=0.02), (
+            f"the candidate's own seconds were written in: {added} - the "
+            f"reference now mixes two clocks (UX-418)")
+        assert document["files"][self.NEW] == added[self.NEW]
+
+    def test_an_entry_the_reference_holds_is_never_rewritten(self):
+        """The whole safety of running this unattended. Refreshing a
+        figure is a judgement about whether a file is *meant* to cost
+        what it now costs, and that is UX-447's human decision - this
+        step only adds names nothing has ever recorded."""
+        victim = tiers.LARGE[0]
+        reference, candidate = self._pair(extra={victim: 300.0,
+                                                 self.NEW: 40.0})
+        document, added = drift.adopt(reference, candidate)
+        assert set(added) == {self.NEW}, added
+        assert document["files"][victim] == reference["files"][victim], (
+            f"{victim} tripled in the candidate and the adopt step moved "
+            f"its reference entry - the gate can now raise its own "
+            f"ceiling with nobody deciding to (UX-447)")
+
+    def test_a_candidate_from_another_machine_is_refused(self):
+        """`against`'s `stale`, at write time. A candidate three times
+        the reference is not this runner, and rows divided by a shift
+        outside `IMAGE_BAND` would be placed on a clock that is about to
+        be replaced wholesale."""
+        reference, candidate = self._pair(image=3.0,
+                                          extra={self.NEW: 40.0 * 3})
+        document, added = drift.adopt(reference, candidate)
+        assert added == {}, added
+        assert document == reference
+
+    def test_two_documents_sharing_no_file_cannot_be_joined(self):
+        """There is no shift to divide by, so there is no honest number
+        to write. Refusing is the answer; guessing 1.0 would be the
+        cross-machine comparison again."""
+        reference = drift.record({"tests/unit/test_one.py": 10.0})
+        candidate = drift.record({"tests/unit/test_two.py": 10.0})
+        document, added = drift.adopt(reference, candidate)
+        assert added == {}, added
+        assert document == reference
+
+    def test_nothing_new_adds_no_row(self):
+        """The state every run after the first is in: `added` is empty,
+        because a run never *adds* a name the reference already has.
+
+        `UX-496` changed the other half. This used to assert the whole
+        document was untouched, so a step that rewrote it would commit
+        on every push; now every run leaves a **reading** on every file
+        it measured, and that accumulation is the point — a wholesale
+        `--record` happened twice in the reference's entire history, so
+        a document that only learned there would never hold more than
+        one reading of anything.
+        """
+        reference, candidate = self._pair()
+        document, added = drift.adopt(reference, candidate)
+        assert added == {}, added
+        assert document["files"].keys() == reference["files"].keys()
+        grew = [name for name, seen in document["samples"].items()
+                if len(seen) > len((reference.get("samples") or {}).get(name, []))]
+        assert grew, "no file gained a reading, so the entry stays one sample"
+
+    def test_the_adopted_rows_say_they_were_adopted(self):
+        """A reader comparing two entries deserves to know one of them
+        was placed on this clock by division rather than measured on it -
+        and the next wholesale `record` drops the key, because then
+        every row is measured again."""
+        reference, candidate = self._pair(extra={self.NEW: 40.0})
+        document, _added = drift.adopt(reference, candidate)
+        assert document["adopted"] == [self.NEW], document["adopted"]
+        assert "adopted" not in drift.record(dict(tiers.recorded()))
+
+    def test_a_run_with_no_candidate_is_not_a_failure(self, tmp_path,
+                                                      capsys):
+        """`always()` puts this job on runs whose `test` job died before
+        the record step. A bookkeeping job reddening the default branch
+        over a missing artifact buys nothing."""
+        code = drift.main(["--adopt", str(tmp_path / "nothing.json")])
+        assert code == 0, capsys.readouterr()
+        assert "no candidate" in capsys.readouterr().err
+
+
+class TestTheRunnerVerdictNeedsASeriesToo:
+    """`UX-508`: `stale` was the third one-sample verdict in this tool.
+
+    Round 75's fourth push went red with nothing in its diff that could
+    have caused it - a dev tool, a guard file, three documents:
+
+    ```text
+    run 33571888677, cdf912b, the record step's own spread block
+      "shift_files": 142,
+      "shift": 0.581          <- IMAGE_BAND is (0.6, 1.7)
+    ```
+
+    `spread`'s shift *is* `shift_of`, so the gate read `stale` and
+    exited 1. The three pushes before it were green and the reference
+    was recorded on an ordinary run (its own `spread.shift` is 1.069):
+    one runner ran the suite about 1.7x faster, and that single reading
+    failed the build.
+
+    `against`'s own docstring already says one run cannot decide -
+    *"whether that is drift or one slow afternoon needs the run before
+    it"* - and then the band was applied to one run anyway. `UX-442`
+    made that argument about a file and `UX-503` about an absent file;
+    this is the same argument about the runner.
+    """
+
+    def _reference(self, tmp_path):
+        path = tmp_path / "ref.json"
+        path.write_text(json.dumps(drift.record(dict(tiers.recorded()))),
+                        encoding="utf-8")
+        return path
+
+    def _run(self, tmp_path, capsys, image, carry=True):
+        """One CI run on a runner `image` times the reference's clock."""
+        times = {name: seconds * image
+                 for name, seconds in tiers.recorded().items()}
+        argv = [str(_report(tmp_path, times)),
+                "--against", str(self._reference(tmp_path))]
+        if carry:
+            argv += ["--carry", str(tmp_path / "carry.json")]
+        code = drift.main(argv)
+        said = capsys.readouterr()
+        return code, said.out + said.err
+
+    #: Half the reference's clock - well outside `IMAGE_BAND`'s 0.6, and
+    #: the direction the real failure came from.
+    FAST = 0.5
+
+    def test_one_fast_runner_does_not_fail_the_build(self, tmp_path,
+                                                     capsys):
+        """The acceptance test's first half, and the red this item was
+        filed on."""
+        code, said = self._run(tmp_path, capsys, self.FAST)
+        assert code == 0, (
+            f"one runner outside the band failed the build - the red "
+            f"UX-508 was filed for:\n{said}")
+        assert "one runner's afternoon" in said, said
+
+    def test_two_agreeing_runs_still_say_the_reference_is_stale(
+            self, tmp_path, capsys):
+        """The other half, so this is a distinction and not a wider
+        gate. A reference that really has stopped describing the runner
+        must still be reported, or `UX-420`'s comparison is off."""
+        first, _said = self._run(tmp_path, capsys, self.FAST)
+        second, said = self._run(tmp_path, capsys, self.FAST)
+        assert first == 0, first
+        assert second == 1, (
+            f"two consecutive runs agreed the reference does not "
+            f"describe this runner and nothing reported it:\n{said}")
+        assert "re-record" in said, said
+
+    def test_a_runner_that_recovers_breaks_the_chain(self, tmp_path,
+                                                    capsys):
+        """`UX-442`'s rule, on this quantity: two excursions with a
+        normal run between them are not two consecutive ones, and only
+        a carry written on the quiet run says so."""
+        self._run(tmp_path, capsys, self.FAST)
+        ordinary, _said = self._run(tmp_path, capsys, 1.0)
+        third, said = self._run(tmp_path, capsys, self.FAST)
+        assert ordinary == 0, ordinary
+        assert third == 0, (
+            f"the run between them was inside the band, so this is one "
+            f"excursion and not two in a row:\n{said}")
+
+    def test_without_a_carry_one_sample_still_decides(self, tmp_path,
+                                                     capsys):
+        """`UX-442` left this shape deliberately and it holds here: a
+        gate that went quiet because a flag was forgotten would be worse
+        than one that reports."""
+        code, said = self._run(tmp_path, capsys, self.FAST, carry=False)
+        assert code == 1, said
+        assert "re-record" in said, said
+
+    def test_the_shift_is_what_crosses_runs(self):
+        """`carry`/`shifted` directly. The exit code above would pass for
+        the wrong reason - a run that failed to write its shift also
+        never confirms, and would look like the fix working."""
+        import tempfile
+        with tempfile.TemporaryDirectory() as where:
+            path = pathlib.Path(where) / "carry.json"
+            drift.carry(path, {}, "probe", [], shift=0.58, shifts=[])
+            assert drift.shifted(path) == [0.58], drift.shifted(path)
+            assert drift.out_of_band(0.55, [0.58]) is True
+            assert drift.out_of_band(0.55, []) is False, (
+                "a run with no memory confirmed on its own reading")
+            assert drift.out_of_band(1.0, [0.58]) is False
+
+    def test_a_carry_from_before_this_change_has_no_shifts(self):
+        """CI restores the previous run's cache, which on the commit
+        this lands in was written without the key. No memory rather than
+        a crash, and the run after it decides alone."""
+        import tempfile
+        with tempfile.TemporaryDirectory() as where:
+            path = pathlib.Path(where) / "carry.json"
+            path.write_text(json.dumps({"runs": [{}], "measured_on": "old"}),
+                            encoding="utf-8")
+            assert drift.shifted(path) == []
+
+
+class TestEveryBranchOfTheMessageIsReached:
+    """`UX-508`'s own defect: a path no clause drove.
+
+    The suite was green here twice and CI raised, from `_against`:
+
+    ```text
+    2 file(s) over both gates on 2 consecutive runs, with nothing in
+    this branch's diff that names them (UX-476):
+    NameError: cannot access free variable 'series' where it is not
+    associated with a value in enclosing scope
+    ```
+
+    `UX-508` added `series = ", ".join(...)` inside the `stale` branch.
+    Python binds a name assigned anywhere in a function as local to the
+    **whole** function, so the nested `readings()` - which calls the
+    module-level `series()` - resolved to that local and found it
+    unassigned on every run that did not take the stale branch.
+
+    Nothing caught it because `TestAgreementIsNotEvidenceOnItsOwn` calls
+    `repeated` directly and `TestAnExcursionMustRepeat` never supplies a
+    `--base`, so `explained` is `None` there and every agreed row is
+    *confirmed*. The `unexplained` print - the one that calls
+    `readings()` - had no clause driving it through `main` at all.
+
+    So this drives each of `_against`'s three per-file messages once,
+    end to end. They are cheap; the branch that is never executed is the
+    one that ships a `NameError`.
+    """
+
+    FLAKY = "tests/unit/test_the_page_has_geometry.py"
+
+    def _run(self, tmp_path, capsys, times, base=None, carry=True):
+        reference = tmp_path / "ref.json"
+        reference.write_text(json.dumps(drift.record(dict(tiers.recorded()))),
+                             encoding="utf-8")
+        argv = [str(_report(tmp_path, times)), "--against", str(reference)]
+        if carry:
+            argv += ["--carry", str(tmp_path / "carry.json")]
+        if base:
+            argv += ["--base", base]
+        code = drift.main(argv)
+        said = capsys.readouterr()
+        return code, said.out + said.err
+
+    def _slower(self):
+        times = dict(tiers.recorded())
+        times[self.FLAKY] = times[self.FLAKY] * 2
+        return times
+
+    def test_the_waiting_message_prints(self, tmp_path, capsys):
+        """One run over both gates: `waiting`, and `say()` runs."""
+        code, said = self._run(tmp_path, capsys, self._slower())
+        assert code == 0, said
+        assert "on this run only" in said, said
+        assert self.FLAKY in said, said
+
+    def test_the_unexplained_message_prints(self, tmp_path, capsys):
+        """Two agreeing runs with a diff that names nothing: the branch
+        that raised in CI. `--base HEAD` on a clean tree is an empty
+        diff, which `explained_by` returns as an empty *set* - evidence
+        that explains nothing, rather than `None` for no evidence."""
+        times = self._slower()
+        self._run(tmp_path, capsys, times, base="HEAD")
+        code, said = self._run(tmp_path, capsys, times, base="HEAD")
+        assert code == 0, said
+        assert "nothing in this branch's diff that names them" in said, said
+        assert "readings:" in said, (
+            "the readings series never printed, so `readings()` - and the "
+            "module-level `series()` it calls - was not executed")
+        assert "x2.0" in said or "x1.9" in said, said
+
+    def test_the_confirmed_message_prints(self, tmp_path, capsys):
+        """Two agreeing runs with no `--base`: `explained` is None, so
+        agreement confirms and the failing message runs."""
+        times = self._slower()
+        self._run(tmp_path, capsys, times)
+        code, said = self._run(tmp_path, capsys, times)
+        assert code == 1, said
+        assert "slower than CI's own record" in said, said
+        assert self.FLAKY in said, said
 
 
 class TestTheSpreadIsTheShiftTheGateUses:
@@ -1279,3 +1752,243 @@ class TestTheToolIsRunnable:
 
 if __name__ == "__main__":  # pragma: no cover
     raise SystemExit(pytest.main([__file__, "-v"]))
+
+
+class TestTheGateLineReachesALogTail:
+    """`UX-491`: every return of `_against` leaves its line in a file.
+
+    The gate prints its summary two steps and one ~400-line collapsed
+    document before the end of the job, and a client that can only read
+    a bounded log tail gets the document and not the line. `UX-488` had
+    to take its pairing from the previous run and said so.
+
+    `--summary PATH` is the route: the gate writes the line it printed,
+    and the candidate step prints that file after its `::endgroup::`, so
+    the shift and the spread recorded against it are adjacent in the
+    tail. The line stays the **gate's** - recomputing it in the later
+    step would make the two numbers agree by construction (§5).
+
+    So the claim here is the one that can fail: not that some branch
+    writes a summary, but that *no* return path leaves the file absent.
+    """
+
+    OFF = "tests/unit/test_the_page_has_geometry.py"
+
+    def _run(self, tmp_path, capsys, times, reference=None, carry=None,
+             tag="s"):
+        ref = tmp_path / f"ref-{tag}.json"
+        ref.write_text(json.dumps(
+            drift.record(dict(tiers.recorded())) if reference is None
+            else reference), encoding="utf-8")
+        summary = tmp_path / f"gate-{tag}.txt"
+        argv = [str(_report(tmp_path, times)), "--against", str(ref),
+                "--summary", str(summary)]
+        if carry:
+            argv += ["--carry", str(carry)]
+        code = drift.main(argv)
+        capsys.readouterr()
+        return code, summary
+
+    def _scaled(self, factor, flaky=1.0):
+        times = {name: seconds * factor
+                 for name, seconds in tiers.recorded().items()}
+        times[self.OFF] = times[self.OFF] * flaky
+        return times
+
+    def test_an_unrecorded_reference_still_leaves_a_line(self, tmp_path,
+                                                         capsys):
+        code, summary = self._run(tmp_path, capsys, self._scaled(1.0),
+                                  reference={}, tag="blank")
+        assert code == 0
+        assert "holds no recorded numbers yet" in summary.read_text()
+
+    def test_a_reference_naming_nothing_still_leaves_a_line(self, tmp_path,
+                                                            capsys):
+        code, summary = self._run(
+            tmp_path, capsys, self._scaled(1.0), tag="none",
+            reference={"measured_on": "elsewhere",
+                       "files": {"tests/unit/test_not_here.py": 1.0}})
+        assert code == 2
+        assert "names none of the" in summary.read_text()
+
+    def test_a_stale_runner_with_no_memory_still_leaves_a_line(self,
+                                                              tmp_path,
+                                                              capsys):
+        code, summary = self._run(tmp_path, capsys, self._scaled(3.0),
+                                  carry=tmp_path / "carry-one.json",
+                                  tag="stale1")
+        assert code == 0
+        said = summary.read_text()
+        assert "outside the band" in said and "nothing was failed" in said
+
+    def test_a_stale_runner_that_repeated_still_leaves_a_line(self,
+                                                              tmp_path,
+                                                              capsys):
+        carry = tmp_path / "carry-two.json"
+        times = self._scaled(3.0)
+        self._run(tmp_path, capsys, times, carry=carry, tag="stale2a")
+        code, summary = self._run(tmp_path, capsys, times, carry=carry,
+                                  tag="stale2b")
+        assert code == 1
+        said = summary.read_text()
+        assert "outside the band" in said and "so were the run(s)" in said
+
+    def test_an_ok_run_still_leaves_a_line(self, tmp_path, capsys):
+        code, summary = self._run(tmp_path, capsys, self._scaled(1.0),
+                                  tag="ok")
+        assert code == 0
+        assert summary.read_text().startswith("tiers ok: ")
+
+    def test_a_file_waiting_for_a_second_run_still_leaves_a_line(self,
+                                                                 tmp_path,
+                                                                 capsys):
+        code, summary = self._run(tmp_path, capsys,
+                                  self._scaled(1.0, flaky=2.0),
+                                  carry=tmp_path / "carry-wait.json",
+                                  tag="wait")
+        assert code == 0
+        assert summary.read_text().startswith("tiers ok: ")
+
+    def test_a_confirmed_file_still_leaves_a_line(self, tmp_path, capsys):
+        carry = tmp_path / "carry-red.json"
+        times = self._scaled(1.0, flaky=2.0)
+        self._run(tmp_path, capsys, times, carry=carry, tag="red-a")
+        code, summary = self._run(tmp_path, capsys, times, carry=carry,
+                                  tag="red-b")
+        assert code == 1
+        said = summary.read_text()
+        assert "file(s) measured against" in said
+        assert self.OFF in said, said
+
+    def test_the_line_carries_the_shift_the_gate_printed(self, tmp_path,
+                                                         capsys):
+        """The pairing `UX-488` could not make: the printed shift and
+        the recorded spread must be the same run's, so the line has to
+        carry a shift at all."""
+        code, summary = self._run(tmp_path, capsys, self._scaled(1.3),
+                                  tag="shift")
+        assert code == 0
+        assert re.search(r"this run x1\.3\d", summary.read_text()), (
+            summary.read_text())
+
+    def test_no_summary_asked_for_writes_no_file(self, tmp_path, capsys):
+        """`--summary` is opt-in: a local run leaves nothing behind."""
+        ref = tmp_path / "ref-opt.json"
+        ref.write_text(json.dumps(drift.record(dict(tiers.recorded()))),
+                       encoding="utf-8")
+        assert drift.main([str(_report(tmp_path, self._scaled(1.0))),
+                           "--against", str(ref)]) == 0
+        capsys.readouterr()
+        assert not list(tmp_path.glob("gate-*.txt"))
+
+
+class TestAReferenceEntryIsMoreThanOneSample:
+    """`UX-496`: one afternoon set the number a later run was judged by.
+
+    `UX-488` refreshed the reference wholesale from one run — the
+    documented route — and froze whichever end of each file's range that
+    run happened to hit. The two cases the row names are the test set
+    here, with their real readings:
+
+    ```text
+    test_why_bga_believes_what_it_believes.py   12.8  8.19  12.81  13.62
+    test_emphasis_is_a_budget.py               15.66 15.52  36.34  15.22
+    ```
+
+    The first is a **bad entry**: four of five runs read 12.8-13.6 and
+    the reference said 8.19, so the next run went red on a
+    documentation-only commit — correctly, against a number that was
+    never representative. The second is an **excursion**: the file came
+    back to its own level and the 36.34 stands alone.
+
+    Nothing in the pipeline told them apart, because both are one
+    number against one number. `samples` is the distinction: `files` is
+    the median of the last `CI_REFERENCE_SAMPLES`, and a file must beat
+    the **top of its own readings** as well as the two gates.
+    """
+
+    BAD = "tests/unit/test_why_bga_believes_what_it_believes.py"
+    SPIKE = "tests/unit/test_emphasis_is_a_budget.py"
+
+    def _grown(self, readings):
+        """A reference that has seen `readings` of each named file, the
+        rest of the suite steady so every run's shift is 1.0."""
+        steady = {f"tests/unit/test_steady_{i}.py": 2.0 + i * 0.5
+                  for i in range(30)}
+        document = None
+        for run in range(len(next(iter(readings.values())))):
+            times = dict(steady)
+            times.update({name: seen[run] for name, seen in readings.items()})
+            document = drift.record(times, f"run{run}", document)
+        return document, steady
+
+    def test_the_entry_is_the_median_not_the_last_run(self):
+        document, _ = self._grown({self.BAD: [12.8, 8.19, 12.81, 13.62]})
+        assert document["samples"][self.BAD] == [12.8, 8.19, 12.81, 13.62]
+        assert document["files"][self.BAD] == 12.8, (
+            f"the entry is {document['files'][self.BAD]}, so the outlier is "
+            f"still what a later run is read against")
+
+    def test_one_excursion_does_not_set_the_entry(self):
+        document, _ = self._grown({self.SPIKE: [15.66, 15.52, 36.34, 15.22]})
+        assert document["files"][self.SPIKE] == 15.52, document["files"][self.SPIKE]
+
+    def test_a_file_repeating_its_own_range_is_not_reported(self):
+        """The excursion case, read back: the run that spikes again is
+        inside what this file has already read, so it is a wide range
+        and not a change."""
+        document, steady = self._grown({self.SPIKE: [15.66, 15.52, 36.34, 15.22]})
+        times = dict(steady, **{self.SPIKE: 36.0})
+        verdict, _shift, rows = drift.against(times, document)
+        assert verdict == "ok", [row[0] for row in rows]
+
+    def test_a_file_that_has_never_moved_is_still_reported(self):
+        """And the other direction, which is what the clause above must
+        not cost: a file whose readings sit inside a few per cent and
+        which now doubles is a change, and reports."""
+        steady = {f"tests/unit/test_steady_{i}.py": 2.0 + i * 0.5
+                  for i in range(30)}
+        document = None
+        for run in range(4):
+            document = drift.record(dict(steady), f"run{run}", document)
+        subject = "tests/unit/test_steady_29.py"
+        times = dict(steady, **{subject: steady[subject] * 2.2})
+        verdict, _shift, rows = drift.against(times, document)
+        assert verdict == "drift" and rows[0][0] == subject, rows
+
+    def test_the_window_is_bounded(self):
+        readings = {self.BAD: [10.0] * (drift.CI_REFERENCE_SAMPLES + 3)}
+        document, _ = self._grown(readings)
+        assert len(document["samples"][self.BAD]) == drift.CI_REFERENCE_SAMPLES
+
+    def test_a_carried_reading_is_put_on_this_runs_clock(self):
+        """A list that mixed two runners' clocks is `UX-418`'s defect
+        inside a key. The rebase is the shift between the documents."""
+        steady = {f"tests/unit/test_steady_{i}.py": 2.0 + i * 0.5
+                  for i in range(30)}
+        first = drift.record(dict(steady), "run0")
+        slower = {name: seconds * 2.0 for name, seconds in steady.items()}
+        second = drift.record(slower, "run1", first)
+        seen = second["samples"]["tests/unit/test_steady_29.py"]
+        assert seen == [round(steady["tests/unit/test_steady_29.py"] * 2.0, 2),
+                        round(slower["tests/unit/test_steady_29.py"], 2)], seen
+
+    def test_a_shift_no_population_supports_drops_the_carried_readings(self):
+        """`SHIFT_MIN_FILES` exists because a median over a handful is
+        not a shift. A list nobody can rebase is worse than one reading,
+        so it is dropped rather than multiplied by a guess."""
+        thin = {"tests/unit/test_a.py": 10.0, "tests/unit/test_b.py": 2.0}
+        first = drift.record(dict(thin), "run0")
+        second = drift.record({"tests/unit/test_a.py": 30.0,
+                               "tests/unit/test_b.py": 2.0}, "run1", first)
+        assert second["samples"]["tests/unit/test_a.py"] == [30.0]
+
+    def test_adopt_leaves_a_reading_on_a_file_it_did_not_add(self):
+        """Where the samples actually come from: two wholesale records
+        in the reference's whole history, against one adopt per merge."""
+        steady = {f"tests/unit/test_steady_{i}.py": 2.0 + i * 0.5
+                  for i in range(30)}
+        reference = drift.record(dict(steady), "recorded")
+        document, added = drift.adopt(reference, drift.record(dict(steady), "ci"))
+        assert added == {}
+        assert len(document["samples"]["tests/unit/test_steady_29.py"]) == 2

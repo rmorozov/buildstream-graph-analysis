@@ -1,6 +1,6 @@
 # UX-492: the README's "verbatim" real-project block prints a sentence the tool can no longer produce
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** `UX-475` changed the sentence | **Found by:** architecture review 10 | **Serves:** the outside reader whose first sight of `bga` is a block that says "verbatim" and is not | **Topic:** docs
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-475` changed the sentence | **Found by:** architecture review 10 | **Serves:** the outside reader whose first sight of `bga` is a block that says "verbatim" and is not | **Topic:** docs
 
 ## Motivation
 
@@ -82,4 +82,73 @@ claims the block is current output.
 
 ## Outcome
 
-_Not started._
+**Round 75, 2026-09-02.** A parallel `implementer` track; merged here.
+
+**Which branch, and why.** The round recorded the gap before the work
+started: re-running the capture needs a 3614-second build neither this
+container nor CI can perform, so the fix is the second branch the
+Required Fix names. Nothing below is a synthesized stand-in — every
+restored line is quoted from the *same run's* fuller block in
+`docs/guides/real-project.md`:415-432.
+
+**The archaeology.** `git log --follow -p -- README.md` reaches six
+commits; the history is truncated at root `bc15935`, which added
+`README.md` whole, so the commit that introduced the block is not in
+it. What the history does show is `717f734` (`UX-365`) hand-patching
+one label *inside* the block:
+
+```diff
+-  Biggest Opportunity: this build is execution-bound - no wait category
++  Biggest wait category: this build is execution-bound - no wait category
+```
+
+So the block is a hand-patched relic, not a re-render. The run itself
+is recoverable from this repository's own records and that is what the
+README now names: capture run `32064333551`, `freedesktop-sdk` at
+`953683fb`, ref `captures/fdsdk/953683fb-incremental-b4j4-32064333551`,
+header timestamp 2026-08-17 20:15:03 UTC, wall clock 3614.22s.
+
+**The rest of the block, checked — the half the review skipped.**
+Sixteen rows audited against the emitter. Four sentences were **missing
+and have been restored** (`-> these elements must get faster…`,
+`- the last of those leaves 72%…`, the truncated `Waiting off the
+critical path` title, the `(structural projections…)` note); the
+ordered list had its uids **shortened to basenames** and now carries
+what the emitter prints; three findings the block predates entirely
+(`UX-207`'s headline, `UX-478`, `UX-479`) and everything below Key
+Findings are now marked `[... elided ...]` rather than cut silently.
+One line — the `Note: 77% of elements have zero slack …` mesh sentence
+— **no emitter can produce today**: both branches now append
+`, N of them off the critical path` or `, all on the critical path`.
+It is kept, dated, and named in the new intro, which also says the
+block is wrapped to the page width rather than emitter output.
+
+**Mutations.** `PYTHONDONTWRITEBYTECODE=1`; clean re-run 6 passed.
+
+| # | mutation | reddened | count |
+|---|---|---|---|
+| 1 | intro says "cut where marked, verbatim" | `..._does_not_call_the_block_verbatim` | 1 failed, 5 passed |
+| 2 | the `Note:` line replaced with today's mesh sentence | `..._one_no_emitter_can_produce` | 1 failed, 5 passed |
+| 3 | linked run id changed, ref left alone | `..._are_the_same_run` | 1 failed, 5 passed |
+| 4 | `captured 2026-08-17 by run` → `captured by run` | `..._and_the_day_it_ran` | 1 failed, 5 passed |
+| 5 | `UX-475` → `UX-9475` | `..._is_a_task_that_exists` | 1 failed, 5 passed |
+| 6 | `_normalise` truncated at `"zero slack"` | 2 clauses | 2 failed, 4 passed |
+
+**Deviation from the Required Fix: one, and it is the finding.** The
+Decomposition named three existing guards; **none of them reads this
+section** — `test_the_readme_block_is_the_real_output.py` indexes from
+`## Quick start`, `test_the_front_door_is_current.py` checks subcommand
+and schema inventories, `test_docs_examples.py` runs the Quick start
+command. So `test_the_real_project_block_is_dated.py` is new, and the
+round's declared guard list asserted a coverage that did not exist.
+(`test_capture_ref_patterns.py` *did* pick the new ref token up on its
+own, and is not duplicated.) The README is now 323 lines and `UX-135`'s
+budget annotation states it.
+
+**Debt filed, not fixed:** `docs/guides/real-project.md` carries the
+same retired `Note:` line, the pre-`UX-365` label, prose teaching the
+retired reading as current, and an appendix asserting the figures are
+"analysed with the current code" — `UX-511`, §3.11.
+
+**Tier.** New file, 0.59s, two `bga analyze` subprocesses — small by
+default, no `tiers.py` row.

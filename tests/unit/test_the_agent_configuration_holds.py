@@ -271,10 +271,19 @@ class TestClaudeMdIsTrueAndShort:
             f"every close - the count decays on its own, and `UX-471` "
             f"removed the last one rather than guard it")
 
-    def test_it_points_at_the_guide_rather_than_restating_it(self):
+    def test_it_points_at_the_card_rather_than_restating_it(self):
         """`UX-240`'s rule for skills, and it holds here for the same
-        reason: two copies of one rule is how the copies disagree."""
+        reason: two copies of one rule is how the copies disagree.
+
+        `UX-505` made the card the entry point, so this asserts the
+        card. The guide is still named — for the argument behind a rule
+        — but a session that reads only what `CLAUDE.md` sends it to
+        must land on the rules, not on 34 KB of the incidents that
+        produced them.
+        """
         text = self._text()
+        assert "docs/contributing/rules.md" in text, (
+            "CLAUDE.md does not send a session to the rules card")
         assert "docs/contributing/fixing-guide.md" in text
         assert len(text.splitlines()) < len(
             (REPO / "docs/contributing/fixing-guide.md").read_text(
@@ -356,16 +365,85 @@ class TestTheSubagentsAreWellFormed:
             declared = re.search(r"^name:\s*(\S+)", head, re.M).group(1)
             assert declared == path.stem, (path.name, declared)
 
-    def test_neither_can_edit_the_tree(self):
-        """Both are read-and-report. A verifier that could fix what it
-        found would be judging its own work, which is the one thing it
-        exists not to do."""
+    #: `UX-504`: the one agent that may edit, and the four files no
+    #: track writes. Named here rather than "everything except the
+    #: implementer", so adding a third editing agent is a decision
+    #: somebody makes in this list.
+    MAY_EDIT = {"implementer"}
+
+    #: The agents whose whole job is to read and report, named. Without
+    #: this the clause below reads "whoever is not on the editing list",
+    #: and widening that list would exempt them silently - which is what
+    #: `UX-504`'s fifth mutation did while every clause stayed green.
+    REPORTERS = {"researcher", "verifier"}
+    SHARED = ("docs/backlog/scenarios/README.md",
+              "docs/backlog/scenarios/closed.md",
+              "tests/tiers.py",
+              "tests/ci_reference.json")
+
+    def test_a_reporting_agent_cannot_edit_the_tree(self):
+        """A verifier that could fix what it found would be judging its
+        own work, which is the one thing it exists not to do; a
+        researcher that could edit is no longer reading."""
         for path in self._files():
+            if path.stem in self.MAY_EDIT:
+                continue
             head = _FRONTMATTER.match(path.read_text(encoding="utf-8")).group(1)
             tools = re.search(r"^tools:\s*(.+)$", head, re.M).group(1)
             for forbidden in ("Edit", "Write", "MultiEdit", "NotebookEdit"):
                 assert forbidden not in tools, (
-                    f"{path.name} may use {forbidden}; both agents report only")
+                    f"{path.name} may use {forbidden}; a reporting agent "
+                    f"reports only")
+
+    def test_a_reporter_is_never_put_on_the_editing_list(self):
+        """`UX-504`. The split is a *role*, not an exemption: a verifier
+        that could fix what it found would judge its own work, and
+        that must not become true by editing one set in this file. Each
+        reporter's body says so too, so the classification cannot be
+        dodged by rewording either end alone."""
+        assert self.MAY_EDIT.isdisjoint(self.REPORTERS), (
+            f"{sorted(self.MAY_EDIT & self.REPORTERS)} may edit, and they "
+            f"are the agents that exist to report")
+        said = ("report only", "fix nothing", "do not edit")
+        for name in sorted(self.REPORTERS):
+            body = (AGENTS / f"{name}.md").read_text(encoding="utf-8").lower()
+            assert any(one in body for one in said), (
+                f"{name}.md no longer says it does not edit, so nothing but "
+                f"this file's own list keeps it from doing so. The three "
+                f"phrasings above are the ones the bodies carry; a fourth "
+                f"is a decision, not a pattern to lengthen")
+
+    def test_the_implementer_may_edit(self):
+        """`UX-504`. Without this the split reads as an exemption rather
+        than a role: an implementer whose tools were trimmed back to
+        read-only would satisfy every other clause here and silently
+        stop being able to run a track."""
+        head = _FRONTMATTER.match(
+            (AGENTS / "implementer.md").read_text(encoding="utf-8")).group(1)
+        tools = re.search(r"^tools:\s*(.+)$", head, re.M).group(1)
+        for needed in ("Edit", "Write"):
+            assert needed in tools, (
+                f"implementer.md cannot {needed}, so it cannot run a track")
+
+    def test_the_implementer_says_where_it_runs(self):
+        """Its editing is bounded by *where* it runs, not by what it
+        promises. A body that does not say so is one an orchestrator
+        might launch in the tree itself."""
+        body = (AGENTS / "implementer.md").read_text(encoding="utf-8")
+        assert "worktree" in body, (
+            "implementer.md does not say it runs in a worktree, which is "
+            "the whole bound on its editing (UX-504)")
+
+    def test_the_implementer_names_the_files_no_track_touches(self):
+        """`UX-501` measured the collision: two branches each closing one
+        item conflicted on the topic table and silently auto-merged the
+        counts sentence to a number neither meant. The four are named in
+        the body because an agent reads its body, not this file."""
+        body = (AGENTS / "implementer.md").read_text(encoding="utf-8")
+        missing = [name for name in self.SHARED if name not in body]
+        assert missing == [], (
+            f"implementer.md does not tell the track to leave {missing} "
+            f"alone - the files every track collides on (UX-501, UX-503)")
 
     def test_the_verifier_says_it_does_not_fix(self):
         body = (AGENTS / "verifier.md").read_text(encoding="utf-8")
@@ -578,3 +656,93 @@ class TestTheCiFirstAdviceStaysTrue:
         assert "draft" not in rules.lower(), (
             "the PR-first loop was promoted into the hard rules; it has "
             "not been measured against the alternative even once")
+
+
+class TestTheRulesCardIsTheEntryPoint:
+    """`UX-505`: the rules on one page, the incidents behind it.
+
+    The fixing guide opens with "if you have limited context budget:
+    read only this file" and is 34,400 bytes — the file *is* the
+    budget. Every rule is stated once and then argued with the incident
+    that produced it, which is why the rules are trusted and also why a
+    session paid 34 KB to learn twelve of them.
+
+    Split by register: the card carries the rules, the guide keeps every
+    incident. So the card has two ways to rot — it can grow back into a
+    second guide, and it can carry a rule the guide does not argue —
+    and one clause each.
+    """
+
+    CARD = REPO / "docs/contributing/rules.md"
+    GUIDE = REPO / "docs/contributing/fixing-guide.md"
+
+    #: The card's budget. Not "smaller than the guide" - that would let
+    #: it reach 300 lines and still pass, which is the state this item
+    #: is about.
+    CAP = 80
+
+    def test_the_card_stays_a_card(self):
+        lines = self.CARD.read_text(encoding="utf-8").splitlines()
+        assert len(lines) <= self.CAP, (
+            f"{self.CARD.name} is {len(lines)} lines, cap is {self.CAP} - "
+            f"a card that grows back into a guide is a second guide, and "
+            f"two copies of a rule is how the copies disagree")
+
+    def test_it_is_a_fraction_of_what_it_replaces(self):
+        """The measurement the filing asks for, as a property: what a
+        session reads first is a small multiple smaller than the
+        argument behind it. Ten is not a magic number - it is the order
+        of magnitude that makes reading the card first worth doing."""
+        card, guide = (len(p.read_bytes()) for p in (self.CARD, self.GUIDE))
+        assert card * 5 < guide, (
+            f"the card is {card} B against the guide's {guide} B; at that "
+            f"ratio a session may as well read the guide")
+
+    def test_every_section_of_the_card_names_the_guide_section(self):
+        """The card cannot carry a rule the guide does not argue. Read
+        per **section**, because the rule sentences are deliberately
+        rewritten short - a clause matching sentences would be asserting
+        the card is a copy, which is the thing it must not be."""
+        import re
+        text = self.CARD.read_text(encoding="utf-8")
+        cited = set()
+        for heading in re.findall(r"^## .*$", text, re.M):
+            cited.update(re.findall(r"§(\d+[a-z]?)", heading))
+        assert cited, "no section of the card names a guide section"
+        headings = self.GUIDE.read_text(encoding="utf-8")
+        for section in sorted(cited):
+            assert re.search(rf"^## {re.escape(section)}\.", headings, re.M), (
+                f"the card cites the guide's §{section} and the guide has "
+                f"no such section - the card is carrying a rule nothing "
+                f"argues")
+
+    def test_the_guide_says_the_card_is_the_entry_point(self):
+        """Otherwise a session that opens the guide first - which is
+        what every document still linking to it does - never learns the
+        card exists."""
+        head = "\n".join(self.GUIDE.read_text(encoding="utf-8").splitlines()[:12])
+        assert "rules.md" in head, (
+            "the guide's opening does not send a reader to the card")
+
+    def test_the_card_names_a_guard_for_the_rules_that_have_one(self):
+        """A rule with no guard is a rule kept by attention alone, and
+        the card is where that is visible. Not every rule can have one -
+        "never widen scope" is judgement - so this asserts the column is
+        populated rather than full.
+
+        Reads the **rule** tables only, by their two columns. The first
+        writing counted every row on the page, and the §6a stream table
+        has a third column of prose that is never empty: emptying every
+        real guard cell left it green, on eight rows that are not rules
+        at all.
+        """
+        rows = [line for line in self.CARD.read_text(encoding="utf-8")
+                .splitlines()
+                if line.startswith("| ") and line.count("|") == 3
+                and "---" not in line]
+        assert len(rows) > 20, f"the card has {len(rows)} rule rows"
+        guarded = [row for row in rows
+                   if row.split("|")[2].strip() not in ("", "-", "—", "guard")]
+        assert len(guarded) >= 8, (
+            f"only {len(guarded)} of {len(rows)} rule rows name a guard; "
+            f"the column is what makes an unguarded rule visible")

@@ -141,13 +141,15 @@ class TestTheFlagChangesWhatIsServed:
 
 
 _PROBE = """
-globalThis._makeNode ??= (await import(process.env.BGA_DOM_SHIM)).makeNode;
-const slot = _makeNode("p");
+// `UX-537`: the shared shim with one override, not a hand-built
+// document. The override is the whole of what this harness needs
+// that the shim's defaults do not give it: one slot to draw into.
+const shim = await import(process.env.BGA_DOM_SHIM);
+const slot = shim.makeNode("p");
 slot.hidden = true;
-globalThis.document = { createElement: _makeNode,
-                        createElementNS: (_n, t) => _makeNode(t),
-                        getElementById: (id) => id === "run-producer"
-                          ? slot : null };
+shim.installDocument({
+  getElementById: (id) => (id === "run-producer" ? slot : null),
+});
 const app = await import("./tests/viewer.mjs");
 
 const STALE = { source: "capture", stored_producer: "0.2.9",

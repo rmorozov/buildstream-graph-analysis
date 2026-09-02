@@ -176,10 +176,12 @@ class TestTheLadder:
 
 
 _PROBE = """
-globalThis._makeNode ??= (await import(process.env.BGA_DOM_SHIM)).makeNode;
-globalThis.document = { createElement: _makeNode,
-                        createElementNS: (_n, t) => _makeNode(t),
-                        getElementById: () => null };
+// `UX-537`: the shared shim, not a hand-built document. This harness
+// needs nothing the shim's defaults do not already give it; `makeNode`
+// is the shim's own, which `renderQuestions` takes as its factory.
+const shim = await import(process.env.BGA_DOM_SHIM);
+shim.installDocument();
+const _makeNode = shim.makeNode;
 const app = await import("./tests/viewer.mjs");
 
 const text = (n) => !n ? "" : ((n.children ?? []).length

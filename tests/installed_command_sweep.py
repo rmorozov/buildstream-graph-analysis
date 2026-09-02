@@ -195,6 +195,13 @@ def invocations(fx: Fixtures):
         "cache-trend": (OK, ["cache-trend", run]),
         "sweep": (OK, ["sweep", run]),
         "blast": (OK, ["blast", fx.element, run]),
+        # `UX-520`. The round trip is the command: pack the store's
+        # snapshot, then read the archive back. `--load` into a fresh
+        # project is the half that can refuse, and refusing is what
+        # this sweep would otherwise never reach.
+        "bundle": (OK, ["bundle", "--export", "@last",
+                        "--project", str(fx.store),
+                        "-o", str(fx.out / "carry.tar.gz")]),
 
         # --- the viewer axis, which no installed-mode step ran -------
         "view": (OK, ["view", run, "--no-browser",

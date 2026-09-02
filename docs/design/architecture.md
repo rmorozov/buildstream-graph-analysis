@@ -994,6 +994,26 @@ keeps two hand-maintained copies of one fact together.
 
 ## Verification Log
 
+Updated 2026-09-02 (after `UX-535`), re-grounded in the contracts
+table above against `bga.contracts`'s derived inventory — **23 ids, 9
+of them marked superseded**, 8 printable and 15 not — and the keys
+`bga analyze --schema` prints: **56 top-level properties**, unchanged,
+because round 80's move was a removal *and* a re-read, not an addition.
+
+Round 80 changed this document in three places, each the table that
+already owned the fact. The CLI table gained `bga bundle` (`UX-520`):
+the capture-layout set as one archive, with a manifest that lets the
+receiving side refuse a bundle from a newer `bga` rather than half-read
+it. The contracts table gained `bundle-manifest/v1` for that manifest,
+and moved `analyze` to **v5** (`UX-535`) — `graph_summary` published
+three facts it took from the same `StructuralMetrics` object
+`graph_metrics` publishes, so three removals, and `analyze/v4` joins
+the read-never-written rows below it. The viewer chapter is unchanged:
+`bga/viewer/` is still **22 modules** and the table still names all of
+them, which `test_the_viewer_modules_have_a_home.py` holds both ways.
+
+The round-73 grounding, kept for what it settled:
+
 Updated 2026-09-01 (after `UX-472`), re-grounded in the contracts
 table above against `bga.contracts`'s derived inventory — **21 ids, 8
 of them marked superseded**, 8 printable and 13 not — and the keys

@@ -180,6 +180,8 @@ bga/cache_trend.py     a series of runs, not a pair
 bga/cache_effectiveness.py  the cache's own numbers
 bga/store_aggregate.py the store as a distribution, per host class (UX-234)
 bga/run_store.py       .bga/runs, the @last/@prev aliases, prune
+bga/bundle.py          a capture packed to carry, and what the far
+                       side refuses to half-read (UX-520)
 bga/sources.py         the source inventory and resource identity
 bga/plane2.py          what a Plane 2 report is, and which shape one is
 bga/hostinfo.py        the host manifest; the cross-host refusal

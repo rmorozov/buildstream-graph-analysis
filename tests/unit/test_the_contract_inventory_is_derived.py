@@ -74,9 +74,11 @@ class TestTheInventoryIsComplete:
         # `host-samples/v1` is written by a module in `tools/` that the
         # package walk cannot see - `run_store.OWNED` names it, which
         # is how it reached this list at all.
+        # `UX-520` added `bundle-manifest/v1`: it is written into the
+        # archive a bundle is, and no command prints it.
         assert contracts.unprintable() == [
             "analyze/v2", "analyze/v3", "analyze/v4", "blast/v1",
-            "capture-layout/v1",
+            "bundle-manifest/v1", "capture-layout/v1",
             "compare/v1", "correlate/v1", "host-samples/v1", "host/v1",
             "host/v2", "plane2/v1", "plane2/v2", "plane2/v3",
             "sources/v1"]

@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-544 scenarios: **9 open**, 535 closed.
+545 scenarios: **10 open**, 535 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -27,7 +27,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | cli | 0 | 19 |
 | store | 0 | 14 |
 | docs | 1 | 66 |
-| guards | 3 | 94 |
+| guards | 4 | 95 |
 
 ## Open scenarios
 
@@ -45,6 +45,7 @@ task file, which is the only place it ever lived twice.
 | UX-544 | [the hand-built *node* census has a hole the document census does not](UX-0544-the-node-census-has-a-hole.md) | guards | Medium | `UX-537`, whose scope was the document | 🔴 |
 | UX-545 | [a refused timeline tells the reader the snapshot has no build log](UX-0545-a-refused-timeline-says-the-wrong-thing.md) | viewer | Medium | `UX-530`, whose scope was the degradation | 🔴 |
 | UX-546 | [the fetch-counting handoff guard is flaky under the full suite](UX-0546-the-fetch-guard-is-flaky-under-load.md) | guards | Medium | two tracks, independently | 🔴 |
+| UX-547 | [the fixture differ compares parsed JSON, so key order drifts unseen](UX-0547-the-fixture-differ-cannot-see-key-order.md) | guards | Low | `UX-535`, refreshing a fixture for a contract bump | 🔴 |
 
 ## UX-522..UX-536: the seventy-ninth round — the controls walked, the suite weighed (2026-09-02)
 

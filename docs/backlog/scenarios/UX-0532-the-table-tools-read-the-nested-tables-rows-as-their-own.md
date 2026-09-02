@@ -1,6 +1,6 @@
 # UX-532: the table tools read the nested tables' rows as their own
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-366 (the bound whose guard stays green), UX-318 (the folds that carry the nested tables) | **Serves:** anyone pressing "All rows" on a table whose cells fold | **Topic:** viewer
+**Priority:** High | **Status:** 🟢 Fixed & Verified | **Depends on:** UX-366 (the bound whose guard stays green), UX-318 (the folds that carry the nested tables) | **Serves:** anyone pressing "All rows" on a table whose cells fold | **Topic:** viewer
 
 ## Motivation
 
@@ -56,3 +56,77 @@ On the synthetic 60-row page: badge "25 of 60" → "60 of 60", nested
 folds carry their 11 rows, copy says 60. Mutation: restore
 `querySelectorAll("tr")` — red on the new fixture, and *only* on it
 (so the fixture is what discriminates).
+
+## Outcome (round 80, 2026-09-02) — 🟢 Done
+
+### The gap, measured
+
+`tests/pages.shared_resource_run` — `macro_micro` (11 elements) given 60
+shared git repositories, the direct pair rotating so the blast sets
+differ. One browser drive over the `resource_blast` table, reading the
+outer tbody's **element children** rather than by selector:
+
+```text
+                     own <tr>  visible  badge        copy            nested rows
+at rest                   660       25  25 of 60     Copy 25 rows    [0, 0, 0]
+after "All rows"          660      660  660 of 60    Copy 660 rows   [0, 0, 0]
+last 3 own rows      4|lib-d.bst · 5|lib-e.bst · 6|lib-f.bst
+```
+
+600 rows torn out of 60 nested tables and appended to the outer tbody by
+`applyFilters`' opening bound. The folds open empty, the badge says
+`660 of 60`, and the table's last rows are the folds' `key|value` pairs
+as two-cell rows — the user's report, reproduced.
+
+### After
+
+Same fixture, same drive, same instrument:
+
+```text
+                     own <tr>  visible  badge        copy            nested rows
+at rest                    60       25  25 of 60     Copy 25 rows    [11, 11, 11]
+after "All rows"           60       60  60 rows      Copy 60 rows    [11, 11, 11]
+```
+
+`ownRows(table)` is the tbody's `<tr>` children, in `tables.js`, and the
+nine sites the Motivation names read it (or `ownCells`, built on it).
+`60 rows` rather than `60 of 60` is `badgeText`'s existing wording for
+shown == total, unchanged.
+
+### Mutations verified red and reverted (5)
+
+| # | mutation | reddened |
+|---|---|---|
+| M1 | `ownRows` → `ownBody(table).querySelectorAll("tr")` — the defect itself | 4 of the 5 new clauses; the 7 `UX-366` clauses stayed **green** |
+| M2 | `shownRows` (`structured.js`) descends again | `…badge_and_the_copy_count…` only — `Copy 660 rows` |
+| M3 | `applyFilters` descends again | the same 4 as M1 |
+| M4 | `applyTopN` descends again | **nothing** — see below |
+| M5 | `sortable` descends again | `…sorting_moves_no_row_between_tables` only |
+
+**Two findings.** `applyTopN` (M4) has **no caller in the page** —
+`grep -rn applyTopN bga/ tests/` finds the definition, one node harness
+and a comment — so its correction is real and unexercised; the page's
+bound goes through `applyFilters`' `top` pass. And `applyFilters` is the
+single site that migrates rows, so the four own-rows/nested/badge/
+all-rows clauses share one cause (M1 ≡ M3): they are four readings of
+one migration, not four independent claims. The two clauses that do
+discriminate alone are the copy count (M2) and sorting (M5).
+
+The `data-element` stamp, `statedOnce` and the distribution strip were
+corrected by the same helper and **no clause of mine reads them** — on
+this fixture the inflated cell counts change no rendered text I could
+assert on. They are unguarded here; the item's Acceptance Test named
+badge, folds and copy, and those are covered.
+
+### Deviation from the Required Fix
+
+The selector is a child walk over `tbody.children`, not `:scope > tr`:
+`tests/dom_shim.mjs` throws on any pseudo-class by design (`UX-264`) and
+48 guard files use it, so `:scope` would have meant changing the shared
+shim. Same claim, one place, no new test surface.
+
+```text
+make test-touching  →  358 passed, 2 skipped in 62.00s (23 files)
+pytest tests/unit/test_all_rows_means_all_rows.py  →  12 passed in 14.60s
+make lint           →  All checks passed!
+```

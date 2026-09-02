@@ -1030,7 +1030,7 @@ if (typeof document !== "undefined" && document.getElementById?.("report")) {
  * export and the anchors honest.
  */
 export function wireFocusAndMarks(root, doc, options = {}) {
-  const refresh = () => {
+  const refresh = ({ reveal = false } = {}) => {
     // UX-228 added a third transient node, and it joins the same
     // removal set on purpose: everything focus adds is keyed by
     // `data-role`, so unfocusing leaves the document byte-identical to
@@ -1041,20 +1041,43 @@ export function wireFocusAndMarks(root, doc, options = {}) {
       stale.parentNode?.removeChild?.(stale);
     }
     const uid = focusedElement(root);
+    let investigation = null;
     if (uid && options.payload) {
       // UX-228: the evidence about this element, assembled from
       // published objects. Prepended *under* the bar, so the reader
       // sees what they focused and then what is known about it.
-      const investigation = renderInvestigation(options.payload, uid, options);
+      investigation = renderInvestigation(options.payload, uid, options);
       if (investigation) root.prepend?.(investigation);
     }
-    if (uid) root.prepend?.(renderFocusBar(uid, { onClear: () => {
-      clearFocus(root); refresh(); notify();
-    }}));
+    let bar = null;
+    if (uid) {
+      bar = renderFocusBar(uid, { onClear: () => {
+        clearFocus(root); refresh(); notify();
+      }});
+      root.prepend?.(bar);
+    }
     const summary = renderMarkSummary(readMarks(root), { onClear: () => {
       applyMarks(root, {}); refresh(); notify();
     }});
     if (summary) root.prepend?.(summary);
+    // `UX-534`: **the state is on the control the hand is on.** Focus
+    // and the marks both answer at the top of the document; without
+    // this the button a reader just pressed looks exactly as it did.
+    const marks = readMarks(root);
+    for (const button of root.querySelectorAll?.("[data-focus-element]") ?? []) {
+      button.setAttribute?.("aria-pressed",
+        String(button.getAttribute("data-focus-element") === uid));
+    }
+    for (const button of root.querySelectorAll?.("[data-mark-element]") ?? []) {
+      button.setAttribute?.("aria-pressed",
+        String(marks[button.getAttribute("data-mark-element")]
+               === button.getAttribute("data-mark-value")));
+    }
+    // The answer is 25,501 px from the button on a card at 26,550 px,
+    // and nothing moved. Reveal it only on the click - a page restoring
+    // focus from its url has not asked to be scrolled.
+    if (reveal) (bar ?? investigation)?.scrollIntoView?.();
+    return investigation;
   };
   // The fragment listens for these already; firing one event rather
   // than writing the hash here keeps UX-211 the only writer.
@@ -1067,7 +1090,7 @@ export function wireFocusAndMarks(root, doc, options = {}) {
     const focusUid = node.getAttribute("data-focus-element");
     if (focusUid) {
       applyFocus(root, focusedElement(root) === focusUid ? null : focusUid);
-      refresh();
+      refresh({ reveal: true });
       notify();
       return;
     }

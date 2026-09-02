@@ -33,6 +33,7 @@
 import { served } from "./primitives.js";
 import { quantity, title } from "./format.js";
 import { GRADE_ANNOTATION, columnStrip } from "./drawings.js";
+import { ownCells } from "./tables.js";
 
 /** The controls §1 names. The value is the guide's own wording. */
 export const CONTROLS = Object.freeze({
@@ -244,7 +245,7 @@ export function distributionStrip(table, specs, total, state, refresh) {
   if (!spec) return null;
   // The column key, not `cssId`: that normalises an *element uid* into
   // an anchor, and a column key is already a schema identifier.
-  const raw = [...table.querySelectorAll(`td[data-column="${spec.key}"]`)]
+  const raw = ownCells(table, spec.key)
     .map((td) => Number(td.getAttribute("data-raw")))
     .filter((n) => Number.isFinite(n));
   if (!raw.length) return null;

@@ -586,6 +586,9 @@ function elementSection(record, places, investigate, format) {
   const focusButton = document.createElement("button");
   focusButton.setAttribute("type", "button");
   focusButton.className = "focus-this";
+  // `UX-534`: born with the state, so an unfocus leaves the document
+  // byte-identical to never-focused (`UX-228`'s invariant).
+  focusButton.setAttribute("aria-pressed", "false");
   focusButton.setAttribute("data-focus-element", uid);
   focusButton.textContent = "Focus";
   controls.append(focusButton);
@@ -593,6 +596,7 @@ function elementSection(record, places, investigate, format) {
     const button = document.createElement("button");
     button.setAttribute("type", "button");
     button.className = "mark-this";
+    button.setAttribute("aria-pressed", "false");
     button.setAttribute("data-mark-element", uid);
     button.setAttribute("data-mark-value", mark);
     button.textContent = ELEMENT_MARK_LABELS[mark];

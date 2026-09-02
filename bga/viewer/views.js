@@ -798,9 +798,13 @@ export function statusLine(payload) {
   const plane2 = payload?.plane2_coverage;
   parts.push(plane2 && typeof plane2.processes === "number"
     ? `Plane 2: ${plane2.processes} processes`
-    : "Plane 2 not captured");
+    : PLANE2_NOT_CAPTURED);
   return parts.join(" \u00b7 ");
 }
+
+// `UX-536`: the evidence line's verdict, exported - a section that
+// would otherwise present an empty join as zeros says the same words.
+export const PLANE2_NOT_CAPTURED = "Plane 2 not captured";
 
 // The same three sentences the CLI banners use. One source, so the
 // page and the terminal cannot describe the same run differently.

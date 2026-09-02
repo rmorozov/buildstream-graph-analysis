@@ -62,10 +62,13 @@ refusal off by accident, which is the one way this row could do harm.
   preserved, not reassigned — and refuses rather than half-loads when a
   member's contract version is one this `bga` does not read, or when the
   stamp is already present and its contents differ.
-- The raw Plane 2 log is the bundle's largest member by far and is only
-  needed to re-fold the report. Whether it ships by default is a
-  decision the row must make and state, with the sizes measured on a
-  real capture rather than assumed.
+- **Everything ships by default**, and a switch excludes the Plane 2
+  capture for the reader who wants a small bundle. Decided by the
+  requester rather than derived: a bundle that silently dropped a
+  member would make the far machine's report quieter than the near
+  one's, and "why is Plane 2 missing over there" is a worse question
+  than a large file. The switch's own output says what it left out, and
+  the bundle's manifest records the omission so `load` can say so too.
 - The two commands round-trip: export, load into an empty store, and
   `bga analyze` on both sides prints the same report.
 

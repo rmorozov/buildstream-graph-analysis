@@ -378,6 +378,16 @@ def clamp_task_starts(
         if span.task_key.task_kind == TaskKind.FETCH:
             fetch_task_by_element[span.task_key.element_uid] = str(span.task_key)
 
+    # `UX-531`: the build-gating edges, indexed by successor once. The
+    # loop below used to scan every edge per task - 4,002 x 11,800 on the
+    # seeded run - and the filter and the order are the ones it applied.
+    build_gating_predecessors: Dict[str, List[str]] = {}
+    for dep_edge in graph.dependencies:
+        if dep_edge.dependency_type == "runtime":
+            continue
+        build_gating_predecessors.setdefault(
+            dep_edge.successor, []).append(dep_edge.predecessor)
+
     result = []
     violations = []
 
@@ -420,13 +430,11 @@ def clamp_task_starts(
             own_fetch = fetch_task_by_element.get(span.task_key.element_uid)
             if own_fetch:
                 deps.append(own_fetch)
-        for dep_edge in graph.dependencies:
-            if dep_edge.dependency_type == "runtime":
-                continue
-            if dep_edge.successor == span.task_key.element_uid:
-                pred_key = build_task_by_element.get(dep_edge.predecessor)
-                if pred_key:
-                    deps.append(pred_key)
+        for predecessor in build_gating_predecessors.get(
+                span.task_key.element_uid, ()):
+            pred_key = build_task_by_element.get(predecessor)
+            if pred_key:
+                deps.append(pred_key)
 
         result.append(NormalizedTask(
             task_key=span.task_key,

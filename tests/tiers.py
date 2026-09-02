@@ -99,6 +99,36 @@ import re
 LARGE_FLOOR_S = 15.0
 MEDIUM_FLOOR_S = 1.0
 
+# `UX-522`: the census set - guards whose subject is the **tree**, so
+# no diff can point at them. `dev_touching.py` unions these into every
+# selection, because a grep from the diff can never reach them and
+# round 75 measured what that cost: of five defects the per-item suite
+# caught, `test-touching` could not have named two, and both were this
+# class (`UX-503`'s register cap, `UX-502`'s skip census - the first
+# and second rows below by that route).
+#
+# Derived, not typed. `test_the_selector_carries_the_census.py` recomputes
+# it: a file that walks a path rooted at the repository **and** that a
+# grep from any non-`__init__` source module never selects. Adding a
+# guard of this shape without listing it here reddens that file.
+#
+# Measured: 272 tests, **10.80s at `-n auto`** - what every
+# `test-touching` run now pays to stop being wrong about this class.
+CENSUS = (
+    "tests/unit/test_a_guard_reads_only_what_a_clone_has.py",
+    "tests/unit/test_capture_ref_patterns.py",
+    "tests/unit/test_every_direction_names_its_reader.py",
+    "tests/unit/test_every_skip_reason_is_declared.py",
+    "tests/unit/test_one_factory_builds_every_table.py",
+    "tests/unit/test_the_agent_configuration_holds.py",
+    "tests/unit/test_the_canned_prose_reads_as_written.py",
+    "tests/unit/test_the_dom_shim_is_one_instrument.py",
+    "tests/unit/test_the_palette_is_validated.py",
+    "tests/unit/test_the_register_is_terse.py",
+    "tests/unit/test_the_viewer_modules_have_a_home.py",
+)
+
+
 # `UX-418`: **the floors are seconds on one machine, and a report from
 # another cannot be compared to them.** Not in any form.
 #
@@ -471,7 +501,14 @@ LARGE = (
     # 1.16 MB export and a third browser page. 11.5s -> 22.3s, and the
     # cost is the whole point of the item - a budget that never met the
     # page is cheaper and worth nothing.
-    "tests/unit/test_the_page_has_a_volume_budget.py",                #   22.3s
+    #
+    # `UX-526` added the second size the item is about - the seeded
+    # 4,002-element run, a second `gen-synthetic` and a fourth browser
+    # page - and the file triples: **22.3s -> 65.0s**, measured alone
+    # in one process on this machine. The track that wrote it measured
+    # 127s in a worktree under four parallel tracks; both are this
+    # file, and the quiet number is the one the floors are made of.
+    "tests/unit/test_the_page_has_a_volume_budget.py",                #   65.0s
     # `UX-455`. Listed medium at 13.5s when `UX-394` wrote it - a
     # three-snapshot store, served, four browser boots and one export.
     # Nothing since has been *about* it; it is the browser boots that
@@ -479,6 +516,21 @@ LARGE = (
     # runs: 18.30 / 18.33 / 18.28s, so it is past the 15.0s large floor
     # by three seconds rather than by a hair.
     "tests/unit/test_the_page_moves_between_runs.py",                #   18.3s
+    # `UX-527`, and the round that tripped over it is this one. The
+    # note this row carried in `MEDIUM` said "14.7s against a large
+    # floor of 15.0 - one more browser clause moves this file"; the
+    # item added the 4,002-element clauses that tell a picker offering
+    # eight from one offering four thousand, and **54.1s** is where it
+    # landed, measured alone in one process. The prediction was right
+    # and the row is where it belongs.
+    "tests/unit/test_the_query_asks_about_this_run.py",              #   54.1s
+    # `UX-529`, large on landing and for one reason: the defect is
+    # invisible below a thousand elements, so the population is the two
+    # committed fixtures **and** the two seeded runs the volume budget
+    # uses. Two `gen-synthetic` calls and four exports, the 4,002 one
+    # 17s of them; no browser. Measured alone in one process, twice:
+    # 44.74 / 40.87s.
+    "tests/unit/test_the_exports_data_half_has_a_budget.py",         #   40.9s
 )
 
 MEDIUM = (
@@ -486,6 +538,25 @@ MEDIUM = (
     # item is about: two clauses run the confirmation for real, which
     # is a pytest subprocess each. Three single-process runs:
     # 1.22 / 1.25 / 1.24s.
+    "tests/unit/test_the_browser_waits_for_a_condition.py",         #    2.6s
+    # `UX-528`, tiered on landing. A store of N golden runs, served,
+    # and the window read at three populations - so a browser, and
+    # `bga view` in front of it. **13.4s** alone in one process, which
+    # is 1.6s under the large floor; the track that wrote it measured
+    # 18s under this round's parallel load and called it large. Medium
+    # is what the quiet machine says, and the margin is small enough
+    # that the next clause moves it.
+    "tests/unit/test_the_store_section_takes_a_window.py",          #   13.4s
+    # `UX-520`, tiered on landing. Nineteen clauses, each packing and
+    # unpacking a real gzipped tar of a small capture, two driving the
+    # CLI end to end. Three single-process runs: 1.84 / 2.97 / 2.27s.
+    "tests/unit/test_a_run_bundle_you_can_carry.py",                #    2.3s
+    # `UX-535`, tiered on landing. Eleven clauses, one of them a
+    # subprocess `analyze` over the golden fixture. 4.27s measured.
+    # `UX-539` follow-up. An AST walk of every file in `bga/` and
+    # `tools/` - 3.50 / 3.66 / 3.83s measured alone in one process.
+    "tests/unit/test_the_package_runs_on_the_python_it_claims.py",  #  3.7s
+    "tests/unit/test_one_fact_is_published_once.py",                #    4.3s
     "tests/unit/test_a_candidate_is_confirmed_alone.py",            # 1.2s
     # `UX-460`, tiered on landing. It runs `analyze` in-process over
     # every committed capture in the tree - seven of them now - which
@@ -519,7 +590,12 @@ MEDIUM = (
     # renders of a 1,202-element two-plane snapshot - the size the
     # track bound is measured at, which is the whole point of the
     # file. 4.6s.
-    "tests/unit/test_the_handoff_counts_what_perfetto_spends.py",  # 4.6s
+    #
+    # Re-measured by `UX-530`, which added a clause here: **10.97s**,
+    # of which 0.57s is that clause. The recorded 4.6s was 5.8s stale
+    # before this round touched it - the renders grew under it, which
+    # is `UX-455`'s shape. Still MEDIUM, and now by a measurement.
+    "tests/unit/test_the_handoff_counts_what_perfetto_spends.py",  # 11.0s
     # `UX-370`, tiered on landing. One boot of `macro_micro` - the only
     # committed fixture with a Plane 2 report beside its run - plus
     # four payload clauses that need no browser at all. 2.2s.
@@ -533,18 +609,6 @@ MEDIUM = (
     # committed captures - `with_timeline` for the page that has a
     # handoff, the other two for the dead-control rule. 7.6s.
     "tests/unit/test_a_finding_reaches_the_timeline.py",         #    7.6s
-    # `UX-369`, tiered on landing. Four browser clauses over `golden`
-    # plus one over the seeded 1,202-element run - the generate and the
-    # export are 3.5s of it, the scale boot most of the rest. The scale
-    # clause is the only place a picker offering 26 of 1,202 elements
-    # can be told from one offering all of them, so it is what the file
-    # costs rather than something to trim.
-    #
-    # **14.7s, against a large floor of 15.0.** The closest call in
-    # either list: one more browser clause moves this file, and the
-    # honest place to say so is here rather than in the round that
-    # trips over it.
-    "tests/unit/test_the_query_asks_about_this_run.py",          #   14.7s
     # `UX-364`, tiered on landing rather than after CI noticed - which
     # it did, at 96% of `timeout 33 make test-small`. Four page exports
     # and eleven clauses over a real Chromium; measured at 10.3s, which

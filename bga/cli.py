@@ -1255,6 +1255,72 @@ def cmd_diagnostics(args: argparse.Namespace) -> int:
     return _execute_and_write(args, lambda: _produce_analysis_output(args, section='diagnostics'))
 
 
+def cmd_bundle(args: argparse.Namespace) -> int:
+    """Execute `bga bundle --export STAMP` / `--load FILE` (`UX-520`).
+
+    The capture, not `run/`: the members come from `UX-381`'s layout
+    contract, so a member added there travels by existing.
+    """
+    from . import bundle as bundle_mod
+
+    try:
+        if args.load:
+            return _bundle_load(args, bundle_mod)
+        return _bundle_export(args, bundle_mod)
+    except (bundle_mod.BundleError, StoreError) as error:
+        print(f"Error: {error}", file=sys.stderr)
+        return 2
+
+
+def _bundle_export(args: argparse.Namespace, bundle_mod) -> int:
+    import os
+
+    from . import run_store
+
+    # A stamp, an alias, or a path. `@last` is what a user has in hand
+    # right after a capture, and a bare stamp is what `--list` printed.
+    token = args.export
+    if os.path.isdir(token):
+        snapshot = token
+    else:
+        snapshot = run_store.resolve_snapshot(
+            token if run_store.is_alias(token) else "@" + token.lstrip("@"))
+    path, manifest = bundle_mod.export(
+        snapshot, args.output, include_plane2=not args.no_plane2)
+    counts = bundle_mod.describe(manifest)
+    print(f"Wrote {path}")
+    print(f"  snapshot {manifest['stamp']}: {counts['members']} member(s), "
+          f"{run_store.human_bytes(counts['bytes'])} before compression")
+    if manifest["excluded"]:
+        # The switch says what it left out, and the manifest records it,
+        # so `--load` can say so on the far machine too.
+        print(f"  left out (--no-plane2): {', '.join(manifest['excluded'])}")
+    print(f"  load it with: bga bundle --load {os.path.basename(path)}")
+    return 0
+
+
+def _bundle_load(args: argparse.Namespace, bundle_mod) -> int:
+    from . import run_store
+
+    project = run_store.project_root()
+    if project is None:
+        print("Error: no BuildStream project here to load into (no "
+              "project.conf in this directory or any parent).",
+              file=sys.stderr)
+        return 2
+    target, manifest = bundle_mod.load(args.load, project)
+    counts = bundle_mod.describe(manifest)
+    print(f"Loaded snapshot {manifest['stamp']} into {target}")
+    print(f"  {counts['members']} member(s), packed by bga "
+          f"{manifest.get('bga_version', 'unknown')}")
+    # `.get`, not `[]`: this manifest came off someone else's machine.
+    if manifest.get("excluded"):
+        print(f"  packed without: {', '.join(manifest['excluded'])} - "
+              f"sections reading those will say they are absent")
+    print("  read it with: bga analyze @last")
+    return 0
+
+
 def _add_common_arguments(
     subparser: argparse.ArgumentParser,
     include_replay: bool = False,
@@ -1886,6 +1952,35 @@ def create_parser() -> argparse.ArgumentParser:
              'same 1%% significance rule the verdict uses).'
     )
     compare_parser.set_defaults(func=cmd_compare)
+
+    # UX-520: the capture as one file. Not `run/` - half of what a
+    # reader needs sits beside it, and `UX-381`'s layout says which half.
+    bundle_parser = subparsers.add_parser(
+        'bundle',
+        usage='bga bundle --export STAMP [-o FILE] | --load FILE',
+        help='Pack a capture into one file, or load one.',
+        description='Pack one snapshot\'s whole capture - the run directory and the '
+                    'Plane 2 report, raw trace, host samples and analysis beside it - '
+                    'into a single archive to carry to another machine, and load one '
+                    'back into this project\'s store under its own stamp. Each member '
+                    'carries its contract version, so a bundle from a newer bga is '
+                    'refused rather than half-read (UX-520).',
+    )
+    bundle_group = bundle_parser.add_mutually_exclusive_group(required=True)
+    bundle_group.add_argument(
+        '--export', metavar='STAMP',
+        help='Snapshot to pack: a stamp, @last/@prev, or a path.')
+    bundle_group.add_argument(
+        '--load', metavar='FILE',
+        help='Bundle to unpack into this project\'s store.')
+    bundle_parser.add_argument(
+        '-o', '--output', metavar='FILE', default=None,
+        help='Where to write the bundle. Default: <stamp>.bga-bundle.tar.gz.')
+    bundle_parser.add_argument(
+        '--no-plane2', action='store_true',
+        help='Leave the Plane 2 capture out. Says what it omitted, and\n'
+             'the manifest records it so --load says so too.')
+    bundle_parser.set_defaults(func=cmd_bundle)
 
     # UX-191: after every subparser exists, so the walk sees all of them.
     _attach_run_completers(parser)

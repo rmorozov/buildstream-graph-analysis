@@ -139,31 +139,64 @@ await send("Page.navigate", { url });
 // 47. The guard comparing the two then reported a difference the page
 // does not have.
 //
-// So the wait is now the condition it always meant: the rendered size
-// of `#report` has stopped changing. Two consecutive equal samples
-// 150ms apart, with the old 1,200ms kept as a floor so nothing observes
-// earlier than it used to, and a ceiling so a page that never settles
-// fails on its assertion rather than hanging here.
-const SETTLE_FLOOR_MS = 1200;
+// So the wait is the condition it always meant: the rendered size of
+// `#report` has stopped changing, with a ceiling so a page that never
+// settles fails on its assertion rather than hanging here.
+//
+// `UX-523`: the 1,200ms floor `UX-482` kept beside the condition is
+// gone. What it was standing in for is an **empty** `#report`, and
+// emptiness is the thing to test: two zero-length samples are not a
+// settled page. Measured on the two committed exports, drive 1.59s ->
+// 0.56s with the same section counts (53 and 73); the suite was
+// sleeping 1.2s per drive, ~430 drives a run.
+//
+// Removing it took two goes, and both misses are here because the
+// second is the one that matters. Watching `#report || document.body`
+// stop changing settles on a **served** page's static skeleton while
+// the payload is still being fetched; watching `#report` alone settles
+// on the sections while `boot()` is still wiring the controls after
+// them, which is what three run-switching guards and two
+// handoff-geometry guards then failed on. Both are the same mistake -
+// a proxy for "the page has finished" - so the page says it now
+// (`data-bga-booted`), and this waits for its own word.
+//
+// **Which pages** was the third miss, found on the merge of round 80's
+// tracks: the condition was `#report`, which is `index.html`'s section
+// and not `perfetto.html`'s - so the handoff page, whose entire state
+// is what its two `fetch`es found, went on settling on the heuristic.
+// Three clauses of `test_one_page_behind_the_button.py` red under the
+// full suite and green alone. The page declares it instead
+// (`data-bga-boots` on `<html>`), so a page that will speak is known
+// before it speaks and an exported one - which has neither attribute
+// until its own `boot()` runs - is not waited on forever.
 const SETTLE_STEP_MS = 150;
 const SETTLE_CEILING_MS = 20000;
-await new Promise((resolve) => setTimeout(resolve, SETTLE_FLOOR_MS));
 {
-  const size = async () => {
+  const state = async () => {
     const got = await send("Runtime.evaluate", {
       expression: `(() => {
-        const root = document.getElementById("report") || document.body;
-        return root ? root.innerHTML.length : 0;
+        const root = document.documentElement;
+        // #report too: an exported page is one file with no
+        // data-bga-boots on it, and boot() still stamps it.
+        // No backticks in here - this is inside a template literal.
+        if (root.dataset.bgaBoots === "1"
+            || document.getElementById("report")) {
+          return { booting: true, done: root.dataset.bgaBooted === "1" };
+        }
+        return { booting: false, n: document.body?.innerHTML.length ?? 0 };
       })()`,
       returnByValue: true,
     });
-    return got.result?.value ?? 0;
+    return got.result?.value ?? { booting: false, n: 0 };
   };
-  let previous = await size();
+  let previous = await state();
   for (let waited = 0; waited < SETTLE_CEILING_MS; waited += SETTLE_STEP_MS) {
+    if (previous.booting && previous.done) break;
     await new Promise((resolve) => setTimeout(resolve, SETTLE_STEP_MS));
-    const now = await size();
-    if (now === previous) break;
+    const now = await state();
+    if (!now.booting && !previous.booting && now.n === previous.n && now.n > 0) {
+      break;
+    }
     previous = now;
   }
 }

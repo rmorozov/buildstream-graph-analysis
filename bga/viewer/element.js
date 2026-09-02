@@ -324,7 +324,7 @@ export function elementUids(payload) {
  * entity, joined on the one key, for every element - which is what a
  * new view asks for instead of discovering where its columns live.
  *
- * The entity has two shapes and `analyze/v4` publishes both: six maps
+ * The entity has two shapes and `analyze/v5` publishes both: six maps
  * under `elements`, keyed by uid, on every capture; and a wide
  * `element_join` row, present only where Plane 2 supplied a report.
  * `SOURCES` above reads the ranked arrays including the join;
@@ -586,6 +586,9 @@ function elementSection(record, places, investigate, format) {
   const focusButton = document.createElement("button");
   focusButton.setAttribute("type", "button");
   focusButton.className = "focus-this";
+  // `UX-534`: born with the state, so an unfocus leaves the document
+  // byte-identical to never-focused (`UX-228`'s invariant).
+  focusButton.setAttribute("aria-pressed", "false");
   focusButton.setAttribute("data-focus-element", uid);
   focusButton.textContent = "Focus";
   controls.append(focusButton);
@@ -593,6 +596,7 @@ function elementSection(record, places, investigate, format) {
     const button = document.createElement("button");
     button.setAttribute("type", "button");
     button.className = "mark-this";
+    button.setAttribute("aria-pressed", "false");
     button.setAttribute("data-mark-element", uid);
     button.setAttribute("data-mark-value", mark);
     button.textContent = ELEMENT_MARK_LABELS[mark];

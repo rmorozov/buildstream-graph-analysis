@@ -221,46 +221,81 @@ class TestTheReaderCanAskForLess:
 class TestARefusalNamesTheBoundItHit:
     """`UX-430`'s third clause. The two bounds measure different things,
     so a refusal that names the wrong one sends the reader to compress
-    something that is not the cost."""
+    something that is not the cost.
+
+    `UX-530` moved what a refusal *is*: the export renders again at each
+    grain `_degradation_steps` names before it refuses anything, so the
+    fake below answers per step - `whole` for the two-plane render and
+    `narrowed` for `--planes 1`, which is how `UX-430`'s own curve
+    behaves (16,832 tracks and 486,167 B become 1,205 and 72,080).
+    """
 
     GOLDEN = str(REPO / "tests/fixtures/golden/mixed_task_kinds")
 
-    def _export(self, monkeypatch, tmp_path, size, tracks):
-        monkeypatch.setattr(
-            view, "trace_with_planes",
-            lambda _run: (b"\x1f\x8b" + b"x" * size, ["1", "2"], None,
-                          tracks))
+    def _export(self, monkeypatch, tmp_path, whole, narrowed=None):
+        """`whole`/`narrowed` are `(bytes, tracks)` for the two steps."""
+        narrowed = whole if narrowed is None else narrowed
+
+        def fake(_run, planes=None):
+            size, tracks = narrowed if planes == PLANE1_ONLY else whole
+            return (b"\x1f\x8b" + b"x" * size,
+                    ["1"] if planes == PLANE1_ONLY else ["1", "2"],
+                    None, tracks)
+
+        monkeypatch.setattr(view, "trace_with_planes", fake)
         path = tmp_path / "report.html"
         view.export(self.GOLDEN, str(path))
-        payload = json.loads(_payload(path, "bga-run"))
-        return payload
+        return json.loads(_payload(path, "bga-run"))
 
-    def test_too_many_tracks_is_refused_in_tracks(self, monkeypatch,
-                                                  tmp_path):
-        payload = self._export(monkeypatch, tmp_path, 4096,
-                               view.TRACE_TRACK_BUDGET + 1)
+    def test_too_many_tracks_degrades_instead_of_refusing(self, monkeypatch,
+                                                          tmp_path):
+        """`UX-530`'s acceptance. The capture that met the ceiling lost
+        the timeline whole, and the flag that would have fitted was
+        named in the recipe printed beside the refusal."""
+        payload = self._export(
+            monkeypatch, tmp_path, (4096, view.TRACE_TRACK_BUDGET + 1),
+            narrowed=(1024, 1_205))
+        assert payload["has_timeline"] is True, payload.get(
+            "timeline_omitted")
+        said = payload["timeline_degraded"]
+        assert "--planes 1" in said and "1,205 tracks" in said, said
+        assert f"{view.TRACE_TRACK_BUDGET + 1:,} tracks" in said, (
+            "the page does not say what the whole timeline would have "
+            f"drawn, so the narrowing reads as a preference: {said}")
+        assert payload["trace_planes"] == ["1"]
+
+    def test_a_narrowing_that_still_does_not_fit_names_both(self,
+                                                            monkeypatch,
+                                                            tmp_path):
+        """Refusal is what is left, and it accounts for every step."""
+        over = (4096, view.TRACE_TRACK_BUDGET + 1)
+        payload = self._export(monkeypatch, tmp_path, over, narrowed=over)
         said = payload["timeline_omitted"]
-        assert "tracks" in said and "MiB ceiling" not in said, said
         assert payload["has_timeline"] is False
+        assert "the whole timeline" in said and "--planes 1" in said, said
+        assert said.count("tracks, over") == 2, said
 
     def test_too_many_bytes_is_still_refused_in_bytes(self, monkeypatch,
                                                       tmp_path):
         payload = self._export(monkeypatch, tmp_path,
-                               view.TRACE_BUDGET_B * 2, 1)
+                               (view.TRACE_BUDGET_B * 2, 1))
         said = payload["timeline_omitted"]
         assert "MiB" in said and "track" not in said, said
 
-    def test_a_trace_inside_both_bounds_is_carried(self, monkeypatch,
-                                                  tmp_path):
-        payload = self._export(monkeypatch, tmp_path, 4096,
-                               view.TRACE_TRACK_BUDGET)
+    def test_a_trace_inside_both_bounds_is_carried_undegraded(self,
+                                                              monkeypatch,
+                                                              tmp_path):
+        payload = self._export(monkeypatch, tmp_path,
+                               (4096, view.TRACE_TRACK_BUDGET))
         assert payload["has_timeline"] is True, payload.get(
             "timeline_omitted")
+        assert "timeline_degraded" not in payload, (
+            "a timeline that fitted whole says it was narrowed")
 
     def test_the_refusal_names_the_flags_that_make_it_smaller(
             self, monkeypatch, tmp_path):
-        payload = self._export(monkeypatch, tmp_path, 4096,
-                               view.TRACE_TRACK_BUDGET + 1)
+        over = (4096, view.TRACE_TRACK_BUDGET + 1)
+        payload = self._export(monkeypatch, tmp_path, over, narrowed=over)
         note = payload["timeline_recipe"]["note"]
         assert "--planes 1" in note and "--only-element" in note, note
 

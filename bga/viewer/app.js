@@ -66,7 +66,7 @@ import { decisionInvestigation, investigate, investigateButton, render,
  * because "we do not know which build wrote this" and "this build"
  * must not look alike.
  */
-export function stampHeader(doc, payload) {
+export function stampHeader(doc, payload, run) {
   const slot = doc.getElementById("run-producer");
   if (!slot) return;
   const stamp = payload?.producer;
@@ -75,7 +75,41 @@ export function stampHeader(doc, payload) {
   slot.textContent = version
     ? `measured by ${tool} ${version}`
     : "measured by an unrecorded build (written before bga stamped its version)";
+  // `UX-533`: and *which* analysis is on this page - the same question
+  // one step in, so it goes on the same line rather than in a banner.
+  const said = analysisSentence(run?.analysis);
+  if (said) {
+    slot.append(` \u2014 ${said}`);
+    slot.setAttribute("data-analysis-source", run.analysis.source);
+    slot.setAttribute("data-analysis-stale",
+                      run.analysis.stale ? "true" : "false");
+  }
   slot.hidden = false;
+}
+
+/**
+ * `UX-533`: the page says whose analysis it is showing.
+ *
+ * `bga view` served `published_analysis(run) or _analyze_now(run)` and
+ * the two rendered identically, so every payload key a later round
+ * added was missing from every existing run with nothing on the page to
+ * say so. The staleness test is `UX-249`'s contract set, computed in
+ * `tools/bga_view.py`; this only spells it.
+ */
+export function analysisSentence(note) {
+  if (!note?.source) return null;
+  if (note.source === "view") return `analysed here by bga ${note.this_build}`;
+  const by = note.stored_producer && note.stored_producer !== "unstamped"
+    ? `by bga ${note.stored_producer}` : "by an unrecorded build";
+  if (!note.stale) return `analysed at capture ${by}`;
+  const absent = note.sections_absent?.length ?? 0;
+  const moved = note.contracts_moved?.length ?? 0;
+  const why = moved
+    ? `${moved} of the contracts it records have moved since`
+    : "it records no contract set, so what it is missing cannot be checked";
+  return `analysed at capture ${by}; ${why}, and ${absent} of the `
+    + `${note.sections_declared} sections this build always publishes are `
+    + `absent \u2014 re-run with \`${note.reanalyse}\``;
 }
 
 /**
@@ -495,6 +529,33 @@ export function inlined(name) {
 }
 
 /**
+ * `UX-529`: the same payload, compacted.
+ *
+ * The data half of an export is linear in the element population and
+ * `EXPORT_BUDGET_B` was the only bound above it - 628 KB at 1,202
+ * elements, 2.0 MB at 4,002. Past `DATA_COMPACT_MIN_B` the export
+ * writes one gzip'd, base64'd `application/octet-stream` block
+ * instead of JSON text, which is the same document at a tenth of the
+ * bytes and is what a per-class budget can be met with.
+ *
+ * `null`, never a throw: an absent block and an unreadable one are
+ * both "not here", which is what `load` below is asking.
+ */
+export async function inflated(name) {
+  const node = document.getElementById(`bga-${name}-gz`);
+  const packed = (node?.textContent ?? "").trim();
+  if (!packed) return null;
+  try {
+    const bytes = Uint8Array.from(atob(packed), (c) => c.charCodeAt(0));
+    const stream = new Response(bytes).body
+      .pipeThrough(new DecompressionStream("gzip"));
+    return JSON.parse(await new Response(stream).text());
+  } catch (error) {
+    return null;
+  }
+}
+
+/**
  * `UX-334`: does this page have that payload, without asking for it.
  *
  * `compare`, `store` and `store-aggregate` are optional by design -
@@ -511,6 +572,10 @@ export function inlined(name) {
  */
 export function offered(run, name) {
   if (inlined(name) !== null) return true;
+  // `UX-529` added a `bga-<name>-gz` branch here and it was dead:
+  // `_offered` derives the manifest from the documents being
+  // embedded, so a compacted payload is listed exactly as a plain one
+  // is, and no mutation of the branch could redden anything.
   const listed = run?.payloads;
   if (!Array.isArray(listed)) return true;
   return listed.includes(name);
@@ -543,6 +608,10 @@ export async function load(name, fallback = null) {
   const here = inlined(name);
   if (here !== null) return here;
   try {
+    // `UX-529`: before the network, because an export that compacted
+    // this document has no network to fall back to.
+    const packed = await inflated(name);
+    if (packed !== null) return packed;
     // `UX-394`: the run selection travels on every document fetch.
     // `?run=<stamp>` is the page's state (`UX-211`), and a page that
     // asked for `report.json` without it would render the run the
@@ -573,7 +642,7 @@ async function boot() {
     // this" (UX-249) is the first thing that decides whether the rest
     // is worth reading. Absent on a run written before the stamp
     // existed, and absent is shown as absent rather than guessed.
-    stampHeader(document, payload);
+    stampHeader(document, payload, run);
     document.title = `bga — ${run.name ?? "report"}`;
     // UX-204: the investigate buttons exist only when there is a
     // timeline to investigate - `UX-194`'s dead-button rule, applied to
@@ -712,7 +781,12 @@ async function boot() {
     // came from, drawn behind them from published figures only.
     const trend = store && contained(
       document, "store_trend", "store.json",
-      () => renderTrend(store, schemas[store.schema], aggregate));
+      // `UX-528`: the loader for the whole listing, injected the way
+      // `copy` is - `views.js` imports nothing. The server offers
+      // `store-all.json` only when the page's own copy is windowed, so
+      // this resolves to `null` on a store the page holds entire.
+      () => renderTrend(store, schemas[store.schema], aggregate,
+                        () => optional(run, "store-all")));
     if (trend) root.append(trend);
     // UX-199: the blast box is a *transport* - it asks the server. An
     // export is a `file://` document with no server, so the box could
@@ -750,6 +824,9 @@ async function boot() {
         // UX-364: which planes are in the trace, so the lead names what
         // the reader sees. `UX-431`: and what the edges became.
         tracePlanes: run.trace_planes, flowLosses: run.trace_flow_losses,
+        // `UX-530`: and why a plane is missing, when this file narrowed
+        // rather than refused.
+        timelineDegraded: run.timeline_degraded,
         // `UX-369`: this run's own elements, and the one the report is
         // already pointing at. The three element-scoped queries used
         // to substitute `macro_micro`'s `core.bst` on every project.
@@ -989,6 +1066,14 @@ async function boot() {
                                      "data-page-failed": "true" },
       el("h2", {}, "Could not load this run"),
       el("p", {}, String(error))));
+  } finally {
+    // `UX-523`: the page says when it has finished booting, because
+    // nothing else could. A driver watching `#report` stop growing
+    // sees the sections and not the wiring that follows them, and the
+    // 1,200ms sleep `UX-482` left in its place was covering that gap
+    // rather than the one it named. In the `finally` so the failure
+    // page counts as booted too: it is a finished page, not a slow one.
+    document.documentElement.dataset.bgaBooted = "1";
   }
 }
 
@@ -1017,7 +1102,7 @@ if (typeof document !== "undefined" && document.getElementById?.("report")) {
  * export and the anchors honest.
  */
 export function wireFocusAndMarks(root, doc, options = {}) {
-  const refresh = () => {
+  const refresh = ({ reveal = false } = {}) => {
     // UX-228 added a third transient node, and it joins the same
     // removal set on purpose: everything focus adds is keyed by
     // `data-role`, so unfocusing leaves the document byte-identical to
@@ -1028,20 +1113,43 @@ export function wireFocusAndMarks(root, doc, options = {}) {
       stale.parentNode?.removeChild?.(stale);
     }
     const uid = focusedElement(root);
+    let investigation = null;
     if (uid && options.payload) {
       // UX-228: the evidence about this element, assembled from
       // published objects. Prepended *under* the bar, so the reader
       // sees what they focused and then what is known about it.
-      const investigation = renderInvestigation(options.payload, uid, options);
+      investigation = renderInvestigation(options.payload, uid, options);
       if (investigation) root.prepend?.(investigation);
     }
-    if (uid) root.prepend?.(renderFocusBar(uid, { onClear: () => {
-      clearFocus(root); refresh(); notify();
-    }}));
+    let bar = null;
+    if (uid) {
+      bar = renderFocusBar(uid, { onClear: () => {
+        clearFocus(root); refresh(); notify();
+      }});
+      root.prepend?.(bar);
+    }
     const summary = renderMarkSummary(readMarks(root), { onClear: () => {
       applyMarks(root, {}); refresh(); notify();
     }});
     if (summary) root.prepend?.(summary);
+    // `UX-534`: **the state is on the control the hand is on.** Focus
+    // and the marks both answer at the top of the document; without
+    // this the button a reader just pressed looks exactly as it did.
+    const marks = readMarks(root);
+    for (const button of root.querySelectorAll?.("[data-focus-element]") ?? []) {
+      button.setAttribute?.("aria-pressed",
+        String(button.getAttribute("data-focus-element") === uid));
+    }
+    for (const button of root.querySelectorAll?.("[data-mark-element]") ?? []) {
+      button.setAttribute?.("aria-pressed",
+        String(marks[button.getAttribute("data-mark-element")]
+               === button.getAttribute("data-mark-value")));
+    }
+    // The answer is 25,501 px from the button on a card at 26,550 px,
+    // and nothing moved. Reveal it only on the click - a page restoring
+    // focus from its url has not asked to be scrolled.
+    if (reveal) (bar ?? investigation)?.scrollIntoView?.();
+    return investigation;
   };
   // The fragment listens for these already; firing one event rather
   // than writing the hash here keeps UX-211 the only writer.
@@ -1054,7 +1162,7 @@ export function wireFocusAndMarks(root, doc, options = {}) {
     const focusUid = node.getAttribute("data-focus-element");
     if (focusUid) {
       applyFocus(root, focusedElement(root) === focusUid ? null : focusUid);
-      refresh();
+      refresh({ reveal: true });
       notify();
       return;
     }

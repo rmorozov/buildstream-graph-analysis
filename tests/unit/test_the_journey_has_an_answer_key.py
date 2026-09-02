@@ -66,6 +66,24 @@ EXAMPLE = REPO / "examples/06-macro-micro-optimization"
 #: lowest of those twenty-two and 1.6 whole observed ranges below it.
 CHAIN_BOUND_FLOOR = 0.75
 
+#: `UX-538`: the same cold build, captured once and committed. The
+#: ranking clause reads this rather than a build it performs, because
+#: what a live build ranks depends on the box - measured below.
+RECORDED = REPO / "tests/fixtures/macro_micro/run"
+
+#: How far `core.bst` leads the runner-up on that recording. Three
+#: `analyze` runs of the committed bytes:
+#:
+#: ```text
+#: core 12.05s   runner-up codegen.bst 7.0s   margin 1.7214  x3
+#: ```
+#:
+#: identical every time, because the input is a file. 1.25 sits 0.47
+#: under it and above every margin a loaded build produced (1.00-1.48,
+#: `UX-489`), so a fixture edited until `core.bst` stops dominating
+#: reddens this and an analyzer that moves the number a little does not.
+CORE_LEAD_FLOOR = 1.25
+
 node = shutil.which("node")
 
 #: One string each, so `UX-213`'s skip census counts them once.
@@ -75,6 +93,10 @@ NO_CHROME = "no chrome/chromium for the geometry guards (set BGA_CHROME)"
 #: The tail this file appends to the shared probe. The probe boots the
 #: export's own inline module; this reads back the two facts `UX-388`
 #: is about - which sections were drawn empty, and whether each says so.
+#:
+#: "Says so" is the presence of a real `.empty-population` sentence,
+#: not one phrase. Round 80 measured why: `UX-536` gave one section a
+#: better sentence and the phrase test called it silent.
 _TAIL = """
 const found = [];
 // `report`, not `body`: the page appends its sections into the element
@@ -86,8 +108,20 @@ const found = [];
   for (const c of n.children ?? []) {
     if (String(c.tagName).toLowerCase() === "section"
         && c.attrs["data-empty"] !== undefined) {
-      found.push([c.attrs["data-section"] ?? null,
-                  (c.textContent || "").includes("found none")]);
+      // The **sentence**, not one wording of it. `UX-536` gave
+      // `element_join_coverage` its own - "these are not zeros that
+      // were measured", which is the truer thing to say and does not
+      // contain "found none" - and this clause read the phrase, so a
+      // section that said something better read as saying nothing.
+      let says = false;
+      (function sentence(m) {
+        for (const k of m.children ?? []) {
+          if (String(k.attrs?.class ?? "").includes("empty-population")
+              && (k.textContent || "").trim().length > 20) says = true;
+          sentence(k);
+        }
+      })(c);
+      found.push([c.attrs["data-section"] ?? null, says]);
     }
     walk(c);
   }
@@ -175,6 +209,21 @@ def _json(walked, argv):
 @pytest.fixture(scope="module")
 def cold(walked):
     return _json(walked, ["analyze", walked["cold_run"], "--format", "json"])
+
+
+@pytest.fixture(scope="module")
+def recorded():
+    """`UX-538`: the same fixture's cold build, captured once and kept.
+
+    The ranking clause reads this instead of a build it performs, so
+    the number it asserts does not depend on how loaded the box is."""
+    done = subprocess.run(
+        [sys.executable, "-m", "bga.cli", "analyze",
+         str(RECORDED), "--format", "json"],
+        capture_output=True, text=True, cwd=str(REPO), timeout=300,
+        env={**os.environ, "PYTHONPATH": str(REPO)})
+    assert done.returncode == 0, done.stderr[-3000:]
+    return json.loads(done.stdout)
 
 
 @pytest.fixture(scope="module")
@@ -357,39 +406,60 @@ class TestTheMacroAnswer:
             f"builds, so this is a change in the fixture rather than in "
             f"the runner")
 
-    def test_the_first_thing_to_fix_is_core(self, cold):
+    def test_the_first_thing_to_fix_is_core(self, recorded):
         """`core.bst` is what the six libraries all wait for, so a
-        ranking that does not put it at the front has lost the graph.
+        ranking that does not put it at the front has lost the graph -
+        asserted of a **recorded** capture, not a live one.
 
-        **At the front, not strictly first** - `UX-489`. This asserted
-        an exact first place in a ranking computed from a build it
-        performs live, and went red once under `make test-touching` at
-        `-n auto` with 102 files in flight (`lib-c.bst` won). Twenty-seven
-        cold builds of this fixture say why:
+        `UX-489` moved this from exact first place to "tied for the
+        top" and it still went red three times in round 80, three
+        different ways. Measured on a 4-core box, `examples/06` cold,
+        `analyze` on the result - the load the guard must survive is
+        the round's own four-track workflow:
 
         ```text
-        unloaded, n=20   core 6.0-8.0s   runner-up 3.0-3.05s   margin >= 1.97
-        loaded,   n=7    core 4.0-6.0s   runner-up 4.0-5.0s    margin 1.00-1.48
-                                                               4 of 7 exact ties
+        load  first in the horizon        core   best   core leads
+          1   core.bst                    10.0   10.0   yes
+          4   codegen.bst x4              18-22  40-42  no, 0 of 4
+          8   codegen.bst                 14-20  20-25  no, 0 of 3
         ```
 
-        The savings quantise to whole seconds, and under load the field
-        closes: `core 5.00 vs lib-b 5.00`, `core 4.00 vs codegen 4.00`,
-        `core 5.00 vs codegen 5.00` twice. On a tie the order is
-        whatever `max()` breaks it to, which is the hair round 73 lost
-        by - `core.bst` still came out first in all 27 runs here, so the
-        old clause did not reproduce in 27 tries and is red at a rate
-        this fixture cannot bound.
+        At four concurrent workers `codegen.bst` takes the top saving by
+        about **2x** in every run. No floor rescues that: the leader
+        changes, so `UX-538` took the other option and the ranking now
+        reads the committed bytes of the same build. The live capture
+        keeps a clause of its own below - that it still produces a
+        horizon naming `core.bst` - which is the half load cannot move.
+        """
+        ranked = recorded["optimization_horizon"]
+        assert ranked, "the recorded horizon is empty"
+        assert leads(ranked, "core.bst"), [
+            (row["element_uid"], row.get("saving_us")) for row in ranked[:3]]
+        core = next(row.get("saving_us") or 0 for row in ranked
+                    if row["element_uid"] == "core.bst")
+        runner_up = max((row.get("saving_us") or 0) for row in ranked
+                        if row["element_uid"] != "core.bst")
+        assert core >= runner_up * CORE_LEAD_FLOOR, (
+            f"core.bst saves {core / 1e6:.2f}s against the runner-up's "
+            f"{runner_up / 1e6:.2f}s, a margin of {core / max(runner_up, 1):.2f} "
+            f"under the {CORE_LEAD_FLOOR} this recording is kept above; "
+            f"UX-538 measured 1.7214 on it three times, so this is the "
+            f"fixture or the ranking rule moving, not the runner")
 
-        So the claim is the one the fixture supports in **both**
-        regimes: `core.bst` is among the elements tied for the largest
-        saving. `UX-456`'s chain-share clause beside this one is the
-        model - a bound with its measurement written next to it.
+    def test_a_live_capture_still_ranks_something(self, cold):
+        """The half a loaded box cannot move, kept live: the build the
+        journey really performs still produces a horizon at all.
+
+        Only that. Which element leads is asserted of the recording
+        above, because at 4 concurrent workers `codegen.bst` led 4 of 4.
+        `core.bst` being *named* was the next thing this clause tried to
+        hold, and one 8-way run of `UX-538`'s sweep dropped it out of
+        the horizon altogether - so under load not even its presence is
+        a fact about this build. A non-empty horizon is; a run with a
+        28s chain that ranks nothing is the analyzer, not the box.
         """
         ranked = cold["optimization_horizon"]
         assert ranked, "the horizon is empty on a run with a 28s chain"
-        assert leads(ranked, "core.bst"), [
-            (row["element_uid"], row.get("saving_us")) for row in ranked[:3]]
 
     def test_the_terminal_says_it_too(self, walked):
         """The same answer, in the words a reader actually meets."""
@@ -505,7 +575,9 @@ class TestTheIncrementalRunIsStillAReport:
         # sections.
         look = """(() => [...document.querySelectorAll('section[data-empty]')]
             .map((n) => [n.getAttribute('data-section'),
-                         n.textContent.includes('found none')]))()"""
+                         Boolean(n.querySelector('.empty-population')
+                           && n.querySelector('.empty-population')
+                                .textContent.trim().length > 20)]))()"""
         with Browser(chrome) as opened:
             seen = opened.measure(exported["page"].as_uri(), look, 1440, 900)
         assert sorted(map(tuple, seen)) == sorted(_empty_sections(

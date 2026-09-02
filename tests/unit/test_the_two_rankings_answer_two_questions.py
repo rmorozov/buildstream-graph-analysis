@@ -144,7 +144,7 @@ class TestEachSentenceSendsTheReaderToTheOther:
     def test_the_blast_ranking_names_the_horizon(self):
         from bga import schemas
 
-        said = schemas.schema("analyze/v4")["properties"]["elements"][
+        said = schemas.schema(schemas.ANALYZE)["properties"]["elements"][
             "properties"]["top_blast_radius"]["description"]
         assert "optimization_horizon" in said, said
         assert "disagree" in said, said
@@ -153,6 +153,6 @@ class TestEachSentenceSendsTheReaderToTheOther:
         from bga import schemas
 
         said = schemas.schema(
-            "analyze/v4")["properties"]["optimization_horizon"]["description"]
+            schemas.ANALYZE)["properties"]["optimization_horizon"]["description"]
         assert "top_blast_radius" in said, said
         assert "different order" in said, said

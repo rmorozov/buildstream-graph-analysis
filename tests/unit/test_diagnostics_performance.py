@@ -11,7 +11,10 @@ here asserts the result is still right, with a performance assertion
 as a secondary check.
 """
 import json
+import sys
 import time
+
+import pytest
 
 from bga import BuildEfficiencyAnalyzer, analyze_run
 from bga.diagnostics.analyzer import DiagnosticsAnalyzer
@@ -173,15 +176,51 @@ def test_graph_analysis_not_recomputed_redundantly(tmp_path, monkeypatch):
     assert call_count["n"] == 1
 
 
+#: `UX-449`'s scan reads skip reasons statically, and an f-string is a
+#: `JoinedStr` it cannot follow - the first draft of the skip below was
+#: one, which took the unreadable count 58 -> 59 and reddened
+#: `test_every_skip_reason_is_declared.py` on CI's 3.9 and 3.11. That
+#: guard's own message names the remedy it prefers, so this is it: the
+#: **condition** is the reason, and the elapsed seconds are evidence
+#: rather than part of it.
+TRACED = ("the duration is a tracer's and not this pipeline's; UX-524's "
+          "coverage job runs +20% and a bare bound would read the "
+          "instrument")
+
+
+def _traced():
+    """Whether a line tracer is measuring this process.
+
+    `UX-524` put `make test` under `--cov-context=test` on the 3.12 job
+    and the workflow states the price it measured: **+20% wall clock**.
+    A bare duration then reads the tracer rather than the code - CI
+    3.12 on `73a4f65` failed at **10.30s against a 10.0s bound**, which
+    is ~8.6s uninstrumented and nowhere near a regression.
+
+    `sys.gettrace()` alone is not enough: coverage uses `sys.monitoring`
+    on 3.12+ and leaves the trace function unset, which is exactly the
+    interpreter that reported this. The module's presence is what
+    holds on both.
+    """
+    return sys.gettrace() is not None or "coverage" in sys.modules
+
+
 def test_full_pipeline_faster_after_p1_21(tmp_path):
     """Informal but real: a 1500-element linear chain (the same
     profiling fixture used to find these hotspots) must complete well
     under what the pre-fix O(N^2) hotspots would allow. Not a strict
     benchmark - just a floor well above what any reasonable regression
     could still pass under.
+
+    The work runs either way; only the *duration* is not asserted under
+    a tracer, because under one the number is not this code's.
+    `UX-482`'s rule - a duration standing in for a condition - and the
+    condition here is "not quadratic again".
     """
     run_dir = _linear_chain_run_dir(tmp_path, 1500)
     start = time.perf_counter()
     analyze_run(run_dir)
     elapsed = time.perf_counter() - start
+    if _traced():
+        pytest.skip(TRACED)
     assert elapsed < 10.0, f"1500-element analyze_run took {elapsed:.2f}s - regression?"

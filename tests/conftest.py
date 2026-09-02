@@ -229,13 +229,31 @@ KNOWN_SKIP_REASONS = {
     # `examples/06`, so it needs all three: a `bst` to build with, a
     # `bwrap` to build in, and the staged toolchain
     # `generate_sources.py` writes and `UX-189` keeps out of a clone.
-    # The `test` job has none of them and the whole file skips.
-    # Measured on `test (3.11)` of PR #181: 14, which is every clause
-    # in the file.
+    # The `test` job has none of them and the whole file skips, so this
+    # number is the file's clause count and moves when the file grows.
+    # PR #181's `test (3.11)`: 14. Round 80: **23** - `UX-536` and
+    # `UX-538` each added a clause and the 8 of headroom absorbed the
+    # first fourteen, so the number that finally reddened CI was one
+    # over the cap rather than one over the count.
+    #
+    # Invisible to any developer machine that has `bst` (this one does:
+    # the file runs, 23 passed in 103s, and skips nothing), which is
+    # fixing guide 7's class - a claim only CI can falsify.
+    # `UX-524` put one CI job's `make test` under `--cov-context=test`,
+    # and the workflow states its price: +20% wall clock. The 1500-
+    # element bound then reads the tracer - 10.30s against 10.0 on CI
+    # 3.12, ~8.6s uninstrumented. One clause, and only where a tracer
+    # is attached, so it fires on no developer machine and on exactly
+    # one of CI's five jobs.
+    "the duration is a tracer's and not this pipeline's; UX-524's "
+    "coverage job runs +20% and a bare bound would read the instrument": (
+        "the 1500-element timing bound; it runs wherever no tracer is "
+        "attached, which is every job but the coverage one", 1),
+
     "the journey needs bst, bwrap and example 06's staged toolchain "
     "(files/toolchain, written by generate_sources.py)": (
         "UX-402's whole-journey arm; it runs where bst, bwrap and the "
-        "staged toolchain are all present", 14),
+        "staged toolchain are all present", 23),
 
     # `UX-449`. Everything below was **found by the static scan in
     # `tests/skip_reasons.py`**, not by a run: eighteen reasons written
@@ -286,6 +304,17 @@ KNOWN_SKIP_REASONS = {
     "no snapshot store in this checkout": (
         "a store is written by a capture and `UX-189` keeps it out of "
         "a clone", 0),
+    # `UX-514`'s two arms. Exactly one fires: the pair reads
+    # `capture-ref-policy:` out of the workflow and each clause skips
+    # when the *other* policy is declared. Both are `pytest.skip()` in
+    # a test body, which the census hook cannot see (it counts
+    # `setup`-phase skips), so both are measured at 0 - `-rs` shows one.
+    "the workflow declares `advanced`": (
+        "the pinned-policy arm, skipped where the workflow says "
+        "`advanced`", 0),
+    "the workflow declares `pinned`": (
+        "the advanced-policy arm, skipped where the workflow says "
+        "`pinned`", 0),
     "this fixture's evidence carries no structured value": (
         "a payload-shape gate over the committed fixtures", 0),
     "this fixture's findings name no elements": (

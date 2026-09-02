@@ -180,6 +180,7 @@ class TestTheFragmentCarriesTheView:
 
 _SHIM = """
 globalThis._makeNode ??= (await import(process.env.BGA_DOM_SHIM)).makeNode;
+globalThis._installDocument ??= (await import(process.env.BGA_DOM_SHIM)).installDocument;
 
 function make(tag) {
   const node = _makeNode(tag);
@@ -187,8 +188,10 @@ function make(tag) {
   return node;
 }
 globalThis.Event = class { constructor(type) { this.type = type; } };
-globalThis.document = { createElement: make, createElementNS: (_n, t) => make(t),
-                        getElementById: () => null };
+_installDocument({
+  createElement: make,
+  createElementNS: (_n, t) => make(t),
+});
 const all = (n, p, f = []) => { if (!n) return f; if (p(n)) f.push(n);
   (n.children ?? []).forEach((c) => all(c, p, f)); return f; };
 """

@@ -65,7 +65,8 @@ const nodes = {
 nodes["perfetto-link"].parentElement = nodes["actions-fallback"];
 nodes["trace-download"].parentElement = nodes["actions-download"];
 
-globalThis.document = { getElementById: (id) => nodes[id] ?? null };
+globalThis._installDocument ??= (await import(process.env.BGA_DOM_SHIM)).installDocument;
+_installDocument({ getElementById: (id) => nodes[id] ?? null });
 globalThis.location = { href: here + "index.html" };
 
 globalThis.fetch = async (url, init = {}) => {
@@ -280,8 +281,13 @@ class TestTheExportSaysWhatToRunInstead:
         # would fake nothing. Same blob, same threshold, same claims.
         monkeypatch.setattr(
             view, "trace_with_planes",
-            lambda _run: (b"\x1f\x8b" + b"x" * (view.TRACE_BUDGET_B * 2),
-                          ["1", "2"], None, 0))
+            # `UX-530`: and `planes`, because the export now renders
+            # again narrowed before it refuses. This blob is over the
+            # byte ceiling at either grain, so both steps refuse and the
+            # claim below is the one it always was.
+            lambda _run, planes=None: (
+                b"\x1f\x8b" + b"x" * (view.TRACE_BUDGET_B * 2),
+                ["1", "2"], None, 0))
 
         path = tmp_path / "report.html"
         result = view.export(str(run), str(path))

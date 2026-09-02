@@ -43,7 +43,20 @@ import skip_reasons  # noqa: E402
 #: a new unresolvable reason is a change somebody has to argue for
 #: rather than a silence - which is the failure mode the whole item is
 #: about. Lowering it is always welcome; the guard says so.
-UNRESOLVABLE = 55
+#:
+#: `UX-523` argued one up, to 56: a thirty-eighth browser guard, whose
+#: reason is `browser.NO_BROWSER` like the other thirty-seven. The scan
+#: cannot follow it because it arrives through an import; making this
+#: one file spell the sentence out would put the same string in two
+#: places, which the sentence-as-contract rule (`UX-326`) likes less
+#: than it likes a readable scan.
+#:
+#: `UX-528` argues **two** up, to 58, and for the same reason twice in
+#: one file: `test_the_store_section_takes_a_window.py` gates its class
+#: on `NO_BROWSER` and skips on it again inside a clause that needs a
+#: second served page. Both are the thirty-ninth browser guard's, not a
+#: new sentence.
+UNRESOLVABLE = 58
 
 
 def test_every_declared_skip_reason_is_known():

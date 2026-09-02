@@ -652,7 +652,7 @@ CAPTURE_LAYOUT = (
      "the host's memory and swap while the build ran, one JSON object "
      "per line (`UX-378`). Absent on a capture taken before that item "
      "or with sampling unavailable."),
-    (f"{STORE_DIRNAME}/{RUNS_DIRNAME}/<stamp>/{ANALYSIS_NAME}", CONDITIONAL, "analyze/v4",
+    (f"{STORE_DIRNAME}/{RUNS_DIRNAME}/<stamp>/{ANALYSIS_NAME}", CONDITIONAL, "analyze/v5",
      "the analysis this capture published, so `bga view` renders "
      "rather than re-deriving (`UX-296`). Absent means the viewer "
      "parses the run itself, and the trace carries no graph structure "

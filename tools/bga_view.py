@@ -26,6 +26,7 @@ or a `..` cannot walk out.
 import argparse
 import base64
 import contextlib
+import gzip
 import http.server
 import io
 import json
@@ -280,6 +281,66 @@ def _analyze_now(run: str) -> dict:
     return _capture(argv)
 
 
+#: `UX-533`: the two answers to "whose analysis is this page showing".
+ANALYSIS_FROM_CAPTURE = "capture"
+ANALYSIS_FROM_VIEW = "view"
+
+
+def _contract_heads(names) -> Dict[str, str]:
+    """`{"analyze": "analyze/v4"}` - the newest version of each contract."""
+    return {name.rsplit("/v", 1)[0]: name
+            for name in sorted(names or ()) if "/v" in name}
+
+
+def analysis_source(stored: Optional[dict], reanalysed: bool) -> dict:
+    """`UX-533`: which analysis the page has, and what it is missing.
+
+    `UX-249`'s contract set is the comparison, not a version number: a
+    build that moved nothing publishes the same set, and that is the
+    axis `producer.py` already records for exactly this reader.
+    `sections_absent` counts `ANALYZE_FULL_KEYS` - the keys this build
+    says *every* full report carries - so it never overstates by
+    counting a section the run has nothing to put in.
+    """
+    from bga import producer, schemas
+
+    theirs = producer.contracts_of(stored)
+    mine = _contract_heads(producer.stamp().get("contracts"))
+    moved: List[str] = []
+    if theirs is not None:
+        old = _contract_heads(theirs)
+        moved = sorted(
+            [f"{old[name]} \u2192 {mine[name]}"
+             for name in set(old) & set(mine) if old[name] != mine[name]]
+            + [f"{mine[name]} (new)" for name in set(mine) - set(old)])
+    declared = set(schemas.ANALYZE_FULL_KEYS)
+    return {
+        "source": ANALYSIS_FROM_VIEW if reanalysed else ANALYSIS_FROM_CAPTURE,
+        "stored_producer": producer.version_of(stored)
+        if stored is not None else None,
+        "this_build": producer.version_of({"producer": producer.stamp()}),
+        "contracts_moved": moved,
+        "sections_declared": len(declared),
+        "sections_absent": sorted(declared - set(stored or {})),
+        # Stale is the *producer* comparison and nothing else: an
+        # unstamped capture cannot be shown to agree with this build.
+        "stale": bool(not reanalysed and stored is not None
+                      and (theirs is None or moved)),
+        "reanalyse": "bga view RUN --reanalyse",
+    }
+
+
+def analysis_note(run: str, reanalyse: bool = False) -> dict:
+    """`analysis_source` for a run on disk - one small file read.
+
+    The same decision `payloads` makes, written once: a run whose
+    capture published nothing was analysed here whether or not the flag
+    was given.
+    """
+    stored = published_analysis(run)
+    return analysis_source(stored, reanalyse or stored is None)
+
+
 def _offered(documents: Dict[str, dict]) -> List[str]:
     """The payload names the page may load, from the table it will be given.
 
@@ -293,7 +354,8 @@ def _offered(documents: Dict[str, dict]) -> List[str]:
                   for name in documents)
 
 
-def payloads(run: str, baseline: Optional[str] = None) -> Dict[str, dict]:
+def payloads(run: str, baseline: Optional[str] = None,
+             reanalyse: bool = False) -> Dict[str, dict]:
     """Everything the page renders, keyed by the url it is served at.
 
     A refusal is data, not an error: `bga compare` exits 6 on runs it
@@ -306,7 +368,11 @@ def payloads(run: str, baseline: Optional[str] = None) -> Dict[str, dict]:
     # writes the report beside the run, so the page gets it for free
     # wherever the store put one, and silently goes without elsewhere.
 
-    documents = {"report.json": published_analysis(run) or _analyze_now(run)}
+    # `UX-533`: `--reanalyse` asks for *this* build's answer. The stored
+    # file is read, never written - it is the capture-time analysis the
+    # CI comment quotes, and overwriting it would delete that.
+    stored = None if reanalyse else published_analysis(run)
+    documents = {"report.json": stored or _analyze_now(run)}
     # `UX-203`: the comparison the user already has. `bga snapshot`
     # compares against the previous run automatically, so by the time
     # anyone runs `bga view` the answer usually exists - it was just
@@ -336,12 +402,31 @@ def payloads(run: str, baseline: Optional[str] = None) -> Dict[str, dict]:
     return documents
 
 
-def store_payload(run: str) -> Optional[dict]:
+#: `UX-528`: how many snapshots the page is handed.
+#:
+#: The sparklines beside the store exhibit got a window
+#: (`element.js`'s `HISTORY_POINTS_MAX`); the exhibit, its table twin
+#: and the run picker did not, and `UX-394` was filed with two runs in
+#: the store. Measured on a store of N copies of the golden run, served:
+#: at N=100 the picker drew 100 options, the twin 100 rows and
+#: `store.json` was 34,056 B against 4,121 at N=12.
+#:
+#: The same 12, because it is the same question - the last dozen runs
+#: of this project - and two windows disagreeing about "recent" is worse
+#: than either. `test_the_page_moves_between_runs.py` holds them equal.
+STORE_WINDOW = 12
+
+
+def store_payload(run: str, window: Optional[int] = STORE_WINDOW
+                  ) -> Optional[dict]:
     """`store/v1` for the project this run belongs to, or None.
 
     `UX-196`'s store trend. Through `bga_snapshot.store_listing`, which
     is also what `--list` renders from, so the drawing and the terminal
     cannot disagree about what is on disk.
+
+    `UX-528`: windowed for the page. `window=None` is the whole store,
+    which is what the focus path behind "show all N" is served from.
     """
     from bga import run_store
     # Relative: packaged, this module is `bga._tools.bga_view`,
@@ -353,7 +438,7 @@ def store_payload(run: str) -> Optional[dict]:
     if project is None:
         return None
     try:
-        return store_listing(project)
+        return store_listing(project, window)
     except OSError:
         return None
 
@@ -474,7 +559,8 @@ def trace_file(run: str, destination: str) -> Optional[str]:
     return (trace_render(run, destination) or {}).get("path")
 
 
-def trace_render(run: str, destination: str) -> Optional[dict]:
+def trace_render(run: str, destination: str,
+                 planes: Optional[str] = None) -> Optional[dict]:
     """`render`'s own result for this run, plus `path`. `None` on refusal.
 
     `UX-364`: the renderer already reports **which planes it put in the
@@ -488,11 +574,12 @@ def trace_render(run: str, destination: str) -> Optional[dict]:
     Plane 2, while `bga timeline` reads the raw log regardless and the
     lanes *are* there. Only the render knows, so the render is asked.
     """
-    from .bga_timeline import render
+    from .bga_timeline import PLANES_BOTH, render
 
     snapshot = os.path.dirname(os.path.abspath(run))
     try:
-        result = render(snapshot, destination, quiet=True)
+        result = render(snapshot, destination, quiet=True,
+                        planes=planes or PLANES_BOTH)
     except (FileNotFoundError, RuntimeError, OSError):
         return None
     return dict(result or {}, path=destination)
@@ -509,7 +596,7 @@ def trace_bytes(run: str) -> Optional[bytes]:
     return trace_with_planes(run)[0]
 
 
-def trace_with_planes(run: str):
+def trace_with_planes(run: str, planes: Optional[str] = None):
     """`(bytes, planes, flow_losses, tracks)` - and what it will draw.
 
     `UX-364`. `trace_bytes` is the same call with the rest dropped; the
@@ -525,10 +612,15 @@ def trace_with_planes(run: str):
     `UX-430` adds the fourth: the **track** count, which is what Perfetto
     spends and what `TRACE_BUDGET_B` cannot see. See `TRACE_TRACK_BUDGET`
     for the measurement.
+
+    `UX-530` adds `planes`: the export renders again, narrowed, rather
+    than refusing a capture whose own recipe names the flag that would
+    have fitted.
     """
     scratch = tempfile.mkdtemp(prefix="bga-view-")
     try:
-        rendered = trace_render(run, os.path.join(scratch, "timeline.json.gz"))
+        rendered = trace_render(run, os.path.join(scratch, "timeline.json.gz"),
+                                planes=planes)
         if rendered is None:
             return None, None, None, None
         with open(rendered["path"], "rb") as handle:
@@ -637,6 +729,27 @@ EXPORT_BUDGET_B = 8 * 1024 * 1024
 # take, which is the export half of the same constant.
 TRACE_BUDGET_B = 4 * 1024 * 1024
 
+#: `UX-529`: past this many bytes of JSON, a document travels the
+#: export **compacted** - gzip, base64, one `application/octet-stream`
+#: block the page inflates - instead of as readable JSON text.
+#:
+#: Not a budget, so deliberately not named one: nothing is refused
+#: here and a reader does nothing about it. It is the size at which
+#: the export stops paying for a payload it can be read out of.
+#: `EXPORT_BUDGET_B` was the only thing above the data half and the
+#: data half is linear in the element population - measured on the two
+#: seeded runs, `bga gen-synthetic --seed 1` and the same with
+#: `--layers 20 --width 200`:
+#:
+#:     elements   report.json   gzip+base64   ratio
+#:        1,202       628,335        69,172   0.110
+#:        4,002     2,041,945       193,492   0.095
+#:
+#: Set above both committed fixtures (30 KB and 80 KB of data), so the
+#: small exports a person reads in an editor stay readable and the
+#: large ones a person mails stay mailable.
+DATA_COMPACT_MIN_B = 200_000
+
 #: `UX-430`: the bound in the unit the **consumer** spends.
 #:
 #: `TRACE_BUDGET_B` above bounds transfer, and it bounds it correctly.
@@ -725,8 +838,11 @@ CEILINGS = (
      "which bound it hit. `bga timeline` renders one beside the "
      "snapshot"),
     ("TRACE_TRACK_BUDGET", "tracks",
-     "`bga timeline --planes 1` or `--only-element`, which narrow what "
-     "is drawn rather than what is carried"),
+     "nothing, for an export: `UX-530` renders again with `--planes 1` "
+     "and the page says it did. `bga timeline --planes 1` or "
+     "`--only-element` narrow what is drawn rather than what is "
+     "carried, and `--only-element` is the one an export cannot pick "
+     "for you"),
 )
 
 
@@ -980,7 +1096,48 @@ def _uncommented_css(text: str) -> str:
         .splitlines() if line.strip())
 
 
-def export(run: str, path: str, with_trace: bool = True) -> dict:
+def _degradation_steps():
+    """`UX-530`: what `export()` renders before it refuses the timeline.
+
+    `(planes, what the page calls the narrowing)`, coarsest last, read
+    off `bga_timeline`'s own choices rather than restated - so a third
+    grain arriving there is a step here, not a flag the recipe names and
+    the export never tries. `UX-430` measured the one that exists on the
+    seeded scale run: 16,832 tracks become 1,205, a **14.0x** narrowing,
+    because the process lanes are the whole of the growth.
+    """
+    from .bga_timeline import PLANE1_ONLY, PLANES_BOTH
+
+    return ((PLANES_BOTH, None),
+            (PLANE1_ONLY, "`--planes 1`, which leaves Plane 2's process "
+                          "lanes out"))
+
+
+def _over_a_ceiling(trace: bytes, tracks: Optional[int]) -> Optional[str]:
+    """Which ceiling this rendering hits, or `None`. Two units, two
+    sentences: a refusal reading "4 MiB" when the problem is the rows
+    sends the reader to compress something that is not the cost.
+
+    `UX-530`: the track count is what `_write_trackevent` opens - one
+    process track per element and one thread track per traced *pid*,
+    after `merge_record_streams` - so it counts **processes**, never the
+    two slices the spine and the hook record for one of them.
+    """
+    if len(trace) * 4 / 3 > TRACE_BUDGET_B:
+        return (f"the timeline is {len(trace) / 1048576:.1f} MiB "
+                f"compressed, over this export's "
+                f"{TRACE_BUDGET_B / 1048576:.0f} MiB ceiling for it")
+    if (tracks or 0) > TRACE_TRACK_BUDGET:
+        return (f"the timeline draws {tracks:,} tracks, over this export's "
+                f"{TRACE_TRACK_BUDGET:,}-track ceiling - Perfetto draws a "
+                f"row per track, and the byte size "
+                f"({len(trace) / 1048576:.1f} MiB) is well inside its own "
+                f"ceiling")
+    return None
+
+
+def export(run: str, path: str, with_trace: bool = True,
+           reanalyse: bool = False) -> dict:
     """Write one self-contained file. Returns what went into it."""
     # `payloads()` keys documents by the *url* they are served at, so
     # they arrive as "report.json". The inline blocks are keyed by name
@@ -990,12 +1147,15 @@ def export(run: str, path: str, with_trace: bool = True) -> dict:
     # which works when served and fails on `file://` - so the export
     # looks fine everywhere except where it is used.
     documents = {name[:-len(".json")] if name.endswith(".json") else name: body
-                 for name, body in payloads(run).items()}
+                 for name, body in payloads(run, reanalyse=reanalyse)
+                 .items()}
     # `UX-342`: after the payloads and before the manifest - it has to
     # see what is being embedded, and `_offered` has to see it.
     documents["schemas"] = schemas_payload(documents)
     documents["run"] = {"run": os.path.abspath(run),
                         "name": os.path.basename(os.path.abspath(run)),
+                        # `UX-533`: which analysis is inlined above.
+                        "analysis": analysis_note(run, reanalyse),
                         # UX-334: the same manifest the server
                         # publishes. An export inlines every payload it
                         # has, so `load` never reaches the network here
@@ -1004,10 +1164,34 @@ def export(run: str, path: str, with_trace: bool = True) -> dict:
                         # that gets tested on one side only.
                         "payloads": _offered(documents)}
 
-    trace, trace_planes, flow_losses, trace_tracks = (
-        trace_with_planes(run) if with_trace else (None, None, None, None))
-    omitted = None
-    if trace is None:
+    trace = trace_planes = flow_losses = trace_tracks = None
+    omitted = degraded = None
+    if with_trace:
+        # `UX-530`: the recipe below already named the flag that would
+        # have fitted, and the export refused without trying it.
+        refusals, tried, fitted = [], [], False
+        for step, narrowing in _degradation_steps():
+            trace, trace_planes, flow_losses, trace_tracks = trace_with_planes(
+                run, planes=step)
+            if trace is None:
+                break
+            refusal = _over_a_ceiling(trace, trace_tracks)
+            if refusal is None:
+                fitted = True
+                if refusals:
+                    degraded = (f"The whole timeline did not fit - "
+                                f"{refusals[0]} - so this file carries "
+                                f"{narrowing}: {trace_tracks:,} tracks.")
+                break
+            refusals.append(refusal)
+            tried.append(narrowing or "the whole timeline")
+        if refusals and not fitted:
+            # Every step tried and none fitted. The reader is owed each
+            # number, not only the last: a refusal naming one narrowing
+            # it never tried is what this item was filed on.
+            omitted = "; ".join(f"{what} - {why}"
+                                for what, why in zip(tried, refusals))
+    if trace is None and omitted is None:
         # UX-329: which absence, from `bga.plane2` - the same sentence
         # the terminal prints and the JSON publishes. The one this
         # replaced said "no raw Plane 2 log" for a run that never
@@ -1018,23 +1202,6 @@ def export(run: str, path: str, with_trace: bool = True) -> dict:
         omitted = plane2_shape.absence(run) or (
             "this run kept no raw Plane 2 log, so there is no timeline "
             "to carry")
-    else:
-        # Two bounds, each named in its own unit. `UX-299` set the byte
-        # one; `UX-430` added the track one, because Perfetto draws a row
-        # per track and a capture can sit at an eighth of the byte bound
-        # with sixteen thousand rows in it. A refusal reading "4 MiB"
-        # when the problem is the rows sends the reader to compress
-        # something that is not the cost.
-        if len(trace) * 4 / 3 > TRACE_BUDGET_B:
-            omitted = (f"the timeline is {len(trace) / 1048576:.1f} MiB "
-                       f"compressed, over this export's "
-                       f"{TRACE_BUDGET_B / 1048576:.0f} MiB ceiling for it")
-        elif (trace_tracks or 0) > TRACE_TRACK_BUDGET:
-            omitted = (f"the timeline draws {trace_tracks:,} tracks, over "
-                       f"this export's {TRACE_TRACK_BUDGET:,}-track "
-                       f"ceiling - Perfetto draws a row per track, and the "
-                       f"byte size ({len(trace) / 1048576:.1f} MiB) is well "
-                       f"inside its own ceiling")
     if omitted and trace is not None:
         # UX-299: and what to do instead, because "the timeline is not
         # in this file" is a dead end without it. The blast box's
@@ -1051,10 +1218,17 @@ def export(run: str, path: str, with_trace: bool = True) -> dict:
                     "you would rather open it yourself, and "
                     "`--planes 1` or `--only-element ELEMENT` write a "
                     "smaller one: the process lanes are where the track "
-                    "count grows.",
+                    "count grows. `--only-element` is the one this "
+                    "export cannot take for you - it needs the element "
+                    "you are investigating.",
         }
         trace = None
     documents["run"]["has_timeline"] = trace is not None
+    # `UX-530`: the step this file took to be able to carry one at all.
+    # The page's handoff sentence says which planes it has; without this
+    # it cannot say why the other is missing.
+    if degraded and trace is not None:
+        documents["run"]["timeline_degraded"] = degraded
     # UX-364: and *which* planes are in it, when there is one. The
     # handoff's lead sentence names them; before this it named both
     # unconditionally, on a capture that had one.
@@ -1084,6 +1258,14 @@ def export(run: str, path: str, with_trace: bool = True) -> dict:
         # string can carry one (an element named after an html file is
         # not hypothetical), so it is escaped rather than trusted.
         body = json.dumps(document).replace("</", "<\\/")
+        if len(body) > DATA_COMPACT_MIN_B:
+            # `UX-529`: base64 has no `<`, so the escape above is moot
+            # and the block cannot be ended early at all.
+            packed = base64.b64encode(gzip.compress(
+                json.dumps(document).encode("utf-8"), 9)).decode()
+            blocks.append('<script type="application/octet-stream" '
+                          f'id="bga-{name}-gz">{packed}</script>')
+            continue
         blocks.append(
             f'<script type="application/json" id="bga-{name}">{body}</script>')
     if trace is not None:
@@ -1450,7 +1632,8 @@ class _Handler(http.server.BaseHTTPRequestHandler):
 def serve(run: str, port: int = 0,
           documents: Optional[Dict[str, dict]] = None,
           with_trace: bool = True,
-          baseline: Optional[str] = None):
+          baseline: Optional[str] = None,
+          reanalyse: bool = False):
     """A started server on 127.0.0.1. The caller closes it.
 
     Returns `(httpd, url)`. Port 0 means the kernel picks one, so two
@@ -1458,12 +1641,19 @@ def serve(run: str, port: int = 0,
     predictable port.
     """
     documents = dict(documents if documents is not None
-                     else payloads(run, baseline))
+                     else payloads(run, baseline, reanalyse))
     documents.setdefault("schemas.json", schemas_payload())
 
     store = store_payload(run)
     if store is not None:
         documents.setdefault("store.json", store)
+        # `UX-528` (§3a): where "show all N snapshots" goes. Offered in
+        # the manifest and fetched only when a reader asks, so the whole
+        # listing costs the page nothing until it is wanted.
+        if store.get("shown", store.get("count")) != store.get("count"):
+            whole = store_payload(run, window=None)
+            if whole is not None:
+                documents.setdefault("store-all.json", whole)
         # UX-234: and what that store says about itself as a
         # distribution. A second document rather than a key of the
         # listing - one row per snapshot and one row per host class are
@@ -1491,6 +1681,9 @@ def serve(run: str, port: int = 0,
         # lines of noise a real error has to be spotted among. The
         # server already knows the answer here; it just never said it.
         "payloads": _offered(documents),
+        # `UX-533`: which analysis is behind `report.json` - the stored
+        # one this capture published, or this build's.
+        "analysis": analysis_note(run, reanalyse),
         # So the page can offer the button only when there is something
         # behind it - a dead "Open in Perfetto" is worse than none.
         "has_timeline": offered,
@@ -1590,6 +1783,11 @@ def main(argv: Optional[List[str]] = None) -> int:
         help="Print the url instead of opening it - for a remote shell, or "
              "when you want to curl the payloads.")
     parser.add_argument(
+        "--reanalyse", action="store_true",
+        help="Analyse the run with *this* build instead of serving the "
+             "analysis its capture published. The stored file is read, "
+             "never written - it is what the CI comment quotes.")
+    parser.add_argument(
         "--compare", default=None, metavar="BASELINE",
         help="Draw the band against this run instead of the one before "
              "RUN in the same store. Same alias grammar.")
@@ -1615,7 +1813,8 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     if args.export:
         try:
-            written = export(run, args.export)
+            written = export(run, args.export,
+                             reanalyse=args.reanalyse)
         except (OSError, RuntimeError, ValueError,
                 json.JSONDecodeError) as error:
             print(f"Error: {error}", file=sys.stderr)
@@ -1638,7 +1837,8 @@ def main(argv: Optional[List[str]] = None) -> int:
         return 0
 
     try:
-        httpd, url = serve(run, port=args.port, baseline=baseline)
+        httpd, url = serve(run, port=args.port, baseline=baseline,
+                           reanalyse=args.reanalyse)
     except (OSError, RuntimeError, ValueError, json.JSONDecodeError) as error:
         print(f"Error: {error}", file=sys.stderr)
         return 2

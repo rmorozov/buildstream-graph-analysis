@@ -585,6 +585,29 @@ scale               1,202    4,763   26,242   36,542      1,941   24,294
 budget, to 4,000 elts          7,000   32,000   41,000      2,300   27,500
 ```
 
+`UX-526` measured the large class at its **top** — the same seeded
+generator at `--layers 20 --width 200`, 4,002 elements — and every one
+of the four opened bounds was past: 107,352 words, 4,774 controls and
+73,075 DOM elements against 41,000 / 2,300 / 27,500. A class asserted
+only at its bottom is `UX-367`'s own defect one size up. The rows and
+pairs a bound does not show now leave the document instead of staying
+in it hidden, and the class is bounded at both ends:
+
+```text
+                 elements   landed   opened    words   controls    nodes
+scale               1,202    5,007   26,584    8,259        787    4,732
+xl                  4,002    4,937   27,230    8,275        812    4,960
+budget, to 4,100 elts          7,000   32,000    9,000        900    5,500
+```
+
+Height does not move at all — a bounded row costs no pixels, which is
+`UX-419`'s finding — and the other three fall by an order of magnitude,
+because at 4,002 elements 96,065 of the page's 107,352 words were the
+hidden half of one `dl`. The nodes bound came down again one item
+later: `UX-527` replaced the Perfetto picker's one-`<option>`-per-element
+`<select>` with a search box drawing eight, 4,119 DOM elements to 126,
+and `test_the_budgets_are_not_slack` is what asked for the restatement.
+
 The small class's words bound moved 12,000 -> 12,600 in round 73, and
 only that one:
 

@@ -59,12 +59,11 @@ CONFLICT (content): Merge conflict in scenarios/README.md
 ```
 
 Both failure modes at once. The topic table **conflicted** — adjacent
-rows, one hunk. The counts sentence did *not*: both sides wrote the
-same decrement from the same base, so git took it silently and the
-index claimed 16 open over 14 rows with nothing checking it. That is
-the worse one. And the table was already wrong: its Total column summed
-to **495** over 504 rows, nine items in no topic and nothing saying
-which.
+rows, one hunk. The counts sentence did *not*: both sides wrote the same
+decrement from the same base, so git took it silently and the index
+claimed 16 open over 14 rows with nothing checking it. That is the worse
+one. And the table was already wrong: its Total column summed to **495**
+over 504 rows, nine items in no topic and nothing saying which.
 
 ### After
 
@@ -86,14 +85,15 @@ Scope, and the aggregate is what stopped colliding.
 
 ### Where the topic comes from, and the bucket
 
-The task file's `**Topic:**` header, else the open table's Topic
-column, else `unclassified`. `closed.md` has no Topic column and **223
-of the 489** closed rows predate the header, so no topic can be derived
-for them — not from the file, not from any of the 171 historical
-revisions of the index. Naming the bucket makes the table sum to the
-row count and the debt visible; distributing them by guesswork would
-not. `--move` now copies the topic into the task file, so the loss does
-not recur. Filed as `UX-507`.
+The task file's `**Topic:**` header, else the open table's Topic column,
+else `unclassified`. `closed.md` has no Topic column and **223 of the
+489** closed rows predate the header, so no topic can be derived for them
+— not from the file, not from any of the 171 historical revisions of the
+index. Naming the bucket makes the table sum to the row count and the debt
+visible; distributing them by guesswork would not. `--move` now copies the
+topic into the task file, so the loss does not recur. Filed as `UX-507`,
+**which classified all 223 on 2026-08-31: the bucket has held 0 rows
+since** (`UX-517`).
 
 ### Mutations verified red and reverted (5)
 
@@ -117,9 +117,10 @@ make test          5749 passed, 27 skipped in 316.49s
 
 ### Deviation from the Required Fix
 
-The filing says "from the rows in `README.md` and `closed.md`". The
-closed rows carry no topic, so the derivation reads the task file's
-header instead and says `unclassified` where there is none. Nothing
-else. §3.10 fixed here: `CLAUDE.md`'s command table and status rule,
-the `verify` skill's step 4, and the `decompose` skill's shared-files
-list, which now carries the merge recipe.
+The filing says "from the rows in `README.md` and `closed.md`". The closed
+rows carry no topic, so the derivation reads the task file's header
+instead and says `unclassified` where there is none — **no longer true
+since `UX-507` (2026-08-31)**. Nothing else. §3.10 fixed here:
+`CLAUDE.md`'s command table and status rule, the `verify` skill's step 4,
+and the `decompose` skill's shared-files list, which now carries the merge
+recipe.

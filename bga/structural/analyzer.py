@@ -101,6 +101,14 @@ from bga.structural.models import (
 )
 
 
+#: `UX-539` used `int.bit_count()`, which is **3.10+**, and
+#: `requires-python` is `>=3.9`: 358 failed and 156 errored on the 3.9
+#: job while every local run was green. Bound once at import so the
+#: fast path stays a method call on the interpreters that have it.
+_popcount = getattr(int, "bit_count", None) or (
+    lambda value: bin(value).count("1"))
+
+
 class StructuralAnalyzer:
     """Analyzes cold structural properties of the build graph.
     
@@ -213,6 +221,40 @@ class StructuralAnalyzer:
             serialization_share=serialization_share,
         )
     
+    def _reachability_counts(self):
+        """`(|descendants|, |ancestors|)` per node, from one closure.
+
+        UX-539: the per-node walk this replaces is O(V*(V+E)); a bitset
+        closure over the topological order is O(V*E/64) plus the OR per
+        edge. `build_element_graph` rejects a cycle before the graph
+        reaches this class, so a topological order always exists.
+        """
+        G = self._graph
+        order = list(nx.topological_sort(G))
+        index = {node: i for i, node in enumerate(order)}
+        bit = [1 << i for i in range(len(order))]
+
+        descendants = [0] * len(order)
+        for node in reversed(order):
+            mask = 0
+            for succ in G.successors(node):
+                j = index[succ]
+                mask |= descendants[j] | bit[j]
+            descendants[index[node]] = mask
+
+        ancestors = [0] * len(order)
+        for node in order:
+            mask = 0
+            for pred in G.predecessors(node):
+                j = index[pred]
+                mask |= ancestors[j] | bit[j]
+            ancestors[index[node]] = mask
+
+        return (
+            {node: _popcount(descendants[i]) for node, i in index.items()},
+            {node: _popcount(ancestors[i]) for node, i in index.items()},
+        )
+
     def analyze_bottlenecks(self) -> BottleneckAnalysis:
         """Detect structural bottlenecks (Part 32).
         
@@ -243,18 +285,20 @@ class StructuralAnalyzer:
         # actually matters for a build, and it is exact rather than
         # heuristic.
         #
-        # O(V*(V+E)) worst case via the two reachability sweeps; 0.2s
-        # for all 1202 nodes of the scale fixture in practice.
+        # UX-539: only the two *counts* are wanted, so they come from
+        # one bitset closure over the topological order rather than
+        # `nx.descendants`/`nx.ancestors` once per node - O(V*(V+E))
+        # and 33.8s of a 24.7s-wall analysis under cProfile at 4,002.
         choke_points = []
         choke_impact = {}
 
         n_nodes = G.number_of_nodes()
+        descendant_count, ancestor_count = self._reachability_counts()
         for node in G.nodes():
-            downstream = nx.descendants(G, node)
-            upstream = nx.ancestors(G, node)
-            if len(downstream) + len(upstream) == n_nodes - 1:
+            downstream = descendant_count[node]
+            if downstream + ancestor_count[node] == n_nodes - 1:
                 choke_points.append(node)
-                choke_impact[node] = len(downstream)
+                choke_impact[node] = downstream
 
         # Ranked by how much waits on them, so the report's own cap
         # shows the ones worth reading first rather than an arbitrary
@@ -627,11 +671,10 @@ class StructuralAnalyzer:
         if historical_runs:
             historical = self.analyze_historical_trends(historical_runs)
         
-        # Generate summary
+        # UX-535: the three facts this took from `metrics` are the ones
+        # `graph_metrics` publishes from the same object, so they are read
+        # there rather than repeated under a second spelling.
         summary = {
-            'total_elements': metrics.num_elements,
-            'critical_path_length': metrics.critical_path_length,
-            'max_parallelism': metrics.max_parallelism,
             'bottleneck_count': len(bottleneck.choke_points),
             'deferrable_leaves': len(deferrability.deferrable_leaves),
             'best_case_speedup': sensitivity.best_case_speedup,

@@ -58,10 +58,8 @@ FIXTURES = {"golden": REPO / "tests/fixtures/golden/mixed_task_kinds",
 
 _PROBE = r"""
 globalThis._makeNode ??= (await import(process.env.BGA_DOM_SHIM)).makeNode;
-globalThis.document = { createElement: _makeNode,
-                        createElementNS: (_n, t) => _makeNode(t),
-                        getElementById: () => null, querySelector: () => null,
-                        querySelectorAll: () => [], addEventListener: () => {} };
+globalThis._installDocument ??= (await import(process.env.BGA_DOM_SHIM)).installDocument;
+_installDocument();
 const v = await import(process.env.BGA_VIEWER);
 const fs = await import("node:fs");
 const payload = JSON.parse(fs.readFileSync(process.env.BGA_PAYLOAD, "utf8"));
@@ -163,7 +161,7 @@ class TestTheShapeIsDeclared:
         shape and is genuinely a list."""
         from bga import schemas
 
-        argv = schemas.schema("analyze/v4")["properties"]["next_steps"][
+        argv = schemas.schema(schemas.ANALYZE)["properties"]["next_steps"][
             "items"]["properties"]["argv"]
         assert argv.get(schemas.COMMAND) == "shell", argv
 

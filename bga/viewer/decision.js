@@ -180,7 +180,7 @@ export function renderProvenance(provenance, options = {}) {
   }
 
   // `UX-357`: the document every path above walks. A record that
-  // travels - a `compare/v1` chain read beside an `analyze/v4` one -
+  // travels - a `compare/v1` chain read beside an `analyze/v5` one -
   // resolves against a different document, and the schema calls this
   // load-bearing the moment it does.
   if (provenance.document) {

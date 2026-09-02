@@ -101,10 +101,10 @@ def _long_enough_to_filter(document):
 
 _HARNESS = r"""
 globalThis._makeNode ??= (await import(process.env.BGA_DOM_SHIM)).makeNode;
+globalThis._installDocument ??= (await import(process.env.BGA_DOM_SHIM)).installDocument;
 const mk = (tag) => _makeNode(tag);
 globalThis.Event ??= class { constructor(t, o = {}) { this.type = t; Object.assign(this, o); } };
-globalThis.document = { createElement: mk, createElementNS: (_n, t) => mk(t),
-                        getElementById: () => null, body: mk("body") };
+_installDocument({ body: mk("body") });
 globalThis.window = { location: { hash: "", search: "" }, addEventListener() {},
                       matchMedia: () => ({ matches: false, addEventListener() {} }) };
 const app = await import("%(app)s");

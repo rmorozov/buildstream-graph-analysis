@@ -101,6 +101,11 @@ FILE_WRITTEN = {
     # capture layout is the *only* one whose "file" is the tree.
     "capture-layout/v1": ".bga/ itself - specification 32.6",
     "host-samples/v1": "host-samples.jsonl (bga capture, UX-378)",
+    # `UX-520`: the manifest inside a run bundle. Written into the
+    # archive `bga bundle --export` produces, and read by `--load` to
+    # decide whether this build can read the capture at all - an
+    # on-disk shape with no command that prints it.
+    "bundle-manifest/v1": "bundle.json inside a bga bundle (UX-520)",
     # `UX-297` retired this one. Still read, never written - which is a
     # third state, and the reason `contracts.superseded()` exists.
     "plane2/v1": "plane2.json, as a capture before UX-297 wrote it",
@@ -116,6 +121,9 @@ FILE_WRITTEN = {
     # `UX-344` put a sixth there: the shape `analyze` wrote before the
     # two namespaces were lifted.
     "analyze/v3": "an older store's report.json, before UX-344",
+    # `UX-535` a seventh: the shape before `graph_summary` stopped
+    # republishing three of `graph_metrics`' facts.
+    "analyze/v4": "an older store's report.json, before UX-535",
     "compare/v1": "an older store's comparison",
     "blast/v1": "an older store's blast answer",
     "correlate/v1": "an older store's two-plane join",
@@ -317,8 +325,8 @@ class TestTheUnionIsTheInventory:
         shapes of one report, which is what the chain in
         `bga/plane2.py` is for."""
         assert contracts.superseded() == [
-            "analyze/v2", "analyze/v3", "blast/v1", "compare/v1",
-            "correlate/v1", "host/v1", "plane2/v1",
+            "analyze/v2", "analyze/v3", "analyze/v4", "blast/v1",
+            "compare/v1", "correlate/v1", "host/v1", "plane2/v1",
             "plane2/v2"], contracts.superseded()
         assert "plane2/v1" in FILE_WRITTEN
         assert "plane2/v2" in FILE_WRITTEN
@@ -409,7 +417,8 @@ class TestTheDocumentSaysWhatTheToolDoes:
     #: declaration rather than to any one spelling of it.
     _COUNT_WORDS = {4: "four", 5: "five", 6: "six", 7: "seven",
                     8: "eight", 9: "nine", 10: "ten", 11: "eleven",
-                    12: "twelve", 13: "thirteen", 14: "fourteen"}
+                    12: "twelve", 13: "thirteen", 14: "fourteen",
+                    15: "fifteen", 16: "sixteen", 17: "seventeen"}
 
     def test_the_unknown_to_schema_sentence_counts_correctly(self):
         """It claimed "the last four" were unknown to `--schema` when

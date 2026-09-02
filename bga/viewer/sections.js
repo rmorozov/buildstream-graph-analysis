@@ -35,7 +35,8 @@ import { CONTROLS, classify } from "./shapes.js";
 import { ARRAY_INLINE_ITEMS, CELL_NEST_LIMIT, LIFTED_SECTION, OBJECT_INLINE_FIELDS, TABLE_OPENS_BOUNDED_ABOVE, liftedCriticalPath, renderPairs, renderStructured, renderTable } from "./structured.js";
 import { boundCards } from "./tables.js";
 import { investigationsFor } from "./trace_context.js";
-import { INCOMPLETE, renderEvidence } from "./views.js";
+import { INCOMPLETE, PLANE2_NOT_CAPTURED, renderEvidence }
+  from "./views.js";
 
 /**
  * `UX-204`: each finding carries a button that knows *why* it is
@@ -300,7 +301,7 @@ export const DRAWN_ELSEWHERE = {
 //: A key reaches a reader as its own section, as a `Run` row (every
 //: scalar), through `DRAWN_ELSEWHERE`, or declared here with the reason
 //: it stops at the terminal. Empty is the *measurement*: every key of
-//: `analyze/v4` reaches a reader today, and the slot exists so the next
+//: `analyze/v5` reaches a reader today, and the slot exists so the next
 //: one that cannot is written down rather than left to the next walk -
 //: which is what fourteen Plane 2 blocks were for six rounds.
 export const TERMINAL_ONLY = {};
@@ -345,7 +346,7 @@ function isEmptyPopulation(value) {
 }
 
 /** The heading, the sentence, and the one line that says it is empty. */
-function renderEmptySection(key, hint, node) {
+function renderEmptySection(key, hint, node, sentence = null) {
   const info = heading(key, hint);
   const section = el("section", {
     "data-section": key, "data-rail": info.rail,
@@ -354,8 +355,8 @@ function renderEmptySection(key, hint, node) {
     "data-empty": "true",
   }, sectionHead(key, hint));
   section.append(el("p", { class: "empty-population" },
-                    `Nothing to report here for this run \u2014 the `
-                    + `analysis ran and found none.`));
+                    sentence ?? (`Nothing to report here for this run \u2014 the `
+                    + `analysis ran and found none.`)));
   // **No schema sentence here**, though an empty section is exactly
   // where a reader would want one. `UX-346` made the rule that a
   // description renders beside its value only when the contract
@@ -371,6 +372,16 @@ export function renderSection(key, value, hint = {}, node = undefined,
                               investigate = null, payload = undefined,
                               root = undefined) {
   if (key in DRAWN_ELSEWHERE) return null;
+  // `UX-536`: **a join with no Plane 2 in it is not a measurement of
+  // zero.** The evidence line already says these words on the same
+  // condition; the section presenting the zeros said nothing, under a
+  // heading that names two planes.
+  if (key === "element_join_coverage" && value
+      && Number(value.plane2_elements) === 0) {
+    return renderEmptySection(key, hint, node,
+      `${PLANE2_NOT_CAPTURED} for this run, so the two planes have `
+      + `nothing to agree on \u2014 these are not zeros that were measured.`);
+  }
   // `UX-388`: empty is rendered, absent is not - and what tells them
   // apart is the *contract*, not the value. A declared collection with
   // nothing in it (or a `null` its emitter writes for an empty input

@@ -249,11 +249,11 @@ class TestTheComparisonCitesTheCandidatesChain:
 
     def test_it_says_which_document_its_paths_walk(self, comparison, golden):
         """A record that travels needs to name where its paths resolve.
-        These are into the candidate run's `analyze/v4`, not into the
+        These are into the candidate run's `analyze/v5`, not into the
         comparison quoting it - and following them against the wrong
         document is the failure this field exists to prevent."""
         record = comparison.to_dict()["candidate_diagnosis"]["provenance"]
-        assert record["document"] == "analyze/v4"
+        assert record["document"] == "analyze/v5"
         for entry in record["evidence"]:
             assert provenance.resolve(comparison.to_dict(),
                                       entry["path"]) is provenance.UNRESOLVED
@@ -469,13 +469,13 @@ class TestThePageDrawsTheObject:
 
 _HARNESS = """
 globalThis._makeNode ??= (await import(process.env.BGA_DOM_SHIM)).makeNode;
+globalThis._installDocument ??= (await import(process.env.BGA_DOM_SHIM)).installDocument;
 
 function make(tag) {
   const node = _makeNode(tag);
   return node;
 }
-globalThis.document = { createElement: make, createElementNS: (_n, t) => make(t),
-                        getElementById: () => null };
+_installDocument();
 const views = await import("./tests/viewer.mjs");
 const node = views.renderProvenance(__RECORD__);
 const text = [], paths = [], raw = [];

@@ -162,6 +162,65 @@ class TestBackToTheTop:
         assert seen["scrollAfter"] == 0, seen["scrollAfter"]
 
 
+#: `UX-535`: every rail entry's label names one destination.
+#:
+#: Read off the rendered rail rather than off the schema: the entries
+#: come from three builders - the chapter tables, `viewEntries` for a
+#: section's presets and `subsections` for its folds - and a guard that
+#: read any one of them could not see a collision between two.
+_LABELS = """
+(() => {
+  const rail = document.querySelector("nav.rail") || document.querySelector("nav");
+  const byLabel = {};
+  for (const a of rail.querySelectorAll("a")) {
+    (byLabel[a.textContent.trim()] ??= []).push(a.getAttribute("href"));
+  }
+  return { entries: Object.values(byLabel).reduce((n, h) => n + h.length, 0),
+           collisions: Object.entries(byLabel)
+             .filter(([, hrefs]) => new Set(hrefs).size > 1) };
+})()
+"""
+
+
+@pytest.fixture(scope="module")
+def labels(tmp_path_factory):
+    """The rail's labels on both committed fixtures, one browser."""
+    if find_chrome() is None:
+        pytest.skip(NO_BROWSER)
+    booted = pages.pages(tmp_path_factory, "rail-labels")
+    with Browser(find_chrome()) as browser:
+        return {label: browser.measure(uri, _LABELS, 1440, 900)
+                for label, uri in booted.items()}
+
+
+@pytest.mark.skipif(find_chrome() is None, reason=NO_BROWSER)
+@pytest.mark.parametrize("label", sorted(pages.FIXTURES))
+class TestARailEntryNamesOneDestination:
+    """`UX-535`. Measured before the fix - one label, two hrefs, on both
+    fixtures:
+
+    ```text
+    Latent heavies   #latent_heavies
+    Latent heavies   #elements~v.elements=Latent%20heavies
+    ```
+
+    A section and an `elements` preset of the same name. `UX-289`'s
+    design keeps both drawings; what a reader cannot do is tell the two
+    rail entries apart, and the preset's option already carries the
+    count that would.
+    """
+
+    def test_no_label_points_two_ways(self, labels, label):
+        out = labels[label]
+        assert out["collisions"] == [], (
+            f"{label}: {len(out['collisions'])} rail label(s) on more than "
+            f"one destination, of {out['entries']}: {out['collisions']}")
+
+    def test_the_rail_was_actually_read(self, labels, label):
+        """So an empty rail cannot pass the clause above."""
+        assert labels[label]["entries"] > 20, labels[label]
+
+
 @pytest.mark.skipif(find_chrome() is None, reason=NO_BROWSER)
 class TestTheKeyboardReaches(object):
     """`UX-223` established the page has a keyboard reader."""

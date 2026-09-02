@@ -20,6 +20,7 @@ census — which is the mechanism that makes a skip loud rather than
 comfortable (`UX-235`). A guard that runs nowhere and a guard that
 runs somewhere and says where are different things.
 """
+import atexit
 import json
 import os
 import pathlib
@@ -38,6 +39,19 @@ CANDIDATES = (
 )
 
 NO_BROWSER = "no chrome/chromium for the geometry guards (set BGA_CHROME)"
+
+#: `UX-523`: `{binary: Browser}` - the one this process launched, kept
+#: alive across every `with Browser(...)` in the worker and closed at
+#: exit. Per process, so xdist's workers do not share a debugging port.
+_SHARED = {}
+
+
+@atexit.register
+def _close_shared():
+    for opened in list(_SHARED.values()):
+        opened._stop()
+        shutil.rmtree(opened.profile, ignore_errors=True)
+    _SHARED.clear()
 
 
 def find_chrome():
@@ -72,6 +86,9 @@ class Browser:
         self.port = _free_port()
         self.profile = tempfile.mkdtemp(prefix="bga-geometry-")
         self.process = None
+        #: `UX-523`: true once this instance is the worker's shared
+        #: browser, which is what stops `__exit__` closing it.
+        self._shared = False
         #: Held apart from `self.process` so it survives `_stop` and can
         #: be drained after the writer is gone (see `_why_it_failed`).
         self._stderr = None
@@ -122,9 +139,25 @@ class Browser:
         return False
 
     def __enter__(self):
+        # `UX-523`: one browser per worker per session. Thirty-eight
+        # guard files each opened their own, and a page is loaded
+        # through `Page.navigate` on a target this process owns alone -
+        # pytest runs one test at a time inside a worker, so there is
+        # never a second load in flight to isolate from. Measured at
+        # 0.33s a launch; what it really buys is that the port race
+        # `UX-456` retries for is run once instead of thirty-eight
+        # times.
+        shared = _SHARED.get(self.binary)
+        if (shared is not None and shared.process is not None
+                and shared.process.poll() is None):
+            self.port = shared.port
+            self._shared = True
+            return self
         last = None
         for attempt in range(1, self.START_ATTEMPTS + 1):
             if self._launch():
+                _SHARED[self.binary] = self
+                self._shared = True
                 return self
             # Order matters, and the falsification is why it is written
             # down: `_why_it_failed` reads the process's stderr, and a
@@ -179,8 +212,12 @@ class Browser:
             self.process = None
 
     def __exit__(self, *_):
-        self._stop()
-        shutil.rmtree(self.profile, ignore_errors=True)
+        # A shared browser outlives its `with`; `_close_shared` at exit
+        # is what ends it. A `Browser` that never became the shared one
+        # (a guard that wants its own) still closes here.
+        if not self._shared:
+            self._stop()
+            shutil.rmtree(self.profile, ignore_errors=True)
 
     def _drive(self, url, expression, width, height, extra=()):
         driver = pathlib.Path(__file__).resolve().parent / "cdp.mjs"

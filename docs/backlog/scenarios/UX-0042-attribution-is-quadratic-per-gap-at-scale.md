@@ -80,6 +80,8 @@ Per gap this is `O(log N + k)` for `k` intervals actually inside the window, aga
 
 Two cheap wins the doc also asked for came from the follow-up profile rather than from guessing: holders are stored as `(key_str, task)` pairs so the inner loops never call `TaskKey.__eq__` (8.5M calls) or `str(task_key)` (2.5M) again.
 
+`UX-531` (round 80): three callers kept the scan this replaced - `_resource_available_at`, `classify_scheduler_wait` and `clamp_task_starts` - so the 30x above was one term of several. `_ResourceTimeline` now also carries `active_keys`/`occupancy_at`, and a second instance of it spans every task rather than one resource.
+
 ### Results
 
 ```text

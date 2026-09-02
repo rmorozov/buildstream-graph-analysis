@@ -45,7 +45,7 @@ from bga import plane2, schemas  # noqa: E402
 FIXTURE = REPO / "tests/fixtures/macro_micro/plane2.json"
 
 #: Every document that describes the contract in prose a reader meets.
-#: `bga/schemas.py` is here because `analyze/v4`'s `plane2_coverage`
+#: `bga/schemas.py` is here because `analyze/v5`'s `plane2_coverage`
 #: carries the same sentence, and the filing named two documents when
 #: there were three - which is what a partition checked mechanically
 #: catches and a reading does not.
@@ -132,14 +132,14 @@ class TestEveryDescriptionNamesBothClasses:
 
 
 class TestTheSchemaSentenceAgrees:
-    """The third instance, which the filing did not name. `analyze/v4`
+    """The third instance, which the filing did not name. `analyze/v5`
     publishes `plane2_coverage.source`, whose description said the same
     wrong thing to a reader who opened the `?` door instead of a
     document."""
 
     @staticmethod
     def _source_description():
-        document = schemas.schema("analyze/v4")
+        document = schemas.schema(schemas.ANALYZE)
         return (document["properties"]["plane2_coverage"]["properties"]
                 ["source"]["description"])
 

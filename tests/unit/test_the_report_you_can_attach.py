@@ -466,7 +466,23 @@ END pid=101 ppid=1 ts=1002.500000 element=work-a.bst cmd=cc -c main.c
 # Sized so a change is measured against a budget rather than negotiating
 # with it, and so a framework arriving - hundreds of kilobytes at once,
 # which is what the pair of guards is for - still trips it immediately.
-PAGE_BUDGET_B = 300_000
+#
+# Round 80 spent all three of those rounds at once and tripped it:
+# **+6,934 B from six viewer items** (294,848 -> 301,782), measured on
+# the merge, which is the only tree that has all six. The three-round
+# sizing was the estimate that failed, not the ceiling - a round that
+# rewrites the table's row bookkeeping, replaces a 4,002-option select
+# and windows the store section is three rounds of source in one. So
+# the same procedure, re-run on this round's number rather than on
+# rounds 69-71's:
+#
+#     page today                301,782 B   (round 80's merge)
+#     growth in round 80         +6,934 B   across six items
+#     this budget                310,000 B  8,218 B, ~1 round like it
+#
+# `DATA_DWARFS_PAGE` is unaffected: the ceiling can reach 343,248 B
+# before that claim needs revisiting, and this is 33,248 B short of it.
+PAGE_BUDGET_B = 310_000
 
 #: `UX-444`: the claim, stated once. **The run's data is at least twice
 #: the page a reader is permitted to download.**
@@ -674,7 +690,58 @@ COMMITTED_EXPORTS = [
     # rather than the 716 the note above claims. `golden`'s 411,000
     # still holds with 2,205 B; `macro_micro`'s does not, and 463,000
     # leaves 4,186 B.
-    ("golden", GOLDEN, 411_000),                       #  408,795 B
+    # Round 80's six viewer items moved both bounds and **only the
+    # page**: the embedded data is byte-identical at every step, so all
+    # of it is source. One instrument, this file's own splitter. Two
+    # tracks measured their own halves against the same 294,848 B base:
+    #
+    #     page       delta   what
+    #     UX-526    +1,139   held-row bookkeeping, `data-rows`
+    #     UX-527    +  758   a search box for a 4,002-option `<select>`
+    #     UX-528    +2,752   the store window, its sentence, the loader
+    #     UX-532/4/6 +2,426   `ownRows` and its two siblings, the Focus
+    #                          reveal, `aria-pressed`, sixty-six collapse
+    #                          buttons that name what they open
+    #
+    # The merge is the only tree that has all six, so its page is
+    # **measured there rather than added up**: 301,782 B, which is 141 B
+    # *below* the sum. The difference is the merge itself - the two
+    # tracks each gave the row selector a family (`ownRows`/`ownCells`
+    # for nested tables, `everyRow`/`columnCells` for held-out rows),
+    # and the resolution is one family that answers both, so `ownCells`
+    # is gone and `ownRows` is a delegation.
+    #
+    #     page      294,848 -> 301,782   (+6,934)
+    #     golden    407,730 -> 415,729
+    #     macro     457,749 -> 465,748
+    #
+    # The recorded figures were 3,564 B stale on golden and 3,564 on
+    # macro_micro. 420,000 leaves 4,271 B.
+    # `UX-533` moved both by **+1,852 B**: +1,096 of page
+    # (`analysisSentence` and the two lines `stampHeader` gained) and
+    # +756 of data, the `run.analysis` note - which analysis the page is
+    # showing, its producer, the contracts that moved and the sections
+    # this build always publishes that it lacks. Same instrument:
+    #
+    #     page         301,801 -> 302,897
+    #     golden       416,110 -> 417,962   (data 114,309 -> 115,065)
+    #     macro_micro  466,209 -> 468,061   (data 164,408 -> 165,164)
+    #
+    # The recorded figures were 381 B stale on golden and 461 on
+    # macro_micro. Both bounds still hold: 420,000 leaves 2,038 B and
+    # 470,000 leaves 1,939 B.
+    # `UX-530` moved both by **+220 B, all page** (302,897 -> 303,117):
+    # the degradation ladder, `_over_a_ceiling` and the sentence the
+    # handoff prints when a step was taken. The embedded data is
+    # byte-identical - neither committed fixture is over a ceiling, so
+    # neither publishes `timeline_degraded`.
+    #
+    # **Measured on the merge, not added up**: the same round's `UX-535`
+    # removed `graph_summary`'s three duplicated facts, so the tree that
+    # ships is 786 B under this track's own reading on golden and 869 B
+    # under it on `macro_micro`. 420,000 leaves 2,604 B and 470,000
+    # leaves 2,588 B; `PAGE_BUDGET_B` has 6,938 B of its 310,000 left.
+    ("golden", GOLDEN, 420_000),                       #  417,396 B
     # `UX-297` moved this one by 385 B before that: the two-plane run
     # publishes `plane2_coverage.source`, which says which shape of
     # Plane 2 report served its numbers and what that costs to open. A
@@ -762,15 +829,21 @@ COMMITTED_EXPORTS = [
     # measurement that forced it is the negotiation this file exists to
     # prevent - but the next round to add a module will trip it, and
     # the figure it needs is this one rather than the stale 453,180.
-    ("macro_micro", MACRO_MICRO, 463_000),             #  458,814 B
+    ("macro_micro", MACRO_MICRO, 470_000),             #  467,412 B
 ]
 
 
 def _embedded(path):
-    """The bytes of documents the page carries, so the rest is the page."""
+    """The bytes of documents the page carries, so the rest is the page.
+
+    `octet-stream` too: `UX-529` compacts a large payload into one, and
+    counting only `application/json` would book a 194 KB compacted
+    report as *page* - which is the half with the budget.
+    """
     text = pathlib.Path(path).read_text(encoding="utf-8")
     return sum(len(found) for found in re.findall(
-        r'<script type="application/json"[^>]*>(.*?)</script>', text, re.S))
+        r'<script type="application/(?:json|octet-stream)"[^>]*>(.*?)'
+        r'</script>', text, re.S))
 
 
 @pytest.fixture
@@ -842,7 +915,7 @@ class TestItNeedsNothingButItself:
         """
         import tools.bga_view as view
 
-        monkeypatch.setattr(view, "payloads", lambda run: {
+        monkeypatch.setattr(view, "payloads", lambda run, **_kw: {
             "report.json": {"schema": "analyze/v2", "section": None,
                             "run_id": "a</script><script>alert(1)</script>",
                             "total_duration_us": 1}})
@@ -1206,7 +1279,27 @@ class TestTheSizeDiscipline:
         # identical for every run of a given contract set, so they sit
         # beside the modules and the stylesheet rather than beside the
         # measurements.
-        return len(page), len(schemas), len(html) - len(page) - len(schemas)
+        #
+        # `UX-529`: the **documents**, not the bytes the file spends on
+        # them. Past `DATA_COMPACT_MIN_B` the export carries the report
+        # gzipped, and at 1,000 elements that is 686,497 B of run data
+        # in 77,768 B of block - so a ratio measured on the block would
+        # read the compaction as the page having grown to dwarf the
+        # data, which is the opposite of what happened. The claim below
+        # is about how much this run has to say against how much page a
+        # reader downloads to read it; the transport is `UX-529`'s.
+        import base64
+        import gzip
+
+        data = 0
+        for kind, ident, block in re.findall(
+                r'<script[^>]*type="application/(json|octet-stream)"[^>]*'
+                r'id="bga-([a-z-]+)"[^>]*>(.*?)</script>', html, re.S):
+            if ident == "schemas":
+                continue
+            data += len(gzip.decompress(base64.b64decode(block))
+                        if kind == "octet-stream" else block.encode("utf-8"))
+        return len(page), len(schemas), data
 
     def test_only_one_number_bounds_the_page(self, tmp_path):
         """`UX-367`: the clause the fix above is falsifiable by.
@@ -1544,16 +1637,23 @@ class TestTheSizeDiscipline:
         ceiling above is a measurement rather than an argument."""
         import json
 
+        import base64
+        import gzip
+
         html = open(exported[0], encoding="utf-8").read()
         blocks = re.findall(
-            r"<script[^>]*type=\"application/json\"[^>]*>(.*?)</script>",
-            html, flags=re.S)
+            r"<script[^>]*type=\"application/(json|octet-stream)\"[^>]*>"
+            r"(.*?)</script>", html, flags=re.S)
         assert blocks, "no data blocks - the export stopped embedding"
-        for block in blocks:
-            # Every one parses as JSON. A blob that is not a document
-            # would land here as something else.
-            json.loads(block)
-        data = sum(len(block) for block in blocks)
+        for kind, block in blocks:
+            # Every one parses as JSON, in whichever form it arrived
+            # (`UX-529`). A blob that is not a document lands here as
+            # something else either way.
+            if kind == "octet-stream":
+                json.loads(gzip.decompress(base64.b64decode(block)))
+            else:
+                json.loads(block)
+        data = sum(len(block) for _kind, block in blocks)
         page = re.sub(r"<script[^>]*type=\"application/(json|octet-stream)\"[^>]*>"
                       r".*?</script>", "", html, flags=re.S)
         assert len(html) - len(page) - data < 4_000, (
@@ -1605,6 +1705,7 @@ class TestTheCiWiring:
 
 _COMMON_SHIM = """
 globalThis._makeNode ??= (await import(process.env.BGA_DOM_SHIM)).makeNode;
+globalThis._installDocument ??= (await import(process.env.BGA_DOM_SHIM)).installDocument;
 
 function makeNode(tag) {
   const node = _makeNode(tag);
@@ -1644,10 +1745,8 @@ for (const name of Object.keys(blocks)) {
 const root = makeNode("main");
 nodes["report"] = root;
 
-globalThis.document = {
-  createElement: makeNode,
-  getElementById: (id) => nodes[id] ?? makeNode("div"),
-};
+globalThis._installDocument ??= (await import(process.env.BGA_DOM_SHIM)).installDocument;
+_installDocument({ getElementById: (id) => nodes[id] ?? makeNode("div") });
 globalThis.fetch = () => { throw new Error("the export fetched something"); };
 
 const source = html.match(
@@ -1669,7 +1768,8 @@ console.log(JSON.stringify(collect(root)));
 
 _SERVED_HARNESS = _COMMON_SHIM + """
 const payload = %s, schema = %s;
-globalThis.document = { createElement: makeNode, getElementById: () => makeNode("div") };
+globalThis._installDocument ??= (await import(process.env.BGA_DOM_SHIM)).installDocument;
+_installDocument({ getElementById: () => makeNode("div") });
 const mod = await import("./tests/viewer.mjs");
 const root = makeNode("main");
 mod.render(payload, schema, root);

@@ -22,6 +22,10 @@ bga capture run --trace-opens --run-dir runs/candidate \
 bga baseline --glob "captures/$PROJ/<commit>-incremental-b4j4-*" -n 3 \
     --candidate runs/candidate
 
+# 2a. exit 6? the refusal names the odd capture — drop it and re-run
+bga baseline --glob "captures/$PROJ/<commit>-incremental-b4j4-*" -n 3 \
+    --exclude "<odd-run-id>" --candidate runs/candidate
+
 # 3. gate on it — two independent verdicts, two exit codes
 bga compare runs/baseline runs/candidate --fail-on-regression             # 4: slower
 bga compare runs/baseline runs/candidate --fail-on-efficiency-regression  # 5: less efficient
@@ -38,6 +42,13 @@ same pair is `NO SIGNIFICANT CHANGE` — which is the truth. `bga baseline`
 assembles that set from published refs, refuses one whose captures are
 not comparable (exit 6), and warns when they came from different `bga`
 revisions.
+
+**When it exits 6.** The ref name carries `<commit>-<mode>-b<builders>j<max_jobs>`
+and nothing else, so a set differing on `target`, `trace_spine` or
+`trace_opens` is separated by no `--glob`. The refusal names the odd
+capture; `--exclude <run-id or ref glob>` drops it, and the set listing
+says how many were dropped, because a band over a population the caller
+edited is a different claim from a band over everything published.
 
 **Which gate to reach for.** `--fail-on-regression` asks "did it get
 slower", which a growing project fails legitimately.
@@ -129,7 +140,7 @@ edge that cost 2.0s of critical path is not carrying anything.
   re-derived — the same published record `bga analyze RUN --explain`
   prints and the page draws — so the comment and the report cannot
   explain one build two ways. The paths in it are into the candidate
-  run's `analyze/v4`, which the block says out loud.
+  run's `analyze/v5`, which the block says out loud.
 - **The trailing line is the run instance** (`UX-95`), not the run
   identity. Two pushes of the same tree produce identical identity
   hashes; only the instant tells the two comments apart.

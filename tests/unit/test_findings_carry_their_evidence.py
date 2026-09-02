@@ -232,16 +232,17 @@ class TestThePageShowsTheNumbers:
 
 _HARNESS = """
 globalThis._makeNode ??= (await import(process.env.BGA_DOM_SHIM)).makeNode;
+globalThis._installDocument ??= (await import(process.env.BGA_DOM_SHIM)).installDocument;
 
 function make(tag) {
   const node = _makeNode(tag);
   node.open = false;
   return node;
 }
-globalThis.document = { createElement: make, createElementNS: (_n, t) => make(t),
-                        createTextNode: (t) => ({ nodeType: 3, textContent: t,
-                                                  attrs: {}, children: [] }),
-                        getElementById: () => null };
+_installDocument({
+  createElement: make,
+  createElementNS: (_n, t) => make(t),
+});
 const app = await import("./tests/viewer.mjs");
 const { readFileSync } = await import("node:fs");
 const [payloadPath, schemaPath] = %s;

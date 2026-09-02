@@ -239,13 +239,13 @@ class TestTheExportCarriesIt:
 
 _HARNESS = """
 globalThis._makeNode ??= (await import(process.env.BGA_DOM_SHIM)).makeNode;
+globalThis._installDocument ??= (await import(process.env.BGA_DOM_SHIM)).installDocument;
 
 function make(tag) {
   const node = _makeNode(tag);
   return node;
 }
-globalThis.document = { createElement: make, createElementNS: (_n, t) => make(t),
-                        getElementById: () => null };
+_installDocument();
 const views = await import("./tests/viewer.mjs");
 const payload = __PAYLOAD__;
 const store = __STORE__;

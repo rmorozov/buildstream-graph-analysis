@@ -72,7 +72,7 @@ For every task, before marking it done:
 
    Tiers come from measured per-file duration (`tests/tiers.py`), not from taste. Use them for the edit-run loop and for re-running one guard after a mutation — **not** as a substitute for the next step.
 
-4. Also run the full existing suite to confirm you didn't regress anything else:
+4. Also run the full existing suite to confirm you didn't regress anything else. **`UX-500` asked whether this could become one run per *batch* and the answer is no**, measured over two rounds rather than argued: run `dev_touching.select` over each responsible commit's own diff and ask whether the guard that caught the defect is in the set the cheap gate would have chosen. Round 75 (Regime A, 7 items): **2 of 5**. Round 80 (Regime B, 24 items, six parallel tracks): **4 of 9** — it did not fall when the batch got three times larger. The four have a shape: the selector maps a diff to the guards that *name* what it touched, and three of them read a **consequence** — a new contract landing in every committed fixture, a reworded sentence another file greps for, a file's own duration crossing a tier floor. No grep over a diff can find those. Figures in [`docs/audits/round-80.md`](../audits/round-80.md) and [`round-75.md`](../audits/round-75.md); the batch gate stays *in addition*, not instead:
 
    ```text
    pip install pytest   # if not already installed in this session - confirmed installable via pip
@@ -180,6 +180,8 @@ bga/cache_trend.py     a series of runs, not a pair
 bga/cache_effectiveness.py  the cache's own numbers
 bga/store_aggregate.py the store as a distribution, per host class (UX-234)
 bga/run_store.py       .bga/runs, the @last/@prev aliases, prune
+bga/bundle.py          a capture packed to carry, and what the far
+                       side refuses to half-read (UX-520)
 bga/sources.py         the source inventory and resource identity
 bga/plane2.py          what a Plane 2 report is, and which shape one is
 bga/hostinfo.py        the host manifest; the cross-host refusal
@@ -227,7 +229,10 @@ tools/bga_release_notes.py  a release body, generated from the closed rows (UX-2
 tools/bga_cross_check.py, gen_synthetic_scale_run.py, chrome_trace_to_bga_trace.py,
 tools/native_trace_to_chrome_trace.py, bst_log_to_chrome_trace.py,
 tools/bst_run_context.py, _run_context_common.py
-tools/dev_touching.py        the tests that name what your diff touched (UX-336)
+tools/dev_touching.py        the tests that name what your diff touched, plus the census
+                             they can never name (UX-336, UX-522)
+tools/dev_touch_map.py       which test files executed which module, off CI's own
+                             coverage run - the import chain a grep cannot see (UX-524)
 tools/dev_close_task.py      the mechanical tail of closing a row (UX-336)
 tools/dev_refresh_analysis.py  the rule a committed analysis is written
                              under, and the command that rewrites one
@@ -240,6 +245,8 @@ tools/dev_perfetto_queries.py  the canned questions, run against a real
                              trace with Perfetto's own reader (UX-432)
 tools/dev_finding_coverage.py  which findings a committed capture really
                              produces, read off analyze (UX-460)
+tools/dev_track_cost.py      where an implementer track's tokens went,
+                             by phase, from the agent transcript (UX-525)
 tools/dev_trace_coverage.py  which captured field reaches the emitted
                              trace, and which Perfetto carriers it uses (UX-466)
 tools/bga_gen_project.py     a BuildStream project `bst build` accepts,
@@ -259,6 +266,8 @@ tests/ci_reference.json    one CI run's per-file seconds, so drift is CI against
                            local --record - the `verify` skill's §3 has the four steps (UX-447).
                            A file it does not carry is adopted by the default branch's own run,
                            not failed on - `--adopt`, and no commit of yours (UX-503)
+tests/touch_map.json       module -> the test files CI measured executing it; adopted by
+                           the default branch's own run, never recorded locally (UX-524)
 tests/dom_shim.mjs         the one DOM every viewer guard runs on (UX-264)
 tests/viewer.mjs           the viewer's exports as one namespace, so a guard names a symbol not a module (UX-337)
 tests/cdp.mjs              headless Chrome over CDP, no dependencies (UX-257)

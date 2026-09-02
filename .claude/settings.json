@@ -4,15 +4,23 @@
       {
         "matcher": "Bash",
         "hooks": [
-          { "type": "command",
-            "command": "${CLAUDE_PROJECT_DIR}/.claude/hooks/no-bulk-add.sh" }
+          {
+            "type": "command",
+            "command": "${CLAUDE_PROJECT_DIR}/.claude/hooks/no-bulk-add.sh"
+          },
+          {
+            "type": "command",
+            "command": "${CLAUDE_PROJECT_DIR}/.claude/hooks/selector-before-commit.sh"
+          }
         ]
       },
       {
         "matcher": "Edit|Write",
         "hooks": [
-          { "type": "command",
-            "command": "${CLAUDE_PROJECT_DIR}/.claude/hooks/keep-the-guards-able-to-fail.sh" }
+          {
+            "type": "command",
+            "command": "${CLAUDE_PROJECT_DIR}/.claude/hooks/keep-the-guards-able-to-fail.sh"
+          }
         ]
       }
     ],
@@ -20,8 +28,10 @@
       {
         "matcher": "Edit|Write",
         "hooks": [
-          { "type": "command",
-            "command": "${CLAUDE_PROJECT_DIR}/.claude/hooks/lint-edited-python.sh" }
+          {
+            "type": "command",
+            "command": "${CLAUDE_PROJECT_DIR}/.claude/hooks/lint-edited-python.sh"
+          }
         ]
       }
     ]

@@ -35,7 +35,7 @@ import { enterTableFocus, focusedTable, leaveTableFocus, registerFocusTarget }
   from "./tablefocus.js";
 import { parseThreshold, applyFilters, badgeText, rowJson, cellText,
          copy, presetColumns, applyPreset, openingBound, plural,
-         boundPairs, sortable,
+         boundPairs, sortable, ownRows, ownBody, showAlso, columnCells,
          rowsMarkdown } from "./tables.js";
 import { PATH_HEAD, PATH_TAIL } from "./views.js";
 
@@ -456,7 +456,11 @@ export function buildTable(key, rows, hint = {}, node = undefined,
                            depth = 0, options = {}) {
   const specs = columnSpecs(hint, rows, node);
   const columns = specs.map((s) => s.key);
-  const table = el("table", { "data-table": key });
+  // `UX-526`: how many rows the table *has*. The DOM used to answer
+  // that and no longer does - a row past the bound leaves it - so the
+  // population is published where a reader and a guard can both read it.
+  const table = el("table", { "data-table": key,
+                              "data-rows": String(rows.length) });
   const head = el("tr");
   for (const spec of specs) {
     head.append(el("th", {
@@ -561,7 +565,7 @@ export function buildTable(key, rows, hint = {}, node = undefined,
   const uidColumn = elementColumn(specs);
   if (uidColumn) {
     table.setAttribute("data-element-column", uidColumn);
-    for (const tr of table.querySelectorAll("tbody tr")) {
+    for (const tr of ownRows(table)) {
       const cell = [...tr.children].find(
         (td) => td.getAttribute("data-column") === uidColumn);
       if (!cell) continue;
@@ -612,8 +616,7 @@ function statedOnce(table, specs, total) {
     if (!spec || spec.role === "element" || spec.key === elementColumn(specs)) {
       continue;
     }
-    const cells = [...table.querySelectorAll(
-      `td[data-column="${spec.key}"]`)];
+    const cells = columnCells(table, spec.key);
     if (cells.length !== total) continue;
     // The **published** value, not the rendered one. Found by a
     // synthetic case: forty-eight durations from 1000 to 1047 µs all
@@ -643,14 +646,15 @@ function statedOnce(table, specs, total) {
 /**
  * Hide a table's middle rows behind one control that says how many.
  *
- * The rows stay in the document - hidden, not removed - so Ctrl-F, the
- * export and `Copy shown rows` all see what they saw before, and
- * opening the fold is a `hidden` flip rather than a render.
+ * `UX-526`: the middle used to stay in the document, hidden. It does
+ * not any more on a table the row bound also reaches - `applyFilters`
+ * holds what it does not show out of the DOM - so the control puts them
+ * back through `showAlso` rather than flipping `hidden`.
  */
 function foldTheMiddle(table, total, { head, tail, noun = "rows" }) {
   if (total <= head + tail + 1) return null;
-  const body = table.querySelector?.("tbody");
-  const all = [...(body?.querySelectorAll?.("tr") ?? [])];
+  const body = ownBody(table);
+  const all = ownRows(table);
   const middle = all.slice(head, all.length - tail);
   if (!middle.length) return null;
   for (const row of middle) row.hidden = true;
@@ -665,7 +669,11 @@ function foldTheMiddle(table, total, { head, tail, noun = "rows" }) {
   const row = el("tr", { class: "fold-row", "data-fold-rows": String(middle.length) },
                  el("td", { colspan: String(cells) }, more));
   more.addEventListener?.("click", () => {
-    for (const hidden of middle) hidden.hidden = false;
+    // `UX-526`: through `showAlso`, because on a table long enough to
+    // also open bounded the middle rows are held out of the document
+    // rather than merely hidden, and un-hiding a detached row draws
+    // nothing.
+    showAlso(body, middle);
     row.hidden = true;
   });
   // Where the middle *begins*, not where it ends: the hidden rows
@@ -740,8 +748,7 @@ export function interrogable(table, specs, total, depth = 0) {
     // the same reading `distributionStrip` makes two hundred lines
     // down, and `CSS.escape` is a browser global the guards' shim does
     // not have.
-    const numeric = [...table.querySelectorAll(
-      `td[data-column="${spec.key}"]`)]
+    const numeric = columnCells(table, spec.key)
       .some((td) => Number.isFinite(Number(td.getAttribute("data-raw"))));
     if (!numeric) return;
     const input = el("input", {
@@ -837,8 +844,7 @@ export function interrogable(table, specs, total, depth = 0) {
   // should choose once - `localStorage`, which is where this page
   // already remembers per-reader preferences, and which failing is not
   // allowed to take the report down with it.
-  const shownRows = () => [...table.querySelectorAll("tbody tr")]
-    .filter((tr) => !tr.hidden);
+  const shownRows = () => ownRows(table).filter((tr) => !tr.hidden);
   const asMarkdown = el("label", { class: "copy-as" },
     el("input", { type: "checkbox", class: "copy-markdown" }),
     " as Markdown");
@@ -846,9 +852,20 @@ export function interrogable(table, specs, total, depth = 0) {
   if (markdownBox) identify(markdownBox, `copy-markdown-${key}`);
   const remembered = readCopyFormat();
   if (markdownBox && remembered === "markdown") markdownBox.checked = true;
+  // `UX-536`: **one preference, one state.** 29 boxes shared one
+  // `localStorage` key that only a reload read back, so a click changed
+  // 1 of 29 and the other 28 went on promising the format the reader
+  // had just turned off.
+  markdownBox?.addEventListener?.(COPY_FORMAT_MIRROR, () => label());
   markdownBox?.addEventListener?.("change", () => {
     writeCopyFormat(markdownBox.checked ? "markdown" : "json");
     label();
+    for (const other of document.querySelectorAll?.("input.copy-markdown")
+                        ?? []) {
+      if (other === markdownBox) continue;
+      other.checked = markdownBox.checked;
+      other.dispatchEvent?.(new Event(COPY_FORMAT_MIRROR));
+    }
   });
 
   const copyRows = el("button", { type: "button", class: "copy-rows" });
@@ -946,6 +963,10 @@ export function interrogable(table, specs, total, depth = 0) {
 // the preference - so both sides are guarded and the default is what
 // the page did before.
 const COPY_FORMAT_KEY = "bga.copy-format";
+
+// `UX-536`: what one box tells the other 28. Its own event rather than
+// `change`, so mirroring cannot re-enter the handler that started it.
+const COPY_FORMAT_MIRROR = "bga:copy-format";
 
 export function readCopyFormat() {
   try {

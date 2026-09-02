@@ -15,19 +15,19 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-534 scenarios: **22 open**, 512 closed.
+550 scenarios: **13 open**, 537 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
-| capture | 3 | 90 |
-| analysis | 1 | 84 |
-| contracts | 0 | 37 |
-| viewer | 8 | 135 |
+| capture | 0 | 90 |
+| analysis | 2 | 87 |
+| contracts | 2 | 39 |
+| viewer | 1 | 136 |
 | cli | 0 | 19 |
-| store | 2 | 14 |
-| docs | 4 | 66 |
-| guards | 4 | 89 |
+| store | 0 | 14 |
+| docs | 4 | 70 |
+| guards | 4 | 95 |
 
 ## Open scenarios
 
@@ -36,28 +36,19 @@ task file, which is the only place it ever lived twice.
 
 | ID | Scenario | Topic | Priority | Serves | Status |
 |---|---|---|---|---|---|
-| UX-92 | [cache effectiveness — hits, misses, churn, trends — is invisible to the tool](UX-0092-cache-effectiveness-is-invisible-to-the-tool.md) | store | Medium | — | 🟡 |
-| UX-500 | [the batch gate, measured against the per-item suite](UX-0500-the-batch-gate-measured-against-the-per-item-suite.md) | docs | High | the implementing session's wall clock; the maintainer's subscription | 🔴 |
-| UX-514 | [the capture schedule can never produce a second commit](UX-0514-the-schedule-can-never-capture-a-second-commit.md) | capture | Medium | `UX-92`'s gate, deferred four times on evidence that cannot arrive | 🔴 |
-| UX-516 | [the CI owner's page teaches a command that exits 6 on this repository's own refs](UX-0516-the-ci-owners-page-teaches-a-command-that-exits-6.md) | docs | Medium | the CI owner who copies the block, meets exit 6, and has no next line to type | 🔴 |
-| UX-517 | [a closed Outcome quotes a bucket that is now empty](UX-0517-a-closed-outcome-quotes-a-bucket-that-is-now-empty.md) | docs | Low | the round that reads `UX-501` and takes its 223 as current | 🔴 |
-| UX-519 | [the snapshot's tail goes quiet in the one phase that has no line](UX-0519-the-snapshot-tail-goes-quiet.md) | capture | Medium | the user watching a capture that has stopped saying anything | 🔴 |
-| UX-520 | [a capture you can carry to another machine in one command](UX-0520-a-run-bundle-you-can-carry.md) | store | Medium | the engineer who captured on a build runner and wants to read it on a laptop | 🔴 |
-| UX-522 | [the selector runs last, and carries the census](UX-0522-the-selector-runs-last-and-carries-the-census.md) | guards | High | the implementing session, at the commit it is about to make | 🔴 |
-| UX-523 | [forty files boot the same page](UX-0523-forty-files-boot-the-same-page.md) | guards | High | every `make test`; the implementing session's gate | 🔴 |
-| UX-524 | [the touching map is measured in CI, not grepped](UX-0524-the-touching-map-is-measured-in-ci.md) | guards | Medium | the session that wants `test-touching` to be a gate | 🔴 |
-| UX-525 | [a track costs 81k-131k tokens, and nobody knows where](UX-0525-a-track-costs-tokens-and-nobody-knows-where.md) | docs | Medium | the maintainer's subscription | 🔴 |
-| UX-526 | [the large budget class is measured at its bottom and breached at its top](UX-0526-the-large-budget-class-is-breached-at-its-top.md) | guards | High | anyone who opens a report of a project larger than the seeded run | 🔴 |
-| UX-527 | [one control has an option per element](UX-0527-one-control-has-an-option-per-element.md) | viewer | High | anyone asking Perfetto about one element of a large project | 🔴 |
-| UX-528 | [the served store section and run picker grow with every snapshot](UX-0528-the-served-store-section-grows-with-every-snapshot.md) | viewer | High | the CI owner whose store holds a hundred runs | 🔴 |
-| UX-529 | [the export's data half is unbounded, and holds each row twice](UX-0529-the-export-data-half-is-unbounded-and-holds-each-row-twice.md) | viewer | Medium | anyone attaching a report of a large project | 🔴 |
-| UX-530 | [a real capture reaches the track ceiling, and the timeline is dropped whole](UX-0530-a-real-capture-reaches-the-track-ceiling-and-loses-the-timeline.md) | capture | Medium | anyone capturing a C++ project with a few hundred processes per element | 🔴 |
-| UX-531 | [`bga analyze` is superlinear, and the page pays for it](UX-0531-bga-analyze-is-superlinear-and-the-page-pays.md) | analysis | Medium | anyone opening a run of a few thousand elements | 🔴 |
-| UX-532 | [the table tools read the nested tables' rows as their own](UX-0532-the-table-tools-read-the-nested-tables-rows-as-their-own.md) | viewer | High | anyone pressing "All rows" on a table whose cells fold | 🔴 |
-| UX-533 | [the served page is the capture-time analysis, and cannot say so](UX-0533-the-served-page-is-the-capture-time-analysis.md) | viewer | High | anyone reading a run captured by an older `bga` | 🔴 |
-| UX-534 | [Focus answers 25,501 px above the button](UX-0534-focus-answers-far-above-the-button.md) | viewer | Medium | anyone who presses Focus on an element card | 🔴 |
-| UX-535 | [one fact published twice, drawn twice, listed twice](UX-0535-one-fact-published-twice-drawn-twice-listed-twice.md) | viewer | Medium | anyone reading the run's identity, or the rail | 🔴 |
-| UX-536 | [four controls that say less than they do](UX-0536-four-controls-that-say-less-than-they-do.md) | viewer | Low | the keyboard and screen-reader reader | 🔴 |
+| UX-540 | [the three contracts `bga` reads and never registers](UX-0540-the-three-contracts-bga-reads-and-never-registers.md) | contracts | Medium | `UX-520`, whose first real bundle refused a healthy capture | 🔴 |
+| UX-541 | [the gap sweep is cut and still quadratic, and the reason is a contract](UX-0541-the-gap-sweep-is-cut-but-still-quadratic.md) | analysis | Medium | `UX-539`, measuring its own close | 🔴 |
+| UX-542 | [`_compute_diagnostics` is now the largest phase of `analyze`](UX-0542-diagnostics-is-now-the-largest-phase.md) | analysis | Medium | `UX-539`'s profile, after its own two terms went | 🔴 |
+| UX-543 | [a second clause of the answer key ranks under contention](UX-0543-a-second-ranking-clause-under-contention.md) | guards | Medium | `UX-538`, fixing its sibling | 🔴 |
+| UX-544 | [the hand-built *node* census has a hole the document census does not](UX-0544-the-node-census-has-a-hole.md) | guards | Medium | `UX-537`, whose scope was the document | 🔴 |
+| UX-545 | [a refused timeline tells the reader the snapshot has no build log](UX-0545-a-refused-timeline-says-the-wrong-thing.md) | viewer | Medium | `UX-530`, whose scope was the degradation | 🔴 |
+| UX-546 | [the fetch-counting handoff guard is flaky under the full suite](UX-0546-the-fetch-guard-is-flaky-under-load.md) | guards | Medium | two tracks, independently | 🔴 |
+| UX-547 | [the fixture differ compares parsed JSON, so key order drifts unseen](UX-0547-the-fixture-differ-cannot-see-key-order.md) | guards | Low | `UX-535`, refreshing a fixture for a contract bump | 🔴 |
+| UX-548 | [five mechanisms round 80 shipped, and no guide names one](UX-0548-round-80s-viewer-axis-reaches-no-guide.md) | docs | High | architecture review 12 | 🔴 |
+| UX-549 | [five counted figures, read as current, wrong](UX-0549-five-counted-figures-a-reader-reads-as-current.md) | docs | Medium | architecture review 12 | 🔴 |
+| UX-550 | [the newest release row records the state *now*, not the one it shipped](UX-0550-the-newest-release-row-records-the-state-now.md) | contracts | High | architecture review 12 | 🔴 |
+| UX-551 | [every session plans its loop against a suite 62% faster than the real one](UX-0551-the-loop-is-planned-against-a-suite-that-is-gone.md) | docs | Medium | architecture review 12 | 🔴 |
+| UX-552 | [the CLI guide's alias table is two rows short](UX-0552-the-alias-table-is-two-rows-short.md) | docs | Low | architecture review 12 | 🔴 |
 
 ## UX-522..UX-536: the seventy-ninth round — the controls walked, the suite weighed (2026-09-02)
 

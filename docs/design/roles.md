@@ -91,7 +91,7 @@ written; the fourth is the payload:
    changed gap lands here in the same commit as the work that changes
    it — the same rule the status table already follows.
 4. **The report names its readers.** Since `UX-372`, every finding in
-   `analyze/v4` carries a `reader` — one of R1–R5, this table's own ids
+   `analyze/v5` carries a `reader` — one of R1–R5, this table's own ids
    — and the document publishes a `readers` index saying, for each
    reader this run has something for, their question and the finding
    that is their biggest lever on it. So "what does this build say to

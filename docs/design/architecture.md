@@ -52,6 +52,7 @@ Confirmed against `bga/cli.py` directly, not the original spec's Part 37 proposa
 | `bga wrap PROJECT LOG -- bst build TARGET` | **Plane 1's capture.** Runs a real `bst` command and writes the wrapped-format log every later stage reads - the first command in the README's own quickstart, and what `bga snapshot` calls when it captures for you. **Not spec-mandated**, `UX-67` | — |
 | `bga capture run\|report\|census PROJECT` | **Plane 2** — trace processes inside element sandboxes (`--trace-opens`, `--trace-spine`), re-render a saved report, or run the static-binary census with no build at all. **Not spec-mandated**, `UX-11`/`UX-105`/`UX-106` | — |
 | `bga snapshot -- bst build TARGET` | The local loop as one command: `capture run --run-dir` + `analyze` + `compare` against the previous snapshot, into a project-local store (`.bga/runs/`), with `@last`/`@prev`/`@<stamp-prefix>` resolving for every argument that names a run directory. Composes those commands rather than reimplementing them, so it changes no number and keeps every refusal. **Not spec-mandated**, `UX-126` | — |
+| `bga bundle --export STAMP \| --load FILE` | **The capture as one file.** Packs one snapshot's whole capture-layout set - the run directory *and* the Plane 2 report, raw trace, host samples, published analysis and build log beside it - into a single archive to `scp`, and loads one back into a project's store under its own stamp. The member list is derived from the layout contract, so `run/`-only tarring stops losing Plane 2; each member carries its contract version, so a bundle from a newer `bga` is refused rather than half-read. `--no-plane2` trades the large member for a small bundle and records the omission. **Not spec-mandated**, `UX-520` | — |
 | `bga doctor [PROJECT]` | Can this machine capture at all: `bst`, a real `bwrap` sandbox, a compiler, Plane 3's log tree, whether the project loads and what it stages — each failure with its own remedy. Read-only; exits non-zero only on a real failure. **Not spec-mandated**, `UX-125` | — |
 | `bga baseline --glob REFS -n N` | Assemble a baseline *set* from published capture refs and band-compare against it in one command, refusing a set whose captures are not comparable. **Not spec-mandated**, `UX-96` | — |
 | `bga view RUN [--export FILE]` | **The report as a page.** Serves the run on `127.0.0.1` at a kernel-chosen port and opens a browser at it, or writes one self-contained file with `--export`. Renders the *schema*, not the report, from the same payloads the subcommands publish - so it can disagree with the CLI only by being stale. Where the reader stops depends on the question: see [what the viewer answers](../guides/what-the-viewer-answers.md). **Not spec-mandated**, `UX-193`/`UX-195` | — |
@@ -60,7 +61,7 @@ Confirmed against `bga/cli.py` directly, not the original spec's Part 37 proposa
 
 Every conclusion the text report draws is also published by `--format json` as a `findings` array, each entry with a stable `id`, a `severity` and the numbers behind it (`UX-75`). Both renderers consume the same list, so they cannot disagree, and a CI consumer keys on `id` rather than re-deriving a threshold out of the renderer.
 
-**`bga analyze --explain`** is how the provenance chain below is reached from the command line: under each claim it prints the evidence fields it was drawn from, the rule that fired, and the trace query that deepens it (`UX-229`). The mechanism is published in `analyze/v4` either way; the flag is what makes it visible to a reader who has a terminal and not a payload.
+**`bga analyze --explain`** is how the provenance chain below is reached from the command line: under each claim it prints the evidence fields it was drawn from, the rule that fired, and the trace query that deepens it (`UX-229`). The mechanism is published in `analyze/v5` either way; the flag is what makes it visible to a reader who has a terminal and not a payload.
 
 ## Real package structure (Plane 1)
 
@@ -923,7 +924,7 @@ renderers are built against, so nothing here is a second copy to drift.
 
 | schema | what it is | printed by |
 |---|---|---|
-| `analyze/v4` | one run's analysis: attribution, floors, the element population, the graph's shape, findings, the headline decision, next steps, who each finding is for (`readers`, `UX-372`), and the provenance behind each claim. **v4** (`UX-344`) removed the two namespaces — `signals` and `structural` were maps of named tables that held no value of their own, so each table is a top-level key now, `metrics` and `summary` renamed to `graph_metrics` and `graph_summary` and the six element-keyed maps grouped under `elements`; `provenance` is published once per claim at the top level rather than written into every finding, the headline and each top action; and `findings[].evidence.blast_radius` is gone by `UX-288`'s rule, being a slice of a population published in full beside it. Measured on the two fixtures: leaves deeper than three fell from 57% to 40% and from 67% to 53%, and the golden report's deepest path from six levels to five. **v3** (`UX-341`) renamed every key that carried a retired unit — `measured_us`, `peak_rss_bytes`, `useful_share`, `occupancy_share` and the rest — so the payload measures time in µs, memory in bytes and a bounded fraction in 0..1, one spelling each. **v2** (`UX-288`) had removed three fields that republished element membership already published beside them — `signals.critical_path`, `signals.leaf_analysis.leaves`, and `structural.deferrability`'s two uid lists (their names at the time). `UX-345` removed one more on the same rule — `signals.critical_path_length`, which held `floors.t_infinity_observed`'s microseconds under a `count` — and renamed `signals.wall_clock_share` to `wall_clock_share_us` | `bga analyze --schema` |
+| `analyze/v5` | one run's analysis: attribution, floors, the element population, the graph's shape, findings, the headline decision, next steps, who each finding is for (`readers`, `UX-372`), and the provenance behind each claim. **v5** (`UX-535`) removed `graph_summary.total_elements`, `graph_summary.critical_path_length` and `graph_summary.max_parallelism` — three facts assigned from the same `StructuralMetrics` object `graph_metrics` publishes, so the document carried one number under two spellings in two sections; they are read from `graph_metrics.num_elements`, `graph_metrics.critical_path_length` and `graph_metrics.max_parallelism`. **v4** (`UX-344`) removed the two namespaces — `signals` and `structural` were maps of named tables that held no value of their own, so each table is a top-level key now, `metrics` and `summary` renamed to `graph_metrics` and `graph_summary` and the six element-keyed maps grouped under `elements`; `provenance` is published once per claim at the top level rather than written into every finding, the headline and each top action; and `findings[].evidence.blast_radius` is gone by `UX-288`'s rule, being a slice of a population published in full beside it. Measured on the two fixtures: leaves deeper than three fell from 57% to 40% and from 67% to 53%, and the golden report's deepest path from six levels to five. **v3** (`UX-341`) renamed every key that carried a retired unit — `measured_us`, `peak_rss_bytes`, `useful_share`, `occupancy_share` and the rest — so the payload measures time in µs, memory in bytes and a bounded fraction in 0..1, one spelling each. **v2** (`UX-288`) had removed three fields that republished element membership already published beside them — `signals.critical_path`, `signals.leaf_analysis.leaves`, and `structural.deferrability`'s two uid lists (their names at the time). `UX-345` removed one more on the same rule — `signals.critical_path_length`, which held `floors.t_infinity_observed`'s microseconds under a `count` — and renamed `signals.wall_clock_share` to `wall_clock_share_us` | `bga analyze --schema` |
 | `compare/v2` | two runs, their signed deltas, the verdict and its noise band, the per-element culprits, and the candidate's diagnosis chain | `bga compare --schema` |
 | `blast/v2` | what rebuilds if one repository, path or element changes | `bga blast --schema` |
 | `correlate/v2` | the two planes joined on element uid, with the coverage of the join | `bga correlate --schema` |
@@ -936,8 +937,10 @@ renderers are built against, so nothing here is a second copy to drift.
 | `plane2/v3` | Plane 2's report about one build: **run-level measurements, with the per-element reductions among them** - 21 of its 24 top-level blocks answer for the whole run and 3 are keyed by element uid, which is the ratio `bga correlate`'s join and every "what did this build cost" question read from opposite ends of (`UX-386`). `UX-297` retired the per-process record list, which is a statement about what was removed rather than about the shape of what is left | at `plane2.json` beside a run |
 | `capture-layout/v1` | the capture directory itself (`UX-381`): every path `.bga/` holds, what writes it, what reads it, whether it is required, conditional or derived, and what an absence means. Specification 32.6, declared as `run_store.CAPTURE_LAYOUT` beside the constants it names | the directory a capture writes |
 | `host-samples/v1` | the host's own memory and swap while the build ran, one JSON object per line (`UX-378`) - the series that says whether a slow build was an OOM. Written by `tools/bst_native_build_tracer.py`, which `bga.contracts`' package walk cannot see, so `run_store.OWNED` names it (`UX-381`) | at `host-samples.jsonl` beside a run |
+| `bundle-manifest/v1` | what is inside a run bundle (`UX-520`): each member's snapshot-relative path, its presence word and its contract version, plus the `bga` that packed it and anything `--no-plane2` left out. Derived from `capture-layout/v1` rather than restated, and the reason the receiving side can refuse a bundle from a newer `bga` instead of half-reading it | inside `bundle.json` in a `bga bundle --export` archive |
 | `plane2/v2` | the same report with the element names of every redundancy finding embedded - the shape a capture before `UX-384` wrote. With the row cap in place that list was the one term still `O(elements)`: 78% of the section at 40 elements and 99% at 1,200. Read, never written | as above, in an older store |
 | `plane2/v1` | the same reductions plus every per-process record - the shape a capture before `UX-297` wrote. Read, never written | as above, in an older store |
+| `analyze/v4` | what `analyze` wrote before `UX-535` removed the three graph facts `graph_summary` republished from `graph_metrics`. Read, never written | in an older store |
 | `analyze/v3` | what `analyze` wrote before `UX-344` lifted the `signals` and `structural` namespaces and published `provenance` once. Read, never written | in an older store |
 | `analyze/v2` | what `analyze` wrote before `UX-341` unified the units - `measured_seconds`, `peak_rss_kb`, `useful_pct`, `occupancy_ratio`. Read, never written | in an older store |
 | `compare/v1` | the same, for a comparison. Read, never written | in an older store |
@@ -947,7 +950,7 @@ renderers are built against, so nothing here is a second copy to drift.
 
 **Every artifact says what wrote it** (`UX-249`): a `producer` block —
 tool, version, and the contract set the writing build had — rides in
-every run directory and every published `analyze/v4` document, because
+every run directory and every published `analyze/v5` document, because
 `bga` reads its own past output as input and until round 30 nothing in
 those artifacts said which build produced them. The version there is
 *provenance*; compatibility is decided per contract, which is why
@@ -990,6 +993,27 @@ keeps two hand-maintained copies of one fact together.
 - **`docs/guides/cli.md`** — CLI reference/usage examples.
 
 ## Verification Log
+
+Updated 2026-09-02 (after `UX-535`), re-grounded in the contracts
+table above against `bga.contracts`'s derived inventory — **23 ids, 9
+of them marked superseded**, 8 printable and 15 not — and the keys
+`bga analyze --schema` prints: **56 top-level properties**, unchanged,
+because round 80's move was a removal *and* a re-read, not an addition.
+
+Round 80 changed this document in three places, each the table that
+already owned the fact. The CLI table gained `bga bundle` (`UX-520`):
+the capture-layout set as one archive, with a manifest that lets the
+receiving side refuse a bundle from a newer `bga` rather than half-read
+it. The contracts table gained `bundle-manifest/v1` for that manifest,
+and moved `analyze` to **v5** (`UX-535`) — `graph_summary` published
+three facts it took from the same `StructuralMetrics` object
+`graph_metrics` publishes, so three removals, and `analyze/v4` joins
+the rows below it that are read and never written. The viewer chapter
+is unchanged:
+`bga/viewer/` is still **22 modules** and the table still names all of
+them, which `test_the_viewer_modules_have_a_home.py` holds both ways.
+
+The round-73 grounding, kept for what it settled:
 
 Updated 2026-09-01 (after `UX-472`), re-grounded in the contracts
 table above against `bga.contracts`'s derived inventory — **21 ids, 8
@@ -1442,7 +1466,7 @@ Updated 2026-08-25 (after `UX-286`), re-grounded in `bga/viewer/`'s
 module list, the published schema `bga analyze --schema` prints, and
 `docs/backlog/scenarios/closed.md`'s round-38 and round-39 rows: the
 viewer axis gained the chapters `UX-286` groups the document into, and
-the contracts table's `analyze/v4` row is checked against the keys the
+the contracts table's `analyze/v5` row is checked against the keys the
 schema declares - which `UX-275` added one to. The date on this line is
 guarded (`UX-247`): a commit that changes this document's prose without
 re-grounding it reddens

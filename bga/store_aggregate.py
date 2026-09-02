@@ -55,6 +55,13 @@ UNKNOWN_HOST_CLASS = "unknown host"
 # what a capacity argument is actually about.
 PERCENTILES = (50, 95)
 
+# `UX-528`: how many stamps a class entry names. The document is a
+# *distribution*; the run list beside it grew with the store and nothing
+# read it as a list - `render()` prints the counts, and the trend plots
+# `store/v1`'s own rows. The same window the page takes, so "which runs
+# is this class" and "which runs are drawn" cannot answer differently.
+STAMPS_MAX = 12
+
 
 def percentile(samples: List[float], p: float) -> Optional[float]:
     """Nearest-rank percentile - a value the store measured, not one
@@ -190,7 +197,11 @@ def _class_aggregate(label: str, manifest: Optional[dict],
         "snapshot_bytes": distribution(
             [row["bytes"] for row in rows if row.get("bytes")]),
         "total_bytes": sum(row.get("bytes") or 0 for row in rows),
-        "stamps": [row["stamp"] for row in rows],
+        # `UX-528`: capped. This is one entry per run per host class,
+        # and nothing reads it as a list - the trend plots `store/v1`'s
+        # rows. At 100 runs it was the whole of this document's growth.
+        "stamps": [row["stamp"] for row in rows][-STAMPS_MAX:],
+        "stamps_total": len(rows),
     }
     # UX-296: a class whose runs carry no capacity scalars says why, and
     # what produces them. The old code reached into every snapshot's

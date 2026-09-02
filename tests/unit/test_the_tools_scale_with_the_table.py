@@ -96,7 +96,9 @@ _LOOK = """
               === 1) {
       scope = scope.parentElement;
     }
-    const rows = t.querySelectorAll("tbody tr").length;
+    // `UX-526`: the rows the table has, published - the DOM holds
+    // only the ones the bound shows.
+    const rows = Number(t.getAttribute("data-rows"));
     const columns = [...t.querySelectorAll("th[data-column]")]
       .map((h) => h.getAttribute("data-column"));
     const uniform = [];
@@ -174,14 +176,17 @@ console.log(JSON.stringify({
 
 _SHIM = """
 globalThis._makeNode ??= (await import(process.env.BGA_DOM_SHIM)).makeNode;
+globalThis._installDocument ??= (await import(process.env.BGA_DOM_SHIM)).installDocument;
 function make(tag) {
   const node = _makeNode(tag);
   node.open = false;
   return node;
 }
 globalThis.Event = class { constructor(type) { this.type = type; } };
-globalThis.document = { createElement: make, createElementNS: (_n, t) => make(t),
-                        getElementById: () => null };
+_installDocument({
+  createElement: make,
+  createElementNS: (_n, t) => make(t),
+});
 """
 
 

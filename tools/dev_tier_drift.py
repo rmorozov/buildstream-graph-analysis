@@ -702,7 +702,13 @@ def explained_by(base):
         return None
     try:
         from tools import dev_touching
-        chosen, why = dev_touching.select(dev_touching.changed_files(base))
+        # `census=False`: `UX-522` unions in the guards a diff can
+        # never name, and this asks the opposite question - what does
+        # this diff *account for*. A census guard runs whatever the
+        # diff is, so counting it here would make every reported file
+        # explained by every branch.
+        chosen, why = dev_touching.select(
+            dev_touching.changed_files(base), census=False)
         if "*" in why:
             # `dev_touching`'s shared-harness fallback: `conftest.py` or
             # `tiers.py` changed, so `select` returns the **whole

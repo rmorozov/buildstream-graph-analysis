@@ -27,6 +27,7 @@ the failure mode, not the convenience.
 import argparse
 import pathlib
 import re
+import subprocess
 import sys
 
 REPO = pathlib.Path(__file__).resolve().parents[1]
@@ -389,6 +390,88 @@ CHECKS = (
 )
 
 
+#: `UX-493`: a figure is `450,000` in prose and `450_000` in Python.
+_FIGURE = re.compile(r"\d{1,3}(?:[,_]\d{3})+")
+
+
+def figures_removed(diff: str):
+    """Thousands-separated numbers a diff deletes from the file that had them.
+
+    Digits only, so the two spellings of one figure are one figure -
+    `UX-469` deleted `("golden", GOLDEN, 406_000)` and the backlog said
+    `406,000`. Kept **per file**: that same commit wrote `406,000 →
+    411,000` into its own task file, so a whole-diff subtraction
+    cancelled the figure it had just moved and reported nothing.
+    """
+    per_file, gone, kept = {}, set(), set()
+
+    def close():
+        per_file.update({d: None for d in gone - kept})
+
+    for line in diff.splitlines():
+        if line.startswith("+++ "):
+            close()
+            gone, kept = set(), set()
+        elif line[:1] in ("-", "+") and not line.startswith("--- "):
+            found = {f.replace(",", "").replace("_", "")
+                     for f in _FIGURE.findall(line[1:])}
+            (gone if line[0] == "-" else kept).update(found)
+    close()
+    return sorted(per_file, key=int)
+
+
+def figures_still_written(figures, skip=None):
+    """`{digits: [(path, lineno, line)]}` for each figure the backlog says.
+
+    Not a verdict. §3.6 is judgement-shaped - an Outcome quoting a
+    figure it measured is history and a sentence presenting one as
+    current is not - and `UX-132` declined to make that a test. This is
+    the half that is not judgement: the grep, run rather than
+    remembered, which is the half round 73 skipped.
+    """
+    wanted = {d: re.compile(r"\b" + r"[,_]?".join(
+        [d[:len(d) % 3 or 3]] + [d[i:i + 3] for i in
+                                 range(len(d) % 3 or 3, len(d), 3)]) + r"\b")
+              for d in figures}
+    hits = {d: [] for d in figures}
+    for path in sorted(SCENARIOS.glob("*.md")):
+        if skip is not None and path.name == skip.name:
+            continue
+        for number, line in enumerate(
+                path.read_text(encoding="utf-8").splitlines(), 1):
+            for digits, pattern in wanted.items():
+                if pattern.search(line):
+                    hits[digits].append((path, number, line.strip()))
+    return hits
+
+
+def report_figures(diff: str, skip=None) -> int:
+    """Print §3.6's grep. Always 0: the annotation call is the author's."""
+    figures = figures_removed(diff)
+    hits = figures_still_written(figures, skip=skip)
+    written = [d for d in figures if hits[d]]
+    print(f"§3.6: {len(figures)} figure(s) removed by this diff, "
+          f"{len(written) or 'none'} still written in {_shown(SCENARIOS)}.")
+    for digits in written:
+        print(f"  {int(digits):,}")
+        for path, number, line in hits[digits]:
+            print(f"    {path.name}:{number}  {line[:72]}")
+    if written:
+        print("  Each is a judgement: annotate the file, or record it in "
+              "your Outcome as history. Nothing here decides that.")
+    return 0
+
+
+def working_diff() -> str:
+    """Staged and unstaged, against `HEAD`. Empty when git cannot answer."""
+    try:
+        done = subprocess.run(["git", "diff", "HEAD"], cwd=str(REPO),
+                              capture_output=True, text=True, timeout=60)
+    except OSError:
+        return ""
+    return done.stdout if done.returncode == 0 else ""
+
+
 def _closed_rows_left_open():
     problems = []
     for line in INDEX.read_text(encoding="utf-8").splitlines():
@@ -505,6 +588,7 @@ def move(uid: str, note: str) -> int:
           f"    grep '^| {uid} |' {_shown(CLOSED)}\n"
           f"  Then derive the index's counts from the rows (UX-501):\n"
           f"    python tools/dev_close_task.py --check --write")
+    report_figures(working_diff(), skip=path)
     return 0
 
 
@@ -528,6 +612,12 @@ def main(argv=None) -> int:
                              "instead of reporting that they disagree. The "
                              "rows stay hand-edited - they carry judgement "
                              "- and the aggregates never do (UX-501)")
+    parser.add_argument("--figures", action="store_true",
+                        help="fixing guide §3.6's grep: figures this diff "
+                             "removed that the backlog still writes")
+    parser.add_argument("--diff", default=None,
+                        help="read the diff from this file instead of "
+                             "`git diff HEAD` (for a guard)")
     # UX-336: so a guard can exercise `--move` against a copy. Found by
     # falsifying this file's own refusal: with the Outcome check removed
     # the clause *performed* the move, on the real backlog. A test that
@@ -562,8 +652,13 @@ def main(argv=None) -> int:
         print(f"{len(problems)} problem(s) over {len(CHECKS)} propert(y/ies), "
               f"{rows} backlog row(s)")
         return 1 if problems else 0
+    if args.figures:
+        diff = (pathlib.Path(args.diff).read_text(encoding="utf-8")
+                if args.diff else working_diff())
+        return report_figures(diff,
+                              skip=task_file(args.uid) if args.uid else None)
     if not args.uid:
-        parser.error("a UX id is required unless --check is given")
+        parser.error("a UX id is required unless --check or --figures is given")
     if args.outcome:
         print(OUTCOME_SKELETON.format(round=args.round, date=args.date,
                                       n=args.mutations, cap=OUTCOME_CAP))
@@ -574,7 +669,7 @@ def main(argv=None) -> int:
                          "sentence about what was found, and nothing can "
                          "write it for you")
         return move(args.uid, args.note)
-    parser.error("give --outcome, --move or --check")
+    parser.error("give --outcome, --move, --check or --figures")
 
 
 if __name__ == "__main__":

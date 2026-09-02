@@ -282,6 +282,16 @@ recorded figures were stale — golden by 152 B, `macro_micro` by
 2,825 B, so the bound had 136 B of headroom rather than the ~3 KB its
 comment claimed.
 
+> **Annotated by `UX-493` (round 75): golden's 406,000 did not stand.**
+> `UX-469` closed later the same day and moved it 406,000 → 411,000, at
+> 407,265 B — its +2,228 B (2,114 source, 114 payload) tripped the
+> bound this sentence had just left standing. The tree carries
+> `("golden", GOLDEN, 411_000)`. `macro_micro`'s 458,000 above is
+> still the tree's (457,284 B, 716 B of headroom). The measurement is
+> right as of this item's run and is not revised; what was missing is
+> the line beside it, because round 73 did not run
+> `git grep 406,000 docs/backlog/scenarios` before committing `UX-469`.
+
 **`UX-483`** is what is left: the builder will inline the next
 population just as happily, and the fifteen guards caught this one
 only because it happened to be uid-keyed and numeric.

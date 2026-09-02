@@ -401,3 +401,87 @@ class TestTheSkeletonFitsTheRegister:
         for asked in ("why that shape", "Counts are what the run printed"):
             assert asked not in printed, (
                 f"the skeleton still asks for {asked!r}")
+class TestTheCloseHelperRunsTheGrepNobodyRan:
+    """`UX-493`: fixing guide §3.6's grep, run rather than remembered.
+
+    Round 73 moved `golden`'s export bound 406,000 -> 411,000 and left
+    `UX-479`'s Outcome saying it stands. The verdict stays judgement -
+    `UX-132` declined to make that a test - but the grep is not, and
+    the grep is the half that was skipped.
+    """
+
+    #: The real shape: a Python literal moved, prose that quotes it.
+    MOVED = ("--- a/tests/unit/test_the_report_you_can_attach.py\n"
+             "+++ b/tests/unit/test_the_report_you_can_attach.py\n"
+             "@@ -664,1 +664,1 @@\n"
+             '-    ("golden", GOLDEN, 406_000),\n'
+             '+    ("golden", GOLDEN, 411_000),\n')
+    SAYS_IT = ("# UX-479\n\n## Outcome\n\n"
+               "golden's 406,000 stands. Both recorded figures were stale.\n")
+
+    def _run(self, *argv):
+        return subprocess.run(
+            [sys.executable, str(REPO / "tools/dev_close_task.py"),
+             "--figures", *argv],
+            capture_output=True, text=True, cwd=str(REPO), timeout=120)
+
+    @staticmethod
+    def _scenarios(tmp_path, says=SAYS_IT):
+        where = tmp_path / "scenarios"
+        where.mkdir()
+        (where / "UX-0479-a-bound.md").write_text(says, encoding="utf-8")
+        return where
+
+    @staticmethod
+    def _diff(tmp_path, text):
+        path = tmp_path / "the.diff"
+        path.write_text(text, encoding="utf-8")
+        return path
+
+    def test_a_moved_figure_the_backlog_still_writes_is_named(self, tmp_path):
+        where = self._scenarios(tmp_path)
+        done = self._run("--diff", str(self._diff(tmp_path, self.MOVED)),
+                         "--scenarios", str(where))
+        assert done.returncode == 0, done.stdout + done.stderr
+        assert "406,000" in done.stdout, done.stdout
+        assert "UX-0479-a-bound.md:5" in done.stdout, (
+            "the diff writes 406_000 and the backlog writes 406,000; a "
+            "reader matching the literal spelling sees neither\n"
+            + done.stdout)
+
+    def test_the_same_commits_own_record_does_not_cancel_the_figure(
+            self, tmp_path):
+        """`UX-469` wrote `406,000 -> 411,000` into its own task file.
+
+        Subtracting added figures across the whole diff cancels exactly
+        the figure the commit moved, and the replay printed nothing.
+        Kept per file.
+        """
+        diff = self.MOVED + (
+            "--- a/docs/backlog/scenarios/UX-0469-fields.md\n"
+            "+++ b/docs/backlog/scenarios/UX-0469-fields.md\n"
+            "@@ -215,0 +215,1 @@\n"
+            "+`golden`'s bound moved 406,000 -> 411,000 with the split.\n")
+        where = self._scenarios(tmp_path)
+        done = self._run("--diff", str(self._diff(tmp_path, diff)),
+                         "--scenarios", str(where))
+        assert "UX-0479-a-bound.md:5" in done.stdout, done.stdout
+
+    def test_a_figure_nothing_writes_is_reported_clean_not_silently(
+            self, tmp_path):
+        where = self._scenarios(tmp_path, says="# UX-479\n\nNo figure.\n")
+        done = self._run("--diff", str(self._diff(tmp_path, self.MOVED)),
+                         "--scenarios", str(where))
+        assert done.returncode == 0, done.stdout + done.stderr
+        assert "1 figure(s) removed" in done.stdout, done.stdout
+        assert "none still written" in done.stdout, (
+            "a clean run has to say it checked, not print nothing\n"
+            + done.stdout)
+
+    def test_the_closing_items_own_file_is_not_reported_against_itself(
+            self, tmp_path):
+        where = self._scenarios(tmp_path)
+        done = self._run("UX-479", "--diff",
+                         str(self._diff(tmp_path, self.MOVED)),
+                         "--scenarios", str(where))
+        assert "none still written" in done.stdout, done.stdout

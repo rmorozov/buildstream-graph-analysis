@@ -75,10 +75,8 @@ UNDECLARABLE = {
 
 _CENSUS = r"""
 globalThis._makeNode ??= (await import(process.env.BGA_DOM_SHIM)).makeNode;
-globalThis.document = { createElement: _makeNode,
-                        createElementNS: (_n, t) => _makeNode(t),
-                        getElementById: () => null, querySelector: () => null,
-                        querySelectorAll: () => [], addEventListener: () => {} };
+globalThis._installDocument ??= (await import(process.env.BGA_DOM_SHIM)).installDocument;
+_installDocument();
 // UX-343: this census reads `hintsOf`/`guessQuantity` directly rather
 // than calling `quantityFor`, because the two channels a declaration
 // can arrive through have to be read *apart* and `quantityFor` folds

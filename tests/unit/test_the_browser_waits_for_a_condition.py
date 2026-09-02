@@ -193,8 +193,6 @@ class TestOneBrowserPerWorker:
         tail = source.split("async function boot()")[1].split("\n}")[0]
         assert "} finally {" in tail
         assert "dataset.bgaBooted" in tail.split("} finally {")[1]
-        assert "documentElement?.dataset" in tail, (
-            "unguarded: forty-eight shims model no documentElement")
 
     def test_the_shared_browser_is_closed_at_exit(self):
         """`atexit`, not `__exit__`. A worker that left a Chrome behind

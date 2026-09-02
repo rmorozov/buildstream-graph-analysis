@@ -390,17 +390,18 @@ console.log(JSON.stringify(mod.%s(%s) ?? null));
 
 _RENDER_HARNESS = """
 globalThis._makeNode ??= (await import(process.env.BGA_DOM_SHIM)).makeNode;
+globalThis._installDocument ??= (await import(process.env.BGA_DOM_SHIM)).installDocument;
 
 function makeNode(tag, ns) {
   const node = _makeNode(tag);
   node.ns = ns ?? null;
   return node;
 }
-globalThis.document = {
+_installDocument({
   createElement: (t) => makeNode(t),
   createElementNS: (ns, t) => makeNode(t, ns),
   getElementById: () => makeNode("div"),
-};
+});
 const mod = await import("./tests/viewer.mjs");
 const out = mod.%s(%s);
 if (!out) { console.log(JSON.stringify({ empty: true })); }

@@ -62,9 +62,8 @@ MACRO = REPO / "tests" / "fixtures" / "macro_micro" / "run"
 def _js(body):
     source = """
 globalThis._makeNode ??= (await import(process.env.BGA_DOM_SHIM)).makeNode;
-globalThis.document = { createElement: _makeNode,
-                        createElementNS: (_n, t) => _makeNode(t),
-                        getElementById: () => null, querySelector: () => null };
+globalThis._installDocument ??= (await import(process.env.BGA_DOM_SHIM)).installDocument;
+_installDocument();
 globalThis.location = { protocol: "file:", href: "http://x/" };
 globalThis.window = { localStorage: { getItem: () => null, setItem: () => {} } };
 globalThis.CSS = { escape: (s) => s };

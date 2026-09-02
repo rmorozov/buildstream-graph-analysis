@@ -58,10 +58,8 @@ FIXTURES = {"golden": REPO / "tests/fixtures/golden/mixed_task_kinds",
 
 _PROBE = r"""
 globalThis._makeNode ??= (await import(process.env.BGA_DOM_SHIM)).makeNode;
-globalThis.document = { createElement: _makeNode,
-                        createElementNS: (_n, t) => _makeNode(t),
-                        getElementById: () => null, querySelector: () => null,
-                        querySelectorAll: () => [], addEventListener: () => {} };
+globalThis._installDocument ??= (await import(process.env.BGA_DOM_SHIM)).installDocument;
+_installDocument();
 const v = await import(process.env.BGA_VIEWER);
 const fs = await import("node:fs");
 const payload = JSON.parse(fs.readFileSync(process.env.BGA_PAYLOAD, "utf8"));

@@ -1648,6 +1648,7 @@ class TestTheCiWiring:
 
 _COMMON_SHIM = """
 globalThis._makeNode ??= (await import(process.env.BGA_DOM_SHIM)).makeNode;
+globalThis._installDocument ??= (await import(process.env.BGA_DOM_SHIM)).installDocument;
 
 function makeNode(tag) {
   const node = _makeNode(tag);
@@ -1687,10 +1688,8 @@ for (const name of Object.keys(blocks)) {
 const root = makeNode("main");
 nodes["report"] = root;
 
-globalThis.document = {
-  createElement: makeNode,
-  getElementById: (id) => nodes[id] ?? makeNode("div"),
-};
+globalThis._installDocument ??= (await import(process.env.BGA_DOM_SHIM)).installDocument;
+_installDocument({ getElementById: (id) => nodes[id] ?? makeNode("div") });
 globalThis.fetch = () => { throw new Error("the export fetched something"); };
 
 const source = html.match(
@@ -1712,7 +1711,8 @@ console.log(JSON.stringify(collect(root)));
 
 _SERVED_HARNESS = _COMMON_SHIM + """
 const payload = %s, schema = %s;
-globalThis.document = { createElement: makeNode, getElementById: () => makeNode("div") };
+globalThis._installDocument ??= (await import(process.env.BGA_DOM_SHIM)).installDocument;
+_installDocument({ getElementById: () => makeNode("div") });
 const mod = await import("./tests/viewer.mjs");
 const root = makeNode("main");
 mod.render(payload, schema, root);

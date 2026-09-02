@@ -598,15 +598,13 @@ _RENDER_HARNESS = """
 const payload = %s, schema = %s;
 
 globalThis._makeNode ??= (await import(process.env.BGA_DOM_SHIM)).makeNode;
+globalThis._installDocument ??= (await import(process.env.BGA_DOM_SHIM)).installDocument;
 
 function makeNode(tag) {
   const node = _makeNode(tag);
   return node;
 }
-globalThis.document = {
-  createElement: makeNode,
-  getElementById: () => makeNode("div"),
-};
+_installDocument({ getElementById: () => makeNode("div") });
 
 const mod = await import("./tests/viewer.mjs");
 const root = makeNode("main");

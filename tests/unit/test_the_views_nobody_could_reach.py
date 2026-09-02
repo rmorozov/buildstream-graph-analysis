@@ -290,12 +290,13 @@ def _render(fn, payload):
 # Enough SVG-aware DOM to run the real renderers.
 _HARNESS = """
 globalThis._makeNode ??= (await import(process.env.BGA_DOM_SHIM)).makeNode;
+globalThis._installDocument ??= (await import(process.env.BGA_DOM_SHIM)).installDocument;
 
 function make(tag) {
   const node = _makeNode(tag);
   return node;
 }
-globalThis.document = { createElement: make, createElementNS: (_ns, t) => make(t) };
+_installDocument();
 
 const views = await import("./tests/viewer.mjs");
 const node = views["%s"](%s);

@@ -225,12 +225,9 @@ class TestItStaysASectionAndStaysBounded:
 
 
 _ELISION = """
-globalThis.document = { createElement: (t) => make(t),
-                        createElementNS: (_n, t) => make(t),
-                        createTextNode: (t) => ({ nodeType: 3, textContent: t,
-                                                  attrs: {}, children: [] }),
-                        getElementById: () => null };
 globalThis._makeNode ??= (await import(process.env.BGA_DOM_SHIM)).makeNode;
+globalThis._installDocument ??= (await import(process.env.BGA_DOM_SHIM)).installDocument;
+_installDocument();
 
 function make(tag) {
   const node = _makeNode(tag);
@@ -251,6 +248,7 @@ console.log(JSON.stringify({ total, shown: views.ELEMENTS_SHOWN,
 
 _SHIM = """
 globalThis._makeNode ??= (await import(process.env.BGA_DOM_SHIM)).makeNode;
+globalThis._installDocument ??= (await import(process.env.BGA_DOM_SHIM)).installDocument;
 
 function make(tag) {
   const node = _makeNode(tag);
@@ -260,10 +258,7 @@ function make(tag) {
 // A text node carries `attrs` too - not because the DOM does, but
 // because every walker here reads `attrs`, and a bare `{}` turns a
 // missing-attribute question into a TypeError three frames deep.
-globalThis.document = { createElement: make, createElementNS: (_n, t) => make(t),
-                        createTextNode: (t) => ({ nodeType: 3, textContent: t,
-                                                  attrs: {}, children: [] }),
-                        getElementById: () => null };
+_installDocument();
 """
 
 _HARNESS = _SHIM + """

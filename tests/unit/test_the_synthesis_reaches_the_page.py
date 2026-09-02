@@ -245,9 +245,8 @@ class TestOnThePage:
 
 _RECORD = """
 globalThis._makeNode ??= (await import(process.env.BGA_DOM_SHIM)).makeNode;
-globalThis.document = { createElement: _makeNode,
-                        createElementNS: (_n, t) => _makeNode(t),
-                        getElementById: () => null };
+globalThis._installDocument ??= (await import(process.env.BGA_DOM_SHIM)).installDocument;
+_installDocument();
 const viewer = await import("./tests/viewer.mjs");
 
 // A **record**: a node whose members are named in `properties`, each

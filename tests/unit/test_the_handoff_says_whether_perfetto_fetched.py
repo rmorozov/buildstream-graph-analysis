@@ -187,7 +187,8 @@ Object.defineProperty(handoff, "textContent", {
   set(value) { calls.said.push(String(value)); },
 });
 
-globalThis.document = { getElementById: (id) => nodes[id] ?? null };
+globalThis._installDocument ??= (await import(process.env.BGA_DOM_SHIM)).installDocument;
+_installDocument({ getElementById: (id) => nodes[id] ?? null });
 globalThis.location = { href: here + "index.html" };
 
 globalThis.fetch = async (url, init = {}) => {

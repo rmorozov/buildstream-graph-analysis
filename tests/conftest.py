@@ -239,6 +239,17 @@ KNOWN_SKIP_REASONS = {
     # Invisible to any developer machine that has `bst` (this one does:
     # the file runs, 23 passed in 103s, and skips nothing), which is
     # fixing guide 7's class - a claim only CI can falsify.
+    # `UX-524` put one CI job's `make test` under `--cov-context=test`,
+    # and the workflow states its price: +20% wall clock. The 1500-
+    # element bound then reads the tracer - 10.30s against 10.0 on CI
+    # 3.12, ~8.6s uninstrumented. One clause, and only where a tracer
+    # is attached, so it fires on no developer machine and on exactly
+    # one of CI's five jobs.
+    "the duration is a tracer's and not this pipeline's; UX-524's "
+    "coverage job runs +20% and a bare bound would read the instrument": (
+        "the 1500-element timing bound; it runs wherever no tracer is "
+        "attached, which is every job but the coverage one", 1),
+
     "the journey needs bst, bwrap and example 06's staged toolchain "
     "(files/toolchain, written by generate_sources.py)": (
         "UX-402's whole-journey arm; it runs where bst, bwrap and the "

@@ -176,6 +176,18 @@ def test_graph_analysis_not_recomputed_redundantly(tmp_path, monkeypatch):
     assert call_count["n"] == 1
 
 
+#: `UX-449`'s scan reads skip reasons statically, and an f-string is a
+#: `JoinedStr` it cannot follow - the first draft of the skip below was
+#: one, which took the unreadable count 58 -> 59 and reddened
+#: `test_every_skip_reason_is_declared.py` on CI's 3.9 and 3.11. That
+#: guard's own message names the remedy it prefers, so this is it: the
+#: **condition** is the reason, and the elapsed seconds are evidence
+#: rather than part of it.
+TRACED = ("the duration is a tracer's and not this pipeline's; UX-524's "
+          "coverage job runs +20% and a bare bound would read the "
+          "instrument")
+
+
 def _traced():
     """Whether a line tracer is measuring this process.
 
@@ -210,8 +222,5 @@ def test_full_pipeline_faster_after_p1_21(tmp_path):
     analyze_run(run_dir)
     elapsed = time.perf_counter() - start
     if _traced():
-        pytest.skip(
-            f"a tracer is measuring this process, so {elapsed:.2f}s is the "
-            f"tracer's number and not this pipeline's (UX-524's coverage "
-            f"job runs +20%)")
+        pytest.skip(TRACED)
     assert elapsed < 10.0, f"1500-element analyze_run took {elapsed:.2f}s - regression?"

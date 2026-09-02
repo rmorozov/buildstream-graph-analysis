@@ -69,17 +69,30 @@ _LOOK = r"""
     .find((n) => n.getAttribute("data-sql-for") === id);
   const shown = code("dependency-wait");
   const copies = button("dependency-wait");
-  const options = pick ? [...pick.options].map((o) => o.value) : [];
+  // `UX-527`: the control is an `<input list>` and what it *draws* is
+  // the datalist, bounded. The population it reaches is the attribute,
+  // which is the claim `UX-369` made and this item leaves alone.
+  const listed = () => [...(pick?.list?.options ?? [])].map((o) => o.value);
+  const options = listed();
+  const population = pick ? Number(pick.getAttribute("data-population")) : 0;
   const started = { sql: shown.textContent, copy: copies.getAttribute("data-copy") };
   // The control's own value, not the first option: on `golden` the
   // default is `base.bst`, which sorts second. A probe that assumed
   // `options[0]` read `null` here and reported the page's fault.
   const chosen = pick ? pick.value : null;
-  // The option furthest from the default, so "it happened to already
-  // be that one" cannot pass this.
-  const target = options[options.length - 1] === chosen
-    ? options[0] : options[options.length - 1];
-  if (pick) { pick.value = target; pick.dispatchEvent(new Event("change")); }
+  // What this probe types. `TYPED` when the caller named one - the only
+  // way to reach an element past the offered few - and otherwise the
+  // offer furthest from the default, so "it happened to already be that
+  // one" cannot pass this.
+  const asked = "TYPED";
+  const target = asked || (options[options.length - 1] === chosen
+    ? options[0] : options[options.length - 1]);
+  if (pick) {
+    pick.value = target;
+    pick.dispatchEvent(new Event("input", { bubbles: true }));
+    pick.dispatchEvent(new Event("change", { bubbles: true }));
+  }
+  const offered = listed();
   // What the reader actually gets. Reading `data-copy` is not enough:
   // `copyButton` closes over the text it was built with, and a button
   // still handing that over would leave the attribute correct and the
@@ -98,7 +111,8 @@ _LOOK = r"""
     pasted,
     chosen,
     chosenIsInTheSql: started.sql.includes("'" + chosen + "'"),
-    options,
+    options, offered, population,
+    tag: pick ? pick.tagName.toLowerCase() : null,
     note: (document.querySelector('[data-control="query-element"] p')
            ?.textContent ?? ""),
     startedMatched: started.sql === started.copy,
@@ -109,6 +123,15 @@ _LOOK = r"""
   };
 })()
 """
+
+
+def _look(typed=""):
+    """`_LOOK`, with the uid this run wants typed into the box.
+
+    `UX-527`: the control offers eight, so reaching the ninth is an act
+    the probe has to perform rather than a list it can index.
+    """
+    return _LOOK.replace("TYPED", typed)
 
 
 def _node(script):
@@ -223,13 +246,13 @@ class TestThePageSubstitutesThisRun:
         """The defect, as a page. `golden` has no element called
         `core.bst`; before this item its page said `core.bst` three
         times, once per element-scoped query."""
-        out = browser.measure(golden_page, _LOOK, 1440, 900)
+        out = browser.measure(golden_page, _look(), 1440, 900)
         assert FOREIGN not in out["body"], (
             "a foreign fixture's element name is still on the page")
 
     def test_the_default_is_an_element_this_run_has(self, browser,
                                                     golden_page):
-        out = browser.measure(golden_page, _LOOK, 1440, 900)
+        out = browser.measure(golden_page, _look(), 1440, 900)
         assert out["options"], "no element picker on a page with a run"
         # `headline.top_actions[0]` on `golden`. Read from the payload
         # rather than written here, so this stays a claim about where
@@ -250,7 +273,7 @@ class TestThePageSubstitutesThisRun:
         is worse than none - which is what the closure in `copyButton`
         would have done had the payload stayed the text it was built
         with."""
-        out = browser.measure(golden_page, _LOOK, 1440, 900)
+        out = browser.measure(golden_page, _look(), 1440, 900)
         assert out["startedMatched"], "display and payload differed at rest"
         assert out["target"] != out["chosen"], (
             "the fixture's population is too small to move the picker")
@@ -268,12 +291,48 @@ class TestThePageSubstitutesThisRun:
         `copyButton` closes over the text it was built with, so a
         button reading the closure would leave `data-copy` correct and
         hand the reader the query they moved off."""
-        out = browser.measure(golden_page, _LOOK, 1440, 900)
+        out = browser.measure(golden_page, _look(), 1440, 900)
         assert out["pasted"], f"nothing reached the clipboard: {out['pasted']}"
         assert out["pasted"] == out["afterCopy"], out["pasted"]
         assert f"'{out['target']}'" in out["pasted"], out["pasted"]
         assert f"'{out['chosen']}'" not in out["pasted"], (
             "the clipboard carries the element the reader moved off")
+
+
+#: `UX-527`: what the control may draw at once, read off the source so
+#: the probe asks the page about the rule the page has.
+PICKER_SHOWN = int(
+    (REPO / "bga/viewer/questions.js").read_text(encoding="utf-8")
+    .split("PICKER_SHOWN = ", 1)[1].split(";", 1)[0].strip())
+
+#: And the number the item chose, written down - the jump box's limit.
+#: Reading the constant off the source is right for the probe and
+#: useless as a bound: the mutation that raises it raises this file's
+#: expectation with it, which is what
+#: `test_a_filter_is_a_property_of_a_table.py` found by running it.
+PICKER_SHOWN_AS_CHOSEN = 8
+
+
+@pytest.fixture(scope="module")
+def at_scale(browser, tmp_path_factory):
+    """`UX-527`: the top of the large size class, 4,002 elements.
+
+    The item is about a control with one option per element and its
+    numbers are at 4,002 - `pages.xl_run`. The element typed in is the
+    last uid the run has, which no published array names, because
+    reaching the population past the offered few is the claim `UX-369`
+    made and this one keeps.
+    """
+    from tools.bga_view import payloads
+
+    made = tmp_path_factory.mktemp("q527-xl")
+    run = pages.xl_run(made)
+    uri = pages.export_uri(run, made, name="xl.html")
+    report = payloads(str(run))["report.json"]
+    uids = sorted(report["elements"]["element_durations"])
+    return {"population": len(uids), "uid": uids[-1],
+            "rest": browser.measure(uri, _look(), 1440, 900),
+            "typed": browser.measure(uri, _look(uids[-1]), 1440, 900)}
 
 
 @needs_browser
@@ -282,27 +341,57 @@ class TestItReachesEveryElementAtScale:
     """The one claim only the scale probe can make.
 
     Eleven elements cannot tell "the run's population" from "the eight
-    rows the attribution table shows"; 1,202 can.
+    rows the attribution table shows"; 4,002 can.
     """
 
-    def test_the_picker_offers_the_whole_run(self, browser,
-                                             tmp_path_factory):
-        from tools.bga_view import payloads
-
-        made = tmp_path_factory.mktemp("q369-scale")
-        run = pages.scale_run(made)
-        uri = pages.export_uri(run, made, name="scale.html")
-        report = payloads(str(run))["report.json"]
-        population = len(report["elements"]["element_durations"])
-        out = browser.measure(uri, _LOOK, 1440, 900)
-        assert population > 1000, population       # the probe, still a probe
-        assert len(out["options"]) == population, (
-            f"{len(out['options'])} of {population} elements are reachable "
-            f"from the query picker")
-        assert str(population) in out["note"], (
+    def test_the_picker_reaches_the_whole_run(self, at_scale):
+        """`UX-369`'s claim, unchanged by `UX-527`: the population is
+        the run's. Read off the control rather than counted in the DOM,
+        because the DOM is now the eight that match."""
+        out = at_scale["rest"]
+        assert at_scale["population"] > 4000, at_scale["population"]
+        assert out["population"] == at_scale["population"], (
+            f"the picker reaches {out['population']} of "
+            f"{at_scale['population']} elements")
+        assert str(at_scale["population"]) in out["note"], (
             f"the sentence beside the control does not say the count it "
-            f"offers: {out['note']!r}")
+            f"searches: {out['note']!r}")
         assert FOREIGN not in out["body"]
+
+    def test_it_draws_eight_and_not_the_project(self, at_scale):
+        """The defect, as a clause. A 4,002-entry dropdown is not a
+        control anyone can use, and it was 4,119 of that page's 8,953
+        DOM elements."""
+        assert PICKER_SHOWN == PICKER_SHOWN_AS_CHOSEN, (
+            f"the picker's bound moved to {PICKER_SHOWN}; say what was "
+            f"measured before changing it")
+        # **Before the probe types and after**, which the first draft of
+        # this clause got wrong: it read only the post-typing list, so
+        # removing the bound from `fill` left it green - the needle was
+        # a whole uid and matched one row whatever the cap was. Found by
+        # running the mutation.
+        for phase in ("rest", "typed"):
+            for when in ("options", "offered"):
+                drawn = at_scale[phase][when]
+                assert len(drawn) <= PICKER_SHOWN, (
+                    f"{phase}/{when}: the control draws {len(drawn)} "
+                    f"options of {at_scale['population']}")
+        assert at_scale["typed"]["offered"] == [at_scale["uid"]], (
+            at_scale["typed"]["offered"])
+
+    def test_the_typed_element_reaches_the_query(self, at_scale):
+        """The other half: an element no published array names is what
+        the SQL asks about, and what the clipboard hands over, once it
+        has been typed."""
+        out, uid = at_scale["typed"], at_scale["uid"]
+        assert out["target"] == uid, out["target"]
+        assert f"'{uid}'" in out["afterSql"], out["afterSql"]
+        assert f"'{uid}'" in out["pasted"], out["pasted"]
+
+    def test_the_control_is_a_search_box(self, at_scale):
+        """Named, so "a `<select>` with fewer options" cannot pass it:
+        a menu with a cap is a population that stops at the cap."""
+        assert at_scale["rest"]["tag"] == "input", at_scale["rest"]["tag"]
 
 
 if __name__ == "__main__":  # pragma: no cover

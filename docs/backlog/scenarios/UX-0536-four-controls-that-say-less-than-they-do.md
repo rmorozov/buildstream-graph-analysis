@@ -104,7 +104,8 @@ the trace rather than from that report.
 owns it): round 80's four items add **2,305 B of page and 0 of data** to
 `golden` — page 294,848 → 297,153 B, data 114,424 → 114,399 (run-path
 noise) — of which this item is 1,185 B, all JS. Bound 411,000; the suite
-measures 411,142.
+measures 411,142. **§3.6:** the other track grew the page from the same
+base, so the merged tree is 415,729 B and the bound is **420,000**.
 
 ```text
 the two guard files  →  54 passed, 6 skipped in 50.70s

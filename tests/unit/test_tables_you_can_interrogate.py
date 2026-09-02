@@ -186,7 +186,11 @@ class TestTheScaleThatDemandedIt:
         # quadratic mistake trips it, which is what would actually
         # demand windowing.
         assert out["rows"] == 4000
+        assert out["published"] == 4000
         assert out["shown"] == out["expected"]
+        # `UX-526`: and the rows the filter did not keep left the
+        # document rather than staying in it hidden.
+        assert out["inDom"] == out["shown"], out
         assert out["render_ms"] < 5000, out
         assert out["filter_ms"] < 2000, out
 
@@ -246,6 +250,10 @@ let t0 = Date.now();
 const section = app.renderTable("elements", rows, hint);
 const render_ms = Date.now() - t0;
 const table = section.children.find((c) => c.tagName === "table");
+// The rows the render actually built. `UX-526` holds what the bound
+// does not show out of the document, so the tbody is no longer the
+// place to count them; `everyRow` is the built set, held and shown.
+const rendered = tables.everyRow(table.querySelector("tbody")).length;
 
 t0 = Date.now();
 const shown = tables.applyFilters(table, {
@@ -256,7 +264,8 @@ const expected = rows.filter((r) => r.element_uid.includes("element-1")
                                  && r.duration_us > 5e6).length;
 
 console.log(JSON.stringify({
-  rows: table.querySelectorAll("tbody tr").length,
+  rows: rendered, inDom: table.querySelectorAll("tbody tr").length,
+  published: Number(table.getAttribute("data-rows")),
   shown, expected, render_ms, filter_ms }));
 """
 

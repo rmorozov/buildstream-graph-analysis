@@ -42,6 +42,7 @@ can go stale.
 this: the change put 1,177 rows in the DOM and height, words and
 controls were all nearly blind to it.
 """
+import collections
 import pathlib
 import sys
 
@@ -218,6 +219,13 @@ class TestAllRowsMeansAllRows:
 #: `<tbody>`; the nested tables' rows are their own. Read as children
 #: rather than by selector, so a guard cannot inherit the descent it is
 #: about.
+#:
+#: `UX-526` then took the rows past the bound *out of the document*, so
+#: the attached own rows are the shown ones and the nested tables that
+#: travel with a held row are unreachable too. Both counts are read at
+#: rest and again with the bound lifted, and the claim is stated over
+#: the pair: the migration this file is about would put 660 rows in the
+#: outer tbody at either reading.
 _NESTED = r"""
 (() => {
   for (const b of document.querySelectorAll("section.chapter")) {
@@ -253,6 +261,9 @@ _NESTED = r"""
 #: rows the outer table owns.
 RESOURCES = 60
 
+#: `openingBound`'s head. What `UX-526` leaves attached at rest.
+OPENING = 25
+
 
 @pytest.fixture(scope="module")
 def folded(browser, tmp_path_factory):
@@ -269,10 +280,15 @@ class TestATableDoesNotOwnTheNestedTablesRows:
     rows" reading `660 of 60` over `Copy 660 rows`."""
 
     def test_the_outer_table_owns_only_its_published_rows(self, folded):
-        """The defect itself: every nested row was migrated up."""
-        assert folded["atRest"]["ownRows"] == RESOURCES, (
+        """The defect itself: every nested row was migrated up.
+
+        At rest the bound holds all but `OPENING` of them out of the
+        document (`UX-526`), so the number to assert is the head; the
+        migration put 660 here, which is neither.
+        """
+        assert folded["atRest"]["ownRows"] == OPENING, (
             f"the outer tbody holds {folded['atRest']['ownRows']} direct "
-            f"<tr> over {RESOURCES} published rows")
+            f"<tr> where the bound shows {OPENING} of {RESOURCES}")
 
     def test_the_nested_folds_keep_their_own_rows(self, folded):
         """The other end of the same migration - the folds opened empty
@@ -293,20 +309,37 @@ class TestATableDoesNotOwnTheNestedTablesRows:
             folded["allRows"]["copy"])
 
     def test_all_rows_moves_no_row_between_tables(self, folded):
-        """And lifting the bound is not what tears them out: the counts
-        are the same before and after."""
+        """And lifting the bound is not what tears them out.
+
+        It re-attaches the held rows, so the population grows from
+        `OPENING` to `RESOURCES` and every nested table that arrives
+        with one still holds its own rows. What the migration did -
+        empty folds, `660 of 60` - reddens on both halves.
+        """
         assert folded["allRows"]["ownRows"] == RESOURCES, (
             folded["allRows"]["ownRows"])
-        assert folded["allRows"]["nested"] == folded["atRest"]["nested"], (
-            "pressing 'All rows' changed what the nested tables hold")
+        nested = folded["allRows"]["nested"]
+        assert len(nested) == RESOURCES and all(n > 0 for n in nested), (
+            f"{sum(1 for n in nested if not n)} of {len(nested)} nested "
+            f"tables hold no rows once the bound is lifted")
+        # A sub-multiset, not a prefix of the sorted list: the bound
+        # keeps the top rows by its own column, which is not the 25
+        # smallest folds.
+        rest = collections.Counter(folded["atRest"]["nested"])
+        assert not (rest - collections.Counter(nested)), (
+            "pressing 'All rows' changed what the nested tables hold: "
+            f"{rest - collections.Counter(nested)}")
 
     def test_sorting_moves_no_row_between_tables(self, folded):
         """`sortable` re-appends every row it ranked, which is the same
         migration by another control."""
         assert folded["sorted"]["ownRows"] == RESOURCES, (
             folded["sorted"]["ownRows"])
+        # Against `allRows`, not `atRest`: the sort happens with the
+        # bound already lifted, so those two hold the same population
+        # and only the order between them differs.
         assert (sorted(folded["sorted"]["nested"])
-                == sorted(folded["atRest"]["nested"])), (
+                == sorted(folded["allRows"]["nested"])), (
             "sorting the outer table changed what the nested tables hold")
 
 

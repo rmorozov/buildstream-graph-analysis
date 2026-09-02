@@ -33,7 +33,9 @@
 import { served } from "./primitives.js";
 import { quantity, title } from "./format.js";
 import { GRADE_ANNOTATION, columnStrip } from "./drawings.js";
-import { ownCells } from "./tables.js";
+// `UX-526`: the rows a bound holds out are out of the document,
+// so "every value in this column" is a call rather than a query.
+import { columnCells } from "./tables.js";
 
 /** The controls §1 names. The value is the guide's own wording. */
 export const CONTROLS = Object.freeze({
@@ -245,7 +247,9 @@ export function distributionStrip(table, specs, total, state, refresh) {
   if (!spec) return null;
   // The column key, not `cssId`: that normalises an *element uid* into
   // an anchor, and a column key is already a schema identifier.
-  const raw = ownCells(table, spec.key)
+  // Over every row, not the shown ones: the label below says "across
+  // all N rows" and `UX-526` took the hidden ones out of the document.
+  const raw = columnCells(table, spec.key)
     .map((td) => Number(td.getAttribute("data-raw")))
     .filter((n) => Number.isFinite(n));
   if (!raw.length) return null;

@@ -61,10 +61,10 @@ folds carry their 11 rows, copy says 60. Mutation: restore
 
 ### The gap, measured
 
-`tests/pages.shared_resource_run` — `macro_micro` (11 elements) given 60
-shared git repositories, the direct pair rotating so the blast sets
-differ. One browser drive over the `resource_blast` table, reading the
-outer tbody's **element children** rather than by selector:
+`tests/pages.shared_resource_run` — `macro_micro` given 60 shared git
+repositories, the direct pair rotating so the blast sets differ. One
+browser drive over `resource_blast`, reading the outer tbody's **element
+children** rather than by selector:
 
 ```text
                      own <tr>  visible  badge        copy            nested rows
@@ -75,12 +75,10 @@ last 3 own rows      4|lib-d.bst · 5|lib-e.bst · 6|lib-f.bst
 
 600 rows torn out of 60 nested tables and appended to the outer tbody by
 `applyFilters`' opening bound. The folds open empty, the badge says
-`660 of 60`, and the table's last rows are the folds' `key|value` pairs
-as two-cell rows — the user's report, reproduced.
+`660 of 60`, and the last rows are the folds' `key|value` pairs as
+two-cell rows — the user's report, reproduced.
 
-### After
-
-Same fixture, same drive, same instrument:
+### After — same fixture, same drive, same instrument
 
 ```text
                      own <tr>  visible  badge        copy            nested rows
@@ -89,44 +87,53 @@ after "All rows"           60       60  60 rows      Copy 60 rows    [11, 11, 11
 ```
 
 `ownRows(table)` is the tbody's `<tr>` children, in `tables.js`, and the
-nine sites the Motivation names read it (or `ownCells`, built on it).
-`60 rows` rather than `60 of 60` is `badgeText`'s existing wording for
-shown == total, unchanged.
+nine sites the Motivation names read it. `60 rows` is `badgeText`'s
+existing wording for shown == total.
 
 ### Mutations verified red and reverted (5)
 
-| # | mutation | reddened |
+| # | mutation | red |
 |---|---|---|
-| M1 | `ownRows` → `ownBody(table).querySelectorAll("tr")` — the defect itself | 4 of the 5 new clauses; the 7 `UX-366` clauses stayed **green** |
-| M2 | `shownRows` (`structured.js`) descends again | `…badge_and_the_copy_count…` only — `Copy 660 rows` |
+| M1 | `ownRows` → `querySelectorAll("tr")` — the defect itself | 4 (the 7 `UX-366` clauses stayed **green**) |
+| M2 | `shownRows` (`structured.js`) descends again | 1 (`Copy 660 rows`) |
 | M3 | `applyFilters` descends again | the same 4 as M1 |
-| M4 | `applyTopN` descends again | **nothing** — see below |
-| M5 | `sortable` descends again | `…sorting_moves_no_row_between_tables` only |
+| M4 | `applyTopN` descends again | **0** — see below |
+| M5 | `sortable` descends again | 1 |
 
-**Two findings.** `applyTopN` (M4) has **no caller in the page** —
-`grep -rn applyTopN bga/ tests/` finds the definition, one node harness
-and a comment — so its correction is real and unexercised; the page's
-bound goes through `applyFilters`' `top` pass. And `applyFilters` is the
-single site that migrates rows, so the four own-rows/nested/badge/
-all-rows clauses share one cause (M1 ≡ M3): they are four readings of
-one migration, not four independent claims. The two clauses that do
-discriminate alone are the copy count (M2) and sorting (M5).
+**Two findings.** `applyTopN` (M4) has **no caller in the page**, so its
+correction is real and unexercised; the page's bound goes through
+`applyFilters`' `top` pass. And `applyFilters` is the single site that
+migrates rows, so the four own-rows/nested/badge/all-rows clauses share
+one cause (M1 ≡ M3): four readings of one migration, not four claims.
+The two that discriminate alone are the copy count (M2) and sorting.
 
 The `data-element` stamp, `statedOnce` and the distribution strip were
-corrected by the same helper and **no clause of mine reads them** — on
-this fixture the inflated cell counts change no rendered text I could
-assert on. They are unguarded here; the item's Acceptance Test named
-badge, folds and copy, and those are covered.
+corrected by the same helper and **no clause of mine reads them**: the
+inflated cell counts change no rendered text on this fixture. Unguarded
+here; the Acceptance Test named badge, folds and copy.
+
+### The merge
+
+`UX-526` gave `tables.js` a second selector on a parallel track, for the
+other half of the same question: every row **held or shown**, a row past
+the bound having left the document. Each family breaks the other's, so
+the merge is one answering both — `everyRow` seeds from `childrenNamed`,
+`ownRows` delegates to it, `columnCells` takes `ownBody`, `ownCells` is
+gone; 141 B smaller than the two. `test_two_row_selectors_became_one.py`
+holds the shape neither track had a fixture for: M1 (`everyRow`
+descends) 4 red, M2 (`ownRows` on attached children) 1, M3
+(`columnCells` by `querySelector`) **0 and cannot be** — an outer tbody
+always precedes a nested one. This file's clauses are restated for the
+bound rather than repaired.
 
 ### Deviation from the Required Fix
 
 The selector is a child walk over `tbody.children`, not `:scope > tr`:
 `tests/dom_shim.mjs` throws on any pseudo-class by design (`UX-264`) and
-48 guard files use it, so `:scope` would have meant changing the shared
-shim. Same claim, one place, no new test surface.
+48 guard files use it. Same claim, one place, no new test surface.
 
 ```text
 make test-touching  →  358 passed, 2 skipped in 62.00s (23 files)
-pytest tests/unit/test_all_rows_means_all_rows.py  →  12 passed in 14.60s
-make lint           →  All checks passed!
+pytest test_all_rows_means_all_rows.py  →  12 passed in 14.60s (merged)
+make lint  →  All checks passed!
 ```

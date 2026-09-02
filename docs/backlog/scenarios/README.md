@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-537 scenarios: **12 open**, 525 closed.
+537 scenarios: **9 open**, 528 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -23,11 +23,11 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | capture | 1 | 90 |
 | analysis | 1 | 85 |
 | contracts | 0 | 37 |
-| viewer | 5 | 135 |
+| viewer | 3 | 135 |
 | cli | 0 | 19 |
 | store | 1 | 14 |
 | docs | 1 | 66 |
-| guards | 3 | 91 |
+| guards | 2 | 91 |
 
 ## Open scenarios
 
@@ -38,9 +38,6 @@ task file, which is the only place it ever lived twice.
 |---|---|---|---|---|---|
 | UX-500 | [the batch gate, measured against the per-item suite](UX-0500-the-batch-gate-measured-against-the-per-item-suite.md) | docs | High | the implementing session's wall clock; the maintainer's subscription | 🔴 |
 | UX-520 | [a capture you can carry to another machine in one command](UX-0520-a-run-bundle-you-can-carry.md) | store | Medium | the engineer who captured on a build runner and wants to read it on a laptop | 🔴 |
-| UX-526 | [the large budget class is measured at its bottom and breached at its top](UX-0526-the-large-budget-class-is-breached-at-its-top.md) | guards | High | anyone who opens a report of a project larger than the seeded run | 🔴 |
-| UX-527 | [one control has an option per element](UX-0527-one-control-has-an-option-per-element.md) | viewer | High | anyone asking Perfetto about one element of a large project | 🔴 |
-| UX-528 | [the served store section and run picker grow with every snapshot](UX-0528-the-served-store-section-grows-with-every-snapshot.md) | viewer | High | the CI owner whose store holds a hundred runs | 🔴 |
 | UX-529 | [the export's data half is unbounded, and holds each row twice](UX-0529-the-export-data-half-is-unbounded-and-holds-each-row-twice.md) | viewer | Medium | anyone attaching a report of a large project | 🔴 |
 | UX-530 | [a real capture reaches the track ceiling, and the timeline is dropped whole](UX-0530-a-real-capture-reaches-the-track-ceiling-and-loses-the-timeline.md) | capture | Medium | anyone capturing a C++ project with a few hundred processes per element | 🔴 |
 | UX-533 | [the served page is the capture-time analysis, and cannot say so](UX-0533-the-served-page-is-the-capture-time-analysis.md) | viewer | High | anyone reading a run captured by an older `bga` | 🔴 |

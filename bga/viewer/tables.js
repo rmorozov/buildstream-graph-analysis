@@ -86,20 +86,96 @@ export function ownBody(table) {
  *
  * A child walk rather than `:scope > tr`: `tests/dom_shim.mjs` refuses
  * pseudo-classes by design (`UX-264`), and the claim is the same one.
+ *
+ * Through `everyRow`, because `UX-526` took the rows past the bound out
+ * of the document: children of the tbody are the *shown* own rows, and
+ * both claims have to hold at once.
  */
 export function ownRows(table) {
-  return childrenNamed(ownBody(table), "tr");
-}
-
-/** `UX-532`: one column's cells, over this table's own rows only. */
-export function ownCells(table, column) {
-  return ownRows(table).flatMap((tr) => [...(tr.children ?? [])].filter(
-    (td) => td.getAttribute?.("data-column") === column));
+  return everyRow(ownBody(table));
 }
 
 /** The text a row matches on: every cell's rendered text, joined. */
 export function rowText(tr) {
   return [...tr.children].map((td) => td.textContent).join(" ").toLowerCase();
+}
+
+// `UX-526`: a row the bound does not show leaves the document.
+//
+// Measured on the seeded 4,002-element run: 4,800 `<tr>` in the DOM and
+// 293 rendered. A row past the bound was `hidden`, which costs no pixels
+// and every node - and `nodes` is the one volume measure that sees a
+// table (`UX-366`). The rows are held here instead, in the order the
+// table holds them, and re-attached by the same control that used to
+// flip `hidden`. Nothing is lost: the payload holds them once already,
+// and the export ships the payload rather than the rendered DOM.
+const HELD = new WeakMap();
+
+/**
+ * Every **own** row of `body`, shown or held out, in the table's order.
+ *
+ * `childrenNamed` and not `querySelectorAll("tr")`: `UX-532`'s claim -
+ * a cell can hold a whole table, and its rows are not these.
+ */
+export function everyRow(body) {
+  const state = HELD.get(body);
+  if (state?.out.size) return state.order;
+  const order = childrenNamed(body, "tr");
+  if (body) HELD.set(body, { order, out: new Set() });
+  return order;
+}
+
+/** Attach exactly `shown`, in that order; the rest leave the document. */
+function showOnly(body, order, shown) {
+  const wanted = new Set(shown);
+  const out = new Set();
+  for (const tr of order) {
+    if (wanted.has(tr)) continue;
+    tr.hidden = true;
+    tr.remove?.();
+    out.add(tr);
+  }
+  for (const tr of shown) { tr.hidden = false; body.append?.(tr); }
+  HELD.set(body, { order, out });
+}
+
+/** Record a new order for the table, leaving the held rows held. */
+function reorder(body, order) {
+  const out = HELD.get(body)?.out ?? new Set();
+  for (const tr of order) if (!out.has(tr)) body.append?.(tr);
+  HELD.set(body, { order, out });
+}
+
+/**
+ * Put `rows` back, keeping whatever else is already shown.
+ *
+ * The other door onto the same held set: a fold's own "+N more" control
+ * asks for its middle rows by name rather than through a filter pass.
+ */
+export function showAlso(body, rows) {
+  const state = HELD.get(body);
+  for (const tr of rows) tr.hidden = false;
+  if (!state) return;
+  for (const tr of rows) state.out.delete(tr);
+  for (const tr of state.order) if (!state.out.has(tr)) body.append?.(tr);
+}
+
+/**
+ * One column's cells, over every row the table has - held or shown.
+ *
+ * `UX-526`: `querySelectorAll("td[data-column=…]")` used to be the same
+ * thing and stopped being it. A strip labelled "across all 1,202 rows"
+ * drawn from the 25 the bound shows is the wrong-population defect the
+ * fixing guide's §5 names, arriving through a change of mechanism.
+ */
+export function columnCells(table, key) {
+  // `ownBody`, not `querySelector("tbody")`: `UX-532` again.
+  const body = ownBody(table);
+  if (!body) return [];
+  return everyRow(body)
+    .map((tr) => [...(tr.children ?? [])].find(
+      (td) => td.getAttribute?.("data-column") === key))
+    .filter(Boolean);
 }
 
 /**
@@ -110,9 +186,8 @@ export function applyFilters(table, { text = "", thresholds = {},
                                      top = null } = {}) {
   const needle = String(text).trim().toLowerCase();
   const body = ownBody(table);
-  const rows = ownRows(table);
+  const rows = everyRow(body);
   const kept = [];
-  let shown = 0;
   for (const tr of rows) {
     let keep = !needle || rowText(tr).includes(needle);
     if (keep) {
@@ -129,8 +204,7 @@ export function applyFilters(table, { text = "", thresholds = {},
         }
       }
     }
-    tr.hidden = !keep;
-    if (keep) { shown += 1; kept.push(tr); }
+    if (keep) kept.push(tr);
   }
   // `UX-392`: **and the preset, over what the filter left.**
   //
@@ -152,6 +226,7 @@ export function applyFilters(table, { text = "", thresholds = {},
   // bound at all because the caller had no column to name. Everything
   // else about it is the same pass, so the badge, the filter and the
   // copy control cannot tell the two apart.
+  let shown = kept;
   if (top && Number.isFinite(Number(top.n))) {
     if (top.column) {
       const value = (tr) => {
@@ -162,13 +237,12 @@ export function applyFilters(table, { text = "", thresholds = {},
       };
       kept.sort((a, b) => value(b) - value(a));
     }
-    kept.forEach((tr, index) => {
-      tr.hidden = index >= Number(top.n);
-      body.append(tr);
-    });
-    shown = Math.min(Number(top.n), kept.length);
+    shown = kept.slice(0, Number(top.n));
   }
-  return shown;
+  // `UX-526`: one place decides which rows exist, so the count the badge
+  // shows and the rows the document holds cannot disagree.
+  showOnly(body, rows, shown);
+  return shown.length;
 }
 
 /**
@@ -233,9 +307,9 @@ export function badgeText(shown, total) {
  * 120 measured **120 cards drawn**, on a page whose every table
  * stopped at 25.
  *
- * The cards past the bound are *hidden*, not removed, for the reason
- * `foldTheMiddle` hides rather than removes: Ctrl-F, the export and
- * every `#anchor` into a finding keep working. One control says how
+ * The cards past the bound are *hidden*, not removed: an `#anchor` into
+ * a finding has to land somewhere, and a card is not a row a bound
+ * re-materialises (`UX-526` moved the rows and left these). One control says how
  * many there are and shows them, and the badge beside it carries the
  * denominator so a bounded list cannot be mistaken for a short one.
  */
@@ -252,21 +326,33 @@ export function boundCards(section, selector, bound, noun = "item") {
  *
  * `groups[i]` is every node belonging to the i-th thing - one card, or
  * a `<dt>` and its `<dd>`. Past `bound` they are hidden, not removed,
- * for the reason `foldTheMiddle` hides rather than removes: Ctrl-F, the
- * export and every anchor keep working. Returns the control, or `null`
+ * for the reason `boundCards` gives. Returns the control, or `null`
  * when there was nothing to bound.
  */
-export function boundGroups(groups, bound, noun = "item") {
+export function boundGroups(groups, bound, noun = "item", detach = false) {
   if (groups.length <= bound) return null;
+  // `UX-526`: `detach` is the pair list's answer - `wall_clock_share_us`
+  // is one pair per element, and at 4,002 elements the hidden ones were
+  // 24,020 DOM nodes and 96,065 words of the page's 107,352.
+  const parent = groups[0]?.[0]?.parentElement
+                 ?? groups[0]?.[0]?.parentNode ?? null;
   for (const [index, group] of groups.entries()) {
-    for (const node of group) node.hidden = index >= bound;
+    for (const node of group) {
+      node.hidden = index >= bound;
+      if (detach && node.hidden) node.remove?.();
+    }
   }
   const badge = el("span", { class: "badge" },
                    badgeText(bound, groups.length));
   const more = el("button", { type: "button", class: "show-all-cards" },
                   `Show all ${plural(groups.length, noun)}`);
   more.addEventListener("click", () => {
-    for (const group of groups) for (const node of group) node.hidden = false;
+    // Every group re-appended, not only the detached ones: appending a
+    // node already in place is a no-op that keeps the pairs in order.
+    for (const group of groups) for (const node of group) {
+      node.hidden = false;
+      if (detach) parent?.append?.(node);
+    }
     badge.textContent = badgeText(groups.length, groups.length);
     more.hidden = true;
   });
@@ -298,7 +384,9 @@ export function boundPairs(list, bound, noun = "row") {
     if (String(node.tagName).toLowerCase() === "dt") groups.push([node]);
     else if (groups.length) groups[groups.length - 1].push(node);
   }
-  return boundGroups(groups, bound, noun);
+  // `UX-526`: detached, unlike the cards - a pair carries no `#anchor`
+  // and this is the page's largest hidden population.
+  return boundGroups(groups, bound, noun, true);
 }
 
 /** What "copy row" puts on the clipboard: the published values, keyed
@@ -494,7 +582,9 @@ export function sortable(table, specs = []) {
       table.querySelectorAll("th").forEach((other) =>
         other.removeAttribute("aria-sort"));
       th.setAttribute("aria-sort", ascending ? "ascending" : "descending");
-      const rows = ownRows(table);
+      // `UX-526`: over every row, held or shown - a sort that saw only
+      // the shown ones would rank the top 25 among themselves.
+      const rows = [...everyRow(body)];
       rows.sort((a, b) => {
         const x = a.children[index]?.dataset.raw ?? "";
         const y = b.children[index]?.dataset.raw ?? "";
@@ -503,7 +593,7 @@ export function sortable(table, specs = []) {
         const order = numeric ? nx - ny : String(x).localeCompare(String(y));
         return ascending ? order : -order;
       });
-      rows.forEach((row) => body.append(row));
+      reorder(body, rows);
     });
   });
 }

@@ -336,12 +336,31 @@ def payloads(run: str, baseline: Optional[str] = None) -> Dict[str, dict]:
     return documents
 
 
-def store_payload(run: str) -> Optional[dict]:
+#: `UX-528`: how many snapshots the page is handed.
+#:
+#: The sparklines beside the store exhibit got a window
+#: (`element.js`'s `HISTORY_POINTS_MAX`); the exhibit, its table twin
+#: and the run picker did not, and `UX-394` was filed with two runs in
+#: the store. Measured on a store of N copies of the golden run, served:
+#: at N=100 the picker drew 100 options, the twin 100 rows and
+#: `store.json` was 34,056 B against 4,121 at N=12.
+#:
+#: The same 12, because it is the same question - the last dozen runs
+#: of this project - and two windows disagreeing about "recent" is worse
+#: than either. `test_the_page_moves_between_runs.py` holds them equal.
+STORE_WINDOW = 12
+
+
+def store_payload(run: str, window: Optional[int] = STORE_WINDOW
+                  ) -> Optional[dict]:
     """`store/v1` for the project this run belongs to, or None.
 
     `UX-196`'s store trend. Through `bga_snapshot.store_listing`, which
     is also what `--list` renders from, so the drawing and the terminal
     cannot disagree about what is on disk.
+
+    `UX-528`: windowed for the page. `window=None` is the whole store,
+    which is what the focus path behind "show all N" is served from.
     """
     from bga import run_store
     # Relative: packaged, this module is `bga._tools.bga_view`,
@@ -353,7 +372,7 @@ def store_payload(run: str) -> Optional[dict]:
     if project is None:
         return None
     try:
-        return store_listing(project)
+        return store_listing(project, window)
     except OSError:
         return None
 
@@ -1464,6 +1483,13 @@ def serve(run: str, port: int = 0,
     store = store_payload(run)
     if store is not None:
         documents.setdefault("store.json", store)
+        # `UX-528` (§3a): where "show all N snapshots" goes. Offered in
+        # the manifest and fetched only when a reader asks, so the whole
+        # listing costs the page nothing until it is wanted.
+        if store.get("shown", store.get("count")) != store.get("count"):
+            whole = store_payload(run, window=None)
+            if whole is not None:
+                documents.setdefault("store-all.json", whole)
         # UX-234: and what that store says about itself as a
         # distribution. A second document rather than a key of the
         # listing - one row per snapshot and one row per host class are

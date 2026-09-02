@@ -64,7 +64,9 @@ GATE_AS_MEASURED = 40
 
 _SURVEY = """(() => {
   const tables = [...document.querySelectorAll("table[data-table]")];
-  const rows = (t) => t.querySelectorAll("tbody tr").length;
+  // `UX-526`: the population the table has, not the rows it is
+  // showing - a row past the bound is out of the document now.
+  const rows = (t) => Number(t.getAttribute("data-rows"));
   const filtered = (t) => Boolean(
     t.closest("[data-bounded], section")?.querySelector("input.table-filter"));
   return {
@@ -83,7 +85,7 @@ _COMPOSES = """(() => {
   const badge = t.closest("section").querySelector("span.badge");
   const shown = () => [...t.querySelectorAll("tbody tr")].filter(
     (r) => !r.hidden);
-  const out = { total: t.querySelectorAll("tbody tr").length,
+  const out = { total: Number(t.getAttribute("data-rows")),
                 opened: shown().length, badgeOpened: badge.textContent };
   box.value = "mod023";
   box.dispatchEvent(new Event("input", { bubbles: true }));

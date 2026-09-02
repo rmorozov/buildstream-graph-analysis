@@ -96,7 +96,9 @@ _LOOK = """
               === 1) {
       scope = scope.parentElement;
     }
-    const rows = t.querySelectorAll("tbody tr").length;
+    // `UX-526`: the rows the table has, published - the DOM holds
+    // only the ones the bound shows.
+    const rows = Number(t.getAttribute("data-rows"));
     const columns = [...t.querySelectorAll("th[data-column]")]
       .map((h) => h.getAttribute("data-column"));
     const uniform = [];

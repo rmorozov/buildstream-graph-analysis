@@ -238,7 +238,7 @@ function markerPoint(marker, cx, cy, r, attrs) {
 // and the answer is a shape.
 
 export function renderTrend(store, schema = undefined,
-                            aggregate = undefined) {
+                            aggregate = undefined, showAll = null) {
   // UX-335: a row that is not an object is not a snapshot. `store/v1`
   // says every entry is one, and a store written by a half-finished
   // prune or an interrupted snapshot can carry a `null` anyway - at
@@ -331,8 +331,16 @@ export function renderTrend(store, schema = undefined,
 
   const wrapper = document.createElement("section");
   wrapper.setAttribute("data-section", "store-trend");
+  // `UX-528`: the page is handed the last `STORE_WINDOW` rows and the
+  // store's own count beside them, so the heading says which it is
+  // drawing. At 100 snapshots the picker drew 100 options and this
+  // twin 100 rows; `bga_view.STORE_WINDOW` is where that stopped.
+  const held = Number(store?.count);
+  const windowed = Number.isFinite(held) && held > rows.length;
   const heading = document.createElement("h2");
-  heading.textContent = `The store (${rows.length} snapshots)`;
+  heading.textContent = windowed
+    ? `The store (the last ${rows.length} of ${held} snapshots)`
+    : `The store (${rows.length} snapshots)`;
   // UX-209: the shape, then one line. The reasons stay behind a fold
   // rather than leaving the page - a reader who wants to know why a
   // square is a square is one click away, and a reader who does not is
@@ -366,13 +374,56 @@ export function renderTrend(store, schema = undefined,
     { name: "last", at: 100, label: rows[rows.length - 1].stamp },
   ]));
   wrapper.append(caption);
-  wrapper.append(exhibitTwin(document, ["snapshot", "duration", "verdict"],
-    rows.map((row) => [
-      row.stamp,
-      row.total_duration_us != null ? seconds(row.total_duration_us) : "—",
-      row.incomplete_reason ? row.incomplete_reason
-        : (row.verdict_kind ?? "—").replace(/_/g, " "),
-    ])));
+  const twinRows = (list) => list.map((row) => [
+    row.stamp,
+    row.total_duration_us != null ? seconds(row.total_duration_us) : "—",
+    row.incomplete_reason ? row.incomplete_reason
+      : (row.verdict_kind ?? "—").replace(/_/g, " "),
+  ]);
+  const columns = ["snapshot", "duration", "verdict"];
+  let twin = exhibitTwin(document, columns, twinRows(rows));
+  wrapper.append(twin);
+  // §3a.1: a window says how deep it goes and where the rest are. The
+  // whole listing is a second document the server offers and nothing
+  // fetches until this is pressed, so the rest cost the page nothing
+  // while they are not wanted.
+  if (windowed) {
+    const more = document.createElement("p");
+    more.className = "muted";
+    more.setAttribute("data-role", "store-window");
+    more.setAttribute("data-shown", String(rows.length));
+    more.setAttribute("data-held", String(held));
+    more.textContent = `Drawn from the last ${rows.length} of this `
+      + `project's ${held} snapshots. `;
+    if (showAll) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "show-all-cards";
+      button.setAttribute("data-role", "store-show-all");
+      button.title = `Load the other ${held - rows.length} snapshots and `
+                     + `list all ${held} as a table`;
+      button.textContent = `Show all ${held} snapshots`;
+      button.addEventListener("click", async () => {
+        const whole = await showAll();
+        const all = (whole?.snapshots ?? []).filter(
+          (row) => row && typeof row === "object");
+        if (!all.length) {
+          more.textContent += "The whole listing could not be read.";
+          button.hidden = true;
+          return;
+        }
+        const replacement = exhibitTwin(document, columns, twinRows(all));
+        twin.replaceWith?.(replacement);
+        twin = replacement;
+        wrapper.setAttribute("data-store-all", String(all.length));
+        button.hidden = true;
+      });
+      more.append(button);
+    } else {
+      more.textContent += "`bga snapshot --list` prints every row.";
+    }
+    wrapper.append(more);
+  }
   // UX-234: what the band is, or why there is none. A refusal is data:
   // a chart that silently dropped its band would read as a store with
   // nothing to say about itself.

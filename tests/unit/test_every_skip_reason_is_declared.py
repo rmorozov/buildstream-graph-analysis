@@ -50,7 +50,13 @@ import skip_reasons  # noqa: E402
 #: one file spell the sentence out would put the same string in two
 #: places, which the sentence-as-contract rule (`UX-326`) likes less
 #: than it likes a readable scan.
-UNRESOLVABLE = 56
+#:
+#: `UX-528` argues **two** up, to 58, and for the same reason twice in
+#: one file: `test_the_store_section_takes_a_window.py` gates its class
+#: on `NO_BROWSER` and skips on it again inside a clause that needs a
+#: second served page. Both are the thirty-ninth browser guard's, not a
+#: new sentence.
+UNRESOLVABLE = 58
 
 
 def test_every_declared_skip_reason_is_known():

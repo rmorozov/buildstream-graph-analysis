@@ -502,6 +502,27 @@ export function runSelector(nav, store, { document: doc, current = null,
   jump("\u2190 Previous run", at > 0 ? runs[at - 1].stamp : null, "previous");
   jump("Latest run", runs[runs.length - 1].stamp, "latest");
 
+  // `UX-528`: the menu is the last `STORE_WINDOW` runs, so the rest of
+  // the store needs a door. A typed stamp is the same `?run=` the menu
+  // follows - the server refuses one it does not have, which is the
+  // answer a reader who mistyped needs.
+  const held = Number(store?.count);
+  if (Number.isFinite(held) && held > runs.length) {
+    const other = owner.createElement("input");
+    other.setAttribute("type", "text");
+    other.setAttribute("data-run-typed", "true");
+    other.setAttribute("aria-label", "Open a run by its stamp");
+    other.setAttribute("placeholder", "or a run id\u2026");
+    other.setAttribute("title",
+      `The menu lists the last ${runs.length} of ${held}; type any stamp `
+      + `\`bga snapshot --list\` prints to open it`);
+    other.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") go(other.value.trim());
+    });
+    other.addEventListener("change", () => go(other.value.trim()));
+    box.append(other);
+  }
+
   const title = nav.querySelector?.(".toc-title");
   if (title?.nextSibling) nav.insertBefore(box, title.nextSibling);
   else nav.append(box);

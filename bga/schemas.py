@@ -4229,6 +4229,9 @@ _STORE_REQUIRED = {
     "project": "string",
     "snapshots": "array",
     "count": "integer",
+    # `UX-528`: an addition, not a rename - `additionalProperties: true`
+    # is why adding a key does not bump a contract (fixing guide §3.7).
+    "shown": "integer",
     "total_bytes": "integer",
 }
 
@@ -4407,7 +4410,13 @@ _STORE_AGGREGATE_HINTS = {
                                    "summed."},
                 "stamps": {"description": "Which snapshots these are, so "
                                           "a figure can be traced to the "
-                                          "runs behind it."},
+                                          "runs behind it. The most recent "
+                                          "`store_aggregate.STAMPS_MAX` of "
+                                          "them (UX-528)."},
+                "stamps_total": {
+                    QUANTITY: "count",
+                    "description": "How many runs are in this class, which "
+                                   "`stamps` lists the last few of."},
                 "shortfall": {
                     "description": "Present instead of a distribution "
                                    "when the class has fewer than "
@@ -4519,8 +4528,15 @@ _STORE_HINTS = {
         "description": "What the stored snapshots occupy on disk, together."},
     "count": {
         QUANTITY: "count",
-        "description": "Snapshots held. The length of every trend drawn from "
-                       "this store."},
+        "description": "Snapshots held. The store's own size, whether or not "
+                       "`snapshots` lists all of them."},
+    # `UX-528`: the page is handed the last twelve and says so, and the
+    # two numbers together are what lets it say it.
+    "shown": {
+        QUANTITY: "count",
+        "description": "Rows in `snapshots` here. Below `count` when the "
+                       "reader of this document asked for a window - "
+                       "`bga view` does, a listing does not."},
     # UX-203: duration leads, because "is this project drifting" is a
     # question about time. Size is still here - it is what the store
     # warning is about - but it stopped being the answer.

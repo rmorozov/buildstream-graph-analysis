@@ -466,7 +466,23 @@ END pid=101 ppid=1 ts=1002.500000 element=work-a.bst cmd=cc -c main.c
 # Sized so a change is measured against a budget rather than negotiating
 # with it, and so a framework arriving - hundreds of kilobytes at once,
 # which is what the pair of guards is for - still trips it immediately.
-PAGE_BUDGET_B = 300_000
+#
+# Round 80 spent all three of those rounds at once and tripped it:
+# **+6,934 B from six viewer items** (294,848 -> 301,782), measured on
+# the merge, which is the only tree that has all six. The three-round
+# sizing was the estimate that failed, not the ceiling - a round that
+# rewrites the table's row bookkeeping, replaces a 4,002-option select
+# and windows the store section is three rounds of source in one. So
+# the same procedure, re-run on this round's number rather than on
+# rounds 69-71's:
+#
+#     page today                301,782 B   (round 80's merge)
+#     growth in round 80         +6,934 B   across six items
+#     this budget                310,000 B  8,218 B, ~1 round like it
+#
+# `DATA_DWARFS_PAGE` is unaffected: the ceiling can reach 343,248 B
+# before that claim needs revisiting, and this is 33,248 B short of it.
+PAGE_BUDGET_B = 310_000
 
 #: `UX-444`: the claim, stated once. **The run's data is at least twice
 #: the page a reader is permitted to download.**
@@ -674,17 +690,34 @@ COMMITTED_EXPORTS = [
     # rather than the 716 the note above claims. `golden`'s 411,000
     # still holds with 2,205 B; `macro_micro`'s does not, and 463,000
     # leaves 4,186 B.
-    # `UX-532`, `UX-534` and `UX-536` moved both by **+2,426 B, all of
-    # it page**: 294,848 -> 297,274 B by this file's own splitter, with
-    # the embedded data byte-identical on both fixtures. `ownRows` and
-    # its two siblings, the Focus reveal, `aria-pressed`, sixty-six
-    # collapse buttons that name what they open. Neither committed
-    # fixture publishes `resource_blast`, so none of it is payload.
+    # Round 80's six viewer items moved both bounds and **only the
+    # page**: the embedded data is byte-identical at every step, so all
+    # of it is source. One instrument, this file's own splitter. Two
+    # tracks measured their own halves against the same 294,848 B base:
     #
-    # `golden`'s 411,000 no longer holds - 411,221 B, 221 over - and
-    # `PAGE_BUDGET_B`'s 300,000 has 2,726 B left, which is the figure
-    # the next viewer round should read before it starts.
-    ("golden", GOLDEN, 416_000),                       #  411,221 B
+    #     page       delta   what
+    #     UX-526    +1,139   held-row bookkeeping, `data-rows`
+    #     UX-527    +  758   a search box for a 4,002-option `<select>`
+    #     UX-528    +2,752   the store window, its sentence, the loader
+    #     UX-532/4/6 +2,426   `ownRows` and its two siblings, the Focus
+    #                          reveal, `aria-pressed`, sixty-six collapse
+    #                          buttons that name what they open
+    #
+    # The merge is the only tree that has all six, so its page is
+    # **measured there rather than added up**: 301,782 B, which is 141 B
+    # *below* the sum. The difference is the merge itself - the two
+    # tracks each gave the row selector a family (`ownRows`/`ownCells`
+    # for nested tables, `everyRow`/`columnCells` for held-out rows),
+    # and the resolution is one family that answers both, so `ownCells`
+    # is gone and `ownRows` is a delegation.
+    #
+    #     page      294,848 -> 301,782   (+6,934)
+    #     golden    407,730 -> 415,729
+    #     macro     457,749 -> 465,748
+    #
+    # The recorded figures were 3,564 B stale on golden and 3,564 on
+    # macro_micro. 420,000 leaves 4,271 B.
+    ("golden", GOLDEN, 420_000),                       #  415,729 B
     # `UX-297` moved this one by 385 B before that: the two-plane run
     # publishes `plane2_coverage.source`, which says which shape of
     # Plane 2 report served its numbers and what that costs to open. A
@@ -772,7 +805,7 @@ COMMITTED_EXPORTS = [
     # measurement that forced it is the negotiation this file exists to
     # prevent - but the next round to add a module will trip it, and
     # the figure it needs is this one rather than the stale 453,180.
-    ("macro_micro", MACRO_MICRO, 466_000),             #  461,240 B
+    ("macro_micro", MACRO_MICRO, 470_000),             #  465,748 B
 ]
 
 

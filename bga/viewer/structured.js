@@ -35,7 +35,7 @@ import { enterTableFocus, focusedTable, leaveTableFocus, registerFocusTarget }
   from "./tablefocus.js";
 import { parseThreshold, applyFilters, badgeText, rowJson, cellText,
          copy, presetColumns, applyPreset, openingBound, plural,
-         boundPairs, sortable, ownRows, ownCells, ownBody,
+         boundPairs, sortable, ownRows, ownBody, showAlso, columnCells,
          rowsMarkdown } from "./tables.js";
 import { PATH_HEAD, PATH_TAIL } from "./views.js";
 
@@ -456,7 +456,11 @@ export function buildTable(key, rows, hint = {}, node = undefined,
                            depth = 0, options = {}) {
   const specs = columnSpecs(hint, rows, node);
   const columns = specs.map((s) => s.key);
-  const table = el("table", { "data-table": key });
+  // `UX-526`: how many rows the table *has*. The DOM used to answer
+  // that and no longer does - a row past the bound leaves it - so the
+  // population is published where a reader and a guard can both read it.
+  const table = el("table", { "data-table": key,
+                              "data-rows": String(rows.length) });
   const head = el("tr");
   for (const spec of specs) {
     head.append(el("th", {
@@ -612,7 +616,7 @@ function statedOnce(table, specs, total) {
     if (!spec || spec.role === "element" || spec.key === elementColumn(specs)) {
       continue;
     }
-    const cells = ownCells(table, spec.key);
+    const cells = columnCells(table, spec.key);
     if (cells.length !== total) continue;
     // The **published** value, not the rendered one. Found by a
     // synthetic case: forty-eight durations from 1000 to 1047 µs all
@@ -642,9 +646,10 @@ function statedOnce(table, specs, total) {
 /**
  * Hide a table's middle rows behind one control that says how many.
  *
- * The rows stay in the document - hidden, not removed - so Ctrl-F, the
- * export and `Copy shown rows` all see what they saw before, and
- * opening the fold is a `hidden` flip rather than a render.
+ * `UX-526`: the middle used to stay in the document, hidden. It does
+ * not any more on a table the row bound also reaches - `applyFilters`
+ * holds what it does not show out of the DOM - so the control puts them
+ * back through `showAlso` rather than flipping `hidden`.
  */
 function foldTheMiddle(table, total, { head, tail, noun = "rows" }) {
   if (total <= head + tail + 1) return null;
@@ -664,7 +669,11 @@ function foldTheMiddle(table, total, { head, tail, noun = "rows" }) {
   const row = el("tr", { class: "fold-row", "data-fold-rows": String(middle.length) },
                  el("td", { colspan: String(cells) }, more));
   more.addEventListener?.("click", () => {
-    for (const hidden of middle) hidden.hidden = false;
+    // `UX-526`: through `showAlso`, because on a table long enough to
+    // also open bounded the middle rows are held out of the document
+    // rather than merely hidden, and un-hiding a detached row draws
+    // nothing.
+    showAlso(body, middle);
     row.hidden = true;
   });
   // Where the middle *begins*, not where it ends: the hidden rows
@@ -739,8 +748,7 @@ export function interrogable(table, specs, total, depth = 0) {
     // the same reading `distributionStrip` makes two hundred lines
     // down, and `CSS.escape` is a browser global the guards' shim does
     // not have.
-    const numeric = [...table.querySelectorAll(
-      `td[data-column="${spec.key}"]`)]
+    const numeric = columnCells(table, spec.key)
       .some((td) => Number.isFinite(Number(td.getAttribute("data-raw"))));
     if (!numeric) return;
     const input = el("input", {

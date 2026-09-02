@@ -88,6 +88,9 @@ console.log(JSON.stringify({
   summary: find(drawn, (n) => n.tagName === "summary").map(text),
   tables: find(drawn, (n) => n.tagName === "table").length,
   rows: find(drawn, (n) => n.tagName === "tr").length,
+  // `UX-526`: the population, which the DOM stopped being.
+  published: find(drawn, (n) => n.tagName === "table")
+    .map((n) => Number(n.attrs?.["data-rows"])),
   sections: find(drawn, (n) => n.attrs?.["data-section"] !== undefined).length,
   bounded: find(drawn, (n) => n.attrs?.["data-bounded"] === "map").length,
   pre: find(drawn, (n) => n.tagName === "pre").length,
@@ -126,7 +129,9 @@ class TestNothingIsCalledObject:
     def test_a_map_is_a_table_a_reader_can_search(self):
         drawn = _draw("slack", {f"e{i}.bst": i * 10 for i in range(44)})
         assert drawn["tables"] == 1, drawn
-        assert drawn["rows"] >= 44, drawn
+        # `UX-526`: the table holds 44 and shows what the bound shows.
+        assert drawn["published"] == [44], drawn
+        assert drawn["rows"] >= 26, drawn
         assert drawn["bounded"] == 1, "the table is not height-bounded"
 
 

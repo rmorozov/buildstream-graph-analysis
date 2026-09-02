@@ -186,6 +186,8 @@ class _ResourceTimeline:
     # string identity test against a value computed once per run.
     points: List[int]
     active: List[Tuple[Tuple[str, NormalizedTask], ...]]
+    # The same holders as a key set per slice, for `occupancy_at`.
+    active_keys: List[frozenset]
     # How many tasks contribute a boundary at each point (a task adds one
     # for its start and one for its finish, so a zero-duration task adds
     # two at the same instant). Needed to reproduce the original's
@@ -207,6 +209,20 @@ class _ResourceTimeline:
         left = bisect_right(self.points, start)
         right = bisect_left(self.points, end)
         return self.points[left:right]
+
+    def occupancy_at(self, timestamp: int, excluding: str) -> int:
+        """How many holders other than `excluding`, without walking them.
+
+        `UX-531`: the callers counted this with a genexpr over the
+        holders tuple, 25.7 million times on the seeded 4,002 run. A
+        holder appears once per slice, so the count is a subtraction.
+        """
+        if not self.active:
+            return 0
+        index = bisect_right(self.points, timestamp) - 1
+        if index < 0 or index >= len(self.active):
+            return 0
+        return len(self.active[index]) - (excluding in self.active_keys[index])
 
 
 class BlameChainAnalyzer:
@@ -267,6 +283,9 @@ class BlameChainAnalyzer:
         # UX-42: per-resource occupancy timeline, built once per run.
         # See _build_resource_timelines.
         self._resource_timelines: Optional[Dict[Resource, _ResourceTimeline]] = None
+        # UX-531: the same structure over *every* task, for
+        # classify_scheduler_wait's true-concurrency sweep.
+        self._all_tasks_timeline_cache: Optional['_ResourceTimeline'] = None
 
     def _resource_timeline(self, resource: Resource) -> Optional['_ResourceTimeline']:
         """Occupancy timeline for one resource, built lazily and once.
@@ -300,44 +319,60 @@ class BlameChainAnalyzer:
             for resource in task.resources:
                 by_resource[resource].append(task)
 
-        timelines: Dict[Resource, _ResourceTimeline] = {}
-        for resource, tasks in by_resource.items():
-            # Zero-duration tasks can never cover a sub-interval (which
-            # is always non-empty), so they are excluded here exactly as
-            # the original `start <= t1 and finish >= t2` test excluded
-            # them.
-            # Boundaries come from *every* task using the resource,
-            # including zero-duration ones: a structural element with
-            # start == finish contributes a split point even though it
-            # can never hold the resource across a non-empty interval.
-            # The original built its boundary set the same way.
-            boundary_refs: Dict[int, int] = defaultdict(int)
-            for entry in tasks:
-                boundary_refs[entry.start_us] += 1
-                boundary_refs[entry.finish_us] += 1
-            points = sorted(boundary_refs)
+        self._resource_timelines = {
+            resource: self._timeline_over(tasks)
+            for resource, tasks in by_resource.items()
+        }
 
-            # Holders, by contrast, are only tasks that actually span an
-            # interval - `start <= t1 and finish >= t2` excluded
-            # zero-duration tasks by construction.
-            spans = [t for t in tasks if t.finish_us > t.start_us]
-            active: List[Tuple[Tuple[str, NormalizedTask], ...]] = []
-            if points:
-                # Sweep once: tasks sorted by start, released by finish.
-                ordered = sorted(spans, key=lambda t: t.start_us)
-                cursor = 0
-                live: List[Tuple[str, NormalizedTask]] = []
-                for point in points[:-1]:
-                    while cursor < len(ordered) and ordered[cursor].start_us <= point:
-                        entry = ordered[cursor]
-                        live.append((str(entry.task_key), entry))
-                        cursor += 1
-                    live = [pair for pair in live if pair[1].finish_us > point]
-                    active.append(tuple(live))
-            timelines[resource] = _ResourceTimeline(
-                points=points, active=active, boundary_refs=dict(boundary_refs)
-            )
-        self._resource_timelines = timelines
+    @staticmethod
+    def _timeline_over(tasks: List[NormalizedTask]) -> '_ResourceTimeline':
+        """One sweep of `tasks` into change points and per-slice holders."""
+        # Zero-duration tasks can never cover a sub-interval (which
+        # is always non-empty), so they are excluded here exactly as
+        # the original `start <= t1 and finish >= t2` test excluded
+        # them.
+        # Boundaries come from *every* task using the resource,
+        # including zero-duration ones: a structural element with
+        # start == finish contributes a split point even though it
+        # can never hold the resource across a non-empty interval.
+        # The original built its boundary set the same way.
+        boundary_refs: Dict[int, int] = defaultdict(int)
+        for entry in tasks:
+            boundary_refs[entry.start_us] += 1
+            boundary_refs[entry.finish_us] += 1
+        points = sorted(boundary_refs)
+
+        # Holders, by contrast, are only tasks that actually span an
+        # interval - `start <= t1 and finish >= t2` excluded
+        # zero-duration tasks by construction.
+        spans = [t for t in tasks if t.finish_us > t.start_us]
+        active: List[Tuple[Tuple[str, NormalizedTask], ...]] = []
+        active_keys: List[frozenset] = []
+        if points:
+            # Sweep once: tasks sorted by start, released by finish.
+            ordered = sorted(spans, key=lambda t: t.start_us)
+            cursor = 0
+            live: List[Tuple[str, NormalizedTask]] = []
+            for point in points[:-1]:
+                while cursor < len(ordered) and ordered[cursor].start_us <= point:
+                    entry = ordered[cursor]
+                    live.append((str(entry.task_key), entry))
+                    cursor += 1
+                live = [pair for pair in live if pair[1].finish_us > point]
+                active.append(tuple(live))
+                active_keys.append(frozenset(pair[0] for pair in live))
+        return _ResourceTimeline(
+            points=points, active=active, active_keys=active_keys,
+            boundary_refs=dict(boundary_refs)
+        )
+
+    def _all_tasks_timeline(self) -> '_ResourceTimeline':
+        """Occupancy of the scheduler itself - every task, not one
+        resource. `UX-531`: `classify_scheduler_wait` rebuilt this per
+        wait gap, which is O(n) work O(n) times."""
+        if self._all_tasks_timeline_cache is None:
+            self._all_tasks_timeline_cache = self._timeline_over(self.tasks)
+        return self._all_tasks_timeline_cache
     
     def _build_dependency_graph(self) -> None:
         """
@@ -646,13 +681,11 @@ class BlameChainAnalyzer:
                 timeline = timelines.get(resource)
                 if timeline is None:
                     continue
-                holders = timeline.holders_at(t1)
                 # The task doing the waiting is excluded from its own
                 # saturation count, as before.
-                occupancy = sum(1 for key_str, _ in holders if key_str != self_key)
-                if occupancy >= capacity:
+                if timeline.occupancy_at(t1, self_key) >= capacity:
                     saturated_resources.add(resource)
-                    holders_by_resource[resource] = holders
+                    holders_by_resource[resource] = timeline.holders_at(t1)
 
             if not saturated_resources:
                 intervals.append((False, t1, t2, {}))
@@ -725,17 +758,17 @@ class BlameChainAnalyzer:
         """
         if not task.resources:
             return True
+        self_key = str(task.task_key)
         for resource in task.resources:
             capacity = self.resource_capacity.get(resource)
             if capacity is None:
                 continue
-            occupied = sum(
-                1
-                for other in self.tasks
-                if other.task_key != task.task_key
-                and resource in other.resources
-                and other.start_us <= ts < other.finish_us
-            )
+            # `UX-531`: the same precomputed timeline `UX-42` built for
+            # `_resource_saturation_intervals` - a scan of every task
+            # here is O(n) per gap and this is called O(n) times.
+            timeline = self._resource_timeline(resource)
+            occupied = (timeline.occupancy_at(ts, self_key)
+                        if timeline is not None else 0)
             if occupied >= capacity:
                 return False
         return True
@@ -818,27 +851,24 @@ class BlameChainAnalyzer:
             # not infer scheduler failure merely because a task did not run.
             return False
 
-        others = [other for other in self.tasks if other.task_key != task.task_key]
-
         # Critical points: wait_start/wait_end plus every other task's own
         # start/finish that falls strictly inside the window - true
         # concurrency can only change at one of these points (a start OR
         # a finish, unlike the old start-only evidence), so they define
         # the maximal constant-concurrency sub-intervals.
+        #
+        # `UX-531`: sliced out of the run-wide timeline rather than built
+        # here. The waiting task's own boundaries are no longer skipped,
+        # because a point that only splits a constant-occupancy interval
+        # leaves both halves with the count the whole had.
+        timeline = self._all_tasks_timeline()
+        self_key = str(task.task_key)
         boundaries = {wait_start, wait_end}
-        for other in others:
-            if wait_start < other.start_us < wait_end:
-                boundaries.add(other.start_us)
-            if wait_start < other.finish_us < wait_end:
-                boundaries.add(other.finish_us)
+        boundaries.update(timeline.change_points_within(wait_start, wait_end))
         points = sorted(boundaries)
 
         for t1, t2 in zip(points, points[1:]):
-            concurrency = sum(
-                1 for other in others
-                if other.start_us <= t1 and other.finish_us >= t2
-            )
-            if concurrency < max_jobs:
+            if timeline.occupancy_at(t1, self_key) < max_jobs:
                 return True
 
         return False

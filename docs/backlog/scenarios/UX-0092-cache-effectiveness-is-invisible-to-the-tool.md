@@ -1,6 +1,6 @@
 # UX-92: cache effectiveness — hits, misses, churn, trends — is invisible to the tool
 
-**Priority:** Medium | **Status:** 🟡 In Progress — stages 1 and 2 done; stage 3's trend shipped as `UX-103`, its gate is deferred on evidence (re-checked at n=7 on 2026-09-02: still zero spread, and the schedule is structurally incapable of a second commit - `UX-514`) | **Depends on:** UX-55 (done), UX-81 (history to trend over)
+**Priority:** Medium | **Status:** 🟡 In Progress — stages 1 and 2 done; stage 3's trend shipped as `UX-103`, its gate is **not deferred any more, it is not gateable on this history** - `UX-514` chose `capture-ref-policy: pinned` in round 80, so the variation this waited for cannot arrive; the row belongs at ⚪ with that reason | **Depends on:** UX-55 (done), UX-81 (history to trend over)
 
 ## Motivation
 

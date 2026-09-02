@@ -3334,7 +3334,12 @@ def read_artifact_contents(project_dir: str, elements: List[str]) -> Dict[str, S
     # than "unknown", which is the one way this function can make every
     # dependency look unused.
     contents: Dict[str, Set[str]] = {}
-    for group in _chunks(list(elements), LIST_CONTENTS_CHUNK):
+    # `UX-519`: the unit is the batch, because after `UX-518` a batch is
+    # one `bst` invocation and the per-element step no longer happens.
+    groups = list(_chunks(list(elements), LIST_CONTENTS_CHUNK))
+    tick = progress.ticker("artifact contents", total=len(groups))
+    for index, group in enumerate(groups, 1):
+        tick.step(index)
         read = _list_contents(project_dir, group)
         if read is None:
             # `UX-518`: the group is all-or-nothing. One unresolvable
@@ -3343,11 +3348,16 @@ def read_artifact_contents(project_dir: str, elements: List[str]) -> Dict[str, S
             # that one - so a failed group is retried one at a time.
             # That pays the old cost exactly when something is wrong,
             # and never on the path this change exists to speed up.
-            for element in group:
+            for retried, element in enumerate(group, 1):
+                # `UX-519`: the batch counter cannot move during the
+                # slow path, so the line says what it is doing instead.
+                tick.note(f"{index}/{len(groups)} retry "
+                          f"{retried}/{len(group)}")
                 alone = _list_contents(project_dir, [element])
                 contents[element] = (alone or {}).get(element, set())
             continue
         contents.update(read)
+    tick.done()
     return contents
 
 

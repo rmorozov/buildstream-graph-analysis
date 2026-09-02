@@ -25,14 +25,22 @@ stdout is the payload, not a progress stream. Elapsed seconds are the
 honest signal."* Nothing to do; recorded so it is not re-filed.
 
 **`bst artifact list-contents` is called once per element**, and the
-cost is per invocation. `examples/09-fine-grained-siblings`, 11
-elements, `bst` 2.7.0, same container, same minute, warm-up discarded:
+cost is per invocation. `bst` 2.7.0, same container, same minute,
+warm-up discarded:
 
 ```text
-A. one call per element (11 calls): total 55.98s, median per call 5.32s
-B. one call, all 11 elements:      5.50 / 5.20 / 4.83s, median 5.20s
-                                                        ratio A/B = 10.8x
+examples/06-macro-micro-optimization, 11 elements, all cached, every call rc=0
+A. one call per element (11 calls): total 14.82s, median per call 1.34s
+B. one call, all 11 elements:      1.59 / 1.59 / 1.61s, median 1.59s
+                                                        ratio A/B = 9.3x
 ```
+
+> **Corrected in round 78, before the fix was written.** This section
+> first reported 10.8x from `examples/09-fine-grained-siblings` — which
+> has no built artifacts, so every call there exits 1 and both shapes
+> were timed on the failing path. `examples/06` is the example whose
+> artifacts exist; the ratio is 9.3x and means the same thing, because
+> the constant is BuildStream's startup either way.
 
 Eleven elements in one call cost what one element costs, because
 `bst artifact list-contents` takes `[ARTIFACTS]...` and the loop was
@@ -46,9 +54,9 @@ build edges                           663
 distinct build-dependency successors  124   <- the upper bound on `needed`
 ```
 
-124 × 5.3s is **~11 minutes** where one call is ~5 seconds. The constant
-is this container's; the shape — flat in the number of elements per call
-— is what the row is about. `UX-518`.
+124 × 1.34s is **~2.8 minutes** where one call is ~1.6 seconds. The
+constant is this container's; the shape — flat in the number of elements
+per call — is what the row is about. `UX-518`.
 
 And the phase has no progress line, alone among the `bst`-driven phases:
 

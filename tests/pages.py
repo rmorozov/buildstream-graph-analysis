@@ -242,6 +242,54 @@ def scale_two_plane_snapshot(into, per_element=12,
     return snapshot
 
 
+#: `UX-532`: a **bounded** table whose cells hold nested tables.
+#:
+#: `UX-366`'s guard stayed green through the row-migration defect
+#: because no fixture had one: golden and `macro_micro` publish no
+#: shared resource, and the scale run's tables fold nothing. Sixty
+#: resources over `macro_micro`'s eleven elements is the smallest shape
+#: with both halves - 60 rows is past `TABLE_OPENS_BOUNDED_ABOVE`, and a
+#: blast of more than `ARRAY_INLINE_ITEMS` renders as a folded nested
+#: table in a cell.
+#:
+#: The direct pair **rotates**, so the blast sets differ row to row:
+#: with one pair for all sixty, `statedOnce` reads `blast_elements` as a
+#: column stated once and removes it, and the fixture has no nested
+#: table left to be wrong about.
+def shared_resource_run(into, resources=60) -> pathlib.Path:
+    """`macro_micro`, given `resources` shared repositories. The run."""
+    from bga import sources
+
+    run = snapshot_copy(FIXTURES["macro_micro"], into)
+    with open(run / "graph.json", encoding="utf-8") as handle:
+        uids = [row["uid"] for row in json.load(handle)["elements"]]
+    elements: dict = {}
+    for index in range(resources):
+        at = index % 5      # the five widest closures, so every blast folds
+        for uid in (uids[at], uids[at + 1]):
+            elements.setdefault(uid, []).append(
+                {"kind": "git", "identity": f"host/org/repo-{index:02d}",
+                 "declared": f"https://host/org/repo-{index:02d}.git",
+                 "keying": "ref", "staged_at": None})
+    (run / "sources.json").write_text(
+        json.dumps(sources.build_inventory(elements)), encoding="utf-8")
+    return run
+
+
+def shared_resource_uri(into, resources=60, name="folded.html") -> str:
+    """`shared_resource_run`, exported. The `file://` URI.
+
+    Not `export_uri`: that copies the snapshot *again*, and the run this
+    builds is already a copy the caller owns.
+    """
+    import tools.bga_view as view
+
+    run = shared_resource_run(into, resources)
+    page = pathlib.Path(into) / name
+    view.export(str(run), str(page))
+    return page.as_uri()
+
+
 #: `UX-438`: what a run with artifact transfer in it looks like.
 #:
 #: `compute_cache_accounting` publishes `transfer_us` and

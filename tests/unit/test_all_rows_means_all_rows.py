@@ -212,5 +212,103 @@ class TestAllRowsMeansAllRows:
                     f"{view['visible']} of {view['allRows']}")
 
 
+#: `UX-532`: the same three statements, over a table whose cells fold.
+#:
+#: The outer table's own rows are the direct `<tr>` children of its own
+#: `<tbody>`; the nested tables' rows are their own. Read as children
+#: rather than by selector, so a guard cannot inherit the descent it is
+#: about.
+_NESTED = r"""
+(() => {
+  for (const b of document.querySelectorAll("section.chapter")) {
+    b.setAttribute("data-open", "true");
+  }
+  const table = document.querySelector(
+    "[data-section=resource_blast] table");
+  const tools = table.closest(".preset-body") || table.parentElement;
+  const own = () => [...table.querySelector("tbody").children]
+    .filter((n) => n.tagName === "TR");
+  const read = () => ({
+    ownRows: own().length,
+    visible: own().filter((tr) => !tr.hidden).length,
+    badge: (tools.querySelector(".badge") || {}).textContent || "",
+    copy: (tools.querySelector(".copy-rows") || {}).textContent || "",
+    nested: [...table.querySelectorAll("tbody table")].map(
+      (t) => [...t.querySelector("tbody").children]
+        .filter((n) => n.tagName === "TR").length),
+  });
+  const atRest = read();
+  const limit = tools.querySelector(".top-n");
+  limit.value = "";                       // "All rows"
+  limit.dispatchEvent(new Event("change", { bubbles: true }));
+  const allRows = read();
+  // Sorting re-appends rows too, and it is a separate site.
+  table.querySelector("thead th").click();
+  return { atRest, allRows, sorted: read() };
+})()
+"""
+
+
+#: How many shared resources the fixture publishes, and so how many
+#: rows the outer table owns.
+RESOURCES = 60
+
+
+@pytest.fixture(scope="module")
+def folded(browser, tmp_path_factory):
+    into = tmp_path_factory.mktemp("u532")
+    uri = pages.shared_resource_uri(into, RESOURCES)
+    return browser.measure(uri, _NESTED, 1440, 900)
+
+
+@needs_browser
+@pytest.mark.medium
+class TestATableDoesNotOwnTheNestedTablesRows:
+    """`UX-532`. Measured before the fix on this fixture: 660 own `<tr>`
+    in the outer tbody, 60 nested tables holding 0 rows each, and "All
+    rows" reading `660 of 60` over `Copy 660 rows`."""
+
+    def test_the_outer_table_owns_only_its_published_rows(self, folded):
+        """The defect itself: every nested row was migrated up."""
+        assert folded["atRest"]["ownRows"] == RESOURCES, (
+            f"the outer tbody holds {folded['atRest']['ownRows']} direct "
+            f"<tr> over {RESOURCES} published rows")
+
+    def test_the_nested_folds_keep_their_own_rows(self, folded):
+        """The other end of the same migration - the folds opened empty
+        because their rows had been appended to the outer tbody."""
+        nested = folded["atRest"]["nested"]
+        assert nested and all(n > 0 for n in nested), (
+            f"{sum(1 for n in nested if not n)} of {len(nested)} nested "
+            f"tables hold no rows")
+
+    def test_the_badge_and_the_copy_count_say_the_published_number(
+            self, folded):
+        """`UX-366`'s three statements, on this shape."""
+        assert folded["atRest"]["badge"] == f"25 of {RESOURCES}", (
+            folded["atRest"]["badge"])
+        assert folded["allRows"]["visible"] == RESOURCES, (
+            folded["allRows"])
+        assert folded["allRows"]["copy"] == f"Copy {RESOURCES} rows", (
+            folded["allRows"]["copy"])
+
+    def test_all_rows_moves_no_row_between_tables(self, folded):
+        """And lifting the bound is not what tears them out: the counts
+        are the same before and after."""
+        assert folded["allRows"]["ownRows"] == RESOURCES, (
+            folded["allRows"]["ownRows"])
+        assert folded["allRows"]["nested"] == folded["atRest"]["nested"], (
+            "pressing 'All rows' changed what the nested tables hold")
+
+    def test_sorting_moves_no_row_between_tables(self, folded):
+        """`sortable` re-appends every row it ranked, which is the same
+        migration by another control."""
+        assert folded["sorted"]["ownRows"] == RESOURCES, (
+            folded["sorted"]["ownRows"])
+        assert (sorted(folded["sorted"]["nested"])
+                == sorted(folded["atRest"]["nested"])), (
+            "sorting the outer table changed what the nested tables hold")
+
+
 if __name__ == "__main__":  # pragma: no cover
     raise SystemExit(pytest.main([__file__, "-v"]))

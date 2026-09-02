@@ -62,6 +62,41 @@ export function passes(raw, threshold) {
   }
 }
 
+const childrenNamed = (node, tag) => [...(node?.children ?? [])].filter(
+  (child) => String(child?.tagName ?? "").toLowerCase() === tag);
+
+/**
+ * `UX-532`: the table's **own** body, never a nested table's.
+ *
+ * A cell can hold a whole table (`UX-318`'s folds), and `<tbody>` inside
+ * one is still a descendant of this `<table>`.
+ */
+export function ownBody(table) {
+  return childrenNamed(table, "tbody")[0] ?? null;
+}
+
+/**
+ * `UX-532`: the table's **own** rows - the one row selector.
+ *
+ * `body.querySelectorAll("tr")` reads every `<tr>` at any depth, so a
+ * table whose cells fold counted the nested tables' rows as its own and
+ * every site that re-appends them tore them out of their folds. Measured
+ * on 60 shared resources over `macro_micro`: 660 direct `<tr>` in the
+ * outer tbody, 60 nested tables left empty, badge `660 of 60`.
+ *
+ * A child walk rather than `:scope > tr`: `tests/dom_shim.mjs` refuses
+ * pseudo-classes by design (`UX-264`), and the claim is the same one.
+ */
+export function ownRows(table) {
+  return childrenNamed(ownBody(table), "tr");
+}
+
+/** `UX-532`: one column's cells, over this table's own rows only. */
+export function ownCells(table, column) {
+  return ownRows(table).flatMap((tr) => [...(tr.children ?? [])].filter(
+    (td) => td.getAttribute?.("data-column") === column));
+}
+
 /** The text a row matches on: every cell's rendered text, joined. */
 export function rowText(tr) {
   return [...tr.children].map((td) => td.textContent).join(" ").toLowerCase();
@@ -74,8 +109,8 @@ export function rowText(tr) {
 export function applyFilters(table, { text = "", thresholds = {},
                                      top = null } = {}) {
   const needle = String(text).trim().toLowerCase();
-  const body = table.querySelector("tbody");
-  const rows = [...body.querySelectorAll("tr")];
+  const body = ownBody(table);
+  const rows = ownRows(table);
   const kept = [];
   let shown = 0;
   for (const tr of rows) {
@@ -312,8 +347,8 @@ export function copy(value, deps = {}) {
  * is *shown*, it does not pretend the rest are gone.
  */
 export function applyTopN(table, column, n) {
-  const body = table.querySelector("tbody");
-  const rows = [...body.querySelectorAll("tr")];
+  const body = ownBody(table);
+  const rows = ownRows(table);
   const value = (tr) => {
     const cell = [...tr.children].find(
       (td) => td.getAttribute("data-column") === column);
@@ -449,7 +484,7 @@ export function rowsMarkdown(rows, specs) {
 // is behaviour. It was in the DOM builder only because that is where
 // it was first written.
 export function sortable(table, specs = []) {
-  const body = table.querySelector("tbody");
+  const body = ownBody(table);
   table.querySelectorAll("th").forEach((th, index) => {
     // UX-201: a column the schema declares unsortable stays unsortable,
     // whatever its values happen to look like.
@@ -459,7 +494,7 @@ export function sortable(table, specs = []) {
       table.querySelectorAll("th").forEach((other) =>
         other.removeAttribute("aria-sort"));
       th.setAttribute("aria-sort", ascending ? "ascending" : "descending");
-      const rows = [...body.querySelectorAll("tr")];
+      const rows = ownRows(table);
       rows.sort((a, b) => {
         const x = a.children[index]?.dataset.raw ?? "";
         const y = b.children[index]?.dataset.raw ?? "";

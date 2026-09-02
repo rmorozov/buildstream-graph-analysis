@@ -268,5 +268,126 @@ class TestTheAcknowledgementGoesBackToWhatItSays:
         assert "row" in out["before"], out
 
 
+#: `UX-534`: press the deepest Focus on the page, as a reader who
+#: scrolled to it would.
+#:
+#: **Read the focus outcome before touching any other control.** A mark
+#: click re-runs `refresh()`, which removes and rebuilds every transient
+#: node - a handle taken before it measures zero, and the first version
+#: of this drive reported "not in the viewport" against a working fix.
+_FOCUS = """
+(() => {
+  for (const box of document.querySelectorAll("section.chapter")) {
+    box.setAttribute("data-open", "true");
+  }
+  const deepest = [...document.querySelectorAll("button.focus-this")]
+    .map((b) => ({ b, y: b.getBoundingClientRect().top + window.scrollY }))
+    .sort((a, c) => c.y - a.y)[0];
+  if (!deepest) return { skipped: "no focus-this button" };
+  // `UX-228`'s baseline, and it has to be taken here: a snapshot after
+  // any click is a snapshot `refresh()` has already stamped, which is
+  // what made the first version of this clause pass a page whose
+  // buttons were not born carrying their state.
+  const report = document.getElementById("report");
+  const pristine = report.innerHTML;
+  deepest.b.scrollIntoView();          // the reader got here by scrolling
+  const seen = (node) => {
+    if (!node) return false;
+    const box = node.getBoundingClientRect();
+    return box.top < window.innerHeight && box.bottom > 0;
+  };
+  const before = { buttonY: Math.round(deepest.y),
+                   scrollY: Math.round(window.scrollY),
+                   pressed: deepest.b.getAttribute("aria-pressed") };
+  deepest.b.click();
+  const panel = document.querySelector("[data-role=focus-investigation]");
+  const after = { scrollY: Math.round(window.scrollY),
+                  pressed: deepest.b.getAttribute("aria-pressed"),
+                  panelExists: !!panel,
+                  panelInViewport: seen(panel),
+                  barInViewport: seen(
+                    document.querySelector("[data-role=focus-bar]")) };
+  const mark = deepest.b.parentElement.querySelector("button.mark-this");
+  const markBefore = mark.getAttribute("aria-pressed");
+  mark.click();
+  const markAfter = mark.getAttribute("aria-pressed");
+  mark.click();                        // unmark
+  deepest.b.click();                   // and unfocus
+  return { before, after,
+           mark: [markBefore, markAfter],
+           restored: report.innerHTML === pristine };
+})()
+"""
+
+
+@pytest.fixture(scope="module")
+def pressed(browser, booted):
+    """`{label: the drive's reading}` - one press per fixture, once."""
+    return {label: browser.measure(booted[label], _FOCUS, 1440, 900)
+            for label in sorted(pages.FIXTURES)}
+
+
+@needs_browser
+@pytest.mark.medium
+@pytest.mark.parametrize("label", sorted(pages.FIXTURES))
+class TestFocusAnswersWhereTheHandIs:
+    """`UX-534`, and it is the rule the two classes above hold: the
+    action is acknowledged where the finger is. Measured before the fix
+    - the press moved the reader nowhere and marked nothing.
+
+    ```text
+    fixture        button y   scrollY after   panel seen   aria-pressed
+    golden           23,934          23,577        false     absent
+    macro_micro      34,305          33,967        false     absent
+    ```
+
+    After: scrollY 132 on both, the panel and the bar in the viewport,
+    and `#report` 231,502 -> 235,403 -> 231,502 characters across a
+    focus and an unfocus.
+    """
+
+    def test_the_investigation_is_in_the_viewport(self, pressed, label):
+        """The item's Acceptance Test. The panel existed either way; what
+        was missing is the reader ever arriving at it."""
+        out = pressed[label]
+        assert "skipped" not in out, out
+        assert out["after"]["panelExists"], out
+        assert out["before"]["buttonY"] > 10_000, (
+            f"{label}: the button is at {out['before']['buttonY']} px - too "
+            f"near the top for this to measure a journey")
+        assert out["after"]["panelInViewport"], (
+            f"{label}: Focus pressed at {out['before']['buttonY']} px left "
+            f"the investigation out of the viewport, at scrollY "
+            f"{out['after']['scrollY']}")
+
+    def test_the_bar_that_clears_it_comes_too(self, pressed, label):
+        """The way back is beside the answer, not where the click was."""
+        assert pressed[label]["after"]["barInViewport"], (
+            label, pressed[label]["after"])
+
+    def test_the_focus_button_says_it_is_pressed(self, pressed, label):
+        """`aria-pressed`, both because a toggle owes a screen reader one
+        and because it is what a reader's eye checks."""
+        out = pressed[label]
+        assert out["before"]["pressed"] == "false", (label, out)
+        assert out["after"]["pressed"] == "true", (label, out)
+
+    def test_the_mark_controls_say_it_too(self, pressed, label):
+        """The three beside it, which carried no state at all."""
+        assert pressed[label]["mark"] == ["false", "true"], (
+            label, pressed[label]["mark"])
+
+    def test_unfocusing_still_restores_the_document(self, pressed, label):
+        """`UX-228`'s invariant, which a state attribute is exactly the
+        way to break: the button is born carrying `aria-pressed="false"`
+        so that an unfocus writes back what was already there.
+
+        `test_focus_is_an_investigation.py` holds the same claim over a
+        synthetic root that has **no focus buttons in it**, so it cannot
+        see this attribute either way. This one boots the page."""
+        assert pressed[label]["restored"], (
+            f"{label}: focus then unfocus left #report changed")
+
+
 if __name__ == "__main__":  # pragma: no cover
     raise SystemExit(pytest.main([__file__, "-v"]))

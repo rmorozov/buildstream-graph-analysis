@@ -23,13 +23,45 @@ the orchestrator's, at the end, and no track touches them.
 | `UX-500` | `docs/audits/round-75.md` (this file) | none — it is a measurement, not a mechanism | spans the round; cannot close in one |
 
 **gap:** `UX-500` needs three rounds per regime and this is round one of
-Regime B. It records this round's figures and stays open; the row says
-so rather than being closed on one sample.
+Regime A — the regime this round actually ran, per the correction under
+the figures below. It records this round's figures and stays open; the
+row says so rather than being closed on one sample.
 
 **gate:** one PR, opened before the first commit (`UX-426`, `verify`
 §7), so every push collects a CI run instead of the batch collecting
 one. `make test` once per batch of independent items, and — until
 `UX-500` decides otherwise — also before any item is marked done.
+
+## Decomposition — the round-73 tail
+
+Same derivation, same four shared files. `tests/tiers.py` is in
+`dev_touching.EVERYTHING`, so a track that edits it selects all 398 test
+files — one more reason it is the orchestrator's.
+
+| item | surfaces | guards (input classes) | track |
+|---|---|---|---|
+| `UX-491` | `tools/dev_tier_drift.py` (where the summary is printed) · `.github/workflows/ci.yml` | `test_the_candidate_reaches_a_log.py` · `test_a_slow_file_says_which_file.py` (reader: log tail only · artifact available) | **gate track, first** — it is the instrument `UX-495` reads |
+| `UX-495` | none yet; a measurement. Readers are `tests/tiers.py` (shared) and `CI_DRIFT_FACTOR` | `test_the_tiers_are_a_partition.py` (host: CI only, §7 — no local instrument at `-n auto` on 4 cores) | **gate track, after `UX-491`** |
+| `UX-496` | `tools/dev_tier_drift.py` (reference shape) · `tests/ci_reference.json` (shared) · `.github/workflows/ci.yml` | `test_a_slow_file_says_which_file.py` (entry: one sample · N samples · a range) · `test_a_candidate_is_confirmed_alone.py` | **gate track, after `UX-495`** — the range it sizes against is what `UX-495` measures |
+| `UX-489` | `tests/unit/test_the_journey_has_an_answer_key.py` | itself (margin: leader beyond spread · leader inside spread) | parallel — one file, no other item names it |
+| `UX-490` | `tests/unit/test_a_guard_reads_only_what_a_clone_has.py` | itself (path: relative-tracked · relative-untracked · absolute-untracked-exists · absolute-absent · `tmp_path`-derived · escaped) | parallel |
+| `UX-492` | `README.md` | `test_the_readme_block_is_the_real_output.py` · `test_the_front_door_is_current.py` · `test_docs_examples.py` | parallel |
+| `UX-493` | `docs/backlog/scenarios/UX-0479-*.md` · `tools/dev_close_task.py` (a mechanical §3.6 check) | `test_docs_links_and_commands.py` · `test_the_loop_stays_fast.py` | parallel — `dev_close_task.py` is free again once the block above lands |
+
+**gap — `UX-492`'s real-run class has no host.** Re-running the
+freedesktop-sdk capture needs a 3614-second build this container cannot
+perform and CI will not either; that leaves "say which release produced
+it", which the Required Fix already admits. Recorded here so the choice
+is a measurement of what is available, not a preference.
+
+**gap — `UX-495` is CI-only** (fixing guide §7). Four local cores at
+`-n auto` are not the runner's, so the spread has to be read off runs,
+not reproduced. `UX-491` exists so those runs can be read at all.
+
+**gate:** the same PR. Four items are parallel and three are one serial
+track, so this is the batch where `UX-504`'s `implementer` agent has
+something to run — and the end-to-end track measurement its Acceptance
+Test is still missing.
 
 ## Regime A, round 1 — the figures `UX-500` asks for
 
@@ -74,5 +106,16 @@ the regimes: `make test-touching` was run **before** the final edit —
 the close, the Outcome, the row move — so the cheap gate never saw the
 change that broke them. Regime B would not fix that; running the
 selector after the last edit would.
+
+And two defects this round reached `main` past a **green full local
+suite**, which is a finding about the gate rather than about the
+regimes: the `stale` verdict on a one-sample reference (`cdf912b` →
+`UX-508`) and the `NameError` in the branch no local run took
+(`ccfa81e` → run 33578729472). Neither `make test` nor any tier can
+produce them here — the first needs the runner's clock, the second
+needs a reference the local tree does not have. Under either regime the
+count of defects only CI can find is **2**, and it is the same 2, so it
+does not separate them; it does say the batch gate cannot be *CI* plus
+nothing.
 
 One round of three. `UX-500` stays open.

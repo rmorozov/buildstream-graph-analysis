@@ -39,7 +39,17 @@ NOT_ON_THE_MAP = {"bga/__init__.py", "tools/__init__.py"}
 # to assert something about the page read §6, was pointed at neither, and
 # wrote its twenty-sixth inline shim, which is exactly the cost `UX-264`
 # measured and removed.
-NOT_IN_TESTS = {"tests/__pycache__"}
+NOT_IN_TESTS = set()
+
+# `UX-512`: two kinds of exemption, and the existence check below is
+# right for only one of them. A *source* path that has since vanished
+# silently widens the map check, so it must exist. A *build artefact* is
+# absent on a fresh clone and present after any run, so requiring it to
+# exist made this file red exactly when `UX-508`'s trap tells a round to
+# clear bytecode before a same-length mutation - and that presented as a
+# flake in one `make test-small` before it was reproduced. Matched by
+# directory name, and the artefact never has to be there.
+BUILD_ARTEFACTS = {"__pycache__", ".pytest_cache"}
 
 
 def _map_text():
@@ -71,7 +81,7 @@ def _real_modules():
     return modules
 
 
-def _real_test_entries():
+def _real_test_entries(root=REPO):
     """Everything directly under `tests/`, directories included.
 
     Directly under, and not recursively: the map points at `tests/unit/`
@@ -79,12 +89,18 @@ def _real_test_entries():
     - while a harness or a suite sitting at the top level is a place a
     session needs directing to."""
     entries = set()
-    for path in sorted((REPO / "tests").iterdir()):
-        rel = path.relative_to(REPO).as_posix()
-        if rel in NOT_IN_TESTS or path.name.startswith("."):
+    for path in sorted((root / "tests").iterdir()):
+        rel = path.relative_to(root).as_posix()
+        if (rel in NOT_IN_TESTS or path.name in BUILD_ARTEFACTS
+                or path.name.startswith(".")):
             continue
         entries.add(rel + "/" if path.is_dir() else rel)
     return entries
+
+
+def _stale(names):
+    """The exemptions naming a path this tree does not have."""
+    return sorted(name for name in names if not (REPO / name).exists())
 
 
 def _named(text, name):
@@ -138,9 +154,37 @@ class TestTheMapNamesTheTree:
     def test_the_exemption_list_names_only_real_paths(self):
         """An exemption for something that no longer exists silently
         widens the check it is an exception to."""
-        unreal = sorted(name for name in NOT_IN_TESTS
-                        if not (REPO / name).exists())
-        assert unreal == [], f"exemption(s) for no such path: {unreal}"
+        assert _stale(NOT_IN_TESTS) == [], (
+            f"exemption(s) for no such path: {_stale(NOT_IN_TESTS)}")
+
+    def test_the_existence_check_would_still_catch_a_stale_entry(self):
+        """`NOT_IN_TESTS` is empty today, so the clause above passes on
+        an empty set and says nothing about the check. This one keeps it
+        honest: `UX-512` moved the one entry it had into
+        `BUILD_ARTEFACTS`, and the source-path rule outlived it."""
+        assert _stale(NOT_IN_TESTS | {"tests/no-such-thing"}) == [
+            "tests/no-such-thing"]
+
+    def test_a_build_artefact_is_exempt_whether_or_not_it_is_there(self, tmp_path):
+        """The acceptance, as a guard: the entry set is the same with
+        the bytecode directory present and absent. Before `UX-512` the
+        exemption was a path that had to exist, so clearing
+        `__pycache__` - which `UX-508` tells a round to do - reddened
+        this file."""
+        (tmp_path / "tests" / "unit").mkdir(parents=True)
+        (tmp_path / "tests" / "support").mkdir()
+        (tmp_path / "tests" / "conftest.py").write_text("")
+        without = _real_test_entries(tmp_path)
+
+        (tmp_path / "tests" / "__pycache__").mkdir()
+        (tmp_path / "tests" / "__pycache__" / "x.pyc").write_bytes(b"")
+        assert _real_test_entries(tmp_path) == without
+        assert "tests/__pycache__/" not in without
+
+    def test_a_build_artefact_exemption_is_a_name_and_not_a_path(self):
+        """A path in `BUILD_ARTEFACTS` would smuggle a source exemption
+        past the existence check that exists for source exemptions."""
+        assert not [name for name in BUILD_ARTEFACTS if "/" in name]
 
     def test_the_map_states_no_count_it_does_not_check(self):
         """`UX-274`'s third clause. The block used to say `218 files,

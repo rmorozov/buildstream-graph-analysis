@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-512 scenarios: **8 open**, 504 closed.
+512 scenarios: **7 open**, 505 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -27,7 +27,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | cli | 0 | 1 |
 | store | 1 | 5 |
 | docs | 3 | 47 |
-| guards | 3 | 69 |
+| guards | 2 | 69 |
 | testing | 0 | 1 |
 | unclassified | 0 | 223 |
 
@@ -43,7 +43,6 @@ task file, which is the only place it ever lived twice.
 | UX-507 | [223 closed rows are in no topic](UX-0507-the-unclassified-bucket.md) | docs | Low | the round that asks "how much of the backlog was viewer work" and gets an answer that is 44 % blank | 🔴 |
 | UX-510 | [a parallel track starts from a base the orchestrator has left behind](UX-0510-a-track-starts-from-a-stale-base.md) | guards | Medium | the track told to read a file that does not exist in its copy | 🔴 |
 | UX-511 | [the guide the README sends readers to teaches a retired reading as current](UX-0511-the-real-project-guide-teaches-a-retired-reading.md) | docs | Medium | the reader who follows the README's link and gets the same stale output with prose built on it | 🔴 |
-| UX-512 | [a guard is red on any tree whose `__pycache__` was cleared](UX-0512-an-exemption-for-a-build-artifact.md) | guards | Low | the round that clears bytecode before a same-length mutation and reads the result as a flake | 🔴 |
 | UX-513 | [two guards are red while a tier edit is uncommitted](UX-0513-two-guards-are-red-until-you-commit.md) | guards | Low | the round re-tiering a file, which is the one time these two guards are red for no reason of its own | 🔴 |
 | UX-514 | [the capture schedule can never produce a second commit](UX-0514-the-schedule-can-never-capture-a-second-commit.md) | capture | Medium | `UX-92`'s gate, deferred four times on evidence that cannot arrive | 🔴 |
 

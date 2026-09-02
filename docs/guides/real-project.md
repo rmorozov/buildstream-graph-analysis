@@ -409,13 +409,20 @@ costs you another full build.
 bga analyze /tmp/run
 ```
 
-Real output, top of the report:
+Output from capture run
+[`32064333551`](https://github.com/rmorozov/buildstream-graph-analysis/actions/runs/32064333551),
+2026-08-17, published as
+`captures/fdsdk/953683fb-incremental-b4j4-32064333551` — the same run
+the appendix names. It is **kept, not current** (`UX-511`): an
+hour-long build neither a clone nor CI can re-run, so this is that
+run's report as it printed then, but for one label refreshed since.
+The rows that have changed the report since are listed under the block.
 
 ```text
 Key Findings:
   Incremental run (caches on): BuildStream skipped elements it had already built, 2 of them on the critical path...
   Confidence: 1.00 (high)
-  Biggest Opportunity: this build is execution-bound - no wait category exceeds 1% of wall-clock time, so there is no scheduling gap to close
+  Biggest wait category: this build is execution-bound - no wait category exceeds 1% of wall-clock time, so there is no scheduling gap to close
   Where the time is: 4 element(s) are 94.0% of the 3610.5s critical path - this build is chain-bound, not scheduler-bound
     components/_private/cmake-stage1.bst    1569.8s (43.5% of path)  -> fixing it saves 1569.8s (43.4% of the build)
     components/openssl.bst                   672.1s (18.6% of path)  -> fixing it saves 522.5s (14.5% of the build)
@@ -431,6 +438,20 @@ Key Findings:
   Efficiency Score: 1.00 (...)
 ```
 
+Five rows have changed this report since that run.
+[`UX-207`](../backlog/scenarios/UX-0207-the-first-screen-is-a-decision.md)
+put the headline diagnosis on the line under `Key Findings:`;
+[`UX-365`](../backlog/scenarios/UX-0365-the-finding-that-claims-the-superlative-is-the-small-one.md)
+scoped `Biggest Opportunity` to `Biggest wait category` — refreshed in
+place above — and moved `Confidence` below the actions it frames, which
+the block still shows in this run's own order;
+[`UX-475`](../backlog/scenarios/UX-0475-mesh-graph-calls-a-linear-chain-a-mesh.md)
+split the `Note:` line in two.
+[`UX-478`](../backlog/scenarios/UX-0478-the-graph-owner-vanishes-on-a-graph-problem.md)
+and
+[`UX-479`](../backlog/scenarios/UX-0479-a-chain-bound-build-publishes-no-blast-radius.md)
+then added two findings this block predates entirely.
+
 ### How to read it, line by line
 
 **`Confidence` first, always.** Below "high", stop and fix the capture —
@@ -438,8 +459,8 @@ every number under it describes a trace with known gaps. A failed build
 is called out even louder, before any efficiency figure, because
 otherwise a build where four elements failed reports a perfect score.
 
-**`Biggest Opportunity` tells you which *kind* of problem you have.** It
-names the largest non-execution category — dependency wait, resource
+**`Biggest wait category` tells you which *kind* of problem you have.**
+It names the largest non-execution category — dependency wait, resource
 wait, scheduler wait, idle, retries. Here it names none of them, because
 99.9% of the time went into execution. That is a real finding and the
 most common one on a serious project: *there is no scheduling gap to
@@ -454,10 +475,16 @@ build, because a near-tie chain takes over the moment it shrinks. If you
 only had the share column you would have spent a week for a minute.
 
 **The `zero slack` note tells you whether the top row is even
-meaningful.** 77% of elements with zero slack means this is a mesh of
-near-equal chains, not one dominant chain. On a mesh, a single element's
-saving is usually capped by the next chain rather than by its own size —
-which is exactly what the right-hand column is measuring.
+meaningful.** A high zero-slack share means a mesh of near-equal chains
+rather than one dominant chain, and on a mesh a single element's saving
+is usually capped by the next chain rather than by its own size — which
+is exactly what the right-hand column is measuring. The block above
+predates [`UX-475`](../backlog/scenarios/UX-0475-mesh-graph-calls-a-linear-chain-a-mesh.md),
+which split this note in two: the share is now reported with how many of
+those elements are *off* the critical path, and a graph with none of
+them gets the opposite sentence — no second chain of equal length, so
+the top row means what it says. Read your own run's note, not this
+one's.
 
 **"Together, the top 3 are worth …"** is the sentence to plan around.
 Whether savings *add* is a property of your graph, simulated rather than
@@ -529,7 +556,7 @@ Both of the first two numbers went the wrong way. See
 You will see a wait category instead, with a next step attached to it:
 
 ```text
-  Biggest Opportunity: 70.1% of wall-clock time is RESOURCE WAIT (250.25s)
+  Biggest wait category: 70.1% of wall-clock time is RESOURCE WAIT (250.25s)
     -> a resource (PROCESS/DOWNLOAD/UPLOAD) was saturated - try --capacity N with a
        higher N, or `bga sweep` to find the real knee point
 ```
@@ -1016,7 +1043,10 @@ published to the `captures/fdsdk-latest` branch as `5eda28a`:
 traced, 88,363 file paths recorded, zero dropped.
 
 Plane 1 figures (`bga analyze`, `bga correlate`) are that capture's own
-`run/` directory analysed with the current code. Two Plane 2 blocks —
+`run/` directory analysed at the time each block was written, **not**
+re-run since (`UX-511`): the numbers are the capture's, the wording is
+each round's. The Step 3 block above says which rows have changed the
+report since it was taken. Two Plane 2 blocks —
 `binary_cost` (the "where the time went inside each element" table) and
 the redundancy list — were **recomputed from that capture's own process
 records**, because the capture predates

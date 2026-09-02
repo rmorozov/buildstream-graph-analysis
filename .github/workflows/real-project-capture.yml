@@ -71,6 +71,28 @@ on:
     inputs:
       fdsdk_ref:
         description: freedesktop-sdk commit to capture
+        # UX-514: capture-ref-policy: pinned.
+        #
+        # A `schedule:` trigger cannot supply workflow inputs, so both
+        # crons take this default and every scheduled capture is of this
+        # one commit. That is the decision, not an oversight: seven
+        # incrementals of one ref are repeated readings of one thing,
+        # which is what a noise band is made of (`UX-39`, and the `UX-81`
+        # comment on the weekly cron below). Captures either side of a
+        # bump would be two populations, and the band would be measuring
+        # the bump.
+        #
+        # What it costs, stated so nobody waits for it again: `UX-92`'s
+        # cache gate needs history across *different* commits and this
+        # schedule cannot produce any, so that gate is not gateable on
+        # this history by construction. It was deferred at n=3, n=5, n=6
+        # and n=7 on the reading that the next capture might supply the
+        # variation; it cannot.
+        #
+        # Changing this to `advanced` means giving the ref a mechanism
+        # that moves it - a third cron, or a bump step - and accepting
+        # two populations. `test_the_pinned_ref_is_a_decision.py` holds
+        # the policy word and the mechanism together.
         default: 953683fb96b82cdf6d7941c4ba9859378942f22b
       target:
         description: Element whose closure is warmed and then partially rebuilt

@@ -15,19 +15,19 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-519 scenarios: **7 open**, 512 closed.
+534 scenarios: **22 open**, 512 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
-| capture | 2 | 89 |
-| analysis | 0 | 83 |
+| capture | 3 | 90 |
+| analysis | 1 | 84 |
 | contracts | 0 | 37 |
-| viewer | 0 | 127 |
+| viewer | 8 | 135 |
 | cli | 0 | 19 |
 | store | 2 | 14 |
-| docs | 3 | 65 |
-| guards | 0 | 85 |
+| docs | 4 | 66 |
+| guards | 4 | 89 |
 
 ## Open scenarios
 
@@ -43,6 +43,68 @@ task file, which is the only place it ever lived twice.
 | UX-517 | [a closed Outcome quotes a bucket that is now empty](UX-0517-a-closed-outcome-quotes-a-bucket-that-is-now-empty.md) | docs | Low | the round that reads `UX-501` and takes its 223 as current | 🔴 |
 | UX-519 | [the snapshot's tail goes quiet in the one phase that has no line](UX-0519-the-snapshot-tail-goes-quiet.md) | capture | Medium | the user watching a capture that has stopped saying anything | 🔴 |
 | UX-520 | [a capture you can carry to another machine in one command](UX-0520-a-run-bundle-you-can-carry.md) | store | Medium | the engineer who captured on a build runner and wants to read it on a laptop | 🔴 |
+| UX-522 | [the selector runs last, and carries the census](UX-0522-the-selector-runs-last-and-carries-the-census.md) | guards | High | the implementing session, at the commit it is about to make | 🔴 |
+| UX-523 | [forty files boot the same page](UX-0523-forty-files-boot-the-same-page.md) | guards | High | every `make test`; the implementing session's gate | 🔴 |
+| UX-524 | [the touching map is measured in CI, not grepped](UX-0524-the-touching-map-is-measured-in-ci.md) | guards | Medium | the session that wants `test-touching` to be a gate | 🔴 |
+| UX-525 | [a track costs 81k-131k tokens, and nobody knows where](UX-0525-a-track-costs-tokens-and-nobody-knows-where.md) | docs | Medium | the maintainer's subscription | 🔴 |
+| UX-526 | [the large budget class is measured at its bottom and breached at its top](UX-0526-the-large-budget-class-is-breached-at-its-top.md) | guards | High | anyone who opens a report of a project larger than the seeded run | 🔴 |
+| UX-527 | [one control has an option per element](UX-0527-one-control-has-an-option-per-element.md) | viewer | High | anyone asking Perfetto about one element of a large project | 🔴 |
+| UX-528 | [the served store section and run picker grow with every snapshot](UX-0528-the-served-store-section-grows-with-every-snapshot.md) | viewer | High | the CI owner whose store holds a hundred runs | 🔴 |
+| UX-529 | [the export's data half is unbounded, and holds each row twice](UX-0529-the-export-data-half-is-unbounded-and-holds-each-row-twice.md) | viewer | Medium | anyone attaching a report of a large project | 🔴 |
+| UX-530 | [a real capture reaches the track ceiling, and the timeline is dropped whole](UX-0530-a-real-capture-reaches-the-track-ceiling-and-loses-the-timeline.md) | capture | Medium | anyone capturing a C++ project with a few hundred processes per element | 🔴 |
+| UX-531 | [`bga analyze` is superlinear, and the page pays for it](UX-0531-bga-analyze-is-superlinear-and-the-page-pays.md) | analysis | Medium | anyone opening a run of a few thousand elements | 🔴 |
+| UX-532 | [the table tools read the nested tables' rows as their own](UX-0532-the-table-tools-read-the-nested-tables-rows-as-their-own.md) | viewer | High | anyone pressing "All rows" on a table whose cells fold | 🔴 |
+| UX-533 | [the served page is the capture-time analysis, and cannot say so](UX-0533-the-served-page-is-the-capture-time-analysis.md) | viewer | High | anyone reading a run captured by an older `bga` | 🔴 |
+| UX-534 | [Focus answers 25,501 px above the button](UX-0534-focus-answers-far-above-the-button.md) | viewer | Medium | anyone who presses Focus on an element card | 🔴 |
+| UX-535 | [one fact published twice, drawn twice, listed twice](UX-0535-one-fact-published-twice-drawn-twice-listed-twice.md) | viewer | Medium | anyone reading the run's identity, or the rail | 🔴 |
+| UX-536 | [four controls that say less than they do](UX-0536-four-controls-that-say-less-than-they-do.md) | viewer | Low | the keyboard and screen-reader reader | 🔴 |
+
+## UX-522..UX-536: the seventy-ninth round — the controls walked, the suite weighed (2026-09-02)
+
+Four asks after rounds 75-76 closed the process slate (rounds 77-78 then measured and implemented three field reports): what more the
+workflow can shed; every `bga view` control audited in a browser for
+reachability, usability, logic and duplication, on a page with both
+planes; the `resource_blast` table that grows a second table under
+"All rows", and its class; and which surfaces grow without bound as
+a project gains elements or a store gains runs. The round is
+[`docs/audits/round-79.md`](../../audits/round-79.md).
+
+**The workflow.** `UX-500`'s first count (Regime A, 15 suite runs,
+~80 min of gate, two misses both census-class) and CI's own
+reference (40 browser files = 51 % of the suite's seconds, each
+exporting and booting the same page) give the next four cuts: the
+selector carries the census set and runs from a pre-commit hook
+(`UX-522`), one export and one Chromium per session (`UX-523`), a
+coverage-measured touching map adopted from CI (`UX-524`), and a
+track's tokens split by phase (`UX-525`).
+
+**"All rows".** No second table exists: `tables.js:77-78` selects
+every `<tr>` under the outer tbody at any depth and re-appends what
+it kept, so nested fold rows migrate into the parent — 624 rows on a
+60-row table, badge "624 of 60", folds opening empty. Sort, Top-N,
+the badge, the copy count and the strip share the descent; five
+tables on a fresh two-plane page are wrong at rest, and `UX-366`'s
+guard is green because no fixture has the shape (`UX-532`).
+
+**The controls, 782 in 193 classes,** every class driven: reachable
+and logical throughout, Expand moves and never copies, 12.8 %
+repeated text against a 21 % budget. Filed: the served page is the
+capture-time analysis with six Plane 2 terms and a section missing
+and no way to say so (`UX-533`); Focus answers 25,501 px above the
+button (`UX-534`); `producer` published twice and the rail listing
+two labels twice (`UX-535`); four controls that say less than they
+do (`UX-536`).
+
+**What grows.** Thirty-seven of forty-one leaf sections are flat
+from 14 to 4,002 elements. The volume budget's "to 4,000" class is
+asserted at 1,202 and breached 2.1-2.7× at 4,002 (`UX-526`); one
+`<select>` carries an option per element (`UX-527`); the served store
+section and run picker are O(N runs) beside sparklines windowed to
+twelve (`UX-528`); the export's data half is 427 B per element under
+a reporting-only ceiling, with every hidden row held twice (`UX-529`);
+a real 740-processes-per-element capture meets the 8,000-track
+ceiling and loses the timeline whole (`UX-530`); `bga analyze` is
+n^1.6-1.9, 45 s at 4,002 (`UX-531`).
 
 ## UX-497..UX-506: the seventy-fourth round — the workflow, measured (2026-09-01)
 

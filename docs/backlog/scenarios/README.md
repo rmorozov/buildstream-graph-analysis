@@ -15,13 +15,13 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-551 scenarios: **13 open**, 538 closed.
+551 scenarios: **12 open**, 539 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
 | capture | 0 | 90 |
-| analysis | 1 | 87 |
+| analysis | 0 | 87 |
 | contracts | 3 | 40 |
 | viewer | 1 | 136 |
 | cli | 0 | 19 |
@@ -37,7 +37,6 @@ task file, which is the only place it ever lived twice.
 | ID | Scenario | Topic | Priority | Serves | Status |
 |---|---|---|---|---|---|
 | UX-540 | [the three contracts `bga` reads and never registers](UX-0540-the-three-contracts-bga-reads-and-never-registers.md) | contracts | Medium | `UX-520`, whose first real bundle refused a healthy capture | 🔴 |
-| UX-542 | [`_compute_diagnostics` is now the largest phase of `analyze`](UX-0542-diagnostics-is-now-the-largest-phase.md) | analysis | Medium | `UX-539`'s profile, after its own two terms went | 🔴 |
 | UX-543 | [a second clause of the answer key ranks under contention](UX-0543-a-second-ranking-clause-under-contention.md) | guards | Medium | `UX-538`, fixing its sibling | 🔴 |
 | UX-544 | [the hand-built *node* census has a hole the document census does not](UX-0544-the-node-census-has-a-hole.md) | guards | Medium | `UX-537`, whose scope was the document | 🔴 |
 | UX-545 | [a refused timeline tells the reader the snapshot has no build log](UX-0545-a-refused-timeline-says-the-wrong-thing.md) | viewer | Medium | `UX-530`, whose scope was the degradation | 🔴 |

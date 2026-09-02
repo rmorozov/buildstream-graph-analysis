@@ -15,7 +15,7 @@ Implements M5 milestone with high-value structural diagnostics:
 import bisect
 import logging
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Dict, FrozenSet, List, Optional, Set, Tuple
 from collections import defaultdict, deque
 import random
 
@@ -306,6 +306,16 @@ class DiagnosticsResult:
                 "deferrable_count": len(self.deferrable_leaves),
             },
         }
+
+
+def element_uids_of(task_durations: Dict[str, int]) -> List[str]:
+    """The element uid of each task key, in the mapping's own order.
+
+    A named seam so a guard can count that it is derived once per
+    `compute_criticality_probability` and not once per Monte-Carlo
+    sample (Part 41.2).
+    """
+    return [key.split('|')[0] for key in task_durations]
 
 
 class DiagnosticsAnalyzer:
@@ -751,20 +761,37 @@ class DiagnosticsAnalyzer:
         predecessors, successors = build_element_graph(self.graph, exclude_dependency_types={"runtime"})
         in_degree, _ = compute_in_out_degree(self.graph, exclude_dependency_types={"runtime"})
 
+        # Part 41.2's other half - "only durations and dynamic
+        # programming values vary" - so the task->element mapping, the
+        # sources and the terminals are derived once here too, not per
+        # sample (UX-542: the mapping alone was 4,002 x 200 splits).
+        element_of_task = element_uids_of(base_durations)
+        base_us = list(base_durations.values())
+        sources = [uid for uid, deg in in_degree.items() if deg == 0]
+        has_successors = frozenset(
+            uid for uid, succs in successors.items() if succs)
+
         for _ in range(num_samples):
-            # Perturb durations
-            perturbed = {}
-            for task_key, duration in base_durations.items():
+            # Perturb durations, straight into the element aggregate the
+            # critical path is defined on (Part 24.1) - same draw order,
+            # same integer arithmetic, one dict instead of two.
+            elem_durations: Dict[str, int] = {}
+            for elem_uid, duration in zip(element_of_task, base_us):
                 # Apply ±perturbation_pct uniformly
                 factor = 1.0 + rng.uniform(-perturbation_pct, perturbation_pct)
-                perturbed[task_key] = int(duration * factor)
+                value = int(duration * factor)
+                if elem_uid in elem_durations:
+                    elem_durations[elem_uid] += value
+                else:
+                    elem_durations[elem_uid] = value
 
             # Recompute the critical path with these perturbed durations -
             # a genuine per-sample resample, not a cached/unperturbed
             # approximation. Returns element UIDs (critical path is
             # defined on the element graph, Part 24.1), not task keys.
             perturbed_cp = self._compute_perturbed_critical_path(
-                perturbed, predecessors, successors, in_degree,
+                elem_durations, predecessors, successors, in_degree,
+                sources, has_successors,
             )
 
             for elem_uid_on_path in perturbed_cp:
@@ -806,40 +833,31 @@ class DiagnosticsAnalyzer:
     
     def _compute_perturbed_critical_path(
         self,
-        perturbed_durations: Dict[str, int],
+        elem_durations: Dict[str, int],
         predecessors: Dict[str, List[str]],
         successors: Dict[str, List[str]],
         in_degree: Dict[str, int],
+        sources: List[str],
+        has_successors: FrozenSet[str],
     ) -> Set[str]:
         """
         Compute critical path with perturbed durations.
 
         Re-runs the longest path algorithm using the perturbed durations
-        to get a genuine Monte Carlo sample. Graph topology
-        (predecessors/successors/in_degree) is passed in, built once by
-        the caller (Part 41.2) rather than rebuilt per sample here.
+        to get a genuine Monte Carlo sample. Everything that does not
+        vary between samples is passed in, built once by the caller
+        (Part 41.2): the topology, the sources, the terminal set, and
+        the element aggregate the durations already arrive as.
         """
-        # Get element UIDs from task keys
-        elem_durations: Dict[str, int] = {}
-        for task_key_str, duration in perturbed_durations.items():
-            # Extract element_uid from task_key string (format: element_uid|kind|phase|attempt)
-            elem_uid = task_key_str.split('|')[0]
-            # Aggregate if multiple tasks per element
-            if elem_uid in elem_durations:
-                elem_durations[elem_uid] += duration
-            else:
-                elem_durations[elem_uid] = duration
-
         earliest_finish: Dict[str, int] = {}
         pred_on_critical: Dict[str, Optional[str]] = {}
-        
+
         queue = deque()
-        for elem_uid, deg in in_degree.items():
-            if deg == 0:
-                earliest_finish[elem_uid] = elem_durations.get(elem_uid, 0)
-                pred_on_critical[elem_uid] = None
-                queue.append(elem_uid)
-        
+        for elem_uid in sources:
+            earliest_finish[elem_uid] = elem_durations.get(elem_uid, 0)
+            pred_on_critical[elem_uid] = None
+            queue.append(elem_uid)
+
         temp_in_degree = dict(in_degree)
         
         while queue:
@@ -867,7 +885,7 @@ class DiagnosticsAnalyzer:
         critical_end = None
         
         for elem_uid, finish in earliest_finish.items():
-            if elem_uid not in successors or not successors[elem_uid]:
+            if elem_uid not in has_successors:
                 if finish > critical_length:
                     critical_length = finish
                     critical_end = elem_uid

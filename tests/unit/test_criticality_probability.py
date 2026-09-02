@@ -137,3 +137,32 @@ def test_graph_topology_built_once_not_per_sample(tmp_path, monkeypatch):
 
     assert call_counts["build_element_graph"] == 1
     assert call_counts["compute_in_out_degree"] == 1
+
+
+def test_the_element_mapping_is_derived_once_not_per_sample(tmp_path, monkeypatch):
+    """UX-542: Part 41.2's second clause - "only durations and dynamic
+    programming values vary". The topology was already hoisted (P1-28
+    above); the task->element mapping was not, and was re-split inside
+    every sample: 4,002 tasks x 200 samples = 800,400 splits on the
+    largest measured run. The bound is the call count, not seconds."""
+    import bga.diagnostics.analyzer as diagnostics_module
+
+    run_dir = _write_diamond_run_dir(tmp_path)
+    calls = []
+    real = diagnostics_module.element_uids_of
+
+    def counting(task_durations):
+        calls.append(len(task_durations))
+        return real(task_durations)
+
+    monkeypatch.setattr(diagnostics_module, "element_uids_of", counting)
+
+    analyzer = BuildEfficiencyAnalyzer(run_dir, run_diagnostics=True)
+    analyzer.load()
+    analyzer.analyze()
+
+    samples = diagnostics_module.DiagnosticsAnalyzer.DEFAULT_MC_SAMPLES
+    assert calls, "the mapping was never derived - the seam is not on the path"
+    assert len(calls) == 1, (
+        f"the task->element mapping was derived {len(calls)} times for "
+        f"{samples} samples; Part 41.2 asks for once")

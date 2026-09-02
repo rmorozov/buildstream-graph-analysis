@@ -1008,7 +1008,8 @@ it. The contracts table gained `bundle-manifest/v1` for that manifest,
 and moved `analyze` to **v5** (`UX-535`) — `graph_summary` published
 three facts it took from the same `StructuralMetrics` object
 `graph_metrics` publishes, so three removals, and `analyze/v4` joins
-the read-never-written rows below it. The viewer chapter is unchanged:
+the rows below it that are read and never written. The viewer chapter
+is unchanged:
 `bga/viewer/` is still **22 modules** and the table still names all of
 them, which `test_the_viewer_modules_have_a_home.py` holds both ways.
 

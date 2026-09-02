@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-519 scenarios: **8 open**, 511 closed.
+519 scenarios: **7 open**, 512 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -23,7 +23,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | capture | 2 | 89 |
 | analysis | 0 | 83 |
 | contracts | 0 | 37 |
-| viewer | 1 | 127 |
+| viewer | 0 | 127 |
 | cli | 0 | 19 |
 | store | 2 | 14 |
 | docs | 3 | 65 |
@@ -43,7 +43,6 @@ task file, which is the only place it ever lived twice.
 | UX-517 | [a closed Outcome quotes a bucket that is now empty](UX-0517-a-closed-outcome-quotes-a-bucket-that-is-now-empty.md) | docs | Low | the round that reads `UX-501` and takes its 223 as current | 🔴 |
 | UX-519 | [the snapshot's tail goes quiet in the one phase that has no line](UX-0519-the-snapshot-tail-goes-quiet.md) | capture | Medium | the user watching a capture that has stopped saying anything | 🔴 |
 | UX-520 | [a capture you can carry to another machine in one command](UX-0520-a-run-bundle-you-can-carry.md) | store | Medium | the engineer who captured on a build runner and wants to read it on a laptop | 🔴 |
-| UX-521 | [the Perfetto handoff goes quiet, and cannot tell working from refused](UX-0521-the-handoff-goes-quiet-for-minutes.md) | viewer | Medium | the reader of a big capture, staring at two tabs that both say nothing | 🔴 |
 
 ## UX-497..UX-506: the seventy-fourth round — the workflow, measured (2026-09-01)
 

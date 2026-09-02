@@ -1,6 +1,6 @@
 # UX-521: the Perfetto handoff goes quiet, and cannot tell working from refused
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** `UX-299` (the size threshold and the deep link), `UX-314` (the fetchability check), `UX-282` (the fallback beside the button) | **Found by:** round 77, field report — *"bga view definitely misses some progress when open timeline in perfetto is clicked on big captures — I waited several minutes before it opened"* | **Serves:** the reader of a big capture, staring at two tabs that both say nothing | **Topic:** viewer
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-299` (the size threshold and the deep link), `UX-314` (the fetchability check), `UX-282` (the fallback beside the button) | **Found by:** round 77, field report — *"bga view definitely misses some progress when open timeline in perfetto is clicked on big captures — I waited several minutes before it opened"* | **Serves:** the reader of a big capture, staring at two tabs that both say nothing | **Topic:** viewer
 
 ## Motivation
 
@@ -80,6 +80,83 @@ server has finished serving the trace — two different sentences, both
 pasted. Mutation: make the server's view of the fetch always report
 "not yet" — the second sentence must not appear.
 
-## Outcome
+## Outcome (round 78, 2026-09-02) — 🟢 Done
 
-_Not started._
+### The gap, measured
+
+```text
+$ git show HEAD:tools/bga_view.py | grep -c 'trace-status'   ->  0
+$ git show HEAD:bga/viewer/app.js | grep -c 'watchTheFetch'  ->  0
+$ git show HEAD:bga/viewer/app.js | sed -n '/deepLink/,/return/p'
+            tab.location = deepLink(absolute.href);
+            announceHandoff(status, `... MiB — over the ... this page will ` +
+              `copy, so Perfetto is fetching it from here directly.`);
+            return;
+```
+
+Nothing asks and nothing answers. That `return` is the page's last
+word, the same whether Perfetto is parsing gigabytes or never asked.
+
+### After
+
+Through the real `wireTheHandoff` against a real `bga view` (port 8080
+for `UX-314`'s CSP, `TRACE_BUDGET_B` lowered to 0 so a fixture-sized
+trace takes the deep-link path — `UX-451`'s technique), Node making
+Perfetto's own `GET`:
+
+```text
+t=0            0.0 MiB — over the 0 MiB this page will copy, so Perfetto is
+               fetching it from here directly. A trace this size takes
+               minutes, and its tab stays blank until it has.
+status         {"fetches": 0, "bytes": 0}
+Perfetto GET   785 bytes
+after the GET  0.0 MiB — Perfetto has fetched the whole trace from here. It
+               is parsing now; the tab fills in when it finishes.
+```
+
+Two sentences, the second the server's own view of the request rather
+than a timer. `0.0 MiB` is the 785-byte fixture through `UX-299`'s
+formatter. With the Acceptance Test's own mutation — the server always
+answering `fetches: 0` — the second never appears. The export grew
+**+1,065 B, all page** (293,783 → 294,848 B, both fixtures' embedded
+data byte-identical); `macro_micro`'s bound is restated with that
+measurement in `test_the_report_you_can_attach.py`.
+
+### Mutations verified red and reverted (16)
+
+| # | mutation | red |
+|---|---|---|
+| M1 | a `HEAD` counts as a fetch | 1 |
+| M2 | the server always says not-yet | 3 |
+| M3 | `bytes` accumulates instead of naming the trace | 1 |
+| M4 | the count is one process-wide global | 3 |
+| M5 | the answer declares a `schema` | 5 |
+| M6 | the page never asks | 7 |
+| M7 | it asks on every over-threshold transport | 5 |
+| M8 | it keeps asking after the answer | 2 |
+| M9 | the asking has no ceiling | 1 |
+| M10 | a dead server is retried forever | 1 |
+| M11 | it asks at a rate of its own | 1 |
+| M12 | the t=0 sentence drops the wait | 1 |
+| M13 | it predicts Perfetto's parse (`40% done`) | 1 |
+| M14 | it asks whichever transport wins | 6 |
+| M15 | it says fetched without reading the answer | 3 |
+| M16 | the two route-name constants drift | 7 |
+
+All 18 clauses are reddened by at least one. M7 was written for
+`..copied_trace_never_asks` and did not discriminate it — it sits
+inside the over-threshold branch, which that class never reaches. M14
+does; M7 stays because it discriminates the refused-origin clause.
+
+### Deviation from the Required Fix
+
+None. The under-threshold silence the Motivation notes "for
+completeness" is left alone: bounded by `TRACE_BUDGET_B` and
+`TIMEOUT_MS`, it is not the minutes-long blank filed here.
+`trace-status.json` declares no schema and is undocumented in
+`docs/guides/cli.md` on purpose — a liveness fact, not a contract.
+
+```text
+=========== 5902 passed, 27 skipped, 1 warning in 442.92s (0:07:22) ============
+ruff check bga/ tools/ tests/ .claude/hooks/   ->  All checks passed!
+```

@@ -642,6 +642,7 @@ MEDIUM = (
     "tests/unit/test_the_perfetto_handoff.py",                       #    6.4s
     "tests/unit/test_docs_links_and_commands.py",                    #    6.2s
     "tests/unit/test_output_schemas.py",                             #    5.7s
+    "tests/unit/test_the_handoff_says_whether_perfetto_fetched.py",  #    5.4s
     "tests/unit/test_grace_window_drains.py",                        #    5.3s
     "tests/unit/test_bst_extract_run.py",                            #    5.0s
     "tests/unit/test_blast_ranking_discriminates.py",                #    4.8s

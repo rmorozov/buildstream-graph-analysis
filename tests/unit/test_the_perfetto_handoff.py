@@ -588,7 +588,7 @@ class TestTheDeepLink:
 
         url = served(str(snapshot / "run"))
         for path in ("report.json", "schemas.json", "run.json",
-                     "blast.json?target=work-a.bst"):
+                     "blast.json?target=work-a.bst", "trace-status.json"):
             request = urllib.request.Request(url + path)
             request.add_header("Origin", PERFETTO_ORIGIN)
             with urllib.request.urlopen(request, timeout=10) as response:
@@ -926,7 +926,7 @@ class TestThePreFlightIsAnswered:
 
         url = served(str(snapshot / "run"))
         for path in ("report.json", "schemas.json", "run.json",
-                     "blast.json?target=work-a.bst"):
+                     "blast.json?target=work-a.bst", "trace-status.json"):
             status, headers = self._options(url + path, PERFETTO_ORIGIN)
             assert status == 404, f"{path} answered a pre-flight with {status}"
             assert headers.get("Access-Control-Allow-Origin") is None

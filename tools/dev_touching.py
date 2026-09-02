@@ -18,11 +18,12 @@ graph**. That choice is deliberate:
   is to be faster than the thing it replaces.
 
 **It is a selector, not a gate.** `make test` before a commit is
-unchanged and the verify skill still requires it; what this buys is
-the twenty runs *before* that one. Three sets, unioned, `--why` naming
-which chose each: the **grep**; the **census** (`UX-522`), guards that
-read the tree and name no module; and the **map** (`UX-524`), what CI
-measured each test executing.
+unchanged; what this buys is the twenty runs *before* that one. Three
+sets, unioned, `--why` naming which chose each: the **grep**; the
+**census** (`UX-522`), guards that read the tree and name no module;
+and the **map** (`UX-524`), what CI measured each test executing. A
+green run prints one line (`UX-525`) - pytest output is 10-16% of a
+track's tokens; red prints everything, and `--loud` always does.
 """
 import argparse
 import os
@@ -182,6 +183,12 @@ def select(changed, census=True):
     return sorted(chosen), why
 
 
+def last_line(text: str) -> str:
+    """Pytest's summary line - the last non-empty one it printed."""
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    return lines[-1].strip("= ") if lines else "no output"
+
+
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--base", default=None,
@@ -192,6 +199,8 @@ def main(argv=None) -> int:
                         help="print what selected each file")
     parser.add_argument("--staged", action="store_true",
                         help="select from the staged diff, not the desk")
+    parser.add_argument("--loud", action="store_true",
+                        help="print pytest's output even when it passes")
     args, rest = parser.parse_known_args(argv)
 
     changed = changed_files(args.base, staged=args.staged)
@@ -218,11 +227,23 @@ def main(argv=None) -> int:
         print("\n".join(selected))
         return 0
 
-    print(f"{len(selected)} test file(s) name the {len(changed)} changed "
-          f"file(s); running them.", file=sys.stderr)
-    return subprocess.call(
-        [sys.executable, "-m", "pytest", *selected, "-q", "-n", "auto", *rest],
-        cwd=REPO, env={**os.environ, "BGA_TIER_ANY": "1"})
+    argv = [sys.executable, "-m", "pytest", *selected, "-q", "-n", "auto", *rest]
+    env = {**os.environ, "BGA_TIER_ANY": "1"}
+    if args.loud:
+        print(f"{len(selected)} test file(s) name the {len(changed)} changed "
+              f"file(s); running them.", file=sys.stderr)
+        return subprocess.call(argv, cwd=REPO, env=env)
+    done = subprocess.run(argv, cwd=REPO, env=env, capture_output=True, text=True)
+    if done.returncode:
+        # Red is the case a reader needs whole; only green is summarised.
+        print(f"{len(selected)} test file(s) name the {len(changed)} changed "
+              f"file(s); running them.", file=sys.stderr)
+        sys.stdout.write(done.stdout)
+        sys.stderr.write(done.stderr)
+        return done.returncode
+    print(f"{len(selected)} file(s) selected · {last_line(done.stdout)}",
+          file=sys.stderr)
+    return 0
 
 
 if __name__ == "__main__":

@@ -73,7 +73,10 @@ function viewEntries(section, doc) {
     const link = doc.createElement("a");
     link.href = `#${key}~v.${table}=${encodeURIComponent(name)}`;
     link.setAttribute("data-toc-view", name);
-    link.textContent = name;
+    // `UX-535`: the option's *label*, which already carries the count -
+    // the bare name collides with the section of the same name, and a
+    // rail with one label on two hrefs cannot be navigated by reading.
+    link.textContent = option.textContent ?? name;
     link.addEventListener?.("click", () => {
       if (select.value === name) return;
       select.value = name;

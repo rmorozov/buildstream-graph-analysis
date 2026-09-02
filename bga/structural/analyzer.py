@@ -213,6 +213,40 @@ class StructuralAnalyzer:
             serialization_share=serialization_share,
         )
     
+    def _reachability_counts(self):
+        """`(|descendants|, |ancestors|)` per node, from one closure.
+
+        UX-539: the per-node walk this replaces is O(V*(V+E)); a bitset
+        closure over the topological order is O(V*E/64) plus the OR per
+        edge. `build_element_graph` rejects a cycle before the graph
+        reaches this class, so a topological order always exists.
+        """
+        G = self._graph
+        order = list(nx.topological_sort(G))
+        index = {node: i for i, node in enumerate(order)}
+        bit = [1 << i for i in range(len(order))]
+
+        descendants = [0] * len(order)
+        for node in reversed(order):
+            mask = 0
+            for succ in G.successors(node):
+                j = index[succ]
+                mask |= descendants[j] | bit[j]
+            descendants[index[node]] = mask
+
+        ancestors = [0] * len(order)
+        for node in order:
+            mask = 0
+            for pred in G.predecessors(node):
+                j = index[pred]
+                mask |= ancestors[j] | bit[j]
+            ancestors[index[node]] = mask
+
+        return (
+            {node: descendants[i].bit_count() for node, i in index.items()},
+            {node: ancestors[i].bit_count() for node, i in index.items()},
+        )
+
     def analyze_bottlenecks(self) -> BottleneckAnalysis:
         """Detect structural bottlenecks (Part 32).
         
@@ -243,18 +277,20 @@ class StructuralAnalyzer:
         # actually matters for a build, and it is exact rather than
         # heuristic.
         #
-        # O(V*(V+E)) worst case via the two reachability sweeps; 0.2s
-        # for all 1202 nodes of the scale fixture in practice.
+        # UX-539: only the two *counts* are wanted, so they come from
+        # one bitset closure over the topological order rather than
+        # `nx.descendants`/`nx.ancestors` once per node - O(V*(V+E))
+        # and 33.8s of a 24.7s-wall analysis under cProfile at 4,002.
         choke_points = []
         choke_impact = {}
 
         n_nodes = G.number_of_nodes()
+        descendant_count, ancestor_count = self._reachability_counts()
         for node in G.nodes():
-            downstream = nx.descendants(G, node)
-            upstream = nx.ancestors(G, node)
-            if len(downstream) + len(upstream) == n_nodes - 1:
+            downstream = descendant_count[node]
+            if downstream + ancestor_count[node] == n_nodes - 1:
                 choke_points.append(node)
-                choke_impact[node] = len(downstream)
+                choke_impact[node] = downstream
 
         # Ranked by how much waits on them, so the report's own cap
         # shows the ones worth reading first rather than an arbitrary

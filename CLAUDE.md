@@ -27,8 +27,8 @@ file is the day-one summary, and
 
 `orient` (where is it) → `decompose` (surfaces, input classes, tracks,
 the batch gate) → `measure` → `falsify` → `verify` (close it).
-`derive` before moving viewer code. Send wide reading to the
-`researcher` agent and a finished change to the `verifier` agent.
+`derive` before moving viewer code. Agents: `researcher` reads wide,
+`implementer` runs one track in a worktree, `verifier` checks the end.
 
 ## Conventions
 

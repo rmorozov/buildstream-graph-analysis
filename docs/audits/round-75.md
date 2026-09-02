@@ -31,13 +31,48 @@ so rather than being closed on one sample.
 one. `make test` once per batch of independent items, and — until
 `UX-500` decides otherwise — also before any item is marked done.
 
-## Regime B, round 1 — the figures `UX-500` asks for
+## Regime A, round 1 — the figures `UX-500` asks for
 
-_Filled as the round runs._
+**Not Regime B.** The plan above said the batch gate would be *in
+addition* until `UX-500` decides, and that is what happened: `make
+test` ran before every item, which is fixing guide §3 as written. So
+these are Regime A's numbers and the B column is still empty after this
+round — stated here rather than relabelled, because a regime nobody ran
+is not a regime measured.
 
-| | |
+| | round 75 |
 |---|---|
-| suite runs | |
-| gate wall clock | |
-| defects the batch gate caught that `test-touching` missed | |
-| commits per task | |
+| items closed | 7 (`UX-501`..`UX-506`, `UX-508`) |
+| suite runs | 15 |
+| gate wall clock | ~80 min (15 × 316-407s at `-n auto`) |
+| commits per task | 1.0 |
+| defects the per-item suite caught | 5 |
+| **of those, ones `test-touching` would not have run** | **2** |
+
+The last row is the number `UX-500` says decides, measured rather than
+argued — `dev_touching.select` run over each commit's own diff, asking
+whether the guard that caught the defect is in the set it would have
+chosen:
+
+```text
+item     the guard that caught it                        test-touching?
+UX-503   test_the_register_is_terse.py                   NO
+UX-501   test_docs_links_and_commands.py                 yes
+UX-501   test_the_agent_configuration_holds.py           yes
+UX-505   test_a_guard_reads_only_what_a_clone_has.py     yes
+UX-502   tests/conftest.py (UX-449's skip census)        NO
+```
+
+**Two of five would have reached the batch gate with the item already
+marked 🟢** — an Outcome over the register's cap, and a skip reason the
+census has never seen. Both are cheap to fix and neither is a product
+defect; what they cost under Regime B is re-opening a closed row.
+
+Three of the five *were* in `test-touching`'s set and were still found
+by `make test`, which is a finding about this session rather than about
+the regimes: `make test-touching` was run **before** the final edit —
+the close, the Outcome, the row move — so the cheap gate never saw the
+change that broke them. Regime B would not fix that; running the
+selector after the last edit would.
+
+One round of three. `UX-500` stays open.

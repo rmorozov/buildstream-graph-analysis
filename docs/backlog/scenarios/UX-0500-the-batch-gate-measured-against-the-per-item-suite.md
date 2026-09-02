@@ -43,6 +43,19 @@ loop loses its "in addition" clause. If not, the number is the reason
 - Any regime that skips `make test` before a *PR* merges — the PR is
   the batch's gate under both regimes.
 
+## Progress
+
+**Round 75 — Regime A, round 1 of 3.** Figures in
+[`docs/audits/round-75.md`](../../audits/round-75.md): 7 items, 15
+suite runs, ~80 min of gate, 1.0 commits per task, and the number that
+decides — **2 of 5** defects the per-item suite caught would not have
+been in `test-touching`'s set at all (measured with
+`dev_touching.select` over each commit's own diff, not argued).
+
+Regime B has not been run. This round's plan said the batch gate would
+be *in addition* until this item decides, and that is what happened, so
+labelling it B would have been the mistake this item exists to prevent.
+
 ## Acceptance Test
 
 Three rounds' figures pasted under the two regimes; the §3 sentence

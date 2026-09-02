@@ -1096,6 +1096,10 @@ class BlameChainAnalyzer:
 
         while cursor < gap_end:
             progressed = False
+            # UX-541: only the first segment's holder_info is returned, so
+            # every later one was accumulated, sorted and dropped - 40.5%
+            # of the builds at 1,202 elements and 47.5% at 4,002.
+            wants_holders = resource_wait_holder_info is None
             # UX-539: one pass over the leading run - if it is saturated
             # this loop wants its end and its holders, and if it is not
             # this loop wants only where saturation next resumes. Neither
@@ -1116,8 +1120,9 @@ class BlameChainAnalyzer:
                         if not is_saturated:
                             break
                         seg_end = t2
-                        for key, us in interval_holder_time_us.items():
-                            holder_time_us[key] += us
+                        if wants_holders:
+                            for key, us in interval_holder_time_us.items():
+                                holder_time_us[key] += us
                     elif is_saturated:
                         next_saturation_us = t1
                         break
@@ -1125,9 +1130,9 @@ class BlameChainAnalyzer:
             if starts_saturated:
                 explained_us = seg_end - cursor
                 if explained_us > 0:
-                    holder_info = self._build_holder_info(task, cursor, seg_end, holder_time_us, explained_us)
-                    if resource_wait_holder_info is None:
-                        resource_wait_holder_info = holder_info
+                    if wants_holders:
+                        resource_wait_holder_info = self._build_holder_info(
+                            task, cursor, seg_end, holder_time_us, explained_us)
                     segments.append((AttributionCategory.RESOURCE_WAIT, cursor, seg_end))
                     cursor = seg_end
                     progressed = True

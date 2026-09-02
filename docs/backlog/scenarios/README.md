@@ -15,14 +15,14 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-550 scenarios: **13 open**, 537 closed.
+551 scenarios: **13 open**, 538 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
 | capture | 0 | 90 |
-| analysis | 2 | 87 |
-| contracts | 2 | 39 |
+| analysis | 1 | 87 |
+| contracts | 3 | 40 |
 | viewer | 1 | 136 |
 | cli | 0 | 19 |
 | store | 0 | 14 |
@@ -37,7 +37,6 @@ task file, which is the only place it ever lived twice.
 | ID | Scenario | Topic | Priority | Serves | Status |
 |---|---|---|---|---|---|
 | UX-540 | [the three contracts `bga` reads and never registers](UX-0540-the-three-contracts-bga-reads-and-never-registers.md) | contracts | Medium | `UX-520`, whose first real bundle refused a healthy capture | 🔴 |
-| UX-541 | [the gap sweep is cut and still quadratic, and the reason is a contract](UX-0541-the-gap-sweep-is-cut-but-still-quadratic.md) | analysis | Medium | `UX-539`, measuring its own close | 🔴 |
 | UX-542 | [`_compute_diagnostics` is now the largest phase of `analyze`](UX-0542-diagnostics-is-now-the-largest-phase.md) | analysis | Medium | `UX-539`'s profile, after its own two terms went | 🔴 |
 | UX-543 | [a second clause of the answer key ranks under contention](UX-0543-a-second-ranking-clause-under-contention.md) | guards | Medium | `UX-538`, fixing its sibling | 🔴 |
 | UX-544 | [the hand-built *node* census has a hole the document census does not](UX-0544-the-node-census-has-a-hole.md) | guards | Medium | `UX-537`, whose scope was the document | 🔴 |
@@ -49,6 +48,7 @@ task file, which is the only place it ever lived twice.
 | UX-550 | [the newest release row records the state *now*, not the one it shipped](UX-0550-the-newest-release-row-records-the-state-now.md) | contracts | High | architecture review 12 | 🔴 |
 | UX-551 | [every session plans its loop against a suite 62% faster than the real one](UX-0551-the-loop-is-planned-against-a-suite-that-is-gone.md) | docs | Medium | architecture review 12 | 🔴 |
 | UX-552 | [the CLI guide's alias table is two rows short](UX-0552-the-alias-table-is-two-rows-short.md) | docs | Low | architecture review 12 | 🔴 |
+| UX-553 | [the resource-holder set is spec-mandated and reaches no reader](UX-0553-the-holder-set-is-mandated-and-unread.md) | contracts | Low | `UX-541`, answering its own reader question | 🔴 |
 
 ## UX-522..UX-536: the seventy-ninth round — the controls walked, the suite weighed (2026-09-02)
 

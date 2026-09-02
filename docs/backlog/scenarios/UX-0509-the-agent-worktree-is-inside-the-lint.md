@@ -76,15 +76,36 @@ clean:
 make: *** [Makefile:102: lint-docs] Error 1
 ```
 
-and the same scan over this tree's own directories, `exit 0`. The
-worktrees are 3 whole clones at `.claude/worktrees/agent-<id>/`, and
-`git status` carried `?? .claude/worktrees/` throughout.
+and the same scan over this tree's own directories, `exit 0`. Three
+whole clones sat at `.claude/worktrees/agent-<id>/`, and `git status`
+carried `?? .claude/worktrees/` throughout.
 
-**The close.** `.gitignore` names the directory; `lint-docs` gains
-`--respect-gitignore` so it reads that one list rather than a second
-copy. The file set is unchanged by the flag — **655 files before, 655
-after**, `comm` empty in both directions — so the flag costs nothing
-beyond the exclusion it is for.
+**The first fix was wrong, and CI found it.** `--respect-gitignore` says
+exactly the right thing and arrived in pymarkdown 0.9.34; the 3.9 lane
+resolves `pymarkdownlnt>=0.9` to **0.9.33**, where it is an argument
+error before a single file is linted:
+
+```text
+__main__.py: error: unrecognized arguments: --respect-gitignore
+make: *** [Makefile:102: lint-docs] Error 2      run 33581936314, test (3.9)
+```
+
+Local `make lint` was green on 0.9.39. This is `UX-418`'s shape on a
+third axis: the local instrument and the runner's are not the same tool.
+
+**The close.** The file list comes from git instead of from a walk:
+
+```make
+git ls-files -z -- README.md CLAUDE.md REVIEW.md 'docs/*.md' '.claude/*.md' \
+  | xargs -0 -r python3 -m pymarkdown --config .pymarkdown.json scan
+```
+
+A worktree is untracked, so `git ls-files` cannot name it, on any
+version of anything. The set is otherwise unchanged: **656 tracked
+files from git against the 655 the walk listed**, and the one difference
+is this round's three not-yet-added task files — which is the cost,
+stated: a brand-new `.md` is linted from its first `git add`, not
+before.
 
 ```text
 $ mkdir -p .claude/worktrees/agent-probe && printf '# probe\n\n```\nx\n```\n' \
@@ -98,20 +119,23 @@ exit=0
 
 | # | mutation | reddened | count |
 |---|---|---|---|
-| N1 | `.gitignore` stops naming the directory | `..._git_ignores_the_worktree_directory`, `..._not_listed` | 2 failed, 1 passed in 8.03s |
-| N2 | the recipe drops `--respect-gitignore` | `..._reads_that_same_list`, `..._not_listed` | 2 failed, 1 passed |
-| N3 | the recipe stops reading `.claude/` at all | `..._not_listed` | 1 failed, 2 passed |
+| N1 | `.gitignore` stops naming the directory | `..._git_ignores_the_worktree_directory` | 1 failed, 3 passed |
+| N2 | the recipe walks the tree again | `..._takes_its_files_from_git`, `..._not_listed` | 2 failed, 2 passed |
+| N3 | `--respect-gitignore` comes back | `..._a_flag_the_39_lane_lacks` | 1 failed, 3 passed |
+| N4 | the recipe stops reading `.claude/` | `..._not_listed` | 1 failed, 3 passed |
 
-N1's own runtime is the finding twice over: 8.03s against 1.64s green,
-because the un-ignored scan walks three clones.
+N3 is the clause that exists only because CI found the first fix; N2 is
+the one that would pass a walk which skipped this single directory, and
+does not.
 
 **Blast radius, checked rather than assumed.** One guard globs from the
 repository root — `test_the_register_is_terse.py`, scoped to
 `tools/dev_*.py` and `.claude/hooks/*.py` — and `dev_touching` reads
 `tests/` only. So `lint-docs` and `git status` were the whole of it.
 
-**Deviation from the Required Fix:** none.
+**Deviation from the Required Fix:** the second clause asked for
+`--respect-gitignore` by name. It cannot run on the 3.9 lane; git's own
+list is the same rule by a mechanism every version has.
 
-**Tier and suite.** New file `test_the_lint_reads_its_own_tree.py`, 1.64s
-— small by default, no `tiers.py` row. `make test-touching`, `make test`
-and `make lint` are in the round's own record below the batch.
+**Tier.** New file `test_the_lint_reads_its_own_tree.py`, 0.30s — small
+by default, no `tiers.py` row.

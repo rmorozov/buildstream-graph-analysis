@@ -2,16 +2,20 @@
 
 `UX-504`'s `implementer` runs in a worktree and the Agent tool puts it
 at `.claude/worktrees/agent-<id>/` - inside the repository. `lint-docs`
-scans `.claude/` recursively, so with three tracks in flight round 75's
+walked `.claude/` recursively, so with three tracks in flight round 75's
 `make lint` went red on `examples/README.md` in a copy the orchestrator
 had never opened.
 
-Two halves hold it: `.gitignore` names the directory, and the lint
-reads that same list rather than a second copy of it. Both are asserted
-here against the real mechanisms - the recipe in the `Makefile` and
-`git check-ignore` - and the third clause runs the recipe's own file
-listing over a planted file, because the flag is `pymarkdown`'s
-promise and not this repository's.
+The fix is that the file list comes from **git** rather than from a
+walk: a worktree is untracked, so `git ls-files` cannot name it, on any
+version of anything. The first attempt used `--respect-gitignore`
+instead and CI found it - the 3.9 lane resolves `pymarkdownlnt>=0.9` to
+0.9.33, which has no such flag, and `make lint` died with `unrecognized
+arguments` before linting a single file (run 33581936314).
+
+The claim that can fail is not "some path is excluded" but "the list is
+git's": a walk that skipped this one directory would satisfy the first
+and lose the property on the next worktree the tooling invents.
 """
 import pathlib
 import re
@@ -32,9 +36,9 @@ def _recipe():
     to keep in step instead of a check on the two real ones.
     """
     body = (REPO / "Makefile").read_text(encoding="utf-8")
-    found = re.search(r"^lint-docs:\n\t(.+)$", body, flags=re.M)
+    found = re.search(r"^lint-docs:\n((?:\t.*\n)+)", body, flags=re.M)
     assert found, "no lint-docs recipe in the Makefile any more"
-    return found.group(1)
+    return found.group(1).replace("\t", "").replace("\\\n", " ")
 
 
 def test_git_ignores_the_worktree_directory():
@@ -47,26 +51,32 @@ def test_git_ignores_the_worktree_directory():
         f"working copy")
 
 
-def test_the_doc_lint_reads_that_same_list():
-    assert "--respect-gitignore" in _recipe(), (
-        f"lint-docs runs `{_recipe()}` - it scans `.claude/` recursively, "
-        f"so it lints every track's copy of the repository as well as this "
-        f"one")
+def test_the_doc_lint_takes_its_files_from_git():
+    recipe = _recipe()
+    assert "git ls-files" in recipe, (
+        f"lint-docs runs `{recipe.strip()}` - it walks the tree, so it "
+        f"lints every track's copy of the repository as well as this one")
 
 
-def test_a_markdown_file_in_a_worktree_is_not_listed(tmp_path):
-    """The end-to-end half: `--respect-gitignore` is `pymarkdown`'s
-    promise, not this repository's, so it is exercised rather than
-    read. The probe is planted where a real worktree goes and removed
-    again."""
+def test_the_lint_does_not_depend_on_a_flag_the_39_lane_lacks():
+    """`--respect-gitignore` arrived in pymarkdown 0.9.34 and the 3.9
+    lane resolves to 0.9.33, where it is a hard argument error. CI found
+    that; this keeps it found."""
+    assert "--respect-gitignore" not in _recipe()
+
+
+def test_a_markdown_file_in_a_worktree_is_not_listed():
+    """The end-to-end half, run through a shell because the recipe is a
+    pipeline. The probe is planted where a real worktree goes and
+    removed again."""
     probe = REPO / WORKTREES / "agent-lint-probe" / "PROBE.md"
     probe.parent.mkdir(parents=True, exist_ok=True)
     probe.write_text("# probe\n\n```\nno language, MD040\n```\n",
                      encoding="utf-8")
     try:
-        listed = subprocess.run(
-            _recipe().replace("scan ", "scan -l ", 1).split(),
-            cwd=REPO, capture_output=True, text=True).stdout
+        listed = subprocess.run(_recipe().replace("scan", "scan -l"),
+                                shell=True, cwd=REPO,
+                                capture_output=True, text=True).stdout
     finally:
         probe.unlink()
         probe.parent.rmdir()

@@ -150,7 +150,7 @@ It reports a signed delta for every certified floor, both efficiency signals, an
 
 ## On a real project
 
-Below is `bga analyze` on a real 3614-second [`freedesktop-sdk`](https://gitlab.com/freedesktop-sdk/freedesktop-sdk) build (4-core runner, `--builders 4 --max-jobs 4`), verbatim:
+Below is `bga analyze` on a real 3614-second [`freedesktop-sdk`](https://gitlab.com/freedesktop-sdk/freedesktop-sdk) build — commit `953683fb`, 4-core runner, `--builders 4 --max-jobs 4`, captured 2026-08-17 by run [`32064333551`](https://github.com/rmorozov/buildstream-graph-analysis/actions/runs/32064333551) and published as `captures/fdsdk/953683fb-incremental-b4j4-32064333551`. It is **kept, not current**: an hour-long build that neither a clone nor CI can re-run, so what follows is that run's report as it printed then, but for one label refreshed since — wrapped to this page's width, and cut where marked.
 
 ```text
 Key Findings:
@@ -167,15 +167,26 @@ Key Findings:
     components/openssl.bst                   672.1s (18.6% of path)  -> fixing it saves 522.5s (14.5% of the build)
     components/python3.bst                   639.8s (17.7% of path)  -> fixing it saves 114.1s (3.2% of the build)
     components/doxygen.bst                   513.5s (14.2% of path)  -> fixing it saves 513.5s (14.2% of the build)
+    -> these elements must get faster, or come off the chain; the scheduler has no room
+    left to give
     Note: 77% of elements have zero slack - this graph is a mesh of near-equal chains, so
     savings on one element are often capped by the next chain rather than by its own duration
   Together, the top 3 are worth 2605.8s (72% of the build) - exactly the sum of their
   individual savings, so they are three separate pieces of work that do not overlap
   Work them in this order (by what a fix is worth, not by size), with what the build drops
-  to: cmake-stage1.bst (2041s) -> openssl.bst (1518s) -> doxygen.bst (1005s)
+  to: components/_private/cmake-stage1.bst (2041s) -> components/openssl.bst (1518s) ->
+  components/doxygen.bst (1005s)
+    - the last of those leaves 72% of the build removed, projected from this run without
+    building again
   Waiting off the critical path, worth nothing to fix today:
-  components/_private/git-minimal.bst (548s), components/icu.bst (431s) (+2 more)
+  components/_private/git-minimal.bst (548s), components/icu.bst (431s) (+2 more) - they
+  bound how far shortening the chain can go
+    (structural projections over this run's measured durations, where "fixed" means the
+    element becomes instant - a re-capture is still the ground truth)
+[... elided: the Efficiency Score line, and every section below Key Findings ...]
 ```
+
+Five rows have changed the report since that run. [`UX-207`](docs/backlog/scenarios/UX-0207-the-first-screen-is-a-decision.md) put the headline diagnosis on the line under `Key Findings:`; [`UX-365`](docs/backlog/scenarios/UX-0365-the-finding-that-claims-the-superlative-is-the-small-one.md) scoped `Biggest Opportunity` to `Biggest wait category` — refreshed in place above — and moved `Confidence` below the actions it frames, which the block still shows in this run's own order; [`UX-475`](docs/backlog/scenarios/UX-0475-mesh-graph-calls-a-linear-chain-a-mesh.md) split the `Note:` line in two, so the mesh wording now also counts the zero-slack elements *off* the critical path and a graph with none of them gets the opposite sentence. [`UX-478`](docs/backlog/scenarios/UX-0478-the-graph-owner-vanishes-on-a-graph-problem.md) and [`UX-479`](docs/backlog/scenarios/UX-0479-a-chain-bound-build-publishes-no-blast-radius.md) then added two findings this block predates entirely. The numbers are this run's; the wording is that round's. The block under [Quick start](#quick-start-30-seconds-no-buildstream-needed) is the one checked line by line against a live run.
 
 One command, every number measured rather than estimated. Three things worth taking from it:
 it **names the constraint** ("chain-bound, not scheduler-bound" is a different problem from a
@@ -296,9 +307,12 @@ make lint                 # ruff + markdown (`make dev-run` prints a real report
      309 lines: `UX-477` changed which branch the Quick start's fixture takes, so the pasted
      block is the chain-bound one, needing an extra elision marker for the four findings that
      arm publishes and a paragraph on why the two lines above it name two different
-     denominators. The budget is a measured target, not a law - but exceeding it
-     silently is what turned 420 into "430" once before, so the number is here rather than in a
-     commit message. -->
+     denominators. Round 75 takes it to 323 lines: `UX-492` dated the real-project block, which
+     called itself verbatim while holding a sentence `UX-475` retired: the capture that
+     produced it, what the report has changed since, and the three report lines and one clause
+     an editor had cut out of it without a marker. The budget is a measured target, not a law -
+     but exceeding it silently is what turned 420 into "430" once before, so the number is
+     here rather than in a commit message. -->
 
 Tiers come from measured per-file duration (`tests/tiers.py`, `UX-238`), not from taste; `small` is
 the default, so a new file joins it free. `pytest -m bst` needs a real BuildStream, and CI's

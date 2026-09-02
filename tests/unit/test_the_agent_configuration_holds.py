@@ -19,10 +19,14 @@ The hook clauses are the ones that matter, because a hook that cannot
 block is `UX-109`'s defect in a newer place: a gate written as though
 it holds.
 """
+import contextlib
+import io
 import json
+import os
 import pathlib
 import re
 import subprocess
+import sys
 
 import pytest
 
@@ -52,6 +56,159 @@ def fire(name, payload):
     done = subprocess.run([str(HOOKS / name)], input=json.dumps(payload),
                           capture_output=True, text=True, timeout=30)
     return done.returncode, done.stderr
+
+
+def _selector_hook():
+    """`UX-522`'s hook, loaded fresh so a clause can replace its edges."""
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location(
+        "selector_before_commit", HOOKS / "selector_before_commit.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+@contextlib.contextmanager
+def _payload(body):
+    """`sys.stdin` carrying one PreToolUse payload."""
+    held = sys.stdin
+    sys.stdin = io.StringIO(json.dumps(body))
+    try:
+        yield
+    finally:
+        sys.stdin = held
+
+
+@contextlib.contextmanager
+def _env(**names):
+    held = {k: os.environ.get(k) for k in names}
+    os.environ.update(names)
+    try:
+        yield
+    finally:
+        for k, v in held.items():
+            if v is None:
+                os.environ.pop(k, None)
+            else:
+                os.environ[k] = v
+
+
+class TestTheSelectorRunsBeforeTheCommit:
+    """`UX-522`: the selector, at the moment it cannot be skipped.
+
+    Round 75 measured the habit rather than arguing about it - the
+    close, the Outcome and the row move all landed *after*
+    `test-touching`'s last run, so it never saw the tree the commit was
+    about. These clauses hold the matching and the escape hatch; that
+    the decision itself is right is `dev_touching`'s business.
+    """
+
+    #: What the hook must recognise as a commit. The heredoc case is
+    #: the one `UX-424` cost a round over: this repository's commit
+    #: messages quote commands, so a text scan fires on the message.
+    @pytest.mark.parametrize("command", (
+        "git commit -m x",
+        "git commit -q -F -",
+        "make lint && git commit -m x",
+        'git commit -F - <<EOF\nfix: git commit -m nope\nEOF',
+    ))
+    def test_it_sees_a_commit(self, command):
+        assert _selector_hook().is_git_commit(command), command
+
+    @pytest.mark.parametrize("command", (
+        "git status --short",
+        "git add tools/dev_touching.py",
+        "echo 'git commit -m x'",
+        "git log --oneline -1",
+        "python3 -c \"print('git commit')\"",
+    ))
+    def test_it_leaves_everything_else_alone(self, command):
+        assert not _selector_hook().is_git_commit(command), command
+
+    def test_settings_declares_it_on_bash(self):
+        """A hook nothing declares is a file, not a control."""
+        held = json.loads(SETTINGS.read_text(encoding="utf-8"))
+        bash = [m for m in held["hooks"]["PreToolUse"]
+                if m.get("matcher") == "Bash"]
+        commands = [h["command"] for m in bash for h in m["hooks"]]
+        assert any("selector-before-commit.sh" in c for c in commands), commands
+
+    def test_the_escape_hatch_is_named_in_the_message(self):
+        """The case the hook cannot be right about: a commit whose
+        *content* is the fix to a red guard. A block with no way past
+        it is a block somebody disables permanently."""
+        source = (HOOKS / "selector_before_commit.py").read_text(
+            encoding="utf-8")
+        assert "BGA_SKIP_SELECTOR" in source
+        assert "{skip}" in source.split("MESSAGE = ")[1].split('"""')[1]
+
+    def test_the_escape_hatch_works(self):
+        """Driven through `main`, with the selector replaced by one that
+        always says red. Firing the real hook proves nothing: on a clean
+        index there is nothing staged to select, so it returns 0 whether
+        the hatch works or not - which is how the mutation that deleted
+        the hatch stayed green."""
+        module, ran = self._hook_that_always_reds()
+        with _payload({"tool_input": {"command": "git commit -m x"}}):
+            with _env(BGA_SKIP_SELECTOR="1"):
+                assert module.main() == 0
+        assert ran == [], "the selector ran despite the escape hatch"
+
+    def test_it_does_not_run_the_selector_for_anything_else(self):
+        """The other half of the matching, at `main` rather than at
+        `is_git_commit`: a hook that consults the matcher and then
+        ignores it costs every Bash command a test run."""
+        module, ran = self._hook_that_always_reds()
+        with _payload({"tool_input": {"command": "git status --short"}}):
+            assert module.main() == 0
+        assert ran == [], "the selector ran on a command that is not a commit"
+
+    def test_it_blocks_a_commit_when_the_selector_is_red(self):
+        """And that the gate is a gate. `2` is the PreToolUse refusal."""
+        module, ran = self._hook_that_always_reds()
+        with _payload({"tool_input": {"command": "git commit -m x"}}):
+            assert module.main() == 2
+        assert ran == [["tests/unit/test_the_register_is_terse.py"]]
+
+    def test_it_judges_the_worktree_it_is_run_in(self, tmp_path):
+        """`parents[2]` of this hook is the **shared** checkout, and a
+        worktree borrows `.claude/` from it - so a hook reading its own
+        path judges a tree the committer is not in. Round 80's track D
+        measured that (8 changed files reported into a worktree with 2)
+        and reached for the escape hatch, which is the wrong end."""
+        module = _selector_hook()
+        subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
+        held = os.getcwd()
+        os.chdir(tmp_path)
+        try:
+            assert module.repo_root().resolve() == tmp_path.resolve()
+        finally:
+            os.chdir(held)
+
+    def test_it_falls_back_to_its_own_tree_outside_a_checkout(self, tmp_path):
+        """The other input class. `git rev-parse` fails outside a
+        repository, and a hook that then raises blocks every commit."""
+        module = _selector_hook()
+        held = os.getcwd()
+        os.chdir(tmp_path)
+        try:
+            assert module.repo_root() == REPO
+        finally:
+            os.chdir(held)
+
+    @staticmethod
+    def _hook_that_always_reds():
+        """The hook module with its two edges replaced: a fixed
+        selection, and a run that is always red. What is left under
+        test is the decision, which is the part with the mutations."""
+        module = _selector_hook()
+        ran = []
+        module.selection = lambda: (
+            ["tests/unit/test_the_register_is_terse.py"], {})
+        module.selector_is_green = lambda files: (ran.append(files),
+                                                  (False, "planted"))[1]
+        return module, ran
 
 
 class TestTheHooksBlockWhatTheyClaim:

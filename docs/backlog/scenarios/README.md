@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-535 scenarios: **22 open**, 513 closed.
+536 scenarios: **22 open**, 514 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -27,7 +27,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | cli | 0 | 19 |
 | store | 2 | 14 |
 | docs | 4 | 66 |
-| guards | 4 | 90 |
+| guards | 4 | 91 |
 
 ## Open scenarios
 
@@ -43,7 +43,6 @@ task file, which is the only place it ever lived twice.
 | UX-517 | [a closed Outcome quotes a bucket that is now empty](UX-0517-a-closed-outcome-quotes-a-bucket-that-is-now-empty.md) | docs | Low | the round that reads `UX-501` and takes its 223 as current | 🔴 |
 | UX-519 | [the snapshot's tail goes quiet in the one phase that has no line](UX-0519-the-snapshot-tail-goes-quiet.md) | capture | Medium | the user watching a capture that has stopped saying anything | 🔴 |
 | UX-520 | [a capture you can carry to another machine in one command](UX-0520-a-run-bundle-you-can-carry.md) | store | Medium | the engineer who captured on a build runner and wants to read it on a laptop | 🔴 |
-| UX-522 | [the selector runs last, and carries the census](UX-0522-the-selector-runs-last-and-carries-the-census.md) | guards | High | the implementing session, at the commit it is about to make | 🔴 |
 | UX-524 | [the touching map is measured in CI, not grepped](UX-0524-the-touching-map-is-measured-in-ci.md) | guards | Medium | the session that wants `test-touching` to be a gate | 🔴 |
 | UX-525 | [a track costs 81k-131k tokens, and nobody knows where](UX-0525-a-track-costs-tokens-and-nobody-knows-where.md) | docs | Medium | the maintainer's subscription | 🔴 |
 | UX-526 | [the large budget class is measured at its bottom and breached at its top](UX-0526-the-large-budget-class-is-breached-at-its-top.md) | guards | High | anyone who opens a report of a project larger than the seeded run | 🔴 |
@@ -58,6 +57,7 @@ task file, which is the only place it ever lived twice.
 | UX-535 | [one fact published twice, drawn twice, listed twice](UX-0535-one-fact-published-twice-drawn-twice-listed-twice.md) | viewer | Medium | anyone reading the run's identity, or the rail | 🔴 |
 | UX-536 | [four controls that say less than they do](UX-0536-four-controls-that-say-less-than-they-do.md) | viewer | Low | the keyboard and screen-reader reader | 🔴 |
 | UX-537 | [forty-eight hand-built documents, and the shared shim they were to become](UX-0537-forty-eight-documents-and-one-shim.md) | guards | Medium | the next round that adds a standard DOM call to the viewer | 🔴 |
+| UX-538 | [a guard that ranks a real build's seconds cannot hold under load](UX-0538-a-ranking-guard-under-contention.md) | guards | Medium | the round that runs parallel tracks on one machine | 🔴 |
 
 ## UX-522..UX-536: the seventy-ninth round — the controls walked, the suite weighed (2026-09-02)
 

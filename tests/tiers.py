@@ -99,6 +99,36 @@ import re
 LARGE_FLOOR_S = 15.0
 MEDIUM_FLOOR_S = 1.0
 
+# `UX-522`: the census set - guards whose subject is the **tree**, so
+# no diff can point at them. `dev_touching.py` unions these into every
+# selection, because a grep from the diff can never reach them and
+# round 75 measured what that cost: of five defects the per-item suite
+# caught, `test-touching` could not have named two, and both were this
+# class (`UX-503`'s register cap, `UX-502`'s skip census - the first
+# and second rows below by that route).
+#
+# Derived, not typed. `test_the_selector_carries_the_census.py` recomputes
+# it: a file that walks a path rooted at the repository **and** that a
+# grep from any non-`__init__` source module never selects. Adding a
+# guard of this shape without listing it here reddens that file.
+#
+# Measured: 272 tests, **10.80s at `-n auto`** - what every
+# `test-touching` run now pays to stop being wrong about this class.
+CENSUS = (
+    "tests/unit/test_a_guard_reads_only_what_a_clone_has.py",
+    "tests/unit/test_capture_ref_patterns.py",
+    "tests/unit/test_every_direction_names_its_reader.py",
+    "tests/unit/test_every_skip_reason_is_declared.py",
+    "tests/unit/test_one_factory_builds_every_table.py",
+    "tests/unit/test_the_agent_configuration_holds.py",
+    "tests/unit/test_the_canned_prose_reads_as_written.py",
+    "tests/unit/test_the_dom_shim_is_one_instrument.py",
+    "tests/unit/test_the_palette_is_validated.py",
+    "tests/unit/test_the_register_is_terse.py",
+    "tests/unit/test_the_viewer_modules_have_a_home.py",
+)
+
+
 # `UX-418`: **the floors are seconds on one machine, and a report from
 # another cannot be compared to them.** Not in any form.
 #

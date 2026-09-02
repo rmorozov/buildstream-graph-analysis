@@ -627,11 +627,10 @@ class StructuralAnalyzer:
         if historical_runs:
             historical = self.analyze_historical_trends(historical_runs)
         
-        # Generate summary
+        # UX-535: the three facts this took from `metrics` are the ones
+        # `graph_metrics` publishes from the same object, so they are read
+        # there rather than repeated under a second spelling.
         summary = {
-            'total_elements': metrics.num_elements,
-            'critical_path_length': metrics.critical_path_length,
-            'max_parallelism': metrics.max_parallelism,
             'bottleneck_count': len(bottleneck.choke_points),
             'deferrable_leaves': len(deferrability.deferrable_leaves),
             'best_case_speedup': sensitivity.best_case_speedup,

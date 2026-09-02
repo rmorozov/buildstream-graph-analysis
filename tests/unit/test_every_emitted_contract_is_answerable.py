@@ -116,6 +116,9 @@ FILE_WRITTEN = {
     # `UX-344` put a sixth there: the shape `analyze` wrote before the
     # two namespaces were lifted.
     "analyze/v3": "an older store's report.json, before UX-344",
+    # `UX-535` a seventh: the shape before `graph_summary` stopped
+    # republishing three of `graph_metrics`' facts.
+    "analyze/v4": "an older store's report.json, before UX-535",
     "compare/v1": "an older store's comparison",
     "blast/v1": "an older store's blast answer",
     "correlate/v1": "an older store's two-plane join",
@@ -317,8 +320,8 @@ class TestTheUnionIsTheInventory:
         shapes of one report, which is what the chain in
         `bga/plane2.py` is for."""
         assert contracts.superseded() == [
-            "analyze/v2", "analyze/v3", "blast/v1", "compare/v1",
-            "correlate/v1", "host/v1", "plane2/v1",
+            "analyze/v2", "analyze/v3", "analyze/v4", "blast/v1",
+            "compare/v1", "correlate/v1", "host/v1", "plane2/v1",
             "plane2/v2"], contracts.superseded()
         assert "plane2/v1" in FILE_WRITTEN
         assert "plane2/v2" in FILE_WRITTEN

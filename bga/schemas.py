@@ -63,7 +63,12 @@ from .findings import DIAGNOSES, READERS
 # of a population published in full beside it - is gone by `UX-288`'s
 # rule. Every one of those is a removal or a rename, which is what this
 # version move is for.
-ANALYZE = "analyze/v4"
+# `UX-535`: v5, and one removal. `graph_summary` carried
+# `total_elements`, `critical_path_length` and `max_parallelism`
+# assigned from the same `StructuralMetrics` object `graph_metrics`
+# publishes - one fact under two spellings in two sections, equal by
+# construction on both fixtures. They are read from `graph_metrics`.
+ANALYZE = "analyze/v5"
 COMPARE = "compare/v2"
 BLAST = "blast/v2"
 STORE = "store/v1"
@@ -74,8 +79,8 @@ STORE = "store/v1"
 # reads a `v2` analyze document by name - the keys this item renamed
 # resolve through `guessQuantity` rather than through a declaration, so
 # an old snapshot still renders, with the fallback saying so.
-SUPERSEDED = ("analyze/v3", "analyze/v2", "compare/v1", "blast/v1",
-              "correlate/v1")
+SUPERSEDED = ("analyze/v4", "analyze/v3", "analyze/v2", "compare/v1",
+              "blast/v1", "correlate/v1")
 # UX-234: the store as a distribution rather than as a list. Beside
 # `store/v1` rather than inside it: a listing is one row per snapshot
 # and this is one row per *host class*, and a consumer wanting the
@@ -1733,21 +1738,13 @@ _STRUCTURAL_TABLES = {
                 "description": "Edges minus elements plus one - how "
                                "tangled the graph is."},
         }},
+    # `UX-535`: `total_elements`, `critical_path_length` and
+    # `max_parallelism` were assigned from the same `metrics` object
+    # `graph_metrics` publishes, so they are declared only there.
     "summary": {
-        "description": "The headline shape numbers, for a reader "
-                       "who wants one line rather than the block.",
+        "description": "What the shape costs, for a reader who wants "
+                       "the consequence rather than the measurements.",
         "properties": {
-            "total_elements": {
-                QUANTITY: "count",
-                "description": "How many elements this run's graph holds."},
-            "critical_path_length": {
-                QUANTITY: "count",
-                "description": "Elements on the chain, not its "
-                               "duration."},
-            "max_parallelism": {
-                QUANTITY: "count",
-                "description": "The most elements that could run at "
-                               "once given the graph alone."},
             "bottleneck_count": {
                 QUANTITY: "count",
                 "description": "Elements everything funnels through."},

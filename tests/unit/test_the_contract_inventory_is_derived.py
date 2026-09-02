@@ -67,14 +67,16 @@ class TestTheInventoryIsComplete:
         # `UX-341` put five more shapes here: the four documents whose
         # units it renamed, and `host/v1`. All five are read and never
         # written, which is exactly the state this list is for.
-        # `UX-344` added `analyze/v3`, for the same reason.
+        # `UX-344` added `analyze/v3`, and `UX-535` `analyze/v4`,
+        # for the same reason.
         # `UX-381` added two more, both on-disk and neither printable:
         # `capture-layout/v1` is the directory itself, and
         # `host-samples/v1` is written by a module in `tools/` that the
         # package walk cannot see - `run_store.OWNED` names it, which
         # is how it reached this list at all.
         assert contracts.unprintable() == [
-            "analyze/v2", "analyze/v3", "blast/v1", "capture-layout/v1",
+            "analyze/v2", "analyze/v3", "analyze/v4", "blast/v1",
+            "capture-layout/v1",
             "compare/v1", "correlate/v1", "host-samples/v1", "host/v1",
             "host/v2", "plane2/v1", "plane2/v2", "plane2/v3",
             "sources/v1"]
@@ -91,8 +93,9 @@ class TestTheInventoryIsComplete:
         from bga import contracts
 
         assert contracts.superseded() == [
-            "analyze/v2", "analyze/v3", "blast/v1", "compare/v1",
-            "correlate/v1", "host/v1", "plane2/v1", "plane2/v2"]
+            "analyze/v2", "analyze/v3", "analyze/v4", "blast/v1",
+            "compare/v1", "correlate/v1", "host/v1", "plane2/v1",
+            "plane2/v2"]
         assert "plane2/v1" in contracts.ids()
         assert "plane2/v1" not in contracts.printable()
 

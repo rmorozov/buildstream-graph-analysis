@@ -324,7 +324,7 @@ export function elementUids(payload) {
  * entity, joined on the one key, for every element - which is what a
  * new view asks for instead of discovering where its columns live.
  *
- * The entity has two shapes and `analyze/v4` publishes both: six maps
+ * The entity has two shapes and `analyze/v5` publishes both: six maps
  * under `elements`, keyed by uid, on every capture; and a wide
  * `element_join` row, present only where Plane 2 supplied a report.
  * `SOURCES` above reads the ranked arrays including the join;

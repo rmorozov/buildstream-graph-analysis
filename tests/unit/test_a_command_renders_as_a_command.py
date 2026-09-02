@@ -163,7 +163,7 @@ class TestTheShapeIsDeclared:
         shape and is genuinely a list."""
         from bga import schemas
 
-        argv = schemas.schema("analyze/v4")["properties"]["next_steps"][
+        argv = schemas.schema(schemas.ANALYZE)["properties"]["next_steps"][
             "items"]["properties"]["argv"]
         assert argv.get(schemas.COMMAND) == "shell", argv
 

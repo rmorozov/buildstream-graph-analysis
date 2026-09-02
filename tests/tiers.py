@@ -553,6 +553,9 @@ MEDIUM = (
     "tests/unit/test_a_run_bundle_you_can_carry.py",                #    2.3s
     # `UX-535`, tiered on landing. Eleven clauses, one of them a
     # subprocess `analyze` over the golden fixture. 4.27s measured.
+    # `UX-539` follow-up. An AST walk of every file in `bga/` and
+    # `tools/` - 3.50 / 3.66 / 3.83s measured alone in one process.
+    "tests/unit/test_the_package_runs_on_the_python_it_claims.py",  #  3.7s
     "tests/unit/test_one_fact_is_published_once.py",                #    4.3s
     "tests/unit/test_a_candidate_is_confirmed_alone.py",            # 1.2s
     # `UX-460`, tiered on landing. It runs `analyze` in-process over

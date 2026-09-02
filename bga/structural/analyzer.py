@@ -101,6 +101,14 @@ from bga.structural.models import (
 )
 
 
+#: `UX-539` used `int.bit_count()`, which is **3.10+**, and
+#: `requires-python` is `>=3.9`: 358 failed and 156 errored on the 3.9
+#: job while every local run was green. Bound once at import so the
+#: fast path stays a method call on the interpreters that have it.
+_popcount = getattr(int, "bit_count", None) or (
+    lambda value: bin(value).count("1"))
+
+
 class StructuralAnalyzer:
     """Analyzes cold structural properties of the build graph.
     
@@ -243,8 +251,8 @@ class StructuralAnalyzer:
             ancestors[index[node]] = mask
 
         return (
-            {node: descendants[i].bit_count() for node, i in index.items()},
-            {node: ancestors[i].bit_count() for node, i in index.items()},
+            {node: _popcount(descendants[i]) for node, i in index.items()},
+            {node: _popcount(ancestors[i]) for node, i in index.items()},
         )
 
     def analyze_bottlenecks(self) -> BottleneckAnalysis:

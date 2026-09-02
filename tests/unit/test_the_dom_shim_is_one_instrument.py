@@ -60,6 +60,46 @@ def _run(script):
 #: contain the thing it forbids — the ninth-time problem, `UX-239`.
 HAND_BUILT = "globalThis.document" + " = {"
 
+#: `UX-544`: a hand-built *node* is an object literal that **defines**
+#: `setAttribute` — method shorthand or property. Calling it on a real
+#: `document.createElement` node is a `.` away, and is not an offence.
+DEFINES = re.compile(r"(?<![.\w])set" + r"Attribute\s*(?:\([^)]*\)\s*\{|:)")
+
+
+def _literal_around(source, index):
+    """Line of the `{` opening the brace-matched literal holding `index`.
+
+    `UX-537`'s method. A `[^}]*` regex stops at the first *nested* `}`,
+    and every node literal carries an `attrs: {}`.
+    """
+    depth = 0
+    for start in range(index - 1, -1, -1):
+        if source[start] == "}":
+            depth += 1
+        elif source[start] == "{":
+            if depth == 0:
+                break
+            depth -= 1
+    else:
+        return None
+    depth = 0
+    for stop in range(start, len(source)):
+        if source[stop] == "{":
+            depth += 1
+        elif source[stop] == "}":
+            depth -= 1
+            if depth == 0:
+                return source[:start].count("\n") + 1
+    return None
+
+
+def _hand_built_nodes(source):
+    """Lines where an object literal defines its own `setAttribute`."""
+    return sorted({line for line in
+                   (_literal_around(source, m.start())
+                    for m in DEFINES.finditer(source))
+                   if line is not None})
+
 
 class TestThereIsOnlyOneShim:
     def test_no_harness_wires_its_own_document(self):
@@ -98,21 +138,25 @@ class TestThereIsOnlyOneShim:
 
     def test_no_harness_builds_its_own_node(self):
         """The census. The *node* is the thing whose fidelity was wrong
-        three times, and it comes from one place."""
+        three times, and it comes from one place.
+
+        `UX-544`: it read a `return {` carrying `setAttribute` and so
+        matched **zero** files — the nested `attrs: {}` closed `[^}]*`
+        before the key, and three of the four offenders hand the
+        literal back through a variable or an arrow anyway. Brace
+        matched now, over every harness rather than the ones naming
+        `createElement`, which three offenders do not.
+        """
         offenders = {}
-        for path in _harness_files():
-            # This file's own probes call `setAttribute` inside a
-            # `return {` of their *result* object. A guard that greps
-            # finds itself - ninth time in this repository (`UX-239`),
-            # and the only honest fix is to name the exception rather
-            # than to weaken the pattern that catches the real thing.
+        for path in sorted((REPO / "tests/unit").glob("*.py")):
+            # This file spells the pattern it forbids, so it would find
+            # itself — ninth time here (`UX-239`), and the honest fix is
+            # to name the exception, not to weaken the pattern.
             if path.name == pathlib.Path(__file__).name:
                 continue
-            source = path.read_text(encoding="utf-8")
-            # A node factory is a `return {` carrying `setAttribute`.
-            for match in re.finditer(r"return \{[^}]*setAttribute", source):
-                offenders.setdefault(path.name, []).append(
-                    source[:match.start()].count("\n") + 1)
+            lines = _hand_built_nodes(path.read_text(encoding="utf-8"))
+            if lines:
+                offenders[path.name] = lines
         assert offenders == {}, (
             f"these harnesses build their own DOM node instead of importing "
             f"tests/dom_shim.mjs: {offenders}. Three fidelity defects have "

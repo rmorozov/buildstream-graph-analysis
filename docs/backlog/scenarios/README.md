@@ -15,13 +15,13 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-538 scenarios: **9 open**, 529 closed.
+540 scenarios: **10 open**, 530 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
 | capture | 1 | 90 |
-| analysis | 1 | 85 |
+| analysis | 2 | 87 |
 | contracts | 1 | 38 |
 | viewer | 3 | 135 |
 | cli | 0 | 19 |
@@ -43,8 +43,9 @@ task file, which is the only place it ever lived twice.
 | UX-535 | [one fact published twice, drawn twice, listed twice](UX-0535-one-fact-published-twice-drawn-twice-listed-twice.md) | viewer | Medium | anyone reading the run's identity, or the rail | 🟡 |
 | UX-537 | [forty-eight hand-built documents, and the shared shim they were to become](UX-0537-forty-eight-documents-and-one-shim.md) | guards | Medium | the next round that adds a standard DOM call to the viewer | 🔴 |
 | UX-538 | [a guard that ranks a real build's seconds cannot hold under load](UX-0538-a-ranking-guard-under-contention.md) | guards | Medium | the round that runs parallel tracks on one machine | 🔴 |
-| UX-539 | [the two superlinear terms UX-531 measured and did not take](UX-0539-two-superlinear-terms-analyze-still-has.md) | analysis | Medium | anyone opening a run of a few thousand elements | 🔴 |
 | UX-540 | [the three contracts `bga` reads and never registers](UX-0540-the-three-contracts-bga-reads-and-never-registers.md) | contracts | Medium | `UX-520`, whose first real bundle refused a healthy capture | 🔴 |
+| UX-541 | [the gap sweep is cut and still quadratic, and the reason is a contract](UX-0541-the-gap-sweep-is-cut-but-still-quadratic.md) | analysis | Medium | `UX-539`, measuring its own close | 🔴 |
+| UX-542 | [`_compute_diagnostics` is now the largest phase of `analyze`](UX-0542-diagnostics-is-now-the-largest-phase.md) | analysis | Medium | `UX-539`'s profile, after its own two terms went | 🔴 |
 
 ## UX-522..UX-536: the seventy-ninth round — the controls walked, the suite weighed (2026-09-02)
 

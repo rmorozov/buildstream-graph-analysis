@@ -1,6 +1,6 @@
 # UX-531: `bga analyze` is superlinear, and the page pays for it
 
-**Priority:** Medium | **Status:** 🟢 Fixed & Verified | **Depends on:** UX-42 (the last superlinear term closed) | **Serves:** anyone opening a run of a few thousand elements | **Topic:** analysis
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-42 (the last superlinear term closed) | **Serves:** anyone opening a run of a few thousand elements | **Topic:** analysis
 
 ## Motivation
 

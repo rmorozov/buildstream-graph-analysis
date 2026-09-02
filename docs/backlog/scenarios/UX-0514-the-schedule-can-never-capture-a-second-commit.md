@@ -1,6 +1,6 @@
 # UX-514: the capture schedule can never produce a second commit
 
-**Priority:** Medium | **Status:** 🟢 Fixed & Verified | **Depends on:** `UX-81` (the schedule), `UX-92` (the gate that needs the variation) | **Found by:** round 76, re-checking `UX-92` for the fourth time | **Serves:** `UX-92`'s gate, which has been "deferred, re-check next month" since n=3 | **Topic:** capture
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-81` (the schedule), `UX-92` (the gate that needs the variation) | **Found by:** round 76, re-checking `UX-92` for the fourth time | **Serves:** `UX-92`'s gate, which has been "deferred, re-check next month" since n=3 | **Topic:** capture
 
 ## Motivation
 

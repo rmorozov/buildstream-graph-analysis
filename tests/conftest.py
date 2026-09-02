@@ -286,6 +286,17 @@ KNOWN_SKIP_REASONS = {
     "no snapshot store in this checkout": (
         "a store is written by a capture and `UX-189` keeps it out of "
         "a clone", 0),
+    # `UX-514`'s two arms. Exactly one fires: the pair reads
+    # `capture-ref-policy:` out of the workflow and each clause skips
+    # when the *other* policy is declared. Both are `pytest.skip()` in
+    # a test body, which the census hook cannot see (it counts
+    # `setup`-phase skips), so both are measured at 0 - `-rs` shows one.
+    "the workflow declares `advanced`": (
+        "the pinned-policy arm, skipped where the workflow says "
+        "`advanced`", 0),
+    "the workflow declares `pinned`": (
+        "the advanced-policy arm, skipped where the workflow says "
+        "`pinned`", 0),
     "this fixture's evidence carries no structured value": (
         "a payload-shape gate over the committed fixtures", 0),
     "this fixture's findings name no elements": (

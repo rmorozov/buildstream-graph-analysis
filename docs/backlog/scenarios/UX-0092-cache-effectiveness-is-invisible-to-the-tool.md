@@ -1,6 +1,6 @@
 # UX-92: cache effectiveness — hits, misses, churn, trends — is invisible to the tool
 
-**Priority:** Medium | **Status:** 🟡 In Progress — stages 1 and 2 done; stage 3's trend shipped as `UX-103`, its gate is **not deferred any more, it is not gateable on this history** - `UX-514` chose `capture-ref-policy: pinned` in round 80, so the variation this waited for cannot arrive; the row belongs at ⚪ with that reason | **Depends on:** UX-55 (done), UX-81 (history to trend over)
+**Priority:** Medium | **Status:** ⚪ Blocked — stages 1 and 2 done; stage 3's trend shipped as `UX-103`. Its gate is **not deferred, it is not gateable on this history**: `UX-514` chose `capture-ref-policy: pinned` in round 80, so the cache variation this waited for cannot arrive from the schedule. Unblocking it means a second ref, which is that item's Out of Scope | **Depends on:** UX-55 (done), UX-81 (history to trend over) | **Topic:** store
 
 ## Motivation
 
@@ -349,3 +349,58 @@ that is a different target, not a cache reading. The `target` field
 `UX-96` added to `capture-context.txt` is what makes this legible: the
 older ref predates it and records nothing, and the ref name has never
 carried the target. Cold history for gating purposes is n=1, not n=2.
+
+## Outcome (round 80, 2026-09-02) — ⚪ Blocked
+
+### What shipped, and what did not
+
+Stages 1 and 2 are in the tool and have been since round 12:
+`bga/cache_effectiveness.py` publishes `signals.cache`, the
+`cache-hit-ratio` finding, churn and invalidation roots. Stage 3's
+*trend* shipped separately as `UX-103` (`bga cache-trend`). What
+remains unbuilt is one clause: **the gate** — the
+`--fail-on-cache-regression` this item asked for.
+
+### Why it is ⚪ and not 🟡
+
+Seven re-checks over five rounds each closed with "not yet"; round 76
+found the line number that makes it "not ever from this history":
+
+```text
+.github/workflows/real-project-capture.yml:163
+  FDSDK_REF: ${{ github.event.inputs.fdsdk_ref || '953683fb96b8...' }}
+```
+
+`schedule:` supplies no workflow inputs, so every scheduled capture
+takes the default. All nine published refs are `953683fb`, and seven
+incrementals read **72% / 25 built / 65 cached with zero spread**. A
+gate needs variation; this series is the same commit measured seven
+times.
+
+Round 80 took the decision rather than re-checking an eighth time.
+`UX-514` chose **`capture-ref-policy: pinned`**, wrote the word into
+the workflow, and guarded it — so the ref is now pinned *on purpose*,
+and what that costs this item is recorded at the pin:
+
+```text
+.github/workflows/real-project-capture.yml
+  # UX-514: capture-ref-policy: pinned.
+```
+
+That is the difference between deferred and blocked. Deferred means
+the evidence has not arrived; blocked means the project has decided,
+in writing, that it will not — the band's meaning was worth more than
+the gate. Unblocking needs a second ref, which is `UX-514`'s stated
+Out of Scope, so this row waits on a policy change and not on a cron.
+
+### Deviation from the Required Fix
+
+One, and it is the reason for the marker: stage 3's gate is **not
+built**, and no clause of it is claimed. Stage 3's trend half is
+`UX-103` (🟢). Nothing here asserts a gate exists.
+
+```text
+No code changed by this row. The move is bookkeeping: the ⚪ marker
+and the row that carries it, so the index stops listing as open an
+item nothing in this repository can advance.
+```

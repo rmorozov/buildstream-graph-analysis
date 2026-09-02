@@ -1,6 +1,6 @@
 # UX-519: the snapshot's tail goes quiet in the one phase that has no line
 
-**Priority:** Medium | **Status:** 🟢 Fixed & Verified | **Depends on:** `UX-183` (the progress module), `UX-518` (batch first) | **Found by:** round 77, field report — *"take considerable time on big projects... at least show progress?"* | **Serves:** the user watching a capture that has stopped saying anything | **Topic:** capture
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-183` (the progress module), `UX-518` (batch first) | **Found by:** round 77, field report — *"take considerable time on big projects... at least show progress?"* | **Serves:** the user watching a capture that has stopped saying anything | **Topic:** capture
 
 ## Motivation
 

@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-551 scenarios: **11 open**, 540 closed.
+551 scenarios: **10 open**, 541 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -27,7 +27,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | cli | 0 | 19 |
 | store | 0 | 14 |
 | docs | 4 | 70 |
-| guards | 3 | 95 |
+| guards | 2 | 95 |
 
 ## Open scenarios
 
@@ -40,7 +40,6 @@ task file, which is the only place it ever lived twice.
 | UX-543 | [a second clause of the answer key ranks under contention](UX-0543-a-second-ranking-clause-under-contention.md) | guards | Medium | `UX-538`, fixing its sibling | 🔴 |
 | UX-545 | [a refused timeline tells the reader the snapshot has no build log](UX-0545-a-refused-timeline-says-the-wrong-thing.md) | viewer | Medium | `UX-530`, whose scope was the degradation | 🔴 |
 | UX-546 | [the fetch-counting handoff guard is flaky under the full suite](UX-0546-the-fetch-guard-is-flaky-under-load.md) | guards | Medium | two tracks, independently | 🔴 |
-| UX-547 | [the fixture differ compares parsed JSON, so key order drifts unseen](UX-0547-the-fixture-differ-cannot-see-key-order.md) | guards | Low | `UX-535`, refreshing a fixture for a contract bump | 🔴 |
 | UX-548 | [five mechanisms round 80 shipped, and no guide names one](UX-0548-round-80s-viewer-axis-reaches-no-guide.md) | docs | High | architecture review 12 | 🔴 |
 | UX-549 | [five counted figures, read as current, wrong](UX-0549-five-counted-figures-a-reader-reads-as-current.md) | docs | Medium | architecture review 12 | 🔴 |
 | UX-550 | [the newest release row records the state *now*, not the one it shipped](UX-0550-the-newest-release-row-records-the-state-now.md) | contracts | High | architecture review 12 | 🔴 |

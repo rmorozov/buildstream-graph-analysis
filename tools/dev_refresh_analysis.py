@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """`UX-486`: the rule a committed analysis document is written under.
 
-    python3 tools/dev_refresh_analysis.py --check
+    python3 -m pytest tests/unit/test_a_committed_analysis_matches_the_analyzer.py
     python3 tools/dev_refresh_analysis.py --write tests/fixtures/with_timeline
 
 Two fixtures hold an analysis and are compared against a fresh run.
@@ -18,7 +18,7 @@ exactly:
 - **the fixture's own path**, which `UX-218`'s next-step commands must
   name to be runnable. Replaced with one fixed token.
 
-`--check` is what the guard runs; `--write` is what a round runs after
+The guard imports `differences()`; `--write` is what a round runs after
 a deliberate change, then reads `git diff` to confirm the change it
 intended is the only one. Key order is compared as its own line
 (`UX-547`) and `--write` is its fix; order is not a contract (`UX-302`).

@@ -1,6 +1,6 @@
 # UX-510: a parallel track starts from a base the orchestrator has left behind
 
-**Priority:** Medium | **Status:** 🟡 In Progress — the brief and the skill carry the base and the merge cost, and the guards mutate red; the acceptance test is a track launch, in flight (round 76) | **Depends on:** `UX-504` | **Found by:** round 75, three tracks in flight | **Serves:** the track told to read a file that does not exist in its copy | **Topic:** guards
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-504` | **Found by:** round 75, three tracks in flight | **Serves:** the track told to read a file that does not exist in its copy | **Topic:** guards
 
 ## Motivation
 
@@ -102,19 +102,34 @@ set to `-40/+200`, which is the count's own sentence in both files. The
 first two forms are recorded rather than deleted: a window chosen by
 eye is how a clause ends up reading the file's other paragraph.
 
-### The acceptance test, in flight
+### The acceptance test, run
 
-All three bullets of the Required Fix are done. The acceptance — *a
-track launched against a HEAD with an uncommitted-at-launch document in
-it, reading that document, from the base the brief names* — is a track
-launch, and round 76 runs it on real work rather than on an errand: an
-`implementer` on `UX-507`, briefed with base
-`44a948cf3d334d0d62ada3c897a7e63482e27d9a` and two cited documents that
-differ on purpose — `docs/audits/round-76.md`, committed at `49a8c62`,
-and this section, written and uncommitted at launch. The track is asked
-to report which of the two it can read.
+*A track launched against a HEAD with an uncommitted-at-launch document
+in it, reading that document, from the base the brief names.* Run on
+real work rather than an errand: an `implementer` on `UX-507`, briefed
+with base `44a948cf3d334d0d62ada3c897a7e63482e27d9a` and two cited
+documents that differ on purpose — `docs/audits/round-76.md`, committed
+at `49a8c62`, and this section, written and uncommitted at launch.
 
-Left 🟡 until that answer is pasted here. A clause that has not been
-checked is not a clause that passed.
+**It reproduced.** The track's first sentence:
+
+```text
+git log --oneline -1   ->   96970dc CI: adopt the tier rows this run measured
+```
+
+**Seven commits behind** the declared base, not nine, and a different
+seven — round 75's number was `8585e7d` against `c5c8d75`. So the
+defect is not a one-off of that round: the worktree starts at some
+earlier commit both times, and the brief is what makes it visible. Of
+the two cited documents it could read **neither** at its arrival base —
+`round-76.md` did not exist there — and it did not recreate this
+section, which is what the brief asks for.
+
+The cost was not cosmetic, and the track named it: two of the seven
+commits (`98e50bb`, `0e0db74`) edit `UX-0092` and `UX-0096`, both inside
+its own 223-file range. Working from the stale base would have rewritten
+two files this round had already changed. It fast-forwarded — its HEAD
+was a strict ancestor and its tree clean, so lossless — and worked from
+`44a948c`, which is the outcome the brief's "say so and stop" is for.
 
 Tests: 81 → 84 in `tests/unit/test_the_agent_configuration_holds.py`.

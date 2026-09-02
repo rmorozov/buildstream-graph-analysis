@@ -46,6 +46,8 @@ commits further on at `c5c8d75`. Two tracks were told to read
 `docs/contributing/rules.md` and `docs/audits/round-75.md`, and
 **neither file existed in their copy**; one also found its `CLAUDE.md`
 and the orchestrator's disagreed about which document is the rule.
+Round 76's track hit it again at a different distance — seven commits —
+so this is the normal case, not one round's accident.
 
 So the first command you run is the one that tells you:
 

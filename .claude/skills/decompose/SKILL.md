@@ -79,9 +79,10 @@ The `verifier` agent reads each track before it merges.
 **The brief names the base, because the worktree does not start where
 you are.** `UX-510`: round 75's three tracks were all created at
 `8585e7d`, nine commits behind the orchestrator, and two of them were
-told to read files that did not exist in their copy. Put the sha in the
-brief and the track checks it with `git log --oneline -1` before
-reading anything.
+told to read files that did not exist in their copy. Round 76's single
+track reproduced it at a different distance — seven commits — so it is
+the shape and not one round's accident. Put the sha in the brief and the
+track checks it with `git log --oneline -1` before reading anything.
 
 **What the merge costs, measured once.** Round 75, three tracks over
 nine commits: **three cherry-picks, one conflicted** — in

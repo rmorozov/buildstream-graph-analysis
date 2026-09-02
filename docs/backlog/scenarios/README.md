@@ -15,21 +15,19 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-513 scenarios: **5 open**, 508 closed.
+513 scenarios: **3 open**, 510 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
-| capture | 1 | 23 |
-| analysis | 0 | 13 |
-| contracts | 0 | 31 |
-| viewer | 0 | 99 |
-| cli | 0 | 1 |
-| store | 1 | 5 |
-| docs | 2 | 47 |
-| guards | 1 | 70 |
-| testing | 0 | 1 |
-| unclassified | 0 | 223 |
+| capture | 1 | 87 |
+| analysis | 0 | 83 |
+| contracts | 0 | 37 |
+| viewer | 0 | 126 |
+| cli | 0 | 19 |
+| store | 1 | 13 |
+| docs | 1 | 63 |
+| guards | 0 | 85 |
 
 ## Open scenarios
 
@@ -40,8 +38,6 @@ task file, which is the only place it ever lived twice.
 |---|---|---|---|---|---|
 | UX-92 | [cache effectiveness — hits, misses, churn, trends — is invisible to the tool](UX-0092-cache-effectiveness-is-invisible-to-the-tool.md) | store | Medium | — | 🟡 |
 | UX-500 | [the batch gate, measured against the per-item suite](UX-0500-the-batch-gate-measured-against-the-per-item-suite.md) | docs | High | the implementing session's wall clock; the maintainer's subscription | 🔴 |
-| UX-507 | [223 closed rows are in no topic](UX-0507-the-unclassified-bucket.md) | docs | Low | the round that asks "how much of the backlog was viewer work" and gets an answer that is 44 % blank | 🔴 |
-| UX-510 | [a parallel track starts from a base the orchestrator has left behind](UX-0510-a-track-starts-from-a-stale-base.md) | guards | Medium | the track told to read a file that does not exist in its copy | 🟡 |
 | UX-514 | [the capture schedule can never produce a second commit](UX-0514-the-schedule-can-never-capture-a-second-commit.md) | capture | Medium | `UX-92`'s gate, deferred four times on evidence that cannot arrive | 🔴 |
 
 ## UX-497..UX-506: the seventy-fourth round — the workflow, measured (2026-09-01)

@@ -1739,3 +1739,131 @@ class TestTheToolIsRunnable:
 
 if __name__ == "__main__":  # pragma: no cover
     raise SystemExit(pytest.main([__file__, "-v"]))
+
+
+class TestTheGateLineReachesALogTail:
+    """`UX-491`: every return of `_against` leaves its line in a file.
+
+    The gate prints its summary two steps and one ~400-line collapsed
+    document before the end of the job, and a client that can only read
+    a bounded log tail gets the document and not the line. `UX-488` had
+    to take its pairing from the previous run and said so.
+
+    `--summary PATH` is the route: the gate writes the line it printed,
+    and the candidate step prints that file after its `::endgroup::`, so
+    the shift and the spread recorded against it are adjacent in the
+    tail. The line stays the **gate's** - recomputing it in the later
+    step would make the two numbers agree by construction (§5).
+
+    So the claim here is the one that can fail: not that some branch
+    writes a summary, but that *no* return path leaves the file absent.
+    """
+
+    OFF = "tests/unit/test_the_page_has_geometry.py"
+
+    def _run(self, tmp_path, capsys, times, reference=None, carry=None,
+             tag="s"):
+        ref = tmp_path / f"ref-{tag}.json"
+        ref.write_text(json.dumps(
+            drift.record(dict(tiers.recorded())) if reference is None
+            else reference), encoding="utf-8")
+        summary = tmp_path / f"gate-{tag}.txt"
+        argv = [str(_report(tmp_path, times)), "--against", str(ref),
+                "--summary", str(summary)]
+        if carry:
+            argv += ["--carry", str(carry)]
+        code = drift.main(argv)
+        capsys.readouterr()
+        return code, summary
+
+    def _scaled(self, factor, flaky=1.0):
+        times = {name: seconds * factor
+                 for name, seconds in tiers.recorded().items()}
+        times[self.OFF] = times[self.OFF] * flaky
+        return times
+
+    def test_an_unrecorded_reference_still_leaves_a_line(self, tmp_path,
+                                                         capsys):
+        code, summary = self._run(tmp_path, capsys, self._scaled(1.0),
+                                  reference={}, tag="blank")
+        assert code == 0
+        assert "holds no recorded numbers yet" in summary.read_text()
+
+    def test_a_reference_naming_nothing_still_leaves_a_line(self, tmp_path,
+                                                            capsys):
+        code, summary = self._run(
+            tmp_path, capsys, self._scaled(1.0), tag="none",
+            reference={"measured_on": "elsewhere",
+                       "files": {"tests/unit/test_not_here.py": 1.0}})
+        assert code == 2
+        assert "names none of the" in summary.read_text()
+
+    def test_a_stale_runner_with_no_memory_still_leaves_a_line(self,
+                                                              tmp_path,
+                                                              capsys):
+        code, summary = self._run(tmp_path, capsys, self._scaled(3.0),
+                                  carry=tmp_path / "carry-one.json",
+                                  tag="stale1")
+        assert code == 0
+        said = summary.read_text()
+        assert "outside the band" in said and "nothing was failed" in said
+
+    def test_a_stale_runner_that_repeated_still_leaves_a_line(self,
+                                                              tmp_path,
+                                                              capsys):
+        carry = tmp_path / "carry-two.json"
+        times = self._scaled(3.0)
+        self._run(tmp_path, capsys, times, carry=carry, tag="stale2a")
+        code, summary = self._run(tmp_path, capsys, times, carry=carry,
+                                  tag="stale2b")
+        assert code == 1
+        said = summary.read_text()
+        assert "outside the band" in said and "so were the run(s)" in said
+
+    def test_an_ok_run_still_leaves_a_line(self, tmp_path, capsys):
+        code, summary = self._run(tmp_path, capsys, self._scaled(1.0),
+                                  tag="ok")
+        assert code == 0
+        assert summary.read_text().startswith("tiers ok: ")
+
+    def test_a_file_waiting_for_a_second_run_still_leaves_a_line(self,
+                                                                 tmp_path,
+                                                                 capsys):
+        code, summary = self._run(tmp_path, capsys,
+                                  self._scaled(1.0, flaky=2.0),
+                                  carry=tmp_path / "carry-wait.json",
+                                  tag="wait")
+        assert code == 0
+        assert summary.read_text().startswith("tiers ok: ")
+
+    def test_a_confirmed_file_still_leaves_a_line(self, tmp_path, capsys):
+        carry = tmp_path / "carry-red.json"
+        times = self._scaled(1.0, flaky=2.0)
+        self._run(tmp_path, capsys, times, carry=carry, tag="red-a")
+        code, summary = self._run(tmp_path, capsys, times, carry=carry,
+                                  tag="red-b")
+        assert code == 1
+        said = summary.read_text()
+        assert "file(s) measured against" in said
+        assert self.OFF in said, said
+
+    def test_the_line_carries_the_shift_the_gate_printed(self, tmp_path,
+                                                         capsys):
+        """The pairing `UX-488` could not make: the printed shift and
+        the recorded spread must be the same run's, so the line has to
+        carry a shift at all."""
+        code, summary = self._run(tmp_path, capsys, self._scaled(1.3),
+                                  tag="shift")
+        assert code == 0
+        assert re.search(r"this run x1\.3\d", summary.read_text()), (
+            summary.read_text())
+
+    def test_no_summary_asked_for_writes_no_file(self, tmp_path, capsys):
+        """`--summary` is opt-in: a local run leaves nothing behind."""
+        ref = tmp_path / "ref-opt.json"
+        ref.write_text(json.dumps(drift.record(dict(tiers.recorded()))),
+                       encoding="utf-8")
+        assert drift.main([str(_report(tmp_path, self._scaled(1.0))),
+                           "--against", str(ref)]) == 0
+        capsys.readouterr()
+        assert not list(tmp_path.glob("gate-*.txt"))

@@ -72,6 +72,75 @@ def _recorded_path():
     raise AssertionError("no step in `test` runs --record any more")
 
 
+def _summary_path():
+    """The path `--against` writes its own line to, from the workflow.
+
+    Read out of the gate step for the same reason `_recorded_path` is
+    read out of the record step: the claim is that the two sites agree.
+    """
+    for step in _jobs()["test"]["steps"]:
+        script = step.get("run") or ""
+        found = re.search(r"--summary\s+\"?\$\{\{[^}]+\}\}/(\S+?)\"?\s",
+                          script)
+        if found:
+            return found.group(1)
+    raise AssertionError("no step in `test` runs --against with --summary")
+
+
+def _candidate_step():
+    for step in _jobs()["test"]["steps"]:
+        if "--record" in (step.get("run") or ""):
+            return step.get("run")
+    raise AssertionError("no step in `test` runs --record any more")
+
+
+def test_the_gate_line_is_printed_where_a_log_tail_reader_gets_it():
+    """`UX-491`. The gate prints its line, then ~400 lines of candidate
+    document follow it, and a client bounded to a log tail gets the
+    document and not the line - so `UX-488` could read the recorded
+    `spread` and not the shift it had to be paired with.
+
+    The route is the gate's own line, written to a file and printed by
+    the later step. Both halves are read out of the workflow here: a
+    rename on either side is the failure this catches.
+    """
+    wrote = _summary_path()
+    assert wrote in _candidate_step(), (
+        f"the gate writes its line to `{wrote}` and the step that prints "
+        f"the candidate does not read it, so the line is still two steps "
+        f"and one collapsed document above the tail")
+
+
+def test_the_line_lands_after_the_document_not_inside_it():
+    """Adjacency is the whole point: the shift and the spread recorded
+    against it have to be in the same tail. Inside the `::group::` the
+    line is at the document's *top*, ~400 lines from the end."""
+    script = _candidate_step()
+    assert "::endgroup::" in script, script
+    tail = script.split("::endgroup::")[-1]
+    assert _summary_path() in tail, (
+        f"`{_summary_path()}` is printed before the document's "
+        f"`::endgroup::`, so the tail still ends in the document")
+
+
+def test_the_later_step_does_not_recompute_the_shift():
+    """Fixing guide §5. A step that ran the tool again would print a
+    line that agrees with the document by construction, and the pairing
+    `UX-488` wanted would be checking nothing."""
+    tail = _candidate_step().split("::endgroup::")[-1]
+    assert "--against" not in tail, tail
+
+
+def test_a_gate_that_never_ran_does_not_fail_the_printing():
+    """The candidate step is `always()` and the gate step is not, so the
+    file can be absent - and a bare `cat` on a missing path would turn
+    UX-491's convenience into a red step."""
+    tail = _candidate_step().split("::endgroup::")[-1]
+    assert "||" in tail, (
+        "the summary is printed with no fallback, so a run whose gate "
+        "step never reached its return fails here instead")
+
+
 def test_a_job_exists_whose_log_is_the_document():
     jobs = _jobs()
     assert drift.CI_CANDIDATE_JOB in jobs, (

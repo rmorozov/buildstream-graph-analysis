@@ -121,6 +121,7 @@ jobs:
           python tools/dev_tier_drift.py "${{ runner.temp }}/junit.xml" \
             --against --carry "${{ runner.temp }}/tier_carry.json" \
             --base "origin/${{ github.event.repository.default_branch }}" \
+            --summary "${{ runner.temp }}/tier_gate.txt" \
             --source "github-actions ubuntu-latest, test (3.11), -n auto"
         if: matrix.python-version == '3.11'
 
@@ -170,6 +171,16 @@ jobs:
           echo "::group::the same document, for a reader without the artifact"
           cat "${{ runner.temp }}/ci_reference.candidate.json"
           echo "::endgroup::"
+          # UX-491: and the gate's own line last, outside the group. The
+          # document above is ~400 lines and a log-tail reader gets only
+          # the end of it, so the shift the gate printed - two steps and
+          # one collapsed document earlier - was out of reach of the
+          # spread recorded beside it. The line is the gate's own, read
+          # from the file that step wrote; recomputing it here would be
+          # the two numbers agreeing by construction (§5).
+          echo "the drift gate's line, repeated for a log-tail reader:"
+          cat "${{ runner.temp }}/tier_gate.txt" \
+            || echo "the gate step wrote no summary - it did not run."
         if: always() && matrix.python-version == '3.11'
 
       - name: Upload it, so refreshing the reference needs no scrolling

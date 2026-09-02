@@ -1,7 +1,8 @@
 """`UX-418`: a slow file is small until CI times out.
 
     make test-tiers                        # the floors, here
-    python3 tools/dev_tier_drift.py REPORT --against --carry PATH --base REF
+    python3 tools/dev_tier_drift.py REPORT --against --carry PATH \
+        --base REF --summary PATH        # the line, for a log tail (UX-491)
     python3 tools/dev_tier_drift.py REPORT --record PATH   # CI's own numbers
     python3 tools/dev_tier_drift.py --adopt CANDIDATE      # UX-503
 
@@ -721,6 +722,16 @@ def series(name, reading, history):
 
 def _against(times, path, args):
     """`--against`: this run read against CI's own recorded numbers."""
+
+    def done(code, summary):
+        # `UX-491`: every return leaves the gate's line in a file, so a
+        # step that runs later can print it into the log tail - which
+        # is all some readers of a run ever get.
+        if args.summary:
+            pathlib.Path(args.summary).write_text(summary + "\n",
+                                                  encoding="utf-8")
+        return code
+
     reference = (json.loads(path.read_text(encoding="utf-8"))
                  if path.is_file() else {})
     # Absent and present-but-unrecorded are the same state: nothing to
@@ -734,7 +745,9 @@ def _against(times, path, args):
               f"numbers, taken on this runner - and the next run compares "
               f"against it (UX-420).", file=sys.stderr)
         print(json.dumps(record(times, args.source), indent=2))
-        return 0
+        return done(0, f"{path.name} holds no recorded numbers yet, so "
+                       f"none of the {len(times)} file(s) this run "
+                       f"measured were checked.")
     verdict, shift, rows = against(times, reference)
     where = reference.get("measured_on", "unknown")
     # `UX-442`. Read before anything is printed and written before
@@ -759,7 +772,8 @@ def _against(times, path, args):
               f"{CI_CANDIDATE_ARTIFACT} artifact or its "
               f"{CI_CANDIDATE_JOB} job's log, not from this machine.",
               file=sys.stderr)
-        return 2
+        return done(2, f"{path.name} names none of the {len(times)} "
+                       f"file(s) this run measured.")
     if verdict == "stale":
         # `UX-508`: one reading of a runner is not evidence about the
         # runner, the same way one reading of a file was not evidence
@@ -783,13 +797,20 @@ def _against(times, path, args):
                   f"from this run's {CI_CANDIDATE_ARTIFACT} artifact or "
                   f"its {CI_CANDIDATE_JOB} job's log, rather than "
                   f"reading the per-file numbers.", file=sys.stderr)
-            return 1
+            return done(1, f"{len(times)} file(s) measured against "
+                           f"{path.name} ({where}), this run x{shift:.2f} "
+                           f"- outside the band, and so were the run(s) "
+                           f"behind it ({readings_so_far}).")
         print(f"{opening} The run(s) behind it read "
               f"{readings_so_far or 'nothing'}, so this is one runner's "
               f"afternoon "
               f"until the next run agrees (UX-508). Nothing is being "
               f"failed on it.", file=sys.stderr)
-        return 0
+        return done(0, f"{len(times)} file(s) measured against "
+                       f"{path.name} ({where}), this run x{shift:.2f} "
+                       f"- outside the band; the run(s) behind it read "
+                       f"{readings_so_far or 'nothing'}, so nothing was "
+                       f"failed on it.")
     known = reference.get("files") or {}
     ratios = {name: times[name] / known[name] for name in known
               if times.get(name) and known[name] > 0}
@@ -804,7 +825,7 @@ def _against(times, path, args):
     if verdict == "ok":
         if not args.quiet:
             print(f"tiers ok: {line}")
-        return 0
+        return done(0, f"tiers ok: {line}")
     explained = explained_by(args.base)
     confirmed, unexplained, waiting, recorded = repeated(
         rows, history, explained)
@@ -868,7 +889,7 @@ def _against(times, path, args):
     if not confirmed:
         if not args.quiet:
             print(f"tiers ok: {line}")
-        return 0
+        return done(0, f"tiers ok: {line}")
     print(line, file=sys.stderr)
     print(f"{len(confirmed)} file(s) slower than CI's own record of them:",
           file=sys.stderr)
@@ -886,7 +907,9 @@ def _against(times, path, args):
           f"printed seconds divided by the shift above; `--record` on your "
           f"own machine writes the wrong clock (UX-418, UX-447).",
           file=sys.stderr)
-    return 1
+    return done(1, f"{line}, and {len(confirmed)} file(s) slower than "
+                   f"{path.name} records: "
+                   + ", ".join(row[0] for row in confirmed))
 
 
 def _adopt(candidate):
@@ -962,6 +985,9 @@ def main(argv=None):
                              f"next one; a file is reported only after "
                              f"{CI_DRIFT_RUNS} consecutive runs find it "
                              f"(UX-442). Without it one sample decides")
+    parser.add_argument("--summary", metavar="PATH", default=None,
+                        help="write --against's own summary line here, for "
+                             "a step that runs later to print (UX-491).")
     parser.add_argument("--source", default="unknown",
                         help="what produced this report, recorded with it")
     args = parser.parse_args(argv)

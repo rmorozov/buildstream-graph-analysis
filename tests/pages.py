@@ -158,16 +158,25 @@ def two_plane_snapshot(into) -> pathlib.Path:
 #: The two committed fixtures are 11-element runs, and round 2 found
 #: four defects at this size that were invisible at eleven. `UX-367`
 #: is the item about the budgets never being measured here.
-def scale_run(into) -> pathlib.Path:
+def scale_run(into, name="scale", shape=()) -> pathlib.Path:
     """`gen-synthetic --seed 1` into `into`. The run directory."""
     import subprocess
     import sys
 
-    run = pathlib.Path(into) / "scale"
+    run = pathlib.Path(into) / name
     subprocess.run([sys.executable, "-m", "bga.cli", "gen-synthetic",
-                    str(run), "--seed", "1"],
+                    str(run), "--seed", "1", *shape],
                    check=True, capture_output=True, cwd=str(REPO))
     return run
+
+
+#: `UX-526`: the **top** of the large size class, as `scale_run` is its
+#: bottom. `--layers 20 --width 200` is 4,002 elements from the same
+#: seed, 0.6 s to generate - a budget measured only at 1,202 governs a
+#: class it never meets, which is `UX-367`'s own defect one size up.
+def xl_run(into) -> pathlib.Path:
+    """`gen-synthetic --seed 1 --layers 20 --width 200`. 4,002 elements."""
+    return scale_run(into, "xl", ("--layers", "20", "--width", "200"))
 
 
 def scale_two_plane_snapshot(into, per_element=12,

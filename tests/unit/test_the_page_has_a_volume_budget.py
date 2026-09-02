@@ -202,9 +202,28 @@ LANDED_HEIGHT_PX = 7_000
 #: satisfied at 2 x 12,002 = 24,004 > 12,600, so this is still a bound
 #: something can reach - and at 363 words a finding, it is not room for
 #: two more.
+#: `UX-526`: the large class is now asserted at **both** ends - 1,202 at
+#: its bottom, the seeded 4,002-element run at its top - and its four
+#: opened bounds are restated from the top, where they were breached.
+#: Measured either side of that item's own change, one instrument:
+#:
+#: ```text
+#:                        opened    words   controls    nodes   <tr> in DOM
+#: scale  1,202  before   26,576   37,312      1,949   24,345         1,545
+#:               after    26,576    8,247        787    5,925           273
+#: xl     4,002  before   27,222  107,352      4,774   73,075         4,800
+#:               after    27,222    8,263        812    8,953           306
+#: ```
+#:
+#: Height does not move, for `UX-419`'s reason: a bounded row costs no
+#: pixels. Everything else does, because the rows and the pairs the bound
+#: does not show now leave the document instead of staying in it hidden.
+#: The class boundary moves 4,000 -> 4,100 so the run that measures it is
+#: inside it; `budget_for` refuses anything past that rather than
+#: inheriting, which is the clause `UX-367` wrote for this exact shape.
 BUDGETS = (
     (50, 34_000, 12_600, 800, 7_900),
-    (4_000, 32_000, 41_000, 2_300, 27_500),
+    (4_100, 32_000, 9_000, 900, 10_000),
 )
 
 
@@ -333,15 +352,22 @@ def browser():
 #: The seeded 1,202-element run is generated rather than committed
 #: (`pages.scale_run`), so it costs a subprocess and not a megabyte in
 #: the tree, and it is the only member that exercises the large class.
-LABELS = sorted(pages.FIXTURES) + ["scale"]
+#: `UX-526` added the fourth: `scale` is the large class's bottom and
+#: `xl` its top, and a class measured only at its bottom was the same
+#: defect `UX-367` closed one size down.
+LABELS = sorted(pages.FIXTURES) + ["scale", "xl"]
+
+#: The generated members, and what builds each.
+_GENERATED = {"scale": pages.scale_run, "xl": pages.xl_run}
 
 
 @pytest.fixture(scope="module")
 def booted(tmp_path_factory):
     made = pages.pages(tmp_path_factory, "volume")
-    into = tmp_path_factory.mktemp("volume-scale")
-    made["scale"] = pages.export_uri(pages.scale_run(into), into,
-                                     name="scale.html")
+    for label, build in _GENERATED.items():
+        into = tmp_path_factory.mktemp(f"volume-{label}")
+        made[label] = pages.export_uri(build(into), into,
+                                       name=f"{label}.html")
     return made
 
 
@@ -353,10 +379,24 @@ def sizes(tmp_path_factory):
     from tools.bga_view import payloads
 
     runs = dict(pages.FIXTURES)
-    runs["scale"] = pages.scale_run(tmp_path_factory.mktemp("volume-count"))
+    for label, build in _GENERATED.items():
+        runs[label] = build(tmp_path_factory.mktemp(f"volume-{label}-count"))
     return {label: len(payloads(str(run))["report.json"]
                        ["elements"]["element_durations"])
             for label, run in runs.items()}
+
+
+@pytest.fixture(scope="module")
+def looked(browser, booted):
+    """`_LOOK`, once per page rather than once per clause.
+
+    `UX-526`: four clauses over four pages is sixteen visits, and the
+    4,002-element page is the expensive one. `_LOOK` returns the landed
+    and the opened state from a single visit, so a second visit can only
+    repeat it.
+    """
+    return {label: browser.measure(booted[label], _LOOK, 1440, 900)
+            for label in LABELS}
 
 
 @needs_browser
@@ -368,15 +408,13 @@ class TestBothBudgetsAreBound:
     holds it *beside* the volume it was paid for with, so a change that
     folds more to grow more reddens rather than passing two guards."""
 
-    def test_the_landed_page_is_short(self, browser, booted, label):
-        out = browser.measure(booted[label], _LOOK, 1440, 900)
-        landed = out["landed"]
+    def test_the_landed_page_is_short(self, looked, label):
+        landed = looked[label]["landed"]
         assert landed["height"] <= LANDED_HEIGHT_PX, (
             f"{label}: the page a reader lands on is {landed['height']} px, "
             f"over the {LANDED_HEIGHT_PX} px budget")
 
-    def test_the_whole_page_is_bounded_too(self, browser, booted, sizes,
-                                           label):
+    def test_the_whole_page_is_bounded_too(self, looked, sizes, label):
         """The sibling `UX-347` did not have. A fold is not a licence:
         answering the distance budget says nothing about this one.
 
@@ -384,8 +422,7 @@ class TestBothBudgetsAreBound:
         pair of numbers for every run was the defect - it made the two
         11-element fixtures the only page anyone had decided about.
         """
-        out = browser.measure(booted[label], _LOOK, 1440, 900)
-        opened = out["opened"]
+        opened = looked[label]["opened"]
         klass, height, words, controls, nodes = budget_for(sizes[label])
         assert opened["nodes"] <= nodes, (
             f"{label}: {opened['nodes']} DOM elements, over the {nodes} "
@@ -402,16 +439,16 @@ class TestBothBudgetsAreBound:
             f"{label}: {opened['controls']} controls, over the {controls} "
             f"budget for runs up to {klass} elements")
 
-    def test_the_page_still_folds(self, browser, booted, label):
+    def test_the_page_still_folds(self, looked, label):
         """Without this, the landed clause is satisfied by a page that
         renders nothing, and the pair stops being a trade at all."""
-        out = browser.measure(booted[label], _LOOK, 1440, 900)
+        out = looked[label]
         landed, opened = out["landed"], out["opened"]
         assert landed["shown"] < opened["shown"], (landed, opened)
         assert landed["height"] < opened["height"], (landed, opened)
         assert opened["sections"] >= 40, opened
 
-    def test_the_budgets_are_not_slack(self, browser, booted, sizes, label):
+    def test_the_budgets_are_not_slack(self, looked, sizes, label):
         """A bound nothing can reach is not a bound. The largest run in
         a class has to be within a factor of two of every budget, or the
         number was chosen to be safe rather than to be a limit.
@@ -429,7 +466,7 @@ class TestBothBudgetsAreBound:
         klass, height, words, controls, nodes = budget_for(sizes[label])
         if largest[klass] != label:
             pytest.skip(f"{largest[klass]} is the largest run in this class")
-        out = browser.measure(booted[label], _LOOK, 1440, 900)
+        out = looked[label]
         opened = out["opened"]
         for measured, bound, name in (
                 (out["landed"]["height"], LANDED_HEIGHT_PX, "landed height"),

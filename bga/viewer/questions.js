@@ -767,6 +767,14 @@ export function renderQuestions(make, options = {}) {
         + "per task, on the build's own clock. Plane 2 is not in it, so "
         + "the queries below that read process lanes return nothing "
         + "here and the ones scoped to Plane 1 answer.") + openIt;
+    // `UX-530`: and *why* it is not in it. The export degrades before
+    // it refuses, and a narrowed page that does not say so reads as a
+    // Plane 1 capture - which is a fact about the build, not about
+    // this file's ceilings.
+    if (options.timelineDegraded) {
+      intro.setAttribute("data-degraded", "true");
+      intro.textContent = `${options.timelineDegraded} ${intro.textContent}`;
+    }
   }
   section.append(intro);
   const accounting = flowAccounting(make, options);

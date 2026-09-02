@@ -558,7 +558,8 @@ def trace_file(run: str, destination: str) -> Optional[str]:
     return (trace_render(run, destination) or {}).get("path")
 
 
-def trace_render(run: str, destination: str) -> Optional[dict]:
+def trace_render(run: str, destination: str,
+                 planes: Optional[str] = None) -> Optional[dict]:
     """`render`'s own result for this run, plus `path`. `None` on refusal.
 
     `UX-364`: the renderer already reports **which planes it put in the
@@ -572,11 +573,12 @@ def trace_render(run: str, destination: str) -> Optional[dict]:
     Plane 2, while `bga timeline` reads the raw log regardless and the
     lanes *are* there. Only the render knows, so the render is asked.
     """
-    from .bga_timeline import render
+    from .bga_timeline import PLANES_BOTH, render
 
     snapshot = os.path.dirname(os.path.abspath(run))
     try:
-        result = render(snapshot, destination, quiet=True)
+        result = render(snapshot, destination, quiet=True,
+                        planes=planes or PLANES_BOTH)
     except (FileNotFoundError, RuntimeError, OSError):
         return None
     return dict(result or {}, path=destination)
@@ -593,7 +595,7 @@ def trace_bytes(run: str) -> Optional[bytes]:
     return trace_with_planes(run)[0]
 
 
-def trace_with_planes(run: str):
+def trace_with_planes(run: str, planes: Optional[str] = None):
     """`(bytes, planes, flow_losses, tracks)` - and what it will draw.
 
     `UX-364`. `trace_bytes` is the same call with the rest dropped; the
@@ -609,10 +611,15 @@ def trace_with_planes(run: str):
     `UX-430` adds the fourth: the **track** count, which is what Perfetto
     spends and what `TRACE_BUDGET_B` cannot see. See `TRACE_TRACK_BUDGET`
     for the measurement.
+
+    `UX-530` adds `planes`: the export renders again, narrowed, rather
+    than refusing a capture whose own recipe names the flag that would
+    have fitted.
     """
     scratch = tempfile.mkdtemp(prefix="bga-view-")
     try:
-        rendered = trace_render(run, os.path.join(scratch, "timeline.json.gz"))
+        rendered = trace_render(run, os.path.join(scratch, "timeline.json.gz"),
+                                planes=planes)
         if rendered is None:
             return None, None, None, None
         with open(rendered["path"], "rb") as handle:
@@ -809,8 +816,11 @@ CEILINGS = (
      "which bound it hit. `bga timeline` renders one beside the "
      "snapshot"),
     ("TRACE_TRACK_BUDGET", "tracks",
-     "`bga timeline --planes 1` or `--only-element`, which narrow what "
-     "is drawn rather than what is carried"),
+     "nothing, for an export: `UX-530` renders again with `--planes 1` "
+     "and the page says it did. `bga timeline --planes 1` or "
+     "`--only-element` narrow what is drawn rather than what is "
+     "carried, and `--only-element` is the one an export cannot pick "
+     "for you"),
 )
 
 
@@ -1064,6 +1074,46 @@ def _uncommented_css(text: str) -> str:
         .splitlines() if line.strip())
 
 
+def _degradation_steps():
+    """`UX-530`: what `export()` renders before it refuses the timeline.
+
+    `(planes, what the page calls the narrowing)`, coarsest last, read
+    off `bga_timeline`'s own choices rather than restated - so a third
+    grain arriving there is a step here, not a flag the recipe names and
+    the export never tries. `UX-430` measured the one that exists on the
+    seeded scale run: 16,832 tracks become 1,205, a **14.0x** narrowing,
+    because the process lanes are the whole of the growth.
+    """
+    from .bga_timeline import PLANE1_ONLY, PLANES_BOTH
+
+    return ((PLANES_BOTH, None),
+            (PLANE1_ONLY, "`--planes 1`, which leaves Plane 2's process "
+                          "lanes out"))
+
+
+def _over_a_ceiling(trace: bytes, tracks: Optional[int]) -> Optional[str]:
+    """Which ceiling this rendering hits, or `None`. Two units, two
+    sentences: a refusal reading "4 MiB" when the problem is the rows
+    sends the reader to compress something that is not the cost.
+
+    `UX-530`: the track count is what `_write_trackevent` opens - one
+    process track per element and one thread track per traced *pid*,
+    after `merge_record_streams` - so it counts **processes**, never the
+    two slices the spine and the hook record for one of them.
+    """
+    if len(trace) * 4 / 3 > TRACE_BUDGET_B:
+        return (f"the timeline is {len(trace) / 1048576:.1f} MiB "
+                f"compressed, over this export's "
+                f"{TRACE_BUDGET_B / 1048576:.0f} MiB ceiling for it")
+    if (tracks or 0) > TRACE_TRACK_BUDGET:
+        return (f"the timeline draws {tracks:,} tracks, over this export's "
+                f"{TRACE_TRACK_BUDGET:,}-track ceiling - Perfetto draws a "
+                f"row per track, and the byte size "
+                f"({len(trace) / 1048576:.1f} MiB) is well inside its own "
+                f"ceiling")
+    return None
+
+
 def export(run: str, path: str, with_trace: bool = True,
            reanalyse: bool = False) -> dict:
     """Write one self-contained file. Returns what went into it."""
@@ -1092,10 +1142,34 @@ def export(run: str, path: str, with_trace: bool = True,
                         # that gets tested on one side only.
                         "payloads": _offered(documents)}
 
-    trace, trace_planes, flow_losses, trace_tracks = (
-        trace_with_planes(run) if with_trace else (None, None, None, None))
-    omitted = None
-    if trace is None:
+    trace = trace_planes = flow_losses = trace_tracks = None
+    omitted = degraded = None
+    if with_trace:
+        # `UX-530`: the recipe below already named the flag that would
+        # have fitted, and the export refused without trying it.
+        refusals, tried, fitted = [], [], False
+        for step, narrowing in _degradation_steps():
+            trace, trace_planes, flow_losses, trace_tracks = trace_with_planes(
+                run, planes=step)
+            if trace is None:
+                break
+            refusal = _over_a_ceiling(trace, trace_tracks)
+            if refusal is None:
+                fitted = True
+                if refusals:
+                    degraded = (f"The whole timeline did not fit - "
+                                f"{refusals[0]} - so this file carries "
+                                f"{narrowing}: {trace_tracks:,} tracks.")
+                break
+            refusals.append(refusal)
+            tried.append(narrowing or "the whole timeline")
+        if refusals and not fitted:
+            # Every step tried and none fitted. The reader is owed each
+            # number, not only the last: a refusal naming one narrowing
+            # it never tried is what this item was filed on.
+            omitted = "; ".join(f"{what} - {why}"
+                                for what, why in zip(tried, refusals))
+    if trace is None and omitted is None:
         # UX-329: which absence, from `bga.plane2` - the same sentence
         # the terminal prints and the JSON publishes. The one this
         # replaced said "no raw Plane 2 log" for a run that never
@@ -1106,23 +1180,6 @@ def export(run: str, path: str, with_trace: bool = True,
         omitted = plane2_shape.absence(run) or (
             "this run kept no raw Plane 2 log, so there is no timeline "
             "to carry")
-    else:
-        # Two bounds, each named in its own unit. `UX-299` set the byte
-        # one; `UX-430` added the track one, because Perfetto draws a row
-        # per track and a capture can sit at an eighth of the byte bound
-        # with sixteen thousand rows in it. A refusal reading "4 MiB"
-        # when the problem is the rows sends the reader to compress
-        # something that is not the cost.
-        if len(trace) * 4 / 3 > TRACE_BUDGET_B:
-            omitted = (f"the timeline is {len(trace) / 1048576:.1f} MiB "
-                       f"compressed, over this export's "
-                       f"{TRACE_BUDGET_B / 1048576:.0f} MiB ceiling for it")
-        elif (trace_tracks or 0) > TRACE_TRACK_BUDGET:
-            omitted = (f"the timeline draws {trace_tracks:,} tracks, over "
-                       f"this export's {TRACE_TRACK_BUDGET:,}-track "
-                       f"ceiling - Perfetto draws a row per track, and the "
-                       f"byte size ({len(trace) / 1048576:.1f} MiB) is well "
-                       f"inside its own ceiling")
     if omitted and trace is not None:
         # UX-299: and what to do instead, because "the timeline is not
         # in this file" is a dead end without it. The blast box's
@@ -1139,10 +1196,17 @@ def export(run: str, path: str, with_trace: bool = True,
                     "you would rather open it yourself, and "
                     "`--planes 1` or `--only-element ELEMENT` write a "
                     "smaller one: the process lanes are where the track "
-                    "count grows.",
+                    "count grows. `--only-element` is the one this "
+                    "export cannot take for you - it needs the element "
+                    "you are investigating.",
         }
         trace = None
     documents["run"]["has_timeline"] = trace is not None
+    # `UX-530`: the step this file took to be able to carry one at all.
+    # The page's handoff sentence says which planes it has; without this
+    # it cannot say why the other is missing.
+    if degraded and trace is not None:
+        documents["run"]["timeline_degraded"] = degraded
     # UX-364: and *which* planes are in it, when there is one. The
     # handoff's lead sentence names them; before this it named both
     # unconditionally, on a capture that had one.

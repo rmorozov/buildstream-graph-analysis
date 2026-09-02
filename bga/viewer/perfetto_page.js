@@ -75,6 +75,7 @@ async function questions() {
     options = {
       hasTimeline: Boolean(run?.has_timeline),
       tracePlanes: run?.trace_planes,
+      timelineDegraded: run?.timeline_degraded,
       flowLosses: run?.trace_flow_losses,
       elements: report ? elementUids(report) : [],
       element: report?.headline?.top_actions?.[0]?.element_uid ?? null,

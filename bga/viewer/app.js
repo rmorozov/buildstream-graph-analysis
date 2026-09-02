@@ -789,6 +789,9 @@ async function boot() {
         // UX-364: which planes are in the trace, so the lead names what
         // the reader sees. `UX-431`: and what the edges became.
         tracePlanes: run.trace_planes, flowLosses: run.trace_flow_losses,
+        // `UX-530`: and why a plane is missing, when this file narrowed
+        // rather than refused.
+        timelineDegraded: run.timeline_degraded,
         // `UX-369`: this run's own elements, and the one the report is
         // already pointing at. The three element-scoped queries used
         // to substitute `macro_micro`'s `core.bst` on every project.

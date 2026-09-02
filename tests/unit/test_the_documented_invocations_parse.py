@@ -7,7 +7,10 @@ broke were one level down: a flag that had never existed on the command
 it was written against, and a positional whose meaning had moved. A
 guard on names cannot see either.
 
-So this one parses the whole invocation.
+So this one parses the whole invocation - including the part past a
+line-wrapping backslash, which `UX-516` found the scan was dropping:
+`shlex` refuses a trailing backslash, so 17 of 220 invocations were read
+as nothing and every flag below their wrap was unchecked.
 
 **How the inventory is built.** Native subcommands come from
 `cli.create_parser()`, which is the real thing. The `tools/` aliases
@@ -62,21 +65,36 @@ def _instructional_files():
     return files
 
 
+def _join_continuations(lines, index):
+    """The whole logical command starting at `lines[index]`, and the
+    index of its last physical line. A guide wraps at 80 columns with
+    a trailing `\\`; read one line only and `shlex` rejects it."""
+    command = _PROMPT.match(lines[index]).group(1)
+    while command.rstrip().endswith("\\") and index + 1 < len(lines):
+        index += 1
+        command = command.rstrip()[:-1] + " " + lines[index].strip()
+    return command, index
+
+
 def documented_invocations():
     """`(path, line number, argv)` for every `bga …` inside a fence."""
     out = []
     for path in _instructional_files():
+        lines = path.read_text(encoding="utf-8").splitlines()
         fenced = False
-        for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+        index = 0
+        while index < len(lines):
+            line = lines[index]
             if _FENCE.match(line):
                 fenced = not fenced
+                index += 1
                 continue
-            if not fenced:
+            if not fenced or not _PROMPT.match(line):
+                index += 1
                 continue
-            match = _PROMPT.match(line)
-            if not match:
-                continue
-            command = match.group(1)
+            number = index + 1
+            command, index = _join_continuations(lines, index)
+            index += 1
             # Strip a trailing shell comment, then everything from `--`
             # on: that is the wrapped build's argv and belongs to `bst`.
             command = command.split("#", 1)[0]
@@ -176,6 +194,35 @@ class TestEveryDocumentedInvocationParses:
         commands = {argv[1] for _, _, argv in found}
         assert {"analyze", "snapshot", "compare"} <= commands, (
             f"the guides no longer teach the basic loop: {sorted(commands)}")
+
+    def test_a_wrapped_invocation_is_read_past_its_backslash(self):
+        """`UX-516`: the CI owner's step 2 wraps over two lines, so the
+        scan saw a trailing `\\`, `shlex` refused it, and `--candidate`
+        and `--exclude` were never checked against the parser. Read from
+        the source, not restated: for every invocation whose own line is
+        continued, the next line's first token must be in the argv."""
+        breaks = re.compile(r"[#|;]|>|&&|\s--\s")
+        wrapped = []
+        for path, number, argv in documented_invocations():
+            lines = (REPO / path).read_text(encoding="utf-8").splitlines()
+            head = lines[number - 1]
+            if not head.rstrip().endswith("\\") or breaks.search(head):
+                continue
+            tail = lines[number].strip().rstrip("\\")
+            try:
+                tokens = shlex.split(tail)
+            except ValueError:
+                continue
+            if not tokens or tokens[0] in ("--", "|", ">", ">>", "&&", ";"):
+                continue
+            wrapped.append(f"{path}:{number}")
+            assert tokens[0] in argv, (
+                f"{path}:{number}: the scan stopped at the backslash - "
+                f"{tokens[0]!r} is on the next line and not in {argv}")
+        assert len(wrapped) >= 8, (
+            f"only {len(wrapped)} wrapped invocation(s) reached the check; "
+            "there were 11 when this was written, so the join or the "
+            "guides' wrapping has moved")
 
     def test_no_documented_flag_is_one_the_command_does_not_have(self):
         """`bga cache-logs . --native-report @last` is the shape: a real

@@ -1,6 +1,6 @@
 # UX-137: eleven things the docs say twice, and one they say three ways
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-135, UX-136 (land the reorder and the era fixes first, so the dedup doesn't move stale text)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-135, UX-136 (land the reorder and the era fixes first, so the dedup doesn't move stale text) | **Topic:** docs
 
 Docs polish round (round 14); the full duplicate-cluster table with
 locations is in [`round-14`](../../audits/round-14.md).

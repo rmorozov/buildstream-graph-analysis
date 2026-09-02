@@ -1,6 +1,6 @@
 # UX-122: the capture guide's ref globs are stale again, and nothing can catch them
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-97 (done — this is its item 2, recurring in the same file)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-97 (done — this is its item 2, recurring in the same file) | **Topic:** docs
 
 ## Motivation
 

@@ -1,6 +1,6 @@
 # UX-90: push-triggered captures burn runner-hours and almost never publish
 
-**Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-81 (done — which superseded the push trigger's purpose)
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-81 (done — which superseded the push trigger's purpose) | **Topic:** capture
 
 ## Motivation
 

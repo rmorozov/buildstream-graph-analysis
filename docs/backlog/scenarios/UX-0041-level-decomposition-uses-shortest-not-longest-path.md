@@ -1,6 +1,6 @@
 # UX-41: the parallelism profile decomposes levels by *shortest* path from a root, so every element under a common base collapses into one level
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** —
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** — | **Topic:** analysis
 
 ## Motivation
 

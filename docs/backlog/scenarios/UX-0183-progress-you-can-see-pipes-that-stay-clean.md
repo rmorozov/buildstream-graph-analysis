@@ -1,6 +1,6 @@
 # UX-183: progress you can see, pipes that stay clean
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-159 (the phase lines this refines), UX-168/UX-169 (the long analyses this narrates)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-159 (the phase lines this refines), UX-168/UX-169 (the long analyses this narrates) | **Topic:** cli
 
 ## Motivation
 

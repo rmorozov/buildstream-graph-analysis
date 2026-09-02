@@ -1,6 +1,6 @@
 # UX-220: the numbers that need a sentence have one
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-201 (the description channel that already renders)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-201 (the description channel that already renders) | **Topic:** contracts
 
 ## Motivation
 

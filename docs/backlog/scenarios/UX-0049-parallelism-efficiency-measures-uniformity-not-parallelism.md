@@ -1,6 +1,6 @@
 # UX-49: `parallelism_efficiency` is `mean_width / max_width`, so a perfectly serial build scores 1.000
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-41 (done - which made the widths correct, and this visible)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-41 (done - which made the widths correct, and this visible) | **Topic:** analysis
 
 ## Motivation
 

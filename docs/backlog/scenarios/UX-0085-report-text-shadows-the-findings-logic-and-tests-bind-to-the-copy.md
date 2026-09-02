@@ -1,6 +1,6 @@
 # UX-85: report/text.py shadows the findings logic, and the guard tests bind to the dead copy
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-75 (done)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-75 (done) | **Topic:** guards
 
 ## Motivation
 

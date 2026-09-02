@@ -1,6 +1,6 @@
 # UX-173: a blast count that counts stacks overstates
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-171 (shares the weighting), UX-156/UX-164 (the honest-counting precedent)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-171 (shares the weighting), UX-156/UX-164 (the honest-counting precedent) | **Topic:** analysis
 
 ## Motivation
 

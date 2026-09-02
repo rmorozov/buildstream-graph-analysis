@@ -1,6 +1,6 @@
 # UX-166: the casd check reads a config bst does not
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-161 (the detection this corrects)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-161 (the detection this corrects) | **Topic:** capture
 
 ## Motivation
 

@@ -1,6 +1,6 @@
 # UX-05: No worked "iteratively optimize a real project" tutorial
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-01`, `UX-02` (the walkthrough should demonstrate the real comparison/efficiency-score tooling, not manual eyeballing - see Sequencing note below)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-01`, `UX-02` (the walkthrough should demonstrate the real comparison/efficiency-score tooling, not manual eyeballing - see Sequencing note below) | **Topic:** docs
 
 ## Motivation
 

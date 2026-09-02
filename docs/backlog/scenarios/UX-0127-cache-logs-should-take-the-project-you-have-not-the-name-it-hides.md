@@ -1,6 +1,6 @@
 # UX-127: cache-logs should take the project you have, not the name it hides
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-91 (done — this is its front door)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-91 (done — this is its front door) | **Topic:** cli
 
 Post-MVP polish, direction: simplify the user scenarios.
 

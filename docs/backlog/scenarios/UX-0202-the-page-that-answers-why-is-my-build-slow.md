@@ -1,6 +1,6 @@
 # UX-202: the page that answers "why is my build slow"
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-193 (the shell), UX-201 (the semantics it leans on), Direction 7 second iteration
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-193 (the shell), UX-201 (the semantics it leans on), Direction 7 second iteration | **Topic:** viewer
 
 ## Motivation
 

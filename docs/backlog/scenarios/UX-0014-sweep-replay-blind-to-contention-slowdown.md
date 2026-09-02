@@ -1,6 +1,6 @@
 # UX-14: `bga sweep`/`bga replay` can't represent the real slowdown `UX-09` measured
 
-**Priority:** High | **Status:** 🟢 Done (tier 1 + tier 2 both implemented) | **Depends on:** `UX-09`
+**Priority:** High | **Status:** 🟢 Done (tier 1 + tier 2 both implemented) | **Depends on:** `UX-09` | **Topic:** analysis
 
 ## Motivation
 

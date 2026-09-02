@@ -1,6 +1,6 @@
 # UX-60: whether `FETCH` time belongs in any efficiency signal has been deferred by two separate tasks and never decided
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-53` (done — which made the duration definition single, and made this the remaining question)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-53` (done — which made the duration definition single, and made this the remaining question) | **Topic:** analysis
 
 ## Motivation
 

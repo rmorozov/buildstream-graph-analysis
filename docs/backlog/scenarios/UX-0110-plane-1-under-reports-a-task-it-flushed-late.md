@@ -1,6 +1,6 @@
 # UX-110: Plane 1 under-reports a task whose log lines it flushed late
 
-**Priority:** Medium | **Status:** 🟢 Done — measured, bounded, and reported; corrected deliberately not | **Depends on:** — (found by UX-108's ground-truth check)
+**Priority:** Medium | **Status:** 🟢 Done — measured, bounded, and reported; corrected deliberately not | **Depends on:** — (found by UX-108's ground-truth check) | **Topic:** capture
 
 ## Motivation
 

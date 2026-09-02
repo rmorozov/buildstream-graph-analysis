@@ -1,6 +1,6 @@
 # UX-169: the report holds every process three times over
 
-**Priority:** Medium | **Status:** 🟢 Done — 413 MB → 204 MB, report byte-identical | **Depends on:** UX-168 (which measured this and could not fix it from the reader)
+**Priority:** Medium | **Status:** 🟢 Done — 413 MB → 204 MB, report byte-identical | **Depends on:** UX-168 (which measured this and could not fix it from the reader) | **Topic:** capture
 
 ## Motivation
 

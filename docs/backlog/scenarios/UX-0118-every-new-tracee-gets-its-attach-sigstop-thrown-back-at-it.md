@@ -1,6 +1,6 @@
 # UX-118: every new tracee gets its attach-SIGSTOP thrown back at it
 
-**Priority:** High | **Status:** 🟢 Done — and it corrected `UX-106`'s recorded conclusion | **Depends on:** UX-106 (done — this is its S3); feeds UX-112's overhead matrix
+**Priority:** High | **Status:** 🟢 Done — and it corrected `UX-106`'s recorded conclusion | **Depends on:** UX-106 (done — this is its S3); feeds UX-112's overhead matrix | **Topic:** capture
 
 ## Motivation
 

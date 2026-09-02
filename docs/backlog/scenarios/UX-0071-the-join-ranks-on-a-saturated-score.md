@@ -1,6 +1,6 @@
 # UX-71: `bga correlate` ranks and gates on a score that saturates, so the join's headline verdict never fires on a real build
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** `UX-70` (done — which measured the right number and did not wire it here)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** `UX-70` (done — which measured the right number and did not wire it here) | **Topic:** analysis
 
 ## Motivation
 

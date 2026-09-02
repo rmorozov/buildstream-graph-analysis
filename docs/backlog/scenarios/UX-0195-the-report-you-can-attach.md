@@ -1,6 +1,6 @@
 # UX-195: the report you can attach
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-193 (the page this exports), UX-115 (the CI journey this joins)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-193 (the page this exports), UX-115 (the CI journey this joins) | **Topic:** viewer
 
 ## Motivation
 

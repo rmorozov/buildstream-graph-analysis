@@ -1,6 +1,6 @@
 # UX-17: `UtilizationAnalyzer`'s own oversubscription check (Part 30.3) is dead code, and would use the wrong field if fixed naively
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** `UX-12`, `UX-15`
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** `UX-12`, `UX-15` | **Topic:** analysis
 
 ## Motivation
 

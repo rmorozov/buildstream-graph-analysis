@@ -1,6 +1,6 @@
 # UX-80: the documented capture command cannot produce the join the docs show
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-56, UX-64 (both done)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-56, UX-64 (both done) | **Topic:** capture
 
 > **Reopened by audit round 11 (2026-08-18).** The mechanism is in the
 > live path (`resolve_invocation_log_path`: `--wrapped-log` implies the

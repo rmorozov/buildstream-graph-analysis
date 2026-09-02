@@ -1,6 +1,6 @@
 # UX-04: "Biggest Opportunity" names a category but not what to do about it
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** none
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** none | **Topic:** analysis
 
 ## Motivation
 

@@ -1,6 +1,6 @@
 # UX-109: the docs lint scans two files and reads as though it scans `docs/`
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-98 (done)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-98 (done) | **Topic:** guards
 
 > Filed as `UX-105` and renumbered to `UX-109`: Direction 4's
 > `UX-105`-`UX-108` landed on `main` first. The commit that filed this

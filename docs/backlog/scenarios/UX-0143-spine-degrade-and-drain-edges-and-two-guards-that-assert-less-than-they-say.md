@@ -1,6 +1,6 @@
 # UX-143: spine degrade/drain edges, and two guards that assert less than they say
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-130, UX-133 (done — these are their edges)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-130, UX-133 (done — these are their edges) | **Topic:** capture
 
 ## Motivation
 

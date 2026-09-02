@@ -1,6 +1,6 @@
 # UX-142: doctor fails every project not named all.bst
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-125 (done — this is its flagship check's blind spot)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-125 (done — this is its flagship check's blind spot) | **Topic:** cli
 
 ## Motivation
 

@@ -1,6 +1,6 @@
 # UX-11: a tool to observe native-build-system behavior *inside* a single element
 
-**Priority:** Medium | **Status:** 🟢 Done - real `tools/bst_native_build_tracer.py`, real `LD_PRELOAD` + `bwrap` shim, real CLI verified against `examples/05-cmake-cpp-toolchain` (see Implementation) | **Depends on:** `UX-09` (the joint-optimization finding this directly follows from)
+**Priority:** Medium | **Status:** 🟢 Done - real `tools/bst_native_build_tracer.py`, real `LD_PRELOAD` + `bwrap` shim, real CLI verified against `examples/05-cmake-cpp-toolchain` (see Implementation) | **Depends on:** `UX-09` (the joint-optimization finding this directly follows from) | **Topic:** capture
 
 ## Motivation
 

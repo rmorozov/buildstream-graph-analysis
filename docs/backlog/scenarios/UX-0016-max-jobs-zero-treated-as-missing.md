@@ -1,6 +1,6 @@
 # UX-16: `native_max_jobs`/`cpu_budget`/`host_cpu_count` of `0` silently treated as "missing"
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** `UX-12`, `UX-15`
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** `UX-12`, `UX-15` | **Topic:** analysis
 
 ## Motivation
 

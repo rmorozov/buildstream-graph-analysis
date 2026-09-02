@@ -1,6 +1,6 @@
 # UX-40: real captures land at ~0.69 confidence because BuildStream's own startup counts against `attribution_score`, and the CI gate fails open below 0.8
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-03 (the gate), UX-10 (which introduced the real wall-clock horizon this interacts with)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-03 (the gate), UX-10 (which introduced the real wall-clock horizon this interacts with) | **Topic:** analysis
 
 ## Motivation
 

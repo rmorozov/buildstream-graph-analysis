@@ -1,6 +1,6 @@
 # UX-32: Plane 2 reports a global process count and one inflated global concurrency number, not per-element achieved parallelism
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-11, UX-23 (both done - the data this needs is already captured and already element-tagged)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-11, UX-23 (both done - the data this needs is already captured and already element-tagged) | **Topic:** capture
 
 ## Motivation
 

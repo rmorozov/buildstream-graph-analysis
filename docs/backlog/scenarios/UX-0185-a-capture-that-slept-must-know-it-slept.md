@@ -1,6 +1,6 @@
 # UX-185: a capture that slept must know it slept
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-156 (the incompleteness grammar this reuses), UX-110 (the timestamp-agreement machinery)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-156 (the incompleteness grammar this reuses), UX-110 (the timestamp-agreement machinery) | **Topic:** capture
 
 ## Motivation
 

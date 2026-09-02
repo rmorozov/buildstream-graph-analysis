@@ -1,6 +1,6 @@
 # UX-157: Ctrl-C on an hours-long capture destroys the trace it already has
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-155 (the scratch whose lifecycle this fixes), UX-126 (snapshot)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-155 (the scratch whose lifecycle this fixes), UX-126 (snapshot) | **Topic:** capture
 
 ## Motivation
 

@@ -1,6 +1,6 @@
 # UX-168: analysis holds the whole trace in memory, and other round-17 leftovers
 
-**Priority:** Medium | **Status:** 🟢 Done — the census, the store and all six one-liners; the memory headline it was filed for was met by `UX-169`, which also corrects this file's figures | **Depends on:** UX-157/UX-148/UX-160 (the landings these trail)
+**Priority:** Medium | **Status:** 🟢 Done — the census, the store and all six one-liners; the memory headline it was filed for was met by `UX-169`, which also corrects this file's figures | **Depends on:** UX-157/UX-148/UX-160 (the landings these trail) | **Topic:** capture
 
 ## Motivation
 

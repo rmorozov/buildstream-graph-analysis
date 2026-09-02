@@ -1,6 +1,6 @@
 # UX-172: `bga blast` — what rebuilds if I touch this
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-171 (the inventory this queries)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-171 (the inventory this queries) | **Topic:** cli
 
 ## Motivation
 

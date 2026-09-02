@@ -1,6 +1,6 @@
 # UX-07: `run_identity.manifest_hash` collides for two different projects in the same git repo
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** none
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** none | **Topic:** capture
 
 ## Motivation
 

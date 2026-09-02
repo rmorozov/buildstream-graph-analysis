@@ -1,6 +1,6 @@
 # UX-186: comparing comparable — the host manifest
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-78 (the refusal grammar), UX-151 (the fingerprint precedent), UX-92 (which measured how much host noise matters)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-78 (the refusal grammar), UX-151 (the fingerprint precedent), UX-92 (which measured how much host noise matters) | **Topic:** capture
 
 ## Motivation
 

@@ -1,6 +1,6 @@
 # UX-61: `max_concurrency` reports 5,268 concurrent processes on a 4-core runner, because a process with no observed exit is excluded from the metric but not from the timeline
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-11` (which introduced the metric)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-11` (which introduced the metric) | **Topic:** capture
 
 ## Motivation
 

@@ -1,6 +1,6 @@
 # UX-160: the census reads only the top of the element tree, and auto-spine bills the difference
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-113 (the auto policy), UX-153 (which routed the directory and not the recursion), UX-108 (the unmeasured overhead this multiplies)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-113 (the auto policy), UX-153 (which routed the directory and not the recursion), UX-108 (the unmeasured overhead this multiplies) | **Topic:** capture
 
 ## Motivation
 

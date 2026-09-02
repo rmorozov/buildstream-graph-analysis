@@ -1,6 +1,6 @@
 # UX-03: No CI-friendly "fail if this build got meaningfully worse" gate
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-01` (run comparison), `UX-02` (efficiency score - the natural gating metric)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-01` (run comparison), `UX-02` (efficiency score - the natural gating metric) | **Topic:** cli
 
 ## Motivation
 

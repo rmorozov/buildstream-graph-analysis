@@ -1,6 +1,6 @@
 # UX-77: the installed CLI cannot reach its own capture tools
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** —
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** — | **Topic:** cli
 
 ## Motivation
 

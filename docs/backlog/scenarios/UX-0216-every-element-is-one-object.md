@@ -1,6 +1,6 @@
 # UX-216: every element is one object, and its links resolve
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-215 (the join it renders), UX-208 (the affordance it repairs), UX-199 (anchors)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-215 (the join it renders), UX-208 (the affordance it repairs), UX-199 (anchors) | **Topic:** viewer
 
 ## Motivation
 

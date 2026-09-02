@@ -1,6 +1,6 @@
 # UX-151: the arity table is the likeliest field failure, and nothing records the version that breaks it
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-146 (the record this extends), UX-11 (the split contract)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-146 (the record this extends), UX-11 (the split contract) | **Topic:** capture
 
 ## Motivation
 

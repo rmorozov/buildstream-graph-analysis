@@ -1,6 +1,6 @@
 # UX-101: nothing ranks what makes the project slow across builds
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-91 (the multi-build log tree), UX-92 (invalidation roots); UX-93 sharpens the cause labels
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-91 (the multi-build log tree), UX-92 (invalidation roots); UX-93 sharpens the cause labels | **Topic:** analysis
 
 Direction 3, item 2 — see
 [`design/directions.md`](../../design/directions.md).

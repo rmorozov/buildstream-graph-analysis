@@ -1,6 +1,6 @@
 # UX-213: the guards that only guard one machine
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-206 (whose acceptance these were), UX-202
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-206 (whose acceptance these were), UX-202 | **Topic:** guards
 
 ## Motivation
 

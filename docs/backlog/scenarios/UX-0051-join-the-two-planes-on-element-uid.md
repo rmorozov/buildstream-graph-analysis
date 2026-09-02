@@ -1,6 +1,6 @@
 # UX-51: nothing joins Plane 1's "which elements matter" to Plane 2's "what happened inside them"
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-23 (element tagging - the join key), UX-24 (single-invocation dual capture), UX-32/UX-45/UX-46 (the Plane 2 facts worth joining), UX-44 (the Plane 1 ranking worth joining to)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-23 (element tagging - the join key), UX-24 (single-invocation dual capture), UX-32/UX-45/UX-46 (the Plane 2 facts worth joining), UX-44 (the Plane 1 ranking worth joining to) | **Topic:** analysis
 
 ## Motivation
 

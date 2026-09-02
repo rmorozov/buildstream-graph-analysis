@@ -1,6 +1,6 @@
 # UX-192: the elision that reopened the round-trip
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-178 (reopened for long identities), UX-181 (whose sentence one surface resurrects)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-178 (reopened for long identities), UX-181 (whose sentence one surface resurrects) | **Topic:** analysis
 
 ## Motivation
 

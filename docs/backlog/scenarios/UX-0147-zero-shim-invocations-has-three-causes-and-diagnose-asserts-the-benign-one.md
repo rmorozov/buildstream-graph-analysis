@@ -1,6 +1,6 @@
 # UX-147: zero shim invocations has three causes, and diagnose asserts the benign one
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-146 (the diagnostics this sharpens)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-146 (the diagnostics this sharpens) | **Topic:** capture
 
 Filed against the same real Ubuntu 24.04 field failure as UX-146
 (`bst build` works; `bga snapshot` fails with `buildbox-run failed

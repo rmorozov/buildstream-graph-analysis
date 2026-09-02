@@ -1,6 +1,6 @@
 # UX-363: the small tier's budget is nine-tenths headroom
 
-**Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-238 (the tiers), UX-336 (the last re-tier) | **Serves:** anyone whose slow test file lands in the default tier | **Topic:** testing
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-238 (the tiers), UX-336 (the last re-tier) | **Serves:** anyone whose slow test file lands in the default tier | **Topic:** guards
 
 ## Motivation
 

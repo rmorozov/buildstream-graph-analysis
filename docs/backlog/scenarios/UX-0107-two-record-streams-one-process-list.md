@@ -1,6 +1,6 @@
 # UX-107: two record streams, one process list
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-106 (the spine records), UX-105 (the census)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-106 (the spine records), UX-105 (the census) | **Topic:** capture
 
 Direction 4, integration — see
 [`design/directions.md`](../../design/directions.md).

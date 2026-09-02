@@ -1,6 +1,6 @@
 # UX-52: the structural plane builds its graph from *all* dependency edges, so `runtime`-only edges inflate its critical path, depth, levels and improvement ranking
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** — (pre-existing; `UX-50` fixed the *durations* on this same code path, this is the *edges*)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** — (pre-existing; `UX-50` fixed the *durations* on this same code path, this is the *edges*) | **Topic:** analysis
 
 ## Motivation
 

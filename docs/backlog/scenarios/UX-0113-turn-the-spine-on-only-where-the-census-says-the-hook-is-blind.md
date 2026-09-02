@@ -1,6 +1,6 @@
 # UX-113: turn the spine on only where the census says the hook is blind
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-105 (the census), UX-106 (the spine), UX-112 (the honest price)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-105 (the census), UX-106 (the spine), UX-112 (the honest price) | **Topic:** capture
 
 ## Motivation
 

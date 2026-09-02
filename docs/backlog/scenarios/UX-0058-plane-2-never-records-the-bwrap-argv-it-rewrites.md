@@ -1,6 +1,6 @@
 # UX-58: the Plane 2 shim rewrites a bwrap argv it never records, so the one artifact needed to fix `UX-56` does not exist in any capture
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** — (blocks `UX-56`'s real fix)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** — (blocks `UX-56`'s real fix) | **Topic:** capture
 
 ## Motivation
 

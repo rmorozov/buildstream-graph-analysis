@@ -1,6 +1,6 @@
 # UX-56: Plane 2's element tag is a path convention a real project overrides, so 99.4% of a real build's processes land in one bucket that is not an element
 
-**Priority:** High | **Status:** 🟢 Done (guard + correlation) | **Depends on:** `UX-23` (which introduced the tag), `UX-51` (which made it a join key)
+**Priority:** High | **Status:** 🟢 Done (guard + correlation) | **Depends on:** `UX-23` (which introduced the tag), `UX-51` (which made it a join key) | **Topic:** capture
 
 ## Investigation, 2026-08-17: what the argv and the process tree rule out
 

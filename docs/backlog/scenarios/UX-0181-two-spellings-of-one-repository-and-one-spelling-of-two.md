@@ -1,6 +1,6 @@
 # UX-181: two spellings of one repository, and one spelling of two
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-171 (`normalize_url` and the identity model)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-171 (`normalize_url` and the identity model) | **Topic:** analysis
 
 ## Motivation
 

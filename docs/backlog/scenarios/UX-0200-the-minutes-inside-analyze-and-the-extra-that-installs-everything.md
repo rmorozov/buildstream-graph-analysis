@@ -1,6 +1,6 @@
 # UX-200: the minutes inside analyze, and the extra that installs everything
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-183 (the Ticker this extends), UX-42 (which documented the quadratic phase)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-183 (the Ticker this extends), UX-42 (which documented the quadratic phase) | **Topic:** cli
 
 ## Motivation
 

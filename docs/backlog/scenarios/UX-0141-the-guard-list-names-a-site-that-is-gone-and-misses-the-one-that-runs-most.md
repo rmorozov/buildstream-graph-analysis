@@ -1,6 +1,6 @@
 # UX-141: the guard list names a site that is gone and misses the one that runs most
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-128, UX-130 (done — this is their seam)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-128, UX-130 (done — this is their seam) | **Topic:** guards
 
 ## Motivation
 

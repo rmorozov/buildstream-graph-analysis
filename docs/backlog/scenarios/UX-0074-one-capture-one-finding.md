@@ -1,6 +1,6 @@
 # UX-74: one capture yields one finding, so a user on a dense graph pays an hour of CI per step — and the report never says which steps are independent
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** `UX-70` (done — which built the per-element simulation this generalizes), `UX-20` (done — whose grouping rule is measured wrong here)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** `UX-70` (done — which built the per-element simulation this generalizes), `UX-20` (done — whose grouping rule is measured wrong here) | **Topic:** analysis
 
 ## Motivation
 

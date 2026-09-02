@@ -1,6 +1,6 @@
 # UX-180: the docs still assert what the disputed region broke
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-170 (the fix the docs trail), UX-138 (the glossary), UX-135 (the README budget)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-170 (the fix the docs trail), UX-138 (the glossary), UX-135 (the README budget) | **Topic:** docs
 
 ## Motivation
 

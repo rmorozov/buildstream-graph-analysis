@@ -1,6 +1,6 @@
 # UX-55: an element that was **cached** is reported as a "genuine coverage gap, worth investigating" and fails a hard gate — so every incremental build, which is what CI actually runs, is judged unreliable
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** `UX-54` (done — which gave `bga` the build-outcome signal this fix needs)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** `UX-54` (done — which gave `bga` the build-outcome signal this fix needs) | **Topic:** analysis
 
 ## Motivation
 

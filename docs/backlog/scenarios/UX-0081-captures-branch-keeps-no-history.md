@@ -1,6 +1,6 @@
 # UX-81: the capture branch keeps one run, and the tool's own CI advice needs three
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** —
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** — | **Topic:** capture
 
 ## Motivation
 

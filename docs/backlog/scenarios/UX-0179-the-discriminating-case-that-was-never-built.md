@@ -1,6 +1,6 @@
 # UX-179: the discriminating case that was never built
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-173 (the guard this makes real), UX-176 (the standard it fails)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-173 (the guard this makes real), UX-176 (the standard it fails) | **Topic:** guards
 
 ## Motivation
 

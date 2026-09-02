@@ -1,6 +1,6 @@
 # UX-139: journey B has no page, and two "guides" are not guides
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-136 (ci-comment's YAML must teach the current flow before it becomes the landing page)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-136 (ci-comment's YAML must teach the current flow before it becomes the landing page) | **Topic:** docs
 
 Docs polish round (round 14); full navigation assessment in
 [`round-14`](../../audits/round-14.md).

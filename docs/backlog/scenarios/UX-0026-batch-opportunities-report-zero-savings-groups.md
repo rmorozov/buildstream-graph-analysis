@@ -1,6 +1,6 @@
 # UX-26: `bga`'s batch/map-reduce opportunity report includes groups with zero real predicted savings
 
-**Priority:** Low | **Status:** 🟢 Done | **Depends on:** — (independent, touches `UX-20`'s existing code)
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** — (independent, touches `UX-20`'s existing code) | **Topic:** analysis
 
 ## Motivation
 

@@ -1,6 +1,6 @@
 # UX-72: the join reads three of Plane 2's findings and drops the rest, so "what to do next" is eight copies of the weakest one
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** `UX-63`, `UX-68`, `UX-69` (all done — all three produce findings nothing consumes), `UX-73` (done first, so the join does not inherit its false positives)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** `UX-63`, `UX-68`, `UX-69` (all done — all three produce findings nothing consumes), `UX-73` (done first, so the join does not inherit its false positives) | **Topic:** analysis
 
 ## Motivation
 

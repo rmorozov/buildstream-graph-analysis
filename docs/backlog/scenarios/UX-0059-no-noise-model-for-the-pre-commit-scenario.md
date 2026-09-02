@@ -1,6 +1,6 @@
 # UX-59: the regression gate compares exactly two runs against a fixed 1% threshold, so the pre-commit scenario has no way to tell a real regression from run-to-run noise
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** `UX-55` (done — which made the two CI scenarios explicit)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** `UX-55` (done — which made the two CI scenarios explicit) | **Topic:** analysis
 
 ## Motivation
 

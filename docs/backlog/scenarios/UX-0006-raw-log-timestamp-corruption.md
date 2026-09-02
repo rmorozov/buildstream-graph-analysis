@@ -1,6 +1,6 @@
 # UX-06: `--format raw` corrupts cross-task ordering on real multi-task logs
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** none
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** none | **Topic:** capture
 
 ## Motivation
 

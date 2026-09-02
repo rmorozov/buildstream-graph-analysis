@@ -1,6 +1,6 @@
 # UX-12: capture real native `--max-jobs` + host CPU core count; flag oversubscription
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** `UX-09` (the joint-optimization finding this directly closes the cheapest part of)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** `UX-09` (the joint-optimization finding this directly closes the cheapest part of) | **Topic:** capture
 
 ## Motivation
 

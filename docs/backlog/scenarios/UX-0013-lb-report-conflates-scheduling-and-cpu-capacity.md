@@ -1,6 +1,6 @@
 # UX-13: `LB`/Certified Headroom report text doesn't say which capacity model it certifies against
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-09`
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-09` | **Topic:** analysis
 
 ## Motivation
 

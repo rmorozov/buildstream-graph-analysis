@@ -1,6 +1,6 @@
 # UX-68: the producer says "evidence, not a verdict"; the recommendation says "removing the edge is free" — and repeats it 8 times about a runtime stack
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** `UX-46` (which produces the evidence), `UX-66` (which unblocked the join that surfaces it)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** `UX-46` (which produces the evidence), `UX-66` (which unblocked the join that surfaces it) | **Topic:** analysis
 
 ## Motivation
 

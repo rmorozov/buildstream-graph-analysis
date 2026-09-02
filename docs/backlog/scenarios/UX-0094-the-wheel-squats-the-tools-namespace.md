@@ -1,6 +1,6 @@
 # UX-94: the wheel ships a top-level `tools` package
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-77 (done)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-77 (done) | **Topic:** cli
 
 ## Motivation
 

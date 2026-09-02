@@ -1,6 +1,6 @@
 # UX-76: the headline block ranks the same five elements three times, and one of the three has been quietly wrong since `UX-70`
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-70` (done — which introduced the regression below)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-70` (done — which introduced the regression below) | **Topic:** analysis
 
 ## Motivation
 

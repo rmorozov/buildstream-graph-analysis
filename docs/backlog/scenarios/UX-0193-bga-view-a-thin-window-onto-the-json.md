@@ -1,6 +1,6 @@
 # UX-193: `bga view` — a thin window onto the JSON
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** Direction 7 (the argument), UX-190 (the schemas this renders)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** Direction 7 (the argument), UX-190 (the schemas this renders) | **Topic:** viewer
 
 ## Motivation
 

@@ -1,6 +1,6 @@
 # UX-136: the two most-read docs teach only the superseded flows
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-96, UX-115, UX-124, UX-126 (the shipped replacements)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-96, UX-115, UX-124, UX-126 (the shipped replacements) | **Topic:** docs
 
 Docs polish round (round 14). Sibling of `UX-135`; full read in
 [`round-14`](../../audits/round-14.md).

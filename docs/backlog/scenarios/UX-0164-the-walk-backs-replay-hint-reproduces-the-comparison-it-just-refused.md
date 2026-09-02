@@ -1,6 +1,6 @@
 # UX-164: the walk-back's replay hint reproduces the comparison it just refused
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-156 (the refusal these words surround)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-156 (the refusal these words surround) | **Topic:** store
 
 ## Motivation
 

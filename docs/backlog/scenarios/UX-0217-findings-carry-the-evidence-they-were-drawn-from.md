@@ -1,6 +1,6 @@
 # UX-217: findings carry the evidence they were drawn from
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-202 (the finding renderer), UX-207 (the decision the findings support)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-202 (the finding renderer), UX-207 (the decision the findings support) | **Topic:** viewer
 
 ## Motivation
 

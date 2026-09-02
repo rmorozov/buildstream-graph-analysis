@@ -1,6 +1,6 @@
 # UX-01: No built-in way to compare two runs (baseline vs. after-a-change)
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** none
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** none | **Topic:** cli
 
 ## Motivation
 

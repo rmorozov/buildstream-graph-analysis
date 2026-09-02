@@ -1,6 +1,6 @@
 # UX-167: prune protects two aliases, and not the baseline the walk-back needs
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-159 (prune), UX-156 (the walk-back whose input this guards)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-159 (prune), UX-156 (the walk-back whose input this guards) | **Topic:** store
 
 ## Motivation
 

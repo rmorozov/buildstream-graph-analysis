@@ -1,6 +1,6 @@
 # UX-176: three guards that assert less than their logs say, round three
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-163, UX-164, UX-165, UX-169, UX-170 (the logs these correct)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-163, UX-164, UX-165, UX-169, UX-170 (the logs these correct) | **Topic:** guards
 
 ## Motivation
 

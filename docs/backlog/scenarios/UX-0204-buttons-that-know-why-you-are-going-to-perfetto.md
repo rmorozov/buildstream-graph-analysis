@@ -1,6 +1,6 @@
 # UX-204: buttons that know why you are going to Perfetto
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-198 (the transport this rides on), UX-194 (the questions it grows), UX-201 (the finding shapes it reads)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-198 (the transport this rides on), UX-194 (the questions it grows), UX-201 (the finding shapes it reads) | **Topic:** viewer
 
 ## Motivation
 

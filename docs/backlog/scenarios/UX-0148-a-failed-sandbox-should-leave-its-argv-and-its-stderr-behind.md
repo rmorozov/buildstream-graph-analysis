@@ -1,6 +1,6 @@
 # UX-148: a failed sandbox should leave its argv and its stderr behind
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-146 (the record this extends)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-146 (the record this extends) | **Topic:** capture
 
 Same field failure as UX-146/UX-147: `buildbox-run failed with
 returncode 1` and nothing else. Round 15 measured the gap directly: a

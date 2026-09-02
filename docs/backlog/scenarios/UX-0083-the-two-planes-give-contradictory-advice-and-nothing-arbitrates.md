@@ -1,6 +1,6 @@
 # UX-83: the two planes give contradictory advice on the same run, and nothing arbitrates
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-51, UX-45 (both done); UX-09/UX-14 (context)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-51, UX-45 (both done); UX-09/UX-14 (context) | **Topic:** analysis
 
 ## Motivation
 

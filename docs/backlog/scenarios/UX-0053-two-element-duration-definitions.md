@@ -1,6 +1,6 @@
 # UX-53: two different per-element duration definitions coexist, so `structural.sensitivity.critical_path_us` and `floors.t_infinity_observed` are 22% apart on any element with more than one task
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** — (introduced by `UX-50`, and violates the invariant `UX-52` wrote down)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** — (introduced by `UX-50`, and violates the invariant `UX-52` wrote down) | **Topic:** analysis
 
 ## Motivation
 

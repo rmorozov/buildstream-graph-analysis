@@ -1,6 +1,6 @@
 # UX-21: oversubscription guard has no memory/swap dimension - only CPU
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** `UX-12`, `UX-16`
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** `UX-12`, `UX-16` | **Topic:** analysis
 
 ## Motivation
 

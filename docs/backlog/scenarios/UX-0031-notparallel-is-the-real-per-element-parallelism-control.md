@@ -1,6 +1,6 @@
 # UX-31: `UX-22` captures `public: bst: max-jobs`, but BuildStream's real per-element parallelism control is `notparallel` - so serialization-point detection sees nothing
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-22 (done - this corrects the field it captures)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-22 (done - this corrects the field it captures) | **Topic:** capture
 
 ## Motivation
 

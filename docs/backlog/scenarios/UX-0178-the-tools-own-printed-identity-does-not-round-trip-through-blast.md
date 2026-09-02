@@ -1,6 +1,6 @@
 # UX-178: the tool's own printed identity does not round-trip through blast
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-171/UX-172 (the surfaces), UX-164 (the paste-and-go precedent)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-171/UX-172 (the surfaces), UX-164 (the paste-and-go precedent) | **Topic:** analysis
 
 ## Motivation
 

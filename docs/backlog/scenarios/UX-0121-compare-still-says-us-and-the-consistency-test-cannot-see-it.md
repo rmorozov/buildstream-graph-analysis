@@ -1,6 +1,6 @@
 # UX-121: compare still says "Us", and the consistency test cannot see it
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-111 (done — this is its unfinished sixth surface)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-111 (done — this is its unfinished sixth surface) | **Topic:** guards
 
 ## Motivation
 

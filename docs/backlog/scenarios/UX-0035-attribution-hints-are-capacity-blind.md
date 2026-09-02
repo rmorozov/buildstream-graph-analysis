@@ -1,6 +1,6 @@
 # UX-35: the `RESOURCE WAIT` next-step hint tells an already-oversubscribed run to raise its capacity
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-04 (done - this is a correctness fix to the hints it added), UX-12/UX-29 (the capacity facts the hint should consult)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-04 (done - this is a correctness fix to the hints it added), UX-12/UX-29 (the capacity facts the hint should consult) | **Topic:** analysis
 
 ## Motivation
 

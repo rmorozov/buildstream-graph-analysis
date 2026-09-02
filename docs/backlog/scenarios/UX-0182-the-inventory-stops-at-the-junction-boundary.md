@@ -1,6 +1,6 @@
 # UX-182: the inventory stops at the junction boundary
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-171 (the inventory this extends), UX-172 (the query that inherits it)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-171 (the inventory this extends), UX-172 (the query that inherits it) | **Topic:** analysis
 
 ## Motivation
 

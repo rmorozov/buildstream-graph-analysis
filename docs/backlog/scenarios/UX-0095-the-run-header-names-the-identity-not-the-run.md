@@ -1,6 +1,6 @@
 # UX-95: the report's `Run:` header names the identity, not the run
 
-**Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-07 (done)
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-07 (done) | **Topic:** analysis
 
 ## Motivation
 

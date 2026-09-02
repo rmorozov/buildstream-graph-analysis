@@ -1,6 +1,6 @@
 # UX-207: the first screen is a decision, the rest is evidence
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-202 (the overview it compresses), UX-204 (the investigate transport the actions ride)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-202 (the overview it compresses), UX-204 (the investigate transport the actions ride) | **Topic:** viewer
 
 ## Motivation
 

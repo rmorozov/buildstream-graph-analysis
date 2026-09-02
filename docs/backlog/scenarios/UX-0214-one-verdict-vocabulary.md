@@ -1,6 +1,6 @@
 # UX-214: one verdict vocabulary, published as one
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-203 (the trend that grew the second chain), UX-201 (the enum it should share), UX-190
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-203 (the trend that grew the second chain), UX-201 (the enum it should share), UX-190 | **Topic:** contracts
 
 ## Motivation
 

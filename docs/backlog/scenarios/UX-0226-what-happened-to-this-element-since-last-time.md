@@ -1,6 +1,6 @@
 # UX-226: what happened to this element since last time
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-215 (the per-element row), UX-221 (per-element deltas), UX-203 (the store the trend already reads)
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-215 (the per-element row), UX-221 (per-element deltas), UX-203 (the store the trend already reads) | **Topic:** viewer
 
 ## Motivation
 

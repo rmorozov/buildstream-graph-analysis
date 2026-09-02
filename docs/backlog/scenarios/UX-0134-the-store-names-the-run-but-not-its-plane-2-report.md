@@ -1,6 +1,6 @@
 # UX-134: the store names the run, but not its Plane 2 report
 
-**Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-126 (the store), UX-51 (`bga correlate`)
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-126 (the store), UX-51 (`bga correlate`) | **Topic:** store
 
 Filed while revising the docs after `UX-126` landed, from the sentence
 the CLI reference could not write without an apology.

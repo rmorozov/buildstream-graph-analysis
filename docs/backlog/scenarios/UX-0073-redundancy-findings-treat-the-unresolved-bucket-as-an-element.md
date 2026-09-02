@@ -1,6 +1,6 @@
 # UX-73: 87% of the redundancy findings' claimed recoverable time comes from an element that does not exist
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** `UX-64`, `UX-66` (done — which introduced the unresolved bucket this now mistakes for an element)
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** `UX-64`, `UX-66` (done — which introduced the unresolved bucket this now mistakes for an element) | **Topic:** capture
 
 ## Motivation
 

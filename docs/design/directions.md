@@ -1432,6 +1432,7 @@ the other rounds now:
 | [77](../audits/round-77.md) | three field reports about waiting, measured and filed — the `bst show` tail on big projects, a run bundle to carry, a Perfetto button silent for minutes (`UX-518`..`UX-521`) |
 | [78](../audits/round-78.md) | the three field reports implemented under a decomposition, everything shipping in the bundle by default (`UX-518`..`UX-521` closed) |
 | [79](../audits/round-79.md) | the controls walked on a two-plane page (782 in 193 classes): the "All rows" table is nested rows migrating into their parent; the served page is the capture-time analysis; the volume budget breached at the top of its own class; the suite weighed — forty browser files are half its seconds (`UX-522`..`UX-536`) |
+| [80](../audits/round-80.md) | the round-79 slate closed in six worktree tracks: `UX-500`'s second regime measured and refused — **4 of 9** defects the batch gate caught were outside `test-touching`'s set, so fixing guide §3 stays; a run bundle you can carry, `analyze/v5`, the export's data half bounded and compacted, and three cross-track collisions only a merge could see (`UX-514`, `UX-516`..`UX-539`, `UX-92`) |
 
 ## Verification Log
 

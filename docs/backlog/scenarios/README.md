@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-545 scenarios: **9 open**, 536 closed.
+545 scenarios: **8 open**, 537 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -26,7 +26,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | viewer | 1 | 136 |
 | cli | 0 | 19 |
 | store | 0 | 14 |
-| docs | 1 | 66 |
+| docs | 0 | 66 |
 | guards | 4 | 95 |
 
 ## Open scenarios
@@ -36,7 +36,6 @@ task file, which is the only place it ever lived twice.
 
 | ID | Scenario | Topic | Priority | Serves | Status |
 |---|---|---|---|---|---|
-| UX-500 | [the batch gate, measured against the per-item suite](UX-0500-the-batch-gate-measured-against-the-per-item-suite.md) | docs | High | the implementing session's wall clock; the maintainer's subscription | 🔴 |
 | UX-540 | [the three contracts `bga` reads and never registers](UX-0540-the-three-contracts-bga-reads-and-never-registers.md) | contracts | Medium | `UX-520`, whose first real bundle refused a healthy capture | 🔴 |
 | UX-541 | [the gap sweep is cut and still quadratic, and the reason is a contract](UX-0541-the-gap-sweep-is-cut-but-still-quadratic.md) | analysis | Medium | `UX-539`, measuring its own close | 🔴 |
 | UX-542 | [`_compute_diagnostics` is now the largest phase of `analyze`](UX-0542-diagnostics-is-now-the-largest-phase.md) | analysis | Medium | `UX-539`'s profile, after its own two terms went | 🔴 |

@@ -72,7 +72,7 @@ For every task, before marking it done:
 
    Tiers come from measured per-file duration (`tests/tiers.py`), not from taste. Use them for the edit-run loop and for re-running one guard after a mutation — **not** as a substitute for the next step.
 
-4. Also run the full existing suite to confirm you didn't regress anything else:
+4. Also run the full existing suite to confirm you didn't regress anything else. **`UX-500` asked whether this could become one run per *batch* and the answer is no**, measured over two rounds rather than argued: run `dev_touching.select` over each responsible commit's own diff and ask whether the guard that caught the defect is in the set the cheap gate would have chosen. Round 75 (Regime A, 7 items): **2 of 5**. Round 80 (Regime B, 24 items, six parallel tracks): **4 of 9** — it did not fall when the batch got three times larger. The four have a shape: the selector maps a diff to the guards that *name* what it touched, and three of them read a **consequence** — a new contract landing in every committed fixture, a reworded sentence another file greps for, a file's own duration crossing a tier floor. No grep over a diff can find those. Figures in [`docs/audits/round-80.md`](../audits/round-80.md) and [`round-75.md`](../audits/round-75.md); the batch gate stays *in addition*, not instead:
 
    ```text
    pip install pytest   # if not already installed in this session - confirmed installable via pip

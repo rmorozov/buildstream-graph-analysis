@@ -15,12 +15,12 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-511 scenarios: **8 open**, 503 closed.
+512 scenarios: **9 open**, 503 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
-| capture | 0 | 22 |
+| capture | 1 | 23 |
 | analysis | 0 | 13 |
 | contracts | 0 | 31 |
 | viewer | 0 | 99 |
@@ -46,6 +46,7 @@ task file, which is the only place it ever lived twice.
 | UX-511 | [the guide the README sends readers to teaches a retired reading as current](UX-0511-the-real-project-guide-teaches-a-retired-reading.md) | docs | Medium | the reader who follows the README's link and gets the same stale output with prose built on it | 🔴 |
 | UX-512 | [a guard is red on any tree whose `__pycache__` was cleared](UX-0512-an-exemption-for-a-build-artifact.md) | guards | Low | the round that clears bytecode before a same-length mutation and reads the result as a flake | 🔴 |
 | UX-513 | [two guards are red while a tier edit is uncommitted](UX-0513-two-guards-are-red-until-you-commit.md) | guards | Low | the round re-tiering a file, which is the one time these two guards are red for no reason of its own | 🔴 |
+| UX-514 | [the capture schedule can never produce a second commit](UX-0514-the-schedule-can-never-capture-a-second-commit.md) | capture | Medium | `UX-92`'s gate, deferred four times on evidence that cannot arrive | 🔴 |
 
 ## UX-497..UX-506: the seventy-fourth round — the workflow, measured (2026-09-01)
 

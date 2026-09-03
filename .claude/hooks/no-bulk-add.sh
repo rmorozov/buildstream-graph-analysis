@@ -1,4 +1,5 @@
 #!/bin/bash
+# holds: rules.md#never-git-add-a-or-git-add-stage-paths-by-name
 # Section 4a.1 of docs/contributing/fixing-guide.md: never `git add -A`
 # or `git add .`. The rule is old; the enforcement is not. Until round
 # 67 it held because the agent remembered it, which is the distinction

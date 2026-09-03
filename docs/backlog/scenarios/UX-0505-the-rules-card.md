@@ -88,6 +88,10 @@ more than the byte count: laid out side by side, **12 of 34** rule rows
 name a guard and the rest are kept by attention alone. That is now
 visible on one page instead of spread over 34 KB.
 
+> `UX-585`, round 83: **34** counted the four `| rule | guard |` header
+> rows as rules. It is **30** rule rows, **13** naming a guard — and
+> one of those names held no clause at all.
+
 Also removed: `CLAUDE.md`'s "**`git add -A` / `git add .`** — forbidden
 by §4a.1" bullet, which is on the card with the hook that enforces it.
 A third copy of a rule is the duplication this split exists to end.

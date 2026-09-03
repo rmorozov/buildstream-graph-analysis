@@ -13,6 +13,8 @@ published schema without a line in the spec and a line in the
 architecture inventory reddens it, which is the only mechanism this
 repository has ever found that keeps two hand-maintained copies of one
 fact together (`UX-131`, and every round since).
+
+holds: rules.md#architecture-or-spec-made-wrong-same-commit
 """
 import pathlib
 import re

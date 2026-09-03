@@ -7,6 +7,9 @@ without anything going red. The wall-clock numbers themselves are *not*
 guarded — they are a property of the machine, and a guard on them would
 fail on a slower laptop for no defect. What is guarded is that the
 mechanism is still wired up, and that the selector still selects.
+
+holds: rules.md#make-test-touching-while-you-work-the-tier-when-it-is-wider
+holds: rules.md#a-number-or-mechanism-you-moved-annotate-the-file-asserting-it
 """
 import pathlib
 import re

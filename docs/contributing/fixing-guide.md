@@ -3,7 +3,7 @@
 This is the mandatory entry point for any agent (human or LLM) picking up a task on this repository. It exists because a prior fixing session, working with limited context, marked several tasks "🟢 Fixed" that were not actually fixed — including `classify_scheduler_wait()` in `bga/attribution/blame_chain.py`, which still unconditionally `return False` after being marked complete. This guide's rules exist specifically to prevent that failure mode from repeating - the discipline below applies to any backlog in this repo, not just the one it was originally written for.
 
 **Start at [`rules.md`](rules.md)** — every rule below as one line with
-its guard, 5 KB against this file's 40 KB (`UX-505`). Come here for the
+its guard, 5 KB against this file's ~40 KB (`UX-505`). Come here for the
 paragraph behind the rule you are about to break: each one carries the
 incident that produced it, and that is why it is trusted, not padding.
 
@@ -213,6 +213,45 @@ bga/suspend.py         did this capture sleep
 bga/cli.py             argparse CLI and dispatch
 bga/tools_dispatch.py  the `tools/` aliases `bga` exposes as subcommands
 bga/progress.py, help_format.py, logging_config.py, exceptions.py
+```
+
+**Every command `bga` answers to** (`UX-608`) — the subcommands, then
+the `tools/` aliases `bga/tools_dispatch.py` exposes, and where each
+one's work is done:
+
+```text
+analyze         bga/analyzer.py
+blast           bga/blast.py
+bundle          bga/bundle.py
+cache-trend     bga/cache_trend.py
+compare         bga/compare.py
+correlate       bga/correlate.py
+diagnostics     bga/diagnostics/
+floors          bga/floors/
+graph           bga/graph/
+replay          bga/replay/
+sweep           bga/replay/        the capacity sweep, not a slice of one analysis
+utilisation     bga/utilisation/
+whatif          bga/whatif.py
+baseline          tools/bst_baseline_set.py
+cache-logs        tools/bst_cache_logs.py
+capture           tools/bst_native_build_tracer.py
+checkout-cost     tools/bst_checkout_cost.py
+chrome-to-trace   tools/chrome_trace_to_bga_trace.py
+cross-check       tools/bga_cross_check.py
+doctor            tools/bga_doctor.py
+extract           tools/bst_extract_run.py
+gen-synthetic     tools/gen_synthetic_scale_run.py
+graph-from-show   tools/bst_show_to_graph.py
+log-to-chrome     tools/bst_log_to_chrome_trace.py
+native-to-chrome  tools/native_trace_to_chrome_trace.py
+rebuild-set       tools/bst_rebuild_set.py
+release-notes     tools/bga_release_notes.py
+run-context       tools/bst_run_context.py
+snapshot          tools/bga_snapshot.py
+timeline          tools/bga_timeline.py
+view              tools/bga_view.py
+wrap              tools/bst_run_wrapped.py
 ```
 
 **The viewer** (`UX-193`..`UX-235`) — hand-written ES modules, no build

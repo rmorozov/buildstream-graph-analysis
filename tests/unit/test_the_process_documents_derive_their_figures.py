@@ -93,8 +93,52 @@ def _sentences(text):
         yield from re.split(r"(?<=[.:!?]) (?=[(\"A-Z*`\-—])", flat)
 
 
+#: `UX-607`: the width the guide's size is stated at. At `round(B/1024)`
+#: the band is 1 KB, so a paragraph over the headroom moved the figure -
+#: and the figure is in two documents, one of them another track's file.
+#: The figure is for a reading decision (card first, guide by paragraph),
+#: which needs an order of magnitude and not a byte.
+GUIDE_KB_STEP = 10
+
+#: What a paragraph costs. The width has to be wider than this.
+PARAGRAPH = 1024
+
+
 def _kb(path):
     return round(path.stat().st_size / 1024)
+
+
+def _bucket(nbytes):
+    """The guide's size as it is stated: KB, to `GUIDE_KB_STEP`."""
+    return round(nbytes / 1024 / GUIDE_KB_STEP) * GUIDE_KB_STEP
+
+
+def _band():
+    """`(low, high)` bytes over which the guide states the same figure."""
+    size = GUIDE.stat().st_size
+    stated, low, high = _bucket(size), size, size
+    while _bucket(low - 1) == stated:
+        low -= 1
+    while _bucket(high) == stated:
+        high += 1
+    return low, high
+
+
+#: `UX-607`: a size in KB, and a sentence that is about the guide. The
+#: layer states other sizes - a 63 KB CI log, a 311 KB snapshot - and
+#: those are observations, not a figure two documents have to agree on.
+_KB = re.compile(r"~?\d[\d,]*\s*KB\b")
+#: Named three ways, and the first draft of this had only two: a third
+#: copy writing `the fixing guide is 40 KB` was not seen, because
+#: `the guide` does not match `the fixing guide`.
+_ABOUT_THE_GUIDE = re.compile(
+    r"\bfixing[- ]guide\b|\bthe (?:whole )?guide\b|\bthis file\b", re.I)
+
+
+def _size_population():
+    """`_population()` plus `CLAUDE.md`, which summarises the card and is
+    where a third copy of the guide's size would land."""
+    return [*_population(), "CLAUDE.md"]
 
 
 def _shared_paths():
@@ -130,16 +174,16 @@ def _derived():
     """`{path: [sentence fragment]}` written from the population here and
     nowhere from a literal, so the ban accepts exactly what a clause
     above has already checked (`UX-549`'s shape)."""
-    guide_kb = _kb(GUIDE)
+    guide_kb = _bucket(GUIDE.stat().st_size)
     shared = WORDS[len(_shared_paths())].capitalize()
     # The rules are the subject; the header above §1 is the argument,
     # and it carries the marker in the sentence stating the count.
     rules = STYLE.read_text(encoding="utf-8").split("\n## 1.", 1)[1]
     enforced = rules.count("**Enforced by test")
     return {
-        "docs/contributing/rules.md": [f"it is {guide_kb} KB"],
+        "docs/contributing/rules.md": [f"it is ~{guide_kb} KB"],
         "docs/contributing/fixing-guide.md": [
-            f"{_kb(RULES)} KB against this file's {guide_kb} KB",
+            f"{_kb(RULES)} KB against this file's ~{guide_kb} KB",
             f"`{schemas.ANALYZE}`, `{schemas.COMPARE}` and `{schemas.BLAST}`",
             "Part 32 spans {}-{}".format(*_part_32())],
         "docs/contributing/release-guide.md": [
@@ -212,6 +256,68 @@ class TestNoBareCountSurvives:
         assert len(sentences) > 400, f"the corpus is {len(sentences)} sentences"
         assert sum(bool(COUNT.search(one)) for one in sentences) > 5, (
             "the pattern matches nothing in the corpus it is meant to read")
+
+
+class TestTheGuidesSizeCostsOneFile:
+    """`UX-607`: the derived size is in two documents, so a paragraph
+    over the headroom is a two-file change across two tracks. Twice in
+    round 84. The width is the fix - `round(B/1024)` left 33 B - and a
+    scan keeps a third copy from appearing."""
+
+    def test_a_paragraph_does_not_move_the_stated_figure(self):
+        """The acceptance: 1 KB added to the guide, and no second
+        document red."""
+        size = GUIDE.stat().st_size
+        _low, high = _band()
+        assert high - size >= PARAGRAPH, (
+            f"the guide is {size:,} B and states ~{_bucket(size)} KB; the "
+            f"figure moves at {high:,} B, so only {high - size:,} B of "
+            f"prose fit before docs/contributing/rules.md must change too")
+
+    def test_the_band_is_what_bought_the_headroom(self):
+        """Not the current size - the width. At `round(B/1024)` the band
+        is 1024 B, so a 1 KB paragraph crosses it wherever it lands and
+        the headroom above is luck."""
+        low, high = _band()
+        assert high - low > PARAGRAPH, (
+            f"the guide states one figure over [{low:,}, {high:,}) B, a "
+            f"{high - low:,} B band a paragraph can cross by accident")
+
+    def test_no_third_document_states_the_guides_size(self):
+        """The shape, not the two instances. A size claim about the
+        guide is a copy that has to move when a paragraph lands, and the
+        two that exist are derived above."""
+        derived, copies = _derived(), []
+        for rel in _size_population():
+            allowed = derived.get(rel, ())
+            for sentence in _sentences(
+                    (REPO / rel).read_text(encoding="utf-8")):
+                if not (_KB.search(sentence) and _ABOUT_THE_GUIDE.search(
+                        sentence)):
+                    continue
+                if any(one in " ".join(sentence.split()) for one in allowed):
+                    continue
+                copies.append(f"{rel}: {sentence[:90]!r}")
+        assert copies == [], (
+            "these state the fixing guide's size and nothing derives it, "
+            "so a paragraph in the guide becomes an edit here too:\n"
+            + "\n".join(copies))
+
+    def test_the_scan_finds_the_copies_that_do_exist(self):
+        """A scan matching nothing bans nothing. The two derived
+        sentences are what it has to see."""
+        found = {rel for rel in _size_population()
+                 for sentence in _sentences(
+                     (REPO / rel).read_text(encoding="utf-8"))
+                 if _KB.search(sentence) and _ABOUT_THE_GUIDE.search(sentence)}
+        assert found == {"docs/contributing/rules.md",
+                         "docs/contributing/fixing-guide.md"}, sorted(found)
+
+    def test_the_scan_reaches_the_day_one_summary(self):
+        """`CLAUDE.md` is the third copy this is guarding against - it
+        summarises the card - and it is in neither `.claude/` nor
+        `docs/contributing/`, so the population above does not reach it."""
+        assert "CLAUDE.md" in _size_population()
 
 
 class TestTheCountNoDecisionReadsIsGone:

@@ -97,5 +97,5 @@ land reads exactly like a guard that does not discriminate.
 
 **Deviation from the Required Fix.** None.
 
-**Suite.** `make test`: 6271 passed, 29 skipped in 250.98s (0:04:10).
-`make lint`: clean.
+**Suite.** `make test`: 6272 passed, 29 skipped in 254.77s (0:04:14),
+load average 0.66 at the start. `make lint`: clean.

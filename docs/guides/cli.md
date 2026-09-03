@@ -2041,8 +2041,14 @@ graph is a much smaller number than its share suggests.
 
 ## Exit Codes
 
+Every code below is `bga/exceptions.py`'s `EXIT_CODES`; the two are compared
+by `tests/unit/test_the_exit_table_derives_from_the_codes.py`.
+
 - `0`: Success.
-- `1`: General error (e.g., invalid arguments, missing files).
+- `1`: General error (e.g., invalid arguments, missing files) — including
+  argparse's own usage errors (unrecognized flag, invalid choice, missing
+  positional), which `UX-574` moved here from argparse's default `2` so a CI
+  job reading `2` can trust it means the run could not be read.
 - `2`: Data ingestion failure (e.g., malformed v9 artifacts), and
   `bga snapshot`'s own refusals — no project here, nothing to run, and
   (`UX-324`) a build command whose executable will not run, which is

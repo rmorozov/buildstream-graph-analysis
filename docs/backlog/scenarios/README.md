@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-552 scenarios: **8 open**, 544 closed.
+553 scenarios: **8 open**, 545 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -23,7 +23,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | capture | 0 | 90 |
 | analysis | 0 | 87 |
 | contracts | 2 | 40 |
-| viewer | 1 | 136 |
+| viewer | 1 | 137 |
 | cli | 0 | 19 |
 | store | 0 | 14 |
 | docs | 2 | 70 |
@@ -38,12 +38,12 @@ task file, which is the only place it ever lived twice.
 |---|---|---|---|---|---|
 | UX-540 | [the three contracts `bga` reads and never registers](UX-0540-the-three-contracts-bga-reads-and-never-registers.md) | contracts | Medium | `UX-520`, whose first real bundle refused a healthy capture | 🔴 |
 | UX-543 | [a second clause of the answer key ranks under contention](UX-0543-a-second-ranking-clause-under-contention.md) | guards | Medium | `UX-538`, fixing its sibling | 🔴 |
-| UX-545 | [a refused timeline tells the reader the snapshot has no build log](UX-0545-a-refused-timeline-says-the-wrong-thing.md) | viewer | Medium | `UX-530`, whose scope was the degradation | 🔴 |
 | UX-546 | [the fetch-counting handoff guard is flaky under the full suite](UX-0546-the-fetch-guard-is-flaky-under-load.md) | guards | Medium | two tracks, independently | 🔴 |
 | UX-549 | [five counted figures, read as current, wrong](UX-0549-five-counted-figures-a-reader-reads-as-current.md) | docs | Medium | architecture review 12 | 🔴 |
 | UX-550 | [the newest release row records the state *now*, not the one it shipped](UX-0550-the-newest-release-row-records-the-state-now.md) | contracts | High | architecture review 12 | 🔴 |
 | UX-551 | [every session plans its loop against a suite 62% faster than the real one](UX-0551-the-loop-is-planned-against-a-suite-that-is-gone.md) | docs | Medium | architecture review 12 | 🔴 |
 | UX-554 | [a failed CI suite takes the record of what failed with it](UX-0554-a-failed-suite-takes-its-junit-with-it.md) | guards | Medium | round 81, unable to diagnose a red `test (3.11)` | 🔴 |
+| UX-555 | [`--no-trace` tells a two-plane run it kept no Plane 2 log](UX-0555-with-trace-false-blames-a-missing-plane-2.md) | viewer | Low | `UX-545`'s track, one branch over from its own fix | 🔴 |
 
 ## UX-522..UX-536: the seventy-ninth round — the controls walked, the suite weighed (2026-09-02)
 

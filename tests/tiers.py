@@ -534,6 +534,12 @@ LARGE = (
 )
 
 MEDIUM = (
+    # `UX-545`, tiered on landing. A real two-plane render with the
+    # ceiling monkeypatched under both rungs, then the exported page
+    # booted - so `bga view` and node, twice over. Measured here on a
+    # quiet 4-core box, single process: 2.65 / 2.51s, and the track
+    # that wrote it read 2.51s.
+    "tests/unit/test_a_refused_timeline_says_it_was_refused.py",    #    2.5s
     # `UX-455`, tiered on landing, and it earned the tier the way the
     # item is about: two clauses run the confirmation for real, which
     # is a pytest subprocess each. Three single-process runs:

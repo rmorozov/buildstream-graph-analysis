@@ -1,6 +1,6 @@
 # UX-582: the styleguide's ledger says seven sections have no guard
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-305 (the conformance checklist), UX-320 | **Serves:** the session that touches the page and reads §7 to find its guard | **Topic:** docs
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-305 (the conformance checklist), UX-320 | **Serves:** the session that touches the page and reads §7 to find its guard | **Topic:** docs
 
 ## Motivation
 

@@ -1,6 +1,6 @@
 # UX-583: the round history is typed, and three rounds are missing from it
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Serves:** the reader tracing a decision to the round that made it | **Topic:** docs
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — | **Serves:** the reader tracing a decision to the round that made it | **Topic:** docs
 
 ## Motivation
 

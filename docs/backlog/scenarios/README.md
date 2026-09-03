@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-587 scenarios: **12 open**, 575 closed.
+587 scenarios: **10 open**, 577 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -26,7 +26,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | viewer | 0 | 138 |
 | cli | 0 | 21 |
 | store | 0 | 15 |
-| docs | 7 | 83 |
+| docs | 5 | 83 |
 | guards | 4 | 110 |
 
 ## Open scenarios
@@ -44,8 +44,6 @@ task file, which is the only place it ever lived twice.
 | UX-578 | [the verbatim blocks that are neither dated nor fresh](UX-0578-the-verbatim-blocks-that-are-neither-dated-nor-fresh.md) | docs | Medium | anyone diffing a guide's output against their own | 🔴 |
 | UX-580 | [the roles table says nothing aggregates across builds](UX-0580-the-roles-table-says-nothing-aggregates-across-builds.md) | docs | Medium | R5 and R7, whose rows are wrong about them | 🔴 |
 | UX-581 | [a direction has no status, so a tail goes silent](UX-0581-a-direction-has-no-status-so-a-tail-goes-silent.md) | docs | High | the reader deciding what is still open at direction level | 🔴 |
-| UX-582 | [the styleguide's ledger says seven sections have no guard](UX-0582-the-styleguide-s-ledger-says-seven-sections-have-no-guard.md) | docs | Medium | the session that touches the page and reads §7 to find its guard | 🔴 |
-| UX-583 | [the round history is typed, and three rounds are missing from it](UX-0583-the-round-history-is-typed-and-three-rounds-are-missing-from-it.md) | docs | Medium | the reader tracing a decision to the round that made it | 🔴 |
 | UX-584 | [the figures nothing reads — thirteen stale numbers in the process layer](UX-0584-the-figures-nothing-reads-thirteen-stale-numbers-in-the-process-layer.md) | docs | Medium | every session's first read | 🔴 |
 | UX-585 | [the card's guard column is counted, not read](UX-0585-the-card-s-guard-column-is-counted-not-read.md) | guards | High | the session that trusts the card's guard column | 🔴 |
 

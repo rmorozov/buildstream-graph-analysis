@@ -1668,10 +1668,11 @@ key:
 | what `analyze`, `compare`, `blast` and `correlate` wrote before `UX-341` unified the units, what `analyze` wrote before `UX-344` lifted its two namespaces, and what it wrote before `UX-535` published the graph's shape once - read, never written | `analyze/v4`, `analyze/v3`, `analyze/v2`, `compare/v1`, `blast/v1`, `correlate/v1` | `bga.schemas.SUPERSEDED` |
 | the host manifest with `memory_mb` where `host/v2` has `memory_bytes` - read and normalised, never written | `host/v1` | `bga.hostinfo.SUPERSEDED` |
 
-The last four are **written but not printable**: they are on-disk
-shapes a run directory carries, not documents a subcommand emits, so
-`--schema` does not know them. `bga.contracts.unprintable()` names that
-difference rather than leaving a reader to discover it at a refusal.
+The six above the retired rows are **written but not printable**: they
+are on-disk shapes a run directory carries, not documents a subcommand
+emits, so `--schema` does not know them. `bga.contracts.unprintable()`
+less `superseded()` names that difference rather than leaving a reader
+to discover it at a refusal.
 
 `plane2/v1` is a fifth kind again: **read and never written**
 (`UX-297`), and `UX-341` added five more of it - the four documents

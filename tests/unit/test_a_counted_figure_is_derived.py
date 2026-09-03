@@ -20,8 +20,10 @@ past it. Every figure below is recomputed from the population it
 describes, so the next move in that population reddens a guard instead
 of ageing a sentence.
 
-The spec's copy of the architecture sentence (`specification.md:1671`)
-is ground truth and is filed against rather than edited.
+`UX-556` closed the spec's copy (`specification.md:1671`). It sits
+inside Part 32, which the rule has always permitted editing; the
+deferral above read "the Part 32 registry" as the table alone. The
+sentence is now derived here like the other five.
 """
 import json
 import pathlib
@@ -42,6 +44,7 @@ ARCHITECTURE = REPO / "docs/design/architecture.md"
 CHANGELOG = REPO / "CHANGELOG.md"
 README = REPO / "README.md"
 GUIDE = REPO / "docs/guides/what-the-viewer-answers.md"
+SPEC = REPO / "docs/spec/specification.md"
 QUESTIONS_JS = REPO / "bga/viewer/questions.js"
 RUN = REPO / "tests/fixtures/macro_micro/run"
 
@@ -119,6 +122,39 @@ class TestTheIndexCountsWhatItReadsAndNeverWrites:
             f"`contracts.printable()` is {len(contracts.printable())}")
 
 
+def _spec_contract_block():
+    """Part 32's contract prose - from its registry table to the next
+    Part. Bounded so a count elsewhere in the file cannot satisfy it."""
+    text = SPEC.read_text(encoding="utf-8")
+    start = text.index("| output | schema | printed by |")
+    return text[start:text.index("\n# Part 33")]
+
+
+def _spec_contract_rows():
+    """The ids each row of Part 32's registry table declares, in order.
+
+    A row may declare several (`UX-341` renamed four documents in one),
+    so this is a list of lists and the callers flatten it.
+    """
+    rows = []
+    for line in _spec_contract_block().splitlines():
+        # The registry table only. `UX-540`'s inputs table follows it
+        # further down the Part, and reading both put `trace/v9` among
+        # the retired rows - the first version of this clause failed
+        # exactly that way.
+        if not line.strip():
+            break
+        if not line.startswith("|") or line.startswith("|---"):
+            continue
+        cells = [cell.strip() for cell in line.split("|")[1:-1]]
+        if len(cells) < 2 or cells[1] == "schema":
+            continue
+        found = re.findall(r"`([a-z0-9-]+/v\d+)`", cells[1])
+        if found:
+            rows.append(found)
+    return rows
+
+
 class TestTheArchitectureCountsItsOwnTable:
     """`docs/design/architecture.md:965`, and the two classes really are
     read off the table's rows rather than from the sentence."""
@@ -153,6 +189,41 @@ class TestTheArchitectureCountsItsOwnTable:
         assert set(rows[start:end]) == written, (
             "the rows above the retired ones are not the written-but-not-"
             "printable set", rows[start:end], sorted(written))
+
+
+class TestTheSpecCountsItsOwnTable:
+    """`UX-556`: `specification.md:1671`, the sixth copy.
+
+    The spec said "The last four are written but not printable" of a
+    set that is six and that four rows follow. `UX-549` fixed the
+    architecture's copy and filed this one, reading the rule as
+    forbidding the edit; the sentence is inside Part 32, which the rule
+    permits. Derived here so it cannot drift again - a count in prose
+    that nothing checks is what produced both copies.
+    """
+
+    def test_the_written_not_printable_count_is_derived(self):
+        written = set(contracts.unprintable()) - set(contracts.superseded())
+        word = WORDS[len(written)]
+        assert (f"The {word} above the retired rows are **written but not "
+                f"printable**") in _flat(_spec_contract_block()), (
+            f"Part 32 should say 'The {word} above the retired rows'; "
+            f"the set is {sorted(written)}")
+
+    def test_they_really_are_above_the_retired_rows(self):
+        """The other half of the error: *last* of a class four rows
+        follow. Read off the table, not off the sentence."""
+        rows = _spec_contract_rows()
+        retired, written = set(contracts.superseded()), (
+            set(contracts.unprintable()) - set(contracts.superseded()))
+        tail = [one for row in rows[-4:] for one in row]
+        assert set(tail) == retired, (
+            "the last rows of Part 32's table are not the retired ones, so "
+            "the sentence points at the wrong end", tail, sorted(retired))
+        above = [one for row in rows[-4 - len(written):-4] for one in row]
+        assert set(above) == written, (
+            "the rows above the retired ones are not the written-but-not-"
+            "printable set", above, sorted(written))
 
 
 class TestTheChangelogCountsThePublishedSet:

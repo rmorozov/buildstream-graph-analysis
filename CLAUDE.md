@@ -43,7 +43,7 @@ the batch gate) → `measure` → `falsify` → `verify` (close it).
 - Task status lives in **two** places: the `**Status:**` line and the
   index row. `--move` edits both; the counts are derived, never typed.
 - `docs/spec/specification.md` is ground truth — read line ranges,
-  never the whole file, and never edit it outside the Part 32 registry.
+  never the whole file, and edit only inside Part 32 (§3.12).
 
 ## Register
 

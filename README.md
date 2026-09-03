@@ -111,7 +111,7 @@ has a one-line remedy, cheaper to read before a thirty-minute build than after.
 total, a per-element aggregate or a ranking. A question needing *when*, or one individual process
 rather than the element around it, is a question for the trace, and the page's **Open timeline in
 Perfetto** button is the way there.
-[`docs/guides/what-the-viewer-answers.md`](docs/guides/what-the-viewer-answers.md) sorts all thirteen
+[`docs/guides/what-the-viewer-answers.md`](docs/guides/what-the-viewer-answers.md) sorts all seventeen
 canned questions by which side answers them, and says which [roles](docs/design/roles.md) the trip serves.
 
 The second `snapshot` prints the analysis **and** the verdict against the first. Captures land

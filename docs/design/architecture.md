@@ -970,12 +970,13 @@ those artifacts said which build produced them. The version there is
 addition does not. `additionalProperties` is true everywhere, so a
 consumer that pins a version keeps working while the tool grows.
 
-The last four rows are written but not printable — on-disk shapes a run
+Six rows are written but not printable — on-disk shapes a run
 directory carries rather than documents a subcommand emits. `--schema`
 does not know them, and `bga.contracts.unprintable()` says so.
-`plane2/v1` goes one further: it is read and never written, which
+The last nine go one further: they are read and never written, which
 `bga.contracts.superseded()` names, because a store full of captures
-taken before `UX-297` still has to analyze.
+taken before `UX-297`, `UX-341`, `UX-344`, `UX-384` and `UX-535` still
+has to analyze.
 
 A guard (`tests/unit/test_the_documents_keep_up_with_the_contracts.py`)
 asserts this table and the spec's Part 32.5 name every contract in

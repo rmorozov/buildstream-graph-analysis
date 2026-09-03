@@ -85,7 +85,7 @@ contracts. Twenty-three ids, and what writes each:
 
 The last fifteen are written into a run directory — or, for
 `bundle-manifest/v1`, into the bundle that carries one — rather than
-printed by a command, so no `--schema` invocation prints them, and eight of those
+printed by a command, so no `--schema` invocation prints them, and nine of those
 are only ever *read* - they are the shapes an older store's artifacts
 are in (`plane2/v1` from `UX-297`, `plane2/v2` from `UX-384`, five from
 `UX-341`, `analyze/v3` from `UX-344` and `analyze/v4` from

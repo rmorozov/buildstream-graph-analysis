@@ -2,8 +2,8 @@
 
 What changed between the `bga` you installed and the one you have now.
 
-A release here records a **contract state**, not a date: the twelve
-published contracts and the command surface as they stood, plus what
+A release here records a **contract state**, not a date: the
+twenty-three published contracts and the command surface as they stood, plus what
 moved since the last row. The procedure is
 [`docs/contributing/release-guide.md`](docs/contributing/release-guide.md)
 and the argument is

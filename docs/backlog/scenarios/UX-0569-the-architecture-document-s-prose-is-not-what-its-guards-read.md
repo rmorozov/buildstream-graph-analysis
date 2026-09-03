@@ -1,6 +1,6 @@
 # UX-569: the architecture document's prose is not what its guards read
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-233 (the contracts guard), UX-472 (the last prose drift filed here) | **Serves:** the reader who opens architecture.md to price a change | **Topic:** docs
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-233 (the contracts guard), UX-472 (the last prose drift filed here) | **Serves:** the reader who opens architecture.md to price a change | **Topic:** docs
 
 ## Motivation
 

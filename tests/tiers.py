@@ -535,6 +535,7 @@ LARGE = (
 
 MEDIUM = (
     "tests/unit/test_a_broken_pipe_is_not_an_error.py",             # 1.6s
+    "tests/unit/test_a_pasted_guide_block_is_fresh_or_dated.py",    # 3.6s
     "tests/unit/test_the_documented_bga_lines_parse.py",            # 2.0s
     # `UX-545`, tiered on landing. A real two-plane render with the
     # ceiling monkeypatched under both rungs, then the exported page

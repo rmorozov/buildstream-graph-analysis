@@ -1,6 +1,6 @@
 # UX-578: the verbatim blocks that are neither dated nor fresh
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-139 (verbatim is evidence), UX-511 (the dated block), UX-492 | **Serves:** anyone diffing a guide's output against their own | **Topic:** docs
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-139 (verbatim is evidence), UX-511 (the dated block), UX-492 | **Serves:** anyone diffing a guide's output against their own | **Topic:** docs
 
 ## Motivation
 

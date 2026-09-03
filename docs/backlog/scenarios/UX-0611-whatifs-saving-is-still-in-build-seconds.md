@@ -1,6 +1,6 @@
 # UX-611: what-if's saving is still in build seconds
 
-**Priority:** Low | **Status:** 🔴 Open | **Depends on:** UX-596 (which built the converter) | **Serves:** the team deciding whether a fix is worth a day | **Topic:** report
+**Priority:** Low | **Status:** 🔴 Open | **Depends on:** UX-596 (which built the converter) | **Serves:** the team deciding whether a fix is worth a day | **Topic:** analysis
 
 ## Motivation
 

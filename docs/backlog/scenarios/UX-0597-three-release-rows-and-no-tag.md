@@ -1,6 +1,6 @@
 # UX-597: three release rows and no tag
 
-**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** UX-251 (a release is a contract state), UX-581 | **Serves:** anyone trying to check out a release this repository claims to have made | **Topic:** tooling
+**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** UX-251 (a release is a contract state), UX-581 | **Serves:** anyone trying to check out a release this repository claims to have made | **Topic:** docs
 
 ## Motivation
 

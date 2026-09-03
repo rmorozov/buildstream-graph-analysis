@@ -1,6 +1,6 @@
 # UX-593: the regression verdict carries no evidence chain
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-229 (why bga believes what it believes), UX-221 (the culprits), UX-581 (the status that names this tail) | **Serves:** R4, the CI gatekeeper asked to defend a red gate | **Topic:** report
+**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-229 (why bga believes what it believes), UX-221 (the culprits), UX-581 (the status that names this tail) | **Serves:** R4, the CI gatekeeper asked to defend a red gate | **Topic:** analysis
 
 ## Motivation
 

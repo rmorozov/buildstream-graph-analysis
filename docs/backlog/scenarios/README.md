@@ -21,15 +21,13 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | Topic | Open | Total |
 |---|---|---|
 | capture | 1 | 91 |
-| analysis | 1 | 90 |
+| analysis | 3 | 92 |
 | contracts | 1 | 41 |
 | viewer | 0 | 138 |
 | cli | 0 | 21 |
 | store | 1 | 16 |
-| docs | 6 | 84 |
+| docs | 7 | 85 |
 | guards | 5 | 112 |
-| report | 2 | 2 |
-| tooling | 1 | 1 |
 
 ## Open scenarios
 
@@ -41,11 +39,11 @@ task file, which is the only place it ever lived twice.
 | UX-589 | [the failure namer reads a junit the run did not write](UX-0589-the-namer-reads-a-junit-the-run-did-not-write.md) | guards | Medium | every session reading a red CI job | 🔴 Open |
 | UX-590 | [the context map's non-path claims are unguarded](UX-0590-the-context-map-s-non-path-claims-are-unguarded.md) | guards | Medium | every session that reads fixing guide §6 to find where a thing lives | 🔴 Open |
 | UX-591 | [the architecture review log is in no index](UX-0591-the-architecture-review-log-is-in-no-index.md) | docs | Medium | the reader looking for what the last architecture review decided | 🔴 Open |
-| UX-593 | [the regression verdict carries no evidence chain](UX-0593-the-regression-verdict-carries-no-evidence-chain.md) | report | Medium | R4, the CI gatekeeper asked to defend a red gate | 🔴 Open |
+| UX-593 | [the regression verdict carries no evidence chain](UX-0593-the-regression-verdict-carries-no-evidence-chain.md) | analysis | Medium | R4, the CI gatekeeper asked to defend a red gate | 🔴 Open |
 | UX-594 | [a capture cannot say when the build was requested](UX-0594-a-capture-cannot-say-when-the-build-was-requested.md) | capture | Medium | R6, the contributor waiting on a verdict | 🔴 Open |
 | UX-595 | [the capacity model has a fact base and no model](UX-0595-the-capacity-model-has-a-fact-base-and-no-model.md) | store | Medium | R5, the capacity operator | 🔴 Open |
-| UX-596 | [build time in the team's units](UX-0596-build-time-in-the-team-s-units.md) | report | Low | R8, the engineering lead funding infrastructure | 🔴 Open |
-| UX-597 | [three release rows and no tag](UX-0597-three-release-rows-and-no-tag.md) | tooling | Low | anyone trying to check out a release this repository claims to have made | 🔴 Open |
+| UX-596 | [build time in the team's units](UX-0596-build-time-in-the-team-s-units.md) | analysis | Low | R8, the engineering lead funding infrastructure | 🔴 Open |
+| UX-597 | [three release rows and no tag](UX-0597-three-release-rows-and-no-tag.md) | docs | Low | anyone trying to check out a release this repository claims to have made | 🔴 Open |
 | UX-598 | [two of the four percentile rows publish no distribution](UX-0598-two-of-the-four-percentile-rows-publish-no-distribution.md) | contracts | Medium | the reader who trusts Direction 11's table | 🔴 Open |
 | UX-565 | [Part 29 is wired to `None` while the store holds the series it needs](UX-0565-part-29-is-wired-to-none-while-the-store-holds-the-series-it-needs.md) | analysis | Medium | R3, the CI owner asking how stable an element's duration is | 🔴 |
 | UX-567 | [two invariants have no guard, and one has no code](UX-0567-two-invariants-have-no-guard-and-one-has-no-code.md) | guards | High | anyone trusting the report's `I1..I13` line | 🔴 |

@@ -493,7 +493,12 @@ def _plane1_outcomes(events) -> dict:
 # question.
 #
 # So: one series, whose peak **equals** the published `max_concurrency`
-# by construction, which is the acceptance test's "one pass, one truth".
+# - the acceptance test's "one pass, one truth". Not a property of the
+# fold: it holds because `render` folds this series from the records
+# `UX-406` joined with `merge_record_streams`, and unjoined the same
+# capture read 24 against a published 13. The guard is
+# `test_one_process_is_one_slice.py`'s
+# `test_the_counter_peak_is_the_reports_max_concurrency`.
 CONCURRENCY_COUNTER = "traced processes running"
 CONCURRENCY_UNIT = "processes"
 
@@ -1450,9 +1455,10 @@ def _write_trackevent(plane1_events, raw_log, spans, anchor_element, output,
             # Everything below derives from this list - the slices, the
             # exec-chain flows, the concurrency counter - so joining
             # here fixes all three at once, and the counter's peak
-            # equals the report's `max_concurrency` again, which is what
-            # `docs/spec/trace-dictionary.md` promises "by construction"
-            # and `UX-310` was closed on.
+            # equals the report's `max_concurrency` again, which is the
+            # equality `docs/spec/trace-dictionary.md` publishes and
+            # `UX-310` was closed on. `UX-572`: that equality is this
+            # call's consequence, so both sentences name it.
             records = merge_record_streams(
                 sorted(stream_records(stream_trace_events(handle)),
                        key=lambda record: record["start_ts"]))

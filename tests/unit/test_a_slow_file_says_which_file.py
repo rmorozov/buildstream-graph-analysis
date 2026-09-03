@@ -1072,7 +1072,12 @@ class TestAgreementIsNotEvidenceOnItsOwn:
         the round, and a real CI run went red on one sample because of
         it.
 
-        The fallback has to read as `None` - no evidence either way.
+        `UX-494` made the fallback read as `None` - no evidence either
+        way. `UX-557` found that `None` is *also* "the diff could not
+        be read", which `repeated` confirms on, so the shared-harness
+        case still failed the build on agreement alone. It now returns
+        `NO_CAUSE_FILTER`, which reports instead.
+
         The first version of this clause asserted the fallback's own
         shape and then called `explained_by` on a base with an *empty*
         diff, where the fallback never fires: it passed with the defect
@@ -1086,10 +1091,32 @@ class TestAgreementIsNotEvidenceOnItsOwn:
             "the shared-harness fallback no longer reports itself as "
             "'*', so explained_by cannot detect it and UX-494 is back")
 
-        assert drift.explained_by("HEAD") is None, (
+        answer = drift.explained_by("HEAD")
+        assert answer is drift.NO_CAUSE_FILTER, (
             "the whole-suite fallback was read as a diff that names "
             "every test file, so every excursion reads as caused by "
             "the branch and the gate confirms on one sample (UX-494)")
+        assert answer is not None, (
+            "`None` is 'the diff could not be read', and `repeated` "
+            "confirms on it - the shared-harness case must not share "
+            "that verdict (UX-557)")
+
+    def test_no_cause_filter_reports_rather_than_failing(self):
+        """`UX-557`. The whole point: a row that agreed across the
+        window, on a diff the selector cannot discriminate, is
+        `unexplained` - printed with its readings, not failed on.
+
+        `UX-476`'s reasoning applies exactly: every run is read against
+        the same recording run, so agreement is one measurement counted
+        twice, and confirming needs evidence of a different kind. When
+        no filter could run there is no such evidence.
+        """
+        confirmed, unexplained, waiting, _new = drift.repeated(
+            [self.ROW], self.HISTORY, explained=drift.NO_CAUSE_FILTER)
+        assert confirmed == [], (
+            "an agreed row with no cause filter still fails the build, "
+            "so the gate confirms on agreement alone (UX-557)")
+        assert unexplained == [self.ROW], (unexplained, waiting)
 
     def test_an_unreadable_diff_confirms_on_agreement_alone(self):
         """`explained=None` is "the diff could not be read" - a shallow
@@ -1616,9 +1643,12 @@ class TestTheVerdictDoesNotDependOnTheWorkingTree:
         so `select` returns the whole suite under `"*"` and
         `explained_by` refuses. That refusal is right (`UX-494`) and is
         not what `UX-513` changed — what changed is that the two clauses
-        above no longer depend on whether it fires."""
+        above no longer depend on whether it fires.
+
+        `UX-557` gave the refusal its own value: `None` also means "the
+        diff could not be read", which `repeated` confirms on."""
         _pin_the_diff(monkeypatch, ["tests/tiers.py"])
-        assert drift.explained_by("HEAD") is None
+        assert drift.explained_by("HEAD") is drift.NO_CAUSE_FILTER
 
     def test_the_pin_is_what_makes_the_difference(self, monkeypatch):
         """Without the pin these three would all answer the same thing

@@ -563,6 +563,7 @@ is open, on what topic, for whom — is the other file's.
 | UX-543 | [a second clause of the answer key ranks under contention](UX-0543-a-second-ranking-clause-under-contention.md) | Medium | `UX-538`, fixing its sibling | 🟢 Done — the declared chain is read from the recording, not the box | [UX-543](UX-0543-a-second-ranking-clause-under-contention.md) |
 | UX-546 | [the fetch-counting handoff guard is flaky under the full suite](UX-0546-the-fetch-guard-is-flaky-under-load.md) | Medium | two tracks, independently | 🟢 Done — the fetch count is read when it moves, not when the body lands | [UX-546](UX-0546-the-fetch-guard-is-flaky-under-load.md) |
 | UX-551 | [every session plans its loop against a suite 62% faster than the real one](UX-0551-the-loop-is-planned-against-a-suite-that-is-gone.md) | Medium | architecture review 12 | 🟢 Done — the suite's wall clock is the machine's, not the suite's - the series, not a figure | [UX-551](UX-0551-the-loop-is-planned-against-a-suite-that-is-gone.md) |
+| UX-557 | [the drift gate's cause filter admits all 424 files](UX-0557-the-cause-filter-admits-the-whole-suite.md) | Medium | round 81's PR, reddened by a file its diff does not touch | 🟢 Done — cannot read the diff and cannot discriminate on it stop sharing one verdict | [UX-557](UX-0557-the-cause-filter-admits-the-whole-suite.md) |
 
 ## UX-207..UX-212: the twenty-third audit round — the report learns to answer first (2026-08-22)
 

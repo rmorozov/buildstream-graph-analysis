@@ -1348,6 +1348,29 @@ def _format_element_deltas(comparison) -> List[str]:
     return lines
 
 
+def _format_verdict_chain(comparison) -> List[str]:
+    """UX-593: the verdict's own chain, as the terminal states it.
+
+    The sentence and the rule, from the record `bga/compare.py` builds -
+    so the terminal and the CI comment cannot word one verdict two
+    ways. The evidence *paths* stay in the CI comment's table and out of
+    here: this surface prints field values under human labels, and a
+    raw `total_duration_us` beside a number in seconds is the confusion
+    UX-121 measured.
+    """
+    from ..compare import verdict_provenance
+
+    record = verdict_provenance(comparison)
+    rule = (record or {}).get('rule') or {}
+    if not rule.get('sentence'):
+        return []
+    lines = [f"  Why: {rule['sentence']}"]
+    if rule.get('name'):
+        lines.append(f"  Rule: {rule['name']} = {rule['threshold']} "
+                     f"({rule['comparison']}, {rule['module']})")
+    return lines
+
+
 def format_compare_text(comparison) -> str:
     """Format a ComparisonResult (UX-01) as human-readable text. Takes
     the dataclass directly (not AnalysisResult) - this is a genuinely
@@ -1405,6 +1428,8 @@ def format_compare_text(comparison) -> str:
             f"  Judged against a noise band from {band['n']} baseline run(s): "
             f"{_fmt_us(band['low_us'])} .. {_fmt_us(band['high_us'])} - {width}"
         )
+    # UX-593: and why that verdict, before the elements it is about.
+    lines.extend(_format_verdict_chain(comparison))
     # UX-221: which elements the verdict is about. Directly under it,
     # because "this got slower" and "this got slower because core.bst
     # tripled" are one line to a reader who only ever sees the first.

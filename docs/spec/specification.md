@@ -1824,6 +1824,41 @@ this note says so.
 
 ---
 
+### 32.7.2 Parts 23 and 27 are declined, and 32.4's `signals` block is mapped (`UX-564`)
+
+Part 23 (wait-to-execution ranking) and Part 27 (critical-path resource
+mix) are **declined**. Nothing in the tool computes either quantity -
+no module, no key, no test - and no row recorded the decision, so a
+spec review found them a second time. They stay in the spec as design
+intent and are not published; `largest_wait_share` in
+`bga/findings.py` is a different quantity and is not Part 23.
+
+32.4's `signals` object is the *declared* shape, and the analyzer's own
+key set is not it. This table is the mapping, one row per declared key:
+
+| 32.4 `signals` key | Part | published as |
+|---|---|---|
+| `wall_clock_share` | 20 | `signals['wall_clock_share_us']` - renamed by `UX-345`, because it is microseconds and the page put a `share` through the percent branch |
+| `leaf_critical_tasks` | 24 | `signals['leaf_analysis']` |
+| `wait_to_execution_top` | 23 | declined |
+| `criticality_probability` | 26 | `signals['criticality_probability']` |
+| `blast_radius` | 25 | `signals['blast_radius']` |
+| `critical_path_resource_mix` | 27 | declined |
+| `ready_queue` | 21 | `signals['ready_queue']` |
+| `concurrency` | 22 | `occupancy['average_concurrency']` and `occupancy['peak_concurrency']` - a sibling of `signals`, not a member |
+| `fetch_build_overlap` | 28 | `signals['fetch_build_overlap']`, conditional on the run having an overlap to report |
+| `duration_variability` | 29 | computed as `DiagnosticsResult.duration_variability`, reaching no consumer - not a `signals` key |
+
+A key here is *published* when the analyzer writes it under `signals`;
+the tool writes several more that 32.4 never declared, which is an
+addition and does not bump anything (the versioning rule above).
+`tests/unit/test_the_declared_signals_are_the_published_ones.py` reads
+this table against 32.4's block and against the key set a real run
+produces, so a declared key that quietly stops being published, or a
+row that names a key nothing writes, reddens rather than ages.
+
+---
+
 # Part 33 — Reconciliation and Confidence
 
 ## 33.1 Hard Gates

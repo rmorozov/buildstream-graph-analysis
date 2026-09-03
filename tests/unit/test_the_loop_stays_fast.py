@@ -67,6 +67,11 @@ class TestTheSuiteStillRunsInParallel:
 class TestTheSelectorStillSelects:
 
     def test_a_one_module_change_selects_a_handful_not_the_suite(self):
+        """One module, and `UX-606` is the row that says so: measured
+        with the map ignored, 18 of the 85 mapped modules still select
+        more than 25 from the grep half alone (`bga/cli.py`, 112).
+        `store_aggregate` is a distinctive two-word name; this is a
+        worked example, not a property of the selector."""
         selected, _ = dev_touching.select(["bga/store_aggregate.py"])
         assert 1 <= len(selected) <= 25, (
             f"a one-module diff selected {len(selected)} files. The point is "
@@ -74,6 +79,46 @@ class TestTheSelectorStillSelects:
         assert "tests/unit/test_the_aggregate_says_what_it_mixes.py" in selected, (
             "the file whose whole subject is the changed module was not "
             f"selected: {selected}")
+
+    def test_an_over_wide_map_entry_is_not_a_selection(self, monkeypatch):
+        """`UX-605`. `--cov-context=test` attributes a module's
+        import-time lines to every test that imports it, so the map CI
+        adopted in `0bc5aff` named 200 of 449 files for
+        `bga/progress.py`. A selection that wide is not one."""
+        wide = dev_touching.test_files()[:dev_touching.MAP_ENTRY_CAP + 1]
+        monkeypatch.setattr(dev_touching, "touch_map",
+                            lambda: {"bga/store_aggregate.py": wide})
+        selected, why = dev_touching.select(["bga/store_aggregate.py"])
+        assert len(selected) <= 25, (
+            f"the map widened the selection to {len(selected)}")
+        assert not [n for n in selected if "map" in why.get(n, [])], (
+            "an entry over the bound still contributed to the selection")
+
+    def test_a_narrow_entry_in_the_same_map_is_still_used(self, monkeypatch):
+        """The half that stops the cap becoming 'ignore the map'. The
+        import chain a grep cannot see is why `UX-524` exists."""
+        unrelated = "tests/unit/test_the_loop_stays_fast.py"
+        monkeypatch.setattr(
+            dev_touching, "touch_map",
+            lambda: {"bga/store_aggregate.py": [unrelated],
+                     "bga/progress.py": dev_touching.test_files()})
+        selected, why = dev_touching.select(["bga/store_aggregate.py"])
+        assert unrelated in selected and "map" in why[unrelated], (
+            f"a one-file map entry was dropped with the wide ones: {why}")
+
+    def test_the_map_in_the_tree_says_which_entries_it_cannot_use(self):
+        """`wide_entries()` is what `--why` prints, so it is derived
+        here rather than trusted. Written first as "every reported
+        entry is over the cap", it stayed green when the reporter was
+        made to report nothing - vacuous both ways. Equality reddens.
+
+        48 of 85 on the map `0bc5aff` adopted; 0 on a clean map, which
+        is the same assertion."""
+        mapped = dev_touching.touch_map()
+        cap = dev_touching.MAP_ENTRY_CAP
+        derived = {k: len(v) for k, v in mapped.items() if len(v) > cap}
+        assert dev_touching.wide_entries() == derived, (
+            "what --why reports is not what the map holds")
 
     def test_a_changed_test_file_runs_itself(self):
         selected, _ = dev_touching.select(

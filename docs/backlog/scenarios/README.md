@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-602 scenarios: **13 open**, 589 closed.
+604 scenarios: **14 open**, 590 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -27,7 +27,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | cli | 0 | 21 |
 | store | 1 | 16 |
 | docs | 3 | 87 |
-| guards | 4 | 115 |
+| guards | 5 | 117 |
 
 ## Open scenarios
 
@@ -49,6 +49,7 @@ task file, which is the only place it ever lived twice.
 | UX-602 | [two hard gates are published and named nowhere](UX-0602-two-hard-gates-are-published-and-named-nowhere.md) | contracts | High | anyone reading `confidence.hard_gates` to decide whether a run is trustworthy | 🔴 Open |
 | UX-603 | [the Python floor reaches no reader](UX-0603-the-python-floor-reaches-no-reader.md) | docs | Medium | the contributor deciding whether their interpreter will do | 🔴 Open |
 | UX-604 | [the verification-log clause reads the entry below it](UX-0604-the-verification-log-clause-reads-the-entry-below.md) | guards | Medium | the round whose log entry says nothing and passes | 🔴 Open |
+| UX-606 | [the selector's bound is measured on one module](UX-0606-the-selectors-bound-is-measured-on-one-module.md) | guards | Medium | the session whose one-module edit runs a third of the suite | 🔴 Open |
 
 ## UX-563..UX-586: the eighty-second round — the documents, read against the tool (2026-09-03)
 

@@ -38,7 +38,7 @@ trace holds the *process's*. They are the whole boundary in practice.
 
 | the question | the report gives you | Perfetto gives you |
 |---|---|---|
-| how much memory did this need? | `element_join[].peak_rss_kb` — the element's peak | `debug.max_rss_kb` on each process slice: **which** process wanted it |
+| how much memory did this need? | `element_join[].peak_rss_bytes` — the element's peak | `debug.max_rss_kb` on each process slice: **which** process wanted it |
 | what does this element actually run? | `element_join[].dominant_binary` — one name | `debug.cmd` on each slice: the untruncated argv, in order |
 | how parallel was the build? | `peak_concurrency` and `average_concurrency` — two scalars | `UX-310`'s counter track: the curve, so you can see *when* it collapsed |
 
@@ -77,7 +77,7 @@ slicing further:**
 | `stalls` | `occupancy.idle_us`, and the idle findings |
 | `dependency-wait` | the critical path and the waited-on chain |
 | `time-by-kind` | the by-kind breakdown |
-| `waited-on-flow` | the declared graph, in `structural` |
+| `waited-on-flow` | `critical_path_detail`, and `graph_metrics.num_edges` for the rest of the declared graph |
 | `sandbox-tax` | the sandbox-tax section (Plane 3) |
 | `which-run-is-this` | the identity header |
 | `graph-levels` | `parallelism.levels`, and the level decomposition it draws |
@@ -175,7 +175,8 @@ moves the same single-run report from one snapshot to another.
   on it** (`UX-430`, `UX-530`), and that bound is not about transport.
   Perfetto draws a row per track, and a big capture reaches the track
   bound while its byte figure still looks comfortable — 491 KB against
-  4 MiB at 16,832 tracks. The ladder is
+  4 MiB at 16,832 tracks (round 83's re-measurement of the seeded scale
+  run, the one [`cli.md`](cli.md) tabulates). The ladder is
   `tools/bga_view.py::_degradation_steps`, coarsest last, and it has
   two steps: **both planes**, then **`--planes 1`, which leaves Plane
   2's process lanes out**. An export renders the first, and if that is

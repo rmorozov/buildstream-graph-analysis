@@ -262,6 +262,10 @@ Wrote run.tar.gz
   load it with: bga bundle --load run.tar.gz
 ```
 
+*Kept, not current* — `UX-520`'s measurement, 2026-09-02, on a
+seven-member capture that is not in this repository, so nothing here can
+re-run it. Cuts: none; the whole of what that command printed is above.
+
 **`--load` unpacks under the bundle's own stamp**, not a new one. The
 stamp is the capture's identity, so a run carried from a runner to a
 laptop keeps the name it was compared under at home — and `UX-186`'s
@@ -279,6 +283,11 @@ Error: this bundle carries contract(s) this bga does not read: graph/v10.
 It was packed by bga 9.9.9; upgrade to read it. Nothing was written.
 ```
 
+*Kept, not current* — `UX-520`'s refusal, 2026-09-02, against a bundle
+hand-packed as `graph/v10` by a `bga` that does not exist; the guard on
+it is `tests/unit/test_a_run_bundle_you_can_carry.py`, not this page.
+Cuts: none.
+
 It refuses the same way when the stamp is already in the store and its
 contents differ — two different captures cannot share one identity.
 Loading the *same* bundle twice is a re-send, not a collision, and
@@ -295,6 +304,13 @@ Wrote small.tar.gz
   snapshot 20260902T101112Z: 6 member(s), 10.8K before compression
   left out (--no-plane2): plane2.json
 ```
+
+*Kept, not current* — the same 2026-09-02 capture as above, which held
+one Plane 2 member. Cuts: the `load it with: bga bundle --load
+small.tar.gz` line the command prints after the `left out` line, and the
+`left out` list carries **every** `plane2*` member the capture had —
+`plane2.json, plane2.log.gz, plane2-resource.json` on a capture holding
+all three.
 
 For the CI direction — publishing to a git ref rather than one file —
 see `bga baseline` and the capture-ref scheme below.
@@ -651,19 +667,26 @@ file, not about what is in it.
 **When the trace is too big to open** (`UX-430`): Perfetto draws a row
 per track, and the process lanes are where that count grows — one per
 element plus one per traced pid. Measured on the seeded scale run
-(`bga gen-synthetic --seed 1`, 1,202 elements, twelve processes each):
+(`bga gen-synthetic --seed 1`, 1,202 elements, twelve processes each),
+re-measured in round 83, because two earlier rounds published two
+different byte figures for this same trace and only one of them can be
+current (`UX-578`):
 
 ```text
                   tracks   slices     bytes
-  both planes     16,832   15,628   486,167
-  --planes 1       1,205    1,204    72,080
-  --only-element   1,219    1,216    73,017
+  both planes     16,832   15,628   491,074
+  --planes 1       1,205    1,204    71,752
+  --only-element   1,219    1,216    72,694
 ```
+
+Tracks and slices are exact and repeat; the byte column moves by a few
+bytes between runs because the anchor element's name is written into the
+trace, so it is quoted to the kilobyte everywhere else.
 
 `--planes 1` leaves the process lanes out; `--only-element` keeps one
 element's, and narrows its exec arrows and the concurrency counter with
 them, so the lanes and the counter agree about what is being shown. The
-byte size never noticed: 486 KB is an eighth of the 4 MiB the handoff
+byte size never noticed: 491 KB is an eighth of the 4 MiB the handoff
 bounds transfer at.
 
 The two planes are aligned on one element that appears in both; without
@@ -982,7 +1005,7 @@ One row per element, from both planes:
 | | |
 | --- | --- |
 | Plane 1 | `on_critical_path`, `critical_path_share`, `potential_saving_us`, `saving_share`, `blast_radius` |
-| Plane 2 | `cores_busy`, `cpu_coverage`, `requested_jobs`, `peak_rss_kb`, `dominant_binary`, `serial_binary` |
+| Plane 2 | `cores_busy`, `cpu_coverage`, `requested_jobs`, `peak_rss_bytes`, `dominant_binary`, `serial_binary` |
 
 `bga analyze --plane2 PLANE2.json` now carries the same rows as
 `element_join`, from the same function — so the report and the command
@@ -1426,7 +1449,8 @@ was:
 The third is the one a reader is least likely to guess at, because the
 byte figure looks fine when it bites: measured on the seeded scale run
 at twelve processes an element, the trace is **491 KB against a 4 MiB
-bound and 16,832 tracks**. `--planes 1` drops the process lanes and is
+bound and 16,832 tracks** (round 83's re-measurement, the same one the
+table above carries). `--planes 1` drops the process lanes and is
 a 14x reduction there — and 26x at twenty-four processes an element,
 since Plane 1's own track count does not move with the process
 population (`UX-445`).

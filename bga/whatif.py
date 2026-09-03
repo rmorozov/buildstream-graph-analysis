@@ -34,6 +34,7 @@ forecast, and the payload says so.
 from typing import Dict, List, Sequence
 
 from . import schemas
+from .report import rate
 
 # What `fixed` means here, published with every answer so a figure that
 # travels keeps its assumption attached.
@@ -157,5 +158,25 @@ def render(document: dict) -> List[str]:
                 f"not what they are worth together "
                 f"({projected['joint_saving_us'] / 1e6:.3f}s) - what one "
                 f"fix is worth depends on the others.")
+        lines.extend(_in_your_units(projected))
         lines.append(f"  {document['convention']}")
     return lines
+
+
+def _in_your_units(projected: dict) -> List[str]:
+    """`UX-611`: the projected saving in the unit the reader decides in.
+
+    Through `report.rate` - the converter the headline and the plan
+    already call - so a saving is priced by one rule and not two.
+    """
+    supplied = rate.supplied()
+    if supplied is None:
+        return []
+    if supplied.get("error"):
+        # Named rather than swallowed: silence here is indistinguishable
+        # from having supplied no rate at all.
+        return [f"  In your units: not applied: {supplied['error']}"]
+    saving_us = projected["joint_saving_us"]
+    return [f"  In your units: saves {saving_us / 1e6:.3f}s = "
+            f"{rate.phrase(saving_us, supplied)}",
+            f"    {rate.preamble(supplied)}"]

@@ -1,6 +1,6 @@
 # UX-594: a capture cannot say when the build was requested
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-234 (the store as a distribution), UX-581 | **Serves:** R6, the contributor waiting on a verdict | **Topic:** capture
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-234 (the store as a distribution), UX-581 | **Serves:** R6, the contributor waiting on a verdict | **Topic:** capture
 
 ## Motivation
 

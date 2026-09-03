@@ -15,17 +15,17 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-609 scenarios: **11 open**, 598 closed.
+611 scenarios: **11 open**, 600 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
-| capture | 1 | 91 |
+| capture | 1 | 92 |
 | analysis | 0 | 92 |
-| contracts | 1 | 43 |
+| contracts | 2 | 44 |
 | viewer | 0 | 138 |
 | cli | 0 | 21 |
-| store | 1 | 16 |
+| store | 0 | 16 |
 | docs | 4 | 89 |
 | guards | 3 | 118 |
 | report | 1 | 1 |
@@ -37,8 +37,6 @@ task file, which is the only place it ever lived twice.
 
 | ID | Scenario | Topic | Priority | Serves | Status |
 |---|---|---|---|---|---|
-| UX-594 | [a capture cannot say when the build was requested](UX-0594-a-capture-cannot-say-when-the-build-was-requested.md) | capture | Medium | R6, the contributor waiting on a verdict | 🔴 Open |
-| UX-595 | [the capacity model has a fact base and no model](UX-0595-the-capacity-model-has-a-fact-base-and-no-model.md) | store | Medium | R5, the capacity operator | 🔴 Open |
 | UX-597 | [three release rows and no tag](UX-0597-three-release-rows-and-no-tag.md) | docs | Low | anyone trying to check out a release this repository claims to have made | 🔴 Open |
 | UX-601 | [two guard ledgers of the same kind, two mechanisms](UX-0601-two-guard-ledgers-of-the-same-kind.md) | docs | Low | the next session asked to add a rule and its guard | 🔴 Open |
 | UX-604 | [the verification-log clause reads the entry below it](UX-0604-the-verification-log-clause-reads-the-entry-below.md) | guards | Medium | the round whose log entry says nothing and passes | 🔴 Open |
@@ -48,6 +46,8 @@ task file, which is the only place it ever lived twice.
 | UX-609 | [the invariants docstring lists five of six gates](UX-0609-the-invariants-docstring-lists-five-of-six-gates.md) | guards | Low | the reader opening the module to find what it enforces | 🔴 Open |
 | UX-610 | [the verdict record is not a published key](UX-0610-the-verdict-record-is-not-a-published-key.md) | contracts | Medium | R4, the CI gatekeeper asked to defend a red gate from the payload alone | 🔴 Open |
 | UX-611 | [what-if's saving is still in build seconds](UX-0611-whatifs-saving-is-still-in-build-seconds.md) | report | Low | the team deciding whether a fix is worth a day | 🔴 Open |
+| UX-612 | [the start clock has no provenance](UX-0612-the-start-clock-has-no-provenance.md) | capture | High | anyone computing a duration from a capture's start | 🔴 Open |
+| UX-613 | [the capacity model emits no document](UX-0613-the-capacity-model-emits-no-document.md) | contracts | Medium | R4 and anyone wanting the model's answer in a pipeline | 🔴 Open |
 
 ## UX-563..UX-586: the eighty-second round — the documents, read against the tool (2026-09-03)
 

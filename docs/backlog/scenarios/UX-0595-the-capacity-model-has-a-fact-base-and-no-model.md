@@ -1,6 +1,6 @@
 # UX-595: the capacity model has a fact base and no model
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-234 (which names this as its own filing), UX-339 (the sweep), UX-594 | **Serves:** R5, the capacity operator | **Topic:** store
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-234 (which names this as its own filing), UX-339 (the sweep), UX-594 | **Serves:** R5, the capacity operator | **Topic:** store
 
 ## Motivation
 

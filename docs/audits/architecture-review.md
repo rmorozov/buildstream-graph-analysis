@@ -83,6 +83,7 @@ would have caught it; a bound at it would only just have.
 | 11 | 2026-09-02 | 510 | `UX-516`, `UX-517` |
 | 12 | 2026-09-02 | 537 | `UX-548`, `UX-549`, `UX-550`, `UX-551`, `UX-552` |
 | 13 | 2026-09-03 | 560 | `UX-563`..`UX-586` — every document group read against the tree; [`round-82.md`](round-82.md) |
+| 14 | 2026-09-03 | 587 | four filings — the registry row `UX-565` falsified, two hard gates no document names, a Python floor in no prose, and a verification-log clause read against the entry below it; [`round-83.md`](round-83.md) |
 
 ### Review 11 — 2026-09-02
 
@@ -907,3 +908,97 @@ round 81 (`UX-583`).
 and every drift above is in a sentence no guard reads. The filings
 do not ask for the prose to be rewritten — they ask for each
 sentence to derive from, or be dated against, the thing it copies.
+
+## Review 14 — 2026-09-03, at 587 closed rows
+
+Input: the twenty-seven rows closed since review 13 — `UX-563`..
+`UX-588` and `UX-592`, which is round 83 executing round 82's slate —
+and the commits between them, `b100beb..ff3e08e`. Round 83 was a round
+of guards: 23 new files under `tests/unit/`, most of them reading a
+document against the tree. The full round is
+[`round-83.md`](round-83.md); this row answers the checklist.
+
+**1. Does the code still do what it says?** Where a guard reads the
+sentence, yes. The 106 files under `tests/unit/` that open a path
+below `docs/` were run as one selection: **1786 passed, 13 skipped, 2
+failed**, and neither failure is a chapter wrong about a mechanism —
+one was this row's own absence, the other `architecture.md`'s opening
+counting 598 scenario files against git's 601. Both are repaired here
+and the same selection is **1788 passed, 13 skipped, 0 failed**; the
+second was repaired by `dev_close_task.py --check --write`, which the
+merge runs again, because every filing below moves that count.
+
+Where no guard reads the sentence, one is now false, and it is this
+round's own doing. 32.7.2's mapping row says `duration_variability` is
+*"computed as `DiagnosticsResult.duration_variability`, reaching no
+consumer - not a `signals` key"*. `UX-565` writes
+`signals['duration_variability']` at `bga/analyzer.py:2163`, publishes
+it under `elements`, and draws two columns from it in
+`bga/viewer/element.js`. `UX-564` wrote the row and `UX-565` falsified
+it inside one round, from two tracks that branched from the same
+commit and merged in that order — and the row's own guard cannot see
+it, because the clause it checks is the one naming a `signals[...]`
+key and this cell names none. The Part-index guard *did* see it:
+`test_every_part_has_a_guard.py` carries a comment saying Part 29 left
+its allowlist "in the same round". One of the two records moved.
+
+**2. Does every published contract have a home?** Yes, and nothing
+moved. `bga.contracts`: **23 emitted ids, 9 superseded, 3 read and
+never written**, 8 printable and 15 not — the figures both
+`architecture.md`'s log and `docs/README.md`'s table carry, each
+guarded. `schemas.names()` is the same eight live ids as at review 13,
+`analyze/v5` among them. The one commit that touched `bga/schemas.py`
+this window added keys, which 32.5's own rule makes an addition rather
+than a bump. Every superseded id a live document names is presented as
+read-and-never-written, checked row by row.
+
+**3. Is any figure invalidated?** Not by a number this round moved:
+`dev_close_task.py --figures` over the whole diff reports 5 figures
+removed and 4 still written, and all four sit in closed rows where
+they are history — `UX-584`'s Outcome annotates the one that was
+current. The figures a document presents as current were re-measured
+and hold: 56 `analyze/v5` top-level properties, 22 modules in
+`bga/viewer/`, 17 questions in `questions.js`, and `rules.md`'s
+*"it is 40 KB"* against a 41,358-byte guide.
+
+**4. What shipped since the last review that no document names?**
+`bga --help` gained no command. Two mechanisms did, and neither has a
+home. `UX-567` added `occupancy_within_capacity` to `hard_gates`,
+which a real run now publishes six members of; Part 33.1 lists three
+plus the blame-chain one, and neither that gate nor
+`run_identity_consistent` is named anywhere in the spec or in the 36
+tracked `.md` files outside `docs/backlog/` and `docs/audits/`.
+`UX-588` guards a Python floor that `pyproject.toml` sets at `>=3.9`
+and CI matrixes to 3.12 — and those same 36 documents, the README's
+Install section included, name no Python version at all.
+
+**5. Does each document's own "last updated" claim match reality?**
+One document carries a currency claim, and its date was right while
+its sentence was not. `architecture.md`'s Verification Log said
+*Updated 2026-09-03 (after `UX-549`), covering round 81's three
+changes to this document*, and `git log -1 --date=short --` on that
+file also gives 2026-09-03 — so `test_the_verification_log_is_true.py`,
+which reads the date and not the item, stayed green across two further
+changes by `UX-569`. A round-83 entry is added by this review. Every
+other dated string in the tree is a capture's date or a "Written"
+date, which `UX-492` and `UX-511` chose deliberately.
+
+The same guard's other half does not discriminate either, found by
+mutating the entry this review wrote. `_claimed()` returns a **fixed
+1200-character window** from the newest entry's date, and
+`test_the_entry_says_what_it_was_grounded_in` looks for
+*"re-grounded in"* anywhere inside it. Measured: the newest entry is
+1045 characters and the phrase occurs at offsets **237 and 1169** — the
+second belongs to the entry below. Deleting the clause from the newest
+entry leaves the test green. It was already so at review 13's tree, at
+800 and 837. Any entry shorter than about 1186 characters is checked
+against its predecessor's sentence.
+
+**The finding that matters most:** round 82 found prose that had
+drifted from the tool, and round 83 gave that prose guards. What is
+left is the same shape one layer up — a decision written in two places
+where only one of them is read. Part 29's mapping row and its
+allowlist row said the same thing, and `UX-565` moved one. Part 33.1
+and `hard_gates` say the same thing, and `UX-567` moved one. Neither
+is a sentence nobody reads: both are inside the registry the last
+review built to stop exactly this.

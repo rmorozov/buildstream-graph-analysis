@@ -1,6 +1,6 @@
 # `bga`: Current Architecture — Three Analysis Planes
 
-**Start here to orient in this codebase.** `docs/spec/specification.md` (v9) is the original design document and stays authoritative for full-length invariant/data-contract text — it is *not* wrong, but it describes the tool as originally scoped, and does not know about anything built since. This doc describes what `bga` actually does **today**, as one coherent system, and points at the real file/doc for every claim so you don't have to reconstruct that history from 598 `docs/backlog/scenarios/` files, 75 `docs/backlog/tasks/` files, and the commit log yourself.
+**Start here to orient in this codebase.** `docs/spec/specification.md` (v9) is the original design document and stays authoritative for full-length invariant/data-contract text — it is *not* wrong, but it describes the tool as originally scoped, and does not know about anything built since. This doc describes what `bga` actually does **today**, as one coherent system, and points at the real file/doc for every claim so you don't have to reconstruct that history from 601 `docs/backlog/scenarios/` files, 75 `docs/backlog/tasks/` files, and the commit log yourself.
 
 **Want to *use* the tool rather than work on it?** [`docs/guides/real-project.md`](../guides/real-project.md) is the end-to-end walkthrough on a real project, with real output at every step.
 
@@ -1033,6 +1033,23 @@ artifact.
 - **`docs/guides/cli.md`** — CLI reference/usage examples.
 
 ## Verification Log
+
+Updated 2026-09-03 (after `UX-569`), covering round 83's three changes
+to this document — the opening sentence's two backlog counts, the
+`tools/` dispatch list under the layout block, and the two stale `.md`
+names in the reading order — re-grounded in the two contract tables
+above against `bga.contracts` and against `bga analyze --schema`:
+**23 emitted ids, 9 of them superseded, and 3 read and never
+written**, 8 printable and 15 not, and `analyze/v5` still at **56
+top-level properties**. Every figure re-read and unchanged from the
+entry below: round 83 published no new contract id, and the one
+commit that touched `bga/schemas.py` added keys under `elements`,
+which 32.5's rule makes an addition. `bga/viewer/` is still **22
+modules** and the table still names all of them. Recorded by
+architecture review 14, whose row is in
+[`../audits/architecture-review.md`](../audits/architecture-review.md);
+the entry below was true about its own date and named a round older
+than the file's last change, which is the half that guard cannot read.
 
 Updated 2026-09-03 (after `UX-549`), covering round 81's three
 changes to this document — `UX-540`, `UX-548` and `UX-549` —

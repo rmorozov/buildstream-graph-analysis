@@ -932,6 +932,11 @@ def store_listing(project: str, window: Optional[int] = None) -> dict:
             # this runs for every snapshot on every `bga view`.
             "total_duration_us": measured.get("total_duration_us"),
             "cache_hit_rate": measured.get("cache_hit_rate"),
+            # `UX-594`: what this run waited before it started, and why
+            # there is no number when there is not - never a zero.
+            "queue_wait_us": measured.get("queue_wait_us"),
+            "queue_wait_absent_reason": measured.get(
+                "queue_wait_absent_reason"),
             # UX-226: what this run cost the elements worth watching.
             # `None`, not `[]`, for a snapshot captured before this
             # existed - the section says "no history" rather than
@@ -999,6 +1004,13 @@ def _run_measurements(snapshot: str) -> dict:
     manifest = context.get("host_manifest")
     if manifest:
         out["host_manifest"] = manifest
+
+    # `UX-594`: the seam the capture recorded, read from the same one
+    # small read. A capture older than it carries neither key.
+    seam = context.get("queue_seam")
+    if isinstance(seam, dict):
+        out["queue_wait_us"] = seam.get("queue_wait_us")
+        out["queue_wait_absent_reason"] = seam.get("absent_reason")
 
     build = (context.get("queue_summary") or {}).get("build") or {}
     processed, skipped = build.get("processed"), build.get("skipped")

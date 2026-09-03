@@ -39,7 +39,7 @@ from .chrome_trace_to_bga_trace import (
 )
 from .bst_show_to_graph import extract_graph
 from ._run_context_common import (add_cpu_capacity_fields, add_host_manifest,
-                                  add_producer,
+                                  add_producer, add_queue_seam,
                                   add_memory_capacity_fields,
                                   typical_resolved_max_jobs)
 
@@ -436,6 +436,8 @@ def extract_run(
         run_context["wall_clock"] = {"start_us": wall_start_us, "end_us": wall_end_us}
     else:
         warnings.append("no bst-invocation span found - wall_clock omitted from run-context.json")
+    # `UX-594`: after `wall_clock`, whose `start_us` is the other instant.
+    add_queue_seam(run_context)
     # BuildStream's own top-level pipeline overhead (Query cache,
     # Resolving elements, etc. - P4-14), if the log has any. A non-spec,
     # additive extension of run-context/v9 (Part 32.1), same precedent as

@@ -64,7 +64,7 @@ from .bst_log_to_chrome_trace import (
 )
 from .chrome_trace_to_bga_trace import invocation_wall_clock
 from ._run_context_common import (add_cpu_capacity_fields, add_host_manifest,
-                                  add_producer,
+                                  add_producer, add_queue_seam,
                                   add_memory_capacity_fields)
 
 
@@ -136,6 +136,8 @@ def build_run_context(
     # compared on the assumption that they are.
     add_host_manifest(run_context)
     add_producer(run_context)
+    # `UX-594`: after `wall_clock`, whose `start_us` is the other instant.
+    add_queue_seam(run_context)
 
     return run_context
 

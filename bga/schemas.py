@@ -4637,6 +4637,32 @@ _STORE_HINTS = {
                                              "lookups in that run - the "
                                              "usual reason two runs of the "
                                              "same project differ."},
+                          # `UX-594`: the half of turnaround that
+                          # happens before bga's clock starts.
+                          "queue_wait_us": {
+                              QUANTITY: "duration_us",
+                              "description": "Between the instant this "
+                                             "build was requested and "
+                                             "the instant it started. "
+                                             "`null` - never zero - "
+                                             "where that is not a "
+                                             "measurement; "
+                                             "`queue_wait_absent_reason` "
+                                             "says which of the three "
+                                             "reasons applies."},
+                          "queue_wait_absent_reason": {
+                              "enum": ["no_request_instant",
+                                       "no_start_instant",
+                                       "request_after_start", None],
+                              "description": "Why there is no wait: "
+                                             "nobody published a "
+                                             "request instant, this "
+                                             "capture has no start "
+                                             "instant either, or the "
+                                             "two disagree about their "
+                                             "order, which is a clock "
+                                             "problem rather than a "
+                                             "queue."},
                           "bytes": {
                               QUANTITY: "bytes",
                               "description": "What that snapshot occupies "

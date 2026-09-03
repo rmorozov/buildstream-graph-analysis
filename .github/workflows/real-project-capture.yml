@@ -57,7 +57,8 @@
 #
 # How to run it
 # -------------
-# Weekly (`schedule`, UX-81) and on `workflow_dispatch`. It deliberately
+# Weekly incremental and monthly cold (`schedule`, UX-81/UX-96), and on
+# `workflow_dispatch`. It deliberately
 # does *not* run on push any more: that trigger cancelled 17 of this
 # workflow's first 24 runs through the concurrency group, several after
 # 25-57 runner-minutes of a ~65-minute job (UX-90). Capture-tooling

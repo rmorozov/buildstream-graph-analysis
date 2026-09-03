@@ -372,6 +372,45 @@ def _index_is_derived():
     return problems
 
 
+#: `UX-569` made `architecture.md`'s opening derive its two backlog
+#: counts. Filing a row grows one of them, so the writer that already
+#: derives the index's counts derives these too - otherwise every
+#: filing reddens a guard in a file the filer did not touch.
+ARCHITECTURE = REPO / "docs" / "design" / "architecture.md"
+_BACKLOG_COUNT = re.compile(
+    r"(\d+) (`docs/backlog/(scenarios|tasks)/` files)")
+
+
+def _backlog_counts():
+    """`{directory: tracked file count}`, git's answer and not a glob's -
+    a checkout holds `.claude/worktrees/<agent>/` (`UX-577`)."""
+    out = subprocess.run(["git", "ls-files"], cwd=REPO, check=True,
+                         capture_output=True, text=True).stdout.splitlines()
+    return {one: sum(1 for path in out
+                     if path.startswith(f"docs/backlog/{one}/"))
+            for one in ("scenarios", "tasks")}
+
+
+def _architecture_is_derived():
+    """The opening sentence against the directories it counts."""
+    counts = _backlog_counts()
+    opening = ARCHITECTURE.read_text(encoding="utf-8").split("\n## ", 1)[0]
+    return [f"architecture.md says {written} {phrase}; git has "
+            f"{counts[directory]} - `--check --write` rewrites it"
+            for written, phrase, directory in _BACKLOG_COUNT.findall(opening)
+            if int(written) != counts[directory]]
+
+
+def write_architecture():
+    """Put the derived counts into the opening sentence."""
+    counts = _backlog_counts()
+    text = ARCHITECTURE.read_text(encoding="utf-8")
+    head, sep, rest = text.partition("\n## ")
+    head = _BACKLOG_COUNT.sub(
+        lambda m: f"{counts[m.group(3)]} {m.group(2)}", head)
+    ARCHITECTURE.write_text(head + sep + rest, encoding="utf-8")
+
+
 def write_index():
     """Put the derived sentence and table into the index."""
     text = INDEX.read_text(encoding="utf-8")
@@ -390,6 +429,8 @@ CHECKS = (
      lambda: _open_count_disagreement()),
     ("the counts sentence and topic table are what the rows say",
      lambda: _index_is_derived()),
+    ("architecture.md's opening counts the backlog directories",
+     lambda: _architecture_is_derived()),
 )
 
 
@@ -643,6 +684,7 @@ def main(argv=None) -> int:
     if args.check:
         if args.write:
             write_index()
+            write_architecture()
         problems = []
         for what, run in CHECKS:
             found = run()

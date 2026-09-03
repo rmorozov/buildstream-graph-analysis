@@ -1023,14 +1023,17 @@ artifact.
 
 ## Verification Log
 
-Updated 2026-09-03 (after `UX-548`), re-grounded in the contracts table
-above against `bga.contracts`'s derived inventory — **23 ids, 9 of them
-marked superseded**, 8 printable and 15 not — and `schemas.schema`'s
-`analyze/v5`: **56 top-level properties**. Both re-read here and
-unchanged: `UX-548` moved two sentences, not a contract. The viewer
-chapter's document table now names `store-all.json` as the one
-conditional entry (`UX-528`), and the `--export` bullet says a document
-past `DATA_COMPACT_MIN_B` travels gzip+base64 (`UX-529`).
+Updated 2026-09-03 (after `UX-540` and `UX-548`), re-grounded in the
+two contract tables above against `bga.contracts` — **23 emitted ids, 9
+of them superseded, and 3 read and never written**. The third set is
+new: `graph/v9`, `run-context/v9` and `trace/v9` are declared by
+`bga.ingest.READS` and answered by `contracts.reads()`, which is the
+chapter *The contracts it reads* below the inventory. 8 printable and
+15 not; `schemas.schema`'s `analyze/v5` still has **56 top-level
+properties**, re-read here and unchanged. The viewer chapter's document
+table now names `store-all.json` as its one conditional entry
+(`UX-528`), and the `--export` bullet says a document past
+`DATA_COMPACT_MIN_B` travels gzip+base64 (`UX-529`).
 
 Updated 2026-09-02 (after `UX-535`), re-grounded in the contracts
 table above against `bga.contracts`'s derived inventory — **23 ids, 9

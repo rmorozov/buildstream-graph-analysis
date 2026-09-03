@@ -11,6 +11,7 @@ shared piece here means a future addition to one reaches both instead of
 requiring a second, easy-to-forget edit.
 """
 import os
+from datetime import datetime, timezone
 from typing import Optional
 
 
@@ -233,3 +234,102 @@ def add_memory_capacity_fields(
         run_context["memory_budget_mb"] = memory_budget_mb
     if estimated_job_memory_mb is not None:
         run_context["estimated_job_memory_mb"] = estimated_job_memory_mb
+
+
+# `UX-594`: where a requested-at instant may come from, in the order a
+# capture tries them. The label names the *variable* and not just the
+# system, because "when was this requested" has more than one
+# defensible answer per CI system and a reader has to be able to check
+# which one a number came from. An environment variable rather than a
+# flag: the capture reaches this through four layers, and this is how a
+# CI system publishes everything else it knows.
+REQUESTED_AT_ENV = (
+    ("BGA_REQUESTED_AT", "env:BGA_REQUESTED_AT"),
+    ("CI_PIPELINE_CREATED_AT", "gitlab_ci:CI_PIPELINE_CREATED_AT"),
+)
+
+# Why there is no wait to publish - named, because "nobody told us" and
+# "the clocks disagree" have different remedies and neither is zero.
+NO_REQUEST_INSTANT = "no_request_instant"
+NO_START_INSTANT = "no_start_instant"
+REQUEST_AFTER_START = "request_after_start"
+
+
+def parse_instant(text) -> Optional[int]:
+    """An ISO-8601 instant as epoch microseconds, or `None`.
+
+    A trailing `Z` is rewritten by hand because `fromisoformat` only
+    learned to read it in 3.11 and this package supports 3.9 - the form
+    every CI system publishes would otherwise parse on a developer's
+    machine and not on the runner's. A naive timestamp is read as UTC,
+    the rule `_resolve_start_time_us` already applies.
+    """
+    if not isinstance(text, str) or not text.strip():
+        return None
+    candidate = text.strip()
+    if candidate.endswith("Z"):
+        candidate = candidate[:-1] + "+00:00"
+    try:
+        moment = datetime.fromisoformat(candidate)
+    except ValueError:
+        return None
+    if moment.tzinfo is None:
+        moment = moment.replace(tzinfo=timezone.utc)
+    return int(moment.timestamp() * 1_000_000)
+
+
+def requested_at(env=None):
+    """The requested-at instant and its source, or `(None, None)`.
+
+    First variable that is both set and parseable wins. An unreadable
+    value is skipped rather than raised on: a three-hour capture must
+    not fail because its runner published a timestamp bga cannot read.
+    """
+    environment = os.environ if env is None else env
+    for name, source in REQUESTED_AT_ENV:
+        instant = parse_instant(environment.get(name))
+        if instant is not None:
+            return instant, source
+    return None, None
+
+
+def add_queue_seam(run_context: dict, env=None) -> None:
+    """`UX-594`: when the build was *requested*, beside when it started.
+
+    bga's clock starts when the build does, so the waiting a
+    contributor actually experiences is outside every number it
+    publishes. This records the other end of that interval where the CI
+    system offers one, and the gap as its own quantity.
+
+    **An absence publishes as an absence.** `queue_wait_us` is `null`
+    with a named reason whenever it is not a measurement, never zero -
+    zero is a real answer ("started the instant it was asked for") and
+    a capture that never learned the request instant has not measured
+    it. A request instant *after* the start is a clock disagreement,
+    not a queue of negative length, and is refused as one.
+
+    Always written, like `build_outcome`: an absent `queue_seam` has to
+    keep meaning "the producer had never heard of this field".
+
+    Call after `wall_clock` is set - the started-at is read from it, so
+    the two instants subtracted here are the two the document publishes.
+    """
+    instant, source = requested_at(env)
+    started = (run_context.get("wall_clock") or {}).get("start_us")
+    if not isinstance(started, int):
+        started = None
+    seam = {
+        "requested_at_us": instant,
+        "requested_at_source": source,
+        "started_at_us": started,
+        "queue_wait_us": None,
+    }
+    if instant is None:
+        seam["absent_reason"] = NO_REQUEST_INSTANT
+    elif started is None:
+        seam["absent_reason"] = NO_START_INSTANT
+    elif instant > started:
+        seam["absent_reason"] = REQUEST_AFTER_START
+    else:
+        seam["queue_wait_us"] = started - instant
+    run_context["queue_seam"] = seam

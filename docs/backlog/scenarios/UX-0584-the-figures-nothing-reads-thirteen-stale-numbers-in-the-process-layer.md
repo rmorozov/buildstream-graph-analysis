@@ -1,6 +1,6 @@
 # UX-584: the figures nothing reads — thirteen stale numbers in the process layer
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-471 (the count removed from CLAUDE.md), UX-505 (the card), UX-551 (the suite figure) | **Serves:** every session's first read | **Topic:** docs
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-471 (the count removed from CLAUDE.md), UX-505 (the card), UX-551 (the suite figure) | **Serves:** every session's first read | **Topic:** docs
 
 ## Motivation
 

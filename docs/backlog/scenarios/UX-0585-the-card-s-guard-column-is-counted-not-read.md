@@ -1,6 +1,6 @@
 # UX-585: the card's guard column is counted, not read
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-505 (the card) | **Serves:** the session that trusts the card's guard column | **Topic:** guards
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-505 (the card) | **Serves:** the session that trusts the card's guard column | **Topic:** guards
 
 ## Motivation
 

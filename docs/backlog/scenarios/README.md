@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-596 scenarios: **13 open**, 583 closed.
+599 scenarios: **14 open**, 585 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -26,8 +26,8 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | viewer | 0 | 138 |
 | cli | 0 | 21 |
 | store | 1 | 16 |
-| docs | 3 | 85 |
-| guards | 5 | 112 |
+| docs | 3 | 86 |
+| guards | 6 | 114 |
 
 ## Open scenarios
 
@@ -45,10 +45,11 @@ task file, which is the only place it ever lived twice.
 | UX-596 | [build time in the team's units](UX-0596-build-time-in-the-team-s-units.md) | analysis | Low | R8, the engineering lead funding infrastructure | 🔴 Open |
 | UX-597 | [three release rows and no tag](UX-0597-three-release-rows-and-no-tag.md) | docs | Low | anyone trying to check out a release this repository claims to have made | 🔴 Open |
 | UX-598 | [two of the four percentile rows publish no distribution](UX-0598-two-of-the-four-percentile-rows-publish-no-distribution.md) | contracts | Medium | the reader who trusts Direction 11's table | 🔴 Open |
+| UX-599 | [a guard pins a contract version by typing it](UX-0599-a-guard-pins-a-contract-version-by-typing-it.md) | guards | Medium | the next contract bump, which will pass a guard that should have caught it | 🔴 Open |
+| UX-600 | [the rules card has one guard it cannot mark](UX-0600-the-rules-card-has-one-guard-it-cannot-mark.md) | guards | Low | the session reading the card's guard column | 🔴 Open |
+| UX-601 | [two guard ledgers of the same kind, two mechanisms](UX-0601-two-guard-ledgers-of-the-same-kind.md) | docs | Low | the next session asked to add a rule and its guard | 🔴 Open |
 | UX-567 | [two invariants have no guard, and one has no code](UX-0567-two-invariants-have-no-guard-and-one-has-no-code.md) | guards | High | anyone trusting the report's `I1..I13` line | 🔴 |
 | UX-568 | [the spec has no index of which Part a guard holds](UX-0568-the-spec-has-no-index-of-which-part-a-guard-holds.md) | guards | Medium | the next specification review — this one took five agents | 🔴 |
-| UX-584 | [the figures nothing reads — thirteen stale numbers in the process layer](UX-0584-the-figures-nothing-reads-thirteen-stale-numbers-in-the-process-layer.md) | docs | Medium | every session's first read | 🔴 |
-| UX-585 | [the card's guard column is counted, not read](UX-0585-the-card-s-guard-column-is-counted-not-read.md) | guards | High | the session that trusts the card's guard column | 🔴 |
 
 ## UX-563..UX-586: the eighty-second round — the documents, read against the tool (2026-09-03)
 

@@ -114,26 +114,27 @@ replace the reader's error with this tool's own.
 | M2 | the naming step deleted | `test_a_step_names_the_failures_on_the_failure_path` — 1 failed, 5 passed |
 | M3 | the tail exits 1 on an unreadable junit | `test_an_unreadable_junit_does_not_mask_the_real_failure` — 1 failed, 5 passed |
 
-### The fix's own gap, found by the next failure
+### Two gaps this fix found in itself
 
-First landed on the 3.11 job only, because 3.11 was the one job already
-writing `--junitxml`. The very next red job was **3.12**, the coverage
-job, which writes none — so it was still unnameable, and the fix had
-reproduced the defect one job over. All four matrix jobs now write a
-junit and both steps are matrix-wide. Worth recording rather than
-quietly amending: a record that covers one of four runners is not a
-record, and the item's own measurement (four unnameable jobs) had
-already said which four.
+**One job of four.** It first landed on 3.11, the one job already
+writing `--junitxml`. The next red job was **3.12** — the coverage
+job, which wrote none — so the fix had reproduced the defect one job
+over. All four are matrix-wide now.
+
+**A proxy it then reddened.** Four junits broke
+`test_one_interpreter_records_so_there_is_one_reference`, asserting
+`text.count("--junitxml=") == 1` — a proxy (§5) for `UX-420`'s real
+invariant, one **reference**, which still held. It now counts
+`--record` *steps* out of the parsed workflow; `text.count("--record")`
+reads 4, three of them comments. The junit's claim is its own clause at
+`>= 3`. Mutations: a second recording step → red; that step unpinned
+from 3.11 → red; junit on one job only → red.
 
 ### Deviation from the Required Fix
 
-**One, deliberate.** The fix asked for the xdist worker assignment to
-be captured too, since `UX-543`/`UX-546` are "a different clause each
-run" and the worker split decides that. Not done: pytest already
-writes `[gw3]` into the failure output the junit carries — CI's own
-`test (3.12)` failure this round shows it — so a second mechanism
-would record what is already recorded. If a later round finds the
-worker id missing from a junit it needs, that is the row to file.
-
-The scope note also stands: this row is why a third instance of the
-flaky family could not be named, and it does not fix any of them.
+**One, deliberate.** The fix also asked for the xdist worker
+assignment. Not done: pytest already writes `[gw3]` into the failure
+output the junit carries — CI's own `test (3.12)` failure this round
+shows it — so a second mechanism would record what is recorded. The
+scope note stands: this row is why a third instance of the flaky
+family could not be named, and it fixes none of them.

@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-587 scenarios: **10 open**, 577 closed.
+589 scenarios: **12 open**, 577 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -26,8 +26,8 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | viewer | 0 | 138 |
 | cli | 0 | 21 |
 | store | 0 | 15 |
-| docs | 5 | 83 |
-| guards | 4 | 110 |
+| docs | 6 | 84 |
+| guards | 5 | 111 |
 
 ## Open scenarios
 
@@ -37,6 +37,8 @@ task file, which is the only place it ever lived twice.
 | ID | Scenario | Topic | Priority | Serves | Status |
 |---|---|---|---|---|---|
 | UX-589 | [the failure namer reads a junit the run did not write](UX-0589-the-namer-reads-a-junit-the-run-did-not-write.md) | guards | Medium | every session reading a red CI job | 🔴 Open |
+| UX-590 | [the context map's non-path claims are unguarded](UX-0590-the-context-map-s-non-path-claims-are-unguarded.md) | guards | Medium | every session that reads fixing guide §6 to find where a thing lives | 🔴 Open |
+| UX-591 | [the architecture review log is in no index](UX-0591-the-architecture-review-log-is-in-no-index.md) | docs | Medium | the reader looking for what the last architecture review decided | 🔴 Open |
 | UX-565 | [Part 29 is wired to `None` while the store holds the series it needs](UX-0565-part-29-is-wired-to-none-while-the-store-holds-the-series-it-needs.md) | analysis | Medium | R3, the CI owner asking how stable an element's duration is | 🔴 |
 | UX-567 | [two invariants have no guard, and one has no code](UX-0567-two-invariants-have-no-guard-and-one-has-no-code.md) | guards | High | anyone trusting the report's `I1..I13` line | 🔴 |
 | UX-568 | [the spec has no index of which Part a guard holds](UX-0568-the-spec-has-no-index-of-which-part-a-guard-holds.md) | guards | Medium | the next specification review — this one took five agents | 🔴 |

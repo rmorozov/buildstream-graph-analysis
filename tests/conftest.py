@@ -329,6 +329,11 @@ KNOWN_SKIP_REASONS = {
         "a geometry gate: the page has to have drawn one first", 0),
     "tomllib is 3.11+; CI's packaging job covers this everywhere": (
         "the one reason here that names its own coverage elsewhere", 0),
+    # `UX-588`: never taken while the floor is 3.9. It exists so the
+    # PEP 604 clause retires itself the day the floor moves, rather
+    # than passing on a check that no longer applies.
+    "the floor has moved to 3.10; PEP 604 is allowed": (
+        "the floor guard's own retirement, unreachable at >=3.9", 0),
 }
 
 # One file going quiet is what this exists to catch, and it is also the

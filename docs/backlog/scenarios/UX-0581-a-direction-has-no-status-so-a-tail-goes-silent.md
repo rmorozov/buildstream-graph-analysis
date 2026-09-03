@@ -108,12 +108,12 @@ until a direction is declined.
 1. **The six tails are named, not filed.** This track may not edit
    `scenarios/README.md`, and a task file without an index row reddens
    `test_every_scenario_has_exactly_one_row_across_the_two_files`. The
-   status lines cite `UX-592`..`UX-597` and are written as if filed; the
+   status lines cite `UX-593`..`UX-598` and are written as if filed; the
    orchestrator files them. Because of that ordering the guard asserts
    *existence* only for the ids a `landed` status names, and for a
    `partial` only that its remainder is not wholly closed — an id a
    `partial` invents cannot be caught until the row exists.
 2. **D10's tag is recorded, not cut.** Cutting `v0.4.0` from a track
    branch would put a tag on a commit the merge discards. Filed as
-   `UX-596` instead of retiring the item, because retiring it is the
+   `UX-597` instead of retiring the item, because retiring it is the
    re-argument this task's Out of Scope forbids.

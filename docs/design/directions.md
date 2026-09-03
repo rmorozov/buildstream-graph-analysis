@@ -946,7 +946,7 @@ new feature and 4 KB of vendored library stop looking alike.
 CI comment and R8's prioritisation case most of all; R1 directly
 ([roles](roles.md)).
 
-**Status:** partial — `UX-227`..`UX-230` closed and the CI comment quotes the chain (`_why_block`); `bga compare` publishes the *candidate diagnosis*'s chain, not the regression verdict's, so this section's last tail is `UX-592`.
+**Status:** partial — `UX-227`..`UX-230` closed and the CI comment quotes the chain (`_why_block`); `bga compare` publishes the *candidate diagnosis*'s chain, not the regression verdict's, so this section's last tail is `UX-593`.
 
 The fourth external review's strongest idea, adopted — and it is the
 house pattern one level up. Round 24 found the relationship layer
@@ -1008,7 +1008,7 @@ deferred maybe, behind the same bar every graph has faced here.
 **Serves:** R5, R6, R7, R8 — the roles the
 [role model](roles.md) found unserved.
 
-**Status:** partial — `UX-234` landed the aggregate fact-base; the rest of the argued order is filed rather than argued again — the queue seam `UX-593`, the capacity model `UX-594`, the cost translation `UX-595`.
+**Status:** partial — `UX-234` landed the aggregate fact-base; the rest of the argued order is filed rather than argued again — the queue seam `UX-594`, the capacity model `UX-595`, the cost translation `UX-596`.
 
 Everything bga answers today is answered within one build, or one
 store's history of one project. That satisfies R1-R4 — and
@@ -1490,7 +1490,7 @@ when it moved — and, through the store, R1 and R7, whose questions are
 answered by comparing this build against builds an *older* `bga`
 measured.
 
-**Status:** partial — items 1-4 landed (`CHANGELOG.md`, three release rows, the generated body, `UX-241`'s review gate); item 5's tag is uncut — `git tag` answers 0 against those three rows — `UX-596`.
+**Status:** partial — items 1-4 landed (`CHANGELOG.md`, three release rows, the generated body, `UX-241`'s review gate); item 5's tag is uncut — `git tag` answers 0 against those three rows — `UX-597`.
 
 `bga` is unusual among analysis tools in one way that matters here:
 **it reads its own past output as input.** `@last`/`@prev`, the
@@ -1619,7 +1619,7 @@ I installed and the thing I have now" at all.
 day, and the graph owner who knows which of those choices the graph
 forbids — and R8, who is handed the ranking as a case for funding.
 
-**Status:** partial — the ranking landed (`UX-260`, `UX-303`); of the four `yes` rows in the table below, two publish `bga:distribution` and two do not, which is `UX-597` and the dated note under that table.
+**Status:** partial — the ranking landed (`UX-260`, `UX-303`); of the four `yes` rows in the table below, two publish `bga:distribution` and two do not, which is `UX-598` and the dated note under that table.
 
 The report ranks elements by blast radius and tells the reader to fix
 the top one. Measured on a 1,202-element run:
@@ -1691,7 +1691,7 @@ magnitude. Applying it everywhere would be cargo cult:
 `blast_radius_distribution` and `element_duration_distribution`
 (`bga/schemas.py`, `_SIGNALS_TABLES`); sandbox tax and processes per
 element carry a `bga:quantity` and no distribution. The rule above is
-the rule; what it has reached is `UX-597`.
+the rule; what it has reached is `UX-598`.
 
 Deciles are the right granularity: ten buckets is a shape a reader
 takes in at a glance, and finer only matters in the tail — where the

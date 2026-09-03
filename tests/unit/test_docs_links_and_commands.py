@@ -28,6 +28,9 @@ from pathlib import Path
 import pytest
 
 REPO = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO))
+
+from bga import contracts, schemas  # noqa: E402
 
 # `[text](target)` where the target is a repo file, not a URL or a bare
 # anchor. Angle-bracket and title forms are not used in this repo.
@@ -799,13 +802,38 @@ def test_the_ci_journey_documents_the_cross_host_gate():
         "old captures still compare, and the guide should say so")
 
 
+def _versioning_history():
+    """§3.7 after its pinning clause: the `UX-288` sentence and what
+    follows. The pinning clause's live ids are read by
+    `test_the_process_documents_derive_their_figures.py`; two guards on
+    one sentence is how the two disagree."""
+    item = (REPO / "docs" / "contributing" / "fixing-guide.md").read_text(
+        encoding="utf-8").split("\n7. **If your fix renames", 1)[1]
+    return item.split("are what a consumer pins", 1)[1].split("\n8. ", 1)[0]
+
+
 def test_the_fixing_guide_names_the_output_versioning_rule():
     """UX-190: a rule that lives only in a module docstring is a rule
-    the next fixer does not meet. The checklist is where they look."""
+    the next fixer does not meet. The checklist is where they look.
+
+    `UX-599`: the version this asserts is read off `bga/schemas.py`,
+    not typed. **It is checking a historical version, not the current
+    one** - the sentence says what `analyze` was bumped *to* first, so
+    the id it names must be one `schemas.py` lists as superseded. A
+    later bump leaves it green, which is correct; a history sentence
+    rewritten to a live id reds.
+    """
     guide = (REPO / "docs" / "contributing" / "fixing-guide.md").read_text(
         encoding="utf-8")
 
-    assert "analyze/v2" in guide
+    named = set(re.findall(r"`([a-z][a-z0-9-]*/v\d+)`", _versioning_history()))
+    assert named, "§3.7's history names no contract id"
+    live = named - set(contracts.superseded())
+    assert not live, (
+        f"§3.7's history names {sorted(live)}, which `bga/schemas.py` does "
+        f"not list as superseded - a history sentence naming a live id "
+        f"either dates the wrong bump or is the current {schemas.ANALYZE} "
+        f"typed in")
     assert "bump" in guide.lower()
     assert "additionalProperties" in guide, (
         "the rule's other half - an addition is not a breaking change")

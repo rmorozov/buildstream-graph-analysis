@@ -510,6 +510,17 @@ def test_every_task_file_has_a_row_in_the_table():
     assert orphans == [], f"task file(s) with no backlog table row: {orphans}"
 
 
+def _in_a_linked_worktree():
+    """`UX-561`: is this checkout a linked worktree rather than the
+    shared one?
+
+    `git worktree add` writes `.git` as a *file* holding `gitdir: ...`;
+    the main checkout has a directory. No subprocess, so the guard
+    costs nothing and works with git absent.
+    """
+    return (REPO / ".git").is_file()
+
+
 def test_the_table_status_matches_the_task_files():
     """UX-131: two hand-maintained copies of one fact, for the third time.
 
@@ -524,16 +535,33 @@ def test_the_table_status_matches_the_task_files():
     legitimately compress and stay prose.
     """
     rows = _table_statuses()
-    disagreements = []
+    disagreements, pending = [], []
     for number, (name, line) in sorted(_file_statuses().items()):
         if number not in rows:
             continue
         in_table = _status_marker(rows[number])
         in_file = _status_marker(line or "")
-        if in_table != in_file:
-            disagreements.append(
-                f"UX-{number}: table says {in_table}, {name} says {in_file}"
-            )
+        if in_table == in_file:
+            continue
+        if _in_a_linked_worktree() and in_file == "🟢" and in_table == "🔴":
+            # `UX-561`: a track closes its item and leaves the index
+            # alone, because `decompose` makes README.md a merge hotspot
+            # the orchestrator owns. In the track's tree that is the
+            # instructed state, not drift - and failing on it made every
+            # track disable `selector-before-commit.sh` to commit
+            # correct work. Only this direction, and only here: 🟢 in
+            # the table over 🔴 in the file is the drift `UX-131` found
+            # three times, and it still fails everywhere.
+            pending.append(f"UX-{number}: {name} is 🟢, its row not moved yet")
+            continue
+        disagreements.append(
+            f"UX-{number}: table says {in_table}, {name} says {in_file}"
+        )
+    if pending:
+        print("\n".join(
+            ["a track's tree: these rows are the orchestrator's to move "
+             "(UX-561), and `dev_close_task.py --move` is what moves them:"]
+            + [f"  {one}" for one in pending]))
     assert disagreements == [], (
         "the backlog table and its task files disagree about status:\n  "
         + "\n  ".join(disagreements)
@@ -864,7 +892,13 @@ def test_every_open_row_carries_a_topic_from_the_closed_set():
     path = REPO / "docs/backlog/scenarios/README.md"
     rows = [line for line in path.read_text(encoding="utf-8").splitlines()
             if _TABLE_ROW.match(line)]
-    assert rows, "no open rows to check"
+    # `UX-562`: 0 open rows is a backlog a round emptied, not a parser
+    # that matched nothing - so the vacuity refusal stands on closed.md,
+    # which only grows, and the open rows are checked however many.
+    closed = [line for line in (REPO / "docs/backlog/scenarios/closed.md")
+              .read_text(encoding="utf-8").splitlines()
+              if _TABLE_ROW.match(line)]
+    assert closed, "the row pattern matches nothing in closed.md"
     bad = []
     for line in rows:
         cells = [c.strip() for c in re.split(r"(?<!\\)\|", line.strip().strip("|"))]

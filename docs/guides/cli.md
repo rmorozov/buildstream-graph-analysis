@@ -44,6 +44,12 @@ wants the underlying program can find it. Dispatch is lazy — only the
 module actually invoked is imported, so `bga analyze` does not pay to
 import the native tracer and the trace converters on every run.
 
+**The table below is that block**, alias for alias and module for
+module:
+[`test_the_alias_table_is_the_help.py`](../../tests/unit/test_the_alias_table_is_the_help.py)
+compares the two, in both directions, so a new alias is a red test
+rather than a row somebody notices (`UX-552`).
+
 | alias | wraps |
 |---|---|
 | `bga wrap` | `tools.bst_run_wrapped` |
@@ -53,6 +59,8 @@ import the native tracer and the trace converters on every run.
 | `bga checkout-cost` | `tools.bst_checkout_cost` |
 | `bga run-context` | `tools.bst_run_context` |
 | `bga graph-from-show` | `tools.bst_show_to_graph` |
+| `bga timeline` | `tools.bga_timeline` |
+| `bga view` | `tools.bga_view` |
 | `bga log-to-chrome` | `tools.bst_log_to_chrome_trace` |
 | `bga chrome-to-trace` | `tools.chrome_trace_to_bga_trace` |
 | `bga native-to-chrome` | `tools.native_trace_to_chrome_trace` |
@@ -1044,6 +1052,18 @@ than an error page.
 The stamp is in the URL, so a link to a run is a link somebody else can
 open, and the browser's back button moves between runs.
 
+**The picker is windowed** (`UX-528`). `store.json` carries the last
+`STORE_WINDOW = 12` snapshots, not the store: at 100 snapshots the
+picker drew 100 options, the store trend 100 rows, and `store.json` was
+34,056 B against 4,121 B at 12. The rest is a second document,
+`store-all.json`, offered in the manifest and fetched only when a
+reader asks for "show all N snapshots" — so a long store costs the page
+nothing until it is wanted. A run outside the window is still
+reachable: the picker grows a box that takes a stamp, which is the same
+`?run=` the menu follows. The window is the same 12 the element
+sparklines use (`HISTORY_POINTS_MAX`), because it is the same question
+— the last dozen runs of this project.
+
 An **export has no store** — it is one file over one run — so it
 renders no picker at all.
 
@@ -1114,6 +1134,25 @@ width. A gap the JSON does not carry enters `analyze/v5` first, where
 `--format json`, CI and every other consumer get it too — which is why
 `confidence.band`, `run_instance.incomplete_reason` and
 `plane2_coverage` are fields rather than viewer logic.
+
+### Whose analysis the page is showing (`UX-533`)
+
+```bash
+bga view @last --reanalyse    # analyse with this build, not the capture's
+```
+
+The page serves the analysis the **capture** published, so a run
+captured by an older build renders that build's answer. The evidence
+header says which: *analysed at capture by bga X*, *analysed here by
+bga X*, or — when the stored file records a contract set this build has
+moved past — the same sentence plus how many of `analyze`'s always-published
+sections are absent from it, and the command to re-run with.
+
+`--reanalyse` is that command. It analyses the run with this build and
+serves that instead; the stored file is **read, never written**, so the
+page and the CI comment that quotes the stored analysis do not diverge.
+Staleness is `UX-249`'s contract set — a build that moved nothing
+publishes the same set — not a version comparison.
 
 ### Finding your way around it (`UX-199`)
 
@@ -1304,6 +1343,25 @@ both modules inlined, the timeline carried as a `data:` URL. No port, no
 server, no network — it opens from a downloads folder, a CI artifact
 viewer, or an email.
 
+**A large document travels compacted** (`UX-529`). Past
+`DATA_COMPACT_MIN_B` — 200,000 B of JSON — a payload is written as one
+gzipped, base64-encoded `application/octet-stream` block instead of
+readable JSON text, and the page inflates it on load. Nothing is
+refused and nothing is dropped: it is the same document, and a reader
+does nothing about it. Measured on the two seeded runs
+(`bga gen-synthetic --seed 1`, and the same with `--layers 20
+--width 200`):
+
+```text
+elements   report.json   gzip+base64   ratio
+   1,202       628,335        69,172   0.110
+   4,002     2,041,945       193,492   0.095
+```
+
+The threshold sits above both committed fixtures (30 KB and 80 KB of
+data), so the small exports a person reads in an editor stay readable
+and the large ones a person mails stay mailable.
+
 **What it weighs, in three parts.** A report is not "page plus data":
 it also carries the JSON Schema for every document in it, so a reader
 can ask what a number means with no network. That third part travels
@@ -1336,6 +1394,12 @@ page, and a bigger project does not make them bigger. What scales is
 the data. On a small project the page is the larger half; on a real one
 the data passes it and keeps going, which is the ratio the thinness
 rule is about.
+
+Both data figures predate the compaction above: round 80 (`UX-529`)
+took the 1,202-element run's data half from 629,385 B to 70,222 B and
+the 4,002-element one from 2,042,989 B to 194,536 B. The shape of the
+statement is unchanged — the data is still what scales — but the
+constant in front of it is an order of magnitude smaller.
 
 > Round 21 measured 638 KiB with the page at 6.0% on the same synthetic
 > run, and round 23 measured 158 KiB with the page at 90,611 B on

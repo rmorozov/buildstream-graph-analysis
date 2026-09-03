@@ -1668,10 +1668,11 @@ key:
 | what `analyze`, `compare`, `blast` and `correlate` wrote before `UX-341` unified the units, what `analyze` wrote before `UX-344` lifted its two namespaces, and what it wrote before `UX-535` published the graph's shape once - read, never written | `analyze/v4`, `analyze/v3`, `analyze/v2`, `compare/v1`, `blast/v1`, `correlate/v1` | `bga.schemas.SUPERSEDED` |
 | the host manifest with `memory_mb` where `host/v2` has `memory_bytes` - read and normalised, never written | `host/v1` | `bga.hostinfo.SUPERSEDED` |
 
-The last four are **written but not printable**: they are on-disk
-shapes a run directory carries, not documents a subcommand emits, so
-`--schema` does not know them. `bga.contracts.unprintable()` names that
-difference rather than leaving a reader to discover it at a refusal.
+The six above the retired rows are **written but not printable**: they
+are on-disk shapes a run directory carries, not documents a subcommand
+emits, so `--schema` does not know them. `bga.contracts.unprintable()`
+less `superseded()` names that difference rather than leaving a reader
+to discover it at a refusal.
 
 `plane2/v1` is a fifth kind again: **read and never written**
 (`UX-297`), and `UX-341` added five more of it - the four documents
@@ -1683,6 +1684,23 @@ per-process record list in the report - 99.9% of the document on a
 analyze. `bga.contracts.superseded()` names the shapes a release still
 opens, because what a release *supports* and what it *emits* are
 different facts a consumer needs separately.
+
+**The inputs are a third kind** (`UX-540`). `run-context/v9`,
+`graph/v9` and `trace/v9` are stamped by whatever produced the capture
+and read by `bga.ingest`, so they are in neither set above - they are
+what a release *accepts*, and `bga analyze` refuses without all three:
+
+| input | schema | read by |
+|---|---|---|
+| the run's identity, host manifest and scheduler configuration (32.1) | `run-context/v9` | `bga.ingest.READS` |
+| the declared element graph, from `bst show` (32.2) | `graph/v9` | as above |
+| the scheduler's own spans and phases (32.3) | `trace/v9` | as above |
+
+`bga.contracts.reads()` names those three and `ids()` does not, because
+what a release accepts and what it emits are two questions. `analysis/v9`
+(32.4) is not a fourth input: it is the analyzer's in-memory result shape
+(`bga.ingest.models.AnalysisResult`), stamped on no artifact, parsed
+from none, and reaching a consumer only as `analyze/v5`.
 
 The list is not maintained by hand alone: a guard asserts that every id
 in `bga.contracts.ids()` appears here and in `docs/design/architecture.md`'s

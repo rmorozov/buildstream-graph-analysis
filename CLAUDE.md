@@ -13,7 +13,7 @@ file is the day-one summary, and
 
 | | |
 |---|---|
-| `make test` | the whole suite, ~5m30s at `-n auto`. **Required before marking anything done.** |
+| `make test` | the whole suite. **Required before marking anything done.** Wall clock moves >2x with the machine — the guide carries the readings |
 | `make test-touching` | just the files naming the modules your diff touched (~4s) |
 | `make test-small` \| `-medium` \| `-large` \| `-fast` | tiers, from measured duration in `tests/tiers.py` |
 | `make test-tiers` | the suite plus a tier-drift parse, in one run |
@@ -43,7 +43,7 @@ the batch gate) → `measure` → `falsify` → `verify` (close it).
 - Task status lives in **two** places: the `**Status:**` line and the
   index row. `--move` edits both; the counts are derived, never typed.
 - `docs/spec/specification.md` is ground truth — read line ranges,
-  never the whole file, and never edit it outside the Part 32 registry.
+  never the whole file, and edit only inside Part 32 (§3.12).
 
 ## Register
 

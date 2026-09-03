@@ -582,6 +582,27 @@ class TestTheSubagentsAreWellFormed:
             assert needed in tools, (
                 f"implementer.md cannot {needed}, so it cannot run a track")
 
+    def test_the_implementer_takes_its_base_rather_than_stopping(self):
+        """`UX-560`: the worktree is created from `origin/main`, not the
+        session's HEAD, so a track's base is wrong whenever the branch
+        is ahead - which is every round. `UX-510` made the brief name
+        the base; the brief is not what decides it.
+
+        Round 81's two tracks both opened 34 commits behind and both
+        recovered by resetting, so the instruction is to take the base,
+        not to stop at it. The reset needs no fetch because a linked
+        worktree shares the main checkout's object database, and the
+        file must say so - a track that does not know that will fetch,
+        or worse, decide the commit is unreachable and improvise.
+        """
+        body = (AGENTS / "implementer.md").read_text(encoding="utf-8")
+        assert "git reset --hard" in body, (
+            "implementer.md does not tell a track to take its named "
+            "base, so a wrong base is reported and then worked around")
+        assert "object database" in body or "object store" in body, (
+            "implementer.md does not say why the reset always works, so "
+            "a track may treat its base as unreachable (UX-560)")
+
     def test_the_implementer_says_where_it_runs(self):
         """Its editing is bounded by *where* it runs, not by what it
         promises. A body that does not say so is one an orchestrator
@@ -621,11 +642,21 @@ class TestTheSubagentsAreWellFormed:
     def test_the_implementer_is_told_to_report_rather_than_work_around(self):
         """The half that decides what a track does with the answer. A
         track that recreates a file the brief cited costs a round; one
-        that says "my base is X, the brief says Y" costs a message."""
-        body = (AGENTS / "implementer.md").read_text(encoding="utf-8")
-        assert "stop looking for the files the brief cites" in body, (
-            "implementer.md tells the track to check its base and not "
-            "what to do when it disagrees (UX-510)")
+        that says "my base is X, the brief says Y" costs a message.
+
+        `UX-560` changed the *remedy* - the track now resets to its base
+        rather than stopping at it - so this pins the property that
+        survived rather than the sentence that did not: the mismatch is
+        reported, and a missing file is never recreated.
+        """
+        body = " ".join(
+            (AGENTS / "implementer.md").read_text(encoding="utf-8").split())
+        assert "say so in your first sentence" in body, (
+            "implementer.md tells the track to check its base and not to "
+            "report what it finds (UX-510)")
+        assert "Never recreate a file the brief cites" in body, (
+            "implementer.md does not forbid recreating a file its copy "
+            "lacks, which is the working-around UX-510 priced")
 
     def test_the_merge_cost_is_a_measured_number_in_both_places(self):
         """`UX-510`'s third bullet. "Parallel is cheaper" is the claim a

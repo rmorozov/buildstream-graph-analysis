@@ -253,7 +253,7 @@ KNOWN_SKIP_REASONS = {
     "the journey needs bst, bwrap and example 06's staged toolchain "
     "(files/toolchain, written by generate_sources.py)": (
         "UX-402's whole-journey arm; it runs where bst, bwrap and the "
-        "staged toolchain are all present", 23),
+        "staged toolchain are all present", 24),
 
     # `UX-449`. Everything below was **found by the static scan in
     # `tests/skip_reasons.py`**, not by a run: eighteen reasons written

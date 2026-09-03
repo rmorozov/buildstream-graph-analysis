@@ -56,10 +56,20 @@ git log --oneline -1        # the commit your copy actually starts from
 ```
 
 If that is not the commit your brief names as the base, **say so in
-your first sentence and stop looking for the files the brief cites**.
-A missing file is the brief being wrong about your base, not a file to
-recreate, and reporting it costs the orchestrator a message where
-working around it costs a round.
+your first sentence, then take the base**:
+
+```bash
+git reset --hard <the commit your brief names>
+```
+
+That always works and needs no fetch: a linked worktree shares the main
+checkout's object database — `git rev-parse --git-common-dir` points at
+it — so every commit the orchestrator has, you already have. `UX-560`
+measured round 81's two tracks both created from `origin/main`, 34
+commits behind their named base, and both recovered exactly this way.
+
+Never recreate a file the brief cites and your copy lacks. That is the
+base being wrong, not the file.
 
 The merge back is not free either, and the number is on file: round
 75's three tracks took three cherry-picks, one of which conflicted, in

@@ -1,6 +1,6 @@
 # UX-547: the fixture differ compares parsed JSON, so key order drifts unseen
 
-**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** `UX-535` (whose refresh carried the drift), `UX-302` (the golden snapshot's rule) | **Found by:** `UX-535`, refreshing the fixture for a contract bump | **Serves:** the round that reads a fixture diff to check its own change | **Topic:** guards
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** `UX-535` (whose refresh carried the drift), `UX-302` (the golden snapshot's rule) | **Found by:** `UX-535`, refreshing the fixture for a contract bump | **Serves:** the round that reads a fixture diff to check its own change | **Topic:** guards
 
 ## Motivation
 
@@ -38,3 +38,67 @@ emitted order once, or the tool says why it never will be.
 A fixture whose keys are reordered and whose values are identical:
 `differences()` names the drift and returns no value difference, with
 a mutation that reorders one block.
+
+## Outcome (round 81, 2026-09-02) — 🟢 Done
+
+### The gap
+
+`differences()` compared each top-level key with
+`json.dumps(..., sort_keys=True)`, so two documents saying the same
+thing in a different order compared equal. `UX-535` is the instance:
+its semantic diff was exactly the intended change while the textual
+diff carried a `value`/`resolved` reordering nobody had asked for.
+
+The loader question the item asks: `json.loads` keeps insertion order
+on CPython 3.7+, so **each file's own order survives the parse** — it
+was only the `sort_keys=True` comparison that threw it away. Nothing
+had to be re-read from the bytes.
+
+### The close
+
+`order_drift()` walks both parsed sides and reports `(where, emitted,
+committed)` for every object carrying the same key *set* in a different
+order, as its own line naming itself:
+
+```text
+the committed order is not the emitted order
+```
+
+It runs only over keys whose values already agree — a key that differs
+explains its own reordering, and reporting both would say one change
+twice. A node whose key sets differ is a value difference and is left
+to the existing comparison.
+
+### The decision the item asked for
+
+**No rewrite was needed.** Both committed fixtures are already in
+emitted order — the baseline below reports no drift — so there was
+nothing to normalise. `--write` is the standing fix if one ever drifts,
+and that is now written in the module docstring rather than implied.
+
+### Mutations verified red and reverted (2)
+
+Applied to `tests/fixtures/with_timeline/analyze.json`, read through
+`differences()` directly (which is how the guard calls it):
+
+| # | mutation | reported |
+|---|---|---|
+| — | baseline, untouched | `(no differences)` |
+| M1 | `headline`'s keys reversed, every value identical | `$.headline \| the committed order is not the emitted order` — **and no value difference** |
+| M2 | `total_duration_us` + 1, order untouched | `total_duration_us \| differs` — **and no drift line** |
+
+M2 is the one that makes M1 mean something: a differ that called every
+change "order drift" would pass M1 and fail here.
+
+### One thing fixed in passing
+
+The module's own usage block opened with
+`python3 tools/dev_refresh_analysis.py --check`, and there is no
+`--check` flag — the guard imports `differences()`. Pre-existing, not
+introduced here, and `UX-326`'s class (a tool's printed sentence is a
+contract). Corrected to the command that does run.
+
+### Deviation from the Required Fix
+
+None. Both branches of the decision were available and the measured
+one — fixtures already in emitted order — needed neither.

@@ -55,7 +55,18 @@ For every task, before marking it done:
 
 1. Run the exact command(s) given in the task's **Acceptance Test** section.
 2. Paste the actual command and actual output into the task file's **Verification Log** section (append, don't overwrite prior entries).
-3. **While you work, run the tests that touch what you changed** (`UX-336`): `make test-touching` maps the working diff to the test files that name it - measured at 4s on a one-module diff. Wider than one module, run the tier (`UX-238`). Every target runs `-n auto`; the whole suite is ~5m30s at that with the bst tier (re-measured round 74: 5,635 passed, 81 skipped, 328s on 4 cores; round 46 read 3m15s, 10m40s single-process) and the small tier is 11s:
+3. **While you work, run the tests that touch what you changed** (`UX-336`): `make test-touching` maps the working diff to the test files that name it - measured at 4s on a one-module diff. Wider than one module, run the tier (`UX-238`). Every target runs `-n auto`. **The suite's wall clock is a property of the machine, not of the suite** (`UX-551`), so budget a round against the spread and not a figure:
+
+```text
+round 46   3m15s                                     4 cores
+round 74   5m28s   5,635 passed,  81 skipped, 328s   4 cores
+round 80   8m52s   6,181 passed,  29 skipped, 533s   4 cores
+round 81   3m45s   6,256 passed,  29 skipped, 226s   4 cores, quiet
+  and round 80's own tree (`ca825c3`) re-measured in round 81:
+           3m32s   6,097 passed, 124 skipped, 212s   worktree
+```
+
+Round 80's 8m52s is **not reproducible on the tree that produced it**: the same commit reads 3m32s on a quiet machine. The suite grew by 621 tests between rounds 74 and 81 and got *faster* in wall clock. So a single dated sample dates the afternoon, not the suite — measure it yourself when the number matters. The small tier is 11s:
 
    | target | measured at `-n auto` | what is in it |
    |---|---|---|
@@ -91,7 +102,9 @@ For every task, before marking it done:
 10. **Does this change what `docs/design/architecture.md` or the spec says is true? Then they change in the same commit.** The user's observation, and it is measurable: when `UX-233` was filed, `architecture.md` still described three analysis planes and stopped at round 20 — before the entire viewer axis (the server, the schema-driven page, the export) and before the contract wave that followed it — and five of the eight published schemas were named in no document at all. Documentation that has fallen a whole axis behind is what makes a big refactor expensive to price, which is exactly the cost the observation names. The mechanical half is guarded: `tests/unit/test_the_documents_keep_up_with_the_contracts.py` asserts every schema id the code emits appears in the spec's Part 32.5 and in the architecture inventory, and that neither names one nothing emits. The judgment half — a *mechanism* the document describes and your change moved — is a checklist item for the same reason item 6 is.
 
 11. **Does this change need documentation you are not writing now? File it before the commit lands.** There were two escape valves for work a session cannot do — a bug you notice becomes a tracker row (`§2.5`), and a doc your change made *wrong* is fixed in the same commit (item 10) — and no door at all for the third and commonest shape: *this needs a proper explanation, and writing it well is half a session's work.* That thought had nowhere to go, so it became a comment, or nothing. Round 28 produced three instances and all three survived only because someone happened to say so out loud: `capacity_recommendation` and `memory_envelope` reach no consumer, and `bga/whatif.py`'s convention was documented only in its own docstring. The rule is the same shape as `§2.5` and costs the same: a row in `docs/backlog/scenarios/README.md` — id, one line, 🔴, topic `docs` — in the commit that creates the debt. A task file can come later; naming the gap is the minimum. If you decide the gap is not worth documenting, say that in the Outcome instead — a stated decline is a decision, and silence is not. `tests/unit/test_documentation_debt_has_a_door.py` holds the mechanical half: a filing that defers documentation must name where it went (`UX-237`).
-12. If the acceptance test does **not** pass after your change, leave status at 🟡 (In Progress) with a note on what's blocking, and stop — do not mark it 🟢 "mostly working."
+12. **`docs/spec/specification.md` is ground truth, and Part 32 is the one Part a round may edit.** `UX-556` is what settled the boundary, because a round hit it and read it two ways. The spec's contract registry said "The last four are **written but not printable**" of a set that is six (`unprintable()` less `superseded()`) and that four rows follow; `UX-549` fixed the architecture's copy of the same sentence and filed the spec's, reading the rule as forbidding the edit. It does not: the sentence is at line 1671 and Part 32 spans 1515-1788, so it was inside the permitted region the whole time. **The Part, not the table** — a rule that lets you correct a registry row but not the sentence counting the rows is not a boundary, it is an accident of where someone drew the line. Everything outside Part 32 stays read-only for a round; a factual error there is filed, not fixed. And the second half, which is what stops this recurring: **a counted figure in Part 32 is derived by a guard, never restated in prose.** Both copies of this error were prose nothing checked. `tests/unit/test_a_counted_figure_is_derived.py::TestTheSpecCountsItsOwnTable` reads the count and the position off the table's own rows.
+
+13. If the acceptance test does **not** pass after your change, leave status at 🟡 (In Progress) with a note on what's blocking, and stop — do not mark it 🟢 "mostly working."
 
 Status legend (same as the tracker):
 
@@ -240,6 +253,8 @@ tools/dev_refresh_analysis.py  the rule a committed analysis is written
 tools/dev_process_bands.py  what the process did to itself, from the committed Outcomes
 tools/dev_tier_drift.py      which files outgrew their tier, from the
                              suite's own junit report (UX-418)
+tools/dev_junit_tail.py      which tests failed, from the junit a red job
+                             kept - when the log tail is the wrong 400 lines (UX-554)
 tools/dev_js_deps.py         the viewer's module graph, derived: order, cycles, what would cross a cut (UX-340)
 tools/dev_perfetto_queries.py  the canned questions, run against a real
                              trace with Perfetto's own reader (UX-432)

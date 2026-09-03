@@ -73,21 +73,36 @@ no meaning, and this repository has spent thirty rounds refusing those.
 2. **Record the state.** The contract set is `bga.contracts.ids()`; the
    command set is what `bga --help` lists. Both go in the release
    section's fenced `state` block, which is what the derivation reads.
-3. **Derive the version** from the table above and bump
+3. **Freeze the row you are superseding.** The previous release's
+   state block gains a `digest:` line as its first line, and stops
+   being editable without the guard saying so (`UX-550`). Only the
+   newest row is checked against the tree; every row below it is
+   checked against its own digest, because that clause was satisfiable
+   by rewriting the last row and for five rounds that was the cheaper
+   path — `0.3.0` carried five contracts that did not exist on its
+   date. Print the digest with:
+
+   ```bash
+   python3 -c "import sys; sys.path.insert(0, 'tests/unit'); \
+     from test_a_release_records_a_contract_state import _states, state_digest; \
+     print(state_digest(_states()['0.3.0']))"
+   ```
+
+4. **Derive the version** from the table above and bump
    `bga/__init__.py` and `pyproject.toml` together — the guard checks
    they agree with the newest release row.
-4. **Write the head**: what this release is about in a paragraph, the
+5. **Write the head**: what this release is about in a paragraph, the
    contract delta in a sentence, and the upgrade note when there is
    one. This is the only part that is written rather than derived, and
    it is the part worth reading.
-5. **Generate the body**: `bga release-notes <from> <to>` emits the
+6. **Generate the body**: `bga release-notes <from> <to>` emits the
    closed rows between two markers, grouped by topic. Do not hand-write
    it — the narrative already exists in `closed.md` and a third copy
    would drift (`UX-252`).
-6. **Carry the review's open findings.** Any finding the review filed
+7. **Carry the review's open findings.** Any finding the review filed
    that is still open is named in the head, so "we knew" is on the
    record rather than in someone's memory.
-7. **Tag** `v<version>` on the release commit.
+8. **Tag** `v<version>` on the release commit.
 
 ## What a release does not do
 

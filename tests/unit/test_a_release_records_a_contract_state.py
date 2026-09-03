@@ -17,6 +17,7 @@ ledger. With one release row there is no pair to check, and a rule that
 only runs once there are two would ship untested and stay untested
 until the day it mattered.
 """
+import hashlib
 import pathlib
 import re
 
@@ -48,6 +49,18 @@ def _rows():
                          "closed_rows": int(match.group(3)),
                          "kind": match.group(4)})
     return rows
+
+
+#: What a state block records. The digest covers these, in this order,
+#: so a reordering is not a change and an edit is.
+STATE_KEYS = ("contracts", "commands")
+
+
+def state_digest(recorded):
+    """`UX-550`: twelve hex characters over one release's recorded state."""
+    payload = "\n".join(f"{key}: {' '.join(sorted(recorded[key]))}"
+                        for key in STATE_KEYS)
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()[:12]
 
 
 def _states():
@@ -147,6 +160,59 @@ class TestTheLedgerIsWellFormed:
             if getattr(action, "choices", None):
                 commands |= set(action.choices)
         assert state["commands"] == sorted(commands)
+
+    def test_a_superseded_release_is_frozen_by_a_digest(self):
+        """`UX-550`: the newest row is checked against the tree, which
+        is satisfiable two ways - cut a release, or rewrite the last
+        row. For five rounds the second was cheaper: `0.3.0`'s block
+        was edited by five commits, none of them a release, and five
+        contracts that did not exist on its date ended up inside it. A
+        row stops being the newest and gains a digest; an edit after
+        that reddens.
+        """
+        states = _states()
+        missing = [row["version"] for row in _rows()[1:]
+                   if "digest" not in states[row["version"]]]
+        assert missing == [], (
+            f"superseded release(s) recording no digest: {missing}. A "
+            f"released row is frozen when the next one is cut - see "
+            f"docs/contributing/release-guide.md")
+
+    def test_a_superseded_releases_state_matches_its_digest(self):
+        """The mutation the clause above cannot see on its own: the
+        contract list edited after the release shipped.
+
+        The digest does not make the block unwritable - nothing in a
+        text file is - but it makes an edit fail rather than pass, and
+        rewriting it too is a deliberate act rather than the cheapest
+        path.
+        """
+        states = _states()
+        wrong = []
+        for row in _rows()[1:]:
+            recorded = states[row["version"]]
+            if "digest" not in recorded:
+                continue
+            real = state_digest(recorded)
+            if recorded["digest"] != [real]:
+                wrong.append(
+                    f"{row['version']}: records digest "
+                    f"{' '.join(recorded['digest'])}, its state hashes to "
+                    f"{real}")
+        assert wrong == [], (
+            f"a shipped release's recorded state has been edited since it "
+            f"was written: {wrong}")
+
+    def test_the_newest_release_carries_no_digest(self):
+        """The decision, asserted rather than assumed. The newest row is
+        the one the tree answers for, so freezing it as well would give
+        that check a second way to be satisfied - edit the state, edit
+        the digest - which is the defect this item was filed for.
+        """
+        newest = _rows()[0]["version"]
+        assert "digest" not in _states()[newest], (
+            f"release {newest} is the newest row and carries a digest; "
+            f"when the tree moves past it the answer is a new row")
 
     def test_the_package_version_is_the_newest_release(self):
         """Three copies of one number - `bga/__init__.py`,

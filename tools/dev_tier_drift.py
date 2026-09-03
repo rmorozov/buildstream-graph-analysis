@@ -671,6 +671,15 @@ def out_of_band(shift, before):
                for one in [shift] + list(before))
 
 
+#: `UX-557`: the diff was read and the selector cannot discriminate on
+#: it - a shared-harness path changed, so `dev_touching` answers "every
+#: test file". Distinct from `None`, which is "the diff could not be
+#: read": `None` confirms on agreement, because a failed fetch must be
+#: loud; this reports, because the evidence `UX-476` requires is absent
+#: rather than unreadable.
+NO_CAUSE_FILTER = "shared harness changed: the selector names every file"
+
+
 def explained_by(base):
     """The test files this branch's diff could plausibly have slowed.
 
@@ -722,11 +731,14 @@ def explained_by(base):
             # files "explained", from two harness files touched earlier
             # in the round.
             #
-            # `None` is the honest answer - no evidence either way -
-            # and `repeated` then confirms on agreement across runs,
-            # which is `UX-442`'s behaviour and the documented meaning
-            # of `None` above. `UX-494`.
-            return None
+            # `UX-494` returned `None` here, which `repeated` reads
+            # as "the diff could not be read" and **confirms** on
+            # agreement - so the shared-harness case failed the build
+            # on two runs against one record, the measurement `UX-476`
+            # showed is one measurement counted twice. `UX-557`: the
+            # diff *was* read, so this is not that; it is no cause
+            # evidence, and a row with no cause evidence is reported.
+            return NO_CAUSE_FILTER
         return set(chosen)
     except Exception:                                # pragma: no cover
         return None
@@ -798,7 +810,11 @@ def repeated(rows, history, explained=None):
     for row in rows:
         if not (enough and all(row[0] in one for one in history)):
             waiting.append(row)
-        elif explained is None or row[0] in explained:
+        elif explained is None:
+            confirmed.append(row)
+        elif explained is NO_CAUSE_FILTER:
+            unexplained.append(row)
+        elif row[0] in explained:
             confirmed.append(row)
         else:
             unexplained.append(row)
@@ -924,6 +940,10 @@ def _against(times, path, args):
             print(f"tiers ok: {line}")
         return done(0, f"tiers ok: {line}")
     explained = explained_by(args.base)
+    if explained is NO_CAUSE_FILTER:
+        # `UX-557`: the line is the gate's published sentence, and a
+        # reader must not read an unfiltered report as a filtered one.
+        line += f" [no cause filter: {NO_CAUSE_FILTER}]"
     confirmed, unexplained, waiting, recorded = repeated(
         rows, history, explained)
 
@@ -954,16 +974,24 @@ def _against(times, path, args):
         # run compares against the same recording run, so agreement
         # across runs is evidence about the *record* as much as about
         # the file, and nothing in the diff names this one.
+        named = ("with no cause filter applied (UX-557)"
+                 if explained is NO_CAUSE_FILTER else
+                 "with nothing in this branch's diff that names them "
+                 "(UX-476)")
         print(f"\n{len(unexplained)} file(s) over both gates on "
-              f"{CI_DRIFT_RUNS} consecutive runs, with nothing in this "
-              f"branch's diff that names them (UX-476):", file=sys.stderr)
+              f"{CI_DRIFT_RUNS} consecutive runs, {named}:",
+              file=sys.stderr)
         for row in unexplained:
             print(f"{say(row)}   readings: {readings(row)}", file=sys.stderr)
+        cause = ("no cause filter could be applied to this diff, so "
+                 "these rows carry agreement and nothing else"
+                 if explained is NO_CAUSE_FILTER else
+                 f"`git diff {args.base}` touches neither these files "
+                 f"nor anything they name")
         print(f"\nEvery run is read against the one recording run, so "
               f"agreeing runs are evidence the reference entry is "
               f"unrepresentative as much as evidence the file got slower "
-              f"- and `git diff {args.base}` touches neither these files "
-              f"nor anything they name. If the readings above agree with "
+              f"- and {cause}. If the readings above agree with "
               f"each other, refresh the reference from this run's "
               f"{CI_CANDIDATE_ARTIFACT} artifact; if they do not, it is "
               f"one runner's afternoon and the next run will say so. "

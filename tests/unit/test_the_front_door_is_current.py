@@ -135,9 +135,16 @@ class TestTheDoorNamesWhatItEmits:
 
     def test_the_index_names_no_schema_the_code_does_not_publish(self):
         """The other direction. A retired id left in the index sends a
-        consumer to pin something that is gone."""
+        consumer to pin something that is gone.
+
+        `UX-540`: an *input* the registry knows is a legitimate name
+        here too - the index gained a `## What it reads` table - so the
+        known set is what the registry answers for, not what it emits.
+        """
+        from bga import contracts
+
         text = (REPO / "docs/README.md").read_text(encoding="utf-8")
-        published = set(_published_schemas())
+        published = set(_published_schemas()) | set(contracts.reads())
         named = set(re.findall(r"`([a-z][a-z-]*/v\d+)`", text))
         stale = sorted(named - published)
         assert stale == [], (

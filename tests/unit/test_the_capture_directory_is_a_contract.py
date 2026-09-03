@@ -159,8 +159,9 @@ class TestTheSpecificationAndTheModuleAgree:
     def test_every_contract_a_row_cites_is_a_real_one(self):
         """A row citing an id nothing owns would send a reader to
         `bga --schema` for a shape that does not exist."""
-        known = set(contracts.ids()) | {"graph/v9", "trace/v9",
-                                        "run-context/v9"}
+        # `UX-540`: was a literal union of the three input shapes,
+        # because no registry knew them. `reads()` does.
+        known = set(contracts.ids()) | set(contracts.reads())
         cited = [c for _p, _pr, c, _w in run_store.CAPTURE_LAYOUT if c]
         unknown = sorted(set(cited) - known)
         assert unknown == [], unknown

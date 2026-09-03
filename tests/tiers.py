@@ -534,6 +534,12 @@ LARGE = (
 )
 
 MEDIUM = (
+    # `UX-545`, tiered on landing. A real two-plane render with the
+    # ceiling monkeypatched under both rungs, then the exported page
+    # booted - so `bga view` and node, twice over. Measured here on a
+    # quiet 4-core box, single process: 2.65 / 2.51s, and the track
+    # that wrote it read 2.51s.
+    "tests/unit/test_a_refused_timeline_says_it_was_refused.py",    #    2.5s
     # `UX-455`, tiered on landing, and it earned the tier the way the
     # item is about: two clauses run the confirmation for real, which
     # is a pytest subprocess each. Three single-process runs:
@@ -572,6 +578,7 @@ MEDIUM = (
     # `UX-443`, tiered on landing. Two real servers on a socket and
     # two full trace renders over a committed capture. 2.8s.
     "tests/unit/test_the_served_handoff_counts_its_edges.py",       # 2.8s
+    "tests/unit/test_the_served_scratch_is_not_leaked.py",          # 1.6s
     # `UX-449`, tiered on landing. It parses every test source in the
     # suite - 195 skip call sites over ~380 files - which is why it is
     # seconds rather than milliseconds despite running no build and

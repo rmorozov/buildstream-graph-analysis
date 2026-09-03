@@ -36,7 +36,8 @@ import pytest
 REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 
-from bga.attribution.blame_chain import BlameChainAnalyzer       # noqa: E402
+from bga.attribution.blame_chain import (AttributionCategory,    # noqa: E402
+                                         BlameChainAnalyzer)
 from bga.ingest.models import (NormalizedTask, Resource, TaskKey,  # noqa: E402
                                TaskKind)
 from bga.structural.analyzer import (ElementDependencyGraph,     # noqa: E402
@@ -222,3 +223,55 @@ class TestTheGapSweepStopsWhereItsCallersStop:
         assert holder_info["explained_us"] == 10
         assert list(holder_info["blocking_tasks"]) == [
             "h.bst|BUILD|EXECUTION|0"]
+
+
+def _resaturating_gap(runs):
+    """A wait gap holding `runs` separated saturated segments - `UX-19`'s
+    re-saturation, the shape that reaches `_build_holder_info` more than
+    once."""
+    tasks = [_task("w.bst", 0, 10000, 10006)]
+    for k in range(runs):
+        base = k * 100
+        tasks.append(_task(f"h{k}.bst", 0, base, base + 10))
+    return tasks
+
+
+class TestTheHolderMapIsBuiltOnlyForTheSegmentThatIsKept:
+    """The third bound. `_classify_wait_gap` returns the *first*
+    resource-wait segment's holder_info and drops every later one, so
+    accumulating and sorting those was work with no reader - 40.5% of
+    the builds at 1,202 elements and 47.5% at 4,002 (`UX-541`)."""
+
+    def _built(self, runs):
+        tasks = _resaturating_gap(runs)
+        analyzer = BlameChainAnalyzer(
+            tasks, resource_capacity={PROCESS: 1}, max_jobs=1)
+        analyzer._build_resource_timelines()
+        built = []
+        real = analyzer._build_holder_info
+
+        def counting(*args, **kwargs):
+            built.append(args[1])
+            return real(*args, **kwargs)
+
+        analyzer._build_holder_info = counting
+        segments, info = analyzer._classify_wait_gap(tasks[0], 0, 10000)
+        resource = [s for s in segments
+                    if s[0] is AttributionCategory.RESOURCE_WAIT]
+        return built, resource, info
+
+    def test_many_saturated_segments_build_one_holder_map(self):
+        built, resource, _info = self._built(8)
+        assert len(resource) > 1, (
+            f"the fixture produced {len(resource)} resource-wait segments, "
+            f"so it cannot tell the two behaviours apart")
+        assert len(built) == 1, (
+            f"{len(resource)} resource-wait segments built {len(built)} "
+            f"holder maps; only the first is ever returned")
+
+    def test_the_one_built_is_the_one_returned(self):
+        """Non-vacuity: building none would satisfy nothing, and
+        building the *last* would answer a different question."""
+        built, _resource, info = self._built(8)
+        assert info is not None
+        assert built == [info["wait_start_us"]] == [0]

@@ -810,12 +810,39 @@ class TestEachComparisonRunsWhereItMeansSomething:
 
     def test_one_interpreter_records_so_there_is_one_reference(self):
         """Four jobs would be four references to keep true, which is the
-        rot this item is mostly about."""
+        rot this item is mostly about.
+
+        `UX-554` gave the junit a second job - naming the failing tests
+        when the log tail cannot - so every matrix job writes one now,
+        and counting `--junitxml=` stopped being the same question. What
+        `UX-420` needs is one **reference**, which is one `--record`.
+        The old count was a proxy for that (fixing guide §5), and it
+        was also weaker: two `--record` steps behind one junit would
+        have passed it.
+        """
         text = self.WORKFLOW.read_text(encoding="utf-8")
-        assert text.count("--junitxml=") == 1, (
-            "more than one CI job writes a timing report; the reference "
-            "is per runner-and-interpreter, so this needs a decision")
-        assert "matrix.python-version == '3.11'" in text, text[:0]
+        recording = [step
+                     for job in yaml.safe_load(text)["jobs"].values()
+                     for step in job.get("steps") or []
+                     if "--record" in (step.get("run") or "")]
+        assert len(recording) == 1, (
+            f"{len(recording)} CI steps record a timing reference; the "
+            f"reference is per runner-and-interpreter, so this needs a "
+            f"decision")
+        assert all(
+            "matrix.python-version ==" in str(step.get("if", ""))
+            for step in recording), (
+            "the recording step is not pinned to one interpreter, so the "
+            "reference it writes depends on which job got there first")
+
+    def test_every_job_keeps_a_junit_to_name_its_failures(self):
+        """`UX-554`: the clause above no longer counts junits, so this
+        one holds what that count used to imply - that a report exists
+        at all - on every job rather than one."""
+        text = self.WORKFLOW.read_text(encoding="utf-8")
+        assert text.count("--junitxml=") >= 3, (
+            f"only {text.count('--junitxml=')} CI step(s) write a junit; a "
+            f"job without one cannot name what failed (UX-554)")
 
 
 class TestAnExcursionMustRepeat:
@@ -1045,7 +1072,12 @@ class TestAgreementIsNotEvidenceOnItsOwn:
         the round, and a real CI run went red on one sample because of
         it.
 
-        The fallback has to read as `None` - no evidence either way.
+        `UX-494` made the fallback read as `None` - no evidence either
+        way. `UX-557` found that `None` is *also* "the diff could not
+        be read", which `repeated` confirms on, so the shared-harness
+        case still failed the build on agreement alone. It now returns
+        `NO_CAUSE_FILTER`, which reports instead.
+
         The first version of this clause asserted the fallback's own
         shape and then called `explained_by` on a base with an *empty*
         diff, where the fallback never fires: it passed with the defect
@@ -1059,10 +1091,32 @@ class TestAgreementIsNotEvidenceOnItsOwn:
             "the shared-harness fallback no longer reports itself as "
             "'*', so explained_by cannot detect it and UX-494 is back")
 
-        assert drift.explained_by("HEAD") is None, (
+        answer = drift.explained_by("HEAD")
+        assert answer is drift.NO_CAUSE_FILTER, (
             "the whole-suite fallback was read as a diff that names "
             "every test file, so every excursion reads as caused by "
             "the branch and the gate confirms on one sample (UX-494)")
+        assert answer is not None, (
+            "`None` is 'the diff could not be read', and `repeated` "
+            "confirms on it - the shared-harness case must not share "
+            "that verdict (UX-557)")
+
+    def test_no_cause_filter_reports_rather_than_failing(self):
+        """`UX-557`. The whole point: a row that agreed across the
+        window, on a diff the selector cannot discriminate, is
+        `unexplained` - printed with its readings, not failed on.
+
+        `UX-476`'s reasoning applies exactly: every run is read against
+        the same recording run, so agreement is one measurement counted
+        twice, and confirming needs evidence of a different kind. When
+        no filter could run there is no such evidence.
+        """
+        confirmed, unexplained, waiting, _new = drift.repeated(
+            [self.ROW], self.HISTORY, explained=drift.NO_CAUSE_FILTER)
+        assert confirmed == [], (
+            "an agreed row with no cause filter still fails the build, "
+            "so the gate confirms on agreement alone (UX-557)")
+        assert unexplained == [self.ROW], (unexplained, waiting)
 
     def test_an_unreadable_diff_confirms_on_agreement_alone(self):
         """`explained=None` is "the diff could not be read" - a shallow
@@ -1589,9 +1643,12 @@ class TestTheVerdictDoesNotDependOnTheWorkingTree:
         so `select` returns the whole suite under `"*"` and
         `explained_by` refuses. That refusal is right (`UX-494`) and is
         not what `UX-513` changed — what changed is that the two clauses
-        above no longer depend on whether it fires."""
+        above no longer depend on whether it fires.
+
+        `UX-557` gave the refusal its own value: `None` also means "the
+        diff could not be read", which `repeated` confirms on."""
         _pin_the_diff(monkeypatch, ["tests/tiers.py"])
-        assert drift.explained_by("HEAD") is None
+        assert drift.explained_by("HEAD") is drift.NO_CAUSE_FILTER
 
     def test_the_pin_is_what_makes_the_difference(self, monkeypatch):
         """Without the pin these three would all answer the same thing
@@ -1860,6 +1917,137 @@ class TestTheRecordStepDoesNotBuryTheFailure:
             f"the recording step's own output never names any of "
             f"{uploaded}, so a reader following 're-record with --record' "
             f"has nowhere to get this run's numbers from")
+
+
+class TestTheFailureNameIsTheLastThingInTheLog:
+    """`UX-558`. `UX-441`'s rule is that the failure stays last in the
+    log; `UX-491` named the reader it is for - one with the log and not
+    the artifact. `UX-554`'s naming step was filed at step 10 of 20, so
+    on a red `test (3.11)` it sat 3,800 lines from the end of a 3,992
+    line log, behind the ~400 line document `UX-476` prints. The
+    `::group::` folds that document in the browser and not over the
+    API, which is exactly the reader it was written for.
+
+    The clause that decides is
+    `test_the_ordered_steps_leave_the_id_in_the_tail`: it runs the
+    job's own `run:` scripts in the workflow's order and counts, so
+    the rule is measured rather than read off the step list (§5). The
+    ordering clause ties CI to the arrangement that measurement covers.
+    """
+
+    WORKFLOW = REPO / ".github/workflows/ci.yml"
+
+    #: The tool whose step names the failures, per `UX-554`.
+    NAMES_THEM = "dev_junit_tail"
+
+    #: A real id, so the tail is searched for what a reader greps for.
+    RED_ID = "test_a_second_reader_is_a_second_fetch"
+
+    #: The reader's window. `UX-558`'s Acceptance Test.
+    TAIL_LINES = 40
+
+    @classmethod
+    def _jobs(cls):
+        return yaml.safe_load(
+            cls.WORKFLOW.read_text(encoding="utf-8"))["jobs"]
+
+    @classmethod
+    def _naming_steps(cls):
+        """`{job: [index, ...]}` for every step that names the failures."""
+        found = {}
+        for job, body in cls._jobs().items():
+            where = [index
+                     for index, step in enumerate(body.get("steps") or [])
+                     if cls.NAMES_THEM in str(step.get("run", ""))]
+            if where:
+                found[job] = where
+        return found
+
+    def test_the_naming_step_is_the_last_step_of_its_job(self):
+        """The rule, stated on the step list: nothing follows it. A
+        step that follows it writes to the log after it, and the whole
+        defect is that ~400 of those lines are more than a log tail."""
+        jobs, naming = self._jobs(), self._naming_steps()
+        assert naming, (
+            f"no job runs {self.NAMES_THEM}, so UX-554's step is gone and "
+            f"there is no failure name for this rule to keep last")
+        for job, where in naming.items():
+            steps = jobs[job]["steps"]
+            assert len(where) == 1, (
+                f"job {job!r} names the failures at steps {where}; which "
+                f"one has to be last is then a guess")
+            after = [step.get("name") or step.get("uses")
+                     for step in steps[where[0] + 1:]]
+            assert not after, (
+                f"job {job!r} runs {len(after)} step(s) after the one that "
+                f"names the failing tests: {after}. On a red 3.11 run the "
+                f"reference document alone is ~400 lines, so the name is "
+                f"out of reach of a log tail - UX-558")
+
+    @classmethod
+    def _a_red_junit(cls, path, rows):
+        """A junit in CI's shape: every file timed, one real failure."""
+        cases = [f'<testcase classname="{name[:-3].replace("/", ".")}'
+                 f'.TestThing" name="test_one" time="{seconds}" />'
+                 for name, seconds in rows.items()]
+        cases.append(
+            '<testcase classname="tests.unit.test_the_server_knows'
+            '_whether_the_trace_was_fetched.TestIt" '
+            f'name="{cls.RED_ID}" time="0.02">'
+            '<failure message="AssertionError: 0 == 1">body</failure>'
+            "</testcase>")
+        path.write_text(
+            '<?xml version="1.0" encoding="utf-8"?><testsuites>'
+            f'<testsuite name="pytest" failures="1" tests="{len(cases)}">'
+            f'{"".join(cases)}</testsuite></testsuites>', encoding="utf-8")
+        return path
+
+    @classmethod
+    def _the_red_path(cls, job="test"):
+        """The `run:` scripts GitHub executes on a 3.11 job whose suite
+        failed, in the workflow's own order.
+
+        A step with no `if:` is `success()` and is skipped after a red;
+        so is one conditioned on the interpreter alone, which is why
+        the drift gate itself does not appear here.
+        """
+        for step in cls._jobs()[job]["steps"]:
+            condition = str(step.get("if", "")).strip()
+            if "run" not in step or "3.12" in condition:
+                continue
+            if "!= '3.11'" in condition:
+                continue
+            if "failure()" in condition or "always()" in condition:
+                yield step["name"], step["run"]
+
+    def test_the_ordered_steps_leave_the_id_in_the_tail(self, tmp_path):
+        """`UX-558`'s Acceptance Test, replayed off the workflow: the
+        last 40 lines of a red 3.11 job's log carry the failing id."""
+        self._a_red_junit(tmp_path / "junit.xml", dict(tiers.recorded()))
+        log = []
+        for name, script in self._the_red_path():
+            if "git fetch" in script:
+                continue                      # the network, not the log
+            script = re.sub(r"\$\{\{\s*runner\.temp\s*\}\}", str(tmp_path),
+                            script)
+            # `python` is not a name every environment binds; the
+            # workflow's own runner does.
+            script = re.sub(r"(?m)^(\s*)python ", rf"\1{sys.executable} ",
+                            script)
+            done = subprocess.run(["bash", "-c", script], cwd=REPO,
+                                  capture_output=True, text=True, timeout=300)
+            log.extend((done.stdout + done.stderr).splitlines())
+        assert len(log) > 200, (
+            f"the replayed red path printed {len(log)} lines, so 'inside "
+            f"the last {self.TAIL_LINES}' is true of any order at all and "
+            f"this clause decides nothing")
+        tail = log[-self.TAIL_LINES:]
+        assert any(self.RED_ID in line for line in tail), (
+            f"the failing id is not in the last {self.TAIL_LINES} of "
+            f"{len(log)} lines; a reader with the log and not the artifact "
+            f"cannot name what failed. The tail is:\n"
+            + "\n".join(tail[:8]))
+
 
 class TestTheToolIsRunnable:
     def test_it_runs_as_a_module_and_says_what_it_checked(self, tmp_path):

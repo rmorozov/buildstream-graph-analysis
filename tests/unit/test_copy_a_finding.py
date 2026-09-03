@@ -184,27 +184,18 @@ class TestThePageCopiesRatherThanWords:
         finding = _finding(ranking, "blast-radius-ranking")
         out = subprocess.run(
             [node, "--input-type=module", "-e", '''
-              const calls = [];
-              function make(tag) {
-                return { tagName: tag, attrs: {}, children: [], textContent: "",
-                  setAttribute(k, v) { this.attrs[k] = String(v); },
-                  getAttribute(k) { return this.attrs[k] ?? null; },
-                  append(...xs) { for (const x of xs) { if (x == null) continue;
-                    typeof x === "string" ? this.textContent += x
-                                          : this.children.push(x); } },
-                  addEventListener(n, fn) { calls.push([n, fn]); } };
-              }
+              const shim = await import(process.env.BGA_DOM_SHIM);
               const { copyButton } = await import("./bga/viewer/questions.js");
               const text = %s;
               const button = copyButton((t, a = {}) => {
-                const n = make(t);
+                const n = shim.makeNode(t);
                 for (const [k, v] of Object.entries(a)) n.setAttribute(k, v);
                 return n;
               }, text);
-              let wrote = null;
-              calls[0][1]();
+              button.listeners.click[0]();
               console.log(JSON.stringify({ copy: button.attrs["data-copy"] }));
             ''' % json.dumps(finding["copy_text"])],
-            capture_output=True, text=True, cwd=REPO, timeout=60)
+            capture_output=True, text=True, cwd=REPO, timeout=60,
+            env=dict(os.environ, BGA_DOM_SHIM=os.path.join(REPO, "tests", "dom_shim.mjs")))
         assert out.returncode == 0, out.stderr
         assert json.loads(out.stdout)["copy"] == finding["copy_text"]

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """`UX-486`: the rule a committed analysis document is written under.
 
-    python3 tools/dev_refresh_analysis.py --check
+    python3 -m pytest tests/unit/test_a_committed_analysis_matches_the_analyzer.py
     python3 tools/dev_refresh_analysis.py --write tests/fixtures/with_timeline
 
 Two fixtures hold an analysis and are compared against a fresh run.
@@ -18,9 +18,10 @@ exactly:
 - **the fixture's own path**, which `UX-218`'s next-step commands must
   name to be runnable. Replaced with one fixed token.
 
-`--check` is what the guard runs; `--write` is what a round runs after
+The guard imports `differences()`; `--write` is what a round runs after
 a deliberate change, then reads `git diff` to confirm the change it
-intended is the only one.
+intended is the only one. Key order is compared as its own line
+(`UX-547`) and `--write` is its fix; order is not a contract (`UX-302`).
 """
 import argparse
 import json
@@ -97,6 +98,35 @@ FIXTURES = (
 )
 
 
+#: How an order difference names itself. Not a value difference - the
+#: document says the same thing in a different order, and a round
+#: reading a fixture diff needs to know which half of it is its own.
+ORDER_DRIFT = "the committed order is not the emitted order"
+
+
+def order_drift(fresh, held, at="$"):
+    """`(where, emitted, committed)` for every object carrying the same
+    keys in a different order.
+
+    Both sides arrive through `json.loads`, which keeps insertion order
+    on CPython 3.7+, so each file's own order survives the parse: it is
+    the `sort_keys=True` comparison in `differences` that throws it
+    away. A node whose key *sets* differ is a value difference and is
+    left to that comparison.
+    """
+    out = []
+    if isinstance(fresh, dict) and isinstance(held, dict):
+        if set(fresh) == set(held) and list(fresh) != list(held):
+            out.append((at, list(fresh), list(held)))
+        for key in fresh:
+            if key in held:
+                out.extend(order_drift(fresh[key], held[key], f"{at}.{key}"))
+    elif isinstance(fresh, list) and isinstance(held, list):
+        for i, (one, other) in enumerate(zip(fresh, held)):
+            out.extend(order_drift(one, other, f"{at}[{i}]"))
+    return out
+
+
 def differences(fixture):
     """`(where, what)` pairs where the committed file and a fresh run
     disagree, most legible first.
@@ -110,14 +140,27 @@ def differences(fixture):
     out = []
     ids_fresh = [f["id"] for f in fresh.get("findings", [])]
     ids_held = [f["id"] for f in held.get("findings", [])]
+    agreed = []
     if ids_fresh != ids_held:
         out.append(("findings", f"committed {ids_held}\n  analyzer  {ids_fresh}"))
+    elif "findings" in fresh and "findings" in held:
+        agreed.append("findings")
     for key in sorted(set(fresh) | set(held)):
         if key == "findings":
             continue
         if json.dumps(fresh.get(key), sort_keys=True) != json.dumps(
                 held.get(key), sort_keys=True):
             out.append((key, "differs"))
+        else:
+            agreed.append(key)
+    # Order, last and only where the values already agree: a key that
+    # differs explains its own reordering, and reporting both would say
+    # one change twice.
+    for where, emitted, committed in order_drift(
+            {k: fresh[k] for k in fresh if k in agreed},
+            {k: held[k] for k in held if k in agreed}):
+        out.append((where, f"{ORDER_DRIFT}\n  committed {committed}"
+                           f"\n  analyzer  {emitted}"))
     return out
 
 

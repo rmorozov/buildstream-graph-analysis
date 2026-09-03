@@ -220,8 +220,11 @@ def main(argv=None) -> int:
         return 0
 
     if args.why:
+        # `UX-557`: the shared-harness fallback keys its one reason
+        # under `"*"`, so a per-name lookup printed `None` for all 424
+        # files - the answer existed and no reader could reach it.
         for name in selected:
-            print(f"{name}\n    <- {why.get(name)}")
+            print(f"{name}\n    <- {why.get(name, why.get('*'))}")
         return 0
     if args.list:
         print("\n".join(selected))

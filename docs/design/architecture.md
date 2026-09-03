@@ -698,7 +698,11 @@ how it is *read*, and the shape is deliberately small.
 - **`bga view`** serves the run on `127.0.0.1` at a kernel-chosen port
   and opens a browser at it. The server is a `ThreadingHTTPServer` with
   a fixed document table: each url is a payload computed by the same
-  functions the CLI calls, so nothing is analysed differently. Three
+  functions the CLI calls, so nothing is analysed differently. One entry
+  is conditional rather than fixed - `store-all.json`, the whole store
+  behind the windowed `store.json` (`STORE_WINDOW = 12`, `UX-528`),
+  offered only when the window hides something and fetched only when a
+  reader asks for it. Three
   urls take a parameter - `blast.json?target=` and
   `whatif.json?elements=`, both of which call the function their
   subcommand calls, and `?run=<stamp>` (`UX-394`), which chooses
@@ -862,9 +866,13 @@ how it is *read*, and the shape is deliberately small.
   ([`styleguide.md` §4-5](styleguide.md)).
 
 - **`--export`** inlines every served document and every module into one
-  self-contained HTML file. What cannot survive that - a live search
-  box, anything needing a server - is *hidden with the command that
-  answers it* rather than shipped as a control that always fails.
+  self-contained HTML file. Past `DATA_COMPACT_MIN_B` (200,000 B of
+  JSON) a document is inlined gzip+base64 in an
+  `application/octet-stream` block that `load()` inflates rather than as
+  readable JSON text (`UX-529`) - the same document, one order of
+  magnitude of bytes. What cannot survive the export at all - a live
+  search box, anything needing a server - is *hidden with the command
+  that answers it* rather than shipped as a control that always fails.
 - **The no-arithmetic boundary** is the axis's one rule, and it is the
   reason the rest holds: **a viewer that derives a conclusion is a
   second analyzer.** Diagnoses, rankings, verdicts, savings, next steps
@@ -962,12 +970,13 @@ those artifacts said which build produced them. The version there is
 addition does not. `additionalProperties` is true everywhere, so a
 consumer that pins a version keeps working while the tool grows.
 
-The last four rows are written but not printable — on-disk shapes a run
+Six rows are written but not printable — on-disk shapes a run
 directory carries rather than documents a subcommand emits. `--schema`
 does not know them, and `bga.contracts.unprintable()` says so.
-`plane2/v1` goes one further: it is read and never written, which
+The last nine go one further: they are read and never written, which
 `bga.contracts.superseded()` names, because a store full of captures
-taken before `UX-297` still has to analyze.
+taken before `UX-297`, `UX-341`, `UX-344`, `UX-384` and `UX-535` still
+has to analyze.
 
 A guard (`tests/unit/test_the_documents_keep_up_with_the_contracts.py`)
 asserts this table and the spec's Part 32.5 name every contract in
@@ -978,6 +987,27 @@ in no registry, no guard and no document, because the previous version
 unioned the registry with a single hard-coded id. A new payload without documentation
 reddens it - which is the only mechanism this repository has found that
 keeps two hand-maintained copies of one fact together.
+
+## The contracts it reads
+
+The other half of the surface (`UX-540`): the input shapes `bga` reads
+and stamps nothing with. Something else wrote them, `bga analyze`
+refuses without all three, and until `UX-540` they were in no registry
+at all - so no consumer could ask which input versions a release
+accepts.
+
+| schema | what it is | read by |
+|---|---|---|
+| `run-context/v9` | what the run was: identity, the `host/v2` manifest, scheduler configuration, the resolved `native_max_jobs` | `bga.ingest.load_run_context` |
+| `graph/v9` | the declared element graph, from `bst show` | `bga.ingest.load_graph` |
+| `trace/v9` | the scheduler's own spans and phases - Plane 1 | `bga.ingest.load_trace` |
+
+`bga.ingest.READS` declares them and `bga.contracts.reads()` walks it,
+beside `ids()` for what the tool emits and `superseded()` for what it
+still opens. Three accessors because *emits*, *accepts* and *no longer
+writes* are three different answers. `analysis/v9` (spec 32.4) is not
+one of these: it is the analyzer's in-memory result shape, on no
+artifact.
 
 ## Navigating the rest of the docs
 
@@ -993,6 +1023,19 @@ keeps two hand-maintained copies of one fact together.
 - **`docs/guides/cli.md`** — CLI reference/usage examples.
 
 ## Verification Log
+
+Updated 2026-09-03 (after `UX-549`), covering round 81's three
+changes to this document — `UX-540`, `UX-548` and `UX-549` —
+re-grounded in the two contract tables above against `bga.contracts` — **23 emitted ids, 9
+of them superseded, and 3 read and never written**. The third set is
+new: `graph/v9`, `run-context/v9` and `trace/v9` are declared by
+`bga.ingest.READS` and answered by `contracts.reads()`, which is the
+chapter *The contracts it reads* below the inventory. 8 printable and
+15 not; `schemas.schema`'s `analyze/v5` still has **56 top-level
+properties**, re-read here and unchanged. The viewer chapter's document
+table now names `store-all.json` as its one conditional entry
+(`UX-528`), and the `--export` bullet says a document past
+`DATA_COMPACT_MIN_B` travels gzip+base64 (`UX-529`).
 
 Updated 2026-09-02 (after `UX-535`), re-grounded in the contracts
 table above against `bga.contracts`'s derived inventory — **23 ids, 9

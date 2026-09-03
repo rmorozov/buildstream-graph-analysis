@@ -65,7 +65,7 @@ jobs:
       # to read this runner against its own past and four would be four
       # references to keep true.
       - name: Test
-        run: make test
+        run: make test PYTEST_ARGS="--junitxml=${{ runner.temp }}/junit.xml"
         if: matrix.python-version != '3.11' && matrix.python-version != '3.12'
 
       # UX-524: the touching map, measured rather than grepped. Coverage
@@ -80,12 +80,22 @@ jobs:
       - name: Test (with a coverage-derived touching map)
         run: |
           make test PYTEST_ARGS="--cov=bga --cov=tools \
-            --cov-context=test --cov-report="
+            --cov-context=test --cov-report= \
+            --junitxml=${{ runner.temp }}/junit.xml"
         if: matrix.python-version == '3.12'
 
       - name: Test (with a timing report)
         run: make test PYTEST_ARGS="--junitxml=${{ runner.temp }}/junit.xml"
         if: matrix.python-version == '3.11'
+
+      - name: Keep the junit whatever the suite did
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: junit-${{ matrix.python-version }}
+          path: ${{ runner.temp }}/junit.xml
+          retention-days: 30
+          if-no-files-found: warn
 
       # UX-418 established that CI's seconds cannot be compared to the
       # floors in tests/tiers.py, which describe a developer machine:
@@ -249,6 +259,25 @@ jobs:
       # file. SMALL_TIER_BACKSTOP_1P_S in tests/tiers.py.
       - name: Test (small tier, single process)
         run: PYTEST_XDIST= timeout 120 make test-small
+
+      # `UX-554`: the junit steps ran only when the suite passed, so on
+      # the run where it matters the record of *what* failed died with
+      # the runner. This names the ids for a truncated log - `UX-491`'s
+      # rule on the path where the gate does not run.
+      #
+      # `UX-558`: **last in the job**, which is the only position where
+      # that rule holds. At step 10 of 20 it sat 3,800 lines from the
+      # end of a red 3.11 log, behind the ~400-line document `UX-476`
+      # prints for a reader without the artifact - and the `::group::`
+      # folds it in the browser only, not over the API, which is the
+      # reader `UX-491` named. `UX-491` had to repeat the gate's line
+      # instead of moving it, because the gate's exit code is the
+      # verdict at its own position; this step exits 0 by design and
+      # gates nothing, so it moves rather than being repeated.
+      - name: The failing tests, named
+        if: failure()
+        run: |
+          python tools/dev_junit_tail.py "${{ runner.temp }}/junit.xml"
 
   # The AI-native SDLC playbook's Test stage: the eval suite runs "on
   # any change to `CLAUDE.md`, skills or hooks, since that configuration

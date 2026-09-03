@@ -827,6 +827,11 @@ async function boot() {
         // `UX-530`: and why a plane is missing, when this file narrowed
         // rather than refused.
         timelineDegraded: run.timeline_degraded,
+        // `UX-545`: and when it refused outright - what it refused, the
+        // ceiling, and the recipe. Without these the page told a
+        // refusal it had no build log.
+        timelineOmitted: run.timeline_omitted,
+        timelineRecipe: run.timeline_recipe,
         // `UX-369`: this run's own elements, and the one the report is
         // already pointing at. The three element-scoped queries used
         // to substitute `macro_micro`'s `core.bst` on every project.

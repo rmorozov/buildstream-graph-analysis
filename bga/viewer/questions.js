@@ -745,7 +745,20 @@ export function renderQuestions(make, options = {}) {
   // side - which then told the two fixtures with **no** trace that
   // their element spans were in one. Trading one false claim for
   // another is what a measurement catches and a reading does not.
-  if (!options.hasTimeline) {
+  // `UX-545`: two absences, and the page said the wrong one. `export()`
+  // writes `timeline_recipe` only for a timeline it rendered and
+  // refused, so that key is what tells a ceiling apart from a snapshot
+  // that never had a build log - and only the second is a reason to
+  // capture again.
+  const refused = options.hasTimeline ? null : options.timelineRecipe;
+  if (refused) {
+    intro.setAttribute("data-omitted", "refused");
+    intro.textContent =
+      `This file has the build log and refused the timeline: `
+      + `${options.timelineOmitted}. Capturing again refuses the same `
+      + `way; run \`${refused.command}\` instead. ${refused.note} The `
+      + `queries below are what to ask it there.`;
+  } else if (!options.hasTimeline) {
     intro.textContent =
       "This snapshot carries no build log, so there is no timeline to "
       + "open here - a capture made with `bga capture` records one, and "

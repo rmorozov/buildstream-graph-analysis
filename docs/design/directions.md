@@ -1620,7 +1620,7 @@ I installed and the thing I have now" at all.
 day, and the graph owner who knows which of those choices the graph
 forbids — and R8, who is handed the ranking as a case for funding.
 
-**Status:** partial — the ranking landed (`UX-260`, `UX-303`); all four `yes` rows in the table below publish a distribution and all four now declare `bga:distribution` (`UX-598`), which the note under that table measures.
+**Status:** landed — the ranking (`UX-260`, `UX-303`), and every `yes` row in the table below both publishing a distribution and declaring `bga:distribution` (`UX-598`), which the note under that table derives.
 
 The report ranks elements by blast radius and tells the reader to fix
 the top one. Measured on a 1,202-element run:

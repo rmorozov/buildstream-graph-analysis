@@ -1,6 +1,6 @@
 # UX-599: a guard pins a contract version by typing it
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-584 (the figures that derive), UX-233 (the contracts guard) | **Serves:** the next contract bump, which will pass a guard that should have caught it | **Topic:** guards
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-584 (the figures that derive), UX-233 (the contracts guard) | **Serves:** the next contract bump, which will pass a guard that should have caught it | **Topic:** guards
 
 ## Motivation
 

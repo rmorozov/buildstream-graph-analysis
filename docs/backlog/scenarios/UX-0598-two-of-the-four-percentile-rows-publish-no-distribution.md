@@ -1,6 +1,6 @@
 # UX-598: two of the four percentile rows publish no distribution
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-260 (the percentiles), UX-303 (the spread drawn), UX-581 | **Serves:** the reader who trusts Direction 11's table | **Topic:** contracts
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-260 (the percentiles), UX-303 (the spread drawn), UX-581 | **Serves:** the reader who trusts Direction 11's table | **Topic:** contracts
 
 ## Motivation
 

@@ -15,19 +15,19 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-604 scenarios: **14 open**, 590 closed.
+607 scenarios: **11 open**, 596 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
 | capture | 1 | 91 |
 | analysis | 2 | 92 |
-| contracts | 2 | 42 |
+| contracts | 0 | 42 |
 | viewer | 0 | 138 |
 | cli | 0 | 21 |
 | store | 1 | 16 |
-| docs | 3 | 87 |
-| guards | 5 | 117 |
+| docs | 4 | 89 |
+| guards | 3 | 118 |
 
 ## Open scenarios
 
@@ -36,20 +36,17 @@ task file, which is the only place it ever lived twice.
 
 | ID | Scenario | Topic | Priority | Serves | Status |
 |---|---|---|---|---|---|
-| UX-590 | [the context map's non-path claims are unguarded](UX-0590-the-context-map-s-non-path-claims-are-unguarded.md) | guards | Medium | every session that reads fixing guide §6 to find where a thing lives | 🔴 Open |
 | UX-593 | [the regression verdict carries no evidence chain](UX-0593-the-regression-verdict-carries-no-evidence-chain.md) | analysis | Medium | R4, the CI gatekeeper asked to defend a red gate | 🔴 Open |
 | UX-594 | [a capture cannot say when the build was requested](UX-0594-a-capture-cannot-say-when-the-build-was-requested.md) | capture | Medium | R6, the contributor waiting on a verdict | 🔴 Open |
 | UX-595 | [the capacity model has a fact base and no model](UX-0595-the-capacity-model-has-a-fact-base-and-no-model.md) | store | Medium | R5, the capacity operator | 🔴 Open |
 | UX-596 | [build time in the team's units](UX-0596-build-time-in-the-team-s-units.md) | analysis | Low | R8, the engineering lead funding infrastructure | 🔴 Open |
 | UX-597 | [three release rows and no tag](UX-0597-three-release-rows-and-no-tag.md) | docs | Low | anyone trying to check out a release this repository claims to have made | 🔴 Open |
-| UX-598 | [two of the four percentile rows publish no distribution](UX-0598-two-of-the-four-percentile-rows-publish-no-distribution.md) | contracts | Medium | the reader who trusts Direction 11's table | 🔴 Open |
-| UX-599 | [a guard pins a contract version by typing it](UX-0599-a-guard-pins-a-contract-version-by-typing-it.md) | guards | Medium | the next contract bump, which will pass a guard that should have caught it | 🔴 Open |
-| UX-600 | [the rules card has one guard it cannot mark](UX-0600-the-rules-card-has-one-guard-it-cannot-mark.md) | guards | Low | the session reading the card's guard column | 🔴 Open |
 | UX-601 | [two guard ledgers of the same kind, two mechanisms](UX-0601-two-guard-ledgers-of-the-same-kind.md) | docs | Low | the next session asked to add a rule and its guard | 🔴 Open |
-| UX-602 | [two hard gates are published and named nowhere](UX-0602-two-hard-gates-are-published-and-named-nowhere.md) | contracts | High | anyone reading `confidence.hard_gates` to decide whether a run is trustworthy | 🔴 Open |
-| UX-603 | [the Python floor reaches no reader](UX-0603-the-python-floor-reaches-no-reader.md) | docs | Medium | the contributor deciding whether their interpreter will do | 🔴 Open |
 | UX-604 | [the verification-log clause reads the entry below it](UX-0604-the-verification-log-clause-reads-the-entry-below.md) | guards | Medium | the round whose log entry says nothing and passes | 🔴 Open |
 | UX-606 | [the selector's bound is measured on one module](UX-0606-the-selectors-bound-is-measured-on-one-module.md) | guards | Medium | the session whose one-module edit runs a third of the suite | 🔴 Open |
+| UX-607 | [a paragraph in the guide is a two-file change](UX-0607-a-paragraph-in-the-guide-is-a-two-file-change.md) | docs | Medium | anyone adding a paragraph to the fixing guide | 🔴 Open |
+| UX-608 | [fifteen commands the context map never names](UX-0608-fifteen-commands-the-context-map-never-names.md) | docs | Medium | every session reading fixing guide §6 to find where a thing lives | 🔴 Open |
+| UX-609 | [the invariants docstring lists five of six gates](UX-0609-the-invariants-docstring-lists-five-of-six-gates.md) | guards | Low | the reader opening the module to find what it enforces | 🔴 Open |
 
 ## UX-563..UX-586: the eighty-second round — the documents, read against the tool (2026-09-03)
 

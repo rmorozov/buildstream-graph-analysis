@@ -1,6 +1,6 @@
 # UX-600: the rules card has one guard it cannot mark
 
-**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** UX-585 (the markers) | **Serves:** the session reading the card's guard column | **Topic:** guards
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-585 (the markers) | **Serves:** the session reading the card's guard column | **Topic:** guards
 
 ## Motivation
 

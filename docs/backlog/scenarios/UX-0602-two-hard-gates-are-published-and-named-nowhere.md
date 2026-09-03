@@ -1,6 +1,6 @@
 # UX-602: two hard gates are published and named nowhere
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-567 (the I6 gate), UX-566 (the advisory map) | **Serves:** anyone reading `confidence.hard_gates` to decide whether a run is trustworthy | **Topic:** contracts
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-567 (the I6 gate), UX-566 (the advisory map) | **Serves:** anyone reading `confidence.hard_gates` to decide whether a run is trustworthy | **Topic:** contracts
 
 ## Motivation
 

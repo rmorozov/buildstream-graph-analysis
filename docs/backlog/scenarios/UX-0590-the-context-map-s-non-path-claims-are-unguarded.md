@@ -1,6 +1,6 @@
 # UX-590: the context map's non-path claims are unguarded
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-573 (the map that walks the tree git has), UX-274 | **Serves:** every session that reads fixing guide §6 to find where a thing lives | **Topic:** guards
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-573 (the map that walks the tree git has), UX-274 | **Serves:** every session that reads fixing guide §6 to find where a thing lives | **Topic:** guards
 
 ## Motivation
 

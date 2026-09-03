@@ -1,6 +1,6 @@
 # UX-603: the Python floor reaches no reader
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-588 (the floor's guard) | **Serves:** the contributor deciding whether their interpreter will do | **Topic:** docs
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-588 (the floor's guard) | **Serves:** the contributor deciding whether their interpreter will do | **Topic:** docs
 
 ## Motivation
 

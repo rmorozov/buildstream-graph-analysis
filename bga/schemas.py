@@ -4863,7 +4863,7 @@ _CORRELATE_HINTS = {
         RAIL: "investigate",
         **_distribution(
             "duration_us", "sandbox tax paid by one element",
-            "How this capture's sandbox tolls are spread. Over every "
+            "How this capture's sandbox tax is spread. Over every "
             "payer, not the top slice - the useful question is \"is "
             "this element's tax unusual\", which only a population "
             "answers. Nearest-rank percentiles, absent below the "

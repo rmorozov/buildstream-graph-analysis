@@ -1886,6 +1886,28 @@ table, including Part 39's two figures, against the tree.
 
 ---
 
+### 32.7.4 Part 34's I7 is I4 as a ratio, not a second quantity (`UX-567`)
+
+I7 requires `blame_chain_coverage == 1.0`. That quantity is computed in
+`bga/validation/invariants.py` as the six task-horizon attribution
+categories summed and divided by the task horizon H - **I4's own
+numerator over I4's own denominator**. For `H > 0` the two are one
+statement: `blame_chain_coverage == 1.0` exactly when `Σ attribution ==
+H`. I7 is recorded here as **I4's alias** and carries no separate guard.
+
+| | |
+|---|---|
+| numerator | `execution_on_chain_us`, `dependency_wait_us`, `resource_wait_us`, `scheduler_wait_us`, `idle_us`, `retry_wait_us` - I4's six |
+| denominator | `horizon_us` - I4's H |
+| what fails first | I4's `attribution_reconciliation` violation, which names the residual in microseconds; `blame_chain_coverage_full` then restates it as a ratio |
+
+`tests/unit/test_every_invariant_has_a_guard.py` holds the alias against
+the code - it drives `compute_confidence` with an attribution that
+misses H by a known amount and asserts the coverage is exactly that sum
+over that horizon - and refuses to let I7 be waived without this row.
+
+---
+
 # Part 33 — Reconciliation and Confidence
 
 ## 33.1 Hard Gates

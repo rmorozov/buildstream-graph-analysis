@@ -1,4 +1,5 @@
 #!/bin/bash
+# holds: rules.md#never-delete-weaken-or-skip-a-test-to-make-a-change-pass
 # PreToolUse on Edit/Write. This repository is made of guards, and its
 # hard rule is that a guard is never skipped, disabled or quarantined to
 # get a run green. That rule has held on discipline alone.

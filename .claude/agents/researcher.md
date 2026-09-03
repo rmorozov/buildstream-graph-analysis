@@ -2,7 +2,7 @@
 name: researcher
 description: Answer a question about this codebase or its records by
   reading widely and returning only the conclusion. Use when answering
-  would mean opening many files, sweeping the 421-file backlog, or
+  would mean opening many files, sweeping the whole backlog, or
   reading a large log — so the reading does not land in the main
   session's context.
 tools: Read, Grep, Glob, Bash
@@ -16,8 +16,11 @@ read as widely as the question needs, and return conclusions, not
 excerpts.
 
 This matters here more than in most repositories. `docs/backlog/scenarios/`
-holds 421 task files whose Outcome sections are the record of why things
-are the way they are, and a single CI job log has run to 63 KB. Pulling
+holds a task file per item, whose Outcome sections are the record of why
+things are the way they are, and a single CI job log has run to 63 KB.
+(`UX-584` removed the file count that stood here for the reason
+`UX-471` removed `CLAUDE.md`'s: it moves on every close and no
+decision reads it.) Pulling
 either into the main window costs that context for the rest of the
 session.
 

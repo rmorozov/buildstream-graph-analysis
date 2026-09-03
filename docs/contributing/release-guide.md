@@ -20,8 +20,10 @@ follow, and they have different answers:
 | which contract states shipped together? | the **release row** in `CHANGELOG.md` |
 
 The package version is *provenance*. It is never the compatibility
-signal: it is a lossy summary of twelve independent contracts, and
-comparing it would refuse across upgrades that moved nothing. What a
+signal: it is a lossy summary of fourteen live contracts, and
+comparing it would refuse across upgrades that moved nothing. That
+count is `bga/contracts.py`'s, less the superseded ids, and
+`test_the_process_documents_derive_their_figures.py` reads it here. What a
 reader compares is the contract set — that is `UX-250`'s job.
 
 ## When to cut one
@@ -79,8 +81,8 @@ no meaning, and this repository has spent thirty rounds refusing those.
    newest row is checked against the tree; every row below it is
    checked against its own digest, because that clause was satisfiable
    by rewriting the last row and for five rounds that was the cheaper
-   path — `0.3.0` carried five contracts that did not exist on its
-   date. Print the digest with:
+   path — `0.3.0` carried five contracts that did not exist on its date
+   (`UX-550`). Print the digest with:
 
    ```bash
    python3 -c "import sys; sys.path.insert(0, 'tests/unit'); \

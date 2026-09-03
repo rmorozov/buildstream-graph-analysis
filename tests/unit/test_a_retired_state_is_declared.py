@@ -17,6 +17,8 @@ note makes, each read off the thing it names.
 The first is an AST walk, not a grep: `'ambiguous'` occurs in this
 repository as a docstring word, as a Plane 2 correlation key and as a
 dict key, and only the last is the subject (§5's first proxy shape).
+
+holds: rules.md#never-invent-data-the-spec-says-must-be-unknown-or-absent
 """
 import ast
 import pathlib

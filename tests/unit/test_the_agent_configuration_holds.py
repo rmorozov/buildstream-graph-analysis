@@ -18,6 +18,8 @@ Two halves, and only one of them is here:
 The hook clauses are the ones that matter, because a hook that cannot
 block is `UX-109`'s defect in a newer place: a gate written as though
 it holds.
+
+holds: rules.md#never-let-an-instrument-read-a-proxy-for-the-thing-it-names
 """
 import contextlib
 import io
@@ -435,8 +437,8 @@ class TestClaudeMdIsTrueAndShort:
         `UX-505` made the card the entry point, so this asserts the
         card. The guide is still named — for the argument behind a rule
         — but a session that reads only what `CLAUDE.md` sends it to
-        must land on the rules, not on 34 KB of the incidents that
-        produced them.
+        must land on the rules, not on the incidents that produced
+        them.
         """
         text = self._text()
         assert "docs/contributing/rules.md" in text, (
@@ -898,10 +900,11 @@ class TestTheRulesCardIsTheEntryPoint:
     """`UX-505`: the rules on one page, the incidents behind it.
 
     The fixing guide opens with "if you have limited context budget:
-    read only this file" and is 34,400 bytes — the file *is* the
-    budget. Every rule is stated once and then argued with the incident
-    that produced it, which is why the rules are trusted and also why a
-    session paid 34 KB to learn twelve of them.
+    read only this file" and is the budget. Every rule is stated once
+    and then argued with the incident that produced it, which is why
+    the rules are trusted and also why a session paid the whole guide
+    to learn them. `UX-584` derives the two sizes in the documents
+    themselves; no figure is restated here.
 
     Split by register: the card carries the rules, the guide keeps every
     incident. So the card has two ways to rot — it can grow back into a
@@ -960,25 +963,144 @@ class TestTheRulesCardIsTheEntryPoint:
         assert "rules.md" in head, (
             "the guide's opening does not send a reader to the card")
 
+    #: `UX-585`: a named guard that carries no marker, and why. Not
+    #: "everything unmarked" - that would make the clause below vacuous.
+    #: Each entry is asserted *still* unmarked, so the list shrinks when
+    #: the marker lands rather than hiding one that did.
+    UNMARKED = {
+        "test_docs_links_and_commands.py":
+            "another track owns the file this round; its row is "
+            "`both status markers, same commit`",
+    }
+
+    #: Named beside a guard, and not one: a tool is the mechanism the
+    #: rule asks for, and the test file next to it is what holds it.
+    NOT_A_GUARD_FILE = ("dev_close_task.py",)
+
+    @staticmethod
+    def _slug(rule):
+        """The rule sentence as an anchor. Rewriting a rule changes its
+        slug, which is the point - a marker names *that* sentence."""
+        plain = re.sub(r"[`*'’]", "", rule)
+        return re.sub(r"-+", "-",
+                      re.sub(r"[^a-z0-9]+", "-", plain.lower())).strip("-")
+
+    def _rule_rows(self):
+        """`[(rule, guard cell)]` from the rule tables only. The §6a
+        stream table has three columns and is not rules; the header row
+        is dropped by its text, not by its position."""
+        rows = []
+        for line in self.CARD.read_text(encoding="utf-8").splitlines():
+            if not (line.startswith("| ") and line.count("|") == 3
+                    and "---" not in line):
+                continue
+            rule, guard = (one.strip() for one in line.split("|")[1:3])
+            if (rule, guard) != ("rule", "guard"):
+                rows.append((rule, guard))
+        return rows
+
+    @staticmethod
+    def _named_files(cell):
+        """Every guard **file** a cell names - a test module or a hook."""
+        return re.findall(r"[\w./-]+\.(?:py|sh)", cell)
+
     def test_the_card_names_a_guard_for_the_rules_that_have_one(self):
         """A rule with no guard is a rule kept by attention alone, and
         the card is where that is visible. Not every rule can have one -
         "never widen scope" is judgement - so this asserts the column is
         populated rather than full.
 
-        Reads the **rule** tables only, by their two columns. The first
-        writing counted every row on the page, and the §6a stream table
-        has a third column of prose that is never empty: emptying every
-        real guard cell left it green, on eight rows that are not rules
-        at all.
+        Reads the **rule** tables only. The first writing counted every
+        row on the page, and the §6a stream table has a third column of
+        prose that is never empty: emptying every real guard cell left
+        it green, on eight rows that are not rules at all.
         """
-        rows = [line for line in self.CARD.read_text(encoding="utf-8")
-                .splitlines()
-                if line.startswith("| ") and line.count("|") == 3
-                and "---" not in line]
+        rows = self._rule_rows()
         assert len(rows) > 20, f"the card has {len(rows)} rule rows"
-        guarded = [row for row in rows
-                   if row.split("|")[2].strip() not in ("", "-", "—", "guard")]
+        guarded = [one for one in rows
+                   if self._named_files(one[1]) or "`make " in one[1]]
         assert len(guarded) >= 8, (
             f"only {len(guarded)} of {len(rows)} rule rows name a guard; "
             f"the column is what makes an unguarded rule visible")
+
+    def test_every_named_guard_carries_the_marker_for_its_row(self):
+        """`UX-585`: the clause above asserts eight cells are populated,
+        so a wrong guard name passes it. A marker is the guard's own
+        claim to hold that rule, and this reads it."""
+        wrong = []
+        for rule, cell in self._rule_rows():
+            want = "holds: rules.md#" + self._slug(rule)
+            for name in self._named_files(cell):
+                found = [one for one in (REPO / "tests/unit" / name,
+                                         REPO / name) if one.exists()]
+                if not found:
+                    wrong.append(f"{rule!r} names {name}, which does not exist")
+                elif pathlib.Path(name).name in self.NOT_A_GUARD_FILE:
+                    continue
+                elif want in found[0].read_text(encoding="utf-8"):
+                    continue
+                elif name not in self.UNMARKED:
+                    wrong.append(f"{name} is the guard for {rule!r} and does "
+                                 f"not say so: no `{want}` line")
+        assert not wrong, "\n".join(wrong)
+
+    def test_every_marker_in_the_tree_names_a_row_that_names_it(self):
+        """The other direction. A rule rewritten without re-pointing its
+        marker leaves a guard claiming a sentence that no longer reads
+        that way, and the clause above cannot see it."""
+        slugs = {self._slug(rule): cell for rule, cell in self._rule_rows()}
+        # `--others` too: a marker in a guard added but not yet committed
+        # is the case this clause is most likely to be run against.
+        listed = subprocess.run(
+            ["git", "ls-files", "--cached", "--others", "--exclude-standard"],
+            cwd=REPO, check=True, capture_output=True, text=True).stdout.split()
+        carriers, wrong = [], []
+        for rel in listed:
+            if rel.startswith("docs/backlog/"):  # the Outcome quotes them
+                continue
+            path = REPO / rel
+            if not path.is_file() or path.suffix not in (".py", ".sh", ".md"):
+                continue
+            text = path.read_text(encoding="utf-8", errors="replace")
+            if "holds: rules.md#" not in text:
+                continue
+            carriers.append(rel)
+            for slug in re.findall(r"holds: rules\.md#([a-z0-9-]+)", text):
+                if slug not in slugs:
+                    wrong.append(f"{rel} holds `{slug}`, and the card has no "
+                                 f"rule with that slug")
+                elif pathlib.Path(rel).name not in slugs[slug]:
+                    wrong.append(f"{rel} holds `{slug}`, whose row names "
+                                 f"{slugs[slug]!r} instead")
+        assert len(carriers) >= 8, (
+            f"only {len(carriers)} files in the tree carry a marker")
+        assert not wrong, "\n".join(wrong)
+
+    def test_a_deferred_marker_is_still_missing(self):
+        """`UNMARKED` is a debt, not an exemption: an entry that has been
+        marked must leave the list, or the list becomes the place a
+        guard nobody checked goes to hide."""
+        stale = []
+        for name, why in self.UNMARKED.items():
+            path = REPO / "tests/unit" / name
+            assert path.exists(), f"{name} is deferred and does not exist"
+            if "holds: rules.md#" in path.read_text(encoding="utf-8"):
+                stale.append(f"{name} carries a marker now ({why})")
+        assert not stale, "\n".join(stale)
+
+    def test_every_make_target_the_column_names_exists(self):
+        """A cell may name a target rather than a file - `make
+        check-clean` is the whole guard for two rows."""
+        makefile = (REPO / "Makefile").read_text(encoding="utf-8")
+        real = set(re.findall(r"^([a-z][\w-]*):", makefile, re.M))
+        named = {one for _, cell in self._rule_rows()
+                 for one in re.findall(r"`make ([a-z][\w-]*)", cell)}
+        assert named, "the guard column names no make target"
+        assert named <= real, f"the card names absent target(s): {named - real}"
+
+    def test_the_marker_scan_reads_a_population(self):
+        """Every clause above passes on a card whose rows name nothing."""
+        named = [one for one in self._rule_rows() if self._named_files(one[1])]
+        assert len(named) >= 8, (
+            f"only {len(named)} rule rows name a guard file")
+        assert self._slug("Never widen scope") == "never-widen-scope"

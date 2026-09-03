@@ -34,6 +34,8 @@ its way in.
 **The four walks.** Each item's own guard drives the mechanism it
 built; these drive the *page*, over everything on it, so a surface none
 of them enumerated is still held to the rule.
+
+holds: rules.md#touching-the-page-run-the-styleguides-seven-questions
 """
 import json
 import os

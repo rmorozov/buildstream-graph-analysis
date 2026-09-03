@@ -3,7 +3,7 @@
 Every rule this repository holds a session to, one line each, with the
 guard that catches it and the [fixing guide](fixing-guide.md) section
 that argues it. **Read the guide's paragraph for the rule you are about
-to break, not the whole guide** — it is 34 KB because every rule carries
+to break, not the whole guide** — it is 40 KB because every rule carries
 the incident that produced it, and the incidents are why the rules are
 trusted (`UX-505`).
 
@@ -15,21 +15,21 @@ trusted (`UX-505`).
 | Replace the placeholder; a removed comment is not an implementation | — |
 | Stay inside the declared scope; a bug you notice becomes a row | — |
 | Touching the page? Run the styleguide's seven questions | `test_the_page_conforms_to_its_sections.py` |
-| Never delete, weaken or skip a test to make a change pass | — |
+| Never delete, weaken or skip a test to make a change pass | `.claude/hooks/keep-the-guards-able-to-fail.sh` |
 
 ## Definition of Done — §3
 
 | rule | guard |
 |---|---|
-| 🟢 only after *you* ran the Acceptance Test, output pasted | — |
+| 🟢 only after *you* ran the Acceptance Test, output pasted | — judgement: nothing can see who ran it |
 | Some claims have no local instrument — open the PR first (§7) | — |
-| `make test-touching` while you work; the tier when it is wider | `test_the_loop_stays_fast.py` |
+| `make test-touching` while you work; the tier when it is wider | `test_the_loop_stays_fast.py` — the selector, not that you ran it |
 | `make test` before anything is marked done. A tier is a selector | — |
 | Both status markers, same commit; the counts are derived | `test_docs_links_and_commands.py` |
-| A number or mechanism you moved: annotate the file asserting it | — |
+| A number or mechanism you moved: annotate the file asserting it | `tools/dev_close_task.py --figures`, held by `test_the_loop_stays_fast.py` |
 | A renamed or removed published key bumps its schema version | `test_output_schemas.py` |
-| Roles served, or how well? `docs/design/roles.md` in the same commit | — |
-| A guard that asserts an order reads the order, never restates it | `test_the_order_the_page_has.py` |
+| Roles served, or how well? `docs/design/roles.md` in the same commit | — judgement: "how well" is not mechanical |
+| A guard that asserts an order reads the order, never restates it | `test_the_order_the_page_has.py` — one worked example, not every order guard |
 | Architecture or spec made wrong? Same commit | `test_the_documents_keep_up_with_the_contracts.py` |
 | Documentation you are not writing now: file the row first | `test_documentation_debt_has_a_door.py` |
 | Acceptance test still failing? 🟡 with what is blocking, and stop | — |
@@ -38,23 +38,23 @@ trusted (`UX-505`).
 
 | rule | guard |
 |---|---|
-| One task, one commit | — |
+| One task, one commit | — judgement: a commit's scope is not readable from it |
 | **Never `git add -A` or `git add .`** — stage paths by name | `.claude/hooks/no-bulk-add.sh` |
 | Read the full staged list before every commit | — |
 | `make check-clean` before committing | `make check-clean` |
-| Quote version specifiers; check `git status` after any `>` | — |
+| Quote version specifiers; check `git status` after any `>` | — judgement: the damage is a stray file, and `make check-clean` sees that |
 | Scratch files live outside the repo | `make check-clean` |
 
 ## Hard rules — §5
 
 | rule | guard |
 |---|---|
-| Never mark 🟢 without a pasted, passing command | — |
+| Never mark 🟢 without a pasted, passing command | — judgement: a pasted block cannot be re-run |
 | Never leave a no-op placeholder and call it implemented | — |
 | Never widen scope | — |
 | Never invent data the spec says must be `UNKNOWN` or absent | `test_a_retired_state_is_declared.py` |
-| Never touch `docs/spec/specification.md` outside Part 32's registry | `test_docs_links_and_commands.py` |
-| **Never let an instrument read a proxy for the thing it names** | the `measure` skill's three questions |
+| Never touch `docs/spec/specification.md` outside Part 32's registry | `test_the_spec_outside_part_32_is_read_only.py` |
+| **Never let an instrument read a proxy for the thing it names** | `test_the_agent_configuration_holds.py` — the `measure` skill states the three questions; asking them is judgement |
 | Exact integer arithmetic for anything invariant-related | — |
 
 The proxy rule is the one this repository breaks most — about thirty

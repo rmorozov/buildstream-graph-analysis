@@ -30,6 +30,8 @@ So these guards read the booted document's own child sequence. The
 pattern, for the next "X above Y" claim: boot the page, walk the root's
 children in order, and compare indices - never re-state the order in the
 test.
+
+holds: rules.md#a-guard-that-asserts-an-order-reads-the-order-never-restates-it
 """
 import json
 import os

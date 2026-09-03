@@ -237,6 +237,8 @@ timestamped record, not a statement of current state.
 [78](audits/round-78.md) ·
 [79](audits/round-79.md) ·
 [80](audits/round-80.md) ·
+[81](audits/round-81.md) ·
+[82](audits/round-82.md) ·
 [the original spec-compliance review](audits/spec-compliance-review.md)
 
 ## Backlog

@@ -36,6 +36,9 @@ OWNERS = {
     # and §6.
     "decompose": "docs/contributing/fixing-guide.md",
     "orient": "docs/contributing/fixing-guide.md",
+    # Round 82: the review checklist as commands; its rule is the review
+    # document's.
+    "review": "docs/audits/architecture-review.md",
 }
 
 _FRONTMATTER = re.compile(r"\A---\n(.*?)\n---\n", re.S)

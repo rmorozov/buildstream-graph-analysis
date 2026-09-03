@@ -18,9 +18,15 @@ FAILED test_a_counted_figure_is_derived.py::…test_the_count_is_the_directory[s
   architecture.md says 613 `docs/backlog/scenarios/` files; git has 615
 ```
 
-It happened **three times in round 84**, and each time the cost was a
+It happened **four times in round 84**, and each time the cost was a
 full-suite run — eight minutes — to learn something the helper had
 just been asked and had answered "clean".
+
+The fourth had a second shape, and it caught the row that filed this
+one. `--check --write` also rewrites `README.md`'s counts sentence, so
+staging that file *before* deriving leaves the rewrite unstaged and
+ships a commit short. The safe order is stage, derive, stage again —
+which is a workflow nobody will remember.
 
 The helper is not wrong about the repository; it is wrong about the
 question it was asked, which was "is the tree I am about to commit
@@ -32,6 +38,9 @@ consistent".
 untracked, non-ignored scenario files — or, if it deliberately reads
 only the index, it says so when an untracked scenario file is present
 rather than reporting clean.
+
+And `--write` reports the files it changed, so a caller who has
+already staged them knows to stage again.
 
 ## Out of Scope
 

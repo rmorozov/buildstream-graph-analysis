@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-602 scenarios: **14 open**, 588 closed.
+602 scenarios: **13 open**, 589 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -26,7 +26,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | viewer | 0 | 138 |
 | cli | 0 | 21 |
 | store | 1 | 16 |
-| docs | 4 | 87 |
+| docs | 3 | 87 |
 | guards | 4 | 115 |
 
 ## Open scenarios
@@ -37,7 +37,6 @@ task file, which is the only place it ever lived twice.
 | ID | Scenario | Topic | Priority | Serves | Status |
 |---|---|---|---|---|---|
 | UX-590 | [the context map's non-path claims are unguarded](UX-0590-the-context-map-s-non-path-claims-are-unguarded.md) | guards | Medium | every session that reads fixing guide §6 to find where a thing lives | 🔴 Open |
-| UX-591 | [the architecture review log is in no index](UX-0591-the-architecture-review-log-is-in-no-index.md) | docs | Medium | the reader looking for what the last architecture review decided | 🔴 Open |
 | UX-593 | [the regression verdict carries no evidence chain](UX-0593-the-regression-verdict-carries-no-evidence-chain.md) | analysis | Medium | R4, the CI gatekeeper asked to defend a red gate | 🔴 Open |
 | UX-594 | [a capture cannot say when the build was requested](UX-0594-a-capture-cannot-say-when-the-build-was-requested.md) | capture | Medium | R6, the contributor waiting on a verdict | 🔴 Open |
 | UX-595 | [the capacity model has a fact base and no model](UX-0595-the-capacity-model-has-a-fact-base-and-no-model.md) | store | Medium | R5, the capacity operator | 🔴 Open |

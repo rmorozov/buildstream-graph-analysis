@@ -1212,19 +1212,33 @@ A section whose schema declares no rail lands in `raw` — never nowhere.
 ### What to run next (`UX-218`)
 
 The report ends with the next commands, chosen by what this run
-measured, with the run path and the element already filled in:
+measured, with the run path and the element already filled in.
+
+Verbatim from `bga gen-synthetic --store /tmp/bga-demo` then
+`cd /tmp/bga-demo && bga analyze @last`, 2026-09-03 (`UX-577`) — the
+seed store `UX-330` plants, so this block is **reproducible, not
+kept**: the same two commands print the same eight lines on any
+machine. It used to quote a stamp from an `examples/06` store that no
+clone has, advising a `compare` that store refused with exit 6.
 
 ```text
 Next:
-  core.bst is the first thing to fix, worth 12.1s - this is what changing it rebuilds.
-    bga blast core.bst examples/06-…/.bga/runs/20260821T170127Z/run
-  Plane 2 measured this run, so the join can say whether core.bst is compute-bound…
-    bga correlate examples/06-…/.bga/runs/20260821T170127Z/run
+  layer02/mod001.bst is the longest thing on the critical path at 14.4s, 54% of it - the build cannot finish sooner than this chain.
+    bga blast layer02/mod001.bst /tmp/bga-demo/.bga/runs/20260303T091500Z/run
+  layer02/mod001.bst is the first thing to fix, worth 6.6s - this is what changing it rebuilds.
+    bga blast layer02/mod001.bst /tmp/bga-demo/.bga/runs/20260303T091500Z/run
   Make the change, then capture it the same way.
-    bga snapshot --project examples/06-macro-micro-optimization -- bst build all.bst
-  Whether it helped, judged against this store's noise - run it in examples/06-macro-micro-optimization.
+    bga snapshot --project /tmp/bga-demo -- bst build all.bst
+  Whether it helped, judged against this store's noise - run it in /tmp/bga-demo.
     bga compare @prev @last
 ```
+
+Both runs of that store are full runs, which is why the last line is
+offered at all: `UX-78` refuses a full baseline against an incremental
+candidate with exit 6, so a store whose `@prev` and `@last` differ in
+`run_mode` is advised the newest run that *does* pair —
+`bga compare @<stamp> @last` — or, where the store holds no such run,
+is not advised to compare at all (`UX-577`).
 
 Every line under a reason is a command as `bga` would receive it, and
 `UX-326` is why that is worth saying: for six rounds the last two were

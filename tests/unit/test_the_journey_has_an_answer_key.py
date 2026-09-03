@@ -84,6 +84,13 @@ RECORDED = REPO / "tests/fixtures/macro_micro/run"
 #: reddens this and an analyzer that moves the number a little does not.
 CORE_LEAD_FLOOR = 1.25
 
+#: Answer 1 as the project *declares* it: `lib-a..lib-f` six deep, none
+#: reading the one before. `UX-543` asserts this of the recording, for
+#: the reason measured on the clause.
+DECLARED_CHAIN = (("lib-a.bst", "lib-b.bst"), ("lib-b.bst", "lib-c.bst"),
+                  ("lib-c.bst", "lib-d.bst"), ("lib-d.bst", "lib-e.bst"),
+                  ("lib-e.bst", "lib-f.bst"))
+
 node = shutil.which("node")
 
 #: One string each, so `UX-213`'s skip census counts them once.
@@ -229,6 +236,25 @@ def recorded():
 @pytest.fixture(scope="module")
 def joined(walked):
     return _json(walked, ["correlate", walked["cold_run"], "--format", "json"])
+
+
+@pytest.fixture(scope="module")
+def recorded_join():
+    """`UX-543`: the two planes of the recording `recorded` ranks.
+
+    The chain clause reads this instead of a build it performs: the
+    finding keeps only edges whose endpoints the run put on the
+    critical path, so a live capture's answer moves with the box.
+    `correlate` on the committed bytes at loadavg 9.03, x3: 18 edges,
+    `saving_us` 24150000, identical.
+    """
+    done = subprocess.run(
+        [sys.executable, "-m", "bga.cli", "correlate",
+         str(RECORDED), "--format", "json"],
+        capture_output=True, text=True, cwd=str(REPO), timeout=300,
+        env={**os.environ, "PYTHONPATH": str(REPO)})
+    assert done.returncode == 0, done.stderr[-3000:]
+    return json.loads(done.stdout)
 
 
 @pytest.fixture(scope="module")
@@ -466,18 +492,56 @@ class TestTheMacroAnswer:
         said = walked["cold"].stdout
         assert "core.bst is the first thing to fix" in said, said[-3000:]
 
-    def test_the_never_read_edges_are_the_declared_chain(self, joined):
+    def test_the_never_read_edges_are_the_declared_chain(self, recorded_join):
         """Answer 1, measured: the six libraries are chained and none of
-        them reads the one before it."""
+        them reads the one before it - asserted of a **recorded**
+        capture, as `UX-538` asserts the ranking one clause up.
+
+        `_unread_gating_edges` keeps only edges whose *both* endpoints
+        the run measured onto the critical path, so which links reach
+        the finding is a reading of the box as well as of the graph.
+        `UX-543` swept it - one capture under N-way CPU contention on a
+        4-core machine, `correlate` on the result:
+
+        ```text
+        loadavg  workers  wall           chain links in the finding
+          0.98-7.68   1    30.9-33.3s    5 of 5, x3
+          6.52-6.77   4    28.9-35.7s    5 of 5, x3
+          8.03-9.16   8    38.2-42.4s    5 of 5, x4
+        ```
+
+        Ten of ten here and one red in round 80: a failure that cannot
+        be produced on demand, and **no floor is available for it** - a
+        link is in the finding or it is not, and set membership has no
+        margin to sit a number under. So the input becomes bytes. The
+        live capture keeps `test_a_live_capture_still_finds_a_chain`
+        below, and answer 1's other half - which dependency each
+        element never opened - stays live in the clause after that,
+        because element rows are not filtered by the critical path.
+        """
+        findings = recorded_join["restructuring"]
+        assert findings, "the join found no restructuring opportunity"
+        edges = {tuple(edge) for edge in findings[0]["edges"]}
+        for before, after in DECLARED_CHAIN:
+            assert (before, after) in edges, sorted(edges)
+
+    def test_a_live_capture_still_finds_a_chain(self, joined):
+        """The half a loaded box cannot move, kept live: the build the
+        journey really performs still reports the six libraries chained
+        by an edge nobody reads.
+
+        *Which* links, and all five of them, is asserted of the
+        recording above - round 80's live one carried four. One is the
+        floor the measured spread cannot cross: `UX-543`'s ten runs at
+        loadavg 0.98-9.16 each carried five of five, round 80's red
+        carried four, and a build that has stopped being a chain at all
+        carries none. So this reddens on the fixture losing its shape
+        and not on the runner losing a link.
+        """
         findings = joined["restructuring"]
         assert findings, "the join found no restructuring opportunity"
         edges = {tuple(edge) for edge in findings[0]["edges"]}
-        for before, after in (("lib-a.bst", "lib-b.bst"),
-                              ("lib-b.bst", "lib-c.bst"),
-                              ("lib-c.bst", "lib-d.bst"),
-                              ("lib-d.bst", "lib-e.bst"),
-                              ("lib-e.bst", "lib-f.bst")):
-            assert (before, after) in edges, sorted(edges)
+        assert edges & set(DECLARED_CHAIN), sorted(edges)
 
     def test_codegen_is_named_unused_by_the_libraries_that_declare_it(
             self, joined):

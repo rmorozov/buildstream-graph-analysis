@@ -55,7 +55,18 @@ For every task, before marking it done:
 
 1. Run the exact command(s) given in the task's **Acceptance Test** section.
 2. Paste the actual command and actual output into the task file's **Verification Log** section (append, don't overwrite prior entries).
-3. **While you work, run the tests that touch what you changed** (`UX-336`): `make test-touching` maps the working diff to the test files that name it - measured at 4s on a one-module diff. Wider than one module, run the tier (`UX-238`). Every target runs `-n auto`; the whole suite is ~5m30s at that with the bst tier (re-measured round 74: 5,635 passed, 81 skipped, 328s on 4 cores; round 46 read 3m15s, 10m40s single-process) and the small tier is 11s:
+3. **While you work, run the tests that touch what you changed** (`UX-336`): `make test-touching` maps the working diff to the test files that name it - measured at 4s on a one-module diff. Wider than one module, run the tier (`UX-238`). Every target runs `-n auto`. **The suite's wall clock is a property of the machine, not of the suite** (`UX-551`), so budget a round against the spread and not a figure:
+
+```text
+round 46   3m15s                                     4 cores
+round 74   5m28s   5,635 passed,  81 skipped, 328s   4 cores
+round 80   8m52s   6,181 passed,  29 skipped, 533s   4 cores
+round 81   3m45s   6,256 passed,  29 skipped, 226s   4 cores, quiet
+  and round 80's own tree (`ca825c3`) re-measured in round 81:
+           3m32s   6,097 passed, 124 skipped, 212s   worktree
+```
+
+Round 80's 8m52s is **not reproducible on the tree that produced it**: the same commit reads 3m32s on a quiet machine. The suite grew by 621 tests between rounds 74 and 81 and got *faster* in wall clock. So a single dated sample dates the afternoon, not the suite — measure it yourself when the number matters. The small tier is 11s:
 
    | target | measured at `-n auto` | what is in it |
    |---|---|---|

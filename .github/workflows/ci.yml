@@ -889,7 +889,7 @@ jobs:
             exit 1
           fi
           # Not anchored to column 0: pyproject's `addopts = "-v"` makes
-          # the summary line `===== 45 passed, 5543 deselected in ... =====`.
+          # the summary line `===== 47 passed, 5543 deselected in ... =====`.
           # Bounded on both sides so "145 passed" cannot satisfy it.
           #
           # The number here and the number in the `echo` below are the
@@ -897,12 +897,12 @@ jobs:
           # - grep 43, echo 45 - for two commits, because
           # `test_the_bst_tier_pin_matches_what_collects` read the echo
           # and nothing read the grep. It now reads both (`UX-480`).
-          grep -qE "(^|[[:space:]=])45 passed([[:space:],]|$)" /tmp/bst-tier.txt || {
-            echo "Expected exactly 45 bst-gated tests to run. Got:" >&2
+          grep -qE "(^|[[:space:]=])47 passed([[:space:],]|$)" /tmp/bst-tier.txt || {
+            echo "Expected exactly 47 bst-gated tests to run. Got:" >&2
             tail -3 /tmp/bst-tier.txt >&2
             exit 1
           }
-          echo "45 bst-gated tests ran, none skipped."
+          echo "47 bst-gated tests ran, none skipped."
 
       - name: The whole suite, with bst present
         # The tier does not live in isolation: an extraction change can

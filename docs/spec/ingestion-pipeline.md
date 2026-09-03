@@ -96,6 +96,12 @@ real `bst show`/`bst build` (BuildStream 2.7.0).
 
 ## Empirically confirmed facts (2026-08-14, against real `bst` 2.7.0)
 
+**Last exercised on `bst` 2.7.0, 2026-09-03.** That version is read from
+the binary by `tests/unit/test_bst_extract_run.py` (`bst --version`), not
+restated here by hand;
+`tests/unit/test_the_ingestion_facts_name_the_bst_they_ran_on.py` fails if
+this line and the binary disagree (`UX-571`).
+
 Do not re-guess these from documentation alone - they were confirmed by
 actually installing BuildStream (`pip install buildstream
 buildstream-plugins`, `apt install bubblewrap`) and running real
@@ -177,11 +183,21 @@ commands against a small from-scratch project
    `autotools`). Added to `bst_show_to_graph.py`'s captured fields as
    `element_kind` on `Element` (`bga/ingest/models.py`) - an additive
    extension beyond graph/v9's spec-minimal schema, same precedent as
-   `dependency_type`. Not read by any analysis consumer yet; see `P4-12`
-   for planned kind-based heuristics (raised directly by the user while
-   reviewing this tool's output).
+   `dependency_type`. The clause that used to follow - "not read by any
+   analysis consumer yet" - was true when written and stopped being true
+   with `P4-12`/`P4-15`: `bga/analyzer.py`, `bga/blast.py`,
+   `bga/cache_effectiveness.py`, `bga/findings.py`, `bga/sources.py` and
+   `bga/structural/consolidation.py` all read it now. See `P4-12` for the
+   kind-based heuristics that were planned then (raised directly by the
+   user while reviewing this tool's output).
 
 ## Empirically confirmed facts about real BuildStream *logs* (2026-08-14, against real `bst` 2.7.0)
+
+**Last exercised on `bst` 2.7.0, 2026-09-03.** That version is read from
+the binary by `tests/unit/test_bst_extract_run.py` (`bst --version`), not
+restated here by hand;
+`tests/unit/test_the_ingestion_facts_name_the_bst_they_ran_on.py` fails if
+this line and the binary disagree (`UX-571`).
 
 Confirmed by actually running real builds (success and failure cases)
 against `tests/fixtures/bst_show_project/` and a throwaway `kind: manual`
@@ -300,9 +316,15 @@ several wrong assumptions turned out to hide behind:
     the wrapper's own per-line UTC timestamp, not BuildStream's elapsed
     prefix).
 11. **BuildStream logs a real "Query cache" activity - at default
-    verbosity, no `--verbose` needed - and it is currently dropped by
-    the ingestion pipeline entirely.** Confirmed against a real `bst
-    build` (BuildStream 2.7.0, from-scratch one-element project):
+    verbosity, no `--verbose` needed.** The clause that used to end that
+    sentence - "and it is currently dropped by the ingestion pipeline
+    entirely" - was true when written and stopped being true with
+    `P4-14`: `bga/analyzer.py`'s `_compute_pipeline_overhead` collects
+    the blank-hash pipeline-level brackets into the `pipeline_overhead`
+    block `bga analyze`/`bga graph` render, and
+    `tests/unit/test_pipeline_overhead.py` guards it. Confirmed against
+    a real `bst build` (BuildStream 2.7.0, from-scratch one-element
+    project):
 
     ```text
     [--:--:--][        ][    main:core activity   ] START   Query cache
@@ -317,8 +339,11 @@ several wrong assumptions turned out to hide behind:
     elapsed cost - but it's one aggregate, non-element-scoped line, and
     `tools/chrome_trace_to_bga_trace.py` already, deliberately, drops
     `action="main"` events as "not a real element task" (its own
-    docstring). So `bga` has zero visibility into this cost today - not
-    "measured as negligible," genuinely never measured. See `P4-14`.
+    docstring). So `bga` had zero visibility into this cost when this was
+    written - not "measured as negligible," genuinely never measured.
+    `P4-14` is what changed that; the measurement is in the cache-query
+    overhead note below (87% of wall time on a real ~2000-element
+    fully-cached rebuild).
 12. **`action="main"` is not exclusive to the blank-hash pipeline-level
     phases above - real commands beyond `bst build` reuse it for
     genuinely different things.** Confirmed against real BuildStream

@@ -14,6 +14,7 @@ import json
 import shutil
 import subprocess
 from pathlib import Path
+from typing import Optional
 
 import pytest
 
@@ -30,6 +31,19 @@ from tools._run_context_common import host_cpu_count as _host_cpu_count
 FIXTURE_PROJECT = Path(__file__).resolve().parents[1] / "fixtures" / "bst_show_project"
 
 BST_AVAILABLE = shutil.which("bst") is not None
+
+# UX-571: the reason string is the one tests/conftest.py's skip census
+# already declares; the version it could not check is named, dated, by
+# docs/spec/ingestion-pipeline.md's "Last exercised on" line.
+BST_SKIP_REASON = "bst not found on PATH - see docs/spec/ingestion-pipeline.md"
+
+
+def bst_version() -> Optional[str]:
+    """The `bst` on PATH as it reports itself, or None if there is none."""
+    if not BST_AVAILABLE:
+        return None
+    proc = subprocess.run(["bst", "--version"], capture_output=True, text=True)
+    return proc.stdout.strip() or None if proc.returncode == 0 else None
 
 
 # --- Pure unit tests -----------------------------------------------------
@@ -210,6 +224,16 @@ def test_extract_run_fails_loudly_without_a_targets_line(tmp_path):
 
 
 # --- Real end-to-end test --------------------------------------------------
+
+@pytest.mark.bst
+@pytest.mark.skipif(not BST_AVAILABLE, reason=BST_SKIP_REASON)
+def test_the_bst_version_these_facts_ran_under_is_printed():
+    """UX-571: the version is read off the binary, not off the prose."""
+    version = bst_version()
+    assert version, "a `bst` on PATH that will not report a version"
+    print(f"UX-571 bst version exercised: {version}")
+
+
 
 @pytest.mark.bst
 @pytest.mark.skipif(not BST_AVAILABLE, reason="bst not found on PATH - see docs/spec/ingestion-pipeline.md")

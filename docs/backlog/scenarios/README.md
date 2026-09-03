@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-551 scenarios: **9 open**, 542 closed.
+552 scenarios: **10 open**, 542 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -27,7 +27,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | cli | 0 | 19 |
 | store | 0 | 14 |
 | docs | 4 | 70 |
-| guards | 2 | 95 |
+| guards | 3 | 96 |
 
 ## Open scenarios
 
@@ -45,6 +45,7 @@ task file, which is the only place it ever lived twice.
 | UX-550 | [the newest release row records the state *now*, not the one it shipped](UX-0550-the-newest-release-row-records-the-state-now.md) | contracts | High | architecture review 12 | 🔴 |
 | UX-551 | [every session plans its loop against a suite 62% faster than the real one](UX-0551-the-loop-is-planned-against-a-suite-that-is-gone.md) | docs | Medium | architecture review 12 | 🔴 |
 | UX-552 | [the CLI guide's alias table is two rows short](UX-0552-the-alias-table-is-two-rows-short.md) | docs | Low | architecture review 12 | 🔴 |
+| UX-554 | [a failed CI suite takes the record of what failed with it](UX-0554-a-failed-suite-takes-its-junit-with-it.md) | guards | Medium | round 81, unable to diagnose a red `test (3.11)` | 🔴 |
 
 ## UX-522..UX-536: the seventy-ninth round — the controls walked, the suite weighed (2026-09-02)
 

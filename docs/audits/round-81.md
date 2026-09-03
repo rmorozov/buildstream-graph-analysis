@@ -51,3 +51,42 @@ gate:     one PR, opened first; per item the suite, per round one merge
 | `docs/design/architecture.md` | `UX-540`, `UX-548`, `UX-549` | distinct line ranges; C owns the file, D rebases onto it |
 | `docs/guides/cli.md` | `UX-548` (:1038, :1302, :1374), `UX-552` (:47-65) | distinct ranges, one track |
 | `contracts.ids()` / `superseded()` | `UX-540`, `UX-549`, `UX-550` | semantic, not textual — the reason C is serial |
+
+## The gate this round actually ran, and the deviation in it
+
+Fixing guide §3 asks for the whole suite before any item is marked 🟢.
+This round did not do that, and the deviation is written here rather
+than left to be inferred from the commits.
+
+What ran per item: `make test-touching`, the item's own guards, and
+every new guard mutated red and reverted. What ran per **track merge**:
+the suite. Fourteen items at round 80's 8m52s is about two hours of
+gate, and with four tracks in worktrees "per item" is not even defined
+until they merge.
+
+`UX-500`'s two rounds are sometimes read as a mixed result. They are
+not — they are a clean negative, but of a different question:
+
+| | round 75 (A) | round 80 (B) |
+|---|---|---|
+| defects the gate caught | 5 | 9 |
+| **of those, outside `test-touching`'s set** | **2** | **4** |
+
+That measures the *cheap selector* against the suite, and says the
+suite must run. It says nothing about **how often** — whether a suite
+run per item catches anything a suite run per merged batch misses has
+never been measured, by either round. Round 80 ran it per batch and
+that gate caught nine.
+
+So the honest statement of this round's regime: the suite gates each
+**merge**, not each item, and the figure below continues `UX-500`'s
+series on a third round shape — four parallel tracks with the
+orchestrating session working five of the items itself.
+
+```text
+round 81, defects the merge gates caught      TBD
+  of those, outside test-touching's set       TBD
+```
+
+Left blank on purpose until the gates have run; a figure written
+before its measurement is the thing this document exists to refuse.

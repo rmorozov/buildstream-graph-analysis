@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-559 scenarios: **2 open**, 557 closed.
+559 scenarios: **0 open**, 559 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -27,8 +27,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | cli | 0 | 19 |
 | store | 0 | 14 |
 | docs | 0 | 71 |
-| guards | 0 | 98 |
-| tooling | 2 | 2 |
+| guards | 0 | 100 |
 
 ## Open scenarios
 
@@ -37,8 +36,6 @@ task file, which is the only place it ever lived twice.
 
 | ID | Scenario | Topic | Priority | Serves | Status |
 |---|---|---|---|---|---|
-| UX-560 | [a worktree track starts from `origin/main`, whatever base its brief names](UX-0560-a-worktree-track-starts-from-origin-main.md) | guards | Medium | round 81's two tracks, independently | 🔴 |
-| UX-561 | [a track that closes an item cannot pass its own pre-commit selector](UX-0561-a-track-cannot-pass-its-own-commit-hook.md) | guards | Medium | round 81's two tracks, independently | 🔴 |
 
 ## UX-522..UX-536: the seventy-ninth round — the controls walked, the suite weighed (2026-09-02)
 

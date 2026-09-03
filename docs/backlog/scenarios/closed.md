@@ -568,6 +568,8 @@ is open, on what topic, for whom — is the other file's.
 | UX-558 | [the failure's name is 3,800 lines from the end of the 3.11 job](UX-0558-the-failure-name-is-3800-lines-from-the-end.md) | Medium | round 81's PR, read three times without finding it | 🟢 Done — the failure's name goes last, where UX-441's rule actually holds | [UX-558](UX-0558-the-failure-name-is-3800-lines-from-the-end.md) |
 | UX-555 | [`--no-trace` tells a two-plane run it kept no Plane 2 log](UX-0555-with-trace-false-blames-a-missing-plane-2.md) | Low | `UX-545`'s track, one branch over from its own fix | 🟢 Done — three reasons for no timeline, not one `or` | [UX-555](UX-0555-with-trace-false-blames-a-missing-plane-2.md) |
 | UX-559 | [`bga view --serve` leaks a scratch directory per served run](UX-0559-serve-leaks-a-scratch-directory-per-run.md) | Medium | `UX-546`'s track, which counted 2,799 of them | 🟢 Done — the served scratch dies with the server | [UX-559](UX-0559-serve-leaks-a-scratch-directory-per-run.md) |
+| UX-560 | [a worktree track starts from `origin/main`, whatever base its brief names](UX-0560-a-worktree-track-starts-from-origin-main.md) | Medium | round 81's two tracks, independently | 🟢 Done — the track takes its base; the worktree shares the object store, so the reset cannot fail | [UX-560](UX-0560-a-worktree-track-starts-from-origin-main.md) |
+| UX-561 | [a track that closes an item cannot pass its own pre-commit selector](UX-0561-a-track-cannot-pass-its-own-commit-hook.md) | Medium | round 81's two tracks, independently | 🟢 Done — the guard learns a track's tree, in one direction only | [UX-561](UX-0561-a-track-cannot-pass-its-own-commit-hook.md) |
 
 ## UX-207..UX-212: the twenty-third audit round — the report learns to answer first (2026-08-22)
 

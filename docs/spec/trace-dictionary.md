@@ -93,14 +93,23 @@ string — which is why a query matches with `glob` and not `=`:
 
 | track | unit | what it counts |
 |---|---|---|
-| `traced processes running` | `processes` | traced processes running at that instant; its peak equals the report's `max_concurrency` by construction |
+| `traced processes running` | `processes` | traced processes running at that instant; its peak equals the report's `max_concurrency` — a consequence of the join below, not of the fold |
 | `host memory available` | `bytes` | `MemAvailable` from the host's `/proc/meminfo`, in bytes |
 | `host swap free` | `bytes` | `SwapFree` from the host's `/proc/meminfo`, in bytes |
 | `host major faults` | `faults` | `pgmajfault` from `/proc/vmstat`, cumulative since boot |
 | `host pages swapped in` | `pages` | `pswpin` from `/proc/vmstat`, cumulative since boot |
 | `host pages swapped out` | `pages` | `pswpout` from `/proc/vmstat`, cumulative since boot |
 
-The first is Plane 2's, folded from the records. The five `host` tracks
+The first is Plane 2's, folded from the records **after `UX-406`'s
+`merge_record_streams` join** — and that join is what makes its peak
+equal the report's `max_concurrency`, not the shape of the fold. With
+the spine on, a dynamically-linked process is recorded twice and both
+copies are alive at the same instant; measured on a spine-on capture of
+`examples/06`, the unjoined stream peaks at 24 against a published
+`max_concurrency` of 13, and the joined one at 13. So the equality is a
+guarded consequence, and the guard is
+`tests/unit/test_one_process_is_one_slice.py`'s
+`test_the_counter_peak_is_the_reports_max_concurrency`. The five `host` tracks
 are `UX-378`'s sampler, read from `host-samples.jsonl` and placed on the
 build's own time axis by `UX-437` — the sampler runs whether or not the
 build was traced, so they are on every capture that has the file,

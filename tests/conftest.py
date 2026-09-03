@@ -189,6 +189,14 @@ KNOWN_SKIP_REASONS = {
         "UX-213's second arm, where examples/06's capture is absent", 15),
     "the examples/06 capture is not here": (
         "UX-213's second arm, where examples/06's capture is absent", 10),
+    # `UX-572`: the same absence, with the path in it. "in this tree"
+    # named no tree, and the tree it meant was a linked worktree, which
+    # never has an ignored capture. Measured at 3 in a tree without it
+    # (`-rs`, the file's three real-capture clauses).
+    "no real capture at examples/06-macro-micro-optimization/"
+    ".bga/runs/20260821T170127Z, in this tree or the checkout "
+    "it was linked from": (
+        "UX-213's second arm, saying which path was missing", 3),
     # The seven CI's `test` job produces and a dev container does not.
     # Every one of them is "the tool is not installed on this runner",
     # and every one of them has a job that *does* install it: the

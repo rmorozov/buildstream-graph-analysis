@@ -2,7 +2,8 @@
 Confidence and reconciliation gates (Part 33).
 
 Hard gates (33.1): ordering_violations == 0, critical_path_coverage ==
-1.0, dominator_coverage == 1.0, blame_chain_coverage == 1.0.
+1.0, dominator_coverage == 1.0, blame_chain_coverage == 1.0, and I6 -
+occupancy within every capacity the run declared (Part 34).
 Soft gates (33.2, defaults): task_coverage >= 0.95, duration_coverage >=
 0.98 - these reduce confidence (via coverage_score's min, below) rather
 than hard-failing.
@@ -21,7 +22,7 @@ import logging
 from typing import List, Optional, Tuple
 
 from ..ingest.models import STRUCTURAL_ELEMENT_KINDS, Graph, NormalizedTask, RunContext, Trace
-from ..occupancy.sweep import compute_task_horizon
+from ..occupancy.sweep import compute_capacity_excursions, compute_task_horizon
 
 logger = logging.getLogger(__name__)
 
@@ -173,6 +174,19 @@ def compute_confidence(
         len(set(identity_hashes)) == 1 if run_identity_all_present else True
     )
 
+    # --- Occupancy capacity (I6, Part 34) ---
+    # Only capacities the capture declared: PROCESS falls back to the
+    # scheduler's own max_jobs, which is a declaration, never to
+    # compute_default_capacities' literals, which are guesses.
+    declared_capacities = dict(
+        (run_context.resource_capacities or {}) if run_context else {}
+    )
+    if run_context and run_context.max_jobs and 'PROCESS' not in declared_capacities:
+        declared_capacities['PROCESS'] = run_context.max_jobs
+    capacity_excursions = compute_capacity_excursions(
+        normalized_tasks or [], declared_capacities,
+    )
+
     # --- Hard gates (33.1) ---
     hard_gates = {
         'ordering_violations_zero': ordering_violations == 0,
@@ -180,6 +194,7 @@ def compute_confidence(
         'dominator_coverage_full': dominator_coverage >= 1.0,
         'blame_chain_coverage_full': blame_chain_coverage >= 1.0,
         'run_identity_consistent': run_identity_consistent,
+        'occupancy_within_capacity': not capacity_excursions,
     }
     # Only critical_path_coverage/dominator_coverage failures need a new
     # violation entry - ordering violations are already individually
@@ -249,6 +264,13 @@ def compute_confidence(
             'type': 'hard_gate_failed', 'gate': 'dominator_coverage',
             'value': dominator_coverage,
             'detail': _missing_element_detail(missing_dominator_uids),
+        })
+    if not hard_gates['occupancy_within_capacity']:
+        # A run whose occupancy exceeds a capacity it declared is a broken
+        # capture, not a finding: every bound below divides by that C_p.
+        new_violations.append({
+            'type': 'hard_gate_failed', 'gate': 'occupancy_within_capacity',
+            'invariant': 'I6', 'detail': capacity_excursions,
         })
     if not hard_gates['run_identity_consistent']:
         new_violations.append({

@@ -91,3 +91,27 @@ def test_no_reconciliation_violations(tmp_path, name, factory):
     result = analyzer.analyze()
 
     assert not any(v.get("type") == "attribution_reconciliation" for v in result.violations)
+
+
+@pytest.mark.parametrize("name,factory", TOPOLOGIES, ids=[n for n, _ in TOPOLOGIES])
+def test_the_flattened_timeline_is_ordered_and_non_overlapping(tmp_path, name, factory):
+    """UX-567, I10 (Part 34): the flattened timeline is ordered,
+    contiguous and non-overlapping. I4 above does not imply this - an
+    overlap and a gap of the same width still sum to H exactly."""
+    analyzer = topo.build_analyzer(tmp_path, factory(), name=name)
+    result = analyzer.analyze()
+    segments = analyzer._attribution_segments
+    assert segments, f"{name}: no flattened timeline to check"
+
+    bounds = [(s.start_us, s.end_us) for s in segments]
+    assert bounds == sorted(bounds), f"{name}: emitted out of order"
+    assert all(end > start for start, end in bounds), f"{name}: empty segment"
+
+    overlapping = [(a, b) for a, b in zip(bounds, bounds[1:]) if b[0] < a[1]]
+    assert overlapping == [], f"{name}: overlapping segments {overlapping}"
+    gaps = [(a, b) for a, b in zip(bounds, bounds[1:]) if b[0] > a[1]]
+    assert gaps == [], f"{name}: gaps between segments {gaps}"
+
+    assert (bounds[0][0], bounds[-1][1]) == (
+        result.occupancy["horizon_start_us"], result.occupancy["horizon_end_us"]
+    ), f"{name}: the timeline does not span the horizon it is measured over"

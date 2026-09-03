@@ -1160,7 +1160,8 @@
             "critical_path_coverage_full": true,
             "dominator_coverage_full": true,
             "blame_chain_coverage_full": true,
-            "run_identity_consistent": true
+            "run_identity_consistent": true,
+            "occupancy_within_capacity": true
         },
         "ordering_violations": 0,
         "task_count": 11,
@@ -1616,10 +1617,10 @@
         }
     ],
     "document_shape": {
-        "leaves": 1066,
+        "leaves": 1067,
         "deepest_depth": 7,
         "deepest_path": "findings.[].evidence.steps.[].entering.[]",
         "deeper_than_three": 524,
-        "deeper_than_three_share": 0.4915572232645403
+        "deeper_than_three_share": 0.49109653233364575
     }
 }

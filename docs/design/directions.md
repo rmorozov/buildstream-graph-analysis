@@ -41,6 +41,8 @@ reduce to it.
 
 **Serves:** R1 above all — one person, one machine, the edit-build-compare loop — and R2, whose element cost the loop surfaces ([roles](roles.md)).
 
+**Status:** landed — the `UX-27`..`UX-40` round below closed it, and the report block this section illustrates is printed (see the note under it).
+
 **Who this is.** One person, one machine, an iterative loop: build,
 analyze, change something, rebuild, compare. `README.md` already sells
 this loop and `UX-05`'s walkthrough shows it working on a `sleep N` proxy
@@ -205,9 +207,21 @@ Capacity: builders 4 x max-jobs 4 = 16 potential processes on 4 cores.
 Every number in that block is either already computed today or is
 derivable from data already captured. None of it is currently printed.
 
+**It is now — measured round 83, 2026-09-03.** That last sentence is
+the round-1 reading and is kept as the argument's starting point; every
+line of the block above renders from `bga/report/text.py` today. The
+serialization group with its combined saving and the `Serialized (…)`
+pairs, `Dispatch Occupancy:`, `Critical Path Length:`, the
+`Parallelism-Pinned Elements (UX-31 …)` block that is the "worth
+looking inside" shortlist, and the `builders=N x native max-jobs=M = K
+potential concurrent processes` sentence are all printed strings in
+that module.
+
 ## Direction 2: `bga` as a CI tool
 
 **Serves:** R4, whose gate this is, and R6 indirectly — every false positive a loose band waves through is a contributor's re-run ([roles](roles.md)).
+
+**Status:** landed — same round; the gate, the CI comment and the noise band all ship (`UX-39`, `UX-40`, `UX-46`).
 
 Three jobs, in increasing order of how hard they are and how badly the
 current design serves them.
@@ -391,6 +405,8 @@ has before writing any code.
 
 **Serves:** R2 and R3 — the class of question this opens is *what is inside an element* and *what shape is the graph*, which are their two questions ([roles](roles.md)).
 
+**Status:** partial — items 1-5 landed as `UX-99`..`UX-104`; the cache-effectiveness gate `UX-92` stays ⚪ Blocked, because `UX-514` pinned the capture ref and the cache variation it waited for cannot arrive from the schedule.
+
 With rounds 10-11 the original two directions are substantially built:
 the local loop runs end to end from the documented commands, the
 marginal gate answers the build owner's growth rule at any project
@@ -473,6 +489,8 @@ section stays the argument.
 
 **Serves:** R2, whose element's real cost is exactly what a blind spot hides, and R1, who acts on the ranking that cost feeds ([roles](roles.md)).
 
+**Status:** landed — the spine and the static-binary fallback ship (`UX-105`..`UX-108`).
+
 Plane 2's one deliberate, load-bearing limitation has been there since
 `UX-11` chose the mechanism: `LD_PRELOAD` fires when the dynamic linker
 loads the hook into a freshly exec'd process, so **a fully static
@@ -543,6 +561,8 @@ section stays the argument.
 
 **Serves:** R4 — the CI comment's last inch — then R1 and R2 for the axis that follows it ([roles](roles.md)).
 
+**Status:** landed — `UX-112`, `UX-113`, `UX-116`, and the polish round `UX-125`..`UX-127`.
+
 Directions 3 and 4 are implemented. What round 12's verification says
 about where the leverage now sits, ranked:
 
@@ -597,6 +617,8 @@ about where the leverage now sits, ranked:
 ## Direction 6: the source axis — blast analysis by shared resource (argued 2026-08-20, round 18)
 
 **Serves:** R2, who owns the repository a change lands in, and R3, who owns what that change rebuilds ([roles](roles.md)).
+
+**Status:** landed — the decomposition below closed (`UX-171`..`UX-174`).
 
 Filed from a real user request, round 18: *blast analysis doesn't take
 element kind into consideration; and in the monorepo case — one repo
@@ -681,6 +703,8 @@ month" — worth filing once UX-171's inventory exists to join against.
 ## Direction 7: the viewer — a thin window onto the JSON (argued 2026-08-21, round 21)
 
 **Serves:** R1, R2, R3 and R4 — everyone who reads a report rather than a payload. The viewer serves no role the payloads do not; that is the whole of its thinness ([roles](roles.md)).
+
+**Status:** landed — all three iterations' decompositions closed (`UX-193`..`UX-214`).
 
 Filed from the user's request, round 21: *"we are on the verge of
 necessity for making a viewer"* — `bga view @snapshot` serving a local
@@ -922,6 +946,8 @@ new feature and 4 KB of vendored library stop looking alike.
 CI comment and R8's prioritisation case most of all; R1 directly
 ([roles](roles.md)).
 
+**Status:** partial — `UX-227`..`UX-230` closed and the CI comment quotes the chain (`_why_block`); `bga compare` publishes the *candidate diagnosis*'s chain, not the regression verdict's, so this section's last tail is `UX-592`.
+
 The fourth external review's strongest idea, adopted — and it is the
 house pattern one level up. Round 24 found the relationship layer
 computed and unpublished (`correlate/v1` closed it). What remains
@@ -981,6 +1007,8 @@ deferred maybe, behind the same bar every graph has faced here.
 
 **Serves:** R5, R6, R7, R8 — the roles the
 [role model](roles.md) found unserved.
+
+**Status:** partial — `UX-234` landed the aggregate fact-base; the rest of the argued order is filed rather than argued again — the queue seam `UX-593`, the capacity model `UX-594`, the cost translation `UX-595`.
 
 Everything bga answers today is answered within one build, or one
 store's history of one project. That satisfies R1-R4 — and
@@ -1222,6 +1250,8 @@ guessing).
 hit — and R5 structurally, since fleet-scale capture is this problem
 multiplied ([roles](roles.md)).
 
+**Status:** landed — both iterations closed (`UX-296`..`UX-300`, `UX-308`..`UX-312`).
+
 The field report that opens the axis: a real project's dual-plane
 snapshot produced a **~2 GB run directory** — `plane2.json` at
 1.5 GB, the raw Plane 2 log another 400 MB gzipped — and `bga view`
@@ -1372,6 +1402,8 @@ vocabulary, and the dictionary gets its guard).
 
 **Serves:** every reader of the page; R1 first ([roles](roles.md)).
 
+**Status:** landed — `styleguide.md` and its guards (`UX-302`, `UX-306`).
+
 The report's visual language, made a governed contract:
 [`styleguide.md`](styleguide.md). One dispatch from published shape
 to control (raw JSON only where deliberate and labeled), series and
@@ -1457,6 +1489,8 @@ illustrations of intent, not implemented output.
 when it moved — and, through the store, R1 and R7, whose questions are
 answered by comparing this build against builds an *older* `bga`
 measured.
+
+**Status:** partial — items 1-4 landed (`CHANGELOG.md`, three release rows, the generated body, `UX-241`'s review gate); item 5's tag is uncut — `git tag` answers 0 against those three rows — `UX-596`.
 
 `bga` is unusual among analysis tools in one way that matters here:
 **it reads its own past output as input.** `@last`/`@prev`, the
@@ -1585,6 +1619,8 @@ I installed and the thing I have now" at all.
 day, and the graph owner who knows which of those choices the graph
 forbids — and R8, who is handed the ranking as a case for funding.
 
+**Status:** partial — the ranking landed (`UX-260`, `UX-303`); of the four `yes` rows in the table below, two publish `bga:distribution` and two do not, which is `UX-597` and the dated note under that table.
+
 The report ranks elements by blast radius and tells the reader to fix
 the top one. Measured on a 1,202-element run:
 
@@ -1650,6 +1686,13 @@ magnitude. Applying it everywhere would be cargo cult:
 | processes per element (Plane 2) | **yes** | heavy tails; one element with 40,000 processes is the finding |
 | confidence, coverage, efficiency | **no** | single run-level numbers with no population to be a percentile of |
 
+**Two of the four `yes` rows are published — measured round 83,
+2026-09-03.** `analyze` emits `bga:distribution` twice, as
+`blast_radius_distribution` and `element_duration_distribution`
+(`bga/schemas.py`, `_SIGNALS_TABLES`); sandbox tax and processes per
+element carry a `bga:quantity` and no distribution. The rule above is
+the rule; what it has reached is `UX-597`.
+
 Deciles are the right granularity: ten buckets is a shape a reader
 takes in at a glance, and finer only matters in the tail — where the
 named p95/p99 already carry it.
@@ -1681,6 +1724,8 @@ graph's shape** rather than ranked as **the reader's next task**.
 
 **Serves:** R1 first, and R3 — the two who open the page rather than the
 JSON.
+
+**Status:** landed — `UX-263`..`UX-272`.
 
 Reported from a real run, in nine parts. Every number below was
 measured on a served report in Chrome 141, not estimated.
@@ -1778,6 +1823,8 @@ readability win available.
 
 **Serves:** R1 first, and R7 — the two who read the page top to bottom
 before they know what they are looking for.
+
+**Status:** landed — `UX-284`..`UX-286`.
 
 Proposed from a real reading: *"maybe we need to review our data and try
 to group it into semantic blocks that should occupy exactly one screen?
@@ -1908,6 +1955,8 @@ passes became chapter boundaries and were deleted.
 
 **Serves:** R1 and R7 first — and every open viewer item, because most
 of them get smaller if this lands first.
+
+**Status:** landed — `UX-288` then `UX-289`, in that order; brainstorm items 5-7 are marked there as unmeasured proposals, not commitments.
 
 Proposed from a real reading: *"we have critical path shown three times
 with a slightly different set of columns, and one time in form of

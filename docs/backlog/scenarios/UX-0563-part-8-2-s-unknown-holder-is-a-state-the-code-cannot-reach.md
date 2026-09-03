@@ -4,8 +4,8 @@
 
 ## Motivation
 
-Spec Part 8.2 (`specification.md:625-632`) and Part 42's "Holder set
-+ `UNKNOWN`" row require an unidentifiable resource holder to be
+Spec Part 8.2 (`specification.md:625-632`) and Part 42's "Holder
+set + `UNKNOWN`" row require an unidentifiable resource holder to be
 reported as `blocking_tasks = UNKNOWN, ambiguous = true` — a rule
 the fixing guide's hard rules repeat ("never invent data the spec
 says must be UNKNOWN"). The code:

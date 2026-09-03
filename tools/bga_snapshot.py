@@ -337,17 +337,22 @@ def create_parser() -> argparse.ArgumentParser:
     # to reach it.
     parser.add_argument(
         "--aggregate", action="store_true",
-        help="What a build here costs: min/median/p95 per host class, over "
-             "the runs that finished.",
+        help="Cost per host class: min/median/p95 over finished runs.",
     )
     parser.add_argument(
         "--blend", action="store_true",
         help="With --aggregate: mix host classes. Refused by default.",
     )
+    # `UX-595`: one flag, not two - they are one question, and this
+    # help is at its line cap (`UX-158`).
+    parser.add_argument(
+        "--capacity", metavar="N,RATE", default=None,
+        help="Model N builders at RATE builds/day: the wait, and what "
+             "it assumes.",
+    )
     parser.add_argument(
         "--format", choices=("text", "json"), default="text",
-        help="With --list or --aggregate: emit `store/v1` (or "
-             "`store-aggregate/v1`) instead of text.",
+        help="JSON for --list/--aggregate instead of text.",
     )
     # UX-159: the store had a size warning and no way to act on it.
     # A subcommand rather than a flag, because it deletes.
@@ -432,6 +437,9 @@ def main(argv: Optional[List[str]] = None) -> int:
     if refusal is not None:
         print(refusal, file=sys.stderr)
         return 2
+
+    if args.capacity is not None:
+        return _capacity(project, args.capacity, args.format)
 
     if args.aggregate:
         return _aggregate(project, blend=args.blend,
@@ -1109,6 +1117,36 @@ def _aggregate(project: str, blend: bool = False,
     if document.get("refusal") and not blend:
         return EXIT_CODE_MISMATCHED_RUNS
     return 0
+
+
+def _capacity(project: str, spec: str, fmt: str = "text") -> int:
+    """`UX-595`: builders and the store's service times, as a model.
+
+    Exit `EXIT_CODE_MISMATCHED_RUNS` on a store of more than one host
+    class, for the reason `--aggregate` does: a queue over two service
+    times is two queues, and no fleet-wide number is published.
+    """
+    from bga import capacity_model
+    from bga.cli import EXIT_CODE_MISMATCHED_RUNS
+
+    if fmt == "json":
+        # A model's document is not a contract yet, and emitting one
+        # unstamped is the drift `UX-190` exists to stop.
+        print("Error: --capacity prints text. Its document carries no "
+              "schema stamp yet, and an unversioned JSON payload is what "
+              "`UX-190` refuses; `--aggregate --format json` publishes "
+              "the measured half.", file=sys.stderr)
+        return 2
+    parsed = capacity_model.parse_capacity(spec)
+    if parsed is None:
+        print(f"Error: --capacity takes N,RATE - a builder count of at "
+              f"least 1 and an arrival rate above 0. Got {spec!r}.",
+              file=sys.stderr)
+        return 2
+    document = capacity_model.read(project, *parsed)
+    for line in capacity_model.render(document):
+        print(line)
+    return EXIT_CODE_MISMATCHED_RUNS if document.get("refusal") else 0
 
 
 def _list(project: str, as_json: bool = False) -> int:

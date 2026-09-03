@@ -18,10 +18,12 @@ A map that is confidently wrong exactly where confidence was requested
 costs more than no map. So it is checked against the tree, both
 directions.
 """
+import argparse
 import functools
 import pathlib
+import re
 import subprocess
-from typing import Optional, Tuple
+from typing import Dict, Optional, Tuple
 
 import pytest
 
@@ -62,6 +64,16 @@ NOT_IN_TESTS = set()
 # directory name, and the artefact never has to be there.
 BUILD_ARTEFACTS = {"__pycache__", ".pytest_cache"}
 
+# `UX-590`: the map's one capability row. The formats are the map's
+# only non-path vocabulary, and this is where they are named.
+FORMAT_ROW = "--format"
+
+# A bare word the map lists among paths that is deliberately neither a
+# command nor a format. Word -> the reason it is allowed to be there;
+# `UX-573`'s `csv` is *not* one of these, because it is a registered
+# `--format` choice and derives.
+PROSE_IN_A_PATH_LIST: Dict[str, str] = {}
+
 
 def _map_text():
     """The map itself - the fenced blocks - and not the prose around it.
@@ -71,12 +83,104 @@ def _map_text():
     the section was regenerated. A guard that is satisfied by its own
     explanation checks nothing.
     """
-    text = GUIDE.read_text(encoding="utf-8")
-    assert "## 6. Where things live" in text, "the guide has no context map"
-    section = text.split("## 6. Where things live", 1)[1].split("\n## 7.", 1)[0]
+    section = _section_six()
     blocks = section.split("```")[1::2]
     assert blocks, "section 6 has no fenced map"
     return "\n".join(block.split("\n", 1)[-1] for block in blocks)
+
+
+def _section_six():
+    text = GUIDE.read_text(encoding="utf-8")
+    assert "## 6. Where things live" in text, "the guide has no context map"
+    return text.split("## 6. Where things live", 1)[1].split("\n## 7.", 1)[0]
+
+
+def _format_row():
+    """`UX-590`: the `--format` row of the map, as its words.
+
+    The map's only capability vocabulary. Everything left of the ` - `
+    is the list; the description after it is prose.
+    """
+    rows = [line for line in _map_text().splitlines()
+            if line.startswith(FORMAT_ROW)]
+    assert len(rows) == 1, (
+        f"section 6 should carry exactly one `{FORMAT_ROW}` row: {rows}")
+    listed = rows[0][len(FORMAT_ROW):].split(" - ", 1)[0]
+    return [word.strip() for word in listed.split(",") if word.strip()]
+
+
+#: A whole hyphenated lowercase word: `cache-trend` is one match, and
+#: the `format` in `--format` is none.
+WORD = re.compile(r"(?<![\w<>-])[a-z][a-z0-9]*(?:-[a-z0-9]+)*(?![\w>-])")
+
+
+@functools.lru_cache(maxsize=1)
+def _registry() -> Tuple[frozenset, frozenset]:
+    """What `bga` registers: (commands, `--format` choices).
+
+    Read off the parser and the alias table rather than a list here -
+    a second list would be the thing that drifts.
+    """
+    import sys
+
+    sys.path.insert(0, str(REPO))
+    from bga.cli import create_parser
+    from bga.tools_dispatch import TOOL_ALIASES
+
+    commands, formats = set(TOOL_ALIASES), set()
+    for action in create_parser()._actions:
+        if not isinstance(action, argparse._SubParsersAction):
+            continue
+        commands |= set(action.choices)
+        for sub in action.choices.values():
+            for option in sub._actions:
+                if "--format" in (option.option_strings or []) and option.choices:
+                    formats |= set(option.choices)
+    return frozenset(commands), frozenset(formats)
+
+
+def _path_lists(text):
+    """The map's comma lists of things, as `(line, paths, bare words)`.
+
+    `UX-573` dropped a bare `csv` from `bga/report/`'s comma list of
+    filenames and recorded that no guard could have seen it. A run ends
+    at the first member that is prose - two or more words not starting
+    with a path - so `bga/run_store.py .bga/runs, the @last/@prev
+    aliases, prune` stops before `prune`, which is a description and not
+    a list member.
+    """
+    lists = []
+    for line in text.splitlines():
+        parts = [part.strip() for part in line.split(",")]
+        if len(parts) < 2:
+            continue
+        paths, bare = [], []
+        for part in parts:
+            words = part.split()
+            if not words:
+                break
+            if _looks_like_a_path(words[0]):
+                paths += [w for w in words if _looks_like_a_path(w)]
+            elif len(words) == 1 and WORD.fullmatch(words[0]):
+                bare.append(words[0])
+            else:
+                break
+        if len(paths) >= 2:
+            lists.append((line.strip(), paths, bare))
+    return lists
+
+
+#: A path claim is rooted or suffixed. A slash alone is not enough:
+#: §6 writes `cold/structural analysis` and `.bga/runs`, which are
+#: English and a directory a build makes, not entries in a list.
+PATH_ROOTS = ("bga/", "tools/", "tests/", "docs/", "examples/")
+PATH_SUFFIXES = (".py", ".c", ".h", ".sh", ".js", ".mjs", ".html", ".css",
+                 ".json", ".md", ".toml", ".yml")
+
+
+def _looks_like_a_path(word):
+    return bool(re.fullmatch(r"[\w./-]+", word)) and (
+        word.startswith(PATH_ROOTS) or word.endswith(PATH_SUFFIXES))
 
 
 @functools.lru_cache(maxsize=1)
@@ -286,6 +390,126 @@ class TestTheMapNamesTheTree:
         text = _map_text()
         assert "only existing test file" not in text
         assert "tests/unit/" in text, "the map does not mention where tests live"
+
+
+class TestTheMapsCapabilitiesDerive:
+    """`UX-590`: §6's non-path claims, held to the registry.
+
+    The path directions above read only what has a slash, so a bare
+    `csv` in `bga/report/`'s row was invisible to them - `UX-573` had to
+    drop one by hand and recorded that nothing could have caught it.
+    """
+
+    def test_every_format_the_map_names_is_registered(self):
+        """The existence direction, for the map's one vocabulary. A
+        format a reader finds here and `bga` refuses is the `csv`
+        defect with the sign flipped."""
+        _commands, formats = _registry()
+        unknown = sorted(word for word in _format_row()
+                         if word not in formats
+                         and word not in PROSE_IN_A_PATH_LIST)
+        assert unknown == [], (
+            f"§6's `--format` row names choice(s) `bga/cli.py` does not "
+            f"declare: {unknown}")
+
+    def test_every_registered_format_is_on_the_map(self):
+        """The other direction, and the one a new renderer trips: a
+        `--format` a run can be asked for and the map does not name is
+        a capability every session rediscovers."""
+        _commands, formats = _registry()
+        missing = sorted(set(formats) - set(_format_row()))
+        assert missing == [], (
+            f"`--format` choice(s) §6 does not name: {missing}. "
+            f"docs/contributing/fixing-guide.md §6.")
+
+    def test_the_registry_is_a_non_empty_population(self):
+        """The vacuity floor for both directions above: an empty
+        registry passes the first and an empty map row the second. One
+        named member per source the registry reads."""
+        commands, formats = _registry()
+        assert "analyze" in commands, "the parser's own subcommands are gone"
+        assert "snapshot" in commands, "the tools_dispatch aliases are gone"
+        assert {"text", "json", "csv"} <= formats, sorted(formats)
+        assert len(commands) > 20, sorted(commands)
+        assert len(_format_row()) > 1, _format_row()
+
+    def test_the_format_row_answers_no_path_question(self):
+        """A vocabulary inside the map could satisfy the module
+        direction with a word that is not a path - `graph` would answer
+        `bga/graph/`. These four cannot."""
+        basenames = {name.rstrip("/").split("/")[-1].removesuffix(".py")
+                     for name in _real_modules()} | {
+            name.rstrip("/").split("/")[-1] for name in _real_test_entries()}
+        assert not basenames & set(_format_row()), (
+            f"the `--format` row would answer a path question: "
+            f"{sorted(basenames & set(_format_row()))}")
+
+    def test_a_bare_word_among_paths_is_a_claim_the_registry_answers(self):
+        """`UX-573`'s `csv`, as a direction. A comma list of paths with
+        a bare word in it is claiming that word is a thing, and the
+        registry - commands and formats both - is what says whether it
+        is."""
+        commands, formats = _registry()
+        offenders = sorted(
+            f"{word!r} in {line!r}"
+            for line, _paths, bare in _path_lists(_map_text())
+            for word in bare
+            if word not in commands and word not in formats
+            and word not in PROSE_IN_A_PATH_LIST)
+        assert offenders == [], (
+            f"the map lists word(s) among paths that `bga` registers as "
+            f"neither a command nor a format: {offenders}")
+
+    def test_the_path_list_scan_reads_a_non_empty_population(self):
+        """The vacuity floor `UX-573` asks for: a scan finding no list
+        at all would pass any bare word in one. Measured at seven lists
+        in §6; the number is a floor, not a target."""
+        lists = _path_lists(_map_text())
+        assert len(lists) >= 5, [line for line, _, _ in lists]
+        assert any("help_format.py" in line for line, _, _ in lists), (
+            "the scan no longer reaches the `bga/progress.py` list")
+
+    def test_the_scan_stops_at_a_description_rather_than_reading_it(self):
+        """`prune` and `analysis` are English, not list members. A scan
+        that read to the end of the line would demand a reason for
+        every adjective in §6."""
+        line = ("bga/report/   text.py, json.py, ci_comment.py - renderers, "
+                "no analysis")
+        lists = _path_lists(line)
+        assert len(lists) == 1, lists
+        assert lists[0][2] == [], lists[0][2]
+        assert _path_lists("bga/a.py, bga/b.py, the @last aliases, prune") == [
+            ("bga/a.py, bga/b.py, the @last aliases, prune",
+             ["bga/a.py", "bga/b.py"], [])]
+
+    def test_a_slash_alone_does_not_make_a_path(self):
+        """The false positives this scan had on its first run: §6 says
+        `cold/structural analysis` and `.bga/runs`, and counting those
+        as list members made `networkx-based` a capability claim."""
+        assert not _looks_like_a_path("cold/structural")
+        assert not _looks_like_a_path(".bga/runs")
+        assert _looks_like_a_path("bga/structural/")
+        assert _looks_like_a_path("help_format.py")
+        assert _path_lists("bga/structural/  cold/structural analysis, "
+                           "networkx-based") == []
+
+    def test_an_unregistered_bare_word_in_a_path_list_is_seen(self):
+        """The allowlist is empty, so the clause above passes on an
+        empty set and says nothing about the scan. This one keeps it
+        honest: a word in neither registry is found where `csv` sat."""
+        line = "bga/report/   text.py, json.py, parquet, ci_comment.py"
+        commands, formats = _registry()
+        bare = [word for _line, _paths, words in _path_lists(line)
+                for word in words]
+        assert bare == ["parquet"], bare
+        assert "parquet" not in commands and "parquet" not in formats
+
+    def test_each_prose_exemption_carries_a_reason(self):
+        """An allowlist entry with no reason is a hole nobody argued
+        for, and the next session cannot tell it from an oversight."""
+        empty = sorted(word for word, why in PROSE_IN_A_PATH_LIST.items()
+                       if not why or not why.strip())
+        assert empty == [], f"exemption(s) with no reason: {empty}"
 
 
 class TestTheStreamsAreNamed:

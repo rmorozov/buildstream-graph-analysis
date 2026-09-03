@@ -48,24 +48,51 @@ from tests.browser import NO_BROWSER, Browser, find_chrome     # noqa: E402
 #: Walking the whole order and back, in one load. The hash rather than
 #: the mark: a rail link sets it synchronously, and the mark is what
 #: this item had to stop depending on.
-_WALK = """(() => {
+_WALK = """(async () => {
   const bar = document.querySelector("nav.toc .toc-steps");
   if (!bar) return { found: false };
+  const links = () => [...document.querySelectorAll("nav.toc [data-toc]")];
   const press = (name, times = 1) => {
     const button = bar.querySelector(`[data-step="${name}"]`);
     const seen = [];
     for (let i = 0; i < times; i++) { button.click(); seen.push(location.hash); }
     return seen;
   };
-  const order = [...document.querySelectorAll("nav.toc [data-toc]")]
-    .map((a) => "#" + a.getAttribute("data-toc"));
+  // `UX-592`: the mark lands on a later task, and `stepper` steps from
+  // wherever it is - so a press before it arrives measures the
+  // from-nowhere rule instead of the walk. Wait for it, and report
+  // whether it came so a page that never marks cannot pass quietly.
+  const settle = () => new Promise((go) => setTimeout(go, 50));
+  let marked = false;
+  for (let i = 0; i < 40 && !marked; i++) {
+    marked = links().some((a) => a.hasAttribute("data-current"));
+    if (!marked) await settle();
+  }
+  const order = links().map((a) => "#" + a.getAttribute("data-toc"));
   const forward = press("next", 6);
   const back = press("previous", 2);
   press("next", order.length + 20);
   const stopped = location.hash;
-  return { found: true, order, forward, back, stopped,
+  return { found: true, marked, order, forward, back, stopped,
            labels: [...bar.querySelectorAll("button")].map(
              (b) => b.getAttribute("data-step")) };
+})()"""
+
+#: The other input class: a rail pressed before the mark exists. The
+#: marks are stripped synchronously and the cursor has not moved, so
+#: this is the from-nowhere rule and not a race - `UX-592`.
+_COLD = """(() => {
+  const bar = document.querySelector("nav.toc .toc-steps");
+  const links = () => [...document.querySelectorAll("nav.toc [data-toc]")];
+  for (const a of links()) a.removeAttribute("data-current");
+  const press = (name, times = 1) => {
+    const button = bar.querySelector(`[data-step="${name}"]`);
+    const seen = [];
+    for (let i = 0; i < times; i++) { button.click(); seen.push(location.hash); }
+    return seen;
+  };
+  const order = links().map((a) => "#" + a.getAttribute("data-toc"));
+  return { order, forward: press("next", 6) };
 })()"""
 
 #: The scroll half, which needs the browser's own asynchrony: a smooth
@@ -86,9 +113,18 @@ _TOP = """(async () => {
 })()"""
 
 #: `]` and `[`, and the rule that they are ignored while typing.
-_KEYS = """(() => {
+_KEYS = """(async () => {
   const send = (key, target) => (target ?? document).dispatchEvent(
     new KeyboardEvent("keydown", { key, bubbles: true }));
+  // `UX-592`: the keys drive the same cursor the rail does, so they
+  // need the same mark before the first press - without it the first
+  // `]` spends itself on the from-nowhere rule and every hash below
+  // is one short. Measured red about once in eight runs under load.
+  const settle = () => new Promise((go) => setTimeout(go, 50));
+  for (let i = 0; i < 40; i++) {
+    if (document.querySelector("nav.toc [data-toc][data-current]")) break;
+    await settle();
+  }
   send("]"); send("]");
   const afterTwo = location.hash;
   send("[");
@@ -114,11 +150,35 @@ def walked(uri):
         return browser.measure(uri, _WALK, 1440, 900)
 
 
+@pytest.fixture(scope="module")
+def cold(uri):
+    with Browser(find_chrome()) as browser:
+        return browser.measure(uri, _COLD, 1440, 900)
+
+
+@pytest.mark.skipif(find_chrome() is None, reason=NO_BROWSER)
+class TestTheStepFromNowhere:
+    """`UX-592`: `stepper` documents that with no mark "next" is the
+    *first* section, and nothing read that branch. CI did, and the walk
+    above - which never waited for the mark - reported it as a defect
+    in the order."""
+
+    def test_next_from_no_mark_is_the_first_section(self, cold):
+        assert cold["forward"] == cold["order"][:6], cold["forward"]
+
+
 @pytest.mark.skipif(find_chrome() is None, reason=NO_BROWSER)
 class TestTheStepFollowsTheDeclaredOrder:
     def test_the_rail_has_the_three_controls(self, walked):
         assert walked["found"], "the rail has no step controls"
         assert walked["labels"] == ["top", "previous", "next"], walked["labels"]
+
+    def test_the_walk_started_from_a_marked_page(self, walked):
+        """`UX-592`: without the mark the stepper starts from nowhere and
+        every clause below is off by one - which is what CI measured."""
+        assert walked["marked"], (
+            "no section carried `data-current` after two seconds; the walk "
+            "below measured the from-nowhere rule, not the order")
 
     def test_next_walks_the_order_the_page_declares(self, walked):
         """Not the DOM's accident - `UX-235`'s order, via the rail."""

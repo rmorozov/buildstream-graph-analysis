@@ -1711,9 +1711,9 @@ run directory for nine rounds while appearing in no registry, no guard
 and no document.
 
 **The versioning rule**: a field *rename or removal* bumps the version;
-an *addition* does not. So `additionalProperties` is true in all three,
-and a consumer that pins `analyze/v5` keeps working while the tool
-grows.
+an *addition* does not. So `additionalProperties` is true in all eight
+schemas `bga/schemas.py` defines, and a consumer that pins `analyze/v5`
+keeps working while the tool grows.
 
 The schemas live in one place, `bga/schemas.py`, which the renderers
 are built against and `--schema` prints from - they cannot be a
@@ -1856,6 +1856,33 @@ addition and does not bump anything (the versioning rule above).
 this table against 32.4's block and against the key set a real run
 produces, so a declared key that quietly stops being published, or a
 row that names a key nothing writes, reddens rather than ages.
+
+---
+
+### 32.7.3 Parts 37.1, 38, 39 and 40 are advisory, and superseded by the tree (`UX-566`)
+
+Each of these Parts opens with *Recommended* or plans work now done,
+and the tool was built differently. The body stays unedited; this says
+which document a reader should trust instead.
+
+| Part | what it recommends | what is current |
+|---|---|---|
+| 37.1 | `bga floors RUN --cold` and `--allow-partial-cold` | `bga floors --help`. `--cold` needs `--history-dir PATH` (repeatable, Part 15.2) to report anything but `unavailable`, and 37.1 never names that flag |
+| 38 | eleven upper-case report chapters | what `bga analyze` prints, from `bga/report/text.py` - nine chapters with different names, one of them (`CPU Utilisation`) conditional. `docs/guides/what-the-viewer-answers.md` is the page's equivalent |
+| 39 | a `bga/` module tree | the tree, and fixing guide §6's context map over it, held equal by `tests/unit/test_the_context_map_is_the_tree.py`. Part 39 names forty modules; thirteen exist. `bga/structural/` is a package it never mentions |
+| 40 | a milestone plan, M0 onward | `docs/backlog/scenarios/README.md` and `closed.md` - the open and closed rows, whose counts are derived |
+
+Part 38's chapter names, Part 39's module names and Part 40's milestone
+ids are therefore **not identifiers to grep for**: a name that appears
+in one of them and nowhere else is archaeology, not a gap.
+
+The "`additionalProperties` is true in all three" sentence in 32.5 was
+the same shape - a count from when three outputs were published - but
+it is inside Part 32, so it was corrected rather than listed here.
+`tests/unit/test_a_counted_figure_is_derived.py` derives it from the
+schemas, and
+`tests/unit/test_the_spec_says_which_parts_are_advisory.py` holds this
+table, including Part 39's two figures, against the tree.
 
 ---
 

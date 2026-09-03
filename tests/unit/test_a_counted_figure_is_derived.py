@@ -24,6 +24,10 @@ of ageing a sentence.
 inside Part 32, which the rule has always permitted editing; the
 deferral above read "the Part 32 registry" as the table alone. The
 sentence is now derived here like the other five.
+
+`UX-566` closed the seventh, three lines further on: "`additional
+Properties` is true in all three" was a count from when three outputs
+were published and `bga/schemas.py` defines eight.
 """
 import json
 import pathlib
@@ -224,6 +228,26 @@ class TestTheSpecCountsItsOwnTable:
         assert set(above) == written, (
             "the rows above the retired ones are not the written-but-not-"
             "printable set", above, sorted(written))
+
+    def test_the_versioning_rule_counts_the_schemas_it_describes(self):
+        """`UX-566`: the seventh copy, `specification.md:1714`. "So
+        `additionalProperties` is true in all three" is a count from
+        when three outputs were published; `bga/schemas.py` defines
+        eight. The sentence's subject is the schema documents, so the
+        figure is read off them and not off any registry class."""
+        from bga import schemas
+
+        defined = sorted(schemas._SCHEMAS)
+        lacking = [one for one in defined
+                   if schemas.schema(one).get("additionalProperties") is not True]
+        assert not lacking, (
+            "the sentence claims additionalProperties for every schema and "
+            "these do not set it", lacking)
+        word = WORDS[len(defined)]
+        assert (f"`additionalProperties` is true in all {word} schemas "
+                f"`bga/schemas.py` defines") in _flat(_spec_contract_block()), (
+            f"Part 32.5 should say 'true in all {word} schemas "
+            f"`bga/schemas.py` defines'; it defines {len(defined)}: {defined}")
 
 
 class TestTheChangelogCountsThePublishedSet:

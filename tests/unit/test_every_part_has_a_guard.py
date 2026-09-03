@@ -39,9 +39,13 @@ UNGUARDED = {
         "held by the golden fixture, but no file asserts the integral",
     22: "compute_average_concurrency and compute_peak_occupancy are "
         "reached only through the occupancy dict a fixture pins",
-    29: "DiagnosticsResult.duration_variability reaches no consumer - "
-        "32.7.2 records that, and there is nothing published to assert",
 }
+
+# Part 29 was here until `UX-565` landed in the same round: the
+# analyzer reads the store's prior same-host runs, `signals` carries
+# the block, and `test_part_29_reads_the_store_it_has.py` names it.
+# `test_an_allowlisted_part_that_gained_a_guard_leaves_the_list` is
+# what noticed, on the merge.
 
 # 32.4 declares nine keys; `AnalysisResult` carries these too. 32.5's
 # rule makes an addition an addition, so each is listed rather than

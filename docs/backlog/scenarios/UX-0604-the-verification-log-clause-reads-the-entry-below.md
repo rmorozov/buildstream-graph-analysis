@@ -37,3 +37,57 @@ than by a character count — the population is a section, not a slice.
 
 Mutation: remove the phrase from the newest entry — red. Today that
 mutation passes, which is this item's whole subject.
+
+## Outcome (round 84, 2026-09-03) — 🟢 Done
+
+**The gap, reproduced.** The Acceptance Test said the mutation *passes*
+today, and it did. Removing the phrase from the newest entry only,
+with the edit confirmed to have landed:
+
+```text
+$ sed -n '1037,1041p' docs/design/architecture.md
+Updated 2026-09-03 (after `UX-569`), covering round 83's three changes
+...
+names in the reading order — checked against the two contract tables
+$ grep -n "re-grounded in" docs/design/architecture.md | head -1
+1056:re-grounded in the two contract tables above against `bga.contracts` — **23
+$ pytest tests/unit/test_the_verification_log_is_true.py -q
+6 passed in 0.05s
+```
+
+Line 1056 is inside the *next* entry (`Updated 2026-09-03 (after
+`UX-549`)`, line 1054). The window ran 1200 characters from line 1037
+and swallowed it.
+
+**The close.** `_claimed()` bounds the entry at the next `Updated
+YYYY-MM-DD (after `UX-N`)` heading rather than at a character count.
+The same mutation now reds:
+
+```text
+FAILED ...::test_the_entry_says_what_it_was_grounded_in
+1 failed, 5 passed
+```
+
+**Mutations verified red and reverted (2):**
+
+| mutation | reddened | run |
+|---|---|---|
+| the phrase removed from the newest entry only | `test_the_entry_says_what_it_was_grounded_in` | 1 failed, 5 passed |
+| `ends` back to `found.start() + 1200` | `test_the_window_is_the_entry_and_not_the_one_below` | 1 failed, 6 passed |
+
+The second clause is new and exists because the first mutation is
+about the *document*, not the guard: a later widening of the window
+would restore the defect while every document-side mutation still
+passed. It asserts the window holds exactly one entry heading.
+
+**A guard of mine that did not discriminate:** none — but the one this
+item fixes is worth naming as the reason the clause exists at all. It
+had never discriminated, at any point in its life: measured at round
+83's base the same window was 1200 characters against an 800-character
+entry, so it read its predecessor there too.
+
+**Deviation from the Required Fix:** none.
+
+**Tier:** unchanged; the file runs 0.06s.
+
+**Suite:** the batch gate runs at the end of the round.

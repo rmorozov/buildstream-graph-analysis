@@ -82,8 +82,16 @@ def _claimed():
         "the log's first entry does not read `Updated YYYY-MM-DD (after "
         "`UX-N`)` - which is the shape this guard, and a reader deciding "
         "whether to trust the document, both read")
+    # `UX-604`: the entry ends where the next one begins, not 1200
+    # characters later. At a fixed width the window reached into the
+    # entry below and found *its* "re-grounded in", so the clause
+    # passed for any newest entry shorter than the slice.
+    rest = log[found.end():]
+    following = re.search(r"^Updated \d{4}-\d{2}-\d{2} \(after `UX-\d+`\)",
+                          rest, re.M)
+    ends = found.end() + (following.start() if following else len(rest))
     return (datetime.date.fromisoformat(found.group(1)), found.group(2),
-            log[found.start():found.start() + 1200])
+            log[found.start():ends])
 
 
 def stale(claimed, last):
@@ -140,6 +148,17 @@ class TestTheLogIsNotStaleAboutItself:
             f"the Verification Log claims {claimed} (after {item}), and "
             f"{DOC.name} was last changed {last}. Re-ground the document and "
             f"say what against, or the log is worse than no log (UX-247).")
+
+    def test_the_window_is_the_entry_and_not_the_one_below(self):
+        """`UX-604`: what the clause below reads. A window that runs on
+        past the next `Updated ` heading is checking its predecessor,
+        which is how the grounding clause passed while saying nothing."""
+        _, _, entry = _claimed()
+        following = re.findall(
+            r"^Updated \d{4}-\d{2}-\d{2} \(after `UX-\d+`\)", entry, re.M)
+        assert len(following) == 1, (
+            f"the window holds {len(following)} entry headings; it should "
+            "end where the next entry begins")
 
     def test_the_entry_says_what_it_was_grounded_in(self):
         """The half a hook cannot write, which is why the item declined

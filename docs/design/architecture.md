@@ -1024,8 +1024,9 @@ artifact.
 
 ## Verification Log
 
-Updated 2026-09-03 (after `UX-540` and `UX-548`), re-grounded in the
-two contract tables above against `bga.contracts` — **23 emitted ids, 9
+Updated 2026-09-03 (after `UX-549`), covering round 81's three
+changes to this document — `UX-540`, `UX-548` and `UX-549` —
+re-grounded in the two contract tables above against `bga.contracts` — **23 emitted ids, 9
 of them superseded, and 3 read and never written**. The third set is
 new: `graph/v9`, `run-context/v9` and `trace/v9` are declared by
 `bga.ingest.READS` and answered by `contracts.reads()`, which is the

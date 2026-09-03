@@ -1,6 +1,6 @@
 # UX-549: five counted figures, read as current, wrong
 
-**Priority:** Medium | **Status:** 🟢 Fixed & Verified | **Depends on:** — | **Serves:** a reader deciding whether to trust the document around the number | **Topic:** docs
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — | **Serves:** a reader deciding whether to trust the document around the number | **Topic:** docs
 
 ## Motivation
 

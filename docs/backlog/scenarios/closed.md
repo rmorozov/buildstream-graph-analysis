@@ -581,6 +581,7 @@ is open, on what topic, for whom — is the other file's.
 | UX-576 | [the question count is stated three ways](UX-0576-the-question-count-is-stated-three-ways.md) | Medium | the reader deciding whether to open Perfetto | 🟢 Done — one derived count — seventeen — and a sweep that reads every counted phrase against questions.js | [UX-576](UX-0576-the-question-count-is-stated-three-ways.md) |
 | UX-577 | [the committed example's own next step refuses](UX-0577-the-committed-example-s-own-next-step-refuses.md) | High | the stranger who follows the README's second command | 🟢 Done — the advised comparison is one the store can make; there was never a committed store to fix | [UX-577](UX-0577-the-committed-example-s-own-next-step-refuses.md) |
 | UX-579 | [the docs guard reads command words, not commands](UX-0579-the-docs-guard-reads-command-words-not-commands.md) | Medium | the next flag rename | 🟢 Done — every fenced bga line in the guides parsed by the real parser, executing only tracked operands | [UX-579](UX-0579-the-docs-guard-reads-command-words-not-commands.md) |
+| UX-588 | [the Python floor is in the CI matrix and in no guard](UX-0588-the-python-floor-is-in-the-matrix-and-in-no-guard.md) | High | every track that writes Python on a newer interpreter | 🟢 Done — the floor comes from pyproject.toml and every annotation is walked for a PEP 604 union | [UX-588](UX-0588-the-python-floor-is-in-the-matrix-and-in-no-guard.md) |
 
 ## UX-207..UX-212: the twenty-third audit round — the report learns to answer first (2026-08-22)
 

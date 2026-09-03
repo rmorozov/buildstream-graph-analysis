@@ -27,6 +27,7 @@ import sys
 from pathlib import Path
 
 import pytest
+from typing import List, Optional
 
 REPO = Path(__file__).resolve().parents[2]
 FIXTURE_RUN = REPO / "tests" / "fixtures" / "macro_micro" / "run"
@@ -90,7 +91,7 @@ def _tokens(command: str, run_dir: str) -> list[str]:
     ][1:]
 
 
-def _refusal(tokens: list[str]) -> str | None:
+def _refusal(tokens: List[str]) -> Optional[str]:
     """What the real CLI would say about these arguments, or None."""
     from bga.cli import _schema_for, create_parser
     from bga.tools_dispatch import TOOL_ALIASES

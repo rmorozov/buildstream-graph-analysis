@@ -8,6 +8,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 | Status | Meaning |
 |---|---|
+| UX-589 | [the failure namer reads a junit the run did not write](UX-0589-the-namer-reads-a-junit-the-run-did-not-write.md) | guards | Medium | every session reading a red CI job | 🔴 Open |
 | 🔴 Not Started | No work begun |
 | 🟡 In Progress | Work underway, or claimed-done-but-unverified |
 | 🟢 Done | Acceptance test run for real, output pasted into the task file |
@@ -15,7 +16,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-585 scenarios: **15 open**, 570 closed.
+587 scenarios: **16 open**, 571 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -27,7 +28,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | cli | 0 | 21 |
 | store | 0 | 15 |
 | docs | 10 | 83 |
-| guards | 4 | 108 |
+| guards | 5 | 110 |
 
 ## Open scenarios
 

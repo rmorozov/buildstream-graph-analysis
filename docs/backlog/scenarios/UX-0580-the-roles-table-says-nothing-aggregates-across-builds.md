@@ -1,6 +1,6 @@
 # UX-580: the roles table says nothing aggregates across builds
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-231 (the same-commit rule for this table), UX-234, UX-339 | **Serves:** R5 and R7, whose rows are wrong about them | **Topic:** docs
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-231 (the same-commit rule for this table), UX-234, UX-339 | **Serves:** R5 and R7, whose rows are wrong about them | **Topic:** docs
 
 ## Motivation
 

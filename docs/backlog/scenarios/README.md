@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-596 scenarios: **16 open**, 580 closed.
+596 scenarios: **15 open**, 581 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -26,7 +26,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | viewer | 0 | 138 |
 | cli | 0 | 21 |
 | store | 1 | 16 |
-| docs | 6 | 85 |
+| docs | 5 | 85 |
 | guards | 5 | 112 |
 
 ## Open scenarios
@@ -49,7 +49,6 @@ task file, which is the only place it ever lived twice.
 | UX-568 | [the spec has no index of which Part a guard holds](UX-0568-the-spec-has-no-index-of-which-part-a-guard-holds.md) | guards | Medium | the next specification review — this one took five agents | 🔴 |
 | UX-569 | [the architecture document's prose is not what its guards read](UX-0569-the-architecture-document-s-prose-is-not-what-its-guards-read.md) | docs | Medium | the reader who opens architecture.md to price a change | 🔴 |
 | UX-578 | [the verbatim blocks that are neither dated nor fresh](UX-0578-the-verbatim-blocks-that-are-neither-dated-nor-fresh.md) | docs | Medium | anyone diffing a guide's output against their own | 🔴 |
-| UX-580 | [the roles table says nothing aggregates across builds](UX-0580-the-roles-table-says-nothing-aggregates-across-builds.md) | docs | Medium | R5 and R7, whose rows are wrong about them | 🔴 |
 | UX-584 | [the figures nothing reads — thirteen stale numbers in the process layer](UX-0584-the-figures-nothing-reads-thirteen-stale-numbers-in-the-process-layer.md) | docs | Medium | every session's first read | 🔴 |
 | UX-585 | [the card's guard column is counted, not read](UX-0585-the-card-s-guard-column-is-counted-not-read.md) | guards | High | the session that trusts the card's guard column | 🔴 |
 

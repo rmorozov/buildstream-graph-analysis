@@ -27,7 +27,7 @@ DOC = REPO / "docs" / "spec" / "ingestion-pipeline.md"
 
 # The "Last exercised on `bst` <version>, <date>" line the headings carry.
 EXERCISED = re.compile(
-    r"\*\*Last exercised on `bst` (?P<version>[0-9]+(?:\.[0-9]+)*), "
+    r"\*\*Last exercised on `bst` (?P<version>[0-9]+(?:\.[0-9]+)*(?:, [0-9]+(?:\.[0-9]+)*)*), "
     r"(?P<date>\d{4}-\d{2}-\d{2})\.\*\*")
 
 # `element_kind` as a value that is read, not as a fragment of a longer
@@ -77,10 +77,16 @@ def test_both_facts_headings_say_which_bst_they_were_last_exercised_on():
 def test_the_documented_version_is_the_one_the_binary_reports():
     documented = EXERCISED.search(_doc())
     assert documented, "no 'Last exercised on' line to check"
-    assert documented.group("version") == bst_version(), (
+    # `UX-571`, corrected in round 83: the tier runs in two environments
+    # with two binaries - CI's runner and the development container - so
+    # the line names every version the facts were exercised on, and this
+    # asks whether the binary running now is one of them. A version
+    # outside the set is a tier that has never been run here.
+    versions = [one.strip() for one in documented.group("version").split(",")]
+    assert bst_version() in versions, (
         f"the document says it was last exercised on bst "
-        f"{documented.group('version')}; this binary reports "
-        f"{bst_version()}. Re-run the bst tier and re-date the line.")
+        f"{', '.join(versions)}; this binary reports {bst_version()}. "
+        f"Re-run the bst tier here and add the version to the line.")
 
 
 # --- fact 9: element_kind is read now ------------------------------------

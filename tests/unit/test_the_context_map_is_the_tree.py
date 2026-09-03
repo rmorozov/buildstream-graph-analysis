@@ -68,6 +68,11 @@ BUILD_ARTEFACTS = {"__pycache__", ".pytest_cache"}
 # only non-path vocabulary, and this is where they are named.
 FORMAT_ROW = "--format"
 
+# `UX-608`: the heading over section 6's command block. `_map_text()`
+# welds every fence into one string, so the rows are found by where they
+# sit and not by what they say - a command name is an ordinary word.
+COMMAND_HEADING = "**Every command `bga` answers to**"
+
 # A bare word the map lists among paths that is deliberately neither a
 # command nor a format. Word -> the reason it is allowed to be there;
 # `UX-573`'s `csv` is *not* one of these, because it is a registered
@@ -107,6 +112,26 @@ def _format_row():
         f"section 6 should carry exactly one `{FORMAT_ROW}` row: {rows}")
     listed = rows[0][len(FORMAT_ROW):].split(" - ", 1)[0]
     return [word.strip() for word in listed.split(",") if word.strip()]
+
+
+def _command_rows():
+    """`UX-608`: `{command: where it lives}` from section 6's command
+    block.
+
+    One row per command, first word the name and second the path. The
+    `--format` row above is one line and this is thirty-two, so it is
+    keyed by its heading rather than by a line prefix.
+    """
+    section = _section_six()
+    assert COMMAND_HEADING in section, (
+        f"section 6 has no command block: {COMMAND_HEADING}")
+    fence = section.split(COMMAND_HEADING, 1)[1].split("```")[1]
+    rows = {}
+    for line in fence.split("\n", 1)[1].splitlines():
+        words = line.split()
+        if words:
+            rows[words[0]] = words[1] if len(words) > 1 else ""
+    return rows
 
 
 #: A whole hyphenated lowercase word: `cache-trend` is one match, and
@@ -510,6 +535,50 @@ class TestTheMapsCapabilitiesDerive:
         empty = sorted(word for word, why in PROSE_IN_A_PATH_LIST.items()
                        if not why or not why.strip())
         assert empty == [], f"exemption(s) with no reason: {empty}"
+
+
+class TestTheMapNamesEveryCommand:
+    """`UX-608`: `UX-590` held the formats both ways and the commands in
+    one direction only - a command *named* in section 6 was checked, and
+    the registry was not held to appear. Fifteen of thirty-two were on no
+    row, so for those the map answered nothing at all."""
+
+    def test_every_registered_command_is_on_the_map(self):
+        """The direction that was missing. A subcommand added without a
+        row is the map's promise going quietly unmet."""
+        commands, _formats = _registry()
+        missing = sorted(set(commands) - set(_command_rows()))
+        assert missing == [], (
+            f"command(s) `bga` registers and section 6 does not name: "
+            f"{missing}. docs/contributing/fixing-guide.md section 6.")
+
+    def test_every_command_the_map_names_is_registered(self):
+        """The other direction: a row for a command `bga` refuses sends
+        a reader to a place for a thing that is not there."""
+        commands, _formats = _registry()
+        unknown = sorted(set(_command_rows()) - set(commands))
+        assert unknown == [], (
+            f"section 6's command block names row(s) `bga` does not "
+            f"register: {unknown}")
+
+    def test_each_command_row_says_where_the_command_lives(self):
+        """A name on its own answers no question. The row is the map's
+        whole point, so the second column is a path in this tree."""
+        bad = sorted(f"{name} -> {where!r}"
+                     for name, where in _command_rows().items()
+                     if not _looks_like_a_path(where)
+                     or not (REPO / where.rstrip("/")).exists())
+        assert bad == [], (
+            f"section 6 command row(s) pointing at no path here: {bad}")
+
+    def test_the_command_block_is_a_non_empty_population(self):
+        """The vacuity floor for both directions: an empty block passes
+        the second and an empty registry the first. One named member per
+        source the registry reads."""
+        rows = _command_rows()
+        assert len(rows) > 20, sorted(rows)
+        assert "analyze" in rows, "the parser's own subcommands are gone"
+        assert "snapshot" in rows, "the tools_dispatch aliases are gone"
 
 
 class TestTheStreamsAreNamed:

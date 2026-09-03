@@ -26,6 +26,7 @@ import shutil
 import subprocess
 import sys
 import threading
+import time
 import urllib.request
 
 import pytest
@@ -93,6 +94,31 @@ def _fetch_trace(url, method="GET"):
         return len(answer.read())
 
 
+def _status_when(url, fetches, within=10.0):
+    """`trace-status.json`, once the server has recorded `fetches`.
+
+    `UX-546`. `_trace` increments the counter in the request thread
+    **after** the body has left the socket, so "the client holds the
+    bytes" and "the count moved" are two events with nothing ordering
+    them. A 4-core box, one fetch then an immediate status ask, x600:
+
+    ```text
+    loadavg   first read stale   the count arrived
+      0.09      0 of 600         -
+      7.12      3 of 600         4.2, 5.5, 5.9 ms late
+    ```
+
+    So this waits on the **condition**, not on a duration, and returns
+    the last reading either way - a count that never arrives is still
+    the wrong dict, and still reddens the caller's assertion.
+    """
+    deadline = time.monotonic() + within
+    while True:
+        seen = _status(url)
+        if seen["fetches"] >= fetches or time.monotonic() > deadline:
+            return seen
+
+
 class TestTheServerKnowsWhetherTheTraceWasFetched:
     def test_before_anyone_asks_it_says_nothing_has(self, snapshot, served):
         """The state the page starts in, and the one it must not
@@ -102,9 +128,12 @@ class TestTheServerKnowsWhetherTheTraceWasFetched:
 
     def test_a_served_body_is_a_fetch_and_carries_its_size(
             self, snapshot, served):
+        """`UX-546`: read through `_status_when`, which is where the
+        3-in-600-at-loadavg-7.12 race and its 4.2-5.9 ms are measured.
+        """
         url = served(snapshot / "run")
         sent = _fetch_trace(url)
-        assert _status(url) == {"fetches": 1, "bytes": sent}
+        assert _status_when(url, 1) == {"fetches": 1, "bytes": sent}
 
     def test_a_head_is_not_a_fetch(self, snapshot, served):
         """The page's own transport decision (`UX-299`) is a `HEAD`, so
@@ -116,18 +145,30 @@ class TestTheServerKnowsWhetherTheTraceWasFetched:
 
     def test_a_second_reader_is_a_second_fetch(self, snapshot, served):
         """Population *many*: two tabs on one server. The count rises,
-        the size does not - it is the trace's size, not a total."""
+        the size does not - it is the trace's size, not a total.
+
+        `UX-546`: two fetches are two chances to read the count before
+        the request thread has written it, at the rate `_status_when`
+        measures (3 of 600 at loadavg 7.12, 0 of 600 at 0.09).
+        """
         url = served(snapshot / "run")
         sent = _fetch_trace(url)
         _fetch_trace(url)
-        assert _status(url) == {"fetches": 2, "bytes": sent}
+        assert _status_when(url, 2) == {"fetches": 2, "bytes": sent}
 
     def test_two_servers_do_not_share_the_answer(self, snapshot, served):
         """`_Handler` carries this on the class `serve` builds per run,
-        so a second `bga view` in the same process starts at zero."""
+        so a second `bga view` in the same process starts at zero.
+
+        `UX-546`: the second server is read *after* the first has
+        settled, so the zero is a server that was never asked rather
+        than one whose request thread has not run yet - the ordering
+        the 4.2-5.9 ms in `_status_when` is measured against, at
+        loadavg 7.12.
+        """
         first, second = served(snapshot / "run"), served(snapshot / "run")
         _fetch_trace(first)
-        assert _status(first)["fetches"] == 1
+        assert _status_when(first, 1)["fetches"] == 1
         assert _status(second)["fetches"] == 0
 
     def test_the_two_route_constants_agree(self):

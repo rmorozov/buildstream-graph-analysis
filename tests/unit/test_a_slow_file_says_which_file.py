@@ -1918,6 +1918,137 @@ class TestTheRecordStepDoesNotBuryTheFailure:
             f"{uploaded}, so a reader following 're-record with --record' "
             f"has nowhere to get this run's numbers from")
 
+
+class TestTheFailureNameIsTheLastThingInTheLog:
+    """`UX-558`. `UX-441`'s rule is that the failure stays last in the
+    log; `UX-491` named the reader it is for - one with the log and not
+    the artifact. `UX-554`'s naming step was filed at step 10 of 20, so
+    on a red `test (3.11)` it sat 3,800 lines from the end of a 3,992
+    line log, behind the ~400 line document `UX-476` prints. The
+    `::group::` folds that document in the browser and not over the
+    API, which is exactly the reader it was written for.
+
+    The clause that decides is
+    `test_the_ordered_steps_leave_the_id_in_the_tail`: it runs the
+    job's own `run:` scripts in the workflow's order and counts, so
+    the rule is measured rather than read off the step list (§5). The
+    ordering clause ties CI to the arrangement that measurement covers.
+    """
+
+    WORKFLOW = REPO / ".github/workflows/ci.yml"
+
+    #: The tool whose step names the failures, per `UX-554`.
+    NAMES_THEM = "dev_junit_tail"
+
+    #: A real id, so the tail is searched for what a reader greps for.
+    RED_ID = "test_a_second_reader_is_a_second_fetch"
+
+    #: The reader's window. `UX-558`'s Acceptance Test.
+    TAIL_LINES = 40
+
+    @classmethod
+    def _jobs(cls):
+        return yaml.safe_load(
+            cls.WORKFLOW.read_text(encoding="utf-8"))["jobs"]
+
+    @classmethod
+    def _naming_steps(cls):
+        """`{job: [index, ...]}` for every step that names the failures."""
+        found = {}
+        for job, body in cls._jobs().items():
+            where = [index
+                     for index, step in enumerate(body.get("steps") or [])
+                     if cls.NAMES_THEM in str(step.get("run", ""))]
+            if where:
+                found[job] = where
+        return found
+
+    def test_the_naming_step_is_the_last_step_of_its_job(self):
+        """The rule, stated on the step list: nothing follows it. A
+        step that follows it writes to the log after it, and the whole
+        defect is that ~400 of those lines are more than a log tail."""
+        jobs, naming = self._jobs(), self._naming_steps()
+        assert naming, (
+            f"no job runs {self.NAMES_THEM}, so UX-554's step is gone and "
+            f"there is no failure name for this rule to keep last")
+        for job, where in naming.items():
+            steps = jobs[job]["steps"]
+            assert len(where) == 1, (
+                f"job {job!r} names the failures at steps {where}; which "
+                f"one has to be last is then a guess")
+            after = [step.get("name") or step.get("uses")
+                     for step in steps[where[0] + 1:]]
+            assert not after, (
+                f"job {job!r} runs {len(after)} step(s) after the one that "
+                f"names the failing tests: {after}. On a red 3.11 run the "
+                f"reference document alone is ~400 lines, so the name is "
+                f"out of reach of a log tail - UX-558")
+
+    @classmethod
+    def _a_red_junit(cls, path, rows):
+        """A junit in CI's shape: every file timed, one real failure."""
+        cases = [f'<testcase classname="{name[:-3].replace("/", ".")}'
+                 f'.TestThing" name="test_one" time="{seconds}" />'
+                 for name, seconds in rows.items()]
+        cases.append(
+            '<testcase classname="tests.unit.test_the_server_knows'
+            '_whether_the_trace_was_fetched.TestIt" '
+            f'name="{cls.RED_ID}" time="0.02">'
+            '<failure message="AssertionError: 0 == 1">body</failure>'
+            "</testcase>")
+        path.write_text(
+            '<?xml version="1.0" encoding="utf-8"?><testsuites>'
+            f'<testsuite name="pytest" failures="1" tests="{len(cases)}">'
+            f'{"".join(cases)}</testsuite></testsuites>', encoding="utf-8")
+        return path
+
+    @classmethod
+    def _the_red_path(cls, job="test"):
+        """The `run:` scripts GitHub executes on a 3.11 job whose suite
+        failed, in the workflow's own order.
+
+        A step with no `if:` is `success()` and is skipped after a red;
+        so is one conditioned on the interpreter alone, which is why
+        the drift gate itself does not appear here.
+        """
+        for step in cls._jobs()[job]["steps"]:
+            condition = str(step.get("if", "")).strip()
+            if "run" not in step or "3.12" in condition:
+                continue
+            if "!= '3.11'" in condition:
+                continue
+            if "failure()" in condition or "always()" in condition:
+                yield step["name"], step["run"]
+
+    def test_the_ordered_steps_leave_the_id_in_the_tail(self, tmp_path):
+        """`UX-558`'s Acceptance Test, replayed off the workflow: the
+        last 40 lines of a red 3.11 job's log carry the failing id."""
+        self._a_red_junit(tmp_path / "junit.xml", dict(tiers.recorded()))
+        log = []
+        for name, script in self._the_red_path():
+            if "git fetch" in script:
+                continue                      # the network, not the log
+            script = re.sub(r"\$\{\{\s*runner\.temp\s*\}\}", str(tmp_path),
+                            script)
+            # `python` is not a name every environment binds; the
+            # workflow's own runner does.
+            script = re.sub(r"(?m)^(\s*)python ", rf"\1{sys.executable} ",
+                            script)
+            done = subprocess.run(["bash", "-c", script], cwd=REPO,
+                                  capture_output=True, text=True, timeout=300)
+            log.extend((done.stdout + done.stderr).splitlines())
+        assert len(log) > 200, (
+            f"the replayed red path printed {len(log)} lines, so 'inside "
+            f"the last {self.TAIL_LINES}' is true of any order at all and "
+            f"this clause decides nothing")
+        tail = log[-self.TAIL_LINES:]
+        assert any(self.RED_ID in line for line in tail), (
+            f"the failing id is not in the last {self.TAIL_LINES} of "
+            f"{len(log)} lines; a reader with the log and not the artifact "
+            f"cannot name what failed. The tail is:\n"
+            + "\n".join(tail[:8]))
+
+
 class TestTheToolIsRunnable:
     def test_it_runs_as_a_module_and_says_what_it_checked(self, tmp_path):
         report = _report(tmp_path, {**tiers.recorded(), SMALL_FILE: 0.2})

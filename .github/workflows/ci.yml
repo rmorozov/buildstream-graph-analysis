@@ -88,17 +88,6 @@ jobs:
         run: make test PYTEST_ARGS="--junitxml=${{ runner.temp }}/junit.xml"
         if: matrix.python-version == '3.11'
 
-      # `UX-554`: the steps below read the junit and run only when the
-      # suite passed, so on the one run where it matters the record of
-      # *what* failed died with the runner. Round 81 could not name
-      # four red jobs. `always()` keeps it; the tail line keeps the
-      # first id legible when the log is truncated, which is `UX-491`'s
-      # rule applied to the path where the gate does not run.
-      - name: The failing tests, named
-        if: failure()
-        run: |
-          python tools/dev_junit_tail.py "${{ runner.temp }}/junit.xml"
-
       - name: Keep the junit whatever the suite did
         if: always()
         uses: actions/upload-artifact@v4
@@ -270,6 +259,25 @@ jobs:
       # file. SMALL_TIER_BACKSTOP_1P_S in tests/tiers.py.
       - name: Test (small tier, single process)
         run: PYTEST_XDIST= timeout 120 make test-small
+
+      # `UX-554`: the junit steps ran only when the suite passed, so on
+      # the run where it matters the record of *what* failed died with
+      # the runner. This names the ids for a truncated log - `UX-491`'s
+      # rule on the path where the gate does not run.
+      #
+      # `UX-558`: **last in the job**, which is the only position where
+      # that rule holds. At step 10 of 20 it sat 3,800 lines from the
+      # end of a red 3.11 log, behind the ~400-line document `UX-476`
+      # prints for a reader without the artifact - and the `::group::`
+      # folds it in the browser only, not over the API, which is the
+      # reader `UX-491` named. `UX-491` had to repeat the gate's line
+      # instead of moving it, because the gate's exit code is the
+      # verdict at its own position; this step exits 0 by design and
+      # gates nothing, so it moves rather than being repeated.
+      - name: The failing tests, named
+        if: failure()
+        run: |
+          python tools/dev_junit_tail.py "${{ runner.temp }}/junit.xml"
 
   # The AI-native SDLC playbook's Test stage: the eval suite runs "on
   # any change to `CLAUDE.md`, skills or hooks, since that configuration

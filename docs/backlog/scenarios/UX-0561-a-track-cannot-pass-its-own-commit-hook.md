@@ -51,6 +51,8 @@ skill instructs, and commits without setting `BGA_SKIP_SELECTOR`.
 
 ## Outcome (round 81, 2026-09-03) — 🟢 Done
 
+**Premise:** held — three clauses red on one fact, and both of round 81's tracks reached for the hook's escape.
+
 ### The gap, measured
 
 Both of round 81's tracks reported the same three clauses red for one

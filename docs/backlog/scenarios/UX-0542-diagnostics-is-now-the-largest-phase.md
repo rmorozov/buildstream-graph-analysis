@@ -43,6 +43,8 @@ five, at 1,202 / 2,402 / 4,002, output byte-identical.
 
 ## Outcome (round 81, 2026-09-02) — 🟢 Done
 
+**Premise:** falsified — the 200 samples are a spec default (Part 26, Part 41.2), not a constant nobody chose.
+
 ### What the 200 is: a spec default, and the premise is falsified
 
 The item asked whether it is "a confidence target, a constant nobody

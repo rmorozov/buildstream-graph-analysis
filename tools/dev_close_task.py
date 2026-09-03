@@ -43,6 +43,9 @@ OUTCOME_CAP = 80
 OUTCOME_SKELETON = """
 ## Outcome (round {round}, {date}) — 🟢 Done
 
+**Premise:** held | falsified — <the Motivation's claim, measured. A Fix
+option that turned out unavailable is a Deviation below, not this.>
+
 ### The gap, measured
 
 ```text

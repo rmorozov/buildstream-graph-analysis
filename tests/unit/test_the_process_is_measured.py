@@ -54,8 +54,11 @@ class TestEachSignalCountsWhatItSays:
         ("falsified", "One mutation verified red and reverted."),
         ("non_discriminating", "B2 did not discriminate until D3 said so."),
         ("non_discriminating", "a non-discriminating guard of its own"),
-        ("premise_false", "The whole Motivation rested on a false premise."),
-        ("premise_false", "its premise was false, and that is recorded"),
+        # `premise_false` stopped being a phrase in `UX-586`: it reads
+        # the declared field, and the four ways this repository wrote
+        # the sentence are in test_the_premise_is_a_declared_field.py.
+        ("premise_false", "**Premise:** falsified - it did not hold."),
+        ("premise_false", "Premise: falsified - it did not hold."),
     ))
     def test_a_phrase_the_repository_writes_is_caught(self, tmp_path, key,
                                                       outcome):

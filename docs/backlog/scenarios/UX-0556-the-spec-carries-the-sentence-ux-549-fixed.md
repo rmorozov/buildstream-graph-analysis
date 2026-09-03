@@ -42,6 +42,8 @@ change written down.
 
 ## Outcome (round 81, 2026-09-03) — 🟢 Done
 
+**Premise:** falsified — the sentence is at :1671 and Part 32 spans 1515-1788, so it was inside the editable region all along.
+
 ### The gap, measured
 
 ```text

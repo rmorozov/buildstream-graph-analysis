@@ -80,18 +80,19 @@ lines of the raw log contain the failing test's id.
 
 ## Outcome (round 81, 2026-09-03) — 🟢 Done
 
+**Premise:** held — the failing id sat ~3,800 lines from the end of 3.11's log and 4 lines from the end of 3.12's.
+
 ### The decision
 
 **Move the naming step last in the `test` job**, not repeated after the
 document, and the document keeps printing.
 
-`UX-491` met this conflict and *repeated* the gate's line, because the
-gate's exit code is the job's verdict at its own position and the step
-cannot move. The naming step has no such constraint — it exits 0 by
-design and gates nothing — so a reorder buys the same property as a
-second copy plus a summary-file hand-off. **Repeating it: rejected** on
-that. **Dropping the document: rejected** — it is `UX-476`'s route for
-the reader whose egress denies the artifact's blob host.
+`UX-491` met this conflict and *repeated* the gate's line, because the gate's
+exit code is the job's verdict at its own position and the step cannot move. The
+naming step has no such constraint — it exits 0 by design and gates nothing — so
+a reorder buys the same property as a second copy plus a summary-file hand-off.
+**Repeating it: rejected** on that. **Dropping the document: rejected** — it is
+`UX-476`'s route for the reader whose egress denies the artifact's blob host.
 
 ### The gap, measured
 
@@ -120,11 +121,10 @@ the id 'test_a_second_reader_is_a_second_fetch' is at line 1265 of 1266,
 which is 2 line(s) from the end
 ```
 
-1,265 lines from the end to 2; the clause pair is `2 passed, 131
-deselected in 0.96s`. `UX-491` is not undone: on the other red path —
-gate red, suite green — the naming step prints **1 line** (`the junit
-records no failure - the suite failed elsewhere`), so the repeated gate
-line lands 1 line from the end rather than at it.
+1,265 lines from the end to 2; the clause pair is `2 passed, 131 deselected in
+0.96s`. `UX-491` is not undone: on the other red path — gate red, suite green — the
+naming step prints **1 line** (`the junit records no failure - the suite failed
+elsewhere`), so the repeated gate line lands 1 line from the end rather than at it.
 
 ### Mutations verified red and reverted (4)
 

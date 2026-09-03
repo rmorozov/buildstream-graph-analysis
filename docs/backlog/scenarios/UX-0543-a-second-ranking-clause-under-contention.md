@@ -43,6 +43,8 @@ average pasted, as `UX-538`'s is.
 
 ## Outcome
 
+**Premise:** held — round 80's red is on record; it did not reproduce here, ten of ten at 1, 4 and 8 workers.
+
 **Round 81, 2026-09-03.** 4-core box, `examples/06` cold, `correlate` on
 the result. The load shape is `UX-538`'s own: one capture under N-way CPU
 contention, because N concurrent captures do not complete here - three

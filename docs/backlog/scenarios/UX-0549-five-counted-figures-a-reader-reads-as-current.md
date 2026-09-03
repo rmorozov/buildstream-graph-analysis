@@ -58,6 +58,8 @@ underlying populations reddens a guard rather than passing.
 
 ## Outcome
 
+**Premise:** held — all five counted figures were wrong as filed, and one of them twice.
+
 **Round 81, 2026-09-03.** All five re-derived, in one guard file that
 recomputes each population.
 

@@ -39,6 +39,8 @@ than counted by hand.
 
 ## Outcome (round 81, 2026-09-03) — 🟢 Done
 
+**Premise:** held — 17 rows in the table against 19 aliases in `bga --help`.
+
 ### The gap, measured
 
 ```text

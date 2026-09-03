@@ -50,6 +50,8 @@ prints, and nothing prints this.
 
 ## Outcome (round 81, 2026-09-03) — 🟢 Done
 
+**Premise:** held — `absence()` is `None` and the `or` swallowed it; it was the Acceptance Test's *fixture* premise that was wrong.
+
 ### The gap, measured
 
 A run with **both** halves of Plane 2 beside it — report and raw log —
@@ -110,17 +112,15 @@ distinctness alone would have shipped this defect.
 ### Deviation from the Required Fix
 
 None to the fix. **The Acceptance Test's fixture premise is wrong**:
-`tests/fixtures/with_timeline` is Plane 1 only —
-`plane2.absence()` there returns `NOT_CAPTURED`, not `None` — so
-exporting it with `with_trace=False` never reached the false sentence.
-The guard builds the state instead (`pages.two_plane_snapshot` plus a
-`plane2.json`) and asserts `sibling_raw_log() is not None` and
-`absence() is None` before testing, so a fixture that stops reproducing
-the defect fails loudly rather than passing vacuously.
+`tests/fixtures/with_timeline` is Plane 1 only — `plane2.absence()` there
+returns `NOT_CAPTURED`, not `None` — so exporting it with `with_trace=False`
+never reached the false sentence. The guard builds the state instead
+(`pages.two_plane_snapshot` plus a `plane2.json`) and asserts `sibling_raw_log()
+is not None` and `absence() is None` before testing, so a fixture that stops
+reproducing the defect fails loudly rather than passing vacuously.
 
 A fourth state exists and got its own sentence rather than a false one:
-`with_trace=True`, Plane 2 present, nothing rendered
-(`TIMELINE_DID_NOT_RENDER`).
+`with_trace=True`, Plane 2 present, nothing rendered (`TIMELINE_DID_NOT_RENDER`).
 
 ```text
 $ make test-touching

@@ -59,6 +59,8 @@ document a reader opens.
 
 ## Outcome (round 81, 2026-09-03) — 🟢 Done
 
+**Premise:** held — all five mechanisms reproduced on `ca825c3`, named in no guide a reader opens.
+
 ### The gap, measured
 
 ```text

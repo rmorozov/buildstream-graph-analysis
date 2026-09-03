@@ -145,6 +145,8 @@ line names whether a cause filter was applied.
 
 ## Outcome (round 81, 2026-09-03) — 🟢 Done
 
+**Premise:** falsified — `UX-494` had already fixed the cause filter; the defect was one step on, `None` read as "diff unreadable".
+
 ### The gap, measured
 
 Five consecutive `test (3.11)` runs red on the drift gate, never on a
@@ -205,15 +207,14 @@ Real drift still fails. Only the row with no cause evidence reports.
 
 ### The filing's own mechanism was wrong
 
-The Motivation said the gate treats all 424 files as explained.
-`UX-494` had already fixed that, and `explained_by` refuses correctly.
-The real defect was one step on: the refusal returned `None`, which
-`repeated` reads as "the diff could not be read" and **confirms** on.
-Two opposite situations — no information, and complete information the
-selector cannot use — shared the verdict that fails the build. The
-correction is in the Motivation above rather than rewritten over,
-because a later round reading this needs to know the first reading was
-wrong and how.
+The Motivation said the gate treats all 424 files as explained. `UX-494`
+had already fixed that, and `explained_by` refuses correctly. The real
+defect was one step on: the refusal returned `None`, which `repeated`
+reads as "the diff could not be read" and **confirms** on. Two opposite
+situations — no information, and complete information the selector cannot
+use — shared the verdict that fails the build. The correction is in the
+Motivation above rather than rewritten over, because a later round reading
+this needs to know the first reading was wrong and how.
 
 ### Deviation from the Required Fix
 

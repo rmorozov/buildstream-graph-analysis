@@ -77,9 +77,40 @@ already implied. Each is recorded in its item's Outcome.
 
 ## Landed
 
-Filled from `closed.md` at the gate, not typed.
+Derived from `closed.md` at the gate, not typed — **19 rows**.
+
+| row | what it was |
+|---|---|
+| [UX-589](../backlog/scenarios/UX-0589-the-namer-reads-a-junit-the-run-did-not-write.md) | the failure namer reads a junit the run did not write |
+| [UX-590](../backlog/scenarios/UX-0590-the-context-map-s-non-path-claims-are-unguarded.md) | the context map's non-path claims are unguarded |
+| [UX-591](../backlog/scenarios/UX-0591-the-architecture-review-log-is-in-no-index.md) | the architecture review log is in no index |
+| [UX-593](../backlog/scenarios/UX-0593-the-regression-verdict-carries-no-evidence-chain.md) | the regression verdict carries no evidence chain |
+| [UX-594](../backlog/scenarios/UX-0594-a-capture-cannot-say-when-the-build-was-requested.md) | a capture cannot say when the build was requested |
+| [UX-595](../backlog/scenarios/UX-0595-the-capacity-model-has-a-fact-base-and-no-model.md) | the capacity model has a fact base and no model |
+| [UX-596](../backlog/scenarios/UX-0596-build-time-in-the-team-s-units.md) | build time in the team's units |
+| [UX-598](../backlog/scenarios/UX-0598-two-of-the-four-percentile-rows-publish-no-distribution.md) | two of the four percentile rows publish no distribution |
+| [UX-599](../backlog/scenarios/UX-0599-a-guard-pins-a-contract-version-by-typing-it.md) | a guard pins a contract version by typing it |
+| [UX-600](../backlog/scenarios/UX-0600-the-rules-card-has-one-guard-it-cannot-mark.md) | the rules card has one guard it cannot mark |
+| [UX-601](../backlog/scenarios/UX-0601-two-guard-ledgers-of-the-same-kind.md) | two guard ledgers of the same kind, two mechanisms |
+| [UX-602](../backlog/scenarios/UX-0602-two-hard-gates-are-published-and-named-nowhere.md) | two hard gates are published and named nowhere |
+| [UX-603](../backlog/scenarios/UX-0603-the-python-floor-reaches-no-reader.md) | the Python floor reaches no reader |
+| [UX-605](../backlog/scenarios/UX-0605-the-touching-map-adopted-a-selection-that-is-everything.md) | the touching map adopted a selection that is everything |
+| [UX-606](../backlog/scenarios/UX-0606-the-selectors-bound-is-measured-on-one-module.md) | the selector's bound is measured on one module |
+| [UX-607](../backlog/scenarios/UX-0607-a-paragraph-in-the-guide-is-a-two-file-change.md) | a paragraph in the guide is a two-file change |
+| [UX-608](../backlog/scenarios/UX-0608-fifteen-commands-the-context-map-never-names.md) | fifteen commands the context map never names |
+| [UX-609](../backlog/scenarios/UX-0609-the-invariants-docstring-lists-five-of-six-gates.md) | the invariants docstring lists five of six gates |
+| [UX-611](../backlog/scenarios/UX-0611-whatifs-saving-is-still-in-build-seconds.md) | what-if's saving is still in build seconds |
 
 ## The gate
 
-`make test`, `make lint`, the index counts derived, this document, then
-the PR.
+```text
+$ make test          6814 passed, 29 skipped in 267.38s (load 0.67)
+$ make lint          All checks passed!
+$ dev_close_task.py --check --write    0 problem(s) over 5 propert(ies)
+```
+
+Backlog after the round: **19 closed, 13 open**, against the
+fifteen this round was handed. Two of the fifteen stay open with their
+reasons on the row — `UX-597`, whose tags are cut and cannot be pushed
+by this session's credential, and the `UX-610`/`UX-612` contracts pair,
+which no track reached.

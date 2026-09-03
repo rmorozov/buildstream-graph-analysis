@@ -1,6 +1,6 @@
 # UX-601: two guard ledgers of the same kind, two mechanisms
 
-**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** UX-582 (§7's ledger), UX-585 (the card's markers) | **Serves:** the next session asked to add a rule and its guard | **Topic:** docs
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-582 (§7's ledger), UX-585 (the card's markers) | **Serves:** the next session asked to add a rule and its guard | **Topic:** docs
 
 ## Motivation
 

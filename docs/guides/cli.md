@@ -1668,7 +1668,8 @@ Documented here because they exist and nothing user-facing said so:
 ## `bga correlate` — Join the Two Planes
 
 ```bash
-bga correlate RUN_DIRECTORY NATIVE_REPORT.json [-f text|json]
+bga correlate RUN_DIRECTORY NATIVE_REPORT.json
+bga correlate RUN_DIRECTORY NATIVE_REPORT.json --format json
 ```
 
 Joins this run's whole-project analysis (Plane 1) with a native trace report of the *same build* (Plane 2, from `tools/bst_native_build_tracer.py run`) on **element UID** — the only contract between the planes.

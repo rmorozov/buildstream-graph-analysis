@@ -1,4 +1,4 @@
-"""Unit tests for bga.attribution.blame_chain, module-level (no full pipeline).
+"""Unit tests for bga.attribution.blame_chain (Part 6), module-level.
 
 Covers P1-02 (real scheduler-wait detection) and P1-01 (real resource-wait
 holder tracking).

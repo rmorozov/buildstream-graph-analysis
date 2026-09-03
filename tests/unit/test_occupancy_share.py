@@ -1,4 +1,4 @@
-"""Tests for UX-27: `efficiency_score` and `certified_headroom` certify
+"""Tests for UX-27: `efficiency_score` and Part 17's `certified_headroom` certify
 against the run's *own observed graph*, so a build whose independent
 elements have been accidentally chained scores 1.00 with zero headroom -
 correctly by their own definitions, and uselessly.

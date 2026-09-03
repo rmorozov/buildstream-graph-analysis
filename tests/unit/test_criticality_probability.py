@@ -1,4 +1,5 @@
-"""Regression tests for P1-09: genuine Monte-Carlo criticality probability.
+"""Regression tests for P1-09: genuine Monte-Carlo criticality
+probability (Part 26).
 
 `DiagnosticsAnalyzer._compute_perturbed_critical_path` (the per-sample
 resampling itself) was already a real implementation, not the

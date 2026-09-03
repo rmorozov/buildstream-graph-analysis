@@ -1,5 +1,5 @@
-"""Regression tests for P1-10: blast-radius weighted duration uses the
-actual downstream element set instead of a fake global average.
+"""Regression tests for P1-10: Part 25's blast-radius weighted duration
+uses the actual downstream element set, not a fake global average.
 
 `bga/diagnostics/analyzer.py::compute_blast_radius` used to compute
 `downstream_count * avg_duration_across_all_elements` - two elements with

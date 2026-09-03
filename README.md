@@ -18,7 +18,7 @@ git clone --single-branch https://github.com/rmorozov/buildstream-graph-analysis
 pip install ./buildstream-graph-analysis   # or the git URL directly
 ```
 
-Plane 1 and Plane 3 work on that alone; capturing Plane 2 also needs a real `bst` and `bubblewrap`
+Needs **Python 3.9** or newer — that is `requires-python` in `pyproject.toml`, and CI runs 3.9-3.12. Plane 1 and Plane 3 work on that alone; capturing Plane 2 also needs a real `bst` and `bubblewrap`
 in the same venv (`pip install -e ".[bst]"`, or your project's own BuildStream install; `bga[all]`
 is `bst` plus completion). `pip install -e .` from inside this checkout is the **contributor** mode,
 which is what `make test` and `make lint` expect and not what a user needs.

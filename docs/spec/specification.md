@@ -1787,6 +1787,43 @@ every `required` path is present, and this table matches the module.
 
 ---
 
+## 32.7 Decisions the registry records
+
+The Parts outside this one are read-only for a round, so a Part the
+tool never built, a state the code cannot reach, or a figure that has
+dated cannot be corrected where it is written. It is decided here
+instead, and a reader meets the answer beside the claim rather than
+filing it a second time. Every row below is held by a guard.
+
+### 32.7.1 Part 8.2's `ambiguous` holder state is retired (`UX-563`)
+
+Part 8.2 and Part 42's "Holder set + `UNKNOWN`" row require an
+unidentifiable resource holder to be reported as `blocking_tasks =
+UNKNOWN, ambiguous = true`. **The occupancy-based holder model has no
+such outcome.** `classify_resource_wait` reports a microsecond as
+resource wait only where occupancy reached capacity, and capacity is at
+least 1, so at least one real overlapping task is identified for every
+microsecond it reports - "saturated but unexplained" is a state the old
+time-overlap model had and this one cannot enter.
+
+| what | where | value |
+|---|---|---|
+| the holder record's flag | `bga/attribution/blame_chain.py` | `'ambiguous': False`, the only value any code path writes |
+| Part 33.4's `ambiguous_wait_time` term | `bga/validation/invariants.py` | a constant 0, and the attribution score is the other two terms |
+
+So the hard rule stands unchanged - **never invent a holder** - but it
+is enforced by the model rather than by a flag: there is no case in
+which a plausible-looking blocker could be substituted, because a
+blocker is only ever named from an occupancy count that already
+contains it. `UNKNOWN` remains reserved; nothing writes it.
+
+Reinstating the state would be a change to the holder model, not to the
+flag. `tests/unit/test_a_retired_state_is_declared.py` holds the three:
+no code path writes `True`, the confidence term is 0 on a real run, and
+this note says so.
+
+---
+
 # Part 33 — Reconciliation and Confidence
 
 ## 33.1 Hard Gates

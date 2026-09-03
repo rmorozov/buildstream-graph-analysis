@@ -1619,7 +1619,7 @@ I installed and the thing I have now" at all.
 day, and the graph owner who knows which of those choices the graph
 forbids — and R8, who is handed the ranking as a case for funding.
 
-**Status:** partial — the ranking landed (`UX-260`, `UX-303`); of the four `yes` rows in the table below, two publish `bga:distribution` and two do not, which is `UX-598` and the dated note under that table.
+**Status:** partial — the ranking landed (`UX-260`, `UX-303`); all four `yes` rows in the table below publish a distribution and all four now declare `bga:distribution` (`UX-598`), which the note under that table measures.
 
 The report ranks elements by blast radius and tells the reader to fix
 the top one. Measured on a 1,202-element run:
@@ -1677,21 +1677,37 @@ the scale, and the population is comparable.** Blast radius qualifies —
 every element is a member and the counts span three orders of
 magnitude. Applying it everywhere would be cargo cult:
 
-| quantity | percentile? | why |
-|---|---|---|
-| blast radius (downstream count) | **yes** | three orders of magnitude, every element a member, no intuition for the scale |
-| element duration | **yes** | the same shape; "is 40s slow here?" has no answer without the distribution |
-| share of the critical path | **no** | already a percentage of a known whole — a percentile of a percentage is a second scale for one fact |
-| sandbox tax (Plane 3) | **yes**, per element | the useful question is "is this element's tax unusual", which is exactly a percentile |
-| processes per element (Plane 2) | **yes** | heavy tails; one element with 40,000 processes is the finding |
-| confidence, coverage, efficiency | **no** | single run-level numbers with no population to be a percentile of |
+| quantity | key | percentile? | why |
+|---|---|---|---|
+| blast radius (downstream count) | `blast_radius` | **yes** | three orders of magnitude, every element a member, no intuition for the scale |
+| element duration | `element_duration` | **yes** | the same shape; "is 40s slow here?" has no answer without the distribution |
+| share of the critical path | `share_of_critical_path` | **no** | already a percentage of a known whole — a percentile of a percentage is a second scale for one fact |
+| sandbox tax (Plane 3) | `sandbox_tax` | **yes**, per element | the useful question is "is this element's tax unusual", which is exactly a percentile |
+| processes per element (Plane 2) | `process_count` | **yes** | heavy tails; one element with 40,000 processes is the finding |
+| confidence, coverage, efficiency | `confidence`, `coverage`, `efficiency_score` | **no** | single run-level numbers with no population to be a percentile of |
 
-**Two of the four `yes` rows are published — measured round 83,
-2026-09-03.** `analyze` emits `bga:distribution` twice, as
-`blast_radius_distribution` and `element_duration_distribution`
-(`bga/schemas.py`, `_SIGNALS_TABLES`); sandbox tax and processes per
-element carry a `bga:quantity` and no distribution. The rule above is
-the rule; what it has reached is `UX-598`.
+The `key` column is the entry in `DISTRIBUTED_QUANTITIES` or
+`UNDISTRIBUTED_QUANTITIES` (`bga/analyzer.py`), where the split is
+recorded with an argument per row; the `percentile?` cell is that
+membership, and `test_the_percentile_rows_are_the_published_ones.py`
+derives one from the other rather than letting a reader compare them.
+
+**All four `yes` rows publish a distribution — re-measured round 84,
+2026-09-03.** `UX-581` dated an earlier count that read
+`bga/schemas.py` as a proxy for what publishes one; two of the four are
+emitted by `bga/correlate.py` into `correlate/v2` instead, and the grep
+could not see them:
+
+```text
+$ python3 -c "from bga.correlate import _scale_of; print(sorted(_scale_of(payers, native)))"
+['process_count_distribution', 'sandbox_tax_distribution']
+$ git grep -n "_distribution(" bga/schemas.py        element_duration, blast_radius
+```
+
+What `UX-598` found was the other half: those two published keys were
+declared by nothing, so every percentile inside them reached the reader
+as a bare number — `UX-343`'s defect. Both now carry `bga:distribution`
+in `_CORRELATE_HINTS`.
 
 Deciles are the right granularity: ten buckets is a shape a reader
 takes in at a glance, and finer only matters in the tail — where the

@@ -811,6 +811,23 @@ DATA_COMPACT_MIN_B = 200_000
 #: to prevent. `UX-445` stays open for a machine that can open the UI.
 TRACE_TRACK_BUDGET = 8_000
 
+#: `UX-555`: why this file carries no timeline, when the reason is
+#: neither an absence of Plane 2 nor a refusal for size.
+#:
+#: `bga/plane2.py` owns the absences and the refusal owns its own
+#: numbers; these two are the states left over, and the `or` that used
+#: to cover them told a complete two-plane run it had kept no raw log.
+TIMELINE_NOT_ASKED_FOR = (
+    "This file was exported with `with_trace=False`, so no timeline was "
+    "rendered for it. That is the flag and not the run: whatever Plane 2 "
+    "this capture kept is untouched beside it, and exporting again "
+    "without the flag carries the timeline.")
+
+#: The residual: asked for, Plane 2 present, and nothing came back.
+TIMELINE_DID_NOT_RENDER = (
+    "This run's Plane 2 log is beside it, but the timeline could not be "
+    "rendered from it, so there is none to carry.")
+
 #: `UX-446`: **every ceiling the hand-off has, declared once.**
 #:
 #: There were two when `docs/guides/cli.md` wrote its ceilings table and
@@ -1199,9 +1216,11 @@ def export(run: str, path: str, with_trace: bool = True,
         # missing" when the report is right there beside the run.
         from bga import plane2 as plane2_shape
 
-        omitted = plane2_shape.absence(run) or (
-            "this run kept no raw Plane 2 log, so there is no timeline "
-            "to carry")
+        # `UX-555`: the caller's own flag is not an absence of Plane 2.
+        if not with_trace:
+            omitted = TIMELINE_NOT_ASKED_FOR
+        else:
+            omitted = plane2_shape.absence(run) or TIMELINE_DID_NOT_RENDER
     if omitted and trace is not None:
         # UX-299: and what to do instead, because "the timeline is not
         # in this file" is a dead end without it. The blast box's

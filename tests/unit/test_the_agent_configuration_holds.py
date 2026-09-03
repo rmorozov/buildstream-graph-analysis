@@ -435,8 +435,8 @@ class TestClaudeMdIsTrueAndShort:
         `UX-505` made the card the entry point, so this asserts the
         card. The guide is still named — for the argument behind a rule
         — but a session that reads only what `CLAUDE.md` sends it to
-        must land on the rules, not on 34 KB of the incidents that
-        produced them.
+        must land on the rules, not on the incidents that produced
+        them.
         """
         text = self._text()
         assert "docs/contributing/rules.md" in text, (
@@ -898,10 +898,11 @@ class TestTheRulesCardIsTheEntryPoint:
     """`UX-505`: the rules on one page, the incidents behind it.
 
     The fixing guide opens with "if you have limited context budget:
-    read only this file" and is 34,400 bytes — the file *is* the
-    budget. Every rule is stated once and then argued with the incident
-    that produced it, which is why the rules are trusted and also why a
-    session paid 34 KB to learn twelve of them.
+    read only this file" and is the budget. Every rule is stated once
+    and then argued with the incident that produced it, which is why
+    the rules are trusted and also why a session paid the whole guide
+    to learn them. `UX-584` derives the two sizes in the documents
+    themselves; no figure is restated here.
 
     Split by register: the card carries the rules, the guide keeps every
     incident. So the card has two ways to rot — it can grow back into a

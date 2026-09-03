@@ -3,7 +3,7 @@
 Every rule this repository holds a session to, one line each, with the
 guard that catches it and the [fixing guide](fixing-guide.md) section
 that argues it. **Read the guide's paragraph for the rule you are about
-to break, not the whole guide** — it is 34 KB because every rule carries
+to break, not the whole guide** — it is 40 KB because every rule carries
 the incident that produced it, and the incidents are why the rules are
 trusted (`UX-505`).
 

@@ -251,6 +251,56 @@ class TestTheSpecCountsItsOwnTable:
             f"`bga/schemas.py` defines'; it defines {len(defined)}: {defined}")
 
 
+def _backlog_files(directory):
+    """What the index has in one backlog directory - `_tracked()`, not a
+    glob: a checkout holds `.claude/worktrees/<agent>/`, a second copy
+    of the whole tree (`UX-577`)."""
+    return sorted(one for one in _tracked()
+                  if one.startswith(f"docs/backlog/{directory}/"))
+
+
+class TestTheArchitectureCountsTheBacklogItSendsYouTo:
+    """`UX-569`: `docs/design/architecture.md:3`, the sentence that is
+    the document's own reason for existing.
+
+    `UX-88` fixed "22 scenario files (there are 76)" at another line of
+    this document; the count here kept its 2026-08 value of 75 while the
+    directory grew to 591. The figure beside it - the closed P0-P4
+    backlog, which does not grow - is 75 and was right, so one stale
+    number sat next to one true one and the pair read as arithmetic.
+    """
+
+    @staticmethod
+    def _opening():
+        """The sentence only, above the first chapter."""
+        return _flat(ARCHITECTURE.read_text(encoding="utf-8").split(
+            "\n## ", 1)[0])
+
+    @pytest.mark.parametrize("directory", ["scenarios", "tasks"])
+    def test_the_count_is_the_directory(self, directory):
+        files = _backlog_files(directory)
+        assert f"{len(files)} `docs/backlog/{directory}/` files" \
+            in self._opening(), (
+            f"architecture.md's opening should say '{len(files)} "
+            f"`docs/backlog/{directory}/` files'; the index holds "
+            f"{len(files)} there")
+
+    @pytest.mark.parametrize("directory", ["scenarios", "tasks"])
+    def test_the_counted_population_is_the_flat_markdown_directory(
+            self, directory):
+        """A figure derived from an empty population passes at nothing,
+        and one derived from a directory with subdirectories counts
+        something the sentence does not name."""
+        files = _backlog_files(directory)
+        assert len(files) > 1, f"docs/backlog/{directory}/ is empty"
+        odd = [one for one in files
+               if not one.endswith(".md")
+               or one.rpartition("/")[0] != f"docs/backlog/{directory}"]
+        assert odd == [], (
+            f"docs/backlog/{directory}/ is no longer the flat markdown "
+            f"directory this figure counts", odd[:5])
+
+
 class TestTheChangelogCountsThePublishedSet:
     """`CHANGELOG.md:5`. The file's own state block listed 23 while its
     opening sentence said twelve."""

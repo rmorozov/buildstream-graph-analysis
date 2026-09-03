@@ -4,9 +4,9 @@
     python tools/dev_process_bands.py --window 40 --json
 
 This repository measures its product obsessively and its process not at
-all. `SIGNALS` counts phrases the Outcome sections already write by
-convention - a metric needing a new ritual stops being collected in
-three rounds.
+all. Three signals count phrases the Outcome already writes; the fourth
+reads the `Premise:` field `dev_close_task.py --outcome` writes, because
+the phrase form read 0 % of a round that recorded seven (`UX-586`).
 
 **It reports; it does not verdict.** A band needs a baseline and one
 reading is not one (`UX-420`, whose first armed run reported 31 files
@@ -29,9 +29,18 @@ SCENARIOS = REPO / "docs/backlog/scenarios"
 #: **Outcome** only - a Motivation describing somebody else's
 #: non-discriminating guard is not this item recording one of its own.
 #:
-#: Each is a phrase the repository already writes by convention, not a
-#: field anyone has to remember to fill in. A metric that needs a new
-#: ritual is a metric that stops being collected in three rounds.
+#: The first three are phrases the repository already writes by
+#: convention. The fourth is a **declared field** the Outcome skeleton
+#: writes, `Premise: held | falsified - <one line>`: the phrase form
+#: (`false premise|premise...(was|is) false`) missed "the premise is
+#: falsified", "premise was wrong" and "premise is half wrong" and read
+#: 0 % of a round that recorded seven - shape 1 of fixing guide SS5,
+#: measured in `UX-586`. A metric needing a new ritual does stop being
+#: collected, so the ritual is the skeleton's, not the writer's.
+#:
+#: `falsified` is the **Motivation's** claim not surviving measurement.
+#: A Required Fix option that turned out unavailable is a *deviation*,
+#: which is the row above; counting it here makes two rows one.
 SIGNALS = (
     ("falsified",
      "recorded a mutation that reddened a new guard",
@@ -43,10 +52,15 @@ SIGNALS = (
      "deviated from its own Required Fix",
      re.compile(r"^\s*-?\s*\*\*None\.\*\*", re.M)),   # inverted below
     ("premise_false",
-     "found the premise it was filed on was false",
-     re.compile(r"false premise|premise[^.]{0,40}(was|is) false|"
-                r"rested on a false|whole Motivation.{0,40}false", re.I)),
+     "found the premise it was filed on false (of declared)",
+     re.compile(r"^\s*\**Premise\**:\**\s*\**falsified\b", re.M | re.I)),
 )
+
+#: The same field with either verdict - what `premise_stated` reads, so
+#: an Outcome predating `UX-586` is counted neither way rather than
+#: silently as "held".
+PREMISE_DECLARED = re.compile(r"^\s*\**Premise\**:\**\s*\**(held|falsified)\b",
+                              re.M | re.I)
 
 
 def outcome_of(text):
@@ -73,6 +87,11 @@ def read(path):
             stated = "Deviation from the Required Fix" in outcome
             found["deviation_stated"] = stated
             hit = stated and not hit
+        # `premise_false` reads a declared field and not the prose around
+        # it, so an Outcome declaring none is counted in neither
+        # direction and `premise_stated` says how many can be.
+        if key == "premise_false":
+            found["premise_stated"] = bool(PREMISE_DECLARED.search(outcome))
         found[key] = hit
     return found
 
@@ -86,8 +105,8 @@ def census(paths):
             rows.append((path.name, found))
     totals = {key: sum(1 for _n, f in rows if f[key])
               for key, _h, _p in SIGNALS}
-    totals["deviation_stated"] = sum(1 for _n, f in rows
-                                     if f["deviation_stated"])
+    for stated in ("deviation_stated", "premise_stated"):
+        totals[stated] = sum(1 for _n, f in rows if f[stated])
     totals["outcomes"] = len(rows)
     return rows, totals
 
@@ -106,13 +125,25 @@ def report(rows, window):
         f"{'':52s}  all     last {window}",
     ]
     for key, headline, _pattern in SIGNALS:
-        whole = rate(sum(1 for _n, f in rows if f[key]), len(rows))
-        near = rate(sum(1 for _n, f in recent if f[key]), len(recent))
+        # The premise row's denominator is the items that declare the
+        # field, not every closed item: a rate over rows that cannot
+        # answer reads the wrong population (fixing guide §5, shape 4).
+        of_all, of_near = rows, recent
+        if key == "premise_false":
+            of_all = [r for r in rows if r[1]["premise_stated"]]
+            of_near = [r for r in recent if r[1]["premise_stated"]]
+        whole = rate(sum(1 for _n, f in of_all if f[key]), len(of_all))
+        near = rate(sum(1 for _n, f in of_near if f[key]), len(of_near))
         lines.append(f"{headline:52s}  {whole:5.1%}   {near:5.1%}")
     stated = rate(sum(1 for _n, f in rows if f["deviation_stated"]), len(rows))
+    declared = sum(1 for _n, f in rows if f["premise_stated"])
+    near_declared = sum(1 for _n, f in recent if f["premise_stated"])
     lines += [
         "",
         f"{'states a Deviation section at all':52s}  {stated:5.1%}",
+        f"{'declares a Premise field at all':52s}  "
+        f"{rate(declared, len(rows)):5.1%}   {rate(near_declared, len(recent)):5.1%}"
+        f"    ({declared} item(s) of {len(rows)}, UX-586 on)",
         "",
         "No band is drawn, for two reasons and the second is the",
         "stronger one:",
@@ -155,7 +186,9 @@ def main(argv=None):
         print(json.dumps({"totals": totals, "window": args.window,
                           "recent": {key: sum(1 for _n, f in rows[-args.window:]
                                               if f[key])
-                                     for key, _h, _p in SIGNALS}}, indent=2))
+                                     for key in
+                                     [k for k, _h, _p in SIGNALS]
+                                     + ["premise_stated"]}}, indent=2))
         return 0
     print("\n".join(report(rows, args.window)))
     return 0

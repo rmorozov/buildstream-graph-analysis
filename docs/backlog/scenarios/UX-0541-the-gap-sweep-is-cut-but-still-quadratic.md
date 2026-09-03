@@ -50,6 +50,8 @@ snapshot moved with it.
 
 ## Outcome (round 81, 2026-09-02) — 🟢 Done
 
+**Premise:** falsified — half wrong: `n^2.25` is an exponent in the run's parallel breadth, not in `n`.
+
 The decision the item asked for, and the premise is half wrong.
 
 ### The scale family, which was not on record
@@ -64,9 +66,8 @@ gen-synthetic --layers 20 --width 200 --seed 1   ->  4,002
 
 ### The gap, measured — the exponent is in breadth, not in n
 
-Instrumented `_iter_saturation_intervals` and `_build_holder_info` over
-a whole `analyze_run`. Holding width at 200 so only the element count
-grows:
+Instrumented `_iter_saturation_intervals` and `_build_holder_info` over a
+whole `analyze_run`. Holding width at 200 so only the element count grows:
 
 ```text
   1202  sub-intervals read  180,930   blocking_tasks width  mean  95.83  max 396
@@ -77,11 +78,10 @@ exponent in n: ln(655904/180930)/ln(4002/1202) = 1.07    width: FLAT
 
 Against the canonical family, where width doubles between the first two
 points: 85,112 -> 383,680 reads, x4.51 for x2.00 elements, exponent
-**2.18**. So `n^2.25` is real but is not an exponent in `n` — the
-holder list tracks the run's parallel breadth, and the two only grow
-together when the fixture is widened. The item's "the leading saturated
-run itself grows with the run" holds only for wider runs, not larger
-ones.
+**2.18**. So `n^2.25` is real but is not an exponent in `n` — the holder
+list tracks the run's parallel breadth, and the two only grow together
+when the fixture is widened. The item's "the leading saturated run itself
+grows with the run" holds only for wider runs, not larger ones.
 
 ### The reader question, answered
 

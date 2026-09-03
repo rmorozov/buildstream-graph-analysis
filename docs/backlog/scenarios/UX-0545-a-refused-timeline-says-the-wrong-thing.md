@@ -44,6 +44,8 @@ falling back to the no-build-log sentence.
 
 ## Outcome (round 81, 2026-09-03) — 🟢 Done
 
+**Premise:** held — nothing in `bga/viewer/` read `timeline_omitted`; the discriminator turned out to be `timeline_recipe`.
+
 ### The gap, measured
 
 ```text

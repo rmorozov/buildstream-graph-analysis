@@ -59,6 +59,8 @@ redden, on the fixture and not on a clock.
 
 ## Outcome (round 80, 2026-09-02) — 🟢 Done
 
+**Premise:** held — both superlinear terms are real and both were taken; the sweep's remaining exponent is a contract, filed as `UX-541`.
+
 ### The gap, measured
 
 Both terms live in `bga/structural/analyzer.py` and

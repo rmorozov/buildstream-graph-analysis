@@ -41,6 +41,8 @@ a mutation that reorders one block.
 
 ## Outcome (round 81, 2026-09-02) — 🟢 Done
 
+**Premise:** held — `sort_keys=True` threw key order away; both committed fixtures were already in emitted order.
+
 ### The gap
 
 `differences()` compared each top-level key with

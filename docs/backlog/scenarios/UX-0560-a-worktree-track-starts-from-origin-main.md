@@ -57,6 +57,8 @@ edit.
 
 ## Outcome (round 81, 2026-09-03) — 🟢 Done
 
+**Premise:** held — both tracks' reflogs show `Created from origin/main`, 34 commits behind the base the brief named.
+
 ### The gap, measured
 
 ```text

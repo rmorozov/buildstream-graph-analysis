@@ -810,12 +810,39 @@ class TestEachComparisonRunsWhereItMeansSomething:
 
     def test_one_interpreter_records_so_there_is_one_reference(self):
         """Four jobs would be four references to keep true, which is the
-        rot this item is mostly about."""
+        rot this item is mostly about.
+
+        `UX-554` gave the junit a second job - naming the failing tests
+        when the log tail cannot - so every matrix job writes one now,
+        and counting `--junitxml=` stopped being the same question. What
+        `UX-420` needs is one **reference**, which is one `--record`.
+        The old count was a proxy for that (fixing guide §5), and it
+        was also weaker: two `--record` steps behind one junit would
+        have passed it.
+        """
         text = self.WORKFLOW.read_text(encoding="utf-8")
-        assert text.count("--junitxml=") == 1, (
-            "more than one CI job writes a timing report; the reference "
-            "is per runner-and-interpreter, so this needs a decision")
-        assert "matrix.python-version == '3.11'" in text, text[:0]
+        recording = [step
+                     for job in yaml.safe_load(text)["jobs"].values()
+                     for step in job.get("steps") or []
+                     if "--record" in (step.get("run") or "")]
+        assert len(recording) == 1, (
+            f"{len(recording)} CI steps record a timing reference; the "
+            f"reference is per runner-and-interpreter, so this needs a "
+            f"decision")
+        assert all(
+            "matrix.python-version ==" in str(step.get("if", ""))
+            for step in recording), (
+            "the recording step is not pinned to one interpreter, so the "
+            "reference it writes depends on which job got there first")
+
+    def test_every_job_keeps_a_junit_to_name_its_failures(self):
+        """`UX-554`: the clause above no longer counts junits, so this
+        one holds what that count used to imply - that a report exists
+        at all - on every job rather than one."""
+        text = self.WORKFLOW.read_text(encoding="utf-8")
+        assert text.count("--junitxml=") >= 3, (
+            f"only {text.count('--junitxml=')} CI step(s) write a junit; a "
+            f"job without one cannot name what failed (UX-554)")
 
 
 class TestAnExcursionMustRepeat:

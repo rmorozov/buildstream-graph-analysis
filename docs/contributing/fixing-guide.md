@@ -240,6 +240,8 @@ tools/dev_refresh_analysis.py  the rule a committed analysis is written
 tools/dev_process_bands.py  what the process did to itself, from the committed Outcomes
 tools/dev_tier_drift.py      which files outgrew their tier, from the
                              suite's own junit report (UX-418)
+tools/dev_junit_tail.py      which tests failed, from the junit a red job
+                             kept - when the log tail is the wrong 400 lines (UX-554)
 tools/dev_js_deps.py         the viewer's module graph, derived: order, cycles, what would cross a cut (UX-340)
 tools/dev_perfetto_queries.py  the canned questions, run against a real
                              trace with Perfetto's own reader (UX-432)

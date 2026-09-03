@@ -146,10 +146,13 @@ class TestNoStepIsOfferedThatCannotBeRun:
         assert "look-inside-the-element" not in steps
 
     def test_the_store_shape_is_read_from_the_path_not_the_disk(self):
-        """`compute_next_steps` stays a pure function of the result -
-        the store-shaped steps are decided by the *shape* of the
-        published run path, so the pipeline does no IO to give
-        advice."""
+        """Which steps are store-shaped is decided by the *shape* of the
+        published run path, not by a directory listing.
+
+        `UX-577` added one read below this: whether the store's last two
+        runs share a run_mode is a fact only the store has, so
+        `_pairable_baseline` reads one `run-context.json` per snapshot.
+        `_store_paths` itself still touches no disk."""
         from bga.findings import _store_paths
 
         assert _store_paths("proj/.bga/runs/20260101T000000Z/run") == (

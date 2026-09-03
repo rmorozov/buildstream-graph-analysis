@@ -18,7 +18,10 @@ A map that is confidently wrong exactly where confidence was requested
 costs more than no map. So it is checked against the tree, both
 directions.
 """
+import functools
 import pathlib
+import subprocess
+from typing import Optional, Tuple
 
 import pytest
 
@@ -28,7 +31,15 @@ GUIDE = REPO / "docs/contributing/fixing-guide.md"
 # Modules small enough or private enough that naming each one would make
 # the map longer without making it more useful. Each is *reachable* -
 # `bga/__init__.py` is not a place anyone needs directing to.
-NOT_ON_THE_MAP = {"bga/__init__.py", "tools/__init__.py"}
+NOT_ON_THE_MAP = {"bga/__init__.py", "tools/__init__.py",
+                  "tools/native_trace/__init__.py"}
+
+# `UX-573`: what `tools/` and `bga/viewer/` are made of. The walk was
+# `tools/*.py` non-recursively, so `hook.c`, `spine.c`, `trackevent.py`
+# and `bwrap_shim.py` - Plane 2 itself, the map's own subject - were on
+# neither the map nor the guard, and `dev_run.sh` with them.
+MAPPED_SUFFIXES = {"tools/": (".py", ".c", ".h", ".sh"),
+                   "bga/viewer/": (".js", ".html", ".css")}
 
 # `UX-274`: the guard above globbed `bga/` and `tools/` and nothing else,
 # so the map's **Tests and docs** block was unguarded prose from the day
@@ -68,16 +79,43 @@ def _map_text():
     return "\n".join(block.split("\n", 1)[-1] for block in blocks)
 
 
-def _real_modules():
+@functools.lru_cache(maxsize=1)
+def _tracked() -> Tuple[str, ...]:
+    """The paths git has, in order. Not the paths on disk.
+
+    `Path.glob` walks whatever the checkout holds, and a main checkout
+    holds `.claude/worktrees/<agent>/` - whole copies of the tree at
+    older commits, whose stale contents a walk then reports as this
+    tree's. That defect landed and was fixed twice in round 83, and
+    this walk is the widest one in the suite.
+    """
+    out = subprocess.run(["git", "ls-files"], cwd=REPO, check=True,
+                         capture_output=True, text=True).stdout
+    return tuple(out.splitlines())
+
+
+def _real_modules(tracked: Optional[Tuple[str, ...]] = None):
+    """Every path §6 has to name.
+
+    `UX-573`: recursive under `tools/` and into `bga/viewer/`, because
+    the non-recursive `tools/*.py` left the LD_PRELOAD hook and the
+    ptrace spine - Plane 2, which is what the map is a map of - with no
+    row and the guard green.
+    """
+    tracked = _tracked() if tracked is None else tracked
     modules = set()
-    for pattern, root in (("*.py", "bga"), ("*.py", "tools")):
-        for path in sorted((REPO / root).glob(pattern)):
-            rel = path.relative_to(REPO).as_posix()
-            if rel not in NOT_ON_THE_MAP:
+    for rel in tracked:
+        if rel in NOT_ON_THE_MAP:
+            continue
+        root = next((r for r in MAPPED_SUFFIXES if rel.startswith(r)), None)
+        if root is not None:
+            if rel.endswith(MAPPED_SUFFIXES[root]):
                 modules.add(rel)
-    for package in sorted((REPO / "bga").iterdir()):
-        if package.is_dir() and (package / "__init__.py").exists():
-            modules.add(package.relative_to(REPO).as_posix() + "/")
+        elif rel.startswith("bga/") and rel.count("/") == 1 and rel.endswith(".py"):
+            modules.add(rel)
+        elif rel.count("/") == 2 and rel.startswith("bga/") and rel.endswith(
+                "/__init__.py"):
+            modules.add(rel.rsplit("/", 1)[0] + "/")
     return modules
 
 
@@ -122,6 +160,39 @@ class TestTheMapNamesTheTree:
             f"module(s) the context map does not mention: {missing}. "
             f"docs/contributing/fixing-guide.md section 6.")
 
+    def test_the_walk_finds_each_population_it_claims_to_walk(self):
+        """`UX-573`'s vacuity clause: a walk that finds no files passes
+        anything, and the way this one gets narrowed again is a suffix
+        or a level quietly dropping out. One named member per suffix the
+        walk added, so the set shrinking is a failure and not a green."""
+        modules = _real_modules()
+        assert modules, "the walk found nothing at all"
+        for name in ("tools/native_trace/hook.c",       # C, one level down
+                     "tools/native_trace/trackevent.py",
+                     "tools/dev_run.sh",                # shell
+                     "bga/viewer/views.js",
+                     "bga/viewer/perfetto.html",
+                     "bga/viewer/style.css"):
+            assert name in modules, f"the walk does not reach {name}"
+
+    def test_the_walk_reads_git_and_not_the_checkout(self):
+        """A main checkout holds `.claude/worktrees/<agent>/` - a whole
+        copy of the tree at an older commit - so a walk over `tools/**`
+        reports files no clone has. The population is what git tracks,
+        which an untracked file on disk cannot enter."""
+        probe = REPO / "tools" / "native_trace" / "ux573_untracked_probe.sh"
+        assert not probe.exists(), probe
+        probe.write_text("# left by a failed run of this guard\n")
+        # The cache is what made the first draft of this guard green
+        # against a mutation that read the checkout: it had been filled
+        # before the probe existed.
+        _tracked.cache_clear()
+        try:
+            assert probe.relative_to(REPO).as_posix() not in _real_modules()
+        finally:
+            probe.unlink()
+            _tracked.cache_clear()
+
     def test_the_map_names_nothing_that_does_not_exist(self):
         """The other direction, and the one that actually bit: the map
         described `tests/test_e2e.py` as the only test file for the
@@ -154,8 +225,9 @@ class TestTheMapNamesTheTree:
     def test_the_exemption_list_names_only_real_paths(self):
         """An exemption for something that no longer exists silently
         widens the check it is an exception to."""
-        assert _stale(NOT_IN_TESTS) == [], (
-            f"exemption(s) for no such path: {_stale(NOT_IN_TESTS)}")
+        names = NOT_IN_TESTS | NOT_ON_THE_MAP
+        assert _stale(names) == [], (
+            f"exemption(s) for no such path: {_stale(names)}")
 
     def test_the_existence_check_would_still_catch_a_stale_entry(self):
         """`NOT_IN_TESTS` is empty today, so the clause above passes on

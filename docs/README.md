@@ -100,6 +100,23 @@ any of these without a version bump; a rename or a removal bumps. The full contr
 [spec Part 32.5](spec/specification.md); what each command does with it
 is [`guides/cli.md`](guides/cli.md).
 
+## What it reads
+
+Three shapes `bga` never writes and cannot run without — the capture's
+own input, stamped by whatever produced it (`UX-540`):
+
+| document | read by |
+|---|---|
+| `run-context/v9` | `bga.ingest.load_run_context`, at `run-context.json` — what the run was: identity, the `host/v2` manifest inside it, scheduler configuration |
+| `graph/v9` | `bga.ingest.load_graph`, at `graph.json` — the declared element graph, from `bst show` |
+| `trace/v9` | `bga.ingest.load_trace`, at `trace.json` — the scheduler's own spans and phases, Plane 1 |
+
+`bga.contracts.reads()` names these; `bga.contracts.ids()` names the
+table above; `superseded()` names what the tool reads but no longer
+writes. What a release *accepts* and what it *emits* are separate
+questions, so they have separate answers. No `--schema` prints an
+input: the shapes are specified in [spec Parts 32.1-32.3](spec/specification.md).
+
 ## Words this project uses precisely
 
 Ten that are easy to blur, pinned here so every other document can be

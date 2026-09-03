@@ -60,6 +60,30 @@ _RETIRED = "SUPERSEDED"
 # `SCHEMA`, exactly as `SUPERSEDED` is.
 _OWNED = "OWNED"
 
+# `UX-540`: and the *input* shapes a module reads and nothing here
+# stamps - `graph/v9`, `trace/v9`, `run-context/v9`. Not retired and
+# not emitted, so neither `SUPERSEDED` nor `SCHEMA` can carry them, and
+# an unregistered input is invisible to every consumer asking what a
+# release accepts. Declared as a module-level tuple, by the module that
+# reads the shape.
+_INPUT = "READS"
+
+
+def _tuple_declared(attribute: str) -> List[str]:
+    """Every contract id in a module-level tuple named `attribute`."""
+    import bga
+
+    found = set()
+    for module in pkgutil.iter_modules(bga.__path__):
+        try:
+            loaded = importlib.import_module(f"bga.{module.name}")
+        except Exception:  # pragma: no cover - see `_declared_in_modules`
+            continue
+        for name in getattr(loaded, attribute, ()) or ():
+            if isinstance(name, str) and CONTRACT_ID.match(name):
+                found.add(name)
+    return sorted(found)
+
 
 def _declared_in_modules() -> Dict[str, str]:
     """`{contract id: owning module}` from the package itself.
@@ -133,21 +157,20 @@ def superseded() -> List[str]:
     part of what it emits, and those are different facts a consumer
     needs separately.
     """
-    import importlib
-    import pkgutil
+    return _tuple_declared(_RETIRED)
 
-    import bga
 
-    retired = set()
-    for module in pkgutil.iter_modules(bga.__path__):
-        try:
-            loaded = importlib.import_module(f"bga.{module.name}")
-        except Exception:  # pragma: no cover - see `_declared_in_modules`
-            continue
-        for name in getattr(loaded, _RETIRED, ()) or ():
-            if isinstance(name, str) and CONTRACT_ID.match(name):
-                retired.add(name)
-    return sorted(retired)
+def reads() -> List[str]:
+    """Input contracts: read by this tool, stamped by something else.
+
+    `UX-540`: the third kind. `ids()` is what a release *emits* and
+    `superseded()` what it still opens after retiring - the shapes
+    `bga analyze` requires and refuses without were in neither, so
+    nothing could answer which input versions a release accepts. They
+    stay out of `ids()` deliberately: emitting `graph/v9` is something
+    this tool has never done.
+    """
+    return _tuple_declared(_INPUT)
 
 
 def unprintable() -> List[str]:

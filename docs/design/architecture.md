@@ -987,6 +987,27 @@ unioned the registry with a single hard-coded id. A new payload without document
 reddens it - which is the only mechanism this repository has found that
 keeps two hand-maintained copies of one fact together.
 
+## The contracts it reads
+
+The other half of the surface (`UX-540`): the input shapes `bga` reads
+and stamps nothing with. Something else wrote them, `bga analyze`
+refuses without all three, and until `UX-540` they were in no registry
+at all - so no consumer could ask which input versions a release
+accepts.
+
+| schema | what it is | read by |
+|---|---|---|
+| `run-context/v9` | what the run was: identity, the `host/v2` manifest, scheduler configuration, the resolved `native_max_jobs` | `bga.ingest.load_run_context` |
+| `graph/v9` | the declared element graph, from `bst show` | `bga.ingest.load_graph` |
+| `trace/v9` | the scheduler's own spans and phases - Plane 1 | `bga.ingest.load_trace` |
+
+`bga.ingest.READS` declares them and `bga.contracts.reads()` walks it,
+beside `ids()` for what the tool emits and `superseded()` for what it
+still opens. Three accessors because *emits*, *accepts* and *no longer
+writes* are three different answers. `analysis/v9` (spec 32.4) is not
+one of these: it is the analyzer's in-memory result shape, on no
+artifact.
+
 ## Navigating the rest of the docs
 
 - **`docs/spec/specification.md`** — original design intent, full formal Part-by-Part text (invariants, data contracts, terminology). Still authoritative for anything not listed as an extension above.

@@ -1,5 +1,10 @@
 """Ingest module for loading run context, graph, and trace data."""
 
+# `UX-540`: the shapes this package reads and no `bga` module stamps.
+# Required members of `capture-layout/v1`; `bga analyze` refuses
+# without them. `bga.contracts.reads()` walks this.
+READS = ("graph/v9", "run-context/v9", "trace/v9")
+
 from .models import (
     AnalysisResult,
     AttributionCategory,

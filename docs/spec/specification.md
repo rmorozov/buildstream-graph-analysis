@@ -1684,6 +1684,23 @@ analyze. `bga.contracts.superseded()` names the shapes a release still
 opens, because what a release *supports* and what it *emits* are
 different facts a consumer needs separately.
 
+**The inputs are a third kind** (`UX-540`). `run-context/v9`,
+`graph/v9` and `trace/v9` are stamped by whatever produced the capture
+and read by `bga.ingest`, so they are in neither set above - they are
+what a release *accepts*, and `bga analyze` refuses without all three:
+
+| input | schema | read by |
+|---|---|---|
+| the run's identity, host manifest and scheduler configuration (32.1) | `run-context/v9` | `bga.ingest.READS` |
+| the declared element graph, from `bst show` (32.2) | `graph/v9` | as above |
+| the scheduler's own spans and phases (32.3) | `trace/v9` | as above |
+
+`bga.contracts.reads()` names those three and `ids()` does not, because
+what a release accepts and what it emits are two questions. `analysis/v9`
+(32.4) is not a fourth input: it is the analyzer's in-memory result shape
+(`bga.ingest.models.AnalysisResult`), stamped on no artifact, parsed
+from none, and reaching a consumer only as `analyze/v5`.
+
 The list is not maintained by hand alone: a guard asserts that every id
 in `bga.contracts.ids()` appears here and in `docs/design/architecture.md`'s
 contract inventory, so a new payload cannot ship undocumented. The

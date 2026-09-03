@@ -110,19 +110,14 @@ def members(snapshot: str, include_plane2: bool = True
 def readable_contracts() -> set:
     """Every contract id this `bga` can read out of a capture directory.
 
-    Three sources, and the third is not decoration. `contracts.ids()`
-    inventories what `bga` *stamps* and `superseded()` what it still
-    reads after retiring (`UX-297`) — but `graph/v9`, `trace/v9` and
-    `run-context/v9` are *input* shapes that no `bga` module stamps, so
-    they are in neither. Measured while `UX-520` was built: the first
-    real bundle was refused for carrying all three. `CAPTURE_LAYOUT` is
-    the contract that says what a capture holds, so it is the authority
-    on what this build reads out of one. `UX-540` is the row for the
-    registry gap itself.
+    Three kinds and one registry: what `bga` stamps, what it still reads
+    after retiring (`UX-297`), and the input shapes nothing here stamps
+    (`UX-540`). The third used to be a `CAPTURE_LAYOUT` union, because
+    the registry did not know `graph/v9`, `trace/v9` or `run-context/v9`
+    and the first real bundle was refused for carrying all three.
     """
-    from_layout = {contract for _relative, _presence, contract
-                   in _layout_relative() if contract}
-    return from_layout | set(contracts.ids()) | set(contracts.superseded())
+    return (set(contracts.ids()) | set(contracts.superseded())
+            | set(contracts.reads()))
 
 
 def manifest_for(snapshot: str, include_plane2: bool = True,

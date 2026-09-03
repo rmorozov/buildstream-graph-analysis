@@ -188,6 +188,7 @@ bga/schemas.py         every published contract + view-hints; `--schema` prints 
 bga/contracts.py       the derived inventory of every contract, printable or not (UX-248)
 bga/producer.py        which build wrote an artifact, and the contract set it had (UX-249)
 bga/report/            text.py, json.py, ci_comment.py - renderers, no analysis
+--format               text, json, csv, ci-comment - what a run can be asked for
 ```
 
 **The commands that are not `analyze`:**

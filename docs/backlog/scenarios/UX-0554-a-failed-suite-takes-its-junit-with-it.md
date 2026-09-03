@@ -49,7 +49,9 @@ verdict on the path where it does not.
 
 - Fixing any individual flaky clause — `UX-543` and `UX-546` own two,
   and this row is why a third could not be named.
-- Making CI faster or changing the matrix.
+- Making CI faster or changing the matrix: declined, because this
+  row is about what a run *records*, and a run that records nothing
+  is no better for being quick.
 
 ## Acceptance Test
 

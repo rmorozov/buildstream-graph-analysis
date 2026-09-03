@@ -1050,3 +1050,200 @@ def test_the_verdict_prose_survives_a_close():
     closed = _close_status_line(
         "**Status:** 🟡 In Progress — stages 1 and 2 done |")
     assert closed == "**Status:** 🟢 Done — stages 1 and 2 done |", closed
+
+
+# --- `UX-569`: a file name in code font is a reference too -----------------
+#
+# `test_every_relative_documentation_link_resolves` above reads markdown
+# links only, so a backticked name that resolves to nothing passes.
+# Measured over the 36 tracked `.md` outside the dated record:
+#
+# ```text
+# 212 backticked `*.md` spans, 88 distinct names
+#     105 repo-root paths   80 beside the document   23 bare basenames
+#       4 resolve to nothing:
+#         docs/design/architecture.md:1021  `optimization-walkthrough-06.md`
+#                                           `design-directions.md`
+#         docs/contributing/style-guide.md:48   `design-directions.md`
+#                                         :172  `UX-0097-short-slug.md`
+# ```
+#
+# The rule is the one links obey - the name must resolve - widened to
+# the three shorthands this tree actually uses. Requiring
+# document-relative resolution alone would red 128 of the 212.
+
+_CODE_SPAN = re.compile(r"`([^`\n]+)`")
+
+#: A code span that is only a markdown file name: no spaces, no flags,
+#: no glob, no `#anchor` (links own those).
+_MD_NAME = re.compile(r"^[\w./+-]+\.md$")
+
+#: Names written on purpose that are not files, each with why. Every
+#: entry is asserted still present, so an exemption cannot outlive its
+#: reason (`UX-576`'s `HISTORICAL`).
+_NOT_A_FILE = {
+    ("docs/contributing/style-guide.md", "design-directions.md"):
+        "§3's worked example is about the document that reached 1237 "
+        "lines before round 11 split it into docs/design/directions.md",
+    ("docs/contributing/style-guide.md", "UX-0097-short-slug.md"):
+        "§9's illustration of the padded-filename form, not a file",
+}
+
+
+def _tracked_paths():
+    """The paths the index has. Not the paths on disk: a checkout holds
+    `.claude/worktrees/<agent>/`, a whole second copy of the tree."""
+    out = subprocess.run(["git", "ls-files"], cwd=REPO, check=True,
+                         capture_output=True, text=True).stdout
+    return out.splitlines()
+
+
+def _reference_documents():
+    """The `.md` a reader navigates by. `docs/backlog/` and
+    `docs/audits/` are the dated record - a task file naming the
+    document a past round read is a fact, and renaming it would make
+    that record false. The same exclusion `INSTRUCTIONAL` makes."""
+    return [one for one in _tracked_paths() if one.endswith(".md")
+            and not one.startswith(("docs/backlog/", "docs/audits/"))]
+
+
+def _resolves(rel, name, tracked):
+    """The three ways a reader resolves a backticked name, in order:
+    beside the document, from the repository root, and as a basename no
+    other tracked file shares - `cli.md` is `docs/guides/cli.md` only
+    because nothing else ends that way."""
+    beside = (REPO / rel).parent / name
+    try:
+        if beside.resolve().relative_to(REPO).as_posix() in tracked:
+            return True
+    except ValueError:
+        pass
+    if name in tracked:
+        return True
+    return len([one for one in tracked
+                if one == name or one.endswith("/" + name)]) == 1
+
+
+def test_every_backticked_markdown_name_resolves():
+    """`UX-88` fixed a link with a literal `...` in it; the same
+    document went on naming two files in code font that do not exist,
+    because nothing read code spans."""
+    tracked = set(_tracked_paths())
+    dangling = []
+    for rel in _reference_documents():
+        text = (REPO / rel).read_text(encoding="utf-8")
+        for number, line in enumerate(text.splitlines(), 1):
+            for match in _CODE_SPAN.finditer(line):
+                name = match.group(1).strip()
+                if not _MD_NAME.match(name) or (rel, name) in _NOT_A_FILE:
+                    continue
+                if not _resolves(rel, name, tracked):
+                    dangling.append(f"{rel}:{number} -> `{name}`")
+    assert dangling == [], (
+        "backticked markdown name(s) that resolve to no file:\n  "
+        + "\n  ".join(dangling))
+
+
+def test_the_code_span_sweep_reads_a_population():
+    """A sweep that finds nothing passes. This is the floor: the
+    documents the fix was measured on are read, and what is read is
+    code spans rather than links."""
+    documents = _reference_documents()
+    for rel in ("docs/design/architecture.md", "README.md",
+                "docs/contributing/style-guide.md"):
+        assert rel in documents, f"the sweep does not read {rel}"
+    names = [match.group(1).strip()
+             for rel in documents
+             for match in _CODE_SPAN.finditer(
+                 (REPO / rel).read_text(encoding="utf-8"))
+             if _MD_NAME.match(match.group(1).strip())]
+    assert len(names) > 100, (
+        "the code-span sweep reads too few names to be reading these "
+        "documents", len(names))
+    architecture = (REPO / "docs/design/architecture.md").read_text(
+        encoding="utf-8")
+    assert "`optimization-walkthrough.md` (what that felt like)" in architecture, (
+        "the reading order's names are not code spans any more, so this "
+        "guard is not what holds them")
+
+
+def test_every_exempt_name_is_still_written():
+    """`_NOT_A_FILE` is an exemption list, and an exemption nothing uses
+    is one nobody rechecks."""
+    stale = [f"{rel} no longer writes `{name}` ({why})"
+             for (rel, name), why in sorted(_NOT_A_FILE.items())
+             if f"`{name}`" not in (REPO / rel).read_text(encoding="utf-8")]
+    assert stale == [], "stale exemption(s):\n  " + "\n  ".join(stale)
+
+
+# --- `UX-569`: the planes' entry points, named as files --------------------
+#
+# The chapters named them as commands only. Measured against
+# `docs/design/architecture.md` when this was filed:
+#
+# ```text
+# bst_run_wrapped.py bst_extract_run.py bst_cache_logs.py bga_snapshot.py
+# tools/native_trace/bwrap_shim.py  tools/dev_run.sh        0 hits each
+# trackevent.py 5   hook.c 3   spine.c 2   - in the prose and the
+#                                            verification log, not the map
+# ```
+
+_ARCHITECTURE = REPO / "docs/design/architecture.md"
+_CLI_CHAPTER = "## Real current CLI surface"
+
+#: The planes' own entry points. The floor for the parse below: if the
+#: CLI chapter stops naming these, it is not the table this guard reads.
+_PLANE_ALIASES = frozenset({"wrap", "extract", "capture", "cache-logs"})
+
+
+def _dispatched_aliases():
+    """`{alias: the file it runs}` for every `bga <alias>` the CLI
+    chapter's first column names that dispatches into `tools/`. Read off
+    the dispatch table, so a new alias joins this guard by being added
+    there rather than by being remembered here."""
+    from bga.tools_dispatch import TOOL_ALIASES
+
+    chapter = _ARCHITECTURE.read_text(encoding="utf-8").split(
+        _CLI_CHAPTER, 1)[1].split("\n## ", 1)[0]
+    named = set()
+    for line in chapter.splitlines():
+        if line.startswith("|"):
+            match = re.match(r"`bga ([a-z][a-z-]*)", line.split("|")[1].strip())
+            if match:
+                named.add(match.group(1))
+    return {alias: TOOL_ALIASES[alias][0].replace("tools.", "tools/") + ".py"
+            for alias in sorted(named) if alias in TOOL_ALIASES}
+
+
+def test_the_architecture_names_the_file_behind_each_command():
+    """A reader pricing a change needs the file, and the chapter gave
+    only the command. The population is the dispatch table's own."""
+    aliases = _dispatched_aliases()
+    assert _PLANE_ALIASES <= set(aliases), (
+        "the CLI chapter no longer names the planes' own entry points, so "
+        "this guard is not reading the table it is for", sorted(aliases))
+    text = _ARCHITECTURE.read_text(encoding="utf-8")
+    missing = sorted(f"{alias} -> {path}" for alias, path in aliases.items()
+                     if path not in text)
+    assert missing == [], (
+        "architecture.md names these commands and not the file each one "
+        "runs:\n  " + "\n  ".join(missing))
+
+
+def test_the_architecture_lists_every_native_trace_member():
+    """Plane 2's mechanism is four files under `tools/native_trace/`; the
+    document named three in prose and the map named none. `bwrap_shim.py`,
+    the piece that puts the hook in front of the real `bwrap`, was
+    nowhere."""
+    members = [one for one in _tracked_paths()
+               # A package marker is not a member of the mechanism.
+               if one.startswith("tools/native_trace/")
+               and not one.endswith("__init__.py")]
+    assert len(members) == 4, (
+        "tools/native_trace/ no longer holds the four members this guard "
+        "is for", members)
+    text = _ARCHITECTURE.read_text(encoding="utf-8")
+    missing = [one for one in members if one not in text]
+    assert missing == [], (
+        "architecture.md describes Plane 2 without naming:\n  "
+        + "\n  ".join(missing))

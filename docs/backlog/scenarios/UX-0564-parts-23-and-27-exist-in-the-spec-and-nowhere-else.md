@@ -1,6 +1,6 @@
 # UX-564: Parts 23 and 27 exist in the spec and nowhere else
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Serves:** the maintainer deciding the spec's edge | **Topic:** analysis
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — | **Serves:** the maintainer deciding the spec's edge | **Topic:** analysis
 
 ## Motivation
 

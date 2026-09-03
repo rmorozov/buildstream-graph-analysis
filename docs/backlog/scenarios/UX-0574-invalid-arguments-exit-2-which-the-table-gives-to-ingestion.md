@@ -1,6 +1,6 @@
 # UX-574: "invalid arguments" exit 2, which the table gives to ingestion
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-186 (the refusal grammar and its codes) | **Serves:** the CI owner branching on an exit code | **Topic:** cli
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-186 (the refusal grammar and its codes) | **Serves:** the CI owner branching on an exit code | **Topic:** cli
 
 ## Motivation
 

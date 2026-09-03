@@ -1,6 +1,6 @@
 # UX-586: the premise detector reads a proxy
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-508 (the process bands), UX-403 (the text-scan shape) | **Serves:** the round that reads the process bands | **Topic:** guards
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-508 (the process bands), UX-403 (the text-scan shape) | **Serves:** the round that reads the process bands | **Topic:** guards
 
 ## Motivation
 

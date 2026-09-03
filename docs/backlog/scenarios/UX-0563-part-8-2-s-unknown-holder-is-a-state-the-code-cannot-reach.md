@@ -1,6 +1,6 @@
 # UX-563: Part 8.2's `UNKNOWN` holder is a state the code cannot reach
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Serves:** the maintainer deciding what the spec still promises | **Topic:** analysis
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — | **Serves:** the maintainer deciding what the spec still promises | **Topic:** analysis
 
 ## Motivation
 

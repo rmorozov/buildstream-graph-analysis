@@ -1,6 +1,6 @@
 # UX-566: two "recommended" Parts describe a tool that was never built that way
 
-**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** — | **Serves:** the reader who opens the spec's tail for the report or the tree | **Topic:** docs
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** — | **Serves:** the reader who opens the spec's tail for the report or the tree | **Topic:** docs
 
 ## Motivation
 

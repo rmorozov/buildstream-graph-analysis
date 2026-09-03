@@ -1,6 +1,6 @@
 # UX-568: the spec has no index of which Part a guard holds
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-567 (the invariant half of the same index) | **Serves:** the next specification review — this one took five agents | **Topic:** guards
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-567 (the invariant half of the same index) | **Serves:** the next specification review — this one took five agents | **Topic:** guards
 
 ## Motivation
 

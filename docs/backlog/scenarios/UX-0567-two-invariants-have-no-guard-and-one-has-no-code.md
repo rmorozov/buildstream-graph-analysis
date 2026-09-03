@@ -1,6 +1,6 @@
 # UX-567: two invariants have no guard, and one has no code
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** — | **Serves:** anyone trusting the report's `I1..I13` line | **Topic:** guards
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** — | **Serves:** anyone trusting the report's `I1..I13` line | **Topic:** guards
 
 ## Motivation
 
@@ -114,3 +114,20 @@ the violation's `detail` only, not as a `confidence` key. A key that is
 `[]` on every healthy run buys nothing the `hard_gates` bool and the
 violation do not already carry. I7 took the alias branch, not the
 distinct-quantity branch.
+
+## Addendum (round 83, at the merge)
+
+`UX-568`'s allowlist carried Part 29 as unguarded, written against a
+base where `duration_variability` reached no consumer. `UX-565` landed
+in the same round and made that false. The clause
+`test_an_allowlisted_part_that_gained_a_guard_leaves_the_list` reddened
+on the merge and named the file that had taken the Part:
+
+```text
+AssertionError: Part(s) [29] are allowlisted and also named by
+[['test_part_29_reads_the_store_it_has.py']] - drop the row
+```
+
+The row is dropped. This is the guard doing the job it was built for
+across two items of one round, which is the case a single track cannot
+test for itself.

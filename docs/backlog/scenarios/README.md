@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-585 scenarios: **19 open**, 566 closed.
+585 scenarios: **15 open**, 570 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -24,10 +24,10 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | analysis | 1 | 90 |
 | contracts | 0 | 40 |
 | viewer | 0 | 138 |
-| cli | 1 | 21 |
-| store | 1 | 15 |
-| docs | 11 | 83 |
-| guards | 5 | 108 |
+| cli | 0 | 21 |
+| store | 0 | 15 |
+| docs | 10 | 83 |
+| guards | 4 | 108 |
 
 ## Open scenarios
 
@@ -44,11 +44,7 @@ task file, which is the only place it ever lived twice.
 | UX-571 | [the ingestion facts were confirmed on a BuildStream this machine no longer has](UX-0571-the-ingestion-facts-were-confirmed-on-a-buildstream-this-machine-no-lo.md) | docs | Medium | whoever meets a `bst` output line the parser does not | 🔴 |
 | UX-572 | ["by construction" survived the construction it now depends on](UX-0572-by-construction-survived-the-construction-it-now-depends-on.md) | docs | Low | the reader of the trace dictionary | 🔴 |
 | UX-573 | [the context map cannot see below `tools/`](UX-0573-the-context-map-cannot-see-below-tools.md) | guards | Medium | the session that greps §6 for the hook and finds nothing | 🔴 |
-| UX-575 | [a documented pipe prints a traceback](UX-0575-a-documented-pipe-prints-a-traceback.md) | cli | High | anyone who types the guide's own pipe to `head` | 🔴 |
-| UX-576 | [the question count is stated three ways](UX-0576-the-question-count-is-stated-three-ways.md) | docs | Medium | the reader deciding whether to open Perfetto | 🔴 |
-| UX-577 | [the committed example's own next step refuses](UX-0577-the-committed-example-s-own-next-step-refuses.md) | store | High | the stranger who follows the README's second command | 🔴 |
 | UX-578 | [the verbatim blocks that are neither dated nor fresh](UX-0578-the-verbatim-blocks-that-are-neither-dated-nor-fresh.md) | docs | Medium | anyone diffing a guide's output against their own | 🔴 |
-| UX-579 | [the docs guard reads command words, not commands](UX-0579-the-docs-guard-reads-command-words-not-commands.md) | guards | Medium | the next flag rename | 🔴 |
 | UX-580 | [the roles table says nothing aggregates across builds](UX-0580-the-roles-table-says-nothing-aggregates-across-builds.md) | docs | Medium | R5 and R7, whose rows are wrong about them | 🔴 |
 | UX-581 | [a direction has no status, so a tail goes silent](UX-0581-a-direction-has-no-status-so-a-tail-goes-silent.md) | docs | High | the reader deciding what is still open at direction level | 🔴 |
 | UX-582 | [the styleguide's ledger says seven sections have no guard](UX-0582-the-styleguide-s-ledger-says-seven-sections-have-no-guard.md) | docs | Medium | the session that touches the page and reads §7 to find its guard | 🔴 |

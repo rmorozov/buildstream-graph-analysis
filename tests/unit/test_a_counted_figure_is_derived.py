@@ -29,6 +29,7 @@ sentence is now derived here like the other five.
 Properties` is true in all three" was a count from when three outputs
 were published and `bga/schemas.py` defines eight.
 """
+import functools
 import json
 import pathlib
 import re
@@ -395,6 +396,14 @@ def _strip(token):
     return token.strip("`*_(),;:.\"'-").lower()
 
 
+@functools.lru_cache(maxsize=1)
+def _tracked():
+    """The paths git has, as a set. Not the paths on disk."""
+    out = subprocess.run(["git", "ls-files"], cwd=REPO, check=True,
+                         capture_output=True, text=True).stdout
+    return frozenset(out.splitlines())
+
+
 def _counted_files():
     """Where a sentence counting the library can live: the documents a
     reader reads, the skills an agent reads, and the source files whose
@@ -407,7 +416,10 @@ def _counted_files():
             ("docs/backlog/", "docs/audits/"))]
     paths += sorted(REPO.glob(".claude/**/*.md"))
     paths += sorted(REPO.glob("tools/*.py")) + sorted(REPO.glob("bga/**/*.js"))
-    return paths
+    # `UX-577`: a glob walks whatever the checkout happens to hold - and a
+    # main checkout holds `.claude/worktrees/<agent>/`, a whole second copy
+    # of the tree at an older commit. The repository is what git tracks.
+    return [one for one in paths if one.relative_to(REPO).as_posix() in _tracked()]
 
 
 def _count_phrases(path):

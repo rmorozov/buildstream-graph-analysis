@@ -1,6 +1,6 @@
 # UX-576: the question count is stated three ways
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-469 (the seventeenth question), UX-549 (derived figures) | **Serves:** the reader deciding whether to open Perfetto | **Topic:** docs
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-469 (the seventeenth question), UX-549 (derived figures) | **Serves:** the reader deciding whether to open Perfetto | **Topic:** docs
 
 ## Motivation
 

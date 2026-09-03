@@ -1,6 +1,6 @@
 # UX-579: the docs guard reads command words, not commands
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-325 (the installed sweep), UX-327 (documented invocations parse) | **Serves:** the next flag rename | **Topic:** guards
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-325 (the installed sweep), UX-327 (documented invocations parse) | **Serves:** the next flag rename | **Topic:** guards
 
 ## Motivation
 

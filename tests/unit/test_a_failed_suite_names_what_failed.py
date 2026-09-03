@@ -9,10 +9,16 @@ Round 81 could not name four red jobs on its own PR.
 Two claims, two instruments: the workflow keeps the file whatever the
 suite did, and `tools/dev_junit_tail.py` turns it into the lines a
 truncated log still needs.
+
+`UX-589`: and a third line saying whose junit it read. Round 83 spent
+four measurements disbelieving a true report because nothing in it
+could be matched against the suite's own summary.
 """
+import os
 import pathlib
 import subprocess
 import sys
+import time
 
 import pytest
 import yaml
@@ -111,6 +117,52 @@ class TestTheTailNamesThem:
         code, out = _tail(tmp_path / "absent.xml")
         assert code == 0, "the tail masked the failure it was reporting on"
         assert "could not be read" in out, out
+
+
+class TestTheTailSaysWhoseJunitItRead:
+    """`UX-589`. The names alone are unfalsifiable to their reader: run
+    33750369347's two were true and were read as an artefact of an
+    earlier step. The totals and the age are what make them checkable."""
+
+    def test_the_totals_are_the_junits_own_header(self, tmp_path):
+        path = tmp_path / "junit.xml"
+        path.write_text(JUNIT, encoding="utf-8")
+        _code, out = _tail(path)
+        assert "3 test(s) recorded" in out, out
+        assert "1 failure(s)" in out, out
+        assert "1 error(s)" in out, out
+
+    def test_a_junit_from_before_the_run_reports_its_age(self, tmp_path):
+        """The clause the item was filed for. A junit no step of this
+        run wrote is not refused - nothing in this workflow can produce
+        one - but its age is on the line, so a reader can see it."""
+        path = tmp_path / "junit.xml"
+        path.write_text(JUNIT, encoding="utf-8")
+        old = time.time() - 3 * 3600
+        os.utime(path, (old, old))
+        _code, out = _tail(path)
+        assert "written 3.0h before this read" in out, out
+
+    def test_a_junit_the_run_just_wrote_reads_as_seconds(self, tmp_path):
+        """The discriminating half: an age that printed the same string
+        for both would carry no information."""
+        path = tmp_path / "junit.xml"
+        path.write_text(JUNIT, encoding="utf-8")
+        _code, out = _tail(path)
+        assert "written 0s before this read" in out, out
+
+    def test_the_line_is_printed_when_the_junit_records_no_failure(
+            self, tmp_path):
+        """The path a reader most needs it on: 'no failure' is either
+        this run's collection error or somebody else's green suite."""
+        path = tmp_path / "junit.xml"
+        path.write_text('<?xml version="1.0"?><testsuites><testsuite '
+                        'name="pytest" tests="9" failures="0" errors="0">'
+                        '<testcase classname="a" name="b"/>'
+                        '</testsuite></testsuites>', encoding="utf-8")
+        _code, out = _tail(path)
+        assert "records no failure" in out, out
+        assert "9 test(s) recorded" in out, out
 
 
 if __name__ == "__main__":  # pragma: no cover

@@ -240,6 +240,7 @@ timestamped record, not a statement of current state.
 [81](audits/round-81.md) ·
 [82](audits/round-82.md) ·
 [83](audits/round-83.md) ·
+[84](audits/round-84.md) ·
 [the guard census of round 64](audits/guard-census-round-64.md) ·
 [the original spec-compliance review](audits/spec-compliance-review.md)
 

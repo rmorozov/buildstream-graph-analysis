@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-602 scenarios: **15 open**, 587 closed.
+602 scenarios: **14 open**, 588 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -27,7 +27,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | cli | 0 | 21 |
 | store | 1 | 16 |
 | docs | 4 | 87 |
-| guards | 5 | 115 |
+| guards | 4 | 115 |
 
 ## Open scenarios
 
@@ -36,7 +36,6 @@ task file, which is the only place it ever lived twice.
 
 | ID | Scenario | Topic | Priority | Serves | Status |
 |---|---|---|---|---|---|
-| UX-589 | [the failure namer reads a junit the run did not write](UX-0589-the-namer-reads-a-junit-the-run-did-not-write.md) | guards | Medium | every session reading a red CI job | 🔴 Open |
 | UX-590 | [the context map's non-path claims are unguarded](UX-0590-the-context-map-s-non-path-claims-are-unguarded.md) | guards | Medium | every session that reads fixing guide §6 to find where a thing lives | 🔴 Open |
 | UX-591 | [the architecture review log is in no index](UX-0591-the-architecture-review-log-is-in-no-index.md) | docs | Medium | the reader looking for what the last architecture review decided | 🔴 Open |
 | UX-593 | [the regression verdict carries no evidence chain](UX-0593-the-regression-verdict-carries-no-evidence-chain.md) | analysis | Medium | R4, the CI gatekeeper asked to defend a red gate | 🔴 Open |

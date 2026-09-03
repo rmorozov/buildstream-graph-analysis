@@ -53,6 +53,22 @@ if everything:
 `tests/tiers.py` is what a round does when it adds one test file**, so
 this is the common case, not the corner.
 
+A second file joined the report on the fifth run, and it is the same
+shape. `tests/unit/test_docs_links_and_commands.py` at 16.2s against
+10.0s recorded, x1.58 — plausibly this round's doing, since that file
+walks the backlog and the round added rows. Measured, it is not:
+
+```text
+backlog files: base 550, branch 557
+rep1 base 7.56s   rep1 branch 7.22s
+rep2 base 7.54s   rep2 branch 7.66s
+```
+
+So the gate has now named two files, neither of which is slower on this
+branch when measured, and it cannot tell them apart from one that would
+be — because the filter that was supposed to make that distinction
+admits all 424.
+
 Two consequences, and the second is the one that reddened a PR:
 
 1. The reason is keyed `"*"` and `--why` reads `why.get(name)`, so all

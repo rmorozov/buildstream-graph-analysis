@@ -30,12 +30,19 @@ import pytest
 REPO = pathlib.Path(__file__).resolve().parents[2]
 STYLEGUIDE = REPO / "docs/design/styleguide.md"
 FIXING_GUIDE = REPO / "docs/contributing/fixing-guide.md"
+#: The third document that numbers sections, and the one whose name
+#: is a letter away from the first. `UX-569` cites its §9 in an
+#: exemption reason, and this scan called that section imaginary.
+STYLE_GUIDE = REPO / "docs/contributing/style-guide.md"
 STRUCTURED = REPO / "bga/viewer/structured.js"
 
 #: A section id in either document: a digit and an optional letter.
-HEADING = re.compile(r"^#{2,3} ([0-9][a-g]?)\. ", re.M)
-CITATION = re.compile(r"§([0-9][a-g]?)")
-ROW = re.compile(r"^\| *§([0-9][a-g]?) *\| *(.*?) *\| *(.*?) *\|$", re.M)
+#: `[0-9]+`, not `[0-9]`: at one digit a `§42` reads as `§4` and a
+#: stray citation passes as a real one - measured, the mutation that
+#: was supposed to redden this scan did not.
+HEADING = re.compile(r"^#{2,3} ([0-9]+[a-g]?)\. ", re.M)
+CITATION = re.compile(r"§([0-9]+[a-g]?)")
+ROW = re.compile(r"^\| *§([0-9]+[a-g]?) *\| *(.*?) *\| *(.*?) *\|$", re.M)
 GUARD = re.compile(r"`(test_[a-z0-9_]+\.py)`")
 
 #: The word a row uses to say its id is shared with the fixing guide,
@@ -87,10 +94,14 @@ def _table():
 
 
 def _ambiguous():
-    """Ids both documents number. A bare `§5` in a guard belongs to
-    whichever document its sentence is about, and nothing in the text
-    says which - so these rows are named rather than derived."""
-    return frozenset(_sections(STYLEGUIDE)) & frozenset(_sections(FIXING_GUIDE))
+    """Ids more than one document numbers. A bare `§5` in a guard
+    belongs to whichever document its sentence is about, and nothing in
+    the text says which - so these rows are named rather than derived.
+    Adding the contributing style guide leaves the set identical today
+    (its §1-§7 are already the fixing guide's, and the page has no §8
+    or §9), and keeps it right if the page ever grows one."""
+    return frozenset(_sections(STYLEGUIDE)) & (
+        frozenset(_sections(FIXING_GUIDE)) | frozenset(_sections(STYLE_GUIDE)))
 
 
 class TestTheTableIsTheGuide:
@@ -152,8 +163,11 @@ class TestTheTableIsHeldToTheScan:
             f"these rows disagree with the ids the fixing guide also "
             f"numbers ({sorted(named)}): {sorted(wrong)}")
 
-    def test_a_cited_section_exists_in_one_of_the_two_documents(self):
-        known = set(_sections(STYLEGUIDE)) | set(_sections(FIXING_GUIDE))
+    def test_a_cited_section_exists_in_a_document_that_numbers_sections(self):
+        """Three documents number sections, not two - `docs/design/
+        styleguide.md`, and both guides under `docs/contributing/`."""
+        known = (set(_sections(STYLEGUIDE)) | set(_sections(FIXING_GUIDE))
+                 | set(_sections(STYLE_GUIDE)))
         stray = {section: sorted(files)
                  for section, files in _cited(_unit_tests()).items()
                  if section not in known}

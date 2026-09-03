@@ -10,10 +10,11 @@ returns null rather than failing (`UX-312`, one level out).
 
 Answering that needs Perfetto's own reader and a two-plane capture.
 Round 69 found the reader had never been present on any machine this
-project had run on, so fourteen shipped questions had never executed -
-`UX-465`'s Outcome has the run. `--fetch` downloads the pinned reader
-when `PATH` and `BGA_TRACE_PROCESSOR` have none, into `--fetch-into`,
-and prints where: that friction is what kept the gate skipping.
+project had run on, so the fourteen shipped questions the library then
+held had never executed - `UX-432`'s Outcome has the run. `--fetch`
+downloads the pinned reader when `PATH` and `BGA_TRACE_PROCESSOR` have
+none, into `--fetch-into`, and prints where: that friction is what kept
+the gate skipping.
 """
 import argparse
 import csv
@@ -118,7 +119,7 @@ def an_element(shell, trace, workdir):
     other capture's element proves nothing about this one.
 
     **One that waited, and among those the longest-running.** Two of the
-    three questions taking an element ask what it waited for, so an
+    four questions taking an element ask what it waited for, so an
     element with no incoming edge answers them empty however
     interesting it is otherwise. Both wrong picks were made here before
     this rule was: `min(element)` chose `all.bst`, the target; longest

@@ -82,15 +82,16 @@ slicing further:**
 | `which-run-is-this` | the identity header |
 | `graph-levels` | `parallelism.levels`, and the level decomposition it draws |
 
-Nine of seventeen genuinely require the trip. The other eight are
-sharper instruments for something the page already told you — which is
-the right ratio for a library of *follow-up* questions, and worth
-knowing before assuming a reader who opened Perfetto had to.
+Nine of the seventeen questions genuinely require the trip. The other
+eight are sharper instruments for something the page already told you —
+which is the right ratio for a library of *follow-up* questions, and
+worth knowing before assuming a reader who opened Perfetto had to.
 
 Three of these arrived after this section was first written and were
 not added to it — `graph-levels` (`UX-380`), `cost-by-executable`
 (`UX-433`) and `executables-in-element` (`UX-448`), which is what
-turned the count above from thirteen into sixteen. Nothing noticed,
+turned the count above from thirteen into sixteen; `resource-queues`
+(`UX-469`) arrived the same way after it. Nothing noticed,
 because the guard on this section read the library for the questions
 the guide *lists* and never the other way round. It reads both
 directions now

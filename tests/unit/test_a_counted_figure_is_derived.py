@@ -326,6 +326,276 @@ class TestTheGuidesEvidenceBlockIsTheReport:
             in _flat(self._block()), (
                 "the block should count the element_join rows and their keys")
 
+# --- `UX-576`: every sentence that counts the question library --------------
+#
+# The count was stated three ways when this was filed - seventeen ids in
+# `questions.js`, "thirteen" in `cli.md`, "fourteen" in the `measure`
+# skill and in `dev_perfetto_queries.py`. The sweep below found three
+# more the item had not: `bga_timeline.py`, `questions.js`'s own
+# chrome-cost note, and `dev_perfetto_queries.py`'s element-taking
+# subset. A phrase is legal three ways - it is one of the sentences
+# `_derived_sentences()` builds from the population, it names the ids it
+# counts, or it is a dated finding in `HISTORICAL`.
+
+CLI = REPO / "docs/guides/cli.md"
+SKILL = REPO / ".claude/skills/measure/SKILL.md"
+HARNESS = REPO / "tools/dev_perfetto_queries.py"
+TIMELINE = REPO / "tools/bga_timeline.py"
+ELEMENT_TOKEN = "{element}"
+
+#: Read as a count when spelled or written bare. `one` is left out
+#: because in prose it is the pronoun - "what lets one query join them"
+#: - and never a count of this library.
+COUNT_WORD = re.compile(r"^(?:" + "|".join(WORDS[n] for n in range(2, 31))
+                        + r"|\d{1,3})$", re.I)
+
+#: The words a count may reach its noun through. Anything else ends the
+#: phrase, which is what keeps "renaming one silently breaks a query"
+#: out of the population.
+MODIFIER = frozenset(
+    "of the its all canned shipped paste-ready perfettosql other more "
+    "remaining library current existing only same whole entire new "
+    "these those sql".split())
+
+NOUN = re.compile(r"\b(?:questions?|quer(?:y|ies))\b", re.I)
+
+#: What makes a passage one about *this* library rather than about
+#: questions in general. A file in `ABOUT_THE_LIBRARY` has no other
+#: subject, so every count in it is one of these.
+LIBRARY = ("canned", "questions.js", "question library", "query library",
+           "PerfettoSQL", "perfetto.html")
+ABOUT_THE_LIBRARY = ("bga/viewer/questions.js",
+                     "tools/dev_perfetto_queries.py",
+                     "docs/guides/what-the-viewer-answers.md")
+
+#: Dated findings: each is true of the library as it was in the round
+#: named, and rewriting one would delete a measurement. Every entry is
+#: asserted to still be present, so the list cannot rot.
+HISTORICAL = {
+    ("docs/design/architecture.md", "All six questions"):
+        "UX-312's review entry, dated 2026-08-26: the library had six",
+    ("docs/design/directions.md", "four of six canned queries"):
+        "round 43's review of those same six",
+    ("docs/design/styleguide.md", "thirteen queries"):
+        "styleguide 4d, headed '(round 58)' - and the next clause, that "
+        "the page fills all three with `core.bst`, is what UX-369 fixed",
+    ("bga/viewer/questions.js", "all six queries"):
+        "UX-210 to UX-308, the rounds that comment is about",
+    ("bga/viewer/questions.js", "four of the six queries"):
+        "the same six, in the same comment",
+    ("bga/viewer/questions.js", "thirteen queries"):
+        "UX-348's measurement of the exported section, 216 px and four "
+        "`details`, taken when it was filed",
+    ("tools/dev_perfetto_queries.py", "the fourteen shipped questions"):
+        "round 69 - UX-432's Outcome ran 14, 2 empty, 0 errors",
+}
+
+
+def _strip(token):
+    return token.strip("`*_(),;:.\"'-").lower()
+
+
+def _counted_files():
+    """Where a sentence counting the library can live: the documents a
+    reader reads, the skills an agent reads, and the source files whose
+    prose states the count. `docs/backlog/` and `docs/audits/` are the
+    historical record - a task file's pasted measurement is a dated fact
+    and is never rewritten."""
+    paths = sorted(REPO.glob("*.md")) + [
+        p for p in sorted(REPO.glob("docs/**/*.md"))
+        if not p.relative_to(REPO).as_posix().startswith(
+            ("docs/backlog/", "docs/audits/"))]
+    paths += sorted(REPO.glob(".claude/**/*.md"))
+    paths += sorted(REPO.glob("tools/*.py")) + sorted(REPO.glob("bga/**/*.js"))
+    return paths
+
+
+def _count_phrases(path):
+    """Every "N ... questions" phrase in one file, with the window a
+    reader meets it in. Grown backwards from the noun through `MODIFIER`
+    words only, so a count is found however it is worded and a pronoun
+    is not."""
+    flat = _flat(path.read_text(encoding="utf-8"))
+    about = path.relative_to(REPO).as_posix() in ABOUT_THE_LIBRARY
+    found = []
+    for match in NOUN.finditer(flat):
+        window = flat[max(0, match.start() - 400):match.end() + 200]
+        if not about and not any(one.lower() in window.lower()
+                                 for one in LIBRARY):
+            continue
+        chain = []
+        for token in reversed(flat[max(0, match.start() - 70):
+                                   match.start()].split()):
+            # A bracket ends it: "(round 58) The query library" is a
+            # heading's number, not the phrase's.
+            if set("()[]") & set(token):
+                break
+            if not (COUNT_WORD.match(_strip(token))
+                    or _strip(token) in MODIFIER):
+                break
+            chain.append(token)
+        chain.reverse()
+        if not any(COUNT_WORD.match(_strip(one)) for one in chain):
+            continue
+        found.append((" ".join(chain + [match.group(0)]),
+                      flat[max(0, match.start() - 120):match.end() + 160]))
+    return found
+
+
+def _question_blocks():
+    """`{id: the entry's source text}`, so a subset is counted off what
+    the entry declares rather than off a sentence about it."""
+    text = QUESTIONS_JS.read_text(encoding="utf-8")
+    body = text.split("export const QUESTIONS = [", 1)[1].split("\n];", 1)[0]
+    blocks = {}
+    for chunk in body.split("\n  {"):
+        found = re.search(r'^    id: "([a-z-]+)"', chunk, re.M)
+        if found:
+            blocks[found.group(1)] = chunk
+    return blocks
+
+
+def _takes_element():
+    return sorted(one for one, block in _question_blocks().items()
+                  if ELEMENT_TOKEN in block)
+
+
+def _chrome_blind():
+    return sorted(one for one, block in _question_blocks().items()
+                  if re.search(r"^    reads: ", block, re.M))
+
+
+def _guide_question_tables():
+    """The guide's two tables, as id lists - the population both its own
+    "nine of the seventeen" sentence and `cli.md`'s copy count."""
+    text = GUIDE.read_text(encoding="utf-8")
+    body = text.split("## The canned questions", 1)[1].split("\n## ", 1)[0]
+    needs, rest = body.split("**Does not need Perfetto", 1)
+    return (re.findall(r"^\| `([a-z-]+)` \|", needs, re.M),
+            re.findall(r"^\| `([a-z-]+)` \|", rest, re.M))
+
+
+def _derived_sentences():
+    """The sentences these documents must carry, written here from the
+    population and nowhere from a literal. One dict, so the sweep
+    accepts exactly what a clause has already checked."""
+    total = len(_questions())
+    needs, rest = _guide_question_tables()
+    head = f"{WORDS[len(needs)].capitalize()} of the {WORDS[total]}"
+    other = WORDS[len(rest)]
+    return {
+        "README.md": [f"sorts all {WORDS[total]} canned questions"],
+        "docs/guides/cli.md": [
+            f"— {WORDS[total]} paste-ready PerfettoSQL queries",
+            f"{head} canned questions genuinely need the trip; "
+            f"{other} are sharper"],
+        "docs/guides/what-the-viewer-answers.md": [
+            f"serves {WORDS[total]} questions",
+            f"{head} questions genuinely require the trip. The other "
+            f"{other} are"],
+        ".claude/skills/measure/SKILL.md": [
+            f"Runs all {WORDS[total]} questions in "
+            f"`bga/viewer/questions.js`"],
+        "tools/dev_perfetto_queries.py": [
+            f"Two of the {WORDS[len(_takes_element())]} questions taking an "
+            f"element"],
+        "bga/viewer/questions.js": [
+            f"{WORDS[len(_takes_element())].capitalize()} of the "
+            f"{WORDS[total]} questions do"],
+    }
+
+
+def _derived_pairs():
+    return [(rel, one) for rel, many in _derived_sentences().items()
+            for one in many]
+
+
+class TestEverySentenceThatCountsTheQuestionsIsDerived:
+    """`UX-576`. Five sentences counted the library and a guard read one
+    of them; `resource-queues` landed on 2026-09-01 and the other four
+    did not move."""
+
+    @pytest.mark.parametrize("rel,sentence", _derived_pairs())
+    def test_the_sentence_is_the_population(self, rel, sentence):
+        assert sentence in _flat((REPO / rel).read_text(encoding="utf-8")), (
+            f"{rel} should say {sentence!r}: questions.js exports "
+            f"{len(_questions())}, the guide sorts "
+            f"{[len(one) for one in _guide_question_tables()]} and "
+            f"{ELEMENT_TOKEN} is in {_takes_element()}")
+
+    def test_the_two_tables_sort_the_whole_library(self):
+        """The split sentences above are only derived if the tables they
+        count are the library."""
+        needs, rest = _guide_question_tables()
+        assert sorted(needs + rest) == sorted(_questions()), (
+            "the guide's two tables and questions.js disagree",
+            sorted(set(needs + rest) ^ set(_questions())))
+
+    def test_the_chrome_cost_names_the_queries_it_counts(self):
+        """The other shape the fix allows: name the ids. Both copies of
+        this sentence said "two of the fourteen"; they name the two now,
+        and the two are read off `reads:`."""
+        blind = _chrome_blind()
+        assert len(blind) == 2, (
+            "both chrome-cost sentences say 'two of the canned questions' "
+            "and this many entries declare `reads:`", blind)
+        for path in (QUESTIONS_JS, TIMELINE):
+            flat = _flat(path.read_text(encoding="utf-8"))
+            missing = [one for one in blind if f"`{one}`" not in flat]
+            assert not missing, (
+                f"{path.name} counts the chrome-blind queries without "
+                f"naming these", missing)
+
+    def test_every_historical_phrase_is_still_there(self):
+        """`HISTORICAL` is an exemption list, and an exemption nothing
+        uses is one nobody rechecks."""
+        for (rel, phrase), why in sorted(HISTORICAL.items()):
+            flat = _flat((REPO / rel).read_text(encoding="utf-8"))
+            assert phrase in flat, (
+                f"{rel} no longer says {phrase!r}, so its exemption ({why}) "
+                f"is stale - drop the entry")
+
+    def test_the_sweep_reads_the_sentences_it_is_for(self):
+        """A sweep that finds nothing passes. This is the floor: every
+        derived sentence and every historical one is in the population
+        the sweep actually walks."""
+        seen = {(path.relative_to(REPO).as_posix(), phrase)
+                for path in _counted_files()
+                for phrase, _ in _count_phrases(path)}
+        for rel, sentence in _derived_pairs() + sorted(HISTORICAL):
+            assert any(this == rel and (that in sentence or sentence in that)
+                       for this, that in seen), (
+                f"the sweep does not see {rel}'s {sentence!r}, so nothing "
+                f"holds it", sorted(one for one in seen if one[0] == rel))
+
+    def test_every_counted_sentence_is_accounted_for(self):
+        """The sweep itself. Every "N ... questions" phrase in `docs/`,
+        `.claude/`, `tools/` and the viewer, held against
+        `questions.js`."""
+        total, ids = len(_questions()), set(_questions())
+        derived = _derived_sentences()
+        unaccounted = []
+        for path in _counted_files():
+            rel = path.relative_to(REPO).as_posix()
+            for phrase, window in _count_phrases(path):
+                if any(phrase in one for one in derived.get(rel, ())):
+                    continue
+                if any(this == rel and that in phrase
+                       for this, that in HISTORICAL):
+                    continue
+                named = {one for one in ids if f"`{one}`" in window}
+                values = {int(one) if one.isdigit() else
+                          next(k for k, v in WORDS.items() if v == one)
+                          for one in (_strip(one) for one in phrase.split())
+                          if COUNT_WORD.match(one)}
+                if values and values <= {total, len(named)}:
+                    continue
+                unaccounted.append(
+                    f"{rel}: {phrase!r} counts {sorted(values)}; the library "
+                    f"serves {total} and the sentence names {sorted(named)}")
+        assert not unaccounted, (
+            "these sentences count the question library and nothing derives "
+            "them:\n" + "\n".join(unaccounted))
 
 if __name__ == "__main__":  # pragma: no cover
     raise SystemExit(pytest.main([__file__, "-v"]))

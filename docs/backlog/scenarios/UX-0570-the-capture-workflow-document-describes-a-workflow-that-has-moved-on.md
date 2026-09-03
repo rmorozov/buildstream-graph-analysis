@@ -1,6 +1,6 @@
 # UX-570: the capture workflow document describes a workflow that has moved on
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-381 (the capture directory contract), UX-516 (the CI owner's page) | **Serves:** the CI owner reading how the weekly capture works | **Topic:** docs
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-381 (the capture directory contract), UX-516 (the CI owner's page) | **Serves:** the CI owner reading how the weekly capture works | **Topic:** docs
 
 ## Motivation
 

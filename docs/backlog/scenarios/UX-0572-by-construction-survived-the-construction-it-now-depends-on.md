@@ -1,6 +1,6 @@
 # UX-572: "by construction" survived the construction it now depends on
 
-**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** UX-406 (the emit-time join that made it true), UX-530 | **Serves:** the reader of the trace dictionary | **Topic:** docs
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-406 (the emit-time join that made it true), UX-530 | **Serves:** the reader of the trace dictionary | **Topic:** docs
 
 ## Motivation
 

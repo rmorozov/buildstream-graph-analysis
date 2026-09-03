@@ -1,6 +1,6 @@
 # UX-573: the context map cannot see below `tools/`
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-239 (the map and its guard) | **Serves:** the session that greps §6 for the hook and finds nothing | **Topic:** guards
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-239 (the map and its guard) | **Serves:** the session that greps §6 for the hook and finds nothing | **Topic:** guards
 
 ## Motivation
 

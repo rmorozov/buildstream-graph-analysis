@@ -41,6 +41,12 @@ derivation actually reads.
 | [0.3.0](#030--every-document-says-what-shape-it-is-2026-08-27) | 2026-08-27 | 332 | breaking |
 | [0.2.0](#020--the-build-that-says-what-it-is-2026-08-24) | 2026-08-24 | 243 | initial |
 
+Tagged `v0.3.0` and `v0.4.0` on the commits that set those versions
+(`bc1593557`, `679b9cf87`). **`0.2.0` carries no tag**: measured in
+round 84 (`UX-597`), `__version__` did not exist when that row's date
+falls, so the row is retrospective and there is no release commit for
+a tag to name.
+
 ## 0.4.0 — a capture you can carry (2026-09-03)
 
 Named for what it makes possible: a capture leaves the machine that

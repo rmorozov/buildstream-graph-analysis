@@ -946,7 +946,7 @@ new feature and 4 KB of vendored library stop looking alike.
 CI comment and R8's prioritisation case most of all; R1 directly
 ([roles](roles.md)).
 
-**Status:** partial — `UX-227`..`UX-230` closed and the CI comment quotes the chain (`_why_block`); `bga compare` publishes the *candidate diagnosis*'s chain, not the regression verdict's, so this section's last tail is `UX-593`.
+**Status:** landed — `UX-227`..`UX-230`, and the regression verdict's own evidence chain (`UX-593`), which is what the CI comment had been quoting the candidate diagnosis's in place of. Publishing that chain as a `compare/v2` key is filed.
 
 The fourth external review's strongest idea, adopted — and it is the
 house pattern one level up. Round 24 found the relationship layer
@@ -1008,7 +1008,7 @@ deferred maybe, behind the same bar every graph has faced here.
 **Serves:** R5, R6, R7, R8 — the roles the
 [role model](roles.md) found unserved.
 
-**Status:** partial — `UX-234` landed the aggregate fact-base; the rest of the argued order is filed rather than argued again — the queue seam `UX-594`, the capacity model `UX-595`, the cost translation `UX-596`.
+**Status:** landed — the aggregate fact-base (`UX-234`), the queue seam (`UX-594`), the capacity model (`UX-595`) and the cost translation (`UX-596`). Two tails are filed rather than open here: the start clock's provenance, and a stamped contract for the model's answer.
 
 Everything bga answers today is answered within one build, or one
 store's history of one project. That satisfies R1-R4 — and

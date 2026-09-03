@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-611 scenarios: **10 open**, 601 closed.
+611 scenarios: **9 open**, 602 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -27,7 +27,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | cli | 0 | 21 |
 | store | 0 | 16 |
 | docs | 4 | 89 |
-| guards | 2 | 118 |
+| guards | 1 | 118 |
 
 ## Open scenarios
 
@@ -41,7 +41,6 @@ task file, which is the only place it ever lived twice.
 | UX-604 | [the verification-log clause reads the entry below it](UX-0604-the-verification-log-clause-reads-the-entry-below.md) | guards | Medium | the round whose log entry says nothing and passes | 🔴 Open |
 | UX-607 | [a paragraph in the guide is a two-file change](UX-0607-a-paragraph-in-the-guide-is-a-two-file-change.md) | docs | Medium | anyone adding a paragraph to the fixing guide | 🔴 Open |
 | UX-608 | [fifteen commands the context map never names](UX-0608-fifteen-commands-the-context-map-never-names.md) | docs | Medium | every session reading fixing guide §6 to find where a thing lives | 🔴 Open |
-| UX-609 | [the invariants docstring lists five of six gates](UX-0609-the-invariants-docstring-lists-five-of-six-gates.md) | guards | Low | the reader opening the module to find what it enforces | 🔴 Open |
 | UX-610 | [the verdict record is not a published key](UX-0610-the-verdict-record-is-not-a-published-key.md) | contracts | Medium | R4, the CI gatekeeper asked to defend a red gate from the payload alone | 🔴 Open |
 | UX-611 | [what-if's saving is still in build seconds](UX-0611-whatifs-saving-is-still-in-build-seconds.md) | analysis | Low | the team deciding whether a fix is worth a day | 🔴 Open |
 | UX-612 | [the start clock has no provenance](UX-0612-the-start-clock-has-no-provenance.md) | capture | High | anyone computing a duration from a capture's start | 🔴 Open |

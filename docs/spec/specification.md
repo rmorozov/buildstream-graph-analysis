@@ -1847,7 +1847,7 @@ key set is not it. This table is the mapping, one row per declared key:
 | `ready_queue` | 21 | `signals['ready_queue']` |
 | `concurrency` | 22 | `occupancy['average_concurrency']` and `occupancy['peak_concurrency']` - a sibling of `signals`, not a member |
 | `fetch_build_overlap` | 28 | `signals['fetch_build_overlap']`, conditional on the run having an overlap to report |
-| `duration_variability` | 29 | computed as `DiagnosticsResult.duration_variability`, reaching no consumer - not a `signals` key |
+| `duration_variability` | 29 | `signals['duration_variability']`, conditional on the run being a snapshot in a store holding three or more finished runs of its own host class (`UX-565`); the element card draws it |
 
 A key here is *published* when the analyzer writes it under `signals`;
 the tool writes several more that 32.4 never declared, which is an

@@ -15,19 +15,19 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-599 scenarios: **12 open**, 587 closed.
+602 scenarios: **15 open**, 587 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
 | capture | 1 | 91 |
 | analysis | 2 | 92 |
-| contracts | 1 | 41 |
+| contracts | 2 | 42 |
 | viewer | 0 | 138 |
 | cli | 0 | 21 |
 | store | 1 | 16 |
-| docs | 3 | 86 |
-| guards | 4 | 114 |
+| docs | 4 | 87 |
+| guards | 5 | 115 |
 
 ## Open scenarios
 
@@ -48,6 +48,9 @@ task file, which is the only place it ever lived twice.
 | UX-599 | [a guard pins a contract version by typing it](UX-0599-a-guard-pins-a-contract-version-by-typing-it.md) | guards | Medium | the next contract bump, which will pass a guard that should have caught it | 🔴 Open |
 | UX-600 | [the rules card has one guard it cannot mark](UX-0600-the-rules-card-has-one-guard-it-cannot-mark.md) | guards | Low | the session reading the card's guard column | 🔴 Open |
 | UX-601 | [two guard ledgers of the same kind, two mechanisms](UX-0601-two-guard-ledgers-of-the-same-kind.md) | docs | Low | the next session asked to add a rule and its guard | 🔴 Open |
+| UX-602 | [two hard gates are published and named nowhere](UX-0602-two-hard-gates-are-published-and-named-nowhere.md) | contracts | High | anyone reading `confidence.hard_gates` to decide whether a run is trustworthy | 🔴 Open |
+| UX-603 | [the Python floor reaches no reader](UX-0603-the-python-floor-reaches-no-reader.md) | docs | Medium | the contributor deciding whether their interpreter will do | 🔴 Open |
+| UX-604 | [the verification-log clause reads the entry below it](UX-0604-the-verification-log-clause-reads-the-entry-below.md) | guards | Medium | the round whose log entry says nothing and passes | 🔴 Open |
 
 ## UX-563..UX-586: the eighty-second round — the documents, read against the tool (2026-09-03)
 

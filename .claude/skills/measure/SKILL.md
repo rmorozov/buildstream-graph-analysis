@@ -115,7 +115,7 @@ bga timeline /path/to/snapshot -o /tmp/two.pftrace
 python tools/dev_perfetto_queries.py /tmp/two.pftrace --fetch
 ```
 
-Runs all fourteen questions in `bga/viewer/questions.js` against the
+Runs all seventeen questions in `bga/viewer/questions.js` against the
 trace and says, per question, whether it answered. `--fetch` downloads
 the pinned reader if none is on `PATH` — Perfetto's own prebuilt, from
 `commondatastorage.googleapis.com` and not `get.perfetto.dev`, which is

@@ -653,11 +653,12 @@ export const WORKED_EXAMPLE = "element-time";
  * chrome                 663       0          0
  * ```
  *
- * Two of the fourteen questions read exactly what the chrome JSON does
- * not carry, so against one they return zero rows and the reader
- * concludes the build had no concurrency and that nothing waited on
- * anything. That is `UX-107`'s rule at the trace boundary: *nobody
- * could look* rendered as *looked and found nothing*.
+ * Two of the questions - `waited-on-flow` and `concurrency-curve` -
+ * read exactly what the chrome JSON does not carry, so against one they
+ * return zero rows and the reader concludes the build had no
+ * concurrency and that nothing waited on anything. That is `UX-107`'s
+ * rule at the trace boundary: *nobody could look* rendered as *looked
+ * and found nothing*.
  *
  * The declaration is on the query (`reads`), and this says what it
  * costs. The shipped path is unaffected - the page's own handoff is
@@ -1004,7 +1005,8 @@ function workedExample(question, make, element = null) {
  *  places - `takesElement` and the re-render below both need it. */
 export const ELEMENT_TOKEN = "{element}";
 
-/** Whether this entry asks about one element. Three of thirteen do. */
+/** Whether this entry asks about one element.
+ *  Four of the seventeen questions do. */
 export function takesElement(question) {
   return String(question?.sql ?? "").includes(ELEMENT_TOKEN);
 }

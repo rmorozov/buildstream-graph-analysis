@@ -52,7 +52,7 @@ trusted (`UX-505`).
 | Never mark 🟢 without a pasted, passing command | — |
 | Never leave a no-op placeholder and call it implemented | — |
 | Never widen scope | — |
-| Never invent data the spec says must be `UNKNOWN` or absent | — |
+| Never invent data the spec says must be `UNKNOWN` or absent | `test_a_retired_state_is_declared.py` |
 | Never touch `docs/spec/specification.md` outside Part 32's registry | `test_docs_links_and_commands.py` |
 | **Never let an instrument read a proxy for the thing it names** | the `measure` skill's three questions |
 | Exact integer arithmetic for anything invariant-related | — |

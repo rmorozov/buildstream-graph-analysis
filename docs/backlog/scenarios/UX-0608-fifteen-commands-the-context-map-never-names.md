@@ -1,6 +1,6 @@
 # UX-608: fifteen commands the context map never names
 
-**Priority:** Medium | **Status:** 🔴 Open | **Depends on:** UX-590 (which measured it), UX-607 (which blocks it) | **Serves:** every session reading fixing guide §6 to find where a thing lives | **Topic:** docs
+**Priority:** Medium | **Status:** 🟢 Done Open | **Depends on:** UX-590 (which measured it), UX-607 (which blocks it) | **Serves:** every session reading fixing guide §6 to find where a thing lives | **Topic:** docs
 
 ## Motivation
 

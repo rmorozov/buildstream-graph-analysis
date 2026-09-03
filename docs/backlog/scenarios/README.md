@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-613 scenarios: **10 open**, 603 closed.
+614 scenarios: **9 open**, 605 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -26,7 +26,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | viewer | 0 | 138 |
 | cli | 0 | 21 |
 | store | 0 | 16 |
-| docs | 4 | 89 |
+| docs | 3 | 90 |
 | guards | 3 | 120 |
 
 ## Open scenarios
@@ -39,13 +39,12 @@ task file, which is the only place it ever lived twice.
 | UX-597 | [three release rows and no tag](UX-0597-three-release-rows-and-no-tag.md) | docs | Low | anyone trying to check out a release this repository claims to have made | 🔴 Open |
 | UX-601 | [two guard ledgers of the same kind, two mechanisms](UX-0601-two-guard-ledgers-of-the-same-kind.md) | docs | Low | the next session asked to add a rule and its guard | 🔴 Open |
 | UX-604 | [the verification-log clause reads the entry below it](UX-0604-the-verification-log-clause-reads-the-entry-below.md) | guards | Medium | the round whose log entry says nothing and passes | 🔴 Open |
-| UX-607 | [a paragraph in the guide is a two-file change](UX-0607-a-paragraph-in-the-guide-is-a-two-file-change.md) | docs | Medium | anyone adding a paragraph to the fixing guide | 🔴 Open |
-| UX-608 | [fifteen commands the context map never names](UX-0608-fifteen-commands-the-context-map-never-names.md) | docs | Medium | every session reading fixing guide §6 to find where a thing lives | 🔴 Open |
 | UX-610 | [the verdict record is not a published key](UX-0610-the-verdict-record-is-not-a-published-key.md) | contracts | Medium | R4, the CI gatekeeper asked to defend a red gate from the payload alone | 🔴 Open |
 | UX-612 | [the start clock has no provenance](UX-0612-the-start-clock-has-no-provenance.md) | capture | High | anyone computing a duration from a capture's start | 🔴 Open |
 | UX-613 | [the capacity model emits no document](UX-0613-the-capacity-model-emits-no-document.md) | contracts | Medium | R4 and anyone wanting the model's answer in a pipeline | 🔴 Open |
 | UX-614 | [a track starts on the default branch, not the round's](UX-0614-a-track-starts-on-the-default-branch.md) | guards | High | every round that runs tracks in parallel | 🔴 Open |
 | UX-615 | [the scratchpad is shared between tracks](UX-0615-the-scratchpad-is-shared-between-tracks.md) | guards | Low | a round running tracks in parallel | 🔴 Open |
+| UX-616 | [the coupling runs the other way too](UX-0616-the-coupling-runs-the-other-way-too.md) | docs | Medium | anyone adding a paragraph to the rules card | 🔴 Open |
 
 ## UX-563..UX-586: the eighty-second round — the documents, read against the tool (2026-09-03)
 

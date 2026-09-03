@@ -201,6 +201,8 @@ bga/whatif.py          the projection for a chosen set of fixes (UX-230)
 bga/cache_trend.py     a series of runs, not a pair
 bga/cache_effectiveness.py  the cache's own numbers
 bga/store_aggregate.py the store as a distribution, per host class (UX-234)
+bga/capacity_model.py  Allen-Cunneen M/G/c over that distribution, each
+                       assumption recorded where the arithmetic uses it (UX-595)
 bga/run_store.py       .bga/runs, the @last/@prev aliases, prune
 bga/bundle.py          a capture packed to carry, and what the far
                        side refuses to half-read (UX-520)

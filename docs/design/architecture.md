@@ -1034,6 +1034,23 @@ artifact.
 
 ## Verification Log
 
+Updated 2026-09-03 (after `UX-569`), covering round 83's three changes
+to this document — the opening sentence's two backlog counts, the
+`tools/` dispatch list under the layout block, and the two stale `.md`
+names in the reading order — re-grounded in the two contract tables
+above against `bga.contracts` and against `bga analyze --schema`:
+**23 emitted ids, 9 of them superseded, and 3 read and never
+written**, 8 printable and 15 not, and `analyze/v5` still at **56
+top-level properties**. Every figure re-read and unchanged from the
+entry below: round 83 published no new contract id, and the one
+commit that touched `bga/schemas.py` added keys under `elements`,
+which 32.5's rule makes an addition. `bga/viewer/` is still **22
+modules** and the table still names all of them. Recorded by
+architecture review 14, whose row is in
+[`../audits/architecture-review.md`](../audits/architecture-review.md);
+the entry below was true about its own date and named a round older
+than the file's last change, which is the half that guard cannot read.
+
 Updated 2026-09-03 (after `UX-549`), covering round 81's three
 changes to this document — `UX-540`, `UX-548` and `UX-549` —
 re-grounded in the two contract tables above against `bga.contracts` — **23 emitted ids, 9

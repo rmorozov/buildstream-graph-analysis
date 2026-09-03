@@ -578,6 +578,7 @@ MEDIUM = (
     # `UX-443`, tiered on landing. Two real servers on a socket and
     # two full trace renders over a committed capture. 2.8s.
     "tests/unit/test_the_served_handoff_counts_its_edges.py",       # 2.8s
+    "tests/unit/test_the_served_scratch_is_not_leaked.py",          # 1.6s
     # `UX-449`, tiered on landing. It parses every test source in the
     # suite - 195 skip call sites over ~380 files - which is why it is
     # seconds rather than milliseconds despite running no build and

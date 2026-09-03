@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-557 scenarios: **3 open**, 554 closed.
+557 scenarios: **0 open**, 557 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -23,11 +23,11 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | capture | 0 | 90 |
 | analysis | 0 | 87 |
 | contracts | 0 | 40 |
-| viewer | 2 | 138 |
+| viewer | 0 | 138 |
 | cli | 0 | 19 |
 | store | 0 | 14 |
 | docs | 0 | 71 |
-| guards | 1 | 98 |
+| guards | 0 | 98 |
 
 ## Open scenarios
 
@@ -36,9 +36,6 @@ task file, which is the only place it ever lived twice.
 
 | ID | Scenario | Topic | Priority | Serves | Status |
 |---|---|---|---|---|---|
-| UX-555 | [`--no-trace` tells a two-plane run it kept no Plane 2 log](UX-0555-with-trace-false-blames-a-missing-plane-2.md) | viewer | Low | `UX-545`'s track, one branch over from its own fix | 🔴 |
-| UX-558 | [the failure's name is 3,800 lines from the end of the 3.11 job](UX-0558-the-failure-name-is-3800-lines-from-the-end.md) | guards | Medium | round 81's PR, read three times without finding it | 🔴 |
-| UX-559 | [`bga view --serve` leaks a scratch directory per served run](UX-0559-serve-leaks-a-scratch-directory-per-run.md) | viewer | Medium | `UX-546`'s track, which counted 2,799 of them | 🔴 |
 
 ## UX-522..UX-536: the seventy-ninth round — the controls walked, the suite weighed (2026-09-02)
 

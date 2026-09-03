@@ -892,7 +892,13 @@ def test_every_open_row_carries_a_topic_from_the_closed_set():
     path = REPO / "docs/backlog/scenarios/README.md"
     rows = [line for line in path.read_text(encoding="utf-8").splitlines()
             if _TABLE_ROW.match(line)]
-    assert rows, "no open rows to check"
+    # `UX-562`: 0 open rows is a backlog a round emptied, not a parser
+    # that matched nothing - so the vacuity refusal stands on closed.md,
+    # which only grows, and the open rows are checked however many.
+    closed = [line for line in (REPO / "docs/backlog/scenarios/closed.md")
+              .read_text(encoding="utf-8").splitlines()
+              if _TABLE_ROW.match(line)]
+    assert closed, "the row pattern matches nothing in closed.md"
     bad = []
     for line in rows:
         cells = [c.strip() for c in re.split(r"(?<!\\)\|", line.strip().strip("|"))]

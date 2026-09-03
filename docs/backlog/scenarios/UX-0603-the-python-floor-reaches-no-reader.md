@@ -27,7 +27,9 @@ matrix that enforces it.
 
 ## Out of Scope
 
-- Moving the floor itself.
+- Moving the floor itself — declined: `UX-588` measured what the
+  floor costs and 3.9 is still what the matrix runs; this item is
+  about saying so, not about changing it.
 
 ## Acceptance Test
 

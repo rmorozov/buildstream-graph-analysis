@@ -391,8 +391,19 @@ def _backlog_counts():
             for one in ("scenarios", "tasks")}
 
 
+def _on_the_real_index():
+    """`--scenarios` points the index checks at a sandbox. The
+    architecture sentence counts the *repository's* backlog, so it is
+    neither checked nor written then - a helper that edited the real
+    tree from a test's temp directory is what `test_the_loop_stays_fast`
+    caught."""
+    return SCENARIOS == REPO / "docs/backlog/scenarios"
+
+
 def _architecture_is_derived():
     """The opening sentence against the directories it counts."""
+    if not _on_the_real_index():
+        return []
     counts = _backlog_counts()
     opening = ARCHITECTURE.read_text(encoding="utf-8").split("\n## ", 1)[0]
     return [f"architecture.md says {written} {phrase}; git has "
@@ -403,6 +414,8 @@ def _architecture_is_derived():
 
 def write_architecture():
     """Put the derived counts into the opening sentence."""
+    if not _on_the_real_index():
+        return
     counts = _backlog_counts()
     text = ARCHITECTURE.read_text(encoding="utf-8")
     head, sep, rest = text.partition("\n## ")

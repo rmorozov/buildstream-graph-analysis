@@ -30,7 +30,8 @@ than by a character count — the population is a section, not a slice.
 
 ## Out of Scope
 
-- What the sentence has to say; only which text is searched for it.
+- What the sentence has to say — declined: `UX-233` argued that and
+  it holds; this item is only about which text is searched for it.
 
 ## Acceptance Test
 

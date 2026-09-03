@@ -1908,6 +1908,35 @@ over that horizon - and refuses to let I7 be waived without this row.
 
 ---
 
+### 32.7.5 Part 33.1's hard gates are six, not four (`UX-602`)
+
+`compute_confidence` publishes six keys under `confidence.hard_gates`;
+Part 33.1 states four of them, and the other two are named in no
+document a reader opens. They are not additions to the rule: each is a
+Part 34 invariant given a *gate* rather than a violation, because a run
+that fails either is a broken capture and every bound below divides by
+what it broke. Part 33 is read-only for a round, so the published set is
+recorded here, one row per key, in the order the code writes them:
+
+| `hard_gates` key | Part 33.1's line | invariant | fails when |
+|---|---|---|---|
+| `ordering_violations_zero` | `ordering_violations == 0` | - | `normalize_trace` raised an `ordering_violation` for any task |
+| `critical_path_coverage_full` | `critical_path_coverage == 1.0` | - | an element on the measured critical path recorded no task; the cached ones are removed from the denominator first |
+| `dominator_coverage_full` | `dominator_coverage == 1.0` | - | the dominator tree does not cover every element in the graph |
+| `blame_chain_coverage_full` | `blame_chain_coverage == 1.0` | I7 | I4's six attribution categories do not sum to H - 32.7.4 records this gate as I4's alias |
+| `run_identity_consistent` | - | I8 | run-context, graph and trace carry conflicting `manifest_hash` values; all three absent is a provenance-score reduction, not a gate failure |
+| `occupancy_within_capacity` | - | I6 | observed occupancy exceeded a capacity the *capture declared* - never one `compute_default_capacities` guessed |
+
+A key is *published* when `compute_confidence` writes it into the
+`hard_gates` dict; the count above is that dict's, not a list anyone
+maintains. `tests/unit/test_the_hard_gates_are_named.py` reads this
+table against a real run's `confidence.hard_gates` in both directions,
+and reads the `Part 33.1's line` column against 33.1's own fenced
+blocks, so a seventh gate cannot arrive unnamed and a row cannot outlive
+the gate it names.
+
+---
+
 # Part 33 — Reconciliation and Confidence
 
 ## 33.1 Hard Gates

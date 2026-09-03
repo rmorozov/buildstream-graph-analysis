@@ -82,6 +82,7 @@ would have caught it; a bound at it would only just have.
 | 10 | 2026-09-01 | 484 | `UX-492`, `UX-493` |
 | 11 | 2026-09-02 | 510 | `UX-516`, `UX-517` |
 | 12 | 2026-09-02 | 537 | `UX-548`, `UX-549`, `UX-550`, `UX-551`, `UX-552` |
+| 13 | 2026-09-03 | 560 | `UX-563`..`UX-586` — every document group read against the tree; [`round-82.md`](round-82.md) |
 
 ### Review 11 — 2026-09-02
 
@@ -856,3 +857,53 @@ sentence is correct as history; §3.6 is about a figure a document
 presents as *current*. A review that filed those would be asking a
 later round to rewrite the record of what was true when it was
 written.
+
+## Review 13 — 2026-09-03, at 560 closed rows
+
+Input: the twenty-three rows closed since review 12 (`UX-538`..
+`UX-562`, rounds 80-81), and — the user's brief — every document in
+the tree, read against the implementation by five researchers. The
+full round is [`round-82.md`](round-82.md); this row answers the
+checklist.
+
+**1. Does the code still do what it says?** Where a guard reads the
+sentence, yes, to the digit: the CLI table, the contract inventory,
+the viewer's 23 rows, the trace dictionary's 37 keys, the spec's Part
+32, the README's block. Where none does, no: `architecture.md:3`
+counts 75 scenarios, `capture-workflow.md` is three steps and eight
+files behind its yml, `ingestion-pipeline.md` confirms its facts on a
+`bst` this machine no longer has, the spec's Part 29 is wired to
+`None`, and `roles.md` denies a mechanism that shipped two rounds
+ago. `UX-569`..`UX-572`, `UX-565`, `UX-580`.
+
+**2. Does every published contract have a home?** Yes — 23 ids in the
+spec, the architecture inventory and `docs/README.md`, guarded both
+ways, and the 32.6 layout row-for-row against a real capture. What
+the guard leaves unheld: 32.1 lists 6 input fields where the loader
+reads 24, and 32.4's key list omits four `AnalysisResult` fields
+(`UX-568`).
+
+**3. Is any figure invalidated?** Thirteen in the process layer alone
+— `analyze/v2` in §3.7, a small tier at 11 s that runs 22 s, "421
+task files" in the researcher agent, "fourteen questions",
+"twelve contracts", a 34 KB guide at 38 KB (`UX-584`); the question
+count three ways in the guides (`UX-576`); two byte figures for one
+trace (`UX-578`); spec:1714's "all three" (`UX-566`).
+
+**4. What shipped since the last review that no document names?**
+Nothing new in `bga --help` since review 12. Older and unnamed:
+`tools/native_trace/`'s four members and `dev_run.sh`, in neither
+map (`UX-573`); Part 28's `fetch_build_overlap`, published and named
+by no test (`UX-568`).
+
+**5. Does each document's own "last updated" claim match reality?**
+The ingestion document's "against `bst` 2.7.0" is its dated claim,
+and the machine runs 2.8.0 (`UX-571`); the styleguide's §7 ledger
+dates seven sections as unguarded that have been guarded since
+rounds 59-70 (`UX-582`); the round-history table has no row for
+round 81 (`UX-583`).
+
+**The finding that matters most:** the tool moved faster than prose,
+and every drift above is in a sentence no guard reads. The filings
+do not ask for the prose to be rewritten — they ask for each
+sentence to derive from, or be dated against, the thing it copies.

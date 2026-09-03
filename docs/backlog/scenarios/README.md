@@ -15,19 +15,19 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-560 scenarios: **0 open**, 560 closed.
+584 scenarios: **24 open**, 560 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
 | capture | 0 | 90 |
-| analysis | 0 | 87 |
+| analysis | 3 | 90 |
 | contracts | 0 | 40 |
 | viewer | 0 | 138 |
-| cli | 0 | 19 |
-| store | 0 | 14 |
-| docs | 0 | 71 |
-| guards | 0 | 101 |
+| cli | 2 | 21 |
+| store | 1 | 15 |
+| docs | 12 | 83 |
+| guards | 6 | 107 |
 
 ## Open scenarios
 
@@ -36,6 +36,65 @@ task file, which is the only place it ever lived twice.
 
 | ID | Scenario | Topic | Priority | Serves | Status |
 |---|---|---|---|---|---|
+| UX-563 | [Part 8.2's `UNKNOWN` holder is a state the code cannot reach](UX-0563-part-8-2-s-unknown-holder-is-a-state-the-code-cannot-reach.md) | analysis | Medium | the maintainer deciding what the spec still promises | 🔴 |
+| UX-564 | [Parts 23 and 27 exist in the spec and nowhere else](UX-0564-parts-23-and-27-exist-in-the-spec-and-nowhere-else.md) | analysis | Medium | the maintainer deciding the spec's edge | 🔴 |
+| UX-565 | [Part 29 is wired to `None` while the store holds the series it needs](UX-0565-part-29-is-wired-to-none-while-the-store-holds-the-series-it-needs.md) | analysis | Medium | R3, the CI owner asking how stable an element's duration is | 🔴 |
+| UX-566 | [two "recommended" Parts describe a tool that was never built that way](UX-0566-two-recommended-parts-describe-a-tool-that-was-never-built-that-way.md) | docs | Low | the reader who opens the spec's tail for the report or the tree | 🔴 |
+| UX-567 | [two invariants have no guard, and one has no code](UX-0567-two-invariants-have-no-guard-and-one-has-no-code.md) | guards | High | anyone trusting the report's `I1..I13` line | 🔴 |
+| UX-568 | [the spec has no index of which Part a guard holds](UX-0568-the-spec-has-no-index-of-which-part-a-guard-holds.md) | guards | Medium | the next specification review — this one took five agents | 🔴 |
+| UX-569 | [the architecture document's prose is not what its guards read](UX-0569-the-architecture-document-s-prose-is-not-what-its-guards-read.md) | docs | Medium | the reader who opens architecture.md to price a change | 🔴 |
+| UX-570 | [the capture workflow document describes a workflow that has moved on](UX-0570-the-capture-workflow-document-describes-a-workflow-that-has-moved-on.md) | docs | Medium | the CI owner reading how the weekly capture works | 🔴 |
+| UX-571 | [the ingestion facts were confirmed on a BuildStream this machine no longer has](UX-0571-the-ingestion-facts-were-confirmed-on-a-buildstream-this-machine-no-lo.md) | docs | Medium | whoever meets a `bst` output line the parser does not | 🔴 |
+| UX-572 | ["by construction" survived the construction it now depends on](UX-0572-by-construction-survived-the-construction-it-now-depends-on.md) | docs | Low | the reader of the trace dictionary | 🔴 |
+| UX-573 | [the context map cannot see below `tools/`](UX-0573-the-context-map-cannot-see-below-tools.md) | guards | Medium | the session that greps §6 for the hook and finds nothing | 🔴 |
+| UX-574 | ["invalid arguments" exit 2, which the table gives to ingestion](UX-0574-invalid-arguments-exit-2-which-the-table-gives-to-ingestion.md) | cli | High | the CI owner branching on an exit code | 🔴 |
+| UX-575 | [a documented pipe prints a traceback](UX-0575-a-documented-pipe-prints-a-traceback.md) | cli | High | anyone who types the guide's own pipe to `head` | 🔴 |
+| UX-576 | [the question count is stated three ways](UX-0576-the-question-count-is-stated-three-ways.md) | docs | Medium | the reader deciding whether to open Perfetto | 🔴 |
+| UX-577 | [the committed example's own next step refuses](UX-0577-the-committed-example-s-own-next-step-refuses.md) | store | High | the stranger who follows the README's second command | 🔴 |
+| UX-578 | [the verbatim blocks that are neither dated nor fresh](UX-0578-the-verbatim-blocks-that-are-neither-dated-nor-fresh.md) | docs | Medium | anyone diffing a guide's output against their own | 🔴 |
+| UX-579 | [the docs guard reads command words, not commands](UX-0579-the-docs-guard-reads-command-words-not-commands.md) | guards | Medium | the next flag rename | 🔴 |
+| UX-580 | [the roles table says nothing aggregates across builds](UX-0580-the-roles-table-says-nothing-aggregates-across-builds.md) | docs | Medium | R5 and R7, whose rows are wrong about them | 🔴 |
+| UX-581 | [a direction has no status, so a tail goes silent](UX-0581-a-direction-has-no-status-so-a-tail-goes-silent.md) | docs | High | the reader deciding what is still open at direction level | 🔴 |
+| UX-582 | [the styleguide's ledger says seven sections have no guard](UX-0582-the-styleguide-s-ledger-says-seven-sections-have-no-guard.md) | docs | Medium | the session that touches the page and reads §7 to find its guard | 🔴 |
+| UX-583 | [the round history is typed, and three rounds are missing from it](UX-0583-the-round-history-is-typed-and-three-rounds-are-missing-from-it.md) | docs | Medium | the reader tracing a decision to the round that made it | 🔴 |
+| UX-584 | [the figures nothing reads — thirteen stale numbers in the process layer](UX-0584-the-figures-nothing-reads-thirteen-stale-numbers-in-the-process-layer.md) | docs | Medium | every session's first read | 🔴 |
+| UX-585 | [the card's guard column is counted, not read](UX-0585-the-card-s-guard-column-is-counted-not-read.md) | guards | High | the session that trusts the card's guard column | 🔴 |
+| UX-586 | [the premise detector reads a proxy](UX-0586-the-premise-detector-reads-a-proxy.md) | guards | Medium | the round that reads the process bands | 🔴 |
+
+## UX-563..UX-586: the eighty-second round — the documents, read against the tool (2026-09-03)
+
+The brief: the tool has moved far from where its documents were
+written — review every document against the implementation and make
+the ground firm. Five researchers, one per document group, checked
+each claim by running something. The round is
+[`docs/audits/round-82.md`](../../audits/round-82.md); it is also
+Review 13 in the architecture-review log.
+
+**The pattern, in every group:** a sentence a guard reads is exact to
+the digit; a sentence no guard reads has drifted at the rate the tool
+moves. So the filings ask for derivation and dating, not rewriting.
+
+**Specification** (`UX-563`..`UX-568`): the core holds to the
+constant and Part 32 row-for-row; Part 8.2's `UNKNOWN` holder is
+unreachable, Parts 23 and 27 exist nowhere else, Part 29 is wired to
+`None` while the store holds its series, I6 has no guard and no
+code, and the spec has no index of which Part a guard holds.
+**Architecture** (`UX-569`..`UX-573`): a 2026-08 count, two files
+that do not exist, a capture-workflow document behind its own yml,
+ingestion facts on `bst` 2.7.0, "by construction" unamended, and a
+context map that cannot see below `tools/` or inside `bga/viewer/`.
+**Guides** (`UX-574`..`UX-579`): invalid arguments exit 2 (the
+table says 1), a documented `| head` prints a traceback, the
+question count three ways, the example store's own advised compare
+refuses with exit 6, five verbatim blocks neither dated nor fresh,
+and a docs guard that reads command words but never flags.
+**Design** (`UX-580`..`UX-583`): the roles table denying
+`store-aggregate/v1`, directions without a status so two tails went
+silent, the styleguide's §7 ledger stale, the round history missing
+rounds. **Process** (`UX-584`..`UX-586`): thirteen stale figures,
+the card's guard column counted not read, the premise detector
+reading 0 % against a round that reports seven. Landed with the
+round: the `review` skill — the checklist as commands.
 
 ## UX-522..UX-536: the seventy-ninth round — the controls walked, the suite weighed (2026-09-02)
 

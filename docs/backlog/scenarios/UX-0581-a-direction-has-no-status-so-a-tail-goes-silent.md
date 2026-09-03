@@ -1,6 +1,6 @@
 # UX-581: a direction has no status, so a tail goes silent
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-231 (the Serves line every direction carries) | **Serves:** the reader deciding what is still open at direction level | **Topic:** docs
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-231 (the Serves line every direction carries) | **Serves:** the reader deciding what is still open at direction level | **Topic:** docs
 
 ## Motivation
 

@@ -15,18 +15,18 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-596 scenarios: **18 open**, 578 closed.
+596 scenarios: **16 open**, 580 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
 | capture | 1 | 91 |
-| analysis | 3 | 92 |
+| analysis | 2 | 92 |
 | contracts | 1 | 41 |
 | viewer | 0 | 138 |
 | cli | 0 | 21 |
 | store | 1 | 16 |
-| docs | 7 | 85 |
+| docs | 6 | 85 |
 | guards | 5 | 112 |
 
 ## Open scenarios
@@ -45,13 +45,11 @@ task file, which is the only place it ever lived twice.
 | UX-596 | [build time in the team's units](UX-0596-build-time-in-the-team-s-units.md) | analysis | Low | R8, the engineering lead funding infrastructure | 🔴 Open |
 | UX-597 | [three release rows and no tag](UX-0597-three-release-rows-and-no-tag.md) | docs | Low | anyone trying to check out a release this repository claims to have made | 🔴 Open |
 | UX-598 | [two of the four percentile rows publish no distribution](UX-0598-two-of-the-four-percentile-rows-publish-no-distribution.md) | contracts | Medium | the reader who trusts Direction 11's table | 🔴 Open |
-| UX-565 | [Part 29 is wired to `None` while the store holds the series it needs](UX-0565-part-29-is-wired-to-none-while-the-store-holds-the-series-it-needs.md) | analysis | Medium | R3, the CI owner asking how stable an element's duration is | 🔴 |
 | UX-567 | [two invariants have no guard, and one has no code](UX-0567-two-invariants-have-no-guard-and-one-has-no-code.md) | guards | High | anyone trusting the report's `I1..I13` line | 🔴 |
 | UX-568 | [the spec has no index of which Part a guard holds](UX-0568-the-spec-has-no-index-of-which-part-a-guard-holds.md) | guards | Medium | the next specification review — this one took five agents | 🔴 |
 | UX-569 | [the architecture document's prose is not what its guards read](UX-0569-the-architecture-document-s-prose-is-not-what-its-guards-read.md) | docs | Medium | the reader who opens architecture.md to price a change | 🔴 |
 | UX-578 | [the verbatim blocks that are neither dated nor fresh](UX-0578-the-verbatim-blocks-that-are-neither-dated-nor-fresh.md) | docs | Medium | anyone diffing a guide's output against their own | 🔴 |
 | UX-580 | [the roles table says nothing aggregates across builds](UX-0580-the-roles-table-says-nothing-aggregates-across-builds.md) | docs | Medium | R5 and R7, whose rows are wrong about them | 🔴 |
-| UX-581 | [a direction has no status, so a tail goes silent](UX-0581-a-direction-has-no-status-so-a-tail-goes-silent.md) | docs | High | the reader deciding what is still open at direction level | 🔴 |
 | UX-584 | [the figures nothing reads — thirteen stale numbers in the process layer](UX-0584-the-figures-nothing-reads-thirteen-stale-numbers-in-the-process-layer.md) | docs | Medium | every session's first read | 🔴 |
 | UX-585 | [the card's guard column is counted, not read](UX-0585-the-card-s-guard-column-is-counted-not-read.md) | guards | High | the session that trusts the card's guard column | 🔴 |
 

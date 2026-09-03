@@ -19,6 +19,8 @@ mechanically and neither catchable by reading:
 
 Both are style-guide rules (`docs/contributing/style-guide.md`); these are
 that can be enforced rather than asked for.
+
+holds: rules.md#both-status-markers-same-commit-the-counts-are-derived
 """
 import re
 import subprocess

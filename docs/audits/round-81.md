@@ -84,9 +84,44 @@ series on a third round shape — four parallel tracks with the
 orchestrating session working five of the items itself.
 
 ```text
-round 81, defects the merge gates caught      TBD
-  of those, outside test-touching's set       TBD
+round 81, defects the merge gates caught        5
+  of those, outside test-touching's set         1
 ```
 
-Left blank on purpose until the gates have run; a figure written
-before its measurement is the thing this document exists to refuse.
+Derived, not counted by hand: for each defect, `dev_touching.select`
+was run on the diff of the commit that introduced it, and asked whether
+the file that went red is in the result.
+
+| defect | introduced | red file in the set? | set |
+|---|---|---|---|
+| `UX-554`'s Out of Scope entry is a bare noun phrase | `7acbf2b` | yes | 38 |
+| `dev_junit_tail.py` is not on the §6 context map | `ddcb969` | **no** | 50 |
+| the one-reference clause counts a proxy (3 == 1) | `b04a340` | yes | 25 |
+| `UX-544`'s census names 5 sites, no harness converted | `c21a434` | yes | 11 |
+| `UX-543`/`UX-546` rows left 🔴 against 🟢 files | `f6d947a` | yes | **424** |
+
+The series, on three round shapes:
+
+```text
+round 75 (A, suite per item)    2 of 5
+round 80 (B, batch gate)        4 of 9
+round 81 (B, four tracks)       1 of 5
+```
+
+Two qualifications, both of which the raw ratio hides.
+
+**The last row's "yes" is worth nothing.** Its set is 424 — the whole
+suite — because `f6d947a` touches `tests/conftest.py`, one of
+`dev_touching`'s `EVERYTHING` paths. The selector did not *select* that
+file; it declined to select at all. `UX-557` is that row.
+
+**Two more defects were caught and are not counted.** `UX-554`'s
+3.11-only junit, whose next red job was 3.12; and the Verification Log
+header, whose regex takes one id and was given two. Neither has a clean
+introducing commit to measure a selector against, so counting them
+would be an estimate, and the point of this cell is that it is not.
+
+What the three rounds now say together is still about the **selector**,
+not the cadence: a suite run catches things a grep-derived set misses,
+in every round that has looked. Whether it must run per item or per
+merge remains unmeasured, and round 81 did not measure it either.

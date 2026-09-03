@@ -34,7 +34,9 @@ table is the subject, the guard reads it both ways.
 ## Out of Scope
 
 - The path directions — they hold and were re-mutated in `UX-573`.
-- Prose outside §6; the map is the claim this item is about.
+- Prose outside §6 — declined: the map is the claim this item is
+  about, and a sweep of every document's capability nouns is a
+  different population with a different vacuity floor.
 
 ## Acceptance Test
 

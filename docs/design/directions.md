@@ -2,7 +2,7 @@
 
 Written 2026-08-16 after a full hands-on audit and a real macro-then-micro
 optimization walkthrough
-([`optimization-walkthrough-06.md`](../audits/case-study-06-macro-micro.md)). This
+([`case-study-06-macro-micro.md`](../audits/case-study-06-macro-micro.md)). This
 is an argument about direction, not a task list — the tasks it argues for
 are filed individually as `UX-27`..`UX-40` in
 [`scenarios/`](../backlog/scenarios/README.md). Read
@@ -1414,8 +1414,8 @@ the other rounds now:
 | [22](../audits/round-22.md) | the viewer landing verified; the field and an external review synthesized into Direction 7's second iteration, plus two shipped views nobody can reach (`UX-198`..`UX-206`) |
 | [23](../audits/round-23.md) | eight of nine round-22 landings hold; the ninth's guards only guard one machine. A second external review's Pareto turn adopted — decision first, everything an action — and its blind spots filed with it (`UX-207`..`UX-214`) |
 | [24](../audits/round-24.md) | the relationship layer the third external review asked for is already computed in `correlate.py` and published nowhere; round 23's own Inspect anchors resolve to nothing; three of the review's premises corrected, and the loop it did not look at filed (`UX-215`..`UX-226`) |
-| [25](../audits/round-24.md) | round 24's first four executed: `correlate/v1` published and the viewer drew it with no change; the dead anchors resolve; findings show their evidence; the next command is published rather than derived. The page-size ceiling stopped being a number and became a ratio (`UX-215`..`UX-218`) |
-| [26](../audits/round-24.md) | round 24's remaining eight executed: the schema learned to say what its numbers mean, `compare/v1` learned which elements changed, the store learned to remember one, and the page learned to draw a plan, focus one element and carry the reader's own marks in the link. Two task premises corrected and two mutations rejected for not discriminating (`UX-219`..`UX-226`) |
+| 25 | round 24's first four executed: `correlate/v1` published and the viewer drew it with no change; the dead anchors resolve; findings show their evidence; the next command is published rather than derived. The page-size ceiling stopped being a number and became a ratio (`UX-215`..`UX-218`) |
+| 26 | round 24's remaining eight executed: the schema learned to say what its numbers mean, `compare/v1` learned which elements changed, the store learned to remember one, and the page learned to draw a plan, focus one element and carry the reader's own marks in the link. Two task premises corrected and two mutations rejected for not discriminating (`UX-219`..`UX-226`) |
 | [27](../audits/round-27.md) | twenty for twenty on the eighteen-commit landing, two hollow guards filed. The role model written: four roles served, four unserved; Direction 8 (provenance) adopted from the fourth review, its workspace declined; Direction 9 (the team axis) opened from the user's positioning (`UX-227`..`UX-235`) |
 | 28-39 | the sibling's execution rounds: UX-236..295 landed, Directions 10-14 argued — recorded in each direction's section and the backlog's round sections rather than as audit files |
 | [40](../audits/round-40.md) | the field's first architectural showstopper: a 2 GB dual-plane snapshot OOMs `bga view` — every load path measured, ~95 % of the monolith unread, the streaming fix on the wrong path; Direction 15 argued (events as a Perfetto TrackEvent stream, capture computes / view serves) and the rounds 28-39 sample verified six for six (`UX-296`..`UX-301`) |
@@ -1426,6 +1426,8 @@ the other rounds now:
 | [46](../audits/round-46.md) | three field errors measured to mechanisms — the trim that interns 3,000 compiles to two names, the CSP that silently breaks tick labels on served pages, the TypeError that was never bga's — and the implementation loop re-tooled with a measured 2.5× (`UX-333`..`UX-336`) |
 | [63](../audits/round-63.md) | seventeen implementation rounds (47-62) recorded in the backlog's own sections, then the sibling's outsider walk run twice: six populations vanish between a cold and an incremental run, fourteen Plane 2 blocks reach no browser, and the Tabulator question filed as a product decision (`UX-388`..`UX-397`) |
 | [64](../audits/round-64.md) | the walk that judged the answers: against example 06's `optimized/` answer key, Plane 2 names every intended fix and correlate compresses them into one 12.9 s paragraph that reaches no page; the rounds 47-63 landing held eleven-of-twelve under falsification; the library question answered with a factory measurement, and the test plan built from the escape ledger (`UX-398`..`UX-410`) |
+| [64 · the guard census](../audits/guard-census-round-64.md) | the falsify ritual run as a sweep rather than the per-round sample it had been since round 18: eleven guard families, one mechanism-revert mutation each, so that a family with no discriminating guard is found rather than a file (`UX-403`) |
+| [72 · the planted-defect walk](../audits/planted-defect-walk-round-72.md) | three defects **chosen first**, generated into real BuildStream projects with `tools/bga_gen_project.py` and built by a real `bst`, recording how far the front door gets each reader towards the answer that was planted (`UX-468`) |
 | [74](../audits/round-74.md) | rounds 65-73 reviewed as a workflow and measured — a 5m30s suite gated per item, 60 KB read before every task file, Outcomes at a median 114 lines, 12 % of commits housekeeping; a Register section and its guard, the `decompose` and `orient` skills landed, and the lifecycle's remaining steps filed (`UX-497`..`UX-506`) |
 | [75](../audits/round-75.md) | the round-74 slate closed under its own decomposition — three implementer tracks in worktrees (943-1,174 s, 81k-131k tokens each), `UX-500`'s first count (Regime A: 15 suite runs, two misses outside the selector's set), the rules card, the derived index, the self-recording CI reference (`UX-500`..`UX-510`) |
 | [76](../audits/round-76.md) | the tail closed, and `main` found red from CI's own adopt commit — the batch gate cannot assume a green base (`UX-511`..`UX-517`) |
@@ -1435,6 +1437,7 @@ the other rounds now:
 | [80](../audits/round-80.md) | the round-79 slate closed in six worktree tracks: `UX-500`'s second regime measured and refused — **4 of 9** defects the batch gate caught were outside `test-touching`'s set, so fixing guide §3 stays; a run bundle you can carry, `analyze/v5`, the export's data half bounded and compacted, and three cross-track collisions only a merge could see (`UX-514`, `UX-516`..`UX-539`, `UX-92`) |
 | [81](../audits/round-81.md) | twenty-two rows, seven premises falsified by measuring — the drift gate's cause filter, a stale base under both tracks, the suite line that was not the run's (`UX-538`..`UX-562`) |
 | [82](../audits/round-82.md) | every document read against the tool by five researchers: a sentence a guard reads is exact, a sentence no guard reads has drifted — twenty-four filings asking for derivation and dating, and the `review` skill (`UX-563`..`UX-586`) |
+| [83](../audits/round-83.md) | round 82's twenty-four rows executed, most of them not "correct a sentence" but "give the sentence a guard and let the correction follow" — the `UX-549` shape (a figure the guard derives) and the `UX-511` shape (a block labelled with its date and its cuts), extended to where round 82 found them missing (`UX-563`..`UX-586`) |
 
 ## Verification Log
 
@@ -1443,7 +1446,7 @@ Written 2026-08-16 from a real session: BuildStream 2.7.0 with
 staged by `examples/stage_cpp_toolchain.sh`, on a 4-core / 16GB Linux
 host. Every number quoted is from a real build and a real `bga`
 invocation in that session, recorded in
-[`optimization-walkthrough-06.md`](../audits/case-study-06-macro-micro.md); every
+[`case-study-06-macro-micro.md`](../audits/case-study-06-macro-micro.md); every
 claim about what the code does was checked against the source rather than
 inferred from output. The proposed report and CI-comment layouts are
 illustrations of intent, not implemented output.

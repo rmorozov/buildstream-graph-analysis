@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-587 scenarios: **13 open**, 574 closed.
+587 scenarios: **12 open**, 575 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -26,7 +26,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | viewer | 0 | 138 |
 | cli | 0 | 21 |
 | store | 0 | 15 |
-| docs | 8 | 83 |
+| docs | 7 | 83 |
 | guards | 4 | 110 |
 
 ## Open scenarios
@@ -41,7 +41,6 @@ task file, which is the only place it ever lived twice.
 | UX-567 | [two invariants have no guard, and one has no code](UX-0567-two-invariants-have-no-guard-and-one-has-no-code.md) | guards | High | anyone trusting the report's `I1..I13` line | 🔴 |
 | UX-568 | [the spec has no index of which Part a guard holds](UX-0568-the-spec-has-no-index-of-which-part-a-guard-holds.md) | guards | Medium | the next specification review — this one took five agents | 🔴 |
 | UX-569 | [the architecture document's prose is not what its guards read](UX-0569-the-architecture-document-s-prose-is-not-what-its-guards-read.md) | docs | Medium | the reader who opens architecture.md to price a change | 🔴 |
-| UX-571 | [the ingestion facts were confirmed on a BuildStream this machine no longer has](UX-0571-the-ingestion-facts-were-confirmed-on-a-buildstream-this-machine-no-lo.md) | docs | Medium | whoever meets a `bst` output line the parser does not | 🔴 |
 | UX-578 | [the verbatim blocks that are neither dated nor fresh](UX-0578-the-verbatim-blocks-that-are-neither-dated-nor-fresh.md) | docs | Medium | anyone diffing a guide's output against their own | 🔴 |
 | UX-580 | [the roles table says nothing aggregates across builds](UX-0580-the-roles-table-says-nothing-aggregates-across-builds.md) | docs | Medium | R5 and R7, whose rows are wrong about them | 🔴 |
 | UX-581 | [a direction has no status, so a tail goes silent](UX-0581-a-direction-has-no-status-so-a-tail-goes-silent.md) | docs | High | the reader deciding what is still open at direction level | 🔴 |

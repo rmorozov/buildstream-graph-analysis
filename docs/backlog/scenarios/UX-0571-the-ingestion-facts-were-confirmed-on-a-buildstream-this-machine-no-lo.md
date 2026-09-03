@@ -1,6 +1,6 @@
 # UX-571: the ingestion facts were confirmed on a BuildStream this machine no longer has
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-88 (the last correction to this document) | **Serves:** whoever meets a `bst` output line the parser does not | **Topic:** docs
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-88 (the last correction to this document) | **Serves:** whoever meets a `bst` output line the parser does not | **Topic:** docs
 
 ## Motivation
 

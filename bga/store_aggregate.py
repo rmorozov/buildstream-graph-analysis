@@ -62,6 +62,12 @@ PERCENTILES = (50, 95)
 # is this class" and "which runs are drawn" cannot answer differently.
 STAMPS_MAX = 12
 
+# `UX-565`: how many runs of a class Part 29's variability reads. The
+# same window the element card's sparkline draws (`element.js`'s
+# `HISTORY_POINTS_MAX`), so the figure and the line above it cannot be
+# about different runs.
+HISTORY_RUNS_MAX = 12
+
 
 def percentile(samples: List[float], p: float) -> Optional[float]:
     """Nearest-rank percentile - a value the store measured, not one
@@ -523,5 +529,87 @@ def read(project: str, blend: bool = False) -> dict:
 
     store_listing = _import_tool("tools.bga_snapshot").store_listing
     return aggregate(store_listing(project), blend=blend)
+
+
+def _snapshot_of(run_dir: Optional[str]) -> Optional[str]:
+    """The store snapshot `run_dir` is the run of, or `None`.
+
+    Structural, not a guess: `<project>/.bga/runs/<stamp>/run` is the
+    layout `capture-layout/v1` declares, so a directory that does not
+    sit in it is a run analysed outside a store and has no history.
+    """
+    if not run_dir:
+        return None
+    run = os.path.abspath(run_dir)
+    if os.path.basename(run) != run_store.RUN_SUBDIR:
+        return None
+    snapshot = os.path.dirname(run)
+    project = run_store.project_root(snapshot)
+    if not project:
+        return None
+    if os.path.dirname(snapshot) != os.path.abspath(run_store.runs_dir(project)):
+        return None
+    return snapshot
+
+
+def element_history(run_dir: Optional[str],
+                    measured: Optional[Dict[str, int]]) -> Optional[dict]:
+    """Per-element duration series for the run at `run_dir`, or `None`.
+
+    `UX-565`. Part 29 needed a history and one existed: `UX-226` writes
+    a bounded per-element slice beside every snapshot and the page
+    already draws it as a sparkline. This is those rows, as samples.
+
+    One host class - this run's - because `UX-186`'s refusal is not
+    suspended by asking the question per element: a duration measured
+    on another machine is a different population, not another sample.
+
+    This run's own sample is `measured`, not its slice: `bga snapshot`
+    analyses (`tools/bga_snapshot.py:543`) *before* it writes the slice
+    (`:548`), so a series read from the store alone would hold one
+    fewer sample at capture time than on any later `bga analyze` of the
+    same snapshot.
+
+    `None` below `MIN_BASELINE_RUNS` for every element - the floor
+    `distribution` refuses under, because a spread over two runs is two
+    numbers wearing a statistic's name.
+    """
+    from .tools_dispatch import _import_tool
+
+    snapshot = _snapshot_of(run_dir)
+    if not snapshot or not measured:
+        return None
+    project = run_store.project_root(snapshot)
+    listing = _import_tool("tools.bga_snapshot").store_listing(project)
+    rows = list(listing.get("snapshots") or [])
+    stamp = os.path.basename(snapshot)
+    here = next((row for row in rows if row.get("stamp") == stamp), None)
+    # `UX-156`: a run that did not finish is not a sample, and this run
+    # is one of the samples.
+    if here is None or here.get("incomplete_reason"):
+        return None
+    label = here.get("host_class") or UNKNOWN_HOST_CLASS
+
+    prior: Dict[str, List[int]] = {}
+    runs = 0
+    for row in rows:
+        if row.get("stamp", "") >= stamp or row.get("incomplete_reason"):
+            continue
+        if (row.get("host_class") or UNKNOWN_HOST_CLASS) != label:
+            continue
+        runs += 1
+        for entry in row.get("elements") or []:
+            uid, value = entry.get("element_uid"), entry.get("duration_us")
+            if uid in measured and isinstance(value, int):
+                prior.setdefault(uid, []).append(value)
+
+    durations = {}
+    for uid, value in measured.items():
+        window = (prior.get(uid) or []) + [int(value)]
+        if len(window) >= MIN_BASELINE_RUNS:
+            durations[uid] = window[-HISTORY_RUNS_MAX:]
+    if not durations:
+        return None
+    return {"host_class": label, "runs": runs + 1, "durations": durations}
 
 

@@ -207,11 +207,15 @@ The existing machinery (declared columns, sorting, text filter,
 unit-aware thresholds, presets, top-N, copy, per-row Inspect,
 nesting cap) is kept and this guide adds the reading rules:
 
-- **Row cap by default.** A table renders its first N rows (N per
-  table, argued, default 20) with "N of 1,202 — show all" — the
-  page never silently renders four thousand rows again, and never
-  silently hides any either. The strip (§2) is what makes the cap
-  honest: the shape of the whole is visible before the fold.
+- **Row cap by default.** A table renders its first N rows with
+  "N of 1,202 — show all" — the page never silently renders four
+  thousand rows again, and never silently hides any either. The
+  threshold a table has to pass to open bounded is
+  `TABLE_OPENS_BOUNDED_ABOVE` in `bga/viewer/structured.js` and the
+  bound it opens at is `openingBound` in `bga/viewer/tables.js`; both
+  carry the argument for their value, and this sentence does not
+  restate it. The strip (§2) is what makes the cap honest: the shape
+  of the whole is visible before the fold.
 - Numbers right-aligned, text left, units per cell (magnitude
   varies too much per column for header units), `data-raw` always.
 - One tool row per table: filter, presets, top-N, copy — no
@@ -915,6 +919,8 @@ exactly these two reasons.
 library is normally *this behaviour would otherwise be re-implemented
 in every module*. Measured, that premise is false here:
 
+Round 65, when this was written:
+
 ```text
 $ grep -ln 'renderTable\|buildTable' bga/viewer/*.js
 bga/viewer/app.js          the one caller outside the factory
@@ -923,17 +929,25 @@ bga/viewer/structured.js   the factory
 
 $ grep -rn 'el("table"' bga/viewer/*.js
 bga/viewer/structured.js:435    one <table> is constructed in the viewer
+```
 
-viewer modules                21
-modules that construct a table 1
+The two counts are derived rather than restated (`UX-582`): the
+paragraph below had aged by one module before anything read it.
+`test_the_styleguide_names_its_guards.py` re-runs both:
+
+```text
+$ git ls-files -- 'bga/viewer/*.js' | wc -l
+22                                  viewer modules
+$ git grep -l 'el("table"' -- 'bga/viewer/*.js' | wc -l
+1                                   modules that construct a table
 ```
 
 Every table on the page — 31 of them on the round-63 export — is built
 by `buildTable`/`renderTable` in `structured.js`, which already owns the
 declared column specs, declared-not-sampled sorting (§3, `UX-284`), the
 preset menus (`presetColumns`), Top-N and fold-the-middle, the density
-strip, the copy control and `interrogable`'s filter bar. The other
-twenty modules *consume* the factory; none hands one. So a behaviour
+strip, the copy control and `interrogable`'s filter bar. Every other
+module *consumes* the factory; none hands one. So a behaviour
 wanted on all 31 tables is **one change to one function**, and every
 future table inherits it — which is the economics a library is adopted
 for, already owned.
@@ -1284,57 +1298,90 @@ against `data-raw` (the UX-196 discipline); and the conformance
 checklist — shape in the table? sentence written? budget kept? —
 joins the fixing guide for any task that touches the page.
 
-Round 55's five sections were written before their guards, which is the
-state `§2c` was in when it was written and the reason it says so out
-loud. **Round 56 landed all five**, and each is now held by a guard
-named for its claim:
+**The ledger below is derived** (`UX-582`).
+`tests/unit/test_the_styleguide_names_its_guards.py` reads every
+`§N` mention in the files `git ls-files -- 'tests/unit/*.py'` names and
+holds this table to them **both ways**: a row naming a guard that does
+not cite that section reddens, and a guard citing a section this table
+omits reddens. A section with no guard is a row with an empty guard
+cell and a reason — which is the state round 55's five were in when
+they were written, made visible instead of narrated in a paragraph
+that then aged. Before it, §7 said seven sections had no guard and
+four of them had one.
 
-| section | guard | item |
+**The ids a scan cannot attribute.** `§1`–`§7`, `§4a` and `§6a` are
+also headings in [`fixing-guide.md`](../contributing/fixing-guide.md),
+and a bare `§5` belongs to whichever document its sentence is about.
+Those rows say `named` — held to existing and citing, not to being
+the whole set, and a row saying it for an id the scan *can* attribute
+is red. The exclusion is read off the fixing guide's own
+headings, so a renumber there moves it.
+
+| § | guard | note |
 |---|---|---|
-| §1b | `test_the_merge_carries_every_field.py`, `test_the_provenance_names_its_rule.py` | `UX-356`, `UX-357` |
-| §2d | `test_the_vocabulary_has_the_shape.py` | `UX-361` |
-| §3e | `test_the_page_has_a_volume_budget.py` | `UX-360` |
-| §4c | `test_a_control_acts_on_what_it_names.py` | `UX-355` |
-| §6a | — | the borrowings are rules the four above enforce |
+| §1 | `test_the_mapping_is_law.py` | named |
+| §1a | `test_a_command_renders_as_a_command.py`, `test_the_contract_names_its_vocabulary.py`, `test_the_vocabulary_has_the_shape.py` | |
+| §1b | `test_the_merge_carries_every_field.py` | |
+| §1c | `test_the_first_finding_is_an_action.py` | |
+| §1d | | `UX-429`'s `test_a_command_renders_as_a_command.py` holds it and cites §1 and §1a, not §1d |
+| §2 | `test_the_shape_before_the_rows.py`, `test_the_shape_channel_is_built.py` | named |
+| §2a | `test_a_drawing_is_graded.py`, `test_emphasis_is_a_budget.py`, `test_the_page_conforms_to_its_sections.py`, `test_the_report_you_can_attach.py`, `test_the_views_that_draw.py`, `test_the_vocabulary_has_the_shape.py` | |
+| §2b | `test_a_drawing_is_graded.py`, `test_apparatus_in_its_place.py`, `test_the_page_conforms_to_its_sections.py`, `test_the_report_is_read_not_decoded.py`, `test_the_report_you_can_attach.py` | |
+| §2c | | `UX-350`'s `test_the_shape_channel_is_built.py` built the channel and cites §2 |
+| §2d | `test_the_vocabulary_has_the_shape.py` | |
+| §2e | | no guard cites it |
+| §3 | `test_the_tools_scale_with_the_table.py`, `test_one_click_from_investigation.py` | named |
+| §3a | `test_a_value_shows_what_it_is.py`, `test_the_chain_folds_and_clicks_are_counted.py`, `test_the_fold_says_how_deep_it_goes.py`, `test_the_merge_carries_every_field.py`, `test_the_page_conforms_to_its_sections.py`, `test_the_provenance_names_its_rule.py`, `test_the_report_you_can_attach.py`, `test_the_store_section_takes_a_window.py`, `test_why_bga_believes_what_it_believes.py` | |
+| §3b | `test_the_chain_folds_and_clicks_are_counted.py`, `test_the_page_conforms_to_its_sections.py` | |
+| §3c | | no guard cites it; §3e's volume budget is the measured half |
+| §3d | | `UX-349`'s `test_the_tools_scale_with_the_table.py` holds it and cites §3 |
+| §3e | `test_the_page_has_a_volume_budget.py` | |
+| §3f | `test_the_handoff_box_is_measured_served.py` | |
+| §3g | `test_the_ceilings_reach_a_reader.py` | |
+| §4 | `test_emphasis_is_a_budget.py`, `test_the_palette_is_validated.py`, `test_a_drawing_is_graded.py`, `test_apparatus_in_its_place.py`, `test_the_browser_is_the_library.py` | named |
+| §4a | | named; `UX-346`'s `test_a_sentence_lives_on_its_door.py` holds it and cites no section |
+| §4b | | `UX-351`'s `test_the_label_is_for_the_reader.py` holds it and cites no section |
+| §4c | `test_a_command_renders_as_a_command.py`, `test_a_control_acts_on_what_it_names.py` | |
+| §4d | | no guard cites it; `UX-368` and `UX-369` are the filed items |
+| §4e | `test_the_ceilings_reach_a_reader.py`, `test_the_served_handoff_counts_its_edges.py` | |
+| §5 | | named; `test_the_palette_is_validated.py`, named in §5's own prose, cites §4.3 and §4.5 only |
+| §5a | | no guard cites it; the easy one passes forever, below |
+| §6 | | named; `test_the_numbers_have_a_sentence.py` and `test_the_shape_before_the_rows.py` hold the sentence and the `n`; neither cites §6 |
+| §6a | `test_every_control_has_a_resting_appearance.py` | named; §6a's refusal, not a fifth copy of four rules |
+| §6b | `test_one_factory_builds_every_table.py`, `test_the_handoff_rides_the_rail.py` | |
+| §6c | `test_the_browser_is_the_library.py`, `test_the_report_you_can_attach.py` | |
+| §6d | `test_every_control_has_a_resting_appearance.py` | |
+| §7 | `test_emphasis_is_a_budget.py`, `test_the_styleguide_names_its_guards.py` | named |
 
-§6a has no guard of its own and should not: it is the argument the
-other four are drawn from, and a section that restated their clauses
-would be a fifth copy of four numbers. A section here with no filed item
-behind it is the failure mode this paragraph exists to make visible.
+What the rows with no guard were written from, rounds 58 and 69, kept
+because a section written from a measurement is only re-arguable with it:
 
-Round 58's four sections are in the same state round 55's were, and are
-listed here the same way — written from a measurement, each with a filed
-item, none with a guard yet:
+```text
+§1c   "Biggest" on 2.72s against a sibling worth 23.1s          UX-365
+§1d   `bga, blast, layer08/…` in the `Run` column, against
+      `argv.join(" ")` at two other sites                       UX-429
+§3f   70,577 px / 33,835 words at 1,202 elements,
+      budget 34,000 / 12,000                                    UX-367
+§4d   `core.bst` filled into three queries on every page        UX-369
+§5a   21.6% of block characters repeated;
+      sentence-splitting says 0%                                UX-371
+```
 
-| section | measured | item |
-|---|---|---|
-| §1c | "Biggest" on 2.72s against a sibling worth 23.1s | `UX-365` |
-| §3f | 70,577 px / 33,835 words at 1,202 elements, budget 34,000 / 12,000 | `UX-367` |
-| §4d | `core.bst` filled into three queries on every page the tool writes | `UX-369`, `UX-368` |
-| §5a | 21.6% of block characters repeated; sentence-splitting says 0% | `UX-371` |
+Two of them carry a trap worth keeping until they get a guard.
 
-The last row carries its own warning. §5a's measurement contradicts the
-obvious one: counting duplicate *sentences* over `textContent` finds
-nothing on the same page where counting duplicate *blocks* finds a
-fifth. A guard for §5a that measures the easy way will pass forever.
+**§5a's measurement contradicts the obvious one.** Counting duplicate
+*sentences* over `textContent` finds nothing on the same page where
+counting duplicate *blocks* finds a fifth. A guard for §5a that
+measures the easy way will pass forever.
 
-This paragraph found one while it was being written: §7 itself carried
-the same sentence twice, in slightly different words, which is the
-defect §5a is about happening to the document that describes it.
+**§3g's trap runs the other way** — 795,371 B against a 4 MiB bound,
+on 15,650 tracks nothing bounds. The easy guard reads `TRACE_BUDGET_B`
+and checks the trace against it, which is the instrument under
+suspicion grading itself. A guard for §3g must count tracks in an
+emitted trace and must redden on a mutation that raises the track
+count while leaving the bytes alone.
 
-Round 69's three sections are in that same state — written from a
-measurement taken on a two-plane capture of the seeded 1,202-element
-run, each with a filed item, none with a guard yet:
-
-| section | measured | item |
-|---|---|---|
-| §1d | `bga, blast, layer08/…` in the `Run` column, against `argv.join(" ")` at two other sites | `UX-429` |
-| §3g | 795,371 B against a 4 MiB bound, on 15,650 tracks nothing bounds; the handoff box 4.9% of the rail exported and 19.5% served | `UX-430`, `UX-435` |
-| §4e | 3,500 edges in, 19 flows out, `flows_dropped: 0` | `UX-431` 🟢 |
-
-§3g's guard has the same trap §5a's does, from the other direction.
-The easy guard reads `TRACE_BUDGET_B` and checks the trace against it —
-which is the instrument under suspicion, grading itself. A guard for
-§3g must count tracks in an emitted trace and must redden on a mutation
-that raises the track count while leaving the bytes alone.
-
+§6a is the argument the other borrowings are drawn from, so its row
+names the guard that holds its *refusal* rather than one restating
+their clauses — a section that did that would be a fifth copy of four
+numbers.

@@ -114,6 +114,17 @@ replace the reader's error with this tool's own.
 | M2 | the naming step deleted | `test_a_step_names_the_failures_on_the_failure_path` — 1 failed, 5 passed |
 | M3 | the tail exits 1 on an unreadable junit | `test_an_unreadable_junit_does_not_mask_the_real_failure` — 1 failed, 5 passed |
 
+### The fix's own gap, found by the next failure
+
+First landed on the 3.11 job only, because 3.11 was the one job already
+writing `--junitxml`. The very next red job was **3.12**, the coverage
+job, which writes none — so it was still unnameable, and the fix had
+reproduced the defect one job over. All four matrix jobs now write a
+junit and both steps are matrix-wide. Worth recording rather than
+quietly amending: a record that covers one of four runners is not a
+record, and the item's own measurement (four unnameable jobs) had
+already said which four.
+
 ### Deviation from the Required Fix
 
 **One, deliberate.** The fix asked for the xdist worker assignment to

@@ -65,7 +65,7 @@ jobs:
       # to read this runner against its own past and four would be four
       # references to keep true.
       - name: Test
-        run: make test
+        run: make test PYTEST_ARGS="--junitxml=${{ runner.temp }}/junit.xml"
         if: matrix.python-version != '3.11' && matrix.python-version != '3.12'
 
       # UX-524: the touching map, measured rather than grepped. Coverage
@@ -80,7 +80,8 @@ jobs:
       - name: Test (with a coverage-derived touching map)
         run: |
           make test PYTEST_ARGS="--cov=bga --cov=tools \
-            --cov-context=test --cov-report="
+            --cov-context=test --cov-report= \
+            --junitxml=${{ runner.temp }}/junit.xml"
         if: matrix.python-version == '3.12'
 
       - name: Test (with a timing report)
@@ -94,15 +95,15 @@ jobs:
       # first id legible when the log is truncated, which is `UX-491`'s
       # rule applied to the path where the gate does not run.
       - name: The failing tests, named
-        if: failure() && matrix.python-version == '3.11'
+        if: failure()
         run: |
           python tools/dev_junit_tail.py "${{ runner.temp }}/junit.xml"
 
       - name: Keep the junit whatever the suite did
-        if: always() && matrix.python-version == '3.11'
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: junit-3.11
+          name: junit-${{ matrix.python-version }}
           path: ${{ runner.temp }}/junit.xml
           retention-days: 30
           if-no-files-found: warn

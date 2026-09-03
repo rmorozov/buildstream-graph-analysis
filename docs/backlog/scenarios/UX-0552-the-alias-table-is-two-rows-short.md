@@ -1,6 +1,6 @@
 # UX-552: the CLI guide's alias table is two rows short
 
-**Priority:** Low | **Status:** 🟢 Fixed & Verified | **Depends on:** — | **Serves:** a reader looking up what `bga` can run | **Topic:** docs
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** — | **Serves:** a reader looking up what `bga` can run | **Topic:** docs
 
 ## Motivation
 

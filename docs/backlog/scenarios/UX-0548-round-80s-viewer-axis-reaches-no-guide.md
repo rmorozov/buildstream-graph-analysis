@@ -1,6 +1,6 @@
 # UX-548: five mechanisms round 80 shipped, and no guide names one
 
-**Priority:** High | **Status:** 🟢 Fixed & Verified | **Depends on:** — | **Serves:** anyone who reads a guide to find out what `bga view` does | **Topic:** docs
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** — | **Serves:** anyone who reads a guide to find out what `bga view` does | **Topic:** docs
 
 ## Motivation
 

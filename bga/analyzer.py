@@ -2036,9 +2036,16 @@ class BuildEfficiencyAnalyzer:
             explicit_targets = {elem.uid for elem in self.graph.elements if elem.requested_target}
             requested_targets = explicit_targets or None
         
-        # Historical durations (not available in single-run analysis)
-        historical_durations = None
-        
+        # `UX-565`: Part 29's history, from the store this run was
+        # captured into - `None` for a run analysed outside one.
+        # Imported here because `store_aggregate` reaches `compare`,
+        # which imports this module.
+        from .store_aggregate import element_history
+
+        history = element_history(
+            self.loaded_from, compute_element_durations(self.normalized_tasks))
+        historical_durations = history["durations"] if history else None
+
         # Run diagnostics analysis
         diag_result = analyze_diagnostics(
             normalized_tasks=self.normalized_tasks,
@@ -2151,6 +2158,27 @@ class BuildEfficiencyAnalyzer:
                 'fraction': diag_result.fetch_build_overlap.overlap_fraction,
             }
         
+        # Duration variability (Part 29)
+        if diag_result.duration_variability:
+            signals['duration_variability'] = {
+                dv.task_class: {
+                    'mean_us': dv.mean_us,
+                    # `p50_us` is `median_us` computed a second way and
+                    # equal for every n, so it is not published twice.
+                    'median_us': dv.median_us,
+                    'p75_us': dv.p75_us,
+                    'p95_us': dv.p95_us,
+                    'coefficient_of_variation': dv.coefficient_of_variation,
+                    'samples': dv.sample_count,
+                    'high_variability': dv.high_variability_warning,
+                    # Which machine's runs these are, on every row: a
+                    # sample count with no class is a figure a reader
+                    # cannot check against `UX-186`'s refusal.
+                    'host_class': history['host_class'],
+                }
+                for dv in diag_result.duration_variability
+            }
+
         # Leaf analysis (Part 24)
         if diag_result.leaf_analysis:
             # UX-288: `leaves` is gone. It was exactly `leaves_detail`'s

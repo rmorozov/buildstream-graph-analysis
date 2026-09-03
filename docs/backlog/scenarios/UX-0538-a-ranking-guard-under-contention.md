@@ -57,6 +57,8 @@ must red on a quiet machine, not only on a loaded one.
 
 ## Outcome
 
+**Premise:** held — the ranking does not survive load: `core.bst` led 1 of 1 quiet runs and 0 of 12 loaded ones.
+
 **Round 80, 2026-09-02.** 4-core box, `examples/06` cold, `analyze` on
 the result, in two load shapes.
 
@@ -83,13 +85,12 @@ load  first in the horizon   core    best (element)      core leads
   8   core.bst              21.1    27.05 codegen.bst    no
 ```
 
-**So `core.bst` led 1 of 1 quiet runs and 0 of 12 loaded ones.** At
-four workers `codegen.bst` takes the top saving by about **2x** - an
-outright reversal, not a tie `UX-489`'s `leads` absorbs. So a floor is
-not available: the leader changes, and no number separates "the fixture
-lost its shape" from "the box was busy". One 8-way run dropped
-`core.bst` out of the horizon **entirely**, falsifying even the weaker
-claim that it is named.
+**So `core.bst` led 1 of 1 quiet runs and 0 of 12 loaded ones.** At four
+workers `codegen.bst` takes the top saving by about **2x** - an outright
+reversal, not a tie `UX-489`'s `leads` absorbs. So a floor is not available:
+the leader changes, and no number separates "the fixture lost its shape"
+from "the box was busy". One 8-way run dropped `core.bst` out of the horizon
+**entirely**, falsifying even the weaker claim that it is named.
 
 **The close: the second option.** The ranking clause reads
 `tests/fixtures/macro_micro/run` - the same build, recorded - so its
@@ -126,11 +127,10 @@ rather than `leads`, on a quiet machine.
 Identical ranking all three: `core.bst` 12.05s, `codegen.bst` 7.0s,
 margin 1.7214. Whole file alone: `23 passed in 144.47s`.
 
-**A second instance, not fixed.**
-`test_the_never_read_edges_are_the_declared_chain` here went red once
-under `make test-touching` at `-n auto` (`('lib-b.bst','lib-c.bst')`
-missing from the restructuring finding), green alone, at base under
-`-n 4`, and on the next run. Needs its own row.
+**A second instance, not fixed.** `test_the_never_read_edges_are_the_declared_chain`
+here went red once under `make test-touching` at `-n auto`
+(`('lib-b.bst','lib-c.bst')` missing from the restructuring finding), green alone,
+at base under `-n 4`, and on the next run. Needs its own row.
 
 **Deviation:** the 8-worker reading is one capture under 8-way CPU
 contention, not 8 concurrent captures - those do not complete here, for

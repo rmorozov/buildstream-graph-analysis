@@ -43,6 +43,8 @@ by the census, with a mutation that plants one in each form.
 
 ## Outcome (round 81, 2026-09-02) — 🟢 Done
 
+**Premise:** held, and understated — the census matched not four harnesses but zero files, in either form.
+
 ### The gap, measured — the census was not narrow, it was dead
 
 The item says a harness that assigns before returning is invisible.

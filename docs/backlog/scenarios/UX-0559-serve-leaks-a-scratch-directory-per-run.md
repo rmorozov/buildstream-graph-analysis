@@ -69,6 +69,8 @@ after=$(ls -d /tmp/bga-serve-* 2>/dev/null | wc -l)
 
 ## Outcome (round 81, 2026-09-03) — 🟢 Done
 
+**Premise:** held — one scratch directory per served run, `before=102 after=104 leaked=2`.
+
 ### The gap, measured
 
 Two servers, each asked for its timeline, each closed — counting

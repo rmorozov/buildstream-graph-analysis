@@ -133,6 +133,63 @@ def compute_occupancy_segments(
     return segments
 
 
+def compute_capacity_excursions(
+    tasks: List[NormalizedTask],
+    declared_capacities: Dict[str, int],
+) -> List[dict]:
+    """
+    I6 (Part 34): where observed occupancy exceeded a declared capacity.
+
+    Only resources the run actually declared a capacity for are read - a
+    default filled in for a resource nobody declared is a guess, and a
+    gate on a guess reports the guess rather than the run.
+
+    Args:
+        tasks: List of normalized tasks
+        declared_capacities: {resource name: C_p} as the capture declared
+            them, never bga/floors/capacity.py's defaulted view
+
+    Returns:
+        One dict per violating resource, ordered by resource name:
+        resource, capacity, peak_occupancy, first_start_us, first_end_us,
+        over_capacity_us.
+    """
+    if not declared_capacities or not tasks:
+        return []
+
+    excursions: Dict[str, dict] = {}
+    active: Dict[Resource, int] = {}
+    prev_timestamp: Optional[int] = None
+
+    for event in build_sweep_events(tasks):
+        if prev_timestamp is not None and prev_timestamp < event.timestamp:
+            for resource, count in active.items():
+                capacity = declared_capacities.get(resource.value)
+                if capacity is None or count <= capacity:
+                    continue
+                record = excursions.setdefault(resource.value, {
+                    'resource': resource.value,
+                    'capacity': capacity,
+                    'peak_occupancy': 0,
+                    'first_start_us': prev_timestamp,
+                    'first_end_us': event.timestamp,
+                    'over_capacity_us': 0,
+                })
+                record['peak_occupancy'] = max(record['peak_occupancy'], count)
+                record['over_capacity_us'] += event.timestamp - prev_timestamp
+
+        if event.task:
+            step = 1 if event.event_type == EventType.START else -1
+            for resource in event.task.resources:
+                active[resource] = active.get(resource, 0) + step
+                if active[resource] <= 0:
+                    del active[resource]
+
+        prev_timestamp = event.timestamp
+
+    return [excursions[name] for name in sorted(excursions)]
+
+
 def compute_task_horizon(tasks: List[NormalizedTask]) -> Tuple[int, int, int]:
     """
     Compute task horizon H (Part 13).

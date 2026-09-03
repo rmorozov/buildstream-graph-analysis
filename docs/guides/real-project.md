@@ -678,11 +678,8 @@ Neither plane alone tells you what to do. Plane 1 knows `cmake-stage1` is
 43% of your build; Plane 2 knows it is 81% `cc1plus` with a 1.9 GB peak.
 The join says both, about the same element, ranked by whole-build impact:
 
-```bash
-bga correlate /tmp/run /tmp/plane2.json
-```
-
 ```text
+$ bga correlate /tmp/run /tmp/plane2.json
 PARTIAL ATTRIBUTION - the rows below are correct for the elements they name,
 and say nothing about the rest:
   109873 of 127627 traced processes (86.1%) are attributed to a named element;
@@ -712,6 +709,17 @@ What to do next (ranked by Plane 1 impact):
       already compute-bound at 1.61 cores busy, so there is nothing to gain from its
       parallelism; shortening it means less work
 ```
+
+*Kept, not current* — capture run
+[`32064333551`](https://github.com/rmorozov/buildstream-graph-analysis/actions/runs/32064333551),
+2026-08-17, `captures/fdsdk/953683fb-incremental-b4j4-32064333551`, the
+same 3614-second freedesktop-sdk build the blocks above come from, which
+neither a clone nor CI can re-run. Cuts: the `====` banner and the
+`Run:`/`Instance:` lines above `PARTIAL ATTRIBUTION`; the rows after
+`components/openssl.bst`; the closing note about the join key and its
+banner. A fresh run on a capture taken today adds two sections this one
+has no fields for — the `Memory envelope:` line quoted below, and the
+`Restructuring opportunity:` finding described under *Reading the join*.
 
 Two elements share one block because they are one story (`UX-89`):
 grouping happens when the findings match, and the figures collapse to
@@ -815,11 +823,14 @@ name** rather than projected, and the refusal still exits 0 — it is the
 answer, not a failure:
 
 ```text
-$ bga whatif @last --element nope.bst
+$ bga whatif tests/fixtures/macro_micro/run --element nope.bst
 What if these were fixed: nope.bst
-  Refused: Not in this run's graph: nope.bst. A subset quietly missing a
-  member projects a different question from the one asked.
+  Refused: Not in this run's graph: nope.bst. A subset quietly missing a member projects a different question from the one asked.
 ```
+
+(Against the committed fixture rather than `@last`, so this block is a
+run anyone can repeat; with your own capture the command is
+`bga whatif @last --element nope.bst`.)
 
 The reasoning behind the bound is in
 [`architecture.md`](../design/architecture.md); the page has the same
@@ -1068,11 +1079,17 @@ of your own:
 
 ```text
 $ bga whatif tests/fixtures/macro_micro/run --element core.bst
+What if these were fixed: core.bst
   Makespan 43.200s -> 31.150s (saves 12.050s)
+[... elided: the upper-bound caveat, quoted under Step 7 ...]
 $ bga whatif tests/fixtures/macro_micro/run --element codegen.bst
+What if these were fixed: codegen.bst
   Makespan 43.200s -> 43.200s (saves 0.000s)
+[... elided: the upper-bound caveat, quoted under Step 7 ...]
 $ bga whatif tests/fixtures/macro_micro/run --element core.bst --element codegen.bst
+What if these were fixed: core.bst, codegen.bst
   Makespan 43.200s -> 24.150s (saves 19.050s)
+[... elided: the non-additivity note and the upper-bound caveat ...]
 ```
 
 The capture itself is not in the repository and never will be —

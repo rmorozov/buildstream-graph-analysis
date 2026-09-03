@@ -51,6 +51,8 @@ that wrote it, or names no figure at all.
 
 ## Outcome (round 81, 2026-09-03) — 🟢 Done
 
+**Premise:** falsified — re-measuring read 3m45s, faster than the figure it was filed to correct; no single wall-clock figure is true.
+
 ### The gap, measured
 
 ```text
@@ -93,11 +95,10 @@ round 81   3m45s   6,256 passed,  29 skipped, 226s   quiet
   ca825c3  3m32s   6,097 passed, 124 skipped, 212s   re-measured here
 ```
 
-A 2.5x spread with the test count rising monotonically. The wall clock
-is the machine's contention, not the suite's — round 80 read 8m52s
-while running four agent tracks, this round 3m45s with none. A *dated*
-figure would mislead exactly as much as an undated one: it dates the
-afternoon.
+A 2.5x spread with the test count rising monotonically. The wall clock is
+the machine's contention, not the suite's — round 80 read 8m52s while
+running four agent tracks, this round 3m45s with none. A *dated* figure
+would mislead exactly as much as an undated one: it dates the afternoon.
 
 So `CLAUDE.md` names no figure and says the clock moves >2x with the
 machine; the guide carries the series and the falsification; the
@@ -120,11 +121,10 @@ carries is that 8m52s does not reproduce.
 ### Deviation from the Required Fix
 
 **One, and it inverts the row.** The Required Fix said "re-measure and
-restate, dated", with `CLAUDE.md` either carrying its round or pointing
-at the guide. It now points at the guide — but the guide does not carry
-*a* figure, it carries the series and the finding that no single figure
-is true. Restating one dated number would have re-filed this row in two
-rounds' time.
+restate, dated", with `CLAUDE.md` either carrying its round or pointing at
+the guide. It now points at the guide — but the guide does not carry *a*
+figure, it carries the series and the finding that no single figure is true.
+Restating one dated number would have re-filed this row in two rounds' time.
 
 The skip-count clause is kept: 81 → 29 is `UX-449`'s census retiring
 skips, and both numbers travel with their wall clock in the series

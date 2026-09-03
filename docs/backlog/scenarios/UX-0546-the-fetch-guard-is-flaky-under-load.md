@@ -47,6 +47,8 @@ with the load average pasted.
 
 ## Outcome
 
+**Premise:** falsified — neither candidate is the shared thing: the race is the counter's write against the served last byte.
+
 **Round 81, 2026-09-03.** 4-core box.
 
 **Neither of the two candidates is the shared thing.** A plugin wrapping

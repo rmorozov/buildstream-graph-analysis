@@ -1119,6 +1119,9 @@ ANALYZE_RUN_DEPENDENT_KEYS = (
     "cache", "element_duration_distribution", "blast_radius_distribution",
     "fetch_build_overlap", "consolidation_candidates",
     "serialization_point_risks",
+    # `UX-565`: Part 29 needs a store of earlier runs of this run's host
+    # class, which a run analysed outside one does not have.
+    "duration_variability",
 )
 
 _COMPARE_REQUIRED = {
@@ -2114,6 +2117,50 @@ _SIGNALS_TABLES = {
             }},
         "description": "How reliably each element binds, rather "
                        "than whether it happened to today."},
+    "duration_variability": {
+        "additionalProperties": {
+            "properties": {
+                "mean_us": {
+                    QUANTITY: "duration_us",
+                    "description": "The average duration of this "
+                                   "element's runs on this host "
+                                   "class."},
+                "median_us": {
+                    QUANTITY: "duration_us",
+                    "description": "The middle duration of the "
+                                   "same series."},
+                "p75_us": {
+                    QUANTITY: "duration_us",
+                    "description": "Three runs in four were at "
+                                   "least this fast."},
+                "p95_us": {
+                    QUANTITY: "duration_us",
+                    "description": "The slow end of the same "
+                                   "series."},
+                "coefficient_of_variation": {
+                    QUANTITY: "ratio",
+                    "description": "Spread over mean. High means "
+                                   "a ranking derived from one "
+                                   "run's durations is less "
+                                   "trustworthy (Part 29)."},
+                "samples": {
+                    QUANTITY: "count",
+                    "description": "Runs of this host class the "
+                                   "store measured this element "
+                                   "in, this one included."},
+                "high_variability": {
+                    "description": "Whether the spread crosses "
+                                   "the threshold at which the "
+                                   "ranking warning applies."},
+                "host_class": {
+                    "description": "The machine these samples "
+                                   "were measured on. One class "
+                                   "only - durations are not "
+                                   "scaled across hosts."},
+            }},
+        "description": "How steady each element's duration is across "
+                       "this store's earlier runs on the same "
+                       "machine."},
     "blast_radius": {
         "additionalProperties": {
             "properties": {
@@ -3833,8 +3880,15 @@ ELEMENT_PLACEMENT_RULE = (
     "`blast_radius`, which is `elements.blast_radius[<uid>]"
     ".downstream_count`, and `on_critical_path`, which is "
     "`elements.criticality_probability[<uid>].observed_critical`.")
-ELEMENT_POPULATION = ELEMENT_KEYED + ("zero_slack_share", "top_blast_radius",
-                                      "blast_radius_ranked_by")
+# `UX-565`: element-keyed like the six above, and conditional unlike
+# them. Part 29 needs a store of earlier runs of this run's host class,
+# which a single capture does not have - so it is kept out of
+# `ELEMENT_KEYED`, whose members are the maps *every* run carries and
+# whose guards read it that way.
+ELEMENT_KEYED_OPTIONAL = ("duration_variability",)
+
+ELEMENT_POPULATION = ELEMENT_KEYED + ELEMENT_KEYED_OPTIONAL + (
+    "zero_slack_share", "top_blast_radius", "blast_radius_ranked_by")
 
 _ELEMENTS = {
     QUESTION: 'Which element should I look at?',
@@ -3845,7 +3899,8 @@ _ELEMENTS = {
                    "row per element; the views below name the columns "
                    "that answer one question.",
     "properties": {
-        **{name: _SIGNALS_TABLES[name] for name in ELEMENT_KEYED
+        **{name: _SIGNALS_TABLES[name]
+           for name in ELEMENT_KEYED + ELEMENT_KEYED_OPTIONAL
            if name in _SIGNALS_TABLES},
         "zero_slack_share": _SIGNALS_TABLES["zero_slack_share"],
         # `UX-344`: the two the namespace never declared. A member with

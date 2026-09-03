@@ -21,9 +21,10 @@ Examples:
 import argparse
 import json
 import logging
+import os
 import sys
 from pathlib import Path
-from typing import List, Optional
+from typing import List, NoReturn, Optional
 
 from . import __version__, contracts, schemas
 from . import plane2 as plane2_shape
@@ -39,7 +40,16 @@ from .compare import (
     efficiency_regression_exceeds_threshold, efficiency_signal_status,
     regression_exceeds_threshold,
 )
-from .exceptions import AnalysisError, IngestionError
+from .exceptions import (
+    EXIT_EFFICIENCY_REGRESSION,
+    EXIT_GENERAL,
+    EXIT_MISMATCHED_RUNS,
+    EXIT_OK,
+    EXIT_REGRESSION,
+    EXIT_SIGNAL_UNAVAILABLE,
+    AnalysisError,
+    IngestionError,
+)
 from .ingest.loader import load_historical_runs
 from .logging_config import configure_logging
 from .units import mb_to_bytes
@@ -618,6 +628,10 @@ def _execute_and_write(args: argparse.Namespace, produce_output) -> int:
 
         return 0
 
+    except BrokenPipeError:
+        # UX-575: the reader closed the pipe; main() answers that, not the
+        # generic handler below, which would call it an unexpected error.
+        raise
     except FileNotFoundError as e:
         # A required input file (run-context.json/graph.json/trace.json) is
         # missing from an otherwise-existing run directory - this is a
@@ -656,13 +670,13 @@ def _execute_and_write(args: argparse.Namespace, produce_output) -> int:
 # *analyzed build* regressed (UX-03). A CI system needs to tell these
 # apart to decide whether to re-run/investigate bga itself vs. block a
 # PR for a real regression.
-EXIT_CODE_REGRESSION = 4
+EXIT_CODE_REGRESSION = EXIT_REGRESSION
 # UX-39: deliberately distinct from EXIT_CODE_REGRESSION. "The build got
 # slower" and "the build got less efficient" are different verdicts and
 # often different teams' problems - a pipeline must be able to warn on
 # the first and fail on the second, which one shared exit code makes
 # impossible.
-EXIT_CODE_EFFICIENCY_REGRESSION = 5
+EXIT_CODE_EFFICIENCY_REGRESSION = EXIT_EFFICIENCY_REGRESSION
 # UX-78: "these two runs are not comparable" is not a verdict about the
 # build, so it must not share an exit code with one. README and the
 # real-project guide both promised a refusal here while the code only
@@ -670,7 +684,7 @@ EXIT_CODE_EFFICIENCY_REGRESSION = 5
 # `Verdict: REGRESSED (+105668.8%)` and exit 4 under the gate, which in
 # CI reads as "your build got slower" when the truth is "your job is
 # comparing the wrong things".
-EXIT_CODE_MISMATCHED_RUNS = 6
+EXIT_CODE_MISMATCHED_RUNS = EXIT_MISMATCHED_RUNS
 # UX-87: "the gate you asked for could not run" is not a verdict about
 # the build either. Reusing 4 would put it in the same bucket as "your
 # build got slower", which is the mis-triage `UX-88` already records
@@ -681,7 +695,7 @@ EXIT_CODE_MISMATCHED_RUNS = 6
 #
 # `--fail-on-low-confidence` (UX-40) keeps returning 4 despite being the
 # same shape of flag - it shipped that way and a pipeline may key on it.
-EXIT_CODE_SIGNAL_UNAVAILABLE = 7
+EXIT_CODE_SIGNAL_UNAVAILABLE = EXIT_SIGNAL_UNAVAILABLE
 
 
 
@@ -951,6 +965,9 @@ def _execute_compare_and_write(args: argparse.Namespace) -> int:
 
         return _compare_exit_code(args, comparison)
 
+    except BrokenPipeError:
+        # UX-575: as above - the boundary owns this one.
+        raise
     except FileNotFoundError as e:
         logger.error("Required input file not found: %s", e)
         print(f"Error: Required input file not found - {e}", file=sys.stderr)
@@ -1460,7 +1477,16 @@ def _add_common_arguments(
     )
 
 
-class _CompactSubParser(argparse.ArgumentParser):
+class _UsageErrorParser(argparse.ArgumentParser):
+    """A parser whose usage errors exit `EXIT_GENERAL`, because argparse's
+    own 2 is the code the table gives to ingestion failure (`UX-574`)."""
+
+    def error(self, message: str) -> NoReturn:
+        self.print_usage(sys.stderr)
+        self.exit(EXIT_GENERAL, f"{self.prog}: error: {message}\n")
+
+
+class _CompactSubParser(_UsageErrorParser):
     """A subparser that inherits the compact help layout without every
     `add_parser` call having to remember to pass it (`UX-158`)."""
 
@@ -1582,7 +1608,7 @@ def create_parser() -> argparse.ArgumentParser:
     Returns:
         Configured ArgumentParser instance
     """
-    parser = argparse.ArgumentParser(
+    parser = _UsageErrorParser(
         prog='bga',
         description='BuildStream Build Efficiency Analyzer - Analyze build traces for efficiency metrics',
         epilog=(
@@ -2176,16 +2202,49 @@ def _command_emitting(contract: str) -> Optional[str]:
     return None
 
 
+def _stop_writing_to_stdout() -> None:
+    """Point stdout's descriptor at /dev/null after a broken pipe.
+
+    UX-575: catching the error is not the whole handler - every later
+    write raises again, including the interpreter's own flush at exit,
+    which prints "Exception ignored" to a stderr the contract says is
+    untouched. A no-op when stdout has no descriptor (a StringIO under
+    test).
+    """
+    try:
+        fd = sys.stdout.fileno()
+    except (AttributeError, ValueError, OSError):
+        return
+    devnull = os.open(os.devnull, os.O_WRONLY)
+    os.dup2(devnull, fd)
+    os.close(devnull)
+
+
 def main(argv: Optional[list[str]] = None) -> int:
+    """Entry point for the bga CLI; returns the exit code.
+
+    UX-575: the one place a broken stdout pipe is answered - the reader
+    chose to stop reading, so that is exit 0 and a silent stderr, not a
+    traceback. The explicit flush is the handler's other half: stdout is
+    block-buffered on a pipe, so a short output raises nothing until the
+    interpreter flushes at exit, which is past every `except` in this
+    process and costs exit 120 plus "Exception ignored" on stderr.
     """
-    Main entry point for the bga CLI.
-    
-    Args:
-        argv: Command-line arguments (defaults to sys.argv[1:])
-        
-    Returns:
-        Exit code
-    """
+    try:
+        try:
+            code = _run(argv)
+        finally:
+            # In the `finally` because argparse's own SystemExit (--help,
+            # --version) leaves by the same door and owes the same flush.
+            sys.stdout.flush()
+        return code
+    except BrokenPipeError:
+        _stop_writing_to_stdout()
+        return EXIT_OK
+
+
+def _run(argv: Optional[list[str]] = None) -> int:
+    """The CLI body main() wraps: completion, --schema, tools, argparse."""
     # UX-67: one entry point for the whole workflow. Checked before
     # argparse, because a tool's own arguments are its business - `bga
     # extract . build.log run/ --format wrapped` must reach

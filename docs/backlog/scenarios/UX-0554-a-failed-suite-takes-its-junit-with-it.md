@@ -60,10 +60,11 @@ the junit naming the failed test, and the job's log tail names it too.
 
 ## Outcome (round 81, 2026-09-03) — 🟢 Done
 
-Taken in-round rather than deferred, because it was blocking the round:
-**four red CI jobs on this branch could not be named**, and the fifth
-only could because its assertion happened to land inside the log
-window the API returns.
+**Premise:** held — the junit is uploaded nowhere, and four red jobs on this branch could not be named.
+
+Taken in-round rather than deferred, because it was blocking the round: **four
+red CI jobs on this branch could not be named**, and the fifth only could
+because its assertion happened to land inside the log window the API returns.
 
 ### The gap, measured
 
@@ -74,10 +75,9 @@ $ grep -A4 "upload-artifact@v4" .github/workflows/ci.yml | grep name:
           name: bst-examples-run-data
 ```
 
-`--junitxml` is written at `:87` and read at `:136`/`:176`; those steps
-carry `if:` conditions that only hold when the suite passed. On the run
-where the junit matters it went to the runner's grave, and all the log
-tail carried was:
+`--junitxml` is written at `:87` and read at `:136`/`:176`; those steps carry
+`if:` conditions that only hold when the suite passed. On the run where the
+junit matters it went to the runner's grave, and all the log tail carried was:
 
 ```text
 the drift gate's line, repeated for a log-tail reader:

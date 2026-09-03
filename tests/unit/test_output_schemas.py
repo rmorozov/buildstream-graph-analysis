@@ -12,6 +12,8 @@ against it is documentation, and documentation drifts - which is the
 whole finding (`runs_outside_band` → `edges_outside_band` was renamed
 in a published payload one round before this item was filed, with
 nothing to signal it).
+
+holds: rules.md#a-renamed-or-removed-published-key-bumps-its-schema-version
 """
 import json
 import os

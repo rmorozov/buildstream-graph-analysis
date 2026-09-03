@@ -1783,6 +1783,57 @@ def _store_paths(run_dir: str):
     return os.sep.join(parts[:-4]) or '.', True
 
 
+def _store_run_modes(project: str) -> List[tuple]:
+    """`(stamp, run_mode)` per run in the store, oldest first.
+
+    `UX-577`: whether `bga compare @prev @last` is a command or a
+    refusal is a fact about the store, not about this run, so it is
+    read here rather than baked into the run document. One
+    `run-context.json` per snapshot - the read `UX-296` chose for a
+    band sample, no trace parse - and an unreadable store yields `[]`.
+    """
+    from . import run_store
+    from .ingest.loader import load_run_context
+
+    modes: List[tuple] = []
+    try:
+        snapshots = run_store.list_runs(project)
+    except OSError:
+        return []
+    for snapshot in snapshots:
+        path = os.path.join(snapshot, 'run', 'run-context.json')
+        if not os.path.isfile(path):
+            path = os.path.join(snapshot, 'run', 'run_context.json')
+        try:
+            context = load_run_context(path)
+        except (OSError, ValueError, KeyError):
+            continue
+        modes.append((os.path.basename(snapshot), context.run_mode))
+    return modes
+
+
+def _pairable_baseline(project: str):
+    """`(prev_mode, last_mode, stamp)` when `@prev @last` would be
+    refused, else `None`.
+
+    `stamp` is the newest run older than `@last` that shares its mode,
+    or `None` when the store holds no such run. `unknown` on either
+    side is not a mismatch, for `_check_run_modes`' reason: it must not
+    be guessed into either bucket.
+    """
+    modes = _store_run_modes(project)
+    if len(modes) < 2:
+        return None
+    (_, prev_mode), (_, last_mode) = modes[-2], modes[-1]
+    if prev_mode in (None, 'unknown') or last_mode in (None, 'unknown'):
+        return None
+    if prev_mode == last_mode:
+        return None
+    for stamp, mode in reversed(modes[:-1]):
+        if mode == last_mode:
+            return prev_mode, last_mode, stamp
+    return prev_mode, last_mode, None
+
 
 def _longest_on_the_path(result) -> Optional[dict]:
     """The critical path's own biggest entry, or `None`.
@@ -1924,13 +1975,35 @@ def compute_next_steps(result: AnalysisResult,
         # `unrecognized arguments`. Aliases resolve against the working
         # directory, so the project belongs in the sentence, not in a
         # flag the parser does not have.
-        steps.append({
-            'id': 'compare-with-the-run-before',
-            'reason': ("Whether it helped, judged against this store's "
-                       f"noise - run it in {project}."),
-            'argv': ['bga', 'compare', '@prev', '@last'],
-            'follows_from': 'run_instance.run_dir',
-        })
+        #
+        # UX-577: and it is only a command where the store's last two
+        # runs share a run_mode - `UX-78` refuses a full baseline
+        # against an incremental candidate with exit 6, so advising the
+        # pair unconditionally advises a refusal.
+        refused = _pairable_baseline(project)
+        if refused is None:
+            steps.append({
+                'id': 'compare-with-the-run-before',
+                'reason': ("Whether it helped, judged against this store's "
+                           f"noise - run it in {project}."),
+                'argv': ['bga', 'compare', '@prev', '@last'],
+                'follows_from': 'run_instance.run_dir',
+            })
+        else:
+            prev_mode, last_mode, stamp = refused
+            # No run of the candidate's own mode means no pair exists;
+            # `measure-again` above is the step that makes one.
+            if stamp:
+                steps.append({
+                    'id': 'compare-with-a-run-that-pairs',
+                    'reason': (
+                        f"@prev is a {prev_mode} run and @last a {last_mode} "
+                        f"one, which compare refuses - {stamp} is the newest "
+                        f"{last_mode} run and pairs with it. Run it in "
+                        f"{project}."),
+                    'argv': ['bga', 'compare', f'@{stamp}', '@last'],
+                    'follows_from': 'confidence.run_mode',
+                })
     return steps
 
 

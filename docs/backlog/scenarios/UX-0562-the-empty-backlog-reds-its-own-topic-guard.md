@@ -53,6 +53,8 @@ mutated to match nothing.
 
 ## Outcome (round 81, 2026-09-03) — 🟢 Done
 
+**Premise:** held — the empty open table reds `test_every_open_row_carries_a_topic_from_the_closed_set`.
+
 **The gap, measured.** Round 81's final `make test`, on the clean tree
 at `f032300` — 0 open rows for the first time in the backlog's life:
 

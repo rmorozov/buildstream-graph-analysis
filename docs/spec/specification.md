@@ -1711,9 +1711,9 @@ run directory for nine rounds while appearing in no registry, no guard
 and no document.
 
 **The versioning rule**: a field *rename or removal* bumps the version;
-an *addition* does not. So `additionalProperties` is true in all three,
-and a consumer that pins `analyze/v5` keeps working while the tool
-grows.
+an *addition* does not. So `additionalProperties` is true in all eight
+schemas `bga/schemas.py` defines, and a consumer that pins `analyze/v5`
+keeps working while the tool grows.
 
 The schemas live in one place, `bga/schemas.py`, which the renderers
 are built against and `--schema` prints from - they cannot be a
@@ -1784,6 +1784,127 @@ are one declaration rather than two.
 `tests/unit/test_the_capture_directory_is_a_contract.py` walks a real
 capture and holds the three equal: every path on disk is named here,
 every `required` path is present, and this table matches the module.
+
+---
+
+## 32.7 Decisions the registry records
+
+The Parts outside this one are read-only for a round, so a Part the
+tool never built, a state the code cannot reach, or a figure that has
+dated cannot be corrected where it is written. It is decided here
+instead, and a reader meets the answer beside the claim rather than
+filing it a second time. Every row below is held by a guard.
+
+### 32.7.1 Part 8.2's `ambiguous` holder state is retired (`UX-563`)
+
+Part 8.2 and Part 42's "Holder set + `UNKNOWN`" row require an
+unidentifiable resource holder to be reported as `blocking_tasks =
+UNKNOWN, ambiguous = true`. **The occupancy-based holder model has no
+such outcome.** `classify_resource_wait` reports a microsecond as
+resource wait only where occupancy reached capacity, and capacity is at
+least 1, so at least one real overlapping task is identified for every
+microsecond it reports - "saturated but unexplained" is a state the old
+time-overlap model had and this one cannot enter.
+
+| what | where | value |
+|---|---|---|
+| the holder record's flag | `bga/attribution/blame_chain.py` | `'ambiguous': False`, the only value any code path writes |
+| Part 33.4's `ambiguous_wait_time` term | `bga/validation/invariants.py` | a constant 0, and the attribution score is the other two terms |
+
+So the hard rule stands unchanged - **never invent a holder** - but it
+is enforced by the model rather than by a flag: there is no case in
+which a plausible-looking blocker could be substituted, because a
+blocker is only ever named from an occupancy count that already
+contains it. `UNKNOWN` remains reserved; nothing writes it.
+
+Reinstating the state would be a change to the holder model, not to the
+flag. `tests/unit/test_a_retired_state_is_declared.py` holds the three:
+no code path writes `True`, the confidence term is 0 on a real run, and
+this note says so.
+
+---
+
+### 32.7.2 Parts 23 and 27 are declined, and 32.4's `signals` block is mapped (`UX-564`)
+
+Part 23 (wait-to-execution ranking) and Part 27 (critical-path resource
+mix) are **declined**. Nothing in the tool computes either quantity -
+no module, no key, no test - and no row recorded the decision, so a
+spec review found them a second time. They stay in the spec as design
+intent and are not published; `largest_wait_share` in
+`bga/findings.py` is a different quantity and is not Part 23.
+
+32.4's `signals` object is the *declared* shape, and the analyzer's own
+key set is not it. This table is the mapping, one row per declared key:
+
+| 32.4 `signals` key | Part | published as |
+|---|---|---|
+| `wall_clock_share` | 20 | `signals['wall_clock_share_us']` - renamed by `UX-345`, because it is microseconds and the page put a `share` through the percent branch |
+| `leaf_critical_tasks` | 24 | `signals['leaf_analysis']` |
+| `wait_to_execution_top` | 23 | declined |
+| `criticality_probability` | 26 | `signals['criticality_probability']` |
+| `blast_radius` | 25 | `signals['blast_radius']` |
+| `critical_path_resource_mix` | 27 | declined |
+| `ready_queue` | 21 | `signals['ready_queue']` |
+| `concurrency` | 22 | `occupancy['average_concurrency']` and `occupancy['peak_concurrency']` - a sibling of `signals`, not a member |
+| `fetch_build_overlap` | 28 | `signals['fetch_build_overlap']`, conditional on the run having an overlap to report |
+| `duration_variability` | 29 | `signals['duration_variability']`, conditional on the run being a snapshot in a store holding three or more finished runs of its own host class (`UX-565`); the element card draws it |
+
+A key here is *published* when the analyzer writes it under `signals`;
+the tool writes several more that 32.4 never declared, which is an
+addition and does not bump anything (the versioning rule above).
+`tests/unit/test_the_declared_signals_are_the_published_ones.py` reads
+this table against 32.4's block and against the key set a real run
+produces, so a declared key that quietly stops being published, or a
+row that names a key nothing writes, reddens rather than ages.
+
+---
+
+### 32.7.3 Parts 37.1, 38, 39 and 40 are advisory, and superseded by the tree (`UX-566`)
+
+Each of these Parts opens with *Recommended* or plans work now done,
+and the tool was built differently. The body stays unedited; this says
+which document a reader should trust instead.
+
+| Part | what it recommends | what is current |
+|---|---|---|
+| 37.1 | `bga floors RUN --cold` and `--allow-partial-cold` | `bga floors --help`. `--cold` needs `--history-dir PATH` (repeatable, Part 15.2) to report anything but `unavailable`, and 37.1 never names that flag |
+| 38 | eleven upper-case report chapters | what `bga analyze` prints, from `bga/report/text.py` - nine chapters with different names, one of them (`CPU Utilisation`) conditional. `docs/guides/what-the-viewer-answers.md` is the page's equivalent |
+| 39 | a `bga/` module tree | the tree, and fixing guide §6's context map over it, held equal by `tests/unit/test_the_context_map_is_the_tree.py`. Part 39 names forty modules; thirteen exist. `bga/structural/` is a package it never mentions |
+| 40 | a milestone plan, M0 onward | `docs/backlog/scenarios/README.md` and `closed.md` - the open and closed rows, whose counts are derived |
+
+Part 38's chapter names, Part 39's module names and Part 40's milestone
+ids are therefore **not identifiers to grep for**: a name that appears
+in one of them and nowhere else is archaeology, not a gap.
+
+The "`additionalProperties` is true in all three" sentence in 32.5 was
+the same shape - a count from when three outputs were published - but
+it is inside Part 32, so it was corrected rather than listed here.
+`tests/unit/test_a_counted_figure_is_derived.py` derives it from the
+schemas, and
+`tests/unit/test_the_spec_says_which_parts_are_advisory.py` holds this
+table, including Part 39's two figures, against the tree.
+
+---
+
+### 32.7.4 Part 34's I7 is I4 as a ratio, not a second quantity (`UX-567`)
+
+I7 requires `blame_chain_coverage == 1.0`. That quantity is computed in
+`bga/validation/invariants.py` as the six task-horizon attribution
+categories summed and divided by the task horizon H - **I4's own
+numerator over I4's own denominator**. For `H > 0` the two are one
+statement: `blame_chain_coverage == 1.0` exactly when `Σ attribution ==
+H`. I7 is recorded here as **I4's alias** and carries no separate guard.
+
+| | |
+|---|---|
+| numerator | `execution_on_chain_us`, `dependency_wait_us`, `resource_wait_us`, `scheduler_wait_us`, `idle_us`, `retry_wait_us` - I4's six |
+| denominator | `horizon_us` - I4's H |
+| what fails first | I4's `attribution_reconciliation` violation, which names the residual in microseconds; `blame_chain_coverage_full` then restates it as a ratio |
+
+`tests/unit/test_every_invariant_has_a_guard.py` holds the alias against
+the code - it drives `compute_confidence` with an attribution that
+misses H by a known amount and asserts the coverage is exactly that sum
+over that horizon - and refuses to let I7 be waived without this row.
 
 ---
 

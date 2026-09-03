@@ -15,19 +15,19 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-584 scenarios: **24 open**, 560 closed.
+602 scenarios: **15 open**, 587 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
-| capture | 0 | 90 |
-| analysis | 3 | 90 |
-| contracts | 0 | 40 |
+| capture | 1 | 91 |
+| analysis | 2 | 92 |
+| contracts | 2 | 42 |
 | viewer | 0 | 138 |
-| cli | 2 | 21 |
-| store | 1 | 15 |
-| docs | 12 | 83 |
-| guards | 6 | 107 |
+| cli | 0 | 21 |
+| store | 1 | 16 |
+| docs | 4 | 87 |
+| guards | 5 | 115 |
 
 ## Open scenarios
 
@@ -36,30 +36,21 @@ task file, which is the only place it ever lived twice.
 
 | ID | Scenario | Topic | Priority | Serves | Status |
 |---|---|---|---|---|---|
-| UX-563 | [Part 8.2's `UNKNOWN` holder is a state the code cannot reach](UX-0563-part-8-2-s-unknown-holder-is-a-state-the-code-cannot-reach.md) | analysis | Medium | the maintainer deciding what the spec still promises | 🔴 |
-| UX-564 | [Parts 23 and 27 exist in the spec and nowhere else](UX-0564-parts-23-and-27-exist-in-the-spec-and-nowhere-else.md) | analysis | Medium | the maintainer deciding the spec's edge | 🔴 |
-| UX-565 | [Part 29 is wired to `None` while the store holds the series it needs](UX-0565-part-29-is-wired-to-none-while-the-store-holds-the-series-it-needs.md) | analysis | Medium | R3, the CI owner asking how stable an element's duration is | 🔴 |
-| UX-566 | [two "recommended" Parts describe a tool that was never built that way](UX-0566-two-recommended-parts-describe-a-tool-that-was-never-built-that-way.md) | docs | Low | the reader who opens the spec's tail for the report or the tree | 🔴 |
-| UX-567 | [two invariants have no guard, and one has no code](UX-0567-two-invariants-have-no-guard-and-one-has-no-code.md) | guards | High | anyone trusting the report's `I1..I13` line | 🔴 |
-| UX-568 | [the spec has no index of which Part a guard holds](UX-0568-the-spec-has-no-index-of-which-part-a-guard-holds.md) | guards | Medium | the next specification review — this one took five agents | 🔴 |
-| UX-569 | [the architecture document's prose is not what its guards read](UX-0569-the-architecture-document-s-prose-is-not-what-its-guards-read.md) | docs | Medium | the reader who opens architecture.md to price a change | 🔴 |
-| UX-570 | [the capture workflow document describes a workflow that has moved on](UX-0570-the-capture-workflow-document-describes-a-workflow-that-has-moved-on.md) | docs | Medium | the CI owner reading how the weekly capture works | 🔴 |
-| UX-571 | [the ingestion facts were confirmed on a BuildStream this machine no longer has](UX-0571-the-ingestion-facts-were-confirmed-on-a-buildstream-this-machine-no-lo.md) | docs | Medium | whoever meets a `bst` output line the parser does not | 🔴 |
-| UX-572 | ["by construction" survived the construction it now depends on](UX-0572-by-construction-survived-the-construction-it-now-depends-on.md) | docs | Low | the reader of the trace dictionary | 🔴 |
-| UX-573 | [the context map cannot see below `tools/`](UX-0573-the-context-map-cannot-see-below-tools.md) | guards | Medium | the session that greps §6 for the hook and finds nothing | 🔴 |
-| UX-574 | ["invalid arguments" exit 2, which the table gives to ingestion](UX-0574-invalid-arguments-exit-2-which-the-table-gives-to-ingestion.md) | cli | High | the CI owner branching on an exit code | 🔴 |
-| UX-575 | [a documented pipe prints a traceback](UX-0575-a-documented-pipe-prints-a-traceback.md) | cli | High | anyone who types the guide's own pipe to `head` | 🔴 |
-| UX-576 | [the question count is stated three ways](UX-0576-the-question-count-is-stated-three-ways.md) | docs | Medium | the reader deciding whether to open Perfetto | 🔴 |
-| UX-577 | [the committed example's own next step refuses](UX-0577-the-committed-example-s-own-next-step-refuses.md) | store | High | the stranger who follows the README's second command | 🔴 |
-| UX-578 | [the verbatim blocks that are neither dated nor fresh](UX-0578-the-verbatim-blocks-that-are-neither-dated-nor-fresh.md) | docs | Medium | anyone diffing a guide's output against their own | 🔴 |
-| UX-579 | [the docs guard reads command words, not commands](UX-0579-the-docs-guard-reads-command-words-not-commands.md) | guards | Medium | the next flag rename | 🔴 |
-| UX-580 | [the roles table says nothing aggregates across builds](UX-0580-the-roles-table-says-nothing-aggregates-across-builds.md) | docs | Medium | R5 and R7, whose rows are wrong about them | 🔴 |
-| UX-581 | [a direction has no status, so a tail goes silent](UX-0581-a-direction-has-no-status-so-a-tail-goes-silent.md) | docs | High | the reader deciding what is still open at direction level | 🔴 |
-| UX-582 | [the styleguide's ledger says seven sections have no guard](UX-0582-the-styleguide-s-ledger-says-seven-sections-have-no-guard.md) | docs | Medium | the session that touches the page and reads §7 to find its guard | 🔴 |
-| UX-583 | [the round history is typed, and three rounds are missing from it](UX-0583-the-round-history-is-typed-and-three-rounds-are-missing-from-it.md) | docs | Medium | the reader tracing a decision to the round that made it | 🔴 |
-| UX-584 | [the figures nothing reads — thirteen stale numbers in the process layer](UX-0584-the-figures-nothing-reads-thirteen-stale-numbers-in-the-process-layer.md) | docs | Medium | every session's first read | 🔴 |
-| UX-585 | [the card's guard column is counted, not read](UX-0585-the-card-s-guard-column-is-counted-not-read.md) | guards | High | the session that trusts the card's guard column | 🔴 |
-| UX-586 | [the premise detector reads a proxy](UX-0586-the-premise-detector-reads-a-proxy.md) | guards | Medium | the round that reads the process bands | 🔴 |
+| UX-589 | [the failure namer reads a junit the run did not write](UX-0589-the-namer-reads-a-junit-the-run-did-not-write.md) | guards | Medium | every session reading a red CI job | 🔴 Open |
+| UX-590 | [the context map's non-path claims are unguarded](UX-0590-the-context-map-s-non-path-claims-are-unguarded.md) | guards | Medium | every session that reads fixing guide §6 to find where a thing lives | 🔴 Open |
+| UX-591 | [the architecture review log is in no index](UX-0591-the-architecture-review-log-is-in-no-index.md) | docs | Medium | the reader looking for what the last architecture review decided | 🔴 Open |
+| UX-593 | [the regression verdict carries no evidence chain](UX-0593-the-regression-verdict-carries-no-evidence-chain.md) | analysis | Medium | R4, the CI gatekeeper asked to defend a red gate | 🔴 Open |
+| UX-594 | [a capture cannot say when the build was requested](UX-0594-a-capture-cannot-say-when-the-build-was-requested.md) | capture | Medium | R6, the contributor waiting on a verdict | 🔴 Open |
+| UX-595 | [the capacity model has a fact base and no model](UX-0595-the-capacity-model-has-a-fact-base-and-no-model.md) | store | Medium | R5, the capacity operator | 🔴 Open |
+| UX-596 | [build time in the team's units](UX-0596-build-time-in-the-team-s-units.md) | analysis | Low | R8, the engineering lead funding infrastructure | 🔴 Open |
+| UX-597 | [three release rows and no tag](UX-0597-three-release-rows-and-no-tag.md) | docs | Low | anyone trying to check out a release this repository claims to have made | 🔴 Open |
+| UX-598 | [two of the four percentile rows publish no distribution](UX-0598-two-of-the-four-percentile-rows-publish-no-distribution.md) | contracts | Medium | the reader who trusts Direction 11's table | 🔴 Open |
+| UX-599 | [a guard pins a contract version by typing it](UX-0599-a-guard-pins-a-contract-version-by-typing-it.md) | guards | Medium | the next contract bump, which will pass a guard that should have caught it | 🔴 Open |
+| UX-600 | [the rules card has one guard it cannot mark](UX-0600-the-rules-card-has-one-guard-it-cannot-mark.md) | guards | Low | the session reading the card's guard column | 🔴 Open |
+| UX-601 | [two guard ledgers of the same kind, two mechanisms](UX-0601-two-guard-ledgers-of-the-same-kind.md) | docs | Low | the next session asked to add a rule and its guard | 🔴 Open |
+| UX-602 | [two hard gates are published and named nowhere](UX-0602-two-hard-gates-are-published-and-named-nowhere.md) | contracts | High | anyone reading `confidence.hard_gates` to decide whether a run is trustworthy | 🔴 Open |
+| UX-603 | [the Python floor reaches no reader](UX-0603-the-python-floor-reaches-no-reader.md) | docs | Medium | the contributor deciding whether their interpreter will do | 🔴 Open |
+| UX-604 | [the verification-log clause reads the entry below it](UX-0604-the-verification-log-clause-reads-the-entry-below.md) | guards | Medium | the round whose log entry says nothing and passes | 🔴 Open |
 
 ## UX-563..UX-586: the eighty-second round — the documents, read against the tool (2026-09-03)
 

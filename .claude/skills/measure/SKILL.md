@@ -92,8 +92,13 @@ bga snapshot --project "$PWD" -- bst build all.bst
   cd /tmp/ex06 && bga snapshot --project "$PWD" -- bst build all.bst
   ```
 
-  Measured that way: 9 elements rebuilt, **813 hook-covered processes**,
-  a 311 KB snapshot, about 40 s of wall clock.
+  Measured that way: 9 elements rebuilt, **813 hook-covered
+  processes**, a 311 KB snapshot, about 40 s of wall clock. The 813
+  is `UX-123`'s post-collapse figure and nothing since has
+  re-measured it — that needs a real `bst` build, so `UX-584` left
+  all four alone and said so rather than guessing. **Treat them as
+  the shape, not the number**, until a capture round takes them
+  again.
 
 Then the trace, and the questions:
 
@@ -115,7 +120,7 @@ bga timeline /path/to/snapshot -o /tmp/two.pftrace
 python tools/dev_perfetto_queries.py /tmp/two.pftrace --fetch
 ```
 
-Runs all fourteen questions in `bga/viewer/questions.js` against the
+Runs all seventeen questions in `bga/viewer/questions.js` against the
 trace and says, per question, whether it answered. `--fetch` downloads
 the pinned reader if none is on `PATH` — Perfetto's own prebuilt, from
 `commondatastorage.googleapis.com` and not `get.perfetto.dev`, which is

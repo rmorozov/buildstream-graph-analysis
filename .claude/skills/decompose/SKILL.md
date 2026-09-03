@@ -48,14 +48,16 @@ either (falsify skill: one mutation, one claim).
 ## 3. Tracks — what can run in parallel
 
 Two items are one track when their surface rows overlap; otherwise
-they are parallel. Three files are shared by *every* item and are the
+they are parallel. Four files are shared by *every* item and are the
 merge hotspots, so a track never touches them — the orchestrating
-session does, once, at the end:
+session does, once, at the end. The count is the block's own rows,
+and `test_the_process_documents_derive_their_figures.py` reads it:
 
 ```text
 docs/backlog/scenarios/README.md    the row (the counts are derived - below)
 docs/backlog/scenarios/closed.md    the closed row
-tests/tiers.py, tests/ci_reference.json   a new file's tier and CI seconds
+tests/tiers.py                      a new file's tier
+tests/ci_reference.json             a new file's CI seconds
 ```
 
 Two of those four have stopped being merge hotspots. `UX-501`: the
@@ -88,8 +90,11 @@ track checks it with `git log --oneline -1` before reading anything.
 nine commits: **three cherry-picks, one conflicted** — in
 `tools/dev_close_task.py` and `tests/unit/test_the_loop_stays_fast.py`,
 both edited inside those nine commits — resolved additively by keeping
-both sides. That is 1.33 commits per task against 1.0 serial, and it is
-this round's number and the only one on file.
+both sides. That is 1.33 commits per task against 1.0 serial. It is not
+the only reading on file and not the worst: round 76 recorded 1.43
+(`docs/audits/round-76.md:135`) and round 80 **1.83** — 44 commits over
+24 items, 1.46 excluding the 9 merges (`docs/audits/round-80.md:23`).
+Read the widest of the three when pricing a batch.
 
 ## 4. The gate — what runs once for the batch
 

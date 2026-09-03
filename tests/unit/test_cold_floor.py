@@ -116,7 +116,11 @@ def test_no_history_at_all_is_unavailable_by_default(tmp_path):
 
 
 def test_partial_history_unavailable_unless_allow_partial_cold(tmp_path):
-    """a.bst has full history (cache_key match); b.bst (depends on a.bst)
+    """I13 (Part 34): T∞,cold is not published unless
+    cold_critical_path_coverage == 1.0, or the user explicitly enables
+    partial estimation.
+
+    a.bst has full history (cache_key match); b.bst (depends on a.bst)
     has no history at all - not by cache_key, not by element+kind+phase,
     and not even by cohort (it uses a distinct phase no historical run
     ever recorded, so the cohort pool for it is empty too) - the cold

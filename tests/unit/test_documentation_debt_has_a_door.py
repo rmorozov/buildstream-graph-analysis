@@ -21,6 +21,8 @@ git grep -l "upper bound, not a forecast" docs/  -> nothing
 The judgment half of the rule cannot be tested - no guard knows which
 mechanism deserves a page. The mechanical half can: **a filing that
 says its documentation is coming later must name where it went.**
+
+holds: rules.md#documentation-you-are-not-writing-now-file-the-row-first
 """
 import pathlib
 import re

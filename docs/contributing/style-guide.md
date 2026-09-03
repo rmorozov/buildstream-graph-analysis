@@ -12,9 +12,12 @@ These rules exist to keep the evidence and lose the accretion. They are
 not style preferences; each one is here because its absence caused a
 real problem, named below.
 
-Two of them are enforced by
-[`tests/unit/test_docs_links_and_commands.py`](../../tests/unit/test_docs_links_and_commands.py).
-The rest are read by people.
+Four of the rules below close with **Enforced by test**, and §8's
+table-cell rule is a fifth in its own words. The rest are read by
+people. The four are counted off this document by
+[`tests/unit/test_the_process_documents_derive_their_figures.py`](../../tests/unit/test_the_process_documents_derive_their_figures.py),
+so the sentence cannot drift the way it had — it said *two* while
+five rules claimed enforcement (`UX-584`).
 
 **Scope, and its sibling** (`UX-306`). This guide governs the
 **documents**. The **web report** has its own contract —
@@ -164,7 +167,7 @@ no single tool covers it:
 **Why:** the round-11 status table rendered broken on GitHub because
 one row's summary quoted a jq pipeline — two unescaped pipes turned a
 6-column row into 8 cells. A sweep then found four more malformed rows
-across three files, one of them broken since the P-task era. Prose
+across three files (`UX-98`), one of them broken since the P-task era. Prose
 rules cannot catch this class; a linter can, which is `UX-98`.
 
 ## 9. Backlog filenames are zero-padded; identifiers are not

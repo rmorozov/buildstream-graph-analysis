@@ -77,6 +77,8 @@ regression this must not cause.
 
 ## Outcome
 
+**Premise:** held — `graph/v9`, `run-context/v9` and `trace/v9` are read by `bga` and registered by nothing.
+
 **Round 81, 2026-09-03.** A third kind: `READS`, walked beside
 `SUPERSEDED` and `OWNED`, answered by `contracts.reads()`. `ids()` is
 unchanged at 23 — emitting `graph/v9` is something this tool has never

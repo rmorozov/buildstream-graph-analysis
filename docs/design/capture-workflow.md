@@ -90,8 +90,12 @@ Two obvious approaches both fail, in opposite directions:
 
 The capture therefore does both, in order:
 
-1. **Warm.** `bst build <target>` with the project's own remote cache
-   enabled. Everything is pulled into the local CAS. Nothing is timed.
+1. **Warm.** `bst artifact pull --deps all <target>` with the project's
+   own remote cache enabled. Everything is pulled into the local CAS.
+   Nothing is timed. `bst build` was the first run's verb and it
+   finished in 7 seconds: it pulls only what it needs, and the target's
+   artifact was already in the remote, so 101 dependencies stayed
+   uncached.
 2. **Cut.** Delete the artifacts of a bounded subgraph.
 3. **Capture.** Rebuild with `--ignore-project-artifact-remotes`, under
    the dual-plane tracer, so exactly that subgraph builds from source on
@@ -149,8 +153,11 @@ OpenSSL, ICU, Doxygen) are each minutes, not hours.
 
 ## Reproducing
 
-The workflow runs **weekly** (Sunday 03:00 UTC) and on
-`workflow_dispatch`, and on nothing else.
+The workflow runs on two crons — **weekly** (Sunday 03:00 UTC) and
+**monthly** (day 1, 04:00 UTC) — and on `workflow_dispatch`, and on
+nothing else. A `schedule:` trigger cannot supply workflow inputs, so
+the mode is read off which cron fired: the monthly one is `cold`, every
+other run `incremental` (`UX-96`).
 
 It used to also run on a push touching the capture tooling, and that
 trigger cancelled **17 of this workflow's first 24 runs** (`UX-90`):
@@ -311,9 +318,29 @@ finds this table and goes looking for `native-report.json` inside a
 | `run/` | the `bga`-ready run directory (`graph.json`, `trace.json`, `run-context.json`) |
 | `native-report.json` | the Plane 2 report |
 | `native-trace.log` | the raw `LD_PRELOAD` trace (and the ptrace spine's records too, when the dispatch set `trace_spine`) |
+| `native-trace.head.log` | over 40 MB, the first 4 MB kept instead — format by eye, never anything time-based |
+| `native-trace.log.omitted` | the note saying the full log was dropped, and how big it was |
+| `native-report-traced-only.json` | `native-report.json` renamed when the traced build failed and a plain retry produced `run/`: the two planes then describe different builds, so nothing joins on it |
 | `build.log` | the wrapped-format Plane 1 log |
+| `build-traced.log` | the traced build's own log, kept under this name when the plain retry rewrote `build.log` |
+| `invocations.jsonl` | one record per hooked sandbox invocation |
+| `bwrap-argv.jsonl` | the `bwrap` argv of each one |
 | `graph-declared.json` | the declared graph, extracted before any build |
 | `rebuild-set.txt` | the exact elements deleted |
 | `state-after-warm.txt`, `state-after-delete.txt` | `bst show %{state}` either side of the cut |
 | `analyze.txt`, `analyze.json`, `correlate.txt` | the analysis as run on the runner |
+| `bst-element-logs.tar.gz` | BuildStream's own per-element logs, `_casd/` excluded |
+| `doctor.txt` | `bga doctor` against the real project, run before the build |
+| `capture-outcome.txt` | `traced_build_exit`, and `plain_build_exit` plus `planes_describe_different_builds` when there was a retry |
 | `capture-context.txt` | commit hashes, `bst` version, core count, memory, disk |
+
+Some rows are conditional. A capture whose traced build succeeded has
+no `build-traced.log` and no `native-report-traced-only.json`; one
+whose raw trace stayed under 40 MB has no `native-trace.head.log` and
+no `native-trace.log.omitted`, and one over it has no
+`native-trace.log`.
+
+After publishing, the job trends itself against its own history: `bga
+baseline -n 8` over the retained refs of the same shape, then `bga
+cache-trend`. It is `continue-on-error` — a degrading cache is a finding
+to read, not a reason to fail the job that produced the data.

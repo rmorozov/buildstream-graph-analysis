@@ -48,6 +48,8 @@ stated, and — if a reader is named — a row filed for it.
 
 ## Outcome (round 81, 2026-09-03) — 🟢 Done
 
+**Premise:** falsified — the reader exists (`UX-469`); it reads the trace, not this field.
+
 **The reader exists. It reads the trace, not this field.**
 
 ### What the search found

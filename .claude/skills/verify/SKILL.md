@@ -30,10 +30,10 @@ exercises a module without naming it, which is why step 3 is unchanged.
 Then the tier, when the change is wider than one module:
 
 ```bash
-make test-small      # 11s  - the default tier; most edits need only this
-make test-medium     # ~1m50s - spawns a process or a node harness
-make test-large      # ~1m15s - scale fixtures, real process trees
-make test-fast       # small + medium: everything needing no real bst (~2m)
+make test-small      # 20s  - the default tier; most edits need only this
+make test-medium     # ~2m50s - spawns a process or a node harness
+make test-large      # ~2m05s - scale fixtures, real process trees
+make test-fast       # small + medium: everything needing no real bst (~3m10s)
 ```
 
 Every target runs `-n auto` (`UX-336`). `PYTEST_XDIST= make test-small`
@@ -96,6 +96,19 @@ an excursion once still prints it, marked as unconfirmed.
 `make test` before you mark anything done. A tier run is not evidence
 about the suite.
 
+### When a CI job is red and the log is too long to read
+
+`UX-554`: the suite's junit survives a red run, and
+`tools/dev_junit_tail.py` names the failing tests from it - which
+beats scrolling a log for the first `FAILED`.
+
+```bash
+python3 tools/dev_junit_tail.py <junit.xml from the red run>
+```
+
+`UX-589` is open on it reading a junit an earlier run wrote, so
+check the file's mtime against the run before trusting the names.
+
 ### When CI's drift step is red and the file really did get slower
 
 `UX-447`: the route, because `--record` on your own machine writes
@@ -127,8 +140,10 @@ append bakes that run's slowness into the row as permanent slack.
 way, with the run id and the shift each was taken from.
 
 Do not run `--record` locally and commit the result. It is not the same
-document: it is 380 files of this machine's clock replacing 380 files
-of CI's, and the gate will be quiet for the wrong reason.
+document: it is this machine's clock replacing CI's, row for row, and
+the gate will be quiet for the wrong reason. (`UX-584` removed the
+file count that stood here: it moves on every new test file and no
+decision reads it.)
 
 **After adding a test file, do nothing.** `UX-503`: a file the
 reference does not carry is printed as *recorded*, not failed on, and

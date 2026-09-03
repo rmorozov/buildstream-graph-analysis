@@ -3,7 +3,7 @@
 This is the mandatory entry point for any agent (human or LLM) picking up a task on this repository. It exists because a prior fixing session, working with limited context, marked several tasks "🟢 Fixed" that were not actually fixed — including `classify_scheduler_wait()` in `bga/attribution/blame_chain.py`, which still unconditionally `return False` after being marked complete. This guide's rules exist specifically to prevent that failure mode from repeating - the discipline below applies to any backlog in this repo, not just the one it was originally written for.
 
 **Start at [`rules.md`](rules.md)** — every rule below as one line with
-its guard, 4 KB against this file's 34 KB (`UX-505`). Come here for the
+its guard, 5 KB against this file's 40 KB (`UX-505`). Come here for the
 paragraph behind the rule you are about to break: each one carries the
 incident that produced it, and that is why it is trusted, not padding.
 
@@ -66,20 +66,25 @@ round 81   3m45s   6,256 passed,  29 skipped, 226s   4 cores, quiet
            3m32s   6,097 passed, 124 skipped, 212s   worktree
 ```
 
-Round 80's 8m52s is **not reproducible on the tree that produced it**: the same commit reads 3m32s on a quiet machine. The suite grew by 621 tests between rounds 74 and 81 and got *faster* in wall clock. So a single dated sample dates the afternoon, not the suite — measure it yourself when the number matters. The small tier is 11s:
+Round 80's 8m52s is **not reproducible on the tree that produced it**: the same commit reads 3m32s on a quiet machine. The suite grew by 621 tests between rounds 74 and 81 and got *faster* in wall clock. So a single dated sample dates the afternoon, not the suite — measure it yourself when the number matters, and record the load average beside it. The small tier is 20s:
 
    | target | measured at `-n auto` | what is in it |
    |---|---|---|
    | `make test-touching` | **4s** on a one-module diff | the test files that name what your diff touched |
-   | `make test-small` | **11s** | pure Python over in-memory fixtures — the default tier |
-   | `make test-medium` | ~1m50s | spawns a process or a node harness |
-   | `make test-large` | ~1m15s | scale fixtures, real process trees |
-   | `make test-fast` | ~2m | small + medium: everything needing no real `bst` |
+   | `make test-small` | **20s** | pure Python over in-memory fixtures — the default tier |
+   | `make test-medium` | ~2m50s | spawns a process or a node harness |
+   | `make test-large` | ~2m05s | scale fixtures, real process trees |
+   | `make test-fast` | ~3m10s | small + medium: everything needing no real `bst` |
    | `pytest -m bst` | — | the enormous tier; needs a real `bst`/`bwrap` build |
 
-   Re-measured 2026-08-27 (`UX-336`) on a 4-core container, after the
-   re-tier the same measurement forced. `PYTEST_XDIST=` turns the
-   parallelism off for a run that needs one process.
+   Re-measured 2026-09-03 (`UX-584`) on the same 4-core container, with
+   `uptime` beside each run because wall clock here moves more than 2x
+   with load: `time make test-small` read 20.8s (3,698 passed, 36
+   skipped) at 1-minute load **0.13**; medium read 2m53s at load
+   **1.05** and large 2m06s at load **6.02**, both with other
+   worktrees running, so those two are the machine's number and not
+   the tier's. `PYTEST_XDIST=` turns the parallelism off for a run
+   that needs one process.
 
    Tiers come from measured per-file duration (`tests/tiers.py`), not from taste. Use them for the edit-run loop and for re-running one guard after a mutation — **not** as a substitute for the next step.
 
@@ -93,7 +98,7 @@ Round 80's 8m52s is **not reproducible on the tree that produced it**: the same 
    `tests/test_e2e.py` is also directly runnable without pytest (`PYTHONPATH=. python3 tests/test_e2e.py`) if you want the fastest possible sanity check, but prefer the full `pytest tests/ -v` run before marking anything 🟢 — it now also covers `tests/test_cli.py` and `tests/test_synthetic_multi_subproject.py` (a larger multi-subproject fixture; see `docs/backlog/tasks/P3-10-synthetic-multi-subproject-large-test.md`), both of which the single e2e script does not run. Tests marked `xfail` (a handful, each pointing at the specific task file that will fix them) are expected — only genuinely new failures are regressions.
 5. Only then: update the status cell in the tracker (`docs/backlog/progress-tracker.md` or `docs/backlog/scenarios/README.md`) to 🟢, and update the task file's own status line. **Both, in the same commit.** These are two hand-maintained copies of one fact and they have drifted in three separate rounds — round 11 found a row 🟢 over a 🔴 file, round 12 found row wording drift, round 13 found *five* rows 🔴 over files that were 🟢 with full verification logs, because the closing commit of a range never touched the table. `tests/unit/test_docs_links_and_commands.py::test_the_table_status_matches_the_task_files` now compares the two markers and fails naming the item, so this one is caught rather than trusted (`UX-131`).
 6. **If your fix changes a number, a mechanism or an explanation an earlier task file presents as current, annotate that file in the same commit.** Not a rewrite — the old figure stays, with one line naming what changed it and when, the way `UX-118` annotated `UX-106`'s superseded explanation: *"a wrong explanation that was believed for a while is worth being able to recognise again"*. `UX-123`'s exec-chain collapse moved `examples/06` from 822 processes to 813 and left three earlier files describing a parser that no longer exists; a later task then quoted 822 fresh, because the convention lived only where one author remembered it. `git grep <old figure> docs/backlog/scenarios` before you commit. This one is judgment-shaped and cannot be a hard test — it is a checklist item precisely because of that (`UX-132`). **It covers mechanisms, not only figures** (`UX-144`), and the precedent `UX-132` itself cites is a mechanism: `UX-118` annotated `UX-106`'s superseded *explanation*. The scope was written as "a number" and the very next range showed why that is too narrow — `UX-130` deleted `UX-118`'s entire seen-set (`g_seen`/`first_stop_for`/`forget_pid`) and `UX-128`'s `initial` restart site, leaving both files describing code that no longer exists, including the worked example the convention was built on. `git grep` the removed identifier as well as the old figure.
-7. **If your fix renames or removes a key in a published JSON output, bump that output's schema version.** `analyze/v2`, `compare/v1` and `blast/v1` (`bga/schemas.py`, spec Part 32.5) are what a consumer pins. `analyze` is at **v2** because `UX-288` removed three fields that republished element membership - the first time this rule has actually been exercised. Adding a key is not a breaking change and does not bump — the schemas set `additionalProperties: true` for exactly that reason — but a rename is, and the round-19 range shipped one (`runs_outside_band` → `edges_outside_band`) with nothing to signal it, which is what `UX-190` was filed against. `tests/unit/test_output_schemas.py` catches a removal; `ANALYZE_FULL_KEYS` catches a rename of an `analyze` key the schema cannot mark required.
+7. **If your fix renames or removes a key in a published JSON output, bump that output's schema version.** `analyze/v5`, `compare/v2` and `blast/v2` (`bga/schemas.py`, spec Part 32.5) are what a consumer pins; `test_the_process_documents_derive_their_figures.py` reads the three ids off `schemas.py` so this sentence cannot age. The first bump was `UX-288`, which took the report to `analyze/v2` by removing three fields that republished element membership. Adding a key is not a breaking change and does not bump — the schemas set `additionalProperties: true` for exactly that reason — but a rename is, and the round-19 range shipped one (`runs_outside_band` → `edges_outside_band`) with nothing to signal it, which is what `UX-190` was filed against. `tests/unit/test_output_schemas.py` catches a removal; `ANALYZE_FULL_KEYS` catches a rename of an `analyze` key the schema cannot mark required.
 
 8. **Does this change which roles are served, or how well? Then `docs/design/roles.md`'s table changes in the same commit.** The gap analysis round 27 wrote — four roles served thoroughly, four barely — only stays true if the tracing is routine (`UX-231`). A new direction carries a `Serves:` line at birth; a new filing carries one in its header.
 
@@ -102,7 +107,7 @@ Round 80's 8m52s is **not reproducible on the tree that produced it**: the same 
 10. **Does this change what `docs/design/architecture.md` or the spec says is true? Then they change in the same commit.** The user's observation, and it is measurable: when `UX-233` was filed, `architecture.md` still described three analysis planes and stopped at round 20 — before the entire viewer axis (the server, the schema-driven page, the export) and before the contract wave that followed it — and five of the eight published schemas were named in no document at all. Documentation that has fallen a whole axis behind is what makes a big refactor expensive to price, which is exactly the cost the observation names. The mechanical half is guarded: `tests/unit/test_the_documents_keep_up_with_the_contracts.py` asserts every schema id the code emits appears in the spec's Part 32.5 and in the architecture inventory, and that neither names one nothing emits. The judgment half — a *mechanism* the document describes and your change moved — is a checklist item for the same reason item 6 is.
 
 11. **Does this change need documentation you are not writing now? File it before the commit lands.** There were two escape valves for work a session cannot do — a bug you notice becomes a tracker row (`§2.5`), and a doc your change made *wrong* is fixed in the same commit (item 10) — and no door at all for the third and commonest shape: *this needs a proper explanation, and writing it well is half a session's work.* That thought had nowhere to go, so it became a comment, or nothing. Round 28 produced three instances and all three survived only because someone happened to say so out loud: `capacity_recommendation` and `memory_envelope` reach no consumer, and `bga/whatif.py`'s convention was documented only in its own docstring. The rule is the same shape as `§2.5` and costs the same: a row in `docs/backlog/scenarios/README.md` — id, one line, 🔴, topic `docs` — in the commit that creates the debt. A task file can come later; naming the gap is the minimum. If you decide the gap is not worth documenting, say that in the Outcome instead — a stated decline is a decision, and silence is not. `tests/unit/test_documentation_debt_has_a_door.py` holds the mechanical half: a filing that defers documentation must name where it went (`UX-237`).
-12. **`docs/spec/specification.md` is ground truth, and Part 32 is the one Part a round may edit.** `UX-556` is what settled the boundary, because a round hit it and read it two ways. The spec's contract registry said "The last four are **written but not printable**" of a set that is six (`unprintable()` less `superseded()`) and that four rows follow; `UX-549` fixed the architecture's copy of the same sentence and filed the spec's, reading the rule as forbidding the edit. It does not: the sentence is at line 1671 and Part 32 spans 1515-1788, so it was inside the permitted region the whole time. **The Part, not the table** — a rule that lets you correct a registry row but not the sentence counting the rows is not a boundary, it is an accident of where someone drew the line. Everything outside Part 32 stays read-only for a round; a factual error there is filed, not fixed. And the second half, which is what stops this recurring: **a counted figure in Part 32 is derived by a guard, never restated in prose.** Both copies of this error were prose nothing checked. `tests/unit/test_a_counted_figure_is_derived.py::TestTheSpecCountsItsOwnTable` reads the count and the position off the table's own rows.
+12. **`docs/spec/specification.md` is ground truth, and Part 32 is the one Part a round may edit.** `UX-556` is what settled the boundary, because a round hit it and read it two ways. The spec's contract registry said "The last four are **written but not printable**" of a set that is six (`unprintable()` less `superseded()`) and that four rows follow; `UX-549` fixed the architecture's copy of the same sentence and filed the spec's, reading the rule as forbidding the edit. It does not: the sentence is at line 1671 and Part 32 spans 1515-1910, so it was inside the permitted region the whole time (the range is derived by `test_the_spec_outside_part_32_is_read_only.py`, which also digests everything outside it). **The Part, not the table** — a rule that lets you correct a registry row but not the sentence counting the rows is not a boundary, it is an accident of where someone drew the line. Everything outside Part 32 stays read-only for a round; a factual error there is filed, not fixed. And the second half, which is what stops this recurring: **a counted figure in Part 32 is derived by a guard, never restated in prose.** Both copies of this error were prose nothing checked. `tests/unit/test_a_counted_figure_is_derived.py::TestTheSpecCountsItsOwnTable` reads the count and the position off the table's own rows.
 
 13. If the acceptance test does **not** pass after your change, leave status at 🟡 (In Progress) with a note on what's blocking, and stop — do not mark it 🟢 "mostly working."
 
@@ -148,7 +153,10 @@ Rules to prevent a repeat:
 
 Regenerated by `UX-239`; a guard
 (`tests/unit/test_the_context_map_is_the_tree.py`) fails if a module
-appears here that does not exist, or exists and does not appear. The
+appears here that does not exist, or exists and does not appear — over
+`git ls-files`, recursively under `tools/` (Python, C, shell) and into
+`bga/viewer/` (`UX-573`), because a non-recursive walk left the
+LD_PRELOAD hook and the ptrace spine off the map and the guard green. The
 previous version described a tree from the repository's first week —
 it said `tests/test_e2e.py   only existing test file` when
 `tests/unit/` alone held 218 — which is worse than no map, because it
@@ -179,7 +187,7 @@ bga/provenance.py      why each claim is made: evidence refs, rule, trace query 
 bga/schemas.py         every published contract + view-hints; `--schema` prints from here
 bga/contracts.py       the derived inventory of every contract, printable or not (UX-248)
 bga/producer.py        which build wrote an artifact, and the contract set it had (UX-249)
-bga/report/            text.py, json.py, csv, ci_comment.py - renderers, no analysis
+bga/report/            text.py, json.py, ci_comment.py - renderers, no analysis
 ```
 
 **The commands that are not `analyze`:**
@@ -211,7 +219,8 @@ step, no framework:
 
 ```text
 bga/viewer/app.js      boots the page, loads the documents, wires everything
-bga/viewer/views.js    the renderers; imports nothing, by design
+bga/viewer/views.js    the renderers; imports drawings, controls, primitives
+                       (derived: `dev_js_deps.py --graph`, never read off)
 bga/viewer/nav.js      table of contents, jump box, command palette
 bga/viewer/focus.js    focus and marks (UX-222/225/228)
 bga/viewer/tables.js   sortable/filterable tables · viewstate.js  URL state
@@ -223,6 +232,25 @@ bga/viewer/shapes.js     the styleguide §1 dispatch table as code -
                          published shape + hint -> the one control (UX-302)
 bga/viewer/rawjson.js    the per-section "view as JSON" toggle (UX-302)
 bga/viewer/drawings.js   the sparkline and the density strips (UX-303)
+bga/viewer/primitives.js the primitives under every chapter - what makes the
+                         module graph acyclic at all (UX-337)
+bga/viewer/format.js     the `bga:` hint keys, their readers and formatters,
+                         and `el`, the one node constructor (UX-337)
+bga/viewer/controls.js   a form control the browser can name: label, id, name,
+                         so the Issues panel is readable (UX-334)
+bga/viewer/element.js    the element object - one element, everything known
+                         about it; split out of views.js (UX-337)
+bga/viewer/decision.js   the decision panel, UX-207's first screen (UX-337)
+bga/viewer/structured.js a value becomes a table, and the table becomes
+                         interrogable: filters, sort, Top-N, folds (UX-337)
+bga/viewer/tablefocus.js table focus, and the depth a fold announces (UX-318)
+bga/viewer/sections.js   the section walk - payload plus schema to DOM, split
+                         from app.js, which boots and wires (UX-450)
+bga/viewer/perfetto.html the page `bga view --perfetto` lands on: how to open
+                         the trace, then what to ask it (UX-194/198/373)
+bga/viewer/sql.html      a redirect into that page's second half (UX-373)
+bga/viewer/perfetto_page.js  its module - it was an inline script the page's
+                         own `default-src 'self'` refused (UX-266)
 ```
 
 **Capture and the tools** — everything a build actually runs through:
@@ -268,6 +296,16 @@ tools/bga_gen_project.py     a BuildStream project `bst build` accepts,
                              from a topology spec (UX-465)
 tools/dev_plane_capability.py  what Plane 2 and Plane 3 could record and
                              do not, both sides run rather than read (UX-470)
+tools/dev_run.sh             one command from "I changed something" to a
+                             rendered report, on a committed fixture
+tools/native_trace/hook.c    Plane 2's LD_PRELOAD hook: a START line as the
+                             linker loads it, an END line as the process exits
+tools/native_trace/spine.c   the ptrace spine - what the hook cannot see,
+                             because a static executable never loads it (UX-106)
+tools/native_trace/trackevent.py  Perfetto's own TrackEvent format, written as
+                             a stream by the stdlib (UX-298, Direction 15)
+tools/native_trace/bwrap_shim.py  a `bwrap` shim ahead of the real one in
+                             `$PATH`, so the hook reaches inside the sandbox
 ```
 
 **Tests and docs:**

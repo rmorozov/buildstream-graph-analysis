@@ -220,7 +220,10 @@ class TestOneProcessIsOneSlice:
         assert len(sources) == len(set(range(len(sources)))), sources
 
     def test_the_counter_peak_is_the_reports_max_concurrency(self, rendered):
-        """`docs/spec/trace-dictionary.md`'s "by construction", in the field.
+        """`docs/spec/trace-dictionary.md`'s equality, in the field.
+
+        It read "by construction" there until `UX-572`; both sentences
+        name this clause and the join now.
 
         `UX-310` was closed on this equality against a capture whose
         spine was off, so the sentence had never been checked in the

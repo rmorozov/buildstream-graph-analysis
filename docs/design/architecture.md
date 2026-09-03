@@ -1,6 +1,6 @@
 # `bga`: Current Architecture — Three Analysis Planes
 
-**Start here to orient in this codebase.** `docs/spec/specification.md` (v9) is the original design document and stays authoritative for full-length invariant/data-contract text — it is *not* wrong, but it describes the tool as originally scoped, and does not know about anything built since. This doc describes what `bga` actually does **today**, as one coherent system, and points at the real file/doc for every claim so you don't have to reconstruct that history from 75 `docs/backlog/scenarios/` files, 75 `docs/backlog/tasks/` files, and the commit log yourself.
+**Start here to orient in this codebase.** `docs/spec/specification.md` (v9) is the original design document and stays authoritative for full-length invariant/data-contract text — it is *not* wrong, but it describes the tool as originally scoped, and does not know about anything built since. This doc describes what `bga` actually does **today**, as one coherent system, and points at the real file/doc for every claim so you don't have to reconstruct that history from 604 `docs/backlog/scenarios/` files, 75 `docs/backlog/tasks/` files, and the commit log yourself.
 
 **Want to *use* the tool rather than work on it?** [`docs/guides/real-project.md`](../guides/real-project.md) is the end-to-end walkthrough on a real project, with real output at every step.
 
@@ -87,7 +87,17 @@ tools_dispatch.py -> `bga <alias>` -> tools/ programs, lazily imported (UX-67)
 report/       -> text/JSON rendering (presentation only, since UX-75)
 ```
 
-`tools/` is a separate, deliberately-not-`bga`-internal set of scripts that turn a real `bst` invocation into `bga`-ingestible input (needs a live `bst`+`bwrap` install; `bga` itself never does) — full data-flow diagram in `docs/spec/ingestion-pipeline.md`. `tools/bst_native_build_tracer.py` (+ `tools/native_trace/`) is Plane 2 — see below.
+`tools/` is a separate, deliberately-not-`bga`-internal set of scripts that turn a real `bst` invocation into `bga`-ingestible input (needs a live `bst`+`bwrap` install; `bga` itself never does) — full data-flow diagram in `docs/spec/ingestion-pipeline.md`. `tools/bst_native_build_tracer.py` (+ `tools/native_trace/`) is Plane 2 — see below. Every command in the CLI table above that dispatches into `tools/` runs one of these files:
+
+- `bga wrap` -> `tools/bst_run_wrapped.py` — Plane 1's capture
+- `bga extract` -> `tools/bst_extract_run.py` — a log plus a project becomes a run directory
+- `bga capture` -> `tools/bst_native_build_tracer.py` — Plane 2's tracer, over `tools/native_trace/bwrap_shim.py` (the shim ahead of the real `bwrap`), `tools/native_trace/hook.c` (the `LD_PRELOAD` hook), `tools/native_trace/spine.c` (the ptrace spine, for static binaries) and `tools/native_trace/trackevent.py` (Perfetto's own TrackEvent writer)
+- `bga cache-logs` -> `tools/bst_cache_logs.py` — Plane 3's reader
+- `bga snapshot` -> `tools/bga_snapshot.py` — the local loop as one command
+- `bga timeline` -> `tools/bga_timeline.py` — both planes on one clock
+- `bga view` -> `tools/bga_view.py` — the report as a page
+- `bga doctor` -> `tools/bga_doctor.py` — can this machine capture at all
+- `bga baseline` -> `tools/bst_baseline_set.py` — the baseline set and its band
 
 ### Where fixtures come from
 
@@ -1018,11 +1028,28 @@ artifact.
 - **`docs/guides/real-project.md`** — the end-to-end user-facing walkthrough on a real project: capture → read → go inside → join → act → gate, with real output at every step and an explicit list of what the tool refuses to say.
 - **`docs/guides/optimization-walkthrough.md`** — a full worked example using the tool for real.
 - **`docs/audits/case-study-06-macro-micro.md`** — the harder companion: a real macro-then-micro cycle on `examples/06-macro-micro-optimization`, written up as the case where the tool does *not* guide you, with every command and output pasted.
-- **`docs/design/directions.md`** — where the tool should go next, argued separately for its two real usage scenarios (local optimization helper, and CI analytics/gate). Reading order: `architecture.md` (what it is) → `optimization-walkthrough-06.md` (what that felt like) → `design-directions.md` (what to do about it).
+- **`docs/design/directions.md`** — where the tool should go next, argued separately for its two real usage scenarios (local optimization helper, and CI analytics/gate). Reading order: `architecture.md` (what it is) → `optimization-walkthrough.md` (what that felt like) → `directions.md` (what to do about it).
 - **`docs/contributing/fixing-guide.md`** — mandatory session-start discipline (verification rules) for either backlog.
 - **`docs/guides/cli.md`** — CLI reference/usage examples.
 
 ## Verification Log
+
+Updated 2026-09-03 (after `UX-569`), covering round 83's three changes
+to this document — the opening sentence's two backlog counts, the
+`tools/` dispatch list under the layout block, and the two stale `.md`
+names in the reading order — re-grounded in the two contract tables
+above against `bga.contracts` and against `bga analyze --schema`:
+**23 emitted ids, 9 of them superseded, and 3 read and never
+written**, 8 printable and 15 not, and `analyze/v5` still at **56
+top-level properties**. Every figure re-read and unchanged from the
+entry below: round 83 published no new contract id, and the one
+commit that touched `bga/schemas.py` added keys under `elements`,
+which 32.5's rule makes an addition. `bga/viewer/` is still **22
+modules** and the table still names all of them. Recorded by
+architecture review 14, whose row is in
+[`../audits/architecture-review.md`](../audits/architecture-review.md);
+the entry below was true about its own date and named a round older
+than the file's last change, which is the half that guard cannot read.
 
 Updated 2026-09-03 (after `UX-549`), covering round 81's three
 changes to this document — `UX-540`, `UX-548` and `UX-549` —

@@ -26,6 +26,9 @@ SCENARIOS = REPO / "docs" / "backlog" / "scenarios"
 # The convention starts here. Everything below is history.
 FIRST_TAGGED = 227
 
+#: An item id wherever a status line cites one - `UX-581`.
+_ITEM = re.compile(r"\bUX-0*(\d+)\b")
+
 
 def _role_ids():
     """The role ids the model actually defines, read from its table."""
@@ -33,11 +36,51 @@ def _role_ids():
 
 
 def _direction_sections():
-    """Each `## Direction N` heading with the text up to the next one."""
+    """Each `## Direction N` heading with the text up to the next `## `.
+
+    `UX-581`: bounded by *any* level-2 heading, not the next Direction.
+    The document interleaves `## Round history` and `## Verification
+    Log` between directions, and the old bound swallowed them - so
+    Direction 16's section carried the 60-row round table and every id
+    in it.
+    """
     text = DIRECTIONS.read_text()
-    starts = [m.start() for m in re.finditer(r"^## Direction \d+", text, re.M)]
-    starts.append(len(text))
-    return [text[starts[i]:starts[i + 1]] for i in range(len(starts) - 1)]
+    heads = list(re.finditer(r"^## .*$", text, re.M))
+    out = []
+    for i, head in enumerate(heads):
+        if not head.group(0).startswith("## Direction "):
+            continue
+        end = heads[i + 1].start() if i + 1 < len(heads) else len(text)
+        out.append(text[head.start():end])
+    return out
+
+
+def _statuses():
+    """`(heading, the Status line)` per direction - `UX-581`."""
+    out = []
+    for section in _direction_sections():
+        for line in section.splitlines():
+            if line.startswith("**Status:**"):
+                out.append((section.splitlines()[0], line))
+                break
+    return out
+
+
+def _filing_numbers():
+    """Every filed item number, from the files `git` tracks."""
+    return {int(re.match(r"UX-0*(\d+)-", path.name).group(1))
+            for path in _task_files()}
+
+
+def _closed_filings():
+    """The subset whose own header line carries the closed marker."""
+    return {int(re.match(r"UX-0*(\d+)-", path.name).group(1))
+            for path in _task_files()
+            if "**Status:** 🟢" in path.read_text().split("\n## ", 1)[0]}
+
+
+def _task_files():
+    return sorted(SCENARIOS.glob("UX-*.md"))
 
 
 def _tagged_task_files():
@@ -85,6 +128,105 @@ class TestEveryDirectionNamesItsReader:
         for section in _direction_sections():
             head = "\n".join(section.splitlines()[:6])
             assert "**Serves:**" in head, section.splitlines()[0]
+
+
+class TestEveryDirectionSaysWhereItStands:
+    """`UX-581`: the same walk, asking where the direction got to.
+
+    A direction with a `Serves:` line and no status reads as landed
+    whatever it is: round 83 found five tails - D8's explain-path, D9's
+    three unfiled steps, D10's uncut tag, D11's two unpublished `yes`
+    rows, D1's stale "none of it is currently printed" - none of them
+    landed, none declined, none visible.
+    """
+
+    def test_each_one_carries_a_status_line(self):
+        walked = {heading for heading, _ in _statuses()}
+        missing = [section.splitlines()[0] for section in _direction_sections()
+                   if section.splitlines()[0] not in walked]
+        assert missing == [], (
+            f"a direction with no status reads as landed whichever it is: "
+            f"{missing}")
+
+    def test_the_status_line_is_near_the_top(self):
+        """Beside `Serves:`, where a reader meets it before the argument."""
+        for section in _direction_sections():
+            head = "\n".join(section.splitlines()[:10])
+            assert "**Status:**" in head, section.splitlines()[0]
+
+    def test_each_status_uses_the_vocabulary(self):
+        """Three words, so the set is countable rather than read."""
+        for heading, status in _statuses():
+            word = status.split("**Status:**", 1)[1].strip().split()[0]
+            assert word in ("landed", "partial", "declined"), (heading, word)
+
+    def test_a_partial_names_a_filed_id_or_states_a_decline(self):
+        """The claim. "partial" with no remainder is the silence this
+        item is about, written in the new vocabulary."""
+        bare = []
+        for heading, status in _statuses():
+            rest = status.split("**Status:**", 1)[1].strip()
+            if not rest.startswith("partial"):
+                continue
+            remainder = rest[len("partial"):]
+            if not (_ITEM.search(remainder) or "declin" in remainder):
+                bare.append(f"{heading}: {rest[:80]}")
+        assert bare == [], (
+            "a `partial` states what remains as a filed id or a decline, "
+            f"or the tail is silent again: {bare}")
+
+    def test_a_declined_status_says_why(self):
+        for heading, status in _statuses():
+            rest = status.split("**Status:**", 1)[1].strip()
+            if rest.startswith("declined"):
+                assert len(rest[len("declined"):].strip(" —-")) >= 20, heading
+
+    def test_a_partial_is_not_wholly_made_of_closed_filings(self):
+        """Derived, so the status cannot go stale the way the sentences
+        it replaces did: the day every id a `partial` names is 🟢, the
+        remainder has landed and the word is wrong."""
+        closed = _closed_filings()
+        stale = []
+        for heading, status in _statuses():
+            rest = status.split("**Status:**", 1)[1].strip()
+            if not rest.startswith("partial"):
+                continue
+            named = {int(n) for n in _ITEM.findall(rest[len("partial"):])}
+            if named and named <= closed:
+                stale.append(f"{heading}: {sorted(named)} are all closed")
+        assert stale == [], (
+            f"a `partial` whose whole remainder has landed: {stale}")
+
+    def test_a_landed_status_names_only_closed_filings(self):
+        """The other direction, and the one that keeps `landed` cheap to
+        write and expensive to write *wrongly*."""
+        closed = _closed_filings()
+        known = _filing_numbers()
+        wrong = []
+        for heading, status in _statuses():
+            rest = status.split("**Status:**", 1)[1].strip()
+            if not rest.startswith("landed"):
+                continue
+            for number in sorted({int(n) for n in _ITEM.findall(rest)}):
+                if number not in known:
+                    wrong.append(f"{heading}: UX-{number} is no filing")
+                elif number not in closed:
+                    wrong.append(f"{heading}: UX-{number} is not closed")
+        assert wrong == [], f"a `landed` status citing open work: {wrong}"
+
+    def test_the_statuses_are_not_all_one_word(self):
+        """A blanket `landed` would satisfy every claim above. The
+        document's own tails are what makes this true today."""
+        words = {status.split("**Status:**", 1)[1].strip().split()[0]
+                 for _, status in _statuses()}
+        assert len(words) >= 2, words
+
+    def test_the_walk_finds_every_direction_the_document_argues(self):
+        """A guard over an empty population passes vacuously, and the
+        `## Direction N` numbering runs 1-16 out of order."""
+        numbered = {int(re.match(r"## Direction (\d+)", section).group(1))
+                    for section in _direction_sections()}
+        assert numbered == set(range(1, 17)), sorted(numbered)
 
 
 class TestEveryNewFilingNamesItsReader:
@@ -135,12 +277,18 @@ class TestEveryNewFilingNamesItsReader:
         role, this guard tells them the map moved and `roles.md` should
         say so too.
 
-        **It has already earned its keep once.** R3 - the graph owner -
-        was in this list until round 32, when `UX-258`/`UX-259` filed
-        against the blast ranking (whether an element reaches most of
-        the graph *by design* is a structural question, which is R3's).
-        This guard is what caught that the row in `roles.md` still
-        claimed R3 was served by round-19 work alone.
+        **It has earned its keep twice.** R3 - the graph owner - was in
+        this list until round 32, when `UX-258`/`UX-259` filed against
+        the blast ranking; this guard caught that `roles.md` still
+        claimed R3 was served by round-19 work alone. In round 83 it
+        emptied: `UX-594` files the requested-at instant R6's waiting
+        would be measured from, so every role now has *a* filing.
+
+        Filed is not served, and the two are now guarded separately.
+        `test_the_roles_table_names_who_serves_it.py` reads **closed**
+        filings and still holds that R6's cell names nobody; this one
+        reads every filing, so it reddens the day a role loses its
+        last one - or the day a ninth role arrives unfiled.
         """
         served = set()
         for path in _tagged_task_files():
@@ -151,7 +299,7 @@ class TestEveryNewFilingNamesItsReader:
                     break
         unserved = sorted(_role_ids() - served,
                           key=lambda r: int(r[1:]))
-        assert unserved == ["R6"], (
+        assert unserved == [], (
             f"the set of roles with no filing since UX-{FIRST_TAGGED} changed "
             f"to {unserved}. That is the role model earning its file - update "
             f"roles.md's table in the same commit (fixing guide, item 7).")

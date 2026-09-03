@@ -49,6 +49,7 @@ import gzip
 import hashlib
 import pathlib
 import shutil
+import subprocess
 import sys
 
 import pytest
@@ -67,8 +68,34 @@ from tools.native_trace import trackevent  # noqa: E402
 
 from test_the_timeline_speaks_perfetto import _fields  # noqa: E402
 
-REAL_CAPTURE = REPO / ("examples/06-macro-micro-optimization/.bga/runs/"
-                       "20260821T170127Z")
+CAPTURE_RUN = ("examples/06-macro-micro-optimization/.bga/runs/"
+               "20260821T170127Z")
+
+
+def _capture_roots():
+    """The trees the gitignored capture can be in, nearest first.
+
+    `UX-572`: a linked worktree gets the tracked files and not the
+    ignored ones, so `parents[2]` alone reads a tree that never has the
+    capture and skips every clause. `--git-common-dir` names the
+    checkout the worktree was linked from, which does.
+    """
+    roots = [REPO]
+    try:
+        common = subprocess.run(
+            ["git", "rev-parse", "--git-common-dir"], cwd=str(REPO),
+            capture_output=True, text=True, timeout=30).stdout.strip()
+    except (OSError, subprocess.SubprocessError):
+        common = ""
+    if common:
+        linked = (REPO / common).resolve().parent
+        if linked != REPO:
+            roots.append(linked)
+    return roots
+
+
+SEARCHED = [root / CAPTURE_RUN for root in _capture_roots()]
+REAL_CAPTURE = next((path for path in SEARCHED if path.is_dir()), SEARCHED[0])
 
 # `examples/06`'s capture is real and **gitignored** - it exists on this
 # machine and not in a clone. The measured figures below are taken from
@@ -76,8 +103,14 @@ REAL_CAPTURE = REPO / ("examples/06-macro-micro-optimization/.bga/runs/"
 # skipped rather than deleted; every *property* they check is also
 # checked on a committed fixture, so CI is not left believing something
 # it never ran.
+#
+# The reason names the path (`UX-572`): "in this tree" did not say
+# *which* tree, and the tree it meant was the one that never has it.
+NO_CAPTURE = ("no real capture at examples/06-macro-micro-optimization/"
+              ".bga/runs/20260821T170127Z, in this tree or the checkout "
+              "it was linked from")
 needs_real_capture = pytest.mark.skipif(
-    not REAL_CAPTURE.is_dir(), reason="no real capture in this tree")
+    not REAL_CAPTURE.is_dir(), reason=NO_CAPTURE)
 
 
 
@@ -189,7 +222,7 @@ def decode(path):
 @pytest.fixture(scope="module")
 def rendered(tmp_path_factory):
     if not REAL_CAPTURE.is_dir():
-        pytest.skip("no real capture in this tree")
+        pytest.skip(NO_CAPTURE)
     tmp = tmp_path_factory.mktemp("counter")
     snapshot = _snapshot(tmp)
     out = tmp / DEFAULT_OUTPUT[FORMAT_TRACKEVENT]

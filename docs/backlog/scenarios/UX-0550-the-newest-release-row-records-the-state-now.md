@@ -64,6 +64,8 @@ a mutation that edits a *superseded* release's contract list reddens.
 
 ## Outcome
 
+**Premise:** held — five commits, none of them a release, on a row dated 2026-08-27.
+
 **Round 81, 2026-09-03. Decision: cut 0.4.0.** The alternative
 (`0.4.0-dev`) was rejected on two measurements: `bga.__version__` and
 `pyproject.toml` are two of the three copies of the newest row's

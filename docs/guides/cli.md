@@ -44,6 +44,12 @@ wants the underlying program can find it. Dispatch is lazy — only the
 module actually invoked is imported, so `bga analyze` does not pay to
 import the native tracer and the trace converters on every run.
 
+**The table below is that block**, alias for alias and module for
+module:
+[`test_the_alias_table_is_the_help.py`](../../tests/unit/test_the_alias_table_is_the_help.py)
+compares the two, in both directions, so a new alias is a red test
+rather than a row somebody notices (`UX-552`).
+
 | alias | wraps |
 |---|---|
 | `bga wrap` | `tools.bst_run_wrapped` |
@@ -53,6 +59,8 @@ import the native tracer and the trace converters on every run.
 | `bga checkout-cost` | `tools.bst_checkout_cost` |
 | `bga run-context` | `tools.bst_run_context` |
 | `bga graph-from-show` | `tools.bst_show_to_graph` |
+| `bga timeline` | `tools.bga_timeline` |
+| `bga view` | `tools.bga_view` |
 | `bga log-to-chrome` | `tools.bst_log_to_chrome_trace` |
 | `bga chrome-to-trace` | `tools.chrome_trace_to_bga_trace` |
 | `bga native-to-chrome` | `tools.native_trace_to_chrome_trace` |

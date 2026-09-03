@@ -1,6 +1,6 @@
 # UX-596: build time in the team's units
 
-**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** UX-230 (a price on a chosen set), UX-581 | **Serves:** R8, the engineering lead funding infrastructure | **Topic:** analysis
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-230 (a price on a chosen set), UX-581 | **Serves:** R8, the engineering lead funding infrastructure | **Topic:** analysis
 
 ## Motivation
 

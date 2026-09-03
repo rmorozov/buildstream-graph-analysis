@@ -15,19 +15,20 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-607 scenarios: **11 open**, 596 closed.
+609 scenarios: **11 open**, 598 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
 | capture | 1 | 91 |
-| analysis | 2 | 92 |
-| contracts | 0 | 42 |
+| analysis | 0 | 92 |
+| contracts | 1 | 43 |
 | viewer | 0 | 138 |
 | cli | 0 | 21 |
 | store | 1 | 16 |
 | docs | 4 | 89 |
 | guards | 3 | 118 |
+| report | 1 | 1 |
 
 ## Open scenarios
 
@@ -36,10 +37,8 @@ task file, which is the only place it ever lived twice.
 
 | ID | Scenario | Topic | Priority | Serves | Status |
 |---|---|---|---|---|---|
-| UX-593 | [the regression verdict carries no evidence chain](UX-0593-the-regression-verdict-carries-no-evidence-chain.md) | analysis | Medium | R4, the CI gatekeeper asked to defend a red gate | 🔴 Open |
 | UX-594 | [a capture cannot say when the build was requested](UX-0594-a-capture-cannot-say-when-the-build-was-requested.md) | capture | Medium | R6, the contributor waiting on a verdict | 🔴 Open |
 | UX-595 | [the capacity model has a fact base and no model](UX-0595-the-capacity-model-has-a-fact-base-and-no-model.md) | store | Medium | R5, the capacity operator | 🔴 Open |
-| UX-596 | [build time in the team's units](UX-0596-build-time-in-the-team-s-units.md) | analysis | Low | R8, the engineering lead funding infrastructure | 🔴 Open |
 | UX-597 | [three release rows and no tag](UX-0597-three-release-rows-and-no-tag.md) | docs | Low | anyone trying to check out a release this repository claims to have made | 🔴 Open |
 | UX-601 | [two guard ledgers of the same kind, two mechanisms](UX-0601-two-guard-ledgers-of-the-same-kind.md) | docs | Low | the next session asked to add a rule and its guard | 🔴 Open |
 | UX-604 | [the verification-log clause reads the entry below it](UX-0604-the-verification-log-clause-reads-the-entry-below.md) | guards | Medium | the round whose log entry says nothing and passes | 🔴 Open |
@@ -47,6 +46,8 @@ task file, which is the only place it ever lived twice.
 | UX-607 | [a paragraph in the guide is a two-file change](UX-0607-a-paragraph-in-the-guide-is-a-two-file-change.md) | docs | Medium | anyone adding a paragraph to the fixing guide | 🔴 Open |
 | UX-608 | [fifteen commands the context map never names](UX-0608-fifteen-commands-the-context-map-never-names.md) | docs | Medium | every session reading fixing guide §6 to find where a thing lives | 🔴 Open |
 | UX-609 | [the invariants docstring lists five of six gates](UX-0609-the-invariants-docstring-lists-five-of-six-gates.md) | guards | Low | the reader opening the module to find what it enforces | 🔴 Open |
+| UX-610 | [the verdict record is not a published key](UX-0610-the-verdict-record-is-not-a-published-key.md) | contracts | Medium | R4, the CI gatekeeper asked to defend a red gate from the payload alone | 🔴 Open |
+| UX-611 | [what-if's saving is still in build seconds](UX-0611-whatifs-saving-is-still-in-build-seconds.md) | report | Low | the team deciding whether a fix is worth a day | 🔴 Open |
 
 ## UX-563..UX-586: the eighty-second round — the documents, read against the tool (2026-09-03)
 

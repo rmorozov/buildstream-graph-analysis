@@ -1648,6 +1648,31 @@ class _Handler(http.server.BaseHTTPRequestHandler):
                    json.dumps({"error": why}).encode())
 
 
+class _Server(http.server.ThreadingHTTPServer):
+    """`UX-559`: the served trace's scratch lives exactly as long as the
+    server that rendered it.
+
+    The `mkdtemp` is class state on the handler, so nothing bounded it:
+    one `bga-serve-*` directory per served run, per process, kept until
+    something else emptied `/tmp`. Closing is where it goes, rather than
+    `atexit`, because `serve()`'s contract is already "the caller closes
+    it" - so every route out, including the `--perfetto` refusal that
+    never reaches the serve loop, cleans up on the call it already makes.
+    """
+
+    def server_close(self):
+        try:
+            super().server_close()
+        finally:
+            handler = self.RequestHandlerClass
+            scratch = getattr(handler, "trace_scratch", None)
+            if scratch:
+                shutil.rmtree(scratch, ignore_errors=True)
+                # The rendered trace was inside it, so the path that
+                # named it is stale rather than merely unused.
+                handler.trace_scratch = handler.trace_path = None
+
+
 def serve(run: str, port: int = 0,
           documents: Optional[Dict[str, dict]] = None,
           with_trace: bool = True,
@@ -1747,7 +1772,7 @@ def serve(run: str, port: int = 0,
                     "trace_lock": threading.Lock(),
                     "trace_served": 0, "trace_served_bytes": 0,
                     "run_root": os.path.abspath(run)})
-    httpd = http.server.ThreadingHTTPServer(("127.0.0.1", port), handler)
+    httpd = _Server(("127.0.0.1", port), handler)
     return httpd, landing_url(httpd.server_address[1])
 
 

@@ -1,6 +1,6 @@
 # UX-559: `bga view --serve` leaks a scratch directory per served run, forever
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-299 (which added the served trace) | **Found by:** `UX-546`'s track, measuring under load | **Serves:** anyone who leaves the viewer running | **Topic:** viewer
+**Priority:** Medium | **Status:** 🟢 Fixed & Verified | **Depends on:** UX-299 (which added the served trace) | **Found by:** `UX-546`'s track, measuring under load | **Serves:** anyone who leaves the viewer running | **Topic:** viewer
 
 ## Motivation
 
@@ -65,4 +65,76 @@ before=$(ls -d /tmp/bga-serve-* 2>/dev/null | wc -l)
 # serve a run twice, stop the server
 after=$(ls -d /tmp/bga-serve-* 2>/dev/null | wc -l)
 [ "$before" = "$after" ]
+```
+
+## Outcome (round 81, 2026-09-03) — 🟢 Done
+
+### The gap, measured
+
+Two servers, each asked for its timeline, each closed — counting
+`bga-serve-*` in `tempfile.gettempdir()` around them:
+
+```text
+  served 785 bytes; scratch dirs now: 103
+  served 785 bytes; scratch dirs now: 104
+before=102 after=104  leaked=2
+```
+
+One directory per served run, exactly as filed. `before=102` is this
+working copy's own backlog of them, from the suite alone.
+
+### After
+
+The same script, unchanged:
+
+```text
+  served 785 bytes; scratch dirs now: 105
+  served 785 bytes; scratch dirs now: 105
+before=104 after=104  leaked=0
+```
+
+The count rises while a server holds its scratch and returns to
+baseline when it closes. The Acceptance Test as written:
+
+```text
+before=104 after=104
+PASS: serving twice and stopping left nothing behind
+```
+
+`server_close()` is where the removal went, not a `finally` in `main`.
+`serve()`'s docstring already says "the caller closes it", so the one
+call every route out already makes — the serve loop's `finally`, the
+`--perfetto` refusal at `:1875` that never enters the loop, and every
+test holding a server — is the one that cleans up. A `finally` around
+the serve loop alone would have left the other two leaking.
+
+### Mutations verified red and reverted (3)
+
+| # | mutation | reddened |
+|---|---|---|
+| B1 | `_Server` → plain `ThreadingHTTPServer`, i.e. the filed defect | both count clauses, "left 2 scratch director(y/ies) behind", 2 red / 1 green |
+| B2 | `rmtree` deleted, the class-state reset kept | the same two — the bookkeeping alone does not remove a directory, 2 red / 1 green |
+| B3 | `trace_run` forced to `None`, so nothing renders | both, on `HTTP Error 404` — a server that serves no trace cannot pass the guard vacuously, 2 red / 1 green |
+
+No guard of this item failed to discriminate. B3 is the one that
+matters: `test_the_scratch_exists_while_the_server_does` reads the
+count *during* the serve, so "none afterwards" cannot be satisfied by
+never making one.
+
+### Deviation from the Required Fix
+
+None. `atexit` was declined — it is the weaker of the two the task file
+offered, and `server_close` fires on the `--perfetto` route that exits
+before the serve loop, which `atexit` would only reach at interpreter
+shutdown.
+
+The guard points `tempfile.tempdir` at its own directory so the reading
+is the test's and not the machine's; under `-n auto` another worker
+serving a run would otherwise land in the same count.
+
+```text
+$ make test-touching
+97 file(s) selected · 1765 passed, 44 skipped in 129.53s (0:02:09)
+$ make lint
+All checks passed!
 ```

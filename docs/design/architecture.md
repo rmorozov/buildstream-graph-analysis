@@ -698,7 +698,11 @@ how it is *read*, and the shape is deliberately small.
 - **`bga view`** serves the run on `127.0.0.1` at a kernel-chosen port
   and opens a browser at it. The server is a `ThreadingHTTPServer` with
   a fixed document table: each url is a payload computed by the same
-  functions the CLI calls, so nothing is analysed differently. Three
+  functions the CLI calls, so nothing is analysed differently. One entry
+  is conditional rather than fixed - `store-all.json`, the whole store
+  behind the windowed `store.json` (`STORE_WINDOW = 12`, `UX-528`),
+  offered only when the window hides something and fetched only when a
+  reader asks for it. Three
   urls take a parameter - `blast.json?target=` and
   `whatif.json?elements=`, both of which call the function their
   subcommand calls, and `?run=<stamp>` (`UX-394`), which chooses
@@ -862,9 +866,13 @@ how it is *read*, and the shape is deliberately small.
   ([`styleguide.md` §4-5](styleguide.md)).
 
 - **`--export`** inlines every served document and every module into one
-  self-contained HTML file. What cannot survive that - a live search
-  box, anything needing a server - is *hidden with the command that
-  answers it* rather than shipped as a control that always fails.
+  self-contained HTML file. Past `DATA_COMPACT_MIN_B` (200,000 B of
+  JSON) a document is inlined gzip+base64 in an
+  `application/octet-stream` block that `load()` inflates rather than as
+  readable JSON text (`UX-529`) - the same document, one order of
+  magnitude of bytes. What cannot survive the export at all - a live
+  search box, anything needing a server - is *hidden with the command
+  that answers it* rather than shipped as a control that always fails.
 - **The no-arithmetic boundary** is the axis's one rule, and it is the
   reason the rest holds: **a viewer that derives a conclusion is a
   second analyzer.** Diagnoses, rankings, verdicts, savings, next steps
@@ -993,6 +1001,15 @@ keeps two hand-maintained copies of one fact together.
 - **`docs/guides/cli.md`** — CLI reference/usage examples.
 
 ## Verification Log
+
+Updated 2026-09-03 (after `UX-548`), re-grounded in the contracts table
+above against `bga.contracts`'s derived inventory — **23 ids, 9 of them
+marked superseded**, 8 printable and 15 not — and `schemas.schema`'s
+`analyze/v5`: **56 top-level properties**. Both re-read here and
+unchanged: `UX-548` moved two sentences, not a contract. The viewer
+chapter's document table now names `store-all.json` as the one
+conditional entry (`UX-528`), and the `--export` bullet says a document
+past `DATA_COMPACT_MIN_B` travels gzip+base64 (`UX-529`).
 
 Updated 2026-09-02 (after `UX-535`), re-grounded in the contracts
 table above against `bga.contracts`'s derived inventory — **23 ids, 9

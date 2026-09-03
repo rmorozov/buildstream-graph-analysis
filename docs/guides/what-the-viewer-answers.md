@@ -139,6 +139,21 @@ picker. That is the one place in this document where the served page
 and the attachment answer differently, and it is a property of the
 artifact rather than of the page.
 
+**Both of the page's pickers draw a window, not the population**
+(`UX-528`, `UX-527`), and both say so where they stand:
+
+| control | draws | reaches |
+|---|---|---|
+| the rail's run picker | the last **12** snapshots (`STORE_WINDOW`) | the whole store — "show all N" fetches `store-all.json`, and a box takes the stamp of any run |
+| the questions page's element box | the first **8** uids matching what you typed (`PICKER_SHOWN`) | every element of the run — the count is in the sentence beside it |
+
+The element box is a search, not a menu: it was a `<select>` with one
+option per element until round 80, which on a 4,002-element run was
+4,119 of the page's 8,953 DOM nodes and not a control anyone could use.
+It matches on *any* part of a uid rather than a prefix, because an
+element is `layer07/mod123.bst` and the layer is rarely the part a
+reader remembers.
+
 What this does *not* make the page is a cross-run analyser. Comparing
 many runs is `bga snapshot --list` and the store aggregate; the picker
 moves the same single-run report from one snapshot to another.
@@ -156,11 +171,20 @@ moves the same single-run report from one snapshot to another.
   Perfetto fetches the trace rather than receiving it by
   `postMessage`. The rule for *when to press the button* does not
   change; only the transport does.
-- **Above 8,000 tracks it is refused** (`UX-430`), and that one is not
-  about transport. Perfetto draws a row per track, and a big capture
-  reaches the track bound while its byte figure still looks
-  comfortable — 491 KB against 4 MiB at 16,832 tracks. `bga timeline
-  --planes 1` is the answer, and [`cli.md`](cli.md)'s ceilings table
-  is where all three bounds are listed. This is the one case where the
-  rule above *does* change: the answer is still in the trace, and the
-  trip has to be made with fewer lanes.
+- **Above 8,000 tracks the export narrows the trace before it gives up
+  on it** (`UX-430`, `UX-530`), and that bound is not about transport.
+  Perfetto draws a row per track, and a big capture reaches the track
+  bound while its byte figure still looks comfortable — 491 KB against
+  4 MiB at 16,832 tracks. The ladder is
+  `tools/bga_view.py::_degradation_steps`, coarsest last, and it has
+  two steps: **both planes**, then **`--planes 1`, which leaves Plane
+  2's process lanes out**. An export renders the first, and if that is
+  over either bound renders the second and carries *that*, saying which
+  step it took and what the whole one would have drawn. Only when every
+  step is still over does the file carry no trace, and then it names
+  each step's own number. `bga timeline --planes 1` and
+  `--only-element` are the same narrowing by hand;
+  [`cli.md`](cli.md)'s ceilings table is where all three bounds are
+  listed. This is the one case where the rule above *does* change: the
+  answer is still in the trace, and the trip has to be made with fewer
+  lanes.

@@ -34,7 +34,7 @@ import pytest
 REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 
-from tools.bga_view import payloads  # noqa: E402
+from tools.bga_view import _degradation_steps, payloads  # noqa: E402
 
 RUN = REPO / "tests/fixtures/macro_micro/run"
 GUIDE = REPO / "docs/guides/what-the-viewer-answers.md"
@@ -242,3 +242,34 @@ class TestTheGuideAndTheRolesAgree:
             "the guide no longer states which roles the Perfetto escape "
             "hatch actually serves, which is the whole of its gap-analysis "
             "value")
+
+
+class TestTheDegradationLadderIsTheCode:
+    """`UX-548`: the guide said the timeline was refused above the track
+    ceiling for a round after `UX-530` made it degrade to `--planes 1`
+    first. The ladder is read off the code here, not restated."""
+
+    @staticmethod
+    def _flat():
+        return " ".join(GUIDE.read_text(encoding="utf-8").split())
+
+    def test_the_guide_names_every_narrowing_the_export_tries(self):
+        steps = [narrowing for _, narrowing in _degradation_steps()
+                 if narrowing]
+        assert steps, "no narrowing step in the ladder at all"
+        flat = self._flat()
+        missing = [step for step in steps if step not in flat]
+        assert not missing, (
+            f"the ladder narrows with {missing}, and the guide does not say "
+            f"so. A step the export takes and no document names is what "
+            f"this clause exists for")
+
+    def test_the_count_of_steps_is_the_count_in_the_prose(self):
+        words = {2: "two", 3: "three", 4: "four", 5: "five"}
+        steps = len(_degradation_steps())
+        assert steps in words, (
+            f"{steps} steps, and this clause has no word for it - add one "
+            f"rather than letting the prose go unchecked")
+        assert f"it has {words[steps]} steps" in self._flat(), (
+            f"the guide does not say the ladder has {words[steps]} steps, "
+            f"and `_degradation_steps` returns {steps}")

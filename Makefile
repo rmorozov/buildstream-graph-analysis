@@ -61,18 +61,18 @@ test-tiers:
 	  status=$$?; rm -f "$(CURDIR)/.tier-report.xml"; exit $$status
 
 test-small:
-	python -m pytest tests/ -m small -q $(PYTEST_XDIST)
+	python -m pytest tests/ -m small -q $(PYTEST_XDIST) $(PYTEST_ARGS)
 
 test-medium:
-	python -m pytest tests/ -m medium -q $(PYTEST_XDIST)
+	python -m pytest tests/ -m medium -q $(PYTEST_XDIST) $(PYTEST_ARGS)
 
 test-large:
-	python -m pytest tests/ -m large -q $(PYTEST_XDIST)
+	python -m pytest tests/ -m large -q $(PYTEST_XDIST) $(PYTEST_ARGS)
 
 # Everything that does not need a real bst build - the widest tier a
 # machine without BuildStream can actually run to completion.
 test-fast:
-	python -m pytest tests/ -m "small or medium" -q $(PYTEST_XDIST)
+	python -m pytest tests/ -m "small or medium" -q $(PYTEST_XDIST) $(PYTEST_ARGS)
 
 # UX-336: the inner loop. Maps the working diff to the test files that
 # name the modules it touched (tools/dev_touching.py explains why grep

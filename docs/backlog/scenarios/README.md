@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-615 scenarios: **10 open**, 605 closed.
+616 scenarios: **11 open**, 605 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -27,7 +27,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | cli | 0 | 21 |
 | store | 0 | 16 |
 | docs | 3 | 90 |
-| guards | 4 | 121 |
+| guards | 5 | 122 |
 
 ## Open scenarios
 
@@ -46,6 +46,7 @@ task file, which is the only place it ever lived twice.
 | UX-615 | [the scratchpad is shared between tracks](UX-0615-the-scratchpad-is-shared-between-tracks.md) | guards | Low | a round running tracks in parallel | 🔴 Open |
 | UX-616 | [the coupling runs the other way too](UX-0616-the-coupling-runs-the-other-way-too.md) | docs | Medium | anyone adding a paragraph to the rules card | 🔴 Open |
 | UX-617 | [the derived count cannot see an unstaged row](UX-0617-the-derived-count-cannot-see-an-unstaged-row.md) | guards | Low | the session filing a row | 🔴 Open |
+| UX-618 | [the step that fails most writes no record](UX-0618-the-step-that-fails-most-writes-no-record.md) | guards | High | every session reading a red CI job | 🔴 Open |
 
 ## UX-563..UX-586: the eighty-second round — the documents, read against the tool (2026-09-03)
 

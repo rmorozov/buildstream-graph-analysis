@@ -58,8 +58,17 @@ jobs:
       # "Tiers match CI's own record of them" step below, which divides
       # the runner out first and names the file. Keep in step with
       # SMALL_TIER_BACKSTOP_S in tests/tiers.py.
+      # `UX-618`: it writes the junit too, so "The failing tests, named"
+      # has something to read. This step is the one that fails most, and
+      # until now a failure here left the namer with no file at all -
+      # every red backstop cost a bisect against a log tail. The later
+      # `Test` step overwrites this junit when it runs, which is what the
+      # drift gate wants; when the backstop fails, `Test` is skipped and
+      # this junit is the record that survives.
       - name: Test (small tier, with a backstop)
-        run: timeout 120 make test-small
+        run: |
+          timeout 120 make test-small \
+            PYTEST_ARGS="--junitxml=${{ runner.temp }}/junit.xml"
 
       # UX-420: one interpreter writes a report, because one is enough
       # to read this runner against its own past and four would be four

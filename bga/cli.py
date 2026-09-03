@@ -21,6 +21,7 @@ Examples:
 import argparse
 import json
 import logging
+import os
 import sys
 from pathlib import Path
 from typing import List, NoReturn, Optional
@@ -43,6 +44,7 @@ from .exceptions import (
     EXIT_EFFICIENCY_REGRESSION,
     EXIT_GENERAL,
     EXIT_MISMATCHED_RUNS,
+    EXIT_OK,
     EXIT_REGRESSION,
     EXIT_SIGNAL_UNAVAILABLE,
     AnalysisError,
@@ -626,6 +628,10 @@ def _execute_and_write(args: argparse.Namespace, produce_output) -> int:
 
         return 0
 
+    except BrokenPipeError:
+        # UX-575: the reader closed the pipe; main() answers that, not the
+        # generic handler below, which would call it an unexpected error.
+        raise
     except FileNotFoundError as e:
         # A required input file (run-context.json/graph.json/trace.json) is
         # missing from an otherwise-existing run directory - this is a
@@ -959,6 +965,9 @@ def _execute_compare_and_write(args: argparse.Namespace) -> int:
 
         return _compare_exit_code(args, comparison)
 
+    except BrokenPipeError:
+        # UX-575: as above - the boundary owns this one.
+        raise
     except FileNotFoundError as e:
         logger.error("Required input file not found: %s", e)
         print(f"Error: Required input file not found - {e}", file=sys.stderr)
@@ -2193,16 +2202,49 @@ def _command_emitting(contract: str) -> Optional[str]:
     return None
 
 
+def _stop_writing_to_stdout() -> None:
+    """Point stdout's descriptor at /dev/null after a broken pipe.
+
+    UX-575: catching the error is not the whole handler - every later
+    write raises again, including the interpreter's own flush at exit,
+    which prints "Exception ignored" to a stderr the contract says is
+    untouched. A no-op when stdout has no descriptor (a StringIO under
+    test).
+    """
+    try:
+        fd = sys.stdout.fileno()
+    except (AttributeError, ValueError, OSError):
+        return
+    devnull = os.open(os.devnull, os.O_WRONLY)
+    os.dup2(devnull, fd)
+    os.close(devnull)
+
+
 def main(argv: Optional[list[str]] = None) -> int:
+    """Entry point for the bga CLI; returns the exit code.
+
+    UX-575: the one place a broken stdout pipe is answered - the reader
+    chose to stop reading, so that is exit 0 and a silent stderr, not a
+    traceback. The explicit flush is the handler's other half: stdout is
+    block-buffered on a pipe, so a short output raises nothing until the
+    interpreter flushes at exit, which is past every `except` in this
+    process and costs exit 120 plus "Exception ignored" on stderr.
     """
-    Main entry point for the bga CLI.
-    
-    Args:
-        argv: Command-line arguments (defaults to sys.argv[1:])
-        
-    Returns:
-        Exit code
-    """
+    try:
+        try:
+            code = _run(argv)
+        finally:
+            # In the `finally` because argparse's own SystemExit (--help,
+            # --version) leaves by the same door and owes the same flush.
+            sys.stdout.flush()
+        return code
+    except BrokenPipeError:
+        _stop_writing_to_stdout()
+        return EXIT_OK
+
+
+def _run(argv: Optional[list[str]] = None) -> int:
+    """The CLI body main() wraps: completion, --schema, tools, argparse."""
     # UX-67: one entry point for the whole workflow. Checked before
     # argparse, because a tool's own arguments are its business - `bga
     # extract . build.log run/ --format wrapped` must reach

@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-554 scenarios: **5 open**, 549 closed.
+555 scenarios: **6 open**, 549 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -27,7 +27,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | cli | 0 | 19 |
 | store | 0 | 14 |
 | docs | 2 | 71 |
-| guards | 2 | 96 |
+| guards | 3 | 97 |
 
 ## Open scenarios
 
@@ -41,6 +41,7 @@ task file, which is the only place it ever lived twice.
 | UX-551 | [every session plans its loop against a suite 62% faster than the real one](UX-0551-the-loop-is-planned-against-a-suite-that-is-gone.md) | docs | Medium | architecture review 12 | 🔴 |
 | UX-555 | [`--no-trace` tells a two-plane run it kept no Plane 2 log](UX-0555-with-trace-false-blames-a-missing-plane-2.md) | viewer | Low | `UX-545`'s track, one branch over from its own fix | 🔴 |
 | UX-556 | [the spec still says "the last four are written but not printable"](UX-0556-the-spec-carries-the-sentence-ux-549-fixed.md) | docs | Low | `UX-549`'s track, which could not edit ground truth | 🔴 |
+| UX-557 | [the drift gate's cause filter admits all 424 files](UX-0557-the-cause-filter-admits-the-whole-suite.md) | guards | Medium | round 81's PR, reddened by a file its diff does not touch | 🔴 |
 
 ## UX-522..UX-536: the seventy-ninth round — the controls walked, the suite weighed (2026-09-02)
 

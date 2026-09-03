@@ -28,3 +28,28 @@ class AnalysisError(BgaError, ValueError):
 
 class ValidationError(BgaError, ValueError):
     """A hard-gate validation check failed."""
+
+
+# UX-574: the one registry docs/guides/cli.md's Exit Codes list derives
+# from, so a row cannot drift from the code again.
+EXIT_OK = 0
+EXIT_GENERAL = 1
+EXIT_INGESTION = 2
+EXIT_ANALYSIS = 3
+EXIT_REGRESSION = 4
+EXIT_EFFICIENCY_REGRESSION = 5
+EXIT_MISMATCHED_RUNS = 6
+EXIT_SIGNAL_UNAVAILABLE = 7
+EXIT_INTERRUPTED = 130
+
+EXIT_CODES: dict[str, int] = {
+    "success": EXIT_OK,
+    "general error": EXIT_GENERAL,
+    "ingestion failure": EXIT_INGESTION,
+    "analysis failure": EXIT_ANALYSIS,
+    "regression": EXIT_REGRESSION,
+    "efficiency regression": EXIT_EFFICIENCY_REGRESSION,
+    "mismatched runs": EXIT_MISMATCHED_RUNS,
+    "signal unavailable": EXIT_SIGNAL_UNAVAILABLE,
+    "interrupted": EXIT_INTERRUPTED,
+}

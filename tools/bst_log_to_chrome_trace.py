@@ -73,6 +73,15 @@ BST_MAX_PUSH_RE = re.compile(r"Maximum Push Tasks:\s+(\d+)")
 # exists in wrapped logs and requires shell-quoting-aware parsing; see
 # tools/bst_extract_run.py (P4-10), which uses this.
 TARGETS_RE = re.compile(r"^\s*Targets:\s+(.*)$")
+
+# `UX-612`: where the bst-invocation's opening timestamp came from -
+# and so where `wall_clock.start_us` came from, since that is the same
+# event. Two of the three are instants the run itself produced; the
+# third is when the log file was last written, which is not one, and a
+# consumer subtracting from it is wrong by however long the build ran.
+START_LOG_TIMESTAMP = "log_timestamp"
+START_OPERATOR_DECLARED = "operator_declared"
+START_FILE_MTIME = "file_mtime"
 # UX-55: BuildStream's closing Pipeline Summary, e.g.
 #     Build Queue: processed 25, skipped 65, failed 0
 # The trailing whitespace and the variable run of spaces after the
@@ -120,7 +129,8 @@ def parse_elapsed_to_seconds(elapsed_str):
 
 
 class WrapperTraceConverter:
-    def __init__(self, raw_start_time_us=None):
+    def __init__(self, raw_start_time_us=None,
+                 raw_start_time_source=START_FILE_MTIME):
         """
         Args:
             raw_start_time_us: absolute epoch microseconds to anchor raw-mode
@@ -128,10 +138,21 @@ class WrapperTraceConverter:
                 mode, which anchors on each line's own wrapper UTC timestamp
                 instead. Required (by process_line_raw) when processing raw
                 lines.
+            raw_start_time_source: where that anchor came from (`UX-612`) -
+                `_resolve_start_time_source` answers it for the same
+                argument `raw_start_time_us` was resolved from. Defaults
+                to the mtime, which is what `_resolve_start_time_us`
+                defaults to.
         """
         self.trace_events = []
         self.last_known_ts = 0
         self.raw_start_time_us = raw_start_time_us
+        self.raw_start_time_source = raw_start_time_source
+        # `UX-612`: (ts, source) per bst-invocation B event, so the
+        # source of the *earliest* one - the event
+        # `invocation_wall_clock` takes as the run's start - is
+        # answerable rather than assumed from the --format flag.
+        self._invocation_starts = []
 
         # Wrapper state
         self.current_cmd = None
@@ -342,6 +363,24 @@ class WrapperTraceConverter:
                 "args": {"Full Command": label},
             }
         )
+        # `UX-612`: this ts is the raw anchor, not an instant the log
+        # recorded - the whole point of the field.
+        self._invocation_starts.append((ts, self.raw_start_time_source))
+
+    def invocation_start_source(self):
+        """How the earliest bst-invocation B timestamp was obtained
+        (`UX-612`) - the very event `invocation_wall_clock` reports as
+        the run's start, so this is the provenance of
+        `wall_clock.start_us`.
+
+        Keyed on the earliest event rather than on the `--format` flag,
+        because `auto` decides per line and a log can open one
+        invocation each way. `None` where no bst invocation was found,
+        which is the case `wall_clock` is omitted in.
+        """
+        if not self._invocation_starts:
+            return None
+        return min(self._invocation_starts, key=lambda pair: pair[0])[1]
 
     def _check_header_lines(self, text):
         """Check a line of BuildStream's own summary-header output
@@ -614,6 +653,10 @@ class WrapperTraceConverter:
                     "args": {"Full Command": self.current_cmd},
                 }
             )
+            # `UX-612`: the wrapper stamped this line when it read it,
+            # so this ts is a real instant.
+            if self.is_bst:
+                self._invocation_starts.append((ts, START_LOG_TIMESTAMP))
             return
 
         ret_match = RETURN_CODE_RE.search(msg)
@@ -788,6 +831,12 @@ class WrapperTraceConverter:
             )
 
         return json.dumps(meta_events + self.trace_events, indent=2)
+
+
+def _resolve_start_time_source(start_time_arg):
+    """Which anchor `_resolve_start_time_us` uses for the same argument
+    (`UX-612`), so the two never answer differently."""
+    return START_OPERATOR_DECLARED if start_time_arg else START_FILE_MTIME
 
 
 def _resolve_start_time_us(start_time_arg, input_log_path):

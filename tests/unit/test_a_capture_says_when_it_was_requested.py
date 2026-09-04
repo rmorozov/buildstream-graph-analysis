@@ -78,8 +78,13 @@ class TestTheAcceptanceTest:
 
 
 class TestZeroIsAnAnswerAndNotADefault:
+    """`UX-612`: these starts declare `log_timestamp`, because the gate
+    it added refuses a start that does not say it is a real instant -
+    the subtraction below is only a measurement when it is."""
+
     def test_a_request_at_the_start_instant_is_a_measured_zero(self):
-        context = {"wall_clock": {"start_us": STARTED_AT_US}}
+        context = {"wall_clock": {"start_us": STARTED_AT_US,
+                                  "start_us_source": "log_timestamp"}}
         common.add_queue_seam(
             context, env={"BGA_REQUESTED_AT": "2026-08-13T09:00:00Z"})
         seam = context["queue_seam"]
@@ -87,7 +92,8 @@ class TestZeroIsAnAnswerAndNotADefault:
         assert "absent_reason" not in seam
 
     def test_a_request_after_the_start_is_refused_rather_than_signed(self):
-        context = {"wall_clock": {"start_us": STARTED_AT_US}}
+        context = {"wall_clock": {"start_us": STARTED_AT_US,
+                                  "start_us_source": "log_timestamp"}}
         common.add_queue_seam(
             context, env={"BGA_REQUESTED_AT": "2026-08-13T09:20:00Z"})
         seam = context["queue_seam"]

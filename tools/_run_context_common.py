@@ -14,6 +14,17 @@ import os
 from datetime import datetime, timezone
 from typing import Optional
 
+from .bst_log_to_chrome_trace import (START_LOG_TIMESTAMP,
+                                      START_OPERATOR_DECLARED)
+
+# `UX-612`: the sources that are a real instant the run produced. A
+# start from anywhere else - the log file's mtime, or a producer old
+# enough to publish no source at all - is an anchor, and subtracting
+# from it yields a figure wrong by however long the build ran before
+# the file was last written. Membership rather than a deny-list, so a
+# fourth source added without a decision is refused rather than trusted.
+START_INSTANT_SOURCES = (START_LOG_TIMESTAMP, START_OPERATOR_DECLARED)
+
 
 def host_cpu_count():
     """The real number of CPU cores available to this process (UX-12) -
@@ -253,6 +264,30 @@ REQUESTED_AT_ENV = (
 NO_REQUEST_INSTANT = "no_request_instant"
 NO_START_INSTANT = "no_start_instant"
 REQUEST_AFTER_START = "request_after_start"
+# `UX-612`: the start is an anchor and not an instant, so there is
+# nothing to subtract from. Distinct from `no_start_instant`, which is
+# a capture with no start at all: this one has a number and refuses it.
+START_NOT_AN_INSTANT = "start_not_an_instant"
+
+
+def add_start_clock_source(run_context: dict, source) -> None:
+    """`UX-612`: how `wall_clock.start_us` was obtained.
+
+    `start_us` was two measurements wearing one name - a real instant
+    read from a wrapped log, and the log file's mtime on the raw path,
+    where there is no instant to read (which is why the mtime is
+    there). Nothing published said which, so `UX-594`'s queue wait
+    subtracted a request instant from a file's last-write time and
+    published the difference as a wait.
+
+    Written inside `wall_clock` rather than beside it: it describes one
+    of that record's two fields, and a consumer that has the start has
+    the source in the same object. Omitted where there is no
+    `wall_clock` - a source for a field that is not there says nothing.
+    """
+    clock = run_context.get("wall_clock")
+    if isinstance(clock, dict) and source is not None:
+        clock["start_us_source"] = source
 
 
 def parse_instant(text) -> Optional[int]:
@@ -311,23 +346,40 @@ def add_queue_seam(run_context: dict, env=None) -> None:
     Always written, like `build_outcome`: an absent `queue_seam` has to
     keep meaning "the producer had never heard of this field".
 
-    Call after `wall_clock` is set - the started-at is read from it, so
-    the two instants subtracted here are the two the document publishes.
+    `UX-612`: and the started-at has to *be* an instant. A start
+    carrying `file_mtime` - or no source at all - is refused with
+    `start_not_an_instant`, because subtracting from a file's last-write
+    time publishes the build's own duration as a queue.
+
+    Call after `wall_clock` and `add_start_clock_source` are set - the
+    started-at and its provenance are both read from there, so the two
+    instants subtracted here are the two the document publishes.
     """
     instant, source = requested_at(env)
-    started = (run_context.get("wall_clock") or {}).get("start_us")
+    clock = run_context.get("wall_clock") or {}
+    started = clock.get("start_us")
+    started_source = clock.get("start_us_source")
     if not isinstance(started, int):
         started = None
     seam = {
         "requested_at_us": instant,
         "requested_at_source": source,
         "started_at_us": started,
+        # `UX-612`: which clock the other end of this interval came
+        # from, carried beside it so the wait and its provenance are
+        # read together.
+        "started_at_source": started_source,
         "queue_wait_us": None,
     }
     if instant is None:
         seam["absent_reason"] = NO_REQUEST_INSTANT
     elif started is None:
         seam["absent_reason"] = NO_START_INSTANT
+    elif started_source not in START_INSTANT_SOURCES:
+        # `UX-612`: before the ordering check, because two instants only
+        # one of which is an instant do not disagree about their order -
+        # a mtime after a request is the normal case, not a clock fault.
+        seam["absent_reason"] = START_NOT_AN_INSTANT
     elif instant > started:
         seam["absent_reason"] = REQUEST_AFTER_START
     else:

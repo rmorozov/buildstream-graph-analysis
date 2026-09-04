@@ -422,14 +422,29 @@ class TestEveryVersionedReleaseIsTagged:
 
     def test_each_named_exception_still_needs_naming(self):
         """`UX-633`: an exemption that has stopped applying is a hole in
-        the clause above wearing a reason. It comes out when it does."""
+        the clause above wearing a reason. It comes out when it does.
+
+        The message carries the commits it resolved, because the first
+        run of this clause on CI said "reachable now" where the same
+        command on a developer's clone said the opposite, and
+        "reachable" without a SHA is not something a log reader can act
+        on (`UX-554`). `--is-ancestor` also answers 0 for *equal*
+        commits, so the two are told apart here rather than conflated.
+        """
         tags = set(self._require_tags())
+        head = _git("rev-parse", "HEAD")[1]
         stale = []
         for tag in sorted(UNREACHABLE_BY_DECISION):
             if tag not in tags:
                 stale.append(f"{tag}: named here and no such tag")
+                continue
+            code, at = _git("rev-parse", f"{tag}^{{commit}}")
+            if code != 0:
+                stale.append(f"{tag}: names no commit in this checkout")
             elif _git("merge-base", "--is-ancestor", tag, "HEAD")[0] == 0:
-                stale.append(f"{tag}: reachable now, so drop the exemption")
+                stale.append(
+                    f"{tag} -> {at} is reachable from HEAD ({head}), so the "
+                    f"exemption is dead and the tag joins the clause above")
         assert stale == [], stale
 
 

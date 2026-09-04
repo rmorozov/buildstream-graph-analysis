@@ -184,6 +184,11 @@ def select(changed, census=True):
     `test_the_selector_carries_the_census.py` wants that: it computes
     which guards a grep can never reach, and calling the whole selector
     to answer that would make every census file reachable by itself.
+
+    `UX-645`: the census is a **floor**, not a selection - the same 11
+    files under every one of the 87 mapped modules. It is inside the
+    width figure because those files run, and `naming(...)` below is
+    the other half, for the questions that are about the change.
     """
     everything = [c for c in changed
                   if any(c == e or c.startswith(e) for e in EVERYTHING)]
@@ -228,6 +233,18 @@ def select(changed, census=True):
     return sorted(chosen), why
 
 
+def naming(selected, why):
+    """`UX-645`: the half of a selection that names the change.
+
+    A file the census alone chose is under every module equally, so it
+    cannot answer "does anything guard this diff". A file with no
+    recorded reason counts as naming: that is the shared-harness
+    fallback, which keys its one reason under `"*"` and really does
+    name everything.
+    """
+    return [name for name in selected if why.get(name, ["*"]) != ["census"]]
+
+
 # `UX-632`: the documents carrying the figure. `CLAUDE.md` is not one -
 # `UX-471`'s guard there forbids a count the tree changes under it, so
 # that row defers to the guide the way its `make test` row already does.
@@ -246,6 +263,11 @@ def spread():
     property of the tree, which is why it is the figure the documents
     carry. Cached: it is 85 selections over the whole suite, and the
     guard that reads it asks four times.
+
+    `UX-645`: the census floor is **inside** these numbers, because the
+    figure is what pytest is handed. Every selection carries all of it,
+    so no reading here can be below `len(census_set())` - measured, the
+    minimum is that floor exactly.
     """
     sizes = sorted(len(select([module])[0]) for module in touch_map())
     if not sizes:
@@ -314,13 +336,18 @@ def main(argv=None) -> int:
         return 0
 
     selected, why = select(changed)
-    if not selected:
+    named = naming(selected, why)
+    if not named:
+        # `UX-645`: read off the naming half, not the whole selection.
+        # The census floor made this unreachable - a module no test
+        # names still selects 11 files and reported as a pass.
         print(f"No test file names any of {len(changed)} changed file(s):\n  "
               + "\n  ".join(changed)
               + "\n\nThat is a finding, not a pass: run `make test-small`, and "
                 "if the change really has no guard, that is what to fix.",
               file=sys.stderr)
-        return 0
+        if not selected:
+            return 0
 
     if args.why:
         # `UX-557`: the shared-harness fallback keys its one reason
@@ -328,6 +355,9 @@ def main(argv=None) -> int:
         # files - the answer existed and no reader could reach it.
         for name in selected:
             print(f"{name}\n    <- {why.get(name, why.get('*'))}")
+        print(f"({len(selected) - len(named)} of {len(selected)} are the "
+              f"census floor, the same under every module - UX-645)",
+              file=sys.stderr)
         for module, size in sorted(wide_entries().items()):
             print(f"(map entry for {module} ignored: {size} files, over the "
                   f"{MAP_ENTRY_CAP} bound - UX-605)", file=sys.stderr)
@@ -350,8 +380,11 @@ def main(argv=None) -> int:
         sys.stdout.write(done.stdout)
         sys.stderr.write(done.stderr)
         return done.returncode
-    print(f"{len(selected)} file(s) selected · {last_line(done.stdout)}",
-          file=sys.stderr)
+    # `UX-645`: the two populations, so the count is not read as if it
+    # were all about the diff.
+    print(f"{len(selected)} file(s) selected "
+          f"({len(selected) - len(named)} census + {len(named)} naming the "
+          f"change) · {last_line(done.stdout)}", file=sys.stderr)
     return 0
 
 

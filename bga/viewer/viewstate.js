@@ -32,6 +32,18 @@ import { applyFocus, applyMarks, captureFocusAndMarks, clearFocus,
 // this table, all of it" is a link somebody pastes into an issue.
 import { applyTableFocus, captureTableFocus } from "./tablefocus.js";
 
+// UX-642: two attributes name one thing. The fixed folds set
+// `data-fold`; every fold `structured.js` builds carries its payload
+// path as `data-fold-path` instead, and the capture selector saw
+// neither of the two conventions as the other - measured on
+// `macro_micro`, 16 `data-fold` against 12 `data-fold-path`, disjoint.
+// Both are read, `data-fold` first, so a fold that ever carries both
+// keeps the shorter key already pasted into links.
+const FOLDS = "details[data-fold],details[data-fold-path]";
+
+const foldKey = (node) =>
+  node.getAttribute("data-fold") ?? node.getAttribute("data-fold-path");
+
 export function splitHash(hash = "") {
   const text = String(hash).replace(/^#/, "");
   const at = text.indexOf(SEPARATOR);
@@ -94,9 +106,10 @@ export function captureView(root) {
     }
   }
 
-  const open = [...(root.querySelectorAll?.("details[data-fold]") ?? [])]
+  const open = [...(root.querySelectorAll?.(FOLDS) ?? [])]
     .filter((node) => node.open)
-    .map((node) => node.getAttribute("data-fold"));
+    .map(foldKey)
+    .filter(Boolean);
   if (open.length) params.set("o", open.join(","));
 
   captureFocusAndMarks(root, params);
@@ -218,10 +231,11 @@ export function applyView(root, query, { dispatch } = {}) {
   }
 
   const open = new Set((params.get("o") ?? "").split(",").filter(Boolean));
-  for (const node of root.querySelectorAll?.("details[data-fold]") ?? []) {
-    if (open.has(node.getAttribute("data-fold"))) {
+  for (const node of root.querySelectorAll?.(FOLDS) ?? []) {
+    const key = foldKey(node);
+    if (key && open.has(key)) {
       node.open = true;
-      applied.push(`o:${node.getAttribute("data-fold")}`);
+      applied.push(`o:${key}`);
     }
   }
 

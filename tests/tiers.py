@@ -645,6 +645,11 @@ MEDIUM = (
     # to do. Two exports booted in a real Chromium plus seven node
     # clauses on `format.js`; 4.2s.
     "tests/unit/test_the_page_keeps_the_names_it_was_given.py",  #    4.2s
+    # `UX-642`, tiered on landing for the reason two lines up: two
+    # exports of `macro_micro` booted in a real Chromium, plus nine
+    # node clauses on the shim. Three single-process runs: 2.15 / 1.84
+    # / 1.46s.
+    "tests/unit/test_a_fold_stays_open_in_the_link.py",          #    2.2s
     # Round 56, the other five of the twelve (see the LARGE block
     # above): over the medium floor, under the large one.
     "tests/unit/test_the_guards_measure_the_page.py",            #   11.5s

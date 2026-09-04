@@ -818,4 +818,9 @@ MEDIUM = (
     # read the question library: the subprocesses are all of it, and no
     # browser is involved. 4.6s here, 6.1s on CI.
     "tests/unit/test_the_questions_are_asked_of_a_real_trace.py",     #    4.6s
+    # `UX-612`, tiered on landing. Seventeen clauses; the four that
+    # publish or refuse a queue wait each drive the capture path end to
+    # end. Single-process, twice: 2.13s on a quiet box, 1.91s here
+    # under two parallel tracks - over the 1.0s floor on both.
+    "tests/unit/test_the_start_clock_says_where_it_came_from.py",     #    2.1s
 )

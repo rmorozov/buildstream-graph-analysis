@@ -1,6 +1,6 @@
 # UX-612: the start clock has no provenance
 
-**Priority:** High | **Status:** 🔴 Open | **Depends on:** UX-594 (which subtracts from it) | **Found by:** round 84, while building the queue seam | **Serves:** anyone computing a duration from a capture's start | **Topic:** capture
+**Priority:** High | **Status:** 🟢 Done Open | **Depends on:** UX-594 (which subtracts from it) | **Found by:** round 84, while building the queue seam | **Serves:** anyone computing a duration from a capture's start | **Topic:** capture
 
 ## Motivation
 

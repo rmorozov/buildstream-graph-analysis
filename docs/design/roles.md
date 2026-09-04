@@ -118,7 +118,7 @@ written; the fourth is the payload:
    the next mechanism that serves a role cannot leave a row stale
    (`UX-580`, `test_the_roles_table_names_who_serves_it.py`).
 4. **The report names its readers.** Since `UX-372`, every finding in
-   `analyze/v5` carries a `reader` — one of R1–R5, this table's own ids
+   `analyze/v6` carries a `reader` — one of R1–R5, this table's own ids
    — and the document publishes a `readers` index saying, for each
    reader this run has something for, their question and the finding
    that is their biggest lever on it. So "what does this build say to

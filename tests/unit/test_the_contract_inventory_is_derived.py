@@ -76,9 +76,10 @@ class TestTheInventoryIsComplete:
         # is how it reached this list at all.
         # `UX-520` added `bundle-manifest/v1`: it is written into the
         # archive a bundle is, and no command prints it.
+        # `UX-641` added `analyze/v5`, for the same reason again.
         assert contracts.unprintable() == [
-            "analyze/v2", "analyze/v3", "analyze/v4", "blast/v1",
-            "bundle-manifest/v1", "capture-layout/v1",
+            "analyze/v2", "analyze/v3", "analyze/v4", "analyze/v5",
+            "blast/v1", "bundle-manifest/v1", "capture-layout/v1",
             "compare/v1", "correlate/v1", "host-samples/v1", "host/v1",
             "host/v2", "plane2/v1", "plane2/v2", "plane2/v3",
             "sources/v1"]
@@ -95,9 +96,9 @@ class TestTheInventoryIsComplete:
         from bga import contracts
 
         assert contracts.superseded() == [
-            "analyze/v2", "analyze/v3", "analyze/v4", "blast/v1",
-            "compare/v1", "correlate/v1", "host/v1", "plane2/v1",
-            "plane2/v2"]
+            "analyze/v2", "analyze/v3", "analyze/v4", "analyze/v5",
+            "blast/v1", "compare/v1", "correlate/v1", "host/v1",
+            "plane2/v1", "plane2/v2"]
         assert "plane2/v1" in contracts.ids()
         assert "plane2/v1" not in contracts.printable()
 

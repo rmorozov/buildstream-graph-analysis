@@ -207,7 +207,7 @@ class TestEveryNumberResolvesToAUnit:
 #: builds them from a run store, which is what the two entries below
 #: with no argv are.
 CONTRACT_RUNS = {
-    "analyze/v5": ["analyze", str(FIXTURES["macro_micro"]), "--format",
+    "analyze/v6": ["analyze", str(FIXTURES["macro_micro"]), "--format",
                    "json"],
     "compare/v2": ["compare", str(FIXTURES["golden"]),
                    str(FIXTURES["golden"]), "--format", "json"],
@@ -227,7 +227,7 @@ CONTRACT_RUNS = {
     "capacity-model/v1": None,
 }
 
-#: What the `neither` bag is allowed to hold outside `analyze/v5`, and
+#: What the `neither` bag is allowed to hold outside `analyze/v6`, and
 #: why. Both entries are `UNDECLARABLE`'s own case reached by a path a
 #: comparison publishes it under - a rule object whose `observed_path`
 #: is null.
@@ -359,7 +359,7 @@ class TestTheCensusReachesEveryContract:
     def test_what_cannot_resolve_is_named_with_a_reason(self, contract):
         census = _census_document(_emitted(contract))
         excused = dict(UNDECLARABLE_ELSEWHERE.get(contract, {}))
-        if contract == "analyze/v5":
+        if contract == "analyze/v6":
             excused.update(UNDECLARABLE)
         unexpected = sorted(set(census["neither"]) - set(excused))
         assert unexpected == [], (

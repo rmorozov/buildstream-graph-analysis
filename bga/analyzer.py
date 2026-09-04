@@ -2497,7 +2497,13 @@ class BuildEfficiencyAnalyzer:
                 ],
             },
             'parallelism': {
-                'levels': result.parallelism.levels,
+                # `UX-641`: one row per level, naming its members. It
+                # published `[0..n-1]` - the row number - until v6.
+                'levels': [
+                    {'level': row.level, 'width': row.width,
+                     'elements': list(row.elements)}
+                    for row in result.parallelism.levels
+                ],
                 'width_at_level': result.parallelism.width_at_level,
                 'max_width': result.parallelism.max_width,
                 'min_width': result.parallelism.min_width,

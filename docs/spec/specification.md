@@ -1518,7 +1518,7 @@ Schemas:
 
 ```text
 run-context/v9      graph/v9      trace/v9      analysis/v9   (inputs, and the analysis shape)
-analyze/v5          compare/v2    blast/v2      correlate/v2  (published outputs - 32.5)
+analyze/v6          compare/v2    blast/v2      correlate/v2  (published outputs - 32.5)
 store/v1            store-aggregate/v1          whatif/v1     (published outputs - 32.5)
 sweep/v1                                                      (what capacity buys - 32.5)
 host/v2                                                       (the measuring machine - UX-186)
@@ -1649,7 +1649,7 @@ key:
 
 | output | schema | printed by |
 |---|---|---|
-| `bga analyze --format json` (and every section subcommand) | `analyze/v5` | `bga analyze --schema` |
+| `bga analyze --format json` (and every section subcommand) | `analyze/v6` | `bga analyze --schema` |
 | `bga compare --format json` | `compare/v2` | `bga compare --schema` |
 | `bga blast --format json` | `blast/v2` | `bga blast --schema` |
 | `bga correlate --format json` | `correlate/v2` | `bga correlate --schema` |
@@ -1666,7 +1666,7 @@ key:
 | the manifest inside a run bundle: each member's path, presence and contract version, and the `bga` that packed it, so the receiving side recognises and refuses a bundle it cannot read in full (`UX-520`) | `bundle-manifest/v1` | `bga.bundle` |
 | the Plane 2 report a capture before `UX-384` wrote - read, never written | `plane2/v2` | `bga.plane2.SUPERSEDED` |
 | the Plane 2 report a capture before `UX-297` wrote - read, never written | `plane2/v1` | `bga.plane2.SUPERSEDED` |
-| what `analyze`, `compare`, `blast` and `correlate` wrote before `UX-341` unified the units, what `analyze` wrote before `UX-344` lifted its two namespaces, and what it wrote before `UX-535` published the graph's shape once - read, never written | `analyze/v4`, `analyze/v3`, `analyze/v2`, `compare/v1`, `blast/v1`, `correlate/v1` | `bga.schemas.SUPERSEDED` |
+| what `analyze`, `compare`, `blast` and `correlate` wrote before `UX-341` unified the units, what `analyze` wrote before `UX-344` lifted its two namespaces, what it wrote before `UX-535` published the graph's shape once, and what it wrote before `UX-641` gave `parallelism.levels` its members instead of the row number - read, never written | `analyze/v5`, `analyze/v4`, `analyze/v3`, `analyze/v2`, `compare/v1`, `blast/v1`, `correlate/v1` | `bga.schemas.SUPERSEDED` |
 | the host manifest with `memory_mb` where `host/v2` has `memory_bytes` - read and normalised, never written | `host/v1` | `bga.hostinfo.SUPERSEDED` |
 
 The six above the retired rows are **written but not printable**: they
@@ -1701,7 +1701,7 @@ what a release *accepts*, and `bga analyze` refuses without all three:
 what a release accepts and what it emits are two questions. `analysis/v9`
 (32.4) is not a fourth input: it is the analyzer's in-memory result shape
 (`bga.ingest.models.AnalysisResult`), stamped on no artifact, parsed
-from none, and reaching a consumer only as `analyze/v5`.
+from none, and reaching a consumer only as `analyze/v6`.
 
 The list is not maintained by hand alone: a guard asserts that every id
 in `bga.contracts.ids()` appears here and in `docs/design/architecture.md`'s
@@ -1712,7 +1712,7 @@ run directory for nine rounds while appearing in no registry, no guard
 and no document.
 
 **The versioning rule**: a field *rename or removal* bumps the version — and so does a key entering **`required`** under a live id (`UX-629`), because a document a consumer already wrote stops validating, which is a break by the only reading a consumer has. A *permitted* addition does not.
-So `additionalProperties` is true in all nine schemas `bga/schemas.py` defines, and a consumer that pins `analyze/v5` keeps working while the tool grows.
+So `additionalProperties` is true in all nine schemas `bga/schemas.py` defines, and a consumer that pins `analyze/v6` keeps working while the tool grows.
 A key the emitter writes on every document therefore lands **permitted-and-always-written** rather than required: declared, named in the schema's own `bga:always_written` so `--schema` states the choice, and guaranteed against the real payload by a guard rather than by `required`.
 `compare/v2`'s `verdict_provenance` is the worked example — `UX-610` took its required set from 14 to 15 under an unmoved id, and this is that undone without a `v3`.
 
@@ -1773,7 +1773,7 @@ cannot tell a broken capture from a cheap one:
 | `.bga/runs/<stamp>/plane2.log.gz` | conditional | — | the raw per-process trace the report was folded from, gzipped. `bga timeline` renders from this; absent means no timeline, which is a different absence from no report (`UX-329`). |
 | `.bga/runs/<stamp>/plane2-resource.json` | conditional | — | the two capacity scalars, beside the report so the aggregator never opens the big file for them (`UX-296`). Absent where the report is. |
 | `.bga/runs/<stamp>/host-samples.jsonl` | conditional | `host-samples/v1` | the host's memory and swap while the build ran, one JSON object per line (`UX-378`). Absent on a capture taken before that item or with sampling unavailable. |
-| `.bga/runs/<stamp>/analyze.json` | conditional | `analyze/v5` | the analysis this capture published, so `bga view` renders rather than re-deriving (`UX-296`). Absent means the viewer parses the run itself, and the trace carries no graph structure (`UX-380`). |
+| `.bga/runs/<stamp>/analyze.json` | conditional | `analyze/v6` | the analysis this capture published, so `bga view` renders rather than re-deriving (`UX-296`). Absent means the viewer parses the run itself, and the trace carries no graph structure (`UX-380`). |
 | `.bga/runs/<stamp>/build.log` | conditional | — | the wrapped BuildStream log, kept because its first line records the real invocation (`UX-29`). `bga timeline` needs it and refuses without it. |
 | `.bga/runs/<stamp>/element-slice.json` | conditional | — | which elements the capture was asked for, where it was asked for a slice rather than the whole project. |
 | `.bga/runs/<stamp>/capture-context.txt` | conditional | — | what the capture did and why, in prose - the diagnostics `UX-146` writes. Never parsed. |

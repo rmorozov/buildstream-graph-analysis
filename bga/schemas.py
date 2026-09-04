@@ -68,7 +68,11 @@ from .findings import DIAGNOSES, READERS
 # assigned from the same `StructuralMetrics` object `graph_metrics`
 # publishes - one fact under two spellings in two sections, equal by
 # construction on both fixtures. They are read from `graph_metrics`.
-ANALYZE = "analyze/v5"
+# `UX-641`: v6, and one key changing shape. `parallelism.levels` was an
+# array of level *numbers* - always `[0 … n-1]`, the row number - and is
+# an array of rows naming each level's members. A consumer indexing it
+# as integers breaks, which is what a version move is for.
+ANALYZE = "analyze/v6"
 COMPARE = "compare/v2"
 BLAST = "blast/v2"
 STORE = "store/v1"
@@ -79,8 +83,8 @@ STORE = "store/v1"
 # reads a `v2` analyze document by name - the keys this item renamed
 # resolve through `guessQuantity` rather than through a declaration, so
 # an old snapshot still renders, with the fallback saying so.
-SUPERSEDED = ("analyze/v4", "analyze/v3", "analyze/v2", "compare/v1",
-              "blast/v1", "correlate/v1")
+SUPERSEDED = ("analyze/v5", "analyze/v4", "analyze/v3", "analyze/v2",
+              "compare/v1", "blast/v1", "correlate/v1")
 # UX-234: the store as a distribution rather than as a list. Beside
 # `store/v1` rather than inside it: a listing is one row per snapshot
 # and this is one row per *host class*, and a consumer wanting the
@@ -2003,13 +2007,38 @@ _STRUCTURAL_TABLES = {
         "properties": {
             # `UX-343`: the four scalars beside the series, and
             # the series' own values.
+            # `UX-641`: one row per level, naming its members. Until
+            # `analyze/v6` this was `[0, 1, … n-1]` under the
+            # description belonging to `width_at_level` beside it - the
+            # row number, published, described as something else.
+            #
+            # The members are `_compute_level_decomposition`'s, which
+            # runs on the **gating** graph (`UX-52`). They are not
+            # `elements.unweighted_depth` grouped by depth: that is the
+            # full graph, and the two disagree by
+            # `[0,-2,0,0,0,0,0,0,+1,0,0,0,+1,0]` on the 1,202-element
+            # synthetic run.
             "levels": {
-                QUANTITY: "count",
-                "description": "One entry per level of the graph, "
-                               "in order.",
-                "items": {
-                    QUANTITY: "count",
-                    "description": "How many elements sit at this level of the graph."}},
+                "description": "One row per level of the graph, from "
+                               "the roots down: how wide it is and "
+                               "which elements sit on it.",
+                COLUMNS: [
+                    {"key": "level", "title": "Level",
+                     "quantity": "count", "sortable": True,
+                     "description": "Longest path in edges from a "
+                                    "source. Roots are level 0."},
+                    {"key": "width", "title": "Elements here",
+                     "quantity": "count", "sortable": True,
+                     "description": "How many elements sit at this "
+                                    "level of the graph."},
+                    # No `role: "element"`: this cell is a *list* of
+                    # uids, and `elementColumn` would anchor one
+                    # Inspect link at the whole JSON string.
+                    {"key": "elements", "title": "Which elements",
+                     "description": "The elements on this level - what "
+                                    "could run at once, once "
+                                    "everything above it is built."},
+                ]},
             "min_width": {
                 QUANTITY: "count",
                 "description": "The narrowest level of the graph - "

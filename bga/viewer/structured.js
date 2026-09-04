@@ -165,6 +165,41 @@ function mapTable(key, rows, hint, node, nested, depth = 0, path = key) {
 }
 
 /**
+ * `UX-641`: a scalar list too long for a cell - head and tail, with a count.
+ *
+ * `UX-319`'s bound, one container down. A table is the wrong shape
+ * here: the 102 uids on one level of the 1,202-element run built a
+ * 102-row interrogable table inside a `<td>`, and twelve of those took
+ * the page to 11,068 DOM elements against a budget of 5,500 - and put
+ * a filter input on a 14-row table that did not ask for one.
+ *
+ * `PATH_HEAD` items, the control, `PATH_TAIL` items - the control
+ * where the middle begins, because DOM order is reading order.
+ */
+function boundedList(value, noun) {
+  const items = value.map(String);
+  const head = items.slice(0, PATH_HEAD);
+  const tail = items.slice(items.length - PATH_TAIL);
+  const behind = items.length - head.length - tail.length;
+  const first = el("span", { class: "list-head" }, head.join(", "));
+  const last = el("span", { class: "list-tail" }, `, ${tail.join(", ")}`);
+  const more = el("button", {
+    type: "button", class: "fold-more", "data-folded": String(behind),
+    title: `Show the ${behind} ${noun} between the first ${head.length} `
+           + `and the last ${tail.length}`,
+  }, `+${behind} more ${noun} (${items.length} in all)`);
+  more.addEventListener?.("click", () => {
+    first.textContent = items.join(", ");
+    last.textContent = "";
+    more.hidden = true;
+  });
+  return el("div", { class: "bounded-list", "data-bounded": "list",
+                     "data-items": String(items.length),
+                     "data-shown": String(head.length + tail.length) },
+            first, more, last);
+}
+
+/**
  * A large value, folded behind a summary that says what it holds.
  *
  * `UX-318` (§3a.1): and **how deep it goes**. "N entries" answered how
@@ -387,6 +422,22 @@ export function renderStructured(key, value, hint = {}, node = undefined,
       return el("span", {}, value.map(String).join(", "));
     }
     if (control === CONTROLS.FOLDED_LIST) {
+      // `UX-641`: **past the row bound a cell's list is bounded too**,
+      // and by `UX-319`'s head-and-tail fold rather than by a second
+      // table. Nothing bounded a cell before: the 102 uids on one level
+      // of the 1,202-element run built a 102-row interrogable table
+      // inside one `<td>`, twelve times over - 11,068 DOM elements
+      // against the page's budget of 5,500, and a filter input on a
+      // 14-row table that did not ask for one.
+      //
+      // The threshold is `TABLE_OPENS_BOUNDED_ABOVE`'s, so this
+      // replaces that bound where it applied rather than adding a
+      // second: measured on both committed fixtures, no cell is over
+      // it; at 1,202 elements twelve are and all twelve are this key.
+      if (value.length > TABLE_OPENS_BOUNDED_ABOVE) {
+        return folded(title(key), value,
+                      boundedList(value, title(key).toLowerCase()), path);
+      }
       const rows = value.map((item, at) => ({ key: String(at), value: item }));
       return folded(title(key), value,
                     mapTable(key, rows, hint, node, false, depth + 1, path),

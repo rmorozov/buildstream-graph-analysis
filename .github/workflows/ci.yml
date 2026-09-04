@@ -25,6 +25,12 @@ jobs:
         python-version: ["3.9", "3.10", "3.11", "3.12"]
     steps:
       - uses: actions/checkout@v4
+        with:
+          # `UX-597`: the release-tag clauses read `v*`, and a
+          # checkout without this brings none - so they would skip
+          # here and guard only a developer's clone.
+          fetch-tags: true
+          fetch-depth: 0
 
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5

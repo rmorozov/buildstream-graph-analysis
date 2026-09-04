@@ -20,6 +20,7 @@ until the day it mattered.
 import hashlib
 import pathlib
 import re
+import subprocess
 
 import pytest
 
@@ -330,6 +331,100 @@ class TestTheReleaseConsumesTheReview:
         assert "Carried findings" in text
         for finding in ("UX-245", "UX-246", "UX-247"):
             assert finding in text, f"{finding} is open and unnamed in the release"
+
+
+#: `UX-597`: the first release whose version the tree actually carries.
+#: `0.2.0`'s row is retrospective - `pyproject.toml` enters this history
+#: at `bc15935`, which sets `0.3.0` - so there is no commit here for a
+#: `v0.2.0` to name.
+FIRST_TAGGED_RELEASE = "0.3.0"
+
+
+def _git(*argv):
+    done = subprocess.run(("git",) + argv, capture_output=True, text=True,
+                          cwd=REPO, timeout=60)
+    return done.returncode, done.stdout.strip()
+
+
+def _tagged_rows():
+    """The release rows a tag is owed, newest first."""
+    return [row for row in _rows()
+            if _as_numbers(row["version"]) >= _as_numbers(FIRST_TAGGED_RELEASE)]
+
+
+def _as_numbers(version):
+    return tuple(int(part) for part in version.split("."))
+
+
+class TestEveryVersionedReleaseIsTagged:
+    """`UX-597`: step 8 of the release guide cuts a tag, and until this
+    round nothing read one - so it went unexecuted for three releases.
+
+    Reachability is a clause of its own because `UX-339` removed the
+    review log's commit column for exactly this: a ref that names a
+    commit no clone can reach is a ref that names one machine.
+    """
+
+    def _require_tags(self):
+        code, out = _git("tag", "--list", "v*")
+        if code != 0 or not out:
+            pytest.skip(
+                "this checkout carries no release tag, so there is nothing "
+                "to read; CI fetches them (the clause below holds that)")
+        return out.splitlines()
+
+    def test_ci_asks_for_the_tags_this_class_reads(self):
+        """Without `fetch-tags`, `actions/checkout` brings none, every
+        clause below skips, and the class is green on the one machine
+        that cannot check it - `UX-213`'s shape."""
+        workflow = (REPO / ".github/workflows/ci.yml").read_text(encoding="utf-8")
+        assert "fetch-tags: true" in workflow, (
+            "ci.yml's checkout does not ask for tags, so the release-tag "
+            "clauses skip on CI and guard nothing there")
+
+    def test_there_is_more_than_one_row_to_check(self):
+        """Non-vacuity: with one row the clauses below are one assertion
+        about one string, and an empty list passes all of them."""
+        assert len(_tagged_rows()) >= 2, (
+            f"only {len(_tagged_rows())} release row(s) at or above "
+            f"{FIRST_TAGGED_RELEASE}; the clauses below are not exercised")
+
+    def test_every_versioned_release_has_its_tag(self):
+        tags = set(self._require_tags())
+        missing = [row["version"] for row in _tagged_rows()
+                   if f"v{row['version']}" not in tags]
+        assert missing == [], (
+            f"release row(s) with no tag: {missing}. Release guide step 8 "
+            f"cuts `v<version>` on the commit that sets it")
+
+    def test_every_tag_names_the_commit_that_set_its_version(self):
+        self._require_tags()
+        wrong = []
+        for row in _tagged_rows():
+            tag = f"v{row['version']}"
+            code, text = _git("show", f"{tag}:pyproject.toml")
+            found = re.search(r'^version = "(.*)"', text, re.M)
+            if code != 0 or not found:
+                wrong.append(f"{tag}: no pyproject.toml at that commit")
+            elif found.group(1) != row["version"]:
+                wrong.append(
+                    f"{tag} names a commit whose pyproject.toml says "
+                    f"{found.group(1)}, not {row['version']}")
+        assert wrong == [], wrong
+
+    def test_every_release_tag_is_reachable_from_here(self):
+        """A tag on a commit this history cannot reach hands a reader
+        code that was never shipped (`UX-339`)."""
+        self._require_tags()
+        unreachable = []
+        for row in _tagged_rows():
+            tag = f"v{row['version']}"
+            code, _ = _git("merge-base", "--is-ancestor", tag, "HEAD")
+            if code != 0:
+                unreachable.append(tag)
+        assert unreachable == [], (
+            f"release tag(s) naming a commit no clone of this branch can "
+            f"reach: {unreachable}")
 
 
 if __name__ == "__main__":  # pragma: no cover

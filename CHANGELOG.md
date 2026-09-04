@@ -42,10 +42,16 @@ derivation actually reads.
 | [0.2.0](#020--the-build-that-says-what-it-is-2026-08-24) | 2026-08-24 | 243 | initial |
 
 Tagged `v0.3.0` and `v0.4.0` on the commits that set those versions
-(`bc1593557`, `679b9cf87`). **`0.2.0` carries no tag**: measured in
-round 84 (`UX-597`), `__version__` did not exist when that row's date
-falls, so the row is retrospective and there is no release commit for
-a tag to name.
+(`bc1593557`, `679b9cf87`), both reachable from `main`.
+`tests/unit/test_a_release_records_a_contract_state.py` reads them, so
+step 8 of the release guide cannot go unexecuted again.
+
+`0.2.0`'s row is retrospective: `pyproject.toml` enters *this* history
+at `bc15935`, which sets `0.3.0`, so no commit here carries `0.2.0` for
+a tag to name. **Corrected round 86:** a `v0.2.0` exists on the remote
+and names `3ebe7e1b5`, which does set `version = "0.2.0"` — on a
+lineage `main` cannot reach. Round 84's "never a version anywhere in
+the tree" was wrong in letter and right in effect. `UX-633` carries it.
 
 ## 0.4.0 — a capture you can carry (2026-09-03)
 

@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-633 scenarios: **1 open**, 632 closed.
+634 scenarios: **2 open**, 632 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -26,7 +26,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | viewer | 0 | 138 |
 | cli | 0 | 21 |
 | store | 0 | 16 |
-| docs | 1 | 96 |
+| docs | 2 | 97 |
 | guards | 0 | 131 |
 
 ## Open scenarios
@@ -37,6 +37,7 @@ task file, which is the only place it ever lived twice.
 | ID | Scenario | Topic | Priority | Serves | Status |
 |---|---|---|---|---|---|
 | UX-635 | [the environment inventory stops at one namespace](UX-0635-the-inventory-stops-at-one-namespace.md) | docs | Medium | anyone driving a Plane 2 or Plane 3 capture by hand | 🔴 Open |
+| UX-636 | [eighty published keys no document names](UX-0636-eighty-published-keys-no-document-names.md) | docs | Medium | anyone reading a payload against the prose that describes it | 🔴 Open |
 
 ## UX-563..UX-586: the eighty-second round — the documents, read against the tool (2026-09-03)
 

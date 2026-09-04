@@ -45,6 +45,7 @@ Six items, one table. The last column is what the over-broad rule hid.
 | `UX-632` | `SITES` emptied in a mutation | the parametrized clauses collected nothing and reported as **skips**, not failures |
 | `UX-633` | a version floor at `0.3.0` | `v0.2.0`, which passed two of three clauses and failed only reachability — and any future unreachable tag |
 | `UX-635` (filed) | the inventory scans the `BGA_*` prefix | 21 `BST_TRACE_*` names in `bwrap_shim.py` that no `BGA_*` guard can see |
+| `UX-636` (filed) | the contracts guard's *repaired* population is a frozen register | the 80 keys still in it, which the ratchet bounds but does not pay |
 
 The repair is the same move in each: **name the exclusion, and give the
 name a clause of its own.** `UX-633` is the clearest — the floor became
@@ -120,6 +121,6 @@ That is the loop working on its first day.
 
 ## The count
 
-Eight rows closed, three filed (`UX-633`, `UX-634`, `UX-635`), 633 in
-the backlog. Direction 10 — releases as contract states — is `landed`:
+Eight rows closed, four filed (`UX-633`, `UX-634`, `UX-635`,
+`UX-636`), 634 in the backlog. Direction 10 — releases as contract states — is `landed`:
 the tags exist, a guard reads them, and step 8 publishes.

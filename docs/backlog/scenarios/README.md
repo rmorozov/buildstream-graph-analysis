@@ -15,19 +15,19 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-630 scenarios: **12 open**, 618 closed.
+630 scenarios: **8 open**, 622 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
 | capture | 0 | 92 |
 | analysis | 0 | 93 |
-| contracts | 3 | 46 |
+| contracts | 2 | 46 |
 | viewer | 0 | 138 |
 | cli | 0 | 21 |
 | store | 0 | 16 |
 | docs | 4 | 93 |
-| guards | 5 | 131 |
+| guards | 2 | 131 |
 
 ## Open scenarios
 
@@ -37,11 +37,7 @@ task file, which is the only place it ever lived twice.
 | ID | Scenario | Topic | Priority | Serves | Status |
 |---|---|---|---|---|---|
 | UX-597 | [three release rows and no tag](UX-0597-three-release-rows-and-no-tag.md) | docs | Low | anyone trying to check out a release this repository claims to have made | 🔴 Open |
-| UX-613 | [the capacity model emits no document](UX-0613-the-capacity-model-emits-no-document.md) | contracts | Medium | R4 and anyone wanting the model's answer in a pipeline | 🔴 Open |
 | UX-622 | [the derived count and its guard read two populations](UX-0622-the-derived-count-and-its-guard-read-two-populations.md) | guards | Medium | the session filing a row | 🔴 Open |
-| UX-623 | [a track cannot read the tree it was copied from](UX-0623-a-track-cannot-read-the-tree-it-was-copied-from.md) | guards | Low | a track checking the base it was given | 🔴 Open |
-| UX-625 | [reverting a mutation can discard the work](UX-0625-reverting-a-mutation-can-discard-the-work.md) | guards | Low | a track falsifying its own guard | 🔴 Open |
-| UX-626 | [a brief names a commit nobody resolved](UX-0626-a-brief-names-a-commit-nobody-resolved.md) | guards | Low | a track given a base | 🔴 Open |
 | UX-627 | [closing a row writes `🟢 Done Open`](UX-0627-closing-a-row-writes-done-open.md) | guards | High | anyone reading a task file's status | 🔴 Open |
 | UX-628 | [five published keys no document names](UX-0628-five-published-keys-no-document-names.md) | contracts | High | anyone reading a payload against the prose that describes it | 🔴 Open |
 | UX-629 | [a required set grew under an unchanged id](UX-0629-a-required-set-grew-under-an-unchanged-id.md) | contracts | Medium | a consumer validating a document it wrote yesterday | 🔴 Open |

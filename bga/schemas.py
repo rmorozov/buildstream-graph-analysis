@@ -858,7 +858,11 @@ _PROVENANCE = {
             },
         },
         "rule": {
-            "description": "What decided this claim.",
+            # `UX-610`: three words until this document put the shape at
+            # a top level the popover guard walks.
+            "description": "What decided this claim: the constant that "
+                           "fired, its live value, and the comparison "
+                           "in words.",
             "properties": {
                 "name": {"description": "The constant that decided it, or "
                                         "null where the claim has no "
@@ -1147,6 +1151,13 @@ _COMPARE_REQUIRED = {
     # required rather than permitted, by the same rule `element_deltas`
     # landed under one round earlier.
     "candidate_diagnosis": "object",
+    # `UX-610`: the chain behind the *verdict* - the sentence a
+    # contributor argues with, which `candidate_diagnosis` above does
+    # not answer. Written on every comparison and `null` on a refusal,
+    # so required-and-nullable rather than optional: a key the payload
+    # always carries but the schema only permits is one a consumer
+    # could lose without any test noticing.
+    "verdict_provenance": "object",
 }
 
 # UX-221: `element_diff` has been emitted since UX-79 and declared by
@@ -3979,6 +3990,20 @@ _CONFIDENCE = {
 
 
 _COMPARE_HINTS = {
+    # `UX-610`: the same shape `analyze/v5` publishes a claim's chain
+    # in, so a consumer that learned to read one has learned to read
+    # this. Its own description, because these paths walk `compare/v2`
+    # and not a run's own analysis.
+    "verdict_provenance": dict(
+        _PROVENANCE,
+        description="Why this run was called what it was called: the "
+                    "published fields the verdict was read from, the "
+                    "rule that fired, and its threshold. Every path "
+                    "walks this document, so a gatekeeper defending a "
+                    "red gate follows them into the payload already in "
+                    "front of them. `null` on a refusal - "
+                    "`not_comparable` states its own reason and no "
+                    "band arithmetic ran behind it."),
     # UX-221: which elements the run's verdict is actually about.
     "element_deltas": {
         QUESTION: 'Which elements caused this?',
@@ -4648,21 +4673,28 @@ _STORE_HINTS = {
                                              "where that is not a "
                                              "measurement; "
                                              "`queue_wait_absent_reason` "
-                                             "says which of the three "
+                                             "says which of the four "
                                              "reasons applies."},
                           "queue_wait_absent_reason": {
+                              # `UX-612` added the fourth: the start is
+                              # the log file's mtime, so there is a
+                              # number to subtract from and it is not
+                              # an instant.
                               "enum": ["no_request_instant",
                                        "no_start_instant",
+                                       "start_not_an_instant",
                                        "request_after_start", None],
                               "description": "Why there is no wait: "
                                              "nobody published a "
                                              "request instant, this "
                                              "capture has no start "
-                                             "instant either, or the "
-                                             "two disagree about their "
-                                             "order, which is a clock "
-                                             "problem rather than a "
-                                             "queue."},
+                                             "instant either, its start "
+                                             "is the log file's mtime "
+                                             "rather than an instant, "
+                                             "or the two disagree about "
+                                             "their order, which is a "
+                                             "clock problem rather than "
+                                             "a queue."},
                           "bytes": {
                               QUANTITY: "bytes",
                               "description": "What that snapshot occupies "

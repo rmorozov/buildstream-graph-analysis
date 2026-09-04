@@ -318,7 +318,7 @@ class ComparisonResult:
     efficiency_gate_signal: Optional[dict] = None
 
     def to_dict(self) -> dict:
-        return {
+        document = {
             'baseline_run_id': self.baseline_run_id,
             'candidate_run_id': self.candidate_run_id,
             'host_comparison': self.host_comparison,
@@ -354,6 +354,13 @@ class ComparisonResult:
             # different command's output.
             'candidate_diagnosis': self.candidate_diagnosis,
         }
+        # `UX-610`: the chain behind the *verdict*, at the top level
+        # where the verdict is. Resolved against the document above and
+        # then inserted into it, so every `evidence[].path` walks the
+        # payload it ships in - and so `verdict_provenance` reading the
+        # document back does not recurse.
+        document['verdict_provenance'] = verdict_provenance(self, document)
+        return document
 
 
 def _numeric_metrics(result: AnalysisResult) -> Dict[str, Optional[float]]:

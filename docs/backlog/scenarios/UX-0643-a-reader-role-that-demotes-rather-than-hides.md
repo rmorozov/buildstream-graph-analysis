@@ -134,3 +134,12 @@ pressed the section's collapse control unconditionally, so it reddened
 under the *fold* mutation too — for the opposite reason, a section that
 was never folded being closed by the press. It presses only a shut fold
 now, which is what a reader does, and the fold mutation leaves it green.
+
+**The Required Fix's page-built clause is not delivered, and is filed
+as UX-650.** Nine sections built by `views.js`, `element.js` and
+`questions.js` declare no reader. The reason is the work order rather
+than the code: round 88's tracks gave those three files to no owner,
+so the track holding the mechanism was forbidden them. All nine stay
+folded under every role and reachable under all of them, which is the
+designed behaviour for an unmapped section — but `blast` is the one a
+capacity-and-impact reader would most want promoted.

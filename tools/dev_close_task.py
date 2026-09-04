@@ -342,8 +342,30 @@ def priority_disagreements():
 #: The order the topic table has always been written in. A derived
 #: table still has to be *read*, and alphabetical would reshuffle it
 #: every time a topic appears. Anything not listed sorts after these.
+#: `UX-658`: it is also `UX-232`'s closed set itself - the one
+#: statement of it. `test_docs_links_and_commands.py` held a second,
+#: hardcoded copy, and a topic no open row could carry reached the
+#: derived table through a row filed and closed in one round.
 TOPIC_ORDER = ("capture", "analysis", "contracts", "viewer", "cli",
                "store", "docs", "guards")
+
+#: One reading of the header, for `topics()` and `file_topics()` both.
+#: The hyphen is in the class because a two-word topic would otherwise
+#: be read as its first word and pass a set it is not in.
+_TOPIC_HEADER = re.compile(r"\*\*Topic:\*\*\s*([a-z-]+)")
+
+
+def header_topic(text):
+    """The `**Topic:**` a task file declares, from its first 8 lines.
+
+    The bound `file_statuses` and `file_priorities` already use, and
+    for the same reason: two Outcomes quote a `**Topic:**` line in
+    their prose, so a whole-file read takes the argument for the
+    subject in any file whose header is missing.
+    """
+    found = _TOPIC_HEADER.search("\n".join(text.splitlines()[:8]))
+    return found.group(1) if found else None
+
 
 #: `UX-501`: 223 of the 489 closed rows predate the `**Topic:**` header
 #: and are in no historical index either, so no topic can be *derived*
@@ -386,11 +408,37 @@ def topics():
     declared = _declared_topics()
     found = {}
     for uid in row_ids(INDEX) + row_ids(CLOSED):
-        header = re.search(r"\*\*Topic:\*\*\s*([a-z]+)",
-                           task_file(uid).read_text(encoding="utf-8"))
-        found[uid] = (header.group(1) if header
-                      else declared.get(uid) or TOPIC_UNKNOWN)
+        header = header_topic(task_file(uid).read_text(encoding="utf-8"))
+        found[uid] = header or declared.get(uid) or TOPIC_UNKNOWN
     return found
+
+
+def file_topics():
+    """`{filename: the `**Topic:**` header it declares, or None}`.
+
+    Every task file, not every row: `UX-656` was filed and closed
+    inside one round, so its row went straight to `closed.md` and the
+    open index never carried it.
+    """
+    found = {}
+    for path in sorted(SCENARIOS.glob("UX-*.md")):
+        if not _FILE_ID.match(path.name):
+            continue
+        found[path.name] = header_topic(path.read_text(encoding="utf-8"))
+    return found
+
+
+def topic_disagreements():
+    """`UX-658`: no task file declares a topic `TOPIC_ORDER` omits.
+
+    The index's table is derived from these headers and sorts an
+    unlisted one after the eight, so a topic the set does not name
+    still prints as a row a reader may not use.
+    """
+    return [f"{name}: topic {topic!r} is outside the closed set "
+            f"{sorted(TOPIC_ORDER)}"
+            for name, topic in sorted(file_topics().items())
+            if topic is not None and topic not in TOPIC_ORDER]
 
 
 def index_header():
@@ -569,6 +617,8 @@ CHECKS = (
      lambda: status_disagreements()),
     ("every row's priority matches its task file's",
      lambda: priority_disagreements()),
+    ("every task file's topic is one the closed set names",
+     lambda: topic_disagreements()),
     ("no closed row is left in the open index",
      lambda: _closed_rows_left_open()),
     ("the index's open count matches its table",

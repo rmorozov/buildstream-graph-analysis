@@ -470,15 +470,19 @@ _FILE_ID = re.compile(r"^UX-0*(\d+)-")
 from tools.dev_close_task import (  # noqa: E402
     PRIORITIES as _PRIORITIES,
     STATUS_WORDS as _STATUS_WORDS,
+    TOPIC_ORDER as _TOPIC_ORDER,
     backlog_files as _backlog_files,
     close_status_line as _close_status_line,
     file_priorities as _file_priorities,
     file_statuses as _file_statuses,
+    file_topics as _file_topics,
+    header_topic as _header_topic,
     priority_disagreements as _priority_disagreements,
     status_marker as _status_marker,
     status_words as _status_words,
     table_priorities as _table_priorities,
     table_statuses as _table_statuses,
+    topic_disagreements as _topic_disagreements,
 )
 
 
@@ -964,9 +968,13 @@ def test_open_rows_are_in_the_readme_and_closed_rows_are_not():
 
 def test_every_open_row_carries_a_topic_from_the_closed_set():
     """UX-232 clause 3. The taxonomy is a closed set so the index can be
-    counted; a free-text topic is a second title."""
-    topics = {"capture", "analysis", "contracts", "viewer",
-              "cli", "store", "docs", "guards"}
+    counted; a free-text topic is a second title.
+
+    `UX-658`: the set was written here as well as in the tool, and the
+    two drifted - so it is read from `TOPIC_ORDER`, which is what the
+    index's table already orders by.
+    """
+    topics = set(_TOPIC_ORDER)
     path = REPO / "docs/backlog/scenarios/README.md"
     rows = [line for line in path.read_text(encoding="utf-8").splitlines()
             if _TABLE_ROW.match(line)]
@@ -983,6 +991,49 @@ def test_every_open_row_carries_a_topic_from_the_closed_set():
         if cells[2] not in topics:
             bad.append(f"{cells[0]}: {cells[2]!r}")
     assert bad == [], f"topic outside the closed set {sorted(topics)}: {bad}"
+
+
+def test_every_task_file_declares_a_topic():
+    """The non-vacuity of the clause below: a file with no
+    `**Topic:**` header declares nothing to be outside the set, and the
+    twin of `test_every_task_file_declares_a_status` above."""
+    missing = sorted(name for name, topic in _file_topics().items()
+                     if topic is None)
+    assert missing == [], (
+        f"task file(s) with no `**Topic:**` header: {missing}")
+
+
+def test_a_topic_quoted_below_the_header_is_not_the_files_topic():
+    """The header is the subject; an Outcome arguing about a topic is
+    the argument. `UX-657`'s Outcome quotes `**Topic:** process` in its
+    prose, so a whole-file read would report that file as declaring it
+    the day its header went missing - a wrong name, not a missing one.
+    """
+    header = "**Priority:** Low | **Status:** \U0001f534 Open"
+    quoted = ("# UX-9999: a thing\n\n" + header
+              + "\n\n## Motivation\n\n" + "x\n" * 8
+              + "\n## Outcome\n\nFiled with `**Topic:** process` "
+                "and refused.\n")
+    assert _header_topic(quoted) is None
+    assert _header_topic(quoted.replace(
+        header, "**Topic:** docs | " + header, 1)) == "docs"
+
+
+def test_no_task_file_declares_a_topic_outside_the_set():
+    """`UX-658`. The population the open-row clause above cannot see.
+
+    `UX-656` was filed and closed inside round 88, so its row went
+    straight to `closed.md` and never sat in the open index - and its
+    `process` reached the index's derived topic table, which sorts a
+    topic `TOPIC_ORDER` does not name after the eight. The set is
+    declared by task files, so the file is what is checked.
+    """
+    assert _topic_disagreements() == [], (
+        "task file(s) declaring a topic outside "
+        f"{sorted(_TOPIC_ORDER)}:\n  "
+        + "\n  ".join(_topic_disagreements())
+        + "\nEither the topic joins TOPIC_ORDER in tools/dev_close_task.py "
+          "or the file takes one the set names.")
 
 
 def test_the_index_counts_match_the_rows_they_index():

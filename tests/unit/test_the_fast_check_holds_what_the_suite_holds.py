@@ -28,6 +28,7 @@ and the suite are one implementation rather than two agreeing readings,
 and that `--check` says what it looked at.
 """
 import pathlib
+import re
 import shutil
 import subprocess
 import sys
@@ -107,6 +108,34 @@ class TestItReadsTheWholeBacklog:
         assert result.returncode == 0, result.stdout
         assert "0 problem(s)" in result.stdout
 
+    def test_a_topic_no_task_file_may_declare_is_reported(self, backlog):
+        """`UX-658`: the population is task files, not rows.
+
+        `UX-656`'s row was written straight into `closed.md`, so a
+        reader of the open index alone saw nothing - the topic it
+        declared still reached the derived table. The fixture's own
+        `UX-382` file is used because it is a closed row, which is the
+        half that was not read.
+        """
+        path = (backlog / "UX-0382-the-element-entity-has-two-shapes-"
+                          "sharing-one-attribute.md")
+        text = path.read_text(encoding="utf-8")
+        assert "**Topic:**" in text, path.name
+        path.write_text(
+            re.sub(r"\*\*Topic:\*\* [a-z-]+", "**Topic:** process", text,
+                   count=1),
+            encoding="utf-8")
+        result = _run(backlog)
+        # The property by name from `CHECKS`, not the exit code: another
+        # property failing would satisfy a returncode assert while this
+        # one said `ok`.
+        what = next(name for name, run in close.CHECKS
+                    if "topic_disagreements" in run.__code__.co_names)
+        assert f"FAIL  {what}" in result.stdout, (
+            "--check passed a task file declaring a topic outside "
+            f"TOPIC_ORDER:\n{result.stdout}")
+        assert path.name in result.stdout, result.stdout
+
     def test_it_reads_both_halves_of_the_backlog(self):
         """The scope that was wrong, asserted directly: `closed.md`
         carries the overwhelming majority of the rows, so a reader that
@@ -139,6 +168,11 @@ class TestOneImplementationNotTwo:
         assert guard._table_priorities is close.table_priorities
         assert guard._file_priorities is close.file_priorities
         assert close.priority_disagreements() == []
+        # `UX-658`: the topic set was the third copy - hardcoded in the
+        # guard, ordered in the tool, and disagreeing by one.
+        assert guard._TOPIC_ORDER is close.TOPIC_ORDER
+        assert guard._file_topics is close.file_topics
+        assert close.topic_disagreements() == []
 
 
 class TestItSaysWhatItChecked:

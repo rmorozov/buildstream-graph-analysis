@@ -104,6 +104,14 @@ Expected base: <sha> "<subject>". If `git log --oneline -1` disagrees,
 `git merge --ff-only <sha>` and say so in your first sentence.
 ```
 
+`UX-623`: the brief may name the round's **branch** instead, and that
+is the better half of the choice. A linked worktree has no `refs/` of
+its own — `refs/heads` and `refs/remotes` are the shared checkout's —
+so every branch you have resolves in the track's copy whether or not
+it is pushed. Measured on `round-83-registry-decisions`, a branch with
+no `origin/` counterpart, resolving from a worktree. Nothing is pushed
+and no id is copied for the track's benefit.
+
 **What the merge costs, measured once.** Round 75, three tracks over
 nine commits: **three cherry-picks, one conflicted** — in
 `tools/dev_close_task.py` and `tests/unit/test_the_loop_stays_fast.py`,

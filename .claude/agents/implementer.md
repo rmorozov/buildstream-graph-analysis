@@ -87,6 +87,39 @@ The merge back is not free either, and the number is on file: round
 — both edited inside the nine commits the tracks did not have. Both
 conflicts were additive and resolved by keeping each side.
 
+## Which refs your copy can read
+
+Every ref the orchestrator has, **pushed or not**. A linked worktree's
+private git dir holds `HEAD`, the index and its own logs and has no
+`refs/` of its own, so `refs/heads` and `refs/remotes` are the shared
+checkout's. `UX-623` measured it from a worktree, on a branch with no
+`origin/` counterpart:
+
+```text
+$ git rev-parse --verify round-83-registry-decisions
+2d30776…                    ← resolves
+$ git rev-parse --verify origin/round-83-registry-decisions
+fatal: Needed a single revision
+```
+
+So your brief may name the round's **branch** rather than a commit id,
+and nothing has to be pushed first for you to check your base against
+it:
+
+```bash
+git merge-base --is-ancestor HEAD <the base your brief names>
+```
+
+Exit 0 says your copy is behind that base or on it, and `--ff-only`
+above will reach it. Non-zero says you have diverged, and taking the
+base would cost work — report that instead of forcing it.
+
+What you cannot read is the main checkout's *per-worktree* state: its
+`HEAD`, its index, its working tree. Round 86 was refused `git -C <the
+main checkout> …`, and refused git behind process substitution and
+behind `sh <script>` as well. Do not route around it — every question
+about your base is answerable inside your own copy, against a ref.
+
 ## Where your scratch files go
 
 The worktree is yours; the scratchpad is not. It is keyed by the

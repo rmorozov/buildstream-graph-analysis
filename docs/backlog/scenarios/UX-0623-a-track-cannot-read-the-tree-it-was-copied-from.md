@@ -4,7 +4,7 @@
 
 ## Motivation
 
-**Corrected round 86, by measurement — the filed text is kept below.**
+**Corrected round 85, by measurement — the filed text is kept below.**
 The two command readings hold. The conclusion drawn from them does
 not: a linked worktree shares the **ref store**, not only the object
 database, so an unpushed branch resolves from it. Measured from round
@@ -83,7 +83,7 @@ check answering from that ref alone.
 A track launched against an unpushed round branch, reporting the base
 mismatch rather than reporting a base it could not check.
 
-## Outcome (round 86, 2026-09-04) — 🔴 implemented, not closed
+## Outcome (round 85, 2026-09-04) — 🟢 Done
 
 **Premise: falsified on its conclusion, held on its two readings.**
 
@@ -99,8 +99,8 @@ git behind <(process substitution) refused: "too complex to verify"
 git behind `sh <script>`           refused: "cannot be shown not to run git"
 ```
 
-The conclusion drawn from them does not hold. A worktree's private git
-dir has no `refs/`, so the ref store is the shared checkout's:
+The conclusion drawn from them does not hold — the ref store is the
+shared checkout's:
 
 ```text
 $ git rev-parse --verify round-83-registry-decisions   2d30776…
@@ -116,15 +116,14 @@ id is copied on this account.
 
 `implementer.md` gains `## Which refs your copy can read`, and the base
 check in it is a ref question a copy can answer alone —
-`git merge-base --is-ancestor HEAD <base>`, which also separates
-*behind* from *diverged* before anything is moved. `decompose` tells
-the orchestrator the branch resolves unpushed. Six clauses, four of
-which **run** it on a checkout with no remote configured.
+`git merge-base --is-ancestor HEAD <base>`, separating *behind* from
+*diverged* before anything moves. `decompose` tells the orchestrator
+the branch resolves unpushed. Six clauses, four of which **run** it on
+a checkout with no remote configured.
 
 ```text
 $ python -m pytest …TestATrackCanReadEveryRefItsCheckoutHas -q
-6 passed, 112 deselected in 2.44s
-$ make test-touching   18 file(s) selected · 599 passed, 3 skipped in 27.03s
+6 passed, 112 deselected · make test-touching 599 passed, 3 skipped
 ```
 
 ### Mutations verified red and reverted (5)
@@ -137,18 +136,26 @@ $ make test-touching   18 file(s) selected · 599 passed, 3 skipped in 27.03s
 | A4 | sandbox copy made by `clone`, not `worktree add` | 3 of 6 — the linked-worktree property all three rest on |
 | A5 | fenced check reads `origin/<base>` | `…answers_from_the_branch_name_alone`, `assert 128 == 0` |
 
-A4 is one mutation against three clauses, which `falsify` calls
-under-falsified. Recorded rather than split: the three claim one
-property from three angles — the ref resolves, the private dir has no
-`refs/`, the documented check answers — and no smaller mutation
-removes the property.
+A4 is one mutation against three clauses — under-falsified by
+`falsify`'s rule, recorded rather than split: the three claim one
+property from three angles (the ref resolves, its path is the shared
+one, the documented check answers) and no smaller mutation removes it.
 
 **A clause that did not discriminate.**
 `…says_no_when_the_copy_has_diverged` stayed **green** under A4, on
-`git`'s exit 128 for an unresolvable ref rather than on the divergence
-it names. Its own mutation (A1) reddens it correctly, so it
-discriminates against the gate it was written for; against a broken
-fixture it reads a fatal error as a "no". Left as is and written down.
+git's exit 128 for an unresolvable ref rather than on the divergence
+it names. A1 reddens it correctly, so it discriminates against its own
+gate; against a broken fixture it reads a fatal error as a "no".
+
+### A guard that read a git version, caught by CI
+
+The second of those three asserted the private git dir has no `refs/`
+— green on git 2.43, red on CI's 2.55, which creates one for the
+per-worktree refs. A **proxy** for "the ref store is shared", and the
+two came apart. The property holds on both: `git rev-parse --git-path
+refs/heads/round` answers with the **common** dir, git routing only
+`refs/bisect`, `refs/worktree` and `HEAD` to the private one. The
+clause asks that now; querying `refs/bisect/round` reddens it.
 
 ### Deviation from the Required Fix
 

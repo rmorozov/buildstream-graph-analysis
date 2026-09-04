@@ -56,7 +56,11 @@ import skip_reasons  # noqa: E402
 #: on `NO_BROWSER` and skips on it again inside a clause that needs a
 #: second served page. Both are the thirty-ninth browser guard's, not a
 #: new sentence.
-UNRESOLVABLE = 58
+#: `UX-640` argues **one** up, to 59: the fortieth browser guard, whose
+#: class mark reads `browser.NO_BROWSER` like the other thirty-nine.
+#: Its module-scoped fixture skips on nothing of its own, which is
+#: where the second would have come from.
+UNRESOLVABLE = 59
 
 
 def test_every_declared_skip_reason_is_known():

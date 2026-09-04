@@ -126,6 +126,29 @@ export function label(key) {
 }
 
 /**
+ * `UX-640`: the label a section's own heading gives it, or `null`.
+ *
+ * `format.js`'s `heading()` needs the schema hint the rail does not
+ * carry, so the rendered `h2` is the authority rather than a second
+ * name derived from the key. Its **text nodes** are the label: the
+ * collapse control, the key span and the JSON toggle are elements, and
+ * subtracting their strings instead takes the wrong `cache` out of
+ * "…from the cache?" (the task file has the measurement).
+ *
+ * `null` under `tests/dom_shim.mjs`, which holds a node's text in one
+ * string and has no `childNodes` - so the rail falls back there, and
+ * this item's guard is a browser guard.
+ */
+export function headingLabel(section) {
+  const head = section?.querySelector?.("h2");
+  if (!head || (head.parentElement ?? head.parentNode) !== section) return null;
+  const own = [...(head.childNodes ?? [])]
+    .filter((node) => node.nodeType === 3)
+    .map((node) => node.textContent ?? "").join("").trim();
+  return own || null;
+}
+
+/**
  * Give every section a stable `id`.
  *
  * The schema key, which is already unique within a document - so a
@@ -306,11 +329,14 @@ export function toc(root, { document: doc, controls } = {}) {
       link.href = `#${key}`;
       link.setAttribute("data-toc", key);
       link.setAttribute("data-rail", rail);
-      // UX-216: a section may name itself. `label(key)` is the right
-      // default for a schema key and the wrong one for an element uid,
-      // which arrives already sanitised into an id.
+      // `UX-640`: the destination's own heading first - one label
+      // authority, so a question added to a heading reaches the rail.
+      // UX-216: then a section that names itself; `label(key)` is the
+      // right default for a schema key and the wrong one for an element
+      // uid, which arrives already sanitised into an id.
       const section = root.querySelector?.(`[data-section="${key}"]`);
-      link.textContent = section?.getAttribute?.("data-toc-label")
+      link.textContent = headingLabel(section)
+        || section?.getAttribute?.("data-toc-label")
         || label(key);
       // `UX-388`: a section that came back empty is still in the map,
       // and says so there. Before this it was not in the document at

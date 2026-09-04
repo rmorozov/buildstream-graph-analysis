@@ -1,6 +1,6 @@
 # UX-640: the rail names the key, the heading asks the question
 
-**Priority:** Medium | **Status:** 🔴 Open | **Depends on:** UX-199 (a report you can find your way around), UX-374 (the page renames the reader's elements) | **Found by:** round 87, by the owner not knowing where a rail entry led | **Serves:** anyone navigating by the rail rather than by scrolling | **Topic:** viewer
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-199 (a report you can find your way around), UX-374 (the page renames the reader's elements) | **Found by:** round 87, by the owner not knowing where a rail entry led | **Serves:** anyone navigating by the rail rather than by scrolling | **Topic:** viewer
 
 ## Motivation
 
@@ -68,3 +68,78 @@ on the delegated `click`, so the state is rebuilt rather than lost.
 Recorded here so a later round does not re-file it. What was *not*
 measured is whether the delegated listener fires for a rail outside
 `#report`; that is this row's one open question and its guard covers it.
+
+## Outcome (round 87, 2026-09-04) — 🟢 Done
+
+**Both fixtures at zero.** Counted with a browser over the exported
+page, rail entries whose text differs from the label their destination's
+`h2` gives itself:
+
+```text
+                  entries   differing (before)   differing (after)
+golden               46             39                   0
+macro_micro          66             52                   0
+```
+
+The 39 and the 52 are this file's own numbers. The entry counts are
+**46 and 66**, one more each than filed above; the filing counted 45 and
+65.
+
+`nav.js` reads the destination's own heading and falls back to
+`data-toc-label`, then to `label(key)`. `heading()` is not callable from
+the rail — it needs the schema hint the rail does not carry — so the
+rendered `h2` is the authority, read as its **text nodes**: subtracting
+the controls' strings takes the wrong `cache` out of "How much of this
+run came from the cache?" and produces `…from the ?cache`. `null` under
+`tests/dom_shim.mjs`, which holds a node's text in one string; the rail
+falls back there and the guard is a browser guard for that reason.
+
+### The open question, answered: it is a defect, and not this row's
+
+The delegated `click` **does not fire** for a rail entry. Served,
+`macro_micro`, Chromium:
+
+```text
+report.contains(rail entry)                         false
+after collapsing `floors`   #~c=floors&v.elements=All+elements&n.…
+after clicking rail `elements`                      #elements
+after the next click inside #report   #elements~c=decision%2Cfloors&v.…
+```
+
+`wireViewState` listens on `#report`; `app.js` puts the rail *after*
+`#actions-group`, a sibling. So the fragment loses the query on a rail
+click and gets it back only on the reader's next interaction inside the
+report — the document keeps the state (`data-collapsed="true"` survives
+the click), the **link** does not. "Also measured, and not a defect"
+above is right about `#${key}` and wrong about the rebuild. Left for
+viewstate's own row rather than fixed here.
+
+`jumpTargets` still names sections `label(key)` (`nav.js:719`) — the
+same two-authority defect on the palette rather than the rail, and out
+of this row's scope.
+
+### The Acceptance Test, deviating on its second sentence
+
+"A mutation to one heading reddens it" cannot hold once there is one
+authority: mutation B below changed **every** heading and the rail
+followed, so the agreement clause stayed green — which is the property
+this row was filed to get. What reddens is the population clause, and
+the mutation that reddens the agreement is one that decouples the rail
+from the heading.
+
+```text
+$ python3 -m pytest tests/unit/test_the_rail_says_what_the_heading_says.py -q
+tests/unit/test_the_rail_says_what_the_heading_says.py ....              [100%]
+
+============================== 4 passed in 1.32s ===============================
+```
+
+### Mutations verified red and reverted (2)
+
+| mutation | reddened | printed |
+|---|---|---|
+| A: `nav.js` rail label drops `headingLabel(section)` | the agreement clause, both fixtures; population green | `39 of 46` / `52 of 66` rail entries name their section something the section does not |
+| B: `format.js` `heading()` returns `title(key)` as its label | the population clause, both fixtures; **agreement green** | `only 0 of 46 headings ask a question` / `0 of 66` |
+
+B is applied to a file this track does not own; it was reverted from the
+step-1 copy and `git status` shows `format.js` unchanged.

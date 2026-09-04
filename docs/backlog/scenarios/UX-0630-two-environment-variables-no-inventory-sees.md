@@ -1,6 +1,6 @@
 # UX-630: two environment variables no inventory sees
 
-**Priority:** Medium | **Status:** 🔴 Open | **Depends on:** UX-326 (the tool's sentences are contracts) | **Found by:** architecture review 15 | **Serves:** anyone trying to find out what changes bga's output | **Topic:** docs
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-326 (the tool's sentences are contracts) | **Found by:** architecture review 15 | **Serves:** anyone trying to find out what changes bga's output | **Topic:** docs
 
 ## Motivation
 
@@ -53,7 +53,7 @@ a flag still appears.
 A new `BGA_*` name in `bga/` or `tools/` with no documented home,
 reddening a guard.
 
-## Outcome (round 86, 2026-09-04) — 🔴 Open
+## Outcome (round 86, 2026-09-04) — 🟢 Done
 
 **Premise:** held, with two narrowings — `BGA_RATE` changes `bga
 analyze` as well as `bga whatif`, and the quote is at `rate.py:24`.

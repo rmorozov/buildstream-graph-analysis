@@ -1,6 +1,6 @@
 # UX-632: the touching figure is the sample its own round disproved
 
-**Priority:** Low | **Status:** 🔴 Open | **Depends on:** UX-606 (which replaced it in the guard), UX-336 (which measured it) | **Found by:** architecture review 15 | **Serves:** anyone budgeting the inner loop | **Topic:** docs
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-606 (which replaced it in the guard), UX-336 (which measured it) | **Found by:** architecture review 15 | **Serves:** anyone budgeting the inner loop | **Topic:** docs
 
 ## Motivation
 
@@ -59,7 +59,7 @@ module, in all three places.
 The three quoted figures derived from the same distribution the guard
 reads, reddening when they drift from it.
 
-## Outcome (round 86, 2026-09-04)
+## Outcome (round 86, 2026-09-04) — 🟢 Done
 
 **Premise:** held for the defect, falsified for two of its figures —
 `cli.py` is 124 and not 118, there are four sites and not three, and

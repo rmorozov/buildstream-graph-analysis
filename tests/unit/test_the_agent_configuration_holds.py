@@ -852,6 +852,104 @@ class TestATrackTakesTheBaseItWasNamed:
             "is the stale base this item is about")
 
 
+class TestEachTrackHasItsOwnScratchpad:
+    """`UX-615`: the worktrees are isolated and the scratchpad is not.
+
+    Measured on this repository's own, round 85:
+
+    ```text
+    session directories under the project key        1
+    entries in the one scratchpad                 1592   (19 days)
+    files matching `mutate*`                        33
+    ```
+
+    The path is keyed by the **project**, so every track of a round
+    lands in it at once. Round 84's track had its `mutate.py` - one of
+    those 33 - overwritten by another track mid-session, after its
+    matrix had run; the surviving names that avoided it carry an item
+    id or an agent id, improvised each time.
+
+    The convention is the one name no two tracks share, and these
+    clauses **run** the recipe out of `implementer.md` rather than
+    reading it, twice, from two worktrees.
+    """
+
+    PLACEHOLDER = re.compile(r"<[^>]+>")
+
+    @staticmethod
+    def _recipe():
+        """The line `implementer.md` tells a track to run before it
+        writes a scratch file."""
+        body = (AGENTS / "implementer.md").read_text(encoding="utf-8")
+        section = body.split("## Where your scratch files go", 1)[1]
+        section = section.split("\n## ", 1)[0]
+        lines = [line.strip()
+                 for block in re.findall(r"```bash\n(.*?)```", section, re.S)
+                 for line in block.splitlines() if line.strip()]
+        assert len(lines) == 1, (
+            f"'Where your scratch files go' fences {len(lines)} commands, "
+            f"not one: {lines}")
+        return lines[0]
+
+    def _made(self, shared, worktree):
+        """The directories the recipe leaves under `shared`, run from
+        `worktree` with the scratchpad path substituted for the
+        placeholder the brief fills in."""
+        worktree.mkdir(parents=True, exist_ok=True)
+        command = self._recipe()
+        assert self.PLACEHOLDER.search(command), (
+            f"{command!r} names no scratchpad for the brief to fill in")
+        done = subprocess.run(
+            ["sh", "-c", self.PLACEHOLDER.sub(str(shared), command)],
+            cwd=worktree, capture_output=True, text=True, timeout=60)
+        assert done.returncode == 0, done.stderr
+        return sorted(p for p in shared.iterdir() if p.is_dir())
+
+    def test_two_tracks_writing_one_filename_do_not_see_each_other(
+            self, tmp_path):
+        """`UX-615`'s acceptance test, on the documented recipe: two
+        tracks, one filename, and neither reads the other's."""
+        shared = tmp_path / "scratchpad"
+        shared.mkdir()
+        first = self._made(shared, tmp_path / "wt" / "agent-aaaa")
+        second = self._made(shared, tmp_path / "wt" / "agent-bbbb")
+        assert len(second) == 2, (
+            f"two worktrees ran the recipe and it made {len(second)} "
+            f"director(y/ies): {[p.name for p in second]}. They share a "
+            f"scratchpad, which is what UX-615 is")
+        mine, theirs = first[0], next(p for p in second if p != first[0])
+        (mine / "mutate.py").write_text("mine\n", encoding="utf-8")
+        (theirs / "mutate.py").write_text("theirs\n", encoding="utf-8")
+        assert (mine / "mutate.py").read_text(encoding="utf-8") == "mine\n", (
+            "the second track's write landed on the first track's file - "
+            "round 84's overwrite, reproduced")
+
+    def test_the_directory_is_named_for_the_worktree(self, tmp_path):
+        """Not merely *a* unique directory: the name has to be one the
+        track can compute without being told, or the brief has to
+        allocate it and two tracks launched at once collide again."""
+        shared = tmp_path / "scratchpad"
+        shared.mkdir()
+        made = self._made(shared, tmp_path / "wt" / "agent-cccc")
+        assert [p.name for p in made] == ["agent-cccc"], (
+            f"the recipe made {[p.name for p in made]}, not a directory "
+            f"named for the worktree it was run in")
+
+    def test_the_orchestrator_names_the_same_convention(self):
+        """One copy, in the two files that carry it - `decompose` is
+        what the brief is written from, `implementer.md` is what the
+        track reads. A brief that says nothing leaves the track to
+        improvise a suffix, which is what the 33 `mutate*` files in the
+        shared directory are."""
+        skill = " ".join((SKILLS / "decompose/SKILL.md").read_text(
+            encoding="utf-8").split())
+        assert 'basename "$PWD"' in skill, (
+            "the decompose skill does not tell the orchestrator to name "
+            "the track's own scratchpad in the brief (UX-615)")
+        assert 'basename "$PWD"' in self._recipe(), (
+            "implementer.md's recipe and the skill's are two conventions")
+
+
 class TestEverySkillWouldLoad:
     """`test_the_skills_point_at_the_guides.py` holds a skill to its
     guide. This holds it to the thing that decides whether it is offered

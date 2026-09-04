@@ -21,8 +21,11 @@ import {
   SCALE, GRADE_ANNOTATION, GRADE_EXHIBIT, exhibitAxis, exhibitTwin,
 } from "./drawings.js";
 // The three the derivation named, and the whole of what this chapter
-// takes from the one above it.
-import { renderBand, verdictMarker, verdictMarkers } from "./views.js";
+// takes from the one above it. `UX-650` adds the fourth: the tag a
+// page-built section declares its reader with, owned there because
+// `views.js` inlines above this file (`dev_js_deps.py --order`).
+import { declareReaders, renderBand, verdictMarker,
+         verdictMarkers } from "./views.js";
 
 // -------------------------------------------------- the element object
 //
@@ -578,6 +581,11 @@ function elementSection(record, places, investigate, format) {
   const heading = document.createElement("h2");
   heading.textContent = uid;
   section.append(heading);
+  // `UX-650`: **unmapped, deliberately.** R2 owns *one* element and the
+  // page cannot tell which, so declaring R2 here promotes all eleven -
+  // which is promoting none, and spends `UX-305`'s budget on a quarter
+  // of the document. The reader reaches their own through the links
+  // `UX-216` put on every uid.
 
   // UX-222 and UX-225: the two controls that act on *this* element.
   // Plain buttons carrying the element and the intent - `app.js` wires
@@ -771,6 +779,12 @@ export function renderCulprits(compare) {
   const heading = document.createElement("h2");
   heading.textContent = "Which elements changed";
   section.append(heading);
+  // `UX-650`: **unmapped, deliberately.** `band` declares R4 because it
+  // renders `verdict_kind`, the field the exit code gates on; this
+  // renders `element_deltas.rows`, which no verdict and no finding
+  // reads. Whether the elements behind a regression are the
+  // gatekeeper's follow-up or their owner's is not a question the code
+  // answers, so it is left where `UX-643` left `decision`.
 
   // Improvements and regressions each on their own, rather than one
   // list ordered by magnitude: a reader looking for what cost them time
@@ -888,6 +902,11 @@ export function renderWhatIf(payload, ask = null, options = {}) {
   const heading = document.createElement("h2");
   heading.textContent = "Choose the fixes";
   section.append(heading);
+  // `UX-650`: R1, derived rather than argued - the whole section is
+  // `payload.optimization_horizon`, and that key joins to R1 in
+  // `schemas._SECTION_READERS` through the `optimization-horizon`
+  // finding.
+  declareReaders(section, ["R1"]);
 
   const list = document.createElement("ul");
   list.className = "whatif-choices";
@@ -1018,6 +1037,9 @@ export function renderHorizon(payload) {
   const heading = document.createElement("h2");
   heading.textContent = "What if I fix these";
   section.append(heading);
+  // `UX-650`: R1, the same derivation as `whatif` - this is
+  // `payload.optimization_horizon` as a plan, and that key joins to R1.
+  declareReaders(section, ["R1"]);
 
   const list = document.createElement("ol");
   list.className = "horizon";

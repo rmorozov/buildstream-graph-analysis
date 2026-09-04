@@ -1,6 +1,6 @@
 # UX-650: nine page-built sections declare no reader
 
-**Priority:** Medium | **Status:** 🔴 Open | **Depends on:** UX-643 (which built the mechanism and could not reach these) | **Found by:** round 88, by track Q naming what its brief forbade it to touch | **Serves:** the reader whose role owns a section the page builds rather than the payload | **Topic:** viewer
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-643 (which built the mechanism and could not reach these) | **Found by:** round 88, by track Q naming what its brief forbade it to touch | **Serves:** the reader whose role owns a section the page builds rather than the payload | **Topic:** viewer
 
 ## Motivation
 
@@ -62,3 +62,84 @@ On both fixtures, every page-built section either declares a reader or
 is deliberately unmapped with the reason at the site; the sections that
 declare one are promoted under that role and folded under the others;
 nothing is removed from the DOM under any role.
+
+## Outcome (round 88, 2026-09-04) — 🟢 Done
+
+**The nine are thirteen.** The list this row was filed with came from a
+report; `grep -n 'data-section", "\|"data-section": "' bga/viewer/{views,element,questions}.js`
+finds four more construction sites — `band`, `store-trend` and
+`blast-tree` in `views.js`, and `element.js`'s one-per-element block.
+Nine declare a reader, four are unmapped with the reason at the site:
+
+```text
+views.js     blast (search + offline)  R2    overview             unmapped
+             blast-tree                R2    element.js
+             evidence                  R4      element-<uid>      unmapped
+             critical-path-drawn       R1      culprits           unmapped
+             band, store-trend         R4    questions.js
+element.js   whatif, horizon           R1      perfetto-questions unmapped
+```
+
+**Two are derived, not argued.** `whatif` and `horizon` *are*
+`payload.optimization_horizon`, and that key joins to R1 in
+`schemas._SECTION_READERS`. `evidence` renders `confidence.*`, where
+four of the five findings are `ci-gatekeeper` and the fifth is the
+failed-build one — R4, whose question is this section's heading.
+`blast` is R2 on the two findings the join could not reach:
+`blast-radius-reach` and `blast-radius-structural` are `recipe-author`
+and compute their paths from the document, and `resource_blast` beside
+it in the same chapter joins to R2. `band` and `store-trend` are R4 on
+`verdict_kind`, the field `_compare_exit_code` gates on.
+`critical-path-drawn` is the one argued from the drawing alone — every
+box carries its `realizable_saving_us` — because no finding cites
+`critical_path_detail`.
+
+**Four refused.** `overview` is the run's whole duration in twelve
+published buckets, the index shape `UX-643` refused for `summary`;
+`perfetto-questions` is seventeen queries spanning all five roles;
+`culprits` renders `element_deltas.rows`, which no verdict and no
+finding reads; and an element block cannot know which element is the
+reader's, so declaring R2 would promote eleven at once. All four stay
+folded under every role and reachable under all — the designed
+behaviour, and `UX-643`'s reachability clause still finds one.
+
+**The contract holds, measured either side on both fixtures:**
+
+```text
+                     promoted R1/R2/R3/R4/R5   landed   under a role
+golden    before          6 1 2 2 -             2,834      2,838
+          after           9 2 2 3 -             2,839      2,843
+macro     before          6 2 2 3 1             5,469      5,473
+          after           9 3 2 4 1             5,474      5,478
+```
+
+Section text byte-identical under all five roles and at "anyone" on
+both, before and after; the section list identical; the node count
+moves only up, by `UX-372`'s four, and returns exactly at "anyone".
+The five landed nodes added are the five tags, one per page-built
+section that declares and renders. `test_the_page_has_a_volume_budget`
+passes: 5,474 nodes against the 7,900 the 11-element class bounds.
+
+**The export grew 609 B on both, all source** — comments are stripped
+by `_uncommented`, so the arguments at the sites cost nothing:
+
+```text
+golden       428,015 -> 428,624 B   bound 432,000, 3,376 B left
+macro_micro  478,520 -> 479,129 B   bound 482,000, 2,871 B left
+```
+
+No bound moved. `dev_js_deps.py --order` is unchanged and acyclic:
+`declareReaders` lives in `views.js`, which already inlines above
+`element.js`.
+
+**Mutations verified red and reverted (5):** the unmapped marker
+removed from `renderQuestions` — a site that neither declares nor says
+why; `renderHorizon` declaring `R6`, a role the roster does not have;
+`declareReaders` building the tag and never appending it — a
+declaration that does not reach the DOM; `renderOverview` declaring R1
+against its own refusal; and `renderQuestions` rewritten as a `const`
+so the seam parse loses the site, which is the clause that keeps the
+parse from passing on nothing.
+
+**Deviation:** none of the nine were declined for the reason the row
+predicted — `blast` is mapped. The count was wrong instead.

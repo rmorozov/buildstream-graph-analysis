@@ -287,3 +287,135 @@ class TestARoleDemotesRatherThanHides:
         assert sorted(anyone["folded"]) == sorted(landed["folded"]), (
             f"the fold did not come back: "
             f"{sorted(set(anyone['folded']) ^ set(landed['folded']))[:5]}")
+
+
+#: `UX-650`: the second source, read the same way as the first.
+#:
+#: The eleven payload sections' roles are *derived* - the join above
+#: recomputes them. A page-built section is published by no contract, so
+#: its role is **declared at the construction site**, which is a weaker
+#: source and therefore a stricter clause: every site either declares or
+#: says at the site why it does not, and no site is left silent.
+_BUILT_IN = ("bga/viewer/views.js", "bga/viewer/element.js",
+             "bga/viewer/questions.js")
+
+#: The two shapes a section is constructed in, and the two the reader is
+#: declared in. `data-section` is the page's own key for a section
+#: (`UX-199`), so a new one cannot avoid this parse by spelling.
+_SITE = re.compile(r'"data-section"\s*[,:]\s*(?:"([^"]+)"|([^,}\)\n]+))')
+_DECLARES = re.compile(r'declareReaders\([^,]+,\s*\[([^\]]*)\]\)')
+_UNMAPPED = re.compile(r"UX-650`?:\s*\*\*unmapped, deliberately\.\*\*"
+                       r"([^\n]*\n(?:\s*//[^\n]*\n)*)")
+_FUNCTION = re.compile(r"^(?:export\s+)?(?:async\s+)?function\s+(\w+)",
+                       re.MULTILINE)
+
+
+def _sites():
+    """`{function name: (key, roles or None, reason)}` over the three
+    page-building modules.
+
+    Split on the top-level `function` seams the module graph already
+    uses, because a construction site's declaration is in the function
+    that builds the section and nowhere else - a file-wide search would
+    let `renderOverview` pass on `renderEvidence`'s declaration.
+    """
+    found = {}
+    for name in _BUILT_IN:
+        text = (REPO / name).read_text(encoding="utf-8")
+        starts = [m.start() for m in _FUNCTION.finditer(text)]
+        for index, start in enumerate(starts):
+            end = starts[index + 1] if index + 1 < len(starts) else len(text)
+            body = text[start:end]
+            keys = [(m.group(1) or m.group(2)).strip()
+                    for m in _SITE.finditer(body)]
+            if not keys:
+                continue
+            roles = [role.strip().strip('"')
+                     for m in _DECLARES.finditer(body)
+                     for role in m.group(1).split(",") if role.strip()]
+            excuse = _UNMAPPED.search(body)
+            found[f"{name.rsplit('/', 1)[1]}::{_FUNCTION.match(body).group(1)}"] = (
+                keys[0], roles or None, excuse.group(1) if excuse else None)
+    return found
+
+
+#: What the sites declare, keyed the way the page keys them - the half
+#: of `_sites()` a rendered page can be held against.
+def _declared_by_key():
+    return {key: roles for key, roles, _why in _sites().values() if roles}
+
+
+class TestEveryPageBuiltSectionDecidesItsReader:
+    def test_the_parse_reaches_the_sites_it_is_written_over(self):
+        """The clause's own setup, asserted rather than assumed: a parse
+        that matched nothing would pass every clause below it."""
+        sites = _sites()
+        assert len(sites) >= 13, sorted(sites)
+        assert {"views.js::renderBlastSearch", "views.js::renderOverview",
+                "element.js::renderHorizon",
+                "questions.js::renderQuestions"} <= set(sites), sorted(sites)
+
+    def test_no_site_is_silent(self):
+        """The item. A section the page builds either names its reader
+        at the site or says there why it cannot - and the refusal is a
+        reason, not a marker: `UX-643` refused five payload sections and
+        wrote down why for each."""
+        for site, (key, roles, why) in sorted(_sites().items()):
+            assert roles or why is not None, (
+                f"{site} builds section {key!r} and neither declares a "
+                f"reader nor says why it does not")
+            if roles is None:
+                assert len(" ".join(why.split())) > 80, (
+                    f"{site} is unmapped with no reason worth reading: "
+                    f"{why!r}")
+
+    def test_every_declared_role_is_one_the_roster_has(self):
+        """The same rule the derived half is held to, over the source
+        this half is declared in."""
+        from bga import schemas
+
+        for site, (key, roles, _why) in sorted(_sites().items()):
+            if not roles:
+                continue
+            assert set(roles) <= set(schemas.READER_ROLES), (
+                f"{site} declares {sorted(set(roles) - set(schemas.READER_ROLES))} "
+                f"for {key!r}, which `findings.READERS` does not name")
+
+
+@needs_browser
+@pytest.mark.parametrize("label", sorted(pages.FIXTURES))
+class TestTheDeclarationReachesThePage:
+    def test_the_page_carries_what_the_site_declared(self, driven, label):
+        """Source and page, one comparison. A declaration that does not
+        reach the DOM is a role the picker cannot act on, and a role on
+        the page that no site declared is a second mechanism."""
+        declared = _declared_by_key()
+        landed = driven[label]["landed"]["declares"]
+        on_page = {key: roles for key, roles in landed.items()
+                   if key in declared}
+        assert len(on_page) >= 5, (
+            f"{label}: only {sorted(on_page)} of the page-built sections "
+            f"that declare a role rendered; nothing below measures")
+        for key, roles in sorted(on_page.items()):
+            assert roles == declared[key], (
+                f"{label}: {key} carries {roles} and its site declares "
+                f"{declared[key]}")
+
+    def test_an_unmapped_page_built_section_declares_nothing(self, driven,
+                                                             label):
+        """The other half: a section whose site refused stays unmapped on
+        the page, folded under every role and reachable under all - the
+        behaviour `UX-643` designed for an incomplete map."""
+        declared = _declared_by_key()
+        landed = driven[label]["landed"]["declares"]
+        for key in ("overview", "perfetto-questions"):
+            assert key in landed, f"{label}: {key} is not on the page"
+            assert not landed[key], (
+                f"{label}: {key} declares {landed[key]} and its site says "
+                f"it is unmapped")
+        assert not declared.keys() & {"overview", "perfetto-questions"}
+        elements = [key for key in landed if key.startswith("element-")]
+        assert elements, f"{label}: no element section to check"
+        assert all(not landed[key] for key in elements), (
+            f"{label}: an element block declares a reader; the page cannot "
+            f"tell which element is the reader's")

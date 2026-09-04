@@ -482,7 +482,27 @@ END pid=101 ppid=1 ts=1002.500000 element=work-a.bst cmd=cc -c main.c
 #
 # `DATA_DWARFS_PAGE` is unaffected: the ceiling can reach 343,248 B
 # before that claim needs revisiting, and this is 33,248 B short of it.
-PAGE_BUDGET_B = 310_000
+#
+# `UX-643` moved all three, measured either side of the item on this
+# worktree (`fc3d7bb` against the reader role):
+#
+#     page         307,932 -> 310,634   (+2,702 B)
+#     golden       424,423 -> 427,125
+#     macro_micro  474,798 -> 477,500
+#
+# **All page, no data**: 2,425 B of `chapters.js`, `format.js`,
+# `decision.js` and `style.css` - `applyRole`, the tag `sectionHead`
+# builds and the fold it drives - and 277 B of `bga:readers` on eleven
+# schema nodes, which is the producer owning the map rather than the
+# page carrying a second one.
+#
+# They move for the reason `UX-613`'s move gives: they had stopped
+# being budgets. At `fc3d7bb` golden was **577 B** under 425,000 and
+# `macro_micro` **202 B** under 475,000, having drifted 4,378 and 4,736
+# B past the figures recorded beside them. 316,000 leaves 5,366 B,
+# 432,000 leaves 4,875 B and 482,000 leaves 4,500 B - the same order of
+# headroom `UX-613` chose.
+PAGE_BUDGET_B = 316_000
 
 #: `UX-444`: the claim, stated once. **The run's data is at least twice
 #: the page a reader is permitted to download.**
@@ -765,7 +785,7 @@ COMMITTED_EXPORTS = [
     # which is a tripwire and not a discipline. 425,000 leaves 4,955 B
     # and 475,000 leaves 4,938 B - the same order of headroom `UX-483`
     # chose when it last moved one.
-    ("golden", GOLDEN, 425_000),                       #  420,045 B
+    ("golden", GOLDEN, 432_000),                       #  427,125 B
     # `UX-297` moved this one by 385 B before that: the two-plane run
     # publishes `plane2_coverage.source`, which says which shape of
     # Plane 2 report served its numbers and what that costs to open. A
@@ -853,7 +873,7 @@ COMMITTED_EXPORTS = [
     # measurement that forced it is the negotiation this file exists to
     # prevent - but the next round to add a module will trip it, and
     # the figure it needs is this one rather than the stale 453,180.
-    ("macro_micro", MACRO_MICRO, 475_000),             #  470,062 B
+    ("macro_micro", MACRO_MICRO, 482_000),             #  477,500 B
 ]
 
 

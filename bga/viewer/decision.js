@@ -20,6 +20,10 @@ import {
 import {
   resolvePath, elementFacts, elementHistory, renderElementHistory,
 } from "./element.js";
+// `UX-643`: the fold `UX-347` built, driven by the choice this module
+// already collects. The role decides what is promoted; `chapters.js`
+// owns how a thing folds and this module does not learn a second way.
+import { applyRole } from "./chapters.js";
 
 // ------------------------------------------------- UX-207: the decision
 
@@ -609,12 +613,28 @@ function readerPicker(payload, slot) {
   return wrap;
 }
 
-/** Put the chosen reader's biggest lever in `slot`, or empty it. */
+/** The document the picker sits in, walked rather than looked up: the
+ *  slot is inside `#report` and `applyRole` acts on the whole of it. */
+function reportRoot(node) {
+  let at = node;
+  while (at && at.getAttribute?.("id") !== "report") {
+    at = at.parentElement ?? at.parentNode ?? at._parent ?? null;
+  }
+  return at;
+}
+
+/** Put the chosen reader's biggest lever in `slot`, or empty it - and
+ *  `UX-643`: promote what that reader reads, fold the rest.
+ *
+ *  The `R1`-`R5` tag is the published index's own `role`, so the page
+ *  spells the reader the same way `findings.READERS` does. */
 export function applyReader(payload, slot, reader) {
   const entry = (payload?.readers ?? []).find((e) => e?.id === reader);
   const block = entry ? readerLead(payload, entry) : null;
   slot.replaceChildren(...(block ? [block] : []));
   slot.setAttribute("data-reader", reader || "");
+  const root = reportRoot(slot);
+  if (root) applyRole(root, entry?.role ?? null);
   return block;
 }
 

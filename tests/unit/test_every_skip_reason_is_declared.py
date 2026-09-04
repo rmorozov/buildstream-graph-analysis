@@ -64,7 +64,11 @@ import skip_reasons  # noqa: E402
 #: forty-first, filed in the same round. Two tracks each wrote 59
 #: against a base of 58 and merged without conflicting, which is why
 #: this constant is a sum and not a side.
-UNRESOLVABLE = 60
+#: `UX-643` argues **one** more, to 61: the forty-second browser guard,
+#: `test_a_reader_role_demotes.py`, whose class mark reads
+#: `browser.NO_BROWSER` like the other forty-one. Its module-scoped
+#: fixture skips on nothing of its own.
+UNRESOLVABLE = 61
 
 
 def test_every_declared_skip_reason_is_known():

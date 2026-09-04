@@ -149,6 +149,23 @@ export function headingLabel(section) {
 }
 
 /**
+ * `UX-648`: the one name for a section, for every list that names it.
+ *
+ * The rail asked this in `UX-640` and the palette went on asking
+ * `label(key)`, so the two lists disagreed with each other as well as
+ * with the page. One function, called from both.
+ *
+ * UX-216: a section that names itself, then `label(key)` - the right
+ * default for a schema key and the wrong one for an element uid, which
+ * arrives already sanitised into an id.
+ */
+export function sectionLabel(section, key) {
+  return headingLabel(section)
+    || section?.getAttribute?.("data-toc-label")
+    || label(key);
+}
+
+/**
  * Give every section a stable `id`.
  *
  * The schema key, which is already unique within a document - so a
@@ -331,13 +348,8 @@ export function toc(root, { document: doc, controls } = {}) {
       link.setAttribute("data-rail", rail);
       // `UX-640`: the destination's own heading first - one label
       // authority, so a question added to a heading reaches the rail.
-      // UX-216: then a section that names itself; `label(key)` is the
-      // right default for a schema key and the wrong one for an element
-      // uid, which arrives already sanitised into an id.
       const section = root.querySelector?.(`[data-section="${key}"]`);
-      link.textContent = headingLabel(section)
-        || section?.getAttribute?.("data-toc-label")
-        || label(key);
+      link.textContent = sectionLabel(section, key);
       // `UX-388`: a section that came back empty is still in the map,
       // and says so there. Before this it was not in the document at
       // all, so the rail was a list of what happened to be non-empty on
@@ -741,8 +753,12 @@ export function scrollspy(root, nav, { observer } = {}) {
  * lives.
  */
 export function jumpTargets(root, payload) {
-  const targets = anchor(root).map(
-    (key) => ({ kind: "section", key, text: label(key) }));
+  // `UX-648`: the same label authority the rail asks, so rail, palette
+  // and heading carry one string per section.
+  const targets = anchor(root).map((key) => ({
+    kind: "section", key,
+    text: sectionLabel(root.querySelector?.(`[data-section="${key}"]`), key),
+  }));
 
   const seen = new Set();
   for (const node of root.querySelectorAll?.("[data-element]") ?? []) {

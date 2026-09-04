@@ -79,7 +79,7 @@ per-section "view as JSON" toggle's `data-raw-json`;
 
 ## 1a. The hint vocabulary
 
-Eighteen hints, and this table is the one place they are all written
+Nineteen hints, and this table is the one place they are all written
 down (`UX-306`). Each names what a schema *declares* about a value;
 §1 above is what the page does with it — except the last row, which
 declares something about the *contract* and is read by a consumer
@@ -107,6 +107,7 @@ sets equal in both directions.
 | `bga:interval` | that a set of published values compare on one axis, each named by its path | the interval and its sentence (§2d) |
 | `bga:keyed_by` | what a map's own **keys** are, where they are not names — `task_uid` today | the row's label (the element) and its `data-key` (the composite), `UX-391` |
 | `bga:explained_by` | the payload key holding this map's **per-key advice for this run** — computed, so not a `description` | the advice on the row of the key it explains, and no second section over the same names, `UX-390` |
+| `bga:readers` | which of `findings.READERS` a section serves, by their `R1`-`R5` ids — silent means no role, which is a map that is incomplete rather than a section that serves nobody (`UX-643`) | the reader picker, which promotes and expands a served section and folds the rest |
 | `bga:command` | that a scalar array is one command line rather than a list of values — the shell it is spelled for | `classify`, which returns §1's command control for it (`UX-429`) |
 | `bga:always_written` | that a key is **not** `required` and yet written on every document — the third state `UX-629` needed, because entering `required` under a live id breaks documents already written | a consumer asking *may be here* or *is always here*; the emitter guarantee is held by `test_a_required_set_grew_under_an_unchanged_id.py`, not by the page |
 

@@ -1,5 +1,5 @@
 {
-    "schema": "analyze/v5",
+    "schema": "analyze/v6",
     "run_id": "golden-fixture-manifest-hash-v1",
     "total_duration_us": 16000,
     "section": null,
@@ -623,9 +623,28 @@
     },
     "parallelism": {
         "levels": [
-            0,
-            1,
-            2
+            {
+                "level": 0,
+                "width": 2,
+                "elements": [
+                    "base.bst",
+                    "extra.bst"
+                ]
+            },
+            {
+                "level": 1,
+                "width": 1,
+                "elements": [
+                    "lib.bst"
+                ]
+            },
+            {
+                "level": 2,
+                "width": 1,
+                "elements": [
+                    "app.bst"
+                ]
+            }
         ],
         "width_at_level": [
             2,
@@ -747,7 +766,7 @@
         {
             "claim": "diagnosis",
             "kind": "diagnosis",
-            "document": "analyze/v5",
+            "document": "analyze/v6",
             "evidence": [
                 {
                     "path": "floors.t_infinity_observed",
@@ -783,7 +802,7 @@
         {
             "claim": "wait-category",
             "kind": "finding",
-            "document": "analyze/v5",
+            "document": "analyze/v6",
             "evidence": [
                 {
                     "path": "attribution.untracked_tail_us",
@@ -816,7 +835,7 @@
         {
             "claim": "time-concentration",
             "kind": "finding",
-            "document": "analyze/v5",
+            "document": "analyze/v6",
             "evidence": [
                 {
                     "path": "total_duration_us",
@@ -845,7 +864,7 @@
         {
             "claim": "chain-graph",
             "kind": "finding",
-            "document": "analyze/v5",
+            "document": "analyze/v6",
             "evidence": [
                 {
                     "path": "elements.zero_slack_share",
@@ -869,7 +888,7 @@
         {
             "claim": "blast-radius-reach",
             "kind": "finding",
-            "document": "analyze/v5",
+            "document": "analyze/v6",
             "evidence": [
                 {
                     "path": "elements.blast_radius[base.bst].downstream_count",
@@ -898,7 +917,7 @@
         {
             "claim": "graph-width",
             "kind": "finding",
-            "document": "analyze/v5",
+            "document": "analyze/v6",
             "evidence": [],
             "rule": {
                 "name": null,
@@ -914,7 +933,7 @@
         {
             "claim": "joint-saving",
             "kind": "finding",
-            "document": "analyze/v5",
+            "document": "analyze/v6",
             "evidence": [
                 {
                     "path": "joint_saving.joint_saving_us",
@@ -954,7 +973,7 @@
         {
             "claim": "optimization-horizon",
             "kind": "finding",
-            "document": "analyze/v5",
+            "document": "analyze/v6",
             "evidence": [
                 {
                     "path": "optimization_horizon[0].makespan_after_us",
@@ -989,7 +1008,7 @@
         {
             "claim": "latent-heavies",
             "kind": "finding",
-            "document": "analyze/v5",
+            "document": "analyze/v6",
             "evidence": [
                 {
                     "path": "latent_heavies[0].duration_us",
@@ -1016,7 +1035,7 @@
         {
             "claim": "confidence",
             "kind": "finding",
-            "document": "analyze/v5",
+            "document": "analyze/v6",
             "evidence": [
                 {
                     "path": "confidence.primary",
@@ -1055,7 +1074,7 @@
         {
             "claim": "efficiency-score",
             "kind": "finding",
-            "document": "analyze/v5",
+            "document": "analyze/v6",
             "evidence": [
                 {
                     "path": "floors.efficiency_score",
@@ -1087,10 +1106,10 @@
         }
     ],
     "document_shape": {
-        "leaves": 700,
+        "leaves": 708,
         "deepest_depth": 7,
         "deepest_path": "findings.[].evidence.steps.[].entering.[]",
-        "deeper_than_three": 331,
-        "deeper_than_three_share": 0.47285714285714286
+        "deeper_than_three": 341,
+        "deeper_than_three_share": 0.481638418079096
     }
 }

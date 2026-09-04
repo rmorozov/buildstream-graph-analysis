@@ -24,7 +24,7 @@ which is the shape `UX-129` calls worse than a refusal.
 import statistics
 from typing import Dict, List, Optional
 
-from . import store_aggregate
+from . import schemas, store_aggregate
 from .compare import MIN_BASELINE_RUNS
 
 MICROSECONDS_PER_DAY = 86_400_000_000
@@ -226,6 +226,10 @@ def model(listing: dict, builders: int, arrivals_per_day: float) -> dict:
                             arrivals_per_day, mixed)
                for label in sorted(by_class)]
     document = {
+        # `UX-613`: first key, so a consumer reading the head of a
+        # truncated document learns what it is before it interprets
+        # anything.
+        "schema": schemas.CAPACITY_MODEL,
         "project": listing.get("project"),
         "builders": builders,
         "arrivals_per_day": arrivals_per_day,

@@ -185,6 +185,9 @@ export function quantity(value, kind) {
     case "kilobytes": return bytes(value * 1024);
     case "seconds": return duration(value * 1e6);
     case "ratio": return `${value.toFixed(2)}×`;
+    // UX-613: a rate names its time base in the quantity, so the
+    // rendering spells the same base the contract does.
+    case "rate_per_day": return `${Math.round(value * 100) / 100}/day`;
     // UX-275: a count is usually whole and renders as itself. The
     // first fractional one published - `cores_busy`, an average over
     // the run - arrived as "1.603977885512677" on the page, fifteen
@@ -234,6 +237,7 @@ const UNIT_SUFFIX = {
   kilobytes: /_kb$/,
   share: /_share$/,
   percent: /_pct$/,
+  rate_per_day: /_per_day$/,
 };
 
 /**

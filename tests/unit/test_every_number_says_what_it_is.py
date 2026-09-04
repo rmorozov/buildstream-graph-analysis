@@ -221,6 +221,10 @@ CONTRACT_RUNS = {
     "sweep/v1": ["sweep", str(FIXTURES["macro_micro"]), "--format", "json"],
     "store/v1": None,
     "store-aggregate/v1": None,
+    # `UX-613`: the model over that same store. No argv either - it
+    # needs a store of finished runs, and `_store_document` below is
+    # where one gets built.
+    "capacity-model/v1": None,
 }
 
 #: What the `neither` bag is allowed to hold outside `analyze/v5`, and
@@ -264,11 +268,14 @@ def _emitted(contract):
 
 
 def _store_document(contract):
-    """`store/v1` and its aggregate, from a three-snapshot store.
+    """`store/v1`, its aggregate and the model, from one store.
 
-    `bga view` builds both; no command prints either, which is the one
-    legitimate reason for a contract to have no argv above and is the
-    same distinction `UX-328`'s guard draws for file-written ids.
+    `bga view` builds the first two; no command prints either, which is
+    the one legitimate reason for a contract to have no argv above and
+    is the same distinction `UX-328`'s guard draws for file-written
+    ids. `UX-613`'s model *does* have a command, but it needs a store
+    on disk rather than a fixture run directory, so it is built beside
+    them from the same snapshots.
     """
     import shutil
     import tempfile
@@ -278,12 +285,22 @@ def _store_document(contract):
     into = pathlib.Path(tempfile.mkdtemp())
     (into / "project.conf").write_text("name: p\nmin-version: 2.0\n")
     runs = []
-    for nth in (1, 2, 3):
+    # `UX-613`: five, not three - a service time needs `MIN_BASELINE_RUNS`
+    # finished runs before the model computes one, and a store of three
+    # would census a document whose only content is a shortfall.
+    for nth in (1, 2, 3, 4, 5):
         run = into / ".bga" / "runs" / f"2026010{nth}T000000Z" / "run"
         run.parent.mkdir(parents=True, exist_ok=True)
         shutil.copytree(FIXTURES["golden"], run)
         os.remove(run / "expected_output.json")
         runs.append(str(run))
+    if contract == "capacity-model/v1":
+        from bga import capacity_model
+
+        document = capacity_model.read(str(into), 4, 400)
+        assert document["host_classes"][0]["answers"], (
+            "the store fixture produced a model with no figures in it")
+        return document
     store = store_payload(runs[-1])
     assert store, "the store fixture produced no store/v1 document"
     if contract == "store/v1":

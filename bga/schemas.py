@@ -103,6 +103,13 @@ SWEEP = "sweep/v1"
 # so `bga view` could not serve it, CI could not gate on it and no
 # consumer could validate it.
 CORRELATE = "correlate/v2"
+# `UX-613`: the queueing model's answer. `UX-595` built it and printed
+# it, and refused `--format json` because an unstamped payload is what
+# `UX-190` stops. Its own document rather than a block inside
+# `store-aggregate/v1`: that one is the store's measured distribution
+# and this is a *model over* it, with an operator-declared arrival rate
+# and ten named assumptions the fact base does not carry.
+CAPACITY_MODEL = "capacity-model/v1"
 
 #: `UX-408`: **what `serialized_pairs` is**, written once.
 #:
@@ -356,6 +363,19 @@ QUANTITIES = (
     "share",         # 0..1; render as a percentage
     "count",
     "ratio",         # unbounded; render as a multiplier
+    # `UX-613`: events per unit time, and the *only* addition since
+    # `UX-341` closed the set. Argued against the rule rather than
+    # added beside it: a rate has dimension T-1, which none of the five
+    # above measures. `duration_us` is a length of time (400 builds/day
+    # would render as "400 microseconds"); `count` is a cardinality
+    # with no denominator, and the denominator is what the queueing
+    # model turns on; `ratio` is dimensionless, and declaring a
+    # dimensioned value dimensionless is the exact defect `UX-341`
+    # removed when it retired `seconds`. The member names its time base
+    # because `UX-341`'s other half is that one dimension has one unit:
+    # a bare `rate` would let builds/day and builds/hour both be
+    # `rate`, and a later `rate_per_hour` reddens the dimension guard.
+    "rate_per_day",
 )
 
 # The dimension each member measures. `UX-341`'s property, stated as
@@ -368,6 +388,7 @@ DIMENSIONS = {
     "share": "bounded fraction",
     "count": "cardinality",
     "ratio": "unbounded multiplier",
+    "rate_per_day": "events per unit time",
 }
 
 # UX-201: the verdict as a value, beside the sentence. `compare/v1`
@@ -918,6 +939,172 @@ _PROVENANCE = {
     "required": ["claim", "kind", "document"],
 }
 
+
+_CAPACITY_MODEL_REQUIRED = {
+    "project": "string",
+    "builders": "integer",
+    "arrivals_per_day": "number",
+    "excluded_runs": "integer",
+    "host_classes": "array",
+    # Always written, `null` where nothing was refused - the same rule
+    # `queue_seam` landed under: an absent key has to keep meaning "the
+    # producer had never heard of this".
+    "refusal": "object",
+}
+
+_CAPACITY_MODEL_HINTS = {
+    "project": {"description": "The store this model was read from. "
+                               "The model and the fact base "
+                               "(`store-aggregate/v1`) describe the same "
+                               "snapshots by construction."},
+    "builders": {
+        QUANTITY: "count",
+        "description": "Concurrent builds the fleet can serve - the `c` "
+                       "of the M/G/c queue, and the number this whole "
+                       "document is a function of."},
+    "arrivals_per_day": {
+        QUANTITY: "rate_per_day",
+        "description": "Builds arriving per day. **Declared, not "
+                       "measured**: a store records when builds ran, "
+                       "not when they were asked for, so this is the "
+                       "operator's own number and `arrival_rate_declared` "
+                       "is on every figure that rests on it."},
+    "excluded_runs": {
+        QUANTITY: "count",
+        "description": "Captures left out of every service time below - "
+                       "failed, interrupted, suspended or unfinished. "
+                       "Counted rather than dropped silently, so a "
+                       "thin model says why it is thin."},
+    "host_classes": {
+        QUESTION: 'How long would a build wait?',
+        RAIL: "act",
+        "description": "One entry per host class, never blended: a "
+                       "queue over two service times is two queues, so "
+                       "each class is modelled as if it served the "
+                       "whole arrival stream and no fleet-wide number "
+                       "is published.",
+        "items": {
+            "properties": {
+                "host_class": {"description": "The machine class these "
+                                              "runs were measured on "
+                                              "(`UX-186`'s manifest)."},
+                "runs": {
+                    QUANTITY: "count",
+                    "description": "Finished runs on this class - the "
+                                   "sample the service time below is "
+                                   "the first two moments of."},
+                "service": {
+                    "properties": {
+                        "samples": {
+                            QUANTITY: "count",
+                            "description": "How many durations the two "
+                                           "moments were computed "
+                                           "from."},
+                        "mean_us": {
+                            QUANTITY: "duration_us",
+                            "description": "The mean service time. The "
+                                           "*mean*, not `UX-234`'s "
+                                           "median: waiting is a "
+                                           "function of the mean and "
+                                           "the spread around it."},
+                        "stdev_us": {
+                            QUANTITY: "duration_us",
+                            "description": "The sample standard "
+                                           "deviation of those "
+                                           "durations."},
+                        "cv2": {
+                            QUANTITY: "ratio",
+                            "description": "The squared coefficient of "
+                                           "variation - the one shape "
+                                           "number Allen-Cunneen needs, "
+                                           "and how far this store sits "
+                                           "from the exponential "
+                                           "service M/M/c assumes "
+                                           "(1.0)."},
+                    },
+                },
+                "answers": {
+                    "description": "One figure per question the model "
+                                   "answers, each carrying the "
+                                   "assumptions its own arithmetic "
+                                   "used - recorded where they entered "
+                                   "the computation, so a number cannot "
+                                   "acquire one this list does not "
+                                   "carry.",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "name": {"description": "Which figure this "
+                                                    "is: `utilization`, "
+                                                    "`wait_us` or "
+                                                    "`queue_length`."},
+                            "quantity": {
+                                "enum": list(QUANTITIES),
+                                "description": "The unit of `value`. "
+                                               "Here rather than on "
+                                               "`value` because one "
+                                               "list carries three "
+                                               "different quantities, "
+                                               "so no declaration on "
+                                               "the key could be right "
+                                               "(`UX-343`)."},
+                            "value": {"description": "The figure, in the "
+                                                     "unit `quantity` "
+                                                     "names."},
+                            "assumes": {
+                                "type": "array",
+                                "description": "The assumption ids this "
+                                               "figure rests on, in the "
+                                               "order the arithmetic "
+                                               "touched them."},
+                        },
+                        "required": ["name", "quantity", "value",
+                                     "assumes"],
+                    },
+                },
+                "shortfall": {
+                    "description": "Why this class was not modelled at "
+                                   "all: too few finished runs for a "
+                                   "service time to mean anything. "
+                                   "`null` where it was modelled.",
+                    "properties": {
+                        "have": {QUANTITY: "count",
+                                 "description": "Finished runs this "
+                                                "class has."},
+                        "need": {QUANTITY: "count",
+                                 "description": "Finished runs a service "
+                                                "time needs before one "
+                                                "is computed."},
+                    },
+                },
+                "refusal": {
+                    "description": "Why a figure this class would "
+                                   "otherwise carry is absent - an "
+                                   "unstable queue publishes no wait, "
+                                   "because a finite one would be a "
+                                   "number about a system that never "
+                                   "reaches equilibrium. `null` where "
+                                   "nothing was refused."},
+            },
+        },
+    },
+    "refusal": {
+        "description": "Why no fleet-wide answer is published: this "
+                       "store holds more than one host class. `null` "
+                       "where it holds one.",
+        "properties": {
+            "check": {"description": "Which check refused, as an id a "
+                                     "consumer can key on."},
+            "classes": {QUANTITY: "count",
+                        "description": "How many host classes the store "
+                                       "holds."},
+            "sentence": {"description": "The refusal in words - one "
+                                        "wording, so the terminal and a "
+                                        "consumer cannot explain it two "
+                                        "ways."},
+        },
+    },
+}
 
 _SWEEP_REQUIRED = {
     "resource": "string",
@@ -4993,6 +5180,17 @@ _SCHEMAS = {
         "excluded and counted; a mix of machines is refused rather than "
         "blended, because durations are not scaled across hosts.",
         hints=_STORE_AGGREGATE_HINTS),
+    CAPACITY_MODEL: lambda: _document(
+        CAPACITY_MODEL, "bga snapshot --capacity N,RATE --format json",
+        _CAPACITY_MODEL_REQUIRED,
+        "What a builder count and an arrival rate would do to the "
+        "queue: utilization, the wait before a build starts and the "
+        "number waiting, per host class, over this store's own measured "
+        "service times. A model and not a measurement - every figure "
+        "carries the assumptions its arithmetic used, the arrival rate "
+        "is declared rather than measured, and an unstable queue "
+        "publishes no wait at all.",
+        hints=_CAPACITY_MODEL_HINTS),
     SWEEP: lambda: _document(
         SWEEP, "bga sweep RUN --format json",
         _SWEEP_REQUIRED,

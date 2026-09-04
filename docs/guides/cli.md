@@ -848,6 +848,50 @@ a duration some build actually took.
 from this document, and nothing at all when the store mixes host
 classes — it prints the refusal instead.
 
+### What that store would do as a queue (`UX-595`, `UX-613`)
+
+`--capacity N,RATE` reads the same store as an M/G/c queue: `N`
+builders, `RATE` builds arriving per day.
+
+```bash
+bga snapshot --capacity 4,400                 # text
+bga snapshot --capacity 4,400 --format json   # a `capacity-model/v1` document
+```
+
+`bga snapshot --capacity --schema` prints the contract it stamps.
+
+```text
+  4 builder(s), 400 build(s)/day
+
+  unknown host - 6 run(s)
+    Service time: mean 703.3s, sd 105.4s, CV^2 0.02, n=6
+    Utilization: 81.4% of 4 builder(s)
+      assumes per_host_class, finished_runs_only, service_is_the_store,
+              arrival_rate_declared, servers_interchangeable,
+              steady_state
+    Wait before a build starts: 300.6s
+```
+
+It is a **model, not a measurement**, and the document says so in three
+ways a consumer can key on:
+
+- **The arrival rate is yours.** A store records when builds ran, never
+  when they were asked for, so `arrivals_per_day` is the number you
+  passed and `arrival_rate_declared` sits on every figure resting on it.
+- **Every figure names what it assumed.** `answers[].assumes` is
+  recorded where each assumption entered the arithmetic, so a number
+  cannot acquire one the list does not carry.
+- **A refusal is a value, not a gap.** `refusal` and `shortfall` are
+  written as `null` where nothing was refused, so an absent key still
+  means "the producer had never heard of this". An unstable queue
+  (utilization at or above 1) publishes no wait at all, because a finite
+  one would be a number about a system that never reaches equilibrium.
+
+Host classes are never blended - a queue over two service times is two
+queues - so each class is modelled as if it served the whole arrival
+stream, and a cross-host store exits **6** exactly as `--aggregate`
+does.
+
 ### Choosing the fixes (`UX-230`)
 
 `bga whatif` projects the build for a set of fixes you choose:

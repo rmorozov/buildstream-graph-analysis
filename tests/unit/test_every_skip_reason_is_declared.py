@@ -56,11 +56,15 @@ import skip_reasons  # noqa: E402
 #: on `NO_BROWSER` and skips on it again inside a clause that needs a
 #: second served page. Both are the thirty-ninth browser guard's, not a
 #: new sentence.
-#: `UX-640` argues **one** up, to 59: the fortieth browser guard, whose
-#: class mark reads `browser.NO_BROWSER` like the other thirty-nine.
-#: Its module-scoped fixture skips on nothing of its own, which is
-#: where the second would have come from.
-UNRESOLVABLE = 59
+#: `UX-640` argues **one** up: the fortieth browser guard, whose class
+#: mark reads `browser.NO_BROWSER` like the other thirty-nine. Its
+#: module-scoped fixture skips on nothing of its own, which is where
+#: the second would have come from.
+#: `UX-642` argues **one** more, to 60, on the same sentence — the
+#: forty-first, filed in the same round. Two tracks each wrote 59
+#: against a base of 58 and merged without conflicting, which is why
+#: this constant is a sum and not a side.
+UNRESOLVABLE = 60
 
 
 def test_every_declared_skip_reason_is_known():

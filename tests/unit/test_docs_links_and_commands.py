@@ -468,12 +468,16 @@ _FILE_ID = re.compile(r"^UX-0*(\d+)-")
 # "0 problem(s)" for the rest. Two readings of one property is how they
 # came to disagree, so there is now one: the tool's, imported here.
 from tools.dev_close_task import (  # noqa: E402
+    PRIORITIES as _PRIORITIES,
     STATUS_WORDS as _STATUS_WORDS,
     backlog_files as _backlog_files,
     close_status_line as _close_status_line,
+    file_priorities as _file_priorities,
     file_statuses as _file_statuses,
+    priority_disagreements as _priority_disagreements,
     status_marker as _status_marker,
     status_words as _status_words,
+    table_priorities as _table_priorities,
     table_statuses as _table_statuses,
 )
 
@@ -503,6 +507,49 @@ def test_every_task_file_declares_a_status():
         "task file(s) with no `**Status:**` marker in their first 8 lines: "
         f"{missing}"
     )
+
+
+def test_a_row_has_exactly_one_priority_cell():
+    """`UX-657`'s instrument, before the claim that rests on it.
+
+    The two tables have different column orders - the open index is
+    `id, scenario, topic, priority, serves, status`, the closed one
+    `id, scenario, priority, depends on, status, task file` - so the
+    cell is found by value, as `table_statuses` finds its own. That
+    read is sound only while no row has two cells equal to a priority
+    word; `table_priorities` answers `None` for one that does, and the
+    pair clause below would then go quiet on it rather than fail.
+    """
+    unreadable = sorted(number for number, cell in _table_priorities().items()
+                        if cell is None)
+    assert unreadable == [], (
+        "backlog row(s) with no single priority cell, so the pair guard "
+        f"below cannot read them: {['UX-%d' % n for n in unreadable]}")
+
+
+def test_every_task_file_declares_a_priority():
+    """The other half of the same non-vacuity, and the twin of
+    `test_every_task_file_declares_a_status` above: a header with no
+    `**Priority:**` compares `None` to `None` for that item."""
+    missing = [name for _number, (name, word) in
+               sorted(_file_priorities().items()) if word not in _PRIORITIES]
+    assert missing == [], (
+        "task file(s) with no `**Priority:**` word in their first 8 lines: "
+        f"{missing}")
+
+
+def test_every_rows_priority_matches_its_task_files():
+    """`UX-657`. The twin of the status pair above.
+
+    `UX-131` guarded status and `UX-387` gave it one reading in the
+    tool; priority got neither, and three of 654 rows had drifted -
+    two of them written by hand one round before this clause.
+    """
+    assert _priority_disagreements() == [], (
+        "backlog row(s) whose priority disagrees with the task file's "
+        "header:\n  " + "\n  ".join(_priority_disagreements())
+        + "\nThe task file is the record; update the row in "
+          "docs/backlog/scenarios/README.md or closed.md to match it.")
 
 
 def test_every_task_file_has_a_row_in_the_table():

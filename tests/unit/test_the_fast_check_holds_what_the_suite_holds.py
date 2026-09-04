@@ -134,6 +134,11 @@ class TestOneImplementationNotTwo:
         assert guard._table_statuses is close.table_statuses
         assert guard._file_statuses is close.file_statuses
         assert close.status_disagreements() == []
+        # `UX-657`: the priority pair arrived with the same arrangement,
+        # so it is asserted here rather than left to be re-read.
+        assert guard._table_priorities is close.table_priorities
+        assert guard._file_priorities is close.file_priorities
+        assert close.priority_disagreements() == []
 
 
 class TestItSaysWhatItChecked:

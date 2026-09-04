@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-654 scenarios: **5 open**, 649 closed.
+656 scenarios: **7 open**, 649 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -27,7 +27,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | cli | 0 | 21 |
 | store | 0 | 16 |
 | docs | 4 | 101 |
-| guards | 0 | 134 |
+| guards | 2 | 136 |
 | process | 0 | 1 |
 
 ## Open scenarios
@@ -39,9 +39,11 @@ task file, which is the only place it ever lived twice.
 |---|---|---|---|---|---|
 | UX-651 | [the spec's Part 32 block is two ids behind](UX-0651-the-spec-s-part-32-block-is-two-ids-behind.md) | docs | Medium | anyone reading the spec to find out what contracts bga has | 🔴 Open |
 | UX-652 | [the currency guard resolves to a day, and a day holds three rounds](UX-0652-the-currency-guard-resolves-to-a-day-and-a-day-holds-three-rounds.md) | docs | Medium | anyone trusting a document's currency marker | 🔴 Open |
-| UX-653 | [a contract bump rewrites the record of what it superseded](UX-0653-a-contract-bump-rewrites-the-record-of-what-it-superseded.md) | docs | High | anyone reading a dated log entry as what was true that day | 🔴 Open |
+| UX-653 | [a contract bump rewrites the record of what it superseded](UX-0653-a-contract-bump-rewrites-the-record-of-what-it-superseded.md) | docs | Low | anyone reading a dated log entry as what was true that day | 🔴 Open |
 | UX-654 | [the vocabulary module still says nine hints](UX-0654-the-vocabulary-module-still-says-nine-hints.md) | viewer | Low | anyone reading format.js's docstring for the hint count | 🔴 Open |
-| UX-655 | [a contract bump landed one level below the key population](UX-0655-a-contract-bump-landed-one-level-below-the-key-population.md) | docs | High | anyone trusting the undocumented-key register | 🔴 Open |
+| UX-655 | [a contract bump landed one level below the key population](UX-0655-a-contract-bump-landed-one-level-below-the-key-population.md) | docs | Medium | anyone trusting the undocumented-key register | 🔴 Open |
+| UX-657 | [the priority column has no guard](UX-0657-the-priority-column-has-no-guard.md) | guards | Low | anyone who sorts the backlog by priority to decide what to do next | 🔴 Open |
+| UX-658 | [a ninth topic exists that no open row may carry](UX-0658-a-ninth-topic-exists-that-no-open-row-may-carry.md) | guards | Low | anyone filing a row and choosing what to put in its Topic cell | 🔴 Open |
 
 ## UX-563..UX-586: the eighty-second round — the documents, read against the tool (2026-09-03)
 

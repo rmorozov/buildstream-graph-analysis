@@ -271,6 +271,68 @@ def status_disagreements():
     return problems
 
 
+#: `UX-657`: priority's twin of `STATUS_EMOJI`. Measured over all 654
+#: rows, exactly one cell per row equals one of these, in both tables
+#: and whatever their column order - which is why the cell is found by
+#: value, the way `table_statuses` finds its own.
+PRIORITIES = ("High", "Medium", "Low")
+
+
+def priority_cell(cells):
+    """The priority cell of a split row, or `None`."""
+    found = [cell for cell in cells if cell in PRIORITIES]
+    return found[0] if len(found) == 1 else None
+
+
+def table_priorities():
+    """`{item number: priority cell}` across both backlog files."""
+    priorities = {}
+    for path in backlog_files():
+        if not path.exists():
+            continue
+        for line in path.read_text(encoding="utf-8").splitlines():
+            match = _TABLE_ROW.match(line)
+            if not match:
+                continue
+            cells = [cell.strip() for cell in
+                     re.split(r"(?<!\\)\|", line.strip().strip("|"))]
+            priorities[int(match.group(1))] = priority_cell(cells)
+    return priorities
+
+
+def file_priorities():
+    """`{item number: (filename, priority word)}` from the task files."""
+    priorities = {}
+    for path in sorted(SCENARIOS.glob("UX-*.md")):
+        match = _FILE_ID.match(path.name)
+        if not match:
+            continue
+        header = path.read_text(encoding="utf-8").splitlines()[:8]
+        line = next((line for line in header if "**Priority:**" in line), None)
+        word = re.search(r"\*\*Priority:\*\* (\S+)", line or "")
+        priorities[int(match.group(1))] = (path.name,
+                                           word.group(1) if word else None)
+    return priorities
+
+
+def priority_disagreements():
+    """`UX-657`: each row's priority equals its file's.
+
+    Symmetric like `status_disagreements`, and for the same reason - it
+    compares the pair without deciding which half is authoritative, so
+    moving either one alone is reported.
+    """
+    rows = table_priorities()
+    problems = []
+    for number, (name, word) in sorted(file_priorities().items()):
+        if number not in rows:
+            continue
+        if rows[number] != word:
+            problems.append(
+                f"UX-{number}: table says {rows[number]}, {name} says {word}")
+    return problems
+
+
 #: What `--check` holds, in the order it prints them. `UX-387`: the
 #: output used to be a bare "0 problem(s)", which reads the same for "I
 #: checked four properties and all passed" and "I checked three and the
@@ -505,6 +567,8 @@ def write_index():
 CHECKS = (
     ("every row's status glyph matches its task file's",
      lambda: status_disagreements()),
+    ("every row's priority matches its task file's",
+     lambda: priority_disagreements()),
     ("no closed row is left in the open index",
      lambda: _closed_rows_left_open()),
     ("the index's open count matches its table",

@@ -39,7 +39,17 @@ A_DOCUMENT_WRITTEN_BEFORE_UX_610 = {
     "candidate_diagnosis": {},
 }
 
-jsonschema = pytest.importorskip("jsonschema")
+try:
+    import jsonschema
+except ImportError:                      # pragma: no cover
+    jsonschema = None
+
+# Round 21's seam, held by `test_six_seams_round_21_found.py`: a
+# module-scope `importorskip` skips every guard in the file, and only
+# two of these need a validator.
+needs_jsonschema = pytest.mark.skipif(
+    jsonschema is None,
+    reason="jsonschema is not installed - `pip install -e '.[dev]'`")
 
 
 def _schema(name):
@@ -130,6 +140,7 @@ class TestTheOldDocumentValidatesAgain:
     week-old document is the measurement; everything else is the
     mechanism that produced it."""
 
+    @needs_jsonschema
     def test_a_document_written_before_ux_610_validates(self):
         jsonschema.validate(A_DOCUMENT_WRITTEN_BEFORE_UX_610,
                             _schema("compare/v2"))
@@ -143,6 +154,7 @@ class TestTheOldDocumentValidatesAgain:
         assert len(A_DOCUMENT_WRITTEN_BEFORE_UX_610) == 14
         assert "verdict_provenance" not in A_DOCUMENT_WRITTEN_BEFORE_UX_610
 
+    @needs_jsonschema
     def test_a_key_still_missing_from_required_reddens(self):
         """And the schema has not simply been emptied: dropping a key
         the id has always required must still fail, or the clause above

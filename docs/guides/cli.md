@@ -636,6 +636,36 @@ buy nothing beyond what completion already gives. Recorded as considered
 and declined, revisitable if argcomplete cannot complete something users
 need.
 
+## The environment `bga` reads (`UX-630`)
+
+`bga --help` cannot list an environment variable — which is the reason
+`bga/report/rate.py` gives for choosing one — so this table is the
+inventory instead. Its population is derived from `bga/` and `tools/`
+rather than from the parser, by
+`tests/unit/test_the_environment_surface_is_an_inventory.py`: a name
+added tomorrow with no flag beside it appears here, or that guard is
+red.
+
+What you can set:
+
+| name | what it changes | where |
+|---|---|---|
+| `BGA_INTERRUPT_GRACE_SECONDS` | seconds a wrapped `bst` gets to stop by itself after `SIGINT` before `bga` escalates; 300 by default, and raising it is how a big build keeps the `queue_summary` written during that shutdown | `tools/bst_run_wrapped.py` |
+| `BGA_NO_PROGRESS` | suppresses the in-phase progress line even on a terminal — the same off-switch as `bga snapshot --no-progress` | `bga/progress.py` |
+| `BGA_RATE` | adds the *In Your Units* block to `bga analyze` and `bga whatif`, converting build seconds at `<amount> <unit>/machine-hour` (or `/build-hour`). Unset, nothing is converted and no block is printed; malformed, the block says why rather than staying silent | `bga/report/rate.py` |
+| `BGA_REQUESTED_AT` | the ISO-8601 instant a capture publishes as `requested_at_us`, and the `queue_wait_us` it derives from that. `CI_PIPELINE_CREATED_AT` is the fallback, and the published `requested_at_source` says which was used | `tools/_run_context_common.py` |
+| `BGA_TRACE_PROCESSOR` | the Perfetto `trace_processor_shell` the canned-question runner uses, ahead of `PATH` and ahead of the pinned download | `tests/trace_processor.py` |
+
+Three more names sit in the same namespace and are **not** switches to
+use. They are listed because a reader who greps the tree finds them and
+deserves an answer:
+
+| name | what it is | where |
+|---|---|---|
+| `BGA_FORCE_PROGRESS` | draws the progress line onto a pipe, so a test can compare a run with progress genuinely on against one with it off. Deliberately not a user-facing switch: it writes control characters into a redirected stderr, which is the one thing `UX-183` exists to prevent | `bga/progress.py` |
+| `BGA_STRICT_HINTS` | not an environment variable at all — a page global, set from the browser console, that makes the report complain about a number carrying no declared `bga:quantity` | `bga/viewer/format.js` |
+| `BGA_TIER_ANY` | set into the child environment by `make test-touching` and by the pre-commit selector, and read by nothing in this tree (`UX-630`) | `tools/dev_touching.py` |
+
 ## `bga timeline` — one trace, both planes (`UX-188`, `UX-298`)
 
 ```bash

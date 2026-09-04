@@ -911,18 +911,20 @@ contracts' *consumer surface* — each schema's top-level properties plus
 the properties of a row directly under a top-level array, since a row
 of `store/v1`'s `snapshots` is what you actually read. That surface was
 199 keys when this was written, 84 of them named in no document outside
-`docs/backlog/` and `docs/audits/`; naming the five above left
-**80 undocumented keys**, which is the figure the guard holds and this
-sentence is checked against.
+`docs/backlog/` and `docs/audits/`; naming the five above left 80, and
+`UX-636` paid those 80 off in the section below. The register in the
+guard is empty, so the figure it holds and this sentence is checked
+against is **0 undocumented keys**.
 
-So the honest statement of coverage, rather than a promise nobody
-keeps:
+So the statement of coverage, which is now a statement and not a
+promise:
 
-- a key added to a printable schema **after** this sentence has prose
-  or the guard reddens naming it;
-- the 84 already undocumented are a frozen register in that guard,
-  which may only shrink — the debt is counted, not hidden, and
-  documenting it is separate work;
+- **every key of every printable contract is named in a document**, and
+  a key added to one of those schemas has prose or the guard reddens
+  naming it;
+- the register the debt was held in may only shrink and is at zero, so
+  a key going undocumented is a decision somebody argues, not a number
+  that drifts;
 - `run-context/v9`, `graph/v9` and `trace/v9` are **not covered at
   all**. They are stamped by whatever produced the capture, `bga` only
   reads them, and there is no JSON Schema here to enumerate — so
@@ -932,6 +934,114 @@ A section subcommand (`bga floors`, `bga graph`, …) emits the same
 `analyze/v6` document restricted to its own keys, with a `section` key
 naming the restriction — so a missing key can be told from a removed
 one.
+
+### Every published key, by contract (`UX-636`)
+
+The rest of the consumer surface, one line each — what the key is, not
+what its schema says it is. `--schema` stays the complete list and the
+source of truth for types; these rows are so a reader holding a payload
+can look one up.
+
+`analyze/v6` — the run-level blocks:
+
+| key | what it is |
+|---|---|
+| `bottleneck` | Where work funnels through one element, and how much waits behind it. `choke_points` ranks by `downstream_count`. |
+| `cpu_time` | The run-level CPU totals beside `element_cpu_time`, with the sentence saying what a CPU figure here is and is not. |
+| `resource_pressure` | The run-level coverage beside `element_resource_pressure`, and what each counter counts. |
+| `configure_phase` | The share of CPU spent configuring rather than building. A floor, for the reason its own `note` gives. |
+| `element_duration_distribution` | How this run's element durations are spread — the answer to "is 40s slow *here*?". Nearest-rank percentiles. |
+| `blast_radius_distribution` | How many elements sit downstream of each, across this graph. "753 downstream" is p99.9 in 1,202 elements and unremarkable in 40,000. |
+| `element_join_coverage` | How far the two-plane join reaches: `joined_elements`, each plane's count, and the elements only one plane saw. |
+| `attribution_hints` | One sentence per wait category saying what reduces it — the advice that belongs with `attribution`, not a second copy of it. |
+| `latent_heavies` | Heavy elements not on the path today. They cost nothing now and become the constraint once what is above them is fixed. |
+| `consolidation_candidates` | Elements always consumed together that could be one element. Structural: from the graph's edges, never a timing estimate. |
+| `batch_opportunities` | What could be built together, with `serialized_pairs` naming the pairs that share a chain and therefore cannot. |
+| `joint_saving` | What fixing the top candidates *together* is worth, simulated, beside `sum_of_individual_us` — they differ when savings overlap. |
+| `serialization_point_risks` | Where the run is forced to serialize. Each entry carries `pinned_elements` (what was pinned, and to what), `governing_cores` (the cores they competed for) and `typical_max_jobs` (the `-j` their own builds used). |
+| `resource_blast` | What one shared resource rebuilds. `null` where no source inventory was captured. |
+| `trace_queries` | Every timeline query that shows a finding or deepens a claim, best first; `trace_query` is its first entry. Absent where there is a single grain. |
+| `unused_dependencies`, `redundancy_count`, `worst_redundancy`, `native_findings` | The Plane 2 half of an `element_join` row: declared-and-never-read dependencies, how often this element repeated work it had already done, the repetition it paid most for, and the producer's own per-element tags. |
+| `edges`, `projection` | Inside a `restructuring` finding: the declared build edges Plane 2 measured never-read, and the replay with those edges removed (`replayed_baseline_us`, `projected_us`, `saving_us`). Evidence, not a verdict. |
+
+`analyze/v6` — inside a `findings`, `next_steps`, `readers`,
+`provenance` or `binary_cost` row:
+
+| key | what it is |
+|---|---|
+| `title` | The finding as one sentence, with its figure. |
+| `detail` | The lines beneath it, or `null` where the title is the whole finding. |
+| `copy_text` | The finding as plain text — title, evidence in declared units, elements, published next step, run identity. What the page's copy button yields. |
+| `reason` | Why this next step, in terms of the values that chose it. |
+| `follows_from` | The finding or published field the step was chosen by, so the advice can be checked against the number behind it. |
+| `label` | What a reader would say about themselves, in the first person; the selector's option text. |
+| `leads_with` | The id of the finding that is that reader's biggest lever here: highest severity, then published order. |
+| `claim` | Which claim a `provenance` entry explains — a finding id, or `diagnosis` for the headline. |
+| `calls`, `cpu_time`, `cpu_share`, `wall_us` | Per binary, in `binary_cost`: how many times this element ran it, the CPU it took, that CPU as a share of the element's measured CPU, and the wall-clock those calls spanned. |
+
+`compare/v2`:
+
+| key | what it is |
+|---|---|
+| `baseline_run_id`, `candidate_run_id` | The run id of each side, so a verdict can be traced to the two captures behind it. |
+| `deltas` | The run-level signed changes — makespan, contention, serialization and the rest, each `candidate - baseline`. |
+| `attribution_deltas` | The same, per wait category: `baseline_us`, `candidate_us`, `delta_us`. |
+| `element_deltas` | Every element in either run with its duration on each side and the signed change, ranked by what moved most. Deliberately **not** banded. |
+| `cache_churn` | How many cache keys moved: `comparable_elements` as the population, then `unchanged_keys` and `changed_keys` out of it. |
+| `baseline_confidence`, `candidate_confidence` | How much of each run the comparison could see — the share of its elements carrying what the verdict is computed from. |
+| `low_confidence` | True when either share is below the floor: the verdict stands, over a partly-read run. |
+| `mismatches` | Fields where the two captures' conditions differ, one row of `field`, `baseline`, `candidate` — a comparison across machines says so rather than hiding it. |
+| `failed_runs` | Runs in the pair that did not finish, named rather than silently compared. |
+
+`blast/v2`:
+
+| key | what it is |
+|---|---|
+| `resolved_as` | Which reading of the target the command used — `url`, `path` or `element`. Published because the order is a heuristic. |
+| `also_matched` | The other readings that would also have matched, so a deterministic pick is not a silent one. |
+| `keying` | How the matched resource is keyed (`url`, `ref`, …) when the target resolved as a repository. |
+| `direct_elements`, `direct_count` | The elements that depend on the target directly. The first hop only. |
+| `blast_elements`, `blast_count` | Everything a change here rebuilds, transitively — the number that makes a small element expensive to touch. |
+| `building_count`, `assembling_count` | That closure split: the ones doing real build work, and the ones that only gather what is below them. |
+| `by_element_kind` | The same closure counted by BuildStream element kind. |
+| `measured_elements` | How many of the affected elements have a recorded duration. The rest are counted, never estimated. |
+| `element_count` | Elements in the project, as the denominator for the reach above. |
+| `has_inventory` | Whether the run carried a source inventory; without one, a url or path target cannot be resolved. |
+| `element_exists` | Whether an element-named target is in the graph at all — so "rebuilds nothing" can be told from "is not there". |
+
+`correlate/v2`:
+
+| key | what it is |
+|---|---|
+| `note` | What the join is and what it refuses: the key it joined on, why an element may appear in one plane only, and that the two timelines are not merged. |
+| `attribution_unreliable` | The producer's own note, when it says its element names are fiction. Set, the join is refused rather than rendered (`UX-56`). |
+| `attribution_partial` | The same note when the names are real but do not cover every process. The join is rendered with its coverage stated (`UX-66`). |
+| `granularity` | Elements paying more sandbox tax than they spend building. |
+| `process_count_distribution` | How many processes each element ran, across this capture. Heavy-tailed: one element with 40,000 processes is the finding. |
+| `sandbox_tax_distribution` | How this capture's sandbox tax is spread, over every payer — "is this element's tax unusual" has no answer without the population. |
+
+`store/v1` and `store-aggregate/v1`:
+
+| key | what it is |
+|---|---|
+| `shown` | Rows in `snapshots` here. Below `count` when the reader asked for a window — `bga view` does, a listing does not. |
+| `total_bytes` | What the snapshots weigh on disk, together; per class inside `host_classes`. |
+| `store_bytes` | What `.bga/runs` weighs, published at the document level rather than inside `blended` (`UX-300`). |
+| `snapshot_bytes` | The per-run size as a distribution over finished runs, not a single number. |
+| `cache_hit_rate` | Cache hits as a share of lookups — per run in `snapshots`, as a distribution in `host_classes`. |
+| `host_class` | CPU model, core count and memory joined into the one label two runs must share to be aggregated (`UX-186`). |
+| `host_classes` | One entry per class. Durations are never scaled across classes. |
+| `blended` | One distribution across every class. `null` unless the store holds a single class, or `--blend` was passed and the mixed claim taken deliberately. |
+| `stamps`, `stamps_total` | Which snapshots a figure came from — the most recent `STAMPS_MAX` of them — and how many there are in all (`UX-528`). |
+| `excluded` | What was left out and why, counted by reason: "we had nine runs" and "we had nine and threw two away" are different claims. |
+| `resource_shortfall` | Present instead of `cores_busy` and `peak_rss_bytes` where no run in the class carries them (`UX-296`). |
+
+`capacity-model/v1`:
+
+| key | what it is |
+|---|---|
+| `service` | The service-time moments this class's queue is modelled from: `samples`, `mean_us` and `stdev_us`. The mean, not the median — waiting is a function of the mean and the spread around it. |
+| `excluded_runs` | Captures left out of every service time — failed, interrupted, suspended or unfinished. Counted, so a thin model says why it is thin. |
 
 ### What a build here costs (`UX-234`)
 

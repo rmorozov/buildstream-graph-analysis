@@ -76,18 +76,11 @@ out of four had no quarrel with.
 
 ### After
 
-`FIRST_TAGGED_RELEASE` is gone. Every release row is now read by every
-clause, and `UNREACHABLE_BY_DECISION = {"v0.2.0"}` carries the one
-exception with its reason in the constant's comment. A sixth clause,
+`FIRST_TAGGED_RELEASE` is gone: every release row is read by every
+clause (2 rows -> 3), and `UNREACHABLE_BY_DECISION = {"v0.2.0"}`
+carries the one exception with its reason. A sixth clause,
 `test_each_named_exception_still_needs_naming`, reddens when a listed
-tag stops needing the exemption.
-
-```text
-rows read by the tag/version clauses   2 -> 3
-exclusions                             a version floor -> one named tag
-```
-
-**33 passed** in `test_a_release_records_a_contract_state.py`.
+tag stops needing it. **33 passed** in the file.
 
 ### Mutations verified red and reverted (3)
 
@@ -97,9 +90,37 @@ exclusions                             a version floor -> one named tag
 | P2 | `"v9.9.9"` added to the set | the staleness clause alone |
 | P3 | `"v0.4.0"` added to the set (a reachable tag) | the staleness clause alone |
 
-P1 is the one that matters: it shows the clause would have caught
-`v0.2.0` on its own, so the exemption is a decision recorded rather
-than a hole that happened to be there.
+P1 matters: the clause would have caught `v0.2.0` on its own, so the
+exemption is a decision recorded, not a hole that happened to be there.
+
+### The clause disagreed with itself across two git versions
+
+`git merge-base --is-ancestor` answered **1 here and 0 on CI for the
+same commit**. Not a checkout difference — the merge ref CI ran on is
+`5e8fb16`, fetched here afterwards, and on the identical object:
+
+```text
+$ git rev-list 5e8fb16 | wc -l                     561
+$ git rev-list 5e8fb16 | grep -c 3ebe7e1b5           0
+$ git merge-base --is-ancestor v0.2.0 5e8fb16      exit 1
+$ git for-each-ref --contains 3ebe7e1b5            refs/tags/v0.2.0
+
+CI (git 2.55.0), same commit:
+  v0.2.0 -> 3ebe7e1b5 is reachable from HEAD (5e8fb16)
+local git 2.43.0
+```
+
+`v0.2.0`'s lineage has a **root of its own**: no common ancestor with
+anything, which is a shape `--is-ancestor`'s optimised path has to get
+right and which this repository cannot audit. So the clause stopped
+using the predicate and computes the definition — `merge-base(tag,
+HEAD) == tag` — which hands back a *value* the message can carry
+(`merge-base: no common ancestor`) instead of an exit code.
+
+Whether 2.55 is wrong or 2.43 is, the guard should not have been
+standing on the difference: that is `UX-418`'s class, a claim that
+holds on one machine. Round 85 shipped the same shape one round
+earlier (a `refs/` proxy, green on 2.43 and red on 2.55).
 
 ### Deviation from the Required Fix
 

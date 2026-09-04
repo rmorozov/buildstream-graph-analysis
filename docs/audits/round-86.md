@@ -79,6 +79,30 @@ rather than only in `UX-597`'s file because it is the same defect as
 the table above, one level up: **a selector is a population, and a
 population is not a gate.**
 
+## The one that only failed on the other machine
+
+`UX-633`'s exemption clause was green here and red on CI, on the
+**same commit** — `5e8fb16`, the PR's merge ref, fetched afterwards so
+both could be asked the identical question:
+
+```text
+local, git 2.43.0     git merge-base --is-ancestor v0.2.0 5e8fb16   exit 1
+                      git rev-list 5e8fb16 | grep -c 3ebe7e1b5           0
+CI,    git 2.55.0     v0.2.0 -> 3ebe7e1b5 is reachable from HEAD (5e8fb16)
+```
+
+`v0.2.0`'s lineage has a root of its own — no common ancestor with
+anything — and the clause was standing on `--is-ancestor`'s answer for
+that shape. It now computes the definition instead, `merge-base(tag,
+HEAD) == tag`, which returns a **value** the failure message carries
+(`merge-base: no common ancestor`) rather than an exit code.
+
+This is `UX-418`'s class, and round 85 shipped the same shape one round
+earlier: a private-`refs/` proxy, green on 2.43 and red on 2.55. Two
+rounds running, the guard that only holds on one machine has been a
+git-version difference — which is worth saying out loud, because the
+local machine is the one every session measures on.
+
 ## What each item left
 
 | row | what shipped | held by |

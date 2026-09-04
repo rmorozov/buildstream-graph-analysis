@@ -341,6 +341,25 @@ class TestTheReleaseConsumesTheReview:
 UNREACHABLE_BY_DECISION = {"v0.2.0"}
 
 
+def _reaches(commit):
+    """Is `commit` an ancestor of `HEAD`? By the definition, not by the
+    predicate.
+
+    `git merge-base --is-ancestor` answered **0 here and 1 on CI for the
+    same commit**: `5e8fb16`, the merge ref of `UX-633`'s own PR, where
+    `git rev-list` locally walks 561 commits and does not contain
+    `3ebe7e1b5` at all. Local git is 2.43.0, CI's is 2.55.0, and that
+    predicate has an optimised path this repository cannot audit.
+
+    `merge-base` computes the common ancestor and hands back a value, so
+    the clause reads what it asks for: the answer is `commit` when it is
+    an ancestor, and **empty** when the two histories are disjoint -
+    which `v0.2.0`'s lineage is, having a root of its own.
+    """
+    code, out = _git("merge-base", commit, "HEAD")
+    return (code == 0 and out == commit), (out or "no common ancestor")
+
+
 def _git(*argv):
     done = subprocess.run(("git",) + argv, capture_output=True, text=True,
                           cwd=REPO, timeout=60)
@@ -412,9 +431,10 @@ class TestEveryVersionedReleaseIsTagged:
             tag = f"v{row['version']}"
             if tag in UNREACHABLE_BY_DECISION:
                 continue
-            code, _ = _git("merge-base", "--is-ancestor", tag, "HEAD")
-            if code != 0:
-                unreachable.append(tag)
+            at = _git("rev-parse", f"{tag}^{{commit}}")[1]
+            reaches, base = _reaches(at)
+            if not reaches:
+                unreachable.append(f"{tag} -> {at} (merge-base: {base})")
         assert unreachable == [], (
             f"release tag(s) naming a commit no clone of this branch can "
             f"reach: {unreachable}. Either the tag moves, or it joins "
@@ -441,7 +461,9 @@ class TestEveryVersionedReleaseIsTagged:
             code, at = _git("rev-parse", f"{tag}^{{commit}}")
             if code != 0:
                 stale.append(f"{tag}: names no commit in this checkout")
-            elif _git("merge-base", "--is-ancestor", tag, "HEAD")[0] == 0:
+                continue
+            reaches, base = _reaches(at)
+            if reaches:
                 stale.append(
                     f"{tag} -> {at} is reachable from HEAD ({head}), so the "
                     f"exemption is dead and the tag joins the clause above")

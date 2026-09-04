@@ -42,7 +42,10 @@ correct — but its sentence has to match what it counts.
 
 - Changing which guards are census guards. They sweep the tree because
   that is what they check.
-- The bound's value.
+- The bound's value — declined because `UX-606` measured 25 against a
+  real distribution, and this row disputes what the figure counts, not
+  where it sits. Moving it would hide the question rather than answer
+  it.
 
 ## Acceptance Test
 

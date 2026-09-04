@@ -58,8 +58,10 @@ that changes when focus is entered.
 ## Out of Scope
 
 - The rail going dead while focused — UX-639, same module, its own row.
-- Making the chapter boxes hide with the sections; that is a question
-  about what focus *is*, and this row is about not losing the reader.
+- Making the chapter boxes hide with the sections — declined because
+  that asks what focus *is* for, and this row only has to stop it
+  losing the reader. The seven headings filling the screen on return
+  are a symptom of the scroll loss, not a second defect.
 
 ## Acceptance Test
 

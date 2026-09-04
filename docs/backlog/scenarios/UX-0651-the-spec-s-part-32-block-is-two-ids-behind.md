@@ -84,3 +84,77 @@ is the same shape one Part up.
 with the rest, the retired line cites `UX-641`, and a guard reddens
 when an id is added to `bga.contracts` without reaching the block —
 shown by adding one and watching it fail.
+
+## Outcome
+
+A guard reads the block, and the block is right. Two lines of Part 32
+moved: `capacity-model/v1` joins `sweep/v1` on the *what capacity buys*
+line, and the retired line becomes `analyze/v5 analyze/v4 analyze/v3
+analyze/v2 (read, never written - UX-641)`.
+
+### Before
+
+The Motivation's script, and the file that should have been red,
+both at `933de24`:
+
+```console
+$ python3 - <<PY   ...the Motivation's script, verbatim...
+ids missing from Part 32's opening block: ['analyze/v5', 'capacity-model/v1']
+
+$ PYTHONPATH=. python3 -m pytest \
+    tests/unit/test_the_documents_keep_up_with_the_contracts.py -q
+15 passed in 0.25s
+```
+
+### After
+
+```console
+$ python3 - <<PY   ...the same script, and the other direction...
+ids missing from Part 32's opening block: []
+block names, not emitted or read: ['analysis/v9']
+
+$ PYTHONPATH=. python3 -m pytest \
+    tests/unit/test_the_documents_keep_up_with_the_contracts.py -q
+20 passed in 0.28s
+```
+
+`analysis/v9` is the one id the block names that `ids()` and `reads()`
+both refuse, and 32.5 already says why - it is the analyzer's in-memory
+result shape, *not a fourth input*. So the "nothing present that
+nothing emits" clause reads three sets: `ids()`, `reads()`, and the ids
+Part 32 gives a numbered subsection to. A naive clause reddens on all
+four of `analysis/v9`, `graph/v9`, `run-context/v9`, `trace/v9`.
+
+### Mutations verified red and reverted (5)
+
+| # | mutation | reddened | count |
+|---|---|---|---|
+| M1 | `OWNED = ("phantom/v1",)` on `bga.bundle`, block untouched | `..._every_id_the_package_has_reaches_the_block`, and the 32.5 and architecture clauses | 3 failed 17 passed |
+| M2 | `phantom/v1` added to the block's `sweep/v1` line | `..._names_nothing_the_package_does_not_have` | 1 failed 19 passed |
+| M3 | `analyze/v6` appended to the retired line | `..._retired_line_holds_retired_ids_only` | 1 failed 19 passed |
+| M4 | the retired line's citation back to `UX-535` (its state as filed) | `..._cites_the_item_that_retired_it` | 1 failed 19 passed |
+| M5 | `_part_32_opening_block()` forced to return `[]` | `..._is_what_part_32_opens_with` and the reach clause | 2 failed 18 passed |
+
+**A guard of mine did not discriminate, and M4 is why it is what it
+is.** The first cut asserted only that the cited item's task file names
+the newest id on the line. `UX-535` names `analyze/v5` twice - it is
+the bump that *created* it - so the exact defect this item was filed
+for passed. It now also asks for the live id of the same family, which
+only the retiring item carries: `UX-641` names `analyze/v6`, `UX-535`
+names no live `analyze/*` at all.
+
+M5 is the reason the fifth clause exists: with the parse empty, the
+three set-difference clauses were **green**, because a set difference
+against nothing is empty.
+
+### Deviation from the Required Fix
+
+The second of the two offered routes - the guard, not derivation. A
+derived block would have had to generate the annotation column too, and
+the annotations are prose (*the measuring machine*, *a capture you can
+carry*) that no registry holds.
+
+**Not fixed, reported:** `plane2/v2` and `plane2/v1` are in
+`superseded()` and sit on the live *Plane 2 report* line, so the
+retired-line clauses do not reach them. Grouping them is a block
+decision this item did not ask to re-take.

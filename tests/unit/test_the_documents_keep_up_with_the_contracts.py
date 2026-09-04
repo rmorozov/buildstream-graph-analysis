@@ -50,6 +50,160 @@ def _published_schemas():
 
 
 GUIDES = REPO / "docs/guides"
+BACKLOG = REPO / "docs/backlog/scenarios"
+PART_32 = "# Part 32 — Data Contracts"
+
+
+def _part_32_opening_block():
+    """`[(ids, annotation)]` for Part 32's opening fenced block.
+
+    Anchored on the Part heading and closed at the first subsection, so
+    the subject is the block a reader of the spec meets first - not
+    32.5's table 117 lines below, which
+    `test_a_counted_figure_is_derived.py` reads and which `UX-651`
+    measured two ids ahead of this block.
+    """
+    text = SPEC.read_text(encoding="utf-8")
+    parts = text.split(PART_32, 1)
+    assert len(parts) == 2, f"the spec has no `{PART_32}` heading"
+    fenced = parts[1].split("\n## 32.", 1)[0].split("```")
+    assert len(fenced) >= 3, "Part 32 opens with no fenced block"
+    rows = []
+    for line in fenced[1].splitlines():
+        if "(" not in line:
+            continue
+        names, annotation = line.split("(", 1)
+        rows.append((re.findall(r"[a-z][a-z0-9-]*/v\d+", names),
+                     annotation.strip().rstrip(")")))
+    return rows
+
+
+def _part_32_subsections():
+    """Every id Part 32 gives a numbered subsection of its own."""
+    text = SPEC.read_text(encoding="utf-8")
+    return set(re.findall(r"\n## 32\.\d+ ([a-z][a-z0-9-]*/v\d+)", text))
+
+
+def _cited_item(annotation):
+    """The task file the annotation cites, or `None`."""
+    found = re.search(r"UX-(\d+)", annotation)
+    if not found:
+        return None
+    files = sorted(BACKLOG.glob(f"UX-{int(found.group(1)):04d}-*.md"))
+    return files[0] if files else None
+
+
+class TestPart32sOpeningBlockIsTheRegistry:
+    """`UX-651`. The registry has two copies and only one was read.
+
+    `UX-565` pointed `test_every_published_schema_is_named_in_the_spec`
+    at 32.5's table, because "mentioned anywhere in Part 32" let a
+    deleted 32.5 row pass - and nothing then read the block. Measured
+    when this was filed: `analyze/v5` (`UX-641`) and
+    `capacity-model/v1` (`UX-613`) were in `contracts.ids()`, in 32.5
+    and in the architecture inventory, and in no line of the block; its
+    retired line still cited `UX-535` for a set now beginning at
+    `analyze/v5`. The whole file was green.
+    """
+
+    def test_every_id_the_package_has_reaches_the_block(self):
+        """The item's Acceptance Test: a contract added to the package
+        and not to the block fails here, by name."""
+        from bga import contracts
+
+        named = {one for ids, _ in _part_32_opening_block() for one in ids}
+        missing = sorted(set(contracts.ids()) - named)
+        assert missing == [], (
+            f"id(s) Part 32's opening block does not name: {missing}. It is "
+            f"the first thing a reader of the spec meets, and 32.5's table "
+            f"being right does not make it right (UX-651)")
+
+    def test_the_block_names_nothing_the_package_does_not_have(self):
+        """The other direction, and the reason it is three sets rather
+        than one: the block opens with the *inputs*, which `ids()` has
+        never held (`UX-540`), and with `analysis/v9`, which is stamped
+        on nothing and reaches a consumer only as `analyze/v6`. Both
+        are read off the package and off Part 32's own subsections, so
+        a stale id has nowhere to hide behind them."""
+        from bga import contracts
+
+        known = (set(contracts.ids()) | set(contracts.reads())
+                 | _part_32_subsections())
+        named = {one for ids, _ in _part_32_opening_block() for one in ids}
+        stale = sorted(named - known)
+        assert stale == [], (
+            f"Part 32's opening block names id(s) nothing emits, reads or "
+            f"gives a subsection to: {stale}")
+
+    def test_a_retired_line_holds_retired_ids_only(self):
+        """`superseded()` is what a release still opens after retiring
+        it, and a live id on one of those lines says the tool stopped
+        writing something it writes every run."""
+        from bga import contracts
+
+        superseded = set(contracts.superseded())
+        wrong = sorted(one for ids, annotation in _part_32_opening_block()
+                       if annotation.startswith("read")
+                       for one in ids if one not in superseded)
+        assert wrong == [], (
+            f"Part 32's read-never-written lines name id(s) that are not in "
+            f"contracts.superseded(): {wrong}")
+
+    def test_a_retired_line_cites_the_item_that_retired_it(self):
+        """Its newest id first, and beside it the item that moved off
+        that id - which is the item naming both it and the live id of
+        the same family that replaced it.
+
+        Naming the retired id alone does not discriminate and was
+        measured not to: the line cited `UX-535` for a set beginning at
+        `analyze/v5`, and `UX-535` names `analyze/v5` too - it is what
+        *created* it, one bump before `UX-641` retired it. Only the
+        retiring item also names the successor.
+        """
+        from bga import contracts
+
+        live = set(contracts.ids()) - set(contracts.superseded())
+        for ids, annotation in _part_32_opening_block():
+            if not annotation.startswith("read"):
+                continue
+            item = _cited_item(annotation)
+            assert item is not None, (
+                f"the retired line `{ids[0]} ... ({annotation})` cites no "
+                f"item, so a reader cannot find what retired it")
+            body = item.read_text(encoding="utf-8")
+            assert ids[0] in body, (
+                f"{item.name} does not name {ids[0]}, the newest id on the "
+                f"line it is cited from")
+            family = ids[0].split("/")[0] + "/"
+            replacements = sorted(one for one in live if one.startswith(family))
+            if not replacements:
+                continue
+            assert [one for one in replacements if one in body], (
+                f"{item.name} names {ids[0]} but none of {replacements} - it "
+                f"is the item that *created* {ids[0]}, not the one that "
+                f"retired it, so the annotation is a bump behind (UX-651)")
+
+    def test_the_block_is_what_part_32_opens_with(self):
+        """Non-vacuity for the two directions above, which are set
+        differences and pass on an empty parse. The anchor is a heading
+        and a fence, and both move."""
+        from bga import contracts
+
+        rows = _part_32_opening_block()
+        named = {one for ids, _ in rows for one in ids}
+        assert len(named) >= len(contracts.ids()), (
+            f"the block parse found {len(named)} id(s) against "
+            f"{len(contracts.ids())} in the package - the fence or the "
+            f"heading moved and the clauses above are reading nothing")
+        assert all(annotation for _, annotation in rows), (
+            "a block line carries no annotation saying what its group is")
+        after = SPEC.read_text(encoding="utf-8")[
+            SPEC.read_text(encoding="utf-8").index(PART_32):]
+        assert after.index("```text") < after.index("\n## 32.1 "), (
+            "Part 32's first fenced block is not above 32.1, so the parse "
+            "above is reading some other block")
+
+
 
 
 def _consumer_surface():

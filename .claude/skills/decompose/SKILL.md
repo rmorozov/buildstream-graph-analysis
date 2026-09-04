@@ -104,6 +104,23 @@ Expected base: <sha> "<subject>". If `git log --oneline -1` disagrees,
 `git merge --ff-only <sha>` and say so in your first sentence.
 ```
 
+`UX-626`: round 85's brief named base `2a7d1b8`, which is not an object
+in this repository at all — the merge it described is `2724972`. The id
+was **written from memory rather than read**, and the paragraph above
+already said to derive it. So the instruction is not repeated louder:
+resolve the string you are about to paste, before the brief goes out.
+
+```bash
+git rev-parse --verify <the base you are about to write>^{commit}
+```
+
+Non-zero and the brief does not go out. `^{commit}` rather than
+`cat-file -t`, which answers `tree` with exit 0 for an id that is a
+valid object and not a base. Nothing in this repository runs at
+brief-writing time — no hook fires on launching a track — so this
+command is the whole pre-launch check, and the track's own
+`git log --oneline -1` is the net one launch later.
+
 `UX-623`: the brief may name the round's **branch** instead, and that
 is the better half of the choice. A linked worktree has no `refs/` of
 its own — `refs/heads` and `refs/remotes` are the shared checkout's —

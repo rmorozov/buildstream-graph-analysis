@@ -1022,6 +1022,130 @@ class TestATrackCanReadEveryRefItsCheckoutHas:
             "it one, so the next round re-derives it or doubts it")
 
 
+class TestABriefsBaseResolvesBeforeItIsSent:
+    """`UX-626`: round 85's brief named base `2a7d1b8`, no object of
+    that name here; the merge it described is `2724972`. Re-measured:
+
+    ```text
+    $ git cat-file -t 2a7d1b8   fatal: Not a valid object name 2a7d1b8
+    $ git cat-file -t 2724972   commit
+    ```
+
+    `decompose` already told the orchestrator to derive the sha rather
+    than remember one, and that is the instruction that was in front of
+    it. Nothing in this repository runs when a track is launched - no
+    hook fires on the Agent tool - so the only check that can exist is
+    a command in the skill the brief is written from, and the only
+    thing worth guarding about a command is that it **discriminates**.
+
+    So these clauses run it, over the three classes an id falls in:
+    absent, a valid object of the wrong type, and a ref that resolves.
+    """
+
+    PLACEHOLDER = re.compile(r"<[^>]+>")
+    #: The id round 85's brief carried. Absent here and absent from any
+    #: sandbox, which is the property the clause below needs.
+    ABSENT = "2a7d1b8"
+
+    @staticmethod
+    def _section():
+        skill = (SKILLS / "decompose/SKILL.md").read_text(encoding="utf-8")
+        assert "## 3. Tracks" in skill, (
+            "the decompose skill has no Tracks section, so the launch "
+            "contract has moved and this class reads nothing")
+        return skill.split("## 3. Tracks", 1)[1].split("\n## ", 1)[0]
+
+    @classmethod
+    def _resolve_check(cls):
+        """The pre-launch check, taken as *the* fenced command in the
+        launch section carrying a placeholder for the base. Selected by
+        shape rather than by its own text: a clause that grepped for
+        `rev-parse` would find whatever command it was told to expect.
+        """
+        lines = [line.split("#")[0].strip()
+                 for block in re.findall(r"```bash\n(.*?)```",
+                                         cls._section(), re.S)
+                 for line in block.splitlines() if line.strip()]
+        carry = [line for line in lines if cls.PLACEHOLDER.search(line)]
+        assert len(carry) == 1, (
+            f"the launch section fences {len(carry)} command(s) taking a "
+            f"base, not one: {carry}. UX-626 is a brief whose base was "
+            f"never resolved; two candidates is no check at all")
+        return carry[0]
+
+    @staticmethod
+    def _git(where, *argv, check=True):
+        return subprocess.run(["git", *argv], cwd=where, check=check,
+                              capture_output=True, text=True, timeout=60)
+
+    @classmethod
+    def _a_repository(cls, tmp_path):
+        repo = tmp_path / "repo"
+        repo.mkdir()
+        (repo / "base.md").write_text("base\n", encoding="utf-8")
+        for argv in (["init", "-q", "-b", "main"],
+                     ["config", "user.email", "a@b"],
+                     ["config", "user.name", "a"],
+                     ["add", "base.md"], ["commit", "-qm", "base"]):
+            cls._git(repo, *argv)
+        return repo
+
+    def _run(self, repo, base):
+        import shlex
+        argv = shlex.split(self.PLACEHOLDER.sub(base, self._resolve_check()))
+        return subprocess.run(argv, cwd=repo, capture_output=True,
+                              text=True, timeout=60)
+
+    def test_it_refuses_the_id_that_was_never_an_object(self, tmp_path):
+        """`UX-626`'s acceptance test: the brief's base, refused before
+        a track is launched rather than by the track afterwards."""
+        repo = self._a_repository(tmp_path)
+        done = self._run(repo, self.ABSENT)
+        assert done.returncode != 0, (
+            f"the documented pre-launch check accepts {self.ABSENT!r}, "
+            f"the id round 85's brief carried and no object here - so a "
+            f"brief still goes out with a base nobody resolved")
+
+    def test_it_refuses_an_object_that_is_not_a_base(self, tmp_path):
+        """The boundary between the classes, and why the command is not
+        `cat-file -t`: a tree id is a valid object, answers with exit 0,
+        and is not something a track can start from."""
+        repo = self._a_repository(tmp_path)
+        tree = self._git(repo, "rev-parse", "HEAD^{tree}").stdout.strip()
+        assert self._git(repo, "cat-file", "-t", tree).stdout.strip() \
+            == "tree", "the sandbox did not produce a tree id"
+        done = self._run(repo, tree)
+        assert done.returncode != 0, (
+            "the documented check calls a tree a valid base, so it "
+            "passes an id that resolves to no commit at all")
+
+    def test_it_accepts_a_ref_the_orchestrator_would_write(self, tmp_path):
+        """The class that must pass, or the check is a command that
+        always fails and the orchestrator learns to skip it. A branch
+        name, because `UX-623` is why the brief may name one."""
+        repo = self._a_repository(tmp_path)
+        self._git(repo, "branch", "round")
+        done = self._run(repo, "round")
+        assert done.returncode == 0, (
+            f"the documented check refuses a branch that exists: "
+            f"{done.stderr.strip()!r}")
+
+    def test_the_skill_says_when_the_check_runs(self):
+        """Scoped to the launch section. The command alone is not the
+        fix - `UX-614` put "derive the sha" on this page and round 85
+        still typed one from memory, so what the section has to carry
+        is the moment: before the brief is sent, not after a track
+        reports."""
+        section = " ".join(self._section().split())
+        assert "before the brief goes out" in section, (
+            "the launch section fences a resolve command without saying "
+            "it runs before the brief is sent, which is the whole of "
+            "UX-626 - the id was wrong when it was written")
+        assert "written from memory rather than read" in section, (
+            "the section drops why the id was wrong; a round reading "
+            "'derive the sha' as advice repeats it (UX-626)")
+
+
 class TestEachTrackHasItsOwnScratchpad:
     """`UX-615`: the worktrees are isolated and the scratchpad is not.
 

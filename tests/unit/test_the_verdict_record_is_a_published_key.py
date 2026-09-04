@@ -99,9 +99,14 @@ class TestTheAcceptanceTest:
 
         assert "verdict_provenance" in document["properties"], sorted(
             document["properties"])
-        assert "verdict_provenance" in document["required"], (
+        # `UX-629` moved this from `required` to `bga:always_written`:
+        # required under a live id broke every compare/v2 written before
+        # this item. The guarantee is unchanged, its holder is not.
+        assert "verdict_provenance" in document.get("bga:always_written", ()), (
             "a key the payload always carries and the schema only "
             "permits is one a consumer could lose unnoticed")
+        assert "verdict_provenance" not in document["required"], (
+            "required under an unmoved id is UX-629's break")
 
     def test_the_key_is_in_the_payload_at_the_top_level(self, payload):
         assert payload["verdict_provenance"] is not None
@@ -232,8 +237,14 @@ class TestTheCensusesSeeIt:
             "efficiency_gate_signal", "baseline_confidence",
             "candidate_confidence",
         }
-        required = set(schemas.schema(schemas.COMPARE)["required"])
-        unguarded = sorted(set(payload) - required - conditional - {"schema"})
+        schema = schemas.schema(schemas.COMPARE)
+        required = set(schema["required"])
+        # `UX-629`'s third state: declared, permitted, and guaranteed by
+        # the emitter rather than by `required`. Read off the schema so
+        # this cannot drift from what a consumer sees.
+        always_written = set(schema.get("bga:always_written", ()))
+        unguarded = sorted(set(payload) - required - conditional
+                           - always_written - {"schema"})
         assert not unguarded, unguarded
 
 

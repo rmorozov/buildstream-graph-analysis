@@ -32,7 +32,7 @@ validates the golden run's real output against the schema this module
 produces - so a field removed from the payload without a matching
 schema edit fails a test rather than a consumer.
 """
-from typing import Dict, List
+from typing import Dict, List, Tuple
 
 # UX-207: the diagnosis vocabulary is decided in `findings.py`,
 # beside the ratio that decides it. Imported rather than restated,
@@ -635,7 +635,8 @@ def _distribution(quantity: str, noun: str, description: str) -> dict:
 
 def _document(name: str, title: str, required: Dict[str, str],
               description: str, optional: Dict[str, str] = None,
-              hints: Dict[str, dict] = None) -> dict:
+              hints: Dict[str, dict] = None,
+              always_written: Tuple[str, ...] = ()) -> dict:
     """A top-level object schema: `schema` plus the always-present keys.
 
     `required` maps a key to its JSON Schema type name, or to `""` for a
@@ -646,6 +647,13 @@ def _document(name: str, title: str, required: Dict[str, str],
     key's subschema. They are annotations: JSON Schema ignores keywords
     it does not know, so a hinted document validates exactly as an
     unhinted one did.
+
+    `always_written` is `UX-629`'s third state, published as
+    `bga:always_written`: a key the emitter writes on every document but
+    that is *not* `required`, because entering `required` under a live
+    id stops a document a consumer already wrote from validating. The
+    guarantee is the emitter's and is guarded against the real payload;
+    the annotation is how `--schema` says so.
     """
     properties: Dict[str, dict] = {
         VERSION_KEY: {"const": name,
@@ -660,17 +668,29 @@ def _document(name: str, title: str, required: Dict[str, str],
             raise KeyError(f"{name}: view-hint for unknown key {key!r}")
         _check_hint(name, key, hint)
         properties[key].update(hint)
-    return {
+    for key in always_written:
+        # Declared-but-not-required is the whole claim; either mistake
+        # makes the annotation a lie the guard would have to catch.
+        if key not in properties:
+            raise KeyError(f"{name}: always_written names undeclared {key!r}")
+        if key in required:
+            raise ValueError(
+                f"{name}: {key!r} is required, so always_written says "
+                f"nothing - the point of it is a key that is not")
+    document = {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "title": title,
         "description": description,
         "type": "object",
         "properties": properties,
         "required": [VERSION_KEY] + list(required),
-        # Additions are not breaking changes, and a schema that forbade
-        # them would turn every new signal into a version bump.
+        # A *permitted* addition is not a breaking change; a key
+        # entering `required` under a live id is (`UX-629`).
         "additionalProperties": True,
     }
+    if always_written:
+        document["bga:always_written"] = list(always_written)
+    return document
 
 
 # `analyze` is the one output with a variable key set: the section
@@ -1338,14 +1358,14 @@ _COMPARE_REQUIRED = {
     # required rather than permitted, by the same rule `element_deltas`
     # landed under one round earlier.
     "candidate_diagnosis": "object",
-    # `UX-610`: the chain behind the *verdict* - the sentence a
-    # contributor argues with, which `candidate_diagnosis` above does
-    # not answer. Written on every comparison and `null` on a refusal,
-    # so required-and-nullable rather than optional: a key the payload
-    # always carries but the schema only permits is one a consumer
-    # could lose without any test noticing.
-    "verdict_provenance": "object",
 }
+
+# `UX-629`: keys the emitter writes on every document that are declared
+# *permitted* rather than required, because entering `required` under a
+# live id stops a document a consumer already wrote from validating.
+# The guarantee is the emitter's, held against the real payload by
+# `tests/unit/test_a_required_set_grew_under_an_unchanged_id.py`.
+_COMPARE_ALWAYS_WRITTEN = ("verdict_provenance",)
 
 # UX-221: `element_diff` has been emitted since UX-79 and declared by
 # nothing, so `UX-190`'s contract never covered it and `bga view` had no
@@ -1363,6 +1383,12 @@ _COMPARE_OPTIONAL = {
     "baseline_confidence": "number",
     "candidate_confidence": "number",
     "cache_churn": "object",
+    # `UX-610`: the chain behind the *verdict* - the sentence a
+    # contributor argues with, which `candidate_diagnosis` does not
+    # answer. Written on every comparison and `null` on a refusal, so
+    # it is `_COMPARE_ALWAYS_WRITTEN` above rather than required
+    # (`UX-629`): required would break every document written before it.
+    "verdict_provenance": "object",
 }
 
 _BLAST_REQUIRED = {
@@ -5144,7 +5170,8 @@ _SCHEMAS = {
         "`improved`, `regressed`, `no significant change`, `within the "
         "baseline set's own observed range` (UX-170), or a `not "
         "comparable (...)` refusal.",
-        optional=_COMPARE_OPTIONAL, hints=_COMPARE_HINTS),
+        optional=_COMPARE_OPTIONAL, hints=_COMPARE_HINTS,
+        always_written=_COMPARE_ALWAYS_WRITTEN),
     BLAST: lambda: _document(
         BLAST, "bga blast --format json",
         _BLAST_REQUIRED,

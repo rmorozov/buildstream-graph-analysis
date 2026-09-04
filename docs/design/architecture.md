@@ -943,10 +943,10 @@ renderers are built against, so nothing here is a second copy to drift.
 | schema | what it is | printed by |
 |---|---|---|
 | `analyze/v5` | one run's analysis: attribution, floors, the element population, the graph's shape, findings, the headline decision, next steps, who each finding is for (`readers`, `UX-372`), and the provenance behind each claim. **v5** (`UX-535`) removed `graph_summary.total_elements`, `graph_summary.critical_path_length` and `graph_summary.max_parallelism` — three facts assigned from the same `StructuralMetrics` object `graph_metrics` publishes, so the document carried one number under two spellings in two sections; they are read from `graph_metrics.num_elements`, `graph_metrics.critical_path_length` and `graph_metrics.max_parallelism`. **v4** (`UX-344`) removed the two namespaces — `signals` and `structural` were maps of named tables that held no value of their own, so each table is a top-level key now, `metrics` and `summary` renamed to `graph_metrics` and `graph_summary` and the six element-keyed maps grouped under `elements`; `provenance` is published once per claim at the top level rather than written into every finding, the headline and each top action; and `findings[].evidence.blast_radius` is gone by `UX-288`'s rule, being a slice of a population published in full beside it. Measured on the two fixtures: leaves deeper than three fell from 57% to 40% and from 67% to 53%, and the golden report's deepest path from six levels to five. **v3** (`UX-341`) renamed every key that carried a retired unit — `measured_us`, `peak_rss_bytes`, `useful_share`, `occupancy_share` and the rest — so the payload measures time in µs, memory in bytes and a bounded fraction in 0..1, one spelling each. **v2** (`UX-288`) had removed three fields that republished element membership already published beside them — `signals.critical_path`, `signals.leaf_analysis.leaves`, and `structural.deferrability`'s two uid lists (their names at the time). `UX-345` removed one more on the same rule — `signals.critical_path_length`, which held `floors.t_infinity_observed`'s microseconds under a `count` — and renamed `signals.wall_clock_share` to `wall_clock_share_us` | `bga analyze --schema` |
-| `compare/v2` | two runs, their signed deltas, the verdict and its noise band, the per-element culprits, and the candidate's diagnosis chain | `bga compare --schema` |
+| `compare/v2` | two runs, their signed deltas, the verdict and its noise band, the per-element culprits, the candidate's diagnosis chain, and `verdict_provenance` (`UX-610`) - the chain behind the *verdict* rather than behind the candidate run, `null` on a refusal | `bga compare --schema` |
 | `blast/v2` | what rebuilds if one repository, path or element changes | `bga blast --schema` |
 | `correlate/v2` | the two planes joined on element uid, with the coverage of the join | `bga correlate --schema` |
-| `store/v1` | what the run store holds: one row per snapshot, with the alias, the verdict and why a capture is not a measurement | `bga snapshot --list --format json` |
+| `store/v1` | what the run store holds: one row per snapshot, with the alias, the verdict and why a capture is not a measurement - and, per row, `queue_wait_us`, the gap between the instant a build was requested and the instant it started, with `queue_wait_absent_reason` naming why where that is `null` rather than zero (`UX-594`) | `bga snapshot --list --format json` |
 | `store-aggregate/v1` | that store as a distribution: min/median/p95/max/MAD per host class, and the refusal when a mix cannot be blended | `bga snapshot --aggregate --format json` |
 | `capacity-model/v1` | that same store as a queue (`UX-613`): what a builder count and a declared arrival rate would do to utilization, the wait before a build starts and the number waiting, per host class. A model over the fact base rather than a block inside it - the arrival rate is the operator's, not measured, and every figure carries the assumption ids its own arithmetic used | `bga snapshot --capacity N,RATE --format json` |
 | `whatif/v1` | what the build would drop to for a chosen set of fixes - one projection, never a sum | `bga whatif --format json` |
@@ -977,9 +977,12 @@ those artifacts said which build produced them. The version there is
 (`UX-250`). Which contract states shipped together is
 [`CHANGELOG.md`](../../CHANGELOG.md) (`UX-251`).
 
-**The versioning rule**: a field rename or removal bumps the version; an
-addition does not. `additionalProperties` is true everywhere, so a
-consumer that pins a version keeps working while the tool grows.
+**The versioning rule**: a rename, a removal, or a key entering
+`required` under a live id bumps the version (`UX-629` - the last stops
+a document a consumer already wrote from validating). A *permitted*
+addition does not and `additionalProperties` is true everywhere, so a
+key the emitter always writes lands permitted, named in the schema's
+`bga:always_written` and guaranteed against the real payload.
 
 Six rows are written but not printable — on-disk shapes a run
 directory carries rather than documents a subcommand emits. `--schema`
@@ -999,6 +1002,10 @@ unioned the registry with a single hard-coded id. A new payload without document
 reddens it - which is the only mechanism this repository has found that
 keeps two hand-maintained copies of one fact together.
 
+**How far down that goes is to the key**, for keys added from now on
+and not retroactively, and it stops at the contracts this tool reads -
+specification 32.5 states the population and `UX-628` measured it.
+
 ## The contracts it reads
 
 The other half of the surface (`UX-540`): the input shapes `bga` reads
@@ -1009,7 +1016,7 @@ accepts.
 
 | schema | what it is | read by |
 |---|---|---|
-| `run-context/v9` | what the run was: identity, the `host/v2` manifest, scheduler configuration, the resolved `native_max_jobs` | `bga.ingest.load_run_context` |
+| `run-context/v9` | what the run was: identity, the `host/v2` manifest, scheduler configuration, the resolved `native_max_jobs`, and `requested_at_us` with `requested_at_source` (`UX-612`) - when the build was asked for and which clock said so, both `null` where nothing did | `bga.ingest.load_run_context` |
 | `graph/v9` | the declared element graph, from `bst show` | `bga.ingest.load_graph` |
 | `trace/v9` | the scheduler's own spans and phases - Plane 1 | `bga.ingest.load_trace` |
 
@@ -1034,6 +1041,47 @@ artifact.
 - **`docs/guides/cli.md`** — CLI reference/usage examples.
 
 ## Verification Log
+
+Updated 2026-09-04 (after `UX-629`), covering one change to this
+document — the inventory's **versioning rule** paragraph, which named
+only rename and removal and now names a key entering `required` under
+a live id as a bump too, with the *permitted-and-always-written* shape
+that is the alternative to one — re-grounded in the two contract tables
+above against `bga.contracts` and `bga/schemas.py`: **24 emitted ids, 9
+of them superseded, and 3 read and never written**, 9 printable and 15
+not. `analyze/v5` is still at **56 top-level properties** and
+`bga/viewer/` still **22 modules**, the table naming all of them; this
+item published no id and added no property. The figure that did move is
+`compare/v2`'s required set, **15 back to 14** — `UX-610` took it 14 →
+15 under an unmoved id, which stopped a `compare/v2` document written
+before it from validating against `compare/v2`, measured as
+`'verdict_provenance' is a required property` on a 14-key document.
+`verdict_provenance` is declared and permitted now, named in the
+schema's `bga:always_written`, so the id did not have to move to
+`compare/v3`. `UX-0610`'s task file is annotated with both figures.
+
+Updated 2026-09-04 (after `UX-628`), covering four changes to this
+document — the `compare/v2`, `store/v1` and `run-context/v9` rows now
+name the five keys that shipped in one window with no document outside
+`docs/backlog/` naming any of them (`verdict_provenance`,
+`queue_wait_us`, `queue_wait_absent_reason`, `requested_at_us`,
+`requested_at_source`), and the inventory chapter now says how far
+key-level coverage goes, with the full statement in
+`docs/guides/cli.md` where a payload's reader looks — all four
+re-grounded in the two contract tables above against `bga.contracts`
+and `bga/schemas.py`: **24 emitted ids, 9 of them
+superseded, and 3 read and never written**, 9 printable and 15 not, and
+`analyze/v5` still at **56 top-level properties**. `bga/viewer/` is
+still **22 modules** and the table still names all of them. Every
+figure re-read at this commit and unchanged from the entry below;
+`UX-628` published no id and moved no key, only the prose beside them.
+Newly measured here, and the reason the chapter gained a sentence: the
+printable contracts' consumer surface is **199 keys**, of which **84**
+were named in no document outside `docs/backlog/` and `docs/audits/` —
+so the guard's population is keys against a frozen register of those
+84, less the four this commit named. The five keys are not one
+contract's accident: `sweep/v1` and `whatif/v1` are the only two of the
+nine whose every surface key was already named.
 
 Updated 2026-09-04 (after `UX-622`), covering one change to this
 document — the opening sentence now names the population its two

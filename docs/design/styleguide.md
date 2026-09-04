@@ -79,9 +79,11 @@ per-section "view as JSON" toggle's `data-raw-json`;
 
 ## 1a. The hint vocabulary
 
-Seventeen hints, and this table is the one place they are all written
+Eighteen hints, and this table is the one place they are all written
 down (`UX-306`). Each names what a schema *declares* about a value;
-§1 above is what the page does with it. A hint the schemas emit and
+§1 above is what the page does with it — except the last row, which
+declares something about the *contract* and is read by a consumer
+rather than by the page. A hint the schemas emit and
 this table does not name is a hint whose meaning lives only in code,
 which is the drift `UX-214` and `UX-273` both exist to prevent —
 `tests/unit/test_the_contract_names_its_vocabulary.py` holds the two
@@ -106,6 +108,7 @@ sets equal in both directions.
 | `bga:keyed_by` | what a map's own **keys** are, where they are not names — `task_uid` today | the row's label (the element) and its `data-key` (the composite), `UX-391` |
 | `bga:explained_by` | the payload key holding this map's **per-key advice for this run** — computed, so not a `description` | the advice on the row of the key it explains, and no second section over the same names, `UX-390` |
 | `bga:command` | that a scalar array is one command line rather than a list of values — the shell it is spelled for | `classify`, which returns §1's command control for it (`UX-429`) |
+| `bga:always_written` | that a key is **not** `required` and yet written on every document — the third state `UX-629` needed, because entering `required` under a live id breaks documents already written | a consumer asking *may be here* or *is always here*; the emitter guarantee is held by `test_a_required_set_grew_under_an_unchanged_id.py`, not by the page |
 
 Two properties this table is here to keep. **A hint is a declaration,
 never a guess**: the page reads what the schema says a value is and

@@ -213,7 +213,8 @@ class TestTheSchemaCannotBeLoosenedToPass:
         baseline, candidate = _two_runs(tmp_path)
         payload = json.loads(
             _bga(["compare", baseline, candidate, "--format", "json"]).stdout)
-        required = set(schemas.schema(schemas.COMPARE)["required"])
+        schema = schemas.schema(schemas.COMPARE)
+        required = set(schema["required"])
         # Keys that are genuinely conditional are listed here, named, so
         # the exemption is a decision rather than an omission.
         conditional = {
@@ -223,7 +224,18 @@ class TestTheSchemaCannotBeLoosenedToPass:
             "cache_churn", "failed_run_details", "efficiency_gate_evaluated",
             "efficiency_gate_signal", "baseline_confidence", "candidate_confidence",
         }
-        unguarded = sorted(set(payload) - required - conditional)
+        # `UX-629`: the third state. A key the emitter always writes is
+        # not conditional and calling it that would be a lie - it is
+        # declared, permitted and guaranteed by the emitter, because
+        # `required` under a live id breaks documents already written.
+        # Read off the schema, not restated: the schema is what a
+        # consumer sees, and a set copied here would drift from it.
+        always_written = set(schema.get("bga:always_written", ()))
+        assert not always_written & required, (
+            f"{sorted(always_written & required)} is both required and "
+            f"declared always-written; the annotation then says nothing")
+        unguarded = sorted(set(payload) - required - conditional
+                           - always_written)
         assert not unguarded, (
             f"compare emits {unguarded}, which the schema neither requires nor "
             f"names as conditional - so removing one would break a consumer "

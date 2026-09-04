@@ -28,6 +28,7 @@ trusted (`UX-505`).
 | Both status markers, same commit; the counts are derived | `test_docs_links_and_commands.py` |
 | A number or mechanism you moved: annotate the file asserting it | `tools/dev_close_task.py --figures`, held by `test_the_loop_stays_fast.py` |
 | A renamed or removed published key bumps its schema version | `test_output_schemas.py` |
+| A key entering `required` under a live id bumps it too | `test_a_required_set_grew_under_an_unchanged_id.py` |
 | Roles served, or how well? `docs/design/roles.md` in the same commit | — judgement: "how well" is not mechanical |
 | A guard that asserts an order reads the order, never restates it | `test_the_order_the_page_has.py` — one worked example, not every order guard |
 | Architecture or spec made wrong? Same commit | `test_the_documents_keep_up_with_the_contracts.py` |

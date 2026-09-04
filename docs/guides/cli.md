@@ -787,9 +787,27 @@ bga analyze --schema
 bga compare --schema | jq '.required'
 ```
 
-**The versioning rule**: a field rename or removal bumps the version; an
-addition does not. Pin `analyze/v5` and your consumer keeps working
-while the tool grows.
+**The versioning rule**: a field rename or removal bumps the version —
+and so does a key entering `required` under a live id (`UX-629`),
+because the document you wrote last week stops validating against the
+id you pinned. A *permitted* addition does not, so pin `analyze/v5` and
+your consumer keeps working while the tool grows.
+
+A key the tool writes on **every** document is therefore declared
+permitted rather than required, and named in the schema's own
+`bga:always_written` — so `--schema` tells you the difference between
+*may be here* and *is always here*, and the guarantee is held against
+the real payload instead of by validation:
+
+```bash
+bga compare --schema | jq '."bga:always_written"'   # ["verdict_provenance"]
+```
+
+`compare/v2`'s `verdict_provenance` is the worked example. `UX-610`
+made it required under an unmoved id, taking the required set from 14
+to 15, and every `compare/v2` document written before it stopped
+validating; it is permitted-and-always-written now, so those documents
+validate again and the id did not have to move.
 
 ### Which keys the prose names, and which it does not (`UX-628`)
 

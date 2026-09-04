@@ -1711,10 +1711,10 @@ inventory is derived from the package rather than from a list, because
 run directory for nine rounds while appearing in no registry, no guard
 and no document.
 
-**The versioning rule**: a field *rename or removal* bumps the version;
-an *addition* does not. So `additionalProperties` is true in all nine
-schemas `bga/schemas.py` defines, and a consumer that pins `analyze/v5`
-keeps working while the tool grows.
+**The versioning rule**: a field *rename or removal* bumps the version — and so does a key entering **`required`** under a live id (`UX-629`), because a document a consumer already wrote stops validating, which is a break by the only reading a consumer has. A *permitted* addition does not.
+So `additionalProperties` is true in all nine schemas `bga/schemas.py` defines, and a consumer that pins `analyze/v5` keeps working while the tool grows.
+A key the emitter writes on every document therefore lands **permitted-and-always-written** rather than required: declared, named in the schema's own `bga:always_written` so `--schema` states the choice, and guaranteed against the real payload by a guard rather than by `required`.
+`compare/v2`'s `verdict_provenance` is the worked example — `UX-610` took its required set from 14 to 15 under an unmoved id, and this is that undone without a `v3`.
 
 The schemas live in one place, `bga/schemas.py`, which the renderers
 are built against and `--schema` prints from - they cannot be a

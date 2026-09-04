@@ -24,6 +24,7 @@ are for.
 """
 import functools
 import json
+import math
 import pathlib
 import re
 import subprocess
@@ -104,10 +105,6 @@ GUIDE_KB_STEP = 10
 PARAGRAPH = 1024
 
 
-def _kb(path):
-    return round(path.stat().st_size / 1024)
-
-
 def _bucket(nbytes):
     """The guide's size as it is stated: KB, to `GUIDE_KB_STEP`."""
     return round(nbytes / 1024 / GUIDE_KB_STEP) * GUIDE_KB_STEP
@@ -124,6 +121,41 @@ def _band():
     return low, high
 
 
+#: `UX-616`: how the guide states the card's size. A constant width does
+#: not transfer downwards - `GUIDE_KB_STEP` on a 4.7 KB file states
+#: `0 KB` - and the figure is a reading decision (start at the card),
+#: which turns on the ratio and not on a value. So the resolution is a
+#: factor of the size: one order of magnitude, sqrt(10) each way.
+ORDERS = {1: "an order of magnitude", 2: "two orders of magnitude",
+          3: "three orders of magnitude"}
+
+
+def _orders(small, large):
+    """How much smaller `small` is than `large`, as the guide says it.
+    Out of range returns a string no document carries, so the derived
+    clause reddens with a readable message instead of a KeyError."""
+    n = round(math.log10(large / small))
+    return ORDERS.get(n, f"<{n} orders of magnitude>")
+
+
+def _relation_band(mover):
+    """`(low, high)` bytes of `mover` - `rules` or `guide` - over which
+    the guide states the same relation between the two files."""
+    size = {"rules": RULES.stat().st_size, "guide": GUIDE.stat().st_size}
+    stated = _orders(size["rules"], size["guide"])
+
+    def says(nbytes):
+        pair = {**size, mover: nbytes}
+        return _orders(pair["rules"], pair["guide"]) == stated
+
+    low = high = size[mover]
+    while says(low - 1):
+        low -= 1
+    while says(high):
+        high += 1
+    return low, high
+
+
 #: `UX-607`: a size in KB, and a sentence that is about the guide. The
 #: layer states other sizes - a 63 KB CI log, a 311 KB snapshot - and
 #: those are observations, not a figure two documents have to agree on.
@@ -133,6 +165,12 @@ _KB = re.compile(r"~?\d[\d,]*\s*KB\b")
 #: `the guide` does not match `the fixing guide`.
 _ABOUT_THE_GUIDE = re.compile(
     r"\bfixing[- ]guide\b|\bthe (?:whole )?guide\b|\bthis file\b", re.I)
+
+
+#: `UX-616`: a sentence about the rules card. `this file` is not here -
+#: it means the card inside `rules.md` and the guide inside the guide,
+#: so it cannot tell a copy from the document being described.
+_ABOUT_THE_CARD = re.compile(r"\brules\.md\b|\bthe (?:rules )?card\b", re.I)
 
 
 def _size_population():
@@ -180,10 +218,12 @@ def _derived():
     # and it carries the marker in the sentence stating the count.
     rules = STYLE.read_text(encoding="utf-8").split("\n## 1.", 1)[1]
     enforced = rules.count("**Enforced by test")
+    orders = _orders(RULES.stat().st_size, GUIDE.stat().st_size)
     return {
         "docs/contributing/rules.md": [f"it is ~{guide_kb} KB"],
         "docs/contributing/fixing-guide.md": [
-            f"{_kb(RULES)} KB against this file's ~{guide_kb} KB",
+            f"{orders} smaller than this file",
+            f"this file is ~{guide_kb} KB",
             f"`{schemas.ANALYZE}`, `{schemas.COMPARE}` and `{schemas.BLAST}`",
             "Part 32 spans {}-{}".format(*_part_32())],
         "docs/contributing/release-guide.md": [
@@ -318,6 +358,66 @@ class TestTheGuidesSizeCostsOneFile:
         summarises the card - and it is in neither `.claude/` nor
         `docs/contributing/`, so the population above does not reach it."""
         assert "CLAUDE.md" in _size_population()
+
+
+class TestTheCardsSizeCostsNoFile:
+    """`UX-616`: the same coupling with the documents swapped. The guide
+    stated the card's size at `round(B/1024)` - a 1,023 B band on a
+    4,694 B file, so a paragraph in the card moved a sentence in the
+    guide wherever it landed. `GUIDE_KB_STEP` does not transfer (it
+    states `0 KB` here), so the resolution is relative: the guide states
+    the *relation*, and no document states the card's size at all."""
+
+    @pytest.mark.parametrize("mover", ["rules", "guide"])
+    def test_a_paragraph_does_not_move_the_relation(self, mover):
+        """The acceptance, both ways round: 1 KB added to either file,
+        and the other document is not red."""
+        size = {"rules": RULES, "guide": GUIDE}[mover].stat().st_size
+        _low, high = _relation_band(mover)
+        assert high - size >= PARAGRAPH, (
+            f"{mover} is {size:,} B; the stated relation moves at "
+            f"{high:,} B, so only {high - size:,} B of prose fit before "
+            f"docs/contributing/fixing-guide.md must change too")
+
+    @pytest.mark.parametrize("mover", ["rules", "guide"])
+    def test_the_relation_band_is_what_bought_the_headroom(self, mover):
+        """Not the current sizes - the width. A band narrower than a
+        paragraph is crossed wherever it lands, and the headroom above
+        is then luck."""
+        low, high = _relation_band(mover)
+        assert high - low > PARAGRAPH, (
+            f"the guide states one relation over [{low:,}, {high:,}) B of "
+            f"{mover}, a {high - low:,} B band a paragraph can cross")
+
+    def test_no_document_states_the_cards_size(self):
+        """The shape, not the one instance. Any size in KB in a sentence
+        naming the card is a copy that moves when a paragraph lands in
+        the card - and unlike the guide's size there is no derived one
+        to exempt, because the relation carries no absolute."""
+        copies = []
+        for rel in _size_population():
+            for sentence in _sentences(
+                    (REPO / rel).read_text(encoding="utf-8")):
+                flat = " ".join(sentence.split())
+                if _KB.search(flat) and _ABOUT_THE_CARD.search(flat):
+                    copies.append(f"{rel}: {flat[:90]!r}")
+        assert copies == [], (
+            "these state the rules card's size, so a paragraph in the "
+            "card becomes an edit here too; state the relation:\n"
+            + "\n".join(copies))
+
+    def test_the_scan_catches_the_sentence_that_was_there(self):
+        """A scan matching nothing bans nothing, and the corpus it reads
+        is now empty by construction. The control is the sentence this
+        item removed from the guide."""
+        was = ("**Start at [`rules.md`](rules.md)** - every rule below as "
+               "one line with its guard, 5 KB against this file's ~40 KB.")
+        assert _KB.search(was) and _ABOUT_THE_CARD.search(was)
+        assert {"docs/contributing/fixing-guide.md", "CLAUDE.md"} <= {
+            rel for rel in _size_population()
+            for sentence in _sentences(
+                (REPO / rel).read_text(encoding="utf-8"))
+            if _ABOUT_THE_CARD.search(" ".join(sentence.split()))}
 
 
 class TestTheCountNoDecisionReadsIsGone:

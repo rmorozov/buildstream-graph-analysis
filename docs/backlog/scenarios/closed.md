@@ -658,6 +658,7 @@ is open, on what topic, for whom — is the other file's.
 | UX-636 | [eighty published keys no document names](UX-0636-eighty-published-keys-no-document-names.md) | Medium | anyone reading a payload against the prose that describes it | 🟢 Done — eighty keys documented in cli.md; the register is empty and a guard holds it | [UX-636](UX-0636-eighty-published-keys-no-document-names.md) |
 | UX-647 | [a rail click never reaches the view-state writer](UX-0647-a-rail-click-never-reaches-the-view-state-writer.md) | High | anyone who navigates by the rail and then shares the link | 🟢 Done — the writer hears the rail; the delegation root is the document | [UX-647](UX-0647-a-rail-click-never-reaches-the-view-state-writer.md) |
 | UX-646 | [the fragment is one event behind the fold](UX-0646-the-fragment-is-one-event-behind-the-fold.md) | Medium | anyone who opens a fold and copies the link | 🟢 Done — one deferred write a turn after dispatch; UX-642's workaround removed and earned | [UX-646](UX-0646-the-fragment-is-one-event-behind-the-fold.md) |
+| UX-656 | [main is red: a closed outcome is eight lines over the cap](UX-0656-main-is-red-a-closed-outcome-is-eight-lines-over-the-cap.md) | High | anyone whose branch is red for a cap another row tripped | 🟢 Done — already closed by 24408cd while the review ran; the deferred clause moved to Out of Scope | [UX-656](UX-0656-main-is-red-a-closed-outcome-is-eight-lines-over-the-cap.md) |
 
 ## UX-207..UX-212: the twenty-third audit round — the report learns to answer first (2026-08-22)
 

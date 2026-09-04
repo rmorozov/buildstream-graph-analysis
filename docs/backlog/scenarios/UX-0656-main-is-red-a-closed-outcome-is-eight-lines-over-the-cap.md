@@ -1,6 +1,6 @@
 # UX-656: main is red — a closed Outcome is eight lines over the cap
 
-**Priority:** High | **Status:** 🔴 Open | **Depends on:** UX-643 (whose Outcome it is) | **Found by:** architecture review 16, running `make test` on `a5030a4` | **Serves:** anyone whose branch cannot go green through no fault of its own | **Topic:** process
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-643 (whose Outcome it is) | **Found by:** architecture review 16, running `make test` on `a5030a4` | **Serves:** anyone whose branch cannot go green through no fault of its own | **Topic:** process
 
 ## Motivation
 
@@ -56,3 +56,25 @@ rather than the Outcome.
 `python3 -m pytest tests/unit/test_the_register_is_terse.py -q` is
 green, and the Outcome still names the mutation table and the
 deviation.
+
+## Outcome
+
+Already closed when this row was filed, by the commit that caused it.
+Review 16 read the base it branched from (`a5030a4`); the fix landed at
+`24408cd` on the same branch while the review was running.
+
+The cause was an amendment to `UX-643`'s Outcome naming the clause
+deferred to `UX-650`. The fix was not to trim it: a clause deferred to
+another row belongs in **Out of Scope**, which carries no cap and is
+where a later round looks for it. Moved there.
+
+```text
+Outcome lines                             88 -> 79   (cap 80)
+tests/unit/test_the_register_is_terse.py  182 passed
+```
+
+**Kept rather than deleted as a duplicate.** The row records that a
+review running against a moving branch reports the base it read, which
+is the correct behaviour and not a defect in the review — the
+alternative, a review that re-reads its base mid-run, would report
+findings no commit ever had.

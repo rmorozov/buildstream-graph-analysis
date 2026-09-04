@@ -41,6 +41,9 @@ import pytest
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
+sys.path.insert(0, str(REPO / "tools"))
+
+import dev_close_task as close_task  # noqa: E402
 
 from bga import contracts  # noqa: E402
 
@@ -251,12 +254,26 @@ class TestTheSpecCountsItsOwnTable:
             f"`bga/schemas.py` defines'; it defines {len(defined)}: {defined}")
 
 
-def _backlog_files(directory):
-    """What the index has in one backlog directory - `_tracked()`, not a
-    glob: a checkout holds `.claude/worktrees/<agent>/`, a second copy
-    of the whole tree (`UX-577`)."""
-    return sorted(one for one in _tracked()
-                  if one.startswith(f"docs/backlog/{directory}/"))
+def _git_listed(root, *extra):
+    """`git ls-files` from `root`, one path per line."""
+    return subprocess.run(["git", "ls-files", *extra], cwd=root, check=True,
+                          capture_output=True, text=True).stdout.splitlines()
+
+
+def _backlog_files(directory, root=REPO):
+    """What a commit from `root` would carry in one backlog directory.
+
+    `UX-622`: the index alone is a *narrower* population than the one
+    `dev_close_task.py` writes the sentence from, and the two disagree
+    exactly while a row is written and not staged. Git's answer and not
+    a glob's - a checkout holds `.claude/worktrees/<agent>/`, a second
+    copy of the whole tree (`UX-577`), listed as one entry.
+    """
+    listed = _git_listed(root) + _git_listed(root, "--others",
+                                             "--exclude-standard")
+    return sorted(one for one in listed
+                  if one.startswith(f"docs/backlog/{directory}/")
+                  and not one.endswith("/"))
 
 
 class TestTheArchitectureCountsTheBacklogItSendsYouTo:
@@ -299,6 +316,106 @@ class TestTheArchitectureCountsTheBacklogItSendsYouTo:
         assert odd == [], (
             f"docs/backlog/{directory}/ is no longer the flat markdown "
             f"directory this figure counts", odd[:5])
+
+
+@pytest.fixture(scope="module")
+def two_population_tree(tmp_path_factory):
+    """A tree where the two populations can differ: one row committed,
+    one written and not staged, one ignored, one untracked directory."""
+    repo = tmp_path_factory.mktemp("counts") / "repo"
+    (repo / "docs/backlog/scenarios").mkdir(parents=True)
+    (repo / "docs/backlog/tasks").mkdir(parents=True)
+    (repo / "docs/backlog/scenarios/UX-0001-committed.md").write_text(
+        "# UX-1\n", encoding="utf-8")
+    (repo / ".gitignore").write_text("*.scratch.md\n", encoding="utf-8")
+    for argv in (["init", "-q"],
+                 ["config", "user.email", "a@b"],
+                 ["config", "user.name", "a"],
+                 ["add", "docs", ".gitignore", "-f"],
+                 ["commit", "-qm", "one"]):
+        subprocess.run(["git", *argv], cwd=repo, check=True,
+                       capture_output=True, text=True)
+    (repo / "docs/backlog/scenarios/UX-0002-unstaged.md").write_text(
+        "# UX-2\n", encoding="utf-8")
+    (repo / "docs/backlog/scenarios/notes.scratch.md").write_text(
+        "x\n", encoding="utf-8")
+    return repo
+
+
+class TestBothSidesReadOneBacklogPopulation:
+    """`UX-622`. `dev_close_task.py` writes the sentence above from the
+    index **plus** untracked (`UX-617`); this file read the index alone,
+    so `--check --write` reported clean and wrote a count the guard
+    rejected until the row was staged.
+
+    They are one question, not two. `git ls-files` is the **index**, not
+    `HEAD`: with one row staged and not committed, `git ls-tree HEAD`
+    counted 626 here and this guard demanded 627. Both sides ask what a
+    commit from this tree would carry; only the depth differed.
+    """
+
+    ONE = "scenarios"
+
+    def test_the_two_sides_count_the_same_population(
+            self, two_population_tree, monkeypatch):
+        """The clause `UX-622` exists for: the writer's figure and the
+        guard's, on a tree where the old pair disagreed."""
+        monkeypatch.setattr(close_task, "REPO", two_population_tree)
+        assert (len(_backlog_files(self.ONE, root=two_population_tree))
+                == close_task._backlog_counts()[self.ONE]), (
+            "dev_close_task.py derives architecture.md's count from one "
+            "population and this file checks it against another, so "
+            "`--check --write` writes a figure the suite rejects")
+
+    def test_that_agreement_is_not_vacuous(self, two_population_tree):
+        """An over-broad fixture would make the clause above compare two
+        equal numbers on a tree where nothing could differ. The index
+        alone is strictly smaller here, so the old population fails it."""
+        index_only = [one for one in _git_listed(two_population_tree)
+                      if one.startswith(f"docs/backlog/{self.ONE}/")]
+        assert index_only, "the fixture committed no backlog row"
+        assert len(index_only) < len(
+            _backlog_files(self.ONE, root=two_population_tree)), (
+            "the fixture has no written-but-unstaged row, so the two "
+            "populations cannot differ and the agreement proves nothing")
+
+    def test_the_population_is_what_a_commit_would_carry(
+            self, two_population_tree):
+        """Equality, not membership: what `.gitignore` names is what the
+        widening could have spent, and a `>=` clause stays green when the
+        filter stops filtering."""
+        assert _backlog_files(self.ONE, root=two_population_tree) == [
+            "docs/backlog/scenarios/UX-0001-committed.md",
+            "docs/backlog/scenarios/UX-0002-unstaged.md"], (
+            "the population is no longer the committed row plus the "
+            "written one - an ignored file is being counted")
+
+    def test_the_sentence_names_the_population_it_counts(self):
+        """The two populations differ only in a dirty tree, so a reader
+        cannot tell from the number which one it is. `UX-622` requires
+        the sentence to say, and a phrase nothing reads is one the next
+        edit drops."""
+        opening = _flat(ARCHITECTURE.read_text(encoding="utf-8").split(
+            "\n## ", 1)[0])
+        assert "files this commit carries" in opening, (
+            "architecture.md's opening counts two backlog directories "
+            "without saying which population - the index, or what a "
+            "commit from here would carry (they differ while a row is "
+            "written and not staged)")
+
+    def test_a_nested_worktree_is_one_entry_and_not_a_row(self, monkeypatch):
+        """A checkout holds `.claude/worktrees/<agent>/`, a second copy
+        of the whole tree; git does not descend into it and lists it as
+        one entry with a trailing slash (`UX-577`). Counted, that copy
+        is one row that does not exist."""
+        monkeypatch.setattr(
+            sys.modules[__name__], "_git_listed",
+            lambda _root, *extra: ["docs/backlog/scenarios/UX-1-real.md"]
+            if not extra else ["docs/backlog/scenarios/worktrees/agent-1/"])
+        assert _backlog_files(self.ONE, root=REPO) == [
+            "docs/backlog/scenarios/UX-1-real.md"], (
+            "a directory entry git listed without descending into it is "
+            "being counted as a backlog row")
 
 
 class TestTheChangelogCountsThePublishedSet:

@@ -41,3 +41,84 @@ population is chosen, the sentence must say which.
 
 A written-but-unstaged task file, `--check --write`, then the guard —
 green, or red with a sentence saying it is red on purpose.
+
+## Outcome (round 85, 2026-09-04) — 🔴 Open
+
+**Premise:** held, both halves, re-measured on `245dfed`.
+
+### The gap, measured
+
+`_backlog_counts` is `_backlog_paths` + `_untracked_backlog`;
+`_backlog_files` was `_tracked()`, plain `git ls-files`. A row written
+and left unstaged, end to end:
+
+```text
+$ python tools/dev_close_task.py --check --write
+  ok    architecture.md's opening counts the backlog directories
+0 problem(s) over 5 propert(y/ies), 624 backlog row(s)
+--write changed 1 file(s) - stage them:
+    docs/design/architecture.md              # it wrote 627
+$ pytest tests/unit/test_a_counted_figure_is_derived.py
+FAILED ...::test_the_count_is_the_directory[scenarios]
+  should say '626 ...'; the index holds 626      1 failed, 30 passed
+```
+
+### Which population, and why
+
+The guard read the **index**, not `HEAD`. With one row staged and not
+committed:
+
+```text
+$ git ls-tree -r --name-only HEAD | grep -c docs/backlog/scenarios/  626
+$ git ls-files                    | grep -c docs/backlog/scenarios/  627
+$ pytest -k "the_count_is_the_directory and scenarios"
+  should say '627 ...'; the index holds 627               1 failed
+```
+
+So it was never asking "what does a clone have" — a clone of `HEAD` has
+626 and it demanded 627. `git ls-files` is `HEAD` plus staged changes:
+both sides already asked *what a commit from here would carry*, and
+differed only in stopping at the staging boundary. One question, so one
+population — the widened one. Shape one, not shape two.
+
+### After
+
+```text
+$ python tools/dev_close_task.py --check --write | tail -3
+0 problem(s) over 5 propert(y/ies), 624 backlog row(s)
+--write changed 1 file(s) - stage them:
+    docs/design/architecture.md
+$ pytest tests/unit/test_a_counted_figure_is_derived.py   36 passed
+```
+
+The sentence now names the population the number cannot ("...and the 75
+`docs/backlog/tasks/` files this commit carries").
+
+### Mutations verified red and reverted (6)
+
+| # | mutation | reddened |
+|---|---|---|
+| M1 | `_backlog_files` back to the index alone (the gap) | agreement / non-vacuity / carries, 3 failed 33 passed |
+| M2 | `_backlog_counts` back to the index alone | **agreement alone**, 1 failed 35 passed |
+| M3 | `--exclude-standard` dropped from `_backlog_files` | carries + agreement, 2 failed 34 passed |
+| M4 | the `endswith("/")` filter dropped | nested-worktree alone, 1 failed 35 passed |
+| M5 | fixture stages the second row | **non-vacuity alone**, 1 failed 35 passed |
+| M6 | "this commit carries" dropped from the sentence | sentence-names-population alone, 1 failed 35 passed |
+
+`M2` is the one that matters: drift reintroduced on the *tool's* side,
+how this item arose, and only the agreement clause sees it.
+`test_that_agreement_is_not_vacuous` does not discriminate under `M1` —
+it reads `_backlog_files` too and co-reddens; `M5` is what it exists
+for. The guard derives the population itself rather than importing
+`_backlog_counts`: an instrument reading the tool's answer could not
+redden under `M2` (the proxy shape, §5).
+
+### Deviation from the Required Fix
+
+None. `--write`'s output for `README.md` is unchanged — that sentence
+derives from index *rows*, not the file population.
+
+```text
+$ make lint            All checks passed!
+$ make test-touching   31 file(s) selected · 753 passed, 3 skipped
+```

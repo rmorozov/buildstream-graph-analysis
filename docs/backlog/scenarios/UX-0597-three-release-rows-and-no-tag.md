@@ -137,6 +137,28 @@ commit that sets its version, and is still useless to a reader.
 M2 is the one that matters: it proves the reachability clause reads
 reachability rather than co-reddening with the version check.
 
+### The guard's own skip reason went undeclared, and CI found it
+
+`UX-449`'s scan reads skip reasons **as written**, so a new one is red
+on every machine whether or not it fires. Mine was, and I did not see
+it because I ran the file and `make test-touching` - a *selector*,
+which does not reach `test_every_skip_reason_is_declared.py` because
+that file names no module in this diff. `make test` would have. It is
+the second entry in `CLAUDE.md`'s "Things Claude gets wrong", and it
+cost one red CI run.
+
+Declared with the count measured rather than counted by eye:
+
+```text
+$ git clone --no-tags --depth 1 ... && pytest <this file> -rs
+SKIPPED [4] ... this checkout carries no release tag
+2 passed, 4 skipped
+```
+
+4 where the tags are absent, 0 where they are present. The two that
+still run there - the CI clause and non-vacuity - are what stops a
+tagless checkout going quiet altogether.
+
 ### Deviation from the Required Fix
 
 The Required Fix said "every release row from `0.3.0` on has a tag on

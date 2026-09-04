@@ -206,3 +206,22 @@ class TestTheStemIsNotADunder:
         selected, _ = dev_touching.select(["bga/graph/__init__.py"],
                                           census=False)
         assert "tests/unit/test_every_skip_reason_is_declared.py" not in selected
+
+    def test_the_import_spelling_did_not_swallow_the_two_misses(self):
+        """`UX-624` widened the grep with `from <package> import
+        <module>`. Condition 2 of this derivation *is* grep
+        reachability, so a spelling loose enough to reach a census
+        guard would delete it from `derived` and the declaration would
+        become padding nobody could re-derive. The two round-75 misses
+        are the ones with a measured cost, so they are the ones asserted
+        still unreachable."""
+        reachable = set()
+        for module in _sources():
+            reachable.update(dev_touching.select([module], census=False)[0])
+        assert len(reachable) > 100, (
+            f"only {len(reachable)} files reachable - the derivation's input "
+            f"collapsed, so the clause below would pass vacuously")
+        for named in ("tests/unit/test_the_register_is_terse.py",
+                      "tests/unit/test_every_skip_reason_is_declared.py"):
+            assert named not in reachable, (
+                f"{named} is round-75's own miss and a grep now reaches it")

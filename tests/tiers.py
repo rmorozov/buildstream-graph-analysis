@@ -829,4 +829,9 @@ MEDIUM = (
     # session (38.7s without it). Single-process here: 4.51s in that
     # one call, 4.58s for the file.
     "tests/unit/test_the_cost_row_is_derived_from_the_selector.py",   #    4.6s
+    # `UX-640`, tiered on landing. One browser boot, two exported
+    # pages - the rail's labels read against their headings on both
+    # committed fixtures. Single-process and alone: 1.26s, all of it
+    # the setup that exports and loads.
+    "tests/unit/test_the_rail_says_what_the_heading_says.py",         #    1.3s
 )

@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-646 scenarios: **12 open**, 634 closed.
+646 scenarios: **10 open**, 636 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -23,7 +23,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | capture | 0 | 92 |
 | analysis | 1 | 94 |
 | contracts | 1 | 47 |
-| viewer | 8 | 146 |
+| viewer | 6 | 146 |
 | cli | 0 | 21 |
 | store | 0 | 16 |
 | docs | 1 | 97 |
@@ -40,9 +40,7 @@ task file, which is the only place it ever lived twice.
 | UX-637 | [a shallow clone answers, and does not say so](UX-0637-a-shallow-clone-answers-and-does-not-say-so.md) | contracts | High | anyone whose guard reads history, and every future session in this environment | 🔴 Open |
 | UX-638 | [table focus destroys the reading position](UX-0638-table-focus-destroys-the-reading-position.md) | viewer | High | anyone who expands a table below the first screen | 🔴 Open |
 | UX-639 | [the rail is dead while a table is focused](UX-0639-the-rail-is-dead-while-a-table-is-focused.md) | viewer | High | anyone who reaches for the rail to leave a focused table | 🔴 Open |
-| UX-640 | [the rail names the key, the heading asks the question](UX-0640-the-rail-names-the-key-the-heading-asks-the-question.md) | viewer | Medium | anyone navigating by the rail rather than by scrolling | 🔴 Open |
 | UX-641 | [the levels key is the identity function](UX-0641-the-levels-key-is-the-identity-function.md) | analysis | Medium | anyone reading the parallelism block | 🔴 Open |
-| UX-642 | [a structured fold forgets it was open](UX-0642-a-structured-fold-forgets-it-was-open.md) | viewer | Low | anyone who shares a link to a report they were reading | 🔴 Open |
 | UX-643 | [a reader role that demotes rather than hides](UX-0643-a-reader-role-that-demotes-rather-than-hides.md) | viewer | Medium | all five readers, each of whom gets the other four's page | 🔴 Open |
 | UX-645 | [the census floor spends half the width bound](UX-0645-the-census-floor-spends-half-the-width-bound.md) | guards | Low | anyone reading a width figure as if it were about their module | 🔴 Open |
 | UX-646 | [the fragment is one event behind the fold](UX-0646-the-fragment-is-one-event-behind-the-fold.md) | viewer | Medium | anyone who opens a fold and copies the link | 🔴 Open |

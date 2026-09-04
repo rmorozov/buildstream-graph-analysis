@@ -78,8 +78,8 @@ as unreachable.
 ## Outcome (round 87, 2026-09-04) — 🟢 Done
 
 **Premise:** half held, half falsified. The sweep is real; its
-population was **one file**, already fixed in round 86. What was left
-is the prospective guard and the guide sentence, not a second repair.
+population was **one file**, already fixed in round 86 — so what was
+left is the prospective guard and the guide sentence.
 
 ### The sweep, measured
 
@@ -95,9 +95,8 @@ subcommand whose answer moves with depth (`log`, `describe`, `blame`,
 reads `git log -1 -- <doc>` and declines on the **graft boundary**
 instead — deliberately, since this repository is worked in a grafted
 clone that is shallow *and* carries the commits that guard needs, so
-`--is-shallow-repository` there would switch a working guard off.
-Nothing else in `tests/` reads history: `ls-files`, `check-ignore`,
-`grep`, `rev-parse HEAD`, `show <ref>:<path>` are content, not ancestry.
+`--is-shallow-repository` there would switch a working guard off. The
+other git calls in `tests/` are content, not ancestry.
 
 ### The Acceptance Test
 
@@ -114,8 +113,7 @@ boundary and reachability here is not the tree's answer
 27 passed, 1 skipped in 0.28s
 ```
 
-With `if _shallow():` mutated to `if False:` in that clone the
-Motivation's output returns — three reachable tags called unreachable:
+Neutralise `_shallow()` there and the Motivation's output returns:
 
 ```text
 E  release tag(s) naming a commit no clone of this branch can reach:
@@ -124,9 +122,8 @@ E  release tag(s) naming a commit no clone of this branch can reach:
 ```
 
 `test_a_guard_that_reads_history_declares_its_depth.py` (11 clauses)
-makes the sweep standing over `git ls-files tests/`, so the third
-history-reading guard cannot arrive undeclared; the developer half is in
-`fixing-guide.md` §3, with its rules-card row.
+makes the sweep standing over `git ls-files tests/`; the developer half
+is in `fixing-guide.md` §3, with its rules-card row.
 
 ### Mutations verified red and reverted (4)
 
@@ -138,20 +135,23 @@ history-reading guard cannot arrive undeclared; the developer half is in
 | A4 | guide's `fetch --unshallow` → `fetch --deepen 50` | `…_its_clone_may_be_shallow`; 1 failed 10 passed |
 
 **One guard of mine did not discriminate.** `declares_depth` first
-excluded docstrings by AST; removing that exclusion left all 11 clauses
-green, because the match is whole-constant equality and prose is never
-equal to `shallow`. It did nothing, so it is gone, and the clause reads
-the load-bearing property instead — a widened `DECLARES_DEPTH` (A3).
+excluded docstrings by AST; removing it left all 11 clauses green,
+because the match is whole-constant equality and prose is never equal
+to `shallow`. It is gone, and the clause reads the load-bearing
+property instead — a widened `DECLARES_DEPTH` (A3). **Its limit,
+measured:** mutating only `if _shallow():` to `if False:` leaves the
+helper and the new guard stays green — it reads that a module *names*
+the predicate, not that it branches on it. Stated in the docstring; the
+release guard's own skip holds the branch.
 
 ### Deviation from the Required Fix
 
 Nothing to repair, so no second file got the two clauses. `tools/` is
 outside the scan: `dev_touching.py` runs `git diff --name-only <base>`
-and belonged to another track.
-
-**Not closed here, and it cannot be:** `README.md` is shared across this
-round's four tracks (`UX-501`), and flipping this file's `**Status:**`
-alone reddens `dev_close_task --check` on both markers, which the commit
-hook runs. Both markers move together, so `dev_close_task.py UX-637
---move` after the merge is the close. The derived loop figure moved
-469 → 470; re-derive once. `make test-touching`: 812 passed, 4 skipped.
+and belonged to another track. **Not closed here, and it cannot be:**
+`README.md` is shared across this round's four tracks (`UX-501`), and
+flipping this file's `**Status:**` alone reddens `dev_close_task
+--check` on both markers, which the commit hook runs — both move
+together, so `dev_close_task.py UX-637 --move` after the merge is the
+close. The derived loop figure moved 469 → 470; re-derive once.
+`make test-touching`: 812 passed, 4 skipped.

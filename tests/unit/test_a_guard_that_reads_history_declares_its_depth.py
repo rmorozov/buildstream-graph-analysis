@@ -23,9 +23,15 @@ reads a tree that is either present or absent and fails loudly, while
 `log`, `rev-list`, `merge-base` and `--diff-filter` answer a question
 whose truth changes with how much history the clone has.
 
+Its limit, stated: this reads that a module **names** the predicate,
+not that it branches on it. A dead `_shallow()` nobody calls would pass
+here and is `test_a_release_records_a_contract_state.py`'s own skip to
+hold.
+
 holds: rules.md#a-history-figure-from-a-shallow-clone-is-worth-nothing-ask-is-shallow-repository-first
 """
 import ast
+import functools
 import pathlib
 import subprocess
 
@@ -104,20 +110,30 @@ def declares_depth(source):
         and isinstance(node.value, str))
 
 
+@functools.lru_cache(maxsize=1)
 def _tracked_tests():
     """git's list, never a glob: the main checkout carries
     `.claude/worktrees/<agent>/`, a whole second tree (`UX-577`)."""
     out = subprocess.run(["git", "ls-files", "tests/"], cwd=REPO, check=True,
                          capture_output=True, text=True).stdout.split()
-    return sorted(rel for rel in out if rel.endswith(".py"))
+    return tuple(sorted(rel for rel in out if rel.endswith(".py")))
 
 
+@functools.lru_cache(maxsize=1)
 def _population():
-    """`{path: source}` for every test module that reads history."""
+    """`{path: source}` for every test module that reads history.
+
+    Cached: three clauses read it, and parsing 487 modules three times
+    put this file over `tests/tiers.py`'s 1.0s medium floor for nothing.
+    """
     found = {}
     for rel in _tracked_tests():
         source = (REPO / rel).read_text(encoding="utf-8")
-        if reads_history(source):
+        # Not a heuristic: `argv_literals` only yields a token from a
+        # sequence headed by `"git"` or a call whose name says git, so a
+        # module without the substring cannot produce one. Skipping its
+        # parse cannot change the answer, only the seconds.
+        if "git" in source and reads_history(source):
             found[rel] = source
     return found
 

@@ -55,7 +55,7 @@ Every JSON document `bga` writes carries its schema id, and
 and the view-hints the browser report renders from (`UX-201`). Where a
 command emits two documents, the flag selects: `bga snapshot --list
 --schema` and `bga snapshot --aggregate --schema` print different
-contracts. Twenty-three ids, and what writes each:
+contracts. Twenty-four ids, and what writes each:
 
 | document | written by |
 |---|---|
@@ -66,6 +66,7 @@ contracts. Twenty-three ids, and what writes each:
 | `whatif/v1` | `bga whatif --format json` — what the build drops to if a chosen set is fixed, and whether the savings add (`UX-230`) |
 | `store/v1` | `bga snapshot --list --format json` — the runs in this project's `.bga/runs` |
 | `store-aggregate/v1` | `bga snapshot --aggregate --format json` — the store as a distribution, per host class (`UX-234`) |
+| `capacity-model/v1` | `bga snapshot --capacity N,RATE --format json` — a builder count and an arrival rate as a queue: utilization, the wait before a build starts and the number waiting, per host class, each figure carrying the assumptions its own arithmetic used (`UX-613`) |
 | `sweep/v1` | `bga sweep --format json` — what more capacity would buy, the knee past which it buys little, and where the model contradicted itself (`UX-339`) |
 | `host/v2` | `bga.hostinfo`, inside every `run-context.json` — which machine measured this run, and what makes two runs comparable |
 | `sources/v1` | `bga extract`, at `sources.json` in a run directory — every element's sources, and how each one is keyed |
@@ -89,7 +90,7 @@ printed by a command, so no `--schema` invocation prints them, and nine of those
 are only ever *read* - they are the shapes an older store's artifacts
 are in (`plane2/v1` from `UX-297`, `plane2/v2` from `UX-384`, five from
 `UX-341`, `analyze/v3` from `UX-344` and `analyze/v4` from
-`UX-535`). The other eight
+`UX-535`). The other nine
 each have a command that prints their contract, and
 `tests/unit/test_every_emitted_contract_is_answerable.py` holds that
 split by running both sides rather than by reading this table

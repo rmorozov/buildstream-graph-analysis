@@ -1655,6 +1655,7 @@ key:
 | `bga correlate --format json` | `correlate/v2` | `bga correlate --schema` |
 | `bga snapshot --list --format json` | `store/v1` | `bga analyze --schema` lists every id |
 | `bga snapshot --aggregate --format json` | `store-aggregate/v1` | as above |
+| `bga snapshot --capacity N,RATE --format json` | `capacity-model/v1` | as above |
 | `bga whatif --format json` | `whatif/v1` | as above |
 | `bga sweep --format json` | `sweep/v1` | as above |
 | the host manifest inside `run-context.json` | `host/v2` | `bga.hostinfo.collect` |
@@ -1711,7 +1712,7 @@ run directory for nine rounds while appearing in no registry, no guard
 and no document.
 
 **The versioning rule**: a field *rename or removal* bumps the version;
-an *addition* does not. So `additionalProperties` is true in all eight
+an *addition* does not. So `additionalProperties` is true in all nine
 schemas `bga/schemas.py` defines, and a consumer that pins `analyze/v5`
 keeps working while the tool grows.
 

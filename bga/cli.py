@@ -2100,6 +2100,9 @@ _EMITS_NO_CONTRACT = {}
 #: order is the order the flags are declared.
 _SCHEMA_BY_FLAG = {
     "snapshot": (("--aggregate", schemas.STORE_AGGREGATE),
+                 # `UX-613`: three documents now, and the model is the
+                 # one whose flag carries a value.
+                 ("--capacity", schemas.CAPACITY_MODEL),
                  ("--list", schemas.STORE)),
 }
 

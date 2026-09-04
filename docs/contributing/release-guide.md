@@ -20,7 +20,7 @@ follow, and they have different answers:
 | which contract states shipped together? | the **release row** in `CHANGELOG.md` |
 
 The package version is *provenance*. It is never the compatibility
-signal: it is a lossy summary of fourteen live contracts, and
+signal: it is a lossy summary of fifteen live contracts, and
 comparing it would refuse across upgrades that moved nothing. That
 count is `bga/contracts.py`'s, less the superseded ids, and
 `test_the_process_documents_derive_their_figures.py` reads it here. What a

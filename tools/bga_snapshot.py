@@ -1129,14 +1129,6 @@ def _capacity(project: str, spec: str, fmt: str = "text") -> int:
     from bga import capacity_model
     from bga.cli import EXIT_CODE_MISMATCHED_RUNS
 
-    if fmt == "json":
-        # A model's document is not a contract yet, and emitting one
-        # unstamped is the drift `UX-190` exists to stop.
-        print("Error: --capacity prints text. Its document carries no "
-              "schema stamp yet, and an unversioned JSON payload is what "
-              "`UX-190` refuses; `--aggregate --format json` publishes "
-              "the measured half.", file=sys.stderr)
-        return 2
     parsed = capacity_model.parse_capacity(spec)
     if parsed is None:
         print(f"Error: --capacity takes N,RATE - a builder count of at "
@@ -1144,8 +1136,14 @@ def _capacity(project: str, spec: str, fmt: str = "text") -> int:
               file=sys.stderr)
         return 2
     document = capacity_model.read(project, *parsed)
-    for line in capacity_model.render(document):
-        print(line)
+    # `UX-613`: `capacity-model/v1`, so a pipeline can act on the answer
+    # the printout gives a human. The exit code is the same either way -
+    # a cross-host store is refused in both spellings.
+    if fmt == "json":
+        print(json.dumps(document, indent=2))
+    else:
+        for line in capacity_model.render(document):
+            print(line)
     return EXIT_CODE_MISMATCHED_RUNS if document.get("refusal") else 0
 
 

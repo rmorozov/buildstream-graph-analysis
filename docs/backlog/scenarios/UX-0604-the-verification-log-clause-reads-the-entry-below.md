@@ -1,6 +1,6 @@
 # UX-604: the verification-log clause reads the entry below it
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-233 (the log), UX-582 (the same shape, found twice) | **Serves:** the round whose log entry says nothing and passes | **Topic:** guards
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-233 (the log), UX-582 (the same shape, found twice) | **Serves:** the round whose log entry says nothing and passes | **Topic:** guards
 
 ## Motivation
 

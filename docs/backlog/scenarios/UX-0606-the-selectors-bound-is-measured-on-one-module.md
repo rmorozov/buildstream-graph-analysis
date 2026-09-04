@@ -1,6 +1,6 @@
 # UX-606: the selector's bound is measured on one module
 
-**Priority:** Medium | **Status:** 🟢 Done Open | **Depends on:** UX-605 (which measured it), UX-336 (which set the bound) | **Serves:** the session whose one-module edit runs a third of the suite | **Topic:** guards
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-605 (which measured it), UX-336 (which set the bound) | **Serves:** the session whose one-module edit runs a third of the suite | **Topic:** guards
 
 ## Motivation
 

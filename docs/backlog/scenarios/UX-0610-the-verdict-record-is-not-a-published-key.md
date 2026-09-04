@@ -1,6 +1,6 @@
 # UX-610: the verdict record is not a published key
 
-**Priority:** Medium | **Status:** 🟢 Done Open | **Depends on:** UX-593 (which built it), UX-343 (one contract version) | **Serves:** R4, the CI gatekeeper asked to defend a red gate from the payload alone | **Topic:** contracts
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-593 (which built it), UX-343 (one contract version) | **Serves:** R4, the CI gatekeeper asked to defend a red gate from the payload alone | **Topic:** contracts
 
 ## Motivation
 

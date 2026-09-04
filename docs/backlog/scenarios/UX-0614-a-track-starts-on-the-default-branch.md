@@ -1,6 +1,6 @@
 # UX-614: a track starts on the default branch, not the round's
 
-**Priority:** High | **Status:** 🟢 Done Open | **Depends on:** UX-510 (a track's brief names the base it will get) | **Found by:** round 84, by three of seven tracks independently | **Serves:** every round that runs tracks in parallel | **Topic:** guards
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-510 (a track's brief names the base it will get) | **Found by:** round 84, by three of seven tracks independently | **Serves:** every round that runs tracks in parallel | **Topic:** guards
 
 ## Motivation
 

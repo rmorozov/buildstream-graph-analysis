@@ -1,6 +1,6 @@
 # UX-609: the invariants docstring lists five of six gates
 
-**Priority:** Low | **Status:** 🟢 Done Open | **Depends on:** UX-602 (which fixed the same defect one layer out) | **Serves:** the reader opening the module to find what it enforces | **Topic:** guards
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-602 (which fixed the same defect one layer out) | **Serves:** the reader opening the module to find what it enforces | **Topic:** guards
 
 ## Motivation
 

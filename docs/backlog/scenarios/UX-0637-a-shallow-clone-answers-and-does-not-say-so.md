@@ -74,3 +74,84 @@ fix, and a history figure measured before that is worth nothing.
 A `--depth 20` clone with tags fetched: the release-reachability clause
 skips with its declared reason rather than naming three reachable tags
 as unreachable.
+
+## Outcome (round 87, 2026-09-04) — 🟢 Done
+
+**Premise:** half held, half falsified. The sweep is real; its
+population was **one file**, already fixed in round 86 — so what was
+left is the prospective guard and the guide sentence.
+
+### The sweep, measured
+
+```text
+$ git grep -l 'rev-list\|merge-base\|diff-filter' tests/
+tests/unit/test_a_release_records_a_contract_state.py
+```
+
+That file already carries the decline (`_shallow()` `:342`, the skip
+`:420`, the `fetch-depth: 0` clause `:437`). Widened by hand to every
+subcommand whose answer moves with depth (`log`, `describe`, `blame`,
+`shortlog`) the population is **two**: `test_the_verification_log_is_true`
+reads `git log -1 -- <doc>` and declines on the **graft boundary**
+instead — deliberately, since this repository is worked in a grafted
+clone that is shallow *and* carries the commits that guard needs, so
+`--is-shallow-repository` there would switch a working guard off. The
+other git calls in `tests/` are content, not ancestry.
+
+### The Acceptance Test
+
+This session's clone is **not** shallow (1226 commits, no
+`.git/shallow`), so the case was built:
+
+```text
+$ git clone --depth 20 file://…/.git shallow20 && git -C shallow20 \
+    fetch --depth 20 origin 'refs/tags/*:refs/tags/*'    v0.2.0 v0.3.0 v0.4.0
+$ git -C shallow20 rev-parse --is-shallow-repository     true  (62 commits)
+$ python3 -m pytest tests/unit/test_a_release_records_a_contract_state.py -q -rs
+SKIPPED [1] …:421: this checkout is shallow, so its history stops at a
+boundary and reachability here is not the tree's answer
+27 passed, 1 skipped in 0.28s
+```
+
+Neutralise `_shallow()` there and the Motivation's output returns:
+
+```text
+E  release tag(s) naming a commit no clone of this branch can reach:
+   ['v0.4.0 -> 679b9cf8… (merge-base: no common ancestor)',
+    'v0.3.0 -> bc159355…', 'v0.2.0 -> 3ebe7e1b…']
+```
+
+`test_a_guard_that_reads_history_declares_its_depth.py` (11 clauses)
+makes the sweep standing over `git ls-files tests/`; the developer half
+is in `fixing-guide.md` §3, with its rules-card row.
+
+### Mutations verified red and reverted (4)
+
+| # | mutation | reddened |
+|---|---|---|
+| A1 | `_shallow()` → `return False`, its skip deleted, in the release guard | `…_says_what_a_shallow_clone_gets`, by path; 1 failed 10 passed |
+| A2 | `DEPTH_DEPENDENT` loses `merge-base` | `…_are_in_it` + `…_a_sentence_does_not`; 2 failed 9 passed |
+| A3 | `DECLARES_DEPTH` gains `-1`, an ordinary argv token | `…_a_literal_and_not_a_word`; 1 failed 10 passed |
+| A4 | guide's `fetch --unshallow` → `fetch --deepen 50` | `…_its_clone_may_be_shallow`; 1 failed 10 passed |
+
+**One guard of mine did not discriminate.** `declares_depth` first
+excluded docstrings by AST; removing it left all 11 clauses green,
+because the match is whole-constant equality and prose is never equal
+to `shallow`. It is gone, and the clause reads the load-bearing
+property instead — a widened `DECLARES_DEPTH` (A3). **Its limit,
+measured:** mutating only `if _shallow():` to `if False:` leaves the
+helper and the new guard stays green — it reads that a module *names*
+the predicate, not that it branches on it. Stated in the docstring; the
+release guard's own skip holds the branch.
+
+### Deviation from the Required Fix
+
+Nothing to repair, so no second file got the two clauses. `tools/` is
+outside the scan: `dev_touching.py` runs `git diff --name-only <base>`
+and belonged to another track. **Not closed here, and it cannot be:**
+`README.md` is shared across this round's four tracks (`UX-501`), and
+flipping this file's `**Status:**` alone reddens `dev_close_task
+--check` on both markers, which the commit hook runs — both move
+together, so `dev_close_task.py UX-637 --move` after the merge is the
+close. The derived loop figure moved 469 → 470; re-derive once.
+`make test-touching`: 812 passed, 4 skipped.

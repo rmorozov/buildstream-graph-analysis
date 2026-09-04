@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-630 scenarios: **8 open**, 622 closed.
+630 scenarios: **6 open**, 624 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -27,7 +27,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | cli | 0 | 21 |
 | store | 0 | 16 |
 | docs | 4 | 93 |
-| guards | 2 | 131 |
+| guards | 0 | 131 |
 
 ## Open scenarios
 
@@ -37,8 +37,6 @@ task file, which is the only place it ever lived twice.
 | ID | Scenario | Topic | Priority | Serves | Status |
 |---|---|---|---|---|---|
 | UX-597 | [three release rows and no tag](UX-0597-three-release-rows-and-no-tag.md) | docs | Low | anyone trying to check out a release this repository claims to have made | 🔴 Open |
-| UX-622 | [the derived count and its guard read two populations](UX-0622-the-derived-count-and-its-guard-read-two-populations.md) | guards | Medium | the session filing a row | 🔴 Open |
-| UX-627 | [closing a row writes `🟢 Done Open`](UX-0627-closing-a-row-writes-done-open.md) | guards | High | anyone reading a task file's status | 🔴 Open |
 | UX-628 | [five published keys no document names](UX-0628-five-published-keys-no-document-names.md) | contracts | High | anyone reading a payload against the prose that describes it | 🔴 Open |
 | UX-629 | [a required set grew under an unchanged id](UX-0629-a-required-set-grew-under-an-unchanged-id.md) | contracts | Medium | a consumer validating a document it wrote yesterday | 🔴 Open |
 | UX-630 | [two environment variables no inventory sees](UX-0630-two-environment-variables-no-inventory-sees.md) | docs | Medium | anyone trying to find out what changes bga's output | 🔴 Open |

@@ -1041,12 +1041,16 @@ backlog counts are drawn from ("the … files this commit carries"),
 which is the index plus untracked and non-ignored, the population
 `tools/dev_close_task.py` writes them from and
 `tests/unit/test_a_counted_figure_is_derived.py` checks them against —
-re-grounded in the two contract tables above against `bga.contracts`
-and `bga.schemas`: **23 emitted ids, 9 of them superseded, and 3 read
-and never written**, 8 printable and 15 not, and `analyze/v5` still at
-**56 top-level properties**. `bga/viewer/` is still **22 modules** and
-the table still names all of them. Every figure re-read and unchanged
-from the entry below — this change was prose, not a contract.
+— and the `capacity-model/v1` row `UX-613` added to the contract
+table. Re-grounded in the two contract tables above against
+`bga.contracts` and `bga.schemas`: **24 emitted ids, 9 of them
+superseded, and 3 read and never written**, 9 printable and 15 not,
+and `analyze/v5` still at **56 top-level properties**. `bga/viewer/`
+is still **22 modules** and the table still names all of them. The
+emitted count moved, for the first time in four rounds: `UX-613`
+published one id and renamed none, so `schemas.names()` is nine.
+Recorded by architecture review 15, whose row is in
+[`../audits/architecture-review.md`](../audits/architecture-review.md).
 
 Updated 2026-09-03 (after `UX-569`), covering round 83's three changes
 to this document — the opening sentence's two backlog counts, the

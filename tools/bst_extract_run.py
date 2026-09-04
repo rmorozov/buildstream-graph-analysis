@@ -31,7 +31,9 @@ import sys
 from pathlib import Path
 from typing import List, Optional, Tuple
 
-from .bst_log_to_chrome_trace import WrapperTraceConverter, _resolve_start_time_us
+from .bst_log_to_chrome_trace import (WrapperTraceConverter,
+                                     _resolve_start_time_source,
+                                     _resolve_start_time_us)
 from .chrome_trace_to_bga_trace import (
     chrome_events_to_bga_spans,
     failed_elements,
@@ -40,6 +42,7 @@ from .chrome_trace_to_bga_trace import (
 from .bst_show_to_graph import extract_graph
 from ._run_context_common import (add_cpu_capacity_fields, add_host_manifest,
                                   add_producer, add_queue_seam,
+                                  add_start_clock_source,
                                   add_memory_capacity_fields,
                                   typical_resolved_max_jobs)
 
@@ -313,7 +316,9 @@ def extract_run(
     warnings = []
 
     start_time_us = _resolve_start_time_us(start_time, log_path)
-    converter = WrapperTraceConverter(raw_start_time_us=start_time_us)
+    converter = WrapperTraceConverter(
+        raw_start_time_us=start_time_us,
+        raw_start_time_source=_resolve_start_time_source(start_time))
     with open(log_path, "r", encoding="utf-8", errors="ignore") as f:
         for line in f:
             if log_format == "wrapped":
@@ -434,6 +439,8 @@ def extract_run(
     add_producer(run_context)
     if wall_start_us is not None and wall_end_us is not None:
         run_context["wall_clock"] = {"start_us": wall_start_us, "end_us": wall_end_us}
+        # `UX-612`: which of the three clocks that start came from.
+        add_start_clock_source(run_context, converter.invocation_start_source())
     else:
         warnings.append("no bst-invocation span found - wall_clock omitted from run-context.json")
     # `UX-594`: after `wall_clock`, whose `start_us` is the other instant.

@@ -4648,21 +4648,28 @@ _STORE_HINTS = {
                                              "where that is not a "
                                              "measurement; "
                                              "`queue_wait_absent_reason` "
-                                             "says which of the three "
+                                             "says which of the four "
                                              "reasons applies."},
                           "queue_wait_absent_reason": {
+                              # `UX-612` added the fourth: the start is
+                              # the log file's mtime, so there is a
+                              # number to subtract from and it is not
+                              # an instant.
                               "enum": ["no_request_instant",
                                        "no_start_instant",
+                                       "start_not_an_instant",
                                        "request_after_start", None],
                               "description": "Why there is no wait: "
                                              "nobody published a "
                                              "request instant, this "
                                              "capture has no start "
-                                             "instant either, or the "
-                                             "two disagree about their "
-                                             "order, which is a clock "
-                                             "problem rather than a "
-                                             "queue."},
+                                             "instant either, its start "
+                                             "is the log file's mtime "
+                                             "rather than an instant, "
+                                             "or the two disagree about "
+                                             "their order, which is a "
+                                             "clock problem rather than "
+                                             "a queue."},
                           "bytes": {
                               QUANTITY: "bytes",
                               "description": "What that snapshot occupies "

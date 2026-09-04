@@ -60,11 +60,13 @@ import sys
 
 from .bst_log_to_chrome_trace import (
     WrapperTraceConverter,
+    _resolve_start_time_source,
     _resolve_start_time_us,
 )
 from .chrome_trace_to_bga_trace import invocation_wall_clock
 from ._run_context_common import (add_cpu_capacity_fields, add_host_manifest,
                                   add_producer, add_queue_seam,
+                                  add_start_clock_source,
                                   add_memory_capacity_fields)
 
 
@@ -86,7 +88,9 @@ def build_run_context(
     log, not a second, possibly-diverging one.
     """
     start_time_us = _resolve_start_time_us(start_time, log_path)
-    converter = WrapperTraceConverter(raw_start_time_us=start_time_us)
+    converter = WrapperTraceConverter(
+        raw_start_time_us=start_time_us,
+        raw_start_time_source=_resolve_start_time_source(start_time))
 
     with open(log_path, "r", encoding="utf-8", errors="ignore") as f:
         for line in f:
@@ -113,6 +117,8 @@ def build_run_context(
     }
     if wall_start_us is not None and wall_end_us is not None:
         run_context["wall_clock"] = {"start_us": wall_start_us, "end_us": wall_end_us}
+        # `UX-612`: which of the three clocks that start came from.
+        add_start_clock_source(run_context, converter.invocation_start_source())
     if host:
         run_context["host"] = host
     # native_max_jobs/host_cpu_count (UX-12), cpu_budget (UX-15) - see

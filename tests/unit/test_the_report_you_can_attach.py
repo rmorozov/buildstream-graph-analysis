@@ -853,7 +853,29 @@ COMMITTED_EXPORTS = [
     # measurement that forced it is the negotiation this file exists to
     # prevent - but the next round to add a module will trip it, and
     # the figure it needs is this one rather than the stale 453,180.
-    ("macro_micro", MACRO_MICRO, 475_000),             #  470,062 B
+    #
+    # `UX-647`/`UX-646` are that round. **+320 B of source** on
+    # `viewstate.js` - the deferred write and the delegation root - and
+    # nothing added to the payload. Measured at `a5bca33` and again
+    # with the change:
+    #
+    #     golden       424,292 -> 424,612   (bound 425,000, 388 B left)
+    #     macro_micro  474,667 -> 474,987   (bound 475,000, 13 B left)
+    #
+    # Two facts the recorded `470,062` hid. The bound had **375 B** of
+    # headroom before this round, not the ~4.9 KB the note above
+    # claims: four items have added source since without restating it.
+    # And the figure moves with **where the repository is checked
+    # out** - the export embeds the run's absolute path once, so the
+    # same commit reads 474,625 in a checkout at
+    # `/home/user/buildstream-graph-analysis` and 474,667 in a
+    # worktree 42 characters below it. A bound with 13 B of headroom
+    # is the tripwire `UX-613` moved these off, so this one moves the
+    # same way and by the same reasoning: 480,000 leaves 5,013 B.
+    # Golden is left alone - 388 B is thin, but it is not tripped, and
+    # a bound moved without a measurement that forced it is the
+    # negotiation above.
+    ("macro_micro", MACRO_MICRO, 480_000),             #  474,987 B
 ]
 
 

@@ -56,7 +56,7 @@ needs_browser = pytest.mark.skipif(chrome is None, reason=NO_BROWSER)
 #: change - the handler replaces it, and a cached node is the instrument
 #: error round 58 made twice.
 _DRIVE = r"""
-(() => {
+(async () => {
   const lead = () => {
     const n = document.querySelector("[data-role=reader-lead]");
     return n ? { reader: n.getAttribute("data-reader"),
@@ -79,13 +79,16 @@ _DRIVE = r"""
                 got: lead() });
   }
   // The fragment. **A bubbling event**: `wireViewState` delegates one
-  // `change` listener at the root, and `new Event("change")` does not
-  // bubble - so the loop above drives the picker's own handler and
+  // `change` listener at the document, and `new Event("change")` does
+  // not bubble - so the loop above drives the picker's own handler and
   // tells you nothing about the link. The picker is set back to the
-  // last real reader here, with an event that reaches the root.
+  // last real reader here, with an event that reaches it.
   const last = [...select.options].filter((o) => o.value).pop();
   select.value = last.value;
   select.dispatchEvent(new Event("change", { bubbles: true }));
+  // `UX-646`: the writer runs a turn after the dispatch, so the
+  // fragment a reader would copy is read after that turn.
+  await new Promise((go) => setTimeout(go, 120));
   return { picker: true, before, seen, wanted: last.value,
            hash: location.hash,
            labelled: Boolean(document.querySelector(

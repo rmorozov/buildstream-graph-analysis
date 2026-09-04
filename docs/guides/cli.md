@@ -791,6 +791,38 @@ bga compare --schema | jq '.required'
 addition does not. Pin `analyze/v5` and your consumer keeps working
 while the tool grows.
 
+### Which keys the prose names, and which it does not (`UX-628`)
+
+`--schema` is the complete key list. The *documents* are not, and this
+says how far they go, because five keys once shipped in one window with
+nothing outside the backlog naming any of them — `verdict_provenance`
+on `compare/v2`, `queue_wait_us` and `queue_wait_absent_reason` on
+`store/v1`, `requested_at_us` and `requested_at_source` on
+`run-context/v9`.
+
+The guard that was supposed to stop that had contract **ids** for a
+population, so it could not see a key. It has keys now: the printable
+contracts' *consumer surface* — each schema's top-level properties plus
+the properties of a row directly under a top-level array, since a row
+of `store/v1`'s `snapshots` is what you actually read. That surface was
+199 keys when this was written, 84 of them named in no document outside
+`docs/backlog/` and `docs/audits/`; naming the five above left
+**80 undocumented keys**, which is the figure the guard holds and this
+sentence is checked against.
+
+So the honest statement of coverage, rather than a promise nobody
+keeps:
+
+- a key added to a printable schema **after** this sentence has prose
+  or the guard reddens naming it;
+- the 84 already undocumented are a frozen register in that guard,
+  which may only shrink — the debt is counted, not hidden, and
+  documenting it is separate work;
+- `run-context/v9`, `graph/v9` and `trace/v9` are **not covered at
+  all**. They are stamped by whatever produced the capture, `bga` only
+  reads them, and there is no JSON Schema here to enumerate — so
+  `requested_at_us` and `requested_at_source` are held by prose alone.
+
 A section subcommand (`bga floors`, `bga graph`, …) emits the same
 `analyze/v5` document restricted to its own keys, with a `section` key
 naming the restriction — so a missing key can be told from a removed

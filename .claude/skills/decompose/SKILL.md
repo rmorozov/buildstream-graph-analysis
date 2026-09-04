@@ -86,6 +86,17 @@ track reproduced it at a different distance — seven commits — so it is
 the shape and not one round's accident. Put the sha in the brief and the
 track checks it with `git log --oneline -1` before reading anything.
 
+`UX-614`: three of round 84's *seven* tracks opened on the default
+branch instead of the round's, and every file their briefs cited was
+missing. So derive the sha at launch — `git rev-parse HEAD`, not one
+remembered from the round document — and make the brief's **first**
+instruction the check and its remedy rather than a request to report:
+
+```text
+Expected base: <sha> "<subject>". If `git log --oneline -1` disagrees,
+`git merge --ff-only <sha>` and say so in your first sentence.
+```
+
 **What the merge costs, measured once.** Round 75, three tracks over
 nine commits: **three cherry-picks, one conflicted** — in
 `tools/dev_close_task.py` and `tests/unit/test_the_loop_stays_fast.py`,

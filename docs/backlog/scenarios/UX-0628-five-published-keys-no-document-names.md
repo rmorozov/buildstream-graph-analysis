@@ -1,6 +1,6 @@
 # UX-628: five published keys no document names
 
-**Priority:** High | **Status:** 🔴 Open | **Depends on:** UX-233 (the mechanical half), UX-610, UX-612 (which added them) | **Found by:** architecture review 15 | **Serves:** anyone reading a payload against the prose that describes it | **Topic:** contracts
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-233 (the mechanical half), UX-610, UX-612 (which added them) | **Found by:** architecture review 15 | **Serves:** anyone reading a payload against the prose that describes it | **Topic:** contracts
 
 ## Motivation
 
@@ -86,7 +86,7 @@ document says so where a reader will look.
 A key added to a live schema with no prose, reddening a guard that
 names the key.
 
-## Outcome (round 86, 2026-09-04) — 🔴 implemented, not closed
+## Outcome (round 86, 2026-09-04) — 🟢 Done
 
 **Premise:** held, corrected above — `run-context/v9` is at `:1012`
 not `:1011`, and two of the five keys are outside any schema-derived

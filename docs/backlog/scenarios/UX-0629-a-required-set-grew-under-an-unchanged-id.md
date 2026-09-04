@@ -1,6 +1,6 @@
 # UX-629: a required set grew under an unchanged id
 
-**Priority:** Medium | **Status:** 🔴 Open | **Depends on:** UX-343 (one contract version), UX-610 (which grew it) | **Found by:** architecture review 15 | **Serves:** a consumer validating a document it wrote yesterday | **Topic:** contracts
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-343 (one contract version), UX-610 (which grew it) | **Found by:** architecture review 15 | **Serves:** a consumer validating a document it wrote yesterday | **Topic:** contracts
 
 ## Motivation
 
@@ -67,7 +67,7 @@ costs a reader the certainty that the key is there.
 A key added to a live schema's `required` list, reddening a guard that
 names the choice §3.7 made.
 
-## Outcome (round 86, 2026-09-04) — 🔴 implemented, not closed
+## Outcome (round 86, 2026-09-04) — 🟢 Done
 
 **Premise:** held. 13→14 and 14→15 both exact; the diffstat was stale
 and is corrected above.

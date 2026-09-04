@@ -741,7 +741,31 @@ COMMITTED_EXPORTS = [
     # ships is 786 B under this track's own reading on golden and 869 B
     # under it on `macro_micro`. 420,000 leaves 2,604 B and 470,000
     # leaves 2,588 B; `PAGE_BUDGET_B` has 6,938 B of its 310,000 left.
-    ("golden", GOLDEN, 420_000),                       #  417,396 B
+    #
+    # `UX-613` moved both, and moved the **bounds**, which nothing has
+    # done since `UX-483`. Measured on the merge (`20076f2^1` against
+    # `20076f2`), not added up:
+    #
+    #     page         304,112 -> 304,213   (+101 B)
+    #     golden       419,960 -> 420,045   (data 115,848 -> 115,832)
+    #     macro_micro  469,977 -> 470,062   (data 165,865 -> 165,849)
+    #
+    # **+101 B page, -16 B data, +85 B net.** The page half is
+    # `bga/viewer/format.js` alone: without a `rate_per_day` case
+    # `quantity(400, "rate_per_day")` falls to `default` and renders a
+    # bare `400`, dropping the unit the contract exists to carry. No
+    # guard forces that case, so it is a correctness choice and the
+    # reason the page half is allowed to move here. The data half went
+    # *down*: the bundle embeds `analyze/v5` only, so
+    # `capacity-model/v1`'s schema is never shipped.
+    #
+    # The bounds move because they had stopped being budgets: at
+    # `20076f2^1` golden was **40 B** under 420,000 and `macro_micro`
+    # **23 B** under 470,000. Any change of any kind tripped them next,
+    # which is a tripwire and not a discipline. 425,000 leaves 4,955 B
+    # and 475,000 leaves 4,938 B - the same order of headroom `UX-483`
+    # chose when it last moved one.
+    ("golden", GOLDEN, 425_000),                       #  420,045 B
     # `UX-297` moved this one by 385 B before that: the two-plane run
     # publishes `plane2_coverage.source`, which says which shape of
     # Plane 2 report served its numbers and what that costs to open. A
@@ -829,7 +853,7 @@ COMMITTED_EXPORTS = [
     # measurement that forced it is the negotiation this file exists to
     # prevent - but the next round to add a module will trip it, and
     # the figure it needs is this one rather than the stale 453,180.
-    ("macro_micro", MACRO_MICRO, 470_000),             #  467,412 B
+    ("macro_micro", MACRO_MICRO, 475_000),             #  470,062 B
 ]
 
 

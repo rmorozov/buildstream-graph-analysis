@@ -224,15 +224,24 @@ CONTRACT_RUNS = {
 }
 
 #: What the `neither` bag is allowed to hold outside `analyze/v5`, and
-#: why. One entry, and it is `UNDECLARABLE`'s own case reached by the
-#: path a comparison publishes it under - the same rule object, quoted
-#: inside the candidate's diagnosis.
+#: why. Both entries are `UNDECLARABLE`'s own case reached by a path a
+#: comparison publishes it under - a rule object whose `observed_path`
+#: is null.
 UNDECLARABLE_ELSEWHERE = {
     "compare/v2": {
         "candidate_diagnosis.provenance.rule.threshold":
             "`UNDECLARABLE`'s first entry, one document over: a rule "
             "whose `observed_path` is null compares against a quantity "
             "the finding computes rather than publishes.",
+        # `UX-610`: the same case for the *verdict*'s rule. Its two
+        # thresholds are scaled-MAD units and a percentage of the
+        # baseline, and no published field is in either - so
+        # `observed_path` is null rather than pointed at a duration it
+        # is not.
+        "verdict_provenance.rule.threshold":
+            "The verdict's own rule: neither threshold is in the unit "
+            "of any published field, so the path is null and the "
+            "number is not a quantity this document carries.",
     },
 }
 

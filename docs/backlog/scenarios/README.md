@@ -15,13 +15,13 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-647 scenarios: **9 open**, 638 closed.
+647 scenarios: **8 open**, 639 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
 | capture | 0 | 92 |
-| analysis | 1 | 94 |
+| analysis | 0 | 94 |
 | contracts | 1 | 47 |
 | viewer | 4 | 146 |
 | cli | 0 | 21 |
@@ -38,7 +38,6 @@ task file, which is the only place it ever lived twice.
 |---|---|---|---|---|---|
 | UX-636 | [eighty published keys no document names](UX-0636-eighty-published-keys-no-document-names.md) | docs | Medium | anyone reading a payload against the prose that describes it | 🔴 Open |
 | UX-637 | [a shallow clone answers, and does not say so](UX-0637-a-shallow-clone-answers-and-does-not-say-so.md) | contracts | High | anyone whose guard reads history, and every future session in this environment | 🔴 Open |
-| UX-641 | [the levels key is the identity function](UX-0641-the-levels-key-is-the-identity-function.md) | analysis | Medium | anyone reading the parallelism block | 🔴 Open |
 | UX-643 | [a reader role that demotes rather than hides](UX-0643-a-reader-role-that-demotes-rather-than-hides.md) | viewer | Medium | all five readers, each of whom gets the other four's page | 🔴 Open |
 | UX-645 | [the census floor spends half the width bound](UX-0645-the-census-floor-spends-half-the-width-bound.md) | guards | Low | anyone reading a width figure as if it were about their module | 🔴 Open |
 | UX-646 | [the fragment is one event behind the fold](UX-0646-the-fragment-is-one-event-behind-the-fold.md) | viewer | Medium | anyone who opens a fold and copies the link | 🔴 Open |

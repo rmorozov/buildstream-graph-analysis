@@ -649,6 +649,7 @@ is open, on what topic, for whom — is the other file's.
 | UX-642 | [a structured fold forgets it was open](UX-0642-a-structured-fold-forgets-it-was-open.md) | Low | anyone who shares a link to a report they were reading | 🟢 Done — viewstate captures and restores both fold conventions | [UX-642](UX-0642-a-structured-fold-forgets-it-was-open.md) |
 | UX-638 | [table focus destroys the reading position](UX-0638-table-focus-destroys-the-reading-position.md) | High | anyone who expands a table below the first screen | 🟢 Done — focus records and restores the reading position; the control says it is pressed | [UX-638](UX-0638-table-focus-destroys-the-reading-position.md) |
 | UX-639 | [the rail is dead while a table is focused](UX-0639-the-rail-is-dead-while-a-table-is-focused.md) | High | anyone who reaches for the rail to leave a focused table | 🟢 Done — the rail is marked inert while focused, from the module that enters focus | [UX-639](UX-0639-the-rail-is-dead-while-a-table-is-focused.md) |
+| UX-641 | [the levels key is the identity function](UX-0641-the-levels-key-is-the-identity-function.md) | Medium | anyone reading the parallelism block | 🟢 Done — levels publishes level, width and members from the gating graph; analyze/v6 | [UX-641](UX-0641-the-levels-key-is-the-identity-function.md) |
 
 ## UX-207..UX-212: the twenty-third audit round — the report learns to answer first (2026-08-22)
 

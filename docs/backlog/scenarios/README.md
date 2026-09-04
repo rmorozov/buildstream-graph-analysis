@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-619 scenarios: **9 open**, 610 closed.
+619 scenarios: **8 open**, 611 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -26,7 +26,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | viewer | 0 | 138 |
 | cli | 0 | 21 |
 | store | 0 | 16 |
-| docs | 2 | 90 |
+| docs | 1 | 90 |
 | guards | 4 | 125 |
 
 ## Open scenarios
@@ -42,7 +42,6 @@ task file, which is the only place it ever lived twice.
 | UX-613 | [the capacity model emits no document](UX-0613-the-capacity-model-emits-no-document.md) | contracts | Medium | R4 and anyone wanting the model's answer in a pipeline | 🔴 Open |
 | UX-614 | [a track starts on the default branch, not the round's](UX-0614-a-track-starts-on-the-default-branch.md) | guards | High | every round that runs tracks in parallel | 🔴 Open |
 | UX-615 | [the scratchpad is shared between tracks](UX-0615-the-scratchpad-is-shared-between-tracks.md) | guards | Low | a round running tracks in parallel | 🔴 Open |
-| UX-616 | [the coupling runs the other way too](UX-0616-the-coupling-runs-the-other-way-too.md) | docs | Medium | anyone adding a paragraph to the rules card | 🔴 Open |
 | UX-617 | [the derived count cannot see an unstaged row](UX-0617-the-derived-count-cannot-see-an-unstaged-row.md) | guards | Low | the session filing a row | 🔴 Open |
 | UX-621 | [a drift-gate red nobody can read](UX-0621-a-drift-gate-red-nobody-can-read.md) | guards | Medium | a session reading a red tier-drift step | 🔴 Open |
 

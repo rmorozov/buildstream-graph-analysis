@@ -78,23 +78,8 @@ one dimension takes one unit. **M4 confirms it.**
 
 The Outcome this replaces said "the schema bundle grows **5,000 B**".
 It does not: the embedded bundle carries **`analyze/v5` only**, so a
-`capacity-model/v1` schema is never embedded. The guard's own
-`export` + `_embedded` split, before and after:
-
-```text
-              total                 page                data
-golden        419,933 -> 420,087    304,281 -> 304,382   115,652 -> 115,705
-macro_micro   469,950 -> 470,104    304,281 -> 304,382   165,669 -> 165,722
-```
-
-**+154 B: +101 B page, +53 B data.** The page half is
-`bga/viewer/format.js` alone; the data half is `QUANTITIES` gaining a
-member, which `analyze/v5`'s embedded schema spells twice.
-
-**Both bounds are left as stated, red by 87 B and 104 B.** The growth
-is not all data, so raising them is not this track's call. The real
-finding is the headroom: the tree was already **67 B** under 420,000
-and **50 B** under 470,000 before this item touched anything.
+`capacity-model/v1` schema is never embedded. The earlier run appears
+to have read the *headroom* as the growth.
 
 ### Mutations
 
@@ -113,6 +98,30 @@ M10 drop builders' QUANTITY              census[capacity-model] 1 failed
 
 M8/M10 are the vacuity probes: they redden the `[capacity-model/v1]`
 parameter specifically, so the five-run store is censused, not skipped.
+
+### The two export bounds, measured on the merge
+
+Measured at the gate on `20076f2^1` against `20076f2`, which is the
+tree that ships — the track's own figures were 42 B out on both, taken
+on its branch before the round's other merges:
+
+```text
+             page      golden     macro_micro   data (golden / mm)
+before     304,112    419,960       469,977    115,848 / 165,865
+after      304,213    420,045       470,062    115,832 / 165,849
+delta         +101        +85          +85        -16 /     -16
+```
+
+**+101 B page, −16 B data.** The page half is `bga/viewer/format.js`
+alone: without a `rate_per_day` case, `quantity(400, "rate_per_day")`
+falls to `default` and renders a bare `400`, dropping the unit the
+contract exists to carry. No guard forces that case, so it is a
+correctness choice, and it is why the page half may move here.
+
+Both bounds raised — 420,000 → 425,000, 470,000 → 475,000 — with the
+split in the note beside them. They had **40 B** and **23 B** of
+headroom before this item, so they had stopped being budgets; the new
+ones leave ~4.9 KB, the order `UX-483` chose when it last moved one.
 
 ### Deviation from the Required Fix
 

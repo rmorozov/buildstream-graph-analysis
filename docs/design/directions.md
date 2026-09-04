@@ -1471,6 +1471,7 @@ the other rounds now:
 | [82](../audits/round-82.md) | every document read against the tool by five researchers: a sentence a guard reads is exact, a sentence no guard reads has drifted — twenty-four filings asking for derivation and dating, and the `review` skill (`UX-563`..`UX-586`) |
 | [83](../audits/round-83.md) | round 82's twenty-four rows executed, most of them not "correct a sentence" but "give the sentence a guard and let the correction follow" — the `UX-549` shape (a figure the guard derives) and the `UX-511` shape (a block labelled with its date and its cuts), extended to where round 82 found them missing (`UX-563`..`UX-586`) |
 | [84](../audits/round-84.md) | the fifteen rows round 83 filed rather than fixed, seven tracks wide — and the round where a filed premise is re-measured before it is implemented, because `UX-589`'s was false and `UX-592` had already refuted it (`UX-589`..`UX-604`) |
+| [85](../audits/round-85.md) | the rows round 84 left, plus the seven the round filed against its own work and six from architecture review 15 — and the round where a premise **carried forward** is a sentence again: seven of nineteen moved under re-measurement, five of them written by the orchestrating session from another track's report (`UX-604`..`UX-627`) |
 
 ## Verification Log
 

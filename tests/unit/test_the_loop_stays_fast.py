@@ -67,8 +67,9 @@ class TestTheSuiteStillRunsInParallel:
 class TestTheSelectorStillSelects:
 
     # `UX-606`: measured over all 85 mapped modules, not one. The
-    # ceilings sit above min 11 / median 16 / p90 38 / max 116 with
-    # room, so ordinary drift is quiet and a shape change is loud.
+    # ceilings sit above min 11 / median 17 / p90 40 / max 124
+    # (`UX-624`, which added the `from x import y` spelling) with room,
+    # so ordinary drift is quiet and a shape change is loud.
     CEILING = {"median": 20, "p90": 45, "max": 130}
     POPULATION_FLOOR = 60
     HANDFUL = 25
@@ -85,13 +86,21 @@ class TestTheSelectorStillSelects:
         "bga/attribution/blame_chain.py", "bga/correlate.py",
         "bga/report/json.py", "tools/native_trace/bwrap_shim.py",
         "bga/schemas.py", "bga/report/_shared.py",
+        # `UX-624`: 14 -> 27. A one-word stem is not a token, so every
+        # one of its 16 importers reached it only as `from bga import
+        # contracts`; the width is those edges, not a looser rule.
+        "bga/contracts.py",
     }
 
     def test_a_one_module_change_selects_a_handful_not_the_suite(self):
         """The worked example, and `UX-606` measured the population it
         used to stand for. `store_aggregate` is a distinctive two-word
         name, which is why 25 holds here; the selector's own contract
-        is the distribution below."""
+        is the distribution below.
+
+        `UX-606` measured min 11 / median 16 / p90 38 / max 116;
+        `UX-624` re-measured it at min 11 / median 17 / p90 40 / max
+        124 after the import spelling joined the grep."""
         selected, _ = dev_touching.select(["bga/store_aggregate.py"])
         assert 1 <= len(selected) <= 25, (
             f"a one-module diff selected {len(selected)} files. The point is "
@@ -203,6 +212,66 @@ class TestTheSelectorStillSelects:
         assert "findings" not in dev_touching.tokens_for("bga/findings.py")
         assert "store_aggregate" in dev_touching.tokens_for(
             "bga/store_aggregate.py")
+
+
+class TestAnImportIsASpellingTheGrepKnows:
+    """`UX-624`. A one-word stem is not a token, so `bga/schemas.py` was
+    spelled only `bga.schemas` - and its 70 importers all write `from
+    bga import schemas`. The map covered for that until `UX-605` capped
+    it, and then `test_every_number_says_what_it_is.py`, which is the
+    census of every declared quantity, stopped being selected at all.
+    """
+
+    GUARD = "tests/unit/test_every_number_says_what_it_is.py"
+
+    def test_the_map_entry_really_is_over_the_cap(self):
+        """Non-vacuity, first: the clause below claims the *grep* now
+        reaches the guard. That claim is empty unless the map cannot -
+        so read the width the cap rejects rather than assuming it."""
+        entry = dev_touching.touch_map().get("bga/schemas.py", ())
+        assert len(entry) > dev_touching.MAP_ENTRY_CAP, (
+            f"bga/schemas.py maps {len(entry)} files, inside the "
+            f"{dev_touching.MAP_ENTRY_CAP} cap - this item's premise is gone "
+            f"and the clause below no longer tests the grep")
+        assert self.GUARD in entry, (
+            f"{self.GUARD} is not in the map entry either - the item's "
+            f"subject has moved")
+
+    def test_the_guard_the_cap_dropped_is_selected_again(self):
+        """The acceptance clause. `--why` has to say the changed path,
+        not `map` or `census`: those are the two routes that would make
+        this pass without the grep having improved at all."""
+        selected, why = dev_touching.select(["bga/schemas.py"])
+        assert self.GUARD in selected, (
+            f"{self.GUARD} reads every declared quantity in bga/schemas.py "
+            f"and a schemas-only diff selected {len(selected)} files without "
+            f"it")
+        assert why[self.GUARD] == ["bga/schemas.py"], (
+            f"selected, but not by the grep: {why[self.GUARD]}")
+
+    def test_another_name_written_first_still_matches(self):
+        """`from bga import contracts, schemas` is the same import as
+        `from bga import schemas`, and 25 edges across 8 modules hung
+        on which name the author happened to write first."""
+        pattern = re.compile(dev_touching.import_pattern("bga/schemas.py"))
+        for line in ("from bga import schemas",
+                     "from bga import contracts, schemas",
+                     "from bga import provenance, contracts, schemas"):
+            assert pattern.search(line), line
+
+    def test_it_does_not_match_a_longer_name_that_starts_the_same(self):
+        """The false edge the word boundary buys: a sibling module
+        whose name extends this one is a different module."""
+        pattern = re.compile(dev_touching.import_pattern("bga/schemas.py"))
+        assert not pattern.search("from bga import schemas_registry")
+        assert not pattern.search("from bga.viewer import schemas")
+
+    def test_a_package_init_is_still_not_a_spelling(self):
+        """`UX-522` removed `__init__` as a token because fifteen
+        packages' inits each 'selected' the skip census. This door does
+        not reopen it."""
+        assert dev_touching.import_pattern("bga/graph/__init__.py") is None
+        assert dev_touching.import_pattern("docs/guides/cli.md") is None
 
 
 class TestTheCloseHelperRefusesTheJudgementParts:

@@ -35,7 +35,10 @@ requested-at instant until `UX-594` lands.
 
 **Five of the fifteen filed premises were false or half-false**, and
 every one was caught by re-measuring before implementing rather than
-at the merge:
+at the merge. (The merge commit's own subject says *six*; it was
+written at the gate rather than derived, and architecture review 15
+found no sixth. Five is the table below, and the table is what was
+measured.)
 
 | item | what the filing said | what the tree said |
 |---|---|---|
@@ -78,6 +81,8 @@ already implied. Each is recorded in its item's Outcome.
 ## Landed
 
 Derived from `closed.md` at the gate, not typed — **19 rows**.
+`UX-604` is a twentieth by the task files' accounting: its Outcome
+heads `round 84` and its row moved in round 85, after this gate.
 
 | row | what it was |
 |---|---|

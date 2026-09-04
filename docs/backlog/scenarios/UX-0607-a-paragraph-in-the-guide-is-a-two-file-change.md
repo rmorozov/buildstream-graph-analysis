@@ -43,7 +43,7 @@ chosen shape so a third copy cannot appear.
 
 A 1 KB paragraph added to the guide, and no second document red.
 
-## Outcome (round 85, 2026-09-03) — 🔴 fix landed, row not moved
+## Outcome (round 84, 2026-09-03) — 🟢 Done
 
 **Premise: half falsified — the figure had already moved.** Filed at
 41,358 B / 114 B; measured at this track's base `d4a3d04`:

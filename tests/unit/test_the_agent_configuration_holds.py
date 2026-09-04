@@ -852,6 +852,482 @@ class TestATrackTakesTheBaseItWasNamed:
             "is the stale base this item is about")
 
 
+class TestATrackCanReadEveryRefItsCheckoutHas:
+    """`UX-623` as filed said a track can read its own branch and
+    `origin/*` and nothing else, so a round whose branch is unpushed
+    leaves the base uncheckable. Measured, that is false: a linked
+    worktree's private git dir has no `refs/` at all, so the whole ref
+    store is the shared checkout's and an unpushed branch resolves.
+
+    ```text
+    $ ls .git/worktrees/<a worktree>/
+    CLAUDE_BASE HEAD ORIG_HEAD commondir gitdir index locked logs
+    ```
+
+    These clauses **run** it, on a checkout with no remote configured -
+    the strongest form of "unpushed" - and run the base check
+    `implementer.md` names against the branch name alone. A clause that
+    only read the file would pass over a body claiming the opposite.
+    """
+
+    PLACEHOLDER = re.compile(r"<[^>]+>")
+    SECTION = "## Which refs your copy can read"
+
+    @classmethod
+    def _section(cls):
+        body = (AGENTS / "implementer.md").read_text(encoding="utf-8")
+        assert cls.SECTION in body, (
+            f"implementer.md has no {cls.SECTION!r} section, so a track "
+            f"is never told which refs it can resolve (UX-623)")
+        return body.split(cls.SECTION, 1)[1].split("\n## ", 1)[0]
+
+    @classmethod
+    def _base_check(cls):
+        """The command that section tells a track to run against the
+        base its brief names, read out of the file - restating it here
+        would pass over a body documenting something else."""
+        lines = [line.split("#")[0].strip()
+                 for block in re.findall(r"```bash\n(.*?)```",
+                                         cls._section(), re.S)
+                 for line in block.splitlines() if line.strip()]
+        assert len(lines) == 1, (
+            f"{cls.SECTION!r} fences {len(lines)} commands, not one: "
+            f"{lines}. A track reading two does not know which answers")
+        return lines[0]
+
+    @staticmethod
+    def _git(where, *argv, check=True):
+        return subprocess.run(["git", *argv], cwd=where, check=check,
+                              capture_output=True, text=True, timeout=60)
+
+    @classmethod
+    def _checkout_with_an_unpushed_branch(cls, tmp_path):
+        """A checkout with **no remote at all** and a round branch three
+        commits ahead of the default, plus a worktree on the default."""
+        repo = tmp_path / "repo"
+        repo.mkdir()
+        (repo / "base.md").write_text("base\n", encoding="utf-8")
+        for argv in (["init", "-q", "-b", "main"],
+                     ["config", "user.email", "a@b"],
+                     ["config", "user.name", "a"],
+                     ["add", "base.md"], ["commit", "-qm", "base"]):
+            cls._git(repo, *argv)
+        cls._git(repo, "checkout", "-qb", "round")
+        for n in range(3):
+            (repo / f"round-{n}.md").write_text("x\n", encoding="utf-8")
+            cls._git(repo, "add", f"round-{n}.md")
+            cls._git(repo, "commit", "-qm", f"round {n}")
+        tip = cls._git(repo, "rev-parse", "HEAD").stdout.strip()
+        cls._git(repo, "checkout", "-q", "main")
+        copy = tmp_path / "copy"
+        cls._git(repo, "worktree", "add", "-q", "-b", "track", str(copy),
+                 "main")
+        assert cls._git(repo, "remote").stdout.strip() == "", (
+            "the sandbox configured a remote, so 'unpushed' is not what "
+            "is being measured")
+        return repo, copy, tip
+
+    def test_a_worktree_resolves_an_unpushed_branch_of_its_checkout(
+            self, tmp_path):
+        """`UX-623`'s corrected acceptance test. The branch exists only
+        in the checkout the copy was made from and has never been
+        pushed anywhere; the copy resolves it by name."""
+        _repo, copy, tip = self._checkout_with_an_unpushed_branch(tmp_path)
+        assert self._git(copy, "rev-parse", "--verify", "round"
+                         ).stdout.strip() == tip, (
+            "a linked worktree cannot resolve an unpushed branch of the "
+            "checkout it was copied from - UX-623 as filed")
+        unpushed = self._git(copy, "rev-parse", "--verify",
+                             "origin/round", check=False)
+        assert unpushed.returncode != 0, (
+            "`origin/round` resolved, so the branch was pushed and the "
+            "clause above measured the easy case")
+
+    def test_the_private_git_dir_carries_no_refs_of_its_own(self, tmp_path):
+        """The mechanism, so the clause above reads as a property and
+        not as one git version's accident."""
+        repo, copy, _tip = self._checkout_with_an_unpushed_branch(tmp_path)
+        private = pathlib.Path(
+            self._git(copy, "rev-parse", "--absolute-git-dir").stdout.strip())
+        common = pathlib.Path(
+            self._git(copy, "rev-parse", "--git-common-dir").stdout.strip())
+        assert private != common.resolve(), (
+            f"{copy} is not a linked worktree - its git dir is the "
+            f"shared one, so nothing here is being measured")
+        assert not (private / "refs").exists(), (
+            f"the worktree's private git dir has its own refs/ "
+            f"({sorted(p.name for p in private.iterdir())}), so the ref "
+            f"store is not shared and UX-623 as filed was right")
+
+    def test_the_documented_check_answers_from_the_branch_name_alone(
+            self, tmp_path):
+        """The base check `implementer.md` names, run with a branch name
+        substituted for its placeholder: a copy behind the round is
+        told so without a commit id and without a fetch."""
+        _repo, copy, _tip = self._checkout_with_an_unpushed_branch(tmp_path)
+        command = self._base_check()
+        assert self.PLACEHOLDER.search(command), (
+            f"{command!r} names no base for the track to substitute")
+        import shlex
+        argv = shlex.split(self.PLACEHOLDER.sub("round", command))
+        done = subprocess.run(argv, cwd=copy, capture_output=True,
+                              text=True, timeout=60)
+        assert done.returncode == 0, (
+            f"the check implementer.md documents does not answer for a "
+            f"copy behind an unpushed round branch: {done.stderr or argv}")
+
+    def test_the_documented_check_says_no_when_the_copy_has_diverged(
+            self, tmp_path):
+        """The half that makes it a check rather than a formality. A
+        copy carrying its own commit is not behind the base, and taking
+        the base would cost that commit - the same distinction
+        `--ff-only` draws, asked before anything is moved."""
+        _repo, copy, _tip = self._checkout_with_an_unpushed_branch(tmp_path)
+        (copy / "mine.md").write_text("a track's own work\n", encoding="utf-8")
+        self._git(copy, "add", "mine.md")
+        self._git(copy, "commit", "-qm", "the track's commit")
+        import shlex
+        argv = shlex.split(self.PLACEHOLDER.sub("round", self._base_check()))
+        done = subprocess.run(argv, cwd=copy, capture_output=True,
+                              text=True, timeout=60)
+        assert done.returncode != 0, (
+            "the documented check calls a diverged copy behind its base, "
+            "so a track runs --ff-only expecting it to work")
+
+    def test_the_section_names_the_reading_a_copy_does_not_get(self):
+        """Scoped to the section, because `implementer.md` argues about
+        the shared object database two sections earlier and a clause
+        reading the whole body would match that instead - the shape
+        `falsify` calls matching your own explanation."""
+        section = " ".join(self._section().split())
+        assert "per-worktree" in section, (
+            "the section says which refs resolve without saying what "
+            "does not, so a track reads it as 'everything resolves'")
+        assert "git -C" in section, (
+            "the section does not name the one reading a track is "
+            "refused, which is the half UX-623 was filed for")
+
+    def test_the_orchestrator_is_told_the_branch_resolves(self):
+        """`decompose` is what the brief is written from. Without this
+        the orchestrator pushes, or copies an id, for a reason that was
+        measured false - and copying an id is `UX-626`."""
+        skill = " ".join((SKILLS / "decompose/SKILL.md").read_text(
+            encoding="utf-8").split())
+        assert "whether or not it is pushed" in skill, (
+            "the decompose skill does not tell the orchestrator that an "
+            "unpushed branch resolves in a track's copy (UX-623)")
+        at = skill.index("whether or not it is pushed")
+        assert "refs/heads" in skill[max(0, at - 400):at + 200], (
+            "the skill states the fact without the mechanism that makes "
+            "it one, so the next round re-derives it or doubts it")
+
+
+class TestABriefsBaseResolvesBeforeItIsSent:
+    """`UX-626`: round 85's brief named base `2a7d1b8`, no object of
+    that name here; the merge it described is `2724972`. Re-measured:
+
+    ```text
+    $ git cat-file -t 2a7d1b8   fatal: Not a valid object name 2a7d1b8
+    $ git cat-file -t 2724972   commit
+    ```
+
+    `decompose` already told the orchestrator to derive the sha rather
+    than remember one, and that is the instruction that was in front of
+    it. Nothing in this repository runs when a track is launched - no
+    hook fires on the Agent tool - so the only check that can exist is
+    a command in the skill the brief is written from, and the only
+    thing worth guarding about a command is that it **discriminates**.
+
+    So these clauses run it, over the three classes an id falls in:
+    absent, a valid object of the wrong type, and a ref that resolves.
+    """
+
+    PLACEHOLDER = re.compile(r"<[^>]+>")
+    #: The id round 85's brief carried. Absent here and absent from any
+    #: sandbox, which is the property the clause below needs.
+    ABSENT = "2a7d1b8"
+
+    @staticmethod
+    def _section():
+        skill = (SKILLS / "decompose/SKILL.md").read_text(encoding="utf-8")
+        assert "## 3. Tracks" in skill, (
+            "the decompose skill has no Tracks section, so the launch "
+            "contract has moved and this class reads nothing")
+        return skill.split("## 3. Tracks", 1)[1].split("\n## ", 1)[0]
+
+    @classmethod
+    def _resolve_check(cls):
+        """The pre-launch check, taken as *the* fenced command in the
+        launch section carrying a placeholder for the base. Selected by
+        shape rather than by its own text: a clause that grepped for
+        `rev-parse` would find whatever command it was told to expect.
+        """
+        lines = [line.split("#")[0].strip()
+                 for block in re.findall(r"```bash\n(.*?)```",
+                                         cls._section(), re.S)
+                 for line in block.splitlines() if line.strip()]
+        carry = [line for line in lines if cls.PLACEHOLDER.search(line)]
+        assert len(carry) == 1, (
+            f"the launch section fences {len(carry)} command(s) taking a "
+            f"base, not one: {carry}. UX-626 is a brief whose base was "
+            f"never resolved; two candidates is no check at all")
+        return carry[0]
+
+    @staticmethod
+    def _git(where, *argv, check=True):
+        return subprocess.run(["git", *argv], cwd=where, check=check,
+                              capture_output=True, text=True, timeout=60)
+
+    @classmethod
+    def _a_repository(cls, tmp_path):
+        repo = tmp_path / "repo"
+        repo.mkdir()
+        (repo / "base.md").write_text("base\n", encoding="utf-8")
+        for argv in (["init", "-q", "-b", "main"],
+                     ["config", "user.email", "a@b"],
+                     ["config", "user.name", "a"],
+                     ["add", "base.md"], ["commit", "-qm", "base"]):
+            cls._git(repo, *argv)
+        return repo
+
+    def _run(self, repo, base):
+        import shlex
+        argv = shlex.split(self.PLACEHOLDER.sub(base, self._resolve_check()))
+        return subprocess.run(argv, cwd=repo, capture_output=True,
+                              text=True, timeout=60)
+
+    def test_it_refuses_the_id_that_was_never_an_object(self, tmp_path):
+        """`UX-626`'s acceptance test: the brief's base, refused before
+        a track is launched rather than by the track afterwards."""
+        repo = self._a_repository(tmp_path)
+        done = self._run(repo, self.ABSENT)
+        assert done.returncode != 0, (
+            f"the documented pre-launch check accepts {self.ABSENT!r}, "
+            f"the id round 85's brief carried and no object here - so a "
+            f"brief still goes out with a base nobody resolved")
+
+    def test_it_refuses_an_object_that_is_not_a_base(self, tmp_path):
+        """The boundary between the classes, and why the command is not
+        `cat-file -t`: a tree id is a valid object, answers with exit 0,
+        and is not something a track can start from."""
+        repo = self._a_repository(tmp_path)
+        tree = self._git(repo, "rev-parse", "HEAD^{tree}").stdout.strip()
+        assert self._git(repo, "cat-file", "-t", tree).stdout.strip() \
+            == "tree", "the sandbox did not produce a tree id"
+        done = self._run(repo, tree)
+        assert done.returncode != 0, (
+            "the documented check calls a tree a valid base, so it "
+            "passes an id that resolves to no commit at all")
+
+    def test_it_accepts_a_ref_the_orchestrator_would_write(self, tmp_path):
+        """The class that must pass, or the check is a command that
+        always fails and the orchestrator learns to skip it. A branch
+        name, because `UX-623` is why the brief may name one."""
+        repo = self._a_repository(tmp_path)
+        self._git(repo, "branch", "round")
+        done = self._run(repo, "round")
+        assert done.returncode == 0, (
+            f"the documented check refuses a branch that exists: "
+            f"{done.stderr.strip()!r}")
+
+    def test_the_skill_says_when_the_check_runs(self):
+        """Scoped to the launch section. The command alone is not the
+        fix - `UX-614` put "derive the sha" on this page and round 85
+        still typed one from memory, so what the section has to carry
+        is the moment: before the brief is sent, not after a track
+        reports."""
+        section = " ".join(self._section().split())
+        assert "before the brief goes out" in section, (
+            "the launch section fences a resolve command without saying "
+            "it runs before the brief is sent, which is the whole of "
+            "UX-626 - the id was wrong when it was written")
+        assert "written from memory rather than read" in section, (
+            "the section drops why the id was wrong; a round reading "
+            "'derive the sha' as advice repeats it (UX-626)")
+
+
+class TestTheDocumentedRevertKeepsTheTracksOwnWork:
+    """`UX-625`. The skill has said how to revert since `UX-359`; what
+    it had not done was work. `cp <file> /tmp/<file>.bak` names a
+    directory that does not exist for any file below the repository
+    root, which is every file here:
+
+    ```text
+    $ cp .github/workflows/ci.yml /tmp/.github/workflows/ci.yml.bak
+    cp: cannot create regular file '…': No such file or directory
+    ```
+
+    A step 1 that errors is why a track improvises step 4, and the
+    improvisation is `git checkout --`, which discards the track's own
+    uncommitted edit in the same file. So these clauses **run** the
+    documented recipe on a nested path with work already in it - a
+    clause that read the skill for the word "snapshot" would pass over
+    a recipe that cannot be executed at all.
+    """
+
+    FILE = "<file>"
+    SCRATCHPAD = "<the scratchpad path you were given>"
+    #: Nested, because the root case is the only one that used to work.
+    NESTED = "tests/unit/test_a_guard.py"
+
+    @classmethod
+    def _fence(cls):
+        body = (SKILLS / "falsify/SKILL.md").read_text(encoding="utf-8")
+        assert "## The loop, per guard" in body, (
+            "the falsify skill has no loop section, so nothing here "
+            "reads the recipe a track is told to run")
+        section = body.split("## The loop, per guard", 1)[1]
+        blocks = re.findall(r"```bash\n(.*?)```",
+                            section.split("\n## ", 1)[0], re.S)
+        assert len(blocks) == 1, (
+            f"the loop section fences {len(blocks)} bash blocks, not "
+            f"one - a track reading two does not know which is the loop")
+        return [line.split("#")[0].rstrip()
+                for line in blocks[0].splitlines()]
+
+    @classmethod
+    def _phases(cls):
+        """`(what makes the snapshot, what puts it back)`, split at the
+        first step that is not shell - steps 2 and 3 are the mutation
+        and the run, and belong to the track rather than to this."""
+        lines = cls._fence()
+        first = next((i for i, line in enumerate(lines)
+                      if line.startswith("python3")), None)
+        assert first is not None, (
+            "the loop fences no python step, so it is not the loop")
+        snapshot = [line for line in lines[:first] if line.strip()]
+        revert = [line for line in lines[first:]
+                  if line.strip().startswith("cp ")]
+        assert snapshot and len(revert) == 1, (
+            f"the loop has {len(snapshot)} step(s) before the mutation "
+            f"and {len(revert)} copy back after it; UX-625 needs one of "
+            f"each or the recipe does not round-trip")
+        # The revert runs in a later shell, so it needs the assignments
+        # the snapshot phase made.
+        return snapshot, [line for line in snapshot if re.match(r"\w+=", line)
+                          ] + revert
+
+    @classmethod
+    def _script(cls, phase, scratchpad):
+        for placeholder in (cls.FILE, cls.SCRATCHPAD):
+            assert any(placeholder in line for line in cls._fence()), (
+                f"the loop names no {placeholder} for a track to fill "
+                f"in, so this clause cannot run what it documents")
+        return "\n".join(
+            line.replace(cls.SCRATCHPAD, str(scratchpad))
+                .replace(cls.FILE, cls.NESTED)
+            for line in phase)
+
+    def _worktree(self, tmp_path):
+        work = tmp_path / "agent-abcd"
+        (work / "tests" / "unit").mkdir(parents=True)
+        return work
+
+    def _sh(self, script, cwd):
+        return subprocess.run(["sh", "-e", "-c", script], cwd=cwd,
+                              capture_output=True, text=True, timeout=60)
+
+    def test_the_snapshot_step_runs_for_a_file_below_the_root(
+            self, tmp_path):
+        """The step that was broken. Every file in this repository is
+        nested, so a recipe that only works at the root works never."""
+        work = self._worktree(tmp_path)
+        (work / self.NESTED).write_text("original\n", encoding="utf-8")
+        scratchpad = tmp_path / "scratchpad"
+        scratchpad.mkdir()
+        done = self._sh(self._script(self._phases()[0], scratchpad), work)
+        assert done.returncode == 0, (
+            f"the falsify loop's snapshot step fails for a nested file, "
+            f"which is every file here: {done.stderr.strip()!r}")
+
+    def test_the_recipe_returns_the_work_and_not_the_committed_text(
+            self, tmp_path):
+        """`UX-625`'s acceptance test: a mutation applied to a file the
+        track has already edited, reverted, and the track's own edit
+        still there. The distinction `git checkout --` cannot draw -
+        it would restore "original", which is neither."""
+        work = self._worktree(tmp_path)
+        target = work / self.NESTED
+        target.write_text("original\n", encoding="utf-8")
+        scratchpad = tmp_path / "scratchpad"
+        scratchpad.mkdir()
+
+        target.write_text("original\nthe track's own edit\n",
+                          encoding="utf-8")
+        snapshot, revert = self._phases()
+        made = self._sh(self._script(snapshot, scratchpad), work)
+        assert made.returncode == 0, made.stderr
+        target.write_text("original\nthe track's own edit\nMUTATION\n",
+                          encoding="utf-8")
+        back = self._sh(self._script(revert, scratchpad), work)
+        assert back.returncode == 0, back.stderr
+
+        left = target.read_text(encoding="utf-8")
+        assert "the track's own edit" in left, (
+            "the documented revert discarded the track's uncommitted "
+            "work along with the mutation - UX-625 itself")
+        assert "MUTATION" not in left, (
+            "the documented revert left the mutation in place, so the "
+            "next run is green for the wrong reason")
+
+    def test_two_tracks_snapshotting_one_file_do_not_collide(
+            self, tmp_path):
+        """`UX-615` in the same place: the scratchpad is keyed by the
+        project, so two tracks mutating one file share a snapshot name
+        unless the recipe separates them. A collision here restores the
+        *other* track's copy, which is worse than no snapshot."""
+        scratchpad = tmp_path / "scratchpad"
+        scratchpad.mkdir()
+        script = self._script(self._phases()[0], scratchpad)
+        seen = []
+        for name in ("agent-aaaa", "agent-bbbb"):
+            work = tmp_path / name
+            (work / "tests" / "unit").mkdir(parents=True)
+            (work / self.NESTED).write_text(f"{name}\n", encoding="utf-8")
+            done = self._sh(script, work)
+            assert done.returncode == 0, done.stderr
+            seen.append(name)
+        kept = sorted(p.read_text(encoding="utf-8").strip()
+                      for p in scratchpad.rglob("test_a_guard.py"))
+        assert kept == seen, (
+            f"two tracks snapshotted one file and the scratchpad holds "
+            f"{kept} - the second overwrote the first, so its revert "
+            f"restores the other track's text (UX-615)")
+
+    def test_the_heading_counts_the_failure_modes_under_it(self):
+        """Derived rather than restated. The safe revert was the third
+        paragraph under a heading that said two, which is where a
+        reader who counts stops reading."""
+        body = (SKILLS / "falsify/SKILL.md").read_text(encoding="utf-8")
+        heading = re.search(r"^## (\w+) failure modes.*$", body, re.M)
+        assert heading, "the falsify skill no longer heads its failure modes"
+        section = body.split(heading.group(0), 1)[1].split("\n## ", 1)[0]
+        written = {"One": 1, "Two": 2, "Three": 3, "Four": 4}
+        assert heading.group(1) in written, (
+            f"the heading counts in {heading.group(1)!r}, which this "
+            f"clause cannot read")
+        found = len(re.findall(r"^\*\*The .*?\.\*\*", section, re.M))
+        assert written[heading.group(1)] == found, (
+            f"the heading says {heading.group(1)} failure modes and "
+            f"{found} follow it; the one that gets dropped is the last, "
+            f"and the last is the safe revert (UX-625)")
+
+    def test_the_track_is_told_which_revert_at_the_step_it_reverts(self):
+        """`implementer.md` step 5 is what a track reads at mutation
+        time; the skill is a click away. Scoped to the loop section,
+        because the file argues about `--ff-only` discarding work three
+        sections earlier and a whole-body read would match that."""
+        body = (AGENTS / "implementer.md").read_text(encoding="utf-8")
+        loop = " ".join(body.split("## The loop", 1)[1]
+                        .split("\n## ", 1)[0].split())
+        assert "git checkout --" in loop, (
+            "implementer.md's loop says to revert without naming the "
+            "revert that discards the track's own work (UX-625)")
+        assert "step 1" in loop, (
+            "the loop names the trap without naming what to use "
+            "instead, which leaves the track where UX-625 found it")
+
+
 class TestEachTrackHasItsOwnScratchpad:
     """`UX-615`: the worktrees are isolated and the scratchpad is not.
 

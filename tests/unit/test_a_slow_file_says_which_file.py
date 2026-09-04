@@ -2306,3 +2306,124 @@ class TestAReferenceEntryIsMoreThanOneSample:
         document, added = drift.adopt(reference, drift.record(dict(steady), "ci"))
         assert added == {}
         assert len(document["samples"]["tests/unit/test_steady_29.py"]) == 2
+
+
+class TestTheVerdictSurvivesWithoutTheLogBody:
+    """`UX-621`: `UX-491`'s line is inside the body a reader cannot get.
+
+    Measured on run 33808929465, red at step 14 of `test (3.11)`:
+
+    ```text
+    GET /check-runs/100825940544/annotations  200
+        "Process completed with exit code 1."
+    GET /actions/jobs/100825940544/logs       302 ->
+        productionresultssa18.blob.core.windows.net
+        curl: (56) CONNECT tunnel failed, response 403
+    GET /actions/jobs/100825940544            200, step 14 keys:
+        completed_at conclusion name number started_at status
+    ```
+
+    So the run JSON has no field to put a verdict in, the log body is
+    behind a host this egress policy refuses, and the annotations are
+    JSON on `api.github.com`. `--annotate` prints the gate's own line as
+    one, and these clauses hold that it is the *gate's* line (§5), that
+    it is red-only, and that the workflow still asks for it.
+    """
+
+    OFF = "tests/unit/test_the_page_has_geometry.py"
+
+    def _run(self, tmp_path, capsys, times, carry=None, annotate=True,
+             tag="a"):
+        ref = tmp_path / f"ref-{tag}.json"
+        ref.write_text(json.dumps(drift.record(dict(tiers.recorded()))),
+                       encoding="utf-8")
+        summary = tmp_path / f"gate-{tag}.txt"
+        argv = [str(_report(tmp_path, times)), "--against", str(ref),
+                "--summary", str(summary)]
+        if carry:
+            argv += ["--carry", str(carry)]
+        if annotate:
+            argv.append("--annotate")
+        code = drift.main(argv)
+        return code, summary, capsys.readouterr().out
+
+    def _red(self, tmp_path, capsys, annotate=True):
+        """The red the item is about: one file confirmed over two runs."""
+        carry = tmp_path / "carry.json"
+        times = dict(tiers.recorded())
+        times[self.OFF] = times[self.OFF] * 2.0
+        self._run(tmp_path, capsys, times, carry=carry, annotate=annotate,
+                  tag="a")
+        return self._run(tmp_path, capsys, times, carry=carry,
+                         annotate=annotate, tag="b")
+
+    @staticmethod
+    def _annotations(out):
+        return [line for line in out.splitlines()
+                if line.startswith("::error")]
+
+    def test_a_red_gate_says_why_where_the_api_can_read_it(self, tmp_path,
+                                                           capsys):
+        code, summary, out = self._red(tmp_path, capsys)
+        assert code == 1, (code, summary.read_text())
+        line = summary.read_text().strip()
+        assert self.OFF in line, (
+            f"the gate wrote {line!r}, which names no file - so the clause "
+            f"below would pass over a verdict that says nothing")
+        found = self._annotations(out)
+        assert len(found) == 1, out
+        # The gate's own sentence, not a second one computed here (§5).
+        message = found[0].split("::", 2)[2].replace("%25", "%")
+        assert message == line, (message, line)
+
+    def test_the_annotation_names_the_document_to_act_on(self, tmp_path,
+                                                         capsys):
+        """An `::error` with no `file=` is attributed to `.github` at the
+        workflow's own line, which is where the unreadable "Process
+        completed with exit code 1." already sits."""
+        code, _summary, out = self._red(tmp_path, capsys)
+        found = self._annotations(out)
+        assert code == 1 and len(found) == 1, (code, out)
+        assert f"file={drift.ANNOTATION_FILE}" in found[0], found[0]
+        assert (REPO / drift.ANNOTATION_FILE).is_file(), (
+            f"{drift.ANNOTATION_FILE} is not a path in this tree, so the "
+            f"annotation points nowhere a reader can open")
+
+    def test_a_green_gate_annotates_nothing(self, tmp_path, capsys):
+        """A failure annotation on a passing run is an alarm nobody
+        reads, which is the state this route exists to leave."""
+        code, summary, out = self._run(tmp_path, capsys,
+                                       dict(tiers.recorded()), tag="ok")
+        assert code == 0
+        assert summary.read_text().startswith("tiers ok: "), (
+            "the green path never reached a return, so 'no annotation' is "
+            "true of a run that decided nothing")
+        assert not self._annotations(out), out
+
+    def test_the_route_is_opt_in(self, tmp_path, capsys):
+        """`--summary`'s rule: a local run leaves no workflow commands in
+        a developer's terminal."""
+        code, summary, out = self._red(tmp_path, capsys, annotate=False)
+        assert code == 1 and self.OFF in summary.read_text()
+        assert not self._annotations(out), out
+
+    def test_the_annotation_is_one_line(self):
+        """A workflow command is line-oriented: the runner reads to the
+        first newline, so an unescaped two-line verdict reaches the API
+        as its first line."""
+        made = drift.annotation("50% slower\r\nand a second line")
+        assert "\n" not in made and "\r" not in made, made
+        assert "%25" in made and "%0A" in made and "%0D" in made, made
+
+    def test_the_workflow_asks_the_gate_for_one(self):
+        steps = [step.get("run") or ""
+                 for job in yaml.safe_load(
+                     (REPO / ".github/workflows/ci.yml").read_text(
+                         encoding="utf-8"))["jobs"].values()
+                 for step in job.get("steps") or []
+                 if "--against" in (step.get("run") or "")]
+        assert steps, "no CI step runs the gate, so nothing is annotated"
+        for script in steps:
+            assert "--annotate" in script, (
+                f"the gate runs without --annotate: {script.strip()!r} - a "
+                f"red run reaches an API client as 'exit code 1' again")

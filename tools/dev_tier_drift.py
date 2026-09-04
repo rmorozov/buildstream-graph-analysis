@@ -2,7 +2,7 @@
 
     make test-tiers                        # the floors, here
     python3 tools/dev_tier_drift.py REPORT --against --carry PATH \
-        --base REF --summary PATH        # the line, for a log tail (UX-491)
+        --base REF --summary PATH --annotate  # the line: tail, API (UX-621)
     python3 tools/dev_tier_drift.py REPORT --record PATH   # CI's own numbers
     python3 tools/dev_tier_drift.py --adopt CANDIDATE      # UX-503
 
@@ -66,6 +66,13 @@ CI_CANDIDATE_ARTIFACT = "ci-reference-candidate"
 #: the job-log API was not. Both names in every message, because which
 #: is reachable depends on who is reading.
 CI_CANDIDATE_JOB = "tier-reference"
+
+#: `UX-621`: what a red gate's annotation points at. Measured on run
+#: 33808929465: an `::error` with no `file=` is attributed to `.github`
+#: at the workflow's line, which is where the unreadable "Process
+#: completed with exit code 1." already sits. The reference is the
+#: document a reader of that annotation has to act on.
+ANNOTATION_FILE = "tests/ci_reference.json"
 
 #: How much slower than its own CI reference a file may run before it is
 #: reported, *after* the run's median shift is divided out.
@@ -833,6 +840,27 @@ def series(name, reading, history):
     return [value for value in seen if value is not None]
 
 
+def annotation(summary, path=ANNOTATION_FILE):
+    """`UX-621`: the gate's line as a check-run annotation.
+
+    `UX-491`'s file reaches a reader of the log *body*, and that body is
+    served from a blob host an agent session is not always allowed to
+    reach - measured on run 33808929465, `GET /actions/jobs/{id}/logs`
+    -> 302 -> `productionresultssa18.blob.core.windows.net`, `curl (56)
+    CONNECT tunnel failed, response 403`, while
+    `/check-runs/{id}/annotations` answered 200 with the messages as
+    JSON. A step's entry in the jobs API carries no output field at all
+    (`name`, `number`, `status`, `conclusion`, two timestamps), so an
+    annotation is the only place a sentence survives that route.
+
+    One line, because a workflow command is line-oriented and the runner
+    reads only up to the first newline.
+    """
+    said = (summary.replace("%", "%25")
+            .replace("\r", "%0D").replace("\n", "%0A"))
+    return f"::error file={path},title=tier drift::{said}"
+
+
 def _against(times, path, args):
     """`--against`: this run read against CI's own recorded numbers."""
 
@@ -843,6 +871,11 @@ def _against(times, path, args):
         if args.summary:
             pathlib.Path(args.summary).write_text(summary + "\n",
                                                   encoding="utf-8")
+        # `UX-621`: and, on a red return only, where a reader without
+        # the log body still gets it. A green gate annotating would be a
+        # failure annotation on a passing run.
+        if args.annotate and code:
+            print(annotation(summary))
         return code
 
     reference = (json.loads(path.read_text(encoding="utf-8"))
@@ -1124,6 +1157,10 @@ def main(argv=None):
     parser.add_argument("--summary", metavar="PATH", default=None,
                         help="write --against's own summary line here, for "
                              "a step that runs later to print (UX-491).")
+    parser.add_argument("--annotate", action="store_true",
+                        help="on a red --against, print the same line as a "
+                             "check-run annotation - the one route to a "
+                             "reader who cannot fetch the log (UX-621).")
     parser.add_argument("--source", default="unknown",
                         help="what produced this report, recorded with it")
     args = parser.parse_args(argv)

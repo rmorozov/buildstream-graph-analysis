@@ -1492,7 +1492,7 @@ when it moved — and, through the store, R1 and R7, whose questions are
 answered by comparing this build against builds an *older* `bga`
 measured.
 
-**Status:** partial — items 1-5 landed (`CHANGELOG.md`, three release rows, the generated body, `UX-241`'s review gate, and the tags: `UX-597` cut `v0.3.0` and `v0.4.0` and a guard now reads them). What item 5 opened is still open: `v0.2.0` names a commit `main` cannot reach — `UX-633`.
+**Status:** partial — items 1-5 landed (`CHANGELOG.md`, three release rows, the generated body, `UX-241`'s review gate, and the tags: `UX-597` cut `v0.3.0` and `v0.4.0` and a guard now reads them, `UX-634` made step 8 publish the release rather than only tag it). What item 5 opened is still open: `v0.2.0` names a commit `main` cannot reach — `UX-633`.
 
 `bga` is unusual among analysis tools in one way that matters here:
 **it reads its own past output as input.** `@last`/`@prev`, the

@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-646 scenarios: **10 open**, 636 closed.
+646 scenarios: **8 open**, 638 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -23,7 +23,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | capture | 0 | 92 |
 | analysis | 1 | 94 |
 | contracts | 1 | 47 |
-| viewer | 6 | 146 |
+| viewer | 4 | 146 |
 | cli | 0 | 21 |
 | store | 0 | 16 |
 | docs | 1 | 97 |
@@ -38,8 +38,6 @@ task file, which is the only place it ever lived twice.
 |---|---|---|---|---|---|
 | UX-636 | [eighty published keys no document names](UX-0636-eighty-published-keys-no-document-names.md) | docs | Medium | anyone reading a payload against the prose that describes it | 🔴 Open |
 | UX-637 | [a shallow clone answers, and does not say so](UX-0637-a-shallow-clone-answers-and-does-not-say-so.md) | contracts | High | anyone whose guard reads history, and every future session in this environment | 🔴 Open |
-| UX-638 | [table focus destroys the reading position](UX-0638-table-focus-destroys-the-reading-position.md) | viewer | High | anyone who expands a table below the first screen | 🔴 Open |
-| UX-639 | [the rail is dead while a table is focused](UX-0639-the-rail-is-dead-while-a-table-is-focused.md) | viewer | High | anyone who reaches for the rail to leave a focused table | 🔴 Open |
 | UX-641 | [the levels key is the identity function](UX-0641-the-levels-key-is-the-identity-function.md) | analysis | Medium | anyone reading the parallelism block | 🔴 Open |
 | UX-643 | [a reader role that demotes rather than hides](UX-0643-a-reader-role-that-demotes-rather-than-hides.md) | viewer | Medium | all five readers, each of whom gets the other four's page | 🔴 Open |
 | UX-645 | [the census floor spends half the width bound](UX-0645-the-census-floor-spends-half-the-width-bound.md) | guards | Low | anyone reading a width figure as if it were about their module | 🔴 Open |

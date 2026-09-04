@@ -206,27 +206,54 @@ class TestPart32sOpeningBlockIsTheRegistry:
 
 
 
+def _row_keys(node, found):
+    """Every key of every row `node` hands a consumer, at any depth.
+
+    Two declarations, because a row has two: an array's `items`, and
+    the `bga:columns` an array node carries. `UX-655` measured why both
+    are needed - `analyze/v6`'s `parallelism.levels` has no `type` and
+    no `items` at all, so its columns are the only statement of what a
+    row of it holds, and `level` and `width` are in no `items` anywhere.
+    """
+    if isinstance(node, dict):
+        items = node.get("items")
+        if isinstance(items, dict):
+            found |= set(items.get("properties", {}))
+        for column in node.get("bga:columns") or ():
+            if isinstance(column, dict) and isinstance(column.get("key"), str):
+                found.add(column["key"])
+        for value in node.values():
+            _row_keys(value, found)
+    elif isinstance(node, list):
+        for value in node:
+            _row_keys(value, found)
+    return found
+
+
 def _consumer_surface():
     """`{key: [contract, ...]}` - the keys a consumer of a printable
     document meets.
 
-    Each schema's top-level properties, plus the properties of a row
-    directly under a top-level array: a row of `store/v1`'s `snapshots`
-    is what a reader actually holds, and `queue_wait_us` lives only
-    there. Not the full recursive key set - that is 891 keys, most of
-    them internal shapes of one block, and a document naming all of
-    them would be the second copy of the schemas `UX-384` already
-    banned from the inventory.
+    Each schema's top-level properties, plus every row it hands over at
+    any depth: a row of `store/v1`'s `snapshots` is what a reader
+    actually holds, and `queue_wait_us` lives only there. Depth is
+    `UX-655`: `parallelism` is a top-level *object* and its `levels`
+    rows one level below that, so a walk stopping under a top-level
+    array published `level` and `width` outside its own population.
+
+    Still not the full recursive key set - 514 distinct keys over the
+    nine printable schemas, 891 counting repeats - most of them
+    internal shapes of one block, and a document naming all of them
+    would be the second copy of the schemas `UX-384` already banned
+    from the inventory. This walk is 236.
     """
     from bga import contracts, schemas
 
     found = {}
     for name in contracts.printable():
-        properties = schemas.schema(name).get("properties", {})
-        keys = set(properties)
-        for value in properties.values():
-            if isinstance(value, dict) and isinstance(value.get("items"), dict):
-                keys |= set(value["items"].get("properties", {}))
+        schema = schemas.schema(name)
+        keys = set(schema.get("properties", {}))
+        _row_keys(schema, keys)
         for key in keys:
             found.setdefault(key, []).append(name)
     return found
@@ -265,6 +292,21 @@ def _named_in_the_documents():
         text.append(path.read_text(encoding="utf-8"))
     text.append((REPO / "README.md").read_text(encoding="utf-8"))
     return code_spanned("\n".join(text))
+
+
+def _coverage_section():
+    """The body of the guide's coverage section, and only that.
+
+    The subject is the section, not the file: `UX-628` measured a
+    clause over the whole guide that could not fail, because line 345
+    names the three input contracts while describing what `bga analyze`
+    reads.
+    """
+    section = CLI_GUIDE.read_text(encoding="utf-8").split(
+        "### Which keys the prose names", 1)
+    assert len(section) == 2, (
+        "docs/guides/cli.md has no `### Which keys the prose names` section")
+    return section[1].split("\n## ", 1)[0].split("\n### ", 1)[0]
 
 
 def _undocumented_keys():
@@ -330,8 +372,9 @@ class TestThePopulationIsKeysAndNotIds:
         surface = _consumer_surface()
         assert len(surface) >= 150, (
             f"the consumer surface is {len(surface)} keys; it was 199 when "
-            f"this was written, so either a contract stopped resolving or "
-            f"the walk above stopped descending")
+            f"this was written and 236 once UX-655 gave it depth, so either "
+            f"a contract stopped resolving or the walk above stopped "
+            f"descending")
         checked = set(surface) - UNDOCUMENTED_WHEN_THE_POPULATION_BECAME_KEYS
         assert len(checked) >= 100, (
             f"the register excuses all but {len(checked)} of "
@@ -395,6 +438,85 @@ class TestThePopulationIsKeysAndNotIds:
                 f"the section does not tell a reader that {stated}'s keys "
                 f"are outside this coverage - an input contract has no JSON "
                 f"Schema here, so no guard can enumerate it")
+
+    def test_the_surface_reaches_a_row_below_a_top_level_object(self):
+        """`UX-655`. `parallelism` is a top-level object and its
+        `levels` rows are one level below that, so a population
+        stopping under a top-level array published the whole of a major
+        bump - `level`, `width`, `elements` for the integers they
+        replaced - outside itself, with the register at zero and every
+        clause green.
+
+        The row's keys are read off the row rather than restated, so
+        the fourth column this item's Acceptance Test adds is in the
+        population by existing.
+        """
+        from bga import schemas
+
+        row = schemas.schema("analyze/v6")["properties"]["parallelism"][
+            "properties"]["levels"]
+        declared = [column["key"] for column in row["bga:columns"]]
+        assert declared, "parallelism.levels declares no columns to reach"
+        surface = _consumer_surface()
+        missing = [key for key in declared
+                   if "analyze/v6" not in surface.get(key, ())]
+        assert missing == [], (
+            f"key(s) of an analyze/v6 row the consumer surface does not "
+            f"reach: {missing}. A consumer indexing parallelism.levels reads "
+            f"exactly these, so a key of one going undocumented is invisible "
+            f"to every clause above (UX-655)")
+
+    def test_a_row_can_be_declared_by_its_columns_alone(self):
+        """Why the walk reads `bga:columns` and not `items` only, and
+        it is asserted rather than assumed because it is a property of
+        a schema somebody else maintains. `parallelism.levels` carries
+        no `type` and no `items`: its columns are the whole declaration
+        of what a row of it holds. Give it an `items` and this fails,
+        and reading columns is re-decided rather than inherited."""
+        from bga import schemas
+
+        row = schemas.schema("analyze/v6")["properties"]["parallelism"][
+            "properties"]["levels"]
+        assert "items" not in row and "type" not in row, (
+            "parallelism.levels declares items or a type now, so bga:columns "
+            "is no longer the only thing that reaches its row")
+        def items_only(node, found):
+            """The walk without the columns half - `UX-655` measured it
+            at 218 keys, holding neither of the two below."""
+            if isinstance(node, dict):
+                items = node.get("items")
+                if isinstance(items, dict):
+                    found |= set(items.get("properties", {}))
+                for value in node.values():
+                    items_only(value, found)
+            elif isinstance(node, list):
+                for value in node:
+                    items_only(value, found)
+            return found
+
+        assert {"level", "width"}.isdisjoint(
+            items_only(schemas.schema("analyze/v6"), set())), (
+            "an items-only walk reaches level or width, so reading "
+            "bga:columns is not what carries this row and the clause above "
+            "would pass without it")
+
+    def test_the_guide_states_the_reach_it_actually_has(self):
+        """The other half of the Required Fix. The statement was
+        unqualified while the population stopped one level down, so a
+        bump whose whole content landed deeper read as covered. The
+        figure is derived off the walk, so widening or narrowing it
+        moves the guide rather than leaving a stale number."""
+        body = _coverage_section()
+        surface = _consumer_surface()
+        assert f"**{len(surface)} keys**" in body, (
+            f"the coverage section does not state the {len(surface)} keys "
+            f"the walk reaches; a reader cannot tell how far it goes from a "
+            f"figure that is not there")
+        for stated in ("bga:columns", "any depth"):
+            assert stated in body, (
+                f"the coverage section does not say `{stated}` - the two "
+                f"things that decide what counts as a row, and the depth "
+                f"they are looked for at, are what the statement is about")
 
     def test_the_input_contracts_are_outside_the_population_on_purpose(self):
         """And it is asserted rather than assumed, because it is the

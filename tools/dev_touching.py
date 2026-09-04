@@ -8,8 +8,8 @@ nobody's inner loop. But a change almost never touches 160 files' worth
 of behaviour: it touches one or two modules, and the tests that can see
 that change are the ones that name them.
 
-So this maps the working diff to a test set, by **grep, not by import
-graph**. That choice is deliberate:
+So this maps the working diff to a test set by **grep over the path,
+the dotted name and the `from x import y` line**, not by import graph:
 
 * an import graph would miss `tests/unit/test_docs_links_and_commands.py`
   reading `docs/guides/cli.md`, and half this suite's guards are of that
@@ -150,6 +150,25 @@ def tokens_for(path: str):
     return {token for token in tokens if len(token) > 3}
 
 
+def import_pattern(path: str):
+    """`UX-624`: the `from <package> import <module>` spelling, as a regex.
+
+    `tokens_for` spells a module `bga.schemas`, and a test that uses it
+    writes `from bga import schemas` - a form no token matches, so the
+    grep half missed 253 real import edges and the map was covering for
+    them. `None` when the path is not an importable submodule.
+    """
+    if not path.endswith(".py"):
+        return None
+    p = pathlib.Path(path)
+    if p.stem.startswith("__") or not p.parent.parts:
+        return None
+    # The optional group is the `from bga import contracts, schemas`
+    # form: 25 of those edges hung on which name was written first.
+    return r"from\s+%s\s+import\s+\(?\s*(?:[\w\s,]*?,\s*)?%s\b" % (
+        re.escape(".".join(p.parent.parts)), re.escape(p.stem))
+
+
 def test_files():
     return sorted(
         str(p.relative_to(REPO))
@@ -192,7 +211,11 @@ def select(changed, census=True):
             if (REPO / candidate).exists():
                 chosen[candidate] = True
                 why.setdefault(candidate, []).append("map")
-        pattern = re.compile("|".join(re.escape(t) for t in sorted(tokens)))
+        spellings = [re.escape(t) for t in sorted(tokens)]
+        importing = import_pattern(path)
+        if importing:
+            spellings.append(importing)
+        pattern = re.compile("|".join(spellings))
         for candidate in test_files():
             try:
                 text = (REPO / candidate).read_text(encoding="utf-8")

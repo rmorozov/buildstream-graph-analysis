@@ -150,12 +150,21 @@ jobs:
         if: always() && matrix.python-version == '3.11'
         continue-on-error: true
 
+      # `UX-621`: `--annotate` is the same line again, where the log body
+      # is not. Run 33808929465 was red at this step and all an API
+      # client could read of it was the annotation "Process completed
+      # with exit code 1." - `GET /actions/jobs/{id}/logs` redirects to
+      # `productionresultssa18.blob.core.windows.net`, which answers 403
+      # on CONNECT here, and a step's entry in the jobs API carries no
+      # output field to put a verdict in. `/check-runs/{id}/annotations`
+      # answered 200 on the same run, so that is where it goes. The
+      # `::warning::` two jobs below is the same route, already in use.
       - name: Tiers match CI's own record of them
         run: |
           python tools/dev_tier_drift.py "${{ runner.temp }}/junit.xml" \
             --against --carry "${{ runner.temp }}/tier_carry.json" \
             --base "origin/${{ github.event.repository.default_branch }}" \
-            --summary "${{ runner.temp }}/tier_gate.txt" \
+            --summary "${{ runner.temp }}/tier_gate.txt" --annotate \
             --source "github-actions ubuntu-latest, test (3.11), -n auto"
         if: matrix.python-version == '3.11'
 

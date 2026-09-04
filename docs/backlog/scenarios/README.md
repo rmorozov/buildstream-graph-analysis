@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-654 scenarios: **6 open**, 648 closed.
+654 scenarios: **5 open**, 649 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -23,7 +23,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | capture | 0 | 92 |
 | analysis | 0 | 94 |
 | contracts | 0 | 47 |
-| viewer | 2 | 148 |
+| viewer | 1 | 148 |
 | cli | 0 | 21 |
 | store | 0 | 16 |
 | docs | 4 | 101 |
@@ -37,7 +37,6 @@ task file, which is the only place it ever lived twice.
 
 | ID | Scenario | Topic | Priority | Serves | Status |
 |---|---|---|---|---|---|
-| UX-650 | [nine page-built sections declare no reader](UX-0650-nine-page-built-sections-declare-no-reader.md) | viewer | Medium | the reader whose role owns a page-built section | 🔴 Open |
 | UX-651 | [the spec's Part 32 block is two ids behind](UX-0651-the-spec-s-part-32-block-is-two-ids-behind.md) | docs | Medium | anyone reading the spec to find out what contracts bga has | 🔴 Open |
 | UX-652 | [the currency guard resolves to a day, and a day holds three rounds](UX-0652-the-currency-guard-resolves-to-a-day-and-a-day-holds-three-rounds.md) | docs | Medium | anyone trusting a document's currency marker | 🔴 Open |
 | UX-653 | [a contract bump rewrites the record of what it superseded](UX-0653-a-contract-bump-rewrites-the-record-of-what-it-superseded.md) | docs | High | anyone reading a dated log entry as what was true that day | 🔴 Open |

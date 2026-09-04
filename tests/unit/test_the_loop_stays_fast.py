@@ -544,6 +544,150 @@ class TestTheSkeletonFitsTheRegister:
         for asked in ("why that shape", "Counts are what the run printed"):
             assert asked not in printed, (
                 f"the skeleton still asks for {asked!r}")
+class TestTheDerivedCountSeesAnUnstagedRow:
+    """`UX-617`: `--check` answers "is the tree I am about to commit
+    consistent", and `git ls-files` reads the **index**.
+
+    A task file written and not yet staged is invisible to it, so the
+    natural order - write the row, derive the counts, stage, commit -
+    shipped the count one short and the helper reported clean:
+
+    ```text
+    $ python tools/dev_close_task.py --check
+    0 problem(s) over 5 propert(y/ies), 617 backlog row(s)
+    $ git add … && make test
+    FAILED test_a_counted_figure_is_derived.py::…[scenarios]
+      architecture.md says 619 …; git has 620
+    ```
+
+    Four times in round 84, each costing a full-suite run. The
+    population is now the index **plus** untracked and non-ignored -
+    what a commit from here would carry.
+    """
+
+    @staticmethod
+    def _repo(tmp_path):
+        """A git repo with one committed scenario file and one written
+        but unstaged, plus the opening sentence that counts them."""
+        repo = tmp_path / "repo"
+        (repo / "docs/backlog/scenarios").mkdir(parents=True)
+        (repo / "docs/backlog/tasks").mkdir(parents=True)
+        (repo / "docs/design").mkdir(parents=True)
+        (repo / "docs/backlog/scenarios/UX-0001-committed.md").write_text(
+            "# UX-1\n", encoding="utf-8")
+        (repo / "docs/design/architecture.md").write_text(
+            "It counts 1 `docs/backlog/scenarios/` files and "
+            "0 `docs/backlog/tasks/` files.\n\n## Chapter\n\n1 more.\n",
+            encoding="utf-8")
+        for argv in (["init", "-q"],
+                     ["config", "user.email", "a@b"],
+                     ["config", "user.name", "a"],
+                     ["add", "docs", "-f"],
+                     ["commit", "-qm", "one"]):
+            subprocess.run(["git", *argv], cwd=repo, check=True,
+                           capture_output=True, text=True)
+        (repo / "docs/backlog/scenarios/UX-0002-unstaged.md").write_text(
+            "# UX-2\n", encoding="utf-8")
+        return repo
+
+    @staticmethod
+    def _pointed_at(repo, monkeypatch):
+        monkeypatch.setattr(close_task, "REPO", repo)
+        monkeypatch.setattr(close_task, "SCENARIOS",
+                            repo / "docs/backlog/scenarios")
+        monkeypatch.setattr(close_task, "ARCHITECTURE",
+                            repo / "docs/design/architecture.md")
+
+    def test_the_count_is_what_a_commit_from_here_would_carry(
+            self, tmp_path, monkeypatch):
+        """One file in the index, one written beside it. The index's
+        answer is 1 and the commit's is 2."""
+        repo = self._repo(tmp_path)
+        self._pointed_at(repo, monkeypatch)
+        assert close_task._backlog_counts()["scenarios"] == 2, (
+            "the derived count still reads the index alone, so a row "
+            "written and not yet staged ships the count one short")
+
+    def test_check_names_the_unstaged_row_instead_of_reporting_clean(
+            self, tmp_path, monkeypatch):
+        """`UX-617`'s acceptance test. The count alone reads as "the
+        sentence is stale"; the name says which half of the tree
+        moved, which is the thing four sessions had to work out."""
+        repo = self._repo(tmp_path)
+        self._pointed_at(repo, monkeypatch)
+        problems = close_task._architecture_is_derived()
+        assert len(problems) == 1, problems
+        assert "UX-0002-unstaged.md" in problems[0], (
+            f"`--check` reported a count mismatch without naming the "
+            f"file that is not staged: {problems[0]}")
+
+    def test_a_nested_worktree_and_an_ignored_file_are_not_counted(
+            self, tmp_path, monkeypatch):
+        """The half `UX-577` bought and this widening could have spent.
+        A checkout holds `.claude/worktrees/<agent>/`, a whole second
+        copy of the tree; git lists it as one entry and does not
+        descend, and `--exclude-standard` drops what `.gitignore`
+        names. A recursive glob counts both."""
+        repo = self._repo(tmp_path)
+        (repo / ".gitignore").write_text(
+            "*.scratch.md\n", encoding="utf-8")
+        (repo / "docs/backlog/scenarios/notes.scratch.md").write_text(
+            "x\n", encoding="utf-8")
+        subprocess.run(["git", "worktree", "add", "-q",
+                        ".claude/worktrees/agent-1", "-b", "w1"],
+                       cwd=repo, check=True, capture_output=True, text=True)
+        self._pointed_at(repo, monkeypatch)
+        assert close_task._backlog_counts()["scenarios"] == 2, (
+            "the count grew past the two files in `docs/backlog/"
+            "scenarios/` - an ignored file or the copy of the whole "
+            "tree under `.claude/worktrees/` is being counted (UX-577)")
+
+    def _run(self, *argv):
+        return subprocess.run(
+            [sys.executable, str(REPO / "tools/dev_close_task.py"), *argv],
+            capture_output=True, text=True, cwd=str(REPO), timeout=120)
+
+    @staticmethod
+    def _index_off_by_a_count(tmp_path):
+        """A backlog copy whose counts sentence disagrees with its rows."""
+        import shutil
+        scenarios = tmp_path / "scenarios"
+        shutil.copytree(REPO / "docs/backlog/scenarios", scenarios)
+        readme = scenarios / "README.md"
+        readme.write_text(
+            re.sub(r"^\d+ scenarios: \*\*\d+ open\*\*",
+                   "999 scenarios: **7 open**",
+                   readme.read_text(encoding="utf-8"), count=1, flags=re.M),
+            encoding="utf-8")
+        return scenarios
+
+    def test_write_names_the_files_it_changed(self, tmp_path):
+        """The second shape, and the one that caught the row filing
+        `UX-617`: `--write` also rewrites the index's counts sentence,
+        so a caller who staged before deriving ships the rewrite
+        unstaged. A `--write` that says nothing cannot be re-staged
+        after."""
+        scenarios = self._index_off_by_a_count(tmp_path)
+        done = self._run("--check", "--write", "--scenarios", str(scenarios))
+        assert done.returncode == 0, done.stdout + done.stderr
+        assert "--write changed 1 file(s)" in done.stdout, (
+            "`--write` rewrote the index and did not say so\n" + done.stdout)
+        assert "README.md" in done.stdout.split("--write changed")[1], (
+            "`--write` says it changed something without naming it\n"
+            + done.stdout)
+
+    def test_write_says_so_when_it_changed_nothing(self, tmp_path):
+        """The clause that stops the report becoming "it always writes".
+        Measured on the tree: a derived index rewrites nothing, and a
+        caller told to stage a file that did not move stages noise."""
+        scenarios = self._index_off_by_a_count(tmp_path)
+        self._run("--check", "--write", "--scenarios", str(scenarios))
+        again = self._run("--check", "--write", "--scenarios", str(scenarios))
+        assert "--write changed no file(s)." in again.stdout, (
+            "a second `--write` over a derived index still reports a "
+            "change\n" + again.stdout)
+
+
 class TestTheCloseHelperRunsTheGrepNobodyRan:
     """`UX-493`: fixing guide §3.6's grep, run rather than remembered.
 

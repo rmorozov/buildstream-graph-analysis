@@ -59,14 +59,24 @@ If that is not the commit your brief names as the base, **say so in
 your first sentence, then take the base**:
 
 ```bash
-git reset --hard <the commit your brief names>
+git merge --ff-only <the commit your brief names>
 ```
 
-That always works and needs no fetch: a linked worktree shares the main
-checkout's object database — `git rev-parse --git-common-dir` points at
-it — so every commit the orchestrator has, you already have. `UX-560`
-measured round 81's two tracks both created from `origin/main`, 34
-commits behind their named base, and both recovered exactly this way.
+It needs no fetch: a linked worktree shares the main checkout's
+object database — `git rev-parse --git-common-dir` points at it — so
+every commit the orchestrator has, you already have. `UX-560` measured round
+81's two tracks both created from `origin/main`, 34 commits behind
+their named base, and both recovered exactly this way. `UX-614` read
+the same thing off a worktree branch's reflog in one line: `branch:
+Created from origin/main` — the harness picks the default branch, and
+whether that is behind the round's tip is not its decision.
+
+`--ff-only` rather than `git reset --hard`, which reaches the same
+commit whenever you are merely *behind* — the only direction the
+harness has produced in four measured rounds. The other direction is
+where they differ: a copy that has diverged is work, and `--ff-only`
+stops rather than discarding it. One of round 84's three affected
+tracks was also refused the reset by a permission classifier.
 
 Never recreate a file the brief cites and your copy lacks. That is the
 base being wrong, not the file.
@@ -76,6 +86,23 @@ The merge back is not free either, and the number is on file: round
 `tools/dev_close_task.py` and `tests/unit/test_the_loop_stays_fast.py`
 — both edited inside the nine commits the tracks did not have. Both
 conflicts were additive and resolved by keeping each side.
+
+## Where your scratch files go
+
+The worktree is yours; the scratchpad is not. It is keyed by the
+*project*, not by the copy you run in — `UX-615` measured **one**
+session directory for the whole repository, holding **1592** entries
+from nineteen days of rounds with `mutate.py` among them. Round 84's
+track had exactly that file overwritten by another track mid-session,
+after its matrix had run. Had the timing been worse it would have
+reported a mutation table it did not produce, which is the one thing
+`falsify` cannot tolerate.
+
+So make a directory named for your worktree and write only inside it:
+
+```bash
+mkdir -p "<the scratchpad path you were given>/$(basename "$PWD")"
+```
 
 ## The loop
 

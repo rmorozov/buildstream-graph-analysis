@@ -592,13 +592,20 @@ class TestTheSubagentsAreWellFormed:
 
         Round 81's two tracks both opened 34 commits behind and both
         recovered by resetting, so the instruction is to take the base,
-        not to stop at it. The reset needs no fetch because a linked
+        not to stop at it. Taking it needs no fetch because a linked
         worktree shares the main checkout's object database, and the
         file must say so - a track that does not know that will fetch,
         or worse, decide the commit is unreachable and improvise.
+
+        `UX-614` moved the *command* out of this clause: asserting the
+        literal `git reset --hard` passed unchanged when the fenced
+        instruction became `git merge --ff-only`, so the string was no
+        longer reading what it named. What is left here is the pair the
+        wording cannot drop - take it, and why that always works -
+        and `TestATrackTakesTheBaseItWasNamed` runs the command itself.
         """
         body = (AGENTS / "implementer.md").read_text(encoding="utf-8")
-        assert "git reset --hard" in body, (
+        assert "then take the base" in body, (
             "implementer.md does not tell a track to take its named "
             "base, so a wrong base is reported and then worked around")
         assert "object database" in body or "object store" in body, (
@@ -695,6 +702,252 @@ class TestTheSubagentsAreWellFormed:
         reaches a task file."""
         body = (AGENTS / "researcher.md").read_text(encoding="utf-8")
         assert "could not establish" in body or "did not find" in body
+
+
+class TestATrackTakesTheBaseItWasNamed:
+    """`UX-614`: the worktree is branched from the **default branch**,
+    not the round's, and three of round 84's seven tracks hit it.
+
+    Re-measured on round 85's own worktree, one line:
+
+    ```text
+    $ git reflog show worktree-agent-a4b6a45b499adfdc3
+    5343bd6 …@{0}: branch: Created from origin/main
+    ```
+
+    The harness picks the branch; the brief cannot. So the remedy is
+    the thing that has to hold, and these clauses **run** it rather
+    than reading it: the command is lifted out of `implementer.md` and
+    executed against the two shapes a copy can be in.
+
+    `git reset --hard` was the documented remedy until this item.
+    Behind - the only direction four measured rounds have produced -
+    the two are the same. Diverged they are not, and that is the
+    argument: `--ff-only` stops, the reset discards.
+    """
+
+    PLACEHOLDER = re.compile(r"<[^>]+>")
+
+    @staticmethod
+    def _recovery():
+        """The command `implementer.md` tells a track to run when its
+        copy is not at its base, read out of the file rather than
+        restated here - a clause that carried its own copy would pass
+        over a body that documents something else."""
+        body = (AGENTS / "implementer.md").read_text(encoding="utf-8")
+        section = body.split("## Where your copy starts", 1)[1]
+        section = section.split("\n## ", 1)[0]
+        lines = [line.split("#")[0].strip()
+                 for block in re.findall(r"```bash\n(.*?)```", section, re.S)
+                 for line in block.splitlines() if line.strip()]
+        found = [line for line in lines
+                 if line.startswith("git") and not line.startswith("git log")]
+        assert len(found) == 1, (
+            f"'Where your copy starts' fences {len(found)} recovery "
+            f"command(s), not one: {found}. A track reading two does not "
+            f"know which is the instruction")
+        return found[0]
+
+    @classmethod
+    def _argv(cls, sha):
+        command = cls._recovery()
+        assert cls.PLACEHOLDER.search(command), (
+            f"{command!r} names no base for the track to substitute")
+        import shlex
+        return shlex.split(cls.PLACEHOLDER.sub(sha, command))
+
+    @staticmethod
+    def _git(where, *argv, check=True):
+        return subprocess.run(["git", *argv], cwd=where, check=check,
+                              capture_output=True, text=True, timeout=60)
+
+    @classmethod
+    def _round_and_a_copy_behind_it(cls, tmp_path):
+        """The harness's shape: a worktree branched from the default
+        branch while the round's branch is three commits ahead, and a
+        file the brief cites existing only on the round's."""
+        repo = tmp_path / "repo"
+        repo.mkdir()
+        (repo / "base.md").write_text("base\n", encoding="utf-8")
+        for argv in (["init", "-q", "-b", "main"],
+                     ["config", "user.email", "a@b"],
+                     ["config", "user.name", "a"],
+                     ["add", "base.md"], ["commit", "-qm", "base"]):
+            cls._git(repo, *argv)
+        cls._git(repo, "checkout", "-qb", "round")
+        for n in range(3):
+            (repo / f"docs-{n}.md").write_text("x\n", encoding="utf-8")
+            cls._git(repo, "add", f"docs-{n}.md")
+            cls._git(repo, "commit", "-qm", f"round {n}")
+        tip = cls._git(repo, "rev-parse", "HEAD").stdout.strip()
+        cls._git(repo, "checkout", "-q", "main")
+        copy = tmp_path / "copy"
+        cls._git(repo, "worktree", "add", "-q", "-b", "track", str(copy),
+                 "main")
+        return repo, copy, tip
+
+    def test_the_documented_recovery_reaches_the_round_s_tip(self, tmp_path):
+        """`UX-614`'s acceptance test: a track launched while the
+        round's branch is ahead of the default, ending on the round's
+        tip - with the file its brief cites now present."""
+        _repo, copy, tip = self._round_and_a_copy_behind_it(tmp_path)
+        assert not (copy / "docs-2.md").exists(), (
+            "the sandbox did not reproduce the shape: the copy already "
+            "has the round's work")
+        done = subprocess.run(self._argv(tip), cwd=copy, capture_output=True,
+                              text=True, timeout=60)
+        assert done.returncode == 0, (
+            f"the command implementer.md documents does not recover a "
+            f"copy three commits behind: {done.stderr}")
+        assert self._git(copy, "rev-parse", "HEAD").stdout.strip() == tip, (
+            "the copy ran the documented recovery and is not at the base")
+        assert (copy / "docs-2.md").exists(), (
+            "the recovery moved the branch without the working tree, so "
+            "the files the brief cites are still missing")
+
+    def test_the_recovery_refuses_to_discard_the_copy_s_own_work(
+            self, tmp_path):
+        """Why `--ff-only` and not `git reset --hard`. Behind, the two
+        are the same command; diverged, the reset silently throws away
+        a commit and the track reports work it no longer has. The
+        instruction has to be the one that fails loudly."""
+        _repo, copy, tip = self._round_and_a_copy_behind_it(tmp_path)
+        (copy / "mine.md").write_text("a track's own work\n", encoding="utf-8")
+        self._git(copy, "add", "mine.md")
+        self._git(copy, "commit", "-qm", "the track's commit")
+        mine = self._git(copy, "rev-parse", "HEAD").stdout.strip()
+
+        done = subprocess.run(self._argv(tip), cwd=copy, capture_output=True,
+                              text=True, timeout=60)
+        assert done.returncode != 0, (
+            "the documented recovery took the base over a diverged copy "
+            "and said nothing - the track's own commit is gone")
+        assert self._git(copy, "rev-parse", "HEAD").stdout.strip() == mine
+        assert (copy / "mine.md").exists()
+
+    def test_the_orchestrator_names_the_recovery_the_track_runs(self):
+        """One copy of the instruction, in the two files that carry it:
+        `decompose` is what the orchestrator writes the brief from and
+        `implementer.md` is what the track reads. `UX-510` put the sha
+        in the brief; this puts the *remedy* there, because a brief
+        that asks a track to report its base gets a report and then a
+        round of working around.
+
+        Measured offset between the two on the skill as written: -247
+        characters, one paragraph - so the window is the paragraph, not
+        the file. A clause reading the whole body passes on a skill
+        that names the command somewhere else entirely.
+        """
+        verb = " ".join(self._recovery().split()[:3])
+        skill = " ".join((SKILLS / "decompose/SKILL.md").read_text(
+            encoding="utf-8").split())
+        assert verb in skill, (
+            f"the decompose skill does not tell the orchestrator to put "
+            f"`{verb}` in the brief, so the track's remedy and the brief's "
+            f"instruction are two different sentences (UX-614)")
+        at = skill.index(verb)
+        assert "git rev-parse HEAD" in skill[max(0, at - 400):at + 400], (
+            "the skill names the recovery without saying the sha is "
+            "derived at launch; a sha remembered from the round document "
+            "is the stale base this item is about")
+
+
+class TestEachTrackHasItsOwnScratchpad:
+    """`UX-615`: the worktrees are isolated and the scratchpad is not.
+
+    Measured on this repository's own, round 85:
+
+    ```text
+    session directories under the project key        1
+    entries in the one scratchpad                 1592   (19 days)
+    files matching `mutate*`                        33
+    ```
+
+    The path is keyed by the **project**, so every track of a round
+    lands in it at once. Round 84's track had its `mutate.py` - one of
+    those 33 - overwritten by another track mid-session, after its
+    matrix had run; the surviving names that avoided it carry an item
+    id or an agent id, improvised each time.
+
+    The convention is the one name no two tracks share, and these
+    clauses **run** the recipe out of `implementer.md` rather than
+    reading it, twice, from two worktrees.
+    """
+
+    PLACEHOLDER = re.compile(r"<[^>]+>")
+
+    @staticmethod
+    def _recipe():
+        """The line `implementer.md` tells a track to run before it
+        writes a scratch file."""
+        body = (AGENTS / "implementer.md").read_text(encoding="utf-8")
+        section = body.split("## Where your scratch files go", 1)[1]
+        section = section.split("\n## ", 1)[0]
+        lines = [line.strip()
+                 for block in re.findall(r"```bash\n(.*?)```", section, re.S)
+                 for line in block.splitlines() if line.strip()]
+        assert len(lines) == 1, (
+            f"'Where your scratch files go' fences {len(lines)} commands, "
+            f"not one: {lines}")
+        return lines[0]
+
+    def _made(self, shared, worktree):
+        """The directories the recipe leaves under `shared`, run from
+        `worktree` with the scratchpad path substituted for the
+        placeholder the brief fills in."""
+        worktree.mkdir(parents=True, exist_ok=True)
+        command = self._recipe()
+        assert self.PLACEHOLDER.search(command), (
+            f"{command!r} names no scratchpad for the brief to fill in")
+        done = subprocess.run(
+            ["sh", "-c", self.PLACEHOLDER.sub(str(shared), command)],
+            cwd=worktree, capture_output=True, text=True, timeout=60)
+        assert done.returncode == 0, done.stderr
+        return sorted(p for p in shared.iterdir() if p.is_dir())
+
+    def test_two_tracks_writing_one_filename_do_not_see_each_other(
+            self, tmp_path):
+        """`UX-615`'s acceptance test, on the documented recipe: two
+        tracks, one filename, and neither reads the other's."""
+        shared = tmp_path / "scratchpad"
+        shared.mkdir()
+        first = self._made(shared, tmp_path / "wt" / "agent-aaaa")
+        second = self._made(shared, tmp_path / "wt" / "agent-bbbb")
+        assert len(second) == 2, (
+            f"two worktrees ran the recipe and it made {len(second)} "
+            f"director(y/ies): {[p.name for p in second]}. They share a "
+            f"scratchpad, which is what UX-615 is")
+        mine, theirs = first[0], next(p for p in second if p != first[0])
+        (mine / "mutate.py").write_text("mine\n", encoding="utf-8")
+        (theirs / "mutate.py").write_text("theirs\n", encoding="utf-8")
+        assert (mine / "mutate.py").read_text(encoding="utf-8") == "mine\n", (
+            "the second track's write landed on the first track's file - "
+            "round 84's overwrite, reproduced")
+
+    def test_the_directory_is_named_for_the_worktree(self, tmp_path):
+        """Not merely *a* unique directory: the name has to be one the
+        track can compute without being told, or the brief has to
+        allocate it and two tracks launched at once collide again."""
+        shared = tmp_path / "scratchpad"
+        shared.mkdir()
+        made = self._made(shared, tmp_path / "wt" / "agent-cccc")
+        assert [p.name for p in made] == ["agent-cccc"], (
+            f"the recipe made {[p.name for p in made]}, not a directory "
+            f"named for the worktree it was run in")
+
+    def test_the_orchestrator_names_the_same_convention(self):
+        """One copy, in the two files that carry it - `decompose` is
+        what the brief is written from, `implementer.md` is what the
+        track reads. A brief that says nothing leaves the track to
+        improvise a suffix, which is what the 33 `mutate*` files in the
+        shared directory are."""
+        skill = " ".join((SKILLS / "decompose/SKILL.md").read_text(
+            encoding="utf-8").split())
+        assert 'basename "$PWD"' in skill, (
+            "the decompose skill does not tell the orchestrator to name "
+            "the track's own scratchpad in the brief (UX-615)")
+        assert 'basename "$PWD"' in self._recipe(), (
+            "implementer.md's recipe and the skill's are two conventions")
 
 
 class TestEverySkillWouldLoad:

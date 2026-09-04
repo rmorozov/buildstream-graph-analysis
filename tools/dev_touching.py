@@ -26,6 +26,7 @@ green run prints one line (`UX-525`) - pytest output is 10-16% of a
 track's tokens; red prints everything, and `--loud` always does.
 """
 import argparse
+import functools
 import os
 import pathlib
 import re
@@ -227,6 +228,43 @@ def select(changed, census=True):
     return sorted(chosen), why
 
 
+# `UX-632`: the documents carrying the figure. `CLAUDE.md` is not one -
+# `UX-471`'s guard there forbids a count the tree changes under it, so
+# that row defers to the guide the way its `make test` row already does.
+COST_SITES = ("docs/contributing/fixing-guide.md",)
+
+#: The sentence those documents carry, and the shape `--write` finds.
+FIGURE = "{min}-{max} of {files} test files, median {median}"
+FIGURE_RE = re.compile(r"\d+-\d+ of \d+ test files, median \d+")
+
+
+@functools.lru_cache(maxsize=1)
+def spread():
+    """What a one-module diff selects, over every module the map names.
+
+    Seconds are a property of the machine (`UX-551`) and this is a
+    property of the tree, which is why it is the figure the documents
+    carry. Cached: it is 85 selections over the whole suite, and the
+    guard that reads it asks four times.
+    """
+    sizes = sorted(len(select([module])[0]) for module in touch_map())
+    if not sizes:
+        raise RuntimeError("the touch map is empty; there is no population")
+    return {"min": sizes[0], "max": sizes[-1],
+            "median": sizes[len(sizes) // 2],
+            "modules": len(sizes), "files": len(test_files())}
+
+
+def figure(values=None):
+    """The cost row's sentence, from `spread()`."""
+    return FIGURE.format(**(values or spread()))
+
+
+def write_figure(text: str, row: str) -> str:
+    """`text` with every stale copy of the figure replaced by `row`."""
+    return FIGURE_RE.sub(row, text)
+
+
 def last_line(text: str) -> str:
     """Pytest's summary line - the last non-empty one it printed."""
     lines = [line.strip() for line in text.splitlines() if line.strip()]
@@ -245,7 +283,28 @@ def main(argv=None) -> int:
                         help="select from the staged diff, not the desk")
     parser.add_argument("--loud", action="store_true",
                         help="print pytest's output even when it passes")
+    parser.add_argument("--spread", action="store_true",
+                        help="print what a one-module diff selects, over "
+                             "every module the map names")
+    parser.add_argument("--write", action="store_true",
+                        help="with --spread, put that figure in the "
+                             "documents that price this loop")
     args, rest = parser.parse_known_args(argv)
+
+    if args.spread:
+        row = figure()
+        print(row)
+        for name in COST_SITES:
+            path = REPO / name
+            text = path.read_text(encoding="utf-8")
+            fixed = write_figure(text, row)
+            if fixed == text:
+                continue
+            if args.write:
+                path.write_text(fixed, encoding="utf-8")
+            print(f"{'rewrote' if args.write else 'stale'}: {name}",
+                  file=sys.stderr)
+        return 0
 
     changed = changed_files(args.base, staged=args.staged)
     if not changed:

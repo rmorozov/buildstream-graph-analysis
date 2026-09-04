@@ -230,6 +230,10 @@ def _real_modules(tracked: Optional[Tuple[str, ...]] = None):
     the non-recursive `tools/*.py` left the LD_PRELOAD hook and the
     ptrace spine - Plane 2, which is what the map is a map of - with no
     row and the guard green.
+
+    `UX-631`: a `bga/` package contributes its files and not its
+    directory, so a module inside one has no home the moment the
+    directory does.
     """
     tracked = _tracked() if tracked is None else tracked
     modules = set()
@@ -242,9 +246,11 @@ def _real_modules(tracked: Optional[Tuple[str, ...]] = None):
                 modules.add(rel)
         elif rel.startswith("bga/") and rel.count("/") == 1 and rel.endswith(".py"):
             modules.add(rel)
-        elif rel.count("/") == 2 and rel.startswith("bga/") and rel.endswith(
-                "/__init__.py"):
-            modules.add(rel.rsplit("/", 1)[0] + "/")
+        elif (rel.count("/") == 2 and rel.startswith("bga/")
+              and rel.endswith(".py") and not rel.endswith("/__init__.py")):
+            # The package's own `__init__.py` is reachable from its row;
+            # what needs a row of its own is each module beside it.
+            modules.add(rel)
     return modules
 
 
@@ -276,15 +282,35 @@ def _named(text, name):
             or name.rstrip("/").split("/")[-1].removesuffix(".py") in text)
 
 
+def _names_the_module(text, rel):
+    """The map names a module by its path, or by its filename **on a row
+    that names its directory**.
+
+    `UX-631`: the rule was `basename-without-suffix in text`, a
+    substring of the whole map. `bga/report/rate.py` passed on the
+    `rate` inside `generated`, `bga/replay/scheduler.py` on the word
+    `scheduler` in another package's description, and
+    `bga/validation/provenance.py` on the row for `bga/provenance.py` -
+    a different file. Reading the directory's own row is the question
+    the clause is named for; the substring was a proxy for it.
+    """
+    if rel in text:
+        return True
+    if rel.endswith("/"):
+        # A directory has no filename to find on a row; the path is it.
+        return False
+    parent, base = rel.rsplit("/", 1)
+    rows = "\n".join(line for line in text.splitlines() if parent + "/" in line)
+    return re.search(rf"(?<![\w./-]){re.escape(base)}(?![\w])", rows) is not None
+
+
 class TestTheMapNamesTheTree:
     def test_every_module_is_on_the_map(self):
         """A module nobody is pointed at is one every session
         rediscovers - which is the cost the map exists to remove."""
         text = _map_text()
-        missing = sorted(
-            name for name in _real_modules()
-            if name.rstrip("/").split("/")[-1].removesuffix(".py") not in text
-            and name not in text)
+        missing = sorted(name for name in _real_modules()
+                         if not _names_the_module(text, name))
         assert missing == [], (
             f"module(s) the context map does not mention: {missing}. "
             f"docs/contributing/fixing-guide.md section 6.")
@@ -301,8 +327,40 @@ class TestTheMapNamesTheTree:
                      "tools/dev_run.sh",                # shell
                      "bga/viewer/views.js",
                      "bga/viewer/perfetto.html",
-                     "bga/viewer/style.css"):
+                     "bga/viewer/style.css",
+                     "bga/report/rate.py",              # `UX-631`: inside
+                     "bga/floors/observed.py"):        # a `bga/` package
             assert name in modules, f"the walk does not reach {name}"
+        assert not [m for m in modules if m.startswith("bga/") and
+                    m.endswith("/") and m not in MAPPED_SUFFIXES], (
+            f"a `bga/` package is still standing in for its files: "
+            f"{sorted(m for m in modules if m.endswith('/'))}")
+
+    def test_a_module_is_named_by_its_own_row_and_not_by_a_word(self):
+        """`UX-631`'s clause. The rule was a substring of the whole map,
+        so `bga/report/rate.py` - the module that landed unmentioned and
+        kept this file green - was answered by the `rate` inside
+        `generated`, on a row about release notes. A word that is not on
+        the module's directory's row answers nothing."""
+        assert not _names_the_module(
+            "tools/bga_release_notes.py  a release body, generated from "
+            "the closed rows", "bga/report/rate.py")
+        assert not _names_the_module(
+            "bga/provenance.py  why each claim is made",
+            "bga/validation/provenance.py")
+        assert not _names_the_module(
+            "bga/report/   text, json, ci_comment", "bga/report/text.py"), (
+            "a filename is named without its suffix")
+        # Two packages hold a `models.py`; one row cannot answer for both.
+        assert not _names_the_module(
+            "bga/ingest/   loader.py, models.py", "bga/structural/models.py")
+        assert _names_the_module(
+            "bga/report/   text.py, rate.py", "bga/report/rate.py")
+        assert _names_the_module("bga/report/rate.py", "bga/report/rate.py")
+        # A directory has no filename, so the empty tail must not match
+        # every row - found by mutating the walk back to directories.
+        assert not _names_the_module("bga/floors/  capacity.py", "bga/graph/")
+        assert _names_the_module("bga/graph/   edg.py", "bga/graph/")
 
     def test_the_walk_reads_git_and_not_the_checkout(self):
         """A main checkout holds `.claude/worktrees/<agent>/` - a whole
@@ -461,13 +519,28 @@ class TestTheMapsCapabilitiesDerive:
     def test_the_format_row_answers_no_path_question(self):
         """A vocabulary inside the map could satisfy the module
         direction with a word that is not a path - `graph` would answer
-        `bga/graph/`. These four cannot."""
-        basenames = {name.rstrip("/").split("/")[-1].removesuffix(".py")
-                     for name in _real_modules()} | {
-            name.rstrip("/").split("/")[-1] for name in _real_test_entries()}
-        assert not basenames & set(_format_row()), (
-            f"the `--format` row would answer a path question: "
-            f"{sorted(basenames & set(_format_row()))}")
+        `bga/graph/`. Asked of the row itself: nothing in it names a
+        module or a test entry.
+
+        `UX-631` re-instrumented this. It compared bare basenames
+        against the row's words, which said `text` answers
+        `bga/report/text.py` the moment that file joined the population
+        - and it does not, because a module is named on its own
+        directory's row. The set intersection was a proxy for the
+        naming rule; this asks the naming rule.
+        """
+        row = "--format " + ", ".join(_format_row())
+        answered = sorted(name for name in _real_modules()
+                          if _names_the_module(row, name))
+        answered += sorted(name for name in _real_test_entries()
+                           if _named(row, name))
+        assert answered == [], (
+            f"the `--format` row would answer a path question: {answered}")
+        # The floor: the check can say yes. Under `UX-631`'s rule a
+        # one-line row cannot answer for a module, so without this the
+        # clause is green whatever the row says.
+        assert _names_the_module(row + "\nbga/report/  rate.py",
+                                 "bga/report/rate.py")
 
     def test_a_bare_word_among_paths_is_a_claim_the_registry_answers(self):
         """`UX-573`'s `csv`, as a direction. A comma list of paths with

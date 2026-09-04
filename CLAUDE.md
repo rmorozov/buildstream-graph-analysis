@@ -14,7 +14,7 @@ file is the day-one summary, and
 | | |
 |---|---|
 | `make test` | the whole suite. **Required before marking anything done.** Wall clock moves >2x with the machine — the guide carries the readings |
-| `make test-touching` | just the files naming the modules your diff touched (~4s) |
+| `make test-touching` | just the files naming the modules your diff touched — a spread over the tree, not a duration; the guide carries it |
 | `make test-small` \| `-medium` \| `-large` \| `-fast` | tiers, from measured duration in `tests/tiers.py` |
 | `make test-tiers` | the suite plus a tier-drift parse, in one run |
 | `make lint` | ruff + PyMarkdown; both must be clean |

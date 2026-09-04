@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-641 scenarios: **8 open**, 633 closed.
+643 scenarios: **9 open**, 634 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -27,7 +27,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | cli | 0 | 21 |
 | store | 0 | 16 |
 | docs | 1 | 97 |
-| guards | 0 | 131 |
+| guards | 1 | 133 |
 
 ## Open scenarios
 
@@ -44,6 +44,7 @@ task file, which is the only place it ever lived twice.
 | UX-641 | [the levels key is the identity function](UX-0641-the-levels-key-is-the-identity-function.md) | analysis | Medium | anyone reading the parallelism block | 🔴 Open |
 | UX-642 | [a structured fold forgets it was open](UX-0642-a-structured-fold-forgets-it-was-open.md) | viewer | Low | anyone who shares a link to a report they were reading | 🔴 Open |
 | UX-643 | [a reader role that demotes rather than hides](UX-0643-a-reader-role-that-demotes-rather-than-hides.md) | viewer | Medium | all five readers, each of whom gets the other four's page | 🔴 Open |
+| UX-645 | [the census floor spends half the width bound](UX-0645-the-census-floor-spends-half-the-width-bound.md) | guards | Low | anyone reading a width figure as if it were about their module | 🔴 Open |
 
 ## UX-563..UX-586: the eighty-second round — the documents, read against the tool (2026-09-03)
 

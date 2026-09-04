@@ -37,10 +37,26 @@ import subprocess
 import pytest
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
-DOC = REPO / "docs/design/architecture.md"
+DOC_REL = "docs/design/architecture.md"
+DOC = REPO / DOC_REL
+GUIDE = REPO / "docs/contributing/fixing-guide.md"
 HEADING = "## Verification Log"
 
 NO_HISTORY = "the clone has no history for this file (a shallow checkout)"
+
+#: `UX-653`. The rule the log is held to, in the document a reader has
+#: and in the guide a session reads before it sweeps an id.
+APPEND_ONLY = "append-only below its newest entry"
+
+#: The escape `UX-353` leaves, named where a session meets the red: the
+#: green meant is the marker word in the old entry, not the sweep.
+RETIRED_GUARD = "test_no_document_serves_a_retired_contract.py"
+
+#: A published contract id, as the tables above the log write one.
+CONTRACT_ID = re.compile(r"\b[a-z][a-z0-9-]*/v\d+\b")
+
+#: An entry's heading: the date a reader takes and the item it credits.
+ENTRY = re.compile(r"^Updated (\d{4}-\d{2}-\d{2}) \(after `(UX-\d+)`\)", re.M)
 
 # UX-306 follow-up, found by this guard failing on PR #155 for a reason
 # that was not the document's. `actions/checkout@v4` clones at depth 1,
@@ -157,6 +173,58 @@ def _only_a_derived_figure_moved(sha):
          if ln.startswith("-") and not ln.startswith("---")],
         [ln[1:] for ln in lines
          if ln.startswith("+") and not ln.startswith("+++")])
+
+
+def entries(text):
+    """`[((date, item), body)]` for one document's log, newest first.
+
+    The heading is the key: an entry is identified by what it credits,
+    not by where it sits, so the comparison survives an entry being
+    added above it - which is the only edit the log is meant to take.
+    """
+    if HEADING not in text:
+        return []
+    log = text.split(HEADING, 1)[1]
+    heads = list(ENTRY.finditer(log))
+    return [((head.group(1), head.group(2)),
+             log[head.start():(heads[n + 1].start()
+                               if n + 1 < len(heads) else len(log))])
+            for n, head in enumerate(heads)]
+
+
+def rewritten_below_the_newest(before, after):
+    """The older entries whose **contract ids** moved between two bodies.
+
+    `UX-653`: a dated record is worth having only if it says what was
+    true then, and four `analyze` bumps carried one sentence from `v2`
+    to `v6` because a `git grep`-and-replace reached it. Compared over
+    the ids, not the prose: a correction to an old entry's wording is
+    fine and a rename through it is the defect.
+
+    The newest entry in `after` is exempt - every round that re-grounds
+    the document rewrites it, and freezing it would forbid the log's one
+    working mechanism. Pure, so both halves are testable claims.
+    """
+    was = dict(entries(before))
+    return [key for key, body in entries(after)[1:]
+            if key in was
+            and sorted(set(CONTRACT_ID.findall(was[key])))
+            != sorted(set(CONTRACT_ID.findall(body)))]
+
+
+def _previous_body():
+    """`DOC` as it stood before its newest change, or `None`.
+
+    `git show <parent>:<path>` is content - the clone has that tree or
+    fails loudly. Finding the parent is the history question, so that is
+    where this declines.
+    """
+    newest = _commits_touching("-1")
+    if not newest or newest[0] in _graft_boundary():
+        return None
+    done = subprocess.run(["git", "show", f"{newest[0]}^:{DOC_REL}"],
+                          capture_output=True, text=True, cwd=REPO, timeout=60)
+    return done.stdout if done.returncode == 0 else None
 
 
 def _history_is_readable():
@@ -437,3 +505,101 @@ class TestTheGuardWouldHaveCaughtIt:
         if not newest:
             pytest.skip(NO_HISTORY)
         assert not stale(_landed_after(newest[0]))
+
+
+class TestTheEntriesAreReadAsWritten:
+    """`UX-653`, the pure half. `rewritten_below_the_newest` decides
+    everything the clause below reports, so what it selects is read
+    here: a comparison that saw nothing, or one that saw the whole
+    document, would both leave that clause green forever."""
+
+    BEFORE = ("## Verification Log\n\n"
+              "Updated 2026-09-04 (after `UX-629`), the `analyze/v5` row.\n\n"
+              "Updated 2026-09-03 (after `UX-569`), the `analyze/v5` row.\n\n"
+              "Updated 2026-08-25 (after `UX-286`), the `analyze/v2` row.\n")
+
+    def test_a_sweep_through_an_old_entry_is_named_by_its_date(self):
+        after = self.BEFORE.replace(
+            "(after `UX-286`), the `analyze/v2`",
+            "(after `UX-286`), the `analyze/v6`")
+        assert rewritten_below_the_newest(self.BEFORE, after) == [
+            ("2026-08-25", "UX-286")]
+
+    def test_the_newest_entry_may_be_rewritten(self):
+        """Out of Scope, and the reason: every round that re-grounds the
+        document rewrites its top entry."""
+        after = self.BEFORE.replace(
+            "(after `UX-629`), the `analyze/v5`",
+            "(after `UX-629`), the `analyze/v6`")
+        assert rewritten_below_the_newest(self.BEFORE, after) == []
+
+    def test_an_entry_pushed_down_by_a_new_one_is_still_itself(self):
+        """The key is what the entry credits, not its position. Keyed by
+        index, adding an entry would report every older one at once."""
+        after = self.BEFORE.replace(
+            "## Verification Log\n\n",
+            "## Verification Log\n\n"
+            "Updated 2026-09-05 (after `UX-653`), the `analyze/v6` row.\n\n")
+        assert rewritten_below_the_newest(self.BEFORE, after) == []
+
+    def test_a_contract_table_above_the_log_is_not_an_entry(self):
+        """The log is the block with the rule; the tables above it are
+        where a live id is *supposed* to be swept."""
+        before = "| `analyze/v5` | the document |\n\n" + self.BEFORE
+        after = before.replace("| `analyze/v5` |", "| `analyze/v6` |", 1)
+        assert rewritten_below_the_newest(before, after) == []
+
+    def test_prose_an_old_entry_gains_is_not_a_rewrite(self):
+        """`UX-353`'s marker word is the green this rule wants a session
+        to reach for, so adding it must not be what this reports."""
+        after = self.BEFORE.replace(
+            "(after `UX-286`), the `analyze/v2` row.",
+            "(after `UX-286`), the `analyze/v2` row, superseded now.")
+        assert rewritten_below_the_newest(self.BEFORE, after) == []
+
+    def test_the_split_finds_every_entry(self):
+        """Non-vacuity: a split that found one entry, or none, would
+        make every clause above pass by reading nothing."""
+        assert [key for key, _ in entries(self.BEFORE)] == [
+            ("2026-09-04", "UX-629"), ("2026-09-03", "UX-569"),
+            ("2026-08-25", "UX-286")]
+        assert len(entries(DOC.read_text(encoding="utf-8"))) >= 20
+
+
+class TestTheLogIsAppendOnlyBelowItsNewestEntry:
+    """`UX-653`. Four `analyze` bumps carried the 2026-08-25 entry's
+    `analyze/v2` to `v6`, each a `git grep`-and-replace of a live id
+    doing the right thing everywhere else and reaching the one block
+    whose purpose is to say what an earlier session checked."""
+
+    def test_no_older_entry_had_a_contract_id_swept_through_it(self):
+        before = _previous_body()
+        if before is None:
+            pytest.skip(NO_HISTORY)
+        rewritten = rewritten_below_the_newest(
+            before, DOC.read_text(encoding="utf-8"))
+        assert rewritten == [], (
+            "the Verification Log is append-only below its newest entry, "
+            "and a contract id moved inside " + ", ".join(
+                f"the {date} entry (after {item})" for date, item in rewritten)
+            + ". That entry says what was checked on that date, against the "
+            "id that was live then; if `UX-353`'s guard is red on it, say "
+            "the id is superseded in the entry rather than sweeping it "
+            "forward (UX-653).")
+
+    def test_the_document_states_the_rule_a_reader_is_held_to(self):
+        log = DOC.read_text(encoding="utf-8").split(HEADING, 1)[1]
+        assert APPEND_ONLY in log.split("Updated", 1)[0], (
+            f"{DOC.name}'s log does not say it is {APPEND_ONLY!r} above its "
+            f"newest entry, so the rule lives only in a guard")
+
+    def test_the_guide_says_which_of_the_two_greens_is_meant(self):
+        """The half a guard cannot do. `UX-353` has two greens - add the
+        marker word, or sweep the id - and the sweep is the cheaper
+        reflex, so the guide names the one that is meant beside item 6."""
+        guide = GUIDE.read_text(encoding="utf-8")
+        for stated in (APPEND_ONLY, RETIRED_GUARD, "superseded"):
+            assert stated in guide, (
+                f"the fixing guide does not name {stated!r} - a session "
+                f"meeting UX-353's red has no way to learn which green is "
+                f"meant, and the sweep is the cheaper one")

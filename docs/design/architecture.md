@@ -1043,6 +1043,24 @@ artifact.
 
 ## Verification Log
 
+This log is **append-only below its newest entry**. Each entry is a
+dated record of what was re-grounded and against what, so the contract
+ids inside it stay as they were written — an id that was live that day
+and is superseded now is what the record says, and sweeping it forward
+with the tables above destroys the one thing the entry is for
+(`UX-653`). The newest entry is the exception: every round that
+re-grounds the document rewrites it.
+
+Updated 2026-09-04 (after `UX-653`), covering one change to this
+document — the paragraph above, which states the rule the log had been
+kept to by hand and lost four times — re-grounded in the two contract
+tables above against `bga.contracts` and `bga/schemas.py`: **25 emitted
+ids, 10 of them superseded, and 3 read and never written**, 9 printable
+and 16 not, `analyze/v6` still at **56 top-level properties** and
+`bga/viewer/` still **22 modules** with the table naming all of them.
+Every figure re-read at this commit and unchanged from the entry below;
+this item published no id and moved no key.
+
 Updated 2026-09-04 (after `UX-652`), covering no change to this
 document's body — what moved is the currency record itself, which is
 now read in commits rather than days — re-grounded in the two contract

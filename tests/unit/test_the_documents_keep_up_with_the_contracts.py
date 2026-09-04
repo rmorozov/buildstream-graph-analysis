@@ -84,6 +84,28 @@ def _part_32_subsections():
     return set(re.findall(r"\n## 32\.\d+ ([a-z][a-z0-9-]*/v\d+)", text))
 
 
+RETIRED_NOTE = re.compile(r"\bread, (?:never written|normalised in)\b")
+
+
+def _claimed_retired(rows):
+    """The ids Part 32's opening block says it no longer writes.
+
+    Two shapes, because a line states it two ways: a note that is
+    wholly a retirement note claims every id on the line, and a note
+    that names ids beside the marker claims exactly those. `UX-659`
+    needs both - the block may either move a retired id to a `read,
+    never written` line or distinguish it in place, and the property
+    is what the block claims, not where a name sits.
+    """
+    claimed = set()
+    for ids, annotation in rows:
+        if not RETIRED_NOTE.search(annotation):
+            continue
+        named = set(re.findall(r"[a-z][a-z0-9-]*/v\d+", annotation))
+        claimed |= (named & set(ids)) or set(ids)
+    return claimed
+
+
 def _cited_item(annotation):
     """The task file the annotation cites, or `None`."""
     found = re.search(r"UX-(\d+)", annotation)
@@ -148,6 +170,29 @@ class TestPart32sOpeningBlockIsTheRegistry:
         assert wrong == [], (
             f"Part 32's read-never-written lines name id(s) that are not in "
             f"contracts.superseded(): {wrong}")
+
+    def test_every_superseded_id_sits_on_a_line_that_says_it_is_retired(self):
+        """`UX-659`. The clause above is keyed on the lines that claim
+        to be retired, so a retired id on a line claiming nothing is
+        outside its population by construction: `plane2/v2` and
+        `plane2/v1` sat beside the live `plane2/v3` under `the Plane 2
+        report`, and the whole class was green.
+
+        This runs over `contracts.superseded()` instead - a population
+        the block cannot shrink - so the block has to state liveness
+        for every retired id, wherever it puts it. No intersection with
+        the ids the block names: all ten are in `contracts.ids()`, and
+        an id missing from the block entirely is also not claimed.
+        """
+        from bga import contracts
+
+        claimed = _claimed_retired(_part_32_opening_block())
+        unclaimed = sorted(set(contracts.superseded()) - claimed)
+        assert unclaimed == [], (
+            f"Part 32's opening block does not say that these id(s) of "
+            f"contracts.superseded() are no longer written: {unclaimed}. A "
+            f"reader asking which member of the family bga writes is given "
+            f"the names and no distinction (UX-659)")
 
     def test_a_retired_line_cites_the_item_that_retired_it(self):
         """Its newest id first, and beside it the item that moved off

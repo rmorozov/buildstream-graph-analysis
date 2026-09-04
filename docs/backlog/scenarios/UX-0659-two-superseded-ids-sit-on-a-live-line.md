@@ -72,3 +72,84 @@ where a name sits.
 Moving any id of `contracts.superseded()` onto a line whose note does
 not say it is retired reddens a clause naming that id, and the block at
 this commit — with `plane2/v1` and `plane2/v2` placed — is green.
+
+## Outcome
+
+The gap, reproduced at `b298a2b` with the Motivation's script:
+
+```console
+$ python3 repro.py
+['plane2/v2', 'plane2/v1'] on a line whose note reads: (the Plane 2 report - UX-384)
+$ python3 -c "from bga import contracts; print(len(contracts.superseded()),
+  set(contracts.superseded()) <= set(contracts.ids()))"
+10 True
+```
+
+`superseded()` ⊆ `ids()`, so the four ids the block names outside
+`ids()` are not in this population and `UX-651`'s three-set allowance
+does not interact. The clause takes no intersection with the block's
+own names — an id missing from it is also unclaimed, which is M7.
+
+**Placement: the ids moved.** `plane2/v2 plane2/v1` now sit on a
+`read, never written - UX-384` line beside the other three retired
+lines; `plane2/v3` keeps `the Plane 2 report - UX-384` alone. The block
+already had one grammar for "still opened, no longer written" and eight
+ids using it; a second grammar in the note is what produced this
+defect, and a reader scanning for what `bga` writes reads a column of
+names, not a sentence. `UX-384` is the right citation — it bumped
+`plane2/v2` → `plane2/v3`, so `test_a_retired_line_cites_the_item_that_retired_it`,
+which now runs over this line, passes on it.
+
+**Presentation-agnostic, demonstrated.** `_claimed_retired` reads a note
+wholly a retirement note as claiming every id on its line, and a note
+naming ids beside the marker as claiming exactly those. Rewriting the
+block to the *other* shape — one Plane 2 line, note `(the Plane 2
+report; plane2/v2 and plane2/v1 read, never written - UX-384)` — leaves
+the whole class green: `6 passed in 0.24s`.
+
+### Mutation table
+
+On the subject, reverted from a scratchpad copy. Clause:
+`test_every_superseded_id_sits_on_a_line_that_says_it_is_retired`.
+
+| mutation | expected | got |
+|---|---|---|
+| M1 `plane2/v1` back on the live line | red, names it | `1 failed`, `['plane2/v1']` |
+| M2 the pre-fix block, both back | red, names both | `1 failed`, `['plane2/v1', 'plane2/v2']` |
+| M3 retired note loses the marker | red, names both | `1 failed`, `['plane2/v1', 'plane2/v2']` |
+| M4 shape B naming `plane2/v2` only | red, names `plane2/v1` | `1 failed`, `['plane2/v1']` |
+| M5 shape B in full (control) | green | `1 passed` |
+| M6 `analyze/v2` onto the live outputs line | red, names it | `1 failed`, `['analyze/v2']` |
+| M7 `analyze/v2` deleted from the block | red, names it | `1 failed`, `['analyze/v2']` |
+
+M6 and M7 are the trap check: keyed neither on the Plane 2 line nor on
+the block's contents, so no gate narrows the population.
+
+### The close
+
+```console
+$ python3 -m pytest tests/unit/test_the_documents_keep_up_with_the_contracts.py \
+    tests/unit/test_a_counted_figure_is_derived.py \
+    tests/unit/test_no_document_serves_a_retired_contract.py \
+    tests/unit/test_docs_links_and_commands.py tests/unit/test_the_register_is_terse.py \
+    tests/unit/test_the_spec_outside_part_32_is_read_only.py -q
+306 passed in 19.88s
+$ make test-touching
+38 file(s) selected (8 census + 30 naming the change) · 923 passed, 4 skipped in 25.40s
+$ make lint
+All checks passed!
+```
+
+### Deviation
+
+The added line moved two figures the fixing guide's item 12 quotes.
+`test_the_spec_outside_part_32_is_read_only.py::test_the_guide_quotes_the_range_the_headings_give`
+reddened on `Part 32 spans 1515-1940` → `1515-1941`. Beside it, `the
+sentence is at line 1671` was already stale at `b298a2b` — 1672 there,
+1673 now. Both are corrected here as figures this commit moves; the
+pre-existing off-by-one deserves a row, since nothing asserts it.
+
+`test_a_retired_line_holds_retired_ids_only`, the converse, is still
+keyed on `annotation.startswith("read")` and would stop reading the
+Plane 2 line under the shape not taken. Left alone: this row asks the
+superseded→line direction, and the shipped shape keeps both on it.

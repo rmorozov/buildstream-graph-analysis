@@ -1526,9 +1526,10 @@ sources/v1                                                    (the source invent
 capture-layout/v1                                             (the capture directory - UX-381)
 host-samples/v1                                               (the host while it built - UX-378)
 bundle-manifest/v1                                            (a capture you can carry - UX-520)
-plane2/v3           plane2/v2     plane2/v1                   (the Plane 2 report - UX-384)
+plane2/v3                                                     (the Plane 2 report - UX-384)
 analyze/v5          analyze/v4    analyze/v3    analyze/v2    (read, never written - UX-641)
 compare/v1          blast/v1      correlate/v1                  (read, never written - UX-341)
+plane2/v2           plane2/v1                                 (read, never written - UX-384)
 host/v1                                                       (read, normalised in - UX-341)
 ```
 

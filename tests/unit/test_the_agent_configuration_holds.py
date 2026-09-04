@@ -852,6 +852,176 @@ class TestATrackTakesTheBaseItWasNamed:
             "is the stale base this item is about")
 
 
+class TestATrackCanReadEveryRefItsCheckoutHas:
+    """`UX-623` as filed said a track can read its own branch and
+    `origin/*` and nothing else, so a round whose branch is unpushed
+    leaves the base uncheckable. Measured, that is false: a linked
+    worktree's private git dir has no `refs/` at all, so the whole ref
+    store is the shared checkout's and an unpushed branch resolves.
+
+    ```text
+    $ ls .git/worktrees/<a worktree>/
+    CLAUDE_BASE HEAD ORIG_HEAD commondir gitdir index locked logs
+    ```
+
+    These clauses **run** it, on a checkout with no remote configured -
+    the strongest form of "unpushed" - and run the base check
+    `implementer.md` names against the branch name alone. A clause that
+    only read the file would pass over a body claiming the opposite.
+    """
+
+    PLACEHOLDER = re.compile(r"<[^>]+>")
+    SECTION = "## Which refs your copy can read"
+
+    @classmethod
+    def _section(cls):
+        body = (AGENTS / "implementer.md").read_text(encoding="utf-8")
+        assert cls.SECTION in body, (
+            f"implementer.md has no {cls.SECTION!r} section, so a track "
+            f"is never told which refs it can resolve (UX-623)")
+        return body.split(cls.SECTION, 1)[1].split("\n## ", 1)[0]
+
+    @classmethod
+    def _base_check(cls):
+        """The command that section tells a track to run against the
+        base its brief names, read out of the file - restating it here
+        would pass over a body documenting something else."""
+        lines = [line.split("#")[0].strip()
+                 for block in re.findall(r"```bash\n(.*?)```",
+                                         cls._section(), re.S)
+                 for line in block.splitlines() if line.strip()]
+        assert len(lines) == 1, (
+            f"{cls.SECTION!r} fences {len(lines)} commands, not one: "
+            f"{lines}. A track reading two does not know which answers")
+        return lines[0]
+
+    @staticmethod
+    def _git(where, *argv, check=True):
+        return subprocess.run(["git", *argv], cwd=where, check=check,
+                              capture_output=True, text=True, timeout=60)
+
+    @classmethod
+    def _checkout_with_an_unpushed_branch(cls, tmp_path):
+        """A checkout with **no remote at all** and a round branch three
+        commits ahead of the default, plus a worktree on the default."""
+        repo = tmp_path / "repo"
+        repo.mkdir()
+        (repo / "base.md").write_text("base\n", encoding="utf-8")
+        for argv in (["init", "-q", "-b", "main"],
+                     ["config", "user.email", "a@b"],
+                     ["config", "user.name", "a"],
+                     ["add", "base.md"], ["commit", "-qm", "base"]):
+            cls._git(repo, *argv)
+        cls._git(repo, "checkout", "-qb", "round")
+        for n in range(3):
+            (repo / f"round-{n}.md").write_text("x\n", encoding="utf-8")
+            cls._git(repo, "add", f"round-{n}.md")
+            cls._git(repo, "commit", "-qm", f"round {n}")
+        tip = cls._git(repo, "rev-parse", "HEAD").stdout.strip()
+        cls._git(repo, "checkout", "-q", "main")
+        copy = tmp_path / "copy"
+        cls._git(repo, "worktree", "add", "-q", "-b", "track", str(copy),
+                 "main")
+        assert cls._git(repo, "remote").stdout.strip() == "", (
+            "the sandbox configured a remote, so 'unpushed' is not what "
+            "is being measured")
+        return repo, copy, tip
+
+    def test_a_worktree_resolves_an_unpushed_branch_of_its_checkout(
+            self, tmp_path):
+        """`UX-623`'s corrected acceptance test. The branch exists only
+        in the checkout the copy was made from and has never been
+        pushed anywhere; the copy resolves it by name."""
+        _repo, copy, tip = self._checkout_with_an_unpushed_branch(tmp_path)
+        assert self._git(copy, "rev-parse", "--verify", "round"
+                         ).stdout.strip() == tip, (
+            "a linked worktree cannot resolve an unpushed branch of the "
+            "checkout it was copied from - UX-623 as filed")
+        unpushed = self._git(copy, "rev-parse", "--verify",
+                             "origin/round", check=False)
+        assert unpushed.returncode != 0, (
+            "`origin/round` resolved, so the branch was pushed and the "
+            "clause above measured the easy case")
+
+    def test_the_private_git_dir_carries_no_refs_of_its_own(self, tmp_path):
+        """The mechanism, so the clause above reads as a property and
+        not as one git version's accident."""
+        repo, copy, _tip = self._checkout_with_an_unpushed_branch(tmp_path)
+        private = pathlib.Path(
+            self._git(copy, "rev-parse", "--absolute-git-dir").stdout.strip())
+        common = pathlib.Path(
+            self._git(copy, "rev-parse", "--git-common-dir").stdout.strip())
+        assert private != common.resolve(), (
+            f"{copy} is not a linked worktree - its git dir is the "
+            f"shared one, so nothing here is being measured")
+        assert not (private / "refs").exists(), (
+            f"the worktree's private git dir has its own refs/ "
+            f"({sorted(p.name for p in private.iterdir())}), so the ref "
+            f"store is not shared and UX-623 as filed was right")
+
+    def test_the_documented_check_answers_from_the_branch_name_alone(
+            self, tmp_path):
+        """The base check `implementer.md` names, run with a branch name
+        substituted for its placeholder: a copy behind the round is
+        told so without a commit id and without a fetch."""
+        _repo, copy, _tip = self._checkout_with_an_unpushed_branch(tmp_path)
+        command = self._base_check()
+        assert self.PLACEHOLDER.search(command), (
+            f"{command!r} names no base for the track to substitute")
+        import shlex
+        argv = shlex.split(self.PLACEHOLDER.sub("round", command))
+        done = subprocess.run(argv, cwd=copy, capture_output=True,
+                              text=True, timeout=60)
+        assert done.returncode == 0, (
+            f"the check implementer.md documents does not answer for a "
+            f"copy behind an unpushed round branch: {done.stderr or argv}")
+
+    def test_the_documented_check_says_no_when_the_copy_has_diverged(
+            self, tmp_path):
+        """The half that makes it a check rather than a formality. A
+        copy carrying its own commit is not behind the base, and taking
+        the base would cost that commit - the same distinction
+        `--ff-only` draws, asked before anything is moved."""
+        _repo, copy, _tip = self._checkout_with_an_unpushed_branch(tmp_path)
+        (copy / "mine.md").write_text("a track's own work\n", encoding="utf-8")
+        self._git(copy, "add", "mine.md")
+        self._git(copy, "commit", "-qm", "the track's commit")
+        import shlex
+        argv = shlex.split(self.PLACEHOLDER.sub("round", self._base_check()))
+        done = subprocess.run(argv, cwd=copy, capture_output=True,
+                              text=True, timeout=60)
+        assert done.returncode != 0, (
+            "the documented check calls a diverged copy behind its base, "
+            "so a track runs --ff-only expecting it to work")
+
+    def test_the_section_names_the_reading_a_copy_does_not_get(self):
+        """Scoped to the section, because `implementer.md` argues about
+        the shared object database two sections earlier and a clause
+        reading the whole body would match that instead - the shape
+        `falsify` calls matching your own explanation."""
+        section = " ".join(self._section().split())
+        assert "per-worktree" in section, (
+            "the section says which refs resolve without saying what "
+            "does not, so a track reads it as 'everything resolves'")
+        assert "git -C" in section, (
+            "the section does not name the one reading a track is "
+            "refused, which is the half UX-623 was filed for")
+
+    def test_the_orchestrator_is_told_the_branch_resolves(self):
+        """`decompose` is what the brief is written from. Without this
+        the orchestrator pushes, or copies an id, for a reason that was
+        measured false - and copying an id is `UX-626`."""
+        skill = " ".join((SKILLS / "decompose/SKILL.md").read_text(
+            encoding="utf-8").split())
+        assert "whether or not it is pushed" in skill, (
+            "the decompose skill does not tell the orchestrator that an "
+            "unpushed branch resolves in a track's copy (UX-623)")
+        at = skill.index("whether or not it is pushed")
+        assert "refs/heads" in skill[max(0, at - 400):at + 200], (
+            "the skill states the fact without the mechanism that makes "
+            "it one, so the next round re-derives it or doubts it")
+
+
 class TestEachTrackHasItsOwnScratchpad:
     """`UX-615`: the worktrees are isolated and the scratchpad is not.
 

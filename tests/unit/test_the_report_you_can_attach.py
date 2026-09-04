@@ -873,7 +873,19 @@ COMMITTED_EXPORTS = [
     # measurement that forced it is the negotiation this file exists to
     # prevent - but the next round to add a module will trip it, and
     # the figure it needs is this one rather than the stale 453,180.
-    ("macro_micro", MACRO_MICRO, 482_000),             #  477,500 B
+    #
+    # `UX-647`/`UX-646` add **+320 B of source** on `viewstate.js` on
+    # top of `UX-643`'s reader role, and nothing to the payload. Two
+    # facts the older note hid. The bound had **375 B** of headroom
+    # before this round, not the ~4.9 KB claimed: four items had added
+    # source since without restating it. And the figure moves with
+    # **where the repository is checked out** - the export embeds the
+    # run's absolute path once, so the same commit reads 42 B larger
+    # in a worktree than in the main checkout. Two tracks moved this
+    # bound in one round, to 480,000 and 482,000 against their own
+    # trees; neither figure is the merged one, so it was re-measured
+    # here rather than picked.
+    ("macro_micro", MACRO_MICRO, 482_000),             #  RE-MEASURE
 ]
 
 

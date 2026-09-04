@@ -577,8 +577,13 @@ const opened = {
   inFocus: section ? all(section, (n) => n.attrs?.["data-section"]).length : 0,
   chainsInFocus: section ? chains(section) : [],
 };
+// `UX-646`: `wireViewState` writes a turn after the event, so the
+// fragment a reader would copy is read after that turn.
+const turn = () => new Promise((go) => setTimeout(go, 0));
+await turn();
 const captured = String(location.hash ?? "");
 back.click();
+await turn();
 const after = dump(root);
 const afterHash = String(location.hash ?? "");
 console.log(JSON.stringify({

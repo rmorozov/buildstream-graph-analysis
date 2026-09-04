@@ -48,14 +48,19 @@ from tests.browser import NO_BROWSER, Browser, find_chrome     # noqa: E402
 #: Walking the whole order and back, in one load. The hash rather than
 #: the mark: a rail link sets it synchronously, and the mark is what
 #: this item had to stop depending on.
+#:
+#: `UX-647`: the anchor half of it. A rail control now reaches the
+#: view-state writer, so the fragment carries `~<query>` beside the
+#: section - and which section is what this item is about.
 _WALK = """(async () => {
   const bar = document.querySelector("nav.toc .toc-steps");
   if (!bar) return { found: false };
   const links = () => [...document.querySelectorAll("nav.toc [data-toc]")];
+  const anchor = () => location.hash.split("~")[0];
   const press = (name, times = 1) => {
     const button = bar.querySelector(`[data-step="${name}"]`);
     const seen = [];
-    for (let i = 0; i < times; i++) { button.click(); seen.push(location.hash); }
+    for (let i = 0; i < times; i++) { button.click(); seen.push(anchor()); }
     return seen;
   };
   // `UX-592`: the mark lands on a later task, and `stepper` steps from
@@ -72,7 +77,7 @@ _WALK = """(async () => {
   const forward = press("next", 6);
   const back = press("previous", 2);
   press("next", order.length + 20);
-  const stopped = location.hash;
+  const stopped = anchor();
   return { found: true, marked, order, forward, back, stopped,
            labels: [...bar.querySelectorAll("button")].map(
              (b) => b.getAttribute("data-step")) };
@@ -85,10 +90,11 @@ _COLD = """(() => {
   const bar = document.querySelector("nav.toc .toc-steps");
   const links = () => [...document.querySelectorAll("nav.toc [data-toc]")];
   for (const a of links()) a.removeAttribute("data-current");
+  const anchor = () => location.hash.split("~")[0];
   const press = (name, times = 1) => {
     const button = bar.querySelector(`[data-step="${name}"]`);
     const seen = [];
-    for (let i = 0; i < times; i++) { button.click(); seen.push(location.hash); }
+    for (let i = 0; i < times; i++) { button.click(); seen.push(anchor()); }
     return seen;
   };
   const order = links().map((a) => "#" + a.getAttribute("data-toc"));
@@ -125,14 +131,15 @@ _KEYS = """(async () => {
     if (document.querySelector("nav.toc [data-toc][data-current]")) break;
     await settle();
   }
+  const anchor = () => location.hash.split("~")[0];
   send("]"); send("]");
-  const afterTwo = location.hash;
+  const afterTwo = anchor();
   send("[");
-  const afterBack = location.hash;
+  const afterBack = anchor();
   const box = document.getElementById("jump");
   box.focus();
   send("]", box);
-  return { afterTwo, afterBack, whileTyping: location.hash };
+  return { afterTwo, afterBack, whileTyping: anchor() };
 })()"""
 
 

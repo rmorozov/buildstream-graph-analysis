@@ -15,14 +15,14 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-656 scenarios: **7 open**, 649 closed.
+657 scenarios: **8 open**, 649 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
 | capture | 0 | 92 |
 | analysis | 0 | 94 |
-| contracts | 0 | 47 |
+| contracts | 1 | 48 |
 | viewer | 1 | 148 |
 | cli | 0 | 21 |
 | store | 0 | 16 |
@@ -44,6 +44,7 @@ task file, which is the only place it ever lived twice.
 | UX-655 | [a contract bump landed one level below the key population](UX-0655-a-contract-bump-landed-one-level-below-the-key-population.md) | docs | Medium | anyone trusting the undocumented-key register | 🔴 Open |
 | UX-657 | [the priority column has no guard](UX-0657-the-priority-column-has-no-guard.md) | guards | Low | anyone who sorts the backlog by priority to decide what to do next | 🔴 Open |
 | UX-658 | [a ninth topic exists that no open row may carry](UX-0658-a-ninth-topic-exists-that-no-open-row-may-carry.md) | guards | Low | anyone filing a row and choosing what to put in its Topic cell | 🔴 Open |
+| UX-659 | [two superseded ids sit on a live line of the spec's registry](UX-0659-two-superseded-ids-sit-on-a-live-line.md) | contracts | Low | anyone reading Part 32's opening block for which Plane 2 contract bga writes | 🔴 Open |
 
 ## UX-563..UX-586: the eighty-second round — the documents, read against the tool (2026-09-03)
 

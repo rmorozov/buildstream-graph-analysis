@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-619 scenarios: **8 open**, 611 closed.
+621 scenarios: **7 open**, 614 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -27,7 +27,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | cli | 0 | 21 |
 | store | 0 | 16 |
 | docs | 1 | 90 |
-| guards | 4 | 125 |
+| guards | 3 | 127 |
 
 ## Open scenarios
 
@@ -40,10 +40,9 @@ task file, which is the only place it ever lived twice.
 | UX-610 | [the verdict record is not a published key](UX-0610-the-verdict-record-is-not-a-published-key.md) | contracts | Medium | R4, the CI gatekeeper asked to defend a red gate from the payload alone | 🔴 Open |
 | UX-612 | [the start clock has no provenance](UX-0612-the-start-clock-has-no-provenance.md) | capture | High | anyone computing a duration from a capture's start | 🔴 Open |
 | UX-613 | [the capacity model emits no document](UX-0613-the-capacity-model-emits-no-document.md) | contracts | Medium | R4 and anyone wanting the model's answer in a pipeline | 🔴 Open |
-| UX-614 | [a track starts on the default branch, not the round's](UX-0614-a-track-starts-on-the-default-branch.md) | guards | High | every round that runs tracks in parallel | 🔴 Open |
-| UX-615 | [the scratchpad is shared between tracks](UX-0615-the-scratchpad-is-shared-between-tracks.md) | guards | Low | a round running tracks in parallel | 🔴 Open |
-| UX-617 | [the derived count cannot see an unstaged row](UX-0617-the-derived-count-cannot-see-an-unstaged-row.md) | guards | Low | the session filing a row | 🔴 Open |
 | UX-621 | [a drift-gate red nobody can read](UX-0621-a-drift-gate-red-nobody-can-read.md) | guards | Medium | a session reading a red tier-drift step | 🔴 Open |
+| UX-622 | [the derived count and its guard read two populations](UX-0622-the-derived-count-and-its-guard-read-two-populations.md) | guards | Medium | the session filing a row | 🔴 Open |
+| UX-623 | [a track cannot read the tree it was copied from](UX-0623-a-track-cannot-read-the-tree-it-was-copied-from.md) | guards | Low | a track checking the base it was given | 🔴 Open |
 
 ## UX-563..UX-586: the eighty-second round — the documents, read against the tool (2026-09-03)
 

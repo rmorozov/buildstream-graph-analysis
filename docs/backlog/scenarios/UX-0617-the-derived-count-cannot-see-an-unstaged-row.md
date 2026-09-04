@@ -1,6 +1,6 @@
 # UX-617: the derived count cannot see an unstaged row
 
-**Priority:** Low | **Status:** 🔴 Open | **Depends on:** UX-501 (the derived counts), UX-336 (the helper) | **Found by:** round 84, three times | **Serves:** the session filing a row | **Topic:** guards
+**Priority:** Low | **Status:** 🟢 Done Open | **Depends on:** UX-501 (the derived counts), UX-336 (the helper) | **Found by:** round 84, three times | **Serves:** the session filing a row | **Topic:** guards
 
 ## Motivation
 
@@ -51,7 +51,7 @@ already staged them knows to stage again.
 An unstaged new task file, and `--check` naming it instead of
 reporting a clean tree.
 
-## Outcome (round 85, 2026-09-04) — 🔴 implemented, not closed
+## Outcome (round 85, 2026-09-04) — 🟢 Done
 
 **Premise:** held, both shapes, re-measured on `5343bd6`.
 
@@ -109,6 +109,14 @@ survives the widening.
 discriminate alone: it asserts `== 2` and so co-reddens with A1. A3 and
 A4 are what it exists for; it is a boundary clause on the same count,
 not a second reading of it.
+
+### A fifth occurrence, adjacent and not fixed here
+
+Round 85's closing commit for `UX-620` staged with a path-scoped
+`git add -u docs/backlog/scenarios/`; the fix lived outside that path,
+so the row moved to `closed.md` and the branch stayed red until
+`471b53a`. Same family, not this item's shape — `--check` was never
+asked.
 
 ### Deviation from the Required Fix
 

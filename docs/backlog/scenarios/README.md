@@ -15,19 +15,19 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-621 scenarios: **7 open**, 614 closed.
+622 scenarios: **6 open**, 616 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
-| capture | 1 | 92 |
+| capture | 0 | 92 |
 | analysis | 0 | 93 |
-| contracts | 2 | 44 |
+| contracts | 1 | 44 |
 | viewer | 0 | 138 |
 | cli | 0 | 21 |
 | store | 0 | 16 |
 | docs | 1 | 90 |
-| guards | 3 | 127 |
+| guards | 4 | 128 |
 
 ## Open scenarios
 
@@ -37,12 +37,11 @@ task file, which is the only place it ever lived twice.
 | ID | Scenario | Topic | Priority | Serves | Status |
 |---|---|---|---|---|---|
 | UX-597 | [three release rows and no tag](UX-0597-three-release-rows-and-no-tag.md) | docs | Low | anyone trying to check out a release this repository claims to have made | 🔴 Open |
-| UX-610 | [the verdict record is not a published key](UX-0610-the-verdict-record-is-not-a-published-key.md) | contracts | Medium | R4, the CI gatekeeper asked to defend a red gate from the payload alone | 🔴 Open |
-| UX-612 | [the start clock has no provenance](UX-0612-the-start-clock-has-no-provenance.md) | capture | High | anyone computing a duration from a capture's start | 🔴 Open |
 | UX-613 | [the capacity model emits no document](UX-0613-the-capacity-model-emits-no-document.md) | contracts | Medium | R4 and anyone wanting the model's answer in a pipeline | 🔴 Open |
 | UX-621 | [a drift-gate red nobody can read](UX-0621-a-drift-gate-red-nobody-can-read.md) | guards | Medium | a session reading a red tier-drift step | 🔴 Open |
 | UX-622 | [the derived count and its guard read two populations](UX-0622-the-derived-count-and-its-guard-read-two-populations.md) | guards | Medium | the session filing a row | 🔴 Open |
 | UX-623 | [a track cannot read the tree it was copied from](UX-0623-a-track-cannot-read-the-tree-it-was-copied-from.md) | guards | Low | a track checking the base it was given | 🔴 Open |
+| UX-624 | [the cap dropped a guard that was not noise](UX-0624-the-cap-dropped-a-guard-that-was-not-noise.md) | guards | Medium | a track adding a declared key | 🔴 Open |
 
 ## UX-563..UX-586: the eighty-second round — the documents, read against the tool (2026-09-03)
 

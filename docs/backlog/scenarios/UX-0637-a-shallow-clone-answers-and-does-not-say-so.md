@@ -1,6 +1,6 @@
 # UX-637: a shallow clone answers, and does not say so
 
-**Priority:** High | **Status:** 🔴 Open | **Depends on:** UX-213 (guards that only guard one machine), UX-418 (the claim with no local instrument) | **Found by:** round 86, by `UX-633` being wrong | **Serves:** anyone whose guard reads history, and every future session in this environment | **Topic:** contracts
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-213 (guards that only guard one machine), UX-418 (the claim with no local instrument) | **Found by:** round 86, by `UX-633` being wrong | **Serves:** anyone whose guard reads history, and every future session in this environment | **Topic:** contracts
 
 ## Motivation
 

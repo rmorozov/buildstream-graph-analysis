@@ -1,6 +1,6 @@
 # UX-636: eighty published keys no document names
 
-**Priority:** Medium | **Status:** 🔴 Open | **Depends on:** UX-628 (which measured this and froze it) | **Found by:** round 86, closing UX-628 | **Serves:** anyone reading a payload against the prose that describes it | **Topic:** docs
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-628 (which measured this and froze it) | **Found by:** round 86, closing UX-628 | **Serves:** anyone reading a payload against the prose that describes it | **Topic:** docs
 
 ## Motivation
 

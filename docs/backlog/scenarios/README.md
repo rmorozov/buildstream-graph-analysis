@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-659 scenarios: **2 open**, 657 closed.
+660 scenarios: **3 open**, 657 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -27,7 +27,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | cli | 0 | 21 |
 | store | 0 | 16 |
 | docs | 1 | 102 |
-| guards | 1 | 138 |
+| guards | 2 | 139 |
 
 ## Open scenarios
 
@@ -38,6 +38,7 @@ task file, which is the only place it ever lived twice.
 |---|---|---|---|---|---|
 | UX-660 | [one sentence, two line numbers, and only one of them is guarded](UX-0660-one-sentence-two-figures-one-guarded.md) | docs | Low | anyone following item 12 to the sentence it points at | 🔴 Open |
 | UX-661 | [the second copy of the topic set orders a release body](UX-0661-the-fourth-copy-of-the-topic-set-orders-a-release.md) | guards | Low | anyone adding a topic and expecting the release notes to know about it | 🔴 Open |
+| UX-662 | [the adopted touching map made the selector guard a hundred times dearer](UX-0662-the-adopted-map-made-the-selector-guard-a-hundred-times-dearer.md) | guards | High | anyone whose branch goes red for a cost the base branch introduced | 🔴 Open |
 
 ## UX-563..UX-586: the eighty-second round — the documents, read against the tool (2026-09-03)
 

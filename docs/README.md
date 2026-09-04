@@ -198,6 +198,16 @@ How to work on this repository.
 What was found, and when. Append-only by nature: each round is a
 timestamped record, not a statement of current state.
 
+Two of them are not rounds. They stand outside the sequence and are
+appended to instead of superseded:
+
+| document | what it records |
+|---|---|
+| [`audits/architecture-review.md`](audits/architecture-review.md) | every architecture and documentation review the `UX-241` cadence has called, newest last — **append-only**, so a superseded finding stays where it was written and the review after it says so |
+| [`audits/spec-compliance-review.md`](audits/spec-compliance-review.md) | the original review of the tool against its specification, before the round sequence began |
+
+The rounds themselves:
+
 [`audits/round-2.md`](audits/round-2.md) ·
 [3](audits/round-3.md) ·
 [4](audits/round-4.md) ·
@@ -240,8 +250,8 @@ timestamped record, not a statement of current state.
 [81](audits/round-81.md) ·
 [82](audits/round-82.md) ·
 [83](audits/round-83.md) ·
-[the guard census of round 64](audits/guard-census-round-64.md) ·
-[the original spec-compliance review](audits/spec-compliance-review.md)
+[84](audits/round-84.md) ·
+[the guard census of round 64](audits/guard-census-round-64.md)
 
 ## Backlog
 

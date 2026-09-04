@@ -9,6 +9,7 @@ from ..findings import (compute_findings, compute_headline,
                         compute_next_steps, render_findings)
 from ..ingest.models import AnalysisResult
 from ..units import GIB, US_PER_S
+from . import rate
 from ._shared import GRAPH_SIGNAL_KEYS, SWEEP_CAPACITY_MODEL_CAVEAT
 
 # Confidence-band labels for the Key Findings headline (P4-02) - a
@@ -254,6 +255,52 @@ def _format_key_findings(result: AnalysisResult,
         record = provenance.for_claim(document, finding.get('id'))
         if record:
             lines.extend(provenance.render(record, indent="    "))
+    return lines + [""]
+
+
+def _priced_fixes(result: AnalysisResult, findings) -> List[tuple]:
+    """`(what, saving_us)` for every fix this report already prices.
+
+    Never a sum. `UX-230` measured why: two fixes on one chain do not
+    add, so the joint number is `joint-saving`'s own published figure or
+    it is absent.
+    """
+    headline = compute_headline(result, findings)
+    rows = [(action["element_uid"], action["saving_us"])
+            for action in headline.get("top_actions") or []
+            if action.get("saving_us") is not None]
+    joint = next((f for f in findings if f.get("id") == "joint-saving"), None)
+    together = ((joint or {}).get("evidence") or {}).get("joint_saving_us")
+    if together:
+        rows.append((f"the top {len(joint.get('elements') or [])} together",
+                     together))
+    return rows
+
+
+def _format_in_your_units(result: AnalysisResult, findings) -> List[str]:
+    """UX-596: the same savings, in the unit the reader argues in.
+
+    Absent unless a rate was supplied, because a default rate presented
+    as a figure is the anecdote this block exists to replace.
+    """
+    supplied = rate.supplied()
+    if supplied is None:
+        return []
+    if supplied.get("error"):
+        # Named rather than swallowed: silence would be indistinguishable
+        # from having supplied nothing.
+        return ["In Your Units:", f"  not applied: {supplied['error']}", ""]
+    rows = _priced_fixes(result, findings)
+    if not rows:
+        return ["In Your Units:",
+                f"  {rate.preamble(supplied)}",
+                "  this run prices no fix, so there is nothing to convert", ""]
+    lines = ["In Your Units:", f"  {rate.preamble(supplied)}"]
+    width = max(len(what) for what, _ in rows)
+    shown = max(len(_fmt_us(us)) for _, us in rows)
+    for what, saving_us in rows:
+        lines.append(f"  {what:<{width}}  {_fmt_us(saving_us):>{shown}} = "
+                     f"{rate.phrase(saving_us, supplied)}")
     return lines + [""]
 
 
@@ -620,6 +667,9 @@ def format_text(result: AnalysisResult, section: Optional[str] = None,
     # floors/replay/utilisation/diagnostics) stay exactly as they were.
     if section is None:
         lines.extend(_format_key_findings(result, explain=explain))
+        # UX-596: beside the savings it converts, and only when a rate
+        # was supplied.
+        lines.extend(_format_in_your_units(result, compute_findings(result)))
         lines.extend(_format_confidence_and_violations(result))
 
     # UX-171: with the graph, because it is a fact about the graph's
@@ -1348,6 +1398,29 @@ def _format_element_deltas(comparison) -> List[str]:
     return lines
 
 
+def _format_verdict_chain(comparison) -> List[str]:
+    """UX-593: the verdict's own chain, as the terminal states it.
+
+    The sentence and the rule, from the record `bga/compare.py` builds -
+    so the terminal and the CI comment cannot word one verdict two
+    ways. The evidence *paths* stay in the CI comment's table and out of
+    here: this surface prints field values under human labels, and a
+    raw `total_duration_us` beside a number in seconds is the confusion
+    UX-121 measured.
+    """
+    from ..compare import verdict_provenance
+
+    record = verdict_provenance(comparison)
+    rule = (record or {}).get('rule') or {}
+    if not rule.get('sentence'):
+        return []
+    lines = [f"  Why: {rule['sentence']}"]
+    if rule.get('name'):
+        lines.append(f"  Rule: {rule['name']} = {rule['threshold']} "
+                     f"({rule['comparison']}, {rule['module']})")
+    return lines
+
+
 def format_compare_text(comparison) -> str:
     """Format a ComparisonResult (UX-01) as human-readable text. Takes
     the dataclass directly (not AnalysisResult) - this is a genuinely
@@ -1405,6 +1478,8 @@ def format_compare_text(comparison) -> str:
             f"  Judged against a noise band from {band['n']} baseline run(s): "
             f"{_fmt_us(band['low_us'])} .. {_fmt_us(band['high_us'])} - {width}"
         )
+    # UX-593: and why that verdict, before the elements it is about.
+    lines.extend(_format_verdict_chain(comparison))
     # UX-221: which elements the verdict is about. Directly under it,
     # because "this got slower" and "this got slower because core.bst
     # tripled" are one line to a reader who only ever sees the first.

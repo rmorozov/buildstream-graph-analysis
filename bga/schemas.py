@@ -4637,6 +4637,32 @@ _STORE_HINTS = {
                                              "lookups in that run - the "
                                              "usual reason two runs of the "
                                              "same project differ."},
+                          # `UX-594`: the half of turnaround that
+                          # happens before bga's clock starts.
+                          "queue_wait_us": {
+                              QUANTITY: "duration_us",
+                              "description": "Between the instant this "
+                                             "build was requested and "
+                                             "the instant it started. "
+                                             "`null` - never zero - "
+                                             "where that is not a "
+                                             "measurement; "
+                                             "`queue_wait_absent_reason` "
+                                             "says which of the three "
+                                             "reasons applies."},
+                          "queue_wait_absent_reason": {
+                              "enum": ["no_request_instant",
+                                       "no_start_instant",
+                                       "request_after_start", None],
+                              "description": "Why there is no wait: "
+                                             "nobody published a "
+                                             "request instant, this "
+                                             "capture has no start "
+                                             "instant either, or the "
+                                             "two disagree about their "
+                                             "order, which is a clock "
+                                             "problem rather than a "
+                                             "queue."},
                           "bytes": {
                               QUANTITY: "bytes",
                               "description": "What that snapshot occupies "
@@ -4733,6 +4759,13 @@ _CORRELATE_OPTIONAL = {
     "memory_envelope": "object",
     "attribution_unreliable": "",
     "attribution_partial": "",
+    # `UX-598`: `UX-260`'s other two distributions. Published by
+    # `_scale_of` since `UX-260` and declared by nothing, so every
+    # percentile inside them reached the reader as a bare number -
+    # `UX-343`'s defect, in the contract the join emits. Optional
+    # because each is absent when its plane was not captured.
+    "sandbox_tax_distribution": "object",
+    "process_count_distribution": "object",
 }
 
 # `UX-404`: one point on the memory envelope - the same three fields
@@ -4849,6 +4882,27 @@ _CORRELATE_HINTS = {
             "at_observed_builders": {"properties": _ENVELOPE_POINT},
             "projections": {"items": {"properties": _ENVELOPE_POINT}},
         },
+    },
+    "sandbox_tax_distribution": {
+        QUESTION: 'How is the sandbox tax spread across the elements '
+                  'that pay it?',
+        RAIL: "investigate",
+        **_distribution(
+            "duration_us", "sandbox tax paid by one element",
+            "How this capture's sandbox tax is spread. Over every "
+            "payer, not the top slice - the useful question is \"is "
+            "this element's tax unusual\", which only a population "
+            "answers. Nearest-rank percentiles, absent below the "
+            "sample floor."),
+    },
+    "process_count_distribution": {
+        QUESTION: 'How are processes per element spread?',
+        RAIL: "investigate",
+        **_distribution(
+            "count", "process count for one element",
+            "How many processes each element ran, spread across this "
+            "capture. Heavy-tailed: one element with 40,000 processes "
+            "is the finding, and the rank alone does not say so."),
     },
     "run_instance": _RUN_INSTANCE_HINT,
 }

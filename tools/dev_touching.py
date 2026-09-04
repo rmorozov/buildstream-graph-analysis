@@ -42,6 +42,22 @@ EVERYTHING = ("tests/conftest.py", "tests/tiers.py", "pyproject.toml",
               "Makefile", "tests/support/", "tests/dom_shim.mjs")
 
 
+# `UX-605`: an entry naming more test files than the selector's own
+# bound is not a selection. Measured on the map CI adopted in
+# `0bc5aff`: **38 of 85** modules named 100+ of 449 test files, topping
+# out at `bga/progress.py` with 200, because `--cov-context=test`
+# attributes a module's *import-time* lines to every test that imports
+# it. 25 is `test_the_loop_stays_fast.py`'s bound on the whole
+# selection, so an entry alone at that width can never be one.
+MAP_ENTRY_CAP = 25
+
+
+def wide_entries(cap=None):
+    """`{module: size}` for the map entries too wide to be a selection."""
+    cap = MAP_ENTRY_CAP if cap is None else cap
+    return {k: len(v) for k, v in touch_map().items() if len(v) > cap}
+
+
 def touch_map():
     """`UX-524`: `{module: [test files]}`, measured by CI's own run.
 
@@ -167,7 +183,12 @@ def select(changed, census=True):
         tokens = tokens_for(path)
         if not tokens:
             continue
-        for candidate in touch_map().get(path, ()):
+        mapped = touch_map().get(path, ())
+        # `UX-605`: too wide to mean anything - fall back to the grep
+        # and the census, which is what a clone without the map does.
+        if len(mapped) > MAP_ENTRY_CAP:
+            mapped = ()
+        for candidate in mapped:
             if (REPO / candidate).exists():
                 chosen[candidate] = True
                 why.setdefault(candidate, []).append("map")
@@ -225,6 +246,9 @@ def main(argv=None) -> int:
         # files - the answer existed and no reader could reach it.
         for name in selected:
             print(f"{name}\n    <- {why.get(name, why.get('*'))}")
+        for module, size in sorted(wide_entries().items()):
+            print(f"(map entry for {module} ignored: {size} files, over the "
+                  f"{MAP_ENTRY_CAP} bound - UX-605)", file=sys.stderr)
         return 0
     if args.list:
         print("\n".join(selected))

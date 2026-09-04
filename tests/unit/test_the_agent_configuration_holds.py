@@ -967,11 +967,9 @@ class TestTheRulesCardIsTheEntryPoint:
     #: "everything unmarked" - that would make the clause below vacuous.
     #: Each entry is asserted *still* unmarked, so the list shrinks when
     #: the marker lands rather than hiding one that did.
-    UNMARKED = {
-        "test_docs_links_and_commands.py":
-            "another track owns the file this round; its row is "
-            "`both status markers, same commit`",
-    }
+    #: `UX-600` emptied it: the one deferral was the round's own
+    #: parallelism, and its marker landed.
+    UNMARKED = {}
 
     #: Named beside a guard, and not one: a tool is the mechanism the
     #: rule asks for, and the test file next to it is what holds it.

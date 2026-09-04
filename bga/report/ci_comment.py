@@ -274,6 +274,49 @@ def _why_block(comparison) -> List[str]:
     return lines
 
 
+def _verdict_why_block(comparison) -> List[str]:
+    """UX-593: the chain behind the **verdict**, beside the one behind
+    the candidate.
+
+    `_why_block` above cites `candidate_diagnosis.provenance` - why the
+    candidate run looks the way it does. The line a contributor argues
+    with is the one at the top of this comment, and it published no
+    grounds at all: the baseline it was measured against, the band or
+    rule it crossed, and which elements crossed it were three greps
+    away in a document nobody opens to defend a red gate.
+
+    Cited, not re-derived, and folded for `_why_block`'s reason.
+
+    **One line of references, where `_why_block` uses a table.** The
+    comment's total length is capped at 60 lines because folded material
+    a reviewer opens is still material they read, and a second table put
+    the large-addition case at 65. A row per reference is unbounded -
+    the band adds three and the culprits five - so the refs render as
+    one bounded line and the block costs ten lines whatever it cites.
+    """
+    from ..compare import verdict_provenance
+
+    record = verdict_provenance(comparison)
+    if not record:
+        return []
+    rule = record.get('rule') or {}
+    lines = [f"<details><summary>Why the verdict is "
+             f"{(comparison.verdict_kind or '').upper()}</summary>", "",
+             rule.get('sentence', ''), ""]
+    if rule.get('name'):
+        lines += [f"Rule `{rule['name']}` = `{rule['threshold']}` "
+                  f"({rule.get('module', '')}). Paths are into this "
+                  f"comparison's own `{record.get('document', 'compare/v2')}`:",
+                  ""]
+    refs = [entry for entry in (record.get('evidence') or [])
+            if entry.get('resolved')]
+    if refs:
+        lines += [" · ".join(f"`{entry['path']}` = {entry['value']}"
+                             for entry in refs), ""]
+    lines += ["</details>", ""]
+    return lines
+
+
 def _cache_line(comparison) -> List[str]:
     churn = getattr(comparison, 'cache_churn', None) or {}
     if not churn.get('applicable'):
@@ -355,6 +398,7 @@ def render_ci_comment(comparison, args, native_report: Optional[dict] = None) ->
 
     lines += _element_table(comparison, _never_read_by_element(native_report))
     lines.append("")
+    lines += _verdict_why_block(comparison)
     lines += _why_block(comparison)
     lines += _cache_line(comparison)
     lines += ["", f"<sub>{_instance_stamp(comparison)}</sub>"]

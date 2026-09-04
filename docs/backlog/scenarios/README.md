@@ -15,19 +15,19 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-602 scenarios: **15 open**, 587 closed.
+617 scenarios: **11 open**, 606 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
-| capture | 1 | 91 |
-| analysis | 2 | 92 |
-| contracts | 2 | 42 |
+| capture | 1 | 92 |
+| analysis | 0 | 93 |
+| contracts | 2 | 44 |
 | viewer | 0 | 138 |
 | cli | 0 | 21 |
-| store | 1 | 16 |
-| docs | 4 | 87 |
-| guards | 5 | 115 |
+| store | 0 | 16 |
+| docs | 2 | 90 |
+| guards | 6 | 123 |
 
 ## Open scenarios
 
@@ -36,21 +36,17 @@ task file, which is the only place it ever lived twice.
 
 | ID | Scenario | Topic | Priority | Serves | Status |
 |---|---|---|---|---|---|
-| UX-589 | [the failure namer reads a junit the run did not write](UX-0589-the-namer-reads-a-junit-the-run-did-not-write.md) | guards | Medium | every session reading a red CI job | 🔴 Open |
-| UX-590 | [the context map's non-path claims are unguarded](UX-0590-the-context-map-s-non-path-claims-are-unguarded.md) | guards | Medium | every session that reads fixing guide §6 to find where a thing lives | 🔴 Open |
-| UX-591 | [the architecture review log is in no index](UX-0591-the-architecture-review-log-is-in-no-index.md) | docs | Medium | the reader looking for what the last architecture review decided | 🔴 Open |
-| UX-593 | [the regression verdict carries no evidence chain](UX-0593-the-regression-verdict-carries-no-evidence-chain.md) | analysis | Medium | R4, the CI gatekeeper asked to defend a red gate | 🔴 Open |
-| UX-594 | [a capture cannot say when the build was requested](UX-0594-a-capture-cannot-say-when-the-build-was-requested.md) | capture | Medium | R6, the contributor waiting on a verdict | 🔴 Open |
-| UX-595 | [the capacity model has a fact base and no model](UX-0595-the-capacity-model-has-a-fact-base-and-no-model.md) | store | Medium | R5, the capacity operator | 🔴 Open |
-| UX-596 | [build time in the team's units](UX-0596-build-time-in-the-team-s-units.md) | analysis | Low | R8, the engineering lead funding infrastructure | 🔴 Open |
 | UX-597 | [three release rows and no tag](UX-0597-three-release-rows-and-no-tag.md) | docs | Low | anyone trying to check out a release this repository claims to have made | 🔴 Open |
-| UX-598 | [two of the four percentile rows publish no distribution](UX-0598-two-of-the-four-percentile-rows-publish-no-distribution.md) | contracts | Medium | the reader who trusts Direction 11's table | 🔴 Open |
-| UX-599 | [a guard pins a contract version by typing it](UX-0599-a-guard-pins-a-contract-version-by-typing-it.md) | guards | Medium | the next contract bump, which will pass a guard that should have caught it | 🔴 Open |
-| UX-600 | [the rules card has one guard it cannot mark](UX-0600-the-rules-card-has-one-guard-it-cannot-mark.md) | guards | Low | the session reading the card's guard column | 🔴 Open |
-| UX-601 | [two guard ledgers of the same kind, two mechanisms](UX-0601-two-guard-ledgers-of-the-same-kind.md) | docs | Low | the next session asked to add a rule and its guard | 🔴 Open |
-| UX-602 | [two hard gates are published and named nowhere](UX-0602-two-hard-gates-are-published-and-named-nowhere.md) | contracts | High | anyone reading `confidence.hard_gates` to decide whether a run is trustworthy | 🔴 Open |
-| UX-603 | [the Python floor reaches no reader](UX-0603-the-python-floor-reaches-no-reader.md) | docs | Medium | the contributor deciding whether their interpreter will do | 🔴 Open |
 | UX-604 | [the verification-log clause reads the entry below it](UX-0604-the-verification-log-clause-reads-the-entry-below.md) | guards | Medium | the round whose log entry says nothing and passes | 🔴 Open |
+| UX-610 | [the verdict record is not a published key](UX-0610-the-verdict-record-is-not-a-published-key.md) | contracts | Medium | R4, the CI gatekeeper asked to defend a red gate from the payload alone | 🔴 Open |
+| UX-612 | [the start clock has no provenance](UX-0612-the-start-clock-has-no-provenance.md) | capture | High | anyone computing a duration from a capture's start | 🔴 Open |
+| UX-613 | [the capacity model emits no document](UX-0613-the-capacity-model-emits-no-document.md) | contracts | Medium | R4 and anyone wanting the model's answer in a pipeline | 🔴 Open |
+| UX-614 | [a track starts on the default branch, not the round's](UX-0614-a-track-starts-on-the-default-branch.md) | guards | High | every round that runs tracks in parallel | 🔴 Open |
+| UX-615 | [the scratchpad is shared between tracks](UX-0615-the-scratchpad-is-shared-between-tracks.md) | guards | Low | a round running tracks in parallel | 🔴 Open |
+| UX-616 | [the coupling runs the other way too](UX-0616-the-coupling-runs-the-other-way-too.md) | docs | Medium | anyone adding a paragraph to the rules card | 🔴 Open |
+| UX-617 | [the derived count cannot see an unstaged row](UX-0617-the-derived-count-cannot-see-an-unstaged-row.md) | guards | Low | the session filing a row | 🔴 Open |
+| UX-618 | [the step that fails most writes no record](UX-0618-the-step-that-fails-most-writes-no-record.md) | guards | High | every session reading a red CI job | 🔴 Open |
+| UX-619 | [four small-tier failures nobody can name](UX-0619-four-small-tier-failures-nobody-can-name.md) | guards | High | every session whose PR goes red for no reason it can find | 🔴 Open |
 
 ## UX-563..UX-586: the eighty-second round — the documents, read against the tool (2026-09-03)
 

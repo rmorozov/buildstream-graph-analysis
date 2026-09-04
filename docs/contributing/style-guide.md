@@ -12,9 +12,9 @@ These rules exist to keep the evidence and lose the accretion. They are
 not style preferences; each one is here because its absence caused a
 real problem, named below.
 
-Four of the rules below close with **Enforced by test**, and §8's
-table-cell rule is a fifth in its own words. The rest are read by
-people. The four are counted off this document by
+Five of the rules below close with **Enforced by test**, and §8's
+table-cell rule is a sixth in its own words. The rest are read by
+people. That count is read off this document by
 [`tests/unit/test_the_process_documents_derive_their_figures.py`](../../tests/unit/test_the_process_documents_derive_their_figures.py),
 so the sentence cannot drift the way it had — it said *two* while
 five rules claimed enforcement (`UX-584`).
@@ -273,6 +273,29 @@ a docstring or a payload note — `capacity_recommendation`,
 `memory_envelope`, and `whatif`'s summing convention. Each survived
 because one person said so out loud in a review, which is not a
 process. `UX-237` filed the rule; `UX-242`..`UX-244` filed the three.
+
+## 15. A guard ledger declares how its rows reach their guards
+
+A table mapping a document's own rows to the guards that hold them is a
+**guard ledger**. Two exist, and they link in opposite directions:
+
+| ledger | link |
+|---|---|
+| [`docs/design/styleguide.md`](../design/styleguide.md) §7 | a `§N` citation in the guard's own text |
+| [`rules.md`](rules.md) | a `holds: rules.md#<slug>` line in the guard |
+
+The test for a new one: **can the guard's text name the row while
+saying what it asserts?** §7's rows are numbered sections, and a guard
+enforcing one quotes the number as the reason for its assertion — the
+citation is prose that had to be there anyway. The card's rows are
+sentences the document numbers nowhere; a guard would never quote one,
+so a passing mention proves nothing and the declared line is the
+guard's only claim. Pick whichever the answer gives. A third ledger
+does not invent a third link.
+
+**Why:** round 83 built both, days apart, and neither knew about the
+other (`UX-601`). **Enforced by test** — a document that grows a guard
+column and adopts neither link fails the suite.
 
 ---
 

@@ -3,7 +3,7 @@
 This is the mandatory entry point for any agent (human or LLM) picking up a task on this repository. It exists because a prior fixing session, working with limited context, marked several tasks "🟢 Fixed" that were not actually fixed — including `classify_scheduler_wait()` in `bga/attribution/blame_chain.py`, which still unconditionally `return False` after being marked complete. This guide's rules exist specifically to prevent that failure mode from repeating - the discipline below applies to any backlog in this repo, not just the one it was originally written for.
 
 **Start at [`rules.md`](rules.md)** — every rule below as one line with
-its guard, 5 KB against this file's 40 KB (`UX-505`). Come here for the
+its guard, 5 KB against this file's ~40 KB (`UX-505`). Come here for the
 paragraph behind the rule you are about to break: each one carries the
 incident that produced it, and that is why it is trusted, not padding.
 
@@ -107,7 +107,7 @@ Round 80's 8m52s is **not reproducible on the tree that produced it**: the same 
 10. **Does this change what `docs/design/architecture.md` or the spec says is true? Then they change in the same commit.** The user's observation, and it is measurable: when `UX-233` was filed, `architecture.md` still described three analysis planes and stopped at round 20 — before the entire viewer axis (the server, the schema-driven page, the export) and before the contract wave that followed it — and five of the eight published schemas were named in no document at all. Documentation that has fallen a whole axis behind is what makes a big refactor expensive to price, which is exactly the cost the observation names. The mechanical half is guarded: `tests/unit/test_the_documents_keep_up_with_the_contracts.py` asserts every schema id the code emits appears in the spec's Part 32.5 and in the architecture inventory, and that neither names one nothing emits. The judgment half — a *mechanism* the document describes and your change moved — is a checklist item for the same reason item 6 is.
 
 11. **Does this change need documentation you are not writing now? File it before the commit lands.** There were two escape valves for work a session cannot do — a bug you notice becomes a tracker row (`§2.5`), and a doc your change made *wrong* is fixed in the same commit (item 10) — and no door at all for the third and commonest shape: *this needs a proper explanation, and writing it well is half a session's work.* That thought had nowhere to go, so it became a comment, or nothing. Round 28 produced three instances and all three survived only because someone happened to say so out loud: `capacity_recommendation` and `memory_envelope` reach no consumer, and `bga/whatif.py`'s convention was documented only in its own docstring. The rule is the same shape as `§2.5` and costs the same: a row in `docs/backlog/scenarios/README.md` — id, one line, 🔴, topic `docs` — in the commit that creates the debt. A task file can come later; naming the gap is the minimum. If you decide the gap is not worth documenting, say that in the Outcome instead — a stated decline is a decision, and silence is not. `tests/unit/test_documentation_debt_has_a_door.py` holds the mechanical half: a filing that defers documentation must name where it went (`UX-237`).
-12. **`docs/spec/specification.md` is ground truth, and Part 32 is the one Part a round may edit.** `UX-556` is what settled the boundary, because a round hit it and read it two ways. The spec's contract registry said "The last four are **written but not printable**" of a set that is six (`unprintable()` less `superseded()`) and that four rows follow; `UX-549` fixed the architecture's copy of the same sentence and filed the spec's, reading the rule as forbidding the edit. It does not: the sentence is at line 1671 and Part 32 spans 1515-1910, so it was inside the permitted region the whole time (the range is derived by `test_the_spec_outside_part_32_is_read_only.py`, which also digests everything outside it). **The Part, not the table** — a rule that lets you correct a registry row but not the sentence counting the rows is not a boundary, it is an accident of where someone drew the line. Everything outside Part 32 stays read-only for a round; a factual error there is filed, not fixed. And the second half, which is what stops this recurring: **a counted figure in Part 32 is derived by a guard, never restated in prose.** Both copies of this error were prose nothing checked. `tests/unit/test_a_counted_figure_is_derived.py::TestTheSpecCountsItsOwnTable` reads the count and the position off the table's own rows.
+12. **`docs/spec/specification.md` is ground truth, and Part 32 is the one Part a round may edit.** `UX-556` is what settled the boundary, because a round hit it and read it two ways. The spec's contract registry said "The last four are **written but not printable**" of a set that is six (`unprintable()` less `superseded()`) and that four rows follow; `UX-549` fixed the architecture's copy of the same sentence and filed the spec's, reading the rule as forbidding the edit. It does not: the sentence is at line 1671 and Part 32 spans 1515-1939, so it was inside the permitted region the whole time (the range is derived by `test_the_spec_outside_part_32_is_read_only.py`, which also digests everything outside it). **The Part, not the table** — a rule that lets you correct a registry row but not the sentence counting the rows is not a boundary, it is an accident of where someone drew the line. Everything outside Part 32 stays read-only for a round; a factual error there is filed, not fixed. And the second half, which is what stops this recurring: **a counted figure in Part 32 is derived by a guard, never restated in prose.** Both copies of this error were prose nothing checked. `tests/unit/test_a_counted_figure_is_derived.py::TestTheSpecCountsItsOwnTable` reads the count and the position off the table's own rows.
 
 13. If the acceptance test does **not** pass after your change, leave status at 🟡 (In Progress) with a note on what's blocking, and stop — do not mark it 🟢 "mostly working."
 
@@ -188,6 +188,7 @@ bga/schemas.py         every published contract + view-hints; `--schema` prints 
 bga/contracts.py       the derived inventory of every contract, printable or not (UX-248)
 bga/producer.py        which build wrote an artifact, and the contract set it had (UX-249)
 bga/report/            text.py, json.py, ci_comment.py - renderers, no analysis
+--format               text, json, csv, ci-comment - what a run can be asked for
 ```
 
 **The commands that are not `analyze`:**
@@ -200,6 +201,8 @@ bga/whatif.py          the projection for a chosen set of fixes (UX-230)
 bga/cache_trend.py     a series of runs, not a pair
 bga/cache_effectiveness.py  the cache's own numbers
 bga/store_aggregate.py the store as a distribution, per host class (UX-234)
+bga/capacity_model.py  Allen-Cunneen M/G/c over that distribution, each
+                       assumption recorded where the arithmetic uses it (UX-595)
 bga/run_store.py       .bga/runs, the @last/@prev aliases, prune
 bga/bundle.py          a capture packed to carry, and what the far
                        side refuses to half-read (UX-520)
@@ -212,6 +215,45 @@ bga/suspend.py         did this capture sleep
 bga/cli.py             argparse CLI and dispatch
 bga/tools_dispatch.py  the `tools/` aliases `bga` exposes as subcommands
 bga/progress.py, help_format.py, logging_config.py, exceptions.py
+```
+
+**Every command `bga` answers to** (`UX-608`) — the subcommands, then
+the `tools/` aliases `bga/tools_dispatch.py` exposes, and where each
+one's work is done:
+
+```text
+analyze         bga/analyzer.py
+blast           bga/blast.py
+bundle          bga/bundle.py
+cache-trend     bga/cache_trend.py
+compare         bga/compare.py
+correlate       bga/correlate.py
+diagnostics     bga/diagnostics/
+floors          bga/floors/
+graph           bga/graph/
+replay          bga/replay/
+sweep           bga/replay/        the capacity sweep, not a slice of one analysis
+utilisation     bga/utilisation/
+whatif          bga/whatif.py
+baseline          tools/bst_baseline_set.py
+cache-logs        tools/bst_cache_logs.py
+capture           tools/bst_native_build_tracer.py
+checkout-cost     tools/bst_checkout_cost.py
+chrome-to-trace   tools/chrome_trace_to_bga_trace.py
+cross-check       tools/bga_cross_check.py
+doctor            tools/bga_doctor.py
+extract           tools/bst_extract_run.py
+gen-synthetic     tools/gen_synthetic_scale_run.py
+graph-from-show   tools/bst_show_to_graph.py
+log-to-chrome     tools/bst_log_to_chrome_trace.py
+native-to-chrome  tools/native_trace_to_chrome_trace.py
+rebuild-set       tools/bst_rebuild_set.py
+release-notes     tools/bga_release_notes.py
+run-context       tools/bst_run_context.py
+snapshot          tools/bga_snapshot.py
+timeline          tools/bga_timeline.py
+view              tools/bga_view.py
+wrap              tools/bst_run_wrapped.py
 ```
 
 **The viewer** (`UX-193`..`UX-235`) — hand-written ES modules, no build

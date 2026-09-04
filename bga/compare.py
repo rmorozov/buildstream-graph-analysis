@@ -788,6 +788,148 @@ def _candidate_diagnosis(candidate_result: AnalysisResult) -> Optional[dict]:
             'provenance': record}
 
 
+# UX-593: the claim id the run verdict's chain is published under, and
+# the module its rule constants live in.
+VERDICT_CLAIM = 'verdict'
+VERDICT_RULE_MODULE = 'bga/compare.py'
+
+# How many crossing elements the chain cites by name. The *count* of
+# every element that crossed is cited beside them as a reference into
+# `element_deltas.counts`, so five is five of a stated number rather
+# than the whole story - `UX-187`'s named elision, in the record.
+VERDICT_CULPRITS_CITED = 5
+
+# Which published count answers "how many elements crossed", per
+# verdict. A declined verdict has none: no element is coloured on its
+# own when the run itself would not be.
+_CROSSING_COUNT = {'regressed': 'grew', 'improved': 'shrank'}
+
+
+def _verdict_rule(kind: str, document: dict) -> dict:
+    """The rule the run verdict actually fired on, read live.
+
+    Three cases, and the third is the one a copied literal would get
+    wrong: a band narrower than the fixed percentage is *widened to it*
+    by `widen_band`, after which the number the verdict was judged
+    against is `_SIGNIFICANCE_PCT` and not the band's `k` at all.
+    """
+    band = document.get('baseline_band') or None
+    baseline_total = (document.get('baseline') or {}).get('total_duration_us')
+    delta = (document.get('deltas') or {}).get('total_duration_us')
+    pct = (delta / baseline_total * 100) if (baseline_total and delta is not None) else None
+    against = (f"The candidate is {pct:+.1f}% against baseline run "
+               f"{document.get('baseline_run_id') or '(no run identity)'}"
+               if pct is not None else
+               "The candidate is compared against baseline run "
+               f"{document.get('baseline_run_id') or '(no run identity)'}")
+    if band and not band.get('widened_to_fixed_pct'):
+        name, threshold = 'DEFAULT_BAND_K', band.get('k')
+        where = (f"the noise band from {band.get('n')} baseline runs "
+                 f"(median +/- {band.get('k'):g}x scaled MAD)")
+    elif band:
+        name, threshold = '_SIGNIFICANCE_PCT', _SIGNIFICANCE_PCT
+        where = (f"the noise band from {band.get('n')} baseline runs, widened "
+                 f"to the fixed {_SIGNIFICANCE_PCT}% rule because it came out "
+                 f"narrower than it")
+    else:
+        name, threshold = '_SIGNIFICANCE_PCT', _SIGNIFICANCE_PCT
+        where = (f"the fixed {_SIGNIFICANCE_PCT}% band around the baseline "
+                 f"(no baseline set was supplied, so no measured band was "
+                 f"derived)")
+    crossed = kind in ('regressed', 'improved', 'within_observed_range')
+    if kind == 'within_observed_range':
+        sentence = (f"{against}, which is outside {where} but inside the range "
+                    f"the baseline runs themselves reached - so "
+                    f"within_observed_range, and the duration verdict is "
+                    f"withheld rather than issued against the set's own spread.")
+    elif kind == 'no_significant_change':
+        sentence = (f"{against}, which is inside {where} - so "
+                    f"no_significant_change, and no element is coloured on "
+                    f"its own when the run itself was not.")
+    else:
+        counts = (document.get('element_deltas') or {}).get('counts') or {}
+        moved = counts.get(_CROSSING_COUNT.get(kind, ''), 0)
+        crossers = (
+            f"{moved} element(s) present in both runs "
+            f"{_CROSSING_COUNT.get(kind, 'moved')}, and the "
+            f"{min(moved, VERDICT_CULPRITS_CITED)} largest are cited"
+            if moved else
+            "No element present in both runs "
+            f"{_CROSSING_COUNT.get(kind, 'moved')}, so what moved is in the "
+            f"elements this change added or removed")
+        sentence = (f"{against}, which is outside {where} - so {kind}. "
+                    f"{crossers}.")
+    return {'name': name, 'threshold': threshold,
+            'comparison': '>' if crossed else '<=',
+            # No published field is in the unit either threshold is in -
+            # scaled-MAD units and a percentage of the baseline - so the
+            # path is null rather than pointed at a duration it is not.
+            'observed_path': None, 'sentence': sentence,
+            'module': VERDICT_RULE_MODULE}
+
+
+def verdict_provenance(comparison, document: Optional[dict] = None) -> Optional[dict]:
+    """`UX-593`: the chain behind the **run verdict**.
+
+    `UX-229` gave every `analyze/v5` claim a record - evidence refs, the
+    rule that fired, the query that deepens it - and a comparison
+    carries the candidate run's diagnosis chain at
+    `candidate_diagnosis.provenance`. That answers *why does the
+    candidate look like this*, which is not the sentence a contributor
+    argues with; `why did you call this REGRESSED` had no published
+    answer at all.
+
+    The same object one document over: every `evidence[].path` walks
+    `compare/v2` itself, so a reader follows the reference into the
+    payload already in front of them rather than into a second command's
+    output. The culprits are `UX-221`'s rows, cited by element uid -
+    `element_deltas.rows[element_uid=core.bst].delta_us` - because a
+    record that copied them would be a second ranking to disagree with
+    the first.
+
+    `None` for a refusal: `not_comparable` states its own reason and no
+    band arithmetic ran behind it.
+    """
+    from . import provenance as _provenance
+
+    kind = getattr(comparison, 'verdict_kind', None)
+    if kind in (None, 'not_comparable'):
+        return None
+    document = comparison.to_dict() if document is None else document
+    paths = ['baseline_run_id', 'baseline.total_duration_us',
+             'candidate.total_duration_us', 'deltas.total_duration_us']
+    if document.get('baseline_band'):
+        paths += ['baseline_band.n', 'baseline_band.low_us',
+                  'baseline_band.high_us']
+    crossing = _CROSSING_COUNT.get(kind)
+    if crossing:
+        paths.append(f'element_deltas.counts.{crossing}')
+        rows = (document.get('element_deltas') or {}).get('rows') or []
+        # Already ranked by absolute delta, so the head is the largest.
+        culprits = [row for row in rows if row.get('presence') == 'both'
+                    and row.get('verdict_kind') == kind]
+        paths += [
+            f"element_deltas.rows[element_uid={row['element_uid']}].delta_us"
+            for row in culprits[:VERDICT_CULPRITS_CITED]]
+    evidence = []
+    for path in paths:
+        value = _provenance.resolve(document, path)
+        row = {'path': path, 'resolved': value is not _provenance.UNRESOLVED,
+               'value': None if value is _provenance.UNRESOLVED else value}
+        quantity = schemas.quantity_for_path(path, schemas.COMPARE)
+        if quantity:
+            row['quantity'] = quantity
+        evidence.append(row)
+    return {
+        'claim': VERDICT_CLAIM, 'kind': 'verdict', 'document': schemas.COMPARE,
+        'evidence': evidence, 'rule': _verdict_rule(kind, document),
+        # No library question deepens a two-run verdict: `TRACE_QUERIES`
+        # is keyed by the claims of one run's analysis, and pointing at
+        # one of those would deepen the candidate, not the comparison.
+        'trace_query': None, 'unpublished_inputs': [],
+    }
+
+
 def _compare_results(
     baseline_result: AnalysisResult,
     candidate_result: AnalysisResult,

@@ -66,7 +66,32 @@ class TestTheSuiteStillRunsInParallel:
 
 class TestTheSelectorStillSelects:
 
+    # `UX-606`: measured over all 85 mapped modules, not one. The
+    # ceilings sit above min 11 / median 16 / p90 38 / max 116 with
+    # room, so ordinary drift is quiet and a shape change is loud.
+    CEILING = {"median": 20, "p90": 45, "max": 130}
+    POPULATION_FLOOR = 60
+    HANDFUL = 25
+
+    # Wide because the module's name is how a test invokes it, not
+    # because the selector is wrong. `UX-606` argued each one.
+    WIDE = {
+        "bga/cli.py", "tools/bga_view.py", "tools/bst_native_build_tracer.py",
+        "bga/ingest/models.py", "bga/report/text.py", "bga/analyzer.py",
+        "tools/bga_snapshot.py", "bga/run_store.py", "bga/compare.py",
+        "bga/findings.py", "tools/native_trace/trackevent.py",
+        "tools/bga_timeline.py", "tools/native_trace_to_chrome_trace.py",
+        "tools/bst_extract_run.py", "bga/tools_dispatch.py",
+        "bga/attribution/blame_chain.py", "bga/correlate.py",
+        "bga/report/json.py", "tools/native_trace/bwrap_shim.py",
+        "bga/schemas.py", "bga/report/_shared.py",
+    }
+
     def test_a_one_module_change_selects_a_handful_not_the_suite(self):
+        """The worked example, and `UX-606` measured the population it
+        used to stand for. `store_aggregate` is a distinctive two-word
+        name, which is why 25 holds here; the selector's own contract
+        is the distribution below."""
         selected, _ = dev_touching.select(["bga/store_aggregate.py"])
         assert 1 <= len(selected) <= 25, (
             f"a one-module diff selected {len(selected)} files. The point is "
@@ -74,6 +99,82 @@ class TestTheSelectorStillSelects:
         assert "tests/unit/test_the_aggregate_says_what_it_mixes.py" in selected, (
             "the file whose whole subject is the changed module was not "
             f"selected: {selected}")
+
+    def test_the_selection_is_a_fraction_of_the_suite(self):
+        """`UX-606`. The claim `store_aggregate` used to carry alone,
+        measured over every module the map names — 85 of them against
+        456 test files:
+
+            min 11 · median 16 · p90 38 · max 116 (`bga/cli.py`, 25%)
+
+        The ceilings carry headroom over those, and each failure names
+        the figure it read, because the point is a selector faster than
+        the tier and not a number for its own sake."""
+        sizes = sorted(len(dev_touching.select([m])[0])
+                       for m in dev_touching.touch_map())
+        assert len(sizes) >= self.POPULATION_FLOOR, (
+            f"only {len(sizes)} modules in the map — the population is "
+            f"broken, not the selector")
+        total = len(dev_touching.test_files())
+        got = {"median": sizes[len(sizes) // 2],
+               "p90": sizes[int(0.9 * len(sizes))],
+               "max": sizes[-1]}
+        over = {k: v for k, v in got.items() if v > self.CEILING[k]}
+        assert not over, (
+            f"the selection outgrew its measured shape: {got} against "
+            f"{self.CEILING}, over a suite of {total} files")
+
+    def test_the_wide_modules_are_named_and_not_merely_tolerated(self):
+        """The clause that makes a *new* wide module loud. These 21 are
+        wide because their names are what a test says to invoke them —
+        116 files name `bga.cli` because they run the CLI — so the
+        width is honest and the old ≤25 bound was the wrong shape. A
+        module joining or leaving the set has to be argued here."""
+        wide = {m for m in dev_touching.touch_map()
+                if len(dev_touching.select([m])[0]) > self.HANDFUL}
+        assert wide == self.WIDE, (
+            f"joined: {sorted(wide - self.WIDE)}; "
+            f"left: {sorted(self.WIDE - wide)}")
+
+    def test_an_over_wide_map_entry_is_not_a_selection(self, monkeypatch):
+        """`UX-605`. `--cov-context=test` attributes a module's
+        import-time lines to every test that imports it, so the map CI
+        adopted in `0bc5aff` named 200 of 449 files for
+        `bga/progress.py`. A selection that wide is not one."""
+        wide = dev_touching.test_files()[:dev_touching.MAP_ENTRY_CAP + 1]
+        monkeypatch.setattr(dev_touching, "touch_map",
+                            lambda: {"bga/store_aggregate.py": wide})
+        selected, why = dev_touching.select(["bga/store_aggregate.py"])
+        assert len(selected) <= 25, (
+            f"the map widened the selection to {len(selected)}")
+        assert not [n for n in selected if "map" in why.get(n, [])], (
+            "an entry over the bound still contributed to the selection")
+
+    def test_a_narrow_entry_in_the_same_map_is_still_used(self, monkeypatch):
+        """The half that stops the cap becoming 'ignore the map'. The
+        import chain a grep cannot see is why `UX-524` exists."""
+        unrelated = "tests/unit/test_the_loop_stays_fast.py"
+        monkeypatch.setattr(
+            dev_touching, "touch_map",
+            lambda: {"bga/store_aggregate.py": [unrelated],
+                     "bga/progress.py": dev_touching.test_files()})
+        selected, why = dev_touching.select(["bga/store_aggregate.py"])
+        assert unrelated in selected and "map" in why[unrelated], (
+            f"a one-file map entry was dropped with the wide ones: {why}")
+
+    def test_the_map_in_the_tree_says_which_entries_it_cannot_use(self):
+        """`wide_entries()` is what `--why` prints, so it is derived
+        here rather than trusted. Written first as "every reported
+        entry is over the cap", it stayed green when the reporter was
+        made to report nothing - vacuous both ways. Equality reddens.
+
+        48 of 85 on the map `0bc5aff` adopted; 0 on a clean map, which
+        is the same assertion."""
+        mapped = dev_touching.touch_map()
+        cap = dev_touching.MAP_ENTRY_CAP
+        derived = {k: len(v) for k, v in mapped.items() if len(v) > cap}
+        assert dev_touching.wide_entries() == derived, (
+            "what --why reports is not what the map holds")
 
     def test_a_changed_test_file_runs_itself(self):
         selected, _ = dev_touching.select(

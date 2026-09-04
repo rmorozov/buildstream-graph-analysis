@@ -22,6 +22,13 @@ with its own `docs/audits/` — and a recursive glob reads them.
 
 `docs/audits/data/` is out: those are appendices to a round document,
 not rounds, and the row belongs to the round that cites them.
+
+`UX-591`: and the documents that are *not* rounds, which this file's
+first version enumerated past. `architecture-review.md` is 45,132 B
+and thirteen reviews long and no index carried it — the round list is
+a run of `·`-separated numbers, so a standing document put there
+reads as a round. They get a table row instead, and a row is what is
+asserted, not a link anywhere on the page.
 """
 import functools
 import os
@@ -45,6 +52,10 @@ LINK = re.compile(r"\[([^\]\n]*)\]\(([^)\s]+)\)")
 # documents, 43 table links and 45 README audits links on `8481f99`.
 FLOOR = 40
 
+# `UX-591`: architecture-review, case-study-06, optimization-walkthrough-04,
+# spec-compliance-review. Measured 4 on the base of round 84.
+NAMED_FLOOR = 4
+
 
 @functools.lru_cache(maxsize=None)
 def _tracked():
@@ -59,6 +70,27 @@ def _round_documents():
         p for p in _tracked()
         if posixpath.dirname(p) == AUDITS
         and re.search(r"round-\d+", posixpath.basename(p))))
+
+
+def _named_documents():
+    """Every audit document that is not a round (`UX-591`)."""
+    return tuple(sorted(
+        p for p in _tracked()
+        if posixpath.dirname(p) == AUDITS
+        and not re.search(r"round-\d+", posixpath.basename(p))))
+
+
+def _readme_table_links():
+    """Links inside a markdown table row of `README` — a row, not a run."""
+    here = posixpath.dirname(README)
+    found = []
+    for line in (REPO / README).read_text(encoding="utf-8").splitlines():
+        if not line.startswith("| "):
+            continue
+        for _label, target in LINK.findall(line):
+            if target.startswith("audits/"):
+                found.append(os.path.normpath(posixpath.join(here, target)))
+    return tuple(found)
 
 
 def _links(doc, prefix):
@@ -107,6 +139,9 @@ def test_the_scan_is_not_vacuous():
         f"only {len(_table_links())} links in the round-history table")
     readme = [ln for ln in _audits_links() if ln[0] == README]
     assert len(readme) >= FLOOR, f"only {len(readme)} audits links in {README}"
+    assert len(_named_documents()) >= NAMED_FLOOR, (
+        f"only {len(_named_documents())} non-round documents under {AUDITS}/ — "
+        f"the enumeration is broken, not the directory")
 
 
 def test_every_round_document_has_a_history_row():
@@ -121,6 +156,25 @@ def test_every_round_document_is_linked_from_the_readme():
     linked = {resolved for doc, _, _, resolved in _audits_links() if doc == README}
     missing = [d for d in _round_documents() if d not in linked]
     assert not missing, f"{README} links to no: {', '.join(missing)}"
+
+
+def test_every_named_audit_document_has_a_readme_table_row():
+    """`UX-591`. A row says what the document records; a number in the
+    round run says only that it is a round, which these are not."""
+    rows = set(_readme_table_links())
+    missing = [d for d in _named_documents() if d not in rows]
+    assert not missing, (
+        f"{README} has no table row for: {', '.join(missing)} - a link in "
+        f"the round run is not a row, and these are not rounds")
+
+
+def test_no_named_audit_document_is_listed_as_a_round():
+    """The other direction: the run under `## Audits` is rounds only."""
+    run = {resolved for doc, _, _, resolved in _audits_links()
+           if doc == README} - set(_readme_table_links())
+    stray = [d for d in _named_documents() if d in run]
+    assert not stray, (
+        f"{README} lists as a round: {', '.join(stray)}")
 
 
 def test_every_audits_link_points_at_a_file_that_exists():

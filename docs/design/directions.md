@@ -946,7 +946,7 @@ new feature and 4 KB of vendored library stop looking alike.
 CI comment and R8's prioritisation case most of all; R1 directly
 ([roles](roles.md)).
 
-**Status:** partial — `UX-227`..`UX-230` closed and the CI comment quotes the chain (`_why_block`); `bga compare` publishes the *candidate diagnosis*'s chain, not the regression verdict's, so this section's last tail is `UX-593`.
+**Status:** landed — `UX-227`..`UX-230`, and the regression verdict's own evidence chain (`UX-593`), which is what the CI comment had been quoting the candidate diagnosis's in place of. Publishing that chain as a `compare/v2` key is filed.
 
 The fourth external review's strongest idea, adopted — and it is the
 house pattern one level up. Round 24 found the relationship layer
@@ -1008,7 +1008,7 @@ deferred maybe, behind the same bar every graph has faced here.
 **Serves:** R5, R6, R7, R8 — the roles the
 [role model](roles.md) found unserved.
 
-**Status:** partial — `UX-234` landed the aggregate fact-base; the rest of the argued order is filed rather than argued again — the queue seam `UX-594`, the capacity model `UX-595`, the cost translation `UX-596`.
+**Status:** landed — the aggregate fact-base (`UX-234`), the queue seam (`UX-594`), the capacity model (`UX-595`) and the cost translation (`UX-596`). Two tails are filed rather than open here: the start clock's provenance, and a stamped contract for the model's answer.
 
 Everything bga answers today is answered within one build, or one
 store's history of one project. That satisfies R1-R4 — and
@@ -1470,6 +1470,7 @@ the other rounds now:
 | [81](../audits/round-81.md) | twenty-two rows, seven premises falsified by measuring — the drift gate's cause filter, a stale base under both tracks, the suite line that was not the run's (`UX-538`..`UX-562`) |
 | [82](../audits/round-82.md) | every document read against the tool by five researchers: a sentence a guard reads is exact, a sentence no guard reads has drifted — twenty-four filings asking for derivation and dating, and the `review` skill (`UX-563`..`UX-586`) |
 | [83](../audits/round-83.md) | round 82's twenty-four rows executed, most of them not "correct a sentence" but "give the sentence a guard and let the correction follow" — the `UX-549` shape (a figure the guard derives) and the `UX-511` shape (a block labelled with its date and its cuts), extended to where round 82 found them missing (`UX-563`..`UX-586`) |
+| [84](../audits/round-84.md) | the fifteen rows round 83 filed rather than fixed, seven tracks wide — and the round where a filed premise is re-measured before it is implemented, because `UX-589`'s was false and `UX-592` had already refuted it (`UX-589`..`UX-604`) |
 
 ## Verification Log
 
@@ -1619,7 +1620,7 @@ I installed and the thing I have now" at all.
 day, and the graph owner who knows which of those choices the graph
 forbids — and R8, who is handed the ranking as a case for funding.
 
-**Status:** partial — the ranking landed (`UX-260`, `UX-303`); of the four `yes` rows in the table below, two publish `bga:distribution` and two do not, which is `UX-598` and the dated note under that table.
+**Status:** landed — the ranking (`UX-260`, `UX-303`), and every `yes` row in the table below both publishing a distribution and declaring `bga:distribution` (`UX-598`), which the note under that table derives.
 
 The report ranks elements by blast radius and tells the reader to fix
 the top one. Measured on a 1,202-element run:
@@ -1677,21 +1678,37 @@ the scale, and the population is comparable.** Blast radius qualifies —
 every element is a member and the counts span three orders of
 magnitude. Applying it everywhere would be cargo cult:
 
-| quantity | percentile? | why |
-|---|---|---|
-| blast radius (downstream count) | **yes** | three orders of magnitude, every element a member, no intuition for the scale |
-| element duration | **yes** | the same shape; "is 40s slow here?" has no answer without the distribution |
-| share of the critical path | **no** | already a percentage of a known whole — a percentile of a percentage is a second scale for one fact |
-| sandbox tax (Plane 3) | **yes**, per element | the useful question is "is this element's tax unusual", which is exactly a percentile |
-| processes per element (Plane 2) | **yes** | heavy tails; one element with 40,000 processes is the finding |
-| confidence, coverage, efficiency | **no** | single run-level numbers with no population to be a percentile of |
+| quantity | key | percentile? | why |
+|---|---|---|---|
+| blast radius (downstream count) | `blast_radius` | **yes** | three orders of magnitude, every element a member, no intuition for the scale |
+| element duration | `element_duration` | **yes** | the same shape; "is 40s slow here?" has no answer without the distribution |
+| share of the critical path | `share_of_critical_path` | **no** | already a percentage of a known whole — a percentile of a percentage is a second scale for one fact |
+| sandbox tax (Plane 3) | `sandbox_tax` | **yes**, per element | the useful question is "is this element's tax unusual", which is exactly a percentile |
+| processes per element (Plane 2) | `process_count` | **yes** | heavy tails; one element with 40,000 processes is the finding |
+| confidence, coverage, efficiency | `confidence`, `coverage`, `efficiency_score` | **no** | single run-level numbers with no population to be a percentile of |
 
-**Two of the four `yes` rows are published — measured round 83,
-2026-09-03.** `analyze` emits `bga:distribution` twice, as
-`blast_radius_distribution` and `element_duration_distribution`
-(`bga/schemas.py`, `_SIGNALS_TABLES`); sandbox tax and processes per
-element carry a `bga:quantity` and no distribution. The rule above is
-the rule; what it has reached is `UX-598`.
+The `key` column is the entry in `DISTRIBUTED_QUANTITIES` or
+`UNDISTRIBUTED_QUANTITIES` (`bga/analyzer.py`), where the split is
+recorded with an argument per row; the `percentile?` cell is that
+membership, and `test_the_percentile_rows_are_the_published_ones.py`
+derives one from the other rather than letting a reader compare them.
+
+**All four `yes` rows publish a distribution — re-measured round 84,
+2026-09-03.** `UX-581` dated an earlier count that read
+`bga/schemas.py` as a proxy for what publishes one; two of the four are
+emitted by `bga/correlate.py` into `correlate/v2` instead, and the grep
+could not see them:
+
+```text
+$ python3 -c "from bga.correlate import _scale_of; print(sorted(_scale_of(payers, native)))"
+['process_count_distribution', 'sandbox_tax_distribution']
+$ git grep -n "_distribution(" bga/schemas.py        element_duration, blast_radius
+```
+
+What `UX-598` found was the other half: those two published keys were
+declared by nothing, so every percentile inside them reached the reader
+as a bare number — `UX-343`'s defect. Both now carry `bga:distribution`
+in `_CORRELATE_HINTS`.
 
 Deciles are the right granularity: ten buckets is a shape a reader
 takes in at a glance, and finer only matters in the tail — where the

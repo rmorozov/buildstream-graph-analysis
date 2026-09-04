@@ -1,9 +1,9 @@
 """
 Confidence and reconciliation gates (Part 33).
 
-Hard gates (33.1): ordering_violations == 0, critical_path_coverage ==
-1.0, dominator_coverage == 1.0, blame_chain_coverage == 1.0, and I6 -
-occupancy within every capacity the run declared (Part 34).
+Hard gates (33.1) - `hard_gates`' keys in written order (spec 32.7.5):
+    ordering_violations_zero critical_path_coverage_full dominator_coverage_full
+    blame_chain_coverage_full run_identity_consistent occupancy_within_capacity
 Soft gates (33.2, defaults): task_coverage >= 0.95, duration_coverage >=
 0.98 - these reduce confidence (via coverage_score's min, below) rather
 than hard-failing.

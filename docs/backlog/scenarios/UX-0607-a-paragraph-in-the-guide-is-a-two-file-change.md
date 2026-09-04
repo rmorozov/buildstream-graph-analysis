@@ -1,6 +1,6 @@
 # UX-607: a paragraph in the guide is a two-file change
 
-**Priority:** Medium | **Status:** 🟢 Done Open | **Depends on:** UX-584 (the derived figure), UX-590, UX-603 (both blocked by it) | **Found by:** round 84, twice in one round by two tracks | **Serves:** anyone adding a paragraph to the fixing guide | **Topic:** docs
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-584 (the derived figure), UX-590, UX-603 (both blocked by it) | **Found by:** round 84, twice in one round by two tracks | **Serves:** anyone adding a paragraph to the fixing guide | **Topic:** docs
 
 ## Motivation
 

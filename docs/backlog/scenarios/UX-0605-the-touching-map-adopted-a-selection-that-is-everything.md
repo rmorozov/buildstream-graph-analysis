@@ -1,6 +1,6 @@
 # UX-605: the touching map adopted a selection that is everything
 
-**Priority:** High | **Status:** 🟢 Done Open | **Depends on:** UX-524 (the map), UX-336 (the bound it broke) | **Found by:** round 84, CI red on the merge commit and green on both parents | **Serves:** every session running `make test-touching` | **Topic:** guards
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-524 (the map), UX-336 (the bound it broke) | **Found by:** round 84, CI red on the merge commit and green on both parents | **Serves:** every session running `make test-touching` | **Topic:** guards
 
 ## Motivation
 

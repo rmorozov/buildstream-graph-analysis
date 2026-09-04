@@ -1,6 +1,6 @@
 # UX-620: a derived count re-dates the document it grounds
 
-**Priority:** High | **Status:** 🟢 Done Open | **Depends on:** UX-247 (the log's rule), UX-233 (the count in the opening), UX-604 (the window this sits beside) | **Found by:** round 85, with `main` red | **Serves:** every session that runs the suite on a fresh clone | **Topic:** guards
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-247 (the log's rule), UX-233 (the count in the opening), UX-604 (the window this sits beside) | **Found by:** round 85, with `main` red | **Serves:** every session that runs the suite on a fresh clone | **Topic:** guards
 
 ## Motivation
 

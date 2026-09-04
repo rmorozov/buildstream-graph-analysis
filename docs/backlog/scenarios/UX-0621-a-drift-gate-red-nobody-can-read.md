@@ -1,6 +1,6 @@
 # UX-621: a drift-gate red nobody can read
 
-**Priority:** Medium | **Status:** 🟢 Done Open | **Depends on:** UX-418 (the gate), UX-476 (the log-tail route), UX-491 (the gate's line) | **Found by:** round 85, while root-causing UX-619 | **Serves:** a session reading a red tier-drift step | **Topic:** guards
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-418 (the gate), UX-476 (the log-tail route), UX-491 (the gate's line) | **Found by:** round 85, while root-causing UX-619 | **Serves:** a session reading a red tier-drift step | **Topic:** guards
 
 ## Motivation
 

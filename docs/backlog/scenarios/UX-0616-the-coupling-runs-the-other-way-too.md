@@ -1,6 +1,6 @@
 # UX-616: the coupling runs the other way too
 
-**Priority:** Medium | **Status:** 🟢 Done Open | **Depends on:** UX-607 (which fixed one direction and measured this one) | **Found by:** round 84, by the track that fixed the forward direction | **Serves:** anyone adding a paragraph to the rules card | **Topic:** docs
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-607 (which fixed one direction and measured this one) | **Found by:** round 84, by the track that fixed the forward direction | **Serves:** anyone adding a paragraph to the rules card | **Topic:** docs
 
 ## Motivation
 

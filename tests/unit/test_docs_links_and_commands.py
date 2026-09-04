@@ -468,6 +468,7 @@ _FILE_ID = re.compile(r"^UX-0*(\d+)-")
 # "0 problem(s)" for the rest. Two readings of one property is how they
 # came to disagree, so there is now one: the tool's, imported here.
 from tools.dev_close_task import (  # noqa: E402
+    STATUS_WORDS as _STATUS_WORDS,
     backlog_files as _backlog_files,
     close_status_line as _close_status_line,
     file_statuses as _file_statuses,
@@ -1033,41 +1034,83 @@ def test_every_out_of_scope_entry_names_a_task_or_states_a_decline():
 # reddens the moment the substitution stops naming the closed words.
 
 
-def test_no_task_file_repeats_its_status_word():
-    """The tree, read rather than parsed."""
-    doubled = []
+def _status_value(line):
+    """`(glyph, words)` from a status line, read **literally**.
+
+    `UX-627`: `status_words()` parses with the very vocabulary under
+    test, so a word missing from it is invisible - `🟢 Done Open` reads
+    back as `['Done']`. This splits the text instead, and stops at the
+    verdict prose `move()` is meant to keep.
+    """
+    segment = re.search(r"\*\*Status:\*\*\s*([^|]*)", line).group(1)
+    segment = re.split(r"\s+[—(]|\s+-\s+", segment)[0]
+    glyph, _, words = segment.strip().partition(" ")
+    return glyph, words.strip()
+
+
+def _tree_status_forms():
+    """`{(glyph, words): (file, line)}` over the whole backlog.
+
+    Derived from the tree, never enumerated: five literals here stayed
+    green while `🔴 Open` - the form every row filed since 2026-09-03
+    carries - closed to `🟢 Done Open` seventeen times (`UX-627`).
+    """
+    forms = {}
     for _number, (name, line) in sorted(_file_statuses().items()):
-        words = _status_words(line or "")
-        if words and len(words) > 1:
-            doubled.append(f"{name}: {' '.join(words)}")
-    assert doubled == [], (
-        "task file(s) whose status line says its word more than once - "
-        "`--move` run against a file whose own marker was already set by "
-        "hand, with a substitution that did not name the word it was "
-        "replacing:\n  "
-        + "\n  ".join(doubled)
+        if line:
+            forms.setdefault(_status_value(line), (name, line))
+    return forms
+
+
+def test_no_task_file_repeats_its_status_word():
+    """The tree, read literally rather than parsed."""
+    wrong = []
+    for _number, (name, line) in sorted(_file_statuses().items()):
+        if not line:
+            continue
+        _glyph, words = _status_value(line)
+        if words not in _STATUS_WORDS:
+            wrong.append(f"{name}: {words!r}")
+        elif _status_words(line) != [words]:
+            # The two readings of one property, asserted to agree: the
+            # parse is what `--check` trusts and the text is the truth.
+            wrong.append(f"{name}: {words!r} parses as {_status_words(line)}")
+    assert wrong == [], (
+        "task file(s) whose status line carries a word `STATUS_WORDS` "
+        "does not name - either `--move` doubled it against a word the "
+        "substitution could not see, or the tree has grown a status the "
+        "helper has to learn:\n  "
+        + "\n  ".join(wrong)
     )
 
 
-def test_closing_a_task_twice_says_done_once():
-    """The mechanism, which is what a mutation has to redden.
+@pytest.mark.parametrize("value", sorted(_tree_status_forms()))
+def test_closing_a_task_twice_says_done_once(value):
+    """The mechanism, over every form the tree actually carries.
 
-    Every status the tree actually uses, closed twice. A substitution
-    naming only the open words passes the first line here and doubles
-    the other four, which is the defect `UX-454` was filed for.
+    Asserted on the closed *text*, not on `status_words()` of it: for
+    `🔴 Open` the old clause was already idempotent and already parsed
+    back as `['Done']`, so a sixth literal would have passed too.
     """
-    doubled = {}
-    for start in ("**Status:** 🔴 Not Started |",
-                  "**Status:** 🟢 Done |",
-                  "**Status:** 🟢 Done. |",
-                  "**Status:** 🟢 Fixed & Verified |",
-                  "**Status:** 🟡 In Progress — stages 1 and 2 done |"):
-        once = _close_status_line(start)
-        twice = _close_status_line(once)
-        if _status_words(twice) != ["Done"] or twice != once:
-            doubled[start] = (once, twice)
-    assert doubled == {}, (
-        f"closing is not idempotent: {doubled}")
+    name, line = _tree_status_forms()[value]
+    once = _close_status_line(line)
+    twice = _close_status_line(once)
+    assert _status_value(once) == ("🟢", "Done"), (
+        f"{name} carries {value!r} and closes to {_status_value(once)!r} - "
+        f"the substitution did not name the word it was replacing, so the "
+        f"glyph moved and the word stayed")
+    assert twice == once, (
+        f"closing {name} twice is not idempotent:\n  {once!r}\n  {twice!r}")
+
+
+def test_the_closing_sweep_reads_more_than_the_closed_form():
+    """A sweep over a tree of nothing but `🟢 Done` would pass whatever
+    the substitution did to an open row. This is its floor."""
+    forms = _tree_status_forms()
+    open_words = {words for glyph, words in forms if glyph != "🟢"}
+    assert len(forms) >= 4 and len(open_words) >= 2, (
+        "the backlog no longer carries enough distinct status forms for "
+        "the sweep above to mean anything", sorted(forms))
 
 
 def test_the_verdict_prose_survives_a_close():

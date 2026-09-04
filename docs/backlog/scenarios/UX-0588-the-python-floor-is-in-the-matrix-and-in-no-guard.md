@@ -1,6 +1,6 @@
 # UX-588: the Python floor is in the CI matrix and in no guard
 
-**Priority:** High | **Status:** 🟢 Done Open | **Depends on:** UX-579 (whose new file tripped it) | **Found by:** round 83's own CI, blocking PR #200 | **Serves:** every track that writes Python on a newer interpreter than the floor | **Topic:** guards
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-579 (whose new file tripped it) | **Found by:** round 83's own CI, blocking PR #200 | **Serves:** every track that writes Python on a newer interpreter than the floor | **Topic:** guards
 
 ## Motivation
 

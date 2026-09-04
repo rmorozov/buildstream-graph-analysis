@@ -1,6 +1,6 @@
 # UX-619: four small-tier failures nobody can name
 
-**Priority:** High | **Status:** 🟢 Done Open | **Depends on:** UX-618 (which would have named them), UX-418 (the backstop) | **Found by:** round 84, on three consecutive commits | **Serves:** every session whose PR goes red for no reason it can find | **Topic:** guards
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-618 (which would have named them), UX-418 (the backstop) | **Found by:** round 84, on three consecutive commits | **Serves:** every session whose PR goes red for no reason it can find | **Topic:** guards
 
 ## Motivation
 

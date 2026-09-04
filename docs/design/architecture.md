@@ -1,6 +1,6 @@
 # `bga`: Current Architecture — Three Analysis Planes
 
-**Start here to orient in this codebase.** `docs/spec/specification.md` (v9) is the original design document and stays authoritative for full-length invariant/data-contract text — it is *not* wrong, but it describes the tool as originally scoped, and does not know about anything built since. This doc describes what `bga` actually does **today**, as one coherent system, and points at the real file/doc for every claim so you don't have to reconstruct that history yourself from the commit log, the 650 `docs/backlog/scenarios/` files and the 75 `docs/backlog/tasks/` files this commit carries.
+**Start here to orient in this codebase.** `docs/spec/specification.md` (v9) is the original design document and stays authoritative for full-length invariant/data-contract text — it is *not* wrong, but it describes the tool as originally scoped, and does not know about anything built since. This doc describes what `bga` actually does **today**, as one coherent system, and points at the real file/doc for every claim so you don't have to reconstruct that history yourself from the commit log, the 656 `docs/backlog/scenarios/` files and the 75 `docs/backlog/tasks/` files this commit carries.
 
 **Want to *use* the tool rather than work on it?** [`docs/guides/real-project.md`](../guides/real-project.md) is the end-to-end walkthrough on a real project, with real output at every step.
 
@@ -1603,8 +1603,11 @@ Updated 2026-08-25 (after `UX-286`), re-grounded in `bga/viewer/`'s
 module list, the published schema `bga analyze --schema` prints, and
 `docs/backlog/scenarios/closed.md`'s round-38 and round-39 rows: the
 viewer axis gained the chapters `UX-286` groups the document into, and
-the contracts table's `analyze/v6` row is checked against the keys the
-schema declares - which `UX-275` added one to. The date on this line is
+the contracts table's `analyze/v2` row is checked against the keys the
+schema declares - which `UX-275` added one to. (`analyze/v2` is
+superseded now and was live on 2026-08-25, which is what this record
+says: four later bumps carried the sentence to `v6` before review 16
+restored it - `UX-653`.) The date on this line is
 guarded (`UX-247`): a commit that changes this document's prose without
 re-grounding it reddens
 `tests/unit/test_the_verification_log_is_true.py`.

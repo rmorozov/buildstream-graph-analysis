@@ -839,4 +839,10 @@ MEDIUM = (
     # committed fixtures. Single-process and alone: 1.26s, all of it
     # the setup that exports and loads.
     "tests/unit/test_the_rail_says_what_the_heading_says.py",         #    1.3s
+    # `UX-638`/`UX-639`, tiered on landing. One served run and one
+    # browser boot each over `macro_micro`: the scroll offset and the
+    # rail's hit test are geometry, so the shim cannot hold either.
+    # Single-process, alone: 2.78s and 3.24s.
+    "tests/unit/test_focus_keeps_the_reading_position.py",            #    2.8s
+    "tests/unit/test_the_rail_says_it_is_not_the_way_out.py",         #    3.2s
 )

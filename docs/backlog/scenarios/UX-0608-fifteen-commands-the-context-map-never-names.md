@@ -38,7 +38,7 @@ a command that does not exist — red.
 
 `UX-607`. The vocabulary costs ~920 B against 33 B of headroom.
 
-## Outcome (round 85, 2026-09-03) — 🔴 fix landed, row not moved
+## Outcome (round 84, 2026-09-03) — 🟢 Done
 
 **Premise: confirmed.** Re-measured at this track's base `d4a3d04`,
 off the registry rather than off `UX-590`'s note:

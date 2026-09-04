@@ -42,7 +42,7 @@ same one `UX-607` extended.
 
 A 1 KB paragraph added to `rules.md`, and no second document red.
 
-## Outcome (round 86, 2026-09-04) — 🔴 fix landed, row not moved
+## Outcome (round 85, 2026-09-04) — 🟢 Done
 
 **Premise: true, one byte stale.** Filed at 4,693 B; measured at this
 track's base `5343bd6`:

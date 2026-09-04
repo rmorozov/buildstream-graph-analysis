@@ -382,13 +382,41 @@ _BACKLOG_COUNT = re.compile(
 
 
 def _backlog_counts():
-    """`{directory: tracked file count}`, git's answer and not a glob's -
-    a checkout holds `.claude/worktrees/<agent>/` (`UX-577`)."""
-    out = subprocess.run(["git", "ls-files"], cwd=REPO, check=True,
-                         capture_output=True, text=True).stdout.splitlines()
-    return {one: sum(1 for path in out
-                     if path.startswith(f"docs/backlog/{one}/"))
+    """`{directory: file count a commit from here would carry}`.
+
+    Git's answer and not a glob's - a checkout holds
+    `.claude/worktrees/<agent>/` (`UX-577`), and git does not descend
+    into one: `--others` lists it as the single entry
+    `.claude/worktrees/agent-1/`, measured.
+
+    `UX-617`: the index alone answers a different question. A task file
+    written and not yet staged is invisible to `git ls-files`, so the
+    natural order - write the row, derive, stage, commit - shipped the
+    count one short four times in round 84, each costing a suite run.
+    `--others --exclude-standard` is the untracked, non-ignored half.
+    """
+    return {one: len(_backlog_paths(one)) + len(_untracked_backlog(one))
             for one in ("scenarios", "tasks")}
+
+
+def _ls_files(*extra):
+    """`docs/backlog/<one>/` paths git lists, per directory."""
+    out = subprocess.run(["git", "ls-files", *extra], cwd=REPO, check=True,
+                         capture_output=True, text=True).stdout.splitlines()
+    # A wholly untracked subdirectory is one entry with a trailing
+    # slash, not the files under it - so is a nested worktree.
+    return {one: [p for p in out if p.startswith(f"docs/backlog/{one}/")
+                  and not p.endswith("/")]
+            for one in ("scenarios", "tasks")}
+
+
+def _backlog_paths(one):
+    return _ls_files()[one]
+
+
+def _untracked_backlog(one):
+    """Written but not staged: what the index cannot see."""
+    return _ls_files("--others", "--exclude-standard")[one]
 
 
 def _on_the_real_index():
@@ -406,31 +434,54 @@ def _architecture_is_derived():
         return []
     counts = _backlog_counts()
     opening = ARCHITECTURE.read_text(encoding="utf-8").split("\n## ", 1)[0]
-    return [f"architecture.md says {written} {phrase}; git has "
+    problems = []
+    for written, phrase, directory in _BACKLOG_COUNT.findall(opening):
+        if int(written) == counts[directory]:
+            continue
+        # `UX-617`: the count alone reads as "the sentence is stale".
+        # Naming the unstaged file says which half of the tree moved.
+        unstaged = _untracked_backlog(directory)
+        problems.append(
+            f"architecture.md says {written} {phrase}; git has "
             f"{counts[directory]} - `--check --write` rewrites it"
-            for written, phrase, directory in _BACKLOG_COUNT.findall(opening)
-            if int(written) != counts[directory]]
+            + (f"; not yet staged: {', '.join(sorted(unstaged))}"
+               if unstaged else ""))
+    return problems
+
+
+def _write_if_changed(path: pathlib.Path, was: str, now: str):
+    """The path when the text moved, `None` when it did not.
+
+    `UX-617`: `--write` edits files the caller may already have staged,
+    so what it changed has to be *reportable*. Nothing is rewritten
+    when nothing moved - an unconditional write would make every run
+    look like a change to a caller reading `git status`.
+    """
+    if now == was:
+        return None
+    path.write_text(now, encoding="utf-8")
+    return path
 
 
 def write_architecture():
     """Put the derived counts into the opening sentence."""
     if not _on_the_real_index():
-        return
+        return None
     counts = _backlog_counts()
     text = ARCHITECTURE.read_text(encoding="utf-8")
     head, sep, rest = text.partition("\n## ")
     head = _BACKLOG_COUNT.sub(
         lambda m: f"{counts[m.group(3)]} {m.group(2)}", head)
-    ARCHITECTURE.write_text(head + sep + rest, encoding="utf-8")
+    return _write_if_changed(ARCHITECTURE, text, head + sep + rest)
 
 
 def write_index():
     """Put the derived sentence and table into the index."""
-    text = INDEX.read_text(encoding="utf-8")
+    was = INDEX.read_text(encoding="utf-8")
     sentence, table = index_header()
-    text = SENTENCE.sub(lambda _m: sentence, text, count=1)
+    text = SENTENCE.sub(lambda _m: sentence, was, count=1)
     text = TOPIC_TABLE.sub(lambda _m: table + "\n", text, count=1)
-    INDEX.write_text(text, encoding="utf-8")
+    return _write_if_changed(INDEX, was, text)
 
 
 CHECKS = (
@@ -695,9 +746,9 @@ def main(argv=None) -> int:
         parser.error("--write is what --check does instead of reporting; "
                      "give both")
     if args.check:
+        wrote = []
         if args.write:
-            write_index()
-            write_architecture()
+            wrote = [p for p in (write_index(), write_architecture()) if p]
         problems = []
         for what, run in CHECKS:
             found = run()
@@ -709,6 +760,13 @@ def main(argv=None) -> int:
         rows = len(table_statuses())
         print(f"{len(problems)} problem(s) over {len(CHECKS)} propert(y/ies), "
               f"{rows} backlog row(s)")
+        if args.write:
+            # `UX-617`: a caller who staged before deriving has to stage
+            # again, and silence here shipped the rewrite unstaged.
+            print(f"--write changed {len(wrote) or 'no'} file(s)"
+                  + (" - stage them:" if wrote else "."))
+            for path in wrote:
+                print(f"    {_shown(path)}")
         return 1 if problems else 0
     if args.figures:
         diff = (pathlib.Path(args.diff).read_text(encoding="utf-8")

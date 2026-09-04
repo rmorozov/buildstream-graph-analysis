@@ -50,3 +50,76 @@ already staged them knows to stage again.
 
 An unstaged new task file, and `--check` naming it instead of
 reporting a clean tree.
+
+## Outcome (round 85, 2026-09-04) — 🔴 implemented, not closed
+
+**Premise:** held, both shapes, re-measured on `5343bd6`.
+
+### The gap, measured
+
+```text
+$ cp …UX-0617….md docs/backlog/scenarios/UX-0999-a-premise-measurement.md
+$ git ls-files | grep -c '^docs/backlog/scenarios/'      619
+$ ls docs/backlog/scenarios/*.md | wc -l                 620
+$ python tools/dev_close_task.py --check
+  ok    architecture.md's opening counts the backlog directories
+0 problem(s) over 5 propert(y/ies), 617 backlog row(s)   exit=0
+$ git add …UX-0999….md && python tools/dev_close_task.py --check
+  FAIL  architecture.md says 619 …; git has 620          exit=1
+```
+
+Second shape, same run: `--check --write` after staging left
+` M docs/design/architecture.md` in `git status` and printed nothing
+about it — the rewrite ships unstaged, one commit short.
+
+### After
+
+```text
+$ python tools/dev_close_task.py --check          # UX-0999 written, not staged
+  FAIL  architecture.md's opening counts the backlog directories - 1 problem(s)
+          architecture.md says 619 `docs/backlog/scenarios/` files; git has 620
+          - `--check --write` rewrites it; not yet staged:
+          docs/backlog/scenarios/UX-0999-a-premise-measurement.md
+1 problem(s) over 5 propert(y/ies), 617 backlog row(s)   exit=1
+$ python tools/dev_close_task.py --check --write | tail -3
+0 problem(s) over 5 propert(y/ies), 617 backlog row(s)
+--write changed 1 file(s) - stage them:
+    docs/design/architecture.md
+$ python tools/dev_close_task.py --check --write | tail -1   # nothing left to move
+--write changed no file(s).
+```
+
+The population is the index **plus** `--others --exclude-standard`.
+Measured that git does not descend into a nested worktree: it lists
+`.claude/worktrees/agent-1/` as one entry, so `UX-577`'s exclusion
+survives the widening.
+
+### Mutations verified red and reverted (6)
+
+| # | mutation | reddened |
+|---|---|---|
+| A1 | `_backlog_counts` back to the index alone | count / acceptance / boundary, 3 failed 2 passed |
+| A2 | `; not yet staged: …` suffix dropped | acceptance only, 1 failed 4 passed |
+| A3 | `--exclude-standard` dropped from the untracked half | boundary, `assert 3 == 2` |
+| A4 | untracked half replaced by `REPO.rglob(…)` | boundary `assert 5 == 2` + count, 2 failed |
+| A5 | `_write_if_changed` reports every call | "changed nothing", 1 failed 5 passed |
+| A6 | `_write_if_changed` reports no call | "names the files", 1 failed 5 passed |
+
+`test_a_nested_worktree_and_an_ignored_file_are_not_counted` does not
+discriminate alone: it asserts `== 2` and so co-reddens with A1. A3 and
+A4 are what it exists for; it is a boundary clause on the same count,
+not a second reading of it.
+
+### Deviation from the Required Fix
+
+None. Both clauses implemented; the first branch of clause 1 (count the
+untracked half) was taken over the second (report and stay index-only).
+Consequence recorded rather than fixed: `--write` now writes a count
+`test_a_counted_figure_is_derived.py` (index-only) rejects until the new
+file is staged. Left alone to keep the surface at the two files the
+Decomposition names; the red is the loud direction, not the silent one.
+
+```text
+$ make test-touching   16 file(s) selected · 544 passed, 3 skipped in 39.24s
+$ make lint            All checks passed!
+```

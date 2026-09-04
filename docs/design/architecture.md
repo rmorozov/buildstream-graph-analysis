@@ -1043,6 +1043,19 @@ artifact.
 
 ## Verification Log
 
+Updated 2026-09-04 (after `UX-652`), covering no change to this
+document's body — what moved is the currency record itself, which is
+now read in commits rather than days — re-grounded in the two contract
+tables above against `bga.contracts` and `bga/schemas.py`: **25 emitted
+ids, 10 of them superseded, and 3 read and never written**, 9 printable
+and 16 not. The headline id is `analyze/v6`, still at **56 top-level
+properties**, and `bga/viewer/` is still **22 modules** with the table
+naming all of them. Three of those figures had moved under the entry
+below, which is the item: `UX-641` published `analyze/v6` and
+superseded `analyze/v5` after `UX-629`'s commit — 24 → 25 emitted,
+9 → 10 superseded, 15 → 16 unprintable — on the same day, so the date
+comparison read a stale line as current.
+
 Updated 2026-09-04 (after `UX-629`), covering one change to this
 document — the inventory's **versioning rule** paragraph, which named
 only rename and removal and now names a key entering `required` under

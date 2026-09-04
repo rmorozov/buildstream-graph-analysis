@@ -96,3 +96,84 @@ in this document's history, the guard is **red**, naming the item and
 the commits that landed after it. Adding an entry that credits the
 newest substantive commit turns it green. Mutation: excusing a
 substantive commit reddens `TestTheExclusionIsNarrow`.
+
+## Outcome (round 89, 2026-09-04) — 🟢 Done
+
+**Premise held, and the figures moved under it.** Re-measured at
+`933de24`, the Motivation's own commands: `claimed 2026-09-04 credits
+UX-629`, `_last_commit() 2026-09-04`, `stale() False`. The day census
+is **27 commits, 10 substantive** now, not 26/9 — `cb0c31e` (review 16)
+landed after the row was filed.
+
+### What the entry crediting `UX-629` was wrong about
+
+```console
+$ python3 -c "from bga import contracts; print(len(contracts.ids()),
+      len(contracts.superseded()), len(contracts.unprintable()))"
+25 10 16
+```
+
+The entry says **24 emitted ids, 9 of them superseded**, 15 unprintable.
+`UX-641` published `analyze/v6` and superseded `analyze/v5` on the same
+day, after `9beda27`. Three stale figures the date comparison read as
+current.
+
+### The Acceptance Test
+
+Red first, on the state the item was filed against, naming the item and
+the commits:
+
+```text
+E   AssertionError: the Verification Log's newest entry is dated 2026-09-04
+E   and credits UX-629 (9beda27); 4 substantive commit(s) have changed
+E   architecture.md since:
+E     cb0c31e Architecture review 16, and the six rows it filed
+E     ffb7ac3 Merge branch 'worktree-agent-aa009447aa99dfd85' into …
+E     6235fc9 UX-641: a level names its members, not the row number
+E     e6400a1 Merge UX-628, UX-629: the contract prose goes down to the key…
+1 failed, 13 passed in 0.53s
+```
+
+Green once the entry crediting `UX-652` is added **and this commit
+exists** — the anchor resolves to it and the skip goes with it:
+
+```text
+$ python3 -m pytest tests/unit/test_the_verification_log_is_true.py -q -rs
+tests/unit/test_the_verification_log_is_true.py ..................
+18 passed in 0.43s
+
+$ python3 -c "…; print(item, v._closing_commit(item), v._landed_after(a))"
+credits UX-652 -> this commit | landed after: [] | stale: False
+```
+
+Before it, the same run is `17 passed, 1 skipped` on `NO_HISTORY`: the
+entry credits an item whose commit is not written yet.
+
+### Mutations verified red and reverted (6)
+
+| # | mutation | reddened | run |
+|---|---|---|---|
+| M1 | `stale()` → `return False` | `…_the_filed_reproduction_is_stale` | 1 failed 16 passed 1 skipped |
+| M2 | `_landed_after` range `<anchor>..HEAD` → `<anchor>` | `…_reproduction_is_stale`, `…_newest_change_leaves_nothing_after_it` | 2 failed 15 passed 1 skipped |
+| M3 | `closing_commit` → `matched[0]`, the newest match | `…_the_oldest_match_wins`, `…_resolves_to_the_commit_that_closed_it` | 2 failed 15 passed 1 skipped |
+| M4 | the subject pattern loses its prefix and its `:` | `…_the_id_first_is_the_close`, `…_a_longer_id_is_not_this_one` | 2 failed 15 passed 1 skipped |
+| M5 | M4 plus `.match` → `.search` | `…_a_merge_naming_two_items_closes_neither`, `…_a_longer_id_is_not_this_one` | 2 failed 15 passed 1 skipped |
+| M6 | `_only_a_derived_figure_moved` → `True` for every commit | `…_the_clause_below_has_commits_to_compare`, `…_reproduction_is_stale` | 2 failed 15 passed 1 skipped |
+
+M3 is the one worth reading: `matched[0]` reddens against **real**
+history as well as the fixture, so a later commit naming the id does
+walk the anchor forward if nothing holds it.
+
+### Deviation from the Required Fix
+
+- **The decline reuses `NO_HISTORY`** rather than coining a reason.
+  `UX-449`'s census incident is a second wording for one absence, and
+  a clone that cannot resolve the credited item's commit has the same
+  absence a graft boundary has. No `KNOWN_SKIP_REASONS` entry moved.
+- **The decline fires while the entry is being written**, because the
+  commit it credits does not exist yet — so this file skips once on the
+  author's machine and asserts on every run after. Measured above.
+- `_last_commit()` is gone; nothing else called it. The exclusion,
+  `only_the_count_moved` and `TestTheExclusionIsNarrow` are untouched,
+  as Out of Scope asks.
+- Not closed here: `README.md` is the orchestrator's this round.

@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-648 scenarios: **3 open**, 645 closed.
+648 scenarios: **1 open**, 647 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -23,7 +23,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | capture | 0 | 92 |
 | analysis | 0 | 94 |
 | contracts | 0 | 47 |
-| viewer | 3 | 147 |
+| viewer | 1 | 147 |
 | cli | 0 | 21 |
 | store | 0 | 16 |
 | docs | 0 | 97 |
@@ -36,8 +36,6 @@ task file, which is the only place it ever lived twice.
 
 | ID | Scenario | Topic | Priority | Serves | Status |
 |---|---|---|---|---|---|
-| UX-646 | [the fragment is one event behind the fold](UX-0646-the-fragment-is-one-event-behind-the-fold.md) | viewer | Medium | anyone who opens a fold and copies the link | 🔴 Open |
-| UX-647 | [a rail click never reaches the view-state writer](UX-0647-a-rail-click-never-reaches-the-view-state-writer.md) | viewer | High | anyone who navigates by the rail and then shares the link | 🔴 Open |
 | UX-650 | [nine page-built sections declare no reader](UX-0650-nine-page-built-sections-declare-no-reader.md) | viewer | Medium | the reader whose role owns a page-built section | 🔴 Open |
 
 ## UX-563..UX-586: the eighty-second round — the documents, read against the tool (2026-09-03)

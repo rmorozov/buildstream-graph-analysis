@@ -1,6 +1,6 @@
 # UX-658: a ninth topic exists that no open row may carry
 
-**Priority:** Low | **Status:** 🔴 Open | **Depends on:** UX-232 (which made the taxonomy a closed set), UX-507 (which classified the topic-less rows) | **Found by:** round 89, filing UX-657 and being refused a topic the index already prints | **Serves:** anyone filing a row and choosing what to put in its Topic cell | **Topic:** guards
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-232 (which made the taxonomy a closed set), UX-507 (which classified the topic-less rows) | **Found by:** round 89, filing UX-657 and being refused a topic the index already prints | **Serves:** anyone filing a row and choosing what to put in its Topic cell | **Topic:** guards
 
 ## Motivation
 

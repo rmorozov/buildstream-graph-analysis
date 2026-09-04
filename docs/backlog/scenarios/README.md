@@ -15,20 +15,19 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-658 scenarios: **3 open**, 655 closed.
+659 scenarios: **2 open**, 657 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
 | capture | 0 | 92 |
 | analysis | 0 | 94 |
-| contracts | 1 | 48 |
+| contracts | 0 | 48 |
 | viewer | 0 | 148 |
 | cli | 0 | 21 |
 | store | 0 | 16 |
 | docs | 1 | 102 |
-| guards | 1 | 136 |
-| process | 0 | 1 |
+| guards | 1 | 138 |
 
 ## Open scenarios
 
@@ -37,9 +36,8 @@ task file, which is the only place it ever lived twice.
 
 | ID | Scenario | Topic | Priority | Serves | Status |
 |---|---|---|---|---|---|
-| UX-658 | [a ninth topic exists that no open row may carry](UX-0658-a-ninth-topic-exists-that-no-open-row-may-carry.md) | guards | Low | anyone filing a row and choosing what to put in its Topic cell | 🔴 Open |
-| UX-659 | [two superseded ids sit on a live line of the spec's registry](UX-0659-two-superseded-ids-sit-on-a-live-line.md) | contracts | Low | anyone reading Part 32's opening block for which Plane 2 contract bga writes | 🔴 Open |
 | UX-660 | [one sentence, two line numbers, and only one of them is guarded](UX-0660-one-sentence-two-figures-one-guarded.md) | docs | Low | anyone following item 12 to the sentence it points at | 🔴 Open |
+| UX-661 | [the second copy of the topic set orders a release body](UX-0661-the-fourth-copy-of-the-topic-set-orders-a-release.md) | guards | Low | anyone adding a topic and expecting the release notes to know about it | 🔴 Open |
 
 ## UX-563..UX-586: the eighty-second round — the documents, read against the tool (2026-09-03)
 

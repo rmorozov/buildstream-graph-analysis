@@ -1,6 +1,6 @@
 # UX-659: two superseded ids sit on a live line of the spec's registry
 
-**Priority:** Low | **Status:** 🔴 Open | **Depends on:** UX-651 (which brought the block under a guard and left this outside it), UX-353 (the retired-id rule) | **Found by:** round 89, track U, while building UX-651's retired-line clauses | **Serves:** anyone reading Part 32's opening block to find out which Plane 2 contract bga writes | **Topic:** contracts
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-651 (which brought the block under a guard and left this outside it), UX-353 (the retired-id rule) | **Found by:** round 89, track U, while building UX-651's retired-line clauses | **Serves:** anyone reading Part 32's opening block to find out which Plane 2 contract bga writes | **Topic:** contracts
 
 ## Motivation
 

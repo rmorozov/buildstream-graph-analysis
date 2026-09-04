@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-622 scenarios: **6 open**, 616 closed.
+624 scenarios: **7 open**, 617 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -27,7 +27,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | cli | 0 | 21 |
 | store | 0 | 16 |
 | docs | 1 | 90 |
-| guards | 4 | 128 |
+| guards | 5 | 130 |
 
 ## Open scenarios
 
@@ -38,10 +38,11 @@ task file, which is the only place it ever lived twice.
 |---|---|---|---|---|---|
 | UX-597 | [three release rows and no tag](UX-0597-three-release-rows-and-no-tag.md) | docs | Low | anyone trying to check out a release this repository claims to have made | 🔴 Open |
 | UX-613 | [the capacity model emits no document](UX-0613-the-capacity-model-emits-no-document.md) | contracts | Medium | R4 and anyone wanting the model's answer in a pipeline | 🔴 Open |
-| UX-621 | [a drift-gate red nobody can read](UX-0621-a-drift-gate-red-nobody-can-read.md) | guards | Medium | a session reading a red tier-drift step | 🔴 Open |
 | UX-622 | [the derived count and its guard read two populations](UX-0622-the-derived-count-and-its-guard-read-two-populations.md) | guards | Medium | the session filing a row | 🔴 Open |
 | UX-623 | [a track cannot read the tree it was copied from](UX-0623-a-track-cannot-read-the-tree-it-was-copied-from.md) | guards | Low | a track checking the base it was given | 🔴 Open |
 | UX-624 | [the cap dropped a guard that was not noise](UX-0624-the-cap-dropped-a-guard-that-was-not-noise.md) | guards | Medium | a track adding a declared key | 🔴 Open |
+| UX-625 | [reverting a mutation can discard the work](UX-0625-reverting-a-mutation-can-discard-the-work.md) | guards | Low | a track falsifying its own guard | 🔴 Open |
+| UX-626 | [a brief names a commit nobody resolved](UX-0626-a-brief-names-a-commit-nobody-resolved.md) | guards | Low | a track given a base | 🔴 Open |
 
 ## UX-563..UX-586: the eighty-second round — the documents, read against the tool (2026-09-03)
 

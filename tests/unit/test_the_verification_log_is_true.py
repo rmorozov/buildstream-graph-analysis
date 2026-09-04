@@ -115,8 +115,58 @@ def _graft_boundary():
             shallow.read_text(encoding="utf-8").splitlines() if line.strip()}
 
 
+# `UX-620`: the counts `tools/dev_close_task.py --write` derives into the
+# opening sentence. They are computed from `git ls-files`, so they are
+# true by construction and cannot make a grounding wrong - but they move
+# the file's date, and every round that files or closes a row moves them.
+_COUNT = re.compile(r"\d+ (`docs/backlog/\w+/` files)")
+
+
+def only_the_count_moved(removed, added):
+    """Do these diff lines differ in nothing but a derived count?
+
+    Compared with the digits normalised away rather than by matching a
+    pattern against each line: a commit that edits the sentence *and*
+    the count would match a pattern for the count, and must not be
+    excused. Pure, so the discrimination is testable without a fixture
+    repository - `_only_a_derived_figure_moved` is the git half.
+    """
+    if not removed or len(removed) != len(added):
+        return False
+    return all(_COUNT.sub(r"N \1", a) == _COUNT.sub(r"N \1", b)
+               for a, b in zip(removed, added))
+
+
+def _only_a_derived_figure_moved(sha):
+    """`only_the_count_moved`, over this commit's change to `DOC`."""
+    done = subprocess.run(
+        ["git", "show", "--format=", "--unified=0", sha, "--", str(DOC)],
+        capture_output=True, text=True, cwd=REPO, timeout=60)
+    if done.returncode != 0:
+        return False
+    lines = done.stdout.splitlines()
+    return only_the_count_moved(
+        [ln[1:] for ln in lines
+         if ln.startswith("-") and not ln.startswith("---")],
+        [ln[1:] for ln in lines
+         if ln.startswith("+") and not ln.startswith("+++")])
+
+
+def _history_is_readable():
+    """Can this clone answer "when did the document last change" at all?
+
+    Separated from `_last_commit` so the non-vacuity clause can tell
+    "no history here" from "the exclusion ate everything".
+    """
+    done = subprocess.run(["git", "log", "-1", "--format=%H", "--", str(DOC)],
+                          capture_output=True, text=True, cwd=REPO, timeout=60)
+    if done.returncode != 0 or not done.stdout.strip():
+        return False
+    return done.stdout.strip() not in _graft_boundary()
+
+
 def _last_commit():
-    """When git last recorded a change to this document, or `None`.
+    """When git last recorded a *substantive* change to this document.
 
     `None` where the clone cannot answer - no history at all, and the
     case the note above documents: the newest commit touching the file
@@ -124,17 +174,67 @@ def _last_commit():
     when history was cut" look identical.
     """
     done = subprocess.run(
-        ["git", "log", "-1", "--date=short", "--format=%ad %H", "--", str(DOC)],
+        ["git", "log", "--date=short", "--format=%ad %H", "--", str(DOC)],
         capture_output=True, text=True, cwd=REPO, timeout=60)
     if done.returncode != 0 or not done.stdout.strip():
         return None
-    when, _, sha = done.stdout.strip().partition(" ")
-    if sha.strip() in _graft_boundary():
-        return None
-    return datetime.date.fromisoformat(when)
+    boundary = _graft_boundary()
+    for line in done.stdout.strip().splitlines():
+        when, _, sha = line.strip().partition(" ")
+        sha = sha.strip()
+        if sha in boundary:
+            return None
+        if _only_a_derived_figure_moved(sha):
+            continue
+        return datetime.date.fromisoformat(when)
+    return None
+
+
+class TestTheExclusionIsNarrow:
+    """`UX-620`. The clause below skips commits that moved only a
+    derived count. An exclusion drawn too wide does not fail that
+    clause - it removes its date and the clause *skips*, which is how a
+    guard gets switched off without going red. These hold the width."""
+
+    SENTENCE = ("reconstruct that history from 619 `docs/backlog/scenarios/` "
+                "files, 75 `docs/backlog/tasks/` files, and the commit log")
+
+    def test_a_count_only_change_is_excused(self):
+        before = self.SENTENCE.replace("619", "604")
+        assert only_the_count_moved([before], [self.SENTENCE])
+
+    def test_a_count_and_a_word_on_one_line_is_not_excused(self):
+        """The case a per-line pattern would wave through, and the
+        reason the comparison normalises instead of matching."""
+        before = self.SENTENCE.replace("619", "604").replace(
+            "the commit log", "the commit history")
+        assert not only_the_count_moved([before], [self.SENTENCE])
+
+    def test_a_prose_only_change_is_not_excused(self):
+        before = self.SENTENCE.replace("the commit log", "the commit history")
+        assert not only_the_count_moved([before], [self.SENTENCE])
+
+    def test_an_added_line_is_not_excused(self):
+        assert not only_the_count_moved([], [self.SENTENCE])
+
+    def test_an_uneven_change_is_not_excused(self):
+        assert not only_the_count_moved(
+            [self.SENTENCE], [self.SENTENCE, "and one more sentence"])
 
 
 class TestTheLogIsNotStaleAboutItself:
+
+    def test_the_clause_below_has_a_date_to_compare(self):
+        """Non-vacuity for the exclusion: in a clone with history, some
+        commit must survive it. An exclusion that excused everything
+        would leave `_last_commit()` empty and the clause below would
+        skip rather than fail."""
+        if not _history_is_readable():
+            pytest.skip(NO_HISTORY)
+        assert _last_commit() is not None, (
+            "every commit touching the document was excused as a derived "
+            "figure - the exclusion is too wide and the clause below is off")
+
 
     def test_the_claimed_date_is_not_older_than_the_last_change(self):
         """The mechanical half of item 2. Equal is the normal case: the

@@ -172,6 +172,14 @@ QUESTION = "bga:question"
 # groups by meaning rather than by payload key order.
 RAIL = "bga:rail"
 RAILS = ("decide", "act", "prove", "investigate", "raw")
+# UX-643: which of `findings.READERS` a section serves, by their `R1`-`R5`
+# ids, so a reader who says who they are gets that section promoted and
+# expanded rather than the other four's page. Silent -> no role, and the
+# section stays folded under every one of them.
+READERS_SERVED = "bga:readers"
+# Read off the roster rather than restated: a second list of role ids is
+# the vocabulary `UX-214` watched diverge.
+READER_ROLES = tuple(_role for _uid, _role, _label, _question in READERS)
 # UX-208: a column can say it holds element uids, which is what earns a
 # row its generic Inspect - declared once, no per-table code.
 ROLE = "bga:role"
@@ -4200,6 +4208,41 @@ for _table, _node in list(_STRUCTURAL_TABLES.items()) + list(_SIGNALS_TABLES.ite
     # the page rather than the contract.
     _rail, _question = _LIFTED_HINTS[_key]
     _ANALYZE_HINTS[_key] = {QUESTION: _question, RAIL: _rail, **_node}
+
+# UX-643: which reader each section serves, as one table.
+#
+# A map rather than a `READERS:` beside each node, for the reason
+# `findings.FINDING_READERS` is one: the assignment is a claim about the
+# whole set - "who is left with nothing to read" - and eleven call sites
+# each naming their own reader is eleven places for that answer to hide.
+#
+# **Derived, not judged.** A section is declared for a reader exactly
+# when `provenance._CLAIMS` cites a path into it for a finding
+# `findings.FINDING_READERS` gives that reader. `bga/findings.py` is the
+# authority for both halves and nothing here re-decides either;
+# `test_a_reader_role_demotes.py` recomputes the join and holds this
+# table equal to it, so a finding that changes reader reddens rather
+# than leaving a stale role on the page.
+#
+# Every other section carries no role. That is the map being incomplete
+# rather than a judgement that they serve nobody: an undeclared section
+# stays folded under every role and reachable under all of them, which
+# is what it does today.
+_SECTION_READERS = {
+    "cache": ("R2", "R4"),
+    "capacity_recommendation": ("R5",),
+    "confidence": ("R1", "R4"),
+    "elements": ("R3",),
+    "floors": ("R1", "R3", "R4"),
+    "headline": ("R1",),
+    "joint_saving": ("R1",),
+    "latent_heavies": ("R2",),
+    "optimization_horizon": ("R1",),
+    "resource_blast": ("R2",),
+    "violations": ("R1",),
+}
+for _key, _roles in _SECTION_READERS.items():
+    _ANALYZE_HINTS[_key][READERS_SERVED] = list(_roles)
 
 # `UX-404`: the seven figures a compared run states about itself.
 #

@@ -840,7 +840,14 @@ MEDIUM = (
     # pages - the rail's labels read against their headings on both
     # committed fixtures. Single-process and alone: 1.26s, all of it
     # the setup that exports and loads.
-    "tests/unit/test_the_rail_says_what_the_heading_says.py",         #    1.3s
+    # `UX-648` added a second boot for the palette's half of the same
+    # claim: 2.20 / 2.20s, still the setup and not the clauses.
+    "tests/unit/test_the_rail_says_what_the_heading_says.py",         #    2.2s
+    # `UX-643`, tiered on landing for the reason the note above the
+    # reader file gives. One browser boot, two exported pages, the
+    # picker driven through every role it offers. Three single-process
+    # runs alone: 2.32 / 2.21 / 2.15s.
+    "tests/unit/test_a_reader_role_demotes.py",                       #    2.2s
     # `UX-638`/`UX-639`, tiered on landing. One served run and one
     # browser boot each over `macro_micro`: the scroll offset and the
     # rail's hit test are geometry, so the shim cannot hold either.

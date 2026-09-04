@@ -496,6 +496,73 @@ function labelFold(box) {
 }
 
 /**
+ * `UX-643`: **the role demotes; it never hides.**
+ *
+ * Nothing is removed, nothing is filtered, and the export's text is
+ * untouched - this only drives the two folds the document already has.
+ * A section the chosen role serves is expanded and wears its `R1`-`R5`
+ * tag; every other section is collapsed into `UX-199`'s own fold, and
+ * a chapter with nothing promoted in it is shut. "Anyone" restores the
+ * landed page: sections open, chapters shut but the first.
+ *
+ * 40 of the page's 51 sections declare no role. They stay folded under
+ * every role and are reachable under all of them, which is what they
+ * do today - the control works over an incomplete map and improves as
+ * the map fills.
+ */
+/** The `R1`-`R5` ids one section declares, off the tag `sectionHead`
+ *  built - the document is where the producer's answer already is, so
+ *  nothing re-reads the schema at click time. A `section[data-section]`
+ *  holds no other one, so the tag found here is its own. */
+export function readersOf(section) {
+  const tag = section?.querySelector?.("[data-reader-tag]");
+  return (tag?.getAttribute?.("data-readers") ?? "").split(/\s+/)
+    .filter(Boolean);
+}
+
+// The section's own collapse control, pressed rather than reimplemented:
+// `collapsible` owns the caret, the `aria-expanded` and the remembered
+// state, and a second writer of `data-collapsed` is the second folding
+// mechanism this item is not allowed to build.
+function foldSection(section, shut) {
+  const toggle = section?.querySelector?.("[data-collapse]");
+  if (!toggle || (toggle.getAttribute?.("aria-expanded") === "true") === !shut) {
+    return false;
+  }
+  if (typeof toggle.click === "function") toggle.click();
+  else toggle.dispatchEvent?.(new Event("click", { bubbles: true }));
+  return true;
+}
+
+export function applyRole(root, role) {
+  const chosen = role || null;
+  const sections = [...(root?.querySelectorAll?.("section[data-section]") ?? [])];
+  let promoted = 0;
+  for (const section of sections) {
+    const owns = Boolean(chosen) && readersOf(section).includes(chosen);
+    if (owns) {
+      promoted += 1;
+      section.setAttribute("data-promoted", chosen);
+    } else section.removeAttribute?.("data-promoted");
+    const tag = section.querySelector?.("[data-reader-tag]");
+    if (tag) tag.textContent = owns ? chosen : "";
+    // The section holding the picker is never folded: a control that
+    // folds itself away is `UX-194`'s dead affordance made by hand.
+    if (section.querySelector?.('[data-role="reader"]')) continue;
+    foldSection(section, Boolean(chosen) && !owns);
+  }
+  for (const box of root?.querySelectorAll?.("section.chapter") ?? []) {
+    // The first chapter has no toggle and `UX-347` keeps it open; the
+    // same skip `setAllOpen` makes, for the same reason.
+    if (!box.querySelector?.("[data-chapter-open]")) continue;
+    setOpen(box, Boolean(chosen)
+                 && Boolean(box.querySelector?.("[data-promoted]")));
+  }
+  return { role: chosen, sections: sections.length, promoted,
+           folded: chosen ? sections.length - promoted : 0 };
+}
+
+/**
  * Open whatever chapter holds `node`, and return it.
  *
  * Every way into a section goes through here: the rail's links, the

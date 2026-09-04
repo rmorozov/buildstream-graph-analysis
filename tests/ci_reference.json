@@ -140,17 +140,17 @@
     "tests/unit/test_every_element_is_one_object.py": 3.11,
     "tests/unit/test_every_emitted_contract_is_answerable.py": 9.87,
     "tests/unit/test_every_finding_reaches_a_fixture.py": 1.88,
-    "tests/unit/test_every_invariant_has_a_guard.py": 0.1,
+    "tests/unit/test_every_invariant_has_a_guard.py": 0.08,
     "tests/unit/test_every_number_says_what_it_is.py": 12.04,
     "tests/unit/test_every_page_reaches_the_report.py": 0.01,
-    "tests/unit/test_every_part_has_a_guard.py": 0.55,
+    "tests/unit/test_every_part_has_a_guard.py": 0.37,
     "tests/unit/test_every_plane2_block_has_a_destination.py": 0.49,
     "tests/unit/test_every_population_at_zero_one_and_many.py": 2.15,
     "tests/unit/test_every_skip_reason_is_declared.py": 11.1,
     "tests/unit/test_every_table_has_its_own_state_key.py": 2.06,
-    "tests/unit/test_fetch_build_overlap.py": 0.51,
+    "tests/unit/test_fetch_build_overlap.py": 0.41,
     "tests/unit/test_fetch_in_the_floor.py": 0.01,
-    "tests/unit/test_findings_are_data.py": 0.07,
+    "tests/unit/test_findings_are_data.py": 0.08,
     "tests/unit/test_findings_carry_their_evidence.py": 1.67,
     "tests/unit/test_fine_grained_fixture.py": 0.01,
     "tests/unit/test_focus_and_the_working_set.py": 0.67,
@@ -244,7 +244,7 @@
     "tests/unit/test_retry_wait_classification.py": 0.02,
     "tests/unit/test_round16_debts.py": 0.05,
     "tests/unit/test_round18_tail.py": 0.02,
-    "tests/unit/test_run_context_common.py": 0.0,
+    "tests/unit/test_run_context_common.py": 0.01,
     "tests/unit/test_run_identity.py": 0.02,
     "tests/unit/test_run_instance.py": 0.01,
     "tests/unit/test_run_mode_and_cached_coverage.py": 0.01,
@@ -295,7 +295,7 @@
     "tests/unit/test_the_capture_doc_reads_its_workflow.py": 0.01,
     "tests/unit/test_the_ceilings_reach_a_reader.py": 0.01,
     "tests/unit/test_the_census_says_what_it_could_not_see.py": 0.04,
-    "tests/unit/test_the_chain_folds_and_clicks_are_counted.py": 33.63,
+    "tests/unit/test_the_chain_folds_and_clicks_are_counted.py": 33.62,
     "tests/unit/test_the_command_table_is_the_cli.py": 0.02,
     "tests/unit/test_the_console_stays_clean.py": 23.03,
     "tests/unit/test_the_contents_read_is_one_call.py": 0.02,
@@ -304,7 +304,7 @@
     "tests/unit/test_the_contract_is_described_as_what_it_is.py": 0.02,
     "tests/unit/test_the_contract_names_its_vocabulary.py": 0.01,
     "tests/unit/test_the_counter_the_constant_was_waiting_for.py": 0.02,
-    "tests/unit/test_the_declared_signals_are_the_published_ones.py": 1.11,
+    "tests/unit/test_the_declared_signals_are_the_published_ones.py": 1.05,
     "tests/unit/test_the_diagnosis_follows_the_shape.py": 0.01,
     "tests/unit/test_the_documented_bga_lines_parse.py": 2.0,
     "tests/unit/test_the_documented_invocations_parse.py": 9.19,
@@ -315,16 +315,16 @@
     "tests/unit/test_the_export_carries_no_commentary.py": 0.71,
     "tests/unit/test_the_export_carries_the_schemas_it_uses.py": 0.33,
     "tests/unit/test_the_export_degrades_before_it_refuses.py": 0.48,
-    "tests/unit/test_the_exports_data_half_has_a_budget.py": 36.86,
+    "tests/unit/test_the_exports_data_half_has_a_budget.py": 39.18,
     "tests/unit/test_the_fast_check_holds_what_the_suite_holds.py": 3.47,
     "tests/unit/test_the_first_finding_is_an_action.py": 0.65,
     "tests/unit/test_the_first_screen_is_a_decision.py": 2.43,
     "tests/unit/test_the_first_view_says_what_to_do.py": 0.06,
     "tests/unit/test_the_fixture_differ_sees_key_order.py": 1.42,
-    "tests/unit/test_the_floor_is_stated_where_it_is_read.py": 0.02,
+    "tests/unit/test_the_floor_is_stated_where_it_is_read.py": 0.01,
     "tests/unit/test_the_fold_says_how_deep_it_goes.py": 10.94,
     "tests/unit/test_the_front_door_is_current.py": 0.03,
-    "tests/unit/test_the_gate_docstring_is_the_registry.py": 0.28,
+    "tests/unit/test_the_gate_docstring_is_the_registry.py": 0.09,
     "tests/unit/test_the_graph_is_derived_not_guessed.py": 0.48,
     "tests/unit/test_the_graph_shape_query_answers.py": 0.26,
     "tests/unit/test_the_guards_measure_the_page.py": 16.03,
@@ -333,10 +333,10 @@
     "tests/unit/test_the_handoff_does_not_carry_the_trace.py": 1.64,
     "tests/unit/test_the_handoff_has_a_fixture.py": 18.89,
     "tests/unit/test_the_handoff_rides_the_rail.py": 5.34,
-    "tests/unit/test_the_handoff_says_whether_perfetto_fetched.py": 5.76,
+    "tests/unit/test_the_handoff_says_whether_perfetto_fetched.py": 5.63,
     "tests/unit/test_the_hard_gates_are_named.py": 0.07,
     "tests/unit/test_the_host_was_asked.py": 0.55,
-    "tests/unit/test_the_ingestion_facts_name_the_bst_they_ran_on.py": 0.02,
+    "tests/unit/test_the_ingestion_facts_name_the_bst_they_ran_on.py": 0.01,
     "tests/unit/test_the_journey_has_an_answer_key.py": 0.0,
     "tests/unit/test_the_journey_reaches_what_if.py": 0.12,
     "tests/unit/test_the_jump_box_offers_what_it_knows.py": 0.81,
@@ -366,12 +366,12 @@
     "tests/unit/test_the_page_that_answers_why.py": 2.12,
     "tests/unit/test_the_pairing_pass_streams.py": 0.45,
     "tests/unit/test_the_palette_is_validated.py": 0.2,
-    "tests/unit/test_the_percentile_rows_are_the_published_ones.py": 0.03,
+    "tests/unit/test_the_percentile_rows_are_the_published_ones.py": 0.02,
     "tests/unit/test_the_perfetto_handoff.py": 11.39,
     "tests/unit/test_the_pinned_ref_is_a_decision.py": 0.01,
     "tests/unit/test_the_planes_agree_about_plane_two.py": 0.55,
     "tests/unit/test_the_population_that_had_no_ceiling.py": 0.01,
-    "tests/unit/test_the_premise_is_a_declared_field.py": 0.41,
+    "tests/unit/test_the_premise_is_a_declared_field.py": 0.37,
     "tests/unit/test_the_printed_sentences_are_contracts.py": 1.6,
     "tests/unit/test_the_process_documents_derive_their_figures.py": 0.4,
     "tests/unit/test_the_process_is_measured.py": 0.39,
@@ -391,13 +391,13 @@
     "tests/unit/test_the_registry_knows_what_it_reads.py": 0.02,
     "tests/unit/test_the_regression_verdict_carries_an_evidence_chain.py": 0.61,
     "tests/unit/test_the_release_body_is_generated.py": 0.28,
-    "tests/unit/test_the_report_has_chapters.py": 7.59,
+    "tests/unit/test_the_report_has_chapters.py": 7.6,
     "tests/unit/test_the_report_has_two_panes.py": 0.02,
     "tests/unit/test_the_report_is_read_not_decoded.py": 0.25,
     "tests/unit/test_the_report_you_can_attach.py": 8.55,
     "tests/unit/test_the_review_has_a_cadence.py": 0.01,
     "tests/unit/test_the_roles_table_names_who_serves_it.py": 0.05,
-    "tests/unit/test_the_round_history_names_every_audit.py": 0.06,
+    "tests/unit/test_the_round_history_names_every_audit.py": 0.03,
     "tests/unit/test_the_schema_says_what_things_are.py": 0.89,
     "tests/unit/test_the_selector_carries_the_census.py": 6.73,
     "tests/unit/test_the_served_handoff_counts_its_edges.py": 0.0,
@@ -410,6 +410,7 @@
     "tests/unit/test_the_slice_says_what_bga_knows.py": 0.32,
     "tests/unit/test_the_spec_outside_part_32_is_read_only.py": 0.01,
     "tests/unit/test_the_spec_says_which_parts_are_advisory.py": 0.02,
+    "tests/unit/test_the_start_clock_says_where_it_came_from.py": 0.06,
     "tests/unit/test_the_store_section_takes_a_window.py": 14.57,
     "tests/unit/test_the_store_speaks_for_more_than_one_build.py": 0.49,
     "tests/unit/test_the_stranger_has_a_seed.py": 4.8,
@@ -426,6 +427,7 @@
     "tests/unit/test_the_two_capabilities_are_offered.py": 32.83,
     "tests/unit/test_the_two_rankings_answer_two_questions.py": 0.04,
     "tests/unit/test_the_value_rule_has_a_home.py": 0.02,
+    "tests/unit/test_the_verdict_record_is_a_published_key.py": 0.83,
     "tests/unit/test_the_verification_log_is_true.py": 0.01,
     "tests/unit/test_the_view_parses_nothing.py": 8.89,
     "tests/unit/test_the_viewer_modules_have_a_home.py": 0.61,
@@ -480,7 +482,7 @@
       2.43
     ],
     "tests/test_e2e.py": [
-      0.03,
+      0.04,
       0.04,
       0.04,
       0.04,
@@ -501,18 +503,19 @@
       0.81
     ],
     "tests/unit/test_a_broken_pipe_is_not_an_error.py": [
+      2.64,
       2.64
     ],
     "tests/unit/test_a_candidate_is_confirmed_alone.py": [
       2.37,
       2.37,
-      2.37,
       2.38,
+      2.37,
       2.37
     ],
     "tests/unit/test_a_capture_can_say_what_it_never_saw.py": [
-      0.02,
       0.03,
+      0.02,
       0.02,
       0.02,
       0.02
@@ -521,6 +524,7 @@
       0.0
     ],
     "tests/unit/test_a_capture_says_when_it_was_requested.py": [
+      0.04,
       0.04
     ],
     "tests/unit/test_a_capture_that_cannot_start.py": [
@@ -531,7 +535,7 @@
       1.71
     ],
     "tests/unit/test_a_capture_that_slept.py": [
-      2.41,
+      2.4,
       2.4,
       2.4,
       2.4,
@@ -573,11 +577,11 @@
       1.26
     ],
     "tests/unit/test_a_control_acts_on_what_it_names.py": [
-      44.2,
       44.17,
       44.18,
       44.19,
-      44.18
+      44.18,
+      44.19
     ],
     "tests/unit/test_a_control_says_what_it_does.py": [
       4.42,
@@ -589,17 +593,18 @@
     "tests/unit/test_a_counted_figure_is_derived.py": [
       0.26,
       0.26,
+      0.26,
       0.26
     ],
     "tests/unit/test_a_declared_quantity_matches_its_value.py": [
-      1.62,
+      1.78,
       1.78,
       1.78,
       1.78,
       1.78
     ],
     "tests/unit/test_a_drawing_is_graded.py": [
-      6.29,
+      6.47,
       6.47,
       6.47,
       6.47,
@@ -608,17 +613,18 @@
     "tests/unit/test_a_failed_suite_names_what_failed.py": [
       0.32,
       0.32,
+      0.32,
       0.32
     ],
     "tests/unit/test_a_filter_is_a_property_of_a_table.py": [
-      14.26,
+      14.25,
       14.25,
       14.25,
       14.25,
       14.25
     ],
     "tests/unit/test_a_finding_is_bounded_by_its_row.py": [
-      1.2,
+      1.21,
       1.21,
       1.21,
       1.21,
@@ -647,25 +653,26 @@
     ],
     "tests/unit/test_a_generated_project_builds.py": [
       0.19,
-      0.19,
       0.2,
+      0.19,
       0.19,
       0.19
     ],
     "tests/unit/test_a_guard_ledger_names_its_link.py": [
+      0.11,
       0.11
     ],
     "tests/unit/test_a_guard_reads_only_what_a_clone_has.py": [
-      16.73,
       16.72,
+      16.73,
       16.73,
       16.73,
       16.73
     ],
     "tests/unit/test_a_link_that_shows_what_i_was_looking_at.py": [
       1.97,
-      1.97,
       1.96,
+      1.97,
       1.97,
       1.97
     ],
@@ -684,7 +691,8 @@
       0.28
     ],
     "tests/unit/test_a_pasted_guide_block_is_fresh_or_dated.py": [
-      5.08
+      5.08,
+      5.09
     ],
     "tests/unit/test_a_project_flag_names_a_project.py": [
       0.01,
@@ -710,37 +718,40 @@
     "tests/unit/test_a_refused_timeline_says_it_was_refused.py": [
       3.84,
       3.47,
+      3.84,
       3.84
     ],
     "tests/unit/test_a_release_records_a_contract_state.py": [
       0.03,
-      0.03,
       0.02,
+      0.03,
       0.03,
       0.03
     ],
     "tests/unit/test_a_report_you_can_navigate.py": [
-      21.59,
       21.62,
       21.62,
       21.63,
-      21.62
+      21.62,
+      21.63
     ],
     "tests/unit/test_a_retired_state_is_declared.py": [
+      0.02,
       0.02
     ],
     "tests/unit/test_a_run_bundle_you_can_carry.py": [
       0.27,
       0.27,
       0.27,
+      0.27,
       0.27
     ],
     "tests/unit/test_a_sentence_lives_on_its_door.py": [
-      26.61,
       26.6,
       26.6,
       26.61,
-      26.6
+      26.6,
+      26.61
     ],
     "tests/unit/test_a_shapeable_population_is_drawn.py": [
       3.2,
@@ -750,7 +761,7 @@
       3.2
     ],
     "tests/unit/test_a_slow_file_says_which_file.py": [
-      1.54,
+      1.74,
       1.74,
       1.74,
       1.74,
@@ -771,8 +782,8 @@
       3.54
     ],
     "tests/unit/test_a_task_uid_is_not_a_label.py": [
-      2.64,
       2.63,
+      2.64,
       2.64,
       2.64,
       2.64
@@ -780,6 +791,7 @@
     "tests/unit/test_a_track_costs_what_it_reads.py": [
       0.03,
       0.01,
+      0.02,
       0.02,
       0.02
     ],
@@ -799,26 +811,27 @@
     ],
     "tests/unit/test_an_artifact_says_what_wrote_it.py": [
       0.53,
-      0.53,
       0.52,
+      0.53,
       0.53,
       0.53
     ],
     "tests/unit/test_an_empty_population_says_so.py": [
-      0.11,
       0.12,
       0.12,
       0.13,
+      0.12,
       0.12
     ],
     "tests/unit/test_analysis_memory_shape.py": [
-      37.61,
       37.6,
+      39.49,
       39.49,
       39.49,
       39.49
     ],
     "tests/unit/test_analyze_stops_rescanning_the_run.py": [
+      0.04,
       0.04,
       0.04,
       0.04,
@@ -828,26 +841,27 @@
       0.02,
       0.02,
       0.02,
+      0.02,
       0.02
     ],
     "tests/unit/test_any_element_can_be_inspected.py": [
-      26.45,
+      26.44,
       26.44,
       26.44,
       26.44,
       26.44
     ],
     "tests/unit/test_apparatus_in_its_place.py": [
-      21.53,
       21.52,
+      21.53,
       21.53,
       21.53,
       21.53
     ],
     "tests/unit/test_attribution_hints.py": [
       0.03,
-      0.03,
       0.02,
+      0.03,
       0.03,
       0.03
     ],
@@ -893,6 +907,7 @@
     "tests/unit/test_batch_zero_savings_filtering.py": [
       0.0,
       0.01,
+      0.01,
       0.01
     ],
     "tests/unit/test_binary_cost.py": [
@@ -910,7 +925,7 @@
       0.01
     ],
     "tests/unit/test_blast_query_and_kinds.py": [
-      1.85,
+      1.84,
       1.84,
       1.84,
       1.84,
@@ -941,7 +956,7 @@
       0.45
     ],
     "tests/unit/test_bst_extract_run_strict.py": [
-      0.1,
+      0.11,
       0.11,
       0.11,
       0.11,
@@ -949,15 +964,15 @@
     ],
     "tests/unit/test_bst_log_converter.py": [
       0.03,
-      0.03,
       0.02,
+      0.03,
       0.03,
       0.03
     ],
     "tests/unit/test_bst_run_context.py": [
       0.08,
-      0.08,
       0.09,
+      0.08,
       0.08,
       0.08
     ],
@@ -979,6 +994,7 @@
       0.0
     ],
     "tests/unit/test_build_time_in_the_teams_units.py": [
+      0.5,
       0.5
     ],
     "tests/unit/test_buttons_that_know_why.py": [
@@ -1017,14 +1033,14 @@
       0.11
     ],
     "tests/unit/test_cache_trend.py": [
-      0.0,
+      0.01,
       0.01,
       0.01,
       0.01,
       0.01
     ],
     "tests/unit/test_cache_trend_series_subject.py": [
-      0.0,
+      0.01,
       0.01,
       0.01,
       0.01,
@@ -1032,6 +1048,7 @@
     ],
     "tests/unit/test_capacity_aware_hints.py": [
       0.0,
+      0.01,
       0.01,
       0.01
     ],
@@ -1099,7 +1116,7 @@
       1.7
     ],
     "tests/unit/test_cli_exit_codes.py": [
-      2.41,
+      2.4,
       2.4,
       2.4,
       2.4,
@@ -1113,7 +1130,7 @@
       7.48
     ],
     "tests/unit/test_cold_floor.py": [
-      0.03,
+      0.04,
       0.04,
       0.04,
       0.04,
@@ -1121,8 +1138,8 @@
     ],
     "tests/unit/test_compare.py": [
       3.91,
-      3.91,
       3.92,
+      3.91,
       3.91,
       3.91
     ],
@@ -1138,7 +1155,7 @@
       2.72,
       2.72,
       2.72,
-      2.72
+      2.73
     ],
     "tests/unit/test_concurrency_pairing_key.py": [
       0.01,
@@ -1170,15 +1187,15 @@
     ],
     "tests/unit/test_copy_a_finding.py": [
       2.25,
-      2.25,
       2.24,
+      2.25,
       2.25,
       2.25
     ],
     "tests/unit/test_correlate.py": [
-      1.18,
       1.19,
       1.2,
+      1.19,
       1.19,
       1.19
     ],
@@ -1191,8 +1208,8 @@
     ],
     "tests/unit/test_cpu_budget.py": [
       0.03,
-      0.03,
       0.02,
+      0.03,
       0.03,
       0.03
     ],
@@ -1204,10 +1221,11 @@
     "tests/unit/test_critical_path_and_choke_point_naming.py": [
       0.0,
       0.01,
+      0.01,
       0.01
     ],
     "tests/unit/test_criticality_probability.py": [
-      0.03,
+      0.04,
       0.04,
       0.04,
       0.04,
@@ -1228,14 +1246,14 @@
       0.01
     ],
     "tests/unit/test_determinism.py": [
-      4.7,
+      4.81,
       4.81,
       4.81,
       4.81,
       4.81
     ],
     "tests/unit/test_dev_run_script.py": [
-      1.47,
+      1.73,
       1.73,
       1.73,
       1.73,
@@ -1250,8 +1268,8 @@
     ],
     "tests/unit/test_docs_examples.py": [
       0.58,
-      0.58,
       0.59,
+      0.58,
       0.58,
       0.58
     ],
@@ -1294,8 +1312,8 @@
     "tests/unit/test_efficiency_gate_exit_codes.py": [
       2.88,
       2.88,
-      2.88,
       2.89,
+      2.88,
       2.88
     ],
     "tests/unit/test_efficiency_gate_signal.py": [
@@ -1313,22 +1331,22 @@
       0.01
     ],
     "tests/unit/test_element_duration_aggregation.py": [
-      0.3,
+      0.33,
       0.33,
       0.33,
       0.33,
       0.33
     ],
     "tests/unit/test_element_kind_heuristics.py": [
-      0.05,
       0.08,
       0.09,
+      0.08,
       0.08,
       0.08
     ],
     "tests/unit/test_emphasis_is_a_budget.py": [
-      15.4,
       15.39,
+      15.4,
       15.4,
       15.4,
       15.4
@@ -1341,7 +1359,7 @@
       0.44
     ],
     "tests/unit/test_every_control_has_a_resting_appearance.py": [
-      11.28,
+      11.27,
       11.27,
       11.27,
       11.27,
@@ -1364,8 +1382,8 @@
     "tests/unit/test_every_emitted_contract_is_answerable.py": [
       9.87,
       9.87,
-      9.87,
       9.88,
+      9.87,
       9.87
     ],
     "tests/unit/test_every_finding_reaches_a_fixture.py": [
@@ -1376,12 +1394,13 @@
       1.88
     ],
     "tests/unit/test_every_invariant_has_a_guard.py": [
-      0.1
+      0.1,
+      0.08
     ],
     "tests/unit/test_every_number_says_what_it_is.py": [
+      12.07,
+      12.07,
       12.04,
-      12.07,
-      12.07,
       12.04,
       12.04
     ],
@@ -1393,7 +1412,8 @@
       0.01
     ],
     "tests/unit/test_every_part_has_a_guard.py": [
-      0.55
+      0.55,
+      0.37
     ],
     "tests/unit/test_every_plane2_block_has_a_destination.py": [
       0.49,
@@ -1410,33 +1430,35 @@
       2.15
     ],
     "tests/unit/test_every_skip_reason_is_declared.py": [
-      11.08,
       11.1,
       11.1,
       11.08,
+      11.1,
       11.1
     ],
     "tests/unit/test_every_table_has_its_own_state_key.py": [
-      2.01,
+      2.06,
       2.06,
       2.06,
       2.06,
       2.06
     ],
     "tests/unit/test_fetch_build_overlap.py": [
-      0.51
+      0.51,
+      0.41
     ],
     "tests/unit/test_fetch_in_the_floor.py": [
       0.0,
       0.01,
+      0.01,
       0.01
     ],
     "tests/unit/test_findings_are_data.py": [
-      0.05,
       0.08,
       0.05,
       0.08,
-      0.07
+      0.07,
+      0.08
     ],
     "tests/unit/test_findings_carry_their_evidence.py": [
       1.67,
@@ -1453,15 +1475,15 @@
       0.01
     ],
     "tests/unit/test_focus_and_the_working_set.py": [
-      0.66,
+      0.67,
       0.67,
       0.67,
       0.67,
       0.67
     ],
     "tests/unit/test_focus_is_an_investigation.py": [
-      1.05,
       1.06,
+      1.05,
       1.05,
       1.05,
       1.05
@@ -1474,7 +1496,7 @@
       0.81
     ],
     "tests/unit/test_grace_window_drains.py": [
-      5.48,
+      5.47,
       5.47,
       5.47,
       5.47,
@@ -1489,8 +1511,8 @@
     ],
     "tests/unit/test_graph_performance.py": [
       2.19,
-      2.19,
       2.2,
+      2.19,
       2.19,
       2.19
     ],
@@ -1530,7 +1552,7 @@
       0.01
     ],
     "tests/unit/test_identity_and_junctions.py": [
-      0.03,
+      0.04,
       0.04,
       0.04,
       0.04,
@@ -1538,12 +1560,13 @@
     ],
     "tests/unit/test_identity_survives_the_page.py": [
       0.03,
-      0.03,
       0.02,
+      0.03,
       0.03,
       0.03
     ],
     "tests/unit/test_idle_bucket_split.py": [
+      0.01,
       0.01,
       0.01,
       0.01,
@@ -1558,22 +1581,22 @@
     ],
     "tests/unit/test_interrupted_capture.py": [
       0.08,
-      0.08,
       0.09,
+      0.08,
       0.08,
       0.08
     ],
     "tests/unit/test_invocation_correlation.py": [
       0.03,
-      0.03,
       0.02,
+      0.03,
       0.03,
       0.03
     ],
     "tests/unit/test_latest_ref_publish.py": [
       0.03,
-      0.03,
       0.02,
+      0.03,
       0.03,
       0.03
     ],
@@ -1593,21 +1616,21 @@
     ],
     "tests/unit/test_logging_and_exceptions.py": [
       1.25,
-      1.25,
       1.24,
+      1.25,
       1.25,
       1.25
     ],
     "tests/unit/test_marginal_efficiency_gate.py": [
-      18.28,
       18.27,
+      18.28,
       18.28,
       18.28,
       18.28
     ],
     "tests/unit/test_max_jobs_zero_sentinel.py": [
-      0.02,
       0.03,
+      0.02,
       0.02,
       0.02,
       0.02
@@ -1621,8 +1644,8 @@
     ],
     "tests/unit/test_memory_oversubscription.py": [
       0.03,
-      0.03,
       0.02,
+      0.03,
       0.03,
       0.03
     ],
@@ -1635,8 +1658,8 @@
     ],
     "tests/unit/test_native_build_tracer.py": [
       0.03,
-      0.03,
       0.02,
+      0.03,
       0.03,
       0.03
     ],
@@ -1707,6 +1730,7 @@
       0.74,
       0.52,
       0.58,
+      0.52,
       0.52
     ],
     "tests/unit/test_no_two_fields_carry_the_same_elements.py": [
@@ -1735,10 +1759,11 @@
       0.01
     ],
     "tests/unit/test_occupancy_within_capacity.py": [
+      0.07,
       0.07
     ],
     "tests/unit/test_one_bad_row_costs_one_section.py": [
-      13.56,
+      13.55,
       13.55,
       13.55,
       13.55,
@@ -1752,9 +1777,9 @@
       2.98
     ],
     "tests/unit/test_one_click_from_investigation.py": [
-      7.99,
       7.98,
       7.99,
+      7.98,
       7.98,
       7.98
     ],
@@ -1769,6 +1794,7 @@
       0.41,
       0.41,
       0.41,
+      0.41,
       0.41
     ],
     "tests/unit/test_one_factory_builds_every_table.py": [
@@ -1779,8 +1805,8 @@
       0.01
     ],
     "tests/unit/test_one_page_behind_the_button.py": [
-      5.28,
       5.27,
+      5.28,
       5.28,
       5.28,
       5.28
@@ -1793,25 +1819,25 @@
       0.01
     ],
     "tests/unit/test_one_resolved_max_jobs.py": [
-      0.02,
       0.03,
       0.02,
+      0.03,
       0.03,
       0.03
     ],
     "tests/unit/test_one_sentence_for_one_key.py": [
-      0.36,
+      0.4,
       0.4,
       0.4,
       0.4,
       0.4
     ],
     "tests/unit/test_one_table_many_views.py": [
-      25.43,
       25.44,
       25.42,
       25.43,
-      25.43
+      25.43,
+      25.44
     ],
     "tests/unit/test_one_timeline_both_planes.py": [
       2.53,
@@ -1821,14 +1847,14 @@
       2.53
     ],
     "tests/unit/test_one_unit_per_dimension.py": [
-      0.19,
+      0.2,
       0.2,
       0.2,
       0.2,
       0.2
     ],
     "tests/unit/test_one_verdict_vocabulary.py": [
-      0.03,
+      0.04,
       0.04,
       0.04,
       0.04,
@@ -1863,6 +1889,7 @@
       0.01
     ],
     "tests/unit/test_part_29_reads_the_store_it_has.py": [
+      0.31,
       0.31
     ],
     "tests/unit/test_peak_memory.py": [
@@ -1888,8 +1915,8 @@
     ],
     "tests/unit/test_pipeline_overhead.py": [
       0.08,
-      0.08,
       0.09,
+      0.08,
       0.08,
       0.08
     ],
@@ -1916,22 +1943,22 @@
     ],
     "tests/unit/test_printed_identity_round_trips.py": [
       0.47,
-      0.47,
       0.48,
+      0.47,
       0.47,
       0.47
     ],
     "tests/unit/test_process_oversubscription.py": [
       0.03,
-      0.03,
       0.02,
+      0.03,
       0.03,
       0.03
     ],
     "tests/unit/test_process_spine.py": [
-      16.31,
       16.3,
       16.31,
+      16.3,
       16.3,
       16.3
     ],
@@ -1947,8 +1974,8 @@
     ],
     "tests/unit/test_publish_the_join.py": [
       4.52,
-      4.52,
       4.53,
+      4.52,
       4.52,
       4.52
     ],
@@ -1959,6 +1986,7 @@
     ],
     "tests/unit/test_realizable_saving.py": [
       0.0,
+      0.01,
       0.01,
       0.01,
       0.01
@@ -1999,7 +2027,7 @@
       0.01
     ],
     "tests/unit/test_report_key_findings.py": [
-      0.11,
+      0.13,
       0.13,
       0.13,
       0.13,
@@ -2017,7 +2045,7 @@
       22.57,
       22.57,
       22.57,
-      22.57
+      22.58
     ],
     "tests/unit/test_resource_saturation_timeline.py": [
       0.02,
@@ -2070,6 +2098,7 @@
     ],
     "tests/unit/test_run_context_common.py": [
       0.0,
+      0.01,
       0.01
     ],
     "tests/unit/test_run_identity.py": [
@@ -2094,7 +2123,7 @@
       0.01
     ],
     "tests/unit/test_run_store.py": [
-      0.19,
+      0.21,
       0.21,
       0.21,
       0.21,
@@ -2108,23 +2137,23 @@
       0.01
     ],
     "tests/unit/test_sandbox_stderr_and_replay.py": [
-      0.53,
       0.57,
       0.52,
+      0.53,
       0.53,
       0.53
     ],
     "tests/unit/test_scratch_and_tmpdir.py": [
       0.08,
-      0.08,
       0.09,
+      0.08,
       0.08,
       0.08
     ],
     "tests/unit/test_section_stage_gating.py": [
       0.47,
-      0.47,
       0.48,
+      0.47,
       0.47,
       0.47
     ],
@@ -2164,7 +2193,7 @@
       1.9
     ],
     "tests/unit/test_six_seams_round_21_found.py": [
-      4.21,
+      4.2,
       4.2,
       4.2,
       4.2,
@@ -2223,7 +2252,7 @@
       0.05
     ],
     "tests/unit/test_static_census.py": [
-      0.03,
+      0.04,
       0.04,
       0.04,
       0.04,
@@ -2261,19 +2290,20 @@
       0.74
     ],
     "tests/unit/test_tables_you_can_interrogate.py": [
-      2.88,
       2.86,
       2.85,
+      2.86,
       2.86,
       2.86
     ],
     "tests/unit/test_the_advised_comparison_is_one_the_store_makes.py": [
+      0.53,
       0.53
     ],
     "tests/unit/test_the_agent_configuration_holds.py": [
-      1.15,
       1.19,
       1.2,
+      1.19,
       1.19,
       1.19
     ],
@@ -2319,6 +2349,7 @@
       3.58,
       3.57,
       3.58,
+      3.57,
       3.57
     ],
     "tests/unit/test_the_build_pivots_by_program.py": [
@@ -2330,13 +2361,13 @@
     ],
     "tests/unit/test_the_builders_question_has_a_document.py": [
       0.03,
-      0.03,
       0.02,
+      0.03,
       0.03,
       0.03
     ],
     "tests/unit/test_the_cache_block_declares_what_it_emits.py": [
-      0.31,
+      0.34,
       0.34,
       0.34,
       0.34,
@@ -2350,9 +2381,9 @@
       0.56
     ],
     "tests/unit/test_the_canned_prose_reads_as_written.py": [
-      0.18,
       0.19,
       0.18,
+      0.19,
       0.19,
       0.19
     ],
@@ -2371,6 +2402,7 @@
       1.16
     ],
     "tests/unit/test_the_capacity_model_prints_its_assumptions.py": [
+      0.08,
       0.08
     ],
     "tests/unit/test_the_capture_directory_is_a_contract.py": [
@@ -2381,6 +2413,7 @@
       0.02
     ],
     "tests/unit/test_the_capture_doc_reads_its_workflow.py": [
+      0.01,
       0.01
     ],
     "tests/unit/test_the_ceilings_reach_a_reader.py": [
@@ -2391,17 +2424,17 @@
       0.01
     ],
     "tests/unit/test_the_census_says_what_it_could_not_see.py": [
-      0.03,
+      0.04,
       0.04,
       0.04,
       0.04,
       0.04
     ],
     "tests/unit/test_the_chain_folds_and_clicks_are_counted.py": [
-      33.63,
       33.62,
       33.63,
       33.64,
+      33.62,
       33.62
     ],
     "tests/unit/test_the_command_table_is_the_cli.py": [
@@ -2412,11 +2445,11 @@
       0.02
     ],
     "tests/unit/test_the_console_stays_clean.py": [
-      23.05,
       23.03,
       23.03,
       23.03,
-      23.03
+      23.03,
+      23.04
     ],
     "tests/unit/test_the_contents_read_is_one_call.py": [
       0.02,
@@ -2454,14 +2487,15 @@
       0.01
     ],
     "tests/unit/test_the_counter_the_constant_was_waiting_for.py": [
-      0.02,
       0.03,
       0.02,
       0.03,
+      0.02,
       0.02
     ],
     "tests/unit/test_the_declared_signals_are_the_published_ones.py": [
-      1.11
+      1.11,
+      1.05
     ],
     "tests/unit/test_the_diagnosis_follows_the_shape.py": [
       0.01,
@@ -2471,10 +2505,11 @@
       0.01
     ],
     "tests/unit/test_the_documented_bga_lines_parse.py": [
+      2.0,
       2.0
     ],
     "tests/unit/test_the_documented_invocations_parse.py": [
-      9.18,
+      9.19,
       9.19,
       9.19,
       9.19,
@@ -2495,9 +2530,11 @@
       0.15
     ],
     "tests/unit/test_the_equality_names_its_join.py": [
+      0.01,
       0.01
     ],
     "tests/unit/test_the_exit_table_derives_from_the_codes.py": [
+      0.35,
       0.35
     ],
     "tests/unit/test_the_export_carries_no_commentary.py": [
@@ -2508,7 +2545,7 @@
       0.71
     ],
     "tests/unit/test_the_export_carries_the_schemas_it_uses.py": [
-      0.31,
+      0.33,
       0.33,
       0.33,
       0.33,
@@ -2518,23 +2555,25 @@
       0.64,
       0.41,
       0.63,
+      0.48,
       0.48
     ],
     "tests/unit/test_the_exports_data_half_has_a_budget.py": [
       42.37,
       36.33,
       42.38,
-      36.86
+      36.86,
+      39.18
     ],
     "tests/unit/test_the_fast_check_holds_what_the_suite_holds.py": [
+      3.46,
+      3.46,
       3.47,
-      3.46,
-      3.46,
       3.47,
       3.47
     ],
     "tests/unit/test_the_first_finding_is_an_action.py": [
-      0.52,
+      0.65,
       0.65,
       0.65,
       0.65,
@@ -2557,13 +2596,15 @@
     "tests/unit/test_the_fixture_differ_sees_key_order.py": [
       1.42,
       1.42,
+      1.42,
       1.42
     ],
     "tests/unit/test_the_floor_is_stated_where_it_is_read.py": [
-      0.02
+      0.02,
+      0.01
     ],
     "tests/unit/test_the_fold_says_how_deep_it_goes.py": [
-      10.3,
+      10.94,
       10.94,
       10.94,
       10.94,
@@ -2571,13 +2612,14 @@
     ],
     "tests/unit/test_the_front_door_is_current.py": [
       0.03,
-      0.03,
       0.02,
+      0.03,
       0.03,
       0.03
     ],
     "tests/unit/test_the_gate_docstring_is_the_registry.py": [
-      0.28
+      0.28,
+      0.09
     ],
     "tests/unit/test_the_graph_is_derived_not_guessed.py": [
       0.48,
@@ -2594,38 +2636,38 @@
       0.26
     ],
     "tests/unit/test_the_guards_measure_the_page.py": [
-      16.04,
+      16.03,
       16.03,
       16.03,
       16.03,
       16.03
     ],
     "tests/unit/test_the_handoff_box_is_measured_served.py": [
-      33.32,
       33.28,
       33.28,
       33.28,
-      33.28
+      33.28,
+      33.29
     ],
     "tests/unit/test_the_handoff_counts_what_perfetto_spends.py": [
       10.99,
       10.99,
       10.99,
       10.99,
-      10.99
+      11.0
     ],
     "tests/unit/test_the_handoff_does_not_carry_the_trace.py": [
       1.64,
-      1.64,
       1.63,
+      1.64,
       1.64,
       1.64
     ],
     "tests/unit/test_the_handoff_has_a_fixture.py": [
-      18.9,
       18.88,
       18.89,
       18.9,
+      18.89,
       18.89
     ],
     "tests/unit/test_the_handoff_rides_the_rail.py": [
@@ -2636,13 +2678,14 @@
       5.34
     ],
     "tests/unit/test_the_handoff_says_whether_perfetto_fetched.py": [
-      5.78,
       5.62,
       5.78,
       5.63,
-      5.76
+      5.76,
+      5.63
     ],
     "tests/unit/test_the_hard_gates_are_named.py": [
+      0.07,
       0.07
     ],
     "tests/unit/test_the_host_was_asked.py": [
@@ -2653,21 +2696,22 @@
       0.55
     ],
     "tests/unit/test_the_ingestion_facts_name_the_bst_they_ran_on.py": [
-      0.02
+      0.02,
+      0.01
     ],
     "tests/unit/test_the_journey_has_an_answer_key.py": [
       0.0
     ],
     "tests/unit/test_the_journey_reaches_what_if.py": [
-      0.11,
       0.12,
       0.12,
       0.13,
+      0.12,
       0.12
     ],
     "tests/unit/test_the_jump_box_offers_what_it_knows.py": [
-      0.58,
       0.8,
+      0.81,
       0.81,
       0.81,
       0.81
@@ -2677,7 +2721,7 @@
       7.92,
       7.92,
       7.92,
-      7.92
+      7.93
     ],
     "tests/unit/test_the_last_three_plane_two_blocks_arrive.py": [
       0.1,
@@ -2687,8 +2731,8 @@
       0.1
     ],
     "tests/unit/test_the_lead_names_the_planes_it_has.py": [
-      11.93,
       11.91,
+      11.92,
       11.92,
       11.92,
       11.92
@@ -2722,7 +2766,7 @@
       10.94
     ],
     "tests/unit/test_the_minutes_inside_analyze.py": [
-      4.77,
+      4.78,
       4.78,
       4.78,
       4.78,
@@ -2743,17 +2787,17 @@
       2.42
     ],
     "tests/unit/test_the_numbers_have_a_sentence.py": [
-      3.43,
       3.62,
       3.62,
       3.63,
+      3.62,
       3.62
     ],
     "tests/unit/test_the_order_the_page_has.py": [
       18.65,
       18.65,
-      18.65,
       18.66,
+      18.65,
       18.65
     ],
     "tests/unit/test_the_ordering_authority_is_one_place.py": [
@@ -2762,6 +2806,7 @@
     "tests/unit/test_the_package_runs_on_the_python_it_claims.py": [
       6.45,
       6.44,
+      6.45,
       6.45,
       6.45
     ],
@@ -2780,18 +2825,18 @@
       16.59
     ],
     "tests/unit/test_the_page_has_a_volume_budget.py": [
-      41.77,
       41.76,
       41.77,
       41.77,
-      41.77
+      41.77,
+      41.78
     ],
     "tests/unit/test_the_page_has_geometry.py": [
-      68.77,
       68.72,
       68.72,
       68.73,
-      68.72
+      68.72,
+      68.73
     ],
     "tests/unit/test_the_page_keeps_the_names_it_was_given.py": [
       5.43,
@@ -2801,8 +2846,8 @@
       5.43
     ],
     "tests/unit/test_the_page_moves_between_runs.py": [
-      22.26,
       22.23,
+      22.24,
       22.24,
       22.24,
       22.24
@@ -2816,8 +2861,8 @@
     ],
     "tests/unit/test_the_page_opens_the_way_it_says.py": [
       0.03,
-      0.03,
       0.02,
+      0.03,
       0.03,
       0.03
     ],
@@ -2825,13 +2870,14 @@
       1.15,
       1.13,
       1.15,
+      1.13,
       1.13
     ],
     "tests/unit/test_the_page_that_answers_why.py": [
       2.12,
       2.12,
-      2.12,
       2.13,
+      2.12,
       2.12
     ],
     "tests/unit/test_the_pairing_pass_streams.py": [
@@ -2842,30 +2888,32 @@
       0.45
     ],
     "tests/unit/test_the_palette_is_validated.py": [
-      0.19,
+      0.2,
       0.2,
       0.2,
       0.2,
       0.2
     ],
     "tests/unit/test_the_percentile_rows_are_the_published_ones.py": [
-      0.03
+      0.03,
+      0.02
     ],
     "tests/unit/test_the_perfetto_handoff.py": [
       11.39,
       11.39,
-      11.39,
       11.4,
+      11.39,
       11.39
     ],
     "tests/unit/test_the_pinned_ref_is_a_decision.py": [
       0.01,
       0.01,
       0.01,
+      0.01,
       0.01
     ],
     "tests/unit/test_the_planes_agree_about_plane_two.py": [
-      0.38,
+      0.55,
       0.55,
       0.55,
       0.55,
@@ -2879,16 +2927,18 @@
       0.01
     ],
     "tests/unit/test_the_premise_is_a_declared_field.py": [
-      0.41
+      0.41,
+      0.37
     ],
     "tests/unit/test_the_printed_sentences_are_contracts.py": [
-      1.34,
+      1.6,
       1.6,
       1.6,
       1.6,
       1.6
     ],
     "tests/unit/test_the_process_documents_derive_their_figures.py": [
+      0.4,
       0.4
     ],
     "tests/unit/test_the_process_is_measured.py": [
@@ -2899,17 +2949,18 @@
       0.39
     ],
     "tests/unit/test_the_provenance_names_its_rule.py": [
-      27.05,
       27.02,
+      27.03,
       27.03,
       27.03,
       27.03
     ],
     "tests/unit/test_the_python_floor_is_a_guard.py": [
+      4.76,
       4.76
     ],
     "tests/unit/test_the_query_asks_about_this_run.py": [
-      19.64,
+      19.67,
       19.67,
       19.67,
       19.67,
@@ -2917,8 +2968,8 @@
     ],
     "tests/unit/test_the_questions_are_asked_of_a_real_trace.py": [
       6.57,
-      6.57,
       6.58,
+      6.57,
       6.57,
       6.57
     ],
@@ -2930,14 +2981,14 @@
       0.3
     ],
     "tests/unit/test_the_rail_takes_a_step.py": [
-      10.83,
+      10.82,
       10.82,
       10.82,
       10.82,
       10.82
     ],
     "tests/unit/test_the_ranking_orders_equals.py": [
-      0.0,
+      0.01,
       0.01,
       0.01,
       0.01,
@@ -2953,8 +3004,8 @@
     "tests/unit/test_the_real_project_block_is_dated.py": [
       0.62,
       0.62,
-      0.62,
       0.63,
+      0.62,
       0.62
     ],
     "tests/unit/test_the_real_reader_agrees.py": [
@@ -2965,14 +3016,14 @@
       0.09
     ],
     "tests/unit/test_the_record_list_is_the_floor.py": [
-      0.23,
+      0.24,
       0.24,
       0.24,
       0.24,
       0.24
     ],
     "tests/unit/test_the_refresh_route_is_written_down.py": [
-      0.01,
+      0.02,
       0.02,
       0.02,
       0.02,
@@ -2988,24 +3039,26 @@
     "tests/unit/test_the_registry_knows_what_it_reads.py": [
       0.02,
       0.02,
+      0.02,
       0.02
     ],
     "tests/unit/test_the_regression_verdict_carries_an_evidence_chain.py": [
+      0.61,
       0.61
     ],
     "tests/unit/test_the_release_body_is_generated.py": [
-      0.25,
+      0.28,
       0.28,
       0.28,
       0.28,
       0.28
     ],
     "tests/unit/test_the_report_has_chapters.py": [
-      7.59,
       7.6,
       7.6,
       7.59,
-      7.59
+      7.59,
+      7.6
     ],
     "tests/unit/test_the_report_has_two_panes.py": [
       0.02,
@@ -3016,8 +3069,8 @@
     ],
     "tests/unit/test_the_report_is_read_not_decoded.py": [
       0.25,
-      0.25,
       0.24,
+      0.25,
       0.25,
       0.25
     ],
@@ -3036,10 +3089,12 @@
       0.01
     ],
     "tests/unit/test_the_roles_table_names_who_serves_it.py": [
+      0.05,
       0.05
     ],
     "tests/unit/test_the_round_history_names_every_audit.py": [
-      0.06
+      0.06,
+      0.03
     ],
     "tests/unit/test_the_schema_says_what_things_are.py": [
       0.89,
@@ -3052,6 +3107,7 @@
       6.73,
       6.73,
       6.73,
+      6.73,
       6.73
     ],
     "tests/unit/test_the_served_handoff_counts_its_edges.py": [
@@ -3059,6 +3115,7 @@
     ],
     "tests/unit/test_the_served_scratch_is_not_leaked.py": [
       2.16,
+      1.81,
       1.81,
       1.81
     ],
@@ -3070,11 +3127,11 @@
       6.01
     ],
     "tests/unit/test_the_shape_channel_is_built.py": [
-      23.57,
       23.56,
       23.56,
       23.56,
-      23.56
+      23.56,
+      23.57
     ],
     "tests/unit/test_the_shape_conclusions_have_a_negative_case.py": [
       0.26,
@@ -3098,23 +3155,29 @@
       0.02
     ],
     "tests/unit/test_the_slice_says_what_bga_knows.py": [
-      0.3,
+      0.32,
       0.32,
       0.32,
       0.32,
       0.32
     ],
     "tests/unit/test_the_spec_outside_part_32_is_read_only.py": [
+      0.01,
       0.01
     ],
     "tests/unit/test_the_spec_says_which_parts_are_advisory.py": [
+      0.02,
       0.02
+    ],
+    "tests/unit/test_the_start_clock_says_where_it_came_from.py": [
+      0.06
     ],
     "tests/unit/test_the_store_section_takes_a_window.py": [
       23.6,
       14.57,
       14.57,
-      14.57
+      14.57,
+      14.58
     ],
     "tests/unit/test_the_store_speaks_for_more_than_one_build.py": [
       0.49,
@@ -3125,8 +3188,8 @@
     ],
     "tests/unit/test_the_stranger_has_a_seed.py": [
       4.8,
-      4.8,
       4.79,
+      4.8,
       4.8,
       4.8
     ],
@@ -3145,6 +3208,7 @@
       2.23
     ],
     "tests/unit/test_the_styleguide_names_its_guards.py": [
+      0.14,
       0.14
     ],
     "tests/unit/test_the_synthesis_reaches_the_page.py": [
@@ -3155,27 +3219,28 @@
       3.64
     ],
     "tests/unit/test_the_tiers_are_a_partition.py": [
-      2.33,
       2.37,
       2.37,
       2.38,
+      2.37,
       2.37
     ],
     "tests/unit/test_the_timeline_speaks_perfetto.py": [
-      7.16,
       7.18,
       7.19,
+      7.18,
       7.18,
       7.18
     ],
     "tests/unit/test_the_tools_scale_with_the_table.py": [
-      20.7,
       20.67,
       20.67,
       20.67,
-      20.67
+      20.67,
+      20.68
     ],
     "tests/unit/test_the_touching_map_is_measured.py": [
+      0.15,
       0.15,
       0.15,
       0.15,
@@ -3189,21 +3254,21 @@
       8.71
     ],
     "tests/unit/test_the_trace_knows_whose_build.py": [
-      0.06,
       0.07,
       0.07,
       0.06,
+      0.07,
       0.07
     ],
     "tests/unit/test_the_two_capabilities_are_offered.py": [
-      32.85,
       32.82,
+      32.83,
       32.83,
       32.83,
       32.83
     ],
     "tests/unit/test_the_two_rankings_answer_two_questions.py": [
-      0.03,
+      0.04,
       0.04,
       0.04,
       0.04,
@@ -3216,6 +3281,9 @@
       0.02,
       0.02
     ],
+    "tests/unit/test_the_verdict_record_is_a_published_key.py": [
+      0.83
+    ],
     "tests/unit/test_the_verification_log_is_true.py": [
       0.01,
       0.01,
@@ -3224,10 +3292,10 @@
       0.01
     ],
     "tests/unit/test_the_view_parses_nothing.py": [
-      8.89,
       8.88,
       8.89,
       8.9,
+      8.89,
       8.89
     ],
     "tests/unit/test_the_viewer_modules_have_a_home.py": [
@@ -3238,9 +3306,9 @@
       0.61
     ],
     "tests/unit/test_the_viewer_perfetto_boundary.py": [
-      0.29,
       0.31,
       0.3,
+      0.31,
       0.31,
       0.31
     ],
@@ -3253,28 +3321,28 @@
     ],
     "tests/unit/test_the_viewer_splits_along_its_seams.py": [
       0.08,
-      0.08,
       0.09,
+      0.08,
       0.08,
       0.08
     ],
     "tests/unit/test_the_views_nobody_could_reach.py": [
-      0.86,
       0.92,
       0.91,
+      0.92,
       0.92,
       0.92
     ],
     "tests/unit/test_the_views_that_draw.py": [
-      3.17,
       3.16,
+      3.17,
       3.17,
       3.17,
       3.17
     ],
     "tests/unit/test_the_vocabulary_has_the_shape.py": [
-      29.53,
       29.5,
+      29.51,
       29.51,
       29.51,
       29.51
@@ -3287,13 +3355,14 @@
       0.01
     ],
     "tests/unit/test_the_workflow_does_not_know_the_payload.py": [
-      0.01,
+      0.02,
       0.02,
       0.02,
       0.02,
       0.02
     ],
     "tests/unit/test_three_reasons_for_no_timeline.py": [
+      0.67,
       0.67,
       0.67,
       0.67
@@ -3306,14 +3375,14 @@
       0.01
     ],
     "tests/unit/test_tools_dispatch.py": [
-      0.52,
+      0.51,
       0.51,
       0.51,
       0.51,
       0.51
     ],
     "tests/unit/test_topology_fixtures.py": [
-      0.09,
+      0.1,
       0.1,
       0.1,
       0.1,
@@ -3321,13 +3390,13 @@
     ],
     "tests/unit/test_total_duration_wall_clock.py": [
       0.03,
-      0.03,
       0.02,
+      0.03,
       0.03,
       0.03
     ],
     "tests/unit/test_trace_stream_and_census_scale.py": [
-      25.32,
+      25.3,
       25.3,
       25.3,
       25.3,
@@ -3344,12 +3413,13 @@
       0.06,
       0.05,
       0.06,
+      0.06,
       0.06
     ],
     "tests/unit/test_unfinished_build_verdict.py": [
       0.08,
-      0.08,
       0.09,
+      0.08,
       0.08,
       0.08
     ],
@@ -3361,7 +3431,7 @@
       0.01
     ],
     "tests/unit/test_utilisation.py": [
-      0.0,
+      0.01,
       0.01,
       0.01,
       0.01,
@@ -3396,7 +3466,7 @@
       0.01
     ],
     "tests/unit/test_what_a_snapshot_weighs.py": [
-      0.03,
+      0.04,
       0.04,
       0.04,
       0.04,
@@ -3417,38 +3487,39 @@
       0.63
     ],
     "tests/unit/test_what_if_you_could_choose_the_fixes.py": [
-      2.41,
+      2.43,
       2.43,
       2.43,
       2.43,
       2.43
     ],
     "tests/unit/test_whatifs_saving_is_in_the_teams_units.py": [
+      0.07,
       0.07
     ],
     "tests/unit/test_which_elements_caused_the_regression.py": [
       1.12,
       1.12,
-      1.12,
       1.13,
+      1.12,
       1.12
     ],
     "tests/unit/test_why_bga_believes_what_it_believes.py": [
       12.14,
       12.14,
-      12.14,
       12.15,
+      12.14,
       12.14
     ],
     "tests/unit/test_why_is_this_ranked_first.py": [
       1.62,
       1.62,
-      1.62,
       1.63,
+      1.62,
       1.62
     ],
     "tests/unit/test_width_uniformity.py": [
-      0.01,
+      0.02,
       0.02,
       0.02,
       0.02,
@@ -3512,9 +3583,11 @@
     "tests/unit/test_the_served_scratch_is_not_leaked.py",
     "tests/unit/test_the_spec_outside_part_32_is_read_only.py",
     "tests/unit/test_the_spec_says_which_parts_are_advisory.py",
+    "tests/unit/test_the_start_clock_says_where_it_came_from.py",
     "tests/unit/test_the_store_section_takes_a_window.py",
     "tests/unit/test_the_styleguide_names_its_guards.py",
     "tests/unit/test_the_touching_map_is_measured.py",
+    "tests/unit/test_the_verdict_record_is_a_published_key.py",
     "tests/unit/test_three_reasons_for_no_timeline.py",
     "tests/unit/test_two_row_selectors_became_one.py",
     "tests/unit/test_whatifs_saving_is_in_the_teams_units.py"

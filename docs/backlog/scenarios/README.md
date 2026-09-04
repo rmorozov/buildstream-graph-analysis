@@ -15,19 +15,19 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-624 scenarios: **7 open**, 617 closed.
+630 scenarios: **13 open**, 617 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
 | capture | 0 | 92 |
 | analysis | 0 | 93 |
-| contracts | 1 | 44 |
+| contracts | 3 | 46 |
 | viewer | 0 | 138 |
 | cli | 0 | 21 |
 | store | 0 | 16 |
-| docs | 1 | 90 |
-| guards | 5 | 130 |
+| docs | 4 | 93 |
+| guards | 6 | 131 |
 
 ## Open scenarios
 
@@ -43,6 +43,12 @@ task file, which is the only place it ever lived twice.
 | UX-624 | [the cap dropped a guard that was not noise](UX-0624-the-cap-dropped-a-guard-that-was-not-noise.md) | guards | Medium | a track adding a declared key | 🔴 Open |
 | UX-625 | [reverting a mutation can discard the work](UX-0625-reverting-a-mutation-can-discard-the-work.md) | guards | Low | a track falsifying its own guard | 🔴 Open |
 | UX-626 | [a brief names a commit nobody resolved](UX-0626-a-brief-names-a-commit-nobody-resolved.md) | guards | Low | a track given a base | 🔴 Open |
+| UX-627 | [closing a row writes `🟢 Done Open`](UX-0627-closing-a-row-writes-done-open.md) | guards | High | anyone reading a task file's status | 🔴 Open |
+| UX-628 | [five published keys no document names](UX-0628-five-published-keys-no-document-names.md) | contracts | High | anyone reading a payload against the prose that describes it | 🔴 Open |
+| UX-629 | [a required set grew under an unchanged id](UX-0629-a-required-set-grew-under-an-unchanged-id.md) | contracts | Medium | a consumer validating a document it wrote yesterday | 🔴 Open |
+| UX-630 | [two environment variables no inventory sees](UX-0630-two-environment-variables-no-inventory-sees.md) | docs | Medium | anyone trying to find out what changes bga's output | 🔴 Open |
+| UX-631 | [the context map's guard cannot see a file inside a package](UX-0631-the-context-map-guard-cannot-see-a-package-file.md) | docs | Medium | a reader looking a module up in the map | 🔴 Open |
+| UX-632 | [the touching figure is the sample its own round disproved](UX-0632-the-touching-figure-is-the-sample-its-own-round-disproved.md) | docs | Low | anyone budgeting the inner loop | 🔴 Open |
 
 ## UX-563..UX-586: the eighty-second round — the documents, read against the tool (2026-09-03)
 

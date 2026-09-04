@@ -84,6 +84,7 @@ would have caught it; a bound at it would only just have.
 | 12 | 2026-09-02 | 537 | `UX-548`, `UX-549`, `UX-550`, `UX-551`, `UX-552` |
 | 13 | 2026-09-03 | 560 | `UX-563`..`UX-586` — every document group read against the tree; [`round-82.md`](round-82.md) |
 | 14 | 2026-09-03 | 587 | four filings — the registry row `UX-565` falsified, two hard gates no document names, a Python floor in no prose, and a verification-log clause read against the entry below it; [`round-83.md`](round-83.md) |
+| 15 | 2026-09-04 | 617 | six filings — closing a row writes `🟢 Done Open` in 17 files with `--check` clean, five published keys no document names, `compare/v2`'s required set grown under an unchanged id, two undocumented env-var input surfaces, `bga/report/rate.py` outside the map guard's population, and the `4s` touching figure the round beside it disproved; [`round-84.md`](round-84.md) |
 
 ### Review 11 — 2026-09-02
 
@@ -1002,3 +1003,123 @@ allowlist row said the same thing, and `UX-565` moved one. Part 33.1
 and `hard_gates` say the same thing, and `UX-567` moved one. Neither
 is a sentence nobody reads: both are inside the registry the last
 review built to stop exactly this.
+
+## Review 15 — 2026-09-04, at 617 closed rows
+
+Input: the thirty rows closed since review 14 — `UX-589`..`UX-621`,
+which is round 84 executing round 83's slate and round 85 still in
+flight — and the commits between them, twenty-seven. The contracts
+track (`UX-610`, `UX-612`) merged *during* this review, so the window
+recorded here is three rows longer than the one it was called on.
+Round 84 is [`round-84.md`](round-84.md); round 85 has no document yet.
+
+**1. Does the code still do what it says?** The 109 files under
+`tests/unit/` that open a path below `docs/` (`git grep -l "docs/" --
+tests/unit/`) run as one selection: **1867 passed, 3 skipped, 1
+failed**, and the one failure is this review's own trigger —
+`test_the_review_has_a_cadence.py`, *"30 scenarios have closed since
+review 14 (2026-09-03), against a bound of 25"*. No chapter is wrong
+about a mechanism a guard reads. Two are wrong where none does.
+`fixing-guide.md:191` says `bga/report/  text.py, json.py,
+ci_comment.py - renderers, no analysis`; `git ls-files bga/report/`
+returns five modules — `_shared.py` and `UX-596`'s new `rate.py` are
+unnamed, and `rate.py` converts rather than renders.
+`architecture.md:946` ends `compare/v2` at *"the candidate's diagnosis
+chain"* and `:1011` ends `run-context/v9` at *"the resolved
+`native_max_jobs`"*; both contracts gained keys this window.
+
+**2. Does every published contract have a home?** Every id, yes; no
+key. `bga.contracts`: **23 emitted ids, 9 superseded, 3 read and never
+written**, 8 printable and 15 not — unchanged from review 13 and 14.
+`schemas.names()` is the same eight live ids. `bga/schemas.py` moved
+87 insertions and **one** deletion, and that deletion is a
+`description` string, so the window is additions and no bump — with
+one qualification the rule does not cover: `_COMPARE_REQUIRED` went
+**13 keys to 14**, so `schema('compare/v2')['required']` is now 15
+entries against 14 at `147a49c`. A `compare/v2` document written
+yesterday no longer validates against `compare/v2` today.
+`additionalProperties: true` does not protect that, and §3.7 names
+only rename and removal as breaking (`UX-629`). Five keys shipped —
+`verdict_provenance`, `queue_wait_us`, `queue_wait_absent_reason`,
+`requested_at_us`, `requested_at_source` — and `git grep -l <key> --
+'docs/**/*.md' README.md ':!docs/backlog' ':!docs/audits'` returns
+**nothing for any of the five** (`UX-628`).
+`test_the_documents_keep_up_with_the_contracts.py` stays green because
+it reads ids.
+
+**3. Is any figure invalidated?** `dev_close_task.py --figures` over
+the window's 20,186-line diff reports **0 figures removed** — and that
+is the tool's whole answer, because `_FIGURE` at
+`tools/dev_close_task.py:502` is `\d{1,3}(?:[,_]\d{3})+`: it can only
+see comma-grouped numbers over a thousand. Re-measured by hand, the
+figures documents present as current hold: **56** `analyze/v5`
+top-level properties, **22** modules in `bga/viewer/`, **17**
+questions in `questions.js`, and `architecture.md`'s opening counts.
+`rules.md`'s *"it is ~40 KB"* reads against a **43,113**-byte guide,
+up 1,755 from review 14's 41,358 — still true at a tilde, drifting.
+One figure is invalidated, in the same table as the round that
+invalidated it: `fixing-guide.md` lines 59 and 74 and `CLAUDE.md`
+line 17 all price `make test-touching` at **4s on a one-module
+diff**, entered `2026-08-28` (`bc15935`) from `bga/store_aggregate.py`.
+`UX-606` closed this window by replacing exactly that one-module
+sample in the *guard* with a distribution. Measured today via
+`dev_touching.select`: `store_aggregate.py` selects **24 of 461** test
+files, `cli.py` **118 of 461**. The prose beside the fixed guard still
+quotes the sample (`UX-632`).
+
+**4. What shipped since the last review that no document names?**
+`bga --help` gained no command: 32 commands, and the context map's
+block matches them exactly, both directions, with
+`test_the_context_map_is_the_tree.py` holding it (`UX-608`).
+`schemas.names()` gained none. Three mechanisms have no home. The five
+contract keys from item 2. `bga/report/rate.py`, whose only mention
+outside `docs/backlog/` is its own source — and the guard cannot see
+it, because `_real_modules` maps a `bga/` package to its directory,
+26 modules in that blind spot (`UX-631`). And an input surface no
+inventory on this checklist can see: `BGA_RATE` and
+`BGA_REQUESTED_AT`, both new this window. Of the eight `BGA_*`
+variables in `bga/` and `tools/`, **six are named in no document**
+outside `docs/backlog/` and `docs/audits/`. `rate.py:22` chose the
+variable on the grounds that it *"costs no help line"* — which is also
+why `bga --help` cannot report it (`UX-630`). Review 14's two findings
+are closed and verified here: all six `hard_gates` keys are now in the
+spec and in the docstring, and `README.md:21` names the 3.9 floor
+against `ci.yml:25`'s `["3.9","3.10","3.11","3.12"]`.
+
+**5. Does each document's own "last updated" claim match reality?**
+The claim is right and the checklist's instrument is now wrong.
+`architecture.md`'s newest entry says *Updated 2026-09-03 (after
+`UX-569`)*; `git log -1 --date=short --` on that file says
+**2026-09-04**. `UX-620`'s `only_the_count_moved` is why that is not a
+defect, and it is neither too wide nor too narrow: of the **33**
+commits touching the document, **7** are excused, and reading all
+seven diffs, every one changes nothing but the digits in *"from N
+`docs/backlog/scenarios/` files"*. Five of the seven are in this
+window. `UX-604` also closed review 14's other half: `_claimed()` now
+ends at the next `Updated` heading, and the newest entry measures 1045
+characters bounded correctly. What is left is that item 5's own
+command no longer answers item 5's question for the one document that
+carries a currency claim.
+
+**The finding that matters most:** round 83's was that a sentence with
+a guard is true; round 84's was that a filing is a sentence no guard
+reads. This window is the next step, and it is about the guards
+themselves: **a guard is written against the vocabulary that existed
+when it was written, and the enumeration inside it ages exactly like
+the prose it replaced.** Three, measured. `close_status_line`'s
+`STATUS_WORDS` names four words; `🔴 Open` entered the tree on
+2026-09-03 and **17 task files now say `🟢 Done Open`**, sixteen of
+them closed in this window, while `dev_close_task.py --check` reports
+*"0 problem(s) over 5 propert(ies)"* and `status_words()` returns
+`['Done']` — this is `UX-454`'s "Done Done" defect reproduced by the
+fix for it, and the guard against it enumerates five literal status
+lines, none of which is the form six open rows carry today
+(`UX-627`). `test_the_context_map_is_the_tree.py`'s population is 104
+paths and `bga/report/rate.py` is not one of them (`UX-631`).
+`test_the_documents_keep_up_with_the_contracts.py` enumerates schema
+ids, and five keys walked past it (`UX-628`). Review 14 found a
+decision written in two places where only one is read; this window has
+the guard reading the right place and the wrong population. The
+counter-example is inside the window: `UX-606` deleted a one-module
+sample and put a derived distribution over the whole population in its
+place. That is the technique the other three need.

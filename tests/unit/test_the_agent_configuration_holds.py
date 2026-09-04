@@ -943,10 +943,17 @@ class TestATrackCanReadEveryRefItsCheckoutHas:
             "`origin/round` resolved, so the branch was pushed and the "
             "clause above measured the easy case")
 
-    def test_the_private_git_dir_carries_no_refs_of_its_own(self, tmp_path):
-        """The mechanism, so the clause above reads as a property and
-        not as one git version's accident."""
-        repo, copy, _tip = self._checkout_with_an_unpushed_branch(tmp_path)
+    def test_a_branch_ref_lives_in_the_shared_dir_not_the_private_one(
+            self, tmp_path):
+        """The mechanism, so the clause above reads as a property.
+
+        Asked of the branch's own ref path rather than of whether a
+        private `refs/` directory exists: git 2.55 creates one for the
+        per-worktree refs (`refs/bisect`, `refs/worktree`) where 2.43
+        does not, and a clause reading that directory measures the git
+        version instead of the ref store (`UX-623`, caught on CI).
+        """
+        _repo, copy, _tip = self._checkout_with_an_unpushed_branch(tmp_path)
         private = pathlib.Path(
             self._git(copy, "rev-parse", "--absolute-git-dir").stdout.strip())
         common = pathlib.Path(
@@ -954,10 +961,13 @@ class TestATrackCanReadEveryRefItsCheckoutHas:
         assert private != common.resolve(), (
             f"{copy} is not a linked worktree - its git dir is the "
             f"shared one, so nothing here is being measured")
-        assert not (private / "refs").exists(), (
-            f"the worktree's private git dir has its own refs/ "
-            f"({sorted(p.name for p in private.iterdir())}), so the ref "
-            f"store is not shared and UX-623 as filed was right")
+        where = pathlib.Path(self._git(
+            copy, "rev-parse", "--git-path",
+            "refs/heads/round").stdout.strip()).resolve()
+        assert private not in where.parents and where != private, (
+            f"the branch's ref path is {where}, inside the worktree's own "
+            f"git dir {private} - the ref store is not shared and UX-623 "
+            f"as filed was right")
 
     def test_the_documented_check_answers_from_the_branch_name_alone(
             self, tmp_path):

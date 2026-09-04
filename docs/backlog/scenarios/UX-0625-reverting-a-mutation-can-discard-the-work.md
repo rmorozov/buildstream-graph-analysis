@@ -4,7 +4,7 @@
 
 ## Motivation
 
-**Corrected round 86, by measurement — the filed text is kept below.**
+**Corrected round 85, by measurement — the filed text is kept below.**
 "It does not say how" is false. The skill has said how since `bc15935`
 (`UX-359`), in two places: step 1 of the loop is `cp <file>
 /tmp/<file>.bak`, and a paragraph names `git checkout --` as a trap.
@@ -85,7 +85,7 @@ same file, and no `git` revert command distinguishes them.
 A mutation applied to a file the track has already edited, reverted,
 and the track's own edit still present.
 
-## Outcome (round 86, 2026-09-04) — 🔴 implemented, not closed
+## Outcome (round 85, 2026-09-04) — 🟢 Done
 
 **Premise: half falsified — the skill was not silent, its recipe was
 broken.** The mechanism is confirmed and the remedy moves.

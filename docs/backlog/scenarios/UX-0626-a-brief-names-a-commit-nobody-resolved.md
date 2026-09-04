@@ -44,7 +44,7 @@ does not at the point of use.
 A brief carrying an unresolvable base, refused before a track is
 launched rather than after.
 
-## Outcome (round 86, 2026-09-04) — 🔴 implemented, not closed
+## Outcome (round 85, 2026-09-04) — 🟢 Done
 
 **Premise: held, both halves, unchanged.**
 

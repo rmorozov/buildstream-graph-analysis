@@ -1042,7 +1042,7 @@ which is the index plus untracked and non-ignored, the population
 `tools/dev_close_task.py` writes them from and
 `tests/unit/test_a_counted_figure_is_derived.py` checks them against —
 — and the `capacity-model/v1` row `UX-613` added to the contract
-table. Re-grounded in the two contract tables above against
+table, re-grounded in the two contract tables above against
 `bga.contracts` and `bga.schemas`: **24 emitted ids, 9 of them
 superseded, and 3 read and never written**, 9 printable and 15 not,
 and `analyze/v5` still at **56 top-level properties**. `bga/viewer/`

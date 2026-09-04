@@ -15,14 +15,14 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-634 scenarios: **1 open**, 633 closed.
+635 scenarios: **2 open**, 633 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
 | capture | 0 | 92 |
 | analysis | 0 | 93 |
-| contracts | 0 | 46 |
+| contracts | 1 | 47 |
 | viewer | 0 | 138 |
 | cli | 0 | 21 |
 | store | 0 | 16 |
@@ -37,6 +37,7 @@ task file, which is the only place it ever lived twice.
 | ID | Scenario | Topic | Priority | Serves | Status |
 |---|---|---|---|---|---|
 | UX-636 | [eighty published keys no document names](UX-0636-eighty-published-keys-no-document-names.md) | docs | Medium | anyone reading a payload against the prose that describes it | 🔴 Open |
+| UX-637 | [a shallow clone answers, and does not say so](UX-0637-a-shallow-clone-answers-and-does-not-say-so.md) | contracts | High | anyone whose guard reads history, and every future session in this environment | 🔴 Open |
 
 ## UX-563..UX-586: the eighty-second round — the documents, read against the tool (2026-09-03)
 

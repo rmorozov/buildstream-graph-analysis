@@ -41,21 +41,21 @@ derivation actually reads.
 | [0.3.0](#030--every-document-says-what-shape-it-is-2026-08-27) | 2026-08-27 | 332 | breaking |
 | [0.2.0](#020--the-build-that-says-what-it-is-2026-08-24) | 2026-08-24 | 243 | initial |
 
-All three rows are tagged. `v0.3.0` and `v0.4.0` name the commits that
-set those versions (`bc1593557`, `679b9cf87`) and both are reachable
-from `main`; `tests/unit/test_a_release_records_a_contract_state.py`
-reads them, so step 8 of the release guide cannot go unexecuted again.
+All three rows are tagged, and all three tags name the commit that set
+their version and are reachable from `main`:
 
-`v0.2.0` names `3ebe7e1b5`, which does set `version = "0.2.0"` — on a
-lineage `main` never merged, so `git checkout v0.2.0` hands a reader a
-tree nothing shipped from. **It is kept on purpose** (`UX-633`): the
-row is this project's first release and the tag is the only ref that
-reaches the code it was cut from. The guard names it in
-`UNREACHABLE_BY_DECISION` rather than excluding it behind a version
-floor, so the *next* unreachable tag reddens instead of being swallowed.
+```text
+v0.2.0  3ebe7e1b5    v0.3.0  bc1593557    v0.4.0  679b9cf87
+```
 
-Round 84 recorded this row as "never a version anywhere in the tree",
-which was wrong in letter and right in effect; the reason is above.
+`tests/unit/test_a_release_records_a_contract_state.py` reads them, so
+step 8 of the release guide cannot go unexecuted again.
+
+Round 84 recorded `0.2.0` as "never a version anywhere in the tree" and
+round 86 first "corrected" that to *a lineage `main` cannot reach*.
+Both are wrong: `pyproject.toml` enters this history at `4ace856`
+(2026-08-13) and `0.2.0` is an ordinary release. The wrong correction
+was read off a shallow clone — `UX-633`, and `UX-637` for the cause.
 
 ## 0.4.0 — a capture you can carry (2026-09-03)
 

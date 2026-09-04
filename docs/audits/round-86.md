@@ -46,9 +46,10 @@ Six items, one table. The last column is what the over-broad rule hid.
 | `UX-629` | `required` is a validator's population | a `compare/v2` document written a week earlier stopped validating, and the versioning rule called it an addition |
 | `UX-631` | `_named` matched a filename against **the whole map** | 21 of 26 package modules were "answered" by another package's row — `bga/report/rate.py` by the word `rate` inside `generated` |
 | `UX-632` | `SITES` emptied in a mutation | the parametrized clauses collected nothing and reported as **skips**, not failures |
-| `UX-633` | a version floor at `0.3.0` | `v0.2.0`, which passed two of three clauses and failed only reachability — and any future unreachable tag |
+| `UX-633` | a version floor at `0.3.0` | nothing, as it turned out — but the floor still had to go, because it excluded by number |
 | `UX-635` | the inventory scans the `BGA_*` prefix | 21 `BST_TRACE_*` names in `bwrap_shim.py` that no `BGA_*` guard can see |
 | `UX-636` (filed) | the contracts guard's *repaired* population is a frozen register | the 80 keys still in it, which the ratchet bounds but does not pay |
+| `UX-637` (filed) | a clone's history, when nobody asked how deep | the reachability of every tag — stated backwards, with confidence |
 
 The repair is the same move in each: **name the exclusion, and give the
 name a clause of its own.** `UX-633` is the clearest — the floor became
@@ -79,31 +80,53 @@ rather than only in `UX-597`'s file because it is the same defect as
 the table above, one level up: **a selector is a population, and a
 population is not a gate.**
 
-## The one that only failed on the other machine
+## The one where the round was wrong, and CI was right
 
-`UX-633`'s exemption clause was green here and red on CI, on the
-**same commit** — `5e8fb16`, the PR's merge ref, fetched afterwards so
-both could be asked the identical question:
+`UX-633`'s clause was green here and red on CI, on the same commit. I
+wrote up the difference I could see — git 2.43 here, 2.55 there — as a
+version bug, with a table, in this document. That was a story built to
+fit, and it was wrong.
+
+**This session's checkout was shallow.**
 
 ```text
-local, git 2.43.0     git merge-base --is-ancestor v0.2.0 5e8fb16   exit 1
-                      git rev-list 5e8fb16 | grep -c 3ebe7e1b5           0
-CI,    git 2.55.0     v0.2.0 -> 3ebe7e1b5 is reachable from HEAD (5e8fb16)
+$ cat .git/shallow                                   8 boundary commits
+$ git rev-list <the PR merge ref> | wc -l                        562
+$ git merge-base --is-ancestor v0.2.0 origin/main             exit 1
+
+$ git fetch --unshallow
+$ git rev-list <the same commit> | wc -l                        1202
+$ git merge-base --is-ancestor v0.2.0 origin/main             exit 0
 ```
 
-`v0.2.0`'s lineage has a root of its own — no common ancestor with
-anything — and the clause was standing on `--is-ancestor`'s answer for
-that shape. It now computes the definition instead, `merge-base(tag,
-HEAD) == tag`, which returns a **value** the failure message carries
-(`merge-base: no common ancestor`) rather than an exit code.
+`bc1593557` was the boundary, so it looked like a root, so `3ebe7e1b5`
+looked like a disjoint lineage. Everything built on that reading —
+`UX-633`, a decision put to the repository's owner, an exemption
+mechanism, a paragraph in `CHANGELOG.md`, the section this one
+replaces — was one truncated clone. CI sets `fetch-depth: 0` and was
+right on all four runs.
 
-This is `UX-418`'s class, and round 85 shipped the same shape one round
-earlier: a private-`refs/` proxy, green on 2.43 and red on 2.55. Two
-rounds running, the guard that only holds on one machine has been a
-git-version difference — which is worth saying out loud, because the
-local machine is the one every session measures on.
+Two things are worth carrying forward, and neither is about git.
 
-## What each item left
+**Four agreeing measurements were one observation.** `rev-list`,
+`merge-base`, `--is-ancestor` and `for-each-ref` all read the same
+truncated history. Agreement between instruments that share an input is
+not corroboration, and this repository's rule — every claim a pasted
+measurement — does not by itself catch it.
+
+**A disagreement with CI is evidence about the environment, not only
+about the code.** The cheap question is *what is different about my
+repository*, and `git rev-parse --is-shallow-repository` is one call.
+I reached instead for the visible difference and spent four pushes on
+it. `UX-637` carries the sweep: every guard reading `git log`,
+`rev-list`, `merge-base` or `--diff-filter` has the same exposure, and
+none has been checked.
+
+It is also the round's own thesis, one level up. A shallow clone is a
+**population narrowed by something nobody stated** — and the guard did
+not go quiet, it stated the opposite conclusion with confidence.
+
+## What each item left## What each item left
 
 | row | what shipped | held by |
 |---|---|---|
@@ -113,7 +136,7 @@ local machine is the one every session measures on.
 | `UX-630` | the environment table in `docs/guides/cli.md`, scanned against the tree | `test_the_environment_surface_is_an_inventory.py` |
 | `UX-631` | the map's rule is per-row, not per-map | `test_the_context_map_is_the_tree.py` |
 | `UX-632` | the loop's cost derived by `dev_touching.py --spread`, written by `--write` | `test_the_cost_row_is_derived_from_the_selector.py` |
-| `UX-633` | one named exemption instead of a version floor | `test_a_release_records_a_contract_state.py` |
+| `UX-633` | nothing — premise falsified, rewritten as the record of how | `UX-637` carries the real defect |
 | `UX-634` | step 8 publishes the release; the description is cut, not rewritten | `test_a_release_records_a_contract_state.py` |
 | `UX-635` | the scan reads a set of prefixes; `BST_TRACE_*`'s 21 names documented by kind | `test_the_environment_surface_is_an_inventory.py` |
 
@@ -151,6 +174,7 @@ That is the loop working on its first day.
 
 ## The count
 
-Nine rows closed, four filed (`UX-633`, `UX-634`, `UX-635`,
-`UX-636`), 634 in the backlog. Direction 10 — releases as contract states — is `landed`:
+Nine rows closed — one of them (`UX-633`) as *no defect*, its premise
+falsified — and five filed (`UX-633`, `UX-634`, `UX-635`, `UX-636`,
+`UX-637`), 635 in the backlog. Direction 10 — releases as contract states — is `landed`:
 the tags exist, a guard reads them, and step 8 publishes.

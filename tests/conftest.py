@@ -113,6 +113,15 @@ KNOWN_SKIP_REASONS = {
     # `-rs`): 16. 14 -> 16.
     "trace_processor_shell is not installed": (
         "Perfetto's shell is an optional local tool, not a dependency", 16),
+    # `UX-637`: the reachability clause refuses to answer from a
+    # history that stops at a boundary. Measured on this session's own
+    # checkout, which was shallow until `git fetch --unshallow`: 1.
+    # 0 on CI, which sets `fetch-depth: 0` - held by a clause of its
+    # own, so this cannot go quiet there.
+    "this checkout is shallow, so its history stops at a boundary and "
+    "reachability here is not the tree's answer": (
+        "a shallow clone's history is truncated, not wrong - so the "
+        "clause declines rather than concluding", 1),
     # `UX-597`'s four release-tag clauses read `git tag --list v*`. A
     # clone made without tags has none, so they gate rather than pass
     # vacuously. Measured on a `--no-tags` clone of this tree: 4 - the

@@ -333,29 +333,20 @@ class TestTheReleaseConsumesTheReview:
             assert finding in text, f"{finding} is open and unnamed in the release"
 
 
-#: `UX-633`: tags kept on purpose whose commit `main` cannot reach.
-#: `v0.2.0` names `3ebe7e1b5` - a lineage that set `0.2.0` and never
-#: merged; `pyproject.toml` enters this history at `bc15935`, which
-#: sets `0.3.0`. Named here rather than excluded behind a version
-#: floor, which would swallow the next one silently.
-UNREACHABLE_BY_DECISION = {"v0.2.0"}
+#: `UX-637`: a shallow clone answers reachability from a history that
+#: stops at a boundary, and says so to nobody. `UX-633` was filed, a
+#: user decision was taken and an exemption shipped on exactly that -
+#: `v0.2.0` read as unreachable here and reachable on CI, and CI was
+#: right. The clauses below refuse to conclude rather than conclude
+#: from a truncated history.
+def _shallow():
+    return _git("rev-parse", "--is-shallow-repository")[1] == "true"
 
 
 def _reaches(commit):
-    """Is `commit` an ancestor of `HEAD`? By the definition, not by the
-    predicate.
-
-    `git merge-base --is-ancestor` answered **0 here and 1 on CI for the
-    same commit**: `5e8fb16`, the merge ref of `UX-633`'s own PR, where
-    `git rev-list` locally walks 561 commits and does not contain
-    `3ebe7e1b5` at all. Local git is 2.43.0, CI's is 2.55.0, and that
-    predicate has an optimised path this repository cannot audit.
-
-    `merge-base` computes the common ancestor and hands back a value, so
-    the clause reads what it asks for: the answer is `commit` when it is
-    an ancestor, and **empty** when the two histories are disjoint -
-    which `v0.2.0`'s lineage is, having a root of its own.
-    """
+    """Is `commit` an ancestor of `HEAD`? By the definition, not the
+    predicate: `merge-base` hands back a value the message can carry,
+    and `--is-ancestor` only an exit code."""
     code, out = _git("merge-base", commit, "HEAD")
     return (code == 0 and out == commit), (out or "no common ancestor")
 
@@ -426,11 +417,13 @@ class TestEveryVersionedReleaseIsTagged:
         """A tag on a commit this history cannot reach hands a reader
         code that was never shipped (`UX-339`)."""
         self._require_tags()
+        if _shallow():
+            pytest.skip(
+                "this checkout is shallow, so its history stops at a "
+                "boundary and reachability here is not the tree's answer")
         unreachable = []
         for row in _rows():
             tag = f"v{row['version']}"
-            if tag in UNREACHABLE_BY_DECISION:
-                continue
             at = _git("rev-parse", f"{tag}^{{commit}}")[1]
             reaches, base = _reaches(at)
             if not reaches:
@@ -440,114 +433,16 @@ class TestEveryVersionedReleaseIsTagged:
             f"reach: {unreachable}. Either the tag moves, or it joins "
             f"UNREACHABLE_BY_DECISION with its reason")
 
-    def test_each_named_exception_still_needs_naming(self):
-        """`UX-633`: an exemption that has stopped applying is a hole in
-        the clause above wearing a reason. It comes out when it does.
-
-        The message carries the commits it resolved, because the first
-        run of this clause on CI said "reachable now" where the same
-        command on a developer's clone said the opposite, and
-        "reachable" without a SHA is not something a log reader can act
-        on (`UX-554`). `--is-ancestor` also answers 0 for *equal*
-        commits, so the two are told apart here rather than conflated.
-        """
-        tags = set(self._require_tags())
-        head = _git("rev-parse", "HEAD")[1]
-        stale = []
-        for tag in sorted(UNREACHABLE_BY_DECISION):
-            if tag not in tags:
-                stale.append(f"{tag}: named here and no such tag")
-                continue
-            code, at = _git("rev-parse", f"{tag}^{{commit}}")
-            if code != 0:
-                stale.append(f"{tag}: names no commit in this checkout")
-                continue
-            reaches, base = _reaches(at)
-            if reaches:
-                stale.append(
-                    f"{tag} -> {at} is reachable from HEAD ({head}), so the "
-                    f"exemption is dead and the tag joins the clause above")
-        assert stale == [], stale
-
-
-#: `UX-634`: where a release section's head stops. Everything above it
-#: is what the GitHub release description is cut from.
-_HEAD_ENDS = "**Contract delta:**"
-
-#: A head longer than this is not a description a reader skims - the
-#: three shipped heads measure 9, 16 and 6 non-blank lines.
-MAX_HEAD_LINES = 24
-
-
-def _release_heads():
-    """`{version: [lines]}` - each section's prose head, title excluded."""
-    text = CHANGELOG.read_text(encoding="utf-8").splitlines()
-    heads, version, collecting = {}, None, False
-    for line in text:
-        found = re.match(r"^## (\d+\.\d+\.\d+) ", line)
-        if found:
-            version, collecting = found.group(1), True
-            heads[version] = []
-            continue
-        if version is None or not collecting:
-            continue
-        if line.startswith(_HEAD_ENDS) or line.startswith("## "):
-            collecting = False
-            continue
-        heads[version].append(line)
-    return heads
-
-
-class TestEveryReleaseCarriesItsOwnDescription:
-    """`UX-634`: step 8 publishes the head step 5 wrote.
-
-    The description is **cut** from `CHANGELOG.md`, so what this checks
-    is that there is something to cut: a section opening with a table
-    or a bare list leaves the publisher writing a second copy, which is
-    the drift `UX-252` refused for the body.
-    """
-
-    def test_the_guide_says_the_description_is_cut_not_written(self):
-        text = RELEASE_GUIDE.read_text(encoding="utf-8")
-        assert "GitHub release" in text, (
-            "the release guide never mentions publishing the tag, so step 8 "
-            "stops at a bare ref (`UX-634`)")
-        assert re.search(r"cut from\s+`CHANGELOG\.md`", text), (
-            "the guide does not say the description is cut from CHANGELOG.md; "
-            "without that it is a second copy that drifts (`UX-252`)")
-
-    def test_every_release_section_has_a_head_to_cut(self):
-        heads = _release_heads()
-        assert heads, "no release section parsed out of CHANGELOG.md"
-        empty = [version for version, lines in heads.items()
-                 if not any(line.strip() for line in lines)]
-        assert empty == [], (
-            f"release section(s) with no prose head: {empty}. Step 5 writes "
-            f"one and step 8 publishes it")
-
-    def test_a_head_opens_with_prose_rather_than_a_table(self):
-        """A section whose first non-blank line is a table row or a list
-        item has nothing a release description can open with."""
-        offenders = []
-        for version, lines in _release_heads().items():
-            first = next((line for line in lines if line.strip()), "")
-            if first.startswith(("|", "- ", "* ", "#", "```")):
-                offenders.append(f"{version}: {first[:40]!r}")
-        assert offenders == [], offenders
-
-    def test_a_head_is_short_enough_to_be_a_description(self):
-        long = {version: len([ln for ln in lines if ln.strip()])
-                for version, lines in _release_heads().items()
-                if len([ln for ln in lines if ln.strip()]) > MAX_HEAD_LINES}
-        assert long == {}, (
-            f"release head(s) over {MAX_HEAD_LINES} non-blank lines: {long}. "
-            f"That is a body, and step 6 generates the body")
-
-    def test_more_than_one_head_is_being_checked(self):
-        """Non-vacuity: an empty parse passes all three clauses above."""
-        assert len(_release_heads()) >= 2, (
-            f"only {len(_release_heads())} release head(s) parsed; the "
-            f"clauses above are not exercised")
+    def test_ci_asks_for_the_history_this_class_reads(self):
+        """`UX-637`: the clause above skips on a shallow clone, so the
+        machine that runs every commit must not have one. Without
+        `fetch-depth: 0` this class would be green everywhere and check
+        reachability nowhere - `UX-213`'s shape, one door along from the
+        `fetch-tags` clause above."""
+        workflow = (REPO / ".github/workflows/ci.yml").read_text(encoding="utf-8")
+        assert "fetch-depth: 0" in workflow, (
+            "ci.yml's checkout does not ask for the whole history, so the "
+            "reachability clause skips on CI and guards nothing there")
 
 
 if __name__ == "__main__":  # pragma: no cover

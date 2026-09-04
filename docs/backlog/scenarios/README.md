@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-632 scenarios: **6 open**, 626 closed.
+632 scenarios: **5 open**, 627 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -26,7 +26,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | viewer | 0 | 138 |
 | cli | 0 | 21 |
 | store | 0 | 16 |
-| docs | 4 | 95 |
+| docs | 3 | 95 |
 | guards | 0 | 131 |
 
 ## Open scenarios
@@ -41,7 +41,6 @@ task file, which is the only place it ever lived twice.
 | UX-630 | [two environment variables no inventory sees](UX-0630-two-environment-variables-no-inventory-sees.md) | docs | Medium | anyone trying to find out what changes bga's output | 🔴 Open |
 | UX-631 | [the context map's guard cannot see a file inside a package](UX-0631-the-context-map-guard-cannot-see-a-package-file.md) | docs | Medium | a reader looking a module up in the map | 🔴 Open |
 | UX-632 | [the touching figure is the sample its own round disproved](UX-0632-the-touching-figure-is-the-sample-its-own-round-disproved.md) | docs | Low | anyone budgeting the inner loop | 🔴 Open |
-| UX-633 | [a release tag names a commit `main` cannot reach](UX-0633-a-release-tag-names-a-commit-main-cannot-reach.md) | docs | Medium | anyone checking out a release this repository claims to have made | 🔴 Open |
 
 ## UX-563..UX-586: the eighty-second round — the documents, read against the tool (2026-09-03)
 

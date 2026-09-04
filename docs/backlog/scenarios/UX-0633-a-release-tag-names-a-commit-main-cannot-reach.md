@@ -1,6 +1,6 @@
 # UX-633: a release tag names a commit `main` cannot reach
 
-**Priority:** Medium | **Status:** 🔴 Open | **Depends on:** UX-597 (which declined this tag), UX-339 (which removed a column for this reason) | **Found by:** round 86, closing UX-597 | **Serves:** anyone checking out a release this repository claims to have made | **Topic:** docs
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-597 (which declined this tag), UX-339 (which removed a column for this reason) | **Found by:** round 86, closing UX-597 | **Serves:** anyone checking out a release this repository claims to have made | **Topic:** docs
 
 ## Motivation
 
@@ -31,16 +31,19 @@ looks like a release.
 
 ## Required Fix
 
-Decided, not left: either `v0.2.0` is deleted from the remote, or it is
-re-pointed at a commit `main` reaches and the CHANGELOG row says which,
-or the row and the tag are documented as naming a pre-merge lineage on
-purpose. The reachability clause in
-`tests/unit/test_a_release_records_a_contract_state.py` reads `0.3.0`
-and up; whichever is chosen, it covers `0.2.0` afterwards.
+**Decided by the repository's owner, round 86: the tag is kept, and
+documented as naming a pre-merge lineage.** It is the only ref that
+reaches the code the first release was cut from, and deleting it would
+lose that for the sake of a clause.
 
-**Not this session's call.** The tag was pushed by the repository's
-owner after `UX-597` declined it, so deleting or moving it is theirs to
-decide.
+So the version floor comes out of
+`tests/unit/test_a_release_records_a_contract_state.py` entirely and is
+replaced by a **named exemption**: `v0.2.0` is listed, with its reason,
+and every other `v*` must be reachable. A floor at `0.3.0` excludes by
+number and would swallow the next unreachable tag in silence — the
+vacuous-guard shape this repository has shipped before. A named set
+cannot: an unlisted tag reddens, and a listed one that stops applying
+reddens too.
 
 ## Out of Scope
 
@@ -52,3 +55,58 @@ decide.
 
 Every `v*` tag in the repository reachable from `HEAD`, with the
 guard's floor lowered to include `0.2.0`.
+
+## Outcome (round 86, 2026-09-04) — 🟢 Done
+
+**Premise held, and the fix is the opposite of what the row's own
+Acceptance Test asked for** — see the deviation.
+
+### The gap, measured
+
+```text
+$ git tag --list 'v*'                                v0.2.0 v0.3.0 v0.4.0
+$ git merge-base --is-ancestor v0.2.0 HEAD           exit 1
+$ git show v0.2.0:pyproject.toml | grep '^version'   version = "0.2.0"
+```
+
+So `v0.2.0` passes *two* of `UX-597`'s three clauses — the tag exists,
+and it names a commit that sets its version — and fails only
+reachability. The `0.3.0` floor was excluding a row that three clauses
+out of four had no quarrel with.
+
+### After
+
+`FIRST_TAGGED_RELEASE` is gone. Every release row is now read by every
+clause, and `UNREACHABLE_BY_DECISION = {"v0.2.0"}` carries the one
+exception with its reason in the constant's comment. A sixth clause,
+`test_each_named_exception_still_needs_naming`, reddens when a listed
+tag stops needing the exemption.
+
+```text
+rows read by the tag/version clauses   2 -> 3
+exclusions                             a version floor -> one named tag
+```
+
+**33 passed** in `test_a_release_records_a_contract_state.py`.
+
+### Mutations verified red and reverted (3)
+
+| # | mutation | reddened |
+|---|---|---|
+| P1 | `UNREACHABLE_BY_DECISION = set()` | reachability alone — the exemption is load-bearing, not decoration |
+| P2 | `"v9.9.9"` added to the set | the staleness clause alone |
+| P3 | `"v0.4.0"` added to the set (a reachable tag) | the staleness clause alone |
+
+P1 is the one that matters: it shows the clause would have caught
+`v0.2.0` on its own, so the exemption is a decision recorded rather
+than a hole that happened to be there.
+
+### Deviation from the Required Fix
+
+The **Acceptance Test as filed** asked for "every `v*` tag reachable
+from `HEAD`, with the guard's floor lowered to include `0.2.0`". That
+presumed the tag would go. The owner decided it stays, so the clause
+that ships is the same shape with the sign flipped: the floor is gone,
+every tag is read, and the one that cannot be reachable is named.
+Written down rather than quietly re-scoped, because the two read alike
+in a diff and do not mean the same thing.

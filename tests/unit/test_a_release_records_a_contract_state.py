@@ -333,27 +333,18 @@ class TestTheReleaseConsumesTheReview:
             assert finding in text, f"{finding} is open and unnamed in the release"
 
 
-#: `UX-597`: the first release whose version the tree actually carries.
-#: `0.2.0`'s row is retrospective - `pyproject.toml` enters this history
-#: at `bc15935`, which sets `0.3.0` - so there is no commit here for a
-#: `v0.2.0` to name.
-FIRST_TAGGED_RELEASE = "0.3.0"
+#: `UX-633`: tags kept on purpose whose commit `main` cannot reach.
+#: `v0.2.0` names `3ebe7e1b5` - a lineage that set `0.2.0` and never
+#: merged; `pyproject.toml` enters this history at `bc15935`, which
+#: sets `0.3.0`. Named here rather than excluded behind a version
+#: floor, which would swallow the next one silently.
+UNREACHABLE_BY_DECISION = {"v0.2.0"}
 
 
 def _git(*argv):
     done = subprocess.run(("git",) + argv, capture_output=True, text=True,
                           cwd=REPO, timeout=60)
     return done.returncode, done.stdout.strip()
-
-
-def _tagged_rows():
-    """The release rows a tag is owed, newest first."""
-    return [row for row in _rows()
-            if _as_numbers(row["version"]) >= _as_numbers(FIRST_TAGGED_RELEASE)]
-
-
-def _as_numbers(version):
-    return tuple(int(part) for part in version.split("."))
 
 
 class TestEveryVersionedReleaseIsTagged:
@@ -385,13 +376,13 @@ class TestEveryVersionedReleaseIsTagged:
     def test_there_is_more_than_one_row_to_check(self):
         """Non-vacuity: with one row the clauses below are one assertion
         about one string, and an empty list passes all of them."""
-        assert len(_tagged_rows()) >= 2, (
-            f"only {len(_tagged_rows())} release row(s) at or above "
-            f"{FIRST_TAGGED_RELEASE}; the clauses below are not exercised")
+        assert len(_rows()) >= 2, (
+            f"only {len(_rows())} release row(s); the clauses below are "
+            f"not exercised")
 
     def test_every_versioned_release_has_its_tag(self):
         tags = set(self._require_tags())
-        missing = [row["version"] for row in _tagged_rows()
+        missing = [row["version"] for row in _rows()
                    if f"v{row['version']}" not in tags]
         assert missing == [], (
             f"release row(s) with no tag: {missing}. Release guide step 8 "
@@ -400,7 +391,7 @@ class TestEveryVersionedReleaseIsTagged:
     def test_every_tag_names_the_commit_that_set_its_version(self):
         self._require_tags()
         wrong = []
-        for row in _tagged_rows():
+        for row in _rows():
             tag = f"v{row['version']}"
             code, text = _git("show", f"{tag}:pyproject.toml")
             found = re.search(r'^version = "(.*)"', text, re.M)
@@ -417,14 +408,29 @@ class TestEveryVersionedReleaseIsTagged:
         code that was never shipped (`UX-339`)."""
         self._require_tags()
         unreachable = []
-        for row in _tagged_rows():
+        for row in _rows():
             tag = f"v{row['version']}"
+            if tag in UNREACHABLE_BY_DECISION:
+                continue
             code, _ = _git("merge-base", "--is-ancestor", tag, "HEAD")
             if code != 0:
                 unreachable.append(tag)
         assert unreachable == [], (
             f"release tag(s) naming a commit no clone of this branch can "
-            f"reach: {unreachable}")
+            f"reach: {unreachable}. Either the tag moves, or it joins "
+            f"UNREACHABLE_BY_DECISION with its reason")
+
+    def test_each_named_exception_still_needs_naming(self):
+        """`UX-633`: an exemption that has stopped applying is a hole in
+        the clause above wearing a reason. It comes out when it does."""
+        tags = set(self._require_tags())
+        stale = []
+        for tag in sorted(UNREACHABLE_BY_DECISION):
+            if tag not in tags:
+                stale.append(f"{tag}: named here and no such tag")
+            elif _git("merge-base", "--is-ancestor", tag, "HEAD")[0] == 0:
+                stale.append(f"{tag}: reachable now, so drop the exemption")
+        assert stale == [], stale
 
 
 #: `UX-634`: where a release section's head stops. Everything above it

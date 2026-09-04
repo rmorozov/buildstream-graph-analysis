@@ -71,7 +71,21 @@ FIXTURES = {"golden": REPO / "tests/fixtures/golden/mixed_task_kinds",
 # The right fix if this keeps climbing is not a looser bound: it is
 # `UX-483`, since a provenance record is where most of this document's
 # depth lives.
-DEEPER_THAN_THREE = {"golden": (0.574, 0.48), "macro_micro": (0.671, 0.58)}
+#
+# `UX-641` moves the golden bound 0.48 -> 0.49, and it is the one kind
+# of movement this ratio is supposed to allow: `parallelism.levels`
+# published `[0 … n-1]` - scalar leaves carrying the row number - and
+# publishes one row per level naming its members, so each level's uids
+# sit at `parallelism.levels.[].elements.[]`, two steps deeper.
+# Membership costs a nesting level; there is no flatter honest shape
+# for "which elements sit here". Measured with
+# `tools/dev_refresh_analysis.py`, before -> after:
+#
+#     golden       700 -> 708 leaves, 331 -> 341 deep, 0.4729 -> 0.4816
+#     macro_micro 1068 -> 1090 leaves, 524 -> 555 deep, 0.4906 -> 0.5092
+#
+# `macro_micro`'s 0.58 is untouched - it had the headroom.
+DEEPER_THAN_THREE = {"golden": (0.574, 0.49), "macro_micro": (0.671, 0.58)}
 
 #: `macro_micro` keeps a seventh level, argued in the item: a step's
 #: `entering` list is four real relations, not a namespace.

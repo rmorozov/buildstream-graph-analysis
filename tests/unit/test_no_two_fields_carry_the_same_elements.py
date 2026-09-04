@@ -1,4 +1,4 @@
-"""UX-288: `analyze/v5` publishes each element population once.
+"""UX-288: `analyze/v6` publishes each element population once.
 
 Measured on the 1,202-element synthetic run, in `analyze/v1`:
 
@@ -131,7 +131,7 @@ def _per_element_measures(found):
 def _is_an_edge(path):
     """A member of a published **edge list** is a relation, not a claim.
 
-    `UX-407` put `restructuring[].edges` into `analyze/v5`, and the
+    `UX-407` put `restructuring[].edges` into `analyze/v6`, and the
     sweep immediately flagged seven pairs of it against
     `batch_opportunities.serialized_pairs`:
 
@@ -336,7 +336,7 @@ class TestEachPopulationIsPublishedOnce:
     def test_the_version_moved_with_them(self, payload):
         """`architecture.md`'s rule: a removal bumps the version. This is
         the first time it has been exercised."""
-        assert payload["schema"] == "analyze/v5", payload["schema"]
+        assert payload["schema"] == "analyze/v6", payload["schema"]
 
 
 class TestWhatReplacedThem:

@@ -645,6 +645,11 @@ MEDIUM = (
     # to do. Two exports booted in a real Chromium plus seven node
     # clauses on `format.js`; 4.2s.
     "tests/unit/test_the_page_keeps_the_names_it_was_given.py",  #    4.2s
+    # `UX-642`, tiered on landing for the reason two lines up: two
+    # exports of `macro_micro` booted in a real Chromium, plus nine
+    # node clauses on the shim. Three single-process runs: 2.15 / 1.84
+    # / 1.46s.
+    "tests/unit/test_a_fold_stays_open_in_the_link.py",          #    2.2s
     # Round 56, the other five of the twelve (see the LARGE block
     # above): over the medium floor, under the large one.
     "tests/unit/test_the_guards_measure_the_page.py",            #   11.5s
@@ -682,6 +687,8 @@ MEDIUM = (
     # said so. One export and one boot per fixture now, cached.
     "tests/unit/test_the_report_has_chapters.py",               #    4.9s
     "tests/unit/test_a_table_cell_obeys_the_value_rule.py",     #    3.2s
+    # `UX-641`: two `bga analyze` subprocesses and four node ones.
+    "tests/unit/test_a_level_names_who_is_in_it.py",            #    2.4s
     "tests/unit/test_a_control_says_what_it_does.py",           #    2.7s
     "tests/unit/test_every_table_has_its_own_state_key.py",     #    1.5s
     "tests/unit/test_findings_carry_their_evidence.py",         #    1.5s
@@ -829,4 +836,15 @@ MEDIUM = (
     # session (38.7s without it). Single-process here: 4.51s in that
     # one call, 4.58s for the file.
     "tests/unit/test_the_cost_row_is_derived_from_the_selector.py",   #    4.6s
+    # `UX-640`, tiered on landing. One browser boot, two exported
+    # pages - the rail's labels read against their headings on both
+    # committed fixtures. Single-process and alone: 1.26s, all of it
+    # the setup that exports and loads.
+    "tests/unit/test_the_rail_says_what_the_heading_says.py",         #    1.3s
+    # `UX-638`/`UX-639`, tiered on landing. One served run and one
+    # browser boot each over `macro_micro`: the scroll offset and the
+    # rail's hit test are geometry, so the shim cannot hold either.
+    # Single-process, alone: 2.78s and 3.24s.
+    "tests/unit/test_focus_keeps_the_reading_position.py",            #    2.8s
+    "tests/unit/test_the_rail_says_it_is_not_the_way_out.py",         #    3.2s
 )

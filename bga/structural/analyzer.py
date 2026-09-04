@@ -92,6 +92,7 @@ def build_edg(graph):
 from bga.structural.models import (
     StructuralMetrics,
     BottleneckAnalysis,
+    LevelOccupancy,
     ParallelismProfile,
     SensitivityResult,
     DeferrabilityResult,
@@ -361,7 +362,15 @@ class StructuralAnalyzer:
         
         level_nums = sorted(levels.keys())
         widths = [len(levels[l]) for l in level_nums]
-        
+        # UX-641: the uids this line used to discard. `sorted` because a
+        # set's iteration order is not stable across processes and this
+        # is a published, byte-compared document.
+        occupancy = [
+            LevelOccupancy(level=l, width=len(levels[l]),
+                           elements=sorted(levels[l]))
+            for l in level_nums
+        ]
+
         # Cumulative work
         cumulative = []
         total = 0
@@ -380,7 +389,7 @@ class StructuralAnalyzer:
         uniformity = mean_width / max_width if max_width > 0 else 0.0
         
         return ParallelismProfile(
-            levels=level_nums,
+            levels=occupancy,
             width_at_level=widths,
             max_width=max_width,
             min_width=min(widths) if widths else 0,

@@ -55,11 +55,11 @@ Every JSON document `bga` writes carries its schema id, and
 and the view-hints the browser report renders from (`UX-201`). Where a
 command emits two documents, the flag selects: `bga snapshot --list
 --schema` and `bga snapshot --aggregate --schema` print different
-contracts. Twenty-four ids, and what writes each:
+contracts. Twenty-five ids, and what writes each:
 
 | document | written by |
 |---|---|
-| `analyze/v5` | `bga analyze --format json` — the analysis, its findings, and why each one is believed (`UX-229`) |
+| `analyze/v6` | `bga analyze --format json` — the analysis, its findings, and why each one is believed (`UX-229`) |
 | `compare/v2` | `bga compare --format json` — the verdict, the noise band, the culprit elements |
 | `blast/v2` | `bga blast --format json` — what a change to one resource rebuilds |
 | `correlate/v2` | `bga correlate --format json` — Plane 1 and Plane 2 joined on element uid |
@@ -76,6 +76,7 @@ contracts. Twenty-four ids, and what writes each:
 | `bundle-manifest/v1` | `bga bundle --export`, inside `bundle.json` in the archive — each member's path, presence and contract version, plus the `bga` that packed it, so the receiving side refuses a bundle it cannot read in full rather than half-loading it (`UX-520`) |
 | `plane2/v2` | the same file as a capture before `UX-384` wrote it, with the element names of every redundancy finding embedded. Still read, never written |
 | `plane2/v1` | the same file as a capture before `UX-297` wrote it, with every per-process record embedded. Still read, never written |
+| `analyze/v5` | what `bga analyze` wrote before `UX-641` gave `parallelism.levels` its members rather than the row number. Still read, never written |
 | `analyze/v4` | what `bga analyze` wrote before `UX-535` published the graph's shape once. Still read, never written |
 | `analyze/v3` | what `bga analyze` wrote before `UX-344` lifted the `signals` and `structural` namespaces. Still read, never written |
 | `analyze/v2` | what it wrote before `UX-341` unified the units — `measured_seconds`, `peak_rss_kb`, `useful_pct`. Still read, never written |
@@ -84,13 +85,13 @@ contracts. Twenty-four ids, and what writes each:
 | `correlate/v1` | the same, for the two-plane join. Still read, never written |
 | `host/v1` | the host manifest with `memory_mb` where `host/v2` has `memory_bytes`. Read and converted on the way in, so an old baseline still compares — never written |
 
-The last fifteen are written into a run directory — or, for
+The last sixteen are written into a run directory — or, for
 `bundle-manifest/v1`, into the bundle that carries one — rather than
-printed by a command, so no `--schema` invocation prints them, and nine of those
+printed by a command, so no `--schema` invocation prints them, and ten of those
 are only ever *read* - they are the shapes an older store's artifacts
 are in (`plane2/v1` from `UX-297`, `plane2/v2` from `UX-384`, five from
-`UX-341`, `analyze/v3` from `UX-344` and `analyze/v4` from
-`UX-535`). The other nine
+`UX-341`, `analyze/v3` from `UX-344`, `analyze/v4` from `UX-535` and
+`analyze/v5` from `UX-641`). The other nine
 each have a command that prints their contract, and
 `tests/unit/test_every_emitted_contract_is_answerable.py` holds that
 split by running both sides rather than by reading this table
@@ -254,6 +255,7 @@ The rounds themselves:
 [84](audits/round-84.md) ·
 [85](audits/round-85.md) ·
 [86](audits/round-86.md) ·
+[87](audits/round-87.md) ·
 [the guard census of round 64](audits/guard-census-round-64.md)
 
 ## Backlog

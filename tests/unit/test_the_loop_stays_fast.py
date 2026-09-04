@@ -90,6 +90,10 @@ class TestTheSelectorStillSelects:
         # one of its 16 importers reached it only as `from bga import
         # contracts`; the width is those edges, not a looser rule.
         "bga/contracts.py",
+        # `UX-644`: 36 = 23 map + 11 census + 4 named. The first member
+        # here that is wide by map and not by name: its entry is 23,
+        # one under `MAP_ENTRY_CAP`, so it counts in full.
+        "bga/report/rate.py",
     }
 
     def test_a_one_module_change_selects_a_handful_not_the_suite(self):
@@ -134,11 +138,15 @@ class TestTheSelectorStillSelects:
             f"{self.CEILING}, over a suite of {total} files")
 
     def test_the_wide_modules_are_named_and_not_merely_tolerated(self):
-        """The clause that makes a *new* wide module loud. These 22 are
-        wide because their names are what a test says to invoke them —
-        116 files name `bga.cli` because they run the CLI — so the
-        width is honest and the old ≤25 bound was the wrong shape. A
-        module joining or leaving the set has to be argued here."""
+        """The clause that makes a *new* wide module loud. Width is
+        honest in two shapes, so the old ≤25 bound was the wrong one:
+        by **name**, where the module's name is what a test says to
+        invoke it — 116 files name `bga.cli` because they run the CLI
+        — and by **map**, where a coverage entry under
+        `MAP_ENTRY_CAP` carries a module tests never name
+        (`UX-644`: `bga/report/rate.py`, 23 of its 36). A module
+        joining or leaving the set has to be argued here, beside its
+        name."""
         wide = {m for m in dev_touching.touch_map()
                 if len(dev_touching.select([m])[0]) > self.HANDFUL}
         assert wide == self.WIDE, (

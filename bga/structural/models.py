@@ -62,13 +62,29 @@ class BottleneckAnalysis:
 
 
 @dataclass(frozen=True)
+class LevelOccupancy:
+    """One level of the gating graph: how wide it is and who is on it.
+
+    UX-641: `elements` is `_compute_level_decomposition`'s own set,
+    sorted. It is **not** derivable from `elements.unweighted_depth`,
+    which is computed on the full graph - the two disagree wherever a
+    runtime edge exists, by `[0,-2,0,0,0,0,0,0,+1,0,0,0,+1,0]` on the
+    1,202-element synthetic run.
+    """
+    level: int
+    width: int
+    elements: List[str]
+
+
+@dataclass(frozen=True)
 class ParallelismProfile:
     """Parallelism profile across pipeline depth.
-    
+
     Part 33: How parallelism varies across the pipeline.
     """
-    # Level-by-level parallelism
-    levels: List[int]  # Depth levels
+    # UX-641: one row per level, each naming its members. This was
+    # `List[int]` and always `[0..n-1]` - the row number, published.
+    levels: List[LevelOccupancy]
     width_at_level: List[int]  # Number of elements at each level
     
     # Statistics

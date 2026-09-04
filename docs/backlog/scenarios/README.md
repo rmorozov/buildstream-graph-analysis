@@ -15,19 +15,19 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-635 scenarios: **2 open**, 633 closed.
+647 scenarios: **8 open**, 639 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
 | capture | 0 | 92 |
-| analysis | 0 | 93 |
+| analysis | 0 | 94 |
 | contracts | 1 | 47 |
-| viewer | 0 | 138 |
+| viewer | 4 | 146 |
 | cli | 0 | 21 |
 | store | 0 | 16 |
 | docs | 1 | 97 |
-| guards | 0 | 131 |
+| guards | 2 | 134 |
 
 ## Open scenarios
 
@@ -38,6 +38,12 @@ task file, which is the only place it ever lived twice.
 |---|---|---|---|---|---|
 | UX-636 | [eighty published keys no document names](UX-0636-eighty-published-keys-no-document-names.md) | docs | Medium | anyone reading a payload against the prose that describes it | 🔴 Open |
 | UX-637 | [a shallow clone answers, and does not say so](UX-0637-a-shallow-clone-answers-and-does-not-say-so.md) | contracts | High | anyone whose guard reads history, and every future session in this environment | 🔴 Open |
+| UX-643 | [a reader role that demotes rather than hides](UX-0643-a-reader-role-that-demotes-rather-than-hides.md) | viewer | Medium | all five readers, each of whom gets the other four's page | 🔴 Open |
+| UX-645 | [the census floor spends half the width bound](UX-0645-the-census-floor-spends-half-the-width-bound.md) | guards | Low | anyone reading a width figure as if it were about their module | 🔴 Open |
+| UX-646 | [the fragment is one event behind the fold](UX-0646-the-fragment-is-one-event-behind-the-fold.md) | viewer | Medium | anyone who opens a fold and copies the link | 🔴 Open |
+| UX-647 | [a rail click never reaches the view-state writer](UX-0647-a-rail-click-never-reaches-the-view-state-writer.md) | viewer | High | anyone who navigates by the rail and then shares the link | 🔴 Open |
+| UX-648 | [the jump box names sections the old way](UX-0648-the-jump-box-names-sections-the-old-way.md) | viewer | Medium | anyone who reaches a section through the palette | 🔴 Open |
+| UX-649 | [the spread bound was set on one machine](UX-0649-the-spread-bound-was-set-on-one-machine.md) | guards | Medium | anyone whose branch is reddened by a guard measuring the runner | 🔴 Open |
 
 ## UX-563..UX-586: the eighty-second round — the documents, read against the tool (2026-09-03)
 

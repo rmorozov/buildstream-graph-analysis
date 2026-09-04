@@ -977,9 +977,12 @@ those artifacts said which build produced them. The version there is
 (`UX-250`). Which contract states shipped together is
 [`CHANGELOG.md`](../../CHANGELOG.md) (`UX-251`).
 
-**The versioning rule**: a field rename or removal bumps the version; an
-addition does not. `additionalProperties` is true everywhere, so a
-consumer that pins a version keeps working while the tool grows.
+**The versioning rule**: a rename, a removal, or a key entering
+`required` under a live id bumps the version (`UX-629` - the last stops
+a document a consumer already wrote from validating). A *permitted*
+addition does not and `additionalProperties` is true everywhere, so a
+key the emitter always writes lands permitted, named in the schema's
+`bga:always_written` and guaranteed against the real payload.
 
 Six rows are written but not printable — on-disk shapes a run
 directory carries rather than documents a subcommand emits. `--schema`
@@ -1038,6 +1041,24 @@ artifact.
 - **`docs/guides/cli.md`** — CLI reference/usage examples.
 
 ## Verification Log
+
+Updated 2026-09-04 (after `UX-629`), covering one change to this
+document — the inventory's **versioning rule** paragraph, which named
+only rename and removal and now names a key entering `required` under
+a live id as a bump too, with the *permitted-and-always-written* shape
+that is the alternative to one — re-grounded in the two contract tables
+above against `bga.contracts` and `bga/schemas.py`: **24 emitted ids, 9
+of them superseded, and 3 read and never written**, 9 printable and 15
+not. `analyze/v5` is still at **56 top-level properties** and
+`bga/viewer/` still **22 modules**, the table naming all of them; this
+item published no id and added no property. The figure that did move is
+`compare/v2`'s required set, **15 back to 14** — `UX-610` took it 14 →
+15 under an unmoved id, which stopped a `compare/v2` document written
+before it from validating against `compare/v2`, measured as
+`'verdict_provenance' is a required property` on a 14-key document.
+`verdict_provenance` is declared and permitted now, named in the
+schema's `bga:always_written`, so the id did not have to move to
+`compare/v3`. `UX-0610`'s task file is annotated with both figures.
 
 Updated 2026-09-04 (after `UX-628`), covering four changes to this
 document — the `compare/v2`, `store/v1` and `run-context/v9` rows now

@@ -138,6 +138,10 @@ export function taskUid(key) {
 
 const RAIL = "bga:rail";
 
+// `UX-643`: the `R1`-`R5` ids this section serves, declared by the
+// producer. Absent is the common case and means no role, not none.
+const READERS_SERVED = "bga:readers";
+
 const ROLE = "bga:role";
 
 // ---------------------------------------------------------------- format
@@ -321,9 +325,11 @@ export function dataKeyed(node, key) {
  * three surfaces cannot name one section three ways.
  */
 export function heading(key, hint = {}) {
+  const served = hint[READERS_SERVED];
   return { question: hint[QUESTION] ?? null, label: hint[QUESTION] ?? title(key),
            subtitle: hint[QUESTION] ? key : null,
-           rail: hint[RAIL] ?? "raw" };
+           rail: hint[RAIL] ?? "raw",
+           readers: Array.isArray(served) ? served.map(String) : [] };
 }
 
 /** `UX-208`: the column that holds element uids, or null. */
@@ -342,6 +348,16 @@ export function sectionHead(key, hint = {}) {
   const node = el("h2", {}, info.label);
   if (info.subtitle) {
     node.append(el("span", { class: "section-key muted" }, info.subtitle));
+  }
+  // `UX-643`: the tag a promoted block wears, built here because this
+  // is the one place a section's head is made - and built **empty**,
+  // because `UX-305`'s budget is spent on the sections one chosen role
+  // owns, not on all of them. `applyRole` fills it and the stylesheet
+  // shows it only while the section is promoted. The declared roles
+  // ride on it so nothing has to re-read the schema at click time.
+  if (info.readers.length) {
+    node.append(el("span", { class: "reader-tag", "data-reader-tag": "",
+                             "data-readers": info.readers.join(" ") }));
   }
   return node;
 }
@@ -466,8 +482,8 @@ export function hintsOf(node) {
   const hint = {};
   if (!node || typeof node !== "object") return hint;
   for (const name of [QUANTITY, SEVERITY, COLUMNS, DIRECTION, QUESTION,
-                      RAIL, PRESETS, SERIES, DISTRIBUTION, INLINE,
-                      DECOMPOSITION, INTERVAL, KEYED_BY,
+                      RAIL, READERS_SERVED, PRESETS, SERIES, DISTRIBUTION,
+                      INLINE, DECOMPOSITION, INTERVAL, KEYED_BY,
                       EXPLAINED_BY, COMMAND]) {
     if (name in node) hint[name] = node[name];
   }

@@ -26,37 +26,12 @@ ARCHITECTURE = REPO / "docs/design/architecture.md"
 SPEC = REPO / "docs/spec/specification.md"
 CLI_GUIDE = REPO / "docs/guides/cli.md"
 
-# `UX-628`: the keys already carrying no prose when the population below
-# went from ids to keys. Frozen, and it may only shrink - a key added
-# after that item is not in here and reddens the clause naming it. Not
-# an exemption anyone may extend: `test_the_register_is_all_live_keys`
-# refuses a name that is no longer a key, so it cannot rot or be padded
-# with a spelling that guards nothing.
-UNDOCUMENTED_WHEN_THE_POPULATION_BECAME_KEYS = frozenset({
-    "also_matched", "assembling_count", "attribution_deltas",
-    "attribution_hints", "attribution_partial", "attribution_unreliable",
-    "baseline_confidence", "baseline_run_id", "batch_opportunities",
-    "blast_count", "blast_elements", "blast_radius_distribution",
-    "blended", "bottleneck", "building_count", "by_element_kind",
-    "cache_churn", "cache_hit_rate", "calls", "candidate_confidence",
-    "candidate_run_id", "claim", "configure_phase",
-    "consolidation_candidates", "copy_text", "cpu_share", "cpu_time",
-    "deltas", "detail", "direct_count", "direct_elements", "edges",
-    "element_count", "element_deltas", "element_duration_distribution",
-    "element_exists", "element_join_coverage", "excluded",
-    "excluded_runs", "failed_runs", "follows_from", "governing_cores",
-    "granularity", "has_inventory", "host_class", "host_classes",
-    "joint_saving", "keying", "label", "latent_heavies", "leads_with",
-    "low_confidence", "measured_elements", "mismatches",
-    "native_findings", "note", "pinned_elements",
-    "process_count_distribution", "projection", "reason",
-    "redundancy_count", "resolved_as", "resource_blast",
-    "resource_pressure", "resource_shortfall", "sandbox_tax_distribution",
-    "serialization_point_risks", "service", "shown", "snapshot_bytes",
-    "stamps", "stamps_total", "store_bytes", "title", "total_bytes",
-    "trace_queries", "typical_max_jobs", "unused_dependencies",
-    "wall_us", "worst_redundancy",
-})
+# `UX-628` froze the 80 keys already carrying no prose when this
+# population went from ids to keys; `UX-636` documented all 80 and the
+# register is empty. It stays as a name rather than being deleted: the
+# clauses below are the statement it became, and an entry reappearing
+# here is a debt that has to be argued rather than added.
+UNDOCUMENTED_WHEN_THE_POPULATION_BECAME_KEYS = frozenset()
 
 
 def _published_schemas():
@@ -155,9 +130,10 @@ class TestThePopulationIsKeysAndNotIds:
 
     Full key coverage was measured before it was chosen and declined:
     199 surface keys, 84 of them undocumented. A guard demanding prose
-    for all of them would be red on arrival and silenced. This is the
-    ratchet instead, and the six clauses below are what stop a
-    ratchet from being an off switch.
+    for all of them would have been red on arrival and silenced, so
+    `UX-628` shipped a ratchet and `UX-636` walked it to zero. The six
+    clauses below are what stopped the ratchet being an off switch and
+    now hold the statement it became.
     """
 
     def test_prose_about_a_key_is_not_the_key(self):
@@ -220,16 +196,19 @@ class TestThePopulationIsKeysAndNotIds:
             f"them - a register entry for a key that does not exist excuses "
             f"nothing and hides that the register may only shrink")
 
-    def test_the_register_only_shrinks(self):
-        """The ratchet, and only the ratchet. 80 when `UX-628` froze
-        it; documenting a key lowers this number and nothing may raise
-        it. Whether an *undocumented* key is in the register is the
-        clause above, asserted there and not restated here - one
-        mutation that reddens two clauses has falsified one."""
-        assert len(UNDOCUMENTED_WHEN_THE_POPULATION_BECAME_KEYS) <= 80, (
+    def test_the_register_is_empty(self):
+        """`UX-636`: the ratchet reached zero and is a statement now.
+        80 when `UX-628` froze it, 0 once the guide's key reference
+        landed - and an entry back in it is a debt somebody argues for,
+        not a number that drifts. Whether an *undocumented* key is in
+        the register is the clause above, asserted there and not
+        restated here - one mutation that reddens two clauses has
+        falsified one."""
+        assert UNDOCUMENTED_WHEN_THE_POPULATION_BECAME_KEYS == frozenset(), (
             f"the register holds "
-            f"{len(UNDOCUMENTED_WHEN_THE_POPULATION_BECAME_KEYS)} keys "
-            f"against the 80 UX-628 froze; it may only shrink")
+            f"{sorted(UNDOCUMENTED_WHEN_THE_POPULATION_BECAME_KEYS)}; it was "
+            f"emptied by UX-636 and a key with no prose reddens the clause "
+            f"above by name rather than being excused here")
 
     def test_the_guide_states_the_coverage_it_actually_has(self):
         """The other half of the Required Fix: where key-level coverage

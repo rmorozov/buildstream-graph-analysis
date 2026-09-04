@@ -265,13 +265,24 @@ export function applyView(root, query, { dispatch } = {}) {
  * Keep the fragment in step with the document.
  *
  * Every control this touches already fires an event; one delegated
- * listener at the root writes the hash after it. `replaceState` rather
- * than assigning `location.hash`, so investigating a report does not
- * fill the back button with twenty entries - and a plain assignment as
- * the fallback where there is no history object (an export opened as a
+ * listener writes the hash after it. `replaceState` rather than
+ * assigning `location.hash`, so investigating a report does not fill
+ * the back button with twenty entries - and a plain assignment as the
+ * fallback where there is no history object (an export opened as a
  * bare file in some browsers).
+ *
+ * `UX-647`: the listener is on the document, not on `root` - the rail
+ * is the report's sibling (`app.js`) and its links, its collapse-all
+ * and its stepper all move this view. Captured from `root` still.
+ *
+ * `UX-646`: one turn *later*, not on the event, because a `<summary>`
+ * flips `open` and an anchor rewrites the fragment after the click
+ * that did it. One write per burst - Chrome throttles same-document
+ * history ops, and a second write per event spends that budget for
+ * nothing. `defer` is the test seam.
  */
-export function wireViewState(root, { location: where, history: past } = {}) {
+export function wireViewState(root, { location: where, history: past,
+                                      defer } = {}) {
   const write = () => {
     const query = captureView(root);
     const { anchor } = splitHash(where?.hash ?? "");
@@ -281,9 +292,19 @@ export function wireViewState(root, { location: where, history: past } = {}) {
     else if (where) where.hash = next;
     return next;
   };
-  for (const name of ["input", "change", "click", "toggle"]) {
-    root.addEventListener?.(name, write);
+  const later = defer ?? ((fn) => setTimeout(fn, 0));
+  let queued = false;
+  const settle = () => {
+    if (queued) return;
+    queued = true;
+    later(() => { queued = false; write(); });
+  };
+  const on = root.ownerDocument ?? root;
+  for (const name of ["input", "change", "click"]) {
+    on.addEventListener?.(name, settle);
   }
+  // `toggle` does not bubble: capture is where a root hears one.
+  on.addEventListener?.("toggle", settle, true);
   return write;
 }
 

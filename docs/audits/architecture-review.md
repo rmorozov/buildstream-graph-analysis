@@ -1,8 +1,10 @@
 # Architecture and documentation review
 
 A round type, and its log. Feature audits happen here on a cadence —
-twenty-eight rounds of them — and documentation review did not, which
-is why one drifted a whole axis and the other did not (`UX-241`).
+twenty-eight rounds of them when `UX-241` was filed on 2026-08-23, and
+[`../design/directions.md`](../design/directions.md)'s round table has
+carried every round since — and documentation review did not, which is
+why one drifted a whole axis and the other did not (`UX-241`).
 
 ## What a review is
 
@@ -85,6 +87,7 @@ would have caught it; a bound at it would only just have.
 | 13 | 2026-09-03 | 560 | `UX-563`..`UX-586` — every document group read against the tree; [`round-82.md`](round-82.md) |
 | 14 | 2026-09-03 | 587 | four filings — the registry row `UX-565` falsified, two hard gates no document names, a Python floor in no prose, and a verification-log clause read against the entry below it; [`round-83.md`](round-83.md) |
 | 15 | 2026-09-04 | 617 | six filings — closing a row writes `🟢 Done Open` in 17 files with `--check` clean, five published keys no document names, `compare/v2`'s required set grown under an unchanged id, two undocumented env-var input surfaces, `bga/report/rate.py` outside the map guard's population, and the `4s` touching figure the round beside it disproved; [`round-84.md`](round-84.md) |
+| 16 | 2026-09-04 | 645 | six filings, three of them a green guard reading the wrong population *shape* — the spec's Part 32 block two ids behind and read by nothing, the currency guard comparing dates on a day that held nine substantive commits, `analyze/v6`'s three new keys one nesting level below the key population — plus a dated log record a guard made every `analyze` bump rewrite, `format.js` still saying nine hints of nineteen, and a red gate on the base; two restorations; [`round-87.md`](round-87.md) |
 
 ### Review 11 — 2026-09-02
 
@@ -1123,3 +1126,146 @@ the guard reading the right place and the wrong population. The
 counter-example is inside the window: `UX-606` deleted a one-module
 sample and put a derived distribution over the whole population in its
 place. That is the technique the other three need.
+
+## Review 16 — 2026-09-04, at 645 closed rows
+
+Input: the 28 rows closed since review 15 — `closed.md` rows 618-645,
+which is round 86's tail (`UX-597`, `UX-613`, `UX-622`..`UX-635`, the
+release tags, the environment inventory and all six of review 15's own
+filings), all of round 87 (`UX-638`..`UX-644`, the `bga view` walk, and
+`UX-641`'s `analyze/v5` → `v6` bump), and round 88 so far (`UX-636`,
+`UX-637`, `UX-643`, `UX-645`, `UX-648`, `UX-649`) — and the 73 commits
+between `18d390a` and `a5030a4`, 130 files, 10,337 insertions. Rounds 86
+and 87 are [`round-86.md`](round-86.md) and
+[`round-87.md`](round-87.md); round 88 has no document yet.
+
+**1. Does the code still do what it says?** The 113 files under
+`tests/unit/` that open a path below `docs/` (`git grep -l "docs/" --
+tests/unit/`) run as one selection: **1932 passed, 13 skipped, 16
+failed**. One failure is this review's own trigger, *"28 scenarios have
+closed since review 15"*. The other 15 are the machine, not the tree:
+every one shells out to `bst`, and `bst` returns 255 with *"Cache too
+full"* against `df -h /` reading **93% used, 2.7G available**. No
+chapter is wrong about a mechanism a guard reads. Where none does, one
+is: `architecture.md`'s Verification Log entry dated 2026-08-25 says
+*"the contracts table's `analyze/v6` row is checked"*, and on that date
+the table carried `analyze/v2` — the sentence has been carried forward
+by all four `analyze` bumps since (`git log --reverse -G "the contracts
+table's .analyze/v" -- docs/design/architecture.md`: `12bdecd`,
+`f859e6f`, `fab3307`, `6235fc9`). Restored here to `v2`, and the
+restoration named the mechanism: it reddened
+`test_no_document_serves_a_retired_contract.py`, whose rule is that a
+retired id in a live document sits in a paragraph saying so. A dated
+entry naming the id that was live when it was written turns red on the
+day that id retires, and sweeping the id forward is the cheapest green.
+The guard asked for all four rewrites (`UX-653`). One more red is on
+the base and is not this review's: `test_the_register_is_terse.py`
+reports `UX-0643`'s Outcome at **88 lines against a cap of 80**
+(`UX-656`) — and that file is not in the 113, which is the selection's
+own limit and a note for review 17. Reviews 13-15 all selected on the
+literal `"docs/"`; `git grep -l '"docs"' -- tests/unit/` finds 12 files
+building the path from segments, **2 of them outside the 113**
+(`test_the_register_is_terse.py` and
+`test_the_jump_box_offers_what_it_knows.py`), and one of the two is red.
+
+**2. Does every published contract have a home?** Every id, yes — in
+32.5 and in the architecture inventory, both guarded. Not in the third
+copy. `bga.contracts`: **25 emitted ids, 10 superseded, 3 read and
+never written**, 9 printable and 16 not — up from review 15's 23/9/3,
+8/15, by `capacity-model/v1` (`UX-613`) and `analyze/v6` (`UX-641`).
+`schemas.names()` is nine live ids, `analyze/v6` where `analyze/v5`
+stood. The spec's **Part 32 opening block** is two of those behind:
+`set(contracts.ids()) - <ids named in the block>` is
+`['analyze/v5', 'capacity-model/v1']`, and its retired line still reads
+*"(read, never written - UX-535)"* when the retired set now begins at
+`analyze/v5` under `UX-641`. Nothing reads that block — `git grep -n
+"Part 32 — Data Contracts" -- tests/unit/ tools/` is empty — because
+`UX-565` deliberately pointed the guard at 32.5's table instead
+(`UX-651`). The bump itself is correct: a type change under a live id
+is a break, and `UX-641` moved the id. Where it landed is item 4.
+
+**3. Is any figure invalidated?** `dev_close_task.py --figures` over
+the window's 16,973-line diff reports **5 figures removed, none still
+written in `docs/backlog/scenarios`** — still the whole of that tool's
+answer, `_FIGURE` being comma-grouped numbers over a thousand. By hand,
+every figure the documents present as current holds: **56**
+`analyze/v6` top-level properties (unchanged across the bump), **22**
+modules in `bga/viewer/`, **19** hints in styleguide §1a against 19
+table rows, 32 `bga --help` commands, and `tools/dev_touching.py
+--spread` re-derives the guide's own *"11-126 of 471 test files, median
+17"* verbatim. One is close: `rules.md`'s *"~40 KB"* reads against a
+**45,054**-byte guide, up 1,941 from review 15's 43,113 and 1,755 the
+window before that. It is green because `UX-607` widened the band to
+`GUIDE_KB_STEP = 10`; `_band()` returns `(35840, 46081)`, so the
+headroom is **1,026 bytes** and the current growth rate spends it next
+window. One is invalidated, in this document: *"Feature audits happen
+here on a cadence — twenty-eight rounds of them"* was written by
+`UX-241` on 2026-08-23 and the tree is at round 88, with 46 round
+documents under `docs/audits/`. Dated here rather than re-typed.
+
+**4. What shipped since the last review that no document names?**
+`bga --help` gained no command: 13 subcommands and 19 aliases, 32, and
+the context map matches both directions. The environment inventory is
+green. Three keys have no home, and they are the payload `analyze/v6`
+exists to publish. `parallelism.levels` went from an array of integers
+to one record per level, keyed `['level', 'width', 'elements']`, and no
+document names one of them as a key of that row: `git grep -c
+'`level`' -- docs/guides/ docs/design/ docs/spec/ README.md` returns
+nothing, `width` reaches the code-font scan only inside the finding id
+`graph-width`, and `elements` only as `analyze`'s own top-level key of
+that name. `UX-636` closed the key register to zero last window
+and `docs/guides/cli.md` now states *"every key of every printable
+contract is named in a document"* — and the consumer surface reads
+**199 keys before this bump and 199 after**, because
+`_consumer_surface()` takes each schema's top-level properties plus a
+row directly under a *top-level* array, and `parallelism.levels` is one
+level further in (`UX-655`). All six of review 15's filings closed in
+this window and are verified here: `🟢 Done Open` is gone and the
+guard's cases are derived from the tree (`UX-627`), a key entering
+`required` under a live id is a bump (`UX-629`), the five contract keys
+are named (`UX-628`, `UX-636`),
+`rate.py` is on its own map row (`UX-631`), the touching figure is
+derived (`UX-632`), and the environment `bga` reads is a table in
+`cli.md` that a guard scans every tracked file under `bga/` and
+`tools/` against (`UX-630`, `UX-635`).
+
+**5. Does each document's own "last updated" claim match reality?**
+One document carries a currency claim, and its guard has stopped being
+able to read it. `_claimed()` returns `2026-09-04 (after UX-629)`;
+`_last_commit()` returns `2026-09-04`; `stale()` is therefore `False`.
+Measured against that one day: **26 commits touched
+`docs/design/architecture.md`, 9 of them substantive** after
+`only_the_count_moved`, and **three land after `9beda27`**, the commit
+the entry credits — one of them `UX-641`, which rewrote the contract
+table's headline id, added a superseded row and moved *"The last nine"*
+to *"The last ten"*. The comparison's unit is a day; this repository
+lands three rounds in one (`UX-652`). Review 14 narrowed this guard's
+window, review 15 said its command no longer answers its question, and
+this is the resolution underneath both.
+
+**The finding that matters most:** review 15's was that a guard ages
+like the prose it replaced, because its enumeration is fixed. This
+window says the same thing about the other half of a guard, and it is
+the harder half: **a population is a shape, and a shape ages without
+anyone typing anything.** Nobody enumerated `analyze/v5` out of the
+spec's Part 32 block — it was never there, because the block is a
+hand-written copy of a registry that grew (`UX-651`). Nobody excluded
+`parallelism.levels` from the key population — it landed one nesting
+level below where the population reaches, and the count did not move
+(`UX-655`). Nobody set the currency guard's resolution to a day — a
+date was the obvious type when five days was the drift, and the drift
+is now three rounds (`UX-652`). Three green guards, three real gaps,
+and not one of them has a list in it that somebody forgot to extend.
+The counter-example is again inside the window: `UX-631` found 21 of 26
+package files answered by another row's substring and made the rule
+per-row — the population changed shape, not length. That is what the
+three above need.
+
+*Committed with `BGA_SKIP_SELECTOR=1`.* The six filings carry no index
+row — the orchestrating session derives `README.md`'s rows and counts
+for the whole round, and this review was told to leave them — so
+`test_docs_links_and_commands.py::test_every_task_file_has_a_row_in_the_table`
+is red on this commit by construction and green once the index is
+derived. `make test` is otherwise **6964 passed, 125 skipped, 20
+failed**: that clause, `UX-656`'s, and 18 in the `bst` family the disk
+explains.

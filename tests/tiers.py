@@ -840,11 +840,27 @@ MEDIUM = (
     # pages - the rail's labels read against their headings on both
     # committed fixtures. Single-process and alone: 1.26s, all of it
     # the setup that exports and loads.
-    "tests/unit/test_the_rail_says_what_the_heading_says.py",         #    1.3s
+    # `UX-648` added a second boot for the palette's half of the same
+    # claim: 2.20 / 2.20s, still the setup and not the clauses.
+    "tests/unit/test_the_rail_says_what_the_heading_says.py",         #    2.2s
+    # `UX-643`, tiered on landing for the reason the note above the
+    # reader file gives. One browser boot, two exported pages, the
+    # picker driven through every role it offers. Three single-process
+    # runs alone: 2.32 / 2.21 / 2.15s.
+    "tests/unit/test_a_reader_role_demotes.py",                       #    2.2s
     # `UX-638`/`UX-639`, tiered on landing. One served run and one
     # browser boot each over `macro_micro`: the scroll offset and the
     # rail's hit test are geometry, so the shim cannot hold either.
     # Single-process, alone: 2.78s and 3.24s.
     "tests/unit/test_focus_keeps_the_reading_position.py",            #    2.8s
     "tests/unit/test_the_rail_says_it_is_not_the_way_out.py",         #    3.2s
+    # `UX-647`, tiered on landing. Two served runs and a browser boot -
+    # a rail click's anchor navigation is the browser's own default
+    # action and no shim has one - plus three node clauses.
+    # Single-process and alone: 4.51 / 4.45s.
+    "tests/unit/test_a_rail_click_reaches_the_writer.py",             #    4.5s
+    # `UX-646`, tiered on landing, the same shape: a `<summary>`'s
+    # activation is a default action too, and the fold it opens has to
+    # be read out of a real page. 3.55 / 3.79s.
+    "tests/unit/test_the_fragment_keeps_up_with_the_fold.py",         #    3.8s
 )

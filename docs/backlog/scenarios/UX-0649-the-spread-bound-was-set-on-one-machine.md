@@ -1,6 +1,6 @@
 # UX-649: the spread bound was set on one machine
 
-**Priority:** Medium | **Status:** 🔴 Open | **Depends on:** UX-213 (guards that only guard one machine), UX-257 (the geometry instrument), UX-495 (the browser family's CI spread) | **Found by:** round 87, by CI going red on a documentation-only commit | **Serves:** anyone whose branch is reddened by a guard measuring the runner rather than the page | **Topic:** guards
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-213 (guards that only guard one machine), UX-257 (the geometry instrument), UX-495 (the browser family's CI spread) | **Found by:** round 87, by CI going red on a documentation-only commit | **Serves:** anyone whose branch is reddened by a guard measuring the runner rather than the page | **Topic:** guards
 
 ## Motivation
 
@@ -63,3 +63,70 @@ what.
 The spread is measured on both fixtures, locally and on CI, and the
 recorded readings sit clear of the bound on every one. A layout that
 equalises section heights still reddens it.
+
+## Outcome
+
+**The gap.** Not settling, and not the bound. The three clauses read
+the page through `content-visibility: auto`, so a section that had not
+been near the viewport reported its `contain-intrinsic-size`
+placeholder instead of its content. The reading was of what the
+compositor had painted, which is why it moved with the runner:
+
+```text
+                     390x844      1440x900     what it is
+as it lands           8.80x        22.16x      paint (bound 8, CI 6.1)
++ 4 extra frames      8.80x        22.16x      waiting is not the fix
++ 500ms sleep         8.80x        22.16x      nor is a longer wait
++ scrolled through   45.39x        31.81x      relevance, not time
+content-visibility   51.43x        39.37x      the page's own numbers
+  forced off
+```
+
+**The close.** `tests/pages.py`'s `FULL_LAYOUT_JS` — the statement the
+volume budget already prepends for this exact reason — moved into
+`_COST`, so all three clauses of the class read content. The two
+siblings keep their bounds, measured either way: heading share 1.79% →
+1.65% worst case against 5%, chapter slack 0.189 → 0.206 screens
+against 0.34.
+
+The bound moves **up**, 8 → 20, from the distribution across both
+fixtures, three viewports, three runs each, idle and with the browser
+suite running `-n auto` beside it — every reading identical to four
+figures:
+
+```text
+              1440x900   1280x800   390x844
+golden          39.37      39.37      51.43
+macro_micro     58.36      58.36      51.87
+```
+
+20 is half the smallest. The docstring now says that instead of 49x.
+The clause also runs on both fixtures, which the acceptance asked for
+and the file did not do. CI is not measured here; what made CI differ
+is removed rather than budgeted for.
+
+```text
+tests/unit/test_the_page_has_geometry.py   51 passed in 18.62s
+  the same, -n auto, three runs            11.81s / 14.32s / 11.83s
+make test-touching                         491 passed, 3 skipped in 31.16s
+make lint                                  All checks passed!
+```
+
+**Mutations.**
+
+| mutation | expected | got |
+|---|---|---|
+| `_COST` loses `FULL_LAYOUT_JS` | red | red: 8.1x landed vs 51.4x walked |
+| `section[data-section] { height: 700px }` | red | red: 1.0x at all six |
+| revert both | green | 51 passed |
+
+The first reddens the new clause with the sentence it was written for;
+the second is the acceptance's second half, and reddens the spread
+clause on both fixtures at every viewport.
+
+**Deviation.** `tests/browser.py` is untouched. The named hypothesis
+was time — fonts and layout settling — and it is measurably false: four
+extra frames and a 500 ms sleep move no digit. Being near the viewport
+is what lays a section out, and no page-level settle can supply that,
+so a settle in the shared probe would have been a duration standing in
+for a condition again (fixing guide §5).

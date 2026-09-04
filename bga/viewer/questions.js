@@ -732,6 +732,12 @@ export function renderQuestions(make, options = {}) {
   const section = make("section", { "data-section": "perfetto-questions",
                                     id: "perfetto-questions" });
   section.append(make("h2", {}, "Questions worth asking in Perfetto"));
+  // `UX-650`: **unmapped, deliberately.** The library's own titles span
+  // every role - per-element time (R1), what one element executed (R2),
+  // what ran at each level of the graph (R3), whether the run finished
+  // (R4), the peak-memory process (R5). A section that is seventeen
+  // readers' questions has no reader, which is why `UX-643` left
+  // `findings` alone for the same shape.
   const intro = make("p", { class: "muted" });
   // `UX-364`: what this run's trace actually carries, from
   // `run.trace_planes`, which is the renderer's own answer. This

@@ -653,6 +653,17 @@ th .th-filter.unparsed { border-color: var(--bad); border-style: dashed; }
 .reader-lead { border-left: 2px solid var(--accent); padding-left: .6rem;
                margin: 0 0 .6rem; }
 .reader-lead p { margin: .15rem 0; }
+/* UX-643: the tag a promoted section wears. Empty until a role is
+   chosen, and `:empty` is what keeps UX-305's budget - the mark is on
+   the sections one reader owns, never on all of them. Ink and a border,
+   not a fill: five categories is past what colour carries alone. */
+.reader-tag:empty { display: none; }
+.reader-tag {
+  margin-left: .5rem; font-size: .7rem; font-weight: normal;
+  letter-spacing: .04em; color: var(--muted);
+  border: 1px solid var(--line); border-radius: .2rem; padding: 0 .25rem;
+  vertical-align: middle;
+}
 .status-line { margin: .2rem 0 .4rem; font-size: .9rem; }
 .evidence-detail > summary { cursor: pointer; font-size: .85rem;
                              color: var(--muted); }

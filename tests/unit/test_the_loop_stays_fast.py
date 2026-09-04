@@ -16,6 +16,8 @@ import re
 import subprocess
 import sys
 
+import pytest
+
 REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 sys.path.insert(0, str(REPO / "tools"))
@@ -25,6 +27,14 @@ import dev_touching  # noqa: E402
 
 MAKEFILE = (REPO / "Makefile").read_text(encoding="utf-8")
 PYPROJECT = (REPO / "pyproject.toml").read_text(encoding="utf-8")
+
+
+class _Done:
+    """What `subprocess.run` hands back, for a `main()` that must not
+    actually start pytest."""
+
+    def __init__(self, returncode, stdout):
+        self.returncode, self.stdout, self.stderr = returncode, stdout, ""
 
 
 class TestTheSuiteStillRunsInParallel:
@@ -72,7 +82,13 @@ class TestTheSelectorStillSelects:
     # so ordinary drift is quiet and a shape change is loud.
     CEILING = {"median": 20, "p90": 45, "max": 130}
     POPULATION_FLOOR = 60
+    #: `UX-645`: **11 census + 14 of your own**. The census floor is
+    #: inside this bound because those files run - the figure is what
+    #: pytest is handed - and it is the same 11 under all 87 mapped
+    #: modules, so 44% of the bound is spent before a module's own
+    #: tests are counted. Derived below rather than trusted.
     HANDFUL = 25
+    CENSUS_FLOOR = 11
 
     # Wide because the module's name is how a test invokes it, not
     # because the selector is wrong. `UX-606` argued each one.
@@ -192,6 +208,69 @@ class TestTheSelectorStillSelects:
         derived = {k: len(v) for k, v in mapped.items() if len(v) > cap}
         assert dev_touching.wide_entries() == derived, (
             "what --why reports is not what the map holds")
+
+    def test_the_bound_is_a_census_floor_plus_the_module_s_own(self):
+        """`UX-645`. The bound means two things at once unless the
+        floor inside it is named, and a named floor rots unless it is
+        derived: 25 is `11 + 14` only while the census is 11 files."""
+        floor = len(dev_touching.census_set())
+        assert floor == self.CENSUS_FLOOR, (
+            f"the census is {floor} files, not {self.CENSUS_FLOOR} - the "
+            f"bound now means {self.HANDFUL - floor} of a module's own "
+            f"tests, and `HANDFUL`'s note says otherwise")
+        assert 0 < floor < self.HANDFUL, floor
+
+    @pytest.mark.parametrize("module", ["bga/store_aggregate.py",
+                                        "bga/cli.py"])
+    def test_the_floor_is_under_every_module_and_not_a_selection(
+            self, module):
+        """The half that makes the arithmetic true rather than stated.
+        Measured over all 87 mapped modules, every selection carries
+        the whole census set and the narrowest is the floor itself; the
+        two here are the median-ish and the widest.
+
+        The narrow end is deliberately not named: this file is one the
+        selector greps, so a module named here stops being a module no
+        test names (it moved the published figure 11 -> 12 when it
+        was, which is the measurement destroying its own subject)."""
+        census = set(dev_touching.census_set())
+        whole = set(dev_touching.select([module])[0])
+        assert census <= whole, (
+            f"{module} is missing {sorted(census - whole)} of the census "
+            f"floor, so the floor is not a floor")
+        own = set(dev_touching.select([module], census=False)[0])
+        assert whole - own <= census, (
+            f"{module}: {sorted(whole - own - census)} appeared with the "
+            f"census and is not a census file")
+
+    def test_a_change_nothing_names_is_a_finding_the_floor_cannot_hide(
+            self, monkeypatch, capsys):
+        """`UX-645`'s consequence, and why the two populations are
+        reported. One of the 87 mapped modules selects the floor and
+        nothing else; keyed on the whole selection the tool called that
+        a pass, because the floor is never empty. The module is not
+        named here for the reason the clause above gives."""
+        census = dev_touching.census_set()
+        monkeypatch.setattr(dev_touching, "changed_files",
+                            lambda *a, **_: ["bga/nothing_names_this.py"])
+        monkeypatch.setattr(
+            dev_touching, "select",
+            lambda *a, **_: (census, {n: ["census"] for n in census}))
+        monkeypatch.setattr(dev_touching.subprocess, "run",
+                            lambda *a, **k: _Done(0, "1 passed in 0.1s"))
+        dev_touching.main([])
+        said = capsys.readouterr().err
+        assert "No test file names any of 1 changed file(s)" in said, said
+        assert "not a pass" in said, said
+
+    def test_the_split_is_reported_and_not_only_the_total(self):
+        """A count a reader takes for "tests that see my change" when
+        44% of it is the same under every module."""
+        census = dev_touching.census_set()
+        why = {n: ["census"] for n in census}
+        why[census[0]] = ["census", "bga/cli.py"]
+        named = dev_touching.naming([*census, "tests/unit/test_cli.py"], why)
+        assert named == [census[0], "tests/unit/test_cli.py"], named
 
     def test_a_changed_test_file_runs_itself(self):
         selected, _ = dev_touching.select(

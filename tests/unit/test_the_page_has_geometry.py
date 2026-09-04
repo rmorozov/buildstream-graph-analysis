@@ -36,6 +36,7 @@ import pytest
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 
+import pages  # noqa: E402
 from browser import NO_BROWSER, Browser, find_chrome  # noqa: E402
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
@@ -63,6 +64,19 @@ def report(tmp_path_factory):
     path = tmp_path_factory.mktemp("page") / "report.html"
     export(str(run), str(path))
     return path.as_uri()
+
+
+@pytest.fixture(scope="module")
+def reports(report, tmp_path_factory):
+    """`{label: uri}` for both committed fixtures.
+
+    `UX-649`: a claim about what a *run* puts in a section is a claim
+    about two runs, and this file exported one. The golden page is the
+    one above rather than a second export of it.
+    """
+    return {"golden": report,
+            **pages.pages(tmp_path_factory, "geometry",
+                          labels=["macro_micro"])}
 
 
 @pytest.fixture(scope="module")
@@ -499,13 +513,18 @@ class TestChaptersCostNoHeight:
     run. Both halves are checked here, because "chapters" implemented as
     a fixed grid would satisfy every other guard in the suite.
 
-    Measured on the exported golden report after this landed:
+    Re-measured for `UX-649` on both committed fixtures with the layout
+    optimisation forced off, three identical runs each (screens of
+    viewport; the spread is tallest/shortest):
 
     ```text
-                    document   headings   heading cost   section heights
-    1440x900          11.29      0.33 scr      2.9%      0.07 - 1.17 (16x)
-    1280x800          12.76      0.37         2.9%       0.08 - 1.31 (16x)
-     390x844          20.58      0.47         2.3%       0.08 - 3.20 (42x)
+                       document  headings  heading cost  sections  spread
+    golden  1440x900     19.97    0.33 scr     1.7%        46      39.4x
+            1280x800     22.67    0.37         1.6%        46      39.4x
+             390x844     39.48    0.62         1.6%        46      51.4x
+    macro   1440x900     36.92    0.33         0.9%        66      58.4x
+            1280x800     42.22    0.37         0.9%        66      58.4x
+             390x844     74.16    0.62         0.8%        66      51.9x
     ```
 
     The document was 11.32 screens before the chapters and 11.29 after:
@@ -513,8 +532,19 @@ class TestChaptersCostNoHeight:
     need between them, which is the whole claim.
     """
 
+    # `UX-649`: the layout optimisation off, before anything here is
+    # read. `content-visibility: auto` gives a section that has not been
+    # near the viewport its `contain-intrinsic-size` placeholder, so all
+    # three clauses were reading what the compositor had painted rather
+    # than what the run put in the page. Measured at 390x844: spread
+    # 8.8x painted against 51.4x laid out, which is what put CI's 6.1x
+    # under a bound of 8 on a documentation-only commit. Waiting is not
+    # the fix - four extra frames and a 500ms sleep moved none of these
+    # numbers by a digit; being near the viewport is what renders a
+    # section, and no page-level settle can supply that.
     _COST = """
     (() => {
+    """ + pages.FULL_LAYOUT_JS + """
       // UX-347: every chapter but the first folds now, and a folded
       // chapter draws none of its sections. These three clauses are
       // about what the document costs *when it is read* - a heading
@@ -597,19 +627,79 @@ class TestChaptersCostNoHeight:
             f"{padded} screens of chapter beyond their sections at "
             f"{width}x{height}")
 
+    @pytest.mark.parametrize("label", sorted(pages.FIXTURES))
     @pytest.mark.parametrize("width,height", VIEWPORTS)
     def test_the_sections_are_still_as_tall_as_their_content(
-            self, browser, report, width, height):
-        """Direction 13's refusal, guarded: section height spans a 49x
-        range across the two runs because ten sections on each size
-        themselves from the run. A layout that equalised them would
-        read as "chapters" and be the change the measurement refused."""
-        out = browser.measure(report, self._COST, width, height)
+            self, browser, reports, label, width, height):
+        """Direction 13's refusal, guarded: sections size themselves
+        from the run, and a layout that equalised them would read as
+        "chapters" and be the change the measurement refused.
+
+        `UX-649` set this number. The docstring said 49x, the bound
+        said 8, this machine read 22.2x and CI read 6.1x and went red
+        on a commit that could not move a pixel - three numbers for one
+        page, because the reading was of what had been painted. Off the
+        placeholder the six conditions above read 39.4 / 39.4 / 51.4 /
+        58.4 / 58.4 / 51.9, three identical runs each and unchanged
+        under `-n auto`. 20 is half the smallest of them: an
+        equalisation to within 20x is still caught, and no runner sits
+        near the line."""
+        out = browser.measure(reports[label], self._COST, width, height)
         assert out["sections"] >= 10, out["sections"]
         spread = out["tallest"] / max(out["shortest"], 0.001)
-        assert spread >= 8, (
-            f"the tallest section is only {spread:.1f}x the shortest at "
-            f"{width}x{height} - something is equalising them")
+        assert spread >= 20, (
+            f"{label}: the tallest section is only {spread:.1f}x the "
+            f"shortest at {width}x{height} - something is equalising them")
+
+    #: `UX-649`: the same reading, after every section has been near the
+    #: viewport. Its own copy of the forcing statement, so a `_COST`
+    #: that lost one still has this to disagree with.
+    _WALKED = """
+    (async () => {
+    """ + pages.FULL_LAYOUT_JS + """
+      const frame = () => new Promise(
+        (go) => requestAnimationFrame(() => requestAnimationFrame(go)));
+      for (const box of document.querySelectorAll("section.chapter")) {
+        box.setAttribute("data-open", "true");
+      }
+      for (let y = 0; y < document.documentElement.scrollHeight;
+           y += window.innerHeight) {
+        window.scrollTo(0, y);
+        await frame();
+      }
+      window.scrollTo(0, 0);
+      await frame();
+      const vh = window.innerHeight;
+      const heights = [...document.querySelectorAll(
+        "main section[data-section]")]
+        .map((s) => s.getBoundingClientRect().height / vh);
+      return { tallest: Math.max(...heights), shortest: Math.min(...heights),
+               sections: heights.length };
+    })()
+    """
+
+    def test_the_spread_is_read_from_content_and_not_from_paint(
+            self, browser, report):
+        """`UX-649`'s cause, held. The clause above must read the same
+        page whether or not the compositor has laid a section out, or
+        it is a guard on the runner: with `content-visibility: auto`
+        left on, 390x844 read 8.8x where a reader who had scrolled the
+        document read 45.4x, and CI - which paints less before the
+        probe asks - read 6.1x against a bound of 8.
+
+        Measured at 390x844 because that is where the gap was widest.
+        The two readings are identical to four figures once the
+        optimisation is off, so the tolerance is for fonts, not for
+        paint."""
+        landed = browser.measure(report, self._COST, 390, 844)
+        walked = browser.measure(report, self._WALKED, 390, 844)
+        assert landed["sections"] == walked["sections"], (landed, walked)
+        one = landed["tallest"] / max(landed["shortest"], 0.001)
+        two = walked["tallest"] / max(walked["shortest"], 0.001)
+        assert abs(one - two) <= 0.02 * two, (
+            f"the spread reads {one:.1f}x on the page as it lands and "
+            f"{two:.1f}x once every section has been near the viewport - "
+            f"this clause is measuring paint, not content (UX-649)")
 
 
 class TestTheInstrumentSaysWhatItCannotSee:

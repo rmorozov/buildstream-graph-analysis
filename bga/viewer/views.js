@@ -30,6 +30,29 @@ import {
 } from "./primitives.js";
 
 
+/**
+ * `UX-650`: the `R1`-`R5` tag, for a section the **page** builds.
+ *
+ * `sectionHead` builds it for the eleven payload sections off
+ * `bga:readers`, which is the join of `provenance._CLAIMS` with
+ * `findings.FINDING_READERS`. A page-built section is in no schema and
+ * so in no join: its role is declared at the construction site, and
+ * this writes the node `applyRole` already reads - one shape, not a
+ * second mechanism. Empty at landing, like the other eleven.
+ *
+ * The declaration is a weaker source than the join, so each site
+ * carries the argument for its role in one line, and a section whose
+ * reader the code does not answer stays unmapped rather than guessed.
+ */
+export function declareReaders(section, roles) {
+  const tag = document.createElement("span");
+  tag.className = "reader-tag";
+  tag.setAttribute("data-reader-tag", "");
+  tag.setAttribute("data-readers", roles.join(" "));
+  (section.querySelector?.("h2") ?? section).append(tag);
+  return section;
+}
+
 // `UX-337`: this file was 2,531 lines. The element object moved to
 // `element.js` and the decision panel to `decision.js`, along the
 // chapter seams this file already carried - see those headers for the
@@ -145,6 +168,10 @@ export function renderBand(compare) {
       + "baselines themselves spanned, so compare declines to call it."
     : `The candidate is ${geometry.where}.`;
   wrapper.append(heading, figure, caption);
+  // `UX-650`: R4 - the band calls this run in or out of the noise, and
+  // "is it normal?" is R4's question; `verdict_kind` is the field
+  // `_compare_exit_code` gates on and `ci_comment.py` reports.
+  declareReaders(wrapper, ["R4"]);
   // UX-316 (§2a): the band's twin. Every row is a published edge of
   // `compare/v1` - the geometry object holds the values beside the
   // positions, so the table and the drawing cannot disagree.
@@ -363,6 +390,10 @@ export function renderTrend(store, schema = undefined,
     wrapper.setAttribute("data-unreadable-rows", String(unreadable));
   }
   wrapper.append(heading, figure);
+  // `UX-650`: R4 - the same verdict over the stored history, one point
+  // per snapshot coloured by `verdict_kind`: "is this normal?" asked of
+  // every run before this one.
+  declareReaders(wrapper, ["R4"]);
   // UX-316 (§2a): an exhibit's ends are read, not hovered - and it is
   // paired with its table twin, so the drawing never hoards values a
   // reader wants as rows. Both are built from `rows`, which is what the
@@ -522,6 +553,13 @@ export function renderBlastSearch(onQuery) {
   });
   form.append(input, button);
   wrapper.append(heading, form, answer);
+  // `UX-650`: R2 - "what does changing my element cost" is R2's own
+  // question. Derived support rather than taste: `blast-radius-reach`
+  // and `blast-radius-structural` are `recipe-author` in
+  // `FINDING_READERS` and reach no join because they compute their
+  // evidence paths from the document, and `resource_blast` - the
+  // payload section beside this one in the same chapter - joins to R2.
+  declareReaders(wrapper, ["R2"]);
   return wrapper;
 }
 
@@ -547,6 +585,10 @@ export function renderBlastOffline(payload, copy, make) {
   const section = make("section", { "data-section": "blast",
                                     "data-toc-label": "Blast radius" });
   section.append(make("h2", {}, "Blast radius"));
+  // `UX-650`: R2, the same section's other shape and so the same role -
+  // the argument is on `renderBlastSearch`. Two shapes declaring two
+  // roles would be one section serving two readers by export mode.
+  declareReaders(section, ["R2"]);
   const step = (payload?.next_steps ?? []).find(
     (entry) => Array.isArray(entry?.argv) && entry.argv[1] === "blast");
   const argv = step ? step.argv.join(" ") : null;
@@ -673,6 +715,11 @@ export function renderOverview(payload) {
   const heading = document.createElement("h2");
   heading.textContent = "Where the time went";
   section.append(heading);
+  // `UX-650`: **unmapped, deliberately.** This is the whole run's
+  // duration split into every published bucket - the index shape
+  // `UX-643` refused for `summary`, one level up from a reader's
+  // question. `floors` carries R1/R3/R4 in the join, but those are the
+  // floors' readers and this draws four of their bars among twelve.
 
   section.append(bar("Total duration", total, total,
                      { "data-field": "total_duration_us" }));
@@ -780,6 +827,12 @@ export function renderEvidence(payload) {
   const heading = document.createElement("h2");
   heading.textContent = "What this capture supports";
   section.append(heading);
+  // `UX-650`: R4 - "is this number trustworthy" is R4's question and
+  // this section is that question asked before any number is read. Its
+  // rows are `confidence.*`, and four of the five findings whose
+  // evidence lives there (`confidence`, `efficiency-score`,
+  // `cache-hit-ratio`, `run-mode-incremental`) are `ci-gatekeeper`.
+  declareReaders(section, ["R4"]);
 
   // UX-207: **the refusal renders once.** It used to appear here *and*
   // in `renderVerdict`, the same sentence in two banners - measured at
@@ -906,6 +959,12 @@ export function renderCriticalPath(payload) {
   const heading = document.createElement("h2");
   heading.textContent = "The chain, drawn";
   section.append(heading);
+  // `UX-650`: R1 - every box carries its `realizable_saving_us` and the
+  // strip is ordered by `share_of_path`, so what this draws is "which
+  // element should I shorten first", which is R1's question. No finding
+  // cites `critical_path_detail`, so the argument is the drawing's own
+  // content rather than the join.
+  declareReaders(section, ["R1"]);
 
   const strip = document.createElement("div");
   strip.className = "path-strip";
@@ -1008,6 +1067,9 @@ export function renderBlastTree(payload) {
   const heading = document.createElement("h2");
   heading.textContent = `What a change to ${payload.target ?? "it"} rebuilds`;
   section.append(heading);
+  // `UX-650`: R2 - the blast answer's closure by depth, so the role is
+  // the blast section's own; drawn only where a server answered.
+  declareReaders(section, ["R2"]);
 
   const list = document.createElement("div");
   list.className = "blast-tree";

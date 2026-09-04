@@ -394,6 +394,11 @@ def _backlog_counts():
     natural order - write the row, derive, stage, commit - shipped the
     count one short four times in round 84, each costing a suite run.
     `--others --exclude-standard` is the untracked, non-ignored half.
+
+    `UX-622`: this is the one population. The sentence names it ("this
+    commit carries") and `test_a_counted_figure_is_derived.py` checks it
+    against the same one - reading the index there wrote a figure the
+    suite rejected until the new row was staged.
     """
     return {one: len(_backlog_paths(one)) + len(_untracked_backlog(one))
             for one in ("scenarios", "tasks")}

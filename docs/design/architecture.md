@@ -1,6 +1,6 @@
 # `bga`: Current Architecture — Three Analysis Planes
 
-**Start here to orient in this codebase.** `docs/spec/specification.md` (v9) is the original design document and stays authoritative for full-length invariant/data-contract text — it is *not* wrong, but it describes the tool as originally scoped, and does not know about anything built since. This doc describes what `bga` actually does **today**, as one coherent system, and points at the real file/doc for every claim so you don't have to reconstruct that history from 632 `docs/backlog/scenarios/` files, 75 `docs/backlog/tasks/` files, and the commit log yourself.
+**Start here to orient in this codebase.** `docs/spec/specification.md` (v9) is the original design document and stays authoritative for full-length invariant/data-contract text — it is *not* wrong, but it describes the tool as originally scoped, and does not know about anything built since. This doc describes what `bga` actually does **today**, as one coherent system, and points at the real file/doc for every claim so you don't have to reconstruct that history yourself from the commit log, the 632 `docs/backlog/scenarios/` files and the 75 `docs/backlog/tasks/` files this commit carries.
 
 **Want to *use* the tool rather than work on it?** [`docs/guides/real-project.md`](../guides/real-project.md) is the end-to-end walkthrough on a real project, with real output at every step.
 
@@ -1034,6 +1034,19 @@ artifact.
 - **`docs/guides/cli.md`** — CLI reference/usage examples.
 
 ## Verification Log
+
+Updated 2026-09-04 (after `UX-622`), covering one change to this
+document — the opening sentence now names the population its two
+backlog counts are drawn from ("the … files this commit carries"),
+which is the index plus untracked and non-ignored, the population
+`tools/dev_close_task.py` writes them from and
+`tests/unit/test_a_counted_figure_is_derived.py` checks them against —
+re-grounded in the two contract tables above against `bga.contracts`
+and `bga.schemas`: **23 emitted ids, 9 of them superseded, and 3 read
+and never written**, 8 printable and 15 not, and `analyze/v5` still at
+**56 top-level properties**. `bga/viewer/` is still **22 modules** and
+the table still names all of them. Every figure re-read and unchanged
+from the entry below — this change was prose, not a contract.
 
 Updated 2026-09-03 (after `UX-569`), covering round 83's three changes
 to this document — the opening sentence's two backlog counts, the

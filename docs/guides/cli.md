@@ -908,20 +908,40 @@ on `compare/v2`, `queue_wait_us` and `queue_wait_absent_reason` on
 The guard that was supposed to stop that had contract **ids** for a
 population, so it could not see a key. It has keys now: the printable
 contracts' *consumer surface* — each schema's top-level properties plus
-the properties of a row directly under a top-level array, since a row
-of `store/v1`'s `snapshots` is what you actually read. That surface was
-199 keys when this was written, 84 of them named in no document outside
+every **row** the document hands you, since a row of `store/v1`'s
+`snapshots` is what you actually read. That surface was 199 keys when
+this was written, 84 of them named in no document outside
 `docs/backlog/` and `docs/audits/`; naming the five above left 80, and
 `UX-636` paid those 80 off in the section below. The register in the
 guard is empty, so the figure it holds and this sentence is checked
 against is **0 undocumented keys**.
 
+A row is found **at any depth**, and by either of the two things that
+declare one: an array's `items`, and the `bga:columns` an array node
+carries. Both are needed, and `UX-655` measured why — `analyze/v6`'s
+`parallelism.levels` has no `type` and no `items` at all, so its
+columns are the whole statement of what one of its rows holds, and
+`level` and `width` are in no `items` anywhere. Depth is the same
+finding one level up: `parallelism` is a top-level *object*, its
+`levels` rows are below that, and a population reaching only under a
+top-level array published the whole of a major bump outside itself.
+The surface is **236 keys** today, and that figure is derived from the
+walk rather than typed here.
+
 So the statement of coverage, which is now a statement and not a
 promise:
 
-- **every key of every printable contract is named in a document**, and
-  a key added to one of those schemas has prose or the guard reddens
-  naming it;
+- **every key of every printable contract you are handed is named in a
+  document** — its top-level keys, and the columns and `items` of
+  every row inside it at any depth — and a key added to one of those
+  schemas has prose or the guard reddens naming it;
+- what is *not* in it is the internal shape of a block that is neither
+  a top-level key nor a row: 514 distinct keys over the nine printable
+  schemas if every nested `properties` object is walked, against the
+  236 above. `--schema` stays the complete list, and a document
+  reproducing all 514 would be the second copy of the schemas
+  `UX-384` banned (`UX-628` declined it, and `UX-655` re-measured it
+  rather than inheriting it);
 - the register the debt was held in may only shrink and is at zero, so
   a key going undocumented is a decision somebody argues, not a number
   that drifts;
@@ -979,6 +999,20 @@ can look one up.
 | `claim` | Which claim a `provenance` entry explains — a finding id, or `diagnosis` for the headline. |
 | `calls`, `cpu_time`, `cpu_share`, `wall_us` | Per binary, in `binary_cost`: how many times this element ran it, the CPU it took, that CPU as a share of the element's measured CPU, and the wall-clock those calls spanned. |
 
+`analyze/v6` — inside a row of a block below the top level (`UX-655`):
+
+| key | what it is |
+|---|---|
+| `level`, `width`, `elements` | A row of `parallelism.levels`, one per level of the graph from the roots down: its longest path in edges from a source (roots are `level` 0), how many elements sit there, and which ones — what could run at once, once everything above it is built. |
+| `fan_in`, `fan_out` | A row of `bottleneck.high_fanin_elements` and `high_fanout_elements`: elements naming this one as a dependency, and dependencies it names. Degrees of the graph, never a transitive count — `blast_radius` is that. |
+| `phase`, `elapsed_us` | A row of `pipeline_overhead`: the named stage of the run, and the wall-clock it spanned. |
+| `finding_id` | In a `headline.top_actions` row, the finding the action's reasoning is in — so the headline's advice can be read back to the evidence that chose it. |
+| `first` | In a `batch_opportunities.serialized_pairs` row, the element that ran first of a pair that shares a dependency chain; `then` is the other. The pair is why they cannot be batched. |
+| `shared_consumers` | In a `consolidation_candidates` row, the elements that always consume the candidate group together — the reason it is a group. |
+| `allows` | In a `capacity_recommendation.constraints` row, how many builders that one ceiling permits, beside the `name` of the ceiling and the `reason` it was measured. A ceiling with no measurement behind it is absent rather than infinite. |
+| `realizable_saving_us` | What removing this element entirely takes off the **makespan** — not off the path. In a `critical_path_detail` row and in a finding's `evidence.rows`, where the two differ whenever something else is ready to take the freed time. |
+| `elided`, `resolved` | In a `provenance` (or `compare/v2` `verdict_provenance`) evidence row: the shape a path held where the value was a container — `object[1202]`, `array[15]` — published instead of copying that population in twice, and `false` where the path did not resolve at all, so a broken reference is visible rather than missing. |
+
 `compare/v2`:
 
 | key | what it is |
@@ -990,6 +1024,7 @@ can look one up.
 | `cache_churn` | How many cache keys moved: `comparable_elements` as the population, then `unchanged_keys` and `changed_keys` out of it. |
 | `baseline_confidence`, `candidate_confidence` | How much of each run the comparison could see — the share of its elements carrying what the verdict is computed from. |
 | `low_confidence` | True when either share is below the floor: the verdict stands, over a partly-read run. |
+| `presence` | In an `element_deltas` row, whether both runs had this element. One that is in a single run has no delta at all — reading it as a change from zero would make a removed element the run's biggest improvement. |
 | `mismatches` | Fields where the two captures' conditions differ, one row of `field`, `baseline`, `candidate` — a comparison across machines says so rather than hiding it. |
 | `failed_runs` | Runs in the pair that did not finish, named rather than silently compared. |
 
@@ -1018,6 +1053,7 @@ can look one up.
 | `attribution_partial` | The same note when the names are real but do not cover every process. The join is rendered with its coverage stated (`UX-66`). |
 | `granularity` | Elements paying more sandbox tax than they spend building. |
 | `process_count_distribution` | How many processes each element ran, across this capture. Heavy-tailed: one element with 40,000 processes is the finding. |
+| `envelope_bytes` | In a `memory_envelope.projections` row, the memory that many concurrent builders would need — bounded by the elements whose peak was actually measured, so it is a floor over what was seen and not a model. |
 | `sandbox_tax_distribution` | How this capture's sandbox tax is spread, over every payer — "is this element's tax unusual" has no answer without the population. |
 
 `store/v1` and `store-aggregate/v1`:
@@ -1042,6 +1078,12 @@ can look one up.
 |---|---|
 | `service` | The service-time moments this class's queue is modelled from: `samples`, `mean_us` and `stdev_us`. The mean, not the median — waiting is a function of the mean and the spread around it. |
 | `excluded_runs` | Captures left out of every service time — failed, interrupted, suspended or unfinished. Counted, so a thin model says why it is thin. |
+
+`sweep/v1`:
+
+| key | what it is |
+|---|---|
+| `makespan_us` | In a `sweeps` row, the makespan the replay produced at that capacity, beside the `capacity` vector tried and the `normalized_improvement` that capacity bought over the point before it. |
 
 ### What a build here costs (`UX-234`)
 

@@ -94,3 +94,82 @@ the `UX-636` table either way.
 `level`, `width` and `elements` of `analyze/v6`'s `parallelism.levels`
 row are each named in a document, and the guard reddens when a fourth
 column is added to that row with no prose — shown by adding one.
+
+## Outcome
+
+The population widened, because counting it first said it could. The
+Required Fix made that a measurement; the candidates, over the nine
+printable schemas at `933de24`:
+
+```text
+199   today: top-level properties + a row directly under a top-level array
+218   + a row under an array at ANY depth
+236   + the `bga:columns` a row declares, at any depth      <- taken
+514   every nested `properties` key, distinct
+891   the same, counting repeats
+```
+
+236 is within one order of 199, so the population widens: 37 new keys,
+**15** of them named in no document.
+
+**A figure the task file quotes is a different quantity.** "The full
+recursive set is 891 keys" is 891 *occurrences* of a `properties` key;
+the distinct set is **514**. Both are in the walk's docstring now,
+because the choice above is an order-of-magnitude argument and it
+matters which end it is against.
+
+**"A row under an array at any depth" does not reach this row.** That
+widening alone is 218 keys and holds neither `level` nor `width`:
+`parallelism.levels` has **no `type` and no `items`**, only
+`description` and `bga:columns`, so its columns are the entire
+declaration of what one of its rows holds. The walk reads both.
+
+### Before and after
+
+```console
+$ PYTHONPATH=. python3 ...the Motivation's script, and after it...
+in the consumer surface: ['elements']
+surface size: 199  undocumented register: 0
+
+in the consumer surface: ['level', 'width', 'elements']
+named in a document: ['level', 'width', 'elements']
+surface size: 236  undocumented register: 0   undocumented keys now: []
+
+$ PYTHONPATH=. python3 -m pytest \
+    tests/unit/test_the_documents_keep_up_with_the_contracts.py -q
+23 passed in 0.31s        # 20 before, and green throughout the gap
+```
+
+The 15 keys are prose in `docs/guides/cli.md`: a new *inside a row of a
+block below the top level* table for `analyze/v6`'s twelve, and rows in
+`compare/v2`, `correlate/v2` and a new `sweep/v1` table for `presence`,
+`envelope_bytes` and `makespan_us`.
+
+### Mutations verified red and reverted (5)
+
+| # | mutation | reddened | count |
+|---|---|---|---|
+| N1 | a fourth column `slack_us` on `parallelism.levels`, no prose | `..._reddens_naming_the_key` (`{'slack_us': ['analyze/v6']}`) and the guide figure | 2 failed 21 passed |
+| N2 | the `bga:columns` half of `_row_keys` deleted | `..._reaches_a_row_below_a_top_level_object`, guide figure at **218** | 2 failed 21 passed |
+| N3 | `_row_keys` back to top-level arrays only | the same two, guide figure at **199** - the state as filed | 2 failed 21 passed |
+| N4 | the guide's surface figure to `**199 keys**` | `..._states_the_reach_it_actually_has` | 1 failed 22 passed |
+| N5 | `"items": {"type": "object"}` on `parallelism.levels` | `..._a_row_can_be_declared_by_its_columns_alone` | 1 failed 22 passed |
+
+**A guard of mine does not discriminate for one of the three keys.**
+`width` was already counted as named before any prose existed - by
+`el.style.width` in the architecture, `graph-width` in `roles.md` and
+`cli.md`, `--width 200` in the styleguide, none of them a sentence
+about a level. Of the three keys, only `level` would have reddened
+`..._reddens_naming_the_key`. `code_spanned` splits identifiers and
+cannot tell a CSS property from a payload key; that is the instrument
+`UX-628` argued for and it is not re-decided here, which is why the
+*reach* clause reads the row's own columns instead.
+
+### Deviation from the Required Fix
+
+The guide's surface figure is derived, so N1 reddened two clauses: a
+key entering the surface moves it. Deliberate - that key already needs
+a prose row in the same file. The second offered branch is not skipped
+either: the guide still says what is outside the 236, with the 514
+beside it, because the walk is a reach and not a claim over every
+nested key.

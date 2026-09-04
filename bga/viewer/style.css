@@ -862,7 +862,15 @@ button.describe:hover, button.describe[aria-expanded="true"] { color: var(--fg);
    and all three are what a drawer would fail to survive in an export or
    a print. */
 .table-focus { display: block; width: 100%; margin: 0; }
+/* UX-638: entering focus scrolls this section to the top, and the top
+   is under the sticky header without the same margin every anchor has. */
+body[data-has-toc] .table-focus { scroll-margin-top: calc(var(--head) + .5rem); }
 .table-focus > h2 { margin-top: .2rem; }
+/* UX-638: the second press is a collapse, so the control shows it is
+   already pressed rather than offering the same thing again. */
+button.expand-table[aria-pressed="true"] {
+  color: var(--fg); border-color: var(--fg);
+}
 .focus-crumb { margin: 0 0 .3rem; }
 button.focus-back, button.expand-table {
   font: inherit; font-size: .82rem; cursor: pointer;

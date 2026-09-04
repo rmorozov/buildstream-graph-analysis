@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-630 scenarios: **13 open**, 617 closed.
+630 scenarios: **12 open**, 618 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -27,7 +27,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | cli | 0 | 21 |
 | store | 0 | 16 |
 | docs | 4 | 93 |
-| guards | 6 | 131 |
+| guards | 5 | 131 |
 
 ## Open scenarios
 
@@ -40,7 +40,6 @@ task file, which is the only place it ever lived twice.
 | UX-613 | [the capacity model emits no document](UX-0613-the-capacity-model-emits-no-document.md) | contracts | Medium | R4 and anyone wanting the model's answer in a pipeline | 🔴 Open |
 | UX-622 | [the derived count and its guard read two populations](UX-0622-the-derived-count-and-its-guard-read-two-populations.md) | guards | Medium | the session filing a row | 🔴 Open |
 | UX-623 | [a track cannot read the tree it was copied from](UX-0623-a-track-cannot-read-the-tree-it-was-copied-from.md) | guards | Low | a track checking the base it was given | 🔴 Open |
-| UX-624 | [the cap dropped a guard that was not noise](UX-0624-the-cap-dropped-a-guard-that-was-not-noise.md) | guards | Medium | a track adding a declared key | 🔴 Open |
 | UX-625 | [reverting a mutation can discard the work](UX-0625-reverting-a-mutation-can-discard-the-work.md) | guards | Low | a track falsifying its own guard | 🔴 Open |
 | UX-626 | [a brief names a commit nobody resolved](UX-0626-a-brief-names-a-commit-nobody-resolved.md) | guards | Low | a track given a base | 🔴 Open |
 | UX-627 | [closing a row writes `🟢 Done Open`](UX-0627-closing-a-row-writes-done-open.md) | guards | High | anyone reading a task file's status | 🔴 Open |

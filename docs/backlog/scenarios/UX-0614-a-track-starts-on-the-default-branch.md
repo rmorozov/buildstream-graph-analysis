@@ -1,6 +1,6 @@
 # UX-614: a track starts on the default branch, not the round's
 
-**Priority:** High | **Status:** 🔴 Open | **Depends on:** UX-510 (a track's brief names the base it will get) | **Found by:** round 84, by three of seven tracks independently | **Serves:** every round that runs tracks in parallel | **Topic:** guards
+**Priority:** High | **Status:** 🟢 Done Open | **Depends on:** UX-510 (a track's brief names the base it will get) | **Found by:** round 84, by three of seven tracks independently | **Serves:** every round that runs tracks in parallel | **Topic:** guards
 
 ## Motivation
 
@@ -46,7 +46,7 @@ a track whose `git log` disagrees stops instead of proceeding.
 A track launched while the round's branch is ahead of the default,
 reporting the round's tip rather than the default branch's.
 
-## Outcome (round 85, 2026-09-04) — 🔴 implemented, not closed
+## Outcome (round 85, 2026-09-04) — 🟢 Done
 
 **Premise:** half-held. The mechanism is confirmed and now has a
 one-line reading; the harm did not recur this round.

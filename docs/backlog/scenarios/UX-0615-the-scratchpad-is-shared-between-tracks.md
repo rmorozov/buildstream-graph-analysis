@@ -1,6 +1,6 @@
 # UX-615: the scratchpad is shared between tracks
 
-**Priority:** Low | **Status:** 🔴 Open | **Depends on:** UX-614 (the same launch step) | **Found by:** round 84, by the track it happened to | **Serves:** a round running tracks in parallel | **Topic:** guards
+**Priority:** Low | **Status:** 🟢 Done Open | **Depends on:** UX-614 (the same launch step) | **Found by:** round 84, by the track it happened to | **Serves:** a round running tracks in parallel | **Topic:** guards
 
 ## Motivation
 
@@ -36,7 +36,7 @@ extends to the working files the track builds beside it.
 
 Two tracks writing the same filename, and neither seeing the other's.
 
-## Outcome (round 85, 2026-09-04) — 🔴 implemented, not closed
+## Outcome (round 85, 2026-09-04) — 🟢 Done
 
 **Premise:** held, and quantified.
 

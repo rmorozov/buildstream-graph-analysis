@@ -149,8 +149,12 @@ mkdir -p "<the scratchpad path you were given>/$(basename "$PWD")"
 4. `make test-touching` while you work.
 5. **Mutate every new guard** and watch it go red — the `falsify`
    skill. A guard nobody mutated is a guard nobody knows can fail. Then
-   revert the mutation and confirm green. Beware a same-length mutation:
-   it can leave a stale `.pyc` behind (`UX-508`), so clear
+   revert the mutation and confirm green. Revert **from the copy the
+   skill's step 1 made**, never `git checkout -- <file>`: the mutation
+   is in the same file as your uncommitted work and git cannot tell
+   them apart, so it discards both and the next mutation comes back red
+   for a reason that is not the guard (`UX-625`). Beware a same-length
+   mutation too: it can leave a stale `.pyc` behind (`UX-508`), so clear
    `__pycache__` or set `PYTHONDONTWRITEBYTECODE=1`.
 6. `make lint`. Commit on your branch with the task's id in the subject.
 

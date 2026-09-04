@@ -13,7 +13,9 @@ The rule lives in
 ## The loop, per guard
 
 ```bash
-cp <file> /tmp/<file>.bak                       # 1. keep the original
+snap="<the scratchpad path you were given>/$(basename "$PWD")"
+mkdir -p "$(dirname "$snap/<file>")"            #    every file here is nested
+cp <file> "$snap/<file>"                        # 1. keep the original
 python3 - <<'PY'                                # 2. apply the mutation
 import pathlib
 p = pathlib.Path("<file>"); t = p.read_text()
@@ -21,9 +23,16 @@ assert "<old>" in t                             #    prove it will land
 p.write_text(t.replace("<old>", "<new>"))
 PY
 python3 -m pytest tests/unit/<guard>.py -q -k <name>   # 3. must FAIL
-cp /tmp/<file>.bak <file>                       # 4. revert
+cp "$snap/<file>" <file>                        # 4. revert
 python3 -m pytest tests/unit/<guard>.py -q      # 5. must PASS
 ```
+
+The two shapes of that path are both load-bearing. `mkdir -p` because
+`/tmp/<file>.bak` — what step 1 said until `UX-625` — is a directory
+that does not exist for any file below the repository root, which is
+all of them; a step 1 that errors is why a track improvises a revert.
+And `$(basename "$PWD")` because the scratchpad is shared between
+tracks and a bare name in it is overwritten (`UX-615`).
 
 Step 2's `assert` matters: a `replace` that matched nothing is a
 mutation that never happened, and a guard that stays green against a
@@ -33,7 +42,7 @@ One mutation per guard, and each mutation targets the *one* thing that
 guard claims. If a single mutation reddens three guards, two of them
 have not been falsified.
 
-## Two failure modes this repository keeps producing
+## Three failure modes this repository keeps producing
 
 **The mutation that does not discriminate.** The guard goes red, but
 for a reason unrelated to what it claims — a syntax error, a fixture
@@ -56,8 +65,13 @@ fails.
 
 **The revert that resets past your own work.** `git checkout -- <file>`
 throws away everything uncommitted in that file, not just the mutation.
-One round lost a whole transport that way and only noticed because the
-guard stayed red. Use a `/tmp` copy, or commit before you falsify.
+It cannot tell them apart: the mutation is applied to the same file the
+work is in, and the work is uncommitted because you are mid-item. One
+round lost a whole transport that way and only noticed because the
+guard stayed red; `UX-625` lost a `ci.yml` edit and paid for it in the
+*next* mutation's run, which came back red for a reason that was not
+the guard — the reading this repository takes most seriously. Step 4
+above is the revert. There is no git command that is.
 
 ## What goes in the Outcome section
 

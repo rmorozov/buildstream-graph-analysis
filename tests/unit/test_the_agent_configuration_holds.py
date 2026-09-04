@@ -1146,6 +1146,188 @@ class TestABriefsBaseResolvesBeforeItIsSent:
             "'derive the sha' as advice repeats it (UX-626)")
 
 
+class TestTheDocumentedRevertKeepsTheTracksOwnWork:
+    """`UX-625`. The skill has said how to revert since `UX-359`; what
+    it had not done was work. `cp <file> /tmp/<file>.bak` names a
+    directory that does not exist for any file below the repository
+    root, which is every file here:
+
+    ```text
+    $ cp .github/workflows/ci.yml /tmp/.github/workflows/ci.yml.bak
+    cp: cannot create regular file '…': No such file or directory
+    ```
+
+    A step 1 that errors is why a track improvises step 4, and the
+    improvisation is `git checkout --`, which discards the track's own
+    uncommitted edit in the same file. So these clauses **run** the
+    documented recipe on a nested path with work already in it - a
+    clause that read the skill for the word "snapshot" would pass over
+    a recipe that cannot be executed at all.
+    """
+
+    FILE = "<file>"
+    SCRATCHPAD = "<the scratchpad path you were given>"
+    #: Nested, because the root case is the only one that used to work.
+    NESTED = "tests/unit/test_a_guard.py"
+
+    @classmethod
+    def _fence(cls):
+        body = (SKILLS / "falsify/SKILL.md").read_text(encoding="utf-8")
+        assert "## The loop, per guard" in body, (
+            "the falsify skill has no loop section, so nothing here "
+            "reads the recipe a track is told to run")
+        section = body.split("## The loop, per guard", 1)[1]
+        blocks = re.findall(r"```bash\n(.*?)```",
+                            section.split("\n## ", 1)[0], re.S)
+        assert len(blocks) == 1, (
+            f"the loop section fences {len(blocks)} bash blocks, not "
+            f"one - a track reading two does not know which is the loop")
+        return [line.split("#")[0].rstrip()
+                for line in blocks[0].splitlines()]
+
+    @classmethod
+    def _phases(cls):
+        """`(what makes the snapshot, what puts it back)`, split at the
+        first step that is not shell - steps 2 and 3 are the mutation
+        and the run, and belong to the track rather than to this."""
+        lines = cls._fence()
+        first = next((i for i, line in enumerate(lines)
+                      if line.startswith("python3")), None)
+        assert first is not None, (
+            "the loop fences no python step, so it is not the loop")
+        snapshot = [line for line in lines[:first] if line.strip()]
+        revert = [line for line in lines[first:]
+                  if line.strip().startswith("cp ")]
+        assert snapshot and len(revert) == 1, (
+            f"the loop has {len(snapshot)} step(s) before the mutation "
+            f"and {len(revert)} copy back after it; UX-625 needs one of "
+            f"each or the recipe does not round-trip")
+        # The revert runs in a later shell, so it needs the assignments
+        # the snapshot phase made.
+        return snapshot, [line for line in snapshot if re.match(r"\w+=", line)
+                          ] + revert
+
+    @classmethod
+    def _script(cls, phase, scratchpad):
+        for placeholder in (cls.FILE, cls.SCRATCHPAD):
+            assert any(placeholder in line for line in cls._fence()), (
+                f"the loop names no {placeholder} for a track to fill "
+                f"in, so this clause cannot run what it documents")
+        return "\n".join(
+            line.replace(cls.SCRATCHPAD, str(scratchpad))
+                .replace(cls.FILE, cls.NESTED)
+            for line in phase)
+
+    def _worktree(self, tmp_path):
+        work = tmp_path / "agent-abcd"
+        (work / "tests" / "unit").mkdir(parents=True)
+        return work
+
+    def _sh(self, script, cwd):
+        return subprocess.run(["sh", "-e", "-c", script], cwd=cwd,
+                              capture_output=True, text=True, timeout=60)
+
+    def test_the_snapshot_step_runs_for_a_file_below_the_root(
+            self, tmp_path):
+        """The step that was broken. Every file in this repository is
+        nested, so a recipe that only works at the root works never."""
+        work = self._worktree(tmp_path)
+        (work / self.NESTED).write_text("original\n", encoding="utf-8")
+        scratchpad = tmp_path / "scratchpad"
+        scratchpad.mkdir()
+        done = self._sh(self._script(self._phases()[0], scratchpad), work)
+        assert done.returncode == 0, (
+            f"the falsify loop's snapshot step fails for a nested file, "
+            f"which is every file here: {done.stderr.strip()!r}")
+
+    def test_the_recipe_returns_the_work_and_not_the_committed_text(
+            self, tmp_path):
+        """`UX-625`'s acceptance test: a mutation applied to a file the
+        track has already edited, reverted, and the track's own edit
+        still there. The distinction `git checkout --` cannot draw -
+        it would restore "original", which is neither."""
+        work = self._worktree(tmp_path)
+        target = work / self.NESTED
+        target.write_text("original\n", encoding="utf-8")
+        scratchpad = tmp_path / "scratchpad"
+        scratchpad.mkdir()
+
+        target.write_text("original\nthe track's own edit\n",
+                          encoding="utf-8")
+        snapshot, revert = self._phases()
+        made = self._sh(self._script(snapshot, scratchpad), work)
+        assert made.returncode == 0, made.stderr
+        target.write_text("original\nthe track's own edit\nMUTATION\n",
+                          encoding="utf-8")
+        back = self._sh(self._script(revert, scratchpad), work)
+        assert back.returncode == 0, back.stderr
+
+        left = target.read_text(encoding="utf-8")
+        assert "the track's own edit" in left, (
+            "the documented revert discarded the track's uncommitted "
+            "work along with the mutation - UX-625 itself")
+        assert "MUTATION" not in left, (
+            "the documented revert left the mutation in place, so the "
+            "next run is green for the wrong reason")
+
+    def test_two_tracks_snapshotting_one_file_do_not_collide(
+            self, tmp_path):
+        """`UX-615` in the same place: the scratchpad is keyed by the
+        project, so two tracks mutating one file share a snapshot name
+        unless the recipe separates them. A collision here restores the
+        *other* track's copy, which is worse than no snapshot."""
+        scratchpad = tmp_path / "scratchpad"
+        scratchpad.mkdir()
+        script = self._script(self._phases()[0], scratchpad)
+        seen = []
+        for name in ("agent-aaaa", "agent-bbbb"):
+            work = tmp_path / name
+            (work / "tests" / "unit").mkdir(parents=True)
+            (work / self.NESTED).write_text(f"{name}\n", encoding="utf-8")
+            done = self._sh(script, work)
+            assert done.returncode == 0, done.stderr
+            seen.append(name)
+        kept = sorted(p.read_text(encoding="utf-8").strip()
+                      for p in scratchpad.rglob("test_a_guard.py"))
+        assert kept == seen, (
+            f"two tracks snapshotted one file and the scratchpad holds "
+            f"{kept} - the second overwrote the first, so its revert "
+            f"restores the other track's text (UX-615)")
+
+    def test_the_heading_counts_the_failure_modes_under_it(self):
+        """Derived rather than restated. The safe revert was the third
+        paragraph under a heading that said two, which is where a
+        reader who counts stops reading."""
+        body = (SKILLS / "falsify/SKILL.md").read_text(encoding="utf-8")
+        heading = re.search(r"^## (\w+) failure modes.*$", body, re.M)
+        assert heading, "the falsify skill no longer heads its failure modes"
+        section = body.split(heading.group(0), 1)[1].split("\n## ", 1)[0]
+        written = {"One": 1, "Two": 2, "Three": 3, "Four": 4}
+        assert heading.group(1) in written, (
+            f"the heading counts in {heading.group(1)!r}, which this "
+            f"clause cannot read")
+        found = len(re.findall(r"^\*\*The .*?\.\*\*", section, re.M))
+        assert written[heading.group(1)] == found, (
+            f"the heading says {heading.group(1)} failure modes and "
+            f"{found} follow it; the one that gets dropped is the last, "
+            f"and the last is the safe revert (UX-625)")
+
+    def test_the_track_is_told_which_revert_at_the_step_it_reverts(self):
+        """`implementer.md` step 5 is what a track reads at mutation
+        time; the skill is a click away. Scoped to the loop section,
+        because the file argues about `--ff-only` discarding work three
+        sections earlier and a whole-body read would match that."""
+        body = (AGENTS / "implementer.md").read_text(encoding="utf-8")
+        loop = " ".join(body.split("## The loop", 1)[1]
+                        .split("\n## ", 1)[0].split())
+        assert "git checkout --" in loop, (
+            "implementer.md's loop says to revert without naming the "
+            "revert that discards the track's own work (UX-625)")
+        assert "step 1" in loop, (
+            "the loop names the trap without naming what to use "
+            "instead, which leaves the track where UX-625 found it")
+
+
 class TestEachTrackHasItsOwnScratchpad:
     """`UX-615`: the worktrees are isolated and the scratchpad is not.
 

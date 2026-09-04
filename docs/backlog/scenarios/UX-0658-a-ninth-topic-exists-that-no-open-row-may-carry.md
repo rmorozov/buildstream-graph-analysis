@@ -84,3 +84,84 @@ the guard say the same thing afterwards.
 The guard reads the set from one place; adding a task file with a
 topic outside it reddens naming that file, and the index's topic table
 and the guard's set cannot disagree because there is only one of them.
+
+## Outcome
+
+**Premise:** held. `TOPIC_ORDER` is the one statement of the set,
+`test_docs_links_and_commands.py` imports it instead of repeating it,
+and `topic_disagreements()` is `--check`'s seventh property. With
+`UX-656` as filed, it names the file:
+
+```console
+$ python3 tools/dev_close_task.py --check
+  ok    every row's status glyph matches its task file's
+  ok    every row's priority matches its task file's
+  FAIL  every task file's topic is one the closed set names - 1 problem(s)
+          UX-0656-main-is-red-a-closed-outcome-is-eight-lines-over-the-cap.md:
+          topic 'process' is outside the closed set ['analysis', 'capture',
+          'cli', 'contracts', 'docs', 'guards', 'store', 'viewer']
+1 problem(s) over 7 propert(y/ies), 657 backlog row(s)
+```
+
+**Widening to closed rows cost one failure, so it was taken.** The
+population is the task file, which declares the topic, and that is the
+path `UX-656` took. One script, read twice, the second with `UX-656`
+reverted to `process`:
+
+```text
+task files: 657 | no header: 0 | open rows: 2 | closed rows: 655
+outside TOPIC_ORDER: 0
+outside TOPIC_ORDER: ["UX-0656-...: topic 'process' is outside ..."]
+```
+
+**`process` does not join the set; `UX-656` is `guards`.** The
+neighbours decided it, not taste — the other `main is red` row, the
+row that set the cap `UX-656` broke, and `UX-657`, which was filed
+`process` and reclassified for the same reason:
+
+```console
+$ grep -o '\*\*Topic:\*\* [a-z-]*' docs/backlog/scenarios/UX-0497*.md \
+    docs/backlog/scenarios/UX-0644*.md docs/backlog/scenarios/UX-0657*.md
+UX-0497-the-register-is-a-budget.md:**Topic:** guards
+UX-0644-main-is-red-a-map-entry-under-the-cap-widened-a-module.md:**Topic:** guards
+UX-0657-the-priority-column-has-no-guard.md:**Topic:** guards
+UX-0657-the-priority-column-has-no-guard.md:**Topic:** process
+```
+
+`UX-656` says of itself that it "is the same shape as `UX-644`"; a
+ninth topic would carry one row against a smallest member of 16. The
+fourth line is `UX-657`'s Outcome *arguing* about `process` — the next
+clause.
+
+**The header is the subject, the Outcome is the argument.** Two files
+quote a `**Topic:**` line below line 8, one of them `process`, so both
+readers take the first 8 lines — `file_statuses`' bound. Under a
+whole-file read, deleting `UX-657`'s header made the guard report that
+file as *declaring* `process`: a wrong name, not a missing one.
+
+**Mutations.**
+
+| mutation | expected | got |
+|---|---|---|
+| `UX-656` back to `**Topic:** process` | red, naming the file | red: "topic 'process' is outside the closed set" — 1 failed, 2 passed |
+| `UX-644`'s `**Topic:**` header deleted | red as a *missing* header | red: "no `**Topic:**` header: ['UX-0644-...']" — 1 failed, 2 passed |
+| `TOPIC_ORDER` `guards` → `guardrails` | red, printing the tool's set | red: "outside the closed set [...'guardrails'...]: ["UX-658: 'guards'"]" — 2 failed, 1 passed |
+| `file_topics()` narrowed to the open index | `--check` misses a planted closed row | red: the topic property printed `ok` — 1 failed |
+| the guard given its own copy of the set | red on the one-reading clause | red: `guard._TOPIC_ORDER is close.TOPIC_ORDER` — 1 failed |
+| the header bound dropped | red, and with a wrong name | red: `_header_topic(...)` returned `'process'` — 1 failed, 3 passed |
+| all six reverted | green | 4 passed, 51 deselected |
+
+Every revert was a `cp` from the scratchpad snapshot (`UX-625`).
+
+**Deviation.** A **fourth** copy of the set is in
+`tools/bga_release_notes.py:36` — the same eight in a release-body
+order, sorting an unlisted topic after them as the index did. Left
+alone; it wants its own row.
+`--check` reports the index's topic table as behind (`guards`
+136 → 137, no `process` row); the index belongs to the round's gate,
+so `--check --write` is left to it, and until it runs three clauses in
+`test_the_loop_stays_fast.py` and one in
+`test_the_fast_check_holds_what_the_suite_holds.py` are red for that
+reason alone — committed with `BGA_SKIP_SELECTOR=1`, which is the case
+that hook names. Against a copy of this tree with the index derived,
+all seven properties are `ok` and `--check` exits 0.

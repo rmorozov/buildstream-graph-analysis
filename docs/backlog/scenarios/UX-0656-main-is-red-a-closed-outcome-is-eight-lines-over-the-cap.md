@@ -1,6 +1,6 @@
 # UX-656: main is red — a closed Outcome is eight lines over the cap
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-643 (whose Outcome it is) | **Found by:** architecture review 16, running `make test` on `a5030a4` | **Serves:** anyone whose branch cannot go green through no fault of its own | **Topic:** process
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-643 (whose Outcome it is) | **Found by:** architecture review 16, running `make test` on `a5030a4` | **Serves:** anyone whose branch cannot go green through no fault of its own | **Topic:** guards
 
 ## Motivation
 

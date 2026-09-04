@@ -25,8 +25,8 @@ The data that would make the block worth opening is computed and
 thrown away one line later:
 
 ```python
-_compute_level_decomposition() -> Dict[int, Set[str]]   # analyzer.py:729 - has the uids
-widths = [len(levels[l]) for l in level_nums]           # analyzer.py:363 - discards them
+_compute_level_decomposition() -> Dict[int, Set[str]]   # structural/analyzer.py:729
+widths = [len(levels[l]) for l in level_nums]           # structural/analyzer.py:363
 ```
 
 ## Required Fix
@@ -121,5 +121,5 @@ no flatter honest shape for "which elements sit here". The contract
 count sentences in `docs/README.md`, `docs/design/architecture.md`,
 `CHANGELOG.md` and spec 32.5 are derived figures and moved with the
 inventory. `bga/analyzer.py` is a re-export shell: the code the task
-cites at `analyzer.py:363`/`:729` is `bga/structural/analyzer.py`.
+cites at `bga/structural/analyzer.py:363`/`:729` is `bga/structural/analyzer.py`.
 

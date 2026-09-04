@@ -87,6 +87,23 @@ The merge back is not free either, and the number is on file: round
 — both edited inside the nine commits the tracks did not have. Both
 conflicts were additive and resolved by keeping each side.
 
+## Where your scratch files go
+
+The worktree is yours; the scratchpad is not. It is keyed by the
+*project*, not by the copy you run in — `UX-615` measured **one**
+session directory for the whole repository, holding **1592** entries
+from nineteen days of rounds with `mutate.py` among them. Round 84's
+track had exactly that file overwritten by another track mid-session,
+after its matrix had run. Had the timing been worse it would have
+reported a mutation table it did not produce, which is the one thing
+`falsify` cannot tolerate.
+
+So make a directory named for your worktree and write only inside it:
+
+```bash
+mkdir -p "<the scratchpad path you were given>/$(basename "$PWD")"
+```
+
 ## The loop
 
 1. Read the task file you were given, in full. **Required Fix** is what

@@ -78,6 +78,13 @@ isolation, or `git worktree add`), commits on its own branch, and
 reports the surfaces it actually touched against the ones it declared.
 The `verifier` agent reads each track before it merges.
 
+The worktrees are isolated; the **scratchpad is not** — it is keyed by
+the project, one directory for every track at once. `UX-615`: round
+84's track had its `mutate.py` overwritten by another track
+mid-session. So the brief tells the track to write under
+`$(basename "$PWD")` inside it, which is the one name no two tracks
+share.
+
 **The brief names the base, because the worktree does not start where
 you are.** `UX-510`: round 75's three tracks were all created at
 `8585e7d`, nine commits behind the orchestrator, and two of them were

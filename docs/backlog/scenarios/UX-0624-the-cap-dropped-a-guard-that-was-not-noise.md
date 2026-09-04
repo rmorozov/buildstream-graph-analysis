@@ -1,6 +1,6 @@
 # UX-624: the cap dropped a guard that was not noise
 
-**Priority:** Medium | **Status:** 🔴 Open | **Depends on:** UX-605 (the cap), UX-522 (the census set), UX-336 (the selector) | **Found by:** round 85, by the contracts track paying for it | **Serves:** a track adding a declared key | **Topic:** guards
+**Priority:** Medium | **Status:** 🟢 Done Open | **Depends on:** UX-605 (the cap), UX-522 (the census set), UX-336 (the selector) | **Found by:** round 85, by the contracts track paying for it | **Serves:** a track adding a declared key | **Topic:** guards
 
 ## Motivation
 
@@ -17,8 +17,17 @@ cap=1000000000  selected= 216  test_every_number_says_what_it_is.py: True
 
 Both entries are over the cap — `bga/schemas.py` maps 189 files,
 `bga/compare.py` 30 — so both are discarded whole, and the guard that
-reads every declared quantity goes with them. It is reachable **only**
-through the map: no grep from either module names it.
+reads every declared quantity goes with them.
+
+**Corrected while implementing (round 85):** the sentence that stood
+here said the guard is *"reachable only through the map: no grep from
+either module names it"*. That is true of the selector and false of
+the file — it writes `from bga import schemas` nine times. `tokens_for`
+spells that module `bga/schemas.py` and `bga.schemas` and withholds the
+bare stem, so the grep half never saw the `from <package> import
+<module>` form at all: **253 such edges across the suite**, 70 of them
+naming `bga/schemas.py`. The map had been covering a tokenizer gap and
+the cap exposed it. The cap is not the defect and neither is the map.
 
 The cost is not hypothetical. `UX-610` added `verdict_provenance` to
 `compare/v2`, passed `make test-touching`, and failed that census;
@@ -48,7 +57,8 @@ does not select a third of the suite.
 
 A `bga/schemas.py`-only diff whose selection contains
 `test_every_number_says_what_it_is.py` and stays under `UX-605`'s
-ceiling of 25 median / 130 max files.
+ceiling — **`{"median": 20, "p90": 45, "max": 130}`**. The 25 written
+here first was `HANDFUL`, a different bound in the same file.
 
 ## Outcome (round 85, 2026-09-04) — 🔴 Open
 

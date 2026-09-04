@@ -1,6 +1,6 @@
 # UX-653: a contract bump rewrites the record of what it superseded
 
-**Priority:** Low | **Status:** 🔴 Open | **Depends on:** UX-247 (which built the log this rewrites) | **Found by:** architecture review 16 | **Serves:** anyone reading the verification log to find out what was checked, and when | **Topic:** docs
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-247 (which built the log this rewrites) | **Found by:** architecture review 16 | **Serves:** anyone reading the verification log to find out what was checked, and when | **Topic:** docs
 
 ## Motivation
 

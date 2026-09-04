@@ -1,6 +1,6 @@
 # UX-655: a contract bump landed one level below the key population
 
-**Priority:** Medium | **Status:** 🔴 Open | **Depends on:** UX-628, UX-636 (which built the key population and walked its register to zero) | **Found by:** architecture review 16 | **Serves:** anyone reading an `analyze/v6` payload against the prose that describes it | **Topic:** docs
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-628, UX-636 (which built the key population and walked its register to zero) | **Found by:** architecture review 16 | **Serves:** anyone reading an `analyze/v6` payload against the prose that describes it | **Topic:** docs
 
 ## Motivation
 

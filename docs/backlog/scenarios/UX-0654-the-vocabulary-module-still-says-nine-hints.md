@@ -1,6 +1,6 @@
 # UX-654: the vocabulary module still says nine hints
 
-**Priority:** Low | **Status:** 🔴 Open | **Depends on:** — | **Found by:** architecture review 16 | **Serves:** anyone opening `format.js` to find out what the page's vocabulary is | **Topic:** viewer
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** — | **Found by:** architecture review 16 | **Serves:** anyone opening `format.js` to find out what the page's vocabulary is | **Topic:** viewer
 
 ## Motivation
 

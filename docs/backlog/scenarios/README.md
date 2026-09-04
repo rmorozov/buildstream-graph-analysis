@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-657 scenarios: **8 open**, 649 closed.
+657 scenarios: **2 open**, 655 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -23,11 +23,11 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | capture | 0 | 92 |
 | analysis | 0 | 94 |
 | contracts | 1 | 48 |
-| viewer | 1 | 148 |
+| viewer | 0 | 148 |
 | cli | 0 | 21 |
 | store | 0 | 16 |
-| docs | 4 | 101 |
-| guards | 2 | 136 |
+| docs | 0 | 101 |
+| guards | 1 | 136 |
 | process | 0 | 1 |
 
 ## Open scenarios
@@ -37,12 +37,6 @@ task file, which is the only place it ever lived twice.
 
 | ID | Scenario | Topic | Priority | Serves | Status |
 |---|---|---|---|---|---|
-| UX-651 | [the spec's Part 32 block is two ids behind](UX-0651-the-spec-s-part-32-block-is-two-ids-behind.md) | docs | Medium | anyone reading the spec to find out what contracts bga has | 🔴 Open |
-| UX-652 | [the currency guard resolves to a day, and a day holds three rounds](UX-0652-the-currency-guard-resolves-to-a-day-and-a-day-holds-three-rounds.md) | docs | Medium | anyone trusting a document's currency marker | 🔴 Open |
-| UX-653 | [a contract bump rewrites the record of what it superseded](UX-0653-a-contract-bump-rewrites-the-record-of-what-it-superseded.md) | docs | Low | anyone reading a dated log entry as what was true that day | 🔴 Open |
-| UX-654 | [the vocabulary module still says nine hints](UX-0654-the-vocabulary-module-still-says-nine-hints.md) | viewer | Low | anyone reading format.js's docstring for the hint count | 🔴 Open |
-| UX-655 | [a contract bump landed one level below the key population](UX-0655-a-contract-bump-landed-one-level-below-the-key-population.md) | docs | Medium | anyone trusting the undocumented-key register | 🔴 Open |
-| UX-657 | [the priority column has no guard](UX-0657-the-priority-column-has-no-guard.md) | guards | Low | anyone who sorts the backlog by priority to decide what to do next | 🔴 Open |
 | UX-658 | [a ninth topic exists that no open row may carry](UX-0658-a-ninth-topic-exists-that-no-open-row-may-carry.md) | guards | Low | anyone filing a row and choosing what to put in its Topic cell | 🔴 Open |
 | UX-659 | [two superseded ids sit on a live line of the spec's registry](UX-0659-two-superseded-ids-sit-on-a-live-line.md) | contracts | Low | anyone reading Part 32's opening block for which Plane 2 contract bga writes | 🔴 Open |
 

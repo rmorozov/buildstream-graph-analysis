@@ -1,6 +1,6 @@
 # UX-657: the priority column has no guard, and three rows have drifted
 
-**Priority:** Low | **Status:** 🔴 Open | **Depends on:** UX-131 (which guarded the status column), UX-387 (one reading of a property, not two) | **Found by:** round 89, checking the rows round 88 wrote | **Serves:** anyone who sorts the backlog by priority to decide what to do next | **Topic:** guards
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-131 (which guarded the status column), UX-387 (one reading of a property, not two) | **Found by:** round 89, checking the rows round 88 wrote | **Serves:** anyone who sorts the backlog by priority to decide what to do next | **Topic:** guards
 
 ## Motivation
 

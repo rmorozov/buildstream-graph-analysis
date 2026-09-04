@@ -1,6 +1,6 @@
 # UX-651: the spec's Part 32 block is two ids behind the registry
 
-**Priority:** Medium | **Status:** 🔴 Open | **Depends on:** — | **Found by:** architecture review 16 | **Serves:** anyone reading the spec to find out what contracts `bga` has | **Topic:** docs
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — | **Found by:** architecture review 16 | **Serves:** anyone reading the spec to find out what contracts `bga` has | **Topic:** docs
 
 ## Motivation
 

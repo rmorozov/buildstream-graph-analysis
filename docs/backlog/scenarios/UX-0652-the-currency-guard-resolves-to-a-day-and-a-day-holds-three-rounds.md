@@ -1,6 +1,6 @@
 # UX-652: the currency guard resolves to a day, and a day holds three rounds
 
-**Priority:** Medium | **Status:** 🔴 Open | **Depends on:** UX-247, UX-604, UX-620 (the three rounds that built and narrowed this guard) | **Found by:** architecture review 16 | **Serves:** a reader deciding whether to trust `architecture.md` | **Topic:** docs
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-247, UX-604, UX-620 (the three rounds that built and narrowed this guard) | **Found by:** architecture review 16 | **Serves:** a reader deciding whether to trust `architecture.md` | **Topic:** docs
 
 ## Motivation
 

@@ -666,6 +666,63 @@ deserves an answer:
 | `BGA_STRICT_HINTS` | not an environment variable at all — a page global, set from the browser console, that makes the report complain about a number carrying no declared `bga:quantity` | `bga/viewer/format.js` |
 | `BGA_TIER_ANY` | set into the child environment by `make test-touching` and by the pre-commit selector, and read by nothing in this tree (`UX-630`) | `tools/dev_touching.py` |
 
+### `BST_TRACE_*` — Plane 2 and Plane 3 (`UX-635`)
+
+The capture path has a second namespace the same size, and until
+`UX-635` this table's population was as wide as the one prefix somebody
+typed into the guard. These are not `bga`'s own switches in the sense
+above: they are how `bga snapshot` drives the `bwrap` shim, the
+`LD_PRELOAD` hook and the ptrace spine, and most of them are set *for*
+you. The three kinds are separated because a reader needs to know which
+is which before touching any of them.
+
+**What you may set, driving a capture by hand:**
+
+| name | what it changes | where |
+|---|---|---|
+| `BST_TRACE_OPENS` | records `open()` as well as `exec`, forwarded into the sandbox by the shim. The `opens` half of Plane 2, and the more expensive half | `tools/native_trace/bwrap_shim.py` |
+| `BST_TRACE_SPINE` | turns the ptrace spine on for this element — Plane 3, which sees the processes `LD_PRELOAD` cannot | `tools/native_trace/bwrap_shim.py` |
+| `BST_TRACE_SPINE_POLICY` | `auto`, `on` or `off`; `auto` resolves per element against the census below rather than for the whole build | `tools/native_trace/bwrap_shim.py` |
+| `BST_TRACE_SPINE_CENSUS` | the census `auto` consults to decide whether this element is worth the spine's price | `tools/native_trace/bwrap_shim.py` |
+| `BST_TRACE_NO_INJECT` | `=1` runs the shim through to the real `bwrap` injecting nothing, so a refusal can be told from a capture defect. `bga snapshot --no-inject` sets it | `tools/native_trace/bwrap_shim.py` |
+| `BST_TRACE_DIAGNOSTICS` | a path the shim writes `bwrap`'s own stderr to, so a sandbox that refused says what it objected to | `tools/native_trace/bwrap_shim.py` |
+| `BST_TRACE_ARGV_MAX` | how much of a recorded `argv` is kept before truncation; the default is the shim's `DEFAULT_ARGV_RECORD_LIMIT` | `tools/native_trace/bwrap_shim.py` |
+
+**What the capture path sets for you.** Setting these by hand does not
+configure a capture, it desynchronises one — the tracer writes them
+into the child environment and the shim requires them:
+
+| name | what it is | where |
+|---|---|---|
+| `BST_TRACE_REAL_BWRAP` | the real `bwrap` the shim shadows and finally executes | `tools/bst_native_build_tracer.py` |
+| `BST_TRACE_BIND_SRC` | the host directory holding the hook and the spine | `tools/bst_native_build_tracer.py` |
+| `BST_TRACE_BIND_DST` | where that directory is bound inside the sandbox | `tools/bst_native_build_tracer.py` |
+| `BST_TRACE_PRELOAD_SO` | the hook's path *inside* the sandbox, for `LD_PRELOAD` | `tools/bst_native_build_tracer.py` |
+| `BST_TRACE_LOG_DST` | where the trace log lands inside the sandbox | `tools/bst_native_build_tracer.py` |
+| `BST_TRACE_LOG` | the same path as the hook and the spine read it | `tools/native_trace/bwrap_shim.py` |
+| `BST_TRACE_ELEMENT` | the element a record belongs to — the key Plane 1 joins on | `tools/native_trace/bwrap_shim.py` |
+| `BST_TRACE_INVOCATION` | which invocation of that element, so a retry is not merged into its first attempt | `tools/native_trace/bwrap_shim.py` |
+| `BST_TRACE_INVOCATION_LOG` | the host-side file the shim appends one line to per invocation | `tools/bst_native_build_tracer.py` |
+| `BST_TRACE_ARGV_LOG` | the host-side `argv` log, written only when argv recording is on | `tools/bst_native_build_tracer.py` |
+
+**What a test sets to reach a failure path.** The spine's degrade and
+refusal branches are unreachable on a machine that *has* `ptrace`, so
+these exist to reach them; `bwrap_shim.py` passes a fixed list of
+`BST_TRACE_*` through and none of these is on it:
+
+| name | what it forces | where |
+|---|---|---|
+| `BST_TRACE_SPINE_FAIL_SEIZE` | `PTRACE_SEIZE` fails, taking the branch every machine without `ptrace` takes | `tools/native_trace/spine.c` |
+| `BST_TRACE_SPINE_FAIL_CONT_AT` | a named restart site fails; the spine lists the known sites when the name is not one | `tools/native_trace/spine.c` |
+| `BST_TRACE_SPINE_DEGRADE_AFTER` | degrades after N events, which is `UX-117`'s hang reproduced on purpose | `tools/native_trace/spine.c` |
+| `BST_TRACE_SPINE_SELFTEST` | runs one self-test instead of a capture (`detach-signal`) | `tools/native_trace/spine.c` |
+
+The system variables `bga` merely *consumes* — `TMPDIR`,
+`XDG_CACHE_HOME`, `XDG_CONFIG_HOME`, `LD_PRELOAD`, `PATH`,
+`PYTHONPATH` — are deliberately not in this table. They are not this
+project's names, and a table that listed them would be describing the
+platform rather than the tool.
+
 ## `bga timeline` — one trace, both planes (`UX-188`, `UX-298`)
 
 ```bash

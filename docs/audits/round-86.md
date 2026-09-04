@@ -17,8 +17,11 @@ such:
 > that rule is wider than the claim, the guard does not fail — it goes
 > quiet.
 
-**Six of the eight items are that shape.** In three of them the
-narrowing was invisible to every other clause in the same file.
+**Six of the nine items are that shape**, and a seventh is the round
+committing it: `UX-635`'s own first cut derived its row parser from
+the scan's pattern, so halving the population halved the parser too
+and every clause passed. In four of them the narrowing was invisible
+to every other clause in the same file.
 
 ## Decomposition
 
@@ -27,7 +30,7 @@ narrowing was invisible to every other clause in the same file.
 | I (here) | `UX-597` → `UX-633` → `UX-634` | all three are the release contract; serial on one guard file |
 | K | `UX-628` → `UX-629` | both touch `bga/schemas.py` and the contract prose |
 | L | `UX-631` → `UX-632` | both touch `docs/contributing/fixing-guide.md` |
-| M | `UX-630` | disjoint: a guide section and a new guard |
+| M | `UX-630` → `UX-635` | disjoint: a guide section and a new guard. `UX-635` was added to the round by the repository's owner after `UX-630`'s track measured it and left it unfiled |
 
 Merge hotspots (`README.md`, `closed.md`, `tiers.py`) were the
 orchestrating session's, once, at the end — as
@@ -44,7 +47,7 @@ Six items, one table. The last column is what the over-broad rule hid.
 | `UX-631` | `_named` matched a filename against **the whole map** | 21 of 26 package modules were "answered" by another package's row — `bga/report/rate.py` by the word `rate` inside `generated` |
 | `UX-632` | `SITES` emptied in a mutation | the parametrized clauses collected nothing and reported as **skips**, not failures |
 | `UX-633` | a version floor at `0.3.0` | `v0.2.0`, which passed two of three clauses and failed only reachability — and any future unreachable tag |
-| `UX-635` (filed) | the inventory scans the `BGA_*` prefix | 21 `BST_TRACE_*` names in `bwrap_shim.py` that no `BGA_*` guard can see |
+| `UX-635` | the inventory scans the `BGA_*` prefix | 21 `BST_TRACE_*` names in `bwrap_shim.py` that no `BGA_*` guard can see |
 | `UX-636` (filed) | the contracts guard's *repaired* population is a frozen register | the 80 keys still in it, which the ratchet bounds but does not pay |
 
 The repair is the same move in each: **name the exclusion, and give the
@@ -88,6 +91,7 @@ population is not a gate.**
 | `UX-632` | the loop's cost derived by `dev_touching.py --spread`, written by `--write` | `test_the_cost_row_is_derived_from_the_selector.py` |
 | `UX-633` | one named exemption instead of a version floor | `test_a_release_records_a_contract_state.py` |
 | `UX-634` | step 8 publishes the release; the description is cut, not rewritten | `test_a_release_records_a_contract_state.py` |
+| `UX-635` | the scan reads a set of prefixes; `BST_TRACE_*`'s 21 names documented by kind | `test_the_environment_surface_is_an_inventory.py` |
 
 `UX-632` is the one to read twice. Wall-clock seconds have no local
 instrument (`UX-551`), so the figure three documents quoted was
@@ -110,17 +114,19 @@ That is the loop working on its first day.
   *validator* enforced and the replacement is one a *guard* enforces,
   which a consumer cannot check from the document alone. That is the
   price of not breaking what they already wrote.
-- **Four guards written this round did not discriminate on their first
+- **Five guards written this round did not discriminate on their first
   run** and are recorded in their task files — two in `UX-628`, one in
-  `UX-631`, one in `UX-632`. `UX-631`'s is the instructive one: the
+  `UX-631`, one in `UX-632`, one in `UX-635`. `UX-631`'s is the instructive one: the
   negative examples were saved by a `.py` suffix rather than by the
   scoping the clause was about, so the scoping was untested.
-- One mutation (`UX-634`'s N4) came back **green because the `sed` did
-  not apply**, and reddened on re-run. A mutation that appears not to
-  land is two hypotheses, not one.
+- **Two** mutations (`UX-634`'s N4, `UX-635`'s C1) came back **green
+  because the `sed` did not apply**, and reddened on re-run. A
+  mutation that appears not to land is two hypotheses, not one —
+  and `UX-635`'s C2, which *did* apply and was still green, is what
+  the other hypothesis looks like.
 
 ## The count
 
-Eight rows closed, four filed (`UX-633`, `UX-634`, `UX-635`,
+Nine rows closed, four filed (`UX-633`, `UX-634`, `UX-635`,
 `UX-636`), 634 in the backlog. Direction 10 — releases as contract states — is `landed`:
 the tags exist, a guard reads them, and step 8 publishes.

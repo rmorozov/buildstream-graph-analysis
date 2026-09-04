@@ -7,6 +7,9 @@ reads the tree.
 
 Measured when this was filed: eight names under `bga/` and `tools/`,
 six of them in no document outside `docs/backlog/` and `docs/audits/`.
+`UX-635` added the second namespace this scan could not see - 21
+`BST_TRACE_*` names, none documented anywhere a reader looks - and
+made the population a set of prefixes rather than one.
 
 Both directions, because a scan that finds nothing satisfies "every
 name is documented" and says so to no one.
@@ -24,9 +27,21 @@ GUIDE = REPO / "docs/guides/cli.md"
 #: too and a guard its own explanation satisfies checks nothing.
 SECTION = "## The environment `bga` reads"
 
-#: The namespace as it appears in source. A pattern and not a list, so
-#: a name added tomorrow is in the population without anyone adding it.
-NAME = re.compile(r"\bBGA_[A-Z0-9_]+\b")
+#: The namespaces, as they appear in source. `UX-635`: a **set**, not
+#: one prefix - `UX-630` scanned `BGA_` alone, and `BST_TRACE_*` is a
+#: second family the same size one namespace over, invisible to a guard
+#: whose population is as wide as the prefix somebody typed into it.
+#:
+#: What is deliberately *not* here: the system variables `bga` merely
+#: consumes (`TMPDIR`, `XDG_CACHE_HOME`, `LD_PRELOAD`, `PYTHONPATH`).
+#: They are not this project's names, and a table that lists them is
+#: describing the platform rather than the tool.
+PREFIXES = ("BGA_", "BST_TRACE_")
+
+#: A pattern and not a list, so a name added tomorrow is in the
+#: population without anyone adding it.
+NAME = re.compile(r"\b(?:%s)[A-Z0-9_]+\b"
+                  % "|".join(re.escape(p) for p in PREFIXES))
 
 #: Where a name may be introduced. Not `tests/`: a harness variable is
 #: the suite's own plumbing, and the acceptance this holds is about a
@@ -35,6 +50,13 @@ ROOTS = ("bga", "tools")
 
 #: A path claim inside a table cell: backticked, and with a suffix.
 CITED = re.compile(r"`([\w./-]+\.\w+)`")
+
+#: A row's first cell. Deliberately **not** derived from `NAME`: it
+#: reads any shouting name, so narrowing `PREFIXES` leaves the rows for
+#: the dropped namespace parsed and unmatched - which is what the stale
+#: clause below is for. Derived, the two sides would shrink together
+#: and a narrowed population would pass every clause in this file.
+ROW_NAME = re.compile(r"`([A-Z][A-Z0-9_]*_[A-Z0-9_]+)`")
 
 
 @functools.lru_cache(maxsize=1)
@@ -86,7 +108,7 @@ def _rows():
         if not line.startswith("|"):
             continue
         cells = [cell.strip() for cell in line.strip("|").split("|")]
-        first = re.fullmatch(r"`(BGA_[A-Z0-9_]+)`", cells[0])
+        first = ROW_NAME.fullmatch(cells[0])
         if first:
             rows[first.group(1)] = cells[-1]
     assert rows, f"no table rows under `{SECTION}` in {GUIDE.name}"

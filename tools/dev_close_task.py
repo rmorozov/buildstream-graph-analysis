@@ -150,14 +150,27 @@ def backlog_files():
 #: files came to say `🟢 Done Done`. `Fixed & Verified` is in the list
 #: because 54 files use it and it would double the same way; `Done\.?`
 #: because eight write a full stop.
-STATUS_WORDS = ("Not Started", "In Progress", "Fixed & Verified", "Done")
-_STATUS_WORD = re.compile(
-    r"(?: (?:" + "|".join(re.escape(w) for w in STATUS_WORDS) + r")\.?)*")
-_ONE_STATUS_WORD = re.compile(
-    r"(?:" + "|".join(re.escape(w) for w in STATUS_WORDS) + r")\.?")
+#:
+#: `UX-627`: the list is the tree's whole vocabulary, not the words that
+#: existed when it was written. `Open` arrived on 2026-09-03 and was not
+#: here, so seventeen rows closed to `🟢 Done Open` -
+#: `test_docs_links_and_commands.py` derives its cases from the tree so
+#: the next new word reddens rather than doubling.
+STATUS_WORDS = ("Not Started", "In Progress", "Fixed & Verified",
+                "Blocked / Deferred", "Blocked", "Deferred", "Open", "Done")
+
+
+def _alternation():
+    """The words as a regex alternation, longest first - `Blocked`
+    before `Blocked / Deferred` leaves `/ Deferred` standing."""
+    return "|".join(re.escape(word) for word in
+                    sorted(STATUS_WORDS, key=len, reverse=True))
+
+
+_STATUS_WORD = re.compile(r"(?: (?:" + _alternation() + r")\.?)*")
+_ONE_STATUS_WORD = re.compile(r"(?:" + _alternation() + r")\.?")
 _STATUS_LINE = re.compile(
-    r"\*\*Status:\*\* (\S+)((?: (?:"
-    + "|".join(re.escape(w) for w in STATUS_WORDS) + r")\.?)*)")
+    r"\*\*Status:\*\* (\S+)((?: (?:" + _alternation() + r")\.?)*)")
 
 
 def status_marker(text):
@@ -394,6 +407,11 @@ def _backlog_counts():
     natural order - write the row, derive, stage, commit - shipped the
     count one short four times in round 84, each costing a suite run.
     `--others --exclude-standard` is the untracked, non-ignored half.
+
+    `UX-622`: this is the one population. The sentence names it ("this
+    commit carries") and `test_a_counted_figure_is_derived.py` checks it
+    against the same one - reading the index there wrote a figure the
+    suite rejected until the new row was staged.
     """
     return {one: len(_backlog_paths(one)) + len(_untracked_backlog(one))
             for one in ("scenarios", "tasks")}

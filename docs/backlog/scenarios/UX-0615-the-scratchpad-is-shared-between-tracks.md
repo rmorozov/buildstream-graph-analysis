@@ -1,6 +1,6 @@
 # UX-615: the scratchpad is shared between tracks
 
-**Priority:** Low | **Status:** 🟢 Done Open | **Depends on:** UX-614 (the same launch step) | **Found by:** round 84, by the track it happened to | **Serves:** a round running tracks in parallel | **Topic:** guards
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-614 (the same launch step) | **Found by:** round 84, by the track it happened to | **Serves:** a round running tracks in parallel | **Topic:** guards
 
 ## Motivation
 

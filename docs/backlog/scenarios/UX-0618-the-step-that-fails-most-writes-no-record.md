@@ -1,6 +1,6 @@
 # UX-618: the step that fails most writes no record
 
-**Priority:** High | **Status:** 🟢 Done Open | **Depends on:** UX-554 (the namer), UX-589 (its provenance), UX-418 (the backstop) | **Found by:** round 84, after four rounds of bisecting a log tail | **Serves:** every session reading a red CI job | **Topic:** guards
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-554 (the namer), UX-589 (its provenance), UX-418 (the backstop) | **Found by:** round 84, after four rounds of bisecting a log tail | **Serves:** every session reading a red CI job | **Topic:** guards
 
 ## Motivation
 

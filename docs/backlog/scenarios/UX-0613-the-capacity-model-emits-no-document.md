@@ -1,6 +1,6 @@
 # UX-613: the capacity model emits no document
 
-**Priority:** Medium | **Status:** 🟢 Done Open | **Depends on:** UX-595 (which built it), UX-341 (the quantity rule that blocks it) | **Serves:** R4 and anyone wanting the model's answer in a pipeline | **Topic:** contracts
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-595 (which built it), UX-341 (the quantity rule that blocks it) | **Serves:** R4 and anyone wanting the model's answer in a pipeline | **Topic:** contracts
 
 ## Motivation
 

@@ -1,6 +1,6 @@
 # UX-625: reverting a mutation can discard the work
 
-**Priority:** Low | **Status:** 🔴 Open | **Depends on:** UX-560 (the track's recovery), UX-614 (the base check) | **Found by:** round 85, by the UX-621 track paying for it | **Serves:** a track falsifying its own guard | **Topic:** guards
+**Priority:** Low | **Status:** 🟢 Done Open | **Depends on:** UX-560 (the track's recovery), UX-614 (the base check) | **Found by:** round 85, by the UX-621 track paying for it | **Serves:** a track falsifying its own guard | **Topic:** guards
 
 ## Motivation
 

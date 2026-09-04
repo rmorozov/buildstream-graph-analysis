@@ -1,6 +1,6 @@
 # UX-613: the capacity model emits no document
 
-**Priority:** Medium | **Status:** 🔴 Open | **Depends on:** UX-595 (which built it), UX-341 (the quantity rule that blocks it) | **Serves:** R4 and anyone wanting the model's answer in a pipeline | **Topic:** contracts
+**Priority:** Medium | **Status:** 🟢 Done Open | **Depends on:** UX-595 (which built it), UX-341 (the quantity rule that blocks it) | **Serves:** R4 and anyone wanting the model's answer in a pipeline | **Topic:** contracts
 
 ## Motivation
 
@@ -61,25 +61,12 @@ $ jsonschema.validate(document, schemas.schema(CAPACITY_MODEL))   True
 
 ### The `rate_per_day` argument, re-checked
 
-`DIMENSIONS` before this item — five members, five dimensions, none T⁻¹:
-
-```text
-duration_us  time      bytes  memory   share  bounded fraction
-count        cardinality       ratio   unbounded multiplier
-```
-
-`duration_us` would render 400/day as "400 microseconds"; `count` has
-no denominator, which is what the model turns on; `ratio` is
-dimensionless, the defect `UX-341` removed with `seconds`. So
-`rate_per_day`, `events per unit time`, naming its time base because
-one dimension takes one unit. **M4 confirms it.**
-
-### The export budget: the earlier reading was wrong
-
-The Outcome this replaces said "the schema bundle grows **5,000 B**".
-It does not: the embedded bundle carries **`analyze/v5` only**, so a
-`capacity-model/v1` schema is never embedded. The earlier run appears
-to have read the *headroom* as the growth.
+`DIMENSIONS` before this item was five members over five dimensions,
+none of them T⁻¹ — `duration_us` would render 400/day as "400
+microseconds"; `count` has no denominator, which is what the model
+turns on; `ratio` is dimensionless, the defect `UX-341` removed with
+`seconds`. So `rate_per_day`, `events per unit time`, naming its time
+base because one dimension takes one unit. **M4 confirms it.**
 
 ### Mutations
 
@@ -101,8 +88,10 @@ parameter specifically, so the five-run store is censused, not skipped.
 
 ### The two export bounds, measured on the merge
 
-Measured at the gate on `20076f2^1` against `20076f2`, which is the
-tree that ships — the track's own figures were 42 B out on both, taken
+The Outcome this replaces said the bundle grows **5,000 B**; it does
+not — the bundle carries `analyze/v5` only, so that run read the
+*headroom* as the growth. Measured at the gate on `20076f2^1`
+against `20076f2`, the tree that ships — the track's own figures were 42 B out on both, taken
 on its branch before the round's other merges:
 
 ```text

@@ -1,6 +1,6 @@
 # UX-623: a track cannot read the tree it was copied from
 
-**Priority:** Low | **Status:** 🔴 Open | **Depends on:** UX-614 (the base instruction), UX-510 (the brief names its base) | **Found by:** round 85, measuring UX-614 | **Serves:** a track checking the base it was given | **Topic:** guards
+**Priority:** Low | **Status:** 🟢 Done Open | **Depends on:** UX-614 (the base instruction), UX-510 (the brief names its base) | **Found by:** round 85, measuring UX-614 | **Serves:** a track checking the base it was given | **Topic:** guards
 
 ## Motivation
 

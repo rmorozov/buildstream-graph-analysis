@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-617 scenarios: **11 open**, 606 closed.
+619 scenarios: **9 open**, 610 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -27,7 +27,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | cli | 0 | 21 |
 | store | 0 | 16 |
 | docs | 2 | 90 |
-| guards | 6 | 123 |
+| guards | 4 | 125 |
 
 ## Open scenarios
 
@@ -37,7 +37,6 @@ task file, which is the only place it ever lived twice.
 | ID | Scenario | Topic | Priority | Serves | Status |
 |---|---|---|---|---|---|
 | UX-597 | [three release rows and no tag](UX-0597-three-release-rows-and-no-tag.md) | docs | Low | anyone trying to check out a release this repository claims to have made | 🔴 Open |
-| UX-604 | [the verification-log clause reads the entry below it](UX-0604-the-verification-log-clause-reads-the-entry-below.md) | guards | Medium | the round whose log entry says nothing and passes | 🔴 Open |
 | UX-610 | [the verdict record is not a published key](UX-0610-the-verdict-record-is-not-a-published-key.md) | contracts | Medium | R4, the CI gatekeeper asked to defend a red gate from the payload alone | 🔴 Open |
 | UX-612 | [the start clock has no provenance](UX-0612-the-start-clock-has-no-provenance.md) | capture | High | anyone computing a duration from a capture's start | 🔴 Open |
 | UX-613 | [the capacity model emits no document](UX-0613-the-capacity-model-emits-no-document.md) | contracts | Medium | R4 and anyone wanting the model's answer in a pipeline | 🔴 Open |
@@ -45,8 +44,7 @@ task file, which is the only place it ever lived twice.
 | UX-615 | [the scratchpad is shared between tracks](UX-0615-the-scratchpad-is-shared-between-tracks.md) | guards | Low | a round running tracks in parallel | 🔴 Open |
 | UX-616 | [the coupling runs the other way too](UX-0616-the-coupling-runs-the-other-way-too.md) | docs | Medium | anyone adding a paragraph to the rules card | 🔴 Open |
 | UX-617 | [the derived count cannot see an unstaged row](UX-0617-the-derived-count-cannot-see-an-unstaged-row.md) | guards | Low | the session filing a row | 🔴 Open |
-| UX-618 | [the step that fails most writes no record](UX-0618-the-step-that-fails-most-writes-no-record.md) | guards | High | every session reading a red CI job | 🔴 Open |
-| UX-619 | [four small-tier failures nobody can name](UX-0619-four-small-tier-failures-nobody-can-name.md) | guards | High | every session whose PR goes red for no reason it can find | 🔴 Open |
+| UX-621 | [a drift-gate red nobody can read](UX-0621-a-drift-gate-red-nobody-can-read.md) | guards | Medium | a session reading a red tier-drift step | 🔴 Open |
 
 ## UX-563..UX-586: the eighty-second round — the documents, read against the tool (2026-09-03)
 

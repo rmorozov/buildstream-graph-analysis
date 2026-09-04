@@ -64,7 +64,7 @@ def enabled(stream=None) -> bool:
         # way to turn progress on without a terminal, so both sides of
         # that assertion were progress-off.
         #
-        # Deliberately not documented as a user-facing switch: it makes
+        # Documented (`UX-630`) as what it is rather than as a switch: it makes
         # `bga ... 2>file` write control characters into that file, and
         # the one thing `UX-183` is about is that nothing does. It loses
         # to `BGA_NO_PROGRESS` above, so the documented off-switch stays

@@ -823,4 +823,10 @@ MEDIUM = (
     # end. Single-process, twice: 2.13s on a quiet box, 1.91s here
     # under two parallel tracks - over the 1.0s floor on both.
     "tests/unit/test_the_start_clock_says_where_it_came_from.py",     #    2.1s
+    # `UX-632`, tiered on landing. One clause runs the selector over
+    # all 85 mapped modules to derive the spread the documents quote -
+    # 85 selections over 463 test files, `lru_cache`d to once per
+    # session (38.7s without it). Single-process here: 4.51s in that
+    # one call, 4.58s for the file.
+    "tests/unit/test_the_cost_row_is_derived_from_the_selector.py",   #    4.6s
 )

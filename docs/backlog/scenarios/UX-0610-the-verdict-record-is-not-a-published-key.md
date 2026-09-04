@@ -78,6 +78,9 @@ shape. Declared with `_PROVENANCE` — the same shape `analyze/v5`
 publishes a claim's chain in — under its own description, because these
 paths walk `compare/v2`.
 
+**Superseded 2026-09-04 by `UX-629`** — `required 15` is now 14, and
+*required-and-nullable* is now *permitted-and-always-written*. Below.
+
 ### Mutations verified red and reverted (7)
 
 | mutation | reddened |
@@ -119,3 +122,30 @@ that census, not by `make test-touching`, which does not select it.
 **The renderers are unchanged.** `ci_comment.py` and `text.py` still
 call `verdict_provenance(comparison)` rather than reading the new key —
 `UX-593`'s rendering, out of scope here.
+
+## Superseded by UX-629 (2026-09-04)
+
+Both figures above stay; this is what moved them (fixing guide §3.6).
+
+`schema(compare/v2)['required']` was **15** with `verdict_provenance`
+in it and is **14** without. Entering `required` under a live id
+stopped every `compare/v2` document written before this item from
+validating against the id its author pinned:
+
+```text
+a 14-key compare/v2 document written before UX-610, against compare/v2:
+  FAILS: 'verdict_provenance' is a required property
+```
+
+The key is *permitted-and-always-written* now — declared, listed in the
+schema's own `bga:always_written` so `--schema` states the choice, and
+guaranteed against the real payload by
+`tests/unit/test_a_required_set_grew_under_an_unchanged_id.py` rather
+than by `required`. The guarantee this item argued for is unchanged;
+only its holder moved, and `compare/v2` did not have to become
+`compare/v3`.
+
+The first mutation in the table above — *the key declared optional
+rather than required* — no longer reddens, because that is now the
+correct state. Its replacement is the key leaving `bga:always_written`,
+which reddens `…schema_declares_the_key` exactly as before.

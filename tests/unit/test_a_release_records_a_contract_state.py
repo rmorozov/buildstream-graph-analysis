@@ -20,6 +20,7 @@ until the day it mattered.
 import hashlib
 import pathlib
 import re
+import subprocess
 
 import pytest
 
@@ -330,6 +331,118 @@ class TestTheReleaseConsumesTheReview:
         assert "Carried findings" in text
         for finding in ("UX-245", "UX-246", "UX-247"):
             assert finding in text, f"{finding} is open and unnamed in the release"
+
+
+#: `UX-637`: a shallow clone answers reachability from a history that
+#: stops at a boundary, and says so to nobody. `UX-633` was filed, a
+#: user decision was taken and an exemption shipped on exactly that -
+#: `v0.2.0` read as unreachable here and reachable on CI, and CI was
+#: right. The clauses below refuse to conclude rather than conclude
+#: from a truncated history.
+def _shallow():
+    return _git("rev-parse", "--is-shallow-repository")[1] == "true"
+
+
+def _reaches(commit):
+    """Is `commit` an ancestor of `HEAD`? By the definition, not the
+    predicate: `merge-base` hands back a value the message can carry,
+    and `--is-ancestor` only an exit code."""
+    code, out = _git("merge-base", commit, "HEAD")
+    return (code == 0 and out == commit), (out or "no common ancestor")
+
+
+def _git(*argv):
+    done = subprocess.run(("git",) + argv, capture_output=True, text=True,
+                          cwd=REPO, timeout=60)
+    return done.returncode, done.stdout.strip()
+
+
+class TestEveryVersionedReleaseIsTagged:
+    """`UX-597`: step 8 of the release guide cuts a tag, and until this
+    round nothing read one - so it went unexecuted for three releases.
+
+    Reachability is a clause of its own because `UX-339` removed the
+    review log's commit column for exactly this: a ref that names a
+    commit no clone can reach is a ref that names one machine.
+    """
+
+    def _require_tags(self):
+        code, out = _git("tag", "--list", "v*")
+        if code != 0 or not out:
+            pytest.skip(
+                "this checkout carries no release tag, so there is nothing "
+                "to read; CI fetches them (the clause below holds that)")
+        return out.splitlines()
+
+    def test_ci_asks_for_the_tags_this_class_reads(self):
+        """Without `fetch-tags`, `actions/checkout` brings none, every
+        clause below skips, and the class is green on the one machine
+        that cannot check it - `UX-213`'s shape."""
+        workflow = (REPO / ".github/workflows/ci.yml").read_text(encoding="utf-8")
+        assert "fetch-tags: true" in workflow, (
+            "ci.yml's checkout does not ask for tags, so the release-tag "
+            "clauses skip on CI and guard nothing there")
+
+    def test_there_is_more_than_one_row_to_check(self):
+        """Non-vacuity: with one row the clauses below are one assertion
+        about one string, and an empty list passes all of them."""
+        assert len(_rows()) >= 2, (
+            f"only {len(_rows())} release row(s); the clauses below are "
+            f"not exercised")
+
+    def test_every_versioned_release_has_its_tag(self):
+        tags = set(self._require_tags())
+        missing = [row["version"] for row in _rows()
+                   if f"v{row['version']}" not in tags]
+        assert missing == [], (
+            f"release row(s) with no tag: {missing}. Release guide step 8 "
+            f"cuts `v<version>` on the commit that sets it")
+
+    def test_every_tag_names_the_commit_that_set_its_version(self):
+        self._require_tags()
+        wrong = []
+        for row in _rows():
+            tag = f"v{row['version']}"
+            code, text = _git("show", f"{tag}:pyproject.toml")
+            found = re.search(r'^version = "(.*)"', text, re.M)
+            if code != 0 or not found:
+                wrong.append(f"{tag}: no pyproject.toml at that commit")
+            elif found.group(1) != row["version"]:
+                wrong.append(
+                    f"{tag} names a commit whose pyproject.toml says "
+                    f"{found.group(1)}, not {row['version']}")
+        assert wrong == [], wrong
+
+    def test_every_release_tag_is_reachable_from_here(self):
+        """A tag on a commit this history cannot reach hands a reader
+        code that was never shipped (`UX-339`)."""
+        self._require_tags()
+        if _shallow():
+            pytest.skip(
+                "this checkout is shallow, so its history stops at a "
+                "boundary and reachability here is not the tree's answer")
+        unreachable = []
+        for row in _rows():
+            tag = f"v{row['version']}"
+            at = _git("rev-parse", f"{tag}^{{commit}}")[1]
+            reaches, base = _reaches(at)
+            if not reaches:
+                unreachable.append(f"{tag} -> {at} (merge-base: {base})")
+        assert unreachable == [], (
+            f"release tag(s) naming a commit no clone of this branch can "
+            f"reach: {unreachable}. Either the tag moves, or it joins "
+            f"UNREACHABLE_BY_DECISION with its reason")
+
+    def test_ci_asks_for_the_history_this_class_reads(self):
+        """`UX-637`: the clause above skips on a shallow clone, so the
+        machine that runs every commit must not have one. Without
+        `fetch-depth: 0` this class would be green everywhere and check
+        reachability nowhere - `UX-213`'s shape, one door along from the
+        `fetch-tags` clause above."""
+        workflow = (REPO / ".github/workflows/ci.yml").read_text(encoding="utf-8")
+        assert "fetch-depth: 0" in workflow, (
+            "ci.yml's checkout does not ask for the whole history, so the "
+            "reachability clause skips on CI and guards nothing there")
 
 
 if __name__ == "__main__":  # pragma: no cover

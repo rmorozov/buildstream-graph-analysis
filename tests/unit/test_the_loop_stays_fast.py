@@ -134,7 +134,7 @@ class TestTheSelectorStillSelects:
             f"{self.CEILING}, over a suite of {total} files")
 
     def test_the_wide_modules_are_named_and_not_merely_tolerated(self):
-        """The clause that makes a *new* wide module loud. These 21 are
+        """The clause that makes a *new* wide module loud. These 22 are
         wide because their names are what a test says to invoke them —
         116 files name `bga.cli` because they run the CLI — so the
         width is honest and the old ≤25 bound was the wrong shape. A

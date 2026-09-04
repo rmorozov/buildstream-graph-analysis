@@ -636,6 +636,93 @@ buy nothing beyond what completion already gives. Recorded as considered
 and declined, revisitable if argcomplete cannot complete something users
 need.
 
+## The environment `bga` reads (`UX-630`)
+
+`bga --help` cannot list an environment variable — which is the reason
+`bga/report/rate.py` gives for choosing one — so this table is the
+inventory instead. Its population is derived from `bga/` and `tools/`
+rather than from the parser, by
+`tests/unit/test_the_environment_surface_is_an_inventory.py`: a name
+added tomorrow with no flag beside it appears here, or that guard is
+red.
+
+What you can set:
+
+| name | what it changes | where |
+|---|---|---|
+| `BGA_INTERRUPT_GRACE_SECONDS` | seconds a wrapped `bst` gets to stop by itself after `SIGINT` before `bga` escalates; 300 by default, and raising it is how a big build keeps the `queue_summary` written during that shutdown | `tools/bst_run_wrapped.py` |
+| `BGA_NO_PROGRESS` | suppresses the in-phase progress line even on a terminal — the same off-switch as `bga snapshot --no-progress` | `bga/progress.py` |
+| `BGA_RATE` | adds the *In Your Units* block to `bga analyze` and `bga whatif`, converting build seconds at `<amount> <unit>/machine-hour` (or `/build-hour`). Unset, nothing is converted and no block is printed; malformed, the block says why rather than staying silent | `bga/report/rate.py` |
+| `BGA_REQUESTED_AT` | the ISO-8601 instant a capture publishes as `requested_at_us`, and the `queue_wait_us` it derives from that. `CI_PIPELINE_CREATED_AT` is the fallback, and the published `requested_at_source` says which was used | `tools/_run_context_common.py` |
+| `BGA_TRACE_PROCESSOR` | the Perfetto `trace_processor_shell` the canned-question runner uses, ahead of `PATH` and ahead of the pinned download | `tests/trace_processor.py` |
+
+Three more names sit in the same namespace and are **not** switches to
+use. They are listed because a reader who greps the tree finds them and
+deserves an answer:
+
+| name | what it is | where |
+|---|---|---|
+| `BGA_FORCE_PROGRESS` | draws the progress line onto a pipe, so a test can compare a run with progress genuinely on against one with it off. Deliberately not a user-facing switch: it writes control characters into a redirected stderr, which is the one thing `UX-183` exists to prevent | `bga/progress.py` |
+| `BGA_STRICT_HINTS` | not an environment variable at all — a page global, set from the browser console, that makes the report complain about a number carrying no declared `bga:quantity` | `bga/viewer/format.js` |
+| `BGA_TIER_ANY` | set into the child environment by `make test-touching` and by the pre-commit selector, and read by nothing in this tree (`UX-630`) | `tools/dev_touching.py` |
+
+### `BST_TRACE_*` — Plane 2 and Plane 3 (`UX-635`)
+
+The capture path has a second namespace the same size, and until
+`UX-635` this table's population was as wide as the one prefix somebody
+typed into the guard. These are not `bga`'s own switches in the sense
+above: they are how `bga snapshot` drives the `bwrap` shim, the
+`LD_PRELOAD` hook and the ptrace spine, and most of them are set *for*
+you. The three kinds are separated because a reader needs to know which
+is which before touching any of them.
+
+**What you may set, driving a capture by hand:**
+
+| name | what it changes | where |
+|---|---|---|
+| `BST_TRACE_OPENS` | records `open()` as well as `exec`, forwarded into the sandbox by the shim. The `opens` half of Plane 2, and the more expensive half | `tools/native_trace/bwrap_shim.py` |
+| `BST_TRACE_SPINE` | turns the ptrace spine on for this element — Plane 3, which sees the processes `LD_PRELOAD` cannot | `tools/native_trace/bwrap_shim.py` |
+| `BST_TRACE_SPINE_POLICY` | `auto`, `on` or `off`; `auto` resolves per element against the census below rather than for the whole build | `tools/native_trace/bwrap_shim.py` |
+| `BST_TRACE_SPINE_CENSUS` | the census `auto` consults to decide whether this element is worth the spine's price | `tools/native_trace/bwrap_shim.py` |
+| `BST_TRACE_NO_INJECT` | `=1` runs the shim through to the real `bwrap` injecting nothing, so a refusal can be told from a capture defect. `bga snapshot --no-inject` sets it | `tools/native_trace/bwrap_shim.py` |
+| `BST_TRACE_DIAGNOSTICS` | a path the shim writes `bwrap`'s own stderr to, so a sandbox that refused says what it objected to | `tools/native_trace/bwrap_shim.py` |
+| `BST_TRACE_ARGV_MAX` | how much of a recorded `argv` is kept before truncation; the default is the shim's `DEFAULT_ARGV_RECORD_LIMIT` | `tools/native_trace/bwrap_shim.py` |
+
+**What the capture path sets for you.** Setting these by hand does not
+configure a capture, it desynchronises one — the tracer writes them
+into the child environment and the shim requires them:
+
+| name | what it is | where |
+|---|---|---|
+| `BST_TRACE_REAL_BWRAP` | the real `bwrap` the shim shadows and finally executes | `tools/bst_native_build_tracer.py` |
+| `BST_TRACE_BIND_SRC` | the host directory holding the hook and the spine | `tools/bst_native_build_tracer.py` |
+| `BST_TRACE_BIND_DST` | where that directory is bound inside the sandbox | `tools/bst_native_build_tracer.py` |
+| `BST_TRACE_PRELOAD_SO` | the hook's path *inside* the sandbox, for `LD_PRELOAD` | `tools/bst_native_build_tracer.py` |
+| `BST_TRACE_LOG_DST` | where the trace log lands inside the sandbox | `tools/bst_native_build_tracer.py` |
+| `BST_TRACE_LOG` | the same path as the hook and the spine read it | `tools/native_trace/bwrap_shim.py` |
+| `BST_TRACE_ELEMENT` | the element a record belongs to — the key Plane 1 joins on | `tools/native_trace/bwrap_shim.py` |
+| `BST_TRACE_INVOCATION` | which invocation of that element, so a retry is not merged into its first attempt | `tools/native_trace/bwrap_shim.py` |
+| `BST_TRACE_INVOCATION_LOG` | the host-side file the shim appends one line to per invocation | `tools/bst_native_build_tracer.py` |
+| `BST_TRACE_ARGV_LOG` | the host-side `argv` log, written only when argv recording is on | `tools/bst_native_build_tracer.py` |
+
+**What a test sets to reach a failure path.** The spine's degrade and
+refusal branches are unreachable on a machine that *has* `ptrace`, so
+these exist to reach them; `bwrap_shim.py` passes a fixed list of
+`BST_TRACE_*` through and none of these is on it:
+
+| name | what it forces | where |
+|---|---|---|
+| `BST_TRACE_SPINE_FAIL_SEIZE` | `PTRACE_SEIZE` fails, taking the branch every machine without `ptrace` takes | `tools/native_trace/spine.c` |
+| `BST_TRACE_SPINE_FAIL_CONT_AT` | a named restart site fails; the spine lists the known sites when the name is not one | `tools/native_trace/spine.c` |
+| `BST_TRACE_SPINE_DEGRADE_AFTER` | degrades after N events, which is `UX-117`'s hang reproduced on purpose | `tools/native_trace/spine.c` |
+| `BST_TRACE_SPINE_SELFTEST` | runs one self-test instead of a capture (`detach-signal`) | `tools/native_trace/spine.c` |
+
+The system variables `bga` merely *consumes* — `TMPDIR`,
+`XDG_CACHE_HOME`, `XDG_CONFIG_HOME`, `LD_PRELOAD`, `PATH`,
+`PYTHONPATH` — are deliberately not in this table. They are not this
+project's names, and a table that listed them would be describing the
+platform rather than the tool.
+
 ## `bga timeline` — one trace, both planes (`UX-188`, `UX-298`)
 
 ```bash
@@ -787,9 +874,59 @@ bga analyze --schema
 bga compare --schema | jq '.required'
 ```
 
-**The versioning rule**: a field rename or removal bumps the version; an
-addition does not. Pin `analyze/v5` and your consumer keeps working
-while the tool grows.
+**The versioning rule**: a field rename or removal bumps the version —
+and so does a key entering `required` under a live id (`UX-629`),
+because the document you wrote last week stops validating against the
+id you pinned. A *permitted* addition does not, so pin `analyze/v5` and
+your consumer keeps working while the tool grows.
+
+A key the tool writes on **every** document is therefore declared
+permitted rather than required, and named in the schema's own
+`bga:always_written` — so `--schema` tells you the difference between
+*may be here* and *is always here*, and the guarantee is held against
+the real payload instead of by validation:
+
+```bash
+bga compare --schema | jq '."bga:always_written"'   # ["verdict_provenance"]
+```
+
+`compare/v2`'s `verdict_provenance` is the worked example. `UX-610`
+made it required under an unmoved id, taking the required set from 14
+to 15, and every `compare/v2` document written before it stopped
+validating; it is permitted-and-always-written now, so those documents
+validate again and the id did not have to move.
+
+### Which keys the prose names, and which it does not (`UX-628`)
+
+`--schema` is the complete key list. The *documents* are not, and this
+says how far they go, because five keys once shipped in one window with
+nothing outside the backlog naming any of them — `verdict_provenance`
+on `compare/v2`, `queue_wait_us` and `queue_wait_absent_reason` on
+`store/v1`, `requested_at_us` and `requested_at_source` on
+`run-context/v9`.
+
+The guard that was supposed to stop that had contract **ids** for a
+population, so it could not see a key. It has keys now: the printable
+contracts' *consumer surface* — each schema's top-level properties plus
+the properties of a row directly under a top-level array, since a row
+of `store/v1`'s `snapshots` is what you actually read. That surface was
+199 keys when this was written, 84 of them named in no document outside
+`docs/backlog/` and `docs/audits/`; naming the five above left
+**80 undocumented keys**, which is the figure the guard holds and this
+sentence is checked against.
+
+So the honest statement of coverage, rather than a promise nobody
+keeps:
+
+- a key added to a printable schema **after** this sentence has prose
+  or the guard reddens naming it;
+- the 84 already undocumented are a frozen register in that guard,
+  which may only shrink — the debt is counted, not hidden, and
+  documenting it is separate work;
+- `run-context/v9`, `graph/v9` and `trace/v9` are **not covered at
+  all**. They are stamped by whatever produced the capture, `bga` only
+  reads them, and there is no JSON Schema here to enumerate — so
+  `requested_at_us` and `requested_at_source` are held by prose alone.
 
 A section subcommand (`bga floors`, `bga graph`, …) emits the same
 `analyze/v5` document restricted to its own keys, with a `section` key

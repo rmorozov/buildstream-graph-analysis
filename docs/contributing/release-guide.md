@@ -104,7 +104,14 @@ no meaning, and this repository has spent thirty rounds refusing those.
 7. **Carry the review's open findings.** Any finding the review filed
    that is still open is named in the head, so "we knew" is on the
    record rather than in someone's memory.
-8. **Tag** `v<version>` on the release commit.
+8. **Tag** `v<version>` on the release commit, and **publish it**: a
+   GitHub release whose description is step 5's head, **cut from
+   `CHANGELOG.md` rather than written again**. `UX-252`'s rule holds
+   here as it does for the body — a second copy of a paragraph drifts
+   from the first, and the tree's copy is the one guards read. The
+   head runs from the section's title to its `**Contract delta:**`
+   line; everything below that is the body, and the release links to
+   the section rather than repeating it.
 
 ## What a release does not do
 

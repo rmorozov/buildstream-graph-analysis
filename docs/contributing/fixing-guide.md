@@ -56,7 +56,7 @@ For every task, before marking it done:
 
 1. Run the exact command(s) given in the task's **Acceptance Test** section.
 2. Paste the actual command and actual output into the task file's **Verification Log** section (append, don't overwrite prior entries).
-3. **While you work, run the tests that touch what you changed** (`UX-336`): `make test-touching` maps the working diff to the test files that name it - measured at 4s on a one-module diff. Wider than one module, run the tier (`UX-238`). Every target runs `-n auto`. **The suite's wall clock is a property of the machine, not of the suite** (`UX-551`), so budget a round against the spread and not a figure:
+3. **While you work, run the tests that touch what you changed** (`UX-336`): `make test-touching` maps the working diff to the test files that name it - 11-125 of 464 test files, median 17, over every module the map names, not the seconds one machine spent on one of them (`UX-632`). `python3 tools/dev_touching.py --spread --write` is the only thing that writes that figure. Wider than one module, run the tier (`UX-238`). Every target runs `-n auto`. **The suite's wall clock is a property of the machine, not of the suite** (`UX-551`), so budget a round against the spread and not a figure:
 
 ```text
 round 46   3m15s                                     4 cores
@@ -71,7 +71,7 @@ Round 80's 8m52s is **not reproducible on the tree that produced it**: the same 
 
    | target | measured at `-n auto` | what is in it |
    |---|---|---|
-   | `make test-touching` | **4s** on a one-module diff | the test files that name what your diff touched |
+   | `make test-touching` | 11-125 of 464 test files, median 17 | the test files that name what your diff touched |
    | `make test-small` | **20s** | pure Python over in-memory fixtures — the default tier |
    | `make test-medium` | ~2m50s | spawns a process or a node harness |
    | `make test-large` | ~2m05s | scale fixtures, real process trees |
@@ -99,7 +99,7 @@ Round 80's 8m52s is **not reproducible on the tree that produced it**: the same 
    `tests/test_e2e.py` is also directly runnable without pytest (`PYTHONPATH=. python3 tests/test_e2e.py`) if you want the fastest possible sanity check, but prefer the full `pytest tests/ -v` run before marking anything 🟢 — it now also covers `tests/test_cli.py` and `tests/test_synthetic_multi_subproject.py` (a larger multi-subproject fixture; see `docs/backlog/tasks/P3-10-synthetic-multi-subproject-large-test.md`), both of which the single e2e script does not run. Tests marked `xfail` (a handful, each pointing at the specific task file that will fix them) are expected — only genuinely new failures are regressions.
 5. Only then: update the status cell in the tracker (`docs/backlog/progress-tracker.md` or `docs/backlog/scenarios/README.md`) to 🟢, and update the task file's own status line. **Both, in the same commit.** These are two hand-maintained copies of one fact and they have drifted in three separate rounds — round 11 found a row 🟢 over a 🔴 file, round 12 found row wording drift, round 13 found *five* rows 🔴 over files that were 🟢 with full verification logs, because the closing commit of a range never touched the table. `tests/unit/test_docs_links_and_commands.py::test_the_table_status_matches_the_task_files` now compares the two markers and fails naming the item, so this one is caught rather than trusted (`UX-131`).
 6. **If your fix changes a number, a mechanism or an explanation an earlier task file presents as current, annotate that file in the same commit.** Not a rewrite — the old figure stays, with one line naming what changed it and when, the way `UX-118` annotated `UX-106`'s superseded explanation: *"a wrong explanation that was believed for a while is worth being able to recognise again"*. `UX-123`'s exec-chain collapse moved `examples/06` from 822 processes to 813 and left three earlier files describing a parser that no longer exists; a later task then quoted 822 fresh, because the convention lived only where one author remembered it. `git grep <old figure> docs/backlog/scenarios` before you commit. This one is judgment-shaped and cannot be a hard test — it is a checklist item precisely because of that (`UX-132`). **It covers mechanisms, not only figures** (`UX-144`), and the precedent `UX-132` itself cites is a mechanism: `UX-118` annotated `UX-106`'s superseded *explanation*. The scope was written as "a number" and the very next range showed why that is too narrow — `UX-130` deleted `UX-118`'s entire seen-set (`g_seen`/`first_stop_for`/`forget_pid`) and `UX-128`'s `initial` restart site, leaving both files describing code that no longer exists, including the worked example the convention was built on. `git grep` the removed identifier as well as the old figure.
-7. **If your fix renames or removes a key in a published JSON output, bump that output's schema version.** `analyze/v5`, `compare/v2` and `blast/v2` (`bga/schemas.py`, spec Part 32.5) are what a consumer pins; `test_the_process_documents_derive_their_figures.py` reads the three ids off `schemas.py` so this sentence cannot age. The first bump was `UX-288`, which took the report to `analyze/v2` by removing three fields that republished element membership. Adding a key is not a breaking change and does not bump — the schemas set `additionalProperties: true` for exactly that reason — but a rename is, and the round-19 range shipped one (`runs_outside_band` → `edges_outside_band`) with nothing to signal it, which is what `UX-190` was filed against. `tests/unit/test_output_schemas.py` catches a removal; `ANALYZE_FULL_KEYS` catches a rename of an `analyze` key the schema cannot mark required.
+7. **If your fix renames or removes a key in a published JSON output, bump that output's schema version.** `analyze/v5`, `compare/v2` and `blast/v2` (`bga/schemas.py`, spec Part 32.5) are what a consumer pins; `test_the_process_documents_derive_their_figures.py` reads the three ids off `schemas.py` so this sentence cannot age. The first bump was `UX-288`, which took the report to `analyze/v2` by removing three fields that republished element membership. Adding a *permitted* key is not a breaking change and does not bump — the schemas set `additionalProperties: true` for exactly that reason — but a key entering **`required`** under a live id **is** (`UX-629`): a document a consumer already wrote stops validating, which is a break by the only reading a consumer has. A key the emitter writes on every document therefore lands permitted-and-always-written — declared in the schema's own `bga:always_written` so `--schema` states the choice, and guaranteed against the real payload by a guard rather than by `required`. A rename is a break too, and the round-19 range shipped one (`runs_outside_band` → `edges_outside_band`) with nothing to signal it, which is what `UX-190` was filed against. `tests/unit/test_output_schemas.py` catches a removal; `ANALYZE_FULL_KEYS` catches a rename of an `analyze` key the schema cannot mark required.
 
 8. **Does this change which roles are served, or how well? Then `docs/design/roles.md`'s table changes in the same commit.** The gap analysis round 27 wrote — four roles served thoroughly, four barely — only stays true if the tracing is routine (`UX-231`). A new direction carries a `Serves:` line at birth; a new filing carries one in its header.
 
@@ -155,9 +155,14 @@ Rules to prevent a repeat:
 Regenerated by `UX-239`; a guard
 (`tests/unit/test_the_context_map_is_the_tree.py`) fails if a module
 appears here that does not exist, or exists and does not appear — over
-`git ls-files`, recursively under `tools/` (Python, C, shell) and into
-`bga/viewer/` (`UX-573`), because a non-recursive walk left the
-LD_PRELOAD hook and the ptrace spine off the map and the guard green. The
+`git ls-files`, recursively under `tools/` (Python, C, shell), into
+`bga/viewer/` (`UX-573`) and into each `bga/` package (`UX-631`),
+because a non-recursive walk left the LD_PRELOAD hook and the ptrace
+spine off the map and the guard green, and a package standing in for
+its own files gave every module inside it a home for free — 21 of the
+26 were on no row. A module is named by its filename **on its
+directory's row**: the rule was a substring of the whole map, which
+`bga/report/rate.py` satisfied through the `rate` inside `generated`. The
 previous version described a tree from the repository's first week —
 it said `tests/test_e2e.py   only existing test file` when
 `tests/unit/` alone held 218 — which is worse than no map, because it
@@ -166,17 +171,17 @@ was confidently wrong exactly where confidence had been requested.
 **The pipeline** — one run in, one analysis out:
 
 ```text
-bga/ingest/            JSON loading, dataclasses (models.py), loader
-bga/normalize/         timestamp quantization, ordering validation
-bga/occupancy/         sweep-line occupancy, task horizon
-bga/graph/             EDG: depth, reachability, dominators, critical path (edg.py)
-bga/attribution/       blame chain, dependency gate, resource/scheduler wait
-bga/replay/            deterministic replay scheduler, capacity sweep
-bga/utilisation/       CPU buckets, oversubscription
-bga/diagnostics/       wall-clock share, blast radius, criticality, leaf analysis
-bga/structural/        cold/structural analysis, networkx-based
-bga/floors/            the certified floors
-bga/validation/        the hard and soft gates
+bga/ingest/            loader.py, models.py - JSON loading and dataclasses
+bga/normalize/         timestamps.py - quantization and ordering validation
+bga/occupancy/         sweep.py - sweep-line occupancy, task horizon
+bga/graph/             edg.py - EDG: depth · reachability · dominators · critical path
+bga/attribution/       blame_chain.py - blame chain, dependency gate, resource/scheduler wait
+bga/replay/            scheduler.py - deterministic replay and the capacity sweep
+bga/utilisation/       detection.py - CPU buckets and oversubscription
+bga/diagnostics/       analyzer.py - wall-clock share · blast radius · criticality · leaf analysis
+bga/structural/        analyzer.py, batching.py, consolidation.py, models.py, serialization_points.py - networkx-based cold/structural analysis
+bga/floors/            capacity.py, cold.py, observed.py, serialization.py - the certified floors
+bga/validation/        determinism.py, invariants.py, provenance.py - the hard and soft gates
 bga/analyzer.py        orchestrator - wires every stage together, BuildEfficiencyAnalyzer
 ```
 
@@ -188,7 +193,7 @@ bga/provenance.py      why each claim is made: evidence refs, rule, trace query 
 bga/schemas.py         every published contract + view-hints; `--schema` prints from here
 bga/contracts.py       the derived inventory of every contract, printable or not (UX-248)
 bga/producer.py        which build wrote an artifact, and the contract set it had (UX-249)
-bga/report/            text.py, json.py, ci_comment.py - renderers, no analysis
+bga/report/            text.py, json.py, ci_comment.py - renderers · _shared.py the section names they share · rate.py converts build seconds into the reader's unit (UX-596)
 --format               text, json, csv, ci-comment - what a run can be asked for
 ```
 

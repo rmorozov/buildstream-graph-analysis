@@ -1472,6 +1472,7 @@ the other rounds now:
 | [83](../audits/round-83.md) | round 82's twenty-four rows executed, most of them not "correct a sentence" but "give the sentence a guard and let the correction follow" — the `UX-549` shape (a figure the guard derives) and the `UX-511` shape (a block labelled with its date and its cuts), extended to where round 82 found them missing (`UX-563`..`UX-586`) |
 | [84](../audits/round-84.md) | the fifteen rows round 83 filed rather than fixed, seven tracks wide — and the round where a filed premise is re-measured before it is implemented, because `UX-589`'s was false and `UX-592` had already refuted it (`UX-589`..`UX-604`) |
 | [85](../audits/round-85.md) | the rows round 84 left, plus the seven the round filed against its own work and six from architecture review 15 — and the round where a premise **carried forward** is a sentence again: seven of nineteen moved under re-measurement, five of them written by the orchestrating session from another track's report (`UX-604`..`UX-627`) |
+| [86](../audits/round-86.md) | the rows round 85 left and the three this round filed — and the round where every item turned out to be one shape: **a guard's population is bounded by a rule somebody typed**, and where that rule is wider than the claim the guard goes quiet rather than failing. Six of eight, plus the session's own undeclared skip reason (`UX-597`..`UX-635`) |
 
 ## Verification Log
 
@@ -1492,7 +1493,7 @@ when it moved — and, through the store, R1 and R7, whose questions are
 answered by comparing this build against builds an *older* `bga`
 measured.
 
-**Status:** partial — items 1-4 landed (`CHANGELOG.md`, three release rows, the generated body, `UX-241`'s review gate); item 5's tag is uncut — `git tag` answers 0 against those three rows — `UX-597`.
+**Status:** landed — `CHANGELOG.md`, three release rows, the generated body, `UX-241`'s review gate, and the tags. `UX-597` cut `v0.3.0` and `v0.4.0` and a guard reads them; `UX-634` made step 8 publish the release rather than only tag it; `UX-633` turned out to be no defect at all — all three tags are ordinary release tags, and the row that said otherwise was read off a truncated history, which its own file now records.
 
 `bga` is unusual among analysis tools in one way that matters here:
 **it reads its own past output as input.** `@last`/`@prev`, the

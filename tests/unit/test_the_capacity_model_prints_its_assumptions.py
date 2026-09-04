@@ -290,14 +290,24 @@ class TestTheReader:
         assert _capacity(project, "4,400") == EXIT_CODE_MISMATCHED_RUNS
         assert "host classes" in capsys.readouterr().out
 
-    def test_json_is_refused_rather_than_emitted_unstamped(self, tmp_path,
-                                                           capsys):
-        """`UX-190`: an unversioned payload is the drift, so the model
-        prints and says why it does not publish."""
+    def test_json_emits_a_stamped_contract(self, tmp_path, capsys):
+        """`UX-613`: what `UX-190` asked for is a stamp, not silence, so
+        the refusal retires the moment the document has one."""
+        from bga import schemas
         from tools.bga_snapshot import _capacity
 
-        assert _capacity(_store(tmp_path, SAMPLES), "4,400", "json") == 2
-        assert "UX-190" in capsys.readouterr().err
+        assert _capacity(_store(tmp_path, SAMPLES), "4,400", "json") == 0
+        out = capsys.readouterr().out
+        document = json.loads(out)
+        assert list(document)[0] == "schema", (
+            "the stamp is not the first key a truncated read would see: "
+            f"{list(document)[:3]}")
+        assert document["schema"] == schemas.CAPACITY_MODEL
+        assert document["host_classes"][0]["answers"], (
+            "a stamped document with no figures in it")
+        jsonschema = pytest.importorskip("jsonschema")
+        jsonschema.validate(document,
+                            schemas.schema(schemas.CAPACITY_MODEL))
 
 
 if __name__ == "__main__":  # pragma: no cover

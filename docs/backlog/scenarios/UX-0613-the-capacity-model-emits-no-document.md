@@ -47,76 +47,81 @@ member is what this item owes.
 
 ## Outcome
 
-**Not implemented. Built, measured green, and reverted** — one required
-edit falls in a file another track owned this round. Everything below
-was run against a real tree; nothing here is estimated.
-
-### The argument for `rate` holds
-
-`UX-341`'s rule is stated as data — `DIMENSIONS[member] -> dimension`,
-and no two members may share a dimension. A rate has dimension T⁻¹,
-which none of the five measures:
+**Implemented.** `capacity-model/v1` is stamped, emitted and answered
+for. Every figure below was run on this tree.
 
 ```text
-duration_us  time                  a length of time; 400/day would
-                                   render "400 microseconds"
-count        cardinality           no denominator, and the denominator
-                                   is what the model turns on
-ratio        unbounded multiplier  dimensionless; declaring a
-                                   dimensioned value dimensionless is
-                                   what UX-341 removed with `seconds`
-```
-
-The member must name its time base — `UX-341`'s other half is one unit
-per dimension, and a bare `rate` would let builds/day and builds/hour
-both be `rate`. So `rate_per_day`, dimension `events per unit time`;
-a later `rate_per_hour` reddens the dimension guard, which is the
-property working.
-
-### What it was measured to cost
-
-```text
-$ bga snapshot --capacity 4,400 --format json   exit 0
-{"schema": "capacity-model/v1", "project": …, "builders": 4,
- "arrivals_per_day": 400.0, "excluded_runs": 0, "host_classes": [ … ]}
+$ bga snapshot --project … --capacity 4,400 --format json    exit 0
+  {"schema": "capacity-model/v1", "project": …, "builders": 4,
+   "arrivals_per_day": 400.0, "excluded_runs": 0, "host_classes": […]}
 $ bga snapshot --capacity --schema
   title "bga snapshot --capacity N,RATE --format json"
-$ jsonschema.validate(document, schema(CAPACITY_MODEL))   True
+$ jsonschema.validate(document, schemas.schema(CAPACITY_MODEL))   True
 ```
 
-Eleven surfaces, all green together: `bga/schemas.py` (the member and
-a 7-key contract, +198), `bga/viewer/format.js` (renderer case and
-`UNIT_SUFFIX`), `bga/capacity_model.py` (the stamp, first key),
-`tools/bga_snapshot.py` (emit instead of refuse), `bga/cli.py`
-(`_SCHEMA_BY_FLAG`), `test_every_number_says_what_it_is.py`
-(`CONTRACT_RUNS` + a five-run store, since three is under
-`MIN_BASELINE_RUNS`), `docs/README.md` (two counts and a row),
-`docs/spec/specification.md` §32.5 (a row and "all nine schemas"),
-`CHANGELOG.md` ("twenty-four published contracts"),
-`test_the_capacity_model_prints_its_assumptions.py` (the refusal guard
-it retires), and `test_the_report_you_can_attach.py`: the schema
-bundle grows **5,000 B**, taking golden to 420,087 B over its stated
-420,000 and `macro_micro` to 470,104 over 470,000.
+### The `rate_per_day` argument, re-checked
 
-### Why it was reverted
+`DIMENSIONS` before this item — five members, five dimensions, none T⁻¹:
 
 ```text
-$ pytest test_the_process_documents_derive_their_figures.py
-E docs/contributing/release-guide.md does not carry the figure the
-  tree gives: ['summary of fifteen live contracts']
-E these count a population the tree changes, and nothing derives them:
-  release-guide.md: 'fourteen live contracts'
+duration_us  time      bytes  memory   share  bounded fraction
+count        cardinality       ratio   unbounded multiplier
 ```
 
-A new live contract forces `fourteen -> fifteen` in
-`docs/contributing/release-guide.md`. That path was another track's
-this round, and there is no way to add a stamped contract without it:
-`_live_contracts()` is `contracts.ids()` minus the superseded, and the
-sentence is derived from it. Landing the rest would have left `make
-test` red on two clauses at the batch gate.
+`duration_us` would render 400/day as "400 microseconds"; `count` has
+no denominator, which is what the model turns on; `ratio` is
+dimensionless, the defect `UX-341` removed with `seconds`. So
+`rate_per_day`, `events per unit time`, naming its time base because
+one dimension takes one unit. **M4 confirms it.**
+
+### The export budget: the earlier reading was wrong
+
+The Outcome this replaces said "the schema bundle grows **5,000 B**".
+It does not: the embedded bundle carries **`analyze/v5` only**, so a
+`capacity-model/v1` schema is never embedded. The guard's own
+`export` + `_embedded` split, before and after:
+
+```text
+              total                 page                data
+golden        419,933 -> 420,087    304,281 -> 304,382   115,652 -> 115,705
+macro_micro   469,950 -> 470,104    304,281 -> 304,382   165,669 -> 165,722
+```
+
+**+154 B: +101 B page, +53 B data.** The page half is
+`bga/viewer/format.js` alone; the data half is `QUANTITIES` gaining a
+member, which `analyze/v5`'s embedded schema spells twice.
+
+**Both bounds are left as stated, red by 87 B and 104 B.** The growth
+is not all data, so raising them is not this track's call. The real
+finding is the headroom: the tree was already **67 B** under 420,000
+and **50 B** under 470,000 before this item touched anything.
+
+### Mutations
+
+```text
+M1  drop `schema` from the document      first-key clause       1 failed
+M2  move `schema` to second key          first-key clause       1 failed
+M3  drop rate_per_day from DIMENSIONS    every_member_declares  1 failed
+M4  add rate_per_hour, same dimension    no_two_quantities      1 failed
+M5  release-guide fifteen -> fourteen    derived sentence       1 failed
+M6  drop --capacity from _SCHEMA_BY_FLAG answerable union       1 failed
+M7  arrivals_per_day quantity -> "rate"  known quantities       1 failed
+M8  drop that QUANTITY entirely          census[capacity-model] 1 failed
+M9  drop the CONTRACT_RUNS entry         inventory is the list  1 failed
+M10 drop builders' QUANTITY              census[capacity-model] 1 failed
+```
+
+M8/M10 are the vacuity probes: they redden the `[capacity-model/v1]`
+parameter specifically, so the five-run store is censused, not skipped.
 
 ### Deviation from the Required Fix
 
-**The whole fix is deferred**, not narrowed: no half of it landed.
-Refile with `docs/contributing/**` in the same track, and the eleven
-surfaces above are the decomposition.
+Five surfaces beyond the eleven, each forced by a guard, not chosen:
+`docs/design/architecture.md` and `docs/guides/cli.md` (the contract
+inventory and the consumer's home — `--capacity` was in **no** guide
+since `UX-595`); `docs/contributing/fixing-guide.md`, whose derived
+"Part 32 spans" figure moves when a §32.5 row is added; and the two
+committed analyses, refreshed by `tools/dev_refresh_analysis.py`
+because `producer.contracts` gained an id and `document_shape.leaves`
+counts it (699 -> 700, 1067 -> 1068) — the general cost of publishing
+a contract, which no task file names.

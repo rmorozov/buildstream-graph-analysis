@@ -46,6 +46,13 @@ function view() {
   return typeof window === "undefined" ? null : window;
 }
 
+/** The rail, which lives beside `root` rather than inside it. */
+function rail(root) {
+  const doc = root?.ownerDocument
+    ?? (typeof document === "undefined" ? null : document);
+  return doc?.querySelector?.("nav.toc") ?? null;
+}
+
 /**
  * `UX-638`: the control says which of its two states it is in.
  *
@@ -180,6 +187,10 @@ export function enterTableFocus(root, path, { onLeave } = {}) {
     if (inside(other, section)) other.removeAttribute?.("data-behind-focus");
     else other.setAttribute("data-behind-focus", "true");
   }
+  // `UX-639`: every rail link now points at a box with no layout, so the
+  // rail says it is not the way out. Marked here because focus is
+  // entered here; `nav.js` never learns what focus is.
+  rail(root)?.setAttribute?.("data-focus-inert", "true");
   markControls(root, path, true);
   // `UX-638`: focus starts where the reader is looking, not wherever the
   // collapse clamped them.
@@ -195,6 +206,7 @@ export function leaveTableFocus(root) {
   for (const other of root.querySelectorAll?.("section[data-section]") ?? []) {
     other.removeAttribute?.("data-behind-focus");
   }
+  rail(root)?.removeAttribute?.("data-focus-inert");
   if (!open) return null;
   markControls(root, open, false);
   const target = targets.get(open);

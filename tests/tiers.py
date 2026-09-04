@@ -829,8 +829,10 @@ MEDIUM = (
     # session (38.7s without it). Single-process here: 4.51s in that
     # one call, 4.58s for the file.
     "tests/unit/test_the_cost_row_is_derived_from_the_selector.py",   #    4.6s
-    # `UX-638`, tiered on landing. One served run and one browser boot
-    # over `macro_micro`: a scroll offset is geometry and the shim has
-    # none. Single-process, alone: 2.78s.
+    # `UX-638`/`UX-639`, tiered on landing. One served run and one
+    # browser boot each over `macro_micro`: the scroll offset and the
+    # rail's hit test are geometry, so the shim cannot hold either.
+    # Single-process, alone: 2.78s and 3.24s.
     "tests/unit/test_focus_keeps_the_reading_position.py",            #    2.8s
+    "tests/unit/test_the_rail_says_it_is_not_the_way_out.py",         #    3.2s
 )

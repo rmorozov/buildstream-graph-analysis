@@ -885,6 +885,15 @@ button.focus-back:hover, button.expand-table:hover { color: var(--fg); }
    in the document, so Ctrl-F, the anchors and the export are unchanged
    - which is exactly what an overlay could not promise. */
 [data-behind-focus="true"] { display: none; }
+/* UX-639: 80 of the rail's 87 links point at a section behind focus, so
+   they are drawn, styled and dead. Shown as inert rather than hidden:
+   the rail is the reader's map of where they are, and removing it says
+   the report is gone rather than that the breadcrumb is the way out.
+   `pointer-events` is what makes it not clickable; the dimming is what
+   makes that visible before the click. */
+nav.toc[data-focus-inert="true"] {
+  opacity: .38; pointer-events: none; filter: grayscale(1);
+}
 /* UX-269: a truncated cell shows that it is truncated, and the whole
    value stays selectable once opened. */
 details.long-text > summary { cursor: pointer; }

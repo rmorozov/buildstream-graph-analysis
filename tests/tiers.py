@@ -852,4 +852,8 @@ MEDIUM = (
     # action and no shim has one - plus three node clauses.
     # Single-process and alone: 4.51 / 4.45s.
     "tests/unit/test_a_rail_click_reaches_the_writer.py",             #    4.5s
+    # `UX-646`, tiered on landing, the same shape: a `<summary>`'s
+    # activation is a default action too, and the fold it opens has to
+    # be read out of a real page. 3.55 / 3.79s.
+    "tests/unit/test_the_fragment_keeps_up_with_the_fold.py",         #    3.8s
 )

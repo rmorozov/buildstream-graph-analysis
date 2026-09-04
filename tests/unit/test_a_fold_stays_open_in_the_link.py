@@ -168,15 +168,13 @@ class TestTheLinkAReaderHandsOver:
         assert wrote["structured"] in read["open"], read
 
 
-#: A fold of each convention opened on the real page, and what the
-#: fragment said afterwards.
+#: A structured fold opened on the real page, and what the fragment
+#: said afterwards.
 #:
-#: Two summaries are clicked, not one: `wireViewState` writes on the
-#: bubbling `click`, and a summary's activation flips `open` *after*
-#: that dispatch - so the fragment a click writes names the folds opened
-#: before it. `toggle` does not bubble, so the listener for it never
-#: fires. Both are separate from this item and neither is fixed here.
-_OPEN = """(() => {
+#: One summary, and a turn to settle: `UX-646` fixed the lag this used
+#: to buy off by clicking a second one. `test_the_fragment_keeps_up_
+#: with_the_fold.py` is the guard for the timing itself.
+_OPEN = """(async () => {
   const census = {
     details: document.querySelectorAll("details").length,
     fold: document.querySelectorAll("details[data-fold]").length,
@@ -185,13 +183,11 @@ _OPEN = """(() => {
       "details[data-fold][data-fold-path]").length,
   };
   const structured = document.querySelector("details[data-fold-path]");
-  const declared = document.querySelector("details[data-fold]");
   structured.querySelector("summary").click();
-  declared.querySelector("summary").click();
+  await new Promise((go) => setTimeout(go, 120));
   window.__u642 = true;
   return { census, hash: location.hash,
            structured: structured.getAttribute("data-fold-path"),
-           declared: declared.getAttribute("data-fold"),
            structuredOpen: structured.open };
 })()"""
 

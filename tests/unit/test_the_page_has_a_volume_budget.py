@@ -105,7 +105,13 @@ needs_browser = pytest.mark.skipif(chrome is None, reason=NO_BROWSER)
 #: The overrun is real either way and smaller than filed: 1.6x, not
 #: 2.1x. `_LOOK` opens chapters only, because that is what a reader
 #: gets from "Expand all"; a `details` is a second, deliberate click.
-LANDED_HEIGHT_PX = 7_000
+#: `UX-681`: 7,000 -> 7,100. `macro_micro` landed at 7,018 once fan-in
+#: shipped, and the 18 px is the element table's new "Dependencies
+#: read" column pushing one header row's wrap - not a new block. A
+#: hundred px of headroom rather than nineteen, so the next column does
+#: not spend a round on this line; the *reason* the budget exists is a
+#: page a reader can take in, and one table column is not that.
+LANDED_HEIGHT_PX = 7_100
 
 #: `UX-367`: the opened bounds, per size class, largest class last.
 #: Each row is `(elements at most, opened px, words, controls, nodes)`,
@@ -241,7 +247,14 @@ LANDED_HEIGHT_PX = 7_000
 #: `<option>` was never counted as one. `nodes` is the measure that sees
 #: it, for `UX-366`'s reason.
 BUDGETS = (
-    (50, 34_000, 12_600, 800, 7_900),
+    # `UX-681`: 34,000 -> 35,000. Measured at 34,678 with fan-in: the
+    # `fan_in` element columns, the `fan_in_distribution` strip in the
+    # graph chapter beside the blast one it mirrors, and two findings.
+    # 678 px for a section that answers the element owner's first
+    # question is what this budget is *for* - it bounds growth, it does
+    # not forbid it - and the class above it is untouched at 32,000,
+    # which is the check that the page still gets denser with scale.
+    (50, 35_000, 12_600, 800, 7_900),
     (4_100, 32_000, 9_000, 900, 5_500),
 )
 

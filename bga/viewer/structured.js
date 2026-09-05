@@ -847,12 +847,16 @@ export function interrogable(table, specs, total, depth = 0) {
   // `openingBound` carries why, and a table with nothing to rank by
   // used to get no control and therefore no bound at all.
   const opening = openingBound(presets, total, TABLE_OPENS_BOUNDED_ABOVE);
-  if (presets.length || opening) {
+  // UX-673: a preset that cannot shrink the table is apparatus without
+  // effect - skip any `n >= total`, and offer no control at all once
+  // even the smallest preset fails that test.
+  if ((presets.length && total > 10) || opening) {
     const preset = el("select", { class: "top-n", "aria-label": "Rows shown" });
     identify(preset, `top-${key}`);
     preset.append(el("option", { value: "" }, "All rows"));
     for (const column of presets) {
       for (const n of [10, 25]) {
+        if (n >= total) continue;
         preset.append(el("option", { value: `${n}:${column}` },
                          `Top ${n} by ${column}`));
       }

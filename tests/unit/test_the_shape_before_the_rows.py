@@ -407,6 +407,37 @@ console.log(JSON.stringify({
             f"the threshold filtered nothing: {out['shown']} rows still shown")
 
 
+@needs_node
+class TestAPresetOffersOnlyWhatItCanFill:
+    """UX-673: a `Top 10` on a three-row table is a menu with no effect
+    - `applyTopN` already clamps at render, so this is the *menu*
+    catching up to what the table already does."""
+
+    @staticmethod
+    def _select(total):
+        return _js(_TABLE % total + """
+const select = all(tools, (n) => n.tagName === "select"
+  && (n.attrs.class || "").includes("top-n"))[0] ?? null;
+const ns = select ? all(select, (n) => n.tagName === "option")
+  .map((o) => o.attrs.value).filter((v) => v.includes(":"))
+  .map((v) => Number(v.split(":")[0])) : [];
+console.log(JSON.stringify({ present: Boolean(select), ns }));
+""")
+
+    def test_no_offered_n_reaches_the_row_count(self):
+        """15 rows: `Top 10` can still shrink it, `Top 25` cannot."""
+        out = self._select(15)
+        assert out["present"], "a 15-row table offers no preset at all"
+        assert all(n < 15 for n in out["ns"]), out
+        assert out["ns"] == [10], out
+
+    def test_under_the_smallest_preset_gets_no_control(self):
+        out = self._select(3)
+        assert not out["present"], (
+            f"a 3-row table cannot fill `Top 10`, so it should offer no "
+            f"top-n control at all: {out}")
+
+
 class TestTheHintsAreDeclaredWhereTheyBelong:
     def test_the_vocabulary_names_both(self):
         from bga import schemas

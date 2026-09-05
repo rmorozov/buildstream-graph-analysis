@@ -271,6 +271,19 @@ def build_document(result: AnalysisResult, section: Optional[str] = None, by_kin
     if section is None and getattr(result, 'capacity_recommendation', None):
         data['capacity_recommendation'] = result.capacity_recommendation
 
+    # UX-676: the same question in cores. Published whenever the section
+    # was computed at all, including when it computed to a named
+    # absence - "this capture has no host CPU series" is the answer a
+    # reader needs, and dropping it would leave them unable to tell it
+    # from "the cores were fine". The two tables are omitted when empty,
+    # which is a population saying it found nothing, not an absence.
+    if section is None and getattr(result, 'utilization_envelope', None):
+        data['utilization_envelope'] = result.utilization_envelope
+        for name in ('underutilized_intervals', 'overcommitted_intervals'):
+            rows = getattr(result, name, None)
+            if rows:
+                data[name] = rows
+
     # UX-202: Plane 2's own coverage of this build, when a Plane 2
     # report was in hand. Absent - not zeroed - without one, for the
     # reason `run_instance` is absent: "not looked at" and "looked at

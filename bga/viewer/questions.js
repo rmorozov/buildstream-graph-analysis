@@ -533,6 +533,7 @@ limit 20;`,
 from counter c
 join counter_track t on c.track_id = t.id
 where t.name = 'traced processes running'
+  {window}
 order by c.value desc
 limit 25;`,
   },
@@ -1012,6 +1013,19 @@ function workedExample(question, make, element = null) {
  *  places - `takesElement` and the re-render below both need it. */
 export const ELEMENT_TOKEN = "{element}";
 
+/** `UX-676`: the second, and the last. A `underutilized_intervals` row
+ *  points at a library entry and a time range, so the entry needs a
+ *  place to put the range - a declared predicate placeholder, not
+ *  string surgery on somebody else's `where`. Renders to nothing when
+ *  no bounds are given, so the un-bounded query is byte-identical to
+ *  what it was before this item. */
+export const WINDOW_TOKEN = "{window}";
+
+/** Whether this entry can be aimed at one window. */
+export function takesWindow(question) {
+  return String(question?.sql ?? "").includes(WINDOW_TOKEN);
+}
+
 /** Whether this entry asks about one element.
  *  Four of the seventeen questions do. */
 export function takesElement(question) {
@@ -1027,7 +1041,17 @@ export function takesElement(question) {
  * the query is finished and returns nothing, which is the failure this
  * item was filed for happening more quietly.
  */
-export function renderedSql(question, element = null) {
+export function renderedSql(question, element = null, bounds = null) {
   const target = element ?? question?.example ?? ELEMENT_TOKEN;
-  return question.sql.split(ELEMENT_TOKEN).join(target);
+  const start = Number(bounds?.start_ns);
+  const end = Number(bounds?.end_ns);
+  // `UX-676`: an incomplete pair renders the token, for `UX-369`'s
+  // reason one line up - a query that silently lost its window returns
+  // the whole build and looks like an answer.
+  const window = (Number.isFinite(start) && Number.isFinite(end))
+    ? `and c.ts between ${start} and ${end}`
+    : (bounds ? WINDOW_TOKEN : "");
+  return question.sql
+    .split(ELEMENT_TOKEN).join(target)
+    .split(WINDOW_TOKEN).join(window);
 }

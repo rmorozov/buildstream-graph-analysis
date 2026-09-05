@@ -18,7 +18,7 @@ it is checked by
 Measured on `tests/fixtures/macro_micro/run`:
 
 ```text
-report.json                       53 top-level sections
+report.json                       54 top-level sections
   occupancy.peak_concurrency      2            one scalar
   occupancy.average_concurrency   1.162…       one scalar
   occupancy.resource_occupancy    {PROCESS: 1.162…}

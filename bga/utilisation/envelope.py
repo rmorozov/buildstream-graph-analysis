@@ -18,8 +18,15 @@ The row says which kind it is and stops there: `ready_not_dispatched`
 is the scheduler, `building` with each element's own `max-jobs` is the
 element's own cap. Deciding between them is `UX-677`'s.
 """
-import math
-from typing import Optional
+
+# `UX-676`: the nearest-rank rule, imported rather than restated. The
+# first draft carried its own copy with a note saying the two were held
+# equal by a guard - which is two rules and an instrument to keep them
+# the same, where one import is one rule. `store_aggregate` reads a
+# whole store, but importing it does not: this is a pure function of a
+# list, and the module costs `hostinfo`, `run_store` and `schemas`,
+# which `bga.analyzer` has already imported by the time this runs.
+from ..store_aggregate import percentile as percentile
 
 #: `UX-676`: how many interval rows are published per table. The same
 #: number as `REDUNDANCY_FINDINGS_MAX` and the viewer's
@@ -34,21 +41,6 @@ INTERVALS_MAX = 40
 #: jobs. Not a tuned fraction - halve it and the rows stop being
 #: actionable, double it and a two-core host can never be under-utilized.
 IDLE_CORES_FLOOR = 1.0
-
-
-def percentile(samples: list[float], p: float) -> Optional[float]:
-    """Nearest-rank, `store_aggregate.percentile`'s rule.
-
-    Imported rather than re-derived would be the better shape; it lives
-    in a module this one must not depend on (`store_aggregate` reads a
-    whole store), so the rule is restated and the guard holds the two
-    equal.
-    """
-    if not samples:
-        return None
-    ordered = sorted(samples)
-    rank = max(1, math.ceil(p / 100 * len(ordered)))
-    return ordered[min(rank, len(ordered)) - 1]
 
 
 def wall_samples(read: dict) -> list[dict]:

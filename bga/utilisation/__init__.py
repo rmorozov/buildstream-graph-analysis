@@ -114,9 +114,13 @@ class UtilizationResult:
     # Detailed intervals for timeline reconstruction
     intervals: list[CPUInterval] = field(default_factory=list)
 
-    # Diagnostics
-    high_utilization_periods: list[tuple[int, int]] = field(default_factory=list)
-    idle_periods: list[tuple[int, int]] = field(default_factory=list)
+    # `UX-676` deleted `idle_periods` and `high_utilization_periods`
+    # from here. They were computed on every run, read by nothing
+    # outside this module for eight rounds, and derived from *active
+    # task count over effective_cpus* - slots, not cores, which is the
+    # proxy `UX-675` exists to replace. The windows a reader wanted are
+    # `underutilized_intervals`; keeping these beside them would be two
+    # answers to one question, in two different units. `UX-401`'s class.
 
     # UX-341: 0..1, like every other bounded fraction the tool
     # publishes. These were 0..100 while `cpu_coverage` beside them was
@@ -182,7 +186,6 @@ class UtilizationAnalyzer:
     """
     
     RECONCILIATION_TOLERANCE_SHARE = 0.02  # Part 33.3: 2% tolerance
-    HIGH_UTILIZATION_THRESHOLD = 0.8  # 80% threshold for "high" utilization
     
     def __init__(
         self,
@@ -257,8 +260,6 @@ class UtilizationAnalyzer:
         self.reconciliation_error_share = 0.0
         
         # Idle/high utilization periods
-        self.idle_periods: list[tuple[int, int]] = []
-        self.high_utilization_periods: list[tuple[int, int]] = []
         
         # Oversubscription analysis
         self.potential_oversubscription = False
@@ -345,7 +346,6 @@ class UtilizationAnalyzer:
         self._build_cpu_intervals(task_intervals, retry_tasks, rebuild_tasks)
 
         # Analyze idle periods from occupancy
-        self._analyze_idle_periods(occupancy_segments)
 
         # Compute bucket totals
         self._compute_bucket_totals()
@@ -399,40 +399,6 @@ class UtilizationAnalyzer:
             self.max_observed_concurrency = max(
                 self.max_observed_concurrency, concurrency
             )
-    
-    def _analyze_idle_periods(self, occupancy_segments: list[dict]) -> None:
-        """
-        Analyze idle periods from occupancy data.
-
-        Identifies periods where CPU capacity was available but unused.
-        Requires real CPU-accounting data (P1-33) - without a real
-        effective_cpus, "utilization" has no real capacity to divide
-        active task count by, so no idle/high-utilization periods are
-        reported (empty, not computed against a fabricated capacity).
-        """
-        self.idle_periods = []
-        self.high_utilization_periods = []
-
-        if not self.cpu_accounting_available:
-            return
-
-        for segment in occupancy_segments:
-            start_us = segment.get("start_us", 0)
-            end_us = segment.get("end_us", 0)
-            active_count = len(segment.get("active_tasks", []))
-
-            duration_us = end_us - start_us
-            if duration_us <= 0:
-                continue
-
-            # Calculate utilization for this segment
-            if self.effective_cpus > 0:
-                utilization = active_count / self.effective_cpus
-
-                if utilization < 0.1:  # Less than 10% utilization = idle
-                    self.idle_periods.append((start_us, end_us))
-                elif utilization >= self.HIGH_UTILIZATION_THRESHOLD:
-                    self.high_utilization_periods.append((start_us, end_us))
     
     def _compute_bucket_totals(self) -> None:
         """Compute total CPU-microseconds per bucket."""
@@ -675,8 +641,6 @@ class UtilizationAnalyzer:
             max_observed_concurrency=self.max_observed_concurrency,
             effective_cpus_source=self.effective_cpus_source,
             intervals=list(self.intervals),
-            high_utilization_periods=list(self.high_utilization_periods),
-            idle_periods=list(self.idle_periods),
         )
 
 

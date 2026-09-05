@@ -1,0 +1,15 @@
+{"schema":"host-samples/v1","interval_s":2.0,"clock":"CLOCK_MONOTONIC","wall_at_start":1788644102.915859,"monotonic_at_start":5287.014772118,"mem_total_kb":16461028,"swap_total_kb":0,"available":true}
+{"mem_free_kb":9131492,"mem_available_kb":15088300,"cached_kb":5430460,"swap_free_kb":0,"pswpin":0,"pswpout":0,"pgmajfault":74762,"cores":4,"load1":0.02,"t":5287.016}
+{"mem_free_kb":8964528,"mem_available_kb":15022776,"cached_kb":5531192,"swap_free_kb":0,"pswpin":0,"pswpout":0,"pgmajfault":75930,"cores":4,"load1":0.02,"t":5289.019,"cpu_busy_cores":1.787}
+{"mem_free_kb":8345300,"mem_available_kb":14462604,"cached_kb":5596664,"swap_free_kb":0,"pswpin":0,"pswpout":0,"pgmajfault":75962,"cores":4,"load1":0.41,"t":5291.019,"cpu_busy_cores":3.255}
+{"mem_free_kb":8448356,"mem_available_kb":14488772,"cached_kb":5520028,"swap_free_kb":0,"pswpin":0,"pswpout":0,"pgmajfault":75965,"cores":4,"load1":0.41,"t":5293.02,"cpu_busy_cores":1.269}
+{"mem_free_kb":8510684,"mem_available_kb":14556564,"cached_kb":5525564,"swap_free_kb":0,"pswpin":0,"pswpout":0,"pgmajfault":75965,"cores":4,"load1":0.46,"t":5295.021,"cpu_busy_cores":1.194}
+{"mem_free_kb":8498352,"mem_available_kb":14549660,"cached_kb":5531008,"swap_free_kb":0,"pswpin":0,"pswpout":0,"pgmajfault":75965,"cores":4,"load1":0.46,"t":5297.022,"cpu_busy_cores":1.069}
+{"mem_free_kb":8612300,"mem_available_kb":14686032,"cached_kb":5547456,"swap_free_kb":0,"pswpin":0,"pswpout":0,"pgmajfault":76573,"cores":4,"load1":0.46,"t":5299.024,"cpu_busy_cores":1.334}
+{"mem_free_kb":8561300,"mem_available_kb":14649212,"cached_kb":5561300,"swap_free_kb":0,"pswpin":0,"pswpout":0,"pgmajfault":77163,"cores":4,"load1":0.67,"t":5301.025,"cpu_busy_cores":1.884}
+{"mem_free_kb":8551616,"mem_available_kb":14652072,"cached_kb":5573768,"swap_free_kb":0,"pswpin":0,"pswpout":0,"pgmajfault":77708,"cores":4,"load1":0.67,"t":5303.026,"cpu_busy_cores":2.069}
+{"mem_free_kb":8494324,"mem_available_kb":14567640,"cached_kb":5547040,"swap_free_kb":0,"pswpin":0,"pswpout":0,"pgmajfault":77831,"cores":4,"load1":0.69,"t":5305.026,"cpu_busy_cores":2.055}
+{"mem_free_kb":8532848,"mem_available_kb":14697992,"cached_kb":5638416,"swap_free_kb":0,"pswpin":0,"pswpout":0,"pgmajfault":78449,"cores":4,"load1":0.69,"t":5307.027,"cpu_busy_cores":2.009}
+{"mem_free_kb":8386732,"mem_available_kb":14562720,"cached_kb":5649528,"swap_free_kb":0,"pswpin":0,"pswpout":0,"pgmajfault":79057,"cores":4,"load1":0.69,"t":5309.028,"cpu_busy_cores":2.044}
+{"mem_free_kb":8416736,"mem_available_kb":14581344,"cached_kb":5644404,"swap_free_kb":0,"pswpin":0,"pswpout":0,"pgmajfault":79675,"cores":4,"load1":0.72,"t":5311.028,"cpu_busy_cores":2.11}
+{"mem_free_kb":8449704,"mem_available_kb":14625304,"cached_kb":5648080,"swap_free_kb":0,"pswpin":0,"pswpout":0,"pgmajfault":80277,"cores":4,"load1":0.72,"t":5313.029,"cpu_busy_cores":1.524}

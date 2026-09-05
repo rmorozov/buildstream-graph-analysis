@@ -1415,6 +1415,142 @@ enforced the house way — booted-page walks, token guards, a
 conformance line in the fixing guide — and amended, not bypassed,
 when a new shape appears. Decomposed as `UX-302`..`UX-306`.
 
+## Direction 17: utilization is one envelope, read by three roles (argued 2026-09-05, round 91)
+
+**Serves:** R4 (the CI owner), R2 (the element owner), R3 (the graph
+owner), R5 (the capacity operator) — the four whose questions
+contradict on the surface and share one quantity underneath.
+
+**Status:** partial — the four corrections are argued here; `UX-675`..`UX-684` are open.
+
+The user's brief, in three questions: can a CI owner tell whether the
+agent's cores are the binding resource without overcommitting memory;
+can an element owner see their transitive dependencies and blast
+radius, and be told whether to split or consolidate; can a graph owner
+show evidence that the graph's shape lets a cold build use the whole
+machine and a cached build rebuild the cheapest subgraph. Round 91
+checked each against what the tool computes (the round-91 inventory: builders and per-element `max-jobs`
+known (`UX-377`); every over-time surface counting processes, not
+cores; `idle_periods` computed and never published; a memory series
+with no CPU field; a sweep with no memory resource; fan-out deep and
+fan-in absent; a kind-based foundation exemption; change frequency
+absent; remote execution deliberately unfiled since round 1) and
+argues four corrections to the brief before it argues the plan.
+
+### Four corrections
+
+**1. "Forty cores occupied" is not the objective; the envelope is.**
+Five builders times a native `max-jobs` of eight is a *ceiling*, and
+a build that never touches it is not necessarily wasting the machine:
+configure, link, staging and cache pushes are single-threaded or
+I/O-bound by nature, and a core idle during them is idle by
+construction. The quantity a CI owner needs is the **utilization
+envelope** — cores busy against cores available, subject to memory
+headroom, *as a series over the build* — and its two violations:
+under-utilization (busy well below available while work is ready)
+and overcommit (load above cores, or swap above zero). Both are
+intervals on the same series; neither is a count. The tool has the
+memory half of the series (`host-samples.jsonl`, `UX-378`) and no CPU
+half: it knows CPU *totals* per process and *processes running* over
+time, and processes running is not cores busy — a blocked process
+holds a slot and no core.
+
+**2. Per-element `max-jobs` tuning is the wrong lever; sharing is.**
+The brief's diagnosis is right — BuildStream has no cross-element
+job server, so builders × native jobs is a static product that
+over- or under-commits depending on which elements happen to overlap
+— and its remedy is fragile: a `max-jobs` chosen per element is
+tuned to one graph shape on one machine, and drifts the day either
+changes. Every native build system BuildStream drives (`make`,
+`ninja`, `cmake`'s generators, `cargo` through `-j`) speaks the GNU
+jobserver protocol; what is missing is a jobserver *outside* the
+sandboxes that every element's build system joins. That is a
+prototype this tool is unusually placed to build: it already owns a
+sandbox-injection path (the `bwrap` shim and the `LD_PRELOAD` hook)
+and already measures the outcome (Plane 2's process starts against
+the host series). Static tuning stays as the fallback the tool
+advises where a jobserver cannot be run — priced, not guessed.
+
+**3. Remote execution is two different things, and the tool prices
+both without either being installed.** BuildStream's own REAPI runs
+an element's whole sandbox on a remote worker (the agent then spends
+staging and waiting, and the worker's `max-jobs` is what matters);
+compiler-level remote execution (`recc`, `reclient`, `goma`) runs
+inside the sandbox and needs a network the sandbox is built to deny.
+Neither is a bga feature; both are what-ifs the tool can already
+half-price — `bga sweep` prices more builders, and a per-element
+compute share prices what a remote worker would take off the agent.
+The gap is the sentence that says so.
+
+**4. A blast threshold is the wrong instrument; expected cost is.**
+An element owner asked to keep their blast radius "under a
+threshold" will split until the graph is a mesh of trivial elements
+— which is the other failure. The quantity is **expected rebuild
+cost**: how often an element changes (Plane 3's kept logs know)
+times what its blast rebuilds (weighted by duration and CPU, with
+assembling elements free but counted for height). Split when the two
+halves' consumers never change together; consolidate when two
+elements always rebuild together — and the co-change matrix that
+decides this is the one artifact neither role has. The foundation
+tier (toolchain, base image, the things everything depends on by
+design) is not noise to filter out of a ranking; it is a *declared*
+tier the ranking reports separately, because a discovered tier moves
+with the graph.
+
+### What follows
+
+The plan is one series, two rankings and two verdicts, filed as
+`UX-675`..`UX-684`:
+
+- **The series** (`UX-675`): busy cores, load and core count on the
+  host sampler's tick, beside memory, and on the trace as three more
+  tracks. Everything below reads it.
+- **The envelope and its intervals** (`UX-676`): the CI owner's
+  short answer — were the cores the binding resource without
+  overcommitting memory — and the long one: the under-utilized and
+  overcommitted intervals as tables, each row naming the elements
+  building per builder with their `max-jobs`, the Plane 2 process
+  count, the predecessors just finished and the successors waiting,
+  and a Perfetto query scoped to the interval. The user's table, with
+  its columns; the dead `idle_periods` code re-based on cores and
+  published, or deleted.
+- **The advisor and its constraint** (`UX-677`, `UX-678`): a
+  recommended `max-jobs` per element under a no-overcommit
+  constraint, priced by replay; memory as a resource the sweep and
+  the queue model honour, so a knee is named by whichever bound came
+  first.
+- **The sharing alternative** (`UX-679`): a jobserver every sandbox
+  joins, through the shim the tool already owns — a spike, judged by
+  the envelope before and after, because dynamic sharing is what
+  static tuning approximates.
+- **Remote execution priced** (`UX-680`): what unbounded builders
+  buy (the sweep) and what moving the compiler's CPU off the agent
+  buys (Plane 2's share), each with its assumption, neither built.
+- **Fan-in** (`UX-681`): direct and transitive upstream counts, the
+  never-read share, and the dominator every path passes through —
+  the element owner's incoming half, the graph owner's suspicious
+  fan-in.
+- **Change frequency and co-change** (`UX-682`): from the logs the
+  project already keeps, without the ref variation `UX-92` was
+  blocked on; expected rebuild cost per element, and split /
+  consolidate as findings decided on co-change rather than on a
+  threshold.
+- **The foundation tier declared** (`UX-683`): because a toolchain
+  built with `autotools` is not a structural kind and tops every
+  ranking today; the discovery proposes, the owner declares, the
+  ranking reports the tier apart.
+- **The cached-build verdict** (`UX-684`): the graph owner's evidence
+  for the build that happens most — the share of the change history
+  that rebuilt under the median blast, height and weight stated
+  separately, with its rule and denominator the way the cold verdict
+  states them.
+
+What the direction declines: a blast *threshold* (replaced by
+expected cost), per-role hues in the page for these findings (§4
+rule 7 stands), and observing a remote build (`UX-9` stands — the
+tool prices it and does not watch it).
+
+
 ## Round history
 
 This document used to carry the findings of rounds 2-6 inline, which
@@ -1477,6 +1613,7 @@ the other rounds now:
 | [88](../audits/round-88.md) | round 87's eight open rows, five tracks wide, plus the review the cadence guard called due — and the round where **four rows were closed by disproving their own premise**, three of them the orchestrating session's: settling was not the geometry gap, the shallow-clone sweep was already closed, the reader map was derivable, and nine page-built sections were thirteen (`UX-636`..`UX-656`) |
 | [89](../audits/round-89.md) | round 88's five open rows in three parallel tracks, and the round where **every closed row was the same defect at a different scale**: a fact written twice, one copy guarded and exact, the other drifted — plus three more found while working, one of them two rows round 88 wrote by hand (`UX-651`..`UX-659`) |
 | [90](../audits/round-90.md) | the process given a ledger — reporters on `sonnet`, the walk and the design review as skills, a run ledger — and the page looked at through seven screenshots: the rail as a source list, a reader as a shape not a hue, a runbook as a shape, a rail click that overshoots (`UX-663`..`UX-674`) |
+| [91](../audits/round-91.md) | a design round: whose question utilization is — the tool counts processes where the CI owner needs cores, computes idle intervals it never publishes, exempts foundations by kind so a toolchain is not exempt, and has no change frequency; Direction 17 argues the envelope, the jobserver, priced remote execution and expected rebuild cost (`UX-675`..`UX-684`) |
 
 ## Verification Log
 

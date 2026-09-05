@@ -15,13 +15,13 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-672 scenarios: **13 open**, 659 closed.
+682 scenarios: **23 open**, 659 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
-| capture | 0 | 92 |
-| analysis | 0 | 94 |
+| capture | 2 | 94 |
+| analysis | 8 | 102 |
 | contracts | 0 | 48 |
 | viewer | 8 | 156 |
 | cli | 0 | 21 |
@@ -49,6 +49,49 @@ task file, which is the only place it ever lived twice.
 | UX-672 | [a blocked pop-up's refusal never renders](UX-0672-a-blocked-pop-up-s-refusal-never-renders.md) | viewer | Medium | anyone whose browser blocks the Perfetto tab | 🔴 |
 | UX-673 | [sixteen tables offer a Top 10 they cannot fill](UX-0673-sixteen-tables-offer-a-top-10-they-cannot-fill.md) | viewer | Medium | anyone reading a three-row table with a five-option menu | 🔴 |
 | UX-674 | [eighteen font sizes, an h3 larger than its h2, and 130-character lines](UX-0674-eighteen-font-sizes-an-h3-larger-than-its-h2-and-130-character-lines.md) | viewer | Medium | every reader of prose on the page | 🔴 |
+| UX-675 | [the host series has memory and no cores](UX-0675-the-host-series-has-memory-and-no-cores.md) | capture | High | R4, asking whether the cores were busy | 🔴 |
+| UX-676 | [the utilization envelope, and the intervals that violate it](UX-0676-the-utilization-envelope-and-the-intervals-that-violate-it.md) | analysis | High | R4 first, R2 and R3 through the elements each interval names | 🔴 |
+| UX-677 | [the max-jobs advisor — per element, under a no-overcommit constraint](UX-0677-the-max-jobs-advisor-per-element-under-a-no-overcommit-constraint.md) | analysis | High | R4 and R2 — the operator who sets the numbers and the owner whose recipe carries them | 🔴 |
+| UX-678 | [memory joins the sweep and the queue model](UX-0678-memory-joins-the-sweep-and-the-queue-model.md) | analysis | Medium | R5 sizing a builder, R4 reading the sweep | 🔴 |
+| UX-679 | [a jobserver every sandbox joins — the prototype bga can run](UX-0679-a-jobserver-every-sandbox-joins-the-prototype-bga-can-run.md) | capture | Medium | R4 and R5 — dynamic sharing instead of static tuning | 🔴 |
+| UX-680 | [remote execution is priced, not built](UX-0680-remote-execution-is-priced-not-built.md) | analysis | Medium | R4 and R8 deciding whether to buy it | 🔴 |
+| UX-681 | [fan-in — what an element depends on, ranked](UX-0681-fan-in-what-an-element-depends-on-ranked.md) | analysis | High | R2 minimising incoming dependencies, R3 spotting the suspicious fan-in | 🔴 |
+| UX-682 | [change frequency and co-change, from the logs the project already keeps](UX-0682-change-frequency-and-co-change-from-the-logs-the-project-already-keeps.md) | analysis | High | R2 and R3 — split, consolidate, or leave alone, decided on evidence | 🔴 |
+| UX-683 | [the foundation tier is declared, and the kind-based exemption misses it](UX-0683-the-foundation-tier-is-declared-and-the-kind-based-exemption-misses-it.md) | analysis | Medium | R2 who owns the toolchain and wants out of the noise; R3 reading the ranking | 🔴 |
+| UX-684 | [the cached-build verdict — does the graph rebuild the cheapest subgraph?](UX-0684-the-cached-build-verdict-does-the-graph-rebuild-the-cheapest-subgraph.md) | analysis | High | R3 showing evidence, R8 reading it | 🔴 |
+
+## UX-675..UX-684: the ninety-first round — whose question utilization is (2026-09-05)
+
+A design round. The user asked whether the tool can answer the CI
+owner's "are the cores the binding resource without overcommitting
+memory", the element owner's incoming dependencies and blast radius,
+and the graph owner's shape evidence for cold and cached builds — and
+asked to be challenged. The inventory (a researcher, on `sonnet`):
+builders and `max-jobs` known; every over-time surface counting
+processes, not cores; `idle_periods` computed and never published;
+memory a series with no CPU field and a model with no place in the
+sweep; fan-out deep, fan-in absent; the foundation exemption by kind,
+so a toolchain is not exempt; change frequency absent; remote
+execution deliberately unfiled since round 1. The argument is
+Direction 17; the round is
+[`docs/audits/round-91.md`](../../audits/round-91.md).
+
+**Four corrections, then ten filings.** The objective is the
+utilization *envelope* — cores busy against capacity and memory
+headroom, as a series — and its violations as intervals, not a core
+count (`UX-675` the cores series, `UX-676` the envelope and the
+user's interval table with elements per builder, `max-jobs`, Plane 2
+counts, neighbours and a scoped Perfetto query). Per-element
+`max-jobs` tuning approximates what a jobserver every sandbox joins
+would do dynamically, and the tool owns the injection path to try it
+(`UX-677` the advisor under a no-overcommit constraint, `UX-678`
+memory in the sweep, `UX-679` the jobserver spike). Remote execution
+is two mechanisms the tool prices without building either
+(`UX-680`). A blast threshold is replaced by expected rebuild cost
+from the logs the project already keeps (`UX-681` fan-in and the
+dominator, `UX-682` change frequency and co-change with split /
+consolidate decided on it, `UX-683` the foundation tier declared,
+`UX-684` the cached-build verdict beside the cold one).
 
 ## UX-663..UX-674: the ninetieth round — the process given a ledger, and the page looked at (2026-09-05)
 

@@ -1,6 +1,6 @@
 # UX-696: the register's unguarded rows — no round in code, a dated count, the commit body
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-497 (the register) | **Serves:** the reader who opens a module a year on and meets its history instead of its reason | **Topic:** guards
+**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-497 (the register) | **Serves:** the reader who opens a module a year on and meets its history instead of its reason | **Topic:** guards | **Shape:** judgement
 
 ## Motivation
 

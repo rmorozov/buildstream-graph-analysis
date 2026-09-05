@@ -1,6 +1,6 @@
 # UX-688: every task carries an area, and the area pages are generated
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-501 (the derived index), UX-239 (the module tree) | **Serves:** the session doing impact analysis or a test plan without rescanning 682 files | **Topic:** docs
+**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-501 (the derived index), UX-239 (the module tree) | **Serves:** the session doing impact analysis or a test plan without rescanning 682 files | **Topic:** docs | **Shape:** judgement
 
 ## Motivation
 

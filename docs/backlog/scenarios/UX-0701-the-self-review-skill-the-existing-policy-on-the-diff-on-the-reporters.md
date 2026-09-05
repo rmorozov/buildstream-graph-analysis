@@ -1,6 +1,6 @@
 # UX-701: the `self-review` skill — the existing policy on the diff, on the reporters' model
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-687 (the impact set that routes it), UX-663 (the run ledger) | **Serves:** the implementing session before it reports done, and R8 who then reads a finding list instead of a diff | **Topic:** docs
+**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-687 (the impact set that routes it), UX-663 (the run ledger) | **Serves:** the implementing session before it reports done, and R8 who then reads a finding list instead of a diff | **Topic:** docs | **Shape:** judgement
 
 ## Motivation
 

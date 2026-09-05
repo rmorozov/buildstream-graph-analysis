@@ -1,6 +1,6 @@
 # UX-686: a release waits for the walk that read its candidate
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-251 (releases as contract states), UX-685 | **Serves:** R8 cutting a release; the reader who installs it | **Topic:** docs
+**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-251 (releases as contract states), UX-685 | **Serves:** R8 cutting a release; the reader who installs it | **Topic:** docs | **Shape:** bounded
 
 ## Motivation
 

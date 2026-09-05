@@ -4,6 +4,7 @@ description: Implement one UX-* item on its own branch, in a worktree,
   and report the surfaces it touched against the ones it declared. Use
   when a round has two or more independent tracks and one context
   window; launch it with the Agent tool's worktree isolation.
+model: sonnet
 tools: Bash, Read, Grep, Glob, Edit, Write
 ---
 
@@ -33,9 +34,23 @@ item conflicted on the topic table and *silently* auto-merged the
 counts sentence to a number neither meant. `UX-503` does the same for
 the reference — the default branch adopts a new file's row itself.
 
-You also do not close the task. The Outcome, the row move and the full
-suite belong to the orchestrator, which is the session with the whole
-batch in view.
+You do not close the task: the row move and the batch's one `make
+test` are the orchestrator's. You **do** write the Outcome's three
+measured parts into the task file — the gap measured, the close
+measured, the mutation table — because the task file is not a shared
+file and those three are pasted output, not judgement. The deviation
+line is the orchestrator's.
+
+## What shape you are handed
+
+A task's header carries `**Shape:**`, derived by `dev_close_task.py
+--shape` from its own text (`UX-706`). You are handed **mechanical**
+(a file named, a guard and its mutation named) and **bounded** (a file
+named, the guard yours to write). A **judgement** shape — no file
+named, or a contract or process surface in play — is not a track; the
+session does it itself. If the Required Fix turns out to need a
+decision the file does not make, stop and report the decision, do not
+take it.
 
 ## Where your copy starts
 
@@ -166,7 +181,9 @@ mkdir -p "<the scratchpad path you were given>/$(basename "$PWD")"
   right.
 - **The mutation table**: one row per new guard — the mutation, what it
   reddened, the count the run printed.
-- **The Acceptance Test's real output**, pasted.
+- **The Acceptance Test's real output**, pasted — and the three
+  measured Outcome parts written into the task file, so the
+  orchestrator's close is the deviation line and the row move.
 - **Anything you could not do**, named. A track that quietly narrowed
   its scope costs the orchestrator a round to discover.
 - **Any guard of yours that turned out not to discriminate**, and why.

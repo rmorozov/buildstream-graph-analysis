@@ -1,6 +1,6 @@
 # UX-670: the first rail click into a folded chapter lands 687 px above its section
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-399 (`content-visibility: auto`), UX-534 (Focus scrolls) | **Serves:** anyone who clicks a rail entry | **Topic:** viewer
+**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-399 (`content-visibility: auto`), UX-534 (Focus scrolls) | **Serves:** anyone who clicks a rail entry | **Topic:** viewer | **Shape:** judgement
 
 ## Motivation
 

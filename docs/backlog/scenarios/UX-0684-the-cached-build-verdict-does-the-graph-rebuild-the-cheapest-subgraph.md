@@ -1,6 +1,6 @@
 # UX-684: the cached-build verdict — does the graph rebuild the cheapest subgraph?
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-682 (expected rebuild cost), UX-477 (the cold verdict's rule) | **Serves:** R3 showing evidence, R8 reading it | **Topic:** analysis
+**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-682 (expected rebuild cost), UX-477 (the cold verdict's rule) | **Serves:** R3 showing evidence, R8 reading it | **Topic:** analysis | **Shape:** judgement
 
 ## Motivation
 

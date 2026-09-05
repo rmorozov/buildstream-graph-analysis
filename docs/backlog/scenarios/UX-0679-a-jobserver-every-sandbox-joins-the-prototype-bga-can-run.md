@@ -1,6 +1,6 @@
 # UX-679: a jobserver every sandbox joins — the prototype bga can run
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-105 (the bwrap shim), UX-675 and UX-676 (the instruments that judge it) | **Serves:** R4 and R5 — dynamic sharing instead of static tuning | **Topic:** capture
+**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-105 (the bwrap shim), UX-675 and UX-676 (the instruments that judge it) | **Serves:** R4 and R5 — dynamic sharing instead of static tuning | **Topic:** capture | **Shape:** judgement
 
 ## Motivation
 

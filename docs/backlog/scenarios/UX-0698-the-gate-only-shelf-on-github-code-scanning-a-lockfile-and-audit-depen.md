@@ -1,6 +1,6 @@
 # UX-698: the gate-only shelf on GitHub — code scanning, a lockfile and audit, Dependabot, secret scanning
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-693 (the local shelves first) | **Serves:** R8 reading a red gate that a hosted tool raised, and the user who wants the heavier analyses without a slower inner loop | **Topic:** guards
+**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-693 (the local shelves first) | **Serves:** R8 reading a red gate that a hosted tool raised, and the user who wants the heavier analyses without a slower inner loop | **Topic:** guards | **Shape:** judgement
 
 ## Motivation
 

@@ -1,6 +1,6 @@
 # UX-687: the impact set is derived by one tool, not five greps
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-524 (the CI-measured touching map), UX-498 (decompose), UX-499 (the orient recipes) | **Serves:** the session at the design stage, before the first edit | **Topic:** guards
+**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-524 (the CI-measured touching map), UX-498 (decompose), UX-499 (the orient recipes) | **Serves:** the session at the design stage, before the first edit | **Topic:** guards | **Shape:** judgement
 
 ## Motivation
 

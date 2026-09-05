@@ -1,6 +1,6 @@
 # UX-702: a performance ratchet at the gate
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-531 (the superlinear analyzer), UX-418 (the reference method) | **Serves:** R8 reading whether a round made `bga analyze` slower on the largest capture, which nothing today records | **Topic:** guards
+**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-531 (the superlinear analyzer), UX-418 (the reference method) | **Serves:** R8 reading whether a round made `bga analyze` slower on the largest capture, which nothing today records | **Topic:** guards | **Shape:** bounded
 
 ## Motivation
 

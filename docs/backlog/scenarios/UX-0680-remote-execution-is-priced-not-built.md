@@ -1,6 +1,6 @@
 # UX-680: remote execution is priced, not built
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-30 (the sweep), UX-9 (what the tool sees under RE) | **Serves:** R4 and R8 deciding whether to buy it | **Topic:** analysis
+**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-30 (the sweep), UX-9 (what the tool sees under RE) | **Serves:** R4 and R8 deciding whether to buy it | **Topic:** analysis | **Shape:** judgement
 
 ## Motivation
 

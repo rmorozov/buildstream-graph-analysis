@@ -1,6 +1,6 @@
 # UX-695: the refactor stream takes the ledger's top row — renderers first
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-694 (the ledger) | **Serves:** the session that opens a round and has no refactor to pick because none is filed | **Topic:** docs
+**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-694 (the ledger) | **Serves:** the session that opens a round and has no refactor to pick because none is filed | **Topic:** docs | **Shape:** judgement
 
 ## Motivation
 

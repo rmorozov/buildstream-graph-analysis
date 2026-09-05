@@ -12,6 +12,23 @@ task file (one item) or the round document (a batch). The rule it
 serves is [fixing guide](../../../docs/contributing/fixing-guide.md) §2
 (stay inside scope) and §3 (every claim measured); this is the step that finds the scope before it is crossed.
 
+## 0. Shape — which model runs it, derived
+
+```bash
+python3 tools/dev_close_task.py --shape UX-NNN        # one id; no id: every open row
+python3 tools/dev_close_task.py --shape --write       # put the word in the header
+```
+
+Three readings of the file's own text, never typed (`UX-706`): the
+Required Fix names a file; the Acceptance Test names a guard and a
+mutation; either names a contract or process surface. **mechanical**
+(all three the right way) and **bounded** (a file, no named guard) are
+tracks for the `implementer` on `sonnet`; **judgement** (no file, or a
+contract or process surface) is the session's own work. Measured on
+the open backlog the day it landed: 8 bounded, 35 judgement, 0
+mechanical — a filing that wants to be a track names its surface in
+the Required Fix and its guard in the Acceptance Test.
+
 ## 1. Surfaces — what the change will touch, derived
 
 ```bash
@@ -148,6 +165,19 @@ here. Fixing guide §3 still asks for the suite before any single item
 is marked done; `UX-500` is the measurement that decides whether the
 batch gate may replace it. Until then the batch gate is *in addition*.
 
+## 5. The batch — what the orchestrator pays
+
+Round 80: six tracks, 24 items, six suite runs, 1.83 commits per item.
+The orchestrator's cost is not what it reads; it is the live context
+**at each rebuild** — a wake after idle or a compaction re-enters the
+whole context as fresh tokens. Measured on this session from round 46
+on: 11 rebuilds were 3.76M of 5.16M tokens (73 %); every read, write
+and test together under a fifth. So the orchestrator reads reports,
+never diffs or logs — the `verifier` reads the diff, the track pastes
+its Outcome parts — and a tool result over a screen goes to a file and
+is read by its head. A batch is as many tracks as the merge can price
+(1.46-1.83 commits per item), not as many as the context can hold.
+
 ## What goes in the file
 
 ```text
@@ -160,4 +190,7 @@ gate:     batch PR #NNN
 ```
 
 Five lines, every one derived above. Longer means the split has not
-been found yet.
+been found yet. Measured in round 94: no task file carried this block
+(`grep -rl '^## Decomposition' docs/backlog/scenarios` → 0); the
+shape line of §0 is what every filing carries, and the block is for a
+track wider than one module.

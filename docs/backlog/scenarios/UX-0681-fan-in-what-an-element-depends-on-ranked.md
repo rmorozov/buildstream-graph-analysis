@@ -1,6 +1,6 @@
 # UX-681: fan-in — what an element depends on, ranked
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-479 (blast for elements), UX-407 (never-read edges) | **Serves:** R2 minimising incoming dependencies, R3 spotting the suspicious fan-in | **Topic:** analysis
+**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-479 (blast for elements), UX-407 (never-read edges) | **Serves:** R2 minimising incoming dependencies, R3 spotting the suspicious fan-in | **Topic:** analysis | **Shape:** judgement
 
 ## Motivation
 

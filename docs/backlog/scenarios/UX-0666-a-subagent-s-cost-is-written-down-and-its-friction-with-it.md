@@ -1,6 +1,6 @@
 # UX-666: a subagent's cost is written down, and its friction with it
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-521 (the tokens-by-phase measurement), UX-508 (the process bands) | **Serves:** the round choosing a model and a shape for its next agent | **Topic:** docs
+**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-521 (the tokens-by-phase measurement), UX-508 (the process bands) | **Serves:** the round choosing a model and a shape for its next agent | **Topic:** docs | **Shape:** judgement
 
 ## Motivation
 

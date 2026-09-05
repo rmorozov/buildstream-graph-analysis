@@ -1,6 +1,6 @@
 # UX-674: eighteen font sizes, an h3 larger than its h2, and 130-character lines
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-305 (the conformance checklist), UX-316 | **Serves:** every reader of prose on the page | **Topic:** viewer
+**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-305 (the conformance checklist), UX-316 | **Serves:** every reader of prose on the page | **Topic:** viewer | **Shape:** judgement
 
 ## Motivation
 

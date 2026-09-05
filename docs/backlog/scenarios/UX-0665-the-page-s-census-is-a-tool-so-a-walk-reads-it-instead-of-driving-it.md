@@ -1,6 +1,6 @@
 # UX-665: the page's census is a tool, so a walk reads it instead of driving it
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-359 (the page fixture every browser guard measures), UX-532 (the nested-row class a census would have caught) | **Serves:** the orchestrating session paying for a walk | **Topic:** guards
+**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-359 (the page fixture every browser guard measures), UX-532 (the nested-row class a census would have caught) | **Serves:** the orchestrating session paying for a walk | **Topic:** guards | **Shape:** bounded
 
 ## Motivation
 

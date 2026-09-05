@@ -1,6 +1,6 @@
 # UX-683: the foundation tier is declared, and the kind-based exemption misses it
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-479, UX-681 | **Serves:** R2 who owns the toolchain and wants out of the noise; R3 reading the ranking | **Topic:** analysis
+**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-479, UX-681 | **Serves:** R2 who owns the toolchain and wants out of the noise; R3 reading the ranking | **Topic:** analysis | **Shape:** judgement
 
 ## Motivation
 

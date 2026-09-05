@@ -167,8 +167,20 @@ class TestTheCoresAreSampledToo:
 
     def test_no_sample_claims_more_cores_busy_than_the_host_has(
             self, sampled):
-        """The bound is the machine, plus the one jiffy the delta is
-        quantised to over that gap - not a slack constant."""
+        """The bound is the machine, plus the quantisation the delta
+        carries over that gap - not a slack constant.
+
+        That is `cores` jiffies, not one. Each CPU keeps **its own**
+        counters and posts whole jiffies at its own tick boundaries, so
+        over a short window each of them independently rounds up: the
+        aggregate can overshoot by a jiffy per CPU. The first draft
+        allowed one over the whole sample and reddened at 4.314 busy on
+        a 4-core host over a 0.051 s gap - 22 jiffies where four cores
+        can accrue at most 20.4, which is 1.6 of quantisation and not a
+        sampler that measured more machine than exists.
+
+        Still not a constant: at a 2 s gap this is 4.02, and the clause
+        would still catch a sampler that double-counted a field."""
         back = sampled["back"]
         if not back["samples"]:
             pytest.skip("this host exposes no /proc/meminfo")
@@ -179,7 +191,7 @@ class TestTheCoresAreSampledToo:
                              for earlier, later in zip(edges, edges[1:])]):
             if "cpu_busy_cores" not in row:
                 continue
-            ceiling = row["cores"] + 1.0 / (_TICKS_PER_S * gap)
+            ceiling = row["cores"] * (1.0 + 1.0 / (_TICKS_PER_S * gap))
             assert 0.0 <= row["cpu_busy_cores"] <= ceiling, (row, gap)
 
 

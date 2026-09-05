@@ -1676,7 +1676,7 @@ area is a field and a generated page), and a specification rewrite
 **Serves:** every implementing session, and R8 deciding whether a
 change may land — the gate is the tool's, the review is the reader's.
 
-**Status:** partial — the corrections are argued here; `UX-693`..`UX-703` are open.
+**Status:** partial — the corrections are argued here; `UX-693`..`UX-705` are open.
 
 The user's brief: static analysis and coverage exist, but no
 refactoring cadence, so comments go stale and complexity grows; revise
@@ -1718,16 +1718,29 @@ no round number in code, a count in a comment dated or derived, and
 the commit-body budget read from the pull request — three rows the
 register states and nothing yet enforces.
 
-**3. Three shelves, not one gate.** Every stronger tool tried finds
-signal today's gate cannot see — 1,378 pyupgrade hits, 87 bandit-class,
-270 pyright errors, 70 eslint problems — and none of it can become a
-zero-tolerance gate in one commit. So the rule set grows on three
-shelves: **auto-fixed** (pyupgrade, simplify, unused suppressions —
-fixed in one commit, enforced from the next), **ratcheted** (complexity,
-size, bandit-class, type errors — the ledger, may not grow), and
-**gate-only** (CodeQL or its private-repo substitute, pip-audit against
-a lockfile, Dependabot, secret scanning — hosted, minutes, never local).
-The inner loop does not slow because it already runs the right tool:
+**3. Three shelves, not one gate — and the middle shelf is a
+baseline, not a count.** Every stronger tool tried finds signal
+today's gate cannot see — 1,378 pyupgrade hits, 87 bandit-class, 270
+pyright errors, 70 eslint problems — and none of it can reach zero in
+one commit. So the rule set grows on three shelves: **auto-fixed**
+(pyupgrade, simplify, unused suppressions — fixed in one commit,
+enforced from the next), **baselined**, and **gate-only** (CodeQL,
+pip-audit against a lockfile, Dependabot, secret scanning — hosted,
+minutes, never local). The round's first draft made the middle shelf
+a per-file count that may not grow; the user's correction is the
+known trick, and it is stricter and cheaper: write every current
+finding down by identity — rule, file, the line's text, its
+occurrence — and the gate is zero-tolerance from that commit on. A
+count lets a new finding in whenever an old one leaves the same file
+and cannot say which is new; a baseline can, and it only ever
+shrinks. Measured: 1,709 findings over six families, 1,709 distinct
+identities, none needing a line number. The list is then work for a
+smaller model — a batch a commit, judged by the suite and by the
+list getting shorter, never by a suppression, which is itself a
+finding (`UX-705`). What has no finding identity — a file's length, a
+function's length, a duplicate block — stays a count in the size
+ledger, and that ledger's top row is the refactor's queue. The inner
+loop does not slow because it already runs the right tool:
 `ruff` on the edited file in 10 ms, and the widened set rides the same
 hook. Everything slower runs only on GitHub, and `make lint` stays what
 it is. Per-file rules by layer, not per-line suppressions: `tools/`
@@ -1780,8 +1793,8 @@ today can change under the same configuration tomorrow.
 ### What follows
 
 `UX-693` the rule set widened by layer, in one auto-fix commit, tools
-pinned (High) · `UX-694` the quality ledger, ratcheted like the CI
-reference (High) · `UX-695` the refactor stream takes the ledger's top
+pinned (High) · `UX-694` a finding baseline, and a size ledger for
+what has no identity (High) · `UX-695` the refactor stream takes the ledger's top
 row, renderers first (Medium) · `UX-696` the register's unguarded rows:
 no round in code, dated counts, the commit body (Medium) · `UX-697` a
 type-error ratchet, contracts first (Medium) · `UX-698` the gate-only
@@ -1790,7 +1803,8 @@ secret scanning (High) · `UX-699` the viewer linted as one module graph
 (Medium) · `UX-700` the symbol index, and CodeQL declined for
 navigation (High) · `UX-701` the `self-review` skill (High) · `UX-702`
 a performance ratchet at the gate (Medium) · `UX-703` a mutation run on
-the touched modules, weekly (Low).
+the touched modules, weekly (Low) · `UX-705` the burn-down on the
+reporters' model, a batch a commit, never a suppression (High).
 
 ## Round history
 
@@ -1856,7 +1870,7 @@ the other rounds now:
 | [90](../audits/round-90.md) | the process given a ledger — reporters on `sonnet`, the walk and the design review as skills, a run ledger — and the page looked at through seven screenshots: the rail as a source list, a reader as a shape not a hue, a runbook as a shape, a rail click that overshoots (`UX-663`..`UX-674`) |
 | [91](../audits/round-91.md) | a design round: whose question utilization is — the tool counts processes where the CI owner needs cores, computes idle intervals it never publishes, exempts foundations by kind so a toolchain is not exempt, and has no change frequency; Direction 17 argues the envelope, the jobserver, priced remote execution and expected rebuild cost (`UX-675`..`UX-684`) |
 | [92](../audits/round-92.md) | a design round on the test workflow: the suite verifies what was built and the walk what was promised — exploration as a seeded scenario that grows the answer key, a release that waits for the walk, the impact set derived, areas as a view, the architecture prose moved one area at a time, a shape budget, a flake ledger, the invariants for any shape (`UX-685`..`UX-692`) |
-| [93](../audits/round-93.md) | a design round on the development workflow: the gate holds the numbers and the review holds the design — the rule set widened by layer and pinned, a ratcheted quality ledger that queues the refactor stream, the register's unguarded rows, a type ratchet, a gate-only shelf on GitHub, the viewer linted, an AST symbol index in place of CodeQL for navigation, a `self-review` skill, a performance ratchet, a weekly mutation run (`UX-693`..`UX-703`) |
+| [93](../audits/round-93.md) | a design round on the development workflow: the gate holds the numbers and the review holds the design — the rule set widened by layer and pinned, a finding baseline that is zero-tolerance for new findings and a size ledger that queues the refactor stream, a burn-down on the reporters' model, the register's unguarded rows, a type baseline, a gate-only shelf on GitHub, the viewer linted, an AST symbol index in place of CodeQL for navigation, a `self-review` skill, a performance ratchet, a weekly mutation run (`UX-693`..`UX-705`) |
 
 ## Verification Log
 

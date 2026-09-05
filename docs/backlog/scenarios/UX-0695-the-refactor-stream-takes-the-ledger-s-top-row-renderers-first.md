@@ -14,7 +14,7 @@ snapshot and the schema guards already judge that no behaviour moved.
 
 ## Required Fix
 
-One sentence in §6a's refactor row: the candidate is the ledger's
+One sentence in §6a's refactor row: the candidate is the size ledger's
 top row by longest function, and a round with two or more tracks
 gives one to it. The first three tracks, filed here as the
 acceptance: `format_text` split by section (one function per report

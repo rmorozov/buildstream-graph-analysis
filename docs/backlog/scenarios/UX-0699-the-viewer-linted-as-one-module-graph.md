@@ -22,8 +22,8 @@ browser globals, `eslint-plugin-import` (`no-unused-modules` with
 `unusedExports`), `eqeqeq`, `no-undef`; run at the gate via
 `npx --yes` in `quality.yml` (`UX-698`) — the dev extra stays
 Python-only, `UX-397`'s decision. The 5 dead exports are deleted or
-referenced, the 6 `==` fixed, the 8 globals declared. The count is a
-ledger column (`UX-694`) so it may not grow.
+referenced, the 6 `==` fixed, the 8 globals declared. The 70 enter the
+baseline (`UX-694`) by identity, so a new one is red.
 
 ## Out of Scope
 

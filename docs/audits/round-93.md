@@ -9,7 +9,7 @@ without slowing the inner loop; a CodeQL skill for navigation in
 place of greps; metrics whose control is delegated to tools, with
 review reserved for design; a cheap self-review skill — and asked to
 be challenged. One researcher measured the gate and the tree; the
-argument is Direction 19; the filings are `UX-693`..`UX-703`.
+argument is Direction 19; the filings are `UX-693`..`UX-705`.
 
 ## What exists today
 
@@ -37,12 +37,17 @@ each number above is one of its pasted outputs.
 
 1. **The cadence is not missing; the measurement is.** §6a defines
    the refactor stream by a measured cost and nothing records one. A
-   ratcheted ledger, and the top row is the refactor's queue.
+   size ledger, and its top row is the refactor's queue.
 2. **Stale comments are counts, promises and history — not names.**
    The identifier guard the brief implies would find nothing; the
    register's unguarded rows are the guard.
-3. **Three shelves.** Auto-fixed, ratcheted, gate-only. The inner
-   loop keeps `ruff` on the edited file; everything slower is hosted.
+3. **Three shelves.** Auto-fixed, baselined, gate-only. The user's
+   correction after the round replaced a count that may not grow with
+   a baseline of every current finding by identity — zero-tolerance
+   for a new one from the first commit, the list only shrinking, and
+   a burn-down a smaller model works a batch a commit. Measured: 1,709
+   findings, 1,709 identities. The inner loop keeps `ruff` on the
+   edited file; everything slower is hosted.
 4. **CodeQL is for data-flow at the gate; navigation wants an AST
    index** — the `orient` greps are slow in tokens, not in seconds.
 5. **`REVIEW.md` already delegates to the gate** — every rule the
@@ -54,7 +59,7 @@ each number above is one of its pasted outputs.
 ## Filed
 
 `UX-693` (the rule set widened by layer, tools pinned — High),
-`UX-694` (the quality ledger — High), `UX-695` (the refactor stream
+`UX-694` (a finding baseline and a size ledger — High), `UX-695` (the refactor stream
 takes the top row, renderers first — Medium), `UX-696` (the register's
 unguarded rows — Medium), `UX-697` (a type-error ratchet, contracts
 first — Medium), `UX-698` (the gate-only shelf on GitHub — High),
@@ -62,7 +67,7 @@ first — Medium), `UX-698` (the gate-only shelf on GitHub — High),
 (the symbol index; CodeQL declined for navigation — High), `UX-701`
 (the `self-review` skill — High), `UX-702` (a performance ratchet at
 the gate — Medium), `UX-703` (a mutation run on the touched modules,
-weekly — Low).
+weekly — Low), `UX-705` (the burn-down on the reporters' model — High).
 
 ## Agents
 

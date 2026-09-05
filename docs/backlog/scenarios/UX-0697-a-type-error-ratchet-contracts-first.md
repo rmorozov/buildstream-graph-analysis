@@ -1,6 +1,6 @@
 # UX-697: a type-error ratchet, contracts first
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-694 (the ledger's column) | **Serves:** the session editing a schema or a contract, where a wrong key is a `UX-190` bump nobody meant | **Topic:** guards
+**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-694 (the baseline) | **Serves:** the session editing a schema or a contract, where a wrong key is a `UX-190` bump nobody meant | **Topic:** guards
 
 ## Motivation
 
@@ -14,16 +14,17 @@ is where a type reads as a schema and an error is a shipped key.
 ## Required Fix
 
 `pyright` in the dev extra, pinned; a `[tool.pyright]` block with
-`typeCheckingMode = "basic"`; the per-file error count a ledger column
-(`UX-694`) so it may not grow; `bga/schemas.py`, `bga/contracts.py`
+`typeCheckingMode = "basic"`; the 270 errors enter the baseline
+(`UX-694`) by identity, so a new one is red and an old one is a
+burn-down batch (`UX-705`); `bga/schemas.py`, `bga/contracts.py`
 and `bga/report/*.py` brought to zero in this task and listed under
-`strict` so they stay there. The CI step is the ledger's guard, not a
-separate `pyright` run — one gate, one reference.
+`strict` so they stay there. The CI step is the baseline's `--check`,
+not a separate `pyright` run — one gate, one list.
 
 ## Out of Scope
 
 - Annotating `tools/` — scripts whose types are `argparse` and
-  strings; the ratchet holds them at today's count and asks no more.
+  strings; the baseline holds today's entries and asks no more.
 - `mypy` beside `pyright` — two checkers disagree on 100 lines and
   agree on the rest; one is chosen, and it is the one that read the
   tree in 10 s.
@@ -32,4 +33,4 @@ separate `pyright` run — one gate, one reference.
 
 `pyright bga/schemas.py bga/contracts.py bga/report` → 0 errors;
 mutation: return `str` from a function annotated `-> int` in
-`bga/report/json.py` — the ledger guard reddens on that file's row.
+`bga/report/json.py` — `--check` reddens on one new entry.

@@ -33,12 +33,13 @@ the judge; a fix that reddens a guard is reverted, not suppressed).
 ignores nothing. **Pinned**: `ruff==<x.y.z>` in the dev extra and the
 same pin in the edit hook's environment. The stale comment is replaced
 by one line of why and the id of this task. `S` and `C901` are not
-selected here — they are the ledger's (`UX-694`).
+selected here — they enter the baseline (`UX-694`).
 
 ## Out of Scope
 
 - `S` and `C901` as zero-tolerance rules — 87 and 84 findings cannot
-  reach zero in one commit; they ratchet under `UX-694`.
+  reach zero in one commit; they are baselined under `UX-694` and
+  burnt down under `UX-705`.
 - Formatting (`ruff format`, `E`/`W`) — a reformat commit hides the
   fixer's diff; a separate task once the auto-fix shelf has landed.
 

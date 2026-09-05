@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-702 scenarios: **42 open**, 660 closed.
+703 scenarios: **43 open**, 660 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -27,7 +27,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | cli | 0 | 21 |
 | store | 0 | 16 |
 | docs | 7 | 110 |
-| guards | 16 | 154 |
+| guards | 17 | 155 |
 
 ## Open scenarios
 
@@ -68,7 +68,7 @@ task file, which is the only place it ever lived twice.
 | UX-691 | [a flake ledger, so an excursion is counted before it is a flake](UX-0691-a-flake-ledger-so-an-excursion-is-counted-before-it-is-a-flake.md) | guards | Medium | the round reading a red gate on a file nobody touched | 🔴 |
 | UX-692 | [the invariants hold for any shape — a seeded sweep over generated projects](UX-0692-the-invariants-hold-for-any-shape-a-seeded-sweep-over-generated-projec.md) | guards | High | R8 trusting the report on a graph nobody fixtured | 🔴 |
 | UX-693 | [the lint rule set widened by layer, in one auto-fix commit, with the tools pinned](UX-0693-the-lint-rule-set-widened-by-layer-in-one-auto-fix-commit-with-the-too.md) | guards | High | the implementing session, whose edit hook then reads the same rules the gate reads | 🔴 |
-| UX-694 | [a quality ledger, ratcheted like the CI reference](UX-0694-a-quality-ledger-ratcheted-like-the-ci-reference.md) | guards | High | the refactor stream, which §6a defines by a measured cost and which has never had one to read | 🔴 |
+| UX-694 | [a finding baseline, and a size ledger for what has no identity](UX-0694-a-finding-baseline-and-a-size-ledger-for-what-has-no-identity.md) | guards | High | the implementing session, whose gate is zero-tolerance for a new finding from the first commit | 🔴 |
 | UX-695 | [the refactor stream takes the ledger's top row — renderers first](UX-0695-the-refactor-stream-takes-the-ledger-s-top-row-renderers-first.md) | docs | Medium | the session that opens a round and has no refactor to pick because none is filed | 🔴 |
 | UX-696 | [the register's unguarded rows — no round in code, a dated count, the commit body](UX-0696-the-register-s-unguarded-rows-no-round-in-code-a-dated-count-the-commi.md) | guards | Medium | the reader who opens a module a year on and meets its history instead of its reason | 🔴 |
 | UX-697 | [a type-error ratchet, contracts first](UX-0697-a-type-error-ratchet-contracts-first.md) | guards | Medium | the session editing a schema or a contract, where a wrong key is a `UX-190` bump nobody meant | 🔴 |
@@ -78,8 +78,9 @@ task file, which is the only place it ever lived twice.
 | UX-701 | [the `self-review` skill — the existing policy on the diff, on the reporters' model](UX-0701-the-self-review-skill-the-existing-policy-on-the-diff-on-the-reporters.md) | docs | High | the implementing session before it reports done, and R8 who then reads a finding list instead of a diff | 🔴 |
 | UX-702 | [a performance ratchet at the gate](UX-0702-a-performance-ratchet-at-the-gate.md) | guards | Medium | R8 reading whether a round made `bga analyze` slower on the largest capture, which nothing today records | 🔴 |
 | UX-703 | [a mutation run on the touched modules, weekly](UX-0703-a-mutation-run-on-the-touched-modules-weekly.md) | guards | Low | the falsify skill, which is a hand ritual per guard and cannot be run over the suite | 🔴 |
+| UX-705 | [the burn-down runs on the reporters' model — a batch a commit, never a suppression](UX-0705-the-burn-down-runs-on-the-reporters-model-a-batch-a-commit-never-a-supp.md) | guards | High | R8, who wants the baseline to reach zero without the session's model reading 1,709 findings | 🔴 |
 
-## UX-693..UX-703: the ninety-third round — the gate holds the numbers, the review holds the design (2026-09-05)
+## UX-693..UX-705: the ninety-third round — the gate holds the numbers, the review holds the design (2026-09-05)
 
 A design round. The user asked how to keep the code in shape as the
 tree grows: no refactoring cadence, stale comments, rising complexity;
@@ -95,13 +96,16 @@ lines never linted; stale identifiers in comments 0 of 1,585, round
 numbers in code 31. The argument is Direction 19; the round is
 [`docs/audits/round-93.md`](../../audits/round-93.md).
 
-**Six corrections, eleven filings.** The cadence is not missing, the
-measurement is: a ratcheted quality ledger (`UX-694`) whose top row
-is the refactor stream's queue, renderers first (`UX-695`), after
+**Six corrections, thirteen filings.** The cadence is not missing, the
+measurement is: a finding baseline — every current finding by
+identity, the gate red on any new one, the list only shrinking — and
+a size ledger for what has no identity (`UX-694`), worked down on the
+reporters' model a batch a commit (`UX-705`) while the size ledger's
+top row is the refactor stream's queue, renderers first (`UX-695`), after
 the rule set is widened by layer in one auto-fix commit with the
 tools pinned (`UX-693`). Stale comments are counts, promises and
 history, not names — the register's unguarded rows (`UX-696`). Three
-shelves: auto-fixed, ratcheted (types, `UX-697`), and gate-only on
+shelves: auto-fixed, baselined (types, `UX-697`), and gate-only on
 GitHub — code scanning, a lockfile and audit, Dependabot, secret
 scanning (`UX-698`), the viewer linted as one module graph
 (`UX-699`). CodeQL declined for navigation; an AST symbol index

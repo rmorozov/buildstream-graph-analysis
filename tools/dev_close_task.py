@@ -90,12 +90,25 @@ rejected it - not a paragraph about the alternatives.>
 
 
 
+_FILES_BY_NUMBER: dict = {}
+
+
 def task_file(uid: str) -> pathlib.Path:
     number = int(re.sub(r"[^0-9]", "", uid))
-    matches = sorted(SCENARIOS.glob(f"UX-{number:04d}-*.md"))
-    if not matches:
+    # UX-704: one listing per directory state, not one glob per row.
+    key = (SCENARIOS, SCENARIOS.stat().st_mtime_ns)
+    if key not in _FILES_BY_NUMBER:
+        by_number: dict = {}
+        for path in sorted(SCENARIOS.glob("UX-*.md")):
+            match = re.match(r"UX-(\d{4})-", path.name)
+            if match:
+                by_number.setdefault(int(match.group(1)), path)
+        _FILES_BY_NUMBER.clear()
+        _FILES_BY_NUMBER[key] = by_number
+    path = _FILES_BY_NUMBER[key].get(number)
+    if path is None:
         raise SystemExit(f"no task file for {uid}")
-    return matches[0]
+    return path
 
 
 def open_row(uid: str):

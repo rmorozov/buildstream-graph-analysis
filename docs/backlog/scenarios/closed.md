@@ -691,6 +691,7 @@ is open, on what topic, for whom — is the other file's.
 | UX-673 | [sixteen tables offer a Top 10 they cannot fill](UX-0673-sixteen-tables-offer-a-top-10-they-cannot-fill.md) | Medium | anyone reading a three-row table with a five-option menu | 🟢 Done — a preset that cannot fill is not offered | [UX-673](UX-0673-sixteen-tables-offer-a-top-10-they-cannot-fill.md) |
 | UX-681 | [fan-in — what an element depends on, ranked](UX-0681-fan-in-what-an-element-depends-on-ranked.md) | High | R2 minimising incoming dependencies, R3 spotting the suspicious fan-in | 🟢 Done — fan-in published, the read share on the join row where the placement rule puts it | [UX-681](UX-0681-fan-in-what-an-element-depends-on-ranked.md) |
 | UX-718 | [the census omits the guard its own docstring names](UX-0718-the-census-omits-the-guard-its-own-docstring-names.md) | High | anyone whose inner loop is `make test-touching` | 🟢 Done — the census names both misses; a derivation cannot see either | [UX-718](UX-0718-the-census-omits-the-guard-its-own-docstring-names.md) |
+| UX-665 | [the page's census is a tool, so a walk reads it instead of driving it](UX-0665-the-page-s-census-is-a-tool-so-a-walk-reads-it-instead-of-driving-it.md) | High | the orchestrating session paying for a walk | 🟢 Done — the census is a tool a walk reads; the registry holds the classes | [UX-665](UX-0665-the-page-s-census-is-a-tool-so-a-walk-reads-it-instead-of-driving-it.md) |
 
 ## UX-207..UX-212: the twenty-third audit round — the report learns to answer first (2026-08-22)
 

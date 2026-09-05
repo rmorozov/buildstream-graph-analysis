@@ -99,6 +99,17 @@ string — which is why a query matches with `glob` and not `=`:
 | `host major faults` | `faults` | `pgmajfault` from `/proc/vmstat`, cumulative since boot |
 | `host pages swapped in` | `pages` | `pswpin` from `/proc/vmstat`, cumulative since boot |
 | `host pages swapped out` | `pages` | `pswpout` from `/proc/vmstat`, cumulative since boot |
+| `host cores busy` | `millicores` | cores busy over the sample's own interval, from `/proc/stat`'s non-idle jiffies (`UX-675`). Quantised to `1 / (100 × interval)` cores — 0.005 at the two-second default |
+| `host cores` | `millicores` | how many cores that host had, counted per sample because a hotplug or a cgroup resize moves it mid-build |
+| `host load average` | `milliprocesses` | `/proc/loadavg`'s one-minute figure: runnable **and** uninterruptible tasks, which is what separates "the cores were busy" from "everything was blocked on the disk" |
+
+The three `milli` units are the item's one concession: `counter_value`
+is an `int64` (`track_event.proto`, field 30) and two of the three are
+fractional, so `HOST_COUNTERS` scales them by 1000 exactly as it scales
+`mem_available_kb` to bytes. `host cores` is drawn on the same axis as
+`host cores busy` because "were the cores the binding resource" is a
+comparison, and before `UX-675` the page asked the reader to make it
+from a number the page did not have.
 
 The first is Plane 2's, folded from the records **after `UX-406`'s
 `merge_record_streams` join** — and that join is what makes its peak

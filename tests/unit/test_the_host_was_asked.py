@@ -45,6 +45,7 @@ One sample costs 37 microseconds — 1,000 reads of both `/proc` files in
 moves, not by what sampling costs.
 """
 import json
+import os
 import pathlib
 import sys
 import time
@@ -56,9 +57,11 @@ sys.path.insert(0, str(REPO))
 
 from bga import run_store
 from tools.bst_native_build_tracer import (
+    _TICKS_PER_S,
     HOST_SAMPLES_SCHEMA,
     HostSampler,
     Plane2Fold,
+    _busy_jiffies,
     compute_process_outcomes,
     read_host_sample,
     read_host_samples,
@@ -104,6 +107,80 @@ def sampled(tmp_path_factory):
     after = time.monotonic()
     return {"path": path, "before": before, "after": after,
             "back": read_host_samples(str(path))}
+
+
+class TestTheCoresAreSampledToo:
+    """`UX-675`. `traced processes running` counts slots, not cores - a
+    process blocked on I/O or a lock holds a slot and no core - so "were
+    the cores the binding resource" had no series to be answered from.
+    Plane 2's rusage is a total at exit and cannot be placed in time.
+    """
+
+    def test_a_sample_names_the_three_it_reads(self):
+        """The item's own mutation: drop the `/proc/stat` read and this
+        reds. Skipped only where the file genuinely is not there, so a
+        dropped read cannot hide behind the same branch."""
+        if not os.path.exists("/proc/stat"):
+            pytest.skip("this host has no /proc/stat")
+        sample = read_host_sample()
+        assert sample, "/proc/stat is there and the sampler read nothing"
+        for key in ("cpu_busy_jiffies", "cores", "load1"):
+            assert key in sample, f"{key} missing from {sorted(sample)}"
+        assert sample["cores"] >= 1 and sample["cpu_busy_jiffies"] > 0
+
+    def test_idle_and_iowait_and_guest_are_not_busy(self):
+        """`/proc/stat`'s first line, in the kernel's order: user, nice,
+        system, idle, iowait, irq, softirq, steal, guest, guest_nice.
+
+        A core in `iowait` is a core another job could have had, which
+        is the distinction the whole item turns on; `guest` and
+        `guest_nice` are already inside `user` and `nice`, so adding
+        them bills a hypervisor's time twice. Neither is 0 on the
+        machines that matter and both are 0 here, so the line is
+        constructed - a sampled one cannot tell these apart.
+        """
+        line = [10, 20, 30, 4000, 500, 1, 2, 3, 7, 9]
+        assert _busy_jiffies(line) == 10 + 20 + 30 + 1 + 2 + 3
+        # A kernel too old to report `steal` onwards: the shorter line
+        # sums to what it has rather than raising.
+        assert _busy_jiffies(line[:7]) == 10 + 20 + 30 + 1 + 2
+
+    def test_cores_busy_lands_exactly_where_a_tick_can_resolve_it(
+            self, sampled):
+        """A rate over a gap shorter than one jiffy is not a coarse
+        reading, it is 0 or 1 whatever the machine was doing - so the
+        sampler publishes nothing there rather than a number. Asserted
+        per sample against its own gap, because the fixture's 0.05 s
+        interval brackets the floor: the first gap is the header read
+        and can fall either side of it.
+        """
+        back = sampled["back"]
+        if not back["samples"]:
+            pytest.skip("this host exposes no /proc/meminfo")
+        edges = ([back["header"]["monotonic_at_start"]]
+                 + [row["t"] for row in back["samples"]])
+        for row, gap in zip(back["samples"],
+                            [later - earlier
+                             for earlier, later in zip(edges, edges[1:])]):
+            assert ("cpu_busy_cores" in row) == (gap >= 1.0 / _TICKS_PER_S), (
+                f"gap {gap}s against a {1.0 / _TICKS_PER_S}s tick: {row}")
+
+    def test_no_sample_claims_more_cores_busy_than_the_host_has(
+            self, sampled):
+        """The bound is the machine, plus the one jiffy the delta is
+        quantised to over that gap - not a slack constant."""
+        back = sampled["back"]
+        if not back["samples"]:
+            pytest.skip("this host exposes no /proc/meminfo")
+        edges = ([back["header"]["monotonic_at_start"]]
+                 + [row["t"] for row in back["samples"]])
+        for row, gap in zip(back["samples"],
+                            [later - earlier
+                             for earlier, later in zip(edges, edges[1:])]):
+            if "cpu_busy_cores" not in row:
+                continue
+            ceiling = row["cores"] + 1.0 / (_TICKS_PER_S * gap)
+            assert 0.0 <= row["cpu_busy_cores"] <= ceiling, (row, gap)
 
 
 class TestTheHostIsSampled:

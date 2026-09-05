@@ -15,15 +15,15 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-714 scenarios: **40 open**, 674 closed.
+715 scenarios: **40 open**, 675 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
-| capture | 2 | 94 |
+| capture | 1 | 94 |
 | analysis | 8 | 102 |
 | contracts | 0 | 48 |
-| viewer | 9 | 157 |
+| viewer | 10 | 158 |
 | cli | 0 | 21 |
 | store | 0 | 16 |
 | docs | 8 | 116 |
@@ -46,7 +46,6 @@ task file, which is the only place it ever lived twice.
 | UX-672 | [a blocked pop-up's refusal never renders](UX-0672-a-blocked-pop-up-s-refusal-never-renders.md) | viewer | Medium | anyone whose browser blocks the Perfetto tab | 🔴 |
 | UX-673 | [sixteen tables offer a Top 10 they cannot fill](UX-0673-sixteen-tables-offer-a-top-10-they-cannot-fill.md) | viewer | Medium | anyone reading a three-row table with a five-option menu | 🔴 |
 | UX-674 | [eighteen font sizes, an h3 larger than its h2, and 130-character lines](UX-0674-eighteen-font-sizes-an-h3-larger-than-its-h2-and-130-character-lines.md) | viewer | Medium | every reader of prose on the page | 🔴 |
-| UX-675 | [the host series has memory and no cores](UX-0675-the-host-series-has-memory-and-no-cores.md) | capture | High | R4, asking whether the cores were busy | 🔴 |
 | UX-676 | [the utilization envelope, and the intervals that violate it](UX-0676-the-utilization-envelope-and-the-intervals-that-violate-it.md) | analysis | High | R4 first, R2 and R3 through the elements each interval names | 🔴 |
 | UX-677 | [the max-jobs advisor — per element, under a no-overcommit constraint](UX-0677-the-max-jobs-advisor-per-element-under-a-no-overcommit-constraint.md) | analysis | High | R4 and R2 — the operator who sets the numbers and the owner whose recipe carries them | 🔴 |
 | UX-678 | [memory joins the sweep and the queue model](UX-0678-memory-joins-the-sweep-and-the-queue-model.md) | analysis | Medium | R5 sizing a builder, R4 reading the sweep | 🔴 |
@@ -76,6 +75,7 @@ task file, which is the only place it ever lived twice.
 | UX-714 | [the orchestrator's share is a bare figure that has moved](UX-0714-the-orchestrators-share-is-a-bare-figure-that-has-moved.md) | docs | Medium | the session pricing a batch against a figure it believes | 🔴 |
 | UX-715 | [fifteen viewer modules, in a passage with no date](UX-0715-fifteen-viewer-modules-in-a-passage-with-no-date.md) | docs | Low | a reader of the architecture's viewer chapter, counting modules | 🔴 |
 | UX-716 | [a guard whose cost is its population has no refresh route](UX-0716-a-guard-whose-cost-is-its-population-has-no-refresh-route.md) | guards | Medium | the branch that goes red for test files another branch added | 🔴 |
+| UX-717 | [the host series is on the trace and in no question](UX-0717-the-host-series-is-on-the-trace-and-in-no-question.md) | viewer | Medium | a reader with Perfetto open, asking whether the cores were busy | 🔴 |
 
 ## UX-706..UX-711: the ninety-fourth round — the pipeline, and which model runs which shape (2026-09-05)
 

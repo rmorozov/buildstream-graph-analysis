@@ -1524,7 +1524,7 @@ sweep/v1            capacity-model/v1                         (what capacity buy
 host/v2                                                       (the measuring machine - UX-186)
 sources/v1                                                    (the source inventory - UX-171)
 capture-layout/v1                                             (the capture directory - UX-381)
-host-samples/v1                                               (the host while it built - UX-378)
+host-samples/v1                                               (the host while it built - UX-378, UX-675)
 bundle-manifest/v1                                            (a capture you can carry - UX-520)
 plane2/v3                                                     (the Plane 2 report - UX-384)
 analyze/v5          analyze/v4    analyze/v3    analyze/v2    (read, never written - UX-641)
@@ -1663,7 +1663,7 @@ key:
 | the source inventory at `sources.json` in a run directory | `sources/v1` | `bga.sources.build_inventory` |
 | the Plane 2 report at `plane2.json` beside a run | `plane2/v3` | `bga.plane2` |
 | the capture directory `.bga/` itself - every path, what writes it, what reads it, and what an absence means (32.6) | `capture-layout/v1` | `bga.run_store` |
-| the host's memory and swap while the build ran, at `host-samples.jsonl` beside a run | `host-samples/v1` | `bga.run_store` names it (`OWNED`); `tools/bst_native_build_tracer.py` writes it |
+| the host's memory, swap and CPU while the build ran, at `host-samples.jsonl` beside a run | `host-samples/v1` | `bga.run_store` names it (`OWNED`); `tools/bst_native_build_tracer.py` writes it |
 | the manifest inside a run bundle: each member's path, presence and contract version, and the `bga` that packed it, so the receiving side recognises and refuses a bundle it cannot read in full (`UX-520`) | `bundle-manifest/v1` | `bga.bundle` |
 | the Plane 2 report a capture before `UX-384` wrote - read, never written | `plane2/v2` | `bga.plane2.SUPERSEDED` |
 | the Plane 2 report a capture before `UX-297` wrote - read, never written | `plane2/v1` | `bga.plane2.SUPERSEDED` |
@@ -1773,7 +1773,7 @@ cannot tell a broken capture from a cheap one:
 | `.bga/runs/<stamp>/plane2.json` | conditional | `plane2/v3` | the Plane 2 report - what ran inside the sandboxes. Absent on a capture taken without Plane 2, and every Plane 2 section of every output is then absent rather than empty. |
 | `.bga/runs/<stamp>/plane2.log.gz` | conditional | — | the raw per-process trace the report was folded from, gzipped. `bga timeline` renders from this; absent means no timeline, which is a different absence from no report (`UX-329`). |
 | `.bga/runs/<stamp>/plane2-resource.json` | conditional | — | the two capacity scalars, beside the report so the aggregator never opens the big file for them (`UX-296`). Absent where the report is. |
-| `.bga/runs/<stamp>/host-samples.jsonl` | conditional | `host-samples/v1` | the host's memory and swap while the build ran, one JSON object per line (`UX-378`). Absent on a capture taken before that item or with sampling unavailable. |
+| `.bga/runs/<stamp>/host-samples.jsonl` | conditional | `host-samples/v1` | the host's memory, swap and CPU while the build ran, one JSON per line (`UX-378`). Absent on a capture taken before that item or with sampling unavailable. |
 | `.bga/runs/<stamp>/analyze.json` | conditional | `analyze/v6` | the analysis this capture published, so `bga view` renders rather than re-deriving (`UX-296`). Absent means the viewer parses the run itself, and the trace carries no graph structure (`UX-380`). |
 | `.bga/runs/<stamp>/build.log` | conditional | — | the wrapped BuildStream log, kept because its first line records the real invocation (`UX-29`). `bga timeline` needs it and refuses without it. |
 | `.bga/runs/<stamp>/element-slice.json` | conditional | — | which elements the capture was asked for, where it was asked for a slice rather than the whole project. |

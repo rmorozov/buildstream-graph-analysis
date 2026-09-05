@@ -531,14 +531,25 @@ COUNTER_WINDOWS = 1000
 #: `duration_us`-style suffixes do not survive a Perfetto axis: the
 #: sampler writes `*_kb` and this multiplies once, here, so the counter
 #: a reader sees is in the unit its label claims.
+#: `UX-675`: and the three CPU tracks, in milli- units. A counter value
+#: is an `int64` on the wire (`counter_value`, field 30) and two of the
+#: three are fractional, so the sampler writes the exact ratio and this
+#: multiplies once - the same move `KB` makes above, for the same
+#: reason. `host cores` is drawn beside `host cores busy` on one axis
+#: because "were the cores the binding resource" is a comparison, and
+#: `questions.js` used to leave it to the reader to make.
 HOST_SAMPLES_NAME = "host-samples.jsonl"
 KB = 1024
+MILLI = 1000
 HOST_COUNTERS = (
     ("mem_available_kb", "host memory available", "bytes", KB),
     ("swap_free_kb", "host swap free", "bytes", KB),
     ("pgmajfault", "host major faults", "faults", 1),
     ("pswpin", "host pages swapped in", "pages", 1),
     ("pswpout", "host pages swapped out", "pages", 1),
+    ("cpu_busy_cores", "host cores busy", "millicores", MILLI),
+    ("cores", "host cores", "millicores", MILLI),
+    ("load1", "host load average", "milliprocesses", MILLI),
 )
 
 
@@ -1372,7 +1383,7 @@ def _write_trackevent(plane1_events, raw_log, spans, anchor_element, output,
                     track = host_tracks[label] = trace.counter_track(
                         label, parent=plane1_track, unit_name=unit)
                 trace.counter(int(round(at_us * NS_PER_US)),
-                              track, value * scale)
+                              track, int(round(value * scale)))
                 host_points += 1
 
         threads = {}

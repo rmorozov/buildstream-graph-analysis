@@ -86,6 +86,30 @@ class TestTheGeneratorDoesWhatItClaims:
         assert notes.TOPIC_ORDER.index("contracts") < notes.TOPIC_ORDER.index("docs")
         assert notes.TOPIC_ORDER.index("cli") < notes.TOPIC_ORDER.index("guards")
 
+    def test_the_release_order_is_a_permutation_of_the_taxonomy(self):
+        """`UX-661`: the fourth copy of the topic set.
+
+        `UX-658` made membership one statement in `dev_close_task`.
+        This module states the same eight in a different sequence, and
+        the sequence is its own argument - a reader wants contract news
+        first, and `TOPIC_ORDER` is where that is said. What it may not
+        own is *which* topics exist: a ninth added there and missing
+        here would have sorted silently to the end of a release body,
+        which is the defect `UX-658` found in the index.
+        """
+        from tools import bga_release_notes as notes
+        from tools import dev_close_task as close
+
+        assert set(notes.TOPIC_ORDER) == set(close.TOPIC_ORDER), (
+            "tools/bga_release_notes.py states the release ordering, but "
+            "membership belongs to dev_close_task.TOPIC_ORDER:\n  only in "
+            f"the release body: {sorted(set(notes.TOPIC_ORDER) - set(close.TOPIC_ORDER))}"
+            f"\n  only in the taxonomy: {sorted(set(close.TOPIC_ORDER) - set(notes.TOPIC_ORDER))}"
+            "\nPlace the new topic in bga_release_notes.TOPIC_ORDER, where "
+            "its position is a decision rather than a default.")
+        assert len(notes.TOPIC_ORDER) == len(set(notes.TOPIC_ORDER)), \
+            "a permutation names each topic once"
+
 
 class TestTheCommittedBodyIsGenerated:
     def test_every_generated_block_matches_the_generator(self):

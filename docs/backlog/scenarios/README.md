@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-710 scenarios: **41 open**, 669 closed.
+710 scenarios: **40 open**, 670 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -27,7 +27,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | cli | 0 | 21 |
 | store | 0 | 16 |
 | docs | 8 | 113 |
-| guards | 14 | 159 |
+| guards | 13 | 159 |
 
 ## Open scenarios
 
@@ -36,7 +36,6 @@ task file, which is the only place it ever lived twice.
 
 | ID | Scenario | Topic | Priority | Serves | Status |
 |---|---|---|---|---|---|
-| UX-661 | [the second copy of the topic set orders a release body](UX-0661-the-fourth-copy-of-the-topic-set-orders-a-release.md) | guards | Low | anyone adding a topic and expecting the release notes to know about it | 🔴 Open |
 | UX-665 | [the page's census is a tool, so a walk reads it instead of driving it](UX-0665-the-page-s-census-is-a-tool-so-a-walk-reads-it-instead-of-driving-it.md) | guards | High | the orchestrating session paying for a walk | 🔴 |
 | UX-666 | [a subagent's cost is written down, and its friction with it](UX-0666-a-subagent-s-cost-is-written-down-and-its-friction-with-it.md) | docs | High | the round choosing a model and a shape for its next agent | 🔴 |
 | UX-667 | [the rail is a source list — chapters disclose, and the mark stays in view](UX-0667-the-rail-is-a-source-list-chapters-disclose-and-the-mark-stays-in-view.md) | viewer | High | R1..R8 — every reader past the first screen | 🔴 |

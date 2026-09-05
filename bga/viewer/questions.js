@@ -526,8 +526,9 @@ limit 20;`,
       "sampled from the same records the " +
       "process census counts. Its peak equals the `max_concurrency` " +
       "the report publishes - by construction, because both read one " +
-      "function. Read it against the machine's core count: a plateau " +
-      "well under it is capacity nobody used.",
+      "function. Read it against `host cores busy` below: a plateau of " +
+      "processes over an idle machine is work that was blocked, not " +
+      "work that filled the cores.",
     sql: `select c.ts / 1e9 as seconds, c.value as processes_running
 from counter c
 join counter_track t on c.track_id = t.id

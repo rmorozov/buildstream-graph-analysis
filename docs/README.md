@@ -207,6 +207,7 @@ appended to instead of superseded:
 |---|---|
 | [`audits/architecture-review.md`](audits/architecture-review.md) | every architecture and documentation review the `UX-241` cadence has called, newest last — **append-only**, so a superseded finding stays where it was written and the review after it says so |
 | [`audits/spec-compliance-review.md`](audits/spec-compliance-review.md) | the original review of the tool against its specification, before the round sequence began |
+| [`audits/agent-runs.md`](audits/agent-runs.md) | what each subagent run cost — tokens, tool calls, wall clock — and its own friction line, one row per run, so a model and a report shape are chosen from numbers (`UX-666`) |
 
 The rounds themselves:
 

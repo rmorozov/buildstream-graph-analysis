@@ -281,6 +281,82 @@ def distribution(values):
     return shape
 
 
+def _blast_signals(diag_result, kind_by_uid: dict) -> dict:
+    """Part 25's four keys, lifted out of `_compute_diagnostics` whole.
+
+    `UX-681`: a move, not a change - the statement budget the baseline
+    holds `_compute_diagnostics` to had no room for the fan-in mirror,
+    and the block the mirror is modelled on is the one that belongs
+    beside it.
+    """
+    out: dict = {}
+    if diag_result.blast_radius:
+        out['blast_radius'] = {
+            br.element_uid: {
+                'downstream_count': br.downstream_count,
+                'weighted_duration_us': br.downstream_weighted_duration_us,
+                'is_leaf': br.is_leaf,
+                'risk_score': br.risk_score,
+                # P4-12 Direction 1/2 (non-spec, additive, presentation
+                # only - never changes downstream_count/risk_score
+                # above, which stay the real, directly-observed data).
+                'element_kind': kind_by_uid.get(br.element_uid, 'unknown'),
+                'is_structural_kind': kind_by_uid.get(br.element_uid) in STRUCTURAL_ELEMENT_KINDS,
+            }
+            for br in diag_result.blast_radius
+        }
+        out['top_blast_radius'] = [
+            br.element_uid for br in diag_result.top_blast_radius_elements[:5]
+        ]
+        # UX-259: the shape the counts come from. `753 downstream`
+        # is p99.9 in a graph of 1,202 and unremarkable in one of
+        # forty thousand, and the *number* is what travels into a
+        # ticket while the rank stays behind. Deciles plus the
+        # named tail, because ten buckets is a shape a reader takes
+        # in at a glance and finer only matters where p95/p99
+        # already carry it.
+        # Absent, not `null`, when the run is too small for a
+        # distribution to mean anything - the same shape `UX-249`
+        # settled on for "we do not have this", so a consumer never
+        # has to interpret a published null.
+        shape = blast_radius_distribution(
+            [br.downstream_count for br in diag_result.blast_radius])
+        if shape:
+            out['blast_radius_distribution'] = shape
+        # UX-173: which order the ranking above is in, published
+        # rather than inferable - "ranked by cost" and "ranked by
+        # count because nothing was measured" are different claims.
+        out['blast_radius_ranked_by'] = (
+            'measured-rebuild-time'
+            if any(br.downstream_weighted_duration_us
+                   for br in diag_result.blast_radius)
+            else 'element-count'
+        )
+    return out
+
+
+def _fan_in_signals(graph, kinds: dict) -> dict:
+    """`UX-681`: the three keys fan-in publishes.
+
+    `reachable_upstream` and `compute_dominators` have run on every
+    analysis since `UX-33` and reached no reader; this is the join that
+    publishes them. Plane 1 only - the never-read share needs Plane 2,
+    so it is a join-row field (`dependency_read_share`) per
+    `ELEMENT_PLACEMENT_RULE`.
+    """
+    from .graph.fan_in import compute_fan_in, top_fan_in
+
+    if not (graph and graph.elements):
+        return {}
+    rows = compute_fan_in(graph, kinds, STRUCTURAL_ELEMENT_KINDS)
+    out = {'fan_in': rows, 'top_fan_in': top_fan_in(rows)}
+    shape = blast_radius_distribution(
+        [row['transitive_count'] for row in rows.values()])
+    if shape:
+        out['fan_in_distribution'] = shape
+    return out
+
+
 def blast_radius_distribution(counts):
     """`UX-259`'s name for `distribution`, kept so nothing that reads it
     has to change."""
@@ -2149,50 +2225,11 @@ class BuildEfficiencyAnalyzer:
                 'nonzero_fraction': diag_result.ready_queue.nonzero_fraction,
             }
         
-        # Blast radius (Part 25)
-        if diag_result.blast_radius:
-            signals['blast_radius'] = {
-                br.element_uid: {
-                    'downstream_count': br.downstream_count,
-                    'weighted_duration_us': br.downstream_weighted_duration_us,
-                    'is_leaf': br.is_leaf,
-                    'risk_score': br.risk_score,
-                    # P4-12 Direction 1/2 (non-spec, additive, presentation
-                    # only - never changes downstream_count/risk_score
-                    # above, which stay the real, directly-observed data).
-                    'element_kind': kind_by_uid.get(br.element_uid, 'unknown'),
-                    'is_structural_kind': kind_by_uid.get(br.element_uid) in STRUCTURAL_ELEMENT_KINDS,
-                }
-                for br in diag_result.blast_radius
-            }
-            signals['top_blast_radius'] = [
-                br.element_uid for br in diag_result.top_blast_radius_elements[:5]
-            ]
-            # UX-259: the shape the counts come from. `753 downstream`
-            # is p99.9 in a graph of 1,202 and unremarkable in one of
-            # forty thousand, and the *number* is what travels into a
-            # ticket while the rank stays behind. Deciles plus the
-            # named tail, because ten buckets is a shape a reader takes
-            # in at a glance and finer only matters where p95/p99
-            # already carry it.
-            # Absent, not `null`, when the run is too small for a
-            # distribution to mean anything - the same shape `UX-249`
-            # settled on for "we do not have this", so a consumer never
-            # has to interpret a published null.
-            shape = blast_radius_distribution(
-                [br.downstream_count for br in diag_result.blast_radius])
-            if shape:
-                signals['blast_radius_distribution'] = shape
-            # UX-173: which order the ranking above is in, published
-            # rather than inferable - "ranked by cost" and "ranked by
-            # count because nothing was measured" are different claims.
-            signals['blast_radius_ranked_by'] = (
-                'measured-rebuild-time'
-                if any(br.downstream_weighted_duration_us
-                       for br in diag_result.blast_radius)
-                else 'element-count'
-            )
-        
+        signals.update(_blast_signals(diag_result, kind_by_uid))
+
+        # `UX-681`: fan-in, the mirror of the blast radius above.
+        signals.update(_fan_in_signals(self.graph, kind_by_uid))
+
         # Criticality probability (Part 26)
         if diag_result.criticality_probabilities:
             signals['criticality_probability'] = {

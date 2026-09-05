@@ -15,13 +15,13 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-716 scenarios: **38 open**, 678 closed.
+717 scenarios: **38 open**, 679 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
 | capture | 1 | 94 |
-| analysis | 7 | 102 |
+| analysis | 7 | 103 |
 | contracts | 0 | 48 |
 | viewer | 8 | 158 |
 | cli | 0 | 21 |
@@ -48,7 +48,6 @@ task file, which is the only place it ever lived twice.
 | UX-678 | [memory joins the sweep and the queue model](UX-0678-memory-joins-the-sweep-and-the-queue-model.md) | analysis | Medium | R5 sizing a builder, R4 reading the sweep | 🔴 |
 | UX-679 | [a jobserver every sandbox joins — the prototype bga can run](UX-0679-a-jobserver-every-sandbox-joins-the-prototype-bga-can-run.md) | capture | Medium | R4 and R5 — dynamic sharing instead of static tuning | 🔴 |
 | UX-680 | [remote execution is priced, not built](UX-0680-remote-execution-is-priced-not-built.md) | analysis | Medium | R4 and R8 deciding whether to buy it | 🔴 |
-| UX-681 | [fan-in — what an element depends on, ranked](UX-0681-fan-in-what-an-element-depends-on-ranked.md) | analysis | High | R2 minimising incoming dependencies, R3 spotting the suspicious fan-in | 🔴 |
 | UX-682 | [change frequency and co-change, from the logs the project already keeps](UX-0682-change-frequency-and-co-change-from-the-logs-the-project-already-keeps.md) | analysis | High | R2 and R3 — split, consolidate, or leave alone, decided on evidence | 🔴 |
 | UX-683 | [the foundation tier is declared, and the kind-based exemption misses it](UX-0683-the-foundation-tier-is-declared-and-the-kind-based-exemption-misses-it.md) | analysis | Medium | R2 who owns the toolchain and wants out of the noise; R3 reading the ranking | 🔴 |
 | UX-684 | [the cached-build verdict — does the graph rebuild the cheapest subgraph?](UX-0684-the-cached-build-verdict-does-the-graph-rebuild-the-cheapest-subgraph.md) | analysis | High | R3 showing evidence, R8 reading it | 🔴 |
@@ -74,6 +73,7 @@ task file, which is the only place it ever lived twice.
 | UX-716 | [a guard whose cost is its population has no refresh route](UX-0716-a-guard-whose-cost-is-its-population-has-no-refresh-route.md) | guards | Medium | the branch that goes red for test files another branch added | 🔴 |
 | UX-717 | [the host series is on the trace and in no question](UX-0717-the-host-series-is-on-the-trace-and-in-no-question.md) | viewer | Medium | a reader with Perfetto open, asking whether the cores were busy | 🔴 |
 | UX-718 | [the census omits the guard its own docstring names](UX-0718-the-census-omits-the-guard-its-own-docstring-names.md) | guards | High | anyone whose inner loop is `make test-touching` | 🔴 |
+| UX-719 | [the bottleneck fan-in and fan-out labels are swapped](UX-0719-the-bottleneck-fan-in-and-fan-out-labels-are-swapped.md) | analysis | Medium | a reader of the graph-shape block | 🔴 |
 
 ## UX-706..UX-711: the ninety-fourth round — the pipeline, and which model runs which shape (2026-09-05)
 

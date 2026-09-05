@@ -198,7 +198,11 @@ class TestTheSchemaDeclaresTheKey:
         every guard here would silently not know about."""
         assert set(schemas.ELEMENT_KEYED) == {
             "element_durations", "slack", "downstream_count",
-            "unweighted_depth", "blast_radius", "criticality_probability"}
+            "unweighted_depth", "blast_radius", "criticality_probability",
+            # `UX-681`: the blast radius's mirror. Plane 1 only, which
+            # is why it is a map here and not a join field - the rule
+            # below is what decides that.
+            "fan_in"}
 
     def test_the_placement_rule_is_written_where_it_is_met(self):
         """A rule in a task file is a rule nobody reads. It goes beside

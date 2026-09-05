@@ -78,12 +78,18 @@ _DRIVE = r"""
   for (const option of [...population.options]) {
     population.value = option.value;
     population.dispatchEvent(new Event("change"));
+    // `UX-673`: a population no preset can bound gets no control at
+    // all, so `null` is a reading and not a crash - and the clause
+    // below asserts which populations are entitled to it.
     const limit = body().querySelector(".top-n");
-    const chose = limit.options[limit.selectedIndex].textContent;
+    const chose = limit ? limit.options[limit.selectedIndex].textContent
+                        : null;
     const atRest = { label: option.textContent, visible: visible(),
                      caption: caption(), badge: badge(), limit: chose };
-    limit.value = "";                       // "All rows"
-    limit.dispatchEvent(new Event("change"));
+    if (limit) {
+      limit.value = "";                     // "All rows"
+      limit.dispatchEvent(new Event("change"));
+    }
     views[option.value] = { ...atRest, allRows: visible(),
                             captionAfter: caption() };
   }
@@ -168,13 +174,24 @@ class TestAllRowsMeansAllRows:
 
     def test_a_short_population_is_not_bounded_at_all(self, driven):
         """And a table under the threshold is left alone rather than
-        given a limit it does not need."""
+        given a limit it does not need.
+
+        `UX-673` made that stronger than "the limit rests on All rows":
+        a population no preset can fill gets **no control**, and
+        `limit` is then `null`. Both readings are the same claim - the
+        rows are all there - so both pass, and a `null` on a table long
+        enough for the smallest preset would not."""
         for name in ("Critical path", "Choke points"):
             view = driven["views"].get(name)
             if not view:
                 continue
             assert view["visible"] == view["allRows"], (name, view)
-            assert view["limit"] == "All rows", (name, view["limit"])
+            if view["limit"] is None:
+                assert view["visible"] <= 10, (
+                    f"{name} shows {view['visible']} rows and offers no "
+                    f"limit - `Top 10` could have filled")
+            else:
+                assert view["limit"] == "All rows", (name, view["limit"])
 
     def test_the_caption_and_the_badge_say_different_true_things(
             self, driven, total):

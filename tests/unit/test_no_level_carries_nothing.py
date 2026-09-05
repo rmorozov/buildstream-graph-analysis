@@ -85,7 +85,24 @@ FIXTURES = {"golden": REPO / "tests/fixtures/golden/mixed_task_kinds",
 #     macro_micro 1068 -> 1090 leaves, 524 -> 555 deep, 0.4906 -> 0.5092
 #
 # `macro_micro`'s 0.58 is untouched - it had the headroom.
-DEEPER_THAN_THREE = {"golden": (0.574, 0.49), "macro_micro": (0.671, 0.58)}
+#
+# `UX-681` moves the golden bound 0.49 -> 0.50, and it is the same kind
+# of movement: `elements.fan_in` is an element-keyed map of records, so
+# every one of its leaves sits at `elements.fan_in.<uid>.<field>` -
+# depth four by construction, exactly as `elements.blast_radius` has
+# been since `UX-479`. Four elements times five fields is twenty deep
+# leaves this run cannot publish any flatter. Measured with
+# `tools/dev_refresh_analysis.py`, before -> after:
+#
+#     golden       708 -> 753 leaves, 341 -> 372 deep, 0.4816 -> 0.4940
+#     macro_micro 1090 -> 2325 leaves, 555 -> 1012 deep, 0.5092 -> 0.4353
+#
+# `macro_micro`'s ratio *fell*: the same twenty-odd deep leaves arrived
+# against a leaf count that more than doubled, because `UX-676`'s
+# interval tables are eleven rows of shallow columns. The bound is not
+# lowered to match - a ratio that improved on one fixture and worsened
+# on the other is the budget doing its job, not a new floor to defend.
+DEEPER_THAN_THREE = {"golden": (0.574, 0.50), "macro_micro": (0.671, 0.58)}
 
 #: `macro_micro` keeps a seventh level, argued in the item: a step's
 #: `entering` list is four real relations, not a namespace.

@@ -8,8 +8,13 @@ Nothing here is a new traversal. `compute_reachability` has returned
 `reachable_upstream` in the same pass as the downstream set since
 `UX-33`, and `compute_dominators` has run on every analysis since; both
 reached `graph_analysis` and neither reached a reader. This is the
-join that publishes them, with `UX-407`'s never-read edges as the third
-column - the one that turns a count into a question.
+join that publishes them.
+
+Plane 1 only. `UX-407`'s never-read edges are the column that turns
+these counts into a question, and they are not here: they need Plane 2
+to exist, so `ELEMENT_PLACEMENT_RULE` puts them on an `element_join`
+row (`dependency_read_share`) rather than in a map every capture
+carries and most captures could only fill with nulls.
 """
 from typing import Optional
 
@@ -37,15 +42,8 @@ def immediate_dominator(dominators: dict, uid: str) -> Optional[str]:
     return max(sorted(others), key=lambda name: len(dominators.get(name) or ()))
 
 
-def compute_fan_in(graph, kinds: dict, structural_kinds,
-                   unread: Optional[dict] = None) -> dict:
-    """Per element: what it pulls in, how much of it was read, and its gate.
-
-    `unread` is `UX-407`'s per-element never-read list (Plane 2's
-    `unused_dependencies`); absent without a Plane 2 report, and the
-    share is then `None` rather than 1.0 - "every edge was read" and
-    "nobody looked" are different claims.
-    """
+def compute_fan_in(graph, kinds: dict, structural_kinds) -> dict:
+    """Per element: what it names, what that pulls in, and its gate."""
     _downstream, upstream = compute_reachability(graph)
     dominators = compute_dominators(graph)
     direct: dict = {element.uid: set() for element in graph.elements}
@@ -54,18 +52,13 @@ def compute_fan_in(graph, kinds: dict, structural_kinds,
             direct[edge.successor].add(edge.predecessor)
     rows = {}
     for uid in sorted(direct):
-        edges = direct[uid]
-        never_read = set((unread or {}).get(uid) or ()) & edges
         rows[uid] = {
-            "direct_count": len(edges),
+            "direct_count": len(direct[uid]),
             # `compute_reachability` excludes the element itself, so
             # this is the closure and not the closure plus one - held
             # by a clause on that helper rather than by a subtraction
             # here, which would be a second rule that could not be wrong.
             "transitive_count": len(upstream.get(uid) or ()),
-            "unread_count": len(never_read) if unread is not None else None,
-            "read_share": (round(1 - len(never_read) / len(edges), 3)
-                           if unread is not None and edges else None),
             "immediate_dominator": immediate_dominator(dominators, uid),
             "element_kind": kinds.get(uid, "unknown"),
             "is_structural_kind": kinds.get(uid) in structural_kinds,

@@ -223,6 +223,8 @@ TRACE_QUERIES = {
     "blast-radius-ranking": ("dependency-wait",),
     "blast-radius-reach": ("dependency-wait",),
     "blast-radius-structural": ("dependency-wait",),
+    "fan-in-ranking": ("dependency-wait",),
+    "fan-in-structural": ("dependency-wait",),
     "shared-source-blast": ("dependency-wait",),
     # Resources: what the processes inside the sandbox cost.
     "memory-envelope": ("peak-rss",),
@@ -499,6 +501,17 @@ def _blast_paths(claim: dict, document: dict) -> tuple[str, ...]:
                  for uid in (claim.get("elements") or ()))
 
 
+def _fan_in_paths(claim: dict, document: dict) -> tuple[str, ...]:
+    """`UX-681`: the mirror, on the same rule and for the same reason.
+
+    One scalar per element the sentence names, in that order. Citing
+    `elements.fan_in` would inline the whole map, which is the defect
+    `_blast_paths` above was written to stop.
+    """
+    return tuple(f"elements.fan_in[{uid}].transitive_count"
+                 for uid in (claim.get("elements") or ()))
+
+
 _CLAIMS = {
     "diagnosis": (
         ("floors.t_infinity_observed", "total_duration_us",
@@ -653,6 +666,24 @@ _CLAIMS = {
             "dependents are the graph's shape rather than a task, which is "
             "why UX-258 reports them here instead of ranking them as work "
             "(the rule UX-76 already applied to criticality)."), ()),
+    "fan-in-ranking": (
+        _fan_in_paths,
+        _unconditional(
+            "Published for every graph with something to rank - an "
+            "element that pulls in nothing is left out rather than "
+            "listed at zero, and a structural kind is reported by the "
+            "claim below rather than ranked here (`UX-76`). Unlike its "
+            "mirror it is not gated on the diagnosis: what an element "
+            "is built on is true whichever way the build is bound, and "
+            "the claim is a description of the graph rather than an "
+            "ordering of work."), ()),
+    "fan-in-structural": (
+        _fan_in_paths,
+        _unconditional(
+            "Published when a structural kind - a stack, a base image - "
+            "has the widest closure. It depends on everything on "
+            "purpose, so the count is the graph's shape and not a "
+            "task."), ()),
     "criticality": (
         ("floors.t_infinity_observed",),
         _unconditional(

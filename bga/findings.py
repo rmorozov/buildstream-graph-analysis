@@ -106,6 +106,9 @@ FINDING_READERS = {
     "latent-heavies": "recipe-author",
     "blast-radius-reach": "recipe-author",
     "blast-radius-structural": "recipe-author",
+    # `UX-681`: the mirror. The ranking is R3's "which fan-in is
+    # suspicious"; naming a stack as the graph's shape is R2's.
+    "fan-in-structural": "recipe-author",
     "shared-source-blast": "recipe-author",
     "cache-transfer-cost": "recipe-author",
     # R3 - the structural answers.
@@ -113,6 +116,7 @@ FINDING_READERS = {
     "chain-graph": "graph-owner",
     "graph-width": "graph-owner",
     "criticality": "graph-owner",
+    "fan-in-ranking": "graph-owner",
     # R4 - whether the number can be trusted and whether it is normal.
     "confidence": "ci-gatekeeper",
     "efficiency-score": "ci-gatekeeper",
@@ -1375,6 +1379,68 @@ def _ranking_findings(result: AnalysisResult, chain_bound: bool) -> list[dict]:
     return findings
 
 
+def _fan_in_findings(result: AnalysisResult) -> list[dict]:
+    """`UX-681`: the blast ranking's mirror, on the same three rules.
+
+    Two members, not four. `fan-in-reach` would be the ranking restated
+    - "what this pulls in" *is* the count it is ranked on, where
+    `blast-radius-reach` adds the cost argument a downstream count does
+    not carry - and `fan-in-unread` would be `restructuring` restated,
+    which already names the never-read edges and replays the saving
+    (`UX-407`). The share those edges were read at is a column on the
+    join row, where `ELEMENT_PLACEMENT_RULE` puts it.
+    """
+    signals = result.signals or {}
+    ranked = signals.get('top_fan_in') or []
+    fan_in = signals.get('fan_in') or {}
+    if not fan_in:
+        return []
+    distribution = signals.get('fan_in_distribution')
+
+    findings = []
+    shown = ranked[:BLAST_RADIUS_SHOWN]
+    if shown:
+        detail = []
+        for index, uid in enumerate(shown, start=1):
+            entry = fan_in.get(uid, {})
+            count = entry.get('transitive_count', 0)
+            detail.append(
+                f"    {index}. {uid} ({count} upstream, "
+                f"{entry.get('direct_count', 0)} named directly"
+                f"{_blast_scale(count, distribution)})"
+                f"{structural_kind_tag(entry)}")
+        if distribution:
+            detail.append(
+                f"    {_density_sentence(distribution, 'pull in')}")
+        findings.append(_finding(
+            'fan-in-ranking', SEVERITY_INFO,
+            "Elements that pull in the most (by upstream closure):",
+            detail=detail, elements=list(shown),
+            evidence=({'fan_in_distribution': distribution}
+                      if distribution else {}),
+        ))
+
+    # `UX-76` again, and the one place this graph's widest fan-in
+    # actually lands: a stack names everything on purpose.
+    structural = sorted(
+        (uid for uid, row in fan_in.items()
+         if row.get('is_structural_kind') and row.get('transitive_count')),
+        key=lambda uid: (-fan_in[uid]['transitive_count'], uid))
+    if structural:
+        named = ", ".join(
+            f"{uid} ({fan_in[uid]['transitive_count']} upstream)"
+            for uid in structural[:BLAST_RADIUS_SHOWN])
+        findings.append(_finding(
+            'fan-in-structural', SEVERITY_INFO,
+            f"Pulling in most of the graph by design: {named} - "
+            f"structural elements "
+            f"({', '.join(sorted({fan_in[uid].get('element_kind', 'unknown') for uid in structural}))})"
+            f" whose dependencies are the graph's shape, not a task",
+            elements=list(structural[:BLAST_RADIUS_SHOWN]),
+        ))
+    return findings
+
+
 def _blast_scale(count, distribution):
     """` , p90+` - where this count sits in its own run.
 
@@ -1410,15 +1476,21 @@ def _indistinguishable(shown, blast_radius, distribution):
             f"- the order between them is not a difference worth acting on")
 
 
-def _density_sentence(distribution):
-    """The graph's shape in one line, rather than a chart (`UX-196`)."""
+def _density_sentence(distribution, verb="reach"):
+    """The graph's shape in one line, rather than a chart (`UX-196`).
+
+    `UX-681`: the verb, because the same arithmetic reads in two
+    directions - a blast radius is what an element *reaches* and a
+    fan-in is what it *pulls in*, and one sentence for both would say
+    the wrong one on half its uses.
+    """
     deciles = distribution.get('deciles') or {}
     median, ninety = deciles.get('p50'), deciles.get('p90')
     if median is None or ninety is None:
         return ""
-    return (f"Shape: half of this run's {distribution['n']} elements reach "
-            f"{median} or fewer, the top tenth reach {ninety} or more "
-            f"(max {distribution['max']})")
+    return (f"Shape: half of this run's {distribution['n']} elements "
+            f"{verb} {median} or fewer, the top tenth {verb} {ninety} or "
+            f"more (max {distribution['max']})")
 
 
 def _criticality_findings(result: AnalysisResult) -> list[dict]:
@@ -1525,6 +1597,9 @@ def compute_findings(result: AnalysisResult) -> list[dict]:
     # ranking's competitor - `_ranking_findings` gates the one claim
     # that competes and publishes the other two either way.
     findings.extend(_ranking_findings(result, chain_bound))
+    # `UX-681`: beside its mirror, and after it - a reader asks what a
+    # change costs before asking what the element is built on.
+    findings.extend(_fan_in_findings(result))
     # `UX-478`: the one claim about the graph that reads no duration and
     # no capacity, so it is emitted here rather than inside the
     # concentration table - it has to survive a run that has no table.

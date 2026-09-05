@@ -23,6 +23,8 @@ limit is a row too.
 | 82 | researcher | main | design docs | — | — | — | **cut by session limit**, re-run | — |
 | 82 | researcher | main | design docs (re-run) | 178k | 36 | 6.2 m | complete | 31 styleguide guards run (126 s); directions.md read whole (2,065 lines) |
 | 82 | researcher | main | process layer | 146k | 46 | 7.4 m | complete | ci.yml read whole (1,253 lines) |
+| 90 | researcher | main | process + design delta since round 82 | 81k | 34 | 3 m | complete | — |
+| 90 | general-purpose | main | design review, all-planes page, 7 screenshots | 229k | 62 | 24 m | complete | two real captures; three census re-runs after navigations killed the driver; `pkill -f` matched its own shell |
 
 What the twelve rows already say: a researcher that reads a document
 whole costs 100-180k; a walker that drives every control costs 336k;

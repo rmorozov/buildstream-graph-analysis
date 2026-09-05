@@ -1866,9 +1866,12 @@ class TestATooLongToolResultGoesToAFile:
             "rule a session reads before it opens anything")
 
     def test_claude_md_carries_the_rule(self):
+        """`CLAUDE.md` is the day-one summary and is capped at a page,
+        so it carries the rule and points at it; the line budget and
+        the routes are `orient`'s, which the clause above holds."""
         text = " ".join(CLAUDE_MD.read_text(encoding="utf-8").split())
-        missing = [word for word in self.WORDS if word not in text]
-        assert not missing, f"CLAUDE.md has lost {missing}"
+        for word in ("over a screen", "scratchpad", "UX-711"):
+            assert word in text, f"CLAUDE.md has lost {word!r}"
 
     def test_the_rule_names_the_cheap_ways_to_read_the_file_back(self):
         """A budget with no route to obey it is a rule nobody keeps."""

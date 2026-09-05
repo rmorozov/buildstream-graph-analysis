@@ -1,6 +1,6 @@
 # UX-700: the symbol index — and CodeQL declined for navigation
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-499 (the orient recipes), UX-687 (the impact tool, which reads it) | **Serves:** the session at the start of a task, which today spends five greps and their raw lines to learn who calls what | **Topic:** guards | **Shape:** bounded
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-499 (the orient recipes), UX-687 (the impact tool, which reads it) | **Serves:** the session at the start of a task, which today spends five greps and their raw lines to learn who calls what | **Topic:** guards | **Shape:** bounded
 
 ## Motivation
 
@@ -94,3 +94,5 @@ branch through `pkg/c.py`'s `from pkg.a import target_fn`, a separate
 import reaching it anywhere in the fixture, and `__all__` is now
 skipped in `top_level_names` (dunders are read by tooling, not by
 name).
+
+**Deviation.** The verifier measured four precision limits: an attribute call on a same-named method and a call to a shadowing inner definition are both listed as callers; a re-export is invisible to `dead`; `dead --js` found 2 exports, not the 5 round 93's grep reported. A navigation aid resolves names, not bindings — data-flow stays CodeQL's (`UX-698`); `UX-699` decides the viewer's five against the two.

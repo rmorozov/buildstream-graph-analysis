@@ -26,7 +26,9 @@ same function.
    asked; **Out of Scope** is what was refused; the **Acceptance Test**
    is how it was to be proven.
 2. Run the Acceptance Test command verbatim. Paste what it printed.
-3. Run `make test-touching`, then `make lint`.
+3. Run `python tools/dev_touching.py --base <the track's base> --loud`, then
+   `make lint` — `make test-touching` diffs the working tree against `HEAD`
+   and sees nothing once the track's commit is `HEAD`.
 4. Read the diff (`git diff main...HEAD`) against the Required Fix.
 
 ## What to report

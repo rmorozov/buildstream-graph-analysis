@@ -1,6 +1,6 @@
 # UX-709: close a batch of ids in one `--move`
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-336 (the close tool), UX-501 (derived counts) | **Serves:** the orchestrator closing a merged batch, which today runs one command per id and re-derives the counts each time | **Topic:** guards | **Shape:** bounded
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-336 (the close tool), UX-501 (derived counts) | **Serves:** the orchestrator closing a merged batch, which today runs one command per id and re-derives the counts each time | **Topic:** guards | **Shape:** bounded
 
 ## Motivation
 
@@ -79,3 +79,5 @@ $ PYTEST_XDIST= python -m pytest -q tests/unit/test_a_batch_closes_in_one_move.p
 The verifier caught a leak: the first guard set `close_task.SCENARIOS`
 directly and never restored it, failing `test_the_loop_stays_fast.py`
 whenever both files shared a worker - fixed with `monkeypatch.setattr`.
+
+**Deviation.** The track's report claimed `make lint` does not reach `docs/backlog/scenarios/`; the verifier ran the target's own `git ls-files` and it reaches all 711. The two verifier findings — the guard's leaked globals and a repeated id closed twice — are the rows above marked A3 and the leak fix.

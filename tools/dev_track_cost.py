@@ -268,12 +268,20 @@ def implementer_transcripts(root):
     told to be, so this reads the first record and nothing later.
     """
     found = []
-    for path in sorted(pathlib.Path(root).rglob("subagents/*.jsonl")):
+    root = pathlib.Path(root)
+    paths = sorted(root.rglob("subagents/*.jsonl")) + sorted(root.rglob("tasks/*.output"))
+    for path in paths:
         with open(path, encoding="utf-8") as handle:
             first = handle.readline()
         if not first.strip():
             continue
-        message = json.loads(first).get("message") or {}
+        try:
+            record = json.loads(first)
+        except json.JSONDecodeError:
+            continue  # a `tasks/*.output` that is a Bash run's own stdout
+        if not isinstance(record, dict):
+            continue
+        message = record.get("message") or {}
         text = message.get("content")
         text = text if isinstance(text, str) else json.dumps(text)
         if re.search(r"running (ONE|one) [Tt][Rr][Aa][Cc][Kk]"
@@ -281,6 +289,48 @@ def implementer_transcripts(root):
             item = re.search(r"UX-\d+", text)
             found.append((str(path), item.group(0) if item else "?"))
     return found
+
+
+_MODEL_WORD = re.compile(r"[a-zA-Z]+")
+
+
+def _agent_and_model(path):
+    """`attributionAgent` and `message.model`, from the records - never
+    from frontmatter, which can name a model the run did not use."""
+    agent = model = None
+    with open(path, encoding="utf-8") as handle:
+        for line in handle:
+            record = json.loads(line)
+            if agent is None and record.get("attributionAgent"):
+                agent = record["attributionAgent"]
+            message = record.get("message")
+            if model is None and isinstance(message, dict) and message.get("model"):
+                model = message["model"]
+            if agent and model:
+                break
+    return agent, model
+
+
+def _model_short(raw):
+    """The bare model family: `claude-sonnet-5` -> `sonnet`."""
+    words = [word for word in _MODEL_WORD.findall(raw or "") if word != "claude"]
+    return words[0] if words else (raw or "?")
+
+
+def ledger_row(path, round_, task, outcome, friction):
+    """One `agent-runs.md` row, derived from the transcript."""
+    rows = responses(path)
+    agent, model = _agent_and_model(path)
+    tokens = sum(_fresh(usage) for _, usage in rows)
+    calls = sum(len(tools) for tools, _ in rows)
+    stamps = _stamps(path)
+    wall = 0.0
+    if stamps:
+        wall = (_parse_ts(max(stamps)) - _parse_ts(min(stamps))).total_seconds() / 60
+    wall_text = f"{wall:.1f}".removesuffix(".0")
+    return (f"| {round_} | {agent} | {_model_short(model)} | {task} | "
+            f"{round(tokens / 1000)}k | {calls} | {wall_text} m | "
+            f"{outcome} | {friction} |")
 
 
 def main(argv=None):
@@ -294,6 +344,11 @@ def main(argv=None):
     parser.add_argument("--floor", type=int, default=30000,
                         help="Fresh-token floor for a rebuild.")
     parser.add_argument("--rounds", help="name=ISO-timestamp,... round boundaries.")
+    parser.add_argument("--ledger", help="Print one agent-runs.md row for a transcript.")
+    parser.add_argument("--round", dest="round_", help="The round cell for --ledger.")
+    parser.add_argument("--task", default="", help="The task cell for --ledger.")
+    parser.add_argument("--outcome", default="", help="The outcome cell for --ledger.")
+    parser.add_argument("--friction", default="", help="The friction cell for --ledger.")
     parser.add_argument("-v", "--verbose", action="store_true")
     args = parser.parse_args(argv)
     if args.list:
@@ -302,6 +357,9 @@ def main(argv=None):
         return 0
     if args.session:
         print(report_rebuilds(args.session, args.floor, args.rounds))
+        return 0
+    if args.ledger:
+        print(ledger_row(args.ledger, args.round_, args.task, args.outcome, args.friction))
         return 0
     if not args.transcripts:
         parser.error("give a transcript path, or --list")

@@ -1,6 +1,6 @@
 # UX-386: `plane2/v2` is described as per-element, and mostly is not
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-297 (plane2/v2), UX-378 (two more run-level blocks), UX-381 (the layout that made the shape readable) | **Serves:** anyone opening a `plane2.json` after reading what it is | **Topic:** contracts
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-297 (plane2/v2), UX-378 (two more run-level blocks), UX-381 (the layout that made the shape readable) | **Serves:** anyone opening a `plane2.json` after reading what it is | **Topic:** contracts | **Area:** bga
 
 ## Motivation
 

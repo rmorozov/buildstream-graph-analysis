@@ -649,7 +649,7 @@ CAPTURE_LAYOUT = (
      "report is."),
     (f"{STORE_DIRNAME}/{RUNS_DIRNAME}/<stamp>/{HOST_SAMPLES_NAME}", CONDITIONAL,
      "host-samples/v1",
-     "the host's memory and swap while the build ran, one JSON object "
+     "the host's memory, swap and CPU while the build ran, one JSON "
      "per line (`UX-378`). Absent on a capture taken before that item "
      "or with sampling unavailable."),
     (f"{STORE_DIRNAME}/{RUNS_DIRNAME}/<stamp>/{ANALYSIS_NAME}", CONDITIONAL, "analyze/v6",

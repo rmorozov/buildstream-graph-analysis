@@ -32,6 +32,7 @@ the Required Fix and its guard in the Acceptance Test.
 ## 1. Surfaces — what the change will touch, derived
 
 ```bash
+git diff --name-only | python3 tools/dev_impact.py -   # the impact set (UX-687)
 git diff --stat                               # after a five-minute sketch of the change
 make test-touching ARGS=--why                 # which guards name those modules
 python3 tools/dev_js_deps.py --graph bga/viewer   # only for a viewer change

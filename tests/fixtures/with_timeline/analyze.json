@@ -121,6 +121,59 @@
             "trace_query": "dependency-wait"
         },
         {
+            "id": "fan-in-ranking",
+            "severity": "info",
+            "title": "Elements that pull in the most (by upstream closure):",
+            "detail": [
+                "    1. app.bst (9 upstream, 8 named directly, at or above p90 of this run)",
+                "    2. lib-f.bst (8 upstream, 4 named directly, at or above p80 of this run)",
+                "    3. lib-e.bst (7 upstream, 4 named directly, at or above p70 of this run)",
+                "    Shape: half of this run's 11 elements pull in 5 or fewer, the top tenth pull in 9 or more (max 10)"
+            ],
+            "elements": [
+                "app.bst",
+                "lib-f.bst",
+                "lib-e.bst"
+            ],
+            "evidence": {
+                "fan_in_distribution": {
+                    "n": 11,
+                    "min": 0,
+                    "max": 10,
+                    "deciles": {
+                        "p10": 1,
+                        "p20": 1,
+                        "p30": 3,
+                        "p40": 4,
+                        "p50": 5,
+                        "p60": 6,
+                        "p70": 7,
+                        "p80": 8,
+                        "p90": 9
+                    },
+                    "p95": 10,
+                    "p99": 10,
+                    "is_flat": false
+                }
+            },
+            "reader": "graph-owner",
+            "copy_text": "BGA finding: Elements that pull in the most (by upstream closure):\n      1. app.bst (9 upstream, 8 named directly, at or above p90 of this run)\n      2. lib-f.bst (8 upstream, 4 named directly, at or above p80 of this run)\n      3. lib-e.bst (7 upstream, 4 named directly, at or above p70 of this run)\n      Shape: half of this run's 11 elements pull in 5 or fewer, the top tenth pull in 9 or more (max 10)\n  Elements: app.bst, lib-f.bst, lib-e.bst\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
+            "trace_query": "dependency-wait"
+        },
+        {
+            "id": "fan-in-structural",
+            "severity": "info",
+            "title": "Pulling in most of the graph by design: all.bst (10 upstream) - structural elements (stack) whose dependencies are the graph's shape, not a task",
+            "detail": [],
+            "elements": [
+                "all.bst"
+            ],
+            "evidence": {},
+            "reader": "recipe-author",
+            "copy_text": "BGA finding: Pulling in most of the graph by design: all.bst (10 upstream) - structural elements (stack) whose dependencies are the graph's shape, not a task\n  Elements: all.bst\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
+            "trace_query": "dependency-wait"
+        },
+        {
             "id": "graph-width",
             "severity": "info",
             "title": "The graph is 11 elements in 10 dependency stages, and its widest stage holds 2 - so no more than 2 can ever be building at once, whatever the capacity",
@@ -321,6 +374,7 @@
             "findings": [
                 "blast-radius-reach",
                 "blast-radius-structural",
+                "fan-in-structural",
                 "latent-heavies"
             ]
         },
@@ -332,6 +386,7 @@
             "leads_with": "chain-graph",
             "findings": [
                 "chain-graph",
+                "fan-in-ranking",
                 "graph-width"
             ]
         },
@@ -394,6 +449,10 @@
         "skipped_inputs": [
             "native_max_jobs"
         ]
+    },
+    "utilization_envelope": {
+        "available": false,
+        "absence": "this capture has no host-samples.jsonl - it was taken before `UX-378`, or the host exposes no /proc/meminfo"
     },
     "plane2_absence": "Plane 2 was not captured for this run, so there is no per-process detail. `bga snapshot -- bst build TARGET` captures both planes.",
     "attribution": {
@@ -573,6 +632,85 @@
                 "is_structural_kind": true
             }
         },
+        "fan_in": {
+            "all.bst": {
+                "direct_count": 1,
+                "transitive_count": 10,
+                "immediate_dominator": "app.bst",
+                "element_kind": "stack",
+                "is_structural_kind": true
+            },
+            "app.bst": {
+                "direct_count": 8,
+                "transitive_count": 9,
+                "immediate_dominator": "toolchain.bst",
+                "element_kind": "cmake",
+                "is_structural_kind": false
+            },
+            "codegen.bst": {
+                "direct_count": 1,
+                "transitive_count": 1,
+                "immediate_dominator": "toolchain.bst",
+                "element_kind": "cmake",
+                "is_structural_kind": false
+            },
+            "core.bst": {
+                "direct_count": 1,
+                "transitive_count": 1,
+                "immediate_dominator": "toolchain.bst",
+                "element_kind": "cmake",
+                "is_structural_kind": false
+            },
+            "lib-a.bst": {
+                "direct_count": 3,
+                "transitive_count": 3,
+                "immediate_dominator": "toolchain.bst",
+                "element_kind": "cmake",
+                "is_structural_kind": false
+            },
+            "lib-b.bst": {
+                "direct_count": 4,
+                "transitive_count": 4,
+                "immediate_dominator": "toolchain.bst",
+                "element_kind": "cmake",
+                "is_structural_kind": false
+            },
+            "lib-c.bst": {
+                "direct_count": 4,
+                "transitive_count": 5,
+                "immediate_dominator": "toolchain.bst",
+                "element_kind": "cmake",
+                "is_structural_kind": false
+            },
+            "lib-d.bst": {
+                "direct_count": 4,
+                "transitive_count": 6,
+                "immediate_dominator": "toolchain.bst",
+                "element_kind": "cmake",
+                "is_structural_kind": false
+            },
+            "lib-e.bst": {
+                "direct_count": 4,
+                "transitive_count": 7,
+                "immediate_dominator": "toolchain.bst",
+                "element_kind": "cmake",
+                "is_structural_kind": false
+            },
+            "lib-f.bst": {
+                "direct_count": 4,
+                "transitive_count": 8,
+                "immediate_dominator": "toolchain.bst",
+                "element_kind": "cmake",
+                "is_structural_kind": false
+            },
+            "toolchain.bst": {
+                "direct_count": 0,
+                "transitive_count": 0,
+                "immediate_dominator": null,
+                "element_kind": "import",
+                "is_structural_kind": true
+            }
+        },
         "criticality_probability": {
             "codegen.bst": {
                 "probability": 0.0,
@@ -660,7 +798,14 @@
             "lib-a.bst",
             "lib-b.bst"
         ],
-        "blast_radius_ranked_by": "measured-rebuild-time"
+        "blast_radius_ranked_by": "measured-rebuild-time",
+        "top_fan_in": [
+            "app.bst",
+            "lib-f.bst",
+            "lib-e.bst",
+            "lib-d.bst",
+            "lib-c.bst"
+        ]
     },
     "critical_path_detail": [
         {
@@ -869,6 +1014,25 @@
             "p70": 7,
             "p80": 8,
             "p90": 8
+        },
+        "p95": 10,
+        "p99": 10,
+        "is_flat": false
+    },
+    "fan_in_distribution": {
+        "n": 11,
+        "min": 0,
+        "max": 10,
+        "deciles": {
+            "p10": 1,
+            "p20": 1,
+            "p30": 3,
+            "p40": 4,
+            "p50": 5,
+            "p60": 6,
+            "p70": 7,
+            "p80": 8,
+            "p90": 9
         },
         "p95": 10,
         "p99": 10,
@@ -1447,6 +1611,64 @@
             "unpublished_inputs": []
         },
         {
+            "claim": "fan-in-ranking",
+            "kind": "finding",
+            "document": "analyze/v6",
+            "evidence": [
+                {
+                    "path": "elements.fan_in[app.bst].transitive_count",
+                    "resolved": true,
+                    "value": 9,
+                    "quantity": "count"
+                },
+                {
+                    "path": "elements.fan_in[lib-f.bst].transitive_count",
+                    "resolved": true,
+                    "value": 8,
+                    "quantity": "count"
+                },
+                {
+                    "path": "elements.fan_in[lib-e.bst].transitive_count",
+                    "resolved": true,
+                    "value": 7,
+                    "quantity": "count"
+                }
+            ],
+            "rule": {
+                "name": null,
+                "threshold": null,
+                "comparison": "present",
+                "observed_path": null,
+                "sentence": "Published for every graph with something to rank - an element that pulls in nothing is left out rather than listed at zero, and a structural kind is reported by the claim below rather than ranked here (`UX-76`). Unlike its mirror it is not gated on the diagnosis: what an element is built on is true whichever way the build is bound, and the claim is a description of the graph rather than an ordering of work.",
+                "module": "bga/findings.py"
+            },
+            "trace_query": "dependency-wait",
+            "unpublished_inputs": []
+        },
+        {
+            "claim": "fan-in-structural",
+            "kind": "finding",
+            "document": "analyze/v6",
+            "evidence": [
+                {
+                    "path": "elements.fan_in[all.bst].transitive_count",
+                    "resolved": true,
+                    "value": 10,
+                    "quantity": "count"
+                }
+            ],
+            "rule": {
+                "name": null,
+                "threshold": null,
+                "comparison": "present",
+                "observed_path": null,
+                "sentence": "Published when a structural kind - a stack, a base image - has the widest closure. It depends on everything on purpose, so the count is the graph's shape and not a task.",
+                "module": "bga/findings.py"
+            },
+            "trace_query": "dependency-wait",
+            "unpublished_inputs": []
+        },
+        {
             "claim": "graph-width",
             "kind": "finding",
             "document": "analyze/v6",
@@ -1678,10 +1900,10 @@
         }
     ],
     "document_shape": {
-        "leaves": 1090,
+        "leaves": 1240,
         "deepest_depth": 7,
         "deepest_path": "findings.[].evidence.steps.[].entering.[]",
-        "deeper_than_three": 555,
-        "deeper_than_three_share": 0.5091743119266054
+        "deeper_than_three": 663,
+        "deeper_than_three_share": 0.5346774193548387
     }
 }

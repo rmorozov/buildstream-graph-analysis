@@ -1,6 +1,6 @@
 # UX-299: a handoff that does not carry the trace in its hands
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-198 (the transport it re-thresholds), UX-298 (the artifact), UX-195 (the export rule it amends) | **Serves:** R1 | **Topic:** viewer
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-198 (the transport it re-thresholds), UX-298 (the artifact), UX-195 (the export rule it amends) | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer
 
 ## Motivation
 

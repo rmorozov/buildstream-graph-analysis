@@ -198,6 +198,7 @@ const size = %(size)s;
 const inlineMax = %(inline_max)s;
 const here = %(here)s;
 const answers = %(answers)s;
+const openReturns = %(open_returns)s;
 
 const calls = { statusAsks: 0, delays: [], said: [] };
 const realTimeout = globalThis.setTimeout;
@@ -278,7 +279,7 @@ const tab = {
 };
 globalThis.__listeners = [];
 globalThis.window = {
-  open(url) { return tab; },
+  open(url) { return openReturns ? tab : null; },
   addEventListener(name, fn) {
     if (name === "message") globalThis.__listeners.push(fn);
   },
@@ -299,6 +300,8 @@ while (pending.length && turns++ < 5000) {
   await new Promise((resolve) => realTimeout(resolve, 0));
 }
 calls.turns = turns;
+calls.fallbackHref = nodes["perfetto-link"].href;
+calls.fallbackHidden = nodes["perfetto-link"].parentElement.hidden;
 
 console.log(JSON.stringify(calls));
 """
@@ -310,12 +313,14 @@ NOT_YET = [{"fetches": 0, "bytes": 0}]
 LANDED = [{"fetches": 0, "bytes": 0}, {"fetches": 1, "bytes": 9_000_000}]
 
 
-def _click(answers, size=9_000_000, inline_max=INLINE_MAX, here=FETCHABLE):
+def _click(answers, size=9_000_000, inline_max=INLINE_MAX, here=FETCHABLE,
+           open_returns=True):
     result = subprocess.run(
         [node, "--input-type=module", "-e",
          _HARNESS % {"size": size, "inline_max": inline_max,
                      "here": json.dumps(here),
-                     "answers": json.dumps(answers)}],
+                     "answers": json.dumps(answers),
+                     "open_returns": json.dumps(open_returns)}],
         capture_output=True, text=True, cwd=REPO, timeout=90)
     assert result.returncode == 0, result.stderr[-3000:]
     return json.loads(result.stdout.strip().splitlines()[-1])
@@ -403,3 +408,27 @@ class TestTheAskingIsBounded:
         loads. The sentence on screen is still true; a page retrying a
         dead socket for five minutes is not an improvement on it."""
         assert _click(["gone"])["statusAsks"] == 1
+
+
+@needs_node
+class TestABlockedPopUpAnnouncesRatherThanCrashing:
+    """UX-672: `openTab` throws synchronously when `window.open` returns
+    `null`. Every prior fixture here hands back a tab, so this is the
+    first to take that branch - if the throw ever sits outside the
+    `try` again, `_click`'s own `returncode == 0` assertion goes red
+    on the uncaught exception, before any assertion below runs."""
+
+    def test_the_refusal_sentence_renders(self):
+        said = _after_the_handoff(_click(NOT_YET, open_returns=False))
+        assert len(said) == 1, said
+        assert "blocked the pop-up" in said[0]
+
+    def test_a_real_link_still_renders_beside_the_refusal(self):
+        result = _click(NOT_YET, open_returns=False)
+        assert result["fallbackHref"] != "#", result["fallbackHref"]
+        assert result["fallbackHidden"] is False
+
+    def test_it_never_asks_the_server(self):
+        """The tab never opened, so there is nothing to `HEAD` and no
+        transport decision to make."""
+        assert _click(NOT_YET, open_returns=False)["statusAsks"] == 0

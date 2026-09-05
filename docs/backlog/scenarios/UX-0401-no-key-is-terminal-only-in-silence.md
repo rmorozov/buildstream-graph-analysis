@@ -1,6 +1,6 @@
 # UX-401: no key is terminal-only in silence
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-389 (the fourteen blocks it will hold in place) | **Serves:** whoever adds the sixteenth block | **Topic:** guards
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-389 (the fourteen blocks it will hold in place) | **Serves:** whoever adds the sixteenth block | **Topic:** guards | **Area:** bga/viewer
 
 ## Motivation
 

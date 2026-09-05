@@ -1,6 +1,6 @@
 # UX-368: no finding carries a Perfetto query
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-229 (why bga believes what it believes), UX-312 (the canned question library), UX-348 (the handoff) | **Serves:** anyone who reads a finding and wants to see it in the trace | **Topic:** viewer
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-229 (why bga believes what it believes), UX-312 (the canned question library), UX-348 (the handoff) | **Serves:** anyone who reads a finding and wants to see it in the trace | **Topic:** viewer | **Area:** bga
 
 ## Motivation
 

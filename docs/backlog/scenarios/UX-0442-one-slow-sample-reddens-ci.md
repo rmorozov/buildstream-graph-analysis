@@ -1,6 +1,6 @@
 # UX-442: one slow sample reddens CI, and nothing asks it to repeat
 
-**Priority:** High | **Status:** 🟢 Done | **Found by:** round 69, the third `test (3.11)` red on a branch whose diff could not cause any of them | **Serves:** every contributor whose PR the drift gate stops for a number that will not reproduce | **Topic:** guards
+**Priority:** High | **Status:** 🟢 Done | **Found by:** round 69, the third `test (3.11)` red on a branch whose diff could not cause any of them | **Serves:** every contributor whose PR the drift gate stops for a number that will not reproduce | **Topic:** guards | **Area:** tools
 
 ## Motivation
 

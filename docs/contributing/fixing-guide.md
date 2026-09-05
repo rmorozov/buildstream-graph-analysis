@@ -66,7 +66,7 @@ For every task, before marking it done:
 
 1. Run the exact command(s) given in the task's **Acceptance Test** section.
 2. Paste the actual command and actual output into the task file's **Verification Log** section (append, don't overwrite prior entries).
-3. **While you work, run the tests that touch what you changed** (`UX-336`): `make test-touching` maps the working diff to the test files that name it - 11-126 of 479 test files, median 17, over every module the map names, not the seconds one machine spent on one of them (`UX-632`). `python3 tools/dev_touching.py --spread --write` is the only thing that writes that figure. Wider than one module, run the tier (`UX-238`). Every target runs `-n auto`. **The suite's wall clock is a property of the machine, not of the suite** (`UX-551`), so budget a round against the spread and not a figure:
+3. **While you work, run the tests that touch what you changed** (`UX-336`): `make test-touching` maps the working diff to the test files that name it - 13-127 of 484 test files, median 19, over every module the map names, not the seconds one machine spent on one of them (`UX-632`). `python3 tools/dev_touching.py --spread --write` is the only thing that writes that figure. Wider than one module, run the tier (`UX-238`). Every target runs `-n auto`. **The suite's wall clock is a property of the machine, not of the suite** (`UX-551`), so budget a round against the spread and not a figure:
 
 ```text
 round 46   3m15s                                     4 cores
@@ -81,7 +81,7 @@ Round 80's 8m52s is **not reproducible on the tree that produced it**: the same 
 
    | target | measured at `-n auto` | what is in it |
    |---|---|---|
-   | `make test-touching` | 11-126 of 479 test files, median 17 | the test files that name what your diff touched |
+   | `make test-touching` | 13-127 of 484 test files, median 19 | the test files that name what your diff touched |
    | `make test-small` | **20s** | pure Python over in-memory fixtures — the default tier |
    | `make test-medium` | ~2m50s | spawns a process or a node harness |
    | `make test-large` | ~2m05s | scale fixtures, real process trees |
@@ -186,10 +186,10 @@ was confidently wrong exactly where confidence had been requested.
 bga/ingest/            loader.py, models.py - JSON loading and dataclasses
 bga/normalize/         timestamps.py - quantization and ordering validation
 bga/occupancy/         sweep.py - sweep-line occupancy, task horizon
-bga/graph/             edg.py - EDG: depth · reachability · dominators · critical path
+bga/graph/             edg.py, fan_in.py - EDG: depth · reachability · dominators · critical path; what an element pulls in, ranked (UX-681)
 bga/attribution/       blame_chain.py - blame chain, dependency gate, resource/scheduler wait
 bga/replay/            scheduler.py - deterministic replay and the capacity sweep
-bga/utilisation/       detection.py - CPU buckets and oversubscription
+bga/utilisation/       detection.py, envelope.py - CPU buckets and oversubscription; cores busy against the caps (UX-676)
 bga/diagnostics/       analyzer.py - wall-clock share · blast radius · criticality · leaf analysis
 bga/structural/        analyzer.py, batching.py, consolidation.py, models.py, serialization_points.py - networkx-based cold/structural analysis
 bga/floors/            capacity.py, cold.py, observed.py, serialization.py - the certified floors
@@ -334,6 +334,8 @@ tools/dev_touching.py        the tests that name what your diff touched, plus th
                              they can never name (UX-336, UX-522)
 tools/dev_touch_map.py       which test files executed which module, off CI's own
                              coverage run - the import chain a grep cannot see (UX-524)
+tools/dev_impact.py          what a change reaches - contracts, findings, guides,
+                             guards, open filings - and where it routes (UX-687, UX-701)
 tools/dev_close_task.py      the mechanical tail of closing a row (UX-336)
 tools/dev_refresh_analysis.py  the rule a committed analysis is written
                              under, and the command that rewrites one
@@ -357,6 +359,8 @@ tools/dev_baseline.py        every current finding by identity in
                              the list only shrinks (UX-694)
 tools/dev_trace_coverage.py  which captured field reaches the emitted
                              trace, and which Perfetto carriers it uses (UX-466)
+tools/dev_page_census.py     the page's structure and control classes, one
+                             boot, printed as JSON for a walk to read (UX-665)
 tools/bga_gen_project.py     a BuildStream project `bst build` accepts,
                              from a topology spec (UX-465)
 tools/dev_plane_capability.py  what Plane 2 and Plane 3 could record and

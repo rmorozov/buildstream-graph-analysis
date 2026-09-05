@@ -1,6 +1,6 @@
 # UX-10: `Total Duration`/`bga compare` can miss real wall-clock time entirely
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** none | **Topic:** analysis
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** none | **Topic:** analysis | **Area:** bga
 
 ## Motivation
 

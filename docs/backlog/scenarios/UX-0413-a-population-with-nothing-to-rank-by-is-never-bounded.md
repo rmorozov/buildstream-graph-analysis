@@ -1,6 +1,6 @@
 # UX-413: a population with nothing to rank by is never bounded
 
-**Priority:** High | **Status:** 🟢 Done | **Found by:** UX-400's sweep, first run | **Serves:** anyone whose run is big enough for the page to be long | **Topic:** viewer
+**Priority:** High | **Status:** 🟢 Done | **Found by:** UX-400's sweep, first run | **Serves:** anyone whose run is big enough for the page to be long | **Topic:** viewer | **Area:** bga/viewer
 
 ## Motivation
 

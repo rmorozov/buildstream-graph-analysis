@@ -1,6 +1,6 @@
 # UX-103: cache health is a point reading with no trend
 
-**Priority:** Medium | **Status:** 🟢 Done — with one deviation from the acceptance's arithmetic, recorded below | **Depends on:** UX-92 (per-run accounting), UX-96 (the baseline/refs fetch helper), UX-93 (honest churn labels first) | **Topic:** store
+**Priority:** Medium | **Status:** 🟢 Done — with one deviation from the acceptance's arithmetic, recorded below | **Depends on:** UX-92 (per-run accounting), UX-96 (the baseline/refs fetch helper), UX-93 (honest churn labels first) | **Topic:** store | **Area:** bga
 
 Direction 3, item 4 — and the trend stage UX-92 explicitly deferred.
 See [`design/directions.md`](../../design/directions.md).

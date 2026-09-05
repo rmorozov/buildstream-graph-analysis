@@ -1,6 +1,6 @@
 # UX-554: a failed CI suite takes the record of what failed with it
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-491` (which made the *success* path legible) | **Found by:** round 81, unable to diagnose a red `test (3.11)` | **Serves:** anyone reading a CI failure they cannot reproduce | **Topic:** guards
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-491` (which made the *success* path legible) | **Found by:** round 81, unable to diagnose a red `test (3.11)` | **Serves:** anyone reading a CI failure they cannot reproduce | **Topic:** guards | **Area:** tools
 
 ## Motivation
 

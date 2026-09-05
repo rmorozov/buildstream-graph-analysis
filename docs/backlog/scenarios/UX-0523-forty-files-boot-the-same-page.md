@@ -1,6 +1,6 @@
 # UX-523: forty files boot the same page
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-336 (the parallel run these numbers are under), UX-359 (the page fixture every browser guard measures) | **Serves:** every `make test`; the implementing session's gate | **Topic:** guards
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-336 (the parallel run these numbers are under), UX-359 (the page fixture every browser guard measures) | **Serves:** every `make test`; the implementing session's gate | **Topic:** guards | **Area:** bga/viewer
 
 ## Motivation
 

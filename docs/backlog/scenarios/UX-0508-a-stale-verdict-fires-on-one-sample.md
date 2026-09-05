@@ -1,6 +1,6 @@
 # UX-508: the whole-runner verdict fires on one sample
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-442 (the two-run rule it copies), UX-503 | **Serves:** the branch whose CI is red because one runner was fast | **Topic:** guards
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-442 (the two-run rule it copies), UX-503 | **Serves:** the branch whose CI is red because one runner was fast | **Topic:** guards | **Area:** tools
 
 ## Motivation
 

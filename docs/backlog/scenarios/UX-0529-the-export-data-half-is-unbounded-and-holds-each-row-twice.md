@@ -1,6 +1,6 @@
 # UX-529: the export's data half is unbounded, and holds each row twice
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-360 (the page-half budget), UX-526 | **Serves:** anyone attaching a report of a large project | **Topic:** viewer
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-360 (the page-half budget), UX-526 | **Serves:** anyone attaching a report of a large project | **Topic:** viewer | **Area:** bga/viewer
 
 ## Motivation
 

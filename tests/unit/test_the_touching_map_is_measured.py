@@ -187,3 +187,85 @@ class TestItComesFromCIAndNotFromHere:
         assert "MAP.write_text" in writes
         after = source.split("measured = read(args.database)")[1]
         assert "MAP.write_text" not in after
+
+
+class TestTheAdoptedMapPaysForItsReaders:
+    """`UX-662`: the map's readers, and the entries adopting it stales.
+
+    `8751a7e` adopted a map on `main`; the next branch to merge went red
+    on the drift gate with **zero** failing tests, for seconds its own
+    diff never spent. The entry was not wrong when it was recorded - the
+    tree under it changed - so the adopting commit retires it, and the
+    next reference candidate re-records it on that run's clock.
+    """
+
+    def test_the_readers_are_the_map_s_own_row_not_a_typed_list(self):
+        """The map names the guards that read it, so nothing is typed
+        beside it to fall out of date the next time one is added."""
+        merged = {dev_touch_map.READER: ["tests/unit/test_a.py"],
+                  "bga/elsewhere.py": ["tests/unit/test_b.py"]}
+        assert dev_touch_map.readers(merged) == ["tests/unit/test_a.py"]
+        assert dev_touch_map.readers({}) == []
+
+    def test_the_named_reader_is_a_module_that_reads_the_map(self):
+        """`READER` is the one typed name left, and a constant naming a
+        module that does not read the map would retire the wrong rows in
+        silence - the shape of defect this whole item is about."""
+        source = (REPO / dev_touch_map.READER).read_text(encoding="utf-8")
+        assert MAP.name in source, dev_touch_map.READER
+
+    def test_retire_drops_the_name_from_files_and_from_samples(self):
+        """Both, not either: `against` reads `samples` for `UX-496`'s
+        band, so an entry left there is still judged against."""
+        reference = {"files": {"a.py": 1.0, "b.py": 2.0},
+                     "samples": {"a.py": [1.0], "b.py": [2.0]}}
+        document, retired = dev_touch_map.retire(reference, ["a.py"])
+        assert retired == ["a.py"]
+        assert document["files"] == {"b.py": 2.0}
+        assert document["samples"] == {"b.py": [2.0]}
+
+    def test_a_name_the_reference_does_not_carry_retires_nothing(self):
+        reference = {"files": {"b.py": 2.0}, "samples": {"b.py": [2.0]}}
+        document, retired = dev_touch_map.retire(reference, ["a.py"])
+        assert retired == []
+        assert document == reference
+
+    def test_a_retired_entry_is_recorded_by_the_gate_not_confirmed(self):
+        """The claim the whole design rests on. Dropping an entry must
+        turn the gate's verdict from one that fails the branch into one
+        that prints the row - otherwise this trades a red gate for a
+        red gate."""
+        import dev_tier_drift
+        reference = {"files": {f"f{n}.py": 10.0 for n in range(5)},
+                     "samples": {f"f{n}.py": [10.0] for n in range(5)}}
+        times = dict({f"f{n}.py": 10.0 for n in range(5)}, **{"f0.py": 90.0})
+
+        verdict, _, rows = dev_tier_drift.against(times, reference)
+        assert verdict == "drift"
+        assert [row[0] for row in rows] == ["f0.py"]
+        assert rows[0][2] == 10.0, "judged against a number it has"
+
+        retired, names = dev_touch_map.retire(reference, ["f0.py"])
+        assert names == ["f0.py"]
+        verdict, _, rows = dev_tier_drift.against(times, retired)
+        assert [row[0] for row in rows] == ["f0.py"], "still printed"
+        assert rows[0][2] is None, "and carried with no number to fail on"
+
+    def test_the_adopting_commit_carries_the_reference_it_retired_from(self):
+        """One commit, or the retire is a change nobody pushed."""
+        held = WORKFLOW.read_text(encoding="utf-8")
+        job = held.split("touch-map-adopt:")[1].split("\n  agent-config:")[0]
+        add = [line for line in job.splitlines()
+               if line.strip().startswith("git add")][0]
+        assert "tests/ci_reference.json" in add, add
+        assert "tests/touch_map.json" in add, add
+
+    def test_the_map_is_adopted_after_the_rows_measured_without_it(self):
+        """`tier-reference-adopt` adopts from a candidate measured with
+        the map as it was *before* this run. Landing second, it would
+        put back exactly what the retire took out."""
+        held = WORKFLOW.read_text(encoding="utf-8")
+        job = held.split("touch-map-adopt:")[1].split("\n  agent-config:")[0]
+        needs = [line for line in job.splitlines()
+                 if line.strip().startswith("needs:")][0]
+        assert "tier-reference-adopt" in needs, needs

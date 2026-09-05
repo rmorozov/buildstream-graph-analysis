@@ -49,6 +49,12 @@ WALKS = {"glob", "rglob", "iterdir", "walk", "listdir", "scandir"}
 #: one of these is the tree; a `tmp_path` is a fixture.
 ROOTS = {"REPO", "ROOT", "REPO_ROOT", "PROJECT", "HERE"}
 
+#: `UX-718`: declared census guards this file's AST check cannot see -
+#: their subject is a fixed, named population, not a walked directory.
+#: `test_a_committed_analysis_matches_the_analyzer.py` compares two
+#: committed fixtures against a live analyzer run; nothing here globs.
+NOT_A_TREE_WALK = {"tests/unit/test_a_committed_analysis_matches_the_analyzer.py"}
+
 
 def _base(node):
     """The leftmost `Name` of an attribute/subscript/binop chain."""
@@ -64,6 +70,9 @@ def _base(node):
 
 
 def _walks_the_repo(path):
+    """`UX-718`: `rooted` also picks up a `def f(root=REPO):` default -
+    `test_the_context_map_is_the_tree.py`'s tree walk is `root.iterdir()`
+    inside such a function, invisible to a module-level-only scan."""
     tree = ast.parse(path.read_text(encoding="utf-8"))
     rooted = set(ROOTS)
     for node in tree.body:
@@ -71,6 +80,12 @@ def _walks_the_repo(path):
                 and isinstance(node.targets[0], ast.Name)
                 and _base(node.value) in rooted):
             rooted.add(node.targets[0].id)
+    for fn in ast.walk(tree):
+        if isinstance(fn, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            defaulted = fn.args.args[len(fn.args.args) - len(fn.args.defaults):]
+            for arg, default in zip(defaulted, fn.args.defaults):
+                if _base(default) in rooted:
+                    rooted.add(arg.arg)
     return any(isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute)
                and n.func.attr in WALKS and _base(n.func.value) in rooted
                for n in ast.walk(tree))
@@ -120,8 +135,15 @@ class TestTheDeclarationIsTheDerivation:
         writes a module's name in its prose, and losing it from the
         census then would be the list wagged by a docstring. Reading
         the tree is the property that makes it a census guard; being
-        unreachable is only what makes it *cost* something to omit."""
+        unreachable is only what makes it *cost* something to omit.
+
+        `UX-718`: `NOT_A_TREE_WALK` is the same argument for a guard
+        whose subject is a fixed, named population - no glob, no
+        `git ls-files` - so this AST check cannot see it either.
+        Its own regression clause below is the argument instead."""
         for named in tiers.CENSUS:
+            if named in NOT_A_TREE_WALK:
+                continue
             assert _walks_the_repo(REPO / named), (
                 f"{named} is declared census but walks no repository tree")
 
@@ -141,6 +163,24 @@ class TestTheDeclarationIsTheDerivation:
         for named in ("tests/unit/test_the_register_is_terse.py",
                       "tests/unit/test_every_skip_reason_is_declared.py"):
             assert named in tiers.CENSUS, named
+
+    def test_the_module_this_derivation_cannot_see_is_in_it(self):
+        """`UX-718`: `test_the_context_map_is_the_tree.py` names 18
+        modules in its own text, so `derived` above finds it reachable
+        and never flags its absence - the fixture only proves *some*
+        module reaches it, not that a *new* one does. Typed here for
+        the same reason as the round-75 pair above: this class of miss
+        has no sound general derivation, only a clause per instance."""
+        assert "tests/unit/test_the_context_map_is_the_tree.py" in tiers.CENSUS
+
+    def test_the_second_miss_the_same_round_measured_is_in_it(self):
+        """`UX-718`: `test_a_committed_analysis_matches_the_analyzer.py`
+        reddened all four CI jobs on `89b1ddf` after `test-touching`
+        passed locally at 251 files - one round, two misses of one
+        class, and neither is `derived`'s shape (it walks nothing;
+        `NOT_A_TREE_WALK` above says why)."""
+        assert ("tests/unit/test_a_committed_analysis_matches_the_analyzer.py"
+                in tiers.CENSUS)
 
     def test_every_declared_file_exists(self):
         for named in tiers.CENSUS:

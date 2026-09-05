@@ -1,6 +1,6 @@
 # UX-688: every task carries an area, and the area pages are generated
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-501 (the derived index), UX-239 (the module tree) | **Serves:** the session doing impact analysis or a test plan without rescanning 682 files | **Topic:** docs | **Shape:** judgement
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-501 (the derived index), UX-239 (the module tree) | **Serves:** the session doing impact analysis or a test plan without rescanning 682 files | **Topic:** docs | **Area:** tools | **Shape:** judgement
 
 ## Motivation
 
@@ -42,3 +42,70 @@ the brief asks for is a *view*, derived.
 Every task from this item on carries an Area the tree knows;
 `--check --write` regenerates the pages and the counts agree;
 mutation: an area not in the tree — red naming the file.
+
+## Outcome
+
+🟢 Done, with the first bullet of the Required Fix **measured and
+declined**. The `**Area:**` field, the vocabulary read out of §6, ten
+generated pages, a `--check` property and a guard.
+
+### The back-derivation does not work, and the number says so
+
+The filing asked for the 682 to be derived from "the files each
+closing commit touched". Run over the whole history:
+
+| derivation | placed | decisive | ambiguous | unplaced |
+|---|---|---|---|---|
+| every path in the closing commits | 602 | **122** | 480 | 112 |
+| `bga/` and `tools/` paths only | 445 | **300** | 145 | 269 |
+
+The first is dominated by `tests/unit` (218) and `docs` (166) — an
+artifact of *one task, one commit, always touching a guard and a
+document*. Commit paths are a proxy for area and the proxy measures
+the convention. The second is honest but coarse: 400 of 445 land in
+`tools`, `bga` and `bga/viewer`, and the fine tree gets 5-12 each.
+
+So the 300 decisive rows are back-filled and the rest carry no field,
+except the 15 filed between this row and the round that closed it,
+which take `AREA_UNKNOWN`. That bucket is not new: `UX-501` created
+`unclassified` for the 223 topic-less rows *"rather than being
+distributed by guesswork"*, and this is the same population problem
+one field over.
+
+### What shipped
+
+```console
+$ python3 tools/dev_close_task.py --check --write
+  ok    every declared area is one the fixing guide's tree knows
+    docs/backlog/areas/bga-viewer.md · tools.md · unassigned.md …
+```
+
+Ten pages, 315 rows placed, 17 areas in the vocabulary. Each page is
+regenerated whole, so a hand edit is undone by the next run — the
+point of a view. The task files stay flat and their guarded links stay
+valid, which is what the Out of Scope section asked for.
+
+### Mutations
+
+| mutation | guard |
+|---|---|
+| the vocabulary stops reading §6 | the areas come from the guide |
+| an area outside the tree stops being reported | the check reports it |
+| a row filed since loses its Area (the row's own) | rows since declare one |
+| the page's count stops counting what it lists | a page counts its rows |
+
+**One clause did not discriminate and was rewritten.** `assert
+area_problems() == []` survived making `area_problems` return `[]`
+unconditionally — it passed whatever the property did, which is the
+failure mode `REVIEW.md` names and `UX-420` found five of. It now
+replaces the population with a known-bad row and requires the report
+to name it.
+
+### Deviation
+
+Three. The back-derivation above. The filings row of `dev_impact.py`
+still joins on Topic — switching it to Area is one function and wants
+the field to be dense first, which it is not yet at 315 of 714. And
+the README's topic table has no area column: the pages are the
+hierarchy, and a column that repeats them is the second copy this
+round has spent itself removing.

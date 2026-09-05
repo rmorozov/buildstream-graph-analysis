@@ -1,6 +1,6 @@
 # UX-285: the identity blocks are split, and the blast box is last
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-207 | **Serves:** R1 and R7 — reading top-down, and asking a question mid-read | **Topic:** viewer
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-207 | **Serves:** R1 and R7 — reading top-down, and asking a question mid-read | **Topic:** viewer | **Area:** bga/viewer
 
 ## Motivation
 

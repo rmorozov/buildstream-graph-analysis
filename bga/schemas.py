@@ -733,6 +733,7 @@ _ANALYZE_OPTIONAL = {
     "elements": "object",
     "element_duration_distribution": "object",
     "blast_radius_distribution": "object",
+    "fan_in_distribution": "object",
     "critical_path_detail": "array",
     "optimization_horizon": "array",
     "latent_heavies": "array",
@@ -771,6 +772,16 @@ _ANALYZE_OPTIONAL = {
     # the Plane 1 sweep with Plane 2's draw, and `capacity_verdict` -
     # "was the capacity right?" - is already here for it to sit beside.
     "capacity_recommendation": "object",
+    # UX-676: the same axis in cores rather than job slots, and the two
+    # populations of window that violate it. Not gated on Plane 2 the
+    # way `capacity_recommendation` above is - the host is sampled on
+    # every capture (`UX-675`), so gating would hide this on exactly the
+    # captures that have nothing else. Optional because a capture taken
+    # before `UX-675` has no CPU series, and the section then carries a
+    # named `absence` rather than being absent.
+    "utilization_envelope": "object",
+    "underutilized_intervals": "array",
+    "overcommitted_intervals": "array",
     "run_instance": "object",
     # UX-249: which build of `bga` wrote this document, and the contract
     # set it had. An *addition*, so no version bump - UX-190's rule.
@@ -1309,6 +1320,14 @@ ANALYZE_FULL_KEYS = (
     "parallelism", "bottleneck", "sensitivity", "batch_opportunities",
     "provenance", "document_shape",
     "utilisation", "confidence", "violations",
+    # `UX-676`: the same axis in cores. Here rather than in the
+    # conditional list because it is present on every full report - a
+    # capture with no host CPU series publishes `available: false` and
+    # the sentence saying which absence it is, so "the cores were fine"
+    # and "nobody measured" stay distinguishable. Its two interval
+    # tables are conditional: they are populations, and an empty one is
+    # a run with no violating window rather than a shortened document.
+    "utilization_envelope",
 )
 
 # UX-215: the keys a full report carries only when `--plane2` was
@@ -1339,11 +1358,19 @@ ANALYZE_PLANE2_KEYS = (
 # *always* there, and a report missing one of these is still full.
 ANALYZE_RUN_DEPENDENT_KEYS = (
     "cache", "element_duration_distribution", "blast_radius_distribution",
+    # `UX-681`: and its mirror, absent for the same reason - a graph of
+    # leaves has no fan-in population to describe.
+    "fan_in_distribution",
     "fetch_build_overlap", "consolidation_candidates",
     "serialization_point_risks",
     # `UX-565`: Part 29 needs a store of earlier runs of this run's host
     # class, which a run analysed outside one does not have.
     "duration_variability",
+    # `UX-676`: a run whose every sampled window was inside the envelope
+    # publishes neither table. Absent means "no window violated it",
+    # which is a fact about the run - `utilization_envelope`'s shares
+    # carry the same answer as numbers.
+    "underutilized_intervals", "overcommitted_intervals",
 )
 
 _COMPARE_REQUIRED = {
@@ -1452,6 +1479,10 @@ _JOIN_COLUMNS = [
      "quantity": "count", "sortable": True},
     {"key": "peak_rss_bytes", "title": "Peak RSS",
      "quantity": "bytes", "sortable": True},
+    # `UX-681`: sortable, because "which element reads least of what it
+    # stages" is the ranking `unused_dependencies` could not give.
+    {"key": "dependency_read_share", "title": "Dependencies read",
+     "quantity": "share", "sortable": True},
 ]
 
 _JOIN_ITEM_PROPERTIES = {
@@ -1615,6 +1646,22 @@ _JOIN_ITEM_PROPERTIES = {
                        "by its own work."},
     "native_findings": {"type": ["array", "null"]},
     "unused_dependencies": {"type": ["array", "null"]},
+    "assessed_dependencies": {
+        QUANTITY: "count",
+        "description": "The dependencies Plane 2 could judge for this "
+                       "element - the ones it saw opened plus the ones "
+                       "it saw nothing from. Not the declared edge "
+                       "count: a dependency with no observed opens at "
+                       "all is uncovered, and scoring it as unread "
+                       "would turn a gap in the capture into a "
+                       "finding."},
+    "dependency_read_share": {
+        QUANTITY: "share",
+        "description": "How many of those were read, as a share, and "
+                       "so what `unused_dependencies` is a list *of*. "
+                       "Absent where Plane 2 assessed nothing - "
+                       "\"every edge was read\" and \"nobody looked\" "
+                       "are different claims."},
     "recommendations": {"type": ["array", "null"]},
 }
 
@@ -1629,6 +1676,26 @@ _JOIN_ITEM_PROPERTIES = {
 # in words too. Quantity and sentence are declared together here so a key
 # cannot acquire one without the other - the completeness guard reads
 # this table, and a new key with no sentence fails it.
+#: `UX-676`: both interval tables are the same row, so the columns are
+#: declared once. Two populations of one shape, not two shapes.
+_INTERVAL_COLUMNS = [
+    {"key": "start_us", "title": "From", "quantity": "duration_us"},
+    {"key": "duration_us", "title": "For", "quantity": "duration_us"},
+    {"key": "busy_cores", "title": "Cores busy", "quantity": "ratio",
+     "sortable": True},
+    {"key": "capacity_cores", "title": "Of", "quantity": "count"},
+    {"key": "busy_share", "title": "Share", "quantity": "share"},
+    {"key": "lost_core_seconds", "title": "Lost core-seconds",
+     "quantity": "ratio", "sortable": True},
+    {"key": "load1", "title": "Load", "quantity": "ratio"},
+    {"key": "building", "title": "Building (with its max-jobs)"},
+    {"key": "ready_not_dispatched", "title": "Ready, not dispatched"},
+    {"key": "just_finished", "title": "Just finished"},
+    {"key": "successors_waiting", "title": "Successors waiting"},
+    {"key": "trace_query", "title": "In Perfetto"},
+]
+
+
 _EVIDENCE_FIELDS = {
     # Durations.
     "category_us": ("duration_us",
@@ -1798,8 +1865,21 @@ EVIDENCE_QUANTITIES.update({
     # `UX-344`: `findings[].evidence.blast_radius` is gone - it was a
     # slice of `elements.blast_radius`, keyed by element uid, published
     # a second time inside the finding that names those elements. What
-    # is left of that evidence is the distribution below, which is a
-    # property of the run and not of any element.
+    # is left of that evidence is the distribution, which is a property
+    # of the run and not of any element.
+    #
+    # `UX-681`: and it was never declared here. `macro_micro` is
+    # chain-bound, so `blast-radius-ranking` is not emitted on either
+    # committed fixture and the fifteen leaves under it reached no
+    # census. The mirror below *is* emitted, which is how the gap was
+    # found; both are declared now, from the same helper the top-level
+    # sections use, so a slice cannot disagree with its source.
+    "blast_radius_distribution": _distribution(
+        "count", "blast radius in this graph",
+        "The population this finding's ranking is placed in."),
+    "fan_in_distribution": _distribution(
+        "count", "fan-in in this graph",
+        "The population this finding's ranking is placed in."),
     "constraints": {"items": {"properties": {
         "allows": {
             QUANTITY: "count",
@@ -2442,6 +2522,46 @@ _SIGNALS_TABLES = {
             }},
         "description": "What one element's change rebuilds, and "
                        "what that costs."},
+    "fan_in": {
+        "additionalProperties": {
+            "properties": {
+                "direct_count": {
+                    QUANTITY: "count",
+                    "description": "Dependencies this element names "
+                                   "itself. The same number "
+                                   "`bottleneck.high_fanin_elements` "
+                                   "ranks the top five of, over every "
+                                   "element rather than five - and "
+                                   "that block's own prose has the "
+                                   "direction backwards (`UX-719`)."},
+                "transitive_count": {
+                    QUANTITY: "count",
+                    "description": "Everything it pulls in through "
+                                   "those, the closure and not the "
+                                   "edge list. An element is not one "
+                                   "of the things it pulls in."},
+                "immediate_dominator": {
+                    "description": "The nearest element every path "
+                                   "from a root passes through: the "
+                                   "rebuild this one waits on. Not a "
+                                   "dependency - an element can depend "
+                                   "on something that dominates "
+                                   "nothing. Null for a root."},
+            }},
+        "description": "What one element pulls in and the rebuild it "
+                       "waits on. Plane 1 only - whether those edges "
+                       "were read is `element_join`'s "
+                       "`dependency_read_share`."},
+    "top_fan_in": {
+        "description": "The widest fan-in, ranked by closure. "
+                       "Structural kinds are excluded from the ranking "
+                       "and never from `fan_in` - a stack depends on "
+                       "everything on purpose (`UX-76`)."},
+    "fan_in_distribution": _distribution(
+        "count", "fan-in in this graph",
+        "How many elements each pulls in, spread across this graph. "
+        "\"8 upstream\" is unremarkable in a 40,000-element run and "
+        "p99 in a graph of forty."),
     "zero_slack_share": {
         QUANTITY: "share",
         "description": "The share of elements with no slack at "
@@ -2797,6 +2917,98 @@ _ANALYZE_HINTS = {
     "run_instance": _RUN_INSTANCE_HINT,
     "producer": {QUESTION: 'Which build of bga measured this?', RAIL: 'raw'},
     "resource_blast": {QUESTION: 'What does one shared resource rebuild?', RAIL: 'investigate'},
+    "utilization_envelope": {
+        QUESTION: 'Were the cores the binding resource?',
+        RAIL: 'act',
+        "description": "Cores busy over the build, from the host's own "
+                       "`/proc/stat` series (`UX-675`), against the smaller "
+                       "of what the scheduler was configured to allow and "
+                       "what the machine has. `traced processes running` "
+                       "cannot answer this: a process blocked on I/O holds "
+                       "a slot and no core.",
+        "properties": {
+            "available": {
+                INLINE: "name",
+                "description": "False when this capture has no host CPU "
+                               "series to read; `absence` then says which "
+                               "of the reasons it is."},
+            "absence": {
+                "description": "Why there is no envelope, in the sentence "
+                               "the terminal and the page both print. Null "
+                               "when there is one."},
+            "samples": {
+                QUANTITY: "count",
+                "description": "Host samples carrying a `cpu_busy_cores` "
+                               "reading. The first sample of a capture "
+                               "carries none - a rate needs a gap."},
+            "cores": {
+                QUANTITY: "count",
+                "description": "Cores the host had, counted per sample "
+                               "because a cgroup resize moves it."},
+            "configured_capacity_cores": {
+                QUANTITY: "count",
+                "description": "`builders x max-jobs` - what the scheduler "
+                               "was allowed to start. Null when the capture "
+                               "recorded neither."},
+            "capacity_cores": {
+                QUANTITY: "count",
+                "description": "The smaller of the two above: what busy "
+                               "could actually have reached. Every share "
+                               "below is against this and not against the "
+                               "configured number, which a four-core host "
+                               "can never deliver."},
+            "busy_cores_p50": {
+                QUANTITY: "ratio",
+                "description": "Median cores busy, nearest-rank over the "
+                               "intervals."},
+            "busy_cores_p95": {
+                QUANTITY: "ratio",
+                "description": "The peak a reader should act on, rather "
+                               "than the single highest sample."},
+            "busy_share_p50": {
+                QUANTITY: "share",
+                "description": "The median as a share of the capacity that "
+                               "could actually be reached."},
+            "busy_share_p95": {
+                QUANTITY: "share",
+                "description": "The same for the peak worth acting on."},
+            "underutilized_share": {
+                QUANTITY: "share",
+                "description": "Share of the sampled build holding at least "
+                               "one idle core while Plane 1 says there was "
+                               "work - building or ready and not "
+                               "dispatched."},
+            "overcommitted_share": {
+                QUANTITY: "share",
+                "description": "Share of it with load above the core count "
+                               "or a page written to swap."},
+            "verdict": {
+                "description": "`not_binding`, `binding` or `overcommitted`. "
+                               "Overcommit wins over under-use: a build that "
+                               "is swapping is past capacity, not short of "
+                               "it, and the remedy points the other way."},
+            "headline": {
+                "description": "The one line the CI owner asked for, with "
+                               "the numbers in it."},
+        }},
+    "underutilized_intervals": {
+        QUESTION: 'Which windows held an idle core, and what was running?',
+        RAIL: 'investigate',
+        "description": "One row per sampled window with a whole core idle "
+                       "and work to run, ranked by lost core-seconds and "
+                       "capped at 40 - more rows than a reader will act on. "
+                       "The row names what was building and each element's "
+                       "own `max-jobs`, and what was ready and not "
+                       "dispatched; deciding between those two is `UX-677`.",
+        COLUMNS: _INTERVAL_COLUMNS,
+    },
+    "overcommitted_intervals": {
+        QUESTION: 'Which windows ran the machine past its cores?',
+        RAIL: 'investigate',
+        "description": "The mirror: load above the core count, or a page "
+                       "written to swap. Ranked by cores busy.",
+        COLUMNS: _INTERVAL_COLUMNS,
+    },
     "capacity_recommendation": {
         QUESTION: 'What should the capacity be, and what decides it?',
         RAIL: 'act',
@@ -4092,6 +4304,8 @@ _LIFTED_HINTS = {
         ('investigate', "How are this run's element durations spread?"),
     "blast_radius_distribution":
         ('investigate', 'How are blast radii spread across this graph?'),
+    "fan_in_distribution":
+        ('investigate', 'How are fan-ins spread across this graph?'),
 }
 
 # The element population, as one key rather than six.
@@ -4111,6 +4325,9 @@ _LIFTED_HINTS = {
 # into the run-identity summary beside the run id.
 ELEMENT_KEYED = ("element_durations", "slack", "downstream_count",
                  "unweighted_depth", "blast_radius",
+                 # `UX-681`: the blast radius's mirror, keyed the same
+                 # way and belonging to the same element entity.
+                 "fan_in",
                  "criticality_probability")
 
 # `UX-382`: the element entity has two shapes, and this is the key that
@@ -4148,7 +4365,9 @@ ELEMENT_PLACEMENT_RULE = (
 ELEMENT_KEYED_OPTIONAL = ("duration_variability",)
 
 ELEMENT_POPULATION = ELEMENT_KEYED + ELEMENT_KEYED_OPTIONAL + (
-    "zero_slack_share", "top_blast_radius", "blast_radius_ranked_by")
+    "zero_slack_share", "top_blast_radius", "blast_radius_ranked_by",
+    # `UX-681`: and the fan-in ranking, beside the blast one it mirrors.
+    "top_fan_in")
 
 _ELEMENTS = {
     QUESTION: 'Which element should I look at?',

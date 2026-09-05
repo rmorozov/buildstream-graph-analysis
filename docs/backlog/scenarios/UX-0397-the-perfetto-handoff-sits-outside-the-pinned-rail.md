@@ -1,6 +1,6 @@
 # UX-397: the Perfetto handoff sits outside the pinned rail
 
-**Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-373 (two satellite pages for one handoff), UX-282 (the fallback below the button that fails), UX-209 (the rail), UX-348 (the handoff) | **Serves:** anyone who decides to open the trace after reading a finding | **Topic:** viewer
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-373 (two satellite pages for one handoff), UX-282 (the fallback below the button that fails), UX-209 (the rail), UX-348 (the handoff) | **Serves:** anyone who decides to open the trace after reading a finding | **Topic:** viewer | **Area:** bga/viewer
 
 ## Motivation
 

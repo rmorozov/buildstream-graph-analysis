@@ -1,6 +1,6 @@
 # UX-629: a required set grew under an unchanged id
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-343 (one contract version), UX-610 (which grew it) | **Found by:** architecture review 15 | **Serves:** a consumer validating a document it wrote yesterday | **Topic:** contracts
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-343 (one contract version), UX-610 (which grew it) | **Found by:** architecture review 15 | **Serves:** a consumer validating a document it wrote yesterday | **Topic:** contracts | **Area:** bga
 
 ## Motivation
 

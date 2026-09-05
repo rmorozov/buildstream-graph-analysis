@@ -1,6 +1,6 @@
 # UX-298: the timeline speaks Perfetto, natively
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** Direction 15, UX-188 (the timeline it succeeds), UX-297 (the stream that feeds it) | **Serves:** R1, R2 | **Topic:** capture
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** Direction 15, UX-188 (the timeline it succeeds), UX-297 (the stream that feeds it) | **Serves:** R1, R2 | **Topic:** capture | **Area:** tools
 
 ## Motivation
 

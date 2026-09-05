@@ -1,6 +1,6 @@
 # UX-446: a third ceiling, and no reader-facing document has it
 
-**Priority:** Medium | **Status:** 🟢 Done | **Found by:** review 8, checklist item 3 — `UX-430`'s own §3.10 debt, one round later | **Serves:** anyone whose export drops the timeline and goes looking for the reason | **Topic:** docs
+**Priority:** Medium | **Status:** 🟢 Done | **Found by:** review 8, checklist item 3 — `UX-430`'s own §3.10 debt, one round later | **Serves:** anyone whose export drops the timeline and goes looking for the reason | **Topic:** docs | **Area:** tools
 
 ## Motivation
 

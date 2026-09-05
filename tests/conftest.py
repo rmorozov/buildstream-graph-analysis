@@ -347,6 +347,8 @@ KNOWN_SKIP_REASONS = {
         "a payload-shape gate over the committed fixtures", 0),
     "this host exposes no /proc/meminfo": (
         "the host sampler reads Linux's own files", 0),
+    "this host has no /proc/stat": (
+        "the host sampler reads Linux's own files", 0),
     "this run published no joint-saving signal": (
         "a payload-shape gate over the committed fixtures", 0),
     "this run rendered no anchored section": (

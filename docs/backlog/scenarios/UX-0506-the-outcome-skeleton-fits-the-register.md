@@ -1,6 +1,6 @@
 # UX-506: the Outcome skeleton fits the register
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-497 (the cap), UX-336 (`dev_close_task --outcome`) | **Serves:** the session closing a task, and the round that reads it later | **Topic:** docs
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-497 (the cap), UX-336 (`dev_close_task --outcome`) | **Serves:** the session closing a task, and the round that reads it later | **Topic:** docs | **Area:** tools
 
 ## Motivation
 

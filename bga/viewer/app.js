@@ -452,8 +452,12 @@ export function wireTheHandoff(run = {}) {
     // this handler, or the click's activation is gone before the open.
     // The same rule applies to the deep-link path below: the tab is
     // opened here, synchronously, and only then is the size asked for.
-    const tab = served ? openTab({}) : null;
+    let tab = null;
     try {
+      // `UX-672`: `openTab` throws synchronously on a blocked pop-up,
+      // and that throw must land in this `catch` - the only site that
+      // announces a refusal - rather than escape the handler uncaught.
+      tab = served ? openTab({}) : null;
       if (tab) {
         // UX-299: a `HEAD`, which reads no trace bytes at all. Over the
         // threshold, the deep link is the transport: Perfetto fetches

@@ -1,6 +1,6 @@
 # UX-455: two files have grown past the tier they are listed in
 
-**Priority:** Low | **Status:** 🟢 Done | **Found by:** round 71, running `make test-tiers` while closing `UX-451` | **Serves:** the contributor whose `make test-medium` quietly costs a minute more than the tier says | **Topic:** guards
+**Priority:** Low | **Status:** 🟢 Done | **Found by:** round 71, running `make test-tiers` while closing `UX-451` | **Serves:** the contributor whose `make test-medium` quietly costs a minute more than the tier says | **Topic:** guards | **Area:** tools
 
 ## Motivation
 

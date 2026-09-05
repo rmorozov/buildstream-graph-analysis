@@ -1,0 +1,116 @@
+{
+  "spans": [
+    {
+      "task_key": "codegen.bst|BUILD|BUILD|0",
+      "ts_us": 1788644104840000,
+      "dur_us": 3003000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "core.bst|BUILD|BUILD|0",
+      "ts_us": 1788644104840000,
+      "dur_us": 10012000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "toolchain.bst|BUILD|BUILD|0",
+      "ts_us": 1788644104840000,
+      "dur_us": 0,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "lib-a.bst|BUILD|BUILD|0",
+      "ts_us": 1788644114852000,
+      "dur_us": 2002000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "lib-b.bst|BUILD|BUILD|0",
+      "ts_us": 1788644116854000,
+      "dur_us": 2003000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "lib-c.bst|BUILD|BUILD|0",
+      "ts_us": 1788644118857000,
+      "dur_us": 3004000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "lib-d.bst|BUILD|BUILD|0",
+      "ts_us": 1788644121861000,
+      "dur_us": 2002000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "lib-e.bst|BUILD|BUILD|0",
+      "ts_us": 1788644123863000,
+      "dur_us": 2003000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "lib-f.bst|BUILD|BUILD|0",
+      "ts_us": 1788644125866000,
+      "dur_us": 2003000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "app.bst|BUILD|BUILD|0",
+      "ts_us": 1788644127869000,
+      "dur_us": 1933000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "all.bst|BUILD|BUILD|0",
+      "ts_us": 1788644129802000,
+      "dur_us": 0,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    }
+  ],
+  "phases": [],
+  "run_identity_hash": "b51434222e77485a2204bc64ab6cf9ad2310dbfa67e211821d889878c814b6a6"
+}

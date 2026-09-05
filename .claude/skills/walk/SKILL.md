@@ -27,10 +27,12 @@ below is what brings the next one under 100k.
 3. **An answer key before the tool speaks.** Example 06 ships
    `optimized/`; diff it first, then score each plane's advice as
    match / partial / miss with the sentence quoted (round 64).
-4. **Read the census, drive the difference.** Boot the export once
-   through `tests/browser.py`, take the control census (classes with
-   counts, sections, rail entries, tables with folded cells), and
-   drive one instance per class — never every button. Report only
+4. **Read the census, drive the difference.** `python3
+   tools/dev_page_census.py <export.html>` boots the export once and
+   prints the census — classes with counts, sections, rail entries,
+   tables with folded cells, drawings and their twins, planes present
+   — so a walk reads it rather than re-deriving it by hand. Drive one
+   instance per class it names — never every button. Report only
    the classes whose effect differs from their label.
 5. **Novelty before filing.** `git grep -l "<section id>"
    docs/backlog/scenarios/` and cite the closed row that touched the

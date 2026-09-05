@@ -97,13 +97,21 @@ class TestTheSelectorStillSelects:
     # so ordinary drift is quiet and a shape change is loud.
     CEILING = {"median": 20, "p90": 45, "max": 130}
     POPULATION_FLOOR = 60
-    #: `UX-645`: **11 census + 14 of your own**. The census floor is
+    #: `UX-645`: **13 census + 14 of your own**. The census floor is
     #: inside this bound because those files run - the figure is what
-    #: pytest is handed - and it is the same 11 under all 87 mapped
-    #: modules, so 44% of the bound is spent before a module's own
+    #: pytest is handed - and it is the same 13 under all 87 mapped
+    #: modules, so 48% of the bound is spent before a module's own
     #: tests are counted. Derived below rather than trusted.
-    HANDFUL = 25
-    CENSUS_FLOOR = 11
+    #:
+    #: `UX-718` moved the census 11 -> 13 and every figure here moved
+    #: with it, by exactly two: min 11 -> 13, median 17 -> 19, p90 40
+    #: -> 41, `store_aggregate` 25 -> 26. The floor is a fixed cost on
+    #: every selection, so a bound that did not move with it would say
+    #: the census can never grow - which is the opposite of what
+    #: `UX-718` argued. The 14 of your own is unchanged, and that is
+    #: the half this bound is actually about.
+    HANDFUL = 27
+    CENSUS_FLOOR = 13
 
     # Wide because the module's name is how a test invokes it, not
     # because the selector is wrong. `UX-606` argued each one.
@@ -125,6 +133,17 @@ class TestTheSelectorStillSelects:
         # here that is wide by map and not by name: its entry is 23,
         # one under `MAP_ENTRY_CAP`, so it counts in full.
         "bga/report/rate.py",
+        # `UX-681`: both at 29 against a bound of 27, and both tipped
+        # over by the same new file. They are the two modules a graph
+        # guard cannot avoid naming - `edg` is where reachability and
+        # dominators live and `loader` is how a fixture becomes a graph
+        # - so their width is the shape of the tree rather than a loose
+        # rule, and it will keep rising with every graph item. They
+        # crossed at 26 against 25 and stayed across when `UX-718`
+        # moved both figures by two; `store_aggregate` crossed on the
+        # same census change and is *not* here, because at 26 against
+        # 27 it went back under and the worked example still holds.
+        "bga/graph/edg.py", "bga/ingest/loader.py",
     }
 
     def test_a_one_module_change_selects_a_handful_not_the_suite(self):
@@ -135,9 +154,11 @@ class TestTheSelectorStillSelects:
 
         `UX-606` measured min 11 / median 16 / p90 38 / max 116;
         `UX-624` re-measured it at min 11 / median 17 / p90 40 / max
-        124 after the import spelling joined the grep."""
+        124 after the import spelling joined the grep; `UX-718` at min
+        13 / median 19 / p90 41 / max 127 after the census took two
+        more."""
         selected, _ = dev_touching.select(["bga/store_aggregate.py"])
-        assert 1 <= len(selected) <= 25, (
+        assert 1 <= len(selected) <= self.HANDFUL, (
             f"a one-module diff selected {len(selected)} files. The point is "
             "to be faster than the tier; selecting everything is not.")
         assert "tests/unit/test_the_aggregate_says_what_it_mixes.py" in selected, (
@@ -192,7 +213,7 @@ class TestTheSelectorStillSelects:
         monkeypatch.setattr(dev_touching, "touch_map",
                             lambda: {"bga/store_aggregate.py": wide})
         selected, why = dev_touching.select(["bga/store_aggregate.py"])
-        assert len(selected) <= 25, (
+        assert len(selected) <= self.HANDFUL, (
             f"the map widened the selection to {len(selected)}")
         assert not [n for n in selected if "map" in why.get(n, [])], (
             "an entry over the bound still contributed to the selection")

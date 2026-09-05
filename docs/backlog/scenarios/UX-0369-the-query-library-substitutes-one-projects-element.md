@@ -1,6 +1,6 @@
 # UX-369: the query library substitutes one project's element name
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-312 (the canned question library), UX-368 (findings carry their query) | **Serves:** anyone pasting a query into Perfetto | **Topic:** viewer
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-312 (the canned question library), UX-368 (findings carry their query) | **Serves:** anyone pasting a query into Perfetto | **Topic:** viewer | **Area:** bga/viewer
 
 ## Motivation
 

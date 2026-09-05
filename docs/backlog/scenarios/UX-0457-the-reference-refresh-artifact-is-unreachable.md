@@ -1,6 +1,6 @@
 # UX-457: the reference can only be refreshed from a host the round cannot reach
 
-**Priority:** Low | **Status:** 🟢 Done | **Found by:** round 71, going to add the missing `tests/ci_reference.json` rows for the round's four new files | **Serves:** the contributor who is told to refresh the reference and cannot fetch the thing to refresh from | **Topic:** guards
+**Priority:** Low | **Status:** 🟢 Done | **Found by:** round 71, going to add the missing `tests/ci_reference.json` rows for the round's four new files | **Serves:** the contributor who is told to refresh the reference and cannot fetch the thing to refresh from | **Topic:** guards | **Area:** tools
 
 ## Motivation
 

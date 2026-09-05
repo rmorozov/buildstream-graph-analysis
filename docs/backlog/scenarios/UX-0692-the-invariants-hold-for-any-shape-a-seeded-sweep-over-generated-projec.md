@@ -1,6 +1,6 @@
 # UX-692: the invariants hold for any shape — a seeded sweep over generated projects
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-465 (a project from a topology spec), UX-567 (the invariant guards), UX-367 (the volume budget) | **Serves:** R8 trusting the report on a graph nobody fixtured | **Topic:** guards | **Shape:** judgement
+**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-465 (a project from a topology spec), UX-567 (the invariant guards), UX-367 (the volume budget) | **Serves:** R8 trusting the report on a graph nobody fixtured | **Topic:** guards | **Area:** unassigned | **Shape:** judgement
 
 ## Motivation
 

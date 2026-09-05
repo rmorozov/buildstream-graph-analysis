@@ -1,6 +1,6 @@
 # UX-631: the context map's guard cannot see a file inside a package
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-573 (which fixed this walk for two trees), UX-608 (the map guard) | **Found by:** architecture review 15 | **Serves:** a reader looking a module up in the map | **Topic:** docs
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-573 (which fixed this walk for two trees), UX-608 (the map guard) | **Found by:** architecture review 15 | **Serves:** a reader looking a module up in the map | **Topic:** docs | **Area:** bga
 
 ## Motivation
 

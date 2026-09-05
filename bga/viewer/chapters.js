@@ -177,7 +177,15 @@ export const CHAPTERS = [
                // `UX-344`: how much was runnable and not running is a
                // fact about the machine, not about an element - the one
                // lifted table whose rail points at the wrong chapter.
-               "ready_queue", "capacity_recommendation"],
+               "ready_queue", "capacity_recommendation",
+               // `UX-676`: the same chapter's question asked in cores
+               // rather than job slots, and the two populations of
+               // window that answer it. Here and not in "investigate":
+               // "were the cores the binding resource" *is* "was the
+               // machine used well", and splitting the two would put
+               // the verdict and its evidence in different chapters.
+               "utilization_envelope", "underutilized_intervals",
+               "overcommitted_intervals"],
     // What the run was given and how much of it was used - the two
     // numbers the chapter's own verdict is computed from.
     answer(payload) {
@@ -200,7 +208,11 @@ export const CHAPTERS = [
                "parallelism", "sensitivity", "deferrability",
                "batch_opportunities", "consolidation_candidates",
                "serialization_point_risks", "leaf_analysis",
-               "blast_radius_distribution", "element_join"],
+               "blast_radius_distribution",
+               // `UX-681`: the blast distribution's mirror, in the
+               // chapter that already holds it - same question, other
+               // direction.
+               "fan_in_distribution", "element_join"],
     // How many elements, and the one that costs the most - the row a
     // reader opening this chapter is looking for.
     answer(payload) {

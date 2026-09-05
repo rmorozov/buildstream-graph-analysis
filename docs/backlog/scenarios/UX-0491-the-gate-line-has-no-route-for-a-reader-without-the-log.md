@@ -1,6 +1,6 @@
 # UX-491: the drift gate's own line has no route a reader can reach
 
-**Priority:** Low | **Status:** 🟢 Done | **Depends on:** `UX-476` built the same route for the candidate | **Found by:** round 73, closing `UX-488` | **Serves:** the round that has to pair a run's printed shift with the spread it recorded and cannot read the first one | **Topic:** guards
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** `UX-476` built the same route for the candidate | **Found by:** round 73, closing `UX-488` | **Serves:** the round that has to pair a run's printed shift with the spread it recorded and cannot read the first one | **Topic:** guards | **Area:** tools
 
 ## Motivation
 

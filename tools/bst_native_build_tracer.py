@@ -690,6 +690,72 @@ _MEMINFO_KEYS = {
 #: that decision with the reader rather than baking a window in here.
 _VMSTAT_KEYS = ("pgmajfault", "pswpin", "pswpout")
 
+#: `UX-675`: which of `/proc/stat`'s first-line jiffy fields are a busy
+#: core. Positions after the `cpu` label, in the order the kernel writes
+#: them - user, nice, system, idle, iowait, irq, softirq, steal, guest,
+#: guest_nice. `idle` and `iowait` are out because a core waiting on I/O
+#: is a core another job could have had, which is the whole distinction
+#: the item exists for; `guest` and `guest_nice` are out because the
+#: kernel already counts them inside `user` and `nice`.
+_STAT_BUSY_FIELDS = (0, 1, 2, 5, 6, 7)
+
+
+def _busy_jiffies(fields) -> int:
+    """The busy sum, as its own function so a guard can feed it a line.
+
+    The exclusions are a correctness claim no reading of this host can
+    settle - `guest` and `iowait` are both 0 on a machine that is
+    neither a hypervisor nor waiting on a disk - so the clause that
+    holds them constructs the line instead of sampling one.
+    """
+    return sum(fields[index] for index in _STAT_BUSY_FIELDS
+               if index < len(fields))
+
+#: Jiffies per second, so a delta becomes cores. 100 on every Linux this
+#: runs on, read rather than assumed.
+try:
+    _TICKS_PER_S = float(os.sysconf("SC_CLK_TCK"))
+except (ValueError, OSError, AttributeError):  # pragma: no cover
+    _TICKS_PER_S = 100.0
+
+#: The shortest interval over which "cores busy" is a reading rather
+#: than noise: one tick. Below it the jiffy delta is 0 or 1 whatever the
+#: machine was doing. Above it the quantisation is `1 / (_TICKS_PER_S *
+#: elapsed)` cores - 0.005 at the 2-second default - and the trace
+#: dictionary states it.
+_CPU_MIN_INTERVAL_S = 1.0 / _TICKS_PER_S
+
+
+def read_cpu_sample() -> dict:
+    """Busy jiffies since boot, the core count, and the 1-minute load.
+
+    `UX-675`. `traced processes running` is not cores busy - a process
+    blocked on I/O or a lock holds a slot and no core - so the question
+    "were the cores the binding resource" had no series to be answered
+    from. Jiffies are cumulative and become a rate in `HostSampler`,
+    which is the only place holding the pair that defines one.
+
+    `cores` is counted per sample rather than kept in the header beside
+    `mem_total_kb`: a cgroup resize or a hotplug moves it mid-build, and
+    installed memory does not.
+    """
+    sample = {}
+    try:
+        with open("/proc/stat") as handle:
+            for line in handle:
+                if line.startswith("cpu "):
+                    fields = [int(value) for value in line.split()[1:]]
+                    sample["cpu_busy_jiffies"] = _busy_jiffies(fields)
+                elif line.startswith("cpu"):
+                    sample["cores"] = sample.get("cores", 0) + 1
+                elif sample:
+                    break
+    except (OSError, ValueError, IndexError):
+        return {}
+    with contextlib.suppress(OSError):
+        sample["load1"] = round(os.getloadavg()[0], 2)
+    return sample
+
 
 def read_host_sample() -> dict:
     """One reading of what the host's memory is doing.
@@ -716,6 +782,7 @@ def read_host_sample() -> dict:
                     sample[key] = int(value)
     except (OSError, ValueError):
         pass
+    sample.update(read_cpu_sample())
     return sample
 
 
@@ -744,6 +811,8 @@ class HostSampler:
         self._thread = None
         self._handle = None
         self.samples = 0
+        # `UX-675`: the pair `cpu_busy_cores` is a delta over.
+        self._cpu = None
 
     def __enter__(self):
         try:
@@ -766,6 +835,7 @@ class HostSampler:
             # sample" are different facts.
             "available": bool(first),
         }
+        self._cpu = (first.get("cpu_busy_jiffies"), header["monotonic_at_start"])
         self._write(header)
         if first:
             self._thread = threading.Thread(target=self._run, daemon=True)
@@ -798,9 +868,23 @@ class HostSampler:
                 # `mem_total_kb` is in the header and does not move.
                 sample.pop("mem_total_kb", None)
                 sample.pop("swap_total_kb", None)
+                self._to_cores(sample)
                 self._write(sample)
                 self.samples += 1
             self._stop.wait(self.interval_s)
+
+    def _to_cores(self, sample: dict) -> None:
+        """`cpu_busy_jiffies` in, `cpu_busy_cores` out (`UX-675`)."""
+        busy = sample.pop("cpu_busy_jiffies", None)
+        if busy is None:
+            return
+        was, at = self._cpu or (None, None)
+        self._cpu = (busy, sample["t"])
+        elapsed = sample["t"] - at if at is not None else 0.0
+        if was is None or elapsed < _CPU_MIN_INTERVAL_S:
+            return
+        sample["cpu_busy_cores"] = round(
+            (busy - was) / (_TICKS_PER_S * elapsed), 3)
 
 
 def read_host_samples(path: str) -> dict:

@@ -1,6 +1,6 @@
 # UX-485: the trace census cannot tell a field that arrived from one whose values another field brought
 
-**Priority:** Low | **Status:** 🟢 Done | **Depends on:** `UX-466` built the census; `UX-469` walked into the limit | **Found by:** round 73, closing `UX-469` | **Serves:** the round that reads a `reached` verdict and believes a field has a carrier of its own | **Topic:** contracts
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** `UX-466` built the census; `UX-469` walked into the limit | **Found by:** round 73, closing `UX-469` | **Serves:** the round that reads a `reached` verdict and believes a field has a carrier of its own | **Topic:** contracts | **Area:** tools
 
 ## Motivation
 

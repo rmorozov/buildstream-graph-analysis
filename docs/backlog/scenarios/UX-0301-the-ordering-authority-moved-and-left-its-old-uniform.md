@@ -1,6 +1,6 @@
 # UX-301: the ordering authority moved and left its old uniform
 
-**Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-286 (the chapter pass that took over), UX-235 (the acceptance it supersedes) | **Serves:** the maintainers | **Topic:** viewer
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-286 (the chapter pass that took over), UX-235 (the acceptance it supersedes) | **Serves:** the maintainers | **Topic:** viewer | **Area:** bga/viewer
 
 ## Motivation
 

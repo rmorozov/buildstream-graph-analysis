@@ -1,6 +1,6 @@
 # UX-577: the committed example's own next step refuses
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-78 (the run-mode refusal), UX-330 (the planted store) | **Serves:** the stranger who follows the README's second command | **Topic:** store
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-78 (the run-mode refusal), UX-330 (the planted store) | **Serves:** the stranger who follows the README's second command | **Topic:** store | **Area:** bga
 
 ## Motivation
 

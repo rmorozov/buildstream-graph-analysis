@@ -1,6 +1,6 @@
 # UX-325: --aggregate crashes on every user install
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-234 (the feature), UX-203 (the CI installed-mode lesson this extends) | **Serves:** R1, R5, R7 | **Topic:** store
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-234 (the feature), UX-203 (the CI installed-mode lesson this extends) | **Serves:** R1, R5, R7 | **Topic:** store | **Area:** bga
 
 ## Motivation
 

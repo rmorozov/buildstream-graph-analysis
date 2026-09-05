@@ -1,6 +1,6 @@
 # UX-545: a refused timeline tells the reader the snapshot has no build log
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-530` (which fixed the degraded case), `UX-194` (the dead-control rule), `UX-321` (an absence is a fact to publish) | **Found by:** `UX-530`, whose scope was the degradation | **Serves:** anyone whose capture is over a ceiling | **Topic:** viewer
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-530` (which fixed the degraded case), `UX-194` (the dead-control rule), `UX-321` (an absence is a fact to publish) | **Found by:** `UX-530`, whose scope was the degradation | **Serves:** anyone whose capture is over a ceiling | **Topic:** viewer | **Area:** bga/viewer
 
 ## Motivation
 

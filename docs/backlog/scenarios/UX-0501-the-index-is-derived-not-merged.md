@@ -1,6 +1,6 @@
 # UX-501: the index is derived, not merged
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-336 (`dev_close_task`, which edits the counts today) | **Serves:** two sessions on one slate; the orchestrator who merges them | **Topic:** docs
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-336 (`dev_close_task`, which edits the counts today) | **Serves:** two sessions on one slate; the orchestrator who merges them | **Topic:** docs | **Area:** tools
 
 ## Motivation
 

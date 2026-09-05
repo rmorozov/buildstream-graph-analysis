@@ -115,6 +115,10 @@ MEDIUM_FLOOR_S = 1.0
 # Measured: 272 tests, **10.80s at `-n auto`** - what every
 # `test-touching` run now pays to stop being wrong about this class.
 CENSUS = (
+    # `UX-718`: subject is `tools/dev_refresh_analysis.FIXTURES`, a
+    # fixed pair - a diff to the analyzer or a schema names neither.
+    # Reddened all four CI jobs on `89b1ddf`, quiet at 251 files locally.
+    "tests/unit/test_a_committed_analysis_matches_the_analyzer.py",
     "tests/unit/test_a_guard_reads_only_what_a_clone_has.py",
     "tests/unit/test_capture_ref_patterns.py",
     "tests/unit/test_every_direction_names_its_reader.py",
@@ -122,6 +126,10 @@ CENSUS = (
     "tests/unit/test_one_factory_builds_every_table.py",
     "tests/unit/test_the_agent_configuration_holds.py",
     "tests/unit/test_the_canned_prose_reads_as_written.py",
+    # `UX-718`: 18 modules already named in its own docstring make it
+    # grep-reachable for those; a *new* module is not. Reddened all
+    # four CI jobs on `44d211f`, quiet at 104 files locally.
+    "tests/unit/test_the_context_map_is_the_tree.py",
     "tests/unit/test_the_dom_shim_is_one_instrument.py",
     "tests/unit/test_the_palette_is_validated.py",
     "tests/unit/test_the_register_is_terse.py",
@@ -535,6 +543,10 @@ LARGE = (
 
 MEDIUM = (
     "tests/unit/test_a_broken_pipe_is_not_an_error.py",             # 1.6s
+    # `UX-665`, tiered on landing: one Chromium, three boots (golden,
+    # macro_micro, the built shared-resource fixture). 1.77/1.78/1.82s
+    # single-process.
+    "tests/unit/test_a_new_control_class_lands_declared.py",        # 1.8s
     "tests/unit/test_a_pasted_guide_block_is_fresh_or_dated.py",    # 3.6s
     "tests/unit/test_the_documented_bga_lines_parse.py",            # 2.0s
     # `UX-545`, tiered on landing. A real two-plane render with the

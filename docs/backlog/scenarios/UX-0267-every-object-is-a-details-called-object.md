@@ -1,6 +1,6 @@
 # UX-267: every object renders as a `<details>` labelled "object"
 
-**Priority:** High | **Status:** 🟢 Fixed & Verified | **Depends on:** — | **Serves:** R1 and R3 | **Topic:** viewer
+**Priority:** High | **Status:** 🟢 Fixed & Verified | **Depends on:** — | **Serves:** R1 and R3 | **Topic:** viewer | **Area:** bga/viewer
 
 ## Motivation
 

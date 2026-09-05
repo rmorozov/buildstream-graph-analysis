@@ -1,6 +1,6 @@
 # UX-430: the trace budget counts bytes, and Perfetto spends tracks
 
-**Priority:** High | **Status:** 🟢 Done | **Found by:** round 69, an outside walk of `bga snapshot` → `bga view` → Perfetto, after a field report of the UI freezing on a real build | **Serves:** anyone who clicks "Open timeline in Perfetto" on a build big enough to be worth analysing | **Topic:** viewer
+**Priority:** High | **Status:** 🟢 Done | **Found by:** round 69, an outside walk of `bga snapshot` → `bga view` → Perfetto, after a field report of the UI freezing on a real build | **Serves:** anyone who clicks "Open timeline in Perfetto" on a build big enough to be worth analysing | **Topic:** viewer | **Area:** tools
 
 ## Motivation
 

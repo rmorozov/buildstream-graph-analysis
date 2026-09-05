@@ -1,6 +1,6 @@
 # UX-278: the magnifier opens nothing for most elements
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-216 | **Serves:** R1 and R7 — who click it to find out more | **Topic:** viewer
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-216 | **Serves:** R1 and R7 — who click it to find out more | **Topic:** viewer | **Area:** bga/viewer
 
 ## Motivation
 

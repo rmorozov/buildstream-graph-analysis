@@ -1,6 +1,6 @@
 # UX-318: the rabbit hole announces its depth
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-277 (the nesting cap), UX-205 (the tables), styleguide §3a | **Serves:** R1, R2 | **Topic:** viewer
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-277 (the nesting cap), UX-205 (the tables), styleguide §3a | **Serves:** R1, R2 | **Topic:** viewer | **Area:** bga/viewer
 
 ## Motivation
 

@@ -24,7 +24,7 @@ Outcome is written.
 | every skip the suite can take, as written | `python3 -m pytest tests/ --co -q 2>/dev/null \| tail -1` then `tests/skip_reasons.py` |
 | the round that filed or closed an item | `grep -n "UX-<n>" docs/backlog/scenarios/README.md docs/backlog/scenarios/closed.md` |
 
-Three rules that keep the lookups cheap:
+Four rules that keep the lookups cheap:
 
 - **Read a line range, not a file.** `sed -n 'a,bp'` for the spec and
   the architecture document — both are over a thousand lines and a
@@ -33,6 +33,12 @@ Three rules that keep the lookups cheap:
   more than five files, or one file over ~400 lines (a CI log, a task
   file's full history), goes to `.claude/agents/researcher.md` and
   comes back as a conclusion with `path:line` evidence.
+- **A tool result over a screen goes to a file.** 60 lines is the
+  budget. A log, a job listing or a persisted read is written to the
+  scratchpad and read back by `head`, `grep` or the tool's own
+  `tail_lines` — never taken whole. `UX-711`: a result that enters the
+  live context is re-bought at every rebuild (`UX-707`), and round 94
+  attributed 26k tokens to one job-log read over five calls.
 - **Trust the guards' names.** `tests/unit/` is one file per claim,
   named for the claim; `ls tests/unit | grep <word>` is usually the
   fastest answer to "is this held?".

@@ -1,6 +1,6 @@
 # UX-650: nine page-built sections declare no reader
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-643 (which built the mechanism and could not reach these) | **Found by:** round 88, by track Q naming what its brief forbade it to touch | **Serves:** the reader whose role owns a section the page builds rather than the payload | **Topic:** viewer
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-643 (which built the mechanism and could not reach these) | **Found by:** round 88, by track Q naming what its brief forbade it to touch | **Serves:** the reader whose role owns a section the page builds rather than the payload | **Topic:** viewer | **Area:** bga/viewer
 
 ## Motivation
 

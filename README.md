@@ -31,7 +31,7 @@ Tab completion — subcommands, flags, and `@last`/`@prev`/stamps wherever a run
 bga analyze tests/fixtures/golden/mixed_task_kinds --diagnostics   # or: make dev-run
 ```
 
-A three-element fixture that runs instantly. The report is **92 lines**;
+A three-element fixture that runs instantly. The report is **95 lines**;
 its two headline sections are below, verbatim, with every cut marked —
 `UX-192` is on file for a block that claimed to be full output and was
 not:

@@ -1,6 +1,6 @@
 # UX-525: a track costs 81k-131k tokens, and nobody knows where
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-504 (the implementer whose runs these are), UX-500 (the measurement round it joins) | **Serves:** the maintainer's subscription | **Topic:** docs
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-504 (the implementer whose runs these are), UX-500 (the measurement round it joins) | **Serves:** the maintainer's subscription | **Topic:** docs | **Area:** tools
 
 ## Motivation
 

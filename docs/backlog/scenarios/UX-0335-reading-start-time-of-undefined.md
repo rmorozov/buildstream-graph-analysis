@@ -1,6 +1,6 @@
 # UX-335: reading 'start_time' of undefined
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-334 (the net that catches this class) | **Serves:** R1 | **Topic:** viewer
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-334 (the net that catches this class) | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer
 
 ## Motivation
 

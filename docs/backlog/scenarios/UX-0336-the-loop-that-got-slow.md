@@ -1,6 +1,6 @@
 # UX-336: the loop that got slow, measured and re-tooled
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-238 (the tiers this extends), the verify/falsify/measure skills | **Serves:** the maintainers — every future round's throughput | **Topic:** guards
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-238 (the tiers this extends), the verify/falsify/measure skills | **Serves:** the maintainers — every future round's throughput | **Topic:** guards | **Area:** tools
 
 ## Motivation
 

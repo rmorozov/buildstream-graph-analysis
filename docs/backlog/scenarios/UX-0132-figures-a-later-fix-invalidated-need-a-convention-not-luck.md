@@ -1,6 +1,6 @@
 # UX-132: figures a later fix invalidated need a convention, not luck
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-123 (whose fix moved the figures) | **Topic:** docs
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-123 (whose fix moved the figures) | **Topic:** docs | **Area:** tools/native_trace
 
 ## Motivation
 

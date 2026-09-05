@@ -1,6 +1,6 @@
 # UX-450: two viewer modules sit exactly on the line-count ceiling
 
-**Priority:** Medium | **Status:** 🟢 Done | **Found by:** round 70, `UX-429` adding four lines to `structured.js` | **Serves:** the next round that adds anything to the viewer's two largest modules | **Topic:** guards
+**Priority:** Medium | **Status:** 🟢 Done | **Found by:** round 70, `UX-429` adding four lines to `structured.js` | **Serves:** the next round that adds anything to the viewer's two largest modules | **Topic:** guards | **Area:** bga/viewer
 
 ## Motivation
 

@@ -1,6 +1,6 @@
 # UX-575: a documented pipe prints a traceback
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-326 (the printed sentences are contracts) | **Serves:** anyone who types the guide's own pipe to `head` | **Topic:** cli
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-326 (the printed sentences are contracts) | **Serves:** anyone who types the guide's own pipe to `head` | **Topic:** cli | **Area:** bga
 
 ## Motivation
 

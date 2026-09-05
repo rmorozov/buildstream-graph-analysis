@@ -65,6 +65,11 @@ SAMPLES = 3
 #: shape it writes them: the two `_kb` fields move, the three `/proc/vmstat`
 #: totals climb, because a series that never changes cannot tell a
 #: counter that was drawn from one that was drawn as a constant.
+#:
+#: `UX-675`'s three move too, and `cpu_busy_cores` is fractional on
+#: purpose - it is the one value in this fixture that the trace's
+#: `int64` counter cannot carry unscaled, so a `MILLI` that went missing
+#: would round it to 1 and the equality below would still hold.
 HEADER = {"schema": "host-samples/v1", "interval_s": INTERVAL_S,
           "clock": "CLOCK_MONOTONIC", "wall_at_start": 1787331688.483485,
           "monotonic_at_start": MONOTONIC_AT_START,
@@ -79,6 +84,8 @@ def _samples():
              "swap_free_kb": 2097148 - index * 512,
              "pswpin": index, "pswpout": 2 * index,
              "pgmajfault": 39076 + 7 * index,
+             "cpu_busy_cores": 1.375 + index * 0.5,
+             "cores": 8, "load1": 4.25 + index,
              "t": MONOTONIC_AT_START + INTERVAL_S * index}
             for index in range(SAMPLES)]
 
@@ -383,6 +390,18 @@ class TestTheHostSeriesReachesTheTrace:
                   if sample["track"] == tracks["host major faults"]]
         assert sorted(faults) == [row["pgmajfault"] for row in _samples()], (
             faults)
+
+    def test_the_fractional_cpu_series_survives_an_int64_counter(self, drawn):
+        """`UX-675`: `counter_value` is an `int64` and cores busy is a
+        ratio, so `HOST_COUNTERS` carries a `MILLI` for it exactly as it
+        carries `KB` for memory. Drawn unscaled the fixture's first
+        sample lands as 1 instead of 1.375 - 37 % of a core, on the one
+        series the item exists to make readable."""
+        tracks = self._tracks(drawn)
+        busy = sorted(sample["value"] for sample in drawn["trace"]["samples"]
+                      if sample["track"] == tracks["host cores busy"])
+        assert busy == sorted(int(round(row["cpu_busy_cores"] * 1000))
+                              for row in _samples()), busy
 
     def test_the_result_counts_the_two_populations_apart(self, drawn):
         """`counters` is `UX-310`'s concurrency series and `UX-430`'s

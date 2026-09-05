@@ -1,6 +1,6 @@
 # UX-349: the table tools do not scale with the table
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-284 (table tools above the table), UX-289 (one element table, many presets) | **Serves:** the reader counting controls on a screen | **Topic:** viewer
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-284 (table tools above the table), UX-289 (one element table, many presets) | **Serves:** the reader counting controls on a screen | **Topic:** viewer | **Area:** bga/viewer
 
 ## Motivation
 

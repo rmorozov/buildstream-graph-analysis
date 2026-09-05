@@ -1,6 +1,6 @@
 # UX-479: a chain-bound build publishes no blast radius, so the recipe-author never learns what their element reaches
 
-**Priority:** Medium | **Status:** 🟢 Done | **Found by:** round 72, `UX-468`'s planted walk 2 | **Serves:** the recipe-author who owns the element every other element waits for, and is shown three elements that are worth nothing to fix | **Topic:** analysis
+**Priority:** Medium | **Status:** 🟢 Done | **Found by:** round 72, `UX-468`'s planted walk 2 | **Serves:** the recipe-author who owns the element every other element waits for, and is shown three elements that are worth nothing to fix | **Topic:** analysis | **Area:** bga
 
 ## Motivation
 

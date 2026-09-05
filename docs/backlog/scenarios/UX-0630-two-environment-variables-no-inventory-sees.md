@@ -1,6 +1,6 @@
 # UX-630: two environment variables no inventory sees
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-326 (the tool's sentences are contracts) | **Found by:** architecture review 15 | **Serves:** anyone trying to find out what changes bga's output | **Topic:** docs
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-326 (the tool's sentences are contracts) | **Found by:** architecture review 15 | **Serves:** anyone trying to find out what changes bga's output | **Topic:** docs | **Area:** bga
 
 ## Motivation
 

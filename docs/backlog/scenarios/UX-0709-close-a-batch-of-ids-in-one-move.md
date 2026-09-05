@@ -61,12 +61,21 @@ not once per id. One invocation instead of 24.
 $ python -m pytest tests/unit/test_a_batch_closes_in_one_move.py -v
 test_both_markers_flip_both_rows_move_counts_derive_once PASSED
 test_a_missing_note_refuses_the_whole_batch PASSED
-2 passed in 0.43s
+test_the_same_id_twice_is_refused_not_closed_twice PASSED
+3 passed in 0.54s
+$ PYTEST_XDIST= python -m pytest -q tests/unit/test_a_batch_closes_in_one_move.py \
+    tests/unit/test_the_loop_stays_fast.py
+53 passed in 7.72s
 ```
 
 ### Mutations
 
 | # | mutation | guard | result |
 |---|---|---|---|
-| A1 | dropped the `leftover_bare` refusal check in `main()` | `test_a_missing_note_refuses_the_whole_batch` | red: `assert 0 != 0`; reverted, green (2 passed) |
-| A2 | only applied `validated[:1]` in `move_batch`'s write loop | `test_both_markers_flip_both_rows_move_counts_derive_once` | red: `UX-9802 still in the open table`; reverted, green (2 passed) |
+| A1 | dropped the `leftover_bare` refusal check in `main()` | `test_a_missing_note_refuses_the_whole_batch` | red: `assert 0 != 0`; reverted, green (3 passed) |
+| A2 | only applied `validated[:1]` in `move_batch`'s write loop | `test_both_markers_flip_both_rows_move_counts_derive_once` | red: `UX-9802 still in the open table`; reverted, green (3 passed) |
+| A3 | dropped the `seen`/`short` repeated-id check in `move_batch` | `test_the_same_id_twice_is_refused_not_closed_twice` | red: `assert 0 != 0`; reverted, green (3 passed) |
+
+The verifier caught a leak: the first guard set `close_task.SCENARIOS`
+directly and never restored it, failing `test_the_loop_stays_fast.py`
+whenever both files shared a worker - fixed with `monkeypatch.setattr`.

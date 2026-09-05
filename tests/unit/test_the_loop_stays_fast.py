@@ -11,6 +11,7 @@ mechanism is still wired up, and that the selector still selects.
 holds: rules.md#make-test-touching-while-you-work-the-tier-when-it-is-wider
 holds: rules.md#a-number-or-mechanism-you-moved-annotate-the-file-asserting-it
 """
+import functools
 import pathlib
 import re
 import subprocess
@@ -72,6 +73,20 @@ class TestTheSuiteStillRunsInParallel:
         assert "PYTEST_XDIST= " in ci, (
             "no CI step runs a tier single-process; a suite that is only "
             "ever run parallel has untested parallel-safety")
+
+
+@functools.lru_cache(maxsize=1)
+def _selection_sizes():
+    """`{module: how many files a one-module diff selects}`.
+
+    `UX-662`: the two clauses below are two readings of one sweep, and
+    each ran it - `select()` greps every test file per module, so the
+    pair cost twice what the measurement does. Cached because the tree
+    does not change inside a run; the clauses that vary the map
+    replace `dev_touching.touch_map` and never reach here.
+    """
+    return {m: len(dev_touching.select([m])[0])
+            for m in dev_touching.touch_map()}
 
 
 class TestTheSelectorStillSelects:
@@ -139,8 +154,7 @@ class TestTheSelectorStillSelects:
         The ceilings carry headroom over those, and each failure names
         the figure it read, because the point is a selector faster than
         the tier and not a number for its own sake."""
-        sizes = sorted(len(dev_touching.select([m])[0])
-                       for m in dev_touching.touch_map())
+        sizes = sorted(_selection_sizes().values())
         assert len(sizes) >= self.POPULATION_FLOOR, (
             f"only {len(sizes)} modules in the map — the population is "
             f"broken, not the selector")
@@ -163,8 +177,8 @@ class TestTheSelectorStillSelects:
         (`UX-644`: `bga/report/rate.py`, 23 of its 36). A module
         joining or leaving the set has to be argued here, beside its
         name."""
-        wide = {m for m in dev_touching.touch_map()
-                if len(dev_touching.select([m])[0]) > self.HANDFUL}
+        wide = {m for m, size in _selection_sizes().items()
+                if size > self.HANDFUL}
         assert wide == self.WIDE, (
             f"joined: {sorted(wide - self.WIDE)}; "
             f"left: {sorted(self.WIDE - wide)}")

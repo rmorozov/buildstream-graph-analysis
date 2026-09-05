@@ -65,6 +65,11 @@ def touch_map():
     Empty when the file is absent, which is the honest answer on a
     clone that has not fetched it: the selection falls back to the grep
     and the census, and `--why` says so.
+
+    `UX-662`: deliberately **not** memoised. Caching it read `{}` once
+    on a guard that rebinds the tests directory and kept it, and the
+    population clause went to zero - and it bought nothing, because the
+    cost is the grep below and not this parse.
     """
     try:
         import json
@@ -177,6 +182,22 @@ def test_files():
         if "__pycache__" not in p.parts)
 
 
+@functools.lru_cache(maxsize=None)
+def _candidate_text(candidate):
+    """A test file's text, read once per process. `None` if unreadable.
+
+    `UX-662`: `select()` greps every test file for each changed path,
+    and the guard that measures the selector calls `select()` once per
+    mapped module - so one clause read 473 files 85 times over. The
+    corpus does not change inside a run, and a file created during one
+    is absent from the cache and read fresh.
+    """
+    try:
+        return (REPO / candidate).read_text(encoding="utf-8")
+    except OSError:
+        return None
+
+
 def select(changed, census=True):
     """The test files to run, and why each was chosen.
 
@@ -223,9 +244,8 @@ def select(changed, census=True):
             spellings.append(importing)
         pattern = re.compile("|".join(spellings))
         for candidate in test_files():
-            try:
-                text = (REPO / candidate).read_text(encoding="utf-8")
-            except OSError:
+            text = _candidate_text(candidate)
+            if text is None:
                 continue
             if pattern.search(text):
                 chosen[candidate] = True

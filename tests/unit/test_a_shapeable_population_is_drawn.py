@@ -20,11 +20,12 @@ rather than against the DOM - the declaration is where the unit lives:
 ```text
 attribution                  8 values, all duration_us
 blast_radius_distribution    5 values, all count
+fan_in_distribution          5 values, all count
 by_binary                   11 values, all count
 wall_clock_share_us         11 values, all duration_us
 ```
 
-Four, not ten. Two of them draw. `attribution` is the one this item
+Five, not ten (`UX-681` added the fourth line). Three of them draw. `attribution` is the one this item
 gives a shape - it is the section that *asks* where the wall clock
 went, its eight buckets are published parts of a published total, and
 they sum to it exactly - and the other two are recorded below with
@@ -84,6 +85,12 @@ SHAPES = {
         "density strip",
         "`UX-303`'s instrument, declared by `bga:distribution` since "
         "`UX-260` published the percentiles."),
+    "fan_in_distribution": (
+        "density strip",
+        "`UX-681`'s mirror of the row above, declared by "
+        "`bga:distribution` the same way and drawn by the same "
+        "control - one instrument over two populations, which is why "
+        "the mirror cost no new shape."),
     "by_binary": (
         None,
         "A ranked map - one call count per binary name. `UX-411` "

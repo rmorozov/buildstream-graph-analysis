@@ -209,6 +209,12 @@ class ElementJoin:
     requested_jobs: Optional[int] = None
     native_findings: list[str] = field(default_factory=list)
     unused_dependencies: list[str] = field(default_factory=list)
+    # `UX-681`: what "3 unused" is 3 *of*. The denominator is the
+    # dependencies Plane 2 could assess - `used` plus
+    # `unused_candidates` - and not the element's declared edge count,
+    # which would silently score an uncovered dependency as unread.
+    assessed_dependencies: Optional[int] = None
+    dependency_read_share: Optional[float] = None
     # UX-72: the measurements the join used to read past. Each is
     # produced per element and was published to JSON for rounds without
     # ever reaching the command the workflow ends on.
@@ -386,6 +392,21 @@ def _plane2_view(native_report: dict) -> dict[str, dict]:
         view.setdefault(entry["element"], {}).setdefault(
             "unused_dependencies", []
         ).append(entry["dependency"])
+    # `UX-681`: the share, from the same two lists. An element Plane 2
+    # reported as uncovered appears in neither, so it gets no share at
+    # all rather than a 1.0 - "every edge was read" and "nobody looked"
+    # are different claims, and the second is the common one.
+    for name in ("used", "unused_candidates"):
+        for entry in declared.get(name) or []:
+            record = view.setdefault(entry["element"], {})
+            record["assessed_dependencies"] = (
+                record.get("assessed_dependencies", 0) + 1)
+    for record in view.values():
+        assessed = record.get("assessed_dependencies")
+        if assessed:
+            unread = len(record.get("unused_dependencies") or ())
+            record["dependency_read_share"] = round(
+                1 - unread / assessed, 3)
     # UX-72: `UX-68` filtered these out of the candidate list three
     # rounds ago and nothing has read them since - no renderer, no
     # consumer. Carried here so the join can say how much it set aside,
@@ -1568,6 +1589,8 @@ def correlate(analysis: dict, native_report: dict, tasks=None, run_context=None,
             requested_jobs=p2.get("requested_jobs"),
             native_findings=p2.get("native_findings", []),
             unused_dependencies=p2.get("unused_dependencies", []),
+            assessed_dependencies=p2.get("assessed_dependencies"),
+            dependency_read_share=p2.get("dependency_read_share"),
             dominant_binary=p2.get("dominant_binary"),
             serial_binary=p2.get("serial_binary"),
             peak_rss_bytes=p2.get("peak_rss_bytes"),

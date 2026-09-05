@@ -733,6 +733,7 @@ _ANALYZE_OPTIONAL = {
     "elements": "object",
     "element_duration_distribution": "object",
     "blast_radius_distribution": "object",
+    "fan_in_distribution": "object",
     "critical_path_detail": "array",
     "optimization_horizon": "array",
     "latent_heavies": "array",
@@ -1357,6 +1358,9 @@ ANALYZE_PLANE2_KEYS = (
 # *always* there, and a report missing one of these is still full.
 ANALYZE_RUN_DEPENDENT_KEYS = (
     "cache", "element_duration_distribution", "blast_radius_distribution",
+    # `UX-681`: and its mirror, absent for the same reason - a graph of
+    # leaves has no fan-in population to describe.
+    "fan_in_distribution",
     "fetch_build_overlap", "consolidation_candidates",
     "serialization_point_risks",
     # `UX-565`: Part 29 needs a store of earlier runs of this run's host
@@ -1475,6 +1479,10 @@ _JOIN_COLUMNS = [
      "quantity": "count", "sortable": True},
     {"key": "peak_rss_bytes", "title": "Peak RSS",
      "quantity": "bytes", "sortable": True},
+    # `UX-681`: sortable, because "which element reads least of what it
+    # stages" is the ranking `unused_dependencies` could not give.
+    {"key": "dependency_read_share", "title": "Dependencies read",
+     "quantity": "share", "sortable": True},
 ]
 
 _JOIN_ITEM_PROPERTIES = {
@@ -1638,6 +1646,22 @@ _JOIN_ITEM_PROPERTIES = {
                        "by its own work."},
     "native_findings": {"type": ["array", "null"]},
     "unused_dependencies": {"type": ["array", "null"]},
+    "assessed_dependencies": {
+        QUANTITY: "count",
+        "description": "The dependencies Plane 2 could judge for this "
+                       "element - the ones it saw opened plus the ones "
+                       "it saw nothing from. Not the declared edge "
+                       "count: a dependency with no observed opens at "
+                       "all is uncovered, and scoring it as unread "
+                       "would turn a gap in the capture into a "
+                       "finding."},
+    "dependency_read_share": {
+        QUANTITY: "share",
+        "description": "How many of those were read, as a share, and "
+                       "so what `unused_dependencies` is a list *of*. "
+                       "Absent where Plane 2 assessed nothing - "
+                       "\"every edge was read\" and \"nobody looked\" "
+                       "are different claims."},
     "recommendations": {"type": ["array", "null"]},
 }
 
@@ -1841,8 +1865,21 @@ EVIDENCE_QUANTITIES.update({
     # `UX-344`: `findings[].evidence.blast_radius` is gone - it was a
     # slice of `elements.blast_radius`, keyed by element uid, published
     # a second time inside the finding that names those elements. What
-    # is left of that evidence is the distribution below, which is a
-    # property of the run and not of any element.
+    # is left of that evidence is the distribution, which is a property
+    # of the run and not of any element.
+    #
+    # `UX-681`: and it was never declared here. `macro_micro` is
+    # chain-bound, so `blast-radius-ranking` is not emitted on either
+    # committed fixture and the fifteen leaves under it reached no
+    # census. The mirror below *is* emitted, which is how the gap was
+    # found; both are declared now, from the same helper the top-level
+    # sections use, so a slice cannot disagree with its source.
+    "blast_radius_distribution": _distribution(
+        "count", "blast radius in this graph",
+        "The population this finding's ranking is placed in."),
+    "fan_in_distribution": _distribution(
+        "count", "fan-in in this graph",
+        "The population this finding's ranking is placed in."),
     "constraints": {"items": {"properties": {
         "allows": {
             QUANTITY: "count",
@@ -2485,6 +2522,46 @@ _SIGNALS_TABLES = {
             }},
         "description": "What one element's change rebuilds, and "
                        "what that costs."},
+    "fan_in": {
+        "additionalProperties": {
+            "properties": {
+                "direct_count": {
+                    QUANTITY: "count",
+                    "description": "Dependencies this element names "
+                                   "itself. The same number "
+                                   "`bottleneck.high_fanin_elements` "
+                                   "ranks the top five of, over every "
+                                   "element rather than five - and "
+                                   "that block's own prose has the "
+                                   "direction backwards (`UX-719`)."},
+                "transitive_count": {
+                    QUANTITY: "count",
+                    "description": "Everything it pulls in through "
+                                   "those, the closure and not the "
+                                   "edge list. An element is not one "
+                                   "of the things it pulls in."},
+                "immediate_dominator": {
+                    "description": "The nearest element every path "
+                                   "from a root passes through: the "
+                                   "rebuild this one waits on. Not a "
+                                   "dependency - an element can depend "
+                                   "on something that dominates "
+                                   "nothing. Null for a root."},
+            }},
+        "description": "What one element pulls in and the rebuild it "
+                       "waits on. Plane 1 only - whether those edges "
+                       "were read is `element_join`'s "
+                       "`dependency_read_share`."},
+    "top_fan_in": {
+        "description": "The widest fan-in, ranked by closure. "
+                       "Structural kinds are excluded from the ranking "
+                       "and never from `fan_in` - a stack depends on "
+                       "everything on purpose (`UX-76`)."},
+    "fan_in_distribution": _distribution(
+        "count", "fan-in in this graph",
+        "How many elements each pulls in, spread across this graph. "
+        "\"8 upstream\" is unremarkable in a 40,000-element run and "
+        "p99 in a graph of forty."),
     "zero_slack_share": {
         QUANTITY: "share",
         "description": "The share of elements with no slack at "
@@ -4227,6 +4304,8 @@ _LIFTED_HINTS = {
         ('investigate', "How are this run's element durations spread?"),
     "blast_radius_distribution":
         ('investigate', 'How are blast radii spread across this graph?'),
+    "fan_in_distribution":
+        ('investigate', 'How are fan-ins spread across this graph?'),
 }
 
 # The element population, as one key rather than six.
@@ -4246,6 +4325,9 @@ _LIFTED_HINTS = {
 # into the run-identity summary beside the run id.
 ELEMENT_KEYED = ("element_durations", "slack", "downstream_count",
                  "unweighted_depth", "blast_radius",
+                 # `UX-681`: the blast radius's mirror, keyed the same
+                 # way and belonging to the same element entity.
+                 "fan_in",
                  "criticality_probability")
 
 # `UX-382`: the element entity has two shapes, and this is the key that
@@ -4283,7 +4365,9 @@ ELEMENT_PLACEMENT_RULE = (
 ELEMENT_KEYED_OPTIONAL = ("duration_variability",)
 
 ELEMENT_POPULATION = ELEMENT_KEYED + ELEMENT_KEYED_OPTIONAL + (
-    "zero_slack_share", "top_blast_radius", "blast_radius_ranked_by")
+    "zero_slack_share", "top_blast_radius", "blast_radius_ranked_by",
+    # `UX-681`: and the fan-in ranking, beside the blast one it mirrors.
+    "top_fan_in")
 
 _ELEMENTS = {
     QUESTION: 'Which element should I look at?',

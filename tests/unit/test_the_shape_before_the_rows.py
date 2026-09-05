@@ -570,9 +570,17 @@ class TestTheRealPagesDrawThem:
         published = [one for one in booted["macro_micro"]["density"]
                      if "density-self" not in (one["klass"] or "")]
         sentences = [one["sentence"] for one in published]
-        assert len(sentences) == 2, sentences
+        assert len(sentences) == 3, sentences
         assert "0 ms → 19.1 s, median 3.1 s, p95 19.1 s — n=11." in sentences
-        assert "0 → 10, median 5, p95 10 — n=11." in sentences
+        # `UX-681`: two of the three, and they are **the same
+        # sentence** - blast radius and fan-in are different maps on
+        # this fixture (`toolchain` is 10 and 0, `all` is 0 and 10) and
+        # their five published figures happen to coincide. Asserted as
+        # a count rather than a set, because a sentence is not an
+        # identity and a reader of this clause should not conclude the
+        # two strips are one.
+        assert sentences.count("0 → 10, median 5, p95 10 — n=11.") == 2, (
+            sentences)
         assert not [one for one in booted["golden"]["density"]
                     if "density-self" not in (one["klass"] or "")]
 

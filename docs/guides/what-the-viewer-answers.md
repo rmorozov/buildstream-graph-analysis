@@ -18,12 +18,12 @@ it is checked by
 Measured on `tests/fixtures/macro_micro/run`:
 
 ```text
-report.json                       54 top-level sections
+report.json                       55 top-level sections
   occupancy.peak_concurrency      2            one scalar
   occupancy.average_concurrency   1.162…       one scalar
   occupancy.resource_occupancy    {PROCESS: 1.162…}
   utilisation.buckets             6 totals, not 6 instants
-  element_join[]                  11 elements, 24 keys each
+  element_join[]                  11 elements, 26 keys each
 ```
 
 `utilisation.buckets` looks like a series and is not: its six keys are

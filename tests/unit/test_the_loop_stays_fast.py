@@ -125,6 +125,15 @@ class TestTheSelectorStillSelects:
         # here that is wide by map and not by name: its entry is 23,
         # one under `MAP_ENTRY_CAP`, so it counts in full.
         "bga/report/rate.py",
+        # `UX-681`: both at 26, one edge over, and both tipped by the
+        # same new file. They are the two modules a graph guard cannot
+        # avoid naming - `edg` is where reachability and dominators
+        # live and `loader` is how a fixture becomes a graph - so their
+        # width is the shape of the tree rather than a loose rule, and
+        # it will keep rising with every graph item. Recorded here at
+        # the crossing rather than after the next one, which is what
+        # this set is for.
+        "bga/graph/edg.py", "bga/ingest/loader.py",
     }
 
     def test_a_one_module_change_selects_a_handful_not_the_suite(self):

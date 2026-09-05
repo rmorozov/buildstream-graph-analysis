@@ -800,7 +800,15 @@ COMMITTED_EXPORTS = [
     # fill. `tests/fixtures/host_cpu` is the fixture that can, and it is
     # not exported by this clause. The 533 B of source is
     # `questions.js`'s `{window}` token and `chapters.js`'s three names.
-    ("golden", GOLDEN, 438_000),                       #  433,708 B
+    # `UX-681` moved this one by 5,118 B, to 438,826. Almost all of it
+    # is the embedded contract: this run has four elements, so its
+    # `fan_in` map is four rows and it publishes no
+    # `fan_in_distribution` at all (below the sample floor). The
+    # `macro_micro` bound below moved by 8,879 for the same change, and
+    # the 3,761 B between the two figures is that run's own fan-in data
+    # - eleven rows plus the distribution - which four elements cannot
+    # produce. The measurement is the argument for the split.
+    ("golden", GOLDEN, 443_000),                       #  438,826 B
     # `UX-297` moved this one by 385 B before that: the two-plane run
     # publishes `plane2_coverage.source`, which says which shape of
     # Plane 2 report served its numbers and what that costs to open. A
@@ -907,7 +915,11 @@ COMMITTED_EXPORTS = [
     # `UX-676` moved this one by the same 5,632 B and for the same
     # reason - see the note on the `golden` bound above. 489,000 leaves
     # 4,918 B, the same order of headroom the two bounds above carry.
-    ("macro_micro", MACRO_MICRO, 489_000),             #  484,082 B
+    # `UX-681` moved this one by 8,879 B - the contract the `golden`
+    # bound above pays for, plus this run's eleven fan-in rows, its
+    # distribution, and two new `element_join` columns. 497,000 leaves
+    # 4,039 B, the same order of headroom the bounds above carry.
+    ("macro_micro", MACRO_MICRO, 497_000),             #  492,961 B
 ]
 
 

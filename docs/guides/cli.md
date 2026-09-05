@@ -402,6 +402,8 @@ The JSON carries a **`findings` array** — the same conclusions the text report
 | `blast-radius-reach` | medium | elements a change to which rebuilds something else, named with their downstream count. Published whatever the diagnosis says — a chain-bound build has a blast radius too (`UX-479`) |
 | `blast-radius-ranking` | varies | elements worth fixing first by downstream reach (needs `--diagnostics`) |
 | `blast-radius-structural` | info | elements whose reach is the graph's shape rather than a task — a base image, a toolchain, a stack. Reported, not ranked (`UX-258`) |
+| `fan-in-ranking` | info | the mirror: elements that *pull in* the most, ranked by upstream closure, with each count placed in the graph's own deciles |
+| `fan-in-structural` | info | a stack or a base image whose closure is the widest — it depends on everything on purpose, so the count is shape and not a task |
 | `criticality` | varies | elements most likely to be on the critical path under duration variance (needs `--diagnostics`) |
 | `optimization-horizon` | varies | what the build drops to after each of the next few fixes |
 | `joint-saving` | varies | whether the recommended set's savings add up or overlap |
@@ -925,7 +927,7 @@ columns are the whole statement of what one of its rows holds, and
 finding one level up: `parallelism` is a top-level *object*, its
 `levels` rows are below that, and a population reaching only under a
 top-level array published the whole of a major bump outside itself.
-The surface is **249 keys** today, and that figure is derived from the
+The surface is **252 keys** today, and that figure is derived from the
 walk rather than typed here.
 
 So the statement of coverage, which is now a statement and not a
@@ -972,6 +974,7 @@ can look one up.
 | `configure_phase` | The share of CPU spent configuring rather than building. A floor, for the reason its own `note` gives. |
 | `element_duration_distribution` | How this run's element durations are spread — the answer to "is 40s slow *here*?". Nearest-rank percentiles. |
 | `blast_radius_distribution` | How many elements sit downstream of each, across this graph. "753 downstream" is p99.9 in 1,202 elements and unremarkable in 40,000. |
+| `fan_in_distribution` | Its mirror: how many elements each *pulls in*, across this graph. "8 upstream" is unremarkable in a 40,000-element run and p99 in a graph of forty. |
 | `element_join_coverage` | How far the two-plane join reaches: `joined_elements`, each plane's count, and the elements only one plane saw. |
 | `attribution_hints` | One sentence per wait category saying what reduces it — the advice that belongs with `attribution`, not a second copy of it. |
 | `latent_heavies` | Heavy elements not on the path today. They cost nothing now and become the constraint once what is above them is fixed. |
@@ -1005,6 +1008,8 @@ can look one up.
 |---|---|
 | `level`, `width`, `elements` | A row of `parallelism.levels`, one per level of the graph from the roots down: its longest path in edges from a source (roots are `level` 0), how many elements sit there, and which ones — what could run at once, once everything above it is built. |
 | `fan_in`, `fan_out` | A row of `bottleneck.high_fanin_elements` and `high_fanout_elements`: elements naming this one as a dependency, and dependencies it names. Degrees of the graph, never a transitive count — `blast_radius` is that. |
+| `direct_count`, `transitive_count`, `immediate_dominator` | A row of `elements.fan_in` (`UX-681`): the dependencies this element names, everything those pull in behind them, and the nearest element every path from a root passes through — the rebuild it waits on, which is not the same as a dependency. `direct_count` is the degree `bottleneck.high_fanin_elements` ranks the top five of; whether those edges were read is `element_join.dependency_read_share`. |
+| `assessed_dependencies`, `dependency_read_share` | A row of `element_join`: how many of this element's dependencies Plane 2 could judge — the ones it saw opened plus the ones it saw nothing from — and how many of those were read. What `unused_dependencies` is a list *of*. A dependency with no observed opens at all is uncovered and in neither, so the share is absent rather than 1.0. |
 | `phase`, `elapsed_us` | A row of `pipeline_overhead`: the named stage of the run, and the wall-clock it spanned. |
 | `finding_id` | In a `headline.top_actions` row, the finding the action's reasoning is in — so the headline's advice can be read back to the evidence that chose it. |
 | `first` | In a `batch_opportunities.serialized_pairs` row, the element that ran first of a pair that shares a dependency chain; `then` is the other. The pair is why they cannot be batched. |

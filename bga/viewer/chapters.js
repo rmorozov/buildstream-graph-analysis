@@ -208,7 +208,11 @@ export const CHAPTERS = [
                "parallelism", "sensitivity", "deferrability",
                "batch_opportunities", "consolidation_candidates",
                "serialization_point_risks", "leaf_analysis",
-               "blast_radius_distribution", "element_join"],
+               "blast_radius_distribution",
+               // `UX-681`: the blast distribution's mirror, in the
+               // chapter that already holds it - same question, other
+               // direction.
+               "fan_in_distribution", "element_join"],
     // How many elements, and the one that costs the most - the row a
     // reader opening this chapter is looking for.
     answer(payload) {

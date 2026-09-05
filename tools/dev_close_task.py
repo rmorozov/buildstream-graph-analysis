@@ -857,22 +857,30 @@ def _shown(path: pathlib.Path) -> str:
         return str(path)
 
 
-def move(uid: str, note: str) -> int:
+def _validate_close(uid: str):
+    """`(path, line, topic, None)` when `uid` may close, else `(None,
+    None, None, message)`.
+
+    # UX-709: the two refusals `move()` always ran, lifted out so a
+    # batch can run every id's check before writing any of them.
+    """
     path = task_file(uid)
     body = path.read_text(encoding="utf-8")
     if "## Outcome" not in body:
-        print(f"{path.name} has no Outcome section. Write it first - a row "
-              f"moved without one is the thing the guides warn about.",
-              file=sys.stderr)
-        return 2
-
+        return None, None, None, (
+            f"{path.name} has no Outcome section. Write it first - a row "
+            f"moved without one is the thing the guides warn about.")
     line, topic = open_row(uid)
     if line is None:
-        print(f"{uid} has no row in the open table (already closed?).",
-              file=sys.stderr)
-        return 2
+        return None, None, None, (
+            f"{uid} has no row in the open table (already closed?).")
+    return path, line, topic, None
 
-    body = close_status_line(body)
+
+def _close_one(uid: str, note: str, path, line: str, topic) -> None:
+    """The write `move()` and `move_batch()` both perform, once the
+    caller has already validated `uid` with `_validate_close`."""
+    body = close_status_line(path.read_text(encoding="utf-8"))
     # `UX-501`: the topic travels with the item. The open row carries a
     # Topic column and the closed row does not, so an item filed before
     # the `**Topic:**` header existed lost its topic the moment it
@@ -914,6 +922,14 @@ def move(uid: str, note: str) -> int:
     last = max(i for i, text in enumerate(closed) if text.startswith("| UX-"))
     closed.insert(last + 1, closed_row)
     CLOSED.write_text("\n".join(closed) + "\n", encoding="utf-8")
+
+
+def move(uid: str, note: str) -> int:
+    path, line, topic, refusal = _validate_close(uid)
+    if refusal:
+        print(refusal, file=sys.stderr)
+        return 2
+    _close_one(uid, note, path, line, topic)
     # `UX-501`: the aggregates are deliberately **not** written here.
     # Measured on two branches each closing one item: writing them made
     # the topic table conflict - the two topics' rows are adjacent, so
@@ -930,6 +946,83 @@ def move(uid: str, note: str) -> int:
           f"    python tools/dev_close_task.py --check --write")
     report_figures(working_diff(), skip=path)
     return 0
+
+
+def move_batch(pairs: list) -> int:
+    """Several `(uid, note)` pairs, closed as one unit.
+
+    # UX-709: every id validated before any of them writes - a bad note
+    # or a missing Outcome four ids in must not leave the first three
+    # half-closed. The counts are derived once, after the last row
+    # moves - `UX-501`'s reasoning applies *between* commits, not inside
+    # the one batch a single command is about to make.
+    """
+    validated = []
+    for uid, note in pairs:
+        if not note.strip():
+            print(f"{uid}: --move needs --note: the closed.md row is a "
+                  f"sentence about what was found, and nothing can write "
+                  f"it for you", file=sys.stderr)
+            return 2
+        path, line, topic, refusal = _validate_close(uid)
+        if refusal:
+            print(refusal, file=sys.stderr)
+            return 2
+        validated.append((uid, note, path, line, topic))
+
+    for uid, note, path, line, topic in validated:
+        _close_one(uid, note, path, line, topic)
+        print(f"{uid}: status flipped, row moved.")
+
+    write_index()
+    sentence, _table = index_header()
+    print(f"counts derived once: {sentence}")
+    return 0
+
+
+#: `UX-709`: the argparse flags that take a value, vs. the plain
+#: switches - `_split_move_batch` needs both to walk past them without
+#: mistaking a flag's value for a bare id.
+_FLAGS_WITH_VALUE = ("--note", "--scenarios", "--round", "--date",
+                     "--mutations", "--diff")
+_FLAGS_BOOL = ("--move", "--check", "--write", "--shape", "--figures",
+              "--outcome", "-h", "--help")
+
+
+def _split_move_batch(argv):
+    """`(pairs, leftover_bare, filtered_argv)` for a `--move` call.
+
+    A bare token immediately followed by `--note <value>` is one batch
+    pair, pulled out of the stream; everything else - including a
+    single legacy `UID --move --note "..."` call, where the id is not
+    adjacent to `--note` - passes through `filtered_argv` unchanged, so
+    `main()` hands it to argparse exactly as before. `leftover_bare` is
+    a bare token that looked like an id but had no `--note` next to it
+    - the batch's missing-note case.
+    """
+    pairs, leftover_bare, filtered = [], [], []
+    i, n = 0, len(argv)
+    while i < n:
+        token = argv[i]
+        if token in _FLAGS_WITH_VALUE:
+            filtered.append(token)
+            i += 1
+            if i < n:
+                filtered.append(argv[i])
+                i += 1
+            continue
+        if token in _FLAGS_BOOL:
+            filtered.append(token)
+            i += 1
+            continue
+        if i + 2 < n and argv[i + 1] == "--note":
+            pairs.append((token, argv[i + 2]))
+            i += 3
+            continue
+        leftover_bare.append(token)
+        filtered.append(token)
+        i += 1
+    return pairs, leftover_bare, filtered
 
 
 def main(argv=None) -> int:
@@ -971,7 +1064,15 @@ def main(argv=None) -> int:
     parser.add_argument("--scenarios", default=None,
                         help="the scenarios directory to act on "
                              "(default: this repository's)")
-    args = parser.parse_args(argv)
+    # UX-709: several ids, each with its own --note, pulled out before
+    # argparse sees them - a single positional can't hold more than one.
+    raw = list(sys.argv[1:] if argv is None else argv)
+    pairs, leftover_bare, filtered = _split_move_batch(raw)
+    batch = bool(pairs) and "--move" in filtered
+    if batch and leftover_bare:
+        parser.error("--move needs --note for every id; missing for: "
+                     + ", ".join(leftover_bare))
+    args = parser.parse_args(filtered)
 
     if args.scenarios:
         global SCENARIOS, INDEX, CLOSED
@@ -1014,13 +1115,15 @@ def main(argv=None) -> int:
                 if args.diff else working_diff())
         return report_figures(diff,
                               skip=task_file(args.uid) if args.uid else None)
-    if not args.uid:
+    if not args.uid and not batch:
         parser.error("a UX id is required unless --check or --figures is given")
     if args.outcome:
         print(OUTCOME_SKELETON.format(round=args.round, date=args.date,
                                       n=args.mutations, cap=OUTCOME_CAP))
         return 0
     if args.move:
+        if batch:
+            return move_batch(pairs)
         if not args.note:
             parser.error("--move needs --note: the closed.md row is a "
                          "sentence about what was found, and nothing can "

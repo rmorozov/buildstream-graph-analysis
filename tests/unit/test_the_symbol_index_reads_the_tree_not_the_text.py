@@ -37,11 +37,19 @@ def real_caller():
 
 def imported_only_fn():
     return 3
+
+
+def attr_called_fn():
+    return 4
 """
 
 IMPORT_FORM = "import pkg.a\n"
 FROM_FORM = "from pkg.a import target_fn\n"
 FROM_FORM_UNCALLED = "from pkg.a import imported_only_fn\n"
+# No `from` import anywhere in the fixture reaches `attr_called_fn` - its only
+# path to "referenced" is the attribute call below, isolating that branch.
+ATTR_CALL_FORM = "import pkg.a\n\n\ndef caller():\n    return pkg.a.attr_called_fn()\n"
+DUNDER_FORM = '__all__ = ["nothing_here"]\n'
 
 
 def _build(tmp_path):
@@ -52,6 +60,8 @@ def _build(tmp_path):
     (pkg / "b.py").write_text(IMPORT_FORM, encoding="utf-8")
     (pkg / "c.py").write_text(FROM_FORM, encoding="utf-8")
     (pkg / "d.py").write_text(FROM_FORM_UNCALLED, encoding="utf-8")
+    (pkg / "e.py").write_text(ATTR_CALL_FORM, encoding="utf-8")
+    (pkg / "f.py").write_text(DUNDER_FORM, encoding="utf-8")
     return tmp_path
 
 
@@ -69,7 +79,7 @@ def test_a_string_and_a_docstring_are_not_callers(tmp_path, monkeypatch):
 def test_importers_finds_both_the_import_and_the_from_form(tmp_path, monkeypatch):
     _point_at(monkeypatch, _build(tmp_path))
     files = {r[0] for r in sym.find_importers("pkg.a", include_tests=False)}
-    assert files == {"pkg/b.py", "pkg/c.py", "pkg/d.py"}, files
+    assert files == {"pkg/b.py", "pkg/c.py", "pkg/d.py", "pkg/e.py"}, files
 
 
 def test_dead_lists_the_unreferenced_name_and_not_the_referenced_one(tmp_path, monkeypatch):
@@ -77,6 +87,8 @@ def test_dead_lists_the_unreferenced_name_and_not_the_referenced_one(tmp_path, m
     dead_names = {name for _, name in sym.find_dead(include_tests=False)}
     assert "unused_fn" in dead_names
     assert "target_fn" not in dead_names
+    assert "attr_called_fn" not in dead_names
+    assert "__all__" not in dead_names
 
 
 def test_a_from_import_alone_counts_as_a_reference(tmp_path, monkeypatch):

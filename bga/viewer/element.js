@@ -473,7 +473,12 @@ const SOURCES = [
     ["cpu_us", "CPU burned", "duration_us"],
     ["read_bytes", "Read from disk", "bytes"],
     ["major_faults", "Major faults", "count"],
-    ["involuntary_switches", "Preempted", "count"]]],
+    ["involuntary_switches", "Preempted", "count"],
+    // `UX-681`: what `Depends on, unused` is a list *of*. The count
+    // beside it is `assessed_dependencies`, and a share with no
+    // denominator in view is the reason that list has been a number
+    // without a scale since `UX-407`.
+    ["dependency_read_share", "Dependencies read", "share"]]],
 ];
 
 // `UX-356` (styleguide §1b): the join's **nested** evidence, declared

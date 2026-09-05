@@ -1,6 +1,6 @@
 # UX-719: the bottleneck fan-in and fan-out labels are swapped
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-681 (which measured it) | **Serves:** R3 reading the graph's shape | **Topic:** analysis | **Shape:** judgement
+**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-681 (which measured it) | **Serves:** R3 reading the graph's shape | **Topic:** analysis | **Shape:** judgement | **Area:** bga/structural
 
 ## Motivation
 

@@ -915,11 +915,15 @@ COMMITTED_EXPORTS = [
     # `UX-676` moved this one by the same 5,632 B and for the same
     # reason - see the note on the `golden` bound above. 489,000 leaves
     # 4,918 B, the same order of headroom the two bounds above carry.
-    # `UX-681` moved this one by 8,879 B - the contract the `golden`
+    # `UX-681` moved this one by 13,079 B - the contract the `golden`
     # bound above pays for, plus this run's eleven fan-in rows, its
-    # distribution, and two new `element_join` columns. 497,000 leaves
-    # 4,039 B, the same order of headroom the bounds above carry.
-    ("macro_micro", MACRO_MICRO, 497_000),             #  492,961 B
+    # distribution, two new `element_join` columns, and the two new
+    # findings with their provenance records. The bound was set at
+    # 497,000 against 492,961 before the findings landed and had to
+    # move again at 497,161; the figure below is the finished item's,
+    # measured once at the end rather than three times on the way.
+    # 502,000 leaves 4,839 B, the same order of headroom above.
+    ("macro_micro", MACRO_MICRO, 502_000),             #  497,161 B
 ]
 
 

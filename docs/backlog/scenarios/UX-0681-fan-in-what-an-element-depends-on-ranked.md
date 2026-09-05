@@ -38,15 +38,10 @@ direct edges as transitive — the closure guard reds.
 
 ## Outcome
 
-**The gap, measured.** The Motivation's three lines held. Both
-traversals ran on every analysis and reached no reader:
-
-```text
-$ grep -rn "reachable_upstream\|compute_dominators" bga/ --include=*.py \
-    | grep -v graph/edg.py
-bga/graph/analysis.py:950   compute_dominators(graph)   -> graph_analysis, unread
-(no other consumer; grep fan_in|upstream_count -> 0 hits)
-```
+**The gap, measured.** The Motivation's three lines held: both
+traversals ran on every analysis and reached no reader -
+`compute_dominators` at `bga/graph/analysis.py:950` into
+`graph_analysis`, and `grep fan_in|upstream_count bga/` at 0 hits.
 
 **The close, measured**, on `tests/fixtures/macro_micro` (example 06,
 11 elements, 34 edges, one root):
@@ -77,61 +72,45 @@ findings                    fan-in-ranking (graph-owner)
 | the ranking is the local optimizer's | `..._each_member_names_its_reader` |
 
 **Two of my own guards were vacuous, and mutation found both.** The
-zero-closure clause read `toolchain.bst not in top_fan_in(rows)`; with
-the rule deleted that element sorts eleventh of eleven and is out of
-the top five anyway, so the clause passed whatever the helper did. It
-is a constructed graph of leaves now. The absent-share clause read
-`toolchain.bst`, which is not in the Plane 2 view **at all** - a
-different question - so it never reached the branch it named; a second
-clause constructs the element Plane 2 measured and could not assess.
+zero-closure clause read `toolchain.bst not in top_fan_in(rows)`, and
+with the rule deleted that element sorts eleventh of eleven anyway; it
+is a constructed graph of leaves now. The absent-share clause read an
+element that is not in the Plane 2 view **at all** - a different
+question - so it never reached the branch it named.
 
-**Four deviations.**
+**Four deviations.** The fifth - two finding members, not four - is argued in `_fan_in_findings`' own docstring.
 
 *The read share is not a fan-in column.* The Required Fix asks for it
-there; `ELEMENT_PLACEMENT_RULE` says an attribute that needs Plane 2 is
-a field on an `element_join` row, and the rule wins - `elements.fan_in`
-is on every capture and a Plane 2 column in it is null on every
-single-plane run. It is `element_join.dependency_read_share`, and its
-denominator is what Plane 2 could *assess* (`used` plus
-`unused_candidates`), not the declared edge count, which would have
-scored an uncovered dependency as unread.
+there; `ELEMENT_PLACEMENT_RULE` says a Plane 2 attribute is a field on
+an `element_join` row, and the rule wins. Its denominator is what
+Plane 2 could *assess* (`used` plus `unused_candidates`), not the
+declared edge count, which would score an uncovered dependency as
+unread.
 
-*Two members, not a family of four.* `fan-in-reach` would restate the
-ranking - what an element pulls in **is** the count it is ranked on,
-where `blast-radius-reach` adds a cost argument a downstream count does
-not carry - and `fan-in-unread` would restate `restructuring`, which
-already names the never-read edges and replays the saving (`UX-407`).
+*The Acceptance Test was wrong twice.* `codegen` is a **direct**
+dependency of `lib-f`, so the named mutation could not fail; `all.bst`
+(1 direct, 10 transitive) is the discriminating pair. And `app.bst`
+depends on `toolchain.bst` directly, so its dominator is `toolchain`,
+not `core` - a dependency and a dominator are different claims.
 
-*The Acceptance Test was wrong twice, and this file corrects it.*
-`codegen` is a **direct** dependency of `lib-f`, so it is in the
-closure for free and the named mutation could not fail; `all.bst` (1
-direct, 10 transitive) is the discriminating pair. And the dominator of
-`app.bst` is `toolchain.bst`, not `core.bst`: `app` depends on
-`toolchain` directly, so no path to it passes through `core`. A
-dependency and a dominator are different claims.
+*Two defects this work falsified, filed rather than fixed here.*
+`bottleneck.high_fanin_elements` ranks `in_degree`, which on this edge
+direction is the element's own **dependencies** - equal to
+`fan_in.direct_count` on all eleven - while its prose says the
+opposite (`UX-719`). And `findings[].evidence` never declared
+`blast_radius_distribution`: both fixtures are chain-bound, so that
+finding is not emitted and its fifteen leaves reached no census.
 
-*Two findings this work falsified elsewhere, filed rather than fixed
-here.* `bottleneck.high_fanin_elements` ranks `in_degree`, which on
-this edge direction is the element's own **dependencies** - the same
-number as `fan_in.direct_count`, verified equal on all eleven
-elements, while its prose says "elements many others depend on".
-`UX-719`.
-And `findings[].evidence.blast_radius_distribution` was never declared:
-both committed fixtures are chain-bound, so that finding is not emitted
-and its fifteen leaves reached no census. The mirror *is* emitted,
-which is how the gap surfaced; both are declared now.
+*One move the diff had to make.* `_compute_diagnostics` sat at exactly
+the statement budget the baseline holds it to, so one
+`signals.update(...)` tripped `PLR0915`, which `UX-705` forbids
+suppressing. Part 25's blast block is lifted whole into
+`_blast_signals`: all seven keys still present on `macro_micro`, and
+the baseline back at 299 with nothing forced.
 
-*One thing the diff had to move.* `_compute_diagnostics` sat at exactly
-the statement budget `tests/quality_baseline.json` holds it to, so a
-single `signals.update(...)` tripped `PLR0915` - and `UX-705` forbids
-a suppression. Part 25's blast block is lifted whole into
-`_blast_signals`, beside the mirror that is modelled on it. A move: all
-seven keys verified present on `macro_micro` after it, and the baseline
-is back at 299 findings with nothing forced.
-
-The export bounds move to 443,000 and 497,000 (+5,118 / +8,879). The
-3,761 B between them is `macro_micro`'s own fan-in data - eleven rows
-plus the distribution - which `golden`'s four elements cannot produce.
+The export bounds move to 443,000 and 502,000 (+5,118 / +13,079). The
+7,961 B between them is `macro_micro`'s own fan-in data and the two
+findings, which `golden`'s four elements cannot produce.
 The golden depth budget moves 0.49 -> 0.50: an element-keyed map of
 records is depth four by construction, as `blast_radius` has been since
 `UX-479`.

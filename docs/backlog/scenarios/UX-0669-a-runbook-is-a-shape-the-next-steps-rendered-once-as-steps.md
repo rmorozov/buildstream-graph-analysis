@@ -1,6 +1,6 @@
 # UX-669: a runbook is a shape — the next steps rendered once, as steps
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-429 (§1d, a command is one line), UX-285, UX-535 | **Serves:** R1, at the moment of deciding what to run | **Topic:** viewer
+**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-429 (§1d, a command is one line), UX-285, UX-535 | **Serves:** R1, at the moment of deciding what to run | **Topic:** viewer | **Shape:** judgement
 
 ## Motivation
 

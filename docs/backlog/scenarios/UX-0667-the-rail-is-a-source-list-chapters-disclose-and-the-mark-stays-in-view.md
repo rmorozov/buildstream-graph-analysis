@@ -1,6 +1,6 @@
 # UX-667: the rail is a source list — chapters disclose, and the mark stays in view
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-286 (the chapters), UX-640 (the mark), UX-393 | **Serves:** R1..R8 — every reader past the first screen | **Topic:** viewer
+**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-286 (the chapters), UX-640 (the mark), UX-393 | **Serves:** R1..R8 — every reader past the first screen | **Topic:** viewer | **Shape:** judgement
 
 ## Motivation
 

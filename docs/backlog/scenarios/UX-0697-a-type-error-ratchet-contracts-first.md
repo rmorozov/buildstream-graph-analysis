@@ -1,6 +1,6 @@
 # UX-697: a type-error ratchet, contracts first
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-694 (the baseline) | **Serves:** the session editing a schema or a contract, where a wrong key is a `UX-190` bump nobody meant | **Topic:** guards
+**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-694 (the baseline) | **Serves:** the session editing a schema or a contract, where a wrong key is a `UX-190` bump nobody meant | **Topic:** guards | **Shape:** judgement
 
 ## Motivation
 

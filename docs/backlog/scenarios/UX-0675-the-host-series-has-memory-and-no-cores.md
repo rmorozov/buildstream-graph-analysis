@@ -1,6 +1,6 @@
 # UX-675: the host series has memory and no cores
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-378 (host-samples.jsonl), UX-437 (the host tracks on the trace) | **Serves:** R4, asking whether the cores were busy | **Topic:** capture
+**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-378 (host-samples.jsonl), UX-437 (the host tracks on the trace) | **Serves:** R4, asking whether the cores were busy | **Topic:** capture | **Shape:** judgement
 
 ## Motivation
 

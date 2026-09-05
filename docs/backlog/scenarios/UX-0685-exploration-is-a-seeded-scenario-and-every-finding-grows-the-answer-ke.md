@@ -1,6 +1,6 @@
 # UX-685: exploration is a seeded scenario, and every finding grows the answer key
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-402 (the journey with an answer key), UX-664 (the walk skill), UX-665 (the page census) | **Serves:** R8 deciding whether the tool is in shape; the implementing session that gets a guard, not a transcript | **Topic:** guards
+**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-402 (the journey with an answer key), UX-664 (the walk skill), UX-665 (the page census) | **Serves:** R8 deciding whether the tool is in shape; the implementing session that gets a guard, not a transcript | **Topic:** guards | **Shape:** bounded
 
 ## Motivation
 

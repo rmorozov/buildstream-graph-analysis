@@ -1,6 +1,6 @@
 # UX-673: sixteen tables offer a Top 10 they cannot fill
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-194 (the Top-N control), UX-349 (the tools scale with the table) | **Serves:** anyone reading a three-row table with a five-option menu | **Topic:** viewer
+**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-194 (the Top-N control), UX-349 (the tools scale with the table) | **Serves:** anyone reading a three-row table with a five-option menu | **Topic:** viewer | **Shape:** judgement
 
 ## Motivation
 

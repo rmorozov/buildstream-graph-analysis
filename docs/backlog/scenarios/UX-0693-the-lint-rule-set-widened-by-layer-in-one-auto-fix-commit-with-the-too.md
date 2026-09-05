@@ -1,6 +1,6 @@
 # UX-693: the lint rule set widened by layer, in one auto-fix commit, with the tools pinned
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** — | **Serves:** the implementing session, whose edit hook then reads the same rules the gate reads | **Topic:** guards
+**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** — | **Serves:** the implementing session, whose edit hook then reads the same rules the gate reads | **Topic:** guards | **Shape:** judgement
 
 ## Motivation
 

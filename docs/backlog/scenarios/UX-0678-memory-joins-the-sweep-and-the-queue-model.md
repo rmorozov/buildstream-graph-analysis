@@ -1,6 +1,6 @@
 # UX-678: memory joins the sweep and the queue model
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-613 (capacity-model/v1), UX-30 (the sweep), UX-116 (memory envelope) | **Serves:** R5 sizing a builder, R4 reading the sweep | **Topic:** analysis
+**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-613 (capacity-model/v1), UX-30 (the sweep), UX-116 (memory envelope) | **Serves:** R5 sizing a builder, R4 reading the sweep | **Topic:** analysis | **Shape:** judgement
 
 ## Motivation
 

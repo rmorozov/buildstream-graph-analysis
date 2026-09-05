@@ -625,6 +625,94 @@ def write_index():
     return _write_if_changed(INDEX, was, text)
 
 
+#: UX-706: which model runs a task is derived from its text, never typed.
+_SHAPE_PATH = re.compile(r"`((?:(?:bga|tools|tests|docs|\.claude|\.github)/[\w./-]+"
+                         r"|pyproject\.toml|Makefile|CLAUDE\.md|REVIEW\.md))[ `]")
+_SHAPE_GUARD = re.compile(r"\btest_\w+\.py\b")
+_SHAPE_JUDGEMENT = ("bga/schemas.py", "bga/contracts.py", "docs/spec/",
+                    ".github/", ".claude/", "docs/contributing/",
+                    "docs/design/directions.md", "pyproject.toml", "Makefile",
+                    "CLAUDE.md", "REVIEW.md")
+_SHAPE_HEADER = re.compile(r" \| \*\*Shape:\*\* [a-z]+")
+SHAPES = ("mechanical", "bounded", "judgement")
+
+
+def _section(text, name):
+    if f"\n## {name}" not in text:
+        return ""
+    return text.split(f"\n## {name}", 1)[1].split("\n## ", 1)[0]
+
+
+def shape_signals(text):
+    """Three yes/no readings of a task file: names a file, names a guard
+    and a mutation, touches a contract or process surface."""
+    fix, test = _section(text, "Required Fix"), _section(text, "Acceptance Test")
+    return {
+        "names a file": bool(_SHAPE_PATH.search(fix)),
+        "names a guard and a mutation": bool(_SHAPE_GUARD.search(test)
+                                            and "mutat" in test.lower()),
+        "touches a contract or process surface": any(
+            s in fix or s in test for s in _SHAPE_JUDGEMENT),
+    }
+
+
+def derived_shape(text):
+    a, b, c = shape_signals(text).values()
+    if c or not a:
+        return "judgement"
+    return "mechanical" if b else "bounded"
+
+
+def declared_shape(text):
+    match = re.search(r"\*\*Shape:\*\* ([a-z]+)", "\n".join(text.splitlines()[:8]))
+    return match.group(1) if match else None
+
+
+def with_shape(text, shape):
+    """The header line carrying `**Shape:** shape`, replaced or appended."""
+    lines = text.splitlines(keepends=True)
+    for i, line in enumerate(lines[:8]):
+        if line.startswith("**Priority:**"):
+            body = _SHAPE_HEADER.sub("", line.rstrip("\n"))
+            lines[i] = f"{body} | **Shape:** {shape}\n"
+            return "".join(lines)
+    return text
+
+
+def open_uids():
+    text = INDEX.read_text(encoding="utf-8") if INDEX.exists() else ""
+    return [int(m.group(1)) for line in text.splitlines()
+            if (m := _TABLE_ROW.match(line))]
+
+
+def shape_disagreements():
+    """Open tasks whose declared shape is missing or not the derived one."""
+    found = []
+    for number in open_uids():
+        try:
+            path = task_file(f"UX-{number}")
+        except SystemExit:
+            continue
+        text = path.read_text(encoding="utf-8")
+        declared, derived = declared_shape(text), derived_shape(text)
+        if declared != derived:
+            found.append(f"UX-{number}: declares {declared or 'no shape'}, "
+                         f"its text derives {derived}")
+    return found
+
+
+def report_shapes(uids, write):
+    for number in uids:
+        path = task_file(f"UX-{number}")
+        text = path.read_text(encoding="utf-8")
+        shape = derived_shape(text)
+        flags = "".join("y" if v else "." for v in shape_signals(text).values())
+        print(f"UX-{number:<5} {shape:<11} {flags}  {path.name}")
+        if write and declared_shape(text) != shape:
+            path.write_text(with_shape(text, shape), encoding="utf-8")
+    return 0
+
+
 CHECKS = (
     ("every row's status glyph matches its task file's",
      lambda: status_disagreements()),
@@ -640,6 +728,8 @@ CHECKS = (
      lambda: _index_is_derived()),
     ("architecture.md's opening counts the backlog directories",
      lambda: _architecture_is_derived()),
+    ("every open task declares the shape its text derives",
+     lambda: shape_disagreements()),
 )
 
 
@@ -865,6 +955,11 @@ def main(argv=None) -> int:
                              "instead of reporting that they disagree. The "
                              "rows stay hand-edited - they carry judgement "
                              "- and the aggregates never do (UX-501)")
+    parser.add_argument("--shape", action="store_true",
+                        help="print the shape a task's text derives - "
+                             "mechanical, bounded or judgement - for one "
+                             "id or every open row; with --write, put it "
+                             "in the header (UX-706)")
     parser.add_argument("--figures", action="store_true",
                         help="fixing guide §3.6's grep: figures this diff "
                              "removed that the backlog still writes")
@@ -887,9 +982,13 @@ def main(argv=None) -> int:
         INDEX = SCENARIOS / "README.md"
         CLOSED = SCENARIOS / "closed.md"
 
-    if args.write and not args.check:
-        parser.error("--write is what --check does instead of reporting; "
-                     "give both")
+    if args.write and not (args.check or args.shape):
+        parser.error("--write is what --check (or --shape) does instead of "
+                     "reporting; give both")
+    if args.shape:
+        numbers = ([int(re.sub(r"[^0-9]", "", args.uid))] if args.uid
+                   else open_uids())
+        return report_shapes(numbers, args.write)
     if args.check:
         wrote = []
         if args.write:

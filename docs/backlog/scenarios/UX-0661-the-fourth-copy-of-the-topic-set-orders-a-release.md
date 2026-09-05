@@ -1,6 +1,6 @@
 # UX-661: the second copy of the topic set orders a release body
 
-**Priority:** Low | **Status:** 🔴 Open | **Depends on:** UX-658 (which made the first three copies one), UX-634 (which built the release body) | **Serves:** anyone adding a topic and expecting the release notes to know about it | **Found by:** round 89, track X, counting the copies UX-658 was about | **Topic:** guards
+**Priority:** Low | **Status:** 🔴 Open | **Depends on:** UX-658 (which made the first three copies one), UX-634 (which built the release body) | **Serves:** anyone adding a topic and expecting the release notes to know about it | **Found by:** round 89, track X, counting the copies UX-658 was about | **Topic:** guards | **Shape:** judgement
 
 ## Motivation
 

@@ -1,6 +1,6 @@
 # UX-694: a finding baseline, and a size ledger for what has no identity
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-693 (the rule set), UX-418 (the reference method) | **Serves:** the implementing session, whose gate is zero-tolerance for a new finding from the first commit and never asks it to fix an old one first | **Topic:** guards
+**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-693 (the rule set), UX-418 (the reference method) | **Serves:** the implementing session, whose gate is zero-tolerance for a new finding from the first commit and never asks it to fix an old one first | **Topic:** guards | **Shape:** bounded
 
 ## Motivation
 

@@ -23,13 +23,13 @@ file is the day-one summary, and
 
 `PYTEST_XDIST= make test-small` turns parallelism off (for `-x` or `pdb`).
 
-## Skills, in the order a task uses them
+## The pipeline
 
-`orient` → `decompose` → `measure` → `falsify` → `verify`; `derive` before
-moving viewer code; `walk` and `design-review` audit the page. Agents:
-`researcher` reads wide, `implementer` runs one track in a worktree,
-`verifier` checks the end — reading and checking on `sonnet`, judgement
-and code on the session's model; every run is a row in `docs/audits/agent-runs.md`.
+`orient` → `decompose` (the **shape**, derived by `dev_close_task.py --shape`) → tracks → `verifier` → merge, one `make test`, close.
+Mechanical and bounded shapes are `implementer` tracks on `sonnet` in worktrees; a judgement shape is the session's own.
+`researcher` and `verifier` read on `sonnet`; the session judges, briefs and merges, and reads reports, never diffs or
+logs — its cost is the live context at each rebuild, 73 % of its tokens when measured. `measure`, `falsify`, `verify` run
+inside a track; `derive` before moving viewer code; `walk` and `design-review` audit the page; every run is a row in `docs/audits/agent-runs.md`.
 
 ## Conventions
 

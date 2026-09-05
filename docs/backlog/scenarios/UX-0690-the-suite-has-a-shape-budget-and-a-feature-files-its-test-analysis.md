@@ -1,6 +1,6 @@
 # UX-690: the suite has a shape budget, and a feature files its test analysis
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-238 (the tiers), UX-400 (the population sweep), UX-498 | **Serves:** R8 reading whether the suite is balanced; the implementer writing the right guard | **Topic:** guards
+**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-238 (the tiers), UX-400 (the population sweep), UX-498 | **Serves:** R8 reading whether the suite is balanced; the implementer writing the right guard | **Topic:** guards | **Shape:** judgement
 
 ## Motivation
 

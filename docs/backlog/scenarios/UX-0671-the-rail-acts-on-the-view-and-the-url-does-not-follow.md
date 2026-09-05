@@ -1,6 +1,6 @@
 # UX-671: the rail acts on the view, and the URL does not follow
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-647 (the view-state writer), UX-648 | **Serves:** anyone sharing "Copy link to this view" | **Topic:** viewer
+**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-647 (the view-state writer), UX-648 | **Serves:** anyone sharing "Copy link to this view" | **Topic:** viewer | **Shape:** judgement
 
 ## Motivation
 

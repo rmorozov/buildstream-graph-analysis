@@ -1,6 +1,6 @@
 # UX-676: the utilization envelope, and the intervals that violate it
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-675 (the cores series), UX-377 (resolved max-jobs), UX-48 (idle split) | **Serves:** R4 first, R2 and R3 through the elements each interval names | **Topic:** analysis
+**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-675 (the cores series), UX-377 (resolved max-jobs), UX-48 (idle split) | **Serves:** R4 first, R2 and R3 through the elements each interval names | **Topic:** analysis | **Shape:** judgement
 
 ## Motivation
 

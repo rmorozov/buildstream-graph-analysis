@@ -1,6 +1,6 @@
 # UX-672: a blocked pop-up's refusal never renders
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-451 (the refusal leaves the column), UX-198 | **Serves:** anyone whose browser blocks the Perfetto tab | **Topic:** viewer
+**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-451 (the refusal leaves the column), UX-198 | **Serves:** anyone whose browser blocks the Perfetto tab | **Topic:** viewer | **Shape:** judgement
 
 ## Motivation
 

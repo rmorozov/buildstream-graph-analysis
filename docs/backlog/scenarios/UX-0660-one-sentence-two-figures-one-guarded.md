@@ -1,6 +1,6 @@
 # UX-660: one sentence, two line numbers, and only one of them is guarded
 
-**Priority:** Low | **Status:** 🔴 Open | **Depends on:** UX-556 (which wrote the sentence), UX-584 (which required the process layer's figures to be derived or dated) | **Found by:** round 89, track Y, when adding a line to Part 32 moved both figures | **Serves:** anyone following item 12 to the sentence it points at | **Topic:** docs
+**Priority:** Low | **Status:** 🔴 Open | **Depends on:** UX-556 (which wrote the sentence), UX-584 (which required the process layer's figures to be derived or dated) | **Found by:** round 89, track Y, when adding a line to Part 32 moved both figures | **Serves:** anyone following item 12 to the sentence it points at | **Topic:** docs | **Shape:** judgement
 
 ## Motivation
 

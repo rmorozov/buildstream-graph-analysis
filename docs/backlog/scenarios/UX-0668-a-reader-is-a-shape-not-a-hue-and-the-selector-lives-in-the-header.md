@@ -1,6 +1,6 @@
 # UX-668: a reader is a shape, not a hue — and the selector lives in the header
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-372 (the reader select), UX-643 (the role demotes), UX-305 | **Serves:** R1..R5, the readers the select names | **Topic:** viewer
+**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-372 (the reader select), UX-643 (the role demotes), UX-305 | **Serves:** R1..R5, the readers the select names | **Topic:** viewer | **Shape:** judgement
 
 ## Motivation
 

@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-703 scenarios: **43 open**, 660 closed.
+709 scenarios: **48 open**, 661 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -26,8 +26,8 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | viewer | 9 | 157 |
 | cli | 0 | 21 |
 | store | 0 | 16 |
-| docs | 7 | 110 |
-| guards | 17 | 155 |
+| docs | 10 | 113 |
+| guards | 19 | 158 |
 
 ## Open scenarios
 
@@ -79,6 +79,33 @@ task file, which is the only place it ever lived twice.
 | UX-702 | [a performance ratchet at the gate](UX-0702-a-performance-ratchet-at-the-gate.md) | guards | Medium | R8 reading whether a round made `bga analyze` slower on the largest capture, which nothing today records | 🔴 |
 | UX-703 | [a mutation run on the touched modules, weekly](UX-0703-a-mutation-run-on-the-touched-modules-weekly.md) | guards | Low | the falsify skill, which is a hand ritual per guard and cannot be run over the suite | 🔴 |
 | UX-705 | [the burn-down runs on the reporters' model — a batch a commit, never a suppression](UX-0705-the-burn-down-runs-on-the-reporters-model-a-batch-a-commit-never-a-supp.md) | guards | High | R8, who wants the baseline to reach zero without the session's model reading 1,709 findings | 🔴 |
+| UX-707 | [the orchestrator's rebuilds are counted and priced, per session](UX-0707-the-orchestrator-s-rebuilds-are-counted-and-priced-per-session.md) | guards | High | the session deciding how long to stay idle and how much to keep in view | 🔴 |
+| UX-708 | [the first batch under the pipeline, priced per shape](UX-0708-the-first-batch-under-the-pipeline-priced-per-shape.md) | docs | High | the advisory in `CLAUDE.md`, which says `sonnet` for tracks on an argument | 🔴 |
+| UX-709 | [close a batch of ids in one `--move`](UX-0709-close-a-batch-of-ids-in-one-move.md) | guards | Medium | the orchestrator closing a merged batch | 🔴 |
+| UX-710 | [a ledger row is derived from the transcript, not typed](UX-0710-a-ledger-row-is-derived-from-the-transcript-not-typed.md) | docs | Medium | the session that types a row from the usage line | 🔴 |
+| UX-711 | [a tool result longer than a screen goes to a file](UX-0711-a-tool-result-longer-than-a-screen-goes-to-a-file.md) | docs | Medium | the orchestrating session, whose live context every rebuild re-buys | 🔴 |
+
+## UX-706..UX-711: the ninety-fourth round — the pipeline, and which model runs which shape (2026-09-05)
+
+A process round. The user asked where a simpler model can take
+batches of tasks that need no design, what the optimal pipeline is,
+and how context spent balances against tasks closed. Measured (a
+researcher on `sonnet`; the session on its own transcript): the
+ledger had never priced an `implementer` or a `verifier`; the
+`decompose` block appears in 0 task files; of 60 closed tasks 38 %
+name a file, 5 % name a guard and a mutation, 15 % touch a contract
+or process surface; the orchestrator's eleven context rebuilds were
+73 % of its tokens since round 46. Landed: a task's **shape**, derived
+from its text by `dev_close_task.py --shape` and held by `--check`
+(`UX-706`); the `implementer` on `sonnet` for mechanical and bounded
+shapes, writing the Outcome's measured parts; the `decompose` skill's
+shape and batch sections; `CLAUDE.md`'s pipeline; the guide's §1.5.
+The round is [`docs/audits/round-94.md`](../../audits/round-94.md).
+
+**Filed.** The orchestrator's rebuilds counted (`UX-707`), the first
+batch priced per shape (`UX-708`), a batch `--move` (`UX-709`), a
+ledger row derived from the transcript (`UX-710`), a tool result
+longer than a screen to a file (`UX-711`).
 
 ## UX-693..UX-705: the ninety-third round — the gate holds the numbers, the review holds the design (2026-09-05)
 

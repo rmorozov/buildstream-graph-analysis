@@ -1,6 +1,6 @@
 # UX-254: the contents take two thirds of the first screen
 
-**Priority:** High | **Status:** 🟢 Fixed & Verified | **Depends on:** — | **Serves:** R1 first — the reader who opened the report to find out what to fix | **Topic:** viewer
+**Priority:** High | **Status:** 🟢 Fixed & Verified | **Depends on:** — | **Serves:** R1 first — the reader who opened the report to find out what to fix | **Topic:** viewer | **Area:** bga/viewer
 
 ## Motivation
 

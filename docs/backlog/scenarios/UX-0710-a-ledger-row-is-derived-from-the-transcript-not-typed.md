@@ -1,6 +1,6 @@
 # UX-710: a ledger row is derived from the transcript, not typed
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-525 (the transcript reader), UX-666 (the ledger) | **Serves:** the session that types a row from the harness's usage line and gets the tokens right and the wall wrong, or the reverse | **Topic:** docs | **Shape:** bounded
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-525 (the transcript reader), UX-666 (the ledger) | **Serves:** the session that types a row from the harness's usage line and gets the tokens right and the wall wrong, or the reverse | **Topic:** docs | **Area:** tools | **Shape:** bounded
 
 ## Motivation
 

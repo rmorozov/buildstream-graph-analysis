@@ -1,6 +1,6 @@
 # UX-437: the host memory series is captured every run and read by nobody
 
-**Priority:** High | **Status:** 🟢 Done | **Found by:** round 69, strand (a) of the outside walk — is every captured thing reachable? | **Serves:** anyone whose build was slow because the host ran out of memory | **Topic:** viewer
+**Priority:** High | **Status:** 🟢 Done | **Found by:** round 69, strand (a) of the outside walk — is every captured thing reachable? | **Serves:** anyone whose build was slow because the host ran out of memory | **Topic:** viewer | **Area:** tools
 
 ## Motivation
 

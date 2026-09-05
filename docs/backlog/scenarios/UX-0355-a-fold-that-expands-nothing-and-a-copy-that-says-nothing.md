@@ -1,6 +1,6 @@
 # UX-355: a fold that expands nothing, and a copy that says nothing
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-347 (chapters fold), UX-279 (a copy control says what it copies) | **Serves:** anyone who lands on the report and tries to open it | **Topic:** viewer
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-347 (chapters fold), UX-279 (a copy control says what it copies) | **Serves:** anyone who lands on the report and tries to open it | **Topic:** viewer | **Area:** bga/viewer
 
 ## Motivation
 

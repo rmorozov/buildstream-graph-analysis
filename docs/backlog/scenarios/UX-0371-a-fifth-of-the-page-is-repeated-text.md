@@ -1,6 +1,6 @@
 # UX-371: a fifth of the page is repeated text
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-360 (the volume budget), UX-305 (emphasis is a budget) | **Serves:** anyone reading more than the first screen | **Topic:** viewer
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-360 (the volume budget), UX-305 (emphasis is a budget) | **Serves:** anyone reading more than the first screen | **Topic:** viewer | **Area:** bga/viewer
 
 ## Motivation
 

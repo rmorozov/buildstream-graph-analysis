@@ -1,6 +1,6 @@
 # UX-64: the sandbox correlation matches on a start *instant*, so 18 of 25 real sandboxes are ambiguous when four builders overlap
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** `UX-56` (done — which built the correlation this sharpens) | **Topic:** capture
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** `UX-56` (done — which built the correlation this sharpens) | **Topic:** capture | **Area:** tools
 
 ## Motivation
 

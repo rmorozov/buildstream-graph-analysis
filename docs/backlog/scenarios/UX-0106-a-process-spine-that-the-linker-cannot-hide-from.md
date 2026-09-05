@@ -1,6 +1,6 @@
 # UX-106: a process spine that the linker cannot hide from
 
-**Priority:** High | **Status:** 🟢 Done (reopened by round 12, closed by UX-144) | **Depends on:** UX-105 (the ground-truth census), UX-11/UX-23/UX-56 (the shim chain, all done) | **Topic:** capture
+**Priority:** High | **Status:** 🟢 Done (reopened by round 12, closed by UX-144) | **Depends on:** UX-105 (the ground-truth census), UX-11/UX-23/UX-56 (the shim chain, all done) | **Topic:** capture | **Area:** tools/native_trace
 
 Direction 4's core — the mechanism argument and the alternatives table
 (acct, CN_PROC, eBPF, polling, fanotify — each weighed and rejected)

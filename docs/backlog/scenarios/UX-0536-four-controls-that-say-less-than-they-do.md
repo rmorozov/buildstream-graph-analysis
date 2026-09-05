@@ -1,6 +1,6 @@
 # UX-536: four controls that say less than they do
 
-**Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-280 (the Markdown preference), UX-223 (the accelerators), UX-334 | **Serves:** the keyboard and screen-reader reader | **Topic:** viewer
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-280 (the Markdown preference), UX-223 (the accelerators), UX-334 | **Serves:** the keyboard and screen-reader reader | **Topic:** viewer | **Area:** bga/viewer
 
 ## Motivation
 

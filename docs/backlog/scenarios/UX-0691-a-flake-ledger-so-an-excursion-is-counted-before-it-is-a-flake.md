@@ -1,6 +1,6 @@
 # UX-691: a flake ledger, so an excursion is counted before it is a flake
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-442 (two-run confirmation), UX-495 (browser guards under load), UX-496 | **Serves:** the round reading a red gate on a file nobody touched | **Topic:** guards | **Shape:** bounded
+**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-442 (two-run confirmation), UX-495 (browser guards under load), UX-496 | **Serves:** the round reading a red gate on a file nobody touched | **Topic:** guards | **Area:** unassigned | **Shape:** bounded
 
 ## Motivation
 

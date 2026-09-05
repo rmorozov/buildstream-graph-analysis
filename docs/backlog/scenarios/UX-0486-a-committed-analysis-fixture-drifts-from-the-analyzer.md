@@ -1,6 +1,6 @@
 # UX-486: a committed analysis fixture drifts from the analyzer, and one clause out of many noticed
 
-**Priority:** Medium | **Status:** 🟢 Done | **Found by:** round 73, closing `UX-469` | **Serves:** the round whose guards pass against an analysis the current code would never emit | **Topic:** guards
+**Priority:** Medium | **Status:** 🟢 Done | **Found by:** round 73, closing `UX-469` | **Serves:** the round whose guards pass against an analysis the current code would never emit | **Topic:** guards | **Area:** tools
 
 ## Motivation
 

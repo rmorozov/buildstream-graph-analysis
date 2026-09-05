@@ -1,6 +1,6 @@
 # UX-526: the large budget class is measured at its bottom and breached at its top
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-367 (the budget), UX-366 and UX-419 (the 40-row bound) | **Serves:** anyone who opens a report of a project larger than the seeded run | **Topic:** guards
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-367 (the budget), UX-366 and UX-419 (the 40-row bound) | **Serves:** anyone who opens a report of a project larger than the seeded run | **Topic:** guards | **Area:** bga/viewer
 
 ## Motivation
 

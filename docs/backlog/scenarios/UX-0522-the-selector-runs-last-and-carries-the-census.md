@@ -1,6 +1,6 @@
 # UX-522: the selector runs last, and carries the census
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-500 (the measurement this changes the odds of), UX-336 (`dev_touching`) | **Serves:** the implementing session, at the commit it is about to make | **Topic:** guards
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-500 (the measurement this changes the odds of), UX-336 (`dev_touching`) | **Serves:** the implementing session, at the commit it is about to make | **Topic:** guards | **Area:** tools
 
 ## Motivation
 

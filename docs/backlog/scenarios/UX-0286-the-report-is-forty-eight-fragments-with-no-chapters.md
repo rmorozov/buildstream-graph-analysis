@@ -1,6 +1,6 @@
 # UX-286: the report is forty-eight fragments with no chapters
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-285 | **Serves:** R1 and R7 — reading top to bottom before they know what they want | **Topic:** viewer
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-285 | **Serves:** R1 and R7 — reading top to bottom before they know what they want | **Topic:** viewer | **Area:** bga/viewer
 
 ## Motivation
 

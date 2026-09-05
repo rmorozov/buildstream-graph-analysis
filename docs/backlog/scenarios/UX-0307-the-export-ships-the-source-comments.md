@@ -1,6 +1,6 @@
 # UX-307: the export ships the source commentary
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-195 (the export this weighs), UX-287 (the split that measures it) | **Serves:** R1 — whoever a report is sent to | **Topic:** viewer
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-195 (the export this weighs), UX-287 (the split that measures it) | **Serves:** R1 — whoever a report is sent to | **Topic:** viewer | **Area:** tools
 
 ## Motivation
 

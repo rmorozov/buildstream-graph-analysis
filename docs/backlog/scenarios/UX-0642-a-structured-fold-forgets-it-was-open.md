@@ -1,6 +1,6 @@
 # UX-642: a structured fold forgets it was open
 
-**Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-211 (URL state), UX-318 (the rabbit hole announces its depth) | **Found by:** round 87, while measuring the parallelism block | **Serves:** anyone who shares a link to a report they were reading | **Topic:** viewer
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-211 (URL state), UX-318 (the rabbit hole announces its depth) | **Found by:** round 87, while measuring the parallelism block | **Serves:** anyone who shares a link to a report they were reading | **Topic:** viewer | **Area:** bga/viewer
 
 ## Motivation
 

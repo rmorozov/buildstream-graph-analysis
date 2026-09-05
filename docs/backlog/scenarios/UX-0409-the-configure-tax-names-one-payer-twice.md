@@ -1,6 +1,6 @@
 # UX-409: the configure tax names one payer twice
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — | **Serves:** anyone reading a cache-logs finding | **Topic:** analysis
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — | **Serves:** anyone reading a cache-logs finding | **Topic:** analysis | **Area:** tools
 
 ## Motivation
 

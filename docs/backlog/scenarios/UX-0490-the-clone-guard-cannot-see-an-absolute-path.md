@@ -1,6 +1,6 @@
 # UX-490: the guard against one-machine data cannot see an absolute path
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-276` built the scan; `UX-485` walked into the hole | **Found by:** round 73, writing `UX-485`'s end-to-end clauses | **Serves:** the round whose new guard rests on a capture in `/tmp` and passes here, green, for one session | **Topic:** guards
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-276` built the scan; `UX-485` walked into the hole | **Found by:** round 73, writing `UX-485`'s end-to-end clauses | **Serves:** the round whose new guard rests on a capture in `/tmp` and passes here, green, for one session | **Topic:** guards | **Area:** tools
 
 ## Motivation
 

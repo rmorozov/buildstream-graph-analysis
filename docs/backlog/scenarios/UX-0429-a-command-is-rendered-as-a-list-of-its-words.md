@@ -1,6 +1,6 @@
 # UX-429: a command is rendered as a list of its words
 
-**Priority:** High | **Status:** 🟢 Done | **Found by:** round 69, an outside walk of `bga snapshot` → `bga view` → Perfetto | **Serves:** every reader who is handed a command and expected to run it | **Topic:** viewer
+**Priority:** High | **Status:** 🟢 Done | **Found by:** round 69, an outside walk of `bga snapshot` → `bga view` → Perfetto | **Serves:** every reader who is handed a command and expected to run it | **Topic:** viewer | **Area:** bga/viewer
 
 ## Motivation
 

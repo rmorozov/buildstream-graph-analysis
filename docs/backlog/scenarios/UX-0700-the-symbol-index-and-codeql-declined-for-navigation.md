@@ -1,6 +1,6 @@
 # UX-700: the symbol index — and CodeQL declined for navigation
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-499 (the orient recipes), UX-687 (the impact tool, which reads it) | **Serves:** the session at the start of a task, which today spends five greps and their raw lines to learn who calls what | **Topic:** guards | **Shape:** bounded
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-499 (the orient recipes), UX-687 (the impact tool, which reads it) | **Serves:** the session at the start of a task, which today spends five greps and their raw lines to learn who calls what | **Topic:** guards | **Area:** tools | **Shape:** bounded
 
 ## Motivation
 

@@ -1,6 +1,6 @@
 # UX-418: a slow file is small until CI times out
 
-**Priority:** Medium | **Status:** 🟢 Done | **Found by:** UX-403's guard census | **Serves:** the edit-run loop | **Topic:** guards
+**Priority:** Medium | **Status:** 🟢 Done | **Found by:** UX-403's guard census | **Serves:** the edit-run loop | **Topic:** guards | **Area:** tools
 
 ## Motivation
 

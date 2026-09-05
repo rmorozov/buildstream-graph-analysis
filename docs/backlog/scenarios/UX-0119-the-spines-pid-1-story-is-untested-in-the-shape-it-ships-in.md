@@ -1,6 +1,6 @@
 # UX-119: the spine's pid-1 story is untested in the shape it ships in
 
-**Priority:** Medium | **Status:** 🟢 Done — premise corrected, and the alternative measured and rejected | **Depends on:** UX-106 (done — this is its S2) | **Topic:** capture
+**Priority:** Medium | **Status:** 🟢 Done — premise corrected, and the alternative measured and rejected | **Depends on:** UX-106 (done — this is its S2) | **Topic:** capture | **Area:** tools/native_trace
 
 ## Motivation
 

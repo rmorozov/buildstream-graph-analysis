@@ -1,6 +1,6 @@
 # UX-527: one control has an option per element
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-368 (the query the control feeds), UX-369 (the substitution) | **Serves:** anyone asking Perfetto about one element of a large project | **Topic:** viewer
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-368 (the query the control feeds), UX-369 (the substitution) | **Serves:** anyone asking Perfetto about one element of a large project | **Topic:** viewer | **Area:** bga/viewer
 
 ## Motivation
 

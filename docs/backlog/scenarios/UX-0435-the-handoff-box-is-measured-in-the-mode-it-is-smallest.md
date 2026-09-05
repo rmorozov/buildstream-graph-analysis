@@ -1,6 +1,6 @@
 # UX-435: the handoff box is measured in the mode where it is smallest
 
-**Priority:** Medium | **Status:** 🟢 Done | **Found by:** round 69, a field report that the Perfetto handoff occupies more of the left rail than it needs | **Serves:** anyone reading the rail while a server is behind the page — the mode `bga view` opens by default | **Topic:** viewer
+**Priority:** Medium | **Status:** 🟢 Done | **Found by:** round 69, a field report that the Perfetto handoff occupies more of the left rail than it needs | **Serves:** anyone reading the rail while a server is behind the page — the mode `bga view` opens by default | **Topic:** viewer | **Area:** bga/viewer
 
 ## Motivation
 

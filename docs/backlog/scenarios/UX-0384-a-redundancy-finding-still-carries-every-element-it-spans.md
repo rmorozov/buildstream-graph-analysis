@@ -1,6 +1,6 @@
 # UX-384: a redundancy finding still carries every element it spans
 
-**Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-375 (the cap that made this the remaining term) | **Serves:** anyone whose store holds a monorepo's captures | **Topic:** contracts
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-375 (the cap that made this the remaining term) | **Serves:** anyone whose store holds a monorepo's captures | **Topic:** contracts | **Area:** bga
 
 ## Motivation
 

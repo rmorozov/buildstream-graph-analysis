@@ -1,6 +1,6 @@
 # UX-348: the two capabilities the tool is for are a closed fold and a stub
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-298 (the timeline speaks Perfetto), UX-312 (the canned question library), UX-172 (bga blast) | **Serves:** the reader who came for the thing this tool does that others do not | **Topic:** viewer
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-298 (the timeline speaks Perfetto), UX-312 (the canned question library), UX-172 (bga blast) | **Serves:** the reader who came for the thing this tool does that others do not | **Topic:** viewer | **Area:** bga/viewer
 
 ## Motivation
 

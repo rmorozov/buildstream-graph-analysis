@@ -1,6 +1,6 @@
 # UX-414: two sections fall into "Everything else", and the guard's fixture cannot see it
 
-**Priority:** Medium | **Status:** 🟢 Done | **Found by:** UX-400's sweep, first run | **Serves:** anyone navigating a two-plane report | **Topic:** viewer
+**Priority:** Medium | **Status:** 🟢 Done | **Found by:** UX-400's sweep, first run | **Serves:** anyone navigating a two-plane report | **Topic:** viewer | **Area:** bga/viewer
 
 ## Motivation
 

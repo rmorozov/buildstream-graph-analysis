@@ -1,6 +1,6 @@
 # UX-541: the gap sweep is cut and still quadratic, and the reason is a contract
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-539` (the sweep this is the remainder of), `UX-531` (the round that measured the term) | **Found by:** `UX-539`, measuring its own close | **Serves:** anyone analysing a monorepo | **Topic:** analysis
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-539` (the sweep this is the remainder of), `UX-531` (the round that measured the term) | **Found by:** `UX-539`, measuring its own close | **Serves:** anyone analysing a monorepo | **Topic:** analysis | **Area:** bga/attribution
 
 ## Motivation
 

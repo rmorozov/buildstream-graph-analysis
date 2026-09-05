@@ -1,6 +1,6 @@
 # UX-375: the Plane 2 report has one uncapped population
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-297 (extraction streams), UX-300 (what a two-gigabyte snapshot does to a store) | **Serves:** anyone whose store has to hold a monorepo's captures | **Topic:** capture
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-297 (extraction streams), UX-300 (what a two-gigabyte snapshot does to a store) | **Serves:** anyone whose store has to hold a monorepo's captures | **Topic:** capture | **Area:** tools
 
 ## Motivation
 

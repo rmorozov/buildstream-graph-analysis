@@ -1,6 +1,6 @@
 # UX-328: --schema answers for everything that emits one
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-190 (the contract discipline), UX-230/UX-234 (the emitters that outgrew it) | **Serves:** R1; every payload consumer | **Topic:** contracts
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-190 (the contract discipline), UX-230/UX-234 (the emitters that outgrew it) | **Serves:** R1; every payload consumer | **Topic:** contracts | **Area:** bga
 
 ## Motivation
 

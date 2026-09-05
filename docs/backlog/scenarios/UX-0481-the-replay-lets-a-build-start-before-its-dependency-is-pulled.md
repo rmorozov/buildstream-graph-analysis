@@ -1,6 +1,6 @@
 # UX-481: the replay starts a build before the artifacts it consumes have been pulled
 
-**Priority:** Medium | **Status:** 🟢 Done | **Found by:** round 72, `UX-459` — the first committed capture with `PULL` tasks reports a reduced model score on every analysis | **Serves:** the reader of a cache-hit build, whose certified floor is computed from a schedule that could not have happened | **Topic:** analysis
+**Priority:** Medium | **Status:** 🟢 Done | **Found by:** round 72, `UX-459` — the first committed capture with `PULL` tasks reports a reduced model score on every analysis | **Serves:** the reader of a cache-hit build, whose certified floor is computed from a schedule that could not have happened | **Topic:** analysis | **Area:** bga/normalize
 
 ## Motivation
 

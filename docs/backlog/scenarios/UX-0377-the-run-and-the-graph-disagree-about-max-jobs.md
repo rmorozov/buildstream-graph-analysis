@@ -1,6 +1,6 @@
 # UX-377: the run and the graph disagree about max-jobs, and on a default capture neither has it
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-29 (auto-extract native_max_jobs from the wrapped log), UX-31 (the resolved per-element max-jobs) | **Serves:** anyone who runs `bga snapshot` without extra flags | **Topic:** capture
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-29 (auto-extract native_max_jobs from the wrapped log), UX-31 (the resolved per-element max-jobs) | **Serves:** anyone who runs `bga snapshot` without extra flags | **Topic:** capture | **Area:** tools
 
 ## Motivation
 

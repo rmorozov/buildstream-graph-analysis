@@ -1,6 +1,6 @@
 # UX-362: the Plane 2 absence sentence claims a timeline it does not own
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-329 (the absence grammar, split), UX-358 (the fixture that found it) | **Serves:** anyone reading a Plane 1 capture's report | **Topic:** viewer
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-329 (the absence grammar, split), UX-358 (the fixture that found it) | **Serves:** anyone reading a Plane 1 capture's report | **Topic:** viewer | **Area:** bga
 
 ## Motivation
 

@@ -1,6 +1,6 @@
 # UX-359: every guard measures a page with Plane 2 stripped out of it
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-329 (the terminal and the viewer agree about Plane 2), UX-347 (the distance budget) | **Serves:** every budget, census and geometry assertion in the suite | **Topic:** guards
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-329 (the terminal and the viewer agree about Plane 2), UX-347 (the distance budget) | **Serves:** every budget, census and geometry assertion in the suite | **Topic:** guards | **Area:** bga/viewer
 
 ## Motivation
 

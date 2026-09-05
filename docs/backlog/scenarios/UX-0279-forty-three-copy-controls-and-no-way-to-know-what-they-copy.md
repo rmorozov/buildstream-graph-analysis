@@ -1,6 +1,6 @@
 # UX-279: forty-three copy controls, and no way to know what they copy
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-224 | **Serves:** R8 — who pastes a finding into a ticket | **Topic:** viewer
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-224 | **Serves:** R8 — who pastes a finding into a ticket | **Topic:** viewer | **Area:** bga/viewer
 
 ## Motivation
 

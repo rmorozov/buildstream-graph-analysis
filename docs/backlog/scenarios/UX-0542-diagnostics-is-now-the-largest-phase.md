@@ -1,6 +1,6 @@
 # UX-542: `_compute_diagnostics` is now the largest phase of `analyze`
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-539` (the round whose profile this is), `UX-531` | **Found by:** `UX-539`'s profile, after its own two terms went | **Serves:** anyone analysing a monorepo | **Topic:** analysis
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-539` (the round whose profile this is), `UX-531` | **Found by:** `UX-539`'s profile, after its own two terms went | **Serves:** anyone analysing a monorepo | **Topic:** analysis | **Area:** bga/diagnostics
 
 ## Motivation
 

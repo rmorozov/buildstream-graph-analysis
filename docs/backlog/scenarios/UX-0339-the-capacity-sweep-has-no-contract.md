@@ -1,6 +1,6 @@
 # UX-339: the capacity sweep has no contract
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-328 (which found it), UX-190 (the rule it breaks) | **Serves:** R5 — capacity operators, and every payload consumer | **Topic:** contracts
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-328 (which found it), UX-190 (the rule it breaks) | **Serves:** R5 — capacity operators, and every payload consumer | **Topic:** contracts | **Area:** bga
 
 ## Motivation
 

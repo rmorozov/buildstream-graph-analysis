@@ -1,6 +1,6 @@
 # UX-199: a report you can find your way around
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-193 (the page), UX-195 (the export that must keep up) | **Topic:** viewer
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-193 (the page), UX-195 (the export that must keep up) | **Topic:** viewer | **Area:** bga/viewer
 
 ## Motivation
 

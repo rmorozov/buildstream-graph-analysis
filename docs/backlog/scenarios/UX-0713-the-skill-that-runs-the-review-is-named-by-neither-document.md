@@ -1,6 +1,6 @@
 # UX-713: the skill that runs the review is named by neither document
 
-**Priority:** Medium | **Status:** 🔴 Open | **Depends on:** UX-240 (the skills), UX-241 (the cadence), UX-505 (the rules card as entry point) | **Found by:** architecture review 17, by needing the skill and not finding it named | **Serves:** the session the cadence guard has just stopped | **Topic:** docs | **Shape:** judgement
+**Priority:** Medium | **Status:** 🔴 Open | **Depends on:** UX-240 (the skills), UX-241 (the cadence), UX-505 (the rules card as entry point) | **Found by:** architecture review 17, by needing the skill and not finding it named | **Serves:** the session the cadence guard has just stopped | **Topic:** docs | **Area:** tools | **Shape:** judgement
 
 ## Motivation
 

@@ -1,6 +1,6 @@
 # UX-473: nothing in CI builds a generated project
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-465` stages 1-4, which shipped | **Found by:** round 72, closing `UX-465`'s first four stages | **Serves:** the round whose spec change breaks a build nobody runs until someone runs it by hand | **Topic:** guards
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-465` stages 1-4, which shipped | **Found by:** round 72, closing `UX-465`'s first four stages | **Serves:** the round whose spec change breaks a build nobody runs until someone runs it by hand | **Topic:** guards | **Area:** tools
 
 ## Motivation
 

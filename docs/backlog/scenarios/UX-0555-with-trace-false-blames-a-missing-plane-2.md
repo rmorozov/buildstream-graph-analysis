@@ -1,6 +1,6 @@
 # UX-555: `--no-trace` tells a two-plane run it kept no Plane 2 log
 
-**Priority:** Low | **Status:** 🟢 Done | **Depends on:** `UX-545` (which fixed the branch beside this one) | **Found by:** `UX-545`'s track, one branch over from its own fix | **Serves:** anyone who exports without a timeline on purpose | **Topic:** viewer
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** `UX-545` (which fixed the branch beside this one) | **Found by:** `UX-545`'s track, one branch over from its own fix | **Serves:** anyone who exports without a timeline on purpose | **Topic:** viewer | **Area:** tools
 
 ## Motivation
 

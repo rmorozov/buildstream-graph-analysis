@@ -1,6 +1,6 @@
 # UX-342: the export ships six schemas nothing can resolve
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-195 (the export), UX-307 (which removed the source commentary for the same reason), UX-201 (why the schema travels at all) | **Serves:** anyone who attaches a report to a ticket | **Topic:** viewer
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-195 (the export), UX-307 (which removed the source commentary for the same reason), UX-201 (why the schema travels at all) | **Serves:** anyone who attaches a report to a ticket | **Topic:** viewer | **Area:** tools
 
 ## Motivation
 

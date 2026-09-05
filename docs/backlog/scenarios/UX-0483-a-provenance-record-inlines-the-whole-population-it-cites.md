@@ -1,6 +1,6 @@
 # UX-483: a provenance record inlines whatever its path resolves to, and only convention keeps that from being a whole population
 
-**Priority:** Medium | **Status:** 🟢 Done | **Found by:** round 73, `UX-479`'s export measurement | **Serves:** the round that adds a claim, cites the map its finding is about, and ships a report carrying that population once per claim | **Topic:** contracts
+**Priority:** Medium | **Status:** 🟢 Done | **Found by:** round 73, `UX-479`'s export measurement | **Serves:** the round that adds a claim, cites the map its finding is about, and ships a report carrying that population once per claim | **Topic:** contracts | **Area:** bga
 
 ## Motivation
 

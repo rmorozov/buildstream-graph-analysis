@@ -1,6 +1,6 @@
 # UX-405: a relative `--project` forfeits Plane 2 in silence
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-155 (the cwd lesson this module already recorded once), UX-376 (the census that should have refused) | **Serves:** R1, on the first capture they ever run | **Topic:** capture
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-155 (the cwd lesson this module already recorded once), UX-376 (the census that should have refused) | **Serves:** R1, on the first capture they ever run | **Topic:** capture | **Area:** tools
 
 ## Motivation
 

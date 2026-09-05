@@ -1,6 +1,6 @@
 # UX-296: the view that parses nothing
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-226 (the decision this promotes), UX-203 (the store rows it leans on) | **Serves:** R1, R2 | **Topic:** viewer
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-226 (the decision this promotes), UX-203 (the store rows it leans on) | **Serves:** R1, R2 | **Topic:** viewer | **Area:** bga
 
 ## Motivation
 

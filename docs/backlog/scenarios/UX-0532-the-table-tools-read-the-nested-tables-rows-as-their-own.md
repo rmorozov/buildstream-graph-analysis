@@ -1,6 +1,6 @@
 # UX-532: the table tools read the nested tables' rows as their own
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-366 (the bound whose guard stays green), UX-318 (the folds that carry the nested tables) | **Serves:** anyone pressing "All rows" on a table whose cells fold | **Topic:** viewer
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-366 (the bound whose guard stays green), UX-318 (the folds that carry the nested tables) | **Serves:** anyone pressing "All rows" on a table whose cells fold | **Topic:** viewer | **Area:** bga/viewer
 
 ## Motivation
 

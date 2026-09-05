@@ -1,6 +1,6 @@
 # UX-708: the first batch under the pipeline, priced per shape
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-706 (the shape), UX-666 (a subagent's cost written down) | **Serves:** the advisory in `CLAUDE.md`, which today says `sonnet` for tracks on the strength of the reading rows alone | **Topic:** docs | **Shape:** judgement
+**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-706 (the shape), UX-666 (a subagent's cost written down) | **Serves:** the advisory in `CLAUDE.md`, which today says `sonnet` for tracks on the strength of the reading rows alone | **Topic:** docs | **Area:** unassigned | **Shape:** judgement
 
 ## Motivation
 

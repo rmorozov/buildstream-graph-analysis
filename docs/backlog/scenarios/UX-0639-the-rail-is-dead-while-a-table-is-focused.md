@@ -1,6 +1,6 @@
 # UX-639: the rail is dead while a table is focused
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-638 (same module) | **Found by:** round 87, measuring what table focus hides | **Serves:** anyone who reaches for the rail to leave a focused table | **Topic:** viewer
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-638 (same module) | **Found by:** round 87, measuring what table focus hides | **Serves:** anyone who reaches for the rail to leave a focused table | **Topic:** viewer | **Area:** bga/viewer
 
 ## Motivation
 

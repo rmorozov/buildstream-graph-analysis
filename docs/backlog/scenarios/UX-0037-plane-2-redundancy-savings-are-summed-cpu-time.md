@@ -1,6 +1,6 @@
 # UX-37: Plane 2's redundant-operation findings report summed process time across elements that ran concurrently, and rank by it
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-23 (done - this is a scoring/reporting fix to the detector it added), UX-26 (the same class of fix, already applied to Plane 1's batch report) | **Topic:** capture
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-23 (done - this is a scoring/reporting fix to the detector it added), UX-26 (the same class of fix, already applied to Plane 1's batch report) | **Topic:** capture | **Area:** tools
 
 ## Motivation
 

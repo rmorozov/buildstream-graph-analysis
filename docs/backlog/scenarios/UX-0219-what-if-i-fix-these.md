@@ -1,6 +1,6 @@
 # UX-219: what if I fix these — the plan, drawn
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-207 (the top actions), UX-208 (the table it replaces) | **Topic:** viewer
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-207 (the top actions), UX-208 (the table it replaces) | **Topic:** viewer | **Area:** bga/viewer
 
 ## Motivation
 

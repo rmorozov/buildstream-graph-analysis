@@ -1,6 +1,6 @@
 # UX-356: the element join is "merged into the element table", and the merge keeps four of its twenty-eight fields
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-215 (publish the join), UX-338 (never draw one population twice), UX-289 (one element table) | **Serves:** anyone who opens the report to find out what to change | **Topic:** viewer
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-215 (publish the join), UX-338 (never draw one population twice), UX-289 (one element table) | **Serves:** anyone who opens the report to find out what to change | **Topic:** viewer | **Area:** bga/viewer
 
 ## Motivation
 

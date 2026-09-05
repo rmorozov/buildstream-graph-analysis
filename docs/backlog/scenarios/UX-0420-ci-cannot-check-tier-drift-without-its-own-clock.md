@@ -1,6 +1,6 @@
 # UX-420: CI cannot check tier drift without a reference of its own
 
-**Priority:** Low | **Status:** 🟢 Done | **Found by:** UX-418, over three CI runs | **Serves:** the edit-run loop, in the place a full run already happens | **Topic:** guards
+**Priority:** Low | **Status:** 🟢 Done | **Found by:** UX-418, over three CI runs | **Serves:** the edit-run loop, in the place a full run already happens | **Topic:** guards | **Area:** tools
 
 ## Motivation
 

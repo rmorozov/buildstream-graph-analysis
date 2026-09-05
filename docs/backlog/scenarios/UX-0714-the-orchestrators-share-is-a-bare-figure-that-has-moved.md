@@ -1,6 +1,6 @@
 # UX-714: the orchestrator's share is a bare figure that has moved
 
-**Priority:** Medium | **Status:** 🔴 Open | **Depends on:** UX-707 (the rebuild count), UX-711 (the reader that works on a live session), UX-511 (dated or derived) | **Found by:** architecture review 17, checklist item 3 | **Serves:** the session pricing a batch against a figure it believes | **Topic:** docs | **Shape:** judgement
+**Priority:** Medium | **Status:** 🔴 Open | **Depends on:** UX-707 (the rebuild count), UX-711 (the reader that works on a live session), UX-511 (dated or derived) | **Found by:** architecture review 17, checklist item 3 | **Serves:** the session pricing a batch against a figure it believes | **Topic:** docs | **Area:** tools | **Shape:** judgement
 
 ## Motivation
 

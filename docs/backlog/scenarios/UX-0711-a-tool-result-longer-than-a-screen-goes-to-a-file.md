@@ -1,6 +1,6 @@
 # UX-711: a tool result longer than a screen goes to a file
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-707 (the rebuild count) | **Serves:** the orchestrating session, whose live context is what every rebuild re-buys | **Topic:** docs | **Shape:** judgement
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-707 (the rebuild count) | **Serves:** the orchestrating session, whose live context is what every rebuild re-buys | **Topic:** docs | **Area:** tools | **Shape:** judgement
 
 ## Motivation
 

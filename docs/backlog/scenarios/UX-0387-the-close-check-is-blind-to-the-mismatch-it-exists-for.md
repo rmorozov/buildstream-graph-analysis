@@ -1,6 +1,6 @@
 # UX-387: the close check is blind to the mismatch it exists for
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-131 (guard the status table against its task files), UX-336 (the loop that got slow) | **Serves:** anyone closing a task before running the full suite | **Topic:** guards
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-131 (guard the status table against its task files), UX-336 (the loop that got slow) | **Serves:** anyone closing a task before running the full suite | **Topic:** guards | **Area:** tools
 
 ## Motivation
 

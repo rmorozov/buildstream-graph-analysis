@@ -1,6 +1,6 @@
 # UX-188: one timeline, both planes
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-51 (the correlate join this visualizes), UX-126 (the snapshot that should feed it) | **Topic:** capture
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-51 (the correlate join this visualizes), UX-126 (the snapshot that should feed it) | **Topic:** capture | **Area:** tools
 
 ## Motivation
 

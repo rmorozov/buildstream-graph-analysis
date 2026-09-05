@@ -1,6 +1,6 @@
 # UX-689: the architecture document moves into the area pages, one track at a time
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-688 (the pages), UX-569 (the prose its guards do not read), UX-568 (the spec's Part→guard index) | **Serves:** the reader pricing a change; the session restructuring without losing a sentence | **Topic:** docs | **Shape:** judgement
+**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-688 (the pages), UX-569 (the prose its guards do not read), UX-568 (the spec's Part→guard index) | **Serves:** the reader pricing a change; the session restructuring without losing a sentence | **Topic:** docs | **Area:** unassigned | **Shape:** judgement
 
 ## Motivation
 

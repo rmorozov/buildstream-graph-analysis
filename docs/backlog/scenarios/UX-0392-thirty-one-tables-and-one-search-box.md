@@ -1,6 +1,6 @@
 # UX-392: thirty-one tables, one search box
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-349 (the table tools do not scale with the table), UX-366 ("All rows" shows twenty-five of twelve hundred), UX-289 (one element table, many presets), UX-223 (the jump box is a command palette) | **Serves:** anyone looking for one element in a report of a real project | **Topic:** viewer
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-349 (the table tools do not scale with the table), UX-366 ("All rows" shows twenty-five of twelve hundred), UX-289 (one element table, many presets), UX-223 (the jump box is a command palette) | **Serves:** anyone looking for one element in a report of a real project | **Topic:** viewer | **Area:** bga/viewer
 
 ## Motivation
 

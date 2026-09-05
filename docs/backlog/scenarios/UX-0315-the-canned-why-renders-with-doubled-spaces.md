@@ -1,6 +1,6 @@
 # UX-315: every canned question's `why` renders with doubled spaces
 
-**Priority:** Low | **Status:** 🟢 Done | **Depends on:** — | **Serves:** R1 | **Topic:** viewer
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** — | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer
 
 ## Motivation
 

@@ -1,6 +1,6 @@
 # UX-503: a new test file records itself in the CI reference
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-420 (the reference), UX-447 (the refresh route), UX-449 | **Serves:** the session that adds a guard and does not want a second commit for it | **Topic:** guards
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-420 (the reference), UX-447 (the refresh route), UX-449 | **Serves:** the session that adds a guard and does not want a second commit for it | **Topic:** guards | **Area:** tools
 
 ## Motivation
 

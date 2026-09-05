@@ -1,6 +1,6 @@
 # UX-434: the graph-shape query collapses every level into one row
 
-**Priority:** High | **Status:** 🟢 Done | **Found by:** round 69, running the question library against a real capture of `examples/06-macro-micro-optimization` | **Serves:** anyone opening the timeline to see the shape of their dependency graph | **Topic:** viewer
+**Priority:** High | **Status:** 🟢 Done | **Found by:** round 69, running the question library against a real capture of `examples/06-macro-micro-optimization` | **Serves:** anyone opening the timeline to see the shape of their dependency graph | **Topic:** viewer | **Area:** bga/viewer
 
 ## Motivation
 

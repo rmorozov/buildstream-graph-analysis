@@ -1,6 +1,6 @@
 # UX-350: the shape channel is written and unbuilt
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-303 (the shape before the rows), UX-316 (exhibits drawn at annotation size) | **Serves:** the reader comparing a number to its population | **Topic:** viewer
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-303 (the shape before the rows), UX-316 (exhibits drawn at annotation size) | **Serves:** the reader comparing a number to its population | **Topic:** viewer | **Area:** bga/viewer
 
 ## Motivation
 

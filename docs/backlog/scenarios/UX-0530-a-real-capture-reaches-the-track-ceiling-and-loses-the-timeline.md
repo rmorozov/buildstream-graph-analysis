@@ -1,6 +1,6 @@
 # UX-530: a real capture reaches the track ceiling, and the timeline is dropped whole
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-430 (the ceiling), UX-406 (the spine double-count that halves the room) | **Serves:** anyone capturing a C++ project with a few hundred processes per element | **Topic:** capture
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-430 (the ceiling), UX-406 (the spine double-count that halves the room) | **Serves:** anyone capturing a C++ project with a few hundred processes per element | **Topic:** capture | **Area:** bga/viewer
 
 ## Motivation
 

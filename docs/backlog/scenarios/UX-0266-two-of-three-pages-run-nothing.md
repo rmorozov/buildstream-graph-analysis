@@ -1,6 +1,6 @@
 # UX-266: two of the three served pages run nothing
 
-**Priority:** High | **Status:** 🟢 Fixed & Verified | **Depends on:** UX-263 | **Serves:** R1, and R2 through the timeline | **Topic:** viewer
+**Priority:** High | **Status:** 🟢 Fixed & Verified | **Depends on:** UX-263 | **Serves:** R1, and R2 through the timeline | **Topic:** viewer | **Area:** bga/viewer
 
 ## Motivation
 

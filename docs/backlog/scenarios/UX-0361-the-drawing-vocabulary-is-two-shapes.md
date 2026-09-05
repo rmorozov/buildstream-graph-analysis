@@ -1,6 +1,6 @@
 # UX-361: the drawing vocabulary is two shapes, and the tool's central claim has neither
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-350 (the shape channel, built), UX-303 (sparklines and density strips), UX-316 (drawing grades) | **Serves:** anyone deciding, at a glance, where a build's time actually goes | **Topic:** viewer
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-350 (the shape channel, built), UX-303 (sparklines and density strips), UX-316 (drawing grades) | **Serves:** anyone deciding, at a glance, where a build's time actually goes | **Topic:** viewer | **Area:** bga/viewer
 
 ## Motivation
 

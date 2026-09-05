@@ -1,6 +1,6 @@
 # UX-351: the label prints the unit the value already carries
 
-**Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-341 (one unit per dimension) | **Serves:** anyone reading a field name on the page | **Topic:** viewer
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-341 (one unit per dimension) | **Serves:** anyone reading a field name on the page | **Topic:** viewer | **Area:** bga/viewer
 
 ## Motivation
 

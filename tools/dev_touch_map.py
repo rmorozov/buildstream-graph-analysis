@@ -21,12 +21,19 @@ import pathlib
 import sqlite3
 import sys
 
+import dev_tier_drift
+
 REPO = pathlib.Path(__file__).resolve().parents[1]
 MAP = REPO / "tests/touch_map.json"
 
 #: Only these are worth a row. A test's coverage of `tests/` is itself,
 #: which the selector already knows, and site-packages is nobody's diff.
 ROOTS = ("bga/", "tools/")
+
+#: The module that reads the map when the selector runs. Its own row
+#: names the guards that pay for whatever the map grows to, so `readers`
+#: below is derived from the map rather than typed beside it.
+READER = "tools/dev_touching.py"
 
 
 def _relative(path):
@@ -79,6 +86,36 @@ def adopt(existing, measured):
     return dict(sorted(merged.items()))
 
 
+def readers(merged):
+    """The guards whose cost this map sets: `READER`'s own row in it."""
+    return sorted(merged.get(READER, ()))
+
+
+def retire(reference, names):
+    """`(document, retired)` - `names` dropped from the drift reference.
+
+    `UX-662`: adopting a map changes what the guards that read it cost,
+    and a number recorded before it is not one they can be judged
+    against. Dropping the entry does not lose it. `dev_tier_drift`
+    carries a file with no entry out as `recorded` rather than
+    `confirmed`, so the gate prints it instead of failing on it, and the
+    next reference candidate re-records it on that run's own clock -
+    `--adopt` adds exactly the names the reference lacks. One run
+    unjudged, against a branch going red for a cost it did not add.
+    """
+    files = reference.get("files") or {}
+    retired = sorted(name for name in names if name in files)
+    if not retired:
+        return reference, []
+    document = dict(reference)
+    for key in ("files", "samples"):
+        if key in document:
+            document[key] = {name: value
+                             for name, value in document[key].items()
+                             if name not in set(retired)}
+    return document, retired
+
+
 def load():
     """The committed map, or `{}` when there is none yet."""
     try:
@@ -99,11 +136,24 @@ def main(argv=None) -> int:
 
     if args.adopt:
         measured = json.loads(pathlib.Path(args.adopt).read_text())
-        merged = adopt(load(), measured)
+        before = load()
+        merged = adopt(before, measured)
         MAP.write_text(json.dumps(merged, indent=1, sort_keys=True) + "\n",
                        encoding="utf-8")
         print(f"{len(merged)} module(s), "
               f"{sum(len(v) for v in merged.values())} edge(s)")
+        if merged != before:
+            reference = json.loads(
+                dev_tier_drift.CI_REFERENCE.read_text(encoding="utf-8"))
+            document, retired = retire(reference, readers(merged))
+            if retired:
+                dev_tier_drift.CI_REFERENCE.write_text(
+                    json.dumps(document, indent=2) + "\n", encoding="utf-8")
+                print(f"retired {len(retired)} drift entr"
+                      f"{'y' if len(retired) == 1 else 'ies'} the map's "
+                      f"readers own, for the next run to re-record:")
+                for name in retired:
+                    print(f"  {name}")
         return 0
 
     measured = read(args.database)

@@ -1556,6 +1556,19 @@ class BuildEfficiencyAnalyzer:
             with progress.ticker("analyzing: utilisation") as tick:
                 result.utilisation = self._compute_utilization(occupancy_stats)
                 tick.step()
+            # UX-676: and the same axis read in cores rather than slots.
+            # Here rather than beside `memory_envelope` in `cli.py`: the
+            # host was sampled on every capture, so gating this on
+            # Plane 2 would hide the one series that answers "were the
+            # cores busy" on exactly the captures that have nothing else
+            # (`UX-675`'s own argument, one layer up).
+            envelope = self._compute_utilization_envelope()
+            result.utilization_envelope = envelope.get("envelope") or {
+                "available": False, "absence": envelope.get("absence")}
+            result.underutilized_intervals = envelope.get(
+                "underutilized_intervals") or []
+            result.overcommitted_intervals = envelope.get(
+                "overcommitted_intervals") or []
 
         # Advanced Diagnostics (M5)
         if 'diagnostics' in stages:
@@ -1875,6 +1888,51 @@ class BuildEfficiencyAnalyzer:
             from .findings import confidence_band
             confidence['band'] = confidence_band(primary)
         return confidence
+
+    def _compute_utilization_envelope(self) -> dict:
+        """`UX-676`: the host CPU series, read against this run's caps.
+
+        `host-samples.jsonl` sits beside the run directory rather than
+        inside it (`capture-layout/v1`), so the path is the run's
+        parent; a directory that is not a capture simply has no file,
+        and the section says so rather than being absent.
+        """
+        from .utilisation import envelope as envelope_module
+
+        # `loaded_from`, not `run_dir`: `analyze(run_dir)` records the
+        # path it read there and leaves the constructor argument alone
+        # (`UX-95`), so the attribute that is always set is the one that
+        # says where this analysis actually came from.
+        directory = self.loaded_from or self.run_dir
+        if not self.run_context or not self.graph or not directory:
+            return {"absence": "this analysis has no run context, graph or "
+                               "run directory to read a host series against"}
+        from .run_store import HOST_SAMPLES_NAME
+        from .tools_dispatch import _import_tool
+
+        path = Path(directory).parent / HOST_SAMPLES_NAME
+        if not path.is_file():
+            return {"absence": f"this capture has no {HOST_SAMPLES_NAME} - "
+                               f"it was taken before `UX-378`, or the host "
+                               f"exposes no /proc/meminfo"}
+        read = _import_tool(
+            "tools.bst_native_build_tracer").read_host_samples(str(path))
+        tasks = [{"element": task.task_key.element_uid,
+                  "start_us": task.start_us, "finish_us": task.finish_us,
+                  "ready_us": task.ready_us}
+                 for task in self.normalized_tasks]
+        successors: dict = {}
+        for edge in self.graph.dependencies:
+            successors.setdefault(edge.predecessor, []).append(edge.successor)
+        return envelope_module.compute(read, {
+            "builders": (self.run_context.resource_capacities
+                         or {}).get('PROCESS'),
+            "native_max_jobs": self.run_context.native_max_jobs,
+            "tasks": tasks,
+            "max_jobs": {element.uid: element.max_jobs
+                         for element in self.graph.elements},
+            "successors": successors,
+        })
 
     def _compute_utilization(self, occupancy_stats: dict) -> dict:
         """

@@ -1838,3 +1838,40 @@ class TestTheRulesCardIsTheEntryPoint:
         assert len(named) >= 8, (
             f"only {len(named)} rule rows name a guard file")
         assert self._slug("Never widen scope") == "never-widen-scope"
+
+
+class TestATooLongToolResultGoesToAFile:
+    """`UX-711`: the rule that keeps a log out of the live context.
+
+    Round 94 attributed this session's tokens to the tools whose
+    results entered them - one job-log read was 26k over five calls.
+    Each stays live and is re-bought at every rebuild (`UX-707`), and
+    `orient` said "lines not files" for *source* while saying nothing
+    about tool output. Two documents steer the session, so the rule is
+    in both and this reads both.
+    """
+
+    #: The rule's load-bearing words, not its whole sentence: the two
+    #: documents phrase it for their own reader, and a guard demanding
+    #: one wording would be a copy of the sentence rather than a check
+    #: on it.
+    WORDS = ("over a screen", "60 lines", "scratchpad")
+
+    def test_the_orient_skill_carries_the_rule(self):
+        text = " ".join((SKILLS / "orient/SKILL.md").read_text(
+            encoding="utf-8").split())
+        missing = [word for word in self.WORDS if word not in text]
+        assert not missing, (
+            f".claude/skills/orient/SKILL.md has lost {missing} - the "
+            "rule a session reads before it opens anything")
+
+    def test_claude_md_carries_the_rule(self):
+        text = " ".join(CLAUDE_MD.read_text(encoding="utf-8").split())
+        missing = [word for word in self.WORDS if word not in text]
+        assert not missing, f"CLAUDE.md has lost {missing}"
+
+    def test_the_rule_names_the_cheap_ways_to_read_the_file_back(self):
+        """A budget with no route to obey it is a rule nobody keeps."""
+        text = (SKILLS / "orient/SKILL.md").read_text(encoding="utf-8")
+        block = text.split("over a screen", 1)[1][:400]
+        assert "head" in block and "grep" in block, block

@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-664 scenarios: **5 open**, 659 closed.
+672 scenarios: **13 open**, 659 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -23,7 +23,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | capture | 0 | 92 |
 | analysis | 0 | 94 |
 | contracts | 0 | 48 |
-| viewer | 0 | 148 |
+| viewer | 8 | 156 |
 | cli | 0 | 21 |
 | store | 0 | 16 |
 | docs | 2 | 105 |
@@ -41,6 +41,43 @@ task file, which is the only place it ever lived twice.
 | UX-662 | [the adopted touching map made the selector guard a hundred times dearer](UX-0662-the-adopted-map-made-the-selector-guard-a-hundred-times-dearer.md) | guards | High | anyone whose branch goes red for a cost the base branch introduced | 🔴 Open |
 | UX-665 | [the page's census is a tool, so a walk reads it instead of driving it](UX-0665-the-page-s-census-is-a-tool-so-a-walk-reads-it-instead-of-driving-it.md) | guards | High | the orchestrating session paying for a walk | 🔴 |
 | UX-666 | [a subagent's cost is written down, and its friction with it](UX-0666-a-subagent-s-cost-is-written-down-and-its-friction-with-it.md) | docs | High | the round choosing a model and a shape for its next agent | 🔴 |
+| UX-667 | [the rail is a source list — chapters disclose, and the mark stays in view](UX-0667-the-rail-is-a-source-list-chapters-disclose-and-the-mark-stays-in-view.md) | viewer | High | R1..R8 — every reader past the first screen | 🔴 |
+| UX-668 | [a reader is a shape, not a hue — and the selector lives in the header](UX-0668-a-reader-is-a-shape-not-a-hue-and-the-selector-lives-in-the-header.md) | viewer | High | R1..R5, the readers the select names | 🔴 |
+| UX-669 | [a runbook is a shape — the next steps rendered once, as steps](UX-0669-a-runbook-is-a-shape-the-next-steps-rendered-once-as-steps.md) | viewer | High | R1, at the moment of deciding what to run | 🔴 |
+| UX-670 | [the first rail click into a folded chapter lands 687 px above its section](UX-0670-the-first-rail-click-into-a-folded-chapter-lands-687-px-above-its-sect.md) | viewer | High | anyone who clicks a rail entry | 🔴 |
+| UX-671 | [the rail acts on the view, and the URL does not follow](UX-0671-the-rail-acts-on-the-view-and-the-url-does-not-follow.md) | viewer | Medium | anyone sharing "Copy link to this view" | 🔴 |
+| UX-672 | [a blocked pop-up's refusal never renders](UX-0672-a-blocked-pop-up-s-refusal-never-renders.md) | viewer | Medium | anyone whose browser blocks the Perfetto tab | 🔴 |
+| UX-673 | [sixteen tables offer a Top 10 they cannot fill](UX-0673-sixteen-tables-offer-a-top-10-they-cannot-fill.md) | viewer | Medium | anyone reading a three-row table with a five-option menu | 🔴 |
+| UX-674 | [eighteen font sizes, an h3 larger than its h2, and 130-character lines](UX-0674-eighteen-font-sizes-an-h3-larger-than-its-h2-and-130-character-lines.md) | viewer | Medium | every reader of prose on the page | 🔴 |
+
+## UX-663..UX-674: the ninetieth round — the process given a ledger, and the page looked at (2026-09-05)
+
+Two halves, in the user's order. First the process: context and
+models (`UX-663`, closed — the reporters run on `sonnet` and their
+frontmatter says so), the walk and the design review as skills
+(`UX-664`, closed), the page's census as a tool a walker reads instead
+of driving (`UX-665`), and a run ledger with a friction line and a
+runs band (`UX-666`) — `docs/audits/agent-runs.md` opens with twelve
+reconstructed runs. Then the design review, the `design-review`
+skill's first run, on a fresh capture with all three planes and
+seven screenshots. The round is
+[`docs/audits/round-90.md`](../../audits/round-90.md).
+
+**What the pictures showed.** A rail of 82 entries with no disclosure,
+16 visible without scrolling, a mark that never comes into view, and
+a scrollbox inside it (`UX-667` — the rail as a source list, §3h). A
+reader select 759 px from its own description, whose promotion draws
+nothing (`UX-668` — a reader is a shape, not a hue: the select and
+its question move to the header, promoted sections get a left rule,
+no per-role hues under §4). The next steps rendered twice, once as a
+table with raw keys in its From column (`UX-669` — a runbook is a
+shape, §1e). The first rail click into a folded chapter landing 687
+px above its section (`UX-670`). Two controls that change the view
+and leave the URL behind (`UX-671`); a blocked pop-up whose refusal
+never renders (`UX-672`); sixteen tables offering a Top 10 they cannot
+fill (`UX-673`); eighteen font sizes, an h3 larger than its h2 and
+130-character lines (`UX-674`). Of 184 control classes driven, 175
+did what their label says.
 
 ## UX-563..UX-586: the eighty-second round — the documents, read against the tool (2026-09-03)
 

@@ -958,7 +958,16 @@ def move_batch(pairs: list) -> int:
     # the one batch a single command is about to make.
     """
     validated = []
+    seen = set()
     for uid, note in pairs:
+        # UX-709: the open table still shows an id as open until its
+        # own write runs, so a repeat passes `_validate_close` twice -
+        # caught here, by the batch's own id list, before any write.
+        short = f"UX-{int(re.sub(r'[^0-9]', '', uid))}"
+        if short in seen:
+            print(f"{uid}: given twice in one --move batch.", file=sys.stderr)
+            return 2
+        seen.add(short)
         if not note.strip():
             print(f"{uid}: --move needs --note: the closed.md row is a "
                   f"sentence about what was found, and nothing can write "

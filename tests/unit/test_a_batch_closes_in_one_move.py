@@ -51,7 +51,7 @@ def _two_open_rows(tmp_path):
 class TestABatchClosesInOneMove:
 
     def test_both_markers_flip_both_rows_move_counts_derive_once(
-            self, tmp_path):
+            self, tmp_path, monkeypatch):
         ids, scenarios = _two_open_rows(tmp_path)
         done = _run("--move", ids[0][0], "--note", "first found",
                     ids[1][0], "--note", "second found",
@@ -67,8 +67,11 @@ class TestABatchClosesInOneMove:
             assert "**Status:** \U0001f7e2 Done" in status, uid
 
         # UX-501: derived once, not per id - the header the rows now say.
-        close_task.SCENARIOS, close_task.INDEX, close_task.CLOSED = (
-            scenarios, scenarios / "README.md", scenarios / "closed.md")
+        # `monkeypatch` restores the module globals on teardown, so this
+        # subprocess-shaped assertion can't leak into another file's run.
+        monkeypatch.setattr(close_task, "SCENARIOS", scenarios)
+        monkeypatch.setattr(close_task, "INDEX", scenarios / "README.md")
+        monkeypatch.setattr(close_task, "CLOSED", scenarios / "closed.md")
         sentence, table = close_task.index_header()
         assert sentence in readme
         assert table in readme
@@ -85,3 +88,14 @@ class TestABatchClosesInOneMove:
         assert f"| {ids[0][0]} |" not in (
             scenarios / "closed.md").read_text(encoding="utf-8"), (
             "the first id closed before the batch was refused")
+
+    def test_the_same_id_twice_is_refused_not_closed_twice(self, tmp_path):
+        ids, scenarios = _two_open_rows(tmp_path)
+        uid = ids[0][0]
+        done = _run("--move", uid, "--note", "first", uid, "--note", "second",
+                    "--scenarios", str(scenarios))
+        assert done.returncode != 0
+        assert uid in done.stderr
+        closed = (scenarios / "closed.md").read_text(encoding="utf-8")
+        assert closed.count(f"| {uid} |") == 0, (
+            "a repeated id wrote a closed row before being refused")

@@ -1,6 +1,6 @@
 {
   "measured_on": "github-actions ubuntu-latest, test (3.11), -n auto",
-  "note": "UX-420: one CI run's per-file totals, so a later CI run can be read against CI rather than against the floors in tests/tiers.py, which describe a developer machine. Refresh from a CI run's ci-reference-candidate artifact, or the log of its tier-reference job, which is this same tool's --record taken on the runner whose clock this document is in - not from a local --record (UX-418, UX-447). UX-488: this document is a whole re-record, taken from run 33544888654's test (3.11) candidate (head 3dd6e03, 397 files) rather than appended to; the five hand-appends round 73 added are retired with it. It is the first record carrying UX-476's spread - shift_files beside files, the median taken over the population the gate divides by - which is why the re-record had to come after that rule change rather than inside it. UX-496: one append on top of that re-record. test_why_bga_believes_what_it_believes.py is set to 13.62 from run 33554592057's candidate (head 3ab9e76, shift x1.003, so the raw seconds need no correction), replacing 8.19. 8.19 was the outlier, not the value: the file read 12.8 on run 33540660861 (where the gate named it at x1.73 against the older 7.1), 8.19 on 33544888654 - the run this document was re-recorded from - 12.81 on 33552128782 and 13.62 on 33554592057. Four of five readings sit at 12.8-13.6. The gate confirmed it over two consecutive runs and was right to. What this exposes is a property of the re-record itself, filed as UX-496: a wholesale refresh from ONE run bakes in whichever end of each file's range that run happened to sample. UX-587: test_docs_links_and_commands.py is set to 18.4 from run 33746724625's test (3.11) candidate (head b3ed6e4, shift x1.07), replacing 9.96. This guard's cost IS the size of the backlog it walks, so its entry goes stale as rows are filed and never comes back: measured on one tree, 584 task files read 13.00s and 286 read 7.47s, a slope of 0.0185 s/file that puts the guard at 9.5s at the 397 files UX-488 re-recorded from - against the 9.96 recorded. The gate confirmed it over two consecutive runs and was right to. --adopt cannot correct this: it adds names the reference lacks and rewrites no entry it has (ci.yml:351), by design, so an entry for a growing population is refreshed by a round or not at all.",
+  "note": "UX-420: one CI run's per-file totals, so a later CI run can be read against CI rather than against the floors in tests/tiers.py, which describe a developer machine. Refresh from a CI run's ci-reference-candidate artifact, or the log of its tier-reference job, which is this same tool's --record taken on the runner whose clock this document is in - not from a local --record (UX-418, UX-447). UX-488: this document is a whole re-record, taken from run 33544888654's test (3.11) candidate (head 3dd6e03, 397 files) rather than appended to; the five hand-appends round 73 added are retired with it. It is the first record carrying UX-476's spread - shift_files beside files, the median taken over the population the gate divides by - which is why the re-record had to come after that rule change rather than inside it. UX-496: one append on top of that re-record. test_why_bga_believes_what_it_believes.py is set to 13.62 from run 33554592057's candidate (head 3ab9e76, shift x1.003, so the raw seconds need no correction), replacing 8.19. 8.19 was the outlier, not the value: the file read 12.8 on run 33540660861 (where the gate named it at x1.73 against the older 7.1), 8.19 on 33544888654 - the run this document was re-recorded from - 12.81 on 33552128782 and 13.62 on 33554592057. Four of five readings sit at 12.8-13.6. The gate confirmed it over two consecutive runs and was right to. What this exposes is a property of the re-record itself, filed as UX-496: a wholesale refresh from ONE run bakes in whichever end of each file's range that run happened to sample. UX-587: test_docs_links_and_commands.py is set to 18.4 from run 33746724625's test (3.11) candidate (head b3ed6e4, shift x1.07), replacing 9.96. This guard's cost IS the size of the backlog it walks, so its entry goes stale as rows are filed and never comes back: measured on one tree, 584 task files read 13.00s and 286 read 7.47s, a slope of 0.0185 s/file that puts the guard at 9.5s at the 397 files UX-488 re-recorded from - against the 9.96 recorded. The gate confirmed it over two consecutive runs and was right to. --adopt cannot correct this: it adds names the reference lacks and rewrites no entry it has (ci.yml:351), by design, so an entry for a growing population is refreshed by a round or not at all. UX-662: three entries refreshed from run 33936064756's test (3.11) candidate (head 26b3252, shift x0.96, so raw seconds are divided by it): test_the_loop_stays_fast.py 4.4 -> 20.62, test_docs_links_and_commands.py 9.96 -> 18.54, test_the_selector_carries_the_census.py 6.73 -> 15.94. All three read the selector, and main's 8751a7e adopted tests/touch_map.json, which select() consults per changed path - measured by removing the file and putting it back, the selector guard's class went 0.55s -> 10.00s. The reference predates the map and was right when it was taken; the tree under it changed. The largest was cut first rather than blessed: 26b3252 shares the per-module sweep between the two clauses that were two readings of it and reads each test file's text once, taking that file 25.3s -> 19.8s in CI and 18.62s -> 14.26s locally, which is 18% under the base commit. What is left is the map's own price, and UX-662 carries the argument for making the adopt job pay it. Samples are set flat at the new value, the shape this document already uses for a refreshed entry. Noted while doing it: the UX-587 sentence above says test_docs_links_and_commands.py 'is set to 18.4', and the document carried 9.96 - a note describing a change the file does not have.",
   "files": {
     "tests/test_cli.py": 2.43,
     "tests/test_e2e.py": 0.04,
@@ -125,7 +125,7 @@
     "tests/unit/test_dev_run_script.py": 1.73,
     "tests/unit/test_diagnostics_performance.py": 4.07,
     "tests/unit/test_docs_examples.py": 0.58,
-    "tests/unit/test_docs_links_and_commands.py": 9.96,
+    "tests/unit/test_docs_links_and_commands.py": 18.54,
     "tests/unit/test_doctor.py": 1.46,
     "tests/unit/test_documentation_debt_has_a_door.py": 0.22,
     "tests/unit/test_dual_plane_capture.py": 0.0,
@@ -350,7 +350,7 @@
     "tests/unit/test_the_last_three_plane_two_blocks_arrive.py": 0.1,
     "tests/unit/test_the_lead_names_the_planes_it_has.py": 11.92,
     "tests/unit/test_the_lint_reads_its_own_tree.py": 0.29,
-    "tests/unit/test_the_loop_stays_fast.py": 4.4,
+    "tests/unit/test_the_loop_stays_fast.py": 20.62,
     "tests/unit/test_the_mapping_is_law.py": 5.47,
     "tests/unit/test_the_merge_carries_every_field.py": 10.94,
     "tests/unit/test_the_minutes_inside_analyze.py": 4.78,
@@ -407,7 +407,7 @@
     "tests/unit/test_the_roles_table_names_who_serves_it.py": 0.05,
     "tests/unit/test_the_round_history_names_every_audit.py": 0.04,
     "tests/unit/test_the_schema_says_what_things_are.py": 0.89,
-    "tests/unit/test_the_selector_carries_the_census.py": 6.73,
+    "tests/unit/test_the_selector_carries_the_census.py": 15.94,
     "tests/unit/test_the_served_handoff_counts_its_edges.py": 0.0,
     "tests/unit/test_the_served_scratch_is_not_leaked.py": 1.81,
     "tests/unit/test_the_shape_before_the_rows.py": 6.01,
@@ -1303,11 +1303,11 @@
       0.58
     ],
     "tests/unit/test_docs_links_and_commands.py": [
-      9.96,
-      9.96,
-      9.96,
-      9.96,
-      9.96
+      18.54,
+      18.54,
+      18.54,
+      18.54,
+      18.54
     ],
     "tests/unit/test_doctor.py": [
       1.46,
@@ -2802,11 +2802,11 @@
       0.29
     ],
     "tests/unit/test_the_loop_stays_fast.py": [
-      4.4,
-      4.4,
-      4.4,
-      4.4,
-      4.4
+      20.62,
+      20.62,
+      20.62,
+      20.62,
+      20.62
     ],
     "tests/unit/test_the_mapping_is_law.py": [
       5.47,
@@ -3175,11 +3175,11 @@
       0.89
     ],
     "tests/unit/test_the_selector_carries_the_census.py": [
-      6.73,
-      6.73,
-      6.73,
-      6.73,
-      6.73
+      15.94,
+      15.94,
+      15.94,
+      15.94,
+      15.94
     ],
     "tests/unit/test_the_served_handoff_counts_its_edges.py": [
       0.0

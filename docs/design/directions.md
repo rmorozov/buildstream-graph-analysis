@@ -1671,6 +1671,127 @@ What the direction declines: a calendar cadence for exploration
 area is a field and a generated page), and a specification rewrite
 (layered, not moved).
 
+## Direction 19: the gate holds the numbers; the review holds the design (argued 2026-09-05, round 93)
+
+**Serves:** every implementing session, and R8 deciding whether a
+change may land — the gate is the tool's, the review is the reader's.
+
+**Status:** partial — the corrections are argued here; `UX-693`..`UX-703` are open.
+
+The user's brief: static analysis and coverage exist, but no
+refactoring cadence, so comments go stale and complexity grows; revise
+the analysis rules; put more analysis on the GitHub gate — performance,
+security, maintenance — without slowing the inner loop; a CodeQL skill
+for navigation in place of several greps; quality metrics whose control
+is delegated to tools, with review reserved for design; and a cheap
+self-review skill against the guidelines that exist. Round 93 measured
+the gate and the tree ([round 93](../audits/round-93.md)) and argues
+six corrections.
+
+### Six corrections
+
+**1. The cadence is not missing; the measurement is.** Fixing guide
+§6a already defines the refactor stream by "a measured cost — size,
+duplication, a budget", and no refactor has ever been priced because
+nothing writes the cost down. The gate runs one rule family
+(`select = ["F"]`), under a comment that calls the tree "~30-module"
+and promises to widen "in a later task" — 104 modules later, the
+comment is the stalest one in the repository and the task never came.
+Meanwhile 84 functions exceed McCabe 10, four files sit at
+maintainability 0.00, and `format_text` is 548 lines at complexity
+135. A calendar cadence would refactor what nobody measured; a
+**ledger** — per-file complexity, longest function, file length,
+suppressions, type errors, committed like `tests/ci_reference.json` and
+ratcheted so a row may only shrink — makes the refactor stream what
+§6a says it is: the top row, one track a round, judged by "the
+measurement moved and no behaviour did". The renderers go first: the
+golden snapshot is already the judge that no behaviour moved.
+
+**2. Stale comments have a shape, and it is not the one the brief
+guesses.** The census checked 1,585 backticked identifiers in comments
+against the tree: 0 unresolved. A guard on identifiers would find
+nothing — an instrument reading a proxy (§5). What has drifted is
+**counts and promises** ("~30-module", "widen later") and **history**
+(31 lines in `bga/` and `tools/` name a round; the register says the
+story lives in the task file). The guard is the register's own rows:
+no round number in code, a count in a comment dated or derived, and
+the commit-body budget read from the pull request — three rows the
+register states and nothing yet enforces.
+
+**3. Three shelves, not one gate.** Every stronger tool tried finds
+signal today's gate cannot see — 1,378 pyupgrade hits, 87 bandit-class,
+270 pyright errors, 70 eslint problems — and none of it can become a
+zero-tolerance gate in one commit. So the rule set grows on three
+shelves: **auto-fixed** (pyupgrade, simplify, unused suppressions —
+fixed in one commit, enforced from the next), **ratcheted** (complexity,
+size, bandit-class, type errors — the ledger, may not grow), and
+**gate-only** (CodeQL or its private-repo substitute, pip-audit against
+a lockfile, Dependabot, secret scanning — hosted, minutes, never local).
+The inner loop does not slow because it already runs the right tool:
+`ruff` on the edited file in 10 ms, and the widened set rides the same
+hook. Everything slower runs only on GitHub, and `make lint` stays what
+it is. Per-file rules by layer, not per-line suppressions: `tools/`
+prints by design (355 hits), `tests/` is not library code.
+
+**4. CodeQL is a gate tool; navigation wants an index.** A CodeQL
+database is a minutes-long build over 62k Python and 13k JS lines;
+what a session asks while navigating — where is this defined, who
+calls it, who imports this module, what does this module export that
+nothing reads — is symbol-shaped and grep answers it in milliseconds.
+The `orient` skill's five greps are slow only in **tokens**: each
+returns raw lines the session then reads. One AST tool
+(`dev_symbols.py`: definitions, callers, importers, fan-in/out,
+unreferenced exports — Python and, via `dev_js_deps`, the viewer)
+returns the answer as a table, and the five recipes become one
+command. What grep cannot do — follow a log field through
+`bst_native_build_tracer.py` to a `subprocess` call, or to the page —
+is data-flow, which is CodeQL's job, at the gate, on GitHub, never in
+a skill.
+
+**5. Delegating control to tools is what `REVIEW.md` already asks
+for — so the review shrinks as the gate grows.** Its "do not report"
+rule excludes anything `make lint` enforces; every rule the gate holds
+is a pass the review no longer runs. The metrics are the ledger's
+columns, few and per-file, so a refactor track can be priced and a
+review can say "the ledger row grew" instead of "this feels long".
+What stays with a reader is routed, not chosen: a diff whose impact
+set (`UX-687`) touches a contract, a spec Part, a hook or a skill gets
+the design review; a diff that touches nothing of the kind gets the
+self-review and the gate.
+
+**6. The self-review is the existing policy on the diff, on the
+reporters' model — not a second checklist.** `REVIEW.md` has four
+passes and a finding shape; the rules card has the rules; two lists
+drift. The skill reads the diff, the task file and those two documents,
+returns findings in `REVIEW.md`'s shape, never re-reports what the gate
+holds, and costs one row in the run ledger — target under 40k tokens.
+The session's model then reads a report, not a diff.
+
+### What the brief forgot
+
+Dependencies are unpinned (`>=` throughout) and there is no lockfile,
+so `pip-audit` has nothing honest to read; the viewer has never been
+linted (5 exports referenced nowhere); no benchmark guards `UX-531`'s
+superlinear analyzer; `falsify` is a hand ritual a mutation run could
+mechanise on the touched modules; duplication is unmeasured; and the
+gate's own tool versions float (`ruff>=0.6`), so a rule set that holds
+today can change under the same configuration tomorrow.
+
+### What follows
+
+`UX-693` the rule set widened by layer, in one auto-fix commit, tools
+pinned (High) · `UX-694` the quality ledger, ratcheted like the CI
+reference (High) · `UX-695` the refactor stream takes the ledger's top
+row, renderers first (Medium) · `UX-696` the register's unguarded rows:
+no round in code, dated counts, the commit body (Medium) · `UX-697` a
+type-error ratchet, contracts first (Medium) · `UX-698` the gate-only
+shelf on GitHub: code scanning, a lockfile and audit, Dependabot,
+secret scanning (High) · `UX-699` the viewer linted as one module graph
+(Medium) · `UX-700` the symbol index, and CodeQL declined for
+navigation (High) · `UX-701` the `self-review` skill (High) · `UX-702`
+a performance ratchet at the gate (Medium) · `UX-703` a mutation run on
+the touched modules, weekly (Low).
+
 ## Round history
 
 This document used to carry the findings of rounds 2-6 inline, which
@@ -1735,6 +1856,7 @@ the other rounds now:
 | [90](../audits/round-90.md) | the process given a ledger — reporters on `sonnet`, the walk and the design review as skills, a run ledger — and the page looked at through seven screenshots: the rail as a source list, a reader as a shape not a hue, a runbook as a shape, a rail click that overshoots (`UX-663`..`UX-674`) |
 | [91](../audits/round-91.md) | a design round: whose question utilization is — the tool counts processes where the CI owner needs cores, computes idle intervals it never publishes, exempts foundations by kind so a toolchain is not exempt, and has no change frequency; Direction 17 argues the envelope, the jobserver, priced remote execution and expected rebuild cost (`UX-675`..`UX-684`) |
 | [92](../audits/round-92.md) | a design round on the test workflow: the suite verifies what was built and the walk what was promised — exploration as a seeded scenario that grows the answer key, a release that waits for the walk, the impact set derived, areas as a view, the architecture prose moved one area at a time, a shape budget, a flake ledger, the invariants for any shape (`UX-685`..`UX-692`) |
+| [93](../audits/round-93.md) | a design round on the development workflow: the gate holds the numbers and the review holds the design — the rule set widened by layer and pinned, a ratcheted quality ledger that queues the refactor stream, the register's unguarded rows, a type ratchet, a gate-only shelf on GitHub, the viewer linted, an AST symbol index in place of CodeQL for navigation, a `self-review` skill, a performance ratchet, a weekly mutation run (`UX-693`..`UX-703`) |
 
 ## Verification Log
 

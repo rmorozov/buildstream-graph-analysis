@@ -25,8 +25,11 @@ limit is a row too.
 | 82 | researcher | main | process layer | 146k | 46 | 7.4 m | complete | ci.yml read whole (1,253 lines) |
 | 90 | researcher | main | process + design delta since round 82 | 81k | 34 | 3 m | complete | — |
 | 90 | general-purpose | main | design review, all-planes page, 7 screenshots | 229k | 62 | 24 m | complete | two real captures; three census re-runs after navigations killed the driver; `pkill -f` matched its own shell |
+| 91 | researcher | sonnet | what the tool answers for the three utilization roles | 121k | 86 | 7 m | complete | computed-vs-published needed a grep of the consuming layer for each producer's names |
+| 92 | researcher | sonnet | the test plan's landing, the suite's shape, the release gate, the backlog | 96k | 34 | 3.8 m | complete | the brief grouped rounds 64, 78 and 80 as one plan; each file's dateline read |
+| 93 | researcher | sonnet | the lint gate, ruff by family, radon, pyright, bandit, eslint, CodeQL feasibility | 62k | 51 | 5.8 m | complete | `ruff --statistics` exits 1 on any finding — one invocation per family |
 
-What the twelve rows already say: a researcher that reads a document
+What the fifteen rows already say: a researcher that reads a document
 whole costs 100-180k; a walker that drives every control costs 336k;
 the two cuts cost a re-run each. The `walk` and `design-review`
 skills fix the report shape so the next rows are smaller, and the

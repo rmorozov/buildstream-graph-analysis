@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-690 scenarios: **31 open**, 659 closed.
+701 scenarios: **42 open**, 659 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -23,11 +23,11 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | capture | 2 | 94 |
 | analysis | 8 | 102 |
 | contracts | 0 | 48 |
-| viewer | 8 | 156 |
+| viewer | 9 | 157 |
 | cli | 0 | 21 |
 | store | 0 | 16 |
-| docs | 5 | 108 |
-| guards | 8 | 145 |
+| docs | 7 | 110 |
+| guards | 16 | 153 |
 
 ## Open scenarios
 
@@ -67,6 +67,49 @@ task file, which is the only place it ever lived twice.
 | UX-690 | [the suite has a shape budget, and a feature files its test analysis](UX-0690-the-suite-has-a-shape-budget-and-a-feature-files-its-test-analysis.md) | guards | Medium | R8 reading whether the suite is balanced; the implementer writing the right guard | 🔴 |
 | UX-691 | [a flake ledger, so an excursion is counted before it is a flake](UX-0691-a-flake-ledger-so-an-excursion-is-counted-before-it-is-a-flake.md) | guards | Medium | the round reading a red gate on a file nobody touched | 🔴 |
 | UX-692 | [the invariants hold for any shape — a seeded sweep over generated projects](UX-0692-the-invariants-hold-for-any-shape-a-seeded-sweep-over-generated-projec.md) | guards | High | R8 trusting the report on a graph nobody fixtured | 🔴 |
+| UX-693 | [the lint rule set widened by layer, in one auto-fix commit, with the tools pinned](UX-0693-the-lint-rule-set-widened-by-layer-in-one-auto-fix-commit-with-the-too.md) | guards | High | the implementing session, whose edit hook then reads the same rules the gate reads | 🔴 |
+| UX-694 | [a quality ledger, ratcheted like the CI reference](UX-0694-a-quality-ledger-ratcheted-like-the-ci-reference.md) | guards | High | the refactor stream, which §6a defines by a measured cost and which has never had one to read | 🔴 |
+| UX-695 | [the refactor stream takes the ledger's top row — renderers first](UX-0695-the-refactor-stream-takes-the-ledger-s-top-row-renderers-first.md) | docs | Medium | the session that opens a round and has no refactor to pick because none is filed | 🔴 |
+| UX-696 | [the register's unguarded rows — no round in code, a dated count, the commit body](UX-0696-the-register-s-unguarded-rows-no-round-in-code-a-dated-count-the-commi.md) | guards | Medium | the reader who opens a module a year on and meets its history instead of its reason | 🔴 |
+| UX-697 | [a type-error ratchet, contracts first](UX-0697-a-type-error-ratchet-contracts-first.md) | guards | Medium | the session editing a schema or a contract, where a wrong key is a `UX-190` bump nobody meant | 🔴 |
+| UX-698 | [the gate-only shelf on GitHub — code scanning, a lockfile and audit, Dependabot, secret scanning](UX-0698-the-gate-only-shelf-on-github-code-scanning-a-lockfile-and-audit-depen.md) | guards | High | R8 reading a red gate that a hosted tool raised, and the user who wants the heavier analyses without a slower inner loop | 🔴 |
+| UX-699 | [the viewer linted as one module graph](UX-0699-the-viewer-linted-as-one-module-graph.md) | viewer | Medium | the session editing a viewer module, which today has no linter of any kind | 🔴 |
+| UX-700 | [the symbol index — and CodeQL declined for navigation](UX-0700-the-symbol-index-and-codeql-declined-for-navigation.md) | guards | High | the session at the start of a task, which today spends five greps and their raw lines to learn who calls what | 🔴 |
+| UX-701 | [the `self-review` skill — the existing policy on the diff, on the reporters' model](UX-0701-the-self-review-skill-the-existing-policy-on-the-diff-on-the-reporters.md) | docs | High | the implementing session before it reports done, and R8 who then reads a finding list instead of a diff | 🔴 |
+| UX-702 | [a performance ratchet at the gate](UX-0702-a-performance-ratchet-at-the-gate.md) | guards | Medium | R8 reading whether a round made `bga analyze` slower on the largest capture, which nothing today records | 🔴 |
+| UX-703 | [a mutation run on the touched modules, weekly](UX-0703-a-mutation-run-on-the-touched-modules-weekly.md) | guards | Low | the falsify skill, which is a hand ritual per guard and cannot be run over the suite | 🔴 |
+
+## UX-693..UX-703: the ninety-third round — the gate holds the numbers, the review holds the design (2026-09-05)
+
+A design round. The user asked how to keep the code in shape as the
+tree grows: no refactoring cadence, stale comments, rising complexity;
+revise the analysis rules; more analysis on the GitHub gate without a
+slower inner loop; CodeQL for navigation; metrics delegated to tools
+with review kept for design; a cheap self-review skill. The
+measurement (a researcher, on `sonnet`): the gate is `ruff` with the
+`F` family alone, under a comment that calls the tree "~30-module"
+and promises a later task — 104 modules, no task; 84 functions over
+McCabe 10 and `format_text` at 548 lines; 270 `pyright` errors, no
+type step; 2 bandit Highs, no lockfile, no Dependabot; 12,906 viewer
+lines never linted; stale identifiers in comments 0 of 1,585, round
+numbers in code 31. The argument is Direction 19; the round is
+[`docs/audits/round-93.md`](../../audits/round-93.md).
+
+**Six corrections, eleven filings.** The cadence is not missing, the
+measurement is: a ratcheted quality ledger (`UX-694`) whose top row
+is the refactor stream's queue, renderers first (`UX-695`), after
+the rule set is widened by layer in one auto-fix commit with the
+tools pinned (`UX-693`). Stale comments are counts, promises and
+history, not names — the register's unguarded rows (`UX-696`). Three
+shelves: auto-fixed, ratcheted (types, `UX-697`), and gate-only on
+GitHub — code scanning, a lockfile and audit, Dependabot, secret
+scanning (`UX-698`), the viewer linted as one module graph
+(`UX-699`). CodeQL declined for navigation; an AST symbol index
+instead (`UX-700`). The self-review is `REVIEW.md` on the diff, on
+the reporters' model, routed by the impact set (`UX-701`). And two
+the brief did not ask for: a performance ratchet at the gate
+(`UX-702`) and a weekly mutation run on the touched modules
+(`UX-703`).
 
 ## UX-685..UX-692: the ninety-second round — the suite verifies what was built, the walk what was promised (2026-09-05)
 

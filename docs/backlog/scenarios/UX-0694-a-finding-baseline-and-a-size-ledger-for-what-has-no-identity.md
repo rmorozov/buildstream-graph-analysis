@@ -56,3 +56,50 @@ burn-down's (`UX-705`).
 add `subprocess.run(cmd, shell=True)` to `bga/cli.py` — red, one
 new `S602`; fix one `S607` without `--shrink` — red, one stale
 entry; `git diff` that adds a baseline line — the shrink guard red.
+
+## Outcome
+
+**This track lands the baseline half only** — the size ledger
+(`tests/quality_reference.json`) is a separate track.
+
+**The gap, measured**: `ruff check bga tools .claude/hooks --select
+S,C901,PLR0912,PLR0913,PLR0915,SIM115 --output-format json` had no
+fingerprint the gate could hold. The first pass also ran the select
+over `tests`, and the verifier caught it: 11,923 of 12,218 written
+entries were test-file findings, 11,238 of them `S101` — Out of Scope
+says one file, one ledger; `tests` is not a `dev_baseline.py` path.
+
+**The close, measured**: `tools/dev_baseline.py --write --force`,
+paths restricted to `bga`, `tools`, `.claude/hooks`:
+
+```text
+S 93 · C901 84 · PLR0912 47 · PLR0913 34 · PLR0915 30 · SIM115 11
+= 299 findings in tests/quality_baseline.json
+```
+
+`make lint` ends `python3 tools/dev_baseline.py --check`; planted
+`bga/_scratch_ux694_mutation.py` (`subprocess.run(cmd, shell=True)`) →
+`new: ruff S602 ... (#1) subprocess.run(cmd, shell=True)`, exit 1;
+removed, clean, exit 0. The verifier's four other fixes land in this
+same write: the new git-diff shrink guard reports 6 gained lines right
+now against the prior commit's `HEAD` (2 from collapsing interior
+whitespace on an already-baselined `bga/contracts.py` `S112` line, 4
+from this commit's own new `subprocess.run` calls in `head_findings`)
+— the exact case the guard exists for; clean again once this commit is
+`HEAD`. `make test-small`: 4,311 passed, 2 known `docs/contributing/`
+context-map failures (out of scope, orchestrator's).
+
+**Mutations** (reverted from a pre-edit copy each time, `__pycache__`
+cleared):
+
+| mutation | reddened | count |
+|---|---|---|
+| identity's `nth` = raw line number | 2 tests (line-number, nth) | 2 failed, 4 passed |
+| `do_check` exit ignores `stale` | fixed-finding test | 1 failed, 5 passed |
+| `do_shrink` appends `new` (no-stale branch) | never-adds test | 1 failed, 5 passed |
+| `gained_since_head` disabled | git-diff-guard test | 1 failed, 1 passed |
+| `.strip()` instead of whitespace collapse | reformat-still-matches test | 1 failed |
+| `do_shrink` appends `new` in the stale branch (verifier's mutation) | stale-and-new-together test | 1 failed |
+| `invalid-syntax` check removed | unparsable-file test | 1 failed |
+
+All reverted, `11 passed`.

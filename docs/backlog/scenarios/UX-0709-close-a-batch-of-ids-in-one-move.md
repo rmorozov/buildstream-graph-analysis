@@ -28,3 +28,54 @@ the file; the orchestrator adds the deviation line before the move.
 Two ids closed in one invocation on a copy (`--scenarios`): both
 markers flipped, both rows in `closed.md`, counts derived once;
 mutation: the second note dropped — the tool refuses the batch.
+
+## Outcome
+
+### The gap, measured
+
+```text
+$ python tools/dev_close_task.py --move UX-9001 --note "a" UX-9002 --note "b" --scenarios <copy>
+usage: dev_close_task.py [-h] [--outcome] ... [uid]
+dev_close_task.py: error: unrecognized arguments: UX-9002
+```
+
+Today's tool takes one positional `uid`; a second id is an argparse
+error. Round 80's batch of 24 needed 24 separate `--move` invocations.
+
+### The close, measured
+
+```text
+$ python tools/dev_close_task.py --move UX-9001 --note "a" UX-9002 --note "b" --scenarios <copy>
+UX-9001: status flipped, row moved.
+UX-9002: status flipped, row moved.
+counts derived once: 711 scenarios: **47 open**, 664 closed.
+$ echo $?
+0
+```
+
+Both markers flipped 🔴→🟢, both rows moved to `closed.md`, and the
+counts sentence + topic table were written once (`write_index()`),
+not once per id. One invocation instead of 24.
+
+```text
+$ python -m pytest tests/unit/test_a_batch_closes_in_one_move.py -v
+test_both_markers_flip_both_rows_move_counts_derive_once PASSED
+test_a_missing_note_refuses_the_whole_batch PASSED
+test_the_same_id_twice_is_refused_not_closed_twice PASSED
+3 passed in 0.54s
+$ PYTEST_XDIST= python -m pytest -q tests/unit/test_a_batch_closes_in_one_move.py \
+    tests/unit/test_the_loop_stays_fast.py
+53 passed in 7.72s
+```
+
+### Mutations
+
+| # | mutation | guard | result |
+|---|---|---|---|
+| A1 | dropped the `leftover_bare` refusal check in `main()` | `test_a_missing_note_refuses_the_whole_batch` | red: `assert 0 != 0`; reverted, green (3 passed) |
+| A2 | only applied `validated[:1]` in `move_batch`'s write loop | `test_both_markers_flip_both_rows_move_counts_derive_once` | red: `UX-9802 still in the open table`; reverted, green (3 passed) |
+| A3 | dropped the `seen`/`short` repeated-id check in `move_batch` | `test_the_same_id_twice_is_refused_not_closed_twice` | red: `assert 0 != 0`; reverted, green (3 passed) |
+
+The verifier caught a leak: the first guard set `close_task.SCENARIOS`
+directly and never restored it, failing `test_the_loop_stays_fast.py`
+whenever both files shared a worker - fixed with `monkeypatch.setattr`.

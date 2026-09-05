@@ -419,9 +419,18 @@ jobs:
   # edges and removes none, so a run that could not reach a module - no
   # browser, no `bst` - narrows nothing. Every refusal exits 0: a
   # bookkeeping job failing the default branch buys nothing.
+  #
+  # `UX-662`: **after** `tier-reference-adopt`, never beside it. That job
+  # adopts rows from a candidate `test (3.11)` measured with the map as
+  # it was *before* this run, so a retire landing first would be undone
+  # by pre-map numbers arriving second. Sequenced, and the pull below
+  # puts this job's retire on top of whatever that one pushed.
   touch-map-adopt:
-    needs: test
-    if: github.event_name == 'push' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    needs: [test, tier-reference-adopt]
+    if: >-
+      always() && github.event_name == 'push'
+      && github.ref == format('refs/heads/{0}',
+                              github.event.repository.default_branch)
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -441,17 +450,22 @@ jobs:
             echo "no candidate on this run - test (3.12) did not reach it"
             exit 0
           }
+          # Before any edit, so the tree is clean to rebase and the
+          # retire below reads the reference `tier-reference-adopt`
+          # just pushed rather than the one this run checked out.
+          git pull --rebase origin "${{ github.ref }}"
           python tools/dev_touch_map.py --adopt touch_map.candidate.json
-          if git diff --quiet -- tests/touch_map.json; then
+          if git diff --quiet -- tests/touch_map.json tests/ci_reference.json
+          then
             echo "the map already carries every edge this run measured"
             exit 0
           fi
-          git diff --stat -- tests/touch_map.json
+          git diff --stat -- tests/touch_map.json tests/ci_reference.json
           git config user.name "github-actions[bot]"
           git config user.email \
             "41898282+github-actions[bot]@users.noreply.github.com"
-          git add tests/touch_map.json
-          git commit -m "CI: adopt the touching map this run measured (UX-524)"
+          git add tests/touch_map.json tests/ci_reference.json
+          git commit -m "CI: adopt the touching map this run measured, and retire the drift entries its readers own (UX-524, UX-662)"
           git push origin "HEAD:${{ github.ref }}" || \
             echo "::warning::the branch refused the update; re-run to retry"
 

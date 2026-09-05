@@ -543,6 +543,10 @@ LARGE = (
 
 MEDIUM = (
     "tests/unit/test_a_broken_pipe_is_not_an_error.py",             # 1.6s
+    # `UX-665`, tiered on landing: one Chromium, three boots (golden,
+    # macro_micro, the built shared-resource fixture). 1.77/1.78/1.82s
+    # single-process.
+    "tests/unit/test_a_new_control_class_lands_declared.py",        # 1.8s
     "tests/unit/test_a_pasted_guide_block_is_fresh_or_dated.py",    # 3.6s
     "tests/unit/test_the_documented_bga_lines_parse.py",            # 2.0s
     # `UX-545`, tiered on landing. A real two-plane render with the

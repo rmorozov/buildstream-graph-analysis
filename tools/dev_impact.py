@@ -166,6 +166,30 @@ def _topic_of(module):
         pathlib.Path(module).name, "analysis")
 
 
+#: A diff touching one of these is a design question as well as a
+#: code one, so `self-review` sends it on. Each is a surface whose
+#: reader is not the diff's author: a published key, the ground-truth
+#: spec, a hook every session runs, a skill every round reads.
+DESIGN_SURFACES = (
+    ("a contract", lambda p: p == "bga/schemas.py"),
+    ("the spec", lambda p: p.startswith("docs/spec/")),
+    ("a hook", lambda p: p.startswith(".claude/hooks/")),
+    ("a skill", lambda p: p.startswith(".claude/skills/")),
+)
+
+
+def route(paths):
+    """`(destination, reasons)` for a diff - `UX-701`'s routing rule.
+
+    `design-review` when the diff reaches a surface whose reader is
+    somebody other than its author, `self-review` otherwise. The rule
+    is here rather than in the skill's prose so a guard can run it.
+    """
+    reasons = sorted({name for name, matches in DESIGN_SURFACES
+                      for path in paths if matches(path)})
+    return ("design-review" if reasons else "self-review"), reasons
+
+
 def report(module):
     """Every row for one module, each from the source named above."""
     guards, _ = dev_touching.select([module])
@@ -183,9 +207,18 @@ def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("target", nargs="?", default="-",
                         help="`-` for paths on stdin, a UX-NNN, or a module")
+    parser.add_argument("--route", action="store_true",
+                        help="print where UX-701's rule sends this diff")
     parser.add_argument("--rows", type=int, default=8,
                         help="how many entries to print per row")
     args = parser.parse_args(argv)
+
+    if args.route:
+        paths = (sys.stdin.read().split() if args.target in (None, "", "-")
+                 else [args.target])
+        where, why = route(paths)
+        print(f"{where}" + (f"  ({', '.join(why)})" if why else ""))
+        return 0
 
     left = unplaced()
     if left:

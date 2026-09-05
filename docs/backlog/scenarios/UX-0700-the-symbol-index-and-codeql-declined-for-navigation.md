@@ -39,3 +39,51 @@ row in the run ledger is re-measured on the next round.
 (`UX-403`'s shape); `dead --js` lists the five exports named above;
 mutation: rename a caller — the row moves; a call inside a docstring —
 not listed.
+
+## Outcome
+
+**The gap, measured** — the orient table's five lookups, run for
+`compute_confidence`, line counts today:
+
+```text
+grep -rn compute_confidence bga/findings.py bga/provenance.py   0
+grep -n  compute_confidence bga/schemas.py                      0
+grep -n  compute_confidence bga/viewer/chapters.js bga/viewer/*.js  0
+grep -ln compute_confidence tests/unit/*.py                     8 files
+git grep -l compute_confidence docs/backlog/scenarios/          5 files
+```
+
+Five separate invocations, none of them the one that mattered — the
+real answer (`bga/analyzer.py:1862`, inside a docstring twice at
+1854/1858, six raw grep hits total) needed a sixth, manual read.
+
+**The close, measured**:
+
+```text
+$ python3 tools/dev_symbols.py callers compute_confidence
+location
+bga/analyzer.py:1862
+
+$ python3 tools/dev_symbols.py dead --js
+location                     name
+bga/viewer/nav.js:16         RAILS
+bga/viewer/tablefocus.js:38  forgetFocusTargets
+
+$ time python3 tools/dev_symbols.py def analyze
+... 0.66s real
+```
+
+One command, one call site, the two docstring mentions correctly
+absent. `dead --js` found two unreferenced exports on this tree, not
+five — the honest count, not a fitted one.
+
+**Mutations** (`tests/unit/test_the_symbol_index_reads_the_tree_not_the_text.py`):
+
+| mutation | reddened | printed |
+|---|---|---|
+| `callers` by regex over raw text | `test_a_string_and_a_docstring_are_not_callers` | `[('pkg/a.py:4',), ('pkg/a.py:12',), ('pkg/a.py:16',), ('pkg/a.py:21',)]` vs expected one row |
+| `dead`'s reference scan drops the `ImportFrom` branch | `test_a_from_import_alone_counts_as_a_reference` | `imported_only_fn` (import-only reference) now `in dead_names` |
+| `imported_names` returns `[]` for the `from` form | `test_importers_finds_both_the_import_and_the_from_form` | `{'pkg/b.py'}` vs expected `{'pkg/b.py', 'pkg/c.py', 'pkg/d.py'}` |
+
+All three reverted from the pre-mutation copy; full file green after
+each (`6 passed`).

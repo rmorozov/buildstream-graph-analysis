@@ -7396,7 +7396,9 @@
   "tests/unit/test_the_start_clock_says_where_it_came_from.py"
  ],
  "tools/dev_close_task.py": [
+  "tests/unit/test_a_batch_closes_in_one_move.py",
   "tests/unit/test_a_counted_figure_is_derived.py",
+  "tests/unit/test_a_task_declares_its_shape.py",
   "tests/unit/test_docs_links_and_commands.py",
   "tests/unit/test_the_fast_check_holds_what_the_suite_holds.py",
   "tests/unit/test_the_loop_stays_fast.py"
@@ -7422,6 +7424,9 @@
   "tests/unit/test_a_committed_analysis_matches_the_analyzer.py",
   "tests/unit/test_the_fixture_differ_sees_key_order.py"
  ],
+ "tools/dev_symbols.py": [
+  "tests/unit/test_the_symbol_index_reads_the_tree_not_the_text.py"
+ ],
  "tools/dev_tier_drift.py": [
   "tests/unit/test_a_candidate_is_confirmed_alone.py",
   "tests/unit/test_a_slow_file_says_which_file.py",
@@ -7443,7 +7448,9 @@
   "tests/unit/test_the_trace_census_reads_both_ends.py"
  ],
  "tools/dev_track_cost.py": [
-  "tests/unit/test_a_track_costs_what_it_reads.py"
+  "tests/unit/test_a_rebuild_is_a_wake_with_nothing_before_it.py",
+  "tests/unit/test_a_track_costs_what_it_reads.py",
+  "tests/unit/test_the_ledger_row_is_the_transcript_s.py"
  ],
  "tools/gen_synthetic_scale_run.py": [
   "tests/unit/test_an_artifact_says_what_wrote_it.py",

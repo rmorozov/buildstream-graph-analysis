@@ -23,6 +23,9 @@ SKILLS = REPO / ".claude/skills"
 # place, which is what the Out of Scope section of UX-240 declines.
 OWNERS = {
     "verify": "docs/contributing/fixing-guide.md",
+    # `UX-701`: the review policy is `REVIEW.md`'s, and the skill is
+    # the procedure that runs it rather than a second copy of it.
+    "self-review": "REVIEW.md",
     "falsify": "docs/contributing/fixing-guide.md",
     "measure": "docs/contributing/style-guide.md",
     # `UX-340`: deriving the viewer's module graph before moving code

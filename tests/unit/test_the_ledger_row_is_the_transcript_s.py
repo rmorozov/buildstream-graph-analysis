@@ -92,3 +92,24 @@ class TestTheToolCallCount:
         row = dev_track_cost.ledger_row(path, 1, "t", "complete", "-")
         cells = [c.strip() for c in row.strip("|").split("|")]
         assert cells[5] == "3", row
+
+
+class TestListSkipsWhatIsNotATranscript:
+    """`tasks/*.output` also holds a Bash run's own stdout, plain text
+    that is not a JSONL record at all - `--list` must step over it."""
+
+    def test_the_transcript_is_named_and_the_plain_text_is_not(
+            self, tmp_path, capsys):
+        tasks = tmp_path / "tasks"
+        tasks.mkdir()
+        (tasks / "x1.output").write_text(
+            json.dumps({"type": "assistant",
+                        "message": {"content": "Implement **UX-999** only."}})
+            + "\n", encoding="utf-8")
+        (tasks / "x2.output").write_text(
+            "5 passed in 1.2s\n", encoding="utf-8")
+        code = dev_track_cost.main(["--list", "--root", str(tmp_path)])
+        said = capsys.readouterr().out
+        assert code == 0
+        assert "x1.output" in said, said
+        assert "x2.output" not in said, said

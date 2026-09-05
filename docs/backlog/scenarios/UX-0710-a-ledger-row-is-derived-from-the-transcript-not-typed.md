@@ -56,3 +56,4 @@ whose first line names `UX-999` now finds it.
 |---|---|---|
 | `_agent_and_model` returns a hardcoded `"claude-sonnet-5"` | `test_the_model_column_is_the_records_model`, `test_a_different_model_prints_a_different_word` | 2 failed, 2 passed |
 | swap the `model`/`agent` cells in `ledger_row`'s format string | `test_the_row_has_nine_cells_in_header_order` | 1 failed, 3 passed |
+| drop the `JSONDecodeError`/non-dict guard in `implementer_transcripts` | `test_the_transcript_is_named_and_the_plain_text_is_not` | 1 failed, 4 passed |

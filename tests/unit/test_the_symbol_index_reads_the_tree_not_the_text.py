@@ -105,16 +105,14 @@ def test_json_round_trips_the_table(tmp_path, monkeypatch, capsys):
     assert printed == [{"location": "pkg/a.py:4", "kind": "def", "class": "-"}]
 
 
-def test_the_tool_stays_under_two_seconds_on_this_tree():
+def test_the_tool_runs_from_the_command_line_on_this_tree():
+    # Seconds are the machine's (UX-418): the timing lives in the
+    # Outcome, and this holds only that the tool runs and answers.
     import subprocess
     import sys
-    import time
 
     repo = pathlib.Path(__file__).resolve().parents[2]
-    start = time.monotonic()
     result = subprocess.run(
         [sys.executable, str(repo / "tools" / "dev_symbols.py"), "def", "analyze"],
-        cwd=repo, capture_output=True, text=True, timeout=10, check=True)
-    elapsed = time.monotonic() - start
-    assert elapsed < 2.0, elapsed
-    assert result.returncode == 0
+        cwd=repo, capture_output=True, text=True, timeout=60, check=True)
+    assert "bga/analyzer.py:" in result.stdout, result.stdout

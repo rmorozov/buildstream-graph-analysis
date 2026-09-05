@@ -58,6 +58,17 @@ says the orchestrator edits nothing while tracks run. The verifiers'
 `verifier.md` now says `--base`. The orchestrator's tokens, measured
 by the round's own tool: 36 rebuilds, 78.7 % of the session.
 
+## What CI found after the local gate
+
+Two Python 3.9 breaks in the symbol index (`A | B` in `isinstance`,
+`zip(strict=)`) — no 3.9 exists here and ruff has no rule for either
+under a 3.9 target; a two-second wall-clock guard the brief itself
+asked for, red at 2.26 s on a loaded runner (`UX-418`'s class, removed);
+and a pre-existing timing test that picks the first unlisted test file
+alphabetically as its "small" file, which became track A's new guard
+(0.9-1.4 s alone, and the tool's own cost on a copy of 709 files);
+the picker now reads CI's record of the file rather than the lists.
+
 ## Standing
 
 `UX-694`, the baseline, is next on the widened set. Not done here:

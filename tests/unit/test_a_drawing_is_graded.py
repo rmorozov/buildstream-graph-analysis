@@ -600,7 +600,11 @@ class TestTheNamedDrawingsAreExhibitsOnTheRealPages:
                 assert one["grade"] == "exhibit", (page, one)
                 assert "exhibit" in one["klass"], (page, one)
                 seen += 1
-        assert seen == 4, f"expected 3 on macro_micro + 1 on golden, saw {seen}"
+        # `UX-681`: 4 -> 5. `fan_in_distribution` is the fourth declared
+        # shape on `macro_micro`, drawn by the same strip control as the
+        # blast one it mirrors - which is why the mirror cost a section
+        # and no new instrument.
+        assert seen == 5, f"expected 4 on macro_micro + 1 on golden, saw {seen}"
 
     def test_the_self_built_strips_are_annotations(self, booted):
         """The other side of the same split, and new with `UX-350`:

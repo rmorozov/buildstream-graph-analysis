@@ -587,11 +587,20 @@ column re-read in round 73:
                  elements   landed   opened    words   controls    nodes
 golden                  4    3,800   15,618    7,144        427    2,498
 macro_micro            11    5,965   31,804   12,002        750    5,686
-budget, to 50 elts             7,000   34,000   12,600        800    7,900
+budget, to 50 elts             7,100   35,000   12,600        800    7,900
 
 scale               1,202    4,763   26,242   36,542      1,941   24,294
 budget, to 4,000 elts          7,000   32,000   41,000      2,300   27,500
 ```
+
+`UX-681` moved the small class's two height bounds, and only that
+class: `macro_micro` measures 7,018 landed and 34,678 opened once
+fan-in ships. The 18 px is the element table's new "Dependencies read"
+column wrapping one header row; the 678 is the `fan_in` columns, the
+`fan_in_distribution` strip beside the blast one it mirrors, and two
+findings. The class above is untouched at 7,000 / 32,000, which is what
+says the page still gets *denser* with scale rather than the budget
+being loosened for everyone.
 
 `UX-526` measured the large class at its **top** — the same seeded
 generator at `--layers 20 --width 200`, 4,002 elements — and every one

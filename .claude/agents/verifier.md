@@ -3,6 +3,7 @@ name: verifier
 description: Check a finished change against the task file that asked for
   it, in a fresh context window, before the session reports done. Use
   after implementing a UX-* item and before writing its Outcome.
+model: sonnet
 tools: Bash, Read, Grep, Glob
 ---
 
@@ -47,3 +48,5 @@ same function.
 Close with the commands you ran and their real output. If the
 Acceptance Test does not pass, that is the report; do not investigate
 why, and do not repair it.
+
+Close with one **friction** line — what cost the most, what was missing, what went wrong — for the run ledger (`docs/audits/agent-runs.md`).

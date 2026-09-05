@@ -170,3 +170,5 @@ mkdir -p "<the scratchpad path you were given>/$(basename "$PWD")"
 - **Anything you could not do**, named. A track that quietly narrowed
   its scope costs the orchestrator a round to discover.
 - **Any guard of yours that turned out not to discriminate**, and why.
+
+Close with one **friction** line — what cost the most, what was missing, what went wrong — for the run ledger (`docs/audits/agent-runs.md`).

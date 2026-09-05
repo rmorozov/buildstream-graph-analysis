@@ -25,10 +25,11 @@ file is the day-one summary, and
 
 ## Skills, in the order a task uses them
 
-`orient` (where is it) → `decompose` (surfaces, input classes, tracks,
-the batch gate) → `measure` → `falsify` → `verify` (close it).
-`derive` before moving viewer code. Agents: `researcher` reads wide,
-`implementer` runs one track in a worktree, `verifier` checks the end.
+`orient` → `decompose` → `measure` → `falsify` → `verify`; `derive` before
+moving viewer code; `walk` and `design-review` audit the page. Agents:
+`researcher` reads wide, `implementer` runs one track in a worktree,
+`verifier` checks the end — reading and checking on `sonnet`, judgement
+and code on the session's model; every run is a row in `docs/audits/agent-runs.md`.
 
 ## Conventions
 
@@ -65,9 +66,8 @@ bga/            analysis, report, schemas · bga/viewer/  the page's modules
 tools/          capture, the LD_PRELOAD hook, the spine, dev helpers
 tests/unit/     one file per item, named for its claim
 docs/backlog/scenarios/   one file per task; README.md open, closed.md closed
-```
-
 Fixing guide §6 is the full map. Don't re-derive it.
+```
 
 ## Things Claude gets wrong
 

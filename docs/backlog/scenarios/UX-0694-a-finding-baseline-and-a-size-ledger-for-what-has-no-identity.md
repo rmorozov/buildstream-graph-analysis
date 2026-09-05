@@ -56,3 +56,49 @@ burn-down's (`UX-705`).
 add `subprocess.run(cmd, shell=True)` to `bga/cli.py` — red, one
 new `S602`; fix one `S607` without `--shrink` — red, one stale
 entry; `git diff` that adds a baseline line — the shrink guard red.
+
+## Outcome
+
+**This track lands the baseline half only** — the size ledger
+(`tests/quality_reference.json`) is a separate track.
+
+**The gap, measured**: `ruff check bga tools tests .claude/hooks
+--select S,C901,PLR0912,PLR0913,PLR0915,SIM115 --output-format json`
+had no fingerprint the gate could hold — 12,201 findings before this
+tree's own guard test existed.
+
+**The close, measured**: `tools/dev_baseline.py --write` on this tree:
+
+```text
+S 11852 · C901 99 · PLR0912 54 · PLR0913 68 · PLR0915 32 · SIM115 113
+= 12,218 findings written to tests/quality_baseline.json
+```
+
+(12,218 not 12,201: the new guard test file itself carries 17 baselined
+findings — asserts and one `subprocess.run` — folded in by the same
+`--write`.) `make lint` now ends:
+
+```text
+python3 tools/dev_baseline.py --check
+clean: 12218 finding(s) match tests/quality_baseline.json
+```
+
+Planted `bga/_scratch_ux694_mutation.py` (`subprocess.run(cmd,
+shell=True)`), removed after:
+
+```text
+new: ruff S602 bga/_scratch_ux694_mutation.py (#1) subprocess.run(cmd, shell=True)
+```
+
+exit 1; removed, `--check` returned to clean, exit 0.
+
+**Mutations** (`tools/dev_baseline.py`, reverted from a pre-edit copy
+each time, `__pycache__` cleared):
+
+| mutation | reddened | count |
+|---|---|---|
+| identity's `nth` set to the raw line number instead of the per-(rule,file,text) occurrence count | `test_a_line_inserted_above_still_matches`, `test_the_same_line_twice_gives_two_identities` | 2 failed, 4 passed |
+| `do_check` exit code ignores `stale`, only reflects `new` | `test_a_fixed_finding_is_reported_as_stale` | 1 failed, 5 passed |
+| `do_shrink` appends `new` findings alongside removing `stale` | `test_shrink_never_adds` | 1 failed, 5 passed |
+
+All three reverted to `6 passed`.

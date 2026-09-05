@@ -89,8 +89,11 @@ test-e2e:
 	python tests/test_e2e.py
 
 # Code linting (ruff, pyflakes rule set - see pyproject.toml's [tool.ruff])
+# UX-694: --check is the baselined families (S, C901, PLR0912, PLR0913,
+# PLR0915, SIM115) - zero-tolerance for a finding not in the baseline.
 lint: lint-docs
 	ruff check bga/ tools/ tests/ .claude/hooks/
+	python3 tools/dev_baseline.py --check
 
 # UX-98: markdown correctness. Only the class that changes how a document
 # renders is enabled - see .pymarkdown.json for why each disabled rule is

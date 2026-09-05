@@ -40,6 +40,20 @@ def _transcript(tmp_path, records, name="t.jsonl"):
     return str(path)
 
 
+class TestTheFirstResponseHasNothingBeforeItEither:
+
+    def test_a_big_first_response_is_a_rebuild(self, tmp_path):
+        path = _transcript(tmp_path, [
+            _record("msg_a", [_text("thinking")], _usage(500000),
+                    "2026-09-05T00:00:00.000Z"),
+            _record("msg_b", [_bash("ls docs")], _usage(10),
+                    "2026-09-05T00:01:00.000Z"),
+        ])
+        data = dev_track_cost.rebuilds(path)
+        assert data["count"] == 1, data
+        assert data["tokens"] == 500000
+
+
 class TestAToolBeforeItIsNotARebuild:
 
     def test_a_big_response_after_a_tool_carrying_one_is_not_a_rebuild(

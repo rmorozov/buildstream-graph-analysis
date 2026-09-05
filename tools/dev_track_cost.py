@@ -180,14 +180,16 @@ def _response_stamps(path):
 
 def rebuilds(path, floor=30000):
     """Responses over `floor` whose previous response called no tool -
-    a wake re-entering the whole live context, not a turn that read one."""
+    a wake re-entering the whole live context, not a turn that read one.
+    The first response has no previous one at all, the purest case."""
     rows = responses(path)
     stamps = _response_stamps(path)
     total = sum(_fresh(usage) for _, usage in rows)
     found = []
-    for index in range(1, len(rows)):
+    for index in range(len(rows)):
         cost = _fresh(rows[index][1])
-        if cost > floor and not rows[index - 1][0]:
+        no_tool_before = index == 0 or not rows[index - 1][0]
+        if cost > floor and no_tool_before:
             found.append({"timestamp": stamps[index], "cost": cost})
     tokens = sum(item["cost"] for item in found)
     return {"count": len(found), "tokens": tokens,

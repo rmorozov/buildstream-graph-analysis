@@ -1,6 +1,6 @@
 # UX-404: the unit census stops at the analyze door
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-343 (the census this extends) | **Serves:** anyone reading a whatif or store number outside the page | **Topic:** guards
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-343 (the census this extends) | **Serves:** anyone reading a whatif or store number outside the page | **Topic:** guards | **Area:** bga
 
 ## Motivation
 

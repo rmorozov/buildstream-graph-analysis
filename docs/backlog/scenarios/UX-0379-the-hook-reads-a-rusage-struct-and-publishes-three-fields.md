@@ -1,6 +1,6 @@
 # UX-379: the hook reads a rusage struct and publishes three of its fields
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-45 (real CPU time), UX-63 (peak RSS from the same struct) | **Serves:** anyone whose build is I/O-bound or contended rather than compute-bound | **Topic:** capture
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-45 (real CPU time), UX-63 (peak RSS from the same struct) | **Serves:** anyone whose build is I/O-bound or contended rather than compute-bound | **Topic:** capture | **Area:** tools
 
 ## Motivation
 

@@ -1,6 +1,6 @@
 # UX-712: the size ledger, for what has no finding identity
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-694 (the baseline, whose second half this is), UX-418 (the reference method) | **Found by:** round 95, splitting UX-694 into two tracks | **Serves:** the refactor stream (`UX-695`), which reads the top row of this ledger and today has no ledger to read | **Topic:** guards | **Shape:** bounded
+**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-694 (the baseline, whose second half this is), UX-418 (the reference method) | **Found by:** round 95, splitting UX-694 into two tracks | **Serves:** the refactor stream (`UX-695`), which reads the top row of this ledger and today has no ledger to read | **Topic:** guards | **Area:** unassigned | **Shape:** bounded
 
 ## Motivation
 

@@ -1,6 +1,6 @@
 # UX-337: the two viewer modules split along their seams
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-336 (which measured the cost and deferred this), UX-199 (the export's derived module order), UX-294 (the module map) | **Serves:** the maintainers — edit cost, not page cost | **Topic:** guards
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-336 (which measured the cost and deferred this), UX-199 (the export's derived module order), UX-294 (the module map) | **Serves:** the maintainers — edit cost, not page cost | **Topic:** guards | **Area:** bga/viewer
 
 ## Motivation
 

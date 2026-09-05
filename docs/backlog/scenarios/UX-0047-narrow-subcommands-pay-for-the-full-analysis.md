@@ -1,6 +1,6 @@
 # UX-47: `bga graph` computes attribution it never renders, so every narrow subcommand costs the same 67s as `analyze`
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-42 (independent, but fixing either alone already helps - see below) | **Topic:** analysis
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-42 (independent, but fixing either alone already helps - see below) | **Topic:** analysis | **Area:** bga
 
 ## Motivation
 

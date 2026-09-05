@@ -1,6 +1,6 @@
 # UX-320: the page conforms to its new sections
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-316, UX-317, UX-318, UX-319 (the mechanisms), styleguide §2a/§2b/§3a/§3b | **Serves:** R1; the maintainers | **Topic:** viewer
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-316, UX-317, UX-318, UX-319 (the mechanisms), styleguide §2a/§2b/§3a/§3b | **Serves:** R1; the maintainers | **Topic:** viewer | **Area:** bga/viewer
 
 ## Motivation
 

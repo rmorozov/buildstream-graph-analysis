@@ -1,6 +1,6 @@
 # UX-290: the schema does not describe its tuples
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-201 | **Serves:** R7 and R8 — reading a column header | **Topic:** contracts
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-201 | **Serves:** R7 and R8 — reading a column header | **Topic:** contracts | **Area:** bga/viewer
 
 ## Motivation
 

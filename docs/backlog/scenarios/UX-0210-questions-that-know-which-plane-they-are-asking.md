@@ -1,6 +1,6 @@
 # UX-210: questions that know which plane they are asking
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-204 (the library these live in) | **Topic:** viewer
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-204 (the library these live in) | **Topic:** viewer | **Area:** bga/viewer
 
 ## Motivation
 

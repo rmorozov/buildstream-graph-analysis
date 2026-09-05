@@ -1,6 +1,6 @@
 # UX-703: a mutation run on the touched modules, weekly
 
-**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** UX-524 (the touching map), UX-698 (the weekly workflow) | **Serves:** the falsify skill, which is a hand ritual per guard and cannot be run over the suite | **Topic:** guards | **Shape:** bounded
+**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** UX-524 (the touching map), UX-698 (the weekly workflow) | **Serves:** the falsify skill, which is a hand ritual per guard and cannot be run over the suite | **Topic:** guards | **Area:** unassigned | **Shape:** bounded
 
 ## Motivation
 

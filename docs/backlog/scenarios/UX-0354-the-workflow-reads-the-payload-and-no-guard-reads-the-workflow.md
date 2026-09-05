@@ -1,6 +1,6 @@
 # UX-354: the workflow reads the payload, and no guard reads the workflow
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-293 (the packaging step reads the contract from the tree), UX-344 (the two namespaces lifted) | **Serves:** whoever changes a contract next | **Topic:** contracts
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-293 (the packaging step reads the contract from the tree), UX-344 (the two namespaces lifted) | **Serves:** whoever changes a contract next | **Topic:** contracts | **Area:** tools
 
 ## Motivation
 

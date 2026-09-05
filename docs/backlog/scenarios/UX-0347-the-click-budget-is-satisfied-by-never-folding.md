@@ -1,6 +1,6 @@
 # UX-347: the click budget is satisfied by never folding
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-319 (the chain folds, and the clicks are counted), UX-286 (the report has chapters) | **Serves:** anyone looking for one number in a twenty-screen document | **Topic:** viewer
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-319 (the chain folds, and the clicks are counted), UX-286 (the report has chapters) | **Serves:** anyone looking for one number in a twenty-screen document | **Topic:** viewer | **Area:** bga/viewer
 
 ## Motivation
 

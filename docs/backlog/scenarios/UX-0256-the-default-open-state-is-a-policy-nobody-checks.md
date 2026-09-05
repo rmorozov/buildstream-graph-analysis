@@ -1,6 +1,6 @@
 # UX-256: the default open state is a policy nobody checks
 
-**Priority:** Medium | **Status:** 🟢 Fixed & Verified | **Depends on:** — | **Serves:** R1, and every future change to the viewer | **Topic:** guards
+**Priority:** Medium | **Status:** 🟢 Fixed & Verified | **Depends on:** — | **Serves:** R1, and every future change to the viewer | **Topic:** guards | **Area:** bga/viewer
 
 ## Motivation
 

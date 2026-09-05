@@ -1,6 +1,6 @@
 # UX-381: the capture directory is a contract nothing writes down
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-134 (the store names the run but not its Plane 2 report), UX-328 (--schema answers for everything that emits one) | **Serves:** anyone reading a snapshot with something other than bga | **Topic:** contracts
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-134 (the store names the run but not its Plane 2 report), UX-328 (--schema answers for everything that emits one) | **Serves:** anyone reading a snapshot with something other than bga | **Topic:** contracts | **Area:** bga
 
 ## Motivation
 

@@ -1,6 +1,6 @@
 # UX-617: the derived count cannot see an unstaged row
 
-**Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-501 (the derived counts), UX-336 (the helper) | **Found by:** round 84, three times | **Serves:** the session filing a row | **Topic:** guards
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-501 (the derived counts), UX-336 (the helper) | **Found by:** round 84, three times | **Serves:** the session filing a row | **Topic:** guards | **Area:** tools
 
 ## Motivation
 

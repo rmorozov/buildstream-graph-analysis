@@ -1,6 +1,6 @@
 # UX-622: the derived count and its guard read two populations
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-617 (the widening), UX-501 (the derivation) | **Found by:** round 85, in UX-617's own Deviation section | **Serves:** the session filing a row | **Topic:** guards
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-617 (the widening), UX-501 (the derivation) | **Found by:** round 85, in UX-617's own Deviation section | **Serves:** the session filing a row | **Topic:** guards | **Area:** tools
 
 ## Motivation
 

@@ -1,6 +1,6 @@
 # UX-382: the element entity has two shapes, and they share one attribute
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-288 (analyze/v2 publishes each population once), UX-216 (every element is one object), UX-356 (every field of the element join reaches a reader) | **Serves:** anyone writing a new view over an existing capture | **Topic:** contracts
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-288 (analyze/v2 publishes each population once), UX-216 (every element is one object), UX-356 (every field of the element join reaches a reader) | **Serves:** anyone writing a new view over an existing capture | **Topic:** contracts | **Area:** bga
 
 ## Motivation
 

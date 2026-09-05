@@ -1,6 +1,6 @@
 # UX-624: the cap dropped a guard that was not noise
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-605 (the cap), UX-522 (the census set), UX-336 (the selector) | **Found by:** round 85, by the contracts track paying for it | **Serves:** a track adding a declared key | **Topic:** guards
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-605 (the cap), UX-522 (the census set), UX-336 (the selector) | **Found by:** round 85, by the contracts track paying for it | **Serves:** a track adding a declared key | **Topic:** guards | **Area:** tools
 
 ## Motivation
 

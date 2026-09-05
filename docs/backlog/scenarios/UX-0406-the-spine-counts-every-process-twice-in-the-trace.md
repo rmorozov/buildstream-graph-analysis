@@ -1,6 +1,6 @@
 # UX-406: the spine counts every process twice in the trace
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-310 (the counter it un-closes), UX-368 (the queries it feeds wrong numbers) | **Serves:** anyone who takes the handoff and believes a number | **Topic:** capture
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-310 (the counter it un-closes), UX-368 (the queries it feeds wrong numbers) | **Serves:** anyone who takes the handoff and believes a number | **Topic:** capture | **Area:** tools
 
 ## Motivation
 

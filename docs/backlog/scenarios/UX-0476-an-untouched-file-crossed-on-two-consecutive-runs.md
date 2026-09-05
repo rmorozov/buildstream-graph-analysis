@@ -1,6 +1,6 @@
 # UX-476: the falsifier `UX-458` named arrived on the very next run
 
-**Priority:** Medium | **Status:** 🟢 Done | **Found by:** round 72, driving PR #191 to green — the drift gate named a file no commit on the branch touches, twice in a row | **Serves:** the contributor whose PR is red for a file they did not write, and whose only offered remedy is to re-record a reference they have no reason to distrust | **Topic:** guards
+**Priority:** Medium | **Status:** 🟢 Done | **Found by:** round 72, driving PR #191 to green — the drift gate named a file no commit on the branch touches, twice in a row | **Serves:** the contributor whose PR is red for a file they did not write, and whose only offered remedy is to re-record a reference they have no reason to distrust | **Topic:** guards | **Area:** tools
 
 ## Motivation
 

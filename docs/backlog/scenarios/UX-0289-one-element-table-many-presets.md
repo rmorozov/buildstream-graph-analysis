@@ -1,6 +1,6 @@
 # UX-289: one element table, many presets
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-288 | **Serves:** R1 and R7 | **Topic:** viewer
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-288 | **Serves:** R1 and R7 | **Topic:** viewer | **Area:** bga/viewer
 
 ## Motivation
 

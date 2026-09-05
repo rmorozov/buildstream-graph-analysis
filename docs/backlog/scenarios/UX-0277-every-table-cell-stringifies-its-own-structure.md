@@ -1,6 +1,6 @@
 # UX-277: every table cell stringifies its own structure
 
-**Priority:** High | **Status:** 🟢 Fixed & Verified | **Depends on:** UX-267 | **Serves:** R1, R7, R8 — everyone who reads the report | **Topic:** viewer
+**Priority:** High | **Status:** 🟢 Fixed & Verified | **Depends on:** UX-267 | **Serves:** R1, R7, R8 — everyone who reads the report | **Topic:** viewer | **Area:** bga/viewer
 
 ## Motivation
 

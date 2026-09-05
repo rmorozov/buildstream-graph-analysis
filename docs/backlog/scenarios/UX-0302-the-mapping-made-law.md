@@ -1,6 +1,6 @@
 # UX-302: the mapping made law — no raw JSON that is not on purpose
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-267, UX-277 (the shape dispatch and the fold this codifies) | **Serves:** R1 — every reader of the page | **Topic:** viewer
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-267, UX-277 (the shape dispatch and the fold this codifies) | **Serves:** R1 — every reader of the page | **Topic:** viewer | **Area:** bga/viewer
 
 ## Motivation
 

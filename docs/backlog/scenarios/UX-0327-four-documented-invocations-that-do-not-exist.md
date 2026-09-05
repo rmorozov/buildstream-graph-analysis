@@ -1,6 +1,6 @@
 # UX-327: four documented invocations that do not exist
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-139 (case-study vs instruction rule), the docs-command guard this extends | **Serves:** R1 | **Topic:** docs
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-139 (case-study vs instruction rule), the docs-command guard this extends | **Serves:** R1 | **Topic:** docs | **Area:** tools
 
 ## Motivation
 

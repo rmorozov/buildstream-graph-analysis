@@ -1,6 +1,6 @@
 # UX-304: dark first, with two grades of token
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-212 (the non-color channels that make print free), styleguide §4-5 | **Serves:** R1 — the user asked for it by name | **Topic:** viewer
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-212 (the non-color channels that make print free), styleguide §4-5 | **Serves:** R1 — the user asked for it by name | **Topic:** viewer | **Area:** bga/viewer
 
 ## Motivation
 

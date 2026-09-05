@@ -1,6 +1,6 @@
 # UX-265: the hand-off answers the read but not the pre-flight
 
-**Priority:** High | **Status:** 🟢 Fixed & Verified | **Depends on:** — | **Serves:** R1, whenever a timeline is worth opening | **Topic:** viewer
+**Priority:** High | **Status:** 🟢 Fixed & Verified | **Depends on:** — | **Serves:** R1, whenever a timeline is worth opening | **Topic:** viewer | **Area:** tools
 
 ## Motivation
 

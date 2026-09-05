@@ -1,6 +1,6 @@
 # UX-389: fourteen of twenty-five Plane 2 blocks reach no browser
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-383 (Plane 2's per-element blocks reach the page), UX-386 (`plane2/v3` is described as what it is), UX-382 (the element placement rule), UX-329 (the terminal and the viewer disagree about Plane 2) | **Serves:** anyone asking in a browser whether the instrument saw everything | **Topic:** viewer
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-383 (Plane 2's per-element blocks reach the page), UX-386 (`plane2/v3` is described as what it is), UX-382 (the element placement rule), UX-329 (the terminal and the viewer disagree about Plane 2) | **Serves:** anyone asking in a browser whether the instrument saw everything | **Topic:** viewer | **Area:** bga
 
 ## Motivation
 

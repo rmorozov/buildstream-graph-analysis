@@ -1,6 +1,6 @@
 # UX-709: close a batch of ids in one `--move`
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-336 (the close tool), UX-501 (derived counts) | **Serves:** the orchestrator closing a merged batch, which today runs one command per id and re-derives the counts each time | **Topic:** guards | **Shape:** bounded
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-336 (the close tool), UX-501 (derived counts) | **Serves:** the orchestrator closing a merged batch, which today runs one command per id and re-derives the counts each time | **Topic:** guards | **Area:** tools | **Shape:** bounded
 
 ## Motivation
 

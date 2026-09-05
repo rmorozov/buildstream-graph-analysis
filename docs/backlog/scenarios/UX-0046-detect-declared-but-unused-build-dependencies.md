@@ -1,6 +1,6 @@
 # UX-46: no signal finds a declared-but-unused build dependency, and the cheap way of finding one does not work
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-11 (the Plane 2 hook), UX-23 (element tagging, which is what makes a per-element answer possible at all) | **Topic:** capture
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-11 (the Plane 2 hook), UX-23 (element tagging, which is what makes a per-element answer possible at all) | **Topic:** capture | **Area:** tools/native_trace
 
 ## Motivation
 

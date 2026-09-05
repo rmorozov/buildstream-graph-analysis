@@ -1,6 +1,6 @@
 # UX-707: the orchestrator's rebuilds are counted and priced, per session
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-525 (the track-cost tool), UX-663 (the run ledger) | **Serves:** the session deciding how long to stay idle and how much to keep in view, from a number rather than a feeling | **Topic:** guards | **Shape:** bounded
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-525 (the track-cost tool), UX-663 (the run ledger) | **Serves:** the session deciding how long to stay idle and how much to keep in view, from a number rather than a feeling | **Topic:** guards | **Area:** tools | **Shape:** bounded
 
 ## Motivation
 

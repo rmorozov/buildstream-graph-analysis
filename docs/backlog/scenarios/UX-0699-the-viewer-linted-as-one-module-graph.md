@@ -1,6 +1,6 @@
 # UX-699: the viewer linted as one module graph
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-397 (the JS-dependency decision) | **Serves:** the session editing a viewer module, which today has no linter of any kind | **Topic:** viewer | **Shape:** judgement
+**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-397 (the JS-dependency decision) | **Serves:** the session editing a viewer module, which today has no linter of any kind | **Topic:** viewer | **Area:** unassigned | **Shape:** judgement
 
 ## Motivation
 

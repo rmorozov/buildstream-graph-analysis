@@ -1,6 +1,6 @@
 # UX-63: the memory oversubscription guard runs entirely on operator-declared estimates, on a blocker that has since been removed
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-21`, `UX-45` (both done) | **Topic:** capture
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-21`, `UX-45` (both done) | **Topic:** capture | **Area:** tools/native_trace
 
 ## Motivation
 

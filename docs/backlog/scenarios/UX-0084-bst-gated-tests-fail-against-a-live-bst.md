@@ -1,6 +1,6 @@
 # UX-84: the bst-gated tests fail against a live bst 2.7, and CI never runs them
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-22 (done) | **Topic:** guards
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-22 (done) | **Topic:** guards | **Area:** tools
 
 ## Motivation
 

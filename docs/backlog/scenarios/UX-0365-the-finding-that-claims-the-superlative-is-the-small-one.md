@@ -1,6 +1,6 @@
 # UX-365: the finding that claims the superlative is the small one
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-207 (the first screen is a decision), UX-261 (the first view leads with what to do) | **Serves:** anyone opening the report to find the biggest lever | **Topic:** analysis
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-207 (the first screen is a decision), UX-261 (the first view leads with what to do) | **Serves:** anyone opening the report to find the biggest lever | **Topic:** analysis | **Area:** bga
 
 ## Motivation
 

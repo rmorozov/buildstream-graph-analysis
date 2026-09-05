@@ -1,6 +1,6 @@
 # UX-716: a guard whose cost is its population has no refresh route
 
-**Priority:** Medium | **Status:** 🔴 Open | **Depends on:** UX-587 (the same property, recorded for the backlog guard), UX-662 (the retire, which does not reach this class), UX-503 (`--adopt` adds names, rewrites none) | **Found by:** round 96, by CI going red on a file its diff never touched | **Serves:** the branch that goes red for test files another branch added | **Topic:** guards | **Shape:** judgement
+**Priority:** Medium | **Status:** 🔴 Open | **Depends on:** UX-587 (the same property, recorded for the backlog guard), UX-662 (the retire, which does not reach this class), UX-503 (`--adopt` adds names, rewrites none) | **Found by:** round 96, by CI going red on a file its diff never touched | **Serves:** the branch that goes red for test files another branch added | **Topic:** guards | **Area:** tools | **Shape:** judgement
 
 ## Motivation
 

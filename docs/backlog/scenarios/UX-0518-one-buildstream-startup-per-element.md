@@ -1,6 +1,6 @@
 # UX-518: the snapshot's tail pays one BuildStream startup per element
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** `UX-46` (which added the call), `UX-107` (which widened the element set it runs over) | **Found by:** round 77, field report — *"at the end of bga snapshot, bst list contents takes considerable time on big projects"* | **Serves:** anyone capturing a project with more than a handful of elements | **Topic:** capture
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** `UX-46` (which added the call), `UX-107` (which widened the element set it runs over) | **Found by:** round 77, field report — *"at the end of bga snapshot, bst list contents takes considerable time on big projects"* | **Serves:** anyone capturing a project with more than a handful of elements | **Topic:** capture | **Area:** tools
 
 ## Motivation
 

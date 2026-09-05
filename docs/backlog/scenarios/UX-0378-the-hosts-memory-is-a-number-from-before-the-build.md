@@ -1,6 +1,6 @@
 # UX-378: the host's memory is a number from before the build, and an OOM leaves no trace
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-104 (memory-aware capacity advice), UX-243 (the memory envelope reaches no reader) | **Serves:** anyone whose build died and does not know why | **Topic:** capture
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-104 (memory-aware capacity advice), UX-243 (the memory envelope reaches no reader) | **Serves:** anyone whose build died and does not know why | **Topic:** capture | **Area:** tools
 
 ## Motivation
 

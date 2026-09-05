@@ -1,6 +1,6 @@
 # UX-222: focus one element, and dim the rest
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-216 (the element object), UX-211 (the fragment that carries the state) | **Topic:** viewer
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-216 (the element object), UX-211 (the fragment that carries the state) | **Topic:** viewer | **Area:** bga/viewer
 
 ## Motivation
 

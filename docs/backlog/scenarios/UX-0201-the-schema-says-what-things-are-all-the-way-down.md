@@ -1,6 +1,6 @@
 # UX-201: the schema says what things are, all the way down
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-193 (view-hints v1), UX-190 (the schemas), Direction 7 second iteration | **Topic:** viewer
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-193 (view-hints v1), UX-190 (the schemas), Direction 7 second iteration | **Topic:** viewer | **Area:** bga
 
 ## Motivation
 

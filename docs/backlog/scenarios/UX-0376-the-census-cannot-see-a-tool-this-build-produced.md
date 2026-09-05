@@ -1,6 +1,6 @@
 # UX-376: the census cannot see a tool this build produced, and the spine policy believes it
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-105 (measure the static-binary blind spot), UX-113 (--trace-spine=auto, guided by the census) | **Serves:** anyone whose project builds its own host tools | **Topic:** capture
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-105 (measure the static-binary blind spot), UX-113 (--trace-spine=auto, guided by the census) | **Serves:** anyone whose project builds its own host tools | **Topic:** capture | **Area:** tools
 
 ## Motivation
 

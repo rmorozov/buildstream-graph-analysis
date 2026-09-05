@@ -1,6 +1,6 @@
 # UX-258: the blast ranking tells you to optimize the base image
 
-**Priority:** High | **Status:** 🟢 Fixed & Verified | **Depends on:** — | **Serves:** R1, who acts on the ranking; R3, who knows which of it the graph forbids | **Topic:** analysis
+**Priority:** High | **Status:** 🟢 Fixed & Verified | **Depends on:** — | **Serves:** R1, who acts on the ranking; R3, who knows which of it the graph forbids | **Topic:** analysis | **Area:** bga
 
 ## Motivation
 

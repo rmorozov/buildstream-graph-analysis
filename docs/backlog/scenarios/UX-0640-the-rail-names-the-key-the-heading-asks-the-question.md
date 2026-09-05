@@ -1,6 +1,6 @@
 # UX-640: the rail names the key, the heading asks the question
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-199 (a report you can find your way around), UX-374 (the page renames the reader's elements) | **Found by:** round 87, by the owner not knowing where a rail entry led | **Serves:** anyone navigating by the rail rather than by scrolling | **Topic:** viewer
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-199 (a report you can find your way around), UX-374 (the page renames the reader's elements) | **Found by:** round 87, by the owner not knowing where a rail entry led | **Serves:** anyone navigating by the rail rather than by scrolling | **Topic:** viewer | **Area:** bga/viewer
 
 ## Motivation
 

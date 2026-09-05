@@ -1,6 +1,6 @@
 # UX-272: the header is four stacked paragraphs
 
-**Priority:** Low | **Status:** 🟢 Fixed & Verified | **Depends on:** UX-254 | **Serves:** R1 | **Topic:** viewer
+**Priority:** Low | **Status:** 🟢 Fixed & Verified | **Depends on:** UX-254 | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer
 
 ## Motivation
 

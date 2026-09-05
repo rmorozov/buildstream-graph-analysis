@@ -1,6 +1,6 @@
 # UX-454: closing a task twice doubles its status word, and the guard cannot see it
 
-**Priority:** Low | **Status:** 🟢 Done | **Found by:** round 70, reading `UX-453`'s own header after closing it | **Serves:** anyone reading a task file's header, and the next round that greps the status line | **Topic:** guards
+**Priority:** Low | **Status:** 🟢 Done | **Found by:** round 70, reading `UX-453`'s own header after closing it | **Serves:** anyone reading a task file's header, and the next round that greps the status line | **Topic:** guards | **Area:** tools
 
 ## Motivation
 

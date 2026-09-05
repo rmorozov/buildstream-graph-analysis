@@ -1,6 +1,6 @@
 # UX-394: nothing in the page moves between runs
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-234 (the store speaks for more than one build), UX-226 (what happened to this element since last time), UX-221 (which elements caused the regression), UX-211 (URL state) | **Serves:** anyone who has captured the same project twice | **Topic:** viewer
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-234 (the store speaks for more than one build), UX-226 (what happened to this element since last time), UX-221 (which elements caused the regression), UX-211 (URL state) | **Serves:** anyone who has captured the same project twice | **Topic:** viewer | **Area:** bga/viewer
 
 ## Motivation
 

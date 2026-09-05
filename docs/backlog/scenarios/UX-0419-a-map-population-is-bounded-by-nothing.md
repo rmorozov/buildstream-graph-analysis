@@ -1,6 +1,6 @@
 # UX-419: a map population is bounded by nothing, and the sweep cannot see it
 
-**Priority:** High | **Status:** 🟢 Done | **Found by:** UX-411's measurement | **Serves:** anyone whose run has many binaries or many tasks | **Topic:** viewer
+**Priority:** High | **Status:** 🟢 Done | **Found by:** UX-411's measurement | **Serves:** anyone whose run has many binaries or many tasks | **Topic:** viewer | **Area:** bga/viewer
 
 ## Motivation
 

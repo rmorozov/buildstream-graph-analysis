@@ -1,6 +1,6 @@
 # UX-447: the reference-refresh route is in no contributor document
 
-**Priority:** Medium | **Status:** 🟢 Done | **Found by:** review 8, checklist item 4 | **Serves:** the contributor whose PR the drift gate stops, who is told to re-record and not where from | **Topic:** docs
+**Priority:** Medium | **Status:** 🟢 Done | **Found by:** review 8, checklist item 4 | **Serves:** the contributor whose PR the drift gate stops, who is told to re-record and not where from | **Topic:** docs | **Area:** tools
 
 ## Motivation
 

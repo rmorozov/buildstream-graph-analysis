@@ -1,6 +1,6 @@
 # UX-330: the stranger needs a seed
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-213 (the committed-capture precedent), UX-188 (the timeline this makes reachable) | **Serves:** R1 — the evaluating newcomer | **Topic:** docs
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-213 (the committed-capture precedent), UX-188 (the timeline this makes reachable) | **Serves:** R1 — the evaluating newcomer | **Topic:** docs | **Area:** tools
 
 ## Motivation
 

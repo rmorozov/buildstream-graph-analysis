@@ -1,6 +1,6 @@
 # UX-155: bga's scratch lives in TMPDIR, and the advice for fixing that breaks the build
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-147 (`probe_bwrap_shim`, which produces the advice), UX-11 (the shim, which is what needs somewhere executable to live) | **Topic:** capture
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-147 (`probe_bwrap_shim`, which produces the advice), UX-11 (the shim, which is what needs somewhere executable to live) | **Topic:** capture | **Area:** tools
 
 Filed from a real user report on Ubuntu 24.04, and this one is a
 two-step failure where **bga supplied the second step**:

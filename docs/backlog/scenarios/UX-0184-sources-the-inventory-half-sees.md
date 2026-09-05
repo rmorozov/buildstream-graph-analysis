@@ -1,6 +1,6 @@
 # UX-184: sources the inventory half-sees
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-171 (the inventory), UX-181 (the identity model) | **Topic:** analysis
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-171 (the inventory), UX-181 (the identity model) | **Topic:** analysis | **Area:** bga
 
 ## Motivation
 

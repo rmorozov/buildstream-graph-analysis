@@ -1,6 +1,6 @@
 # UX-436: forty-four controls are the browser's, not the page's
 
-**Priority:** Medium | **Status:** 🟢 Done | **Found by:** round 69, a field report that the page's buttons look dull | **Serves:** every reader, on every screen of the report | **Topic:** viewer
+**Priority:** Medium | **Status:** 🟢 Done | **Found by:** round 69, a field report that the page's buttons look dull | **Serves:** every reader, on every screen of the report | **Topic:** viewer | **Area:** bga/viewer
 
 ## Motivation
 

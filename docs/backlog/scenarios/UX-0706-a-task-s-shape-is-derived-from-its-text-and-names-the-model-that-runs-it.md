@@ -1,6 +1,6 @@
 # UX-706: a task's shape is derived from its text, and names the model that runs it
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-663 (the model advisory), UX-498 (the decompose skill) | **Found by:** round 94, pricing the pipeline | **Serves:** the session deciding which of a round's filings a cheaper model may run, without reading them all | **Topic:** guards | **Shape:** judgement
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-663 (the model advisory), UX-498 (the decompose skill) | **Found by:** round 94, pricing the pipeline | **Serves:** the session deciding which of a round's filings a cheaper model may run, without reading them all | **Topic:** guards | **Area:** tools | **Shape:** judgement
 
 ## Motivation
 

@@ -1,6 +1,6 @@
 # UX-478: the graph-owner is not offered a reader on the one build whose defect is the graph
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-477` (the diagnosis both R3 findings key off) | **Found by:** round 72, `UX-468`'s planted walk 3 | **Serves:** the graph-owner who opens the report on a strict chain and finds their reader is not there | **Topic:** analysis
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-477` (the diagnosis both R3 findings key off) | **Found by:** round 72, `UX-468`'s planted walk 3 | **Serves:** the graph-owner who opens the report on a strict chain and finds their reader is not there | **Topic:** analysis | **Area:** bga
 
 ## Motivation
 

@@ -1,6 +1,6 @@
 # UX-161: the stale casd everyone suspects is checkable before the build, and nobody looks
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-147 (whose item 2 this completes), UX-149 (the probe with the structural blind spot) | **Topic:** capture
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-147 (whose item 2 this completes), UX-149 (the probe with the structural blind spot) | **Topic:** capture | **Area:** tools
 
 ## Motivation
 

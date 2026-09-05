@@ -1,6 +1,6 @@
 # UX-524: the touching map is measured in CI, not grepped
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-522 (the census half), UX-503 (the adopt route the map reuses) | **Serves:** the session that wants `test-touching` to be a gate | **Topic:** guards
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-522 (the census half), UX-503 (the adopt route the map reuses) | **Serves:** the session that wants `test-touching` to be a gate | **Topic:** guards | **Area:** tools
 
 ## Motivation
 

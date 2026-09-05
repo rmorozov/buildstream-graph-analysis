@@ -1,6 +1,6 @@
 # UX-158: --help is a design-history lecture
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-135/UX-137 (the same concision pass, which stopped at the docs) | **Topic:** cli
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-135/UX-137 (the same concision pass, which stopped at the docs) | **Topic:** cli | **Area:** tools
 
 ## Motivation
 

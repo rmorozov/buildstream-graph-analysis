@@ -1,6 +1,6 @@
 # UX-627: closing a row writes `🟢 Done Open`
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-454 (the defect this reproduces), UX-336 (the helper) | **Found by:** architecture review 15 | **Serves:** anyone reading a task file's status | **Topic:** guards
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-454 (the defect this reproduces), UX-336 (the helper) | **Found by:** architecture review 15 | **Serves:** anyone reading a task file's status | **Topic:** guards | **Area:** tools
 
 ## Motivation
 

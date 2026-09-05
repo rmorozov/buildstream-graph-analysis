@@ -1,6 +1,6 @@
 # UX-357: the provenance section shows the claim and withholds the rule
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-229 (publish why bga believes what it believes) | **Serves:** the reviewer who has to decide whether to trust a number before acting on it | **Topic:** viewer
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-229 (publish why bga believes what it believes) | **Serves:** the reviewer who has to decide whether to trust a number before acting on it | **Topic:** viewer | **Area:** bga/viewer
 
 ## Motivation
 

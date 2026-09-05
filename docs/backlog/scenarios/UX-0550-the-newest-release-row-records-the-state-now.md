@@ -1,6 +1,6 @@
 # UX-550: the newest release row records the state *now*, not the one it shipped
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-252 (the generated release body) | **Serves:** anyone answering "what changed between the bga I installed and the one I have" | **Topic:** contracts
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-252 (the generated release body) | **Serves:** anyone answering "what changed between the bga I installed and the one I have" | **Topic:** contracts | **Area:** bga
 
 ## Motivation
 

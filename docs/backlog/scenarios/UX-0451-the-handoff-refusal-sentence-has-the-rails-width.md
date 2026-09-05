@@ -1,6 +1,6 @@
 # UX-451: the hand-off's refusal sentence is written into a 208px column
 
-**Priority:** Medium | **Status:** 🟢 Done | **Found by:** round 70, the half of `UX-435` that could not be measured | **Serves:** the reader whose hand-off failed — the only reader who ever sees this sentence | **Topic:** viewer
+**Priority:** Medium | **Status:** 🟢 Done | **Found by:** round 70, the half of `UX-435` that could not be measured | **Serves:** the reader whose hand-off failed — the only reader who ever sees this sentence | **Topic:** viewer | **Area:** bga/viewer
 
 ## Motivation
 

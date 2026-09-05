@@ -1,6 +1,6 @@
 # UX-465: nothing generates a BuildStream project, so axes D, F and G are hand-authored or absent
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-463` (the axes and which half owns them) · feeds `UX-466`'s stage 3, `UX-467`'s negative case and `UX-468`'s planted defect | **Found by:** round 72, inventorying the generation tooling | **Serves:** the round that needs a build with a known answer and has to hand-write a tenth example to get one | **Topic:** capture
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-463` (the axes and which half owns them) · feeds `UX-466`'s stage 3, `UX-467`'s negative case and `UX-468`'s planted defect | **Found by:** round 72, inventorying the generation tooling | **Serves:** the round that needs a build with a known answer and has to hand-write a tenth example to get one | **Topic:** capture | **Area:** tools
 
 ## Motivation
 

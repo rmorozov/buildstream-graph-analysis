@@ -1,6 +1,6 @@
 # UX-39: `--fail-on-regression` gates on wall-clock alone, so it fires on noise and on legitimately-added work, and never on added inefficiency
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-01, UX-02, UX-03 (all done - this changes what the gate they built measures), UX-27 (the metric it needs), UX-40 (the confidence rule that currently disables it) | **Topic:** analysis
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-01, UX-02, UX-03 (all done - this changes what the gate they built measures), UX-27 (the metric it needs), UX-40 (the confidence rule that currently disables it) | **Topic:** analysis | **Area:** bga
 
 ## Motivation
 

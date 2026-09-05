@@ -1,6 +1,6 @@
 # UX-123: spine record hygiene — ENDs without STARTs, exec chains, and the nearest join
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-106, UX-107 (done — these are their S4/S5/S6) | **Topic:** capture
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-106, UX-107 (done — these are their S4/S5/S6) | **Topic:** capture | **Area:** tools
 
 ## Motivation
 

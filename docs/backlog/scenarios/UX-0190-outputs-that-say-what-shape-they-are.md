@@ -1,6 +1,6 @@
 # UX-190: outputs that say what shape they are
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-75 (the published-contract precedent), UX-171 (`sources/v1`, the one output that already does this) | **Topic:** contracts
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-75 (the published-contract precedent), UX-171 (`sources/v1`, the one output that already does this) | **Topic:** contracts | **Area:** bga
 
 ## Motivation
 

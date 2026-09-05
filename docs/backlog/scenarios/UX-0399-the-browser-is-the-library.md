@@ -1,6 +1,6 @@
 # UX-399: the browser is the library
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-392 (the filters), UX-393 (the navigation), UX-396 (the drawings gap) | **Serves:** R2, and every reader of a seven-screen report | **Topic:** viewer
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-392 (the filters), UX-393 (the navigation), UX-396 (the drawings gap) | **Serves:** R2, and every reader of a seven-screen report | **Topic:** viewer | **Area:** bga/viewer
 
 ## Motivation
 

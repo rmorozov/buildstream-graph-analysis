@@ -1,6 +1,6 @@
 # UX-440: two rankings over one order, and nothing says why there are two
 
-**Priority:** Low | **Status:** 🟢 Done | **Found by:** round 69, the clause `UX-439` left unfinished | **Serves:** anyone comparing the page's ranked list against the terminal's | **Topic:** contracts
+**Priority:** Low | **Status:** 🟢 Done | **Found by:** round 69, the clause `UX-439` left unfinished | **Serves:** anyone comparing the page's ranked list against the terminal's | **Topic:** contracts | **Area:** bga
 
 ## Motivation
 

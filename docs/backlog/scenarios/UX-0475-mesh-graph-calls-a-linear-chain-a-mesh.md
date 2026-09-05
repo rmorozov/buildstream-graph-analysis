@@ -1,6 +1,6 @@
 # UX-475: `mesh-graph` calls a five-element linear chain "a mesh of near-equal chains"
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-467` found it; the fixture is `topologies.linear_chain` | **Found by:** round 72, `UX-467`'s negative case | **Serves:** the graph-owner told their chain is a mesh, and that savings are capped by "the next chain" when there is only one | **Topic:** analysis
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-467` found it; the fixture is `topologies.linear_chain` | **Found by:** round 72, `UX-467`'s negative case | **Serves:** the graph-owner told their chain is a mesh, and that savings are capped by "the next chain" when there is only one | **Topic:** analysis | **Area:** bga
 
 ## Motivation
 

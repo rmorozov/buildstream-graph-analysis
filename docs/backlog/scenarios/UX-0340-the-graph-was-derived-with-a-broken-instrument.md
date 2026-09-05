@@ -1,6 +1,6 @@
 # UX-340: the graph was derived with a broken instrument
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-337 (which needed it and had to build it twice), UX-199 (the export's derived module order) | **Serves:** the maintainers — the next time code moves between viewer modules | **Topic:** guards
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-337 (which needed it and had to build it twice), UX-199 (the export's derived module order) | **Serves:** the maintainers — the next time code moves between viewer modules | **Topic:** guards | **Area:** tools
 
 ## Motivation
 

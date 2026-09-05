@@ -1,6 +1,6 @@
 # UX-208: everything important is one click from investigation
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-204 (the TraceContext transport), UX-205 (the table tools these extend), UX-207 (the panel the top actions live in) | **Topic:** viewer
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-204 (the TraceContext transport), UX-205 (the table tools these extend), UX-207 (the panel the top actions live in) | **Topic:** viewer | **Area:** bga/viewer
 
 ## Motivation
 

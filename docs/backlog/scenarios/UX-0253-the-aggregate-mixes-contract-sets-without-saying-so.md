@@ -1,6 +1,6 @@
 # UX-253: the aggregate mixes contract sets without saying so
 
-**Priority:** Medium | **Status:** 🟢 Fixed & Verified | **Depends on:** UX-250 (the two-run case, done) | **Serves:** R7 and R5 — the two who read a distribution rather than a pair | **Topic:** contracts
+**Priority:** Medium | **Status:** 🟢 Fixed & Verified | **Depends on:** UX-250 (the two-run case, done) | **Serves:** R7 and R5 — the two who read a distribution rather than a pair | **Topic:** contracts | **Area:** bga
 
 ## Motivation
 

@@ -1,6 +1,6 @@
 # UX-129: the millisecond does not reconcile the figures it claims to
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-112 (done — this audits its headline number) | **Topic:** docs
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-112 (done — this audits its headline number) | **Topic:** docs | **Area:** tools/native_trace
 
 ## Motivation
 

@@ -1,6 +1,6 @@
 # UX-331: the README excerpt, and the sentence that contradicts itself
 
-**Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-139, UX-192 (pasted-output honesty) | **Serves:** R1 | **Topic:** docs
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-139, UX-192 (pasted-output honesty) | **Serves:** R1 | **Topic:** docs | **Area:** bga
 
 ## Motivation
 

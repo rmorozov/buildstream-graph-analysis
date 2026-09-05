@@ -1,6 +1,6 @@
 # UX-439: the blast-radius ranking ties, and the tie-break is unstable
 
-**Priority:** High | **Status:** 🟢 Done | **Found by:** round 69, `bst-tests` red on PR #188 with a diff that touches no analysis code | **Serves:** anyone who reads "the first thing to fix" and expects the same answer twice | **Topic:** analysis
+**Priority:** High | **Status:** 🟢 Done | **Found by:** round 69, `bst-tests` red on PR #188 with a diff that touches no analysis code | **Serves:** anyone who reads "the first thing to fix" and expects the same answer twice | **Topic:** analysis | **Area:** bga/diagnostics
 
 ## Motivation
 

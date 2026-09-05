@@ -1,6 +1,6 @@
 # UX-96: the baseline set exists, but assembling it is a scavenger hunt
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-81 (done) | **Topic:** store
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-81 (done) | **Topic:** store | **Area:** tools
 
 ## Motivation
 

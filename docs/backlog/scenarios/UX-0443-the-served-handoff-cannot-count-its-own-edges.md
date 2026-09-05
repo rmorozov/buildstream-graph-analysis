@@ -1,6 +1,6 @@
 # UX-443: the served handoff cannot count its own edges
 
-**Priority:** Medium | **Status:** 🟢 Done | **Found by:** round 70, closing `UX-431` | **Serves:** anyone who runs `bga view` and opens the handoff page instead of exporting a report | **Topic:** viewer
+**Priority:** Medium | **Status:** 🟢 Done | **Found by:** round 70, closing `UX-431` | **Serves:** anyone who runs `bga view` and opens the handoff page instead of exporting a report | **Topic:** viewer | **Area:** tools
 
 ## Motivation
 

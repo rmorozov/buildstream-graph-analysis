@@ -1,6 +1,6 @@
 # UX-364: the Perfetto lead promises a plane the trace does not carry
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-348 (the lead sentence), UX-362 (the same defect, opposite sign) | **Serves:** anyone opening a Plane 1 capture's trace in Perfetto | **Topic:** viewer
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-348 (the lead sentence), UX-362 (the same defect, opposite sign) | **Serves:** anyone opening a Plane 1 capture's trace in Perfetto | **Topic:** viewer | **Area:** bga/viewer
 
 ## Motivation
 

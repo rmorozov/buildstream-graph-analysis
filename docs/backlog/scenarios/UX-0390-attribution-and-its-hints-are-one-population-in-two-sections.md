@@ -1,6 +1,6 @@
 # UX-390: attribution and its hints are one population in two sections
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-288 (a population is published once), UX-351 (the label prints the unit the value carries), UX-286 (the report has chapters) | **Serves:** anyone reading where a build's time went | **Topic:** viewer
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-288 (a population is published once), UX-351 (the label prints the unit the value carries), UX-286 (the report has chapters) | **Serves:** anyone reading where a build's time went | **Topic:** viewer | **Area:** bga/viewer
 
 ## Motivation
 

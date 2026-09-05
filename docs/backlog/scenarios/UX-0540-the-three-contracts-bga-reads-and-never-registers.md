@@ -1,6 +1,6 @@
 # UX-540: the three contracts `bga` reads and never registers
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-248` (the contract inventory this extends), `UX-381` (the capture layout that names them), `UX-520` (the bundle that hit it) | **Found by:** `UX-520`, building the run bundle | **Serves:** anyone asking what shapes a release can read | **Topic:** contracts
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-248` (the contract inventory this extends), `UX-381` (the capture layout that names them), `UX-520` (the bundle that hit it) | **Found by:** `UX-520`, building the run bundle | **Serves:** anyone asking what shapes a release can read | **Topic:** contracts | **Area:** bga
 
 ## Motivation
 

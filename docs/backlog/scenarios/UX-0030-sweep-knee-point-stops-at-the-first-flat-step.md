@@ -1,6 +1,6 @@
 # UX-30: `bga sweep`'s knee point stops at the first flat step, so it recommends a capacity its own table shows is 35% too small
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** — | **Topic:** analysis
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** — | **Topic:** analysis | **Area:** bga/replay
 
 ## Motivation
 

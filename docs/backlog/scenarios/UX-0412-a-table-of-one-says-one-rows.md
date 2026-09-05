@@ -1,6 +1,6 @@
 # UX-412: a table of one says "1 rows"
 
-**Priority:** Medium | **Status:** 🟢 Done | **Found by:** UX-400's sweep, first run | **Serves:** every reader of a run small enough to have one of something | **Topic:** viewer
+**Priority:** Medium | **Status:** 🟢 Done | **Found by:** UX-400's sweep, first run | **Serves:** every reader of a run small enough to have one of something | **Topic:** viewer | **Area:** bga/viewer
 
 ## Motivation
 

@@ -1,6 +1,6 @@
 # UX-38: `bst_native_build_tracer report` accepts the JSON report and confidently prints "Processes traced: 0"
 
-**Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-11 (done) | **Topic:** capture
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-11 (done) | **Topic:** capture | **Area:** tools
 
 ## Motivation
 

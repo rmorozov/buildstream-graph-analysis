@@ -1,6 +1,6 @@
 # UX-283: the bottleneck view names elements you cannot reach
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-277 | **Serves:** R1 and R7 — who found the choke point and now want it | **Topic:** viewer
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-277 | **Serves:** R1 and R7 — who found the choke point and now want it | **Topic:** viewer | **Area:** bga/viewer
 
 ## Motivation
 

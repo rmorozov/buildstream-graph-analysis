@@ -1,6 +1,6 @@
 # UX-715: fifteen viewer modules, in a passage with no date
 
-**Priority:** Low | **Status:** 🔴 Open | **Depends on:** UX-294 (the acceptance the passage narrates), UX-511 (dated or derived), UX-340 (the module graph instrument) | **Found by:** architecture review 17, checklist item 3 | **Serves:** a reader of the architecture's viewer chapter, counting modules | **Topic:** docs | **Shape:** judgement
+**Priority:** Low | **Status:** 🔴 Open | **Depends on:** UX-294 (the acceptance the passage narrates), UX-511 (dated or derived), UX-340 (the module graph instrument) | **Found by:** architecture review 17, checklist item 3 | **Serves:** a reader of the architecture's viewer chapter, counting modules | **Topic:** docs | **Area:** bga/viewer | **Shape:** judgement
 
 ## Motivation
 

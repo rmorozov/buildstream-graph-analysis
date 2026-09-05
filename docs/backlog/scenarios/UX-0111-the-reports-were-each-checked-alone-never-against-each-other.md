@@ -1,6 +1,6 @@
 # UX-111: the reports were each checked alone, never against each other
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — (a cross-cutting audit, not a feature) | **Topic:** analysis
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — (a cross-cutting audit, not a feature) | **Topic:** analysis | **Area:** bga
 
 ## Motivation
 

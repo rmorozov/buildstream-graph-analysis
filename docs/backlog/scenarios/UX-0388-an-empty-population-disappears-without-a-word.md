@@ -1,6 +1,6 @@
 # UX-388: an empty population disappears without a word
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-107 ("nobody could look" is not "looked and found nothing"), UX-286 (the report has chapters), UX-320 (the page conforms to its sections) | **Serves:** anyone reading the report of an incremental build | **Topic:** viewer
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-107 ("nobody could look" is not "looked and found nothing"), UX-286 (the report has chapters), UX-320 (the page conforms to its sections) | **Serves:** anyone reading the report of an incremental build | **Topic:** viewer | **Area:** bga/viewer
 
 ## Motivation
 

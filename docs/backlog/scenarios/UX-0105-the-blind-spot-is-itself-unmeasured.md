@@ -1,6 +1,6 @@
 # UX-105: the hook's blind spot is itself unmeasured
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — (first step of Direction 4) | **Topic:** capture
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — (first step of Direction 4) | **Topic:** capture | **Area:** tools
 
 Direction 4 — see [`design/directions.md`](../../design/directions.md).
 

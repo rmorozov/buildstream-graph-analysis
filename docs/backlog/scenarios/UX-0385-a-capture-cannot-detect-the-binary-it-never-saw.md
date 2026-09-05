@@ -1,6 +1,6 @@
 # UX-385: a capture cannot detect the binary it never saw
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-376 (the policy that made this the remaining half) | **Serves:** anyone reading a capture taken with the spine off | **Topic:** capture
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-376 (the policy that made this the remaining half) | **Serves:** anyone reading a capture taken with the spine off | **Topic:** capture | **Area:** tools
 
 ## Motivation
 

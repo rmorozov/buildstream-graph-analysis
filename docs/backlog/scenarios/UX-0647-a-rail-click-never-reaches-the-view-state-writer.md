@@ -1,6 +1,6 @@
 # UX-647: a rail click never reaches the view-state writer
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-211 (URL state), UX-225 (the working set travels in the link), UX-640 (which measured it) | **Found by:** round 87, track B, settling a question UX-640 got half right | **Serves:** anyone who navigates by the rail and then shares the link | **Topic:** viewer
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-211 (URL state), UX-225 (the working set travels in the link), UX-640 (which measured it) | **Found by:** round 87, track B, settling a question UX-640 got half right | **Serves:** anyone who navigates by the rail and then shares the link | **Topic:** viewer | **Area:** bga/viewer
 
 ## Motivation
 

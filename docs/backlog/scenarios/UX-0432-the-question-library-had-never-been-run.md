@@ -1,6 +1,6 @@
 # UX-432: the question library had never been run
 
-**Priority:** High | **Status:** 🟢 Done | **Found by:** round 69, an outside walk of `bga snapshot` → `bga view` → Perfetto | **Serves:** every future round that touches the trace or the query library | **Topic:** guards
+**Priority:** High | **Status:** 🟢 Done | **Found by:** round 69, an outside walk of `bga snapshot` → `bga view` → Perfetto | **Serves:** every future round that touches the trace or the query library | **Topic:** guards | **Area:** tools
 
 ## Motivation
 

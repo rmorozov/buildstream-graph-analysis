@@ -1,6 +1,6 @@
 # UX-459: eight findings are reachable by nothing a clone has
 
-**Priority:** Medium | **Status:** 🟢 Done | **Found by:** round 72, tracing the heuristics in `bga analyze` to the fixtures that reach them | **Serves:** the round that adds a heuristic and has no fixture that can exercise it | **Topic:** guards
+**Priority:** Medium | **Status:** 🟢 Done | **Found by:** round 72, tracing the heuristics in `bga analyze` to the fixtures that reach them | **Serves:** the round that adds a heuristic and has no fixture that can exercise it | **Topic:** guards | **Area:** tools
 
 ## Motivation
 

@@ -1,6 +1,6 @@
 # UX-263: the page's own policy refuses its drawings
 
-**Priority:** High | **Status:** 🟢 Fixed & Verified | **Depends on:** — | **Serves:** R1, on every run opened in a browser | **Topic:** viewer
+**Priority:** High | **Status:** 🟢 Fixed & Verified | **Depends on:** — | **Serves:** R1, on every run opened in a browser | **Topic:** viewer | **Area:** bga/viewer
 
 ## Motivation
 

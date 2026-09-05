@@ -1,6 +1,6 @@
 # UX-438: the page guesses a unit on a real capture, and says so on the console
 
-**Priority:** Medium | **Status:** 🟢 Done | **Found by:** round 69, strand (b) — pressing all 468 controls on a real capture | **Serves:** every reader, and the next round that trusts a clean console | **Topic:** contracts
+**Priority:** Medium | **Status:** 🟢 Done | **Found by:** round 69, strand (b) — pressing all 468 controls on a real capture | **Serves:** every reader, and the next round that trusts a clean console | **Topic:** contracts | **Area:** bga
 
 ## Motivation
 

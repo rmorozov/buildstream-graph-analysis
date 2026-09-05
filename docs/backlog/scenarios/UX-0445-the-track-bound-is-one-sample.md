@@ -1,6 +1,6 @@
 # UX-445: the track bound is one sample, and nothing has measured the cost it stands for
 
-**Priority:** Medium | **Status:** ⚪ Blocked / Deferred | **Found by:** round 70, setting `TRACE_TRACK_BUDGET` in `UX-430` | **Serves:** anyone whose capture the handoff refuses, and the round that has to decide whether it was right to | **Topic:** guards
+**Priority:** Medium | **Status:** ⚪ Blocked / Deferred | **Found by:** round 70, setting `TRACE_TRACK_BUDGET` in `UX-430` | **Serves:** anyone whose capture the handoff refuses, and the round that has to decide whether it was right to | **Topic:** guards | **Area:** tools
 
 ## Motivation
 

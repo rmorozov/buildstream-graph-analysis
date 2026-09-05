@@ -1,6 +1,6 @@
 # UX-565: Part 29 is wired to `None` while the store holds the series it needs
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-234 (the store as a distribution), UX-92 | **Serves:** R3, the CI owner asking how stable an element's duration is | **Topic:** analysis
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-234 (the store as a distribution), UX-92 | **Serves:** R3, the CI owner asking how stable an element's duration is | **Topic:** analysis | **Area:** bga
 
 ## Motivation
 

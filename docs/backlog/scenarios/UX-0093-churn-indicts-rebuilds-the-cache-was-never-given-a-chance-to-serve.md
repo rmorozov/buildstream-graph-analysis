@@ -1,6 +1,6 @@
 # UX-93: churn indicts rebuilds the cache was never given a chance to serve
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-92 (done), UX-55 (done) | **Topic:** store
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-92 (done), UX-55 (done) | **Topic:** store | **Area:** bga
 
 ## Motivation
 

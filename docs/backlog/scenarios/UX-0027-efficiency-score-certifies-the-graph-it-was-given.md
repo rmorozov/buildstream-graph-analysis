@@ -1,6 +1,6 @@
 # UX-27: `efficiency_score` and `certified_headroom` certify the graph the run was given, so a badly-shaped build scores perfectly
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** — (UX-02 defines the score this changes; UX-39 is the CI-facing consequence) | **Topic:** analysis
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** — (UX-02 defines the score this changes; UX-39 is the CI-facing consequence) | **Topic:** analysis | **Area:** bga
 
 ## Motivation
 

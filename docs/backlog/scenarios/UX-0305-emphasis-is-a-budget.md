@@ -1,6 +1,6 @@
 # UX-305: emphasis is a budget, spent once per block
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-304 (the tokens), styleguide §4.6 | **Serves:** R1 | **Topic:** viewer
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-304 (the tokens), styleguide §4.6 | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer
 
 ## Motivation
 

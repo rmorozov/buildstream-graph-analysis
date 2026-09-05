@@ -1,6 +1,6 @@
 # UX-321: the question that can never answer, and three smaller seams
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-312 (the class it survives from), UX-308 (the contract it mis-reads) | **Serves:** R1, R2 | **Topic:** viewer
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-312 (the class it survives from), UX-308 (the contract it mis-reads) | **Serves:** R1, R2 | **Topic:** viewer | **Area:** tools
 
 ## Motivation
 

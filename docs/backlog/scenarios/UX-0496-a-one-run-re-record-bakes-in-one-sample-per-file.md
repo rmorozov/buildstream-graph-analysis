@@ -1,6 +1,6 @@
 # UX-496: a wholesale re-record samples every file once, and the drift factor has never been sized against that
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-488` did the re-record; `UX-494` let the gate speak; `UX-458` closed the factor with a starting value | **Found by:** round 73, driving PR #191 to green | **Serves:** the round whose gate is red on a file nobody touched, and cannot tell a stale reference entry from a real regression | **Topic:** guards
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-488` did the re-record; `UX-494` let the gate speak; `UX-458` closed the factor with a starting value | **Found by:** round 73, driving PR #191 to green | **Serves:** the round whose gate is red on a file nobody touched, and cannot tell a stale reference entry from a real regression | **Topic:** guards | **Area:** tools
 
 ## Motivation
 

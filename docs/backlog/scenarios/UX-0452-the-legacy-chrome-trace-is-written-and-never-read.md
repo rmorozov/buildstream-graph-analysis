@@ -1,6 +1,6 @@
 # UX-452: every capture writes a legacy Chrome trace that no reader opens
 
-**Priority:** Low | **Status:** 🟢 Done | **Found by:** round 70, `UX-437`'s consumer census on its first run | **Serves:** the reader who tars a capture up for an issue, and pays for a file nobody reads | **Topic:** contracts
+**Priority:** Low | **Status:** 🟢 Done | **Found by:** round 70, `UX-437`'s consumer census on its first run | **Serves:** the reader who tars a capture up for an issue, and pays for a file nobody reads | **Topic:** contracts | **Area:** tools
 
 ## Motivation
 

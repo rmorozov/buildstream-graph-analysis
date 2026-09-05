@@ -1,6 +1,6 @@
 # UX-477: one graph, two verdicts — the chain-bound line is decided by how long the build is
 
-**Priority:** Medium | **Status:** 🟢 Done | **Found by:** round 72, `UX-468`'s planted walk — a six-element strict chain was diagnosed "scheduler-bound, not chain-bound" | **Serves:** the graph-owner whose build really is a chain and is told the time is going somewhere other than the chain | **Topic:** analysis
+**Priority:** Medium | **Status:** 🟢 Done | **Found by:** round 72, `UX-468`'s planted walk — a six-element strict chain was diagnosed "scheduler-bound, not chain-bound" | **Serves:** the graph-owner whose build really is a chain and is told the time is going somewhere other than the chain | **Topic:** analysis | **Area:** bga
 
 ## Motivation
 

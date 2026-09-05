@@ -1,6 +1,6 @@
 # UX-314: the deep link Perfetto refuses to follow
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-198 (the link), UX-299 (what made it load-bearing) | **Serves:** R1 | **Topic:** viewer
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-198 (the link), UX-299 (what made it load-bearing) | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer
 
 ## Motivation
 

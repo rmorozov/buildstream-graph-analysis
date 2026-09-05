@@ -1,6 +1,6 @@
 # UX-557: the drift gate's cause filter admits all 424 files, and `--why` cannot say so
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-476 (which built the filter), UX-442 (the carry), UX-524 (the map) | **Serves:** the round whose PR the gate reddens | **Topic:** guards
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-476 (which built the filter), UX-442 (the carry), UX-524 (the map) | **Serves:** the round whose PR the gate reddens | **Topic:** guards | **Area:** tools
 
 ## Motivation
 

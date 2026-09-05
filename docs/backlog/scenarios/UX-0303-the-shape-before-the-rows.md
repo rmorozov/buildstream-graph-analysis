@@ -1,6 +1,6 @@
 # UX-303: the shape before the rows — sparklines and density strips
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-226 (the sparkline this generalizes), UX-205 (the thresholds the strip drives), UX-234 (the published percentiles) | **Serves:** R1, R7 | **Topic:** viewer
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-226 (the sparkline this generalizes), UX-205 (the thresholds the strip drives), UX-234 (the published percentiles) | **Serves:** R1, R7 | **Topic:** viewer | **Area:** bga/viewer
 
 ## Motivation
 

@@ -1,6 +1,6 @@
 # UX-292: thirteen tables share one view-state key
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-211 | **Serves:** R1 and R7 | **Topic:** viewer
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-211 | **Serves:** R1 and R7 | **Topic:** viewer | **Area:** bga/viewer
 
 ## Motivation
 

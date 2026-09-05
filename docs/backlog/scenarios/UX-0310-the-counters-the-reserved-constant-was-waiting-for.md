@@ -1,6 +1,6 @@
 # UX-310: the counters the reserved constant was waiting for
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-298 (which reserved `TYPE_COUNTER`), UX-297 (the streaming pass that computes them) | **Serves:** R1, R5 | **Topic:** capture
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-298 (which reserved `TYPE_COUNTER`), UX-297 (the streaming pass that computes them) | **Serves:** R1, R5 | **Topic:** capture | **Area:** tools
 
 ## Motivation
 

@@ -1,6 +1,6 @@
 # UX-648: the jump box names sections the old way
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-223 (the jump box becomes a command palette), UX-640 (which fixed the rail's half) | **Found by:** round 87, track B, from the seam it did not cross | **Serves:** anyone who reaches a section through the palette | **Topic:** viewer
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-223 (the jump box becomes a command palette), UX-640 (which fixed the rail's half) | **Found by:** round 87, track B, from the seam it did not cross | **Serves:** anyone who reaches a section through the palette | **Topic:** viewer | **Area:** bga/viewer
 
 ## Motivation
 

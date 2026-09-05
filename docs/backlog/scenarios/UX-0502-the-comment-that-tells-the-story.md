@@ -1,6 +1,6 @@
 # UX-502: the comment that tells the story
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-497 (the budget these are over) | **Serves:** every session that opens a dev tool to use it, not to relive it | **Topic:** docs
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-497 (the budget these are over) | **Serves:** every session that opens a dev tool to use it, not to relive it | **Topic:** docs | **Area:** tools
 
 ## Motivation
 

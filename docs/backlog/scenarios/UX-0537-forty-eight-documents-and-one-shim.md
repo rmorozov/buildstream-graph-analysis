@@ -1,6 +1,6 @@
 # UX-537: forty-eight hand-built documents, and the shared shim they were to become
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-264` (the shared shim), `UX-219` and `UX-254` (two defects this shape has already produced), `UX-523` (found it again) | **Serves:** the next round that adds a standard DOM call to the viewer | **Topic:** guards
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** `UX-264` (the shared shim), `UX-219` and `UX-254` (two defects this shape has already produced), `UX-523` (found it again) | **Serves:** the next round that adds a standard DOM call to the viewer | **Topic:** guards | **Area:** bga/viewer
 
 ## Motivation
 

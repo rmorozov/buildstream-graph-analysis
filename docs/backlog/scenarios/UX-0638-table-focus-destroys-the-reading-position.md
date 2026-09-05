@@ -1,6 +1,6 @@
 # UX-638: table focus destroys the reading position
 
-**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-284 (tools above the table), UX-318 (the rabbit hole announces its depth) | **Found by:** round 87, by the repository's owner pressing Expand twice | **Serves:** anyone who expands a table below the first screen | **Topic:** viewer
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-284 (tools above the table), UX-318 (the rabbit hole announces its depth) | **Found by:** round 87, by the repository's owner pressing Expand twice | **Serves:** anyone who expands a table below the first screen | **Topic:** viewer | **Area:** bga/viewer
 
 ## Motivation
 

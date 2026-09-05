@@ -256,13 +256,13 @@ def find_dead_js():
 
 def render(headers, rows, as_json):
     if as_json:
-        print(json.dumps([dict(zip(headers, row, strict=True)) for row in rows]))
+        print(json.dumps([dict(zip(headers, row)) for row in rows]))
         return
     widths = [max(len(h), *(len(str(r[i])) for r in rows)) if rows else len(h)
               for i, h in enumerate(headers)]
-    print("  ".join(h.ljust(w) for h, w in zip(headers, widths, strict=True)))
+    print("  ".join(h.ljust(w) for h, w in zip(headers, widths)))
     for row in rows:
-        print("  ".join(str(c).ljust(w) for c, w in zip(row, widths, strict=True)))
+        print("  ".join(str(c).ljust(w) for c, w in zip(row, widths)))
 
 
 def main():

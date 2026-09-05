@@ -28,7 +28,8 @@ file is the day-one summary, and
 `orient` → `decompose` (the **shape**, derived by `dev_close_task.py --shape`) → tracks → `verifier` → merge, one `make test`, close.
 Mechanical and bounded shapes are `implementer` tracks on `sonnet` in worktrees; a judgement shape is the session's own.
 `researcher` and `verifier` read on `sonnet`; the session judges, briefs and merges, and reads reports, never diffs or
-logs — its cost is the live context at each rebuild, 73 % of its tokens when measured. `measure`, `falsify`, `verify` run
+logs — its cost is the live context at each rebuild, 73 % of its tokens when measured. A tool result over a screen
+(60 lines) goes to the scratchpad and is read by `head`, `grep` or `tail_lines`; a log is never taken whole (`UX-711`). `measure`, `falsify`, `verify` run
 inside a track; `derive` before moving viewer code; `walk` and `design-review` audit the page; every run is a row in `docs/audits/agent-runs.md`.
 
 ## Conventions

@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-710 scenarios: **40 open**, 670 closed.
+710 scenarios: **39 open**, 671 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -26,7 +26,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | viewer | 9 | 157 |
 | cli | 0 | 21 |
 | store | 0 | 16 |
-| docs | 8 | 113 |
+| docs | 7 | 113 |
 | guards | 13 | 159 |
 
 ## Open scenarios
@@ -74,7 +74,6 @@ task file, which is the only place it ever lived twice.
 | UX-703 | [a mutation run on the touched modules, weekly](UX-0703-a-mutation-run-on-the-touched-modules-weekly.md) | guards | Low | the falsify skill, which is a hand ritual per guard and cannot be run over the suite | 🔴 |
 | UX-705 | [the burn-down runs on the reporters' model — a batch a commit, never a suppression](UX-0705-the-burn-down-runs-on-the-reporters-model-a-batch-a-commit-never-a-supp.md) | guards | High | R8, who wants the baseline to reach zero without the session's model reading 1,709 findings | 🔴 |
 | UX-708 | [the first batch under the pipeline, priced per shape](UX-0708-the-first-batch-under-the-pipeline-priced-per-shape.md) | docs | High | the advisory in `CLAUDE.md`, which says `sonnet` for tracks on an argument | 🔴 |
-| UX-711 | [a tool result longer than a screen goes to a file](UX-0711-a-tool-result-longer-than-a-screen-goes-to-a-file.md) | docs | Medium | the orchestrating session, whose live context every rebuild re-buys | 🔴 |
 | UX-712 | [the size ledger, for what has no finding identity](UX-0712-the-size-ledger-for-what-has-no-finding-identity.md) | guards | Medium | the refactor stream, which reads the top row of this ledger | 🔴 |
 
 ## UX-706..UX-711: the ninety-fourth round — the pipeline, and which model runs which shape (2026-09-05)

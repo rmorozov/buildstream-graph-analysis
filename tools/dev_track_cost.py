@@ -48,6 +48,21 @@ _READ = re.compile(
     r"|git +(log|grep|show|diff|status|ls-remote))\b")
 
 
+def _record(line):
+    """One transcript line, or `None` when it will not parse.
+
+    `UX-711`: a session measuring **itself** reads a transcript still
+    being appended to, so the last line is half written. Every reader
+    below goes through here; skipping that line costs the final
+    response and is what makes the figure obtainable from inside the
+    run it describes.
+    """
+    try:
+        return json.loads(line)
+    except json.JSONDecodeError:
+        return None
+
+
 def _tool_text(block):
     """The argv-ish text of one `tool_use` block: what it ran or wrote."""
     args = block.get("input") or {}
@@ -100,7 +115,9 @@ def responses(path):
     order, tools, usage = [], {}, {}
     with open(path, encoding="utf-8") as handle:
         for line in handle:
-            record = json.loads(line)
+            record = _record(line)
+            if record is None:
+                continue
             message = record.get("message")
             if record.get("type") != "assistant" or not isinstance(message, dict):
                 continue
@@ -120,7 +137,10 @@ def _stamps(path):
     out = []
     with open(path, encoding="utf-8") as handle:
         for line in handle:
-            stamp = json.loads(line).get("timestamp")
+            parsed = _record(line)
+            if parsed is None:
+                continue
+            stamp = parsed.get("timestamp")
             if stamp:
                 out.append(stamp)
     return out
@@ -167,7 +187,9 @@ def _response_stamps(path):
     order, stamp = [], {}
     with open(path, encoding="utf-8") as handle:
         for line in handle:
-            record = json.loads(line)
+            record = _record(line)
+            if record is None:
+                continue
             message = record.get("message")
             if record.get("type") != "assistant" or not isinstance(message, dict):
                 continue
@@ -278,7 +300,9 @@ def implementer_transcripts(root):
         if not first.strip():
             continue
         try:
-            record = json.loads(first)
+            record = _record(first)
+            if record is None:
+                continue
         except json.JSONDecodeError:
             continue  # a `tasks/*.output` that is a Bash run's own stdout
         if not isinstance(record, dict):
@@ -302,7 +326,9 @@ def _agent_and_model(path):
     agent = model = None
     with open(path, encoding="utf-8") as handle:
         for line in handle:
-            record = json.loads(line)
+            record = _record(line)
+            if record is None:
+                continue
             if agent is None and record.get("attributionAgent"):
                 agent = record["attributionAgent"]
             message = record.get("message")

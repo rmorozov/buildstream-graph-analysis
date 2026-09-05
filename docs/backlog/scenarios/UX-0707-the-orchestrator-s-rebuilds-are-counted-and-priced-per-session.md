@@ -1,6 +1,6 @@
 # UX-707: the orchestrator's rebuilds are counted and priced, per session
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-525 (the track-cost tool), UX-663 (the run ledger) | **Serves:** the session deciding how long to stay idle and how much to keep in view, from a number rather than a feeling | **Topic:** guards | **Shape:** bounded
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-525 (the track-cost tool), UX-663 (the run ledger) | **Serves:** the session deciding how long to stay idle and how much to keep in view, from a number rather than a feeling | **Topic:** guards | **Shape:** bounded
 
 ## Motivation
 
@@ -61,3 +61,5 @@ count from 35 to 36.
 | drop the "no tool before it" guard (`cost > floor` alone) | `test_a_big_response_after_a_tool_carrying_one_is_not_a_rebuild` | 1 failed, 4 passed |
 | `cost > floor` → `cost >= floor` | `test_a_response_at_the_floor_is_not_over_it` | 1 failed, 4 passed |
 | restore `range(1, len(rows))` | `test_a_big_first_response_is_a_rebuild` | 1 failed, 5 passed |
+
+**Deviation.** `--rounds` kept the old `index > 0` idiom after the track's fix and could not count a first response; made equal to `--session` at the merge. The acceptance figures (11 rebuilds, 3.76M) were a moving transcript's; the share, 73-79 %, is the durable one.

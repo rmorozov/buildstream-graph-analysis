@@ -122,3 +122,12 @@ class TestTheRoundSplitSumsToTheTotal:
         assert sum(t["rebuilds"] for t in totals.values()) == 2
         assert totals["one"]["tokens"] == 51000
         assert totals["two"]["tokens"] == 62000
+
+    def test_the_rounds_count_a_big_first_response_as_session_does(self, tmp_path):
+        path = _transcript(tmp_path, [
+            _record("msg_a", [_text("brief")], _usage(500000),
+                    "2026-09-05T00:00:00Z"),
+            _record("msg_b", [_bash("ls docs")], _usage(10), "2026-09-05T00:01:00Z"),
+        ])
+        totals = dev_track_cost.round_totals(path, "one=2026-09-05T00:00:00Z")
+        assert totals["one"]["rebuilds"] == dev_track_cost.rebuilds(path)["count"] == 1

@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-709 scenarios: **47 open**, 662 closed.
+709 scenarios: **43 open**, 666 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -26,8 +26,8 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | viewer | 9 | 157 |
 | cli | 0 | 21 |
 | store | 0 | 16 |
-| docs | 10 | 113 |
-| guards | 18 | 158 |
+| docs | 9 | 113 |
+| guards | 15 | 158 |
 
 ## Open scenarios
 
@@ -73,15 +73,11 @@ task file, which is the only place it ever lived twice.
 | UX-697 | [a type-error ratchet, contracts first](UX-0697-a-type-error-ratchet-contracts-first.md) | guards | Medium | the session editing a schema or a contract, where a wrong key is a `UX-190` bump nobody meant | 🔴 |
 | UX-698 | [the gate-only shelf on GitHub — code scanning, a lockfile and audit, Dependabot, secret scanning](UX-0698-the-gate-only-shelf-on-github-code-scanning-a-lockfile-and-audit-depen.md) | guards | High | R8 reading a red gate that a hosted tool raised, and the user who wants the heavier analyses without a slower inner loop | 🔴 |
 | UX-699 | [the viewer linted as one module graph](UX-0699-the-viewer-linted-as-one-module-graph.md) | viewer | Medium | the session editing a viewer module, which today has no linter of any kind | 🔴 |
-| UX-700 | [the symbol index — and CodeQL declined for navigation](UX-0700-the-symbol-index-and-codeql-declined-for-navigation.md) | guards | High | the session at the start of a task, which today spends five greps and their raw lines to learn who calls what | 🔴 |
 | UX-701 | [the `self-review` skill — the existing policy on the diff, on the reporters' model](UX-0701-the-self-review-skill-the-existing-policy-on-the-diff-on-the-reporters.md) | docs | High | the implementing session before it reports done, and R8 who then reads a finding list instead of a diff | 🔴 |
 | UX-702 | [a performance ratchet at the gate](UX-0702-a-performance-ratchet-at-the-gate.md) | guards | Medium | R8 reading whether a round made `bga analyze` slower on the largest capture, which nothing today records | 🔴 |
 | UX-703 | [a mutation run on the touched modules, weekly](UX-0703-a-mutation-run-on-the-touched-modules-weekly.md) | guards | Low | the falsify skill, which is a hand ritual per guard and cannot be run over the suite | 🔴 |
 | UX-705 | [the burn-down runs on the reporters' model — a batch a commit, never a suppression](UX-0705-the-burn-down-runs-on-the-reporters-model-a-batch-a-commit-never-a-supp.md) | guards | High | R8, who wants the baseline to reach zero without the session's model reading 1,709 findings | 🔴 |
-| UX-707 | [the orchestrator's rebuilds are counted and priced, per session](UX-0707-the-orchestrator-s-rebuilds-are-counted-and-priced-per-session.md) | guards | High | the session deciding how long to stay idle and how much to keep in view | 🔴 |
 | UX-708 | [the first batch under the pipeline, priced per shape](UX-0708-the-first-batch-under-the-pipeline-priced-per-shape.md) | docs | High | the advisory in `CLAUDE.md`, which says `sonnet` for tracks on an argument | 🔴 |
-| UX-709 | [close a batch of ids in one `--move`](UX-0709-close-a-batch-of-ids-in-one-move.md) | guards | Medium | the orchestrator closing a merged batch | 🔴 |
-| UX-710 | [a ledger row is derived from the transcript, not typed](UX-0710-a-ledger-row-is-derived-from-the-transcript-not-typed.md) | docs | Medium | the session that types a row from the usage line | 🔴 |
 | UX-711 | [a tool result longer than a screen goes to a file](UX-0711-a-tool-result-longer-than-a-screen-goes-to-a-file.md) | docs | Medium | the orchestrating session, whose live context every rebuild re-buys | 🔴 |
 
 ## UX-706..UX-711: the ninety-fourth round — the pipeline, and which model runs which shape (2026-09-05)

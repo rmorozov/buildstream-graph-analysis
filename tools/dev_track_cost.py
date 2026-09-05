@@ -223,7 +223,7 @@ def round_totals(path, rounds_spec, floor=30000):
                     owner = name
         totals[owner]["responses"] += 1
         totals[owner]["tokens"] += _fresh(usage)
-        if index > 0 and _fresh(usage) > floor and not rows[index - 1][0]:
+        if _fresh(usage) > floor and (index == 0 or not rows[index - 1][0]):
             totals[owner]["rebuilds"] += 1
     return totals
 

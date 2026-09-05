@@ -9,7 +9,7 @@ shape from numbers rather than from memory. Rows are appended by the
 orchestrating session at the end of the round; a run cut off by a
 limit is a row too.
 
-| round | agent | model | task | tokens | tool calls | wall | outcome | what cost the most / what went wrong |
+| round | agent | model | task | tokens (fresh: input + cache creation, `UX-710`; reads low by the last response's output) | tool calls | wall | outcome | what cost the most / what went wrong |
 |---|---|---|---|---|---|---|---|---|
 | 64 | general-purpose | main | verification, 12 landings | 116k | 103 | 10 m | complete | mutation loop per guard; suite runs |
 | 64 | general-purpose | main | outside walk, answer key | 175k | 95 | 18 m | complete | real bst build; trace_processor download (4 m) |
@@ -29,8 +29,14 @@ limit is a row too.
 | 92 | researcher | sonnet | the test plan's landing, the suite's shape, the release gate, the backlog | 96k | 34 | 3.8 m | complete | the brief grouped rounds 64, 78 and 80 as one plan; each file's dateline read |
 | 93 | researcher | sonnet | the lint gate, ruff by family, radon, pyright, bandit, eslint, CodeQL feasibility | 62k | 51 | 5.8 m | complete | `ruff --statistics` exits 1 on any finding — one invocation per family |
 | 94 | researcher | sonnet | the stages as documented, the ledger by model, 60 closed tasks shaped, tasks per PR, the hooks timed | 145k | 76 | 11.4 m | complete | `git show --stat` on a merge hides the `closed.md` diff and truncates test paths; a batch commit closes 2-19 ids |
+| 95 | implementer | sonnet | track C: UX-700 the symbol index (bounded), incl. the verifier's two fixes | 216k | 101 | 25 m | merged | the task's Acceptance Test named five dead exports that the file never lists; the proxy classifier misread cp/pytest chains as git |
+| 95 | implementer | sonnet | track A: UX-709 batch --move (bounded), incl. the verifier's two fixes | 271k | 97 | 31 m | merged | a batch grammar argparse cannot express; proving the single-id call byte-identical cost most |
+| 95 | implementer | sonnet | track B: UX-707 --session and UX-710 --ledger (bounded), incl. the verifier's two fixes | 281k | 129 | 31.1 m | merged | ran twice against the main checkout instead of the worktree; a heredoc containing the word complete was refused as a shell builtin |
+| 95 | verifier | sonnet | verifier of track C | 46k | 29 | 5.6 m | one guard could not fail; `__all__` listed dead; attribute calls and shadowing unresolved | `make test-touching` is a no-op once the track's commit is HEAD; `--base` needed |
+| 95 | verifier | sonnet | verifier of track A | 45k | 48 | 9.8 m | leaked module globals; a repeated id closed twice; a false lint claim | the leak is invisible under `-n auto`; found by running the two files serially |
+| 95 | verifier | sonnet | verifier of track B | 63k | 44 | 8.4 m | the first response never a rebuild; `--list` guard untested; 139k vs 145k explained | the harness's billed total had to be dug out of a task-notification string |
 
-What the sixteen rows already say: a researcher that reads a document
+What the twenty-two rows already say: a researcher that reads a document
 whole costs 100-180k; a walker that drives every control costs 336k;
 the two cuts cost a re-run each. The `walk` and `design-review`
 skills fix the report shape so the next rows are smaller, and the

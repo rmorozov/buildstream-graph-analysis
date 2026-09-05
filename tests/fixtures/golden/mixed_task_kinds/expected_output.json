@@ -353,6 +353,10 @@
             "governing core count (host_cpu_count/cpu_budget)"
         ]
     },
+    "utilization_envelope": {
+        "available": false,
+        "absence": "this capture has no host-samples.jsonl - it was taken before `UX-378`, or the host exposes no /proc/meminfo"
+    },
     "plane2_absence": "Plane 2 was not captured for this run, so there is no per-process detail. `bga snapshot -- bst build TARGET` captures both planes.",
     "attribution": {
         "execution_on_chain_us": 14000,
@@ -1106,10 +1110,10 @@
         }
     ],
     "document_shape": {
-        "leaves": 708,
+        "leaves": 710,
         "deepest_depth": 7,
         "deepest_path": "findings.[].evidence.steps.[].entering.[]",
         "deeper_than_three": 341,
-        "deeper_than_three_share": 0.481638418079096
+        "deeper_than_three_share": 0.4802816901408451
     }
 }

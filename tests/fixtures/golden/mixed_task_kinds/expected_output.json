@@ -99,6 +99,23 @@
             "trace_query": "dependency-wait"
         },
         {
+            "id": "fan-in-ranking",
+            "severity": "info",
+            "title": "Elements that pull in the most (by upstream closure):",
+            "detail": [
+                "    1. app.bst (2 upstream, 1 named directly)",
+                "    2. lib.bst (1 upstream, 1 named directly)"
+            ],
+            "elements": [
+                "app.bst",
+                "lib.bst"
+            ],
+            "evidence": {},
+            "reader": "graph-owner",
+            "copy_text": "BGA finding: Elements that pull in the most (by upstream closure):\n      1. app.bst (2 upstream, 1 named directly)\n      2. lib.bst (1 upstream, 1 named directly)\n  Elements: app.bst, lib.bst\n  Run: golden-fixture-manifest-hash-v1",
+            "trace_query": "dependency-wait"
+        },
+        {
             "id": "graph-width",
             "severity": "info",
             "title": "The graph is 4 elements in 3 dependency stages, and its widest stage holds 2 - so no more than 2 can ever be building at once, whatever the capacity",
@@ -290,6 +307,7 @@
             "leads_with": "chain-graph",
             "findings": [
                 "chain-graph",
+                "fan-in-ranking",
                 "graph-width"
             ]
         },
@@ -453,6 +471,36 @@
                 "is_structural_kind": false
             }
         },
+        "fan_in": {
+            "app.bst": {
+                "direct_count": 1,
+                "transitive_count": 2,
+                "immediate_dominator": "lib.bst",
+                "element_kind": "unknown",
+                "is_structural_kind": false
+            },
+            "base.bst": {
+                "direct_count": 0,
+                "transitive_count": 0,
+                "immediate_dominator": null,
+                "element_kind": "unknown",
+                "is_structural_kind": false
+            },
+            "extra.bst": {
+                "direct_count": 0,
+                "transitive_count": 0,
+                "immediate_dominator": null,
+                "element_kind": "unknown",
+                "is_structural_kind": false
+            },
+            "lib.bst": {
+                "direct_count": 1,
+                "transitive_count": 1,
+                "immediate_dominator": "base.bst",
+                "element_kind": "unknown",
+                "is_structural_kind": false
+            }
+        },
         "criticality_probability": {
             "base.bst": {
                 "probability": 1.0,
@@ -490,7 +538,11 @@
             "extra.bst",
             "app.bst"
         ],
-        "blast_radius_ranked_by": "measured-rebuild-time"
+        "blast_radius_ranked_by": "measured-rebuild-time",
+        "top_fan_in": [
+            "app.bst",
+            "lib.bst"
+        ]
     },
     "critical_path_detail": [
         {
@@ -919,6 +971,35 @@
             "unpublished_inputs": []
         },
         {
+            "claim": "fan-in-ranking",
+            "kind": "finding",
+            "document": "analyze/v6",
+            "evidence": [
+                {
+                    "path": "elements.fan_in[app.bst].transitive_count",
+                    "resolved": true,
+                    "value": 2,
+                    "quantity": "count"
+                },
+                {
+                    "path": "elements.fan_in[lib.bst].transitive_count",
+                    "resolved": true,
+                    "value": 1,
+                    "quantity": "count"
+                }
+            ],
+            "rule": {
+                "name": null,
+                "threshold": null,
+                "comparison": "present",
+                "observed_path": null,
+                "sentence": "Published for every graph with something to rank - an element that pulls in nothing is left out rather than listed at zero, and a structural kind is reported by the claim below rather than ranked here (`UX-76`). Unlike its mirror it is not gated on the diagnosis: what an element is built on is true whichever way the build is bound, and the claim is a description of the graph rather than an ordering of work.",
+                "module": "bga/findings.py"
+            },
+            "trace_query": "dependency-wait",
+            "unpublished_inputs": []
+        },
+        {
             "claim": "graph-width",
             "kind": "finding",
             "document": "analyze/v6",
@@ -1110,10 +1191,10 @@
         }
     ],
     "document_shape": {
-        "leaves": 710,
+        "leaves": 761,
         "deepest_depth": 7,
         "deepest_path": "findings.[].evidence.steps.[].entering.[]",
-        "deeper_than_three": 341,
-        "deeper_than_three_share": 0.4802816901408451
+        "deeper_than_three": 380,
+        "deeper_than_three_share": 0.49934296977660975
     }
 }

@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-717 scenarios: **38 open**, 679 closed.
+717 scenarios: **37 open**, 680 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -27,7 +27,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | cli | 0 | 21 |
 | store | 0 | 16 |
 | docs | 8 | 116 |
-| guards | 14 | 161 |
+| guards | 13 | 161 |
 
 ## Open scenarios
 
@@ -72,7 +72,6 @@ task file, which is the only place it ever lived twice.
 | UX-715 | [fifteen viewer modules, in a passage with no date](UX-0715-fifteen-viewer-modules-in-a-passage-with-no-date.md) | docs | Low | a reader of the architecture's viewer chapter, counting modules | 🔴 |
 | UX-716 | [a guard whose cost is its population has no refresh route](UX-0716-a-guard-whose-cost-is-its-population-has-no-refresh-route.md) | guards | Medium | the branch that goes red for test files another branch added | 🔴 |
 | UX-717 | [the host series is on the trace and in no question](UX-0717-the-host-series-is-on-the-trace-and-in-no-question.md) | viewer | Medium | a reader with Perfetto open, asking whether the cores were busy | 🔴 |
-| UX-718 | [the census omits the guard its own docstring names](UX-0718-the-census-omits-the-guard-its-own-docstring-names.md) | guards | High | anyone whose inner loop is `make test-touching` | 🔴 |
 | UX-719 | [the bottleneck fan-in and fan-out labels are swapped](UX-0719-the-bottleneck-fan-in-and-fan-out-labels-are-swapped.md) | analysis | Medium | a reader of the graph-shape block | 🔴 |
 
 ## UX-706..UX-711: the ninety-fourth round — the pipeline, and which model runs which shape (2026-09-05)

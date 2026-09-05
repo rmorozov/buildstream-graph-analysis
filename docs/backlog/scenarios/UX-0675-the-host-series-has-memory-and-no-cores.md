@@ -111,3 +111,11 @@ them (`test_every_library_query_is_reachable_from_a_finding`) cannot
 pass until a finding names CPU utilization, which is `UX-676`'s. Filed
 as `UX-717` with the count and the blocked clause recorded, rather
 than carried here.
+
+**A correction, from the round's own full run.** The ceiling allowed
+one jiffy of quantisation per *sample*; there are `cores` of them,
+each CPU rounding up at its own tick. Red at 4.314 busy on 4 cores
+over 0.051 s - 22 jiffies where four can accrue 20.4. So
+`cores + 1/(TICKS*gap)` = 4.196 becomes `cores * (1 + ...)` = 4.784,
+and 4.02 at a 2 s gap: the bound was wrong, not the sampler, and it
+is still not a slack constant.

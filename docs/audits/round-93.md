@@ -76,7 +76,11 @@ A design round produces no code; the one test edit is the direction
 walk's count, 1-18 → 1-19. Two of the brief's premises did not
 survive measurement: the stale-comment shape (names: 0 of 1,585) and
 CodeQL as a navigation tool (a minutes-long build for millisecond
-questions). The rest held and is filed with its numbers. Not
-established: whether the repository is public (decides CodeQL versus
-`semgrep` in `UX-698`) and whether the five unreferenced viewer
-exports are reached dynamically (`UX-699` checks before deleting).
+questions). The rest held and is filed with its numbers. The user
+confirmed the repository is public, so `UX-698` takes CodeQL. Not
+established: whether the five unreferenced viewer exports are reached
+dynamically (`UX-699` checks before deleting). The round's own gate
+went red on the branch — the backlog it added to made `--check`
+quadratic in the guard that runs it eleven times — and `UX-704`
+closed it: the ledger of `UX-694` and the ratchet of `UX-702`, met
+live.

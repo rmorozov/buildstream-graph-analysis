@@ -18,9 +18,8 @@ a browser (`REVIEW.md`, the security pass).
 
 A second workflow, `quality.yml`, on pull requests and a weekly
 schedule, never in `make lint`: **code scanning** — CodeQL
-(`python`, `javascript`) if the repository is public, `semgrep` with
-the `p/python` and `p/javascript` packs if it is private and Advanced
-Security is not licensed; **a lockfile** (`uv lock` or `pip-compile`
+(`python`, `javascript`); the repository is public, so code scanning
+is free and `semgrep` is not needed; **a lockfile** (`uv lock` or `pip-compile`
 into `requirements.lock`) committed and `pip-audit -r` against it;
 **Dependabot** for pip and actions, weekly, grouped; **secret
 scanning** with push protection on the repository. Each tool's

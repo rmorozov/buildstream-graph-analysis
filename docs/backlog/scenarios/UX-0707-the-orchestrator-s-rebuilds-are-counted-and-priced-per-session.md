@@ -33,3 +33,26 @@ line per session in the run ledger, beside the agents' rows.
 On this session's transcript the tool prints 11 rebuilds and 3.76M;
 mutation: count a response with a tool before it as a rebuild — the
 count moves and the guard on a synthetic transcript reddens.
+
+## Outcome
+
+**The gap, measured.** No `--session` flag existed; `responses()` and
+`_fresh()`-shaped cost were already there for the phase split, nothing
+read them for a rebuild. `--floor` and `--rounds` were absent too.
+
+**The close, measured.** `python3 tools/dev_track_cost.py --session
+<this session's transcript>` (grown past round 94, run at round 95):
+`rebuilds 35  tokens 14580071  share 78.7%` — round 94's 11/3.76M/73%
+was this same live file measured 45 responses earlier; the file keeps
+growing across rounds, so the ratio (not the count) is the stable
+figure. `--rounds "a=2026-08-18T13:00:00Z,b=2026-08-19T10:00:00Z"` on
+the same file: totals partition every response, `sum(tokens) ==`
+the ungrouped total (checked by
+`tests/unit/test_a_rebuild_is_a_wake_with_nothing_before_it.py`).
+
+**Mutations.**
+
+| mutation | reddened | count |
+|---|---|---|
+| drop the "no tool before it" guard (`cost > floor` alone) | `test_a_big_response_after_a_tool_carrying_one_is_not_a_rebuild` | 1 failed, 4 passed |
+| `cost > floor` → `cost >= floor` | `test_a_response_at_the_floor_is_not_over_it` | 1 failed, 4 passed |

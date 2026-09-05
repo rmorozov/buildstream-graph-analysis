@@ -1,6 +1,6 @@
 # UX-660: one sentence, two line numbers, and only one of them is guarded
 
-**Priority:** Low | **Status:** 🔴 Open | **Depends on:** UX-556 (which wrote the sentence), UX-584 (which required the process layer's figures to be derived or dated) | **Found by:** round 89, track Y, when adding a line to Part 32 moved both figures | **Serves:** anyone following item 12 to the sentence it points at | **Topic:** docs | **Shape:** judgement
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-556 (which wrote the sentence), UX-584 (which required the process layer's figures to be derived or dated) | **Found by:** round 89, track Y, when adding a line to Part 32 moved both figures | **Serves:** anyone following item 12 to the sentence it points at | **Topic:** docs | **Shape:** judgement
 
 ## Motivation
 
@@ -81,3 +81,57 @@ Item 12 carries no line number the tree can move past, or carries one a
 guard reddens on. Mutation: adding a line inside Part 32 above the
 sentence reddens the guard naming the figure, exactly as it already
 reddens the one naming the span.
+
+## Outcome
+
+🟢 Done. The number is derived, not dropped.
+
+**The decision was a measurement, as the row asked.** The choice was
+"derive it or lose it, whichever is cheaper", and the words item 12
+points at — *written but not printable* — appear **once** in the whole
+spec:
+
+```console
+$ grep -c "written but not printable" docs/spec/specification.md
+1
+```
+
+One match is an unambiguous anchor, so `_registry_sentence()` is six
+lines beside `_part_32()`, which was already deriving its neighbour on
+the same sentence. Deriving cost less than deleting would have, and the
+reader keeps the number.
+
+`test_the_process_documents_derive_their_figures.py` now derives both
+halves of the sentence. The helper raises rather than guesses if the
+anchor ever stops being unique — a silent `[0]` would have re-created
+this row's own defect one layer down.
+
+### Acceptance
+
+The mutation the row names: one line added inside Part 32 above the
+sentence.
+
+```console
+$ python3 - <<'EOF'   # insert a line at 1660
+...
+EOF
+$ python3 -m pytest tests/unit/test_the_process_documents_derive_their_figures.py
+E   assert not ['the sentence is at line 1674', 'Part 32 spans 1515-1942']
+1 failed, 22 passed
+```
+
+**Both** figures are named in the failure. Before this commit the same
+mutation named only the span — which is exactly how `UX-613` moved one
+and left the other.
+
+### Mutations
+
+| mutation | guard |
+|---|---|
+| a line added inside Part 32, above the sentence | names both figures, not one |
+| (control) the tree unmutated | 23 passed |
+
+### Deviation
+
+None. The row offered two doors and a rule for choosing between them;
+the rule chose, and the cheap door was the one that keeps the number.

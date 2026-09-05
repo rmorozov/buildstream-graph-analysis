@@ -115,13 +115,15 @@ def load_baseline(path):
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def write_baseline(path, findings, families, version):
+def write_baseline(path, findings, families, version, forced_by=None):
     findings = sorted(findings, key=sort_key)
     body = ",\n".join(f"    {json.dumps(f, sort_keys=True)}" for f in findings)
+    forced = f'  "forced_by": {json.dumps(forced_by)},\n' if forced_by else ""
     text = ("{\n"
             f'  "ruff_version": {json.dumps(version)},\n'
             f'  "families": {json.dumps(sorted(set(families)))},\n'
-            '  "findings": [\n' + (body + "\n" if body else "") + "  ]\n"
+            + forced
+            + '  "findings": [\n' + (body + "\n" if body else "") + "  ]\n"
             "}\n")
     pathlib.Path(path).write_text(text, encoding="utf-8")
 
@@ -134,7 +136,7 @@ def diff(current, baseline):
     return new, stale
 
 
-def head_findings(path):
+def head_document(path):
     """The baseline `git show HEAD:<path>` carries, or `None` if that
     fails - no repo, no HEAD, or the path isn't tracked yet."""
     path = pathlib.Path(path).resolve()
@@ -150,22 +152,32 @@ def head_findings(path):
     if show.returncode != 0:
         return None
     try:
-        return json.loads(show.stdout)["findings"]
-    except (json.JSONDecodeError, KeyError):
+        document = json.loads(show.stdout)
+        document["findings"]
+    except (json.JSONDecodeError, KeyError, TypeError):
         return None
+    return document
 
 
-def gained_since_head(path, working_findings):
+def gained_since_head(path, working_findings, forced_by=None):
     """`UX-694`: the shrink guard - a line in `path` that `HEAD` never
-    carried, so `--write --force` was the only legitimate way there."""
-    head = head_findings(path)
+    carried. A `--write --force --reason UX-NNN` is the one way there,
+    and it authorises the gain until it lands: a `forced_by` HEAD does
+    not carry yet."""
+    head = head_document(path)
     if head is None:
         return []
-    carried = {identity(f) for f in head}
+    if forced_by and forced_by != head.get("forced_by"):
+        return []
+    carried = {identity(f) for f in head["findings"]}
     return [f for f in working_findings if identity(f) not in carried]
 
 
 def do_write(args, current, existing):
+    if args.force and not args.reason:
+        print("--force needs --reason UX-NNN: the id that authorises adding "
+              "a finding, written into the baseline's header")
+        return 2
     if existing is not None and not args.force:
         new, _stale = diff(current, existing["findings"])
         if new:
@@ -174,7 +186,8 @@ def do_write(args, current, existing):
             for f in new:
                 print(f"  new: {describe(f)}")
             return 1
-    write_baseline(args.baseline, current, FAMILIES, ruff_version())
+    write_baseline(args.baseline, current, FAMILIES, ruff_version(),
+                   forced_by=args.reason if args.force else None)
     print(f"wrote {len(current)} finding(s) to {args.baseline}")
     return 0
 
@@ -184,14 +197,15 @@ def do_check(args, current, existing):
         print(f"no baseline at {args.baseline} - run --write first")
         return 1
     new, stale = diff(current, existing["findings"])
-    gained = gained_since_head(args.baseline, existing["findings"])
+    gained = gained_since_head(args.baseline, existing["findings"],
+                               existing.get("forced_by"))
     for f in new:
         print(f"new: {describe(f)}")
     for f in stale:
         print(f"stale: {describe(f)}")
     for f in gained:
-        print(f"gained: {describe(f)} - only --write --force, with a "
-              "UX- id in the commit, may add a line")
+        print(f"gained: {describe(f)} - only --write --force --reason "
+              "UX-NNN may add a line")
     if not new and not stale and not gained:
         print(f"clean: {len(current)} finding(s) match {args.baseline}")
         return 0
@@ -207,7 +221,8 @@ def do_shrink(args, current, existing):
         drop = {identity(f) for f in stale}
         kept = [f for f in existing["findings"] if identity(f) not in drop]
         write_baseline(args.baseline, kept, existing.get("families", FAMILIES),
-                       existing.get("ruff_version", ruff_version()))
+                       existing.get("ruff_version", ruff_version()),
+                       forced_by=existing.get("forced_by"))
         plural = "y" if len(stale) == 1 else "ies"
         print(f"removed {len(stale)} stale entr{plural}")
     else:
@@ -227,6 +242,8 @@ def main(argv=None):
     parser.add_argument("--shrink", action="store_true")
     parser.add_argument("--force", action="store_true",
                          help="with --write, allow adding new entries")
+    parser.add_argument("--reason", default=None,
+                         help="with --force, the UX- id that authorises the add")
     parser.add_argument("--baseline", type=pathlib.Path, default=DEFAULT_BASELINE)
     parser.add_argument("--root", type=pathlib.Path, default=REPO)
     parser.add_argument("--paths", nargs="+", default=None)

@@ -35,8 +35,10 @@ limit is a row too.
 | 95 | verifier | sonnet | verifier of track C | 46k | 29 | 5.6 m | one guard could not fail; `__all__` listed dead; attribute calls and shadowing unresolved | `make test-touching` is a no-op once the track's commit is HEAD; `--base` needed |
 | 95 | verifier | sonnet | verifier of track A | 45k | 48 | 9.8 m | leaked module globals; a repeated id closed twice; a false lint claim | the leak is invisible under `-n auto`; found by running the two files serially |
 | 95 | verifier | sonnet | verifier of track B | 63k | 44 | 8.4 m | the first response never a rebuild; `--list` guard untested; 139k vs 145k explained | the harness's billed total had to be dug out of a task-notification string |
+| 95 | implementer | sonnet | track D: UX-694 the finding baseline (bounded), incl. the verifier's five fixes | 296k | 117 | 45.7 m | merged | the git-diff guard makes the adding commit's own pre-commit lint red until it is HEAD; the brief's scope (`tests/` in the paths) contradicted the task's Out of Scope |
+| 95 | verifier | sonnet | verifier of track D | 64k | 38 | 8.4 m | `tests/` scanned against Out of Scope (92 % `S101`); the git-diff guard absent; shrink with stale+new untested; a reformat re-identifies; `--shrink` wipes on a parse failure | the Required Fix names four analyzers and the Outcome said nothing of the three dropped |
 
-What the twenty-two rows already say: a researcher that reads a document
+What the twenty-four rows already say: a researcher that reads a document
 whole costs 100-180k; a walker that drives every control costs 336k;
 the two cuts cost a re-run each. The `walk` and `design-review`
 skills fix the report shape so the next rows are smaller, and the

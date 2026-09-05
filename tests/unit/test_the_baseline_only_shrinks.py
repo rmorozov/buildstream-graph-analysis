@@ -33,6 +33,11 @@ def _load(path):
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def _git(root, *args):
+    return subprocess.run(["git", "-C", str(root), *args],
+                          capture_output=True, text=True, check=True)
+
+
 class TestIdentityIgnoresTheLineNumber:
     def test_a_line_inserted_above_still_matches(self, tmp_path):
         module = tmp_path / "pkg" / "m.py"
@@ -88,11 +93,27 @@ class TestShrinkOnlyShrinks:
         before = _load(baseline)["findings"]
         _write(module, VIOLATION)
         shrink = _run(tmp_path, baseline, "--shrink")
-        assert shrink.returncode == 0
+        assert shrink.returncode == 1, shrink.stdout
         assert _load(baseline)["findings"] == before
         check = _run(tmp_path, baseline, "--check")
         assert check.returncode == 1
         assert "new: ruff S602" in check.stdout
+
+    def test_shrink_removes_stale_and_still_reds_a_new_one(self, tmp_path):
+        """The verifier's mutation: `kept` gaining `new` inside the
+        stale-removal branch, not just the no-stale one."""
+        module = tmp_path / "pkg" / "m.py"
+        other = tmp_path / "pkg" / "o.py"
+        baseline = tmp_path / "baseline.json"
+        _write(module, VIOLATION)
+        _run(tmp_path, baseline, "--write")
+        _write(module, CLEAN)
+        _write(other, VIOLATION)
+        shrink = _run(tmp_path, baseline, "--shrink")
+        assert shrink.returncode == 1, shrink.stdout
+        assert "new: ruff S602" in shrink.stdout
+        files = {f["file"] for f in _load(baseline)["findings"]}
+        assert files == set(), files
 
 
 class TestOccurrenceDisambiguates:
@@ -108,3 +129,65 @@ class TestOccurrenceDisambiguates:
         _run(tmp_path, baseline, "--write")
         entries = [f for f in _load(baseline)["findings"] if f["rule"] == "S602"]
         assert sorted(f["nth"] for f in entries) == [1, 2]
+
+
+class TestIdentityCollapsesInteriorWhitespace:
+    def test_a_reformat_of_the_flagged_line_still_matches(self, tmp_path):
+        module = tmp_path / "pkg" / "m.py"
+        baseline = tmp_path / "baseline.json"
+        _write(module, VIOLATION)
+        assert _run(tmp_path, baseline, "--write").returncode == 0
+        reformatted = VIOLATION.replace(
+            "subprocess.run(cmd, shell=True)",
+            "subprocess.run(cmd,   shell=True)")
+        _write(module, reformatted)
+        check = _run(tmp_path, baseline, "--check")
+        assert check.returncode == 0, check.stdout
+
+
+class TestTheGitDiffShrinkGuard:
+    def test_a_gained_entry_reds_check(self, tmp_path):
+        module = tmp_path / "pkg" / "m.py"
+        other = tmp_path / "pkg" / "o.py"
+        baseline = tmp_path / "baseline.json"
+        _write(module, VIOLATION)
+        assert _run(tmp_path, baseline, "--write").returncode == 0
+        _git(tmp_path, "init", "-q")
+        _git(tmp_path, "-c", "user.email=t@example.com", "-c", "user.name=t",
+             "add", "-A")
+        _git(tmp_path, "-c", "user.email=t@example.com", "-c", "user.name=t",
+             "commit", "-q", "-m", "baseline")
+        _write(other, VIOLATION)
+        assert _run(tmp_path, baseline, "--write", "--force").returncode == 0
+        check = _run(tmp_path, baseline, "--check")
+        assert check.returncode == 1, check.stdout
+        assert "gained: ruff S602" in check.stdout
+
+    def test_a_pure_shrink_leaves_check_clean(self, tmp_path):
+        module = tmp_path / "pkg" / "m.py"
+        baseline = tmp_path / "baseline.json"
+        _write(module, VIOLATION)
+        assert _run(tmp_path, baseline, "--write").returncode == 0
+        _git(tmp_path, "init", "-q")
+        _git(tmp_path, "-c", "user.email=t@example.com", "-c", "user.name=t",
+             "add", "-A")
+        _git(tmp_path, "-c", "user.email=t@example.com", "-c", "user.name=t",
+             "commit", "-q", "-m", "baseline")
+        _write(module, CLEAN)
+        assert _run(tmp_path, baseline, "--shrink").returncode == 0
+        check = _run(tmp_path, baseline, "--check")
+        assert check.returncode == 0, check.stdout
+
+
+class TestUnparsableFileIsAnError:
+    def test_invalid_syntax_exits_2_and_writes_nothing(self, tmp_path):
+        module = tmp_path / "pkg" / "m.py"
+        baseline = tmp_path / "baseline.json"
+        _write(module, VIOLATION)
+        assert _run(tmp_path, baseline, "--write").returncode == 0
+        before = baseline.read_text(encoding="utf-8")
+        _write(module, "def f(:\n    pass\n")
+        shrink = _run(tmp_path, baseline, "--shrink")
+        assert shrink.returncode == 2
+        assert "m.py" in shrink.stdout
+        assert baseline.read_text(encoding="utf-8") == before

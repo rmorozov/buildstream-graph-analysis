@@ -1,6 +1,6 @@
 # UX-694: a finding baseline, and a size ledger for what has no identity
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-693 (the rule set), UX-418 (the reference method) | **Serves:** the implementing session, whose gate is zero-tolerance for a new finding from the first commit and never asks it to fix an old one first | **Topic:** guards | **Shape:** bounded
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-693 (the rule set), UX-418 (the reference method) | **Serves:** the implementing session, whose gate is zero-tolerance for a new finding from the first commit and never asks it to fix an old one first | **Topic:** guards | **Shape:** bounded
 
 ## Motivation
 
@@ -103,3 +103,14 @@ cleared):
 | `invalid-syntax` check removed | unparsable-file test | 1 failed |
 
 All reverted, `11 passed`.
+
+**Deviation.** The track landed `ruff`'s families only; `pyright`,
+`bandit` and `eslint` enter the baseline as `UX-697`, `UX-698` and
+`UX-699` land. The size ledger — the half with no finding identity —
+is `UX-712`. The orchestrator's brief put `tests/` in the paths against
+this task's own Out of Scope, and 11,923 of a first 12,218 entries
+were test files, 11,238 of them `S101`; the verifier caught it and the
+baseline is 299 over the code. A forced write now needs `--reason
+UX-NNN`, written into the header, and a gain is authorised until that
+header lands — so the adding commit's own `make lint` is green.
+

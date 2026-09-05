@@ -3,10 +3,10 @@
 Run on 2026-09-05, after round 94 merged. A feature round in batch
 form (§6a, the `decompose` skill's §5). The user asked for the tasks
 that unblock the most others or pay off at once for later sessions,
-naming zero-tolerance quality gates. Five closed: `UX-693` by the
-session, `UX-700`, `UX-707`, `UX-709`, `UX-710` by three `implementer`
-tracks on `sonnet`, each read by a `verifier` on `sonnet` before its
-merge. This is `UX-708`'s measurement: the first priced batch.
+naming zero-tolerance quality gates. Six closed: `UX-693` by the
+session, `UX-700`, `UX-707`, `UX-709`, `UX-710` and `UX-694` by four
+`implementer` tracks on `sonnet`, each read by a `verifier` on `sonnet`
+before its merge. This is `UX-708`'s measurement: the first priced batch.
 
 ## The batch, chosen by fan-in
 
@@ -28,8 +28,10 @@ prose), `SIM115` to the baseline, `ruff==0.15.8`. Two gate mutations
 red. `UX-700`: `tools/dev_symbols.py`, 0.7 s a query. `UX-709`: a
 batch `--move`, which closed this round's four tracks in one call.
 `UX-707`: `--session` prices a session's rebuilds — 36 over the whole
-transcript, 78.7 %. `UX-710`: `--ledger` derives a run's row; the six
-rows below are its output.
+transcript, 78.7 %. `UX-710`: `--ledger` derives a run's row; the rows
+below are its output. `UX-694`: the finding baseline — 299 findings
+over the code by identity, `--check` in `make lint` red on a new one,
+the list only shrinking, a forced add carrying its `UX-` reason.
 
 ## The tracks, priced
 
@@ -38,7 +40,8 @@ rows below are its output.
 | track C, UX-700 | bounded | 216k | 101 | 25 m | a guard that could not fail; `__all__` listed dead; four precision limits |
 | track A, UX-709 | bounded | 271k | 97 | 31 m | leaked module globals, hidden under `-n auto`; a repeated id closed twice; a false claim about lint |
 | track B, UX-707+710 | bounded | 281k | 129 | 31.1 m | the first response never a rebuild; an untested guard; 139k vs 145k explained |
-| verifiers | — | 45k · 46k · 63k | 48 · 29 · 44 | 5.6-9.8 m | six defects the tracks' own mutation tables did not |
+| track D, UX-694 | bounded | 296k | 117 | 45.7 m | `tests/` scanned against the task's Out of Scope (92 % of 12,218 entries were `S101`); the git-diff shrink guard absent; shrink with stale+new untested; a reformat re-identified; `--shrink` wiped on a parse failure |
+| verifiers | — | 45k · 46k · 63k · 64k | 48 · 29 · 44 · 38 | 5.6-9.8 m | eleven defects the tracks' own mutation tables did not |
 
 Tokens are the fresh figure (`UX-710`), each track including its
 resumed fix run. The three first runs alone were 103k, 128k, 135k by
@@ -47,7 +50,9 @@ researcher run and lands; every one needed the verifier: **six
 defects in three tracks, none caught by the track's own mutations**,
 one of them a guard that passed whatever the code did. The advisory
 holds as measured: `sonnet` for bounded shapes, never without the
-verifier.
+verifier. Two of track D's five were the orchestrator's brief
+contradicting the task file — the verifier reads the task file, and
+that is why it is a separate reader.
 
 ## Three losses, recorded
 
@@ -71,7 +76,7 @@ the picker now reads CI's record of the file rather than the lists.
 
 ## Standing
 
-`UX-694`, the baseline, is next on the widened set. Not done here:
+The size ledger, `UX-694`'s second half, is `UX-712`. Not done here:
 `UX-666` and `UX-687` (judgement, two unblocks each). The round-93
 grep found five unreferenced viewer exports; `dead --js` finds two;
 `UX-699` decides.

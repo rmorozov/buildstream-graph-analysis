@@ -158,10 +158,28 @@ class TestTheGitDiffShrinkGuard:
         _git(tmp_path, "-c", "user.email=t@example.com", "-c", "user.name=t",
              "commit", "-q", "-m", "baseline")
         _write(other, VIOLATION)
-        assert _run(tmp_path, baseline, "--write", "--force").returncode == 0
+        # A forced write with a reason HEAD does not carry is authorised
+        # until it lands; the same reason again is a hand edit.
+        assert _run(tmp_path, baseline, "--write", "--force", "--reason", "UX-1").returncode == 0
+        assert _run(tmp_path, baseline, "--check").returncode == 0
+        _git(tmp_path, "-c", "user.email=t@example.com", "-c", "user.name=t",
+             "commit", "-q", "-am", "UX-1 adds a finding")
+        _write(tmp_path / "pkg" / "p.py", VIOLATION)
+        assert _run(tmp_path, baseline, "--write", "--force", "--reason", "UX-1").returncode == 0
         check = _run(tmp_path, baseline, "--check")
         assert check.returncode == 1, check.stdout
         assert "gained: ruff S602" in check.stdout
+
+    def test_force_without_a_reason_writes_nothing(self, tmp_path):
+        module = tmp_path / "pkg" / "m.py"
+        baseline = tmp_path / "baseline.json"
+        _write(module, VIOLATION)
+        assert _run(tmp_path, baseline, "--write").returncode == 0
+        before = baseline.read_bytes()
+        _write(tmp_path / "pkg" / "o.py", VIOLATION)
+        done = _run(tmp_path, baseline, "--write", "--force")
+        assert done.returncode == 2 and "--reason" in done.stdout
+        assert baseline.read_bytes() == before
 
     def test_a_pure_shrink_leaves_check_clean(self, tmp_path):
         module = tmp_path / "pkg" / "m.py"

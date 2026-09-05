@@ -35,6 +35,7 @@ VISUAL = REPO / "docs" / "design" / "styleguide.md"
 DOCS = REPO / "docs" / "contributing" / "style-guide.md"
 FIXING = REPO / "docs" / "contributing" / "fixing-guide.md"
 INDEX = REPO / "docs" / "README.md"
+FORMAT = REPO / "bga" / "viewer" / "format.js"
 
 
 def _emitted():
@@ -47,6 +48,19 @@ def _documented():
     text = VISUAL.read_text(encoding="utf-8")
     table = text.split("## 1a.", 1)[1].split("\n## ", 1)[0]
     return set(re.findall(r"^\|\s*`(bga:[\w-]+)`\s*\|", table, re.M))
+
+
+def _declared_in_format():
+    """Every `bga:` key `format.js` binds a constant to."""
+    return set(re.findall(r'^(?:export )?const \w+ = "(bga:[\w-]+)";',
+                          FORMAT.read_text(encoding="utf-8"), re.M))
+
+
+def _format_opening():
+    """`format.js`'s opening comment, unwrapped to one line."""
+    head = FORMAT.read_text(encoding="utf-8").split("*/", 1)[0]
+    return " ".join(re.sub(r"^\s*/?\*+ ?", "", line)
+                    for line in head.splitlines())
 
 
 class TestEveryHintIsDocumentedOnce:
@@ -77,6 +91,41 @@ class TestEveryHintIsDocumentedOnce:
             cells = [c.strip() for c in line.strip().strip("|").split("|")]
             assert len(cells) == 3, line
             assert all(cells), f"an empty cell in: {line}"
+
+
+class TestTheModuleSaysHowManyItDeclares:
+    """UX-654: `format.js` opened with "the nine `bga:` hint keys" while
+    declaring 17 of the 19 the schemas emit. Both figures the sentence
+    now carries are derived here, so neither can age unnoticed."""
+
+    def test_the_count_of_keys_the_module_declares(self):
+        said = re.search(r"the (\d+) `bga:` hint keys this module declares",
+                         _format_opening())
+        assert said, (
+            "format.js's opening paragraph no longer states how many "
+            "`bga:` hint keys it declares, in the words this guard reads")
+        assert int(said.group(1)) == len(_declared_in_format()), (
+            f"format.js says it declares {said.group(1)} `bga:` hint keys "
+            f"and declares {len(_declared_in_format())}: "
+            f"{sorted(_declared_in_format())}")
+
+    def test_the_size_of_the_vocabulary_it_is_part_of(self):
+        said = re.search(r"\(of the (\d+) `bga/schemas\.py` emits\)",
+                         _format_opening())
+        assert said, (
+            "format.js's opening paragraph no longer states the size of "
+            "the emitted vocabulary its keys are drawn from")
+        assert int(said.group(1)) == len(_emitted()), (
+            f"format.js says the schemas emit {said.group(1)} hints and "
+            f"they emit {len(_emitted())}")
+
+    def test_the_keys_it_declares_are_drawn_from_that_vocabulary(self):
+        """The sentence's `of the 19` is a subset claim, not only a
+        smaller number."""
+        invented = sorted(_declared_in_format() - _emitted())
+        assert not invented, (
+            f"declared in format.js and emitted by nothing: {invented}. "
+            f"A renderer reading a key no schema writes draws nothing.")
 
 
 class TestTheGuideIsRoutedTo:

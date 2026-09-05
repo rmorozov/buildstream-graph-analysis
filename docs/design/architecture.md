@@ -1,6 +1,6 @@
 # `bga`: Current Architecture — Three Analysis Planes
 
-**Start here to orient in this codebase.** `docs/spec/specification.md` (v9) is the original design document and stays authoritative for full-length invariant/data-contract text — it is *not* wrong, but it describes the tool as originally scoped, and does not know about anything built since. This doc describes what `bga` actually does **today**, as one coherent system, and points at the real file/doc for every claim so you don't have to reconstruct that history yourself from the commit log, the 656 `docs/backlog/scenarios/` files and the 75 `docs/backlog/tasks/` files this commit carries.
+**Start here to orient in this codebase.** `docs/spec/specification.md` (v9) is the original design document and stays authoritative for full-length invariant/data-contract text — it is *not* wrong, but it describes the tool as originally scoped, and does not know about anything built since. This doc describes what `bga` actually does **today**, as one coherent system, and points at the real file/doc for every claim so you don't have to reconstruct that history yourself from the commit log, the 662 `docs/backlog/scenarios/` files and the 75 `docs/backlog/tasks/` files this commit carries.
 
 **Want to *use* the tool rather than work on it?** [`docs/guides/real-project.md`](../guides/real-project.md) is the end-to-end walkthrough on a real project, with real output at every step.
 
@@ -1042,6 +1042,37 @@ artifact.
 - **`docs/guides/cli.md`** — CLI reference/usage examples.
 
 ## Verification Log
+
+This log is **append-only below its newest entry**. Each entry is a
+dated record of what was re-grounded and against what, so the contract
+ids inside it stay as they were written — an id that was live that day
+and is superseded now is what the record says, and sweeping it forward
+with the tables above destroys the one thing the entry is for
+(`UX-653`). The newest entry is the exception: every round that
+re-grounds the document rewrites it.
+
+Updated 2026-09-04 (after `UX-653`), covering one change to this
+document — the paragraph above, which states the rule the log had been
+kept to by hand and lost four times — re-grounded in the two contract
+tables above against `bga.contracts` and `bga/schemas.py`: **25 emitted
+ids, 10 of them superseded, and 3 read and never written**, 9 printable
+and 16 not, `analyze/v6` still at **56 top-level properties** and
+`bga/viewer/` still **22 modules** with the table naming all of them.
+Every figure re-read at this commit and unchanged from the entry below;
+this item published no id and moved no key.
+
+Updated 2026-09-04 (after `UX-652`), covering no change to this
+document's body — what moved is the currency record itself, which is
+now read in commits rather than days — re-grounded in the two contract
+tables above against `bga.contracts` and `bga/schemas.py`: **25 emitted
+ids, 10 of them superseded, and 3 read and never written**, 9 printable
+and 16 not. The headline id is `analyze/v6`, still at **56 top-level
+properties**, and `bga/viewer/` is still **22 modules** with the table
+naming all of them. Three of those figures had moved under the entry
+below, which is the item: `UX-641` published `analyze/v6` and
+superseded `analyze/v5` after `UX-629`'s commit — 24 → 25 emitted,
+9 → 10 superseded, 15 → 16 unprintable — on the same day, so the date
+comparison read a stale line as current.
 
 Updated 2026-09-04 (after `UX-629`), covering one change to this
 document — the inventory's **versioning rule** paragraph, which named

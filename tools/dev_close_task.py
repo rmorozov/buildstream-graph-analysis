@@ -271,6 +271,68 @@ def status_disagreements():
     return problems
 
 
+#: `UX-657`: priority's twin of `STATUS_EMOJI`. Measured over all 654
+#: rows, exactly one cell per row equals one of these, in both tables
+#: and whatever their column order - which is why the cell is found by
+#: value, the way `table_statuses` finds its own.
+PRIORITIES = ("High", "Medium", "Low")
+
+
+def priority_cell(cells):
+    """The priority cell of a split row, or `None`."""
+    found = [cell for cell in cells if cell in PRIORITIES]
+    return found[0] if len(found) == 1 else None
+
+
+def table_priorities():
+    """`{item number: priority cell}` across both backlog files."""
+    priorities = {}
+    for path in backlog_files():
+        if not path.exists():
+            continue
+        for line in path.read_text(encoding="utf-8").splitlines():
+            match = _TABLE_ROW.match(line)
+            if not match:
+                continue
+            cells = [cell.strip() for cell in
+                     re.split(r"(?<!\\)\|", line.strip().strip("|"))]
+            priorities[int(match.group(1))] = priority_cell(cells)
+    return priorities
+
+
+def file_priorities():
+    """`{item number: (filename, priority word)}` from the task files."""
+    priorities = {}
+    for path in sorted(SCENARIOS.glob("UX-*.md")):
+        match = _FILE_ID.match(path.name)
+        if not match:
+            continue
+        header = path.read_text(encoding="utf-8").splitlines()[:8]
+        line = next((line for line in header if "**Priority:**" in line), None)
+        word = re.search(r"\*\*Priority:\*\* (\S+)", line or "")
+        priorities[int(match.group(1))] = (path.name,
+                                           word.group(1) if word else None)
+    return priorities
+
+
+def priority_disagreements():
+    """`UX-657`: each row's priority equals its file's.
+
+    Symmetric like `status_disagreements`, and for the same reason - it
+    compares the pair without deciding which half is authoritative, so
+    moving either one alone is reported.
+    """
+    rows = table_priorities()
+    problems = []
+    for number, (name, word) in sorted(file_priorities().items()):
+        if number not in rows:
+            continue
+        if rows[number] != word:
+            problems.append(
+                f"UX-{number}: table says {rows[number]}, {name} says {word}")
+    return problems
+
+
 #: What `--check` holds, in the order it prints them. `UX-387`: the
 #: output used to be a bare "0 problem(s)", which reads the same for "I
 #: checked four properties and all passed" and "I checked three and the
@@ -280,8 +342,30 @@ def status_disagreements():
 #: The order the topic table has always been written in. A derived
 #: table still has to be *read*, and alphabetical would reshuffle it
 #: every time a topic appears. Anything not listed sorts after these.
+#: `UX-658`: it is also `UX-232`'s closed set itself - the one
+#: statement of it. `test_docs_links_and_commands.py` held a second,
+#: hardcoded copy, and a topic no open row could carry reached the
+#: derived table through a row filed and closed in one round.
 TOPIC_ORDER = ("capture", "analysis", "contracts", "viewer", "cli",
                "store", "docs", "guards")
+
+#: One reading of the header, for `topics()` and `file_topics()` both.
+#: The hyphen is in the class because a two-word topic would otherwise
+#: be read as its first word and pass a set it is not in.
+_TOPIC_HEADER = re.compile(r"\*\*Topic:\*\*\s*([a-z-]+)")
+
+
+def header_topic(text):
+    """The `**Topic:**` a task file declares, from its first 8 lines.
+
+    The bound `file_statuses` and `file_priorities` already use, and
+    for the same reason: two Outcomes quote a `**Topic:**` line in
+    their prose, so a whole-file read takes the argument for the
+    subject in any file whose header is missing.
+    """
+    found = _TOPIC_HEADER.search("\n".join(text.splitlines()[:8]))
+    return found.group(1) if found else None
+
 
 #: `UX-501`: 223 of the 489 closed rows predate the `**Topic:**` header
 #: and are in no historical index either, so no topic can be *derived*
@@ -324,11 +408,37 @@ def topics():
     declared = _declared_topics()
     found = {}
     for uid in row_ids(INDEX) + row_ids(CLOSED):
-        header = re.search(r"\*\*Topic:\*\*\s*([a-z]+)",
-                           task_file(uid).read_text(encoding="utf-8"))
-        found[uid] = (header.group(1) if header
-                      else declared.get(uid) or TOPIC_UNKNOWN)
+        header = header_topic(task_file(uid).read_text(encoding="utf-8"))
+        found[uid] = header or declared.get(uid) or TOPIC_UNKNOWN
     return found
+
+
+def file_topics():
+    """`{filename: the `**Topic:**` header it declares, or None}`.
+
+    Every task file, not every row: `UX-656` was filed and closed
+    inside one round, so its row went straight to `closed.md` and the
+    open index never carried it.
+    """
+    found = {}
+    for path in sorted(SCENARIOS.glob("UX-*.md")):
+        if not _FILE_ID.match(path.name):
+            continue
+        found[path.name] = header_topic(path.read_text(encoding="utf-8"))
+    return found
+
+
+def topic_disagreements():
+    """`UX-658`: no task file declares a topic `TOPIC_ORDER` omits.
+
+    The index's table is derived from these headers and sorts an
+    unlisted one after the eight, so a topic the set does not name
+    still prints as a row a reader may not use.
+    """
+    return [f"{name}: topic {topic!r} is outside the closed set "
+            f"{sorted(TOPIC_ORDER)}"
+            for name, topic in sorted(file_topics().items())
+            if topic is not None and topic not in TOPIC_ORDER]
 
 
 def index_header():
@@ -505,6 +615,10 @@ def write_index():
 CHECKS = (
     ("every row's status glyph matches its task file's",
      lambda: status_disagreements()),
+    ("every row's priority matches its task file's",
+     lambda: priority_disagreements()),
+    ("every task file's topic is one the closed set names",
+     lambda: topic_disagreements()),
     ("no closed row is left in the open index",
      lambda: _closed_rows_left_open()),
     ("the index's open count matches its table",

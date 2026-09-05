@@ -15,20 +15,19 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-654 scenarios: **5 open**, 649 closed.
+660 scenarios: **3 open**, 657 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
 | capture | 0 | 92 |
 | analysis | 0 | 94 |
-| contracts | 0 | 47 |
-| viewer | 1 | 148 |
+| contracts | 0 | 48 |
+| viewer | 0 | 148 |
 | cli | 0 | 21 |
 | store | 0 | 16 |
-| docs | 4 | 101 |
-| guards | 0 | 134 |
-| process | 0 | 1 |
+| docs | 1 | 102 |
+| guards | 2 | 139 |
 
 ## Open scenarios
 
@@ -37,11 +36,9 @@ task file, which is the only place it ever lived twice.
 
 | ID | Scenario | Topic | Priority | Serves | Status |
 |---|---|---|---|---|---|
-| UX-651 | [the spec's Part 32 block is two ids behind](UX-0651-the-spec-s-part-32-block-is-two-ids-behind.md) | docs | Medium | anyone reading the spec to find out what contracts bga has | 🔴 Open |
-| UX-652 | [the currency guard resolves to a day, and a day holds three rounds](UX-0652-the-currency-guard-resolves-to-a-day-and-a-day-holds-three-rounds.md) | docs | Medium | anyone trusting a document's currency marker | 🔴 Open |
-| UX-653 | [a contract bump rewrites the record of what it superseded](UX-0653-a-contract-bump-rewrites-the-record-of-what-it-superseded.md) | docs | High | anyone reading a dated log entry as what was true that day | 🔴 Open |
-| UX-654 | [the vocabulary module still says nine hints](UX-0654-the-vocabulary-module-still-says-nine-hints.md) | viewer | Low | anyone reading format.js's docstring for the hint count | 🔴 Open |
-| UX-655 | [a contract bump landed one level below the key population](UX-0655-a-contract-bump-landed-one-level-below-the-key-population.md) | docs | High | anyone trusting the undocumented-key register | 🔴 Open |
+| UX-660 | [one sentence, two line numbers, and only one of them is guarded](UX-0660-one-sentence-two-figures-one-guarded.md) | docs | Low | anyone following item 12 to the sentence it points at | 🔴 Open |
+| UX-661 | [the second copy of the topic set orders a release body](UX-0661-the-fourth-copy-of-the-topic-set-orders-a-release.md) | guards | Low | anyone adding a topic and expecting the release notes to know about it | 🔴 Open |
+| UX-662 | [the adopted touching map made the selector guard a hundred times dearer](UX-0662-the-adopted-map-made-the-selector-guard-a-hundred-times-dearer.md) | guards | High | anyone whose branch goes red for a cost the base branch introduced | 🔴 Open |
 
 ## UX-563..UX-586: the eighty-second round — the documents, read against the tool (2026-09-03)
 

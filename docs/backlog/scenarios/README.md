@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-660 scenarios: **3 open**, 657 closed.
+664 scenarios: **5 open**, 659 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -26,8 +26,8 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | viewer | 0 | 148 |
 | cli | 0 | 21 |
 | store | 0 | 16 |
-| docs | 1 | 102 |
-| guards | 2 | 139 |
+| docs | 2 | 105 |
+| guards | 3 | 140 |
 
 ## Open scenarios
 
@@ -39,6 +39,8 @@ task file, which is the only place it ever lived twice.
 | UX-660 | [one sentence, two line numbers, and only one of them is guarded](UX-0660-one-sentence-two-figures-one-guarded.md) | docs | Low | anyone following item 12 to the sentence it points at | 🔴 Open |
 | UX-661 | [the second copy of the topic set orders a release body](UX-0661-the-fourth-copy-of-the-topic-set-orders-a-release.md) | guards | Low | anyone adding a topic and expecting the release notes to know about it | 🔴 Open |
 | UX-662 | [the adopted touching map made the selector guard a hundred times dearer](UX-0662-the-adopted-map-made-the-selector-guard-a-hundred-times-dearer.md) | guards | High | anyone whose branch goes red for a cost the base branch introduced | 🔴 Open |
+| UX-665 | [the page's census is a tool, so a walk reads it instead of driving it](UX-0665-the-page-s-census-is-a-tool-so-a-walk-reads-it-instead-of-driving-it.md) | guards | High | the orchestrating session paying for a walk | 🔴 |
+| UX-666 | [a subagent's cost is written down, and its friction with it](UX-0666-a-subagent-s-cost-is-written-down-and-its-friction-with-it.md) | docs | High | the round choosing a model and a shape for its next agent | 🔴 |
 
 ## UX-563..UX-586: the eighty-second round — the documents, read against the tool (2026-09-03)
 

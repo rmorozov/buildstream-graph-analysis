@@ -5,6 +5,7 @@ description: Answer a question about this codebase or its records by
   would mean opening many files, sweeping the whole backlog, or
   reading a large log — so the reading does not land in the main
   session's context.
+model: sonnet
 tools: Read, Grep, Glob, Bash
 ---
 
@@ -50,3 +51,5 @@ context map. It says where things live so you do not re-derive it.
 - Do not guess to fill a gap. An unanswered question returned honestly
   is worth more than a plausible sentence, which is exactly the failure
   this repository files items about.
+
+Close with one **friction** line — what cost the most, what was missing, what went wrong — for the run ledger (`docs/audits/agent-runs.md`).

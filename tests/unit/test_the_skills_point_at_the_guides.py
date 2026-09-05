@@ -39,6 +39,10 @@ OWNERS = {
     # Round 82: the review checklist as commands; its rule is the review
     # document's.
     "review": "docs/audits/architecture-review.md",
+    # Round 90: the outsider walk and the design review as protocols;
+    # the audit stream owns the first, the styleguide the second.
+    "walk": "docs/contributing/fixing-guide.md",
+    "design-review": "docs/design/styleguide.md",
 }
 
 _FRONTMATTER = re.compile(r"\A---\n(.*?)\n---\n", re.S)

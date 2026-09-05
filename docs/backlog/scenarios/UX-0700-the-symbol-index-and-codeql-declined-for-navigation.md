@@ -84,6 +84,13 @@ five — the honest count, not a fitted one.
 | `callers` by regex over raw text | `test_a_string_and_a_docstring_are_not_callers` | `[('pkg/a.py:4',), ('pkg/a.py:12',), ('pkg/a.py:16',), ('pkg/a.py:21',)]` vs expected one row |
 | `dead`'s reference scan drops the `ImportFrom` branch | `test_a_from_import_alone_counts_as_a_reference` | `imported_only_fn` (import-only reference) now `in dead_names` |
 | `imported_names` returns `[]` for the `from` form | `test_importers_finds_both_the_import_and_the_from_form` | `{'pkg/b.py'}` vs expected `{'pkg/b.py', 'pkg/c.py', 'pkg/d.py'}` |
+| `referenced_names` drops the `Name`/`Load` and `Attribute` branches (`ImportFrom` only) | `test_dead_lists_the_unreferenced_name_and_not_the_referenced_one` | `AssertionError: assert 'attr_called_fn' not in {..., 'attr_called_fn', ...}` — `attr_called_fn` is reached only by `pkg.a.attr_called_fn()`, no `from` import anywhere |
 
-All three reverted from the pre-mutation copy; full file green after
-each (`6 passed`).
+All four reverted from the pre-mutation copy; full file green after
+each (`6 passed`). The verifier found the third row's guard did not
+isolate the call path — `target_fn` survived a disabled `Name`/`Load`
+branch through `pkg/c.py`'s `from pkg.a import target_fn`, a separate
+`ImportFrom` credit — so `attr_called_fn` was added with no `from`
+import reaching it anywhere in the fixture, and `__all__` is now
+skipped in `top_level_names` (dunders are read by tooling, not by
+name).

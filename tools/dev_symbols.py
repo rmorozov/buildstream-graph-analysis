@@ -194,7 +194,8 @@ def top_level_names(path, tree):
             names += [(t.id, node.lineno) for t in node.targets if isinstance(t, ast.Name)]
         elif isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
             names.append((node.target.id, node.lineno))
-    return names
+    # `__all__` and friends are read by tooling, never by name - not an export.
+    return [(n, ln) for n, ln in names if not (n.startswith("__") and n.endswith("__"))]
 
 
 def referenced_names(include_tests):

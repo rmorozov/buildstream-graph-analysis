@@ -55,6 +55,11 @@ ANALYSIS_ADDITIONS = {
     "plane2_absence", "total_duration_us", "pipeline_overhead",
     "timestamp_agreement", "element_kind_summary", "capacity_verdict",
     "plane2_capacity", "capacity_recommendation",
+    # `UX-676`: cores busy against this run's caps, and the two windows
+    # that violate it. Additive like the rest - 32.4 predates the host
+    # CPU series entirely (`UX-675`).
+    "utilization_envelope", "underutilized_intervals",
+    "overcommitted_intervals",
 }
 
 # Likewise for 32.1's six against what `load_run_context` reads.

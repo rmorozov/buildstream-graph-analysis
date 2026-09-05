@@ -565,6 +565,16 @@ class AnalysisResult:
     # a Plane 2 report is supplied and the capture recorded the host's
     # memory - the arithmetic needs both.
     memory_envelope: dict = field(default_factory=dict)
+    # UX-676: cores busy against the capacity the scheduler configured
+    # and the cores the host has, plus the windows that violate it.
+    # `{available, absence, ...}` - populated from the host CPU series
+    # `UX-675` samples, and carrying a named absence rather than `{}`
+    # when a capture predates that item. The two tables are top-level
+    # beside it because they are populations, not fields of a summary
+    # (`UX-288`'s rule), and each is capped at `INTERVALS_MAX`.
+    utilization_envelope: dict = field(default_factory=dict)
+    underutilized_intervals: list = field(default_factory=list)
+    overcommitted_intervals: list = field(default_factory=list)
     # UX-329: why Plane 2 is absent from this analysis, as the one
     # sentence the terminal, the page and the export all print. `None`
     # when it is not absent.

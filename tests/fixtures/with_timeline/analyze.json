@@ -395,6 +395,10 @@
             "native_max_jobs"
         ]
     },
+    "utilization_envelope": {
+        "available": false,
+        "absence": "this capture has no host-samples.jsonl - it was taken before `UX-378`, or the host exposes no /proc/meminfo"
+    },
     "plane2_absence": "Plane 2 was not captured for this run, so there is no per-process detail. `bga snapshot -- bst build TARGET` captures both planes.",
     "attribution": {
         "execution_on_chain_us": 43200000,
@@ -1678,10 +1682,10 @@
         }
     ],
     "document_shape": {
-        "leaves": 1090,
+        "leaves": 1092,
         "deepest_depth": 7,
         "deepest_path": "findings.[].evidence.steps.[].entering.[]",
         "deeper_than_three": 555,
-        "deeper_than_three_share": 0.5091743119266054
+        "deeper_than_three_share": 0.5082417582417582
     }
 }

@@ -7,14 +7,18 @@
                                                 # matches now
 
 Runs ruff (json) for S, C901, PLR0912, PLR0913, PLR0915, SIM115 - not in
-the gate's own `--select` (`pyproject.toml`) - over bga, tools, tests,
-.claude/hooks. A finding's identity is `(tool, rule, file, the source
-line's text stripped, nth occurrence of that identity in the file)`:
-never a line number, so a line inserted above one does not move it out
-from under the baseline. `tests/quality_baseline.json` holds the list,
-sorted, one entry per line. `--write` refuses to add a new entry
-without `--force`; `--shrink` only ever removes what nothing matches
-any more.
+the gate's own `--select` (`pyproject.toml`) - over bga, tools,
+.claude/hooks (never tests - `tests/**` is a different ledger). A
+finding's identity is `(tool, rule, file, the source line's text with
+interior whitespace collapsed, nth occurrence of that identity in the
+file)`: never a line number, so a line inserted above, or a reformat of
+one already flagged, does not move it out from under the baseline.
+`tests/quality_baseline.json` holds the list, sorted, one entry per
+line. `--write` refuses to add a new entry without `--force`; `--check`
+also refuses an entry `git show HEAD:` doesn't carry, unstaged or not;
+`--shrink` only ever removes what nothing matches any more. A file
+ruff cannot parse aborts everything rather than risk reading its
+absence as a fix.
 """
 import argparse
 import collections
@@ -25,8 +29,12 @@ import sys
 
 REPO = pathlib.Path(__file__).resolve().parents[1]
 FAMILIES = ("S", "C901", "PLR0912", "PLR0913", "PLR0915", "SIM115")
-DEFAULT_PATHS = ("bga", "tools", "tests", ".claude/hooks")
+DEFAULT_PATHS = ("bga", "tools", ".claude/hooks")
 DEFAULT_BASELINE = REPO / "tests" / "quality_baseline.json"
+
+
+class RuffFailure(Exception):
+    """ruff's answer cannot be trusted: a bad exit, or a file it could not parse."""
 
 
 def ruff_version():
@@ -42,8 +50,16 @@ def ruff_findings(root, paths, families):
     run = subprocess.run(cmd, cwd=root, capture_output=True,
                           text=True, check=False)
     if run.returncode not in (0, 1):
-        raise SystemExit(f"ruff failed: {run.stderr}")
-    return json.loads(run.stdout or "[]")
+        raise RuffFailure(f"ruff exited {run.returncode}: {run.stderr.strip()}")
+    raw = json.loads(run.stdout or "[]")
+    # `invalid-syntax`: ruff reports the parse error and nothing else for
+    # that file - a real finding already baselined there would read as
+    # fixed, when the file is merely unreadable right now.
+    unparsable = sorted({item["filename"] for item in raw
+                          if item.get("code") == "invalid-syntax"})
+    if unparsable:
+        raise RuffFailure("ruff could not parse: " + ", ".join(unparsable))
+    return raw
 
 
 def normalize(raw, root):
@@ -65,7 +81,8 @@ def normalize(raw, root):
             lines_of[path] = path.read_text(
                 encoding="utf-8", errors="replace").splitlines()
         text_lines = lines_of[path]
-        text = text_lines[row - 1].strip() if 0 < row <= len(text_lines) else ""
+        text = (" ".join(text_lines[row - 1].split())
+                if 0 < row <= len(text_lines) else "")
         decorated.append((rel, row, rule, text))
     decorated.sort(key=lambda t: (t[0], t[1]))
     counts = collections.Counter()
@@ -117,6 +134,37 @@ def diff(current, baseline):
     return new, stale
 
 
+def head_findings(path):
+    """The baseline `git show HEAD:<path>` carries, or `None` if that
+    fails - no repo, no HEAD, or the path isn't tracked yet."""
+    path = pathlib.Path(path).resolve()
+    top = subprocess.run(["git", "-C", str(path.parent), "rev-parse",
+                          "--show-toplevel"], capture_output=True,
+                         text=True, check=False)
+    if top.returncode != 0:
+        return None
+    toplevel = pathlib.Path(top.stdout.strip())
+    rel = path.relative_to(toplevel).as_posix()
+    show = subprocess.run(["git", "-C", str(toplevel), "show", f"HEAD:{rel}"],
+                          capture_output=True, text=True, check=False)
+    if show.returncode != 0:
+        return None
+    try:
+        return json.loads(show.stdout)["findings"]
+    except (json.JSONDecodeError, KeyError):
+        return None
+
+
+def gained_since_head(path, working_findings):
+    """`UX-694`: the shrink guard - a line in `path` that `HEAD` never
+    carried, so `--write --force` was the only legitimate way there."""
+    head = head_findings(path)
+    if head is None:
+        return []
+    carried = {identity(f) for f in head}
+    return [f for f in working_findings if identity(f) not in carried]
+
+
 def do_write(args, current, existing):
     if existing is not None and not args.force:
         new, _stale = diff(current, existing["findings"])
@@ -136,11 +184,15 @@ def do_check(args, current, existing):
         print(f"no baseline at {args.baseline} - run --write first")
         return 1
     new, stale = diff(current, existing["findings"])
+    gained = gained_since_head(args.baseline, existing["findings"])
     for f in new:
         print(f"new: {describe(f)}")
     for f in stale:
         print(f"stale: {describe(f)}")
-    if not new and not stale:
+    for f in gained:
+        print(f"gained: {describe(f)} - only --write --force, with a "
+              "UX- id in the commit, may add a line")
+    if not new and not stale and not gained:
         print(f"clean: {len(current)} finding(s) match {args.baseline}")
         return 0
     return 1
@@ -150,16 +202,21 @@ def do_shrink(args, current, existing):
     if existing is None:
         print(f"no baseline at {args.baseline} - run --write first")
         return 1
-    _new, stale = diff(current, existing["findings"])
-    if not stale:
+    new, stale = diff(current, existing["findings"])
+    if stale:
+        drop = {identity(f) for f in stale}
+        kept = [f for f in existing["findings"] if identity(f) not in drop]
+        write_baseline(args.baseline, kept, existing.get("families", FAMILIES),
+                       existing.get("ruff_version", ruff_version()))
+        plural = "y" if len(stale) == 1 else "ies"
+        print(f"removed {len(stale)} stale entr{plural}")
+    else:
         print("nothing stale")
-        return 0
-    drop = {identity(f) for f in stale}
-    kept = [f for f in existing["findings"] if identity(f) not in drop]
-    write_baseline(args.baseline, kept, existing.get("families", FAMILIES),
-                   existing.get("ruff_version", ruff_version()))
-    plural = "y" if len(stale) == 1 else "ies"
-    print(f"removed {len(stale)} stale entr{plural}")
+    if new:
+        print(f"{len(new)} new finding(s) remain - shrink does not add:")
+        for f in new:
+            print(f"  new: {describe(f)}")
+        return 1
     return 0
 
 
@@ -178,7 +235,11 @@ def main(argv=None):
         parser.error("exactly one of --write, --check, --shrink")
 
     paths = args.paths or list(DEFAULT_PATHS)
-    raw = ruff_findings(args.root, paths, FAMILIES)
+    try:
+        raw = ruff_findings(args.root, paths, FAMILIES)
+    except RuffFailure as exc:
+        print(f"error: {exc}")
+        return 2
     current = normalize(raw, args.root)
     existing = load_baseline(args.baseline)
 

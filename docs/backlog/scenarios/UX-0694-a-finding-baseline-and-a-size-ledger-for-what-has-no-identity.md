@@ -62,43 +62,44 @@ entry; `git diff` that adds a baseline line — the shrink guard red.
 **This track lands the baseline half only** — the size ledger
 (`tests/quality_reference.json`) is a separate track.
 
-**The gap, measured**: `ruff check bga tools tests .claude/hooks
---select S,C901,PLR0912,PLR0913,PLR0915,SIM115 --output-format json`
-had no fingerprint the gate could hold — 12,201 findings before this
-tree's own guard test existed.
+**The gap, measured**: `ruff check bga tools .claude/hooks --select
+S,C901,PLR0912,PLR0913,PLR0915,SIM115 --output-format json` had no
+fingerprint the gate could hold. The first pass also ran the select
+over `tests`, and the verifier caught it: 11,923 of 12,218 written
+entries were test-file findings, 11,238 of them `S101` — Out of Scope
+says one file, one ledger; `tests` is not a `dev_baseline.py` path.
 
-**The close, measured**: `tools/dev_baseline.py --write` on this tree:
-
-```text
-S 11852 · C901 99 · PLR0912 54 · PLR0913 68 · PLR0915 32 · SIM115 113
-= 12,218 findings written to tests/quality_baseline.json
-```
-
-(12,218 not 12,201: the new guard test file itself carries 17 baselined
-findings — asserts and one `subprocess.run` — folded in by the same
-`--write`.) `make lint` now ends:
+**The close, measured**: `tools/dev_baseline.py --write --force`,
+paths restricted to `bga`, `tools`, `.claude/hooks`:
 
 ```text
-python3 tools/dev_baseline.py --check
-clean: 12218 finding(s) match tests/quality_baseline.json
+S 93 · C901 84 · PLR0912 47 · PLR0913 34 · PLR0915 30 · SIM115 11
+= 299 findings in tests/quality_baseline.json
 ```
 
-Planted `bga/_scratch_ux694_mutation.py` (`subprocess.run(cmd,
-shell=True)`), removed after:
+`make lint` ends `python3 tools/dev_baseline.py --check`; planted
+`bga/_scratch_ux694_mutation.py` (`subprocess.run(cmd, shell=True)`) →
+`new: ruff S602 ... (#1) subprocess.run(cmd, shell=True)`, exit 1;
+removed, clean, exit 0. The verifier's four other fixes land in this
+same write: the new git-diff shrink guard reports 6 gained lines right
+now against the prior commit's `HEAD` (2 from collapsing interior
+whitespace on an already-baselined `bga/contracts.py` `S112` line, 4
+from this commit's own new `subprocess.run` calls in `head_findings`)
+— the exact case the guard exists for; clean again once this commit is
+`HEAD`. `make test-small`: 4,311 passed, 2 known `docs/contributing/`
+context-map failures (out of scope, orchestrator's).
 
-```text
-new: ruff S602 bga/_scratch_ux694_mutation.py (#1) subprocess.run(cmd, shell=True)
-```
-
-exit 1; removed, `--check` returned to clean, exit 0.
-
-**Mutations** (`tools/dev_baseline.py`, reverted from a pre-edit copy
-each time, `__pycache__` cleared):
+**Mutations** (reverted from a pre-edit copy each time, `__pycache__`
+cleared):
 
 | mutation | reddened | count |
 |---|---|---|
-| identity's `nth` set to the raw line number instead of the per-(rule,file,text) occurrence count | `test_a_line_inserted_above_still_matches`, `test_the_same_line_twice_gives_two_identities` | 2 failed, 4 passed |
-| `do_check` exit code ignores `stale`, only reflects `new` | `test_a_fixed_finding_is_reported_as_stale` | 1 failed, 5 passed |
-| `do_shrink` appends `new` findings alongside removing `stale` | `test_shrink_never_adds` | 1 failed, 5 passed |
+| identity's `nth` = raw line number | 2 tests (line-number, nth) | 2 failed, 4 passed |
+| `do_check` exit ignores `stale` | fixed-finding test | 1 failed, 5 passed |
+| `do_shrink` appends `new` (no-stale branch) | never-adds test | 1 failed, 5 passed |
+| `gained_since_head` disabled | git-diff-guard test | 1 failed, 1 passed |
+| `.strip()` instead of whitespace collapse | reformat-still-matches test | 1 failed |
+| `do_shrink` appends `new` in the stale branch (verifier's mutation) | stale-and-new-together test | 1 failed |
+| `invalid-syntax` check removed | unparsable-file test | 1 failed |
 
-All three reverted to `6 passed`.
+All reverted, `11 passed`.

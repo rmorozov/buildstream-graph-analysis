@@ -97,7 +97,7 @@ def find_definitions(name, include_tests):
             for child in ast.iter_child_nodes(node):
                 parents[child] = node
         for node in ast.walk(tree):
-            if not isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef):
+            if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
                 continue
             if node.name != name:
                 continue
@@ -159,7 +159,7 @@ def find_importers(module, include_tests):
         if tree is None:
             continue
         for node in ast.walk(tree):
-            if isinstance(node, ast.Import | ast.ImportFrom) and module in imported_names(path, node):
+            if isinstance(node, (ast.Import, ast.ImportFrom)) and module in imported_names(path, node):
                 rows.append((rel(path),))
                 break
     return rows
@@ -174,7 +174,7 @@ def find_fanout(module, include_tests):
         return []
     seen = []
     for node in ast.walk(tree):
-        if not isinstance(node, ast.Import | ast.ImportFrom):
+        if not isinstance(node, (ast.Import, ast.ImportFrom)):
             continue
         for name in imported_names(target, node):
             if name.split(".")[0] in DIRS and module_to_path(name) and name not in seen:
@@ -188,7 +188,7 @@ def find_fanout(module, include_tests):
 def top_level_names(path, tree):
     names = []
     for node in tree.body:
-        if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef):
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
             names.append((node.name, node.lineno))
         elif isinstance(node, ast.Assign):
             names += [(t.id, node.lineno) for t in node.targets if isinstance(t, ast.Name)]

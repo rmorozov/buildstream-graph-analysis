@@ -140,11 +140,7 @@ $ python3 tools/dev_touch_map.py --adopt cand.json   # one added edge
 87 module(s), 7341 edge(s)
 retired 6 drift entries the map's readers own, for the next run to re-record:
   tests/unit/test_a_slow_file_says_which_file.py
-  tests/unit/test_a_track_costs_what_it_reads.py
-  tests/unit/test_the_cost_row_is_derived_from_the_selector.py
-  tests/unit/test_the_loop_stays_fast.py
-  tests/unit/test_the_selector_carries_the_census.py
-  tests/unit/test_the_touching_map_is_measured.py
+  ... four more, then test_the_touching_map_is_measured.py
 ```
 
 `files` 474 → 468, and each retired name reads `None` after. The gate's

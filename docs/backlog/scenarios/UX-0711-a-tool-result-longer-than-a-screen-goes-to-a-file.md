@@ -91,6 +91,15 @@ next round is the first that can measure it against this baseline.
 | the sentence removed from `CLAUDE.md` | the CLAUDE.md clause |
 | the budget kept, `head`/`grep` dropped | the routes clause |
 
+### Where the page budget bit
+
+`CLAUDE.md` is capped at 80 lines and the addition made it 81 — caught
+by its own guard, after this round had already committed and pushed it.
+The paragraph is rewrapped to three lines and the rule split by reader:
+`CLAUDE.md` carries the rule and the id, `orient` the 60-line budget
+and the routes. The guard now reads each document for what that
+document is for, rather than the same three words twice.
+
 ### Deviation
 
 One addition beyond the Required Fix: the `_record()` tolerance in

@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-682 scenarios: **23 open**, 659 closed.
+690 scenarios: **31 open**, 659 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -26,8 +26,8 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | viewer | 8 | 156 |
 | cli | 0 | 21 |
 | store | 0 | 16 |
-| docs | 2 | 105 |
-| guards | 3 | 140 |
+| docs | 5 | 108 |
+| guards | 8 | 145 |
 
 ## Open scenarios
 
@@ -59,6 +59,44 @@ task file, which is the only place it ever lived twice.
 | UX-682 | [change frequency and co-change, from the logs the project already keeps](UX-0682-change-frequency-and-co-change-from-the-logs-the-project-already-keeps.md) | analysis | High | R2 and R3 — split, consolidate, or leave alone, decided on evidence | 🔴 |
 | UX-683 | [the foundation tier is declared, and the kind-based exemption misses it](UX-0683-the-foundation-tier-is-declared-and-the-kind-based-exemption-misses-it.md) | analysis | Medium | R2 who owns the toolchain and wants out of the noise; R3 reading the ranking | 🔴 |
 | UX-684 | [the cached-build verdict — does the graph rebuild the cheapest subgraph?](UX-0684-the-cached-build-verdict-does-the-graph-rebuild-the-cheapest-subgraph.md) | analysis | High | R3 showing evidence, R8 reading it | 🔴 |
+| UX-685 | [exploration is a seeded scenario, and every finding grows the answer key](UX-0685-exploration-is-a-seeded-scenario-and-every-finding-grows-the-answer-ke.md) | guards | High | R8 deciding whether the tool is in shape; the implementing session that gets a guard, not a transcript | 🔴 |
+| UX-686 | [a release waits for the walk that read its candidate](UX-0686-a-release-waits-for-the-walk-that-read-its-candidate.md) | docs | High | R8 cutting a release; the reader who installs it | 🔴 |
+| UX-687 | [the impact set is derived by one tool, not five greps](UX-0687-the-impact-set-is-derived-by-one-tool-not-five-greps.md) | guards | High | the session at the design stage, before the first edit | 🔴 |
+| UX-688 | [every task carries an area, and the area pages are generated](UX-0688-every-task-carries-an-area-and-the-area-pages-are-generated.md) | docs | High | the session doing impact analysis or a test plan without rescanning 682 files | 🔴 |
+| UX-689 | [the architecture document moves into the area pages, one track at a time](UX-0689-the-architecture-document-moves-into-the-area-pages-one-track-at-a-tim.md) | docs | Medium | the reader pricing a change; the session restructuring without losing a sentence | 🔴 |
+| UX-690 | [the suite has a shape budget, and a feature files its test analysis](UX-0690-the-suite-has-a-shape-budget-and-a-feature-files-its-test-analysis.md) | guards | Medium | R8 reading whether the suite is balanced; the implementer writing the right guard | 🔴 |
+| UX-691 | [a flake ledger, so an excursion is counted before it is a flake](UX-0691-a-flake-ledger-so-an-excursion-is-counted-before-it-is-a-flake.md) | guards | Medium | the round reading a red gate on a file nobody touched | 🔴 |
+| UX-692 | [the invariants hold for any shape — a seeded sweep over generated projects](UX-0692-the-invariants-hold-for-any-shape-a-seeded-sweep-over-generated-projec.md) | guards | High | R8 trusting the report on a graph nobody fixtured | 🔴 |
+
+## UX-685..UX-692: the ninety-second round — the suite verifies what was built, the walk what was promised (2026-09-05)
+
+A design round. The user asked how to keep the tool in shape when
+hand exploration finds a problem every time the suite does not: an
+exploratory cadence on a cheaper model tied to the release, impact
+analysis at the design stage, a hierarchical backlog, and a planned
+restructuring of the specification and the architecture document.
+The inventory (a researcher, on `sonnet`): 472 one-claim files and
+three journey-shaped ones; the journey guard with an answer key
+(`UX-402`) real and unchanged since round 64; no property-based test,
+no flake ledger, no release gate on a walk, no area field on 682
+tasks, no module→contract→guide index; the batch gate settled against
+batching (`UX-500`); the spec's edge decisions taken. The argument is
+Direction 18; the round is
+[`docs/audits/round-92.md`](../../audits/round-92.md).
+
+**Five corrections, eight filings.** Make the journey the unit and
+every finding an answer-key row (`UX-685` — a seeded scenario, driven
+on the reporters' model and judged on the session's). Tie the walk to
+the release and make the release wait for it (`UX-686`). Derive the
+impact set with one tool instead of five greps (`UX-687`) and give
+every task an area with generated area pages, a view rather than a
+move (`UX-688`). Do not restructure the spec — it is layered — and
+move the architecture document's prose into the area pages one track
+at a time (`UX-689`). And three the brief did not ask for: a shape
+budget for the suite with a filed test analysis per feature
+(`UX-690`), a flake ledger (`UX-691`), and a seeded sweep over
+generated projects asserting the thirteen invariants for any shape
+(`UX-692`).
 
 ## UX-675..UX-684: the ninety-first round — whose question utilization is (2026-09-05)
 

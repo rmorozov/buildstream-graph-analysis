@@ -1550,6 +1550,127 @@ expected cost), per-role hues in the page for these findings (§4
 rule 7 stands), and observing a remote build (`UX-9` stands — the
 tool prices it and does not watch it).
 
+## Direction 18: the suite verifies what was built; the walk verifies what was promised — and both are planned before the code (argued 2026-09-05, round 92)
+
+**Serves:** R8 (the maintainer deciding when to release), and every
+implementing session — the suite is theirs, the walk is the reader's.
+
+**Status:** partial — the corrections are argued here; `UX-685`..`UX-692` are open.
+
+The user's brief: the suite grows and hand exploration still finds
+problems every time; so a cadence of exploratory testing on a cheaper
+model, tied to the release; an impact analysis at the design stage;
+a hierarchical backlog so impact and test planning stop rescanning
+hundreds of tasks; and, planned carefully, a restructuring of the
+specification and the architecture document. Round 92 checked each
+against the tree (the round-92 inventory: 472 one-claim files and three journey-shaped ones; the journey guard with an answer key real and unchanged since round 64; no property-based test, no flake ledger, no release gate on a walk; no area field on 682 tasks and no module→contract→guide index; the batch gate settled against batching by `UX-500`'s own numbers; the spec's edge decisions taken in `UX-564`..`UX-568`) and argues five corrections.
+
+### Five corrections
+
+**1. Exploration finds what it finds because the suite tests claims
+and a reader tests journeys — so make the journey the unit.** Every
+guard in `tests/unit/` is one file per claim, and a claim is true
+the moment it is written; a reader meets the page in sequence, with
+a real capture, after twenty other changes landed. That is why the
+round-45 stranger, the round-63 walk, the round-77 controls, the
+round-90 design review each found a class the suite could not: the
+suite had no journey-shaped assertion. The remedy is not more
+exploration; it is turning each exploration's *protocol* into a
+guard with an answer key (`UX-402`'s shape), so the next walk starts
+from what the last one already holds and spends its budget on what
+moved. Exploration then has a job the suite cannot do — variation —
+and a shape that keeps it cheap: a seeded scenario drawn from the
+area tree and the input classes, a fixed report, a finding that
+becomes a guard.
+
+**2. A cheaper model is right for the driving and wrong for the
+judging.** Round 90's advisory put reading and checking on `sonnet`;
+a scripted walk (capture, export, drive one control per class, take
+the census, diff against the answer key) is checking, and belongs
+there — round 77's walk cost 336k tokens because it also *judged*
+every control. The judgement (is this reasonable, is this the
+guide's promise, what should the rule be) stays with the session's
+model, on the walk's report rather than on the page. The cost target
+is one row in the run ledger: a scripted walk under 100k, a
+judgement under 50k.
+
+**3. Tie exploration to the release, and make the release wait for
+it.** A release is a contract state (`UX-251`); nothing today makes
+it wait for a walk. The gate is mechanical: the release candidate is
+the last commit that changed a contract, and a release is cut only
+when a walk and a design review have run on or after that commit,
+their reports are in the audits, and every finding they filed is
+either closed or declined in the release notes. Cadence follows from
+the contract changes, not from a calendar — a quiet month needs no
+walk, a round that bumps `analyze` needs one before it ships.
+
+**4. Impact analysis exists in pieces and is run by hand; derive it.**
+The `decompose` skill's surfaces are derived by the touching map and
+the selector; what a design-stage reader also needs — which contracts
+a module emits, which findings it produces, which guides name it,
+which styleguide sections cite it, which open filings sit on it — is
+five greps in the `orient` skill. One tool runs them all and prints
+the impact set for a filing or a diff, and the set is what the
+filing's decomposition pastes. The hierarchical backlog the brief
+asks for is the same index read the other way: not a new tree of
+files (682 task files, guarded links, closed rows verbatim — a move
+would cost a round and break the record) but an **area** field per
+task, derived once from the files each closing commit touched and
+kept by a guard, with generated area pages: modules, contracts,
+guards, guides, open and closed tasks. Impact analysis then reads one
+page.
+
+**5. Do not restructure the specification; layer it. Restructure the
+architecture document one area at a time.** The spec is frozen
+outside Part 32 by rule, and its five edge decisions are taken
+(`UX-564`..`UX-568`); a rewrite would re-open them for no reader. The layering already begun — the
+Part 32 registry, the Part→guard index, the advisory-Parts note — is
+what makes the spec navigable without moving a line. The
+architecture document is different: its guarded skeletons are exact
+and its prose drifts, and the area pages of correction 4 are where
+each chapter's prose belongs — so the restructure is a *move per
+area*, one track each under the `decompose` skill's merge rules,
+never a rewrite, with the docs guards holding every link across the
+move. Planned as a round of tracks, judged by one number: no
+sentence lost (the round-82 review's method, run on the before and
+after).
+
+### What follows
+
+Eight filings, `UX-685`..`UX-692`:
+
+- **Exploration as a seeded scenario** (`UX-685`): `dev_scenario.py
+  --seed N` draws area × input class × role and prints the scripted
+  walk; the driving half runs on the reporters' model, the judging
+  half on the session's, each a ledger row under a target; every
+  finding adds a row to the journey's answer key in the same round.
+- **The release waits for the walk** (`UX-686`): a third condition
+  in the release guide, read by the derivation guard — a walk and a
+  design review on or after the candidate commit, their findings
+  closed or declined by name.
+- **The impact set derived** (`UX-687`): one tool prints modules,
+  contracts, findings, guides, styleguide sections, guards and open
+  filings for a diff or an id; the decomposition pastes it.
+- **Areas, as a view** (`UX-688`): an Area field derived from the
+  closing commits, generated area pages, no file moved.
+- **The architecture document moved one area at a time**
+  (`UX-689`): the spec layered and left; the prose into the area
+  pages under the merge rules, judged by no sentence lost.
+- **A shape budget and a filed test analysis** (`UX-690`): the
+  suite's purpose mix derived and bounded; a feature names its input
+  classes and the journey it extends.
+- **A flake ledger** (`UX-691`): excursions counted before they are
+  called flakes.
+- **The invariants for any shape** (`UX-692`): a seeded sweep over
+  generated projects asserting I1-I13, determinism and the volume
+  budget — the exploration nobody can do by hand, mechanised and
+  cheap.
+
+What the direction declines: a calendar cadence for exploration
+(the contract change is the clock), a new tree of task files (the
+area is a field and a generated page), and a specification rewrite
+(layered, not moved).
+
 ## Round history
 
 This document used to carry the findings of rounds 2-6 inline, which
@@ -1613,6 +1734,7 @@ the other rounds now:
 | [89](../audits/round-89.md) | round 88's five open rows in three parallel tracks, and the round where **every closed row was the same defect at a different scale**: a fact written twice, one copy guarded and exact, the other drifted — plus three more found while working, one of them two rows round 88 wrote by hand (`UX-651`..`UX-659`) |
 | [90](../audits/round-90.md) | the process given a ledger — reporters on `sonnet`, the walk and the design review as skills, a run ledger — and the page looked at through seven screenshots: the rail as a source list, a reader as a shape not a hue, a runbook as a shape, a rail click that overshoots (`UX-663`..`UX-674`) |
 | [91](../audits/round-91.md) | a design round: whose question utilization is — the tool counts processes where the CI owner needs cores, computes idle intervals it never publishes, exempts foundations by kind so a toolchain is not exempt, and has no change frequency; Direction 17 argues the envelope, the jobserver, priced remote execution and expected rebuild cost (`UX-675`..`UX-684`) |
+| [92](../audits/round-92.md) | a design round on the test workflow: the suite verifies what was built and the walk what was promised — exploration as a seeded scenario that grows the answer key, a release that waits for the walk, the impact set derived, areas as a view, the architecture prose moved one area at a time, a shape budget, a flake ledger, the invariants for any shape (`UX-685`..`UX-692`) |
 
 ## Verification Log
 

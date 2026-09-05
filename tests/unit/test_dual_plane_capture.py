@@ -15,7 +15,7 @@ import subprocess
 import pytest
 
 from tools.bst_log_to_chrome_trace import WrapperTraceConverter
-from tools.bst_native_build_tracer import parse_trace_log, pair_events, run_traced_build
+from tools.bst_native_build_tracer import pair_events, parse_trace_log, run_traced_build
 from tools.native_trace_to_chrome_trace import build_combined_chrome_trace, build_standalone_chrome_trace
 
 BST_AVAILABLE = shutil.which("bst") is not None

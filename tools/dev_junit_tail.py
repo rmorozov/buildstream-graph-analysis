@@ -41,7 +41,7 @@ def failures(path):
 def totals(path):
     """`tests/failures/errors` as the junit records them, and its age."""
     root = ET.parse(path).getroot()
-    counted = {key: 0 for key in ("tests", "failures", "errors")}
+    counted = dict.fromkeys(("tests", "failures", "errors"), 0)
     for suite in root.iter("testsuite"):
         for key in counted:
             counted[key] += int(suite.get(key) or 0)

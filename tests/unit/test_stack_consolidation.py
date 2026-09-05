@@ -6,10 +6,10 @@ See docs/backlog/tasks/P4-15-stack-consolidation-heuristic.md.
 """
 import json
 
-from bga.ingest.models import Graph, Element, DependencyEdge
-from bga.structural.consolidation import find_consolidation_candidates
 from bga import BuildEfficiencyAnalyzer
+from bga.ingest.models import DependencyEdge, Element, Graph
 from bga.report.text import format_text
+from bga.structural.consolidation import find_consolidation_candidates
 
 
 def _graph(elements, deps):

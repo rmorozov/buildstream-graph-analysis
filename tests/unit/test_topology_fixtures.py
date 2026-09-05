@@ -10,7 +10,6 @@ import pytest
 
 from tests.fixtures import topologies as topo
 
-
 FACTORIES = [
     ("linear_chain", lambda: topo.linear_chain()),
     ("linear_chain_n5", lambda: topo.linear_chain(n=5)),

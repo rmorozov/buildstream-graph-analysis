@@ -24,7 +24,7 @@ import json
 
 from bga import BuildEfficiencyAnalyzer
 from bga.ingest.loader import load_historical_runs
-from bga.ingest.models import Graph, Element, NormalizedTask, TaskKey, TaskKind, Trace, TaskSpan
+from bga.ingest.models import Element, Graph, NormalizedTask, TaskKey, TaskKind, TaskSpan, Trace
 from bga.utilisation.detection import compute_rebuild_tasks, compute_retry_tasks
 
 

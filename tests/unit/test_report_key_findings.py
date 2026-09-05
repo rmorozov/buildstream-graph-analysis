@@ -10,8 +10,8 @@ from pathlib import Path
 import pytest
 
 from bga import BuildEfficiencyAnalyzer
-from bga.report.text import format_text, format_csv
 from bga.report.json import format_json
+from bga.report.text import format_csv, format_text
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 

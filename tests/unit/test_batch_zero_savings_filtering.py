@@ -21,7 +21,7 @@ def _zero_group(elements):
         baseline_makespan_us=6_400_000,
         combined_makespan_us=6_400_000,
         combined_savings_us=0,
-        individual_savings_us={e: 0 for e in elements},
+        individual_savings_us=dict.fromkeys(elements, 0),
     )
 
 
@@ -31,7 +31,7 @@ def _real_group(elements, baseline_us, combined_us):
         baseline_makespan_us=baseline_us,
         combined_makespan_us=combined_us,
         combined_savings_us=baseline_us - combined_us,
-        individual_savings_us={e: 0 for e in elements},
+        individual_savings_us=dict.fromkeys(elements, 0),
     )
 
 

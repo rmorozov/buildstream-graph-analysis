@@ -16,8 +16,8 @@ Experiment - the module docstrings were fed to argparse as
 This guard exists so the next design saga lands in a file rather than in
 argparse.
 """
-import io
 import contextlib
+import io
 
 import pytest
 
@@ -85,9 +85,8 @@ def test_every_command_bga_dispatches_is_covered_by_this_file():
 def _help(argv):
     from bga.cli import main
     out = io.StringIO()
-    with contextlib.redirect_stdout(out), contextlib.redirect_stderr(out):
-        with pytest.raises(SystemExit):
-            main(argv)
+    with contextlib.redirect_stdout(out), contextlib.redirect_stderr(out), pytest.raises(SystemExit):
+        main(argv)
     return out.getvalue()
 
 
@@ -128,7 +127,7 @@ def test_module_docstrings_are_no_longer_the_help_text():
     docstring is a design record. The docstrings themselves may stay any
     length - they just stop being what argparse prints."""
     import tools.bst_native_build_tracer as tracer
-    assert tracer.HELP != tracer.__doc__
+    assert tracer.__doc__ != tracer.HELP
     assert len(tracer.HELP.splitlines()) <= 10
     # the history is still there for a reader of the source
     assert "UX-11" in tracer.__doc__

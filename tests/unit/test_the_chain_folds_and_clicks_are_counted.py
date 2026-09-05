@@ -56,8 +56,8 @@ REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 sys.path.insert(0, str(REPO / "tests"))
 
-from browser import NO_BROWSER, Browser, find_chrome    # noqa: E402
-from pages import snapshot_copy    # noqa: E402
+from browser import NO_BROWSER, Browser, find_chrome
+from pages import snapshot_copy
 
 chrome = find_chrome()
 needs_browser = pytest.mark.skipif(chrome is None, reason=NO_BROWSER)
@@ -118,8 +118,8 @@ class TestTheChainsListingFolds:
         return _js("""
 const { liftedCriticalPath } = await import("./tests/viewer.mjs");
 const { PATH_HEAD, PATH_TAIL } = await import("./tests/viewer.mjs");
-const rows = Array.from({ length: %d }, (_, i) => ({
-  element_uid: `e${i}.bst`, duration_us: 1000 * (%d - i),
+const rows = Array.from({ length: __LENGTH__ }, (_, i) => ({
+  element_uid: `e${i}.bst`, duration_us: 1000 * (__LENGTH__ - i),
   share_of_path: 0.05 }));
 const section = liftedCriticalPath({ critical_path_detail: rows }, undefined);
 const body = all(section, (n) => n.tagName === "tbody")[0];
@@ -139,7 +139,7 @@ console.log(JSON.stringify({
   label: button ? text(button) : null,
   title: button ? button.attrs.title : null,
 }));
-""" % (length, length))
+""".replace("__LENGTH__", str(length)))
 
     def test_a_long_chain_shows_its_head_and_its_tail(self):
         out = self._chain(20)
@@ -244,11 +244,11 @@ console.log(JSON.stringify({
   railFolded, chapters: chapters.length, sections: walked.length,
   unreachable: walked.filter((w) => w.cost === null).map((w) => w.key),
   worst: scored.length ? Math.max(...scored.map((w) => w.cost)) : 0,
-  overBudget: scored.filter((w) => w.cost > %d).map((w) => [w.key, w.cost]),
+  overBudget: scored.filter((w) => w.cost > __CLICK_BUDGET__).map((w) => [w.key, w.cost]),
   histogram: scored.reduce((h, w) => {
     h[w.cost] = (h[w.cost] ?? 0) + 1; return h; }, {}),
   error: failure }));
-""" % CLICK_BUDGET
+""".replace("__CLICK_BUDGET__", str(CLICK_BUDGET))
 
 
 def _boot(run_dir, tmp, narrow):

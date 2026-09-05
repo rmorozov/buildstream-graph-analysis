@@ -33,8 +33,8 @@ REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 sys.path.insert(0, str(REPO / "tests"))
 
-from browser import NO_BROWSER, Browser, find_chrome    # noqa: E402
-from pages import snapshot_copy    # noqa: E402
+from browser import NO_BROWSER, Browser, find_chrome
+from pages import snapshot_copy
 
 GOLDEN = REPO / "tests/fixtures/golden/mixed_task_kinds"
 MACRO = REPO / "tests/fixtures/macro_micro/run"

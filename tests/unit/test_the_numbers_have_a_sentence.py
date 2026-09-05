@@ -104,8 +104,8 @@ class TestTheSchemaDescribesWhatIsPublished:
     def test_every_described_member_is_one_the_payload_carries(self, section):
         payload = self._analyze()[section]
         declared = set(
-            (schemas.schema(schemas.ANALYZE)["properties"][section]
-             .get("properties") or {}))
+            schemas.schema(schemas.ANALYZE)["properties"][section]
+             .get("properties") or {})
         assert declared, f"{section} declares no members at all"
         phantom = sorted(declared - set(payload))
         assert phantom == [], (

@@ -278,8 +278,7 @@ class TestTheBlastEndpoint:
 
         printed = subprocess.run(
             [sys.executable, "-c",
-             "from bga.cli import main; raise SystemExit(main(%r))"
-             % (["blast", target, run, "--no-cost", "-f", "json"],)],
+             "from bga.cli import main; raise SystemExit(main({!r}))".format(["blast", target, run, "--no-cost", "-f", "json"])],
             capture_output=True, text=True, cwd=os.getcwd())
         assert printed.returncode == 0, printed.stderr
         assert served_answer == json.loads(printed.stdout)

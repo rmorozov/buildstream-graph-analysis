@@ -26,13 +26,15 @@ REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 
-from tools.bga_timeline import concurrency_series  # noqa: E402
-from tools.bst_native_build_tracer import (  # noqa: E402
-    compute_max_concurrency, merge_record_streams, parse_trace_lines,
-    stream_records)
+from test_one_process_is_one_slice import _RAW, PEAK_CONCURRENCY
 
-from test_one_process_is_one_slice import (  # noqa: E402
-    _RAW, PEAK_CONCURRENCY)
+from tools.bga_timeline import concurrency_series
+from tools.bst_native_build_tracer import (
+    compute_max_concurrency,
+    merge_record_streams,
+    parse_trace_lines,
+    stream_records,
+)
 
 DICTIONARY = REPO / "docs/spec/trace-dictionary.md"
 TIMELINE = REPO / "tools/bga_timeline.py"

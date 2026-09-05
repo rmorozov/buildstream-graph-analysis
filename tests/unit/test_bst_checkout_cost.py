@@ -24,9 +24,9 @@ from pathlib import Path
 
 import pytest
 
-from ._bst_env import isolated_bst_env
-
 from tools.bst_checkout_cost import compare, summarize
+
+from ._bst_env import isolated_bst_env
 
 FIXTURE_PROJECT = Path(__file__).resolve().parents[1] / "fixtures" / "bst_show_project"
 BST_AVAILABLE = shutil.which("bst") is not None

@@ -12,7 +12,6 @@ import pytest
 
 from bga.compare import _compare_results, compute_band
 
-
 # The five real fdsdk captures, in microseconds. Same commit, same
 # workflow, same `--builders 4 --max-jobs 4`.
 FDSDK = [3614.22e6, 3434.43e6, 3405.78e6, 3261.22e6, 2712.39e6]

@@ -24,7 +24,6 @@ import pytest
 from bga import sources
 from tools.bst_extract_run import build_source_inventory
 
-
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 GOLDEN = os.path.join(REPO_ROOT, "tests", "fixtures", "golden", "mixed_task_kinds")
 
@@ -69,7 +68,7 @@ class TestOneRepositoryConsumedTwoWays:
         downstream = {uid: {"app.bst"} for uid in libs}
         downstream["core.bst"] = set(libs) | {"app.bst"}
         downstream["app.bst"] = set()
-        kinds = {uid: "cmake" for uid in libs}
+        kinds = dict.fromkeys(libs, "cmake")
         kinds["core.bst"] = "manual"
         kinds["app.bst"] = "cmake"
         return libs, downstream, kinds
@@ -84,7 +83,7 @@ class TestOneRepositoryConsumedTwoWays:
 
         inventory = build_source_inventory(project, sorted(elements))
         rows = sources.resource_blast(inventory, downstream, kinds,
-                                      {uid: 100_000_000 for uid in kinds})
+                                      dict.fromkeys(kinds, 100000000))
         assert len(rows) == 1, rows
         row = rows[0]
         assert row["identity"] == "gitlab.example.com/org/monorepo"
@@ -126,7 +125,7 @@ class TestOneRepositoryConsumedTwoWays:
         project = _project(tmp_path, elements)
         inventory = build_source_inventory(project, sorted(elements))
         rows = sources.resource_blast(inventory, downstream, kinds,
-                                      {uid: 3_600_000_000 for uid in kinds})
+                                      dict.fromkeys(kinds, 3600000000))
 
         # 7 of 8 elements is most of the graph.
         headline = sources.monorepo_headline(rows, element_count=8)

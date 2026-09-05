@@ -14,12 +14,12 @@ import logging
 import subprocess
 import sys
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
 
-def _diff_paths(a: Any, b: Any, path: str = "") -> List[str]:
+def _diff_paths(a: Any, b: Any, path: str = "") -> list[str]:
     """Recursively find differing key paths between two JSON-decoded
     values, so a mismatch is diagnosable ("which field differs and how"),
     not just "mismatch found"."""
@@ -46,7 +46,7 @@ def _diff_paths(a: Any, b: Any, path: str = "") -> List[str]:
     return []
 
 
-def _compare_canonical_runs(canonical_runs: List[Any], n: int) -> Dict[str, Any]:
+def _compare_canonical_runs(canonical_runs: list[Any], n: int) -> dict[str, Any]:
     """Shared comparison/reporting logic for both determinism-check modes
     (in-process and cross-process, P1-35) - same result shape, same
     diagnosable-diff behavior, so callers/consumers don't need to care
@@ -77,7 +77,7 @@ def _compare_canonical_runs(canonical_runs: List[Any], n: int) -> Dict[str, Any]
     }
 
 
-def run_determinism_check(run_dir: Path, n: int = 100) -> Dict[str, Any]:
+def run_determinism_check(run_dir: Path, n: int = 100) -> dict[str, Any]:
     """
     Run the full analysis pipeline n times against the same run_dir and
     assert every run produces byte-identical canonical output.
@@ -110,8 +110,8 @@ def run_determinism_check(run_dir: Path, n: int = 100) -> Dict[str, Any]:
     from ..analyzer import BuildEfficiencyAnalyzer
     from ..cli import format_json
 
-    canonical_runs: List[Any] = []
-    for i in range(n):
+    canonical_runs: list[Any] = []
+    for _i in range(n):
         analyzer = BuildEfficiencyAnalyzer(run_dir)
         analyzer.load()
         result = analyzer.analyze()
@@ -121,7 +121,7 @@ def run_determinism_check(run_dir: Path, n: int = 100) -> Dict[str, Any]:
     return _compare_canonical_runs(canonical_runs, n)
 
 
-def run_cross_process_determinism_check(run_dir: Path, n: int = 5) -> Dict[str, Any]:
+def run_cross_process_determinism_check(run_dir: Path, n: int = 5) -> dict[str, Any]:
     """
     Like run_determinism_check, but each repeat is a genuinely separate
     `python -m bga.cli analyze -f json` subprocess (P1-35), not N repeats
@@ -149,8 +149,8 @@ def run_cross_process_determinism_check(run_dir: Path, n: int = 5) -> Dict[str, 
 
     Returns: same shape as run_determinism_check.
     """
-    canonical_runs: List[Any] = []
-    for i in range(n):
+    canonical_runs: list[Any] = []
+    for _i in range(n):
         proc = subprocess.run(
             [sys.executable, "-m", "bga.cli", "analyze", "-f", "json", str(run_dir)],
             capture_output=True, text=True, check=True,

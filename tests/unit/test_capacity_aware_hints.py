@@ -12,7 +12,8 @@ capacity formulas comparing the same real inputs is the divergence
 from bga.analyzer import BuildEfficiencyAnalyzer
 from bga.ingest.models import AttributionCategory, RunContext
 from bga.report._shared import (
-    ATTRIBUTION_CATEGORY_HINTS, ATTRIBUTION_CATEGORY_HINTS_BY_KEY,
+    ATTRIBUTION_CATEGORY_HINTS,
+    ATTRIBUTION_CATEGORY_HINTS_BY_KEY,
     resolve_attribution_hint,
 )
 

@@ -64,12 +64,13 @@ into one convenience command.
 import argparse
 import json
 import subprocess
+import sys
 import tempfile
 import time
+from collections.abc import Sequence
+from typing import Optional
 
 from bga import progress
-import sys
-from typing import List, Optional, Sequence
 
 RECORD_SEP = "\x1e"  # ASCII Record Separator - between elements
 FIELD_SEP = "\x1f"  # ASCII Unit Separator - between fields of one element
@@ -79,7 +80,7 @@ _FORMAT = FIELD_SEP.join(
 ) + RECORD_SEP
 
 
-def _parse_dep_list(raw: str) -> List[str]:
+def _parse_dep_list(raw: str) -> list[str]:
     """Parse a %{build-deps}/%{runtime-deps} value: empty renders as the
     literal string "[]"; a non-empty list renders as one "- name" line
     per dependency, which can span multiple physical lines for a
@@ -286,8 +287,8 @@ def run_bst_show(
 def build_graph(stdout: str, targets: Sequence[str]) -> dict:
     """Parse run_bst_show's stdout into graph/v9's {"elements", "dependencies"} shape."""
     requested = set(targets)
-    elements: List[dict] = []
-    dependencies: List[dict] = []
+    elements: list[dict] = []
+    dependencies: list[dict] = []
     seen_uids = set()
 
     for record in stdout.split(RECORD_SEP):

@@ -14,13 +14,13 @@ Implements M5 milestone with high-value structural diagnostics:
 
 import bisect
 import logging
-from dataclasses import dataclass, field
-from typing import Dict, FrozenSet, List, Optional, Set, Tuple
-from collections import defaultdict, deque
 import random
+from collections import defaultdict, deque
+from dataclasses import dataclass, field
+from typing import Optional
 
-from bga.ingest.models import NormalizedTask, TaskKind
 from bga.graph.edg import build_element_graph, compute_in_out_degree
+from bga.ingest.models import NormalizedTask, TaskKind
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +50,7 @@ class ReadyQueueMetrics:
     peak_depth: int
     time_with_nonzero_queue_us: int
     total_horizon_us: int
-    queue_depth_timeline: List[Tuple[int, int, int]] = field(default_factory=list)  # (start, end, depth)
+    queue_depth_timeline: list[tuple[int, int, int]] = field(default_factory=list)  # (start, end, depth)
     
     @property
     def nonzero_fraction(self) -> float:
@@ -80,8 +80,8 @@ class BlastRadiusResult:
         return self.downstream_count if self.is_on_critical_path else 0
 
 
-def order_blast_radius(results: List["BlastRadiusResult"],
-                       element_durations: Dict[str, int]) -> None:
+def order_blast_radius(results: list["BlastRadiusResult"],
+                       element_durations: dict[str, int]) -> None:
     """Rank blast-radius results in place, with a **total** order.
 
     `UX-173` chose the key: what a change to each element would cost,
@@ -221,32 +221,32 @@ class DiagnosticsResult:
     Complete advanced diagnostics result (M5).
     """
     # Wall-clock share
-    wall_clock_shares: List[WallClockShare] = field(default_factory=list)
+    wall_clock_shares: list[WallClockShare] = field(default_factory=list)
     total_active_wall_time_us: int = 0
     
     # Ready queue
     ready_queue: Optional[ReadyQueueMetrics] = None
     
     # Blast radius
-    blast_radius: List[BlastRadiusResult] = field(default_factory=list)
-    top_blast_radius_elements: List[BlastRadiusResult] = field(default_factory=list)
+    blast_radius: list[BlastRadiusResult] = field(default_factory=list)
+    top_blast_radius_elements: list[BlastRadiusResult] = field(default_factory=list)
     
     # Criticality probability
-    criticality_probabilities: List[CriticalityProbability] = field(default_factory=list)
-    high_criticality_elements: List[CriticalityProbability] = field(default_factory=list)
+    criticality_probabilities: list[CriticalityProbability] = field(default_factory=list)
+    high_criticality_elements: list[CriticalityProbability] = field(default_factory=list)
     
     # Fetch/build overlap
     fetch_build_overlap: Optional[FetchBuildOverlap] = None
     
     # Duration variability (requires historical data)
-    duration_variability: List[DurationVariability] = field(default_factory=list)
+    duration_variability: list[DurationVariability] = field(default_factory=list)
     
     # Leaf analysis
-    leaf_analysis: List[LeafAnalysis] = field(default_factory=list)
-    deferrable_leaves: List[LeafAnalysis] = field(default_factory=list)
+    leaf_analysis: list[LeafAnalysis] = field(default_factory=list)
+    deferrable_leaves: list[LeafAnalysis] = field(default_factory=list)
     
     # Churn × blast radius (requires historical churn data)
-    churn_blast_radius: Dict[str, float] = field(default_factory=dict)
+    churn_blast_radius: dict[str, float] = field(default_factory=dict)
     
     def to_dict(self) -> dict:
         """Convert to analysis/v9 compatible dictionary."""
@@ -308,7 +308,7 @@ class DiagnosticsResult:
         }
 
 
-def element_uids_of(task_durations: Dict[str, int]) -> List[str]:
+def element_uids_of(task_durations: dict[str, int]) -> list[str]:
     """The element uid of each task key, in the mapping's own order.
 
     A named seam so a guard can count that it is derived once per
@@ -332,11 +332,11 @@ class DiagnosticsAnalyzer:
     
     def __init__(
         self,
-        normalized_tasks: List[object],
+        normalized_tasks: list[object],
         graph_analysis: dict,
-        blame_chain: Optional[List[str]] = None,
-        critical_path: Optional[List[str]] = None,
-        slack: Optional[Dict[str, int]] = None,
+        blame_chain: Optional[list[str]] = None,
+        critical_path: Optional[list[str]] = None,
+        slack: Optional[dict[str, int]] = None,
     ):
         """
         Initialize diagnostics analyzer.
@@ -360,12 +360,12 @@ class DiagnosticsAnalyzer:
         self.successors = graph_analysis.get('successors', {}) if graph_analysis else {}
         
         # Build task maps
-        self.task_map: Dict[str, object] = {
+        self.task_map: dict[str, object] = {
             str(t.task_key): t for t in self.tasks
         }
         
         # Element-level maps
-        self.element_tasks: Dict[str, List[str]] = defaultdict(list)
+        self.element_tasks: dict[str, list[str]] = defaultdict(list)
         for task in self.tasks:
             elem_uid = task.task_key.element_uid
             self.element_tasks[elem_uid].append(str(task.task_key))
@@ -384,7 +384,7 @@ class DiagnosticsAnalyzer:
         # not just the timestamp) so the resource-aware path in
         # _estimate_ready_count can enumerate the actual ready-but-not-
         # started candidates at a given instant, not just their count.
-        self._tasks_sorted_by_ready: List[NormalizedTask] = sorted(
+        self._tasks_sorted_by_ready: list[NormalizedTask] = sorted(
             self.tasks, key=lambda t: t.ready_us,
         )
 
@@ -394,8 +394,8 @@ class DiagnosticsAnalyzer:
         # rescan of every task holding R - the same event-boundary idea
         # _resource_available_at (bga/attribution/blame_chain.py) uses for
         # a single point check, adapted here for repeated queries.
-        self._resource_starts: Dict[str, List[int]] = defaultdict(list)
-        self._resource_finishes: Dict[str, List[int]] = defaultdict(list)
+        self._resource_starts: dict[str, list[int]] = defaultdict(list)
+        self._resource_finishes: dict[str, list[int]] = defaultdict(list)
         for t in self.tasks:
             for resource in (t.resources or []):
                 key = resource.value if hasattr(resource, 'value') else str(resource)
@@ -405,7 +405,7 @@ class DiagnosticsAnalyzer:
             self._resource_starts[key].sort()
             self._resource_finishes[key].sort()
     
-    def compute_wall_clock_shares(self) -> List[WallClockShare]:
+    def compute_wall_clock_shares(self) -> list[WallClockShare]:
         """
         Compute wall-clock share for each task (Part 20).
         
@@ -428,8 +428,8 @@ class DiagnosticsAnalyzer:
         events.sort(key=lambda x: (x[0], x[1]))
         
         # Sweep to compute concurrent count at each point
-        shares: Dict[str, float] = defaultdict(float)
-        active_tasks: Set[str] = set()
+        shares: dict[str, float] = defaultdict(float)
+        active_tasks: set[str] = set()
         prev_time = events[0][0] if events else 0
         
         for timestamp, delta, task_key in events:
@@ -464,8 +464,8 @@ class DiagnosticsAnalyzer:
     
     def compute_ready_queue_metrics(
         self,
-        occupancy_segments: List[dict],
-        resource_capacities: Optional[Dict[str, int]] = None,
+        occupancy_segments: list[dict],
+        resource_capacities: Optional[dict[str, int]] = None,
     ) -> ReadyQueueMetrics:
         """
         Compute ready queue depth metrics (Part 21).
@@ -530,8 +530,8 @@ class DiagnosticsAnalyzer:
     def _estimate_ready_count(
         self,
         time_us: int,
-        active_tasks: Set[str],
-        resource_capacities: Optional[Dict[str, int]] = None,
+        active_tasks: set[str],
+        resource_capacities: Optional[dict[str, int]] = None,
     ) -> int:
         """
         Estimate number of ready but not executing tasks at given time:
@@ -604,7 +604,7 @@ class DiagnosticsAnalyzer:
         self,
         task: NormalizedTask,
         time_us: int,
-        resource_capacities: Dict[str, int],
+        resource_capacities: dict[str, int],
     ) -> bool:
         """True if every resource `task` requires has a free capacity slot
         at `time_us` (P2-10). Vacuously True for a task with no resources.
@@ -622,7 +622,7 @@ class DiagnosticsAnalyzer:
                 return False
         return True
     
-    def compute_blast_radius(self) -> List[BlastRadiusResult]:
+    def compute_blast_radius(self) -> list[BlastRadiusResult]:
         """
         Compute blast radius for all elements (Part 25).
         
@@ -639,7 +639,7 @@ class DiagnosticsAnalyzer:
         reachable_downstream = self.graph_analysis.get('reachable_downstream', {})
 
         # Build element duration map
-        element_durations: Dict[str, int] = defaultdict(int)
+        element_durations: dict[str, int] = defaultdict(int)
         for task in self.tasks:
             elem_uid = task.task_key.element_uid
             element_durations[elem_uid] += task.dur_us
@@ -652,7 +652,7 @@ class DiagnosticsAnalyzer:
         # was structurally always False regardless of true membership.
 
         results = []
-        for elem_uid in downstream_counts.keys():
+        for elem_uid in downstream_counts:
             downstream_count = downstream_counts[elem_uid]
 
             # Weighted downstream duration = sum of the *actual* downstream
@@ -718,7 +718,7 @@ class DiagnosticsAnalyzer:
         self,
         num_samples: int = DEFAULT_MC_SAMPLES,
         perturbation_pct: float = DEFAULT_PERTURBATION_PCT,
-    ) -> List[CriticalityProbability]:
+    ) -> list[CriticalityProbability]:
         """
         Compute Monte-Carlo criticality probability (Part 26).
         
@@ -735,12 +735,12 @@ class DiagnosticsAnalyzer:
         rng = random.Random(self.MC_RANDOM_SEED)
 
         # Get base durations
-        base_durations: Dict[str, int] = {
+        base_durations: dict[str, int] = {
             str(t.task_key): t.dur_us for t in self.tasks
         }
 
         # Track critical path appearances
-        critical_counts: Dict[str, int] = defaultdict(int)
+        critical_counts: dict[str, int] = defaultdict(int)
 
         # Graph topology (Part 41.2: "reuse the graph topology and avoid
         # rebuilding graph structures - only durations and dynamic
@@ -775,7 +775,7 @@ class DiagnosticsAnalyzer:
             # Perturb durations, straight into the element aggregate the
             # critical path is defined on (Part 24.1) - same draw order,
             # same integer arithmetic, one dict instead of two.
-            elem_durations: Dict[str, int] = {}
+            elem_durations: dict[str, int] = {}
             for elem_uid, duration in zip(element_of_task, base_us):
                 # Apply ±perturbation_pct uniformly
                 factor = 1.0 + rng.uniform(-perturbation_pct, perturbation_pct)
@@ -833,13 +833,13 @@ class DiagnosticsAnalyzer:
     
     def _compute_perturbed_critical_path(
         self,
-        elem_durations: Dict[str, int],
-        predecessors: Dict[str, List[str]],
-        successors: Dict[str, List[str]],
-        in_degree: Dict[str, int],
-        sources: List[str],
-        has_successors: FrozenSet[str],
-    ) -> Set[str]:
+        elem_durations: dict[str, int],
+        predecessors: dict[str, list[str]],
+        successors: dict[str, list[str]],
+        in_degree: dict[str, int],
+        sources: list[str],
+        has_successors: frozenset[str],
+    ) -> set[str]:
         """
         Compute critical path with perturbed durations.
 
@@ -849,8 +849,8 @@ class DiagnosticsAnalyzer:
         (Part 41.2): the topology, the sources, the terminal set, and
         the element aggregate the durations already arrive as.
         """
-        earliest_finish: Dict[str, int] = {}
-        pred_on_critical: Dict[str, Optional[str]] = {}
+        earliest_finish: dict[str, int] = {}
+        pred_on_critical: dict[str, Optional[str]] = {}
 
         queue = deque()
         for elem_uid in sources:
@@ -866,10 +866,7 @@ class DiagnosticsAnalyzer:
             for succ in successors.get(current, []):
                 potential_finish = earliest_finish[current] + elem_durations.get(succ, 0)
                 
-                if succ not in earliest_finish:
-                    earliest_finish[succ] = potential_finish
-                    pred_on_critical[succ] = current
-                elif potential_finish > earliest_finish[succ]:
+                if succ not in earliest_finish or potential_finish > earliest_finish[succ]:
                     earliest_finish[succ] = potential_finish
                     pred_on_critical[succ] = current
                 
@@ -885,10 +882,9 @@ class DiagnosticsAnalyzer:
         critical_end = None
         
         for elem_uid, finish in earliest_finish.items():
-            if elem_uid not in has_successors:
-                if finish > critical_length:
-                    critical_length = finish
-                    critical_end = elem_uid
+            if elem_uid not in has_successors and finish > critical_length:
+                critical_length = finish
+                critical_end = elem_uid
         
         if critical_end is None:
             critical_length = max(earliest_finish.values())
@@ -948,8 +944,8 @@ class DiagnosticsAnalyzer:
     
     def compute_leaf_analysis(
         self,
-        requested_targets: Optional[Set[str]] = None,
-    ) -> List[LeafAnalysis]:
+        requested_targets: Optional[set[str]] = None,
+    ) -> list[LeafAnalysis]:
         """
         Compute advanced leaf analysis (Part 24).
         
@@ -1014,8 +1010,8 @@ class DiagnosticsAnalyzer:
     
     def compute_duration_variability(
         self,
-        historical_durations: Optional[Dict[str, List[int]]] = None,
-    ) -> List[DurationVariability]:
+        historical_durations: Optional[dict[str, list[int]]] = None,
+    ) -> list[DurationVariability]:
         """
         Compute duration variability statistics (Part 29).
         
@@ -1061,10 +1057,10 @@ class DiagnosticsAnalyzer:
     
     def run_full_diagnostics(
         self,
-        occupancy_segments: Optional[List[dict]] = None,
-        resource_capacities: Optional[Dict[str, int]] = None,
-        requested_targets: Optional[Set[str]] = None,
-        historical_durations: Optional[Dict[str, List[int]]] = None,
+        occupancy_segments: Optional[list[dict]] = None,
+        resource_capacities: Optional[dict[str, int]] = None,
+        requested_targets: Optional[set[str]] = None,
+        historical_durations: Optional[dict[str, list[int]]] = None,
     ) -> DiagnosticsResult:
         """
         Run complete M5 diagnostics suite.
@@ -1123,15 +1119,15 @@ class DiagnosticsAnalyzer:
 
 
 def analyze_diagnostics(
-    normalized_tasks: List[object],
+    normalized_tasks: list[object],
     graph_analysis: dict,
-    blame_chain: Optional[List[str]] = None,
-    critical_path: Optional[List[str]] = None,
-    slack: Optional[Dict[str, int]] = None,
-    occupancy_segments: Optional[List[dict]] = None,
-    resource_capacities: Optional[Dict[str, int]] = None,
-    requested_targets: Optional[Set[str]] = None,
-    historical_durations: Optional[Dict[str, List[int]]] = None,
+    blame_chain: Optional[list[str]] = None,
+    critical_path: Optional[list[str]] = None,
+    slack: Optional[dict[str, int]] = None,
+    occupancy_segments: Optional[list[dict]] = None,
+    resource_capacities: Optional[dict[str, int]] = None,
+    requested_targets: Optional[set[str]] = None,
+    historical_durations: Optional[dict[str, list[int]]] = None,
 ) -> DiagnosticsResult:
     """
     Convenience function to run full diagnostics analysis.

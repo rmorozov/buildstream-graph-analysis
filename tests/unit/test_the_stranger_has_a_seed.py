@@ -91,8 +91,7 @@ class TestTheSeedIsAStore:
         parses to zero records is the failure mode a shape check misses,
         so this asks the real parser."""
         sys.path.insert(0, str(REPO))
-        from tools.bst_native_build_tracer import (parse_trace_lines,
-                                                   stream_records)
+        from tools.bst_native_build_tracer import parse_trace_lines, stream_records
 
         newest = sorted((seed / ".bga" / "runs").iterdir())[-1]
         with gzip.open(newest / "plane2.log.gz", "rt") as handle:

@@ -29,7 +29,7 @@ import sys
 REPO = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO))
 
-from bga.findings import FINDING_READERS                       # noqa: E402
+from bga.findings import FINDING_READERS
 
 #: Findings no committed capture can produce, and why. A declaration,
 #: not an exemption: the reason is the reviewed part, and a finding
@@ -132,7 +132,7 @@ def findings_of(run):
                 contextlib.redirect_stderr(io.StringIO()):
             main(["analyze", str(run), "--format", "json"])
         return {f["id"] for f in json.loads(buffer.getvalue())["findings"]}
-    except BaseException:                                # noqa: BLE001
+    except BaseException:
         return None
 
 

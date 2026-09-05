@@ -36,12 +36,9 @@ import pytest
 REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 
-from bga.attribution.blame_chain import (AttributionCategory,    # noqa: E402
-                                         BlameChainAnalyzer)
-from bga.ingest.models import (NormalizedTask, Resource, TaskKey,  # noqa: E402
-                               TaskKind)
-from bga.structural.analyzer import (ElementDependencyGraph,     # noqa: E402
-                                     StructuralAnalyzer)
+from bga.attribution.blame_chain import AttributionCategory, BlameChainAnalyzer
+from bga.ingest.models import NormalizedTask, Resource, TaskKey, TaskKind
+from bga.structural.analyzer import ElementDependencyGraph, StructuralAnalyzer
 
 PROCESS = Resource.PROCESS
 

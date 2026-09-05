@@ -18,7 +18,6 @@ from bga import sources
 from bga.blast import blast, classify_target
 from tools.bst_extract_run import build_source_inventory
 
-
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 GOLDEN = os.path.join(REPO_ROOT, "tests", "fixtures", "golden", "mixed_task_kinds")
 

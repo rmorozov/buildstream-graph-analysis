@@ -63,7 +63,7 @@ import os
 import re
 import sys
 from datetime import datetime, timezone
-from typing import Dict, List, Optional
+from typing import Optional
 
 # `[HH:MM:SS] STATE   [cachekey] element.bst: Activity` - the cache key
 # is absent on some lines (the sandbox's own `Running commands`), so it
@@ -114,7 +114,7 @@ def parse_element_log(path: str, project_root: Optional[str] = None) -> Optional
     if not match:
         return None
 
-    with open(path, 'r', encoding='utf-8', errors='replace') as handle:
+    with open(path, encoding='utf-8', errors='replace') as handle:
         lines = handle.read().splitlines()
     if not lines:
         return None
@@ -138,9 +138,9 @@ def parse_element_log(path: str, project_root: Optional[str] = None) -> Optional
         )
         started_us = int(stamp.timestamp() * 1_000_000)
 
-    phases: List[dict] = []
-    commands: List[str] = []
-    self_timed: List[dict] = []
+    phases: list[dict] = []
+    commands: list[str] = []
+    self_timed: list[dict] = []
     element = None
     outcome = None
     total_us = None
@@ -151,7 +151,7 @@ def parse_element_log(path: str, project_root: Optional[str] = None) -> Optional
     # contains, which would double-count.
     enclosing = action.replace('-', ' ').title()
 
-    pending_command: Optional[List[str]] = None
+    pending_command: Optional[list[str]] = None
     for line in lines:
         # A shell command echo continues across lines when it ends in a
         # backslash, and BuildStream echoes it verbatim. Joining them
@@ -219,7 +219,7 @@ def parse_element_log(path: str, project_root: Optional[str] = None) -> Optional
     }
 
 
-def scan_log_tree(root: str, project: Optional[str] = None) -> List[dict]:
+def scan_log_tree(root: str, project: Optional[str] = None) -> list[dict]:
     """Every element log under `root`, newest last.
 
     `root` is BuildStream's own `logs/` directory. Its immediate children
@@ -231,7 +231,7 @@ def scan_log_tree(root: str, project: Optional[str] = None) -> List[dict]:
     directory order, so two runs over the same tree produce identical
     output on any filesystem.
     """
-    records: List[dict] = []
+    records: list[dict] = []
     for dirpath, _dirnames, filenames in os.walk(root):
         for filename in sorted(filenames):
             record = parse_element_log(os.path.join(dirpath, filename))
@@ -315,7 +315,7 @@ def _phase_family(name: str) -> str:
     return name.split(' at:', 1)[0].strip()
 
 
-def sandbox_tax(records: List[dict]) -> dict:
+def sandbox_tax(records: list[dict]) -> dict:
     """UX-99: how much of this project's element time was the sandbox
     rather than the build.
 
@@ -341,7 +341,7 @@ def sandbox_tax(records: List[dict]) -> dict:
     if not builds:
         return {}
 
-    by_family: Dict[str, int] = {}
+    by_family: dict[str, int] = {}
     work_us = toll_us = total_us = 0
     payers = []
     for record in builds:
@@ -406,7 +406,7 @@ def sandbox_tax(records: List[dict]) -> dict:
     }
 
 
-def phase_breakdown(records: List[dict]) -> List[dict]:
+def phase_breakdown(records: list[dict]) -> list[dict]:
     """Per element: where its own time went, by BuildStream phase.
 
     Only `build` records: a `fetch` log has a single enclosing activity
@@ -470,7 +470,7 @@ CONFIGURE_SELF_TIMED = frozenset({'Configuring', 'Generating', 'Build files'})
 CONFIGURE_SHARE_NOTABLE = 0.10
 
 
-def configure_tax(records: List[dict]) -> dict:
+def configure_tax(records: list[dict]) -> dict:
     """UX-102: how much of each element's time the native build system
     spent working out how to build, rather than building.
 
@@ -585,7 +585,7 @@ def join_configure_views(plane3: dict, native_report: Optional[dict]) -> dict:
     }
 
 
-def repeated_operations(records: List[dict]) -> List[dict]:
+def repeated_operations(records: list[dict]) -> list[dict]:
     """Commands whose exact text recurs across distinct elements.
 
     A no-tracer approximation of `UX-23`'s redundancy detector, and
@@ -595,7 +595,7 @@ def repeated_operations(records: List[dict]) -> List[dict]:
     an operation recurs and in how many elements. It is a pointer at
     something to measure, not a measurement.
     """
-    by_command: Dict[str, set] = {}
+    by_command: dict[str, set] = {}
     for record in records:
         if record['action'] != 'build':
             continue
@@ -679,7 +679,7 @@ def top_distinct_payers(rows, cost_key, limit=PAYERS_NAMED):
     return [element for element, _cost in order[:limit]]
 
 
-def _plane3_findings(plane3_configure: dict, views: dict) -> List[dict]:
+def _plane3_findings(plane3_configure: dict, views: dict) -> list[dict]:
     """UX-102 item 3: one project-wide finding, with an id, naming the
     top payers and the size of the prize.
 
@@ -746,7 +746,7 @@ def _plane3_findings(plane3_configure: dict, views: dict) -> List[dict]:
 TAX_WINDOW_STRONG_BUILDS = 5
 
 
-def developer_tax(records: List[dict], dependencies: Optional[List[dict]] = None) -> dict:
+def developer_tax(records: list[dict], dependencies: Optional[list[dict]] = None) -> dict:
     """UX-101: which element costs the most wall-clock across the whole
     log tree, and why it keeps rebuilding.
 
@@ -786,13 +786,13 @@ def developer_tax(records: List[dict], dependencies: Optional[List[dict]] = None
     if not builds:
         return {}
 
-    by_element: Dict[str, List[dict]] = {}
+    by_element: dict[str, list[dict]] = {}
     for record in builds:
         by_element.setdefault(record['element'], []).append(record)
     for history in by_element.values():
         history.sort(key=lambda r: (r['started_us'] or 0, r['path']))
 
-    predecessors: Dict[str, List[str]] = {}
+    predecessors: dict[str, list[str]] = {}
     for dependency in dependencies or []:
         predecessors.setdefault(dependency['successor'], []).append(
             dependency['predecessor'],
@@ -818,7 +818,7 @@ def developer_tax(records: List[dict], dependencies: Optional[List[dict]] = None
     for element, history in by_element.items():
         total_us = sum(record['total_us'] for record in history)
         causes = {'unchanged_key': 0, 'own_key_changed': 0, 'rooted_upstream': 0}
-        roots: Dict[str, int] = {}
+        roots: dict[str, int] = {}
         for previous, current in zip(history, history[1:]):
             if current['cache_key'] == previous['cache_key']:
                 causes['unchanged_key'] += 1
@@ -874,8 +874,8 @@ def developer_tax(records: List[dict], dependencies: Optional[List[dict]] = None
 
 
 def build_report(
-    records: List[dict], native_report: Optional[dict] = None,
-    dependencies: Optional[List[dict]] = None,
+    records: list[dict], native_report: Optional[dict] = None,
+    dependencies: Optional[list[dict]] = None,
 ) -> dict:
     projects = sorted({r['project'] for r in records if r['project']})
     builds = [r for r in records if r['action'] == 'build']
@@ -1175,7 +1175,7 @@ def project_name_from_dir(project_dir: str) -> Optional[str]:
     """
     conf = os.path.join(project_dir, 'project.conf')
     try:
-        with open(conf, 'r', encoding='utf-8', errors='replace') as handle:
+        with open(conf, encoding='utf-8', errors='replace') as handle:
             for line in handle:
                 if line.startswith('name:'):
                     return line.split(':', 1)[1].strip() or None
@@ -1188,13 +1188,13 @@ def is_project_dir(path: str) -> bool:
     return os.path.isfile(os.path.join(path, 'project.conf'))
 
 
-def summarize_log_tree(root: str) -> List[dict]:
+def summarize_log_tree(root: str) -> list[dict]:
     """What the log tree holds, per project: counts and time span.
 
     `UX-127` item 2. Discovery is the tool's job - a user should not have
     to `ls` a cache directory to find out what is in it.
     """
-    projects: Dict[str, dict] = {}
+    projects: dict[str, dict] = {}
     for record in scan_log_tree(root):
         name = record.get('project') or '(unknown)'
         entry = projects.setdefault(name, {
@@ -1215,7 +1215,7 @@ def summarize_log_tree(root: str) -> List[dict]:
     )
 
 
-def format_log_tree_listing(root: str, projects: List[dict]) -> str:
+def format_log_tree_listing(root: str, projects: list[dict]) -> str:
     lines = ['=' * 60, 'BuildStream log tree', '=' * 60, f"  {root}", '']
     if not projects:
         lines.append('  (no element logs - run a build first)')
@@ -1245,7 +1245,7 @@ def _CompactRawHelp(prog):
     from bga.help_format import CompactRawHelp
     return CompactRawHelp(prog)
 
-def main(argv: Optional[List[str]] = None) -> int:
+def main(argv: Optional[list[str]] = None) -> int:
     parser = argparse.ArgumentParser(
         description=HELP, formatter_class=_CompactRawHelp,
     )
@@ -1398,7 +1398,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     native_report = None
     if args.native_report:
         try:
-            with open(args.native_report, 'r', encoding='utf-8') as handle:
+            with open(args.native_report, encoding='utf-8') as handle:
                 native_report = json.load(handle)
         except (OSError, ValueError) as error:
             print(
@@ -1411,7 +1411,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     dependencies = None
     if args.graph:
         try:
-            with open(args.graph, 'r', encoding='utf-8') as handle:
+            with open(args.graph, encoding='utf-8') as handle:
                 dependencies = (json.load(handle) or {}).get('dependencies') or []
         except (OSError, ValueError) as error:
             print(f"Error: could not read the graph at {args.graph}: {error}",

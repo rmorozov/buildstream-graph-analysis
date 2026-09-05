@@ -491,7 +491,7 @@ class TestTheUndeclaredGateIsLoadBearing:
         """Without the gate `orphan.bst` would earn advice: it carries
         a saving share and a low cores-busy, which is exactly what
         `_recommend` fires on."""
-        from bga.correlate import _recommend, ElementJoin
+        from bga.correlate import ElementJoin, _recommend
 
         orphan = ElementJoin(element="orphan.bst", declared=False,
                              potential_saving_us=8_000_000,

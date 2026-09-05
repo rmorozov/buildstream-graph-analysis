@@ -58,9 +58,9 @@ import pytest
 REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 
-from bga import schemas                                       # noqa: E402
-from tests import pages                                       # noqa: E402
-from tests.browser import NO_BROWSER, Browser, find_chrome     # noqa: E402
+from bga import schemas
+from tests import pages
+from tests.browser import NO_BROWSER, Browser, find_chrome
 
 RUN = REPO / "tests/fixtures/macro_micro/run"
 

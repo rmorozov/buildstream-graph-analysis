@@ -26,7 +26,6 @@ from bga import run_store
 from tools import bst_native_build_tracer as tracer
 from tools.native_trace import bwrap_shim
 
-
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 

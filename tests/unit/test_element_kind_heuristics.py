@@ -23,8 +23,8 @@ from pathlib import Path
 import pytest
 
 from bga import BuildEfficiencyAnalyzer
-from bga.report.text import format_text
 from bga.report.json import format_json
+from bga.report.text import format_text
 
 FIXTURE_PROJECT = Path(__file__).resolve().parents[1] / "fixtures" / "bst_show_project"
 BST_AVAILABLE = shutil.which("bst") is not None

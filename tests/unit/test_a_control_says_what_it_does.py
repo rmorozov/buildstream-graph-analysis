@@ -168,7 +168,7 @@ class TestEveryCopyControlNamesItsNoun:
         assert rows, "no table offers a row copy"
         assert all(any(ch.isdigit() for ch in c["label"]) for c in rows), (
             [c["label"] for c in rows])
-        assert not any("shown rows" == c["label"].lower().replace("copy ", "")
+        assert not any(c["label"].lower().replace("copy ", "") == "shown rows"
                        for c in rows)
 
     def test_the_label_matches_what_the_control_actually_copies(self, payload):
@@ -222,9 +222,9 @@ class TestTheRowCopyOffersMarkdown:
         script = """
 const shim = await import(process.env.BGA_DOM_SHIM);
 shim.installDocument();
-const { rowsMarkdown, rowJson } = await import("%s");
+const {{ rowsMarkdown, rowJson }} = await import("{}");
 const mk = shim.makeNode;
-const row = (uid, dur) => {
+const row = (uid, dur) => {{
   const tr = mk("tr");
   const a = mk("td"); a.setAttribute("data-column", "element");
   a.setAttribute("data-raw", uid);
@@ -232,15 +232,15 @@ const row = (uid, dur) => {
   b.setAttribute("data-raw", String(dur));
   tr.append(a, b);
   return tr;
-};
+}};
 const rows = [row("a|b.bst", 5), row("c.bst", 9)];
-const specs = [{ key: "element", title: "Element" },
-               { key: "dur", title: "Duration", numeric: true }];
-console.log(JSON.stringify({
+const specs = [{{ key: "element", title: "Element" }},
+               {{ key: "dur", title: "Duration", numeric: true }}];
+console.log(JSON.stringify({{
   markdown: rowsMarkdown(rows, specs),
   json: rows.map((tr) => rowJson(tr, ["element", "dur"])),
-}));
-""" % (REPO / "bga/viewer/tables.js").as_uri()
+}}));
+""".format((REPO / "bga/viewer/tables.js").as_uri())
         done = subprocess.run([node, "--input-type=module", "-e", script],
                               capture_output=True, text=True, cwd=REPO,
                               timeout=60,

@@ -12,7 +12,10 @@ import pytest
 
 from tools import bga_doctor as doctor
 from tools.bst_native_build_tracer import (
-    _record_line, capture_fingerprint, element_path, resolve_buildbox_run,
+    _record_line,
+    capture_fingerprint,
+    element_path,
+    resolve_buildbox_run,
 )
 
 
@@ -94,6 +97,7 @@ class TestTheFourClaimsThatHadNoTest:
         """UX-147 item 5's claim: the failing user is told what would
         answer the question."""
         import inspect
+
         from tools import bst_native_build_tracer as tracer
         source = inspect.getsource(tracer.main)
         assert "re-run with --diagnose" in source

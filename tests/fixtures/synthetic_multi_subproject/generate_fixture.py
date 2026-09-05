@@ -27,9 +27,11 @@ REPO_ROOT = FIXTURE_DIR.parents[2]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from tools.bst_log_to_chrome_trace import WrapperTraceConverter  # noqa: E402
-from tests.fixtures.synthetic_multi_subproject import build_model  # noqa: E402
-from tests.fixtures.synthetic_multi_subproject import adapter  # noqa: E402
+from tests.fixtures.synthetic_multi_subproject import (
+    adapter,
+    build_model,
+)
+from tools.bst_log_to_chrome_trace import WrapperTraceConverter
 
 BASE_DT = datetime(2026, 8, 13, 9, 0, 0)
 

@@ -23,7 +23,7 @@ import functools
 import pathlib
 import re
 import subprocess
-from typing import Dict, Optional, Tuple
+from typing import Optional
 
 import pytest
 
@@ -77,7 +77,7 @@ COMMAND_HEADING = "**Every command `bga` answers to**"
 # command nor a format. Word -> the reason it is allowed to be there;
 # `UX-573`'s `csv` is *not* one of these, because it is a registered
 # `--format` choice and derives.
-PROSE_IN_A_PATH_LIST: Dict[str, str] = {}
+PROSE_IN_A_PATH_LIST: dict[str, str] = {}
 
 
 def _map_text():
@@ -140,7 +140,7 @@ WORD = re.compile(r"(?<![\w<>-])[a-z][a-z0-9]*(?:-[a-z0-9]+)*(?![\w>-])")
 
 
 @functools.lru_cache(maxsize=1)
-def _registry() -> Tuple[frozenset, frozenset]:
+def _registry() -> tuple[frozenset, frozenset]:
     """What `bga` registers: (commands, `--format` choices).
 
     Read off the parser and the alias table rather than a list here -
@@ -209,7 +209,7 @@ def _looks_like_a_path(word):
 
 
 @functools.lru_cache(maxsize=1)
-def _tracked() -> Tuple[str, ...]:
+def _tracked() -> tuple[str, ...]:
     """The paths git has, in order. Not the paths on disk.
 
     `Path.glob` walks whatever the checkout holds, and a main checkout
@@ -223,7 +223,7 @@ def _tracked() -> Tuple[str, ...]:
     return tuple(out.splitlines())
 
 
-def _real_modules(tracked: Optional[Tuple[str, ...]] = None):
+def _real_modules(tracked: Optional[tuple[str, ...]] = None):
     """Every path §6 has to name.
 
     `UX-573`: recursive under `tools/` and into `bga/viewer/`, because

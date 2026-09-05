@@ -32,9 +32,8 @@ import pytest
 REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 
-from bga import run_store  # noqa: E402
-from tools.bga_snapshot import (  # noqa: E402
-    build_ever_started, why_the_build_cannot_start)
+from bga import run_store
+from tools.bga_snapshot import build_ever_started, why_the_build_cannot_start
 
 # The wrapper log's own shapes, copied from `bst_run_wrapped.run_wrapped`
 # rather than invented: the first two lines are written before `Popen`,

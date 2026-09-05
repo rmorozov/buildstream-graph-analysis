@@ -36,7 +36,7 @@ import os
 import shutil
 import sys
 import tempfile
-from typing import Dict, List, Optional
+from typing import Optional
 
 from bga import hostinfo
 
@@ -54,7 +54,7 @@ RUN_SUBDIR = "run"
 # `UX-380`: the analysis the capture wrote beside the run, which is
 # where the graph-structural facts a slice now carries come from.
 # Named in `run_store` so the layout has one authority.
-from bga.run_store import ANALYSIS_NAME    # noqa: E402
+from bga.run_store import ANALYSIS_NAME
 
 # `UX-298`: the two shapes this command can write. TrackEvent is
 # Perfetto's own - a stream of packets, written as the records arrive
@@ -321,7 +321,7 @@ def element_kinds(snapshot: str) -> dict:
     """
     path = os.path.join(snapshot, RUN_SUBDIR, "graph.json")
     try:
-        with open(path, "r", encoding="utf-8") as handle:
+        with open(path, encoding="utf-8") as handle:
             graph = json.load(handle)
     except (OSError, ValueError):
         return {}
@@ -363,7 +363,7 @@ def task_resources(snapshot: str) -> dict:
     """
     path = os.path.join(snapshot, RUN_SUBDIR, "trace.json")
     try:
-        with open(path, "r", encoding="utf-8") as handle:
+        with open(path, encoding="utf-8") as handle:
             trace = json.load(handle)
     except (OSError, ValueError):
         return {}
@@ -400,7 +400,7 @@ def element_structure(snapshot: str) -> dict:
     """
     path = os.path.join(snapshot, ANALYSIS_NAME)
     try:
-        with open(path, "r", encoding="utf-8") as handle:
+        with open(path, encoding="utf-8") as handle:
             analysis = json.load(handle)
     except (OSError, ValueError):
         return {}
@@ -451,7 +451,7 @@ def _plane1_outcomes(events) -> dict:
     than splitting a slice's facts across two, which a reader would have
     to reassemble.
     """
-    open_by_tid: Dict[int, list] = {}
+    open_by_tid: dict[int, list] = {}
     outcomes = {}
     for event in events:
         phase = event.get("ph")
@@ -542,7 +542,7 @@ HOST_COUNTERS = (
 )
 
 
-def host_series(snapshot: str) -> List[tuple]:
+def host_series(snapshot: str) -> list[tuple]:
     """`(wall-clock microseconds, {key: value})` per sample.
 
     Each row is stamped on `CLOCK_MONOTONIC`, which means nothing beside
@@ -780,7 +780,7 @@ def run_identity(snapshot: str) -> dict:
     """
     path = os.path.join(snapshot, RUN_SUBDIR, "run-context.json")
     try:
-        with open(path, "r", encoding="utf-8") as handle:
+        with open(path, encoding="utf-8") as handle:
             context = json.load(handle)
     except (OSError, ValueError):
         return {}
@@ -904,7 +904,7 @@ def dependency_edges(snapshot: str):
     """
     path = os.path.join(snapshot, RUN_SUBDIR, "graph.json")
     try:
-        with open(path, "r", encoding="utf-8") as handle:
+        with open(path, encoding="utf-8") as handle:
             graph = json.load(handle)
     except (OSError, ValueError):
         return []
@@ -965,7 +965,7 @@ def flow_accounting(snapshot: str):
         plane1 = os.path.join(scratch, "plane1.json")
         if plane1_main([wrapped, plane1], quiet=True):
             return None
-        with open(plane1, "r", encoding="utf-8") as handle:
+        with open(plane1, encoding="utf-8") as handle:
             events = json.load(handle)
         edges = dependency_edges(snapshot)
         _flows, losses, next_flow = _plane1_flows(events, edges, 1)
@@ -1165,7 +1165,7 @@ def _raw_log(snapshot: str) -> Optional[str]:
 def _open_raw(path: str):
     return (gzip.open(path, "rt", encoding="utf-8", errors="ignore")
             if path.endswith(".gz")
-            else open(path, "r", encoding="utf-8", errors="ignore"))
+            else open(path, encoding="utf-8", errors="ignore"))
 
 
 def pick_anchor(raw_log: str) -> Optional[str]:
@@ -1304,9 +1304,7 @@ def _write_trackevent(plane1_events, raw_log, spans, anchor_element, output,
     here rather than left to be discovered - and one record per
     process, which is what a per-process timeline is.
     """
-    from .bst_native_build_tracer import (merge_record_streams,
-                                          stream_records,
-                                          stream_trace_events)
+    from .bst_native_build_tracer import merge_record_streams, stream_records, stream_trace_events
     from .native_trace.trackevent import TrackEventWriter
 
     offset_us = (_plane1_offset_us(plane1_events, spans, anchor_element)
@@ -1639,7 +1637,7 @@ def render(snapshot: str, output: str,
                         "with; this run's raw log is still beside the "
                         "snapshot")
             raw = None
-        with open(plane1, "r", encoding="utf-8") as handle:
+        with open(plane1, encoding="utf-8") as handle:
             plane1_events = json.load(handle)
         spans = element_spans(raw) if raw else {}
         anchor = anchor_element or choose_anchor(spans, plane1_events)
@@ -1730,7 +1728,7 @@ def _chrome_counts(output: str) -> dict:
     landed on disk.
     """
     try:
-        with open(output, "r", encoding="utf-8") as handle:
+        with open(output, encoding="utf-8") as handle:
             events = json.load(handle)
     except (OSError, ValueError):                        # pragma: no cover
         return {}
@@ -1740,7 +1738,7 @@ def _chrome_counts(output: str) -> dict:
     return {"slices": slices, "flows": 0, "counters": 0}
 
 
-def _flow_accounting_lines(result: dict) -> List[str]:
+def _flow_accounting_lines(result: dict) -> list[str]:
     """`UX-431`: what the graph's edges became, one line each.
 
     Printed whenever the run had edges at all, including the run where
@@ -1831,7 +1829,7 @@ def describe(result: dict, output: str) -> str:
     return "\n".join(lines)
 
 
-def main(argv: Optional[List[str]] = None) -> int:
+def main(argv: Optional[list[str]] = None) -> int:
     from bga.help_format import CompactRawHelp
 
     parser = argparse.ArgumentParser(
@@ -1883,7 +1881,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     try:
         snapshot = (run_store.resolve_snapshot(args.run, run_store.project_root())
                     if run_store.is_alias(args.run) else args.run)
-    except Exception as error:  # noqa: BLE001 - reported, not swallowed
+    except Exception as error:
         print(f"Error: {error}", file=sys.stderr)
         return 2
 

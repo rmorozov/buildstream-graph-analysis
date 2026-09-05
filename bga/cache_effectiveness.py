@@ -20,7 +20,7 @@ run's own spans say where the time went. Every field is None rather than
 0 when the capture does not record it, on this codebase's standing rule
 that "not measured" and "measured as none" are different facts.
 """
-from typing import Dict, List, Optional, Set
+from typing import Optional
 
 from .sources import split_by_kind
 
@@ -56,7 +56,7 @@ def _ratio(hits: Optional[int], misses: Optional[int]) -> Optional[float]:
     return hits / total if total > 0 else None
 
 
-def _closure(graph, targets: Set[str]) -> Set[str]:
+def _closure(graph, targets: set[str]) -> set[str]:
     """Every element the given targets depend on, transitively, plus the
     targets themselves.
 
@@ -68,11 +68,11 @@ def _closure(graph, targets: Set[str]) -> Set[str]:
     excluded here would be an element whose cache state nobody accounts
     for.
     """
-    predecessors: Dict[str, List[str]] = {}
+    predecessors: dict[str, list[str]] = {}
     for dep in getattr(graph, 'dependencies', None) or []:
         predecessors.setdefault(dep.successor, []).append(dep.predecessor)
 
-    seen: Set[str] = set()
+    seen: set[str] = set()
     stack = list(targets)
     while stack:
         uid = stack.pop()
@@ -83,7 +83,7 @@ def _closure(graph, targets: Set[str]) -> Set[str]:
     return seen
 
 
-def _transfer_us(tasks) -> Dict[str, int]:
+def _transfer_us(tasks) -> dict[str, int]:
     """Wall-clock in each transfer resource, from the run's own spans.
 
     Summed over task duration rather than over a resource timeline, so
@@ -91,7 +91,7 @@ def _transfer_us(tasks) -> Dict[str, int]:
     "how much pulling did this build do", not "how long was the pull
     window".
     """
-    totals: Dict[str, int] = {}
+    totals: dict[str, int] = {}
     for task in tasks or []:
         resource = getattr(task, 'primary_resource', None)
         if resource is None:
@@ -166,7 +166,7 @@ def compute_cache_accounting(
 def _churn_precondition(
     candidate_run_mode: Optional[str],
     baseline_run_mode: Optional[str],
-    baseline_built: Optional[Set[str]],
+    baseline_built: Optional[set[str]],
 ) -> Optional[dict]:
     """The reason churn cannot be judged for this pair, or None.
 
@@ -205,8 +205,8 @@ def _churn_precondition(
 
 def compute_cache_churn(
     baseline_elements, candidate_elements, dependencies,
-    candidate_built: Set[str], candidate_durations: Dict[str, int],
-    baseline_built: Optional[Set[str]] = None,
+    candidate_built: set[str], candidate_durations: dict[str, int],
+    baseline_built: Optional[set[str]] = None,
     candidate_run_mode: Optional[str] = None,
     baseline_run_mode: Optional[str] = None,
 ) -> dict:
@@ -302,11 +302,11 @@ def compute_cache_churn(
     churned = sorted(rebuilt_unchanged - set(rebuilt_in_both))
     wasted_us = sum(candidate_durations.get(uid, 0) for uid in churned)
 
-    predecessors: Dict[str, List[str]] = {}
+    predecessors: dict[str, list[str]] = {}
     for dep in dependencies or []:
         predecessors.setdefault(dep.successor, []).append(dep.predecessor)
 
-    successors: Dict[str, List[str]] = {}
+    successors: dict[str, list[str]] = {}
     for dep in dependencies or []:
         successors.setdefault(dep.predecessor, []).append(dep.successor)
 

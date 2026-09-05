@@ -42,7 +42,7 @@ import pytest
 REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 
-from tests.fixtures import topologies as topo    # noqa: E402
+from tests.fixtures import topologies as topo
 
 FIXTURES = {"golden": REPO / "tests/fixtures/golden/mixed_task_kinds",
             "macro_micro": REPO / "tests/fixtures/macro_micro/run"}

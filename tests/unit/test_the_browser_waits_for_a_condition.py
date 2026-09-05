@@ -42,7 +42,7 @@ REPO = str(pathlib.Path(__file__).resolve().parents[2])
 sys.path.insert(0, REPO)
 sys.path.insert(0, os.path.join(REPO, "tests"))
 
-from browser import Browser, find_chrome, NO_BROWSER      # noqa: E402
+from browser import NO_BROWSER, Browser, find_chrome
 
 chrome = find_chrome()
 needs_chrome = pytest.mark.skipif(chrome is None, reason=NO_BROWSER)
@@ -151,9 +151,8 @@ class TestOneBrowserPerWorker:
     def test_a_second_open_is_the_same_browser(self):
         """`UX-523`'s other half. Thirty-eight files opened one each;
         one process drives one page at a time, so they can be one."""
-        with Browser(chrome) as first:
-            with Browser(chrome) as second:
-                assert second.port == first.port
+        with Browser(chrome) as first, Browser(chrome) as second:
+            assert second.port == first.port
 
     def test_it_survives_the_with_that_opened_it(self, pages):
         """The shared browser outlives its block - otherwise the first

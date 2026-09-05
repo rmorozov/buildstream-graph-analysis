@@ -30,7 +30,7 @@ makes, each with a timeout and each degrading to `None`.
 import os
 import shutil
 import subprocess
-from typing import Dict, List, Optional
+from typing import Optional
 
 from .units import mb_to_bytes
 
@@ -64,7 +64,7 @@ def _cpu_model() -> Optional[str]:
     built, and therefore useless for telling two of them apart.
     """
     try:
-        with open("/proc/cpuinfo", "r", encoding="utf-8") as handle:
+        with open("/proc/cpuinfo", encoding="utf-8") as handle:
             for line in handle:
                 if line.startswith(("model name", "Model")):
                     _label, _colon, value = line.partition(":")
@@ -80,7 +80,7 @@ def _distro_id() -> Optional[str]:
     """`id version` from `/etc/os-release`, e.g. `debian 12`."""
     fields = {}
     try:
-        with open("/etc/os-release", "r", encoding="utf-8") as handle:
+        with open("/etc/os-release", encoding="utf-8") as handle:
             for line in handle:
                 key, _sep, value = line.partition("=")
                 fields[key.strip()] = value.strip().strip('"')
@@ -93,7 +93,7 @@ def _distro_id() -> Optional[str]:
     return f"{name} {version}" if version else name
 
 
-def _version_line(argv: List[str]) -> Optional[str]:
+def _version_line(argv: list[str]) -> Optional[str]:
     """The first line of a `--version`, or None.
 
     Same shape as `UX-151`'s fingerprint probe, including reading
@@ -107,7 +107,7 @@ def _version_line(argv: List[str]) -> Optional[str]:
     return text.splitlines()[0] if text else None
 
 
-def _toolchain() -> Dict[str, Optional[str]]:
+def _toolchain() -> dict[str, Optional[str]]:
     """The programs whose version changes what a build does.
 
     `cc` is included because the compiler is usually the largest single
@@ -164,7 +164,7 @@ def collect(with_toolchain: bool = True) -> dict:
 
 
 def differing_fields(baseline: Optional[dict],
-                     candidate: Optional[dict]) -> List[str]:
+                     candidate: Optional[dict]) -> list[str]:
     """Which of `COMPARED_FIELDS` the two manifests disagree on.
 
     A field missing from *both* is not a difference: two captures from a
@@ -248,7 +248,7 @@ def describe(classification: dict,
             "difference between the two runs is not evidence about the change.")
 
 
-def homogeneous(manifests: List[Optional[dict]]) -> bool:
+def homogeneous(manifests: list[Optional[dict]]) -> bool:
     """Whether every manifest in a baseline set describes one machine.
 
     `bga baseline` warns rather than refuses: a band assembled across

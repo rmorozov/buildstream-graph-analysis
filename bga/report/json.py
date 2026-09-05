@@ -1,13 +1,11 @@
 """JSON report formatting (Part 32.4/37)."""
 import json as _json
-from typing import Optional, Tuple
+from typing import Optional
 
 from .. import producer, provenance, schemas
-from ..findings import (compute_findings, compute_headline,
-                        compute_next_steps, finding_copy_text, reader_index)
+from ..findings import compute_findings, compute_headline, compute_next_steps, finding_copy_text, reader_index
 from ..ingest.models import AnalysisResult
 from ._shared import ATTRIBUTION_CATEGORY_HINTS_BY_KEY, GRAPH_SIGNAL_KEYS, resolve_attribution_hint
-
 
 # `UX-344`: `structural.metrics` and `structural.summary` under their
 # own names. At the top level `metrics` and `summary` would be two of
@@ -32,7 +30,7 @@ def _lift(data: dict, block: dict, renames: Optional[dict] = None) -> None:
         data[name] = value
 
 
-def _measure_shape(document: dict) -> Tuple[int, int, str, int]:
+def _measure_shape(document: dict) -> tuple[int, int, str, int]:
     """`(leaves, deepest_depth, deepest_path, deeper_than_three)`.
 
     A container step counts a level, which is how `UX-344` measured the

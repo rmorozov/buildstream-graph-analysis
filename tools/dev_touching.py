@@ -171,7 +171,7 @@ def import_pattern(path: str):
         return None
     # The optional group is the `from bga import contracts, schemas`
     # form: 25 of those edges hung on which name was written first.
-    return r"from\s+%s\s+import\s+\(?\s*(?:[\w\s,]*?,\s*)?%s\b" % (
+    return r"from\s+{}\s+import\s+\(?\s*(?:[\w\s,]*?,\s*)?{}\b".format(
         re.escape(".".join(p.parent.parts)), re.escape(p.stem))
 
 
@@ -182,7 +182,7 @@ def test_files():
         if "__pycache__" not in p.parts)
 
 
-@functools.lru_cache(maxsize=None)
+@functools.cache
 def _candidate_text(candidate):
     """A test file's text, read once per process. `None` if unreadable.
 

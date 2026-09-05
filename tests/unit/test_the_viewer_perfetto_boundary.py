@@ -34,7 +34,7 @@ import pytest
 REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 
-from tools.bga_view import _degradation_steps, payloads  # noqa: E402
+from tools.bga_view import _degradation_steps, payloads
 
 RUN = REPO / "tests/fixtures/macro_micro/run"
 GUIDE = REPO / "docs/guides/what-the-viewer-answers.md"
@@ -128,13 +128,12 @@ class TestTheReportHasNoTimeAxis:
             if isinstance(node, dict):
                 for key, value in node.items():
                     walk(value, f"{path}.{key}")
-            elif isinstance(node, list) and len(node) > 3:
-                # A list of bare numbers under a time-ish name is what a
-                # series looks like. Element rows are lists of dicts.
-                if all(isinstance(v, (int, float)) for v in node) and \
-                        re.search(r"(time|ts|us|series|curve|samples)",
-                                  path, re.I):
-                    suspicious.append((path, len(node)))
+            # A list of bare numbers under a time-ish name is what a
+            # series looks like. Element rows are lists of dicts.
+            elif (isinstance(node, list) and len(node) > 3
+                  and all(isinstance(v, (int, float)) for v in node)
+                  and re.search(r"(time|ts|us|series|curve|samples)", path, re.I)):
+                suspicious.append((path, len(node)))
 
         walk(report, "report")
         assert not suspicious, (

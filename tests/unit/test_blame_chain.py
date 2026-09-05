@@ -6,7 +6,7 @@ holder tracking).
 import pytest
 
 from bga.attribution.blame_chain import BlameChainAnalyzer
-from bga.ingest.models import AttributionCategory, NormalizedTask, TaskKey, TaskKind, Resource
+from bga.ingest.models import AttributionCategory, NormalizedTask, Resource, TaskKey, TaskKind
 
 
 def _task(uid, ready_us, start_us, finish_us, resources=None):

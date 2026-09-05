@@ -34,9 +34,8 @@ import pytest
 REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 
-from tools import bga_view as view                             # noqa: E402
-from tools.bga_timeline import (                               # noqa: E402
-    PLANE1_ONLY, PLANE_CHOICES, PLANES_BOTH, render)
+from tools import bga_view as view
+from tools.bga_timeline import PLANE1_ONLY, PLANE_CHOICES, PLANES_BOTH, render
 
 node = __import__("shutil").which("node")
 needs_node = pytest.mark.skipif(node is None, reason="node is not installed")

@@ -31,8 +31,7 @@ needs_node = pytest.mark.skipif(node is None, reason="node is not installed")
 def _report(run=GOLDEN):
     result = subprocess.run(
         [sys.executable, "-c",
-         "from bga.cli import main; raise SystemExit(main(%r))"
-         % (["analyze", run, "--format", "json"],)],
+         "from bga.cli import main; raise SystemExit(main({!r}))".format(["analyze", run, "--format", "json"])],
         capture_output=True, text=True, cwd=os.getcwd())
     assert result.returncode == 0, result.stderr
     return json.loads(result.stdout)

@@ -48,7 +48,7 @@ import pytest
 REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 
-from bga.findings import CHAIN_BOUND_RATIO                      # noqa: E402
+from bga.findings import CHAIN_BOUND_RATIO
 
 EXAMPLE = REPO / "examples/06-macro-micro-optimization"
 

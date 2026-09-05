@@ -39,7 +39,7 @@ here is a value the store actually measured - which is the same reason
 import math
 import os
 import statistics
-from typing import Dict, List, Optional
+from typing import Optional
 
 from . import hostinfo, run_store, schemas
 from .compare import MIN_BASELINE_RUNS
@@ -69,7 +69,7 @@ STAMPS_MAX = 12
 HISTORY_RUNS_MAX = 12
 
 
-def percentile(samples: List[float], p: float) -> Optional[float]:
+def percentile(samples: list[float], p: float) -> Optional[float]:
     """Nearest-rank percentile - a value the store measured, not one
     between two of them.
 
@@ -84,7 +84,7 @@ def percentile(samples: List[float], p: float) -> Optional[float]:
     return ordered[min(rank, len(ordered)) - 1]
 
 
-def distribution(samples: List[float]) -> Optional[dict]:
+def distribution(samples: list[float]) -> Optional[dict]:
     """`min/median/p95/max/MAD`, or `None` below the sample floor.
 
     The floor is `compare.MIN_BASELINE_RUNS`, the same one the noise
@@ -176,7 +176,7 @@ def _resource_profile(row: dict) -> dict:
 
 
 def _class_aggregate(label: str, manifest: Optional[dict],
-                     rows: List[dict]) -> dict:
+                     rows: list[dict]) -> dict:
     """One host class's distributions, or its shortfall."""
     durations = [row["total_duration_us"] for row in rows]
     entry = {
@@ -240,14 +240,14 @@ def _class_aggregate(label: str, manifest: Optional[dict],
     return entry
 
 
-def _excluded(rows: List[dict]) -> dict:
+def _excluded(rows: list[dict]) -> dict:
     """Why each unusable snapshot was left out, counted by reason.
 
     `UX-156`: a build that did not finish is not a sample, and a
     distribution that silently dropped it would claim a cleaner store
     than the one on disk.
     """
-    reasons: Dict[str, int] = {}
+    reasons: dict[str, int] = {}
     for row in rows:
         if row.get("incomplete_reason"):
             reasons[str(row["incomplete_reason"])] = (
@@ -308,14 +308,14 @@ def _contract_set_of(snapshot: str) -> Optional[tuple]:
     return tuple(sorted(ids)) if ids else None
 
 
-def _contract_composition(rows: List[dict]) -> dict:
+def _contract_composition(rows: list[dict]) -> dict:
     """Which contract sets this store holds, and which one is current.
 
     Published whichever way the rule falls: "we aggregated thirty runs"
     and "we aggregated thirty runs written under two different
     definitions of the fields" are different claims.
     """
-    seen: Dict[tuple, int] = {}
+    seen: dict[tuple, int] = {}
     unstamped = 0
     for row in rows:
         found = _contract_set_of(row.get("path") or "")
@@ -353,8 +353,8 @@ def aggregate(listing: dict, blend: bool = False) -> dict:
         else:
             usable.append(row)
 
-    by_class: Dict[str, List[dict]] = {}
-    manifests: Dict[str, Optional[dict]] = {}
+    by_class: dict[str, list[dict]] = {}
+    manifests: dict[str, Optional[dict]] = {}
     for row in usable:
         # The label is on the row (the listing computed it once); the
         # full manifest is read here, once per class, because a reader
@@ -429,7 +429,7 @@ def aggregate(listing: dict, blend: bool = False) -> dict:
     return schemas.stamp(document, schemas.STORE_AGGREGATE)
 
 
-def _blended(by_class: Dict[str, List[dict]]) -> dict:
+def _blended(by_class: dict[str, list[dict]]) -> dict:
     every = [row for rows in by_class.values() for row in rows]
     return {
         "runs": len(every),
@@ -454,7 +454,7 @@ def _blended(by_class: Dict[str, List[dict]]) -> dict:
     }
 
 
-def render(document: dict) -> List[str]:
+def render(document: dict) -> list[str]:
     """The aggregate as text. One renderer, so `--aggregate` and
     `--aggregate --format json` cannot describe one store two ways."""
     from .run_store import human_bytes
@@ -503,7 +503,7 @@ _FIGURES = (
 )
 
 
-def _distribution_lines(entry: dict) -> List[str]:
+def _distribution_lines(entry: dict) -> list[str]:
     lines = []
     for key, label, divisor, unit in _FIGURES:
         shape = entry.get(key)
@@ -553,7 +553,7 @@ def _snapshot_of(run_dir: Optional[str]) -> Optional[str]:
 
 
 def element_history(run_dir: Optional[str],
-                    measured: Optional[Dict[str, int]]) -> Optional[dict]:
+                    measured: Optional[dict[str, int]]) -> Optional[dict]:
     """Per-element duration series for the run at `run_dir`, or `None`.
 
     `UX-565`. Part 29 needed a history and one existed: `UX-226` writes
@@ -590,7 +590,7 @@ def element_history(run_dir: Optional[str],
         return None
     label = here.get("host_class") or UNKNOWN_HOST_CLASS
 
-    prior: Dict[str, List[int]] = {}
+    prior: dict[str, list[int]] = {}
     runs = 0
     for row in rows:
         if row.get("stamp", "") >= stamp or row.get("incomplete_reason"):

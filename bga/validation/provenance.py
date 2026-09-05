@@ -31,7 +31,7 @@ silent substitution. Unwrap explicitly (.value) only where a plain
 value is genuinely needed.
 """
 from dataclasses import dataclass
-from typing import Dict, Optional, Union
+from typing import Optional, Union
 
 
 @dataclass(frozen=True)
@@ -60,8 +60,8 @@ class Measured:
 
 
 def assemble_floors(
-    certified: Dict[str, Optional[Certified]],
-    advisory: Dict[str, Advisory],
+    certified: dict[str, Optional[Certified]],
+    advisory: dict[str, Advisory],
 ) -> dict:
     """
     Merge certified and advisory values into the plain `floors` dict -

@@ -40,8 +40,7 @@ PREFIXES = ("BGA_", "BST_TRACE_")
 
 #: A pattern and not a list, so a name added tomorrow is in the
 #: population without anyone adding it.
-NAME = re.compile(r"\b(?:%s)[A-Z0-9_]+\b"
-                  % "|".join(re.escape(p) for p in PREFIXES))
+NAME = re.compile(r"\b(?:{})[A-Z0-9_]+\b".format("|".join(re.escape(p) for p in PREFIXES)))
 
 #: Where a name may be introduced. Not `tests/`: a harness variable is
 #: the suite's own plumbing, and the acceptance this holds is about a

@@ -6,9 +6,8 @@ All timestamps and durations use int64 microseconds.
 """
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Set
 from enum import Enum
-
+from typing import Optional
 
 # BuildStream plugin kinds (Element.element_kind, P4-08) that are
 # typically thin structural/aggregation elements - no real compilation of
@@ -67,7 +66,7 @@ class RunContext:
     wall_start_us: Optional[int] = None
     wall_end_us: Optional[int] = None
     host: Optional[str] = None
-    resource_capacities: Dict[str, int] = field(default_factory=dict)
+    resource_capacities: dict[str, int] = field(default_factory=dict)
     max_jobs: Optional[int] = None
     cpu_accounting: Optional[dict] = None
     # Real native `--max-jobs` (per-element internal build-system
@@ -129,13 +128,13 @@ class RunContext:
     # *intends* to use: a budget is a policy, this is a fact.
     host_memory_mb: Optional[int] = None
     estimated_job_memory_mb: Optional[int] = None
-    exclusive_resources: List[str] = field(default_factory=list)  # Part 31.3
+    exclusive_resources: list[str] = field(default_factory=list)  # Part 31.3
     # BuildStream's own top-level, non-element-scoped pipeline phases
     # (e.g. "Query cache", "Resolving elements") - not part of run-context/v9's
     # spec-mandated minimal schema (Part 32.1), an additive extension
     # `tools/bst_extract_run.py` populates from the real log. Each entry:
     # {"phase": str, "elapsed_us": int}. See docs/backlog/tasks/P4-14-cache-query-overhead-visibility.md.
-    pipeline_overhead: List[dict] = field(default_factory=list)
+    pipeline_overhead: list[dict] = field(default_factory=list)
     # Run-identity manifest (I8, P1-37) - not part of run-context/v9's
     # spec-mandated schema (the spec states I8's invariant but defines no
     # concrete field/mechanism for it anywhere), an additive extension
@@ -248,7 +247,7 @@ class RunContext:
         return "incremental" if cached > 0 else "full"
 
     @property
-    def failed_elements(self) -> List[str]:
+    def failed_elements(self) -> list[str]:
         """Elements whose task ended in FAILURE, or `[]` when the
         producer recorded no outcome at all. Use `build_outcome is None`
         to distinguish "no failures" from "unknown"."""
@@ -387,7 +386,7 @@ class TaskSpan:
     task_key: TaskKey
     ts_us: int  # Start timestamp in microseconds
     dur_us: int  # Duration in microseconds
-    resources: List[Resource] = field(default_factory=list)
+    resources: list[Resource] = field(default_factory=list)
     primary_resource: Optional[Resource] = None
     # UX-62: BuildStream's own terminal status for this task attempt
     # ("SUCCESS", "FAILURE", ...). None means the capture did not record
@@ -445,14 +444,14 @@ class Graph:
     
     Contains elements and their dependencies.
     """
-    elements: List[Element] = field(default_factory=list)
-    dependencies: List[DependencyEdge] = field(default_factory=list)
+    elements: list[Element] = field(default_factory=list)
+    dependencies: list[DependencyEdge] = field(default_factory=list)
 
     # Derived metrics (computed during analysis)
-    in_degree: Dict[str, int] = field(default_factory=dict)
-    out_degree: Dict[str, int] = field(default_factory=dict)
-    unweighted_depth: Dict[str, int] = field(default_factory=dict)
-    reachable_downstream_count: Dict[str, int] = field(default_factory=dict)
+    in_degree: dict[str, int] = field(default_factory=dict)
+    out_degree: dict[str, int] = field(default_factory=dict)
+    unweighted_depth: dict[str, int] = field(default_factory=dict)
+    reachable_downstream_count: dict[str, int] = field(default_factory=dict)
     # Run-identity manifest hash (I8, P1-37) - see
     # RunContext.run_identity's docstring for what it covers. None for
     # older/hand-built run directories without one.
@@ -466,8 +465,8 @@ class Trace:
 
     Contains task spans and phase spans.
     """
-    spans: List[TaskSpan] = field(default_factory=list)
-    phases: List[PhaseSpan] = field(default_factory=list)
+    spans: list[TaskSpan] = field(default_factory=list)
+    phases: list[PhaseSpan] = field(default_factory=list)
     # Run-identity manifest hash (I8, P1-37) - see RunContext.run_identity.
     run_identity_hash: Optional[str] = None
 
@@ -483,8 +482,8 @@ class NormalizedTask:
     ready_us: int  # When task became dependency-ready
     start_us: int  # When task actually started (may be clamped)
     finish_us: int  # Immutable finish time
-    dependencies: List[str] = field(default_factory=list)  # Predecessor task keys
-    resources: List[Resource] = field(default_factory=list)
+    dependencies: list[str] = field(default_factory=list)  # Predecessor task keys
+    resources: list[Resource] = field(default_factory=list)
     primary_resource: Optional[Resource] = None
     # UX-62: carried through from the span, same None-means-unrecorded
     # rule. Attribution deliberately still counts a failed attempt's
@@ -534,8 +533,8 @@ class OccupancySegment:
     """
     start_us: int
     end_us: int
-    active_tasks: Set[str]  # Set of task keys
-    active_resources: Dict[Resource, int] = field(default_factory=dict)  # resource -> count
+    active_tasks: set[str]  # Set of task keys
+    active_resources: dict[Resource, int] = field(default_factory=dict)  # resource -> count
 
 
 @dataclass

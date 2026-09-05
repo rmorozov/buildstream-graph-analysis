@@ -160,7 +160,7 @@ class TestADeferralNamesWhereItWent:
         planted = ("This mechanism needs proper documentation and it is "
                    "not in this round's scope.")
         assert _DEFERRAL.search(planted)
-        others = [n for n in re.findall(r"UX-(\d+)", planted)]
+        others = list(re.findall(r"UX-(\d+)", planted))
         assert others == [], "the fixture accidentally names an id"
 
     def test_the_round_28_instances_were_filed(self):

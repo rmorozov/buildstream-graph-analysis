@@ -24,10 +24,10 @@ integration. tools/chrome_trace_to_bga_trace.py converts this tool's
 Chrome Trace output the rest of the way into trace/v9 (see
 docs/spec/ingestion-pipeline.md).
 """
-import re
-import json
 import argparse
+import json
 import os
+import re
 import sys
 from datetime import datetime, timezone
 
@@ -327,7 +327,7 @@ class WrapperTraceConverter:
 
         if self.is_bst:
             # Force close any lingering builder tasks when the bst command ends
-            for h, task in list(self.active_tasks.items()):
+            for _h, task in list(self.active_tasks.items()):
                 self.trace_events.append(
                     {
                         "name": f"{task['element']} [{task['phase']}]",
@@ -901,7 +901,7 @@ def main(argv=None, quiet=False):
     converter = WrapperTraceConverter(raw_start_time_us=start_time_us)
 
     try:
-        with open(args.input_log, "r", encoding="utf-8", errors="ignore") as f:
+        with open(args.input_log, encoding="utf-8", errors="ignore") as f:
             for line in f:
                 if args.format == "wrapped":
                     converter.process_line_wrapped(line)

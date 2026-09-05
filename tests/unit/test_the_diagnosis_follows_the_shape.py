@@ -19,9 +19,13 @@ that makes true, and neither can be read off the source.
 """
 import pytest
 
-from bga.findings import (CHAIN_BOUND_RATIO, DIAGNOSIS_CHAIN_BOUND,
-                          DIAGNOSIS_INCONCLUSIVE, DIAGNOSIS_SCHEDULER_BOUND,
-                          diagnose)
+from bga.findings import (
+    CHAIN_BOUND_RATIO,
+    DIAGNOSIS_CHAIN_BOUND,
+    DIAGNOSIS_INCONCLUSIVE,
+    DIAGNOSIS_SCHEDULER_BOUND,
+    diagnose,
+)
 
 
 class _Run:

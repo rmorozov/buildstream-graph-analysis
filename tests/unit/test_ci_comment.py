@@ -90,8 +90,9 @@ def _grown(tmp_path, name, serialized):
 
 
 def _compare(baseline, candidate):
-    from bga.compare import compare_runs
     from pathlib import Path
+
+    from bga.compare import compare_runs
     return compare_runs(Path(baseline), Path(candidate))
 
 

@@ -6,12 +6,12 @@ term, sharing compute_resource_work_us below rather than duplicating the
 per-task resource scan.
 """
 from collections import defaultdict
-from typing import Dict, List, Optional
+from typing import Optional
 
 from ..ingest.models import NormalizedTask, RunContext
 
 
-def compute_resource_work_us(normalized_tasks: List[NormalizedTask]) -> Dict[str, int]:
+def compute_resource_work_us(normalized_tasks: list[NormalizedTask]) -> dict[str, int]:
     """
     W_p: observed work per resource, over every resource type actually
     used by any task (PROCESS/DOWNLOAD/UPLOAD/CACHE/OTHER - Part 31.2),
@@ -20,7 +20,7 @@ def compute_resource_work_us(normalized_tasks: List[NormalizedTask]) -> Dict[str
     occupying that resource for the whole span, matching how C_p is a
     per-resource capacity independent of the others.
     """
-    resource_work_us: Dict[str, int] = defaultdict(int)
+    resource_work_us: dict[str, int] = defaultdict(int)
     for task in normalized_tasks:
         task_resources = task.resources or ([task.primary_resource] if task.primary_resource else [])
         for res in task_resources:
@@ -28,7 +28,7 @@ def compute_resource_work_us(normalized_tasks: List[NormalizedTask]) -> Dict[str
     return dict(resource_work_us)
 
 
-def compute_default_capacities(run_context: Optional[RunContext]) -> Dict[str, int]:
+def compute_default_capacities(run_context: Optional[RunContext]) -> dict[str, int]:
     """
     Effective capacity per resource, falling back to sensible defaults
     when run_context doesn't declare one. Shared by both the LB
@@ -52,7 +52,7 @@ def compute_default_capacities(run_context: Optional[RunContext]) -> Dict[str, i
 
 
 def compute_capacity_lower_bound(
-    normalized_tasks: List[NormalizedTask],
+    normalized_tasks: list[NormalizedTask],
     run_context: Optional[RunContext],
 ) -> int:
     """

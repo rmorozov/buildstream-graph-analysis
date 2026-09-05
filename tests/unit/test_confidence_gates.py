@@ -105,7 +105,7 @@ def test_task_coverage_below_soft_threshold_degrades_confidence_without_hard_fai
 
     # 1 real task out of what will become 10 "declared" spans -> 0.10,
     # well below the 0.95 threshold.
-    for i in range(9):
+    for _i in range(9):
         analyzer.trace.spans.append(analyzer.trace.spans[0])
 
     graph_analysis = analyze_graph(analyzer.graph, analyzer.normalized_tasks)

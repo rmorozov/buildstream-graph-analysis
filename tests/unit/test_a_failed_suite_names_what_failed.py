@@ -43,8 +43,7 @@ JUNIT = """<?xml version="1.0" encoding="utf-8"?>
 def _steps():
     document = yaml.safe_load(WORKFLOW.read_text(encoding="utf-8"))
     for job in document["jobs"].values():
-        for step in job.get("steps", []):
-            yield step
+        yield from job.get("steps", [])
 
 
 def _tail(path):

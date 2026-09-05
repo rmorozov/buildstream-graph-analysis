@@ -26,14 +26,14 @@ same file since `UX-122` - one guard's idea of where the workflow is.
 import pathlib
 import re
 import sys
-from typing import List, Optional, Tuple
+from typing import Optional
 
 import pytest
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 
-from test_capture_ref_patterns import WORKFLOW  # noqa: E402
+from test_capture_ref_patterns import WORKFLOW
 
 DOC = REPO / "docs/design/capture-workflow.md"
 
@@ -88,24 +88,24 @@ def _schedule_block() -> str:
     return "\n".join(lines)
 
 
-def _crons() -> List[str]:
+def _crons() -> list[str]:
     return CRON.findall(_schedule_block())
 
 
-def _cadence(cron: str) -> Tuple[str, Optional[str], str]:
+def _cadence(cron: str) -> tuple[str, Optional[str], str]:
     """`("weekly", "Sunday", "03:00 UTC")` from `0 3 * * 0`."""
     minute, hour, dom, _month, dow = cron.split()
-    clock = "{:02d}:{:02d} UTC".format(int(hour), int(minute))
+    clock = f"{int(hour):02d}:{int(minute):02d} UTC"
     if dow != "*" and dom == "*":
         return "weekly", DAYS[int(dow.split(",")[0]) % 7], clock
     if dom != "*" and dow == "*":
-        return "monthly", "day {}".format(int(dom)), clock
+        return "monthly", f"day {int(dom)}", clock
     if dom == "*" and dow == "*":
         return "daily", None, clock
     raise AssertionError(
-        "cron `{}` is neither weekly, monthly nor daily - the "
+        f"cron `{cron}` is neither weekly, monthly nor daily - the "
         "document's sentence needs a word this guard cannot derive"
-        .format(cron))
+        )
 
 
 def _triggers() -> set:
@@ -147,13 +147,13 @@ class TestTheContentsTableIsTheWorkflowsFileList:
         missing = sorted(_workflow_files() - _table_files())
         assert missing == [], (
             "the workflow writes these under `capture/` and the contents "
-            "table names none of them: {}".format(missing))
+            f"table names none of them: {missing}")
 
     def test_it_names_nothing_the_workflow_does_not_write(self):
         extra = sorted(_table_files() - _workflow_files())
         assert extra == [], (
             "the contents table promises files no longer written to "
-            "`capture/`: {}".format(extra))
+            f"`capture/`: {extra}")
 
 
 class TestTheTriggerSentenceIsTheScheduleBlock:
@@ -166,9 +166,8 @@ class TestTheTriggerSentenceIsTheScheduleBlock:
                 if token is None:
                     continue
                 assert token in sentence, (
-                    "cron `{}` runs {} at {}; the trigger sentence does "
-                    "not say `{}`:\n{}".format(
-                        cron, cadence, clock, token, sentence))
+                    f"cron `{cron}` runs {cadence} at {clock}; the trigger sentence does "
+                    f"not say `{token}`:\n{sentence}")
 
     def test_it_claims_no_cadence_the_workflow_lacks(self):
         """The half that catches a *removed* cron: the sentence would
@@ -179,8 +178,8 @@ class TestTheTriggerSentenceIsTheScheduleBlock:
             if cadence in real:
                 continue
             assert cadence not in sentence, (
-                "the trigger sentence claims a {} run; the workflow's "
-                "schedule has {}".format(cadence, sorted(_crons())))
+                f"the trigger sentence claims a {cadence} run; the workflow's "
+                f"schedule has {sorted(_crons())}")
 
     def test_it_names_every_trigger_the_workflow_has(self):
         """`and on nothing else` is a claim about the whole `on:` block,
@@ -190,9 +189,9 @@ class TestTheTriggerSentenceIsTheScheduleBlock:
             if trigger == "schedule":
                 continue          # named by its cadence, checked above
             assert trigger in sentence, (
-                "`{}` is a trigger of this workflow and the sentence "
+                f"`{trigger}` is a trigger of this workflow and the sentence "
                 "that says what triggers it does not mention it"
-                .format(trigger))
+                )
 
 
 class TestTheDerivationWouldCatchTheDriftItWasWrittenFor:

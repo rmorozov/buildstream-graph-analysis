@@ -337,9 +337,9 @@ def test_analyze_and_correlate_name_the_same_element_first():
     re-notice in a later audit round."""
     import json as _json
 
+    from bga.findings import heaviest_on_path
     from bga.ingest.models import AnalysisResult
     from bga.report.json import format_json
-    from bga.findings import heaviest_on_path
 
     analysis = _real_analysis()
     result = AnalysisResult(

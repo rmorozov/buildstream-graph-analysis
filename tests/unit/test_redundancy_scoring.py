@@ -11,7 +11,9 @@ identical across elements by construction while doing entirely different
 work in each.
 """
 from tools.bst_native_build_tracer import (
-    _elide_cmd, _is_element_build_driver, detect_redundant_operations,
+    _elide_cmd,
+    _is_element_build_driver,
+    detect_redundant_operations,
 )
 
 

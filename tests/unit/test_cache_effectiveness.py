@@ -21,7 +21,9 @@ The end-to-end numbers quoted below are from real `examples/06` builds
 run for this task with a real bst 2.7.0, not from fixtures.
 """
 from bga.cache_effectiveness import (
-    HEALTHY_HIT_RATIO, POOR_HIT_RATIO, compute_cache_accounting,
+    HEALTHY_HIT_RATIO,
+    POOR_HIT_RATIO,
+    compute_cache_accounting,
     compute_cache_churn,
 )
 from bga.findings import compute_findings, findings_by_id
@@ -198,7 +200,7 @@ def _churn(baseline, candidate, deps, built, durations=None, baseline_built=(),
         [_Elem(u, k) for u, k in baseline.items()],
         [_Elem(u, k) for u, k in candidate.items()],
         [_Dep(p, s) for p, s in deps],
-        set(built), durations or {u: 1_000_000 for u in built},
+        set(built), durations or dict.fromkeys(built, 1000000),
         baseline_built=None if baseline_built is None else set(baseline_built),
         candidate_run_mode=candidate_run_mode,
         baseline_run_mode=baseline_run_mode,

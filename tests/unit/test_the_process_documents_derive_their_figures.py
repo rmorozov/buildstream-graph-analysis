@@ -35,7 +35,7 @@ import pytest
 REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 
-from bga import contracts, schemas  # noqa: E402
+from bga import contracts, schemas
 
 RULES = REPO / "docs/contributing/rules.md"
 GUIDE = REPO / "docs/contributing/fixing-guide.md"

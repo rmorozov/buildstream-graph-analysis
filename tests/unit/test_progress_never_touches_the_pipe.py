@@ -147,10 +147,9 @@ class TestWhatATerminalSees:
     def test_the_context_manager_clears_on_an_exception(self, monkeypatch):
         monkeypatch.delenv("BGA_NO_PROGRESS", raising=False)
         stream = _FakeTTY()
-        with pytest.raises(ValueError):
-            with progress.ticker("census", stream=stream) as tick:
-                tick.step(3)
-                raise ValueError("boom")
+        with pytest.raises(ValueError), progress.ticker("census", stream=stream) as tick:
+            tick.step(3)
+            raise ValueError("boom")
         assert stream.getvalue().endswith("\r")
 
 
@@ -201,7 +200,7 @@ class TestStdoutIsUntouched:
              "import os, sys\n"
              "os.chdir(sys.argv[1])\n"
              "from bga.cli import main\n"
-             "raise SystemExit(main(%r))" % (argv,), cwd or os.getcwd()],
+             f"raise SystemExit(main({argv!r}))", cwd or os.getcwd()],
             capture_output=True, env=env, cwd=os.getcwd())
 
     def _analyze(self, env_extra):
@@ -209,7 +208,7 @@ class TestStdoutIsUntouched:
         return subprocess.run(
             [sys.executable, "-c",
              "from bga.cli import main; raise SystemExit(main("
-             "['analyze', %r, '--format', 'json']))" % GOLDEN],
+             f"['analyze', {GOLDEN!r}, '--format', 'json']))"],
             capture_output=True, env=env, cwd=os.getcwd())
 
     def test_forcing_progress_on_actually_draws(self, tmp_path):

@@ -14,9 +14,9 @@ The occupancy step function is the core architectural primitive that supports:
 """
 
 import logging
-from typing import List, Dict, Set, Tuple, Optional
 from dataclasses import dataclass, field
 from enum import IntEnum
+from typing import Optional
 
 from ..ingest.models import NormalizedTask, Resource
 
@@ -38,7 +38,7 @@ class SweepEvent:
     task: Optional[NormalizedTask] = field(compare=False, default=None)
 
 
-def build_sweep_events(tasks: List[NormalizedTask]) -> List[SweepEvent]:
+def build_sweep_events(tasks: list[NormalizedTask]) -> list[SweepEvent]:
     """
     Build sorted list of sweep events from normalized tasks.
     
@@ -77,8 +77,8 @@ def build_sweep_events(tasks: List[NormalizedTask]) -> List[SweepEvent]:
 
 
 def compute_occupancy_segments(
-    tasks: List[NormalizedTask],
-) -> List[Tuple[int, int, Set[str], Dict[Resource, int]]]:
+    tasks: list[NormalizedTask],
+) -> list[tuple[int, int, set[str], dict[Resource, int]]]:
     """
     Compute occupancy segments using sweep-line algorithm (Part 4.1).
     
@@ -98,20 +98,19 @@ def compute_occupancy_segments(
     events = build_sweep_events(tasks)
     
     segments = []
-    active_tasks: Set[str] = set()
-    active_resources: Dict[Resource, int] = {}
+    active_tasks: set[str] = set()
+    active_resources: dict[Resource, int] = {}
     prev_timestamp: Optional[int] = None
     
     for event in events:
         # If we have a previous timestamp and active tasks, record segment
-        if prev_timestamp is not None and prev_timestamp < event.timestamp:
-            if active_tasks:  # Only record segments with active work
-                segments.append((
-                    prev_timestamp,
-                    event.timestamp,
-                    set(active_tasks),
-                    dict(active_resources),
-                ))
+        if prev_timestamp is not None and prev_timestamp < event.timestamp and active_tasks:
+            segments.append((
+                prev_timestamp,
+                event.timestamp,
+                set(active_tasks),
+                dict(active_resources),
+            ))
         
         # Update active set based on event type
         if event.event_type == EventType.START:
@@ -134,9 +133,9 @@ def compute_occupancy_segments(
 
 
 def compute_capacity_excursions(
-    tasks: List[NormalizedTask],
-    declared_capacities: Dict[str, int],
-) -> List[dict]:
+    tasks: list[NormalizedTask],
+    declared_capacities: dict[str, int],
+) -> list[dict]:
     """
     I6 (Part 34): where observed occupancy exceeded a declared capacity.
 
@@ -157,8 +156,8 @@ def compute_capacity_excursions(
     if not declared_capacities or not tasks:
         return []
 
-    excursions: Dict[str, dict] = {}
-    active: Dict[Resource, int] = {}
+    excursions: dict[str, dict] = {}
+    active: dict[Resource, int] = {}
     prev_timestamp: Optional[int] = None
 
     for event in build_sweep_events(tasks):
@@ -190,7 +189,7 @@ def compute_capacity_excursions(
     return [excursions[name] for name in sorted(excursions)]
 
 
-def compute_task_horizon(tasks: List[NormalizedTask]) -> Tuple[int, int, int]:
+def compute_task_horizon(tasks: list[NormalizedTask]) -> tuple[int, int, int]:
     """
     Compute task horizon H (Part 13).
     
@@ -213,7 +212,7 @@ def compute_task_horizon(tasks: List[NormalizedTask]) -> Tuple[int, int, int]:
 
 
 def compute_idle_time(
-    segments: List[Tuple[int, int, Set[str], Dict[Resource, int]]],
+    segments: list[tuple[int, int, set[str], dict[Resource, int]]],
     horizon_start: int,
     horizon_end: int,
 ) -> int:
@@ -256,7 +255,7 @@ def compute_idle_time(
 
 
 def compute_average_concurrency(
-    segments: List[Tuple[int, int, Set[str], Dict[Resource, int]]],
+    segments: list[tuple[int, int, set[str], dict[Resource, int]]],
     horizon_us: int,
 ) -> float:
     """
@@ -286,9 +285,9 @@ def compute_average_concurrency(
 
 
 def compute_resource_occupancy(
-    segments: List[Tuple[int, int, Set[str], Dict[Resource, int]]],
+    segments: list[tuple[int, int, set[str], dict[Resource, int]]],
     horizon_us: int,
-) -> Dict[Resource, float]:
+) -> dict[Resource, float]:
     """
     Compute average resource occupancy (Part 22.2).
     
@@ -305,7 +304,7 @@ def compute_resource_occupancy(
     if horizon_us <= 0:
         return {}
     
-    occupancy: Dict[Resource, int] = {}
+    occupancy: dict[Resource, int] = {}
     
     for start, end, _, resource_counts in segments:
         duration = end - start
@@ -319,8 +318,8 @@ def compute_resource_occupancy(
 
 
 def compute_peak_occupancy(
-    segments: List[Tuple[int, int, Set[str], Dict[Resource, int]]],
-) -> Tuple[int, Dict[Resource, int]]:
+    segments: list[tuple[int, int, set[str], dict[Resource, int]]],
+) -> tuple[int, dict[Resource, int]]:
     """
     Compute peak occupancy for tasks and resources.
     
@@ -331,7 +330,7 @@ def compute_peak_occupancy(
         Tuple of (peak_task_count, peak_resource_counts)
     """
     peak_tasks = 0
-    peak_resources: Dict[Resource, int] = {}
+    peak_resources: dict[Resource, int] = {}
     
     for _, _, active_tasks, resource_counts in segments:
         peak_tasks = max(peak_tasks, len(active_tasks))
@@ -345,7 +344,7 @@ def compute_peak_occupancy(
 
 
 def compute_occupancy_stats(
-    tasks: List[NormalizedTask],
+    tasks: list[NormalizedTask],
 ) -> dict:
     """
     Compute comprehensive occupancy statistics.

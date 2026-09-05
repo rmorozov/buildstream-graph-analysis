@@ -34,7 +34,7 @@ import sys
 REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 
-from tools import dev_tier_drift as drift                      # noqa: E402
+from tools import dev_tier_drift as drift
 
 WORKFLOW = REPO / ".github/workflows/ci.yml"
 VERIFY = REPO / ".claude/skills/verify/SKILL.md"
@@ -108,7 +108,7 @@ def _advice_expressions():
         else:
             candidates = [kw.value for kw in node.keywords
                           if kw.arg in ("help", "note")]
-        for argument in candidates:  # noqa: B007 - see the dict pass below
+        for argument in candidates:
 
             text = "".join(
                 part.value for part in ast.walk(argument)

@@ -38,7 +38,7 @@ import pytest
 REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 
-from tools import dev_close_task as close  # noqa: E402
+from tools import dev_close_task as close
 
 SCENARIOS = REPO / "docs/backlog/scenarios"
 TOOL = REPO / "tools/dev_close_task.py"

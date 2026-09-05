@@ -37,8 +37,8 @@ import sys
 REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 
-from bga import cli  # noqa: E402
-from bga.tools_dispatch import TOOL_ALIASES  # noqa: E402
+from bga import cli
+from bga.tools_dispatch import TOOL_ALIASES
 
 ARCHITECTURE = REPO / "docs/design/architecture.md"
 

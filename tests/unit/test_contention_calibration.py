@@ -11,10 +11,19 @@ than 2 real calibration points on tier 1's own fixed, uncalibrated
 duration - exactly what these tests verify.
 """
 from bga.ingest.models import (
-    Graph, NormalizedTask, Resource, RunContext, TaskKey, TaskKind, TaskSpan, Trace,
+    Graph,
+    NormalizedTask,
+    Resource,
+    RunContext,
+    TaskKey,
+    TaskKind,
+    TaskSpan,
+    Trace,
 )
 from bga.replay.scheduler import (
-    ReplayScheduler, _interpolate_calibrated_duration, build_contention_calibration,
+    ReplayScheduler,
+    _interpolate_calibrated_duration,
+    build_contention_calibration,
 )
 
 

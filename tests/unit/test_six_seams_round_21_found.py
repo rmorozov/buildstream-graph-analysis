@@ -40,8 +40,7 @@ class TestTheTimelinePrintsNoPathThatIsAlreadyGone:
         out = tmp_path / "timeline.json"
         result = subprocess.run(
             [sys.executable, "-c",
-             "from bga.cli import main; raise SystemExit(main(%r))"
-             % (["timeline", str(snapshot), "-o", str(out)],)],
+             "from bga.cli import main; raise SystemExit(main({!r}))".format(["timeline", str(snapshot), "-o", str(out)])],
             capture_output=True, text=True, cwd=REPO)
         assert result.returncode == 0, result.stderr
 
@@ -60,8 +59,7 @@ class TestTheTimelinePrintsNoPathThatIsAlreadyGone:
         log.write_text(_WRAPPED)
         result = subprocess.run(
             [sys.executable, "-c",
-             "from bga.cli import main; raise SystemExit(main(%r))"
-             % (["log-to-chrome", str(log), str(tmp_path / "out.json")],)],
+             "from bga.cli import main; raise SystemExit(main({!r}))".format(["log-to-chrome", str(log), str(tmp_path / "out.json")])],
             capture_output=True, text=True, cwd=REPO)
         assert "Successfully generated" in result.stderr
         assert str(tmp_path / "out.json") in result.stderr
@@ -72,8 +70,7 @@ class TestTheTimelinePrintsNoPathThatIsAlreadyGone:
         renders as exit 0."""
         result = subprocess.run(
             [sys.executable, "-c",
-             "from bga.cli import main; raise SystemExit(main(%r))"
-             % (["log-to-chrome", "/nope/missing.log", str(tmp_path / "o.json")],)],
+             "from bga.cli import main; raise SystemExit(main({!r}))".format(["log-to-chrome", "/nope/missing.log", str(tmp_path / "o.json")])],
             capture_output=True, text=True, cwd=REPO)
         assert result.returncode != 0, "a missing input exited 0"
         assert result.stdout == "", "the error went to stdout"

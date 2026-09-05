@@ -31,7 +31,8 @@ import subprocess
 import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
-from no_bulk_add import SEPARATORS, tokens_of, without_heredocs   # noqa: E402
+from no_bulk_add import SEPARATORS, tokens_of, without_heredocs
+
 
 def repo_root():
     """The checkout the commit is being made in, not the hook's own.

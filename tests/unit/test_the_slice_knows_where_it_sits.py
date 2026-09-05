@@ -34,10 +34,10 @@ import pytest
 REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 
-from bga.viewer import __name__ as _viewer    # noqa: E402,F401
-from tools.bga_timeline import (    # noqa: E402
-    PLANE1_ANNOTATIONS,
+from bga.viewer import __name__ as _viewer  # noqa: F401
+from tools.bga_timeline import (
     IDENTITY_ANNOTATIONS,
+    PLANE1_ANNOTATIONS,
     _plane1_annotations,
     element_structure,
     run_identity,

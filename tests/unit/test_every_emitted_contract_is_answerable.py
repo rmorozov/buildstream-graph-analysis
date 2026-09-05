@@ -45,7 +45,7 @@ import pytest
 REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 
-from bga import contracts, schemas                     # noqa: E402
+from bga import contracts, schemas
 
 RUN = REPO / "tests/fixtures/golden/mixed_task_kinds"
 #: The two-plane fixture, because `correlate` is a *join* - it refuses
@@ -258,7 +258,7 @@ class TestEveryEmittedIdIsAnswerable:
         for command, contract in emitted.items():
             enrolled = _SCHEMA_BY_COMMAND.get(command)
             if enrolled is None:
-                for flag, name in _SCHEMA_BY_FLAG.get(command, ()):
+                for _flag, name in _SCHEMA_BY_FLAG.get(command, ()):
                     enrolled = enrolled or name
             if enrolled != contract:
                 wrong[command] = (contract, enrolled)

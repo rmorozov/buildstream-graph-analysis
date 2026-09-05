@@ -18,7 +18,7 @@ import pytest
 REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 
-from tools import dev_touching, dev_track_cost  # noqa: E402
+from tools import dev_touching, dev_track_cost
 
 
 def _record(message_id, blocks, usage, stamp="2026-09-02T00:00:00.000Z"):

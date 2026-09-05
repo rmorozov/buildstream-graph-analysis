@@ -1323,7 +1323,6 @@ class TestTheSizeDiscipline:
         exactly the shape of defect they exist to hold.
         """
         import tools.bga_view as view
-
         from tests.fixtures.topologies import linear_chain, write_run_dir
 
         run = write_run_dir(tmp_path, linear_chain(1000))
@@ -1695,10 +1694,9 @@ class TestTheSizeDiscipline:
         page renders. A ceiling cannot tell 10 KB of new contract from
         10 KB of embedded font; this can, and it is why raising the
         ceiling above is a measurement rather than an argument."""
-        import json
-
         import base64
         import gzip
+        import json
 
         html = open(exported[0], encoding="utf-8").read()
         blocks = re.findall(
@@ -1736,8 +1734,7 @@ class TestTheCommandLine:
         path = tmp_path / "out.html"
         result = subprocess.run(
             [sys.executable, "-c",
-             "from bga.cli import main; raise SystemExit(main(%r))"
-             % (["view", str(snapshot / "run"), "--export", str(path)],)],
+             "from bga.cli import main; raise SystemExit(main({!r}))".format(["view", str(snapshot / "run"), "--export", str(path)])],
             capture_output=True, text=True, cwd=os.getcwd(), timeout=120)
         assert result.returncode == 0, result.stderr
         assert path.exists()

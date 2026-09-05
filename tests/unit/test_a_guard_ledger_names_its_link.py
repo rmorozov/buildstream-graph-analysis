@@ -33,8 +33,7 @@ import pytest
 REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 
-from test_the_agent_configuration_holds import (  # noqa: E402
-    TestTheRulesCardIsTheEntryPoint as CARD_GUARD)
+from test_the_agent_configuration_holds import TestTheRulesCardIsTheEntryPoint as CARD_GUARD
 
 STYLE_GUIDE = REPO / "docs/contributing/style-guide.md"
 
@@ -115,7 +114,7 @@ def _ledger_weight(rel):
     """How many rows of `rel` point a guard column at a tracked test."""
     text = (REPO / rel).read_text(encoding="utf-8", errors="replace")
     total = 0
-    for index, header, body in _guard_columns(text):
+    for index, _header, body in _guard_columns(text):
         for line in body:
             cells = _cells(line)
             if index < len(cells) and _named_guards(cells[index]):
@@ -162,7 +161,7 @@ def _section_rows(rel):
     """`{section id: cell}` for a ledger keyed by a `§` id."""
     text = (REPO / rel).read_text(encoding="utf-8", errors="replace")
     rows = {}
-    for index, header, body in _guard_columns(text):
+    for index, _header, body in _guard_columns(text):
         for line in body:
             cells = _cells(line)
             if index >= len(cells) or not cells[0].startswith("§"):
@@ -175,7 +174,7 @@ def _sentence_rows(rel):
     """`[(rule, cell)]` for a ledger keyed by a sentence."""
     text = (REPO / rel).read_text(encoding="utf-8", errors="replace")
     rows = []
-    for index, header, body in _guard_columns(text):
+    for index, _header, body in _guard_columns(text):
         for line in body:
             cells = _cells(line)
             if index < len(cells) and not cells[0].startswith("§"):

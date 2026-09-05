@@ -65,7 +65,8 @@ needs_node = pytest.mark.skipif(node is None, reason="node is not installed")
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 sys.path.insert(0, str(REPO / "tests"))
-from pages import snapshot_copy    # noqa: E402
+from pages import snapshot_copy
+
 GOLDEN = REPO / "tests" / "fixtures" / "golden" / "mixed_task_kinds"
 MACRO = REPO / "tests" / "fixtures" / "macro_micro" / "run"
 VIEWER = REPO / "bga" / "viewer"

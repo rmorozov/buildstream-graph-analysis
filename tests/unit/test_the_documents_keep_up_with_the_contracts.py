@@ -446,7 +446,7 @@ class TestThePopulationIsKeysAndNotIds:
         the register is the clause above, asserted there and not
         restated here - one mutation that reddens two clauses has
         falsified one."""
-        assert UNDOCUMENTED_WHEN_THE_POPULATION_BECAME_KEYS == frozenset(), (
+        assert frozenset() == UNDOCUMENTED_WHEN_THE_POPULATION_BECAME_KEYS, (
             f"the register holds "
             f"{sorted(UNDOCUMENTED_WHEN_THE_POPULATION_BECAME_KEYS)}; it was "
             f"emptied by UX-636 and a key with no prose reddens the clause "

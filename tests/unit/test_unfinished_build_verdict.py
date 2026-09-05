@@ -8,7 +8,9 @@ the verdict, the analysis banner and the baseline choice all ignored it.
 import json
 
 from bga.compare import (
-    ComparisonResult, _build_failure_detail, _describe_build_failures,
+    ComparisonResult,
+    _build_failure_detail,
+    _describe_build_failures,
 )
 from bga.report.text import format_compare_text
 from tools.bga_snapshot import _healthy_baseline, _snapshot_failed

@@ -36,7 +36,7 @@ dependencies = [
 dev = [
     "pytest>=7.0",
     "pytest-cov>=4.0",
-    "ruff>=0.6",
+    "ruff==0.15.8",
     # tools/bst_extract_run.py --strict mode's project.conf reader
     # (P4-13). Listed here too (not just under `bst` below) because most
     # of its own unit tests (tests/unit/test_bst_extract_run_strict.py)
@@ -164,15 +164,18 @@ line-length = 120
 target-version = "py39"
 
 [tool.ruff.lint]
-# Deliberately small, high-value rule set to start (P4-04): pyflakes
-# (F) only - unused imports/variables, undefined names, obvious bugs.
-# No style/formatting rules (E/W/line-length enforcement) yet - a
-# from-scratch strict config on an existing ~30-module codebase risks
-# either a wall of unrelated noise or blanket-suppressing everything.
-# Widen the rule set in a later, separate task once the team has
-# opinions on style rules (line length, quote style, etc.) - see
-# docs/backlog/tasks/P4-04-basic-python-linting.md's own scoping note.
-select = ["F"]
+# UX-693: the auto-fixed shelf, enforced from the commit that fixed it;
+# S, C901 and PLR are the baseline's (UX-694), never zero-tolerance here.
+select = ["F", "I", "UP", "B", "SIM", "C4", "RUF100"]
+# SIM115 (open without a context manager) has no fixer; it enters the
+# baseline under UX-694 rather than a per-line suppression. ERA001 read
+# 11 prose comments as code and no code, so it is not selected.
+ignore = ["SIM115"]
+
+[tool.ruff.lint.per-file-ignores]
+# tools/ prints by design; tests/ may build a dict or a list by hand.
+"tools/**" = ["T201"]
+"tests/**" = ["C408"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

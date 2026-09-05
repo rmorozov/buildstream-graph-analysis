@@ -49,8 +49,9 @@ import pytest
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 sys.path.insert(0, str(REPO / "tests"))
-import pages    # noqa: E402
-from pages import snapshot_copy    # noqa: E402
+import pages
+from pages import snapshot_copy
+
 node = shutil.which("node")
 needs_node = pytest.mark.skipif(node is None, reason="node is not installed")
 VIEWER = REPO / "bga" / "viewer"
@@ -103,10 +104,10 @@ class TestTheDepthIsCounted:
         (None, {"levels": 0, "rows": 0}),
     ])
     def test_known_shapes(self, value, expected):
-        out = _js("""
-const { shapeOf } = await import("./bga/viewer/shapes.js");
-console.log(JSON.stringify(shapeOf(%s)));
-""" % json.dumps(value))
+        out = _js(f"""
+const {{ shapeOf }} = await import("./bga/viewer/shapes.js");
+console.log(JSON.stringify(shapeOf({json.dumps(value)})));
+""")
         assert out == expected
 
     def test_the_sentence_is_the_numbers(self):

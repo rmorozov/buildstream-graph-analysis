@@ -28,7 +28,8 @@ inventory into the run directory at extract time, which is the one
 moment the project and the run are both in hand.
 """
 import os
-from typing import Dict, Iterable, List, Optional, Set, Tuple
+from collections.abc import Iterable
+from typing import Optional
 
 from .units import US_PER_S
 
@@ -45,7 +46,7 @@ SCHEMA = "sources/v1"
 # Kinds absent from this map are reported with keying "unknown" rather
 # than assumed either way - guessing here would turn a blast estimate
 # into a fabrication, and the count of unknown kinds is reported.
-KEYING_BY_KIND: Dict[str, str] = {
+KEYING_BY_KIND: dict[str, str] = {
     # Core BuildStream plugins.
     "git": "ref",
     "bzr": "ref",
@@ -89,7 +90,7 @@ def is_building_kind(kind: Optional[str]) -> bool:
     return (kind or "unknown") not in ASSEMBLING_KINDS
 
 
-def split_by_kind(uids, element_kinds: Dict[str, str]) -> Tuple[int, int]:
+def split_by_kind(uids, element_kinds: dict[str, str]) -> tuple[int, int]:
     """`(building, assembling)` counts for a set of elements.
 
     `UX-181`: materialised once. The previous version counted the
@@ -198,7 +199,7 @@ def _unkeyable_path(kind: str, path: str) -> Optional[str]:
     return None
 
 
-def resource_of_source(source) -> Tuple[Optional[dict], Optional[str]]:
+def resource_of_source(source) -> tuple[Optional[dict], Optional[str]]:
     """One `sources:` stanza as `(resource, complaint)`.
 
     Exactly one of the two is ever set. A stanza this cannot read is
@@ -278,7 +279,7 @@ def resource_of_source(source) -> Tuple[Optional[dict], Optional[str]]:
     return resource, None
 
 
-def resources_from_element(data: Optional[dict]) -> Tuple[List[dict], List[str]]:
+def resources_from_element(data: Optional[dict]) -> tuple[list[dict], list[str]]:
     """`(resources, complaints)` for one parsed `.bst` file."""
     if not isinstance(data, dict):
         return [], ["element file could not be read"]
@@ -287,8 +288,8 @@ def resources_from_element(data: Optional[dict]) -> Tuple[List[dict], List[str]]
         return [], []
     if not isinstance(stanzas, list):
         return [], ["`sources` is not a list"]
-    resources: List[dict] = []
-    complaints: List[str] = []
+    resources: list[dict] = []
+    complaints: list[str] = []
     for stanza in stanzas:
         resource, complaint = resource_of_source(stanza)
         if resource is not None:
@@ -298,8 +299,8 @@ def resources_from_element(data: Optional[dict]) -> Tuple[List[dict], List[str]]
     return resources, complaints
 
 
-def build_inventory(per_element: Dict[str, List[dict]],
-                    complaints: Optional[Dict[str, List[str]]] = None) -> dict:
+def build_inventory(per_element: dict[str, list[dict]],
+                    complaints: Optional[dict[str, list[str]]] = None) -> dict:
     """The on-disk shape, `sources/v1`."""
     return {
         "schema": SCHEMA,
@@ -308,7 +309,7 @@ def build_inventory(per_element: Dict[str, List[dict]],
     }
 
 
-def resource_key(resource: dict) -> Tuple[str, str]:
+def resource_key(resource: dict) -> tuple[str, str]:
     """The pair a resource is grouped by: its kind and its identity.
 
     Public since `UX-192`, because `bga blast` grouped by identity alone
@@ -320,9 +321,9 @@ def resource_key(resource: dict) -> Tuple[str, str]:
 _resource_key = resource_key
 
 
-def elements_by_resource(inventory: dict) -> Dict[Tuple[str, str], List[str]]:
+def elements_by_resource(inventory: dict) -> dict[tuple[str, str], list[str]]:
     """`(kind, identity) -> [element uid]`, sorted, from an inventory."""
-    grouped: Dict[Tuple[str, str], List[str]] = {}
+    grouped: dict[tuple[str, str], list[str]] = {}
     for uid, resources in (inventory.get("elements") or {}).items():
         for resource in resources or []:
             grouped.setdefault(_resource_key(resource), []).append(uid)
@@ -330,10 +331,10 @@ def elements_by_resource(inventory: dict) -> Dict[Tuple[str, str], List[str]]:
 
 
 def resource_blast(inventory: dict,
-                   downstream: Dict[str, Set[str]],
-                   element_kinds: Dict[str, str],
-                   element_durations_us: Optional[Dict[str, int]] = None,
-                   minimum_elements: int = 2) -> List[dict]:
+                   downstream: dict[str, set[str]],
+                   element_kinds: dict[str, str],
+                   element_durations_us: Optional[dict[str, int]] = None,
+                   minimum_elements: int = 2) -> list[dict]:
     """One row per resource more than one element sources.
 
     `downstream[uid]` is everything a change to `uid` forces to rebuild,
@@ -347,14 +348,14 @@ def resource_blast(inventory: dict,
     keeps between "measured as nothing" and "not measured".
     """
     durations = element_durations_us or {}
-    rows: List[dict] = []
+    rows: list[dict] = []
     for (kind, identity), direct in elements_by_resource(inventory).items():
         if len(direct) < minimum_elements:
             continue
-        blast: Set[str] = set(direct)
+        blast: set[str] = set(direct)
         for uid in direct:
             blast |= set(downstream.get(uid) or ())
-        by_kind: Dict[str, int] = {}
+        by_kind: dict[str, int] = {}
         for uid in sorted(blast):
             by_kind[element_kinds.get(uid, "unknown")] = \
                 by_kind.get(element_kinds.get(uid, "unknown"), 0) + 1
@@ -428,7 +429,7 @@ def format_work(seconds: float) -> str:
     return f"{seconds:.0f}s"
 
 
-def monorepo_headline(rows: List[dict], element_count: int,
+def monorepo_headline(rows: list[dict], element_count: int,
                       share: float = MONOREPO_SHARE) -> Optional[str]:
     """One sentence, when one repository dominates the graph's rebuilds."""
     if not element_count:
@@ -460,7 +461,7 @@ def load_inventory(path) -> Optional[dict]:
     """
     import json
     try:
-        with open(path, "r", encoding="utf-8") as handle:
+        with open(path, encoding="utf-8") as handle:
             data = json.load(handle)
     except (OSError, ValueError):
         return None
@@ -469,5 +470,5 @@ def load_inventory(path) -> Optional[dict]:
     return data
 
 
-def iter_resource_identities(inventory: dict) -> Iterable[Tuple[str, str]]:
+def iter_resource_identities(inventory: dict) -> Iterable[tuple[str, str]]:
     return elements_by_resource(inventory).keys()

@@ -12,15 +12,15 @@ are not about tracing at all: the wrapped build's exit status must be
 what it would have been untraced, in every failure mode, and a tracer
 that dies must leave the build running.
 """
+import contextlib
 import os
 import shutil
 import signal
 import subprocess
 import time
+from pathlib import Path
 
 import pytest
-
-from pathlib import Path
 
 from tools.bst_native_build_tracer import compile_spine, parse_trace_log
 from tools.native_trace.bwrap_shim import build_shim_argv
@@ -266,8 +266,8 @@ def test_a_real_static_build_is_invisible_to_the_hook_and_visible_to_the_spine(t
     because "the spine found 24 processes" means nothing without "and
     the hook alone found 0 on the same build".
     """
-    from tools.bst_native_build_tracer import run_traced_build
     from tests.unit._bst_env import isolated_bst_env
+    from tools.bst_native_build_tracer import run_traced_build
 
     project = os.path.join(REPO_ROOT, "examples", "01-resource-contention")
     if not os.path.isfile(os.path.join(project, "files", "runtime", "bin", "sh")):
@@ -441,10 +441,8 @@ def _stop_probe(binary, tmp_path, delay=1.0):
     except OSError:
         state = "gone"
     exited_before_cont = process.poll() is not None
-    try:
+    with contextlib.suppress(ProcessLookupError):
         os.kill(pid, signal.SIGCONT)
-    except ProcessLookupError:
-        pass
     returncode = process.wait(timeout=30)
     return {"state": state, "exited_before_cont": exited_before_cont,
             "returncode": returncode, "elapsed": time.time() - started}
@@ -505,10 +503,8 @@ def test_a_grandchilds_stop_is_honored_too(spine, tmp_path):
         state = open(f"/proc/{pid}/stat").read().rsplit(") ", 1)[-1].split()[0]
     except OSError:
         state = "gone"
-    try:
+    with contextlib.suppress(ProcessLookupError):
         os.kill(pid, signal.SIGCONT)
-    except ProcessLookupError:
-        pass
     returncode = process.wait(timeout=30)
 
     assert alive, "the whole tree finished through a stopped grandchild"
@@ -1122,9 +1118,9 @@ class TestAGroupStoppedTraceeIsNotResumedByADetach:
             [spine], env={**os.environ, "BST_TRACE_SPINE_SELFTEST": "detach-signal"},
             capture_output=True, text=True, timeout=60)
         assert result.returncode == 0, result.stderr
-        return dict(
-            (line.split()[0], int(line.split()[1]))
-            for line in result.stdout.splitlines() if line.strip())
+        return {
+            line.split()[0]: int(line.split()[1])
+            for line in result.stdout.splitlines() if line.strip()}
 
     @pytest.mark.parametrize("case,expected", [
         ("group-stop-SIGSTOP", signal.SIGSTOP),

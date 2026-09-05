@@ -12,8 +12,13 @@ import subprocess
 import pytest
 
 from tools.bst_baseline_set import (
-    _find_run_directory, check_homogeneity, exclude_refs, fetch_run_directory,
-    format_set_text, list_capture_refs, refusal_remedy,
+    _find_run_directory,
+    check_homogeneity,
+    exclude_refs,
+    fetch_run_directory,
+    format_set_text,
+    list_capture_refs,
+    refusal_remedy,
 )
 
 

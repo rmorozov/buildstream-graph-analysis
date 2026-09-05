@@ -152,9 +152,8 @@ class TestTheSelectorRunsBeforeTheCommit:
         the hatch works or not - which is how the mutation that deleted
         the hatch stayed green."""
         module, ran = self._hook_that_always_reds()
-        with _payload({"tool_input": {"command": "git commit -m x"}}):
-            with _env(BGA_SKIP_SELECTOR="1"):
-                assert module.main() == 0
+        with _payload({"tool_input": {"command": "git commit -m x"}}), _env(BGA_SKIP_SELECTOR="1"):
+            assert module.main() == 0
         assert ran == [], "the selector ran despite the escape hatch"
 
     def test_it_does_not_run_the_selector_for_anything_else(self):
@@ -1772,9 +1771,7 @@ class TestTheRulesCardIsTheEntryPoint:
                                          REPO / name) if one.exists()]
                 if not found:
                     wrong.append(f"{rule!r} names {name}, which does not exist")
-                elif pathlib.Path(name).name in self.NOT_A_GUARD_FILE:
-                    continue
-                elif want in found[0].read_text(encoding="utf-8"):
+                elif pathlib.Path(name).name in self.NOT_A_GUARD_FILE or want in found[0].read_text(encoding="utf-8"):
                     continue
                 elif name not in self.UNMARKED:
                     wrong.append(f"{name} is the guard for {rule!r} and does "

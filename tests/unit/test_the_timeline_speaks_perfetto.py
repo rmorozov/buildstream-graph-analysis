@@ -39,9 +39,8 @@ import pytest
 REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 
-from tools.bga_timeline import (  # noqa: E402
-    DEFAULT_OUTPUT, FORMAT_CHROME, FORMAT_TRACKEVENT, render)
-from tools.native_trace import trackevent  # noqa: E402
+from tools.bga_timeline import DEFAULT_OUTPUT, FORMAT_CHROME, FORMAT_TRACKEVENT, render
+from tools.native_trace import trackevent
 
 FIELD_NUMBERS = REPO / "tests/fixtures/perfetto_field_numbers.json"
 GOLDEN = REPO / "tests/fixtures/golden/mixed_task_kinds"

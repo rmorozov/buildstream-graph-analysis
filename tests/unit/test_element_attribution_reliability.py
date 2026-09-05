@@ -19,9 +19,9 @@ real `examples/06` capture (822 processes, 9 elements, every tag ending
 in `.bst`) - so this is not the mechanism failing, it is the mechanism
 resting on a convention a real project is free to override.
 """
-from bga.correlate import correlate, format_correlation
 import pytest
 
+from bga.correlate import correlate, format_correlation
 from tools.bst_native_build_tracer import assess_element_attribution
 
 

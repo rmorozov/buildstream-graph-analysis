@@ -23,7 +23,7 @@ import argparse
 import json
 import sys
 from collections import defaultdict
-from typing import List, Sequence, Tuple
+from collections.abc import Sequence
 
 ACTION_TO_KIND = {
     "track": "TRACK",
@@ -44,7 +44,7 @@ KIND_TO_RESOURCE = {
 }
 
 
-def chrome_events_to_bga_spans(events: Sequence[dict]) -> Tuple[List[dict], List[str]]:
+def chrome_events_to_bga_spans(events: Sequence[dict]) -> tuple[list[dict], list[str]]:
     """Convert a list of Chrome Trace Event dicts into a list of trace/v9
     span dicts.
 
@@ -59,7 +59,7 @@ def chrome_events_to_bga_spans(events: Sequence[dict]) -> Tuple[List[dict], List
     """
     open_stack = defaultdict(list)  # (pid, tid) -> list of open B events
     pairs = []  # (begin_event, end_event)
-    dropped: List[str] = []
+    dropped: list[str] = []
 
     for ev in events:
         if ev.get("cat") != "bst-builder" or ev.get("ph") not in ("B", "E"):
@@ -132,7 +132,7 @@ def chrome_events_to_bga_spans(events: Sequence[dict]) -> Tuple[List[dict], List
     return spans, dropped
 
 
-def failed_elements(events: Sequence[dict]) -> List[str]:
+def failed_elements(events: Sequence[dict]) -> list[str]:
     """Elements whose task ended in `FAILURE` (UX-54).
 
     BuildStream's own log states each task's terminal status, and
@@ -181,7 +181,7 @@ def main() -> int:
     parser.add_argument("output_json", help="Path to write the trace/v9 JSON to.")
     args = parser.parse_args()
 
-    with open(args.chrome_trace_json, "r", encoding="utf-8") as f:
+    with open(args.chrome_trace_json, encoding="utf-8") as f:
         events = json.load(f)
 
     spans, dropped = chrome_events_to_bga_spans(events)

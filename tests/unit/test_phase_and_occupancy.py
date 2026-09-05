@@ -210,7 +210,7 @@ def test_zero_duration_task_alongside_real_tasks_does_not_break_sweep():
     segments = compute_occupancy_segments([zero, real])
 
     assert sum(end - start for start, end, _, _ in segments) == 10000
-    for start, end, active_tasks, resource_counts in segments:
+    for _start, _end, active_tasks, resource_counts in segments:
         assert active_tasks == {"real.bst|BUILD|BUILD|0"}
         assert resource_counts == {Resource.PROCESS: 1}
 

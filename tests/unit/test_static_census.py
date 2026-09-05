@@ -14,7 +14,9 @@ import struct
 import pytest
 
 from tools.bst_native_build_tracer import (
-    census_project, census_static_executables, classify_elf,
+    census_project,
+    census_static_executables,
+    classify_elf,
 )
 
 

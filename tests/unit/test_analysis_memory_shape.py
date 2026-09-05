@@ -21,7 +21,6 @@ import pytest
 
 from tools import bst_native_build_tracer as tracer
 
-
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 

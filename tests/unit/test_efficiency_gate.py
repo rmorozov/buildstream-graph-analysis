@@ -12,7 +12,9 @@ occupancy (and 7.4% of wall-clock - more than seven times the duration
 gate's own default, which is why that gate fires on noise).
 """
 from bga.compare import (
-    ComparisonResult, _EFFICIENCY_DROP_PP, efficiency_below_floor,
+    _EFFICIENCY_DROP_PP,
+    ComparisonResult,
+    efficiency_below_floor,
     efficiency_regression_exceeds_threshold,
 )
 

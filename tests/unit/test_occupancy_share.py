@@ -14,7 +14,14 @@ pair: 27.8% -> 63.0%.
 """
 from bga.analyzer import BuildEfficiencyAnalyzer
 from bga.ingest.models import (
-    DependencyEdge, Element, Graph, NormalizedTask, RunContext, TaskKey, TaskKind, Trace,
+    DependencyEdge,
+    Element,
+    Graph,
+    NormalizedTask,
+    RunContext,
+    TaskKey,
+    TaskKind,
+    Trace,
 )
 
 

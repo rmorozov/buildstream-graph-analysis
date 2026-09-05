@@ -58,15 +58,24 @@ REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 
-from tools.bga_timeline import (  # noqa: E402
-    CONCURRENCY_COUNTER, CONCURRENCY_UNIT, COUNTER_WINDOWS, DEFAULT_OUTPUT,
-    FORMAT_TRACKEVENT, concurrency_series, render)
-from tools.bst_native_build_tracer import (  # noqa: E402
-    compute_max_concurrency, parse_trace_lines, stream_records,
-    stream_trace_events)
-from tools.native_trace import trackevent  # noqa: E402
+from test_the_timeline_speaks_perfetto import _fields
 
-from test_the_timeline_speaks_perfetto import _fields  # noqa: E402
+from tools.bga_timeline import (
+    CONCURRENCY_COUNTER,
+    CONCURRENCY_UNIT,
+    COUNTER_WINDOWS,
+    DEFAULT_OUTPUT,
+    FORMAT_TRACKEVENT,
+    concurrency_series,
+    render,
+)
+from tools.bst_native_build_tracer import (
+    compute_max_concurrency,
+    parse_trace_lines,
+    stream_records,
+    stream_trace_events,
+)
+from tools.native_trace import trackevent
 
 CAPTURE_RUN = ("examples/06-macro-micro-optimization/.bga/runs/"
                "20260821T170127Z")

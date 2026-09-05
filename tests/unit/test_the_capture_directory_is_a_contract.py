@@ -50,7 +50,7 @@ import pytest
 REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 
-from bga import contracts, run_store  # noqa: E402
+from bga import contracts, run_store
 
 SPEC = REPO / "docs/spec/specification.md"
 WORKFLOW = REPO / "docs/design/capture-workflow.md"

@@ -97,16 +97,15 @@ def _repack(source, destination, manifest=None, drop=(), extra=()):
             if info.name == bundle.MANIFEST_NAME:
                 info.size = len(payload)
     entries = [(info, data) for info, data in entries if info.name not in drop]
-    with open(destination, "wb") as raw:
-        with gzip.GzipFile(fileobj=raw, mode="wb", mtime=0) as compressed:
-            with tarfile.open(fileobj=compressed, mode="w") as archive:
-                for info, data in entries:
-                    info.size = len(data)
-                    archive.addfile(info, io.BytesIO(data))
-                for name, data in extra:
-                    info = tarfile.TarInfo(name)
-                    info.size = len(data)
-                    archive.addfile(info, io.BytesIO(data))
+    with open(destination, "wb") as raw, gzip.GzipFile(fileobj=raw, mode="wb", mtime=0) as compressed, \
+            tarfile.open(fileobj=compressed, mode="w") as archive:
+            for info, data in entries:
+                info.size = len(data)
+                archive.addfile(info, io.BytesIO(data))
+            for name, data in extra:
+                info = tarfile.TarInfo(name)
+                info.size = len(data)
+                archive.addfile(info, io.BytesIO(data))
     return destination
 
 
@@ -259,14 +258,13 @@ class TestTheFarSideRefusesRatherThanHalfReads:
             entries = [(info, original.extractfile(info).read())
                        for info in original.getmembers()]
         forged = str(tmp_path / "dir.tar.gz")
-        with open(forged, "wb") as raw:
-            with gzip.GzipFile(fileobj=raw, mode="wb", mtime=0) as compressed:
-                with tarfile.open(fileobj=compressed, mode="w") as archive:
-                    for info, data in entries:
-                        archive.addfile(info, io.BytesIO(data))
-                    directory = tarfile.TarInfo(bundle.MEMBER_PREFIX + "sub")
-                    directory.type = tarfile.DIRTYPE
-                    archive.addfile(directory)
+        with open(forged, "wb") as raw, gzip.GzipFile(fileobj=raw, mode="wb", mtime=0) as compressed, \
+                tarfile.open(fileobj=compressed, mode="w") as archive:
+                for info, data in entries:
+                    archive.addfile(info, io.BytesIO(data))
+                directory = tarfile.TarInfo(bundle.MEMBER_PREFIX + "sub")
+                directory.type = tarfile.DIRTYPE
+                archive.addfile(directory)
         with pytest.raises(bundle.BundleError) as error:
             bundle.load(forged, far)
         assert "is not a file under" in str(error.value)

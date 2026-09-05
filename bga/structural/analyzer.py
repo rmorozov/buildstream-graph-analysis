@@ -14,9 +14,9 @@ Implements Parts 31-39:
 """
 
 import logging
-from collections import defaultdict
-from typing import Dict, List, Set, Optional, Any
 import statistics
+from collections import defaultdict
+from typing import Any, Optional
 
 from bga.ingest.models import NormalizedTask
 
@@ -63,8 +63,9 @@ def build_edg(graph):
     to every fixture in this repository, none of which contains a single
     runtime edge.
     """
-    from bga.graph.edg import build_element_graph
     import networkx as nx
+
+    from bga.graph.edg import build_element_graph
 
     def _nx_graph(successors_map):
         G = nx.DiGraph()
@@ -90,17 +91,16 @@ def build_edg(graph):
 
 
 from bga.structural.models import (
-    StructuralMetrics,
     BottleneckAnalysis,
+    DeferrabilityResult,
+    HistoricalTrend,
     LevelOccupancy,
     ParallelismProfile,
     SensitivityResult,
-    DeferrabilityResult,
-    HistoricalTrend,
     StructuralAnalysisResult,
+    StructuralMetrics,
     deferral_risk_for,
 )
-
 
 #: `UX-539` used `int.bit_count()`, which is **3.10+**, and
 #: `requires-python` is `>=3.9`: 358 failed and 156 errored on the 3.9
@@ -121,9 +121,9 @@ class StructuralAnalyzer:
     def __init__(
         self,
         edg: ElementDependencyGraph,
-        tasks: Dict[str, NormalizedTask],
-        element_durations: Optional[Dict[str, int]] = None,
-        element_head_durations: Optional[Dict[str, int]] = None,
+        tasks: dict[str, NormalizedTask],
+        element_durations: Optional[dict[str, int]] = None,
+        element_head_durations: Optional[dict[str, int]] = None,
     ):
         """
         `element_durations` (UX-50) is the authoritative per-element
@@ -310,7 +310,7 @@ class StructuralAnalyzer:
         resource_usage = defaultdict(list)
         for key, task in self.tasks.items():
             if hasattr(task, 'resource_profile') and task.resource_profile:
-                for res_type in task.resource_profile.keys():
+                for res_type in task.resource_profile:
                     resource_usage[res_type].append(key)
         
         resource_contention = {
@@ -447,7 +447,7 @@ class StructuralAnalyzer:
         next_binding_gap = min(positive_slacks) if positive_slacks else float('inf')
 
         potential_saving = {}
-        for key in self.tasks.keys():
+        for key in self.tasks:
             slack = max(slacks.get(key, 0), 0)
             if slack > 0:
                 potential_saving[key] = 0.0
@@ -501,7 +501,7 @@ class StructuralAnalyzer:
         best_case = makespan / residual if residual > 0 else None
 
         # CP sensitivity (how much CP changes per unit duration change)
-        cp_sensitivity = {node: 1.0 for node in cp_nodes}  # Simplified: 1:1 for CP elements
+        cp_sensitivity = dict.fromkeys(cp_nodes, 1.0)  # Simplified: 1:1 for CP elements
 
         return SensitivityResult(
             sensitivity_scores=sensitivity_scores,
@@ -573,7 +573,7 @@ class StructuralAnalyzer:
         )
     
     def analyze_historical_trends(
-        self, historical_runs: List[Dict[str, Any]]
+        self, historical_runs: list[dict[str, Any]]
     ) -> HistoricalTrend:
         """Analyze historical trends across multiple runs (Part 36).
         
@@ -660,7 +660,7 @@ class StructuralAnalyzer:
         )
     
     def run_full_analysis(
-        self, historical_runs: Optional[List[Dict[str, Any]]] = None
+        self, historical_runs: Optional[list[dict[str, Any]]] = None
     ) -> StructuralAnalysisResult:
         """Run complete structural analysis (all M6 components).
         
@@ -701,7 +701,7 @@ class StructuralAnalyzer:
     
     # Helper methods
     
-    def _compute_critical_path_nodes(self) -> List[str]:
+    def _compute_critical_path_nodes(self) -> list[str]:
         """Get nodes on the critical path."""
         # Use existing critical path computation from EDG module
         # The edg.G is a NetworkX DiGraph, we need to compute critical path using bga.graph.edg functions
@@ -714,7 +714,7 @@ class StructuralAnalyzer:
             task_durations = dict(self._durations())
             
             # Build a Graph object from our NetworkX graph for the function
-            from bga.ingest.models import Graph, Element, DependencyEdge
+            from bga.ingest.models import DependencyEdge, Element, Graph
             elements = [Element(uid=node) for node in self._graph.nodes()]
             dependencies = []
             for pred, succ in self._graph.edges():
@@ -735,7 +735,7 @@ class StructuralAnalyzer:
             )
             return []
     
-    def _compute_level_decomposition(self) -> Dict[int, Set[str]]:
+    def _compute_level_decomposition(self) -> dict[int, set[str]]:
         """Decompose the graph into levels by *longest* path from a root.
 
         UX-41: this was a BFS with first-visit-wins, which assigns each
@@ -762,7 +762,7 @@ class StructuralAnalyzer:
         if G.number_of_nodes() == 0:
             return dict(levels)
 
-        depths: Dict[str, int] = {}
+        depths: dict[str, int] = {}
         for node in nx.topological_sort(G):
             preds = list(G.predecessors(node))
             depths[node] = 0 if not preds else 1 + max(depths[p] for p in preds)
@@ -770,7 +770,7 @@ class StructuralAnalyzer:
 
         return dict(levels)
     
-    def _find_longest_serial_chain_from(self, start: str) -> List[str]:
+    def _find_longest_serial_chain_from(self, start: str) -> list[str]:
         """Find longest serial (non-branching) chain starting from a node."""
         G = self._graph
         chain = [start]
@@ -785,7 +785,7 @@ class StructuralAnalyzer:
         
         return chain
     
-    def _durations(self) -> Dict[str, int]:
+    def _durations(self) -> dict[str, int]:
         """Duration in microseconds for every *graph* node.
 
         The graph and the task table need not agree: a node with no
@@ -807,7 +807,7 @@ class StructuralAnalyzer:
             for node in self._graph.nodes()
         }
 
-    def _longest_path_us(self, zeroed: Optional[Set[str]] = None) -> int:
+    def _longest_path_us(self, zeroed: Optional[set[str]] = None) -> int:
         """Longest weighted path through the graph, in microseconds.
 
         `zeroed` treats the named nodes as instantaneous, which is how
@@ -817,7 +817,7 @@ class StructuralAnalyzer:
         zeroed = zeroed or set()
         durations = self._durations()
         heads = self.element_head_durations
-        finish: Dict[str, int] = {}
+        finish: dict[str, int] = {}
         longest = 0
         for node in nx.topological_sort(self._graph):
             duration = 0 if node in zeroed else durations[node]
@@ -834,7 +834,7 @@ class StructuralAnalyzer:
             longest = max(longest, finish[node])
         return longest
 
-    def _compute_all_slacks(self) -> Dict[str, float]:
+    def _compute_all_slacks(self) -> dict[str, float]:
         """Total slack per element, from a real CPM forward/backward pass.
 
         UX-44: this used to be `task.dur_us * 0.5` for every element -
@@ -857,7 +857,7 @@ class StructuralAnalyzer:
         durations = self._durations()
         order = list(nx.topological_sort(G))
 
-        earliest_start: Dict[str, int] = {}
+        earliest_start: dict[str, int] = {}
         for node in order:
             earliest_start[node] = max(
                 (earliest_start[p] + durations[p] for p in G.predecessors(node)),
@@ -867,7 +867,7 @@ class StructuralAnalyzer:
             (earliest_start[node] + durations[node] for node in order), default=0
         )
 
-        latest_finish: Dict[str, int] = {}
+        latest_finish: dict[str, int] = {}
         for node in reversed(order):
             latest_finish[node] = min(
                 (latest_finish[s] - durations[s] for s in G.successors(node)),
@@ -879,7 +879,7 @@ class StructuralAnalyzer:
             for node in order
         }
     
-    def _compute_slope(self, x: List[float], y: List[float]) -> float:
+    def _compute_slope(self, x: list[float], y: list[float]) -> float:
         """Compute linear regression slope."""
         if len(x) < 2:
             return 0.0

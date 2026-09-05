@@ -5,6 +5,13 @@
 # without them. `bga.contracts.reads()` walks this.
 READS = ("graph/v9", "run-context/v9", "trace/v9")
 
+from .loader import (
+    load_all,
+    load_chrome_trace,
+    load_graph,
+    load_run_context,
+    load_trace,
+)
 from .models import (
     AnalysisResult,
     AttributionCategory,
@@ -20,13 +27,6 @@ from .models import (
     TaskKind,
     TaskSpan,
     Trace,
-)
-from .loader import (
-    load_all,
-    load_chrome_trace,
-    load_graph,
-    load_run_context,
-    load_trace,
 )
 
 __all__ = [

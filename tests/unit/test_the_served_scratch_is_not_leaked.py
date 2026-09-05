@@ -35,8 +35,8 @@ import pytest
 REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 
-from tests import pages                                       # noqa: E402
-from tools import bga_view                                    # noqa: E402
+from tests import pages
+from tools import bga_view
 
 #: The prefix the module mkdtemps with. Read from nothing - if it is
 #: reworded this guard should keep counting the directories the module

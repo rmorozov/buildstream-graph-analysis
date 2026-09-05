@@ -74,7 +74,7 @@ def test_one_contaminated_baseline_run_does_not_widen_the_band():
 
     assert width_dirty == pytest.approx(width_clean, rel=0.35)
     # ... and a real regression is still outside it.
-    assert 27.17e6 * 1.15 > dirty["high_us"]
+    assert dirty["high_us"] < 27.17e6 * 1.15
 
 
 def test_too_few_runs_yields_no_band():

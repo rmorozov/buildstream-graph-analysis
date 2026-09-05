@@ -65,7 +65,7 @@ sys.path.insert(0, str(REPO))
 sys.path.insert(0, str(REPO / "tests"))
 sys.path.insert(0, str(REPO / "tests/unit"))
 
-import pages    # noqa: E402
+import pages
 
 node = shutil.which("node")
 needs_node = pytest.mark.skipif(node is None, reason="node is not installed")
@@ -161,10 +161,11 @@ def test_the_walk_reached_the_transfer_block(emitted):
     above by having nothing to complain about. Named paths rather than a
     count: a count moves whenever anything else in the document does.
     """
-    from test_every_number_says_what_it_is import _CENSUS
     import os
     import subprocess
     import tempfile
+
+    from test_every_number_says_what_it_is import _CENSUS
 
     from bga import schemas
 

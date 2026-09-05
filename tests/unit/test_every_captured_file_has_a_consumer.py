@@ -42,10 +42,10 @@ sys.path.insert(0, str(REPO))
 sys.path.insert(0, str(REPO / "tests"))
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 
-from bga import run_store  # noqa: E402
-from tools.bga_timeline import (HOST_COUNTERS, HOST_SAMPLES_NAME,  # noqa: E402
-                                render)
-from test_the_counter_the_constant_was_waiting_for import decode  # noqa: E402
+from test_the_counter_the_constant_was_waiting_for import decode
+
+from bga import run_store
+from tools.bga_timeline import HOST_COUNTERS, HOST_SAMPLES_NAME, render
 
 #: The committed fixture `UX-358` built so a timeline could be rendered
 #: without a real capture. Its `build.log` carries the `bga-clocks`
@@ -224,10 +224,8 @@ def census(tmp_path_factory):
         # otherwise: `read_host_samples` opens the path either way, so a
         # census over attempts would have passed on the very absence
         # `UX-437` was filed on.
-        try:
+        with contextlib.suppress(TypeError, ValueError):
             opened.add(os.path.realpath(file))
-        except (TypeError, ValueError):
-            pass
         return handle
 
     for name, reader in _readers(snapshot, scratch).items():
@@ -240,7 +238,7 @@ def census(tmp_path_factory):
                 # files it would have opened are unread for a reason
                 # that is not "nothing consumes them".
                 failed[name] = f"exit {code}"
-        except BaseException as exc:            # noqa: BLE001 - reported
+        except BaseException as exc:
             failed[name] = f"{type(exc).__name__}: {exc}"
         finally:
             builtins.open = real_open
@@ -393,7 +391,7 @@ class TestTheHostSeriesReachesTheTrace:
         result = drawn["result"]
         assert result["host_counters"] == SAMPLES * len(HOST_COUNTERS), result
         assert result["counters"] == len(
-            [sample for sample in drawn["trace"]["samples"]]) - \
+            list(drawn["trace"]["samples"])) - \
             result["host_counters"], result
 
     def test_a_capture_with_no_host_samples_draws_no_host_track(

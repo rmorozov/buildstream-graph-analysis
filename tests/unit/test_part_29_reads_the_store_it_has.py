@@ -164,7 +164,7 @@ class TestTheHistoryReaderItself:
         about different runs."""
         source = (REPO / "bga/viewer/element.js").read_text(encoding="utf-8")
         drawn = int(source.split("HISTORY_POINTS_MAX = ", 1)[1].split(";", 1)[0])
-        assert store_aggregate.HISTORY_RUNS_MAX == drawn
+        assert drawn == store_aggregate.HISTORY_RUNS_MAX
 
 
 class TestTheDocumentDeclaresIt:

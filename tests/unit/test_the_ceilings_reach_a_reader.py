@@ -33,7 +33,7 @@ import sys
 REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 
-from tools import bga_view as view                             # noqa: E402
+from tools import bga_view as view
 
 CLI = REPO / "docs/guides/cli.md"
 STYLEGUIDE = REPO / "docs/design/styleguide.md"

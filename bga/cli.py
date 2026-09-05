@@ -24,20 +24,24 @@ import logging
 import os
 import sys
 from pathlib import Path
-from typing import List, NoReturn, Optional
+from typing import NoReturn, Optional
 
 from . import __version__, contracts, schemas
 from . import plane2 as plane2_shape
 from .analyzer import (
-    MODELLED_AXIS_CLAUSE, UNMODELED_AXIS_CLAUSE, BuildEfficiencyAnalyzer,
+    MODELLED_AXIS_CLAUSE,
+    UNMODELED_AXIS_CLAUSE,
+    BuildEfficiencyAnalyzer,
 )
-from .help_format import CompactHelp
 from .compare import (
-    _EFFICIENCY_DROP_PP, DEFAULT_BAND_K, DEFAULT_MAX_ADDITION_STRETCH,
+    _EFFICIENCY_DROP_PP,
+    DEFAULT_BAND_K,
+    DEFAULT_MAX_ADDITION_STRETCH,
     RunsNotComparableError,
     compare_runs,
     efficiency_below_floor,
-    efficiency_regression_exceeds_threshold, efficiency_signal_status,
+    efficiency_regression_exceeds_threshold,
+    efficiency_signal_status,
     regression_exceeds_threshold,
 )
 from .exceptions import (
@@ -50,17 +54,10 @@ from .exceptions import (
     AnalysisError,
     IngestionError,
 )
+from .help_format import CompactHelp
 from .ingest.loader import load_historical_runs
 from .logging_config import configure_logging
-from .units import mb_to_bytes
 from .replay.scheduler import build_contention_calibration
-from .run_store import (
-    StoreError,
-    resolve as resolve_run_alias,
-    resolve_plane2 as resolve_plane2_alias,
-    sibling_plane2,
-)
-from .report.ci_comment import render_ci_comment
 from .report import (
     SWEEP_CAPACITY_MODEL_CAVEAT,
     format_compare_text,
@@ -69,6 +66,18 @@ from .report import (
     format_sweep_text,
     format_text,
 )
+from .report.ci_comment import render_ci_comment
+from .run_store import (
+    StoreError,
+    sibling_plane2,
+)
+from .run_store import (
+    resolve as resolve_run_alias,
+)
+from .run_store import (
+    resolve_plane2 as resolve_plane2_alias,
+)
+from .units import mb_to_bytes
 
 logger = logging.getLogger(__name__)
 
@@ -174,7 +183,7 @@ def _attach_plane2_capacity(args: argparse.Namespace, analyzer, result) -> None:
     from bga.correlate import compute_memory_envelope, summarize_plane2_capacity
 
     try:
-        with open(path, 'r', encoding='utf-8') as handle:
+        with open(path, encoding='utf-8') as handle:
             native_report = json.load(handle)
     except (OSError, json.JSONDecodeError) as exc:
         print(f"Warning: --plane2 {path} could not be read ({exc}); "
@@ -256,7 +265,8 @@ def _capacity_recommendation(analyzer, result, context) -> dict:
     of what was swept instead of asserting a number it did not reach.
     """
     from bga.correlate import (
-        _RECOMMENDATION_SWEEP_CAP, _RECOMMENDATION_SWEEP_HEADROOM,
+        _RECOMMENDATION_SWEEP_CAP,
+        _RECOMMENDATION_SWEEP_HEADROOM,
         compute_capacity_recommendation,
     )
 
@@ -364,7 +374,7 @@ def _produce_sweep_output(args: argparse.Namespace) -> str:
     analyzer.normalize()
 
     contention_calibration = None
-    calibration_capacities: List[int] = []
+    calibration_capacities: list[int] = []
     if getattr(args, 'calibration_dir', None):
         calibration_runs = load_historical_runs([Path(p) for p in args.calibration_dir])
         logger.info("Loaded %d calibration run(s) for UX-14 tier 2 contention modeling", len(calibration_runs))
@@ -448,7 +458,7 @@ def _memory_envelope_delta(args: argparse.Namespace) -> dict:
             # single parse right here, on the machine that had just
             # finished the build.
             native_report = None
-            with open(plane2_path, 'r', encoding='utf-8') as handle:
+            with open(plane2_path, encoding='utf-8') as handle:
                 native_report = json.load(handle)
             run_context, _graph, _trace = load_all(Path(run_dir))
         except (OSError, json.JSONDecodeError, ValueError) as exc:
@@ -1051,7 +1061,6 @@ def cmd_blast(args: argparse.Namespace) -> int:
     lives in `compare`, where a gate belongs.
     """
     from bga.blast import blast, format_blast_json, format_blast_text
-
     from bga.run_store import project_root
 
     try:
@@ -1157,7 +1166,7 @@ def cmd_correlate(args: argparse.Namespace) -> int:
         print(f"Plane 2: {args.native_report}", file=sys.stderr)
 
     try:
-        with open(args.native_report, 'r', encoding='utf-8') as f:
+        with open(args.native_report, encoding='utf-8') as f:
             native_report = json.load(f)
     except FileNotFoundError:
         print(f"Error: native report not found: {args.native_report}", file=sys.stderr)
@@ -1191,7 +1200,7 @@ def cmd_correlate(args: argparse.Namespace) -> int:
         cache_logs = None
         if getattr(args, 'cache_logs', None):
             try:
-                with open(args.cache_logs, 'r', encoding='utf-8') as handle:
+                with open(args.cache_logs, encoding='utf-8') as handle:
                     cache_logs = json.load(handle)
             except (OSError, json.JSONDecodeError) as exc:
                 print(f"Warning: --cache-logs {args.cache_logs} could not be read "
@@ -1524,7 +1533,7 @@ def _snapshot_completer(prefix, parsed_args, **_kwargs):
                   for snapshot in run_store.list_runs(project)]
         return [candidate for candidate in ["@last", "@prev"] + stamps
                 if candidate.startswith(prefix)]
-    except Exception:  # noqa: BLE001 - a dead TAB is worse than no answer
+    except Exception:
         return []
 
 
@@ -1543,7 +1552,7 @@ def _element_completer(prefix, parsed_args, **_kwargs):
             return []
         return [name for name in discover_element_names(project)
                 if name.startswith(prefix)]
-    except Exception:  # noqa: BLE001
+    except Exception:
         return []
 
 
@@ -1590,7 +1599,7 @@ def _command_completer(prefix, parsed_args, **_kwargs):
             if getattr(action, "choices", None) and hasattr(action.choices, "keys"):
                 names |= set(action.choices)
         return sorted(name for name in names if name.startswith(prefix))
-    except Exception:  # noqa: BLE001 - a dead TAB is worse than no answer
+    except Exception:
         return []
 
 

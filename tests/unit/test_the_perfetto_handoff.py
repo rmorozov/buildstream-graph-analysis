@@ -18,22 +18,22 @@ import gzip
 import hashlib
 import json
 import os
-import shutil
-import re
-import urllib.parse
-import subprocess
 import pathlib
+import re
+import shutil
+import subprocess
 import sys
 import tempfile
 import threading
 import urllib.error
+import urllib.parse
 import urllib.request
 
 import pytest
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 
-import trace_processor  # noqa: E402
+import trace_processor
 
 GOLDEN = "tests/fixtures/golden/mixed_task_kinds"
 node = shutil.which("node")
@@ -145,8 +145,7 @@ class TestTheServedTrace:
             [sys.executable, "-c",
              "import sys\n"
              "from tools.bga_view import trace_bytes\n"
-             "sys.stdout.write(str(len(trace_bytes(%r) or b'')))"
-             % str(snapshot / "run")],
+             "sys.stdout.write(str(len(trace_bytes({!r}) or b'')))".format(str(snapshot / "run"))],
             capture_output=True, text=True, cwd=os.getcwd())
         assert result.returncode == 0, result.stderr
         assert int(result.stdout) > 0, "nothing was rendered"

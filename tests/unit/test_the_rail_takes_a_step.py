@@ -42,8 +42,8 @@ import pytest
 REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 
-from tests import pages                                       # noqa: E402
-from tests.browser import NO_BROWSER, Browser, find_chrome     # noqa: E402
+from tests import pages
+from tests.browser import NO_BROWSER, Browser, find_chrome
 
 #: Walking the whole order and back, in one load. The hash rather than
 #: the mark: a rail link sets it synchronously, and the mark is what
@@ -289,7 +289,7 @@ class TestARailEntryNamesOneDestination:
 
 
 @pytest.mark.skipif(find_chrome() is None, reason=NO_BROWSER)
-class TestTheKeyboardReaches(object):
+class TestTheKeyboardReaches:
     """`UX-223` established the page has a keyboard reader."""
 
     def test_the_bracket_keys_step(self, uri):

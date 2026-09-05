@@ -32,7 +32,7 @@ import pytest
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 
-from bga import contracts, schemas  # noqa: E402
+from bga import contracts, schemas
 
 # `[text](target)` where the target is a repo file, not a URL or a bare
 # anchor. Angle-bracket and title forms are not used in this repo.
@@ -467,21 +467,49 @@ _FILE_ID = re.compile(r"^UX-0*(\d+)-")
 # open index only, so it answered for 7 rows of 386 and printed
 # "0 problem(s)" for the rest. Two readings of one property is how they
 # came to disagree, so there is now one: the tool's, imported here.
-from tools.dev_close_task import (  # noqa: E402
+from tools.dev_close_task import (
     PRIORITIES as _PRIORITIES,
+)
+from tools.dev_close_task import (
     STATUS_WORDS as _STATUS_WORDS,
+)
+from tools.dev_close_task import (
     TOPIC_ORDER as _TOPIC_ORDER,
+)
+from tools.dev_close_task import (
     backlog_files as _backlog_files,
+)
+from tools.dev_close_task import (
     close_status_line as _close_status_line,
+)
+from tools.dev_close_task import (
     file_priorities as _file_priorities,
+)
+from tools.dev_close_task import (
     file_statuses as _file_statuses,
+)
+from tools.dev_close_task import (
     file_topics as _file_topics,
+)
+from tools.dev_close_task import (
     header_topic as _header_topic,
+)
+from tools.dev_close_task import (
     priority_disagreements as _priority_disagreements,
+)
+from tools.dev_close_task import (
     status_marker as _status_marker,
+)
+from tools.dev_close_task import (
     status_words as _status_words,
+)
+from tools.dev_close_task import (
     table_priorities as _table_priorities,
+)
+from tools.dev_close_task import (
     table_statuses as _table_statuses,
+)
+from tools.dev_close_task import (
     topic_disagreements as _topic_disagreements,
 )
 
@@ -528,7 +556,7 @@ def test_a_row_has_exactly_one_priority_cell():
                         if cell is None)
     assert unreadable == [], (
         "backlog row(s) with no single priority cell, so the pair guard "
-        f"below cannot read them: {['UX-%d' % n for n in unreadable]}")
+        f"below cannot read them: {[f'UX-{n}' for n in unreadable]}")
 
 
 def test_every_task_file_declares_a_priority():
@@ -1390,7 +1418,7 @@ def test_the_architecture_names_the_file_behind_each_command():
     """A reader pricing a change needs the file, and the chapter gave
     only the command. The population is the dispatch table's own."""
     aliases = _dispatched_aliases()
-    assert _PLANE_ALIASES <= set(aliases), (
+    assert set(aliases) >= _PLANE_ALIASES, (
         "the CLI chapter no longer names the planes' own entry points, so "
         "this guard is not reading the table it is for", sorted(aliases))
     text = _ARCHITECTURE.read_text(encoding="utf-8")

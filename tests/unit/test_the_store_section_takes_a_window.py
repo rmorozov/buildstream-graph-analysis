@@ -39,7 +39,7 @@ REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 sys.path.insert(0, str(REPO / "tests"))
 
-from browser import NO_BROWSER, Browser, find_chrome    # noqa: E402
+from browser import NO_BROWSER, Browser, find_chrome
 
 chrome = find_chrome()
 needs_browser = pytest.mark.skipif(chrome is None, reason=NO_BROWSER)
@@ -139,10 +139,9 @@ def browser():
 @pytest.fixture(scope="module")
 def stores(browser, tmp_path_factory):
     """`{count: reading}` for both sizes, each served once."""
-    from tools.bga_view import (payloads, serve, store_aggregate_payload,
-                                store_payload)
-    from tools.bga_snapshot import store_listing
     from bga import run_store
+    from tools.bga_snapshot import store_listing
+    from tools.bga_view import payloads, serve, store_aggregate_payload, store_payload
 
     out = {}
     for count in (AT_THE_WINDOW, PAST_IT):
@@ -292,7 +291,7 @@ class TestTheDocumentsAreWindowedAtTheSource:
         source = (REPO / "bga/viewer/element.js").read_text(encoding="utf-8")
         history = int(source.split("HISTORY_POINTS_MAX = ", 1)[1]
                       .split(";", 1)[0].strip())
-        assert STORE_WINDOW == history, (
+        assert history == STORE_WINDOW, (
             f"the store window is {STORE_WINDOW} and the history window "
             f"{history}; one of them is not 'the last dozen runs'")
         assert STORE_WINDOW == AT_THE_WINDOW

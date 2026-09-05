@@ -37,7 +37,7 @@ import tempfile
 REPO = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO))
 
-from tools.native_trace import trackevent          # noqa: E402
+from tools.native_trace import trackevent
 
 #: The carriers Perfetto's TrackEvent proto offers for information, and
 #: what each one is for. Stage 2's question is which of these the

@@ -19,8 +19,8 @@ import json
 import pytest
 
 from bga import BuildEfficiencyAnalyzer
-from bga.report.text import format_text
 from bga.report.json import format_json
+from bga.report.text import format_text
 from tools.bst_log_to_chrome_trace import WrapperTraceConverter
 
 # A real, empirically captured log excerpt (BuildStream 2.7.0, default

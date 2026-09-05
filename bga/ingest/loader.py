@@ -8,8 +8,8 @@ Currently supports Chrome JSON trace format.
 import json
 import logging
 from pathlib import Path
-from typing import List
 
+from ..exceptions import IngestionError
 from .models import (
     DependencyEdge,
     Element,
@@ -22,7 +22,6 @@ from .models import (
     TaskSpan,
     Trace,
 )
-from ..exceptions import IngestionError
 
 logger = logging.getLogger(__name__)
 
@@ -34,10 +33,10 @@ def load_run_context(path: Path) -> RunContext:
     Expected schema: run-context/v9 (Part 32.1)
     """
     try:
-        with open(path, 'r') as f:
+        with open(path) as f:
             data = json.load(f)
     except json.JSONDecodeError as e:
-        raise IngestionError(f"Malformed JSON in run context file {path}: {e}")
+        raise IngestionError(f"Malformed JSON in run context file {path}: {e}") from e
 
     wall_clock = data.get('wall_clock', {})
 
@@ -102,10 +101,10 @@ def load_trace(path: Path) -> Trace:
     Also supports Chrome trace format with conversion.
     """
     try:
-        with open(path, 'r') as f:
+        with open(path) as f:
             data = json.load(f)
     except json.JSONDecodeError as e:
-        raise IngestionError(f"Malformed JSON in trace file {path}: {e}")
+        raise IngestionError(f"Malformed JSON in trace file {path}: {e}") from e
 
     spans = []
     phases = []
@@ -182,7 +181,7 @@ def load_trace(path: Path) -> Trace:
             resources = []
             resource_profile = task_data.get('resource_profile', {})
             if isinstance(resource_profile, dict):
-                for res_name in resource_profile.keys():
+                for res_name in resource_profile:
                     resources.append(_parse_resource(res_name))
             
             primary_resource = None
@@ -260,10 +259,10 @@ def load_graph(path: Path) -> Graph:
     Expected schema: graph/v9 (Part 32.2)
     """
     try:
-        with open(path, 'r') as f:
+        with open(path) as f:
             data = json.load(f)
     except json.JSONDecodeError as e:
-        raise IngestionError(f"Malformed JSON in graph file {path}: {e}")
+        raise IngestionError(f"Malformed JSON in graph file {path}: {e}") from e
 
     elements = []
     dependencies = []
@@ -343,7 +342,7 @@ def load_all(run_dir: Path) -> tuple[RunContext, Graph, Trace]:
     return run_context, graph, trace
 
 
-def load_historical_runs(run_dirs: List[Path]) -> List[tuple[RunContext, Graph, Trace]]:
+def load_historical_runs(run_dirs: list[Path]) -> list[tuple[RunContext, Graph, Trace]]:
     """
     Load one or more prior runs' trace/graph data (Part 15.2 - the
     duration-source hierarchy for the advisory cold structural floor

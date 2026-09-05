@@ -20,8 +20,18 @@ import sys
 import pytest
 
 from tools.bga_doctor import (
-    FAIL, OK, SKIP, WARN, check_compiler, check_plane3, check_project_loads,
-    check_scratch, check_staged_sources, format_text, main, run_checks,
+    FAIL,
+    OK,
+    SKIP,
+    WARN,
+    check_compiler,
+    check_plane3,
+    check_project_loads,
+    check_scratch,
+    check_staged_sources,
+    format_text,
+    main,
+    run_checks,
 )
 
 

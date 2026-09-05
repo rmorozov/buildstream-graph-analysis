@@ -69,7 +69,7 @@ def test_the_dev_extras_are_actually_here():
 def _bga(args):
     return subprocess.run(
         [sys.executable, "-c",
-         "from bga.cli import main; raise SystemExit(main(%r))" % (args,)],
+         f"from bga.cli import main; raise SystemExit(main({args!r}))"],
         capture_output=True, text=True, cwd=os.getcwd())
 
 

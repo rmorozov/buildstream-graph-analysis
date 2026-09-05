@@ -81,7 +81,7 @@ def _declared():
         for key, node in document["properties"].items():
             if isinstance(node, dict) and schemas.DISTRIBUTION in node:
                 found[key] = name
-        for key, node in document["properties"].items():
+        for node in document["properties"].values():
             for nested, child in (node.get("properties") or {}).items():
                 if isinstance(child, dict) and schemas.DISTRIBUTION in child:
                     found[nested] = name

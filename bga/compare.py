@@ -12,13 +12,11 @@ even the same project.
 import logging
 import statistics
 from dataclasses import dataclass, field
-
-from . import schemas
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Optional
 
+from . import hostinfo, producer, schemas
 from .analyzer import BuildEfficiencyAnalyzer
-from . import hostinfo, producer
 from .cache_effectiveness import compute_cache_churn
 from .ingest.models import AnalysisResult, Element
 from .report.text import _CONFIDENCE_HIGH
@@ -137,7 +135,7 @@ def classify_against_band(candidate_us: float, band: dict,
     return "improved" if candidate_us < band['median_us'] else "regressed"
 
 
-def compute_band(durations_us: List[float], k: float = DEFAULT_BAND_K) -> Optional[dict]:
+def compute_band(durations_us: list[float], k: float = DEFAULT_BAND_K) -> Optional[dict]:
     """Robust noise band for a set of baseline runs: median ± k·(1.4826·MAD).
 
     Why a band at all: `_SIGNIFICANCE_PCT` is a single constant applied to
@@ -230,12 +228,12 @@ class RunsNotComparableError(ValueError):
 class ComparisonResult:
     baseline_run_id: str
     candidate_run_id: str
-    baseline_metrics: Dict[str, Optional[float]]
-    candidate_metrics: Dict[str, Optional[float]]
-    deltas: Dict[str, Optional[float]]
+    baseline_metrics: dict[str, Optional[float]]
+    candidate_metrics: dict[str, Optional[float]]
+    deltas: dict[str, Optional[float]]
     baseline_confidence: Optional[float]
     candidate_confidence: Optional[float]
-    attribution_deltas: Dict[str, dict]
+    attribution_deltas: dict[str, dict]
     verdict: str
     low_confidence: bool
     # UX-201: the verdict as a value, from the same branch as the
@@ -253,7 +251,7 @@ class ComparisonResult:
     # caller can refuse and name the check that failed rather than
     # matching on prose. Each entry is `{"check": ..., "message": ...}`;
     # `check` is stable, `message` is not.
-    mismatches: List[dict] = field(default_factory=list)
+    mismatches: list[dict] = field(default_factory=list)
     # UX-186: whether both runs were measured on the same machine.
     # `{"status": same|different|unknown, "differing": [...]}`. `unknown`
     # for a capture taken before the manifest existed, which still
@@ -265,13 +263,13 @@ class ComparisonResult:
     # build is not a noisy signal, it is a definite fact, and the two
     # therefore get opposite gate behaviour - low confidence fails open,
     # a failed build fails closed.
-    failed_runs: List[str] = field(default_factory=list)
+    failed_runs: list[str] = field(default_factory=list)
     # UX-156: one entry per failed run - `{"run", "failed_elements",
     # "built", "scheduled"}` - so the verdict can name the element and
     # the counts instead of only the side. `built`/`scheduled` are None
     # when the capture recorded no queue summary, and the wording drops
     # the clause rather than inventing a number.
-    failed_run_details: List[dict] = field(default_factory=list)
+    failed_run_details: list[dict] = field(default_factory=list)
     # UX-59: the noise band the verdict was judged against, when
     # enough baseline runs were supplied to derive one. None means
     # the fixed-percentage rule was used, which is what every
@@ -363,16 +361,16 @@ class ComparisonResult:
         return document
 
 
-def _numeric_metrics(result: AnalysisResult) -> Dict[str, Optional[float]]:
+def _numeric_metrics(result: AnalysisResult) -> dict[str, Optional[float]]:
     floors = result.floors or {}
-    metrics: Dict[str, Optional[float]] = {'total_duration_us': result.total_duration_us}
+    metrics: dict[str, Optional[float]] = {'total_duration_us': result.total_duration_us}
     for key in _FLOOR_KEYS[1:]:
         metrics[key] = floors.get(key)
     return metrics
 
 
-def _deltas(baseline: Dict[str, Optional[float]], candidate: Dict[str, Optional[float]]) -> Dict[str, Optional[float]]:
-    deltas: Dict[str, Optional[float]] = {}
+def _deltas(baseline: dict[str, Optional[float]], candidate: dict[str, Optional[float]]) -> dict[str, Optional[float]]:
+    deltas: dict[str, Optional[float]] = {}
     for key in _FLOOR_KEYS:
         b, c = baseline.get(key), candidate.get(key)
         deltas[key] = (c - b) if (b is not None and c is not None) else None
@@ -382,7 +380,7 @@ def _deltas(baseline: Dict[str, Optional[float]], candidate: Dict[str, Optional[
 def _attribution_deltas(
     baseline_attr: dict, candidate_attr: dict,
     baseline_total_us: int, candidate_total_us: int,
-) -> Dict[str, dict]:
+) -> dict[str, dict]:
     """Per-category delta, both absolute (microseconds) and as a share
     of each run's own total - a category that grows in absolute time but
     shrinks as a share of a much-larger total (or vice versa) is a real,
@@ -393,7 +391,7 @@ def _attribution_deltas(
     away was 0..1.
     """
     categories = sorted(set(baseline_attr) | set(candidate_attr))
-    result: Dict[str, dict] = {}
+    result: dict[str, dict] = {}
     for cat in categories:
         b_us = baseline_attr.get(cat, 0)
         c_us = candidate_attr.get(cat, 0)
@@ -412,7 +410,7 @@ def _attribution_deltas(
     return result
 
 
-def _element_durations(result: AnalysisResult) -> Dict[str, int]:
+def _element_durations(result: AnalysisResult) -> dict[str, int]:
     """Per-element measured duration for *every* element (`UX-79`).
 
     A well-added element is off the critical path by construction, so a
@@ -436,8 +434,8 @@ def _element_durations(result: AnalysisResult) -> Dict[str, int]:
 def _element_diff(
     baseline_result: AnalysisResult,
     candidate_result: AnalysisResult,
-    baseline_elements: List[Element],
-    candidate_elements: List[Element],
+    baseline_elements: list[Element],
+    candidate_elements: list[Element],
 ) -> dict:
     """Which elements this change added, removed, or moved (`UX-79`).
 
@@ -565,8 +563,7 @@ def _element_deltas(
         -abs(row['delta_us'] or 0),
         row['element_uid'],
     ))
-    counts = {name: 0 for name in
-              ('grew', 'shrank', 'unchanged', 'appeared', 'disappeared')}
+    counts = dict.fromkeys(('grew', 'shrank', 'unchanged', 'appeared', 'disappeared'), 0)
     for row in rows:
         if row['presence'] != 'both':
             counts[row['presence']] += 1
@@ -634,7 +631,7 @@ def compute_marginal_efficiency(element_diff: dict) -> Optional[dict]:
     }
 
 
-def _check_comparability(baseline_elements: List[Element], candidate_elements: List[Element]) -> Optional[str]:
+def _check_comparability(baseline_elements: list[Element], candidate_elements: list[Element]) -> Optional[str]:
     """Flag (don't block) when the two runs' graphs look like they might
     not even be the same project - less than half the element UIDs
     shared between them. An empty element list on either side means
@@ -667,7 +664,7 @@ def _build_failure_detail(name: str, result) -> dict:
     are `None` on a capture taken before that field existed, where the
     wording drops the clause rather than guessing.
     """
-    failed: List[str] = []
+    failed: list[str] = []
     built = scheduled = cached = None
     interrupted = False
     suspended = None
@@ -702,7 +699,7 @@ def _count_clause(detail: dict) -> Optional[str]:
     return ", ".join(parts)
 
 
-def _describe_build_failures(details: List[dict]) -> str:
+def _describe_build_failures(details: list[dict]) -> str:
     """The verdict's parenthetical: which run died, on what, how far in.
 
     One sentence, because it replaces IMPROVED/REGRESSED on the line the
@@ -940,11 +937,11 @@ def verdict_provenance(comparison, document: Optional[dict] = None) -> Optional[
 def _compare_results(
     baseline_result: AnalysisResult,
     candidate_result: AnalysisResult,
-    baseline_elements: List[Element],
-    candidate_elements: List[Element],
+    baseline_elements: list[Element],
+    candidate_elements: list[Element],
     baseline_band: Optional[dict] = None,
     baseline_band_shortfall: Optional[dict] = None,
-    candidate_dependencies: Optional[List] = None,
+    candidate_dependencies: Optional[list] = None,
 ) -> ComparisonResult:
     baseline_metrics = _numeric_metrics(baseline_result)
     candidate_metrics = _numeric_metrics(candidate_result)
@@ -1005,7 +1002,7 @@ def _compare_results(
         if isinstance(built_durations, dict) else {}
     )
 
-    mismatches: List[dict] = []
+    mismatches: list[dict] = []
     comparability_warning = _check_comparability(baseline_elements, candidate_elements)
     if comparability_warning:
         mismatches.append({'check': 'shared_elements', 'message': comparability_warning})
@@ -1241,7 +1238,7 @@ def _band_sample(run_dir: Path, analyzer_kwargs: dict):
 
 
 def compare_runs(baseline_dir: Path, candidate_dir: Path,
-                 baseline_runs: Optional[List[Path]] = None,
+                 baseline_runs: Optional[list[Path]] = None,
                  band_k: float = DEFAULT_BAND_K,
                  **analyzer_kwargs) -> ComparisonResult:
     """Load, analyze, and compare two run directories independently -
@@ -1423,10 +1420,7 @@ def efficiency_signal_status(
     if drop_gate_on and (baseline is None or candidate is None):
         not_applied.append('--fail-on-efficiency-regression')
 
-    if not (drop_gate_on or floor_gate_on):
-        evaluated = None
-    else:
-        evaluated = not not_applied
+    evaluated = None if not (drop_gate_on or floor_gate_on) else not not_applied
     return {
         'evaluated': evaluated,
         'missing_occupancy_in': missing,

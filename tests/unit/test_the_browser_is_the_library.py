@@ -41,8 +41,8 @@ import pytest
 REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 
-from tests import pages                                      # noqa: E402
-from tests.browser import NO_BROWSER, Browser, find_chrome    # noqa: E402
+from tests import pages
+from tests.browser import NO_BROWSER, Browser, find_chrome
 
 #: Milliseconds of forced-reflow time that `content-visibility` must
 #: save on the `macro_micro` export. `UX-422`: an absolute quantity,

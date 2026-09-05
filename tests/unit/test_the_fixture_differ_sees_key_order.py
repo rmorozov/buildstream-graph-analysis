@@ -30,12 +30,12 @@ import pytest
 REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 
-from tools import dev_refresh_analysis as refresh  # noqa: E402
+from tools import dev_refresh_analysis as refresh
 
 BLOCK = "occupancy"
 
 
-@functools.lru_cache(maxsize=None)
+@functools.cache
 def _emitted():
     """One analyzer run, shared: the harness needs the real document,
     not a hand-written one, or it would be asserting about its own."""

@@ -8,19 +8,20 @@ Implements Part 5: Static Dependency Graph including:
 """
 
 import logging
-from typing import Dict, List, Sequence, Set, Tuple, Optional
 from collections import defaultdict, deque
+from collections.abc import Sequence
+from typing import Optional
 
-from ..ingest.models import Graph, NormalizedTask
 from ..exceptions import AnalysisError
+from ..ingest.models import Graph, NormalizedTask
 
 logger = logging.getLogger(__name__)
 
 
 def build_element_graph(
     graph: Graph,
-    exclude_dependency_types: Optional[Set[str]] = None,
-) -> Tuple[Dict[str, List[str]], Dict[str, List[str]]]:
+    exclude_dependency_types: Optional[set[str]] = None,
+) -> tuple[dict[str, list[str]], dict[str, list[str]]]:
     """
     Build adjacency lists for the Element Dependency Graph.
 
@@ -44,8 +45,8 @@ def build_element_graph(
     Returns:
         Tuple of (predecessors, successors) adjacency lists
     """
-    predecessors: Dict[str, List[str]] = defaultdict(list)
-    successors: Dict[str, List[str]] = defaultdict(list)
+    predecessors: dict[str, list[str]] = defaultdict(list)
+    successors: dict[str, list[str]] = defaultdict(list)
 
     for dep in graph.dependencies:
         if exclude_dependency_types and dep.dependency_type in exclude_dependency_types:
@@ -58,8 +59,8 @@ def build_element_graph(
 
 def compute_in_out_degree(
     graph: Graph,
-    exclude_dependency_types: Optional[Set[str]] = None,
-) -> Tuple[Dict[str, int], Dict[str, int]]:
+    exclude_dependency_types: Optional[set[str]] = None,
+) -> tuple[dict[str, int], dict[str, int]]:
     """
     Compute in-degree and out-degree for all elements (Part 5.3).
 
@@ -75,8 +76,8 @@ def compute_in_out_degree(
     Returns:
         Tuple of (in_degree, out_degree) dictionaries
     """
-    in_degree: Dict[str, int] = defaultdict(int)
-    out_degree: Dict[str, int] = defaultdict(int)
+    in_degree: dict[str, int] = defaultdict(int)
+    out_degree: dict[str, int] = defaultdict(int)
 
     # Initialize all elements with zero degree
     for elem in graph.elements:
@@ -92,7 +93,7 @@ def compute_in_out_degree(
     return dict(in_degree), dict(out_degree)
 
 
-def compute_unweighted_depth(graph: Graph) -> Dict[str, int]:
+def compute_unweighted_depth(graph: Graph) -> dict[str, int]:
     """
     Compute unweighted depth for all elements (Part 5.3, 14.2).
     
@@ -113,7 +114,7 @@ def compute_unweighted_depth(graph: Graph) -> Dict[str, int]:
     _, successors = build_element_graph(graph)
     in_degree, _ = compute_in_out_degree(graph)
 
-    depth: Dict[str, int] = {}
+    depth: dict[str, int] = {}
 
     # Initialize sources with depth 0
     queue = deque()
@@ -154,8 +155,8 @@ def compute_unweighted_depth(graph: Graph) -> Dict[str, int]:
 
 def compute_weighted_depth(
     graph: Graph,
-    task_durations: Dict[str, int],
-) -> Dict[str, int]:
+    task_durations: dict[str, int],
+) -> dict[str, int]:
     """
     Compute weighted depth for all elements.
     
@@ -175,7 +176,7 @@ def compute_weighted_depth(
     in_degree, _ = compute_in_out_degree(graph)
 
     # earliest_finish[elem] = earliest time elem can finish
-    earliest_finish: Dict[str, int] = {}
+    earliest_finish: dict[str, int] = {}
 
     # Initialize sources
     queue = deque()
@@ -215,7 +216,7 @@ def compute_weighted_depth(
     return earliest_finish
 
 
-def compute_reachability(graph: Graph) -> Tuple[Dict[str, Set[str]], Dict[str, Set[str]]]:
+def compute_reachability(graph: Graph) -> tuple[dict[str, set[str]], dict[str, set[str]]]:
     """
     Compute reachability sets for all elements (Part 5.3).
     
@@ -235,8 +236,8 @@ def compute_reachability(graph: Graph) -> Tuple[Dict[str, Set[str]], Dict[str, S
     predecessors, _ = build_element_graph(graph)
     
     # Compute downstream reachability using reverse topological order
-    reachable_downstream: Dict[str, Set[str]] = {}
-    reachable_upstream: Dict[str, Set[str]] = {}
+    reachable_downstream: dict[str, set[str]] = {}
+    reachable_upstream: dict[str, set[str]] = {}
     
     # Get topological order
     in_degree, _ = compute_in_out_degree(graph)
@@ -279,7 +280,7 @@ def compute_reachability(graph: Graph) -> Tuple[Dict[str, Set[str]], Dict[str, S
     return reachable_downstream, reachable_upstream
 
 
-def compute_downstream_count(graph: Graph) -> Dict[str, int]:
+def compute_downstream_count(graph: Graph) -> dict[str, int]:
     """
     Compute downstream count (blast radius) for all elements (Part 25).
     
@@ -297,7 +298,7 @@ def compute_downstream_count(graph: Graph) -> Dict[str, int]:
     }
 
 
-def find_terminal_elements(graph: Graph) -> Set[str]:
+def find_terminal_elements(graph: Graph) -> set[str]:
     """
     Find terminal elements (elements with no successors).
     
@@ -319,7 +320,7 @@ def find_terminal_elements(graph: Graph) -> Set[str]:
     return terminals
 
 
-def find_requested_targets(graph: Graph) -> Set[str]:
+def find_requested_targets(graph: Graph) -> set[str]:
     """
     Find requested target elements.
     
@@ -334,8 +335,8 @@ def find_requested_targets(graph: Graph) -> Set[str]:
 
 def compute_reverse_reachability_from_targets(
     graph: Graph,
-    targets: Optional[Set[str]] = None,
-) -> Set[str]:
+    targets: Optional[set[str]] = None,
+) -> set[str]:
     """
     Compute elements reachable from any requested target (Part 24.2).
     
@@ -368,7 +369,7 @@ def compute_reverse_reachability_from_targets(
     return reachable
 
 
-def compute_dominators(graph: Graph, start_elements: Optional[Set[str]] = None) -> Dict[str, Set[str]]:
+def compute_dominators(graph: Graph, start_elements: Optional[set[str]] = None) -> dict[str, set[str]]:
     """
     Compute dominators for all elements (Part 5.3).
     
@@ -390,12 +391,12 @@ def compute_dominators(graph: Graph, start_elements: Optional[Set[str]] = None) 
         start_elements = {uid for uid, deg in in_degree.items() if deg == 0}
 
     # Initialize dominators
-    dom: Dict[str, Set[str]] = {}
+    dom: dict[str, set[str]] = {}
 
     # Topological sort - O(N+E), see compute_unweighted_depth.
     topo_order = []
     queue = deque(start_elements)
-    temp_in_degree = {uid: deg for uid, deg in in_degree.items()}
+    temp_in_degree = dict(in_degree.items())
 
     for start in start_elements:
         dom[start] = {start}
@@ -437,8 +438,8 @@ def compute_dominators(graph: Graph, start_elements: Optional[Set[str]] = None) 
 
 
 def compute_element_stage_durations(
-    tasks: List[NormalizedTask],
-) -> Dict[str, Tuple[int, int]]:
+    tasks: list[NormalizedTask],
+) -> dict[str, tuple[int, int]]:
     """UX-60: each element split into the part that waits on nothing and
     the part that waits on its dependencies.
 
@@ -471,8 +472,8 @@ def compute_element_stage_durations(
     is unchanged - which is why this can be introduced without moving a
     published floor on any real capture.
     """
-    heads: Dict[str, int] = {}
-    works: Dict[str, int] = {}
+    heads: dict[str, int] = {}
+    works: dict[str, int] = {}
     for task in tasks:
         uid = task.task_key.element_uid
         kind = getattr(task.task_key.task_kind, 'value', task.task_key.task_kind)
@@ -488,9 +489,9 @@ def compute_element_stage_durations(
 
 def compute_critical_path(
     graph: Graph,
-    task_durations: Dict[str, int],
-    head_durations: Optional[Dict[str, int]] = None,
-) -> Tuple[int, List[str]]:
+    task_durations: dict[str, int],
+    head_durations: Optional[dict[str, int]] = None,
+) -> tuple[int, list[str]]:
     """
     Compute observed critical path (Part 5.3, 14.1).
 
@@ -529,9 +530,9 @@ def compute_critical_path(
     in_degree, _ = compute_in_out_degree(graph, exclude_dependency_types={"runtime"})
     
     # earliest_finish[elem] = earliest time elem can finish
-    earliest_finish: Dict[str, int] = {}
+    earliest_finish: dict[str, int] = {}
     # predecessor_on_critical[elem] = predecessor that determines earliest finish
-    pred_on_critical: Dict[str, Optional[str]] = {}
+    pred_on_critical: dict[str, Optional[str]] = {}
     
     # Topological sort with earliest finish computation
     queue = deque()
@@ -560,10 +561,7 @@ def compute_critical_path(
                 + task_durations.get(succ, 0)
             )
             
-            if succ not in earliest_finish:
-                earliest_finish[succ] = potential_finish
-                pred_on_critical[succ] = current
-            elif potential_finish > earliest_finish[succ]:
+            if succ not in earliest_finish or potential_finish > earliest_finish[succ]:
                 earliest_finish[succ] = potential_finish
                 pred_on_critical[succ] = current
             
@@ -580,10 +578,10 @@ def compute_critical_path(
     
     for elem_uid in earliest_finish:
         # Check if this is a terminal element
-        if elem_uid not in successors or not successors[elem_uid]:
-            if earliest_finish[elem_uid] > critical_length:
-                critical_length = earliest_finish[elem_uid]
-                critical_end = elem_uid
+        terminal = elem_uid not in successors or not successors[elem_uid]
+        if terminal and earliest_finish[elem_uid] > critical_length:
+            critical_length = earliest_finish[elem_uid]
+            critical_end = elem_uid
     
     # If no terminal found, use maximum overall
     if critical_end is None:
@@ -604,9 +602,9 @@ def compute_critical_path(
 
 def compute_slack(
     graph: Graph,
-    task_durations: Dict[str, int],
+    task_durations: dict[str, int],
     critical_path_length: int,
-) -> Dict[str, int]:
+) -> dict[str, int]:
     """
     Compute slack for all elements (Part 5.3).
 
@@ -631,7 +629,7 @@ def compute_slack(
     in_degree, _ = compute_in_out_degree(graph, exclude_dependency_types={"runtime"})
     
     # Compute earliest start times
-    earliest_start: Dict[str, int] = {}
+    earliest_start: dict[str, int] = {}
     queue = deque()
     for elem_uid, deg in in_degree.items():
         if deg == 0:
@@ -657,7 +655,7 @@ def compute_slack(
                 queue.append(succ)
     
     # Compute latest start times (reverse pass)
-    latest_start: Dict[str, int] = {}
+    latest_start: dict[str, int] = {}
     
     # Initialize terminal elements
     for elem_uid in reversed(topo_order):
@@ -695,9 +693,9 @@ REALIZABLE_SAVING_CANDIDATES = 8
 
 def compute_realizable_savings(
     graph: Graph,
-    durations: Dict[str, int],
-    candidates: List[str],
-) -> Dict[str, int]:
+    durations: dict[str, int],
+    candidates: list[str],
+) -> dict[str, int]:
     """UX-70: what the critical path would actually lose if each
     candidate became instant.
 
@@ -720,7 +718,7 @@ def compute_realizable_savings(
     if not candidates:
         return {}
     baseline, _path = compute_critical_path(graph, durations)
-    savings: Dict[str, int] = {}
+    savings: dict[str, int] = {}
     for uid in candidates[:REALIZABLE_SAVING_CANDIDATES]:
         if not durations.get(uid):
             continue
@@ -741,7 +739,7 @@ OPTIMIZATION_HORIZON_STEPS = 5
 
 def compute_joint_saving(
     graph: Graph,
-    durations: Dict[str, int],
+    durations: dict[str, int],
     elements: Sequence[str],
 ) -> int:
     """What the build would lose if *all* of `elements` became instant.
@@ -767,10 +765,10 @@ def compute_joint_saving(
 
 def compute_optimization_horizon(
     graph: Graph,
-    durations: Dict[str, int],
-    excluded: Optional[Set[str]] = None,
+    durations: dict[str, int],
+    excluded: Optional[set[str]] = None,
     steps: int = OPTIMIZATION_HORIZON_STEPS,
-) -> List[dict]:
+) -> list[dict]:
     """What becomes binding after each fix, projected from one capture.
 
     A user learns one element per capture today, and on a graph where
@@ -803,7 +801,7 @@ def compute_optimization_horizon(
         return []
     remaining = dict(durations)
     on_path = set(path)
-    horizon: List[dict] = []
+    horizon: list[dict] = []
     for _step in range(max(0, steps)):
         candidates = [
             uid for uid in path
@@ -851,12 +849,12 @@ JOINT_SAVING_SET_SIZE = 3
 
 
 def compute_latent_heavies(
-    durations: Dict[str, int],
+    durations: dict[str, int],
     critical_path: Sequence[str],
     total_us: int,
-    excluded: Optional[Set[str]] = None,
+    excluded: Optional[set[str]] = None,
     floor_share: float = LATENT_HEAVY_SHARE,
-) -> List[dict]:
+) -> list[dict]:
     """Heavy elements that are on no critical path and in no ranking.
 
     Their realizable saving today is genuinely 0, so every ranking the
@@ -881,7 +879,7 @@ def compute_latent_heavies(
     return sorted(latent, key=lambda e: -e['duration_us'])[:LATENT_HEAVIES_SHOWN]
 
 
-def compute_element_durations(tasks: List[NormalizedTask]) -> Dict[str, int]:
+def compute_element_durations(tasks: list[NormalizedTask]) -> dict[str, int]:
     """The single per-element duration definition: the **longest** task
     the element ran.
 
@@ -907,7 +905,7 @@ def compute_element_durations(tasks: List[NormalizedTask]) -> Dict[str, int]:
     modelling question about Part 14.1, recorded in
     `docs/backlog/scenarios/UX-53-*.md`, not something to decide silently here.
     """
-    durations: Dict[str, int] = {}
+    durations: dict[str, int] = {}
     for task in tasks:
         elem_uid = task.task_key.element_uid
         durations[elem_uid] = max(durations.get(elem_uid, 0), task.dur_us)
@@ -916,7 +914,7 @@ def compute_element_durations(tasks: List[NormalizedTask]) -> Dict[str, int]:
 
 def analyze_graph(
     graph: Graph,
-    tasks: List[NormalizedTask],
+    tasks: list[NormalizedTask],
 ) -> dict:
     """
     Perform comprehensive graph analysis.

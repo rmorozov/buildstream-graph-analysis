@@ -68,7 +68,6 @@ from tools.bst_native_build_tracer import (
     stream_trace_events,
 )
 
-
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # **Both of these are gitignored.** They exist on this machine and not

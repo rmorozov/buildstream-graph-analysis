@@ -16,7 +16,14 @@ shortening the list.
 """
 from bga.analyzer import BuildEfficiencyAnalyzer
 from bga.ingest.models import (
-    DependencyEdge, Element, Graph, NormalizedTask, RunContext, TaskKey, TaskKind, Trace,
+    DependencyEdge,
+    Element,
+    Graph,
+    NormalizedTask,
+    RunContext,
+    TaskKey,
+    TaskKind,
+    Trace,
 )
 from bga.report.text import format_text
 

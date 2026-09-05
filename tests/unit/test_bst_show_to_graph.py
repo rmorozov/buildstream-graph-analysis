@@ -18,8 +18,13 @@ from pathlib import Path
 import pytest
 
 from tools.bst_show_to_graph import (
-    FIELD_SEP, RECORD_SEP, _parse_dep_list, _parse_max_jobs, _parse_notparallel,
-    build_graph, extract_graph,
+    FIELD_SEP,
+    RECORD_SEP,
+    _parse_dep_list,
+    _parse_max_jobs,
+    _parse_notparallel,
+    build_graph,
+    extract_graph,
 )
 
 FIXTURE_PROJECT = Path(__file__).resolve().parents[1] / "fixtures" / "bst_show_project"

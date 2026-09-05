@@ -7,11 +7,11 @@ The replay scheduler simulates execution under different capacity constraints
 to answer "what-if" questions about resource allocation.
 """
 
-import logging
-from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Tuple, Set
-from collections import defaultdict, deque
 import heapq
+import logging
+from collections import defaultdict, deque
+from dataclasses import dataclass, field
+from typing import Optional
 
 from ..floors.capacity import compute_default_capacities
 from ..ingest.models import Graph, RunContext, Trace
@@ -28,13 +28,13 @@ _KNEE_IMPROVEMENT_THRESHOLD = 0.05
 # UX-14 tier 2: a task's real calibration identity - (element_uid,
 # task_kind, phase), i.e. TaskKey minus attempt, the same identity
 # bga/floors/cold.py already uses for its own historical-run matching.
-CalibrationKey = Tuple[str, str, str]
+CalibrationKey = tuple[str, str, str]
 
 
 def build_contention_calibration(
-    calibration_runs: List[Tuple[RunContext, Graph, Trace]],
+    calibration_runs: list[tuple[RunContext, Graph, Trace]],
     resource: str,
-) -> Dict[CalibrationKey, List[Tuple[int, int]]]:
+) -> dict[CalibrationKey, list[tuple[int, int]]]:
     """
     UX-14 tier 2: real `(capacity, dur_us)` calibration points per task,
     built from 2+ real captured runs of the same project at different
@@ -48,7 +48,7 @@ def build_contention_calibration(
     its spans and is skipped entirely for this resource - never silently
     treated as capacity 0.
     """
-    calibration: Dict[CalibrationKey, List[Tuple[int, int]]] = defaultdict(list)
+    calibration: dict[CalibrationKey, list[tuple[int, int]]] = defaultdict(list)
     for hist_context, _hist_graph, hist_trace in calibration_runs:
         cap = (hist_context.resource_capacities or {}).get(resource)
         if cap is None:
@@ -59,7 +59,7 @@ def build_contention_calibration(
     return dict(calibration)
 
 
-def _interpolate_calibrated_duration(points: List[Tuple[int, int]], cap: int) -> Tuple[int, bool]:
+def _interpolate_calibrated_duration(points: list[tuple[int, int]], cap: int) -> tuple[int, bool]:
     """Linear interpolation between the two real calibrated
     `(capacity, duration)` points bracketing `cap` - never extrapolates
     past the real calibrated min/max (UX-14 tier 2's own explicit "never
@@ -71,7 +71,7 @@ def _interpolate_calibrated_duration(points: List[Tuple[int, int]], cap: int) ->
     collapsed by averaging before interpolating, sorted ascending by
     capacity.
     """
-    by_cap: Dict[int, List[int]] = defaultdict(list)
+    by_cap: dict[int, list[int]] = defaultdict(list)
     for cap_point, dur in points:
         by_cap[cap_point].append(dur)
     sorted_points = sorted((c, sum(ds) // len(ds)) for c, ds in by_cap.items())
@@ -97,7 +97,7 @@ class ScheduledTask:
     start_us: int
     finish_us: int
     duration_us: int
-    resources_required: Dict[str, int] = field(default_factory=dict)
+    resources_required: dict[str, int] = field(default_factory=dict)
     
     @property
     def element_uid(self) -> str:
@@ -109,9 +109,9 @@ class ScheduledTask:
 class ReplayResult:
     """Result of a single replay simulation."""
     makespan_us: int
-    scheduled_tasks: List[ScheduledTask]
-    capacity_used: Dict[str, int]
-    timeline: List[Tuple[int, str, int]]  # (time_us, event_type, task_key)
+    scheduled_tasks: list[ScheduledTask]
+    capacity_used: dict[str, int]
+    timeline: list[tuple[int, str, int]]  # (time_us, event_type, task_key)
     
     @property
     def model_slack_us(self) -> Optional[int]:
@@ -128,9 +128,9 @@ class ReplayResult:
 @dataclass
 class CapacitySweepResult:
     """Result of a capacity sweep across multiple configurations."""
-    sweeps: List[Dict]
-    knee_points: Dict[str, int]
-    monotonicity_violations: List[str]
+    sweeps: list[dict]
+    knee_points: dict[str, int]
+    monotonicity_violations: list[str]
     
     def is_monotonic(self, resource: str) -> bool:
         """Check if makespan decreases monotonically with capacity."""
@@ -151,7 +151,7 @@ class ReplayScheduler:
     
     def __init__(
         self,
-        tasks: List[NormalizedTask],
+        tasks: list[NormalizedTask],
         run_context: Optional[RunContext] = None,
     ):
         """
@@ -165,13 +165,13 @@ class ReplayScheduler:
         self.run_context = run_context
         
         # Build task lookup
-        self._task_map: Dict[str, NormalizedTask] = {
+        self._task_map: dict[str, NormalizedTask] = {
             str(t.task_key): t for t in tasks
         }
         
         # Build dependency graph (successors for each task)
-        self._predecessors: Dict[str, Set[str]] = defaultdict(set)
-        self._successors: Dict[str, Set[str]] = defaultdict(set)
+        self._predecessors: dict[str, set[str]] = defaultdict(set)
+        self._successors: dict[str, set[str]] = defaultdict(set)
         
         for task in tasks:
             task_key = str(task.task_key)
@@ -195,9 +195,9 @@ class ReplayScheduler:
         # sink - real Part 18 `depth` priority rule support (P1-34:
         # previously byte-identical to `lpt`, not depth at all).
         # Computed once here, not per-call.
-        self._task_depths: Dict[str, int] = self._compute_task_depths()
+        self._task_depths: dict[str, int] = self._compute_task_depths()
 
-    def _compute_task_depths(self) -> Dict[str, int]:
+    def _compute_task_depths(self) -> dict[str, int]:
         """Longest remaining path (in task hops) from each task to any
         sink (a task nothing depends on) - not depth *from* a root, which
         would tie at 0 for every task that's ready at the very start
@@ -206,7 +206,7 @@ class ReplayScheduler:
         the task with the most/longest downstream work riding on it
         first. Computed via Kahn's algorithm over the *reversed* graph
         (starting from sinks, walking back through predecessors)."""
-        depths: Dict[str, int] = {}
+        depths: dict[str, int] = {}
         out_degree = {key: len(self._successors[key]) for key in self._task_map}
         queue = deque(key for key, deg in out_degree.items() if deg == 0)
         for key in queue:
@@ -230,7 +230,7 @@ class ReplayScheduler:
                     queue.append(pred)
         return depths
     
-    def _get_task_resources(self, task_key: str) -> Dict[str, int]:
+    def _get_task_resources(self, task_key: str) -> dict[str, int]:
         """
         Determine resource requirements for a task, from the task's own
         observed `resources` (falling back to `primary_resource`, then to
@@ -247,9 +247,9 @@ class ReplayScheduler:
     
     def replay(
         self,
-        capacities: Optional[Dict[str, int]] = None,
+        capacities: Optional[dict[str, int]] = None,
         priority_rule: str = 'lpt',
-        duration_overrides: Optional[Dict[str, int]] = None,
+        duration_overrides: Optional[dict[str, int]] = None,
     ) -> ReplayResult:
         """
         Run deterministic replay with specified capacities.
@@ -290,17 +290,17 @@ class ReplayScheduler:
         duration_overrides = duration_overrides or {}
 
         # Track remaining predecessor count for each task
-        remaining_preds: Dict[str, int] = {
+        remaining_preds: dict[str, int] = {
             str(t.task_key): len(self._predecessors[str(t.task_key)])
             for t in self.tasks
         }
         
         # Track finish times for dependency resolution
-        finish_times: Dict[str, int] = {}
+        finish_times: dict[str, int] = {}
         
         # Ready queue: tasks with all predecessors done
         # Heap: (-priority, task_key) for max-heap behavior
-        ready_queue: List[Tuple[int, str]] = []
+        ready_queue: list[tuple[int, str]] = []
         
         # Initialize with tasks that have no predecessors
         for task in self.tasks:
@@ -311,12 +311,12 @@ class ReplayScheduler:
         
         # Current time and active tasks
         current_time = 0
-        active_tasks: Dict[str, ScheduledTask] = {}
-        scheduled_tasks: List[ScheduledTask] = []
-        timeline: List[Tuple[int, str, str]] = []
+        active_tasks: dict[str, ScheduledTask] = {}
+        scheduled_tasks: list[ScheduledTask] = []
+        timeline: list[tuple[int, str, str]] = []
         
         # Event queue: (finish_time, task_key)
-        event_queue: List[Tuple[int, str]] = []
+        event_queue: list[tuple[int, str]] = []
         
         # Available capacity
         available_capacity = capacities.copy()
@@ -429,7 +429,7 @@ class ReplayScheduler:
             timeline=timeline,
         )
     
-    def _compute_priority(self, task: NormalizedTask, rule: str, duration_overrides: Optional[Dict[str, int]] = None) -> int:
+    def _compute_priority(self, task: NormalizedTask, rule: str, duration_overrides: Optional[dict[str, int]] = None) -> int:
         """
         Compute priority value for task selection.
 
@@ -479,8 +479,8 @@ class ReplayScheduler:
         min_capacity: int = 1,
         max_capacity: Optional[int] = None,
         step: int = 1,
-        other_capacities: Optional[Dict[str, int]] = None,
-        contention_calibration: Optional[Dict[CalibrationKey, List[Tuple[int, int]]]] = None,
+        other_capacities: Optional[dict[str, int]] = None,
+        contention_calibration: Optional[dict[CalibrationKey, list[tuple[int, int]]]] = None,
     ) -> CapacitySweepResult:
         """
         Sweep capacity for a single resource (Part 19).
@@ -604,9 +604,9 @@ class ReplayScheduler:
     
     def multi_resource_sweep(
         self,
-        resources: List[str],
-        capacity_sets: List[Dict[str, int]],
-    ) -> List[Dict]:
+        resources: list[str],
+        capacity_sets: list[dict[str, int]],
+    ) -> list[dict]:
         """
         Sweep multiple resource configurations.
         
@@ -631,8 +631,8 @@ class ReplayScheduler:
 
 
 def compute_replay_makespan(
-    tasks: List[NormalizedTask],
-    capacities: Dict[str, int],
+    tasks: list[NormalizedTask],
+    capacities: dict[str, int],
     run_context: Optional[RunContext] = None,
 ) -> int:
     """

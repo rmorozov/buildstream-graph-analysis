@@ -47,8 +47,8 @@ picture, and that is Perfetto's own UI to decide.
 import gzip
 import hashlib
 import json
-import re
 import pathlib
+import re
 import shutil
 import struct
 import sys
@@ -59,15 +59,20 @@ REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 
-from bga.run_store import ANALYSIS_NAME  # noqa: E402
-from tools.bga_timeline import (  # noqa: E402
-    DEFAULT_OUTPUT, FLOW_LOSS_REASONS, FORMAT_TRACKEVENT, dependency_edges,
-    describe, element_structure, render)
-from tools.native_trace import trackevent  # noqa: E402
+from test_one_click_from_investigation import _node, needs_node
+from test_the_timeline_speaks_perfetto import _fields
 
-from test_the_timeline_speaks_perfetto import _fields  # noqa: E402
-from test_one_click_from_investigation import (  # noqa: E402
-    _node, needs_node)
+from bga.run_store import ANALYSIS_NAME
+from tools.bga_timeline import (
+    DEFAULT_OUTPUT,
+    FLOW_LOSS_REASONS,
+    FORMAT_TRACKEVENT,
+    dependency_edges,
+    describe,
+    element_structure,
+    render,
+)
+from tools.native_trace import trackevent
 
 GOLDEN = REPO / "tests/fixtures/golden/mixed_task_kinds"
 REAL_CAPTURE = REPO / ("examples/06-macro-micro-optimization/.bga/runs/"
@@ -311,8 +316,7 @@ class TestThePlane2ArrowsAreTheExecChain:
         of a pid collision.
         """
         from tools.bga_timeline import _plane2_flows
-        from tools.bst_native_build_tracer import (
-            parse_trace_lines, stream_records)
+        from tools.bst_native_build_tracer import parse_trace_lines, stream_records
         records = sorted(stream_records(iter(parse_trace_lines(
             _raw().splitlines()))), key=lambda r: r["start_ts"])
         by_id = {id(record): record for record in records}
@@ -332,8 +336,7 @@ class TestThePlane2ArrowsAreTheExecChain:
         """`ppid=1` is the sandbox's own init, which the capture never
         recorded. Nothing to point at."""
         from tools.bga_timeline import _plane2_flows
-        from tools.bst_native_build_tracer import (
-            parse_trace_lines, stream_records)
+        from tools.bst_native_build_tracer import parse_trace_lines, stream_records
         records = list(stream_records(iter(parse_trace_lines([
             "START pid=2 ppid=1 ts=1.0 element=e.bst inv=a cmd=orphan",
             "END pid=2 ppid=1 ts=2.0 element=e.bst inv=a utime=0.1 stime=0.1",

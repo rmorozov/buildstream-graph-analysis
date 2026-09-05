@@ -41,7 +41,7 @@ import pytest
 REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 
-from bga import plane2                                        # noqa: E402
+from bga import plane2
 
 REPORT = REPO / "tests/fixtures/macro_micro/plane2.json"
 RUN = REPO / "tests/fixtures/macro_micro/run"

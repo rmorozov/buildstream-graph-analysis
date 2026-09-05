@@ -71,8 +71,8 @@ the emitter's *encoding*, not of its numbering, and an earlier draft of
 this docstring claimed both.
 """
 import gzip
-import json
 import hashlib
+import json
 import os
 import pathlib
 import shutil
@@ -85,17 +85,24 @@ REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 
-from tools import bga_timeline  # noqa: E402
-from tools.bga_timeline import (
-    CATEGORY_PLANE2,  # noqa: E402
-    ANNOTATION_CONTRACT, CATEGORY_FAILED, DEFAULT_OUTPUT, EXIT_STATUS_OK,
-    FORMAT_TRACKEVENT, PLANE1_ANNOTATIONS, PLANE2_ANNOTATIONS, element_kinds,
-    render, task_resources)
-from tools.bst_native_build_tracer import (  # noqa: E402
-    parse_trace_lines, stream_records)
-from tools.native_trace import trackevent  # noqa: E402
+from test_the_timeline_speaks_perfetto import _WRAPPED, _fields
 
-from test_the_timeline_speaks_perfetto import _fields, _WRAPPED  # noqa: E402
+from tools import bga_timeline
+from tools.bga_timeline import (
+    ANNOTATION_CONTRACT,
+    CATEGORY_FAILED,
+    CATEGORY_PLANE2,
+    DEFAULT_OUTPUT,
+    EXIT_STATUS_OK,
+    FORMAT_TRACKEVENT,
+    PLANE1_ANNOTATIONS,
+    PLANE2_ANNOTATIONS,
+    element_kinds,
+    render,
+    task_resources,
+)
+from tools.bst_native_build_tracer import parse_trace_lines, stream_records
+from tools.native_trace import trackevent
 
 GOLDEN = REPO / "tests/fixtures/golden/mixed_task_kinds"
 REAL_CAPTURE = REPO / ("examples/06-macro-micro-optimization/.bga/runs/"

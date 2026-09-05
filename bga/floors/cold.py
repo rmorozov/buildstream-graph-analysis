@@ -22,7 +22,7 @@ by the caller (bga/analyzer.py::_compute_floors).
 """
 import logging
 from collections import defaultdict
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Optional
 
 from ..graph.edg import compute_critical_path
 from ..ingest.models import Graph, NormalizedTask
@@ -41,7 +41,7 @@ TIER_COHORT = "COHORT"
 TIER_UNAVAILABLE = "UNAVAILABLE"
 
 
-def _median(values: List[int]) -> int:
+def _median(values: list[int]) -> int:
     ordered = sorted(values)
     n = len(ordered)
     mid = n // 2
@@ -52,7 +52,7 @@ def _median(values: List[int]) -> int:
 
 def compute_cold_floor(
     graph: Optional[Graph],
-    normalized_tasks: List[NormalizedTask],
+    normalized_tasks: list[NormalizedTask],
     historical_runs: list,
     cold: bool,
     allow_partial_cold: bool,
@@ -73,11 +73,11 @@ def compute_cold_floor(
     # specificity (Part 15.2). Raw observed span durations are used
     # directly (not run through full normalization) - these are
     # advisory estimate sources, not measured values themselves.
-    by_cache_key: Dict[Tuple[str, str, str], List[int]] = defaultdict(list)
-    by_element_kind_phase: Dict[Tuple[str, str, str], List[int]] = defaultdict(list)
-    by_cohort: Dict[Tuple[str, str], List[int]] = defaultdict(list)
+    by_cache_key: dict[tuple[str, str, str], list[int]] = defaultdict(list)
+    by_element_kind_phase: dict[tuple[str, str, str], list[int]] = defaultdict(list)
+    by_cohort: dict[tuple[str, str], list[int]] = defaultdict(list)
 
-    for hist_context, hist_graph, hist_trace in historical_runs:
+    for _hist_context, hist_graph, hist_trace in historical_runs:
         cache_key_by_element = {elem.uid: elem.cache_key for elem in hist_graph.elements}
         for span in hist_trace.spans:
             kind = span.task_key.task_kind.value
@@ -90,16 +90,16 @@ def compute_cold_floor(
                 by_cache_key[(cache_key, kind, phase)].append(span.dur_us)
 
     element_cache_key = {elem.uid: elem.cache_key for elem in graph.elements}
-    tasks_by_element: Dict[str, List] = defaultdict(list)
+    tasks_by_element: dict[str, list] = defaultdict(list)
     for task in normalized_tasks:
         tasks_by_element[task.task_key.element_uid].append(task)
 
-    cold_duration_by_element: Dict[str, int] = {}
-    unavailable_elements: Set[str] = set()
+    cold_duration_by_element: dict[str, int] = {}
+    unavailable_elements: set[str] = set()
     # P2-06: which tier actually resolved each element's cold duration -
     # additive provenance detail alongside cold_duration_by_element,
     # doesn't change any existing value below.
-    cold_duration_sources: Dict[str, str] = {}
+    cold_duration_sources: dict[str, str] = {}
 
     for elem in graph.elements:
         elem_uid = elem.uid
@@ -120,7 +120,7 @@ def compute_cold_floor(
         # rather than an ambiguous aggregate.
         any_unavailable = False
         cache_key = element_cache_key.get(elem_uid)
-        resolved: List[Tuple[int, str]] = []
+        resolved: list[tuple[int, str]] = []
         for task in tasks:
             kind = task.task_key.task_kind.value
             phase = task.task_key.phase
@@ -166,7 +166,7 @@ def compute_cold_floor(
     # single aggregate high/low confidence label. Computed regardless of
     # the publication gate below, since it's equally useful (arguably
     # more so) as a diagnostic for *why* the floor came back unavailable.
-    cold_critical_path_duration_sources: Dict[str, int] = defaultdict(int)
+    cold_critical_path_duration_sources: dict[str, int] = defaultdict(int)
     for uid in cold_path:
         cold_critical_path_duration_sources[cold_duration_sources.get(uid, TIER_UNAVAILABLE)] += 1
     cold_critical_path_duration_sources = dict(cold_critical_path_duration_sources)

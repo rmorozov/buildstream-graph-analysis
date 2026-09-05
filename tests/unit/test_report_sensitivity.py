@@ -44,8 +44,9 @@ def test_text_report_names_best_case_speedup_and_improvable_time():
 def test_json_report_still_has_sensitivity_unchanged():
     """This is additive to the text report only - JSON's own
     sensitivity shape (already correct) must stay unchanged."""
-    from bga.report.json import format_json
     import json
+
+    from bga.report.json import format_json
 
     result = _analyze()
     data = json.loads(format_json(result))
@@ -115,8 +116,9 @@ def test_element_that_cannot_move_the_finish_is_not_an_opportunity():
 
 
 def test_json_report_has_batch_opportunities():
-    from bga.report.json import format_json
     import json
+
+    from bga.report.json import format_json
 
     result = _analyze()
     data = json.loads(format_json(result))

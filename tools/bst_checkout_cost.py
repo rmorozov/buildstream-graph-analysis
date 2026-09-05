@@ -41,7 +41,6 @@ tool's whole reason to exist is to *not* drop them.
 import argparse
 import json
 import sys
-from typing import Dict, List
 
 from .bst_log_to_chrome_trace import WrapperTraceConverter, _resolve_start_time_us
 from .chrome_trace_to_bga_trace import invocation_wall_clock
@@ -50,7 +49,7 @@ from .chrome_trace_to_bga_trace import invocation_wall_clock
 def _parse_log(log_path: str, log_format: str = "auto") -> WrapperTraceConverter:
     start_time_us = _resolve_start_time_us(None, log_path)
     converter = WrapperTraceConverter(raw_start_time_us=start_time_us)
-    with open(log_path, "r", encoding="utf-8", errors="ignore") as f:
+    with open(log_path, encoding="utf-8", errors="ignore") as f:
         for line in f:
             if log_format == "wrapped":
                 converter.process_line_wrapped(line)
@@ -62,7 +61,7 @@ def _parse_log(log_path: str, log_format: str = "auto") -> WrapperTraceConverter
     return converter
 
 
-def _per_element_checkout_costs(trace_events: List[dict]) -> Dict[str, int]:
+def _per_element_checkout_costs(trace_events: list[dict]) -> dict[str, int]:
     """Sum real per-element checkout-phase durations (Staging sources /
     Staging dependencies / Integrating sandbox / Checking out files in
     ...) - each a real B/E pair under action="main" with the checked-out
@@ -73,8 +72,8 @@ def _per_element_checkout_costs(trace_events: List[dict]) -> Dict[str, int]:
     - see docs/backlog/tasks/P4-15-stack-consolidation-heuristic.md), so a
     simple per-tid stack is enough to pair them correctly.
     """
-    costs: Dict[str, int] = {}
-    open_by_tid: Dict[int, dict] = {}
+    costs: dict[str, int] = {}
+    open_by_tid: dict[int, dict] = {}
     for ev in trace_events:
         if ev.get("cat") != "bst-builder":
             continue
@@ -111,7 +110,7 @@ def summarize(log_path: str, log_format: str = "auto") -> dict:
     }
 
 
-def compare(individual_log_paths: List[str], consolidated_log_path: str, log_format: str = "auto") -> dict:
+def compare(individual_log_paths: list[str], consolidated_log_path: str, log_format: str = "auto") -> dict:
     """Real measured comparison: N separate checkout invocations vs. one
     consolidated (typically `kind: stack`-based) invocation covering the
     same elements. Each individual invocation pays its own

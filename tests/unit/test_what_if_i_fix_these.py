@@ -69,15 +69,15 @@ def report():
 
 @pytest.fixture(scope="module")
 def drawn(report):
-    script = _SHIM + '''
-      const { renderHorizon } = await import("./tests/viewer.mjs");
-      const section = renderHorizon(%s);
-      if (section === null) { console.log(JSON.stringify(null)); }
-      else {
-        const rows = all(section, (n) => n.className === "horizon-step").map((li) => {
+    script = _SHIM + f'''
+      const {{ renderHorizon }} = await import("./tests/viewer.mjs");
+      const section = renderHorizon({json.dumps(report)});
+      if (section === null) {{ console.log(JSON.stringify(null)); }}
+      else {{
+        const rows = all(section, (n) => n.className === "horizon-step").map((li) => {{
           const bar = all(li, (n) => n.attrs["data-role"] === "bar")[0];
           const entering = all(li, (n) => n.attrs["data-role"] === "entering")[0];
-          return {
+          return {{
             element: li.attrs["data-element"] ?? null,
             makespan: li.attrs["data-makespan-after-us"],
             saving: li.attrs["data-saving-us"] ?? null,
@@ -88,20 +88,20 @@ def drawn(report):
             enteringHrefs: entering
               ? all(entering, (n) => n.tagName === "a").map(href) : [],
             hrefs: all(li, (n) => n.tagName === "a").map(href),
-          };
-        });
+          }};
+        }});
         const total = all(section, (n) => n.attrs["data-role"] === "horizon-total")[0];
-        console.log(JSON.stringify({
+        console.log(JSON.stringify({{
           rows,
           section: section.attrs["data-section"],
-          total: total ? {
+          total: total ? {{
             text: text(total),
             cumulative: total.attrs["data-cumulative-saving-us"],
             of: total.attrs["data-total-us"],
-          } : null,
-        }));
-      }
-    ''' % json.dumps(report)
+          }} : null,
+        }}));
+      }}
+    '''
     result = subprocess.run([node, "--input-type=module", "-e", script],
                             capture_output=True, text=True, cwd=REPO, timeout=60)
     assert result.returncode == 0, result.stderr
@@ -227,16 +227,16 @@ class TestTheTotalIsPublishedValuesOnly:
         }
         assert sum(s["saving_us"] for s in
                    payload["optimization_horizon"]) == 20
-        script = _SHIM + '''
-          const { renderHorizon } = await import("./tests/viewer.mjs");
-          const section = renderHorizon(%s);
+        script = _SHIM + f'''
+          const {{ renderHorizon }} = await import("./tests/viewer.mjs");
+          const section = renderHorizon({json.dumps(payload)});
           const total = all(section,
             (n) => n.attrs["data-role"] === "horizon-total")[0];
-          console.log(JSON.stringify({
+          console.log(JSON.stringify({{
             cumulative: total.attrs["data-cumulative-saving-us"],
             text: text(total),
-          }));
-        ''' % json.dumps(payload)
+          }}));
+        '''
         result = subprocess.run([node, "--input-type=module", "-e", script],
                                 capture_output=True, text=True, cwd=REPO,
                                 timeout=60)
@@ -251,10 +251,10 @@ class TestAbsenceStaysAbsent:
 
     @staticmethod
     def _render(payload):
-        script = _SHIM + '''
-          const { renderHorizon } = await import("./tests/viewer.mjs");
-          console.log(JSON.stringify(renderHorizon(%s) === null));
-        ''' % json.dumps(payload)
+        script = _SHIM + f'''
+          const {{ renderHorizon }} = await import("./tests/viewer.mjs");
+          console.log(JSON.stringify(renderHorizon({json.dumps(payload)}) === null));
+        '''
         result = subprocess.run([node, "--input-type=module", "-e", script],
                                 capture_output=True, text=True, cwd=REPO, timeout=60)
         assert result.returncode == 0, result.stderr

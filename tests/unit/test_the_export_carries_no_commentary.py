@@ -44,7 +44,7 @@ import pytest
 REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 
-from tools import bga_view as view  # noqa: E402
+from tools import bga_view as view
 
 VIEWER = REPO / "bga/viewer"
 MODULES = tuple(name for name in view.ASSETS if name.endswith(".js"))

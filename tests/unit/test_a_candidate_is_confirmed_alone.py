@@ -37,7 +37,7 @@ import sys
 REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 
-from tools import dev_tier_drift as drift                      # noqa: E402
+from tools import dev_tier_drift as drift
 
 #: A file listed small that the parallel report puts over the medium
 #: floor, and the seconds a single-process run of it really costs. Both

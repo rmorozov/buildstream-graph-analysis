@@ -9,8 +9,8 @@ Structural analysis (bga/graph/edg.py: reachability, depth, dominators,
 critical path) is deliberately untouched and still reads every edge
 regardless of type - only *gating* semantics changed.
 """
-from bga.ingest.models import DependencyEdge, Graph, Element, Resource, TaskKey, TaskKind, TaskSpan
 from bga.graph.edg import compute_critical_path, compute_reachability
+from bga.ingest.models import DependencyEdge, Element, Graph, Resource, TaskKey, TaskKind, TaskSpan
 from bga.normalize.timestamps import (
     clamp_task_starts,
     compute_ready_times,

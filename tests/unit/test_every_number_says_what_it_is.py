@@ -137,10 +137,10 @@ console.log(JSON.stringify({
 
 
 def _census(label):
+    import tempfile
+
     from bga import schemas
     from tools.bga_view import payloads
-
-    import tempfile
 
     scratch = pathlib.Path(tempfile.mkdtemp())
     (scratch / "payload.json").write_text(
@@ -280,7 +280,7 @@ def _store_document(contract):
     import shutil
     import tempfile
 
-    from tools.bga_view import store_payload, store_aggregate_payload
+    from tools.bga_view import store_aggregate_payload, store_payload
 
     into = pathlib.Path(tempfile.mkdtemp())
     (into / "project.conf").write_text("name: p\nmin-version: 2.0\n")
@@ -311,9 +311,9 @@ def _store_document(contract):
 
 
 def _census_document(document):
-    from bga import schemas
-
     import tempfile
+
+    from bga import schemas
 
     scratch = pathlib.Path(tempfile.mkdtemp())
     (scratch / "payload.json").write_text(json.dumps(document))

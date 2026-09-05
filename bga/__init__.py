@@ -15,6 +15,10 @@ The governing principle is:
 __version__ = "0.4.0"
 
 from .analyzer import BuildEfficiencyAnalyzer, analyze_run
+from .graph import (
+    analyze_graph,
+    compute_critical_path,
+)
 from .ingest import (
     AnalysisResult,
     AttributionCategory,
@@ -44,18 +48,14 @@ from .occupancy import (
     compute_occupancy_stats,
     compute_task_horizon,
 )
-from .graph import (
-    analyze_graph,
-    compute_critical_path,
-)
 from .structural import (
-    StructuralAnalyzer,
-    StructuralMetrics,
     BottleneckAnalysis,
-    ParallelismProfile,
-    SensitivityResult,
     DeferrabilityResult,
     HistoricalTrend,
+    ParallelismProfile,
+    SensitivityResult,
+    StructuralAnalyzer,
+    StructuralMetrics,
 )
 
 __all__ = [

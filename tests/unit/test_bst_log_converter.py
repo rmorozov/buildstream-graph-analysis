@@ -20,10 +20,10 @@ installed BuildStream 2.7.0 (see docs/spec/ingestion-pipeline.md):
 import pytest
 
 from tools.bst_log_to_chrome_trace import (
-    WrapperTraceConverter,
-    parse_elapsed_to_seconds,
-    _resolve_start_time_us,
     TARGETS_RE,
+    WrapperTraceConverter,
+    _resolve_start_time_us,
+    parse_elapsed_to_seconds,
 )
 
 

@@ -44,11 +44,11 @@ tool's import cost on the hot path of the command people run most.
 """
 import importlib
 import sys
-from typing import Dict, List, Optional, Tuple
+from typing import Optional
 
 # alias -> (module, one-line help). Ordered as the workflow runs, because
 # `bga --help` prints them in this order and that ordering is the point.
-TOOL_ALIASES: Dict[str, Tuple[str, str]] = {
+TOOL_ALIASES: dict[str, tuple[str, str]] = {
     "wrap": (
         "tools.bst_run_wrapped",
         "Run a command, writing a log bga can ingest",
@@ -190,7 +190,7 @@ def _import_tool(module_name: str):
         return importlib.import_module(_INSTALLED_PREFIX + module_name)
 
 
-def dispatch(argv: List[str]) -> Optional[int]:
+def dispatch(argv: list[str]) -> Optional[int]:
     """Run the tool `argv[0]` names, or return None if it names none.
 
     Returns None rather than raising so the caller can fall through to

@@ -26,7 +26,7 @@ estimate, not a claim about what any real optimization would actually
 achieve.
 """
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Set, Tuple
+from typing import Any
 
 from ..graph.edg import compute_reachability
 from ..ingest.models import Graph
@@ -38,7 +38,7 @@ class BatchGroup:
     """A set of mutually-independent high-sensitivity elements (no
     pairwise ancestor/descendant relationship in the dependency graph)
     - the real "map" grouping this module produces."""
-    elements: List[str]
+    elements: list[str]
     baseline_makespan_us: int
     combined_makespan_us: int
     combined_savings_us: int
@@ -46,7 +46,7 @@ class BatchGroup:
     # whole group) were fixed - lets a reader see the "combined" effect
     # is not simply the sum of the individual ones (real DAG scheduling
     # effects: shared critical-path membership, resource contention).
-    individual_savings_us: Dict[str, int] = field(default_factory=dict)
+    individual_savings_us: dict[str, int] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -54,11 +54,11 @@ class BatchOpportunities:
     """UX-20's own map-reduce result over a candidate set of high-
     sensitivity elements (typically `compute_sensitivity`'s own
     `top_opportunities`)."""
-    groups: List[BatchGroup]
-    serialized_pairs: List[Tuple[str, str]]
+    groups: list[BatchGroup]
+    serialized_pairs: list[tuple[str, str]]
 
 
-def _are_independent(a: str, b: str, reachable_downstream: Dict[str, Set[str]]) -> bool:
+def _are_independent(a: str, b: str, reachable_downstream: dict[str, set[str]]) -> bool:
     """True iff neither element can reach the other - no ancestor/
     descendant relationship, i.e. fixing one is not blocked on fixing
     the other first."""
@@ -66,8 +66,8 @@ def _are_independent(a: str, b: str, reachable_downstream: Dict[str, Set[str]]) 
 
 
 def _partition_into_independent_groups(
-    candidates: List[str], reachable_downstream: Dict[str, Set[str]],
-) -> Tuple[List[List[str]], List[Tuple[str, str]]]:
+    candidates: list[str], reachable_downstream: dict[str, set[str]],
+) -> tuple[list[list[str]], list[tuple[str, str]]]:
     """Greedy antichain partition over `candidates` (caller supplies
     them in most-impactful-first order): each candidate joins the first
     existing group it's independent of every current member of, else
@@ -78,7 +78,7 @@ def _partition_into_independent_groups(
     (no two members share an ancestor/descendant relationship) is what
     matters, not group-count optimality.
     """
-    groups: List[List[str]] = []
+    groups: list[list[str]] = []
     for candidate in candidates:
         placed = False
         for group in groups:
@@ -93,7 +93,7 @@ def _partition_into_independent_groups(
     # informational (not used to decide grouping above, which is
     # already settled), so a reader can see *why* two elements weren't
     # grouped together, not just that they weren't.
-    serialized_pairs: List[Tuple[str, str]] = [
+    serialized_pairs: list[tuple[str, str]] = [
         (a, b)
         for i, a in enumerate(candidates)
         for b in candidates[i + 1:]
@@ -103,10 +103,10 @@ def _partition_into_independent_groups(
 
 
 def compute_batch_opportunities(
-    candidates: List[str],
+    candidates: list[str],
     graph: Graph,
     replay_scheduler: ReplayScheduler,
-    element_to_task_key: Dict[str, str],
+    element_to_task_key: dict[str, str],
     priority_rule: str = 'lpt',
 ) -> BatchOpportunities:
     """Partitions `candidates` (element UIDs, most-impactful-first - the
@@ -124,7 +124,7 @@ def compute_batch_opportunities(
 
     baseline_makespan_us = replay_scheduler.replay(priority_rule=priority_rule).makespan_us
 
-    groups: List[BatchGroup] = []
+    groups: list[BatchGroup] = []
     for raw_group in raw_groups:
         task_keys = [
             (element, element_to_task_key[element])
@@ -140,7 +140,7 @@ def compute_batch_opportunities(
             priority_rule=priority_rule, duration_overrides=combined_overrides,
         ).makespan_us
 
-        individual_savings_us: Dict[str, int] = {}
+        individual_savings_us: dict[str, int] = {}
         for element, task_key in task_keys:
             solo_makespan_us = replay_scheduler.replay(
                 priority_rule=priority_rule, duration_overrides={task_key: 0},
@@ -158,7 +158,7 @@ def compute_batch_opportunities(
     return BatchOpportunities(groups=groups, serialized_pairs=serialized_pairs)
 
 
-def serialize_batch_opportunities(batch_result: BatchOpportunities) -> Dict[str, Any]:
+def serialize_batch_opportunities(batch_result: BatchOpportunities) -> dict[str, Any]:
     """Report-shape serialization of `compute_batch_opportunities`'s
     result (UX-20). A group with zero real `combined_savings_us` -
     fixing all its members together doesn't move the makespan at all -

@@ -37,7 +37,7 @@ from a plain `bst show`.
 """
 from dataclasses import dataclass, field
 from statistics import mean
-from typing import Dict, List, Optional
+from typing import Optional
 
 from ..graph.edg import compute_reachability
 from ..ingest.models import Element, Graph, NormalizedTask
@@ -52,9 +52,9 @@ class SerializationPointRisk:
     `elements` stays a list for schema compatibility with `UX-22`'s own
     published shape, but now holds exactly one element - the pinning is
     a property of that element, not of a group."""
-    elements: List[str]
-    element_max_jobs: Dict[str, int] = field(default_factory=dict)
-    element_duration_us: Dict[str, int] = field(default_factory=dict)
+    elements: list[str]
+    element_max_jobs: dict[str, int] = field(default_factory=dict)
+    element_duration_us: dict[str, int] = field(default_factory=dict)
     builders: int = 0
     governing_cores: int = 0
     hint: str = ""
@@ -68,7 +68,7 @@ class SerializationPointRisk:
 
 @dataclass(frozen=True)
 class SerializationPointAnalysis:
-    risks: List[SerializationPointRisk]
+    risks: list[SerializationPointRisk]
 
 
 def _build_hint(
@@ -93,8 +93,8 @@ def _build_hint(
 
 
 def detect_large_serialization_points(
-    elements: List[Element],
-    tasks: Dict[str, NormalizedTask],
+    elements: list[Element],
+    tasks: dict[str, NormalizedTask],
     graph: Graph,
     builders: Optional[int],
     governing_cores: Optional[int],
@@ -141,7 +141,7 @@ def detect_large_serialization_points(
 
     reachable_downstream, _ = compute_reachability(graph)
 
-    risks: List[SerializationPointRisk] = []
+    risks: list[SerializationPointRisk] = []
     for element in elements:
         pinned_by_flag = element.notparallel is True
         pinned_by_value = element.max_jobs is not None and element.max_jobs < typical_max_jobs

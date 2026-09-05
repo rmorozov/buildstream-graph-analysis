@@ -141,7 +141,7 @@ def _group(sections):
     return json.loads(done.stdout)
 
 
-@functools.lru_cache(maxsize=None)
+@functools.cache
 def _cached_boot(source):
     """One export and one node boot per fixture, per process.
 

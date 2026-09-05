@@ -6,7 +6,7 @@ combined effect of fixing every element in a group at once via
 hand-built fixtures, no run-dir/JSON needed (same pattern
 `tests/unit/test_replay.py` already uses).
 """
-from bga.ingest.models import Element, Graph, DependencyEdge, NormalizedTask, Resource, TaskKey, TaskKind
+from bga.ingest.models import DependencyEdge, Element, Graph, NormalizedTask, Resource, TaskKey, TaskKind
 from bga.replay.scheduler import ReplayScheduler
 from bga.structural.batching import compute_batch_opportunities
 

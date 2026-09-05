@@ -56,7 +56,8 @@ import pytest
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 sys.path.insert(0, str(REPO / "tests"))
-from pages import snapshot_copy    # noqa: E402
+from pages import snapshot_copy
+
 node = shutil.which("node")
 needs_node = pytest.mark.skipif(node is None, reason="node is not installed")
 GOLDEN = REPO / "tests" / "fixtures" / "golden" / "mixed_task_kinds"
@@ -103,12 +104,12 @@ class TestASparklineDrawsWhatItWasGiven:
     them would have to produce the same coordinates to pass."""
 
     def _drawn(self, values):
-        return _js("""
-const { sparkline } = await import("./bga/viewer/drawings.js");
-const block = sparkline(%s, { unit: "level", grade: "annotation" });
+        return _js(f"""
+const {{ sparkline }} = await import("./bga/viewer/drawings.js");
+const block = sparkline({json.dumps(values)}, {{ unit: "level", grade: "annotation" }});
 const svg = all(block, (n) => n.tagName === "svg")[0] ?? null;
 const line = svg && all(svg, (n) => n.tagName === "polyline")[0];
-console.log(JSON.stringify({
+console.log(JSON.stringify({{
   drawn: block.attrs["data-drawn"],
   points: block.attrs["data-points"],
   values: svg ? svg.attrs["data-values"] : null,
@@ -117,8 +118,8 @@ console.log(JSON.stringify({
     (n) => [n.attrs["data-mark"], n.attrs["data-value"], n.attrs.cx, n.attrs.cy]) : [],
   sentence: text(all(block,
     (n) => n.attrs["data-role"] === "series-sentence")[0]),
-}));
-""" % json.dumps(values))
+}}));
+""")
 
     def test_each_point_lands_where_its_value_puts_it(self):
         values = [4, 1, 9, 3, 7]
@@ -176,21 +177,21 @@ console.log(JSON.stringify({
 @needs_node
 class TestAPublishedStripPrintsWhatWasPublished:
     def _drawn(self, distribution, count_key="n"):
-        return _js("""
-const { strip } = await import("./bga/viewer/drawings.js");
-const block = strip(%s, { countKey: %s, grade: "annotation" });
+        return _js(f"""
+const {{ strip }} = await import("./bga/viewer/drawings.js");
+const block = strip({json.dumps(distribution)}, {{ countKey: {json.dumps(count_key)}, grade: "annotation" }});
 const svg = all(block, (n) => n.tagName === "svg")[0] ?? null;
-console.log(JSON.stringify({
+console.log(JSON.stringify({{
   drawn: block.attrs["data-drawn"], n: block.attrs["data-n"],
   printed: svg ? svg.attrs["data-printed"] : null,
-  attrs: svg ? { min: svg.attrs["data-min"], max: svg.attrs["data-max"],
-                 p50: svg.attrs["data-p50"], p95: svg.attrs["data-p95"] } : null,
+  attrs: svg ? {{ min: svg.attrs["data-min"], max: svg.attrs["data-max"],
+                 p50: svg.attrs["data-p50"], p95: svg.attrs["data-p95"] }} : null,
   ticks: svg ? all(svg, (n) => n.attrs["data-mark"]).map(
     (n) => [n.attrs["data-mark"], n.attrs["data-value"], n.attrs.x1]) : [],
   sentence: text(all(block,
     (n) => n.attrs["data-role"] === "density-sentence")[0]),
-}));
-""" % (json.dumps(distribution), json.dumps(count_key)))
+}}));
+""")
 
     def test_every_tick_sits_where_its_value_puts_it(self):
         shape = {"n": 11, "min": 0, "max": 100,
@@ -251,19 +252,19 @@ class TestASelfBuiltStripPrintsNoDerivedNumber:
     the no-arithmetic line moves."""
 
     def _drawn(self, values):
-        return _js("""
-const { columnStrip } = await import("./bga/viewer/drawings.js");
-const block = columnStrip(%s, { grade: "annotation" });
+        return _js(f"""
+const {{ columnStrip }} = await import("./bga/viewer/drawings.js");
+const block = columnStrip({json.dumps(values)}, {{ grade: "annotation" }});
 const svg = all(block, (n) => n.tagName === "svg")[0] ?? null;
-console.log(JSON.stringify({
+console.log(JSON.stringify({{
   drawn: block.attrs["data-drawn"], n: block.attrs["data-n"],
   printed: svg ? svg.attrs["data-printed"] : null,
   ticks: svg ? all(svg, (n) => n.attrs["data-mark"]).map(
     (n) => [n.attrs["data-mark"], n.attrs["data-value"], n.attrs.x1]) : [],
   sentence: text(all(block,
     (n) => n.attrs["data-role"] === "density-sentence")[0]),
-}));
-""" % json.dumps(values))
+}}));
+""")
 
     def test_the_ticks_exist_as_geometry(self):
         out = self._drawn([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])

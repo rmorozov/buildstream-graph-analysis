@@ -23,8 +23,8 @@ REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 sys.path.insert(0, str(REPO / "tools"))
 
-import dev_close_task as close_task  # noqa: E402
-import dev_touching  # noqa: E402
+import dev_close_task as close_task
+import dev_touching
 
 MAKEFILE = (REPO / "Makefile").read_text(encoding="utf-8")
 PYPROJECT = (REPO / "pyproject.toml").read_text(encoding="utf-8")

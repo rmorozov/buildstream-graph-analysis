@@ -49,7 +49,7 @@ import pytest
 REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 
-from tools.bst_native_build_tracer import (    # noqa: E402
+from tools.bst_native_build_tracer import (
     census_project,
     census_spine_verdicts,
     format_census_coverage,
@@ -238,7 +238,7 @@ class TestTheSentenceMatchesTheVerdict:
         # One declared element with no verdict: the shape `unassessed`
         # counts, reached here by handing the formatter a short dict
         # rather than by breaking the census.
-        partial = {name: needs for name, needs in list(verdicts.items())[:1]}
+        partial = dict(list(verdicts.items())[:1])
         line = format_census_coverage(project, partial, set())
         assert "unassessed" in line, line
         assert "the spine is not needed" not in line, (

@@ -10,7 +10,7 @@ Implements data structures for:
 """
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Any
+from typing import Any, Optional
 
 
 @dataclass(frozen=True)
@@ -46,19 +46,19 @@ class BottleneckAnalysis:
     Part 32: Identifies structural bottlenecks that limit parallelism.
     """
     # Key bottlenecks
-    choke_points: List[str]  # Element keys that are choke points
-    choke_point_impact: Dict[str, int]  # Downstream count per choke point
+    choke_points: list[str]  # Element keys that are choke points
+    choke_point_impact: dict[str, int]  # Downstream count per choke point
     
     # Resource bottlenecks (structural)
-    resource_contention: Dict[str, List[str]]  # resource_type -> [element_keys]
+    resource_contention: dict[str, list[str]]  # resource_type -> [element_keys]
     
     # Serialization chains
-    longest_serial_chain: List[str]
+    longest_serial_chain: list[str]
     serial_chain_length: int
     
     # Fan-in/fan-out imbalances
-    high_fanin_elements: List[tuple]  # [(key, fanin_count), ...]
-    high_fanout_elements: List[tuple]  # [(key, fanout_count), ...]
+    high_fanin_elements: list[tuple]  # [(key, fanin_count), ...]
+    high_fanout_elements: list[tuple]  # [(key, fanout_count), ...]
 
 
 @dataclass(frozen=True)
@@ -73,7 +73,7 @@ class LevelOccupancy:
     """
     level: int
     width: int
-    elements: List[str]
+    elements: list[str]
 
 
 @dataclass(frozen=True)
@@ -84,8 +84,8 @@ class ParallelismProfile:
     """
     # UX-641: one row per level, each naming its members. This was
     # `List[int]` and always `[0..n-1]` - the row number, published.
-    levels: List[LevelOccupancy]
-    width_at_level: List[int]  # Number of elements at each level
+    levels: list[LevelOccupancy]
+    width_at_level: list[int]  # Number of elements at each level
     
     # Statistics
     max_width: int
@@ -93,7 +93,7 @@ class ParallelismProfile:
     mean_width: float
     
     # Cumulative
-    cumulative_work: List[int]  # Total elements up to each level
+    cumulative_work: list[int]  # Total elements up to each level
 
     # UX-49: `mean_width / max_width` - how *uniform* the level widths
     # are, which is not how parallel the build is and never was. Under
@@ -133,10 +133,10 @@ class SensitivityResult:
     `element_kind` (`P4-12`'s own precedent).
     """
     # Per-element sensitivity
-    sensitivity_scores: Dict[str, float]  # element_key -> improvement_potential
+    sensitivity_scores: dict[str, float]  # element_key -> improvement_potential
     
     # Top opportunities
-    top_opportunities: List[tuple]  # [(key, score, impact), ...]
+    top_opportunities: list[tuple]  # [(key, score, impact), ...]
     
     # Aggregate metrics
     #
@@ -162,7 +162,7 @@ class SensitivityResult:
     critical_path_us: int  # Weighted longest path - what the two above are relative to
     
     # Critical path sensitivity
-    cp_sensitivity: Dict[str, float]  # How much CP changes per unit duration change
+    cp_sensitivity: dict[str, float]  # How much CP changes per unit duration change
 
 
 @dataclass(frozen=True)
@@ -172,15 +172,15 @@ class DeferrabilityResult:
     Part 35: Which elements could be deferred without blocking dependents?
     """
     # Leaf classification
-    deferrable_leaves: List[str]  # Leaves that can be deferred
-    non_deferrable_leaves: List[str]  # Leaves that block something
+    deferrable_leaves: list[str]  # Leaves that can be deferred
+    non_deferrable_leaves: list[str]  # Leaves that block something
     
     # Deferral impact
-    deferral_savings_us: Dict[str, int]  # Time saved per deferrable leaf
-    deferral_risk: Dict[str, str]  # Risk level: 'low', 'medium', 'high'
+    deferral_savings_us: dict[str, int]  # Time saved per deferrable leaf
+    deferral_risk: dict[str, str]  # Risk level: 'low', 'medium', 'high'
     
     # Recommendations
-    recommended_deferrals: List[str]  # Leaves recommended for deferral
+    recommended_deferrals: list[str]  # Leaves recommended for deferral
     total_deferrable_work_us: int
 
 
@@ -191,13 +191,13 @@ class HistoricalTrend:
     Part 36: How metrics evolve over time.
     """
     # Time series data
-    run_ids: List[str]
-    timestamps: List[int]  # Unix timestamps
+    run_ids: list[str]
+    timestamps: list[int]  # Unix timestamps
     
     # Metric evolution
-    duration_trend: List[int]  # Total duration per run (microseconds)
-    efficiency_trend: List[float]  # Efficiency ratio per run
-    parallelism_trend: List[float]  # Avg parallelism per run
+    duration_trend: list[int]  # Total duration per run (microseconds)
+    efficiency_trend: list[float]  # Efficiency ratio per run
+    parallelism_trend: list[float]  # Avg parallelism per run
     
     # Statistical analysis
     duration_slope: float  # Rate of change in duration
@@ -205,7 +205,7 @@ class HistoricalTrend:
     efficiency_slope: float
     
     # Anomaly detection
-    anomalies: List[dict]  # [{run_id, metric, deviation}, ...]
+    anomalies: list[dict]  # [{run_id, metric, deviation}, ...]
     
     # Forecasting (simple linear projection)
     forecast_next_duration: Optional[int]
@@ -231,7 +231,7 @@ class StructuralAnalysisResult:
     historical: Optional[HistoricalTrend] = None
     
     # Summary
-    summary: Dict[str, Any] = field(default_factory=dict)
+    summary: dict[str, Any] = field(default_factory=dict)
 
 
 # UX-288: the deferral-risk rule, extracted so it has one home.

@@ -81,7 +81,7 @@ def _analysis_and_parts(run_dir):
 
 def _native(unused, elements=LIBS):
     return {
-        "by_element": {uid: 1 for uid in elements},
+        "by_element": dict.fromkeys(elements, 1),
         "per_element_parallelism": [],
         "cpu_time": {"per_element": {}},
         "element_attribution": {"reliable": True, "unattributed_processes": 0},

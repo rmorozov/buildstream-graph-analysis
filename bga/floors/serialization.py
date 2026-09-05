@@ -4,14 +4,14 @@ formula): resources declared exclusive cannot overlap at all, regardless
 of declared capacity, so the bound is the full observed work for that
 resource - not work/capacity like a normal pooled resource.
 """
-from typing import List, Optional
+from typing import Optional
 
 from ..ingest.models import NormalizedTask, RunContext
 from .capacity import compute_resource_work_us
 
 
 def compute_exclusive_serialization_bound(
-    normalized_tasks: List[NormalizedTask],
+    normalized_tasks: list[NormalizedTask],
     run_context: Optional[RunContext],
 ) -> int:
     """Hard serialization floor for resources in run_context.exclusive_resources."""

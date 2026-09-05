@@ -40,8 +40,8 @@ import pytest
 REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 
-from bga import plane2, run_store  # noqa: E402
-from tools.bga_view import payloads  # noqa: E402
+from bga import plane2, run_store
+from tools.bga_view import payloads
 
 FIXTURE = REPO / "tests/fixtures/macro_micro"
 GOLDEN = REPO / "tests/fixtures/golden/mixed_task_kinds"
@@ -51,9 +51,8 @@ def _terminal(run, *extra):
     from bga.cli import main
 
     buffer = io.StringIO()
-    with contextlib.redirect_stdout(buffer):
-        with contextlib.redirect_stderr(io.StringIO()):
-            main(["analyze", str(run), "--format", "json", *extra])
+    with contextlib.redirect_stdout(buffer), contextlib.redirect_stderr(io.StringIO()):
+        main(["analyze", str(run), "--format", "json", *extra])
     return json.loads(buffer.getvalue())
 
 
@@ -61,9 +60,8 @@ def _text(run, *extra):
     from bga.cli import main
 
     buffer = io.StringIO()
-    with contextlib.redirect_stdout(buffer):
-        with contextlib.redirect_stderr(io.StringIO()):
-            main(["analyze", str(run), *extra])
+    with contextlib.redirect_stdout(buffer), contextlib.redirect_stderr(io.StringIO()):
+        main(["analyze", str(run), *extra])
     return buffer.getvalue()
 
 

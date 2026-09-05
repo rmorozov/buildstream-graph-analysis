@@ -37,8 +37,8 @@ import pytest
 REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 
-from tools import bga_timeline  # noqa: E402
-from tools.native_trace import trackevent  # noqa: E402
+from tools import bga_timeline
+from tools.native_trace import trackevent
 
 QUESTIONS_JS = REPO / "bga/viewer/questions.js"
 DICTIONARY = REPO / "docs/spec/trace-dictionary.md"
@@ -277,7 +277,7 @@ class TestTheEmittedTraceCarriesWhatTheQuestionsScopeBy:
     @pytest.fixture(scope="class")
     def decoded(self):
         sys.path.insert(0, str(REPO / "tests/unit"))
-        from test_the_timeline_speaks_perfetto import _snapshot, _fields
+        from test_the_timeline_speaks_perfetto import _fields, _snapshot
 
         tmp = pathlib.Path(tempfile.mkdtemp())
         try:

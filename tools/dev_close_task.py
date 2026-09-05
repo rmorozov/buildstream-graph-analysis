@@ -470,13 +470,11 @@ def index_header():
                                      name))
     rows = ["| Topic | Open | Total |", "|---|---|---|"]
     for topic in every:
-        rows.append("| %s | %d | %d |" % (
-            topic,
-            sum(1 for uid in open_ids if of[uid] == topic),
-            sum(1 for uid in of if of[uid] == topic)))
-    sentence = ("%d scenarios: **%d open**, %d closed."
-                % (len(open_ids) + len(closed_ids), len(open_ids),
-                   len(closed_ids)))
+        open_here = sum(1 for uid in open_ids if of[uid] == topic)
+        every_here = sum(1 for uid in of if of[uid] == topic)
+        rows.append(f"| {topic} | {open_here} | {every_here} |")
+    sentence = (f"{len(open_ids) + len(closed_ids)} scenarios: "
+                f"**{len(open_ids)} open**, {len(closed_ids)} closed.")
     return sentence, "\n".join(rows)
 
 
@@ -496,9 +494,8 @@ def _index_is_derived():
     if not written:
         problems.append("the index has no counts sentence to check")
     elif written.group(0) != sentence:
-        problems.append("the counts sentence says %r; the rows say %r "
-                        "- `--check --write` rewrites it"
-                        % (written.group(0), sentence))
+        problems.append(f"the counts sentence says {written.group(0)!r}; the rows say {sentence!r} "
+                        "- `--check --write` rewrites it")
     block = TOPIC_TABLE.search(text)
     if not block:
         problems.append("the index has no topic table to check")
@@ -749,7 +746,7 @@ def figures_removed(diff: str):
     per_file, gone, kept = {}, set(), set()
 
     def close():
-        per_file.update({d: None for d in gone - kept})
+        per_file.update(dict.fromkeys(gone - kept))
 
     for line in diff.splitlines():
         if line.startswith("+++ "):
@@ -886,7 +883,7 @@ def move(uid: str, note: str) -> int:
                       body, count=1, flags=re.M)
     path.write_text(body, encoding="utf-8")
 
-    cells = [c for c in line.split("|")]
+    cells = list(line.split("|"))
     scenario, priority, serves = cells[2].strip(), cells[4].strip(), cells[5].strip()
     # The last cell is the **task file link**, not the scenario text
     # again. The first draft of this function copied the scenario into

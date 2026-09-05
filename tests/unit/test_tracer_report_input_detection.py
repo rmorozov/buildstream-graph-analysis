@@ -12,7 +12,9 @@ import json
 import pytest
 
 from tools.bst_native_build_tracer import (
-    EmptyTraceError, load_and_summarize, load_saved_report,
+    EmptyTraceError,
+    load_and_summarize,
+    load_saved_report,
 )
 
 _SAVED_REPORT = {
@@ -104,9 +106,9 @@ def test_an_option_after_the_positionals_is_a_usage_error(tmp_path, capsys):
     """`cmd` is argparse.REMAINDER, so a misplaced option was swallowed
     into the wrapped command and surfaced as a bare
     `FileNotFoundError: '--wrapped-log'` from subprocess.run."""
-    from tools.bst_native_build_tracer import main
-
     import sys
+
+    from tools.bst_native_build_tracer import main
     argv = sys.argv
     sys.argv = [
         "bst_native_build_tracer.py", "run", "PROJ", "OUT",

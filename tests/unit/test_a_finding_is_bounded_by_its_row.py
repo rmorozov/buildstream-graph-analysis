@@ -36,9 +36,9 @@ import pytest
 REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 
-from bga import contracts, plane2  # noqa: E402
-from bga.correlate import _other_element_count  # noqa: E402
-from tools.bst_native_build_tracer import (  # noqa: E402
+from bga import contracts, plane2
+from bga.correlate import _other_element_count
+from tools.bst_native_build_tracer import (
     REDUNDANCY_FINDINGS_MAX,
     detect_redundant_operations,
 )

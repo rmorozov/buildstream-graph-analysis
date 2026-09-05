@@ -41,7 +41,7 @@ REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 sys.path.insert(0, str(REPO / "tests"))
 
-import pages    # noqa: E402
+import pages
 
 #: Words that assert a maximum. A finding using one is claiming
 #: something about every other candidate, so it either names the

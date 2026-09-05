@@ -185,16 +185,16 @@ class TestThePageCopiesRatherThanWords:
         out = subprocess.run(
             [node, "--input-type=module", "-e", '''
               const shim = await import(process.env.BGA_DOM_SHIM);
-              const { copyButton } = await import("./bga/viewer/questions.js");
-              const text = %s;
-              const button = copyButton((t, a = {}) => {
+              const {{ copyButton }} = await import("./bga/viewer/questions.js");
+              const text = {};
+              const button = copyButton((t, a = {{}}) => {{
                 const n = shim.makeNode(t);
                 for (const [k, v] of Object.entries(a)) n.setAttribute(k, v);
                 return n;
-              }, text);
+              }}, text);
               button.listeners.click[0]();
-              console.log(JSON.stringify({ copy: button.attrs["data-copy"] }));
-            ''' % json.dumps(finding["copy_text"])],
+              console.log(JSON.stringify({{ copy: button.attrs["data-copy"] }}));
+            '''.format(json.dumps(finding["copy_text"]))],
             capture_output=True, text=True, cwd=REPO, timeout=60,
             env=dict(os.environ, BGA_DOM_SHIM=os.path.join(REPO, "tests", "dom_shim.mjs")))
         assert out.returncode == 0, out.stderr

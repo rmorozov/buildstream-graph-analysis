@@ -20,8 +20,8 @@ all of them.
 """
 import json
 import os
-import subprocess
 import shutil
+import subprocess
 import tempfile
 
 import pytest

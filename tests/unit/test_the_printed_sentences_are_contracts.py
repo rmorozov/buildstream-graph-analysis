@@ -42,9 +42,9 @@ import pytest
 REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 
-from bga import cli  # noqa: E402
-from bga.tools_dispatch import TOOL_ALIASES  # noqa: E402
-from tools import bga_snapshot  # noqa: E402
+from bga import cli
+from bga.tools_dispatch import TOOL_ALIASES
+from tools import bga_snapshot
 
 # The alias parsers this guard can reach. `bga snapshot` is the one the
 # advice block prints; a step that starts printing another alias needs

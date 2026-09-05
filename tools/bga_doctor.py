@@ -34,7 +34,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
-from typing import List, Optional
+from typing import Optional
 
 # Findings-style ids (UX-75), so a script can key on the check rather
 # than on its prose.
@@ -175,7 +175,7 @@ def check_compiler() -> dict:
     return _check("c-compiler", OK, f"C compiler at {cc} links shared and static")
 
 
-def _compiles(argv: List[str]) -> bool:
+def _compiles(argv: list[str]) -> bool:
     """Whether a trivial program links with these flags.
 
     Fed on stdin so nothing is written anywhere, and output goes to
@@ -206,7 +206,8 @@ def check_root_spanning_sources(project_dir: Optional[str] = None) -> dict:
     if not project_dir:
         return _check("sources-scoped", SKIP, "no project given")
     from .bst_native_build_tracer import (
-        _local_source_paths, discover_element_names,
+        _local_source_paths,
+        discover_element_names,
     )
     root = os.path.abspath(project_dir)
     store = os.path.join(root, ".bga")
@@ -310,7 +311,7 @@ def check_sleep_policy() -> Optional[dict]:
                 "way, and refuses to verdict."))
 
 
-def check_scratch(project_dir: Optional[str] = None) -> List[dict]:
+def check_scratch(project_dir: Optional[str] = None) -> list[dict]:
     """Can bga execute the shim it writes, and is `TMPDIR` sane?
 
     UX-155, from a field report that took two steps and where bga
@@ -439,7 +440,7 @@ def check_plane3(project_name: Optional[str] = None) -> dict:
                   f"{len(projects)} project(s) with logs in {root}")
 
 
-def check_project_loads(project_dir: str) -> List[dict]:
+def check_project_loads(project_dir: str) -> list[dict]:
     """The project loads, and every plugin it names is installed.
 
     "No element plugin registered for kind cmake" is the failure this
@@ -523,7 +524,7 @@ def element_path(project_dir: str) -> str:
     return _element_path(project_dir)
 
 
-def discover_elements(project_dir: str) -> List[str]:
+def discover_elements(project_dir: str) -> list[str]:
     """Element names this project declares, as `bst show` takes them.
 
     Sorted shallowest first, then by name: a top-level element is the
@@ -556,7 +557,7 @@ def _plugins_package_installed() -> bool:
     return importlib.util.find_spec("buildstream_plugins") is not None
 
 
-def check_staged_sources(project_dir: str) -> List[dict]:
+def check_staged_sources(project_dir: str) -> list[dict]:
     """What the census can say without building anything (`UX-105`).
 
     Two different problems, deliberately separate findings: a sandbox
@@ -625,7 +626,7 @@ def check_staged_sources(project_dir: str) -> List[dict]:
     return findings
 
 
-def run_checks(project_dir: Optional[str] = None) -> List[dict]:
+def run_checks(project_dir: Optional[str] = None) -> list[dict]:
     checks = [check_bst(), check_bwrap(), check_compiler()]
     checks.append(check_stale_casd())
     sleep_policy = check_sleep_policy()
@@ -647,7 +648,7 @@ def run_checks(project_dir: Optional[str] = None) -> List[dict]:
 _MARK = {OK: "ok  ", FAIL: "FAIL", WARN: "warn", SKIP: "skip"}
 
 
-def format_text(checks: List[dict], project_dir: Optional[str]) -> str:
+def format_text(checks: list[dict], project_dir: Optional[str]) -> str:
     lines = ["=" * 60, "bga doctor", "=" * 60]
     if project_dir:
         lines.append(f"Project: {project_dir}")
@@ -723,7 +724,7 @@ def _find_stageable_runtime() -> Optional[str]:
     return None
 
 
-def check_capture_chain(project_dir: Optional[str] = None) -> List[dict]:
+def check_capture_chain(project_dir: Optional[str] = None) -> list[dict]:
     """UX-149: run the whole chain on a canned workload.
 
     `bga doctor` proves the *parts* - bst runs, bwrap builds a sandbox
@@ -748,7 +749,9 @@ def check_capture_chain(project_dir: Optional[str] = None) -> List[dict]:
                    "with a shell in it, and this check will not build one")]
 
     from .bst_native_build_tracer import (
-        count_build_tasks, load_and_summarize, read_capture_diagnostics,
+        count_build_tasks,
+        load_and_summarize,
+        read_capture_diagnostics,
         run_traced_build,
     )
 
@@ -774,7 +777,7 @@ def check_capture_chain(project_dir: Optional[str] = None) -> List[dict]:
                 project, ["bst", "--no-colors", "build", "probe.bst"], raw,
                 wrapped_log_path=plane1, trace_opens=True,
                 diagnostics_path=diagnostics, trace_spine="auto")
-        except Exception as error:  # noqa: BLE001 - reported as the finding
+        except Exception as error:
             return [_check("capture-chain", FAIL,
                            f"the probe capture could not start: {error}",
                            remedy="the message above is the first broken link")]
@@ -891,9 +894,9 @@ def _isolated_home(home: str) -> dict:
     return env
 
 
-def _tail(path: str, lines: int = 6) -> List[str]:
+def _tail(path: str, lines: int = 6) -> list[str]:
     try:
-        with open(path, "r", encoding="utf-8", errors="replace") as handle:
+        with open(path, encoding="utf-8", errors="replace") as handle:
             return handle.read().splitlines()[-lines:]
     except OSError:
         return []
@@ -905,7 +908,7 @@ def _CompactRawHelp(prog):
     from bga.help_format import CompactRawHelp
     return CompactRawHelp(prog)
 
-def main(argv: Optional[List[str]] = None) -> int:
+def main(argv: Optional[list[str]] = None) -> int:
     parser = argparse.ArgumentParser(
         description=HELP, formatter_class=_CompactRawHelp,
     )

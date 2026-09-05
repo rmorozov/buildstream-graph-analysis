@@ -12,18 +12,19 @@ Implements Parts 6-12:
 """
 
 import logging
-from dataclasses import dataclass, field
-from typing import Dict, Iterator, List, Optional, Set, Tuple
 from bisect import bisect_left, bisect_right
 from collections import defaultdict
+from collections.abc import Iterator
+from dataclasses import dataclass, field
+from typing import Optional
 
 from ..ingest.models import (
-    NormalizedTask,
     AttributionCategory,
+    NormalizedTask,
     Resource,
+    RunContext,
     TaskKey,
     TaskKind,
-    RunContext,
 )
 
 logger = logging.getLogger(__name__)
@@ -113,7 +114,7 @@ class BlameChainNode:
     execution_start: int
     execution_end: int
     dependency_wait_start: Optional[int] = None
-    wait_breakdown: List[Tuple[AttributionCategory, int, int]] = field(default_factory=list)
+    wait_breakdown: list[tuple[AttributionCategory, int, int]] = field(default_factory=list)
     responsible_predecessor: Optional[TaskKey] = None
     resource_wait_info: Optional[dict] = None
     scheduler_wait_info: Optional[dict] = None
@@ -153,7 +154,7 @@ class TaskAttribution:
     resource_wait_us: int = 0
     scheduler_wait_us: int = 0
     retry_wait_us: int = 0
-    phase_annotations: List[str] = field(default_factory=list)
+    phase_annotations: list[str] = field(default_factory=list)
     
     def to_dict(self) -> dict:
         """Convert to dictionary representation."""
@@ -184,18 +185,18 @@ class _ResourceTimeline:
     # millions of times, and both `TaskKey.__eq__` (a dataclass
     # comparison) and `str(task_key)` are far more expensive than a
     # string identity test against a value computed once per run.
-    points: List[int]
-    active: List[Tuple[Tuple[str, NormalizedTask], ...]]
+    points: list[int]
+    active: list[tuple[tuple[str, NormalizedTask], ...]]
     # The same holders as a key set per slice, for `occupancy_at`.
-    active_keys: List[frozenset]
+    active_keys: list[frozenset]
     # How many tasks contribute a boundary at each point (a task adds one
     # for its start and one for its finish, so a zero-duration task adds
     # two at the same instant). Needed to reproduce the original's
     # exclusion of the *waiting* task's own boundaries: a point that only
     # that task contributes is not a boundary for its own gap.
-    boundary_refs: Dict[int, int]
+    boundary_refs: dict[int, int]
 
-    def holders_at(self, timestamp: int) -> Tuple[Tuple[str, NormalizedTask], ...]:
+    def holders_at(self, timestamp: int) -> tuple[tuple[str, NormalizedTask], ...]:
         """Tasks holding the resource at `timestamp`. O(log N)."""
         if not self.active:
             return ()
@@ -204,7 +205,7 @@ class _ResourceTimeline:
             return ()
         return self.active[index]
 
-    def change_points_within(self, start: int, end: int) -> List[int]:
+    def change_points_within(self, start: int, end: int) -> list[int]:
         """Change points strictly inside `(start, end)`. O(log N + k)."""
         left = bisect_right(self.points, start)
         right = bisect_left(self.points, end)
@@ -238,11 +239,11 @@ class BlameChainAnalyzer:
     
     def __init__(
         self,
-        normalized_tasks: List[NormalizedTask],
+        normalized_tasks: list[NormalizedTask],
         run_context: Optional[RunContext] = None,
-        phase_spans: Optional[List] = None,
-        active_tasks_at_time: Optional[Dict[int, Set[str]]] = None,
-        resource_capacity: Optional[Dict[Resource, int]] = None,
+        phase_spans: Optional[list] = None,
+        active_tasks_at_time: Optional[dict[int, set[str]]] = None,
+        resource_capacity: Optional[dict[Resource, int]] = None,
         max_jobs: Optional[int] = None,
     ):
         """
@@ -266,26 +267,26 @@ class BlameChainAnalyzer:
         self.max_jobs = max_jobs
         
         # Build task lookup
-        self.task_by_key: Dict[str, NormalizedTask] = {
+        self.task_by_key: dict[str, NormalizedTask] = {
             str(t.task_key): t for t in self.tasks
         }
         
         # Build predecessor/successor maps based on ready times
         # A task's predecessors are those that finish at or before its ready time
-        self.predecessors: Dict[str, List[str]] = defaultdict(list)
-        self.successors: Dict[str, List[str]] = defaultdict(list)
+        self.predecessors: dict[str, list[str]] = defaultdict(list)
+        self.successors: dict[str, list[str]] = defaultdict(list)
         self._build_dependency_graph()
         
         # Cache for blame chain computation
-        self._blame_chain_cache: Dict[str, BlameChainNode] = {}
-        self._attribution_cache: Dict[str, TaskAttribution] = {}
+        self._blame_chain_cache: dict[str, BlameChainNode] = {}
+        self._attribution_cache: dict[str, TaskAttribution] = {}
 
         # UX-42: per-resource occupancy timeline, built once per run.
         # See _build_resource_timelines.
-        self._resource_timelines: Optional[Dict[Resource, _ResourceTimeline]] = None
+        self._resource_timelines: Optional[dict[Resource, _ResourceTimeline]] = None
         # UX-531: the same structure over *every* task, for
         # classify_scheduler_wait's true-concurrency sweep.
-        self._all_tasks_timeline_cache: Optional['_ResourceTimeline'] = None
+        self._all_tasks_timeline_cache: Optional[_ResourceTimeline] = None
 
     def _resource_timeline(self, resource: Resource) -> Optional['_ResourceTimeline']:
         """Occupancy timeline for one resource, built lazily and once.
@@ -314,7 +315,7 @@ class BlameChainAnalyzer:
         1202-task scale fixture at ~16-way concurrency that is tens of
         thousands of references, not a task-by-task matrix.
         """
-        by_resource: Dict[Resource, List[NormalizedTask]] = defaultdict(list)
+        by_resource: dict[Resource, list[NormalizedTask]] = defaultdict(list)
         for task in self.tasks:
             for resource in task.resources:
                 by_resource[resource].append(task)
@@ -325,7 +326,7 @@ class BlameChainAnalyzer:
         }
 
     @staticmethod
-    def _timeline_over(tasks: List[NormalizedTask]) -> '_ResourceTimeline':
+    def _timeline_over(tasks: list[NormalizedTask]) -> '_ResourceTimeline':
         """One sweep of `tasks` into change points and per-slice holders."""
         # Zero-duration tasks can never cover a sub-interval (which
         # is always non-empty), so they are excluded here exactly as
@@ -336,7 +337,7 @@ class BlameChainAnalyzer:
         # start == finish contributes a split point even though it
         # can never hold the resource across a non-empty interval.
         # The original built its boundary set the same way.
-        boundary_refs: Dict[int, int] = defaultdict(int)
+        boundary_refs: dict[int, int] = defaultdict(int)
         for entry in tasks:
             boundary_refs[entry.start_us] += 1
             boundary_refs[entry.finish_us] += 1
@@ -346,13 +347,13 @@ class BlameChainAnalyzer:
         # interval - `start <= t1 and finish >= t2` excluded
         # zero-duration tasks by construction.
         spans = [t for t in tasks if t.finish_us > t.start_us]
-        active: List[Tuple[Tuple[str, NormalizedTask], ...]] = []
-        active_keys: List[frozenset] = []
+        active: list[tuple[tuple[str, NormalizedTask], ...]] = []
+        active_keys: list[frozenset] = []
         if points:
             # Sweep once: tasks sorted by start, released by finish.
             ordered = sorted(spans, key=lambda t: t.start_us)
             cursor = 0
-            live: List[Tuple[str, NormalizedTask]] = []
+            live: list[tuple[str, NormalizedTask]] = []
             for point in points[:-1]:
                 while cursor < len(ordered) and ordered[cursor].start_us <= point:
                     entry = ordered[cursor]
@@ -385,7 +386,7 @@ class BlameChainAnalyzer:
         # finish exactly at this task's ready time" lookup into an O(1)
         # dict access per task instead of an O(N) rescan (was O(N^2)
         # overall, run on every analysis - Part 41).
-        tasks_by_finish: Dict[int, List] = defaultdict(list)
+        tasks_by_finish: dict[int, list] = defaultdict(list)
         for other in self.tasks:
             tasks_by_finish[other.finish_us].append(other)
 
@@ -402,8 +403,8 @@ class BlameChainAnalyzer:
     def compute_ready_time(
         self,
         task_key_str: str,
-        task_finish_times: Dict[str, int],
-        explicit_predecessors: Dict[str, List[str]],
+        task_finish_times: dict[str, int],
+        explicit_predecessors: dict[str, list[str]],
     ) -> int:
         """
         Compute ready time for a task (Part 7).
@@ -433,9 +434,9 @@ class BlameChainAnalyzer:
     def select_dependency_blame(
         self,
         task_key_str: str,
-        predecessors: List[str],
-        task_finish_times: Dict[str, int],
-        task_depths: Dict[str, int],
+        predecessors: list[str],
+        task_finish_times: dict[str, int],
+        task_depths: dict[str, int],
     ) -> Optional[str]:
         """
         Select the predecessor to blame for dependency wait (Part 7.1).
@@ -471,11 +472,11 @@ class BlameChainAnalyzer:
     def classify_resource_wait(
         self,
         task: NormalizedTask,
-        active_tasks_at_time: Dict[int, Set[str]],
-        resource_capacity: Dict[Resource, int],
+        active_tasks_at_time: dict[int, set[str]],
+        resource_capacity: dict[Resource, int],
         window_start: Optional[int] = None,
         window_end: Optional[int] = None,
-    ) -> Tuple[bool, Optional[dict]]:
+    ) -> tuple[bool, Optional[dict]]:
         """
         Classify resource wait intervals (Part 8).
 
@@ -577,8 +578,8 @@ class BlameChainAnalyzer:
         # actually freeing up. UX-539: nothing past that run is read, so
         # nothing past it is built.
         saturated_until = wait_start
-        holder_time_us: Dict[str, int] = defaultdict(int)
-        for is_saturated, t1, t2, interval_holder_time_us in self._iter_saturation_intervals(
+        holder_time_us: dict[str, int] = defaultdict(int)
+        for is_saturated, _t1, t2, interval_holder_time_us in self._iter_saturation_intervals(
             task, wait_start, wait_end, resource_capacity
         ):
             if not is_saturated:
@@ -598,8 +599,8 @@ class BlameChainAnalyzer:
         task: NormalizedTask,
         window_start: int,
         window_end: int,
-        resource_capacity: Dict[Resource, int],
-    ) -> List[Tuple[bool, int, int, Dict[str, int]]]:
+        resource_capacity: dict[Resource, int],
+    ) -> list[tuple[bool, int, int, dict[str, int]]]:
         """All maximal constant-saturation sub-intervals of
         [window_start, window_end) for `task`'s required resources - not
         just the leading saturated prefix `classify_resource_wait` itself
@@ -630,8 +631,8 @@ class BlameChainAnalyzer:
         task: NormalizedTask,
         window_start: int,
         window_end: int,
-        resource_capacity: Dict[Resource, int],
-    ) -> Iterator[Tuple[bool, int, int, Dict[str, int]]]:
+        resource_capacity: dict[Resource, int],
+    ) -> Iterator[tuple[bool, int, int, dict[str, int]]]:
         """`_resource_saturation_intervals`, yielded in order.
 
         UX-539: both callers break at the end of the leading run, so
@@ -738,7 +739,7 @@ class BlameChainAnalyzer:
                 yield (False, t1, t2, {})
                 continue
 
-            holder_time_us: Dict[str, int] = dict.fromkeys(holder_keys, t2 - t1)
+            holder_time_us: dict[str, int] = dict.fromkeys(holder_keys, t2 - t1)
             holder_time_us.pop(self_key, None)
             yield (True, t1, t2, holder_time_us)
 
@@ -747,7 +748,7 @@ class BlameChainAnalyzer:
         task: NormalizedTask,
         wait_start: int,
         wait_end: int,
-        holder_time_us: Dict[str, int],
+        holder_time_us: dict[str, int],
         explained_us: int,
     ) -> dict:
         """Builds `classify_resource_wait`'s own public holder_info
@@ -905,13 +906,9 @@ class BlameChainAnalyzer:
         boundaries.update(timeline.change_points_within(wait_start, wait_end))
         points = sorted(boundaries)
 
-        for t1, t2 in zip(points, points[1:]):
-            if timeline.occupancy_at(t1, self_key) < max_jobs:
-                return True
-
-        return False
+        return any(timeline.occupancy_at(t1, self_key) < max_jobs for t1, t2 in zip(points, points[1:]))
     
-    def _overlapping_phases(self, start_us: int, end_us: int) -> List[str]:
+    def _overlapping_phases(self, start_us: int, end_us: int) -> list[str]:
         """
         Phase names overlapping [start_us, end_us) (Part 10).
 
@@ -930,7 +927,7 @@ class BlameChainAnalyzer:
     def annotate_phases(
         self,
         task: NormalizedTask,
-    ) -> List[str]:
+    ) -> list[str]:
         """
         Annotate task with overlapping phases (Part 10).
 
@@ -1010,7 +1007,7 @@ class BlameChainAnalyzer:
         task: NormalizedTask,
         gap_start: int,
         gap_end: int,
-    ) -> Tuple[List[Tuple[AttributionCategory, int, int]], Optional[dict]]:
+    ) -> tuple[list[tuple[AttributionCategory, int, int]], Optional[dict]]:
         """Split a task's post-ready wait gap [gap_start, gap_end) into
         DEPENDENCY_WAIT/RESOURCE_WAIT/SCHEDULER_WAIT/RETRY_WAIT sub-segments
         (Part 7: "the interval is classified according to what happened
@@ -1090,7 +1087,7 @@ class BlameChainAnalyzer:
         is still present in `segments` regardless. None if resource-wait
         never applied at all.
         """
-        segments: List[Tuple[AttributionCategory, int, int]] = []
+        segments: list[tuple[AttributionCategory, int, int]] = []
         cursor = gap_start
         resource_wait_holder_info: Optional[dict] = None
 
@@ -1105,7 +1102,7 @@ class BlameChainAnalyzer:
             # this loop wants only where saturation next resumes. Neither
             # reads past that, so the sweep stops there.
             seg_end = cursor
-            holder_time_us: Dict[str, int] = defaultdict(int)
+            holder_time_us: dict[str, int] = defaultdict(int)
             next_saturation_us: Optional[int] = None
             starts_saturated = False
             if task.resources:
@@ -1168,12 +1165,12 @@ class BlameChainAnalyzer:
     def build_blame_chain(
         self,
         terminal_task_key: str,
-        task_finish_times: Dict[str, int],
-        explicit_predecessors: Dict[str, List[str]],
-        task_depths: Dict[str, int],
-        already_covered: Optional[Set[str]] = None,
-        covered_intervals: Optional[List[Tuple[int, int]]] = None,
-    ) -> List[BlameChainNode]:
+        task_finish_times: dict[str, int],
+        explicit_predecessors: dict[str, list[str]],
+        task_depths: dict[str, int],
+        already_covered: Optional[set[str]] = None,
+        covered_intervals: Optional[list[tuple[int, int]]] = None,
+    ) -> list[BlameChainNode]:
         """
         Build the complete blame chain backward from a terminal task (Part 6).
 
@@ -1334,8 +1331,8 @@ class BlameChainAnalyzer:
         self,
         task: NormalizedTask,
         is_on_chain: bool,
-        explicit_predecessors: Dict[str, List[str]],
-        task_finish_times: Dict[str, int],
+        explicit_predecessors: dict[str, list[str]],
+        task_finish_times: dict[str, int],
     ) -> TaskAttribution:
         """
         Compute complete attribution for one task (Part 11).
@@ -1380,10 +1377,7 @@ class BlameChainAnalyzer:
             # equal to task.start_us is Part 7's "no predecessor" fallback,
             # not real evidence - only trust it as a max() floor when it
             # already reflects a genuine wait.
-            if ready_time < task.start_us:
-                ready_time = max(ready_time, retry_pred.finish_us)
-            else:
-                ready_time = retry_pred.finish_us
+            ready_time = max(ready_time, retry_pred.finish_us) if ready_time < task.start_us else retry_pred.finish_us
         if task.start_us > ready_time:
             segments, _holder_info = self._classify_wait_gap(task, ready_time, task.start_us)
             for category, seg_start, seg_end in segments:
@@ -1404,11 +1398,11 @@ class BlameChainAnalyzer:
     
     def compute_full_attribution(
         self,
-        explicit_predecessors: Dict[str, List[str]],
-        task_finish_times: Dict[str, int],
-        task_depths: Dict[str, int],
-        terminal_tasks: Optional[Set[str]] = None,
-    ) -> Tuple[List[BlameChainNode], Dict[str, TaskAttribution], List[AttributionSegment]]:
+        explicit_predecessors: dict[str, list[str]],
+        task_finish_times: dict[str, int],
+        task_depths: dict[str, int],
+        terminal_tasks: Optional[set[str]] = None,
+    ) -> tuple[list[BlameChainNode], dict[str, TaskAttribution], list[AttributionSegment]]:
         """
         Compute complete attribution for all tasks (M2 deliverable).
         
@@ -1443,7 +1437,7 @@ class BlameChainAnalyzer:
                 max_finish = max(t.finish_us for t in self.tasks)
                 terminal_tasks = {
                     min(
-                        (str(t.task_key) for t in self.tasks if t.finish_us == max_finish)
+                        str(t.task_key) for t in self.tasks if t.finish_us == max_finish
                     )
                 }
             else:
@@ -1460,10 +1454,10 @@ class BlameChainAnalyzer:
         # is shared across every walk so that if two terminals' walks
         # happen to converge on shared upstream lineage, the second walk
         # stops there instead of re-adding (and double-counting) it.
-        all_chain_nodes: List[BlameChainNode] = []
-        chain_task_keys: Set[str] = set()
-        already_covered: Set[str] = set()
-        covered_intervals: List[Tuple[int, int]] = []
+        all_chain_nodes: list[BlameChainNode] = []
+        chain_task_keys: set[str] = set()
+        already_covered: set[str] = set()
+        covered_intervals: list[tuple[int, int]] = []
 
         ordered_terminals = sorted(
             terminal_tasks,
@@ -1483,7 +1477,7 @@ class BlameChainAnalyzer:
                 chain_task_keys.add(str(node.task_key))
         
         # Compute attribution for all tasks
-        task_attributions: Dict[str, TaskAttribution] = {}
+        task_attributions: dict[str, TaskAttribution] = {}
         for task in self.tasks:
             task_key_str = str(task.task_key)
             is_on_chain = task_key_str in chain_task_keys
@@ -1507,10 +1501,10 @@ class BlameChainAnalyzer:
     
     def _build_flattened_timeline(
         self,
-        blame_chain: List[BlameChainNode],
-        task_attributions: Dict[str, TaskAttribution],
-        task_finish_times: Dict[str, int],
-    ) -> List[AttributionSegment]:
+        blame_chain: list[BlameChainNode],
+        task_attributions: dict[str, TaskAttribution],
+        task_finish_times: dict[str, int],
+    ) -> list[AttributionSegment]:
         """
         Build flattened timeline for presentation (Part 12).
         
@@ -1588,7 +1582,7 @@ class BlameChainAnalyzer:
         # them (e.g. two independent requested targets where nothing runs
         # in the gap) - previously idle_us was always silently 0, since
         # nothing anywhere ever produced an IDLE segment.
-        filled_segments: List[AttributionSegment] = []
+        filled_segments: list[AttributionSegment] = []
         cursor = min_start
         for seg in segments:
             if seg.start_us > cursor:
@@ -1612,7 +1606,7 @@ class BlameChainAnalyzer:
     
     def reconcile_attribution(
         self,
-        segments: List[AttributionSegment],
+        segments: list[AttributionSegment],
     ) -> dict:
         """
         Reconcile attribution to ensure invariants (Part 12.1, M2 exit criteria).
@@ -1627,7 +1621,7 @@ class BlameChainAnalyzer:
             Dict with reconciled attribution totals
         """
         # Sum by category
-        totals: Dict[AttributionCategory, int] = defaultdict(int)
+        totals: dict[AttributionCategory, int] = defaultdict(int)
         
         for seg in segments:
             totals[seg.category] += seg.duration_us

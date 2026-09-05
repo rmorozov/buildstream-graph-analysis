@@ -49,8 +49,8 @@ class TestTheTwoChainsDisagreed:
         On this pair it said `regressed`; compare says the set cannot
         support the claim."""
         band = _band()
-        old_answer = ("regressed" if 150.0 > band["high_us"]
-                      else "improved" if 150.0 < band["low_us"] else "within_band")
+        old_answer = ("regressed" if band["high_us"] < 150.0
+                      else "improved" if band["low_us"] > 150.0 else "within_band")
         assert old_answer == "regressed"
         assert classify_against_band(150.0, band) == "within_observed_range"
         assert old_answer != classify_against_band(150.0, band)

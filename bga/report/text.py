@@ -1,12 +1,9 @@
 """Human-readable text/CSV report formatting (Part 37)."""
-from typing import List, Optional
+from typing import Optional
 
 from .. import findings as findings_mod
-from .. import provenance
-from .. import schemas
-from .. import sources
-from ..findings import (compute_findings, compute_headline,
-                        compute_next_steps, render_findings)
+from .. import provenance, schemas, sources
+from ..findings import compute_findings, compute_headline, compute_next_steps, render_findings
 from ..ingest.models import AnalysisResult
 from ..units import GIB, US_PER_S
 from . import rate
@@ -214,7 +211,7 @@ def _format_capacity_model_note(result: AnalysisResult) -> str:
 
 
 def _format_key_findings(result: AnalysisResult,
-                         explain: bool = False) -> List[str]:
+                         explain: bool = False) -> list[str]:
     """Synthesized "what to look at first" summary (P4-02).
 
     `UX-75`: this used to *be* the synthesis - every conclusion the tool
@@ -258,7 +255,7 @@ def _format_key_findings(result: AnalysisResult,
     return lines + [""]
 
 
-def _priced_fixes(result: AnalysisResult, findings) -> List[tuple]:
+def _priced_fixes(result: AnalysisResult, findings) -> list[tuple]:
     """`(what, saving_us)` for every fix this report already prices.
 
     Never a sum. `UX-230` measured why: two fixes on one chain do not
@@ -277,7 +274,7 @@ def _priced_fixes(result: AnalysisResult, findings) -> List[tuple]:
     return rows
 
 
-def _format_in_your_units(result: AnalysisResult, findings) -> List[str]:
+def _format_in_your_units(result: AnalysisResult, findings) -> list[str]:
     """UX-596: the same savings, in the unit the reader argues in.
 
     Absent unless a rate was supplied, because a default rate presented
@@ -304,7 +301,7 @@ def _format_in_your_units(result: AnalysisResult, findings) -> List[str]:
     return lines + [""]
 
 
-def _format_plane2_absence(result: AnalysisResult) -> List[str]:
+def _format_plane2_absence(result: AnalysisResult) -> list[str]:
     """`UX-329`: the absence, stated. Silence is what it replaces.
 
     A report with no Plane 2 section used to say nothing about why, and
@@ -318,7 +315,7 @@ def _format_plane2_absence(result: AnalysisResult) -> List[str]:
     return ["Plane 2:", f"  {sentence}", ""]
 
 
-def _format_next_steps(result: AnalysisResult) -> List[str]:
+def _format_next_steps(result: AnalysisResult) -> list[str]:
     """`UX-218`: the loop's next commands, in the terminal too.
 
     Same list the JSON publishes and the page renders, from the same
@@ -336,12 +333,12 @@ def _format_next_steps(result: AnalysisResult) -> List[str]:
     return lines + [""]
 
 
-def _format_confidence_and_violations(result: AnalysisResult) -> List[str]:
+def _format_confidence_and_violations(result: AnalysisResult) -> list[str]:
     """Confidence/violations block (P4-02 requirement 1) - previously
     result.confidence/.violations (Part 33's hard/soft gates, P1-13) were
     fully populated but never printed in text output at all, only
     reachable via `--format json`."""
-    lines: List[str] = []
+    lines: list[str] = []
     confidence = result.confidence or {}
     if confidence:
         lines.append("Confidence:")
@@ -366,7 +363,7 @@ def _format_confidence_and_violations(result: AnalysisResult) -> List[str]:
     return lines
 
 
-def _format_timestamp_resolution(result: AnalysisResult) -> List[str]:
+def _format_timestamp_resolution(result: AnalysisResult) -> list[str]:
     """UX-110: how far every duration above can be from the truth, when
     that distance is large enough to change a reading.
 
@@ -424,7 +421,7 @@ def _attribution_label(category: str) -> str:
     return category.replace("_", " ").title()
 
 
-def _format_pipeline_overhead(result: AnalysisResult) -> List[str]:
+def _format_pipeline_overhead(result: AnalysisResult) -> list[str]:
     """Pipeline-level overhead block (P4-14) - BuildStream's own
     top-level "main:core activity" phases (Query cache, Resolving
     elements, etc.) are real work with a real elapsed cost, confirmed
@@ -435,7 +432,7 @@ def _format_pipeline_overhead(result: AnalysisResult) -> List[str]:
     never a fabricated per-element breakdown: BuildStream's own log
     doesn't provide more precision than this.
     """
-    lines: List[str] = []
+    lines: list[str] = []
     overhead = getattr(result, 'pipeline_overhead', None) or {}
     phases = overhead.get('phases') or []
     if not phases:
@@ -454,12 +451,12 @@ def _format_pipeline_overhead(result: AnalysisResult) -> List[str]:
     return lines
 
 
-def _format_by_kind_summary(result: AnalysisResult) -> List[str]:
+def _format_by_kind_summary(result: AnalysisResult) -> list[str]:
     """`bga graph --by-kind` (P4-12 Direction 3) - aggregate stats
     grouped by BuildStream element_kind. Opt-in, additive, presentation
     only - see docs/backlog/tasks/P4-12-element-kind-based-heuristics.md.
     """
-    lines: List[str] = []
+    lines: list[str] = []
     summary = getattr(result, 'element_kind_summary', None) or {}
     if not summary:
         return lines
@@ -475,7 +472,7 @@ def _format_by_kind_summary(result: AnalysisResult) -> List[str]:
     return lines
 
 
-def _format_resource_blast(result, full_sections=frozenset()) -> List[str]:
+def _format_resource_blast(result, full_sections=frozenset()) -> list[str]:
     """UX-171: which repository feeds which elements, and what it costs.
 
     Silent when the run carries no inventory (a capture from before
@@ -556,7 +553,7 @@ def _format_resource_blast(result, full_sections=frozenset()) -> List[str]:
     return lines
 
 
-def _format_blast_ranking(signals: dict) -> List[str]:
+def _format_blast_ranking(signals: dict) -> list[str]:
     """UX-173: the top blast elements, in the order the ranking used.
 
     "Ranked by cost" and "ranked by count, because this run measured
@@ -1172,7 +1169,7 @@ def memory_envelope_direction(delta_bytes: float) -> str:
     return 'grew' if delta_bytes > 0 else 'shrank'
 
 
-def _memory_knee_caveat(memory_envelope: Optional[dict], knee) -> List[str]:
+def _memory_knee_caveat(memory_envelope: Optional[dict], knee) -> list[str]:
     """UX-104: which constraint binds at the knee.
 
     The sweep's knee is a replay-model answer about *scheduling*, and
@@ -1216,7 +1213,7 @@ def _memory_knee_caveat(memory_envelope: Optional[dict], knee) -> List[str]:
     ]
 
 
-def _plane2_knee_caveat(plane2_capacity: Optional[dict], knee) -> List[str]:
+def _plane2_knee_caveat(plane2_capacity: Optional[dict], knee) -> list[str]:
     """What Plane 2 knows about whether the knee is reachable (`UX-83`).
 
     Measured once on a real dual-plane capture: the sweep put the knee at
@@ -1248,7 +1245,7 @@ def _plane2_knee_caveat(plane2_capacity: Optional[dict], knee) -> List[str]:
     return lines
 
 
-def format_sweep_text(resource: str, sweep_result, calibration_capacities: Optional[List[int]] = None, plane2_capacity: Optional[dict] = None, memory_envelope: Optional[dict] = None) -> str:
+def format_sweep_text(resource: str, sweep_result, calibration_capacities: Optional[list[int]] = None, plane2_capacity: Optional[dict] = None, memory_envelope: Optional[dict] = None) -> str:
     """Format a capacity_sweep result (Part 19) as human-readable text.
 
     `calibration_capacities` (UX-14 tier 2, PR #58's approved design):
@@ -1324,7 +1321,7 @@ def _fmt_signed_us(delta_us: Optional[float], pct: Optional[float] = None) -> st
     return text
 
 
-def _format_invalidation_roots(churn: dict) -> List[str]:
+def _format_invalidation_roots(churn: dict) -> list[str]:
     """UX-92's invalidation roots, one line each.
 
     Extracted from `format_compare_text` by `UX-173`, which had to
@@ -1333,7 +1330,7 @@ def _format_invalidation_roots(churn: dict) -> List[str]:
     seven compilers, and a guard on that wording needs something to
     call.
     """
-    lines: List[str] = []
+    lines: list[str] = []
     for root in (churn.get('invalidation_roots') or [])[:_INVALIDATION_ROOTS_SHOWN]:
         total_us = root['duration_us'] + root['downstream_us']
         # UX-173: the split, where there is one to make.
@@ -1362,7 +1359,7 @@ def _format_invalidation_roots(churn: dict) -> List[str]:
 ELEMENT_DELTAS_SHOWN = 8
 
 
-def _format_element_deltas(comparison) -> List[str]:
+def _format_element_deltas(comparison) -> list[str]:
     """UX-221: the culprit rows, ranked by what moved most.
 
     Capped here and named, per `UX-187` - the JSON carries every row.
@@ -1398,7 +1395,7 @@ def _format_element_deltas(comparison) -> List[str]:
     return lines
 
 
-def _format_verdict_chain(comparison) -> List[str]:
+def _format_verdict_chain(comparison) -> list[str]:
     """UX-593: the verdict's own chain, as the terminal states it.
 
     The sentence and the rule, from the record `bga/compare.py` builds -

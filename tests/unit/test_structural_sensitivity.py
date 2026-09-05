@@ -48,7 +48,7 @@ def test_compute_sensitivity_zero_denominator_slack_does_not_crash(monkeypatch):
 
     result = analyzer.compute_sensitivity()
 
-    for key, score, impact_pct in result.top_opportunities:
+    for key, score, _impact_pct in result.top_opportunities:
         assert score >= 0.0, f"{key} got negative sensitivity score {score}"
 
 
@@ -63,7 +63,7 @@ def test_compute_sensitivity_more_negative_slack_does_not_crash(monkeypatch):
 
     result = analyzer.compute_sensitivity()
 
-    for key, score, impact_pct in result.top_opportunities:
+    for key, score, _impact_pct in result.top_opportunities:
         assert score >= 0.0, f"{key} got negative sensitivity score {score}"
 
 

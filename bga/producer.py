@@ -32,7 +32,8 @@ independent contracts, so comparing versions would refuse across
 upgrades that moved nothing. What a reader compares is the contract
 set; the version is how a human finds the build that wrote it.
 """
-from typing import List, Optional
+import contextlib
+from typing import Optional
 
 from . import __version__
 
@@ -69,10 +70,8 @@ def add(artifact: dict) -> None:
     own contracts is still a run directory, and reads back as
     `UNSTAMPED`, which is a state this codebase handles.
     """
-    try:
+    with contextlib.suppress(Exception):
         artifact[PRODUCER_KEY] = stamp()
-    except Exception:  # noqa: BLE001 - provenance must not break a capture
-        pass
 
 
 def read(artifact: Optional[dict]) -> Optional[dict]:
@@ -90,7 +89,7 @@ def version_of(artifact: Optional[dict]) -> str:
     return version if isinstance(version, str) and version else UNSTAMPED
 
 
-def contracts_of(artifact: Optional[dict]) -> Optional[List[str]]:
+def contracts_of(artifact: Optional[dict]) -> Optional[list[str]]:
     """The contract set recorded, or `None` if there is no stamp.
 
     `None` and `[]` are different answers and both occur: no stamp at
@@ -130,7 +129,7 @@ def _by_name(names):
 
 
 def comparison_movement(baseline: Optional[dict],
-                        candidate: Optional[dict]) -> List[str]:
+                        candidate: Optional[dict]) -> list[str]:
     """Contracts a comparison reads that moved between two producers.
 
     Empty when the two agree, when either is unstamped, or when the

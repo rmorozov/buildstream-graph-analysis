@@ -303,12 +303,12 @@ class TestTheStripReadsThePayload:
 
     @staticmethod
     def _render(comparison):
-        script = _SHIM + '''
-          const { renderCulprits } = await import("./tests/viewer.mjs");
-          const section = renderCulprits(%s);
-          const items = all(section, (n) => n.tagName === "li").map((li) => {
+        script = _SHIM + f'''
+          const {{ renderCulprits }} = await import("./tests/viewer.mjs");
+          const section = renderCulprits({json.dumps(comparison.to_dict())});
+          const items = all(section, (n) => n.tagName === "li").map((li) => {{
             const link = all(li, (n) => n.tagName === "a")[0];
-            return {
+            return {{
               element: li.attrs["data-element"],
               verdict: li.attrs["data-verdict-kind"],
               presence: li.attrs["data-presence"],
@@ -316,19 +316,19 @@ class TestTheStripReadsThePayload:
               group: null,
               href: link.href ?? link.attrs.href ?? "",
               text: text(li),
-            };
-          });
+            }};
+          }});
           const groups = all(section, (n) => n.attrs["data-group"]).map(
             (n) => [n.attrs["data-group"],
                     all(n, (m) => m.tagName === "li")
                       .map((m) => m.attrs["data-element"])]);
           const caveat = all(section,
             (n) => n.attrs["data-role"] === "not-banded")[0];
-          console.log(JSON.stringify({
+          console.log(JSON.stringify({{
             items, groups, caveat: text(caveat),
             section: section.attrs["data-section"],
-          }));
-        ''' % json.dumps(comparison.to_dict())
+          }}));
+        '''
         result = subprocess.run([node, "--input-type=module", "-e", script],
                                 capture_output=True, text=True,
                                 cwd=os.getcwd(), timeout=60)

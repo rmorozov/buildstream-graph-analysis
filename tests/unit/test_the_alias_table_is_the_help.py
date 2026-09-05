@@ -33,7 +33,7 @@ import pytest
 REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 
-from bga.tools_dispatch import format_tool_help  # noqa: E402
+from bga.tools_dispatch import format_tool_help
 
 CLI = REPO / "docs/guides/cli.md"
 

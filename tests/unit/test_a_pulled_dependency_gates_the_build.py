@@ -31,8 +31,7 @@ import io
 import json
 import pathlib
 
-from bga.ingest.models import (DependencyEdge, Element, Graph, TaskKey,
-                               TaskKind, TaskSpan)
+from bga.ingest.models import DependencyEdge, Element, Graph, TaskKey, TaskKind, TaskSpan
 from bga.normalize.timestamps import _element_build_finish, clamp_task_starts
 
 REPO = pathlib.Path(__file__).resolve().parents[2]

@@ -18,7 +18,12 @@ import pytest
 from bga import run_store
 from tools import bga_snapshot
 from tools.bga_snapshot import (
-    PLANE2_NAME, RUN_SUBDIR, _capture_context, _list, _sticky_config, main,
+    PLANE2_NAME,
+    RUN_SUBDIR,
+    _capture_context,
+    _list,
+    _sticky_config,
+    main,
     take_snapshot,
 )
 

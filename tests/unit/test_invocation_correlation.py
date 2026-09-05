@@ -31,6 +31,7 @@ from tools.bst_native_build_tracer import (
     parse_trace_log,
 )
 
+
 def _inv(*pairs):
     return [{"invocation_id": i, "started_at": t} for i, t in pairs]
 

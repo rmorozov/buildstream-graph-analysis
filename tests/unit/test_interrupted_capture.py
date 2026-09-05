@@ -139,9 +139,8 @@ class TestRunWrappedActuallyCallsTheShutdown:
         monkeypatch.setattr(rw.subprocess, "Popen", lambda *a, **k: self._Proc())
         monkeypatch.setattr(rw, "shutdown_build_group",
                             lambda proc, emit=None, **kw: called.append(proc))
-        with open(tmp_path / "log", "w", encoding="utf-8") as handle:
-            with pytest.raises(exc_type):
-                rw.run_wrapped(str(tmp_path), ["bst", "build", "x.bst"], handle)
+        with open(tmp_path / "log", "w", encoding="utf-8") as handle, pytest.raises(exc_type):
+            rw.run_wrapped(str(tmp_path), ["bst", "build", "x.bst"], handle)
         return called
 
     def test_an_interrupt_stops_the_build_before_propagating(self, tmp_path, monkeypatch):
@@ -163,9 +162,8 @@ class TestRunWrappedActuallyCallsTheShutdown:
         monkeypatch.setattr(rw.subprocess, "Popen", lambda *a, **k: _Boom())
         monkeypatch.setattr(rw, "shutdown_build_group",
                             lambda proc, emit=None, **kw: called.append(proc))
-        with open(tmp_path / "log", "w", encoding="utf-8") as handle:
-            with pytest.raises(RuntimeError):
-                rw.run_wrapped(str(tmp_path), ["bst", "build", "x.bst"], handle)
+        with open(tmp_path / "log", "w", encoding="utf-8") as handle, pytest.raises(RuntimeError):
+            rw.run_wrapped(str(tmp_path), ["bst", "build", "x.bst"], handle)
         assert len(called) == 1
 
 
@@ -279,6 +277,7 @@ class TestAnInterruptIsNotAFailedBuild:
     def test_an_interrupted_snapshot_is_skipped_as_a_baseline(self, tmp_path):
         """UX-156 skips wreckage; an interrupted run is wreckage too."""
         import json
+
         from tools.bga_snapshot import _snapshot_failed
         run = tmp_path / "snap" / "run"
         run.mkdir(parents=True)

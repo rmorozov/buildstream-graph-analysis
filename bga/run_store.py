@@ -24,7 +24,7 @@ import json
 import os
 import re
 from datetime import datetime, timezone
-from typing import List, Optional
+from typing import Optional
 
 from . import progress
 
@@ -128,7 +128,7 @@ def ensure_store_ignored(project: str) -> None:
     _write_gitignore(project)
 
 
-def list_snapshots(project: str) -> List[str]:
+def list_snapshots(project: str) -> list[str]:
     """Every snapshot directory, oldest first.
 
     Sorted by name, which is the stamp, which is time order — no
@@ -149,7 +149,7 @@ def has_run(snapshot: str) -> bool:
     return os.path.isdir(os.path.join(snapshot, RUN_SUBDIR))
 
 
-def list_runs(project: str) -> List[str]:
+def list_runs(project: str) -> list[str]:
     """The snapshots that hold an analyzable run directory, oldest first.
 
     Not the same list as `list_snapshots`, and the difference is the
@@ -415,7 +415,7 @@ def read_config(project: str) -> dict:
     """
     path = os.path.join(store_dir(project), CONFIG_NAME)
     try:
-        with open(path, "r", encoding="utf-8") as handle:
+        with open(path, encoding="utf-8") as handle:
             data = json.load(handle)
     except (OSError, ValueError):
         return {}
@@ -673,7 +673,7 @@ CAPTURE_LAYOUT = (
 )
 
 
-def layout_paths() -> List[str]:
+def layout_paths() -> list[str]:
     """Every path the capture directory contract names."""
     return [path for path, _presence, _contract, _what in CAPTURE_LAYOUT]
 

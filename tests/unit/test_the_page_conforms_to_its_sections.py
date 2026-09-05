@@ -50,7 +50,8 @@ import pytest
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 sys.path.insert(0, str(REPO / "tests"))
-from pages import snapshot_copy    # noqa: E402
+from pages import snapshot_copy
+
 node = shutil.which("node")
 needs_node = pytest.mark.skipif(node is None, reason="node is not installed")
 VIEWER = REPO / "bga" / "viewer"
@@ -77,7 +78,7 @@ def _scale():
     found = {}
     for grade in ("GRADE_ANNOTATION", "GRADE_EXHIBIT"):
         block = re.search(
-            r"\[%s\]: Object\.freeze\(\{([^}]*)\}\)" % grade, source, re.S)
+            rf"\[{grade}\]: Object\.freeze\(\{{([^}}]*)\}}\)", source, re.S)
         assert block, grade
         found[grade] = {name: int(value) for name, value in
                         re.findall(r"(\w+):\s*(\d+)", block.group(1))}

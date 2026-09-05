@@ -197,8 +197,8 @@ def test_normalize_trace_surfaces_clamp_violation_and_excludes_task():
     validate_ordering's ordering_violation and clamp_task_starts's new
     clamp_negative_duration violation fire for the same underlying
     cause, from two different checks - both are reported)."""
-    from bga.normalize.timestamps import normalize_trace
     from bga.ingest.models import Trace
+    from bga.normalize.timestamps import normalize_trace
 
     spans = [_span("a.bst", 0, 100000), _span("b.bst", 20000, 10000)]
     trace = Trace(spans=spans)
@@ -218,6 +218,7 @@ def test_normalized_task_rejects_negative_duration_at_construction():
     refuse to be constructed with finish_us < start_us, regardless of
     caller - not just within clamp_task_starts."""
     import pytest
+
     from bga.ingest.models import NormalizedTask
 
     with pytest.raises(ValueError):

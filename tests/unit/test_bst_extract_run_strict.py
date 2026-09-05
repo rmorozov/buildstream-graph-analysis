@@ -29,13 +29,13 @@ from pathlib import Path
 
 import pytest
 
-from ._bst_env import isolated_bst_env
-
 from tools.bst_extract_run import (
     _check_project_refs_strict,
     _read_ref_storage,
     extract_run,
 )
+
+from ._bst_env import isolated_bst_env
 
 FIXTURE_PROJECT = Path(__file__).resolve().parents[1] / "fixtures" / "bst_show_project"
 BST_AVAILABLE = shutil.which("bst") is not None

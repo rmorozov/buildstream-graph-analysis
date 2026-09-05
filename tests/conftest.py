@@ -35,7 +35,6 @@ import os
 import pathlib
 
 import pytest
-
 from tiers import LARGE, MEDIUM
 
 # UX-264: where the one DOM shim lives, as an absolute file URL.

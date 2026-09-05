@@ -86,7 +86,7 @@ def emitted(tmp_path):
     args = ["compare", str(baseline), str(candidate), "--format", "json"]
     result = subprocess.run(
         [sys.executable, "-c",
-         "from bga.cli import main; raise SystemExit(main(%r))" % (args,)],
+         f"from bga.cli import main; raise SystemExit(main({args!r}))"],
         capture_output=True, text=True)
     return json.loads(result.stdout)
 

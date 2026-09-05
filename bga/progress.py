@@ -144,10 +144,7 @@ class Ticker:
     # ------------------------------------------------------------------
 
     def _render(self, suffix: str) -> str:
-        if self.total:
-            body = f"{self.label}: {self._count}/{self.total}"
-        else:
-            body = f"{self.label}: {self._count}"
+        body = f"{self.label}: {self._count}/{self.total}" if self.total else f"{self.label}: {self._count}"
         if suffix:
             body = f"{body} {suffix}"
         return f"  {body}"[:_MAX_WIDTH]

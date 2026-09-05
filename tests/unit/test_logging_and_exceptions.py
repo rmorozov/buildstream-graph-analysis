@@ -6,12 +6,12 @@ malformed/missing input content) that replace the previous
 string-matching-based exit-code routing in bga/cli.py.
 """
 import json
+import logging
 import subprocess
 import sys
 
 from bga.exceptions import AnalysisError, BgaError, IngestionError
 from bga.logging_config import configure_logging
-import logging
 
 
 def _run_bga(args):

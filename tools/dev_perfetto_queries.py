@@ -31,7 +31,7 @@ import urllib.request
 REPO = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO))
 
-from tests import trace_processor              # noqa: E402  (UX-321's one gate)
+from tests import trace_processor
 
 QUESTIONS_JS = REPO / "bga/viewer/questions.js"
 

@@ -57,8 +57,7 @@ def _exported_constants():
     """What the viewer actually exports as a number."""
     source = "\n".join((REPO / "bga/viewer" / name).read_text(encoding="utf-8")
                        for name in VIEWER_MODULES)
-    return {name: value for name, value in
-            re.findall(r"^export const ([A-Z_]+) = (\d+);", source, re.M)}
+    return dict(re.findall(r"^export const ([A-Z_]+) = (\d+);", source, re.M))
 
 
 class TestTheRuleIsWhereASchemaAuthorReads:

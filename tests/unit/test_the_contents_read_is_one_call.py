@@ -42,7 +42,7 @@ import pytest
 REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 
-from tools import bst_native_build_tracer as tracer            # noqa: E402
+from tools import bst_native_build_tracer as tracer
 
 
 class _Bst:

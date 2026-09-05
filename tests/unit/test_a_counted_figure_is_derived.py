@@ -43,9 +43,9 @@ REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 sys.path.insert(0, str(REPO / "tools"))
 
-import dev_close_task as close_task  # noqa: E402
+import dev_close_task as close_task
 
-from bga import contracts  # noqa: E402
+from bga import contracts
 
 INDEX = REPO / "docs/README.md"
 ARCHITECTURE = REPO / "docs/design/architecture.md"
@@ -521,9 +521,7 @@ COUNT_WORD = re.compile(r"^(?:" + "|".join(WORDS[n] for n in range(2, 31))
 #: phrase, which is what keeps "renaming one silently breaks a query"
 #: out of the population.
 MODIFIER = frozenset(
-    "of the its all canned shipped paste-ready perfettosql other more "
-    "remaining library current existing only same whole entire new "
-    "these those sql".split())
+    ["of", "the", "its", "all", "canned", "shipped", "paste-ready", "perfettosql", "other", "more", "remaining", "library", "current", "existing", "only", "same", "whole", "entire", "new", "these", "those", "sql"])
 
 NOUN = re.compile(r"\b(?:questions?|quer(?:y|ies))\b", re.I)
 

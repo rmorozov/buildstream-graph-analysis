@@ -5,27 +5,15 @@ Orchestrates the complete analysis pipeline as specified in the v9 specification
 """
 
 import logging
+from collections import defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Optional
 
-from .structural.models import deferral_risk_for
-from typing import Optional, Tuple, Dict, List, Set
-from collections import defaultdict
-
-from . import progress
-from .cache_effectiveness import compute_cache_accounting
-from .ingest.models import AnalysisResult, Graph, RunContext, Trace, TaskKind, STRUCTURAL_ELEMENT_KINDS
-from .ingest.loader import load_all
-from .normalize.timestamps import normalize_trace
-from .occupancy.sweep import compute_occupancy_stats, compute_task_horizon
-from .graph.edg import (
-    JOINT_SAVING_SET_SIZE,
-    analyze_graph, compute_element_durations, compute_element_stage_durations,
-    compute_joint_saving,
-    compute_latent_heavies, compute_optimization_horizon,
-    compute_realizable_savings,
-)
+from . import hostinfo, progress
 from .attribution.blame_chain import BlameChainAnalyzer
+from .cache_effectiveness import compute_cache_accounting
+from .diagnostics import analyze_diagnostics
 from .floors import (
     compute_capacity_lower_bound,
     compute_cold_floor,
@@ -33,17 +21,30 @@ from .floors import (
     compute_exclusive_serialization_bound,
     compute_t_infinity_observed,
 )
+from .graph.edg import (
+    JOINT_SAVING_SET_SIZE,
+    analyze_graph,
+    compute_element_durations,
+    compute_element_stage_durations,
+    compute_joint_saving,
+    compute_latent_heavies,
+    compute_optimization_horizon,
+    compute_realizable_savings,
+)
+from .ingest.loader import load_all
+from .ingest.models import STRUCTURAL_ELEMENT_KINDS, AnalysisResult, Graph, RunContext, TaskKind, Trace
+from .normalize.timestamps import normalize_trace
+from .occupancy.sweep import compute_occupancy_stats, compute_task_horizon
 from .replay.scheduler import ReplayScheduler
+from .structural import StructuralAnalyzer
+from .structural.models import deferral_risk_for
+from .units import s_to_us as _s_to_us
 from .utilisation import (
     CPUAccounting,
     UtilizationAnalyzer,
     compute_rebuild_tasks,
     compute_retry_tasks,
 )
-from .diagnostics import analyze_diagnostics
-from .structural import StructuralAnalyzer
-from . import hostinfo
-from .units import s_to_us as _s_to_us
 from .validation import compute_confidence
 from .validation.provenance import Advisory, Certified, assemble_floors
 
@@ -310,7 +311,7 @@ class BuildEfficiencyAnalyzer:
         verbose: bool = False,
         cold: bool = False,
         allow_partial_cold: bool = False,
-        historical_runs: Optional[List[Tuple[RunContext, Graph, Trace]]] = None,
+        historical_runs: Optional[list[tuple[RunContext, Graph, Trace]]] = None,
     ):
         """
         Initialize the analyzer.
@@ -480,7 +481,7 @@ class BuildEfficiencyAnalyzer:
         # started at exactly this instant", not true concurrency, and
         # classify_scheduler_wait now computes real concurrency directly
         # from the task list instead.
-        active_tasks_at_time: Dict[int, Set[str]] = defaultdict(set)
+        active_tasks_at_time: dict[int, set[str]] = defaultdict(set)
 
         for task in self.normalized_tasks:
             # Mark task as active during its execution [start_us, finish_us)
@@ -780,15 +781,15 @@ class BuildEfficiencyAnalyzer:
         # dependency's BUILD finishing has no causal bearing on when the
         # successor's own work can start, so it must not become a
         # responsible predecessor in the blame chain either.
-        build_task_by_element: Dict[str, str] = {}
-        tasks_by_element: Dict[str, List[str]] = defaultdict(list)
+        build_task_by_element: dict[str, str] = {}
+        tasks_by_element: dict[str, list[str]] = defaultdict(list)
         for task in self.normalized_tasks:
             key_str = str(task.task_key)
             tasks_by_element[task.task_key.element_uid].append(key_str)
             if task.task_key.task_kind == TaskKind.BUILD:
                 build_task_by_element[task.task_key.element_uid] = key_str
 
-        explicit_predecessors: Dict[str, List[str]] = {}
+        explicit_predecessors: dict[str, list[str]] = {}
         for dep in self.graph.dependencies:
             if dep.dependency_type == "runtime":
                 continue
@@ -799,13 +800,13 @@ class BuildEfficiencyAnalyzer:
                 explicit_predecessors.setdefault(succ_key, []).append(pred_key)
         
         # Build finish time map
-        task_finish_times: Dict[str, int] = {
+        task_finish_times: dict[str, int] = {
             str(t.task_key): t.finish_us
             for t in self.normalized_tasks
         }
         
         # Use unweighted depth as proxy for task depths
-        task_depths: Dict[str, int] = {}
+        task_depths: dict[str, int] = {}
         for task in self.normalized_tasks:
             elem_uid = task.task_key.element_uid
             task_depths[str(task.task_key)] = graph_analysis['unweighted_depth'].get(elem_uid, 0)
@@ -818,7 +819,7 @@ class BuildEfficiencyAnalyzer:
         # walk is started from each; already_covered (inside
         # compute_full_attribution) prevents double-counting if two
         # terminals' walks converge on shared upstream lineage.
-        successor_elements: Dict[str, List[str]] = defaultdict(list)
+        successor_elements: dict[str, list[str]] = defaultdict(list)
         for dep in self.graph.dependencies:
             successor_elements[dep.predecessor].append(dep.successor)
 
@@ -827,7 +828,7 @@ class BuildEfficiencyAnalyzer:
             if elem.requested_target or not successor_elements.get(elem.uid)
         }
 
-        terminal_tasks: Set[str] = set()
+        terminal_tasks: set[str] = set()
         for elem_uid in terminal_element_uids:
             elem_task_keys = tasks_by_element.get(elem_uid, [])
             if not elem_task_keys:
@@ -1670,7 +1671,7 @@ class BuildEfficiencyAnalyzer:
             ),
         }
 
-    def _build_critical_path_detail(self, critical_path: List[str]) -> List[dict]:
+    def _build_critical_path_detail(self, critical_path: list[str]) -> list[dict]:
         """UX-33: per-element detail for every critical-path element, so
         the text report can name the whole chain instead of printing a
         bare length.
@@ -1695,7 +1696,7 @@ class BuildEfficiencyAnalyzer:
         """
         if not critical_path:
             return []
-        duration_by_uid: Dict[str, int] = defaultdict(int)
+        duration_by_uid: dict[str, int] = defaultdict(int)
         for task in self.normalized_tasks:
             duration_by_uid[task.task_key.element_uid] += task.dur_us
         kind_by_uid = self._element_kind_lookup()
@@ -1707,7 +1708,7 @@ class BuildEfficiencyAnalyzer:
         # holds 17.7% of the path and is worth 3.2% of the build.
         # Evaluated for the heaviest non-structural candidates only, since
         # each costs one longest-path recomputation.
-        savings: Dict[str, int] = {}
+        savings: dict[str, int] = {}
         if self.graph:
             candidates = [
                 uid for uid in sorted(
@@ -1737,9 +1738,9 @@ class BuildEfficiencyAnalyzer:
 
     def _build_optimization_outlook(
         self,
-        critical_path: List[str],
+        critical_path: list[str],
         total_duration_us: int,
-        result_detail: Optional[List[dict]] = None,
+        result_detail: Optional[list[dict]] = None,
     ) -> dict:
         """UX-74: what to do after the first fix, what the set is worth
         together, and what is waiting off the path.
@@ -1764,7 +1765,7 @@ class BuildEfficiencyAnalyzer:
         """
         if not self.graph or not critical_path:
             return {}
-        durations: Dict[str, int] = defaultdict(int)
+        durations: dict[str, int] = defaultdict(int)
         for task in self.normalized_tasks:
             durations[task.task_key.element_uid] += task.dur_us
         kind_by_uid = self._element_kind_lookup()
@@ -1814,7 +1815,7 @@ class BuildEfficiencyAnalyzer:
             ),
         }
 
-    def _element_kind_lookup(self) -> Dict[str, str]:
+    def _element_kind_lookup(self) -> dict[str, str]:
         """uid -> element_kind, defaulting to the explicit "unknown"
         bucket (never silently omitted - P4-12's own Out of Scope: an
         unrecognized/absent kind must never be misclassified, only
@@ -1833,11 +1834,11 @@ class BuildEfficiencyAnalyzer:
         """
         if not self.graph:
             return {}
-        duration_by_uid: Dict[str, int] = defaultdict(int)
+        duration_by_uid: dict[str, int] = defaultdict(int)
         for task in self.normalized_tasks:
             duration_by_uid[task.task_key.element_uid] += task.dur_us
 
-        summary: Dict[str, dict] = {}
+        summary: dict[str, dict] = {}
         for elem in self.graph.elements:
             kind = elem.element_kind or "unknown"
             entry = summary.setdefault(kind, {"count": 0, "total_duration_us": 0})

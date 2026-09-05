@@ -22,7 +22,6 @@ import pytest
 from tools import bst_run_wrapped
 from tools.bst_native_build_tracer import format_post_build_interrupt
 
-
 MARKER = "Pipeline Summary: 3 of 9 elements built"
 
 
@@ -180,7 +179,7 @@ class TestTheCallerSaysWhyTheSummaryIsMissing:
                 # `run_wrapped` insists on a bst-shaped command; the fake
                 # is invoked through the interpreter under that name.
                 bst = tmp_path / "bst"
-                bst.write_text("#!/bin/sh\nexec %s %s\n" % (sys.executable, script))
+                bst.write_text(f"#!/bin/sh\nexec {sys.executable} {script}\n")
                 bst.chmod(0o755)
                 with pytest.raises(KeyboardInterrupt):
                     _run_and_interrupt(str(tmp_path), [str(bst)], handle)

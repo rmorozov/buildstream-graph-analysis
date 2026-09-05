@@ -47,8 +47,13 @@ import tempfile
 import pytest
 
 from bga import schemas
-from bga.findings import (CHAIN_BOUND_RATIO, DIAGNOSES, DIAGNOSIS_CHAIN_BOUND,
-                          DIAGNOSIS_INCONCLUSIVE, DIAGNOSIS_SCHEDULER_BOUND)
+from bga.findings import (
+    CHAIN_BOUND_RATIO,
+    DIAGNOSES,
+    DIAGNOSIS_CHAIN_BOUND,
+    DIAGNOSIS_INCONCLUSIVE,
+    DIAGNOSIS_SCHEDULER_BOUND,
+)
 
 GOLDEN = "tests/fixtures/golden/mixed_task_kinds"
 # `UX-477`: a committed capture whose *graph* is scheduler-bound, rather

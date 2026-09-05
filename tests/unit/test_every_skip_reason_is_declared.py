@@ -26,8 +26,8 @@ REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 sys.path.insert(0, str(REPO / "tests"))
 
-import conftest  # noqa: E402
-import skip_reasons  # noqa: E402
+import conftest
+import skip_reasons
 
 #: What the scan could not read statically, measured 2026-08-31 on the
 #: whole suite:

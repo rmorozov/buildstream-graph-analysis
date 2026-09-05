@@ -35,7 +35,7 @@ lesson about the alternative.
 """
 import shutil
 import time
-from typing import List, Optional
+from typing import Optional
 
 # How much wall-minus-monotonic drift counts as "the machine slept".
 #
@@ -92,7 +92,7 @@ def available() -> dict:
     }
 
 
-def inhibit_argv(command: List[str]) -> List[str]:
+def inhibit_argv(command: list[str]) -> list[str]:
     """`command`, wrapped in whatever inhibitors are installed.
 
     The field's own incantation:

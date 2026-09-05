@@ -114,7 +114,7 @@ class TestTheTableIsTheGuide:
 
     def test_a_row_with_no_guard_gives_a_reason(self):
         bare = [section for section, (guards, note) in _table().items()
-                if not guards and not note.strip("-—  ")]
+                if not guards and all(ch in "-— " for ch in note)]
         assert not bare, (
             f"these rows name no guard and give no reason: {sorted(bare)}")
 

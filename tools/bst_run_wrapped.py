@@ -29,6 +29,7 @@ own is_bst detection) for the resulting log to parse as a real BuildStream
 invocation under --format wrapped.
 """
 import argparse
+import contextlib
 import os
 import re
 import select
@@ -36,10 +37,10 @@ import signal
 import subprocess
 import sys
 import time
-
-from bga import suspend
 from datetime import datetime, timezone
 from typing import Optional
+
+from bga import suspend
 
 
 def _now_str():
@@ -63,10 +64,8 @@ def signal_build_group(proc, sig) -> None:
     Silent on a group that is already gone - a race with the build's own
     exit is the normal case here, not an error.
     """
-    try:
+    with contextlib.suppress(ProcessLookupError, PermissionError, OSError):
         os.killpg(os.getpgid(proc.pid), sig)
-    except (ProcessLookupError, PermissionError, OSError):
-        pass
 
 
 # UX-163 item 3: how long to let `bst` stop by itself before escalating.
@@ -247,7 +246,7 @@ def read_clock_pairs(log_path: str) -> dict:
     """
     pairs = {}
     try:
-        with open(log_path, "r", encoding="utf-8", errors="replace") as handle:
+        with open(log_path, encoding="utf-8", errors="replace") as handle:
             for line in handle:
                 found = CLOCK_RE.search(line)
                 if found:

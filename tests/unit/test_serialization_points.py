@@ -12,7 +12,7 @@ rest of the build by `variables: notparallel: True`.
 Real, hand-built fixtures (no run-dir/JSON needed), matching
 `tests/unit/test_batch_opportunities.py`'s own pattern.
 """
-from bga.ingest.models import Element, Graph, DependencyEdge, NormalizedTask, Resource, TaskKey, TaskKind
+from bga.ingest.models import DependencyEdge, Element, Graph, NormalizedTask, Resource, TaskKey, TaskKind
 from bga.structural.serialization_points import detect_large_serialization_points
 
 

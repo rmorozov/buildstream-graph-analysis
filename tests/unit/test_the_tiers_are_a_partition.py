@@ -21,11 +21,12 @@ REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO / "tests"))
 sys.path.insert(0, str(REPO))
 
-import tiers  # noqa: E402  - needs the path above
+import tiers
+
 # `UX-421`: the half of `UX-363`'s inequality that a step timeout could
 # not hold moved to the per-file rule, so this file now checks that
 # rule rather than asserting about a wall clock.
-from tools import dev_tier_drift as drift                      # noqa: E402
+from tools import dev_tier_drift as drift
 
 
 def _test_files():

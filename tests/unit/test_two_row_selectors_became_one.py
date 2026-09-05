@@ -37,7 +37,7 @@ _PROBE = r"""
 const shim = await import(process.env.BGA_DOM_SHIM);
 shim.installDocument();
 const t = await import(process.env.BGA_TABLES);
-const OUTER = %d, INNER = %d, SHOWN = %d;
+const OUTER = __OUTER__, INNER = __INNER__, SHOWN = __SHOWN__;
 
 const el = (tag, attrs = {}, ...kids) => {
   const node = document.createElement(tag);
@@ -82,7 +82,7 @@ out.afterTheBound = {
     td.getAttribute("data-raw")).filter((v) => v === "999").length,
 };
 console.log(JSON.stringify(out));
-""" % (OUTER, INNER, SHOWN)
+""".replace("__OUTER__", str(OUTER)).replace("__INNER__", str(INNER)).replace("__SHOWN__", str(SHOWN))
 
 
 @pytest.fixture(scope="module")

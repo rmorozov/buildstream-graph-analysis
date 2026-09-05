@@ -40,7 +40,7 @@ END pid=101 ppid=1 ts=1002.500000 element=work-a.bst cmd=cc -c main.c
 def _bga(args, cwd=None):
     return subprocess.run(
         [sys.executable, "-c",
-         "from bga.cli import main; raise SystemExit(main(%r))" % (args,)],
+         f"from bga.cli import main; raise SystemExit(main({args!r}))"],
         capture_output=True, text=True, cwd=cwd or os.getcwd())
 
 

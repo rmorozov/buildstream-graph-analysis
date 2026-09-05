@@ -23,28 +23,31 @@ terminal-task selection (Part 6.2) with no error raised - deriving both
 from the exact same log removes that whole class of mismatch.
 """
 import argparse
+import contextlib
 import hashlib
 import json
 import os
 import subprocess
 import sys
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import Optional
 
-from .bst_log_to_chrome_trace import (WrapperTraceConverter,
-                                     _resolve_start_time_source,
-                                     _resolve_start_time_us)
+from ._run_context_common import (
+    add_cpu_capacity_fields,
+    add_host_manifest,
+    add_memory_capacity_fields,
+    add_producer,
+    add_queue_seam,
+    add_start_clock_source,
+    typical_resolved_max_jobs,
+)
+from .bst_log_to_chrome_trace import WrapperTraceConverter, _resolve_start_time_source, _resolve_start_time_us
+from .bst_show_to_graph import extract_graph
 from .chrome_trace_to_bga_trace import (
     chrome_events_to_bga_spans,
     failed_elements,
     invocation_wall_clock,
 )
-from .bst_show_to_graph import extract_graph
-from ._run_context_common import (add_cpu_capacity_fields, add_host_manifest,
-                                  add_producer, add_queue_seam,
-                                  add_start_clock_source,
-                                  add_memory_capacity_fields,
-                                  typical_resolved_max_jobs)
 
 
 def _parse_targets(targets_str: str):
@@ -319,7 +322,7 @@ def extract_run(
     converter = WrapperTraceConverter(
         raw_start_time_us=start_time_us,
         raw_start_time_source=_resolve_start_time_source(start_time))
-    with open(log_path, "r", encoding="utf-8", errors="ignore") as f:
+    with open(log_path, encoding="utf-8", errors="ignore") as f:
         for line in f:
             if log_format == "wrapped":
                 converter.process_line_wrapped(line)
@@ -478,6 +481,7 @@ def extract_run(
     # and those extract exactly as they did - a capture too old to have
     # looked is not a capture that slept.
     from bga import suspend as _suspend
+
     from .bst_run_wrapped import read_clock_pairs
 
     pairs = read_clock_pairs(log_path) if log_format != "raw" else {}
@@ -604,10 +608,8 @@ def _drop_size_memo(run_dir: Path) -> None:
     """
     from bga.run_store import SIZE_CACHE_NAME
 
-    try:
+    with contextlib.suppress(OSError):
         (run_dir.parent / SIZE_CACHE_NAME).unlink()
-    except OSError:
-        pass
 
 
 def _junction_subproject(project_dir: str, junction_uid: str) -> Optional[str]:
@@ -634,7 +636,7 @@ def _junction_subproject(project_dir: str, junction_uid: str) -> Optional[str]:
     return None
 
 
-def _resolve_junctioned(project_dir: str, uid: str) -> Tuple[Optional[str], Optional[str], str]:
+def _resolve_junctioned(project_dir: str, uid: str) -> tuple[Optional[str], Optional[str], str]:
     """`(subproject_dir, element_name, junction_prefix)` for a uid.
 
     A uid may nest (`a.bst:b.bst:c.bst`), so this walks left to right,
@@ -644,7 +646,7 @@ def _resolve_junctioned(project_dir: str, uid: str) -> Tuple[Optional[str], Opti
     """
     parts = uid.split(":")
     current = project_dir
-    prefix_parts: List[str] = []
+    prefix_parts: list[str] = []
     for junction in parts[:-1]:
         subproject = _junction_subproject(current, junction)
         if subproject is None:
@@ -681,6 +683,7 @@ def build_source_inventory(project_dir: str, element_uids) -> dict:
     exist.
     """
     from bga import sources as sources_module
+
     from .bst_native_build_tracer import elements_dir_for, read_element_yaml
 
     per_element = {}

@@ -19,14 +19,14 @@ P1-*/P2-* acceptance tests).
 """
 import json
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Optional
 
 from bga import BuildEfficiencyAnalyzer
 
 RunContext = dict
 Graph = dict
 Trace = dict
-Topology = Tuple[RunContext, Graph, Trace]
+Topology = tuple[RunContext, Graph, Trace]
 
 
 def _element(uid: str, cache_key: Optional[str] = None, requested_target: bool = False) -> dict:
@@ -40,7 +40,7 @@ def _dependency(predecessor: str, successor: str, dependency_type: str = "build"
 def _span(
     uid: str, start_us: int, dur_us: int,
     kind: str = "BUILD", phase: str = "BUILD", attempt: int = 0,
-    resources: Tuple[str, ...] = ("PROCESS",),
+    resources: tuple[str, ...] = ("PROCESS",),
 ) -> dict:
     return {
         "task_key": f"{uid}|{kind}|{phase}|{attempt}",
@@ -53,7 +53,7 @@ def _span(
 
 def _run_context(
     wall_end_us: int, max_jobs: int = 8,
-    resource_capacities: Optional[Dict[str, int]] = None,
+    resource_capacities: Optional[dict[str, int]] = None,
     trace_epsilon_us: int = 1000,
 ) -> RunContext:
     return {
@@ -71,9 +71,9 @@ def _run_context(
 
 
 def _build(
-    elements: List[dict], dependencies: List[dict], spans: List[dict],
+    elements: list[dict], dependencies: list[dict], spans: list[dict],
     wall_end_us: int, max_jobs: int = 8,
-    resource_capacities: Optional[Dict[str, int]] = None,
+    resource_capacities: Optional[dict[str, int]] = None,
 ) -> Topology:
     graph = {"elements": elements, "dependencies": dependencies}
     trace = {"spans": spans, "phases": []}
@@ -81,7 +81,7 @@ def _build(
     return run_context, graph, trace
 
 
-def _duration_for(uid: str, default_us: int, durations: Optional[Dict[str, int]]) -> int:
+def _duration_for(uid: str, default_us: int, durations: Optional[dict[str, int]]) -> int:
     return (durations or {}).get(uid, default_us)
 
 
@@ -89,7 +89,7 @@ def _duration_for(uid: str, default_us: int, durations: Optional[Dict[str, int]]
 
 def linear_chain(
     n: int = 3, duration_us: int = 10000,
-    durations: Optional[Dict[str, int]] = None,
+    durations: Optional[dict[str, int]] = None,
     requested_target_last: bool = True,
 ) -> Topology:
     """elem0 -> elem1 -> ... -> elem(n-1), each depending only on its
@@ -111,7 +111,7 @@ def linear_chain(
     return _build(elements, dependencies, spans, wall_end_us=t, max_jobs=1)
 
 
-def diamond(duration_us: int = 10000, durations: Optional[Dict[str, int]] = None) -> Topology:
+def diamond(duration_us: int = 10000, durations: Optional[dict[str, int]] = None) -> Topology:
     """a -> {b, c} -> d: b and c run concurrently between a and d."""
     a, b, c, d = "a.bst", "b.bst", "c.bst", "d.bst"
     elements = [_element(a), _element(b), _element(c), _element(d, requested_target=True)]
@@ -132,7 +132,7 @@ def diamond(duration_us: int = 10000, durations: Optional[Dict[str, int]] = None
 
 
 def fan_in(
-    n: int = 4, duration_us: int = 10000, durations: Optional[Dict[str, int]] = None,
+    n: int = 4, duration_us: int = 10000, durations: Optional[dict[str, int]] = None,
 ) -> Topology:
     """n independent predecessors converging on one successor."""
     pred_uids = [f"pred{i}.bst" for i in range(n)]
@@ -150,7 +150,7 @@ def fan_in(
 
 
 def fan_out(
-    n: int = 4, duration_us: int = 10000, durations: Optional[Dict[str, int]] = None,
+    n: int = 4, duration_us: int = 10000, durations: Optional[dict[str, int]] = None,
 ) -> Topology:
     """one predecessor, n independent successors (all requested targets)."""
     source = "source.bst"
@@ -241,9 +241,9 @@ def independent_branches(
 ) -> Topology:
     """n fully disconnected linear chains sharing no dependencies -
     each branch's last element is a requested target."""
-    elements: List[dict] = []
-    dependencies: List[dict] = []
-    spans: List[dict] = []
+    elements: list[dict] = []
+    dependencies: list[dict] = []
+    spans: list[dict] = []
     finish = 0
 
     for branch in range(n):
@@ -344,7 +344,7 @@ def shared_base_wide(
     """
     base = "toolchain.bst"
     elements = [dict(_element(base), element_kind=base_kind)]
-    dependencies: List[dict] = []
+    dependencies: list[dict] = []
     spans = [_span(base, 0, base_us)]
     # Heaviest, its near-tie, then a decreasing tail - so the ranking
     # has more than two entries to be in order over.
@@ -366,7 +366,7 @@ def shared_base_wide(
 def one_source_many_elements(
     elements: int = 4, duration_us: int = 4_000_000,
     url: str = "https://example.invalid/mono.git",
-) -> Tuple[Topology, dict]:
+) -> tuple[Topology, dict]:
     """T2: one repository sourced by N elements.
 
     Reaches `shared-source-blast`, and returns
@@ -378,7 +378,7 @@ def one_source_many_elements(
     uids = [f"pkg{i}.bst" for i in range(elements)]
     els = [dict(_element(uid, requested_target=True), element_kind="manual")
            for uid in uids]
-    spans: List[dict] = []
+    spans: list[dict] = []
     t = 0
     for uid in uids:
         spans.append(_span(uid, t, duration_us))
@@ -428,7 +428,7 @@ def ample_capacity(
 
 def the_same_build_twice(
     chain: int = 4, duration_us: int = 2_000_000,
-) -> Tuple[Topology, Topology]:
+) -> tuple[Topology, Topology]:
     """T4: `(cold, incremental)` over one graph.
 
     The incremental half reaches `run-mode-incremental`. What decides
@@ -446,8 +446,8 @@ def the_same_build_twice(
            for i, uid in enumerate(uids)]
     dependencies = [_dependency(uids[i - 1], uids[i]) for i in range(1, chain)]
 
-    def one_run(built: List[str], skipped: int) -> Topology:
-        spans: List[dict] = []
+    def one_run(built: list[str], skipped: int) -> Topology:
+        spans: list[dict] = []
         t = 0
         for uid in built:
             spans.append(_span(uid, t, duration_us))
@@ -574,9 +574,9 @@ def a_chain_beside_a_crowd(
     exactly where it was needed, which is half of what `UX-474`
     recorded.
     """
-    elements: List[dict] = []
-    dependencies: List[dict] = []
-    spans: List[dict] = []
+    elements: list[dict] = []
+    dependencies: list[dict] = []
+    spans: list[dict] = []
 
     uids = [f"lib{i}.bst" for i in range(chain)]
     for i, uid in enumerate(uids):
@@ -693,12 +693,12 @@ COVERING_SET = {
 }
 
 
-def covering_set() -> Dict[str, Tuple[Topology, Optional[dict]]]:
+def covering_set() -> dict[str, tuple[Topology, Optional[dict]]]:
     """`{directory name: (topology, sources)}` for every committed
     capture `UX-464` added, including the two that are not a bare
     factory call - `one_source_many_elements` returns an inventory
     beside its topology, and `the_same_build_twice` returns a pair."""
-    built: Dict[str, Tuple[Topology, Optional[dict]]] = {
+    built: dict[str, tuple[Topology, Optional[dict]]] = {
         name: (factory(), sources)
         for name, (factory, sources) in COVERING_SET.items()
     }
@@ -710,7 +710,7 @@ def covering_set() -> Dict[str, Tuple[Topology, Optional[dict]]]:
     return built
 
 
-def write_covering_set(root: Path) -> List[Path]:
+def write_covering_set(root: Path) -> list[Path]:
     """Write every covering-set capture under `root`, one directory
     each, and return the run directories in name order."""
     written = []

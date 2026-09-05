@@ -59,12 +59,12 @@ docstring, and docs/audits/round-11.md.
 import argparse
 import json
 import sys
-from typing import Dict, Iterable, List, Set
+from collections.abc import Iterable
 
 
-def build_successors(dependencies: Iterable[dict]) -> Dict[str, List[str]]:
+def build_successors(dependencies: Iterable[dict]) -> dict[str, list[str]]:
     """`{predecessor: [successors]}` over `build` edges only."""
-    successors: Dict[str, List[str]] = {}
+    successors: dict[str, list[str]] = {}
     for dep in dependencies:
         if dep.get("dependency_type") == "runtime":
             continue
@@ -72,7 +72,7 @@ def build_successors(dependencies: Iterable[dict]) -> Dict[str, List[str]]:
     return successors
 
 
-def rebuild_set(graph: dict, cuts: Iterable[str]) -> List[str]:
+def rebuild_set(graph: dict, cuts: Iterable[str]) -> list[str]:
     """Return the sorted upward closure of `cuts` over build edges.
 
     Every cut must exist in the graph; a typo'd or out-of-closure cut is
@@ -89,7 +89,7 @@ def rebuild_set(graph: dict, cuts: Iterable[str]) -> List[str]:
 
     successors = build_successors(graph["dependencies"])
 
-    closure: Set[str] = set()
+    closure: set[str] = set()
     stack = list(cuts)
     while stack:
         uid = stack.pop()

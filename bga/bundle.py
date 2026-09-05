@@ -30,7 +30,7 @@ import json
 import os
 import tarfile
 from datetime import datetime, timezone
-from typing import Dict, List, Optional, Tuple
+from typing import Optional
 
 from . import __version__, contracts, run_store
 
@@ -52,7 +52,7 @@ class BundleError(Exception):
     holds a different capture under its stamp."""
 
 
-def _layout_relative() -> List[Tuple[str, str, Optional[str]]]:
+def _layout_relative() -> list[tuple[str, str, Optional[str]]]:
     """`(snapshot-relative path, presence, contract)` for every file the
     capture-layout contract names inside one snapshot.
 
@@ -80,7 +80,7 @@ def is_plane2(relative: str) -> bool:
 
 
 def members(snapshot: str, include_plane2: bool = True
-            ) -> Tuple[List[dict], List[str]]:
+            ) -> tuple[list[dict], list[str]]:
     """What this snapshot would ship, and what the switch left out.
 
     `DERIVED` rows never ship (see the module docstring). A `REQUIRED`
@@ -140,7 +140,7 @@ def default_output(stamp: str) -> str:
 
 def export(snapshot: str, output: Optional[str] = None,
            include_plane2: bool = True,
-           now: Optional[datetime] = None) -> Tuple[str, dict]:
+           now: Optional[datetime] = None) -> tuple[str, dict]:
     """Write one archive holding this snapshot's capture-layout members.
 
     Returns the path written and the manifest inside it.
@@ -155,20 +155,20 @@ def export(snapshot: str, output: Optional[str] = None,
     destination = output or default_output(manifest["stamp"])
 
     payload = json.dumps(manifest, indent=2, sort_keys=True).encode("utf-8")
-    with open(destination, "wb") as raw:
-        # `mtime=0` so the same snapshot packs to the same bytes twice;
-        # a bundle a user diffs against a re-export should be equal.
-        with gzip.GzipFile(fileobj=raw, mode="wb", mtime=0) as compressed:
-            with tarfile.open(fileobj=compressed, mode="w") as archive:
-                info = tarfile.TarInfo(MANIFEST_NAME)
-                info.size = len(payload)
-                archive.addfile(info, io.BytesIO(payload))
-                for member in manifest["members"]:
-                    archive.add(
-                        os.path.join(snapshot, member["path"]),
-                        arcname=MEMBER_PREFIX + member["path"],
-                        recursive=False,
-                    )
+    # `mtime=0` so the same snapshot packs to the same bytes twice;
+    # a bundle a user diffs against a re-export should be equal.
+    with open(destination, "wb") as raw, \
+            gzip.GzipFile(fileobj=raw, mode="wb", mtime=0) as compressed, \
+            tarfile.open(fileobj=compressed, mode="w") as archive:
+        info = tarfile.TarInfo(MANIFEST_NAME)
+        info.size = len(payload)
+        archive.addfile(info, io.BytesIO(payload))
+        for member in manifest["members"]:
+            archive.add(
+                os.path.join(snapshot, member["path"]),
+                arcname=MEMBER_PREFIX + member["path"],
+                recursive=False,
+            )
     return destination, manifest
 
 
@@ -183,11 +183,11 @@ def read_manifest(bundle: str) -> dict:
                     f"bundle. `bga bundle --export` writes one.")
             manifest = json.loads(handle.read().decode("utf-8"))
     except tarfile.TarError as error:
-        raise BundleError(f"{bundle} is not a readable archive: {error}")
+        raise BundleError(f"{bundle} is not a readable archive: {error}") from error
     except KeyError:
         raise BundleError(
             f"{bundle} has no {MANIFEST_NAME}, so it is not a bga bundle. "
-            f"`bga bundle --export` writes one.")
+            f"`bga bundle --export` writes one.") from None
     if not isinstance(manifest, dict):
         raise BundleError(f"{bundle}'s {MANIFEST_NAME} is not an object")
     return manifest
@@ -220,7 +220,7 @@ def check_readable(manifest: dict) -> None:
 
 
 def _safe_members(archive: tarfile.TarFile, manifest: dict
-                  ) -> List[tarfile.TarInfo]:
+                  ) -> list[tarfile.TarInfo]:
     """The archive's own entries for the manifest's members.
 
     Read back from the archive rather than trusted from the manifest: a
@@ -253,7 +253,7 @@ def _safe_members(archive: tarfile.TarFile, manifest: dict
 
 
 def _differs(target: str, archive: tarfile.TarFile,
-             infos: List[tarfile.TarInfo]) -> List[str]:
+             infos: list[tarfile.TarInfo]) -> list[str]:
     """The members already on disk under this stamp whose bytes differ."""
     changed = []
     for info in infos:
@@ -272,7 +272,7 @@ def _differs(target: str, archive: tarfile.TarFile,
     return changed
 
 
-def load(bundle: str, project: str) -> Tuple[str, dict]:
+def load(bundle: str, project: str) -> tuple[str, dict]:
     """Unpack into this project's store under the bundle's own stamp.
 
     The stamp is the capture's identity, so it is preserved rather than
@@ -309,7 +309,7 @@ def load(bundle: str, project: str) -> Tuple[str, dict]:
     return target, manifest
 
 
-def describe(manifest: dict) -> Dict[str, int]:
+def describe(manifest: dict) -> dict[str, int]:
     """The counts the two commands print, so both say the same thing."""
     return {
         "members": len(manifest.get("members", ())),

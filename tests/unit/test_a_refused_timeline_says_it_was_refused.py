@@ -40,7 +40,7 @@ import pytest
 REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 
-from tests import pages                                       # noqa: E402
+from tests import pages
 
 node = shutil.which("node")
 needs_node = pytest.mark.skipif(node is None, reason="node is not installed")

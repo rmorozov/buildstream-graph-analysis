@@ -31,7 +31,7 @@ becomes instant, over this run's measured durations, with nothing else
 about the build assumed to change. It is an upper bound, not a
 forecast, and the payload says so.
 """
-from typing import Dict, List, Sequence
+from collections.abc import Sequence
 
 from . import schemas
 from .report import rate
@@ -89,7 +89,7 @@ def project(result, graph, elements: Sequence[str]) -> dict:
     return schemas.stamp(document, schemas.WHATIF)
 
 
-def _durations(result) -> Dict[str, int]:
+def _durations(result) -> dict[str, int]:
     durations = (getattr(result, 'signals', None) or {}).get('element_durations')
     return dict(durations or {})
 
@@ -108,7 +108,7 @@ def _sum_of_individual(graph, durations, selected) -> int:
     return int(sum(savings.get(uid, 0) for uid in selected))
 
 
-def _refusals(graph, durations, selected) -> List[dict]:
+def _refusals(graph, durations, selected) -> list[dict]:
     if not selected:
         return [{"check": "empty_selection",
                  "elements": [],
@@ -133,7 +133,7 @@ def _refusals(graph, durations, selected) -> List[dict]:
     return []
 
 
-def render(document: dict) -> List[str]:
+def render(document: dict) -> list[str]:
     """The answer as text. One renderer, so `bga whatif` and
     `bga whatif --format json` cannot describe one selection two ways."""
     chosen = ", ".join(document["selected"]) or "(nothing selected)"
@@ -163,7 +163,7 @@ def render(document: dict) -> List[str]:
     return lines
 
 
-def _in_your_units(projected: dict) -> List[str]:
+def _in_your_units(projected: dict) -> list[str]:
     """`UX-611`: the projected saving in the unit the reader decides in.
 
     Through `report.rate` - the converter the headline and the plan

@@ -22,7 +22,7 @@ REPO = pathlib.Path(__file__).resolve().parents[2]
 SCENARIOS = REPO / "docs/backlog/scenarios"
 sys.path.insert(0, str(REPO))
 
-from tools import dev_process_bands as bands                    # noqa: E402
+from tools import dev_process_bands as bands
 
 #: The items annotated when the field was introduced - round 81's rows
 #: and the two round 80 closed beside them. A later round's Outcomes
@@ -64,7 +64,7 @@ class TestTheSkeletonWritesTheField:
     def test_the_skeleton_pre_fills_no_verdict(self):
         """`UX-506`'s rule for every other measurement in the skeleton:
         a pre-filled answer is an invitation to the unmeasured claim."""
-        pattern = dict((k, p) for k, _h, p in bands.SIGNALS)["premise_false"]
+        pattern = {k: p for k, _h, p in bands.SIGNALS}["premise_false"]
         assert not pattern.search(self._printed()), (
             "the skeleton pre-fills `falsified`, so an unedited Outcome "
             "would be counted as one")

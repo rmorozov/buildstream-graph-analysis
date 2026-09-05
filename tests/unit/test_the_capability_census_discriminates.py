@@ -26,7 +26,7 @@ import pytest
 REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 
-from tools import dev_plane_capability as capability  # noqa: E402
+from tools import dev_plane_capability as capability
 
 #: Both halves of this census compile a C source and run it, so a
 #: machine without a compiler cannot be asked the question at all.

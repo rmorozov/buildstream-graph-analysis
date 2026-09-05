@@ -39,8 +39,8 @@ sys.path.insert(0, str(REPO))
 sys.path.insert(0, str(REPO / "tools"))
 sys.path.insert(0, str(REPO / "tests"))
 
-import dev_touching                                      # noqa: E402
-import tiers                                             # noqa: E402
+import dev_touching
+import tiers
 
 #: What a walk over a tree is spelled, in this suite.
 WALKS = {"glob", "rglob", "iterdir", "walk", "listdir", "scandir"}
@@ -169,7 +169,8 @@ class TestTheSelectorRunsThem:
         makes every reported slow file explained by every branch -
         which is what `test_an_empty_diff_is_an_empty_set_and_not_none`
         caught at this round's batch gate, after the union landed."""
-        from tools import dev_tier_drift, dev_touching as imported
+        from tools import dev_tier_drift
+        from tools import dev_touching as imported
 
         # `dev_tier_drift` reaches it as `tools.dev_touching`, which is
         # a different module object from this file's `dev_touching`.

@@ -80,12 +80,10 @@ def _write_monolith(path, records):
     with open(path, "w", encoding="utf-8") as handle:
         handle.write("{\n")
         handle.write(' "wall_span_s": 3600.0,\n')
-        handle.write(' "cpu_time": %s,\n'
-                     % json.dumps({"per_element": per_element}))
-        handle.write(' "peak_memory": %s,\n'
-                     % json.dumps({"available": True, "per_element": peaks}))
+        handle.write(' "cpu_time": {},\n'.format(json.dumps({"per_element": per_element})))
+        handle.write(' "peak_memory": {},\n'.format(json.dumps({"available": True, "per_element": peaks})))
         handle.write(' "per_element_parallelism": [],\n')
-        handle.write(' "stream_coverage": {"processes": %d},\n' % records)
+        handle.write(f' "stream_coverage": {{"processes": {records}}},\n')
         handle.write(' "processes": [\n')
         for i in range(records):
             record = {"pid": 1000 + i, "ppid": 1000,

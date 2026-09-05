@@ -10,7 +10,8 @@ siblings took 2.5s. Everything needed to see that was already in the
 tracer's own emitted `processes[]`; nothing computed it.
 """
 from tools.bst_native_build_tracer import (
-    classify_binary, compute_per_element_parallelism,
+    classify_binary,
+    compute_per_element_parallelism,
 )
 
 
@@ -42,7 +43,7 @@ def _serialized_element():
 def _parallel_element():
     """One element at -j4: four compiles overlapping."""
     records = [_record("lib-a.bst", "/usr/bin/make -f Makefile -j4", 0.0, 3.5)]
-    for i in range(4):
+    for _i in range(4):
         records.append(
             _record("lib-a.bst", "/usr/libexec/gcc/cc1plus -quiet b.cpp", 0.1, 3.1)
         )

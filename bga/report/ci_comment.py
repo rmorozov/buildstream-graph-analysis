@@ -19,11 +19,13 @@ from the same predicate `bga compare`'s exit code calls — never
 recomputed from a threshold spelled out a second time. If this file and
 the exit code ever disagree, that is a bug in this file.
 """
-from typing import List, Optional
+from typing import Optional
 
 from ..compare import (
-    DEFAULT_MAX_ADDITION_STRETCH, efficiency_below_floor,
-    efficiency_regression_exceeds_threshold, regression_exceeds_threshold,
+    DEFAULT_MAX_ADDITION_STRETCH,
+    efficiency_below_floor,
+    efficiency_regression_exceeds_threshold,
+    regression_exceeds_threshold,
 )
 
 # The handle a CI job greps for to decide between editing its existing
@@ -56,7 +58,7 @@ def _pct_points(delta: Optional[float]) -> str:
     return f"{'+' if delta >= 0 else '-'}{abs(delta) * 100:.1f}pp"
 
 
-def _gate_rows(comparison, args) -> List[dict]:
+def _gate_rows(comparison, args) -> list[dict]:
     """One row per gate, in the order `_compare_exit_code` evaluates them.
 
     A gate the invocation did not ask for is reported as **not
@@ -66,7 +68,7 @@ def _gate_rows(comparison, args) -> List[dict]:
     pipeline that checked nothing — the exact failure `UX-87` recorded
     against the efficiency gate itself.
     """
-    rows: List[dict] = []
+    rows: list[dict] = []
 
     marginal_on = getattr(args, 'fail_on_inefficient_additions', False)
     marginal = getattr(comparison, 'marginal_efficiency', None)
@@ -190,7 +192,7 @@ def _never_read_by_element(native_report: Optional[dict]) -> Optional[dict]:
     return by_element
 
 
-def _element_table(comparison, never_read: Optional[dict]) -> List[str]:
+def _element_table(comparison, never_read: Optional[dict]) -> list[str]:
     diff = comparison.element_diff or {}
     added = diff.get('new') or []
     moved = diff.get('moved_onto_critical_path') or []
@@ -231,7 +233,7 @@ def _element_table(comparison, never_read: Optional[dict]) -> List[str]:
     return lines
 
 
-def _why_block(comparison) -> List[str]:
+def _why_block(comparison) -> list[str]:
     """UX-229: the candidate run's diagnosis, with the chain behind it.
 
     The comment states verdicts; a reviewer's first question is *why do
@@ -274,7 +276,7 @@ def _why_block(comparison) -> List[str]:
     return lines
 
 
-def _verdict_why_block(comparison) -> List[str]:
+def _verdict_why_block(comparison) -> list[str]:
     """UX-593: the chain behind the **verdict**, beside the one behind
     the candidate.
 
@@ -317,7 +319,7 @@ def _verdict_why_block(comparison) -> List[str]:
     return lines
 
 
-def _cache_line(comparison) -> List[str]:
+def _cache_line(comparison) -> list[str]:
     churn = getattr(comparison, 'cache_churn', None) or {}
     if not churn.get('applicable'):
         # UX-93: not applicable is a reason, and the reason is the useful
@@ -406,7 +408,7 @@ def render_ci_comment(comparison, args, native_report: Optional[dict] = None) ->
     # A trailing blank line is what a `gh pr comment --body-file` writes
     # anyway; collapsing the doubles keeps the rendering stable whether or
     # not an optional block was present.
-    out: List[str] = []
+    out: list[str] = []
     for line in lines:
         if line == "" and out and out[-1] == "":
             continue

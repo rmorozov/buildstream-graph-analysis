@@ -65,13 +65,11 @@ REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 
-from tools.bga_timeline import (                          # noqa: E402
-    DEFAULT_OUTPUT, FORMAT_TRACKEVENT, render)
-from tools.bst_native_build_tracer import (               # noqa: E402
-    merge_record_streams, stream_records, stream_trace_events)
-from tools.native_trace import trackevent                 # noqa: E402
+from test_the_timeline_speaks_perfetto import _fields
 
-from test_the_timeline_speaks_perfetto import _fields     # noqa: E402
+from tools.bga_timeline import DEFAULT_OUTPUT, FORMAT_TRACKEVENT, render
+from tools.bst_native_build_tracer import merge_record_streams, stream_records, stream_trace_events
+from tools.native_trace import trackevent
 
 GOLDEN = REPO / "tests/fixtures/golden/mixed_task_kinds"
 

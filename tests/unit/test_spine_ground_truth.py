@@ -53,8 +53,8 @@ PLANE_AGREEMENT_S = 1.0
 )
 def test_the_spine_measures_sleep_3_as_three_seconds_of_nothing(tmp_path):
     """The known answer, and the self-consistency it implies."""
-    from tools.bst_native_build_tracer import run_traced_build
     from tests.unit._bst_env import isolated_bst_env
+    from tools.bst_native_build_tracer import run_traced_build
 
     project = os.path.join(REPO_ROOT, "examples", "01-resource-contention")
     if not os.path.isfile(os.path.join(project, "files", "runtime", "bin", "sh")):
@@ -124,8 +124,8 @@ def test_the_two_planes_agree_on_how_long_each_element_took(tmp_path):
     within a stated tolerance is what can honestly be asserted, and the
     disagreement itself is UX-110.
     """
-    from tools.bst_native_build_tracer import build_spans_from_wrapped_log, run_traced_build
     from tests.unit._bst_env import isolated_bst_env
+    from tools.bst_native_build_tracer import build_spans_from_wrapped_log, run_traced_build
 
     project = os.path.join(REPO_ROOT, "examples", "01-resource-contention")
     if not os.path.isfile(os.path.join(project, "files", "runtime", "bin", "sh")):

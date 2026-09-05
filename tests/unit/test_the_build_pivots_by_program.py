@@ -41,12 +41,11 @@ import pytest
 REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 
-from tests import pages                                        # noqa: E402
-from tools.bga_timeline import (                               # noqa: E402
-    PLANE2_ANNOTATIONS, _executable, render)
+from tests import pages
+from tools.bga_timeline import PLANE2_ANNOTATIONS, _executable, render
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
-from test_the_slice_says_what_bga_knows import decode          # noqa: E402
+from test_the_slice_says_what_bga_knows import decode
 
 node = shutil.which("node")
 needs_node = pytest.mark.skipif(node is None, reason="node is not installed")

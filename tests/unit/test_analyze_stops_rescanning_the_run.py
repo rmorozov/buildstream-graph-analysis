@@ -28,10 +28,9 @@ import pytest
 REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 
-from bga.attribution.blame_chain import BlameChainAnalyzer          # noqa: E402
-from bga.ingest.models import (NormalizedTask, Resource, TaskKey,   # noqa: E402
-                               TaskKind)
-from bga.normalize.timestamps import clamp_task_starts              # noqa: E402
+from bga.attribution.blame_chain import BlameChainAnalyzer
+from bga.ingest.models import NormalizedTask, Resource, TaskKey, TaskKind
+from bga.normalize.timestamps import clamp_task_starts
 
 
 def _task(uid, ready_us, start_us, finish_us, resources=(Resource.PROCESS,),

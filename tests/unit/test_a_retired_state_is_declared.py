@@ -133,8 +133,7 @@ class TestTheConfidenceTermIsConstantZero:
         actually returns and once with its flag forced true. The second
         must move the score - otherwise this guard is reading a term
         nothing consumes."""
-        from bga.attribution.blame_chain import (AttributionCategory,
-                                                 AttributionSegment)
+        from bga.attribution.blame_chain import AttributionCategory, AttributionSegment
         from bga.validation.invariants import compute_confidence
 
         waiting, info = _saturated_resource_wait()

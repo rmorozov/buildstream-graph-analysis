@@ -32,7 +32,7 @@ from contextlib import redirect_stderr
 REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 
-from tools import bga_snapshot                                # noqa: E402
+from tools import bga_snapshot
 
 
 def _listing(root: pathlib.Path):

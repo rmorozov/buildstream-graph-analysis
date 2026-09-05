@@ -177,7 +177,7 @@ class TestWhatCompareDoes:
 def _compare(args):
     return subprocess.run(
         [sys.executable, "-c",
-         "from bga.cli import main; raise SystemExit(main(%r))" % (args,)],
+         f"from bga.cli import main; raise SystemExit(main({args!r}))"],
         capture_output=True, text=True, cwd=os.getcwd())
 
 

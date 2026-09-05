@@ -38,9 +38,8 @@ REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 sys.path.insert(0, str(REPO / "tests"))
 
-from tools.bga_timeline import (  # noqa: E402
-    dependency_edges, flow_accounting, render)
-from tools.bga_view import serve, timeline_flow_accounting  # noqa: E402
+from tools.bga_timeline import dependency_edges, flow_accounting, render
+from tools.bga_view import serve, timeline_flow_accounting
 
 
 def served_run_json(run):

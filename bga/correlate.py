@@ -38,13 +38,11 @@ it builds"**.
 """
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Tuple
+from typing import Optional
 
 from . import schemas
-from .units import (GIB, MIB, US_PER_S, kb_to_bytes, mb_to_bytes,
-                    s_to_us)
 from .findings import SEVERITY_HIGH, SEVERITY_INFO, SEVERITY_MEDIUM
-
+from .units import GIB, MIB, US_PER_S, kb_to_bytes, mb_to_bytes, s_to_us
 
 # An element is "not compute-bound" below this many cores busy. One core
 # means a build that never overlapped any work with anything - the
@@ -209,8 +207,8 @@ class ElementJoin:
     major_faults: Optional[int] = None
     involuntary_switches: Optional[int] = None
     requested_jobs: Optional[int] = None
-    native_findings: List[str] = field(default_factory=list)
-    unused_dependencies: List[str] = field(default_factory=list)
+    native_findings: list[str] = field(default_factory=list)
+    unused_dependencies: list[str] = field(default_factory=list)
     # UX-72: the measurements the join used to read past. Each is
     # produced per element and was published to JSON for rounds without
     # ever reaching the command the workflow ends on.
@@ -219,12 +217,12 @@ class ElementJoin:
     peak_rss_bytes: Optional[int] = None
     worst_redundancy: Optional[dict] = None
     redundancy_count: int = 0
-    aggregating_dependencies: List[str] = field(default_factory=list)
+    aggregating_dependencies: list[str] = field(default_factory=list)
     # Synthesis
-    recommendations: List[str] = field(default_factory=list)
+    recommendations: list[str] = field(default_factory=list)
 
 
-def _plane1_view(analysis: dict) -> Tuple[Dict[str, dict], str]:
+def _plane1_view(analysis: dict) -> tuple[dict[str, dict], str]:
     """Per-element Plane 1 facts, keyed by element UID.
 
     Returns the view and the name of the metric its `potential_saving_us`
@@ -237,7 +235,7 @@ def _plane1_view(analysis: dict) -> Tuple[Dict[str, dict], str]:
     critical_path_us = sensitivity.get("critical_path_us") or 0
     total_us = analysis.get("total_duration_us") or 0
 
-    view: Dict[str, dict] = {}
+    view: dict[str, dict] = {}
     # `UX-382`: this and `blast_radius` below are the join's two
     # denormalised Plane 1 facts - the same values `elements.*` already
     # carries, copied onto the row so the join table can sort on them.
@@ -253,7 +251,7 @@ def _plane1_view(analysis: dict) -> Tuple[Dict[str, dict], str]:
     # quantity `bga analyze` prints, rather than the capped proxy, so the
     # two commands cannot describe the same element differently.
     detail = analysis.get("critical_path_detail") or []
-    realizable: Dict[str, int] = {}
+    realizable: dict[str, int] = {}
     for entry in detail:
         element = entry.get("element_uid")
         if not element:
@@ -336,9 +334,9 @@ def _declared_elements(analysis: dict) -> set:
     return known
 
 
-def _plane2_view(native_report: dict) -> Dict[str, dict]:
+def _plane2_view(native_report: dict) -> dict[str, dict]:
     """Per-element Plane 2 facts, keyed by the same element UID."""
-    view: Dict[str, dict] = {}
+    view: dict[str, dict] = {}
 
     for entry in native_report.get("per_element_parallelism") or []:
         element = entry.get("element")
@@ -447,7 +445,7 @@ def _plane2_view(native_report: dict) -> Dict[str, dict]:
 # cheapest honest filter - the projection below then tells the truth
 # about what removing them is actually worth, so this bound only has to
 # be *permissive enough*, not exact.
-def _unread_gating_edges(analysis: dict, native_report: dict) -> List[tuple]:
+def _unread_gating_edges(analysis: dict, native_report: dict) -> list[tuple]:
     """`(predecessor, successor)` build edges measured never-read that
     also sit on the critical path.
 
@@ -469,14 +467,14 @@ def _unread_gating_edges(analysis: dict, native_report: dict) -> List[tuple]:
     return sorted(set(edges))
 
 
-def _connected_edge_groups(edges: List[tuple]) -> List[List[tuple]]:
+def _connected_edge_groups(edges: list[tuple]) -> list[list[tuple]]:
     """Group edges that share an endpoint.
 
     Five separately-hedged rows saying "`lib-b` never read `lib-a`" are
     five bricks; one group saying "these six elements form a chain whose
     every internal edge is unread" is the wall (`UX-82`).
     """
-    parent: Dict[str, str] = {}
+    parent: dict[str, str] = {}
 
     def find(node: str) -> str:
         parent.setdefault(node, node)
@@ -492,14 +490,14 @@ def _connected_edge_groups(edges: List[tuple]) -> List[List[tuple]]:
 
     for predecessor, successor in edges:
         union(predecessor, successor)
-    groups: Dict[str, List[tuple]] = {}
+    groups: dict[str, list[tuple]] = {}
     for edge in edges:
         groups.setdefault(find(edge[0]), []).append(edge)
     return [sorted(group) for _root, group in sorted(groups.items())]
 
 
 def project_without_edges(
-    tasks, run_context, edges: List[tuple], capacities: Optional[dict] = None,
+    tasks, run_context, edges: list[tuple], capacities: Optional[dict] = None,
 ) -> Optional[dict]:
     """Replay the observed run with `edges` deleted from the graph.
 
@@ -547,7 +545,7 @@ def project_without_edges(
     }
 
 
-def _collapse_range(values: List[float], fmt, unit: str = "") -> str:
+def _collapse_range(values: list[float], fmt, unit: str = "") -> str:
     """`1.4-1.8` for a spread, `1.6` for agreement.
 
     UX-89: a grouped block must not imply more precision than the group
@@ -561,7 +559,7 @@ def _collapse_range(values: List[float], fmt, unit: str = "") -> str:
     return f"{low}{unit}" if low == high else f"{low}-{high}{unit}"
 
 
-def _name_elements(elements: List[str]) -> str:
+def _name_elements(elements: list[str]) -> str:
     """`lib-a.bst..lib-f.bst, app.bst` rather than seven full names.
 
     Only contracts a run of names sharing a prefix and differing in a
@@ -572,7 +570,7 @@ def _name_elements(elements: List[str]) -> str:
     if len(elements) < 3:
         return ", ".join(elements)
     ordered = sorted(elements)
-    runs: List[List[str]] = []
+    runs: list[list[str]] = []
     for name in ordered:
         if runs and _is_next_in_run(runs[-1][-1], name):
             runs[-1].append(name)
@@ -596,7 +594,7 @@ def _is_next_in_run(previous: str, name: str) -> bool:
     return a.isalnum() and b.isalnum() and ord(b) == ord(a) + 1
 
 
-def _grouped_line(finding_id: str, entries: List[dict], text: str) -> Optional[str]:
+def _grouped_line(finding_id: str, entries: list[dict], text: str) -> Optional[str]:
     """One line standing in for `len(entries)` identical ones.
 
     Returns None for a finding whose per-element figures do not
@@ -657,7 +655,7 @@ def _grouped_line(finding_id: str, entries: List[dict], text: str) -> Optional[s
     return None
 
 
-def _grouped_blocks(actionable: List[dict]) -> List[tuple]:
+def _grouped_blocks(actionable: list[dict]) -> list[tuple]:
     """Partition `actionable` into (elements, entries, signature) groups.
 
     UX-89: on `examples/06`'s baseline, `lib-a.bst` through `lib-f.bst`
@@ -673,8 +671,8 @@ def _grouped_blocks(actionable: List[dict]) -> List[tuple]:
     group takes the position of its strongest member, so grouping never
     reorders what leads.
     """
-    groups: List[tuple] = []
-    index: Dict[tuple, int] = {}
+    groups: list[tuple] = []
+    index: dict[tuple, int] = {}
     for entry in actionable:
         signature = tuple(step['id'] for step in entry['recommendations'])
         if signature in index:
@@ -688,7 +686,7 @@ def _grouped_blocks(actionable: List[dict]) -> List[tuple]:
     ]
 
 
-def _group_header(elements: List[str], entries: List[dict]) -> str:
+def _group_header(elements: list[str], entries: list[dict]) -> str:
     """`lib-a.bst..lib-f.bst, app.bst (7 elements, 6-9% of the critical
     path each, 2.6-3.0s apiece, 19.7s together)`.
 
@@ -714,7 +712,7 @@ def _group_header(elements: List[str], entries: List[dict]) -> str:
     return f"{_name_elements(elements)} ({', '.join(parts)}):"
 
 
-def _recommend(joined: ElementJoin, memory_envelope_available: bool = False) -> List[str]:
+def _recommend(joined: ElementJoin, memory_envelope_available: bool = False) -> list[str]:
     """Turn one element's two-plane picture into directed next steps.
 
     Only fires where the join actually adds something. A Plane 2 finding
@@ -724,7 +722,7 @@ def _recommend(joined: ElementJoin, memory_envelope_available: bool = False) -> 
     """
     # (evidence rank, id, text) - sorted at the end so the strongest
     # measured finding leads and the hedged one never displaces it.
-    ranked: List[tuple] = []
+    ranked: list[tuple] = []
     share = joined.critical_path_share
     worth = joined.saving_share
 
@@ -1237,7 +1235,7 @@ SPLIT_MEAN_CONCURRENCY = 2.0
 def find_granularity_findings(
     analysis: dict, native_report: dict, cache_logs: Optional[dict] = None,
     tasks=None, run_context=None, dependencies=None,
-) -> List[dict]:
+) -> list[dict]:
     """UX-100: are the elements the right size?
 
     Element granularity is BuildStream's oldest tuning question and every
@@ -1268,7 +1266,7 @@ def find_granularity_findings(
     return findings
 
 
-def _merge_candidates(dependencies, cache_logs, tasks, run_context) -> List[dict]:
+def _merge_candidates(dependencies, cache_logs, tasks, run_context) -> list[dict]:
     payers = ((cache_logs or {}).get('sandbox_tax') or {}).get('top_payers') or []
     measured = [p for p in payers if p.get('total_us')]
     if not measured:
@@ -1286,12 +1284,12 @@ def _merge_candidates(dependencies, cache_logs, tasks, run_context) -> List[dict
     # a check that could never fire - the defect class this repository
     # keeps finding in its own gates, caught here by printing the parent
     # map while wiring it up.
-    parents: Dict[str, set] = {}
+    parents: dict[str, set] = {}
     for dependency in dependencies or []:
         if getattr(dependency, 'dependency_type', None) == 'runtime':
             continue
         parents.setdefault(dependency.successor, set()).add(dependency.predecessor)
-    groups: Dict[frozenset, List[str]] = {}
+    groups: dict[frozenset, list[str]] = {}
     for element, own_parents in parents.items():
         if element in toll_share:
             groups.setdefault(frozenset(own_parents), []).append(element)
@@ -1404,7 +1402,7 @@ def _project_with_reduced_durations(tasks, run_context, reductions) -> Optional[
     }
 
 
-def _split_candidates(analysis, native_report) -> List[dict]:
+def _split_candidates(analysis, native_report) -> list[dict]:
     durations = (analysis.get('elements') or {}).get('element_durations') or {}
     path = schemas.critical_path_uids(analysis)
     horizon = (analysis.get('floors') or {}).get('t_infinity_observed') or 0
@@ -1453,7 +1451,7 @@ def _split_candidates(analysis, native_report) -> List[dict]:
 
 def find_restructuring_findings(
     analysis: dict, native_report: dict, tasks=None, run_context=None,
-) -> List[dict]:
+) -> list[dict]:
     """The structural conclusion five per-element rows jointly support.
 
     On `examples/06`'s baseline the tool had every fact of the macro
@@ -1546,7 +1544,7 @@ def correlate(analysis: dict, native_report: dict, tasks=None, run_context=None,
     )
     memory_envelope_available = bool(memory_envelope.get('at_observed_builders'))
 
-    joined: List[ElementJoin] = []
+    joined: list[ElementJoin] = []
     for element in sorted(set(plane1) | set(plane2)):
         p1 = plane1.get(element, {})
         p2 = plane2.get(element, {})
@@ -1710,7 +1708,7 @@ def correlate(analysis: dict, native_report: dict, tasks=None, run_context=None,
     }
 
 
-def _chain_order(finding: dict) -> List[str]:
+def _chain_order(finding: dict) -> list[str]:
     """The group's elements in dependency order where it is a simple
     chain, and sorted otherwise.
 
@@ -1718,7 +1716,7 @@ def _chain_order(finding: dict) -> List[str]:
     says "these are in a line" in a way an alphabetical list does not.
     """
     edges = [tuple(edge) for edge in finding['edges']]
-    successors = {a: b for a, b in edges}
+    successors = dict(edges)
     heads = {a for a, _ in edges} - {b for _, b in edges}
     if len(heads) != 1 or len(successors) != len(edges):
         return list(finding['elements'])
@@ -1833,7 +1831,7 @@ def format_correlation(result: dict) -> str:
     # Grouped by the caveat they share: the JSON keeps one entry per
     # element, because that is what a CI consumer keys on, and the text
     # says the shared half once.
-    grouped: List[Tuple[Tuple[str, str, str], List[dict]]] = []
+    grouped: list[tuple[tuple[str, str, str], list[dict]]] = []
     for finding in result.get("granularity") or []:
         key = (finding['severity'], finding['id'], finding.get('rationale') or '')
         if grouped and grouped[-1][0] == key:

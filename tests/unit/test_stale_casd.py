@@ -17,7 +17,9 @@ import os
 import pytest
 
 from tools.bst_native_build_tracer import (
-    buildstream_cache_dir, detect_stale_casd, format_stale_casd_warning,
+    buildstream_cache_dir,
+    detect_stale_casd,
+    format_stale_casd_warning,
 )
 
 

@@ -31,7 +31,7 @@ needs_node = pytest.mark.skipif(node is None, reason="node is not installed")
 def _bga(args):
     result = subprocess.run(
         [sys.executable, "-c",
-         "from bga.cli import main; raise SystemExit(main(%r))" % (args,)],
+         f"from bga.cli import main; raise SystemExit(main({args!r}))"],
         capture_output=True, text=True, cwd=os.getcwd())
     assert result.returncode == 0, result.stderr
     return result.stdout

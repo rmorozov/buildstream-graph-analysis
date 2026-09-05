@@ -92,7 +92,7 @@ def _claimed():
         "groups the document into - if the sentence moved, this guard "
         "has to move with it rather than pass silently")
     word = found.group(1)
-    number = WORDS.get(word.lower(), None)
+    number = WORDS.get(word.lower())
     if number is None and word.isdigit():
         number = int(word)
     assert number is not None, (

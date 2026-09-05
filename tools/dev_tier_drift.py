@@ -38,7 +38,7 @@ import xml.etree.ElementTree as ET
 REPO = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO))
 
-from tests import tiers                                        # noqa: E402
+from tests import tiers
 
 #: Ordered, so "measured above where it is listed" is a comparison.
 RANK = {"small": 0, "medium": 1, "large": 2}
@@ -621,7 +621,7 @@ def carried(path):
         if isinstance(one, dict):
             out.append(dict(one))
         elif isinstance(one, list):
-            out.append({name: None for name in one})
+            out.append(dict.fromkeys(one))
     return out
 
 

@@ -79,12 +79,12 @@ import argparse
 import json
 import os
 import sys
-from typing import Dict, List, Optional
+from typing import Optional
 
 PLANE2_CAT = "native-process"
 
 
-def assign_element_pids(elements: List[str], start_pid: int = 2) -> Dict[str, int]:
+def assign_element_pids(elements: list[str], start_pid: int = 2) -> dict[str, int]:
     """A stable synthetic Chrome Trace `pid` per real element, sorted
     for determinism (I11) - never `pid: 1`, reserved for Plane 1's own
     real "the BuildStream invocation" sentinel (`bst_log_to_chrome_trace.py`),
@@ -93,14 +93,14 @@ def assign_element_pids(elements: List[str], start_pid: int = 2) -> Dict[str, in
     return {element: start_pid + i for i, element in enumerate(sorted(set(elements)))}
 
 
-def _process_name_events(element_pids: Dict[str, int]) -> List[dict]:
+def _process_name_events(element_pids: dict[str, int]) -> list[dict]:
     return [
         {"name": "process_name", "ph": "M", "pid": pid, "args": {"name": f"native: {element}"}}
         for element, pid in element_pids.items()
     ]
 
 
-def _plane2_trace_events(records: List[dict], element_pids: Dict[str, int], ts_offset_us: float) -> List[dict]:
+def _plane2_trace_events(records: list[dict], element_pids: dict[str, int], ts_offset_us: float) -> list[dict]:
     """Real Chrome Trace events for Plane 2's own traced processes -
     complete (`X`) events for matched (start+end known) records, instant
     (`i`) events for open (no observed exit) ones (an honest choice: a
@@ -126,7 +126,7 @@ def _plane2_trace_events(records: List[dict], element_pids: Dict[str, int], ts_o
     return events
 
 
-def build_standalone_chrome_trace(records: List[dict]) -> List[dict]:
+def build_standalone_chrome_trace(records: list[dict]) -> list[dict]:
     """Real Plane 2 records (as returned by `bst_native_build_tracer.pair_events`)
     alone, converted into a real, self-contained Chrome Trace event list.
     Timestamps are normalized so the trace starts near `ts=0` (Plane 2's
@@ -140,7 +140,7 @@ def build_standalone_chrome_trace(records: List[dict]) -> List[dict]:
     return _process_name_events(element_pids) + _plane2_trace_events(records, element_pids, offset_us)
 
 
-def compute_clock_offset_us(plane1_trace_events: List[dict], plane2_records: List[dict], anchor_element: str) -> float:
+def compute_clock_offset_us(plane1_trace_events: list[dict], plane2_records: list[dict], anchor_element: str) -> float:
     """The one real, global additive offset (microseconds) to convert
     every Plane 2 `CLOCK_MONOTONIC`-seconds timestamp into Plane 1's own
     real wall-clock-microseconds coordinate system - computed from
@@ -199,8 +199,8 @@ def compute_clock_offset_us(plane1_trace_events: List[dict], plane2_records: Lis
 
 
 def build_combined_chrome_trace(
-    plane1_trace_events: List[dict], plane2_records: List[dict], anchor_element: str,
-) -> List[dict]:
+    plane1_trace_events: list[dict], plane2_records: list[dict], anchor_element: str,
+) -> list[dict]:
     """Merges Plane 1's own real trace events (unmodified - its own
     `pid: 1`/per-task `tid` convention is untouched) with Plane 2's own
     real per-process events, correlated onto one shared timeline via
@@ -284,7 +284,7 @@ def main(argv=None, quiet=False) -> int:
     if args.command == "standalone":
         output = build_standalone_chrome_trace(records)
     else:
-        with open(args.plane1_json, "r", encoding="utf-8") as f:
+        with open(args.plane1_json, encoding="utf-8") as f:
             plane1_trace_events = json.load(f)
         output = build_combined_chrome_trace(plane1_trace_events, records, args.anchor_element)
 

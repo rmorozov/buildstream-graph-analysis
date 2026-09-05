@@ -198,7 +198,7 @@ class TestTheIntegrationIsInert:
         result = subprocess.run(
             [sys.executable, "-c",
              "from bga.cli import main; raise SystemExit(main("
-             "['analyze', %r, '--format', 'json']))" % GOLDEN],
+             f"['analyze', {GOLDEN!r}, '--format', 'json']))"],
             capture_output=True, text=True, cwd=os.getcwd())
         assert result.returncode == 0, result.stderr
         assert json.loads(result.stdout)["schema"] == "analyze/v6"

@@ -33,13 +33,13 @@ before your change and once after; the comparison is automatic.
 Full background: docs/guides/real-project.md
 """
 import argparse
-import json
 import gzip
+import json
 import os
 import shutil
 import sys
 import time
-from typing import List, Optional, Tuple
+from typing import Optional
 
 from bga import run_store
 
@@ -64,7 +64,7 @@ HOST_SAMPLES_NAME = run_store.HOST_SAMPLES_NAME
 CONTEXT_NAME = "capture-context.txt"
 
 
-def _capture_context(project: str, command: List[str], config: dict) -> str:
+def _capture_context(project: str, command: list[str], config: dict) -> str:
     """What this capture was, in the terms UX-95 made the report carry.
 
     Written before the build rather than after, so a snapshot of a build
@@ -137,7 +137,7 @@ def why_the_project_is_not_one(project: str):
     return "\n".join(lines)
 
 
-def why_the_build_cannot_start(command: List[str]):
+def why_the_build_cannot_start(command: list[str]):
     """The sentence to print instead of capturing, or `None`.
 
     `UX-324`. On a machine without `bst`, `bga snapshot -- bst build
@@ -219,10 +219,10 @@ def build_ever_started(snapshot: str):
     return "bga-clocks start" not in lines[-1]
 
 
-def take_snapshot(project: str, command: List[str], config: dict,
+def take_snapshot(project: str, command: list[str], config: dict,
                   snapshot: Optional[str] = None, diagnose: bool = False,
                   no_inject: bool = False, inhibit: bool = False,
-                  keep_raw: bool = True) -> Tuple[str, int]:
+                  keep_raw: bool = True) -> tuple[str, int]:
     """Capture into a new snapshot directory. Returns it and the build's
     own exit code - which is the build's answer, not the capture's."""
     from .bst_native_build_tracer import main as capture_main
@@ -403,7 +403,7 @@ def create_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def main(argv: Optional[List[str]] = None) -> int:
+def main(argv: Optional[list[str]] = None) -> int:
     args = create_parser().parse_args(argv)
 
     if args.no_progress:
@@ -783,7 +783,7 @@ def _snapshot_failed(snapshot: str) -> bool:
     """
     path = os.path.join(snapshot, RUN_SUBDIR, "run-context.json")
     try:
-        with open(path, "r", encoding="utf-8") as handle:
+        with open(path, encoding="utf-8") as handle:
             outcome = json.load(handle).get("build_outcome") or {}
     except (OSError, ValueError):
         return False
@@ -813,7 +813,7 @@ def _healthy_baseline(previous):
     return None, list(reversed(skipped))
 
 
-def _walkback_notice(baseline: Optional[str], skipped: List[str]) -> str:
+def _walkback_notice(baseline: Optional[str], skipped: list[str]) -> str:
     """What the walk-back says it did, and why.
 
     `UX-164` item 2: the sentence was built for a plural list and read
@@ -1029,7 +1029,7 @@ def _run_measurements(snapshot: str) -> dict:
     return out
 
 
-def _mark_verdicts(rows: List[dict]) -> None:
+def _mark_verdicts(rows: list[dict]) -> None:
     """Give each row a `verdict_kind` against the runs before it.
 
     `UX-203` asked for "the verdict vs its walk-back baseline", and its
@@ -1057,7 +1057,7 @@ def _mark_verdicts(rows: List[dict]) -> None:
     """
     from bga.compare import classify_against_band, compute_band, widen_band
 
-    history: List[int] = []
+    history: list[int] = []
     for row in rows:
         duration = row.get("total_duration_us")
         if duration is None or row.get("incomplete_reason"):
@@ -1240,8 +1240,8 @@ def parse_size(text: str) -> int:
     return int(value * _SIZE_SUFFIXES[suffix])
 
 
-def over_budget(snapshots: List[str], budget: int, protected: set,
-                size_of) -> List[str]:
+def over_budget(snapshots: list[str], budget: int, protected: set,
+                size_of) -> list[str]:
     """The oldest snapshots to delete to bring a store under `budget`.
 
     `UX-300`. The keep-set is not negotiable - `@last` and `@prev` are

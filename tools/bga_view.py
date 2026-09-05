@@ -38,7 +38,7 @@ import tempfile
 import threading
 import urllib.parse
 import webbrowser
-from typing import Dict, List, Optional
+from typing import Optional
 
 from bga import plane2 as _plane2_shape
 
@@ -152,7 +152,7 @@ TRACE_STATUS_NAME = "trace-status.json"
 PERFETTO_ORIGIN = "https://ui.perfetto.dev"
 
 
-def _capture(argv: List[str]) -> dict:
+def _capture(argv: list[str]) -> dict:
     """Run a bga command and return the JSON it printed.
 
     Through `main()` rather than by importing the renderer: the payload
@@ -173,7 +173,7 @@ def _capture(argv: List[str]) -> dict:
     return json.loads(text)
 
 
-def history(run: str) -> List[str]:
+def history(run: str) -> list[str]:
     """Every run in `run`'s own store that precedes it, oldest first.
 
     `UX-203`: the band needs a *set*, not a pair.
@@ -286,7 +286,7 @@ ANALYSIS_FROM_CAPTURE = "capture"
 ANALYSIS_FROM_VIEW = "view"
 
 
-def _contract_heads(names) -> Dict[str, str]:
+def _contract_heads(names) -> dict[str, str]:
     """`{"analyze": "analyze/v4"}` - the newest version of each contract."""
     return {name.rsplit("/v", 1)[0]: name
             for name in sorted(names or ()) if "/v" in name}
@@ -306,7 +306,7 @@ def analysis_source(stored: Optional[dict], reanalysed: bool) -> dict:
 
     theirs = producer.contracts_of(stored)
     mine = _contract_heads(producer.stamp().get("contracts"))
-    moved: List[str] = []
+    moved: list[str] = []
     if theirs is not None:
         old = _contract_heads(theirs)
         moved = sorted(
@@ -341,7 +341,7 @@ def analysis_note(run: str, reanalyse: bool = False) -> dict:
     return analysis_source(stored, reanalyse or stored is None)
 
 
-def _offered(documents: Dict[str, dict]) -> List[str]:
+def _offered(documents: dict[str, dict]) -> list[str]:
     """The payload names the page may load, from the table it will be given.
 
     `UX-334`: keyed by *name* - "compare" - because that is what
@@ -355,7 +355,7 @@ def _offered(documents: Dict[str, dict]) -> List[str]:
 
 
 def payloads(run: str, baseline: Optional[str] = None,
-             reanalyse: bool = False) -> Dict[str, dict]:
+             reanalyse: bool = False) -> dict[str, dict]:
     """Everything the page renders, keyed by the url it is served at.
 
     A refusal is data, not an error: `bga compare` exits 6 on runs it
@@ -429,6 +429,7 @@ def store_payload(run: str, window: Optional[int] = STORE_WINDOW
     which is what the focus path behind "show all N" is served from.
     """
     from bga import run_store
+
     # Relative: packaged, this module is `bga._tools.bga_view`,
     # and `tools` does not exist. `UX-94` made these siblings
     # import each other relatively for exactly this reason.
@@ -632,7 +633,7 @@ def trace_with_planes(run: str, planes: Optional[str] = None):
         shutil.rmtree(scratch, ignore_errors=True)
 
 
-def schemas_payload(documents: Optional[Dict[str, dict]] = None) -> dict:
+def schemas_payload(documents: Optional[dict[str, dict]] = None) -> dict:
     """The schemas, so the page can render generically.
 
     Served rather than inlined so the page has one source of truth for
@@ -660,7 +661,7 @@ def schemas_payload(documents: Optional[Dict[str, dict]] = None) -> dict:
     return {name: schemas.schema(name) for name in sorted(names)}
 
 
-def _declared_schemas(documents: Dict[str, dict], known) -> set:
+def _declared_schemas(documents: dict[str, dict], known) -> set:
     """Every schema id the documents name, at any depth.
 
     At any depth because a document can carry another's id inside it -
@@ -871,7 +872,7 @@ _IMPORT_RE = re.compile(r"""^[ \t]*import\s.*?from\s+["']\./([\w.-]+)["'];?""",
                         re.M | re.S)
 
 
-def _module_order(entry: str = "app.js") -> List[str]:
+def _module_order(entry: str = "app.js") -> list[str]:
     """Every module the export must inline, dependencies first.
 
     **Derived, not listed.** `UX-199` found the export defining none of
@@ -1217,10 +1218,7 @@ def export(run: str, path: str, with_trace: bool = True,
         from bga import plane2 as plane2_shape
 
         # `UX-555`: the caller's own flag is not an absence of Plane 2.
-        if not with_trace:
-            omitted = TIMELINE_NOT_ASKED_FOR
-        else:
-            omitted = plane2_shape.absence(run) or TIMELINE_DID_NOT_RENDER
+        omitted = TIMELINE_NOT_ASKED_FOR if not with_trace else plane2_shape.absence(run) or TIMELINE_DID_NOT_RENDER
     if omitted and trace is not None:
         # UX-299: and what to do instead, because "the timeline is not
         # in this file" is a dead end without it. The blast box's
@@ -1318,18 +1316,18 @@ class _Handler(http.server.BaseHTTPRequestHandler):
     """GET only, from a fixed table. No filesystem fall-through."""
 
     server_version = "bga-view"
-    documents: Dict[str, dict] = {}
-    blobs: Dict[str, bytes] = {}
+    documents: dict[str, dict] = {}
+    blobs: dict[str, bytes] = {}
     run_root: str = ""
     # `UX-394`: the other runs of this run's own store, by the stamp
     # the store lists them under, and what has been built for each.
     # Empty where there is no store, which is what makes the selector
     # absent rather than empty (`UX-388`'s rule).
-    sibling_runs: Dict[str, str] = {}
-    sibling_documents: Dict[str, Dict[str, dict]] = {}
+    sibling_runs: dict[str, str] = {}
+    sibling_documents: dict[str, dict[str, dict]] = {}
     sibling_lock: Optional[threading.Lock] = None
 
-    def _for_run(self, raw: str) -> Dict[str, dict]:
+    def _for_run(self, raw: str) -> dict[str, dict]:
         """The documents for the run `?run=` names, or this one's.
 
         **Built on request, cached per stamp.** `payloads` runs the
@@ -1372,13 +1370,13 @@ class _Handler(http.server.BaseHTTPRequestHandler):
                 self.sibling_documents[wanted] = built
             return built
 
-    def log_message(self, format, *args):        # noqa: A002
+    def log_message(self, format, *args):
         # `BaseHTTPRequestHandler` logs every hit to stderr, which would
         # scribble over `UX-183`'s progress line and tell the user
         # nothing they want.
         pass
 
-    def do_GET(self):                            # noqa: N802 - stdlib name
+    def do_GET(self):
         raw = self.path
         path = raw.split("?", 1)[0].lstrip("/") or "index.html"
         if path == "blast.json":
@@ -1419,10 +1417,10 @@ class _Handler(http.server.BaseHTTPRequestHandler):
             return self._asset(path)
         self._refuse(404, f"{path}: not served")
 
-    def do_HEAD(self):                           # noqa: N802
+    def do_HEAD(self):
         self.do_GET()
 
-    def do_OPTIONS(self):                        # noqa: N802 - stdlib name
+    def do_OPTIONS(self):
         """The CORS pre-flight for the trace blob, and nothing else.
 
         `UX-265`: the `?url=` hand-off used to be a *simple* request -
@@ -1499,7 +1497,7 @@ class _Handler(http.server.BaseHTTPRequestHandler):
             return self._refuse(400, "target is too long")
         try:
             return self._json(blast_answer(self.run_root, target))
-        except Exception as error:  # noqa: BLE001 - reported as data
+        except Exception as error:
             return self._refuse(422, f"{target}: {error}")
 
     def _whatif(self, raw):
@@ -1512,7 +1510,7 @@ class _Handler(http.server.BaseHTTPRequestHandler):
         elements = [uid for uid in raw_elements.split(",") if uid.strip()]
         try:
             return self._json(whatif_answer(self.run_root, elements))
-        except Exception as error:  # noqa: BLE001 - reported as data
+        except Exception as error:
             return self._refuse(422, str(error))
 
     def _json(self, document):
@@ -1674,7 +1672,7 @@ class _Server(http.server.ThreadingHTTPServer):
 
 
 def serve(run: str, port: int = 0,
-          documents: Optional[Dict[str, dict]] = None,
+          documents: Optional[dict[str, dict]] = None,
           with_trace: bool = True,
           baseline: Optional[str] = None,
           reanalyse: bool = False):
@@ -1800,7 +1798,7 @@ def landing_url(port: int) -> str:
     return f"http://{PERFETTO_FETCHABLE_PORTS.get(port, '127.0.0.1')}:{port}/"
 
 
-def main(argv: Optional[List[str]] = None) -> int:
+def main(argv: Optional[list[str]] = None) -> int:
     from bga.help_format import CompactRawHelp
 
     parser = argparse.ArgumentParser(
@@ -1851,7 +1849,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         # unit test passed an explicit path.
         run = run_store.resolve(args.run)
         baseline = run_store.resolve(args.compare) if args.compare else None
-    except Exception as error:  # noqa: BLE001 - reported, not swallowed
+    except Exception as error:
         print(f"Error: {error}", file=sys.stderr)
         return 2
 

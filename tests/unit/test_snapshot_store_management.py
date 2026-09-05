@@ -13,7 +13,7 @@ import time
 import pytest
 
 from bga import run_store
-from tools.bga_snapshot import _prune, _protected, main
+from tools.bga_snapshot import _protected, _prune, main
 
 
 def _snapshot(project, name, files=(("plane2.json", "x" * 1000),), failed=()):
@@ -92,6 +92,7 @@ class TestPruneDeletesButNotTheOnesInUse:
                                          os.path.join(project, ".bga", "runs", "01")})
         assert os.path.join(project, ".bga", "runs", "01") not in _protected(project)
         import inspect
+
         from tools import bga_snapshot
         assert '"baseline"' not in inspect.getsource(bga_snapshot._protected)
 
@@ -186,6 +187,7 @@ class TestPruneDeletesButNotTheOnesInUse:
 class TestTheSizeWarningNamesTheCommand:
     def test_it_no_longer_advises_hand_deletion(self):
         import inspect
+
         from tools import bga_snapshot
         source = inspect.getsource(bga_snapshot._warn_if_large)
         assert "prune" in source

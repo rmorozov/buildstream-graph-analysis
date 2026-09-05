@@ -25,7 +25,7 @@ import pytest
 REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO / "tools"))
 
-import dev_touching  # noqa: E402
+import dev_touching
 
 #: Per document, how many lines pricing the loop must carry the figure.
 #: An equality, not a floor: a site that drops it is the defect, and

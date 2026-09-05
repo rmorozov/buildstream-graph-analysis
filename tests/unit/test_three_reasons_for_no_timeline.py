@@ -35,9 +35,9 @@ import pytest
 REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 
-from bga import plane2, run_store                             # noqa: E402
-from tests import pages                                       # noqa: E402
-from tools import bga_view                                    # noqa: E402
+from bga import plane2, run_store
+from tests import pages
+from tools import bga_view
 
 #: A run with no Plane 2 beside it at all - the second state.
 GOLDEN = REPO / "tests/fixtures/golden/mixed_task_kinds"

@@ -25,7 +25,7 @@ import pytest
 REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 
-from bga import producer, schemas  # noqa: E402
+from bga import producer, schemas
 
 FIXTURES = {
     "golden": REPO / "tests/fixtures/golden/mixed_task_kinds/expected_output.json",

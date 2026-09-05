@@ -139,18 +139,18 @@ class TestTheHistoryIsDrawnFromPublishedValues:
             _snapshot("b", [_element("core.bst", 10500000)]),
             _snapshot("c", [_element("core.bst", 9400000)]),
         )
-        out = _js('''
-          const { renderElementHistory } = await import("./tests/viewer.mjs");
-          const block = renderElementHistory(%s, "core.bst");
+        out = _js(f'''
+          const {{ renderElementHistory }} = await import("./tests/viewer.mjs");
+          const block = renderElementHistory({json.dumps(store)}, "core.bst");
           const spark = all(block, (n) => n.attrs["data-role"] === "sparkline")[0];
-          console.log(JSON.stringify({
+          console.log(JSON.stringify({{
             history: block.attrs["data-history"],
             points: block.attrs["data-points"],
             values: spark ? spark.attrs["data-values"] : null,
             sentence: text(all(block,
               (n) => n.attrs["data-role"] === "history-sentence")[0]),
-          }));
-        ''' % json.dumps(store))
+          }}));
+        ''')
         assert out["history"] == "present"
         assert out["points"] == "3"
         assert out["values"] == "12100000,10500000,9400000"
@@ -163,22 +163,22 @@ class TestTheHistoryIsDrawnFromPublishedValues:
             _snapshot("a", [_element("core.bst", 12100000)]),
             _snapshot("b", [_element("core.bst", 9400000)]),
         )
-        out = _js('''
-          const { elementHistory } = await import("./tests/viewer.mjs");
+        out = _js(f'''
+          const {{ elementHistory }} = await import("./tests/viewer.mjs");
           console.log(JSON.stringify(
-            elementHistory(%s, "core.bst").series.map((p) => p.duration_us)));
-        ''' % json.dumps(store))
+            elementHistory({json.dumps(store)}, "core.bst").series.map((p) => p.duration_us)));
+        ''')
         assert out == [12100000, 9400000]
         assert len(set(out)) > 1, "the fixture must actually fall"
 
     def test_one_run_is_stated_as_one_run(self):
         store = _store(_snapshot("a", [_element("core.bst", 5000000)]))
-        out = _js('''
-          const { renderElementHistory } = await import("./tests/viewer.mjs");
-          const block = renderElementHistory(%s, "core.bst");
+        out = _js(f'''
+          const {{ renderElementHistory }} = await import("./tests/viewer.mjs");
+          const block = renderElementHistory({json.dumps(store)}, "core.bst");
           console.log(JSON.stringify(text(all(block,
             (n) => n.attrs["data-role"] === "history-sentence")[0])));
-        ''' % json.dumps(store))
+        ''')
         assert out == "5.0 s in one recorded run."
 
     def test_leaving_the_critical_path_is_named(self):
@@ -186,12 +186,12 @@ class TestTheHistoryIsDrawnFromPublishedValues:
             _snapshot("first", [_element("core.bst", 12000000, on_path=True)]),
             _snapshot("second", [_element("core.bst", 3000000, on_path=False)]),
         )
-        out = _js('''
-          const { renderElementHistory } = await import("./tests/viewer.mjs");
-          const block = renderElementHistory(%s, "core.bst");
+        out = _js(f'''
+          const {{ renderElementHistory }} = await import("./tests/viewer.mjs");
+          const block = renderElementHistory({json.dumps(store)}, "core.bst");
           console.log(JSON.stringify(text(all(block,
             (n) => n.attrs["data-role"] === "history-sentence")[0])));
-        ''' % json.dumps(store))
+        ''')
         assert "Off the critical path since second." in out
 
     def test_each_point_carries_the_verdict_shape_from_the_schema(self):
@@ -209,12 +209,12 @@ class TestTheHistoryIsDrawnFromPublishedValues:
             _snapshot("a", [_element("core.bst", 10)], verdict="regressed"),
             _snapshot("b", [_element("core.bst", 8)], verdict="improved"),
         )
-        out = _js('''
-          const { renderElementHistory } = await import("./tests/viewer.mjs");
-          const block = renderElementHistory(%s, "core.bst", %s);
+        out = _js(f'''
+          const {{ renderElementHistory }} = await import("./tests/viewer.mjs");
+          const block = renderElementHistory({json.dumps(store)}, "core.bst", {json.dumps(schemas.schema(schemas.STORE))});
           console.log(JSON.stringify(all(block,
             (n) => n.attrs["data-marker"]).map((n) => n.attrs["data-marker"])));
-        ''' % (json.dumps(store), json.dumps(schemas.schema(schemas.STORE))))
+        ''')
         assert out == [schemas.VERDICT_MARKERS["regressed"],
                        schemas.VERDICT_MARKERS["improved"]]
 
@@ -223,12 +223,12 @@ class TestTheHistoryIsDrawnFromPublishedValues:
         the neutral one rather than inventing a vocabulary."""
         store = _store(_snapshot("a", [_element("core.bst", 10)],
                                  verdict="regressed"))
-        out = _js('''
-          const { renderElementHistory } = await import("./tests/viewer.mjs");
-          const block = renderElementHistory(%s, "core.bst");
+        out = _js(f'''
+          const {{ renderElementHistory }} = await import("./tests/viewer.mjs");
+          const block = renderElementHistory({json.dumps(store)}, "core.bst");
           console.log(JSON.stringify(all(block,
             (n) => n.attrs["data-marker"]).map((n) => n.attrs["data-marker"])));
-        ''' % json.dumps(store))
+        ''')
         assert out == ["circle"]
 
 
@@ -237,16 +237,16 @@ class TestAbsenceIsStatedNeverDrawn:
 
     def test_an_element_with_no_history_says_so(self):
         store = _store(_snapshot("a", [_element("other.bst", 100)]))
-        out = _js('''
-          const { renderElementHistory } = await import("./tests/viewer.mjs");
-          const block = renderElementHistory(%s, "core.bst");
-          console.log(JSON.stringify({
+        out = _js(f'''
+          const {{ renderElementHistory }} = await import("./tests/viewer.mjs");
+          const block = renderElementHistory({json.dumps(store)}, "core.bst");
+          console.log(JSON.stringify({{
             history: block.attrs["data-history"],
             points: block.attrs["data-points"],
             spark: all(block, (n) => n.attrs["data-role"] === "sparkline").length,
             text: text(block),
-          }));
-        ''' % json.dumps(store))
+          }}));
+        ''')
         assert out["history"] == "none"
         assert out["points"] == "0"
         assert out["spark"] == 0, "a point at zero is not an absence"
@@ -256,13 +256,13 @@ class TestAbsenceIsStatedNeverDrawn:
         """`elements: null` and `elements: []` are different facts."""
         old = _store({"stamp": "a", "verdict_kind": "improved", "elements": None})
         analyzed = _store(_snapshot("a", []))
-        out = _js('''
-          const { renderElementHistory } = await import("./tests/viewer.mjs");
-          console.log(JSON.stringify({
-            old: text(renderElementHistory(%s, "core.bst")),
-            analyzed: text(renderElementHistory(%s, "core.bst")),
-          }));
-        ''' % (json.dumps(old), json.dumps(analyzed)))
+        out = _js(f'''
+          const {{ renderElementHistory }} = await import("./tests/viewer.mjs");
+          console.log(JSON.stringify({{
+            old: text(renderElementHistory({json.dumps(old)}, "core.bst")),
+            analyzed: text(renderElementHistory({json.dumps(analyzed)}, "core.bst")),
+          }}));
+        ''')
         assert "captured before per-element history was recorded" in out["old"]
         assert "has not been on the critical path" in out["analyzed"]
         assert out["old"] != out["analyzed"]

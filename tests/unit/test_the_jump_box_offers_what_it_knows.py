@@ -63,11 +63,10 @@ def _js(body):
 
 
 def _palette(query, context=None):
-    return _js('''
-      const { paletteResults } = await import("./bga/viewer/nav.js");
-      console.log(JSON.stringify(paletteResults(%s, %s, %s, %s)));
-    ''' % (json.dumps(_TARGETS), json.dumps(query),
-           json.dumps(_PAYLOAD), json.dumps(context or {})))
+    return _js(f'''
+      const {{ paletteResults }} = await import("./bga/viewer/nav.js");
+      console.log(JSON.stringify(paletteResults({json.dumps(_TARGETS)}, {json.dumps(query)}, {json.dumps(_PAYLOAD)}, {json.dumps(context or {})})));
+    ''')
 
 
 @needs_node

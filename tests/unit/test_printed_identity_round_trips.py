@@ -23,7 +23,6 @@ from bga import sources
 from bga.blast import blast, classify_target, format_blast_text, known_identity
 from bga.report.text import _format_resource_blast
 
-
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 GOLDEN = os.path.join(REPO_ROOT, "tests", "fixtures", "golden", "mixed_task_kinds")
 MONO = "https://gitlab.example.com/org/monorepo.git"

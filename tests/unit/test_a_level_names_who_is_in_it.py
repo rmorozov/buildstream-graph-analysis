@@ -35,8 +35,8 @@ REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 sys.path.insert(0, str(REPO / "tests"))
 
-from bga import schemas    # noqa: E402
-from bga.schemas import COLUMNS    # noqa: E402
+from bga import schemas
+from bga.schemas import COLUMNS
 
 FIXTURES = {
     "golden": REPO / "tests/fixtures/golden/mixed_task_kinds",
@@ -130,10 +130,10 @@ class TestTheMembersComeFromTheGatingGraph:
     @staticmethod
     @pytest.fixture(scope="class")
     def document(tmp_path_factory):
+        from fixtures.topologies import _build, _dependency, _element, _span, write_run_dir
+
         from bga import BuildEfficiencyAnalyzer
         from bga.report.json import format_json
-        from fixtures.topologies import _build, _dependency, _element, _span
-        from fixtures.topologies import write_run_dir
 
         uids = ["a.bst", "b.bst", "c.bst", "d.bst"]
         topology = _build(
@@ -163,6 +163,7 @@ class TestTheMembersComeFromTheGatingGraph:
         pass whatever the analyzer sourced its members from.
         """
         import networkx as nx
+
         from bga.ingest.loader import load_all
         from bga.structural.analyzer import build_edg
 
@@ -181,9 +182,8 @@ class TestTheMembersComeFromTheGatingGraph:
         assert depths(edg.G_full)["d.bst"] == 3, depths(edg.G_full)
 
     def test_the_members_are_the_gating_graphs(self, document):
-        from bga.structural.analyzer import build_edg
         from bga.ingest.loader import load_all
-        from bga.structural.analyzer import StructuralAnalyzer
+        from bga.structural.analyzer import StructuralAnalyzer, build_edg
 
         document, run = document
         _context, graph, _trace = load_all(pathlib.Path(run))

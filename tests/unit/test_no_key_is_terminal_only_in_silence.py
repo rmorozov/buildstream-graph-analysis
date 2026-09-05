@@ -44,7 +44,7 @@ import pytest
 REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 
-from bga import plane2                                        # noqa: E402
+from bga import plane2
 
 node = shutil.which("node")
 needs_node = pytest.mark.skipif(node is None, reason="node is not installed")
@@ -100,7 +100,7 @@ def _declarations(name):
     found = re.search(rf"export const {name} = \{{(.*?)\}};", source, re.S)
     assert found, f"app.js no longer declares {name}"
     body = found.group(1)
-    return {key: body for key in re.findall(r"^  (\w+):", body, re.M)}
+    return dict.fromkeys(re.findall(r"^  (\w+):", body, re.M), body)
 
 
 @pytest.fixture(scope="module")

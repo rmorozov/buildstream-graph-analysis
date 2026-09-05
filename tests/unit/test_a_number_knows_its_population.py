@@ -91,8 +91,7 @@ class TestTheSplitIsADecision:
             assert len(why) > 40, f"{name}: no argument against it"
 
     def test_the_two_sets_do_not_overlap(self):
-        from bga.analyzer import (DISTRIBUTED_QUANTITIES,
-                                  UNDISTRIBUTED_QUANTITIES)
+        from bga.analyzer import DISTRIBUTED_QUANTITIES, UNDISTRIBUTED_QUANTITIES
 
         both = set(DISTRIBUTED_QUANTITIES) & set(UNDISTRIBUTED_QUANTITIES)
         assert both == set(), f"{both} is on both lists"

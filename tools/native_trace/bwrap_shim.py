@@ -27,13 +27,14 @@ reintroduce by hand and easy to miss without a fixture-driven test
 (tests/unit/test_bwrap_shim.py exercises real captured bwrap argv from
 UX-11's own prototype run).
 """
+import contextlib
 import json
 import os
 import select
 import signal
 import sys
 import time
-from typing import List, Optional, Tuple
+from typing import Optional
 
 # bwrap flags, keyed by how many trailing positional args each consumes.
 #
@@ -86,7 +87,7 @@ _ZERO_ARG_FLAGS = {
 KNOWN_FLAGS = _THREE_ARG_FLAGS | _TWO_ARG_FLAGS | _ONE_ARG_FLAGS | _ZERO_ARG_FLAGS
 
 
-def unknown_flags(args: List[str]) -> List[str]:
+def unknown_flags(args: list[str]) -> list[str]:
     """Option-looking tokens the table has no arity for, in order.
 
     Reported rather than reasoned about: an unknown flag means the split
@@ -114,7 +115,7 @@ def unknown_flags(args: List[str]) -> List[str]:
     return seen
 
 
-def split_bwrap_args(args: List[str]) -> Tuple[List[str], List[str]]:
+def split_bwrap_args(args: list[str]) -> tuple[list[str], list[str]]:
     """Split a real bwrap argv (as BuildStream generates it) into
     (options, command): every leading `--flag [args...]` bwrap option,
     then the trailing positional command to exec inside the sandbox
@@ -131,7 +132,7 @@ def split_bwrap_args(args: List[str]) -> Tuple[List[str], List[str]]:
     """
     i = 0
     n = len(args)
-    opts: List[str] = []
+    opts: list[str] = []
     while i < n:
         arg = args[i]
         if arg in _THREE_ARG_FLAGS:
@@ -151,7 +152,7 @@ def split_bwrap_args(args: List[str]) -> Tuple[List[str], List[str]]:
     return opts, list(args[i:])
 
 
-def extract_element_name(opts: List[str]) -> Optional[str]:
+def extract_element_name(opts: list[str]) -> Optional[str]:
     """UX-23: BuildStream's own generated bwrap argv always includes a
     real `--dir buildstream/<project-name>/<element>.bst` option (the
     sandbox's own working directory, confirmed present in every real
@@ -203,14 +204,14 @@ def element_from_build_root(path: str) -> Optional[str]:
 
 def build_shim_argv(
     real_bwrap: str,
-    bst_args: List[str],
+    bst_args: list[str],
     bind_src: str,
     bind_dst: str,
     preload_so: str,
     trace_log: str,
     invocation_id: Optional[int] = None,
     spine: Optional[str] = None,
-) -> List[str]:
+) -> list[str]:
     """The real, complete argv to exec: BuildStream's own bwrap options
     first (unmodified, including its own root-filesystem bind), then the
     injected `--bind`/`--setenv LD_PRELOAD`/`--setenv BST_TRACE_LOG`
@@ -279,7 +280,7 @@ def build_shim_argv(
 DEFAULT_ARGV_RECORD_LIMIT = 32
 
 
-def record_argv(log_path: str, argv: List[str], limit: int) -> bool:
+def record_argv(log_path: str, argv: list[str], limit: int) -> bool:
     """UX-58: append one bwrap argv, as BuildStream generated it, to
     `log_path`. Returns whether a record was written.
 
@@ -304,7 +305,7 @@ def record_argv(log_path: str, argv: List[str], limit: int) -> bool:
     try:
         recorded = 0
         try:
-            with open(log_path, "r", encoding="utf-8") as handle:
+            with open(log_path, encoding="utf-8") as handle:
                 recorded = sum(1 for _ in handle)
         except FileNotFoundError:
             pass
@@ -322,7 +323,7 @@ def record_argv(log_path: str, argv: List[str], limit: int) -> bool:
             try:
                 with open(f"/proc/{pid}/cmdline", "rb") as handle:
                     cmd = handle.read().decode("utf-8", "replace").replace("\x00", " ").strip()
-                with open(f"/proc/{pid}/stat", "r") as handle:
+                with open(f"/proc/{pid}/stat") as handle:
                     ppid = int(handle.read().rsplit(")", 1)[1].split()[1])
             except (OSError, ValueError, IndexError):
                 break
@@ -373,7 +374,7 @@ def spine_for_element(policy: Optional[str], census_path: Optional[str],
     if element is None:
         return spine                       # name unrecoverable - trace it
     try:
-        with open(census_path, "r", encoding="utf-8") as handle:
+        with open(census_path, encoding="utf-8") as handle:
             verdicts = json.load(handle)
     except (OSError, ValueError, TypeError):
         return spine                       # no census to consult - trace it
@@ -423,8 +424,8 @@ def record_invocation(log_path: Optional[str], invocation_id: int,
         return False
 
 
-def record_diagnostics(log_path: Optional[str], received: List[str],
-                       exec_argv: List[str], real_bwrap: str,
+def record_diagnostics(log_path: Optional[str], received: list[str],
+                       exec_argv: list[str], real_bwrap: str,
                        element: Optional[str], spine: Optional[str],
                        injected: bool,
                        stderr_path: Optional[str] = None) -> bool:
@@ -518,7 +519,7 @@ def _reap(pid: int) -> Optional[int]:
     return status if done == pid else None
 
 
-def run_teed(real_bwrap: str, argv: List[str], stderr_path: str) -> int:
+def run_teed(real_bwrap: str, argv: list[str], stderr_path: str) -> int:
     """Run the real bwrap as a child, copying its stderr to a file.
 
     `UX-148`, and the reason this is `--diagnose`-only. The default path
@@ -545,7 +546,7 @@ def run_teed(real_bwrap: str, argv: List[str], stderr_path: str) -> int:
             if write_fd > 2:
                 os.close(write_fd)
             os.execv(real_bwrap, argv)
-        except BaseException as error:  # noqa: BLE001 - last chance to speak
+        except BaseException as error:
             try:
                 os.write(2, f"bga: could not exec {real_bwrap}: {error}\n".encode())
             finally:
@@ -597,10 +598,8 @@ def exit_like(status: int) -> int:
     """
     if os.WIFSIGNALED(status):
         signum = os.WTERMSIG(status)
-        try:
+        with contextlib.suppress(ValueError, OSError):
             signal.signal(signum, signal.SIG_DFL)
-        except (ValueError, OSError):
-            pass
         os.kill(os.getpid(), signum)
         # Only reached if the signal was blocked or could not be raised.
         return 128 + signum

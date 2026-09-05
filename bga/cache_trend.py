@@ -37,7 +37,7 @@ reporting zero.
 """
 import os
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import Optional
 
 from .cache_effectiveness import compute_cache_accounting, compute_cache_churn
 from .compare import _SIGNIFICANCE_PCT, MIN_BASELINE_RUNS, compute_band
@@ -98,7 +98,7 @@ def _rebuild_us(tasks) -> Optional[int]:
     return total
 
 
-def _subject(run_context) -> Optional[Tuple[str, Tuple[str, ...]]]:
+def _subject(run_context) -> Optional[tuple[str, tuple[str, ...]]]:
     """What a series is a series *of*: the project and the targets built.
 
     `None` when the capture records no identity at all - every run
@@ -168,7 +168,7 @@ def _row(name: str, result, run_context, graph, tasks, previous) -> dict:
     return row
 
 
-def _band_findings(rows: List[dict]) -> List[dict]:
+def _band_findings(rows: list[dict]) -> list[dict]:
     """A finding per trended metric whose newest reading leaves the band
     the trailing window describes.
 
@@ -243,7 +243,7 @@ def _subject_label(subject) -> str:
     return f"{project} {', '.join(targets)}".strip()
 
 
-def build_trend(rows: List[dict]) -> dict:
+def build_trend(rows: list[dict]) -> dict:
     """The trend payload: the rows as given, plus whatever the window
     supports.
 
@@ -310,7 +310,7 @@ def trend_from_run_dirs(run_dirs, **analyzer_kwargs) -> dict:
     """
     from .analyzer import BuildEfficiencyAnalyzer
 
-    rows: List[dict] = []
+    rows: list[dict] = []
     previous = None
     for run_dir in run_dirs:
         analyzer = BuildEfficiencyAnalyzer(**analyzer_kwargs)

@@ -22,7 +22,7 @@ exponential service time that the store can measure and contradict,
 which is the shape `UX-129` calls worse than a refusal.
 """
 import statistics
-from typing import Dict, List, Optional
+from typing import Optional
 
 from . import schemas, store_aggregate
 from .compare import MIN_BASELINE_RUNS
@@ -79,7 +79,7 @@ class _Assumed:
     """What one number's arithmetic leaned on, in the order it did."""
 
     def __init__(self):
-        self.ids: List[str] = []
+        self.ids: list[str] = []
 
     def on(self, name: str) -> None:
         if name not in ASSUMPTIONS:
@@ -104,7 +104,7 @@ def erlang_c(builders: int, load: float) -> float:
     return busy / (total - term + busy)
 
 
-def service_time(samples: List[float]) -> dict:
+def service_time(samples: list[float]) -> dict:
     """The first two moments of a measured service time.
 
     `UX-234` publishes a median and a MAD because a robust centre is
@@ -131,7 +131,7 @@ def _answer(name: str, value, quantity: str, assumed: _Assumed) -> dict:
             "assumes": list(assumed.ids)}
 
 
-def _class_model(label: str, samples: List[float], builders: int,
+def _class_model(label: str, samples: list[float], builders: int,
                  arrivals_per_day: float, mixed: bool) -> dict:
     """One host class's utilization and waiting, or why there is none."""
     entry = {"host_class": label, "runs": len(samples), "service": None,
@@ -212,7 +212,7 @@ def model(listing: dict, builders: int, arrivals_per_day: float) -> dict:
     if arrivals_per_day <= 0:
         raise ValueError("the arrival rate must be greater than 0")
 
-    by_class: Dict[str, List[float]] = {}
+    by_class: dict[str, list[float]] = {}
     excluded = 0
     for row in listing.get("snapshots") or []:
         if row.get("incomplete_reason") or row.get("total_duration_us") is None:
@@ -252,9 +252,9 @@ def model(listing: dict, builders: int, arrivals_per_day: float) -> dict:
     return document
 
 
-def _used(document: dict) -> List[str]:
+def _used(document: dict) -> list[str]:
     """Every assumption some number in this document leaned on."""
-    seen: List[str] = []
+    seen: list[str] = []
     for entry in document.get("host_classes") or []:
         for answer in entry.get("answers") or []:
             for name in answer.get("assumes") or []:
@@ -271,14 +271,14 @@ _UNITS = {
 }
 
 
-def _wrapped(prefix: str, body: str, indent: str) -> List[str]:
+def _wrapped(prefix: str, body: str, indent: str) -> list[str]:
     import textwrap
 
     return textwrap.wrap(body, width=72, initial_indent=prefix,
                          subsequent_indent=indent) or [prefix.rstrip()]
 
 
-def render(document: dict) -> List[str]:
+def render(document: dict) -> list[str]:
     """The model as text: every number names what its own arithmetic
     assumed, and the legend states each of those once.
 

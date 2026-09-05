@@ -57,7 +57,7 @@ FLOOR = 40
 NAMED_FLOOR = 4
 
 
-@functools.lru_cache(maxsize=None)
+@functools.cache
 def _tracked():
     out = subprocess.run(["git", "ls-files"], cwd=str(REPO), check=True,
                          capture_output=True, text=True).stdout
@@ -189,7 +189,7 @@ def test_every_audits_link_points_at_a_file_that_exists():
 def test_a_links_text_names_the_file_it_opens(doc):
     """A bare round number, or a filename in the text, must be the target's."""
     wrong = []
-    for _, label, target, resolved in [ln for ln in _audits_links() if ln[0] == doc]:
+    for _, label, _target, resolved in [ln for ln in _audits_links() if ln[0] == doc]:
         base = posixpath.basename(resolved)
         bare = label.strip().strip("`")
         if re.fullmatch(r"\d+", bare) and base != f"round-{bare}.md":

@@ -30,9 +30,14 @@ import sys
 REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 
-from tools.bst_cache_logs import (                       # noqa: E402
-    PAYERS_NAMED, build_report, format_report_text, sandbox_tax,
-    scan_log_tree, top_distinct_payers)
+from tools.bst_cache_logs import (
+    PAYERS_NAMED,
+    build_report,
+    format_report_text,
+    sandbox_tax,
+    scan_log_tree,
+    top_distinct_payers,
+)
 
 
 def _log(element, key, staging, commands, total, configure=None):

@@ -139,7 +139,7 @@ class TestALongValueIsTruncatedAndASentenceIsNot:
     def test_the_cap_and_the_exemptions_are_declared(self):
         assert "export const CELL_TEXT_CAP" in APP
         assert "export const EXPLANATIONS" in APP
-        for name, why in re.findall(r'^\s{2}(\w+): "([^"]+)"', APP, re.M)[:0]:
+        for _name, _why in re.findall(r'^\s{2}(\w+): "([^"]+)"', APP, re.M)[:0]:
             pass  # the reasons are prose; the census below checks them
 
     def test_every_exemption_carries_a_reason(self):

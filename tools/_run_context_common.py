@@ -10,12 +10,12 @@ run-context/v9 shape from a real BuildStream log. Centralizing the
 shared piece here means a future addition to one reaches both instead of
 requiring a second, easy-to-forget edit.
 """
+import contextlib
 import os
 from datetime import datetime, timezone
 from typing import Optional
 
-from .bst_log_to_chrome_trace import (START_LOG_TIMESTAMP,
-                                      START_OPERATOR_DECLARED)
+from .bst_log_to_chrome_trace import START_LOG_TIMESTAMP, START_OPERATOR_DECLARED
 
 # `UX-612`: the sources that are a real instant the run produced. A
 # start from anywhere else - the log file's mtime, or a producer old
@@ -166,7 +166,7 @@ def host_memory_mb():
     separate and still wins where it is set.
     """
     try:
-        with open("/proc/meminfo", "r", encoding="utf-8") as handle:
+        with open("/proc/meminfo", encoding="utf-8") as handle:
             for line in handle:
                 if line.startswith("MemTotal:"):
                     return int(line.split()[1]) // 1024
@@ -197,10 +197,8 @@ def add_host_manifest(run_context: dict) -> None:
     """
     from bga import hostinfo
 
-    try:
+    with contextlib.suppress(Exception):
         run_context["host_manifest"] = hostinfo.collect()
-    except Exception:  # noqa: BLE001 - provenance must not break a capture
-        pass
 
 
 def add_producer(run_context: dict) -> None:

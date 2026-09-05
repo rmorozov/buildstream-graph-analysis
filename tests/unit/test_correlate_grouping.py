@@ -24,10 +24,15 @@ task (bst 2.7.0, `--builders 4 --max-jobs 4`, cache cleared): 48 lines
 before, 21 after, with `core.bst` still leading on its own.
 """
 from bga.correlate import (
-    _collapse_range, _grouped_blocks, _group_header, _name_elements,
-    _SERIALIZATION_NOTABLE_S, ElementJoin, _recommend, format_correlation,
+    _SERIALIZATION_NOTABLE_S,
+    ElementJoin,
+    _collapse_range,
+    _group_header,
+    _grouped_blocks,
+    _name_elements,
+    _recommend,
+    format_correlation,
 )
-
 
 # --- the materiality bar ------------------------------------------------
 

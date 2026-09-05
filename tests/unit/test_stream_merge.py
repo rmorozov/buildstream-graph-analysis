@@ -474,8 +474,8 @@ def test_a_static_build_reports_itself_unmeasurable_rather_than_clean(tmp_path):
     look rather than report no unused dependencies. Run against a real
     build because the claim is about a real build's report.
     """
-    from tools.bst_native_build_tracer import load_and_summarize, run_traced_build
     from tests.unit._bst_env import isolated_bst_env
+    from tools.bst_native_build_tracer import load_and_summarize, run_traced_build
 
     project = os.path.join(REPO_ROOT, "examples", "01-resource-contention")
     if not os.path.isfile(os.path.join(project, "files", "runtime", "bin", "sh")):

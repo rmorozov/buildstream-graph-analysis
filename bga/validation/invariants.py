@@ -19,7 +19,7 @@ cold_confidence stays fully separate (already lives in floors, from
 bga.floors.cold.compute_cold_floor - never read or written here).
 """
 import logging
-from typing import List, Optional, Tuple
+from typing import Optional
 
 from ..ingest.models import STRUCTURAL_ELEMENT_KINDS, Graph, NormalizedTask, RunContext, Trace
 from ..occupancy.sweep import compute_capacity_excursions, compute_task_horizon
@@ -31,16 +31,16 @@ DURATION_COVERAGE_THRESHOLD = 0.98
 
 
 def compute_confidence(
-    normalized_tasks: List[NormalizedTask],
+    normalized_tasks: list[NormalizedTask],
     run_context: Optional[RunContext],
     trace: Optional[Trace],
     graph: Optional[Graph],
-    violations: List[dict],
+    violations: list[dict],
     attribution_segments: list,
     graph_analysis: Optional[dict],
     attribution: dict,
     floors: dict,
-) -> Tuple[dict, List[dict]]:
+) -> tuple[dict, list[dict]]:
     """
     Compute confidence metrics.
 
@@ -95,7 +95,7 @@ def compute_confidence(
     #     number that produced tasks - the checksum that proves nothing
     #     was dropped in extraction.
     # If any fails, this behaves exactly as it did before.
-    cached_on_critical_path: List[str] = []
+    cached_on_critical_path: list[str] = []
     if run_context is not None and run_context.run_mode == 'incremental':
         built = run_context.built_element_count
         if not run_context.failed_elements and built == len(elements_with_tasks):
@@ -214,7 +214,7 @@ def compute_confidence(
     # the real reason - never a generic re-statement of the ratio.
     kind_by_uid = {e.uid: (e.element_kind or 'unknown') for e in graph.elements} if graph else {}
 
-    def _missing_element_detail(uids: List[str]) -> List[dict]:
+    def _missing_element_detail(uids: list[str]) -> list[dict]:
         return [
             {
                 'element_uid': uid,
@@ -224,7 +224,7 @@ def compute_confidence(
             for uid in uids
         ]
 
-    new_violations: List[dict] = []
+    new_violations: list[dict] = []
 
     # UX-60: I3 - `T∞,observed >= max(observed task duration)`. The spec
     # states it and nothing implemented it, which is why `UX-53` could
@@ -332,10 +332,9 @@ def compute_confidence(
     # computed elsewhere in the pipeline, rather than a new one invented
     # from nothing.
     model_score = 1.0
-    if floors.get('t_c') is not None and floors.get('lb') is not None:
-        if floors['t_c'] < floors['lb']:
-            model_score = 0.5
-            logger.warning("Model score reduced: T_C (%d) < LB (%d)", floors['t_c'], floors['lb'])
+    if floors.get('t_c') is not None and floors.get('lb') is not None and floors['t_c'] < floors['lb']:
+        model_score = 0.5
+        logger.warning("Model score reduced: T_C (%d) < LB (%d)", floors['t_c'], floors['lb'])
 
     # attribution_score (33.4): untracked_time, ambiguous_wait_time,
     # violation_time - never penalizes legitimate phase overlap (phase

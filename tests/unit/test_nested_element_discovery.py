@@ -11,7 +11,8 @@ traced - so `--trace-spine=auto`, snapshot's default, quietly became
 """
 
 from tools.bst_native_build_tracer import (
-    discover_element_names, format_census_coverage,
+    discover_element_names,
+    format_census_coverage,
 )
 from tools.native_trace.bwrap_shim import element_from_build_root, extract_element_name
 

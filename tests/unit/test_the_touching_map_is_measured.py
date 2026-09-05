@@ -34,8 +34,8 @@ REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 sys.path.insert(0, str(REPO / "tools"))
 
-import dev_touch_map                                      # noqa: E402
-import dev_touching                                       # noqa: E402
+import dev_touch_map
+import dev_touching
 
 WORKFLOW = REPO / ".github/workflows/ci.yml"
 MAP = REPO / "tests/touch_map.json"

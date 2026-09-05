@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-709 scenarios: **48 open**, 661 closed.
+709 scenarios: **47 open**, 662 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -27,7 +27,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | cli | 0 | 21 |
 | store | 0 | 16 |
 | docs | 10 | 113 |
-| guards | 19 | 158 |
+| guards | 18 | 158 |
 
 ## Open scenarios
 
@@ -67,7 +67,6 @@ task file, which is the only place it ever lived twice.
 | UX-690 | [the suite has a shape budget, and a feature files its test analysis](UX-0690-the-suite-has-a-shape-budget-and-a-feature-files-its-test-analysis.md) | guards | Medium | R8 reading whether the suite is balanced; the implementer writing the right guard | 🔴 |
 | UX-691 | [a flake ledger, so an excursion is counted before it is a flake](UX-0691-a-flake-ledger-so-an-excursion-is-counted-before-it-is-a-flake.md) | guards | Medium | the round reading a red gate on a file nobody touched | 🔴 |
 | UX-692 | [the invariants hold for any shape — a seeded sweep over generated projects](UX-0692-the-invariants-hold-for-any-shape-a-seeded-sweep-over-generated-projec.md) | guards | High | R8 trusting the report on a graph nobody fixtured | 🔴 |
-| UX-693 | [the lint rule set widened by layer, in one auto-fix commit, with the tools pinned](UX-0693-the-lint-rule-set-widened-by-layer-in-one-auto-fix-commit-with-the-too.md) | guards | High | the implementing session, whose edit hook then reads the same rules the gate reads | 🔴 |
 | UX-694 | [a finding baseline, and a size ledger for what has no identity](UX-0694-a-finding-baseline-and-a-size-ledger-for-what-has-no-identity.md) | guards | High | the implementing session, whose gate is zero-tolerance for a new finding from the first commit | 🔴 |
 | UX-695 | [the refactor stream takes the ledger's top row — renderers first](UX-0695-the-refactor-stream-takes-the-ledger-s-top-row-renderers-first.md) | docs | Medium | the session that opens a round and has no refactor to pick because none is filed | 🔴 |
 | UX-696 | [the register's unguarded rows — no round in code, a dated count, the commit body](UX-0696-the-register-s-unguarded-rows-no-round-in-code-a-dated-count-the-commi.md) | guards | Medium | the reader who opens a module a year on and meets its history instead of its reason | 🔴 |

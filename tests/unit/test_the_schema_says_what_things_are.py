@@ -58,14 +58,14 @@ class TestTheTwoLiveWrongnesses:
 
     def test_a_nested_byte_count_renders_as_one(self):
         out = _js('''
-          const { quantity, quantityFor, childNode } =
+          const {{ quantity, quantityFor, childNode }} =
             await import("./tests/viewer.mjs");
-          const envelope = %s;
+          const envelope = {};
           console.log(JSON.stringify(
             quantity(512 * 1024 * 1024, quantityFor(
               childNode(envelope, "host_memory_bytes"), "host_memory_bytes"))));
-        ''' % json.dumps(
-            schemas.schema(schemas.CORRELATE)["properties"]["memory_envelope"]))
+        '''.format(json.dumps(
+            schemas.schema(schemas.CORRELATE)["properties"]["memory_envelope"])))
         assert out == "512.0 MiB", out
 
     def test_a_declared_share_is_shown_as_a_percentage(self):
@@ -75,13 +75,13 @@ class TestTheTwoLiveWrongnesses:
         - is now unreachable by construction, because there is no
         0..100 member left to declare."""
         out = _js('''
-          const { quantity, quantityFor, childNode } =
+          const {{ quantity, quantityFor, childNode }} =
             await import("./tests/viewer.mjs");
-          const util = %s;
+          const util = {};
           console.log(JSON.stringify(quantity(0.42, quantityFor(
             childNode(util, "useful_share"), "useful_share"))));
-        ''' % json.dumps(
-            schemas.schema(schemas.ANALYZE)["properties"]["utilisation"]))
+        '''.format(json.dumps(
+            schemas.schema(schemas.ANALYZE)["properties"]["utilisation"])))
         assert out == "42.0%", out
 
     def test_without_the_schema_node_the_guess_is_still_wrong(self):
@@ -104,9 +104,9 @@ class TestTheTwoLiveWrongnesses:
         "1.603977885512677" - fifteen digits of a number measured to
         two. Whole counts, which are all the others, are untouched."""
         out = _js('''
-          const { quantity, quantityFor, childNode } =
+          const {{ quantity, quantityFor, childNode }} =
             await import("./tests/viewer.mjs");
-          const block = %s;
+          const block = {};
           console.log(JSON.stringify([
             quantity(1.603977885512677,
                      quantityFor(childNode(block, "cores_busy"),
@@ -114,9 +114,9 @@ class TestTheTwoLiveWrongnesses:
             quantity(4, quantityFor(childNode(block, "builders"),
                                     "builders")),
           ]));
-        ''' % json.dumps(
+        '''.format(json.dumps(
             schemas.schema(schemas.ANALYZE)["properties"]
-            ["capacity_recommendation"]))
+            ["capacity_recommendation"])))
         # `UX-341`: `cores_busy` is one measurement with one unit now.
         # `capacity_recommendation` declared it `count` while the four
         # element-level copies of the same figure declared `ratio`.
@@ -231,8 +231,8 @@ class TestTheVerdictIsAValue:
         assert "verdict_kind" in schemas.schema(schemas.COMPARE)["properties"]
 
     def test_it_is_emitted_from_the_same_branch_as_the_sentence(self, tmp_path):
-        import io
         import contextlib
+        import io
 
         from bga.cli import main
 
@@ -243,11 +243,8 @@ class TestTheVerdictIsAValue:
             os.remove(run / "expected_output.json")
             runs.append(str(run))
         buffer = io.StringIO()
-        with contextlib.redirect_stdout(buffer):
-            try:
-                main(["compare", *runs, "--format", "json"])
-            except SystemExit:
-                pass
+        with contextlib.redirect_stdout(buffer), contextlib.suppress(SystemExit):
+            main(["compare", *runs, "--format", "json"])
         payload = json.loads(buffer.getvalue())
         assert payload["verdict_kind"] in schemas.VERDICT_KINDS
         # The sentence and the enum must agree about which branch ran.
@@ -258,8 +255,9 @@ class TestTheVerdictIsAValue:
         """A `ComparisonResult` built by something other than the
         significance chain records nothing rather than claiming the
         strongest refusal."""
-        from bga.compare import ComparisonResult
         import dataclasses
+
+        from bga.compare import ComparisonResult
 
         field = {f.name: f for f in dataclasses.fields(ComparisonResult)}
         assert field["verdict_kind"].default is None
@@ -283,31 +281,31 @@ class TestDescriptionsAreThePopovers:
         overhead = schemas.schema(schemas.ANALYZE)["properties"][
             "pipeline_overhead"]
         description = overhead["properties"]["total_us"]["description"]
-        out = _js('''
-          const { renderPairs } = await import("./tests/viewer.mjs");
+        out = _js(f'''
+          const {{ renderPairs }} = await import("./tests/viewer.mjs");
           globalThis._makeNode ??= (await import(process.env.BGA_DOM_SHIM)).makeNode;
 globalThis._installDocument ??= (await import(process.env.BGA_DOM_SHIM)).installDocument;
 
-function make(tag) {
+function make(tag) {{
   const node = _makeNode(tag);
   return node;
-}
+}}
           _installDocument();
-          const node = %s;
-          const out = renderPairs("pipeline_overhead", { total_us: 1441000 }, {}, node);
+          const node = {json.dumps(overhead)};
+          const out = renderPairs("pipeline_overhead", {{ total_us: 1441000 }}, {{}}, node);
           // `el()` assigns non-data attributes as *properties*
           // (node.title = ...), which a browser reflects onto the
           // attribute. The shim has to look in both places; checking
           // only `attrs` reported an empty list against a working
           // popover.
           const titles = [];
-          (function walk(n) {
+          (function walk(n) {{
             const t = (n.attrs && n.attrs.title) || n.title;
             if (t) titles.push(t);
             (n.children ?? []).forEach(walk);
-          })(out);
+          }})(out);
           console.log(JSON.stringify(titles));
-        ''' % json.dumps(overhead))
+        ''')
         assert description in out, out
 
     def test_every_description_is_a_sentence_worth_showing(self):

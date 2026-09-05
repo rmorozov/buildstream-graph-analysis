@@ -15,10 +15,24 @@ import os
 import pytest
 
 from bga.run_store import (
-    CONFIG_NAME, PLANE2_NAME, STORE_DIRNAME, StoreError, has_run, is_alias,
-    list_runs, list_snapshots, new_snapshot_dir, project_root, read_config,
-    resolve, resolve_plane2, resolve_snapshot, runs_dir, sibling_plane2,
-    store_size_bytes, write_config,
+    CONFIG_NAME,
+    PLANE2_NAME,
+    STORE_DIRNAME,
+    StoreError,
+    has_run,
+    is_alias,
+    list_runs,
+    list_snapshots,
+    new_snapshot_dir,
+    project_root,
+    read_config,
+    resolve,
+    resolve_plane2,
+    resolve_snapshot,
+    runs_dir,
+    sibling_plane2,
+    store_size_bytes,
+    write_config,
 )
 
 

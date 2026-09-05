@@ -38,10 +38,9 @@ import pytest
 REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 
-from tests import pages                                        # noqa: E402
-from tools.bga_timeline import (                               # noqa: E402
-    PLANE1_ONLY, describe, render)
-from tools import bga_view as view                             # noqa: E402
+from tests import pages
+from tools import bga_view as view
+from tools.bga_timeline import PLANE1_ONLY, describe, render
 
 #: Small enough to render in a moment, large enough that elements and
 #: pids are different numbers - a fixture where they agree cannot tell

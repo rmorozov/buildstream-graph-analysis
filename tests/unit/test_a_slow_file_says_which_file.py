@@ -21,9 +21,9 @@ it. The real run is in CI; what is checked here is that the rule reads
 the floors, names the file, and can fail.
 """
 import json
-import statistics
 import pathlib
 import re
+import statistics
 import subprocess
 import sys
 
@@ -33,8 +33,9 @@ import yaml
 REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 
-from tests import tiers                                        # noqa: E402
-from tools import dev_tier_drift as drift                      # noqa: E402
+from tests import tiers
+from tools import dev_tier_drift as drift
+
 
 def _pin_the_diff(monkeypatch, files):
     """Pin the branch diff `explained_by` reads, instead of the tree's.
@@ -596,7 +597,7 @@ class TestTheFirstArmedRunIsTheRegressionSuite:
             reference[name] = 1.0 + index * 0.05
             times[name] = reference[name] * self.SHIFT
         return times, drift.record(reference and
-                                   {k: v for k, v in reference.items()})
+                                   dict(reference.items()))
 
     def test_the_replay_really_is_that_run(self):
         """The premise. If the synthetic run's median is not the shift
@@ -2025,7 +2026,7 @@ class TestTheFailureNameIsTheLastThingInTheLog:
         last 40 lines of a red 3.11 job's log carry the failing id."""
         self._a_red_junit(tmp_path / "junit.xml", dict(tiers.recorded()))
         log = []
-        for name, script in self._the_red_path():
+        for _name, script in self._the_red_path():
             if "git fetch" in script:
                 continue                      # the network, not the log
             script = re.sub(r"\$\{\{\s*runner\.temp\s*\}\}", str(tmp_path),

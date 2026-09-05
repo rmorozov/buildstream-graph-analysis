@@ -43,7 +43,7 @@ REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 sys.path.insert(0, str(REPO / "tests"))
 
-from bga import schemas  # noqa: E402
+from bga import schemas
 
 FIXTURE = REPO / "tests/fixtures/macro_micro"
 
@@ -61,8 +61,9 @@ FROM_EACH_BLOCK = {
 def payload():
     """`macro_micro`'s report, once - the one committed fixture with a
     Plane 2 report beside its run."""
-    from tools.bga_view import payloads
     import pages
+
+    from tools.bga_view import payloads
     return payloads(str(pages.FIXTURES["macro_micro"]))["report.json"]
 
 

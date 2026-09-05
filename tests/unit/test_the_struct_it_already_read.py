@@ -54,7 +54,7 @@ import pytest
 REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 
-from tools.bst_native_build_tracer import (    # noqa: E402
+from tools.bst_native_build_tracer import (
     _IO_BLOCK_BYTES,
     _PRESSURE_FIELDS,
     Plane2Fold,

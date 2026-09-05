@@ -61,7 +61,6 @@ import argparse
 import json
 import sys
 from collections import defaultdict
-from typing import Dict, List
 
 from bga import schemas as _schemas
 
@@ -79,8 +78,8 @@ def _load(run_dir: str):
 def topological_order(graph: dict, build_only: bool):
     """(order, predecessors). Ties broken by uid so the result depends
     only on the input, never on dict iteration order."""
-    successors: Dict[str, List[str]] = defaultdict(list)
-    predecessors: Dict[str, List[str]] = defaultdict(list)
+    successors: dict[str, list[str]] = defaultdict(list)
+    predecessors: dict[str, list[str]] = defaultdict(list)
     nodes = {element["uid"] for element in graph["elements"]}
     for dep in graph["dependencies"]:
         if build_only and dep.get("dependency_type") == "runtime":
@@ -88,7 +87,7 @@ def topological_order(graph: dict, build_only: bool):
         successors[dep["predecessor"]].append(dep["successor"])
         predecessors[dep["successor"]].append(dep["predecessor"])
 
-    indegree = {node: 0 for node in nodes}
+    indegree = dict.fromkeys(nodes, 0)
     for preds in successors.values():
         for succ in preds:
             indegree[succ] += 1
@@ -107,15 +106,15 @@ def topological_order(graph: dict, build_only: bool):
 
 def longest_path_elements(graph: dict, build_only: bool) -> int:
     order, predecessors = topological_order(graph, build_only)
-    depth: Dict[str, int] = {}
+    depth: dict[str, int] = {}
     for node in order:
         depth[node] = max((depth[p] for p in predecessors.get(node, ())), default=-1) + 1
     return max(depth.values()) + 1 if depth else 0
 
 
-def longest_path_us(graph: dict, durations: Dict[str, int], build_only: bool = True) -> int:
+def longest_path_us(graph: dict, durations: dict[str, int], build_only: bool = True) -> int:
     order, predecessors = topological_order(graph, build_only)
-    best: Dict[str, int] = {}
+    best: dict[str, int] = {}
     for node in order:
         best[node] = durations.get(node, 0) + max(
             (best[p] for p in predecessors.get(node, ())), default=0
@@ -135,8 +134,8 @@ def run(run_dir: str, analysis: dict) -> int:
     # The longest task per element, matching
     # `bga/graph/edg.py::compute_element_durations` - the definition
     # UX-53 made single.
-    durations: Dict[str, int] = defaultdict(int)
-    build_durations: Dict[str, int] = defaultdict(int)
+    durations: dict[str, int] = defaultdict(int)
+    build_durations: dict[str, int] = defaultdict(int)
     for span in spans:
         uid, kind = span["task_key"].split("|")[:2]
         length = quantize(span["ts_us"] + span["dur_us"]) - quantize(span["ts_us"])
@@ -147,7 +146,7 @@ def run(run_dir: str, analysis: dict) -> int:
     runtime_edges = sum(
         1 for d in graph["dependencies"] if d.get("dependency_type") == "runtime"
     )
-    kinds: Dict[str, int] = defaultdict(int)
+    kinds: dict[str, int] = defaultdict(int)
     for element in graph["elements"]:
         kinds[element.get("element_kind")] += 1
     tasks_per_element = len(spans) / len(durations) if durations else 0

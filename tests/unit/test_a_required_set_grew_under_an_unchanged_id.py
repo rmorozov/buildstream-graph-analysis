@@ -250,8 +250,7 @@ def comparison(tmp_path_factory):
         runs.append(str(run))
     done = subprocess.run(
         [sys.executable, "-c",
-         "from bga.cli import main; raise SystemExit(main(%r))"
-         % (["compare", runs[0], runs[1], "--format", "json"],)],
+         "from bga.cli import main; raise SystemExit(main({!r}))".format(["compare", runs[0], runs[1], "--format", "json"])],
         capture_output=True, text=True, cwd=REPO, timeout=300)
     assert done.returncode == 0, done.stderr[-2000:]
     return json.loads(done.stdout)

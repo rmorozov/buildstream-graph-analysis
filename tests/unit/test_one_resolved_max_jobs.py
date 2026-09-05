@@ -43,7 +43,7 @@ import pytest
 REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 
-from tools._run_context_common import (    # noqa: E402
+from tools._run_context_common import (
     NATIVE_MAX_JOBS_OPERATOR_DECLARED,
     NATIVE_MAX_JOBS_PARSED_FROM_INVOCATION,
     NATIVE_MAX_JOBS_RESOLVED_FROM_GRAPH,
@@ -136,7 +136,7 @@ class TestTheGraphIsExtractedWithTheBuildsOwnOptions:
         original = graph_tool.subprocess.Popen
         graph_tool.subprocess.Popen = fake_run
         try:
-            with pytest.raises(Exception):
+            with pytest.raises(RuntimeError, match="stop"):
                 graph_tool.run_bst_show("/nowhere", ["all.bst"],
                                         bst_options=["--max-jobs", "2"])
         finally:
@@ -157,7 +157,7 @@ class TestTheGraphIsExtractedWithTheBuildsOwnOptions:
         original = graph_tool.subprocess.Popen
         graph_tool.subprocess.Popen = fake_run
         try:
-            with pytest.raises(Exception):
+            with pytest.raises(RuntimeError, match="stop"):
                 graph_tool.run_bst_show("/nowhere", ["all.bst"])
         finally:
             graph_tool.subprocess.Popen = original

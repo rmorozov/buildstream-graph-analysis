@@ -22,9 +22,13 @@ import pytest
 
 from bga.diagnostics.analyzer import DiagnosticsAnalyzer
 from bga.ingest.models import (
-    DependencyEdge, Element, Graph, NormalizedTask, TaskKey, TaskKind,
+    DependencyEdge,
+    Element,
+    Graph,
+    NormalizedTask,
+    TaskKey,
+    TaskKind,
 )
-
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 

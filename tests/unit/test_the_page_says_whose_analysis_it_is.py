@@ -32,8 +32,8 @@ import pytest
 REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 
-from bga import producer                                       # noqa: E402
-from tools import bga_view as view                             # noqa: E402
+from bga import producer
+from tools import bga_view as view
 
 RUN = REPO / "tests/fixtures/with_timeline/run"
 STORED = REPO / "tests/fixtures/with_timeline/analyze.json"

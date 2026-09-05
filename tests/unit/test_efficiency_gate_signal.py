@@ -23,7 +23,6 @@ import subprocess
 import sys
 from pathlib import Path
 
-
 from bga.compare import efficiency_signal_status
 
 GOLDEN = Path(__file__).resolve().parents[1] / "fixtures" / "golden" / "mixed_task_kinds"

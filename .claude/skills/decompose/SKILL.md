@@ -178,6 +178,11 @@ its Outcome parts — and a tool result over a screen goes to a file and
 is read by its head. A batch is as many tracks as the merge can price
 (1.46-1.83 commits per item), not as many as the context can hold.
 
+While tracks run, the orchestrator edits nothing and commits nothing:
+a declined permission interrupts the turn, and an interrupt kills every
+track with it — three tracks at 16:01 on 2026-09-05, two minutes in.
+Reads and reports only, until the last report is in.
+
 ## What goes in the file
 
 ```text

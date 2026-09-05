@@ -31,10 +31,12 @@ numbers behind the sentence, so a consumer never has to parse `title`.
 """
 import collections
 import os
-from typing import Dict, List, Optional
+from typing import Optional
 
 from .cache_effectiveness import (
-    HEALTHY_HIT_RATIO, POOR_HIT_RATIO, TRANSFER_SHARE_NOTABLE,
+    HEALTHY_HIT_RATIO,
+    POOR_HIT_RATIO,
+    TRANSFER_SHARE_NOTABLE,
 )
 from .ingest.models import AnalysisResult
 from .units import GIB
@@ -306,7 +308,7 @@ def structural_kind_tag(entry: dict) -> str:
     return f" [structural: {kind}, may not reflect real compute work]"
 
 
-def heaviest_on_path(result) -> List[dict]:
+def heaviest_on_path(result) -> list[dict]:
     """Critical-path elements with real measured work, ranked by what
     optimizing them is actually worth (`UX-70`), falling back to raw
     duration where a realizable saving was not evaluated.
@@ -330,7 +332,7 @@ def heaviest_on_path(result) -> List[dict]:
     )
 
 
-def path_elements_by_duration(result) -> List[dict]:
+def path_elements_by_duration(result) -> list[dict]:
     """The same population `heaviest_on_path` ranks, ordered by measured
     duration (`UX-76`).
 
@@ -353,8 +355,8 @@ def _finding(
     id: str,
     severity: str,
     title: str,
-    detail: Optional[List[str]] = None,
-    elements: Optional[List[str]] = None,
+    detail: Optional[list[str]] = None,
+    elements: Optional[list[str]] = None,
     evidence: Optional[dict] = None,
 ) -> dict:
     return {
@@ -367,7 +369,7 @@ def _finding(
     }
 
 
-def _cache_findings(result: AnalysisResult) -> List[dict]:
+def _cache_findings(result: AnalysisResult) -> list[dict]:
     """UX-92 stage 1: the cache's own numbers, as findings.
 
     Deliberately not gated on the hit ratio being *bad*. Every other
@@ -385,9 +387,9 @@ def _cache_findings(result: AnalysisResult) -> List[dict]:
     built = cache.get('built_elements')
     cached = cache.get('cached_elements')
     closure = cache.get('target_closure') or {}
-    findings: List[dict] = []
+    findings: list[dict] = []
 
-    detail: List[str] = []
+    detail: list[str] = []
     if closure.get('hit_share') is not None and closure.get('targets'):
         detail.append(
             f"    -> for {', '.join(closure['targets'])}'s own closure it is "
@@ -458,7 +460,7 @@ def _cache_findings(result: AnalysisResult) -> List[dict]:
     return findings
 
 
-def _run_scope_findings(result: AnalysisResult) -> List[dict]:
+def _run_scope_findings(result: AnalysisResult) -> list[dict]:
     """Everything true of the run rather than of an element.
 
     `UX-365` split what this returns into two lists without moving any
@@ -489,9 +491,9 @@ def _run_scope_findings(result: AnalysisResult) -> List[dict]:
     return _run_blocking_findings(result) + _run_context_findings(result)
 
 
-def _run_blocking_findings(result: AnalysisResult) -> List[dict]:
+def _run_blocking_findings(result: AnalysisResult) -> list[dict]:
     """`UX-54`: what makes every number below describe a different build."""
-    findings: List[dict] = []
+    findings: list[dict] = []
     # UX-54: said first, before any efficiency number, because every
     # number below describes a build that did not finish. A real
     # freedesktop-sdk capture in which all four attempted elements failed
@@ -557,10 +559,10 @@ def _run_blocking_findings(result: AnalysisResult) -> List[dict]:
     return findings
 
 
-def _run_context_findings(result: AnalysisResult) -> List[dict]:
+def _run_context_findings(result: AnalysisResult) -> list[dict]:
     """What this run *was* - mode, cache, confidence. Description rather
     than action, which is why `UX-365` stopped it opening the list."""
-    findings: List[dict] = []
+    findings: list[dict] = []
     confidence = result.confidence or {}
     # UX-55: which of the two CI scenarios this run is, said before the
     # numbers, because it changes what they are *about*.
@@ -601,7 +603,7 @@ def _run_context_findings(result: AnalysisResult) -> List[dict]:
 
 def _time_concentration_findings(
     result: AnalysisResult, execution_bound: bool, chain_bound: bool,
-) -> List[dict]:
+) -> list[dict]:
     """UX-65 named where the time is; UX-76 made it one table.
 
     The tool already computes every number here; it simply never put them
@@ -620,7 +622,7 @@ def _time_concentration_findings(
     top = heavy[:TIME_CONCENTRATION_SHOWN_MAX]
     share = sum(d['duration_us'] for d in top) / path_us
     verdict = " - this build is chain-bound, not scheduler-bound" if chain_bound else ""
-    detail: List[str] = []
+    detail: list[str] = []
     width = max(len(d['element_uid']) for d in top)
     rows = []
     for d in top:
@@ -754,7 +756,7 @@ def _zero_slack_off_path(result: AnalysisResult) -> int:
 
 
 
-def _graph_shape_findings(result: AnalysisResult) -> List[dict]:
+def _graph_shape_findings(result: AnalysisResult) -> list[dict]:
     """`UX-478`: what the shape makes impossible, from the shape alone.
 
     The graph-owner's published question is *"What does the shape of
@@ -807,7 +809,7 @@ def _graph_shape_findings(result: AnalysisResult) -> List[dict]:
     )]
 
 
-def _memory_envelope_findings(result: AnalysisResult) -> List[str]:
+def _memory_envelope_findings(result: AnalysisResult) -> list[str]:
     """UX-104: the multiplication the report used to leave to the reader.
 
     One sentence, and it is the one the README used to perform in prose:
@@ -865,7 +867,7 @@ def _memory_refuses_more_builders(result: AnalysisResult) -> Optional[str]:
     )
 
 
-def _shared_source_findings(result: AnalysisResult) -> List[dict]:
+def _shared_source_findings(result: AnalysisResult) -> list[dict]:
     """UX-171: when one repository decides most of the build's rebuilds.
 
     Only the headline lands here. The table itself is a report section,
@@ -896,7 +898,7 @@ def _shared_source_findings(result: AnalysisResult) -> List[dict]:
     )]
 
 
-def _memory_finding(result: AnalysisResult) -> List[dict]:
+def _memory_finding(result: AnalysisResult) -> list[dict]:
     """UX-104's envelope, as a finding with an id like everything else
     since `UX-75`.
 
@@ -930,7 +932,7 @@ def _memory_finding(result: AnalysisResult) -> List[dict]:
     )]
 
 
-def _capacity_recommendation_finding(result: AnalysisResult) -> List[dict]:
+def _capacity_recommendation_finding(result: AnalysisResult) -> list[dict]:
     """UX-116: the paragraph that intersects the four constraints.
 
     `UX-09` asked, in the first week of this backlog, whether `--builders`
@@ -1083,7 +1085,7 @@ def _plane2_capacity_hint(result: AnalysisResult, category: str) -> Optional[str
     return None
 
 
-def _opportunity_findings(result: AnalysisResult, chain_bound: bool) -> List[dict]:
+def _opportunity_findings(result: AnalysisResult, chain_bound: bool) -> list[dict]:
     attribution = result.attribution or {}
     total = result.total_duration_us
     non_execution = {
@@ -1146,12 +1148,12 @@ def _opportunity_findings(result: AnalysisResult, chain_bound: bool) -> List[dic
     )]
 
 
-def _outlook_findings(result: AnalysisResult) -> List[dict]:
+def _outlook_findings(result: AnalysisResult) -> list[dict]:
     """UX-74: what to do after the first fix, what the set is worth
     together, and what is waiting off the path."""
     signals = result.signals or {}
     total = result.total_duration_us or 0
-    findings: List[dict] = []
+    findings: list[dict] = []
 
     joint = signals.get('joint_saving')
     if joint and joint.get('joint_saving_us') and total:
@@ -1225,7 +1227,7 @@ def _outlook_findings(result: AnalysisResult) -> List[dict]:
     return findings
 
 
-def _ranking_findings(result: AnalysisResult, chain_bound: bool) -> List[dict]:
+def _ranking_findings(result: AnalysisResult, chain_bound: bool) -> list[dict]:
     """Everything the run has to say about **reach** - who depends on me.
 
     Three claims, and `UX-479` is the round that separated them, because
@@ -1419,7 +1421,7 @@ def _density_sentence(distribution):
             f"(max {distribution['max']})")
 
 
-def _criticality_findings(result: AnalysisResult) -> List[dict]:
+def _criticality_findings(result: AnalysisResult) -> list[dict]:
     criticality = (result.signals or {}).get('criticality_probability') or {}
     if not criticality:
         return []
@@ -1449,9 +1451,9 @@ def _criticality_findings(result: AnalysisResult) -> List[dict]:
     )]
 
 
-def _floor_findings(result: AnalysisResult) -> List[dict]:
+def _floor_findings(result: AnalysisResult) -> list[dict]:
     floors = result.floors or {}
-    findings: List[dict] = []
+    findings: list[dict] = []
     t_inf = floors.get('t_infinity_observed') or floors.get('t_infinity_observed_us', 0)
     lb_val = floors.get('lb') or floors.get('lb_us', 0)
     headroom = floors.get('certified_headroom') or floors.get('certified_headroom_us', 0)
@@ -1482,7 +1484,7 @@ def _floor_findings(result: AnalysisResult) -> List[dict]:
     return findings
 
 
-def compute_findings(result: AnalysisResult) -> List[dict]:
+def compute_findings(result: AnalysisResult) -> list[dict]:
     """Every conclusion the report draws, in the order it draws them.
 
     Reads already-computed fields and performs no new analysis - the same
@@ -1512,14 +1514,13 @@ def compute_findings(result: AnalysisResult) -> List[dict]:
     concentration_emitted = any(
         f['id'] == 'time-concentration' for f in opportunity
     )
-    if chain_bound and heaviest_on_path(result):
-        # UX-76: one table, not a second ranking of the same names.
-        if not concentration_emitted:
-            concentration = _time_concentration_findings(
-                result, execution_bound=False, chain_bound=True,
-            )
-            findings.extend(concentration)
-            concentration_emitted = bool(concentration)
+    # UX-76: one table, not a second ranking of the same names.
+    if chain_bound and heaviest_on_path(result) and not concentration_emitted:
+        concentration = _time_concentration_findings(
+            result, execution_bound=False, chain_bound=True,
+        )
+        findings.extend(concentration)
+        concentration_emitted = bool(concentration)
     # `UX-479`: outside the branch. Reach is not the concentration
     # ranking's competitor - `_ranking_findings` gates the one claim
     # that competes and publishes the other two either way.
@@ -1638,7 +1639,7 @@ def diagnose(result: AnalysisResult) -> dict:
                 ratio=ratio, bound=CHAIN_BOUND_RATIO)}
 
 
-def _top_actions(result: AnalysisResult, findings: List[dict]) -> List[dict]:
+def _top_actions(result: AnalysisResult, findings: list[dict]) -> list[dict]:
     """Ordered references into the findings that already rank things.
 
     References, not copies: `finding_id` says where the reasoning is, so
@@ -1647,7 +1648,7 @@ def _top_actions(result: AnalysisResult, findings: List[dict]) -> List[dict]:
     does - `None` would read as "zero", which is a different claim.
     """
     by_id = findings_by_id(findings)
-    actions: List[dict] = []
+    actions: list[dict] = []
 
     concentration = by_id.get('time-concentration')
     for row in ((concentration or {}).get('evidence') or {}).get('rows') or []:
@@ -1677,7 +1678,7 @@ def _top_actions(result: AnalysisResult, findings: List[dict]) -> List[dict]:
 
 
 def compute_headline(result: AnalysisResult,
-                     findings: Optional[List[dict]] = None) -> dict:
+                     findings: Optional[list[dict]] = None) -> dict:
     """What to fix first, and what it is worth - as data.
 
     `UX-207`'s rule, and Direction 7's: **a viewer that derives the
@@ -1783,7 +1784,7 @@ def _store_paths(run_dir: str):
     return os.sep.join(parts[:-4]) or '.', True
 
 
-def _store_run_modes(project: str) -> List[tuple]:
+def _store_run_modes(project: str) -> list[tuple]:
     """`(stamp, run_mode)` per run in the store, oldest first.
 
     `UX-577`: whether `bga compare @prev @last` is a command or a
@@ -1795,7 +1796,7 @@ def _store_run_modes(project: str) -> List[tuple]:
     from . import run_store
     from .ingest.loader import load_run_context
 
-    modes: List[tuple] = []
+    modes: list[tuple] = []
     try:
         snapshots = run_store.list_runs(project)
     except OSError:
@@ -1852,7 +1853,7 @@ def _longest_on_the_path(result) -> Optional[dict]:
 
 
 def compute_next_steps(result: AnalysisResult,
-                       headline: Optional[dict] = None) -> List[dict]:
+                       headline: Optional[dict] = None) -> list[dict]:
     """The next commands, chosen by what this run measured.
 
     Each step carries the reason it was chosen (from published values),
@@ -1875,7 +1876,7 @@ def compute_next_steps(result: AnalysisResult,
     project, in_store = _store_paths(run_dir)
     actions = headline.get('top_actions') or []
     top = actions[0] if actions else None
-    steps: List[dict] = []
+    steps: list[dict] = []
 
     # UX-261: what the build is *waiting for*, before what is big.
     #
@@ -2007,21 +2008,21 @@ def compute_next_steps(result: AnalysisResult,
     return steps
 
 
-def render_findings(findings: List[dict]) -> List[str]:
+def render_findings(findings: list[dict]) -> list[str]:
     """The text form: a title line per finding, plus its own detail lines.
 
     Detail lines carry their own indentation because they are tables and
     sub-rankings whose alignment is part of their meaning; titles are
     indented uniformly here.
     """
-    lines: List[str] = []
+    lines: list[str] = []
     for finding in findings:
         lines.append(f"{finding.get('indent', '  ')}{finding['title']}")
         lines.extend(finding.get('detail') or [])
     return lines
 
 
-def findings_by_id(findings: List[dict]) -> Dict[str, dict]:
+def findings_by_id(findings: list[dict]) -> dict[str, dict]:
     return {f['id']: f for f in findings}
 
 

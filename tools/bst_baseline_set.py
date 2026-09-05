@@ -45,7 +45,7 @@ import shutil
 import subprocess
 import sys
 import tarfile
-from typing import Dict, List, Optional
+from typing import Optional
 
 # `captures/fdsdk/<short-ref>-<mode>-b<builders>j<max_jobs>-<run_id>`.
 # The run id is GitHub's, and it increases monotonically, so it is the
@@ -122,7 +122,7 @@ NAMED_BY_THE_REF = ('fdsdk_ref', 'capture_mode', 'builders', 'max_jobs')
 DRIFT_FIELD = 'bga_ref'
 
 
-def list_capture_refs(remote: str, glob: str, cwd: Optional[str] = None) -> List[dict]:
+def list_capture_refs(remote: str, glob: str, cwd: Optional[str] = None) -> list[dict]:
     """Every published capture ref matching `glob`, newest first."""
     result = subprocess.run(
         ['git', 'ls-remote', '--heads', remote, glob],
@@ -147,7 +147,7 @@ def list_capture_refs(remote: str, glob: str, cwd: Optional[str] = None) -> List
     return sorted(refs, key=lambda r: -int(r['run_id']))
 
 
-def exclude_refs(refs: List[dict], patterns: List[str]) -> List[dict]:
+def exclude_refs(refs: list[dict], patterns: list[str]) -> list[dict]:
     """Drop the refs a caller has named, before `-n` takes the newest N.
 
     A pattern is `fnmatch`ed against the full ref name and against the
@@ -163,7 +163,7 @@ def exclude_refs(refs: List[dict], patterns: List[str]) -> List[dict]:
     ]
 
 
-def _parse_context(text: str) -> Dict[str, str]:
+def _parse_context(text: str) -> dict[str, str]:
     context = {}
     for line in text.splitlines():
         if '=' in line:
@@ -243,7 +243,7 @@ def _find_run_directory(root: str) -> Optional[str]:
     return None
 
 
-def check_homogeneity(members: List[dict]) -> dict:
+def check_homogeneity(members: list[dict]) -> dict:
     """What differs across the set, split by whether it invalidates the
     set or merely deserves saying.
 
@@ -341,7 +341,7 @@ def check_homogeneity(members: List[dict]) -> dict:
     }
 
 
-def _host_drift(members: List[dict]) -> Optional[dict]:
+def _host_drift(members: list[dict]) -> Optional[dict]:
     """UX-186 item 3: whether the set was captured on one machine.
 
     A warning rather than a refusal, unlike the mismatches above. A band
@@ -375,12 +375,12 @@ def _host_drift(members: List[dict]) -> Optional[dict]:
             f"fleet, not the build (UX-92 measured 33% spread on one machine)"
         ),
         'cpu_models': models,
-        'cpu_counts': [count for count in counts],
+        'cpu_counts': list(counts),
         'unknown': sum(1 for manifest in manifests if not manifest),
     }
 
 
-def _name_refs(refs: List[str], limit: int = 3) -> str:
+def _name_refs(refs: list[str], limit: int = 3) -> str:
     """The runs a warning is about, named - the drift warning already
     names them, and a warning that says "2 captures" without saying which
     two sends the reader back to `git ls-remote`."""
@@ -388,7 +388,7 @@ def _name_refs(refs: List[str], limit: int = 3) -> str:
     return shown if len(refs) <= limit else f"{shown}, +{len(refs) - limit} more"
 
 
-def trend_order(path: str) -> List[str]:
+def trend_order(path: str) -> list[str]:
     """The run directories of a `--format json` set, oldest first.
 
     `UX-354`: the caller used to reach into the document -
@@ -409,7 +409,7 @@ def trend_order(path: str) -> List[str]:
     return [member['run_dir'] for member in reversed(document['members'])]
 
 
-def refusal_remedy(mismatches: List[dict], members: List[dict]) -> str:
+def refusal_remedy(mismatches: list[dict], members: list[dict]) -> str:
     """The sentence after the refusal: what the caller can actually do.
 
     Narrowing the glob only works for the four fields the ref name
@@ -432,7 +432,7 @@ def refusal_remedy(mismatches: List[dict], members: List[dict]) -> str:
     return remedy
 
 
-def _minority_refs(mismatches: List[dict], members: List[dict]) -> List[str]:
+def _minority_refs(mismatches: list[dict], members: list[dict]) -> list[str]:
     """The refs holding the least common value of a field the ref name
     cannot carry - a suggestion, not a verdict: the majority is not
     automatically the right population, and the caller decides."""
@@ -455,7 +455,7 @@ def _minority_refs(mismatches: List[dict], members: List[dict]) -> List[str]:
     return odd
 
 
-def format_set_text(members: List[dict], homogeneity: dict, excluded: int = 0) -> str:
+def format_set_text(members: list[dict], homogeneity: dict, excluded: int = 0) -> str:
     lines = [
         '=' * 60,
         'Baseline Set',
@@ -511,7 +511,7 @@ def _CompactRawHelp(prog):
     from bga.help_format import CompactRawHelp
     return CompactRawHelp(prog)
 
-def main(argv: Optional[List[str]] = None) -> int:
+def main(argv: Optional[list[str]] = None) -> int:
     parser = argparse.ArgumentParser(
         description=HELP, formatter_class=_CompactRawHelp,
     )
@@ -557,7 +557,8 @@ def main(argv: Optional[List[str]] = None) -> int:
     # Plane 2 report (UX-134). Resolved through the same resolver, not a
     # copy of it, and before anything is fetched.
     if args.candidate:
-        from bga.run_store import StoreError, resolve as resolve_run_alias
+        from bga.run_store import StoreError
+        from bga.run_store import resolve as resolve_run_alias
         try:
             args.candidate = resolve_run_alias(args.candidate)
         except StoreError as error:

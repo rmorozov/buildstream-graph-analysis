@@ -5,15 +5,15 @@ Implements M5 milestone with high-value structural diagnostics.
 """
 
 from .analyzer import (
-    DiagnosticsAnalyzer,
-    DiagnosticsResult,
-    WallClockShare,
-    ReadyQueueMetrics,
     BlastRadiusResult,
     CriticalityProbability,
-    FetchBuildOverlap,
+    DiagnosticsAnalyzer,
+    DiagnosticsResult,
     DurationVariability,
+    FetchBuildOverlap,
     LeafAnalysis,
+    ReadyQueueMetrics,
+    WallClockShare,
     analyze_diagnostics,
 )
 

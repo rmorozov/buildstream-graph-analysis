@@ -63,10 +63,9 @@ sys.path.insert(0, str(REPO))
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 
-import trace_processor  # noqa: E402
+import trace_processor
 
-from tools.bga_timeline import (  # noqa: E402
-    ANNOTATION_CONTRACT, CONCURRENCY_COUNTER, render)
+from tools.bga_timeline import ANNOTATION_CONTRACT, CONCURRENCY_COUNTER, render
 
 GOLDEN = REPO / "tests/fixtures/golden/mixed_task_kinds"
 

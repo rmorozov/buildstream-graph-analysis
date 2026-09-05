@@ -26,12 +26,14 @@ import pathlib
 import pytest
 
 from tools import _run_context_common as common
-from tools.bst_log_to_chrome_trace import (START_FILE_MTIME,
-                                           START_LOG_TIMESTAMP,
-                                           START_OPERATOR_DECLARED,
-                                           WrapperTraceConverter,
-                                           _resolve_start_time_source,
-                                           _resolve_start_time_us)
+from tools.bst_log_to_chrome_trace import (
+    START_FILE_MTIME,
+    START_LOG_TIMESTAMP,
+    START_OPERATOR_DECLARED,
+    WrapperTraceConverter,
+    _resolve_start_time_source,
+    _resolve_start_time_us,
+)
 from tools.bst_run_context import build_run_context
 
 REPO = pathlib.Path(__file__).resolve().parents[2]

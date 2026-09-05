@@ -170,10 +170,9 @@ class TestTheEvidenceHeader:
         would render `This run is <reason>.` and explain nothing."""
         import ast
         import inspect
+        import textwrap
 
         from bga.ingest.models import RunContext
-
-        import textwrap
 
         tree = ast.parse(textwrap.dedent(
             inspect.getsource(RunContext.incomplete_reason.fget)))

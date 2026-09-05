@@ -42,14 +42,21 @@ REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 
-from tools.bga_timeline import (  # noqa: E402
-    DEFAULT_OUTPUT, FORMAT_TRACKEVENT, IDENTITY_ANNOTATIONS, IDENTITY_TRACK,
-    LANE_ORDER_RULE, identity_annotations, identity_track_name, render,
-    run_identity)
-from tools.native_trace import trackevent  # noqa: E402
-from bga import hostinfo  # noqa: E402
+from test_the_timeline_speaks_perfetto import _fields
 
-from test_the_timeline_speaks_perfetto import _fields  # noqa: E402
+from bga import hostinfo
+from tools.bga_timeline import (
+    DEFAULT_OUTPUT,
+    FORMAT_TRACKEVENT,
+    IDENTITY_ANNOTATIONS,
+    IDENTITY_TRACK,
+    LANE_ORDER_RULE,
+    identity_annotations,
+    identity_track_name,
+    render,
+    run_identity,
+)
+from tools.native_trace import trackevent
 
 GOLDEN = REPO / "tests/fixtures/golden/mixed_task_kinds"
 REAL_CAPTURE = REPO / ("examples/06-macro-micro-optimization/.bga/runs/"
@@ -346,8 +353,8 @@ class TestAnIncompleteRunSaysSoInTheName:
         """`incomplete_reason` has one definition (`UX-156`/`157`/`185`
         joined it into one accessor). This reads that one, so a fourth
         way to be incomplete arrives here for free."""
-        from tools.bga_timeline import _incomplete_reason
         from bga.ingest.models import RunContext
+        from tools.bga_timeline import _incomplete_reason
 
         for outcome in ({"failed_elements": ["a"], "interrupted": False},
                         {"failed_elements": [], "interrupted": True},

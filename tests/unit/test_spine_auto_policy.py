@@ -33,8 +33,8 @@ def staged_project(name, *sentinel):
     project = os.path.join(REPO_ROOT, "examples", name)
     if not os.path.isfile(os.path.join(project, *sentinel)):
         pytest.skip(
-            "examples/%s is not staged - run examples/stage_runtimes.sh and "
-            "examples/stage_cpp_toolchain.sh" % name
+            f"examples/{name} is not staged - run examples/stage_runtimes.sh and "
+            "examples/stage_cpp_toolchain.sh"
         )
     return project
 

@@ -36,8 +36,8 @@ import pytest
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 
-import pages  # noqa: E402
-from browser import NO_BROWSER, Browser, find_chrome  # noqa: E402
+import pages
+from browser import NO_BROWSER, Browser, find_chrome
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 GOLDEN = REPO / "tests/fixtures/golden/mixed_task_kinds"

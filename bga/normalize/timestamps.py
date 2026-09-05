@@ -10,15 +10,14 @@ Key principles:
 """
 
 import logging
-from typing import List, Dict, Tuple
 
 from ..ingest.models import (
+    DependencyEdge,
     Graph,
     NormalizedTask,
     TaskKind,
     TaskSpan,
     Trace,
-    DependencyEdge,
 )
 
 logger = logging.getLogger(__name__)
@@ -46,8 +45,8 @@ _ARTIFACT_TASK_KINDS = (TaskKind.BUILD, TaskKind.PULL)
 
 
 def _element_artifact_task(
-    normalized_spans: List[Tuple[TaskSpan, int, int]],
-) -> Dict[str, Tuple[TaskSpan, int]]:
+    normalized_spans: list[tuple[TaskSpan, int, int]],
+) -> dict[str, tuple[TaskSpan, int]]:
     """Map element_uid -> the span that put its artifact here, and its
     quantized finish.
 
@@ -58,7 +57,7 @@ def _element_artifact_task(
     were two maps built from one `if` each, and `UX-481` found them
     wrong in the same way at the same time.
     """
-    best: Dict[str, Tuple[TaskSpan, int]] = {}
+    best: dict[str, tuple[TaskSpan, int]] = {}
     for span, _q_start, q_finish in normalized_spans:
         kind = span.task_key.task_kind
         if kind not in _ARTIFACT_TASK_KINDS:
@@ -71,7 +70,7 @@ def _element_artifact_task(
     return best
 
 
-def _element_build_finish(normalized_spans: List[Tuple[TaskSpan, int, int]]) -> Dict[str, int]:
+def _element_build_finish(normalized_spans: list[tuple[TaskSpan, int, int]]) -> dict[str, int]:
     """
     Map element_uid -> the (quantized) finish of the task that produced
     its artifact here (Part 32.2's `depends:` semantics: a downstream
@@ -137,9 +136,9 @@ def quantize_timestamp(ts_us: int, epsilon_us: int) -> int:
 
 
 def normalize_timestamps(
-    spans: List[TaskSpan],
+    spans: list[TaskSpan],
     epsilon_us: int = 50000,
-) -> List[Tuple[TaskSpan, int, int]]:
+) -> list[tuple[TaskSpan, int, int]]:
     """
     Normalize timestamps for all task spans (Part 3.2).
     
@@ -165,9 +164,9 @@ def normalize_timestamps(
 
 
 def compute_ready_times(
-    normalized_spans: List[Tuple[TaskSpan, int, int]],
-    dependencies: List[DependencyEdge],
-) -> Dict[str, int]:
+    normalized_spans: list[tuple[TaskSpan, int, int]],
+    dependencies: list[DependencyEdge],
+) -> dict[str, int]:
     """
     Compute ready times for all tasks based on dependency graph (Part 7).
 
@@ -203,7 +202,7 @@ def compute_ready_times(
         Dict mapping task key string to ready time in microseconds
     """
     # Build predecessor map using element UIDs - build-gating edges only.
-    predecessors: Dict[str, List[str]] = {}  # successor -> list of predecessor element uids
+    predecessors: dict[str, list[str]] = {}  # successor -> list of predecessor element uids
 
     for dep in dependencies:
         if dep.dependency_type == "runtime":
@@ -215,9 +214,9 @@ def compute_ready_times(
     element_build_finish = _element_build_finish(normalized_spans)
 
     # Compute ready times
-    ready_times: Dict[str, int] = {}
+    ready_times: dict[str, int] = {}
 
-    for span, q_start, q_finish in normalized_spans:
+    for span, q_start, _q_finish in normalized_spans:
         task_key_str = str(span.task_key)
         element_uid = span.task_key.element_uid
 
@@ -235,10 +234,10 @@ def compute_ready_times(
 
 
 def validate_ordering(
-    normalized_spans: List[Tuple[TaskSpan, int, int]],
-    dependencies: List[DependencyEdge],
-    ready_times: Dict[str, int],
-) -> List[dict]:
+    normalized_spans: list[tuple[TaskSpan, int, int]],
+    dependencies: list[DependencyEdge],
+    ready_times: dict[str, int],
+) -> list[dict]:
     """
     Validate ordering constraints (Part 3.3).
 
@@ -271,7 +270,7 @@ def validate_ordering(
     violations = []
 
     element_build_finish = _element_build_finish(normalized_spans)
-    build_start_by_element: Dict[str, int] = {}
+    build_start_by_element: dict[str, int] = {}
     for span, q_start, _q_finish in normalized_spans:
         if span.task_key.task_kind == TaskKind.BUILD:
             build_start_by_element[span.task_key.element_uid] = q_start
@@ -302,10 +301,10 @@ def validate_ordering(
 
 
 def clamp_task_starts(
-    normalized_spans: List[Tuple[TaskSpan, int, int]],
-    ready_times: Dict[str, int],
+    normalized_spans: list[tuple[TaskSpan, int, int]],
+    ready_times: dict[str, int],
     graph: Graph,
-) -> Tuple[List[NormalizedTask], List[dict]]:
+) -> tuple[list[NormalizedTask], list[dict]]:
     """
     Clamp task starts to their ready times (Part 3.4).
 
@@ -358,7 +357,7 @@ def clamp_task_starts(
     # it consumes had finished, and scored `T_C (9000000) < LB
     # (12000000)` - the same under-constraint this comment warns about,
     # one edge over from the one `UX-60` closed.
-    build_task_by_element: Dict[str, str] = {
+    build_task_by_element: dict[str, str] = {
         uid: str(span.task_key)
         for uid, (span, _finish) in _element_artifact_task(normalized_spans).items()
     }
@@ -373,7 +372,7 @@ def clamp_task_starts(
     # `T_C (118000000) < LB (122000000)` - the exact under-constraint
     # this function's own comment warns about, found by a floor finally
     # disagreeing with it.
-    fetch_task_by_element: Dict[str, str] = {}
+    fetch_task_by_element: dict[str, str] = {}
     for span, _q_start, _q_finish in normalized_spans:
         if span.task_key.task_kind == TaskKind.FETCH:
             fetch_task_by_element[span.task_key.element_uid] = str(span.task_key)
@@ -381,7 +380,7 @@ def clamp_task_starts(
     # `UX-531`: the build-gating edges, indexed by successor once. The
     # loop below used to scan every edge per task - 4,002 x 11,800 on the
     # seeded run - and the filter and the order are the ones it applied.
-    build_gating_predecessors: Dict[str, List[str]] = {}
+    build_gating_predecessors: dict[str, list[str]] = {}
     for dep_edge in graph.dependencies:
         if dep_edge.dependency_type == "runtime":
             continue
@@ -450,7 +449,7 @@ def clamp_task_starts(
     return result, violations
 
 
-def normalize_trace(trace: Trace, graph: Graph, epsilon_us: int = 50000) -> Tuple[List[NormalizedTask], List[dict]]:
+def normalize_trace(trace: Trace, graph: Graph, epsilon_us: int = 50000) -> tuple[list[NormalizedTask], list[dict]]:
     """
     Full trace normalization pipeline (Part 3).
     

@@ -39,7 +39,7 @@ import sys
 REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 
-from bga import schemas                                      # noqa: E402
+from bga import schemas
 
 BATCHING = REPO / "bga/structural/batching.py"
 TEXT_REPORT = REPO / "bga/report/text.py"

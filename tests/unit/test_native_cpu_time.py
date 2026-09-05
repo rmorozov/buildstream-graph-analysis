@@ -22,7 +22,6 @@ from tools.bst_native_build_tracer import (
     summarize,
 )
 
-
 NEW = (
     "START pid=2 ppid=1 ts=100.0 element=core.bst cmd=cc1plus -c a.cpp\n"
     "END pid=2 ppid=1 ts=104.0 element=core.bst utime=3.500000 stime=0.250000 "

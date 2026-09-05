@@ -44,8 +44,8 @@ REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 sys.path.insert(0, str(REPO / "tests"))
 
-from browser import NO_BROWSER, Browser, find_chrome    # noqa: E402
-from pages import snapshot_copy    # noqa: E402
+from browser import NO_BROWSER, Browser, find_chrome
+from pages import snapshot_copy
 
 FIXTURES = {"golden": REPO / "tests/fixtures/golden/mixed_task_kinds",
             "macro_micro": REPO / "tests/fixtures/macro_micro/run"}

@@ -16,18 +16,17 @@ This is a question, not a gate: it exits 0 on an answer of zero, the
 same as on an answer of two hundred. A gate belongs in `bga compare`,
 where the refusal grammar already lives.
 """
+import contextlib
 import json
 import os
 from pathlib import Path
-from typing import Dict, List, Optional, Set
+from typing import Optional
 
 from . import schemas
 from . import sources as sources_mod
-from .graph.edg import (build_element_graph, compute_element_durations,
-                       compute_reachability)
+from .graph.edg import build_element_graph, compute_element_durations, compute_reachability
 from .ingest.loader import load_all
 from .units import US_PER_S
-
 
 # The order a target is resolved in, applied top to bottom and stated in
 # the output whenever more than one shape could have matched.
@@ -85,7 +84,7 @@ def _cwd_is_inside(project_dir: Optional[str]) -> bool:
 
 
 def classify_target(target: str, project_dir: Optional[str] = None,
-                    inventory: Optional[dict] = None) -> List[str]:
+                    inventory: Optional[dict] = None) -> list[str]:
     """Every shape `target` could be, most specific first.
 
     Ambiguity is real: a project could name an element `https` (it
@@ -134,7 +133,7 @@ def classify_target(target: str, project_dir: Optional[str] = None,
     return [shape for shape in RESOLUTION_ORDER if shape in shapes]
 
 
-def _elements_for_url(inventory: dict, target: str) -> Set[str]:
+def _elements_for_url(inventory: dict, target: str) -> set[str]:
     wanted = sources_mod.normalize_url(target)
     found = set()
     for uid, resources in (inventory.get("elements") or {}).items():
@@ -144,7 +143,7 @@ def _elements_for_url(inventory: dict, target: str) -> Set[str]:
     return found
 
 
-def _elements_for_path(inventory: dict, target: str, project_dir: Optional[str]) -> Set[str]:
+def _elements_for_path(inventory: dict, target: str, project_dir: Optional[str]) -> set[str]:
     """Elements whose content-keyed sources stage `target`.
 
     A source staging `files/src` covers `files/src/lib-a/main.c`, so
@@ -159,10 +158,8 @@ def _elements_for_path(inventory: dict, target: str, project_dir: Optional[str])
     absolute = os.path.abspath(target)
     for base in ([project_dir] if project_dir and (
             os.path.isabs(target) or _cwd_is_inside(project_dir)) else []):
-        try:
+        with contextlib.suppress(ValueError):
             candidates.append(os.path.relpath(absolute, base))
-        except ValueError:
-            pass
     candidates.append(target)
     relative = None
     for candidate in candidates:
@@ -201,7 +198,7 @@ def _elements_for_path(inventory: dict, target: str, project_dir: Optional[str])
     return found
 
 
-def _kind_of(inventory: dict, direct: Set[str], keying: Optional[str]) -> Optional[str]:
+def _kind_of(inventory: dict, direct: set[str], keying: Optional[str]) -> Optional[str]:
     """The source kind behind a heuristic match, when it is unambiguous.
 
     `UX-192`. A heuristic resolves a *spelling*, not a stanza, so more
@@ -247,7 +244,7 @@ def blast(run_dir, target: str, project_dir: Optional[str] = None,
     # with the tool's own output is the bug this closes.
     matched = known_identity(inventory, target)
     shapes = classify_target(target, project_dir, inventory)
-    direct: Set[str] = set()
+    direct: set[str] = set()
     used: Optional[str] = None
     keying = None
     kind = None
@@ -283,7 +280,7 @@ def blast(run_dir, target: str, project_dir: Optional[str] = None,
     if used is None:
         used = shapes[0] if shapes else "element"
 
-    reachable: Set[str] = set(direct)
+    reachable: set[str] = set(direct)
     for uid in direct:
         reachable |= set(downstream.get(uid) or ())
     building, assembling = sources_mod.split_by_kind(reachable, kinds)
@@ -294,7 +291,7 @@ def blast(run_dir, target: str, project_dir: Optional[str] = None,
     durations = (compute_element_durations(_tasks_of(run_dir))
                  if measure else {})
     measured = [durations[uid] for uid in reachable if uid in durations]
-    by_kind: Dict[str, int] = {}
+    by_kind: dict[str, int] = {}
     for uid in reachable:
         by_kind[kinds.get(uid, "unknown")] = by_kind.get(kinds.get(uid, "unknown"), 0) + 1
     return {
@@ -328,7 +325,7 @@ def blast(run_dir, target: str, project_dir: Optional[str] = None,
     }
 
 
-def _by_depth(direct, reachable, successors, kinds, durations) -> List[dict]:
+def _by_depth(direct, reachable, successors, kinds, durations) -> list[dict]:
     """The closure as a hierarchy: `{element_uid, depth, element_kind,
     measured_us}`, direct consumers first.
 
@@ -344,7 +341,7 @@ def _by_depth(direct, reachable, successors, kinds, durations) -> List[dict]:
     shorter one: the depth at which a reader first meets it, and the
     depth at which rebuilding it actually becomes unavoidable.
     """
-    tree: List[dict] = []
+    tree: list[dict] = []
     seen = set(direct)
     frontier = sorted(direct)
     depth = 0

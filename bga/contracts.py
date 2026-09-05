@@ -31,7 +31,6 @@ while the set cannot be enumerated.
 import importlib
 import pkgutil
 import re
-from typing import Dict, List
 
 # `analyze/v1`, `store-aggregate/v1`. The version is the whole point of
 # the shape: an id with no `/vN` cannot say that it moved.
@@ -69,7 +68,7 @@ _OWNED = "OWNED"
 _INPUT = "READS"
 
 
-def _tuple_declared(attribute: str) -> List[str]:
+def _tuple_declared(attribute: str) -> list[str]:
     """Every contract id in a module-level tuple named `attribute`."""
     import bga
 
@@ -85,7 +84,7 @@ def _tuple_declared(attribute: str) -> List[str]:
     return sorted(found)
 
 
-def _declared_in_modules() -> Dict[str, str]:
+def _declared_in_modules() -> dict[str, str]:
     """`{contract id: owning module}` from the package itself.
 
     The walk costs ~3ms once `bga.cli` is loaded, which is every context
@@ -113,7 +112,7 @@ def _declared_in_modules() -> Dict[str, str]:
     return found
 
 
-def inventory() -> Dict[str, str]:
+def inventory() -> dict[str, str]:
     """Every contract, mapped to what owns it.
 
     Two sources, because there are genuinely two kinds: the documents
@@ -130,12 +129,12 @@ def inventory() -> Dict[str, str]:
     return owned
 
 
-def ids() -> List[str]:
+def ids() -> list[str]:
     """Every contract id, sorted. The set a release records."""
     return sorted(inventory())
 
 
-def printable() -> List[str]:
+def printable() -> list[str]:
     """The subset `bga --schema` can print.
 
     Named rather than assumed: a reader who meets `sources/v1` in a run
@@ -148,7 +147,7 @@ def printable() -> List[str]:
     return sorted(schemas.names())
 
 
-def superseded() -> List[str]:
+def superseded() -> list[str]:
     """Contracts this tool reads and no longer writes.
 
     `UX-297` retired the Plane 2 monolith. Every capture in an existing
@@ -160,7 +159,7 @@ def superseded() -> List[str]:
     return _tuple_declared(_RETIRED)
 
 
-def reads() -> List[str]:
+def reads() -> list[str]:
     """Input contracts: read by this tool, stamped by something else.
 
     `UX-540`: the third kind. `ids()` is what a release *emits* and
@@ -173,6 +172,6 @@ def reads() -> List[str]:
     return _tuple_declared(_INPUT)
 
 
-def unprintable() -> List[str]:
+def unprintable() -> list[str]:
     """Contracts that are written but have no printable schema."""
     return sorted(set(ids()) - set(printable()))

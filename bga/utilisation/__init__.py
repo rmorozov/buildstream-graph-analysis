@@ -7,8 +7,8 @@ Handles CPU capacity calculation, bucketing, and oversubscription detection.
 
 import logging
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Tuple
 from enum import Enum
+from typing import Optional
 
 # Explicit re-export (bga/analyzer.py imports these from this package,
 # not from .detection directly) - the redundant alias tells linters this
@@ -51,7 +51,7 @@ class CPUInterval:
     """
     start_us: int
     end_us: int
-    active_tasks: List[str]  # Task keys running in this interval
+    active_tasks: list[str]  # Task keys running in this interval
     cpu_usage_us: int  # CPU time consumed in this interval
     bucket: CPUBucket = CPUBucket.UNTRACKED
     
@@ -84,7 +84,7 @@ class UtilizationResult:
     # regardless of cpu_accounting_available (P1-33: it was never actually
     # a CPU-time measurement, just labeled as CPU-microseconds - keeping
     # it under its own honest meaning, not removing it).
-    buckets: Dict[CPUBucket, int] = field(default_factory=dict)
+    buckets: dict[CPUBucket, int] = field(default_factory=dict)
 
     # Reconciliation (Part 33.3/I9) - only meaningful when
     # cpu_accounting_available; None/0 otherwise, never computed against
@@ -112,11 +112,11 @@ class UtilizationResult:
     effective_cpus_source: Optional[str] = None
 
     # Detailed intervals for timeline reconstruction
-    intervals: List[CPUInterval] = field(default_factory=list)
+    intervals: list[CPUInterval] = field(default_factory=list)
 
     # Diagnostics
-    high_utilization_periods: List[Tuple[int, int]] = field(default_factory=list)
-    idle_periods: List[Tuple[int, int]] = field(default_factory=list)
+    high_utilization_periods: list[tuple[int, int]] = field(default_factory=list)
+    idle_periods: list[tuple[int, int]] = field(default_factory=list)
 
     # UX-341: 0..1, like every other bounded fraction the tool
     # publishes. These were 0..100 while `cpu_coverage` beside them was
@@ -246,9 +246,9 @@ class UtilizationAnalyzer:
         )
         
         # Analysis state
-        self.intervals: List[CPUInterval] = []
-        self._task_intervals: List[dict] = []
-        self.buckets: Dict[CPUBucket, int] = {bucket: 0 for bucket in CPUBucket}
+        self.intervals: list[CPUInterval] = []
+        self._task_intervals: list[dict] = []
+        self.buckets: dict[CPUBucket, int] = dict.fromkeys(CPUBucket, 0)
         self.max_observed_concurrency = 0
         
         # Reconciliation state
@@ -257,14 +257,14 @@ class UtilizationAnalyzer:
         self.reconciliation_error_share = 0.0
         
         # Idle/high utilization periods
-        self.idle_periods: List[Tuple[int, int]] = []
-        self.high_utilization_periods: List[Tuple[int, int]] = []
+        self.idle_periods: list[tuple[int, int]] = []
+        self.high_utilization_periods: list[tuple[int, int]] = []
         
         # Oversubscription analysis
         self.potential_oversubscription = False
         self.oversubscription_evidence = "INSUFFICIENT_EVIDENCE"
         
-    def _compute_effective_cpus(self) -> Tuple[Optional[float], Optional[str]]:
+    def _compute_effective_cpus(self) -> tuple[Optional[float], Optional[str]]:
         """
         Compute effective CPU count (Part 30.1) and which real source it
         came from - `(None, None)` when no real capacity source is
@@ -314,8 +314,8 @@ class UtilizationAnalyzer:
     
     def analyze(
         self,
-        task_intervals: List[dict],
-        occupancy_segments: List[dict],
+        task_intervals: list[dict],
+        occupancy_segments: list[dict],
         retry_tasks: Optional[set] = None,
         rebuild_tasks: Optional[set] = None,
         oversubscription_violation: Optional[dict] = None,
@@ -360,7 +360,7 @@ class UtilizationAnalyzer:
     
     def _build_cpu_intervals(
         self,
-        task_intervals: List[dict],
+        task_intervals: list[dict],
         retry_tasks: set,
         rebuild_tasks: set,
     ) -> None:
@@ -400,7 +400,7 @@ class UtilizationAnalyzer:
                 self.max_observed_concurrency, concurrency
             )
     
-    def _analyze_idle_periods(self, occupancy_segments: List[dict]) -> None:
+    def _analyze_idle_periods(self, occupancy_segments: list[dict]) -> None:
         """
         Analyze idle periods from occupancy data.
 
@@ -436,7 +436,7 @@ class UtilizationAnalyzer:
     
     def _compute_bucket_totals(self) -> None:
         """Compute total CPU-microseconds per bucket."""
-        self.buckets = {bucket: 0 for bucket in CPUBucket}
+        self.buckets = dict.fromkeys(CPUBucket, 0)
         
         for interval in self.intervals:
             self.buckets[interval.bucket] += interval.cpu_usage_us
@@ -685,8 +685,8 @@ def analyze_utilization(
     wall_clock_us: int = 0,
     host_cpu_count: Optional[int] = None,
     cpu_budget: Optional[int] = None,
-    task_intervals: Optional[List[dict]] = None,
-    occupancy_segments: Optional[List[dict]] = None,
+    task_intervals: Optional[list[dict]] = None,
+    occupancy_segments: Optional[list[dict]] = None,
     retry_tasks: Optional[set] = None,
     rebuild_tasks: Optional[set] = None,
     oversubscription_violation: Optional[dict] = None,

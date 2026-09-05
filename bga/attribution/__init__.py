@@ -6,9 +6,9 @@ Implements the dependency blame chain model (M2).
 
 from .blame_chain import (
     AttributionSegment,
+    BlameChainAnalyzer,
     BlameChainNode,
     TaskAttribution,
-    BlameChainAnalyzer,
 )
 
 __all__ = [

@@ -59,7 +59,8 @@ import pytest
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 sys.path.insert(0, str(REPO / "tests"))
-from pages import snapshot_copy    # noqa: E402
+from pages import snapshot_copy
+
 node = shutil.which("node")
 needs_node = pytest.mark.skipif(node is None, reason="node is not installed")
 VIEWER = REPO / "bga" / "viewer"
@@ -133,11 +134,11 @@ class TestADrawingMustChooseItsGrade:
         'strip({ n: 3, min: 0, max: 9, p95: 8, deciles: { p50: 4 } }, {})',
     ])
     def test_omitting_the_grade_is_an_error(self, call):
-        result = _js("""
-const { sparkline, strip } = await import("./bga/viewer/drawings.js");
-%s;
-console.log("{}");
-""" % call)
+        result = _js(f"""
+const {{ sparkline, strip }} = await import("./bga/viewer/drawings.js");
+{call};
+console.log("{{}}");
+""")
         assert result.returncode != 0, (
             "a drawing was made without a grade; §2a says the call site "
             "chooses, and a silent default is what this item is fixing")
@@ -636,7 +637,7 @@ class TestTheNamedDrawingsAreExhibitsOnTheRealPages:
         agree with the drawing to pass."""
         for page, out in booted.items():
             for one in _declared(out):
-                rows = {label: value for label, value in one["twinRows"]}
+                rows = dict(one["twinRows"])
                 if one["role"] == "series":
                     values = one["values"].split(",")
                     assert len(rows) == len(values), (page, one)
@@ -655,19 +656,19 @@ class TestTheComposedFiguresAreExhibits:
     "unreadable because everything is very small"."""
 
     def _render(self, function, argument):
-        result = _js("""
+        result = _js(f"""
 const mod = await import("./tests/viewer.mjs");
-const node = mod.%s(%s);
+const node = mod.{function}({argument});
 const svg = all(node, (n) => n.tagName === "svg")[0] ?? null;
-console.log(JSON.stringify({
+console.log(JSON.stringify({{
   viewBox: svg ? svg.attrs.viewBox : null,
   grade: svg ? (svg.attrs["data-grade"] ?? null) : null,
   axis: all(node, (n) => n.attrs?.["data-role"] === "draw-axis").length,
   twin: all(node, (n) => n.attrs?.["data-role"] === "drawing-twin")
     .flatMap((t) => (t.children?.[1]?.children ?? []).map(
       (tr) => (tr.children ?? []).map(text))),
-}));
-""" % (function, argument))
+}}));
+""")
         assert result.returncode == 0, result.stderr[-3000:]
         return json.loads(result.stdout)
 

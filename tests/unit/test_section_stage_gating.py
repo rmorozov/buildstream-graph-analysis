@@ -23,7 +23,6 @@ from bga.report.json import format_json
 from bga.report.text import format_text
 from tests.fixtures import topologies
 
-
 SECTIONS = ["graph", "floors", "utilisation", "diagnostics", None]
 
 

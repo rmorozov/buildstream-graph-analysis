@@ -136,7 +136,7 @@ class TestAWaiverCitesTheDecisionThatMadeIt:
         """32.7.4's claim, on the code: a run whose attribution misses H
         by a known amount reports exactly that ratio, so I7 adds no
         quantity I4 does not already carry."""
-        attribution = {k: 0 for k in _HORIZON_KEYS}
+        attribution = dict.fromkeys(_HORIZON_KEYS, 0)
         attribution["execution_on_chain_us"] = 3
         confidence, _ = compute_confidence(
             normalized_tasks=[_task(0, 4)], run_context=None, trace=None,
@@ -147,7 +147,7 @@ class TestAWaiverCitesTheDecisionThatMadeIt:
         assert confidence["hard_gates"]["blame_chain_coverage_full"] is False
 
     def test_the_alias_holds_at_one_too(self):
-        attribution = {k: 0 for k in _HORIZON_KEYS}
+        attribution = dict.fromkeys(_HORIZON_KEYS, 0)
         attribution["execution_on_chain_us"] = 4
         confidence, _ = compute_confidence(
             normalized_tasks=[_task(0, 4)], run_context=None, trace=None,

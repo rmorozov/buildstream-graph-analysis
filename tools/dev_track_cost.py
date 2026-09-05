@@ -165,10 +165,8 @@ def report(path, verbose=False):
         if phase not in data["phases"]:
             continue
         turns, tokens = data["phases"][phase]
-        lines.append("%-9s %6d %10d %6.1f"
-                     % (phase, turns, tokens, 100.0 * tokens / total))
-    lines.append("%-9s %6d %10d %6.1f"
-                 % ("TOTAL", data["responses"], total, 100.0))
+        lines.append(f"{phase:<9} {turns:6d} {tokens:10d} {100.0 * tokens / total:6.1f}")
+    lines.append(f"{'TOTAL':<9} {data['responses']:6d} {total:10d} {100.0:6.1f}")
     lines.append(f"context high-water {data['peak_context']}, "
                  f"cache re-reads {data['cache_read']}")
     if verbose:

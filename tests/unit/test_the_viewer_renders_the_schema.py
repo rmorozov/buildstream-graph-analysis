@@ -130,7 +130,7 @@ class TestItServesTheSameJsonTheCliPrints:
         printed = subprocess.run(
             [sys.executable, "-c",
              "from bga.cli import main; raise SystemExit(main("
-             "['analyze', %r, '--format', 'json']))" % GOLDEN],
+             f"['analyze', {GOLDEN!r}, '--format', 'json']))"],
             capture_output=True, text=True, cwd=os.getcwd())
         assert served_payload == json.loads(printed.stdout)
 
@@ -235,7 +235,7 @@ class TestTheViewHints:
         printed = subprocess.run(
             [sys.executable, "-c",
              "from bga.cli import main; raise SystemExit(main("
-             "['analyze', %r, '--format', 'json']))" % GOLDEN],
+             f"['analyze', {GOLDEN!r}, '--format', 'json']))"],
             capture_output=True, text=True, cwd=os.getcwd())
         jsonschema.validate(json.loads(printed.stdout),
                             schemas.schema(schemas.ANALYZE))
@@ -375,7 +375,7 @@ class TestTheSchemaDescribesWhatRealRunsEmit:
         result = subprocess.run(
             [sys.executable, "-c",
              "from bga.cli import main; raise SystemExit(main("
-             "['analyze', %r, '--format', 'json']))" % run],
+             f"['analyze', {run!r}, '--format', 'json']))"],
             capture_output=True, text=True, cwd=os.getcwd())
         assert result.returncode == 0, result.stderr
         return json.loads(result.stdout)
@@ -509,7 +509,7 @@ class TestTheViewerShipsNoToolchain:
 
         expected = os.path.join(os.path.dirname(os.path.abspath(bga.__file__)),
                                 "viewer")
-        assert view.ASSET_DIR == expected
+        assert expected == view.ASSET_DIR
         for name in view.ASSETS:
             assert os.path.exists(os.path.join(view.ASSET_DIR, name)), name
 
@@ -576,7 +576,7 @@ class TestTheCommandLine:
         result = subprocess.run(
             [sys.executable, "-c",
              "from bga.cli import main; raise SystemExit(main("
-             "['view', %r, '--no-browser']))" % str(tmp_path / "nope")],
+             "['view', {!r}, '--no-browser']))".format(str(tmp_path / "nope"))],
             capture_output=True, text=True, cwd=os.getcwd(), timeout=60)
         assert result.returncode == 2, result.stdout
         assert "Traceback" not in result.stderr

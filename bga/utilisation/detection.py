@@ -8,24 +8,24 @@ straight through to `UtilizationAnalyzer.analyze`'s `retry_tasks`/
 `rebuild_tasks` parameters unchanged.
 """
 from collections import defaultdict
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Optional
 
 from ..ingest.models import Graph, NormalizedTask, TaskKind
 
 
-def compute_retry_tasks(normalized_tasks: List[NormalizedTask]) -> Set[str]:
+def compute_retry_tasks(normalized_tasks: list[NormalizedTask]) -> set[str]:
     """
     A task is a retry (Part 5.2's `attempt` field) if another recorded
     task shares its `element_uid|task_kind|phase` but has a higher
     `attempt` number - every non-final attempt is the wasted/discarded
     one, not the final attempt that actually completed the work.
     """
-    groups: Dict[Tuple[str, str, str], List[NormalizedTask]] = defaultdict(list)
+    groups: dict[tuple[str, str, str], list[NormalizedTask]] = defaultdict(list)
     for task in normalized_tasks:
         key = (task.task_key.element_uid, task.task_key.task_kind.value, task.task_key.phase)
         groups[key].append(task)
 
-    retry_tasks: Set[str] = set()
+    retry_tasks: set[str] = set()
     for tasks in groups.values():
         if len(tasks) <= 1:
             continue
@@ -38,9 +38,9 @@ def compute_retry_tasks(normalized_tasks: List[NormalizedTask]) -> Set[str]:
 
 def compute_rebuild_tasks(
     graph: Optional[Graph],
-    normalized_tasks: List[NormalizedTask],
+    normalized_tasks: list[NormalizedTask],
     historical_runs: list,
-) -> Set[str]:
+) -> set[str]:
     """
     A rebuild is a BUILD task that executed despite a matching cache_key
     already having been built successfully in an earlier run - work that
@@ -54,7 +54,7 @@ def compute_rebuild_tasks(
 
     current_cache_key = {elem.uid: elem.cache_key for elem in graph.elements}
 
-    previously_built_cache_keys: Set[str] = set()
+    previously_built_cache_keys: set[str] = set()
     for _hist_context, hist_graph, hist_trace in historical_runs:
         hist_cache_key = {elem.uid: elem.cache_key for elem in hist_graph.elements}
         for span in hist_trace.spans:
@@ -64,7 +64,7 @@ def compute_rebuild_tasks(
             if cache_key:
                 previously_built_cache_keys.add(cache_key)
 
-    rebuild_tasks: Set[str] = set()
+    rebuild_tasks: set[str] = set()
     for task in normalized_tasks:
         if task.task_key.task_kind != TaskKind.BUILD:
             continue

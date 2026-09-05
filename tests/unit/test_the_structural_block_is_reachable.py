@@ -195,7 +195,7 @@ class TestTheBlockIsReachable:
 
 
 def drawn_headers(payload):
-    return [h for h in _structural(payload)["headers"]]
+    return list(_structural(payload)["headers"])
 
 
 if __name__ == "__main__":  # pragma: no cover

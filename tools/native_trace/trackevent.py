@@ -76,7 +76,6 @@ that the numbers above are still the numbers upstream means.
 """
 import gzip
 import struct
-from typing import Dict
 
 # --- wire types (protobuf encoding, not Perfetto's) ---------------------
 WIRE_VARINT = 0
@@ -270,12 +269,12 @@ class TrackEventWriter:
         # (`InternedData` field number -> {name: iid}) and its own
         # pending queue, because a table's definitions ride on the next
         # packet that refers to them.
-        self._tables: Dict[int, Dict[str, int]] = {
+        self._tables: dict[int, dict[str, int]] = {
             INTERNED_EVENT_NAMES: {},
             INTERNED_EVENT_CATEGORIES: {},
             INTERNED_DEBUG_ANNOTATION_NAMES: {},
         }
-        self._pending: Dict[int, list] = {field: [] for field in self._tables}
+        self._pending: dict[int, list] = {field: [] for field in self._tables}
         self._next_uuid = 1
         self._first = True
         self.packets = 0

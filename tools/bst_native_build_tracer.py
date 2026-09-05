@@ -71,8 +71,8 @@ import gzip
 import itertools
 import json
 import os
-import re
 import platform
+import re
 import shutil
 import stat
 import struct
@@ -82,13 +82,14 @@ import tempfile
 import threading
 import time
 from collections import defaultdict
-from typing import Dict, List, Optional, Set, Tuple
-
+from typing import Optional
 
 from bga import progress
+
 # `UX-297`: the report's contract, owned by the module that describes the
 # shape rather than by the writer - which is how `bga.contracts` finds it.
 from bga.plane2 import SCHEMA as PLANE2_SCHEMA
+
 from .bst_run_wrapped import run_wrapped, shutdown_build_group
 from .native_trace.bwrap_shim import __file__ as _bwrap_shim_source
 
@@ -193,7 +194,7 @@ def write_bwrap_shim(shim_dir: str) -> str:
     that has none, which is exactly where they most needed to run.
     """
     shim_path = os.path.join(shim_dir, "bwrap")
-    with open(_bwrap_shim_source, "r", encoding="utf-8") as handle:
+    with open(_bwrap_shim_source, encoding="utf-8") as handle:
         source = handle.read()
     if source.startswith("#!"):
         source = f"#!{sys.executable}\n" + source.split("\n", 1)[1]
@@ -326,7 +327,7 @@ def scratch_dir_or_fallback(project_dir: str) -> Optional[str]:
     return root
 
 
-def absolute_tmpdir_env(env: Dict[str, str]) -> Dict[str, str]:
+def absolute_tmpdir_env(env: dict[str, str]) -> dict[str, str]:
     """Make an inherited relative `TMPDIR` absolute before `bst` sees it.
 
     UX-155. Python tolerates a relative `TMPDIR` - `tempfile` treats it
@@ -450,7 +451,7 @@ def read_scalar_key(path: str, key: str) -> Optional[str]:
     plugins are not installed and without importing BuildStream.
     """
     try:
-        with open(path, "r", encoding="utf-8", errors="replace") as handle:
+        with open(path, encoding="utf-8", errors="replace") as handle:
             for line in handle:
                 stripped = line.strip()
                 if not stripped.startswith(key + ":"):
@@ -528,7 +529,7 @@ def _process_start_age(pid: str, proc_root: str = "/proc") -> Optional[float]:
     itself contain spaces and parentheses.
     """
     try:
-        with open(f"{proc_root}/{pid}/stat", "r", encoding="utf-8") as handle:
+        with open(f"{proc_root}/{pid}/stat", encoding="utf-8") as handle:
             fields = handle.read().rsplit(")", 1)[1].split()
         started_ticks = int(fields[19])
         uptime = float(
@@ -539,7 +540,7 @@ def _process_start_age(pid: str, proc_root: str = "/proc") -> Optional[float]:
 
 
 def detect_stale_casd(cache_dir: Optional[str] = None,
-                      proc_root: str = "/proc") -> List[dict]:
+                      proc_root: str = "/proc") -> list[dict]:
     """Running `buildbox-casd` processes already serving this cache.
 
     `UX-161`, completing `UX-147`'s deferred item 2. A `casd` started
@@ -570,7 +571,7 @@ def detect_stale_casd(cache_dir: Optional[str] = None,
         return []
     for pid in pids:
         try:
-            with open(f"{proc_root}/{pid}/comm", "r", encoding="utf-8") as handle:
+            with open(f"{proc_root}/{pid}/comm", encoding="utf-8") as handle:
                 if handle.read().strip() != CASD_NAME:
                     continue
             with open(f"{proc_root}/{pid}/cmdline", "rb") as handle:
@@ -596,7 +597,7 @@ def detect_stale_casd(cache_dir: Optional[str] = None,
     return sorted(found, key=lambda entry: entry["pid"])
 
 
-def format_stale_casd_warning(found: List[dict]) -> Optional[str]:
+def format_stale_casd_warning(found: list[dict]) -> Optional[str]:
     """The up-front warning, or `None` when there is nothing to say.
 
     Silent on a quiet machine is a requirement, not an oversight: a
@@ -621,7 +622,7 @@ def format_stale_casd_warning(found: List[dict]) -> Optional[str]:
     return "\n".join(lines)
 
 
-def discover_element_names(project_dir: str) -> List[str]:
+def discover_element_names(project_dir: str) -> list[str]:
     """Every element in the project, by the name BuildStream calls it.
 
     `UX-160`. Discovery was `os.listdir(...).endswith(".bst")` in four
@@ -699,7 +700,7 @@ def read_host_sample() -> dict:
     """
     sample = {}
     try:
-        with open("/proc/meminfo", "r") as handle:
+        with open("/proc/meminfo") as handle:
             for line in handle:
                 key, _, rest = line.partition(":")
                 name = _MEMINFO_KEYS.get(key)
@@ -708,7 +709,7 @@ def read_host_sample() -> dict:
     except (OSError, ValueError, IndexError):
         return {}
     try:
-        with open("/proc/vmstat", "r") as handle:
+        with open("/proc/vmstat") as handle:
             for line in handle:
                 key, _, value = line.partition(" ")
                 if key in _VMSTAT_KEYS:
@@ -776,10 +777,8 @@ class HostSampler:
         if self._thread is not None:
             self._thread.join(timeout=self.interval_s + 1.0)
         if self._handle is not None:
-            try:
+            with contextlib.suppress(OSError):
                 self._handle.close()
-            except OSError:
-                pass
         return False
 
     def _write(self, row: dict) -> None:
@@ -812,7 +811,7 @@ def read_host_samples(path: str) -> dict:
     """
     header, samples = {}, []
     try:
-        with open(path, "r", encoding="utf-8") as handle:
+        with open(path, encoding="utf-8") as handle:
             for line in handle:
                 line = line.strip()
                 if not line:
@@ -830,7 +829,7 @@ def read_host_samples(path: str) -> dict:
     return {"header": header, "samples": samples}
 
 
-def run_traced_build(project_dir: str, cmd: List[str], raw_log_path: str, wrapped_log_path: Optional[str] = None, trace_opens: bool = False, argv_log_path: Optional[str] = None, invocation_log_path: Optional[str] = None,
+def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrapped_log_path: Optional[str] = None, trace_opens: bool = False, argv_log_path: Optional[str] = None, invocation_log_path: Optional[str] = None,
                      trace_spine=False, diagnostics_path: Optional[str] = None,
                      no_inject: bool = False, inhibit: bool = False,
                      host_samples_path: Optional[str] = None) -> int:
@@ -1105,7 +1104,7 @@ _OPENS_HEADER_RE = re.compile(
 )
 
 
-def parse_open_records(text: str, open_element_overrides: Optional[Dict[str, str]] = None) -> Dict[str, dict]:
+def parse_open_records(text: str, open_element_overrides: Optional[dict[str, str]] = None) -> dict[str, dict]:
     """`parse_open_lines`, over one string instead of an iterable.
 
     Kept because callers outside the analysis path have a string in hand
@@ -1114,7 +1113,7 @@ def parse_open_records(text: str, open_element_overrides: Optional[Dict[str, str
     return parse_open_lines(text.splitlines(), open_element_overrides)
 
 
-def parse_open_lines(lines, open_element_overrides: Optional[Dict[str, str]] = None) -> Dict[str, dict]:
+def parse_open_lines(lines, open_element_overrides: Optional[dict[str, str]] = None) -> dict[str, dict]:
     """Parse UX-46's `OPENS` blocks into `{element: {...}}`.
 
     Each block is a header line followed by exactly `unique` absolute
@@ -1130,7 +1129,7 @@ def parse_open_lines(lines, open_element_overrides: Optional[Dict[str, str]] = N
     unsafe and is reported as such rather than quietly rounded away.
     """
     open_element_overrides = open_element_overrides or {}
-    per_element: Dict[str, dict] = {}
+    per_element: dict[str, dict] = {}
     # UX-169: one pass over an iterable, with the block's own `unique`
     # count as the only state - the index-with-lookahead version needed
     # the whole trace as a list of lines, which is the copy the analysis
@@ -1187,7 +1186,7 @@ def parse_open_lines(lines, open_element_overrides: Optional[Dict[str, str]] = N
     return per_element
 
 
-def parse_trace_log(text: str) -> List[dict]:
+def parse_trace_log(text: str) -> list[dict]:
     """Parse raw `START pid=.. ppid=.. ts=.. element=.. cmd=..` / `END
     ...` lines from hook.c into structured events. `element=` (UX-23) is
     optional for backward compatibility with a raw log captured before
@@ -1201,7 +1200,7 @@ def parse_trace_log(text: str) -> List[dict]:
     return parse_trace_lines(text.splitlines())
 
 
-def parse_trace_lines(lines, total_lines: Optional[int] = None) -> List[dict]:
+def parse_trace_lines(lines, total_lines: Optional[int] = None) -> list[dict]:
     """`parse_trace_log`, over an iterable of lines instead of one string.
 
     `UX-168`. The caller used to read the whole trace into memory and
@@ -1245,7 +1244,7 @@ def stream_trace_events(lines, total_lines: Optional[int] = None):
         if not line or not (line.startswith("START ") or line.startswith("END ")):
             continue
         event, rest = line.split(" ", 1)
-        fields: Dict[str, str] = {}
+        fields: dict[str, str] = {}
         remaining = rest
         for key in ("pid", "ppid", "ts"):
             marker = f"{key}="
@@ -1287,7 +1286,7 @@ def stream_trace_events(lines, total_lines: Optional[int] = None):
         # previous hook still parses and simply reports CPU time as
         # unavailable rather than as zero - an unmeasured CPU time and a
         # genuinely-zero one are different claims.
-        rusage: Dict[str, float] = {}
+        rusage: dict[str, float] = {}
         # UX-106: `src=` and `exit=` are written by the ptrace spine and
         # absent from every hook-written record. Parsed here rather than
         # tolerated as unknown, because this loop *stops* at the first
@@ -1378,7 +1377,7 @@ def stream_trace_events(lines, total_lines: Optional[int] = None):
     tick.done()
 
 
-def _pair_key(ev: dict) -> Tuple[str, int, str]:
+def _pair_key(ev: dict) -> tuple[str, int, str]:
     """What makes two records the same process's, for pairing.
 
     The sandbox (UX-56/UX-61) rather than the element, because pids are
@@ -1390,7 +1389,7 @@ def _pair_key(ev: dict) -> Tuple[str, int, str]:
     return (ev.get("invocation") or ev["element"], ev["pid"], ev.get("src", "hook"))
 
 
-def count_unmatched_ends(events: List[dict]) -> Dict[str, int]:
+def count_unmatched_ends(events: list[dict]) -> dict[str, int]:
     """ENDs with no START to pair with, split by what they can support.
 
     `UX-123` counted these as one number and called all of them
@@ -1428,14 +1427,14 @@ def count_unmatched_ends(events: List[dict]) -> Dict[str, int]:
     return counts
 
 
-def count_fork_only_exits(events: List[dict]) -> int:
+def count_fork_only_exits(events: list[dict]) -> int:
     """`UX-123`'s name, kept for its callers; the spine half of the pair
     above. See `count_unmatched_ends` for why the two are not one number.
     """
     return count_unmatched_ends(events)["fork_only"]
 
 
-def _drain(events: List[dict]):
+def _drain(events: list[dict]):
     """Yield each event and drop the list's own reference to it.
 
     `UX-169`. Iterating a list and clearing it afterwards keeps every
@@ -1448,7 +1447,7 @@ def _drain(events: List[dict]):
     del events[:]
 
 
-def pair_events(events: List[dict], consume: bool = False) -> List[dict]:
+def pair_events(events: list[dict], consume: bool = False) -> list[dict]:
     """Pair each START with its own process's END, FIFO per `(element,
     pid)` - correct as long as one pid's own lifetime doesn't overlap a
     later reused instance of the same pid *within the same element's own
@@ -1493,7 +1492,7 @@ def pair_events(events: List[dict], consume: bool = False) -> List[dict]:
     return sorted(stream_records(ordered), key=lambda r: r["start_ts"])
 
 
-def stream_records(events, counts: Optional[Dict[str, int]] = None):
+def stream_records(events, counts: Optional[dict[str, int]] = None):
     """`pair_events`, as the single pass it can be.
 
     Yields each record when its END arrives, then the open ones - so a
@@ -1529,7 +1528,7 @@ def stream_records(events, counts: Optional[Dict[str, int]] = None):
     second walk because after this pass the events are gone - and
     because the open-set it needs is the one this loop already keeps.
     """
-    open_by_key: Dict[Tuple[str, int, str], List[dict]] = {}
+    open_by_key: dict[tuple[str, int, str], list[dict]] = {}
     if counts is not None:
         counts.setdefault("fork_only", 0)
         counts.setdefault("unmatched", 0)
@@ -1731,7 +1730,7 @@ COVERAGE_SPINE_ONLY = "spine-only"
 COVERAGE_HOOK_ONLY = "hook-only"
 
 
-def merge_record_streams(records: List[dict]) -> List[dict]:
+def merge_record_streams(records: list[dict]) -> list[dict]:
     """UX-107: two record streams, one process list.
 
     With `UX-106`'s spine running, a *dynamically*-linked process is
@@ -1766,7 +1765,7 @@ def merge_record_streams(records: List[dict]) -> List[dict]:
             record.setdefault("coverage", COVERAGE_HOOK_ONLY)
         return records
 
-    hook_by_key: Dict[Tuple[Optional[str], int], List[dict]] = {}
+    hook_by_key: dict[tuple[Optional[str], int], list[dict]] = {}
     for record in records:
         if record.get("src") == "spine":
             continue
@@ -1774,7 +1773,7 @@ def merge_record_streams(records: List[dict]) -> List[dict]:
     for pending in hook_by_key.values():
         pending.sort(key=lambda r: r["start_ts"])
 
-    merged: List[dict] = []
+    merged: list[dict] = []
     matched_hooks = set()
     for record in sorted(spine_records, key=lambda r: r["start_ts"]):
         key = (record.get("invocation"), record["pid"])
@@ -1901,10 +1900,7 @@ def _is_element_build_driver(cmd: str) -> bool:
     """
     if "--build" in cmd:
         return True
-    for token in cmd.split():
-        if os.path.basename(token) in _BUILD_DRIVER_BINARIES:
-            return True
-    return False
+    return any(os.path.basename(token) in _BUILD_DRIVER_BINARIES for token in cmd.split())
 
 
 def _binary_name(cmd: str) -> str:
@@ -2021,7 +2017,7 @@ def _is_element_name(name: Optional[str]) -> bool:
     return bool(name) and name.endswith(".bst")
 
 
-def detect_redundant_operations(records: List[dict]) -> Tuple[List[dict], dict]:
+def detect_redundant_operations(records: list[dict]) -> tuple[list[dict], dict]:
     """UX-23: group matched (start+end known), element-attributed traced
     processes by their normalized command signature - any signature
     occurring under 2+ *distinct* real elements is a real, concrete
@@ -2066,11 +2062,11 @@ class _RedundantOperations:
     """
 
     def __init__(self):
-        self.by_signature: Dict[str, dict] = {}
+        self.by_signature: dict[str, dict] = {}
         # Signatures seen under a non-element bucket, so a finding that
         # disappears for lack of a *second* resolved element can be
         # counted rather than silently dropped.
-        self.unresolved_signatures: Dict[str, set] = defaultdict(set)
+        self.unresolved_signatures: dict[str, set] = defaultdict(set)
         self.excluded_command_blocks = 0
 
     def add(self, r):
@@ -2260,7 +2256,7 @@ def classify_binary(name: str) -> str:
     return "unclassified"
 
 
-def _concurrency_profile(intervals: List[Tuple[float, float]]) -> dict:
+def _concurrency_profile(intervals: list[tuple[float, float]]) -> dict:
     """Peak and time-weighted mean concurrency over a set of
     [start, end] process intervals, plus their span and total lifetime."""
     if not intervals:
@@ -2287,7 +2283,7 @@ def _concurrency_profile(intervals: List[Tuple[float, float]]) -> dict:
     }
 
 
-def compute_per_element_parallelism(records: List[dict]) -> List[dict]:
+def compute_per_element_parallelism(records: list[dict]) -> list[dict]:
     """UX-32: for each BuildStream element, how much parallelism its own
     native build system actually achieved - the question Plane 2 exists
     to answer, and the one its report did not have a number for.
@@ -2317,10 +2313,10 @@ class _PerElementParallelism:
     """
 
     def __init__(self):
-        self.starts: Dict[str, array.array] = {}
-        self.ends: Dict[str, array.array] = {}
-        self.unclassified: Dict[str, Dict[str, int]] = {}
-        self.requested: Dict[str, Optional[int]] = {}
+        self.starts: dict[str, array.array] = {}
+        self.ends: dict[str, array.array] = {}
+        self.unclassified: dict[str, dict[str, int]] = {}
+        self.requested: dict[str, Optional[int]] = {}
 
     def add(self, r):
         if r["open"] or r["end_ts"] is None:
@@ -2406,7 +2402,7 @@ class _PerElementParallelism:
         return profiles
 
 
-def assess_element_attribution(by_element: Dict[str, int]) -> dict:
+def assess_element_attribution(by_element: dict[str, int]) -> dict:
     """UX-56: is the per-element split real, or did every process land in
     one bucket that is not an element?
 
@@ -2500,7 +2496,7 @@ def assess_element_attribution(by_element: Dict[str, int]) -> dict:
     }
 
 
-def compute_max_concurrency(records: List[dict]) -> int:
+def compute_max_concurrency(records: list[dict]) -> int:
     """A real sweep over process intervals - matched (start+end known)
     records only. Open (unmatched) records are deliberately excluded,
     not extended to the trace's last timestamp: a real run against
@@ -2690,7 +2686,7 @@ def census_static_executables(root: str) -> dict:
     census that dies on a broken link in a staged sysroot is a census
     nobody runs.
     """
-    static: List[str] = []
+    static: list[str] = []
     dynamic = libraries = unclassified = scripts = 0
     if not os.path.isdir(root):
         return {"static": [], "dynamic": 0, "libraries": 0,
@@ -2737,7 +2733,7 @@ def census_static_executables(root: str) -> dict:
     }
 
 
-_ELEMENT_YAML_CACHE: Dict[tuple, Optional[dict]] = {}
+_ELEMENT_YAML_CACHE: dict[tuple, Optional[dict]] = {}
 
 
 def read_element_yaml(path: str) -> Optional[dict]:
@@ -2768,7 +2764,7 @@ def read_element_yaml(path: str) -> Optional[dict]:
     if key in _ELEMENT_YAML_CACHE:
         return _ELEMENT_YAML_CACHE[key]
     try:
-        with open(path, "r", encoding="utf-8") as handle:
+        with open(path, encoding="utf-8") as handle:
             # libyaml's loader wherever the binding was built with it;
             # the pure-Python scanner is several times slower and this
             # is the census's dominant cost.
@@ -2782,7 +2778,7 @@ def read_element_yaml(path: str) -> Optional[dict]:
     return data
 
 
-def _local_source_paths(project_dir: str, element: str) -> List[str]:
+def _local_source_paths(project_dir: str, element: str) -> list[str]:
     """The directories an element stages from its own `local` sources.
 
     Read from the `.bst` file for the same reason
@@ -2805,7 +2801,7 @@ def _local_source_paths(project_dir: str, element: str) -> List[str]:
     return paths
 
 
-def census_spine_verdicts(project_dir: str) -> Dict[str, bool]:
+def census_spine_verdicts(project_dir: str) -> dict[str, bool]:
     """UX-113: `{element: does the hook need help here}`, from the census.
 
     True where the element's sandbox stages at least one static
@@ -2845,8 +2841,8 @@ def census_spine_verdicts(project_dir: str) -> Dict[str, bool]:
     }
 
 
-def format_census_coverage(project_dir: str, verdicts: Dict[str, bool],
-                           unassessable: Optional[Set[str]] = None) -> str:
+def format_census_coverage(project_dir: str, verdicts: dict[str, bool],
+                           unassessable: Optional[set[str]] = None) -> str:
     """One line naming what `--trace-spine=auto` decided, and on what.
 
     `UX-160` item 3. The unassessed count is the number that matters:
@@ -2900,7 +2896,7 @@ def format_census_coverage(project_dir: str, verdicts: Dict[str, bool],
     return line
 
 
-def census_project(project_dir: str, elements: List[str]) -> dict:
+def census_project(project_dir: str, elements: list[str]) -> dict:
     """UX-105: which elements have a static executable in their sandbox,
     and which are therefore invisible to Plane 2 in part or in whole.
 
@@ -2929,7 +2925,7 @@ def census_project(project_dir: str, elements: List[str]) -> dict:
     and only a spine measures what it did.
     """
     declared = read_declared_build_deps(project_dir, elements)
-    own: Dict[str, dict] = {}
+    own: dict[str, dict] = {}
     # UX-183: on freedesktop-sdk this walks every `local` source of every
     # element before the build starts - minutes, behind one phase line.
     census_tick = progress.ticker("census", total=len(elements))
@@ -2951,9 +2947,9 @@ def census_project(project_dir: str, elements: List[str]) -> dict:
     # and needed one Python frame per link. Measured on a synthetic
     # 1,000-element project (each element depending on the previous
     # five): 2.04s before this memo.
-    closures: Dict[str, Set[str]] = {}
+    closures: dict[str, set[str]] = {}
 
-    def _closure(element: str) -> Set[str]:
+    def _closure(element: str) -> set[str]:
         """Everything reachable from `element` over declared build deps.
 
         Plain iterative reachability, short-circuited by `closures`
@@ -2965,7 +2961,7 @@ def census_project(project_dir: str, elements: List[str]) -> dict:
         cached = closures.get(element)
         if cached is not None:
             return cached
-        seen: Set[str] = set()
+        seen: set[str] = set()
         stack = list(declared.get(element) or [])
         while stack:
             dependency = stack.pop()
@@ -2988,7 +2984,7 @@ def census_project(project_dir: str, elements: List[str]) -> dict:
         to arrive in; a list in reverse dependency order would memoize
         every answer and still walk the whole graph for each one.
         """
-        visited: Set[str] = set()
+        visited: set[str] = set()
         for root in list(declared):
             if root in visited:
                 continue
@@ -3074,7 +3070,7 @@ def census_project(project_dir: str, elements: List[str]) -> dict:
     }
 
 
-def read_element_kinds(project_dir: str) -> Dict[str, str]:
+def read_element_kinds(project_dir: str) -> dict[str, str]:
     """`{element_uid: kind}` read from the element files themselves.
 
     UX-68 needs this to explain *why* a dependency staged nothing: a
@@ -3088,7 +3084,7 @@ def read_element_kinds(project_dir: str) -> Dict[str, str]:
     the mapping - the caller degrades to a reason without the kind, never
     to a wrong one.
     """
-    kinds: Dict[str, str] = {}
+    kinds: dict[str, str] = {}
     elements_dir = elements_dir_for(project_dir)
     if not os.path.isdir(elements_dir):
         return kinds
@@ -3099,7 +3095,7 @@ def read_element_kinds(project_dir: str) -> Dict[str, str]:
             path = os.path.join(root, name)
             uid = os.path.relpath(path, elements_dir)
             try:
-                with open(path, "r", errors="replace") as handle:
+                with open(path, errors="replace") as handle:
                     for line in handle:
                         if line.startswith("kind:"):
                             kinds[uid] = line.split(":", 1)[1].strip()
@@ -3130,7 +3126,7 @@ _SHELL_BUILTINS = frozenset((
 ))
 
 
-def _named_binaries(commands) -> Tuple[List[str], List[str]]:
+def _named_binaries(commands) -> tuple[list[str], list[str]]:
     """`(binaries named, lines this could not read)` for one command block.
 
     `UX-385`'s Out of Scope is the whole of the parsing policy: **the
@@ -3147,8 +3143,8 @@ def _named_binaries(commands) -> Tuple[List[str], List[str]]:
     resolves and this does not; a leading `VAR=value` is an environment
     prefix rather than a program.
     """
-    named: List[str] = []
-    unread: List[str] = []
+    named: list[str] = []
+    unread: list[str] = []
     for entry in commands or []:
         if not isinstance(entry, str):
             continue
@@ -3193,8 +3189,8 @@ def _named_binaries(commands) -> Tuple[List[str], List[str]]:
 
 
 def detect_named_but_unobserved(project_dir: Optional[str],
-                                elements: List[str],
-                                observed: Dict[str, Set[str]]) -> dict:
+                                elements: list[str],
+                                observed: dict[str, set[str]]) -> dict:
     """`UX-385`: the binaries an element names and no record for it shows.
 
     `UX-105` established that the LD_PRELOAD hook "cannot detect its own
@@ -3220,7 +3216,7 @@ def detect_named_but_unobserved(project_dir: Optional[str],
     mean. Calling it "missed" would be a finding, and this is the
     measurement a finding would one day rest on.
     """
-    per_element: Dict[str, dict] = {}
+    per_element: dict[str, dict] = {}
     observed = observed or {}
     if project_dir:
         elements_dir = elements_dir_for(project_dir)
@@ -3267,7 +3263,7 @@ def detect_named_but_unobserved(project_dir: Optional[str],
     }
 
 
-def read_declared_build_deps(project_dir: str, elements: List[str]) -> Dict[str, List[str]]:
+def read_declared_build_deps(project_dir: str, elements: list[str]) -> dict[str, list[str]]:
     """`{element: [directly declared build dependencies]}`, read from the
     element files themselves.
 
@@ -3286,7 +3282,7 @@ def read_declared_build_deps(project_dir: str, elements: List[str]) -> Dict[str,
     about one and must not propose removing it.
     """
     elements_dir = elements_dir_for(project_dir)
-    declared: Dict[str, List[str]] = {}
+    declared: dict[str, list[str]] = {}
     for element in elements:
         path = os.path.join(elements_dir, element)
         # UX-168: one shared, memoised parse - the census used to read
@@ -3294,7 +3290,7 @@ def read_declared_build_deps(project_dir: str, elements: List[str]) -> Dict[str,
         data = read_element_yaml(path)
         if data is None:
             continue
-        deps: List[str] = []
+        deps: list[str] = []
         for entry in data.get("depends") or []:
             if isinstance(entry, str):
                 # Shorthand `- foo.bst` defaults to a build+runtime dep.
@@ -3309,7 +3305,7 @@ def read_declared_build_deps(project_dir: str, elements: List[str]) -> Dict[str,
     return declared
 
 
-def read_artifact_contents(project_dir: str, elements: List[str]) -> Dict[str, Set[str]]:
+def read_artifact_contents(project_dir: str, elements: list[str]) -> dict[str, set[str]]:
     """`{element: {absolute staged paths}}` via `bst artifact list-contents`.
 
     This is the half UX-46 called "the half that does not exist yet".
@@ -3333,7 +3329,7 @@ def read_artifact_contents(project_dir: str, elements: List[str]) -> Dict[str, S
     # element that ends up absent would read as "staged nothing" rather
     # than "unknown", which is the one way this function can make every
     # dependency look unused.
-    contents: Dict[str, Set[str]] = {}
+    contents: dict[str, set[str]] = {}
     # `UX-519`: the unit is the batch, because after `UX-518` a batch is
     # one `bst` invocation and the per-element step no longer happens.
     groups = list(_chunks(list(elements), LIST_CONTENTS_CHUNK))
@@ -3372,13 +3368,13 @@ def read_artifact_contents(project_dir: str, elements: List[str]) -> Dict[str, S
 LIST_CONTENTS_CHUNK = 200
 
 
-def _chunks(items: List[str], size: int):
+def _chunks(items: list[str], size: int):
     for start in range(0, len(items), size):
         yield items[start:start + size]
 
 
 def _list_contents(project_dir: str,
-                   group: List[str]) -> Optional[Dict[str, Set[str]]]:
+                   group: list[str]) -> Optional[dict[str, set[str]]]:
     """One `bst artifact list-contents` call over `group`.
 
     `None` when the call failed - which is *not* the same as "these
@@ -3400,7 +3396,7 @@ def _list_contents(project_dir: str,
     if result.returncode != 0:
         return None
     wanted = set(group)
-    read: Dict[str, Set[str]] = {name: set() for name in group}
+    read: dict[str, set[str]] = {name: set() for name in group}
     current: Optional[str] = None
     for line in result.stdout.splitlines():
         stripped = line.strip()
@@ -3428,7 +3424,7 @@ def _list_contents(project_dir: str,
 _MIN_STAGED_FILES_FOR_EVIDENCE = 2
 
 
-def compute_element_opens_coverage(records: List[dict]) -> Dict[str, dict]:
+def compute_element_opens_coverage(records: list[dict]) -> dict[str, dict]:
     """UX-107: per element, what share of its processes the *hook* could
     see - which is the share any opens-based finding speaks about.
 
@@ -3448,7 +3444,7 @@ class _ElementOpensCoverage:
     """`compute_element_opens_coverage`, one record at a time. `UX-297`."""
 
     def __init__(self):
-        self.coverage: Dict[str, dict] = {}
+        self.coverage: dict[str, dict] = {}
         self.saw_spine = False
 
     def add(self, record):
@@ -3473,11 +3469,11 @@ class _ElementOpensCoverage:
 
 
 def compute_declared_vs_used(
-    opens_by_element: Dict[str, dict],
-    declared_deps: Dict[str, List[str]],
-    artifact_contents: Dict[str, Set[str]],
-    element_kinds: Optional[Dict[str, str]] = None,
-    opens_coverage: Optional[Dict[str, dict]] = None,
+    opens_by_element: dict[str, dict],
+    declared_deps: dict[str, list[str]],
+    artifact_contents: dict[str, set[str]],
+    element_kinds: Optional[dict[str, str]] = None,
+    opens_coverage: Optional[dict[str, dict]] = None,
 ) -> dict:
     """Which declared build dependencies did each element never read?
 
@@ -3510,13 +3506,13 @@ def compute_declared_vs_used(
     - a dependency whose artifact contents could not be read is skipped
       with a reason, never counted as unused.
     """
-    unused: List[dict] = []
-    used: List[dict] = []
+    unused: list[dict] = []
+    used: list[dict] = []
     # UX-68: kept separate rather than dropped - the pattern is real
     # and worth reviewing, it is just not an 'unused dependency'.
-    aggregating: List[dict] = []
-    uncovered: List[dict] = []
-    skipped: List[dict] = []
+    aggregating: list[dict] = []
+    uncovered: list[dict] = []
+    skipped: list[dict] = []
 
     for element, deps in sorted(declared_deps.items()):
         observed = opens_by_element.get(element)
@@ -3659,7 +3655,7 @@ def compute_declared_vs_used(
     }
 
 
-def build_spans_from_wrapped_log(path: str) -> List[dict]:
+def build_spans_from_wrapped_log(path: str) -> list[dict]:
     """UX-56: per-element BUILD spans in wall-clock seconds, from a
     wrapped BuildStream log.
 
@@ -3681,9 +3677,9 @@ def build_spans_from_wrapped_log(path: str) -> List[dict]:
         from bst_log_to_chrome_trace import BST_LOG_RE, PREFIX_RE, WrapperTraceConverter
 
     converter = WrapperTraceConverter()
-    open_starts: Dict[str, float] = {}
-    spans: Dict[str, dict] = {}
-    with open(path, "r", errors="replace") as handle:
+    open_starts: dict[str, float] = {}
+    spans: dict[str, dict] = {}
+    with open(path, errors="replace") as handle:
         for line in handle:
             prefix = PREFIX_RE.match(line.strip())
             if not prefix:
@@ -3710,7 +3706,7 @@ def build_spans_from_wrapped_log(path: str) -> List[dict]:
     return sorted(spans.values(), key=lambda s: s["start"])
 
 
-def sandbox_durations(records: List[dict]) -> Dict[str, float]:
+def sandbox_durations(records: list[dict]) -> dict[str, float]:
     """UX-64: how long each sandbox was alive, in seconds, from its own
     processes' `CLOCK_MONOTONIC` stamps.
 
@@ -3738,8 +3734,8 @@ class _SandboxDurations:
     """`sandbox_durations`, one record at a time. `UX-297`."""
 
     def __init__(self):
-        self.first: Dict[str, float] = {}
-        self.last: Dict[str, float] = {}
+        self.first: dict[str, float] = {}
+        self.last: dict[str, float] = {}
 
     def add(self, record):
         key = record.get("invocation")
@@ -3763,8 +3759,8 @@ class _SandboxDurations:
 
 
 def correlate_invocations(
-    invocations: List[dict], build_spans: List[dict],
-    durations: Optional[Dict[str, float]] = None,
+    invocations: list[dict], build_spans: list[dict],
+    durations: Optional[dict[str, float]] = None,
 ) -> dict:
     """UX-56/UX-64: recover each sandbox's real element by matching it
     against Plane 1's BUILD spans, when the name Plane 2 captured
@@ -3801,9 +3797,9 @@ def correlate_invocations(
           "intervals_used": bool}`.
     """
     durations = durations or {}
-    resolved: Dict[str, str] = {}
-    ambiguous: List[str] = []
-    unmatched: List[str] = []
+    resolved: dict[str, str] = {}
+    ambiguous: list[str] = []
+    unmatched: list[str] = []
 
     for invocation in invocations:
         key = str(invocation.get("invocation_id"))
@@ -3855,7 +3851,7 @@ def correlate_invocations(
     }
 
 
-def apply_correlation(records: List[dict], resolved: Dict[str, str]) -> int:
+def apply_correlation(records: list[dict], resolved: dict[str, str]) -> int:
     """Relabel every traced process whose sandbox was resolved. Returns
     how many records were relabelled.
 
@@ -3872,7 +3868,7 @@ def apply_correlation(records: List[dict], resolved: Dict[str, str]) -> int:
     return relabelled
 
 
-def compute_binary_cost(records: List[dict], top_n: int = 5) -> dict:
+def compute_binary_cost(records: list[dict], top_n: int = 5) -> dict:
     """UX-69: per element, which binaries actually burned the time.
 
     The report has always ranked binaries by **invocation count**, and on
@@ -3909,7 +3905,7 @@ class _BinaryCost:
     """`compute_binary_cost`, one record at a time. `UX-297`."""
 
     def __init__(self):
-        self.per_element: Dict[str, dict] = {}
+        self.per_element: dict[str, dict] = {}
 
     def add(self, record):
         element = record.get("element")
@@ -3927,7 +3923,7 @@ class _BinaryCost:
         if record.get("duration_s") is not None:
             stat["wall_s"] += record["duration_s"]
 
-    def observed(self) -> Dict[str, Set[str]]:
+    def observed(self) -> dict[str, set[str]]:
         """`{element: {binary, ...}}`, uncapped.
 
         `UX-385` needs every binary an element's records name, and
@@ -3940,7 +3936,7 @@ class _BinaryCost:
                 for element, binaries in self.per_element.items()}
 
     def finish(self, top_n: int = 5):
-        result: Dict[str, dict] = {}
+        result: dict[str, dict] = {}
         for element, binaries in self.per_element.items():
             by_cpu = sorted(binaries.items(), key=lambda kv: -kv[1]["cpu_us"])
             measured_cpu = sum(v["cpu_us"] for v in binaries.values())
@@ -3977,7 +3973,7 @@ class _BinaryCost:
         return result
 
 
-def compute_peak_memory(records: List[dict]) -> dict:
+def compute_peak_memory(records: list[dict]) -> dict:
     """UX-63: peak resident set size per element, from the same
     `getrusage` call `UX-45` already makes at exit.
 
@@ -4010,7 +4006,7 @@ class _PeakMemory:
     """`compute_peak_memory`, one record at a time. `UX-297`."""
 
     def __init__(self):
-        self.per_element: Dict[str, dict] = {}
+        self.per_element: dict[str, dict] = {}
 
     def add(self, record):
         entry = self.per_element.setdefault(
@@ -4046,7 +4042,7 @@ class _PeakMemory:
         }
 
 
-def compute_process_outcomes(records: List[dict]) -> dict:
+def compute_process_outcomes(records: list[dict]) -> dict:
     """How each element's processes ended (`UX-378`).
 
     The spine reads the wait status from the kernel's own exit-stop
@@ -4082,11 +4078,11 @@ class _ProcessOutcomes:
     def __init__(self):
         self.exited_zero = 0
         self.exited_nonzero = 0
-        self.by_signal: Dict[str, int] = {}
+        self.by_signal: dict[str, int] = {}
         self.unknown = 0
         #: Only the elements with something to say appear, so this stays
         #: `O(elements that had a failure)` rather than `O(elements)`.
-        self.per_element: Dict[str, dict] = {}
+        self.per_element: dict[str, dict] = {}
 
     def add(self, record):
         status = record.get("exit_status")
@@ -4143,7 +4139,7 @@ class _ProcessOutcomes:
         }
 
 
-def compute_resource_pressure(records: List[dict]) -> dict:
+def compute_resource_pressure(records: list[dict]) -> dict:
     """What each element's processes did to the disk, to memory and to
     the run queue (`UX-379`).
 
@@ -4184,12 +4180,12 @@ class _ResourcePressure:
     FIELDS = _PRESSURE_FIELDS
 
     def __init__(self):
-        self.per_element: Dict[str, dict] = {}
+        self.per_element: dict[str, dict] = {}
 
     def add(self, record):
         entry = self.per_element.get(record["element"])
         if entry is None:
-            entry = {name: 0 for name in self.FIELDS}
+            entry = dict.fromkeys(self.FIELDS, 0)
             entry["measured"] = 0
             entry["unmeasured"] = 0
             self.per_element[record["element"]] = entry
@@ -4236,7 +4232,7 @@ class _ResourcePressure:
         }
 
 
-def compute_cpu_time(records: List[dict]) -> dict:
+def compute_cpu_time(records: list[dict]) -> dict:
     """Real CPU time per element, from each process's own `getrusage`
     at exit (UX-45).
 
@@ -4278,8 +4274,8 @@ class _CpuTime:
     """
 
     def __init__(self):
-        self.per_element: Dict[str, dict] = {}
-        self.spans: Dict[str, list] = {}
+        self.per_element: dict[str, dict] = {}
+        self.spans: dict[str, list] = {}
         self.spine_sourced = 0
 
     def add(self, record):
@@ -4394,7 +4390,7 @@ _ARGV0_WRAPPERS = frozenset({'sh', 'bash', 'dash', 'env'})
 _CMAKE_NON_CONFIGURE = re.compile(r'(?:^|\s)(?:--build|--install|-E)(?:\s|$)')
 
 
-def _executable_candidates(cmd: str) -> List[str]:
+def _executable_candidates(cmd: str) -> list[str]:
     """The basenames that could name the program this command runs.
 
     Wrappers are walked through rather than stopped at:
@@ -4434,7 +4430,7 @@ def is_configure_root(cmd: str) -> bool:
     return any(name in _CONFIGURE_EXECUTABLES for name in candidates)
 
 
-def classify_configure_phase(records: List[dict]) -> dict:
+def classify_configure_phase(records: list[dict]) -> dict:
     """UX-102: split each element's traced CPU into configuring and
     building, by process parentage.
 
@@ -4501,12 +4497,12 @@ class _ConfigurePhase:
         # map this replaces did - a sandbox that recycles a pid leaves
         # the later process as that key's occupant, and changing that
         # here would change the classification.
-        self.parent: Dict[int, int] = {}
+        self.parent: dict[int, int] = {}
         # The subset of those keys whose own command line is a
         # configure entry point. A set, because on most builds it is
         # nearly empty.
         self.roots = set()
-        self.sandbox_ids: Dict[str, int] = {}
+        self.sandbox_ids: dict[str, int] = {}
         # Both of the above are built in `finish`, from the rows, not as
         # the stream arrives. Measured: the parent map is ~100 bytes a
         # process, and building it during the fold puts it beside the
@@ -4518,7 +4514,7 @@ class _ConfigurePhase:
         self.rows_pid = array.array("q")
         self.rows_ppid = array.array("q")
         self.rows_root = bytearray()
-        self.elements: List[str] = []
+        self.elements: list[str] = []
         self.cpu = array.array("q")
 
     _NO_PARENT = -1
@@ -4540,7 +4536,7 @@ class _ConfigurePhase:
         self.rows_ppid.append(self._NO_PARENT if ppid is None else ppid)
         self.rows_root.append(1 if root else 0)
         self.elements.append(record["element"])
-        self.cpu.append(record["cpu_us"] if "cpu_us" in record else self._NO_CPU)
+        self.cpu.append(record.get("cpu_us", self._NO_CPU))
 
     def _is_configure(self, sandbox_id, pid, ppid, own_root) -> bool:
         """The walk `classify_configure_phase` has always made, over the
@@ -4574,7 +4570,7 @@ class _ConfigurePhase:
             else:
                 self.roots.discard(key)
 
-        per_element: Dict[str, dict] = {}
+        per_element: dict[str, dict] = {}
         for index, element in enumerate(self.elements):
             entry = per_element.setdefault(element, {
                 "configure_cpu_us": 0, "build_cpu_us": 0,
@@ -4634,7 +4630,7 @@ class _ConfigurePhase:
 CPU_RECONCILIATION_TOLERANCE_US = 50_000
 
 
-def compute_stream_coverage(records: List[dict],
+def compute_stream_coverage(records: list[dict],
                             fork_only_exits: int = 0,
                             unmatched_ends: int = 0) -> dict:
     """UX-107: coverage as a measured number rather than a footnote.
@@ -4675,8 +4671,8 @@ class _StreamCoverage:
 
     def __init__(self):
         self.records = 0
-        self.counts: Dict[str, int] = {}
-        self.disagreements: List[dict] = []
+        self.counts: dict[str, int] = {}
+        self.disagreements: list[dict] = []
         self.reconciled = 0
         self.spine_total = 0
         self.hook_total = 0
@@ -4805,7 +4801,7 @@ class Plane2Fold:
     sandbox is complete.
     """
 
-    def __init__(self, resolved: Optional[Dict[str, str]] = None):
+    def __init__(self, resolved: Optional[dict[str, str]] = None):
         # `UX-56`'s correction, applied as each record arrives rather
         # than by a second pass that rewrites the list in place - there
         # is no list to rewrite. Every aggregate is keyed on the element
@@ -4816,8 +4812,8 @@ class Plane2Fold:
         self.count = 0
         self.matched = 0
         self.open_records = 0
-        self.by_binary: Dict[str, int] = {}
-        self.by_element: Dict[str, int] = {}
+        self.by_binary: dict[str, int] = {}
+        self.by_element: dict[str, int] = {}
         self.wall_start = None
         self.wall_end = None
         self.concurrency = _MaxConcurrency()
@@ -4865,7 +4861,7 @@ class Plane2Fold:
         self.opens_coverage.add(record)
         self.sandboxes.add(record)
 
-    def observed_binaries(self) -> Dict[str, Set[str]]:
+    def observed_binaries(self) -> dict[str, set[str]]:
         """`UX-385`: every binary each element's records named.
 
         Delegated rather than recomputed - the binary counter has
@@ -4881,7 +4877,7 @@ class Plane2Fold:
                                  unmatched_ends=unmatched_ends)
 
 
-def summarize(records: List[dict], correlation: Optional[dict] = None,
+def summarize(records: list[dict], correlation: Optional[dict] = None,
               fork_only_exits: int = 0, unmatched_ends: int = 0) -> dict:
     """The report over a record list. `UX-297`: a fold with the list
     poured into it, so the list-based and streaming paths cannot
@@ -4994,7 +4990,7 @@ def load_saved_report(path: str) -> Optional[dict]:
     impossible.
     """
     try:
-        with open(path, "r", encoding="utf-8") as f:
+        with open(path, encoding="utf-8") as f:
             data = json.load(f)
     except (json.JSONDecodeError, UnicodeDecodeError, OSError):
         return None
@@ -5003,7 +4999,7 @@ def load_saved_report(path: str) -> Optional[dict]:
     return None
 
 
-def load_records(raw_log_path: str, merge: bool = True) -> List[dict]:
+def load_records(raw_log_path: str, merge: bool = True) -> list[dict]:
     """Every process record a raw trace log holds.
 
     `UX-297` took the record list out of the report, so the log it came
@@ -5029,7 +5025,7 @@ def load_records(raw_log_path: str, merge: bool = True) -> List[dict]:
     records they became. The rows come back sorted by start, which is
     what `pair_events` always returned and what every caller reads.
     """
-    with open(raw_log_path, "r", encoding="utf-8", errors="ignore") as handle:
+    with open(raw_log_path, encoding="utf-8", errors="ignore") as handle:
         records = sorted(stream_records(stream_trace_events(handle)),
                          key=lambda record: record["start_ts"])
     return merge_record_streams(records) if merge else records
@@ -5054,7 +5050,7 @@ def _open_maybe_gzipped(path: str):
         gzipped = probe.read(2) == b"\x1f\x8b"
     if gzipped:
         return gzip.open(path, "rt", encoding="utf-8", errors="ignore")
-    return open(path, "r", encoding="utf-8", errors="ignore")
+    return open(path, encoding="utf-8", errors="ignore")
 
 
 def load_and_summarize(raw_log_path: str, project_dir: Optional[str] = None,
@@ -5189,7 +5185,7 @@ def load_and_summarize(raw_log_path: str, project_dir: Optional[str] = None,
     # UX-169: and the handle goes in, not `handle.read()`. The comment
     # above said "streaming" while the call built exactly the whole-file
     # string it was written to avoid.
-    with open(raw_log_path, "r", encoding="utf-8", errors="ignore") as handle:
+    with open(raw_log_path, encoding="utf-8", errors="ignore") as handle:
         opens_by_element = parse_open_lines(
             handle,
             open_element_overrides=(correlation or {}).get('resolved'))
@@ -5258,7 +5254,7 @@ def load_and_summarize(raw_log_path: str, project_dir: Optional[str] = None,
     return report
 
 
-def _format_cpu_time(cpu_time: dict) -> List[str]:
+def _format_cpu_time(cpu_time: dict) -> list[str]:
     """Render UX-45's per-element CPU block, or say plainly that no CPU
     time was captured. Never renders a zero as if it were a measurement."""
     if not cpu_time:
@@ -5297,7 +5293,7 @@ def _format_cpu_time(cpu_time: dict) -> List[str]:
     return lines
 
 
-def _format_configure_phase(configure: dict) -> List[str]:
+def _format_configure_phase(configure: dict) -> list[str]:
     """UX-102: the configure tax, with the elements that pay it."""
     if not configure.get("available") or not configure.get("total_cpu_us"):
         return []
@@ -5332,7 +5328,7 @@ def _format_configure_phase(configure: dict) -> List[str]:
 _CONFIGURE_PAYERS_SHOWN = 8
 
 
-def _format_binary_cost(binary_cost: dict, elements: List[str]) -> List[str]:
+def _format_binary_cost(binary_cost: dict, elements: list[str]) -> list[str]:
     """UX-69's per-element block, for the elements worth reading about.
 
     Ranked by CPU time with the count shown beside it, because the two
@@ -5366,7 +5362,7 @@ def _format_binary_cost(binary_cost: dict, elements: List[str]) -> List[str]:
     return lines
 
 
-def _format_peak_memory(peak_memory: dict) -> List[str]:
+def _format_peak_memory(peak_memory: dict) -> list[str]:
     """UX-63's per-element block. States that the figure is a per-process
     peak and not a total, because a bare "Peak memory" heading beside a
     per-element list reads as exactly the concurrent total it is not."""
@@ -5391,7 +5387,7 @@ def _format_peak_memory(peak_memory: dict) -> List[str]:
     return lines
 
 
-def _format_resource_pressure(pressure: dict) -> List[str]:
+def _format_resource_pressure(pressure: dict) -> list[str]:
     """`UX-379`'s per-element block, beside `peak_memory` because it is
     the rest of the same `getrusage` call.
 
@@ -5435,7 +5431,7 @@ def _human_bytes(value: int) -> str:
     return f"{size:.1f} GB"
 
 
-def _format_process_outcomes(outcomes: dict) -> List[str]:
+def _format_process_outcomes(outcomes: dict) -> list[str]:
     """`UX-378`'s block. Silent on a clean, fully-covered capture and
     loud on a killed one - a heading that always fires teaches a reader
     to skip it, and this is the line they must not skip."""
@@ -5511,7 +5507,7 @@ _CENSUS_BINARIES_SHOWN = 8
 _CENSUS_ELEMENTS_SHOWN = 8
 
 
-def _format_stream_coverage(report: dict) -> List[str]:
+def _format_stream_coverage(report: dict) -> list[str]:
     """UX-107: coverage, counted. Silent on a capture with one stream and
     nothing to say about the other - which is every capture taken before
     the spine existed, and which must read exactly as it always did."""
@@ -5607,7 +5603,7 @@ def _format_stream_coverage(report: dict) -> List[str]:
     return lines
 
 
-def _format_static_census(report: dict) -> List[str]:
+def _format_static_census(report: dict) -> list[str]:
     """UX-105: the blind spot, named where it is measured and silent
     where it is not there.
 
@@ -5716,7 +5712,7 @@ def _format_static_census(report: dict) -> List[str]:
     ]
 
 
-def _format_declared_vs_used(analysis: dict) -> List[str]:
+def _format_declared_vs_used(analysis: dict) -> list[str]:
     """Render UX-46's declared-vs-used block as *candidates with
     evidence*, never as a verdict - a confident false "unused" is the
     dangerous failure here, since acting on it deletes a real edge."""
@@ -5732,7 +5728,7 @@ def _format_declared_vs_used(analysis: dict) -> List[str]:
         f"across {len({u['element'] for u in unused})} element(s); "
         f"{len(used)} dependency edge(s) confirmed used"
     ]
-    by_element: Dict[str, List[dict]] = {}
+    by_element: dict[str, list[dict]] = {}
     for entry in unused:
         by_element.setdefault(entry["element"], []).append(entry)
     for element, entries in sorted(by_element.items()):
@@ -6035,7 +6031,7 @@ def _spine_policy(flag: str):
 def read_capture_fingerprint(path: str) -> Optional[dict]:
     """The `UX-151` header line, if the record has one."""
     try:
-        with open(path, "r", encoding="utf-8", errors="replace") as handle:
+        with open(path, encoding="utf-8", errors="replace") as handle:
             for line in handle:
                 if not line.strip():
                     continue
@@ -6050,7 +6046,7 @@ def read_capture_fingerprint(path: str) -> Optional[dict]:
     return None
 
 
-def read_capture_diagnostics(path: str) -> List[dict]:
+def read_capture_diagnostics(path: str) -> list[dict]:
     """The shim's own records, or an empty list.
 
     The fingerprint line (`UX-151`) is not one of them: it describes the
@@ -6059,7 +6055,7 @@ def read_capture_diagnostics(path: str) -> List[dict]:
     """
     records = []
     try:
-        with open(path, "r", encoding="utf-8", errors="replace") as handle:
+        with open(path, encoding="utf-8", errors="replace") as handle:
             for line in handle:
                 if line.strip():
                     try:
@@ -6142,7 +6138,7 @@ def count_build_tasks(plane1_log_path: Optional[str]) -> Optional[int]:
     # inside BuildStream and launch nothing.
     started = 0
     try:
-        with open(plane1_log_path, "r", encoding="utf-8", errors="replace") as handle:
+        with open(plane1_log_path, encoding="utf-8", errors="replace") as handle:
             for line in handle:
                 if "START" in line and "Running commands" in line:
                     started += 1
@@ -6218,11 +6214,11 @@ def capture_fingerprint() -> dict:
     }
 
 
-def read_invocations(path: str) -> List[dict]:
+def read_invocations(path: str) -> list[dict]:
     """Every invocation record in a diagnostics file, fingerprint aside."""
     rows = []
     try:
-        with open(path, "r", encoding="utf-8", errors="replace") as handle:
+        with open(path, encoding="utf-8", errors="replace") as handle:
             for line in handle:
                 line = line.strip()
                 if not line:
@@ -6275,7 +6271,7 @@ def format_sandbox_stderr(path: str, tail_lines: int = 12) -> Optional[str]:
     position, row = speaking[-1]
     live = sandbox_stderr_path(path, row)
     try:
-        with open(live, "r", encoding="utf-8", errors="replace") as handle:
+        with open(live, encoding="utf-8", errors="replace") as handle:
             lines = handle.read().splitlines()
     except OSError:
         return None
@@ -6390,7 +6386,7 @@ _BIND_FLAGS = frozenset({
 })
 
 
-def missing_bind_paths(argv: List[str]) -> List[str]:
+def missing_bind_paths(argv: list[str]) -> list[str]:
     """Host paths this argv binds that are no longer there (`UX-148`)."""
     missing = []
     for i, token in enumerate(argv):
@@ -6620,7 +6616,7 @@ def _CompactRawHelp(prog):
     from bga.help_format import CompactRawHelp
     return CompactRawHelp(prog)
 
-def main(argv: Optional[List[str]] = None) -> int:
+def main(argv: Optional[list[str]] = None) -> int:
     """`argv` defaults to `sys.argv[1:]`, as argparse does.
 
     Named so this is callable in-process (`UX-126`'s `bga snapshot`
@@ -6893,7 +6889,7 @@ def main(argv: Optional[List[str]] = None) -> int:
                 try:
                     extract_run(args.project_dir, wrapped_log_path, args.run_dir,
                                 log_format="wrapped", interrupted=interrupted)
-                except Exception as exc:  # noqa: BLE001 - reported, not swallowed
+                except Exception as exc:
                     print(f"Warning: could not extract a run directory into "
                           f"{args.run_dir}: {exc}", file=sys.stderr)
                 else:

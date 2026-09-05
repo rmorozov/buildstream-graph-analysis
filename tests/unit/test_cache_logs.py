@@ -24,8 +24,12 @@ import shutil
 import pytest
 
 from tools.bst_cache_logs import (
-    REPEATED_MIN_ELEMENTS, build_report, format_report_text, parse_element_log,
-    repeated_operations, scan_log_tree,
+    REPEATED_MIN_ELEMENTS,
+    build_report,
+    format_report_text,
+    parse_element_log,
+    repeated_operations,
+    scan_log_tree,
 )
 
 BST_AVAILABLE = shutil.which("bst") is not None
@@ -680,8 +684,11 @@ def test_an_empty_command_block_is_not_a_repeated_operation(tmp_path):
 
 # --- UX-127: the front door takes the project you have ------------------
 
-from tools.bst_cache_logs import (  # noqa: E402
-    is_project_dir, main, project_name_from_dir, summarize_log_tree,
+from tools.bst_cache_logs import (
+    is_project_dir,
+    main,
+    project_name_from_dir,
+    summarize_log_tree,
 )
 
 

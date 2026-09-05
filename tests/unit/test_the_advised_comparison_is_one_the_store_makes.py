@@ -18,8 +18,8 @@ import pytest
 REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 
-from bga.exceptions import EXIT_CODES, EXIT_OK  # noqa: E402
-from tools import bga_snapshot  # noqa: E402
+from bga.exceptions import EXIT_CODES, EXIT_OK
+from tools import bga_snapshot
 
 COLD = REPO / "tests/fixtures/same_build_twice_cold/run"
 INCREMENTAL = REPO / "tests/fixtures/same_build_twice_incremental/run"
@@ -50,12 +50,11 @@ def _run(argv):
     """One `bga` invocation, in-process, returning its exit code."""
     from bga.cli import main
 
-    with io.StringIO() as sink:
-        with contextlib.redirect_stdout(sink), contextlib.redirect_stderr(sink):
-            try:
-                return main(argv) or EXIT_OK
-            except SystemExit as exit_code:
-                return exit_code.code or EXIT_OK
+    with io.StringIO() as sink, contextlib.redirect_stdout(sink), contextlib.redirect_stderr(sink):
+        try:
+            return main(argv) or EXIT_OK
+        except SystemExit as exit_code:
+            return exit_code.code or EXIT_OK
 
 
 def _steps(run_dir):

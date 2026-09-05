@@ -125,7 +125,7 @@ class TestNothingReachesPastTheFloor:
         3.10 and the floor is 3.9, so the pair discriminates."""
         assert ("bit_count", (3, 10)) in [
             (name, added) for name, added, _what in NEWER_THAN_THE_FLOOR]
-        assert (3, 10) > _floor(), (
+        assert _floor() < (3, 10), (
             "the floor has reached 3.10, so bit_count is fine now and this "
             "reproduction should be retired with its row")
 
@@ -140,7 +140,7 @@ class TestNothingReachesPastTheFloor:
             "no source calls `.splitlines()`, so the control row proves "
             "nothing - pick another name that is actually used")
         floor = _floor()
-        assert (3, 0) <= floor, floor
+        assert floor >= (3, 0), floor
 
 
 if __name__ == "__main__":  # pragma: no cover

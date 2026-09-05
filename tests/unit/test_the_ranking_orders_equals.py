@@ -24,8 +24,7 @@ import pytest
 REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 
-from bga.diagnostics.analyzer import (                  # noqa: E402
-    BlastRadiusResult, order_blast_radius)
+from bga.diagnostics.analyzer import BlastRadiusResult, order_blast_radius
 
 
 def ranked(results, durations):

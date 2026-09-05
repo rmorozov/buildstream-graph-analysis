@@ -14,13 +14,12 @@ stack` element whose own dependencies exactly match the group, as
 candidates worth considering for consolidation under one.
 """
 from collections import defaultdict
-from typing import Dict, FrozenSet, List
 
 from bga.graph.edg import build_element_graph
 from bga.ingest.models import Graph
 
 
-def find_consolidation_candidates(graph: Graph) -> List[dict]:
+def find_consolidation_candidates(graph: Graph) -> list[dict]:
     """Real, deterministic structural candidates - never a timing
     estimate (see the module docstring). Each result:
     {"elements": [uid, ...], "shared_consumers": [uid, ...]}, sorted by
@@ -38,7 +37,7 @@ def find_consolidation_candidates(graph: Graph) -> List[dict]:
     # excluded: an empty set isn't a real shared relationship, grouping
     # every unconsumed leaf together on that basis would be a false
     # signal, not a genuine "always consumed together" one.
-    groups: Dict[FrozenSet[str], List[str]] = defaultdict(list)
+    groups: dict[frozenset[str], list[str]] = defaultdict(list)
     for uid in element_kind_by_uid:
         consumers = frozenset(successors.get(uid, []))
         if consumers:

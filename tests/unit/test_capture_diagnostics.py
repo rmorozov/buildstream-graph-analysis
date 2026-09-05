@@ -18,7 +18,8 @@ import os
 import pytest
 
 from tools.bst_native_build_tracer import (
-    format_capture_diagnostics, read_capture_diagnostics,
+    format_capture_diagnostics,
+    read_capture_diagnostics,
 )
 from tools.native_trace.bwrap_shim import record_diagnostics
 
@@ -431,7 +432,8 @@ class TestTheRecordSaysWhatToParseAgainst:
         """"The shim ran 0 times" is the record's most important reading
         and a header line must not make it impossible to say."""
         from tools.bst_native_build_tracer import (
-            capture_fingerprint, read_capture_diagnostics,
+            capture_fingerprint,
+            read_capture_diagnostics,
             read_capture_fingerprint,
         )
 
@@ -518,7 +520,8 @@ class TestTheShimIsProvedExecutableBeforeTheBuild:
 
     def test_a_freshly_installed_shim_answers_its_own_probe(self, tmp_path):
         from tools.bst_native_build_tracer import (
-            probe_bwrap_shim, write_bwrap_shim,
+            probe_bwrap_shim,
+            write_bwrap_shim,
         )
 
         write_bwrap_shim(str(tmp_path))
@@ -538,7 +541,9 @@ class TestTheShimIsProvedExecutableBeforeTheBuild:
 
     def test_a_shim_that_cannot_be_executed_fails_with_the_reason(self, tmp_path):
         from tools.bst_native_build_tracer import (
-            TraceError, probe_bwrap_shim, write_bwrap_shim,
+            TraceError,
+            probe_bwrap_shim,
+            write_bwrap_shim,
         )
 
         write_bwrap_shim(str(tmp_path))

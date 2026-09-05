@@ -35,8 +35,14 @@ import sys
 REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 
-from tests.installed_command_sweep import (  # noqa: E402
-    OK, PARSE_ONLY, REFUSES, Fixtures, documented_commands, invocations)
+from tests.installed_command_sweep import (
+    OK,
+    PARSE_ONLY,
+    REFUSES,
+    Fixtures,
+    documented_commands,
+    invocations,
+)
 
 PACKAGE = REPO / "bga"
 
@@ -55,12 +61,11 @@ def _tools_imports(path: pathlib.Path):
             for alias in node.names:
                 if alias.name == "tools" or alias.name.startswith("tools."):
                     found.append((node.lineno, f"import {alias.name}"))
-        elif isinstance(node, ast.ImportFrom):
-            # `level > 0` is a relative import: `from .tools_dispatch`
-            # is fine and is what the fix uses.
-            if node.level == 0 and node.module and (
-                    node.module == "tools" or node.module.startswith("tools.")):
-                found.append((node.lineno, f"from {node.module} import …"))
+        # `level > 0` is a relative import: `from .tools_dispatch`
+        # is fine and is what the fix uses.
+        elif isinstance(node, ast.ImportFrom) and node.level == 0 and node.module and (
+                node.module == "tools" or node.module.startswith("tools.")):
+            found.append((node.lineno, f"from {node.module} import …"))
     return found
 
 

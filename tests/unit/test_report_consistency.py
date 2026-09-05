@@ -11,7 +11,6 @@ from bga.correlate import format_correlation
 from bga.report.text import _attribution_label
 from tools.bst_cache_logs import _elide_element, _pct
 
-
 BANNER = "=" * 60
 
 # The smallest coverage block `format_correlation` will render - these

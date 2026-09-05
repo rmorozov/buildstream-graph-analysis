@@ -6,13 +6,13 @@ parallelism limits, sensitivity analysis, and deferrability.
 
 from bga.structural.analyzer import StructuralAnalyzer
 from bga.structural.models import (
-    StructuralMetrics,
     BottleneckAnalysis,
-    ParallelismProfile,
-    SensitivityResult,
     DeferrabilityResult,
     HistoricalTrend,
+    ParallelismProfile,
+    SensitivityResult,
     StructuralAnalysisResult,
+    StructuralMetrics,
 )
 
 __all__ = [

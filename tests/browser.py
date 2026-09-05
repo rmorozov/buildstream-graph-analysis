@@ -128,7 +128,7 @@ class Browser:
                         f"http://127.0.0.1:{self.port}/json/version",
                         timeout=1):
                     return True
-            except Exception:                            # noqa: BLE001
+            except Exception:
                 # A Chrome that has already exited will never answer, so
                 # there is nothing to wait out - and *that it exited* is
                 # the fact that distinguishes a taken port from a slow
@@ -191,7 +191,7 @@ class Browser:
         if self._stderr is not None:
             try:
                 said = self._stderr.read() or b""
-            except Exception:                            # noqa: BLE001
+            except Exception:
                 said = b""
             finally:
                 self._stderr.close()

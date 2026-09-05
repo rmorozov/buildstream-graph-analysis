@@ -11,8 +11,8 @@ optimizing** at 17.7% of the critical path, and making it instant saves
 minute. The other three top elements were worth 78–100% of their
 duration, so the failure is specific to graph shape rather than uniform.
 """
-from bga.ingest.models import DependencyEdge, Element, Graph
 from bga.graph.edg import compute_realizable_savings
+from bga.ingest.models import DependencyEdge, Element, Graph
 
 
 def _graph(edges, elements=None):

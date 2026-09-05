@@ -16,7 +16,9 @@ import os
 
 from tools.bst_native_build_tracer import format_post_build_interrupt
 from tools.bst_run_wrapped import (
-    DEFAULT_SIGINT_GRACE, SIGINT_GRACE_ENV, sigint_grace_seconds,
+    DEFAULT_SIGINT_GRACE,
+    SIGINT_GRACE_ENV,
+    sigint_grace_seconds,
 )
 
 
@@ -86,6 +88,7 @@ class TestTheGraceWindow:
         so a missing queue_summary is an escalation artifact rather than
         absent-by-nature."""
         import subprocess as sp
+
         from tools.bst_run_wrapped import shutdown_build_group
 
         class _Proc:
@@ -104,6 +107,7 @@ class TestTheGraceWindow:
 
     def test_the_escalation_message_names_the_knob(self, monkeypatch):
         import subprocess as sp
+
         from tools.bst_run_wrapped import shutdown_build_group
 
         class _Proc:
@@ -127,6 +131,7 @@ class TestEveryPhaseConverts:
         """Compiling the hook and the census run before the build's own
         try/except, so they reached main as a bare KeyboardInterrupt."""
         import inspect
+
         from tools import bst_native_build_tracer as tracer
         source = inspect.getsource(tracer.main)
         assert source.count("except KeyboardInterrupt:") >= 2, (
@@ -144,6 +149,7 @@ class TestEveryPhaseConverts:
         the phase and asserts on what the user sees.
         """
         import sys as _sys
+
         from tools import bst_native_build_tracer as tracer
 
         log = tmp_path / "build.log"

@@ -27,8 +27,7 @@ import pytest
 REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 
-from tools.bst_native_build_tracer import (  # noqa: E402
-    compile_hook, compile_spine, parse_trace_lines, stream_records)
+from tools.bst_native_build_tracer import compile_hook, compile_spine, parse_trace_lines, stream_records
 
 needs_cc = pytest.mark.skipif(
     shutil.which("cc") is None and shutil.which("gcc") is None,

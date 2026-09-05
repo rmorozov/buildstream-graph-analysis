@@ -37,8 +37,7 @@ def _analyze(env_extra, run=GOLDEN, argv=None):
     env.update(env_extra)
     return subprocess.run(
         [sys.executable, "-c",
-         "from bga.cli import main; raise SystemExit(main(%r))"
-         % (argv or ["analyze", run, "--format", "json"],)],
+         "from bga.cli import main; raise SystemExit(main({!r}))".format(argv or ["analyze", run, "--format", "json"])],
         capture_output=True, env=env, cwd=os.getcwd())
 
 
@@ -46,8 +45,11 @@ class TestEveryNamedPhaseDraws:
     def test_the_pipeline_imports_progress_at_all(self):
         """The reproduction, kept: nothing in the analyze pipeline had
         any instrumentation."""
-        source = open("bga/analyzer.py", encoding="utf-8").read()
-        assert "import progress" in source, (
+        # UX-693: read the module, not the text - the import sorter
+        # merges `from . import progress` with its neighbours.
+        import bga.analyzer
+        import bga.progress
+        assert getattr(bga.analyzer, "progress", None) is bga.progress, (
             "the pipeline is silent again")
 
     @pytest.mark.parametrize("phase", PHASES)

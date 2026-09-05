@@ -60,8 +60,8 @@ import pytest
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 
-from browser import NO_BROWSER, Browser, find_chrome    # noqa: E402
-from pages import snapshot_copy, transfer_run    # noqa: E402
+from browser import NO_BROWSER, Browser, find_chrome
+from pages import snapshot_copy, transfer_run
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))

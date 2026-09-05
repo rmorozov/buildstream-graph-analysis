@@ -156,7 +156,7 @@ class TestBlastGroupsTheWayTheTableGroups:
         inventory = json.loads((run / "sources.json").read_text())
         _table_text, rows = _table(
             inventory, {uid: set() for uid in inventory["elements"]},
-            {uid: "manual" for uid in inventory["elements"]})
+            dict.fromkeys(inventory["elements"], "manual"))
 
         assert sorted(row["kind"] for row in rows) == ["local", "patch"]
         assert [row["direct_count"] for row in rows] == [2, 2]

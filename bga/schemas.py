@@ -32,7 +32,6 @@ validates the golden run's real output against the schema this module
 produces - so a field removed from the payload without a matching
 schema edit fails a test rather than a consumer.
 """
-from typing import Dict, List, Tuple
 
 # UX-207: the diagnosis vocabulary is decided in `findings.py`,
 # beside the ratio that decides it. Imported rather than restated,
@@ -645,10 +644,10 @@ def _distribution(quantity: str, noun: str, description: str) -> dict:
     }
 
 
-def _document(name: str, title: str, required: Dict[str, str],
-              description: str, optional: Dict[str, str] = None,
-              hints: Dict[str, dict] = None,
-              always_written: Tuple[str, ...] = ()) -> dict:
+def _document(name: str, title: str, required: dict[str, str],
+              description: str, optional: dict[str, str] = None,
+              hints: dict[str, dict] = None,
+              always_written: tuple[str, ...] = ()) -> dict:
     """A top-level object schema: `schema` plus the always-present keys.
 
     `required` maps a key to its JSON Schema type name, or to `""` for a
@@ -667,7 +666,7 @@ def _document(name: str, title: str, required: Dict[str, str],
     guarantee is the emitter's and is guarded against the real payload;
     the annotation is how `--schema` says so.
     """
-    properties: Dict[str, dict] = {
+    properties: dict[str, dict] = {
         VERSION_KEY: {"const": name,
                       "description": "The shape of this document."},
     }
@@ -5399,7 +5398,7 @@ def _descend(node: dict, segment):
     return None
 
 
-def names() -> List[str]:
+def names() -> list[str]:
     """Every schema this tool produces, newest contract first."""
     return sorted(_SCHEMAS)
 

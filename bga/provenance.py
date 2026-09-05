@@ -36,12 +36,11 @@ finished document, which is also why `attach` runs at the end of the
 report build rather than beside `compute_findings`: the paths are only
 meaningful once the document they point into exists.
 """
-from typing import Any, List, Optional, Tuple
+from typing import Any, Optional
 
 from . import findings as _findings
 from . import schemas as _schemas
-from .cache_effectiveness import (HEALTHY_HIT_RATIO, POOR_HIT_RATIO,
-                                  TRANSFER_SHARE_NOTABLE)
+from .cache_effectiveness import HEALTHY_HIT_RATIO, POOR_HIT_RATIO, TRANSFER_SHARE_NOTABLE
 
 # The module every threshold below is defined in, published so a record
 # names where to go and change it rather than only what it is called.
@@ -256,7 +255,7 @@ TRACE_QUERIES = {
 }
 
 
-def queries_for(claim_id) -> Tuple[str, ...]:
+def queries_for(claim_id) -> tuple[str, ...]:
     """Every library question that deepens `claim_id`, best first.
 
     `UX-448`. The first is what the Investigate button opens; the rest
@@ -468,7 +467,7 @@ def _chain_rule(claim, document):
 #
 # `UX-275` emptied the other one: `capacity_recommendation` is published
 # now, so its paths moved up into the evidence they always were.
-def _blast_paths(claim: dict, document: dict) -> Tuple[str, ...]:
+def _blast_paths(claim: dict, document: dict) -> tuple[str, ...]:
     """`UX-479`: one scalar per element the sentence names.
 
     Both blast claims used to cite `elements.blast_radius` - the whole
@@ -673,7 +672,7 @@ _CLAIMS = {
 }
 
 
-def claim_ids() -> Tuple[str, ...]:
+def claim_ids() -> tuple[str, ...]:
     """Every claim this module can explain - the guard's other direction
     against `findings.py`'s own ids."""
     return tuple(sorted(_CLAIMS))
@@ -801,7 +800,7 @@ def _finding_by_id(document: dict, finding_id: Optional[str]):
                  if f.get("id") == finding_id), None)
 
 
-def unresolved_references(document: dict) -> List[str]:
+def unresolved_references(document: dict) -> list[str]:
     """Every published reference that does not resolve - the guard's
     whole job, and a function rather than a test helper because a
     consumer deserves the same check.
@@ -810,7 +809,7 @@ def unresolved_references(document: dict) -> List[str]:
     keyed by claim id, so a `finding_id` or a finding with no record is
     the dangling reference the `see` path used to be.
     """
-    dangling: List[str] = []
+    dangling: list[str] = []
     published = {entry.get("claim") for entry in document.get("provenance") or []}
     for _claim, entry in claims(document):
         for cited in entry.get("evidence") or []:
@@ -852,7 +851,7 @@ def claims(document: dict):
             yield claim, entry
 
 
-def render(provenance: dict, indent: str = "    ") -> List[str]:
+def render(provenance: dict, indent: str = "    ") -> list[str]:
     """The chain as text lines. One renderer for the terminal, so
     `--explain` and the page cannot word the same chain differently."""
     if not provenance or not provenance.get("rule"):

@@ -13,8 +13,11 @@ import subprocess
 import sys
 
 from tools.bst_native_build_tracer import (
-    format_sandbox_stderr, missing_bind_paths, read_invocations,
-    replay_sandbox, sandbox_stderr_path,
+    format_sandbox_stderr,
+    missing_bind_paths,
+    read_invocations,
+    replay_sandbox,
+    sandbox_stderr_path,
 )
 from tools.native_trace.bwrap_shim import exit_like, run_teed, stderr_record_path
 
@@ -202,6 +205,7 @@ class TestTheDefaultPathStillExecs:
         process is in scope there and only there. Everywhere else the pure
         exec is the contract."""
         import inspect
+
         from tools.native_trace import bwrap_shim
         source = inspect.getsource(bwrap_shim.main)
         tee_line = [ln for ln in source.splitlines() if "run_teed" in ln]

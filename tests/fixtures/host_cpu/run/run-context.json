@@ -1,0 +1,137 @@
+{
+  "trace_epsilon_us": 50000,
+  "resource_capacities": {
+    "PROCESS": 4,
+    "DOWNLOAD": 10,
+    "UPLOAD": 4
+  },
+  "max_jobs": 4,
+  "native_max_jobs": 4,
+  "native_max_jobs_source": "resolved_from_graph",
+  "host_cpu_count": 4,
+  "host_memory_mb": 16075,
+  "host_manifest": {
+    "schema": "host/v2",
+    "cpu_model": "Intel(R) Xeon(R) Processor @ 2.10GHz",
+    "cpu_count": 4,
+    "memory_bytes": 16855859200,
+    "kernel_release": "6.18.44-fc-v24",
+    "distro_id": "ubuntu 24.04",
+    "toolchain": {
+      "bst": "2.7.0",
+      "bwrap": "bubblewrap 0.9.0",
+      "buildbox-run": null,
+      "cc": "cc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0"
+    }
+  },
+  "producer": {
+    "tool": "bga",
+    "version": "0.4.0",
+    "contracts": [
+      "analyze/v2",
+      "analyze/v3",
+      "analyze/v4",
+      "analyze/v5",
+      "analyze/v6",
+      "blast/v1",
+      "blast/v2",
+      "bundle-manifest/v1",
+      "capacity-model/v1",
+      "capture-layout/v1",
+      "compare/v1",
+      "compare/v2",
+      "correlate/v1",
+      "correlate/v2",
+      "host-samples/v1",
+      "host/v1",
+      "host/v2",
+      "plane2/v1",
+      "plane2/v2",
+      "plane2/v3",
+      "sources/v1",
+      "store-aggregate/v1",
+      "store/v1",
+      "sweep/v1",
+      "whatif/v1"
+    ]
+  },
+  "wall_clock": {
+    "start_us": 1788644102916000,
+    "end_us": 1788644129985000,
+    "start_us_source": "log_timestamp"
+  },
+  "queue_seam": {
+    "requested_at_us": null,
+    "requested_at_source": null,
+    "started_at_us": 1788644102916000,
+    "started_at_source": "log_timestamp",
+    "queue_wait_us": null,
+    "absent_reason": "no_request_instant"
+  },
+  "pipeline_overhead": [
+    {
+      "phase": "Loading elements",
+      "elapsed_us": 2000
+    },
+    {
+      "phase": "Resolving elements",
+      "elapsed_us": 515000
+    },
+    {
+      "phase": "Initializing remote caches",
+      "elapsed_us": 0
+    },
+    {
+      "phase": "Query cache",
+      "elapsed_us": 159000
+    }
+  ],
+  "build_outcome": {
+    "failed_elements": [],
+    "failed_count": 0,
+    "interrupted": false
+  },
+  "queue_summary": {
+    "fetch": {
+      "processed": 0,
+      "skipped": 11,
+      "failed": 0
+    },
+    "build": {
+      "processed": 11,
+      "skipped": 0,
+      "failed": 0
+    }
+  },
+  "timestamp_agreement": {
+    "tasks_compared": 11,
+    "tasks_shorter_than_bst": 1,
+    "shorter_than_bst": [
+      {
+        "element": "app.bst",
+        "action": "build",
+        "span_s": 1.933,
+        "bst_elapsed_s": 2.0,
+        "shortfall_s": 0.067
+      }
+    ],
+    "worst_shortfall_s": -0.067,
+    "worst_excess_s": 1.004,
+    "note": "Each task's duration measured twice: the wrapped log's own timestamps, which are stamped when the wrapper read each line, against BuildStream's `[HH:MM:SS]` elapsed prefix, which is its own timing truncated to whole seconds. The difference is the wrapper's read-lag, and it bounds the resolution of every Plane 1 duration in this run. A task reported as shorter than BuildStream's own figure is provably short, not merely imprecise (UX-110)."
+  },
+  "run_identity": {
+    "manifest_hash": "b51434222e77485a2204bc64ab6cf9ad2310dbfa67e211821d889878c814b6a6",
+    "project_identity": "examples/06-macro-micro-optimization",
+    "targets": [
+      "all.bst"
+    ],
+    "scheduler": {
+      "builders": 4,
+      "fetchers": 10,
+      "pushers": 4,
+      "native_max_jobs": 4
+    },
+    "project_git_commit": "5b8252c3b6fd42f30e5bb10856a6a9e2b0df7ed3",
+    "project_refs_sha256": null
+  }
+}

@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-713 scenarios: **42 open**, 671 closed.
+714 scenarios: **43 open**, 671 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -27,7 +27,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | cli | 0 | 21 |
 | store | 0 | 16 |
 | docs | 10 | 116 |
-| guards | 13 | 159 |
+| guards | 14 | 160 |
 
 ## Open scenarios
 
@@ -78,6 +78,7 @@ task file, which is the only place it ever lived twice.
 | UX-713 | [the skill that runs the review is named by neither document](UX-0713-the-skill-that-runs-the-review-is-named-by-neither-document.md) | docs | Medium | the session the cadence guard has just stopped | 🔴 |
 | UX-714 | [the orchestrator's share is a bare figure that has moved](UX-0714-the-orchestrators-share-is-a-bare-figure-that-has-moved.md) | docs | Medium | the session pricing a batch against a figure it believes | 🔴 |
 | UX-715 | [fifteen viewer modules, in a passage with no date](UX-0715-fifteen-viewer-modules-in-a-passage-with-no-date.md) | docs | Low | a reader of the architecture's viewer chapter, counting modules | 🔴 |
+| UX-716 | [a guard whose cost is its population has no refresh route](UX-0716-a-guard-whose-cost-is-its-population-has-no-refresh-route.md) | guards | Medium | the branch that goes red for test files another branch added | 🔴 |
 
 ## UX-706..UX-711: the ninety-fourth round — the pipeline, and which model runs which shape (2026-09-05)
 

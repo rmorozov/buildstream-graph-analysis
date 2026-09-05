@@ -196,6 +196,23 @@ def _part_32():
     return first, next(n for n in starts if n > first) - 1
 
 
+def _registry_sentence():
+    """`UX-660`: the line item 12 points at, read off the spec.
+
+    Its neighbour on the same line - the Part's span - was derived and
+    this was not, so `UX-613` moved one and left the other, in one edit
+    on one sentence, and thirteen commits carried it wrong. The words
+    are unique in the spec, which is what makes deriving it cheaper
+    than dropping the number.
+    """
+    lines = SPEC.read_text(encoding="utf-8").splitlines()
+    found = [n for n, line in enumerate(lines, 1)
+             if "written but not printable" in line]
+    if len(found) != 1:
+        raise AssertionError(f"{len(found)} lines match, not one: {found}")
+    return found[0]
+
+
 def _live_contracts():
     return [one for one in contracts.ids() if one not in contracts.superseded()]
 
@@ -225,6 +242,7 @@ def _derived():
             f"{orders} smaller than this file",
             f"this file is ~{guide_kb} KB",
             f"`{schemas.ANALYZE}`, `{schemas.COMPARE}` and `{schemas.BLAST}`",
+            f"the sentence is at line {_registry_sentence()}",
             "Part 32 spans {}-{}".format(*_part_32())],
         "docs/contributing/release-guide.md": [
             f"summary of {WORDS[len(_live_contracts())]} live contracts"],

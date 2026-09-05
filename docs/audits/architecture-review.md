@@ -88,6 +88,7 @@ would have caught it; a bound at it would only just have.
 | 14 | 2026-09-03 | 587 | four filings — the registry row `UX-565` falsified, two hard gates no document names, a Python floor in no prose, and a verification-log clause read against the entry below it; [`round-83.md`](round-83.md) |
 | 15 | 2026-09-04 | 617 | six filings — closing a row writes `🟢 Done Open` in 17 files with `--check` clean, five published keys no document names, `compare/v2`'s required set grown under an unchanged id, two undocumented env-var input surfaces, `bga/report/rate.py` outside the map guard's population, and the `4s` touching figure the round beside it disproved; [`round-84.md`](round-84.md) |
 | 16 | 2026-09-04 | 645 | six filings, three of them a green guard reading the wrong population *shape* — the spec's Part 32 block two ids behind and read by nothing, the currency guard comparing dates on a day that held nine substantive commits, `analyze/v6`'s three new keys one nesting level below the key population — plus a dated log record a guard made every `analyze` bump rewrite, `format.js` still saying nine hints of nineteen, and a red gate on the base; two restorations; [`round-87.md`](round-87.md) |
+| 17 | 2026-09-05 | 671 | three filings, all the same shape the last four reviews found — a sentence no guard reads: the `review` skill named by neither `CLAUDE.md` nor the checklist the cadence guard sends a stopped session to, the orchestrator's 73 % share carried bare in `CLAUDE.md` and measuring 46.9 % today, and *fifteen viewer modules* in an undated passage against 22 on disk; two claims checked and found sound (the `479` touching spread, `fifteen live contracts`) |
 
 ### Review 11 — 2026-09-02
 
@@ -1269,3 +1270,51 @@ is red on this commit by construction and green once the index is
 derived. `make test` is otherwise **6964 passed, 125 skipped, 20
 failed**: that clause, `UX-656`'s, and 18 in the `bst` family the disk
 explains.
+
+## Review 17 — 2026-09-05, at 671 closed rows
+
+Run because the cadence guard reddened the round's own CI at 26 closed
+rows against a bound of 25 — round 96's four closes are what crossed
+it. The method was the `review` skill's: find the sentences no guard
+reads, then run one command against each.
+
+**1. Does the code still do what it says?** Spot-checked on the two
+surfaces this round touched. `--adopt` retires exactly the entries the
+map's own row names (`UX-662`'s acceptance, re-run); the drift gate
+carries an entry-less file as `recorded` and returns 0
+(`dev_tier_drift.py:811,1047`). No drift found.
+
+**2. Does every published contract have a home?** `contracts.ids()` is
+25, of which 15 are live; `release-guide.md:23` says *fifteen live
+contracts* and is **derived** by
+`test_the_process_documents_derive_their_figures.py`. Sound — and the
+check is recorded here because the review's first reading of it, against
+`len(ids())`, looked like a finding and was not. Verifying the
+denominator is what stopped a false filing.
+
+**3. Is any figure invalidated?** Two were, one was not.
+
+| figure | says | measured now |
+|---|---|---|
+| `fixing-guide.md:69,84` | `11-126 of 479 test files, median 17` | identical — `dev_touching.py --spread` |
+| `CLAUDE.md` pipeline | `73 % of its tokens when measured` | 46.9 % over 136 rebuilds — `UX-714` |
+| `architecture.md:1465` | *all fifteen viewer modules* | 22 on disk — `UX-715` |
+
+**4. What shipped since the last review that no document names?** The
+`review` skill itself, which is reachable from neither `CLAUDE.md` nor
+the checklist a stopped session is sent to — `UX-713`. Eight of nine
+skills are named; the missing one is the only one a guard *forces* a
+round to run.
+
+**5. Does each document's own "last updated" claim match reality?** The
+architecture document's derived counts moved with this review's own
+filings (712 → 715 scenario files) under
+`dev_close_task.py --check --write`, which is the derivation working.
+No dated claim found stale.
+
+**Not findings, checked and dismissed.** 65 backticked paths that
+resolve nowhere are upstream BuildStream modules (`_stream.py`,
+`_context.py`) and example output filenames (`store.json`,
+`bundle.json`), not repository references. The architecture's CLI table
+names 22 commands against `cli.py`'s 13 `add_parser` calls, because nine
+ship as their own entry points rather than subparsers.

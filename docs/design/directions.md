@@ -1550,7 +1550,6 @@ expected cost), per-role hues in the page for these findings (§4
 rule 7 stands), and observing a remote build (`UX-9` stands — the
 tool prices it and does not watch it).
 
-
 ## Round history
 
 This document used to carry the findings of rounds 2-6 inline, which

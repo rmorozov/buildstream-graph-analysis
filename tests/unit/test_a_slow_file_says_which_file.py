@@ -62,11 +62,15 @@ def _a_small_file():
     assertions about the wrong transition.
     """
     listed = set(tiers.LARGE) | set(tiers.MEDIUM)
+    # UX-709: "unlisted" read as "small" until a new 1 s file was first
+    # in the alphabet; CI's own record of the file decides instead.
+    on_ci = json.loads((REPO / "tests/ci_reference.json").read_text(
+        encoding="utf-8"))["files"]
     for path in sorted((REPO / "tests/unit").glob("test_*.py")):
         name = str(path.relative_to(REPO))
-        if name not in listed:
+        if name not in listed and on_ci.get(name, 99.0) < tiers.MEDIUM_FLOOR_S / 2:
             return name
-    raise AssertionError("every unit file is in a tier list")
+    raise AssertionError("no unit file is both unlisted and small on CI's record")
 
 
 #: A file in no tier list, so `listed_tier` says `small`.

@@ -96,3 +96,4 @@ skipped in `top_level_names` (dunders are read by tooling, not by
 name).
 
 **Deviation.** The verifier measured four precision limits: an attribute call on a same-named method and a call to a shadowing inner definition are both listed as callers; a re-export is invisible to `dead`; `dead --js` found 2 exports, not the 5 round 93's grep reported. A navigation aid resolves names, not bindings — data-flow stays CodeQL's (`UX-698`); `UX-699` decides the viewer's five against the two.
+CI, not the local gate, caught two 3.9 breaks the track wrote (`isinstance(x, A | B)`, `zip(strict=)`): no 3.9 here, and ruff has no rule for either under a 3.9 target. The two-second guard was a timing across machines (`UX-418`); it reads 2.26 s on a loaded runner and now holds only that the tool answers, the timing staying in this Outcome.

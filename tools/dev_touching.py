@@ -93,8 +93,9 @@ def census_set():
     Declared in `tests/tiers.py` and checked against a derivation, so
     the list is auditable rather than typed:
     `tests/unit/test_the_selector_carries_the_census.py`. Measured at
-    **10.80s** for 272 tests at `-n auto` - the price of the inner
-    loop never being wrong about this class again.
+    **36.6s** for 716 tests at `-n auto` (`UX-730` moved it from 14
+    files/10.80s) - the price of the inner loop never being wrong about
+    this class again.
     """
     sys.path.insert(0, str(TESTS))
     import tiers

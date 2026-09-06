@@ -95,7 +95,13 @@ class TestTheSelectorStillSelects:
     # ceilings sit above min 11 / median 17 / p90 40 / max 124
     # (`UX-624`, which added the `from x import y` spelling) with room,
     # so ordinary drift is quiet and a shape change is loud.
-    CEILING = {"median": 20, "p90": 45, "max": 130}
+    #
+    # `UX-730` moved the census 14 -> 19, and re-measured over 88 mapped
+    # modules: min 14 -> 19, median 20 -> 25, p90 43 -> 47, max 128 ->
+    # 131 - not a uniform +5, because five of the new census files were
+    # already grep-reachable from some modules' own selections. Same
+    # +2 headroom kept on p90 and max; median left at the measurement.
+    CEILING = {"median": 25, "p90": 49, "max": 133}
     POPULATION_FLOOR = 60
     #: `UX-645`: **13 census + 14 of your own**. The census floor is
     #: inside this bound because those files run - the figure is what
@@ -114,11 +120,21 @@ class TestTheSelectorStillSelects:
     #: Round 98 moved it 13 -> 14, declaring `UX-713`'s skill-membership
     #: guard (it walks `.claude/skills/` and no grep selects it). Same
     #: arithmetic: 27 -> 28, so "14 of your own" still holds.
-    HANDFUL = 28
-    CENSUS_FLOOR = 14
+    #:
+    #: `UX-730` moved it 14 -> 19: the detector widened to a guard whose
+    #: population is a named index file reached through a tool function
+    #: rather than a direct `WALKS` name, and five of those were already
+    #: in the tree. Same arithmetic: 28 -> 33.
+    HANDFUL = 33
+    CENSUS_FLOOR = 19
 
     # Wide because the module's name is how a test invokes it, not
     # because the selector is wrong. `UX-606` argued each one.
+    #
+    # `UX-730`: `bga/report/_shared.py` (33) and
+    # `tools/native_trace/bwrap_shim.py` (32) left when `HANDFUL` moved
+    # 28 -> 33 with the census - neither was wide by name or map, only
+    # by a bound the census widening itself raised past them.
     WIDE = {
         "bga/cli.py", "tools/bga_view.py", "tools/bst_native_build_tracer.py",
         "bga/ingest/models.py", "bga/report/text.py", "bga/analyzer.py",
@@ -127,8 +143,8 @@ class TestTheSelectorStillSelects:
         "tools/bga_timeline.py", "tools/native_trace_to_chrome_trace.py",
         "tools/bst_extract_run.py", "bga/tools_dispatch.py",
         "bga/attribution/blame_chain.py", "bga/correlate.py",
-        "bga/report/json.py", "tools/native_trace/bwrap_shim.py",
-        "bga/schemas.py", "bga/report/_shared.py",
+        "bga/report/json.py",
+        "bga/schemas.py",
         # `UX-624`: 14 -> 27. A one-word stem is not a token, so every
         # one of its 16 importers reached it only as `from bga import
         # contracts`; the width is those edges, not a looser rule.

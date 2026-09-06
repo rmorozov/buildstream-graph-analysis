@@ -84,3 +84,47 @@ band the Outcome argues for — and say what the bound is for.
 The sentence is either dated with its round or derived from a fixture
 a guard measures. Mutation, for the second shape: make `export` write
 a materially larger page — the clause reds naming both figures.
+
+## Outcome
+
+**Gap measured**: the guide's sentence named "a real 46 s capture with
+both planes" — not in the tree, so no guard could check it — while
+`export('tests/fixtures/macro_micro/run', …)` (the tree's own fixture)
+measured 499,911 B = 488.19 KiB in 0.382 s, six times the guide's
+82 KiB. Re-derived here rather than trusted: same figure, 499,911 B.
+
+**Close measured**: `UX-549`'s shape, the decision the task already
+took. `docs/guides/ci-comment.md:276-277` now names
+`tests/fixtures/macro_micro/run` and states **488 KiB**, with the old
+46 s capture's **82 KiB** kept as a dated aside (`UX-511`'s shape,
+2026-08-21, `UX-195` — the commit that wrote it) rather than dropped.
+A new guard, `TestTheCiWiring::test_the_export_size_the_guide_states_is_still_true`
+in `tests/unit/test_the_report_you_can_attach.py`, parses the stated
+KiB out of the doc, runs `export` on the fixture, and asserts the
+measured KiB sits within ±20% of the stated figure — a band, not a
+byte-exact equality: wide enough to absorb the few hundred bytes an
+unrelated comment, contract field, or the embedded run path moves
+without forcing a doc edit every round (the neighbouring
+`test_each_committed_run_exports_within_its_stated_bound` bound for
+this same fixture already carries ~700 B of comment-driven drift per
+change); tight enough that a materially larger or smaller page still
+reds.
+
+**Mutation table**:
+
+| mutation | reddened | measured |
+|---|---|---|
+| `export` appends 700,000 bytes to the written page (Acceptance Test's own) | `test_the_export_size_the_guide_states_is_still_true` | "states 488 KiB … measures 1199953 B = 1171.8 KiB, outside the ±20% band" |
+| `export` writes only the first half of the page (tests the band's low side, not just growth) | same | "states 488 KiB … measures 249953 B = 244.1 KiB, outside the ±20% band" |
+
+Both mutations applied to a scratch copy (`tools/bga_view.py`, copied
+to the scratchpad before editing) and reverted from that copy;
+`git diff --stat tools/bga_view.py` empty after each revert, guard
+green again both times.
+
+**Deviation**: none from the declared shape. The file's own
+`--durations=0` shows the new test at 0.11 s (not the standalone
+0.382 s — the process and imports are already warm inside the file's
+run); the file's total went from ~2.2 s to ~2.3–6.4 s depending on
+harness overhead, still far under `LARGE_FLOOR_S` (15.0 s) and above
+`MEDIUM_FLOOR_S` (1.0 s), so the file's tier is unchanged (medium).

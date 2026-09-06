@@ -83,3 +83,47 @@ Each of the three sentences is derived from its population, and each
 new clause reds when that population moves. Mutations: add a row to
 §1a's table without touching the word; add a row to `agent-runs.md`;
 add `# Part 45` to a scratch copy of the spec.
+
+## Outcome
+
+Three classes added to `tests/unit/test_a_counted_figure_is_derived.py`:
+`TestTheStyleguideCountsItsOwnVocabulary`,
+`TestTheAuditLedgerCountsItsOwnRows`,
+`TestTheIndexCountsTheSpecsOwnRanges`. The first loads
+`test_the_contract_names_its_vocabulary.py` by file location and calls
+its `_documented()` rather than re-deriving the hint set.
+
+Gap measured (before the fix, guards added but docs unchanged):
+
+```text
+$ python -m pytest tests/unit/test_a_counted_figure_is_derived.py -k \
+  "AuditLedger or SpecsOwnRanges" -q
+agent-runs.md: table has 26 rows, sentence says twenty-four (FAIL)
+docs/README.md: spec has Parts 0-44, sentence says 0-40 (FAIL)
+styleguide.md: table has 20 rows, sentence says Twenty (PASS - already true)
+```
+
+Close measured (after `docs/audits/agent-runs.md:41` → "twenty-six" and
+`docs/README.md:173` → "Parts 0-44"):
+
+```text
+$ python -m pytest tests/unit/test_a_counted_figure_is_derived.py -q
+39 passed in 0.79s
+```
+
+Mutation table (scratch-copy revert each time, `__pycache__` cleared
+before confirming green):
+
+| guard | mutation | reddened | count |
+|---|---|---|---|
+| `TestTheStyleguideCountsItsOwnVocabulary` | added `bga:mutation-test` row to §1a, word untouched | table 20→21, "Twenty" stale | 1 failed |
+| `TestTheAuditLedgerCountsItsOwnRows` | added a row to `agent-runs.md`'s table | rows 26→27, "twenty-six" stale | 1 failed |
+| `TestTheIndexCountsTheSpecsOwnRanges` | appended `# Part 45` to `specification.md` | Parts 0-44→0-45, `docs/README.md` stale | 1 failed |
+
+All three reverted from a scratch copy (never `git checkout --` on a
+file with live work); `git diff` after each revert showed no residual
+mutation, and the full file passed 39/39 again.
+
+No deviation from the brief: the styleguide sentence needed no edit
+(the twenty-hint word was already true, as the brief said); the other
+two documents' sentences were corrected to match the derived figures.

@@ -1,6 +1,6 @@
 # UX-722: a rail target inside a scrolling table lands under the header
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-670 (which measured it) | **Serves:** anyone who clicks a rail entry into a nested block | **Topic:** viewer | **Shape:** judgement | **Area:** bga/viewer
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-670 (which measured it) | **Serves:** anyone who clicks a rail entry into a nested block | **Topic:** viewer | **Shape:** judgement | **Area:** bga/viewer
 
 ## Motivation
 

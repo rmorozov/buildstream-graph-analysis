@@ -28,7 +28,7 @@ reader compares is the contract set — that is `UX-250`'s job.
 
 ## When to cut one
 
-Two conditions, both measured, neither a date:
+Three conditions, all measured, none a date:
 
 1. **A contract moved** — a schema version bumped, a subcommand or flag
    added, renamed or removed. A release with an identical contract
@@ -37,6 +37,17 @@ Two conditions, both measured, neither a date:
 2. **A review row exists** at or after the previous release's
    closed-row marker, in
    [`../audits/architecture-review.md`](../audits/architecture-review.md).
+3. **A walk read the candidate.** The candidate is the newest commit
+   touching a file `bga.contracts.inventory()` names, plus `bga/cli.py`
+   and `bga/tools_dispatch.py` — over-approximated on purpose
+   (`UX-686`): touching `schemas.py` without moving a contract's `/vN`
+   still counts, which can only make a release wait longer, never let
+   one through unreviewed. A `walk` (`UX-685`, any seed) has run on or
+   after that commit, its report is in `docs/audits/`, and every
+   finding it filed is closed or named in the release's CHANGELOG row.
+   `tests/unit/test_a_release_records_a_contract_state.py` derives this
+   from the walk report's own date and `→ UX-NNN` filings — reused
+   from `tools/dev_scenario.py`, not reimplemented.
 
 Condition 2 is the whole documentation half, and it is deliberately a
 *reference* rather than a second checklist. `UX-241` already owns the
@@ -44,7 +55,9 @@ review cadence; a release that ran its own doc sweep would be a second
 mechanism racing the first for one job, and two hand-maintained copies
 of one fact drifting apart is the single most-repeated defect in this
 repository's history. **A release consumes the review. It does not
-duplicate it.**
+duplicate it.** Condition 3 is the walk's own half; the **design
+review** half a walk's report also promises is deferred to `UX-727`,
+which gives the derivation a report shape to read.
 
 ## The version is derived, not chosen
 
@@ -69,9 +82,11 @@ no meaning, and this repository has spent thirty rounds refusing those.
 
 ## Cutting one
 
-1. **Confirm the review.** `docs/audits/architecture-review.md` has a
-   row at or after the previous release's closed-row marker. If it does
-   not, run a review first — that is a different session (`§6a`).
+1. **Confirm the review and the walk.** `docs/audits/architecture-review.md`
+   has a row at or after the previous release's closed-row marker; a
+   walk report in `docs/audits/` is dated on or after the candidate
+   commit, with its filed findings closed or named below. If either
+   does not hold, run it first — that is a different session (`§6a`).
 2. **Record the state.** The contract set is `bga.contracts.ids()`; the
    command set is what `bga --help` lists. Both go in the release
    section's fenced `state` block, which is what the derivation reads.

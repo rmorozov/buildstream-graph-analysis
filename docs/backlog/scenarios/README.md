@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-740 scenarios: **21 open**, 719 closed.
+740 scenarios: **20 open**, 720 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -27,7 +27,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | cli | 0 | 22 |
 | store | 0 | 16 |
 | docs | 4 | 118 |
-| guards | 7 | 172 |
+| guards | 6 | 172 |
 
 ## Open scenarios
 
@@ -50,7 +50,6 @@ task file, which is the only place it ever lived twice.
 | UX-689 | [the architecture document moves into the area pages, one track at a time](UX-0689-the-architecture-document-moves-into-the-area-pages-one-track-at-a-tim.md) | docs | Medium | the reader pricing a change; the session restructuring without losing a sentence | 🔴 |
 | UX-690 | [the suite has a shape budget, and a feature files its test analysis](UX-0690-the-suite-has-a-shape-budget-and-a-feature-files-its-test-analysis.md) | guards | Medium | R8 reading whether the suite is balanced; the implementer writing the right guard | 🔴 |
 | UX-695 | [the refactor stream takes the ledger's top row — renderers first](UX-0695-the-refactor-stream-takes-the-ledger-s-top-row-renderers-first.md) | docs | Medium | the session that opens a round and has no refactor to pick because none is filed | 🔴 |
-| UX-696 | [the register's unguarded rows — no round in code, a dated count, the commit body](UX-0696-the-register-s-unguarded-rows-no-round-in-code-a-dated-count-the-commi.md) | guards | Medium | the reader who opens a module a year on and meets its history instead of its reason | 🔴 |
 | UX-697 | [a type-error ratchet, contracts first](UX-0697-a-type-error-ratchet-contracts-first.md) | guards | Medium | the session editing a schema or a contract, where a wrong key is a `UX-190` bump nobody meant | 🔴 |
 | UX-698 | [the gate-only shelf on GitHub — code scanning, a lockfile and audit, Dependabot, secret scanning](UX-0698-the-gate-only-shelf-on-github-code-scanning-a-lockfile-and-audit-depen.md) | guards | High | R8 reading a red gate that a hosted tool raised, and the user who wants the heavier analyses without a slower inner loop | 🔴 |
 | UX-705 | [the burn-down runs on the reporters' model — a batch a commit, never a suppression](UX-0705-the-burn-down-runs-on-the-reporters-model-a-batch-a-commit-never-a-supp.md) | guards | High | R8, who wants the baseline to reach zero without the session's model reading 1,709 findings | 🔴 |

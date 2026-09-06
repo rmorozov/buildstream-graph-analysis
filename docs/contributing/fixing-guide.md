@@ -66,7 +66,7 @@ For every task, before marking it done:
 
 1. Run the exact command(s) given in the task's **Acceptance Test** section.
 2. Paste the actual command and actual output into the task file's **Verification Log** section (append, don't overwrite prior entries).
-3. **While you work, run the tests that touch what you changed** (`UX-336`): `make test-touching` maps the working diff to the test files that name it - 31-145 of 505 test files, median 37, over every module the map names, not the seconds one machine spent on one of them (`UX-632`). `python3 tools/dev_touching.py --spread --write` is the only thing that writes that figure. Wider than one module, run the tier (`UX-238`). Every target runs `-n auto`. **The suite's wall clock is a property of the machine, not of the suite** (`UX-551`), so budget a round against the spread and not a figure:
+3. **While you work, run the tests that touch what you changed** (`UX-336`): `make test-touching` maps the working diff to the test files that name it - 31-145 of 507 test files, median 37, over every module the map names, not the seconds one machine spent on one of them (`UX-632`). `python3 tools/dev_touching.py --spread --write` is the only thing that writes that figure. Wider than one module, run the tier (`UX-238`). Every target runs `-n auto`. **The suite's wall clock is a property of the machine, not of the suite** (`UX-551`), so budget a round against the spread and not a figure:
 
 ```text
 round 46   3m15s                                     4 cores
@@ -81,7 +81,7 @@ Round 80's 8m52s is **not reproducible on the tree that produced it**: the same 
 
    | target | measured at `-n auto` | what is in it |
    |---|---|---|
-   | `make test-touching` | 31-145 of 505 test files, median 37 | the test files that name what your diff touched |
+   | `make test-touching` | 31-145 of 507 test files, median 37 | the test files that name what your diff touched |
    | `make test-small` | **20s** | pure Python over in-memory fixtures — the default tier |
    | `make test-medium` | ~2m50s | spawns a process or a node harness |
    | `make test-large` | ~2m05s | scale fixtures, real process trees |
@@ -357,6 +357,8 @@ tools/dev_flake_census.py    which files the flake ledger says need a
                              filed task or a declared reason (UX-691)
 tools/dev_junit_tail.py      which tests failed, from the junit a red job
                              kept - when the log tail is the wrong 400 lines (UX-554)
+tools/dev_commit_bodies.py   which commits a branch adds spend more than
+                             eight body lines, footer excluded (UX-696)
 tools/dev_js_deps.py         the viewer's module graph, derived: order, cycles, what would cross a cut (UX-340)
 tools/dev_perfetto_queries.py  the canned questions, run against a real
                              trace with Perfetto's own reader (UX-432)

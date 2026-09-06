@@ -629,6 +629,16 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -e ".[dev]"
+      # `UX-696`: `CLAUDE.md`'s register states an eight-line commit
+      # body and nothing read it. Measured on the branch that added the
+      # guard: eleven commits over, worst at fifteen. Commits before
+      # `RULE_FROM` are grandfathered by author date rather than by a
+      # list of hashes, which a merge would invalidate.
+      - name: A commit body is eight lines
+        run: |
+          git fetch --no-tags --depth=200 origin main
+          python3 tools/dev_commit_bodies.py origin/main
+
       - name: The configuration that steers the agent
         run: |
           python3 -m pytest tests/unit/test_the_agent_configuration_holds.py -q

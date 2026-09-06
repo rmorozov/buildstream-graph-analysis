@@ -1,7 +1,7 @@
 {
   "ruff_version": "0.15.8",
   "families": ["C901", "PLR0912", "PLR0913", "PLR0915", "S", "SIM115"],
-  "forced_by": "UX-702, UX-712, UX-703",
+  "forced_by": "UX-696",
   "findings": [
     {"file": ".claude/hooks/selector_before_commit.py", "line": "done = subprocess.run(", "nth": 1, "rule": "S603", "tool": "ruff"},
     {"file": ".claude/hooks/selector_before_commit.py", "line": "done = subprocess.run([\"git\", \"rev-parse\", \"--show-toplevel\"],", "nth": 1, "rule": "S607", "tool": "ruff"},
@@ -245,6 +245,8 @@
     {"file": "tools/dev_close_task.py", "line": "out = subprocess.run([\"git\", \"ls-files\", *extra], cwd=REPO, check=True,", "nth": 1, "rule": "S603", "tool": "ruff"},
     {"file": "tools/dev_close_task.py", "line": "done = subprocess.run([\"git\", \"diff\", \"HEAD\"], cwd=str(REPO),", "nth": 1, "rule": "S607", "tool": "ruff"},
     {"file": "tools/dev_close_task.py", "line": "out = subprocess.run([\"git\", \"ls-files\", *extra], cwd=REPO, check=True,", "nth": 1, "rule": "S607", "tool": "ruff"},
+    {"file": "tools/dev_commit_bodies.py", "line": "out = subprocess.run(", "nth": 1, "rule": "S603", "tool": "ruff"},
+    {"file": "tools/dev_commit_bodies.py", "line": "[\"git\", \"log\", f\"{base}..HEAD\", \"--no-merges\",", "nth": 1, "rule": "S607", "tool": "ruff"},
     {"file": "tools/dev_finding_coverage.py", "line": "done = subprocess.run([\"git\", \"ls-files\"], cwd=str(root),", "nth": 1, "rule": "S607", "tool": "ruff"},
     {"file": "tools/dev_js_deps.py", "line": "def main(argv=None):", "nth": 1, "rule": "C901", "tool": "ruff"},
     {"file": "tools/dev_js_deps.py", "line": "def strip_comments(source: str) -> str:", "nth": 1, "rule": "C901", "tool": "ruff"},

@@ -67,9 +67,18 @@ exits non-zero:
 - where the failure is a write, the path that could not be written is
   named. `bst`'s own diagnostics carry it; the wrapper discards it.
 
-Decide and say in the Outcome whether 255 should survive as the tool's
-exit code or be mapped — `UX-114`'s exit-code table is the contract
-this joins, and an undocumented 255 is itself a finding.
+**The decision, taken here: 255 survives, unmapped.**
+`docs/guides/cli.md:194` already states the contract — *`bga snapshot`
+exits with the wrapped build's own exit code* — and 255 is `bst`'s,
+not a code `bga` invented. Mapping it would break the one property a
+CI job depends on (the wrapped build's code reaches the caller) to
+compensate for a missing sentence, which is the wrong layer. The
+defect is that nothing in either stream says why; the number is
+correct and is not the finding.
+
+What the exit-code table does owe the reader is that this
+pass-through exists at all, so the fix states it where a reader
+meets the codes rather than only at line 194.
 
 ## Out of Scope
 

@@ -34,9 +34,29 @@ The `implementer` skill's brief template says how a track invokes the
 tool it is changing — `PYTHONPATH=<worktree> python3 -m bga.cli`, or
 cwd pinned to the worktree — and says why, in one line. Whether that
 belongs in the skill, in `dev_track_brief`'s generated text, or in a
-`conftest`-style guard that refuses a `bga` import resolving outside
-the tree it is invoked from is the judgement; the third catches it
-where it bites and the first two only tell someone about it.
+guard that refuses a `bga` import resolving outside the tree it is
+invoked from is the judgement; the third catches it where it bites and
+the first two only tell someone about it.
+
+**The decision, taken here: the third, as a warning at CLI startup,
+plus the brief line.** Not a `conftest` guard — this row's own
+Motivation measures `pytest` as unaffected, because every test file
+derives `REPO` from its own `__file__`. A `conftest` check would run
+where the trap is not and stay silent where it is.
+
+The place it bites is the manual CLI repro, so the check belongs at
+`bga`'s own startup, and it must be **precise enough to have no false
+positive for an ordinary user**: warn only when the current working
+directory is inside a checkout of *this* repository and the imported
+`bga` package resolves to a *different* checkout of it. A user running
+a system install from an unrelated directory is the normal case and
+must see nothing.
+
+Warn rather than refuse: the shadowed invocation still produces real
+output, and a round that knows what it is doing may want it. What
+round 98 lost was not the ability to run the command, it was the
+knowledge that the output came from somewhere else — so the sentence
+is the fix, and it names both paths.
 
 ## Out of Scope
 

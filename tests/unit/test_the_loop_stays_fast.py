@@ -161,6 +161,14 @@ class TestTheSelectorStillSelects:
         "bga/attribution/blame_chain.py", "bga/correlate.py",
         "bga/report/json.py",
         "bga/schemas.py",
+        # `UX-740`, round 102: 46 = 31 census + 16 named, one over the
+        # bound. Wide by **name**: loading a fixture run is what a guard
+        # does to get one, so `from bga.ingest.loader import load_all`
+        # is the sixteenth such line and the sixteenth is what tipped
+        # it. Its map entry is 193 files, seven times `MAP_ENTRY_CAP`,
+        # so `UX-605`'s rule discards it and the 16 are the whole
+        # selection.
+        "bga/ingest/loader.py",
         # `UX-624`: 14 -> 27. A one-word stem is not a token, so every
         # one of its 16 importers reached it only as `from bga import
         # contracts`; the width is those edges, not a looser rule.

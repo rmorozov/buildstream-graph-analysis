@@ -927,7 +927,7 @@ columns are the whole statement of what one of its rows holds, and
 finding one level up: `parallelism` is a top-level *object*, its
 `levels` rows are below that, and a population reaching only under a
 top-level array published the whole of a major bump outside itself.
-The surface is **257 keys** today, and that figure is derived from the
+The surface is **258 keys** today, and that figure is derived from the
 walk rather than typed here.
 
 So the statement of coverage, which is now a statement and not a
@@ -1016,6 +1016,7 @@ can look one up.
 | `shared_consumers` | In a `consolidation_candidates` row, the elements that always consume the candidate group together — the reason it is a group. |
 | `utilization_envelope`, `capacity_cores`, `busy_cores`, `busy_share` | Cores busy over the build against the smaller of `builders x max-jobs` and the host's cores (`UX-676`). The capacity is the smaller because a four-core host can never deliver sixteen, and a share against a number nothing can reach is not a verdict. `busy_cores` is the interval's own reading; `busy_share` is it over `capacity_cores`. |
 | `underutilized_intervals`, `overcommitted_intervals`, `lost_core_seconds` | The windows that violate the envelope, ranked and capped at forty. Under-utilized is one whole core idle while Plane 1 says there was work; overcommitted is load above the core count or a page written to swap. `lost_core_seconds` is the idle capacity times the window, which is what the ranking is by. |
+| `duration_resolution` | The elements this capture's epsilon grid published as zero (`UX-740`). Quantization rounds a span lying wholly inside one rounding bucket to a single grid point, so its duration and every share computed from it are zero - unmeasurable at this resolution, not instantaneous. Carries `epsilon_us`, the element names and the task keys. Absent when the run had none, so "nothing was erased" and "the tool does not check" stay distinguishable. |
 | `building`, `ready_not_dispatched`, `just_finished`, `successors_waiting` | In an interval row, what Plane 1 says was going on: the elements overlapping the window each with its own `max_jobs`, those dependency-ready and not dispatched for the whole of it, those that finished inside it, and the successors those unblocked that had not started. Which of the first two explains the idle core is `UX-677`'s question, not this table's. |
 | `start_us`, `load1` | In an interval row, where the window starts on the build's own wall clock, and the host's one-minute load average through it — runnable *and* uninterruptible tasks, which is what separates a busy machine from a blocked one. |
 | `allows` | In a `capacity_recommendation.constraints` row, how many builders that one ceiling permits, beside the `name` of the ceiling and the `reason` it was measured. A ceiling with no measurement behind it is absent rather than infinite. |

@@ -33,7 +33,7 @@ from .graph.edg import (
 )
 from .ingest.loader import load_all
 from .ingest.models import STRUCTURAL_ELEMENT_KINDS, AnalysisResult, Graph, RunContext, TaskKind, Trace
-from .normalize.timestamps import normalize_trace
+from .normalize.timestamps import normalize_trace, spans_below_resolution
 from .occupancy.sweep import compute_occupancy_stats, compute_task_horizon
 from .replay.scheduler import ReplayScheduler
 from .structural import StructuralAnalyzer
@@ -1299,6 +1299,32 @@ class BuildEfficiencyAnalyzer:
             'skipped_inputs': skipped,
         }
 
+    def _build_duration_resolution(self) -> dict:
+        """`UX-740`: the tasks this run's epsilon grid published as zero.
+
+        Absent (`{}`) when none were, which is a fact about the run -
+        `underutilized_intervals`' rule. A count of elements rather than
+        a share, and the epsilon beside it, because "unmeasurable"
+        without the resolution is not a statement.
+        """
+        epsilon_us = self.run_context.trace_epsilon_us if self.run_context else 50000
+        erased = spans_below_resolution(self.trace.spans if self.trace else [], epsilon_us)
+        if not erased:
+            return {}
+        elements = sorted({key.split("|", 1)[0] for key in erased})
+        return {
+            "epsilon_us": epsilon_us,
+            "element_count": len(elements),
+            "elements": elements,
+            "tasks": sorted(erased),
+            "note": (
+                f"{len(elements)} element(s) ran for less than half this "
+                f"capture's {epsilon_us} us resolution, so every duration and "
+                f"share computed for them is published as zero. They are "
+                f"unmeasurable at this epsilon, not instantaneous."
+            ),
+        }
+
     def _build_capacity_model_note(self) -> str:
         """UX-13: `LB`/`Efficiency Score` are correctly computed per spec
         Part 16, but only ever certify against this run's *recorded*
@@ -1666,6 +1692,11 @@ class BuildEfficiencyAnalyzer:
         # on it instead of deriving a second, independent capacity
         # formula (UX-17's own resolved rule).
         result.capacity_verdict = self._build_capacity_verdict()
+
+        # `UX-740`: and which durations this run's grid could not express
+        # at all. Absent when none - the run had none, not the tool had
+        # nothing to say.
+        result.duration_resolution = self._build_duration_resolution()
         
         # Confidence (Part 33) - rendered by the full report only (both
         # formatters gate it on `section is None`), and it consumes

@@ -60,6 +60,10 @@ ANALYSIS_ADDITIONS = {
     # CPU series entirely (`UX-675`).
     "utilization_envelope", "underutilized_intervals",
     "overcommitted_intervals",
+    # `UX-740`: which of this run's durations the epsilon grid could not
+    # express. Additive for the same reason - 32.4 states the grid but
+    # not what falls through it.
+    "duration_resolution",
 }
 
 # Likewise for 32.1's six against what `load_run_context` reads.

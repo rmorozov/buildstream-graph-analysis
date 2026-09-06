@@ -263,6 +263,12 @@ def build_document(result: AnalysisResult, section: Optional[str] = None, by_kin
     if section is None and getattr(result, 'capacity_verdict', None):
         data['capacity_verdict'] = result.capacity_verdict
 
+    # `UX-740`: and which of this run's durations the grid published as
+    # zero. Absent when none were, so "nothing was erased" and "the tool
+    # does not check" stay distinguishable by presence.
+    if section is None and getattr(result, 'duration_resolution', None):
+        data['duration_resolution'] = result.duration_resolution
+
     # UX-275: and what the capacity *should* be. Computed since UX-116,
     # rendered in full by the text report, and dropped here - so the
     # tool's answer to the question this backlog opened with (`UX-09`:

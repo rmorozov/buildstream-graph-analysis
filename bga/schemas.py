@@ -791,6 +791,10 @@ _ANALYZE_OPTIONAL = {
     "utilization_envelope": "object",
     "underutilized_intervals": "array",
     "overcommitted_intervals": "array",
+    # `UX-740`: the durations this run's epsilon grid could not express.
+    # Absent when it expressed all of them - a fact about the run, so it
+    # sits with the run-dependent keys below rather than the pinned ones.
+    "duration_resolution": "object",
     "run_instance": "object",
     # UX-249: which build of `bga` wrote this document, and the contract
     # set it had. An *addition*, so no version bump - UX-190's rule.
@@ -1380,6 +1384,10 @@ ANALYZE_RUN_DEPENDENT_KEYS = (
     # which is a fact about the run - `utilization_envelope`'s shares
     # carry the same answer as numbers.
     "underutilized_intervals", "overcommitted_intervals",
+    # `UX-740`: same rule - a run with no task under half the epsilon
+    # has nothing to disclose, and an empty object would read as a
+    # disclosure that found nothing.
+    "duration_resolution",
 )
 
 _COMPARE_REQUIRED = {
@@ -3173,6 +3181,39 @@ _ANALYZE_HINTS = {
                 "description": "The missing inputs, named - so a reader can "
                                "supply them rather than guess why the check "
                                "said nothing."},
+        },
+    },
+    "duration_resolution": {
+        QUESTION: 'Which durations could this capture not express?',
+        RAIL: 'prove',
+        "description": "Elements that ran for less than half the trace "
+                       "epsilon. Quantization rounds both their endpoints "
+                       "to one grid point, so every duration and share "
+                       "computed for them is zero - unmeasurable at this "
+                       "resolution, not instantaneous. Absent when the run "
+                       "had none.",
+        "properties": {
+            "epsilon_us": {
+                QUANTITY: "duration_us",
+                "description": "The grid in force. Without it "
+                               "\"unmeasurable\" names no threshold."},
+            "element_count": {
+                "description": "How many elements, not how many tasks - "
+                               "the reader acts on elements."},
+            "elements": {
+                "description": "Which ones, named, so the reader can see "
+                               "whether any figure they were about to use "
+                               "rests on one."},
+            "tasks": {
+                "description": "The task keys behind the element list, for "
+                               "a consumer joining on the trace."},
+            "note": {
+                "description": "The sentence, so a consumer that renders "
+                               "nothing else still says why the zeros are "
+                               "there. Not declared inline: the section is "
+                               "absent on a run with nothing erased, and a "
+                               "key that promises to render cannot keep it "
+                               "on the runs that carry no section."},
         },
     },
     "violations": {QUESTION: 'What did not add up?', RAIL: 'prove'},

@@ -110,8 +110,12 @@ class TestTheSelectorStillSelects:
     #: the census can never grow - which is the opposite of what
     #: `UX-718` argued. The 14 of your own is unchanged, and that is
     #: the half this bound is actually about.
-    HANDFUL = 27
-    CENSUS_FLOOR = 13
+    #:
+    #: Round 98 moved it 13 -> 14, declaring `UX-713`'s skill-membership
+    #: guard (it walks `.claude/skills/` and no grep selects it). Same
+    #: arithmetic: 27 -> 28, so "14 of your own" still holds.
+    HANDFUL = 28
+    CENSUS_FLOOR = 14
 
     # Wide because the module's name is how a test invokes it, not
     # because the selector is wrong. `UX-606` argued each one.
@@ -156,7 +160,9 @@ class TestTheSelectorStillSelects:
         `UX-624` re-measured it at min 11 / median 17 / p90 40 / max
         124 after the import spelling joined the grep; `UX-718` at min
         13 / median 19 / p90 41 / max 127 after the census took two
-        more."""
+        more; round 98 at min 14 / median 20 / p90 43 / max 128 over
+        87 modules, after the census took one more. p90 moved by two,
+        not one - the floor is flat, the tail is not."""
         selected, _ = dev_touching.select(["bga/store_aggregate.py"])
         assert 1 <= len(selected) <= self.HANDFUL, (
             f"a one-module diff selected {len(selected)} files. The point is "

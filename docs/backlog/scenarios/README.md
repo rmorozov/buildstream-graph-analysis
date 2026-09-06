@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-723 scenarios: **38 open**, 685 closed.
+724 scenarios: **39 open**, 685 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -27,7 +27,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | cli | 1 | 22 |
 | store | 0 | 16 |
 | docs | 8 | 116 |
-| guards | 11 | 162 |
+| guards | 12 | 163 |
 
 ## Open scenarios
 
@@ -74,6 +74,7 @@ task file, which is the only place it ever lived twice.
 | UX-724 | [the diagnostics blocks vanish on a fully cached run](UX-0724-the-diagnostics-blocks-vanish-on-a-fully-cached-run.md) | analysis | Medium | R2 and R3, reading an incremental run's report | 🔴 |
 | UX-725 | [`bga view --export` prints two ERROR lines and exits 0](UX-0725-view-export-prints-two-error-lines-and-exits-zero.md) | cli | Medium | anyone exporting a run whose neighbour is a different run mode | 🔴 |
 | UX-726 | [no flag omits Plane 2, and the empty one says nothing](UX-0726-no-flag-omits-plane-2-and-the-empty-one-says-nothing.md) | capture | High | anyone who wants a Plane 1 capture, and every reader of a run that has an empty Plane 2 | 🔴 |
+| UX-727 | [a design review report has no shape a guard can read](UX-0727-a-design-review-report-has-no-shape-a-guard-can-read.md) | guards | Medium | the release gate, and the round reading a review it did not run | 🔴 |
 
 ## UX-706..UX-711: the ninety-fourth round — the pipeline, and which model runs which shape (2026-09-05)
 

@@ -840,7 +840,18 @@ COMMITTED_EXPORTS = [
     # travels whether or not a run has host CPU samples - neither
     # committed fixture does. Not moved here because it is not tripped:
     # 449,000 still leaves 1,210 B.
-    ("golden", GOLDEN, 449_000),                       #  447,790 B
+    # `UX-667`: 449,000 -> 453,000. Measured at 446,559 before the round
+    # and 450,317 after, +3,758 B. Attributed by diffing the two exports
+    # line by line rather than guessed: the 69 added lines are the rail's
+    # own `.toc .chapters` / `button.toc-chapter-open` CSS and markup.
+    # The session first read this growth as `UX-740`'s new schema entry -
+    # it is not; `duration_resolution` occurs once in the page and golden
+    # publishes no such section at all. The track moved the `macro_micro`
+    # row for its rail work and left this one, which is the same class of
+    # miss the round has been finding: a second bound the diff selects
+    # but the track did not look at.
+    # 453,000 leaves 2,683 B, the same order as the 2,441 it had.
+    ("golden", GOLDEN, 453_000),                       #  450,317 B
     # `UX-297` moved this one by 385 B before that: the two-plane run
     # publishes `plane2_coverage.source`, which says which shape of
     # Plane 2 report served its numbers and what that costs to open. A

@@ -77,7 +77,13 @@ import skip_reasons
 #: guard, `test_a_rail_click_lands_on_its_section.py`, whose
 #: module-level `needs_browser` reads `browser.NO_BROWSER` like
 #: the other forty-three.
-UNRESOLVABLE = 63
+#: `UX-667` argues **one** more, to 64: the forty-fifth browser
+#: guard, `test_the_rail_is_a_source_list.py`, same form again. Its
+#: track reported this clause as failing on its base and worked
+#: around it with `BGA_SKIP_SELECTOR=1`; it does not - checked out at
+#: `origin/main` the clause passes, so the sixty-fourth is the file
+#: the track itself added.
+UNRESOLVABLE = 64
 
 
 def test_every_declared_skip_reason_is_known():

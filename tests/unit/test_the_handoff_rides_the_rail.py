@@ -161,8 +161,13 @@ class TestItIsReachableFromTheLastScreen:
         """
         order = at_the_bottom["railOrder"]
         assert "actions-group" in order, order
+        # `UX-667` moved the marker one level down: the chapter rows
+        # became a disclosure list, so `toc-rail` is now inside
+        # `.chapters` rather than a child of `nav.toc`. The claim is
+        # unchanged - what the rail's own scroll can hide is what sits
+        # below the chapter list.
         first_chapter = next(
-            (at for at, name in enumerate(order) if "toc-rail" in name), None)
+            (at for at, name in enumerate(order) if "chapters" in name), None)
         assert first_chapter is not None, order
         assert order.index("actions-group") < first_chapter, order
 

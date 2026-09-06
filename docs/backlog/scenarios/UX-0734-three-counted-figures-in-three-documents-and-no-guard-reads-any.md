@@ -1,6 +1,6 @@
 # UX-734: three counted figures in three documents, and no guard reads any
 
-**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** UX-549 (which built the sweep these three join), UX-569, UX-576 | **Serves:** the next reader who takes one of these numbers as arithmetic | **Topic:** docs | **Shape:** judgement | **Area:** tools
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-549 (which built the sweep these three join), UX-569, UX-576 | **Serves:** the next reader who takes one of these numbers as arithmetic | **Topic:** docs | **Shape:** judgement | **Area:** tools
 
 ## Motivation
 
@@ -29,11 +29,20 @@ the numeral out of true.
 $ sed -n '41p' docs/audits/agent-runs.md
 What the twenty-four rows already say: a researcher that reads a document
 
-$ awk '/^\| /{n++} END{print n-2}' docs/audits/agent-runs.md
-25
+$ grep -c "^|" docs/audits/agent-runs.md          # header + separator + rows
+28
+$ python3 -c "…rows that are neither the header nor the separator…"
+26
 ```
 
-Wrong by one, and the population is that document's own table.
+Wrong by two, and the population is that document's own table. The
+review filed this with **25**, from `awk '/^\| /{n++} END{print n-2}'`
+— a pattern that requires `| ` and so never matched the `|---|`
+separator, then subtracted it anyway. The finding held; its
+replacement figure did not, and the track that closed this row caught
+it. Corrected here and in the review's own section, not overwritten:
+the wrong command is the record of how a review can restate a bare
+number with another bare number.
 
 ```console
 $ grep -o "Parts 0-40[^|]*" docs/README.md

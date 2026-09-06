@@ -1,0 +1,21 @@
+name: Quality
+
+on:
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "0 6 * * 1"
+
+jobs:
+  eslint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # UX-699: `eslint-plugin-import` throws with no `package.json`
+      # findable above the linted file; the checkout itself must stay
+      # without one, so this writes a throwaway one beside it instead.
+      - name: Lint the viewer
+        run: |
+          echo '{"private":true}' > "${GITHUB_WORKSPACE}/../package.json"
+          npx --yes --package eslint@9 --package eslint-plugin-import@2 \
+            --package globals@17 -- eslint bga/viewer

@@ -99,7 +99,6 @@ function scaleFor(grade) {
 }
 
 /** The annotation box, kept as named constants for the §2 geometry guards. */
-export const SPARK_WIDTH = SCALE[GRADE_ANNOTATION].width;
 export const SPARK_HEIGHT = SCALE[GRADE_ANNOTATION].spark;
 export const STRIP_HEIGHT = SCALE[GRADE_ANNOTATION].strip;
 

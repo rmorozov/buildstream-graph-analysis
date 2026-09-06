@@ -1,6 +1,6 @@
 # UX-730: a derived figure over the whole test tree has no refresh route
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-716 (the same class, in the timing mechanism), UX-662 (which retires the map's readers), UX-336 (the selector) | **Serves:** every round that adds a test file, and the branch that pays for it | **Topic:** guards | **Shape:** bounded | **Area:** tools
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-716 (the same class, in the timing mechanism), UX-662 (which retires the map's readers), UX-336 (the selector) | **Serves:** every round that adds a test file, and the branch that pays for it | **Topic:** guards | **Shape:** bounded | **Area:** tools
 
 ## Motivation
 

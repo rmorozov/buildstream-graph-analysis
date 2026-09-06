@@ -144,10 +144,77 @@ answer does not transfer is what this measurement corrects: the proxy
 is not elapsed time, it is Plane 1's element duration standing in for
 the process's.
 
-Two readings are not a law. What the next round needs before choosing
-is the distribution of Plane 1 minus Plane 2 over a quiet run, which
-is the budget an asymmetric bound would be set from - and that reading
-touches `UX-110`, so the two should be taken together.
+### The asymmetric bound, measured and then falsified
+
+The distribution the paragraph above asked for, taken: 10 traced
+builds on a quiet host, 80 elements compared, signed `Plane 1 - Plane 2`:
+
+```text
+  min -0.362   p10 -0.355   median -0.006   p90 -0.004   max -0.002
+  negative (Plane 1 short): 80 of 80
+```
+
+Every sample negative, bimodal at -0.005 and -0.36 - the burst-flush
+lag the clause's own docstring names. So the quiet host says: Plane 1
+only ever runs short, by at most 0.362s.
+
+That was built into a split tolerance - `PLANE1_SHORT_S = 0.5` against
+`PLANE1_LONG_S = 5.0` - and all four mutations behaved:
+
+| mutation | expected | got |
+|---|---|---|
+| Plane 1 0.8s short, past the 0.5 bound | red | red, delta -0.807 |
+| Plane 1 6s long, past the 5.0 bound | red | red, delta +5.994 |
+| Plane 1 3s long, inside 5.0 (the contention case) | green | green |
+| short bound widened to 10.0, same 0.8s offset | green | green |
+
+**Then the acceptance test killed it.** Under four concurrent suites
+the failure moved to the short side:
+
+```text
+=== under load round=3 load=22.80/25.36 ===
+E   AssertionError: work-h.bst: Plane 2 3.008s against Plane 1 2.233s,
+    delta -0.775s
+```
+
+Plane 1 read 2.233s for a `sleep 3`. Contention stretches the
+burst-flush lag too, so 0.5 (sized from a quiet-host population of 80)
+does not bound the loaded case. At load 20-25 `SLEEP_TOLERANCE_S`
+reddened as well, which it had not done at load 19. The change is
+reverted; `PLANE_AGREEMENT_S` stands at 1.0.
+
+**And it corrects the section above.** "One-directional" was wrong: the
+delta runs -0.775 to +1.02 under load and -0.362 to -0.002 quiet. Both
+sides stretch, and the bound was sized from a population that excludes
+the case it has to survive - the fixing guide's own §5 shape, made by
+the session this time.
+
+### A caveat on the loaded readings
+
+The four-suite runs were also filling the disk: they left 3.8 GB in
+`/tmp/pytest-of-root`, and once free space ran out `bst` began failing
+outright with `Cache too full` and exit 255, which is a build failure
+rather than a timing one. Clearing that and re-running on a quiet box
+gives `2 passed in 27.39s`, so the revert is clean and the 255s were
+the session's own mess.
+
+What it means for the readings above is that "four concurrent suites"
+understates the condition: the box was also under heavy write I/O and
+approaching a full disk. I/O contention is still contention, and the
+-0.775s reading stands as a reading, but a later round reproducing
+this should watch free space as well as load, or it may not see the
+same numbers on a box with headroom.
+
+### What is left
+
+Three of the four routes are now closed by measurement rather than
+argument: widen (rejected on sight), skip on load (no threshold
+exists), asymmetric bound (both sides stretch). What remains is the
+route the row listed third - **read something the contention cannot
+move**. `IDLE_CPU_US` already does this and held at every load point
+tried, which is the existence proof. The open question is whether the
+*span* half can be re-expressed the same way, and it is a question
+about the spine's records rather than about tolerances.
 
 ## Out of Scope
 

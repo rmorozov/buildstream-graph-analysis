@@ -33,6 +33,7 @@ import datetime
 import pathlib
 import re
 import subprocess
+import sys
 
 import pytest
 
@@ -286,17 +287,61 @@ def _commits_touching(*revs):
     return done.stdout.split()
 
 
+def merge_has_no_claim(parent_count, combined_diff_is_empty):
+    """`UX-732`: a merge's `--cc` diff omits every hunk that already
+    matches a parent, so an empty one means every line of the result
+    matches *some* side - the merge decided nothing of its own. Not the
+    blob: a clean recombination (one side's count, the other's entry)
+    matches neither parent's whole file yet has no hunk, and is
+    correctly not a landing either. A resolution that writes text
+    present in *neither* side produces a hunk and still counts. Pure,
+    so `_merge_has_no_claim` is the git half.
+    """
+    return parent_count > 1 and combined_diff_is_empty
+
+
+def _merge_has_no_claim(sha, parents):
+    """`merge_has_no_claim` over this clone's combined diff for `DOC`.
+
+    A non-zero git exit reads as "has a claim" - conservative, the same
+    direction `_only_a_derived_figure_moved` already takes, so a commit
+    this clone cannot examine is never the reason `stale` says nothing
+    landed.
+    """
+    if len(parents) <= 1:
+        return False
+    done = subprocess.run(["git", "diff-tree", "--cc", sha, "--", str(DOC)],
+                          capture_output=True, text=True, cwd=REPO, timeout=60)
+    if done.returncode != 0:
+        return False
+    body = done.stdout.split("\n", 1)
+    empty = not (body[1].strip() if len(body) > 1 else "")
+    return merge_has_no_claim(len(parents), empty)
+
+
 def _landed_after(anchor):
     """The substantive commits touching `DOC` that `anchor` does not carry.
 
     `UX-652`: reachability, not a clock. `<anchor>..HEAD` is what the
     entry does not describe, whatever day any of it was written on;
     `only_the_count_moved` is the same exclusion as before.
+
+    `UX-732`: the default log, not `--full-history` - the merge this
+    row exists for reaches this query already (its `DOC` blob differs
+    from both parents, so it is not TREESAME to either and default
+    history simplification does not prune it); the combined-diff check
+    below is what discriminates it from a real resolution, not a wider
+    range.
     """
-    found = _commits_touching(f"{anchor}..HEAD")
-    if found is None:
+    done = subprocess.run(
+        ["git", "log", "--format=%H%x09%P", f"{anchor}..HEAD", "--", str(DOC)],
+        capture_output=True, text=True, cwd=REPO, timeout=60)
+    if done.returncode != 0:
         return None
-    return [sha for sha in found if not _only_a_derived_figure_moved(sha)]
+    rows = [line.split("\t", 1) for line in done.stdout.splitlines() if line]
+    return [sha for sha, parents in rows
+            if not _only_a_derived_figure_moved(sha)
+            and not _merge_has_no_claim(sha, parents.split())]
 
 
 def _describe(shas):
@@ -522,6 +567,129 @@ class TestTheGuardWouldHaveCaughtIt:
         if not newest:
             pytest.skip(NO_HISTORY)
         assert not stale(_landed_after(newest[0]))
+
+
+def _git(cwd, *args):
+    return subprocess.run(["git", *args], cwd=cwd, capture_output=True,
+                          text=True, timeout=60)
+
+
+def _write(repo, body):
+    (repo / DOC_REL).write_text(
+        "# Architecture\n\n## Verification Log\n\n"
+        "append-only below its newest entry\n\n" + body, encoding="utf-8")
+
+
+@pytest.fixture
+def merge_repo(tmp_path, monkeypatch):
+    """A throwaway repository, so a merge can be shaped without touching
+    this one's real history (`UX-732`). This module's `REPO`/`DOC`
+    globals are what every function above reads, so the fixture points
+    them here rather than passing a root through each call.
+    """
+    (tmp_path / "docs" / "design").mkdir(parents=True)
+    _write(tmp_path, "Updated 2026-01-01 (after `UX-1`), the base.\n")
+    _git(tmp_path, "init", "-q")
+    _git(tmp_path, "config", "user.email", "t@t.example")
+    _git(tmp_path, "config", "user.name", "t")
+    _git(tmp_path, "add", DOC_REL)
+    _git(tmp_path, "commit", "-q", "-m", "base")
+    monkeypatch.setattr(sys.modules[__name__], "REPO", tmp_path)
+    monkeypatch.setattr(sys.modules[__name__], "DOC", tmp_path / DOC_REL)
+    return tmp_path
+
+
+#: A count-conflict fixture's shared line - real shape, so
+#: `_only_a_derived_figure_moved` reads it the way it reads the actual
+#: document (`UX-620`'s `_COUNT` pattern).
+_COUNT_LINE = "{n} `docs/backlog/scenarios/` files.\n"
+
+
+class TestAMergeCanCarryAnEntryWithoutLanding:
+    """`UX-732`. `closing_commit`'s anchor sits on the track branch, so
+    the `--no-ff` merge that brings it in is always in `anchor..HEAD` -
+    the fix is what `_landed_after` does with that merge, not where the
+    anchor sits.
+
+    Real history's shape (`2a0bf0f`, round 98's first track merge):
+    master rewrites the derived-count line on nearly every commit, so a
+    clean 3-way of "master moved the count" and "the track added the
+    entry" is the common case, not the rare one - and its blob matches
+    *neither* parent even though it decided nothing of its own. The
+    three tests below are, in order, no other side at all, that clean
+    recombination, and a resolution that writes a count present in
+    neither parent - the only one of the three with a claim.
+    """
+
+    def test_a_merge_with_no_other_side_is_not_a_landing(self, merge_repo):
+        """The literal Acceptance Test: nothing else ever touched `DOC`,
+        so the merge carries track's commit forward untouched."""
+        _git(merge_repo, "checkout", "-q", "-b", "track")
+        _write(merge_repo, "Updated 2026-01-02 (after `UX-900`), track's own.\n")
+        _git(merge_repo, "add", DOC_REL)
+        _git(merge_repo, "commit", "-q", "-m", "UX-900: entry")
+        anchor = _git(merge_repo, "rev-parse", "HEAD").stdout.strip()
+        _git(merge_repo, "checkout", "-q", "master")
+        _git(merge_repo, "merge", "--no-ff", "-q", "-m", "Merge track",
+            "track")
+        assert not stale(_landed_after(anchor))
+
+    def _count_conflict(self, repo):
+        """A base doc with a real derived-count line, then a genuine
+        conflict on it: track bumps it *and* adds its own entry (a
+        different region, so that half auto-merges regardless); master
+        bumps it to a different value on an ordinary commit."""
+        (repo / DOC_REL).write_text(
+            "# Architecture\n\n" + _COUNT_LINE.format(n=5) +
+            "\n## Verification Log\n\nappend-only below its newest entry\n")
+        _git(repo, "add", DOC_REL)
+        _git(repo, "commit", "-q", "-m", "base count")
+        _git(repo, "checkout", "-q", "-b", "track")
+        (repo / DOC_REL).write_text(
+            "# Architecture\n\n" + _COUNT_LINE.format(n=6) +
+            "\n## Verification Log\n\nappend-only below its newest entry\n\n"
+            "Updated 2026-01-02 (after `UX-900`), track's own.\n")
+        _git(repo, "add", DOC_REL)
+        _git(repo, "commit", "-q", "-m", "UX-900: entry")
+        anchor = _git(repo, "rev-parse", "HEAD").stdout.strip()
+        _git(repo, "checkout", "-q", "master")
+        (repo / DOC_REL).write_text(
+            "# Architecture\n\n" + _COUNT_LINE.format(n=7) +
+            "\n## Verification Log\n\nappend-only below its newest entry\n")
+        _git(repo, "add", DOC_REL)
+        _git(repo, "commit", "-q", "-m", "bump count")
+        conflicted = _git(repo, "merge", "--no-ff", "-m", "Merge track",
+                          "track")
+        assert "CONFLICT" in conflicted.stdout, conflicted.stdout
+        return anchor
+
+    def test_a_clean_recombination_is_not_a_landing(self, merge_repo):
+        """`2a0bf0f`'s shape: resolved by keeping master's newer count
+        *and* track's entry - the blob matches neither parent, but
+        every line matches one of them, so `--cc` has no hunk and the
+        merge decided nothing of its own."""
+        anchor = self._count_conflict(merge_repo)
+        (merge_repo / DOC_REL).write_text(
+            "# Architecture\n\n" + _COUNT_LINE.format(n=7) +
+            "\n## Verification Log\n\nappend-only below its newest entry\n\n"
+            "Updated 2026-01-02 (after `UX-900`), track's own.\n")
+        _git(merge_repo, "add", DOC_REL)
+        _git(merge_repo, "commit", "-q", "-m", "Merge track")
+        assert not stale(_landed_after(anchor))
+
+    def test_a_conflict_resolved_with_new_content_is_a_landing(
+            self, merge_repo):
+        """Resolved by writing a count present in *neither* parent -
+        `--cc` has a hunk for that line, so this is a real landing, the
+        half that keeps this from reading as "skip merges"."""
+        anchor = self._count_conflict(merge_repo)
+        (merge_repo / DOC_REL).write_text(
+            "# Architecture\n\n" + _COUNT_LINE.format(n=8) +
+            "\n## Verification Log\n\nappend-only below its newest entry\n\n"
+            "Updated 2026-01-02 (after `UX-900`), track's own.\n")
+        _git(merge_repo, "add", DOC_REL)
+        _git(merge_repo, "commit", "-q", "-m", "Merge track")
+        assert stale(_landed_after(anchor))
 
 
 class TestTheEntriesAreReadAsWritten:

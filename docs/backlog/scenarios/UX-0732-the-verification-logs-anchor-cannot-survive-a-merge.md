@@ -80,3 +80,44 @@ A track commit that writes the entry, merged with `--no-ff`, leaves
 the guard green; a merge that resolves a conflict *inside* the log
 leaves it red. Mutation: make the skip unconditional on parent count —
 the conflict case goes green and the guard reds.
+
+## Outcome
+
+**Deviation.** The "decision, taken here" chose the blob comparison.
+This pass measured it wrong against the merge the row exists for:
+`2a0bf0f^1:DOC` = `b354827…`, `^2:DOC` = `1340b1b…`, `2a0bf0f:DOC` =
+`dc38a08…` — the merge's blob equals **neither** parent, so `blob in
+parent_blobs` calls it a landing, the exact commit this row exists to
+stop calling one. It is not rare: master rewrites the derived-count
+line on nearly every commit, so "master moved the count, track added
+the entry" is a clean 3-way whose blob is in neither parent every
+time. The combined diff replaces it: `git diff-tree --cc <sha> --
+DOC`, empty when every line already matches a parent —
+`git diff-tree --cc 2a0bf0f -- docs/design/architecture.md | wc -c` →
+`41` (the sha line, no hunk). `_landed_after` keeps the default range;
+`--full-history` is dropped — `2a0bf0f` reaches
+`<anchor>..HEAD -- DOC` today (its blob is TREESAME to neither
+parent), confirmed against this repository's own history with
+`409fe54..2a0bf0f -- DOC` (`UX-713`'s own closing commit as anchor),
+which lists `2a0bf0f`. `closing_commit` stays untouched.
+
+**Gap, measured.** The blob-route code (this branch's prior commit)
+against the new fixture (`2a0bf0f`'s shape: a real same-line conflict
+resolved by keeping master's newer count *and* track's entry, so the
+blob matches neither parent but every line matches one side):
+`assert not stale(_landed_after(anchor))` →
+`AssertionError: assert not True … stale(['a896570…'])`.
+
+**Close, measured.** With the combined-diff check: `pytest
+tests/unit/test_the_verification_log_is_true.py -q` → `30 passed`.
+Three directions: no other side at all → `not stale([])`; the clean
+recombination above (`--cc` empty) → `not stale([])`; the same
+conflict resolved by writing a count in *neither* parent (`--cc` has a
+hunk) → `stale(['<merge sha>'])`.
+
+**Mutation table.**
+
+| mutation | reddened | count |
+|---|---|---|
+| `merge_has_no_claim`: unconditional on parent count (drop the diff test) — the Acceptance Test's own mutation | `test_a_conflict_resolved_with_new_content_is_a_landing` | 1 failed, 29 passed |
+| `_merge_has_no_claim`: reintroduce the blob comparison | `test_a_clean_recombination_is_not_a_landing` (`2a0bf0f`'s shape) | 1 failed, 29 passed |

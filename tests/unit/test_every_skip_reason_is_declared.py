@@ -73,7 +73,11 @@ import skip_reasons
 #: `needs_browser` reads `browser.NO_BROWSER` like the other
 #: forty-two. Its two module-scoped fixtures skip on nothing of
 #: their own.
-UNRESOLVABLE = 62
+#: `UX-670` argues **one** more, to 63: the forty-fourth browser
+#: guard, `test_a_rail_click_lands_on_its_section.py`, whose
+#: module-level `needs_browser` reads `browser.NO_BROWSER` like
+#: the other forty-three.
+UNRESOLVABLE = 63
 
 
 def test_every_declared_skip_reason_is_known():

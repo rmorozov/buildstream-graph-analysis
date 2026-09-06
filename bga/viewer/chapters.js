@@ -592,6 +592,44 @@ export function revealChapter(node) {
   return box ?? null;
 }
 
+/**
+ * Open `node`'s chapter, then land on `node` once its real height is in.
+ *
+ * `UX-670`: `content-visibility: auto` (`UX-399`) estimates the height
+ * of a folded chapter's unrendered sections, so the scroll that
+ * follows the fold opening runs against the estimate. Measured on
+ * `macro_micro` at 1440x900, one fresh load per link, section top
+ * against the 104 px a correct landing gives: `whatif` -736,
+ * `perfetto-questions` -576, `restructuring` -317,
+ * `critical_path_detail` +673.
+ *
+ * It lands **twice**: once now, which is the only landing the jump box
+ * gets (a rail link has the browser's own anchor scroll and the jump
+ * box has none), and once two frames later, when the opened chapter's
+ * real height is in. Measured on `macro_micro`, the 61 folded section
+ * links, section top against the 104 px a correct landing gives:
+ *
+ * ```text
+ * now only            55 correct     the browser's scroll runs after this
+ * one frame later      6 correct     mid-layout: the estimate is still live
+ * two frames later    55 correct
+ * ```
+ *
+ * One frame is worse than none, which is why this is two and not a
+ * number anybody picked. `scrollIntoView` reads `scroll-margin-top`,
+ * where the sticky header's height lives, so no offset is repeated
+ * here.
+ */
+export function revealAndLand(node, behavior) {
+  const box = revealChapter(node);
+  const land = () => node?.scrollIntoView?.(
+    behavior ? { behavior, block: "start" } : undefined);
+  land();
+  const frame = globalThis.requestAnimationFrame;
+  if (frame) frame(() => frame(land));
+  return box;
+}
+
 /** The chapter boxes already in the document: `id -> box`. */
 function openBoxes(root) {
   const boxes = new Map();

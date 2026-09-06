@@ -441,6 +441,12 @@ SMALL_TIER_BACKSTOP_1P_S = 120.0  # the single-process step's timeout
 # divides the runner out before it looks at any file.
 
 LARGE = (
+    # `UX-670`, tiered on landing. **61 fresh page loads**, one per
+    # folded rail link: the first click renders a chapter and a
+    # rendered chapter has a real height, so a second link driven on
+    # the same load would be measured against the fix. Three
+    # single-process runs: 24.98 / 24.16 / 24.07s.
+    "tests/unit/test_a_rail_click_lands_on_its_section.py",          #   24.1s
     # `UX-435`, then `UX-451`. It was medium at 14.2s - "just under the
     # large floor", which is a note about a file one clause from
     # crossing it. `UX-451` added the refused state: a second served

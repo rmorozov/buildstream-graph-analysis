@@ -341,9 +341,8 @@ class TestTheReleaseConsumesTheReview:
 _CANDIDATE_FILES = ("bga/bundle.py", "bga/hostinfo.py", "bga/plane2.py",
                     "bga/run_store.py", "bga/schemas.py", "bga/sources.py",
                     "bga/cli.py", "bga/tools_dispatch.py")
-_WALK_DATE = re.compile(r"Base\s+`[0-9a-f]{7,40}`,\s*(\d{4}-\d{2}-\d{2})")
-_FINDINGS_BLOCK = re.compile(r"(?ms)^findings\s+(.*?)^rows added\s")
-_FILED = re.compile(r"→\s*(UX-\d+)")
+from tools.dev_audit_reports import REPORT_DATE as _WALK_DATE
+from tools.dev_audit_reports import filed_findings
 
 
 def candidate_commit_date():
@@ -413,9 +412,7 @@ class TestTheReleaseConsumesTheWalk:
         for path, text in reports.items():
             date = _WALK_DATE.search(text)
             assert date, f"{path}: no `Base \\`<hash>\\`, <date>` line"
-            block = _FINDINGS_BLOCK.search(text)
-            assert block, f"{path}: no findings block"
-            found[path] = (date.group(1), set(_FILED.findall(block.group(1))))
+            found[path] = (date.group(1), filed_findings(text))
         assert found.get("docs/audits/walk-seed-1.md") == ("2026-09-06", {"UX-723"})
         assert found.get("docs/audits/walk-seed-2.md") == (
             "2026-09-06", {"UX-724", "UX-725"})
@@ -432,14 +429,67 @@ class TestTheReleaseConsumesTheWalk:
             encoding="utf-8") for name in ("README.md", "closed.md")}
         filed = set()
         for _, text in audits_documents():
-            block = _FINDINGS_BLOCK.search(text) if is_walk_report(text) else None
-            if block:
-                filed |= set(_FILED.findall(block.group(1)))
+            if is_walk_report(text):
+                filed |= filed_findings(text)
         assert filed, "no walk report filed a finding"
         for name in sorted(filed):
             rows = [index for index, text in indexes.items()
                     if re.search(rf"^\| {name} \|", text, re.M)]
             assert len(rows) == 1, f"{name} has rows in {rows or 'neither index'}"
+
+
+#: `UX-727`: no conforming design-review report exists yet
+#: (`docs/audits/round-90.md` predates the skill and the task file
+#: declines retrofitting it), so this half is synthetic - the skill's
+#: declared head, exercised on a document written to it, not on a real
+#: one under `docs/audits/`.
+_DESIGN_REVIEW_GOOD = (
+    "# Design review — synthetic (UX-727)\n\n"
+    "design review   the served export, run r1, screenshots s1-s7\n"
+    "controls        12 classes, 2 differ from label\n"
+    "filed           UX-900, UX-901\n\n"
+    "measured: the rail shows 9 entries without scrolling.\n"
+)
+_ROUND_DOCUMENT = "# Round 96\n\nSome prose about a review, no fields.\n"
+
+
+class TestADesignReviewReportHasAShapeAGuardCanRead:
+    """`UX-727`: `dev_audit_reports` gives the `design-review` skill's
+    report the same fixed-head recognition `UX-685` gave the walk."""
+
+    def test_a_conforming_report_is_recognised_and_its_filings_extracted(self):
+        from tools.dev_audit_reports import filed_findings, report_kind
+
+        assert report_kind(_DESIGN_REVIEW_GOOD) == "design-review"
+        assert filed_findings(_DESIGN_REVIEW_GOOD) == {"UX-900", "UX-901"}
+
+    def test_a_round_document_is_not_a_design_review(self):
+        from tools.dev_audit_reports import report_kind
+
+        assert report_kind(_ROUND_DOCUMENT) is None
+
+    def test_dropping_the_filed_line_reds_the_guard_naming_the_file(self):
+        """The Acceptance Test's mutation: a design-review-shaped
+        document that drops its filed-findings line is still
+        recognised as one, but `report_problems` names it."""
+        from tools.dev_audit_reports import report_problems
+
+        mutated = _DESIGN_REVIEW_GOOD.replace(
+            "filed           UX-900, UX-901\n", "")
+        problems = report_problems([("r.md", mutated)])
+        assert problems == ["r.md: no filed findings line"], problems
+
+    def test_a_wrapped_head_line_is_still_recognised(self):
+        """Not vacuous: `UX-686` read a walk report's `Base` line and
+        found nothing because the markdown line wraps it - the same
+        head labels here use `\\s+`, not a literal space, so a label
+        and its content split across a wrapped line still matches."""
+        from tools.dev_audit_reports import report_kind
+
+        wrapped = _DESIGN_REVIEW_GOOD.replace(
+            "design review   the served export, run r1, screenshots s1-s7\n",
+            "design review\nthe served export, run r1, screenshots s1-s7\n")
+        assert report_kind(wrapped) == "design-review"
 
 
 #: `UX-637`: a shallow clone answers reachability from a history that

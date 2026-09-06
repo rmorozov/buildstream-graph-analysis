@@ -1,0 +1,50 @@
+name: Mutation
+
+# UX-703: `falsify` mutates one guard by hand; this asks the same
+# question of the modules the week touched. A survivor is a filing,
+# not a failure, so this never gates a pull request and runs on its
+# own weekly schedule only.
+#
+# `UX-698` (not yet landed) is the shelf `quality.yml`'s PR-and-weekly
+# schedule was meant to carry this step in - this is its own workflow
+# file until that lands, so a track working this row does not also
+# have to decide CodeQL, a lockfile and Dependabot to file one survivor.
+on:
+  schedule:
+    - cron: "0 5 * * 0"
+  workflow_dispatch: {}
+
+jobs:
+  mutate-touched:
+    runs-on: ubuntu-latest
+    # Direct-push, not a PR: the ledger is an append-only filing (never
+    # a gate), so a PR would need a human review of a table nobody is
+    # asked to act on. Revisit if `UX-698` gives this a shared shelf
+    # with its own review convention.
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install -e ".[dev]"
+          pip install mutmut
+
+      - name: Weekly mutation run over the modules touched since last week
+        run: python3 tools/dev_mutation.py --write --since "$(git rev-list -1 --before='7 days ago' HEAD)"
+
+      - name: Commit the ledger
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/audits/mutation.md
+          git diff --cached --quiet && exit 0
+          git commit -q -m "mutation: weekly survivor filing (${{ github.run_id }})"
+          git push -q

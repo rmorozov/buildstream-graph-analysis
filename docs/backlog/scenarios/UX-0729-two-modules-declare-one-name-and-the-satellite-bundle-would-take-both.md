@@ -1,0 +1,56 @@
+# UX-729: two modules declare one name, and the satellite bundle would take both
+
+**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** UX-721 (the same flattening, its other edge), UX-199 (which derived the order) | **Serves:** anyone who inlines a second entry point | **Topic:** viewer | **Shape:** judgement | **Area:** tools
+
+## Motivation
+
+`UX-721` refused the aliased import because the export concatenates the
+modules into one scope. That scope has a second way to break, and it is
+already true of the tree — measured over the 22 viewer modules' own
+top-level declarations:
+
+```console
+$ # every `export`ed / top-level function|const|let|class, by owner
+modules 22   top-level names 393
+collisions {'make': ['drawings.js', 'perfetto_page.js']}
+
+$ python3 -c "from tools.bga_view import _module_order; print(_module_order('perfetto_page.js'))"
+['perfetto.js', 'primitives.js', 'format.js', 'controls.js', 'questions.js',
+ 'drawings.js', 'views.js', 'element.js', 'perfetto_page.js']
+```
+
+Both declare `function make`, with **different signatures** —
+`drawings.js:108` takes `(doc, tag, attrs, ...children)` and
+`perfetto_page.js:57` takes `(tag, attrs, ...children)`.
+
+Nothing is broken today: the export inlines `app.js`'s bundle only (21
+modules, no `perfetto_page.js`), and `perfetto.html` is *served*, where
+`<script type="module" src="perfetto_page.js">` gives each module its
+own scope and the two `make`s never meet. The finding is that
+`_module_order("perfetto_page.js")` is a callable that returns a
+bundle which cannot be flattened, and nothing says so.
+
+## Required Fix
+
+Either the export refuses a bundle whose modules declare one name twice
+— the same shape as `UX-721`'s refusal, and it would name both modules
+— or `perfetto_page.js`'s `make` is renamed and a guard holds the
+whole-tree property (no two viewer modules share a top-level name),
+which is stronger and costs one rename today. Pick one and say which
+in the Outcome; the second is cheaper now and the first survives a
+tree that grows a legitimate duplicate.
+
+## Out of Scope
+
+- Aliased imports. `UX-721` closed that edge and its refusal is the
+  model this one follows.
+- Making the export inline `perfetto_page.js`. **Declined**: `UX-373`
+  settled that the satellite pages are served, and inlining a second
+  entry point is a different item with its own byte budget.
+
+## Acceptance Test
+
+A bundle whose modules declare one name twice is refused, naming both
+modules — or the property holds tree-wide and a guard reads it.
+Mutation: give a second module a name the first declares — red,
+naming both.

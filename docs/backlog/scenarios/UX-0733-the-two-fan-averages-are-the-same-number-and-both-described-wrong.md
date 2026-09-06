@@ -1,6 +1,6 @@
 # UX-733: the two fan averages are the same number, and both described wrong
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-719 (the same swap, in the ranked blocks) | **Serves:** R3 reading the graph-shape block | **Topic:** analysis | **Shape:** judgement | **Area:** bga/structural
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-719 (the same swap, in the ranked blocks) | **Serves:** R3 reading the graph-shape block | **Topic:** analysis | **Shape:** judgement | **Area:** bga/structural
 
 ## Motivation
 

@@ -64,7 +64,7 @@ the flattened scope was measured:
 
 ```console
 $ # every top-level function|const|let|class in bga/viewer/*.js, by owner
-modules 22   top-level names 393
+modules 22   top-level names 393   # 394; see UX-729
 collisions {'make': ['drawings.js', 'perfetto_page.js']}
 ```
 

@@ -420,14 +420,26 @@ class TestTheReleaseConsumesTheWalk:
         assert found.get("docs/audits/walk-seed-2.md") == (
             "2026-09-06", {"UX-724", "UX-725"})
 
-    def test_the_filed_findings_closed_status_matches_the_backlog(self):
-        """The status half `walk_covers_candidate` needs, read from the
-        two real reports' actual filings rather than asserted."""
-        closed_text = (REPO / "docs/backlog/scenarios/closed.md").read_text(
-            encoding="utf-8")
-        assert "UX-723" in closed_text
-        assert "UX-724" not in closed_text
-        assert "UX-725" not in closed_text
+    def test_every_filed_finding_resolves_to_exactly_one_backlog_row(self):
+        """The status half `walk_covers_candidate` needs, derived. Which
+        of the two indexes a filing sits in is today's state and moves
+        the day it closes; that it sits in exactly one of them is the
+        claim - a filing in neither was lost, and one in both is a row
+        the move left behind."""
+        from tools.dev_scenario import audits_documents, is_walk_report
+
+        indexes = {name: (REPO / f"docs/backlog/scenarios/{name}").read_text(
+            encoding="utf-8") for name in ("README.md", "closed.md")}
+        filed = set()
+        for _, text in audits_documents():
+            block = _FINDINGS_BLOCK.search(text) if is_walk_report(text) else None
+            if block:
+                filed |= set(_FILED.findall(block.group(1)))
+        assert filed, "no walk report filed a finding"
+        for name in sorted(filed):
+            rows = [index for index, text in indexes.items()
+                    if re.search(rf"^\| {name} \|", text, re.M)]
+            assert len(rows) == 1, f"{name} has rows in {rows or 'neither index'}"
 
 
 #: `UX-637`: a shallow clone answers reachability from a history that

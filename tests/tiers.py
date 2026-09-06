@@ -917,4 +917,9 @@ MEDIUM = (
     # activation is a default action too, and the fold it opens has to
     # be read out of a real page. 3.55 / 3.79s.
     "tests/unit/test_the_fragment_keeps_up_with_the_fold.py",         #    3.8s
+    # `UX-692`, tiered on landing. 50 generated shapes through the full
+    # `analyze()` pipeline plus 9 re-runs at n=3 for determinism - no
+    # browser, no subprocess, but 59 real analyses. Three
+    # single-process runs alone: 4.93 / 5.17 / 5.12s.
+    "tests/unit/test_the_invariants_hold_for_any_shape.py",           #    5.2s
 )

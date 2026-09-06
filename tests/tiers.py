@@ -109,11 +109,14 @@ MEDIUM_FLOOR_S = 1.0
 #
 # Derived, not typed. `test_the_selector_carries_the_census.py` recomputes
 # it: a file that walks a path rooted at the repository **and** that a
-# grep from any non-`__init__` source module never selects. Adding a
-# guard of this shape without listing it here reddens that file.
+# grep from any non-`__init__` source module never selects, **or** one
+# that calls a curated tool function whose own body derives a count
+# from the tree or a named index file (`UX-730`). Adding a guard of
+# this shape without listing it here reddens that file.
 #
-# Measured: 272 tests, **10.80s at `-n auto`** - what every
-# `test-touching` run now pays to stop being wrong about this class.
+# Measured: 716 tests, **36.6s at `-n auto`** (`UX-730` moved it from
+# 272 tests/10.80s at 14 files) - what every `test-touching` run now
+# pays to stop being wrong about this class.
 CENSUS = (
     # `UX-718`: subject is `tools/dev_refresh_analysis.FIXTURES`, a
     # fixed pair - a diff to the analyzer or a schema names neither.
@@ -135,6 +138,16 @@ CENSUS = (
     "tests/unit/test_the_palette_is_validated.py",
     "tests/unit/test_the_register_is_terse.py",
     "tests/unit/test_the_viewer_modules_have_a_home.py",
+    # `UX-730`: round 98's own misses, plus one sibling this derivation
+    # finds by the same rule. Each calls a tool function - `spread()`,
+    # `shape_disagreements()`, `table_statuses()`, `backlog_files()` -
+    # whose own body reads the tree or a named index file; no `WALKS`
+    # name appears in any of the five.
+    "tests/unit/test_a_task_declares_its_shape.py",
+    "tests/unit/test_docs_links_and_commands.py",
+    "tests/unit/test_the_cost_row_is_derived_from_the_selector.py",
+    "tests/unit/test_the_fast_check_holds_what_the_suite_holds.py",
+    "tests/unit/test_the_loop_stays_fast.py",
 )
 
 

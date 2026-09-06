@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-738 scenarios: **21 open**, 717 closed.
+739 scenarios: **21 open**, 718 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -23,11 +23,11 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | capture | 1 | 96 |
 | analysis | 6 | 107 |
 | contracts | 0 | 48 |
-| viewer | 4 | 161 |
+| viewer | 3 | 161 |
 | cli | 0 | 22 |
 | store | 0 | 16 |
 | docs | 4 | 118 |
-| guards | 6 | 170 |
+| guards | 7 | 171 |
 
 ## Open scenarios
 
@@ -53,10 +53,10 @@ task file, which is the only place it ever lived twice.
 | UX-696 | [the register's unguarded rows — no round in code, a dated count, the commit body](UX-0696-the-register-s-unguarded-rows-no-round-in-code-a-dated-count-the-commi.md) | guards | Medium | the reader who opens a module a year on and meets its history instead of its reason | 🔴 |
 | UX-697 | [a type-error ratchet, contracts first](UX-0697-a-type-error-ratchet-contracts-first.md) | guards | Medium | the session editing a schema or a contract, where a wrong key is a `UX-190` bump nobody meant | 🔴 |
 | UX-698 | [the gate-only shelf on GitHub — code scanning, a lockfile and audit, Dependabot, secret scanning](UX-0698-the-gate-only-shelf-on-github-code-scanning-a-lockfile-and-audit-depen.md) | guards | High | R8 reading a red gate that a hosted tool raised, and the user who wants the heavier analyses without a slower inner loop | 🔴 |
-| UX-699 | [the viewer linted as one module graph](UX-0699-the-viewer-linted-as-one-module-graph.md) | viewer | Medium | the session editing a viewer module, which today has no linter of any kind | 🔴 |
 | UX-705 | [the burn-down runs on the reporters' model — a batch a commit, never a suppression](UX-0705-the-burn-down-runs-on-the-reporters-model-a-batch-a-commit-never-a-supp.md) | guards | High | R8, who wants the baseline to reach zero without the session's model reading 1,709 findings | 🔴 |
 | UX-708 | [the first batch under the pipeline, priced per shape](UX-0708-the-first-batch-under-the-pipeline-priced-per-shape.md) | docs | High | the advisory in `CLAUDE.md`, which says `sonnet` for tracks on an argument | 🔴 |
 | UX-741 | [the spine's ground truth reads wall clock, and a loaded host reds it](UX-0741-the-spine-s-ground-truth-reads-wall-clock-and-a-loaded-host-reds-it.md) | guards | Medium | R8 reading a red gate on a file nobody touched | 🔴 |
+| UX-742 | [the viewer's dead exports need a detector eslint cannot be](UX-0742-the-viewer-s-dead-exports-need-a-detector-eslint-cannot-be.md) | guards | Low | the session deleting viewer code and wanting to know what nothing reads | 🔴 |
 
 ## UX-706..UX-711: the ninety-fourth round — the pipeline, and which model runs which shape (2026-09-05)
 

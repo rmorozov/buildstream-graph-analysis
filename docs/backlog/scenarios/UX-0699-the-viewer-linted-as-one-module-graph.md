@@ -1,6 +1,6 @@
 # UX-699: the viewer linted as one module graph
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-397 (the JS-dependency decision) | **Serves:** the session editing a viewer module, which today has no linter of any kind | **Topic:** viewer | **Area:** unassigned | **Shape:** judgement
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-397 (the JS-dependency decision) | **Serves:** the session editing a viewer module, which today has no linter of any kind | **Topic:** viewer | **Area:** unassigned | **Shape:** judgement
 
 ## Motivation
 
@@ -120,3 +120,32 @@ the plugin crashes with no `package.json` above the linted file, which an
 existing guard forbids inside this tree; `quality.yml` writes one beside the
 checkout, untested against a real runner's layout. `dev_touching.py --spread
 --write`: no diff (no `tools/` or top-level `tests/` file added).
+
+### The session's reduction, on merge
+
+The track shipped `import/no-unused-modules` with two workarounds and
+reported honestly that its mutation does not red. The session removed
+the rule rather than merge it inert. Measured on the merged tree:
+
+```console
+$ npx --package eslint@9 --package eslint-plugin-import@2 \
+      --package globals@17 -- eslint bga/viewer
+   ... at checkUsage (eslint-plugin-import/lib/rules/no-unused-modules.js:636)
+rc=2
+
+$ npx --package eslint@9 --package globals@17 -- eslint bga/viewer
+rc=0
+```
+
+Dropping it removed the plugin, `.eslintrc.json` (needed only by that
+rule's own legacy file lookup), and the `package.json` the CI step
+wrote beside the checkout - a workaround for a guard that deliberately
+forbids one, never tested on a real runner.
+
+What ships is what discriminates. Mutation, on the reduced config:
+one `===` returned to `==` in `views.js` gives `1 problem (1 error)`,
+exit 1; reverted, exit 0.
+
+The unused-export question outlived the tool and is `UX-742`. The five
+dead exports are still deleted: that finding came from a whole-tree
+grep the session ran itself, not from the plugin.

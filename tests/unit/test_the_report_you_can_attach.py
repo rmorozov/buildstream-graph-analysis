@@ -835,7 +835,12 @@ COMMITTED_EXPORTS = [
     # The old comment on this row said 438,826; `UX-681` recorded that
     # before its last edit and nothing re-read it - the bound held, the
     # note did not. Measured at HEAD before this change: 442,716.
-    ("golden", GOLDEN, 449_000),                       #  444,220 B
+    # `UX-677` moved this one by 1,168 B, all contract: the
+    # `max_jobs_advice` schema prose on `capacity_recommendation`, which
+    # travels whether or not a run has host CPU samples - neither
+    # committed fixture does. Not moved here because it is not tripped:
+    # 449,000 still leaves 1,210 B.
+    ("golden", GOLDEN, 449_000),                       #  447,790 B
     # `UX-297` moved this one by 385 B before that: the two-plane run
     # publishes `plane2_coverage.source`, which says which shape of
     # Plane 2 report served its numbers and what that costs to open. A
@@ -952,7 +957,10 @@ COMMITTED_EXPORTS = [
     # 502,000 leaves 4,839 B, the same order of headroom above.
     # `UX-669`: +1,504 B here too, to 498,665, and this bound holds -
     # 3,335 B of headroom, which is why only the row above moved.
-    ("macro_micro", MACRO_MICRO, 502_000),             #  498,665 B
+    # `UX-677` moved this one by the same 1,168 B and for the same
+    # reason - see the note on the `golden` bound above. 507,000 leaves
+    # 4,718 B, the same order of headroom the other bounds carry.
+    ("macro_micro", MACRO_MICRO, 507_000),             #  502,282 B
 ]
 
 
@@ -1071,18 +1079,35 @@ class TestItRendersTheSameThing:
         assert "findings" in rendered["sections"], rendered["sections"]
         assert rendered["severities"], "no severity reached the page"
 
-    def test_it_renders_what_the_served_page_renders(self, exported, snapshot):
+    def test_it_renders_what_the_served_page_renders(
+            self, exported, snapshot, tmp_path):
         """Same payload, same schema, same renderer - so same output.
-        A second renderer would show up here as a difference."""
+        A second renderer would show up here as a difference.
+
+        The embedded schema is written to a `.mjs` file rather than
+        passed via `-e`: Linux's per-argument `MAX_ARG_STRLEN` is 128
+        KiB, and `analyze/v6`'s schema text alone was already 130,551 B
+        before `UX-677` - 521 B of headroom no single future key could
+        be trusted to leave (`E2BIG` is not a budget this file states
+        anywhere, so growth here read as this test's own bug rather than
+        as growth on the ledger this file otherwise tracks).
+        """
         from tools.bga_view import payloads, schemas_payload
 
         run = str(snapshot / "run")
         payload = payloads(run)["report.json"]
         schema = schemas_payload()[payload["schema"]]
 
+        # `./tests/viewer.mjs` resolved against `cwd` under `-e`; a real
+        # script file resolves relative specifiers against its own
+        # location instead, so the viewer's own path travels as a
+        # `file:` URL rather than as a relative one.
+        viewer_url = pathlib.Path(os.getcwd(), "tests", "viewer.mjs").as_uri()
+        script_path = tmp_path / "served_harness.mjs"
+        script_path.write_text(_SERVED_HARNESS % (
+            json.dumps(payload), json.dumps(schema), json.dumps(viewer_url)))
         served = subprocess.run(
-            [node, "--input-type=module", "-e",
-             _SERVED_HARNESS % (json.dumps(payload), json.dumps(schema))],
+            [node, str(script_path)],
             capture_output=True, text=True, cwd=os.getcwd(), timeout=90)
         assert served.returncode == 0, served.stderr
 
@@ -1923,7 +1948,7 @@ _SERVED_HARNESS = _COMMON_SHIM + """
 const payload = %s, schema = %s;
 globalThis._installDocument ??= (await import(process.env.BGA_DOM_SHIM)).installDocument;
 _installDocument({ getElementById: () => makeNode("div") });
-const mod = await import("./tests/viewer.mjs");
+const mod = await import(%s);
 const root = makeNode("main");
 mod.render(payload, schema, root);
 console.log(JSON.stringify(collect(root)));

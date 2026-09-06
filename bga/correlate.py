@@ -1217,6 +1217,117 @@ def _memory_allows(memory_envelope: dict) -> Optional[dict]:
     }
 
 
+#: `UX-677`: how many `UX-675` host-CPU-sample intervals must overlap an
+#: element's own BUILD span before its row gets a number rather than a
+#: refusal. Measured on `tests/fixtures/host_cpu` (2s sampling, 12
+#: intervals over the whole run): the two zero-duration structural
+#: elements see 0 overlapping intervals; the eleven real spans range
+#: from 1 (`app.bst`, 1.95s - barely inside one 2s gap) through 2 (six
+#: elements at ~2-3s) to 5 (`core.bst`, 10s). One interval is a single
+#: delta that can extend well past the element's own duration and say
+#: nothing about it in particular; two is the floor at which a reading
+#: is actually inside the span more than once.
+MIN_HOST_SAMPLES_IN_SPAN = 2
+
+
+def compute_max_jobs_advice(
+    host_samples: dict,
+    tasks: list[dict],
+    max_jobs: dict,
+    peak_rss_bytes: Optional[dict] = None,
+    host_memory_bytes: Optional[int] = None,
+) -> dict:
+    """UX-677: per-element `max-jobs`, under the no-overcommit constraint.
+
+    Joins `UX-675`'s raw host CPU series directly to each element's own
+    BUILD span - not `UX-676`'s `underutilized_intervals`/
+    `overcommitted_intervals`, which are ranked and capped at 40 rows
+    and so are a *sample* of the windows; reading them here would be an
+    instrument reading a proxy for the series itself.
+
+    **The constraint.** At every instant, the sum of the `max-jobs`
+    recommended for the elements building then must not exceed the
+    host's cores. `local_max_concurrency(e)` - the most elements ever
+    building at once in a host-sample interval e's own span touches - is
+    at least the concurrency at every instant inside that span, so
+    `recommended_max_jobs(e) = host_cores // local_max_concurrency(e)`
+    means each of the `concurrency(t)` elements building at any instant
+    `t` contributes at most `host_cores // concurrency(t)`, and their
+    sum is at most `host_cores`.
+
+    **Thin evidence.** An element whose span touches fewer than
+    `MIN_HOST_SAMPLES_IN_SPAN` intervals gets a stated refusal instead
+    of a number - a recommendation resting on one reading is a guess
+    wearing a measurement's clothes (the same bar `UX-83` uses).
+
+    **Memory.** When `peak_rss_bytes` is known for every element
+    building alongside e at some instant in its span, and their sum
+    there exceeds `host_memory_bytes`, e also gets a refusal: no
+    `max-jobs` value un-spends memory already measured spent.
+    """
+    from .utilisation.envelope import intervals as _intervals
+    from .utilisation.envelope import wall_samples as _wall_samples
+
+    windows = _intervals(_wall_samples(host_samples or {}))
+    cores = windows[-1].get("cores") if windows else None
+    if not windows or not cores:
+        return {}
+
+    def _building(window: dict) -> set:
+        return {t["element"] for t in tasks
+                if t["start_us"] < window["end_us"]
+                and t["finish_us"] > window["start_us"]}
+
+    elements = []
+    for task in tasks:
+        uid = task["element"]
+        current = max_jobs.get(uid)
+        span = [w for w in windows
+                if task["start_us"] < w["end_us"]
+                and task["finish_us"] > w["start_us"]]
+        row = {"element": uid, "current_max_jobs": current,
+               "samples_in_span": len(span)}
+        if len(span) < MIN_HOST_SAMPLES_IN_SPAN:
+            row["refusal"] = (
+                f"only {len(span)} host CPU sample interval(s) fall "
+                f"inside this element's BUILD span - "
+                f"{MIN_HOST_SAMPLES_IN_SPAN} needed (UX-677)")
+            row["recommended_max_jobs"] = None
+            elements.append(row)
+            continue
+        local_max = max(len(_building(w)) for w in span)
+        recommended = max(1, cores // local_max)
+        overlap_rss = None
+        if peak_rss_bytes:
+            for w in span:
+                building = _building(w)
+                if all(peak_rss_bytes.get(e) is not None for e in building):
+                    total = sum(peak_rss_bytes[e] for e in building)
+                    overlap_rss = total if overlap_rss is None \
+                        else max(overlap_rss, total)
+        row.update({
+            "local_max_concurrency": local_max,
+            "recommended_max_jobs": recommended,
+            "max_jobs_change": (recommended - current
+                                 if current is not None else None),
+            "peak_rss_bytes": (peak_rss_bytes or {}).get(uid),
+            "overlap_peak_rss_bytes": overlap_rss,
+            "refusal": None,
+        })
+        if (host_memory_bytes and overlap_rss is not None
+                and overlap_rss > host_memory_bytes):
+            row["refusal"] = (
+                f"elements building alongside it peaked at "
+                f"{overlap_rss} bytes together, over the "
+                f"{host_memory_bytes}-byte host - no max-jobs value "
+                f"un-spends memory already measured spent")
+            row["recommended_max_jobs"] = None
+        elements.append(row)
+
+    return {"min_samples_in_span": MIN_HOST_SAMPLES_IN_SPAN,
+            "host_cores": cores, "elements": elements}
+
+
 # UX-100: the too-fine signature, stated as a definition rather than as
 # a threshold.
 #

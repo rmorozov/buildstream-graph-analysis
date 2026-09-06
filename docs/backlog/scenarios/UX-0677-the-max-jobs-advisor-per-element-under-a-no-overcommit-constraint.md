@@ -70,3 +70,49 @@ prices the drop; on a synthetic run with two `-j8` elements
 overlapping on four cores it recommends the split that fits.
 Mutation: drop the memory constraint — the advisor guard reds on a
 run whose peaks exceed RAM.
+
+## Outcome
+
+**Gap measured.** `capacity_recommendation` named `pinned_elements`
+(one core) and nothing for the other sign. No fixture publishes both a
+host CPU series and per-process peak RSS, so the memory half of
+decision 3 had no committed evidence to check against either.
+
+**Threshold measured.** On `tests/fixtures/host_cpu` (2s sampling, 12
+raw intervals over the run), overlapping-interval counts per element:
+`toolchain.bst` 0, `all.bst` 0, `app.bst` 1 (1.95s span), six `-j4`
+elements 2, `lib-c.bst` 3, `core.bst` 5 (10s span). One interval is a
+single delta that can extend well past an element's own duration; two
+is the floor at which a reading is actually inside the span more than
+once. `MIN_HOST_SAMPLES_IN_SPAN = 2` in `bga/correlate.py`.
+
+**Close measured.** `compute_max_jobs_advice` joins the raw series
+(`wall_samples`/`intervals`, not `UX-676`'s capped tables) to each
+element's span; `recommended = max(1, host_cores // local_max_concurrency)`
+provably keeps any instant's sum at or under `host_cores` (proof in the
+function's docstring). Run for real on `host_cpu`: `core.bst` (max-jobs
+1, notparallel) is recommended to 2; the six `-j4` elements that never
+overlap more than one other are recommended down to 2; `app.bst`,
+`toolchain.bst`, `all.bst` refuse (thin evidence). Checked directly
+against every window: `sum(recommended for building) <= 4` holds
+everywhere (max observed sum was exactly 4). The synthetic two-`-j8`
+case (Acceptance Test, `TestTheSplitThatFits`) splits to 2+2 on 4
+cores. The memory refusal is demonstrated on `host_cpu`'s own real
+overlap (`core.bst`/`lib-a.bst`) with peak RSS figures stated directly,
+since no committed fixture carries both series.
+
+**Mutation table.**
+
+| mutation | reddened | count |
+|---|---|---|
+| `local_max = 1` (ignore overlap) | `test_an_overlapping_dash_j4_element_is_recommended_down`, `test_the_published_recommendation_never_overcommits_cores`, `test_two_dash_j8_elements_are_split_to_fit`, `test_room_in_memory_leaves_the_cpu_number_alone` | 4 of 9 |
+| memory check disabled (`False and ...`) | `test_an_overcommitting_overlap_is_a_refusal` | 1 of 9 |
+
+Both reverted from the pristine copy; suite green after each revert.
+
+**Deviation.** "Prices the drop" (Acceptance Test) is `UX-739`'s
+replay pricing, out of scope per the Required Fix's own carve-out; not
+implemented. No committed fixture carries both a host CPU series and
+per-process peak RSS, so the memory constraint's real-fixture
+demonstration uses `host_cpu`'s real overlap with directly-stated RSS
+rather than a fully end-to-end capture.

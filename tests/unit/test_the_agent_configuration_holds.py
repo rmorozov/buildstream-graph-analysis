@@ -429,6 +429,29 @@ class TestClaudeMdIsTrueAndShort:
             f"every close - the count decays on its own, and `UX-471` "
             f"removed the last one rather than guard it")
 
+    def test_no_line_carries_a_bare_share(self):
+        """`UX-714`: `73 % of its tokens when measured` carried no
+        window and no date, so a reader could not tell a round-46
+        figure from the session entire. Pinned (a `UX-` id, a round or
+        a date) **within the same clause** survives; the record with
+        its window lives in the `decompose` skill. Scoped to the
+        clause rather than the line - `UX-711` sits two clauses after
+        the figure in the same line, which would otherwise pin it by
+        accident.
+        """
+        pinned = re.compile(r"UX-\d+|round \d+|\d{4}-\d{2}-\d{2}")
+        share = re.compile(r"\d+(?:\.\d+)?\s?%")
+        bare = []
+        for line in self._text().splitlines():
+            if '"' in line:
+                continue
+            for clause in re.split(r"[,;—]", line):
+                if share.search(clause) and not pinned.search(clause):
+                    bare.append(clause.strip())
+        assert bare == [], (
+            f"CLAUDE.md carries a bare share with no window or date: "
+            f"{bare}")
+
     def test_it_points_at_the_card_rather_than_restating_it(self):
         """`UX-240`'s rule for skills, and it holds here for the same
         reason: two copies of one rule is how the copies disagree.

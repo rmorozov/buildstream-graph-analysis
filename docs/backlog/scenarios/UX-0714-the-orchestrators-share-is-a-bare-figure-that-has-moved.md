@@ -50,3 +50,48 @@ tight enough that `UX-711` had to rewrap a paragraph to fit.
 No steering document carries a bare share. Mutation: put a bare
 percentage back into `CLAUDE.md` — a clause reddens, or the figure is
 absent and the sentence points at the record.
+
+## Outcome
+
+**The gap, measured.**
+
+```console
+$ grep -n "%" CLAUDE.md
+31:context at each rebuild, 73 % of its tokens when measured; a result over a screen goes to the scratchpad (`UX-711`). `measure`, `falsify`, `verify`
+37:  that produced it. "roughly 5% noise" is not a number; this repository
+```
+
+Line 31's `73 %` carried neither a window nor a date. The `decompose`
+skill's own record (§5) had the window — *"from round 46 on"* — but no
+date either.
+
+**The close, measured.**
+
+```console
+$ grep -n "%" CLAUDE.md
+37:  that produced it. "roughly 5% noise" is not a number; this repository
+```
+
+No bare share remains; line 31 now reads *"its cost is the live
+context at each rebuild — the `decompose` skill carries the measured
+share, with its window"*. `decompose`'s §5 now reads *"Measured on
+this session from round 46 on, at round 94 (2026-09-05): 11 rebuilds
+were 3.76M of 5.16M tokens (73 %)"* — round 94 and its date are `UX-
+707`'s own Outcome, which took this same measurement.
+
+**Mutations.**
+
+| mutation | reddened | count |
+|---|---|---|
+| put `73 % of its tokens when measured` back into `CLAUDE.md`'s line 31 | `test_no_line_carries_a_bare_share` | 1 failed, 130 passed |
+
+First attempt scoped the guard to the whole physical line, and it did
+**not** discriminate: line 31 also carries `` `UX-711` `` two clauses
+after the share, which pinned the line by accident and left the
+mutation green. Rescoped to the comma/semicolon/em-dash-delimited
+clause; the same mutation then reddened as above. Reverted from a
+scratch copy, confirmed green.
+
+**Deviation.** None from the Required Fix. `CLAUDE.md`'s page-budget
+guard (`test_it_stays_about_a_page`) stayed at 80 lines throughout,
+checked after every edit in this and the paired `UX-713` commit.

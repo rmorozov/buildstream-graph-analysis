@@ -56,8 +56,19 @@ Either shape works and the Outcome says which:
   the sentence, and let a guard run `export` and compare. Costs a
   second or two per run and cannot drift.
 
-Prefer the second if the export is cheap enough on that fixture to sit
-in a small-tier file; measure it and say. A byte-exact equality will
+**The decision, taken here: the second.** The export is cheap on that
+fixture and a guard can afford to run it:
+
+```console
+$ time python3 -c "… export('tests/fixtures/macro_micro/run', out) …"
+499911
+real    0m0.382s
+```
+
+0.38 s, no browser and no subprocess, so it sits in a small-tier file.
+The first route keeps a number nobody can check, which is what the row
+is about. Restate the sentence for `tests/fixtures/macro_micro/run`,
+name the fixture in it, and derive it. A byte-exact equality will
 red on any content change, so bound it — an order of magnitude, or a
 band the Outcome argues for — and say what the bound is for.
 

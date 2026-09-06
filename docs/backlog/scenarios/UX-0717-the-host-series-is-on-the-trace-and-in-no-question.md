@@ -1,6 +1,6 @@
 # UX-717: the host series is on the trace and in no question
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-675 (the three CPU tracks), UX-676 (a finding to link the query from) | **Serves:** R4, asking whether the cores were busy | **Topic:** viewer | **Shape:** judgement | **Area:** bga/viewer
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-675 (the three CPU tracks); **not** UX-676 - the round-101 track verified it publishes a report section and per-row trace queries, not a Finding the reachability gate reads, so the premise this row was filed on does not hold | **Serves:** R5, the capacity operator - the question hangs off `capacity-recommendation`, which publishes `cores_busy` and `binding_constraint`; the row said R4 before it was built | **Topic:** viewer | **Shape:** judgement | **Area:** bga/viewer
 
 ## Motivation
 

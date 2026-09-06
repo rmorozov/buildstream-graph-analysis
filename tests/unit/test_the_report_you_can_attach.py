@@ -504,9 +504,12 @@ END pid=101 ppid=1 ts=1002.500000 element=work-a.bst cmd=cc -c main.c
 # headroom `UX-613` chose.
 # `UX-717` added the eighteenth question - `were-the-cores-busy`, its
 # `why` and the widened `NEEDS_TRACKEVENT` comment - and tripped this
-# one by 52 B, measured against its own tree (a worktree's absolute
-# path is longer than the main checkout's, so this figure and the
-# 316,000 it replaces are not directly comparable; the delta is):
+# one by 52 B. The track recorded the absolute path of the tree it
+# measured in as the reason its figure and the 316,000 differed; that
+# is not it - the checkout's path occurs **0 times** in the page
+# (`page.count(str(Path.cwd()))`, run in the main checkout). The
+# figures are directly comparable, 316,000 really does fail here, and
+# the delta below is the whole of it:
 #
 #     page   314,938 -> 316,052   (+1,114 B, all source)
 #

@@ -3186,34 +3186,23 @@ _ANALYZE_HINTS = {
     "duration_resolution": {
         QUESTION: 'Which durations could this capture not express?',
         RAIL: 'prove',
-        "description": "Elements that ran for less than half the trace "
-                       "epsilon. Quantization rounds both their endpoints "
-                       "to one grid point, so every duration and share "
-                       "computed for them is zero - unmeasurable at this "
-                       "resolution, not instantaneous. Absent when the run "
-                       "had none.",
+        "description": "Elements whose span the epsilon grid rounded to "
+                       "zero width. Their durations and shares publish as "
+                       "zero: unmeasurable at this resolution, not "
+                       "instantaneous. Absent when the run had none.",
         "properties": {
             "epsilon_us": {
                 QUANTITY: "duration_us",
-                "description": "The grid in force. Without it "
-                               "\"unmeasurable\" names no threshold."},
+                "description": "The grid in force."},
             "element_count": {
-                "description": "How many elements, not how many tasks - "
-                               "the reader acts on elements."},
+                "description": "How many elements, not tasks."},
             "elements": {
-                "description": "Which ones, named, so the reader can see "
-                               "whether any figure they were about to use "
-                               "rests on one."},
+                "description": "Which ones, so a figure resting on one is "
+                               "visible."},
             "tasks": {
-                "description": "The task keys behind the element list, for "
-                               "a consumer joining on the trace."},
+                "description": "The task keys behind them."},
             "note": {
-                "description": "The sentence, so a consumer that renders "
-                               "nothing else still says why the zeros are "
-                               "there. Not declared inline: the section is "
-                               "absent on a run with nothing erased, and a "
-                               "key that promises to render cannot keep it "
-                               "on the runs that carry no section."},
+                "description": "The sentence itself."},
         },
     },
     "violations": {QUESTION: 'What did not add up?', RAIL: 'prove'},

@@ -263,6 +263,22 @@ BUDGETS = (
     # same order it left. Caught by `make test` and not by the track's
     # own `make test-touching`, which does not select this file from a
     # change to `questions.js`.
+    # `UX-740`: neither budget moves, and the reason is the item's own
+    # discrimination. `duration_resolution` is published only when the
+    # grid erased a span, so the two committed fixtures are unmoved and
+    # the two generated runs pay for it - measured either side by
+    # returning `[]` from `spans_below_resolution`:
+    #
+    #     golden      7,745 -> 7,745   (+0)
+    #     macro_micro 12,644 -> 12,644 (+0)
+    #     scale       8,870 -> 8,935   (+65)
+    #     xl          9,013 -> 9,078   (+65)
+    #
+    # The first draft cost +140 and needed 9,100 -> 9,200. That was the
+    # `?` door's prose, not the disclosure: the section carries 36 words
+    # of data, so 140 was a schema entry written at four times the
+    # register the ones beside it keep. Trimmed there instead, and the
+    # budget holds with 22 of headroom.
     (50, 35_000, 12_700, 800, 7_900),
     (4_100, 32_000, 9_100, 900, 5_500),
 )

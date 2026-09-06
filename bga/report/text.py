@@ -7,7 +7,7 @@ from ..findings import compute_findings, compute_headline, compute_next_steps, r
 from ..ingest.models import AnalysisResult
 from ..units import GIB, US_PER_S
 from . import rate
-from ._shared import GRAPH_SIGNAL_KEYS, SWEEP_CAPACITY_MODEL_CAVEAT
+from ._shared import EMPTY_POPULATION_SENTENCE, GRAPH_SIGNAL_KEYS, SWEEP_CAPACITY_MODEL_CAVEAT
 
 # Confidence-band labels for the Key Findings headline (P4-02) - a
 # presentation-only heuristic, not a spec-defined threshold (Part 33
@@ -887,7 +887,9 @@ def format_text(result: AnalysisResult, section: Optional[str] = None,
         diagnostics_signals = {k: v for k, v in result.signals.items() if k not in GRAPH_SIGNAL_KEYS}
         if diagnostics_signals:
             lines.append("Advanced Diagnostics:")
+            has_ranked_population = False
             if 'blast_radius' in diagnostics_signals:
+                has_ranked_population = True
                 br_data = diagnostics_signals['blast_radius']
                 # Handle both dict format and dataclass format
                 if isinstance(br_data, dict) and br_data:
@@ -901,6 +903,7 @@ def format_text(result: AnalysisResult, section: Optional[str] = None,
                 # are stacks is not a blast of 84 things that build.
                 lines.extend(_format_blast_ranking(diagnostics_signals))
             if 'criticality_probability' in diagnostics_signals:
+                has_ranked_population = True
                 cp_data = diagnostics_signals['criticality_probability']
                 # Handle both dict format and dataclass format
                 high_crit = 0
@@ -909,6 +912,11 @@ def format_text(result: AnalysisResult, section: Optional[str] = None,
                 elif isinstance(cp_data, list):
                     high_crit = sum(1 for cp in cp_data if getattr(cp, 'probability', 0) > 0.5)
                 lines.append(f"  High Criticality Elements: {high_crit} (>50% probability)")
+            if not has_ranked_population:
+                # `UX-724`: 0 rebuilt means no blast/criticality ranking
+                # to compute - say so, rather than leaving the heading
+                # above with nothing under it and no reason given.
+                lines.append(f"  {EMPTY_POPULATION_SENTENCE}")
             lines.append("")
 
     # Structural Analysis (M6) - shown alongside 'graph' since it's
@@ -920,8 +928,8 @@ def format_text(result: AnalysisResult, section: Optional[str] = None,
     # result.structural_metrics attribute and mismatched key names
     # ('bottlenecks'/'parallelism_profile' vs. the real 'bottleneck'/
     # 'parallelism'), so this block never actually fired either.
-    if section in (None, 'graph') and hasattr(result, 'structural') and result.structural:
-        sm = result.structural
+    if section in (None, 'graph') and hasattr(result, 'structural'):
+        sm = result.structural or {}
         metrics = sm.get('metrics') or {}
         bottleneck = sm.get('bottleneck') or {}
         parallelism = sm.get('parallelism') or {}
@@ -1109,6 +1117,12 @@ def format_text(result: AnalysisResult, section: Optional[str] = None,
                 )
                 for risk in serialization_point_risks:
                     lines.append(f"    - {risk['hint']}")
+            lines.append("")
+        else:
+            # `UX-724`: 0 rebuilt means no tasks to run structural
+            # analysis over - say so, rather than dropping the block.
+            lines.append("Structural Analysis:")
+            lines.append(f"  {EMPTY_POPULATION_SENTENCE}")
             lines.append("")
 
     if section in (None, 'graph') and by_kind:

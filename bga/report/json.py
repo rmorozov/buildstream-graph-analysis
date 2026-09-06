@@ -5,7 +5,12 @@ from typing import Optional
 from .. import producer, provenance, schemas
 from ..findings import compute_findings, compute_headline, compute_next_steps, finding_copy_text, reader_index
 from ..ingest.models import AnalysisResult
-from ._shared import ATTRIBUTION_CATEGORY_HINTS_BY_KEY, GRAPH_SIGNAL_KEYS, resolve_attribution_hint
+from ._shared import (
+    ATTRIBUTION_CATEGORY_HINTS_BY_KEY,
+    GRAPH_SIGNAL_KEYS,
+    STRUCTURAL_ALWAYS_PRESENT_KEYS,
+    resolve_attribution_hint,
+)
 
 # `UX-344`: `structural.metrics` and `structural.summary` under their
 # own names. At the top level `metrics` and `summary` would be two of
@@ -350,8 +355,13 @@ def build_document(result: AnalysisResult, section: Optional[str] = None, by_kin
                 data['elements'] = elements
             _lift(data, signals_data)
 
-    if section in (None, 'graph') and hasattr(result, 'structural') and result.structural:
-        _lift(data, result.structural, _STRUCTURAL_RENAMES)
+    if section in (None, 'graph') and hasattr(result, 'structural'):
+        # `UX-724`: 0 rebuilt means no tasks to run structural analysis
+        # over, so this returns `{}` - publish the declared-empty shape
+        # `ANALYZE_FULL_KEYS` promises rather than dropping all seven.
+        structural = result.structural or {
+            key: {} for key in STRUCTURAL_ALWAYS_PRESENT_KEYS}
+        _lift(data, structural, _STRUCTURAL_RENAMES)
 
     if section in (None, 'utilisation') and hasattr(result, 'utilisation') and result.utilisation:
         data['utilisation'] = result.utilisation

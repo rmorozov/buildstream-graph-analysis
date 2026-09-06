@@ -1,6 +1,6 @@
 # UX-686: a release waits for the walk that read its candidate
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-251 (releases as contract states), UX-685 | **Serves:** R8 cutting a release; the reader who installs it | **Topic:** docs | **Shape:** bounded
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-251 (releases as contract states), UX-685 | **Serves:** R8 cutting a release; the reader who installs it | **Topic:** docs | **Shape:** bounded
 
 ## Motivation
 
@@ -88,5 +88,11 @@ $ python3 -c "import sys; sys.path.insert(0,'tests/unit'); \
 Both mutations reverted from the pre-mutation copy in the scratchpad; `pytest tests/unit/test_a_release_records_a_contract_state.py -q` back to 37 passed after each.
 
 **Not bisected**: `contracts.ids()` for the exact contract-moving commit — cheaper to state, more expensive to run (per the two decisions above); `git log -1` over the over-approximated file set is what ships.
+
+**0.4.0 is not retroactively gated.** The condition names *when to cut
+one*, and `TestTheWalkGateIsDerived` runs on synthetic pairs because no
+release has been cut through it. 0.4.0 (2026-09-03) predates the walk
+skill and cannot satisfy a condition that did not exist; the guard reads
+the tree's current candidate, never a shipped row.
 
 **Design-review half**: not built — `UX-727` gives it a report shape first; the guide's third condition names it in prose for a human only.

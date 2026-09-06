@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-724 scenarios: **38 open**, 686 closed.
+724 scenarios: **37 open**, 687 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -26,7 +26,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | viewer | 8 | 160 |
 | cli | 1 | 22 |
 | store | 0 | 16 |
-| docs | 8 | 116 |
+| docs | 7 | 116 |
 | guards | 12 | 163 |
 
 ## Open scenarios
@@ -48,7 +48,6 @@ task file, which is the only place it ever lived twice.
 | UX-682 | [change frequency and co-change, from the logs the project already keeps](UX-0682-change-frequency-and-co-change-from-the-logs-the-project-already-keeps.md) | analysis | High | R2 and R3 — split, consolidate, or leave alone, decided on evidence | 🔴 |
 | UX-683 | [the foundation tier is declared, and the kind-based exemption misses it](UX-0683-the-foundation-tier-is-declared-and-the-kind-based-exemption-misses-it.md) | analysis | Medium | R2 who owns the toolchain and wants out of the noise; R3 reading the ranking | 🔴 |
 | UX-684 | [the cached-build verdict — does the graph rebuild the cheapest subgraph?](UX-0684-the-cached-build-verdict-does-the-graph-rebuild-the-cheapest-subgraph.md) | analysis | High | R3 showing evidence, R8 reading it | 🔴 |
-| UX-686 | [a release waits for the walk that read its candidate](UX-0686-a-release-waits-for-the-walk-that-read-its-candidate.md) | docs | High | R8 cutting a release; the reader who installs it | 🔴 |
 | UX-689 | [the architecture document moves into the area pages, one track at a time](UX-0689-the-architecture-document-moves-into-the-area-pages-one-track-at-a-tim.md) | docs | Medium | the reader pricing a change; the session restructuring without losing a sentence | 🔴 |
 | UX-690 | [the suite has a shape budget, and a feature files its test analysis](UX-0690-the-suite-has-a-shape-budget-and-a-feature-files-its-test-analysis.md) | guards | Medium | R8 reading whether the suite is balanced; the implementer writing the right guard | 🔴 |
 | UX-691 | [a flake ledger, so an excursion is counted before it is a flake](UX-0691-a-flake-ledger-so-an-excursion-is-counted-before-it-is-a-flake.md) | guards | Medium | the round reading a red gate on a file nobody touched | 🔴 |

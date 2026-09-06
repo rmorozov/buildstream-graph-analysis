@@ -42,11 +42,6 @@ export function recordSource(section, value) {
   return section;
 }
 
-/** The published value a section was rendered from, or `undefined`. */
-export function sourceOf(section) {
-  return SECTION_SOURCES.get(section);
-}
-
 export const SHOW = "view as JSON";
 export const HIDE = "hide JSON";
 

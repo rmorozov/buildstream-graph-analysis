@@ -89,11 +89,6 @@ function markControls(root, path, pressed) {
   }
 }
 
-/** What a `path` would open, for a guard and for `applyView`. */
-export function focusTargets() {
-  return [...targets.keys()];
-}
-
 /**
  * Declare that `node` can be opened full width.
  *

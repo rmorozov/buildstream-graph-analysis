@@ -147,11 +147,6 @@ export function unmappedShapes() {
   return unmappedSeen.slice();
 }
 
-/** Forget them. For a guard that renders more than one page. */
-export function forgetUnmapped() {
-  unmappedSeen.length = 0;
-}
-
 /**
  * Record and announce one unmapped shape.
  *

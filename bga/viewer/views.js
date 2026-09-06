@@ -29,6 +29,9 @@ import {
   SVG, svg, seconds, mib, bar, OVERVIEW_SHOWN, elementAnchor,
 } from "./primitives.js";
 
+// UX-699: `eqeqeq` disallows `== null`, so a null-or-undefined check is
+// its own name rather than a loosened operator.
+const notNullish = (value) => value !== null && value !== undefined;
 
 /**
  * `UX-650`: the `R1`-`R5` tag, for a section the **page** builds.
@@ -369,11 +372,11 @@ export function renderTrend(store, schema = undefined,
     const tip = svg("title");
     tip.textContent = [
       row.stamp,
-      row.total_duration_us != null ? seconds(row.total_duration_us) : null,
+      notNullish(row.total_duration_us) ? seconds(row.total_duration_us) : null,
       verdict ? verdict.replace(/_/g, " ") : null,
-      row.cache_hit_rate != null
+      notNullish(row.cache_hit_rate)
         ? `${(row.cache_hit_rate * 100).toFixed(0)}% cache hits` : null,
-      row.bytes != null ? mib(row.bytes) : null,
+      notNullish(row.bytes) ? mib(row.bytes) : null,
     ].filter(Boolean).join(" · ");
     point.append(tip);
     figure.append(point);
@@ -430,7 +433,7 @@ export function renderTrend(store, schema = undefined,
   wrapper.append(caption);
   const twinRows = (list) => list.map((row) => [
     row.stamp,
-    row.total_duration_us != null ? seconds(row.total_duration_us) : "—",
+    notNullish(row.total_duration_us) ? seconds(row.total_duration_us) : "—",
     row.incomplete_reason ? row.incomplete_reason
       : (row.verdict_kind ?? "—").replace(/_/g, " "),
   ]);
@@ -519,7 +522,7 @@ export function trendDistribution(aggregate) {
   const blended = aggregate?.blended;
   if (!blended || (blended.mixes ?? 1) !== 1) return null;
   const duration = blended.duration_us;
-  if (!duration || duration.median == null || duration.p95 == null) return null;
+  if (!duration || !notNullish(duration.median) || !notNullish(duration.p95)) return null;
   return duration;
 }
 

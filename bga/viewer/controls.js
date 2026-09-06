@@ -62,13 +62,6 @@ export function labelFor(label, node, stem) {
   return id;
 }
 
-// For the guards: a fresh document is a fresh id space. The page never
-// calls this - it loads once - but a test file that boots the shim
-// twice would otherwise see `-2` suffixes it did not ask for.
-export function forgetIds() {
-  taken.clear();
-}
-
 // UX-335: a section that throws loses its section, not the page.
 //
 // `boot()` has one page-wide `try/catch`, so **any** renderer's throw
@@ -121,7 +114,6 @@ export function contained(doc, name, payload, build) {
   try {
     return build();
   } catch (error) {
-    // eslint-disable-next-line no-console
     console.error(`bga: section "${name}" failed on ${payload}:`, error);
     return sectionFailure(doc, name, payload, error);
   }

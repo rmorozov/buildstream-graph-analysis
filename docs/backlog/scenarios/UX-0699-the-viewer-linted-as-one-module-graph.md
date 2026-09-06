@@ -17,13 +17,46 @@ found 5 exports nothing references: `forgetIds` (`controls.js`),
 
 ## Required Fix
 
-An `eslint.config.js` at the root with `sourceType: "module"`,
-browser globals, `eslint-plugin-import` (`no-unused-modules` with
-`unusedExports`), `eqeqeq`, `no-undef`; run at the gate via
-`npx --yes` in `quality.yml` (`UX-698`) — the dev extra stays
-Python-only, `UX-397`'s decision. The 5 dead exports are deleted or
-referenced, the 6 `==` fixed, the 8 globals declared. The 70 enter the
-baseline (`UX-694`) by identity, so a new one is red.
+The five decisions are taken here so the track has none left:
+
+1. **The five dead exports are deleted, not referenced.** Measured,
+   per name, across the whole tree:
+
+   ```console
+   forgetIds (controls.js)        viewer 0  tests 0  docs 1
+   SPARK_WIDTH (drawings.js)      viewer 0  tests 0  docs 1
+   sourceOf (rawjson.js)          viewer 0  tests 0  docs 1
+   forgetUnmapped (shapes.js)     viewer 0  tests 0  docs 1
+   focusTargets (tablefocus.js)   viewer 0  tests 0  docs 1
+   ```
+
+   The one `docs/` hit is this file naming them. Referencing dead code
+   to quiet a linter is the fake fix; they go.
+2. **The linter runs at the CI gate only, never in `make lint`.**
+   `UX-397`'s decision stands - the dev extra stays Python-only, and
+   nothing in the tree may need `node` at test time. `npx` does resolve
+   in this container (`npx --yes eslint@9 --version` -> `v9.39.5`,
+   exit 0), so a track can develop against it; that is not licence to
+   depend on it.
+3. **Pin the major.** An unpinned `npx --yes eslint` lets a new major
+   silently change the finding set, which is the reason `UX-693`
+   pinned ruff and `tests/quality_baseline.json` records
+   `ruff_version`. Pin, and record the resolved version beside the
+   findings the same way.
+4. **Re-measure the 70.** Round 93's count is nine rounds old and the
+   viewer has moved since - `UX-667` alone rewrote `nav.js` and
+   `chapters.js`. Measure on the track's own base, paste it, and treat
+   the 70 as context rather than a target.
+5. **A baseline, not zero.** The Acceptance Test's "0 problems"
+   conflicts with the Required Fix's "the 70 enter the baseline";
+   the baseline wins. Fix the three named classes - the 5 dead
+   exports, the 6 `==`, the 8 undeclared globals - and whatever
+   remains enters `UX-694`'s baseline by identity, so a *new* problem
+   is red and the standing ones are recorded rather than hidden.
+
+The surfaces: `eslint.config.js` at the root, `.github/workflows/quality.yml`,
+the five viewer modules the dead exports live in, `views.js` for the
+six `==`, and the baseline file.
 
 ## Out of Scope
 

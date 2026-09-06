@@ -172,12 +172,13 @@ Round 80: six tracks, 24 items, six suite runs, 1.83 commits per item.
 The orchestrator's cost is not what it reads; it is the live context
 **at each rebuild** — a wake after idle or a compaction re-enters the
 whole context as fresh tokens. Measured on this session from round 46
-on: 11 rebuilds were 3.76M of 5.16M tokens (73 %); every read, write
-and test together under a fifth. So the orchestrator reads reports,
-never diffs or logs — the `verifier` reads the diff, the track pastes
-its Outcome parts — and a tool result over a screen goes to a file and
-is read by its head. A batch is as many tracks as the merge can price
-(1.46-1.83 commits per item), not as many as the context can hold.
+on, at round 94 (2026-09-05): 11 rebuilds were 3.76M of 5.16M tokens
+(73 %); every read, write and test together under a fifth. So the
+orchestrator reads reports, never diffs or logs — the `verifier` reads
+the diff, the track pastes its Outcome parts — and a tool result over
+a screen goes to a file and is read by its head. A batch is as many
+tracks as the merge can price (1.46-1.83 commits per item), not as
+many as the context can hold.
 
 While tracks run, the orchestrator edits nothing and commits nothing:
 a declined permission interrupts the turn, and an interrupt kills every

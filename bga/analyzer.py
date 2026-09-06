@@ -1965,34 +1965,43 @@ class BuildEfficiencyAnalyzer:
             confidence['band'] = confidence_band(primary)
         return confidence
 
-    def _compute_utilization_envelope(self) -> dict:
-        """`UX-676`: the host CPU series, read against this run's caps.
+    def read_host_samples(self) -> Optional[dict]:
+        """`UX-675`'s raw `{header, samples}`, or `None`.
 
         `host-samples.jsonl` sits beside the run directory rather than
         inside it (`capture-layout/v1`), so the path is the run's
-        parent; a directory that is not a capture simply has no file,
-        and the section says so rather than being absent.
+        parent. Shared by `_compute_utilization_envelope` (`UX-676`'s
+        capped, ranked tables) and `UX-677`'s advisor, which joins this
+        same raw series to each element's span directly rather than
+        reading those tables as a proxy for it.
         """
-        from .utilisation import envelope as envelope_module
-
-        # `loaded_from`, not `run_dir`: `analyze(run_dir)` records the
-        # path it read there and leaves the constructor argument alone
-        # (`UX-95`), so the attribute that is always set is the one that
-        # says where this analysis actually came from.
         directory = self.loaded_from or self.run_dir
         if not self.run_context or not self.graph or not directory:
-            return {"absence": "this analysis has no run context, graph or "
-                               "run directory to read a host series against"}
+            return None
         from .run_store import HOST_SAMPLES_NAME
         from .tools_dispatch import _import_tool
 
         path = Path(directory).parent / HOST_SAMPLES_NAME
         if not path.is_file():
+            return None
+        return _import_tool(
+            "tools.bst_native_build_tracer").read_host_samples(str(path))
+
+    def _compute_utilization_envelope(self) -> dict:
+        """`UX-676`: the host CPU series, read against this run's caps."""
+        from .utilisation import envelope as envelope_module
+
+        read = self.read_host_samples()
+        if read is None:
+            directory = self.loaded_from or self.run_dir
+            if not self.run_context or not self.graph or not directory:
+                return {"absence": "this analysis has no run context, "
+                                   "graph or run directory to read a host "
+                                   "series against"}
+            from .run_store import HOST_SAMPLES_NAME
             return {"absence": f"this capture has no {HOST_SAMPLES_NAME} - "
                                f"it was taken before `UX-378`, or the host "
                                f"exposes no /proc/meminfo"}
-        read = _import_tool(
-            "tools.bst_native_build_tracer").read_host_samples(str(path))
         tasks = [{"element": task.task_key.element_uid,
                   "start_us": task.start_us, "finish_us": task.finish_us,
                   "ready_us": task.ready_us}

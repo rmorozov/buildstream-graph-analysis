@@ -927,7 +927,7 @@ columns are the whole statement of what one of its rows holds, and
 finding one level up: `parallelism` is a top-level *object*, its
 `levels` rows are below that, and a population reaching only under a
 top-level array published the whole of a major bump outside itself.
-The surface is **252 keys** today, and that figure is derived from the
+The surface is **257 keys** today, and that figure is derived from the
 walk rather than typed here.
 
 So the statement of coverage, which is now a statement and not a
@@ -2198,6 +2198,24 @@ It never recommends a value it has no measurement for. `--builders`
 advice that clears the CPU check and blows the memory one is advice to
 build into swap, which is why the two are computed together and the
 binding one is named.
+
+**Per element: `max_jobs_advice` (`UX-677`).** The same document also
+carries, per element, a recommended `--max-jobs` under a no-overcommit
+constraint: at every instant the recommended values for the elements
+building then sum to at most `host_cpu_count`, and their measured peak
+RSS sums to at most the host's memory. Evidence is `UX-675`'s raw host
+CPU series joined directly to each element's own BUILD span, not the
+ranked, 40-row-capped `underutilized_intervals`/`overcommitted_intervals`
+tables above.
+
+| key | what it is |
+|---|---|
+| `current_max_jobs` | the `-j` this element's own build used (`UX-377`) |
+| `recommended_max_jobs` | what the no-overcommit constraint allows; `None` when `refusal` is set |
+| `max_jobs_change` | `recommended_max_jobs` minus `current_max_jobs`, signed |
+| `local_max_concurrency` | the most elements ever seen building at once in a host-sample interval this element's span touches |
+| `samples_in_span` | how many host-CPU-sample intervals overlap this element's span; too few and the row refuses rather than guesses |
+| `refusal` | why no number was published - thin evidence, or an overlap whose measured peak RSS already exceeds the host's memory |
 
 **The sweep behind it, as data: `sweep/v1`** (`UX-339`). The graph
 constraint above is the *knee* of a capacity sweep, and `bga sweep`

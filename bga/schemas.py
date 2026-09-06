@@ -1687,6 +1687,24 @@ _JOIN_ITEM_PROPERTIES = {
 # this table, and a new key with no sentence fails it.
 #: `UX-676`: both interval tables are the same row, so the columns are
 #: declared once. Two populations of one shape, not two shapes.
+#: `UX-677`: the per-element max-jobs advisor's own table, on
+#: `capacity_recommendation` rather than a contract of its own.
+_MAX_JOBS_ADVICE_COLUMNS = [
+    {"key": "element", "title": "Element", "sortable": True},
+    {"key": "current_max_jobs", "title": "Current", "quantity": "count",
+     "sortable": True},
+    {"key": "recommended_max_jobs", "title": "Recommended",
+     "quantity": "count", "sortable": True},
+    {"key": "max_jobs_change", "title": "Change", "quantity": "count",
+     DIRECTION: "higher_is_better", "sortable": True},
+    {"key": "local_max_concurrency", "title": "Most seen overlapping",
+     "quantity": "count", "sortable": True},
+    {"key": "samples_in_span", "title": "Host samples in span",
+     "quantity": "count", "sortable": True},
+    {"key": "refusal", "title": "Refusal"},
+]
+
+
 _INTERVAL_COLUMNS = [
     {"key": "start_us", "title": "From", "quantity": "duration_us"},
     {"key": "duration_us", "title": "For", "quantity": "duration_us"},
@@ -3103,6 +3121,22 @@ _ANALYZE_HINTS = {
                                "one core, from Plane 2. Free capacity these "
                                "leave is capacity no builder count can "
                                "use."},
+            "max_jobs_advice": {
+                "description": "`UX-677`: per element, `--max-jobs` under a "
+                               "no-overcommit constraint - the sum of "
+                               "recommended values for elements building at "
+                               "once must not exceed `host_cpu_count`, and "
+                               "the sum of their measured peak RSS must not "
+                               "exceed the host's memory. Evidence is "
+                               "`UX-675`'s host CPU series joined directly "
+                               "to each element's BUILD span, not "
+                               "`UX-676`'s ranked, capped interval tables. "
+                               "An element with too few overlapping samples, "
+                               "or whose overlap already overcommits "
+                               "memory, carries `refusal` instead of a "
+                               "number.",
+                COLUMNS: _MAX_JOBS_ADVICE_COLUMNS,
+            },
             "caveat": {
                 "description": "What this recommendation is not. Read it "
                                "before acting: the sweep replays observed "

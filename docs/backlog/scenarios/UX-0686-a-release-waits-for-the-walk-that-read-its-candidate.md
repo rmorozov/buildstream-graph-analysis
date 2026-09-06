@@ -53,3 +53,40 @@ it until `UX-727` gives it a head to read.
 With a walk dated before the candidate commit, the release guard
 refuses naming the walk's date; with one after, and its findings
 closed, it passes. Mutation: drop the date comparison — red.
+
+## Outcome
+
+**Gap measured** — before, the guide named no walk:
+
+```text
+$ git show 74c0a90:docs/contributing/release-guide.md | grep -ci "walk\|UX-685"
+0
+```
+
+**Close measured** — after, the third condition and the derivation:
+
+```text
+$ grep -ci "walk\|UX-685" docs/contributing/release-guide.md
+7
+$ python3 -m pytest tests/unit/test_a_release_records_a_contract_state.py -q
+....................................                                    [100%]
+37 passed in 0.34s
+$ python3 -c "import sys; sys.path.insert(0,'tests/unit'); \
+  from test_a_release_records_a_contract_state import candidate_commit_date; \
+  print(candidate_commit_date())"
+2026-09-06
+```
+
+**Mutation table**
+
+| guard | mutation | reddened | count |
+|---|---|---|---|
+| `walk_covers_candidate` (date gate) | drop `if walk_date < candidate_date: return False` | `TestTheWalkGateIsDerived.test_a_walk_before_the_candidate_refuses` | 1 failed, 4 passed |
+| `_FILED` (real-report parsing) | `_FILED = re.compile(r"NEVERMATCH")` | `TestTheReleaseConsumesTheWalk.test_a_walk_reports_date_and_filings_are_read_from_the_real_tree` | 1 failed, 3 passed |
+| backlog-status fixture check | flip `"UX-724" not in` to `"UX-724" in` | `TestTheReleaseConsumesTheWalk.test_the_filed_findings_closed_status_matches_the_backlog` | 1 failed |
+
+Both mutations reverted from the pre-mutation copy in the scratchpad; `pytest tests/unit/test_a_release_records_a_contract_state.py -q` back to 37 passed after each.
+
+**Not bisected**: `contracts.ids()` for the exact contract-moving commit — cheaper to state, more expensive to run (per the two decisions above); `git log -1` over the over-approximated file set is what ships.
+
+**Design-review half**: not built — `UX-727` gives it a report shape first; the guide's third condition names it in prose for a human only.

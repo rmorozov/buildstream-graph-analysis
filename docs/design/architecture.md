@@ -680,7 +680,7 @@ The table covers `UX-01`..`UX-76`: the additions that shaped the architecture th
 | UX-57 | Hook's open-path buffer flushes instead of dropping (70% of a real build's opens were lost) | 🟢 Done |
 | UX-58 | Plane 2 shim records the bwrap argv and invocation it rewrites | 🟢 Done |
 | UX-59 | Regression gate can compare against a baseline *set* — median ± k·MAD band, minimum three runs | 🟢 Done |
-| UX-60 | `I3` implemented; the FETCH-in-efficiency question **decided** and documented rather than deferred again - but not yet **applied**, because the answer cannot be one number per element and moves a certified floor in both directions | 🟡 Partial |
+| UX-60 | `I3` implemented; the FETCH-in-efficiency question **decided** and documented rather than deferred again - but not yet **applied**, because the answer cannot be one number per element and moves a certified floor in both directions | 🟢 Done |
 | UX-61 | `max_concurrency` keyed on `(invocation, pid)` — it reported 5,268 concurrent processes on a 4-core runner | 🟢 Done |
 | UX-62 | Per-span terminal status carried through `trace/v9`; failed task time reported as waste, not silently reclassified | 🟢 Done |
 | UX-63 | **Measured per-element peak RSS** (`ru_maxrss`), replacing operator-declared memory estimates | 🟢 Done |

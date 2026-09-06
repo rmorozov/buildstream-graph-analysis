@@ -15,19 +15,19 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-719 scenarios: **36 open**, 683 closed.
+722 scenarios: **38 open**, 684 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
 | capture | 1 | 94 |
-| analysis | 7 | 103 |
+| analysis | 8 | 104 |
 | contracts | 0 | 48 |
 | viewer | 8 | 160 |
-| cli | 0 | 21 |
+| cli | 1 | 22 |
 | store | 0 | 16 |
 | docs | 8 | 116 |
-| guards | 12 | 161 |
+| guards | 12 | 162 |
 
 ## Open scenarios
 
@@ -48,7 +48,6 @@ task file, which is the only place it ever lived twice.
 | UX-682 | [change frequency and co-change, from the logs the project already keeps](UX-0682-change-frequency-and-co-change-from-the-logs-the-project-already-keeps.md) | analysis | High | R2 and R3 — split, consolidate, or leave alone, decided on evidence | 🔴 |
 | UX-683 | [the foundation tier is declared, and the kind-based exemption misses it](UX-0683-the-foundation-tier-is-declared-and-the-kind-based-exemption-misses-it.md) | analysis | Medium | R2 who owns the toolchain and wants out of the noise; R3 reading the ranking | 🔴 |
 | UX-684 | [the cached-build verdict — does the graph rebuild the cheapest subgraph?](UX-0684-the-cached-build-verdict-does-the-graph-rebuild-the-cheapest-subgraph.md) | analysis | High | R3 showing evidence, R8 reading it | 🔴 |
-| UX-685 | [exploration is a seeded scenario, and every finding grows the answer key](UX-0685-exploration-is-a-seeded-scenario-and-every-finding-grows-the-answer-ke.md) | guards | High | R8 deciding whether the tool is in shape; the implementing session that gets a guard, not a transcript | 🟡 |
 | UX-686 | [a release waits for the walk that read its candidate](UX-0686-a-release-waits-for-the-walk-that-read-its-candidate.md) | docs | High | R8 cutting a release; the reader who installs it | 🔴 |
 | UX-689 | [the architecture document moves into the area pages, one track at a time](UX-0689-the-architecture-document-moves-into-the-area-pages-one-track-at-a-tim.md) | docs | Medium | the reader pricing a change; the session restructuring without losing a sentence | 🔴 |
 | UX-690 | [the suite has a shape budget, and a feature files its test analysis](UX-0690-the-suite-has-a-shape-budget-and-a-feature-files-its-test-analysis.md) | guards | Medium | R8 reading whether the suite is balanced; the implementer writing the right guard | 🔴 |
@@ -72,6 +71,9 @@ task file, which is the only place it ever lived twice.
 | UX-719 | [the bottleneck fan-in and fan-out labels are swapped](UX-0719-the-bottleneck-fan-in-and-fan-out-labels-are-swapped.md) | analysis | Medium | a reader of the graph-shape block | 🔴 |
 | UX-721 | [an aliased import is silently dropped by the export](UX-0721-an-aliased-import-is-silently-dropped-by-the-export.md) | viewer | Medium | anyone editing a viewer module | 🔴 |
 | UX-722 | [a rail target inside a scrolling table lands under the header](UX-0722-a-rail-target-inside-a-scrolling-table-lands-under-the-header.md) | viewer | Medium | anyone who clicks a rail entry into a nested block | 🔴 |
+| UX-723 | [the scenario recipe prints commands that do not run](UX-0723-the-scenario-recipe-prints-commands-that-do-not-run.md) | guards | High | the walker following the script the seed prints | 🔴 |
+| UX-724 | [the diagnostics blocks vanish on a fully cached run](UX-0724-the-diagnostics-blocks-vanish-on-a-fully-cached-run.md) | analysis | Medium | R2 and R3, reading an incremental run's report | 🔴 |
+| UX-725 | [`bga view --export` prints two ERROR lines and exits 0](UX-0725-view-export-prints-two-error-lines-and-exits-zero.md) | cli | Medium | anyone exporting a run whose neighbour is a different run mode | 🔴 |
 
 ## UX-706..UX-711: the ninety-fourth round — the pipeline, and which model runs which shape (2026-09-05)
 

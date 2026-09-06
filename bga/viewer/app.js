@@ -24,8 +24,9 @@ import { handOff, deepLink, tracedSize, openTab, perfettoCanFetch,
 // `renderBlastTree` is *not* imported here: `views.js` draws the tree
 // inside `renderBlastSearch`, and the name sat in this list unused
 // until UX-337 counted what each half of the file actually reaches for.
-import { renderBand, renderTrend, renderBlastSearch, renderBlastOffline,
-         renderOverview, renderEvidence, renderCriticalPath } from "./views.js";
+import { renderBand, renderBandUnavailable, renderTrend, renderBlastSearch,
+         renderBlastOffline, renderOverview, renderEvidence,
+         renderCriticalPath } from "./views.js";
 // `UX-337`: the two chapters that moved out of `views.js`. Named
 // directly, one import per file - `views.js` could re-export them, but
 // the export's `_module_order` walks `import` lines and a re-export is
@@ -665,7 +666,14 @@ async function boot() {
     const comparison = await optional(run, "compare");
     const band = comparison && contained(
       document, "band", "compare.json", () => renderBand(comparison));
-    if (band) root.append(band);
+    if (band) {
+      root.append(band);
+    } else if (run.comparison_unavailable) {
+      // `UX-725`: the auto-picked baseline was refused (`UX-55`), not
+      // merely absent - the page says so, once, where the band would
+      // have been.
+      root.append(renderBandUnavailable(run.comparison_unavailable));
+    }
     // UX-221: and which elements put the candidate where the band says
     // it is. The band states the verdict, this states the cause, and
     // `chapters.js` is what puts them in that order - see the note on

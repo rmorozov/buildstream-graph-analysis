@@ -2116,6 +2116,47 @@ _SCHEMA_BY_FLAG = {
 }
 
 
+def _checkout_root(start: Path) -> Optional[Path]:
+    """Walk up from `start` for a checkout of *this* repository (UX-728).
+
+    Marker: `bga/__init__.py` beside a `pyproject.toml` naming project
+    "bga" - a couple of stats per directory, no subprocess, so it does
+    not shell out on every startup the way `git rev-parse` would.
+    """
+    for candidate in (start, *start.parents):
+        if not (candidate / "bga" / "__init__.py").is_file():
+            continue
+        pyproject = candidate / "pyproject.toml"
+        try:
+            text = pyproject.read_text()
+        except OSError:
+            continue
+        if 'name = "bga"' in text:
+            return candidate
+    return None
+
+
+def _maybe_warn_wrong_checkout() -> None:
+    """UX-728: warn only when cwd and the imported `bga` disagree.
+
+    Both must resolve to a checkout of this repository first - an
+    unrelated directory, or a system/venv install run from anywhere,
+    must see nothing.
+    """
+    cwd_root = _checkout_root(Path.cwd().resolve())
+    if cwd_root is None:
+        return
+    import_root = Path(__file__).resolve().parent.parent
+    if import_root == cwd_root:
+        return
+    print(
+        f"bga: imported from {import_root}, but the working directory is "
+        f"inside a different checkout of this repository at {cwd_root} - "
+        "commands may run against the wrong copy (UX-728).",
+        file=sys.stderr,
+    )
+
+
 def _maybe_complete() -> None:
     """Hand the parser to `argcomplete`, when the shell asked for it.
 
@@ -2263,6 +2304,11 @@ def _run(argv: Optional[list[str]] = None) -> int:
     # `bst_extract_run` untouched, and letting this parser see them first
     # would mean teaching it every tool's flags.
     raw_argv = list(sys.argv[1:] if argv is None else argv)
+
+    # UX-728: a track's worktree and the editable install it shadows are
+    # both checkouts of this repo but not the same one - say so on stderr
+    # before anything else runs.
+    _maybe_warn_wrong_checkout()
 
     # UX-190: `--schema` answers about the *shape* of an output, not
     # about a run, so it is checked before argparse insists on the run

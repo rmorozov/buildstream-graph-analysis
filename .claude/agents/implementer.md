@@ -160,7 +160,11 @@ mkdir -p "<the scratchpad path you were given>/$(basename "$PWD")"
 2. `orient` for where the surfaces are. Read only the ranges the task
    file cites.
 3. Implement the minimal fix. A placeholder replaced by a comment is
-   not an implementation.
+   not an implementation. Manually repro through the CLI with cwd
+   pinned to this worktree, or `PYTHONPATH=<worktree> python3 -m
+   bga.cli` — otherwise it resolves to the session's install, not your
+   copy (`UX-728`); `bga` warns at startup when it can tell the two
+   apart.
 4. `make test-touching` while you work.
 5. **Mutate every new guard** and watch it go red — the `falsify`
    skill. A guard nobody mutated is a guard nobody knows can fail. Then

@@ -2033,12 +2033,16 @@ _STRUCTURAL_TABLES = {
                                "counted in edges."},
             "avg_fanin": {
                 QUANTITY: "ratio",
-                "description": "Direct dependents per element, "
-                               "averaged."},
+                "description": "Direct dependencies per element, "
+                               "averaged - equal to avg_fanout by "
+                               "construction (|E|/|V|; every edge is "
+                               "one in-edge and one out-edge)."},
             "avg_fanout": {
                 QUANTITY: "ratio",
-                "description": "Direct dependencies per element, "
-                               "averaged."},
+                "description": "Direct dependents per element, "
+                               "averaged - equal to avg_fanin by "
+                               "construction (|E|/|V|; every edge is "
+                               "one in-edge and one out-edge)."},
             "max_parallelism": {
                 QUANTITY: "count",
                 "description": "The most elements that could run at "

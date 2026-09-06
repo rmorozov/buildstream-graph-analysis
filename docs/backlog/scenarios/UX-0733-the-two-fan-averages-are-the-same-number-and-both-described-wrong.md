@@ -79,3 +79,47 @@ A guard holds each average's description against the degree it
 averages, derived from the graph rather than from the sentence; and if
 both keys survive, asserts the equality the descriptions must then
 state. Mutation: swap either description back — red, naming the key.
+
+## Outcome
+
+**Gap measured** - re-ran the Motivation's reading on
+`tests/fixtures/macro_micro`, from `graph.json`'s edge list directly:
+
+```text
+nodes 11  edges 34
+mean(in_degree)  = 3.0909
+mean(out_degree) = 3.0909
+equal: True
+```
+
+Matches the task file exactly; no correction needed. `avg_fanin`
+averages in-degree (dependencies), `avg_fanout` out-degree
+(dependents) - `bga/schemas.py:2034-2041` had them swapped.
+
+**Close measured** - swapped the two `bga/schemas.py:2034-2041`
+descriptions so `avg_fanin` says "Direct dependencies per element" and
+`avg_fanout` "Direct dependents per element", per the Required Fix;
+per the decision paragraph, both keys stay and each description now
+also states the equality by construction (`|E|/|V|`, every edge one
+in-edge and one out-edge), naming the counterpart key. `docs/guides/
+cli.md` carries no `avg_fanin`/`avg_fanout` sentence (checked;
+`fan_in`/`fan_out` there is `UX-719`'s ranked-block prose, untouched).
+
+`make test-touching`: `102 file(s) selected (14 census + 88 naming the
+change) · 2065 passed, 40 skipped in 64.51s`. `make lint`: clean.
+`dev_baseline.py --check`: 299.
+
+**Mutation table** (`tests/unit/
+test_a_fan_average_names_the_degree_it_averages.py`, scratch-copy edit
+and restore, never `git checkout --`).
+
+| mutation | clause reddened | result |
+|---|---|---|
+| restore old `avg_fanin` sentence ("Direct dependents…") | `test_avg_fanin_names_dependencies_not_dependents`, `test_avg_fanin_names_avg_fanout_and_the_reason` | 2 of 8 fail |
+| restore old `avg_fanout` sentence ("Direct dependencies…") | `test_avg_fanout_names_dependents_not_dependencies`, `test_avg_fanout_names_avg_fanin_and_the_reason` | 2 of 8 fail |
+
+Each reverted from the saved copy; suite green again (8/8) after each.
+
+**Deviation** - none from the Required Fix or the decision paragraph.
+`docs/guides/cli.md` was checked, per scope, and found to carry
+neither sentence - no edit made there.

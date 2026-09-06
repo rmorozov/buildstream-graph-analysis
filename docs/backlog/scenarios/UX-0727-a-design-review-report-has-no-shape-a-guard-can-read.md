@@ -37,7 +37,7 @@ decision, and the Outcome says which.
 
 - The review's *content* — this is about a head a guard can read, not
   about what a review should look at.
-- Retrofitting `round-90.md`, which predates the skill.
+- Retrofitting `round-90.md`. **Declined**: it predates the skill, and a head added to it now would be a shape nobody wrote to, which is the drift a fixed shape exists to stop.
 
 ## Acceptance Test
 

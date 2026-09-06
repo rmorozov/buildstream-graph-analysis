@@ -15,12 +15,12 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-724 scenarios: **39 open**, 685 closed.
+724 scenarios: **38 open**, 686 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
-| capture | 2 | 95 |
+| capture | 1 | 95 |
 | analysis | 8 | 104 |
 | contracts | 0 | 48 |
 | viewer | 8 | 160 |
@@ -73,7 +73,6 @@ task file, which is the only place it ever lived twice.
 | UX-722 | [a rail target inside a scrolling table lands under the header](UX-0722-a-rail-target-inside-a-scrolling-table-lands-under-the-header.md) | viewer | Medium | anyone who clicks a rail entry into a nested block | 🔴 |
 | UX-724 | [the diagnostics blocks vanish on a fully cached run](UX-0724-the-diagnostics-blocks-vanish-on-a-fully-cached-run.md) | analysis | Medium | R2 and R3, reading an incremental run's report | 🔴 |
 | UX-725 | [`bga view --export` prints two ERROR lines and exits 0](UX-0725-view-export-prints-two-error-lines-and-exits-zero.md) | cli | Medium | anyone exporting a run whose neighbour is a different run mode | 🔴 |
-| UX-726 | [no flag omits Plane 2, and the empty one says nothing](UX-0726-no-flag-omits-plane-2-and-the-empty-one-says-nothing.md) | capture | High | anyone who wants a Plane 1 capture, and every reader of a run that has an empty Plane 2 | 🔴 |
 | UX-727 | [a design review report has no shape a guard can read](UX-0727-a-design-review-report-has-no-shape-a-guard-can-read.md) | guards | Medium | the release gate, and the round reading a review it did not run | 🔴 |
 
 ## UX-706..UX-711: the ninety-fourth round — the pipeline, and which model runs which shape (2026-09-05)

@@ -24,6 +24,7 @@ can see is `records_embedded`, which the analysis publishes so that
 "this run's report is 1.5 GB" is a fact about the capture rather than a
 mystery about the tool.
 """
+import json
 import os
 from typing import Optional
 
@@ -309,6 +310,19 @@ DECLINED = ("Plane 2 was captured and this report was asked not to read it "
             "(`--no-plane2`), so every figure below is Plane 1 alone.")
 
 
+#: `UX-726`: the fourth state, which `UX-685`'s seed-2 walk met and no
+#: sentence covered. A report that exists and recorded nothing is not
+#: "no absence" - the reader who asked for Plane 1 alone gets it, and
+#: the reader whose hook failed to attach gets the same file.
+CAPTURED_EMPTY = ("Plane 2 was captured and recorded no process at all, so "
+                  "there is no per-process detail. That is what every "
+                  "`bga snapshot` flag that reads like \"off\" produces - "
+                  "`--no-inject`, `--no-trace-opens`, `--trace-spine=off` - "
+                  "and it is also what a hook that failed to attach looks "
+                  "like. `bga wrap` then `bga extract` captures Plane 1 "
+                  "alone on purpose.")
+
+
 def absence(run_dir: str, declined: bool = False):
     """Which absence this run has, as a sentence, or `None` for none.
 
@@ -330,7 +344,28 @@ def absence(run_dir: str, declined: bool = False):
         return DECLINED
     if run_store.sibling_raw_log(run_dir) is None:
         return CAPTURED_NO_RAW_LOG
+    # `UX-726`: last, because the three above are about what is *beside*
+    # the run and this one is about what is *in* the report.
+    if _recorded_nothing(run_store.sibling_plane2(run_dir)):
+        return CAPTURED_EMPTY
     return None
+
+
+def _recorded_nothing(path):
+    """Whether a Plane 2 report counted no process at all.
+
+    A missing or unreadable file is not this state - `absence` has
+    already ruled the file present, so a read that fails is a corrupt
+    report and not an empty one, and saying "recorded nothing" about it
+    would be a guess.
+    """
+    if not path:
+        return False
+    try:
+        with open(path, encoding="utf-8") as handle:
+            return json.load(handle).get("process_count") == 0
+    except (OSError, ValueError):
+        return False
 
 
 def attachable(run_dir: str):

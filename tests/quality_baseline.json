@@ -1,6 +1,7 @@
 {
   "ruff_version": "0.15.8",
   "families": ["C901", "PLR0912", "PLR0913", "PLR0915", "S", "SIM115"],
+  "forced_by": "UX-712",
   "findings": [
     {"file": ".claude/hooks/selector_before_commit.py", "line": "done = subprocess.run(", "nth": 1, "rule": "S603", "tool": "ruff"},
     {"file": ".claude/hooks/selector_before_commit.py", "line": "done = subprocess.run([\"git\", \"rev-parse\", \"--show-toplevel\"],", "nth": 1, "rule": "S607", "tool": "ruff"},
@@ -261,6 +262,7 @@
     {"file": "tools/dev_refresh_analysis.py", "line": "into=\"expected_output.json\", run=\".\", token=\"<run>\"),", "nth": 1, "rule": "S106", "tool": "ruff"},
     {"file": "tools/dev_refresh_analysis.py", "line": "def __init__(self, path, into, run=\".\", token=\"<run>\"):", "nth": 1, "rule": "S107", "tool": "ruff"},
     {"file": "tools/dev_refresh_analysis.py", "line": "done = subprocess.run(", "nth": 1, "rule": "S603", "tool": "ruff"},
+    {"file": "tools/dev_sizes.py", "line": "run = subprocess.run(cmd, cwd=root, capture_output=True, text=True,", "nth": 1, "rule": "S603", "tool": "ruff"},
     {"file": "tools/dev_tier_drift.py", "line": "def _against(times, path, args):", "nth": 1, "rule": "C901", "tool": "ruff"},
     {"file": "tools/dev_tier_drift.py", "line": "def main(argv=None):", "nth": 1, "rule": "C901", "tool": "ruff"},
     {"file": "tools/dev_tier_drift.py", "line": "def _against(times, path, args):", "nth": 1, "rule": "PLR0912", "tool": "ruff"},

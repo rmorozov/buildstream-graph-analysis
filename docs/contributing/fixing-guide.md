@@ -66,7 +66,7 @@ For every task, before marking it done:
 
 1. Run the exact command(s) given in the task's **Acceptance Test** section.
 2. Paste the actual command and actual output into the task file's **Verification Log** section (append, don't overwrite prior entries).
-3. **While you work, run the tests that touch what you changed** (`UX-336`): `make test-touching` maps the working diff to the test files that name it - 19-131 of 495 test files, median 25, over every module the map names, not the seconds one machine spent on one of them (`UX-632`). `python3 tools/dev_touching.py --spread --write` is the only thing that writes that figure. Wider than one module, run the tier (`UX-238`). Every target runs `-n auto`. **The suite's wall clock is a property of the machine, not of the suite** (`UX-551`), so budget a round against the spread and not a figure:
+3. **While you work, run the tests that touch what you changed** (`UX-336`): `make test-touching` maps the working diff to the test files that name it - 19-131 of 496 test files, median 25, over every module the map names, not the seconds one machine spent on one of them (`UX-632`). `python3 tools/dev_touching.py --spread --write` is the only thing that writes that figure. Wider than one module, run the tier (`UX-238`). Every target runs `-n auto`. **The suite's wall clock is a property of the machine, not of the suite** (`UX-551`), so budget a round against the spread and not a figure:
 
 ```text
 round 46   3m15s                                     4 cores
@@ -81,7 +81,7 @@ Round 80's 8m52s is **not reproducible on the tree that produced it**: the same 
 
    | target | measured at `-n auto` | what is in it |
    |---|---|---|
-   | `make test-touching` | 19-131 of 495 test files, median 25 | the test files that name what your diff touched |
+   | `make test-touching` | 19-131 of 496 test files, median 25 | the test files that name what your diff touched |
    | `make test-small` | **20s** | pure Python over in-memory fixtures — the default tier |
    | `make test-medium` | ~2m50s | spawns a process or a node harness |
    | `make test-large` | ~2m05s | scale fixtures, real process trees |
@@ -357,6 +357,10 @@ tools/dev_symbols.py         def, callers, importers, fan-in and dead names,
 tools/dev_baseline.py        every current finding by identity in
                              tests/quality_baseline.json; a new one is red,
                              the list only shrinks (UX-694)
+tools/dev_sizes.py           the size ledger for what has no finding
+                             identity - longest function, file lines,
+                             duplicate blocks - in tests/quality_reference.json;
+                             a grown cell is red (UX-712)
 tools/dev_trace_coverage.py  which captured field reaches the emitted
                              trace, and which Perfetto carriers it uses (UX-466)
 tools/dev_page_census.py     the page's structure and control classes, one
@@ -397,6 +401,9 @@ tests/touch_map.json       module -> the test files CI measured executing it; ad
                            the default branch's own run, never recorded locally (UX-524)
 tests/quality_baseline.json  every finding the widened families report today, by
                            identity; `dev_baseline.py --check` reds a new one (UX-694)
+tests/quality_reference.json  the size ledger's three counts per file - longest
+                           function, file lines, duplicate blocks; `dev_sizes.py
+                           --check` reds a grown cell (UX-712)
 tests/dom_shim.mjs         the one DOM every viewer guard runs on (UX-264)
 tests/viewer.mjs           the viewer's exports as one namespace, so a guard names a symbol not a module (UX-337)
 tests/cdp.mjs              headless Chrome over CDP, no dependencies (UX-257)

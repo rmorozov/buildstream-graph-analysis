@@ -37,7 +37,6 @@ limit is a row too.
 | 95 | verifier | sonnet | verifier of track B | 63k | 44 | 8.4 m | the first response never a rebuild; `--list` guard untested; 139k vs 145k explained | the harness's billed total had to be dug out of a task-notification string |
 | 95 | implementer | sonnet | track D: UX-694 the finding baseline (bounded), incl. the verifier's five fixes | 296k | 117 | 45.7 m | merged | the git-diff guard makes the adding commit's own pre-commit lint red until it is HEAD; the brief's scope (`tests/` in the paths) contradicted the task's Out of Scope |
 | 95 | verifier | sonnet | verifier of track D | 64k | 38 | 8.4 m | `tests/` scanned against Out of Scope (92 % `S101`); the git-diff guard absent; shrink with stale+new untested; a reformat re-identifies; `--shrink` wipes on a parse failure | the Required Fix names four analyzers and the Outcome said nothing of the three dropped |
-
 | 100 | implementer | sonnet | `UX-732` the log's landed-after range (judgement, taken in the brief) | 189k | 115 | 35.1 m | reworked, then merged | the chosen route was wrong: a blob comparison calls a clean 3-way a landing, which is every merge here |
 | 100 | implementer | sonnet | `UX-732` rework: the combined diff replaces the blob | 244k | 39 | 11.5 m | merged | the first pass's own reproduction used an unbounded `git log`, which answers a different question than `anchor..HEAD` |
 | 100 | implementer | sonnet | `UX-734` three counted figures (judgement) | 100k | 76 | 15.7 m | merged | found the review's own replacement figure off by two, and corrected it |

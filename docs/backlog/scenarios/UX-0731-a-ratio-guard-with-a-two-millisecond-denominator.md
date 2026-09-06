@@ -1,6 +1,6 @@
 # UX-731: a ratio guard with a two-millisecond denominator
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-551 (wall clock is a property of the machine), UX-716 (the neighbouring decay) | **Serves:** the round whose gate goes red on a green tree | **Topic:** guards | **Shape:** judgement | **Area:** tools
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-551 (wall clock is a property of the machine), UX-716 (the neighbouring decay) | **Serves:** the round whose gate goes red on a green tree | **Topic:** guards | **Shape:** judgement | **Area:** tools
 
 ## Motivation
 
@@ -73,3 +73,73 @@ The guard's verdict is unchanged by load: run it against a busy box
 and against an idle one and the assertion's input moves by less than
 its margin. Mutation: reintroduce a quadratic rescan in
 `compute_unweighted_depth` — red on both.
+
+## Outcome
+
+**The decision, taken here: stop timing.** Both routes measured before
+choosing, as the Required Fix asks.
+
+Route 1, grow the denominator. N=9000 is the first size whose window
+is tens of milliseconds, and its large partner would be N=36000:
+
+```text
+N=500:  fixture 0.002s  measured window  1.91ms  5 repeats incl. load 0.05s
+N=9000: fixture 0.036s  measured window 44.76ms  5 repeats incl. load 1.16s
+```
+
+~6 s for the pair, and still a clock: 44 ms buys headroom against a
+preemption, it does not remove one. Route 2, count the work:
+
+```text
+trial 1: small 33032 (0.040s)  large 132032 (0.169s)  ratio 3.997x
+trial 2: small 33032 (0.040s)  large 132032 (0.157s)  ratio 3.997x
+trial 3: small 33032 (0.040s)  large 132032 (0.173s)  ratio 3.997x
+```
+
+Identical to the event across trials, 0.21 s, and nothing the box is
+doing can reach it. Route 2, and the row's own reasoning was right:
+"the algorithms are O(N+E)" is a claim about work, and a line event is
+work the interpreter did.
+
+**The close, measured.** `sys.settrace` counts line and return events
+whose frame is in `bga/graph/edg.py` or
+`bga/attribution/blame_chain.py`; loading and normalising stay outside
+the trace, as they stayed outside the clock. The threshold is
+**unmoved at 10x** — the instrument changed, the claim did not, and
+`Out of Scope` declined widening it.
+
+```console
+$ pytest tests/unit/test_graph_performance.py -q
+4 passed in 0.83s
+```
+
+Faster than the version it replaces (5 repeats x 2 sizes, declared
+1.2 s in `tests/tiers.py`, 2.19 s in `ci_reference.json`), so the tier
+does not move.
+
+**The mutation table.**
+
+| mutation | clause that reds |
+|---|---|
+| a quadratic rescan of `graph.dependencies` inside `compute_unweighted_depth`'s Kahn loop — the Acceptance Test's own | `test_four_times_the_graph_is_not_sixteen_times_the_work`: `4x the graph took 15.21x the steps (535030 -> 8140030)` |
+| `_MEASURED` names `bga/graph/edge.py`, a path nothing matches (vacuity: both counts 0, ratio undefined) | `test_every_measured_module_is_reached` |
+| the reading becomes a clock again — `steps[where] += 1 + (time.perf_counter_ns() % 2)` | `test_the_count_does_not_move_between_runs`: `40587 vs 40636` |
+
+Applied to scratch copies (`edg.pristine.py`, `perf.pristine.py`) and
+reverted from those copies, not `git checkout --`; `__pycache__`
+cleared between runs.
+
+**One mutation that did not red, and what it means.** Dropping the
+module filter so every traced frame counts left all four clauses
+green: the frames executing inside those three calls are the same
+frames every run, so the count stays deterministic even when the
+filter stops filtering. The determinism clause therefore does not
+guard the *filter* — `test_every_measured_module_is_reached` does —
+and M3b above is what it does guard.
+
+**The neighbouring red, recorded rather than fixed.** Round 98's same
+gate also failed `test_a_project_directory_still_gets_the_project_shaped
+_error`: 56.10 s alone against its own 120 s subprocess cap, on a
+machine whose spread was 2.2x the same day. Same class, different
+guard, and out of this row's scope — it is a subprocess cap, not a
+ratio.

@@ -19,7 +19,7 @@ predecessor mapping, via P1-19's fix) plus an informal but real
 performance check across items 1 and 2.
 """
 import json
-import time
+import sys
 
 from bga import analyze_run
 from bga.attribution.blame_chain import BlameChainAnalyzer
@@ -103,57 +103,106 @@ def test_multi_task_kind_element_predecessors_correctly_distinguished(tmp_path):
     assert total == h
 
 
-def test_performance_scales_subquadratically(tmp_path):
-    """Time the three specific functions P1-16 named at N=500 vs N=2000
-    linear-chain elements - compute_unweighted_depth, compute_weighted_depth
-    (bga/graph/edg.py), and _build_dependency_graph (via constructing a
-    BlameChainAnalyzer, bga/attribution/blame_chain.py). O(N^2) would be
-    roughly 16x slower at 4x the size; O(N+E) should be far less than
-    that (~4x). Threshold (10x) and taking the min of several repeats
-    (not a single sample) to keep this robust against CI noise while
-    still catching a real quadratic regression - the single-sample,
-    8x-threshold version of this test produced a real false positive on
-    GitHub Actions' shared runners (P4-06, first time this suite ran on
-    real CI infrastructure rather than a consistent sandboxed dev
-    environment): 9.0x on one trial, entirely plausible noise for
-    sub-50ms measurements on a shared VM, not a regression - confirmed
-    by the fact it passed cleanly in the same CI run's other matrix
-    legs. min-of-repeats is the standard fix for exactly this class of
-    noise in microbenchmarks (a single slow trial can't drag the result
-    down the way it can drag a mean up).
+#: The modules whose work the claim is about. A line event outside them
+#: is somebody else's cost and is not counted.
+_MEASURED = ("bga/graph/edg.py", "bga/attribution/blame_chain.py")
 
-    Deliberately does NOT time the full analyze_graph()/analyze_run()
-    pipeline: profiling found that end-to-end timing is dominated by two
-    functions P1-16 never named - compute_reachability's full-set
-    materialization (inherently ~O(N^2) output size on a dense/chain
-    reachability graph) and compute_dominators' naive iterative
-    fixed-point dataflow - plus an unrelated O(N^2) hotspot in
-    diagnostics' ready-queue metrics. All three are real but distinct,
-    out-of-scope findings, logged separately (see P1-21) rather than
-    silently pulled into this task's already-precise three-spot scope.
+
+def _steps_taken(run_dir):
+    """`{module: line events}` for one run of the three named functions.
+
+    `UX-731`: the count, not the clock. The predecessor timed a 1.7 ms
+    window under `-n auto` on a box whose load average was 3.25, so one
+    scheduler preemption inside that window moved the quotient and the
+    guard reddened on a green tree. A line event is work the interpreter
+    actually did: it is identical run to run and on any machine, so what
+    else the box is doing cannot reach it.
+
+    Loading and normalising happen outside the trace, as the timed
+    version kept them outside the clock.
     """
-    small_dir = _linear_chain_run_dir(tmp_path / "small", 500)
-    large_dir = _linear_chain_run_dir(tmp_path / "large", 2000)
+    rc, g, tr = load_all(run_dir)
+    tasks, _ = normalize_trace(tr, g, rc.trace_epsilon_us)
+    durations = {t.task_key.element_uid: t.dur_us for t in tasks}
 
-    def _timed_once(run_dir):
-        rc, g, tr = load_all(run_dir)
-        tasks, _ = normalize_trace(tr, g, rc.trace_epsilon_us)
-        durations = {t.task_key.element_uid: t.dur_us for t in tasks}
+    steps = dict.fromkeys(_MEASURED, 0)
 
-        start = time.perf_counter()
+    def _count(frame, event, _arg):
+        where = next((one for one in _MEASURED
+                      if frame.f_code.co_filename.endswith(one)), None)
+        if where is None:
+            return None
+        if event != "call":
+            steps[where] += 1
+        return _count
+
+    sys.settrace(_count)
+    try:
         compute_unweighted_depth(g)
         compute_weighted_depth(g, durations)
         BlameChainAnalyzer(tasks)  # runs _build_dependency_graph
-        return time.perf_counter() - start
+    finally:
+        sys.settrace(None)
+    return steps
 
-    def _timed_min(run_dir, repeats=5):
-        return min(_timed_once(run_dir) for _ in range(repeats))
 
-    small_elapsed = _timed_min(small_dir)
-    large_elapsed = _timed_min(large_dir)
+class TestTheThreeFunctionsScaleSubquadratically:
+    """P1-16's claim, on the instrument that reads it.
 
-    ratio = large_elapsed / small_elapsed if small_elapsed > 0 else float('inf')
-    assert ratio < 10.0, (
-        f"4x graph size took {ratio:.1f}x longer ({small_elapsed:.4f}s -> "
-        f"{large_elapsed:.4f}s, min of 5 repeats each) - looks quadratic, not O(N+E)"
-    )
+    The three functions are `compute_unweighted_depth`,
+    `compute_weighted_depth` (`bga/graph/edg.py`) and
+    `_build_dependency_graph` (via constructing a `BlameChainAnalyzer`).
+    O(N^2) does ~16x the work at 4x the size; O(N+E) does ~4x. The
+    threshold stays 10x, unmoved from the timed version - `UX-731`
+    replaced the instrument and deliberately did not touch the claim.
+
+    Deliberately does NOT cover the full `analyze_graph()`/`analyze_run()`
+    pipeline: end-to-end cost is dominated by two functions P1-16 never
+    named - `compute_reachability`'s full-set materialization (inherently
+    ~O(N^2) output size on a chain) and `compute_dominators`' naive
+    fixed-point dataflow - plus an O(N^2) hotspot in diagnostics'
+    ready-queue metrics. Real, distinct, and held by P1-21.
+
+    The timed version's own history, kept because it is why the
+    threshold is 10x and not 8x: a single-sample, 8x version produced a
+    false positive on GitHub Actions (P4-06) at 9.0x, plausible noise
+    for a sub-50 ms window on a shared VM. min-of-repeats raised the
+    floor and did not remove it; counting does.
+    """
+
+    SMALL, LARGE = 500, 2000
+    BOUND = 10.0
+
+    @staticmethod
+    def _both(tmp_path):
+        return (_steps_taken(_linear_chain_run_dir(tmp_path / "small", 500)),
+                _steps_taken(_linear_chain_run_dir(tmp_path / "large", 2000)))
+
+    def test_four_times_the_graph_is_not_sixteen_times_the_work(self, tmp_path):
+        small, large = self._both(tmp_path)
+        done, grew = sum(small.values()), sum(large.values())
+        ratio = grew / done
+        assert ratio < self.BOUND, (
+            f"4x the graph took {ratio:.2f}x the steps ({done} -> {grew}) - "
+            f"looks quadratic, not O(N+E). Per module: "
+            f"{ {k: (small[k], large[k]) for k in _MEASURED} }")
+
+    def test_every_measured_module_is_reached(self, tmp_path):
+        """The vacuity floor. A module that moves, or a filename the
+        suffix match stops recognising, leaves both counts at 0 and the
+        ratio undefined - which must red rather than read as linear."""
+        small, large = self._both(tmp_path)
+        silent = [one for one in _MEASURED if not small[one] or not large[one]]
+        assert not silent, (
+            f"the trace reached no line of {silent}, so the ratio above is "
+            f"not about them", small, large)
+
+    def test_the_count_does_not_move_between_runs(self, tmp_path):
+        """What the timed version could not claim, and the whole reason
+        for the swap: the reading is a property of the code, not of the
+        machine. If this ever reds, the instrument has become a proxy
+        again and the ratio clause's margin means nothing."""
+        first = _steps_taken(_linear_chain_run_dir(tmp_path / "one", 500))
+        again = _steps_taken(_linear_chain_run_dir(tmp_path / "two", 500))
+        assert first == again, (
+            "two runs of the same graph counted different work", first, again)

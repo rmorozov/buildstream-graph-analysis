@@ -101,7 +101,13 @@ class TestTheSelectorStillSelects:
     # 131 - not a uniform +5, because five of the new census files were
     # already grep-reachable from some modules' own selections. Same
     # +2 headroom kept on p90 and max; median left at the measurement.
-    CEILING = {"median": 25, "p90": 49, "max": 133}
+    #
+    # `UX-737` moved the census 19 -> 31 (the subprocess-population
+    # half `UX-730` deferred), re-measured over 94 mapped modules: min
+    # 19 -> 31, median 25 -> 37, p90 47 -> 58, max 131 -> 143. Same
+    # convention: median at the measurement, +2 headroom kept on p90
+    # and max.
+    CEILING = {"median": 37, "p90": 60, "max": 145}
     POPULATION_FLOOR = 60
     #: `UX-645`: **13 census + 14 of your own**. The census floor is
     #: inside this bound because those files run - the figure is what
@@ -125,8 +131,18 @@ class TestTheSelectorStillSelects:
     #: population is a named index file reached through a tool function
     #: rather than a direct `WALKS` name, and five of those were already
     #: in the tree. Same arithmetic: 28 -> 33.
-    HANDFUL = 33
-    CENSUS_FLOOR = 19
+    #:
+    #: `UX-737` moved it 19 -> 31: the detector widened again, to a
+    #: guard whose population comes from a subprocess (`git ls-files`,
+    #: `pytest --collect-only`) rather than a tool function - twelve
+    #: pre-existing guards, `UX-730`'s own deferred half. Same
+    #: arithmetic: 33 -> 45. `store_aggregate`'s own grep-only count is
+    #: still 14, unchanged - measured 41 rather than the arithmetic's
+    #: 45 because 4 of the 14 are now also census members, but `HANDFUL`
+    #: keeps the stated formula's headroom rather than the tighter
+    #: measured one.
+    HANDFUL = 45
+    CENSUS_FLOOR = 31
 
     # Wide because the module's name is how a test invokes it, not
     # because the selector is wrong. `UX-606` argued each one.
@@ -172,7 +188,11 @@ class TestTheSelectorStillSelects:
         # moved both figures by two; `store_aggregate` crossed on the
         # same census change and is *not* here, because at 26 against
         # 27 it went back under and the worked example still holds.
-        "bga/graph/edg.py", "bga/ingest/loader.py",
+        #
+        # `UX-737`: `loader` left (45 against the new 45 - equal, not
+        # over) when `HANDFUL` moved 33 -> 45 with the census; `edg`
+        # stayed (46 against 45), one file over.
+        "bga/graph/edg.py",
     }
 
     def test_a_one_module_change_selects_a_handful_not_the_suite(self):

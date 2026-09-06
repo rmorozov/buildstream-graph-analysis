@@ -148,6 +148,23 @@ CENSUS = (
     "tests/unit/test_the_cost_row_is_derived_from_the_selector.py",
     "tests/unit/test_the_fast_check_holds_what_the_suite_holds.py",
     "tests/unit/test_the_loop_stays_fast.py",
+    # `UX-737`: the other half `UX-730` measured and deferred - a
+    # guard whose population comes from a subprocess (`git ls-files`,
+    # `pytest --collect-only`) rather than a tool function. Twelve of
+    # the thirteen the deferral named; the thirteenth
+    # (`test_docs_links_and_commands.py`) is already above.
+    "tests/unit/test_a_counted_figure_is_derived.py",
+    "tests/unit/test_a_guard_ledger_names_its_link.py",
+    "tests/unit/test_a_guard_that_reads_history_declares_its_depth.py",
+    "tests/unit/test_every_invariant_has_a_guard.py",
+    "tests/unit/test_every_part_has_a_guard.py",
+    "tests/unit/test_the_environment_surface_is_an_inventory.py",
+    "tests/unit/test_the_process_documents_derive_their_figures.py",
+    "tests/unit/test_the_python_floor_is_a_guard.py",
+    "tests/unit/test_the_roles_table_names_who_serves_it.py",
+    "tests/unit/test_the_round_history_names_every_audit.py",
+    "tests/unit/test_the_styleguide_names_its_guards.py",
+    "tests/unit/test_the_tiers_are_a_partition.py",
 )
 
 

@@ -29,6 +29,7 @@ about skip reasons. That false edge alone hid one of round 75's two
 misses from this derivation.
 """
 import ast
+import inspect
 import pathlib
 import sys
 
@@ -39,6 +40,7 @@ sys.path.insert(0, str(REPO))
 sys.path.insert(0, str(REPO / "tools"))
 sys.path.insert(0, str(REPO / "tests"))
 
+import dev_close_task
 import dev_touching
 import tiers
 
@@ -54,6 +56,41 @@ ROOTS = {"REPO", "ROOT", "REPO_ROOT", "PROJECT", "HERE"}
 #: `test_a_committed_analysis_matches_the_analyzer.py` compares two
 #: committed fixtures against a live analyzer run; nothing here globs.
 NOT_A_TREE_WALK = {"tests/unit/test_a_committed_analysis_matches_the_analyzer.py"}
+
+#: `UX-730`: round 98 measured the gap `WALKS` leaves - a guard whose
+#: population is a **named index file** (`INDEX`, `CLOSED`,
+#: `tests/touch_map.json`) reached through a tool's own reader shows no
+#: `WALKS` name of its own. Rather than parse every tool the suite
+#: imports, the six functions below are curated and each is checked, in
+#: `TestPopulationDelegatesActuallyDelegate`, against its *own* source
+#: for the same evidence `WALKS` looks for directly. A guard that calls
+#: one is a census guard by the same argument as a guard that globs
+#: itself - it just does it through a name this file has to be told.
+#:
+#: The other half of the gap this row measured - a guard that shells
+#: out (`git ls-files`, a pytest collection run) rather than calling a
+#: named tool function - is not covered here. A first pass at detecting
+#: it mechanically surfaced 13 pre-existing guards this item's own
+#: Motivation never counted, which is a population-migration decision
+#: past what a bounded task should take unasked; see this item's
+#: Outcome.
+POPULATION_DELEGATES = {"spread", "test_files", "touch_map",
+                         "table_statuses", "backlog_files",
+                         "shape_disagreements"}
+
+#: The modules those names are trusted from. A same-named method on an
+#: unrelated object - `dev_tier_drift.spread`, a statistical spread -
+#: is not this, so the call is only counted when its base resolves to
+#: one of these.
+DELEGATE_MODULES = {"dev_touching", "dev_close_task"}
+
+#: A delegate call whose own root is a fixture, not the repository -
+#: `test_the_touching_map_is_measured.py` calls `touch_map()` after
+#: `monkeypatch.setattr(dev_touching, "TESTS", tmp_path)`, exercising
+#: the empty-map fallback rather than the real population. Excluded the
+#: way `NOT_A_TREE_WALK` excludes the opposite case, and for the same
+#: reason: this AST check has no view of what a decorator monkeypatches.
+DELEGATED_UNDER_A_FIXTURE = {"tests/unit/test_the_touching_map_is_measured.py"}
 
 
 def _base(node):
@@ -109,14 +146,63 @@ def _guard_files():
                   if "__pycache__" not in p.parts)
 
 
+def _delegate_names(tree):
+    """`{local name}` bound to a trusted module, and to a function
+    imported directly by name from one."""
+    modules, functions = set(), set()
+    for node in tree.body:
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                if alias.name.split(".")[-1] in DELEGATE_MODULES:
+                    modules.add(alias.asname or alias.name.split(".")[-1])
+        elif isinstance(node, ast.ImportFrom):
+            base = (node.module or "").split(".")[-1]
+            if base == "tools":
+                for alias in node.names:
+                    if alias.name in DELEGATE_MODULES:
+                        modules.add(alias.asname or alias.name)
+            elif base in DELEGATE_MODULES:
+                for alias in node.names:
+                    if alias.name in POPULATION_DELEGATES:
+                        functions.add(alias.asname or alias.name)
+    return modules, functions
+
+
+def _delegates_a_population(path):
+    """`UX-730`: a call to `POPULATION_DELEGATES`, on a name resolved
+    to `DELEGATE_MODULES` by an import this file can read - directly
+    (`module.spread()`) or by the function's own name when it was
+    imported that way (`table_statuses as _table_statuses`)."""
+    tree = ast.parse(path.read_text(encoding="utf-8"))
+    modules, functions = _delegate_names(tree)
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        if (isinstance(node.func, ast.Attribute)
+                and node.func.attr in POPULATION_DELEGATES
+                and _base(node.func.value) in modules):
+            return True
+        if isinstance(node.func, ast.Name) and node.func.id in functions:
+            return True
+    return False
+
+
 @pytest.fixture(scope="module")
 def derived():
     reachable = set()
     for module in _sources():
         reachable.update(dev_touching.select([module], census=False)[0])
-    return sorted(str(p.relative_to(REPO)) for p in _guard_files()
-                  if _walks_the_repo(p)
-                  and str(p.relative_to(REPO)) not in reachable)
+    walked = {str(p.relative_to(REPO)) for p in _guard_files()
+              if _walks_the_repo(p)
+              and str(p.relative_to(REPO)) not in reachable}
+    # `UX-730`: not filtered by `reachable`. The event that invalidates
+    # these - a file added elsewhere in `tests/` or the backlog - is
+    # not one `_sources()` ever asks about; being selected for an edit
+    # to the delegate tool itself answers a different question than the
+    # one this derivation exists for.
+    delegated = {str(p.relative_to(REPO)) for p in _guard_files()
+                 if _delegates_a_population(p)} - DELEGATED_UNDER_A_FIXTURE
+    return sorted(walked | delegated)
 
 
 class TestTheDeclarationIsTheDerivation:
@@ -140,19 +226,27 @@ class TestTheDeclarationIsTheDerivation:
         `UX-718`: `NOT_A_TREE_WALK` is the same argument for a guard
         whose subject is a fixed, named population - no glob, no
         `git ls-files` - so this AST check cannot see it either.
-        Its own regression clause below is the argument instead."""
+        Its own regression clause below is the argument instead.
+
+        `UX-730`: a delegate call is the same shape a second way - the
+        walk happens in the tool it calls, not here - so it is accepted
+        as evidence too, and `TestPopulationDelegatesActuallyDelegate`
+        is the regression clause for it."""
         for named in tiers.CENSUS:
             if named in NOT_A_TREE_WALK:
                 continue
-            assert _walks_the_repo(REPO / named), (
-                f"{named} is declared census but walks no repository tree")
+            assert (_walks_the_repo(REPO / named)
+                    or _delegates_a_population(REPO / named)), (
+                f"{named} is declared census but walks no repository tree "
+                f"and delegates no known population")
 
     def test_the_set_stays_the_size_it_was_measured_at(self):
         """The price, asserted. Every `test-touching` run pays this
-        set; at 11 files it is 10.80s at `-n auto` against a ~4s
-        selection, and the round that doubles it should have to say so.
-        The bound is a ceiling, not a target."""
-        assert len(tiers.CENSUS) <= 14, (
+        set; at 19 files it is 36.6s at `-n auto` (`UX-730`: 14 files/
+        10.80s before) against a ~4s selection, and the round that
+        doubles it should have to say so. The bound is a ceiling, not a
+        target."""
+        assert len(tiers.CENSUS) <= 19, (
             f"{len(tiers.CENSUS)} census files - re-measure the set's "
             f"seconds and move this bound with the number")
 
@@ -185,6 +279,40 @@ class TestTheDeclarationIsTheDerivation:
     def test_every_declared_file_exists(self):
         for named in tiers.CENSUS:
             assert (REPO / named).exists(), named
+
+
+class TestPopulationDelegatesActuallyDelegate:
+    """`UX-730`: `POPULATION_DELEGATES` is padding the moment one of its
+    six names stops reading the tree, a named index file or a
+    subprocess - checked against each function's own source rather than
+    assumed, the way `test_nothing_is_declared_that_does_not_read_the_tree`
+    holds `NOT_A_TREE_WALK` to the same standard."""
+
+    OWNERS = {
+        "spread": dev_touching.spread,
+        "test_files": dev_touching.test_files,
+        "touch_map": dev_touching.touch_map,
+        "table_statuses": dev_close_task.table_statuses,
+        "backlog_files": dev_close_task.backlog_files,
+        "shape_disagreements": dev_close_task.shape_disagreements,
+    }
+
+    def test_the_set_is_not_empty(self):
+        """The vacuity floor. An empty `POPULATION_DELEGATES` would let
+        every clause below - and `derived`'s use of it - pass at
+        nothing."""
+        assert POPULATION_DELEGATES, "no delegate is declared"
+        assert set(self.OWNERS) == POPULATION_DELEGATES, (
+            "OWNERS and POPULATION_DELEGATES have drifted apart")
+
+    @pytest.mark.parametrize("name", sorted(POPULATION_DELEGATES))
+    def test_each_delegate_still_reads_the_tree_or_an_index(self, name):
+        source = inspect.getsource(self.OWNERS[name])
+        markers = ("rglob(", "glob(", "INDEX", "CLOSED", "touch_map(",
+                   "test_files(", "task_file(", "backlog_files(", "ls-files")
+        assert any(marker in source for marker in markers), (
+            f"{name} no longer shows any of the markers this set was "
+            f"curated for - re-derive POPULATION_DELEGATES")
 
 
 class TestTheSelectorRunsThem:

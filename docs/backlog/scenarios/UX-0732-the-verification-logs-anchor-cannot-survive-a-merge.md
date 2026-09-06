@@ -55,6 +55,18 @@ The anchor's definition widens, or the range does. Two candidates:
 The first keeps `closing_commit` pure and touches only the range. Say
 which, and why, in the Outcome.
 
+**The decision, taken here: the first route.** `_landed_after` skips
+a commit whose `DOC` blob equals one of its parents' — not "skip
+merges", which would hide a conflict resolution that really did change
+the document. The test is on the blob, so a merge that introduces no
+claim of its own is not a landing and a merge that edits the log still
+is. `closing_commit` keeps its oldest-match rule untouched, which
+`UX-652` argued for and this row does not reopen; only the range
+moves. The second route (anchor on the newest commit, close the
+walk-forward hazard with a date check) is the fallback if the blob
+comparison cannot be expressed against this history — say so in the
+Outcome if you get there.
+
 ## Out of Scope
 
 - `closing_commit`'s oldest-match rule itself, if the first route is

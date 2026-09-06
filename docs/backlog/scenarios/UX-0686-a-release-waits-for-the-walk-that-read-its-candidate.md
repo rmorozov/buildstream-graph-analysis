@@ -18,12 +18,30 @@ invoked by audit rounds when they remember.
 
 The release guide gains a third condition: the release candidate is
 the last commit that changed a contract; a walk (`UX-685`, any seed)
-and a design review have run on or after it, their reports are in
-`docs/audits/`, and every finding they filed is closed or declined
-by name in the release's CHANGELOG row. The release derivation guard
-reads the audits' dates against the candidate commit's date and the
-filings' status. Cadence follows from contract changes, not a
-calendar.
+has run on or after it, its report is in `docs/audits/`, and every
+finding it filed is closed or declined by name in the release's
+CHANGELOG row. The release derivation guard reads the walk's date
+against the candidate commit's date and the filings' status. Cadence
+follows from contract changes, not a calendar.
+
+**Two decisions the first track stopped on, settled here.**
+
+*The candidate commit is over-approximated on purpose.* It is the
+newest commit touching a file that `bga.contracts.inventory()` names,
+plus `bga/cli.py` and `bga/tools_dispatch.py` (the command surface) —
+`git log -1` over that set. Touching `schemas.py` without moving a
+`/vN` counts, so the candidate can be newer than the true last
+contract move. That is the **safe** direction for a gate: an
+over-approximation can only make a release wait longer, never let one
+through unreviewed. Bisecting `contracts.ids()` for the exact commit
+is a cheaper-to-state, more expensive-to-run alternative and is not
+worth it here; say so in the Outcome.
+
+*The design review half is deferred.* A design review report has no
+shape a guard can recognise (`UX-727`), so this item checks the
+**walk** only. The guide's third condition names the review as a
+requirement for a human to satisfy; the derivation guard does not read
+it until `UX-727` gives it a head to read.
 
 ## Out of Scope
 

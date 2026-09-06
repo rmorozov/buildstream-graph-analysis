@@ -78,6 +78,54 @@ class TestCIRunsIt:
         assert out.returncode == 1, out.stdout
         assert "over the" in out.stdout
 
+    def test_it_says_how_many_commits_it_read(self, tmp_path):
+        """`UX-696`: "every commit is within the cap" reads the same
+        whether it checked eleven or none. The step's log line has to
+        name the population, or the gate cannot be told from a gate
+        that selected nothing - which is the defect this row is about.
+        """
+        repo = tmp_path / "r"
+        repo.mkdir()
+        env = {"GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@t",
+               "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t@t",
+               "PATH": "/usr/bin:/bin", "HOME": str(tmp_path)}
+        run = lambda *a: subprocess.run(a, cwd=repo, env=env, check=True,
+                                        capture_output=True)
+        run("git", "init", "-q", "-b", "main")
+        (repo / "a").write_text("1")
+        run("git", "add", "a")
+        run("git", "commit", "-qm", "base")
+        run("git", "branch", "-f", "base-ref")
+        for i in range(3):
+            (repo / "a").write_text(str(i + 2))
+            run("git", "add", "a")
+            run("git", "commit", "-qm", f"subject {i}\n\nline one")
+        out = subprocess.run(
+            [sys.executable, str(REPO / "tools/dev_commit_bodies.py"),
+             "base-ref"], cwd=repo, env=env, capture_output=True, text=True)
+        assert out.returncode == 0, out.stdout
+        assert "3 of 3 commit(s)" in out.stdout, out.stdout
+
+    def test_an_unresolvable_base_raises_rather_than_passing(self, tmp_path):
+        """The failed-fetch path. A gate that reads nothing and exits 0
+        is worse than no gate, so `check=True` is load-bearing."""
+        repo = tmp_path / "r"
+        repo.mkdir()
+        env = {"GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@t",
+               "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t@t",
+               "PATH": "/usr/bin:/bin", "HOME": str(tmp_path)}
+        run = lambda *a: subprocess.run(a, cwd=repo, env=env, check=True,
+                                        capture_output=True)
+        run("git", "init", "-q", "-b", "main")
+        (repo / "a").write_text("1")
+        run("git", "add", "a")
+        run("git", "commit", "-qm", "base")
+        out = subprocess.run(
+            [sys.executable, str(REPO / "tools/dev_commit_bodies.py"),
+             "origin/does-not-exist"], cwd=repo, env=env,
+            capture_output=True, text=True)
+        assert out.returncode != 0, out.stdout
+
     def test_a_body_within_the_cap_exits_zero(self, tmp_path):
         """The other direction, so the clause above is not passing on a
         tool that fails whatever it reads."""

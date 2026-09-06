@@ -101,14 +101,21 @@ nothing is a proxy" - the same reason it declined the identifier check.
 | a nine-line body, run against a synthetic repo | the tool exits 1 | 1 |
 | the cutoff removed | the branch's own eleven | 11 |
 
+**A follow-up, from watching it run.** Its first CI line read the
+same whether it checked eleven commits or none - this row's own defect,
+built into its fix. It now says `1 of 39 commit(s) ... checked (38
+predate the rule)`. A refusal on an empty range was written beside it
+and removed: **it cannot fire**, since `base..HEAD` is empty exactly
+when HEAD is an ancestor of `base`. What catches a failed fetch is
+`check=True`: an unresolvable base exits 1, verified.
+
 **Deviations.**
 
 - Two ruff findings (`S603`, `S607`) adopted with
   `dev_baseline.py --write --force --reason UX-696`. A dev tool
   shelling out to `git` is the established pattern - 45 `S603` and 23
   `S607` already recorded, `dev_close_task.py` among them.
-- The rule cannot be applied to this branch's history without
-  rewriting eleven pushed commit messages, and `tests/tiers.py` and
-  three task files cite their hashes. Grandfathering by date keeps
-  those citations valid.
+- The rule cannot reach this branch's history without rewriting
+  eleven pushed messages whose hashes `tests/tiers.py` and three task
+  files cite. Grandfathering by date keeps those citations valid.
 

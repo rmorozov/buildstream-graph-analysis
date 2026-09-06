@@ -31,29 +31,47 @@ def body_lines(body):
             if line.strip() and not FOOTER.match(line.strip())]
 
 
-def over_cap(base="origin/main", cap=CAP, since=RULE_FROM):
-    """`(sha, subject, n)` for each commit the branch adds that is over."""
+def _log(base, extra):
     out = subprocess.run(
         ["git", "log", f"{base}..HEAD", "--no-merges",
-         f"--since={since}", "--format=%H%x1f%s%x1f%b%x1e"],
+         *extra, "--format=%H%x1f%s%x1f%b%x1e"],
         capture_output=True, text=True, check=True).stdout
-    over = []
     for record in out.split("\x1e"):
         record = record.strip("\n")
-        if not record:
-            continue
-        sha, subject, body = record.split("\x1f", 2)
+        if record:
+            yield record.split("\x1f", 2)
+
+
+def over_cap(base="origin/main", cap=CAP, since=RULE_FROM):
+    """`(over, considered, in_range)` for the commits the branch adds.
+
+    Both counts are reported rather than just a verdict: "every commit
+    is within the cap" reads the same whether it checked eleven or
+    none, and a gate whose population cannot be seen is the defect
+    `UX-696` was filed about. A refusal on `in_range == 0` was written
+    and then removed - it cannot fire, because an empty `base..HEAD` is
+    exactly the case where HEAD is already an ancestor of `base`. What
+    catches a failed fetch is `check=True`: an unresolvable `base`
+    raises rather than reading nothing.
+    """
+    in_range = sum(1 for _ in _log(base, []))
+    over, considered = [], 0
+    for sha, subject, body in _log(base, [f"--since={since}"]):
+        considered += 1
         n = len(body_lines(body))
         if n > cap:
             over.append((sha[:9], subject, n))
-    return over
+    return over, considered, in_range
+
 
 
 def main(argv):
     base = argv[1] if len(argv) > 1 else "origin/main"
-    over = over_cap(base)
+    over, considered, in_range = over_cap(base)
     if not over:
-        print(f"every commit {base}..HEAD is within {CAP} body lines")
+        print(f"{considered} of {in_range} commit(s) in {base}..HEAD "
+              f"checked ({in_range - considered} predate the rule); "
+              f"every one is within {CAP} body lines")
         return 0
     print(f"{len(over)} commit(s) over the {CAP}-line body budget "
           f"CLAUDE.md states:")

@@ -36,6 +36,7 @@ import argparse
 import gzip
 import json
 import os
+import re
 import shutil
 import sys
 import time
@@ -550,7 +551,8 @@ def main(argv: Optional[list[str]] = None) -> int:
 
     print()
     _analyze(run_dir, os.path.join(snapshot, PLANE2_NAME),
-             publish_to=os.path.join(snapshot, run_store.ANALYSIS_NAME))
+             publish_to=os.path.join(snapshot, run_store.ANALYSIS_NAME),
+             build_exit=build_exit)
     # UX-226: the small slice this snapshot contributes to the store's
     # per-element history. Never fatal - see `write_element_slice`.
     write_element_slice(snapshot, run_dir)
@@ -569,6 +571,14 @@ def main(argv: Optional[list[str]] = None) -> int:
 
     _say_what_it_weighs(snapshot, project)
     _warn_if_large(project)
+    # UX-738: round 100's gate read a complete-looking report next to
+    # `assert 255 == 0` with nothing in either stream saying why. This is
+    # the last thing printed, so a reader who only sees the tail still
+    # meets the number that mattered.
+    if build_exit:
+        print(_exit_summary_line(build_exit,
+                                 os.path.join(snapshot, WRAPPED_LOG_NAME)),
+              file=sys.stderr)
     # The build's own status is the answer, as everywhere else here: a
     # failed build must not look like a successful snapshot.
     return build_exit
@@ -612,7 +622,50 @@ def _sticky_config(project: str, args: argparse.Namespace) -> dict:
     return config
 
 
-def _analyze(run_dir: str, plane2: str, publish_to: Optional[str] = None) -> int:
+# UX-738: the last four thousand characters of a build that could not
+# write read as a complete, idle run, and only the exit code disagreed.
+# `bst`'s own `OSError`/`PermissionError`/... str already carries the
+# path (`[Errno N] <strerror>: '<path>'` is the interpreter's own
+# rendering, not this project's), and `bst_run_wrapped.emit` already
+# writes every line of it into the wrapped log - nothing reads it back
+# out, which is the discard. This is the read-back, over the same tail
+# `build_ever_started` already reads rather than a second full parse.
+_WRITE_FAILURE_TAIL_BYTES = 65536
+_WRITE_FAILURE_RE = re.compile(r"\[Errno \d+\][^:]*: '([^']+)'")
+
+
+def _write_failure_path(wrapped_log_path: str) -> Optional[str]:
+    """The path from `bst`'s own OS-level error, if the log's tail names
+    one. `None` on any of: no wrapped log, no such line, an unreadable
+    file - a missing answer here is the ordinary case, not a defect."""
+    try:
+        size = os.path.getsize(wrapped_log_path)
+        with open(wrapped_log_path, "rb") as handle:
+            handle.seek(max(0, size - _WRITE_FAILURE_TAIL_BYTES))
+            tail = handle.read().decode("utf-8", "replace")
+    except OSError:
+        return None
+    path = None
+    for match in _WRITE_FAILURE_RE.finditer(tail):
+        path = match.group(1)
+    return path
+
+
+def _exit_summary_line(build_exit: int, wrapped_log_path: str) -> str:
+    """The one sentence a scrolled terminal still has to meet.
+
+    `docs/guides/cli.md`'s pass-through contract keeps `build_exit`
+    itself unmapped (255 survives); this only adds the sentence nothing
+    else states, naming the write path when the log's tail has one.
+    """
+    where = _write_failure_path(wrapped_log_path)
+    named = f" Could not write {where}." if where else ""
+    return (f"bst exited {build_exit} - the analysis above describes a "
+            f"build that did not complete.{named}")
+
+
+def _analyze(run_dir: str, plane2: str, publish_to: Optional[str] = None,
+            build_exit: int = 0) -> int:
     """Print the report, and publish the same analysis as JSON.
 
     `UX-296`: **capture computes, view serves.** `bga view` used to
@@ -627,6 +680,13 @@ def _analyze(run_dir: str, plane2: str, publish_to: Optional[str] = None) -> int
     path if anything about the seam is unavailable - a snapshot whose
     payload was not published is the ordinary older case, and `bga view`
     still renders it.
+
+    `build_exit`: `UX-738`. A capture with zero execution measured on
+    the chain *and* a non-zero wrapped exit is not a slow, idle build -
+    it is one that could not run, the same class `UX-156` already
+    refuses to verdict for a failed element. A legitimate fully-cached
+    build also has zero chain execution, which is why the exit code is
+    the other half of the conjunction: `build_exit == 0` always prints.
     """
     argv = ["analyze", run_dir]
     if os.path.isfile(plane2):
@@ -649,7 +709,16 @@ def _analyze(run_dir: str, plane2: str, publish_to: Optional[str] = None) -> int
         from bga.cli import main as cli_main
         return cli_main(argv)
 
-    print(format_text(result))
+    executed_us = (result.attribution or {}).get('execution_on_chain_us') or 0
+    if build_exit and not executed_us:
+        # UX-156's own grammar ("THIS BUILD DID NOT FINISH"), not a
+        # second vocabulary: the verdict below would score idleness on
+        # a build that never ran, which is the defect this refuses.
+        print("THIS BUILD DID NOT FINISH: zero execution was measured on "
+              "the critical path. No attribution verdict is printed for a "
+              "build that could not run.")
+    else:
+        print(format_text(result))
     try:
         with open(publish_to, "w", encoding="utf-8") as handle:
             handle.write(format_json(result))

@@ -2453,6 +2453,13 @@ by `tests/unit/test_the_exit_table_derives_from_the_codes.py`.
   the build at all, which refuses with `2` before creating a snapshot
   (`UX-324`).
 
+This table is `bga`'s own codes; `bga snapshot` does not map into it for
+the wrapped build's outcome (line 194 above) — a `bst` that dies at
+`255` surfaces `255`, not one of the numbers here. `UX-738`: a non-zero
+wrapped exit now also gets one printed sentence naming that code and, if
+the wrapped log's tail shows a write failed, the path that could not be
+written — the number was always right, only the silence around it changed.
+
 ## See Also
 
 - [Project README](../../README.md)

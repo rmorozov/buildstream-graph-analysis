@@ -159,6 +159,27 @@ reads, not the constant.
   3.78s, and this guard's CI reference entry is 2.37s, so the honest
   instrument would have read as tier drift and reddened a gate.
 
-**CI's own single-process reading:** pending the first run that is
-allowed to finish.
+**CI's own single-process reading.** Run 34056892602 (`b44cf87`) is
+the first that let step 27 finish. All four `test` jobs green:
+
+```text
+job          step 7 `-n auto`   step 27 single process
+test (3.9)     86s                149s
+test (3.10)    76s                137s
+test (3.11)    70s                125s
+test (3.12)    89s                154s
+```
+
+The floors are replaced by measurements (154.0 slowest, 125.0
+fastest), and the parallel slowest moves 87.0 -> 89.0, this run's 3.12
+being above the last run's worst. The backstops stand: 300 is 3.4x the 89s,
+900 is 5.8x the 154s.
+
+**And one estimate in the first commit was wrong.** It read "CI's
+single-process step is around 200-260s", extrapolated from the local
+2.95x single/parallel ratio applied to CI's parallel step. On CI the
+ratio is **1.75** - this container has the cores to make `-n auto` pay
+more than a runner does - so the real figure is 125-154s. The
+prediction did not affect the sizing (900 clears either), but it was a
+proxy reading dressed as a number, which is the thing §5 names.
 

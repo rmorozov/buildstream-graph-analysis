@@ -435,19 +435,28 @@ def recorded():
 #
 # The tier did not slow down; it grew. 3102 tests when this file was
 # first measured, 7657 collected on that head, 4626 of them small.
-SMALL_TIER_CI_SLOW_S = 87.0       # parallel, `-n auto`, slowest seen (3.10)
+# Run 34056892602 (head `b44cf87`) is the first that let step 27 finish,
+# and its four jobs are where the single-process pair finally come from
+# as measurements rather than kill points:
+#
+# ```text
+# job          step 7 `-n auto`   step 27 single process
+# test (3.9)     86s                149s
+# test (3.10)    76s                137s
+# test (3.11)    70s                125s
+# test (3.12)    89s                154s
+# ```
+#
+# The extremes below are over both runs. **Single process costs 1.75x
+# the parallel step on CI, not the 2.95x it costs locally** (140.37s
+# against 47.53s on a quiet container): this box has the cores to make
+# `-n auto` pay more, so an estimate extrapolated from the local ratio
+# over-predicted CI at 200-260s. The lesson is the file's own: a ratio
+# measured on one machine is not a measurement of another.
+SMALL_TIER_CI_SLOW_S = 89.0       # parallel, `-n auto`, slowest seen (3.12)
 SMALL_TIER_CI_FAST_S = 66.0       # parallel, fastest seen (3.11)
-# A floor, not a measurement: the job was killed at this value with the
-# run still going, so the figure this constant wants is somewhere above
-# it. That has now happened three times - at 27.0, at 30.0 and here, on
-# all four interpreters at once - and a killed run still proves the
-# tier once cost more than the number it was killed at, which is what a
-# backstop has to clear. The only complete single-process reading
-# anywhere is local: 140.37s of pytest, 141.82s wall, on a quiet
-# container whose parallel run is 47.53s. CI's parallel step is 1.4-1.8x
-# that box, so CI's single-process step is around 200-260s.
-SMALL_TIER_CI_SLOW_1P_S = 120.0   # single process, floor (all four)
-SMALL_TIER_CI_FAST_1P_S = 120.0   # single process, floor (all four)
+SMALL_TIER_CI_SLOW_1P_S = 154.0   # single process, slowest seen (3.12)
+SMALL_TIER_CI_FAST_1P_S = 125.0   # single process, fastest seen (3.11)
 
 # `UX-743`: the population the four figures above were measured on,
 # counted in files rather than tests. Files are free to count from the
@@ -476,12 +485,10 @@ SMALL_TIER_POPULATION_FILES = 326  # small-tier files at `b1b664b`
 # maintenance the old budget demanded every re-tier.
 #
 # `UX-743`: **they are no longer the same number.** UX-421 set both to
-# 120 because the two steps then differed by a second; single process
-# now costs 2.95x the parallel run (140.37s against 47.53s locally), so
-# one number cannot sit several times above both. 300 is 3.4x the
-# measured 87s parallel step; 900 is 7.5x the 120s floor the single-
-# process step was killed at and about 3.5x the 200-260s that step is
-# expected to actually cost on a runner.
+# 120 because the two steps then differed by a second; on CI the single-
+# process step now costs 1.75x the parallel one, so one number cannot
+# sit several times above both. 300 is 3.4x the measured 89s; 900 is
+# 5.8x the measured 154s.
 #
 # **What actually catches a large file in the default tier** is
 # `tools/dev_tier_drift.py --against`, run in CI on the 3.11 job. It

@@ -96,3 +96,13 @@ skill and cannot satisfy a condition that did not exist; the guard reads
 the tree's current candidate, never a shipped row.
 
 **Design-review half**: not built — `UX-727` gives it a report shape first; the guide's third condition names it in prose for a human only.
+
+**Follow-up, same day.** The third guard shipped here pinned today's
+state — `assert "UX-724" not in closed_text` — and reddened the moment
+`UX-724` closed, hours later. Rewritten as
+`test_every_filed_finding_resolves_to_exactly_one_backlog_row`: which
+index a filing sits in is today's state, that it sits in exactly one is
+the claim. Falsified twice — the lookup matched nothing (`assert 0 ==
+1`), and a duplicate row for `UX-723` in both indexes (`UX-723 has rows
+in ['README.md', 'closed.md']`). Relaxing `== 1` to `<= 1` alone stays
+green, which is why the second mutation had to move the data.

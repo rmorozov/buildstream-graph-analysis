@@ -28,6 +28,22 @@ E   AssertionError: work-a.bst: Plane 2 3.506s against Plane 1 7.284s
 E   assert 3.777534432891116 < 1.0
 ```
 
+Re-run on the same commit once the host was quiet - the session had
+reaped 287 orphaned Chromium processes holding 3.8 GB, left behind by
+completed test runs:
+
+```console
+$ uptime
+ 19:08:17 up  4:03,  0 user,  load average: 1.13, 19.86, 189.01
+$ python3 -m pytest tests/unit/test_spine_ground_truth.py \
+      tests/unit/test_diagnostics_performance.py -q
+6 passed in 29.47s
+```
+
+So the pair of readings the Required Fix asks for already exists at two
+load points: **at 16, both clauses red; at 1.13, all six pass.** What is
+still missing is where between them the boundary sits.
+
 **The tree is not at fault, and CI is the discriminator.** The same
 commit's CI run named four failures and neither of these was among
 them - GitHub's runner is quiet, and there both clauses pass. So this

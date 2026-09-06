@@ -1051,20 +1051,19 @@ with the tables above destroys the one thing the entry is for
 (`UX-653`). The newest entry is the exception: every round that
 re-grounds the document rewrites it.
 
-Updated 2026-09-06 (after `UX-732`), covering two changes to this
-document — the `UX-294`/`UX-295` retrospective paragraph below, which
-now anchors "fifteen viewer modules" to `UX-294` (2026-08-26) instead
-of reading as a claim about today's directory (`UX-715`), and this
-entry, rewritten because the one it replaces could not be re-grounded
-after a merge (`UX-732`) — re-grounded in the two contract tables
-above against `bga.contracts` and `bga/schemas.py`: **25 emitted ids,
-10 of them superseded, and 3 read and never written**, 9 printable and
-16 not, unchanged from the entry below. `bga analyze --schema` now
-prints **60 top-level properties**, moved since the entry below's 56
-under items neither row audited. `bga/viewer/` is **still 22 modules**
-(`ls bga/viewer/*.js | wc -l`); the entry this replaces read 23 from
-`*.js *.css`, which counts a stylesheet as a module and reads as a
-movement that did not happen. Neither item published an id.
+Updated 2026-09-06 (after `UX-736`), covering one change to this
+document — the `UX-60` row of the history table above, `🟡 Partial`
+against a task file that has been `🟢 Done` with a verification log
+since round 13. That table is 75 rows of a fact `UX-131` guarded in
+two other places and never here; `test_the_table_status_matches_the
+_task_files` now reads it, so this is the last round in which the
+correction had to be made by hand. The document is re-grounded in the
+two contract tables above against `bga.contracts` and `bga/schemas.py`: **25
+emitted ids, 10 of them superseded, and 3 read and never written**, 9
+printable and 16 not, `analyze/v6` still at **60 top-level
+properties**, and `bga/viewer/` still **22 modules**
+(`ls bga/viewer/*.js | wc -l`) — every figure unchanged from the entry
+this replaces. The item published no id and moved no key.
 
 Updated 2026-09-04 (after `UX-653`), covering one change to this
 document — the paragraph above, which states the rule the log had been

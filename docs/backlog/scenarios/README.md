@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-733 scenarios: **33 open**, 700 closed.
+733 scenarios: **30 open**, 703 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -26,8 +26,8 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | viewer | 6 | 161 |
 | cli | 0 | 22 |
 | store | 0 | 16 |
-| docs | 6 | 118 |
-| guards | 14 | 168 |
+| docs | 4 | 118 |
+| guards | 13 | 168 |
 
 ## Open scenarios
 
@@ -66,9 +66,6 @@ task file, which is the only place it ever lived twice.
 | UX-717 | [the host series is on the trace and in no question](UX-0717-the-host-series-is-on-the-trace-and-in-no-question.md) | viewer | Medium | a reader with Perfetto open, asking whether the cores were busy | 🔴 |
 | UX-728 | [a track's repro runs the session's checkout, not its worktree](UX-0728-a-tracks-repro-runs-the-sessions-checkout-not-its-worktree.md) | guards | Medium | every `implementer` track that reproduces a defect through the CLI | 🔴 |
 | UX-730 | [a derived figure over the whole test tree has no refresh route](UX-0730-a-derived-figure-over-the-whole-test-tree-has-no-refresh-route.md) | guards | Medium | every round that adds a test file, and the branch that pays for it | 🔴 |
-| UX-734 | [three counted figures in three documents, and no guard reads any](UX-0734-three-counted-figures-in-three-documents-and-no-guard-reads-any.md) | docs | Low | the next reader who takes one of these numbers as arithmetic | 🔴 |
-| UX-735 | [the attachment guide's export size measures a capture not in the tree](UX-0735-the-attachment-guides-export-size-measures-a-capture-not-in-the-tree.md) | docs | Low | the CI author deciding whether to upload the artifact | 🔴 |
-| UX-736 | [the architecture's status table is a third copy of a guarded fact](UX-0736-the-architectures-status-table-is-a-third-copy-of-a-guarded-fact.md) | guards | Medium | every reader who takes the architecture's history table as current | 🔴 |
 
 ## UX-706..UX-711: the ninety-fourth round — the pipeline, and which model runs which shape (2026-09-05)
 

@@ -1390,7 +1390,7 @@ headings, so a renumber there moves it.
 | § | guard | note |
 |---|---|---|
 | §1 | `test_the_mapping_is_law.py` | named |
-| §1a | `test_a_command_renders_as_a_command.py`, `test_a_new_control_class_lands_declared.py`, `test_the_contract_names_its_vocabulary.py`, `test_the_vocabulary_has_the_shape.py` | |
+| §1a | `test_a_command_renders_as_a_command.py`, `test_a_counted_figure_is_derived.py`, `test_a_new_control_class_lands_declared.py`, `test_the_contract_names_its_vocabulary.py`, `test_the_vocabulary_has_the_shape.py` | |
 | §1b | `test_the_merge_carries_every_field.py` | |
 | §1c | `test_the_first_finding_is_an_action.py` | |
 | §1d | | `UX-429`'s `test_a_command_renders_as_a_command.py` holds it and cites §1 and §1a, not §1d |

@@ -1,6 +1,6 @@
 # UX-735: the attachment guide's export size measures a capture not in the tree
 
-**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** UX-511 (which set the dated-label shape), UX-195, UX-529 (which bounded the export's data half) | **Serves:** the CI author deciding whether to upload the artifact | **Topic:** docs | **Shape:** bounded | **Area:** tools
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-511 (which set the dated-label shape), UX-195, UX-529 (which bounded the export's data half) | **Serves:** the CI author deciding whether to upload the artifact | **Topic:** docs | **Shape:** bounded | **Area:** tools
 
 ## Motivation
 

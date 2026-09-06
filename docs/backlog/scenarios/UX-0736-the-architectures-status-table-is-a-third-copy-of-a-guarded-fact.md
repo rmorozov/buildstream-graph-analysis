@@ -1,6 +1,6 @@
 # UX-736: the architecture's status table is a third copy of a guarded fact
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-131 (which guarded the first two copies), UX-657 (its priority twin), UX-88 | **Serves:** every reader who takes the architecture's history table as current | **Topic:** guards | **Shape:** judgement | **Area:** tools
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-131 (which guarded the first two copies), UX-657 (its priority twin), UX-88 | **Serves:** every reader who takes the architecture's history table as current | **Topic:** guards | **Shape:** judgement | **Area:** tools
 
 ## Motivation
 

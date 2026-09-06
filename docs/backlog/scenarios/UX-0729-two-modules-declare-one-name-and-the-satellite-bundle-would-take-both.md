@@ -66,3 +66,52 @@ A bundle whose modules declare one name twice is refused, naming both
 modules — or the property holds tree-wide and a guard reads it.
 Mutation: give a second module a name the first declares — red,
 naming both.
+
+## Outcome
+
+**The gap, measured.** Re-derived with `tools/dev_js_deps.declarations`
+over `bga/viewer/*.js` (the character scanner `derive` already uses,
+not a fresh regex):
+
+```console
+modules 22   top-level names 394
+collisions {'make': ['drawings.js', 'perfetto_page.js']}
+```
+
+394, not the file's 393 — a naive line regex over the raw text gives
+the same 394, so the one-off is in the earlier measurement, not in the
+method; the collision itself matches exactly. `_module_order`, re-run:
+
+```console
+$ python3 -c "from tools.bga_view import _module_order; print(_module_order('perfetto_page.js'))"
+['perfetto.js', 'primitives.js', 'format.js', 'controls.js', 'questions.js',
+ 'drawings.js', 'views.js', 'element.js', 'perfetto_page.js']
+```
+
+**The close, measured.** `perfetto_page.js`'s `function make(tag, attrs,
+...children)` renamed `makeNode`, its only two occurrences (the
+declaration and the `renderQuestions(make, options)` call). Re-derived:
+
+```console
+modules 22   top-level names 394
+collisions {}
+```
+
+`perfetto.html` still boots for real: `tests/unit/test_one_page_behind_the_button.py`
+(18 tests, real Chrome, `renderQuestions` exercised through `makeNode`)
+and `tests/unit/test_the_browser_waits_for_a_condition.py` (10 tests)
+both pass unmodified. No other module referenced `make` by name.
+
+**The guard's cost.** `tests/unit/test_no_two_viewer_modules_share_a_top_level_name.py`,
+4 tests: **0.08-0.35s** alone, no fixture, no subprocess, no browser —
+it reads the 22 files on disk.
+
+**The mutation table.**
+
+| mutation | clause that reds |
+|---|---|
+| `element.js` gains a top-level `function makeNode` (a name `perfetto_page.js` already declares) — the Acceptance Test's own | `test_no_name_has_two_owners` (names `element.js` and `perfetto_page.js`) + `test_the_known_collision_is_closed` |
+| the walk skips `drawings.js` (vacuity: an empty read of one module would pass the no-collision clause for having nothing to collide) | `test_the_walk_reaches_every_module` |
+
+Both applied to a scratch copy and reverted from it, not `git checkout
+--`; `__pycache__` cleared before the re-run confirmed green.

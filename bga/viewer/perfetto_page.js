@@ -54,7 +54,7 @@ document.getElementById("open").addEventListener("click", async () => {
  * the section renders with what it had, which is what `sql.html`
  * always showed.
  */
-function make(tag, attrs = {}, ...children) {
+function makeNode(tag, attrs = {}, ...children) {
   const node = document.createElement(tag);
   for (const [name, value] of Object.entries(attrs)) {
     node.setAttribute(name, value);
@@ -106,7 +106,7 @@ async function questions() {
     // section still renders; it just cannot name this run's elements,
     // and the button stays - an unknown timeline is not an absent one.
   }
-  document.getElementById("questions").append(renderQuestions(make, options));
+  document.getElementById("questions").append(renderQuestions(makeNode, options));
   // `UX-523`, one page over: this page fetches too, and it is the one
   // whose whole state is what the fetch found. Without the flag the
   // sampler falls back to "the markup stopped growing", which a cold

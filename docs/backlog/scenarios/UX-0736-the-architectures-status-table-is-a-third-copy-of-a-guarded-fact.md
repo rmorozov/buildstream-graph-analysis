@@ -77,3 +77,39 @@ first and leave the table unguarded.
 The architecture's table is held against the task files, or dated.
 Mutation: flip one row's marker away from its file — red, naming the
 id, the table's marker and the file's.
+
+## Outcome
+
+**Route taken: widen the guard**, as decided in the Required Fix.
+`test_the_table_status_matches_the_task_files` now folds a second
+population in: `_architecture_table_statuses()`, scoped between
+`## Real extensions beyond the original spec` and the next `## `
+heading, so a `| UX-N | ... |`-shaped row outside that section (or a
+renamed heading) cannot silently stand in for it. Its cells carry
+`marker + words` (`🟡 Partial`); `_status_marker` already finds the
+glyph inside either shape, so the comparison is unchanged. `UX-561`'s
+worktree exemption (🟢-in-file over 🔴-in-table) applies to both
+tables now, symmetrically. `UX-60`'s row (line 683) is fixed:
+`🟡 Partial` → `🟢 Done`, marker cell only — the summary prose is
+untouched, per `UX-131`.
+
+**Gap, measured.** `_architecture_table_statuses()` before the fix:
+75 rows, one (`UX-60`) disagreeing with its task file's `🟢`, as the
+Motivation's own console block shows.
+
+**Close, measured.** `pytest tests/unit/test_docs_links_and_commands.py
+-q` → `57 passed`. `make test-touching` → `942 passed, 3 skipped`.
+`make lint` → clean (ruff + PyMarkdown + baseline).
+
+**Mutation table.**
+
+| mutation | reddened | count |
+|---|---|---|
+| flip UX-01's table marker `🟢 Done` → `🟡 Partial` (scratch copy, reverted after) | `test_the_table_status_matches_the_task_files`, naming `UX-1 (docs/design/architecture.md): table says 🟡, UX-0001-... says 🟢` | 1 failed |
+| rename the section heading so the parse stops matching (scratch copy, reverted after) | `test_the_architecture_table_is_read_at_all` (population empty) — confirmed the equality test alone stays green at 0 population, which is why this second clause exists | 1 failed |
+
+**Deviation.** None from the decided route. One judgement call the
+task file left open: the marker mutation had to avoid `🔴`, which
+`UX-561`'s exemption (correctly) treats as pending-index-move in a
+linked worktree rather than drift — `🟡` discriminates the same clause
+without touching that exemption.

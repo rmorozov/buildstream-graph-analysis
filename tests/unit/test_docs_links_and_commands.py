@@ -606,6 +606,54 @@ def _in_a_linked_worktree():
     return (REPO / ".git").is_file()
 
 
+#: `UX-736`: architecture.md's own history table, scoped by its own
+#: heading rather than by row shape alone - a `| UX-N | ... |` row
+#: elsewhere in the document (or a renamed heading) must not silently
+#: take its place, which is how the backlog's population went unread
+#: for this table in the first place.
+_ARCHITECTURE_TABLE_HEADING = "## Real extensions beyond the original spec"
+
+
+def _architecture_table_statuses():
+    """`{item number: status cell}` from architecture.md's history table.
+
+    Its cells carry `marker + words` (`🟡 Partial`), not the backlog's
+    bare marker - `_status_marker` finds the glyph inside either shape,
+    so the same comparison applies unchanged.
+    """
+    path = REPO / "docs/design/architecture.md"
+    lines = path.read_text(encoding="utf-8").splitlines()
+    start = next((i for i, line in enumerate(lines)
+                  if line.startswith(_ARCHITECTURE_TABLE_HEADING)), None)
+    if start is None:
+        return {}
+    end = next((i for i, line in enumerate(lines[start + 1:], start + 1)
+                if line.startswith("## ")), len(lines))
+    statuses = {}
+    for line in lines[start:end]:
+        match = _TABLE_ROW.match(line)
+        if not match:
+            continue
+        cells = [cell.strip() for cell in
+                 re.split(r"(?<!\\)\|", line.strip().strip("|"))]
+        marker = next((c for c in cells if c[:1] in _STATUS_EMOJI), "")
+        if marker:
+            statuses[int(match.group(1))] = marker
+    return statuses
+
+
+def test_the_architecture_table_is_read_at_all():
+    """Non-vacuity for the clause below: a heading rename or a table
+    moved out from under it must fail loudly, not pass by finding
+    nothing to disagree about."""
+    rows = _architecture_table_statuses()
+    assert rows, (
+        "docs/design/architecture.md's history table read as empty - "
+        f"expected the section starting {_ARCHITECTURE_TABLE_HEADING!r} "
+        "to hold `| UX-N | ... | marker |` rows"
+    )
+
+
 def test_the_table_status_matches_the_task_files():
     """UX-131: two hand-maintained copies of one fact, for the third time.
 
@@ -618,37 +666,45 @@ def test_the_table_status_matches_the_task_files():
     correspondence here has drifted within days, and every mechanically
     checked one has held. Only the marker is pinned — row *summaries*
     legitimately compress and stay prose.
+
+    `UX-736`: a **third** copy, `docs/design/architecture.md`'s own
+    history table, is checked the same way and folded into one report.
     """
-    rows = _table_statuses()
+    tables = {
+        "docs/backlog/scenarios/README.md or closed.md": _table_statuses(),
+        "docs/design/architecture.md": _architecture_table_statuses(),
+    }
     disagreements, pending = [], []
     for number, (name, line) in sorted(_file_statuses().items()):
-        if number not in rows:
-            continue
-        in_table = _status_marker(rows[number])
         in_file = _status_marker(line or "")
-        if in_table == in_file:
-            continue
-        if _in_a_linked_worktree() and in_file == "🟢" and in_table == "🔴":
-            # `UX-561`: a track closes its item and leaves the index
-            # alone, because `decompose` makes README.md a merge hotspot
-            # the orchestrator owns. In the track's tree that is the
-            # instructed state, not drift - and failing on it made every
-            # track disable `selector-before-commit.sh` to commit
-            # correct work. Only this direction, and only here: 🟢 in
-            # the table over 🔴 in the file is the drift `UX-131` found
-            # three times, and it still fails everywhere.
-            pending.append(f"UX-{number}: {name} is 🟢, its row not moved yet")
-            continue
-        disagreements.append(
-            f"UX-{number}: table says {in_table}, {name} says {in_file}"
-        )
+        for table_name, rows in tables.items():
+            if number not in rows:
+                continue
+            in_table = _status_marker(rows[number])
+            if in_table == in_file:
+                continue
+            if _in_a_linked_worktree() and in_file == "🟢" and in_table == "🔴":
+                # `UX-561`: a track closes its item and leaves the index
+                # alone, because `decompose` makes README.md a merge hotspot
+                # the orchestrator owns. In the track's tree that is the
+                # instructed state, not drift - and failing on it made every
+                # track disable `selector-before-commit.sh` to commit
+                # correct work. Only this direction, and only here: 🟢 in
+                # the table over 🔴 in the file is the drift `UX-131` found
+                # three times, and it still fails everywhere.
+                pending.append(f"UX-{number}: {name} is 🟢, its row not moved yet")
+                continue
+            disagreements.append(
+                f"UX-{number} ({table_name}): table says {in_table}, "
+                f"{name} says {in_file}"
+            )
     if pending:
         print("\n".join(
             ["a track's tree: these rows are the orchestrator's to move "
              "(UX-561), and `dev_close_task.py --move` is what moves them:"]
             + [f"  {one}" for one in pending]))
     assert disagreements == [], (
-        "the backlog table and its task files disagree about status:\n  "
+        "a status table and its task files disagree about status:\n  "
         + "\n  ".join(disagreements)
         + "\nUpdate the row in docs/backlog/scenarios/README.md in the same "
           "commit as the file (docs/contributing/fixing-guide.md)."

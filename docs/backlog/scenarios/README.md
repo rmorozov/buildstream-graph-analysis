@@ -15,19 +15,19 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-722 scenarios: **38 open**, 684 closed.
+723 scenarios: **38 open**, 685 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
-| capture | 1 | 94 |
+| capture | 2 | 95 |
 | analysis | 8 | 104 |
 | contracts | 0 | 48 |
 | viewer | 8 | 160 |
 | cli | 1 | 22 |
 | store | 0 | 16 |
 | docs | 8 | 116 |
-| guards | 12 | 162 |
+| guards | 11 | 162 |
 
 ## Open scenarios
 
@@ -71,9 +71,9 @@ task file, which is the only place it ever lived twice.
 | UX-719 | [the bottleneck fan-in and fan-out labels are swapped](UX-0719-the-bottleneck-fan-in-and-fan-out-labels-are-swapped.md) | analysis | Medium | a reader of the graph-shape block | 🔴 |
 | UX-721 | [an aliased import is silently dropped by the export](UX-0721-an-aliased-import-is-silently-dropped-by-the-export.md) | viewer | Medium | anyone editing a viewer module | 🔴 |
 | UX-722 | [a rail target inside a scrolling table lands under the header](UX-0722-a-rail-target-inside-a-scrolling-table-lands-under-the-header.md) | viewer | Medium | anyone who clicks a rail entry into a nested block | 🔴 |
-| UX-723 | [the scenario recipe prints commands that do not run](UX-0723-the-scenario-recipe-prints-commands-that-do-not-run.md) | guards | High | the walker following the script the seed prints | 🔴 |
 | UX-724 | [the diagnostics blocks vanish on a fully cached run](UX-0724-the-diagnostics-blocks-vanish-on-a-fully-cached-run.md) | analysis | Medium | R2 and R3, reading an incremental run's report | 🔴 |
 | UX-725 | [`bga view --export` prints two ERROR lines and exits 0](UX-0725-view-export-prints-two-error-lines-and-exits-zero.md) | cli | Medium | anyone exporting a run whose neighbour is a different run mode | 🔴 |
+| UX-726 | [no flag omits Plane 2, and the empty one says nothing](UX-0726-no-flag-omits-plane-2-and-the-empty-one-says-nothing.md) | capture | High | anyone who wants a Plane 1 capture, and every reader of a run that has an empty Plane 2 | 🔴 |
 
 ## UX-706..UX-711: the ninety-fourth round — the pipeline, and which model runs which shape (2026-09-05)
 

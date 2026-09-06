@@ -8,6 +8,7 @@ its seed and the answer-key rows it added, and one that does not is
 caught rather than read as an ordinary round document.
 """
 import pathlib
+import re
 import sys
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
@@ -87,34 +88,105 @@ class TestAWalkReportNamesItsSeedAndItsRows:
 
 
 class TestTheRecipeIsRunnable:
-    """`UX-685` seed 1's answer-key row, and it records a **gap**.
+    """`UX-685` seed 1's answer-key row, **now the rule it was filed for**.
 
-    The first seeded walk found the recipe unrunnable in its first
-    minute:
+    The row recorded the gap the first seeded walk found:
 
         $ bga gen-synthetic --seed 1 --elements 1 /tmp/gsprobe
         bga gen-synthetic: error: unrecognized arguments: --elements ...
 
-    Asserted as it *is*, so a rerun of seed 1 says the row held.
-    `UX-723` is the fix; closing it reddens these clauses, which is the
-    point - they then become the rule rather than the gap.
+    `UX-723` closed it, so these assert the promise instead. A rerun of
+    seed 1 says the row held by passing.
     """
 
-    def test_the_population_recipe_names_a_flag_that_does_not_exist(self):
-        from tools.dev_scenario import _RECIPE
+    def test_the_population_recipe_names_a_project_and_a_target(self):
+        """Not a planted run. `gen-synthetic` writes `graph.json` and
+        friends; the recipe's next line then asks for a `bst build`,
+        and the two cannot both be the input."""
+        recipes = scenario._RECIPE["population"]
+        assert "gen-synthetic" not in " ".join(recipes.values())
+        for key, text in recipes.items():
+            assert "examples/" in text, (key, text)
+            assert "bst build" in text or "built twice" in text, (key, text)
 
-        assert "--elements" in _RECIPE["population"]["1"], (
-            "the population recipe no longer names `--elements` - UX-723 "
-            "has landed, so this row must become the rule it was filed "
-            "for: every command the recipe prints parses against `--help`")
+    def test_the_three_plane_two_recipes_are_three_commands(self):
+        """One command under two annotations was the defect. `absent`
+        is not `snapshot` at all - no flag omits Plane 2 (`UX-726`)."""
+        rows = scenario._RECIPE["Plane 2"]
+        assert len(set(rows.values())) == 3, rows
+        assert "snapshot" not in rows["absent"] or "not" in rows["absent"]
+        assert "--trace-spine=off" in rows["hook only"]
+        assert "--trace-spine=on" in rows["spine on"]
 
-    def test_the_two_plane_two_recipes_are_the_same_command(self):
-        from tools.dev_scenario import _RECIPE
 
-        absent, hook = (_RECIPE["Plane 2"]["absent"],
-                        _RECIPE["Plane 2"]["hook only"])
-        command = "`bga snapshot -- bst build all.bst`"
-        assert absent.startswith(command) and hook.startswith(command), (
-            "the two Plane 2 recipes no longer print one command under two "
-            "annotations - UX-723 has landed; assert what each now runs")
+class TestEveryPrintedCommandRuns:
+    """`UX-723`'s acceptance: the script the seed prints is runnable.
 
+    Seed 1's walk found `bga gen-synthetic --seed N --elements 1` in the
+    recipe; the flag does not exist. Nothing checked, because the recipe
+    is a table of strings and no clause read them as commands.
+
+    This parses every `bga <sub> ...` the recipe prints against that
+    subcommand's own `--help`, which is the source of truth an
+    `argparse` CLI already keeps. Paths and `<target>` placeholders are
+    not resolved - a command that names a file is checked for its
+    *flags*, not run.
+    """
+
+    #: Every seed's recipe, over a fixed sample. Ten is the Acceptance
+    #: Test's own number and costs 0.4s: the tool shells out to nothing.
+    SEEDS = range(1, 11)
+
+    @staticmethod
+    def _bga_commands(text):
+        """`bga ...` fragments inside backticks, one per match."""
+        return [found.strip() for found in
+                re.findall(r"`(bga [^`]+)`", text)]
+
+    @staticmethod
+    def _flags(command):
+        """The `--flag` tokens in one command fragment."""
+        return [token.split("=")[0] for token in command.split()
+                if token.startswith("--") and token != "--"]
+
+    def _known_flags(self, sub):
+        import subprocess
+
+        done = subprocess.run(["bga", sub, "--help"], capture_output=True,
+                              text=True, timeout=60)
+        if done.returncode != 0:
+            return None
+        return set(re.findall(r"(--[a-z0-9-]+)", done.stdout))
+
+    def test_every_recipe_command_names_a_real_subcommand(self):
+        import subprocess
+
+        subs = set(re.findall(r"^\s+\{?([a-z][a-z0-9,-]*)\}?",
+                              subprocess.run(["bga", "--help"],
+                                             capture_output=True, text=True,
+                                             timeout=60).stdout, re.M))
+        named = {command.split()[1]
+                 for seed in self.SEEDS
+                 for command in self._bga_commands(scenario.scripted_walk(seed))}
+        unknown = sorted(name for name in named
+                         if not any(name in group.split(",")
+                                    for group in subs))
+        assert unknown == [], (
+            f"the recipe names subcommand(s) `bga` does not have: {unknown}")
+
+    def test_every_recipe_flag_is_one_its_subcommand_takes(self):
+        """The clause seed 1's finding needed. `--elements` parsed as a
+        word before this; it is checked against `gen-synthetic --help`
+        now, for every seed in the sample."""
+        wrong = []
+        for seed in self.SEEDS:
+            for command in self._bga_commands(scenario.scripted_walk(seed)):
+                sub = command.split()[1]
+                known = self._known_flags(sub)
+                if known is None:
+                    wrong.append(f"seed {seed}: `bga {sub} --help` refused")
+                    continue
+                for flag in self._flags(command):
+                    if flag not in known:
+                        wrong.append(f"seed {seed}: `{command}` -> {flag}")
+        assert wrong == [], "\n".join(wrong)

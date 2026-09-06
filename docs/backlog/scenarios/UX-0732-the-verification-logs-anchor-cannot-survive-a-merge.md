@@ -80,3 +80,33 @@ A track commit that writes the entry, merged with `--no-ff`, leaves
 the guard green; a merge that resolves a conflict *inside* the log
 leaves it red. Mutation: make the skip unconditional on parent count —
 the conflict case goes green and the guard reds.
+
+## Outcome
+
+**Gap, measured.** In a scratch repo, `_commits_touching`'s existing
+default `git log -- path` already excludes any merge whose `DOC` blob
+matches a parent's — that condition *is* git's own TREESAME pruning,
+so the blob check the decision names is unreachable against it (proven
+both ways: constructed a `--no-ff` merge resolved wholesale to one
+side, and it never appears in `git log <anchor>..HEAD -- path`, with
+or without this fix). Widening `_landed_after`'s own query to
+`--full-history` is what makes the check reachable (still "only the
+range moves" — `closing_commit` is untouched). Pasted, the resulting
+gap once the range is widened alone (no blob check yet): a same-line
+conflict resolved to track's own value, `assert not stale(...)` →
+`AssertionError: assert not True … stale(['c4e842a…'])`.
+
+**Close, measured.** With the blob check added: `pytest
+tests/unit/test_the_verification_log_is_true.py -q` → `29 passed`.
+Both directions, same fixture family (a real same-line conflict on the
+derived-count sentence, track's separate entry auto-merging either
+way): resolved to track's own parent's blob → `not stale([])`;
+resolved to neither parent's blob (master's count kept, track's entry
+kept) → `stale(['<merge sha>'])`.
+
+**Mutation table.**
+
+| mutation | reddened | count |
+|---|---|---|
+| `merge_has_no_claim`: `len(parent_blobs) > 1` unconditional (drop the blob test) — the Acceptance Test's own mutation | `test_a_merge_resolved_to_neither_parent_is_a_landing` | 1 failed, 28 passed |
+| `merge_has_no_claim`: `blob in parent_blobs` → `blob not in parent_blobs` (inverted) | both new tests | 2 failed, 27 passed |

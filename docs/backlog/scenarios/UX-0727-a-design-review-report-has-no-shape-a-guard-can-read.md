@@ -33,6 +33,30 @@ than read by a human. `dev_scenario.py`'s `is_walk_report` is the
 model; whether the two share a helper or stay separate is the
 decision, and the Outcome says which.
 
+**The decision, taken here: one helper, in a module of its own.**
+`UX-686`'s guard is the evidence. It needed the walk's filings and
+reimplemented the parse in a test file rather than importing one:
+
+```console
+$ grep -n "_FINDINGS_BLOCK\|_FILED" tests/unit/test_a_release_records_a_contract_state.py
+345:_FINDINGS_BLOCK = re.compile(r"(?ms)^findings\s+(.*?)^rows added\s")
+346:_FILED = re.compile(r"→\s*(UX-\d+)")
+$ grep -rn "_FINDINGS_BLOCK" tools/
+(nothing)
+```
+
+That parse belongs beside the recogniser, and the recogniser is about
+*a report under `docs/audits/` with a head a guard can read* — which is
+neither the walk's property nor the review's. So: a new
+`tools/dev_audit_reports.py` holding the kind→labels table, the kind
+recogniser and the filings extraction; `dev_scenario.py`'s
+`is_walk_report` and `report_problems` delegate to it and keep their
+names, so no caller moves; the release guard imports the extraction
+instead of carrying a second copy. `audits_documents()` stays in
+`dev_scenario.py` — it is about what the repository *tracks*
+(`tracked_paths`, `UX-687`), a different concern from what a document
+*is*.
+
 **The head's lines wrap.** `UX-686`'s first date regex read `Base
 `<sha>`, <date>.` and found nothing: the walk reports wrap that line
 across a markdown line break, so `\s+` rather than a literal space is

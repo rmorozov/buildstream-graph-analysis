@@ -603,27 +603,34 @@ class TestTheIncrementalRunIsStillAReport:
             "the incremental run published no empty collection, so this "
             "file is no longer walking the case UX-388 was filed on")
 
-    def test_the_text_report_still_drops_its_diagnostics_blocks(self, walked):
-        """`UX-685` seed 2's answer-key row, and it records a **gap**.
+    def test_the_text_report_says_which_absence_it_is(self, walked):
+        """`UX-685` seed 2's answer-key row, closed by `UX-724`.
 
-        `UX-388`'s rule reached the page and not the text report: on a
-        0-rebuilt incremental run the Advanced Diagnostics block is not
-        rendered empty, it is absent, with no line saying why. Measured
-        on the walk's own capture:
+        `UX-388`'s rule had reached the page and not the text report: on
+        a 0-rebuilt incremental run the Advanced Diagnostics and
+        Structural Analysis blocks were absent, with no line saying why.
+        Measured on the walk's own capture before the fix:
 
             bottleneck    @prev dict   @last None
             parallelism   @prev dict   @last None
 
-        Asserted as it *is*, so a rerun of seed 2 says the row held.
-        `UX-724` is the fix; closing it reddens this clause, which is
-        the point - the row then becomes the rule rather than the gap.
+        Now both blocks render their heading and `UX-388`'s sentence,
+        and `--format json`'s `bottleneck` is a declared-empty `{}`
+        rather than dropped.
         """
-        warm = _json(walked, ["analyze", walked["warm_run"],
-                              "--diagnostics", "--format", "json"])
-        assert warm.get("bottleneck") is None, (
-            "the incremental run now publishes `bottleneck` - UX-724 has "
-            "landed, so this row must become the rule it was filed for: "
-            "assert the block renders and says which absence it is")
+        warm_json = _json(walked, ["analyze", walked["warm_run"],
+                                   "--diagnostics", "--format", "json"])
+        assert warm_json.get("bottleneck") == {}, (
+            "`bottleneck` should be a declared-empty object on this "
+            "0-rebuilt run, not dropped or null")
+        warm_text = _run(
+            [sys.executable, "-m", "bga.cli", "analyze",
+             walked["warm_run"], "--diagnostics"],
+            walked["project"], walked["env"], timeout=300).stdout
+        assert "Advanced Diagnostics:" in warm_text
+        assert "Structural Analysis:" in warm_text
+        assert warm_text.count("the analysis ran and found none") == 2, (
+            "both blocks should say which absence it is")
 
     def test_the_page_says_the_analysis_found_none(self, exported):
         """Read through the shared node probe, which now can read it.

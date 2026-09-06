@@ -47,3 +47,54 @@ Advanced Diagnostics heading and a sentence naming the absence, and
 `--format json`'s `bottleneck` is a declared-empty shape rather than
 `null`. Mutation: return to omitting the block — the guard reds on the
 missing heading.
+
+## Outcome (2026-09-06)
+
+### Gap measured
+
+`examples/08-process-storm`, cold then incremental (0 rebuilt), before
+the fix:
+
+```text
+Advanced Diagnostics:          <- heading present, body empty, no line
+                                   (Max Blast Radius / High Criticality gone)
+Structural Analysis:           <- heading absent entirely
+```
+
+`--format json` (`@last`, before): `bottleneck`/`parallelism`/
+`graph_metrics`/`graph_summary`/`sensitivity`/`deferrability`/
+`batch_opportunities` all key-absent, matching `ANALYZE_FULL_KEYS`'
+own claim that they are "always present" being silently violated.
+
+### Close measured
+
+Same fixture, after:
+
+```text
+Advanced Diagnostics:
+  Nothing to report here for this run — the analysis ran and found none.
+
+Structural Analysis:
+  Nothing to report here for this run — the analysis ran and found none.
+```
+
+`--format json` (`@last`, after): all seven keys present, each `{}`;
+`jsonschema.validate` against `analyze/v6` still passes (schema already
+typed them `["object","null"]`, no `required`, no version bump needed).
+
+Real walk fixture (`examples/06-macro-micro-optimization`,
+`test_the_journey_has_an_answer_key.py`):
+`pytest ...::test_the_text_report_says_which_absence_it_is` — 1 passed,
+72.07s. `make test-touching`: 80 files, 1642 passed, 8 skipped, 99.55s.
+`make lint`: clean. `dev_baseline.py --check`: 299, unchanged.
+
+### Mutation table
+
+| # | mutation | reddened | count |
+|---|---|---|---|
+| A1 | Structural Analysis: restore `and result.structural` truthy gate, drop the empty-branch | `test_the_text_report_says_which_absence_it_is` (`"Structural Analysis:" in warm_text`) | 1 failed |
+| A2 | Advanced Diagnostics: drop the `has_ranked_population`/sentence branch | same test, `count("...found none") == 2` | 1 == 2, failed |
+| B | `--format json`: restore `and result.structural` truthy gate on `_lift`, drop the declared-empty stand-in | same test, `warm_json.get("bottleneck") == {}` | `None == {}`, failed |
+
+All three reverted from the untouched copy (`falsify` step 1) and
+reconfirmed green (1 passed) after each revert.

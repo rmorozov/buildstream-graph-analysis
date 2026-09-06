@@ -333,6 +333,103 @@ class TestTheReleaseConsumesTheReview:
             assert finding in text, f"{finding} is open and unnamed in the release"
 
 
+# `UX-686`: the candidate is over-approximated on purpose - the files
+# backing `bga.contracts.inventory()` plus the command surface, so
+# touching `schemas.py` without moving a `/vN` still counts. Bisecting
+# `contracts.ids()` for the exact commit is cheaper to state and more
+# expensive to run, and is not worth it here.
+_CANDIDATE_FILES = ("bga/bundle.py", "bga/hostinfo.py", "bga/plane2.py",
+                    "bga/run_store.py", "bga/schemas.py", "bga/sources.py",
+                    "bga/cli.py", "bga/tools_dispatch.py")
+_WALK_DATE = re.compile(r"Base\s+`[0-9a-f]{7,40}`,\s*(\d{4}-\d{2}-\d{2})")
+_FINDINGS_BLOCK = re.compile(r"(?ms)^findings\s+(.*?)^rows added\s")
+_FILED = re.compile(r"→\s*(UX-\d+)")
+
+
+def candidate_commit_date():
+    """`%cs` of the newest commit over `_CANDIDATE_FILES` - `git log -1`,
+    over-approximated on purpose (`UX-686`)."""
+    code, out = _git("log", "-1", "--format=%cs", "--", *_CANDIDATE_FILES)
+    assert code == 0 and out, "no commit touches the candidate file set"
+    return out
+
+
+def walk_covers_candidate(candidate_date, walk_date, filed, closed, carried):
+    """The release guide's third condition, pure (`UX-686`): a walk at
+    or after the candidate, and every finding it filed closed or
+    carried (named in the release's CHANGELOG row)."""
+    if walk_date < candidate_date:
+        return False
+    return all(name in closed or name in carried for name in filed)
+
+
+class TestTheWalkGateIsDerived:
+    """Synthetic pairs, on cases the real ledger does not contain yet -
+    no release has been cut through this condition (`UX-686`)."""
+
+    def test_a_walk_before_the_candidate_refuses(self):
+        assert walk_covers_candidate(
+            "2026-09-06", "2026-09-05", set(), set(), set()) is False
+
+    def test_a_walk_on_the_candidates_date_clears_it(self):
+        assert walk_covers_candidate(
+            "2026-09-06", "2026-09-06", set(), set(), set()) is True
+
+    def test_a_walk_after_with_its_finding_closed_passes(self):
+        assert walk_covers_candidate(
+            "2026-09-06", "2026-09-07", {"UX-1"}, {"UX-1"}, set()) is True
+
+    def test_an_open_unnamed_finding_refuses(self):
+        assert walk_covers_candidate(
+            "2026-09-06", "2026-09-07", {"UX-1"}, set(), set()) is False
+
+    def test_an_open_finding_named_in_the_changelog_passes(self):
+        assert walk_covers_candidate(
+            "2026-09-06", "2026-09-07", {"UX-1"}, set(), {"UX-1"}) is True
+
+
+class TestTheReleaseConsumesTheWalk:
+    """`UX-686`'s third condition. `UX-727` defers the design-review
+    half a walk's report also promises, so this reads the walk only."""
+
+    def test_the_release_guide_names_the_walk_condition(self):
+        text = RELEASE_GUIDE.read_text(encoding="utf-8")
+        assert "UX-685" in text
+        assert "walk" in text.lower()
+
+    def test_the_candidate_commit_is_computable(self):
+        assert re.fullmatch(r"\d{4}-\d{2}-\d{2}", candidate_commit_date())
+
+    def test_a_walk_reports_date_and_filings_are_read_from_the_real_tree(self):
+        """`is_walk_report`/`audits_documents` (`UX-685`) pick the shape
+        and the tracked set; this adds the date and `→ UX-NNN`
+        filings on top of both real reports, not reimplemented."""
+        from tools.dev_scenario import audits_documents, is_walk_report
+
+        reports = {path: text for path, text in audits_documents()
+                   if is_walk_report(text)}
+        assert reports, "no walk report under docs/audits/"
+        found = {}
+        for path, text in reports.items():
+            date = _WALK_DATE.search(text)
+            assert date, f"{path}: no `Base \\`<hash>\\`, <date>` line"
+            block = _FINDINGS_BLOCK.search(text)
+            assert block, f"{path}: no findings block"
+            found[path] = (date.group(1), set(_FILED.findall(block.group(1))))
+        assert found.get("docs/audits/walk-seed-1.md") == ("2026-09-06", {"UX-723"})
+        assert found.get("docs/audits/walk-seed-2.md") == (
+            "2026-09-06", {"UX-724", "UX-725"})
+
+    def test_the_filed_findings_closed_status_matches_the_backlog(self):
+        """The status half `walk_covers_candidate` needs, read from the
+        two real reports' actual filings rather than asserted."""
+        closed_text = (REPO / "docs/backlog/scenarios/closed.md").read_text(
+            encoding="utf-8")
+        assert "UX-723" in closed_text
+        assert "UX-724" not in closed_text
+        assert "UX-725" not in closed_text
+
+
 #: `UX-637`: a shallow clone answers reachability from a history that
 #: stops at a boundary, and says so to nobody. `UX-633` was filed, a
 #: user decision was taken and an exemption shipped on exactly that -

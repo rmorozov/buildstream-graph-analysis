@@ -1051,6 +1051,19 @@ with the tables above destroys the one thing the entry is for
 (`UX-653`). The newest entry is the exception: every round that
 re-grounds the document rewrites it.
 
+Updated 2026-09-06 (after `UX-715`), covering one change to this
+document — the `UX-294`/`UX-295` retrospective paragraph below, which
+now anchors "fifteen viewer modules" to `UX-294` (2026-08-26) instead
+of reading as a claim about today's directory — re-grounded in the two
+contract tables above against `bga.contracts` and `bga/schemas.py`:
+**25 emitted ids, 10 of them superseded, and 3 read and never
+written**, 9 printable and 16 not, unchanged from the entry below.
+`bga analyze --schema` now prints **60 top-level properties** and
+`bga/viewer/` now holds **23** modules (`ls bga/viewer/*.js
+bga/viewer/*.css | wc -l`) — both moved since the entry below's 56 and
+22, under items this row did not audit; the map above already names
+all 23. This item published no id and moved neither count itself.
+
 Updated 2026-09-04 (after `UX-653`), covering one change to this
 document — the paragraph above, which states the rule the log had been
 kept to by hand and lost four times — re-grounded in the two contract
@@ -1462,10 +1475,11 @@ home* checklist that were still open.
 Both were found the same way and both had the same shape: a guard that
 was green because it was asking the maintainer's question.
 `UX-294`'s acceptance (*named in at least one document under `docs/`*)
-had become true of all fifteen viewer modules by attrition, while the
-architecture — the document a reader of `bga/viewer/` opens — named
-eight; so the guard went on the map instead. `UX-295`'s contract-home
-guard checked the spec and this document, which is where a maintainer
+had become true of all fifteen viewer modules at `UX-294` (2026-08-26)
+by attrition, while the architecture — the document a reader of
+`bga/viewer/` opens — named eight; so the guard went on the map
+instead. `UX-295`'s contract-home guard checked the spec and this
+document, which is where a maintainer
 looks, so `whatif/v1` being absent from every *guide* sat under it
 unnoticed; the new clause asks the reader's question, scoped to the
 printable contracts with the run-directory shapes exempted by name.

@@ -386,12 +386,12 @@ body[data-has-toc] > .toc a {
   display: block; overflow: hidden; text-overflow: ellipsis;
   white-space: nowrap;
 }
-/* The one group that grows with the run. Bounded here rather than
-   truncated in JS: every link stays reachable, and the rail's own
-   scroll is what absorbs the length. */
-body[data-has-toc] > .toc ul[data-rail="elements"] {
-  max-height: 12rem; overflow-y: auto;
-}
+/* `UX-667` (styleguide §3h.3, §3a.3): the one group that grows with the
+   run used to be bounded by a scrollbox nested inside the rail's own
+   scroll - the shape §3a.3 already abolished for tables. Disclosure by
+   chapter is what bounds it now: `investigate`'s entries are behind the
+   `elements` chapter's fold like every other chapter's, so there is
+   nothing left for a second scroll container to do. */
 .toc a { font-size: .88rem; text-decoration: none; }
 .toc a:hover, .toc a:focus { text-decoration: underline; }
 /* UX-391: what the task uid says besides the element name. Muted and
@@ -701,6 +701,30 @@ th .th-filter.unparsed { border-color: var(--bad); border-style: dashed; }
 .chip:hover { border-color: var(--accent); }
 .toc-rail { margin: .6rem 0 .1rem; font-size: .72rem; letter-spacing: .06em;
             text-transform: uppercase; color: var(--muted); }
+
+/* `UX-667` (styleguide §3h): a source list - every chapter, and only
+   the open one's sections. `li[data-chapter]` is the row; `data-open`
+   is mirrored onto it from the same `section.chapter` box the document
+   folds (`chapters.js`'s `labelFold`), so the two views cannot drift.
+   No `overflow-y` here or on `.sections` below: the acceptance test's
+   third clause is that folding, not a scrollbox, is what bounds the
+   rail now. */
+.toc .chapters { list-style: none; margin: 0; padding: 0; }
+.toc .chapters > li { margin: .5rem 0 0; }
+.toc .chapters > li[data-open="false"] > .sections { display: none; }
+/* §6d's "quiet" grade (transparent, solid, 3px) - the same full
+   appearance `button.chapter-open` already draws (`test_every_control_
+   has_a_resting_appearance.py` counts the whole look, not only the
+   three fields the grade is keyed on, so `font-size` and `padding`
+   stay the base button's). Only layout and case are this rule's own -
+   neither is a measured field. */
+button.toc-chapter-open {
+  display: block; width: 100%; text-align: left;
+  background: transparent; color: var(--muted);
+  letter-spacing: .06em; text-transform: uppercase;
+}
+button.toc-chapter-open:hover,
+button.toc-chapter-open[aria-expanded="true"] { color: var(--fg); }
 .question-group > summary { cursor: pointer; text-transform: capitalize;
                             color: var(--muted); font-size: .85rem;
                             margin-top: .6rem; }
@@ -1157,7 +1181,13 @@ p.run-advice {
   gap: .25rem;
   margin: .35rem 0 .6rem;
 }
-.toc-steps button { flex: 1; }
+/* `UX-667`: one row of three, not the wrap the default button font
+   gave three in a 208px column ("41px two-line buttons", round 90's
+   design review). `white-space` is not one of the fields
+   `test_every_control_has_a_resting_appearance.py` holds to four
+   combinations - font-size and padding are, so those stay the
+   standing grade's own rather than drifting into a fifth. */
+.toc-steps button { flex: 1; white-space: nowrap; }
 /* `UX-536`: the two accelerators, said where the controls they drive
    are. Muted and last, so it reads as a note rather than a fourth
    control. */

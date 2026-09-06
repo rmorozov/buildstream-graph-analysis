@@ -958,9 +958,15 @@ COMMITTED_EXPORTS = [
     # `UX-669`: +1,504 B here too, to 498,665, and this bound holds -
     # 3,335 B of headroom, which is why only the row above moved.
     # `UX-677` moved this one by the same 1,168 B and for the same
-    # reason - see the note on the `golden` bound above. 507,000 leaves
-    # 4,718 B, the same order of headroom the other bounds carry.
-    ("macro_micro", MACRO_MICRO, 507_000),             #  502,282 B
+    # reason - see the note on the `golden` bound above.
+    # `UX-667`: +1,869 B on top, all source, measured in one worktree
+    # either side to hold the run path's own contribution fixed
+    # (total 501,514 -> 503,383, data 185,519 -> 185,519 unmoved) -
+    # `chapters.js`'s `labelFold` and `nav.js`'s chapter-row markup.
+    # The two landed in the same round and the figure below is the
+    # merged tree's, measured once rather than added up:
+    # 510,000 leaves 4,715 B, the same order of headroom above.
+    ("macro_micro", MACRO_MICRO, 510_000),             #  505,285 B
 ]
 
 

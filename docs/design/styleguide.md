@@ -1314,6 +1314,43 @@ So §3f's rule has a second dimension. **A bound is enforced at the
 largest size the tool tells people to use, and in the mode people use
 it in.** `UX-435` is the item.
 
+## 3h. The rail is a source list (round 90)
+
+Round 90's design review, on a capture with every plane:
+
+```text
+nav.toc                          240 × 804 px · scrollHeight 1,902 (2.4 rail-screens)
+entries                           82 (67 sections + 14 sub-entries + 1 store)
+disclosure elements                0 - a flat <ul> per chapter
+visible without scrolling the rail    16 of 82
+scrollspy                        marks aria-current - rail.scrollTop stays 0
+```
+
+§3b's click budget and §3c's distance budget hold; the rail spends the
+reader's own distance budget on itself, and "you are here" never comes
+into view. A source list is grouped, discloses, and has one selection -
+this rail had the groups and the mark and no disclosure.
+
+**The rail shows every chapter and only the current chapter's
+sections.** A chapter row discloses, and its disclosure *is* the
+document's chapter fold (§4a's grouping, `chapters.js`'s `data-open`) -
+one state, two views (§4c), not a second fold the rail keeps of its
+own. `nav.toc > ul.chapters > li[data-chapter] >
+button[aria-expanded] "<title> · <n>" > ul.sections > li >
+a[aria-current]`. The scrollspy mark calls
+`scrollIntoView({block: "nearest"})` on every update, so the current
+entry is always inside the rail's own viewport rather than merely
+marked off-screen. `investigate`'s per-element list, previously the one
+rail scroll `UX-254` bounded with `max-height: 12rem; overflow-y:
+auto` (the shape §3a.3 already abolished for tables), needs no scrollbox
+of its own once disclosure bounds what is drawn.
+
+`UX-271` refused a *JSON-shaped* tree; this is the chapter grouping,
+already the rail's own, made foldable - a different object, and the
+content per chapter is unchanged (`UX-640`'s label authority).
+
+`UX-667` is the item.
+
 ## 4e. A handoff says what it could not carry (round 69)
 
 Same capture. `run/graph.json` holds 3,500 dependency edges; the
@@ -1414,6 +1451,7 @@ headings, so a renumber there moves it.
 | §3e | `test_the_page_has_a_volume_budget.py` | |
 | §3f | `test_the_handoff_box_is_measured_served.py` | |
 | §3g | `test_the_ceilings_reach_a_reader.py` | |
+| §3h | `test_the_rail_is_a_source_list.py` | |
 | §4 | `test_emphasis_is_a_budget.py`, `test_the_palette_is_validated.py`, `test_a_drawing_is_graded.py`, `test_apparatus_in_its_place.py`, `test_the_browser_is_the_library.py` | named |
 | §4a | | named; `UX-346`'s `test_a_sentence_lives_on_its_door.py` holds it and cites no section |
 | §4b | `test_a_runbook_is_not_a_table.py` | `UX-351`'s `test_the_label_is_for_the_reader.py` holds it and cites no section; `UX-669`'s clause holds the half that says a citation is a question, never a key |

@@ -495,16 +495,45 @@ export function setAllOpen(root, open) {
   return boxes.length;
 }
 
-function labelFold(box) {
-  const toggle = box.querySelector?.("[data-chapter-open]");
-  if (!toggle) return;
+/**
+ * `UX-667`: the box's own document-side control and the rail's row for
+ * the same chapter are two views of this one `data-open` attribute.
+ * `box.__railToggle` is a plain JS reference, not a selector - `nav.js`
+ * sets it once, while the rail is still a detached tree the DOM has no
+ * way to search (`labelFold` used to run, from `chapters()`, *before*
+ * `box` itself was appended to `root`; a document-wide query at that
+ * point finds nothing, silently). `data-open` is mirrored onto the
+ * rail row (`li[data-chapter]`) too, which is the hook the stylesheet
+ * hides a closed chapter's `ul.sections` with.
+ */
+export function labelFold(box) {
+  const toggle = box?.querySelector?.("[data-chapter-open]");
+  const rail = box?.__railToggle ?? null;
+  if (!toggle && !rail) return;
   const held = box.querySelectorAll?.("[data-section]")?.length ?? 0;
   const open = isOpen(box);
-  toggle.setAttribute("aria-expanded", String(open));
-  toggle.textContent = open ? "Hide" : `Show ${held} section${held === 1 ? "" : "s"}`;
-  toggle.setAttribute("title", open
-    ? `Fold "${box.getAttribute("aria-label")}" back to its answer`
-    : `Open "${box.getAttribute("aria-label")}"`);
+  if (toggle) {
+    toggle.setAttribute("aria-expanded", String(open));
+    toggle.textContent = open ? "Hide"
+      : `Show ${held} section${held === 1 ? "" : "s"}`;
+    toggle.setAttribute("title", open
+      ? `Fold "${box.getAttribute("aria-label")}" back to its answer`
+      : `Open "${box.getAttribute("aria-label")}"`);
+  }
+  if (rail) {
+    rail.setAttribute("aria-expanded", String(open));
+    rail.textContent = `${box.getAttribute("aria-label")} · ${held}`;
+    rail.closest?.("li[data-chapter]")?.setAttribute(
+      "data-open", String(open));
+  }
+}
+
+/** The chapter box a rail row's toggle should share state with - the
+ *  one indirection `nav.js` needs so the chapter table stays this
+ *  file's business (`UX-199`). */
+export function chapterBox(root, id) {
+  return root?.querySelector?.(`section.chapter[data-chapter="${id}"]`)
+    ?? null;
 }
 
 /**

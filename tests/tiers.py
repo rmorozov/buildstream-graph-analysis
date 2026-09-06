@@ -597,6 +597,11 @@ MEDIUM = (
     # clauses that need no browser. Three single-process runs:
     # 1.41 / 1.35 / 1.35s.
     "tests/unit/test_a_runbook_is_not_a_table.py",                #    1.4s
+    # `UX-667`, tiered on landing. One Chromium, one module-scoped
+    # page - the rail's landing state, a 68-mark walk and the CSS
+    # sweep all read from it. Measured single-process, `--durations=0`:
+    # 10.5s.
+    "tests/unit/test_the_rail_is_a_source_list.py",               #   10.5s
     # `UX-455`, tiered on landing, and it earned the tier the way the
     # item is about: two clauses run the confirmation for real, which
     # is a pytest subprocess each. Three single-process runs:

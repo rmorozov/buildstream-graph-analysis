@@ -1333,29 +1333,29 @@ headings, so a renumber there moves it.
 | § | guard | note |
 |---|---|---|
 | §1 | `test_the_mapping_is_law.py` | named |
-| §1a | `test_a_command_renders_as_a_command.py`, `test_the_contract_names_its_vocabulary.py`, `test_the_vocabulary_has_the_shape.py` | |
+| §1a | `test_a_command_renders_as_a_command.py`, `test_a_new_control_class_lands_declared.py`, `test_the_contract_names_its_vocabulary.py`, `test_the_vocabulary_has_the_shape.py` | |
 | §1b | `test_the_merge_carries_every_field.py` | |
 | §1c | `test_the_first_finding_is_an_action.py` | |
 | §1d | | `UX-429`'s `test_a_command_renders_as_a_command.py` holds it and cites §1 and §1a, not §1d |
 | §2 | `test_the_shape_before_the_rows.py`, `test_the_shape_channel_is_built.py` | named |
-| §2a | `test_a_drawing_is_graded.py`, `test_emphasis_is_a_budget.py`, `test_the_page_conforms_to_its_sections.py`, `test_the_report_you_can_attach.py`, `test_the_views_that_draw.py`, `test_the_vocabulary_has_the_shape.py` | |
-| §2b | `test_a_drawing_is_graded.py`, `test_apparatus_in_its_place.py`, `test_the_page_conforms_to_its_sections.py`, `test_the_report_is_read_not_decoded.py`, `test_the_report_you_can_attach.py` | |
+| §2a | `test_a_drawing_is_graded.py`, `test_a_new_control_class_lands_declared.py`, `test_emphasis_is_a_budget.py`, `test_the_page_conforms_to_its_sections.py`, `test_the_report_you_can_attach.py`, `test_the_views_that_draw.py`, `test_the_vocabulary_has_the_shape.py` | |
+| §2b | `test_a_drawing_is_graded.py`, `test_apparatus_in_its_place.py`, `test_a_new_control_class_lands_declared.py`, `test_the_page_conforms_to_its_sections.py`, `test_the_report_is_read_not_decoded.py`, `test_the_report_you_can_attach.py` | |
 | §2c | | `UX-350`'s `test_the_shape_channel_is_built.py` built the channel and cites §2 |
 | §2d | `test_the_vocabulary_has_the_shape.py` | |
 | §2e | | no guard cites it |
 | §3 | `test_the_tools_scale_with_the_table.py`, `test_one_click_from_investigation.py` | named |
 | §3a | `test_a_level_names_who_is_in_it.py`, `test_a_value_shows_what_it_is.py`, `test_the_chain_folds_and_clicks_are_counted.py`, `test_the_fold_says_how_deep_it_goes.py`, `test_the_merge_carries_every_field.py`, `test_the_page_conforms_to_its_sections.py`, `test_the_provenance_names_its_rule.py`, `test_the_report_you_can_attach.py`, `test_the_store_section_takes_a_window.py`, `test_why_bga_believes_what_it_believes.py` | |
 | §3b | `test_the_chain_folds_and_clicks_are_counted.py`, `test_the_page_conforms_to_its_sections.py` | |
-| §3c | | no guard cites it; §3e's volume budget is the measured half |
-| §3d | | `UX-349`'s `test_the_tools_scale_with_the_table.py` holds it and cites §3 |
+| §3c | `test_a_new_control_class_lands_declared.py` | `UX-665`'s registry names the § each control class belongs to, so the census cites this one for the rail's; §3e's volume budget is still the measured half |
+| §3d | `test_a_new_control_class_lands_declared.py` | `UX-349`'s `test_the_tools_scale_with_the_table.py` also holds it and cites §3 |
 | §3e | `test_the_page_has_a_volume_budget.py` | |
 | §3f | `test_the_handoff_box_is_measured_served.py` | |
 | §3g | `test_the_ceilings_reach_a_reader.py` | |
 | §4 | `test_emphasis_is_a_budget.py`, `test_the_palette_is_validated.py`, `test_a_drawing_is_graded.py`, `test_apparatus_in_its_place.py`, `test_the_browser_is_the_library.py` | named |
 | §4a | | named; `UX-346`'s `test_a_sentence_lives_on_its_door.py` holds it and cites no section |
 | §4b | | `UX-351`'s `test_the_label_is_for_the_reader.py` holds it and cites no section |
-| §4c | `test_a_command_renders_as_a_command.py`, `test_a_control_acts_on_what_it_names.py` | |
-| §4d | | no guard cites it; `UX-368` and `UX-369` are the filed items |
+| §4c | `test_a_new_control_class_lands_declared.py`, `test_a_command_renders_as_a_command.py`, `test_a_control_acts_on_what_it_names.py` | |
+| §4d | `test_a_new_control_class_lands_declared.py` | `UX-665`'s registry names the § each class belongs to, which is how this one first acquired a guard; `UX-368` and `UX-369` are still the filed items |
 | §4e | `test_the_ceilings_reach_a_reader.py`, `test_the_served_handoff_counts_its_edges.py` | |
 | §5 | | named; `test_the_palette_is_validated.py`, named in §5's own prose, cites §4.3 and §4.5 only |
 | §5a | | no guard cites it; the easy one passes forever, below |

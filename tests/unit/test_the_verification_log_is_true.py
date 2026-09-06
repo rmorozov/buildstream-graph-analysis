@@ -390,8 +390,22 @@ class TestTheLogIsNotStaleAboutItself:
 
     #: How far back the non-vacuity clause reads. Bounded because the
     #: exclusion spawns one `git show` per commit and this file is
-    #: `small`: 108 commits touch the document, 20 is 0.2s of them.
-    WINDOW = 20
+    #: `small`: 108 commits touch the document, 20 was 0.2s of them.
+    #:
+    #: `UX-669` ran it out. `dev_close_task.py --check --write` rewrites
+    #: this document's derived counts on every close and filing, so a
+    #: round of seven closes and two filings lands nine count-only
+    #: commits; at `7d6c9fa` all 20 were excused and the clause went
+    #: red in CI having been green locally one commit earlier. The
+    #: newest substantive change sat at **position 21** - `74fbeac`,
+    #: `UX-653` - so the window was one short of a repository that had
+    #: not stopped moving. Measured, single-process:
+    #:
+    #:     20 commits  0.09s     30 commits  0.14s     40  0.20s
+    #:
+    #: 40 buys 19 commits of headroom for 0.11s. Nothing here excuses
+    #: more than it did: the exclusion is unchanged.
+    WINDOW = 40
 
     def test_the_clause_below_has_commits_to_compare(self):
         """Non-vacuity for the exclusion: in a clone with history, some
@@ -406,8 +420,11 @@ class TestTheLogIsNotStaleAboutItself:
         assert [sha for sha in recent
                 if not _only_a_derived_figure_moved(sha)], (
             f"all {len(recent)} of the document's newest commits were "
-            "excused as a derived figure - the exclusion is too wide and "
-            "the clause below is off")
+            "excused as a derived figure, so the clause below reads "
+            "nothing. Either the exclusion is too wide, or the document "
+            "has taken only derived counts for that long and the window "
+            "above needs re-measuring against its first survivor "
+            "(`UX-669`)")
 
     def test_nothing_landed_after_the_commit_the_entry_credits(self):
         """The mechanical half of item 2, in the unit the tree moves in

@@ -29,6 +29,31 @@ Its verdict, though, depends on the size of `tests/`, and adding
 anything the guard names. The `selector-before-commit` hook therefore
 passed on all four commits that invalidated it, and CI paid.
 
+**The class has at least four members, measured.** Round 98 hit it
+twice more, hours apart, through a *task file* rather than a test file:
+`UX-727`'s text was edited to derive `bounded` while its header still
+said `judgement`, and four guards that read the whole backlog went red
+on CI while the hook stayed green. What one task-file change selects:
+
+```console
+$ python3 -c "from tools.dev_touching import select; \
+    print(len(select(['docs/backlog/scenarios/UX-0727-….md'])[0]))"
+13                                         # the census floor, and nothing else
+  test_a_task_declares_its_shape.py                    not selected
+  test_the_loop_stays_fast.py                          not selected
+  test_the_fast_check_holds_what_the_suite_holds.py    not selected
+  test_the_cost_row_is_derived_from_the_selector.py    not selected
+$ pytest <those four> -q
+84 passed in 13.05s
+```
+
+Four guards, 13.05 s together. `UX-716` says to decide between its two
+routes on how many guards are in the class — "if it is two, the first
+route is cheaper; if it is twenty, the second is". Four is the count so
+far, and all four are reachable by one declaration
+(`docs/backlog/scenarios/` and `tests/`), which argues for the
+declare-the-population route over normalising each reading.
+
 This is `UX-716`'s class in a second mechanism. There it is *recorded
 seconds* decaying as a population grows; here it is a *derived figure*.
 Same shape, different currency, and neither `UX-662`'s retirement of

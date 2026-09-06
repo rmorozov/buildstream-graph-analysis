@@ -50,3 +50,66 @@ Guard (browser tier): every rail link, not only those whose target is
 a `<section>`, lands within the sticky header's height of the viewport
 top or at the document's end. Mutation: put `overflow: auto` back on
 the table — the two `restructuring--*` links red at 44 px.
+
+## Outcome
+
+**The gap, measured** — same fixture, method, viewport as the
+Motivation, this session:
+
+```text
+restructuring--edges        44 px   fromEnd 901
+restructuring--projection   44 px   fromEnd 901
+restructuring               104 px  fromEnd 1091   (the control)
+```
+
+Matches the filed numbers (44/895 then; 44/901 now — the 6 px is
+`fromEnd`'s own noise, not the defect).
+
+**The preferred fix does not close it.** Wrapping the table
+(`.table-scroll`, `overflow-x: auto` moved off `main table`) and
+re-measuring: `restructuring--edges`/`projection` land at **50 px**,
+not 104. `scrollIntoView` treats *any* element with `overflow-x: auto`
+as a scroll container regardless of tag, wrapper or actual overflow
+(confirmed: `wrap.scrollHeight === wrap.clientHeight`, nothing to
+scroll) — it aligns that ancestor to the viewport top and the document
+scroll runs against the rect that alignment already touched. Moving
+the declaration from `<table>` to a `<div>` around it changes which
+element absorbs the scroll, not whether one does. Reverted (would
+have touched `bga/viewer/style.css` and `structured.js`'s
+`renderTable`; neither is in this diff).
+
+**The close, measured.** `revealAndLand` (`chapters.js`) now computes
+the document scroll itself — `getBoundingClientRect().top` plus
+`scroll-margin-top`, applied via `window.scrollTo` — rather than
+delegating to `node.scrollIntoView()`. No ancestor's scroll runs at
+all:
+
+```text
+restructuring--edges        104 px   fromEnd 955
+restructuring--projection   104 px   fromEnd 955
+restructuring                104 px  fromEnd 1091
+```
+
+Band asserted: `[102, 106]`, reusing `UX-670`'s `BAND` (measured
+single-process 104; the `+-2` there covers `-n auto`'s rounding, and
+this fixture has only these two fold targets to confirm it against).
+UX-254 (page never scrolls sideways) and UX-318 (`main table table`
+stays `overflow: visible`) reverified directly, unchanged since no
+CSS moved: `test_the_page_never_scrolls_sideways`,
+`TestNestedScrollboxesAreGone`, `TestTheBootedPageHasOneScrollBoxPerChain`
+all green.
+
+**The mutation table**, in `test_a_rail_click_lands_on_its_section.py`:
+
+| mutation | clause that reds |
+|---|---|
+| `land` back to `node.scrollIntoView(...)` | `test_the_landing_is_computed_not_delegated`; `TestARailClickIntoAFoldLandsUnderTheHeader::test_the_landing_is_the_header_and_not_merely_close` (`[44]`) |
+| drop the `scroll-margin-top` subtraction (`margin = 0`) | both fold clauses above, plus `UX-670`'s three browser clauses (`[-1, 0, 1]`) |
+
+**Deviation.** The named mutation (`overflow: auto` back on the table)
+does not apply: the table's `overflow` was never changed, so nothing
+regresses. `TestARailClickLandsUnderTheHeader`'s machinery is reused
+by name (`browser`, `_CLICK`) for a new `_FOLDS` selector and
+`fold_landings` fixture in the same file, rather than a second one —
+the two target shapes (`<section>` in a chapter, `<details>` in a
+table cell) need different discovery but the same click-and-measure.

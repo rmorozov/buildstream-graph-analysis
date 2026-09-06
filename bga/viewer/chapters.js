@@ -616,14 +616,28 @@ export function revealChapter(node) {
  * ```
  *
  * One frame is worse than none, which is why this is two and not a
- * number anybody picked. `scrollIntoView` reads `scroll-margin-top`,
- * where the sticky header's height lives, so no offset is repeated
+ * number anybody picked. `scroll-margin-top`, where the sticky
+ * header's height lives, is read off the node rather than repeated
  * here.
+ *
+ * `UX-722`: computed from the rect rather than `node.scrollIntoView`.
+ * A wide table (`main table`, UX-254) is a scroll container, and a
+ * fold inside one of its cells sits behind it - `scrollIntoView`
+ * aligns *that* ancestor to the viewport top, which costs nothing when
+ * there is nothing to scroll, and the document scroll that follows
+ * runs against the rect that alignment already touched. The document
+ * is the only box this ever needed to move.
  */
 export function revealAndLand(node, behavior) {
   const box = revealChapter(node);
-  const land = () => node?.scrollIntoView?.(
-    behavior ? { behavior, block: "start" } : undefined);
+  const land = () => {
+    if (!node?.getBoundingClientRect) return;
+    const view = node.ownerDocument?.defaultView ?? globalThis;
+    const margin = parseFloat(
+      view.getComputedStyle?.(node)?.scrollMarginTop) || 0;
+    const top = (view.scrollY ?? 0) + node.getBoundingClientRect().top - margin;
+    view.scrollTo?.(behavior ? { top, behavior } : { top });
+  };
   land();
   const frame = globalThis.requestAnimationFrame;
   if (frame) frame(() => frame(land));

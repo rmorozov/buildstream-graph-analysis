@@ -18,6 +18,20 @@ after the real height is in.
 The six sections at the document's end land where the page runs out of
 scroll, not under the header: that is the page's height, not this
 defect, and the split below is asserted rather than allowed for.
+
+UX-722: two rail sub-entries do not name a section at all - `nav.js`
+names a fold (`<details class="map">`) too, and both
+`restructuring--edges` and `restructuring--projection` sit in a `<td>`
+of a table whose `overflow-x: auto` (`main table`, UX-254) makes it a
+scroll container. `node.scrollIntoView()` aligned *that* ancestor to
+the viewport top - nothing to actually scroll, so the alignment was
+free - and the document scroll that followed ran against the rect it
+had already touched: 44 px, same as before this file's own fix.
+Wrapping the table changes which element that scroll container is and
+not the outcome (measured: still ~50 px) - any `overflow-x: auto`
+ancestor, table or wrapper, is one to `scrollIntoView`. `revealAndLand`
+computes the document scroll itself, from the rect and
+`scroll-margin-top`, so no ancestor's scroll runs at all.
 """
 import pathlib
 import sys
@@ -100,6 +114,33 @@ def landings(browser, tmp_path_factory):
             for one in ids]
 
 
+#: `UX-722`: every rail link whose target is a fold rather than a
+#: section - `nav.js`'s `subsections` names a `details.map` too, and a
+#: rail link is not only ever a way into a section.
+_FOLDS = r"""
+(() => [...document.querySelectorAll('a[href^="#"]')]
+   .filter((a) => a.closest("nav, .rail, .toc"))
+   .map((a) => {
+     const id = a.getAttribute("href").slice(1);
+     const t = document.getElementById(id);
+     return (t && t.tagName === "DETAILS") ? id : null;
+   }).filter(Boolean))()
+"""
+
+
+@pytest.fixture(scope="module")
+def fold_landings(browser, tmp_path_factory):
+    """Same method as `landings`, a fresh load per fold rather than per
+    section - the two are a different DOM shape (`<details>` in a
+    table cell, not `<section>` in a chapter) and neither fixture
+    stands in for the other."""
+    into = tmp_path_factory.mktemp("u722")
+    uri = pages.export_uri(pages.FIXTURES["macro_micro"], into)
+    ids = browser.measure(uri, _FOLDS, 1440, 900)
+    return [browser.measure(uri, _CLICK.replace("__ID__", one), 1440, 900)
+            for one in ids]
+
+
 class TestTheEntryPointsLandRatherThanScroll:
     def test_every_way_in_goes_through_the_settle(self):
         """The rail, the jump box and a pasted `#anchor` are three
@@ -121,6 +162,19 @@ class TestTheEntryPointsLandRatherThanScroll:
         body = body[:body.index("\n}\n")]
         assert "\n  land();\n" in body
         assert "frame(() => frame(land))" in body
+
+    def test_the_landing_is_computed_not_delegated(self):
+        """`UX-722`: `scrollIntoView` aligns the nearest scroll
+        container - a wide table or its wrapper alike - to the
+        viewport top, which is free when there is nothing to scroll
+        and wrong regardless. The document scroll is computed from the
+        rect and the node's own `scroll-margin-top` instead."""
+        text = (REPO / "bga" / "viewer" / "chapters.js").read_text()
+        body = text[text.index("export function revealAndLand("):]
+        body = body[:body.index("\n}\n")]
+        assert "scrollIntoView" not in body
+        assert "getBoundingClientRect" in body
+        assert "scrollMarginTop" in body
 
 
 @needs_browser
@@ -160,4 +214,43 @@ class TestARailClickLandsUnderTheHeader:
         low, high = self.BAND
         tops = sorted({row["top"] for row in landings
                        if row["fromEnd"] != 0})
+        assert tops and low <= min(tops) and max(tops) <= high, tops
+
+
+@needs_browser
+class TestARailClickIntoAFoldLandsUnderTheHeader:
+    """`UX-722`: `restructuring--edges` and `restructuring--projection`,
+    measured on `macro_micro` at 1440x900 before this item's fix:
+
+    ```text
+    restructuring--edges        44 px   fromEnd 895
+    restructuring--projection   44 px   fromEnd 895
+    restructuring               104 px  fromEnd 1042   (the control)
+    ```
+
+    Both sit in a `<td>` of the `restructuring` table, whose
+    `overflow-x: auto` (UX-254) makes it a scroll container between the
+    fold and the document.
+    """
+
+    def test_every_fold_link_lands_or_runs_out_of_page(self, fold_landings):
+        assert fold_landings, "no rail link targets a fold on this fixture"
+        missed = [row for row in fold_landings
+                  if not (0 <= row["top"] <= row["head"] + SLACK_PX)
+                  and row["fromEnd"] != 0]
+        assert missed == [], (
+            f"{len(missed)} of {len(fold_landings)} fold links land away "
+            f"from the fold they name, and the page had somewhere left to "
+            f"scroll: {missed}")
+
+    def test_the_two_known_folds_are_the_ones_measured(self, fold_landings):
+        """Pasted, so a third fold target does not silently join the
+        passing set unmeasured."""
+        assert sorted(row["id"] for row in fold_landings) == [
+            "restructuring--edges", "restructuring--projection"]
+
+    def test_the_landing_is_the_header_and_not_merely_close(
+            self, fold_landings):
+        low, high = TestARailClickLandsUnderTheHeader.BAND
+        tops = sorted({row["top"] for row in fold_landings})
         assert tops and low <= min(tops) and max(tops) <= high, tops

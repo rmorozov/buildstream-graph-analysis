@@ -153,6 +153,15 @@ class TestTheSelectorStillSelects:
         # here that is wide by map and not by name: its entry is 23,
         # one under `MAP_ENTRY_CAP`, so it counts in full.
         "bga/report/rate.py",
+        # `UX-730`, round 100: 35 = 19 census + 16 named, one over the
+        # bound. Wide by **name** and not by map - its map entry is 180
+        # files, seven times `MAP_ENTRY_CAP`, so `UX-605`'s rule
+        # discards it and the 16 are what a `fan_in` grep really finds.
+        # It joined the *population* rather than the tree: CI's adopted
+        # map went 88 -> 94 modules and named it for the first time, so
+        # a branch that has not merged main cannot see this row at all
+        # (`UX-716`'s class, in the map instead of the ledger).
+        "bga/graph/fan_in.py",
         # `UX-681`: both at 29 against a bound of 27, and both tipped
         # over by the same new file. They are the two modules a graph
         # guard cannot avoid naming - `edg` is where reachability and

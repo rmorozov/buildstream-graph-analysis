@@ -46,11 +46,20 @@ import os
 import pathlib
 import re
 import subprocess
+import sys
 import tempfile
 
 import pytest
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO))
+
+from tests import tiers
+from tools import dev_tier_drift as drift
+
+#: This file's own path, for `TestThePopulationScaledEntryIsNormalised`
+#: below - it is the guard `UX-716` was filed on.
+THIS_FILE = "tests/unit/test_a_guard_reads_only_what_a_clone_has.py"
 
 # A path is a *repository* path here if it starts with one of the
 # directories a clone has. Anything else in a string literal is a URL, a
@@ -648,6 +657,63 @@ class TestAnAbsolutePathOutsideTheCloneIsSeen:
             f'import pathlib\nX = pathlib.Path("{capture}")\n'
             'Y = open("tests/fixtures/macro_micro/plane2.json")\n')
         assert cited == {str(capture), "tests/fixtures/macro_micro/plane2.json"}
+
+
+class TestThePopulationScaledEntryIsNormalised:
+    """`UX-716`: this file's own recorded seconds are a function of the
+    `tests/` tree's size - it sweeps every `tests/**/*.py` and reads
+    each one - not of anything a diff touches. Round 96 read a bigger
+    tree as a 1.53x regression. `against()` must scale what it expects
+    this entry to cost by how far the tree has actually grown, or every
+    round that adds test files elsewhere re-triggers the same report.
+    """
+
+    def _reference(self, seconds, population):
+        times = dict(tiers.recorded())
+        times[THIS_FILE] = seconds
+        reference = drift.record(times, "a runner")
+        reference["population"] = {THIS_FILE: population}
+        return reference
+
+    def test_a_population_that_grew_with_the_seconds_is_not_drift(
+            self, monkeypatch):
+        reference = self._reference(16.7, population=496)
+        monkeypatch.setattr(drift, "population_size", lambda _pop: 992)
+        times = dict(tiers.recorded())
+        times[THIS_FILE] = 33.4  # doubled, same cost per file as before
+        verdict, _shift, rows = drift.against(times, reference)
+        assert verdict == "ok", rows
+
+    def test_the_same_jump_with_no_population_growth_is_still_drift(
+            self, monkeypatch):
+        reference = self._reference(16.7, population=496)
+        monkeypatch.setattr(drift, "population_size", lambda _pop: 496)
+        times = dict(tiers.recorded())
+        times[THIS_FILE] = 33.4  # doubled with an unchanged tree
+        verdict, _shift, rows = drift.against(times, reference)
+        assert verdict == "drift", rows
+        assert rows[0][0] == THIS_FILE
+
+    def test_a_reference_with_no_population_field_reads_as_it_always_did(
+            self, monkeypatch):
+        """A document `UX-716` never wrote to still gets the raw,
+        unscaled comparison - the feature must not need a migration to
+        avoid crashing on last round's reference."""
+        reference = self._reference(16.7, population=496)
+        del reference["population"]
+        monkeypatch.setattr(drift, "population_size", lambda _pop: 992)
+        times = dict(tiers.recorded())
+        times[THIS_FILE] = 33.4
+        verdict, _shift, rows = drift.against(times, reference)
+        assert verdict == "drift", rows
+
+    def test_the_class_is_not_vacuously_empty(self):
+        """The measurement this row rests on is a count. A `derived`
+        set nobody can see empty out would "prove" the two-member route
+        for free - the same failure `SUBPROCESS_POPULATION_MARKERS`'s
+        vacuity clause guards in `test_the_selector_carries_the_census`."""
+        assert drift.POPULATION_CLASS
+        assert THIS_FILE in drift.POPULATION_CLASS
 
 
 if __name__ == "__main__":  # pragma: no cover

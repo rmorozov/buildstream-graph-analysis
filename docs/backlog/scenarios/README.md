@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-733 scenarios: **35 open**, 698 closed.
+733 scenarios: **34 open**, 699 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -27,7 +27,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | cli | 0 | 22 |
 | store | 0 | 16 |
 | docs | 6 | 118 |
-| guards | 16 | 168 |
+| guards | 15 | 168 |
 
 ## Open scenarios
 
@@ -67,7 +67,6 @@ task file, which is the only place it ever lived twice.
 | UX-728 | [a track's repro runs the session's checkout, not its worktree](UX-0728-a-tracks-repro-runs-the-sessions-checkout-not-its-worktree.md) | guards | Medium | every `implementer` track that reproduces a defect through the CLI | 🔴 |
 | UX-730 | [a derived figure over the whole test tree has no refresh route](UX-0730-a-derived-figure-over-the-whole-test-tree-has-no-refresh-route.md) | guards | Medium | every round that adds a test file, and the branch that pays for it | 🔴 |
 | UX-731 | [a ratio guard with a two-millisecond denominator](UX-0731-a-ratio-guard-with-a-two-millisecond-denominator.md) | guards | Medium | the round whose gate goes red on a green tree | 🔴 |
-| UX-732 | [the verification log's anchor cannot survive a merge](UX-0732-the-verification-logs-anchor-cannot-survive-a-merge.md) | guards | Medium | every round that runs a track touching the architecture document | 🔴 |
 | UX-734 | [three counted figures in three documents, and no guard reads any](UX-0734-three-counted-figures-in-three-documents-and-no-guard-reads-any.md) | docs | Low | the next reader who takes one of these numbers as arithmetic | 🔴 |
 | UX-735 | [the attachment guide's export size measures a capture not in the tree](UX-0735-the-attachment-guides-export-size-measures-a-capture-not-in-the-tree.md) | docs | Low | the CI author deciding whether to upload the artifact | 🔴 |
 | UX-736 | [the architecture's status table is a third copy of a guarded fact](UX-0736-the-architectures-status-table-is-a-third-copy-of-a-guarded-fact.md) | guards | Medium | every reader who takes the architecture's history table as current | 🔴 |

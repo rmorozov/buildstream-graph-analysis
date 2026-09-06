@@ -1,6 +1,6 @@
 # UX-732: the verification log's anchor cannot survive a merge
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-652 (which made the anchor a commit), UX-604, UX-247 | **Serves:** every round that runs a track touching the architecture document | **Topic:** guards | **Shape:** judgement | **Area:** tools
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-652 (which made the anchor a commit), UX-604, UX-247 | **Serves:** every round that runs a track touching the architecture document | **Topic:** guards | **Shape:** judgement | **Area:** tools
 
 ## Motivation
 

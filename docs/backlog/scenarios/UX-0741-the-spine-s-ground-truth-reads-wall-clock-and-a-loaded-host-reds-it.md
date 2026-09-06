@@ -84,6 +84,71 @@ Measure before choosing: run the two clauses at several load averages
 and record where each starts to red, so whichever route is taken has a
 number under it rather than an adjective.
 
+### The measurement, and what it falsified
+
+Two sweeps on this 4-core container, the two clauses run bare each
+time. First, load from CPU hogs alone:
+
+```text
+hogs   load before/after   verdict
+   0      0.81 / 0.63      2 passed in 28.62s
+   2      1.92 / 2.11      2 passed in 27.29s
+   4      3.80 / 4.08      2 passed in 28.14s
+   8      7.61 / 7.92      2 passed in 28.74s
+  16     15.29 / 16.28     2 passed in 31.71s
+```
+
+**At load 16.28 both clauses pass** - the same load average at which
+round 102's gate reddened both. So load average is not the variable,
+and one concurrent suite (load ~5, three probes) does not reach it
+either. Four concurrent `make test-fast` runs do:
+
+```text
+round   load before/after   avail_mb   verdict
+    1     19.42 / 25.15       7598     1 failed (plane agreement)
+    2     25.15 / 27.39       6819     2 passed
+    3     27.39 / 24.72       6445     2 passed
+    4     24.72 / 22.29       6975     2 passed
+
+E   AssertionError: work-e.bst: Plane 2 3.008s against Plane 1 4.025s
+E   assert 1.0165357883670367 < 1.0
+```
+
+**Skip on a loaded host is dead.** No threshold separates these: it
+failed at 19.42 and passed three times at 24.72-27.39, and passed at
+16.28 under hogs. One failure in twelve probes, and never
+`SLEEP_TOLERANCE_S` - that clause held in all twelve.
+
+### What the numbers say instead
+
+The margin was **16 milliseconds** on a 1.0s tolerance. Round 102's
+was 3.78s, four times further out, on a host also carrying 3.8 GB of
+orphaned Chromium; this box had 6.4-7.6 GB free throughout.
+
+And the direction is the finding. Both failing readings have Plane 1
+larger, not Plane 2:
+
+```text
+             Plane 2   Plane 1
+round 102     3.506s    7.284s
+here          3.008s    4.025s
+```
+
+**Plane 2 is right in both.** A `sleep 3` is 3.008s. What stretched is
+Plane 1, whose `duration_s` is the *element's* duration - staging and
+teardown around the sleep - while Plane 2 measures the process. The
+clause puts a symmetric bound on a quantity whose error is
+one-directional and whose two halves do not measure the same span.
+That is `UX-731`'s shape after all, and the note above saying the
+answer does not transfer is what this measurement corrects: the proxy
+is not elapsed time, it is Plane 1's element duration standing in for
+the process's.
+
+Two readings are not a law. What the next round needs before choosing
+is the distribution of Plane 1 minus Plane 2 over a quiet run, which
+is the budget an asymmetric bound would be set from - and that reading
+touches `UX-110`, so the two should be taken together.
+
 ## Out of Scope
 
 - `PLANE_AGREEMENT_S`'s underlying disagreement, which is `UX-110`'s

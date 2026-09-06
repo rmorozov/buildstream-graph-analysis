@@ -41,8 +41,10 @@ needs_browser = pytest.mark.skipif(chrome is None, reason=NO_BROWSER)
 REGISTRY = {
     "a": (r".+", "UX-216"),                    # a plain citation link
     "a.element": (r".+", "UX-216"),            # a generic element-name link
+    "a.from.muted": (r"^from: ", "§1e"),       # a runbook step's citation
     "a.inspect": (r"^⌕$", "§1a"),               # bga:role's generic Inspect link
     "a.path-box": (r".+", "§3c"),              # the critical chain, folded
+    "a.runbook-link": (r"^\d+ steps?, in the decision panel$", "§1e"),
     "a.why": (r"^why$", "UX-207"),             # links a top action to its finding
     "button": (r".+", "§4d"),                  # the Perfetto handoff button
     "button.chapter-open": (r"^Show \d+ sections?$", "§3c"),

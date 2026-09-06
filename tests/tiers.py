@@ -555,6 +555,11 @@ MEDIUM = (
     # quiet 4-core box, single process: 2.65 / 2.51s, and the track
     # that wrote it read 2.51s.
     "tests/unit/test_a_refused_timeline_says_it_was_refused.py",    #    2.5s
+    # `UX-669`, tiered on landing. One Chromium, two boots (golden,
+    # macro_micro) read in one measure call each, plus three source
+    # clauses that need no browser. Three single-process runs:
+    # 1.41 / 1.35 / 1.35s.
+    "tests/unit/test_a_runbook_is_not_a_table.py",                #    1.4s
     # `UX-455`, tiered on landing, and it earned the tier the way the
     # item is about: two clauses run the confirmation for real, which
     # is a pytest subprocess each. Three single-process runs:

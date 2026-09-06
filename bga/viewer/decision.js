@@ -17,6 +17,11 @@ import {
 import {
   SCALE, GRADE_ANNOTATION, GRADE_EXHIBIT, exhibitAxis, exhibitTwin,
 } from "./drawings.js";
+// `UX-669`: the three local `heading` variables below became `head`
+// to take this import unaliased - the export concatenates the modules
+// into one scope and drops the `import` line, so an alias resolves to
+// a name nothing declares.
+import { childNode, heading, hintsOf } from "./format.js";
 import {
   resolvePath, elementFacts, elementHistory, renderElementHistory,
 } from "./element.js";
@@ -377,9 +382,9 @@ export function renderInvestigation(payload, uid, options = {}) {
   section.setAttribute("data-role", "focus-investigation");
   section.setAttribute("data-section", "investigation");
   section.setAttribute("data-element", uid);
-  const heading = document.createElement("h2");
-  heading.textContent = `Everything about ${uid}`;
-  section.append(heading);
+  const head = document.createElement("h2");
+  head.textContent = `Everything about ${uid}`;
+  section.append(head);
 
   const groups = [
     ["why", "Why it matters", investigationWhy(payload, uid, options)],
@@ -649,9 +654,9 @@ export function renderDecision(payload, investigate = null, copy = null,
   section.setAttribute("id", "decision");
   section.setAttribute("data-diagnosis", headline.diagnosis);
 
-  const heading = document.createElement("h2");
-  heading.textContent = "What to fix first";
-  section.append(heading);
+  const head = document.createElement("h2");
+  head.textContent = "What to fix first";
+  section.append(head);
 
   const sentence = document.createElement("p");
   sentence.className = "diagnosis";
@@ -740,12 +745,13 @@ export function renderDecision(payload, investigate = null, copy = null,
   // the terminal, CI and this panel give the same answer.
   const steps = Array.isArray(payload?.next_steps) ? payload.next_steps : [];
   if (steps.length) {
-    const heading = document.createElement("h3");
-    heading.textContent = "Next";
-    section.append(heading);
+    const head = document.createElement("h3");
+    head.textContent = "Next";
+    section.append(head);
     const list = document.createElement("ol");
     list.className = "next-steps";
-    for (const step of steps) list.append(nextStepRow(step, copy));
+    for (const step of steps)
+      list.append(nextStepRow(step, copy, payload, options.reportSchema));
     section.append(list);
   }
   return section;
@@ -758,14 +764,14 @@ export function renderDecision(payload, investigate = null, copy = null,
  * no dependency on `tables.js` - and so a harness can drive the button
  * without a clipboard.
  */
-function nextStepRow(step, copy) {
+function nextStepRow(step, copy, payload, reportSchema) {
   const row = document.createElement("li");
   row.className = "next-step";
   row.setAttribute("data-step", step.id ?? "");
   row.setAttribute("data-follows-from", step.follows_from ?? "");
 
   const why = document.createElement("p");
-  why.className = "muted";
+  why.className = "why muted";
   why.textContent = step.reason ?? "";
   row.append(why);
 
@@ -773,7 +779,35 @@ function nextStepRow(step, copy) {
   // wording lives there now, with the join and the monospace line, so
   // this site and the two others cannot drift apart again.
   row.append(...commandLine(step.argv, { copy }));
+  const from = followsFrom(step.follows_from, payload, reportSchema);
+  if (from) row.append(from);
   return row;
+}
+
+/**
+ * `UX-669`: where a step came from, as a link a reader can follow.
+ *
+ * `follows_from` names either a published section or a finding id. A
+ * section is linked by its own question - never its key, which is
+ * §4b's rule and the raw `critical_path_detail` a reader met in the
+ * table this replaces. A finding has no anchor of its own, so it links
+ * the findings list and is labelled with its own claim.
+ */
+function followsFrom(name, payload, reportSchema) {
+  if (!name) return null;
+  const link = document.createElement("a");
+  link.className = "from muted";
+  if (payload && name in payload) {
+    link.setAttribute("href", `#${name}`);
+    link.textContent =
+      `from: ${heading(name, hintsOf(childNode(reportSchema, name))).label}`;
+    return link;
+  }
+  const finding = (payload?.findings ?? []).find((one) => one.id === name);
+  if (!finding) return null;
+  link.setAttribute("href", "#findings");
+  link.textContent = `from: ${finding.title ?? name}`;
+  return link;
 }
 
 function actionRow(action, investigate, whyBlock = null) {

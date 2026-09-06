@@ -648,6 +648,14 @@ th .th-filter.unparsed { border-color: var(--bad); border-style: dashed; }
                     align-items: baseline; flex-wrap: wrap; }
 .decision .action .worth { color: var(--muted); font-size: .85rem; }
 .decision .action .why { font-size: .8rem; }
+/* UX-669 (§1e): the runbook. Three blocks a reader reads downward -
+   why, the command, where it came from - so the command keeps its own
+   line however long it is, and the citation does not trail the Copy
+   button. */
+.next-steps { margin: 0; padding-left: 1.3rem; }
+.next-step { margin: .35rem 0; }
+.next-step .why { margin: 0 0 .15rem; font-size: .85rem; }
+.next-step .from { display: block; font-size: .8rem; margin-top: .1rem; }
 /* UX-372: the reader says who they are, and gets their own lever. */
 .reader-picker { font-size: .85rem; margin: .1rem 0 .5rem; }
 .reader-lead { border-left: 2px solid var(--accent); padding-left: .6rem;

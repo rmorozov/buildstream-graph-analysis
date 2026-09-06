@@ -755,7 +755,11 @@ async function boot() {
       copy,
       // UX-227: the store and the schema, for the history line and the
       // verdict shapes inside each "why this one" fold.
-      { store, schema: schemas[store?.schema] }));
+      // `UX-669`: and the report's own schema, so a step's
+      // `follows_from` renders as the target section's question rather
+      // than its key.
+      { store, schema: schemas[store?.schema],
+        reportSchema: schemas[payload.schema] }));
     if (decision) root.append(decision);
     // UX-216: one section per element the report discusses, appended
     // after everything that names an element has been drawn - the

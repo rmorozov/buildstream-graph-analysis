@@ -116,17 +116,21 @@ class TestTheRailIsItsOwnColumn:
 
     def test_the_group_that_grows_with_the_run_is_bounded(self):
         """One link per element the report names - 25 of the 48 entries
-        on the 1,202-element run. Bounded in CSS with its own scroll
-        rather than truncated in JS, so every link stays reachable
-        (`UX-203`).
+        on the 1,202-element run. Bounded by chapter disclosure now,
+        not by a scrollbox of its own (`UX-667`, the rail-is-a-source-
+        list rule): the "Which elements, and how do they connect?"
+        chapter, like every other, is drawn only while its own row is
+        open, so the group that grows with the run is never on screen
+        unbounded either way.
 
         `UX-286` moved which group that is: the rail listed the
-        `investigate` *rail* and now lists the "Which elements, and how
-        do they connect?" *chapter*, which is where the element blocks
-        are. The bound has to name the group that actually grows, so it
-        moved with it."""
-        assert 'data-rail="elements"' in CSS, (
-            "nothing bounds the one rail group whose length is the run's")
+        `investigate` *rail* and now lists the elements *chapter*,
+        which is where the element blocks are."""
+        assert 'ul[data-rail="elements"]' not in CSS, (
+            "the elements list has a scrollbox of its own again - the "
+            "nested-scrollbox shape the styleguide's table-focus rule "
+            "already abolished, and chapter disclosure is what bounds "
+            "this group now")
         assert 'list.setAttribute("data-rail", rail)' in NAV, (
             "nav.js no longer tags each group, so the stylesheet cannot "
             "tell the growing one from the fixed ones")

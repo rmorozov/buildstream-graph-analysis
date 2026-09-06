@@ -184,7 +184,10 @@ def _sentence_rows(rel):
 
 def _headings(rel):
     text = (REPO / rel).read_text(encoding="utf-8", errors="replace")
-    return frozenset(re.findall(r"^#{2,3} ([0-9]+[a-g]?)\. ", text, re.M))
+    # `UX-667`: the eighth sub-section a topic has reached needed an
+    # eighth letter - widened with `test_the_styleguide_names_its_
+    # guards.py`'s own copy of this pattern.
+    return frozenset(re.findall(r"^#{2,3} ([0-9]+[a-z]?)\. ", text, re.M))
 
 
 class TestTheRegistryIsReadable:

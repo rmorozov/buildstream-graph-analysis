@@ -175,7 +175,9 @@ class TestTheRailGroupsTheContents:
         in a declared order - but it is now the *page's* grouping, so
         the list and the document cannot describe different reports."""
         out = _render(_report())
-        rails = out["toc_rails"]
+        # `UX-667`: a row now names its chapter's count too ("<title> ·
+        # <n>"), so the title is a prefix rather than the whole string.
+        rails = [re.split(r" · \d+$", one)[0] for one in out["toc_rails"]]
         assert rails, "the contents has no groups"
         titles = _chapter_titles()
         order = [title for title in titles if title in rails]
@@ -421,8 +423,14 @@ const headings = all(root, (n) => n.tagName === "h2").map((n) => {
 });
 
 const contents = nav.toc(root, { document: globalThis.document });
+// `UX-667`: the first chapter's row is still a plain `.toc-rail`
+// caption - it has no disclosure to draw - and every other chapter's
+// is now the `.toc-chapter-open` button that shares the document's own
+// fold. One list, in document order, over both.
 const tocRails = contents
-  ? all(contents, (n) => n.className === "toc-rail").map((n) => n.textContent)
+  ? all(contents, (n) => n.className === "toc-rail"
+                       || n.className === "toc-chapter-open")
+      .map((n) => n.textContent)
   : [];
 const tocLinks = contents
   ? all(contents, (n) => n.attrs["data-toc"])

@@ -952,7 +952,17 @@ COMMITTED_EXPORTS = [
     # 502,000 leaves 4,839 B, the same order of headroom above.
     # `UX-669`: +1,504 B here too, to 498,665, and this bound holds -
     # 3,335 B of headroom, which is why only the row above moved.
-    ("macro_micro", MACRO_MICRO, 502_000),             #  498,665 B
+    # `UX-667`: +1,869 B, all source, measured in one worktree either
+    # side to hold the run path's own contribution fixed:
+    #
+    #     total   501,514 -> 503,383   (+1,869)
+    #     data    185,519 -> 185,519   (+0)
+    #
+    # `chapters.js`'s `labelFold` and `nav.js`'s `toc()` chapter-row
+    # markup (the rail-is-a-source-list rule) - no committed run's
+    # payload changed.
+    # 508,000 leaves 4,617 B, the same order of headroom above.
+    ("macro_micro", MACRO_MICRO, 508_000),             #  503,383 B
 ]
 
 

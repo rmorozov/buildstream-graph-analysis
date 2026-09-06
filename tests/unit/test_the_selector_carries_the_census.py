@@ -19,7 +19,10 @@ The list is **derived, not typed**, and this file is the derivation. A
 census guard is a file that
 
 1. walks a path rooted at the repository - `REPO.glob`, `SCENARIOS
-   .glob`, `TESTS.rglob` - rather than at a `tmp_path`; and
+   .glob`, `TESTS.rglob` - directly, through a delegate call
+   (`UX-730`) or through a subprocess that enumerates it (`UX-737`:
+   `git ls-files`, `pytest --collect-only`) - rather than at a
+   `tmp_path`; and
 2. no grep from any source module selects, so listing it is the only
    way it ever runs.
 
@@ -67,13 +70,9 @@ NOT_A_TREE_WALK = {"tests/unit/test_a_committed_analysis_matches_the_analyzer.py
 #: one is a census guard by the same argument as a guard that globs
 #: itself - it just does it through a name this file has to be told.
 #:
-#: The other half of the gap this row measured - a guard that shells
-#: out (`git ls-files`, a pytest collection run) rather than calling a
-#: named tool function - is not covered here. A first pass at detecting
-#: it mechanically surfaced 13 pre-existing guards this item's own
-#: Motivation never counted, which is a population-migration decision
-#: past what a bounded task should take unasked; see this item's
-#: Outcome.
+#: `UX-737`: the other half of the gap - a guard that shells out
+#: (`git ls-files`, a pytest collection run) rather than calling a
+#: named tool function - closed below, by `_shells_out_for_a_population`.
 POPULATION_DELEGATES = {"spread", "test_files", "touch_map",
                          "table_statuses", "backlog_files",
                          "shape_disagreements"}
@@ -91,6 +90,19 @@ DELEGATE_MODULES = {"dev_touching", "dev_close_task"}
 #: way `NOT_A_TREE_WALK` excludes the opposite case, and for the same
 #: reason: this AST check has no view of what a decorator monkeypatches.
 DELEGATED_UNDER_A_FIXTURE = {"tests/unit/test_the_touching_map_is_measured.py"}
+
+#: `UX-737`: an argv fragment that means "this call enumerates a
+#: population" rather than merely "this call shells out" - about 200
+#: guard files call `subprocess` for reasons that have nothing to do
+#: with their own population (running the CLI under test, mostly).
+#: `git ls-files` reads the tracked tree the way `REPO.rglob` does;
+#: `--collect-only` reads the suite pytest itself would run. A single-
+#: file existence check (`git ls-files --error-unmatch <path>`) is not
+#: this - it names one file, not a population - so it is excluded by
+#: requiring `ls-files` be the call's own second argument with no
+#: `--error-unmatch` alongside it, rather than merely present somewhere
+#: in the command.
+SUBPROCESS_POPULATION_MARKERS = {"ls-files", "--collect-only"}
 
 
 def _base(node):
@@ -187,6 +199,40 @@ def _delegates_a_population(path):
     return False
 
 
+def _literal_argv(node):
+    """The constant strings of a call's first positional argument, in
+    order; a non-constant element (`*extra`, `shutil.which(...)`) is
+    `None` so a positional check (`argv[:2]`) still lines up."""
+    if not node.args or not isinstance(node.args[0], (ast.List, ast.Tuple)):
+        return []
+    return [elt.value if isinstance(elt, ast.Constant)
+            and isinstance(elt.value, str) else None
+            for elt in node.args[0].elts]
+
+
+def _shells_out_for_a_population(path):
+    """`UX-737`: a `subprocess.run`/`check_output`/`check_call`/`call`
+    whose argv enumerates a population - `["git", "ls-files", ...]`
+    with no `--error-unmatch` (that names one file, not a population),
+    or any argv carrying `--collect-only`. `git grep`, `git log`, `git
+    diff` and the CLI-under-test invocations the same 200-odd files
+    make are not this - the marker has to be the call's own second
+    argument, not merely present in the command."""
+    tree = ast.parse(path.read_text(encoding="utf-8"))
+    for node in ast.walk(tree):
+        if not (isinstance(node, ast.Call)
+                and isinstance(node.func, ast.Attribute)
+                and node.func.attr in {"run", "check_output", "check_call", "call"}
+                and _base(node.func.value) == "subprocess"):
+            continue
+        argv = _literal_argv(node)
+        if argv[:2] == ["git", "ls-files"] and "--error-unmatch" not in argv:
+            return True
+        if "--collect-only" in argv:
+            return True
+    return False
+
+
 @pytest.fixture(scope="module")
 def derived():
     reachable = set()
@@ -202,7 +248,11 @@ def derived():
     # one this derivation exists for.
     delegated = {str(p.relative_to(REPO)) for p in _guard_files()
                  if _delegates_a_population(p)} - DELEGATED_UNDER_A_FIXTURE
-    return sorted(walked | delegated)
+    # `UX-737`: same reasoning as `delegated` - the walk happens inside
+    # a subprocess, not here, so it is not filtered by `reachable` either.
+    shelled = {str(p.relative_to(REPO)) for p in _guard_files()
+               if _shells_out_for_a_population(p)}
+    return sorted(walked | delegated | shelled)
 
 
 class TestTheDeclarationIsTheDerivation:
@@ -231,22 +281,27 @@ class TestTheDeclarationIsTheDerivation:
         `UX-730`: a delegate call is the same shape a second way - the
         walk happens in the tool it calls, not here - so it is accepted
         as evidence too, and `TestPopulationDelegatesActuallyDelegate`
-        is the regression clause for it."""
+        is the regression clause for it.
+
+        `UX-737`: a subprocess enumeration is the same shape a third
+        way - the walk happens in `git`/`pytest`, not here."""
         for named in tiers.CENSUS:
             if named in NOT_A_TREE_WALK:
                 continue
             assert (_walks_the_repo(REPO / named)
-                    or _delegates_a_population(REPO / named)), (
-                f"{named} is declared census but walks no repository tree "
-                f"and delegates no known population")
+                    or _delegates_a_population(REPO / named)
+                    or _shells_out_for_a_population(REPO / named)), (
+                f"{named} is declared census but walks no repository tree, "
+                f"delegates no known population and shells out for none")
 
     def test_the_set_stays_the_size_it_was_measured_at(self):
         """The price, asserted. Every `test-touching` run pays this
-        set; at 19 files it is 36.6s at `-n auto` (`UX-730`: 14 files/
-        10.80s before) against a ~4s selection, and the round that
-        doubles it should have to say so. The bound is a ceiling, not a
-        target."""
-        assert len(tiers.CENSUS) <= 19, (
+        set; at 31 files it is 891 tests/24.2s at `-n auto` (`UX-730`:
+        19 files/716 tests/36.6s before - seconds are the machine
+        (`UX-551`), not comparable across rounds) against a ~4s
+        selection, and the round that doubles it should have to say
+        so. The bound is a ceiling, not a target."""
+        assert len(tiers.CENSUS) <= 31, (
             f"{len(tiers.CENSUS)} census files - re-measure the set's "
             f"seconds and move this bound with the number")
 
@@ -313,6 +368,34 @@ class TestPopulationDelegatesActuallyDelegate:
         assert any(marker in source for marker in markers), (
             f"{name} no longer shows any of the markers this set was "
             f"curated for - re-derive POPULATION_DELEGATES")
+
+
+class TestSubprocessPopulationMarkersAreNotAProxy:
+    """`UX-737`: `SUBPROCESS_POPULATION_MARKERS` is padding the moment
+    it stops being what a real guard's own population call carries -
+    checked against a guard already in the tree, the way
+    `TestPopulationDelegatesActuallyDelegate` checks a delegate's own
+    source rather than assuming the set is right."""
+
+    #: One guard file the derivation already relies on, per marker.
+    WORKED_EXAMPLES = {
+        "ls-files": "tests/unit/test_a_guard_ledger_names_its_link.py",
+        "--collect-only": "tests/unit/test_the_tiers_are_a_partition.py",
+    }
+
+    def test_the_set_is_not_empty(self):
+        """The vacuity floor. An empty `SUBPROCESS_POPULATION_MARKERS`
+        would let `_shells_out_for_a_population` - and `derived`'s use
+        of it - pass at nothing."""
+        assert SUBPROCESS_POPULATION_MARKERS, "no marker is declared"
+        assert set(self.WORKED_EXAMPLES) == SUBPROCESS_POPULATION_MARKERS, (
+            "WORKED_EXAMPLES and SUBPROCESS_POPULATION_MARKERS have drifted apart")
+
+    @pytest.mark.parametrize("marker", sorted(SUBPROCESS_POPULATION_MARKERS))
+    def test_each_marker_is_carried_by_a_real_guard(self, marker):
+        assert _shells_out_for_a_population(REPO / self.WORKED_EXAMPLES[marker]), (
+            f"{marker} no longer fires on its own worked example - "
+            f"re-derive SUBPROCESS_POPULATION_MARKERS")
 
 
 class TestTheSelectorRunsThem:

@@ -84,3 +84,72 @@ docstring are narrowed to what it reads and the gap is dated. Mutation:
 add a guard that reads its population through `git ls-files` and is
 absent from `CENSUS` — red under the first route, and under the second
 explicitly out of the detector's stated reach.
+
+## Outcome
+
+**The gap, measured.** `_shells_out_for_a_population()` (AST) checks a
+`subprocess.run`/`check_output`/`check_call`/`call` whose argv's first
+two literal elements are `["git", "ls-files"]` with no
+`--error-unmatch` (that names one file, not a population), or any argv
+carrying `--collect-only`. Against the real tree this fires on 16
+files; 4 already `CENSUS` (`test_a_guard_reads_only_what_a_clone_has.py`,
+`test_docs_links_and_commands.py`, `test_the_agent_configuration_holds.py`,
+`test_the_context_map_is_the_tree.py`), 12 new — exactly the thirteen
+this row's Motivation named, minus `test_docs_links_and_commands.py`
+which was already in. It does **not** flag `git grep`, `git log`,
+`git ls-files --error-unmatch <path>` (a single-file check, 2 sites),
+or a docstring/comment mention (5 sites) — the discriminator is the
+call's own second argv element, not the word "subprocess", which about
+200 guard files use for the CLI under test.
+
+**The close, measured.** Migrated: the widened detector already forces
+this, since `derived` (unfiltered by `reachable`, same argument as
+`UX-730`'s delegate half) must be a subset of `CENSUS` or
+`test_every_derived_census_guard_is_declared` reds. `CENSUS` 19 → 31.
+`test_the_selector_carries_the_census.py`:
+
+```console
+$ python3 -m pytest tests/unit/test_the_selector_carries_the_census.py -q
+25 passed
+```
+
+`HANDFUL` 33 → 45, `CENSUS_FLOOR` 19 → 31 (`test_the_loop_stays_fast.py`,
+same "+14 of your own" arithmetic; `store_aggregate` measures 41 rather
+than 45 because 4 of its 14 own files are now also census members —
+`HANDFUL` keeps the stated formula, not the tighter measured bound).
+`WIDE` lost one member, `bga/ingest/loader.py` (45 against the new 45,
+no longer over); `bga/graph/edg.py` stayed (46, one over). Real
+`make test-touching`:
+
+```console
+7382 passed, 126 skipped in 489.84s
+```
+
+31-file census run alone: `891 passed, 3 skipped in 24.19s` at `-n auto`
+(`UX-730`: 19 files/716 tests/36.6s — seconds are the machine, `UX-551`,
+not comparable). `make lint`: clean.
+
+**Price paid, argued.** `CENSUS` grew 63% (19→31) in this row alone,
+132% since `UX-730`'s own 14. The 12 are the guards round-75's own
+argument already covers — a guard whose subject is the tree and no
+grep reaches — so the alternative (leave them undetected) is the exact
+gap `UX-522` was filed to close, reopened for a different mechanism.
+Right price: yes, on the same grounds `UX-730` used for its five.
+
+**Deviation, loud.** `test_the_cost_row_is_derived_from_the_selector.py`
+reds on `docs/contributing/fixing-guide.md` — its cost-row sentence is
+stale (`19-131 of 495…` vs. the new `31-143 of 495 test files, median
+37`). Fixed by `python3 tools/dev_touching.py --spread --write`, but
+that file is not a declared surface for this track and is not touched
+here; the orchestrator's merge needs that one command before
+`make test`.
+
+**Mutations.**
+
+| mutation | reddened | count |
+|---|---|---|
+| new guard calling `subprocess.run(["git","ls-files",...])`, absent from `CENSUS` | `test_every_derived_census_guard_is_declared` | 1 failed |
+| `SUBPROCESS_POPULATION_MARKERS = set()` (vacuity) | `test_the_set_is_not_empty` | 1 failed, 22 passed, 1 skipped |
+
+Both reverted by hand-editing back (not `git checkout --`); both green
+after — `test_the_selector_carries_the_census.py`: 25 passed.

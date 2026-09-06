@@ -89,6 +89,7 @@ would have caught it; a bound at it would only just have.
 | 15 | 2026-09-04 | 617 | six filings — closing a row writes `🟢 Done Open` in 17 files with `--check` clean, five published keys no document names, `compare/v2`'s required set grown under an unchanged id, two undocumented env-var input surfaces, `bga/report/rate.py` outside the map guard's population, and the `4s` touching figure the round beside it disproved; [`round-84.md`](round-84.md) |
 | 16 | 2026-09-04 | 645 | six filings, three of them a green guard reading the wrong population *shape* — the spec's Part 32 block two ids behind and read by nothing, the currency guard comparing dates on a day that held nine substantive commits, `analyze/v6`'s three new keys one nesting level below the key population — plus a dated log record a guard made every `analyze` bump rewrite, `format.js` still saying nine hints of nineteen, and a red gate on the base; two restorations; [`round-87.md`](round-87.md) |
 | 17 | 2026-09-05 | 671 | three filings, all the same shape the last four reviews found — a sentence no guard reads: the `review` skill named by neither `CLAUDE.md` nor the checklist the cadence guard sends a stopped session to, the orchestrator's 73 % share carried bare in `CLAUDE.md` and measuring 46.9 % today, and *fifteen viewer modules* in an undated passage against 22 on disk; two claims checked and found sound (the `479` touching spread, `fifteen live contracts`) |
+| 18 | 2026-09-06 | 698 | three filings, and for the fifth review running the shape is a sentence no guard reads — three counted figures each derivable from a population already in the tree (`UX-734`: *Twenty hints* beside a table held equal to the schemas in both directions, *the twenty-four rows* against 25, *Parts 0-40* against 45), the attachment guide's **82 KiB** measured on a capture that is not in the tree and cannot be reproduced (`UX-735`; the one export this repository can measure is 488 KiB), and a third hand-maintained copy of a fact `UX-131` guarded twice — 75 status rows in `architecture.md` outside the guard's population, one of them drifted (`UX-736`); four document groups read in parallel, every finding re-run by the session before filing |
 
 ### Review 11 — 2026-09-02
 
@@ -1318,3 +1319,76 @@ resolve nowhere are upstream BuildStream modules (`_stream.py`,
 `bundle.json`), not repository references. The architecture's CLI table
 names 22 commands against `cli.py`'s 13 `add_parser` calls, because nine
 ship as their own entry points rather than subparsers.
+
+## Review 18 — 2026-09-06, at 698 closed rows
+
+Run because the cadence guard reddened on round 99's own closes — 27
+scenarios since review 17 against a bound of 25, and no ordering of
+those two closes is green first, since closing is the thing that fires
+it. Four document groups read in parallel (architecture, guides,
+process documents, skills and design docs); every finding re-run by
+the session with its own command before filing, which is what the
+`agent-runs.md` row count below cost.
+
+**1. Does the code still do what it says?** One place it does not, and
+it is a *third* copy of a fact `UX-131` guarded twice. The architecture
+carries 75 `| UX-N | … | marker |` history rows; the guard that holds
+status against the task files reads `docs/backlog/scenarios/README.md`
+and `closed.md` and nothing else:
+
+```console
+$ # architecture.md's history rows against the task files' Status: line
+architecture.md status rows: 75 | with a task file: 75
+   ('UX-60', '🟡 Partial', '🟢')
+disagreements: 1
+```
+
+The marker cell here is `marker + words` (`🟡 Partial`), not the bare
+marker the backlog's cells carry — a clause written for those returns
+nothing here, which is how the table stayed unread. `UX-736`.
+
+**2. Does every published contract have a home?** `contracts.ids()` is
+25, of which 15 are live and 9 printable;
+`test_the_documents_keep_up_with_the_contracts.py` passes 24 clauses in
+0.28 s. Sound, and unchanged since review 17 — no contract landed in
+rounds 98 or 99.
+
+**3. Is any figure invalidated?** Four, in four documents, none read by
+any guard.
+
+| figure | says | measured now |
+|---|---|---|
+| `styleguide.md:83` | *Twenty hints* | 20 — true, and the only half of the sentence nothing holds |
+| `agent-runs.md:41` | *the twenty-four rows* | 25 — `awk '/^\| /{n++} END{print n-2}'` |
+| `docs/README.md:173` | *Parts 0-40* | 45 — last is `# Part 44 — Final Semantic Contract` |
+| `ci-comment.md:277` | **82 KiB** | 488 KiB for `export` on `macro_micro/run` — a different population, which is the finding |
+
+The first three are `UX-734`, and the styleguide's is the sharpest of
+them: the table beside that word is held equal to `bga/schemas.py` in
+both directions, so the guard that keeps the table right is exactly
+what will walk the numeral out of true. The `I1`-`I13` half of
+`docs/README.md:173` is correct — one stale number beside one true one,
+the pair `UX-569` found for the same reason.
+
+`ci-comment.md`'s is `UX-735` and a different defect: the capture it
+names ("a real 46 s capture with both planes") is not in the tree, so
+no reader and no guard can reproduce it. Six guards cite that document;
+none reads that sentence.
+
+**4. What shipped since the last review that no document names?**
+Nothing that should be named is unnamed. `tools/dev_audit_reports.py`
+(`UX-727`) is in `fixing-guide.md`'s map; the two new guard modules
+(`UX-721`, `UX-729`) are not named by any document, which is the norm
+for a test file and not a finding.
+
+The count itself needed care: `grep -r` over `docs/` and `.claude/`
+reported this module named by 25 documents, of which 24 were copies
+inside `.claude/worktrees/<agent>/` — `UX-577`'s trap, live again.
+`git grep` is the answer, and the reason the repository's own guards
+already use it.
+
+**5. Does each document's own "last updated" claim match reality?** No
+document outside `docs/backlog/` and `docs/audits/` carries one: the
+architecture's derived counts are the mechanism instead, and
+`dev_close_task.py --check --write` moved them with this review's own
+three filings. No dated claim found stale.

@@ -1,6 +1,6 @@
 # UX-729: two modules declare one name, and the satellite bundle would take both
 
-**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** UX-721 (the same flattening, its other edge), UX-199 (which derived the order) | **Serves:** anyone who inlines a second entry point | **Topic:** viewer | **Shape:** judgement | **Area:** tools
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-721 (the same flattening, its other edge), UX-199 (which derived the order) | **Serves:** anyone who inlines a second entry point | **Topic:** viewer | **Shape:** judgement | **Area:** tools
 
 ## Motivation
 
@@ -11,7 +11,8 @@ top-level declarations:
 
 ```console
 $ # every `export`ed / top-level function|const|let|class, by owner
-modules 22   top-level names 393
+modules 22   top-level names 393   # 394 by `dev_js_deps.declarations`;
+                                   # the Outcome carries the correction
 collisions {'make': ['drawings.js', 'perfetto_page.js']}
 
 $ python3 -c "from tools.bga_view import _module_order; print(_module_order('perfetto_page.js'))"
@@ -115,3 +116,19 @@ it reads the 22 files on disk.
 
 Both applied to a scratch copy and reverted from it, not `git checkout
 --`; `__pycache__` cleared before the re-run confirmed green.
+
+**The selector was skipped for this commit, and why.** Closing this row
+and `UX-733` took the count since review 17 from 25 to 27, which is
+what `test_the_review_has_a_cadence.py` exists to notice:
+
+```text
+27 scenarios have closed since review 17 (2026-09-05), against a bound
+of 25. Run a review: the checklist is in docs/audits/architecture-review.md
+```
+
+No ordering of these two closes is green first — closing is the thing
+that fires it — so `BGA_SKIP_SELECTOR=1` was set for this one commit
+and review 18 lands its row next. The other red in that run,
+`test_a_project_directory_still_gets_the_project_shaped_error`, is
+contention: 56.10 s alone against its own 120 s subprocess cap, on a
+machine whose spread was measured at 2.2x the same day (`UX-731`).

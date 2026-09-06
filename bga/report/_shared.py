@@ -39,6 +39,25 @@ SWEEP_CAPACITY_MODEL_CAVEAT = (
     "capacity). Treat this curve as a shape, not an exact runtime prediction (Part 19)."
 )
 
+# `UX-724`: `UX-388`'s rule for the page - a declared collection that
+# came back empty renders, it does not vanish - extended to the text
+# report and `--format json`. Verbatim from `renderEmptySection` in
+# `bga/viewer/sections.js`, so the two formats agree on the words, not
+# just the fact (`cli.md:362`'s "cannot disagree").
+EMPTY_POPULATION_SENTENCE = (
+    "Nothing to report here for this run — the analysis ran and found none."
+)
+
+# `ANALYZE_FULL_KEYS` (bga/schemas.py) declares these structural
+# sub-keys always present on a full report. A 0-rebuilt run has no
+# tasks to run structural analysis over, so `_compute_structural_
+# analysis` returns `{}` - which used to drop all seven rather than
+# publish them empty (UX-724).
+STRUCTURAL_ALWAYS_PRESENT_KEYS = (
+    "metrics", "bottleneck", "parallelism", "sensitivity",
+    "deferrability", "batch_opportunities", "summary",
+)
+
 
 def _attribution_key(category: AttributionCategory) -> str:
     """The lowercase `<category>_us` key `result.attribution` (and

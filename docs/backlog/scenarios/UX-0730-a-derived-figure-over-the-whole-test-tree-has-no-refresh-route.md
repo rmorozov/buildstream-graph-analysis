@@ -59,6 +59,31 @@ seconds* decaying as a population grows; here it is a *derived figure*.
 Same shape, different currency, and neither `UX-662`'s retirement of
 the map's readers nor the census floor covers it.
 
+**Half the mechanism already exists, and this row was filed without
+knowing it.** `test_the_selector_carries_the_census`'s
+`TestTheDeclarationIsTheDerivation` derives exactly this class and
+requires its members in `CENSUS` — it caught `UX-713`'s new guard on
+CI in this same round:
+
+```text
+AssertionError: 1 guard(s) walk the repository tree and no grep selects
+them, so they run only if listed in tests/tiers.py's CENSUS:
+['tests/unit/test_every_skill_directory_is_named_in_claude_md.py']
+```
+
+It detects a *directory walk*, by AST:
+
+```python
+WALKS = {"glob", "rglob", "iterdir", "walk", "listdir", "scandir"}
+```
+
+The four guards measured above walk nothing. They read **named index
+files** (`README.md`, `closed.md`, the fixing guide) or shell out
+(`git ls-files`, `dev_touching.py --spread`), so their population is
+just as wide and the derivation cannot see it. That is the gap, and it
+is narrower than "build a mechanism": the mechanism is built and its
+*detector* is too literal.
+
 ## Required Fix
 
 The census floor (`tests/tiers.py`'s `CENSUS`, the 13 files that run

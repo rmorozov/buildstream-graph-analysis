@@ -165,13 +165,19 @@ jobs:
       # output field to put a verdict in. `/check-runs/{id}/annotations`
       # answered 200 on the same run, so that is where it goes. The
       # `::warning::` two jobs below is the same route, already in use.
+      # `UX-691`: `--flake-ledger` and `--run-id` are this gate's own
+      # excursions, one candidate row per file it names as waiting or
+      # confirmed - the two steps below give it an artifact and adopt
+      # it, the same shape as the reference's own candidate.
       - name: Tiers match CI's own record of them
         run: |
           python tools/dev_tier_drift.py "${{ runner.temp }}/junit.xml" \
             --against --carry "${{ runner.temp }}/tier_carry.json" \
             --base "origin/${{ github.event.repository.default_branch }}" \
             --summary "${{ runner.temp }}/tier_gate.txt" --annotate \
-            --source "github-actions ubuntu-latest, test (3.11), -n auto"
+            --source "github-actions ubuntu-latest, test (3.11), -n auto" \
+            --flake-ledger "${{ runner.temp }}/flake_ledger.candidate.json" \
+            --run-id "${{ github.run_id }}"
         if: matrix.python-version == '3.11'
 
       # `always()`, because the run this most needs to remember is the
@@ -182,6 +188,20 @@ jobs:
           path: ${{ runner.temp }}/tier_carry.json
           key: tier-carry-${{ github.ref }}-${{ github.run_id }}
         if: always() && matrix.python-version == '3.11'
+
+      # `UX-691`: the gate step above writes this candidate on every
+      # return, including a clean run - `if-no-files-found: warn` rather
+      # than `error`, because a run that died before reaching the gate
+      # is the same "no candidate" state `touch-map-adopt` already
+      # tolerates below.
+      - name: This run's flake ledger, for adopting
+        if: always() && matrix.python-version == '3.11'
+        uses: actions/upload-artifact@v4
+        with:
+          name: flake-ledger-candidate
+          path: ${{ runner.temp }}/flake_ledger.candidate.json
+          retention-days: 30
+          if-no-files-found: warn
 
       # UX-427: the half of UX-420's design that was missing. The
       # reference can be *recorded* - `--record` writes it - but nothing
@@ -466,6 +486,51 @@ jobs:
             "41898282+github-actions[bot]@users.noreply.github.com"
           git add tests/touch_map.json tests/ci_reference.json
           git commit -m "CI: adopt the touching map this run measured, and retire the drift entries its readers own (UX-524, UX-662)"
+          git push origin "HEAD:${{ github.ref }}" || \
+            echo "::warning::the branch refused the update; re-run to retry"
+
+  # `UX-691`: the drift gate's own memory, appended rather than merged -
+  # a ledger row is an event this run reported, not a named slot the
+  # reference lacks, so every row the candidate holds that this ledger
+  # does not already carry for that (file, run id) is added. Only on
+  # `push` to the default branch, and every refusal exits 0, for the
+  # same reason as the two adopt jobs above.
+  flake-ledger-adopt:
+    needs: test
+    if: >-
+      always() && github.event_name == 'push'
+      && github.ref == format('refs/heads/{0}',
+                              github.event.repository.default_branch)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Fetch what test (3.11) recorded
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: flake-ledger-candidate
+      - name: Append this run's excursions to the ledger
+        run: |
+          test -f flake_ledger.candidate.json || {
+            echo "no candidate on this run - test (3.11) did not reach the ledger step"
+            exit 0
+          }
+          git pull --rebase origin "${{ github.ref }}"
+          python tools/dev_tier_drift.py --adopt-flake flake_ledger.candidate.json
+          if git diff --quiet -- tests/flake_ledger.json; then
+            echo "the ledger already carries every excursion this run reported"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email \
+            "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tests/flake_ledger.json
+          git commit -m "CI: append this run's excursions to the flake ledger (UX-691)"
           git push origin "HEAD:${{ github.ref }}" || \
             echo "::warning::the branch refused the update; re-run to retry"
 

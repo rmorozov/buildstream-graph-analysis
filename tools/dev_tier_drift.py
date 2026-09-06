@@ -67,6 +67,17 @@ CI_CANDIDATE_ARTIFACT = "ci-reference-candidate"
 #: is reachable depends on who is reading.
 CI_CANDIDATE_JOB = "tier-reference"
 
+#: `UX-691`: this gate's own memory of an excursion, one row per file
+#: per run - `(file, run_id, shift, confirmed)`. Adopted the same way
+#: as the reference above: a candidate this job writes, merged into the
+#: committed document by an unattended push-only job. Read by
+#: `tools/dev_flake_census.py`.
+FLAKE_LEDGER = REPO / "tests" / "flake_ledger.json"
+
+#: The artifact a run's candidate travels in, and the job whose log is
+#: it - same shape as `CI_CANDIDATE_ARTIFACT`/`CI_CANDIDATE_JOB` above.
+FLAKE_LEDGER_ARTIFACT = "flake-ledger-candidate"
+
 #: `UX-621`: what a red gate's annotation points at. Measured on run
 #: 33808929465: an `::error` with no `file=` is attributed to `.github`
 #: at the workflow's line, which is where the unreadable "Process
@@ -840,6 +851,28 @@ def series(name, reading, history):
     return [value for value in seen if value is not None]
 
 
+def ledger_rows(waiting, confirmed, run_id):
+    """`UX-691`: this run's excursions, one flake-ledger row each.
+
+    `waiting` is a file over both gates on this run only - reported,
+    not yet agreed by a second run (`UX-442`) - and `confirmed` is a
+    file that agreed across the window *and* has a cause in the diff
+    (`UX-476`). Neither `unexplained` (agreed, no cause) nor `recorded`
+    (no reference entry yet, `UX-503`) is an excursion of a file
+    *against its own record*, which is what the ledger counts.
+
+    Each row's `shift` is the row's own ratio - `times[name] / shift`
+    already divided by the run's shift, the same number the gate's
+    message prints as `x{ratio:.2f}` - not the run-wide shift, which
+    says nothing about this one file.
+    """
+    entries = [(name, ratio, False) for name, _s, _w, ratio in waiting]
+    entries += [(name, ratio, True) for name, _s, _w, ratio in confirmed]
+    return [{"file": name, "run_id": run_id, "shift": round(ratio, 3),
+             "confirmed": is_confirmed}
+            for name, ratio, is_confirmed in entries]
+
+
 def annotation(summary, path=ANNOTATION_FILE):
     """`UX-621`: the gate's line as a check-run annotation.
 
@@ -863,6 +896,7 @@ def annotation(summary, path=ANNOTATION_FILE):
 
 def _against(times, path, args):
     """`--against`: this run read against CI's own recorded numbers."""
+    ledger = []  # `UX-691`: filled once `repeated()` names this run's rows.
 
     def done(code, summary):
         # `UX-491`: every return leaves the gate's line in a file, so a
@@ -871,6 +905,13 @@ def _against(times, path, args):
         if args.summary:
             pathlib.Path(args.summary).write_text(summary + "\n",
                                                   encoding="utf-8")
+        # `UX-691`: every return, including the runs that named nothing
+        # - an empty candidate is what tells the adopt job this run
+        # reached the gate at all, the same reason `carry` above writes
+        # on a clean run too.
+        if args.flake_ledger:
+            pathlib.Path(args.flake_ledger).write_text(
+                json.dumps(ledger, indent=2) + "\n", encoding="utf-8")
         # `UX-621`: and, on a red return only, where a reader without
         # the log body still gets it. A green gate annotating would be a
         # failure annotation on a passing run.
@@ -979,6 +1020,7 @@ def _against(times, path, args):
         line += f" [no cause filter: {NO_CAUSE_FILTER}]"
     confirmed, unexplained, waiting, recorded = repeated(
         rows, history, explained)
+    ledger[:] = ledger_rows(waiting, confirmed, args.run_id)
 
     def say(row):
         # `UX-503` split the reference-less rows out into `recorded`
@@ -1111,6 +1153,40 @@ def _adopt(candidate):
     return 0
 
 
+def _adopt_flake(candidate):
+    """`--adopt-flake`: append this run's excursions to the ledger.
+
+    `UX-691`. Unlike `_adopt`, which folds in *rows the reference does
+    not carry yet*, a ledger row is an event, not a named slot - so
+    every row the candidate holds is appended, `(file, run_id)` already
+    present skipped, which is what keeps a retried job from
+    double-counting the same run's excursion.
+    """
+    if not candidate.is_file():
+        print(f"{candidate}: no candidate document to adopt from - the run "
+              f"that would have written it did not reach the ledger step",
+              file=sys.stderr)
+        return 0
+    document = (json.loads(FLAKE_LEDGER.read_text(encoding="utf-8"))
+               if FLAKE_LEDGER.is_file() else {"entries": [], "declared": {}})
+    entries = document.get("entries") or []
+    seen = {(row.get("file"), row.get("run_id")) for row in entries}
+    added = [row for row in json.loads(candidate.read_text(encoding="utf-8"))
+             if (row.get("file"), row.get("run_id")) not in seen]
+    if not added:
+        print(f"{FLAKE_LEDGER.name} already carries every excursion this "
+              f"run reported")
+        return 0
+    document["entries"] = entries + added
+    FLAKE_LEDGER.write_text(json.dumps(document, indent=2) + "\n",
+                            encoding="utf-8")
+    print(f"appended {len(added)} excursion(s) to {FLAKE_LEDGER.name}:")
+    for row in added:
+        print(f"  {row['file']}  run {row['run_id']}  x{row['shift']:.2f}  "
+              f"confirmed={row['confirmed']}")
+    return 0
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("report", nargs="?",
@@ -1139,6 +1215,11 @@ def main(argv=None):
                              f"{CI_CANDIDATE_ARTIFACT} artifact) into it, "
                              f"on the reference's own clock, and touch no "
                              f"entry it already holds (UX-503)")
+    parser.add_argument("--adopt-flake", metavar="CANDIDATE",
+                        help=f"append the excursions a {FLAKE_LEDGER_ARTIFACT} "
+                             f"candidate holds to {FLAKE_LEDGER.name}, "
+                             f"skipping any (file, run id) it already has "
+                             f"(UX-691)")
     parser.add_argument("--no-confirm", action="store_true",
                         help="report what the parallel report said, "
                              "without re-running each named file alone "
@@ -1163,8 +1244,18 @@ def main(argv=None):
                              "reader who cannot fetch the log (UX-621).")
     parser.add_argument("--source", default="unknown",
                         help="what produced this report, recorded with it")
+    parser.add_argument("--flake-ledger", metavar="PATH", default=None,
+                        help=f"with --against, write this run's excursions "
+                             f"(waiting and confirmed rows) as a "
+                             f"{FLAKE_LEDGER_ARTIFACT} candidate, for "
+                             f"--adopt-flake to append (UX-691)")
+    parser.add_argument("--run-id", default="unknown",
+                        help="this run's id, recorded on each flake-ledger "
+                             "row it writes (UX-691)")
     args = parser.parse_args(argv)
 
+    if args.adopt_flake:
+        return _adopt_flake(pathlib.Path(args.adopt_flake))
     if args.adopt:
         return _adopt(pathlib.Path(args.adopt))
     if not args.report:

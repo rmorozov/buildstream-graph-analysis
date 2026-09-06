@@ -24,8 +24,10 @@ import argparse
 import collections
 import json
 import pathlib
+import re
 import subprocess
 import sys
+import tokenize
 
 REPO = pathlib.Path(__file__).resolve().parents[1]
 FAMILIES = ("S", "C901", "PLR0912", "PLR0913", "PLR0915", "SIM115")
@@ -60,6 +62,104 @@ def ruff_findings(root, paths, families):
     if unparsable:
         raise RuffFailure("ruff could not parse: " + ", ".join(unparsable))
     return raw
+
+
+#: `UX-705`: a suppression is a finding, so a burn-down cannot close a
+#: batch by silencing it. Without this the count shrinks whether the
+#: code was fixed or annotated, and a delegated track is judged by a
+#: number it can move either way.
+#:
+#: Counted rather than forbidden: some suppressions are right, and the
+#: baseline's rule is already "this many, never more".
+#:
+#: Scope is the paths the baseline governs, plus `pyproject.toml` -
+#: whose per-file-ignores silence checks *in* those paths, so a rule
+#: retired there would otherwise leave no trace. `tests/` is outside
+#: both, which is why the three `noqa: F401` under it are absent.
+SUPPRESSION_PATTERNS = (
+    re.compile(r"#\s*noqa\b"),
+    re.compile(r"#\s*type:\s*ignore\b"),
+    re.compile(r"eslint-disable"),
+)
+#: A per-file-ignores row: `"glob" = ["RULE", ...]`, and only inside
+#: that table - the same shape is ordinary TOML elsewhere in the file.
+PER_FILE_IGNORE = re.compile(r'^\s*"[^"]+"\s*=\s*\[')
+
+
+def _python_suppressions(path, rel, lines):
+    """Real comment tokens only.
+
+    A regex over the text counts its own pattern string and any prose
+    that quotes a directive - this file did both when the census was
+    first written. `tokenize` separates a comment from a string, and a
+    directive on a comment-only line is left out because it suppresses
+    nothing: ruff reports it as an unused `noqa` instead.
+    """
+    try:
+        with path.open("rb") as handle:
+            tokens = list(tokenize.tokenize(handle.readline))
+    except (OSError, tokenize.TokenError, SyntaxError):
+        return
+    code_rows = {tok.start[0] for tok in tokens
+                 if tok.type not in (tokenize.COMMENT, tokenize.NL,
+                                     tokenize.NEWLINE, tokenize.INDENT,
+                                     tokenize.DEDENT, tokenize.ENCODING,
+                                     tokenize.ENDMARKER)}
+    for tok in tokens:
+        if tok.type != tokenize.COMMENT:
+            continue
+        row = tok.start[0]
+        if row not in code_rows:
+            continue
+        if any(p.search(tok.string) for p in SUPPRESSION_PATTERNS):
+            yield rel, row, " ".join(lines[row - 1].split())
+
+
+def _suppressions_in(path, rel):
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except (OSError, UnicodeDecodeError):
+        return
+    if path.suffix == ".py":
+        yield from _python_suppressions(path, rel, lines)
+        return
+    in_ignores = False
+    for row, line in enumerate(lines, 1):
+        if path.name == "pyproject.toml":
+            if line.lstrip().startswith("["):
+                in_ignores = "per-file-ignores" in line
+            if in_ignores and PER_FILE_IGNORE.match(line):
+                yield rel, row, " ".join(line.split())
+            continue
+        if any(p.search(line) for p in SUPPRESSION_PATTERNS):
+            yield rel, row, " ".join(line.split())
+
+
+def suppression_findings(root, paths):
+    """Every silenced check under `paths`, shaped like a ruff finding."""
+    root = pathlib.Path(root).resolve()
+    files = [root / "pyproject.toml"]
+    for base in paths:
+        base = root / base
+        if base.is_file():
+            files.append(base)
+        elif base.is_dir():
+            files.extend(sorted(q for q in base.rglob("*")
+                                if q.suffix in (".py", ".js")))
+    found = []
+    for path in files:
+        if not path.is_file():
+            continue
+        rel = path.resolve().relative_to(root).as_posix()
+        found.extend(_suppressions_in(path, rel))
+    found.sort(key=lambda t: (t[0], t[1]))
+    counts = collections.Counter()
+    out = []
+    for file, _row, text in found:
+        counts[(file, text)] += 1
+        out.append({"tool": "repo", "rule": "SUPPRESSION", "file": file,
+                    "line": text, "nth": counts[(file, text)]})
+    return out
 
 
 def normalize(raw, root):
@@ -257,7 +357,8 @@ def main(argv=None):
     except RuffFailure as exc:
         print(f"error: {exc}")
         return 2
-    current = normalize(raw, args.root)
+    current = (normalize(raw, args.root)
+               + suppression_findings(args.root, paths))
     existing = load_baseline(args.baseline)
 
     if args.write:

@@ -1,6 +1,6 @@
 # `bga`: Current Architecture — Three Analysis Planes
 
-**Start here to orient in this codebase.** `docs/spec/specification.md` (v9) is the original design document and stays authoritative for full-length invariant/data-contract text — it is *not* wrong, but it describes the tool as originally scoped, and does not know about anything built since. This doc describes what `bga` actually does **today**, as one coherent system, and points at the real file/doc for every claim so you don't have to reconstruct that history yourself from the commit log, the 730 `docs/backlog/scenarios/` files and the 75 `docs/backlog/tasks/` files this commit carries.
+**Start here to orient in this codebase.** `docs/spec/specification.md` (v9) is the original design document and stays authoritative for full-length invariant/data-contract text — it is *not* wrong, but it describes the tool as originally scoped, and does not know about anything built since. This doc describes what `bga` actually does **today**, as one coherent system, and points at the real file/doc for every claim so you don't have to reconstruct that history yourself from the commit log, the 731 `docs/backlog/scenarios/` files and the 75 `docs/backlog/tasks/` files this commit carries.
 
 **Want to *use* the tool rather than work on it?** [`docs/guides/real-project.md`](../guides/real-project.md) is the end-to-end walkthrough on a real project, with real output at every step.
 
@@ -1051,18 +1051,20 @@ with the tables above destroys the one thing the entry is for
 (`UX-653`). The newest entry is the exception: every round that
 re-grounds the document rewrites it.
 
-Updated 2026-09-06 (after `UX-715`), covering one change to this
+Updated 2026-09-06 (after `UX-732`), covering two changes to this
 document — the `UX-294`/`UX-295` retrospective paragraph below, which
 now anchors "fifteen viewer modules" to `UX-294` (2026-08-26) instead
-of reading as a claim about today's directory — re-grounded in the two
-contract tables above against `bga.contracts` and `bga/schemas.py`:
-**25 emitted ids, 10 of them superseded, and 3 read and never
-written**, 9 printable and 16 not, unchanged from the entry below.
-`bga analyze --schema` now prints **60 top-level properties** and
-`bga/viewer/` now holds **23** modules (`ls bga/viewer/*.js
-bga/viewer/*.css | wc -l`) — both moved since the entry below's 56 and
-22, under items this row did not audit; the map above already names
-all 23. This item published no id and moved neither count itself.
+of reading as a claim about today's directory (`UX-715`), and this
+entry, rewritten because the one it replaces could not be re-grounded
+after a merge (`UX-732`) — re-grounded in the two contract tables
+above against `bga.contracts` and `bga/schemas.py`: **25 emitted ids,
+10 of them superseded, and 3 read and never written**, 9 printable and
+16 not, unchanged from the entry below. `bga analyze --schema` now
+prints **60 top-level properties**, moved since the entry below's 56
+under items neither row audited. `bga/viewer/` is **still 22 modules**
+(`ls bga/viewer/*.js | wc -l`); the entry this replaces read 23 from
+`*.js *.css`, which counts a stylesheet as a module and reads as a
+movement that did not happen. Neither item published an id.
 
 Updated 2026-09-04 (after `UX-653`), covering one change to this
 document — the paragraph above, which states the rule the log had been

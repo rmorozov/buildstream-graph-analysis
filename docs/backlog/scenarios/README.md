@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-727 scenarios: **37 open**, 690 closed.
+728 scenarios: **38 open**, 690 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -27,7 +27,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | cli | 0 | 22 |
 | store | 0 | 16 |
 | docs | 7 | 116 |
-| guards | 14 | 165 |
+| guards | 15 | 166 |
 
 ## Open scenarios
 
@@ -73,6 +73,7 @@ task file, which is the only place it ever lived twice.
 | UX-728 | [a track's repro runs the session's checkout, not its worktree](UX-0728-a-tracks-repro-runs-the-sessions-checkout-not-its-worktree.md) | guards | Medium | every `implementer` track that reproduces a defect through the CLI | 🔴 |
 | UX-729 | [two modules declare one name, and the satellite bundle would take both](UX-0729-two-modules-declare-one-name-and-the-satellite-bundle-would-take-both.md) | viewer | Low | anyone who inlines a second entry point | 🔴 |
 | UX-730 | [a derived figure over the whole test tree has no refresh route](UX-0730-a-derived-figure-over-the-whole-test-tree-has-no-refresh-route.md) | guards | Medium | every round that adds a test file, and the branch that pays for it | 🔴 |
+| UX-731 | [a ratio guard with a two-millisecond denominator](UX-0731-a-ratio-guard-with-a-two-millisecond-denominator.md) | guards | Medium | the round whose gate goes red on a green tree | 🔴 |
 
 ## UX-706..UX-711: the ninety-fourth round — the pipeline, and which model runs which shape (2026-09-05)
 

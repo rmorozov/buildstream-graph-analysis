@@ -15,19 +15,19 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-724 scenarios: **36 open**, 688 closed.
+725 scenarios: **36 open**, 689 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
 | capture | 1 | 95 |
-| analysis | 8 | 104 |
+| analysis | 7 | 104 |
 | contracts | 0 | 48 |
 | viewer | 8 | 160 |
 | cli | 0 | 22 |
 | store | 0 | 16 |
 | docs | 7 | 116 |
-| guards | 12 | 163 |
+| guards | 13 | 164 |
 
 ## Open scenarios
 
@@ -70,8 +70,8 @@ task file, which is the only place it ever lived twice.
 | UX-719 | [the bottleneck fan-in and fan-out labels are swapped](UX-0719-the-bottleneck-fan-in-and-fan-out-labels-are-swapped.md) | analysis | Medium | a reader of the graph-shape block | 🔴 |
 | UX-721 | [an aliased import is silently dropped by the export](UX-0721-an-aliased-import-is-silently-dropped-by-the-export.md) | viewer | Medium | anyone editing a viewer module | 🔴 |
 | UX-722 | [a rail target inside a scrolling table lands under the header](UX-0722-a-rail-target-inside-a-scrolling-table-lands-under-the-header.md) | viewer | Medium | anyone who clicks a rail entry into a nested block | 🔴 |
-| UX-724 | [the diagnostics blocks vanish on a fully cached run](UX-0724-the-diagnostics-blocks-vanish-on-a-fully-cached-run.md) | analysis | Medium | R2 and R3, reading an incremental run's report | 🔴 |
 | UX-727 | [a design review report has no shape a guard can read](UX-0727-a-design-review-report-has-no-shape-a-guard-can-read.md) | guards | Medium | the release gate, and the round reading a review it did not run | 🔴 |
+| UX-728 | [a track's repro runs the session's checkout, not its worktree](UX-0728-a-tracks-repro-runs-the-sessions-checkout-not-its-worktree.md) | guards | Medium | every `implementer` track that reproduces a defect through the CLI | 🔴 |
 
 ## UX-706..UX-711: the ninety-fourth round — the pipeline, and which model runs which shape (2026-09-05)
 

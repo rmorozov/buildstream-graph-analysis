@@ -1,6 +1,6 @@
 # UX-724: the diagnostics blocks vanish on a fully cached run
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-388 (empty is rendered, absent is not) | **Serves:** R2 and R3, reading an incremental run's report | **Topic:** analysis | **Shape:** judgement | **Area:** bga/diagnostics
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-388 (empty is rendered, absent is not) | **Serves:** R2 and R3, reading an incremental run's report | **Topic:** analysis | **Shape:** judgement | **Area:** bga/diagnostics
 
 ## Motivation
 
@@ -98,3 +98,25 @@ Real walk fixture (`examples/06-macro-micro-optimization`,
 
 All three reverted from the untouched copy (`falsify` step 1) and
 reconfirmed green (1 passed) after each revert.
+
+### Deviations
+
+*The answer-key row was rewritten, not deleted.*
+`test_the_text_report_still_drops_its_diagnostics_blocks` recorded this
+gap and said in its own docstring that closing it reddens the clause.
+It is now `test_the_text_report_says_which_absence_it_is`, asserting
+the rule. That is the ratchet `UX-685`'s answer key was built to fire.
+
+*No schema version moved.* `analyze/v6` already types the seven
+structural keys `["object","null"]` with no `required`, so `{}`
+validates. The track checked rather than assumed, and did not take the
+bump decision on its own.
+
+*`bga/report/_shared.py` was not in the declared surface.* The
+`UX-388` sentence had to live somewhere both `text.py` and `json.py`
+read; `_shared.py`'s own docstring names that as its job. Accepted.
+
+*Friction, filed as `UX-728`:* a track's repro through the `bga`
+console script or `python3 -m bga.cli` runs the **session's** checkout,
+not the worktree, unless cwd is the worktree or `PYTHONPATH` names it.
+The track's first post-fix repro silently ran unpatched code.

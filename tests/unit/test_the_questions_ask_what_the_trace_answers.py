@@ -160,9 +160,17 @@ class TestEveryQuestionNamesEmittedVocabulary:
                     f"slice may carry more than one, so this must be `glob`")
 
     def test_every_counter_track_named_is_one_the_emitter_creates(self):
-        emitted = {bga_timeline.CONCURRENCY_COUNTER}
+        """`UX-717` widened the set past one: `HOST_COUNTERS`' own
+        labels, so a question naming `host cores busy` stops failing
+        this clause for being right."""
+        emitted = {bga_timeline.CONCURRENCY_COUNTER} | {
+            label for _key, label, _unit, _scale in bga_timeline.HOST_COUNTERS}
         for question in _questions():
-            for name in re.findall(r"t\.name\s*=\s*'([^']+)'", question["sql"]):
+            names = re.findall(r"t\.name\s*=\s*'([^']+)'", question["sql"])
+            for group in re.findall(r"t\.name\s+in\s*\(([^)]+)\)",
+                                    question["sql"], re.I):
+                names += re.findall(r"'([^']+)'", group)
+            for name in names:
                 assert name in emitted, (
                     f"{question['id']} selects counter track {name!r}; the "
                     f"emitter creates {sorted(emitted)}")

@@ -188,7 +188,12 @@ TRACE_QUERIES = {
     # the alternative: it answers where the gaps are, once you know
     # which queue you are asking about.
     "wait-category": ("resource-queues", "stalls"),
-    "capacity-recommendation": ("resource-queues", "stalls"),
+    # `UX-717`: a third grain. This is the finding that already names
+    # `host_cpu_count`, `cores_busy` and the binding constraint, so it
+    # is what the host counter-track question hangs off - no finding
+    # UX-676 published reaches `findings.py`'s claim mechanism at all.
+    "capacity-recommendation": ("resource-queues", "stalls",
+                                "were-the-cores-busy"),
     # Execution: the finding names elements; the query opens them.
     #
     # `UX-433`: **which programs**, not which elements. The claim is that

@@ -717,11 +717,12 @@ class TestEverySentenceThatCountsTheQuestionsIsDerived:
 
     def test_the_chrome_cost_names_the_queries_it_counts(self):
         """The other shape the fix allows: name the ids. Both copies of
-        this sentence said "two of the fourteen"; they name the two now,
-        and the two are read off `reads:`."""
+        this sentence said "two of the fourteen"; they name the ids now,
+        and the ids are read off `reads:`. `UX-717` grew the set to
+        three."""
         blind = _chrome_blind()
-        assert len(blind) == 2, (
-            "both chrome-cost sentences say 'two of the canned questions' "
+        assert len(blind) == 3, (
+            "both chrome-cost sentences say 'three of the canned questions' "
             "and this many entries declare `reads:`", blind)
         for path in (QUESTIONS_JS, TIMELINE):
             flat = _flat(path.read_text(encoding="utf-8"))

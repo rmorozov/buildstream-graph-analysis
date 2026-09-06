@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-737 scenarios: **25 open**, 712 closed.
+737 scenarios: **23 open**, 714 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -23,11 +23,11 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | capture | 1 | 96 |
 | analysis | 6 | 107 |
 | contracts | 0 | 48 |
-| viewer | 5 | 161 |
+| viewer | 4 | 161 |
 | cli | 0 | 22 |
 | store | 0 | 16 |
 | docs | 4 | 118 |
-| guards | 9 | 169 |
+| guards | 8 | 169 |
 
 ## Open scenarios
 
@@ -37,7 +37,6 @@ task file, which is the only place it ever lived twice.
 | ID | Scenario | Topic | Priority | Serves | Status |
 |---|---|---|---|---|---|
 | UX-666 | [a subagent's cost is written down, and its friction with it](UX-0666-a-subagent-s-cost-is-written-down-and-its-friction-with-it.md) | docs | High | the round choosing a model and a shape for its next agent | 🔴 |
-| UX-667 | [the rail is a source list — chapters disclose, and the mark stays in view](UX-0667-the-rail-is-a-source-list-chapters-disclose-and-the-mark-stays-in-view.md) | viewer | High | R1..R8 — every reader past the first screen | 🔴 |
 | UX-668 | [a reader is a shape, not a hue — and the selector lives in the header](UX-0668-a-reader-is-a-shape-not-a-hue-and-the-selector-lives-in-the-header.md) | viewer | High | R1..R5, the readers the select names | 🔴 |
 | UX-671 | [the rail acts on the view, and the URL does not follow](UX-0671-the-rail-acts-on-the-view-and-the-url-does-not-follow.md) | viewer | Medium | anyone sharing "Copy link to this view" | 🔴 |
 | UX-674 | [eighteen font sizes, an h3 larger than its h2, and 130-character lines](UX-0674-eighteen-font-sizes-an-h3-larger-than-its-h2-and-130-character-lines.md) | viewer | Medium | every reader of prose on the page | 🔴 |
@@ -50,7 +49,6 @@ task file, which is the only place it ever lived twice.
 | UX-684 | [the cached-build verdict — does the graph rebuild the cheapest subgraph?](UX-0684-the-cached-build-verdict-does-the-graph-rebuild-the-cheapest-subgraph.md) | analysis | High | R3 showing evidence, R8 reading it | 🔴 |
 | UX-689 | [the architecture document moves into the area pages, one track at a time](UX-0689-the-architecture-document-moves-into-the-area-pages-one-track-at-a-tim.md) | docs | Medium | the reader pricing a change; the session restructuring without losing a sentence | 🔴 |
 | UX-690 | [the suite has a shape budget, and a feature files its test analysis](UX-0690-the-suite-has-a-shape-budget-and-a-feature-files-its-test-analysis.md) | guards | Medium | R8 reading whether the suite is balanced; the implementer writing the right guard | 🔴 |
-| UX-691 | [a flake ledger, so an excursion is counted before it is a flake](UX-0691-a-flake-ledger-so-an-excursion-is-counted-before-it-is-a-flake.md) | guards | Medium | the round reading a red gate on a file nobody touched | 🔴 |
 | UX-695 | [the refactor stream takes the ledger's top row — renderers first](UX-0695-the-refactor-stream-takes-the-ledger-s-top-row-renderers-first.md) | docs | Medium | the session that opens a round and has no refactor to pick because none is filed | 🔴 |
 | UX-696 | [the register's unguarded rows — no round in code, a dated count, the commit body](UX-0696-the-register-s-unguarded-rows-no-round-in-code-a-dated-count-the-commi.md) | guards | Medium | the reader who opens a module a year on and meets its history instead of its reason | 🔴 |
 | UX-697 | [a type-error ratchet, contracts first](UX-0697-a-type-error-ratchet-contracts-first.md) | guards | Medium | the session editing a schema or a contract, where a wrong key is a `UX-190` bump nobody meant | 🔴 |

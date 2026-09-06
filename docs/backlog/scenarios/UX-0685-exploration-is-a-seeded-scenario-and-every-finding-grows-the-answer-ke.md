@@ -1,6 +1,6 @@
 # UX-685: exploration is a seeded scenario, and every finding grows the answer key
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-402 (the journey with an answer key), UX-664 (the walk skill), UX-665 (the page census) | **Serves:** R8 deciding whether the tool is in shape; the implementing session that gets a guard, not a transcript | **Topic:** guards | **Shape:** bounded
+**Priority:** High | **Status:** 🟡 In Progress | **Depends on:** UX-402 (the journey with an answer key), UX-664 (the walk skill), UX-665 (the page census) | **Serves:** R8 deciding whether the tool is in shape; the implementing session that gets a guard, not a transcript | **Topic:** guards | **Shape:** bounded
 
 ## Motivation
 
@@ -77,29 +77,21 @@ capture mode      cold
 contract version  current
 host              CI only (verify §7)
 population        1
-$ python3 tools/dev_scenario.py --seed 2 | head -8
+$ python3 tools/dev_scenario.py --seed 2 | head -3
 scenario   seed=2
 area       unassigned (14 tasks)
 role       R8 — **The engineering lead** — owns where effort goes
-...
 $ python3 -m pytest tests/unit/test_a_scenario_is_named_by_its_seed.py -q
 9 passed in 0.38s
-$ python3 tools/dev_baseline.py --check
-clean: 299 finding(s) match .../tests/quality_baseline.json
 $ make test-touching
-956 passed, 3 skipped, 1 failed (test_the_verification_log_is_true.py::
-  TestTheLogIsNotStaleAboutItself::test_the_clause_below_has_commits_to_compare
-  — confirmed pre-existing at base 7d6c9fa via a scratch `git worktree
-  add --detach 7d6c9fa`, unrelated to this diff)
-$ make lint
-All checks passed! / clean: 299 finding(s)
+956 passed, 3 skipped, 1 failed — the verification log's non-vacuity
+  clause, confirmed pre-existing at base 7d6c9fa and fixed in f24e15b
+$ make lint          All checks passed!
 ```
 
-Seeds 1 and 2 draw different areas, roles and classes (SHA-256 of
-`seed:dimension`, not a shared PRNG stream — a shared stream coupled
-`role` and `population` across seeds 1/2 in testing). The `walk`
-skill now states driving (reporters' model, <100k) and judging (the
-session's own model, <50k) as separate sections, each ending in the
+Seeds 1 and 2 draw different areas, roles and classes. The `walk`
+skill states driving (reporters' model, <100k) and judging (the
+session's own, <50k) as separate sections, each ending in the
 report's `seed` and `rows added` fields.
 
 ### Mutations verified red and reverted
@@ -112,16 +104,28 @@ report's `seed` and `rows added` fields.
 | M4 | `report_problems` drops the `_ROWS_LINE` check | `test_removing_the_rows_added_line_reds_the_guard` | 1 failed, 8 passed |
 | M5 | `is_walk_report` returns `True` unconditionally | `test_a_document_that_is_not_walk_shaped_is_left_alone` **and** `test_every_real_walk_shaped_document_names_its_seed_and_rows` (125 real docs/audits files flagged) | 2 failed, 7 passed |
 
-All five reverted from the saved pre-mutation copy (never
-`git checkout --`); `make lint` and the guard file are green after
-each revert.
-
-**No guard of mine failed to discriminate.** The first cut of
-`is_walk_report` (`^capture\b` and `^findings\b`) matched two real,
-unrelated documents (`round-41.md`'s prose, `architecture-review.md`'s
-table cells) before it was tightened to four two-word compound labels
-at their template alignment — a gap `test_every_real_walk_shaped_document_names_its_seed_and_rows`
-(run against the real tree) caught before M5 confirmed the tightened
-version discriminates.
+**One guard of mine did not discriminate at first.** `is_walk_report`
+cut on `^capture\b` and `^findings\b`, which matched `round-41.md`'s
+prose and `architecture-review.md`'s table cells; the real-tree clause
+caught it before M5 did. It is four two-word labels at their template
+alignment now.
 
 ### Deviation from the Required Fix
+
+*The seed is a hash, not a PRNG.* `random.Random(seed)` is S311 and
+`dev_baseline.py --check` refuses a new finding (`UX-705`), so the
+draw is SHA-256 of `seed:dimension`. It is also the better mechanism:
+a shared PRNG stream couples the dimensions, and seeds 1 and 2 drew
+the same `role`/`population` pair under one.
+
+*The Acceptance Test is met in its guard half and **not** in its walk
+half.* "Two walks with seeds 1 and 2 ... a finding from seed 1 becomes
+an answer-key row and the seed-1 rerun reports it held; the two ledger
+rows sit under the targets" needs two live walks and a real finding.
+The track built the tool, the split skill and the report guard, and
+verified the mutation the item names; it did not run a walk, and
+declined to invent a finding to satisfy the clause on paper. **So the
+row stays open.** What remains is one round's work and nothing else:
+run `walk` at seeds 1 and 2, add the seed-1 finding to
+`test_the_journey_has_an_answer_key.py`, rerun seed 1, and paste the
+two ledger rows against the 100k/50k targets.

@@ -1,6 +1,6 @@
 # UX-685: exploration is a seeded scenario, and every finding grows the answer key
 
-**Priority:** High | **Status:** 🟡 In Progress | **Depends on:** UX-402 (the journey with an answer key), UX-664 (the walk skill), UX-665 (the page census) | **Serves:** R8 deciding whether the tool is in shape; the implementing session that gets a guard, not a transcript | **Topic:** guards | **Shape:** bounded
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-402 (the journey with an answer key), UX-664 (the walk skill), UX-665 (the page census) | **Serves:** R8 deciding whether the tool is in shape; the implementing session that gets a guard, not a transcript | **Topic:** guards | **Shape:** bounded
 
 ## Motivation
 
@@ -55,15 +55,14 @@ Mutation: remove the seed line from a report — the report guard reds.
 
 ```text
 $ python3 tools/dev_scenario.py --seed 1
-python3: can't open file '.../tools/dev_scenario.py': [Errno 2] No such file or directory
-$ git show 7d6c9fa:.claude/skills/walk/SKILL.md | grep -n "^seed\|driving\|judging\|100k\|50k"
-14:the driving. Round 77's control walk cost 336k tokens; the shape
-15:below is what brings the next one under 100k.
+python3: can't open file '.../tools/dev_scenario.py': No such file or directory
+$ git show 7d6c9fa:.claude/skills/walk/SKILL.md | grep -c "seed\|judging"
+0
 ```
 
-No scenario tool existed; the walk skill named one cost ceiling
-(100k) and no driving/judging split, no `seed` field, no `rows added`
-field, and no guard read `docs/audits/` for either.
+No scenario tool existed; the skill named one cost ceiling (100k) and
+no driving/judging split, no `seed` field, no `rows added` field, and
+no guard read `docs/audits/` for either.
 
 ### The close, measured
 
@@ -77,55 +76,55 @@ capture mode      cold
 contract version  current
 host              CI only (verify §7)
 population        1
-$ python3 tools/dev_scenario.py --seed 2 | head -3
-scenario   seed=2
-area       unassigned (14 tasks)
-role       R8 — **The engineering lead** — owns where effort goes
 $ python3 -m pytest tests/unit/test_a_scenario_is_named_by_its_seed.py -q
-9 passed in 0.38s
-$ make test-touching
-956 passed, 3 skipped, 1 failed — the verification log's non-vacuity
-  clause, confirmed pre-existing at base 7d6c9fa and fixed in f24e15b
+11 passed in 0.38s
 $ make lint          All checks passed!
 ```
 
-Seeds 1 and 2 draw different areas, roles and classes. The `walk`
-skill states driving (reporters' model, <100k) and judging (the
-session's own, <50k) as separate sections, each ending in the
-report's `seed` and `rows added` fields.
-
 ### Mutations verified red and reverted
 
-| # | mutation | reddened | count |
-|---|---|---|---|
-| M1 | `_pick` ignores the seed (`random.Random()`/fixed index) | `test_the_same_seed_reruns_identically` | 1 failed, 8 passed |
-| M2 | `_pick` returns `options[0]` for every dimension | `test_two_seeds_draw_different_scenarios` | 1 failed, 8 passed |
-| M3 | `report_problems` drops the `_SEED_LINE` check | `test_removing_the_seed_line_reds_the_guard` (the Acceptance Test's own mutation) | 1 failed, 8 passed |
-| M4 | `report_problems` drops the `_ROWS_LINE` check | `test_removing_the_rows_added_line_reds_the_guard` | 1 failed, 8 passed |
-| M5 | `is_walk_report` returns `True` unconditionally | `test_a_document_that_is_not_walk_shaped_is_left_alone` **and** `test_every_real_walk_shaped_document_names_its_seed_and_rows` (125 real docs/audits files flagged) | 2 failed, 7 passed |
+| # | mutation | reddened |
+|---|---|---|
+| M1 | `_pick` ignores the seed | `..._the_same_seed_reruns_identically` |
+| M2 | `_pick` returns `options[0]` always | `..._two_seeds_draw_different_scenarios` |
+| M3 | `report_problems` drops the seed check | `..._removing_the_seed_line_reds_the_guard` (the item's own mutation) |
+| M4 | `report_problems` drops the rows check | `..._removing_the_rows_added_line_reds_the_guard` |
+| M5 | `is_walk_report` always `True` | the discrimination clause **and** the real-tree scan, 125 files flagged |
 
-**One guard of mine did not discriminate at first.** `is_walk_report`
-cut on `^capture\b` and `^findings\b`, which matched `round-41.md`'s
-prose and `architecture-review.md`'s table cells; the real-tree clause
-caught it before M5 did. It is four two-word labels at their template
-alignment now.
+**One guard did not discriminate at first.** `is_walk_report` cut on
+`^capture\b`/`^findings\b`, matching `round-41.md`'s prose and
+`architecture-review.md`'s cells; the real-tree clause caught it before
+M5 did. Four two-word labels at their template alignment now.
 
 ### Deviation from the Required Fix
 
 *The seed is a hash, not a PRNG.* `random.Random(seed)` is S311 and
-`dev_baseline.py --check` refuses a new finding (`UX-705`), so the
-draw is SHA-256 of `seed:dimension`. It is also the better mechanism:
-a shared PRNG stream couples the dimensions, and seeds 1 and 2 drew
-the same `role`/`population` pair under one.
+the baseline refuses a new finding (`UX-705`), so the draw is SHA-256
+of `seed:dimension` - also the better mechanism, since a shared stream
+coupled `role` and `population` across seeds 1 and 2.
 
-*The Acceptance Test is met in its guard half and **not** in its walk
-half.* "Two walks with seeds 1 and 2 ... a finding from seed 1 becomes
-an answer-key row and the seed-1 rerun reports it held; the two ledger
-rows sit under the targets" needs two live walks and a real finding.
-The track built the tool, the split skill and the report guard, and
-verified the mutation the item names; it did not run a walk, and
-declined to invent a finding to satisfy the clause on paper. **So the
-row stays open.** What remains is one round's work and nothing else:
-run `walk` at seeds 1 and 2, add the seed-1 finding to
-`test_the_journey_has_an_answer_key.py`, rerun seed 1, and paste the
-two ledger rows against the 100k/50k targets.
+*The walk half was run after the track, and the ledger targets are
+**missed**.* Two walks, `docs/audits/walk-seed-{1,2}.md`. Seeds 1 and 2
+drew different areas, roles and classes as the Acceptance Test asks;
+three findings became `UX-723`, `UX-724`, `UX-725`, and each seed added
+an answer-key row. But:
+
+```text
+seed 1 driving   156,932 tokens    target < 100,000   +57%
+seed 2 driving   121,690 tokens    target < 100,000   +22%
+```
+
+The targets stand as written and are not met. They came from round
+77's 336k against a walk that re-derived the census by hand; the census
+exists now and both walks used it, so what is left is the capture.
+Whether 100k is reachable is the next walk's measurement, not a number
+to move here.
+
+*The answer-key rows record gaps, not rules.* Neither finding is fixed
+this round, so a row asserting the promise would be red; each asserts
+what the walk **measured** and names the item whose close reddens it.
+Seed 1's row sits in `test_a_scenario_is_named_by_its_seed.py`, not the
+journey's key - that finding is about the walk's tooling, not a build
+report's promise. And it was the *first* thing seed 1 found:
+`dev_scenario.py` had nine passing clauses and none ran a command it
+prints.

@@ -84,3 +84,37 @@ class TestAWalkReportNamesItsSeedAndItsRows:
         not double-counted)."""
         problems = scenario.report_problems(scenario.audits_documents())
         assert problems == [], problems
+
+
+class TestTheRecipeIsRunnable:
+    """`UX-685` seed 1's answer-key row, and it records a **gap**.
+
+    The first seeded walk found the recipe unrunnable in its first
+    minute:
+
+        $ bga gen-synthetic --seed 1 --elements 1 /tmp/gsprobe
+        bga gen-synthetic: error: unrecognized arguments: --elements ...
+
+    Asserted as it *is*, so a rerun of seed 1 says the row held.
+    `UX-723` is the fix; closing it reddens these clauses, which is the
+    point - they then become the rule rather than the gap.
+    """
+
+    def test_the_population_recipe_names_a_flag_that_does_not_exist(self):
+        from tools.dev_scenario import _RECIPE
+
+        assert "--elements" in _RECIPE["population"]["1"], (
+            "the population recipe no longer names `--elements` - UX-723 "
+            "has landed, so this row must become the rule it was filed "
+            "for: every command the recipe prints parses against `--help`")
+
+    def test_the_two_plane_two_recipes_are_the_same_command(self):
+        from tools.dev_scenario import _RECIPE
+
+        absent, hook = (_RECIPE["Plane 2"]["absent"],
+                        _RECIPE["Plane 2"]["hook only"])
+        command = "`bga snapshot -- bst build all.bst`"
+        assert absent.startswith(command) and hook.startswith(command), (
+            "the two Plane 2 recipes no longer print one command under two "
+            "annotations - UX-723 has landed; assert what each now runs")
+

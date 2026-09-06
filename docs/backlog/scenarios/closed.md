@@ -729,6 +729,7 @@ is open, on what topic, for whom — is the other file's.
 | UX-712 | [the size ledger, for what has no finding identity](UX-0712-the-size-ledger-for-what-has-no-finding-identity.md) | Medium | the refactor stream, which reads the top row of this ledger | 🟢 Done — three counts per file; a grown cell is red | [UX-712](UX-0712-the-size-ledger-for-what-has-no-finding-identity.md) |
 | UX-703 | [a mutation run on the touched modules, weekly](UX-0703-a-mutation-run-on-the-touched-modules-weekly.md) | Low | the falsify skill, which is a hand ritual per guard and cannot be run over the suite | 🟢 Done — mutmut over the touched modules, weekly; a survivor is a filing | [UX-703](UX-0703-a-mutation-run-on-the-touched-modules-weekly.md) |
 | UX-699 | [the viewer linted as one module graph](UX-0699-the-viewer-linted-as-one-module-graph.md) | Medium | the session editing a viewer module, which today has no linter of any kind | 🟢 Done — eqeqeq and no-undef at the gate; the unused-export half is UX-742 | [UX-699](UX-0699-the-viewer-linted-as-one-module-graph.md) |
+| UX-743 | [the small tier's backstop was sized against a suite half this size](UX-0743-the-small-tier-backstop-was-sized-against-a-suite-half-this-size.md) | High | R8 reading a red CI on a commit that broke nothing | 🟢 Done — backstops re-sized from run 34054287865; population tripwire added | [UX-743](UX-0743-the-small-tier-backstop-was-sized-against-a-suite-half-this-size.md) |
 
 ## UX-207..UX-212: the twenty-third audit round — the report learns to answer first (2026-08-22)
 

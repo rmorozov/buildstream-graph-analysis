@@ -421,15 +421,46 @@ def recorded():
 # these constants have. Named by the job that produced each, not
 # because the interpreter is the cause - see the note about the runner
 # - but so a later reader can find the log.
-SMALL_TIER_CI_SLOW_S = 29.0       # parallel, `-n auto`, slowest seen (3.9)
-SMALL_TIER_CI_FAST_S = 17.34      # parallel, fastest seen (3.12)
-# A floor, not a measurement: `test (3.9)` was killed at this value
-# with the run at 100%, so the figure this constant wants is somewhere
-# above it. That has now happened twice - at 27.0 and again at 30.0 -
-# and a killed run still proves the tier once cost more than the number
-# it was killed at, which is what a budget has to clear.
-SMALL_TIER_CI_SLOW_1P_S = 30.0    # single process, slowest seen (3.9)
-SMALL_TIER_CI_FAST_1P_S = 17.03   # single process, fastest seen (3.12)
+# `UX-743` re-recorded all four from run 34054287865 (head `b1b664b`),
+# where the old figures - 29.0 / 17.34 / 30.0 / 17.03, last measured in
+# round 66 - had gone 3x and 4x stale and killed every job:
+#
+# ```text
+# job          step 7 `-n auto`   step 27 single process
+# test (3.9)     82s                120s  killed
+# test (3.10)    87s                120s  killed
+# test (3.11)    66s                120s  killed
+# test (3.12)    86s                120s  killed
+# ```
+#
+# The tier did not slow down; it grew. 3102 tests when this file was
+# first measured, 7657 collected on that head, 4626 of them small.
+SMALL_TIER_CI_SLOW_S = 87.0       # parallel, `-n auto`, slowest seen (3.10)
+SMALL_TIER_CI_FAST_S = 66.0       # parallel, fastest seen (3.11)
+# A floor, not a measurement: the job was killed at this value with the
+# run still going, so the figure this constant wants is somewhere above
+# it. That has now happened three times - at 27.0, at 30.0 and here, on
+# all four interpreters at once - and a killed run still proves the
+# tier once cost more than the number it was killed at, which is what a
+# backstop has to clear. The only complete single-process reading
+# anywhere is local: 140.37s of pytest, 141.82s wall, on a quiet
+# container whose parallel run is 47.53s. CI's parallel step is 1.4-1.8x
+# that box, so CI's single-process step is around 200-260s.
+SMALL_TIER_CI_SLOW_1P_S = 120.0   # single process, floor (all four)
+SMALL_TIER_CI_FAST_1P_S = 120.0   # single process, floor (all four)
+
+# `UX-743`: the population the four figures above were measured on,
+# counted in files rather than tests. Files are free to count from the
+# tree; a `-m small --collect-only` costs 3.78s on every run of the
+# guard that would pay it, whose own CI reference entry is 2.37s - so
+# the honest instrument would red the tier-drift gate. One file per
+# item is this repository's rule, so the two move together.
+#
+# `test_the_backstops_were_sized_on_this_tree` reds when the tier has
+# grown past 1.5x this. It is a staleness tripwire, not a budget: what
+# it asks for is two numbers re-read off a CI run, which is the work
+# nothing did for thirty-five rounds while the suite doubled.
+SMALL_TIER_POPULATION_FILES = 326  # small-tier files at `b1b664b`
 
 # `UX-421`. **These are backstops, not budgets.** The distinction is
 # the whole item: a budget claims to bound the tier, and a wall-clock
@@ -438,20 +469,27 @@ SMALL_TIER_CI_FAST_1P_S = 17.03   # single process, fastest seen (3.12)
 # 3.10, 3.11 and 3.12 passed the same step on the same commit at 26,
 # 26 and 19s. Nothing about the tier differed between those four jobs.
 #
-# Sized to catch a hang and nothing finer: about four times the
-# slowest step ever seen (30.0s), and far enough below the job's own
-# timeout that it fails fast with a legible message instead of burning
-# six minutes. A number in this range needs no re-measuring when the
-# tier grows by a second, which was the maintenance the old budget
-# demanded every re-tier.
+# Sized to catch a hang and nothing finer: several times the slowest
+# step ever seen, and far enough below the job's own timeout that it
+# fails fast with a legible message. A number in this range needs no
+# re-measuring when the tier grows by a second, which was the
+# maintenance the old budget demanded every re-tier.
+#
+# `UX-743`: **they are no longer the same number.** UX-421 set both to
+# 120 because the two steps then differed by a second; single process
+# now costs 2.95x the parallel run (140.37s against 47.53s locally), so
+# one number cannot sit several times above both. 300 is 3.4x the
+# measured 87s parallel step; 900 is 7.5x the 120s floor the single-
+# process step was killed at and about 3.5x the 200-260s that step is
+# expected to actually cost on a runner.
 #
 # **What actually catches a large file in the default tier** is
 # `tools/dev_tier_drift.py --against`, run in CI on the 3.11 job. It
 # compares each file to CI's own recorded seconds with the run's median
 # shift divided out, so a slow runner is not read as a slow file - and
 # it names the file, which a timeout never could.
-SMALL_TIER_BACKSTOP_S = 120.0     # the `-n auto` step's timeout
-SMALL_TIER_BACKSTOP_1P_S = 120.0  # the single-process step's timeout
+SMALL_TIER_BACKSTOP_S = 300.0     # the `-n auto` step's timeout
+SMALL_TIER_BACKSTOP_1P_S = 900.0  # the single-process step's timeout
 
 # The sizing this replaced, kept because it is the argument `UX-421`
 # had to answer rather than a number to restore. The old budget was

@@ -71,9 +71,13 @@ jobs:
       # `Test` step overwrites this junit when it runs, which is what the
       # drift gate wants; when the backstop fails, `Test` is skipped and
       # this junit is the record that survives.
+      #
+      # `UX-743`: 120 -> 300. The step measured 66-87s across the four
+      # jobs of run 34054287865; 120 was sized against a 29s reading
+      # from round 66, and the suite has doubled since.
       - name: Test (small tier, with a backstop)
         run: |
-          timeout 120 make test-small \
+          timeout 300 make test-small \
             PYTEST_ARGS="--junitxml=${{ runner.temp }}/junit.xml"
 
       # UX-420: one interpreter writes a report, because one is enough
@@ -372,8 +376,13 @@ jobs:
       # backstop like the one above. It went unguarded until UX-363: the
       # partition guard's regex stopped at the first `timeout` in this
       # file. SMALL_TIER_BACKSTOP_1P_S in tests/tiers.py.
+      #
+      # `UX-743`: 120 -> 900, and no longer equal to the step above.
+      # All four jobs of run 34054287865 were killed at 120 with no
+      # test failure recorded - single process now costs 2.95x the
+      # parallel run, which one shared number could not sit above.
       - name: Test (small tier, single process)
-        run: PYTEST_XDIST= timeout 120 make test-small
+        run: PYTEST_XDIST= timeout 900 make test-small
 
       # `UX-554`: the junit steps ran only when the suite passed, so on
       # the run where it matters the record of *what* failed died with

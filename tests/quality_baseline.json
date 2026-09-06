@@ -1,6 +1,7 @@
 {
   "ruff_version": "0.15.8",
   "families": ["C901", "PLR0912", "PLR0913", "PLR0915", "S", "SIM115"],
+  "forced_by": "UX-702",
   "findings": [
     {"file": ".claude/hooks/selector_before_commit.py", "line": "done = subprocess.run(", "nth": 1, "rule": "S603", "tool": "ruff"},
     {"file": ".claude/hooks/selector_before_commit.py", "line": "done = subprocess.run([\"git\", \"rev-parse\", \"--show-toplevel\"],", "nth": 1, "rule": "S607", "tool": "ruff"},
@@ -250,6 +251,8 @@
     {"file": "tools/dev_js_deps.py", "line": "def main(argv=None):", "nth": 1, "rule": "PLR0912", "tool": "ruff"},
     {"file": "tools/dev_junit_tail.py", "line": "root = ET.parse(path).getroot()", "nth": 1, "rule": "S314", "tool": "ruff"},
     {"file": "tools/dev_junit_tail.py", "line": "root = ET.parse(path).getroot()", "nth": 2, "rule": "S314", "tool": "ruff"},
+    {"file": "tools/dev_perf_ratchet.py", "line": "resolved = subprocess.run(", "nth": 1, "rule": "S603", "tool": "ruff"},
+    {"file": "tools/dev_perf_ratchet.py", "line": "[\"git\", \"rev-parse\", \"--verify\", \"--quiet\", f\"{base}^{{commit}}\"],", "nth": 1, "rule": "S607", "tool": "ruff"},
     {"file": "tools/dev_perfetto_queries.py", "line": "with urllib.request.urlopen(READER_URL, timeout=600) as response:", "nth": 1, "rule": "S310", "tool": "ruff"},
     {"file": "tools/dev_perfetto_queries.py", "line": "done = subprocess.run([node, \"--input-type=module\", \"-e\", script],", "nth": 1, "rule": "S603", "tool": "ruff"},
     {"file": "tools/dev_perfetto_queries.py", "line": "done = subprocess.run([str(shell), \"-q\", str(path), str(trace)],", "nth": 1, "rule": "S603", "tool": "ruff"},

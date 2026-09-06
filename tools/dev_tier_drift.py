@@ -53,6 +53,11 @@ RANK = {"small": 0, "medium": 1, "large": 2}
 #: `test_the_step_says_so_rather_than_passing_over_no_reference` holds.
 CI_REFERENCE = REPO / "tests" / "ci_reference.json"
 
+#: `UX-702`: the analyzer's own wall clock and peak RSS, beside the
+#: tier rows in the same document - `dev_perf_ratchet.py` writes and
+#: reads them, `adopt` below just carries them across.
+PERF_KEYS = ("analyze_wall_s", "analyze_rss_mb")
+
 #: `UX-447`: where a refreshed reference comes from. A local `--record`
 #: writes *this* machine's seconds, which `UX-418` ruled out, so every
 #: "re-record" message names this artifact instead. One constant rather
@@ -495,16 +500,32 @@ def adopt(reference, candidate):
       `stale` - the reference is not describing this runner any more,
       and rows adopted into it would be measured against a document
       that is about to be replaced wholesale.
+
+    `UX-702` folds `PERF_KEYS` in first, independently of the file
+    population above: two scalar readings, not a file among many, so
+    there is no shift to divide them by and neither refusal applies - a
+    candidate carrying them where the reference does not is the only
+    condition, `dev_perf_ratchet.merge`'s own bootstrap state.
     """
+    perf_added = {key: candidate[key] for key in PERF_KEYS
+                  if key not in reference and key in candidate}
     known = reference.get("files") or {}
     times = candidate.get("files") or {}
     ratios = {name: times[name] / known[name] for name in known
               if times.get(name) and known[name] > 0}
     if not ratios:
-        return reference, {}
+        if not perf_added:
+            return reference, {}
+        document = dict(reference)
+        document.update(perf_added)
+        return document, perf_added
     shift = shift_of(ratios, known)
     if not IMAGE_BAND[0] <= shift <= IMAGE_BAND[1]:
-        return reference, {}
+        if not perf_added:
+            return reference, {}
+        document = dict(reference)
+        document.update(perf_added)
+        return document, perf_added
     added = {name: round(seconds / shift, 2)
              for name, seconds in times.items() if name not in known}
     # `UX-496`: and a reading for every name it *does* carry, on the
@@ -530,6 +551,7 @@ def adopt(reference, candidate):
     for name, seconds in added.items():
         kept[name] = [seconds]
     document = dict(reference)
+    document.update(perf_added)
     document["samples"] = {name: kept[name] for name in sorted(kept)}
     document["files"] = {
         name: round(statistics.median_low(kept[name]), 2)
@@ -541,7 +563,7 @@ def adopt(reference, candidate):
     # it.
     document["adopted"] = sorted(
         set(reference.get("adopted") or []) & set(known) | set(added))
-    return document, added
+    return document, {**added, **perf_added}
 
 
 def shift_population(ratios, known):
@@ -925,7 +947,7 @@ def ledger_rows(waiting, confirmed, run_id):
             for name, ratio, is_confirmed in entries]
 
 
-def annotation(summary, path=ANNOTATION_FILE):
+def annotation(summary, path=ANNOTATION_FILE, title="tier drift"):
     """`UX-621`: the gate's line as a check-run annotation.
 
     `UX-491`'s file reaches a reader of the log *body*, and that body is
@@ -939,11 +961,12 @@ def annotation(summary, path=ANNOTATION_FILE):
     annotation is the only place a sentence survives that route.
 
     One line, because a workflow command is line-oriented and the runner
-    reads only up to the first newline.
+    reads only up to the first newline. `title` distinguishes a second
+    gate reusing this route (`UX-702`) from this one in the same job.
     """
     said = (summary.replace("%", "%25")
             .replace("\r", "%0D").replace("\n", "%0A"))
-    return f"::error file={path},title=tier drift::{said}"
+    return f"::error file={path},title={title}::{said}"
 
 
 def _against(times, path, args):

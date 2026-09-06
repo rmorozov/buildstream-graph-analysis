@@ -252,6 +252,77 @@ jobs:
             || echo "the gate step wrote no summary - it did not run."
         if: always() && matrix.python-version == '3.11'
 
+      # `UX-702`: `bga analyze` was measured superlinear (`UX-531`) and
+      # nothing recorded whether a round moves it. Two commands, because
+      # each is its own cold path into the analyzer - a published
+      # `analyze.json` makes `view` skip it - so both are timed and
+      # `tools/dev_perf_ratchet.py` judges the worse of the two on each
+      # axis. Never in `make test`: the reading is this runner's own
+      # clock, and `UX-420`'s Motivation is why no number taken
+      # elsewhere compares with it.
+      - name: What the last run of this branch found for the analyzer's own clock
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ runner.temp }}/perf_carry.json
+          key: perf-carry-${{ github.ref }}-${{ github.run_id }}
+          restore-keys: |
+            perf-carry-${{ github.ref }}-
+        if: matrix.python-version == '3.11'
+
+      - name: The largest fixture, for the analyzer's own clock
+        run: |
+          python -m bga.cli gen-synthetic "${{ runner.temp }}/perf_analyze" \
+            --seed 1 --layers 20 --width 200
+          python -m bga.cli gen-synthetic "${{ runner.temp }}/perf_export" \
+            --seed 1 --layers 20 --width 200
+        if: always() && matrix.python-version == '3.11'
+
+      - name: The analyzer's own wall clock and peak RSS, on the largest fixture
+        run: |
+          /usr/bin/time -v python -m bga.cli analyze \
+            "${{ runner.temp }}/perf_analyze" --format json \
+            -o "${{ runner.temp }}/perf_analyze/analyze.json" \
+            2> "${{ runner.temp }}/perf_analyze.time"
+          /usr/bin/time -v python -m bga.cli view --export \
+            "${{ runner.temp }}/perf_export.html" \
+            "${{ runner.temp }}/perf_export" \
+            2> "${{ runner.temp }}/perf_export.time"
+        if: always() && matrix.python-version == '3.11'
+
+      # Beside the tier rows, in the same candidate this job already
+      # writes and uploads a few steps below - one artifact, one
+      # `--adopt` job, both already there for UX-503's reasons.
+      - name: Fold that reading into this run's candidate
+        run: |
+          python tools/dev_perf_ratchet.py --merge \
+            "${{ runner.temp }}/ci_reference.candidate.json" \
+            "${{ runner.temp }}/perf_analyze.time" \
+            "${{ runner.temp }}/perf_export.time" \
+            --source "github-actions ubuntu-latest, test (3.11), -n auto"
+        if: always() && matrix.python-version == '3.11'
+
+      # `UX-420`'s Motivation, replayed on this gate's own two numbers:
+      # absolute margin, never a ratio. Two consecutive runs (`UX-442`)
+      # and the diff-touches-`bga/analyzer.py` gate both live inside the
+      # tool, reading the diff `origin/<default>` fetched above.
+      - name: The analyzer's wall clock and RSS, against CI's own record
+        run: |
+          python tools/dev_perf_ratchet.py --against tests/ci_reference.json \
+            --carry "${{ runner.temp }}/perf_carry.json" \
+            --base "origin/${{ github.event.repository.default_branch }}" \
+            --summary "${{ runner.temp }}/perf_gate.txt" --annotate \
+            --source "github-actions ubuntu-latest, test (3.11), -n auto" \
+            "${{ runner.temp }}/perf_analyze.time" \
+            "${{ runner.temp }}/perf_export.time"
+        if: always() && matrix.python-version == '3.11'
+
+      - name: Leave it for the next run (analyzer gate)
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ runner.temp }}/perf_carry.json
+          key: perf-carry-${{ github.ref }}-${{ github.run_id }}
+        if: always() && matrix.python-version == '3.11'
+
       - name: Upload it, so refreshing the reference needs no scrolling
         if: always() && matrix.python-version == '3.11'
         uses: actions/upload-artifact@v4

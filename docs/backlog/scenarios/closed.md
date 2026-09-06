@@ -727,6 +727,7 @@ is open, on what topic, for whom — is the other file's.
 | UX-691 | [a flake ledger, so an excursion is counted before it is a flake](UX-0691-a-flake-ledger-so-an-excursion-is-counted-before-it-is-a-flake.md) | Medium | the round reading a red gate on a file nobody touched | 🟢 Done — excursions are counted before they are a flake | [UX-691](UX-0691-a-flake-ledger-so-an-excursion-is-counted-before-it-is-a-flake.md) |
 | UX-702 | [a performance ratchet at the gate](UX-0702-a-performance-ratchet-at-the-gate.md) | Medium | R8 reading whether a round made `bga analyze` slower on the largest capture, which nothing today records | 🟢 Done — an absolute margin, two consecutive runs, and a diff that names the analyzer | [UX-702](UX-0702-a-performance-ratchet-at-the-gate.md) |
 | UX-712 | [the size ledger, for what has no finding identity](UX-0712-the-size-ledger-for-what-has-no-finding-identity.md) | Medium | the refactor stream, which reads the top row of this ledger | 🟢 Done — three counts per file; a grown cell is red | [UX-712](UX-0712-the-size-ledger-for-what-has-no-finding-identity.md) |
+| UX-703 | [a mutation run on the touched modules, weekly](UX-0703-a-mutation-run-on-the-touched-modules-weekly.md) | Low | the falsify skill, which is a hand ritual per guard and cannot be run over the suite | 🟢 Done — mutmut over the touched modules, weekly; a survivor is a filing | [UX-703](UX-0703-a-mutation-run-on-the-touched-modules-weekly.md) |
 
 ## UX-207..UX-212: the twenty-third audit round — the report learns to answer first (2026-08-22)
 

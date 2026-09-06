@@ -42,8 +42,24 @@ limit is a row too.
 | 100 | implementer | sonnet | `UX-734` three counted figures (judgement) | 100k | 76 | 15.7 m | merged | found the review's own replacement figure off by two, and corrected it |
 | 100 | implementer | sonnet | `UX-735` the export size, derived (bounded) | 63k | 56 | 12.0 m | merged | — |
 | 100 | implementer | sonnet | `UX-736` the architecture's status table (judgement, taken in the brief) | 66k | 59 | 12.7 m | merged | its first mutation flipped to 🔴, which `UX-561`'s worktree exemption absorbs — the guard passed for the wrong reason |
+| 102 | implementer | sonnet | `UX-667` the rail is a source list (judgement, decided in the brief) | 319k | 243 | 59.6 m | merged | reverse-engineering which prose in a judgement Required Fix was load-bearing DOM and which was already true; reported a base failure as pre-existing that `origin/main` passes |
+| 102 | implementer | sonnet | `UX-691` a flake ledger (bounded) | 146k | 105 | 21.1 m | merged | the derived cost row and the context map both red from adding two test files, and neither is in the task file or `rules.md` |
+| 102 | implementer | sonnet | `UX-702` a performance ratchet at the gate (bounded) | 259k | 230 | 52.6 m | merged | issued early reads against the shared checkout instead of its worktree; left `dev_perf_ratchet.py` off the §6 context map |
+| 102 | implementer | sonnet | `UX-712` the size ledger (bounded) | 416k | 227 | 59.2 m | merged | stalled twice waiting on a background notification that never arrives; found pylint attributes every duplicate-code hit to one arbitrary module |
+| 102 | implementer | sonnet | `UX-703` a weekly mutation run (bounded) | 226k | 207 | 76.6 m | merged | stalled on a backgrounded mutmut run; mutmut copies the tree one directory deeper, so every `parents[N]` root in this repo resolves wrong inside a mutant |
 
-What the thirty-one rows already say: a researcher that reads a document
+Round 101's four tracks are **not** here: this session could not
+identify their transcripts with certainty after a context rebuild, and
+a guessed row is worse than a missing one. Round 102's five are, all
+derived with `dev_track_cost.py --ledger`.
+
+Two of the five stalled waiting on a background notification that never
+arrives, with a finished round of work uncommitted in a worktree; both
+committed cleanly once told to run in the foreground. Three of the five
+left a derived figure or a §6 context-map row behind - the same class
+the round itself was about, arriving in the tracks' own work.
+
+What the thirty-six rows already say: a researcher that reads a document
 whole costs 100-180k; a walker that drives every control costs 336k;
 the two cuts cost a re-run each. The `walk` and `design-review`
 skills fix the report shape so the next rows are smaller, and the

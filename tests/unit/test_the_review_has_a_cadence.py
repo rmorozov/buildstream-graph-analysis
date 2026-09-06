@@ -49,6 +49,17 @@ def _log_rows():
     return rows
 
 
+def _cadence_message(distance, last):
+    """The text a stopped session reads first — `UX-713`: the checklist
+    alone sent it to a document, not to the method that runs it."""
+    return (
+        f"{distance} scenarios have closed since review {last['n']} "
+        f"({last['date']}), against a bound of "
+        f"{MAX_ROWS_BETWEEN_REVIEWS}. Run a review: the checklist is in "
+        f"docs/audits/architecture-review.md, and the `review` skill runs "
+        f"it.")
+
+
 def _closed_now():
     """Rows in `closed.md`, which is the ledger `UX-232` made it.
 
@@ -127,10 +138,14 @@ class TestTheDistanceIsMeasured:
             f"and closed.md has {_closed_now()} — the log is ahead of the "
             f"tree, which means a row was recorded before it closed")
         assert distance <= MAX_ROWS_BETWEEN_REVIEWS, (
-            f"{distance} scenarios have closed since review {last['n']} "
-            f"({last['date']}), against a bound of "
-            f"{MAX_ROWS_BETWEEN_REVIEWS}. Run a review: the checklist is in "
-            f"docs/audits/architecture-review.md.")
+            _cadence_message(distance, last))
+
+    def test_the_cadence_message_names_the_skill_as_well_as_the_checklist(self):
+        """`UX-713`: the message is what a stopped session reads first,
+        and it sent it to a document with no method in it."""
+        message = _cadence_message(99, {"n": 1, "date": "2026-01-01"})
+        assert "docs/audits/architecture-review.md" in message
+        assert "`review` skill" in message
 
     def test_the_bound_is_argued_where_a_reader_will_look(self):
         """Two copies of one number is the drift this repository fixes

@@ -33,6 +33,12 @@ than read by a human. `dev_scenario.py`'s `is_walk_report` is the
 model; whether the two share a helper or stay separate is the
 decision, and the Outcome says which.
 
+**The head's lines wrap.** `UX-686`'s first date regex read `Base
+`<sha>`, <date>.` and found nothing: the walk reports wrap that line
+across a markdown line break, so `\s+` rather than a literal space is
+what a shape regex needs. Whatever head this item fixes, its guard is
+whitespace-tolerant or it is a guard that passes on a rewrap.
+
 ## Out of Scope
 
 - The review's *content* — this is about a head a guard can read, not

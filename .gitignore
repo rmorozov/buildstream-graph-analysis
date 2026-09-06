@@ -47,6 +47,11 @@ coverage.xml
 .hypothesis/
 .pytest_cache/
 
+# UX-703: mutmut's working copy and cache - a run's build artifact,
+# never committed.
+mutants/
+.mutmut-cache
+
 # Translations
 *.mo
 *.pot

@@ -1051,19 +1051,22 @@ with the tables above destroys the one thing the entry is for
 (`UX-653`). The newest entry is the exception: every round that
 re-grounds the document rewrites it.
 
-Updated 2026-09-06 (after `UX-736`), covering one change to this
-document — the `UX-60` row of the history table above, `🟡 Partial`
-against a task file that has been `🟢 Done` with a verification log
-since round 13. That table is 75 rows of a fact `UX-131` guarded in
-two other places and never here; `test_the_table_status_matches_the
-_task_files` now reads it, so this is the last round in which the
-correction had to be made by hand. The document is re-grounded in the
-two contract tables above against `bga.contracts` and `bga/schemas.py`: **25
-emitted ids, 10 of them superseded, and 3 read and never written**, 9
-printable and 16 not, `analyze/v6` still at **60 top-level
-properties**, and `bga/viewer/` still **22 modules**
-(`ls bga/viewer/*.js | wc -l`) — every figure unchanged from the entry
-this replaces. The item published no id and moved no key.
+Updated 2026-09-06 (after `UX-738`), covering no change to this
+document's body — what moved is the currency record itself and the
+derived backlog counts above it, which every filing moves. The entry
+this replaces credited `UX-736`, whose fix corrected the `UX-60` row
+of the history table and put those 75 rows under
+`test_the_table_status_matches_the_task_files`; that entry then went
+stale the moment the round's next commit touched the document, which
+is `UX-732`'s trap in its remaining, non-merge form — the anchor has
+to be the newest substantive touch, so it is written last. The
+document is re-grounded in the two contract tables above against
+`bga.contracts` and `bga/schemas.py`: **25 emitted ids, 10 of them
+superseded, and 3 read and never written**, 9 printable and 16 not,
+`analyze/v6` still at **60 top-level properties**, and `bga/viewer/`
+still **22 modules** (`ls bga/viewer/*.js | wc -l`) — every figure
+unchanged from the entry this replaces. The item published no id and
+moved no key.
 
 Updated 2026-09-04 (after `UX-653`), covering one change to this
 document — the paragraph above, which states the rule the log had been

@@ -1555,7 +1555,14 @@ tool prices it and does not watch it).
 **Serves:** R8 (the maintainer deciding when to release), and every
 implementing session — the suite is theirs, the walk is the reader's.
 
-**Status:** partial — the corrections are argued here; `UX-685`..`UX-692` are open.
+**Status:** landed — `UX-685`..`UX-692` all closed.
+
+The last of them tested this direction's own claim rather than
+restating it: `UX-692`'s seeded sweep found a real defect on its
+first generated shapes — a span under the epsilon grid collapsing to
+a zero-width segment — and filed it for a separate round instead of
+fixing it in place. A sweep that verifies what was promised is worth
+having exactly when it finds something the fixtures never had.
 
 The user's brief: the suite grows and hand exploration still finds
 problems every time; so a cadence of exploratory testing on a cheaper

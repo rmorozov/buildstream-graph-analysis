@@ -589,7 +589,7 @@ column re-read in round 73:
                  elements   landed   opened    words   controls    nodes
 golden                  4    3,800   15,618    7,144        427    2,498
 macro_micro            11    5,965   31,804   12,002        750    5,686
-budget, to 50 elts             7,100   35,000   12,600        800    7,900
+budget, to 50 elts             7,100   35,000   12,700        800    7,900
 
 scale               1,202    4,763   26,242   36,542      1,941   24,294
 budget, to 4,000 elts          7,000   32,000   41,000      2,300   27,500
@@ -626,6 +626,11 @@ hidden half of one `dl`. The nodes bound came down again one item
 later: `UX-527` replaced the Perfetto picker's one-`<option>`-per-element
 `<select>` with a search box drawing eight, 4,119 DOM elements to 126,
 and `test_the_budgets_are_not_slack` is what asked for the restatement.
+
+`UX-717` moved the small class's words bound 12,600 -> 12,700 and the
+4,100 class's 9,000 -> 9,100: the eighteenth canned question is words
+and nothing else, measured 12,644 (+44) and 9,013 (+13) with every
+other column unmoved.
 
 The small class's words bound moved 12,000 -> 12,600 in round 73, and
 only that one:

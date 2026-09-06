@@ -254,8 +254,17 @@ BUDGETS = (
     # question is what this budget is *for* - it bounds growth, it does
     # not forbid it - and the class above it is untouched at 32,000,
     # which is the check that the page still gets denser with scale.
-    (50, 35_000, 12_600, 800, 7_900),
-    (4_100, 32_000, 9_000, 900, 5_500),
+    # `UX-717`: words 12,600 -> 12,700 and 9,000 -> 9,100. The
+    # eighteenth question - `were-the-cores-busy`, its `why` and its
+    # two sorting-table rows - is words and nothing else: measured
+    # 12,644 (+44) and 9,013 (+13), with every other column of both
+    # classes unmoved. Same shape as `UX-681` above: the budget bounds
+    # growth rather than forbidding it, and 56/87 of headroom is the
+    # same order it left. Caught by `make test` and not by the track's
+    # own `make test-touching`, which does not select this file from a
+    # change to `questions.js`.
+    (50, 35_000, 12_700, 800, 7_900),
+    (4_100, 32_000, 9_100, 900, 5_500),
 )
 
 

@@ -36,7 +36,7 @@ import { renderCulprits, renderElementHistory, renderHorizon,
 import { renderDecision, renderProvenanceRecords, renderInvestigation } from "./decision.js";
 import { anchor, collapsible, toc, scrollspy, stepper, runSelector,
          jumpTargets, matches, paletteResults } from "./nav.js";
-import { chapters, fileInChapter, revealChapter, setAllOpen } from "./chapters.js";
+import { chapters, fileInChapter, revealAndLand, setAllOpen } from "./chapters.js";
 // UX-302: the second of §1's two deliberate raw-JSON sites - the one
 // the reader asks for, per section, because pasting a section into an
 // issue is what people do with a report.
@@ -167,8 +167,7 @@ export function wireJumpBox(nav, root, payload, context = {}) {
     // first - here, on a rail link, and on a pasted `#anchor` - so the
     // fold costs the interaction §3b already budgets and never a
     // section a reader cannot reach.
-    revealChapter(node);
-    node.scrollIntoView?.({ behavior: "smooth", block: "start" });
+    revealAndLand(node, "smooth");
     node.setAttribute("data-jumped", "true");
     setTimeout(() => node.removeAttribute("data-jumped"), 1600);
   };
@@ -1031,7 +1030,10 @@ async function boot() {
       if (!id) return null;
       const node = document.getElementById(id)
         ?? root.querySelector?.(`[data-section="${id}"]`);
-      return node ? revealChapter(node) : null;
+      // `UX-670`: and land again after the fold's real height is in.
+      // The browser's own anchor scroll has already run against
+      // `content-visibility`'s estimate by the time this fires.
+      return node ? revealAndLand(node) : null;
     };
     document.addEventListener?.("click", (event) => {
       const href = event?.target?.closest?.("a[href^=\"#\"]")

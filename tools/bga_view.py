@@ -158,18 +158,29 @@ def _capture(argv: list[str]) -> dict:
     Through `main()` rather than by importing the renderer: the payload
     a viewer shows has to be the payload a user gets, and the only way
     to guarantee that is to take the same path.
+
+    `UX-725`: stderr is captured too, not discarded - `main()` prints a
+    full sentence on its own refusals (`RunsNotComparableError`,
+    `UX-114`), and a caller that treats the refusal as an absence rather
+    than a failure must not let that sentence reach the real terminal.
+    The refusal's own words become the raised exception's message
+    instead of the generic "printed nothing", so a caller that *does*
+    want them (an explicit `--compare`) still gets them, once.
     """
     from bga.cli import main
 
-    buffer = io.StringIO()
-    with contextlib.redirect_stdout(buffer):
+    out, err = io.StringIO(), io.StringIO()
+    with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
         try:
             code = main(argv)
         except SystemExit as exit_code:      # argparse's own exits
             code = exit_code.code
-    text = buffer.getvalue()
+    text = out.getvalue()
     if not text.strip():
-        raise RuntimeError(f"`bga {' '.join(argv)}` printed nothing (exit {code})")
+        printed = err.getvalue().strip()
+        reason = printed.splitlines()[-1].removeprefix("Error: ") if printed else None
+        raise RuntimeError(
+            reason or f"`bga {' '.join(argv)}` printed nothing (exit {code})")
     return json.loads(text)
 
 
@@ -355,12 +366,17 @@ def _offered(documents: dict[str, dict]) -> list[str]:
 
 
 def payloads(run: str, baseline: Optional[str] = None,
-             reanalyse: bool = False) -> dict[str, dict]:
+             reanalyse: bool = False, notes: Optional[dict] = None) -> dict[str, dict]:
     """Everything the page renders, keyed by the url it is served at.
 
     A refusal is data, not an error: `bga compare` exits 6 on runs it
     will not judge, and that verdict is exactly what the viewer should
     show. So the exit code is ignored here and the document is served.
+
+    `notes`, when given, receives `comparison_unavailable` (`UX-725`) -
+    the reason the automatically-picked baseline could not be compared,
+    for a caller (`export`) that puts it on the page instead of losing
+    it the way this function always has.
     """
     # `UX-202`: the evidence header states what this capture can
     # support, and Plane 2's coverage is half that answer - but
@@ -393,12 +409,14 @@ def payloads(run: str, baseline: Optional[str] = None,
             argv += ["--baseline-run", path]
         try:
             documents["compare.json"] = _capture(argv)
-        except (RuntimeError, json.JSONDecodeError, OSError):
+        except (RuntimeError, json.JSONDecodeError, OSError) as error:
             # A predecessor that cannot be compared is not an error
             # here - the report still renders, minus one view. An
             # explicit `--compare` that fails is reported by `main`.
             if baseline is not None:
                 raise
+            if notes is not None:
+                notes["comparison_unavailable"] = str(error)
     return documents
 
 
@@ -1164,8 +1182,9 @@ def export(run: str, path: str, with_trace: bool = True,
     # the loader does not find it, and it falls through to `fetch`,
     # which works when served and fails on `file://` - so the export
     # looks fine everywhere except where it is used.
+    notes: dict = {}
     documents = {name[:-len(".json")] if name.endswith(".json") else name: body
-                 for name, body in payloads(run, reanalyse=reanalyse)
+                 for name, body in payloads(run, reanalyse=reanalyse, notes=notes)
                  .items()}
     # `UX-342`: after the payloads and before the manifest - it has to
     # see what is being embedded, and `_offered` has to see it.
@@ -1181,6 +1200,12 @@ def export(run: str, path: str, with_trace: bool = True,
                         # a key that exists on one side only is a key
                         # that gets tested on one side only.
                         "payloads": _offered(documents)}
+    if notes.get("comparison_unavailable"):
+        # `UX-725`: the band's own absence, said once on the page - not
+        # the two lines `bga compare` printed while `payloads()` built
+        # it and swallowed, on a run mode mismatch it refuses to average
+        # into a band (`UX-55`).
+        documents["run"]["comparison_unavailable"] = notes["comparison_unavailable"]
 
     trace = trace_planes = flow_losses = trace_tracks = None
     omitted = degraded = None

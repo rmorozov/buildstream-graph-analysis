@@ -2201,29 +2201,32 @@ _STRUCTURAL_TABLES = {
             # drew them as `#1` and `#2`, which is honest about
             # being a position and says nothing about the
             # measure.
+            # UX-719: the edges run predecessor -> successor, so an
+            # in-edge is a dependency and an out-edge a dependent -
+            # the two blocks had each other's sentence.
             "high_fanin_elements": {
-                "description": "Elements many others depend on "
-                               "directly, with how many.",
-                COLUMNS: [
-                    {"key": "element_uid", "title": "Element",
-                     "role": "element", "sortable": True},
-                    {"key": "fan_in", "title": "Direct dependents",
-                     "quantity": "count", "sortable": True,
-                     "description": "Elements naming this one as "
-                                    "a dependency - an in-degree, "
-                                    "not a transitive count."},
-                ]},
-            "high_fanout_elements": {
                 "description": "Elements that depend on many "
                                "others directly, with how many.",
                 COLUMNS: [
                     {"key": "element_uid", "title": "Element",
                      "role": "element", "sortable": True},
-                    {"key": "fan_out", "title": "Direct dependencies",
+                    {"key": "fan_in", "title": "Direct dependencies",
                      "quantity": "count", "sortable": True,
                      "description": "Dependencies this element "
-                                    "names - an out-degree, not a "
+                                    "names - an in-degree, not a "
                                     "transitive count."},
+                ]},
+            "high_fanout_elements": {
+                "description": "Elements many others depend on "
+                               "directly, with how many.",
+                COLUMNS: [
+                    {"key": "element_uid", "title": "Element",
+                     "role": "element", "sortable": True},
+                    {"key": "fan_out", "title": "Direct dependents",
+                     "quantity": "count", "sortable": True,
+                     "description": "Elements naming this one as "
+                                    "a dependency - an out-degree, "
+                                    "not a transitive count."},
                 ]},
         }},
     "sensitivity": {
@@ -2540,9 +2543,7 @@ _SIGNALS_TABLES = {
                                    "itself. The same number "
                                    "`bottleneck.high_fanin_elements` "
                                    "ranks the top five of, over every "
-                                   "element rather than five - and "
-                                   "that block's own prose has the "
-                                   "direction backwards (`UX-719`)."},
+                                   "element rather than five."},
                 "transitive_count": {
                     QUANTITY: "count",
                     "description": "Everything it pulls in through "

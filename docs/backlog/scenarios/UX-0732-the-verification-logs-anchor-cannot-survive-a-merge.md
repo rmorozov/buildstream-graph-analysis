@@ -83,30 +83,41 @@ the conflict case goes green and the guard reds.
 
 ## Outcome
 
-**Gap, measured.** In a scratch repo, `_commits_touching`'s existing
-default `git log -- path` already excludes any merge whose `DOC` blob
-matches a parent's — that condition *is* git's own TREESAME pruning,
-so the blob check the decision names is unreachable against it (proven
-both ways: constructed a `--no-ff` merge resolved wholesale to one
-side, and it never appears in `git log <anchor>..HEAD -- path`, with
-or without this fix). Widening `_landed_after`'s own query to
-`--full-history` is what makes the check reachable (still "only the
-range moves" — `closing_commit` is untouched). Pasted, the resulting
-gap once the range is widened alone (no blob check yet): a same-line
-conflict resolved to track's own value, `assert not stale(...)` →
-`AssertionError: assert not True … stale(['c4e842a…'])`.
+**Deviation.** The "decision, taken here" chose the blob comparison.
+This pass measured it wrong against the merge the row exists for:
+`2a0bf0f^1:DOC` = `b354827…`, `^2:DOC` = `1340b1b…`, `2a0bf0f:DOC` =
+`dc38a08…` — the merge's blob equals **neither** parent, so `blob in
+parent_blobs` calls it a landing, the exact commit this row exists to
+stop calling one. It is not rare: master rewrites the derived-count
+line on nearly every commit, so "master moved the count, track added
+the entry" is a clean 3-way whose blob is in neither parent every
+time. The combined diff replaces it: `git diff-tree --cc <sha> --
+DOC`, empty when every line already matches a parent —
+`git diff-tree --cc 2a0bf0f -- docs/design/architecture.md | wc -c` →
+`41` (the sha line, no hunk). `_landed_after` keeps the default range;
+`--full-history` is dropped — `2a0bf0f` reaches
+`<anchor>..HEAD -- DOC` today (its blob is TREESAME to neither
+parent), confirmed against this repository's own history with
+`409fe54..2a0bf0f -- DOC` (`UX-713`'s own closing commit as anchor),
+which lists `2a0bf0f`. `closing_commit` stays untouched.
 
-**Close, measured.** With the blob check added: `pytest
-tests/unit/test_the_verification_log_is_true.py -q` → `29 passed`.
-Both directions, same fixture family (a real same-line conflict on the
-derived-count sentence, track's separate entry auto-merging either
-way): resolved to track's own parent's blob → `not stale([])`;
-resolved to neither parent's blob (master's count kept, track's entry
-kept) → `stale(['<merge sha>'])`.
+**Gap, measured.** The blob-route code (this branch's prior commit)
+against the new fixture (`2a0bf0f`'s shape: a real same-line conflict
+resolved by keeping master's newer count *and* track's entry, so the
+blob matches neither parent but every line matches one side):
+`assert not stale(_landed_after(anchor))` →
+`AssertionError: assert not True … stale(['a896570…'])`.
+
+**Close, measured.** With the combined-diff check: `pytest
+tests/unit/test_the_verification_log_is_true.py -q` → `30 passed`.
+Three directions: no other side at all → `not stale([])`; the clean
+recombination above (`--cc` empty) → `not stale([])`; the same
+conflict resolved by writing a count in *neither* parent (`--cc` has a
+hunk) → `stale(['<merge sha>'])`.
 
 **Mutation table.**
 
 | mutation | reddened | count |
 |---|---|---|
-| `merge_has_no_claim`: `len(parent_blobs) > 1` unconditional (drop the blob test) — the Acceptance Test's own mutation | `test_a_merge_resolved_to_neither_parent_is_a_landing` | 1 failed, 28 passed |
-| `merge_has_no_claim`: `blob in parent_blobs` → `blob not in parent_blobs` (inverted) | both new tests | 2 failed, 27 passed |
+| `merge_has_no_claim`: unconditional on parent count (drop the diff test) — the Acceptance Test's own mutation | `test_a_conflict_resolved_with_new_content_is_a_landing` | 1 failed, 29 passed |
+| `_merge_has_no_claim`: reintroduce the blob comparison | `test_a_clean_recombination_is_not_a_landing` (`2a0bf0f`'s shape) | 1 failed, 29 passed |

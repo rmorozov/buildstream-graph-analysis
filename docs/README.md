@@ -207,6 +207,8 @@ appended to instead of superseded:
 |---|---|
 | [`audits/architecture-review.md`](audits/architecture-review.md) | every architecture and documentation review the `UX-241` cadence has called, newest last — **append-only**, so a superseded finding stays where it was written and the review after it says so |
 | [`audits/spec-compliance-review.md`](audits/spec-compliance-review.md) | the original review of the tool against its specification, before the round sequence began |
+| [`audits/walk-seed-1.md`](audits/walk-seed-1.md) | `UX-685`'s first seeded walk — 1 element, Plane 2 absent, real Chrome; the seed names it and reruns it |
+| [`audits/walk-seed-2.md`](audits/walk-seed-2.md) | `UX-685`'s second seeded walk — the empty-population class, hook-only Plane 2, the static export |
 | [`audits/agent-runs.md`](audits/agent-runs.md) | what each subagent run cost — tokens, tool calls, wall clock — and its own friction line, one row per run, so a model and a report shape are chosen from numbers (`UX-666`) |
 
 The rounds themselves:

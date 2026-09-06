@@ -1,6 +1,6 @@
 # UX-725: `bga view --export` prints two ERROR lines and exits 0
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-326 (the tool's own sentences are contracts), UX-55 (compare's run-mode refusal) | **Serves:** anyone exporting a run whose neighbour is a different run mode | **Topic:** cli | **Shape:** judgement | **Area:** bga
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-326 (the tool's own sentences are contracts), UX-55 (compare's run-mode refusal) | **Serves:** anyone exporting a run whose neighbour is a different run mode | **Topic:** cli | **Shape:** judgement | **Area:** bga
 
 ## Motivation
 
@@ -100,3 +100,23 @@ make test-touching   125 file(s) selected, 2411 passed, 61 skipped, 472.4s
 make lint             clean
 dev_baseline.py --check   299, unchanged
 ```
+
+### Deviation
+
+*Run as a track on a `judgement` shape.* `--shape` derives `judgement`
+from this file's text, which by the pipeline's rule is the session's
+own work. The brief had already taken the three judgements the file
+leaves open — which surface carries the message (the page, not
+stderr), whose vocabulary (`UX-388`'s), and that `bga compare`'s own
+exit code is out of scope — so what was left was bounded. The track
+was right to proceed and to say so; the lesson is that a shape derived
+from the *file* can be stale once a brief has decided its open
+questions.
+
+*The gap's fixture is synthetic.* The store pairing an incremental
+baseline with a full candidate is built by the guard, not committed:
+`examples/` carries no such pair, and the walk that found this ran on
+a store it made. Re-checked on a committed run
+(`examples/06-macro-micro-optimization/.bga/runs/20260904T130407Z`):
+export writes 467 KiB, exit 0, stderr carries only its own `Wrote …`
+line and no `^ERROR|^Error:`.

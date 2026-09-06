@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-725 scenarios: **36 open**, 689 closed.
+726 scenarios: **36 open**, 690 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -23,7 +23,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | capture | 1 | 95 |
 | analysis | 7 | 104 |
 | contracts | 0 | 48 |
-| viewer | 8 | 160 |
+| viewer | 8 | 161 |
 | cli | 0 | 22 |
 | store | 0 | 16 |
 | docs | 7 | 116 |
@@ -68,10 +68,10 @@ task file, which is the only place it ever lived twice.
 | UX-716 | [a guard whose cost is its population has no refresh route](UX-0716-a-guard-whose-cost-is-its-population-has-no-refresh-route.md) | guards | Medium | the branch that goes red for test files another branch added | 🔴 |
 | UX-717 | [the host series is on the trace and in no question](UX-0717-the-host-series-is-on-the-trace-and-in-no-question.md) | viewer | Medium | a reader with Perfetto open, asking whether the cores were busy | 🔴 |
 | UX-719 | [the bottleneck fan-in and fan-out labels are swapped](UX-0719-the-bottleneck-fan-in-and-fan-out-labels-are-swapped.md) | analysis | Medium | a reader of the graph-shape block | 🔴 |
-| UX-721 | [an aliased import is silently dropped by the export](UX-0721-an-aliased-import-is-silently-dropped-by-the-export.md) | viewer | Medium | anyone editing a viewer module | 🔴 |
 | UX-722 | [a rail target inside a scrolling table lands under the header](UX-0722-a-rail-target-inside-a-scrolling-table-lands-under-the-header.md) | viewer | Medium | anyone who clicks a rail entry into a nested block | 🔴 |
 | UX-727 | [a design review report has no shape a guard can read](UX-0727-a-design-review-report-has-no-shape-a-guard-can-read.md) | guards | Medium | the release gate, and the round reading a review it did not run | 🔴 |
 | UX-728 | [a track's repro runs the session's checkout, not its worktree](UX-0728-a-tracks-repro-runs-the-sessions-checkout-not-its-worktree.md) | guards | Medium | every `implementer` track that reproduces a defect through the CLI | 🔴 |
+| UX-729 | [two modules declare one name, and the satellite bundle would take both](UX-0729-two-modules-declare-one-name-and-the-satellite-bundle-would-take-both.md) | viewer | Low | anyone who inlines a second entry point | 🔴 |
 
 ## UX-706..UX-711: the ninety-fourth round — the pipeline, and which model runs which shape (2026-09-05)
 

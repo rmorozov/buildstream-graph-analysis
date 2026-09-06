@@ -890,6 +890,22 @@ _IMPORT_RE = re.compile(r"""^[ \t]*import\s.*?from\s+["']\./([\w.-]+)["'];?""",
                         re.M | re.S)
 
 
+#: `UX-721`: a renamed binding inside an `import`'s own clause. The
+#: export blanks the statement and concatenates the modules into one
+#: scope, where the original name is already declared and the alias is
+#: not - so an alias resolves to nothing and the section dies in
+#: `UX-335`'s containment banner.
+_ALIAS_RE = re.compile(r"\b([A-Za-z_$][\w$]*)\s+as\s+([A-Za-z_$][\w$]*)")
+
+
+def _aliased_imports(text: str) -> list[tuple[str, str]]:
+    """`(original, alias)` for every renamed binding `text` imports."""
+    found: list[tuple[str, str]] = []
+    for match in _IMPORT_RE.finditer(text):
+        found += _ALIAS_RE.findall(match.group(0))
+    return found
+
+
 def _module_order(entry: str = "app.js") -> list[str]:
     """Every module the export must inline, dependencies first.
 
@@ -928,6 +944,19 @@ def _inline_module(name: str) -> str:
     safe because what it imported is now declared above it.
     """
     text = open(os.path.join(ASSET_DIR, name), encoding="utf-8").read()
+    # `UX-721`: refused rather than translated. Emitting one
+    # `const alias = original;` would remove the constraint for one
+    # module and leave the other way this flattening breaks silently -
+    # two modules declaring one name - unguarded either way.
+    aliases = _aliased_imports(text)
+    if aliases:
+        renamed = ", ".join(f"{original} as {alias}" for original, alias in aliases)
+        raise RuntimeError(
+            f"{name} renames an import ({renamed}) and the export cannot "
+            f"carry it: the modules concatenate into one scope, the "
+            f"`import` line is dropped, and the alias resolves to a name "
+            f"nothing declares. Use the imported name unaliased and "
+            f"rename the local that clashes with it.")
     # Removed with the same expression `_module_order` walks, over the
     # whole text rather than line by line: an `import { a, b }` list
     # wrapped across two lines matched neither half of the old

@@ -38,17 +38,35 @@ _ROLE_ROW = re.compile(r"^\|\s*(R\d)\s*\|\s*(.+?)\s*\|")
 #: One fragment of the scripted walk per class, keyed by the class's
 #: leading word — the decompose table's own text, read rather than
 #: retyped, so only the *mapping* is local and the vocabulary is not.
+#:
+#: `UX-723`: every fragment names a **committed project and a build
+#: target**, and every command in one runs. The first cut named
+#: `gen-synthetic --elements 1`, which is not a flag; `--layers/--width`
+#: is, and it *plants* a run rather than building one, which the next
+#: recipe line then asks to build. `population 0` is not a build at all
+#: — a cold build of anything rebuilds something — so it is the second
+#: build's rebuilt population.
 _RECIPE = {
-    "population": {"0": "an empty run — zero built elements",
-                  "1": "one element (`bga gen-synthetic --seed N --elements 1`)",
-                  "many": "`examples/06-macro-micro-optimization` (9 elements)"},
+    "population": {"0": "`examples/08-process-storm`, built twice — the "
+                        "*rebuilt* population of the second `bst build` is "
+                        "zero, which is the only way to reach this class",
+                  "1": "`examples/08-process-storm`, `bst build "
+                       "toolchain.bst` — a leaf with no `depends`",
+                  "many": "`examples/06-macro-micro-optimization`, `bst "
+                          "build all.bst` (11 elements)"},
     "contract version": {"legacy": "a committed legacy-contract fixture, read-only",
                          "current": "a fresh capture on today's schema"},
-    "capture mode": {"cold": "a cold `bst build all.bst` (`XDG_CACHE_HOME` isolated)",
-                     "incremental": "a second `bst build all.bst` in the same store"},
-    "Plane 2": {"absent": "`bga snapshot -- bst build all.bst` — no hook, no spine",
-               "hook only": "`bga snapshot -- bst build all.bst` — the LD_PRELOAD hook, no spine",
-               "spine on": "`bga snapshot --trace-spine=on -- bst build all.bst`"},
+    "capture mode": {"cold": "a cold `bst build <target>` (`XDG_CACHE_HOME` "
+                             "isolated) — `<target>` is the population row's",
+                     "incremental": "a second `bst build <target>` in the "
+                                    "same store"},
+    "Plane 2": {"absent": "`bga wrap` then `bga extract` — **not** `bga "
+                          "snapshot`, which has no flag that omits Plane 2 "
+                          "(`UX-726`)",
+               "hook only": "`bga snapshot --trace-opens --trace-spine=off "
+                            "-- bst build <target>`",
+               "spine on": "`bga snapshot --trace-opens --trace-spine=on "
+                           "-- bst build <target>`"},
     "reader": {"DOM shim": "the shim boot (`tests/dom_shim.mjs`), no browser",
               "real Chrome": "`tests/browser.py`'s `Browser(find_chrome())`",
               "the export": "the static export read as bytes, no boot"},

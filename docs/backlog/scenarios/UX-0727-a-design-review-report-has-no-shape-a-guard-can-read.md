@@ -1,6 +1,6 @@
 # UX-727: a design review report has no shape a guard can read
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-685 (which gave the walk one), UX-686 (which needs this one) | **Serves:** the release gate, and the round reading a review it did not run | **Topic:** guards | **Shape:** judgement | **Area:** tools
+**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-685 (which gave the walk one), UX-686 (which needs this one) | **Serves:** the release gate, and the round reading a review it did not run | **Topic:** guards | **Shape:** bounded | **Area:** tools
 
 ## Motivation
 
@@ -74,3 +74,63 @@ whitespace-tolerant or it is a guard that passes on a rewrap.
 A design review report written to the new shape is recognised and its
 filed findings extracted; a round document is not. Mutation: drop the
 findings line — the guard reds naming the file.
+
+## Outcome
+
+**Gap measured** — before, the parse lived in the test, not `tools/`:
+
+```text
+$ grep -n "_FINDINGS_BLOCK\|_FILED" tests/unit/test_a_release_records_a_contract_state.py
+345:_FINDINGS_BLOCK = re.compile(r"(?ms)^findings\s+(.*?)^rows added\s")
+346:_FILED = re.compile(r"→\s*(UX-\d+)")
+$ grep -rn "_FINDINGS_BLOCK" tools/
+(nothing)
+```
+
+**Close measured** — after, one module holds both kinds:
+
+```text
+$ grep -n "_FINDINGS_BLOCK\|_FILED" tests/unit/test_a_release_records_a_contract_state.py
+(nothing)
+$ grep -rn filed_findings tools/*.py
+tools/dev_audit_reports.py:75:def filed_findings(text):
+$ python3 -m pytest tests/unit/test_a_release_records_a_contract_state.py tests/unit/test_a_scenario_is_named_by_its_seed.py -q
+....................................................
+54 passed in 5.03s
+```
+
+**Mutation table** (scratch copy per `falsify`, reverted from it, never `git checkout --`):
+
+| guard | mutation | reddened | count |
+|---|---|---|---|
+| design-review's required `filed` field | drop `_REQUIRED_FIELDS["design-review"]`'s entry | `test_dropping_the_filed_line_reds_the_guard_naming_the_file` (Acceptance Test's own mutation) | 1 failed, 3 passed |
+| whitespace-tolerance | `\s+` → `[ ]+` in the head regex | `test_a_wrapped_head_line_is_still_recognised` | 1 failed, 3 passed |
+| `filed_findings` extraction | design-review's `_EXTRACT` entry required a `→` it never carries | `test_a_conforming_report_is_recognised_and_its_filings_extracted` | 1 failed, 3 passed |
+| `is_walk_report` delegation | `dev_scenario.is_walk_report` hardcoded `False` | two `TestTheReleaseConsumesTheWalk` clauses (real reports now unseen) | 2 failed, 39 passed |
+
+**Decisions taken here, not in the task file**: design-review's identifying
+head is `("design review", "controls")`; `filed` is a required field
+checked separately (mirrors walk's `seed`/`rows added` split), so
+dropping it still recognises the kind but reds `report_problems`.
+Design-review's filings field is the curated `filed` line itself — every
+`UX-\d+` on it counts, unlike walk's block where an unmarked finding
+("Judged: not a defect... Not filed.") is deliberately excluded by the
+`→` requirement. `_WALK_DATE` moved into the module as `REPORT_DATE`: the
+`Base \`<sha>\`, <date>` sentence is not walk-specific, so it sits beside
+the recogniser rather than under either kind's table.
+
+**Meaning shift, named**: `test_a_walk_reports_date_and_filings_are_read_from_the_real_tree`
+no longer asserts a findings block exists before extracting (its own
+"no findings block" message is gone); `filed_findings` returns `set()`
+silently instead. The final tuple comparison still fails clearly if
+extraction comes up empty, so no real coverage is lost.
+
+**Design-review half stays synthetic**: no conforming report exists —
+`round-90.md` predates the skill and is declined (Out of Scope). The
+four new clauses exercise a document written to the shape, plus the
+skill's own declared head; only the walk half reads the two real
+reports under `docs/audits/`.
+
+**Surface not declared**: `docs/contributing/fixing-guide.md` gained one
+row (§6's context map) — `test_every_module_is_on_the_map` reds on any
+new `tools/` module without it.

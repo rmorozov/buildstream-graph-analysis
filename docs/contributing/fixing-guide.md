@@ -364,6 +364,8 @@ tools/dev_page_census.py     the page's structure and control classes, one
 tools/dev_scenario.py        a walk's scenario, drawn from a seed - the area
                              index, the decompose skill's input classes, a
                              role - and the scripted walk it prints (UX-685)
+tools/dev_audit_reports.py  the walk/design-review report shapes and their
+                             filed findings, one recogniser for both (UX-727)
 tools/bga_gen_project.py     a BuildStream project `bst build` accepts,
                              from a topology spec (UX-465)
 tools/dev_plane_capability.py  what Plane 2 and Plane 3 could record and

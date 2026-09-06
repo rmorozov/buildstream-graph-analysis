@@ -46,11 +46,23 @@ scratchpad. The orchestrator passes the model choice on the launch
 
 ## The report, ≤ 140 lines
 
-Per ask: *measured* (numbers, quoted text) → *judged* (the § and the
-craft question) → *proposed* (a rule sentence for the guide, the DOM
-or CSS shape in a few lines, the guard that would hold it). Then the
-broken-controls table and a numbered findings list with the nearest
-closed row each.
+A fixed head, on the `walk` skill's pattern (`UX-685`, `UX-727`) —
+enough labelled lines that a guard can tell this from a round document
+without reading it:
+
+```text
+design review   the surface reviewed and the export or served page it came from
+controls        N classes, K differ from label
+filed           the findings this review filed, `UX-NNN, UX-NNN` — or `none`
+```
+
+Then, per ask: *measured* (numbers, quoted text) → *judged* (the § and
+the craft question) → *proposed* (a rule sentence for the guide, the
+DOM or CSS shape in a few lines, the guard that would hold it). Then
+the broken-controls table and a numbered findings list with the
+nearest closed row each — `filed` above names the same set, so
+"every finding it filed is closed or declined" is derivable without a
+human reading the list.
 
 ## Ledger
 

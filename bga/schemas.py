@@ -3193,16 +3193,20 @@ _ANALYZE_HINTS = {
         "properties": {
             "epsilon_us": {
                 QUANTITY: "duration_us",
-                "description": "The grid in force."},
+                "description": "The grid in force - without it "
+                               "\"unmeasurable\" names no threshold."},
             "element_count": {
-                "description": "How many elements, not tasks."},
+                "description": "How many elements, not how many tasks: the "
+                               "reader acts on elements."},
             "elements": {
                 "description": "Which ones, so a figure resting on one is "
                                "visible."},
             "tasks": {
-                "description": "The task keys behind them."},
+                "description": "The task keys behind them, for a consumer "
+                               "joining on the trace."},
             "note": {
-                "description": "The sentence itself."},
+                "description": "The sentence itself, for a consumer that "
+                               "renders nothing else."},
         },
     },
     "violations": {QUESTION: 'What did not add up?', RAIL: 'prove'},

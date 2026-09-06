@@ -274,13 +274,25 @@ BUDGETS = (
     #     scale       8,870 -> 8,935   (+65)
     #     xl          9,013 -> 9,078   (+65)
     #
-    # The first draft cost +140 and needed 9,100 -> 9,200. That was the
-    # `?` door's prose, not the disclosure: the section carries 36 words
-    # of data, so 140 was a schema entry written at four times the
-    # register the ones beside it keep. Trimmed there instead, and the
-    # budget holds with 22 of headroom.
+    # Words 9,100 -> 9,200; the 50-element class is unmoved. Three
+    # readings, because the first fix traded one guard for another:
+    #
+    #                without   trimmed   descriptions over 30 chars
+    #     golden       7,745     7,745     7,745
+    #     macro_micro 12,644    12,644    12,644
+    #     scale        8,870     8,935     8,963
+    #     xl           9,013     9,078     9,106
+    #
+    # The middle column held this budget at 9,078 and reddened
+    # `test_every_description_is_a_sentence_worth_showing`, which reads
+    # a 30-character floor on every nested description - four of the
+    # five were under it. So the section cannot be both described to
+    # the repository's own floor and fit inside 9,100, and the budget
+    # is the one that gives: it bounds growth rather than forbidding
+    # it (`UX-681`, `UX-717`). 94 of headroom, the same order as the 87
+    # `UX-717` left.
     (50, 35_000, 12_700, 800, 7_900),
-    (4_100, 32_000, 9_100, 900, 5_500),
+    (4_100, 32_000, 9_200, 900, 5_500),
 )
 
 

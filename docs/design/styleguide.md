@@ -627,6 +627,13 @@ later: `UX-527` replaced the Perfetto picker's one-`<option>`-per-element
 `<select>` with a search box drawing eight, 4,119 DOM elements to 126,
 and `test_the_budgets_are_not_slack` is what asked for the restatement.
 
+`UX-740` moved the 4,100 class's words bound 9,100 -> 9,200: its
+`duration_resolution` section is published only on a run whose grid
+erased a span, so both committed fixtures are unmoved and the two
+generated ones pay 93 words. Described at the 30-character floor
+`test_every_description_is_a_sentence_worth_showing` reads, the
+section cannot also fit 9,100 - and the budget is the one that gives.
+
 `UX-717` moved the small class's words bound 12,600 -> 12,700 and the
 4,100 class's 9,000 -> 9,100: the eighteenth canned question is words
 and nothing else, measured 12,644 (+44) and 9,013 (+13) with every

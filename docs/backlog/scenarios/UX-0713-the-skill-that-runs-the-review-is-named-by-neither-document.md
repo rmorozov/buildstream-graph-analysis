@@ -57,3 +57,50 @@ reads first. And a clause asserts every directory under
 `CLAUDE.md` names all nine skills; adding a tenth directory under
 `.claude/skills/` and not naming it reddens a clause. Mutation: remove
 `review` from `CLAUDE.md` — the clause reddens naming it.
+
+## Outcome
+
+**The gap, measured.** `.claude/skills/` now holds ten directories
+(`self-review` shipped after this row was filed) and `CLAUDE.md`
+named neither the checklist's method nor the newer one:
+
+```console
+$ for s in $(ls -d .claude/skills/*/ | sed 's|.*skills/||;s|/||'); do
+    grep -q "\`$s\`" CLAUDE.md || echo "MISSING: $s"; done
+MISSING: review
+MISSING: self-review
+```
+
+The cadence guard's message still sent a stopped session to the
+checklist alone.
+
+**The close, measured.** Same command, zero misses:
+
+```console
+$ for s in $(ls -d .claude/skills/*/ | sed 's|.*skills/||;s|/||'); do
+    grep -q "\`$s\`" CLAUDE.md || echo "MISSING: $s"; done
+$ echo $?
+0
+```
+
+`CLAUDE.md`'s pipeline line now reads `... verify (which calls
+self-review last) run inside a track ... walk, design-review and
+review audit the page`. The cadence guard's message (built by a new
+`_cadence_message()` in `test_the_review_has_a_cadence.py`) now ends
+`"...docs/audits/architecture-review.md, and the \`review\` skill
+runs it."`
+
+**Mutations.**
+
+| mutation | reddened | count |
+|---|---|---|
+| remove `review` from `CLAUDE.md`'s pipeline line | `test_every_skill_directory_is_named_in_claude_md` | 1 failed |
+| drop `` and the `review` skill runs it`` from `_cadence_message` | `test_the_cadence_message_names_the_skill_as_well_as_the_checklist` | 1 failed, 8 passed |
+
+Both reverted from a scratch copy (not `git checkout --`); both green
+after.
+
+**Deviation.** The row's own motivation counted nine skills and one
+missing name; the tree had grown a tenth (`self-review`, `UX-701`)
+since filing, also unnamed. The membership clause and the fix cover
+both, which is what "membership, not a count" buys.

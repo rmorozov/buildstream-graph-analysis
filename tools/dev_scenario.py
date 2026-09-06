@@ -27,6 +27,8 @@ REPO = pathlib.Path(__file__).resolve().parents[1]
 if str(REPO) not in sys.path:
     sys.path.insert(0, str(REPO))
 
+from tools.dev_audit_reports import is_walk_report as _is_walk_report
+from tools.dev_audit_reports import report_problems as _report_problems
 from tools.dev_close_task import area_pages
 from tools.dev_finding_coverage import tracked_paths
 
@@ -161,33 +163,17 @@ def scripted_walk(seed):
     return "\n".join(lines)
 
 
-#: Four of the `walk` skill's fixed-shape report's own field labels,
-#: aligned as the template has them (label, whitespace, content) — the
-#: two-word compounds are what a round document's prose does not say
-#: by coincidence at a line's start, unlike bare `capture`/`findings`.
-_SHAPE = tuple(re.compile(rf"(?m)^{label}\s+\S")
-              for label in ("answer key", "per plane", "findings", "friction"))
-_SEED_LINE = re.compile(r"(?m)^seed\s")
-_ROWS_LINE = re.compile(r"(?m)^rows added\s")
-
-
 def is_walk_report(text):
-    """Whether `text` follows the `walk` skill's own report shape."""
-    return all(pattern.search(text) for pattern in _SHAPE)
+    """Whether `text` follows the `walk` skill's own report shape.
+    Delegates to `dev_audit_reports` (`UX-727`)."""
+    return _is_walk_report(text)
 
 
 def report_problems(documents):
     """`path: what is missing`, for every walk-shaped `(path, text)`
-    lacking its seed or the answer-key rows it added (`UX-685`)."""
-    problems = []
-    for path, text in documents:
-        if not is_walk_report(text):
-            continue
-        if not _SEED_LINE.search(text):
-            problems.append(f"{path}: no seed line")
-        if not _ROWS_LINE.search(text):
-            problems.append(f"{path}: no answer-key rows added line")
-    return problems
+    lacking its seed or the answer-key rows it added (`UX-685`).
+    Delegates to `dev_audit_reports` (`UX-727`)."""
+    return _report_problems(documents)
 
 
 def audits_documents():

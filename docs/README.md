@@ -210,6 +210,7 @@ appended to instead of superseded:
 | [`audits/walk-seed-1.md`](audits/walk-seed-1.md) | `UX-685`'s first seeded walk — 1 element, Plane 2 absent, real Chrome; the seed names it and reruns it |
 | [`audits/walk-seed-2.md`](audits/walk-seed-2.md) | `UX-685`'s second seeded walk — the empty-population class, hook-only Plane 2, the static export |
 | [`audits/agent-runs.md`](audits/agent-runs.md) | what each subagent run cost — tokens, tool calls, wall clock — and its own friction line, one row per run, so a model and a report shape are chosen from numbers (`UX-666`) |
+| [`audits/mutation.md`](audits/mutation.md) | the weekly mutation run's survivors — a mutant the touched modules' own guards did not kill, one dated section per run. A survivor is a filing, not a failure (`UX-703`) |
 
 The rounds themselves:
 

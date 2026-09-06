@@ -74,3 +74,35 @@ A track's brief, generated or written, names the invocation that reads
 the worktree; or a guard refuses a `bga` import whose `__file__` is
 outside the repository root the caller resolved. Mutation: drop the
 line, or the check — red, naming the resolved path.
+
+## Outcome
+
+**Gap measured:** before the fix, `bga.cli` printed nothing on any of
+the three cwd/import combinations - including the shadowed one, where
+`sys.path.insert(0, REPO)` from a fabricated second checkout still ran
+silently. `tests/unit/test_a_shadowed_checkout_warns_at_startup.py`
+against `git show HEAD:bga/cli.py` confirms: `test_warns_when_cwd_is_a_different_checkout`
+fails (`assert 'UX-728' in ''`) on the pre-fix module.
+
+**Close measured:** `_checkout_root` walks up from cwd for
+`bga/__init__.py` beside a `pyproject.toml` naming `bga` - no
+subprocess. Startup, `python -m bga.cli --version`, n=30:
+before `mean=0.2179 median=0.2120`; after `mean=0.2270 median=0.2094`
+(re-check `mean=0.2233 median=0.2168`) - inside run-to-run noise, no
+`git` spawn added. The three guard cases all pass:
+`test_warns_when_cwd_is_a_different_checkout`,
+`test_silent_when_cwd_and_import_agree`,
+`test_silent_when_cwd_is_not_a_checkout_at_all` - 3 passed in 0.93s.
+`make test-touching`: 144 files, 2887 passed, 72 skipped. `make lint`
+clean.
+
+**Mutation table:**
+
+| mutation | reddened | count |
+|---|---|---|
+| drop the call to `_maybe_warn_wrong_checkout()` in `_run` | the mismatch case (`UX-728` absent from stderr) | 1 failed, 2 passed |
+| `import_root == cwd_root` → `!=` | the mismatch case (now silent) and the agreement case (now warns) | 2 failed, 1 passed |
+| drop the `cwd_root is None` guard | the unrelated-cwd case (warns with `at None`) | 1 failed, 2 passed |
+
+Reverted each from a scratchpad copy, not `git checkout`; all three
+green after revert.

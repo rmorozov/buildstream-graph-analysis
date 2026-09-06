@@ -45,8 +45,12 @@ Widen `test_the_table_status_matches_the_task_files`' population to
 this table, or state why the architecture's markers are a dated
 record rather than a live claim and label them so.
 
-The first is the repository's own answer everywhere else and costs
-one parse. If it is taken, the marker cell needs reading as
+**The decision, taken here: widen the guard.** 74 of the 75 rows agree
+with their task files, which is a table being maintained as a live
+claim and failing at it, not a dated record nobody was updating — date
+it and you would be dating 74 sentences that are currently true, and
+the drift would continue silently. The first route is also the
+repository's own answer everywhere else, and costs one parse. If it is taken, the marker cell needs reading as
 `marker + words` (`🟡 Partial`, not `🟡`) — the backlog's cells carry
 the marker alone and a clause written for those returns nothing here,
 which is how this table stayed unread. The linked-worktree exemption

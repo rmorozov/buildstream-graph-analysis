@@ -25,7 +25,7 @@ import { chapters } from "./chapters.js";
 import { renderProvenance } from "./decision.js";
 import { GRADE_EXHIBIT, decomposition, interval, strip } from "./drawings.js";
 import { resolvePath } from "./element.js";
-import { COLUMNS, DECOMPOSITION, DISTRIBUTION, INLINE, INTERVAL, QUANTITY, SERIES, SEVERITY, bytes, childNode, cssId, describedTerm, el, guessQuantity, heading, hintsOf, quantity, quantityFor, sectionHead, title } from "./format.js";
+import { COLUMNS, DECOMPOSITION, DISTRIBUTION, INLINE, INTERVAL, QUANTITY, RUNBOOK, SERIES, SEVERITY, bytes, childNode, cssId, describedTerm, el, guessQuantity, heading, hintsOf, quantity, quantityFor, sectionHead, title } from "./format.js";
 import { matches } from "./nav.js";
 import { handOff } from "./perfetto.js";
 import { served } from "./primitives.js";
@@ -415,6 +415,19 @@ export function renderSection(key, value, hint = {}, node = undefined,
       nestLimit: CELL_NEST_LIMIT,
       inlineFields: OBJECT_INLINE_FIELDS, inlineItems: ARRAY_INLINE_ITEMS,
     });
+    // `UX-669` (§1e): a runbook renders **once**, in the decision
+    // panel, where a reader who has just been told what is wrong is
+    // standing. The section is a link to it rather than a second copy:
+    // a table of three commands wrapped over three lines each was
+    // §5a's repeated-text budget spent on a duplicate.
+    if (hintsOf(node)[RUNBOOK] ?? hint[RUNBOOK]) {
+      return el("section", { "data-section": key,
+                             "data-rail": heading(key, hint).rail },
+                sectionHead(key, hint),
+                el("p", {}, el("a", { href: "#decision", class: "runbook-link" },
+                               `${value.length} step${value.length === 1 ? "" : "s"}, `
+                               + "in the decision panel")));
+    }
     if (control === CONTROLS.TABLE
         && value.every((item) => item && typeof item === "object"
                                  && !Array.isArray(item))) {

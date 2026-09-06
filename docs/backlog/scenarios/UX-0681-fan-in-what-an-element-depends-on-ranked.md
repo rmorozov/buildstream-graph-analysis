@@ -108,7 +108,9 @@ suppressing. Part 25's blast block is lifted whole into
 `_blast_signals`: all seven keys still present on `macro_micro`, and
 the baseline back at 299 with nothing forced.
 
-The export bounds move to 443,000 and 502,000 (+5,118 / +13,079). The
+The export bounds move to 443,000 and 502,000 (+5,118 / +13,079) -
+`UX-669` moved the first to 449,000, and found the 438,826 below
+stale by 3,890 at the moment it was written. The
 7,961 B between them is `macro_micro`'s own fan-in data and the two
 findings, which `golden`'s four elements cannot produce.
 The golden depth budget moves 0.49 -> 0.50: an element-keyed map of

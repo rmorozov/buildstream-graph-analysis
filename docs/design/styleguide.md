@@ -38,6 +38,7 @@ side is the only control that may render it.
 | boolean / nullable presence | a sentence | "not captured" ≠ "zero" — absence is stated, never drawn |
 | scalar + `description` | value + popover | the schema's sentence, on demand |
 | array of objects | table (§3) | declared columns; distribution strip when §2 applies |
+| array of objects + `bga:runbook` | **a runbook** — `ol` of *why, command, citation* | `UX-669` (§1e); rendered once, in the decision panel, and the section is a link to it |
 | array of arrays | table of positional columns | `UX-290`; declared `bga:columns` name them, otherwise `#1`/`#2` |
 | short scalar array (≤ inline cap) | inline `code` list | existing rule, kept |
 | scalar array + `bga:command` | **one monospace command line + copy** | `UX-429`; the same measured shape as the row above, and only the schema knows which it is — a joined-by-comma argv does not run |
@@ -79,7 +80,7 @@ per-section "view as JSON" toggle's `data-raw-json`;
 
 ## 1a. The hint vocabulary
 
-Nineteen hints, and this table is the one place they are all written
+Twenty hints, and this table is the one place they are all written
 down (`UX-306`). Each names what a schema *declares* about a value;
 §1 above is what the page does with it — except the last row, which
 declares something about the *contract* and is read by a consumer
@@ -109,6 +110,7 @@ sets equal in both directions.
 | `bga:explained_by` | the payload key holding this map's **per-key advice for this run** — computed, so not a `description` | the advice on the row of the key it explains, and no second section over the same names, `UX-390` |
 | `bga:readers` | which of `findings.READERS` a section serves, by their `R1`-`R5` ids — silent means no role, which is a map that is incomplete rather than a section that serves nobody (`UX-643`) | the reader picker, which promotes and expands a served section and folds the rest |
 | `bga:command` | that a scalar array is one command line rather than a list of values — the shell it is spelled for | `classify`, which returns §1's command control for it (`UX-429`) |
+| `bga:runbook` | that an ordered array of `{reason, command, citation}` is a runbook and not a population — three steps a reader runs, not rows to compare (`UX-669`) | `renderSection`, which draws the link to the decision panel and no table |
 | `bga:always_written` | that a key is **not** `required` and yet written on every document — the third state `UX-629` needed, because entering `required` under a live id breaks documents already written | a consumer asking *may be here* or *is always here*; the emitter guarantee is held by `test_a_required_set_grew_under_an_unchanged_id.py`, not by the page |
 
 Two properties this table is here to keep. **A hint is a declaration,
@@ -1175,6 +1177,61 @@ together with the schema change, because
 `bga/schemas.py` equal in both directions: a documented hint nothing
 emits reddens exactly as an undocumented one does.
 
+## 1e. A runbook is a shape (round 97)
+
+The next steps rendered **twice** in chapter 1. Measured on
+`macro_micro`, exported and booted at 1440x900:
+
+```text
+(a) decision panel     ol.next-steps > li.next-step[data-step]   3 steps
+(b) section next_steps <table data-table="next_steps">  Why | Run | From
+    Run cell     bga blast core.bst /tmp/.../run   wrapped over 3 lines
+    From cell    critical_path_detail               a raw key (§4b)
+```
+
+§1 sends "array of objects" to a table and that is right for a
+population — rows a reader compares, sorts, filters. This array is not
+a population. It is three commands in order, each with the reason it
+was chosen and the section it was chosen from, and a table renders the
+one thing a reader came for — the command — wrapped across three lines
+in a 310 px cell.
+
+**An array of objects with a `bga:command` member and a `reason` is a
+runbook, never a table.**
+
+```html
+<ol class="next-steps"><li class="next-step" data-step>
+  <p class="why">…</p>
+  {command line, §1d}
+  <a class="from" href="#critical_path_detail">from: {section question}</a>
+</li></ol>
+```
+
+Three properties, each of which the table broke:
+
+- **Rendered once.** The panel keeps it — a reader who has just been
+  told what is wrong is standing there — and the section becomes one
+  link to it. Two copies of the same three commands was §5a's
+  repeated-text budget spent on a duplicate.
+- **The citation is a question, not a key.** `follows_from` names a
+  published section, so it links to it and is labelled with what that
+  section asks. §4b's rule; the `From` column printed
+  `critical_path_detail`. A step that follows a *finding* has no
+  anchor of its own, so it links the findings list and carries the
+  finding's own claim.
+- **Declared, not sniffed.** `bga:runbook` is on the `next_steps`
+  declaration (§1a), the way every other shape here is. `constraints`
+  and `findings[].evidence` are the payload's other `{reason, …}`
+  arrays and neither is ordered or runnable, so a sniffing rule would
+  have caught both.
+
+`UX-669` is the item and
+`tests/unit/test_a_runbook_is_not_a_table.py` is the guard. Ten
+mutations, each reddening a named clause; the one that found a vacuous
+clause is the tenth — *every array of objects becomes a runbook* — which
+stayed green against a control counting `critical_path_detail`, a
+section this branch never draws.
+
 ## 3g. A budget counts what its consumer spends (round 69)
 
 `tools/bga_view.py` carried **one** bound on the Perfetto handoff when
@@ -1337,6 +1394,7 @@ headings, so a renumber there moves it.
 | §1b | `test_the_merge_carries_every_field.py` | |
 | §1c | `test_the_first_finding_is_an_action.py` | |
 | §1d | | `UX-429`'s `test_a_command_renders_as_a_command.py` holds it and cites §1 and §1a, not §1d |
+| §1e | `test_a_new_control_class_lands_declared.py`, `test_a_runbook_is_not_a_table.py` | |
 | §2 | `test_the_shape_before_the_rows.py`, `test_the_shape_channel_is_built.py` | named |
 | §2a | `test_a_drawing_is_graded.py`, `test_a_new_control_class_lands_declared.py`, `test_emphasis_is_a_budget.py`, `test_the_page_conforms_to_its_sections.py`, `test_the_report_you_can_attach.py`, `test_the_views_that_draw.py`, `test_the_vocabulary_has_the_shape.py` | |
 | §2b | `test_a_drawing_is_graded.py`, `test_apparatus_in_its_place.py`, `test_a_new_control_class_lands_declared.py`, `test_the_page_conforms_to_its_sections.py`, `test_the_report_is_read_not_decoded.py`, `test_the_report_you_can_attach.py` | |
@@ -1353,7 +1411,7 @@ headings, so a renumber there moves it.
 | §3g | `test_the_ceilings_reach_a_reader.py` | |
 | §4 | `test_emphasis_is_a_budget.py`, `test_the_palette_is_validated.py`, `test_a_drawing_is_graded.py`, `test_apparatus_in_its_place.py`, `test_the_browser_is_the_library.py` | named |
 | §4a | | named; `UX-346`'s `test_a_sentence_lives_on_its_door.py` holds it and cites no section |
-| §4b | | `UX-351`'s `test_the_label_is_for_the_reader.py` holds it and cites no section |
+| §4b | `test_a_runbook_is_not_a_table.py` | `UX-351`'s `test_the_label_is_for_the_reader.py` holds it and cites no section; `UX-669`'s clause holds the half that says a citation is a question, never a key |
 | §4c | `test_a_new_control_class_lands_declared.py`, `test_a_command_renders_as_a_command.py`, `test_a_control_acts_on_what_it_names.py` | |
 | §4d | `test_a_new_control_class_lands_declared.py` | `UX-665`'s registry names the § each class belongs to, which is how this one first acquired a guard; `UX-368` and `UX-369` are still the filed items |
 | §4e | `test_the_ceilings_reach_a_reader.py`, `test_the_served_handoff_counts_its_edges.py` | |

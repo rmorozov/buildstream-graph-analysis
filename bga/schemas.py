@@ -258,6 +258,15 @@ DIRECTION = "bga:direction"        # what the sign of a delta means
 SERIES = "bga:series"
 DISTRIBUTION = "bga:distribution"
 
+# `UX-669` (styleguide §1e): an ordered list of *reason, command,
+# citation* is a runbook, not a table. §1 sends "array of objects" to a
+# table and that is right for a population; this array is three steps a
+# reader runs in order, and a table renders the command wrapped over
+# three lines in a 310 px cell with its citation beside it as a raw
+# key. Declared rather than sniffed, for the reason every other hint
+# here is: the page chooses nothing.
+RUNBOOK = "bga:runbook"
+
 # `UX-361` (styleguide §2d): the two shapes the vocabulary did not have.
 #
 # A strip shows a distribution and a sparkline shows an ordered series.
@@ -3737,6 +3746,7 @@ _ANALYZE_HINTS = {
     "next_steps": {
         QUESTION: 'What should I run next?',
         RAIL: "decide",
+        RUNBOOK: True,
         "description": "The next commands, chosen by what this run "
                        "measured. Decided in the pipeline rather than "
                        "by a consumer, so the terminal, CI and the "

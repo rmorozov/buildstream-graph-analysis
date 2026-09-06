@@ -808,7 +808,21 @@ COMMITTED_EXPORTS = [
     # the 3,761 B between the two figures is that run's own fan-in data
     # - eleven rows plus the distribution - which four elements cannot
     # produce. The measurement is the argument for the split.
-    ("golden", GOLDEN, 443_000),                       #  438,826 B
+    # `UX-669` moved **both** by exactly 1,504 B - 1,483 of source and
+    # 21 of contract, no data at all:
+    #
+    #     source       312,267 -> 313,750   (+1,483: `followsFrom`, the
+    #                                        runbook branch, 4 CSS rules)
+    #     contract      98,079 ->  98,100   (+21: `"bga:runbook": true`)
+    #     data (both)   unchanged           (+0)
+    #
+    # The same 1,504 on both runs is the measurement saying the change
+    # is page and not content: the table it removes was never in the
+    # file, only in what the file draws.
+    # The old comment on this row said 438,826; `UX-681` recorded that
+    # before its last edit and nothing re-read it - the bound held, the
+    # note did not. Measured at HEAD before this change: 442,716.
+    ("golden", GOLDEN, 449_000),                       #  444,220 B
     # `UX-297` moved this one by 385 B before that: the two-plane run
     # publishes `plane2_coverage.source`, which says which shape of
     # Plane 2 report served its numbers and what that costs to open. A
@@ -923,7 +937,9 @@ COMMITTED_EXPORTS = [
     # move again at 497,161; the figure below is the finished item's,
     # measured once at the end rather than three times on the way.
     # 502,000 leaves 4,839 B, the same order of headroom above.
-    ("macro_micro", MACRO_MICRO, 502_000),             #  497,161 B
+    # `UX-669`: +1,504 B here too, to 498,665, and this bound holds -
+    # 3,335 B of headroom, which is why only the row above moved.
+    ("macro_micro", MACRO_MICRO, 502_000),             #  498,665 B
 ]
 
 

@@ -2,8 +2,8 @@
  * UX-337: the vocabulary every renderer speaks, in one module below them.
  *
  * `app.js`'s own first seam was called `format`, and this is that
- * chapter lifted out whole: the 17 `bga:` hint keys this module
- * declares (of the 19 `bga/schemas.py` emits), the readers that pull
+ * chapter lifted out whole: the 18 `bga:` hint keys this module
+ * declares (of the 20 `bga/schemas.py` emits), the readers that pull
  * them off a schema node (`hintsOf`, `childNode`, `quantityFor`), the
  * formatters that turn a number into a printed value under them, and
  * `el` - the one node constructor everything above builds with.
@@ -35,6 +35,8 @@ export const DIRECTION = "bga:direction";
 export const SERIES = "bga:series";
 
 export const DISTRIBUTION = "bga:distribution";
+//: `UX-669` (§1e): this array is a runbook, not a table.
+export const RUNBOOK = "bga:runbook";
 
 // `UX-361` (§2d): the two shapes the vocabulary did not have. Both name
 // **published paths**, resolved against the document, so the page lays
@@ -484,6 +486,7 @@ export function hintsOf(node) {
   if (!node || typeof node !== "object") return hint;
   for (const name of [QUANTITY, SEVERITY, COLUMNS, DIRECTION, QUESTION,
                       RAIL, READERS_SERVED, PRESETS, SERIES, DISTRIBUTION,
+                      RUNBOOK,
                       INLINE, DECOMPOSITION, INTERVAL, KEYED_BY,
                       EXPLAINED_BY, COMMAND]) {
     if (name in node) hint[name] = node[name];

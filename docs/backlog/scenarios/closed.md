@@ -692,6 +692,7 @@ is open, on what topic, for whom — is the other file's.
 | UX-681 | [fan-in — what an element depends on, ranked](UX-0681-fan-in-what-an-element-depends-on-ranked.md) | High | R2 minimising incoming dependencies, R3 spotting the suspicious fan-in | 🟢 Done — fan-in published, the read share on the join row where the placement rule puts it | [UX-681](UX-0681-fan-in-what-an-element-depends-on-ranked.md) |
 | UX-718 | [the census omits the guard its own docstring names](UX-0718-the-census-omits-the-guard-its-own-docstring-names.md) | High | anyone whose inner loop is `make test-touching` | 🟢 Done — the census names both misses; a derivation cannot see either | [UX-718](UX-0718-the-census-omits-the-guard-its-own-docstring-names.md) |
 | UX-665 | [the page's census is a tool, so a walk reads it instead of driving it](UX-0665-the-page-s-census-is-a-tool-so-a-walk-reads-it-instead-of-driving-it.md) | High | the orchestrating session paying for a walk | 🟢 Done — the census is a tool a walk reads; the registry holds the classes | [UX-665](UX-0665-the-page-s-census-is-a-tool-so-a-walk-reads-it-instead-of-driving-it.md) |
+| UX-669 | [a runbook is a shape — the next steps rendered once, as steps](UX-0669-a-runbook-is-a-shape-the-next-steps-rendered-once-as-steps.md) | High | R1, at the moment of deciding what to run | 🟢 Done — the runbook shape: bga:runbook, §1e, one rendering | [UX-669](UX-0669-a-runbook-is-a-shape-the-next-steps-rendered-once-as-steps.md) |
 
 ## UX-207..UX-212: the twenty-third audit round — the report learns to answer first (2026-08-22)
 

@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-736 scenarios: **28 open**, 708 closed.
+736 scenarios: **27 open**, 709 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -27,7 +27,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | cli | 0 | 22 |
 | store | 0 | 16 |
 | docs | 4 | 118 |
-| guards | 11 | 169 |
+| guards | 10 | 169 |
 
 ## Open scenarios
 
@@ -63,7 +63,6 @@ task file, which is the only place it ever lived twice.
 | UX-705 | [the burn-down runs on the reporters' model — a batch a commit, never a suppression](UX-0705-the-burn-down-runs-on-the-reporters-model-a-batch-a-commit-never-a-supp.md) | guards | High | R8, who wants the baseline to reach zero without the session's model reading 1,709 findings | 🔴 |
 | UX-708 | [the first batch under the pipeline, priced per shape](UX-0708-the-first-batch-under-the-pipeline-priced-per-shape.md) | docs | High | the advisory in `CLAUDE.md`, which says `sonnet` for tracks on an argument | 🔴 |
 | UX-712 | [the size ledger, for what has no finding identity](UX-0712-the-size-ledger-for-what-has-no-finding-identity.md) | guards | Medium | the refactor stream, which reads the top row of this ledger | 🔴 |
-| UX-716 | [a guard whose cost is its population has no refresh route](UX-0716-a-guard-whose-cost-is-its-population-has-no-refresh-route.md) | guards | Medium | the branch that goes red for test files another branch added | 🔴 |
 
 ## UX-706..UX-711: the ninety-fourth round — the pipeline, and which model runs which shape (2026-09-05)
 

@@ -1,6 +1,6 @@
 # UX-737: the census detector's other half — thirteen guards a subprocess hides
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-730 (which built the first half and measured this one), UX-716, UX-336 | **Serves:** the round whose CI reds on a guard its pre-commit hook could not select | **Topic:** guards | **Shape:** bounded | **Area:** tools
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-730 (which built the first half and measured this one), UX-716, UX-336 | **Serves:** the round whose CI reds on a guard its pre-commit hook could not select | **Topic:** guards | **Shape:** bounded | **Area:** tools
 
 ## Motivation
 

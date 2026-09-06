@@ -15,19 +15,19 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-735 scenarios: **31 open**, 704 closed.
+735 scenarios: **28 open**, 707 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
-| capture | 2 | 96 |
+| capture | 1 | 96 |
 | analysis | 6 | 105 |
 | contracts | 0 | 48 |
 | viewer | 6 | 161 |
 | cli | 0 | 22 |
 | store | 0 | 16 |
 | docs | 4 | 118 |
-| guards | 13 | 169 |
+| guards | 11 | 169 |
 
 ## Open scenarios
 
@@ -64,9 +64,6 @@ task file, which is the only place it ever lived twice.
 | UX-712 | [the size ledger, for what has no finding identity](UX-0712-the-size-ledger-for-what-has-no-finding-identity.md) | guards | Medium | the refactor stream, which reads the top row of this ledger | 🔴 |
 | UX-716 | [a guard whose cost is its population has no refresh route](UX-0716-a-guard-whose-cost-is-its-population-has-no-refresh-route.md) | guards | Medium | the branch that goes red for test files another branch added | 🔴 |
 | UX-717 | [the host series is on the trace and in no question](UX-0717-the-host-series-is-on-the-trace-and-in-no-question.md) | viewer | Medium | a reader with Perfetto open, asking whether the cores were busy | 🔴 |
-| UX-728 | [a track's repro runs the session's checkout, not its worktree](UX-0728-a-tracks-repro-runs-the-sessions-checkout-not-its-worktree.md) | guards | Medium | every `implementer` track that reproduces a defect through the CLI | 🔴 |
-| UX-737 | [the census detector's other half — thirteen guards a subprocess hides](UX-0737-the-census-detectors-other-half-thirteen-guards-a-subprocess-hides.md) | guards | Medium | the round whose CI reds on a guard its pre-commit hook could not select | 🔴 |
-| UX-738 | [a build that could not write reports as a clean run and exit 255](UX-0738-a-build-that-could-not-write-reports-as-a-clean-run-and-exit-255.md) | capture | High | anyone whose disk fills mid-capture, and the round that then reads the report | 🔴 |
 
 ## UX-706..UX-711: the ninety-fourth round — the pipeline, and which model runs which shape (2026-09-05)
 

@@ -1,6 +1,6 @@
 # UX-738: a build that could not write reports as a clean run and exit 255
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-156 (a failed build must not verdict as if it finished), UX-324, UX-148 | **Serves:** anyone whose disk fills mid-capture, and the round that then reads the report | **Topic:** capture | **Shape:** judgement | **Area:** tools
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-156 (a failed build must not verdict as if it finished), UX-324, UX-148 | **Serves:** anyone whose disk fills mid-capture, and the round that then reads the report | **Topic:** capture | **Shape:** judgement | **Area:** tools
 
 ## Motivation
 

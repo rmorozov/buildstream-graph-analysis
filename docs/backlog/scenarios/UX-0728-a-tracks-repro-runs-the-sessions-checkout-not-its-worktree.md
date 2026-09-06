@@ -1,6 +1,6 @@
 # UX-728: a track's repro runs the session's checkout, not its worktree
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-510 (a track's brief names the base it will actually get) | **Serves:** every `implementer` track that reproduces a defect through the CLI | **Topic:** guards | **Shape:** judgement | **Area:** tools
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-510 (a track's brief names the base it will actually get) | **Serves:** every `implementer` track that reproduces a defect through the CLI | **Topic:** guards | **Shape:** judgement | **Area:** tools
 
 ## Motivation
 

@@ -168,6 +168,40 @@ SHIFT_MIN_FILES = 20
 #: The tier each one is measured against - see `boundaries`.
 ABOVE = {"small": "medium", "medium": "large"}
 
+#: `UX-716`: a guard whose recorded seconds are a function of a
+#: population the repository grows every round - the tests tree, the
+#: backlog - rather than of anything a diff touches. Measured: 54 of
+#: 488 recorded entries walk, delegate to, or shell out for a
+#: repository-rooted population (`test_the_selector_carries_the_census`'s
+#: own `derived` evidence, read **without** its `reachable` filter -
+#: that filter answers "is this guard selectable", a different
+#: question from "does this guard's cost scale"). Two of those 54 are
+#: the ones a real run moved: `tests/ci_reference.json`'s note has the
+#: perturbation. Not typed as "the two"; declared, so a third found the
+#: way `UX-587` and this row's own incident were - by CI, not by
+#: review - adds one line here rather than a second hand-refresh.
+POPULATION_CLASS = {
+    "tests/unit/test_a_guard_reads_only_what_a_clone_has.py": "tests_tree",
+    "tests/unit/test_docs_links_and_commands.py": "backlog",
+}
+
+
+def population_size(population):
+    """The tree's current size for one of `POPULATION_CLASS`'s names.
+
+    `dev_touching.test_files()` and `dev_close_task._backlog_counts()`
+    are the repository's own counts of these two directories - not a
+    second glob built here, which is how `UX-587`'s guard and this
+    one's would end up counting two different things for "the same"
+    population.
+    """
+    from tools import dev_close_task, dev_touching
+    if population == "tests_tree":
+        return len(dev_touching.test_files())
+    if population == "backlog":
+        return dev_close_task._backlog_counts()["scenarios"]
+    raise ValueError(population)
+
 
 def file_of(classname):
     """The test file a junit `classname` came from, or None.
@@ -411,6 +445,13 @@ def record(times, source="unknown", reference=None):
     saw = spread(times, reference or {})
     if saw:
         document["spread"] = saw
+    # `UX-716`: this run's own tree is what `times` was measured on, so
+    # its count is the population these two entries are recorded
+    # against - not the CI checkout's, which a local `--record` never
+    # sees anyway (`UX-418`).
+    document["population"] = {name: population_size(population)
+                              for name, population in POPULATION_CLASS.items()
+                              if name in times}
     return document
 
 
@@ -567,12 +608,23 @@ def against(times, reference):
     # the factor alone, since `files` is a median of the same list, so
     # it cannot invent a report the old rule would not have made.
     band = reference.get("samples") or {}
+    recorded_population = reference.get("population") or {}
     rows = []
     for name, ratio in ratios.items():
         # Both, not either: see CI_DRIFT_SECONDS. `expected` is what the
         # reference says this file costs *on this run's clock*, so the
         # seconds added are the ones the run really paid.
         expected = known[name] * shift
+        # `UX-716`: for a guard in `POPULATION_CLASS`, part of `expected`
+        # is the tree growing, not this run being slower - so it is
+        # scaled by how far the population has actually moved before
+        # the two gates below judge what is left. A reference recorded
+        # before this field existed carries no `recorded_population`
+        # entry, and reads exactly as it did before.
+        population = POPULATION_CLASS.get(name)
+        was = recorded_population.get(name) if population else None
+        if population and was:
+            expected *= population_size(population) / was
         seen = band.get(name) or []
         if (ratio / shift > CI_DRIFT_FACTOR
                 and times[name] - expected >= CI_DRIFT_SECONDS

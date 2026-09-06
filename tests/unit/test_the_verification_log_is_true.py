@@ -33,6 +33,7 @@ import datetime
 import pathlib
 import re
 import subprocess
+import sys
 
 import pytest
 
@@ -286,17 +287,52 @@ def _commits_touching(*revs):
     return done.stdout.split()
 
 
+def _doc_blob(rev):
+    """The git blob `DOC` has at `rev`, or `None` off this clone."""
+    done = subprocess.run(["git", "rev-parse", f"{rev}:{DOC_REL}"],
+                          capture_output=True, text=True, cwd=REPO, timeout=60)
+    return done.stdout.strip() if done.returncode == 0 else None
+
+
+def merge_has_no_claim(blob, parent_blobs):
+    """`UX-732`: a merge whose `DOC` blob already equals one of its
+    parents' carried that side forward untouched - it decided nothing
+    about the document, so it is not a landing. Tested on the blob, not
+    the parent count: a merge resolving a conflict *inside* the log
+    produces a blob unlike either parent and still counts. Pure, so
+    `_merge_has_no_claim` is the git half.
+    """
+    return len(parent_blobs) > 1 and blob in parent_blobs
+
+
+def _merge_has_no_claim(sha, parents):
+    """`merge_has_no_claim` over this clone's blobs."""
+    return merge_has_no_claim(_doc_blob(sha), [_doc_blob(p) for p in parents])
+
+
 def _landed_after(anchor):
     """The substantive commits touching `DOC` that `anchor` does not carry.
 
     `UX-652`: reachability, not a clock. `<anchor>..HEAD` is what the
     entry does not describe, whatever day any of it was written on;
     `only_the_count_moved` is the same exclusion as before.
+
+    `UX-732`: `--full-history`, not `_commits_touching`'s default log -
+    git's own simplification already prunes a merge TREESAME to one
+    parent, which is exactly `merge_has_no_claim`'s condition, so the
+    default query never hands that class of commit to the check below.
+    Widening the range is what makes the exclusion reachable at all.
     """
-    found = _commits_touching(f"{anchor}..HEAD")
-    if found is None:
+    done = subprocess.run(
+        ["git", "log", "--full-history", "--format=%H%x09%P",
+         f"{anchor}..HEAD", "--", str(DOC)],
+        capture_output=True, text=True, cwd=REPO, timeout=60)
+    if done.returncode != 0:
         return None
-    return [sha for sha in found if not _only_a_derived_figure_moved(sha)]
+    rows = [line.split("\t", 1) for line in done.stdout.splitlines() if line]
+    return [sha for sha, parents in rows
+            if not _only_a_derived_figure_moved(sha)
+            and not _merge_has_no_claim(sha, parents.split())]
 
 
 def _describe(shas):
@@ -522,6 +558,110 @@ class TestTheGuardWouldHaveCaughtIt:
         if not newest:
             pytest.skip(NO_HISTORY)
         assert not stale(_landed_after(newest[0]))
+
+
+def _git(cwd, *args):
+    return subprocess.run(["git", *args], cwd=cwd, capture_output=True,
+                          text=True, timeout=60)
+
+
+def _write(repo, body):
+    (repo / DOC_REL).write_text(
+        "# Architecture\n\n## Verification Log\n\n"
+        "append-only below its newest entry\n\n" + body, encoding="utf-8")
+
+
+@pytest.fixture
+def merge_repo(tmp_path, monkeypatch):
+    """A throwaway repository, so a merge can be shaped without touching
+    this one's real history (`UX-732`). This module's `REPO`/`DOC`
+    globals are what every function above reads, so the fixture points
+    them here rather than passing a root through each call.
+    """
+    (tmp_path / "docs" / "design").mkdir(parents=True)
+    _write(tmp_path, "Updated 2026-01-01 (after `UX-1`), the base.\n")
+    _git(tmp_path, "init", "-q")
+    _git(tmp_path, "config", "user.email", "t@t.example")
+    _git(tmp_path, "config", "user.name", "t")
+    _git(tmp_path, "add", DOC_REL)
+    _git(tmp_path, "commit", "-q", "-m", "base")
+    monkeypatch.setattr(sys.modules[__name__], "REPO", tmp_path)
+    monkeypatch.setattr(sys.modules[__name__], "DOC", tmp_path / DOC_REL)
+    return tmp_path
+
+
+#: A count-conflict fixture's shared line - real shape, so
+#: `_only_a_derived_figure_moved` reads it the way it reads the actual
+#: document (`UX-620`'s `_COUNT` pattern).
+_COUNT_LINE = "{n} `docs/backlog/scenarios/` files.\n"
+
+
+class TestAMergeCanCarryAnEntryWithoutLanding:
+    """`UX-732`. `closing_commit`'s anchor sits on the track branch, so
+    the `--no-ff` merge that brings it in is always in `anchor..HEAD` -
+    the fix is what `_landed_after` does with that merge, not where the
+    anchor sits.
+
+    Both branches touch the *same* derived-count line so the merge
+    conflicts and needs resolving (git auto-merges track's separate
+    entry insertion regardless of that line's outcome). Which value
+    the resolution keeps is the only thing that differs between the
+    two tests below - matching the decision's "the test is on the
+    blob, not the parent count": both merges have two parents.
+    """
+
+    def _conflicting_merge(self, repo):
+        (repo / DOC_REL).write_text(
+            "# Architecture\n\n" + _COUNT_LINE.format(n=5) +
+            "\n## Verification Log\n\nappend-only below its newest entry\n")
+        _git(repo, "add", DOC_REL)
+        _git(repo, "commit", "-q", "-m", "base count")
+        _git(repo, "checkout", "-q", "-b", "track")
+        (repo / DOC_REL).write_text(
+            "# Architecture\n\n" + _COUNT_LINE.format(n=6) +
+            "\n## Verification Log\n\nappend-only below its newest entry\n\n"
+            "Updated 2026-01-02 (after `UX-900`), track's own.\n")
+        _git(repo, "add", DOC_REL)
+        _git(repo, "commit", "-q", "-m", "UX-900: entry")
+        anchor = _git(repo, "rev-parse", "HEAD").stdout.strip()
+        _git(repo, "checkout", "-q", "master")
+        (repo / DOC_REL).write_text(
+            "# Architecture\n\n" + _COUNT_LINE.format(n=7) +
+            "\n## Verification Log\n\nappend-only below its newest entry\n")
+        _git(repo, "add", DOC_REL)
+        _git(repo, "commit", "-q", "-m", "bump count")
+        conflicted = _git(repo, "merge", "--no-ff", "-m", "Merge track",
+                          "track")
+        assert "CONFLICT" in conflicted.stdout, conflicted.stdout
+        return anchor
+
+    def test_a_merge_resolved_to_ones_parent_is_not_a_landing(
+            self, merge_repo):
+        """Resolved by keeping track's own count - the merge's `DOC`
+        blob ends up identical to its track parent's, deciding nothing
+        the entry's own commit had not already decided."""
+        anchor = self._conflicting_merge(merge_repo)
+        (merge_repo / DOC_REL).write_text(
+            "# Architecture\n\n" + _COUNT_LINE.format(n=6) +
+            "\n## Verification Log\n\nappend-only below its newest entry\n\n"
+            "Updated 2026-01-02 (after `UX-900`), track's own.\n")
+        _git(merge_repo, "add", DOC_REL)
+        _git(merge_repo, "commit", "-q", "-m", "Merge track")
+        assert not stale(_landed_after(anchor))
+
+    def test_a_merge_resolved_to_neither_parent_is_a_landing(
+            self, merge_repo):
+        """Resolved by keeping master's newer count alongside track's
+        entry - the merge's blob matches neither parent, so it counts,
+        the half that keeps this from reading as "skip merges"."""
+        anchor = self._conflicting_merge(merge_repo)
+        (merge_repo / DOC_REL).write_text(
+            "# Architecture\n\n" + _COUNT_LINE.format(n=7) +
+            "\n## Verification Log\n\nappend-only below its newest entry\n\n"
+            "Updated 2026-01-02 (after `UX-900`), track's own.\n")
+        _git(merge_repo, "add", DOC_REL)
+        _git(merge_repo, "commit", "-q", "-m", "Merge track")
+        assert stale(_landed_after(anchor))
 
 
 class TestTheEntriesAreReadAsWritten:

@@ -40,6 +40,18 @@ which is stronger and costs one rename today. Pick one and say which
 in the Outcome; the second is cheaper now and the first survives a
 tree that grows a legitimate duplicate.
 
+**The decision, taken here: rename, and guard the whole tree.** One
+rename today (`perfetto_page.js`'s `make`, local to that file and
+shadowed by `drawings.js`'s four-argument one) buys the stronger
+property: **no two viewer modules share a top-level name**, guarded
+over all 22 rather than over the bundles the export happens to build.
+A refusal at export time would only catch a bundle someone assembles,
+and `_module_order("perfetto_page.js")` is callable today without any
+export asking for it. The refusal is the right answer for a tree that
+grows a legitimate duplicate; this tree has exactly one, and it is not
+legitimate — two functions named `make` with different signatures.
+Say in the Outcome what the guard costs to run.
+
 ## Out of Scope
 
 - Aliased imports. `UX-721` closed that edge and its refusal is the

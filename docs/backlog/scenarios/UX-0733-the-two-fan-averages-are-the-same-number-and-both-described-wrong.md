@@ -52,6 +52,19 @@ rename keys for exactly this reason. Decide, and say which in the
 Outcome; if both stay, the descriptions must say that the two are
 equal by construction, or the next reader files this row again.
 
+**The decision, taken here: both keys stay, and say so.** `UX-719`
+declined to rename `high_fanin_elements`/`high_fanout_elements` because
+`analyze/v*` is published and a reader's script may name either; the
+same argument holds one screen up, and superseding two keys to save a
+duplicate value is a contract move for a wording defect. So: swap the
+two descriptions to name the degree each averages, and each
+description states that the two are equal by construction — `|E|/|V|`,
+every edge being one in-edge and one out-edge — so the next reader
+sees the redundancy in the sentence rather than rediscovering it.
+Collapsing them to one key is the better shape and the wrong trade at
+this price; if a later round moves `analyze/v7` for another reason,
+that is when to take it.
+
 ## Out of Scope
 
 - The ranked `high_fanin_elements`/`high_fanout_elements` blocks.

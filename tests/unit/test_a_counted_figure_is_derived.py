@@ -55,6 +55,10 @@ GUIDE = REPO / "docs/guides/what-the-viewer-answers.md"
 SPEC = REPO / "docs/spec/specification.md"
 QUESTIONS_JS = REPO / "bga/viewer/questions.js"
 RUN = REPO / "tests/fixtures/macro_micro/run"
+STYLEGUIDE = REPO / "docs/design/styleguide.md"
+AGENT_RUNS = REPO / "docs/audits/agent-runs.md"
+VOCABULARY_GUARD = (
+    REPO / "tests/unit/test_the_contract_names_its_vocabulary.py")
 
 #: How these documents spell a count. The map is the vocabulary, not
 #: the claim - it grows ahead of the numbers rather than being chased
@@ -773,6 +777,94 @@ class TestEverySentenceThatCountsTheQuestionsIsDerived:
         assert not unaccounted, (
             "these sentences count the question library and nothing derives "
             "them:\n" + "\n".join(unaccounted))
+
+# --- `UX-734`: three counted figures, each in its own document, none
+# read by a guard before now.
+
+@functools.lru_cache(maxsize=1)
+def _vocabulary_guard_module():
+    """`test_the_contract_names_its_vocabulary.py`, loaded rather than
+    re-derived - it already holds the emitted and documented hint sets
+    equal in both directions, so a fresh regex over `bga/schemas.py`
+    would be a second instrument for the one fact it already answers."""
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location(
+        "_vocabulary_guard", VOCABULARY_GUARD)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+class TestTheStyleguideCountsItsOwnVocabulary:
+    """`docs/design/styleguide.md:83`. The table beside the word is
+    already held equal to `bga/schemas.py` in both directions; the
+    numeral was the only half of the sentence nothing read, so a
+    twenty-first hint would move the table under a word that stayed
+    "Twenty"."""
+
+    def test_the_hint_count_is_the_documented_table(self):
+        documented = _vocabulary_guard_module()._documented()
+        word = WORDS[len(documented)]
+        assert (f"{word.capitalize()} hints, and this table is the one "
+                f"place they are all written") in _flat(
+                    STYLEGUIDE.read_text(encoding="utf-8")), (
+            f"styleguide.md's §1a should open '{word.capitalize()} hints, "
+            f"and this table is the one place they are all written'; the "
+            f"table has {len(documented)} rows: {sorted(documented)}")
+
+
+def _agent_run_rows():
+    """`docs/audits/agent-runs.md`'s own table rows - every table line
+    after the `|---|` separator, header excluded."""
+    lines = AGENT_RUNS.read_text(encoding="utf-8").splitlines()
+    start = next(i for i, line in enumerate(lines)
+                if line.startswith("|---"))
+    return [line for line in lines[start + 1:] if line.startswith("| ")]
+
+
+class TestTheAuditLedgerCountsItsOwnRows:
+    """`docs/audits/agent-runs.md:41`. Prose about the table below it,
+    not a pasted measurement of a run - `_counted_files()` excludes
+    `docs/audits/` as the historical record, so this reads the row
+    count directly rather than through that sweep."""
+
+    def test_the_summary_counts_the_table_rows(self):
+        rows = _agent_run_rows()
+        word = WORDS[len(rows)]
+        assert f"What the {word} rows already say" in _flat(
+            AGENT_RUNS.read_text(encoding="utf-8")), (
+            f"agent-runs.md should say 'What the {word} rows already "
+            f"say'; the table has {len(rows)} rows")
+
+
+def _spec_parts():
+    """Every `# Part N` heading's number, in the spec as it stands."""
+    text = SPEC.read_text(encoding="utf-8")
+    return sorted(int(n) for n in re.findall(r"^# Part (\d+) ", text, re.M))
+
+
+def _spec_invariants():
+    """Every `## IN` heading's number - the invariant registry."""
+    text = SPEC.read_text(encoding="utf-8")
+    return sorted(int(n) for n in re.findall(r"^## I(\d+) ", text, re.M))
+
+
+class TestTheIndexCountsTheSpecsOwnRanges:
+    """`docs/README.md:173`. The invariant half - `I1`-`I13` - was
+    already correct; restating a true figure beside a derived one is
+    how the Part range beside it went four Parts stale (`UX-569`'s
+    pattern). Both ends of both ranges, one clause."""
+
+    def test_the_part_and_invariant_ranges_are_derived(self):
+        parts, invariants = _spec_parts(), _spec_invariants()
+        assert (f"Parts {parts[0]}-{parts[-1]}, invariants "
+                f"`I{invariants[0]}`-`I{invariants[-1]}`") in _flat(
+                    INDEX.read_text(encoding="utf-8")), (
+            f"docs/README.md should say 'Parts {parts[0]}-{parts[-1]}, "
+            f"invariants `I{invariants[0]}`-`I{invariants[-1]}`'; the spec "
+            f"has Parts {parts} and invariants {invariants}")
+
 
 if __name__ == "__main__":  # pragma: no cover
     raise SystemExit(pytest.main([__file__, "-v"]))

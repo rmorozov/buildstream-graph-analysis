@@ -201,6 +201,29 @@ export function renderBand(compare) {
   return wrapper;
 }
 
+/**
+ * `UX-725`: the band's refusal, once, where the band would have been -
+ * not the two lines `bga compare` printed internally while `bga view`
+ * built it (`ERROR ...` and `Error: ...`, on an export that succeeded).
+ * `data-empty` reuses `UX-388`'s rail marker: this section exists and
+ * says it has nothing, same as an empty population does.
+ */
+export function renderBandUnavailable(reason) {
+  const wrapper = document.createElement("section");
+  wrapper.setAttribute("data-section", "band");
+  wrapper.setAttribute("data-empty", "true");
+  const heading = document.createElement("h2");
+  heading.textContent = "The band";
+  const note = document.createElement("p");
+  note.className = "empty-population";
+  note.textContent = `No comparison band: ${reason}`;
+  wrapper.append(heading, note);
+  // Same reader as `renderBand`'s: R4 asks "is it normal?", and this is
+  // that question's site whichever answer it has - a card, not a band.
+  declareReaders(wrapper, ["R4"]);
+  return wrapper;
+}
+
 // UX-212: a second channel for the verdict.
 //
 // The trend encoded `verdict_kind` as fill colour alone, so the one

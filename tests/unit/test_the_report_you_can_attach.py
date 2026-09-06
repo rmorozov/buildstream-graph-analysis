@@ -1809,6 +1809,39 @@ class TestTheCiWiring:
         assert "--export" in text, (
             "the CI page posts the comment but never mentions the artifact")
 
+    # UX-735: +/-20% around the guide's stated KiB. Wide enough that a
+    # comment, a contract field, or the embedded run path moving by a
+    # few hundred bytes does not need a doc edit; tight enough that a
+    # materially larger page (roughly double, from a mutation or a new
+    # embedded payload) still reds.
+    EXPORT_SIZE_BAND = 0.20
+
+    def test_the_export_size_the_guide_states_is_still_true(self, tmp_path):
+        """`UX-735`: the guide names `tests/fixtures/macro_micro/run` and
+        a KiB figure for it, so this reads that fixture's export rather
+        than the 46 s capture the old sentence named and nobody could
+        reproduce."""
+        from tools.bga_view import export
+
+        text = open("docs/guides/ci-comment.md", encoding="utf-8").read()
+        match = re.search(
+            r"tests/fixtures/macro_micro/run.*?\*\*(\d+) KiB\*\*",
+            text, re.S)
+        assert match, (
+            "the guide no longer names the macro_micro fixture beside "
+            "a KiB figure - UX-735's sentence moved or was reworded")
+        stated_kib = int(match.group(1))
+
+        result = export(MACRO_MICRO, str(tmp_path / "ci-comment.html"))
+        measured_kib = result["bytes"] / 1024
+        low = stated_kib * (1 - self.EXPORT_SIZE_BAND)
+        high = stated_kib * (1 + self.EXPORT_SIZE_BAND)
+        assert low <= measured_kib <= high, (
+            f"docs/guides/ci-comment.md states {stated_kib} KiB for "
+            f"{MACRO_MICRO}, but export() measures {result['bytes']} B "
+            f"= {measured_kib:.1f} KiB, outside the "
+            f"+/-{self.EXPORT_SIZE_BAND:.0%} band")
+
 
 _COMMON_SHIM = """
 globalThis._makeNode ??= (await import(process.env.BGA_DOM_SHIM)).makeNode;

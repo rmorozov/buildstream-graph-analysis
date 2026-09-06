@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-729 scenarios: **36 open**, 693 closed.
+729 scenarios: **35 open**, 694 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -27,7 +27,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | cli | 0 | 22 |
 | store | 0 | 16 |
 | docs | 4 | 116 |
-| guards | 16 | 167 |
+| guards | 15 | 167 |
 
 ## Open scenarios
 
@@ -66,7 +66,6 @@ task file, which is the only place it ever lived twice.
 | UX-717 | [the host series is on the trace and in no question](UX-0717-the-host-series-is-on-the-trace-and-in-no-question.md) | viewer | Medium | a reader with Perfetto open, asking whether the cores were busy | 🔴 |
 | UX-719 | [the bottleneck fan-in and fan-out labels are swapped](UX-0719-the-bottleneck-fan-in-and-fan-out-labels-are-swapped.md) | analysis | Medium | a reader of the graph-shape block | 🔴 |
 | UX-722 | [a rail target inside a scrolling table lands under the header](UX-0722-a-rail-target-inside-a-scrolling-table-lands-under-the-header.md) | viewer | Medium | anyone who clicks a rail entry into a nested block | 🔴 |
-| UX-727 | [a design review report has no shape a guard can read](UX-0727-a-design-review-report-has-no-shape-a-guard-can-read.md) | guards | Medium | the release gate, and the round reading a review it did not run | 🔴 |
 | UX-728 | [a track's repro runs the session's checkout, not its worktree](UX-0728-a-tracks-repro-runs-the-sessions-checkout-not-its-worktree.md) | guards | Medium | every `implementer` track that reproduces a defect through the CLI | 🔴 |
 | UX-729 | [two modules declare one name, and the satellite bundle would take both](UX-0729-two-modules-declare-one-name-and-the-satellite-bundle-would-take-both.md) | viewer | Low | anyone who inlines a second entry point | 🔴 |
 | UX-730 | [a derived figure over the whole test tree has no refresh route](UX-0730-a-derived-figure-over-the-whole-test-tree-has-no-refresh-route.md) | guards | Medium | every round that adds a test file, and the branch that pays for it | 🔴 |

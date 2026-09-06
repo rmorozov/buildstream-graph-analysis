@@ -1,6 +1,6 @@
 # UX-727: a design review report has no shape a guard can read
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-685 (which gave the walk one), UX-686 (which needs this one) | **Serves:** the release gate, and the round reading a review it did not run | **Topic:** guards | **Shape:** bounded | **Area:** tools
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-685 (which gave the walk one), UX-686 (which needs this one) | **Serves:** the release gate, and the round reading a review it did not run | **Topic:** guards | **Shape:** bounded | **Area:** tools
 
 ## Motivation
 

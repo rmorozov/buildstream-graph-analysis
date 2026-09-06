@@ -361,6 +361,9 @@ tools/dev_trace_coverage.py  which captured field reaches the emitted
                              trace, and which Perfetto carriers it uses (UX-466)
 tools/dev_page_census.py     the page's structure and control classes, one
                              boot, printed as JSON for a walk to read (UX-665)
+tools/dev_scenario.py        a walk's scenario, drawn from a seed - the area
+                             index, the decompose skill's input classes, a
+                             role - and the scripted walk it prints (UX-685)
 tools/bga_gen_project.py     a BuildStream project `bst build` accepts,
                              from a topology spec (UX-465)
 tools/dev_plane_capability.py  what Plane 2 and Plane 3 could record and

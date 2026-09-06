@@ -502,7 +502,17 @@ END pid=101 ppid=1 ts=1002.500000 element=work-a.bst cmd=cc -c main.c
 # B past the figures recorded beside them. 316,000 leaves 5,366 B,
 # 432,000 leaves 4,875 B and 482,000 leaves 4,500 B - the same order of
 # headroom `UX-613` chose.
-PAGE_BUDGET_B = 316_000
+# `UX-717` added the eighteenth question - `were-the-cores-busy`, its
+# `why` and the widened `NEEDS_TRACKEVENT` comment - and tripped this
+# one by 52 B, measured against its own tree (a worktree's absolute
+# path is longer than the main checkout's, so this figure and the
+# 316,000 it replaces are not directly comparable; the delta is):
+#
+#     page   314,938 -> 316,052   (+1,114 B, all source)
+#
+# 322,000 leaves 5,948 B, the same order of headroom the moves above
+# chose.
+PAGE_BUDGET_B = 322_000
 
 #: `UX-444`: the claim, stated once. **The run's data is at least twice
 #: the page a reader is permitted to download.**

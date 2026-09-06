@@ -1871,7 +1871,7 @@ exits **7** rather than opening a page that would 404.
 
 The handoff page also carries a list of **questions worth asking in
 Perfetto** (`perfetto.html`, under the button that opens the trace they
-ask about) — seventeen paste-ready PerfettoSQL queries, with a control
+ask about) — eighteen paste-ready PerfettoSQL queries, with a control
 that swaps in whichever of this run's elements you are asking about.
 They are docs, not a feature: the SQL engine is Perfetto's. `UX-373`
 merged them in from the separate `sql.html`, whose URL still redirects
@@ -1881,7 +1881,7 @@ here.
 in it is a total, a per-element aggregate or a ranking. So a question
 that needs *when*, or needs one individual **process** rather than the
 element around it, is a question for the trace — and one that does not
-is already answered on the page. Nine of the seventeen canned questions
+is already answered on the page. Ten of the eighteen canned questions
 genuinely need the trip; eight are sharper instruments for something
 the page has said already.
 [`what-the-viewer-answers.md`](what-the-viewer-answers.md) sorts them,

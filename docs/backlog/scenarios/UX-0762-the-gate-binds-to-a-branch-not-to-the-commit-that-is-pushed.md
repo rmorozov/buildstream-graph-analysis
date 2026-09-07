@@ -54,4 +54,81 @@ was silent.
 
 ## Outcome
 
-_Not started._
+**Gap measured** (round-104 shape, scratch repo: commit, marker,
+further commit, push):
+
+```text
+EXIT: 2 — Blocked: HEAD (6bb7b4a5...) was never covered by a green
+`make test` ... that sha is 1a795c6a..., not this one.
+```
+
+No hook existed to catch this before this row - the payload above
+returned exit 0 everywhere.
+
+**Close measured**: marker refreshed -> `EXIT: 0`, then a real push to
+a local bare remote landed. An amend after the green marker refuses
+again (`HEAD` moved) - confirmed, not a bug. `make check-clean` stays
+green with the marker on disk.
+
+**Verifier review, round 1 - two fixes:**
+
+1. `is_real_push` returned on the *first* `git` invocation, so
+   `git status && git push origin master` and `git push --dry-run
+   origin master && git push origin master` both silently exited 0 on
+   an uncovered `HEAD` - `no_bulk_add.is_bulk_add`'s own solved
+   problem. Fixed by copying its loop; both now `True`. `git -C x
+   push`, `VAR=1 git push`, `command git push` still bypass both -
+   shared, pre-existing, filed nowhere new here.
+2. The escape hatch was a silent, permanent off-switch. Now
+   `BGA_SKIP_PUSH_GATE` must match `UX-\d+` (`1`/`true`/`yes` refused,
+   naming why) and a real bypass prints loudly to stderr:
+
+```text
+GATE BYPASSED by BGA_SKIP_PUSH_GATE=UX-762: pushing ca781671...,
+uncovered by any green `make test`. Holds for every push in this
+shell until BGA_SKIP_PUSH_GATE is unset.
+```
+
+`fixing-guide.md` item 14 says exporting it disables the gate for the
+shell's lifetime.
+
+**Gate re-run on this branch's own tip.** The marker read `789d7af`
+(12:15:09) against a final commit at 12:21:22 - this branch could not
+have pushed itself under its own rule. Re-run with these fixes on the
+tree, before the amend that records this text:
+
+```text
+$ rm -f .gate-covered && make test
+7661 passed, 127 skipped, 1 warning in 322.24s (0:05:22)
+$ cat .gate-covered; git rev-parse HEAD
+4724b20da952afdf8de32e6838a7ee587a4c8f52
+4724b20da952afdf8de32e6838a7ee587a4c8f52
+```
+
+The amend that follows changes only this text, moving `HEAD` again by
+this row's own rule - correct, not a gap: the orchestrator's `make
+test` at merge covers the commit actually pushed.
+
+**Mutation table** (`test_the_gate_covers_the_pushed_commit.py`, 30
+tests; scratchpad snapshot/revert, never `git checkout --`):
+
+| mutation | reddened | count |
+|---|---|---|
+| drop the exemption/`:branch` check | dry-run/delete/tags/refspec | 9/30 |
+| `covered == head` -> `!=` | marker-comparison clauses | 7/30 |
+| non-push `git` returns `False` (round-1 bug, reinstated) | `status && push` | 2/30 |
+| exempt push returns `False` | `--dry-run && push` | 2/30 |
+| escape hatch never consulted | bare-flag, valid-reason clauses | 2/30 |
+| `TASK_ID` widened to `.*` | bare-flag-refused only | 1/30 |
+| `BYPASS` drops `{reason}` | loud-line content only | 1/30 |
+
+Every mutation reverted; suite back to 30/30 and file byte-identical
+to the snapshot each time.
+
+**Recorded, not fixed:** `UX-766` (filed separately) - the `--force
+--reason UX-762` baseline growth (2 `S607` findings) is loud only
+uncommitted; `gained_since_head` matches HEAD once this commit lands,
+so `make lint` is silent on it thereafter, same as every forced entry.
+Also: `dev_touching`'s no-selector escalation to a full ~8-9 minute
+suite run whenever the diff touches `Makefile`, with no progress
+output - real friction, not fixed here.

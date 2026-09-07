@@ -26,7 +26,7 @@ trusted (`UX-505`).
 | Some claims have no local instrument — open the PR first (§7) | — |
 | A history figure from a shallow clone is worth nothing — ask `--is-shallow-repository` first | `test_a_guard_that_reads_history_declares_its_depth.py` |
 | `make test-touching` while you work; the tier when it is wider | `test_the_loop_stays_fast.py` — the selector, not that you ran it |
-| `make test` before anything is marked done. A tier is a selector | — |
+| `make test` before anything is marked done. A tier is a selector | `.claude/hooks/gate-covers-push.sh` — covers the commit you push, not the branch you ran it on (`UX-762`) |
 | Both status markers, same commit; the counts are derived | `test_docs_links_and_commands.py` |
 | A number or mechanism you moved: annotate the file asserting it | `tools/dev_close_task.py --figures`, held by `test_the_loop_stays_fast.py` |
 | A renamed or removed published key bumps its schema version | `test_output_schemas.py` |

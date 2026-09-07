@@ -1,7 +1,11 @@
 {
   "ruff_version": "0.15.8",
   "families": ["C901", "PLR0912", "PLR0913", "PLR0915", "S", "SIM115"],
+  "forced_by": "UX-762",
+  "forced": [["ruff", "S607", ".claude/hooks/gate_covers_push.py", "done = subprocess.run([\"git\", \"rev-parse\", \"--show-toplevel\"],", 1], ["ruff", "S607", ".claude/hooks/gate_covers_push.py", "done = subprocess.run([\"git\", \"rev-parse\", \"HEAD\"], cwd=root,", 1]],
   "findings": [
+    {"file": ".claude/hooks/gate_covers_push.py", "line": "done = subprocess.run([\"git\", \"rev-parse\", \"--show-toplevel\"],", "nth": 1, "rule": "S607", "tool": "ruff"},
+    {"file": ".claude/hooks/gate_covers_push.py", "line": "done = subprocess.run([\"git\", \"rev-parse\", \"HEAD\"], cwd=root,", "nth": 1, "rule": "S607", "tool": "ruff"},
     {"file": ".claude/hooks/selector_before_commit.py", "line": "done = subprocess.run(", "nth": 1, "rule": "S603", "tool": "ruff"},
     {"file": ".claude/hooks/selector_before_commit.py", "line": "done = subprocess.run([\"git\", \"rev-parse\", \"--show-toplevel\"],", "nth": 1, "rule": "S607", "tool": "ruff"},
     {"file": "bga/analyzer.py", "line": "def _compute_attribution(self, graph_analysis: Optional[dict] = None) -> dict:", "nth": 1, "rule": "C901", "tool": "ruff"},

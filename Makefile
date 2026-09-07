@@ -48,8 +48,12 @@ PYTEST_XDIST ?= -n auto
 # produced (`UX-418`) rather than running it twice.
 PYTEST_ARGS ?=
 
+# UX-762: the sha this run covered, written only when pytest exits 0 -
+# make aborts the recipe on the line above's failure, so a red suite
+# never reaches this one. `.claude/hooks/gate-covers-push.sh` reads it.
 test:
 	python -m pytest tests/ -q $(PYTEST_XDIST) $(PYTEST_ARGS)
+	@git rev-parse HEAD > .gate-covered
 
 # UX-418: the full suite, then which files have outgrown their tier.
 # One command because the check reads the run's own report - it costs a

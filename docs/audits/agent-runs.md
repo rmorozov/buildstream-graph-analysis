@@ -76,6 +76,10 @@ pairing for every merged row from round 103 on.
 | 104 | verifier | sonnet | UX-753 verifier | 174k | 76 | 44.5 m | held, then merged | the population claim needed an independent enumeration; the discriminating mutation was one the track never tried |
 | 104 | verifier | sonnet | UX-744 verifier | 281k | 93 | 33.8 m | held twice | finding the mutation point that separates caught from silently absorbed - one function down |
 | 104 | verifier | sonnet | UX-755 verifier | 78k | 65 | 12.6 m | merged | reproducing a negative disk margin on a shared container without disturbing other agents |
+| 105 | implementer | sonnet | UX-761 the verifier mandate (judgement) | 485k | 121 | 52.6 m | merged | two verifier rounds; a fabricated grep figure in its own Outcome, and a skill line that restated the rule its commit message claimed it had stopped restating |
+| 105 | implementer | sonnet | UX-762 the gate binds to the commit (judgement) | 444k | 226 | 91.6 m | merged | the first parser returned at the first git invocation, so a compound command walked through; dev_touching escalates to a full suite whenever a diff touches the Makefile |
+| 105 | verifier | sonnet | UX-761 verifier | 186k | 75 | 24.4 m | held twice, then merged | re-running the track own pasted commands is what found the fabricated figure; nothing short of that would have caught it |
+| 105 | verifier | sonnet | UX-762 verifier | 252k | 130 | 66.5 m | held, then merged | the bypass was only visible by piping adversarial commands through the real hook rather than trusting the mutation table |
 
 Round 101's four tracks are **not** here: this session could not
 identify their transcripts with certainty after a context rebuild, and
@@ -88,7 +92,7 @@ committed cleanly once told to run in the foreground. Three of the five
 left a derived figure or a §6 context-map row behind - the same class
 the round itself was about, arriving in the tracks' own work.
 
-What the fifty-nine rows already say: a researcher that reads a document
+What the sixty-three rows already say: a researcher that reads a document
 whole costs 100-180k; a walker that drives every control costs 336k;
 the two cuts cost a re-run each. The `walk` and `design-review`
 skills fix the report shape so the next rows are smaller, and the

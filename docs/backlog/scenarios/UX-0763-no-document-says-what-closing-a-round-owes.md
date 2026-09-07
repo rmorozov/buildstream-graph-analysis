@@ -50,6 +50,23 @@ history cannot be committed before the commits it must read.
 Then either bring `scenarios/README.md`'s round headings up to date or
 retire them, so the record stops disagreeing a fifth way.
 
+**The gate's place in the order is now decided by a hook, and the
+pipeline disagrees with it.** `UX-762` binds `make test` to the commit
+that gets pushed. `CLAUDE.md:28` orders the round
+`tracks -> verifier -> merge, one \u0060make test\u0060, close` — with **close** after
+the gate, and close means the row moves, the derived counts, the ledger
+rows and the round document. Every one of those is a commit, so on that
+order the hook reds on the final push of every round, and the practical
+response under time pressure is the escape hatch rather than a second
+five-minute suite. `UX-762`'s verifier named this before it could bite:
+the fix is correct for the sha mechanism and leaves the ordering
+unresolved.
+
+So the section this row writes must put **the gate last** — after the
+closes, the ledger and the round document — or require a second run
+after them. Round 105 closed itself that way and pushed with no
+bypass, which is the reading to record.
+
 ## Out of Scope
 
 - The register itself (`UX-744`, reopened) and the archaeology

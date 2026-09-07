@@ -1,6 +1,6 @@
 # UX-761: the verifier is mandated in the one document the guide outranks
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-666 (the runs ledger) | **Serves:** the session that reads the mandatory entry point and never learns a verifier exists | **Topic:** docs | **Area:** unassigned | **Shape:** judgement
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-666 (the runs ledger) | **Serves:** the session that reads the mandatory entry point and never learns a verifier exists | **Topic:** docs | **Area:** unassigned | **Shape:** judgement
 
 ## Motivation
 

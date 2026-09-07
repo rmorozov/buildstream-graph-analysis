@@ -1,6 +1,6 @@
 # UX-762: the gate binds to a branch, not to the commit that is pushed
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-336 (the loop), UX-522 (the selector hook) | **Serves:** the session whose gate passed on a commit it did not push | **Topic:** guards | **Area:** unassigned | **Shape:** judgement
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-336 (the loop), UX-522 (the selector hook) | **Serves:** the session whose gate passed on a commit it did not push | **Topic:** guards | **Area:** unassigned | **Shape:** judgement
 
 ## Motivation
 

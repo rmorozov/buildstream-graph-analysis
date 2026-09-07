@@ -135,3 +135,37 @@ outside the `with` only so the `except OSError` two lines up can answer
 closed at `:295`. So the batch is 8, not 11, and the row's own "removes
 exactly that batch's findings" is what says so.
 
+## Batch 2 outcome (`SIM115`, `tools/`, 8 findings in 3 files)
+
+**Gap measured**: 8 `SIM115` findings across `bga_view.py` (4),
+`bst_native_build_tracer.py` (3), `dev_trace_coverage.py` (1) — each a
+`.read()` or a comprehension over a handle opened without a `with`.
+The 3 findings named as false positives (`bga_view.py:1604`,
+`trackevent.py:265` ×2) were left untouched and verified still
+present in the baseline after `--shrink`.
+
+**Close measured**: `dev_baseline.py --shrink` → `removed 8 stale
+entries`; `git diff tests/quality_baseline.json` removes exactly the
+8 `SIM115` lines named in the brief, none other; `--check` → `clean:
+292 finding(s)`; `make test-touching` → `3487 passed, 76 skipped in
+254.42s`; `make test` → `7558 passed, 126 skipped, 1 warning in
+432.99s`; `make lint` → `All checks passed!` then `clean: 292
+finding(s)`.
+
+**8 of 8 closed**, each wrapped in a `with` around the single read
+site: two nested-function reads in `bga_view.py` (`_module_order`'s
+`walk`, `_inline_module`), the export's `index.html`/`style.css`
+pair (two separate opens, two separate `with`s), `/proc/uptime` in
+`_process_start_age`, two `json.loads(...) for line in open(...)`
+comprehensions in `load_and_summarize`, and the gzip/plain branch in
+`dev_trace_coverage.decode`.
+
+| mutation | reddened | of |
+|---|---|---|
+| add `# noqa: S607` to a closed site (`bga_view.py:928`) | `dev_baseline.py --check` (`new: repo SUPPRESSION`) | 1 of 1 |
+
+No new guard was written this batch — the suppression census
+(`suppression_findings()`) already exists from the Progress section
+above; the mutation confirms it still discriminates against this
+batch's sites, not that it is new.
+

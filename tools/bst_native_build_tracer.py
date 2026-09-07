@@ -532,8 +532,8 @@ def _process_start_age(pid: str, proc_root: str = "/proc") -> Optional[float]:
         with open(f"{proc_root}/{pid}/stat", encoding="utf-8") as handle:
             fields = handle.read().rsplit(")", 1)[1].split()
         started_ticks = int(fields[19])
-        uptime = float(
-            open(f"{proc_root}/uptime", encoding="utf-8").read().split()[0])
+        with open(f"{proc_root}/uptime", encoding="utf-8") as handle:
+            uptime = float(handle.read().split()[0])
         return uptime - started_ticks / os.sysconf("SC_CLK_TCK")
     except (OSError, ValueError, IndexError):
         return None
@@ -5210,10 +5210,10 @@ def load_and_summarize(raw_log_path: str, project_dir: Optional[str] = None,
     # facts, and the trace alone cannot tell them apart.
     spine_policy = None
     if invocation_log_path and os.path.exists(invocation_log_path):
-        sandboxes = [
-            json.loads(line) for line in open(invocation_log_path, errors="replace")
-            if line.strip()
-        ]
+        with open(invocation_log_path, errors="replace") as handle:
+            sandboxes = [
+                json.loads(line) for line in handle if line.strip()
+            ]
         if sandboxes and any("spine_traced" in entry for entry in sandboxes):
             traced = sum(1 for entry in sandboxes if entry.get("spine_traced"))
             spine_policy = {
@@ -5228,10 +5228,10 @@ def load_and_summarize(raw_log_path: str, project_dir: Optional[str] = None,
     # and this used to raise FileNotFoundError from inside the capture,
     # after the build, discarding a report that was otherwise complete.
     if invocation_log_path and os.path.exists(invocation_log_path) and plane1_log_path:
-        invocations = [
-            json.loads(line) for line in open(invocation_log_path, errors="replace")
-            if line.strip()
-        ]
+        with open(invocation_log_path, errors="replace") as handle:
+            invocations = [
+                json.loads(line) for line in handle if line.strip()
+            ]
         spans = build_spans_from_wrapped_log(plane1_log_path)
         # UX-64: give the correlation real intervals rather than start
         # instants. Under `--builders 4` an instant sits inside four

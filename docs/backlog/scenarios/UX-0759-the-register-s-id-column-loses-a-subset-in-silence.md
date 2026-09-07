@@ -1,6 +1,32 @@
 # UX-759: the register's id column loses a subset in silence
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-744 (the register and its pin) | **Serves:** the round that reads the register to learn what an earlier round closed | **Topic:** guards | **Area:** unassigned | **Shape:** judgement
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-744 (the register and its pin) | **Serves:** the round that reads the register to learn what an earlier round closed | **Topic:** guards | **Area:** unassigned | **Shape:** judgement
+
+## Superseded by UX-744's landed shape (2026-09-07)
+
+Everything below describes a register with an **ids** column. The one
+that landed has none:
+
+```console
+$ head -5 docs/audits/round-register.md | tail -2
+| round | date |
+|---|---|
+$ grep -rn DASH_ROUNDS tests/unit/ tools/ | wc -l
+0
+```
+
+`UX-744`'s verifier reached the same conclusion this row did — a
+best-effort regex over commit prose cannot witness its own losses —
+and the fix was to stop deriving ids rather than to guard them. So
+clauses 2 and 3 have no column to check and `DASH_ROUNDS` no longer
+exists; the Acceptance Test below cannot be run as written.
+
+What survives is clause 1 in the **date** column: round 64 is still
+`—`, and this row's own Out of Scope already declines it. `UX-772`
+covers the adjacent defect that `document_date()` reads a first date
+rather than a dateline. This row is therefore a **decline**, not a
+deferral, and closes as one — the reasoning is kept because a later
+round reading `UX-744` will ask why the ids column is missing.
 
 ## Motivation
 
@@ -59,4 +85,44 @@ where today it reports `33 passed`.
 
 ## Outcome
 
-_Not started._
+**Declined — round 107.** `UX-744` landed a register the column this
+row guards does not exist in.
+
+**The gap, measured.** Both checks looked only at rows going fully
+empty; dropping 3 of round 90's 11 ids left `33 passed`. That reading
+stands and was never wrong.
+
+**What closed it instead.** `UX-744`'s verifier reached this row's own
+conclusion — a best-effort regex over commit prose cannot witness its
+own losses — and the fix taken was to stop deriving ids, not to guard
+them:
+
+```console
+$ head -5 docs/audits/round-register.md | tail -2
+| round | date |
+|---|---|
+$ grep -rn DASH_ROUNDS tests/unit/ tools/ | wc -l
+0
+$ grep -c 'ids' tools/dev_round_register.py
+1
+```
+
+The single `ids` hit is the module docstring saying why there is no
+such column.
+
+**The mutation table is empty and that is the finding.** Clause 3
+asked for a subset-drop mutation over the id column. There is no
+column, so there is nothing to mutate — a row whose acceptance test
+cannot be *run* is declined, not deferred, and saying so is the
+decision the fixing guide asks for rather than leaving it 🔴 forever.
+
+**What survives, and where it went.** Clause 1 wanted `round-N.md` as
+a fourth source. In the date column that need is real and `UX-772`
+carries it: `document_date()` takes a document's first `YYYY-MM-DD`
+whatever it means. Round 64 stays `—` and this row's own Out of Scope
+already declined it — it has no record in reachable history.
+
+**Deviation.** The whole Required Fix, declined rather than
+implemented. The reasoning is kept above the Motivation rather than
+deleted, because a round reading `UX-744` will ask why the ids column
+is missing and this is the answer.

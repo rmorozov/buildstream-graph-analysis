@@ -20,6 +20,7 @@ are parsed - a paragraph naming a section is not a row.
 **This file is excluded from its own scan.** It quotes section ids to
 report them, so scanning it would make every row cite its own reader.
 """
+import collections
 import functools
 import pathlib
 import re
@@ -88,6 +89,75 @@ def _sections(path):
     return HEADING.findall(path.read_text(encoding="utf-8"))
 
 
+#: Where a document that numbers sections could live - not the
+#: population itself, only where `_process_documents()` looks.
+_PROCESS_DIRS = ("docs/design/", "docs/contributing/")
+
+
+def _display_name(path):
+    """The short name a citation elsewhere would use for `path`: a
+    skill's directory, since every `SKILL.md` shares that filename, or
+    a guide's stem otherwise."""
+    rel = path.relative_to(REPO).as_posix()
+    if rel.startswith(".claude/skills/") and path.name == "SKILL.md":
+        return path.parent.name
+    return path.stem
+
+
+def _cites_own_id(path, ids, tracked):
+    """`UX-771`: the heading shape alone is not enough - `review`'s own
+    §1-§5 pass it, and `directions.md`'s "review §6/§7" does not name
+    one of them. A document is in scope only if some *other* tracked
+    file cites it by name at an id it actually numbers.
+
+    The lookbehind guards the boundary a verifier found missing: with
+    none, `self-review §3` reads as `review` cited at `3`, since
+    `self-review` ends in `review` - pulling `review/SKILL.md` into
+    the population on a citation nobody wrote about it."""
+    name = _display_name(path)
+    rel = path.relative_to(REPO).as_posix()
+    for alias in {name, name.replace("-", " ")}:
+        cite = re.compile(r"(?<![\w-])" + re.escape(alias)
+                          + r"(?:\.md)?`?\s*§([0-9]+[a-z]?)")
+        for other in tracked:
+            if other == rel or not other.endswith(".md"):
+                continue
+            text = (REPO / other).read_text(encoding="utf-8", errors="replace")
+            if any(found in ids for found in cite.findall(text)):
+                return True
+    return False
+
+
+@functools.lru_cache(maxsize=1)
+def _process_documents():
+    """The documents `_ambiguous()` reads - derived, not five paths
+    typed in, so a sixth such document is in scope the day it exists.
+    A candidate is in `_PROCESS_DIRS` or a `SKILL.md`, numbers at
+    least two sections, and does so for at least half its `##`/`###`
+    headings (`architecture.md` and `directions.md` fail this: a few
+    numbered items in an otherwise prose document); `_cites_own_id`
+    then requires it be named elsewhere at one of its own ids."""
+    tracked = _tracked()
+    candidates = []
+    for rel in tracked:
+        if not rel.endswith(".md"):
+            continue
+        if not (rel.startswith(_PROCESS_DIRS)
+                or (rel.startswith(".claude/skills/") and rel.endswith("/SKILL.md"))):
+            continue
+        path = REPO / rel
+        if not path.exists():
+            continue
+        text = path.read_text(encoding="utf-8", errors="replace")
+        total = len(re.findall(r"^#{2,3} ", text, re.M))
+        numbered = HEADING.findall(text)
+        if not total or len(numbered) < 2 or len(numbered) / total < 0.5:
+            continue
+        candidates.append((path, frozenset(numbered)))
+    return frozenset(path for path, ids in candidates
+                      if _cites_own_id(path, ids, tracked))
+
+
 def _table():
     """`{section: (guards, note)}` from §7's rows, in document order."""
     text = STYLEGUIDE.read_text(encoding="utf-8")
@@ -97,30 +167,44 @@ def _table():
 
 
 def _ambiguous():
-    """Ids more than one of the three documents numbers. A bare `§5`
-    in a guard belongs to whichever document its sentence is about,
-    and nothing in the text says which - so these rows are named
-    rather than derived.
+    """`{(id, owners)}` for every id more than one process document
+    numbers, `owners` the sorted display names of all that do. A bare
+    `§5` in a guard belongs to whichever document its sentence is
+    about, and nothing in the text says which - so these rows are
+    named rather than derived.
 
     `UX-765` found the gap this replaced: pairing `STYLEGUIDE` against
     the union of the other two sees a collision either shares with it,
     but not one `FIXING_GUIDE` and `STYLE_GUIDE` share with each other
-    and not with `STYLEGUIDE` - which is exactly the shape `## 8.` in
-    `fixing-guide.md` and `STYLE_GUIDE`'s own `§8` took. Pairwise
-    over all three closes that."""
-    ids = [frozenset(_sections(d)) for d in (STYLEGUIDE, FIXING_GUIDE, STYLE_GUIDE)]
-    seen, dup = set(), set()
-    for one in ids:
-        dup |= seen & one
-        seen |= one
-    return frozenset(dup)
+    and not with `STYLEGUIDE`. `UX-771` widened the population from
+    the three to `_process_documents()`; naming the *owners*, not just
+    the id, is what lets the population shrinking back red with no new
+    section needed to prove it."""
+    owners = collections.defaultdict(set)
+    for doc in _process_documents():
+        name = _display_name(doc)
+        for section in _sections(doc):
+            owners[section].add(name)
+    return frozenset((section, tuple(sorted(names)))
+                      for section, names in owners.items() if len(names) > 1)
 
 
-#: `_ambiguous()`, measured the day `UX-765` closed this gap. A census,
-#: not a judgement that sharing these is fine - a new id joining it is
-#: exactly the collision this guard exists to catch, so it fails naming
-#: the id rather than silently widening the set it compares against.
-KNOWN_AMBIGUOUS = frozenset({"1", "2", "3", "4", "4a", "5", "6", "6a", "7"})
+#: `_ambiguous()`, measured the day `UX-771` widened the population to
+#: five documents. A census, not a judgement that sharing these is
+#: fine - a new id, or an id gaining or losing an owner, is exactly
+#: the collision this guard exists to catch, so it fails naming the
+#: pair rather than silently widening the set it compares against.
+KNOWN_AMBIGUOUS = frozenset({
+    ("1", ("decompose", "fixing-guide", "style-guide", "styleguide", "verify")),
+    ("2", ("decompose", "fixing-guide", "style-guide", "styleguide", "verify")),
+    ("3", ("decompose", "fixing-guide", "style-guide", "styleguide", "verify")),
+    ("4", ("decompose", "fixing-guide", "style-guide", "styleguide", "verify")),
+    ("4a", ("fixing-guide", "styleguide")),
+    ("5", ("decompose", "fixing-guide", "style-guide", "styleguide", "verify")),
+    ("6", ("fixing-guide", "style-guide", "styleguide", "verify")),
+    ("6a", ("fixing-guide", "styleguide")),
+    ("7", ("fixing-guide", "style-guide", "styleguide", "verify")),
+})
 
 
 class TestTheIdSpaceGrowsNoSilentCollision:
@@ -128,23 +212,55 @@ class TestTheIdSpaceGrowsNoSilentCollision:
     own `§8`, and the old `_ambiguous()` - `STYLEGUIDE` paired against
     the union of the other two - could not see a collision neither
     document shares with `STYLEGUIDE`. This is the direct check: any
-    id `_ambiguous()` did not already carry is a new one."""
+    `(id, owners)` `_ambiguous()` did not already carry is new, whether
+    the id is new or an existing id gained or lost an owner."""
 
-    def test_no_new_id_is_shared_across_the_three_documents(self):
+    def test_no_new_id_is_shared_across_the_process_documents(self):
         extra = _ambiguous() - KNOWN_AMBIGUOUS
         assert extra == set(), (
-            f"{sorted(extra)} now heads a section in more than one of "
-            f"{STYLEGUIDE.name}, {FIXING_GUIDE.name}, {STYLE_GUIDE.name} "
-            f"and did not before - give the new section a number none "
-            f"of the three already use")
+            f"{sorted(extra)} - a section id and its owning documents "
+            f"that KNOWN_AMBIGUOUS does not already carry; a document "
+            f"started numbering an id it did not before, or a new "
+            f"document joined the population - update KNOWN_AMBIGUOUS "
+            f"or give the section a number none of "
+            f"{sorted(_display_name(d) for d in _process_documents())} "
+            f"already uses")
 
     def test_the_known_set_is_not_stale(self):
-        """The other direction: a retired id left in the allowlist
-        would let a real new collision hide underneath it."""
+        """The other direction: a retired id, or an owner that no
+        longer numbers it, left in the allowlist would let a real new
+        collision hide underneath it."""
         gone = KNOWN_AMBIGUOUS - _ambiguous()
         assert gone == set(), (
-            f"{sorted(gone)} is no longer shared by any two of the three "
-            f"documents - shrink `KNOWN_AMBIGUOUS` to match")
+            f"{sorted(gone)} no longer matches an id's live owner set "
+            f"- shrink or update `KNOWN_AMBIGUOUS` to match")
+
+    def test_the_population_is_the_five_documents_this_widened_to(self):
+        """`UX-771`: the heading shape alone is not enough. `directions.
+        md` cites `.claude/skills/review/SKILL.md` at ids past its own
+        highest (5), so that citation cannot be about its own sections -
+        `review` and its neighbor `self-review` stay out; `verify` and
+        `decompose` are named at ids they do number, and join in."""
+        names = {_display_name(d) for d in _process_documents()}
+        assert names == {"styleguide", "fixing-guide", "style-guide",
+                          "verify", "decompose"}, sorted(names)
+
+    def test_self_review_cannot_stand_in_for_review(self, tmp_path):
+        """A verifier found `_cites_own_id`'s alias match unbounded on
+        the left: `self-review` ends in `review`, so a file citing only
+        the former read as the latter cited at an id it holds. A
+        hermetic probe, not a real tracked file - the corpus has no
+        such citation today, so this would pass without the fix."""
+        review = REPO / ".claude/skills/review/SKILL.md"
+        ids = frozenset(_sections(review))
+        probe = tmp_path / "probe.md"
+        tracked = _tracked() | {str(probe)}
+        probe.write_text("See self-review §3 for detail.\n", encoding="utf-8")
+        assert not _cites_own_id(review, ids, tracked), (
+            "self-review §3 pulled review into the population")
+        probe.write_text("See review §3 for detail.\n", encoding="utf-8")
+        assert _cites_own_id(review, ids, tracked), (
+            "a genuine review §3 did not pull review in")
 
 
 class TestTheTableIsTheGuide:
@@ -180,7 +296,8 @@ class TestTheTableIsTheGuide:
 
 class TestTheTableIsHeldToTheScan:
     def test_no_guard_cites_a_section_the_table_omits(self):
-        cited, table, named = _cited(_unit_tests()), _table(), _ambiguous()
+        cited, table = _cited(_unit_tests()), _table()
+        named = {section for section, _ in _ambiguous()}
         wrong = []
         for section, files in sorted(cited.items()):
             if section in named or section not in table:
@@ -199,7 +316,7 @@ class TestTheTableIsHeldToTheScan:
         assert not wrong, "\n".join(wrong)
 
     def test_a_row_is_named_exactly_when_the_scan_cannot_attribute_it(self):
-        named = _ambiguous()
+        named = {section for section, _ in _ambiguous()}
         wrong = [f"§{section}" for section, (_, note) in _table().items()
                  if (NAMED in note.split(";")[0]) != (section in named)]
         assert not wrong, (
@@ -207,10 +324,11 @@ class TestTheTableIsHeldToTheScan:
             f"numbers ({sorted(named)}): {sorted(wrong)}")
 
     def test_a_cited_section_exists_in_a_document_that_numbers_sections(self):
-        """Three documents number sections, not two - `docs/design/
-        styleguide.md`, and both guides under `docs/contributing/`."""
-        known = (set(_sections(STYLEGUIDE)) | set(_sections(FIXING_GUIDE))
-                 | set(_sections(STYLE_GUIDE)))
+        """`UX-771`: the population is `_process_documents()`, derived -
+        not a fixed count of documents typed here."""
+        known = set()
+        for doc in _process_documents():
+            known |= set(_sections(doc))
         stray = {section: sorted(files)
                  for section, files in _cited(_unit_tests()).items()
                  if section not in known}

@@ -45,6 +45,8 @@ guide is right and the skill is a bug.
 
 **A task may only be marked 🟢 Fixed & Verified if you have personally run its Acceptance Test in this session and it passed.** Self-assessment ("this looks correct now") is not sufficient — that is exactly how the scheduler-wait regression above happened.
 
+**A track's own run is necessary and not sufficient.** An `implementer` track is read by a `verifier` before it merges (`UX-761`) — the same self-assessment failure mode above, one remove: a track's Acceptance Test passing in its own worktree is still one agent grading its own work. Its finding is not advisory: the row does not merge until the track has answered it, or the session records in the task file why the finding is declined. `docs/audits/agent-runs.md` is where this is checked — a merged `implementer` row names its task, a `verifier` row in the same round names it back, and `test_a_merged_track_names_its_verifier.py` reads the pairing (`rules.md` §3).
+
 **Some acceptance tests cannot run here.** A claim about behaviour
 across machines — more than one runner, a loaded runner, CI's own clock —
 has no local instrument, and `make test` in this container cannot falsify
@@ -66,7 +68,7 @@ For every task, before marking it done:
 
 1. Run the exact command(s) given in the task's **Acceptance Test** section.
 2. Paste the actual command and actual output into the task file's **Verification Log** section (append, don't overwrite prior entries).
-3. **While you work, run the tests that touch what you changed** (`UX-336`): `make test-touching` maps the working diff to the test files that name it - 31-145 of 510 test files, median 38, over every module the map names, not the seconds one machine spent on one of them (`UX-632`). `python3 tools/dev_touching.py --spread --write` is the only thing that writes that figure. It moves whenever the set of (test file, module named) pairs changes - a new test file, a new import, a renamed module, a deleted file - not only the first of those (`UX-756`: round 103 moved it with two imports and no new file, and CI reddened on the stale row). Wider than one module, run the tier (`UX-238`). Every target runs `-n auto`. **The suite's wall clock is a property of the machine, not of the suite** (`UX-551`), so budget a round against the spread and not a figure:
+3. **While you work, run the tests that touch what you changed** (`UX-336`): `make test-touching` maps the working diff to the test files that name it - 31-145 of 511 test files, median 38, over every module the map names, not the seconds one machine spent on one of them (`UX-632`). `python3 tools/dev_touching.py --spread --write` is the only thing that writes that figure. It moves whenever the set of (test file, module named) pairs changes - a new test file, a new import, a renamed module, a deleted file - not only the first of those (`UX-756`: round 103 moved it with two imports and no new file, and CI reddened on the stale row). Wider than one module, run the tier (`UX-238`). Every target runs `-n auto`. **The suite's wall clock is a property of the machine, not of the suite** (`UX-551`), so budget a round against the spread and not a figure:
 
 ```text
 round 46   3m15s                                     4 cores
@@ -81,7 +83,7 @@ Round 80's 8m52s is **not reproducible on the tree that produced it**: the same 
 
    | target | measured at `-n auto` | what is in it |
    |---|---|---|
-   | `make test-touching` | 31-145 of 510 test files, median 38 | the test files that name what your diff touched |
+   | `make test-touching` | 31-145 of 511 test files, median 38 | the test files that name what your diff touched |
    | `make test-small` | **20s** | pure Python over in-memory fixtures — the default tier |
    | `make test-medium` | ~2m50s | spawns a process or a node harness |
    | `make test-large` | ~2m05s | scale fixtures, real process trees |

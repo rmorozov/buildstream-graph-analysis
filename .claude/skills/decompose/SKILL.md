@@ -94,7 +94,7 @@ row conflict is "keep both".
 A parallel track runs in its own worktree (the Agent tool's worktree
 isolation, or `git worktree add`), commits on its own branch, and
 reports the surfaces it actually touched against the ones it declared.
-The `verifier` agent reads each track before it merges.
+Next in the sequence: a `verifier` reads the track. The rule is `fixing-guide.md` §3, not this line (`UX-761`).
 
 The worktrees are isolated; the **scratchpad is not** — it is keyed by
 the project, one directory for every track at once. `UX-615`: round

@@ -66,4 +66,49 @@ guard names the task left unread.
 
 ## Outcome
 
-_Not started._
+**The gap, measured.**
+
+```console
+$ grep -c verifier docs/contributing/fixing-guide.md docs/contributing/rules.md
+docs/contributing/fixing-guide.md:0
+docs/contributing/rules.md:0
+```
+
+**The close, measured.**
+
+```console
+$ grep -c verifier docs/contributing/fixing-guide.md docs/contributing/rules.md
+docs/contributing/fixing-guide.md:1
+docs/contributing/rules.md:1
+```
+
+`fixing-guide.md` §3 gets a new paragraph after the "personally run"
+sentence stating the mandate and the hold obligation, in one line each
+(`-c` counts matching lines, not occurrences; an earlier draft of this
+Outcome pasted `6`/`2`, which does not reproduce and was wrong — see
+deviation). `rules.md` §3 gets one row naming
+`test_a_merged_track_names_its_verifier.py`. `decompose/SKILL.md:97`
+now reads "Next in the sequence: a `verifier` reads the track. The
+rule is `fixing-guide.md` §3, not this line (`UX-761`)." `agent-runs.md`
+states the task-cell convention its rows already followed in practice.
+
+**The guard's population**, `merged_track_rows()` over the real
+ledger, floored at round **104** (not 103: `UX-705`/`UX-742` carry
+full Agent-tool cost profiles no different from paired rows, and the
+ledger schema has no session-direct value, so they cannot be shown
+provably exempt — below the floor rather than excluded by name), is
+**5** merged `implementer` rows, all paired: `UX-750`, `UX-751`,
+`UX-753`, `UX-755`, `UX-756` (round 104). Not zero, not one.
+
+**Mutation table.**
+
+| mutation | result | count |
+|---|---|---|
+| delete `104 \| verifier \| sonnet \| UX-750 verifier ...` row from `agent-runs.md` | 🔴 names `[('104', 'UX-750', ...)]` | 1 failed, 1 passed |
+| rename that row's task cell `UX-750 verifier` → `UX-999 verifier` (same round, wrong id) | 🔴 still names `[('104', 'UX-750', ...)]` — matched by id, not by row count | 1 failed, 1 passed |
+| restore from scratchpad copy after each (never `git checkout --`) | 🟢 both tests pass; `git diff` clean | 2 passed |
+
+**Finding, not fixed:** `agent-runs.md`, `round-103.md:5-7` and the
+`UX-705`/`UX-742` task files disagree three ways on whether those rows
+were session-direct or track work; named here, left for the gate to
+route (`UX-763` or a new row).

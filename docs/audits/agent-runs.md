@@ -9,6 +9,12 @@ shape from numbers rather than from memory. Rows are appended by the
 orchestrating session at the end of the round; a run cut off by a
 limit is a row too.
 
+**Convention (`UX-761`):** a task's id opens its `implementer` row's
+task cell (`UX-750 the map count guard (judgement)`), and its
+`verifier` row's task cell repeats the id (`UX-750 verifier`) in the
+same round — `test_a_merged_track_names_its_verifier.py` reads the
+pairing for every merged row from round 103 on.
+
 | round | agent | model | task | tokens (fresh: input + cache creation, `UX-710`; reads low by the last response's output) | tool calls | wall | outcome | what cost the most / what went wrong |
 |---|---|---|---|---|---|---|---|---|
 | 64 | general-purpose | main | verification, 12 landings | 116k | 103 | 10 m | complete | mutation loop per guard; suite runs |

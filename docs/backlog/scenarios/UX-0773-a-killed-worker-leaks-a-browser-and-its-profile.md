@@ -85,6 +85,44 @@ $ pgrep -f bga-geometry | wc -l
 
 plus a mutation: remove the sweep and the guard reds.
 
-## Outcome
+## Outcome (round 108, 2026-09-07) — 🟢 Done
 
-_Not started._
+**Premise:** held — a `SIGKILL`ed worker's Chrome and profile survived
+it; a second `Browser` entry now sweeps both.
+
+### The gap, measured
+
+Against the pre-fix `browser.py` (git `8b27565`), the guard's own
+launch-then-`SIGKILL` reproduces the filed leak:
+
+```text
+tests/unit/test_a_killed_browser_does_not_outlive_the_worker.py F
+AssertionError: a second Browser entry left
+  /tmp/ux773-d0pda6wy/bga-geometry-qdxuwpzw behind
+```
+
+`atexit` never ran (the worker died by signal) and nothing else was
+watching, so the profile and its Chrome (reparented, still running)
+were still there for the second entry to find.
+
+### After
+
+```text
+tests/unit/test_a_killed_browser_does_not_outlive_the_worker.py .
+1 passed in 0.7s-0.8s (3 runs)
+```
+
+The second entry's `_sweep_stale()` finds the root (named for the dead
+pid), kills the orphaned Chrome by its own process group and removes
+the directory, before making its own.
+
+### Mutations verified red and reverted (3)
+
+| # | mutation | reddened |
+|---|---|---|
+| 1 | `_sweep_stale` returns before its loop | `AssertionError: a second Browser entry left .../bga-geometry-21776-h2ktq760 behind` |
+| 2a | sweep removes the directory, skips `_kill_orphan` | same clause, directory not fully removable while Chrome still holds it: `.../bga-geometry-22260-xoaf5m7u behind` |
+| 2b | sweep kills the orphan, skips `shutil.rmtree` | same clause on the directory alone (process confirmed dead first): `.../bga-geometry-jl3vmbn2 behind` |
+| 3 | launcher exits cleanly instead of by signal | `AssertionError: launcher exited 0, not by signal - the case this guard is about` (own guard rail); with that rail removed too, the positive control catches it instead: `the killed launcher's own profile is gone already - nothing here for a sweep to prove itself against`. Confirms the guard cannot pass vacuously either way. |
+
+No guard of this item failed to discriminate.

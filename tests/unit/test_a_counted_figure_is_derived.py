@@ -44,6 +44,7 @@ sys.path.insert(0, str(REPO))
 sys.path.insert(0, str(REPO / "tools"))
 
 import dev_close_task as close_task
+import dev_track_cost
 
 from bga import contracts
 
@@ -60,21 +61,9 @@ AGENT_RUNS = REPO / "docs/audits/agent-runs.md"
 VOCABULARY_GUARD = (
     REPO / "tests/unit/test_the_contract_names_its_vocabulary.py")
 
-#: How these documents spell a count. The map is the vocabulary, not
-#: the claim - it grows ahead of the numbers rather than being chased
-#: by them (`UX-341`'s lesson, in `test_every_emitted_contract_is
-#: _answerable.py`).
-WORDS = {1: "one", 2: "two", 3: "three", 4: "four", 5: "five", 6: "six",
-         7: "seven", 8: "eight", 9: "nine", 10: "ten", 11: "eleven",
-         12: "twelve", 13: "thirteen", 14: "fourteen", 15: "fifteen",
-         16: "sixteen", 17: "seventeen", 18: "eighteen", 19: "nineteen",
-         20: "twenty", 21: "twenty-one", 22: "twenty-two",
-         23: "twenty-three", 24: "twenty-four", 25: "twenty-five",
-         26: "twenty-six", 27: "twenty-seven", 28: "twenty-eight",
-         29: "twenty-nine", 30: "thirty", 31: "thirty-one",
-         32: "thirty-two", 33: "thirty-three", 34: "thirty-four",
-         35: "thirty-five", 36: "thirty-six", 37: "thirty-seven",
-         38: "thirty-eight", 39: "thirty-nine", 40: "forty"}
+#: How these documents spell a count, derived from the writer's own
+#: `count_word` so the two cannot drift (`UX-752`).
+WORDS = {n: dev_track_cost.count_word(n) for n in range(1, 100)}
 
 
 def _flat(text):

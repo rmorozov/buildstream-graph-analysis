@@ -529,39 +529,32 @@ A quick correctness sanity check with this fixture: the Attribution Breakdown sh
 ## 7a. Closing a round
 
 Round obligations are scattered; round 104 closed from memory and
-missed two, both caught by CI (`UX-763`). In order, each step
-readable only after the one before it:
+missed two, both caught by CI (`UX-763`). In order:
 
-1. Each task's row moves, both markers, one commit:
-   `dev_close_task.py UX-NNN --move --note "…"` —
+1. Each row moves, both markers, one commit:
+   `dev_close_task.py UX-NNN --move --note-file F` (`UX-768`) —
    `test_the_table_status_matches_the_task_files`.
-2. The index counts, derived once every row has moved:
+2. The index counts, once every row has moved:
    `dev_close_task.py --check --write` (`UX-501`) —
    `test_the_index_counts_match_the_rows_they_index`.
-3. The ledger rows, one per subagent with its friction line, in
-   `docs/audits/agent-runs.md` (`dev_track_cost.py --append`, `UX-666`)
-   — `test_a_run_is_priced.py::TestTheRowIsWritten`.
+3. A ledger row per subagent, with its friction line:
+   `dev_track_cost.py --append` (`UX-666`) —
+   `test_a_run_is_priced.py::TestTheRowIsWritten`.
 4. The touch-map spread, when the (file, module) pairs changed:
    `dev_touching.py --spread --write` (`UX-756`) —
    `test_the_cost_row_is_derived_from_the_selector.py`.
-5. The round document, its `## Agents` table copied from step 3's
-   rows or stating none ran —
-   `test_a_run_is_priced.py::TestEveryRoundDocumentPricesItsAgents`
-   (`UX-666`).
-6. `directions.md`'s history row and the `docs/README.md` link, in
-   the same commit —
-   `test_the_round_history_names_every_audit.py` (`UX-583`/`UX-591`).
+5. The round document, its `## Agents` table from step 3's rows or
+   stating none ran —
+   `test_a_run_is_priced.py::TestEveryRoundDocumentPricesItsAgents`.
+6. `directions.md`'s history row and the `docs/README.md` link —
+   `test_the_round_history_names_every_audit.py` (`UX-583`).
 7. The gate, last: `make test` on the commit about to push —
    `test_the_gate_covers_the_pushed_commit.py` (`UX-762`). Steps 1-6
-   are commits too, so a gate before them is stale by ship time;
-   round 105 closed this way, no bypass.
+   are commits too, so a gate before them is stale by ship time.
 
-**Self-reference (`UX-744`):** history-derived figures can't name the
-commit that first states them — the round document is one. Step 2
-avoids this by counting rows, not commits ("regenerate last",
-`UX-501`); a register counting *rounds* can't include its own landing
-commit, so it is one round behind by construction, caught up next
-round.
+**Self-reference (`UX-744`):** a history-derived figure cannot name
+the commit that first states it. Step 2 counts rows, not commits
+(`UX-501`); a register counting *rounds* is one round behind by
+construction, caught up next round.
 
-Names the guard each step already has; it replaces none of them
-(`UX-744`, `UX-757` build the missing instrument).
+Each step names the guard it already has, and replaces none.

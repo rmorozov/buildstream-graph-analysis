@@ -19,7 +19,7 @@ file is the day-one summary, and
 | `make test-tiers` | the suite plus a tier-drift parse, in one run |
 | `make lint` | ruff + PyMarkdown; both must be clean |
 | `make check-clean` | fails if an ignored path is tracked |
-| `dev_close_task.py UX-NNN --move --note "…"` then `--check --write` | the row move and both markers, then the derived index counts |
+| `dev_close_task.py UX-NNN --move --note-file <path>` then `--check --write` | the row move and both markers, then the derived index counts; `--note-file` keeps the note off the command line (UX-768) |
 
 `PYTEST_XDIST= make test-small` turns parallelism off (for `-x` or `pdb`).
 

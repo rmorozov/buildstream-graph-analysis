@@ -222,10 +222,15 @@ class TestTheRoundRegisterIsDerived:
         derived = dev_round_register.rounds()
         odd = sorted(written ^ on_disk, key=int)
         dates = [(n, derived[n]["date"]) for n in odd if n in derived]
-        assert dev_round_register.check() == [], (
+        problems = dev_round_register.check()
+        # `UX-781`: the set difference alone said "the file disagrees"
+        # for a truncated history *and* for a real drift, and a round
+        # went to the wrong one. `check()` is what is being asserted;
+        # printing everything except its own words was the defect.
+        assert problems == [], (
             f"derived-not-written {sorted(written - on_disk, key=int)} "
             f"written-not-derived {sorted(on_disk - written, key=int)} "
-            f"dates {dates}")
+            f"dates {dates} check {problems}")
 
     def test_the_register_names_99_through_103(self):
         registered = set(dev_round_register.rounds())

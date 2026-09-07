@@ -151,10 +151,20 @@ class TestAShallowCloneIsRefused:
         assert problems and "shallow" in problems[0], problems
 
     def test_a_left_behind_marker_is_not_a_shallow_history(self, tmp_path):
-        """The one CI taught: the file's presence is a proxy. Git is
-        asked, so a marker over a complete history reads complete."""
+        """The one CI taught: the file's presence is a proxy. `UX-781`:
+        the marker names a real commit that HEAD cannot reach, so an
+        empty file is not what makes this pass - a boundary off this
+        history cuts nothing this derivation walks."""
         root = self._repo(tmp_path / "r", commits=2)
-        (root / ".git" / "shallow").write_text("", encoding="utf-8")
+        env = ["-c", "user.email=t@t", "-c", "user.name=t"]
+        subprocess.run(["git", "-C", str(root), *env, "commit", "-q",
+                        "--allow-empty", "-m", "off-history"], check=True)
+        off = subprocess.run(["git", "-C", str(root), "rev-parse", "HEAD"],
+                             capture_output=True, text=True,
+                             check=True).stdout.strip()
+        subprocess.run(["git", "-C", str(root), "reset", "-q", "--hard",
+                        "HEAD~1"], check=True)
+        (root / ".git" / "shallow").write_text(off + "\n", encoding="utf-8")
         assert not reg.is_shallow(root)
 
     def test_a_complete_clone_is_not_refused(self, tmp_path, monkeypatch):
@@ -167,6 +177,42 @@ class TestAShallowCloneIsRefused:
         monkeypatch.setattr(reg, "rounds", lambda: {"3": {"date": "d"}})
         path.write_text(reg.render(reg.written_rounds()), encoding="utf-8")
         assert reg.check() == []
+
+    def test_a_depth_fetch_onto_a_complete_clone_is_shallow(
+            self, tmp_path):
+        """`UX-781`, and the case that falsified the first two
+        readings. The clone is complete, so every object is on disk and
+        no parent is missing - but a `--depth` fetch grafts a boundary
+        and `git log` stops at it. CI did this to itself at
+        `ci.yml`'s base-diff step, on the 3.11 job only."""
+        origin = self._repo(tmp_path / "o", commits=6)
+        root = tmp_path / "r"
+        subprocess.run(["git", "clone", "-q", f"file://{origin}", str(root)],
+                       check=True)
+        assert not reg.is_shallow(root), "a full clone, before the fetch"
+        walked = len(subprocess.run(
+            ["git", "-C", str(root), "rev-list", "--count", "HEAD"],
+            capture_output=True, text=True, check=True).stdout.split())
+        subprocess.run(["git", "-C", str(root), "fetch", "--no-tags",
+                        "--depth=2", "origin", "HEAD"], check=True,
+                       capture_output=True)
+        boundary = (root / ".git" / "shallow").read_text(
+            encoding="utf-8").split()
+        assert boundary, "the depth fetch wrote no boundary"
+        # The reading UX-776 shipped: the parent objects are all still
+        # here, so object-presence reads this repository as complete.
+        present = all(subprocess.run(
+            ["git", "-C", str(root), "cat-file", "-e", line.split()[1]],
+            capture_output=True, check=False).returncode == 0
+            for sha in boundary
+            for line in subprocess.run(
+                ["git", "-C", str(root), "cat-file", "-p", sha],
+                capture_output=True, text=True, check=True).stdout.splitlines()
+            if line.startswith("parent "))
+        assert present, "no parent object is missing - the falsifying half"
+        assert reg.is_shallow(root), (
+            f"{walked} commits were reachable and the fetch grafted "
+            f"{boundary}; the derivation must refuse")
 
     def test_the_real_checkout_is_complete(self):
         """The one that would have caught this round: a shallow clone

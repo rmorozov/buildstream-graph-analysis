@@ -126,3 +126,31 @@ landed. `test_the_real_checkout_is_complete` is the addition: it reads
 the checkout the suite is running in rather than a fixture, so the
 condition is caught where the work happens. It is the only clause here
 that would have prevented this round's cost.
+
+### Corrected by `UX-781` (2026-09-07)
+
+The reading above is **also a proxy**, and the same CI job falsified it
+two commits later. `git fetch --depth=N` on a clone that was complete
+grafts a boundary without deleting anything, so every parent object is
+still present and the test reads `False` on a history git has already
+stopped walking:
+
+```console
+$ git -C fullprobe rev-list --count HEAD ; git -C fullprobe fetch --no-tags --depth=200 origin main ; git -C fullprobe rev-list --count HEAD
+1541
+855
+$ python3 -c "…print(reg.is_shallow('fullprobe'))"
+False
+```
+
+That is the third proxy for one question — marker existence, then
+object presence — each committed as the fix for the last. What the
+derivation depends on is the traversal: a commit named in
+`.git/shallow` is parentless to git whatever the object store holds.
+`is_shallow()` now asks whether such a commit is an ancestor of
+`HEAD`; the guard's fixture is the depth fetch that falsified this,
+and the version this row shipped is one of its mutations. See
+`UX-781`, which also carries the cause of the truncation itself —
+`ci.yml`'s own base-diff step, on the job that failed.
+
+The register's 71 rows and both entry points' refusal stand.

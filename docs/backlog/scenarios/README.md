@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-777 scenarios: **27 open**, 750 closed.
+779 scenarios: **29 open**, 750 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -27,7 +27,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | cli | 0 | 22 |
 | store | 0 | 16 |
 | docs | 8 | 131 |
-| guards | 9 | 194 |
+| guards | 11 | 196 |
 
 ## Open scenarios
 
@@ -63,6 +63,8 @@ task file, which is the only place it ever lived twice.
 | UX-778 | [the docs index counts two guards where four fire](UX-0778-the-docs-index-counts-two-guards-where-four-fire.md) | docs | Medium | the reader deciding which style rules are mechanical and which are honour-system | 🔴 |
 | UX-779 | [the README prints two wall clocks the guide says are not the suite's](UX-0779-the-readme-prints-two-wall-clocks-the-guide-says-are-not-the-suites.md) | docs | Medium | the newcomer budgeting a run from a number measured on someone else's afternoon | 🔴 |
 | UX-780 | [the map says a shelf shipped, and one linter did](UX-0780-the-map-says-a-shelf-shipped-and-one-linter-did.md) | docs | Medium | the round pricing whether the analysis shelf exists before deciding to build it | 🔴 |
+| UX-781 | [CI truncates the history it just fetched in full](UX-0781-ci-truncates-the-history-it-just-fetched-in-full.md) | guards | High | the round reading a red CI job that the same tree passes locally | 🔴 |
+| UX-782 | [the register derives its rounds from `git log`, which is a property of the clone](UX-0782-the-register-derives-its-rounds-from-git-log.md) | guards | Medium | the round whose register disagrees with itself on a second machine | 🔴 |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

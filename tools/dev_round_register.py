@@ -68,31 +68,29 @@ SHALLOW = ("{repo} is a shallow clone - `git log` cannot see the whole "
 
 
 def is_shallow(repo=None):
-    """Whether `git log` is actually cut: a commit `.git/shallow` names
-    has a parent whose object is absent.
+    """Whether `git log` stops at a boundary inside HEAD's own history:
+    `.git/shallow` names a commit that is an ancestor of HEAD.
 
-    Neither the marker's existence nor `rev-parse --is-shallow-
-    repository` (which reads it) answers this - a runner holding all
-    1,538 commits carried a stale marker, and the first version of this
-    reddened CI on it. A grafted boundary still records its parent in
-    its own object; what it lacks is the parent.
+    Three readings were tried and two were proxies. The marker's
+    existence is one (a stale marker cuts nothing). Whether the
+    boundary's parent *object* is absent is the other, and `UX-781`
+    falsified it: `git fetch --depth=200` on a complete clone cut 1,541
+    commits to 855 while every parent object stayed on disk, so that
+    test read False on a repository git was already refusing to walk.
+    A commit in `.git/shallow` is parentless to every traversal
+    whatever objects exist - so the question is only whether the
+    traversal this derivation runs passes through one.
     """
     repo = str(repo or REPO)
     marker = pathlib.Path(repo) / ".git" / "shallow"
     if not marker.exists():
         return False
     for sha in marker.read_text(encoding="utf-8").split():
-        body = subprocess.run([GIT, "cat-file", "-p", sha], cwd=repo,
-                              capture_output=True, text=True, check=False)
-        if body.returncode != 0:
-            continue
-        for line in body.stdout.splitlines():
-            if not line.startswith("parent "):
-                continue
-            here = subprocess.run([GIT, "cat-file", "-e", line.split()[1]],
-                                  cwd=repo, capture_output=True, check=False)
-            if here.returncode != 0:
-                return True
+        cuts = subprocess.run([GIT, "merge-base", "--is-ancestor", sha,
+                               "HEAD"], cwd=repo, capture_output=True,
+                              check=False)
+        if cuts.returncode == 0:
+            return True
     return False
 
 

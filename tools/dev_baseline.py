@@ -18,7 +18,9 @@ line. `--write` refuses to add a new entry without `--force`; `--check`
 also refuses an entry `git show HEAD:` doesn't carry, unstaged or not;
 `--shrink` only ever removes what nothing matches any more. A file
 ruff cannot parse aborts everything rather than risk reading its
-absence as a fix.
+absence as a fix. Every forced batch stays named in `--check`'s output
+indefinitely, committed or not, accumulated rather than overwritten
+(`UX-766`).
 """
 import argparse
 import collections
@@ -215,18 +217,19 @@ def load_baseline(path):
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def write_baseline(path, findings, families, version, forced=None):
-    """`forced` is `None`, or `(reason, identities)` - who authorised a
-    gain and which lines (`UX-745`). One argument, not two: the pair is
-    meaningless apart, and splitting it puts this function over its
-    argument ceiling."""
+def write_baseline(path, findings, families, version, forced_batches=()):
+    """`forced_batches` is every `(reason, identities)` a `--force` has
+    signed, oldest first. `UX-745` gave it one slot that a later
+    `--force` overwrote outright, so an older reason's lines dropped out
+    of view - not out of `findings` - the moment a newer one landed
+    (`UX-766`, found by a verifier's own scratch repo)."""
     findings = sorted(findings, key=sort_key)
     body = ",\n".join(f"    {json.dumps(f, sort_keys=True)}" for f in findings)
     header = ""
-    if forced:
-        reason, signed = forced
-        header = (f'  "forced_by": {json.dumps(reason)},\n'
-                  f'  "forced": {json.dumps(sorted(list(i) for i in signed))},\n')
+    if forced_batches:
+        batches = [{"reason": reason, "identities": sorted(list(i) for i in ids)}
+                   for reason, ids in forced_batches]
+        header = f'  "forced": {json.dumps(batches)},\n'
     text = ("{\n"
             f'  "ruff_version": {json.dumps(version)},\n'
             f'  "families": {json.dumps(sorted(set(families)))},\n'
@@ -234,6 +237,21 @@ def write_baseline(path, findings, families, version, forced=None):
             + '  "findings": [\n' + (body + "\n" if body else "") + "  ]\n"
             "}\n")
     pathlib.Path(path).write_text(text, encoding="utf-8")
+
+
+def load_forced(document):
+    """Every forced batch `document` carries, oldest first:
+    `[(reason, {identity, ...})]`."""
+    return [(b["reason"], {tuple(i) for i in b["identities"]})
+            for b in document.get("forced", ())]
+
+
+def _prune_forced(batches, keep):
+    """Only identities still in `keep`; a batch left with none drops out -
+    a line `--shrink` or a plain `--write` removed was fixed, not forced
+    any more."""
+    return [(reason, kept) for reason, ids in batches
+            if (kept := {i for i in ids if i in keep})]
 
 
 def diff(current, baseline):
@@ -267,26 +285,28 @@ def head_document(path):
     return document
 
 
-def gained_since_head(path, working_findings, forced_by=None, forced=()):
+def gained_since_head(path, working_findings, batches=()):
     """`UX-694`: a line in `path` that `HEAD` never carried, split into
-    the ones a `--force` authorised and the ones nobody did.
+    the ones some `--force` authorised and the ones nobody did.
 
     Returns `(authorised, unauthorised)` - both red, and the split is
-    the message. `UX-745`: the waiver used to return nothing at all for
+    the message; `authorised` pairs each finding with the reason that
+    signed it. `UX-745`: the waiver used to return nothing at all for
     any `forced_by` unlike HEAD's, so one forced line let every other
-    gain through with it, and a *repeat* of HEAD's reason was checked
-    more strictly than a novel one.
+    gain through with it. `UX-766`: `batches` (plural) so a second,
+    unrelated `--force` does not also un-authorise the first.
     """
     head = head_document(path)
     if head is None:
         return [], []
     carried = {identity(f) for f in head["findings"]}
     gained = [f for f in working_findings if identity(f) not in carried]
-    if not forced_by:
-        return [], gained
-    signed = {tuple(i) for i in forced}
-    return ([f for f in gained if identity(f) in signed],
-            [f for f in gained if identity(f) not in signed])
+    reason_of = {}
+    for reason, ids in batches:
+        for i in ids:
+            reason_of.setdefault(i, reason)
+    return ([(reason_of[identity(f)], f) for f in gained if identity(f) in reason_of],
+            [f for f in gained if identity(f) not in reason_of])
 
 
 def do_write(args, current, existing):
@@ -302,18 +322,37 @@ def do_write(args, current, existing):
             for f in new:
                 print(f"  new: {describe(f)}")
             return 1
-    signed = ()
+    current_ids = {identity(f) for f in current}
+    batches = _prune_forced(load_forced(existing), current_ids) if existing else []
+    signed = set()
     if args.force:
         head = head_document(args.baseline)
-        if head is not None:
-            carried = {identity(f) for f in head["findings"]}
-            signed = [identity(f) for f in current
-                      if identity(f) not in carried]
+        carried = {identity(f) for f in head["findings"]} if head is not None else set()
+        signed = {identity(f) for f in current if identity(f) not in carried}
+        if signed:
+            batches = [*batches, (args.reason, signed)]
     write_baseline(args.baseline, current, FAMILIES, ruff_version(),
-                   forced=(args.reason, signed) if args.force else None)
+                   forced_batches=batches)
     print(f"wrote {len(current)} finding(s) to {args.baseline}"
           + (f"; {len(signed)} authorised by {args.reason}" if signed else ""))
     return 0
+
+
+def standing_forced(existing, batches, exclude):
+    """`UX-766`: forced entries `gained_since_head` stops naming once
+    committed, because HEAD and the working file are then identical.
+    Every batch, not the most recent one - the row's own defect was a
+    single slot a second `--force` overwrote. Excludes whatever
+    `authorised` already names, pre-commit, so a line is never printed
+    under both banners."""
+    by_id = {identity(f): f for f in existing["findings"]}
+    out = []
+    for reason, ids in batches:
+        for i in ids - exclude:
+            found = by_id.get(i)
+            if found is not None:
+                out.append((reason, found))
+    return out
 
 
 def do_check(args, current, existing):
@@ -321,9 +360,11 @@ def do_check(args, current, existing):
         print(f"no baseline at {args.baseline} - run --write first")
         return 1
     new, stale = diff(current, existing["findings"])
+    batches = load_forced(existing)
     authorised, gained = gained_since_head(
-        args.baseline, existing["findings"], existing.get("forced_by"),
-        existing.get("forced", ()))
+        args.baseline, existing["findings"], batches)
+    standing = standing_forced(
+        existing, batches, {identity(f) for _, f in authorised})
     for f in new:
         print(f"new: {describe(f)}")
     for f in stale:
@@ -334,14 +375,22 @@ def do_check(args, current, existing):
     # an *uncommitted* tree - in CI the working file is HEAD - so this
     # costs a forced gain nothing once it lands, and costs a track that
     # forced one the `make lint` it has to paste (`UX-745`).
-    for f in authorised:
-        print(f"authorised by {existing['forced_by']}, red until committed: "
-              f"{describe(f)}")
+    for reason, f in authorised:
+        print(f"authorised by {reason}, red until committed: {describe(f)}")
     for f in gained:
         print(f"gained: {describe(f)} - only --write --force --reason "
               "UX-NNN may add a line")
+    # `UX-766`: still visible after the commit that made the block above
+    # silent - stays until whoever rewrites the baseline decides otherwise.
+    for reason, f in standing:
+        print(f"still forced by {reason}: {describe(f)}")
     if not new and not stale and not gained and not authorised:
-        print(f"clean: {len(current)} finding(s) match {args.baseline}")
+        tail = ""
+        if standing:
+            counts = collections.Counter(reason for reason, _ in standing)
+            tail = "; " + "; ".join(f"{n} still forced by {r}"
+                                     for r, n in sorted(counts.items()))
+        print(f"clean: {len(current)} finding(s) match {args.baseline}{tail}")
         return 0
     return 1
 
@@ -354,11 +403,11 @@ def do_shrink(args, current, existing):
     if stale:
         drop = {identity(f) for f in stale}
         kept = [f for f in existing["findings"] if identity(f) not in drop]
+        kept_ids = {identity(f) for f in kept}
+        batches = _prune_forced(load_forced(existing), kept_ids)
         write_baseline(args.baseline, kept, existing.get("families", FAMILIES),
                        existing.get("ruff_version", ruff_version()),
-                       forced=(existing["forced_by"],
-                               existing.get("forced", ()))
-                       if existing.get("forced_by") else None)
+                       forced_batches=batches)
         plural = "y" if len(stale) == 1 else "ies"
         print(f"removed {len(stale)} stale entr{plural}")
     else:

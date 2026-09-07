@@ -83,7 +83,9 @@ import skip_reasons
 #: around it with `BGA_SKIP_SELECTOR=1`; it does not - checked out at
 #: `origin/main` the clause passes, so the sixty-fourth is the file
 #: the track itself added.
-UNRESOLVABLE = 64
+#: `UX-674` argues **one** more, to 65: the forty-sixth browser
+#: guard, `test_the_type_scale_is_four_steps.py`, same form again.
+UNRESOLVABLE = 65
 
 
 def test_every_declared_skip_reason_is_known():

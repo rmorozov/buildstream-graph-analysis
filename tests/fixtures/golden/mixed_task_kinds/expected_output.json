@@ -848,7 +848,7 @@
                 "threshold": 0.9,
                 "comparison": ">=",
                 "observed_path": "headline.chain_share",
-                "sentence": "The critical path is 100.0% of the task horizon - the span from the first task's start to the last one's finish, which excludes BuildStream's own startup - and that is >= the 90% at which the chain rather than the scheduler is called the constraint, so chain_bound.",
+                "sentence": "The critical path is 100.0% of the task horizon (the span from the first task's start to the last one's finish, excluding BuildStream's own startup), at or above the 90% line at which the chain rather than the scheduler is called the constraint, so this build is chain-bound.",
                 "module": "bga/findings.py",
                 "threshold_quantity": "share"
             },

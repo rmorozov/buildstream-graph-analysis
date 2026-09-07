@@ -190,16 +190,34 @@ function mergeTicks(ticks) {
   });
 }
 
+//: The two mark names a caller uses for the axis's own ends -
+//: `sparkline`'s `first`/`last` and a strip's `min`/`max`. `style.css`
+//: gives both pairs the same edge anchor.
+const EDGE_MARKS = new Set(["first", "last", "min", "max"]);
+
 export function exhibitAxis(doc, ticks) {
   const row = box(doc, "div", { class: "draw-axis", "data-role": "draw-axis" });
-  for (const tick of mergeTicks(ticks)) {
-    if (!tick) continue;
+  const merged = mergeTicks(ticks).filter(Boolean);
+  // `UX-674`: exactly one tick between the two edges lays out in
+  // normal flow (`margin-left`, a CSS row's own siblings never
+  // overlap) instead of by absolute percentage (`left`, which knows
+  // nothing about a neighbour's width). Two or more middle ticks -
+  // `decomposition`'s case - keep the original layout;
+  // `AXIS_TICK_MIN_SHARE` is what protects that one from the same
+  // defect, by dropping a tick rather than moving it.
+  const middle = merged.filter((tick) => !EDGE_MARKS.has(tick.name));
+  const flow = middle.length === 1
+    && merged.some((tick) => tick.name === "first" || tick.name === "min")
+    && merged.some((tick) => tick.name === "last" || tick.name === "max");
+  if (flow) row.setAttribute("data-layout", "flow");
+  for (const tick of merged) {
     const at = tick.at.toFixed(2);
     const label = box(doc, "span", {
       class: "draw-tick", "data-mark": tick.name, "data-at": at,
     }, tick.label);
-    // `left` is a position, not a colour or a size (§4.5's tokens
-    // govern those); a per-mark percentage cannot be a class.
+    // `left`/`margin-left` are positions, not a colour or a size
+    // (§4.5's tokens govern those); a per-mark percentage cannot be a
+    // class.
     //
     // UX-334: through the CSSOM, never `style: ...`, which `box` would
     // set as an *attribute*. The server sends `default-src 'self'` with
@@ -211,7 +229,10 @@ export function exhibitAxis(doc, ticks) {
     // served page was the broken one. `UX-263` learned this in
     // `views.js:566` and this module reintroduced it; a property
     // assignment is not inline style and is not subject to the policy.
-    if (label.style) label.style.left = `${at}%`;
+    if (label.style) {
+      if (flow && !EDGE_MARKS.has(tick.name)) label.style.marginLeft = `${at}%`;
+      else if (!flow) label.style.left = `${at}%`;
+    }
     row.append(label);
   }
   return row;

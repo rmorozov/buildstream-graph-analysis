@@ -195,8 +195,8 @@ UNMODELED_AXIS_CLAUSE = (
 # not.
 MODELLED_AXIS_CLAUSE = (
     "native build-system parallelism (--max-jobs) is modelled for this "
-    "capture from its own Plane 2 measurements - see the capacity "
-    "recommendation below (UX-116)."
+    "capture from its own Plane 2 measurements; see the capacity "
+    "recommendation below (`UX-116`)."
 )
 
 

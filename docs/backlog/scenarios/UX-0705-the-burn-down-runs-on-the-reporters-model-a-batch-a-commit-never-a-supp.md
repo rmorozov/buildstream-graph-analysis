@@ -26,8 +26,8 @@ per-file-ignore, an `eslint-disable` are each a finding in the
 baseline's own count, so a suppression is a growth and red. One row
 per batch in the run ledger: tokens, findings closed, reverts. A
 round with two or more tracks gives one to the burn-down until the
-baseline is empty; the first batch is `S607` (18 partial-path
-executables → `shutil.which`).
+baseline is empty; each batch is picked from the census, and `S607`
+is not one of them — Batch 1 below measured why.
 
 ## Out of Scope
 
@@ -38,10 +38,10 @@ executables → `shutil.which`).
 
 ## Acceptance Test
 
-After the first batch: `git grep -c S607 tests/quality_baseline.json`
-→ 0, `make test` green, one ledger row; mutation: a batch that adds
-one `# noqa: S607` — `--check` red on the suppression count, the
-track fails.
+Per batch: `dev_baseline.py --shrink` removes exactly that batch's
+findings and `--check` adds none of any rule, `make test` green, one
+ledger row. Mutation: a batch that adds one `# noqa: S607` —
+`--check` red on the suppression count, the track fails.
 
 ## Progress
 
@@ -113,7 +113,18 @@ literal argv (`bst_baseline_set.py` fetch/ls-remote,
 `bst_native_build_tracer.py` bst-artifact) -
 `tests/unit/test_baseline_set.py`, `tests/unit/test_the_contents_read_is_one_call.py`.
 
-Whether to authorise the `S603` growth (`--write --force --reason
-UX-705`) or move the three tests is a call the batch's own Acceptance
-Test ("no new finding of any rule") does not make for itself.
+**Verified independently, and decided.** Reproduced on
+`tools/dev_touching.py`: before, `S603@118 S607@122 S603@395`; after
+resolving `git`, `S603@120 S603@123 S603@397` — the finding changed
+label, it did not close. **The growth is not authorised**: a `--force`
+that turns 8 `S607` into 8 `S603` moves the count sideways and costs
+three tests their literal-argv assertion. So this row's original "first
+batch is `S607`, → 0" was unachievable as a reduction, and 7 of 23 is
+the whole of what that family had to give.
+
+**The census after batch 1** — `dev_baseline.py --check`: `clean: 300
+finding(s)`. 195 are structural and `UX-695`'s (`C901` 84, `PLR0912`
+47, `PLR0913` 34, `PLR0915` 30); 105 are this row's. **Next batch is
+`SIM115`** (11 findings, 4 files, all under `tools/`): `open` without a
+context manager, mechanical, and no rule trades against it.
 

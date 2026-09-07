@@ -97,14 +97,54 @@ def _table():
 
 
 def _ambiguous():
-    """Ids more than one document numbers. A bare `§5` in a guard
-    belongs to whichever document its sentence is about, and nothing in
-    the text says which - so these rows are named rather than derived.
-    Adding the contributing style guide leaves the set identical today
-    (its §1-§7 are already the fixing guide's, and the page has no §8
-    or §9), and keeps it right if the page ever grows one."""
-    return frozenset(_sections(STYLEGUIDE)) & (
-        frozenset(_sections(FIXING_GUIDE)) | frozenset(_sections(STYLE_GUIDE)))
+    """Ids more than one of the three documents numbers. A bare `§5`
+    in a guard belongs to whichever document its sentence is about,
+    and nothing in the text says which - so these rows are named
+    rather than derived.
+
+    `UX-765` found the gap this replaced: pairing `STYLEGUIDE` against
+    the union of the other two sees a collision either shares with it,
+    but not one `FIXING_GUIDE` and `STYLE_GUIDE` share with each other
+    and not with `STYLEGUIDE` - which is exactly the shape `## 8.` in
+    `fixing-guide.md` and `STYLE_GUIDE`'s own `§8` took. Pairwise
+    over all three closes that."""
+    ids = [frozenset(_sections(d)) for d in (STYLEGUIDE, FIXING_GUIDE, STYLE_GUIDE)]
+    seen, dup = set(), set()
+    for one in ids:
+        dup |= seen & one
+        seen |= one
+    return frozenset(dup)
+
+
+#: `_ambiguous()`, measured the day `UX-765` closed this gap. A census,
+#: not a judgement that sharing these is fine - a new id joining it is
+#: exactly the collision this guard exists to catch, so it fails naming
+#: the id rather than silently widening the set it compares against.
+KNOWN_AMBIGUOUS = frozenset({"1", "2", "3", "4", "4a", "5", "6", "6a", "7"})
+
+
+class TestTheIdSpaceGrowsNoSilentCollision:
+    """`UX-765`: `## 8.` in `fixing-guide.md` duplicated `STYLE_GUIDE`'s
+    own `§8`, and the old `_ambiguous()` - `STYLEGUIDE` paired against
+    the union of the other two - could not see a collision neither
+    document shares with `STYLEGUIDE`. This is the direct check: any
+    id `_ambiguous()` did not already carry is a new one."""
+
+    def test_no_new_id_is_shared_across_the_three_documents(self):
+        extra = _ambiguous() - KNOWN_AMBIGUOUS
+        assert extra == set(), (
+            f"{sorted(extra)} now heads a section in more than one of "
+            f"{STYLEGUIDE.name}, {FIXING_GUIDE.name}, {STYLE_GUIDE.name} "
+            f"and did not before - give the new section a number none "
+            f"of the three already use")
+
+    def test_the_known_set_is_not_stale(self):
+        """The other direction: a retired id left in the allowlist
+        would let a real new collision hide underneath it."""
+        gone = KNOWN_AMBIGUOUS - _ambiguous()
+        assert gone == set(), (
+            f"{sorted(gone)} is no longer shared by any two of the three "
+            f"documents - shrink `KNOWN_AMBIGUOUS` to match")
 
 
 class TestTheTableIsTheGuide:

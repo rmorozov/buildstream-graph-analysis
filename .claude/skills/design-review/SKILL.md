@@ -16,8 +16,11 @@ restyle the page in passing.
 
 One subagent that can read images, so the pictures never enter the
 orchestrating session. It returns text; the screenshots stay in the
-scratchpad. The orchestrator passes the model choice on the launch
-(see `CLAUDE.md`'s agents line).
+scratchpad. The orchestrator passes the model choice on the launch —
+`CLAUDE.md`'s agents line pins `researcher` and `verifier` to `sonnet`
+and names none for this skill or `walk`, so the choice is the
+launching session's, recorded by `docs/audits/agent-runs.md`'s model
+column rather than advised here (`UX-765`).
 
 ## The protocol
 

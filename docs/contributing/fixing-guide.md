@@ -99,6 +99,11 @@ Round 80's 8m52s is **not reproducible on the tree that produced it**: the same 
    the tier's. `PYTEST_XDIST=` turns the parallelism off for a run
    that needs one process.
 
+   `Makefile:30-32` carries `UX-238`'s dated reading (2026-08-23: small
+   18.2s, medium 184.0s, large 159.0s) — up to 35% apart on `large`,
+   neither wrong, both machine-dependent (`UX-765`). Cite this
+   paragraph's, the newer of the two.
+
    Tiers come from measured per-file duration (`tests/tiers.py`), not from taste. Use them for the edit-run loop and for re-running one guard after a mutation — **not** as a substitute for the next step.
 
 4. Also run the full existing suite to confirm you didn't regress anything else. **`UX-500` asked whether this could become one run per *batch* and the answer is no**, measured over two rounds rather than argued: run `dev_touching.select` over each responsible commit's own diff and ask whether the guard that caught the defect is in the set the cheap gate would have chosen. Round 75 (Regime A, 7 items): **2 of 5**. Round 80 (Regime B, 24 items, six parallel tracks): **4 of 9** — it did not fall when the batch got three times larger. The four have a shape: the selector maps a diff to the guards that *name* what it touched, and three of them read a **consequence** — a new contract landing in every committed fixture, a reworded sentence another file greps for, a file's own duration crossing a tier floor. No grep over a diff can find those. Figures in [`docs/audits/round-80.md`](../audits/round-80.md) and [`round-75.md`](../audits/round-75.md); the batch gate stays *in addition*, not instead:
@@ -520,3 +525,43 @@ json.dump(trace, open(f"{d}/trace.json", "w"))
 Then: `python3 -m bga.cli analyze /tmp/bga_test_run`
 
 A quick correctness sanity check with this fixture: the Attribution Breakdown should sum to the full 450000µs task horizon (I4, Σ attribution == H) - if it doesn't, something regressed in the attribution pipeline, and that's worth investigating before anything else.
+
+## 7a. Closing a round
+
+Round obligations are scattered; round 104 closed from memory and
+missed two, both caught by CI (`UX-763`). In order, each step
+readable only after the one before it:
+
+1. Each task's row moves, both markers, one commit:
+   `dev_close_task.py UX-NNN --move --note "…"` —
+   `test_the_table_status_matches_the_task_files`.
+2. The index counts, derived once every row has moved:
+   `dev_close_task.py --check --write` (`UX-501`) —
+   `test_the_index_counts_match_the_rows_they_index`.
+3. The ledger rows, one per subagent with its friction line, in
+   `docs/audits/agent-runs.md` (`dev_track_cost.py --append`, `UX-666`)
+   — `test_a_run_is_priced.py::TestTheRowIsWritten`.
+4. The touch-map spread, when the (file, module) pairs changed:
+   `dev_touching.py --spread --write` (`UX-756`) —
+   `test_the_cost_row_is_derived_from_the_selector.py`.
+5. The round document, its `## Agents` table copied from step 3's
+   rows or stating none ran —
+   `test_a_run_is_priced.py::TestEveryRoundDocumentPricesItsAgents`
+   (`UX-666`).
+6. `directions.md`'s history row and the `docs/README.md` link, in
+   the same commit —
+   `test_the_round_history_names_every_audit.py` (`UX-583`/`UX-591`).
+7. The gate, last: `make test` on the commit about to push —
+   `test_the_gate_covers_the_pushed_commit.py` (`UX-762`). Steps 1-6
+   are commits too, so a gate before them is stale by ship time;
+   round 105 closed this way, no bypass.
+
+**Self-reference (`UX-744`):** history-derived figures can't name the
+commit that first states them — the round document is one. Step 2
+avoids this by counting rows, not commits ("regenerate last",
+`UX-501`); a register counting *rounds* can't include its own landing
+commit, so it is one round behind by construction, caught up next
+round.
+
+Names the guard each step already has; it replaces none of them
+(`UX-744`, `UX-757` build the missing instrument).

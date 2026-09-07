@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-746 scenarios: **20 open**, 726 closed.
+747 scenarios: **21 open**, 726 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -27,7 +27,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | cli | 0 | 22 |
 | store | 0 | 16 |
 | docs | 5 | 121 |
-| guards | 5 | 175 |
+| guards | 6 | 176 |
 
 ## Open scenarios
 
@@ -56,6 +56,7 @@ task file, which is the only place it ever lived twice.
 | UX-746 | [four workflows are on no map, and the map's guard cannot see them](UX-0746-four-workflows-are-on-no-map-and-the-map-s-guard-cannot-see-them.md) | docs | Medium | the low-context session told not to re-derive where things live | 🔴 |
 | UX-748 | [three guards read a narrower population than the sentence they check](UX-0748-three-guards-read-a-narrower-population-than-the-sentence-they-check.md) | guards | Medium | the reader who trusts a guarded sentence because it is guarded | 🔴 |
 | UX-749 | [a citation that looks like a path, and a count of branches that moved](UX-0749-a-citation-that-looks-like-a-path-and-a-count-of-branches-that-moved.md) | docs | Low | the reader who clicks, or counts | 🔴 |
+| UX-750 | [the map's one count is the one noun the guard does not list](UX-0750-the-map-s-one-count-is-the-one-noun-the-guard-does-not-list.md) | guards | Medium | the reader who trusts a guarded sentence because it is guarded | 🔴 |
 
 ## UX-706..UX-711: the ninety-fourth round — the pipeline, and which model runs which shape (2026-09-05)
 

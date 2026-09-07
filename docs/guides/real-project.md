@@ -223,8 +223,10 @@ that shape by CI. `pip install -e ".[bst]"` from inside the checkout is
 the contributor mode.
 
 `--single-branch` because this repository doubles as the capture archive
-(`UX-77`): eight `captures/*` branches, which a default clone fetches
-whether or not you will ever read one. Nothing in this guide needs them,
+(`UX-77`): `captures/*` branches — twelve as of 2026-09-07 (`git
+ls-remote --heads origin 'captures/*' | wc -l`; a capture job may add
+more at any time) — which a default clone fetches whether or not you
+will ever read one. Nothing in this guide needs them,
 and the one command that does — `bga baseline` — fetches by ref rather
 than from the clone's refspec, so it works either way.
 

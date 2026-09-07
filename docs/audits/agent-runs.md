@@ -50,6 +50,12 @@ limit is a row too.
 | 103 | implementer | sonnet | `UX-705` burn-down batch 1: S607 under `tools/` (bounded) | 190k | 160 | 35.4 m | merged | resolving the executable turns a literal argv into one with a Name in it, which is what S603 reads - 16 of 23 cannot close without growing S603 |
 | 103 | implementer | sonnet | `UX-705` burn-down batch 2: SIM115 under `tools/` (bounded) | 73k | 92 | 14.9 m | merged | wall clock: make test is ~7 min and the turn budget went into polling for it, not into the fix, which was mechanical as briefed |
 | 103 | implementer | sonnet | `UX-742` a dead-export detector eslint cannot be (bounded) | 252k | 101 | 31.1 m | merged, two fixes | strip_comments blanks a string body wholesale, silently erasing the module paths a name-level import parse needs - 286 unread before the switch to raw text |
+| 103 | implementer | sonnet | UX-749 | 84k | 69 | 19 m | merged; nine pseudo-path citations to bare ids, branch count dated | the task file's own citation list omitted UX-3; verifying the count beat trusting the list |
+| 103 | implementer | sonnet | UX-746 | 159k | 71 | 21.5 m | merged after correction; the four workflows are on the map and the walk reaches them | copied the task file's false 'manual' premise forward without opening the .yml |
+| 103 | implementer | sonnet | UX-748 | 413k | 121 | 48.6 m | merged after correction; three guards widened, log re-anchored, range regex widened again | measured its acceptance test in a tree where its own commit did not yet exist |
+| 103 | verifier | sonnet | UX-746 verify | 251k | 81 | 27.4 m | both vacuity claims reproduced load-bearing; found the capture row misdescribes its workflow | the Outcome named each mutation but not the counter-mutation proving it load-bearing |
+| 103 | verifier | sonnet | UX-749 verify | 104k | 77 | 30.2 m | count and guard confirmed; caught a 6-line comment against the Register's cap, and the #anchor gap | a loaded box turned one full suite into three background waits |
+| 103 | verifier | sonnet | UX-748 verify | 91k | 66 | 15.5 m | found the acceptance test does not survive being committed, and the new guard vacuous on 'remain open' | the defect was invisible from the track's own uncommitted sandbox; only re-running against HEAD showed it |
 
 Round 101's four tracks are **not** here: this session could not
 identify their transcripts with certainty after a context rebuild, and
@@ -62,7 +68,7 @@ committed cleanly once told to run in the foreground. Three of the five
 left a derived figure or a §6 context-map row behind - the same class
 the round itself was about, arriving in the tracks' own work.
 
-What the thirty-nine rows already say: a researcher that reads a document
+What the forty-five rows already say: a researcher that reads a document
 whole costs 100-180k; a walker that drives every control costs 336k;
 the two cuts cost a re-run each. The `walk` and `design-review`
 skills fix the report shape so the next rows are smaller, and the

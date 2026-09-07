@@ -21,10 +21,14 @@ comfortable (`UX-235`). A guard that runs nowhere and a guard that
 runs somewhere and says where are different things.
 """
 import atexit
+import contextlib
+import glob
 import json
 import os
 import pathlib
+import re
 import shutil
+import signal
 import socket
 import subprocess
 import tempfile
@@ -52,6 +56,65 @@ def _close_shared():
         opened._stop()
         shutil.rmtree(opened.profile, ignore_errors=True)
     _SHARED.clear()
+
+
+#: `UX-773`: a root's name carries the pid that made it, so a later
+#: process can tell one whose owner exited (stale) from one still in
+#: use, without touching a root it did not create the naming for.
+_OWNER = re.compile(r"^bga-geometry-(\d+)-")
+
+
+def _new_profile():
+    """A profile root named for this process, under the system tmpdir
+    read at call time (so a guard pointing `tempfile.tempdir` at its
+    own directory lands here, not in the machine's `/tmp`)."""
+    return tempfile.mkdtemp(prefix=f"bga-geometry-{os.getpid()}-")
+
+
+def _owner_gone(path):
+    match = _OWNER.match(os.path.basename(path))
+    if not match:
+        return False
+    pid = int(match.group(1))
+    if pid == os.getpid():
+        return False
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return True
+    except PermissionError:
+        return False
+    return False
+
+
+def _kill_orphan(profile):
+    """SIGKILL every process (as its own process group, see `_launch`'s
+    `start_new_session`) whose command line names `profile` as its
+    `--user-data-dir` - the Chrome a killed owner left running,
+    reparented to pid 1 rather than reaped."""
+    needle = profile.encode()
+    for entry in glob.glob("/proc/[0-9]*"):
+        try:
+            cmdline = pathlib.Path(entry, "cmdline").read_bytes()
+        except OSError:
+            continue
+        if needle not in cmdline:
+            continue
+        pid = int(os.path.basename(entry))
+        with contextlib.suppress(ProcessLookupError, PermissionError):
+            os.killpg(os.getpgid(pid), signal.SIGKILL)
+
+
+def _sweep_stale():
+    """`UX-773`: `atexit` (`_close_shared`, above) never runs for a
+    worker killed by signal, so its Chrome and profile survive it.
+    Run on every entry, before this process makes its own root, so the
+    one that starts cleans up after the one a signal cut off."""
+    root = tempfile.gettempdir()
+    for path in glob.glob(os.path.join(root, "bga-geometry-*")):
+        if _owner_gone(path):
+            _kill_orphan(path)
+            shutil.rmtree(path, ignore_errors=True)
 
 
 def find_chrome():
@@ -84,7 +147,11 @@ class Browser:
     def __init__(self, binary):
         self.binary = binary
         self.port = _free_port()
-        self.profile = tempfile.mkdtemp(prefix="bga-geometry-")
+        #: Made in `__enter__`, only for the instance that actually
+        #: launches - an instance that ends up reusing `_SHARED` never
+        #: needs one (`UX-773`: a profile made regardless was itself a
+        #: leak, on every reuse, that no `atexit` handler ever named).
+        self.profile = None
         self.process = None
         #: `UX-523`: true once this instance is the worker's shared
         #: browser, which is what stops `__exit__` closing it.
@@ -118,7 +185,12 @@ class Browser:
             [self.binary, "--headless=new", "--no-sandbox", "--disable-gpu",
              "--disable-dev-shm-usage", f"--remote-debugging-port={self.port}",
              f"--user-data-dir={self.profile}", "about:blank"],
-            stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+            stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
+            # `UX-773`: its own process group, so a later sweep can
+            # `killpg` the browser (and any helper it forked) without
+            # reaching the group its own launcher - possibly this
+            # worker's whole xdist session - belongs to.
+            start_new_session=True)
         self._stderr = self.process.stderr
         deadline = time.time() + self.START_TIMEOUT_S
         while time.time() < deadline:
@@ -147,12 +219,17 @@ class Browser:
         # 0.33s a launch; what it really buys is that the port race
         # `UX-456` retries for is run once instead of thirty-eight
         # times.
+        # `UX-773`: before anything else, so the process that starts
+        # cleans up after the one a signal cut off - the only point at
+        # which anything is running to do it.
+        _sweep_stale()
         shared = _SHARED.get(self.binary)
         if (shared is not None and shared.process is not None
                 and shared.process.poll() is None):
             self.port = shared.port
             self._shared = True
             return self
+        self.profile = _new_profile()
         last = None
         for attempt in range(1, self.START_ATTEMPTS + 1):
             if self._launch():

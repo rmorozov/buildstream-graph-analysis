@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-756 scenarios: **20 open**, 736 closed.
+757 scenarios: **20 open**, 737 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -27,7 +27,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | cli | 0 | 22 |
 | store | 0 | 16 |
 | docs | 4 | 123 |
-| guards | 6 | 181 |
+| guards | 6 | 182 |
 
 ## Open scenarios
 
@@ -52,10 +52,10 @@ task file, which is the only place it ever lived twice.
 | UX-698 | [the gate-only shelf on GitHub — code scanning, a lockfile and audit, Dependabot, secret scanning](UX-0698-the-gate-only-shelf-on-github-code-scanning-a-lockfile-and-audit-depen.md) | guards | High | R8 reading a red gate that a hosted tool raised, and the user who wants the heavier analyses without a slower inner loop | 🔴 |
 | UX-741 | [the spine's ground truth reads wall clock, and a loaded host reds it](UX-0741-the-spine-s-ground-truth-reads-wall-clock-and-a-loaded-host-reds-it.md) | guards | Medium | R8 reading a red gate on a file nobody touched | 🔴 |
 | UX-744 | [no register says which rounds exist, and four records disagree](UX-0744-no-register-says-which-rounds-exist-and-four-records-disagree.md) | docs | Medium | the session opening a round, which cannot number it from any record | 🔴 |
-| UX-755 | [the gate and CI disagree, and the gate is the one that is wrong](UX-0755-the-gate-and-ci-disagree-and-the-gate-is-the-one-that-is-wrong.md) | guards | Medium | the session that runs `make test` and believes it | 🔴 |
 | UX-757 | [the four rounds the register names have no document](UX-0757-the-four-rounds-the-register-names-have-no-document.md) | docs | Medium | the reader who cannot see what rounds 99..102 launched | 🔴 |
 | UX-758 | [the edge-mark test reads a merged name and never matches](UX-0758-the-edge-mark-test-reads-a-merged-name-and-never-matches.md) | viewer | Medium | the reader of an exhibit axis whose labels silently stop being protected | 🔴 |
 | UX-759 | [the register's id column loses a subset in silence](UX-0759-the-register-s-id-column-loses-a-subset-in-silence.md) | guards | Medium | the round that reads the register to learn what an earlier round closed | 🔴 |
+| UX-760 | [six more files build against the broken reserve](UX-0760-six-more-files-build-against-the-broken-reserve.md) | guards | Medium | the session that runs `make test` on a container with a large disk and little free space | 🔴 |
 
 ## UX-706..UX-711: the ninety-fourth round — the pipeline, and which model runs which shape (2026-09-05)
 

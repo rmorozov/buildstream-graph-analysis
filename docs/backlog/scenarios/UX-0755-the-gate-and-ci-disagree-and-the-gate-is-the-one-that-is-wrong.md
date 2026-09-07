@@ -1,6 +1,6 @@
 # UX-755: the gate and CI disagree, and the gate is the one that is wrong
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-336 (the loop), UX-418 (a slow file CI sees differently) | **Serves:** the session that runs `make test` and believes it | **Topic:** guards | **Area:** unassigned | **Shape:** judgement
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-336 (the loop), UX-418 (a slow file CI sees differently) | **Serves:** the session that runs `make test` and believes it | **Topic:** guards | **Area:** unassigned | **Shape:** judgement
 
 ## Motivation
 

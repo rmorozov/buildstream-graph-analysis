@@ -1,11 +1,11 @@
 # Round 102: five ledger rows, a mid-round gate, and two red spine clauses
 
-No commit reads "round 102: take ... judgements"; the only commit
-naming the round is a mid-round checkpoint, `af56022` (2026-09-06
-18:08), "Round 102 gate: three guards `UX-667` moved and did not
-visit". The round's identity is the ledger's, not a marker commit's:
-`agent-runs.md` rows 51-55 all read `102` in their first column, for
-`UX-667`, `UX-691`, `UX-702`, `UX-712` and `UX-703`.
+Run on 2026-09-06. No commit reads "round 102: take ... judgements";
+the only commit naming the round is a mid-round checkpoint, `af56022`
+(2026-09-06 18:08), "Round 102 gate: three guards `UX-667` moved and
+did not visit". The round's identity is the ledger's, not a marker
+commit's: `agent-runs.md` rows 51-55 all read `102` in their first
+column, for `UX-667`, `UX-691`, `UX-702`, `UX-712` and `UX-703`.
 
 ## What closed
 

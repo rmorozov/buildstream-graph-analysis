@@ -1,8 +1,8 @@
 # Round 105 — the two rules the pipeline never wrote down
 
-Two rows, both from round 104's pipeline review, both `judgement`, both
-held by their verifier before merge. Three rows filed, two of them
-found by closing the round itself.
+Run on 2026-09-07. Two rows, both from round 104's pipeline review,
+both `judgement`, both held by their verifier before merge. Three
+rows filed, two of them found by closing the round itself.
 
 ## What closed
 

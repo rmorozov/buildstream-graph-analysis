@@ -1,7 +1,7 @@
 {
   "ruff_version": "0.15.8",
   "families": ["C901", "PLR0912", "PLR0913", "PLR0915", "S", "SIM115"],
-  "forced": [{"reason": "UX-762", "identities": [["ruff", "S607", ".claude/hooks/gate_covers_push.py", "done = subprocess.run([\"git\", \"rev-parse\", \"--show-toplevel\"],", 1], ["ruff", "S607", ".claude/hooks/gate_covers_push.py", "done = subprocess.run([\"git\", \"rev-parse\", \"HEAD\"], cwd=root,", 1]]}, {"reason": "UX-744", "identities": [["ruff", "S603", "tools/dev_round_register.py", "out = subprocess.run(", 1]]}, {"reason": "UX-744", "identities": [["ruff", "S603", "tools/dev_round_register.py", "out = subprocess.run(", 2]]}],
+  "forced": [{"reason": "UX-762", "identities": [["ruff", "S607", ".claude/hooks/gate_covers_push.py", "done = subprocess.run([\"git\", \"rev-parse\", \"--show-toplevel\"],", 1], ["ruff", "S607", ".claude/hooks/gate_covers_push.py", "done = subprocess.run([\"git\", \"rev-parse\", \"HEAD\"], cwd=root,", 1]]}, {"reason": "UX-744", "identities": [["ruff", "S603", "tools/dev_round_register.py", "out = subprocess.run(", 1]]}],
   "findings": [
     {"file": ".claude/hooks/gate_covers_push.py", "line": "done = subprocess.run([\"git\", \"rev-parse\", \"--show-toplevel\"],", "nth": 1, "rule": "S607", "tool": "ruff"},
     {"file": ".claude/hooks/gate_covers_push.py", "line": "done = subprocess.run([\"git\", \"rev-parse\", \"HEAD\"], cwd=root,", "nth": 1, "rule": "S607", "tool": "ruff"},
@@ -257,7 +257,6 @@
     {"file": "tools/dev_refresh_analysis.py", "line": "def __init__(self, path, into, run=\".\", token=\"<run>\"):", "nth": 1, "rule": "S107", "tool": "ruff"},
     {"file": "tools/dev_refresh_analysis.py", "line": "done = subprocess.run(", "nth": 1, "rule": "S603", "tool": "ruff"},
     {"file": "tools/dev_round_register.py", "line": "out = subprocess.run(", "nth": 1, "rule": "S603", "tool": "ruff"},
-    {"file": "tools/dev_round_register.py", "line": "out = subprocess.run(", "nth": 2, "rule": "S603", "tool": "ruff"},
     {"file": "tools/dev_sizes.py", "line": "run = subprocess.run(cmd, cwd=root, capture_output=True, text=True,", "nth": 1, "rule": "S603", "tool": "ruff"},
     {"file": "tools/dev_tier_drift.py", "line": "def _against(times, path, args):", "nth": 1, "rule": "C901", "tool": "ruff"},
     {"file": "tools/dev_tier_drift.py", "line": "def main(argv=None):", "nth": 1, "rule": "C901", "tool": "ruff"},

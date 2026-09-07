@@ -164,12 +164,15 @@ table) change too.
 fails naming the item if you miss one, and
 
 ```bash
-python tools/dev_close_task.py UX-NNN --move --note "one line for closed.md"
+python tools/dev_close_task.py UX-NNN --move --note-file /tmp/note.md
 python tools/dev_close_task.py --check --write
 ```
 
 does the mechanical edits and reports what disagrees (`UX-336`).
-`--move` refuses when the task file has no Outcome section.
+`--move` refuses when the task file has no Outcome section, and refuses
+a note with an embedded newline as a substituted note, not a written
+one (`UX-768`) - `--note-file` keeps the note off the command line
+entirely, where a backtick in it would otherwise run.
 
 `UX-501`: `--move` touches only the rows. The counts sentence and the
 topic table above them are *derived* - `--check --write` regenerates

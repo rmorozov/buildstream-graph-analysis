@@ -56,6 +56,8 @@ limit is a row too.
 | 103 | verifier | sonnet | UX-746 verify | 251k | 81 | 27.4 m | both vacuity claims reproduced load-bearing; found the capture row misdescribes its workflow | the Outcome named each mutation but not the counter-mutation proving it load-bearing |
 | 103 | verifier | sonnet | UX-749 verify | 104k | 77 | 30.2 m | count and guard confirmed; caught a 6-line comment against the Register's cap, and the #anchor gap | a loaded box turned one full suite into three background waits |
 | 103 | verifier | sonnet | UX-748 verify | 91k | 66 | 15.5 m | found the acceptance test does not survive being committed, and the new guard vacuous on 'remain open' | the defect was invisible from the track's own uncommitted sandbox; only re-running against HEAD showed it |
+| 103 | implementer | sonnet | UX-674 | 410k | 363 | 104.2 m | merged after correction; four font sizes, h3 below h2, prose at 72 of its own glyphs | a type-scale row that needed a layout-model change; scope grew four times, each reported |
+| 103 | verifier | sonnet | UX-674 verify | 120k | 80 | 55.3 m | found a false budget-cost claim, an undisclosed non-rewrite, and the layout change no new guard reads | the task file alone could not resolve which sentences its Motivation named |
 
 Round 101's four tracks are **not** here: this session could not
 identify their transcripts with certainty after a context rebuild, and
@@ -68,7 +70,7 @@ committed cleanly once told to run in the foreground. Three of the five
 left a derived figure or a §6 context-map row behind - the same class
 the round itself was about, arriving in the tracks' own work.
 
-What the forty-five rows already say: a researcher that reads a document
+What the forty-seven rows already say: a researcher that reads a document
 whole costs 100-180k; a walker that drives every control costs 336k;
 the two cuts cost a re-run each. The `walk` and `design-review`
 skills fix the report shape so the next rows are smaller, and the

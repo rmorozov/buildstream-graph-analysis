@@ -148,6 +148,23 @@ CENSUS = (
     "tests/unit/test_the_cost_row_is_derived_from_the_selector.py",
     "tests/unit/test_the_fast_check_holds_what_the_suite_holds.py",
     "tests/unit/test_the_loop_stays_fast.py",
+    # `UX-737`: the other half `UX-730` measured and deferred - a
+    # guard whose population comes from a subprocess (`git ls-files`,
+    # `pytest --collect-only`) rather than a tool function. Twelve of
+    # the thirteen the deferral named; the thirteenth
+    # (`test_docs_links_and_commands.py`) is already above.
+    "tests/unit/test_a_counted_figure_is_derived.py",
+    "tests/unit/test_a_guard_ledger_names_its_link.py",
+    "tests/unit/test_a_guard_that_reads_history_declares_its_depth.py",
+    "tests/unit/test_every_invariant_has_a_guard.py",
+    "tests/unit/test_every_part_has_a_guard.py",
+    "tests/unit/test_the_environment_surface_is_an_inventory.py",
+    "tests/unit/test_the_process_documents_derive_their_figures.py",
+    "tests/unit/test_the_python_floor_is_a_guard.py",
+    "tests/unit/test_the_roles_table_names_who_serves_it.py",
+    "tests/unit/test_the_round_history_names_every_audit.py",
+    "tests/unit/test_the_styleguide_names_its_guards.py",
+    "tests/unit/test_the_tiers_are_a_partition.py",
 )
 
 
@@ -404,15 +421,55 @@ def recorded():
 # these constants have. Named by the job that produced each, not
 # because the interpreter is the cause - see the note about the runner
 # - but so a later reader can find the log.
-SMALL_TIER_CI_SLOW_S = 29.0       # parallel, `-n auto`, slowest seen (3.9)
-SMALL_TIER_CI_FAST_S = 17.34      # parallel, fastest seen (3.12)
-# A floor, not a measurement: `test (3.9)` was killed at this value
-# with the run at 100%, so the figure this constant wants is somewhere
-# above it. That has now happened twice - at 27.0 and again at 30.0 -
-# and a killed run still proves the tier once cost more than the number
-# it was killed at, which is what a budget has to clear.
-SMALL_TIER_CI_SLOW_1P_S = 30.0    # single process, slowest seen (3.9)
-SMALL_TIER_CI_FAST_1P_S = 17.03   # single process, fastest seen (3.12)
+# `UX-743` re-recorded all four from run 34054287865 (head `b1b664b`),
+# where the old figures - 29.0 / 17.34 / 30.0 / 17.03, last measured in
+# round 66 - had gone 3x and 4x stale and killed every job:
+#
+# ```text
+# job          step 7 `-n auto`   step 27 single process
+# test (3.9)     82s                120s  killed
+# test (3.10)    87s                120s  killed
+# test (3.11)    66s                120s  killed
+# test (3.12)    86s                120s  killed
+# ```
+#
+# The tier did not slow down; it grew. 3102 tests when this file was
+# first measured, 7657 collected on that head, 4626 of them small.
+# Run 34056892602 (head `b44cf87`) is the first that let step 27 finish,
+# and its four jobs are where the single-process pair finally come from
+# as measurements rather than kill points:
+#
+# ```text
+# job          step 7 `-n auto`   step 27 single process
+# test (3.9)     86s                149s
+# test (3.10)    76s                137s
+# test (3.11)    70s                125s
+# test (3.12)    89s                154s
+# ```
+#
+# The extremes below are over both runs. **Single process costs 1.75x
+# the parallel step on CI, not the 2.95x it costs locally** (140.37s
+# against 47.53s on a quiet container): this box has the cores to make
+# `-n auto` pay more, so an estimate extrapolated from the local ratio
+# over-predicted CI at 200-260s. The lesson is the file's own: a ratio
+# measured on one machine is not a measurement of another.
+SMALL_TIER_CI_SLOW_S = 89.0       # parallel, `-n auto`, slowest seen (3.12)
+SMALL_TIER_CI_FAST_S = 66.0       # parallel, fastest seen (3.11)
+SMALL_TIER_CI_SLOW_1P_S = 154.0   # single process, slowest seen (3.12)
+SMALL_TIER_CI_FAST_1P_S = 125.0   # single process, fastest seen (3.11)
+
+# `UX-743`: the population the four figures above were measured on,
+# counted in files rather than tests. Files are free to count from the
+# tree; a `-m small --collect-only` costs 3.78s on every run of the
+# guard that would pay it, whose own CI reference entry is 2.37s - so
+# the honest instrument would red the tier-drift gate. One file per
+# item is this repository's rule, so the two move together.
+#
+# `test_the_backstops_were_sized_on_this_tree` reds when the tier has
+# grown past 1.5x this. It is a staleness tripwire, not a budget: what
+# it asks for is two numbers re-read off a CI run, which is the work
+# nothing did for thirty-five rounds while the suite doubled.
+SMALL_TIER_POPULATION_FILES = 326  # small-tier files at `b1b664b`
 
 # `UX-421`. **These are backstops, not budgets.** The distinction is
 # the whole item: a budget claims to bound the tier, and a wall-clock
@@ -421,20 +478,25 @@ SMALL_TIER_CI_FAST_1P_S = 17.03   # single process, fastest seen (3.12)
 # 3.10, 3.11 and 3.12 passed the same step on the same commit at 26,
 # 26 and 19s. Nothing about the tier differed between those four jobs.
 #
-# Sized to catch a hang and nothing finer: about four times the
-# slowest step ever seen (30.0s), and far enough below the job's own
-# timeout that it fails fast with a legible message instead of burning
-# six minutes. A number in this range needs no re-measuring when the
-# tier grows by a second, which was the maintenance the old budget
-# demanded every re-tier.
+# Sized to catch a hang and nothing finer: several times the slowest
+# step ever seen, and far enough below the job's own timeout that it
+# fails fast with a legible message. A number in this range needs no
+# re-measuring when the tier grows by a second, which was the
+# maintenance the old budget demanded every re-tier.
+#
+# `UX-743`: **they are no longer the same number.** UX-421 set both to
+# 120 because the two steps then differed by a second; on CI the single-
+# process step now costs 1.75x the parallel one, so one number cannot
+# sit several times above both. 300 is 3.4x the measured 89s; 900 is
+# 5.8x the measured 154s.
 #
 # **What actually catches a large file in the default tier** is
 # `tools/dev_tier_drift.py --against`, run in CI on the 3.11 job. It
 # compares each file to CI's own recorded seconds with the run's median
 # shift divided out, so a slow runner is not read as a slow file - and
 # it names the file, which a timeout never could.
-SMALL_TIER_BACKSTOP_S = 120.0     # the `-n auto` step's timeout
-SMALL_TIER_BACKSTOP_1P_S = 120.0  # the single-process step's timeout
+SMALL_TIER_BACKSTOP_S = 300.0     # the `-n auto` step's timeout
+SMALL_TIER_BACKSTOP_1P_S = 900.0  # the single-process step's timeout
 
 # The sizing this replaced, kept because it is the argument `UX-421`
 # had to answer rather than a number to restore. The old budget was
@@ -580,6 +642,11 @@ MEDIUM = (
     # clauses that need no browser. Three single-process runs:
     # 1.41 / 1.35 / 1.35s.
     "tests/unit/test_a_runbook_is_not_a_table.py",                #    1.4s
+    # `UX-667`, tiered on landing. One Chromium, one module-scoped
+    # page - the rail's landing state, a 68-mark walk and the CSS
+    # sweep all read from it. Measured single-process, `--durations=0`:
+    # 10.5s.
+    "tests/unit/test_the_rail_is_a_source_list.py",               #   10.5s
     # `UX-455`, tiered on landing, and it earned the tier the way the
     # item is about: two clauses run the confirmation for real, which
     # is a pytest subprocess each. Three single-process runs:
@@ -726,6 +793,10 @@ MEDIUM = (
     "tests/unit/test_a_table_cell_obeys_the_value_rule.py",     #    3.2s
     # `UX-641`: two `bga analyze` subprocesses and four node ones.
     "tests/unit/test_a_level_names_who_is_in_it.py",            #    2.4s
+    # `UX-674`, tiered on landing: one Chromium, two page boots
+    # (golden and macro_micro) over eight clauses. 2.35s measured
+    # single-process with `--durations=0`.
+    "tests/unit/test_the_type_scale_is_four_steps.py",          #    2.4s
     "tests/unit/test_a_control_says_what_it_does.py",           #    2.7s
     "tests/unit/test_every_table_has_its_own_state_key.py",     #    1.5s
     "tests/unit/test_findings_carry_their_evidence.py",         #    1.5s
@@ -900,4 +971,9 @@ MEDIUM = (
     # activation is a default action too, and the fold it opens has to
     # be read out of a real page. 3.55 / 3.79s.
     "tests/unit/test_the_fragment_keeps_up_with_the_fold.py",         #    3.8s
+    # `UX-692`, tiered on landing. 50 generated shapes through the full
+    # `analyze()` pipeline plus 9 re-runs at n=3 for determinism - no
+    # browser, no subprocess, but 59 real analyses. Three
+    # single-process runs alone: 4.93 / 5.17 / 5.12s.
+    "tests/unit/test_the_invariants_hold_for_any_shape.py",           #    5.2s
 )

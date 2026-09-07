@@ -15,19 +15,19 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-735 scenarios: **31 open**, 704 closed.
+765 scenarios: **26 open**, 739 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
-| capture | 2 | 96 |
-| analysis | 6 | 105 |
+| capture | 1 | 96 |
+| analysis | 6 | 107 |
 | contracts | 0 | 48 |
-| viewer | 6 | 161 |
+| viewer | 3 | 163 |
 | cli | 0 | 22 |
 | store | 0 | 16 |
-| docs | 4 | 118 |
-| guards | 13 | 169 |
+| docs | 6 | 126 |
+| guards | 10 | 187 |
 
 ## Open scenarios
 
@@ -36,13 +36,10 @@ task file, which is the only place it ever lived twice.
 
 | ID | Scenario | Topic | Priority | Serves | Status |
 |---|---|---|---|---|---|
-| UX-666 | [a subagent's cost is written down, and its friction with it](UX-0666-a-subagent-s-cost-is-written-down-and-its-friction-with-it.md) | docs | High | the round choosing a model and a shape for its next agent | 🔴 |
-| UX-667 | [the rail is a source list — chapters disclose, and the mark stays in view](UX-0667-the-rail-is-a-source-list-chapters-disclose-and-the-mark-stays-in-view.md) | viewer | High | R1..R8 — every reader past the first screen | 🔴 |
 | UX-668 | [a reader is a shape, not a hue — and the selector lives in the header](UX-0668-a-reader-is-a-shape-not-a-hue-and-the-selector-lives-in-the-header.md) | viewer | High | R1..R5, the readers the select names | 🔴 |
 | UX-671 | [the rail acts on the view, and the URL does not follow](UX-0671-the-rail-acts-on-the-view-and-the-url-does-not-follow.md) | viewer | Medium | anyone sharing "Copy link to this view" | 🔴 |
-| UX-674 | [eighteen font sizes, an h3 larger than its h2, and 130-character lines](UX-0674-eighteen-font-sizes-an-h3-larger-than-its-h2-and-130-character-lines.md) | viewer | Medium | every reader of prose on the page | 🔴 |
-| UX-677 | [the max-jobs advisor — per element, under a no-overcommit constraint](UX-0677-the-max-jobs-advisor-per-element-under-a-no-overcommit-constraint.md) | analysis | High | R4 and R2 — the operator who sets the numbers and the owner whose recipe carries them | 🔴 |
 | UX-678 | [memory joins the sweep and the queue model](UX-0678-memory-joins-the-sweep-and-the-queue-model.md) | analysis | Medium | R5 sizing a builder, R4 reading the sweep | 🔴 |
+| UX-739 | [the max-jobs advice is not priced — nothing says what the build drops to](UX-0739-the-max-jobs-advice-is-not-priced-nothing-says-what-the-build-drops-to.md) | analysis | Medium | R4 and R5, deciding whether the recommendation is worth applying | 🔴 |
 | UX-679 | [a jobserver every sandbox joins — the prototype bga can run](UX-0679-a-jobserver-every-sandbox-joins-the-prototype-bga-can-run.md) | capture | Medium | R4 and R5 — dynamic sharing instead of static tuning | 🔴 |
 | UX-680 | [remote execution is priced, not built](UX-0680-remote-execution-is-priced-not-built.md) | analysis | Medium | R4 and R8 deciding whether to buy it | 🔴 |
 | UX-682 | [change frequency and co-change, from the logs the project already keeps](UX-0682-change-frequency-and-co-change-from-the-logs-the-project-already-keeps.md) | analysis | High | R2 and R3 — split, consolidate, or leave alone, decided on evidence | 🔴 |
@@ -50,23 +47,21 @@ task file, which is the only place it ever lived twice.
 | UX-684 | [the cached-build verdict — does the graph rebuild the cheapest subgraph?](UX-0684-the-cached-build-verdict-does-the-graph-rebuild-the-cheapest-subgraph.md) | analysis | High | R3 showing evidence, R8 reading it | 🔴 |
 | UX-689 | [the architecture document moves into the area pages, one track at a time](UX-0689-the-architecture-document-moves-into-the-area-pages-one-track-at-a-tim.md) | docs | Medium | the reader pricing a change; the session restructuring without losing a sentence | 🔴 |
 | UX-690 | [the suite has a shape budget, and a feature files its test analysis](UX-0690-the-suite-has-a-shape-budget-and-a-feature-files-its-test-analysis.md) | guards | Medium | R8 reading whether the suite is balanced; the implementer writing the right guard | 🔴 |
-| UX-691 | [a flake ledger, so an excursion is counted before it is a flake](UX-0691-a-flake-ledger-so-an-excursion-is-counted-before-it-is-a-flake.md) | guards | Medium | the round reading a red gate on a file nobody touched | 🔴 |
-| UX-692 | [the invariants hold for any shape — a seeded sweep over generated projects](UX-0692-the-invariants-hold-for-any-shape-a-seeded-sweep-over-generated-projec.md) | guards | High | R8 trusting the report on a graph nobody fixtured | 🔴 |
 | UX-695 | [the refactor stream takes the ledger's top row — renderers first](UX-0695-the-refactor-stream-takes-the-ledger-s-top-row-renderers-first.md) | docs | Medium | the session that opens a round and has no refactor to pick because none is filed | 🔴 |
-| UX-696 | [the register's unguarded rows — no round in code, a dated count, the commit body](UX-0696-the-register-s-unguarded-rows-no-round-in-code-a-dated-count-the-commi.md) | guards | Medium | the reader who opens a module a year on and meets its history instead of its reason | 🔴 |
 | UX-697 | [a type-error ratchet, contracts first](UX-0697-a-type-error-ratchet-contracts-first.md) | guards | Medium | the session editing a schema or a contract, where a wrong key is a `UX-190` bump nobody meant | 🔴 |
 | UX-698 | [the gate-only shelf on GitHub — code scanning, a lockfile and audit, Dependabot, secret scanning](UX-0698-the-gate-only-shelf-on-github-code-scanning-a-lockfile-and-audit-depen.md) | guards | High | R8 reading a red gate that a hosted tool raised, and the user who wants the heavier analyses without a slower inner loop | 🔴 |
-| UX-699 | [the viewer linted as one module graph](UX-0699-the-viewer-linted-as-one-module-graph.md) | viewer | Medium | the session editing a viewer module, which today has no linter of any kind | 🔴 |
-| UX-702 | [a performance ratchet at the gate](UX-0702-a-performance-ratchet-at-the-gate.md) | guards | Medium | R8 reading whether a round made `bga analyze` slower on the largest capture, which nothing today records | 🔴 |
-| UX-703 | [a mutation run on the touched modules, weekly](UX-0703-a-mutation-run-on-the-touched-modules-weekly.md) | guards | Low | the falsify skill, which is a hand ritual per guard and cannot be run over the suite | 🔴 |
-| UX-705 | [the burn-down runs on the reporters' model — a batch a commit, never a suppression](UX-0705-the-burn-down-runs-on-the-reporters-model-a-batch-a-commit-never-a-supp.md) | guards | High | R8, who wants the baseline to reach zero without the session's model reading 1,709 findings | 🔴 |
-| UX-708 | [the first batch under the pipeline, priced per shape](UX-0708-the-first-batch-under-the-pipeline-priced-per-shape.md) | docs | High | the advisory in `CLAUDE.md`, which says `sonnet` for tracks on an argument | 🔴 |
-| UX-712 | [the size ledger, for what has no finding identity](UX-0712-the-size-ledger-for-what-has-no-finding-identity.md) | guards | Medium | the refactor stream, which reads the top row of this ledger | 🔴 |
-| UX-716 | [a guard whose cost is its population has no refresh route](UX-0716-a-guard-whose-cost-is-its-population-has-no-refresh-route.md) | guards | Medium | the branch that goes red for test files another branch added | 🔴 |
-| UX-717 | [the host series is on the trace and in no question](UX-0717-the-host-series-is-on-the-trace-and-in-no-question.md) | viewer | Medium | a reader with Perfetto open, asking whether the cores were busy | 🔴 |
-| UX-728 | [a track's repro runs the session's checkout, not its worktree](UX-0728-a-tracks-repro-runs-the-sessions-checkout-not-its-worktree.md) | guards | Medium | every `implementer` track that reproduces a defect through the CLI | 🔴 |
-| UX-737 | [the census detector's other half — thirteen guards a subprocess hides](UX-0737-the-census-detectors-other-half-thirteen-guards-a-subprocess-hides.md) | guards | Medium | the round whose CI reds on a guard its pre-commit hook could not select | 🔴 |
-| UX-738 | [a build that could not write reports as a clean run and exit 255](UX-0738-a-build-that-could-not-write-reports-as-a-clean-run-and-exit-255.md) | capture | High | anyone whose disk fills mid-capture, and the round that then reads the report | 🔴 |
+| UX-741 | [the spine's ground truth reads wall clock, and a loaded host reds it](UX-0741-the-spine-s-ground-truth-reads-wall-clock-and-a-loaded-host-reds-it.md) | guards | Medium | R8 reading a red gate on a file nobody touched | 🔴 |
+| UX-744 | [no register says which rounds exist, and four records disagree](UX-0744-no-register-says-which-rounds-exist-and-four-records-disagree.md) | docs | Medium | the session opening a round, which cannot number it from any record | 🔴 |
+| UX-757 | [the four rounds the register names have no document](UX-0757-the-four-rounds-the-register-names-have-no-document.md) | docs | Medium | the reader who cannot see what rounds 99..102 launched | 🔴 |
+| UX-758 | [the edge-mark test reads a merged name and never matches](UX-0758-the-edge-mark-test-reads-a-merged-name-and-never-matches.md) | viewer | Medium | the reader of an exhibit axis whose labels silently stop being protected | 🔴 |
+| UX-759 | [the register's id column loses a subset in silence](UX-0759-the-register-s-id-column-loses-a-subset-in-silence.md) | guards | Medium | the round that reads the register to learn what an earlier round closed | 🔴 |
+| UX-760 | [six more files build against the broken reserve](UX-0760-six-more-files-build-against-the-broken-reserve.md) | guards | Medium | the session that runs `make test` on a container with a large disk and little free space | 🔴 |
+| UX-763 | [no document says what closing a round owes](UX-0763-no-document-says-what-closing-a-round-owes.md) | docs | Medium | the session closing a round from memory because no list exists | 🔴 |
+| UX-764 | [two Register caps are guarded and two are honour-system](UX-0764-two-register-caps-are-guarded-and-two-are-honour-system.md) | guards | Medium | the reader who trusts a cap because the guard reported green | 🔴 |
+| UX-765 | [two process cross-references point at numbers that are not there](UX-0765-two-process-cross-references-point-at-numbers-that-are-not-there.md) | docs | Low | the session that follows a cross-reference and finds the other number | 🔴 |
+| UX-766 | [the forced baseline is loud only until it is committed](UX-0766-the-forced-baseline-is-loud-only-until-it-is-committed.md) | guards | Medium | the session reading `make lint` and believing the baseline did not grow | 🔴 |
+| UX-767 | [the push gate sees one channel, and the round used another](UX-0767-the-push-gate-sees-one-channel-and-the-round-used-another.md) | guards | Medium | the session that trusts the push gate to cover its branch | 🔴 |
+| UX-768 | [the closing note is a shell argument, and its backticks run](UX-0768-the-closing-note-is-a-shell-argument-and-its-backticks-run.md) | guards | High | every round that closes a row with a note naming a command | 🔴 |
 
 ## UX-706..UX-711: the ninety-fourth round — the pipeline, and which model runs which shape (2026-09-05)
 

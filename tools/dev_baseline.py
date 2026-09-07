@@ -24,8 +24,10 @@ import argparse
 import collections
 import json
 import pathlib
+import re
 import subprocess
 import sys
+import tokenize
 
 REPO = pathlib.Path(__file__).resolve().parents[1]
 FAMILIES = ("S", "C901", "PLR0912", "PLR0913", "PLR0915", "SIM115")
@@ -60,6 +62,104 @@ def ruff_findings(root, paths, families):
     if unparsable:
         raise RuffFailure("ruff could not parse: " + ", ".join(unparsable))
     return raw
+
+
+#: `UX-705`: a suppression is a finding, so a burn-down cannot close a
+#: batch by silencing it. Without this the count shrinks whether the
+#: code was fixed or annotated, and a delegated track is judged by a
+#: number it can move either way.
+#:
+#: Counted rather than forbidden: some suppressions are right, and the
+#: baseline's rule is already "this many, never more".
+#:
+#: Scope is the paths the baseline governs, plus `pyproject.toml` -
+#: whose per-file-ignores silence checks *in* those paths, so a rule
+#: retired there would otherwise leave no trace. `tests/` is outside
+#: both, which is why the three `noqa: F401` under it are absent.
+SUPPRESSION_PATTERNS = (
+    re.compile(r"#\s*noqa\b"),
+    re.compile(r"#\s*type:\s*ignore\b"),
+    re.compile(r"eslint-disable"),
+)
+#: A per-file-ignores row: `"glob" = ["RULE", ...]`, and only inside
+#: that table - the same shape is ordinary TOML elsewhere in the file.
+PER_FILE_IGNORE = re.compile(r'^\s*"[^"]+"\s*=\s*\[')
+
+
+def _python_suppressions(path, rel, lines):
+    """Real comment tokens only.
+
+    A regex over the text counts its own pattern string and any prose
+    that quotes a directive - this file did both when the census was
+    first written. `tokenize` separates a comment from a string, and a
+    directive on a comment-only line is left out because it suppresses
+    nothing: ruff reports it as an unused `noqa` instead.
+    """
+    try:
+        with path.open("rb") as handle:
+            tokens = list(tokenize.tokenize(handle.readline))
+    except (OSError, tokenize.TokenError, SyntaxError):
+        return
+    code_rows = {tok.start[0] for tok in tokens
+                 if tok.type not in (tokenize.COMMENT, tokenize.NL,
+                                     tokenize.NEWLINE, tokenize.INDENT,
+                                     tokenize.DEDENT, tokenize.ENCODING,
+                                     tokenize.ENDMARKER)}
+    for tok in tokens:
+        if tok.type != tokenize.COMMENT:
+            continue
+        row = tok.start[0]
+        if row not in code_rows:
+            continue
+        if any(p.search(tok.string) for p in SUPPRESSION_PATTERNS):
+            yield rel, row, " ".join(lines[row - 1].split())
+
+
+def _suppressions_in(path, rel):
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except (OSError, UnicodeDecodeError):
+        return
+    if path.suffix == ".py":
+        yield from _python_suppressions(path, rel, lines)
+        return
+    in_ignores = False
+    for row, line in enumerate(lines, 1):
+        if path.name == "pyproject.toml":
+            if line.lstrip().startswith("["):
+                in_ignores = "per-file-ignores" in line
+            if in_ignores and PER_FILE_IGNORE.match(line):
+                yield rel, row, " ".join(line.split())
+            continue
+        if any(p.search(line) for p in SUPPRESSION_PATTERNS):
+            yield rel, row, " ".join(line.split())
+
+
+def suppression_findings(root, paths):
+    """Every silenced check under `paths`, shaped like a ruff finding."""
+    root = pathlib.Path(root).resolve()
+    files = [root / "pyproject.toml"]
+    for base in paths:
+        base = root / base
+        if base.is_file():
+            files.append(base)
+        elif base.is_dir():
+            files.extend(sorted(q for q in base.rglob("*")
+                                if q.suffix in (".py", ".js")))
+    found = []
+    for path in files:
+        if not path.is_file():
+            continue
+        rel = path.resolve().relative_to(root).as_posix()
+        found.extend(_suppressions_in(path, rel))
+    found.sort(key=lambda t: (t[0], t[1]))
+    counts = collections.Counter()
+    out = []
+    for file, _row, text in found:
+        counts[(file, text)] += 1
+        out.append({"tool": "repo", "rule": "SUPPRESSION", "file": file,
+                    "line": text, "nth": counts[(file, text)]})
+    return out
 
 
 def normalize(raw, root):
@@ -115,14 +215,22 @@ def load_baseline(path):
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def write_baseline(path, findings, families, version, forced_by=None):
+def write_baseline(path, findings, families, version, forced=None):
+    """`forced` is `None`, or `(reason, identities)` - who authorised a
+    gain and which lines (`UX-745`). One argument, not two: the pair is
+    meaningless apart, and splitting it puts this function over its
+    argument ceiling."""
     findings = sorted(findings, key=sort_key)
     body = ",\n".join(f"    {json.dumps(f, sort_keys=True)}" for f in findings)
-    forced = f'  "forced_by": {json.dumps(forced_by)},\n' if forced_by else ""
+    header = ""
+    if forced:
+        reason, signed = forced
+        header = (f'  "forced_by": {json.dumps(reason)},\n'
+                  f'  "forced": {json.dumps(sorted(list(i) for i in signed))},\n')
     text = ("{\n"
             f'  "ruff_version": {json.dumps(version)},\n'
             f'  "families": {json.dumps(sorted(set(families)))},\n'
-            + forced
+            + header
             + '  "findings": [\n' + (body + "\n" if body else "") + "  ]\n"
             "}\n")
     pathlib.Path(path).write_text(text, encoding="utf-8")
@@ -159,18 +267,26 @@ def head_document(path):
     return document
 
 
-def gained_since_head(path, working_findings, forced_by=None):
-    """`UX-694`: the shrink guard - a line in `path` that `HEAD` never
-    carried. A `--write --force --reason UX-NNN` is the one way there,
-    and it authorises the gain until it lands: a `forced_by` HEAD does
-    not carry yet."""
+def gained_since_head(path, working_findings, forced_by=None, forced=()):
+    """`UX-694`: a line in `path` that `HEAD` never carried, split into
+    the ones a `--force` authorised and the ones nobody did.
+
+    Returns `(authorised, unauthorised)` - both red, and the split is
+    the message. `UX-745`: the waiver used to return nothing at all for
+    any `forced_by` unlike HEAD's, so one forced line let every other
+    gain through with it, and a *repeat* of HEAD's reason was checked
+    more strictly than a novel one.
+    """
     head = head_document(path)
     if head is None:
-        return []
-    if forced_by and forced_by != head.get("forced_by"):
-        return []
+        return [], []
     carried = {identity(f) for f in head["findings"]}
-    return [f for f in working_findings if identity(f) not in carried]
+    gained = [f for f in working_findings if identity(f) not in carried]
+    if not forced_by:
+        return [], gained
+    signed = {tuple(i) for i in forced}
+    return ([f for f in gained if identity(f) in signed],
+            [f for f in gained if identity(f) not in signed])
 
 
 def do_write(args, current, existing):
@@ -186,9 +302,17 @@ def do_write(args, current, existing):
             for f in new:
                 print(f"  new: {describe(f)}")
             return 1
+    signed = ()
+    if args.force:
+        head = head_document(args.baseline)
+        if head is not None:
+            carried = {identity(f) for f in head["findings"]}
+            signed = [identity(f) for f in current
+                      if identity(f) not in carried]
     write_baseline(args.baseline, current, FAMILIES, ruff_version(),
-                   forced_by=args.reason if args.force else None)
-    print(f"wrote {len(current)} finding(s) to {args.baseline}")
+                   forced=(args.reason, signed) if args.force else None)
+    print(f"wrote {len(current)} finding(s) to {args.baseline}"
+          + (f"; {len(signed)} authorised by {args.reason}" if signed else ""))
     return 0
 
 
@@ -197,16 +321,26 @@ def do_check(args, current, existing):
         print(f"no baseline at {args.baseline} - run --write first")
         return 1
     new, stale = diff(current, existing["findings"])
-    gained = gained_since_head(args.baseline, existing["findings"],
-                               existing.get("forced_by"))
+    authorised, gained = gained_since_head(
+        args.baseline, existing["findings"], existing.get("forced_by"),
+        existing.get("forced", ()))
     for f in new:
         print(f"new: {describe(f)}")
     for f in stale:
         print(f"stale: {describe(f)}")
+    # Printed, never swallowed: a track that grows the list says so in
+    # the `make lint` it pastes, which is what the merging session reads.
+    # Red, not waived. `gained_since_head` only ever sees a difference in
+    # an *uncommitted* tree - in CI the working file is HEAD - so this
+    # costs a forced gain nothing once it lands, and costs a track that
+    # forced one the `make lint` it has to paste (`UX-745`).
+    for f in authorised:
+        print(f"authorised by {existing['forced_by']}, red until committed: "
+              f"{describe(f)}")
     for f in gained:
         print(f"gained: {describe(f)} - only --write --force --reason "
               "UX-NNN may add a line")
-    if not new and not stale and not gained:
+    if not new and not stale and not gained and not authorised:
         print(f"clean: {len(current)} finding(s) match {args.baseline}")
         return 0
     return 1
@@ -222,7 +356,9 @@ def do_shrink(args, current, existing):
         kept = [f for f in existing["findings"] if identity(f) not in drop]
         write_baseline(args.baseline, kept, existing.get("families", FAMILIES),
                        existing.get("ruff_version", ruff_version()),
-                       forced_by=existing.get("forced_by"))
+                       forced=(existing["forced_by"],
+                               existing.get("forced", ()))
+                       if existing.get("forced_by") else None)
         plural = "y" if len(stale) == 1 else "ies"
         print(f"removed {len(stale)} stale entr{plural}")
     else:
@@ -257,7 +393,8 @@ def main(argv=None):
     except RuffFailure as exc:
         print(f"error: {exc}")
         return 2
-    current = normalize(raw, args.root)
+    current = (normalize(raw, args.root)
+               + suppression_findings(args.root, paths))
     existing = load_baseline(args.baseline)
 
     if args.write:

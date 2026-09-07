@@ -77,7 +77,7 @@ from .run_store import (
 from .run_store import (
     resolve_plane2 as resolve_plane2_alias,
 )
-from .units import mb_to_bytes
+from .units import kb_to_bytes, mb_to_bytes
 
 logger = logging.getLogger(__name__)
 
@@ -241,16 +241,61 @@ def _attach_plane2_capacity(args: argparse.Namespace, analyzer, result) -> None:
     # is gated on Plane 2 being in hand anyway.
     result.capacity_recommendation = _capacity_recommendation(
         analyzer, result, context)
-    if result.capacity_recommendation:
-        # UX-116 item 3: the "currently unmodeled axis" note is retired
-        # *only* where the block ran. Elsewhere it stays, because
-        # elsewhere it is still true - and the substitution is on a named
-        # constant rather than a re-typed sentence, so the two cannot
-        # drift into disagreeing about which clause is being retired.
-        note = (result.floors or {}).get('capacity_model_note') or ''
-        if UNMODELED_AXIS_CLAUSE in note:
-            result.floors['capacity_model_note'] = note.replace(
-                UNMODELED_AXIS_CLAUSE, MODELLED_AXIS_CLAUSE, 1)
+    _finish_capacity_recommendation(analyzer, result, native_report)
+
+
+def _finish_capacity_recommendation(analyzer, result, native_report: dict) -> None:
+    """UX-116/UX-677: what only runs once the block above exists."""
+    if not result.capacity_recommendation:
+        return
+    # UX-116 item 3: the "currently unmodeled axis" note is retired
+    # *only* where the block ran. Elsewhere it stays, because
+    # elsewhere it is still true - and the substitution is on a named
+    # constant rather than a re-typed sentence, so the two cannot
+    # drift into disagreeing about which clause is being retired.
+    note = (result.floors or {}).get('capacity_model_note') or ''
+    if UNMODELED_AXIS_CLAUSE in note:
+        result.floors['capacity_model_note'] = note.replace(
+            UNMODELED_AXIS_CLAUSE, MODELLED_AXIS_CLAUSE, 1)
+    # UX-677: per-element `max-jobs`, on the same document - not a new
+    # contract id. Joins `UX-675`'s raw host CPU series (present on
+    # every capture) directly to each element's BUILD span; per-element
+    # peak RSS comes from this same Plane 2 report when it carries one,
+    # and is skipped rather than assumed when absent.
+    advice = _max_jobs_advice(analyzer, native_report)
+    if advice:
+        result.capacity_recommendation['max_jobs_advice'] = advice
+
+
+def _max_jobs_advice(analyzer, native_report: dict) -> dict:
+    """UX-677: the inputs `compute_max_jobs_advice` needs, gathered.
+
+    Host samples are read directly (`UX-675` is on every capture, not
+    gated on Plane 2) - only the per-element peak RSS and the host
+    memory total, both genuinely Plane 2/host-sample facts, come from
+    this call's own arguments.
+    """
+    from bga.correlate import compute_max_jobs_advice
+
+    host_samples = analyzer.read_host_samples()
+    graph = getattr(analyzer, 'graph', None)
+    if not host_samples or not graph:
+        return {}
+    tasks = [{"element": task.task_key.element_uid,
+              "start_us": task.start_us, "finish_us": task.finish_us}
+             for task in getattr(analyzer, 'normalized_tasks', []) or []]
+    max_jobs = {element.uid: element.max_jobs for element in graph.elements}
+    per_element = ((native_report or {}).get('peak_memory') or {}).get(
+        'per_element') or {}
+    peak_rss_bytes = {uid: kb_to_bytes(entry['peak_rss_kb'])
+                       for uid, entry in per_element.items()
+                       if entry.get('peak_rss_kb')}
+    mem_total_kb = (host_samples.get('header') or {}).get('mem_total_kb')
+    return compute_max_jobs_advice(
+        host_samples, tasks, max_jobs,
+        peak_rss_bytes=peak_rss_bytes or None,
+        host_memory_bytes=kb_to_bytes(mem_total_kb) if mem_total_kb else None,
+    )
 
 
 def _capacity_recommendation(analyzer, result, context) -> dict:
@@ -2116,6 +2161,47 @@ _SCHEMA_BY_FLAG = {
 }
 
 
+def _checkout_root(start: Path) -> Optional[Path]:
+    """Walk up from `start` for a checkout of *this* repository (UX-728).
+
+    Marker: `bga/__init__.py` beside a `pyproject.toml` naming project
+    "bga" - a couple of stats per directory, no subprocess, so it does
+    not shell out on every startup the way `git rev-parse` would.
+    """
+    for candidate in (start, *start.parents):
+        if not (candidate / "bga" / "__init__.py").is_file():
+            continue
+        pyproject = candidate / "pyproject.toml"
+        try:
+            text = pyproject.read_text()
+        except OSError:
+            continue
+        if 'name = "bga"' in text:
+            return candidate
+    return None
+
+
+def _maybe_warn_wrong_checkout() -> None:
+    """UX-728: warn only when cwd and the imported `bga` disagree.
+
+    Both must resolve to a checkout of this repository first - an
+    unrelated directory, or a system/venv install run from anywhere,
+    must see nothing.
+    """
+    cwd_root = _checkout_root(Path.cwd().resolve())
+    if cwd_root is None:
+        return
+    import_root = Path(__file__).resolve().parent.parent
+    if import_root == cwd_root:
+        return
+    print(
+        f"bga: imported from {import_root}, but the working directory is "
+        f"inside a different checkout of this repository at {cwd_root} - "
+        "commands may run against the wrong copy (UX-728).",
+        file=sys.stderr,
+    )
+
+
 def _maybe_complete() -> None:
     """Hand the parser to `argcomplete`, when the shell asked for it.
 
@@ -2263,6 +2349,11 @@ def _run(argv: Optional[list[str]] = None) -> int:
     # `bst_extract_run` untouched, and letting this parser see them first
     # would mean teaching it every tool's flags.
     raw_argv = list(sys.argv[1:] if argv is None else argv)
+
+    # UX-728: a track's worktree and the editable install it shadows are
+    # both checkouts of this repo but not the same one - say so on stderr
+    # before anything else runs.
+    _maybe_warn_wrong_checkout()
 
     # UX-190: `--schema` answers about the *shape* of an output, not
     # about a run, so it is checked before argparse insists on the run

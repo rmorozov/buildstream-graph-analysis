@@ -135,6 +135,33 @@ def quantize_timestamp(ts_us: int, epsilon_us: int) -> int:
     return ((2 * ts_us + epsilon_us) // (2 * epsilon_us)) * epsilon_us
 
 
+def spans_below_resolution(spans, epsilon_us: int = 50000) -> list[str]:
+    """The task keys whose duration the epsilon grid erased.
+
+    `UX-740`: `normalize_timestamps` quantizes start and finish
+    independently, so a span that lies wholly inside one rounding
+    bucket lands on the same grid point at both ends and reports zero
+    width - 24,999 µs of real work published as none, with no violation
+    raised. Being narrower than half the grid is necessary but not
+    sufficient: the same span straddling a bucket boundary survives, so
+    the predicate is run per span rather than read off the duration.
+
+    The predicate is `raw finish > raw start` **and** quantized width
+    zero. It is deliberately not "duration below epsilon": a `stack` or
+    `import` element records a genuine zero, and calling that erased
+    would name honest data as a defect (both zero-width spans in every
+    committed fixture are of that kind).
+    """
+    erased = []
+    for span in spans:
+        if span.finish_us <= span.ts_us:
+            continue
+        if quantize_timestamp(span.ts_us, epsilon_us) == \
+                quantize_timestamp(span.finish_us, epsilon_us):
+            erased.append(str(span.task_key))
+    return erased
+
+
 def normalize_timestamps(
     spans: list[TaskSpan],
     epsilon_us: int = 50000,

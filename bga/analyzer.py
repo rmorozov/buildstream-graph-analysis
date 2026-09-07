@@ -33,7 +33,7 @@ from .graph.edg import (
 )
 from .ingest.loader import load_all
 from .ingest.models import STRUCTURAL_ELEMENT_KINDS, AnalysisResult, Graph, RunContext, TaskKind, Trace
-from .normalize.timestamps import normalize_trace
+from .normalize.timestamps import normalize_trace, spans_below_resolution
 from .occupancy.sweep import compute_occupancy_stats, compute_task_horizon
 from .replay.scheduler import ReplayScheduler
 from .structural import StructuralAnalyzer
@@ -195,8 +195,8 @@ UNMODELED_AXIS_CLAUSE = (
 # not.
 MODELLED_AXIS_CLAUSE = (
     "native build-system parallelism (--max-jobs) is modelled for this "
-    "capture from its own Plane 2 measurements - see the capacity "
-    "recommendation below (UX-116)."
+    "capture from its own Plane 2 measurements; see the capacity "
+    "recommendation below (`UX-116`)."
 )
 
 
@@ -1299,6 +1299,32 @@ class BuildEfficiencyAnalyzer:
             'skipped_inputs': skipped,
         }
 
+    def _build_duration_resolution(self) -> dict:
+        """`UX-740`: the tasks this run's epsilon grid published as zero.
+
+        Absent (`{}`) when none were, which is a fact about the run -
+        `underutilized_intervals`' rule. A count of elements rather than
+        a share, and the epsilon beside it, because "unmeasurable"
+        without the resolution is not a statement.
+        """
+        epsilon_us = self.run_context.trace_epsilon_us if self.run_context else 50000
+        erased = spans_below_resolution(self.trace.spans if self.trace else [], epsilon_us)
+        if not erased:
+            return {}
+        elements = sorted({key.split("|", 1)[0] for key in erased})
+        return {
+            "epsilon_us": epsilon_us,
+            "element_count": len(elements),
+            "elements": elements,
+            "tasks": sorted(erased),
+            "note": (
+                f"{len(elements)} element(s) ran for less than half this "
+                f"capture's {epsilon_us} us resolution, so every duration and "
+                f"share computed for them is published as zero. They are "
+                f"unmeasurable at this epsilon, not instantaneous."
+            ),
+        }
+
     def _build_capacity_model_note(self) -> str:
         """UX-13: `LB`/`Efficiency Score` are correctly computed per spec
         Part 16, but only ever certify against this run's *recorded*
@@ -1666,6 +1692,11 @@ class BuildEfficiencyAnalyzer:
         # on it instead of deriving a second, independent capacity
         # formula (UX-17's own resolved rule).
         result.capacity_verdict = self._build_capacity_verdict()
+
+        # `UX-740`: and which durations this run's grid could not express
+        # at all. Absent when none - the run had none, not the tool had
+        # nothing to say.
+        result.duration_resolution = self._build_duration_resolution()
         
         # Confidence (Part 33) - rendered by the full report only (both
         # formatters gate it on `section is None`), and it consumes
@@ -1965,34 +1996,43 @@ class BuildEfficiencyAnalyzer:
             confidence['band'] = confidence_band(primary)
         return confidence
 
-    def _compute_utilization_envelope(self) -> dict:
-        """`UX-676`: the host CPU series, read against this run's caps.
+    def read_host_samples(self) -> Optional[dict]:
+        """`UX-675`'s raw `{header, samples}`, or `None`.
 
         `host-samples.jsonl` sits beside the run directory rather than
         inside it (`capture-layout/v1`), so the path is the run's
-        parent; a directory that is not a capture simply has no file,
-        and the section says so rather than being absent.
+        parent. Shared by `_compute_utilization_envelope` (`UX-676`'s
+        capped, ranked tables) and `UX-677`'s advisor, which joins this
+        same raw series to each element's span directly rather than
+        reading those tables as a proxy for it.
         """
-        from .utilisation import envelope as envelope_module
-
-        # `loaded_from`, not `run_dir`: `analyze(run_dir)` records the
-        # path it read there and leaves the constructor argument alone
-        # (`UX-95`), so the attribute that is always set is the one that
-        # says where this analysis actually came from.
         directory = self.loaded_from or self.run_dir
         if not self.run_context or not self.graph or not directory:
-            return {"absence": "this analysis has no run context, graph or "
-                               "run directory to read a host series against"}
+            return None
         from .run_store import HOST_SAMPLES_NAME
         from .tools_dispatch import _import_tool
 
         path = Path(directory).parent / HOST_SAMPLES_NAME
         if not path.is_file():
+            return None
+        return _import_tool(
+            "tools.bst_native_build_tracer").read_host_samples(str(path))
+
+    def _compute_utilization_envelope(self) -> dict:
+        """`UX-676`: the host CPU series, read against this run's caps."""
+        from .utilisation import envelope as envelope_module
+
+        read = self.read_host_samples()
+        if read is None:
+            directory = self.loaded_from or self.run_dir
+            if not self.run_context or not self.graph or not directory:
+                return {"absence": "this analysis has no run context, "
+                                   "graph or run directory to read a host "
+                                   "series against"}
+            from .run_store import HOST_SAMPLES_NAME
             return {"absence": f"this capture has no {HOST_SAMPLES_NAME} - "
                                f"it was taken before `UX-378`, or the host "
                                f"exposes no /proc/meminfo"}
-        read = _import_tool(
-            "tools.bst_native_build_tracer").read_host_samples(str(path))
         tasks = [{"element": task.task_key.element_uid,
                   "start_us": task.start_us, "finish_us": task.finish_us,
                   "ready_us": task.ready_us}

@@ -1075,16 +1075,16 @@ def _plane2_capacity_hint(result: AnalysisResult, category: str) -> Optional[str
         )
         return (
             f"{lead}{names} asked its native build for -j1 while the rest of this "
-            f"build asked for more: remove `notparallel` / raise that element's job "
-            f"count first. That is capacity you already have, and unlike --builders "
-            f"it cannot contend with itself (UX-83)"
+            f"build asked for more: remove `notparallel` or raise that element's "
+            f"job count first. That is capacity you already have, and unlike "
+            f"`--builders` it cannot contend with itself (`UX-83`)."
         )
     if plane2.get('saturated') and measured:
         return (
             f"do NOT raise capacity on this host - {measured}, so another builder "
             f"would contend for CPU rather than add throughput. The wait is real; "
             f"the remedy is less work or better intra-element parallelism, not more "
-            f"concurrent elements (UX-83)"
+            f"concurrent elements (`UX-83`)."
         )
     return None
 

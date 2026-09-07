@@ -40,9 +40,12 @@ STRUCTURED = REPO / "bga/viewer/structured.js"
 #: `[0-9]+`, not `[0-9]`: at one digit a `§42` reads as `§4` and a
 #: stray citation passes as a real one - measured, the mutation that
 #: was supposed to redden this scan did not.
-HEADING = re.compile(r"^#{2,3} ([0-9]+[a-g]?)\. ", re.M)
-CITATION = re.compile(r"§([0-9]+[a-g]?)")
-ROW = re.compile(r"^\| *§([0-9]+[a-g]?) *\| *(.*?) *\| *(.*?) *\|$", re.M)
+#: `UX-667`: `[a-g]` stopped at the seventh sub-section any topic had
+#: reached; `§3h` is the eighth, so the range widens to the whole
+#: alphabet rather than to eight letters that would need widening again.
+HEADING = re.compile(r"^#{2,3} ([0-9]+[a-z]?)\. ", re.M)
+CITATION = re.compile(r"§([0-9]+[a-z]?)")
+ROW = re.compile(r"^\| *§([0-9]+[a-z]?) *\| *(.*?) *\| *(.*?) *\|$", re.M)
 GUARD = re.compile(r"`(test_[a-z0-9_]+\.py)`")
 
 #: The word a row uses to say its id is shared with the fixing guide,

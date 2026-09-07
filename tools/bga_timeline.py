@@ -1718,16 +1718,17 @@ def render(snapshot: str, output: str,
 #:
 #: The zeroes were **omitted** from the summary rather than printed, so
 #: the output did not hint that two thirds of the trace's structure was
-#: gone - and two of the canned questions (`waited-on-flow`,
-#: `concurrency-curve`) read exactly the tables it lacks, returning zero
-#: rows. That is `UX-107`'s rule at the trace boundary: *nobody could
-#: look* rendered as *looked and found nothing*.
+#: gone - and three of the canned questions (`waited-on-flow`,
+#: `concurrency-curve`, `were-the-cores-busy`) read exactly the tables
+#: it lacks, returning zero rows. That is `UX-107`'s rule at the trace
+#: boundary: *nobody could look* rendered as *looked and found nothing*.
 CHROME_CARRIES_NO = ("flows", "counters")
 
 CHROME_COST = (
     "This format carries slices only - no flows and no counters - so "
-    "the queries that read them (`waited-on-flow`, `concurrency-curve`) "
-    "return nothing. `--format trackevent` carries all three.")
+    "the queries that read them (`waited-on-flow`, `concurrency-curve`, "
+    "`were-the-cores-busy`) return nothing. `--format trackevent` "
+    "carries all three.")
 
 
 def _chrome_counts(output: str) -> dict:

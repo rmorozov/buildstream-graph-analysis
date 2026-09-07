@@ -1,6 +1,6 @@
 # UX-705: the burn-down runs on the reporters' model — a batch a commit, never a suppression
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-694 (the baseline), UX-663 (the model advisory and the run ledger), UX-498 (the implementer's worktree) | **Serves:** R8, who wants the baseline to reach zero without the session's model reading 1,709 findings | **Topic:** guards | **Area:** unassigned | **Shape:** judgement
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-694 (the baseline), UX-663 (the model advisory and the run ledger), UX-498 (the implementer's worktree) | **Serves:** R8, who wants the baseline to reach zero without the session's model reading 1,709 findings | **Topic:** guards | **Area:** unassigned | **Shape:** judgement
 
 ## Motivation
 
@@ -26,8 +26,8 @@ per-file-ignore, an `eslint-disable` are each a finding in the
 baseline's own count, so a suppression is a growth and red. One row
 per batch in the run ledger: tokens, findings closed, reverts. A
 round with two or more tracks gives one to the burn-down until the
-baseline is empty; the first batch is `S607` (18 partial-path
-executables → `shutil.which`).
+baseline is empty; each batch is picked from the census, and `S607`
+is not one of them — Batch 1 below measured why.
 
 ## Out of Scope
 
@@ -38,7 +38,252 @@ executables → `shutil.which`).
 
 ## Acceptance Test
 
-After the first batch: `git grep -c S607 tests/quality_baseline.json`
-→ 0, `make test` green, one ledger row; mutation: a batch that adds
-one `# noqa: S607` — `--check` red on the suppression count, the
-track fails.
+Per batch: `dev_baseline.py --shrink` removes exactly that batch's
+findings and `--check` adds none of any rule, `make test` green, one
+ledger row. Mutation: a batch that adds one `# noqa: S607` —
+`--check` red on the suppression count, the track fails.
+
+## Progress
+
+**The rule that makes a burn-down safe to delegate did not exist.** The
+Required Fix reads "a `# noqa`, `# type: ignore`, a per-file-ignore, an
+`eslint-disable` are each a finding in the baseline's own count, so a
+suppression is a growth and red". Measured: `dev_baseline.py` had no
+notion of a suppression at all. So a track told to close 24 `S607`
+findings could have closed all 24 by annotating them, and the number it
+is judged by would have shrunk exactly as if it had fixed them.
+
+Built and verified. `suppression_findings()` in `dev_baseline.py`
+records them as `repo SUPPRESSION` entries, and the property holds:
+
+```console
+$ # a burn-down "closes" one by silencing it instead
+$ python3 tools/dev_baseline.py --check
+new: repo SUPPRESSION bga/blast.py (#1) import os # noqa: S607
+```
+
+The census scans the paths the baseline governs plus `pyproject.toml`,
+whose per-file-ignores silence checks *in* those paths. Population
+today: 2, both per-file-ignores. `tests/` is outside the baseline's
+scope, which is why the three `noqa: F401` under it are absent.
+
+**The first census read itself.** A text scan counted its own pattern
+table (`re.compile(r"eslint-disable")`) and prose quoting a directive.
+Python is now read with `tokenize`, so a string is not a comment, and a
+directive on a comment-only line is left out because it suppresses
+nothing - ruff reports an unused `noqa` there instead.
+
+| mutation | reddened | of 9 |
+|---|---|---|
+| the census stops reading comment tokens | two `TestWhatCounts` clauses | 2 |
+| the code-line requirement dropped | `_a_directive_in_prose_is_not_one` | 1 |
+| the per-file-ignores table check dropped | `_the_same_shape_elsewhere_...` | 1 |
+
+**What is left.** The first batch - `S607`, now **24 findings in 12
+files**, not the 18 this row states - as one `implementer` run on the
+reporters' model, and its ledger row. The row stays open for it; what
+this adds is the check that would otherwise let that run pass by
+annotating.
+
+## Batch 1 outcome (`S607`, `tools/`, 23 findings in 11 files)
+
+**Gap measured**: 23 `S607` findings, `shutil.which` resolution real
+(not a rename) in every case. **Close measured**: `dev_baseline.py
+--shrink` → `removed 7 stale entries`; `--check` → `clean: 300
+finding(s)`; `make test-touching` → `1355 passed, 3 skipped`; `make
+test` → `7558 passed, 126 skipped, 1 warning in 359.89s`.
+
+**7 of 23 closed** (`bst_extract_run.py` ×5, `dev_commit_bodies.py`
+×1, `dev_perf_ratchet.py` ×1) - each call already carried a variable
+argument, so `S603` was already priced in and unaffected by the swap.
+
+**16 left, not mechanical**: resolving the executable turns a literal
+argv into one with a `Name` in it, which is exactly what `S603`
+("subprocess call: check for execution of untrusted input") uses to
+tell a trusted call from an unproven one - `bga_doctor.py`'s own
+`shutil.which` sites already carry this tax, baselined. 8 gain a
+*new* `S603` (`bst_baseline_set.py` archive/ls-tree/show×2,
+`dev_baseline.py` ruff-version, `dev_close_task.py` diff-HEAD,
+`dev_finding_coverage.py` ls-files, `dev_touching.py` ls-files
+--others); 5 shift an *already-baselined* `S603`'s identity, same
+count either way (`dev_baseline.py` show/top, `dev_close_task.py`
+ls-files, `dev_plane_capability.py` nm, `dev_tier_drift.py`
+rev-parse); 3 are baseline-clean but redden a test asserting a
+literal argv (`bst_baseline_set.py` fetch/ls-remote,
+`bst_native_build_tracer.py` bst-artifact) -
+`tests/unit/test_baseline_set.py`, `tests/unit/test_the_contents_read_is_one_call.py`.
+
+**Verified independently, and decided.** Reproduced on
+`tools/dev_touching.py`: before, `S603@118 S607@122 S603@395`; after
+resolving `git`, `S603@120 S603@123 S603@397` — the finding changed
+label, it did not close. **The growth is not authorised**: a `--force`
+that turns 8 `S607` into 8 `S603` moves the count sideways and costs
+three tests their literal-argv assertion. So this row's original "first
+batch is `S607`, → 0" was unachievable as a reduction, and 7 of 23 is
+the whole of what that family had to give.
+
+**The census after batch 1** — `dev_baseline.py --check`: `clean: 300
+finding(s)`. 195 are structural and `UX-695`'s (`C901` 84, `PLR0912`
+47, `PLR0913` 34, `PLR0915` 30); 105 are this row's. **Next batch is
+`SIM115`** (11 findings, 4 files, all under `tools/`). Read before
+briefing it: **8 are mechanical** — a `.read()` or a comprehension over
+a fresh handle, which takes a `with` (`bga_view.py` 928/946/1321/1323,
+`bst_native_build_tracer.py` ×3, `dev_trace_coverage.py`). **3 are the
+rule's false positives** and stay baselined: `bga_view.py:1604` opens
+outside the `with` only so the `except OSError` two lines up can answer
+404, and `trackevent.py:265` is a handle whose lifetime is the writer's,
+closed at `:295`. So the batch is 8, not 11, and the row's own "removes
+exactly that batch's findings" is what says so.
+
+## Batch 2 outcome (`SIM115`, `tools/`, 8 findings in 3 files)
+
+**Gap measured**: 8 `SIM115` findings across `bga_view.py` (4),
+`bst_native_build_tracer.py` (3), `dev_trace_coverage.py` (1) — each a
+`.read()` or a comprehension over a handle opened without a `with`.
+The 3 findings named as false positives (`bga_view.py:1604`,
+`trackevent.py:265` ×2) were left untouched and verified still
+present in the baseline after `--shrink`.
+
+**Close measured**: `dev_baseline.py --shrink` → `removed 8 stale
+entries`; `git diff tests/quality_baseline.json` removes exactly the
+8 `SIM115` lines named in the brief, none other; `--check` → `clean:
+292 finding(s)`; `make test-touching` → `3487 passed, 76 skipped in
+254.42s`; `make test` → `7558 passed, 126 skipped, 1 warning in
+432.99s`; `make lint` → `All checks passed!` then `clean: 292
+finding(s)`.
+
+**8 of 8 closed**, each wrapped in a `with` around the single read
+site: two nested-function reads in `bga_view.py` (`_module_order`'s
+`walk`, `_inline_module`), the export's `index.html`/`style.css`
+pair (two separate opens, two separate `with`s), `/proc/uptime` in
+`_process_start_age`, two `json.loads(...) for line in open(...)`
+comprehensions in `load_and_summarize`, and the gzip/plain branch in
+`dev_trace_coverage.decode`.
+
+| mutation | reddened | of |
+|---|---|---|
+| add `# noqa: S607` to a closed site (`bga_view.py:928`) | `dev_baseline.py --check` (`new: repo SUPPRESSION`) | 1 of 1 |
+
+No new guard was written this batch — the suppression census
+(`suppression_findings()`) already exists from the Progress section
+above; the mutation confirms it still discriminates against this
+batch's sites, not that it is new.
+
+**Deviation: none.** 8 of 8 closed, no rule traded, no suppression;
+the three false positives are still baselined. Verified independently
+before merging: the diff removes exactly 8 `SIM115` entries and adds
+none of any rule, and `bga_view.py:1604` and `trackevent.py:265` (×2)
+are still in the list at 292.
+
+**The census after batch 2** — `dev_baseline.py --check`: `clean: 292
+finding(s)`. 195 structural (`UX-695`'s), **97 this row's**, of which
+63 are the argv family that cannot reduce (`S603` 46, `S607` 17, per
+batch 1). So **34 remain that a batch can actually close**, the
+largest being `S108` (7, a hardcoded `/tmp` in `bst_baseline_set.py`
+and `bst_native_build_tracer.py`) — the next batch, and unlike
+`SIM115` it needs a fixture read before it is called mechanical.
+
+## Batch 3 outcome (`S108`, `tools/`, 7 findings — 1 of them a batch)
+
+**Read before briefing it, and there was no track to brief.** The
+family is 7 findings in 2 files and **one is a hardcoded temp path**:
+
+- `bst_baseline_set.py:586` `os.environ.get('TMPDIR', '/tmp')` — the
+  right *intent*, spelled by hand. `tempfile.gettempdir()` is the same
+  fallback chain and one finding fewer. Measured both ways:
+
+  ```console
+  $ TMPDIR=/var/tmp/probe python3 -c "import tempfile; print(tempfile.gettempdir())"
+  /var/tmp/probe
+  $ TMPDIR=/no/such/dir python3 -c "import tempfile; print(tempfile.gettempdir())"
+  /tmp
+  $ TMPDIR=/no/such/dir python3 -c "import os; print(os.environ.get('TMPDIR','/tmp'))"
+  /no/such/dir
+  ```
+
+  So it also stops handing the tool a directory that does not exist.
+
+- **2 are a regex, not a path**: `re.compile(r"/tmp/cc[A-Za-z0-9]+\.\w+")`
+  in `bst_native_build_tracer.py` redacts gcc's temp filenames *out of
+  a trace*. `/tmp` there is data being matched.
+- **4 are the sandbox's bind destination**, not the host's temp:
+  `BST_TRACE_BIND_DST` and the three paths under it are where the
+  capture directory is mounted **inside bwrap**. Documented at
+  `docs/guides/cli.md:701` and asserted verbatim three times in
+  `tests/unit/test_capture_diagnostics.py`. A host `gettempdir()` would
+  be the wrong answer, and the guards would say so.
+
+**Close measured**: `--shrink` → `removed 1 stale entry`; `--check` →
+`clean: 291 finding(s)`; `make test-touching` → `1105 passed in
+24.37s`. Mutation: closing it with `# noqa: S108` instead —
+`new: repo SUPPRESSION tools/bst_baseline_set.py (#1)`, red.
+
+**The second family that does not burn down, for a second reason.**
+`S607` could only be relabelled; `S108` mostly cannot be *read* — the
+rule matches a literal and cannot tell a pattern or a sandbox path from
+a host one. 6 of 7 stay, correctly.
+
+## Outcome (round 103, 2026-09-07) — 🟢 Done
+
+**Premise:** held, then bounded — "a list is work a smaller model can
+do" is true, and three batches did it. What the row assumed and did not
+measure is that the list is *reducible*. Most of it is not.
+
+### The gap, measured
+
+```text
+$ python3 tools/dev_baseline.py --check          # at filing
+clean: 1709 finding(s)   # nothing said who may close one, or how
+```
+
+No protocol, and — measured first, `Progress` above — no notion of a
+suppression, so a track told to close 24 findings could have annotated
+all 24 and the number judging it would have shrunk the same.
+
+### After
+
+```text
+$ python3 tools/dev_baseline.py --check
+clean: 291 finding(s) match tests/quality_baseline.json
+```
+
+Three batches on `sonnet`, one commit each, **16 findings closed, none
+suppressed, none traded**: `S607` 7 of 23, `SIM115` 8 of 8, `S108` 1 of
+7. Two ledger rows (batch 3 needed no track — the reading *was* the
+work).
+
+**Where the floor is.** Of 291: **195 structural** and `UX-695`'s;
+**63** the `S603`/`S607` argv family, which `S607`'s batch measured as
+untradeable — resolving an executable turns a literal argv into a
+`Name`, which is the thing `S603` reads; **11** read by a batch and
+correct as they stand (6 `S108`, 3 `SIM115`, 2 per-file-ignores the
+census records). **22 are unexamined**, the largest family `S314` at 4.
+
+So "until the baseline is empty" cannot happen, and "a batch a commit"
+has run out of batches at 4 findings. The remaining 22 are one finding
+at a time — ordinary work on the row that touches the file, not a
+delegable stream.
+
+### Mutations verified red and reverted (per batch)
+
+| # | mutation | reddened |
+|---|---|---|
+| B1 | a `# noqa` on a closed `bga/` site | `new: repo SUPPRESSION`, batch 1 |
+| B2 | a `# noqa: S607` on a closed site | `new: repo SUPPRESSION`, batch 2 |
+| B3 | a `# noqa: S108` instead of the fix | `new: repo SUPPRESSION`, batch 3 |
+
+The census's own 9 clauses and their mutation table are in `Progress`.
+
+### Deviation from the Required Fix
+
+Two, both measured. "The first batch is `S607` (18 → `shutil.which`)"
+was wrong twice — 23 not 18, and reducible only 7 — and the Acceptance
+Test's `git grep -c S607 → 0` was unachievable, so both were rewritten
+to a per-batch criterion mid-row. And a track can still force its own
+growth past `make lint`; one did, and it is filed as `UX-745`.
+
+```text
+$ make test
+$ make lint
+```
+

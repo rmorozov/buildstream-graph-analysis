@@ -1,0 +1,17 @@
+name: Quality
+
+on:
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "0 6 * * 1"
+
+jobs:
+  eslint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Lint the viewer
+        run: |
+          npx --yes --package eslint@9 --package globals@17 -- \
+            eslint bga/viewer

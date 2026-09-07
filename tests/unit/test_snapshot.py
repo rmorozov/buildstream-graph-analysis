@@ -337,6 +337,110 @@ class TestListing:
                 if "20260102T000000Z" in ln and "(no run directory" in ln]
 
 
+class TestAnExitThatSaysWhy:
+    """UX-738: round 100's gate read a complete-looking report beside
+    `assert 255 == 0` with nothing in either stream saying why."""
+
+    def test_the_last_line_names_the_exit_code_and_incompletion(
+            self, project, recorded, monkeypatch):
+        """Both streams land on the same terminal in call order, which
+        `capsys` cannot show (it keeps stdout/stderr in two buffers) -
+        so both are redirected to one buffer here instead."""
+        import contextlib
+        import io
+
+        monkeypatch.chdir(project)
+        monkeypatch.setattr(bga_snapshot, "_analyze", lambda *a, **k: 0)
+        import tools.bst_native_build_tracer as tracer
+        tracer.main.returncode = 255
+
+        buffer = io.StringIO()
+        with contextlib.redirect_stdout(buffer), contextlib.redirect_stderr(buffer):
+            rc = main(["--", "bst", "build", "all.bst"])
+
+        assert rc == 255
+        lines = [ln for ln in buffer.getvalue().splitlines() if ln.strip()]
+        assert "255" in lines[-1] and "did not complete" in lines[-1]
+
+    def test_a_zero_exit_names_nothing(
+            self, project, recorded, monkeypatch, capsys):
+        """The mutation's control: a clean build must not gain a trailing
+        line it never had before."""
+        monkeypatch.chdir(project)
+        monkeypatch.setattr(bga_snapshot, "_analyze", lambda *a, **k: 0)
+
+        assert main(["--", "bst", "build", "all.bst"]) == 0
+
+        assert "did not complete" not in capsys.readouterr().out
+
+
+class TestZeroExecutionRefusesAVerdict:
+    """UX-738 clause 2: the shape `UX-156` uses for a failed element -
+    refuse the verdict rather than print one - extended to a build that
+    could not run at all. The conjunction matters: a legitimate,
+    fully-cached build also has zero chain execution and exits 0."""
+
+    def _stub(self, monkeypatch, tmp_path, execution_us, rendered="VERDICT"):
+        import bga.cli as cli
+        import bga.report.json as report_json
+        import bga.report.text as report_text
+
+        class Result:
+            attribution = {'execution_on_chain_us': execution_us}
+
+        monkeypatch.setattr(cli, "analyzed", lambda args, section: Result())
+        monkeypatch.setattr(report_text, "format_text", lambda result: rendered)
+        # The publish-as-JSON side is orthogonal to this clause - a
+        # `Result` stub with only `.attribution` is enough for the
+        # refusal decision, not for a real `format_json`.
+        monkeypatch.setattr(report_json, "format_json", lambda *a, **k: "{}")
+
+        run_dir = tmp_path / "run"
+        run_dir.mkdir()
+        plane2 = tmp_path / PLANE2_NAME
+        plane2.write_text("{}")
+        return str(run_dir), str(plane2), str(tmp_path / "out.json")
+
+    def test_zero_execution_and_a_failed_build_is_refused(
+            self, monkeypatch, tmp_path, capsys):
+        run_dir, plane2, publish_to = self._stub(monkeypatch, tmp_path, 0)
+
+        bga_snapshot._analyze(run_dir, plane2, publish_to=publish_to,
+                              build_exit=255)
+
+        out = capsys.readouterr().out
+        assert "DID NOT FINISH" in out
+        assert "VERDICT" not in out
+
+    def test_a_cached_build_with_zero_execution_still_prints(
+            self, monkeypatch, tmp_path, capsys):
+        run_dir, plane2, publish_to = self._stub(monkeypatch, tmp_path, 0)
+
+        bga_snapshot._analyze(run_dir, plane2, publish_to=publish_to,
+                              build_exit=0)
+
+        assert "VERDICT" in capsys.readouterr().out
+
+
+def test_a_write_failure_names_the_path_from_the_wrapped_log(tmp_path):
+    """UX-738 clause 3: `bst`'s own `OSError` already carries the path;
+    `bst_run_wrapped.emit` already writes it into the wrapped log; this
+    is the read-back that was missing."""
+    wrapped = tmp_path / "build.log"
+    wrapped.write_text(
+        "[wrapper][2026-01-01 00:00:00,000] INFO: Executing command: bst build all.bst\n"
+        "[wrapper][2026-01-01 00:00:01,000] INFO: Traceback (most recent call last):\n"
+        "[wrapper][2026-01-01 00:00:01,000] INFO: OSError: [Errno 28] No "
+        "space left on device: '/home/x/.cache/buildstream/artifacts/refs/y'\n"
+        "[wrapper][2026-01-01 00:00:01,000] INFO: Return code: 255\n"
+    )
+
+    line = bga_snapshot._exit_summary_line(255, str(wrapped))
+
+    assert "255" in line
+    assert "/home/x/.cache/buildstream/artifacts/refs/y" in line
+
+
 def test_the_size_warning_fires_only_past_the_threshold(project, monkeypatch, capsys):
     monkeypatch.setattr(bga_snapshot, "_SIZE_WARN_BYTES", 10)
     os.makedirs(os.path.join(run_store.runs_dir(str(project)), "20260101T000000Z"))

@@ -45,6 +45,7 @@ import shutil
 import subprocess
 import sys
 import tarfile
+import tempfile
 from typing import Optional
 
 # `captures/fdsdk/<short-ref>-<mode>-b<builders>j<max_jobs>-<run_id>`.
@@ -583,7 +584,7 @@ def main(argv: Optional[list[str]] = None) -> int:
         return 1
 
     workdir = args.workdir or os.path.join(
-        os.environ.get('TMPDIR', '/tmp'), f'bga-baseline-{os.getpid()}',
+        tempfile.gettempdir(), f'bga-baseline-{os.getpid()}',
     )
     remove_workdir = args.workdir is None
     members = []

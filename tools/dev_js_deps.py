@@ -32,6 +32,7 @@ import re
 import sys
 
 REPO = pathlib.Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPO))
 
 # A `/` here opens a regex literal rather than dividing. The standard
 # heuristic: what can precede a division is a value, and what can
@@ -44,6 +45,14 @@ DECLARATION = re.compile(
 COMMENT_LINE = re.compile(r"^\s*(//|/\*|\*)")
 IMPORT = re.compile(r"""^[ \t]*import\s.*?from\s+["']\./([\w.-]+)["'];?""",
                     re.M | re.S)
+# Unlike `IMPORT`, run over raw text: `strip_comments` blanks a string's
+# body wholesale (see below), which would erase the module path this
+# also needs. Every import in `bga/viewer` is a destructured relative
+# one (`UX-742` checked), so the bare-name and namespace forms are not
+# handled - a module that grew one would need this widened, loudly.
+IMPORT_NAMED = re.compile(
+    r"""^[ \t]*import\s*\{(?P<names>.*?)\}\s*from\s+["']\./(?P<mod>[\w.-]+)["'];?""",
+    re.M | re.S)
 
 
 def strip_comments(source: str) -> str:
@@ -221,6 +230,103 @@ def cycles(directory):
     return found
 
 
+def imported_symbols(directory):
+    """Named imports within `directory`, module name -> symbols pulled from it.
+
+    `tests/viewer.mjs`'s `export * from` barrel lives outside
+    `directory` and is never parsed here - it is a test fixture that
+    re-exports everything, and folding it in would mark every export of
+    every module "used" the moment any one name from it is, anywhere
+    (`UX-742`).
+    """
+    used = {}
+    for path in sorted(pathlib.Path(directory).glob("*.js")):
+        text = path.read_text(encoding="utf-8")
+        for m in IMPORT_NAMED.finditer(text):
+            names = {n.strip().split(" as ")[0].strip()
+                     for n in m.group("names").split(",") if n.strip()}
+            used.setdefault(m.group("mod"), set()).update(names)
+    return used
+
+
+def _own_source(root):
+    """This module's path within `root`, or None when it is outside it
+    (a guard's throwaway tree)."""
+    try:
+        return pathlib.Path(__file__).resolve().relative_to(
+            pathlib.Path(root).resolve()).as_posix()
+    except ValueError:
+        return None
+
+
+def reads_code(rel, own_source):
+    """Whether a tracked path could name a viewer symbol *as a reader*.
+
+    Two kinds cannot, and both were measured resurrecting a name this
+    census had just reported dead: `docs/`, which is prose *about* the
+    code - an Outcome naming the finding put four mentions in the tree -
+    and this module, whose own comment naming it put a fifth (`UX-742`).
+    A `.py` anywhere else **is** a reader: seven of the eight candidates
+    are named by a Python page guard that drives them, and stay quiet.
+    """
+    return not (rel.startswith("docs/") or rel == own_source)
+
+
+def dead_exports(directory, root=REPO):
+    """Exports the directory's own graph never imports, each confirmed
+    dead by a search of every tracked file rather than shipped as the
+    graph's word alone.
+
+    Excluding the barrel (above) from the import graph surfaces every
+    export a *test* reads only through the barrel's dynamic
+    `await import(...)` - invisible to any import graph - as a false
+    positive: 108 names in `bga/viewer`, next to the 121
+    `no-unused-modules` found scoped the same way. Confirming each
+    candidate against the whole tracked tree - by hand, the same check
+    that cleared `UX-699`'s five - drops that to the ones nothing
+    anywhere names.
+    """
+    directory = pathlib.Path(directory)
+    exports = {path.name: {b["name"] for b in declarations(path) if b["exported"]}
+              for path in sorted(directory.glob("*.js"))}
+    used = imported_symbols(directory)
+    candidates = [(mod, name) for mod, names in exports.items()
+                 for name in sorted(names - used.get(mod, set()))]
+    if not candidates:
+        return {}
+
+    root = pathlib.Path(root).resolve()
+    # `UX-687`'s list, not a second `git ls-files`: one call, one
+    # baselined finding, and the same answer on a clone (`UX-742`).
+    from tools.dev_finding_coverage import tracked_paths
+    tracked = sorted(tracked_paths(root))
+    texts = {}
+    own_source = _own_source(root)
+    for rel in tracked:
+        if not reads_code(rel, own_source):
+            continue
+        try:
+            texts[rel] = (root / rel).read_text(encoding="utf-8", errors="ignore")
+        except OSError:
+            continue
+    own_dir = directory.resolve().relative_to(root).as_posix()
+    own_of = {name: f"{own_dir}/{mod}" for mod, name in candidates}
+    # One pass per file over every candidate at once - `UX-742` measured
+    # a pattern-per-candidate version at 39 s; this at under 2.
+    combined = re.compile(
+        r"\b(" + "|".join(re.escape(n) for n in own_of) + r")\b")
+    hits = dict.fromkeys(own_of, -1)   # the declaration itself, subtracted once
+    for text in texts.values():
+        for m in combined.finditer(text):
+            hits[m.group(1)] += 1
+
+    dead = {}
+    for mod, name in candidates:
+        if hits[name] <= 0:
+            dead.setdefault(mod, []).append(name)
+    return dead
+
+
 PARAMETERS = re.compile(
     r"^(?:export\s+)?(?:async\s+)?(?:function\s+\w+\s*|"
     r"(?:const|let|var)\s+\w+\s*=\s*(?:async\s*)?)\((.*?)\)", re.S)
@@ -244,6 +350,12 @@ def bound_names(text: str):
     return set(re.findall(r"\b([A-Za-z_$][\w$]*)\b", found.group(1)))
 
 
+#: How a declaration with no group reads in a crossing's label. Not a
+#: group name: a grouping that used this string would alias, and the
+#: sort keeps `None` rather than this (`UX-747`).
+UNPLACED = "(unplaced)"
+
+
 def crossings(path, groups):
     """Which symbols each group would have to import from which other.
 
@@ -262,9 +374,29 @@ def crossings(path, groups):
         for word in sorted(set(re.findall(r"\b(\w+)\b", body)) - bound):
             if word in home and home[word] != home.get(name):
                 needed.setdefault((home.get(name), home[word]), []).append(word)
+    # A declaration the grouping left out has no home, and `None` is
+    # neither sortable against a group name nor readable in the label -
+    # the partial grouping this tool exists to answer produced both
+    # (`UX-747`).
     return {"unplaced": unplaced,
-            "crossings": {f"{a} <- {b}": sorted(v)
-                          for (a, b), v in sorted(needed.items())}}
+            "crossings": {f"{a or UNPLACED} <- {b}": sorted(v)
+                          for (a, b), v in sorted(
+                              needed.items(),
+                              key=lambda kv: (kv[0][0] or "", kv[0][1]))}}
+
+
+def _report_dead(directory, as_json):
+    """`--dead-exports`' output. Out of `main()` because that function
+    is at its `PLR0915` statement ceiling and a new clause is a new
+    baseline entry, which is what `UX-705` exists to shrink."""
+    dead = dead_exports(directory)
+    if as_json:
+        print(json.dumps(dead))
+    else:
+        for mod in sorted(dead):
+            for name in dead[mod]:
+                print(f"{mod}: {name}")
+    return 1 if any(dead.values()) else 0
 
 
 def main(argv=None):
@@ -279,6 +411,8 @@ def main(argv=None):
                         help="FILE's top-level declarations and their spans")
     parser.add_argument("--crossings", metavar="FILE",
                         help="which symbols would cross a proposed cut of FILE")
+    parser.add_argument("--dead-exports", metavar="DIR",
+                        help="DIR's exports nothing else in the tree reads")
     parser.add_argument("--groups", metavar="JSON",
                         help="the proposed grouping: {group: [names]}, a file "
                              "or a literal. Required by --crossings")
@@ -326,7 +460,10 @@ def main(argv=None):
         if not args.groups:
             parser.error("--crossings needs --groups")
         raw = args.groups
-        if pathlib.Path(raw).exists():
+        # `--help` promises "a file or a literal", and a literal over the
+        # 255-byte name limit made the path test itself raise - which is
+        # every grouping the `derive` skill documents (`UX-747`).
+        if not raw.lstrip().startswith("{") and pathlib.Path(raw).exists():
             raw = pathlib.Path(raw).read_text(encoding="utf-8")
         result = crossings(args.crossings, json.loads(raw))
         if args.json:
@@ -338,8 +475,11 @@ def main(argv=None):
                 print(f"{pair:<28} {' '.join(names)}")
         return 1 if result["unplaced"] else 0
 
-    parser.error("nothing asked for: try --order, --graph, --declarations "
-                 "or --crossings")
+    if args.dead_exports:
+        return _report_dead(args.dead_exports, args.json)
+
+    parser.error("nothing asked for: try --order, --graph, --declarations, "
+                 "--crossings or --dead-exports")
 
 
 if __name__ == "__main__":

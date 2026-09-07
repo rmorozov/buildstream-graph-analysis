@@ -9,6 +9,12 @@ shape from numbers rather than from memory. Rows are appended by the
 orchestrating session at the end of the round; a run cut off by a
 limit is a row too.
 
+**Convention (`UX-761`):** a task's id opens its `implementer` row's
+task cell (`UX-750 the map count guard (judgement)`), and its
+`verifier` row's task cell repeats the id (`UX-750 verifier`) in the
+same round — `test_a_merged_track_names_its_verifier.py` reads the
+pairing for every merged row from round 103 on.
+
 | round | agent | model | task | tokens (fresh: input + cache creation, `UX-710`; reads low by the last response's output) | tool calls | wall | outcome | what cost the most / what went wrong |
 |---|---|---|---|---|---|---|---|---|
 | 64 | general-purpose | main | verification, 12 landings | 116k | 103 | 10 m | complete | mutation loop per guard; suite runs |
@@ -42,8 +48,51 @@ limit is a row too.
 | 100 | implementer | sonnet | `UX-734` three counted figures (judgement) | 100k | 76 | 15.7 m | merged | found the review's own replacement figure off by two, and corrected it |
 | 100 | implementer | sonnet | `UX-735` the export size, derived (bounded) | 63k | 56 | 12.0 m | merged | — |
 | 100 | implementer | sonnet | `UX-736` the architecture's status table (judgement, taken in the brief) | 66k | 59 | 12.7 m | merged | its first mutation flipped to 🔴, which `UX-561`'s worktree exemption absorbs — the guard passed for the wrong reason |
+| 102 | implementer | sonnet | `UX-667` the rail is a source list (judgement, decided in the brief) | 319k | 243 | 59.6 m | merged | reverse-engineering which prose in a judgement Required Fix was load-bearing DOM and which was already true; reported a base failure as pre-existing that `origin/main` passes |
+| 102 | implementer | sonnet | `UX-691` a flake ledger (bounded) | 146k | 105 | 21.1 m | merged | the derived cost row and the context map both red from adding two test files, and neither is in the task file or `rules.md` |
+| 102 | implementer | sonnet | `UX-702` a performance ratchet at the gate (bounded) | 259k | 230 | 52.6 m | merged | issued early reads against the shared checkout instead of its worktree; left `dev_perf_ratchet.py` off the §6 context map |
+| 102 | implementer | sonnet | `UX-712` the size ledger (bounded) | 416k | 227 | 59.2 m | merged | stalled twice waiting on a background notification that never arrives; found pylint attributes every duplicate-code hit to one arbitrary module |
+| 102 | implementer | sonnet | `UX-703` a weekly mutation run (bounded) | 226k | 207 | 76.6 m | merged | stalled on a backgrounded mutmut run; mutmut copies the tree one directory deeper, so every `parents[N]` root in this repo resolves wrong inside a mutant |
+| 103 | implementer | sonnet | `UX-705` burn-down batch 1: S607 under `tools/` (bounded) | 190k | 160 | 35.4 m | merged | resolving the executable turns a literal argv into one with a Name in it, which is what S603 reads - 16 of 23 cannot close without growing S603 |
+| 103 | implementer | sonnet | `UX-705` burn-down batch 2: SIM115 under `tools/` (bounded) | 73k | 92 | 14.9 m | merged | wall clock: make test is ~7 min and the turn budget went into polling for it, not into the fix, which was mechanical as briefed |
+| 103 | implementer | sonnet | `UX-742` a dead-export detector eslint cannot be (bounded) | 252k | 101 | 31.1 m | merged, two fixes | strip_comments blanks a string body wholesale, silently erasing the module paths a name-level import parse needs - 286 unread before the switch to raw text |
+| 103 | implementer | sonnet | UX-749 | 84k | 69 | 19 m | merged; nine pseudo-path citations to bare ids, branch count dated | the task file's own citation list omitted UX-3; verifying the count beat trusting the list |
+| 103 | implementer | sonnet | UX-746 | 159k | 71 | 21.5 m | merged after correction; the four workflows are on the map and the walk reaches them | copied the task file's false 'manual' premise forward without opening the .yml |
+| 103 | implementer | sonnet | UX-748 | 413k | 121 | 48.6 m | merged after correction; three guards widened, log re-anchored, range regex widened again | measured its acceptance test in a tree where its own commit did not yet exist |
+| 103 | verifier | sonnet | UX-746 verify | 251k | 81 | 27.4 m | both vacuity claims reproduced load-bearing; found the capture row misdescribes its workflow | the Outcome named each mutation but not the counter-mutation proving it load-bearing |
+| 103 | verifier | sonnet | UX-749 verify | 104k | 77 | 30.2 m | count and guard confirmed; caught a 6-line comment against the Register's cap, and the #anchor gap | a loaded box turned one full suite into three background waits |
+| 103 | verifier | sonnet | UX-748 verify | 91k | 66 | 15.5 m | found the acceptance test does not survive being committed, and the new guard vacuous on 'remain open' | the defect was invisible from the track's own uncommitted sandbox; only re-running against HEAD showed it |
+| 103 | implementer | sonnet | UX-674 | 410k | 363 | 104.2 m | merged after correction; four font sizes, h3 below h2, prose at 72 of its own glyphs | a type-scale row that needed a layout-model change; scope grew four times, each reported |
+| 103 | verifier | sonnet | UX-674 verify | 120k | 80 | 55.3 m | found a false budget-cost claim, an undisclosed non-rewrite, and the layout change no new guard reads | the task file alone could not resolve which sentences its Motivation named |
+| 104 | implementer | sonnet | UX-750 the map count guard (judgement) | 239k | 96 | 34.6 m | merged | the denylist needed zero entries, not the three the brief anticipated; proving that took an exhaustive digit-run scan |
+| 104 | implementer | sonnet | UX-751 the landed clause range (judgement) | 92k | 38 | 73.1 m | merged | worktree opened nine commits behind the named base; the ff-only remedy is the whole cost |
+| 104 | implementer | sonnet | UX-753 the flow axis guard (judgement) | 457k | 155 | 75.8 m | merged | first attempt vacuous; a dynamic import over file:// fails without --allow-file-access-from-files, so the constructed case had to go through the served page |
+| 104 | implementer | sonnet | UX-755 the gate and CI disagree (judgement) | 684k | 240 | 79.7 m | merged | the shared scratchpad vanished mid-run and destroyed a completed diagnostic log; re-derived on a cheaper tier |
+| 104 | implementer | sonnet | UX-744 the round register (judgement) | 634k | 205 | 81.2 m | reverted, reopened | three verification rounds: independence was false twice, and CI then falsified the derivation itself |
+| 104 | implementer | sonnet | UX-756 the spread rule (judgement) | 68k | 52 | 13.2 m | merged | finding a module whose selection sat at the median, so a demonstration import would move the figure at all |
+| 104 | verifier | sonnet | UX-751 verifier | 334k | 73 | 61.9 m | held: one wrong count | three full make test runs to establish that a red suite was not the diff |
+| 104 | verifier | sonnet | UX-750 verifier | 64k | 60 | 13.5 m | merged after amend | the exclusions were three different mechanisms told as one story; testing each separately found the latent false positive |
+| 104 | verifier | sonnet | UX-756 verifier | 53k | 50 | 11.2 m | merged | the substring trap: renaming to a name containing the old one gives a false pass |
+| 104 | verifier | sonnet | UX-753 verifier | 174k | 76 | 44.5 m | held, then merged | the population claim needed an independent enumeration; the discriminating mutation was one the track never tried |
+| 104 | verifier | sonnet | UX-744 verifier | 281k | 93 | 33.8 m | held twice | finding the mutation point that separates caught from silently absorbed - one function down |
+| 104 | verifier | sonnet | UX-755 verifier | 78k | 65 | 12.6 m | merged | reproducing a negative disk margin on a shared container without disturbing other agents |
+| 105 | implementer | sonnet | UX-761 the verifier mandate (judgement) | 485k | 121 | 52.6 m | merged | two verifier rounds; a fabricated grep figure in its own Outcome, and a skill line that restated the rule its commit message claimed it had stopped restating |
+| 105 | implementer | sonnet | UX-762 the gate binds to the commit (judgement) | 444k | 226 | 91.6 m | merged | the first parser returned at the first git invocation, so a compound command walked through; dev_touching escalates to a full suite whenever a diff touches the Makefile |
+| 105 | verifier | sonnet | UX-761 verifier | 186k | 75 | 24.4 m | held twice, then merged | re-running the track own pasted commands is what found the fabricated figure; nothing short of that would have caught it |
+| 105 | verifier | sonnet | UX-762 verifier | 252k | 130 | 66.5 m | held, then merged | the bypass was only visible by piping adversarial commands through the real hook rather than trusting the mutation table |
 
-What the thirty-one rows already say: a researcher that reads a document
+Round 101's four tracks are **not** here: this session could not
+identify their transcripts with certainty after a context rebuild, and
+a guessed row is worse than a missing one. Round 102's five are, all
+derived with `dev_track_cost.py --ledger`.
+
+Two of the five stalled waiting on a background notification that never
+arrives, with a finished round of work uncommitted in a worktree; both
+committed cleanly once told to run in the foreground. Three of the five
+left a derived figure or a §6 context-map row behind - the same class
+the round itself was about, arriving in the tracks' own work.
+
+What the sixty-three rows already say: a researcher that reads a document
 whole costs 100-180k; a walker that drives every control costs 336k;
 the two cuts cost a re-run each. The `walk` and `design-review`
 skills fix the report shape so the next rows are smaller, and the

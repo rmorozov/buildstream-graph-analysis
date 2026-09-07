@@ -1,6 +1,6 @@
 # BuildStream Build Efficiency Analyzer - Makefile
 
-.PHONY: test test-tiers test-small test-medium test-large test-fast test-touching test-e2e lint lint-docs dev-run clean check-clean install dev help
+.PHONY: test test-tiers test-small test-medium test-large test-fast test-touching test-e2e lint lint-docs sizes dev-run clean check-clean install dev help
 
 # Default target
 help:
@@ -15,6 +15,7 @@ help:
 	@echo "  make test-e2e    - Run end-to-end tests directly"
 	@echo "  make lint        - Run code linting (ruff)"
 	@echo "  make lint-docs   - Markdown correctness (UX-98); part of make lint"
+	@echo "  make sizes       - The size ledger's ratchet (UX-712); not part of make lint"
 	@echo "  make dev-run     - Analyze a sample fixture and print a real report (fast smoke check)"
 	@echo "  make clean       - Remove build artifacts and cache"
 	@echo "  make check-clean - Fail if any ignored/build-artifact path is tracked by git"
@@ -47,8 +48,12 @@ PYTEST_XDIST ?= -n auto
 # produced (`UX-418`) rather than running it twice.
 PYTEST_ARGS ?=
 
+# UX-762: the sha this run covered, written only when pytest exits 0 -
+# make aborts the recipe on the line above's failure, so a red suite
+# never reaches this one. `.claude/hooks/gate-covers-push.sh` reads it.
 test:
 	python -m pytest tests/ -q $(PYTEST_XDIST) $(PYTEST_ARGS)
+	@git rev-parse HEAD > .gate-covered
 
 # UX-418: the full suite, then which files have outgrown their tier.
 # One command because the check reads the run's own report - it costs a
@@ -109,6 +114,14 @@ lint: lint-docs
 lint-docs:
 	git ls-files -z -- README.md CLAUDE.md REVIEW.md 'docs/*.md' '.claude/*.md' \
 	  | xargs -0 -r python3 -m pymarkdown --config .pymarkdown.json scan
+
+# UX-712: the size ledger - a file's longest function, its own line
+# count, and pylint's duplicate-code block count, none of which have a
+# finding identity. Not in `make lint`: pylint's duplicate-code sweep
+# alone measured ~22s here, on every push nobody asked for; the pace of
+# closing what it finds is UX-695's.
+sizes:
+	python3 tools/dev_sizes.py --check
 
 # Local dev convenience: analyze a checked-in sample fixture and print a
 # real report - one command from "I changed some code" to "I can see

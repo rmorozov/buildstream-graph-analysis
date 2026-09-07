@@ -1333,6 +1333,10 @@ _CODE_SPAN = re.compile(r"`([^`\n]+)`")
 #: no glob, no `#anchor` (links own those).
 _MD_NAME = re.compile(r"^[\w./+-]+\.md$")
 
+#: `UX-749`: a backlog citation shaped like a path but missing `.md`,
+#: which `_MD_NAME` never sees.
+_SCENARIO_PSEUDO_PATH = re.compile(r"^docs/backlog/scenarios/[\w.+-]+$")
+
 #: Names written on purpose that are not files, each with why. Every
 #: entry is asserted still present, so an exemption cannot outlive its
 #: reason (`UX-576`'s `HISTORICAL`).
@@ -1390,7 +1394,10 @@ def test_every_backticked_markdown_name_resolves():
         for number, line in enumerate(text.splitlines(), 1):
             for match in _CODE_SPAN.finditer(line):
                 name = match.group(1).strip()
-                if not _MD_NAME.match(name) or (rel, name) in _NOT_A_FILE:
+                is_name = _MD_NAME.match(name)
+                is_pseudo_path = (
+                    not is_name and _SCENARIO_PSEUDO_PATH.match(name))
+                if not (is_name or is_pseudo_path) or (rel, name) in _NOT_A_FILE:
                     continue
                 if not _resolves(rel, name, tracked):
                     dangling.append(f"{rel}:{number} -> `{name}`")

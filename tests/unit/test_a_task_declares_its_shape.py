@@ -70,15 +70,29 @@ class TestTheRealBacklogAgrees:
         assert close.shape_disagreements() == []
 
     def test_the_check_reports_a_typed_shape(self, tmp_path):
-        """The mutation the guard exists for: a hand-edited word."""
+        """The mutation the guard exists for: a hand-edited word.
+
+        The subject is whichever task is open when this runs, and its
+        replacement shape is derived rather than named. `UX-702` was
+        hard-coded here until the round that closed it: `--check` reads
+        open rows only, so a closed fixture makes the mutation silent
+        and the clause passes on a tool that has stopped working.
+        """
+        sys.path.insert(0, str(REPO / "tools"))
+        import dev_close_task as tool
+
         into = tmp_path / "scenarios"
         into.mkdir()
         for path in (REPO / "docs/backlog/scenarios").glob("*.md"):
             shutil.copy(path, into / path.name)
-        target = next(into.glob("UX-0702-*.md"))
-        target.write_text(target.read_text(encoding="utf-8").replace(
-            "**Shape:** bounded", "**Shape:** mechanical", 1), encoding="utf-8")
+        uid = sorted(tool.open_uids())[0]
+        target = next(into.glob(f"UX-{uid:04d}-*.md"))
+        text = target.read_text(encoding="utf-8")
+        derived = tool.derived_shape(text)
+        wrong = next(s for s in tool.SHAPES if s != derived)
+        target.write_text(tool.with_shape(text, wrong), encoding="utf-8")
         run = subprocess.run([sys.executable, str(TOOL), "--check", "--scenarios", str(into)],
                              capture_output=True, text=True)
         assert run.returncode == 1
-        assert "UX-702: declares mechanical, its text derives bounded" in run.stdout
+        assert (f"UX-{uid}: declares {wrong}, its text derives {derived}"
+                in run.stdout), run.stdout

@@ -579,6 +579,11 @@ class AnalysisResult:
     # sentence the terminal, the page and the export all print. `None`
     # when it is not absent.
     plane2_absence: Optional[str] = None
+    # UX-740: the tasks this run's epsilon grid published as zero -
+    # raw finish after raw start, but both endpoints on one grid point.
+    # `{"epsilon_us", "element_count", "elements", "tasks", "note"}`,
+    # empty when the run had none.
+    duration_resolution: dict = field(default_factory=dict)
     total_duration_us: int = 0
     # BuildStream's own top-level pipeline overhead (Query cache, Resolving
     # elements, etc.) - not part of analysis/v9's spec-mandated schema

@@ -20,7 +20,12 @@ export const RAILS = ["decide", "act", "prove", "investigate", "raw"];
 
 // UX-286: and the chapters the rail lists, which are the document's
 // grouping rather than a second one written here.
-import { CHAPTERS, UNCHAPTERED, chapterFor } from "./chapters.js";
+// UX-667: `isOpen`/`setOpen`/`labelFold`/`chapterBox` are the shared
+// state a rail row's disclosure and the document's own chapter fold
+// both paint from - one state, two views, never a second fold this
+// file invents.
+import { CHAPTERS, UNCHAPTERED, chapterFor, isOpen, setOpen, labelFold,
+         chapterBox } from "./chapters.js";
 
 /** The sections the page actually rendered, in document order. */
 export function sections(root) {
@@ -318,28 +323,68 @@ export function toc(root, { document: doc, controls } = {}) {
     grouped.get(grouped.has(id) ? id : UNCHAPTERED.id).push(key);
   }
 
+  // `UX-667`: styleguide §3h. `ul.chapters` holds one `li[data-chapter]`
+  // per chapter - a row that always names the chapter and a `ul.sections`
+  // that only the *open* chapter shows, so 82 entries stop being one
+  // flat 2.4-screen list and become the seven of whichever question the
+  // reader is on. The row's disclosure is not a second fold: it is the
+  // document's own chapter fold, read and written through `isOpen` /
+  // `setOpen` on the same `section.chapter` box `chapters()` already
+  // built - one state, two views (styleguide §4c).
+  const chapterList = doc.createElement("ul");
+  chapterList.className = "chapters";
+  nav.append(chapterList);
+
   for (const chapter of order) {
     const members = grouped.get(chapter.id);
     if (!members.length) continue;
-    const groupName = doc.createElement("p");
-    groupName.className = "toc-rail";
-    groupName.setAttribute("data-rail", chapter.id);
-    groupName.setAttribute("data-chapter", chapter.id);
-    // UX-286 item 2: navigation moves chapter to chapter, so the
-    // chapter's own name is the link to it - a reader who wants the
-    // next question does not have to aim at its first section.
-    const jump = doc.createElement("a");
-    jump.href = `#chapter-${chapter.id}`;
-    jump.setAttribute("data-toc-chapter", chapter.id);
-    jump.textContent = chapter.title;
-    groupName.append(jump);
-    nav.append(groupName);
+    const row = doc.createElement("li");
+    row.setAttribute("data-chapter", chapter.id);
     const rail = chapter.id;
     const list = doc.createElement("ul");
+    list.className = "sections";
     // UX-254: the rail this list belongs to, so the stylesheet can
     // bound the one group that grows with the run (`investigate` is
     // one entry per focused element) without JS truncating anything.
     list.setAttribute("data-rail", rail);
+
+    // `UX-347`: the first chapter is the decision and stays open
+    // everywhere it is drawn - the rail gives it no control that would
+    // shut what the document itself will not.
+    const box = chapterBox(root, chapter.id);
+    const open = chapter === order[0] || isOpen(box);
+    row.setAttribute("data-open", String(open));
+    if (chapter === order[0]) {
+      const label = doc.createElement("p");
+      label.className = "toc-rail";
+      label.setAttribute("data-rail", chapter.id);
+      label.setAttribute("data-chapter", chapter.id);
+      label.textContent = `${chapter.title} · ${members.length}`;
+      row.append(label);
+    } else {
+      const toggle = doc.createElement("button");
+      toggle.className = "toc-chapter-open";
+      toggle.setAttribute("type", "button");
+      toggle.setAttribute("data-chapter-open", chapter.id);
+      toggle.setAttribute("data-toc-chapter", chapter.id);
+      toggle.setAttribute("aria-expanded", String(open));
+      toggle.setAttribute("aria-controls", `chapter-${chapter.id}`);
+      toggle.textContent = `${chapter.title} · ${members.length}`;
+      // The click toggles the one state the document's own control
+      // does - `labelFold` (called from `setOpen`) then repaints both
+      // views, this button included, from `box`'s own `data-open`.
+      // `__railToggle` is how it finds this one: a plain reference, not
+      // a query, because the rail is still a detached tree at this
+      // point in boot and a query would find nothing (measured; see
+      // `labelFold`'s own note).
+      if (box) box.__railToggle = toggle;
+      toggle.addEventListener("click", () => {
+        const target = chapterBox(root, chapter.id);
+        if (target) setOpen(target, !isOpen(target));
+      });
+      row.append(toggle);
+    }
+
     for (const key of members) {
       const item = doc.createElement("li");
       const link = doc.createElement("a");
@@ -373,7 +418,8 @@ export function toc(root, { document: doc, controls } = {}) {
       if (inner) item.append(inner);
       list.append(item);
     }
-    nav.append(list);
+    row.append(list);
+    chapterList.append(row);
   }
 
   if (controls) {
@@ -727,6 +773,12 @@ export function scrollspy(root, nav, { observer } = {}) {
     if (link) {
       link.setAttribute("data-current", "true");
       link.setAttribute("aria-current", "location");
+      // `UX-667`: the mark moves with the reader; the rail's own scroll
+      // follows it rather than leaving "you are here" to scroll off a
+      // rail the document has already carried past. `"nearest"` is a
+      // no-op once the mark is already in view, so a rail short enough
+      // to show it all costs nothing here.
+      link.scrollIntoView?.({ block: "nearest" });
     }
   };
 

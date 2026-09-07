@@ -502,7 +502,20 @@ END pid=101 ppid=1 ts=1002.500000 element=work-a.bst cmd=cc -c main.c
 # B past the figures recorded beside them. 316,000 leaves 5,366 B,
 # 432,000 leaves 4,875 B and 482,000 leaves 4,500 B - the same order of
 # headroom `UX-613` chose.
-PAGE_BUDGET_B = 316_000
+# `UX-717` added the eighteenth question - `were-the-cores-busy`, its
+# `why` and the widened `NEEDS_TRACKEVENT` comment - and tripped this
+# one by 52 B. The track recorded the absolute path of the tree it
+# measured in as the reason its figure and the 316,000 differed; that
+# is not it - the checkout's path occurs **0 times** in the page
+# (`page.count(str(Path.cwd()))`, run in the main checkout). The
+# figures are directly comparable, 316,000 really does fail here, and
+# the delta below is the whole of it:
+#
+#     page   314,938 -> 316,052   (+1,114 B, all source)
+#
+# 322,000 leaves 5,948 B, the same order of headroom the moves above
+# chose.
+PAGE_BUDGET_B = 322_000
 
 #: `UX-444`: the claim, stated once. **The run's data is at least twice
 #: the page a reader is permitted to download.**
@@ -822,7 +835,23 @@ COMMITTED_EXPORTS = [
     # The old comment on this row said 438,826; `UX-681` recorded that
     # before its last edit and nothing re-read it - the bound held, the
     # note did not. Measured at HEAD before this change: 442,716.
-    ("golden", GOLDEN, 449_000),                       #  444,220 B
+    # `UX-677` moved this one by 1,168 B, all contract: the
+    # `max_jobs_advice` schema prose on `capacity_recommendation`, which
+    # travels whether or not a run has host CPU samples - neither
+    # committed fixture does. Not moved here because it is not tripped:
+    # 449,000 still leaves 1,210 B.
+    # `UX-667`: 449,000 -> 453,000. Measured at 446,559 before the round
+    # and 450,317 after, +3,758 B. Attributed by diffing the two exports
+    # line by line rather than guessed: the 69 added lines are the rail's
+    # own `.toc .chapters` / `button.toc-chapter-open` CSS and markup.
+    # The session first read this growth as `UX-740`'s new schema entry -
+    # it is not; `duration_resolution` occurs once in the page and golden
+    # publishes no such section at all. The track moved the `macro_micro`
+    # row for its rail work and left this one, which is the same class of
+    # miss the round has been finding: a second bound the diff selects
+    # but the track did not look at.
+    # 453,000 leaves 2,683 B, the same order as the 2,441 it had.
+    ("golden", GOLDEN, 453_000),                       #  450,317 B
     # `UX-297` moved this one by 385 B before that: the two-plane run
     # publishes `plane2_coverage.source`, which says which shape of
     # Plane 2 report served its numbers and what that costs to open. A
@@ -939,7 +968,16 @@ COMMITTED_EXPORTS = [
     # 502,000 leaves 4,839 B, the same order of headroom above.
     # `UX-669`: +1,504 B here too, to 498,665, and this bound holds -
     # 3,335 B of headroom, which is why only the row above moved.
-    ("macro_micro", MACRO_MICRO, 502_000),             #  498,665 B
+    # `UX-677` moved this one by the same 1,168 B and for the same
+    # reason - see the note on the `golden` bound above.
+    # `UX-667`: +1,869 B on top, all source, measured in one worktree
+    # either side to hold the run path's own contribution fixed
+    # (total 501,514 -> 503,383, data 185,519 -> 185,519 unmoved) -
+    # `chapters.js`'s `labelFold` and `nav.js`'s chapter-row markup.
+    # The two landed in the same round and the figure below is the
+    # merged tree's, measured once rather than added up:
+    # 510,000 leaves 4,715 B, the same order of headroom above.
+    ("macro_micro", MACRO_MICRO, 510_000),             #  505,285 B
 ]
 
 
@@ -1058,18 +1096,35 @@ class TestItRendersTheSameThing:
         assert "findings" in rendered["sections"], rendered["sections"]
         assert rendered["severities"], "no severity reached the page"
 
-    def test_it_renders_what_the_served_page_renders(self, exported, snapshot):
+    def test_it_renders_what_the_served_page_renders(
+            self, exported, snapshot, tmp_path):
         """Same payload, same schema, same renderer - so same output.
-        A second renderer would show up here as a difference."""
+        A second renderer would show up here as a difference.
+
+        The embedded schema is written to a `.mjs` file rather than
+        passed via `-e`: Linux's per-argument `MAX_ARG_STRLEN` is 128
+        KiB, and `analyze/v6`'s schema text alone was already 130,551 B
+        before `UX-677` - 521 B of headroom no single future key could
+        be trusted to leave (`E2BIG` is not a budget this file states
+        anywhere, so growth here read as this test's own bug rather than
+        as growth on the ledger this file otherwise tracks).
+        """
         from tools.bga_view import payloads, schemas_payload
 
         run = str(snapshot / "run")
         payload = payloads(run)["report.json"]
         schema = schemas_payload()[payload["schema"]]
 
+        # `./tests/viewer.mjs` resolved against `cwd` under `-e`; a real
+        # script file resolves relative specifiers against its own
+        # location instead, so the viewer's own path travels as a
+        # `file:` URL rather than as a relative one.
+        viewer_url = pathlib.Path(os.getcwd(), "tests", "viewer.mjs").as_uri()
+        script_path = tmp_path / "served_harness.mjs"
+        script_path.write_text(_SERVED_HARNESS % (
+            json.dumps(payload), json.dumps(schema), json.dumps(viewer_url)))
         served = subprocess.run(
-            [node, "--input-type=module", "-e",
-             _SERVED_HARNESS % (json.dumps(payload), json.dumps(schema))],
+            [node, str(script_path)],
             capture_output=True, text=True, cwd=os.getcwd(), timeout=90)
         assert served.returncode == 0, served.stderr
 
@@ -1910,7 +1965,7 @@ _SERVED_HARNESS = _COMMON_SHIM + """
 const payload = %s, schema = %s;
 globalThis._installDocument ??= (await import(process.env.BGA_DOM_SHIM)).installDocument;
 _installDocument({ getElementById: () => makeNode("div") });
-const mod = await import("./tests/viewer.mjs");
+const mod = await import(%s);
 const root = makeNode("main");
 mod.render(payload, schema, root);
 console.log(JSON.stringify(collect(root)));

@@ -20,10 +20,16 @@ import argparse
 import json
 import pathlib
 import re
+import statistics
 import sys
 
 REPO = pathlib.Path(__file__).resolve().parents[1]
 SCENARIOS = REPO / "docs/backlog/scenarios"
+#: `UX-666`: the runs band's source. The Outcomes above say what the
+#: *process* did; this table says what a *run* cost, and until now
+#: nothing read it.
+LEDGER = REPO / "docs/audits/agent-runs.md"
+sys.path.insert(0, str(REPO))
 
 #: `(key, headline, pattern)`. Every pattern is matched against the
 #: **Outcome** only - a Motivation describing somebody else's
@@ -165,6 +171,151 @@ def report(rows, window):
     return lines
 
 
+#: A ledger cell the writer could not fill. Read as unknown, not zero -
+#: a run cut before it reported has no token figure, and averaging it in
+#: as 0 is the shape fixing guide SS5 calls reading a proxy.
+UNKNOWN = ("—", "-", "", "?")
+
+
+def _number(cell, suffix):
+    """`190k` -> 190000, `35.4 m` -> 35.4, an unfilled cell -> None."""
+    text = cell.strip().removesuffix(suffix).strip()
+    if text in UNKNOWN:
+        return None
+    try:
+        return float(text) * (1000 if suffix == "k" else 1)
+    except ValueError:
+        return None
+
+
+def ledger_runs(path=LEDGER):
+    """`UX-666`: one dict per `agent-runs.md` row, oldest first."""
+    runs = []
+    for line in path.read_text(encoding="utf-8").splitlines():
+        cells = [c.strip() for c in line.split("|")[1:-1]]
+        # The header and the `|---|` separator split into nine cells
+        # too; a round is the only one that is a number.
+        if len(cells) != 9 or not cells[0].isdigit():
+            continue
+        runs.append({"round": cells[0], "agent": cells[1], "model": cells[2],
+                     "task": cells[3], "tokens": _number(cells[4], "k"),
+                     "calls": cells[5], "wall": _number(cells[6], "m"),
+                     "outcome": cells[7]})
+    return runs
+
+
+UX_IN_TASK = re.compile(r"UX-(\d+)")
+
+
+def shape_of(run):
+    """`UX-706`'s shape for the task a run names, or None.
+
+    Derived from the task file, never from the row: the row's own text
+    says "(bounded)" in prose, and a prose cell is the thing this
+    repository keeps finding out of date. A run naming no id - a
+    researcher's sweep, a walk - has no shape, which is not "unknown"
+    but "the question does not apply".
+    """
+    from tools import dev_close_task
+    found = UX_IN_TASK.search(run["task"])
+    if not found:
+        return None
+    try:
+        text = dev_close_task.task_file(f"UX-{found.group(1)}").read_text(
+            encoding="utf-8")
+    except (OSError, SystemExit, ValueError):
+        return None
+    return dev_close_task.derived_shape(text)
+
+
+def shape_report(runs):
+    """`UX-708`: what a track cost, by the shape of what it was given.
+
+    Over the **whole** ledger and not a window: 17 implementer runs is
+    already a thin population to read a median from, and a window would
+    make it thinner. Reported, not verdicted - the advisory in
+    `CLAUDE.md` is the sentence this decides, and it is decided by a
+    person reading the rows, not by a threshold here.
+    """
+    tracks = [r for r in runs if r["agent"] == "implementer"]
+    by = {}
+    for run in tracks:
+        by.setdefault(shape_of(run), []).append(run)
+    lines = [f"{len(tracks)} implementer run(s), by the shape "
+             f"`dev_close_task.py --shape` derives:", "",
+             f"{'shape':12s}{'runs':>5s}{'median tokens':>15s}"
+             f"{'median wall':>13s}{'not merged':>12s}"]
+    for shape, group in sorted(by.items(), key=lambda kv: str(kv[0])):
+        priced = [r["tokens"] for r in group if r["tokens"] is not None]
+        walled = [r["wall"] for r in group if r["wall"] is not None]
+        stalled = sum(1 for r in group if "merged" not in r["outcome"])
+        tokens = f"{round(statistics.median(priced) / 1000)}k" if priced else "—"
+        wall = f"{statistics.median(walled):.1f} m" if walled else "—"
+        lines.append(f"{str(shape or '(no id)'):12s}{len(group):5d}{tokens:>15s}"
+                     f"{wall:>13s}{stalled:>12d}")
+    off = disagreements(tracks)
+    if off:
+        # Not resolved here. A row whose task file is `judgement` can
+        # still hand a track a *bounded* slice of it - a burn-down batch
+        # is the case - so the derivation is right about the row and
+        # wrong about the run, and a reader adjusting the split needs to
+        # see which rows (`UX-708`).
+        lines += ["", f"the row's own word differs on {len(off)} of "
+                      f"{len(tracks)}, each a batch of a larger row:"]
+        lines += [f"  {task}: cell says {said}, file derives {derived}"
+                  for task, said, derived in off]
+    return lines
+
+
+SHAPE_IN_CELL = re.compile(r"\((mechanical|bounded|judgement)")
+
+
+def disagreements(tracks):
+    """`(task, what the cell says, what the file derives)` where they differ."""
+    off = []
+    for run in tracks:
+        said = SHAPE_IN_CELL.search(run["task"])
+        derived = shape_of(run)
+        if said and derived and said.group(1) != derived:
+            off.append((run["task"], said.group(1), derived))
+    return off
+
+
+def runs_report(runs, window):
+    """The runs band, as a list of lines. It reports; it does not verdict -
+    the same reason the bands above do not, and one more: the model column
+    is what `CLAUDE.md`'s advisory is measured against, and an advisory
+    that reads its own band is a loop."""
+    recent = runs[-window:]
+    lines = [f"{len(runs)} run(s) in the ledger; the last {len(recent)} "
+             f"by kind and model.", "",
+             f"{'kind':14s}{'model':10s}{'runs':>6s}{'median tokens':>15s}"
+             f"{'median wall':>13s}"]
+    kinds = {}
+    for run in recent:
+        kinds.setdefault((run["agent"], run["model"]), []).append(run)
+    for (agent, model), group in sorted(kinds.items()):
+        priced = [r["tokens"] for r in group if r["tokens"] is not None]
+        walled = [r["wall"] for r in group if r["wall"] is not None]
+        tokens = f"{round(statistics.median(priced) / 1000)}k" if priced else "—"
+        wall = f"{statistics.median(walled):.1f} m" if walled else "—"
+        lines.append(f"{agent:14s}{model:10s}{len(group):6d}{tokens:>15s}"
+                     f"{wall:>13s}")
+    cut = [r for r in runs if "cut" in r["outcome"].lower()]
+    unpriced = [r for r in runs if r["tokens"] is None]
+    lines += ["",
+              f"cut or re-run: {len(cut)} of {len(runs)}"
+              + (f" (round {', round '.join(r['round'] for r in cut)})"
+                 if cut else ""),
+              f"no token figure: {len(unpriced)} of {len(runs)}",
+              "",
+              "No band is drawn. Two readings of one kind is not a",
+              "baseline, and the column a band would fire on - tokens by",
+              "model - is the one `CLAUDE.md`'s advisory already sets.",
+              ""] + shape_report(runs)
+    return lines
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--window", type=int, default=40,
@@ -172,7 +323,14 @@ def main(argv=None):
                              "column covers (default 40)")
     parser.add_argument("--json", action="store_true",
                         help="the counts, for a later round to band")
+    parser.add_argument("--runs", type=int, metavar="N",
+                        help="instead of the Outcome bands: what the last N "
+                             "runs in docs/audits/agent-runs.md cost, by "
+                             "agent kind and model (UX-666)")
     args = parser.parse_args(argv)
+    if args.runs:
+        print("\n".join(runs_report(ledger_runs(), args.runs)))
+        return 0
 
     paths = list(SCENARIOS.glob("UX-*.md"))
     if not paths:

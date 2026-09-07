@@ -1,6 +1,6 @@
 # UX-738: a build that could not write reports as a clean run and exit 255
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-156 (a failed build must not verdict as if it finished), UX-324, UX-148 | **Serves:** anyone whose disk fills mid-capture, and the round that then reads the report | **Topic:** capture | **Shape:** judgement | **Area:** tools
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-156 (a failed build must not verdict as if it finished), UX-324, UX-148 | **Serves:** anyone whose disk fills mid-capture, and the round that then reads the report | **Topic:** capture | **Shape:** judgement | **Area:** tools
 
 ## Motivation
 
@@ -67,9 +67,18 @@ exits non-zero:
 - where the failure is a write, the path that could not be written is
   named. `bst`'s own diagnostics carry it; the wrapper discards it.
 
-Decide and say in the Outcome whether 255 should survive as the tool's
-exit code or be mapped — `UX-114`'s exit-code table is the contract
-this joins, and an undocumented 255 is itself a finding.
+**The decision, taken here: 255 survives, unmapped.**
+`docs/guides/cli.md:194` already states the contract — *`bga snapshot`
+exits with the wrapped build's own exit code* — and 255 is `bst`'s,
+not a code `bga` invented. Mapping it would break the one property a
+CI job depends on (the wrapped build's code reaches the caller) to
+compensate for a missing sentence, which is the wrong layer. The
+defect is that nothing in either stream says why; the number is
+correct and is not the finding.
+
+What the exit-code table does owe the reader is that this
+pass-through exists at all, so the fix states it where a reader
+meets the codes rather than only at line 194.
 
 ## Out of Scope
 
@@ -87,3 +96,40 @@ line of its output says the build did not complete, naming the wrapped
 exit code; no attribution verdict is printed for it. Mutation: make
 the wrapped command exit non-zero after producing a partial trace —
 the clause reds if a verdict is printed anyway.
+
+## Outcome
+
+**Gap measured:** `bga snapshot`'s only signal for a write failure was
+the numeric exit code; neither stream said why, and a run with zero
+execution measured on the chain and a non-zero exit printed a full
+Attribution Breakdown as if it had run and been idle (round 100's
+`assert 255 == 0` reproduction).
+
+**Close measured:** `main()` now prints one line, last, whenever
+`build_exit != 0`: `bst exited N - the analysis above describes a
+build that did not complete.`, plus `Could not write PATH.` when the
+wrapped log's tail carries an OS-level write error (Python's own
+`[Errno N] <strerror>: 'path'` rendering). `_analyze()` refuses the
+printed verdict, in `UX-156`'s own "THIS BUILD DID NOT FINISH"
+wording, exactly when `build_exit` is non-zero **and**
+`execution_on_chain_us` is zero; a fully-cached, exit-0 build with the
+same zero execution still prints — both proven by one guard's two
+assertions. Simulated the failing write via a fixture wrapped log
+carrying a synthetic `OSError` line rather than filling this
+container's disk: faithful because `bst_run_wrapped.emit` writes
+`bst`'s real stdout/stderr verbatim into that same log, and Python's
+`OSError.__str__` is the interpreter's own rendering, not invented.
+
+**Mutation table:**
+
+| clause | mutation | reddened | result |
+|---|---|---|---|
+| 1: exit line | deleted the trailing `if build_exit: print(_exit_summary_line(...))` block | `TestAnExitThatSaysWhy::test_the_last_line_names_the_exit_code_and_incompletion` | 1 failed, 1 passed |
+| 2: refuse not print | `if build_exit and not executed_us:` → `if not executed_us:` | `TestZeroExecutionRefusesAVerdict::test_a_cached_build_with_zero_execution_still_prints` | 1 failed, 1 passed |
+| 3: name the path | `named = f" Could not write {where}." if where else ""` → `named = ""` | `test_a_write_failure_names_the_path_from_the_wrapped_log` | 1 failed, 32 passed elsewhere |
+
+`tests/unit/test_snapshot.py -q`: 33 passed, 1 skipped (clean, no
+mutation). `make lint`: clean. `make test-touching`: 1422 passed, 30
+skipped. `tests/unit/test_the_journey_has_an_answer_key.py`: 25
+skipped (no `bst`/`bwrap`/staged toolchain in this container — the
+same environment gate it always had, not a regression).

@@ -188,7 +188,12 @@ TRACE_QUERIES = {
     # the alternative: it answers where the gaps are, once you know
     # which queue you are asking about.
     "wait-category": ("resource-queues", "stalls"),
-    "capacity-recommendation": ("resource-queues", "stalls"),
+    # `UX-717`: a third grain. This is the finding that already names
+    # `host_cpu_count`, `cores_busy` and the binding constraint, so it
+    # is what the host counter-track question hangs off - no finding
+    # UX-676 published reaches `findings.py`'s claim mechanism at all.
+    "capacity-recommendation": ("resource-queues", "stalls",
+                                "were-the-cores-busy"),
     # Execution: the finding names elements; the query opens them.
     #
     # `UX-433`: **which programs**, not which elements. The claim is that
@@ -322,14 +327,23 @@ def _diagnosis_rule(claim, document):
             "Neither branch could be taken: this run did not record both "
             "durations the ratio needs.")
     fired = ">=" if name == _findings.DIAGNOSIS_CHAIN_BOUND else "<"
+    # UX-674 (styleguide §4b, extended to sentences): `fired` and `name`
+    # stay raw in the *rule* - `comparison` and the diagnosis value are
+    # payload fields, read by a consumer, not a reader. The `sentence`
+    # a reader sees gets the words instead: "at or above"/"below" is
+    # this file's own convention (`_wait_category_rule` et al.), and a
+    # hyphenated label reads as prose where the bare enum read as a key.
+    above_or_below = "at or above" if fired == ">=" else "below"
+    label = name.replace("_", "-") if isinstance(name, str) else "unresolved"
     return _rule(
         "CHAIN_BOUND_RATIO", _findings.CHAIN_BOUND_RATIO, fired,
         "headline.chain_share",
-        f"The critical path is {ratio:.1%} of the task horizon - the span "
-        f"from the first task's start to the last one's finish, which "
-        f"excludes BuildStream's own startup - and that is {fired} the "
-        f"{_findings.CHAIN_BOUND_RATIO:.0%} at which the chain rather than "
-        f"the scheduler is called the constraint, so {name}.")
+        f"The critical path is {ratio:.1%} of the task horizon (the span "
+        f"from the first task's start to the last one's finish, "
+        f"excluding BuildStream's own startup), {above_or_below} the "
+        f"{_findings.CHAIN_BOUND_RATIO:.0%} line at which the chain "
+        f"rather than the scheduler is called the constraint, so this "
+        f"build is {label}.")
 
 
 def _wait_category_rule(claim, document):

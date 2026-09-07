@@ -70,6 +70,14 @@ dev = [
     # break a suite under xdist. A dev dependency: nothing a user
     # installs needs it.
     "pytest-xdist>=3.5",
+    # UX-712: the size ledger's duplicate-block count -
+    # `--enable=duplicate-code`, pip-installable and the only one of
+    # the tried tools with no CI-side account needed. Unpinned above
+    # `3.3`: pylint 4.x needs Python >=3.10 and pip resolves 3.3.9 for
+    # the 3.9 lane on its own Requires-Python metadata - verified with
+    # `pip install --dry-run` on 3.10, 3.11 and 3.12 here; 3.9 was not
+    # available to try directly.
+    "pylint>=3.3",
 ]
 # UX-191: `pip install bga[completion]`, then
 # `eval "$(register-python-argcomplete bga)"`. Shell completion for the

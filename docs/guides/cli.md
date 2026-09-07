@@ -927,7 +927,7 @@ columns are the whole statement of what one of its rows holds, and
 finding one level up: `parallelism` is a top-level *object*, its
 `levels` rows are below that, and a population reaching only under a
 top-level array published the whole of a major bump outside itself.
-The surface is **252 keys** today, and that figure is derived from the
+The surface is **258 keys** today, and that figure is derived from the
 walk rather than typed here.
 
 So the statement of coverage, which is now a statement and not a
@@ -1016,6 +1016,7 @@ can look one up.
 | `shared_consumers` | In a `consolidation_candidates` row, the elements that always consume the candidate group together — the reason it is a group. |
 | `utilization_envelope`, `capacity_cores`, `busy_cores`, `busy_share` | Cores busy over the build against the smaller of `builders x max-jobs` and the host's cores (`UX-676`). The capacity is the smaller because a four-core host can never deliver sixteen, and a share against a number nothing can reach is not a verdict. `busy_cores` is the interval's own reading; `busy_share` is it over `capacity_cores`. |
 | `underutilized_intervals`, `overcommitted_intervals`, `lost_core_seconds` | The windows that violate the envelope, ranked and capped at forty. Under-utilized is one whole core idle while Plane 1 says there was work; overcommitted is load above the core count or a page written to swap. `lost_core_seconds` is the idle capacity times the window, which is what the ranking is by. |
+| `duration_resolution` | The elements this capture's epsilon grid published as zero (`UX-740`). Quantization rounds a span lying wholly inside one rounding bucket to a single grid point, so its duration and every share computed from it are zero - unmeasurable at this resolution, not instantaneous. Carries `epsilon_us`, the element names and the task keys. Absent when the run had none, so "nothing was erased" and "the tool does not check" stay distinguishable. |
 | `building`, `ready_not_dispatched`, `just_finished`, `successors_waiting` | In an interval row, what Plane 1 says was going on: the elements overlapping the window each with its own `max_jobs`, those dependency-ready and not dispatched for the whole of it, those that finished inside it, and the successors those unblocked that had not started. Which of the first two explains the idle core is `UX-677`'s question, not this table's. |
 | `start_us`, `load1` | In an interval row, where the window starts on the build's own wall clock, and the host's one-minute load average through it — runnable *and* uninterruptible tasks, which is what separates a busy machine from a blocked one. |
 | `allows` | In a `capacity_recommendation.constraints` row, how many builders that one ceiling permits, beside the `name` of the ceiling and the `reason` it was measured. A ceiling with no measurement behind it is absent rather than infinite. |
@@ -1288,9 +1289,11 @@ bga analyze RUN/ --explain
 ```text
   This build is scheduler-bound, not chain-bound: the critical path is
   88% of wall-clock, so the time is going somewhere other than the chain.
-    why: The critical path is 87.5% of wall-clock, which is < the 90% at
-         which the chain rather than the scheduler is called the
-         constraint - so scheduler_bound.
+    why: The critical path is 87.5% of the task horizon (the span from
+         the first task's start to the last one's finish, excluding
+         BuildStream's own startup), below the 90% line at which the
+         chain rather than the scheduler is called the constraint, so
+         this build is scheduler-bound.
     rule: CHAIN_BOUND_RATIO = 0.9 (<, bga/findings.py)
       floors.t_infinity_observed = 14000
       total_duration_us = 16000
@@ -1871,7 +1874,7 @@ exits **7** rather than opening a page that would 404.
 
 The handoff page also carries a list of **questions worth asking in
 Perfetto** (`perfetto.html`, under the button that opens the trace they
-ask about) — seventeen paste-ready PerfettoSQL queries, with a control
+ask about) — eighteen paste-ready PerfettoSQL queries, with a control
 that swaps in whichever of this run's elements you are asking about.
 They are docs, not a feature: the SQL engine is Perfetto's. `UX-373`
 merged them in from the separate `sql.html`, whose URL still redirects
@@ -1881,7 +1884,7 @@ here.
 in it is a total, a per-element aggregate or a ranking. So a question
 that needs *when*, or needs one individual **process** rather than the
 element around it, is a question for the trace — and one that does not
-is already answered on the page. Nine of the seventeen canned questions
+is already answered on the page. Ten of the eighteen canned questions
 genuinely need the trip; eight are sharper instruments for something
 the page has said already.
 [`what-the-viewer-answers.md`](what-the-viewer-answers.md) sorts them,
@@ -1960,7 +1963,7 @@ not wall clock — a build with any parallelism completes it in less.
 
 ## `bga compare` — Run-to-Run Comparison
 
-Not a spec-mandated command (`docs/backlog/scenarios/UX-01`) - compares a baseline run against a candidate run and reports signed deltas in certified floors, efficiency score, and attribution, plus a verdict:
+Not a spec-mandated command (`UX-1`) - compares a baseline run against a candidate run and reports signed deltas in certified floors, efficiency score, and attribution, plus a verdict:
 
 ```bash
 bga compare /path/to/before-run /path/to/after-run
@@ -1971,7 +1974,7 @@ The verdict is one of `improved`/`regressed`/`no significant change`/`within the
 
 ### CI Regression Gate (`--fail-on-regression`)
 
-Not spec-mandated (`docs/backlog/scenarios/UX-03`) - opt-in gating mode for a CI pipeline that wants to actually *fail* on a genuine regression, not just report it:
+Not spec-mandated (`UX-3`) - opt-in gating mode for a CI pipeline that wants to actually *fail* on a genuine regression, not just report it:
 
 ```bash
 bga compare /path/to/baseline-run /path/to/candidate-run --fail-on-regression
@@ -1998,11 +2001,11 @@ Worked GitHub Actions example - extract two runs and gate on the comparison:
 
 The job fails (exit `4`) only on a real, high-confidence regression; a genuine improvement, a change within tolerance, or a low-confidence comparison all let the job continue.
 
-Pass `--fail-on-low-confidence` (`docs/backlog/scenarios/UX-40`) to treat "this comparison was too low-confidence to gate on" as a failure rather than failing open - a gate that silently stops gating still reports green, and some pipelines would rather see that.
+Pass `--fail-on-low-confidence` (`UX-40`) to treat "this comparison was too low-confidence to gate on" as a failure rather than failing open - a gate that silently stops gating still reports green, and some pipelines would rather see that.
 
 ### CI Efficiency Gate (`--fail-on-efficiency-regression`, `--min-efficiency`)
 
-Not spec-mandated (`docs/backlog/scenarios/UX-39`). The duration gate above answers *"did the build get slower"*. That is the wrong question when a project is legitimately growing: adding three new elements makes the build slower, and a duration gate cannot tell that apart from a real regression. The question a build owner actually wants gated is **"adding work is allowed; adding work *inefficiently* is not."**
+Not spec-mandated (`UX-39`). The duration gate above answers *"did the build get slower"*. That is the wrong question when a project is legitimately growing: adding three new elements makes the build slower, and a duration gate cannot tell that apart from a real regression. The question a build owner actually wants gated is **"adding work is allowed; adding work *inefficiently* is not."**
 
 ```bash
 # fail if the build became meaningfully less efficient than the baseline
@@ -2012,7 +2015,7 @@ bga compare runs/baseline runs/candidate --fail-on-efficiency-regression
 bga compare runs/baseline runs/candidate --min-efficiency 0.45
 ```
 
-Exits `5` - a code distinct from `4`, so a pipeline can warn on "slower" and fail on "less efficient", or vice versa. Gates on **Dispatch Occupancy** (`floors.occupancy_share`, `docs/backlog/scenarios/UX-27`), which is invariant to how much work the build does: adding well-parallelized elements barely moves it, adding serialized ones moves it sharply.
+Exits `5` - a code distinct from `4`, so a pipeline can warn on "slower" and fail on "less efficient", or vice versa. Gates on **Dispatch Occupancy** (`floors.occupancy_share`, `UX-27`), which is invariant to how much work the build does: adding well-parallelized elements barely moves it, adding serialized ones moves it sharply.
 
 Real, measured illustration on one project (`examples/06-macro-micro-optimization`), same runner:
 
@@ -2198,6 +2201,24 @@ It never recommends a value it has no measurement for. `--builders`
 advice that clears the CPU check and blows the memory one is advice to
 build into swap, which is why the two are computed together and the
 binding one is named.
+
+**Per element: `max_jobs_advice` (`UX-677`).** The same document also
+carries, per element, a recommended `--max-jobs` under a no-overcommit
+constraint: at every instant the recommended values for the elements
+building then sum to at most `host_cpu_count`, and their measured peak
+RSS sums to at most the host's memory. Evidence is `UX-675`'s raw host
+CPU series joined directly to each element's own BUILD span, not the
+ranked, 40-row-capped `underutilized_intervals`/`overcommitted_intervals`
+tables above.
+
+| key | what it is |
+|---|---|
+| `current_max_jobs` | the `-j` this element's own build used (`UX-377`) |
+| `recommended_max_jobs` | what the no-overcommit constraint allows; `None` when `refusal` is set |
+| `max_jobs_change` | `recommended_max_jobs` minus `current_max_jobs`, signed |
+| `local_max_concurrency` | the most elements ever seen building at once in a host-sample interval this element's span touches |
+| `samples_in_span` | how many host-CPU-sample intervals overlap this element's span; too few and the row refuses rather than guesses |
+| `refusal` | why no number was published - thin evidence, or an overlap whose measured peak RSS already exceeds the host's memory |
 
 **The sweep behind it, as data: `sweep/v1`** (`UX-339`). The graph
 constraint above is the *knee* of a capacity sweep, and `bga sweep`
@@ -2388,7 +2409,7 @@ bga analyze @last --diagnostics --format json | \
 
 - **Confidence** — how much to trust the numbers below (data completeness/quality of this specific trace). Below "high"? Fix the underlying trace before acting on anything else. A build that *failed* is called out even louder, before any efficiency figure.
 - **Certified Headroom** — a *proven* lower bound, not a guess: given the work this build actually did, it cannot possibly finish faster than `T∞`/`LB` (whichever is larger) without changing that work. Headroom above zero means real room to improve scheduling *without touching any element's build steps*; zero means rescheduling cannot help at all.
-- **Efficiency Score and Dispatch Occupancy** — deliberately two numbers, because one cannot do the job. **Efficiency Score** asks *"did the scheduler pack this graph well?"*, and everything it is built from comes from the graph this run actually had — so a build whose independent elements were accidentally chained scores a perfect 1.00, correctly and uselessly. **Dispatch Occupancy** asks *"how much of the available slot-time did the run actually use?"* and never consults the graph, so serializing work that could have run concurrently pushes it down. Read them together: a high score with low occupancy means the scheduler did fine and the *graph* is the problem. (Real measured pair: three one-line fixes made a build 30.5% faster while Efficiency Score fell 1.00 → 0.83 and Dispatch Occupancy rose 27.8% → 63.0%. See [`docs/backlog/scenarios/UX-27`](../backlog/scenarios/UX-0027-efficiency-score-certifies-the-graph-it-was-given.md).)
+- **Efficiency Score and Dispatch Occupancy** — deliberately two numbers, because one cannot do the job. **Efficiency Score** asks *"did the scheduler pack this graph well?"*, and everything it is built from comes from the graph this run actually had — so a build whose independent elements were accidentally chained scores a perfect 1.00, correctly and uselessly. **Dispatch Occupancy** asks *"how much of the available slot-time did the run actually use?"* and never consults the graph, so serializing work that could have run concurrently pushes it down. Read them together: a high score with low occupancy means the scheduler did fine and the *graph* is the problem. (Real measured pair: three one-line fixes made a build 30.5% faster while Efficiency Score fell 1.00 → 0.83 and Dispatch Occupancy rose 27.8% → 63.0%. See [`UX-27`](../backlog/scenarios/UX-0027-efficiency-score-certifies-the-graph-it-was-given.md).)
 - **Where the time is** — on a build the chain constrains, the headline is one table: each heavy element's duration, its share of the critical path, and what fixing it would actually recover. The rows are ordered by duration because that is what "where is the time" means; the fix order is named separately, because on a dense graph the two disagree.
 - **What to do after that** — the next few fixes projected from the same capture: what the build drops to after each, whether the recommended set's savings *add*, and which heavy elements sit off the critical path worth nothing to fix today. Without it, finding the second thing to fix costs another full build. ([`UX-74`](../backlog/scenarios/UX-0074-one-capture-one-finding.md))
 - **Elements Most Worth Optimizing First** — on a build the *graph* constrains rather than the chain, this ranks by blast radius instead: fixing a slow element near the root helps every downstream element too.
@@ -2436,14 +2457,14 @@ by `tests/unit/test_the_exit_table_derives_from_the_codes.py`.
   declined before anything is written.
 - `3`: Analysis failure (e.g., graph cycles detected).
 - `4`: **not "slower" alone.** `bga compare` returns it for any of three things, and a CI job that triages it as a duration regression will mis-read two of them:
-  - `--fail-on-regression` and the build's total duration really did regress beyond the threshold (`docs/backlog/scenarios/UX-03`);
+  - `--fail-on-regression` and the build's total duration really did regress beyond the threshold (`UX-3`);
   - the **build-failure gate** (`UX-54`) - either run describes a build in which an element FAILED, so no scheduling verdict is meaningful. This fires whenever *any* gate was requested, including when only the efficiency gates were;
   - `--fail-on-low-confidence` and a run's confidence is below the "high" band.
 
   Read the stderr line, which names which of the three fired. All three are distinct from 1/2/3, which mean `bga` itself failed to run.
-- `5`: `bga compare --fail-on-efficiency-regression`/`--min-efficiency`/`--fail-on-inefficient-additions` only - the build became meaningfully *less efficient*, whether or not it also got slower. Deliberately distinct from `4`: "slower" and "less efficient" are different verdicts and often different teams' problems (`docs/backlog/scenarios/UX-39`).
-- `6`: **refused as not comparable** - not a verdict about the build at all, which is why it does not share a code with one. Two commands return it: `bga compare`, when the two runs share fewer than half their element UIDs or one is a caches-off run and the other incremental (`docs/backlog/scenarios/UX-78`; `--allow-mismatch` overrides); `bga cache-trend`, when the series is not all of one project and target set, in which case the per-run rows still print and only the band verdict is withheld (`docs/backlog/scenarios/UX-111`); and `bga baseline`, when the assembled set's captures are not comparable to each other (`docs/backlog/scenarios/UX-96`).
-- `7`: `bga compare --require-efficiency-signal` only - an efficiency gate was requested but could not be evaluated, because a run has no `occupancy_share`. Like `6`, not a verdict about the build: `4` would say it got slower and `5` would say it got less efficient, and neither was determined (`docs/backlog/scenarios/UX-87`). Without `--require-efficiency-signal` the same situation exits `0`, prints an `Efficiency gate NOT APPLIED` line to stderr, and publishes `efficiency_gate_evaluated: false`.
+- `5`: `bga compare --fail-on-efficiency-regression`/`--min-efficiency`/`--fail-on-inefficient-additions` only - the build became meaningfully *less efficient*, whether or not it also got slower. Deliberately distinct from `4`: "slower" and "less efficient" are different verdicts and often different teams' problems (`UX-39`).
+- `6`: **refused as not comparable** - not a verdict about the build at all, which is why it does not share a code with one. Two commands return it: `bga compare`, when the two runs share fewer than half their element UIDs or one is a caches-off run and the other incremental (`UX-78`; `--allow-mismatch` overrides); `bga cache-trend`, when the series is not all of one project and target set, in which case the per-run rows still print and only the band verdict is withheld (`UX-111`); and `bga baseline`, when the assembled set's captures are not comparable to each other (`UX-96`).
+- `7`: `bga compare --require-efficiency-signal` only - an efficiency gate was requested but could not be evaluated, because a run has no `occupancy_share`. Like `6`, not a verdict about the build: `4` would say it got slower and `5` would say it got less efficient, and neither was determined (`UX-87`). Without `--require-efficiency-signal` the same situation exits `0`, prints an `Efficiency gate NOT APPLIED` line to stderr, and publishes `efficiency_gate_evaluated: false`.
 - `130`: **interrupted** (`UX-157`, `UX-163`). Ctrl-C during a capture is
   not a failure and not a verdict: whatever the build completed is kept,
   analyzed, and labelled as a build that did not finish. A comparison
@@ -2452,6 +2473,13 @@ by `tests/unit/test_the_exit_table_derives_from_the_codes.py`.
   nothing behind and says so — and so does a machine that cannot start
   the build at all, which refuses with `2` before creating a snapshot
   (`UX-324`).
+
+This table is `bga`'s own codes; `bga snapshot` does not map into it for
+the wrapped build's outcome (line 194 above) — a `bst` that dies at
+`255` surfaces `255`, not one of the numbers here. `UX-738`: a non-zero
+wrapped exit now also gets one printed sentence naming that code and, if
+the wrapped log's tail shows a write failed, the path that could not be
+written — the number was always right, only the silence around it changed.
 
 ## See Also
 

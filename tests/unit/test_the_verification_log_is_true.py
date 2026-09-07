@@ -163,8 +163,12 @@ def only_the_count_moved(removed, added):
 
 def _only_a_derived_figure_moved(sha):
     """`only_the_count_moved`, over this commit's change to `DOC`."""
+    # `--first-parent -m`: a merge's default `git show` is a *combined*
+    # diff whose prefix is two columns wide, so `ln[1:]` left `+text`
+    # against ` text` and the exclusion never fired (`UX-754`).
     done = subprocess.run(
-        ["git", "show", "--format=", "--unified=0", sha, "--", str(DOC)],
+        ["git", "show", "--format=", "--unified=0", "--first-parent", "-m",
+         sha, "--", str(DOC)],
         capture_output=True, text=True, cwd=REPO, timeout=60)
     if done.returncode != 0:
         return False
@@ -513,6 +517,26 @@ class TestTheLogIsNotStaleAboutItself:
         # document the next reviewer can open.
         assert re.search(r"`[a-z_/.]+\.(md|py|js)`|`bga [a-z]+", entry), (
             "the entry names no source a reader could re-check")
+
+    def test_the_entry_credits_the_true_schema_size(self):
+        """`UX-748`: the clause above credits a *commit*, never a figure,
+        so `UX-740` adding `duration_resolution` to `analyze/v6` never
+        touched this document and stayed invisible - the entry kept
+        saying 60 after the schema became 61. Re-derived, not credited.
+        """
+        import bga.schemas as schemas
+
+        _, _, entry = _claimed()
+        found = re.search(
+            r"`(analyze/v\d+)`[^\n]*?\*\*(\d+) top-level properties\*\*",
+            entry)
+        assert found, f"the newest entry names no schema figure: {entry!r}"
+        contract, stated = found.group(1), int(found.group(2))
+        actual = len(schemas.schema(contract)["properties"])
+        assert actual == stated, (
+            f"the newest entry says {contract} has {stated} top-level "
+            f"properties; bga.schemas.schema({contract!r})['properties'] "
+            f"has {actual}")
 
     def test_the_older_entries_are_kept(self):
         """A log that replaces its own history is a field, not a log."""

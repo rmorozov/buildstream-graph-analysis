@@ -263,6 +263,28 @@ class TestTheDefaultTierStaysFast:
             f"{backstop} is {bound}s, and a CI `timeout` is whole "
             f"seconds - there is no workflow line this can equal")
 
+    def test_the_backstops_were_sized_on_this_tree(self):
+        """The clause above compares two hand-maintained numbers, so it
+        holds whatever the tier costs - `120 >= 30 * 3` was true for
+        thirty-five rounds while the suite doubled and CI killed every
+        job at 120 (`UX-743`, run 34054287865). This one reads the
+        tree.
+
+        A population count, not a duration: what it can say is that the
+        tier is no longer the tier the four CI figures were measured
+        on, and that two numbers need re-reading off a run. 1.5x is
+        wide on purpose - `UX-421` retired a budget for demanding
+        maintenance every re-tier, and this must not become one.
+        """
+        small = _test_files() - set(tiers.LARGE) - set(tiers.MEDIUM)
+        ceiling = tiers.SMALL_TIER_POPULATION_FILES * 1.5
+        assert len(small) <= ceiling, (
+            f"the small tier is {len(small)} files against the "
+            f"{tiers.SMALL_TIER_POPULATION_FILES} the backstops were sized "
+            f"on. Re-read SMALL_TIER_CI_SLOW_S and _1P_S off a CI run's "
+            f"two small-tier steps, re-size the backstops, and set "
+            f"SMALL_TIER_POPULATION_FILES to what you measured on")
+
     def test_the_per_file_rule_is_what_catches_a_large_file_now(self):
         """The half the backstop gave up, held somewhere it works.
 

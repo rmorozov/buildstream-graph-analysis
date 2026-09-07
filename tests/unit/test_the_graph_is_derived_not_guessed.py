@@ -39,6 +39,10 @@ import sys
 REPO = pathlib.Path(__file__).resolve().parents[2]
 TOOL = REPO / "tools/dev_js_deps.py"
 FIXTURE = REPO / "tests/fixtures/js/interpolated.js"
+#: `UX-747`: two referencing declarations, so one grouping can
+#: leave one out and place the other. `interpolated.js` has only
+#: `gamma`, and its counts are measured elsewhere.
+PARTIAL = REPO / "tests/fixtures/js/partial_groups.js"
 VIEWER = REPO / "bga/viewer"
 
 # The grouping the fixture is built around: two modules' worth of names.
@@ -202,9 +206,80 @@ class TestTheToolRefusesRatherThanGuesses:
                     json.dumps({"lower": ["LABEL"], "upper": ["beta"]}),
                     "--json")
         assert done.returncode == 1, done.stdout
-        left_out = json.loads(done.stdout)["unplaced"]
-        assert set(left_out) == {"HIDDEN", "alpha", "delta", "gamma",
-                                 "render"}, left_out
+        answer = json.loads(done.stdout)
+        assert set(answer["unplaced"]) == {"HIDDEN", "alpha", "delta", "gamma",
+                                           "render"}, answer
+        # `UX-747`: the crossings map is read too. It was not, and a
+        # declaration with no home reached it as the literal `None` for
+        # as long as nobody looked.
+        assert answer["crossings"] == {"(unplaced) <- lower": ["LABEL"]}, answer
+
+    def test_a_partial_grouping_sorts_placed_and_unplaced_together(self):
+        """`UX-747`: the crash the `derive` skill's own example produced.
+
+        A key whose home is a group and a key whose home is `None` were
+        sorted against each other — `TypeError`, on the partial grouping
+        that is the skill's entire stated use case. One key of each kind
+        is what `interpolated.js` cannot make, which is why this runs on
+        a fixture of its own.
+        """
+        done = _run("--crossings", str(PARTIAL), "--groups",
+                    json.dumps({"home": ["SHARED"], "one": ["placed"]}),
+                    "--json")
+        assert done.returncode == 1, done.stderr
+        answer = json.loads(done.stdout)
+        assert answer["unplaced"] == ["unplaced"], answer
+        assert answer["crossings"] == {"(unplaced) <- home": ["SHARED"],
+                                       "one <- home": ["SHARED"]}, answer
+
+    def test_a_whole_grouping_leaves_nothing_unplaced(self):
+        """The other direction, so the clause above is a distinction and
+        not an assertion that the tool merely runs."""
+        done = _run("--crossings", str(PARTIAL), "--groups",
+                    json.dumps({"home": ["SHARED"],
+                                "one": ["placed", "unplaced"]}), "--json")
+        assert done.returncode == 0, done.stderr
+        answer = json.loads(done.stdout)
+        assert answer["unplaced"] == []
+        # The pair, not the list: two declarations in `one` both reference
+        # `SHARED`, and the list appends once per referencing declaration,
+        # so it reads `["SHARED", "SHARED"]`. Left as it is - `UX-747` is
+        # the crash and the stale example - and asserted as a set so this
+        # clause does not bless the duplicate either way.
+        assert list(answer["crossings"]) == ["one <- home"], answer
+        assert set(answer["crossings"]["one <- home"]) == {"SHARED"}, answer
+
+    def test_a_literal_grouping_is_not_tested_as_a_path_first(self):
+        """`UX-747`: `--help` promises "a file or a literal", and the
+        path test ran first. Any literal past the 255-byte name limit
+        made `Path(raw).exists()` itself raise `OSError` - which is every
+        grouping the `derive` skill documents, before a line of JSON was
+        parsed."""
+        wide = {f"g{n}": [f"name{n}"] for n in range(40)}
+        assert len(json.dumps(wide)) > 255
+        done = _run("--crossings", str(PARTIAL), "--groups",
+                    json.dumps(wide), "--json")
+        assert "OSError" not in done.stderr and "too long" not in done.stderr, (
+            done.stderr)
+        assert done.returncode == 1, done.stderr
+        assert json.loads(done.stdout)["unplaced"] == [
+            "SHARED", "placed", "unplaced"]
+
+    def test_the_derive_skill_s_example_runs(self):
+        """The Acceptance Test: copied out of `SKILL.md`, not retyped.
+        The skill is what `CLAUDE.md` sends a session to before moving
+        viewer code, and its example raised two different exceptions."""
+        skill = (REPO / ".claude/skills/derive/SKILL.md").read_text(
+            encoding="utf-8")
+        block = skill.split("--crossings bga/viewer/app.js --groups '", 1)[1]
+        groups = block.split("'\n```", 1)[0]
+        done = _run("--crossings", "bga/viewer/app.js", "--groups", groups)
+        assert done.returncode == 0, done.stderr
+        for line in ("app <- handoff", "handoff <- app",
+                     "fetch <- handoff", "handoff <- fetch"):
+            assert line in done.stdout, (
+                f"the skill pastes an answer containing {line!r}; the tool "
+                f"now says:\n{done.stdout}")
 
     def test_crossings_without_a_grouping_is_an_error(self):
         done = _run("--crossings", str(FIXTURE))
@@ -219,3 +294,107 @@ class TestTheToolRefusesRatherThanGuesses:
         assert "not a scope analysis" in source, (
             "the parameter subtraction is not scope analysis, and a reader "
             "who assumes it is will trust an answer it cannot give")
+
+
+class TestTheDeadExportDetector:
+    """UX-742: `eslint-plugin-import`'s `no-unused-modules` cannot run in
+    this tree without a forbidden `package.json`, and cannot discriminate
+    even with one — `tests/viewer.mjs`'s `export * from` barrel marks
+    every export of every module it re-exports "used", so it never
+    reddens, or (barrel excluded) names 121 things it cannot tell apart
+    from a real reader it cannot see (a test's dynamic `await import`).
+    `dev_js_deps.dead_exports` answers from the graph instead, and
+    confirms each candidate against the whole tracked tree the way
+    `UX-699` once confirmed its five by hand."""
+
+    @staticmethod
+    def _repo(tmp_path, viewer_files, other_files=()):
+        viewer = tmp_path / "viewer"
+        viewer.mkdir()
+        for name, text in viewer_files.items():
+            (viewer / name).write_text(text, encoding="utf-8")
+        for name, text in other_files:
+            target = tmp_path / name
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(text, encoding="utf-8")
+        subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
+        subprocess.run(["git", "add", "-A"], cwd=tmp_path, check=True)
+        return viewer
+
+    def test_an_export_nothing_imports_is_named(self, tmp_path):
+        from tools.dev_js_deps import dead_exports
+
+        viewer = self._repo(tmp_path, {
+            "a.js": "export function used() {\n  return 1;\n}\n",
+            "b.js": ('import { used } from "./a.js";\n\n'
+                     "export function unread() {\n  return used();\n}\n"),
+        })
+        assert dead_exports(viewer, root=tmp_path) == {"b.js": ["unread"]}
+
+    def test_a_real_viewer_import_quiets_it(self, tmp_path):
+        from tools.dev_js_deps import dead_exports
+
+        viewer = self._repo(tmp_path, {
+            "a.js": "export function used() {\n  return 1;\n}\n",
+            "b.js": ('import { used } from "./a.js";\n\n'
+                     "export function notDead() {\n  return used();\n}\n"),
+            "c.js": ('import { notDead } from "./b.js";\n\n'
+                     "notDead();\n"),
+        })
+        assert dead_exports(viewer, root=tmp_path) == {}
+
+    def test_a_reader_outside_the_directory_is_not_a_false_positive(
+            self, tmp_path):
+        """The whole-tree confirmation, not the module graph alone: a
+        name no *viewer* module imports but something elsewhere in the
+        tree names is not reported dead. Skipping this step is exactly
+        how excluding the barrel from `eslint`'s scope named 121 things
+        that tests read only dynamically (`UX-742`'s measurement)."""
+        from tools.dev_js_deps import dead_exports
+
+        viewer = self._repo(
+            tmp_path,
+            {"a.js": "export function readElsewhere() {\n  return 1;\n}\n"},
+            other_files=[("consumer.mjs",
+                          'const mod = await import("./viewer/a.js");\n'
+                          "mod.readElsewhere();\n")])
+        assert dead_exports(viewer, root=tmp_path) == {}
+
+    def test_prose_about_a_name_is_not_a_reader(self, tmp_path):
+        """`UX-742`, found on merge: the detector named `takesWindow`,
+        the finding was written into the task file, and the next run
+        called it alive - four mentions in a tracked `.md`. A census
+        that reads its own record cannot report twice."""
+        from tools.dev_js_deps import dead_exports
+
+        viewer = self._repo(
+            tmp_path,
+            {"a.js": "export function neverRead() {\n  return 1;\n}\n"},
+            other_files=[("docs/note.md",
+                          "`neverRead` is the export UX-742 found dead.\n")])
+        assert dead_exports(viewer, root=tmp_path) == {"a.js": ["neverRead"]}
+
+    def test_the_detectors_own_source_is_not_a_reader(self):
+        """The same defect one layer down: the comment explaining the
+        `docs/` exclusion named the symbol, and that mention alone was
+        enough to silence the tool."""
+        from tools.dev_js_deps import reads_code
+
+        assert reads_code("tests/browser.py", "tools/dev_js_deps.py")
+        assert reads_code("bga/viewer/shapes.js", "tools/dev_js_deps.py")
+        assert not reads_code("tools/dev_js_deps.py", "tools/dev_js_deps.py")
+        assert not reads_code("docs/backlog/scenarios/UX-0742.md", None)
+
+    def test_a_python_reader_elsewhere_still_counts(self, tmp_path):
+        """The exclusions are two named paths, not a suffix rule: a
+        Python guard that drives a viewer symbol by name is a reader,
+        and seven of `bga/viewer`'s eight candidates are alive only
+        because one does."""
+        from tools.dev_js_deps import dead_exports
+
+        viewer = self._repo(
+            tmp_path,
+            {"a.js": "export function driven() {\n  return 1;\n}\n"},
+            other_files=[("tests/page.py", 'page.evaluate("driven()")\n')])
+        assert dead_exports(viewer, root=tmp_path) == {}
+

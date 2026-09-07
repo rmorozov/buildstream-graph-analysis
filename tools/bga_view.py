@@ -925,7 +925,8 @@ def _module_order(entry: str = "app.js") -> list[str]:
         if name in seen:
             return
         seen.add(name)
-        text = open(os.path.join(ASSET_DIR, name), encoding="utf-8").read()
+        with open(os.path.join(ASSET_DIR, name), encoding="utf-8") as handle:
+            text = handle.read()
         for match in re.finditer(_IMPORT_RE, text):
             walk(match.group(1))
         order.append(name)
@@ -943,7 +944,8 @@ def _inline_module(name: str) -> str:
     declarations in one scope, and dropping the `import` statement is
     safe because what it imported is now declared above it.
     """
-    text = open(os.path.join(ASSET_DIR, name), encoding="utf-8").read()
+    with open(os.path.join(ASSET_DIR, name), encoding="utf-8") as handle:
+        text = handle.read()
     # `UX-721`: refused rather than translated. Emitting one
     # `const alias = original;` would remove the constraint for one
     # module and leave the other way this flattening breaks silently -
@@ -1318,9 +1320,10 @@ def export(run: str, path: str, with_trace: bool = True,
     if omitted:
         documents["run"]["timeline_omitted"] = omitted
 
-    page = open(os.path.join(ASSET_DIR, "index.html"), encoding="utf-8").read()
-    style = _uncommented_css(
-        open(os.path.join(ASSET_DIR, "style.css"), encoding="utf-8").read())
+    with open(os.path.join(ASSET_DIR, "index.html"), encoding="utf-8") as handle:
+        page = handle.read()
+    with open(os.path.join(ASSET_DIR, "style.css"), encoding="utf-8") as handle:
+        style = _uncommented_css(handle.read())
     script = "\n".join(_inline_module(name) for name in _module_order())
 
     blocks = []

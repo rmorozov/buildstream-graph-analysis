@@ -45,6 +45,8 @@ guide is right and the skill is a bug.
 
 **A task may only be marked 🟢 Fixed & Verified if you have personally run its Acceptance Test in this session and it passed.** Self-assessment ("this looks correct now") is not sufficient — that is exactly how the scheduler-wait regression above happened.
 
+**A track's own run is necessary and not sufficient.** An `implementer` track is read by a `verifier` before it merges (`UX-761`) — the same self-assessment failure mode above, one remove: a track's Acceptance Test passing in its own worktree is still one agent grading its own work. Its finding is not advisory: the row does not merge until the track has answered it, or the session records in the task file why the finding is declined. `docs/audits/agent-runs.md` is where this is checked — a merged `implementer` row names its task, a `verifier` row in the same round names it back, and `test_a_merged_track_names_its_verifier.py` reads the pairing (`rules.md` §3).
+
 **Some acceptance tests cannot run here.** A claim about behaviour
 across machines — more than one runner, a loaded runner, CI's own clock —
 has no local instrument, and `make test` in this container cannot falsify
@@ -66,7 +68,7 @@ For every task, before marking it done:
 
 1. Run the exact command(s) given in the task's **Acceptance Test** section.
 2. Paste the actual command and actual output into the task file's **Verification Log** section (append, don't overwrite prior entries).
-3. **While you work, run the tests that touch what you changed** (`UX-336`): `make test-touching` maps the working diff to the test files that name it - 19-131 of 495 test files, median 25, over every module the map names, not the seconds one machine spent on one of them (`UX-632`). `python3 tools/dev_touching.py --spread --write` is the only thing that writes that figure. Wider than one module, run the tier (`UX-238`). Every target runs `-n auto`. **The suite's wall clock is a property of the machine, not of the suite** (`UX-551`), so budget a round against the spread and not a figure:
+3. **While you work, run the tests that touch what you changed** (`UX-336`): `make test-touching` maps the working diff to the test files that name it - 31-145 of 512 test files, median 38, over every module the map names, not the seconds one machine spent on one of them (`UX-632`). `python3 tools/dev_touching.py --spread --write` is the only thing that writes that figure. It moves whenever the set of (test file, module named) pairs changes - a new test file, a new import, a renamed module, a deleted file - not only the first of those (`UX-756`: round 103 moved it with two imports and no new file, and CI reddened on the stale row). Wider than one module, run the tier (`UX-238`). Every target runs `-n auto`. **The suite's wall clock is a property of the machine, not of the suite** (`UX-551`), so budget a round against the spread and not a figure:
 
 ```text
 round 46   3m15s                                     4 cores
@@ -81,7 +83,7 @@ Round 80's 8m52s is **not reproducible on the tree that produced it**: the same 
 
    | target | measured at `-n auto` | what is in it |
    |---|---|---|
-   | `make test-touching` | 19-131 of 495 test files, median 25 | the test files that name what your diff touched |
+   | `make test-touching` | 31-145 of 512 test files, median 38 | the test files that name what your diff touched |
    | `make test-small` | **20s** | pure Python over in-memory fixtures — the default tier |
    | `make test-medium` | ~2m50s | spawns a process or a node harness |
    | `make test-large` | ~2m05s | scale fixtures, real process trees |
@@ -123,6 +125,7 @@ Round 80's 8m52s is **not reproducible on the tree that produced it**: the same 
 12. **`docs/spec/specification.md` is ground truth, and Part 32 is the one Part a round may edit.** `UX-556` is what settled the boundary, because a round hit it and read it two ways. The spec's contract registry said "The last four are **written but not printable**" of a set that is six (`unprintable()` less `superseded()`) and that four rows follow; `UX-549` fixed the architecture's copy of the same sentence and filed the spec's, reading the rule as forbidding the edit. It does not: the sentence is at line 1673 and Part 32 spans 1515-1941, so it was inside the permitted region the whole time (the range is derived by `test_the_spec_outside_part_32_is_read_only.py`, which also digests everything outside it). **The Part, not the table** — a rule that lets you correct a registry row but not the sentence counting the rows is not a boundary, it is an accident of where someone drew the line. Everything outside Part 32 stays read-only for a round; a factual error there is filed, not fixed. And the second half, which is what stops this recurring: **a counted figure in Part 32 is derived by a guard, never restated in prose.** Both copies of this error were prose nothing checked. `tests/unit/test_a_counted_figure_is_derived.py::TestTheSpecCountsItsOwnTable` reads the count and the position off the table's own rows.
 
 13. If the acceptance test does **not** pass after your change, leave status at 🟡 (In Progress) with a note on what's blocking, and stop — do not mark it 🟢 "mostly working."
+14. **`make test` before anything is marked done" covers the commit you push, not the branch you ran it on** (`UX-762`). Round 104 ran the gate at `67cc0d1` and then pushed `4879bcc`, a round-document commit that followed it and that CI reddened on — the gate had covered a commit that was never the one that shipped. `make test`'s own recipe now writes `.gate-covered` (gitignored) with `HEAD`'s sha, only when pytest exits 0, and `.claude/hooks/gate-covers-push.sh` reads it on `git push`, refusing a `HEAD` the marker does not name and printing both shas. An amend or a further commit after the gate correctly reds — that is the point, not a bug. `BGA_SKIP_PUSH_GATE=UX-NNN` is the named escape for a push that legitimately precedes the gate (a WIP branch, a fix you want CI to see) — a bare flag is refused, the bypass is printed loudly to stderr naming the reason and the sha, and **exporting it, rather than setting it for one command, disables the gate for every push in that shell until it is unset.** It does not fire on `--dry-run`, a branch or tag delete, or anything that is not `git commit`/`git push`, and it scans a whole compound command the way `no_bulk_add.is_bulk_add` does — `git status && git push` is still seen — sharing that guard's own gap that `git -C x push`, `VAR=1 git push` and `command git push` bypass both.
 
 Status legend (same as the tracker):
 
@@ -168,17 +171,20 @@ Regenerated by `UX-239`; a guard
 (`tests/unit/test_the_context_map_is_the_tree.py`) fails if a module
 appears here that does not exist, or exists and does not appear — over
 `git ls-files`, recursively under `tools/` (Python, C, shell), into
-`bga/viewer/` (`UX-573`) and into each `bga/` package (`UX-631`),
-because a non-recursive walk left the LD_PRELOAD hook and the ptrace
-spine off the map and the guard green, and a package standing in for
-its own files gave every module inside it a home for free — 21 of the
-26 were on no row. A module is named by its filename **on its
-directory's row**: the rule was a substring of the whole map, which
-`bga/report/rate.py` satisfied through the `rate` inside `generated`. The
-previous version described a tree from the repository's first week —
-it said `tests/test_e2e.py   only existing test file` when
-`tests/unit/` alone held 218 — which is worse than no map, because it
-was confidently wrong exactly where confidence had been requested.
+`bga/viewer/` (`UX-573`), into each `bga/` package (`UX-631`) and into
+`.github/workflows/` (`UX-746`), because a non-recursive walk left the
+LD_PRELOAD hook and the ptrace spine off the map and the guard green, a
+package standing in for its own files gave every module inside it a
+home for free — 21 of the 26 were on no row — and the workflow
+directory was missing from the walk's own table entirely, so its four
+files were invisible to both the map and the guard that checks it. A
+module is named by its filename **on its directory's row**: the rule
+was a substring of the whole map, which `bga/report/rate.py` satisfied
+through the `rate` inside `generated`. The previous version described a
+tree from the repository's first week — it said `tests/test_e2e.py
+only existing test file` when `tests/unit/` alone held 218 — which is
+worse than no map, because it was confidently wrong exactly where
+confidence had been requested.
 
 **The pipeline** — one run in, one analysis out:
 
@@ -343,8 +349,22 @@ tools/dev_refresh_analysis.py  the rule a committed analysis is written
 tools/dev_process_bands.py  what the process did to itself, from the committed Outcomes
 tools/dev_tier_drift.py      which files outgrew their tier, from the
                              suite's own junit report (UX-418)
+tools/dev_mutation.py        mutmut over the modules a diff touched, weekly -
+                             survivors into a ledger under docs/audits/ (UX-703)
+tools/dev_perf_ratchet.py    whether `bga analyze` and `bga view --export`
+                             got slower or heavier on the largest fixture,
+                             from CI's own two consecutive readings against
+                             an absolute margin (UX-702)
+tools/dev_sizes.py           the size ledger for what has no finding
+                             identity - longest function, file lines,
+                             duplicate blocks - in tests/quality_reference.json;
+                             a grown cell is red (UX-712)
+tools/dev_flake_census.py    which files the flake ledger says need a
+                             filed task or a declared reason (UX-691)
 tools/dev_junit_tail.py      which tests failed, from the junit a red job
-                             kept - when the log tail is the wrong 400 lines (UX-554)
+                             kept - when the log tail lands on the wrong slice (UX-554)
+tools/dev_commit_bodies.py   which commits a branch adds spend more than
+                             eight body lines, footer excluded (UX-696)
 tools/dev_js_deps.py         the viewer's module graph, derived: order, cycles, what would cross a cut (UX-340)
 tools/dev_perfetto_queries.py  the canned questions, run against a real
                              trace with Perfetto's own reader (UX-432)
@@ -382,6 +402,26 @@ tools/native_trace/bwrap_shim.py  a `bwrap` shim ahead of the real one in
                              `$PATH`, so the hook reaches inside the sandbox
 ```
 
+**The CI workflows** — what each is for, and when it runs (`UX-746`):
+
+```text
+.github/workflows/ci.yml                    push/PR - the gate: suite
+                                             (parallel + single-process),
+                                             lint, tier-drift parse, the
+                                             ci-reference-candidate artefact
+.github/workflows/quality.yml               PR + weekly - the gate-only
+                                             analysis shelf (UX-698/UX-699)
+.github/workflows/mutation.yml              weekly - mutmut over the
+                                             touched modules (UX-703)
+.github/workflows/real-project-capture.yml  weekly + monthly + dispatch -
+                                             the real freedesktop-sdk
+                                             capture: Sun 03:00 UTC
+                                             incremental, 1st 04:00 UTC
+                                             cold (UX-96), no push
+                                             trigger (UX-90);
+                                             docs/design/capture-workflow.md
+```
+
 **Tests and docs:**
 
 ```text
@@ -395,6 +435,12 @@ tests/ci_reference.json    one CI run's per-file seconds, so drift is CI against
                            not failed on - `--adopt`, and no commit of yours (UX-503)
 tests/touch_map.json       module -> the test files CI measured executing it; adopted by
                            the default branch's own run, never recorded locally (UX-524)
+tests/quality_reference.json  the size ledger's three counts per file - longest
+                           function, file lines, duplicate blocks; `dev_sizes.py
+                           --check` reds a grown cell (UX-712)
+tests/flake_ledger.json    every unconfirmed excursion and confirmed drift the tier-drift
+                           gate reported, one row each; appended by the default branch's
+                           own run - `--adopt-flake` - and read by dev_flake_census.py (UX-691)
 tests/quality_baseline.json  every finding the widened families report today, by
                            identity; `dev_baseline.py --check` reds a new one (UX-694)
 tests/dom_shim.mjs         the one DOM every viewer guard runs on (UX-264)

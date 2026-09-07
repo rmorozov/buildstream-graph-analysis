@@ -50,7 +50,7 @@ because the page cannot answer it.
 
 ## The canned questions, sorted by whether you needed to leave
 
-`bga view` serves seventeen questions under the handoff on its
+`bga view` serves eighteen questions under the handoff on its
 `perfetto.html` page, ready to paste into Perfetto's query box. Sorted
 against the rule above:
 
@@ -61,6 +61,7 @@ against the rule above:
 | `element-commands` | the page has `dominant_binary`, one name; this is every command |
 | `peak-rss` | the page has the element's peak; this finds the single process |
 | `concurrency-curve` | the page has two scalars; this is the shape over time |
+| `were-the-cores-busy` | `utilization_envelope` has p50/p95 summaries; this is the host's cores-busy, cores and load-average curves themselves |
 | `failed-processes` | the page reports that an element failed; this reports which command did |
 | `process-storm` | needs the per-process count *and* their durations together |
 | `cpu-versus-wall` | per-process `debug.cpu_us` against each slice's own wall time |
@@ -82,7 +83,7 @@ slicing further:**
 | `which-run-is-this` | the identity header |
 | `graph-levels` | `parallelism.levels`, and the level decomposition it draws |
 
-Nine of the seventeen questions genuinely require the trip. The other
+Ten of the eighteen questions genuinely require the trip. The other
 eight are sharper instruments for something the page already told you —
 which is the right ratio for a library of *follow-up* questions, and
 worth knowing before assuming a reader who opened Perfetto had to.

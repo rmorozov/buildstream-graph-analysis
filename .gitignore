@@ -47,6 +47,11 @@ coverage.xml
 .hypothesis/
 .pytest_cache/
 
+# UX-703: mutmut's working copy and cache - a run's build artifact,
+# never committed.
+mutants/
+.mutmut-cache
+
 # Translations
 *.mo
 *.pot
@@ -196,3 +201,7 @@ examples/09-fine-grained-siblings/merged/files/bulk/
 
 # Agent worktrees: whole clones the Agent tool makes under the repo (UX-509).
 .claude/worktrees/
+
+# UX-762: the sha `make test` last passed on - written only on green,
+# read by .claude/hooks/gate-covers-push.sh on `git push`.
+.gate-covered

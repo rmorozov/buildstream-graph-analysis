@@ -1,0 +1,5 @@
+{
+  "note": "UX-691: every unconfirmed excursion and every confirmed drift the tier-drift gate reported, one row each - appended by `tools/dev_tier_drift.py --adopt-flake` on push to the default branch, from the candidate its `--flake-ledger` flag writes on the CI gate that ran `--against`. `declared` names a file whose excursions are a known, accepted cost rather than a filed robustness task. Read by `tools/dev_flake_census.py`.",
+  "entries": [],
+  "declared": {}
+}

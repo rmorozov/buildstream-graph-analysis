@@ -11,7 +11,7 @@ It works in three planes — one build's element schedule, the processes inside 
 
 ## Install
 
-Into the venv of the project you want to analyze — `bga` does not have to live in that project, or anywhere near it. Clone `--single-branch`: this repository also carries eight `captures/*` branches of published capture data, and a default clone fetches all of them (50 MiB against 5.3 MiB); nothing needs them up front, and `bga baseline` fetches the refs it wants on demand.
+Into the venv of the project you want to analyze — `bga` does not have to live in that project, or anywhere near it. Clone `--single-branch`: this repository also carries `captures/*` branches of published capture data — twelve as of 2026-09-07 (`git ls-remote --heads origin 'captures/*' | wc -l`; a capture job may add more at any time) — and a default clone fetches all of them (50 MiB against 5.3 MiB); nothing needs them up front, and `bga baseline` fetches the refs it wants on demand.
 
 ```bash
 git clone --single-branch https://github.com/rmorozov/buildstream-graph-analysis
@@ -111,7 +111,7 @@ has a one-line remedy, cheaper to read before a thirty-minute build than after.
 total, a per-element aggregate or a ranking. A question needing *when*, or one individual process
 rather than the element around it, is a question for the trace, and the page's **Open timeline in
 Perfetto** button is the way there.
-[`docs/guides/what-the-viewer-answers.md`](docs/guides/what-the-viewer-answers.md) sorts all seventeen
+[`docs/guides/what-the-viewer-answers.md`](docs/guides/what-the-viewer-answers.md) sorts all eighteen
 canned questions by which side answers them, and says which [roles](docs/design/roles.md) the trip serves.
 
 The second `snapshot` prints the analysis **and** the verdict against the first. Captures land

@@ -22,10 +22,11 @@ trusted (`UX-505`).
 | rule | guard |
 |---|---|
 | 🟢 only after *you* ran the Acceptance Test, output pasted | — judgement: nothing can see who ran it |
+| A merged `implementer` row is read by a `verifier` first; a hold isn't lifted until answered or declined in the task file | `test_a_merged_track_names_its_verifier.py` |
 | Some claims have no local instrument — open the PR first (§7) | — |
 | A history figure from a shallow clone is worth nothing — ask `--is-shallow-repository` first | `test_a_guard_that_reads_history_declares_its_depth.py` |
 | `make test-touching` while you work; the tier when it is wider | `test_the_loop_stays_fast.py` — the selector, not that you ran it |
-| `make test` before anything is marked done. A tier is a selector | — |
+| `make test` before anything is marked done. A tier is a selector | `.claude/hooks/gate-covers-push.sh` — covers the commit you push, not the branch you ran it on (`UX-762`) |
 | Both status markers, same commit; the counts are derived | `test_docs_links_and_commands.py` |
 | A number or mechanism you moved: annotate the file asserting it | `tools/dev_close_task.py --figures`, held by `test_the_loop_stays_fast.py` |
 | A renamed or removed published key bumps its schema version | `test_output_schemas.py` |
@@ -60,8 +61,7 @@ trusted (`UX-505`).
 | Exact integer arithmetic for anything invariant-related | — |
 
 The proxy rule is the one this repository breaks most — about thirty
-sightings across twenty-six items, in four shapes. §5 names all four
-with a worked example each; read it before writing a guard.
+sightings across twenty-six items, in four shapes. §5 names all four with a worked example each; read it before writing a guard.
 
 ## Which kind of session is this? — §6a
 

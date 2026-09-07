@@ -361,6 +361,43 @@ def ledger_row(path, round_, task, outcome, friction):
             f"{outcome} | {friction} |")
 
 
+#: `UX-666`: the ledger the rows go into. A round appends here; the
+#: summary sentence below the table is derived from the row count, never
+#: typed - `test_a_counted_figure_is_derived.py` reads it back.
+LEDGER = pathlib.Path(__file__).resolve().parents[1] / "docs/audits/agent-runs.md"
+
+_TENS = ("", "", "twenty", "thirty", "forty", "fifty",
+         "sixty", "seventy", "eighty", "ninety")
+_UNITS = ("zero", "one", "two", "three", "four", "five", "six", "seven",
+          "eight", "nine", "ten", "eleven", "twelve", "thirteen",
+          "fourteen", "fifteen", "sixteen", "seventeen", "eighteen",
+          "nineteen")
+
+
+def count_word(n):
+    """`37` -> `thirty-seven`. Built, not tabled: the guard that reads
+    the sentence back carries a table, and two tables drift."""
+    if n < 20:
+        return _UNITS[n]
+    tens, unit = divmod(n, 10)
+    return _TENS[tens] + (f"-{_UNITS[unit]}" if unit else "")
+
+
+def append_row(row, ledger=LEDGER):
+    """`UX-666`: the row after the table's last, count sentence re-derived."""
+    lines = ledger.read_text(encoding="utf-8").splitlines()
+    start = next(i for i, line in enumerate(lines) if line.startswith("|---"))
+    body = [i for i, line in enumerate(lines[start + 1:], start + 1)
+            if line.startswith("| ")]
+    lines.insert(body[-1] + 1, row)
+    said = count_word(len(body) + 1)
+    text = re.sub(r"What the [a-z-]+ rows already say",
+                  f"What the {said} rows already say",
+                  "\n".join(lines) + "\n")
+    ledger.write_text(text, encoding="utf-8")
+    return said
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("transcripts", nargs="*")
@@ -377,6 +414,10 @@ def main(argv=None):
     parser.add_argument("--task", default="", help="The task cell for --ledger.")
     parser.add_argument("--outcome", default="", help="The outcome cell for --ledger.")
     parser.add_argument("--friction", default="", help="The friction cell for --ledger.")
+    parser.add_argument("--append", action="store_true",
+                        help="With --ledger: write the row into "
+                             "docs/audits/agent-runs.md and re-derive its "
+                             "count sentence, instead of printing it.")
     parser.add_argument("-v", "--verbose", action="store_true")
     args = parser.parse_args(argv)
     if args.list:
@@ -387,7 +428,13 @@ def main(argv=None):
         print(report_rebuilds(args.session, args.floor, args.rounds))
         return 0
     if args.ledger:
-        print(ledger_row(args.ledger, args.round_, args.task, args.outcome, args.friction))
+        row = ledger_row(args.ledger, args.round_, args.task,
+                         args.outcome, args.friction)
+        if args.append:
+            said = append_row(row)
+            print(f"appended to {LEDGER}; the summary now says {said}")
+        else:
+            print(row)
         return 0
     if not args.transcripts:
         parser.error("give a transcript path, or --list")

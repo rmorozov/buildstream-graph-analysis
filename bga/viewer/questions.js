@@ -538,6 +538,34 @@ order by c.value desc
 limit 25;`,
   },
   {
+    id: "were-the-cores-busy",
+    category: "scheduling",
+    plane: "Plane 1",
+    reads: "counter",
+    title: "Were the cores busy, or just the machine loaded?",
+    why:
+      "`UX-675` put the host's own `/proc/stat` series on the trace, " +
+      "against `traced processes running` above: a process blocked on " +
+      "I/O holds a slot and no core. `host cores busy` against " +
+      "`host cores` is the share actually drawn; `host load average` " +
+      "beside them is what tells a busy machine apart from one where " +
+      "everything is stuck on the disk instead.",
+    sql: `select c.ts / 1e9 as seconds,
+       max(case when t.name = 'host cores busy' then c.value end) / 1000.0
+         as cores_busy,
+       max(case when t.name = 'host cores' then c.value end) / 1000.0
+         as cores_total,
+       max(case when t.name = 'host load average' then c.value end) / 1000.0
+         as load_average
+from counter c
+join counter_track t on c.track_id = t.id
+where t.name in ('host cores busy', 'host cores', 'host load average')
+  {window}
+group by c.ts
+order by c.ts desc
+limit 25;`,
+  },
+  {
     id: "which-run-is-this",
     category: "scheduling",
     plane: "run",
@@ -655,12 +683,12 @@ export const WORKED_EXAMPLE = "element-time";
  * chrome                 663       0          0
  * ```
  *
- * Two of the questions - `waited-on-flow` and `concurrency-curve` -
- * read exactly what the chrome JSON does not carry, so against one they
- * return zero rows and the reader concludes the build had no
- * concurrency and that nothing waited on anything. That is `UX-107`'s
- * rule at the trace boundary: *nobody could look* rendered as *looked
- * and found nothing*.
+ * Three of the questions - `waited-on-flow`, `concurrency-curve` and
+ * `were-the-cores-busy` - read exactly what the chrome JSON does not
+ * carry, so against one they return zero rows and the reader concludes
+ * the build had no concurrency and that nothing waited on anything.
+ * That is `UX-107`'s rule at the trace boundary: *nobody could look*
+ * rendered as *looked and found nothing*.
  *
  * The declaration is on the query (`reads`), and this says what it
  * costs. The shipped path is unaffected - the page's own handoff is
@@ -737,7 +765,7 @@ export function renderQuestions(make, options = {}) {
   // `UX-650`: **unmapped, deliberately.** The library's own titles span
   // every role - per-element time (R1), what one element executed (R2),
   // what ran at each level of the graph (R3), whether the run finished
-  // (R4), the peak-memory process (R5). A section that is seventeen
+  // (R4), the peak-memory process (R5). A section that is eighteen
   // readers' questions has no reader, which is why `UX-643` left
   // `findings` alone for the same shape.
   const intro = make("p", { class: "muted" });
@@ -1027,7 +1055,7 @@ export function takesWindow(question) {
 }
 
 /** Whether this entry asks about one element.
- *  Four of the seventeen questions do. */
+ *  Four of the eighteen questions do. */
 export function takesElement(question) {
   return String(question?.sql ?? "").includes(ELEMENT_TOKEN);
 }

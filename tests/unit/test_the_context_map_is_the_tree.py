@@ -40,8 +40,12 @@ NOT_ON_THE_MAP = {"bga/__init__.py", "tools/__init__.py",
 # `tools/*.py` non-recursively, so `hook.c`, `spine.c`, `trackevent.py`
 # and `bwrap_shim.py` - Plane 2 itself, the map's own subject - were on
 # neither the map nor the guard, and `dev_run.sh` with them.
+# `UX-746`: `.github/workflows/` was on no root at all, so the walk
+# never reached it in either direction - two of its four files shipped
+# with no document naming either.
 MAPPED_SUFFIXES = {"tools/": (".py", ".c", ".h", ".sh"),
-                   "bga/viewer/": (".js", ".html", ".css")}
+                   "bga/viewer/": (".js", ".html", ".css"),
+                   ".github/workflows/": (".yml",)}
 
 # `UX-274`: the guard above globbed `bga/` and `tools/` and nothing else,
 # so the map's **Tests and docs** block was unguarded prose from the day
@@ -78,6 +82,13 @@ COMMAND_HEADING = "**Every command `bga` answers to**"
 # `UX-573`'s `csv` is *not* one of these, because it is a registered
 # `--format` choice and derives.
 PROSE_IN_A_PATH_LIST: dict[str, str] = {}
+
+# `UX-750`: the digit-run-plus-word denylist. Ids (`UX-238`, `UX-264`)
+# need no entry - the guard's own lookbehind already treats a hyphen-
+# prefixed digit run as an id, not a count. Empty because nothing else
+# on the map today matches; a match here is a live count found, not
+# something to widen the check around.
+NOT_A_COUNT: set[str] = set()
 
 
 def _map_text():
@@ -329,7 +340,8 @@ class TestTheMapNamesTheTree:
                      "bga/viewer/perfetto.html",
                      "bga/viewer/style.css",
                      "bga/report/rate.py",              # `UX-631`: inside
-                     "bga/floors/observed.py"):        # a `bga/` package
+                     "bga/floors/observed.py",         # a `bga/` package
+                     ".github/workflows/ci.yml"):      # `UX-746`
             assert name in modules, f"the walk does not reach {name}"
         assert not [m for m in modules if m.startswith("bga/") and
                     m.endswith("/") and m not in MAPPED_SUFFIXES], (
@@ -391,7 +403,8 @@ class TestTheMapNamesTheTree:
         # creates, not a path in the tree, and `\b` alone matched the
         # `bga/runs` inside it.
         named = set(re.findall(
-            r"(?<![\w./-])((?:bga|tools|tests|docs)/[\w./-]+)", text))
+            r"(?<![\w./-])((?:bga|tools|tests|docs|\.github)/[\w./-]+)",
+            text))
         stale = sorted(
             path for path in named
             if not (REPO / path.rstrip("/")).exists()
@@ -452,17 +465,20 @@ class TestTheMapNamesTheTree:
         five rounds old. A figure nothing checks is the defect, not the
         count, so the map states none.
 
-        Deliberately narrow: `UX-238`, `UX-264` and the rest are ids and
-        not counts, and a rule that banned digits would ban those."""
+        `UX-750`: the noun allowlist missed `lines`, so `400 lines`
+        passed. Inverted to a denylist: every digit-run followed by a
+        word is a count unless `NOT_A_COUNT` names the shape. Ids like
+        `UX-238`/`UX-264` need no entry - a digit run preceded by a
+        hyphen is an id, excluded by the lookbehind itself."""
         import re
 
         text = _map_text()
         # One optional adjective between the number and the noun: the
         # first draft matched `218 files` and missed `the 233 closed
         # rows` two lines below it, which is half a guard.
-        counted = re.findall(
-            r"(?<![\w-])[~]?[\d,]{2,}\s+(?:[a-z-]+\s+)?"
-            r"(?:files?|tests?|rows?|elements?|items?|scenarios?)\b", text)
+        counted = [m for m in re.findall(
+            r"(?<![\w-])[~]?[\d,]{2,}\s+(?:[a-z-]+\s+)?[a-z]+\b", text)
+            if m not in NOT_A_COUNT]
         assert counted == [], (
             f"the context map states counted figure(s) nothing checks: "
             f"{counted}. Name the thing, not how many of it there are.")

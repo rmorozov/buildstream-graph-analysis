@@ -1,6 +1,6 @@
 # UX-667: the rail is a source list — chapters disclose, and the mark stays in view
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-286 (the chapters), UX-640 (the mark), UX-393 | **Serves:** R1..R8 — every reader past the first screen | **Topic:** viewer | **Shape:** judgement
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-286 (the chapters), UX-640 (the mark), UX-393 | **Serves:** R1..R8 — every reader past the first screen | **Topic:** viewer | **Shape:** judgement
 
 ## Motivation
 
@@ -61,3 +61,37 @@ sections and no more; after a driven scroll to every section the
 `[aria-current]` rect is inside the rail's rect; no `overflow-y:auto`
 inside `nav.toc`. Mutation: restore the flat list — red on the first
 clause.
+
+## Outcome
+
+**Gap measured** (round 90, pasted in Motivation): `nav.toc` 240×804px,
+scrollHeight 1,902 (2.4 rail-screens); 82 entries under 8 flat `<ul>`s,
+0 disclosure elements; 16 of 82 visible without scrolling; scrollspy
+sets `aria-current` while `rail.scrollTop` stays 0.
+
+**Close measured**, `macro_micro`, real Chrome, `python3 -m pytest
+tests/unit/test_the_rail_is_a_source_list.py -q`:
+
+```text
+landing: rows=7 links=68 visible=7 openRows=['decide'] visibleOutsideOpen=0
+walk: 68 of 68 marks land inside the rail's own rect (0 outside)
+no `ul[data-rail="elements"]{overflow-y:auto}` (or any other
+  descendant of `.toc`) remains
+```
+
+Export byte cost, `macro_micro`, measured either side in one worktree:
+501,514 -> 503,383 B (+1,869, all source, data unchanged at 185,519 B);
+bound moved 502,000 -> 508,000 (`test_the_report_you_can_attach.py`).
+Volume budget (`test_the_page_has_a_volume_budget.py`) needed no move:
+25 passed, 2 skipped (self-exclusion, pre-existing).
+
+**Mutation table**:
+
+| mutation | guard reddened | what it said |
+|---|---|---|
+| force every chapter row `open=true` (the Acceptance Test's own: restore the flat list) | `test_at_landing_only_the_open_chapters_sections_show` | `openRows` 7 of 7 chapters instead of `['decide']` |
+| remove `link.scrollIntoView({block:"nearest"})` | `test_every_section_the_reader_reaches_keeps_its_mark_in_the_rail` | 45 of 68 marks sit outside the rail's rect |
+| reinstate `ul[data-rail="elements"]{max-height:12rem;overflow-y:auto}` | `test_no_descendant_of_the_rail_scrolls_on_its_own` | names the one reinstated rule |
+| drop each chapter's first member (`members.slice(1)`) - a source removed from the rail | `test_a_report_you_can_navigate.py::test_the_contents_lists_exactly_what_was_rendered` (pre-existing) | toc/rendered sets disagree, 7 keys missing |
+
+All four reverted and confirmed green after.

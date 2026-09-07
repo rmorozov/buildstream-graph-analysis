@@ -712,6 +712,13 @@ def format_text(result: AnalysisResult, section: Optional[str] = None,
             parts = ", ".join(f"{count} {tier.replace('_', ' ').lower()}" for tier, count in sorted(cp_sources.items()))
             lines.append(f"  Cold critical path sources:  {parts}")
         lines.append(_format_capacity_model_note(result))
+        # `UX-740`: the floors above divide by durations, and some of
+        # those durations are zero because the grid could not hold them.
+        resolution = getattr(result, 'duration_resolution', None) or {}
+        if resolution.get('note'):
+            lines.append("  " + resolution['note'])
+            lines.append(f"  Unmeasurable at this epsilon: "
+                         f"{', '.join(resolution.get('elements', []))}")
         lines.append("")
 
     # Attribution (Part 11-12) - full report only; `--format csv` already

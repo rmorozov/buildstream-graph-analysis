@@ -223,8 +223,10 @@ that shape by CI. `pip install -e ".[bst]"` from inside the checkout is
 the contributor mode.
 
 `--single-branch` because this repository doubles as the capture archive
-(`UX-77`): eight `captures/*` branches, which a default clone fetches
-whether or not you will ever read one. Nothing in this guide needs them,
+(`UX-77`): `captures/*` branches — twelve as of 2026-09-07 (`git
+ls-remote --heads origin 'captures/*' | wc -l`; a capture job may add
+more at any time) — which a default clone fetches whether or not you
+will ever read one. Nothing in this guide needs them,
 and the one command that does — `bga baseline` — fetches by ref rather
 than from the clone's refspec, so it works either way.
 
@@ -1109,9 +1111,17 @@ subset:
 
 ```text
 Where the time is: 3 element(s) are 99.7% of the 1980.5s critical path
-  bootstrap/build/gcc-stage1.bst  1248.7s (63.0% of path)  -> fixing it saves 1248.7s
-  bootstrap/base-sdk/gettext.bst   725.9s (36.6% of path)  -> fixing it saves  110.1s
+  bootstrap/build/gcc-stage1.bst  1248.7s (63.0% of path)  -> fixing it saves 1248.7s (60.8% of the build)
+  bootstrap/base-sdk/gettext.bst   725.9s (36.6% of path)  -> fixing it saves  110.1s (5.4% of the build)
+  bootstrap/gnu-config.bst            1.1s (0.1% of path)  -> fixing it saves    1.1s (0.1% of the build)
 ```
+
+Kept, not current — 2026-09-07: this block is `UX-086`'s own record of
+that run, not re-run here, because the caches-off capture behind it is
+a build artifact and is never committed (`UX-126`, `UX-189`). Cuts:
+the third row (`bootstrap/gnu-config.bst`) and the `(NN.N% of the
+build)` suffix `bga/findings.py:637-643` always appends had both been
+dropped from the two rows above.
 
 Note what the second row says, and what only a cold capture could have
 shown: `gettext` is 36.6% of the path and worth **5.4%** of the build.

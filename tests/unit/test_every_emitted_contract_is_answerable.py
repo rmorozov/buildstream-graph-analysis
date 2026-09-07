@@ -42,6 +42,8 @@ import sys
 
 import pytest
 
+from tools.dev_track_cost import count_word
+
 REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 
@@ -419,10 +421,7 @@ class TestTheDocumentSaysWhatTheToolDoes:
     #: more shapes into "written, or read, but never printed", so the
     #: number moved - and the clause below holds the sentence to the
     #: declaration rather than to any one spelling of it.
-    _COUNT_WORDS = {4: "four", 5: "five", 6: "six", 7: "seven",
-                    8: "eight", 9: "nine", 10: "ten", 11: "eleven",
-                    12: "twelve", 13: "thirteen", 14: "fourteen",
-                    15: "fifteen", 16: "sixteen", 17: "seventeen"}
+    _COUNT_WORDS = {n: count_word(n) for n in range(1, 100)}
 
     def test_the_unknown_to_schema_sentence_counts_correctly(self):
         """It claimed "the last four" were unknown to `--schema` when

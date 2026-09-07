@@ -254,8 +254,53 @@ BUDGETS = (
     # question is what this budget is *for* - it bounds growth, it does
     # not forbid it - and the class above it is untouched at 32,000,
     # which is the check that the page still gets denser with scale.
-    (50, 35_000, 12_600, 800, 7_900),
-    (4_100, 32_000, 9_000, 900, 5_500),
+    # `UX-717`: words 12,600 -> 12,700 and 9,000 -> 9,100. The
+    # eighteenth question - `were-the-cores-busy`, its `why` and its
+    # two sorting-table rows - is words and nothing else: measured
+    # 12,644 (+44) and 9,013 (+13), with every other column of both
+    # classes unmoved. Same shape as `UX-681` above: the budget bounds
+    # growth rather than forbidding it, and 56/87 of headroom is the
+    # same order it left. Caught by `make test` and not by the track's
+    # own `make test-touching`, which does not select this file from a
+    # change to `questions.js`.
+    # `UX-740`: neither budget moves, and the reason is the item's own
+    # discrimination. `duration_resolution` is published only when the
+    # grid erased a span, so the two committed fixtures are unmoved and
+    # the two generated runs pay for it - measured either side by
+    # returning `[]` from `spans_below_resolution`:
+    #
+    #     golden      7,745 -> 7,745   (+0)
+    #     macro_micro 12,644 -> 12,644 (+0)
+    #     scale       8,870 -> 8,935   (+65)
+    #     xl          9,013 -> 9,078   (+65)
+    #
+    # Words 9,100 -> 9,200; the 50-element class is unmoved. Three
+    # readings, because the first fix traded one guard for another:
+    #
+    #                without   trimmed   descriptions over 30 chars
+    #     golden       7,745     7,745     7,745
+    #     macro_micro 12,644    12,644    12,644
+    #     scale        8,870     8,935     8,963
+    #     xl           9,013     9,078     9,106
+    #
+    # The middle column held this budget at 9,078 and reddened
+    # `test_every_description_is_a_sentence_worth_showing`, which reads
+    # a 30-character floor on every nested description - four of the
+    # five were under it. So the section cannot be both described to
+    # the repository's own floor and fit inside 9,100, and the budget
+    # is the one that gives: it bounds growth rather than forbidding
+    # it (`UX-681`, `UX-717`). 94 of headroom, the same order as the 87
+    # `UX-717` left.
+    # `UX-674`: 35,000 -> 35,900. The styleguide's new type scale collapses
+    # every small/quiet control onto one `--font-small` (13px) - the
+    # `button.describe` door alone is 126 of `macro_micro`'s controls,
+    # and every one of them moved up from an 11.2px UA-adjacent `.7rem`.
+    # `words`, `controls` and `nodes` are unmoved (no content changed);
+    # measured 35,813, 87 of headroom, the same order `UX-717` left.
+    # The 4,100 class is untouched at 32,000 - the fixed overhead does
+    # not scale with element count, so a run there stays under it.
+    (50, 35_900, 12_700, 800, 7_900),
+    (4_100, 32_000, 9_200, 900, 5_500),
 )
 
 

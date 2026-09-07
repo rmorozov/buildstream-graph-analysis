@@ -101,7 +101,19 @@ class TestTheSelectorStillSelects:
     # 131 - not a uniform +5, because five of the new census files were
     # already grep-reachable from some modules' own selections. Same
     # +2 headroom kept on p90 and max; median left at the measurement.
-    CEILING = {"median": 25, "p90": 49, "max": 133}
+    #
+    # `UX-737` moved the census 19 -> 31 (the subprocess-population
+    # half `UX-730` deferred), re-measured over 94 mapped modules: min
+    # 19 -> 31, median 25 -> 37, p90 47 -> 58, max 131 -> 143. Same
+    # convention: median at the measurement, +2 headroom kept on p90
+    # and max.
+    #
+    # `UX-752` derived two guards' spelling tables from
+    # `dev_track_cost.count_word`, so two more test files name that
+    # module and its selection grew by two. Measured either side:
+    # median 37 at `0c334ed`, 38 with the imports, p90 and max
+    # unmoved. Median at the measurement, as above.
+    CEILING = {"median": 38, "p90": 60, "max": 145}
     POPULATION_FLOOR = 60
     #: `UX-645`: **13 census + 14 of your own**. The census floor is
     #: inside this bound because those files run - the figure is what
@@ -125,8 +137,18 @@ class TestTheSelectorStillSelects:
     #: population is a named index file reached through a tool function
     #: rather than a direct `WALKS` name, and five of those were already
     #: in the tree. Same arithmetic: 28 -> 33.
-    HANDFUL = 33
-    CENSUS_FLOOR = 19
+    #:
+    #: `UX-737` moved it 19 -> 31: the detector widened again, to a
+    #: guard whose population comes from a subprocess (`git ls-files`,
+    #: `pytest --collect-only`) rather than a tool function - twelve
+    #: pre-existing guards, `UX-730`'s own deferred half. Same
+    #: arithmetic: 33 -> 45. `store_aggregate`'s own grep-only count is
+    #: still 14, unchanged - measured 41 rather than the arithmetic's
+    #: 45 because 4 of the 14 are now also census members, but `HANDFUL`
+    #: keeps the stated formula's headroom rather than the tighter
+    #: measured one.
+    HANDFUL = 45
+    CENSUS_FLOOR = 31
 
     # Wide because the module's name is how a test invokes it, not
     # because the selector is wrong. `UX-606` argued each one.
@@ -145,6 +167,14 @@ class TestTheSelectorStillSelects:
         "bga/attribution/blame_chain.py", "bga/correlate.py",
         "bga/report/json.py",
         "bga/schemas.py",
+        # `UX-740`, round 102: 46 = 31 census + 16 named, one over the
+        # bound. Wide by **name**: loading a fixture run is what a guard
+        # does to get one, so `from bga.ingest.loader import load_all`
+        # is the sixteenth such line and the sixteenth is what tipped
+        # it. Its map entry is 193 files, seven times `MAP_ENTRY_CAP`,
+        # so `UX-605`'s rule discards it and the 16 are the whole
+        # selection.
+        "bga/ingest/loader.py",
         # `UX-624`: 14 -> 27. A one-word stem is not a token, so every
         # one of its 16 importers reached it only as `from bga import
         # contracts`; the width is those edges, not a looser rule.
@@ -172,7 +202,11 @@ class TestTheSelectorStillSelects:
         # moved both figures by two; `store_aggregate` crossed on the
         # same census change and is *not* here, because at 26 against
         # 27 it went back under and the worked example still holds.
-        "bga/graph/edg.py", "bga/ingest/loader.py",
+        #
+        # `UX-737`: `loader` left (45 against the new 45 - equal, not
+        # over) when `HANDFUL` moved 33 -> 45 with the census; `edg`
+        # stayed (46 against 45), one file over.
+        "bga/graph/edg.py",
     }
 
     def test_a_one_module_change_selects_a_handful_not_the_suite(self):

@@ -236,8 +236,11 @@ def decode(path):
     two fields this census cannot tell apart, and saying *where* a
     value arrived is what lets it say so.
     """
-    raw = (gzip.open(path, "rb").read() if _gzipped(path)
-           else path.read_bytes())
+    if _gzipped(path):
+        with gzip.open(path, "rb") as handle:
+            raw = handle.read()
+    else:
+        raw = path.read_bytes()
     packets = [v for f, _w, v in _wire_fields(raw)
                if f == trackevent.TRACE_PACKET]
     interned = {trackevent.INTERNED_EVENT_NAMES: {},

@@ -1421,7 +1421,7 @@ when a new shape appears. Decomposed as `UX-302`..`UX-306`.
 owner), R5 (the capacity operator) — the four whose questions
 contradict on the surface and share one quantity underneath.
 
-**Status:** partial — the four corrections are argued here; `UX-675`..`UX-684` are open.
+**Status:** partial — the four corrections are argued here; `UX-675`, `UX-676`, `UX-677`, `UX-681` landed and `UX-678`, `UX-679`, `UX-680`, `UX-682`, `UX-683`, `UX-684` are open.
 
 The user's brief, in three questions: can a CI owner tell whether the
 agent's cores are the binding resource without overcommitting memory;
@@ -1555,7 +1555,14 @@ tool prices it and does not watch it).
 **Serves:** R8 (the maintainer deciding when to release), and every
 implementing session — the suite is theirs, the walk is the reader's.
 
-**Status:** partial — the corrections are argued here; `UX-685`..`UX-692` are open.
+**Status:** partial — `UX-685`, `UX-686`, `UX-687`, `UX-688`, `UX-691` and `UX-692` landed; `UX-689` and `UX-690` are open.
+
+The last of them tested this direction's own claim rather than
+restating it: `UX-692`'s seeded sweep found a real defect on its
+first generated shapes — a span under the epsilon grid collapsing to
+a zero-width segment — and filed it for a separate round instead of
+fixing it in place. A sweep that verifies what was promised is worth
+having exactly when it finds something the fixtures never had.
 
 The user's brief: the suite grows and hand exploration still finds
 problems every time; so a cadence of exploratory testing on a cheaper
@@ -1676,7 +1683,7 @@ area is a field and a generated page), and a specification rewrite
 **Serves:** every implementing session, and R8 deciding whether a
 change may land — the gate is the tool's, the review is the reader's.
 
-**Status:** partial — the corrections are argued here; `UX-693`..`UX-705` are open.
+**Status:** partial — `UX-695`, `UX-697` and `UX-698` remain open; the rest of the round has closed.
 
 The user's brief: static analysis and coverage exist, but no
 refactoring cadence, so comments go stale and complexity grows; revise
@@ -1873,6 +1880,9 @@ the other rounds now:
 | [93](../audits/round-93.md) | a design round on the development workflow: the gate holds the numbers and the review holds the design — the rule set widened by layer and pinned, a finding baseline that is zero-tolerance for new findings and a size ledger that queues the refactor stream, a burn-down on the reporters' model, the register's unguarded rows, a type baseline, a gate-only shelf on GitHub, the viewer linted, an AST symbol index in place of CodeQL for navigation, a `self-review` skill, a performance ratchet, a weekly mutation run (`UX-693`..`UX-705`) |
 | [94](../audits/round-94.md) | a process round on the pipeline: a task's shape derived from its text names the model that runs it, the implementer on `sonnet` for mechanical and bounded shapes, the orchestrator's cost measured as its live context at each rebuild (73 %), one task per track rather than per session; the rebuild count, a priced first batch, a batch close, a derived ledger row and a screen-long tool result filed (`UX-706`..`UX-711`) |
 | [95](../audits/round-95.md) | the first batch under the pipeline: the rule set widened by layer in one auto-fix commit with the tool pinned (`UX-693`), three bounded tracks on `sonnet` each read by a verifier — the symbol index, a batch `--move`, a session's rebuilds priced, a ledger row derived, the finding baseline (`UX-700`, `UX-707`, `UX-709`, `UX-710`, `UX-694`); eleven defects found by the verifiers, none by the tracks; three tracks lost to an interrupt and the rule that follows |
+| [103](../audits/round-103.md) | the guard whose population is narrower than its sentence, five times: four `implementer` tracks on `sonnet` each read by a `verifier` before merge (`UX-746`, `UX-749`, `UX-748`, `UX-674`), six rows closed by the session before them; the verifiers found four defects the tracks' own reports did not, two of which would have merged — an acceptance test that did not survive being committed, and a budget claim off by 524px; seven rows filed (`UX-750`..`UX-756`), two of them closed in the same round, and three CI reds all the session's own |
+| [104](../audits/round-104.md) | the verifier earned the round: six `judgement` rows as `implementer` tracks on `sonnet`, each read by a `verifier` before merge, and three held — `UX-753`'s guard stayed green when the rule it checked was deleted outright, and `UX-744` claimed an independence that a mutation one function down disproved twice; five closed (`UX-750`, `UX-751`, `UX-753`, `UX-755`, `UX-756`), `UX-744` reverted after CI falsified a derivation no worktree could test, four filed (`UX-757`..`UX-760`); the gate itself was wrong — BuildStream sizes its 5% cache reserve against nominal disk, not free, which round 103 misdiagnosed as contention |
+| [105](../audits/round-105.md) | the two rules the pipeline never wrote down: the verifier mandate moved out of `decompose/SKILL.md` — its only statement, in the document the guide outranks and never mentioned — into `fixing-guide.md` §3, with a guard pairing every merged `implementer` ledger row to a `verifier` row; and the gate bound to the commit that gets pushed, by a marker `make test` writes and a hook that reads it. Both rows held by their verifier: a pasted `grep` that did not reproduce, a skill line still restating the rule its commit message said it had stopped restating, and a hook an ordinary `git status && git push` walked straight past. Three filed (`UX-766`, `UX-767`, and the ordering into `UX-763`) |
 
 ## Verification Log
 

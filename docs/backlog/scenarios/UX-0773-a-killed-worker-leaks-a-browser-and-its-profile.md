@@ -82,6 +82,7 @@ $ ls -d $TMPDIR/bga-geometry-* | wc -l     # after a SIGKILLed launch
 $ pgrep -f bga-geometry | wc -l
 0
 ```
+
 plus a mutation: remove the sweep and the guard reds.
 
 ## Outcome

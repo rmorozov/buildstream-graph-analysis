@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-757 scenarios: **20 open**, 737 closed.
+762 scenarios: **25 open**, 737 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -26,8 +26,8 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | viewer | 3 | 163 |
 | cli | 0 | 22 |
 | store | 0 | 16 |
-| docs | 4 | 123 |
-| guards | 6 | 182 |
+| docs | 7 | 126 |
+| guards | 8 | 184 |
 
 ## Open scenarios
 
@@ -56,6 +56,11 @@ task file, which is the only place it ever lived twice.
 | UX-758 | [the edge-mark test reads a merged name and never matches](UX-0758-the-edge-mark-test-reads-a-merged-name-and-never-matches.md) | viewer | Medium | the reader of an exhibit axis whose labels silently stop being protected | 🔴 |
 | UX-759 | [the register's id column loses a subset in silence](UX-0759-the-register-s-id-column-loses-a-subset-in-silence.md) | guards | Medium | the round that reads the register to learn what an earlier round closed | 🔴 |
 | UX-760 | [six more files build against the broken reserve](UX-0760-six-more-files-build-against-the-broken-reserve.md) | guards | Medium | the session that runs `make test` on a container with a large disk and little free space | 🔴 |
+| UX-761 | [the verifier is mandated in the one document the guide outranks](UX-0761-the-verifier-is-mandated-in-the-one-document-the-guide-outranks.md) | docs | High | the session that reads the mandatory entry point and never learns a verifier exists | 🔴 |
+| UX-762 | [the gate binds to a branch, not to the commit that is pushed](UX-0762-the-gate-binds-to-a-branch-not-to-the-commit-that-is-pushed.md) | guards | High | the session whose gate passed on a commit it did not push | 🔴 |
+| UX-763 | [no document says what closing a round owes](UX-0763-no-document-says-what-closing-a-round-owes.md) | docs | Medium | the session closing a round from memory because no list exists | 🔴 |
+| UX-764 | [two Register caps are guarded and two are honour-system](UX-0764-two-register-caps-are-guarded-and-two-are-honour-system.md) | guards | Medium | the reader who trusts a cap because the guard reported green | 🔴 |
+| UX-765 | [two process cross-references point at numbers that are not there](UX-0765-two-process-cross-references-point-at-numbers-that-are-not-there.md) | docs | Low | the session that follows a cross-reference and finds the other number | 🔴 |
 
 ## UX-706..UX-711: the ninety-fourth round — the pipeline, and which model runs which shape (2026-09-05)
 

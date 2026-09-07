@@ -27,6 +27,7 @@ import contextlib
 import hashlib
 import json
 import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -49,6 +50,10 @@ from .chrome_trace_to_bga_trace import (
     invocation_wall_clock,
 )
 
+# S607: resolved once against PATH, not trusted to whatever order the
+# shell would have used.
+GIT = shutil.which("git") or "git"
+
 
 def _parse_targets(targets_str: str):
     return [t.strip() for t in targets_str.split(",") if t.strip()]
@@ -68,7 +73,7 @@ def _git_consistency_note(project_dir: str):
     """
     try:
         status = subprocess.run(
-            ["git", "-C", project_dir, "status", "--porcelain"],
+            [GIT, "-C", project_dir, "status", "--porcelain"],
             capture_output=True, text=True, timeout=30,
         )
     except (OSError, subprocess.TimeoutExpired):
@@ -93,7 +98,7 @@ def _git_commit(project_dir: str):
     dirty/clean, not the actual commit."""
     try:
         result = subprocess.run(
-            ["git", "-C", project_dir, "rev-parse", "HEAD"],
+            [GIT, "-C", project_dir, "rev-parse", "HEAD"],
             capture_output=True, text=True, timeout=30,
         )
     except (OSError, subprocess.TimeoutExpired):
@@ -122,7 +127,7 @@ def _project_identity(project_dir: str) -> str:
     """
     try:
         result = subprocess.run(
-            ["git", "-C", project_dir, "rev-parse", "--show-toplevel"],
+            [GIT, "-C", project_dir, "rev-parse", "--show-toplevel"],
             capture_output=True, text=True, timeout=30,
         )
     except (OSError, subprocess.TimeoutExpired):
@@ -267,7 +272,7 @@ def _check_project_refs_strict(project_dir: str):
     # "not a repository"), confirmed empirically while writing this.
     try:
         status_check = subprocess.run(
-            ["git", "-C", project_dir, "status", "--porcelain"],
+            [GIT, "-C", project_dir, "status", "--porcelain"],
             capture_output=True, text=True, timeout=30,
         )
     except (OSError, subprocess.TimeoutExpired) as e:
@@ -280,7 +285,7 @@ def _check_project_refs_strict(project_dir: str):
 
     try:
         git_check = subprocess.run(
-            ["git", "-C", project_dir, "diff", "--exit-code", "--", "project.refs"],
+            [GIT, "-C", project_dir, "diff", "--exit-code", "--", "project.refs"],
             capture_output=True, text=True, timeout=30,
         )
     except (OSError, subprocess.TimeoutExpired) as e:

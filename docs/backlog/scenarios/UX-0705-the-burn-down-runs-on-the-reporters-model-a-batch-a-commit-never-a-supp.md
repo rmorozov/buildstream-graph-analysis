@@ -85,3 +85,35 @@ reporters' model, and its ledger row. The row stays open for it; what
 this adds is the check that would otherwise let that run pass by
 annotating.
 
+## Batch 1 outcome (`S607`, `tools/`, 23 findings in 11 files)
+
+**Gap measured**: 23 `S607` findings, `shutil.which` resolution real
+(not a rename) in every case. **Close measured**: `dev_baseline.py
+--shrink` → `removed 7 stale entries`; `--check` → `clean: 300
+finding(s)`; `make test-touching` → `1355 passed, 3 skipped`; `make
+test` → `7558 passed, 126 skipped, 1 warning in 359.89s`.
+
+**7 of 23 closed** (`bst_extract_run.py` ×5, `dev_commit_bodies.py`
+×1, `dev_perf_ratchet.py` ×1) - each call already carried a variable
+argument, so `S603` was already priced in and unaffected by the swap.
+
+**16 left, not mechanical**: resolving the executable turns a literal
+argv into one with a `Name` in it, which is exactly what `S603`
+("subprocess call: check for execution of untrusted input") uses to
+tell a trusted call from an unproven one - `bga_doctor.py`'s own
+`shutil.which` sites already carry this tax, baselined. 8 gain a
+*new* `S603` (`bst_baseline_set.py` archive/ls-tree/show×2,
+`dev_baseline.py` ruff-version, `dev_close_task.py` diff-HEAD,
+`dev_finding_coverage.py` ls-files, `dev_touching.py` ls-files
+--others); 5 shift an *already-baselined* `S603`'s identity, same
+count either way (`dev_baseline.py` show/top, `dev_close_task.py`
+ls-files, `dev_plane_capability.py` nm, `dev_tier_drift.py`
+rev-parse); 3 are baseline-clean but redden a test asserting a
+literal argv (`bst_baseline_set.py` fetch/ls-remote,
+`bst_native_build_tracer.py` bst-artifact) -
+`tests/unit/test_baseline_set.py`, `tests/unit/test_the_contents_read_is_one_call.py`.
+
+Whether to authorise the `S603` growth (`--write --force --reason
+UX-705`) or move the three tests is a call the batch's own Acceptance
+Test ("no new finding of any rule") does not make for itself.
+

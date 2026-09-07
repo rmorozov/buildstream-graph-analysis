@@ -16,8 +16,13 @@ than a list of hashes: author dates survive a rebase, and a hash list
 would go stale the first time this branch is merged.
 """
 import re
+import shutil
 import subprocess
 import sys
+
+# S607: resolved once against PATH, not trusted to whatever order the
+# shell would have used.
+GIT = shutil.which("git") or "git"
 
 CAP = 8
 RULE_FROM = "2026-09-06T21:52:00+00:00"
@@ -33,7 +38,7 @@ def body_lines(body):
 
 def _log(base, extra):
     out = subprocess.run(
-        ["git", "log", f"{base}..HEAD", "--no-merges",
+        [GIT, "log", f"{base}..HEAD", "--no-merges",
          *extra, "--format=%H%x1f%s%x1f%b%x1e"],
         capture_output=True, text=True, check=True).stdout
     for record in out.split("\x1e"):

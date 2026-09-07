@@ -22,10 +22,14 @@ import argparse
 import json
 import pathlib
 import re
+import shutil
 import subprocess
 import sys
 
 REPO = pathlib.Path(__file__).resolve().parents[1]
+# S607: resolved once against PATH, not trusted to whatever order the
+# shell would have used.
+GIT = shutil.which("git") or "git"
 sys.path.insert(0, str(REPO))
 
 from tools import dev_touching
@@ -102,7 +106,7 @@ def touches_analyzer(base):
     if not base:
         return None
     resolved = subprocess.run(
-        ["git", "rev-parse", "--verify", "--quiet", f"{base}^{{commit}}"],
+        [GIT, "rev-parse", "--verify", "--quiet", f"{base}^{{commit}}"],
         capture_output=True, text=True, cwd=REPO)
     if resolved.returncode != 0:
         return None

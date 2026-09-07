@@ -94,9 +94,32 @@ history: 40 rows added, `--check` exit 0.
 |---|---|
 | the refusal removed from `check()` | `test_check_refuses_rather_than_deriving_from_half_a_history` |
 | `is_shallow()` reads `.git` instead of `.git/shallow` | `test_a_complete_clone_is_not_refused` **and** `test_the_real_checkout_is_complete` — the second is the one that matters: a refusal that fires on every clone is not a refusal |
+| `is_shallow()` back to the marker's existence — the version CI reddened | `test_a_left_behind_marker_is_not_a_shallow_history`, whose fixture is a real `--depth 1` clone and a real stale marker, not a written file |
 
 The second mutation is why the pair exists. A guard that only asserts
 "a shallow clone reds" passes when the tool reds on everything.
+
+**The first fix read a proxy, and CI said so.** `is_shallow()` began
+as `(.git/shallow).exists()`. That reddened every job on `43dab8d` —
+on a runner holding all 1,538 commits, which carries a stale marker.
+`git rev-parse --is-shallow-repository` reads the same file and would
+have fixed nothing. What distinguishes them is measurable: a grafted
+boundary still records its parent in its own object and lacks the
+parent object; a stale marker's parent is present.
+
+```console
+$ git clone --depth 1 file://$origin r && cd r
+$ git cat-file -e $(git cat-file -p $(cat .git/shallow) | awk '/^parent/{print $2}')
+$ echo $?
+1                       # cut
+$ # same marker written by hand over a complete clone
+$ echo $?
+0                       # stale
+```
+
+So the row's own defect — an instrument reading a proxy for the thing
+it names — was committed once more while fixing it, and caught by the
+only instrument that could: CI, on a machine whose clone differs.
 
 **Deviation.** The row asks for the refusal and a guard, and both
 landed. `test_the_real_checkout_is_complete` is the addition: it reads

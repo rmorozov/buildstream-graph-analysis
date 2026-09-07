@@ -4,6 +4,7 @@ commits happen to exist when the suite runs, and mutation testing does
 not need a real commit to land first.
 """
 import pathlib
+import subprocess
 import sys
 
 import pytest
@@ -127,21 +128,41 @@ class TestAShallowCloneIsRefused:
     commits derived 32 rounds; CI's 1,538 derived 71, and `--check`
     reddened on the register `--write` had produced here."""
 
+    @staticmethod
+    def _repo(root, commits, shallow=False):
+        """A repository with a real history. A cut one is made by
+        cloning this at `--depth 1`, not by writing a marker."""
+        subprocess.run(["git", "init", "-q", str(root)], check=True)
+        env = ["-c", "user.email=t@t", "-c", "user.name=t"]
+        for n in range(commits):
+            subprocess.run(["git", "-C", str(root), *env, "commit", "-q",
+                            "--allow-empty", "-m", f"c{n}"], check=True)
+        return root
+
     def test_check_refuses_rather_than_deriving_from_half_a_history(
             self, tmp_path, monkeypatch):
-        (tmp_path / ".git").mkdir()
-        (tmp_path / ".git" / "shallow").write_text("sha\n", encoding="utf-8")
-        monkeypatch.setattr(reg, "REPO", tmp_path)
+        origin = self._repo(tmp_path / "o", commits=3)
+        root = tmp_path / "r"
+        subprocess.run(["git", "clone", "-q", "--depth", "1",
+                        f"file://{origin}", str(root)], check=True)
+        monkeypatch.setattr(reg, "REPO", root)
         monkeypatch.setattr(reg, "rounds", lambda: {"3": {"date": "d"}})
         problems = reg.check()
         assert problems and "shallow" in problems[0], problems
 
+    def test_a_left_behind_marker_is_not_a_shallow_history(self, tmp_path):
+        """The one CI taught: the file's presence is a proxy. Git is
+        asked, so a marker over a complete history reads complete."""
+        root = self._repo(tmp_path / "r", commits=2)
+        (root / ".git" / "shallow").write_text("", encoding="utf-8")
+        assert not reg.is_shallow(root)
+
     def test_a_complete_clone_is_not_refused(self, tmp_path, monkeypatch):
-        """The discriminator: without the marker the same tree passes,
-        so the refusal reads the boundary and not the directory."""
-        (tmp_path / ".git").mkdir()
-        path = tmp_path / "round-register.md"
-        monkeypatch.setattr(reg, "REPO", tmp_path)
+        """The discriminator: the same tree without the boundary
+        passes, so the refusal reads history and not a directory."""
+        root = self._repo(tmp_path / "r", commits=2)
+        path = root / "round-register.md"
+        monkeypatch.setattr(reg, "REPO", root)
         monkeypatch.setattr(reg, "REGISTER", path)
         monkeypatch.setattr(reg, "rounds", lambda: {"3": {"date": "d"}})
         path.write_text(reg.render(reg.written_rounds()), encoding="utf-8")

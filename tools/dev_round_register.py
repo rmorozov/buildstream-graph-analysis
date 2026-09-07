@@ -58,7 +58,32 @@ SHALLOW = ("{repo} is a shallow clone - `git log` cannot see the whole "
 
 
 def is_shallow(repo=None):
-    return (pathlib.Path(repo or REPO) / ".git" / "shallow").exists()
+    """Whether `git log` is actually cut: a commit `.git/shallow` names
+    has a parent whose object is absent.
+
+    Neither the marker's existence nor `rev-parse --is-shallow-
+    repository` (which reads it) answers this - a runner holding all
+    1,538 commits carried a stale marker, and the first version of this
+    reddened CI on it. A grafted boundary still records its parent in
+    its own object; what it lacks is the parent.
+    """
+    repo = str(repo or REPO)
+    marker = pathlib.Path(repo) / ".git" / "shallow"
+    if not marker.exists():
+        return False
+    for sha in marker.read_text(encoding="utf-8").split():
+        body = subprocess.run([GIT, "cat-file", "-p", sha], cwd=repo,
+                              capture_output=True, text=True, check=False)
+        if body.returncode != 0:
+            continue
+        for line in body.stdout.splitlines():
+            if not line.startswith("parent "):
+                continue
+            here = subprocess.run([GIT, "cat-file", "-e", line.split()[1]],
+                                  cwd=repo, capture_output=True, check=False)
+            if here.returncode != 0:
+                return True
+    return False
 
 
 def _commits(repo=REPO):

@@ -3,9 +3,8 @@
 `make test`'s recipe writes `.gate-covered` (gitignored) with HEAD's
 sha, only on a green run - a red suite covers nothing, so the write is
 the recipe's last line, reached only if pytest exits 0. This hook reads
-that marker on `git push` and blocks a HEAD the marker does not name -
-the round-104 gap: the gate ran, a further commit followed it, and
-nothing said the second commit was never covered.
+that marker on `git push` and blocks a HEAD the marker does not name:
+round 104's gap, a commit after the gate that shipped uncovered.
 
 Scans the **whole** command, in `no_bulk_add.is_bulk_add`'s loop: a
 push after `&&`, not only the first invocation, must be seen. Shares
@@ -19,6 +18,11 @@ Escape hatch: `BGA_SKIP_PUSH_GATE=UX-NNN`, the row that authorised the
 push - a bare flag is refused. Prints the bypass to stderr, loud in
 the transcript a session already reads (`UX-745`'s reasoning), and
 holds for every push in the shell's lifetime once exported.
+
+Channel, not command: a `PreToolUse` hook only sees a Bash tool call,
+so it is not total. Rounds 103-105's 41-push channel mix is not
+recoverable from committed material, but at least one used this
+covered channel (`UX-767`); CI is the real backstop regardless.
 """
 import json
 import os

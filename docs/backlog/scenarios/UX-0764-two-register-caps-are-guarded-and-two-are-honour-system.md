@@ -79,13 +79,15 @@ are a sibling track's row). Added `TestOutcomeContentIsGuarded` to
 Outcome must mention "mutation" or be named in `NO_GUARD_OUTCOMES`
 (four pre-existing exemptions, checked real by their own clause). New
 `test_the_commit_body_gate_runs_before_ci.py` runs
-`dev_commit_bodies.over_cap(base="origin/main")` inside `make test` -
-the same population CI reads (`ci.yml:642`), so local and CI agree,
-and a track's own suite now sees what round 106 needed a verifier's
-manual run to catch. Stated blind spot: a checkout where `origin/main`
-does not resolve (CI's `test` job never fetches it) skips rather than
-reading a false pass; a commit already folded into `origin/main`
-measures an empty range - a pre-merge gate, not a retroactive audit.
+`dev_commit_bodies.over_cap(base="origin/main")` inside `make test`, so
+a track's own suite now sees what round 106 needed a verifier's manual
+run to catch. Where it does **not** run: `ci.yml:642`'s call lives in
+the `agent-config` job, which fetches `origin main` first; the `test`
+job checks out without that fetch, so this guard skips there and adds
+no enforcement inside CI (`agent-config`'s own call still runs on every
+push). It earns its place on a local `make test`, where the ref
+resolves. A commit already folded into `origin/main` measures an empty
+range - a pre-merge gate, not a retroactive audit.
 
 **Mutation table.**
 

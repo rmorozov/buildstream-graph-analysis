@@ -14,6 +14,7 @@ own newest round is excluded by construction (fixing-guide.md §7a),
 so this file never demands a document from a round still in progress.
 """
 import pathlib
+import re
 import subprocess
 import sys
 
@@ -211,13 +212,20 @@ class TestTheRoundRegisterIsDerived:
     task commits."""
 
     def test_the_written_table_matches_the_derivation(self):
-        # The tool already says which of its two failures fired - a
-        # missing file or a disagreeing one. Restating it in prose threw
-        # that away and cost a CI round.
-        reasons = dev_round_register.check()
-        assert reasons == [], (
-            f"{reasons} - and the derivation reads "
-            f"{sorted(dev_round_register.written_rounds(), key=int)}")
+        # The discriminating cells first: `dev_junit_tail.py` is what a
+        # red CI run is read through and it truncates, so a message that
+        # opens with an absolute path spends the whole budget on it.
+        written = set(dev_round_register.written_rounds())
+        on_disk = set(re.findall(
+            r"^\| (\d+) \|", dev_round_register.REGISTER.read_text(
+                encoding="utf-8"), re.MULTILINE))
+        derived = dev_round_register.rounds()
+        odd = sorted(written ^ on_disk, key=int)
+        dates = [(n, derived[n]["date"]) for n in odd if n in derived]
+        assert dev_round_register.check() == [], (
+            f"derived-not-written {sorted(written - on_disk, key=int)} "
+            f"written-not-derived {sorted(on_disk - written, key=int)} "
+            f"dates {dates}")
 
     def test_the_register_names_99_through_103(self):
         registered = set(dev_round_register.rounds())

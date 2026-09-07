@@ -121,5 +121,39 @@ class TestRenderAndCheckRoundTrip:
         assert reg.check() == []
 
 
+class TestAShallowCloneIsRefused:
+    """`UX-776`: `git log` stops at the shallow boundary, so the
+    derivation is a property of the checkout. This container's 610
+    commits derived 32 rounds; CI's 1,538 derived 71, and `--check`
+    reddened on the register `--write` had produced here."""
+
+    def test_check_refuses_rather_than_deriving_from_half_a_history(
+            self, tmp_path, monkeypatch):
+        (tmp_path / ".git").mkdir()
+        (tmp_path / ".git" / "shallow").write_text("sha\n", encoding="utf-8")
+        monkeypatch.setattr(reg, "REPO", tmp_path)
+        monkeypatch.setattr(reg, "rounds", lambda: {"3": {"date": "d"}})
+        problems = reg.check()
+        assert problems and "shallow" in problems[0], problems
+
+    def test_a_complete_clone_is_not_refused(self, tmp_path, monkeypatch):
+        """The discriminator: without the marker the same tree passes,
+        so the refusal reads the boundary and not the directory."""
+        (tmp_path / ".git").mkdir()
+        path = tmp_path / "round-register.md"
+        monkeypatch.setattr(reg, "REPO", tmp_path)
+        monkeypatch.setattr(reg, "REGISTER", path)
+        monkeypatch.setattr(reg, "rounds", lambda: {"3": {"date": "d"}})
+        path.write_text(reg.render(reg.written_rounds()), encoding="utf-8")
+        assert reg.check() == []
+
+    def test_the_real_checkout_is_complete(self):
+        """The one that would have caught this round: a shallow clone
+        writes a truncated register and CI reds on it."""
+        assert not reg.is_shallow(), (
+            "this checkout is shallow - run `git fetch --unshallow` "
+            "before deriving anything from git history")
+
+
 if __name__ == "__main__":  # pragma: no cover
     raise SystemExit(pytest.main([__file__, "-v"]))

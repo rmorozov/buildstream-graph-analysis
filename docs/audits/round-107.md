@@ -2,7 +2,7 @@
 
 Closed 2026-09-07.
 
-Four rows closed, four filed. The user's order again: workflow rows
+Three rows closed, four filed. The user's order again: workflow rows
 first. The round's subject is not a defect in the code but two in the
 record — a landed fix that silently made an open row unimplementable,
 and a conclusion of mine that outran its measurement.
@@ -12,7 +12,7 @@ and a conclusion of mine that outran its measurement.
 | row | what it does |
 |---|---|
 | `UX-744` | the round register, derived by construction; `{round, date}`, no ids |
-| `UX-764` | the two Register caps that were honour-system, guarded |
+| `UX-764` | **not closed** — its track landed two commits and half its Required Fix (the code-comment cap, `rules.md`'s honesty) is a sibling row's; the file and the index both correctly still read 🔴, and this document said otherwise until review 20 caught it |
 | `UX-759` | **declined** — `UX-744` left it no column to guard |
 | `UX-760` | twelve `bst`-gated files read a per-test quota, not the host's 5% |
 

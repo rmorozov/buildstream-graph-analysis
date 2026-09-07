@@ -49,6 +49,18 @@ HEADER = (
 )
 
 
+#: `UX-776`: a shallow clone's `git log` stops early, so this
+#: derivation is a property of the checkout. 610 commits derived 32
+#: rounds here; CI's 1,538 derived 71.
+SHALLOW = ("{repo} is a shallow clone - `git log` cannot see the whole "
+           "history this derives from, so neither --check nor --write "
+           "means anything here. `git fetch --unshallow` first (UX-776)")
+
+
+def is_shallow(repo=None):
+    return (pathlib.Path(repo or REPO) / ".git" / "shallow").exists()
+
+
 def _commits(repo=REPO):
     """`(date, body)` per real commit, oldest git provides - the
     production source; a fixture hands `commit_signal` its own list."""
@@ -143,6 +155,8 @@ def render(reg):
 def check():
     """`[]` when the file on disk matches `written_rounds()`, else the
     one-line reason it does not."""
+    if is_shallow():
+        return [SHALLOW.format(repo=REPO)]
     want = render(written_rounds())
     if not REGISTER.exists():
         return [f"{REGISTER} does not exist - run --write"]
@@ -157,6 +171,9 @@ def main():
     parser.add_argument("--check", action="store_true")
     parser.add_argument("--write", action="store_true")
     args = parser.parse_args()
+    if is_shallow():
+        print(SHALLOW.format(repo=REPO), file=sys.stderr)
+        return 1
     if args.write:
         REGISTER.write_text(render(written_rounds()), encoding="utf-8")
         print(f"wrote {REGISTER}")

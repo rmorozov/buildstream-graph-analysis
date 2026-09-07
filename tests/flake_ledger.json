@@ -1,5 +1,24 @@
 {
   "note": "UX-691: every unconfirmed excursion and every confirmed drift the tier-drift gate reported, one row each - appended by `tools/dev_tier_drift.py --adopt-flake` on push to the default branch, from the candidate its `--flake-ledger` flag writes on the CI gate that ran `--against`. `declared` names a file whose excursions are a known, accepted cost rather than a filed robustness task. Read by `tools/dev_flake_census.py`.",
-  "entries": [],
+  "entries": [
+    {
+      "file": "tests/unit/test_the_query_asks_about_this_run.py",
+      "run_id": "34133997279",
+      "shift": 2.115,
+      "confirmed": false
+    },
+    {
+      "file": "tests/unit/test_a_report_you_can_navigate.py",
+      "run_id": "34133997279",
+      "shift": 1.598,
+      "confirmed": false
+    },
+    {
+      "file": "tests/unit/test_the_mapping_is_law.py",
+      "run_id": "34133997279",
+      "shift": 2.549,
+      "confirmed": false
+    }
+  ],
   "declared": {}
 }

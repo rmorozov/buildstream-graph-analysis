@@ -125,6 +125,13 @@ the whole of what that family had to give.
 **The census after batch 1** — `dev_baseline.py --check`: `clean: 300
 finding(s)`. 195 are structural and `UX-695`'s (`C901` 84, `PLR0912`
 47, `PLR0913` 34, `PLR0915` 30); 105 are this row's. **Next batch is
-`SIM115`** (11 findings, 4 files, all under `tools/`): `open` without a
-context manager, mechanical, and no rule trades against it.
+`SIM115`** (11 findings, 4 files, all under `tools/`). Read before
+briefing it: **8 are mechanical** — a `.read()` or a comprehension over
+a fresh handle, which takes a `with` (`bga_view.py` 928/946/1321/1323,
+`bst_native_build_tracer.py` ×3, `dev_trace_coverage.py`). **3 are the
+rule's false positives** and stay baselined: `bga_view.py:1604` opens
+outside the `with` only so the `except OSError` two lines up can answer
+404, and `trackevent.py:265` is a handle whose lifetime is the writer's,
+closed at `:295`. So the batch is 8, not 11, and the row's own "removes
+exactly that batch's findings" is what says so.
 

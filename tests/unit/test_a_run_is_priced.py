@@ -211,9 +211,13 @@ class TestTheRoundRegisterIsDerived:
     task commits."""
 
     def test_the_written_table_matches_the_derivation(self):
-        assert dev_round_register.check() == [], (
-            "docs/audits/round-register.md disagrees with "
-            "dev_round_register.written_rounds() - run --write")
+        # The tool already says which of its two failures fired - a
+        # missing file or a disagreeing one. Restating it in prose threw
+        # that away and cost a CI round.
+        reasons = dev_round_register.check()
+        assert reasons == [], (
+            f"{reasons} - and the derivation reads "
+            f"{sorted(dev_round_register.written_rounds(), key=int)}")
 
     def test_the_register_names_99_through_103(self):
         registered = set(dev_round_register.rounds())

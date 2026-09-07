@@ -1,6 +1,6 @@
 # UX-744: no register says which rounds exist, and four records disagree
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-666 (the runs ledger, and the guard that stops at the documents which exist) | **Serves:** the session opening a round, which cannot number it from any record | **Topic:** docs | **Area:** unassigned | **Shape:** judgement
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-666 (the runs ledger, and the guard that stops at the documents which exist) | **Serves:** the session opening a round, which cannot number it from any record | **Topic:** docs | **Area:** unassigned | **Shape:** judgement
 
 ## Motivation
 

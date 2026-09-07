@@ -1,6 +1,6 @@
 # UX-750: the map's one count is the one noun the guard does not list
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-274 (the guard), UX-491/UX-476 (the sentences) | **Serves:** the reader who trusts a guarded sentence because it is guarded | **Topic:** guards | **Area:** unassigned | **Shape:** judgement
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-274 (the guard), UX-491/UX-476 (the sentences) | **Serves:** the reader who trusts a guarded sentence because it is guarded | **Topic:** guards | **Area:** unassigned | **Shape:** judgement
 
 ## Motivation
 

@@ -1,6 +1,6 @@
 # UX-751: the landed clause reads endpoints where the open clause reads the range
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-748 (the open clause), UX-231 (the directions guard) | **Serves:** the reader trusting a Direction's status line | **Topic:** guards | **Area:** unassigned | **Shape:** judgement
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-748 (the open clause), UX-231 (the directions guard) | **Serves:** the reader trusting a Direction's status line | **Topic:** guards | **Area:** unassigned | **Shape:** judgement
 
 ## Motivation
 

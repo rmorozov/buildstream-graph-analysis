@@ -1,6 +1,6 @@
 # UX-753: the flow axis is drawn by one row and read by none
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-674 (which added it), UX-361 (the shapes) | **Serves:** the reader of an exhibit axis, and the round that changes one | **Topic:** viewer | **Area:** unassigned | **Shape:** judgement
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-674 (which added it), UX-361 (the shapes) | **Serves:** the reader of an exhibit axis, and the round that changes one | **Topic:** viewer | **Area:** unassigned | **Shape:** judgement
 
 ## Motivation
 

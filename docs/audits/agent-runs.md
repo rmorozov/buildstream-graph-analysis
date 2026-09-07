@@ -100,6 +100,7 @@ pairing for every merged row from round 103 on.
 | 108 | implementer | sonnet | UX-772, the dateline | 340k | 201 | 51.4 m | merged; its own verifier caught the population filter reproducing the defect one layer down | a first pass filtered on document_date() is not None, which is the same silent skip moved |
 | 108 | implementer | sonnet | UX-773, the leaked browser | 261k | 195 | 45.9 m | merged; flagged the UNRESOLVABLE bump rather than improvising it | the guard has to SIGKILL a real worker, so the fixture is a subprocess and not a mock |
 | 108 | verifier | sonnet | verify UX-772 | 50k | 58 | 8.6 m | HOLD; the population was filtered on document_date() is not None, which reproduces the row's own defect one layer down. Accepted and fixed before merge | the finding is a population question, so it needed the four rounds the filter silently skipped to be named one by one |
+| 108 | verifier | sonnet | verify UX-773 | 118k | 83 | 21.4 m | HOLD; three findings - the guard passed only in the order it was run, the sweep signalled without waiting, and the round's own closing commit had just broken a second tier guard. All fixed as UX-783 | the stated repro is green in isolation, so reproducing it meant realising the failure is a property of process-shared state and composing this file with a sibling geometry guard |
 
 Round 101's four tracks are **not** here: this session could not
 identify their transcripts with certainty after a context rebuild, and
@@ -112,7 +113,7 @@ committed cleanly once told to run in the foreground. Three of the five
 left a derived figure or a §6 context-map row behind - the same class
 the round itself was about, arriving in the tracks' own work.
 
-What the eighty-three rows already say: a researcher that reads a document
+What the eighty-four rows already say: a researcher that reads a document
 whole costs 100-180k; a walker that drives every control costs 336k;
 the two cuts cost a re-run each. The `walk` and `design-review`
 skills fix the report shape so the next rows are smaller, and the

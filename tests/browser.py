@@ -87,22 +87,40 @@ def _owner_gone(path):
     return False
 
 
-def _kill_orphan(profile):
-    """SIGKILL every process (as its own process group, see `_launch`'s
-    `start_new_session`) whose command line names `profile` as its
-    `--user-data-dir` - the Chrome a killed owner left running,
-    reparented to pid 1 rather than reaped."""
+#: How long `_kill_orphan` waits for the pids it signalled to leave
+#: `/proc`. `UX-783`: SIGKILL returns before the process is gone, and
+#: the profile is `rmtree`d on the next line - a Chrome still writing
+#: into a removed directory is the mess this sweep exists to stop.
+#: Measured on this container: the pids clear in under 40ms; 2s is the
+#: refusal-to-hang bound, not an expected wait.
+REAP_TIMEOUT_S = 2.0
+
+
+def _pids_under(profile):
+    """Every pid whose command line names `profile` as `--user-data-dir`."""
     needle = profile.encode()
+    found = []
     for entry in glob.glob("/proc/[0-9]*"):
         try:
             cmdline = pathlib.Path(entry, "cmdline").read_bytes()
         except OSError:
             continue
-        if needle not in cmdline:
-            continue
-        pid = int(os.path.basename(entry))
+        if needle in cmdline:
+            found.append(int(os.path.basename(entry)))
+    return found
+
+
+def _kill_orphan(profile):
+    """SIGKILL every process (as its own process group, see `_launch`'s
+    `start_new_session`) whose command line names `profile` as its
+    `--user-data-dir` - the Chrome a killed owner left running,
+    reparented to pid 1 rather than reaped - and wait for them to go."""
+    for pid in _pids_under(profile):
         with contextlib.suppress(ProcessLookupError, PermissionError):
             os.killpg(os.getpgid(pid), signal.SIGKILL)
+    deadline = time.time() + REAP_TIMEOUT_S
+    while _pids_under(profile) and time.time() < deadline:
+        time.sleep(0.01)
 
 
 def _sweep_stale():
@@ -156,6 +174,9 @@ class Browser:
         #: `UX-523`: true once this instance is the worker's shared
         #: browser, which is what stops `__exit__` closing it.
         self._shared = False
+        #: True once `__enter__` returned a shared browser instead of
+        #: launching one - so this instance owns no profile root.
+        self._reused = False
         #: Held apart from `self.process` so it survives `_stop` and can
         #: be drained after the writer is gone (see `_why_it_failed`).
         self._stderr = None
@@ -228,6 +249,9 @@ class Browser:
                 and shared.process.poll() is None):
             self.port = shared.port
             self._shared = True
+            #: `UX-783`: this entry made no root of its own. A guard
+            #: counting roots cannot tell the two paths apart without it.
+            self._reused = True
             return self
         self.profile = _new_profile()
         last = None

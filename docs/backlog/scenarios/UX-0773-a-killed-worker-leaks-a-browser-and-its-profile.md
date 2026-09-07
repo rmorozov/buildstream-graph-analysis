@@ -77,13 +77,26 @@ Count before and after against a `tempfile.tempdir` the guard owns —
 ## Acceptance Test
 
 ```console
-$ ls -d $TMPDIR/bga-geometry-* | wc -l     # after a SIGKILLed launch
-0
+$ PYTEST_XDIST= python3 -m pytest tests/unit/test_a_killed_browser_does_not_outlive_the_worker.py -q
+2 passed
+```
+
+Both parameters, because a `Browser` entry either launches or reuses
+`UX-523`'s shared browser and the sweep must happen either way.
+
+`UX-783`: the first version of this section read
+
+```console
 $ pgrep -f bga-geometry | wc -l
 0
 ```
 
-plus a mutation: remove the sweep and the guard reds.
+which is machine-wide and cannot separate this launch's leak from any
+other geometry guard's Chrome - it reads 82 on a loaded container and
+never 0. The guard itself was already right (`_pids_using(profile)`
+matches the exact `--user-data-dir` in `/proc/*/cmdline`); the
+Acceptance Test as written was the proxy, and a later round would have
+run it and believed it.
 
 ## Outcome (round 108, 2026-09-07) — 🟢 Done
 

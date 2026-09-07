@@ -37,6 +37,26 @@ from tests import tiers
 from tools import dev_tier_drift as drift
 
 
+#: `UX-783`: the same construction rule `test_the_tiers_are_a_partition.py`
+#: applies, read here so the two guards cannot disagree about one file.
+def _boots_a_browser(name):
+    from tests.unit import test_the_tiers_are_a_partition as partition
+    path = pathlib.Path(__file__).resolve().parents[2] / name
+    return bool(partition.BOOTS_A_BROWSER.search(partition._code(path)))
+
+
+def _excused_in_medium(name, seconds):
+    """Whether `MEDIUM` may hold `name` at `seconds` despite the floor.
+
+    A named function rather than an inline clause because the bound is
+    the whole point and a clause that restates it is a guard reading
+    itself - which is how the first version of this passed a mutation
+    that dropped the bound.
+    """
+    return _boots_a_browser(name) and seconds < tiers.LARGE_FLOOR_S
+
+
+
 def _pin_the_diff(monkeypatch, files):
     """Pin the branch diff `explained_by` reads, instead of the tree's.
 
@@ -151,14 +171,41 @@ class TestTheReferenceIsReadableAndComplete:
         """The lists and their own numbers, checked against each other -
         which nothing did before. A `LARGE` entry recorded at 3s is
         either a stale number or a wrong list, and both want looking at.
+
+        `UX-783`: one exception, downward only. A file matching
+        `BOOTS_A_BROWSER` is placed by *construction* -
+        `test_the_tiers_are_a_partition.py` refuses it in the small tier
+        whatever it measures - so a browser guard under the medium floor
+        is the two rules agreeing, not drifting. Round 108 read that as
+        a wrong list and moved a 0.6s browser guard out of `MEDIUM`,
+        which reddened the other guard. Above `LARGE_FLOOR_S` still
+        reds: construction says "not small", never "any tier will do".
         """
         reference = tiers.recorded()
         wrong = {name: reference[name] for name in tiers.LARGE
                  if drift.tier_for(reference[name]) != "large"}
         wrong.update({name: reference[name] for name in tiers.MEDIUM
-                      if drift.tier_for(reference[name]) != "medium"})
+                      if drift.tier_for(reference[name]) != "medium"
+                      and not _excused_in_medium(name, reference[name])})
         assert wrong == {}, (
             f"listed in one tier and recorded in another: {wrong}")
+
+    def test_the_browser_exception_does_not_reach_above_the_large_floor(self):
+        """The exception's own bound, asked of the function the guard
+        above actually calls. A browser guard is excused below
+        `LARGE_FLOOR_S` and never at or past it - construction says
+        "not small", never "any tier will do"."""
+        browser_files = [name for name in tiers.MEDIUM
+                         if _boots_a_browser(name)]
+        assert browser_files, (
+            "no browser guard sits in MEDIUM - this checks nothing")
+        name = browser_files[0]
+        assert _excused_in_medium(name, tiers.LARGE_FLOOR_S - 0.001), (
+            f"{name} under the large floor is the case UX-783 excuses")
+        assert not _excused_in_medium(name, tiers.LARGE_FLOOR_S), (
+            f"{name} at LARGE_FLOOR_S is a wrong list, not an excuse")
+        assert not _excused_in_medium(name, tiers.LARGE_FLOOR_S + 10), (
+            f"{name} ten seconds past the large floor is still excused")
 
 
 class TestItFailsNamingTheFile:

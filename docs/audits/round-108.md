@@ -2,8 +2,9 @@
 
 Run on 2026-09-07.
 
-Four rows closed, two filed. Three were the round's planned tracks;
-the fourth is what the round found while trying to make CI green.
+Five rows closed, three filed. Three were the round's planned tracks;
+the other two are what the round found while trying to make CI green,
+and what a verifier found in the round's own closing work.
 
 ## The tracks
 
@@ -76,25 +77,52 @@ cost about the same, so the label is not buying what it claims — still
 holds, but the sign flipped, and a reader who remembers the old figure
 should know it was four runs of drift and not a correction.
 
-`tests/tiers.py` lost `UX-773`'s new file from `MEDIUM`. The track
-placed it there on a class argument (it boots a real Chrome), and the
-tier guard reads measured duration, which is 0.7s — under the 1.0s
-floor. The rule in this repository is the duration, so the duration
-decides; if CI records it slower the drift machinery moves it back,
-which is what that machinery is for.
+## The fifth row, and a mistake of my own
+
+`UX-783`, and it exists because `UX-773` merged without a verifier.
+Dispatching one late found three things.
+
+I moved `UX-773`'s new file out of `MEDIUM` because
+`test_the_record_agrees_with_the_tier_it_is_in` reds on a 0.6s entry
+under the 1.0s floor. That was wrong. `test_the_tiers_are_a_partition.py`
+places a browser file by **construction** and says so in its own
+docstring — duration does not enter — so moving it reddened that guard
+instead. Two rules genuinely contradict each other for one file, and
+picking the side that was shouting at me is the "runs a tier and
+commits" mistake `CLAUDE.md` already names. The two now meet in one
+function, `_excused_in_medium()`, bounded so a browser guard past the
+large floor is still a wrong list.
+
+The other two are `UX-773`'s. Its guard asserted `after == before + 1`
+after a second `Browser` entry — true only when this worker holds no
+shared browser, which is true only when the file runs alone. Under
+`-n auto` a worker runs many files and 38 of them share that helper.
+And `_kill_orphan` signalled without waiting: `rmtree` ran on the next
+line while the processes were still alive. The launch path hid it,
+because booting Chrome takes ~0.3s and the pids clear in under 40ms;
+the reuse path returns immediately and does not.
+
+Both fixes are guarded by the reuse parameter, and both mutations
+redden **only** that parameter — which is the measurement that the
+case was invisible before.
+
+One more thing the verifier caught: `UX-773`'s Acceptance Test said
+`pgrep -f bga-geometry | wc -l` → `0`. That is machine-wide, reads 82
+on this container, and could never have been run as written. The guard
+itself was right all along; the acceptance clause was the proxy.
 
 ## Agents
 
-Five runs — three `implementer`, two `verifier`, all on `sonnet`.
+Six runs — three `implementer`, three `verifier`, all on `sonnet`.
 `UX-781` is the session's own, not a track: it is the judgement about
 what CI's own step list meant.
 
 | | |
 |---|---|
 | implementer | 3 tracks; `UX-771` amended before merging, `UX-772` and `UX-773` merged as they landed |
-| verifier | 2 runs; one MERGE-with-a-named-fix (`UX-771`), one HOLD (`UX-772`) |
+| verifier | 3 runs; one MERGE-with-a-named-fix (`UX-771`), two HOLD (`UX-772`, `UX-773`) |
 
-Both verifier findings changed what shipped. `UX-771`'s: a section id
+All three verifier findings changed what shipped. `UX-771`'s: a section id
 matched inside a longer one, fixed with a lookbehind and a fourth
 mutation. `UX-772`'s is the more expensive one — the track's first
 pass filtered its population on `document_date() is not None`, which
@@ -102,6 +130,8 @@ skips exactly the documents the row was filed about. Four rounds were
 passing silently. The population reds on an unwaived `None` now.
 
 `UX-773` merged without a verifier and its own guard then reddened in
-this round's gate. That is the cost of the missing run, and it is
-recorded here rather than in the row: the standing rule is a verifier
-per merged track, and this round ran two for three.
+the round's gate. The run happened late instead, returned HOLD, and
+found three defects — one of them mine, made while closing the round.
+The standing rule is a verifier per merged track; skipping one did not
+save the work, it moved it after the merge and added a regression on
+top.

@@ -1,7 +1,7 @@
 {
   "ruff_version": "0.15.8",
   "families": ["C901", "PLR0912", "PLR0913", "PLR0915", "S", "SIM115"],
-  "forced_by": "UX-705",
+  "forced_by": "UX-742",
   "findings": [
     {"file": ".claude/hooks/selector_before_commit.py", "line": "done = subprocess.run(", "nth": 1, "rule": "S603", "tool": "ruff"},
     {"file": ".claude/hooks/selector_before_commit.py", "line": "done = subprocess.run([\"git\", \"rev-parse\", \"--show-toplevel\"],", "nth": 1, "rule": "S607", "tool": "ruff"},
@@ -240,6 +240,8 @@
     {"file": "tools/dev_js_deps.py", "line": "def main(argv=None):", "nth": 1, "rule": "C901", "tool": "ruff"},
     {"file": "tools/dev_js_deps.py", "line": "def strip_comments(source: str) -> str:", "nth": 1, "rule": "C901", "tool": "ruff"},
     {"file": "tools/dev_js_deps.py", "line": "def main(argv=None):", "nth": 1, "rule": "PLR0912", "tool": "ruff"},
+    {"file": "tools/dev_js_deps.py", "line": "def main(argv=None):", "nth": 1, "rule": "PLR0915", "tool": "ruff"},
+    {"file": "tools/dev_js_deps.py", "line": "tracked = subprocess.run([\"git\", \"ls-files\"], cwd=str(root),", "nth": 1, "rule": "S607", "tool": "ruff"},
     {"file": "tools/dev_junit_tail.py", "line": "root = ET.parse(path).getroot()", "nth": 1, "rule": "S314", "tool": "ruff"},
     {"file": "tools/dev_junit_tail.py", "line": "root = ET.parse(path).getroot()", "nth": 2, "rule": "S314", "tool": "ruff"},
     {"file": "tools/dev_mutation.py", "line": "return subprocess.run(argv, cwd=REPO, text=True, capture_output=True, **kw)", "nth": 1, "rule": "S603", "tool": "ruff"},

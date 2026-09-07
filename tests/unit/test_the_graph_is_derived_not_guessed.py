@@ -219,3 +219,66 @@ class TestTheToolRefusesRatherThanGuesses:
         assert "not a scope analysis" in source, (
             "the parameter subtraction is not scope analysis, and a reader "
             "who assumes it is will trust an answer it cannot give")
+
+
+class TestTheDeadExportDetector:
+    """UX-742: `eslint-plugin-import`'s `no-unused-modules` cannot run in
+    this tree without a forbidden `package.json`, and cannot discriminate
+    even with one — `tests/viewer.mjs`'s `export * from` barrel marks
+    every export of every module it re-exports "used", so it never
+    reddens, or (barrel excluded) names 121 things it cannot tell apart
+    from a real reader it cannot see (a test's dynamic `await import`).
+    `dev_js_deps.dead_exports` answers from the graph instead, and
+    confirms each candidate against the whole tracked tree the way
+    `UX-699` once confirmed its five by hand."""
+
+    @staticmethod
+    def _repo(tmp_path, viewer_files, other_files=()):
+        viewer = tmp_path / "viewer"
+        viewer.mkdir()
+        for name, text in viewer_files.items():
+            (viewer / name).write_text(text, encoding="utf-8")
+        for name, text in other_files:
+            (tmp_path / name).write_text(text, encoding="utf-8")
+        subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
+        subprocess.run(["git", "add", "-A"], cwd=tmp_path, check=True)
+        return viewer
+
+    def test_an_export_nothing_imports_is_named(self, tmp_path):
+        from tools.dev_js_deps import dead_exports
+
+        viewer = self._repo(tmp_path, {
+            "a.js": "export function used() {\n  return 1;\n}\n",
+            "b.js": ('import { used } from "./a.js";\n\n'
+                     "export function unread() {\n  return used();\n}\n"),
+        })
+        assert dead_exports(viewer, root=tmp_path) == {"b.js": ["unread"]}
+
+    def test_a_real_viewer_import_quiets_it(self, tmp_path):
+        from tools.dev_js_deps import dead_exports
+
+        viewer = self._repo(tmp_path, {
+            "a.js": "export function used() {\n  return 1;\n}\n",
+            "b.js": ('import { used } from "./a.js";\n\n'
+                     "export function notDead() {\n  return used();\n}\n"),
+            "c.js": ('import { notDead } from "./b.js";\n\n'
+                     "notDead();\n"),
+        })
+        assert dead_exports(viewer, root=tmp_path) == {}
+
+    def test_a_reader_outside_the_directory_is_not_a_false_positive(
+            self, tmp_path):
+        """The whole-tree confirmation, not the module graph alone: a
+        name no *viewer* module imports but something elsewhere in the
+        tree names is not reported dead. Skipping this step is exactly
+        how excluding the barrel from `eslint`'s scope named 121 things
+        that tests read only dynamically (`UX-742`'s measurement)."""
+        from tools.dev_js_deps import dead_exports
+
+        viewer = self._repo(
+            tmp_path,
+            {"a.js": "export function readElsewhere() {\n  return 1;\n}\n"},
+            other_files=[("consumer.mjs",
+                          'const mod = await import("./viewer/a.js");\n'
+                          "mod.readElsewhere();\n")])
+        assert dead_exports(viewer, root=tmp_path) == {}

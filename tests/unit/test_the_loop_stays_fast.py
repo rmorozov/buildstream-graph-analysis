@@ -107,7 +107,13 @@ class TestTheSelectorStillSelects:
     # 19 -> 31, median 25 -> 37, p90 47 -> 58, max 131 -> 143. Same
     # convention: median at the measurement, +2 headroom kept on p90
     # and max.
-    CEILING = {"median": 37, "p90": 60, "max": 145}
+    #
+    # `UX-752` derived two guards' spelling tables from
+    # `dev_track_cost.count_word`, so two more test files name that
+    # module and its selection grew by two. Measured either side:
+    # median 37 at `0c334ed`, 38 with the imports, p90 and max
+    # unmoved. Median at the measurement, as above.
+    CEILING = {"median": 38, "p90": 60, "max": 145}
     POPULATION_FLOOR = 60
     #: `UX-645`: **13 census + 14 of your own**. The census floor is
     #: inside this bound because those files run - the figure is what

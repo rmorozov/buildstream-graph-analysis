@@ -169,3 +169,17 @@ No new guard was written this batch — the suppression census
 above; the mutation confirms it still discriminates against this
 batch's sites, not that it is new.
 
+**Deviation: none.** 8 of 8 closed, no rule traded, no suppression;
+the three false positives are still baselined. Verified independently
+before merging: the diff removes exactly 8 `SIM115` entries and adds
+none of any rule, and `bga_view.py:1604` and `trackevent.py:265` (×2)
+are still in the list at 292.
+
+**The census after batch 2** — `dev_baseline.py --check`: `clean: 292
+finding(s)`. 195 structural (`UX-695`'s), **97 this row's**, of which
+63 are the argv family that cannot reduce (`S603` 46, `S607` 17, per
+batch 1). So **34 remain that a batch can actually close**, the
+largest being `S108` (7, a hardcoded `/tmp` in `bst_baseline_set.py`
+and `bst_native_build_tracer.py`) — the next batch, and unlike
+`SIM115` it needs a fixture read before it is called mechanical.
+

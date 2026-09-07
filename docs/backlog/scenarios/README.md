@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-771 scenarios: **23 open**, 748 closed.
+772 scenarios: **23 open**, 749 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -27,7 +27,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | cli | 0 | 22 |
 | store | 0 | 16 |
 | docs | 4 | 127 |
-| guards | 9 | 192 |
+| guards | 9 | 193 |
 
 ## Open scenarios
 
@@ -53,12 +53,12 @@ task file, which is the only place it ever lived twice.
 | UX-741 | [the spine's ground truth reads wall clock, and a loaded host reds it](UX-0741-the-spine-s-ground-truth-reads-wall-clock-and-a-loaded-host-reds-it.md) | guards | Medium | R8 reading a red gate on a file nobody touched | 🔴 |
 | UX-744 | [no register says which rounds exist, and four records disagree](UX-0744-no-register-says-which-rounds-exist-and-four-records-disagree.md) | docs | Medium | the session opening a round, which cannot number it from any record | 🔴 |
 | UX-758 | [the edge-mark test reads a merged name and never matches](UX-0758-the-edge-mark-test-reads-a-merged-name-and-never-matches.md) | viewer | Medium | the reader of an exhibit axis whose labels silently stop being protected | 🔴 |
-| UX-760 | [six more files build against the broken reserve](UX-0760-six-more-files-build-against-the-broken-reserve.md) | guards | Medium | the session that runs `make test` on a container with a large disk and little free space | 🔴 |
 | UX-764 | [two Register caps are guarded and two are honour-system](UX-0764-two-register-caps-are-guarded-and-two-are-honour-system.md) | guards | Medium | the reader who trusts a cap because the guard reported green | 🔴 |
 | UX-771 | [two more documents number sections, and no guard reads them](UX-0771-two-more-documents-number-sections-and-no-guard-reads-them.md) | guards | Medium | the round that renames a section and learns which id was taken from CI | 🔴 |
 | UX-772 | [the first date in a document is not its dateline](UX-0772-the-first-date-in-a-document-is-not-its-dateline.md) | guards | Medium | the round whose register row disagrees with its own document | 🔴 |
 | UX-773 | [a killed worker leaks a browser and its profile](UX-0773-a-killed-worker-leaks-a-browser-and-its-profile.md) | guards | Medium | the session whose next `make test` reds on disk, on a tree nobody touched | 🔴 |
 | UX-774 | [the guide is at its band ceiling, and every round pays a trim](UX-0774-the-guide-is-at-its-band-ceiling-and-every-round-pays-a-trim.md) | docs | Medium | the round that adds a tool and finds an unrelated paragraph is what it has to delete | 🔴 |
+| UX-775 | [two files still build against the ambient HOME](UX-0775-two-files-still-build-against-the-ambient-home.md) | guards | Medium | the session whose `make test` reds on two files nobody touched, at a margin the other twelve survive | 🔴 |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

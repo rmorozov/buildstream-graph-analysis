@@ -1,6 +1,6 @@
 # UX-760: six more files build against the broken reserve
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-755 (the mechanism and the fix's shape) | **Serves:** the session that runs `make test` on a container with a large disk and little free space | **Topic:** guards | **Area:** unassigned | **Shape:** judgement
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-755 (the mechanism and the fix's shape) | **Serves:** the session that runs `make test` on a container with a large disk and little free space | **Topic:** guards | **Area:** unassigned | **Shape:** judgement
 
 ## Motivation
 
@@ -68,20 +68,36 @@ control `UX-755`'s verifier ran, applied to the six.
 `3 failed, 7983 passed, 83 skipped in 346.88s`:
 `test_stream_merge.py::test_a_static_build_reports_itself_unmeasurable_
 rather_than_clean` and `test_spine_ground_truth.py`'s two `UX-741`
-clauses - none of the row's seven. Derivation: every file gating on
-`shutil.which("bst")` (15), minus ones invoking only `bst show`/
-`artifact delete` (no CAS write, so never `Cache too full` -
-`test_bst_show_to_graph.py`, `test_element_kind_heuristics.py`) and
-ones mocking `subprocess.Popen`/`.run` entirely (`test_interrupted_
-capture.py`, `test_stale_casd.py`). Left: the row's 7 plus
-`test_cache_logs.py`, `test_process_spine.py`, `test_snapshot.py`,
-`test_spine_ground_truth.py`, `test_stream_merge.py` - all reaching
-`tests/unit/_bst_env.py`'s `isolated_bst_env`, and 2 more that do not
-(`test_native_build_tracer.py`, `test_dual_plane_capture.py` - real
-`bst build` against the ambient, un-isolated `$HOME`, not a per-test
-`tmp_path`; the shared fixture's `quota: 3G` there would shrink a
-persistent cache other runs reuse, a different and larger change - not
-fixed here, flagged for filing separately).
+clauses - none of the row's seven.
+
+Derivation, **corrected after verification** - the first version named
+`test_interrupted_capture.py` and `test_stale_casd.py` as excluded from
+a 15-file sweep, and neither file is in the sweep:
+
+```console
+$ grep -rln 'shutil.which("bst")' tests/ | wc -l
+18
+$ grep -rln 'isolated_bst_env\|bst_env' tests/unit/*.py | wc -l
+13          # 12 tests + _bst_env.py itself
+$ grep -rln 'shutil.which("bst")' tests/ \
+    | grep -c 'test_interrupted_capture\|test_stale_casd'
+0
+```
+
+18 gate on `bst`; 11 of those write to CAS and now reach
+`tests/unit/_bst_env.py`, joined by `test_snapshot.py`, which gates
+another way - 12. The seven excluded from the 18: four never write to
+CAS so can never see `Cache too full` (`test_bst_show_to_graph.py`,
+`test_doctor.py`, `test_element_kind_heuristics.py`,
+`test_the_printed_sentences_are_contracts.py`),
+`test_the_journey_has_an_answer_key.py` was already fixed by `UX-755`,
+and two are deferred (`test_native_build_tracer.py`,
+`test_dual_plane_capture.py` - real `bst build` against the ambient,
+un-isolated `$HOME`, not a per-test `tmp_path`; the shared fixture's
+`quota: 3G` there would shrink a persistent cache other runs reuse, a
+different and larger change). **The two deferred still redden at a
+genuinely negative margin** - the boundary is defensible, the defect is
+not fully closed, and `UX-775` carries the remainder.
 
 A second gap, found only by driving the margin negative and rerunning
 the row's own six: `isolated_bst_env` alone was not enough.

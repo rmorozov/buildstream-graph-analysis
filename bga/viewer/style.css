@@ -94,7 +94,20 @@
   --draw-exhibit-h: 9rem;
   --draw-exhibit-strip-h: 3.5rem;
   --draw-exhibit-figure-h: 11rem;
-  --draw-tick: .72rem;
+  --draw-tick: var(--font-small);
+
+  /* UX-674 (styleguide §4f): **the type scale, four steps and no
+     fifth.** Every `font-size` in this file resolves to one of these
+     - never a bare rem/em/px - so nesting cannot compound a fifth
+     value into existence the way `.decision .diagnosis`'s `1.02rem`
+     and the unstyled `h3`'s UA default (`1.17em` of a 15px body,
+     17.55px) did. `h3` takes `--font-body` at weight 600 rather than
+     its own step, so it is never the size class a reader has to
+     learn a fifth time. */
+  --font-h1: 21px;
+  --font-h2: 17px;
+  --font-body: 15px;
+  --font-small: 13px;
 }
 
 /* The override. `prefers-color-scheme: light` also matches a reader
@@ -134,9 +147,15 @@
 * { box-sizing: border-box; }
 body {
   margin: 0 auto; padding: 1.5rem; max-width: 62rem;
-  font: 15px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: var(--font-body); line-height: 1.55;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
   color: var(--fg); background: var(--bg);
 }
+
+/* UX-674 (styleguide §4f): a line a reader can track without losing
+   the left margin. `p, li > p, dd` rather than `main` or `body`: a
+   table cell or a runbook command is not prose and is not narrowed. */
+p, li > p, dd { max-width: 72ch; }
 
 /* `UX-436` (styleguide §6d): **every control has a resting
    appearance, and this file states it.**
@@ -161,7 +180,7 @@ body {
    export constraint, and this item leaves that refusal standing. A
    control that looks like the page it is in needs neither. */
 button {
-  font: inherit; font-size: .82rem; line-height: 1.35; cursor: pointer;
+  font: inherit; font-size: var(--font-small); line-height: 1.35; cursor: pointer;
   color: var(--fg); background: var(--muted-bg);
   border: 1px solid var(--line); border-radius: 3px;
   padding: .1rem .45rem;
@@ -221,7 +240,7 @@ body[data-has-toc] > .handoff-refusal { grid-area: warn; }
 body[data-has-toc] > nav.toc { grid-area: rail; }
 body[data-has-toc] > main    { grid-area: main; min-width: 0; }
 body[data-has-toc] > footer  { grid-area: foot; }
-h1 { font-size: 1.4rem; margin: 0; }
+h1 { font-size: var(--font-h1); margin: 0; }
 /* UX-255: the heading is a band, not a column - it spans both panes
    and stays compact enough to afford staying put. */
 body[data-has-toc] > header {
@@ -229,7 +248,7 @@ body[data-has-toc] > header {
   border-bottom: 1px solid var(--line);
   padding: .2rem 0 .5rem; margin: 0 0 1rem;
 }
-#run-path, #run-producer { margin: .1rem 0 0; font-size: .85rem; }
+#run-path, #run-producer { margin: .1rem 0 0; font-size: var(--font-small); }
 /* The height the sticky heading occupies, named once so the rail's
    offset and every anchor's landing clear it by the same amount. A
    jump that lands under the header is the "information overlaps"
@@ -243,7 +262,11 @@ body[data-has-toc] > header {
 body[data-has-toc] { --head: 6rem; }
 body[data-has-toc] > nav.toc { top: var(--head); max-height: calc(100vh - var(--head)); }
 body[data-has-toc] main > section, body[data-has-toc] [id] { scroll-margin-top: calc(var(--head) + .5rem); }
-h2 { font-size: 1.05rem; margin: 2rem 0 .5rem; }
+h2 { font-size: var(--font-h2); margin: 2rem 0 .5rem; }
+/* UX-674 (styleguide §4f): `h3` is body weight 600, not its own step -
+   the unstyled UA default (1.17em of the body) computed 17.55px,
+   above every h2 on the page (16.8px) it was supposed to nest under. */
+h3 { font-size: var(--font-body); font-weight: 600; margin: 1rem 0 .3rem; }
 .muted { color: var(--muted); }
 code, .num { font-family: ui-monospace, "SF Mono", Menlo, monospace; }
 a { color: var(--accent); }
@@ -290,7 +313,7 @@ a { color: var(--accent); }
 .finding .title { font-weight: 600; }
 .finding .detail { margin: .2rem 0 0; }
 .badge {
-  font-size: .75rem; text-transform: uppercase; letter-spacing: .04em;
+  font-size: var(--font-small); text-transform: uppercase; letter-spacing: .04em;
   color: var(--muted); margin-right: .5rem;
 }
 
@@ -327,7 +350,7 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 .pairs dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
 details { margin: .3rem 0; }
 summary { cursor: pointer; color: var(--muted); }
-footer { margin-top: 3rem; border-top: 1px solid var(--line); padding-top: .8rem; font-size: .9rem; }
+footer { margin-top: 3rem; border-top: 1px solid var(--line); padding-top: .8rem; font-size: var(--font-small); }
 
 /* UX-196: the band strip and the store trend. Two SVGs, no library. */
 /* UX-316: both are exhibit grade - the section's whole answer - so
@@ -373,7 +396,7 @@ body[data-has-toc] > .toc {
   padding: .2rem 1rem .8rem 0; margin: 0;
   max-height: 100vh; overflow-y: auto; overscroll-behavior: contain;
 }
-.toc-title { margin: 0 0 .3rem; font-weight: 600; font-size: .9rem; }
+.toc-title { margin: 0 0 .3rem; font-weight: 600; font-size: var(--font-small); }
 .toc ul {
   list-style: none; margin: 0; padding: 0;
   display: flex; flex-wrap: wrap; gap: .2rem .9rem;
@@ -392,11 +415,11 @@ body[data-has-toc] > .toc a {
    chapter is what bounds it now: `investigate`'s entries are behind the
    `elements` chapter's fold like every other chapter's, so there is
    nothing left for a second scroll container to do. */
-.toc a { font-size: .88rem; text-decoration: none; }
+.toc a { font-size: var(--font-small); text-decoration: none; }
 .toc a:hover, .toc a:focus { text-decoration: underline; }
 /* UX-391: what the task uid says besides the element name. Muted and
    small - it is a qualifier on a name, not a second name. */
-.task-qualifier { font-size: .85em; font-weight: normal; }
+.task-qualifier { font-size: var(--font-small); font-weight: normal; }
 
 /* UX-388: a population that came back empty. Muted and marked in the
    rail, and one line in the document - the section is present so a
@@ -420,7 +443,7 @@ p.empty-population { margin: .35rem 0 0; color: var(--muted); max-width: 62ch; }
 button.collapse { margin-right: .4rem; }
 button.collapse:hover { color: var(--fg); }
 
-#jump { font: inherit; font-size: .88rem; margin-top: .5rem;
+#jump { font: inherit; font-size: var(--font-small); margin-top: .5rem;
         padding: .25rem .5rem; width: min(22rem, 100%);
         border: 1px solid var(--line); border-radius: 3px;
         background: var(--bg); color: var(--fg); }
@@ -437,7 +460,7 @@ button.collapse:hover { color: var(--fg); }
 section.chapter { margin: 1.35rem 0 0; }
 section.chapter:first-of-type { margin-top: 0; }
 h2.chapter-title {
-  font-size: 1.3rem; margin: 0; padding-top: .5rem;
+  font-size: var(--font-h2); margin: 0; padding-top: .5rem;
   border-top: 2px solid var(--line);
 }
 /* Inside a chapter the sections need less air between them than they
@@ -483,7 +506,7 @@ section.chapter > section[data-section] {
   contain-intrinsic-size: auto 600px;
 }
 p.chapter-answer {
-  margin: .35rem 0 0; color: var(--muted); font-size: .95rem;
+  margin: .35rem 0 0; color: var(--muted); font-size: var(--font-body);
   max-width: 62ch;
 }
 button.chapter-open { margin-left: .6rem; vertical-align: middle; }
@@ -521,12 +544,12 @@ section[data-jumped="true"], [data-jumped="true"] {
    numbers - the printed value beside each is the field itself. */
 .wf-row { display: grid; grid-template-columns: 13rem 1fr 6rem;
           align-items: center; gap: .6rem; margin: .18rem 0; }
-.wf-label { font-size: .88rem; }
+.wf-label { font-size: var(--font-small); }
 .wf-track { background: var(--panel); border: 1px solid var(--line);
             border-radius: 2px; height: .85rem; overflow: hidden; }
 .wf-fill { display: block; height: 100%; background: var(--accent-mark);
            opacity: .55; }
-.wf-value { text-align: right; font-size: .85rem; }
+.wf-value { text-align: right; font-size: var(--font-small); }
 section[data-section="evidence"] .verdict { margin: .4rem 0 .8rem; }
 @media (max-width: 40rem) {
   .wf-row { grid-template-columns: 1fr 4.5rem; }
@@ -583,15 +606,15 @@ input.table-filter { max-width: 100%; }
    base rule written out by hand, at a different size. */
 .investigate button { }
 .investigate button:hover { border-color: var(--accent); }
-.investigate .handoff { margin-left: .6rem; font-size: .82rem; }
-.investigate .query { margin: .4rem 0 0; font-size: .8rem; }
+.investigate .handoff { margin-left: .6rem; font-size: var(--font-small); }
+.investigate .query { margin: .4rem 0 0; font-size: var(--font-small); }
 h3.category { text-transform: capitalize; letter-spacing: .04em;
-              color: var(--muted); font-size: .82rem; margin-top: 1.2rem; }
+              color: var(--muted); font-size: var(--font-small); margin-top: 1.2rem; }
 
 /* UX-205: the tools above each table. */
 .table-tools { display: flex; align-items: center; gap: .6rem;
                margin: .4rem 0 .3rem; flex-wrap: wrap; }
-.table-filter { font: inherit; font-size: .85rem; padding: .15rem .4rem;
+.table-filter { font: inherit; font-size: var(--font-small); padding: .15rem .4rem;
                 background: var(--panel); color: inherit;
                 border: 1px solid var(--line); border-radius: 3px;
                 /* `min-width: 12rem` flat was 192px that would not shrink,
@@ -601,10 +624,10 @@ h3.category { text-transform: capitalize; letter-spacing: .04em;
                    not - the filter is still usable at any width, and the
                    report stops scrolling sideways. */
                 min-width: min(12rem, 100%); max-width: 100%; }
-.table-tools .badge { font-size: .8rem; color: var(--muted); }
+.table-tools .badge { font-size: var(--font-small); color: var(--muted); }
 .copy-rows { }
 th .th-filter { display: block; width: 100%; margin-top: .2rem;
-                font: inherit; font-size: .75rem; font-weight: normal;
+                font: inherit; font-size: var(--font-small); font-weight: normal;
                 padding: .05rem .25rem; background: var(--bg); color: inherit;
                 border: 1px solid var(--line); border-radius: 2px; }
 /* UX-304: the tone is not the signal - `border-style` is the shape
@@ -621,18 +644,18 @@ th .th-filter.unparsed { border-color: var(--bad); border-style: dashed; }
             border-radius: 3px; text-decoration: none; color: inherit;
             display: flex; flex-direction: column; gap: .1rem; }
 .path-box:hover { border-color: var(--accent); }
-.path-name { font-size: .82rem; overflow-wrap: anywhere; }
-.path-time { font-size: .78rem; color: var(--muted); }
+.path-name { font-size: var(--font-small); overflow-wrap: anywhere; }
+.path-time { font-size: var(--font-small); color: var(--muted); }
 .path-more { align-self: center; }
 
 /* And the blast answer as an indented hierarchy - padding is the
    published depth. */
 .blast-tree { margin: .4rem 0; }
 .blast-row { display: flex; align-items: baseline; gap: .5rem;
-             padding-top: .1rem; padding-bottom: .1rem; font-size: .85rem; }
+             padding-top: .1rem; padding-bottom: .1rem; font-size: var(--font-small); }
 .blast-name { overflow-wrap: anywhere; }
-.blast-cost { margin-left: auto; color: var(--muted); font-size: .8rem; }
-.kind { font-size: .72rem; padding: 0 .3rem; border-radius: 2px;
+.blast-cost { margin-left: auto; color: var(--muted); font-size: var(--font-small); }
+.kind { font-size: var(--font-small); padding: 0 .3rem; border-radius: 2px;
         background: var(--panel); border: 1px solid var(--line);
         color: var(--muted); }
 
@@ -641,23 +664,23 @@ th .th-filter.unparsed { border-color: var(--bad); border-style: dashed; }
             padding: .7rem .9rem; margin-bottom: 1rem;
             background: var(--panel); }
 .decision h2 { margin-top: 0; }
-.decision .diagnosis { font-size: 1.02rem; margin: .2rem 0 .6rem; }
+.decision .diagnosis { font-size: var(--font-body); margin: .2rem 0 .6rem; }
 .decision .opportunity { margin: .3rem 0 .6rem; }
 .decision .actions { margin: 0; padding-left: 1.3rem; }
 .decision .action { margin: .2rem 0; display: flex; gap: .6rem;
                     align-items: baseline; flex-wrap: wrap; }
-.decision .action .worth { color: var(--muted); font-size: .85rem; }
-.decision .action .why { font-size: .8rem; }
+.decision .action .worth { color: var(--muted); font-size: var(--font-small); }
+.decision .action .why { font-size: var(--font-small); }
 /* UX-669 (§1e): the runbook. Three blocks a reader reads downward -
    why, the command, where it came from - so the command keeps its own
    line however long it is, and the citation does not trail the Copy
    button. */
 .next-steps { margin: 0; padding-left: 1.3rem; }
 .next-step { margin: .35rem 0; }
-.next-step .why { margin: 0 0 .15rem; font-size: .85rem; }
-.next-step .from { display: block; font-size: .8rem; margin-top: .1rem; }
+.next-step .why { margin: 0 0 .15rem; font-size: var(--font-small); }
+.next-step .from { display: block; font-size: var(--font-small); margin-top: .1rem; }
 /* UX-372: the reader says who they are, and gets their own lever. */
-.reader-picker { font-size: .85rem; margin: .1rem 0 .5rem; }
+.reader-picker { font-size: var(--font-small); margin: .1rem 0 .5rem; }
 .reader-lead { border-left: 2px solid var(--accent); padding-left: .6rem;
                margin: 0 0 .6rem; }
 .reader-lead p { margin: .15rem 0; }
@@ -667,19 +690,19 @@ th .th-filter.unparsed { border-color: var(--bad); border-style: dashed; }
    not a fill: five categories is past what colour carries alone. */
 .reader-tag:empty { display: none; }
 .reader-tag {
-  margin-left: .5rem; font-size: .7rem; font-weight: normal;
+  margin-left: .5rem; font-size: var(--font-small); font-weight: normal;
   letter-spacing: .04em; color: var(--muted);
   border: 1px solid var(--line); border-radius: .2rem; padding: 0 .25rem;
   vertical-align: middle;
 }
-.status-line { margin: .2rem 0 .4rem; font-size: .9rem; }
-.evidence-detail > summary { cursor: pointer; font-size: .85rem;
+.status-line { margin: .2rem 0 .4rem; font-size: var(--font-small); }
+.evidence-detail > summary { cursor: pointer; font-size: var(--font-small);
                              color: var(--muted); }
-.overview-tail > summary { cursor: pointer; font-size: .82rem;
+.overview-tail > summary { cursor: pointer; font-size: var(--font-small);
                            color: var(--muted); margin-top: .3rem; }
 
 /* UX-208 / UX-209: investigation affordances, and the rail. */
-.section-key { margin-left: .5rem; font-size: .8rem; font-weight: normal; }
+.section-key { margin-left: .5rem; font-size: var(--font-small); font-weight: normal; }
 .inspect { margin-left: .35rem; text-decoration: none; opacity: .55; }
 .inspect:hover { opacity: 1; }
 .copy-sql { margin-top: .25rem; }
@@ -688,18 +711,22 @@ th .th-filter.unparsed { border-color: var(--bad); border-style: dashed; }
    select itself is a `.top-n`: the same control, drawn the same way. */
 .query-element { margin: .4rem 0 .6rem; display: flex; gap: .4rem;
                  align-items: baseline; flex-wrap: wrap; }
-.query-element > label { font-size: .82rem; color: var(--muted); }
+.query-element > label { font-size: var(--font-small); color: var(--muted); }
 .query-element > p { flex-basis: 100%; margin: .15rem 0 0; }
-.top-n { font: inherit; font-size: .8rem; background: var(--panel);
+.top-n { font: inherit; font-size: var(--font-small); background: var(--panel);
          color: inherit; border: 1px solid var(--line); border-radius: 3px;
          max-width: 100%; }
+/* UX-674: unstyled, this `<select>` and its `<option>`s compute
+   Chromium's own menu size (13.3333px) rather than inheriting - the
+   type-scale guard is what found it, not a visual read. */
+.preset-view, .preset-view option { font-size: var(--font-small); }
 .blast-chips { margin: .3rem 0; display: flex; gap: .35rem;
                align-items: baseline; flex-wrap: wrap; }
-.chip { font: inherit; font-size: .78rem; padding: .1rem .5rem;
+.chip { font: inherit; font-size: var(--font-small); padding: .1rem .5rem;
         background: var(--panel); color: inherit; border: 1px solid var(--line);
         border-radius: 10px; cursor: pointer; }
 .chip:hover { border-color: var(--accent); }
-.toc-rail { margin: .6rem 0 .1rem; font-size: .72rem; letter-spacing: .06em;
+.toc-rail { margin: .6rem 0 .1rem; font-size: var(--font-small); letter-spacing: .06em;
             text-transform: uppercase; color: var(--muted); }
 
 /* `UX-667` (styleguide §3h): a source list - every chapter, and only
@@ -726,7 +753,7 @@ button.toc-chapter-open {
 button.toc-chapter-open:hover,
 button.toc-chapter-open[aria-expanded="true"] { color: var(--fg); }
 .question-group > summary { cursor: pointer; text-transform: capitalize;
-                            color: var(--muted); font-size: .85rem;
+                            color: var(--muted); font-size: var(--font-small);
                             margin-top: .6rem; }
 
 /* UX-219: the horizon as a bar sequence. The width is the only thing
@@ -753,7 +780,7 @@ ol.horizon { list-style: none; margin: 0; padding: 0; }
   border-radius: 2px;
 }
 .horizon-value { font-variant-numeric: tabular-nums; }
-.horizon-entering { grid-column: 2 / -1; font-size: 0.85em; }
+.horizon-entering { grid-column: 2 / -1; font-size: var(--font-small); }
 .horizon-total { font-weight: 600; margin-top: 0.4rem; }
 
 /* UX-222: focus dims, never removes. The reader has to be able to see
@@ -777,7 +804,7 @@ section[data-section][data-unfocused="true"] > h2 { opacity: 0.32; }
    what the reader dismissed is one they cannot check. */
 [data-mark]::after {
   content: " (" attr(data-mark) ")";
-  font-size: 0.85em;
+  font-size: var(--font-small);
   opacity: 0.7;
 }
 [data-mark="done"] { text-decoration-color: currentColor; }
@@ -793,14 +820,14 @@ section[data-section][data-unfocused="true"] > h2 { opacity: 0.32; }
    block. */
 .element-history { display: flex; align-items: center; gap: 0.5rem; }
 .spark-point[data-on-path="false"] { fill-opacity: 0.45; }
-.history-sentence { font-size: 0.9em; }
+.history-sentence { font-size: var(--font-small); }
 
 /* UX-223: the palette's groups and its keyboard cursor. */
 .palette-group {
-  font-size: 0.72em; letter-spacing: 0.08em; opacity: 0.6;
+  font-size: var(--font-small); letter-spacing: 0.08em; opacity: 0.6;
   padding: 0.3rem 0.2rem 0.1rem; list-style: none;
 }
-.palette-facts { opacity: 0.7; font-size: 0.85em; margin-left: 0.4rem; }
+.palette-facts { opacity: 0.7; font-size: var(--font-small); margin-left: 0.4rem; }
 .jump-hits li[data-active="true"] > button { outline: 2px solid var(--accent); }
 
 /* UX-267: a small object reads as one line of `name value` pairs, so
@@ -865,7 +892,7 @@ button.fold-more:hover { color: var(--fg); }
    measurement because the row's width is the column's width and the
    column's width is the viewport's. */
 button.describe {
-  font: inherit; font-size: .7rem; line-height: 1; cursor: help;
+  font: inherit; font-size: var(--font-small); line-height: 1; cursor: help;
   background: transparent; color: var(--muted);
   border: 1px solid var(--line); border-radius: 50%;
   width: 1.1em; height: 1.1em; padding: 0; margin-left: .35rem;
@@ -873,7 +900,7 @@ button.describe {
 }
 button.describe:hover, button.describe[aria-expanded="true"] { color: var(--fg); }
 .description {
-  font-size: .82rem; color: var(--muted);
+  font-size: var(--font-small); color: var(--muted);
   display: block; margin-top: .2rem;
 }
 @media (min-width: 60rem) {
@@ -916,7 +943,7 @@ button.expand-table[aria-pressed="true"] {
 }
 .focus-crumb { margin: 0 0 .3rem; }
 button.focus-back, button.expand-table {
-  font: inherit; font-size: .82rem; cursor: pointer;
+  font: inherit; font-size: var(--font-small); cursor: pointer;
   background: transparent; color: var(--muted);
   border: 1px solid var(--line); border-radius: 3px;
   padding: .1rem .45rem;
@@ -949,7 +976,7 @@ details.long-text .full-text { white-space: pre-wrap; margin: 0.4rem 0 0; }
   list-style: none;
   margin: 0.15rem 0 0.3rem 0.8rem;
   padding: 0;
-  font-size: 0.92em;
+  font-size: var(--font-small);
 }
 .toc .toc-sub a { color: var(--muted); }
 .toc .toc-sub .toc-more { color: var(--muted); font-style: italic; }
@@ -982,7 +1009,7 @@ body[data-has-toc] > header { display: block; }
    is the first thing in reading order for a reader who wants out. */
 header > .home {
   margin: 0 0 .25rem;
-  font-size: .85rem;
+  font-size: var(--font-small);
 }
 header > .home a { text-decoration: none; }
 header > .home a:hover { text-decoration: underline; }
@@ -1038,7 +1065,7 @@ button.json-toggle:hover { color: var(--fg); }
 .section-json pre {
   margin: .5rem 0 0;
   max-height: 24rem; overflow: auto;
-  font-size: .78rem; line-height: 1.4;
+  font-size: var(--font-small); line-height: 1.4;
   background: var(--panel);
   border: 1px solid var(--line); border-radius: 3px; padding: .5rem;
   white-space: pre-wrap; word-break: break-word;
@@ -1054,7 +1081,7 @@ button.json-toggle:hover { color: var(--fg); }
   flex-wrap: wrap; margin: .3rem 0;
 }
 .series-label, .density-label {
-  font-size: .78rem; color: var(--muted);
+  font-size: var(--font-small); color: var(--muted);
 }
 .sparkline {
   width: var(--draw-annotation-w); height: var(--draw-annotation-h);
@@ -1067,7 +1094,7 @@ button.json-toggle:hover { color: var(--fg); }
    and §4.2 allows one accent). */
 .spark-point[data-mark="peak"] { r: 2.2; stroke-width: .8; }
 .series-sentence, .density-sentence {
-  font-size: .82rem; font-variant-numeric: tabular-nums;
+  font-size: var(--font-small); font-variant-numeric: tabular-nums;
 }
 .density-strip {
   width: var(--draw-annotation-strip-w);
@@ -1145,6 +1172,21 @@ button.json-toggle:hover { color: var(--fg); }
 .draw-tick[data-mark="max"], .draw-tick[data-mark="last"] {
   transform: translateX(-100%);
 }
+/* `UX-674`: a single middle tick between two edge ticks lays out in
+   normal flow instead of by absolute percentage - flow never overlaps
+   a sibling, a percentage `left` can once either label's own text
+   widens. `--draw-tick` moving onto `--font-small` (13px, up from an
+   11.52px `.72rem`) turned a 9.5px clearance on `macro_micro`'s
+   parallelism axis into a 34px overlap; this is the fix, not a
+   smaller size the type-scale guard has no room for. */
+.draw-axis[data-layout="flow"] { display: flex; }
+.draw-axis[data-layout="flow"] .draw-tick {
+  position: static; transform: none;
+}
+.draw-axis[data-layout="flow"] .draw-tick[data-mark="max"],
+.draw-axis[data-layout="flow"] .draw-tick[data-mark="last"] {
+  margin-left: auto;
+}
 
 /* The twin. Closed by default - the drawing is the answer and the
    table is the same answer as rows - and it survives the export,
@@ -1152,7 +1194,7 @@ button.json-toggle:hover { color: var(--fg); }
 .draw-twin { margin: .3rem 0 0; }
 button.twin-toggle { }
 button.twin-toggle:hover { color: var(--fg); }
-table.twin-table { margin-top: .3rem; font-size: .82rem; }
+table.twin-table { margin-top: .3rem; font-size: var(--font-small); }
 table.twin-table td { font-variant-numeric: tabular-nums; }
 
 /* Paper has no toggles: an exhibit's twin prints open, so the values
@@ -1193,7 +1235,7 @@ p.run-advice {
    control. */
 .toc-keys {
   flex: 0 0 auto; align-self: center;
-  color: var(--muted); font-size: .78rem; white-space: nowrap;
+  color: var(--muted); font-size: var(--font-small); white-space: nowrap;
 }
 
 /* `UX-397`: the Perfetto handoff, in the rail rather than in a header
@@ -1211,5 +1253,9 @@ p.run-advice {
    choice away. In the rail beside the handoff, so the two controls
    that leave this page sit together. */
 .run-picker { margin: .4rem 0 .6rem; }
+/* UX-674: an unstyled `<option>` computes its own UA menu size
+   (13.3333px in Chromium) rather than inheriting - a fifth value the
+   type-scale guard would otherwise never see coming from CSS at all. */
+.run-picker select, .run-picker option { font-size: var(--font-small); }
 .run-picker select { width: 100%; margin-top: .15rem; }
 .run-picker button { margin-top: .25rem; margin-right: .25rem; }

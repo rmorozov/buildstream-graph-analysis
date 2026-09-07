@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-749 scenarios: **20 open**, 729 closed.
+750 scenarios: **20 open**, 730 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -23,7 +23,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | capture | 1 | 96 |
 | analysis | 6 | 107 |
 | contracts | 0 | 48 |
-| viewer | 3 | 161 |
+| viewer | 3 | 162 |
 | cli | 0 | 22 |
 | store | 0 | 16 |
 | docs | 3 | 121 |
@@ -38,7 +38,6 @@ task file, which is the only place it ever lived twice.
 |---|---|---|---|---|---|
 | UX-668 | [a reader is a shape, not a hue — and the selector lives in the header](UX-0668-a-reader-is-a-shape-not-a-hue-and-the-selector-lives-in-the-header.md) | viewer | High | R1..R5, the readers the select names | 🔴 |
 | UX-671 | [the rail acts on the view, and the URL does not follow](UX-0671-the-rail-acts-on-the-view-and-the-url-does-not-follow.md) | viewer | Medium | anyone sharing "Copy link to this view" | 🔴 |
-| UX-674 | [eighteen font sizes, an h3 larger than its h2, and 130-character lines](UX-0674-eighteen-font-sizes-an-h3-larger-than-its-h2-and-130-character-lines.md) | viewer | Medium | every reader of prose on the page | 🔴 |
 | UX-678 | [memory joins the sweep and the queue model](UX-0678-memory-joins-the-sweep-and-the-queue-model.md) | analysis | Medium | R5 sizing a builder, R4 reading the sweep | 🔴 |
 | UX-739 | [the max-jobs advice is not priced — nothing says what the build drops to](UX-0739-the-max-jobs-advice-is-not-priced-nothing-says-what-the-build-drops-to.md) | analysis | Medium | R4 and R5, deciding whether the recommendation is worth applying | 🔴 |
 | UX-679 | [a jobserver every sandbox joins — the prototype bga can run](UX-0679-a-jobserver-every-sandbox-joins-the-prototype-bga-can-run.md) | capture | Medium | R4 and R5 — dynamic sharing instead of static tuning | 🔴 |
@@ -56,6 +55,7 @@ task file, which is the only place it ever lived twice.
 | UX-750 | [the map's one count is the one noun the guard does not list](UX-0750-the-map-s-one-count-is-the-one-noun-the-guard-does-not-list.md) | guards | Medium | the reader who trusts a guarded sentence because it is guarded | 🔴 |
 | UX-751 | [the landed clause reads endpoints where the open clause reads the range](UX-0751-the-landed-clause-reads-endpoints-where-the-open-clause-reads-the-range.md) | guards | Medium | the reader trusting a Direction's status line | 🔴 |
 | UX-752 | [the guard's spelling table ran out at forty](UX-0752-the-guard-s-spelling-table-ran-out-at-forty.md) | guards | Medium | the round that appends a ledger row and finds CI red for it | 🔴 |
+| UX-753 | [the flow axis is drawn by one row and read by none](UX-0753-the-flow-axis-is-drawn-by-one-row-and-read-by-none.md) | viewer | Medium | the reader of an exhibit axis, and the round that changes one | 🔴 |
 
 ## UX-706..UX-711: the ninety-fourth round — the pipeline, and which model runs which shape (2026-09-05)
 

@@ -1289,9 +1289,11 @@ bga analyze RUN/ --explain
 ```text
   This build is scheduler-bound, not chain-bound: the critical path is
   88% of wall-clock, so the time is going somewhere other than the chain.
-    why: The critical path is 87.5% of wall-clock, which is < the 90% at
-         which the chain rather than the scheduler is called the
-         constraint - so scheduler_bound.
+    why: The critical path is 87.5% of the task horizon (the span from
+         the first task's start to the last one's finish, excluding
+         BuildStream's own startup), below the 90% line at which the
+         chain rather than the scheduler is called the constraint, so
+         this build is scheduler-bound.
     rule: CHAIN_BOUND_RATIO = 0.9 (<, bga/findings.py)
       floors.t_infinity_observed = 14000
       total_duration_us = 16000

@@ -291,7 +291,15 @@ BUDGETS = (
     # is the one that gives: it bounds growth rather than forbidding
     # it (`UX-681`, `UX-717`). 94 of headroom, the same order as the 87
     # `UX-717` left.
-    (50, 35_000, 12_700, 800, 7_900),
+    # `UX-674`: 35,000 -> 35,900. The styleguide's new type scale collapses
+    # every small/quiet control onto one `--font-small` (13px) - the
+    # `button.describe` door alone is 126 of `macro_micro`'s controls,
+    # and every one of them moved up from an 11.2px UA-adjacent `.7rem`.
+    # `words`, `controls` and `nodes` are unmoved (no content changed);
+    # measured 35,813, 87 of headroom, the same order `UX-717` left.
+    # The 4,100 class is untouched at 32,000 - the fixed overhead does
+    # not scale with element count, so a run there stays under it.
+    (50, 35_900, 12_700, 800, 7_900),
     (4_100, 32_000, 9_200, 900, 5_500),
 )
 

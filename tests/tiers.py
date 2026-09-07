@@ -793,6 +793,10 @@ MEDIUM = (
     "tests/unit/test_a_table_cell_obeys_the_value_rule.py",     #    3.2s
     # `UX-641`: two `bga analyze` subprocesses and four node ones.
     "tests/unit/test_a_level_names_who_is_in_it.py",            #    2.4s
+    # `UX-674`, tiered on landing: one Chromium, two page boots
+    # (golden and macro_micro) over eight clauses. 2.35s measured
+    # single-process with `--durations=0`.
+    "tests/unit/test_the_type_scale_is_four_steps.py",          #    2.4s
     "tests/unit/test_a_control_says_what_it_does.py",           #    2.7s
     "tests/unit/test_every_table_has_its_own_state_key.py",     #    1.5s
     "tests/unit/test_findings_carry_their_evidence.py",         #    1.5s

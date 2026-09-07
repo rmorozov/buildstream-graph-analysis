@@ -589,7 +589,7 @@ column re-read in round 73:
                  elements   landed   opened    words   controls    nodes
 golden                  4    3,800   15,618    7,144        427    2,498
 macro_micro            11    5,965   31,804   12,002        750    5,686
-budget, to 50 elts             7,100   35,000   12,700        800    7,900
+budget, to 50 elts             7,100   35,900   12,700        800    7,900
 
 scale               1,202    4,763   26,242   36,542      1,941   24,294
 budget, to 4,000 elts          7,000   32,000   41,000      2,300   27,500
@@ -638,6 +638,13 @@ section cannot also fit 9,100 - and the budget is the one that gives.
 4,100 class's 9,000 -> 9,100: the eighteenth canned question is words
 and nothing else, measured 12,644 (+44) and 9,013 (+13) with every
 other column unmoved.
+
+`UX-674` moved the small class's height bound 35,000 -> 35,900: §4f's
+type scale put every small/quiet control on `--font-small` (13px),
+`button.describe` (126 of `macro_micro`'s controls) among them, up
+from an 11.2px `.7rem`. Measured 35,813, words/controls/nodes
+unmoved; the 4,100 class stays at 32,000, so the overhead is fixed
+rather than scaling with element count.
 
 The small class's words bound moved 12,000 -> 12,600 in round 73, and
 only that one:
@@ -1404,6 +1411,113 @@ served page is the half still missing (`UX-443`): `UX-296` moved the
 render off the startup path on purpose, so `run.json` is written before
 anything has counted an edge.
 
+## 4f. The type scale (round 82)
+
+Measured on the booted golden export at 1440x900, before this item:
+**18 distinct `getComputedStyle(...).fontSize` values**, from `body/td`
+at 15px to an unstyled `h3` at 17.55px - the browser's own `1.17em`
+default, sitting *above* the 16.8px `h2` it renders under
+(`python3 -m pytest tests/unit/test_the_type_scale_is_four_steps.py`,
+before this item's fix, reproduces both). Three prose lines measured
+alongside it, each read against `p.diagnosis`'s unclamped 983px box at
+15/16.32px: ~122 characters (the verdict), ~133 (a finding title),
+~127 (a next-step reason) - `p, li > p, dd` had no `max-width` at all.
+
+Color and emphasis have budgets (§4, §4.5); type had none, so every
+section that wanted a slightly different weight of "small" wrote its
+own `rem`, and nesting compounded them - `.decision .diagnosis`'s
+`1.02rem` inside a page whose `h2` was `1.05rem` is two numbers a
+reader was never meant to tell apart.
+
+**The scale is four steps, named, never a bare `rem`/`em`/`px`:**
+
+```text
+--font-h1:    21px
+--font-h2:    17px
+--font-body:  15px
+--font-small: 13px
+```
+
+`h3` is not a fifth step - `h3 { font-size: var(--font-body); font-weight:
+600; }` - so it can never be *the* size a reader has to learn, and it is
+mechanically smaller than `--font-h2` (17px) rather than smaller by
+convention. `p, li > p, dd { max-width: 72ch }` bounds the line
+regardless of the viewport underneath it.
+
+**§4b extended to sentences: a task id or a payload key is never bare
+in prose a reader sees.** §4b already said a *citation* is a question,
+not a key (`UX-669`); this is the same rule applied past the citation
+label to the sentence around it. Three examples, measured before and
+after:
+
+```text
+before (265 chars, provenance, `bga/provenance.py`)
+  The critical path is 100.0% of the task horizon - the span from the
+  first task's start to the last one's finish, which excludes
+  BuildStream's own startup - and that is >= the 90% at which the chain
+  rather than the scheduler is called the constraint, so chain_bound.
+
+after (275 chars)
+  The critical path is 100.0% of the task horizon (the span from the
+  first task's start to the last one's finish, excluding BuildStream's
+  own startup), at or above the 90% line at which the chain rather than
+  the scheduler is called the constraint, so this build is chain-bound.
+```
+
+The raw `>=` (a `rule.comparison` payload field) and the bare
+`chain_bound` (a `headline.diagnosis` payload value) read as code to a
+reader who is not the schema; `at or above` and the hyphenated
+`chain-bound` are this file's own existing convention for the same
+fact (`_wait_category_rule` and `DIAGNOSIS_SENTENCES`), just not yet
+applied here.
+
+```text
+before (157 chars, the capacity note, `bga/analyzer.py`)
+  native build-system parallelism (--max-jobs) is modelled for this
+  capture from its own Plane 2 measurements - see the capacity
+  recommendation below (UX-116).
+
+after (158 chars)
+  native build-system parallelism (--max-jobs) is modelled for this
+  capture from its own Plane 2 measurements; see the capacity
+  recommendation below (`UX-116`).
+```
+
+A bare `UX-116` reads as a word in the sentence rather than a citation;
+backticking it is the same move `` `UX-669` `` and every other citation
+in this document already make.
+
+```text
+before (240 chars, the max-jobs advisor, `bga/findings.py`)
+  core.bst asked its native build for -j1 while the rest of this
+  build asked for more: remove `notparallel` / raise that element's job
+  count first. That is capacity you already have, and unlike --builders
+  it cannot contend with itself (UX-83)
+
+after (246 chars)
+  core.bst asked its native build for -j1 while the rest of this
+  build asked for more: remove `notparallel` or raise that element's
+  job count first. That is capacity you already have, and unlike
+  `--builders` it cannot contend with itself (`UX-83`).
+```
+
+The `/` stood in for the word "or" - a slash-alternative reads as a
+regex to a reader mid-sentence - and `--builders` and `(UX-83)` were
+the same bare-payload/bare-citation defect the other two examples have.
+None of the three changed what they claim; the `Verification Log` and
+the golden/`with_timeline` fixtures carry the after text.
+
+**Guard**: `tests/unit/test_the_type_scale_is_four_steps.py`, on a real
+browser (`tests/browser.py`) against the golden and `macro_micro`
+exports: distinct computed sizes <= 4, every `h3` strictly smaller than
+every `h2`, and no `p`/`li > p`/`dd` box wider than 72 widths of its
+own font's `0` glyph (a canvas 2D measurement, not a re-read of the
+declared `max-width` - a rule widened to `130ch` would still agree with
+itself). Two source-level clauses hold the tokens and the `max-width`
+declaration are actually in `style.css`, independent of any render.
+
+`UX-674` is the item.
+
 ## 7. Enforcement
 
 What keeps this true after the commit that lands it: the booted
@@ -1465,6 +1579,7 @@ headings, so a renumber there moves it.
 | §4c | `test_a_new_control_class_lands_declared.py`, `test_a_command_renders_as_a_command.py`, `test_a_control_acts_on_what_it_names.py` | |
 | §4d | `test_a_new_control_class_lands_declared.py` | `UX-665`'s registry names the § each class belongs to, which is how this one first acquired a guard; `UX-368` and `UX-369` are still the filed items |
 | §4e | `test_the_ceilings_reach_a_reader.py`, `test_the_served_handoff_counts_its_edges.py` | |
+| §4f | `test_the_type_scale_is_four_steps.py` | |
 | §5 | | named; `test_the_palette_is_validated.py`, named in §5's own prose, cites §4.3 and §4.5 only |
 | §5a | | no guard cites it; the easy one passes forever, below |
 | §6 | | named; `test_the_numbers_have_a_sentence.py` and `test_the_shape_before_the_rows.py` hold the sentence and the `n`; neither cites §6 |

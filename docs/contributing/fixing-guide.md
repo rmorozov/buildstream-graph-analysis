@@ -359,7 +359,7 @@ tools/dev_sizes.py           the size ledger for what has no finding
 tools/dev_flake_census.py    which files the flake ledger says need a
                              filed task or a declared reason (UX-691)
 tools/dev_junit_tail.py      which tests failed, from the junit a red job
-                             kept - when the log tail is the wrong 400 lines (UX-554)
+                             kept - when the log tail lands on the wrong slice (UX-554)
 tools/dev_commit_bodies.py   which commits a branch adds spend more than
                              eight body lines, footer excluded (UX-696)
 tools/dev_js_deps.py         the viewer's module graph, derived: order, cycles, what would cross a cut (UX-340)

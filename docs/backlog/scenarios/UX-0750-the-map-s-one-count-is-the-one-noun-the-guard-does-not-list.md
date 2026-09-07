@@ -85,4 +85,52 @@ mutation table shows the widened noun list reddening on a restored
 
 ## Outcome
 
-_Not started._
+### The gap
+
+Pre-fix red, the six-noun allowlist widened but the sentences not yet
+re-stated:
+
+```console
+$ PYTEST_XDIST= python3 -m pytest tests/unit/test_the_context_map_is_the_tree.py \
+  -k test_the_map_states_no_count_it_does_not_check -q
+FAILED ...::test_the_map_states_no_count_it_does_not_check
+AssertionError: the context map states counted figure(s) nothing
+checks: ['400 lines']. Name the thing, not how many of it there are.
+```
+
+### The close
+
+Inverted the allowlist to `NOT_A_COUNT`, empty: every id in the map is
+already excluded by the existing hyphen lookbehind (`UX-238`, `UX-264`
+match nothing), so no entry was needed - one match, `400 lines`, and no
+other shape surfaced (checked by exhaustive digit-run scan of
+`_map_text()`). Re-stated `dev_junit_tail.py`'s map row to name the
+thing. For `ci.yml:248`/`:394`: took the row's second alternative and
+dropped the figure - `--record`'s document length depends on CI's own
+clock (`UX-418`: "a local report cannot stand in", `ci.yml:218`), so no
+command run from a checkout reproduces it; a verifier pass first tried
+dating it (3,845, via `record()` fed the checkout's own reference as
+both `times` and `reference`) but that is not runnable from CI's actual
+inputs, so it was dropped instead. `ci.yml:227`'s `370 lines` untouched,
+per Out of Scope.
+
+```console
+$ PYTEST_XDIST= python3 -m pytest tests/unit/test_the_context_map_is_the_tree.py -q
+30 passed in 0.39s
+```
+
+### Mutations
+
+| # | mutation | result |
+|---|---|---|
+| M1 | restore `400 lines` in the map (revert the `dev_junit_tail.py` row) | 1 failed - real count caught |
+| M2 | keep M1, revert the guard to the old six-noun allowlist | 30 passed - old regex vacuous, confirms the widening is what catches it |
+| M3 | keep M1, add `"400 lines"` to `NOT_A_COUNT` | 30 passed - denylist suppresses, confirms why it ships empty |
+
+### Deviation
+
+None from the Required Fix. `NOT_A_COUNT` ships empty rather than
+naming `UX-238`/`UX-264`: the existing lookbehind already excludes
+hyphen-prefixed digit runs (ids), verified by scanning every digit run
+in `_map_text()` today - adding entries for shapes the regex already
+excludes would be dead weight in the set.

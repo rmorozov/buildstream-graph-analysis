@@ -245,8 +245,10 @@ jobs:
           cat "${{ runner.temp }}/ci_reference.candidate.json"
           echo "::endgroup::"
           # UX-491: and the gate's own line last, outside the group. The
-          # document above is ~400 lines and a log-tail reader gets only
-          # the end of it, so the shift the gate printed - two steps and
+          # document above runs long - its length depends on CI's own
+          # clock, so no figure here is reproducible from a checkout
+          # (`UX-418`, `UX-750`) - and a log-tail reader gets only the
+          # end of it, so the shift the gate printed - two steps and
           # one collapsed document earlier - was out of reach of the
           # spread recorded beside it. The line is the gate's own, read
           # from the file that step wrote; recomputing it here would be
@@ -391,7 +393,7 @@ jobs:
       #
       # `UX-558`: **last in the job**, which is the only position where
       # that rule holds. At step 10 of 20 it sat 3,800 lines from the
-      # end of a red 3.11 log, behind the ~400-line document `UX-476`
+      # end of a red 3.11 log, behind the long document `UX-476`
       # prints for a reader without the artifact - and the `::group::`
       # folds it in the browser only, not over the API, which is the
       # reader `UX-491` named. `UX-491` had to repeat the gate's line

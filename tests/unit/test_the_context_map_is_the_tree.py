@@ -83,6 +83,13 @@ COMMAND_HEADING = "**Every command `bga` answers to**"
 # `--format` choice and derives.
 PROSE_IN_A_PATH_LIST: dict[str, str] = {}
 
+# `UX-750`: the digit-run-plus-word denylist. Ids (`UX-238`, `UX-264`)
+# need no entry - the guard's own lookbehind already treats a hyphen-
+# prefixed digit run as an id, not a count. Empty because nothing else
+# on the map today matches; a match here is a live count found, not
+# something to widen the check around.
+NOT_A_COUNT: set[str] = set()
+
 
 def _map_text():
     """The map itself - the fenced blocks - and not the prose around it.
@@ -458,17 +465,20 @@ class TestTheMapNamesTheTree:
         five rounds old. A figure nothing checks is the defect, not the
         count, so the map states none.
 
-        Deliberately narrow: `UX-238`, `UX-264` and the rest are ids and
-        not counts, and a rule that banned digits would ban those."""
+        `UX-750`: the noun allowlist missed `lines`, so `400 lines`
+        passed. Inverted to a denylist: every digit-run followed by a
+        word is a count unless `NOT_A_COUNT` names the shape. Ids like
+        `UX-238`/`UX-264` need no entry - a digit run preceded by a
+        hyphen is an id, excluded by the lookbehind itself."""
         import re
 
         text = _map_text()
         # One optional adjective between the number and the noun: the
         # first draft matched `218 files` and missed `the 233 closed
         # rows` two lines below it, which is half a guard.
-        counted = re.findall(
-            r"(?<![\w-])[~]?[\d,]{2,}\s+(?:[a-z-]+\s+)?"
-            r"(?:files?|tests?|rows?|elements?|items?|scenarios?)\b", text)
+        counted = [m for m in re.findall(
+            r"(?<![\w-])[~]?[\d,]{2,}\s+(?:[a-z-]+\s+)?[a-z]+\b", text)
+            if m not in NOT_A_COUNT]
         assert counted == [], (
             f"the context map states counted figure(s) nothing checks: "
             f"{counted}. Name the thing, not how many of it there are.")

@@ -61,8 +61,10 @@ that decided it.
   remainder its Outcome names.
 - `UX-773`'s browser leak. Different owner, same symptom — a red gate
   from disk pressure rather than from the diff.
-- Changing `cache.reserved-disk-space`'s default, which is
-  BuildStream's, not this repository's.
+- Changing `cache.reserved-disk-space`'s default — it is
+  BuildStream's, not this repository's, and a fix here that only
+  works against a patched `bst` is not a fix for anyone running
+  the released one.
 
 ## Acceptance Test
 

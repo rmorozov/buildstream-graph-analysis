@@ -125,3 +125,21 @@ the ledger-`setdefault` check - is unchanged and still green):
 source; this row tried exactly that within its own scope and found it
 unreliable, which is now evidence for that row rather than motivation
 alone.
+
+### The second verifier held, and the row merged anyway
+
+The re-verification of `17bf0b8` returned `## Verdict: HOLD`: the
+population claim for rounds 76 and 85 was not supported by the
+evidence given for it. The row merged 26 seconds later.
+
+The finding was **accepted, not declined** — the Outcome above was
+corrected and `UX-772` filed against `document_date()`. But `UX-761`
+says a row does not merge until the track has answered the finding or
+the session records here why it is declined, and neither happened
+before the merge. Recorded now because a reader of this file would
+otherwise learn only the corrected conclusion and not that a verifier
+reached it first.
+
+`UX-759`'s premise did not survive this row: the register that shipped
+has no ids column, so that row closed as a decline. That annotation
+was owed by this commit under the fixing guide's item 6.

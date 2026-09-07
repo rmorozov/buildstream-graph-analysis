@@ -35,3 +35,4 @@ Derived by `tools/dev_round_register.py --write` from the commits naming a round
 | 104 | 2026-09-07 |
 | 105 | 2026-09-07 |
 | 106 | 2026-09-07 |
+| 107 | 2026-09-07 |

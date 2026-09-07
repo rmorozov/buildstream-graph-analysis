@@ -39,6 +39,10 @@ import sys
 REPO = pathlib.Path(__file__).resolve().parents[2]
 TOOL = REPO / "tools/dev_js_deps.py"
 FIXTURE = REPO / "tests/fixtures/js/interpolated.js"
+#: `UX-747`: two referencing declarations, so one grouping can
+#: leave one out and place the other. `interpolated.js` has only
+#: `gamma`, and its counts are measured elsewhere.
+PARTIAL = REPO / "tests/fixtures/js/partial_groups.js"
 VIEWER = REPO / "bga/viewer"
 
 # The grouping the fixture is built around: two modules' worth of names.
@@ -202,9 +206,80 @@ class TestTheToolRefusesRatherThanGuesses:
                     json.dumps({"lower": ["LABEL"], "upper": ["beta"]}),
                     "--json")
         assert done.returncode == 1, done.stdout
-        left_out = json.loads(done.stdout)["unplaced"]
-        assert set(left_out) == {"HIDDEN", "alpha", "delta", "gamma",
-                                 "render"}, left_out
+        answer = json.loads(done.stdout)
+        assert set(answer["unplaced"]) == {"HIDDEN", "alpha", "delta", "gamma",
+                                           "render"}, answer
+        # `UX-747`: the crossings map is read too. It was not, and a
+        # declaration with no home reached it as the literal `None` for
+        # as long as nobody looked.
+        assert answer["crossings"] == {"(unplaced) <- lower": ["LABEL"]}, answer
+
+    def test_a_partial_grouping_sorts_placed_and_unplaced_together(self):
+        """`UX-747`: the crash the `derive` skill's own example produced.
+
+        A key whose home is a group and a key whose home is `None` were
+        sorted against each other — `TypeError`, on the partial grouping
+        that is the skill's entire stated use case. One key of each kind
+        is what `interpolated.js` cannot make, which is why this runs on
+        a fixture of its own.
+        """
+        done = _run("--crossings", str(PARTIAL), "--groups",
+                    json.dumps({"home": ["SHARED"], "one": ["placed"]}),
+                    "--json")
+        assert done.returncode == 1, done.stderr
+        answer = json.loads(done.stdout)
+        assert answer["unplaced"] == ["unplaced"], answer
+        assert answer["crossings"] == {"(unplaced) <- home": ["SHARED"],
+                                       "one <- home": ["SHARED"]}, answer
+
+    def test_a_whole_grouping_leaves_nothing_unplaced(self):
+        """The other direction, so the clause above is a distinction and
+        not an assertion that the tool merely runs."""
+        done = _run("--crossings", str(PARTIAL), "--groups",
+                    json.dumps({"home": ["SHARED"],
+                                "one": ["placed", "unplaced"]}), "--json")
+        assert done.returncode == 0, done.stderr
+        answer = json.loads(done.stdout)
+        assert answer["unplaced"] == []
+        # The pair, not the list: two declarations in `one` both reference
+        # `SHARED`, and the list appends once per referencing declaration,
+        # so it reads `["SHARED", "SHARED"]`. Left as it is - `UX-747` is
+        # the crash and the stale example - and asserted as a set so this
+        # clause does not bless the duplicate either way.
+        assert list(answer["crossings"]) == ["one <- home"], answer
+        assert set(answer["crossings"]["one <- home"]) == {"SHARED"}, answer
+
+    def test_a_literal_grouping_is_not_tested_as_a_path_first(self):
+        """`UX-747`: `--help` promises "a file or a literal", and the
+        path test ran first. Any literal past the 255-byte name limit
+        made `Path(raw).exists()` itself raise `OSError` - which is every
+        grouping the `derive` skill documents, before a line of JSON was
+        parsed."""
+        wide = {f"g{n}": [f"name{n}"] for n in range(40)}
+        assert len(json.dumps(wide)) > 255
+        done = _run("--crossings", str(PARTIAL), "--groups",
+                    json.dumps(wide), "--json")
+        assert "OSError" not in done.stderr and "too long" not in done.stderr, (
+            done.stderr)
+        assert done.returncode == 1, done.stderr
+        assert json.loads(done.stdout)["unplaced"] == [
+            "SHARED", "placed", "unplaced"]
+
+    def test_the_derive_skill_s_example_runs(self):
+        """The Acceptance Test: copied out of `SKILL.md`, not retyped.
+        The skill is what `CLAUDE.md` sends a session to before moving
+        viewer code, and its example raised two different exceptions."""
+        skill = (REPO / ".claude/skills/derive/SKILL.md").read_text(
+            encoding="utf-8")
+        block = skill.split("--crossings bga/viewer/app.js --groups '", 1)[1]
+        groups = block.split("'\n```", 1)[0]
+        done = _run("--crossings", "bga/viewer/app.js", "--groups", groups)
+        assert done.returncode == 0, done.stderr
+        for line in ("app <- handoff", "handoff <- app",
+                     "fetch <- handoff", "handoff <- fetch"):
+            assert line in done.stdout, (
+                f"the skill pastes an answer containing {line!r}; the tool "
+                f"now says:\n{done.stdout}")
 
     def test_crossings_without_a_grouping_is_an_error(self):
         done = _run("--crossings", str(FIXTURE))

@@ -43,17 +43,29 @@ Then write the proposed grouping down and ask what would have to cross:
 
 ```bash
 python3 tools/dev_js_deps.py --crossings bga/viewer/app.js --groups '{
-  "format":     ["QUANTITY", "duration", "bytes", "el"],
-  "structured": ["columnSpecs", "buildTable", "renderTable"],
-  "app":        ["render", "boot"]
+  "fetch":   ["FETCH_POLL_MS", "FETCH_POLL_LIMIT", "TRACE_STATUS_URL", "watchTheFetch"],
+  "handoff": ["announceHandoff", "wireTheHandoff", "inlined", "inflated", "offered", "optional"],
+  "app":     ["stampHeader", "analysisSentence", "foldOnNarrow", "wireJumpBox", "runQuery", "load", "boot", "wireFocusAndMarks"]
 }'
 ```
 
-Read the direction. `structured <- format` is fine; `format <- app` and
-`structured <- app` in the same answer is a cycle, and the cut has to
-move. `UX-337`'s `views.js` split began exactly here and found the
-chapters were **not** acyclic — three edges of one symbol each, none of
-them chapter content, which is why `primitives.js` exists.
+```text
+app <- handoff               inflated inlined optional wireTheHandoff
+fetch <- handoff             announceHandoff
+handoff <- app               load
+handoff <- fetch             watchTheFetch
+```
+
+Read the direction. `a <- b` is *a needs b*, so a pair in both
+directions is a cycle: here `app`/`handoff` and `fetch`/`handoff` both
+come back, and this cut cannot be made as written. `UX-337`'s
+`views.js` split began exactly here and found the chapters were **not**
+acyclic — three edges of one symbol each, none of them chapter content,
+which is why `primitives.js` exists.
+
+A grouping that leaves declarations out is answered, not refused: the
+unplaced names go to stderr, the exit is 1, and their crossings are
+keyed `(unplaced) <- <group>`.
 
 ## Why not a regex, and why not an LSP
 

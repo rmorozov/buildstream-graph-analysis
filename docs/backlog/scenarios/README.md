@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-746 scenarios: **22 open**, 724 closed.
+746 scenarios: **21 open**, 725 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -27,7 +27,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | cli | 0 | 22 |
 | store | 0 | 16 |
 | docs | 5 | 121 |
-| guards | 7 | 175 |
+| guards | 6 | 175 |
 
 ## Open scenarios
 
@@ -55,7 +55,6 @@ task file, which is the only place it ever lived twice.
 | UX-744 | [no register says which rounds exist, and four records disagree](UX-0744-no-register-says-which-rounds-exist-and-four-records-disagree.md) | docs | Medium | the session opening a round, which cannot number it from any record | 🔴 |
 | UX-745 | [a track can authorise its own baseline growth, and did](UX-0745-a-track-can-authorise-its-own-baseline-growth-and-did.md) | guards | High | the session merging a track it did not watch | 🔴 |
 | UX-746 | [four workflows are on no map, and the map's guard cannot see them](UX-0746-four-workflows-are-on-no-map-and-the-map-s-guard-cannot-see-them.md) | docs | Medium | the low-context session told not to re-derive where things live | 🔴 |
-| UX-747 | [the `derive` skill's own example crashes the tool it documents](UX-0747-the-derive-skill-s-own-example-crashes-the-tool-it-documents.md) | guards | High | the session about to move viewer code | 🔴 |
 | UX-748 | [three guards read a narrower population than the sentence they check](UX-0748-three-guards-read-a-narrower-population-than-the-sentence-they-check.md) | guards | Medium | the reader who trusts a guarded sentence because it is guarded | 🔴 |
 | UX-749 | [a citation that looks like a path, and a count of branches that moved](UX-0749-a-citation-that-looks-like-a-path-and-a-count-of-branches-that-moved.md) | docs | Low | the reader who clicks, or counts | 🔴 |
 

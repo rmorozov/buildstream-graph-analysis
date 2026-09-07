@@ -350,6 +350,12 @@ def bound_names(text: str):
     return set(re.findall(r"\b([A-Za-z_$][\w$]*)\b", found.group(1)))
 
 
+#: How a declaration with no group reads in a crossing's label. Not a
+#: group name: a grouping that used this string would alias, and the
+#: sort keeps `None` rather than this (`UX-747`).
+UNPLACED = "(unplaced)"
+
+
 def crossings(path, groups):
     """Which symbols each group would have to import from which other.
 
@@ -368,9 +374,15 @@ def crossings(path, groups):
         for word in sorted(set(re.findall(r"\b(\w+)\b", body)) - bound):
             if word in home and home[word] != home.get(name):
                 needed.setdefault((home.get(name), home[word]), []).append(word)
+    # A declaration the grouping left out has no home, and `None` is
+    # neither sortable against a group name nor readable in the label -
+    # the partial grouping this tool exists to answer produced both
+    # (`UX-747`).
     return {"unplaced": unplaced,
-            "crossings": {f"{a} <- {b}": sorted(v)
-                          for (a, b), v in sorted(needed.items())}}
+            "crossings": {f"{a or UNPLACED} <- {b}": sorted(v)
+                          for (a, b), v in sorted(
+                              needed.items(),
+                              key=lambda kv: (kv[0][0] or "", kv[0][1]))}}
 
 
 def _report_dead(directory, as_json):
@@ -448,7 +460,10 @@ def main(argv=None):
         if not args.groups:
             parser.error("--crossings needs --groups")
         raw = args.groups
-        if pathlib.Path(raw).exists():
+        # `--help` promises "a file or a literal", and a literal over the
+        # 255-byte name limit made the path test itself raise - which is
+        # every grouping the `derive` skill documents (`UX-747`).
+        if not raw.lstrip().startswith("{") and pathlib.Path(raw).exists():
             raw = pathlib.Path(raw).read_text(encoding="utf-8")
         result = crossings(args.crossings, json.loads(raw))
         if args.json:

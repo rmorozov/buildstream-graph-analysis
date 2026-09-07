@@ -1,6 +1,6 @@
 # UX-745: a track can authorise its own baseline growth, and did
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-694 (the baseline), UX-705 (the burn-down, whose pass condition this defeats) | **Serves:** the session merging a track it did not watch | **Topic:** guards | **Area:** tools | **Shape:** judgement
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-694 (the baseline), UX-705 (the burn-down, whose pass condition this defeats) | **Serves:** the session merging a track it did not watch | **Topic:** guards | **Area:** tools | **Shape:** judgement
 
 ## Motivation
 
@@ -60,3 +60,80 @@ A track's commit that forces a new finding is red at `make lint` on the
 track's own branch, naming the rule and the file. Mutation: the session
 forces the same finding with the same reason after deciding it — green,
 and the ledger row says the round authorised a gain.
+
+## Outcome (round 103, 2026-09-07) — 🟢 Done
+
+**Premise:** held, and the mechanism was not the one filed. The
+Required Fix's first route — "the gate reads HEAD's baseline … applied
+to `--check` and not only to the diff guard" — was **already done**:
+`do_check` has called `gained_since_head` since `UX-694`. The hole was
+inside that function.
+
+### The gap, measured
+
+```text
+$ # HEAD carries one finding, forced_by UX-705; the tree adds two,
+$ # one of them in a file the force never touched
+no force        -> 2 gain(s) reported
+force UX-742    -> 0 gain(s) reported
+force UX-705    -> 2 gain(s) reported
+```
+
+`if forced_by and forced_by != head.get("forced_by"): return []` — one
+`--force` with a **novel** reason waived every gain in the file, not
+the lines it signed. And it is backwards: repeating HEAD's reason was
+checked *more* strictly than inventing one.
+
+### After
+
+A gain is red until it is committed, and the message says who signed
+it:
+
+```text
+authorised by UX-1, red until committed: ruff S602 pkg/o.py (#1) ...
+```
+
+**Why that costs nothing where it must not.** `gained_since_head`
+compares the working file against `HEAD`, and in CI the working file
+*is* HEAD — so a committed forced gain is invisible to it, and CI is
+green on any committed state, before and after this change. The one
+place it now reds is a local `make lint` in an uncommitted tree, which
+is exactly the `make lint` a track pastes into its report. The edit
+hook runs `ruff` on one file and never the baseline, so nothing blocks
+the track from committing either.
+
+`--force` also records **which** identities it signed, so a line
+hand-added to the list afterwards no longer rides in on the signature.
+
+### Mutations verified red and reverted (3)
+
+| # | mutation | reddened |
+|---|---|---|
+| Q1 | the whole-file waiver restored | the unrelated-gain clause |
+| Q2 | an authorised gain green again | the red-until-committed clause |
+| Q3 | the force signs no identities | the unrelated-gain clause |
+
+### Deviation from the Required Fix
+
+**Neither route as written.** Route one was already in place. Route two
+— `--force` refuses unless the reason is an open row naming the grown
+file — was **declined**: it gates on a string a track writes about
+itself, and a track that will force a growth will also write the id of
+the row it is working. Making the growth *loud in the output the
+session reads* discriminates where a self-declared reason does not.
+
+Route two's real content, traceability, is kept as the `forced` list
+and the named message rather than as a refusal.
+
+`write_baseline` went to six arguments and tripped `PLR0913` — the
+growth this row exists to stop. The pair became one `forced=(reason,
+identities)` argument instead of being forced through. `clean: 291`,
+no growth.
+
+```text
+$ make test
+7641 passed, 83 skipped, 1 warning in 675.11s (0:11:15)
+$ make lint
+All checks passed! / clean: 291 finding(s)
+```
+

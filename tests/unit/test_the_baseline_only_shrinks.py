@@ -158,17 +158,51 @@ class TestTheGitDiffShrinkGuard:
         _git(tmp_path, "-c", "user.email=t@example.com", "-c", "user.name=t",
              "commit", "-q", "-m", "baseline")
         _write(other, VIOLATION)
-        # A forced write with a reason HEAD does not carry is authorised
-        # until it lands; the same reason again is a hand edit.
+        # `UX-745`: a forced write is *red until it is committed*, and the
+        # message says who signed it. It used to be waived outright, which
+        # is how a track shipped a growth with every gate green.
         assert _run(tmp_path, baseline, "--write", "--force", "--reason", "UX-1").returncode == 0
-        assert _run(tmp_path, baseline, "--check").returncode == 0
+        check = _run(tmp_path, baseline, "--check")
+        assert check.returncode == 1, check.stdout
+        assert "authorised by UX-1, red until committed" in check.stdout
         _git(tmp_path, "-c", "user.email=t@example.com", "-c", "user.name=t",
              "commit", "-q", "-am", "UX-1 adds a finding")
+        # Committed, it is HEAD's own line and costs nothing - which is
+        # why this is free in CI, where the working file *is* HEAD.
+        assert _run(tmp_path, baseline, "--check").returncode == 0
         _write(tmp_path / "pkg" / "p.py", VIOLATION)
         assert _run(tmp_path, baseline, "--write", "--force", "--reason", "UX-1").returncode == 0
         check = _run(tmp_path, baseline, "--check")
         assert check.returncode == 1, check.stdout
-        assert "gained: ruff S602" in check.stdout
+        assert "ruff S602" in check.stdout
+
+    def test_one_forced_line_does_not_waive_an_unrelated_gain(self, tmp_path):
+        """`UX-745`, the measured hole: the waiver was the whole file. A
+        `--force` whose reason differed from HEAD's returned no gains at
+        all, so a line it never touched rode in beside the one it signed
+        — and a *repeat* of HEAD's reason was checked more strictly than
+        a novel one, which is backwards."""
+        baseline = tmp_path / "baseline.json"
+        _write(tmp_path / "pkg" / "m.py", VIOLATION)
+        assert _run(tmp_path, baseline, "--write").returncode == 0
+        _git(tmp_path, "init", "-q")
+        _git(tmp_path, "-c", "user.email=t@example.com", "-c", "user.name=t",
+             "add", "-A")
+        _git(tmp_path, "-c", "user.email=t@example.com", "-c", "user.name=t",
+             "commit", "-q", "-m", "baseline")
+        _write(tmp_path / "pkg" / "signed.py", VIOLATION)
+        assert _run(tmp_path, baseline, "--write", "--force",
+                    "--reason", "UX-2").returncode == 0
+        # A line the force never saw, hand-added to the list afterwards.
+        document = json.loads(baseline.read_text(encoding="utf-8"))
+        document["findings"].append({"file": "pkg/smuggled.py", "line": VIOLATION.strip(),
+                                     "nth": 1, "rule": "S602", "tool": "ruff"})
+        baseline.write_text(json.dumps(document), encoding="utf-8")
+        check = _run(tmp_path, baseline, "--check")
+        assert check.returncode == 1, check.stdout
+        assert "pkg/smuggled.py" in check.stdout, (
+            f"the hand-added line rode in on the force's signature:\n"
+            f"{check.stdout}")
 
     def test_force_without_a_reason_writes_nothing(self, tmp_path):
         module = tmp_path / "pkg" / "m.py"

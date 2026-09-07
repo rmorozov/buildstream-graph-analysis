@@ -215,14 +215,22 @@ def load_baseline(path):
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def write_baseline(path, findings, families, version, forced_by=None):
+def write_baseline(path, findings, families, version, forced=None):
+    """`forced` is `None`, or `(reason, identities)` - who authorised a
+    gain and which lines (`UX-745`). One argument, not two: the pair is
+    meaningless apart, and splitting it puts this function over its
+    argument ceiling."""
     findings = sorted(findings, key=sort_key)
     body = ",\n".join(f"    {json.dumps(f, sort_keys=True)}" for f in findings)
-    forced = f'  "forced_by": {json.dumps(forced_by)},\n' if forced_by else ""
+    header = ""
+    if forced:
+        reason, signed = forced
+        header = (f'  "forced_by": {json.dumps(reason)},\n'
+                  f'  "forced": {json.dumps(sorted(list(i) for i in signed))},\n')
     text = ("{\n"
             f'  "ruff_version": {json.dumps(version)},\n'
             f'  "families": {json.dumps(sorted(set(families)))},\n'
-            + forced
+            + header
             + '  "findings": [\n' + (body + "\n" if body else "") + "  ]\n"
             "}\n")
     pathlib.Path(path).write_text(text, encoding="utf-8")
@@ -259,18 +267,26 @@ def head_document(path):
     return document
 
 
-def gained_since_head(path, working_findings, forced_by=None):
-    """`UX-694`: the shrink guard - a line in `path` that `HEAD` never
-    carried. A `--write --force --reason UX-NNN` is the one way there,
-    and it authorises the gain until it lands: a `forced_by` HEAD does
-    not carry yet."""
+def gained_since_head(path, working_findings, forced_by=None, forced=()):
+    """`UX-694`: a line in `path` that `HEAD` never carried, split into
+    the ones a `--force` authorised and the ones nobody did.
+
+    Returns `(authorised, unauthorised)` - both red, and the split is
+    the message. `UX-745`: the waiver used to return nothing at all for
+    any `forced_by` unlike HEAD's, so one forced line let every other
+    gain through with it, and a *repeat* of HEAD's reason was checked
+    more strictly than a novel one.
+    """
     head = head_document(path)
     if head is None:
-        return []
-    if forced_by and forced_by != head.get("forced_by"):
-        return []
+        return [], []
     carried = {identity(f) for f in head["findings"]}
-    return [f for f in working_findings if identity(f) not in carried]
+    gained = [f for f in working_findings if identity(f) not in carried]
+    if not forced_by:
+        return [], gained
+    signed = {tuple(i) for i in forced}
+    return ([f for f in gained if identity(f) in signed],
+            [f for f in gained if identity(f) not in signed])
 
 
 def do_write(args, current, existing):
@@ -286,9 +302,17 @@ def do_write(args, current, existing):
             for f in new:
                 print(f"  new: {describe(f)}")
             return 1
+    signed = ()
+    if args.force:
+        head = head_document(args.baseline)
+        if head is not None:
+            carried = {identity(f) for f in head["findings"]}
+            signed = [identity(f) for f in current
+                      if identity(f) not in carried]
     write_baseline(args.baseline, current, FAMILIES, ruff_version(),
-                   forced_by=args.reason if args.force else None)
-    print(f"wrote {len(current)} finding(s) to {args.baseline}")
+                   forced=(args.reason, signed) if args.force else None)
+    print(f"wrote {len(current)} finding(s) to {args.baseline}"
+          + (f"; {len(signed)} authorised by {args.reason}" if signed else ""))
     return 0
 
 
@@ -297,16 +321,26 @@ def do_check(args, current, existing):
         print(f"no baseline at {args.baseline} - run --write first")
         return 1
     new, stale = diff(current, existing["findings"])
-    gained = gained_since_head(args.baseline, existing["findings"],
-                               existing.get("forced_by"))
+    authorised, gained = gained_since_head(
+        args.baseline, existing["findings"], existing.get("forced_by"),
+        existing.get("forced", ()))
     for f in new:
         print(f"new: {describe(f)}")
     for f in stale:
         print(f"stale: {describe(f)}")
+    # Printed, never swallowed: a track that grows the list says so in
+    # the `make lint` it pastes, which is what the merging session reads.
+    # Red, not waived. `gained_since_head` only ever sees a difference in
+    # an *uncommitted* tree - in CI the working file is HEAD - so this
+    # costs a forced gain nothing once it lands, and costs a track that
+    # forced one the `make lint` it has to paste (`UX-745`).
+    for f in authorised:
+        print(f"authorised by {existing['forced_by']}, red until committed: "
+              f"{describe(f)}")
     for f in gained:
         print(f"gained: {describe(f)} - only --write --force --reason "
               "UX-NNN may add a line")
-    if not new and not stale and not gained:
+    if not new and not stale and not gained and not authorised:
         print(f"clean: {len(current)} finding(s) match {args.baseline}")
         return 0
     return 1
@@ -322,7 +356,9 @@ def do_shrink(args, current, existing):
         kept = [f for f in existing["findings"] if identity(f) not in drop]
         write_baseline(args.baseline, kept, existing.get("families", FAMILIES),
                        existing.get("ruff_version", ruff_version()),
-                       forced_by=existing.get("forced_by"))
+                       forced=(existing["forced_by"],
+                               existing.get("forced", ()))
+                       if existing.get("forced_by") else None)
         plural = "y" if len(stale) == 1 else "ies"
         print(f"removed {len(stale)} stale entr{plural}")
     else:

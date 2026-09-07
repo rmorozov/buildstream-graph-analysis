@@ -9,8 +9,11 @@ commit's date. No ids-closed column is derived here: a verifier found
 `commit_signal()` cannot tell a commit that *documents* an earlier
 round from one that is *in* it - a retroactive documentation commit
 legitimately names the round it describes, dragging that round's date
-to its own. `document_date()` reads a round's own document instead,
-for the comparison test that catches exactly that.
+to its own. `document_date()` reads a round's own **dateline** -
+a heading's parenthesised date, or an opening "Run on"/"Opens at"
+sentence - never a document's first date of any kind (`UX-772`):
+rounds 76 and 85 each carry an earlier, incidental date that is not
+their own, and a document stating none reads `None`.
 
 `written_rounds()` excludes the newest round unless its own document
 already exists: a round in progress cannot commit the row that names
@@ -36,7 +39,14 @@ sys.path.insert(0, str(REPO))
 from tools import dev_process_bands
 
 ROUND_RE = re.compile(r"\bround\s+(\d+)\b", re.IGNORECASE)
-DATE_RE = re.compile(r"\b(20\d\d-\d\d-\d\d)\b")
+#: `UX-772`: a dateline, not any date - a heading's own parenthesised
+#: date, or the opening sentence stating one ("Run on ...", "Opens at
+#: `sha` (...)"). A date elsewhere in the text is a mention, not a claim
+#: about when the round happened.
+DATELINE_RE = re.compile(
+    r"^#\s.*\((20\d\d-\d\d-\d\d)\)"
+    r"|^(?:Run on|Opens at)\b.*?\b(20\d\d-\d\d-\d\d)\b",
+    re.MULTILINE)
 
 HEADER = (
     "# Round register\n\n"
@@ -126,29 +136,20 @@ def rounds(commits=None, ledger_runs=None):
 
 
 def _first_date_in_text(text):
-    match = DATE_RE.search(text)
-    return match.group(1) if match else None
-
-
-def _first_commit_date(path, repo=REPO):
-    """The date `path` was first added - a round written
-    contemporaneously (no dateline in its own text) still has one."""
-    out = subprocess.run(
-        [GIT, "log", "--format=%ad", "--date=short", "--follow",
-         "--diff-filter=A", "--", str(path)],
-        cwd=str(repo), capture_output=True, text=True, check=True).stdout
-    lines = [line for line in out.splitlines() if line.strip()]
-    return lines[-1] if lines else None
+    match = DATELINE_RE.search(text)
+    if not match:
+        return None
+    return match.group(1) or match.group(2)
 
 
 def document_date(number, repo=REPO):
-    """The round's own document's date - the first date its text
-    states, or the file's own first-commit date if it states none."""
+    """The round's own dateline, or `None` if its document states
+    none - never a proxy (a file's first-commit date, or any other
+    date the text happens to mention) for a claim it never made."""
     path = repo / "docs/audits" / f"round-{number}.md"
     if not path.exists():
         return None
-    return (_first_date_in_text(path.read_text(encoding="utf-8"))
-            or _first_commit_date(path, repo))
+    return _first_date_in_text(path.read_text(encoding="utf-8"))
 
 
 def _has_document(number, repo=REPO):

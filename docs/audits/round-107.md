@@ -1,6 +1,6 @@
 # Round 107 — a fix that retired a filed row, and the correction I owed round 106
 
-Closed 2026-09-07.
+Run on 2026-09-07.
 
 Three rows closed, four filed. The user's order again: workflow rows
 first. The round's subject is not a defect in the code but two in the

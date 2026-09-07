@@ -252,19 +252,57 @@ DATE_MISMATCH_WAIVER = {
     "101": ("2026-09-07", "UX-757's retroactive documentation commits "
                            "name round 101 in prose; commit_signal() "
                            "reads that as round 101's own work"),
+    # Two more, measured rather than assumed - and two different
+    # causes, which is why each carries its own sentence. `git log
+    # --format=%ad --date=short --grep 'round 19'` returns 2026-08-20
+    # *and* 2026-08-21, one commit opening the round and one closing
+    # it; `rounds()` takes `max`, the document states its opening.
+    # Round 22's later date is `docs: record how round 22 closed`,
+    # UX-757's shape again.
+    "19": ("2026-09-07", "a two-day round: commits on 2026-08-20 "
+                         "(opening) and 2026-08-21 (closing); the "
+                         "document states the day it opened"),
+    "22": ("2026-09-07", "`docs: record how round 22 closed` lands "
+                         "2026-08-22, a day after the round's own "
+                         "commits - a retroactive documentation commit"),
 }
 
 
+#: `UX-772`'s verifier: a round whose document states no recognized
+#: dateline must red, not silently skip - the same shape the row was
+#: filed on, one layer down. These ten predate the register (round 99)
+#: and open with an "Input:"/prose sentence, never "Run on"/"Opens at"
+#: - closed history, not rewritten to satisfy a later guard. `(pinned
+#: on, reason)`, so a round that gains a real dateline is caught by
+#: `test_a_documented_rounds_date_matches_its_document`'s own check
+#: below rather than staying silently waived.
+NO_DATELINE_WAIVER = dict.fromkeys(
+    ("75", "76", "77", "78", "80", "81", "83", "84", "85", "86"),
+    ("2026-09-07", "pre-round-99 audit-cadence document, no stated "
+                   "dateline (UX-772)"))
+#: Rounds 7-9 open on the CI run that produced the capture - `Run
+#: [\`32044281643\`](...)`, a run id and no date anywhere in the
+#: document. They entered this population when `UX-781` un-truncated
+#: the history the register derives from, not by any change to them.
+NO_DATELINE_WAIVER.update(dict.fromkeys(
+    ("7", "8", "9"),
+    ("2026-09-07", "opens on a CI run id, not a date; states none "
+                   "(UX-772, population widened by UX-781)")))
+
+
 def _documented_rounds():
-    """Every round `dev_round_register.rounds()` names, `FIRST_PRICED
-    _ROUND` on, that also has a `docs/audits/round-N.md`. Below that
-    boundary a multi-day round's own opening date legitimately differs
-    from the register's latest-commit date (round 76 opens 09-01,
-    closes 09-02; round 85 opens 09-03, closes 09-04) - a different
-    measurement, not the contamination this class exists to catch."""
-    return sorted((n for n in dev_round_register.rounds()
-                    if int(n) >= FIRST_PRICED_ROUND
-                    and (AUDITS / f"round-{n}.md").exists()), key=int)
+    """Every round the register names with a real date and a document
+    - no `FIRST_PRICED_ROUND` floor and no dateline-recognized filter
+    (`UX-772`'s verifier: filtering on `document_date() is not None`
+    reproduced the same defect one layer down - "the population is
+    documents whose phrasing the regex happens to recognize"). A round
+    the register cannot date at all (round 64: its naming commit is
+    not on this history) is the one exclusion left, a different
+    mechanism (`rounds()`'s reachability, not a document's dateline)."""
+    reg = dev_round_register.rounds()
+    return sorted((n for n in reg
+                   if reg[n]["date"] != "—"
+                   and (AUDITS / f"round-{n}.md").exists()), key=int)
 
 
 class TestARegisteredRoundsDateMatchesItsDocument:
@@ -272,17 +310,39 @@ class TestARegisteredRoundsDateMatchesItsDocument:
     the five rounds it was demonstrated on, for this same reason, and
     was dropped rather than shipped wrong. This is the same check kept
     on what remains - the register's date against the round's own
-    document, for every round one exists for."""
+    document, for every round one exists for. `UX-772`'s verifier: an
+    unrecognized dateline reds unless named in `NO_DATELINE_WAIVER`,
+    the same shape as `UNPRICEABLE_ROUND_WAIVER` - a silent skip is
+    the defect this class exists to catch, not a way to avoid it."""
 
     def test_the_population_is_not_empty(self):
         assert len(_documented_rounds()) >= 6, (
             "this class asserts nothing if no registered round has a "
             f"document: {_documented_rounds()}")
 
+    def test_the_population_reaches_below_first_priced_round(self):
+        below = [n for n in _documented_rounds() if int(n) < FIRST_PRICED_ROUND]
+        assert below, (
+            f"`FIRST_PRICED_ROUND` ({FIRST_PRICED_ROUND}) stopped exactly "
+            "where rounds 76 and 85 fail (UX-772); a population narrowed "
+            "back to it buys nothing")
+
     @pytest.mark.parametrize("number", _documented_rounds())
     def test_a_documented_rounds_date_matches_its_document(self, number):
         register_date = dev_round_register.rounds()[number]["date"]
         document_date = dev_round_register.document_date(number)
+        if number in NO_DATELINE_WAIVER:
+            assert document_date is None, (
+                f"round {number} is waived for stating no dateline, but "
+                "now states one - drop it from NO_DATELINE_WAIVER and let "
+                "it compare")
+            return
+        assert document_date is not None, (
+            f"round {number} has no register-recognized dateline in "
+            f"docs/audits/round-{number}.md ('Run on ...', 'Opens at "
+            "...', or a heading's parenthesised date) and is not named "
+            "in NO_DATELINE_WAIVER - a document that does not state its "
+            "own date is exactly UX-772's defect")
         if number in DATE_MISMATCH_WAIVER:
             assert register_date != document_date, (
                 f"round {number} is waived for a mismatch that no "

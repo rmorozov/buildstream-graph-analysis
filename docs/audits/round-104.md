@@ -1,10 +1,10 @@
 # Round 104 — the verifier earned the round
 
-Five rows closed, one reverted by CI, four filed. The round's subject
-was the defect round 103 found five times — **a guard whose population
-is narrower than the sentence it checks** — and it found two more, both
-inside this round's own fixes, and both only because a verifier ran a
-mutation the track had not.
+Run on 2026-09-07. Five rows closed, one reverted by CI, four filed.
+The round's subject was the defect round 103 found five times — **a
+guard whose population is narrower than the sentence it checks** —
+and it found two more, both inside this round's own fixes, and both
+only because a verifier ran a mutation the track had not.
 
 ## What closed
 

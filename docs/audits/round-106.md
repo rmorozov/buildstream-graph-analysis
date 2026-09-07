@@ -1,10 +1,10 @@
 # Round 106 — the agent workflow's own loop, and the guards that read a citation
 
-Eight rows closed, three filed. The user ordered it: workflow rows
-first, features and bugs after. Four `implementer` tracks in parallel
-on `sonnet`, each read by a `verifier` before merge — the mandate
-`UX-761` put in the guide last round, exercised for the first time on a
-full round.
+Run on 2026-09-07. Eight rows closed, three filed. The user ordered
+it: workflow rows first, features and bugs after. Four `implementer`
+tracks in parallel on `sonnet`, each read by a `verifier` before
+merge — the mandate `UX-761` put in the guide last round, exercised
+for the first time on a full round.
 
 **Every one of the four tracks was held, and every hold was on
 something the track's own report asserted and a verifier's own commands

@@ -370,5 +370,55 @@ class TestOneMeasurementForTheScaleTrace:
             "not reading the drift this item found", found)
 
 
+class TestATimeConcentrationBlockMatchesWhatFindingsAlwaysPrints:
+    """`UX-748`: `_blocks()` only reads fences opening `$ bga `, so a
+    fence pasting `bga`'s own findings text with no command shown -
+    `real-project.md:1110` - sits in no branch of it. `bga/findings.py:
+    637-643` always appends `(NN.N% of the build)` to a row with a
+    realizable saving; this block dropped the suffix from both its rows
+    and its own header undercounted them by one.
+    """
+
+    DOC = REPO / "docs/guides/real-project.md"
+    HEADER = re.compile(
+        r"Where the time is: (\d+) element\(s\) are [\d.]+% of the "
+        r"[\d.]+s critical path\n")
+    ROW = re.compile(r"^ {2}\S.*-> fixing it saves [\d.]+s(.*)$", re.M)
+    SUFFIX = re.compile(r"\(\d+\.\d% of the build\)")
+
+    def _block(self):
+        text = self.DOC.read_text(encoding="utf-8")
+        found = self.HEADER.search(text)
+        assert found, "no time-concentration block in real-project.md"
+        end = text.index("```", found.end())
+        return found, text[found.end():end], text[end:end + 600]
+
+    def test_the_header_count_matches_the_rows_pasted(self):
+        found, body, _ = self._block()
+        rows = [line for line in body.splitlines() if line.strip()]
+        assert rows, "the block pastes no rows"
+        assert int(found.group(1)) == len(rows), (
+            f"the header says {found.group(1)} element(s); {len(rows)} "
+            f"row(s) are pasted")
+
+    def test_every_row_carries_the_suffix_findings_always_appends(self):
+        _, body, _ = self._block()
+        rows = list(self.ROW.finditer(body))
+        assert rows, "no row in the block ends in a realizable saving"
+        missing = [m.group(0) for m in rows if not self.SUFFIX.search(m.group(1))]
+        assert missing == [], (
+            "bga/findings.py always appends `(NN.N% of the build)` to a "
+            f"row with a realizable saving; missing from: {missing}")
+
+    def test_the_block_is_dated_since_it_cannot_be_re_run(self):
+        """The capture behind it is a build artifact and never committed
+        (`UX-126`, `UX-189`), so this block takes the `UX-511` branch."""
+        _, _, trailer = self._block()
+        assert KEPT.search(trailer), (
+            "the block cannot be re-run here and does not say so")
+        assert ISO_DATE.search(trailer), "the block is not dated"
+        assert CUTS.search(trailer), "the block names no Cuts:"
+
+
 if __name__ == "__main__":  # pragma: no cover
     raise SystemExit(pytest.main([__file__, "-v"]))

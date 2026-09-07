@@ -514,6 +514,26 @@ class TestTheLogIsNotStaleAboutItself:
         assert re.search(r"`[a-z_/.]+\.(md|py|js)`|`bga [a-z]+", entry), (
             "the entry names no source a reader could re-check")
 
+    def test_the_entry_credits_the_true_schema_size(self):
+        """`UX-748`: the clause above credits a *commit*, never a figure,
+        so `UX-740` adding `duration_resolution` to `analyze/v6` never
+        touched this document and stayed invisible - the entry kept
+        saying 60 after the schema became 61. Re-derived, not credited.
+        """
+        import bga.schemas as schemas
+
+        _, _, entry = _claimed()
+        found = re.search(
+            r"`(analyze/v\d+)`[^\n]*?\*\*(\d+) top-level properties\*\*",
+            entry)
+        assert found, f"the newest entry names no schema figure: {entry!r}"
+        contract, stated = found.group(1), int(found.group(2))
+        actual = len(schemas.schema(contract)["properties"])
+        assert actual == stated, (
+            f"the newest entry says {contract} has {stated} top-level "
+            f"properties; bga.schemas.schema({contract!r})['properties'] "
+            f"has {actual}")
+
     def test_the_older_entries_are_kept(self):
         """A log that replaces its own history is a field, not a log."""
         text = DOC.read_text(encoding="utf-8").split(HEADING, 1)[1]

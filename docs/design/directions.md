@@ -1421,7 +1421,7 @@ when a new shape appears. Decomposed as `UX-302`..`UX-306`.
 owner), R5 (the capacity operator) — the four whose questions
 contradict on the surface and share one quantity underneath.
 
-**Status:** partial — the four corrections are argued here; `UX-675`..`UX-684` are open.
+**Status:** partial — the four corrections are argued here; `UX-675`, `UX-676`, `UX-677`, `UX-681` landed and `UX-678`, `UX-679`, `UX-680`, `UX-682`, `UX-683`, `UX-684` are open.
 
 The user's brief, in three questions: can a CI owner tell whether the
 agent's cores are the binding resource without overcommitting memory;
@@ -1555,7 +1555,7 @@ tool prices it and does not watch it).
 **Serves:** R8 (the maintainer deciding when to release), and every
 implementing session — the suite is theirs, the walk is the reader's.
 
-**Status:** landed — `UX-685`..`UX-692` all closed.
+**Status:** partial — `UX-685`, `UX-686`, `UX-687`, `UX-688`, `UX-691` and `UX-692` landed; `UX-689` and `UX-690` are open.
 
 The last of them tested this direction's own claim rather than
 restating it: `UX-692`'s seeded sweep found a real defect on its

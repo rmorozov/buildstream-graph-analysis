@@ -29,6 +29,31 @@ FIRST_TAGGED = 227
 #: An item id wherever a status line cites one - `UX-581`.
 _ITEM = re.compile(r"\bUX-0*(\d+)\b")
 
+#: `` `UX-A`..`UX-B` `` in a status line - `UX-748`.
+_RANGE = re.compile(r"UX-0*(\d+)`\.\.`UX-0*(\d+)")
+
+#: The same range, where the prose calls it open rather than landed -
+#: `UX-748`: this is the shape that goes stale one closed id at a time,
+#: not the shape (`landed as A..B`) that is a fixed historical record.
+_RANGE_OPEN = re.compile(
+    r"UX-0*(\d+)`\.\.`UX-0*(\d+)` (?:are|is|remain|remains)"
+    r"(?: still)? open")
+
+
+def _ids_in(text):
+    """Every id a status line cites, a range expanded to what is filed.
+
+    `_ITEM` alone reads a range's two endpoints, so `UX-675`..`UX-684`
+    is `{675, 684}` and a status calling it "open" never reddens while
+    `684` itself is - even with four of the ten ids 🟢 (`UX-748`).
+    Expanded to what is **filed** in `[A, B]`, not every integer, so a
+    gap in the numbering is not invented into an id.
+    """
+    ids = {int(n) for n in _ITEM.findall(text)}
+    for lo, hi in ((int(a), int(b)) for a, b in _RANGE.findall(text)):
+        ids.update(n for n in _filing_numbers() if lo <= n <= hi)
+    return ids
+
 
 def _role_ids():
     """The role ids the model actually defines, read from its table."""
@@ -191,11 +216,32 @@ class TestEveryDirectionSaysWhereItStands:
             rest = status.split("**Status:**", 1)[1].strip()
             if not rest.startswith("partial"):
                 continue
-            named = {int(n) for n in _ITEM.findall(rest[len("partial"):])}
+            named = _ids_in(rest[len("partial"):])
             if named and named <= closed:
                 stale.append(f"{heading}: {sorted(named)} are all closed")
         assert stale == [], (
             f"a `partial` whose whole remainder has landed: {stale}")
+
+    def test_a_range_called_open_names_no_closed_filing(self):
+        """`UX-748`: a range's two endpoints are not the range. `684`
+        stayed open while `675`, `676`, `677`, `681` landed, so a status
+        calling `UX-675`..`UX-684` "open" stayed true by the endpoints
+        alone - checked here against every id the range spans that is
+        actually filed."""
+        closed = _closed_filings()
+        filed = _filing_numbers()
+        wrong = []
+        for heading, status in _statuses():
+            for lo, hi in ((int(a), int(b))
+                           for a, b in _RANGE_OPEN.findall(status)):
+                landed = sorted(n for n in filed
+                                 if lo <= n <= hi and n in closed)
+                if landed:
+                    wrong.append(
+                        f"{heading}: UX-{lo}..UX-{hi} called open already "
+                        f"has closed {landed}")
+        assert wrong == [], (
+            f"a range called open has a closed filing inside it: {wrong}")
 
     def test_a_landed_status_names_only_closed_filings(self):
         """The other direction, and the one that keeps `landed` cheap to

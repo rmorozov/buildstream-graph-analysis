@@ -1,6 +1,6 @@
 # `bga`: Current Architecture — Three Analysis Planes
 
-**Start here to orient in this codebase.** `docs/spec/specification.md` (v9) is the original design document and stays authoritative for full-length invariant/data-contract text — it is *not* wrong, but it describes the tool as originally scoped, and does not know about anything built since. This doc describes what `bga` actually does **today**, as one coherent system, and points at the real file/doc for every claim so you don't have to reconstruct that history yourself from the commit log, the 749 `docs/backlog/scenarios/` files and the 75 `docs/backlog/tasks/` files this commit carries.
+**Start here to orient in this codebase.** `docs/spec/specification.md` (v9) is the original design document and stays authoritative for full-length invariant/data-contract text — it is *not* wrong, but it describes the tool as originally scoped, and does not know about anything built since. This doc describes what `bga` actually does **today**, as one coherent system, and points at the real file/doc for every claim so you don't have to reconstruct that history yourself from the commit log, the 750 `docs/backlog/scenarios/` files and the 75 `docs/backlog/tasks/` files this commit carries.
 
 **Want to *use* the tool rather than work on it?** [`docs/guides/real-project.md`](../guides/real-project.md) is the end-to-end walkthrough on a real project, with real output at every step.
 
@@ -1051,22 +1051,24 @@ with the tables above destroys the one thing the entry is for
 (`UX-653`). The newest entry is the exception: every round that
 re-grounds the document rewrites it.
 
-Updated 2026-09-06 (after `UX-738`), covering no change to this
-document's body — what moved is the currency record itself and the
-derived backlog counts above it, which every filing moves. The entry
-this replaces credited `UX-736`, whose fix corrected the `UX-60` row
-of the history table and put those 75 rows under
-`test_the_table_status_matches_the_task_files`; that entry then went
-stale the moment the round's next commit touched the document, which
-is `UX-732`'s trap in its remaining, non-merge form — the anchor has
-to be the newest substantive touch, so it is written last. The
-document is re-grounded in the two contract tables above against
-`bga.contracts` and `bga/schemas.py`: **25 emitted ids, 10 of them
-superseded, and 3 read and never written**, 9 printable and 16 not,
-`analyze/v6` still at **60 top-level properties**, and `bga/viewer/`
-still **22 modules** (`ls bga/viewer/*.js | wc -l`) — every figure
-unchanged from the entry this replaces. The item published no id and
-moved no key.
+Updated 2026-09-07 (after `UX-748`), covering one change to this
+document — the schema figure in this very entry, which said sixty
+top-level properties while the contract had carried sixty-one since
+`UX-740` added `duration_resolution`. The prose was copied forward
+between entries and no guard read it; `UX-748` gave it one that
+derives the count from `bga/schemas.py`, which is why a figure four
+entries old was found at all. The entry this replaces credited
+`UX-738` and moved only the derived backlog counts. Note the trap
+that entry named and this one fell into anyway: correcting a figure
+*inside* the newest entry is itself a substantive touch, so the entry
+has to be re-dated and re-anchored in the same commit, or the log goes
+stale about itself the moment it lands. The document is re-grounded in
+the two contract tables above against `bga.contracts` and
+`bga/schemas.py`: **25 emitted ids, 10 of them superseded, and 3 read
+and never written**, 9 printable and 16 not,
+`analyze/v6` at **61 top-level properties**, and `bga/viewer/` still
+**22 modules** (`ls bga/viewer/*.js | wc -l`). The item published no
+id and moved no key.
 
 Updated 2026-09-04 (after `UX-653`), covering one change to this
 document — the paragraph above, which states the rule the log had been

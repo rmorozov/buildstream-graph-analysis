@@ -49,6 +49,7 @@ limit is a row too.
 | 102 | implementer | sonnet | `UX-703` a weekly mutation run (bounded) | 226k | 207 | 76.6 m | merged | stalled on a backgrounded mutmut run; mutmut copies the tree one directory deeper, so every `parents[N]` root in this repo resolves wrong inside a mutant |
 | 103 | implementer | sonnet | `UX-705` burn-down batch 1: S607 under `tools/` (bounded) | 190k | 160 | 35.4 m | merged | resolving the executable turns a literal argv into one with a Name in it, which is what S603 reads - 16 of 23 cannot close without growing S603 |
 | 103 | implementer | sonnet | `UX-705` burn-down batch 2: SIM115 under `tools/` (bounded) | 73k | 92 | 14.9 m | merged | wall clock: make test is ~7 min and the turn budget went into polling for it, not into the fix, which was mechanical as briefed |
+| 103 | implementer | sonnet | `UX-742` a dead-export detector eslint cannot be (bounded) | 252k | 101 | 31.1 m | merged, two fixes | strip_comments blanks a string body wholesale, silently erasing the module paths a name-level import parse needs - 286 unread before the switch to raw text |
 
 Round 101's four tracks are **not** here: this session could not
 identify their transcripts with certainty after a context rebuild, and
@@ -61,7 +62,7 @@ committed cleanly once told to run in the foreground. Three of the five
 left a derived figure or a §6 context-map row behind - the same class
 the round itself was about, arriving in the tracks' own work.
 
-What the thirty-eight rows already say: a researcher that reads a document
+What the thirty-nine rows already say: a researcher that reads a document
 whole costs 100-180k; a walker that drives every control costs 336k;
 the two cuts cost a re-run each. The `walk` and `design-review`
 skills fix the report shape so the next rows are smaller, and the

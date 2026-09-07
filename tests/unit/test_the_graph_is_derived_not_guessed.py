@@ -239,7 +239,9 @@ class TestTheDeadExportDetector:
         for name, text in viewer_files.items():
             (viewer / name).write_text(text, encoding="utf-8")
         for name, text in other_files:
-            (tmp_path / name).write_text(text, encoding="utf-8")
+            target = tmp_path / name
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(text, encoding="utf-8")
         subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
         subprocess.run(["git", "add", "-A"], cwd=tmp_path, check=True)
         return viewer
@@ -282,3 +284,42 @@ class TestTheDeadExportDetector:
                           'const mod = await import("./viewer/a.js");\n'
                           "mod.readElsewhere();\n")])
         assert dead_exports(viewer, root=tmp_path) == {}
+
+    def test_prose_about_a_name_is_not_a_reader(self, tmp_path):
+        """`UX-742`, found on merge: the detector named `takesWindow`,
+        the finding was written into the task file, and the next run
+        called it alive - four mentions in a tracked `.md`. A census
+        that reads its own record cannot report twice."""
+        from tools.dev_js_deps import dead_exports
+
+        viewer = self._repo(
+            tmp_path,
+            {"a.js": "export function neverRead() {\n  return 1;\n}\n"},
+            other_files=[("docs/note.md",
+                          "`neverRead` is the export UX-742 found dead.\n")])
+        assert dead_exports(viewer, root=tmp_path) == {"a.js": ["neverRead"]}
+
+    def test_the_detectors_own_source_is_not_a_reader(self):
+        """The same defect one layer down: the comment explaining the
+        `docs/` exclusion named the symbol, and that mention alone was
+        enough to silence the tool."""
+        from tools.dev_js_deps import reads_code
+
+        assert reads_code("tests/browser.py", "tools/dev_js_deps.py")
+        assert reads_code("bga/viewer/shapes.js", "tools/dev_js_deps.py")
+        assert not reads_code("tools/dev_js_deps.py", "tools/dev_js_deps.py")
+        assert not reads_code("docs/backlog/scenarios/UX-0742.md", None)
+
+    def test_a_python_reader_elsewhere_still_counts(self, tmp_path):
+        """The exclusions are two named paths, not a suffix rule: a
+        Python guard that drives a viewer symbol by name is a reader,
+        and seven of `bga/viewer`'s eight candidates are alive only
+        because one does."""
+        from tools.dev_js_deps import dead_exports
+
+        viewer = self._repo(
+            tmp_path,
+            {"a.js": "export function driven() {\n  return 1;\n}\n"},
+            other_files=[("tests/page.py", 'page.evaluate("driven()")\n')])
+        assert dead_exports(viewer, root=tmp_path) == {}
+

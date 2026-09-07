@@ -1,6 +1,6 @@
 # UX-742: the viewer's dead exports need a detector eslint cannot be
 
-**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** UX-699 (the linter that ships without this), UX-340 (`dev_js_deps`, the module graph already derived) | **Serves:** the session deleting viewer code and wanting to know what nothing reads | **Topic:** guards | **Shape:** bounded | **Area:** tools
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-699 (the linter that ships without this), UX-340 (`dev_js_deps`, the module graph already derived) | **Serves:** the session deleting viewer code and wanting to know what nothing reads | **Topic:** guards | **Shape:** bounded | **Area:** tools
 
 ## Motivation
 
@@ -62,7 +62,10 @@ page uses. Mutation: add an unread export to a viewer module and
 confirm the detector names it; import it from a real viewer module and
 confirm it goes quiet.
 
-## Outcome
+## Outcome (round 103, 2026-09-07) — 🟢 Done
+
+**Premise:** held — eslint is wrong here, and the graph alone is not
+right either: 108 is not 5.
 
 **The gap, measured.** `dev_js_deps`' graph over `bga/viewer`, barrel
 *counted* (every export of a module `tests/viewer.mjs` re-exports
@@ -73,18 +76,15 @@ default-scope answer for the same reason, a wildcard `export *`. Barrel
 the same way, both dominated by exports a *test* reads only through the
 barrel's dynamic `await import(...)`, invisible to either instrument.
 Neither is the five: the graph alone cannot tell a dead export from one
-only a test reads. Per the row's own instruction, that is a finding
-about the question, not a number to ship - stopped there and added a
-second stage instead of shipping the 108.
+only a test reads. Per the row's instruction that is a finding about
+the question, so a second stage was added rather than the 108 shipped.
 
 **The close, measured.** `dev_js_deps.dead_exports()`: barrel-excluded
 graph candidates, each confirmed against a whole-tree text search (the
 same check that cleared `UX-699`'s five by hand) before being named.
 On the current tree: **1** confirmed (`takesWindow`, `questions.js`) -
 new, not one of the five (`forgetIds`, `SPARK_WIDTH`, `sourceOf`,
-`forgetUnmapped`, `focusTargets`), all already deleted by `UX-699`. Not
-deleted here - out of this task's Required Fix, which asked for the
-detector, not a cleanup pass; left for the session to decide.
+`forgetUnmapped`, `focusTargets`), all already deleted by `UX-699`.
 
 Acceptance Test, on the real tree (`git diff --stat` clean before and
 after, mutation reverted):
@@ -108,3 +108,36 @@ reverted from a pristine copy each time):
 |---|---|---|
 | drop the `-1` (own declaration) term | `test_an_export_nothing_imports_is_named` | 1 failed, 12 passed → reverted: 13 passed |
 | confirm only within `directory`, not the whole tree | `test_a_reader_outside_the_directory_is_not_a_false_positive` | 1 failed, 12 passed → reverted: 13 passed |
+
+**The census read its own record**, twice. Writing `takesWindow` into
+this Outcome put four mentions in a tracked `.md` and the next run
+called it alive; excluding `docs/` re-broke it one layer down, on the
+comment that explained the exclusion. The corpus is now every tracked
+file except `docs/` and this module (`reads_code()`) — not a suffix
+rule: seven of eight candidates are alive only because a Python page
+guard drives them by name.
+
+| mutation | reddened |
+|---|---|
+| `docs/` counted as a reader | `_prose_about_a_name_is_not_a_reader` + 1 |
+| the detector's own source counted | `_the_detectors_own_source_is_not_a_reader` |
+| the corpus made a `.js/.mjs/.html` suffix rule | `_a_python_reader_elsewhere_still_counts` + 1 |
+
+### Deviation from the Required Fix
+
+Two, both on merge. The track forced **two new baseline entries**
+(`PLR0915` on `main()`, `S607` on a second `git ls-files`) where
+`UX-705` exists to shrink that list; both are gone — the CLI clause is
+`_report_dead()`, the tracked-file list is `UX-687`'s `tracked_paths`
+whose `git ls-files` is already baselined, and `forced_by` is cleared.
+`takesWindow` is named, not deleted: the row asked for the detector.
+
+```text
+$ python3 tools/dev_js_deps.py --dead-exports bga/viewer
+questions.js: takesWindow
+$ make test
+7626 passed, 82 skipped, 1 warning in 434.31s (0:07:14)
+$ make lint
+All checks passed! / clean: 292 finding(s)
+```
+

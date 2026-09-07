@@ -29,10 +29,10 @@ import argparse
 import json
 import pathlib
 import re
-import subprocess
 import sys
 
 REPO = pathlib.Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPO))
 
 # A `/` here opens a regex literal rather than dividing. The standard
 # heuristic: what can precede a division is a value, and what can
@@ -249,6 +249,29 @@ def imported_symbols(directory):
     return used
 
 
+def _own_source(root):
+    """This module's path within `root`, or None when it is outside it
+    (a guard's throwaway tree)."""
+    try:
+        return pathlib.Path(__file__).resolve().relative_to(
+            pathlib.Path(root).resolve()).as_posix()
+    except ValueError:
+        return None
+
+
+def reads_code(rel, own_source):
+    """Whether a tracked path could name a viewer symbol *as a reader*.
+
+    Two kinds cannot, and both were measured resurrecting a name this
+    census had just reported dead: `docs/`, which is prose *about* the
+    code - an Outcome naming the finding put four mentions in the tree -
+    and this module, whose own comment naming it put a fifth (`UX-742`).
+    A `.py` anywhere else **is** a reader: seven of the eight candidates
+    are named by a Python page guard that drives them, and stay quiet.
+    """
+    return not (rel.startswith("docs/") or rel == own_source)
+
+
 def dead_exports(directory, root=REPO):
     """Exports the directory's own graph never imports, each confirmed
     dead by a search of every tracked file rather than shipped as the
@@ -273,11 +296,15 @@ def dead_exports(directory, root=REPO):
         return {}
 
     root = pathlib.Path(root).resolve()
-    tracked = subprocess.run(["git", "ls-files"], cwd=str(root),
-                             capture_output=True, text=True,
-                             check=True).stdout.split()
+    # `UX-687`'s list, not a second `git ls-files`: one call, one
+    # baselined finding, and the same answer on a clone (`UX-742`).
+    from tools.dev_finding_coverage import tracked_paths
+    tracked = sorted(tracked_paths(root))
     texts = {}
+    own_source = _own_source(root)
     for rel in tracked:
+        if not reads_code(rel, own_source):
+            continue
         try:
             texts[rel] = (root / rel).read_text(encoding="utf-8", errors="ignore")
         except OSError:
@@ -344,6 +371,20 @@ def crossings(path, groups):
     return {"unplaced": unplaced,
             "crossings": {f"{a} <- {b}": sorted(v)
                           for (a, b), v in sorted(needed.items())}}
+
+
+def _report_dead(directory, as_json):
+    """`--dead-exports`' output. Out of `main()` because that function
+    is at its `PLR0915` statement ceiling and a new clause is a new
+    baseline entry, which is what `UX-705` exists to shrink."""
+    dead = dead_exports(directory)
+    if as_json:
+        print(json.dumps(dead))
+    else:
+        for mod in sorted(dead):
+            for name in dead[mod]:
+                print(f"{mod}: {name}")
+    return 1 if any(dead.values()) else 0
 
 
 def main(argv=None):
@@ -420,15 +461,7 @@ def main(argv=None):
         return 1 if result["unplaced"] else 0
 
     if args.dead_exports:
-        dead = dead_exports(args.dead_exports)
-        total = sum(len(v) for v in dead.values())
-        if args.json:
-            print(json.dumps(dead))
-        else:
-            for mod in sorted(dead):
-                for name in dead[mod]:
-                    print(f"{mod}: {name}")
-        return 1 if total else 0
+        return _report_dead(args.dead_exports, args.json)
 
     parser.error("nothing asked for: try --order, --graph, --declarations, "
                  "--crossings or --dead-exports")

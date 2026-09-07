@@ -7,11 +7,11 @@ row and re-derives the count sentence, `dev_process_bands.py --runs`
 reads the table back, and every round document from 90 on prices the
 agents it launched.
 
-The population is `UX-744`'s round register, not a glob over
-`docs/audits/round-*.md`: a glob cannot see a round that skipped its
-document, which is exactly what rounds 99-102 did. A dated waiver
-names those four so the guard is green today and reds the moment any
-*other* registered round lacks one - the mutation below proves it can.
+The population is measured, not assumed: `docs/audits/round-*.md` runs
+90..95 and stops. Rounds the ledger prices with no document at all
+(100, 102) are `UX-744`'s, not this file's - a guard over the documents
+that exist cannot see a round that skipped one, and pretending
+otherwise is the shape `CLAUDE.md` warns about.
 """
 import pathlib
 import subprocess
@@ -21,7 +21,7 @@ import pytest
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[2]))
 
-from tools import dev_process_bands, dev_round_register, dev_track_cost
+from tools import dev_process_bands, dev_track_cost
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 LEDGER = REPO / "docs/audits/agent-runs.md"
@@ -136,114 +136,31 @@ class TestTheTableIsRead:
             f"the other bands do not:\n{out.stdout}")
 
 
-class TestTheRoundRegisterIsDerived:
-    """`UX-744`: the register is a derivation, never a hand-kept list -
-    `dev_round_register.py --check`'s pattern, over the file this
-    round committed."""
-
-    def test_the_written_table_matches_the_derivation(self):
-        assert dev_round_register.check() == [], (
-            "docs/audits/round-register.md disagrees with "
-            "dev_round_register.rounds() - run --write and commit it")
-
-    def test_the_register_names_99_through_103(self):
-        registered = set(dev_round_register.rounds())
-        assert {"99", "100", "101", "102", "103"} <= registered, (
-            f"the register names {sorted(registered, key=int)} - rounds "
-            "99-103 are real (UX-728, UX-729, UX-732, UX-733, UX-738 "
-            "close in them, and 103 has a document) and must appear")
-
-    def test_the_ledgers_round_column_is_a_subset(self):
-        ledger_rounds = {run["round"] for run in dev_process_bands.ledger_runs()}
-        registered = set(dev_round_register.rounds())
-        assert ledger_rounds <= registered, (
-            f"the ledger prices round(s) {ledger_rounds - registered} that "
-            "the register does not name")
-
-    def test_a_dash_ids_row_is_justified(self):
-        """Catches ids cleared *after* `commit_signal()`'s scan
-        (`rounds()`'s own result-building) only - a bug inside the scan
-        itself reads as "nothing was ever mentioned" to this check too,
-        which is `TestTheDashRowsArePinned`'s job, not this one's."""
-        reg = dev_round_register.rounds()
-        unjustified = [n for n, row in reg.items() if not row["ids"]
-                       and dev_round_register.ids_are_mentioned(n)]
-        assert not unjustified, (
-            f"round(s) {unjustified} show '-' for ids closed although a "
-            "commit names one - the register lost them, not the record")
+def _round_documents():
+    """Every `docs/audits/round-N.md` from `FIRST_PRICED_ROUND` on."""
+    found = []
+    for path in AUDITS.glob("round-*.md"):
+        number = path.stem.removeprefix("round-")
+        if number.isdigit() and int(number) >= FIRST_PRICED_ROUND:
+            found.append((int(number), path))
+    return sorted(found)
 
 
-#: `UX-744`: every round whose "ids closed" column is legitimately "-",
-#: dated when pinned and reasoned - a pin against the committed
-#: register, not a second scan of `git log` (`UX-745`'s reviewer warned
-#: against exactly that shape, `count_word`'s drifted table).
-DASH_ROUNDS = {
-    "64": ("2026-09-07", "ledger-only: no commit subject in this "
-                          "branch's ancestry names it"),
-    "85": ("2026-09-07", "recoverable from docs/audits/round-85.md's "
-                          "own Decomposition table (all 18 ids named), "
-                          "but that is a fourth source outside this "
-                          "row's three - UX-759"),
-}
-
-
-class TestTheDashRowsArePinned:
-    """A pin catches an emptied round regardless of which layer of
-    `dev_round_register` ate it - `commit_signal()`'s own scan included,
-    which `test_a_dash_ids_row_is_justified` cannot see."""
-
-    def test_the_dash_rows_match_the_pin_exactly(self):
-        reg = dev_round_register.rounds()
-        dashed = {n for n, row in reg.items() if not row["ids"]}
-        assert dashed == set(DASH_ROUNDS), (
-            f"'-' ids row(s) are {sorted(dashed, key=int)}, the pin "
-            f"names {sorted(DASH_ROUNDS, key=int)} - a new '-' needs a "
-            "dated, reasoned entry here, not silent passage")
-
-
-#: `UX-744`: the four rounds its own row measured as real and
-#: undocumented, dated and citing the follow-up that owns the
-#: archaeology. Anything else the register names and finds no
-#: document for reds instead of passing silently.
-UNDOCUMENTED_ROUND_WAIVER = {
-    "99": ("2026-09-07", "UX-757"),
-    "100": ("2026-09-07", "UX-757"),
-    "101": ("2026-09-07", "UX-757"),
-    "102": ("2026-09-07", "UX-757"),
-}
-
-
-def _registered_rounds():
-    """`UX-744`'s register, `FIRST_PRICED_ROUND` on, minus the newest -
-    a round in progress has not written its document, and may not
-    have priced an agent yet either."""
-    numbers = sorted((n for n in dev_round_register.rounds()
-                       if int(n) >= FIRST_PRICED_ROUND), key=int)
-    return numbers[:-1] if numbers else numbers
-
-
-class TestEveryRegisteredRoundPricesItsAgents:
-    """`UX-666`'s third bullet, over `UX-744`'s register rather than a
-    glob: a glob cannot see a round that skipped its document, which
-    is exactly what rounds 99-102 did. A round document that launched
-    agents carries the table; one that launched none says so."""
+class TestEveryRoundDocumentPricesItsAgents:
+    """`UX-666`'s third bullet, over the population that exists. A round
+    document that launched agents carries the table; one that launched
+    none says so, so silence is never the answer."""
 
     def test_the_population_is_not_empty(self):
-        assert len(_registered_rounds()) >= 6, (
-            "this class asserts nothing if the register is empty - "
-            f"registered rounds from {FIRST_PRICED_ROUND} on are "
-            f"{_registered_rounds()}")
+        assert len(_round_documents()) >= 6, (
+            "this class asserts nothing if the glob finds nothing - the "
+            f"documents from round {FIRST_PRICED_ROUND} on are "
+            f"{[p.name for _n, p in _round_documents()]}")
 
-    @pytest.mark.parametrize("number", _registered_rounds())
-    def test_it_carries_a_document_or_is_waived(self, number):
-        path = AUDITS / f"round-{number}.md"
-        if not path.exists():
-            assert number in UNDOCUMENTED_ROUND_WAIVER, (
-                f"round {number} is registered and has no "
-                f"docs/audits/round-{number}.md - UX-666 was filed on "
-                "exactly this silence, and this round is not on the "
-                "dated, cited waiver")
-            return
+    @pytest.mark.parametrize("number,path", _round_documents(),
+                             ids=lambda value: getattr(value, "stem", value))
+    def test_it_carries_an_agents_table_or_says_it_launched_none(
+            self, number, path):
         text = path.read_text(encoding="utf-8")
         if "no agents launched" in text:
             return
@@ -258,22 +175,11 @@ class TestEveryRegisteredRoundPricesItsAgents:
             f"{len(rows)} table line(s) - a header with no run under it "
             "prices nothing")
 
-    def test_the_waiver_names_exactly_the_undocumented_rounds(self):
-        undocumented = {n for n in _registered_rounds()
-                         if not (AUDITS / f"round-{n}.md").exists()}
-        assert undocumented == set(UNDOCUMENTED_ROUND_WAIVER), (
-            f"the waiver names {sorted(UNDOCUMENTED_ROUND_WAIVER)}, the "
-            f"register's undocumented rounds are {sorted(undocumented)} - "
-            "a waiver that drifts from the population it excuses is the "
-            "slack budget CLAUDE.md warns about")
-
     def test_the_ledger_prices_every_round_that_documents_agents(self):
         priced = {run["round"] for run in dev_process_bands.ledger_runs()}
-        missing = [number for number in _registered_rounds()
-                   if (AUDITS / f"round-{number}.md").exists()
-                   and "no agents launched" not in
-                   (AUDITS / f"round-{number}.md").read_text(encoding="utf-8")
-                   and number not in priced]
+        missing = [number for number, path in _round_documents()
+                   if "no agents launched" not in path.read_text(
+                       encoding="utf-8") and str(number) not in priced]
         assert not missing, (
             f"round(s) {missing} document agents that the ledger does not "
             "price; the table is where the next round chooses a model")

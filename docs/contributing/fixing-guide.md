@@ -344,10 +344,6 @@ tools/dev_refresh_analysis.py  the rule a committed analysis is written
                              under, and the command that rewrites one
                              from a fresh run (UX-486)
 tools/dev_process_bands.py  what the process did to itself, from the committed Outcomes
-tools/dev_round_register.py  which rounds happened, reconciled from
-                             closed.md's rows against the commit that
-                             names a round and the ledger's own round
-                             column (UX-744)
 tools/dev_tier_drift.py      which files outgrew their tier, from the
                              suite's own junit report (UX-418)
 tools/dev_mutation.py        mutmut over the modules a diff touched, weekly -

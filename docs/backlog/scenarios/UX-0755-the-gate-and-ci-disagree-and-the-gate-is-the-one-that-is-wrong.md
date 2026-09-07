@@ -4,49 +4,33 @@
 
 ## Motivation
 
-`CLAUDE.md` says `make test` is **the gate**, and that running a tier
-and committing is a thing this repository gets wrong. Round 103 found
-a case where the gate itself reports a failure CI does not have, and
-does it reproducibly.
+**Corrected**, against the diagnosis track's own measurement: this row
+was filed on an isolated-passes / suite-fails split
+(`25 passed in 47.30s` alone against `18 errors` inside `make test`)
+that does not hold. Run alone again, same container, same file:
+`7 passed, 18 errors in 12.44s` — no suite involved at all. The split
+was never a property of xdist, ordering, or `LD_PRELOAD`; it was a
+snapshot of a *moving* quantity, read once on each side.
 
-`tests/unit/test_the_journey_has_an_answer_key.py` alone:
+The real mechanism: BuildStream's `cache.reserved-disk-space` default
+(`5%`) is computed against `shutil.disk_usage(volume).total` — the
+nominal filesystem size — not `.free`. On a container whose real free
+space is small next to its nominal size, that reserve alone can exceed
+what is actually free, and `bst` then refuses every build
+("Cache too full") before a single subprocess runs — hence
+`Processes traced: 0`. The margin (`free - reserved`) moves by
+gigabytes as other activity fills or clears `/tmp`: clearing 1.5 GB of
+stale `pytest-of-root` scratch moved it from `+1.776 GB` to
+`+3.361 GB` in one step. A short isolated run and a long suite run
+sample this margin at different, uncoordinated moments — that is the
+whole "split".
 
-```console
-$ PYTEST_XDIST= python3 -m pytest tests/unit/test_the_journey_has_an_answer_key.py -q
-25 passed in 47.30s
-```
-
-The same file inside `make test`, on the same commit, twice — once on
-a box sharing the machine with another agent's suite, once on a quiet
-one:
-
-```text
-7630 passed, 83 skipped, 18 errors    (loaded)
-7628 passed, 83 skipped, 18 errors    (quiet)
-```
-
-The error is a capture that traced nothing:
-
-```text
-AssertionError: Processes traced: 0 (0 matched, 0 no observed exit)
-ELEMENT ATTRIBUTION UNRELIABLE: no process carried an element tag at all
-```
-
-CI on the same commit:
-
-```text
-read from junit.xml: 4698 test(s) recorded, 1 failure(s), 0 error(s)
-```
-
-Zero errors, and `bst-tests` and `bst-examples` both green. So the
-file's LD_PRELOAD capture works in CI and in isolation here, and
-fails only inside the full suite on this container.
-
-The round first called this contention with a concurrent track. That
-was wrong: the quiet-box run reproduced it identically. "Another
-agent was running" is a plausible cause, not a measured one, and this
-row exists partly because that reading was published before the
-counter-test was run.
+A second, independent sighting: `track/ux-751` (a two-file docs/guard
+diff touching nothing in the capture path) hit 12 failures across
+7 files under a full `make test` (593s) — every one a real-`bst`
+end-to-end test, every one passing clean run alone immediately after.
+Same class, same cause, seven files wide, not the contention its own
+verifier first read it as.
 
 ## Required Fix
 
@@ -73,10 +57,63 @@ counter-test was run.
 
 ## Acceptance Test
 
-`make test` on this container, on a commit CI calls green, reports no
-error this file's isolated run does not also report — or reports a
-declared skip naming the precondition.
+**Restated** — not isolated-passes/suite-fails; that split does not
+hold and is not the bar. Instead: with `free - reserved-disk-space`
+(BuildStream's own arithmetic) deliberately driven to `<= 0`, the file
+fails without the fix and passes with it; at the container's normal,
+higher margin, it continues to pass.
 
 ## Outcome
 
-_Not started._
+**The gap measured.** Isolated, unmodified: `7 passed, 18 errors in
+12.44s` (repeated: `44.40s`) - the split the row was filed on does not
+reproduce. A bare `bst build all.bst`, no bga/pytest/LD_PRELOAD, fails
+identically: `Cache too full`. Root cause:
+`buildstream/_context.py`'s `cache.reserved-disk-space` (default `5%`)
+reads `shutil.disk_usage(volume).total` (270.55 GB), not `.free`
+(13.3-16.9 GB across measurements minutes apart) - `5%` of total is
+13.53 GB, so `free - reserved` straddles zero and moves by gigabytes as
+`/tmp` fills or clears (clearing 1.5 GB of stale `pytest-of-root`
+moved it `+1.776 GB -> +3.361 GB`). Upstream, not this repo's code.
+Second sighting: `track/ux-751`'s `make test` (593s, unrelated diff)
+hit 12 failures across 7 real-`bst` files, all clean alone immediately
+after - same class, wider blast radius than one file.
+
+Ruled out, each checked directly: an env var the suite sets (`tests/
+conftest.py` in full - no autouse fixture, no worker branch); a shared
+global `cachedir` (no `~/.config/buildstream*.conf` existed); a stale
+`casd` reused across workers (none running; `detect_stale_casd`'s own
+warning never fired); a module-level cache/global leaking across a
+shared xdist worker (grepped `bst_native_build_tracer.py` and
+`bga/run_store.py` - none). A margin-narrows-over-one-run test (before/
+after a 612-test `large`-tier run) did not show shrinkage here
+(`+1.73 GB -> +2.16 GB`) - this run's own footprint was 11 MB; the
+container's other concurrent tracks dominate that signal, so this
+specific angle is inconclusive, not confirming.
+
+**The close measured — fixed, not skipped.** `tools/bst_show_to_graph.
+run_show` already threads `bst_options` through for a replayed build;
+BuildStream itself reads `$XDG_CONFIG_HOME/buildstream(2).conf`
+(`_context.py`), so one env var on the `walked` fixture's `env` reaches
+both the wrapped build and `extract_run`'s internal `bst show` with no
+per-call-site plumbing. Added `tests/fixtures/macro_micro/
+xdg_config_home/{buildstream,buildstream2}.conf` (`cache: {quota: 3G,
+reserved-disk-space: 500M}` - absolute values, no percent-of-total),
+repo-owned, referenced only via this test's own `env` dict - never
+`~/.config/`, so no other track's `bst` is touched.
+
+**Inverse check, at a deliberately-lowered margin** (`fallocate`'d a
+file to `free - reserved = -0.92 GB`, BuildStream's own arithmetic):
+
+| env dict | result |
+|---|---|
+| without the `XDG_CONFIG_HOME` override | `7 passed, 18 errors in 7.06s` |
+| with it (this commit) | `25 passed in 61.65s` |
+
+Same margin, opposite result - the fix discriminates. At the container's
+normal margin afterward: `25 passed in 42.07s`.
+
+Filed, not fixed here: the upstream `total`-vs-`.free` read; 6 other
+files sharing this exposure (`test_a_generated_project_builds.py` and
+6 more, from `track/ux-751`'s 12 failures) - same fix would apply,
+out of this row's declared scope.

@@ -71,6 +71,14 @@ CHAIN_BOUND_FLOOR = 0.75
 #: what a live build ranks depends on the box - measured below.
 RECORDED = REPO / "tests/fixtures/macro_micro/run"
 
+#: `UX-755`: a repo-owned `$XDG_CONFIG_HOME`, not `~/.config/` - a
+#: host-global file would move every `bst` invocation on the box,
+#: including a concurrent track's. `bst` reads this env var itself
+#: (`buildstream/_context.py`), which is what lets one override reach
+#: both the wrapped build and `extract_run`'s own internal `bst show`
+#: without threading a flag through each call site individually.
+BST_XDG_CONFIG_HOME = REPO / "tests/fixtures/macro_micro/xdg_config_home"
+
 #: How far `core.bst` leads the runner-up on that recording. Three
 #: `analyze` runs of the committed bytes:
 #:
@@ -188,7 +196,17 @@ def walked(tmp_path_factory):
            "PYTHONPATH": str(REPO),
            # The whole point of the isolation: a cold cache, and the
            # developer's own artifacts untouched.
-           "XDG_CACHE_HOME": str(into / "cache")}
+           "XDG_CACHE_HOME": str(into / "cache"),
+           # `UX-755`: BuildStream's default `reserved-disk-space` (5%)
+           # reads the *total* size of the cache's filesystem, not what
+           # is actually free - a host whose real headroom is small next
+           # to its nominal disk size can see that reserve alone exceed
+           # what is free, refusing any build with "Cache too full"
+           # before a process runs. This repo-owned config overrides it
+           # with absolute values everywhere `bst` looks for a home
+           # config, reaching both this build and `extract_run`'s own
+           # internal `bst show`.
+           "XDG_CONFIG_HOME": str(BST_XDG_CONFIG_HOME)}
 
     doctor = _run([sys.executable, "-m", "tools.bga_doctor", str(project)],
                   project, env, timeout=300)

@@ -40,8 +40,12 @@ NOT_ON_THE_MAP = {"bga/__init__.py", "tools/__init__.py",
 # `tools/*.py` non-recursively, so `hook.c`, `spine.c`, `trackevent.py`
 # and `bwrap_shim.py` - Plane 2 itself, the map's own subject - were on
 # neither the map nor the guard, and `dev_run.sh` with them.
+# `UX-746`: `.github/workflows/` was on no root at all, so the walk
+# never reached it in either direction - two of its four files shipped
+# with no document naming either.
 MAPPED_SUFFIXES = {"tools/": (".py", ".c", ".h", ".sh"),
-                   "bga/viewer/": (".js", ".html", ".css")}
+                   "bga/viewer/": (".js", ".html", ".css"),
+                   ".github/workflows/": (".yml",)}
 
 # `UX-274`: the guard above globbed `bga/` and `tools/` and nothing else,
 # so the map's **Tests and docs** block was unguarded prose from the day
@@ -329,7 +333,8 @@ class TestTheMapNamesTheTree:
                      "bga/viewer/perfetto.html",
                      "bga/viewer/style.css",
                      "bga/report/rate.py",              # `UX-631`: inside
-                     "bga/floors/observed.py"):        # a `bga/` package
+                     "bga/floors/observed.py",         # a `bga/` package
+                     ".github/workflows/ci.yml"):      # `UX-746`
             assert name in modules, f"the walk does not reach {name}"
         assert not [m for m in modules if m.startswith("bga/") and
                     m.endswith("/") and m not in MAPPED_SUFFIXES], (
@@ -391,7 +396,8 @@ class TestTheMapNamesTheTree:
         # creates, not a path in the tree, and `\b` alone matched the
         # `bga/runs` inside it.
         named = set(re.findall(
-            r"(?<![\w./-])((?:bga|tools|tests|docs)/[\w./-]+)", text))
+            r"(?<![\w./-])((?:bga|tools|tests|docs|\.github)/[\w./-]+)",
+            text))
         stale = sorted(
             path for path in named
             if not (REPO / path.rstrip("/")).exists()

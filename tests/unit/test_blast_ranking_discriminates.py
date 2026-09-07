@@ -154,7 +154,7 @@ class TestTheMemoDropIsWired:
         opposite of what it looks like.
         """
         from bga import run_store
-        from tests.unit._bst_env import isolated_bst_env
+        from tests.unit._bst_env import bst_env, isolated_bst_env
         from tools.bst_extract_run import extract_run
 
         snapshot = tmp_path / "20260820T120000Z"
@@ -171,7 +171,11 @@ class TestTheMemoDropIsWired:
             capture_output=True, text=True, env=isolated_bst_env(tmp_path),
         )
         log.write_text(proc.stdout + proc.stderr)
-        extract_run(FIXTURE_PROJECT, str(log), str(run), log_format="auto")
+        # `UX-760`: extract_run's own internal `bst show` is a separate
+        # subprocess, inheriting this process's environment rather than
+        # the `env=` above.
+        with bst_env(tmp_path):
+            extract_run(FIXTURE_PROJECT, str(log), str(run), log_format="auto")
 
         assert (run / "graph.json").exists(), "the extraction did not succeed"
         assert not memo.exists(), (

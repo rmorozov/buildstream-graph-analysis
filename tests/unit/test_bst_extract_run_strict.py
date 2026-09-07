@@ -35,7 +35,7 @@ from tools.bst_extract_run import (
     extract_run,
 )
 
-from ._bst_env import isolated_bst_env
+from ._bst_env import bst_env, isolated_bst_env
 
 FIXTURE_PROJECT = Path(__file__).resolve().parents[1] / "fixtures" / "bst_show_project"
 BST_AVAILABLE = shutil.which("bst") is not None
@@ -156,7 +156,10 @@ def test_strict_fails_loudly_for_the_inline_storage_fixture(tmp_path):
     )
     log_path.write_text(proc.stdout + proc.stderr)
 
-    with pytest.raises(RuntimeError, match="ref-storage: project.refs"):
+    # `UX-760`: extract_run's own internal `bst show` is a separate
+    # subprocess, inheriting this process's environment rather than the
+    # `env=` above.
+    with bst_env(tmp_path), pytest.raises(RuntimeError, match="ref-storage: project.refs"):
         extract_run(str(FIXTURE_PROJECT), str(log_path), str(tmp_path / "run"), strict=True)
 
 
@@ -177,7 +180,11 @@ def test_non_strict_extraction_of_inline_fixture_has_no_provenance_field(tmp_pat
     log_path.write_text(proc.stdout + proc.stderr)
 
     out_dir = tmp_path / "run"
-    extract_run(str(FIXTURE_PROJECT), str(log_path), str(out_dir))  # strict=False (default)
+    # `UX-760`: extract_run's own internal `bst show` is a separate
+    # subprocess, inheriting this process's environment rather than the
+    # `env=` above.
+    with bst_env(tmp_path):
+        extract_run(str(FIXTURE_PROJECT), str(log_path), str(out_dir))  # strict=False (default)
     run_context = json.loads((out_dir / "run-context.json").read_text())
     assert "project_refs_provenance" not in run_context
 
@@ -232,7 +239,11 @@ def test_real_project_refs_lifecycle_clean_then_dirtied(tmp_path):
     build_log.write_text(proc.stdout + proc.stderr)
 
     out_dir = tmp_path / "run"
-    summary = extract_run(str(project), str(build_log), str(out_dir), strict=True)
+    # `UX-760`: extract_run's own internal `bst show` is a separate
+    # subprocess, inheriting this process's environment rather than the
+    # `env=` used for the subprocess calls above.
+    with bst_env(tmp_path / "home"):
+        summary = extract_run(str(project), str(build_log), str(out_dir), strict=True)
     assert summary["output_dir"] == str(out_dir)
     run_context = json.loads((out_dir / "run-context.json").read_text())
     assert run_context["project_refs_provenance"]["path"] == "project.refs"
@@ -248,5 +259,6 @@ def test_real_project_refs_lifecycle_clean_then_dirtied(tmp_path):
         capture_output=True, text=True, env=env, check=True,
     )
 
-    with pytest.raises(RuntimeError, match="project.refs.*uncommitted changes"):
+    with bst_env(tmp_path / "home"), pytest.raises(
+            RuntimeError, match="project.refs.*uncommitted changes"):
         extract_run(str(project), str(build_log), str(tmp_path / "run2"), strict=True)

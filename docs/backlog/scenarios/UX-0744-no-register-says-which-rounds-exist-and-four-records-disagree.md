@@ -96,10 +96,15 @@ $ python3 -m pytest tests/unit/test_a_run_is_priced.py \
 Round 101 is the same contamination the hold named (register said
 2026-09-07; its own document's "Opens at" says 2026-09-06), now
 caught and pinned (`DATE_MISMATCH_WAIVER`), not silent.
-Below `FIRST_PRICED_ROUND`, rounds 76 and 85 also mismatch - a
-different, legitimate fact (a multi-day round's opening date differs
-from its closing date: 76 opens 09-01, closes 09-02; 85 opens 09-03,
-closes 09-04), not contamination, so outside this class's population.
+Below `FIRST_PRICED_ROUND`, rounds 76 and 85 also mismatch, and
+verification falsified the multi-day reading first offered here: both
+are the *same* contamination. `_first_date_in_text` takes the file's
+first `YYYY-MM-DD` whatever it means - for 76 that is `UX-96`'s cron
+firing `2026-09-01`, for 85 a status-word note dated `2026-09-03` -
+and no commit touching either round's rows exists on the earlier day.
+They are outside the population only because `UX-666` set
+`FIRST_PRICED_ROUND` at 90, not because they are a different
+phenomenon. `UX-772` carries the dateline fix.
 
 **The exclusion rule** no longer drops "whichever round is highest so
 far" unconditionally: `written_rounds()` drops the newest only if that

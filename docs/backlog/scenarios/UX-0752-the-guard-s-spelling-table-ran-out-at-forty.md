@@ -34,7 +34,8 @@ apart for a whole round.
 
 1. Derive `WORDS` from `dev_track_cost.count_word` rather than typing
    it, so the guard and the writer share one derivation and stop at
-   the same place (`count_word`'s own domain is `n < 100`).
+   the same place (`count_word`'s own domain is `n < 100`). Same for
+   the two sibling tables measured at headroom 1 below.
 2. Correct the comment that claims the map grows ahead of the numbers.
 3. **The inverse check:** confirm the fix is not cosmetic — the row
    count that reddened this must pass, and a count past the old
@@ -42,11 +43,19 @@ apart for a whole round.
 
 ## Out of Scope
 
-- The other spelling tables in the suite. `test_the_spec_says_which_parts_are_advisory.py`,
-  `test_the_process_documents_derive_their_figures.py` and
-  `test_every_emitted_contract_is_answerable.py` each carry one over a
-  different range; whether they share this one is a separate question
-  and none of them is currently red.
+- Nothing, on the sibling tables — that scoping was written before
+  they were measured and was wrong. "None of them is currently red"
+  was true and useless; **two of the three are one row from it**:
+
+  | table | ceiling | population | headroom |
+  |---|---|---|---|
+  | `test_the_spec_says_which_parts_are_advisory.py` | 41 | 40 | **1** |
+  | `test_every_emitted_contract_is_answerable.py` | 17 | 16 | **1** |
+  | `test_the_process_documents_derive_their_figures.py` | 20 | 15 | 5 |
+
+  The next module named in Part 39, and the next contract that writes
+  a file, each red CI with this same `KeyError`. Both are now derived
+  from `count_word`; the third is left, its headroom recorded.
 - `count_word`'s domain. Nothing in this repository counts to a
   hundred of anything, so extending it would be speculation rather
   than a measured need.

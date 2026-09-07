@@ -25,10 +25,11 @@ import pytest
 REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 
+from tools.dev_track_cost import count_word
+
 SPEC = REPO / "docs/spec/specification.md"
 
-WORDS = {11: "eleven", 12: "twelve", 13: "thirteen", 14: "fourteen",
-         30: "thirty", 39: "thirty-nine", 40: "forty", 41: "forty-one"}
+WORDS = {n: count_word(n) for n in range(1, 100)}
 
 
 def _note_table():

@@ -33,7 +33,7 @@ below are its output. `UX-694`: the finding baseline — 299 findings
 over the code by identity, `--check` in `make lint` red on a new one,
 the list only shrinking, a forced add carrying its `UX-` reason.
 
-## The tracks, priced
+## Agents
 
 | run | shape | tokens | tool calls | wall | the verifier found |
 |---|---|---|---|---|---|

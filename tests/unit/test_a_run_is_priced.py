@@ -1,0 +1,185 @@
+"""`UX-666`: a subagent's cost is written down, and something reads it.
+
+The ledger (`docs/audits/agent-runs.md`) had a habit problem in both
+directions: nothing required the row, and nothing read the table. These
+clauses hold the two halves - `dev_track_cost.py --append` writes the
+row and re-derives the count sentence, `dev_process_bands.py --runs`
+reads the table back, and every round document from 90 on prices the
+agents it launched.
+
+The population is measured, not assumed: `docs/audits/round-*.md` runs
+90..95 and stops. Rounds the ledger prices with no document at all
+(100, 102) are `UX-744`'s, not this file's - a guard over the documents
+that exist cannot see a round that skipped one, and pretending
+otherwise is the shape `CLAUDE.md` warns about.
+"""
+import pathlib
+import subprocess
+import sys
+
+import pytest
+
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[2]))
+
+from tools import dev_process_bands, dev_track_cost
+
+REPO = pathlib.Path(__file__).resolve().parents[2]
+LEDGER = REPO / "docs/audits/agent-runs.md"
+AUDITS = REPO / "docs/audits"
+
+#: The round the ledger's own rows start pricing at, from `UX-666`'s
+#: Required Fix - "every round document from 90 on".
+FIRST_PRICED_ROUND = 90
+
+LEDGER_HEAD = """# Agent runs
+
+| round | agent | model | task | tokens | tool calls | wall | outcome | friction |
+|---|---|---|---|---|---|---|---|---|
+| 90 | researcher | sonnet | a | 100k | 10 | 5 m | complete | — |
+| 91 | verifier | sonnet | b | 50k | 20 | 2 m | complete | — |
+
+What the two rows already say: something.
+"""
+
+
+@pytest.fixture
+def ledger(tmp_path):
+    path = tmp_path / "agent-runs.md"
+    path.write_text(LEDGER_HEAD, encoding="utf-8")
+    return path
+
+
+class TestTheRowIsWritten:
+    """`dev_track_cost.py --append`: the row lands, and the sentence
+    below the table is derived from the count rather than typed."""
+
+    def test_the_row_goes_after_the_tables_last_row(self, ledger):
+        dev_track_cost.append_row("| 92 | implementer | sonnet | c | 1k | 1 "
+                                  "| 1 m | merged | — |", ledger)
+        rows = [line for line in ledger.read_text(encoding="utf-8").splitlines()
+                if line.startswith("| ") and line.split("|")[1].strip().isdigit()]
+        assert [row.split("|")[1].strip() for row in rows] == ["90", "91", "92"], (
+            "the appended row belongs after the table's last row, in "
+            f"round order; the table now reads {rows}")
+
+    def test_the_count_sentence_is_re_derived(self, ledger):
+        said = dev_track_cost.append_row("| 92 | implementer | sonnet | c | 1k "
+                                         "| 1 | 1 m | merged | — |", ledger)
+        assert said == "three"
+        assert "What the three rows already say" in ledger.read_text(
+            encoding="utf-8"), (
+            "appending a third row must leave the summary saying 'three'; "
+            "a typed count is the defect UX-666 was filed on")
+
+    def test_nothing_else_in_the_document_moves(self, ledger):
+        before = ledger.read_text(encoding="utf-8")
+        dev_track_cost.append_row("| 92 | a | b | c | 1k | 1 | 1 m | d | e |",
+                                  ledger)
+        after = ledger.read_text(encoding="utf-8")
+        assert after.startswith("# Agent runs\n")
+        assert len(after.splitlines()) == len(before.splitlines()) + 1
+
+    def test_the_word_is_built_not_tabled(self):
+        assert dev_track_cost.count_word(37) == "thirty-seven"
+        assert dev_track_cost.count_word(19) == "nineteen"
+        assert dev_track_cost.count_word(40) == "forty"
+        assert all(dev_track_cost.count_word(n) for n in range(1, 100))
+
+
+class TestTheTableIsRead:
+    """`dev_process_bands.py --runs`: the ledger's own rows, priced by
+    agent kind and model. Until `UX-666` nothing in the tree read it."""
+
+    def test_the_separator_is_not_a_run(self, ledger):
+        runs = dev_process_bands.ledger_runs(ledger)
+        assert len(runs) == 2, (
+            "the header and the `|---|` separator split into nine cells "
+            f"too; only a row whose first cell is a round number is a run: "
+            f"{runs}")
+        assert [run["round"] for run in runs] == ["90", "91"]
+
+    def test_the_real_ledger_parses_to_its_own_row_count(self):
+        rows = [line for line in LEDGER.read_text(encoding="utf-8").splitlines()
+                if line.startswith("| ")]
+        # `rows` includes the header; the separator starts `|---`.
+        assert len(dev_process_bands.ledger_runs()) == len(rows) - 1
+
+    def test_an_unfilled_token_cell_is_unknown_and_not_zero(self, tmp_path):
+        path = tmp_path / "l.md"
+        path.write_text(
+            "| round | agent | model | task | tokens | tool calls | wall | "
+            "outcome | friction |\n|---|---|---|---|---|---|---|---|---|\n"
+            "| 82 | researcher | main | cut | — | — | — | cut, re-run | — |\n"
+            "| 83 | researcher | main | ran | 100k | 10 | 5 m | complete | — |\n"
+            "\nWhat the two rows already say: x.\n", encoding="utf-8")
+        runs = dev_process_bands.ledger_runs(path)
+        assert runs[0]["tokens"] is None and runs[0]["wall"] is None
+        report = "\n".join(dev_process_bands.runs_report(runs, 2))
+        assert "100k" in report, (
+            "the median of one priced run and one unpriced is the priced "
+            f"one; averaging the cut run in as 0 reads a proxy:\n{report}")
+        assert "no token figure: 1 of 2" in report
+
+    def test_the_band_prices_by_kind_and_model(self, ledger):
+        report = "\n".join(dev_process_bands.runs_report(
+            dev_process_bands.ledger_runs(ledger), 2))
+        assert "researcher" in report and "verifier" in report
+        assert "100k" in report and "50k" in report
+
+    def test_the_flag_runs_on_the_real_ledger(self):
+        out = subprocess.run(
+            [sys.executable, str(REPO / "tools/dev_process_bands.py"),
+             "--runs", "12"], capture_output=True, text=True, check=True)
+        assert "run(s) in the ledger" in out.stdout
+        assert "No band is drawn" in out.stdout, (
+            "the runs band reports and does not verdict, for the reason "
+            f"the other bands do not:\n{out.stdout}")
+
+
+def _round_documents():
+    """Every `docs/audits/round-N.md` from `FIRST_PRICED_ROUND` on."""
+    found = []
+    for path in AUDITS.glob("round-*.md"):
+        number = path.stem.removeprefix("round-")
+        if number.isdigit() and int(number) >= FIRST_PRICED_ROUND:
+            found.append((int(number), path))
+    return sorted(found)
+
+
+class TestEveryRoundDocumentPricesItsAgents:
+    """`UX-666`'s third bullet, over the population that exists. A round
+    document that launched agents carries the table; one that launched
+    none says so, so silence is never the answer."""
+
+    def test_the_population_is_not_empty(self):
+        assert len(_round_documents()) >= 6, (
+            "this class asserts nothing if the glob finds nothing - the "
+            f"documents from round {FIRST_PRICED_ROUND} on are "
+            f"{[p.name for _n, p in _round_documents()]}")
+
+    @pytest.mark.parametrize("number,path", _round_documents(),
+                             ids=lambda value: getattr(value, "stem", value))
+    def test_it_carries_an_agents_table_or_says_it_launched_none(
+            self, number, path):
+        text = path.read_text(encoding="utf-8")
+        if "no agents launched" in text:
+            return
+        assert "\n## Agents" in text, (
+            f"round-{number}.md must carry a `## Agents` section or say "
+            "'no agents launched'; a round that priced its runs nowhere "
+            "is what UX-666 was filed on")
+        section = text.split("\n## Agents", 1)[1].split("\n## ", 1)[0]
+        rows = [line for line in section.splitlines() if line.startswith("| ")]
+        assert len(rows) >= 2, (
+            f"round-{number}.md's `## Agents` section has a heading and "
+            f"{len(rows)} table line(s) - a header with no run under it "
+            "prices nothing")
+
+    def test_the_ledger_prices_every_round_that_documents_agents(self):
+        priced = {run["round"] for run in dev_process_bands.ledger_runs()}
+        missing = [number for number, path in _round_documents()
+                   if "no agents launched" not in path.read_text(
+                       encoding="utf-8") and str(number) not in priced]
+        assert not missing, (
+            f"round(s) {missing} document agents that the ledger does not "
+            "price; the table is where the next round chooses a model")

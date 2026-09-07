@@ -59,4 +59,54 @@ without moving any label far enough to overlap.
 
 ## Outcome
 
-_Not started._
+**Gap measured.** `test_no_axis_overlaps` was the only guard touching
+the flow rule and reads rendered overlap, not the rule.
+
+**Vacuity found.** The verifier deleted `exhibitAxis`'s
+`middle.length === 1` gate entirely (leaving only the edge check) and
+the negative clause stayed green: `16 passed in 12.59s`. Enumerated,
+the negative population was **7 real axes, all with `both_edges=False`**:
+4 with no edge marks at all, 3 (`*_distribution`) with `p95`/`max`
+merged into `"p95 max"`, which fails `EDGE_MARKS.has()`'s exact check.
+The clause could not tell "more interior ticks" from "no edges", and
+the same merge is a real bug (filed **`UX-758`**, not fixed here): a
+distribution's true shape - one interior tick between two real edges -
+is misclassified as two, silently, because no current `p50` label is
+wide enough to overlap.
+
+**Close measured.** Added `served_url` (a live `bga view` origin, real
+`drawings.js`) and drove `exhibitAxis(document, ticks)` directly with
+`min`/`p25`(30)/`p75`(70)/`max` - two interior marks 40 points apart,
+so `mergeTicks` keeps both distinct, with real edges present. The real
+product code returned `layout: None`, no `margin-left` - added as the
+negative clause's 5th member (4 real + 1 constructed). The
+`_is_merged_edge` predicate matches **four** real axes, not three: the
+3 distributions, plus `golden/parallelism` (`"first peak"`) - inert
+today since its own interior count (1) already fails the `< 2` filter,
+but excluded anyway so a future `UX-758` fix to the classification
+cannot make that redundancy load-bearing unchecked:
+
+```console
+$ PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers PYTEST_XDIST= python3 -m pytest \
+    tests/unit/test_the_shape_channel_is_built.py -v
+...16 passed in 11.98s
+```
+
+**Mutation table.**
+| clause | mutation | reddened | count |
+|---|---|---|---|
+| positive | `middle.length === 1` → `=== 2` | this clause + `test_no_axis_overlaps[macro_micro]` | 2 failed, 14 passed |
+| negative (pre-fix) | drop `middle.length === 1` gate | nothing - the vacuity above | 16 passed |
+| negative (post-fix) | same drop-the-gate mutation | this clause only, on `constructed/synthetic` | 1 failed, 15 passed |
+
+Both mutations reverted from a saved copy of `drawings.js`;
+`git status --porcelain bga/viewer/drawings.js` empty, suite green
+again.
+
+**Known remaining gap (`UX-758`, not closed here).** The positive
+clause's own `has_first`/`has_last` use the same exact-name match
+`exhibitAxis` does: forcing `has_first` true while keeping the tick-
+count gate flips `golden/parallelism` to `data-layout="flow"` and
+`16 passed` - no red. The edge half of the flow condition is unguarded
+for the same root cause as the product bug, and needs the
+classification fixed first.

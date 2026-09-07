@@ -37,6 +37,8 @@ element population the 95th percentile is the largest value.
 import json
 import pathlib
 import sys
+import threading
+import time
 
 import pytest
 
@@ -66,7 +68,8 @@ _LOOK = """
         const box = tick.getBoundingClientRect();
         return { mark: tick.getAttribute("data-mark"),
                  text: (tick.textContent || "").trim(),
-                 left: box.left, right: box.right };
+                 left: box.left, right: box.right,
+                 marginLeft: tick.style.marginLeft };
       });
       let overlaps = 0;
       for (let i = 0; i < ticks.length; i += 1) {
@@ -77,6 +80,7 @@ _LOOK = """
         }
       }
       return { ticks, overlaps,
+               layout: axis.getAttribute("data-layout"),
                section: axis.closest("[data-section]")
                  ?.getAttribute("data-section") ?? null };
     });
@@ -141,6 +145,26 @@ def pages(tmp_path_factory):
         view.export(str(run), str(page))
         made[name] = page.as_uri()
     return made
+
+
+@pytest.fixture(scope="module")
+def served_url(tmp_path_factory):
+    """A live `bga view` origin - `drawings.js` served as the real,
+    unbundled ES module (an export inlines it, so `import` cannot reach
+    it there) - for driving `exhibitAxis` itself with tick input no
+    fixture happens to produce."""
+    from tools.bga_view import serve
+
+    run = snapshot_copy(FIXTURES["macro_micro"],
+                         tmp_path_factory.mktemp("flow-axis-served"))
+    httpd, url = serve(str(run), port=0)
+    threading.Thread(target=httpd.serve_forever, daemon=True).start()
+    time.sleep(0.3)
+    try:
+        yield url
+    finally:
+        httpd.shutdown()
+        httpd.server_close()
 
 
 @needs_browser
@@ -246,6 +270,119 @@ class TestNoTwoLabelsSitOnTopOfEachOther:
             # `level 1 (first, peak 2)` would be saying it twice.
             for name in tick["mark"].split()[1:]:
                 assert name in tick["text"], (tick, name)
+
+
+#: `EDGE_MARKS` from `drawings.js`, mirrored here rather than imported -
+#: this file has no JS import path, and the set is a stable contract
+#: `exhibitAxis` cites in its own comment.
+_EDGE_MARKS = {"first", "last", "min", "max"}
+
+#: A tick array with two interior marks `mergeTicks` will not collapse
+#: (30 and 70 are 40 points apart) between two real edges, driven
+#: through the actual `exhibitAxis` - the real fixtures have no such
+#: axis: every one with both edges present has at most one interior
+#: mark (`UX-753`'s own population count).
+_CONSTRUCTED_MULTI_INTERIOR = """
+(async () => {
+  const mod = await import("./drawings.js");
+  const row = mod.exhibitAxis(document, [
+    { name: "min", at: 0, label: "0 ms" },
+    { name: "p25", at: 30, label: "30 ms" },
+    { name: "p75", at: 70, label: "70 ms" },
+    { name: "max", at: 100, label: "100 ms" },
+  ]);
+  document.body.append(row);
+  return {
+    layout: row.getAttribute("data-layout"),
+    ticks: [...row.querySelectorAll(".draw-tick")].map((tick) => ({
+      mark: tick.getAttribute("data-mark"), marginLeft: tick.style.marginLeft,
+    })),
+  };
+})()
+"""
+
+
+def _is_merged_edge(mark):
+    """A tick whose merged name absorbed an edge without becoming one -
+    `mergeTicks` joins names with a space, so `"p95 max"` carries the
+    `"max"` token but fails `EDGE_MARKS.has()`'s exact check. `UX-758`
+    is the resulting misclassification in `exhibitAxis` itself; this
+    guard excludes such a tick's axis rather than asserting the bug is
+    the rule."""
+    return mark not in _EDGE_MARKS and any(
+        token in _EDGE_MARKS for token in (mark or "").split())
+
+
+def _axes(browser, pages):
+    """Every drawn axis, over both fixtures - one has none of the flow
+    case, the other none of the multi-interior case with a merged edge,
+    so the two clauses below are asserted over the union, not per-page."""
+    out = []
+    for label in sorted(FIXTURES):
+        seen = browser.measure(pages[label], _LOOK, 1440, 900)
+        for axis in seen["axes"]:
+            out.append({**axis, "label": label})
+    return out
+
+
+def _constructed_axis(browser, served_url):
+    """The one axis in this guard's population that both carries real
+    edges and has more than one interior tick - built, not found,
+    because no fixture axis satisfies both at once (see the population
+    count in `UX-753`'s Outcome)."""
+    out = browser.measure(served_url, _CONSTRUCTED_MULTI_INTERIOR, 800, 600)
+    return {**out, "label": "constructed", "section": "synthetic"}
+
+
+@needs_browser
+@pytest.mark.medium
+class TestTheFlowLayoutMatchesItsInteriorTickCount:
+    """`UX-753`: `UX-674`'s `data-layout="flow"` rule, read off the DOM
+    rather than off a rendered overlap - `test_no_axis_overlaps` above
+    catches a broken *result* on these two fixtures' own geometry; this
+    reads the *rule* `exhibitAxis` states in its own comment."""
+
+    def test_one_interior_tick_with_both_edges_is_flow(self, browser, pages):
+        checked = 0
+        for axis in _axes(browser, pages):
+            edges = axis["ticks"]
+            has_first = any(t["mark"] in ("first", "min") for t in edges)
+            has_last = any(t["mark"] in ("last", "max") for t in edges)
+            interior = [t for t in edges if t["mark"] not in _EDGE_MARKS]
+            if not (has_first and has_last and len(interior) == 1):
+                continue
+            checked += 1
+            assert axis["layout"] == "flow", (
+                f"{axis['label']}/{axis['section']}: one interior tick, "
+                f"data-layout={axis['layout']!r}")
+            assert interior[0]["marginLeft"] != "", (
+                f"{axis['label']}/{axis['section']}: interior tick "
+                f"{interior[0]['mark']!r} carries no margin-left")
+        assert checked, "no axis, on either fixture, has exactly one " \
+            "interior tick with both edges present"
+
+    def test_more_than_one_interior_tick_is_not_flow(
+            self, browser, pages, served_url):
+        checked = 0
+        axes = _axes(browser, pages) + [_constructed_axis(browser, served_url)]
+        for axis in axes:
+            # UX-758: a merged edge's axis is excluded, not asserted on
+            # - its true interior count is disputed by the bug this
+            # guard must not certify as correct.
+            if any(_is_merged_edge(t["mark"]) for t in axis["ticks"]):
+                continue
+            interior = [t for t in axis["ticks"] if t["mark"] not in _EDGE_MARKS]
+            if len(interior) < 2:
+                continue
+            checked += 1
+            assert axis["layout"] != "flow", (
+                f"{axis['label']}/{axis['section']}: {len(interior)} "
+                f"interior ticks, data-layout={axis['layout']!r}")
+            assert all(t["marginLeft"] == "" for t in axis["ticks"]), (
+                f"{axis['label']}/{axis['section']}: a tick carries "
+                f"margin-left under {len(interior)} interior ticks")
+        assert checked, "no axis, real or constructed, has more than " \
+            "one interior tick with no merged edge"
 
 
 if __name__ == "__main__":  # pragma: no cover

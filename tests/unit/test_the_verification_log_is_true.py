@@ -163,8 +163,12 @@ def only_the_count_moved(removed, added):
 
 def _only_a_derived_figure_moved(sha):
     """`only_the_count_moved`, over this commit's change to `DOC`."""
+    # `--first-parent -m`: a merge's default `git show` is a *combined*
+    # diff whose prefix is two columns wide, so `ln[1:]` left `+text`
+    # against ` text` and the exclusion never fired (`UX-754`).
     done = subprocess.run(
-        ["git", "show", "--format=", "--unified=0", sha, "--", str(DOC)],
+        ["git", "show", "--format=", "--unified=0", "--first-parent", "-m",
+         sha, "--", str(DOC)],
         capture_output=True, text=True, cwd=REPO, timeout=60)
     if done.returncode != 0:
         return False

@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-750 scenarios: **20 open**, 730 closed.
+751 scenarios: **21 open**, 730 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -27,7 +27,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | cli | 0 | 22 |
 | store | 0 | 16 |
 | docs | 3 | 121 |
-| guards | 7 | 178 |
+| guards | 8 | 179 |
 
 ## Open scenarios
 
@@ -56,6 +56,7 @@ task file, which is the only place it ever lived twice.
 | UX-751 | [the landed clause reads endpoints where the open clause reads the range](UX-0751-the-landed-clause-reads-endpoints-where-the-open-clause-reads-the-range.md) | guards | Medium | the reader trusting a Direction's status line | 🔴 |
 | UX-752 | [the guard's spelling table ran out at forty](UX-0752-the-guard-s-spelling-table-ran-out-at-forty.md) | guards | Medium | the round that appends a ledger row and finds CI red for it | 🔴 |
 | UX-753 | [the flow axis is drawn by one row and read by none](UX-0753-the-flow-axis-is-drawn-by-one-row-and-read-by-none.md) | viewer | Medium | the reader of an exhibit axis, and the round that changes one | 🔴 |
+| UX-754 | [the derived-figure exclusion cannot read a merge](UX-0754-the-derived-figure-exclusion-cannot-read-a-merge.md) | guards | Medium | every round that merges a track and closes a row | 🔴 |
 
 ## UX-706..UX-711: the ninety-fourth round — the pipeline, and which model runs which shape (2026-09-05)
 

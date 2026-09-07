@@ -26,7 +26,7 @@ from tools.bst_extract_run import (
     extract_run,
 )
 
-from ._bst_env import isolated_bst_env
+from ._bst_env import bst_env, isolated_bst_env
 
 FIXTURE_PROJECT = Path(__file__).resolve().parents[1] / "fixtures" / "bst_show_project"
 
@@ -248,7 +248,11 @@ def test_real_end_to_end_extraction_produces_a_complete_bga_ready_run(tmp_path):
     log_path.write_text(proc.stdout + proc.stderr)
 
     out_dir = tmp_path / "run"
-    summary = extract_run(str(FIXTURE_PROJECT), str(log_path), str(out_dir), log_format="auto")
+    # `UX-760`: extract_run's own internal `bst show` is a separate
+    # subprocess, inheriting this process's environment rather than the
+    # `env=` above.
+    with bst_env(tmp_path):
+        summary = extract_run(str(FIXTURE_PROJECT), str(log_path), str(out_dir), log_format="auto")
 
     assert summary["targets"] == ["app.bst"]
     assert summary["elements"] == 4
@@ -324,7 +328,11 @@ def test_different_target_lists_produce_different_requested_targets(tmp_path):
         )
         log_path.write_text(proc.stdout + proc.stderr)
         out_dir = tmp_path / out_name
-        summary = extract_run(str(FIXTURE_PROJECT), str(log_path), str(out_dir), log_format="auto")
+        # `UX-760`: extract_run's own internal `bst show` is a separate
+        # subprocess, inheriting this process's environment rather than
+        # the `env=` above.
+        with bst_env(tmp_path):
+            summary = extract_run(str(FIXTURE_PROJECT), str(log_path), str(out_dir), log_format="auto")
         graph = json.loads((out_dir / "graph.json").read_text())
         requested = {e["uid"] for e in graph["elements"] if e["requested_target"]}
         return summary["targets"], requested
@@ -365,7 +373,11 @@ def test_pipeline_overhead_extracted_from_a_real_cached_rebuild(tmp_path):
     log_path.write_text(proc.stdout + proc.stderr)
 
     out_dir = tmp_path / "run"
-    extract_run(str(FIXTURE_PROJECT), str(log_path), str(out_dir), log_format="auto")
+    # `UX-760`: extract_run's own internal `bst show` is a separate
+    # subprocess, inheriting this process's environment rather than the
+    # `env=` above.
+    with bst_env(tmp_path):
+        extract_run(str(FIXTURE_PROJECT), str(log_path), str(out_dir), log_format="auto")
 
     run_context = json.loads((out_dir / "run-context.json").read_text())
     phases = {e["phase"] for e in run_context.get("pipeline_overhead", [])}

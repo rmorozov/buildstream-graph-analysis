@@ -62,4 +62,64 @@ control `UX-755`'s verifier ran, applied to the six.
 
 ## Outcome
 
-_Not started._
+**The gap measured — wider than the row's own list.** A round-107
+`make test` (cleared, quiet host, margin `+1.450 GB` at start,
+`-1.321 GB` by the end - the suite spends 2.77 GB of its own temp) gave
+`3 failed, 7983 passed, 83 skipped in 346.88s`:
+`test_stream_merge.py::test_a_static_build_reports_itself_unmeasurable_
+rather_than_clean` and `test_spine_ground_truth.py`'s two `UX-741`
+clauses - none of the row's seven. Derivation: every file gating on
+`shutil.which("bst")` (15), minus ones invoking only `bst show`/
+`artifact delete` (no CAS write, so never `Cache too full` -
+`test_bst_show_to_graph.py`, `test_element_kind_heuristics.py`) and
+ones mocking `subprocess.Popen`/`.run` entirely (`test_interrupted_
+capture.py`, `test_stale_casd.py`). Left: the row's 7 plus
+`test_cache_logs.py`, `test_process_spine.py`, `test_snapshot.py`,
+`test_spine_ground_truth.py`, `test_stream_merge.py` - all reaching
+`tests/unit/_bst_env.py`'s `isolated_bst_env`, and 2 more that do not
+(`test_native_build_tracer.py`, `test_dual_plane_capture.py` - real
+`bst build` against the ambient, un-isolated `$HOME`, not a per-test
+`tmp_path`; the shared fixture's `quota: 3G` there would shrink a
+persistent cache other runs reuse, a different and larger change - not
+fixed here, flagged for filing separately).
+
+A second gap, found only by driving the margin negative and rerunning
+the row's own six: `isolated_bst_env` alone was not enough.
+`extract_run`'s and `run_traced_build`'s internal `bst show`/build are
+*separate* subprocesses inheriting the pytest worker's own environment,
+not the `env=` dict handed to an earlier, different `subprocess.run` -
+so five files (`test_blast_ranking_discriminates.py`, both
+`test_bst_extract_run*.py`, `test_shared_source_blast.py`) still failed
+`Cache too full` after the first pass.
+
+**The close measured.** `_bst_env.py`: `isolated_bst_env` now defaults
+`XDG_CONFIG_HOME` to `UX-755`'s repo-owned, absolute-valued fixture
+(overridable via `extra`), reaching every `subprocess.run(env=...)`
+call site through one constant; a new `bst_env(home)` context manager
+applies the same default to `os.environ` itself, for the in-process
+call sites above. `test_a_generated_project_builds.py`'s `_isolated()`
+now points at the same fixture instead of an empty, never-created
+directory. At a driven margin (`free - reserved = -0.80 GB`,
+BuildStream's own arithmetic, `fallocate`'d and removed after):
+
+| population | before | after |
+|---|---|---|
+| the row's 7 + 5 more (12 files, 51 selected clauses) | 12 failed (`Cache too full`) | 51 passed |
+| `test_spine_ground_truth.py`'s two `UX-741` clauses | `assert 255 == 0` (refusal, not the wall-clock tolerance - `UX-741` untouched) | both passed, `27.27s` |
+
+At the container's normal margin (`+9.28 GB`) afterward: all of the
+above still pass; `make test-touching` (40 files, 31 census + 9 naming
+the change): `1397 passed, 3 skipped in 94.92s`.
+
+**Mutation.** Both fixture files' `reserved-disk-space: 500M` changed
+to `5%` (the row's own control), margin driven to `-0.67 GB`:
+
+| file | result |
+|---|---|
+| `test_bst_checkout_cost.py`, `test_a_generated_project_builds.py` (x2), `test_bst_extract_run.py`, `test_spine_ground_truth.py`, `test_stream_merge.py` | `6 failed` - `Cache too full` / `assert 255 == 0` |
+
+Reverted (`git checkout --` on the two unmodified fixture files); same
+six green again at the same margin, then at the normal one.
+
+`test_native_build_tracer.py`, `test_dual_plane_capture.py`: named,
+not fixed - see the gap above.

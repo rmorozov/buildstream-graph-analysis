@@ -19,11 +19,22 @@ Nine phantom failures pointing at the tool, caused by the harness.
 So: inherit the environment and override only `HOME`. The isolation is
 unchanged - `HOME` is the only thing `bst` keys its cache and config off
 - and a `--user` install keeps working.
+
+`UX-760`: also defaults `XDG_CONFIG_HOME` to `UX-755`'s repo-owned,
+absolute-valued cache config, so every caller sizes its reserve against
+real disk rather than nominal. `extra` still overrides or removes it.
 """
+import contextlib
 import os
+import pathlib
 import site
 import sys
 from typing import Optional
+
+#: `UX-755`: one repo-owned config, absolute `cache` values - read by
+#: every real-`bst` test through this module, never copied per file.
+BST_XDG_CONFIG_HOME = (pathlib.Path(__file__).resolve().parents[2]
+                        / "tests/fixtures/macro_micro/xdg_config_home")
 
 
 def _user_site_to_preserve() -> Optional[str]:
@@ -57,6 +68,7 @@ def isolated_bst_env(home, **extra: Optional[str]) -> dict:
     """
     env = dict(os.environ)
     env["HOME"] = str(home)
+    env["XDG_CONFIG_HOME"] = str(BST_XDG_CONFIG_HOME)
     user_site = _user_site_to_preserve()
     if user_site:
         existing = env.get("PYTHONPATH")
@@ -67,3 +79,23 @@ def isolated_bst_env(home, **extra: Optional[str]) -> dict:
         else:
             env[key] = value
     return env
+
+
+@contextlib.contextmanager
+def bst_env(home, **extra: Optional[str]):
+    """`isolated_bst_env(home, **extra)` applied to `os.environ` itself,
+    restored after.
+
+    `UX-760`: a `subprocess.run(env=...)` reaches only its own direct
+    child - `extract_run`'s and `run_traced_build`'s own internal `bst
+    show`/build calls are separate subprocesses that inherit this
+    *process's* environment, unreached by an `env=` kwarg passed to an
+    earlier, different call.
+    """
+    previous = dict(os.environ)
+    os.environ.update(isolated_bst_env(home, **extra))
+    try:
+        yield
+    finally:
+        os.environ.clear()
+        os.environ.update(previous)

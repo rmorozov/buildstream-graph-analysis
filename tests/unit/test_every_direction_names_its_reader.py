@@ -245,7 +245,11 @@ class TestEveryDirectionSaysWhereItStands:
 
     def test_a_landed_status_names_only_closed_filings(self):
         """The other direction, and the one that keeps `landed` cheap to
-        write and expensive to write *wrongly*."""
+        write and expensive to write *wrongly*.
+
+        `UX-751`: a range's two endpoints are not the range, same as
+        `test_a_range_called_open_names_no_closed_filing` - `685`..`692`
+        stayed true by its endpoints while `689` and `690` sat open."""
         closed = _closed_filings()
         known = _filing_numbers()
         wrong = []
@@ -253,7 +257,7 @@ class TestEveryDirectionSaysWhereItStands:
             rest = status.split("**Status:**", 1)[1].strip()
             if not rest.startswith("landed"):
                 continue
-            for number in sorted({int(n) for n in _ITEM.findall(rest)}):
+            for number in sorted(_ids_in(rest)):
                 if number not in known:
                     wrong.append(f"{heading}: UX-{number} is no filing")
                 elif number not in closed:

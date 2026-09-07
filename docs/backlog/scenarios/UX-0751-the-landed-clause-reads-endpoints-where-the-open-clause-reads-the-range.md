@@ -60,4 +60,63 @@ mutation above reddens it naming both open ids.
 
 ## Outcome
 
-_Not started._
+**Gap measured:** `test_a_landed_status_names_only_closed_filings` read
+`{int(n) for n in _ITEM.findall(rest)}` — two endpoints of a range, not
+its span. Population, via the guard's own `_statuses()`:
+
+```console
+$ python3 -c "import sys; sys.path.insert(0, 'tests/unit'); \
+import test_every_direction_names_its_reader as m; \
+print(len([1 for h, s in m._statuses() \
+if s.split('**Status:**', 1)[1].strip().startswith('landed')]))"
+15
+```
+
+15 `landed` statuses, range-expanded via `_ids_in()`, name 94 ids;
+checked against the guard's own closed-set and independently against
+`closed.md`'s index:
+
+```console
+$ python3 -c "...ids = union of _ids_in(rest) for the 15 landed rows...
+print(len(ids)); print(sorted(ids - m._closed_filings())); \
+print(sorted(ids - closed_md_ids))"
+94
+[]
+[]
+```
+
+All 94 already closed both ways; only Direction 18's sentence
+(corrected by `UX-748`) would have reddened. No sentence needed
+correcting.
+
+**Close measured:** swapped `_ITEM.findall(rest)` for `_ids_in(rest)`
+in the landed clause. `pytest
+tests/unit/test_every_direction_names_its_reader.py -q` → `23 passed`.
+Inverse check — restored line 1558 to `landed — `UX-685`..`UX-692` all
+closed.`, reran the single test:
+
+```text
+FAILED …test_a_landed_status_names_only_closed_filings
+AssertionError: a `landed` status citing open work:
+['## Direction 18…: UX-689 is not closed',
+ '## Direction 18…: UX-690 is not closed']
+```
+
+Both open ids named; reverted `directions.md` to the checked-in text
+(unchanged — no correction was live-needed).
+
+**Mutation table:**
+
+| clause | mutation | reddened | count |
+|---|---|---|---|
+| landed clause | restore `685..692 all closed` (endpoints-only phrasing `_ids_in` now expands) | yes, names 689 & 690 | 1 failed, 22 deselected |
+
+`make test` for this row is the round's batch gate, run once after
+`UX-755`'s fix lands — that row's own `make test` currently reads `12
+failed, 7606 passed`, all 12 real-`bst` end-to-end tests failing on
+`Cache too full` (BuildStream sizing its 5% reserve off nominal disk
+rather than free space), none in this diff's touching set.
+
+`_closed_filings()`/`_filing_numbers()` read each file's own
+`**Status:**` header, not `README.md`/`closed.md`; if the two ever
+drift the guard sides with the header — no live instance found here.

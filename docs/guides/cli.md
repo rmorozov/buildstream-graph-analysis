@@ -1961,7 +1961,7 @@ not wall clock — a build with any parallelism completes it in less.
 
 ## `bga compare` — Run-to-Run Comparison
 
-Not a spec-mandated command (`docs/backlog/scenarios/UX-01`) - compares a baseline run against a candidate run and reports signed deltas in certified floors, efficiency score, and attribution, plus a verdict:
+Not a spec-mandated command (`UX-1`) - compares a baseline run against a candidate run and reports signed deltas in certified floors, efficiency score, and attribution, plus a verdict:
 
 ```bash
 bga compare /path/to/before-run /path/to/after-run
@@ -1972,7 +1972,7 @@ The verdict is one of `improved`/`regressed`/`no significant change`/`within the
 
 ### CI Regression Gate (`--fail-on-regression`)
 
-Not spec-mandated (`docs/backlog/scenarios/UX-03`) - opt-in gating mode for a CI pipeline that wants to actually *fail* on a genuine regression, not just report it:
+Not spec-mandated (`UX-3`) - opt-in gating mode for a CI pipeline that wants to actually *fail* on a genuine regression, not just report it:
 
 ```bash
 bga compare /path/to/baseline-run /path/to/candidate-run --fail-on-regression
@@ -1999,11 +1999,11 @@ Worked GitHub Actions example - extract two runs and gate on the comparison:
 
 The job fails (exit `4`) only on a real, high-confidence regression; a genuine improvement, a change within tolerance, or a low-confidence comparison all let the job continue.
 
-Pass `--fail-on-low-confidence` (`docs/backlog/scenarios/UX-40`) to treat "this comparison was too low-confidence to gate on" as a failure rather than failing open - a gate that silently stops gating still reports green, and some pipelines would rather see that.
+Pass `--fail-on-low-confidence` (`UX-40`) to treat "this comparison was too low-confidence to gate on" as a failure rather than failing open - a gate that silently stops gating still reports green, and some pipelines would rather see that.
 
 ### CI Efficiency Gate (`--fail-on-efficiency-regression`, `--min-efficiency`)
 
-Not spec-mandated (`docs/backlog/scenarios/UX-39`). The duration gate above answers *"did the build get slower"*. That is the wrong question when a project is legitimately growing: adding three new elements makes the build slower, and a duration gate cannot tell that apart from a real regression. The question a build owner actually wants gated is **"adding work is allowed; adding work *inefficiently* is not."**
+Not spec-mandated (`UX-39`). The duration gate above answers *"did the build get slower"*. That is the wrong question when a project is legitimately growing: adding three new elements makes the build slower, and a duration gate cannot tell that apart from a real regression. The question a build owner actually wants gated is **"adding work is allowed; adding work *inefficiently* is not."**
 
 ```bash
 # fail if the build became meaningfully less efficient than the baseline
@@ -2013,7 +2013,7 @@ bga compare runs/baseline runs/candidate --fail-on-efficiency-regression
 bga compare runs/baseline runs/candidate --min-efficiency 0.45
 ```
 
-Exits `5` - a code distinct from `4`, so a pipeline can warn on "slower" and fail on "less efficient", or vice versa. Gates on **Dispatch Occupancy** (`floors.occupancy_share`, `docs/backlog/scenarios/UX-27`), which is invariant to how much work the build does: adding well-parallelized elements barely moves it, adding serialized ones moves it sharply.
+Exits `5` - a code distinct from `4`, so a pipeline can warn on "slower" and fail on "less efficient", or vice versa. Gates on **Dispatch Occupancy** (`floors.occupancy_share`, `UX-27`), which is invariant to how much work the build does: adding well-parallelized elements barely moves it, adding serialized ones moves it sharply.
 
 Real, measured illustration on one project (`examples/06-macro-micro-optimization`), same runner:
 
@@ -2407,7 +2407,7 @@ bga analyze @last --diagnostics --format json | \
 
 - **Confidence** — how much to trust the numbers below (data completeness/quality of this specific trace). Below "high"? Fix the underlying trace before acting on anything else. A build that *failed* is called out even louder, before any efficiency figure.
 - **Certified Headroom** — a *proven* lower bound, not a guess: given the work this build actually did, it cannot possibly finish faster than `T∞`/`LB` (whichever is larger) without changing that work. Headroom above zero means real room to improve scheduling *without touching any element's build steps*; zero means rescheduling cannot help at all.
-- **Efficiency Score and Dispatch Occupancy** — deliberately two numbers, because one cannot do the job. **Efficiency Score** asks *"did the scheduler pack this graph well?"*, and everything it is built from comes from the graph this run actually had — so a build whose independent elements were accidentally chained scores a perfect 1.00, correctly and uselessly. **Dispatch Occupancy** asks *"how much of the available slot-time did the run actually use?"* and never consults the graph, so serializing work that could have run concurrently pushes it down. Read them together: a high score with low occupancy means the scheduler did fine and the *graph* is the problem. (Real measured pair: three one-line fixes made a build 30.5% faster while Efficiency Score fell 1.00 → 0.83 and Dispatch Occupancy rose 27.8% → 63.0%. See [`docs/backlog/scenarios/UX-27`](../backlog/scenarios/UX-0027-efficiency-score-certifies-the-graph-it-was-given.md).)
+- **Efficiency Score and Dispatch Occupancy** — deliberately two numbers, because one cannot do the job. **Efficiency Score** asks *"did the scheduler pack this graph well?"*, and everything it is built from comes from the graph this run actually had — so a build whose independent elements were accidentally chained scores a perfect 1.00, correctly and uselessly. **Dispatch Occupancy** asks *"how much of the available slot-time did the run actually use?"* and never consults the graph, so serializing work that could have run concurrently pushes it down. Read them together: a high score with low occupancy means the scheduler did fine and the *graph* is the problem. (Real measured pair: three one-line fixes made a build 30.5% faster while Efficiency Score fell 1.00 → 0.83 and Dispatch Occupancy rose 27.8% → 63.0%. See [`UX-27`](../backlog/scenarios/UX-0027-efficiency-score-certifies-the-graph-it-was-given.md).)
 - **Where the time is** — on a build the chain constrains, the headline is one table: each heavy element's duration, its share of the critical path, and what fixing it would actually recover. The rows are ordered by duration because that is what "where is the time" means; the fix order is named separately, because on a dense graph the two disagree.
 - **What to do after that** — the next few fixes projected from the same capture: what the build drops to after each, whether the recommended set's savings *add*, and which heavy elements sit off the critical path worth nothing to fix today. Without it, finding the second thing to fix costs another full build. ([`UX-74`](../backlog/scenarios/UX-0074-one-capture-one-finding.md))
 - **Elements Most Worth Optimizing First** — on a build the *graph* constrains rather than the chain, this ranks by blast radius instead: fixing a slow element near the root helps every downstream element too.
@@ -2455,14 +2455,14 @@ by `tests/unit/test_the_exit_table_derives_from_the_codes.py`.
   declined before anything is written.
 - `3`: Analysis failure (e.g., graph cycles detected).
 - `4`: **not "slower" alone.** `bga compare` returns it for any of three things, and a CI job that triages it as a duration regression will mis-read two of them:
-  - `--fail-on-regression` and the build's total duration really did regress beyond the threshold (`docs/backlog/scenarios/UX-03`);
+  - `--fail-on-regression` and the build's total duration really did regress beyond the threshold (`UX-3`);
   - the **build-failure gate** (`UX-54`) - either run describes a build in which an element FAILED, so no scheduling verdict is meaningful. This fires whenever *any* gate was requested, including when only the efficiency gates were;
   - `--fail-on-low-confidence` and a run's confidence is below the "high" band.
 
   Read the stderr line, which names which of the three fired. All three are distinct from 1/2/3, which mean `bga` itself failed to run.
-- `5`: `bga compare --fail-on-efficiency-regression`/`--min-efficiency`/`--fail-on-inefficient-additions` only - the build became meaningfully *less efficient*, whether or not it also got slower. Deliberately distinct from `4`: "slower" and "less efficient" are different verdicts and often different teams' problems (`docs/backlog/scenarios/UX-39`).
-- `6`: **refused as not comparable** - not a verdict about the build at all, which is why it does not share a code with one. Two commands return it: `bga compare`, when the two runs share fewer than half their element UIDs or one is a caches-off run and the other incremental (`docs/backlog/scenarios/UX-78`; `--allow-mismatch` overrides); `bga cache-trend`, when the series is not all of one project and target set, in which case the per-run rows still print and only the band verdict is withheld (`docs/backlog/scenarios/UX-111`); and `bga baseline`, when the assembled set's captures are not comparable to each other (`docs/backlog/scenarios/UX-96`).
-- `7`: `bga compare --require-efficiency-signal` only - an efficiency gate was requested but could not be evaluated, because a run has no `occupancy_share`. Like `6`, not a verdict about the build: `4` would say it got slower and `5` would say it got less efficient, and neither was determined (`docs/backlog/scenarios/UX-87`). Without `--require-efficiency-signal` the same situation exits `0`, prints an `Efficiency gate NOT APPLIED` line to stderr, and publishes `efficiency_gate_evaluated: false`.
+- `5`: `bga compare --fail-on-efficiency-regression`/`--min-efficiency`/`--fail-on-inefficient-additions` only - the build became meaningfully *less efficient*, whether or not it also got slower. Deliberately distinct from `4`: "slower" and "less efficient" are different verdicts and often different teams' problems (`UX-39`).
+- `6`: **refused as not comparable** - not a verdict about the build at all, which is why it does not share a code with one. Two commands return it: `bga compare`, when the two runs share fewer than half their element UIDs or one is a caches-off run and the other incremental (`UX-78`; `--allow-mismatch` overrides); `bga cache-trend`, when the series is not all of one project and target set, in which case the per-run rows still print and only the band verdict is withheld (`UX-111`); and `bga baseline`, when the assembled set's captures are not comparable to each other (`UX-96`).
+- `7`: `bga compare --require-efficiency-signal` only - an efficiency gate was requested but could not be evaluated, because a run has no `occupancy_share`. Like `6`, not a verdict about the build: `4` would say it got slower and `5` would say it got less efficient, and neither was determined (`UX-87`). Without `--require-efficiency-signal` the same situation exits `0`, prints an `Efficiency gate NOT APPLIED` line to stderr, and publishes `efficiency_gate_evaluated: false`.
 - `130`: **interrupted** (`UX-157`, `UX-163`). Ctrl-C during a capture is
   not a failure and not a verdict: whatever the build completed is kept,
   analyzed, and labelled as a build that did not finish. A comparison

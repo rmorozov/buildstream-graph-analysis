@@ -58,6 +58,18 @@ limit is a row too.
 | 103 | verifier | sonnet | UX-748 verify | 91k | 66 | 15.5 m | found the acceptance test does not survive being committed, and the new guard vacuous on 'remain open' | the defect was invisible from the track's own uncommitted sandbox; only re-running against HEAD showed it |
 | 103 | implementer | sonnet | UX-674 | 410k | 363 | 104.2 m | merged after correction; four font sizes, h3 below h2, prose at 72 of its own glyphs | a type-scale row that needed a layout-model change; scope grew four times, each reported |
 | 103 | verifier | sonnet | UX-674 verify | 120k | 80 | 55.3 m | found a false budget-cost claim, an undisclosed non-rewrite, and the layout change no new guard reads | the task file alone could not resolve which sentences its Motivation named |
+| 104 | implementer | sonnet | UX-750 the map count guard (judgement) | 239k | 96 | 34.6 m | merged | the denylist needed zero entries, not the three the brief anticipated; proving that took an exhaustive digit-run scan |
+| 104 | implementer | sonnet | UX-751 the landed clause range (judgement) | 92k | 38 | 73.1 m | merged | worktree opened nine commits behind the named base; the ff-only remedy is the whole cost |
+| 104 | implementer | sonnet | UX-753 the flow axis guard (judgement) | 457k | 155 | 75.8 m | merged | first attempt vacuous; a dynamic import over file:// fails without --allow-file-access-from-files, so the constructed case had to go through the served page |
+| 104 | implementer | sonnet | UX-755 the gate and CI disagree (judgement) | 684k | 240 | 79.7 m | merged | the shared scratchpad vanished mid-run and destroyed a completed diagnostic log; re-derived on a cheaper tier |
+| 104 | implementer | sonnet | UX-744 the round register (judgement) | 634k | 205 | 81.2 m | reverted, reopened | three verification rounds: independence was false twice, and CI then falsified the derivation itself |
+| 104 | implementer | sonnet | UX-756 the spread rule (judgement) | 68k | 52 | 13.2 m | merged | finding a module whose selection sat at the median, so a demonstration import would move the figure at all |
+| 104 | verifier | sonnet | UX-751 verifier | 334k | 73 | 61.9 m | held: one wrong count | three full make test runs to establish that a red suite was not the diff |
+| 104 | verifier | sonnet | UX-750 verifier | 64k | 60 | 13.5 m | merged after amend | the exclusions were three different mechanisms told as one story; testing each separately found the latent false positive |
+| 104 | verifier | sonnet | UX-756 verifier | 53k | 50 | 11.2 m | merged | the substring trap: renaming to a name containing the old one gives a false pass |
+| 104 | verifier | sonnet | UX-753 verifier | 174k | 76 | 44.5 m | held, then merged | the population claim needed an independent enumeration; the discriminating mutation was one the track never tried |
+| 104 | verifier | sonnet | UX-744 verifier | 281k | 93 | 33.8 m | held twice | finding the mutation point that separates caught from silently absorbed - one function down |
+| 104 | verifier | sonnet | UX-755 verifier | 78k | 65 | 12.6 m | merged | reproducing a negative disk margin on a shared container without disturbing other agents |
 
 Round 101's four tracks are **not** here: this session could not
 identify their transcripts with certainty after a context rebuild, and
@@ -70,7 +82,7 @@ committed cleanly once told to run in the foreground. Three of the five
 left a derived figure or a §6 context-map row behind - the same class
 the round itself was about, arriving in the tracks' own work.
 
-What the forty-seven rows already say: a researcher that reads a document
+What the fifty-nine rows already say: a researcher that reads a document
 whole costs 100-180k; a walker that drives every control costs 336k;
 the two cuts cost a re-run each. The `walk` and `design-review`
 skills fix the report shape so the next rows are smaller, and the

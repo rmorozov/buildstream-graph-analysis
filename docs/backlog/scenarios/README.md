@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-753 scenarios: **21 open**, 732 closed.
+756 scenarios: **24 open**, 732 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -23,11 +23,11 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | capture | 1 | 96 |
 | analysis | 6 | 107 |
 | contracts | 0 | 48 |
-| viewer | 3 | 162 |
+| viewer | 4 | 163 |
 | cli | 0 | 22 |
 | store | 0 | 16 |
-| docs | 4 | 122 |
-| guards | 7 | 180 |
+| docs | 5 | 123 |
+| guards | 8 | 181 |
 
 ## Open scenarios
 
@@ -57,6 +57,9 @@ task file, which is the only place it ever lived twice.
 | UX-753 | [the flow axis is drawn by one row and read by none](UX-0753-the-flow-axis-is-drawn-by-one-row-and-read-by-none.md) | viewer | Medium | the reader of an exhibit axis, and the round that changes one | 🔴 |
 | UX-755 | [the gate and CI disagree, and the gate is the one that is wrong](UX-0755-the-gate-and-ci-disagree-and-the-gate-is-the-one-that-is-wrong.md) | guards | Medium | the session that runs `make test` and believes it | 🔴 |
 | UX-756 | [the spread rule names a new file when an import is enough](UX-0756-the-spread-rule-names-a-new-file-when-an-import-is-enough.md) | docs | Low | the round that re-derives what it was told to and is red anyway | 🔴 |
+| UX-757 | [the four rounds the register names have no document](UX-0757-the-four-rounds-the-register-names-have-no-document.md) | docs | Medium | the reader who cannot see what rounds 99..102 launched | 🔴 |
+| UX-758 | [the edge-mark test reads a merged name and never matches](UX-0758-the-edge-mark-test-reads-a-merged-name-and-never-matches.md) | viewer | Medium | the reader of an exhibit axis whose labels silently stop being protected | 🔴 |
+| UX-759 | [the register's id column loses a subset in silence](UX-0759-the-register-s-id-column-loses-a-subset-in-silence.md) | guards | Medium | the round that reads the register to learn what an earlier round closed | 🔴 |
 
 ## UX-706..UX-711: the ninety-fourth round — the pipeline, and which model runs which shape (2026-09-05)
 

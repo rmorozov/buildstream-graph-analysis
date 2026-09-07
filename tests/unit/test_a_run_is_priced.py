@@ -183,3 +183,67 @@ class TestEveryRoundDocumentPricesItsAgents:
         assert not missing, (
             f"round(s) {missing} document agents that the ledger does not "
             "price; the table is where the next round chooses a model")
+
+
+class TestATrackIsPricedByShape:
+    """`UX-708`: the ledger had no shape column and needs none - the
+    shape is `UX-706`'s derivation over the task file, joined on the id
+    the row already names. A prose cell would be one more sentence
+    nothing reads back."""
+
+    def test_the_shape_comes_from_the_file_not_the_cell(self, tmp_path):
+        run = {"agent": "implementer", "task": "`UX-706` a thing (mechanical)"}
+        # `UX-706`'s own file derives its shape; the cell says otherwise
+        # on purpose, and the cell must lose.
+        assert dev_process_bands.shape_of(run) != "mechanical"
+        assert dev_process_bands.shape_of(run) in ("bounded", "judgement")
+
+    def test_a_run_naming_no_task_has_no_shape(self):
+        assert dev_process_bands.shape_of(
+            {"agent": "researcher", "task": "spec vs code"}) is None
+
+    def test_an_unknown_id_is_no_shape_rather_than_a_crash(self):
+        assert dev_process_bands.shape_of(
+            {"agent": "implementer", "task": "`UX-99999` gone"}) is None
+
+    def test_only_implementer_runs_are_shaped(self):
+        report = "\n".join(dev_process_bands.shape_report(
+            dev_process_bands.ledger_runs()))
+        tracks = [r for r in dev_process_bands.ledger_runs()
+                  if r["agent"] == "implementer"]
+        assert f"{len(tracks)} implementer run(s)" in report, (
+            "a researcher's sweep has no task shape; folding it in would "
+            f"price a different question:\n{report}")
+
+    def test_a_cell_that_disagrees_is_named_not_silently_resolved(self):
+        """A row whose file derives `judgement` can still have handed a
+        track a *bounded* slice - a burn-down batch is exactly that - so
+        the split is reported with the disagreeing rows beside it."""
+        tracks = [r for r in dev_process_bands.ledger_runs()
+                  if r["agent"] == "implementer"]
+        off = dev_process_bands.disagreements(tracks)
+        report = "\n".join(dev_process_bands.shape_report(
+            dev_process_bands.ledger_runs()))
+        if off:
+            assert f"differs on {len(off)} of {len(tracks)}" in report
+            for task, _said, _derived in off:
+                assert task in report
+        else:
+            assert "the row's own word differs" not in report
+
+    def test_the_advisory_names_what_the_rows_measured(self):
+        """`UX-708`'s deliverable is one sentence in `CLAUDE.md`, and it
+        is the sentence the split decides. A number in it and no run
+        behind it is the defect this repository files rows about."""
+        claude = (REPO / "CLAUDE.md").read_text(encoding="utf-8")
+        tracks = [r for r in dev_process_bands.ledger_runs()
+                  if r["agent"] == "implementer"]
+        judgement = [r for r in tracks
+                     if dev_process_bands.SHAPE_IN_CELL.search(r["task"])
+                     and dev_process_bands.SHAPE_IN_CELL.search(
+                         r["task"]).group(1) == "judgement"]
+        assert f"{len(judgement)} of {len(tracks)} runs" in claude, (
+            f"CLAUDE.md's pipeline should say '{len(judgement)} of "
+            f"{len(tracks)} runs'; the ledger has {len(tracks)} implementer "
+            f"rows, {len(judgement)} of them judgement-shaped")
+

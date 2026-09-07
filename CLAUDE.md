@@ -26,7 +26,7 @@ file is the day-one summary, and
 ## The pipeline
 
 `orient` → `decompose` (the **shape**, derived by `dev_close_task.py --shape`) → tracks → `verifier` → merge, one `make test`, close.
-Mechanical and bounded shapes are `implementer` tracks on `sonnet` in worktrees; a judgement shape is the session's own.
+Mechanical and bounded shapes are `implementer` tracks on `sonnet` in worktrees; a judgement shape is the session's own — the *judgement*, not the work: three of the four judgement rows say the session took it in the brief, and those tracks ran on `sonnet` for a 144k median against bounded's 239k (4 of 17 runs, all merged; `dev_process_bands.py --runs`).
 `researcher` and `verifier` read on `sonnet`; the session judges, briefs and merges, and reads reports, never diffs or logs — its cost is the live
 context at each rebuild — the `decompose` skill carries the measured share, with its window; a result over a screen goes to the scratchpad (`UX-711`). `measure`, `falsify`, `verify`
 (which calls `self-review` last) run inside a track; `derive` before moving viewer code; `walk` and `design-review` audit the page and `review` the documents; every run is a row in `docs/audits/agent-runs.md`.

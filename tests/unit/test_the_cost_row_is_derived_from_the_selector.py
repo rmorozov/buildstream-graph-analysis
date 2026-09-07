@@ -122,21 +122,22 @@ class TestTheFigureIsMeasured:
         got = dev_touching.spread()
         assert got["modules"] >= 60, got
         assert got["files"] >= 200, got
-        assert got["min"] <= got["median"] <= got["max"], got
+        assert got["min"] <= got["max"], got
+        assert "median" not in got, got  # UX-770
 
     def test_the_figure_interpolates_and_is_not_a_constant(self):
         """A string returned whatever the tree says would be a typed
         figure with an extra step in front of it."""
         made = dev_touching.figure(
-            {"min": 1, "max": 2, "median": 3, "files": 4, "modules": 5})
-        assert made == "1-2 of 4 test files, median 3", made
+            {"min": 1, "max": 2, "files": 4, "modules": 5})
+        assert made == "1-2 of 4 test files", made
         assert made != dev_touching.figure()
 
     def test_the_rewriter_replaces_a_stale_figure_and_nothing_else(self):
         """What `--write` does, on text this test owns."""
-        stale = "cost: 9-9 of 9 test files, median 9 - and 4s elsewhere\n"
-        fixed = dev_touching.write_figure(stale, "1-2 of 3 test files, median 4")
-        assert fixed == "cost: 1-2 of 3 test files, median 4 - and 4s elsewhere\n"
+        stale = "cost: 9-9 of 9 test files - and 4s elsewhere\n"
+        fixed = dev_touching.write_figure(stale, "1-2 of 3 test files")
+        assert fixed == "cost: 1-2 of 3 test files - and 4s elsewhere\n"
 
     def test_the_option_prints_what_the_clauses_read(self, capsys):
         """The tool and the guard are one figure, or the tool is a

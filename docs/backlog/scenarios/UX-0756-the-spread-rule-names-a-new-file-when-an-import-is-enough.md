@@ -1,6 +1,6 @@
 # UX-756: the spread rule names a new file when an import is enough
 
-**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** UX-632 (the spread), UX-336 (the selector) | **Serves:** the round that re-derives what it was told to and is red anyway | **Topic:** docs | **Area:** unassigned | **Shape:** bounded
+**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** UX-632 (the spread), UX-336 (the selector) | **Serves:** the round that re-derives what it was told to and is red anyway | **Topic:** docs | **Area:** unassigned | **Shape:** judgement
 
 ## Motivation
 

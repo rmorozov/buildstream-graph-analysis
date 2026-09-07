@@ -63,6 +63,14 @@ task file, which is the only place it ever lived twice.
 | UX-767 | [the push gate sees one channel, and the round used another](UX-0767-the-push-gate-sees-one-channel-and-the-round-used-another.md) | guards | Medium | the session that trusts the push gate to cover its branch | 🔴 |
 | UX-768 | [the closing note is a shell argument, and its backticks run](UX-0768-the-closing-note-is-a-shell-argument-and-its-backticks-run.md) | guards | High | every round that closes a row with a note naming a command | 🔴 |
 
+**The narrative round headings below are retired at round 94**
+(`UX-763`): each one hand-types an id range and a date that a register
+would derive, and typing rounds 95 on by hand is the fifth disagreeing
+record `UX-763` found, not a sixth fix for it. `UX-744`'s register is
+where a later round's id range and date belong; `UX-757` is where a
+round's own document belongs. The existing headings stay, unedited,
+as the record of what each round already claimed.
+
 ## UX-706..UX-711: the ninety-fourth round — the pipeline, and which model runs which shape (2026-09-05)
 
 A process round. The user asked where a simpler model can take

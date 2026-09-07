@@ -84,4 +84,57 @@ exist, it does not replace them.
 
 ## Outcome
 
-_Not started._
+**The gap, measured.**
+
+```console
+$ git show e8f3d58:docs/contributing/fixing-guide.md | grep -c "round document"
+1
+$ git show e8f3d58:CLAUDE.md | grep -c "round document"; git show e8f3d58:docs/contributing/rules.md | grep -c "round document"
+0
+0
+$ git show e8f3d58:docs/backlog/scenarios/README.md | grep -n "^## UX-" | sort -t: -k1 -n | tail -1
+1475:## UX-365..UX-373: the fifty-eighth round — the walk out to Perfetto (2026-08-28)
+```
+
+Highest narrative round heading is 94 (`UX-706..UX-711`, 2026-09-05);
+this round is 106 — 11 rounds' headings never written, confirming the
+Motivation's fifth disagreeing record.
+
+**The close, measured.** `docs/contributing/fixing-guide.md` §7a
+("Closing a round") lists the seven obligations in order, each with
+its command and the guard that already owns it, and answers `UX-744`'s
+self-referential case (a history-derived figure can't name the commit
+that states it — solved by never letting step 2's "regenerate last"
+pattern apply to anything that counts commits). `CLAUDE.md:28`'s
+pipeline now reads `merge → close (... — fixing guide §7a) → one
+make test, push`, gate last. `scenarios/README.md`'s round headings
+are **retired**, not brought current: typing rounds 95-106's id
+ranges and dates by hand is the disagreeing-record shape this row
+exists to stop; a note at the table's end says so and points to
+`UX-744`/`UX-757`; existing headings are unedited.
+
+**Decisions this file did not already make, two caught by review:**
+no `rules.md` line — the card is at its 80-line cap and the Required
+Fix names no such line. The section collided twice, self-caught once:
+first landed as `§4b`, which `docs/design/styleguide.md` already owns
+(`4b`-`4f`), moved to `§8` and re-verified — but `docs/contributing/
+style-guide.md` has its own real `## 8.`, invisible to `_ambiguous()`,
+which only paired `STYLEGUIDE` against the union of the other two;
+the orchestrator's review caught this one. Renamed to `§7a` (unused by
+all three); `_ambiguous()` widened to pairwise overlap across all
+three, and a new census guard (`TestTheIdSpaceGrowsNoSilentCollision`)
+fails naming any id a future section repeats. Three of seven steps
+named a tool and a `UX-` id with no guard file; all seven now name
+one.
+
+**Mutation table** (falsify skill; `/tmp` copies, reverted):
+
+| mutation | guard | result |
+|---|---|---|
+| `README.md`: `**26 open**` → `**27 open**` | `test_the_index_counts_match_the_rows_they_index` | 1 passed → 1 failed → reverted, 1 passed |
+| §7a's `## 8.` restored (`fixing-guide.md`) | `test_no_new_id_is_shared_across_the_three_documents` | 1 passed → 1 failed (names `'8'`) → reverted, 1 passed |
+| §7a's item 2 bullet deleted, then the count mutation above, together | `test_the_index_counts_match_the_rows_they_index` | still 1 failed — reverted, 1 passed |
+
+The third row is the Acceptance Test performed, not reasoned about:
+with the obligation's own sentence gone from the guide, the guard
+that owns it still catches the real violation.

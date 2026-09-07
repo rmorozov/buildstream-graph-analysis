@@ -1,6 +1,6 @@
 # UX-705: the burn-down runs on the reporters' model — a batch a commit, never a suppression
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-694 (the baseline), UX-663 (the model advisory and the run ledger), UX-498 (the implementer's worktree) | **Serves:** R8, who wants the baseline to reach zero without the session's model reading 1,709 findings | **Topic:** guards | **Area:** unassigned | **Shape:** judgement
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-694 (the baseline), UX-663 (the model advisory and the run ledger), UX-498 (the implementer's worktree) | **Serves:** R8, who wants the baseline to reach zero without the session's model reading 1,709 findings | **Topic:** guards | **Area:** unassigned | **Shape:** judgement
 
 ## Motivation
 
@@ -182,4 +182,108 @@ batch 1). So **34 remain that a batch can actually close**, the
 largest being `S108` (7, a hardcoded `/tmp` in `bst_baseline_set.py`
 and `bst_native_build_tracer.py`) — the next batch, and unlike
 `SIM115` it needs a fixture read before it is called mechanical.
+
+## Batch 3 outcome (`S108`, `tools/`, 7 findings — 1 of them a batch)
+
+**Read before briefing it, and there was no track to brief.** The
+family is 7 findings in 2 files and **one is a hardcoded temp path**:
+
+- `bst_baseline_set.py:586` `os.environ.get('TMPDIR', '/tmp')` — the
+  right *intent*, spelled by hand. `tempfile.gettempdir()` is the same
+  fallback chain and one finding fewer. Measured both ways:
+
+  ```console
+  $ TMPDIR=/var/tmp/probe python3 -c "import tempfile; print(tempfile.gettempdir())"
+  /var/tmp/probe
+  $ TMPDIR=/no/such/dir python3 -c "import tempfile; print(tempfile.gettempdir())"
+  /tmp
+  $ TMPDIR=/no/such/dir python3 -c "import os; print(os.environ.get('TMPDIR','/tmp'))"
+  /no/such/dir
+  ```
+
+  So it also stops handing the tool a directory that does not exist.
+
+- **2 are a regex, not a path**: `re.compile(r"/tmp/cc[A-Za-z0-9]+\.\w+")`
+  in `bst_native_build_tracer.py` redacts gcc's temp filenames *out of
+  a trace*. `/tmp` there is data being matched.
+- **4 are the sandbox's bind destination**, not the host's temp:
+  `BST_TRACE_BIND_DST` and the three paths under it are where the
+  capture directory is mounted **inside bwrap**. Documented at
+  `docs/guides/cli.md:701` and asserted verbatim three times in
+  `tests/unit/test_capture_diagnostics.py`. A host `gettempdir()` would
+  be the wrong answer, and the guards would say so.
+
+**Close measured**: `--shrink` → `removed 1 stale entry`; `--check` →
+`clean: 291 finding(s)`; `make test-touching` → `1105 passed in
+24.37s`. Mutation: closing it with `# noqa: S108` instead —
+`new: repo SUPPRESSION tools/bst_baseline_set.py (#1)`, red.
+
+**The second family that does not burn down, for a second reason.**
+`S607` could only be relabelled; `S108` mostly cannot be *read* — the
+rule matches a literal and cannot tell a pattern or a sandbox path from
+a host one. 6 of 7 stay, correctly.
+
+## Outcome (round 103, 2026-09-07) — 🟢 Done
+
+**Premise:** held, then bounded — "a list is work a smaller model can
+do" is true, and three batches did it. What the row assumed and did not
+measure is that the list is *reducible*. Most of it is not.
+
+### The gap, measured
+
+```text
+$ python3 tools/dev_baseline.py --check          # at filing
+clean: 1709 finding(s)   # nothing said who may close one, or how
+```
+
+No protocol, and — measured first, `Progress` above — no notion of a
+suppression, so a track told to close 24 findings could have annotated
+all 24 and the number judging it would have shrunk the same.
+
+### After
+
+```text
+$ python3 tools/dev_baseline.py --check
+clean: 291 finding(s) match tests/quality_baseline.json
+```
+
+Three batches on `sonnet`, one commit each, **16 findings closed, none
+suppressed, none traded**: `S607` 7 of 23, `SIM115` 8 of 8, `S108` 1 of
+7. Two ledger rows (batch 3 needed no track — the reading *was* the
+work).
+
+**Where the floor is.** Of 291: **195 structural** and `UX-695`'s;
+**63** the `S603`/`S607` argv family, which `S607`'s batch measured as
+untradeable — resolving an executable turns a literal argv into a
+`Name`, which is the thing `S603` reads; **11** read by a batch and
+correct as they stand (6 `S108`, 3 `SIM115`, 2 per-file-ignores the
+census records). **22 are unexamined**, the largest family `S314` at 4.
+
+So "until the baseline is empty" cannot happen, and "a batch a commit"
+has run out of batches at 4 findings. The remaining 22 are one finding
+at a time — ordinary work on the row that touches the file, not a
+delegable stream.
+
+### Mutations verified red and reverted (per batch)
+
+| # | mutation | reddened |
+|---|---|---|
+| B1 | a `# noqa` on a closed `bga/` site | `new: repo SUPPRESSION`, batch 1 |
+| B2 | a `# noqa: S607` on a closed site | `new: repo SUPPRESSION`, batch 2 |
+| B3 | a `# noqa: S108` instead of the fix | `new: repo SUPPRESSION`, batch 3 |
+
+The census's own 9 clauses and their mutation table are in `Progress`.
+
+### Deviation from the Required Fix
+
+Two, both measured. "The first batch is `S607` (18 → `shutil.which`)"
+was wrong twice — 23 not 18, and reducible only 7 — and the Acceptance
+Test's `git grep -c S607 → 0` was unachievable, so both were rewritten
+to a per-batch criterion mid-row. And a track can still force its own
+growth past `make lint`; one did, and it is filed as `UX-745`.
+
+```text
+$ make test
+$ make lint
+```
 

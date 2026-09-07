@@ -140,7 +140,6 @@
     {"file": "tools/bst_baseline_set.py", "line": "def main(argv: Optional[list[str]] = None) -> int:", "nth": 1, "rule": "C901", "tool": "ruff"},
     {"file": "tools/bst_baseline_set.py", "line": "def main(argv: Optional[list[str]] = None) -> int:", "nth": 1, "rule": "PLR0912", "tool": "ruff"},
     {"file": "tools/bst_baseline_set.py", "line": "def main(argv: Optional[list[str]] = None) -> int:", "nth": 1, "rule": "PLR0915", "tool": "ruff"},
-    {"file": "tools/bst_baseline_set.py", "line": "os.environ.get('TMPDIR', '/tmp'), f'bga-baseline-{os.getpid()}',", "nth": 1, "rule": "S108", "tool": "ruff"},
     {"file": "tools/bst_baseline_set.py", "line": "tar.extractall(dest)", "nth": 1, "rule": "S202", "tool": "ruff"},
     {"file": "tools/bst_baseline_set.py", "line": "tar.extractall(dest)", "nth": 2, "rule": "S202", "tool": "ruff"},
     {"file": "tools/bst_baseline_set.py", "line": "fetch = subprocess.run(", "nth": 1, "rule": "S603", "tool": "ruff"},

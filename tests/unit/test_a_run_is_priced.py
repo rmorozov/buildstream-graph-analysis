@@ -238,10 +238,11 @@ class TestATrackIsPricedByShape:
         claude = (REPO / "CLAUDE.md").read_text(encoding="utf-8")
         tracks = [r for r in dev_process_bands.ledger_runs()
                   if r["agent"] == "implementer"]
+        # The split `--runs` prints, not the cell's own word: review 19
+        # found the sentence citing a command that produced a different
+        # number, which is the defect this file exists to stop.
         judgement = [r for r in tracks
-                     if dev_process_bands.SHAPE_IN_CELL.search(r["task"])
-                     and dev_process_bands.SHAPE_IN_CELL.search(
-                         r["task"]).group(1) == "judgement"]
+                     if dev_process_bands.shape_of(r) == "judgement"]
         assert f"{len(judgement)} of {len(tracks)} runs" in claude, (
             f"CLAUDE.md's pipeline should say '{len(judgement)} of "
             f"{len(tracks)} runs'; the ledger has {len(tracks)} implementer "

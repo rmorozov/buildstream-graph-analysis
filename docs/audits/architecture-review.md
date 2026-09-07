@@ -90,6 +90,7 @@ would have caught it; a bound at it would only just have.
 | 16 | 2026-09-04 | 645 | six filings, three of them a green guard reading the wrong population *shape* — the spec's Part 32 block two ids behind and read by nothing, the currency guard comparing dates on a day that held nine substantive commits, `analyze/v6`'s three new keys one nesting level below the key population — plus a dated log record a guard made every `analyze` bump rewrite, `format.js` still saying nine hints of nineteen, and a red gate on the base; two restorations; [`round-87.md`](round-87.md) |
 | 17 | 2026-09-05 | 671 | three filings, all the same shape the last four reviews found — a sentence no guard reads: the `review` skill named by neither `CLAUDE.md` nor the checklist the cadence guard sends a stopped session to, the orchestrator's 73 % share carried bare in `CLAUDE.md` and measuring 46.9 % today, and *fifteen viewer modules* in an undated passage against 22 on disk; two claims checked and found sound (the `479` touching spread, `fifteen live contracts`) |
 | 18 | 2026-09-06 | 698 | three filings, and for the fifth review running the shape is a sentence no guard reads — three counted figures each derivable from a population already in the tree (`UX-734`: *Twenty hints* beside a table held equal to the schemas in both directions, *the twenty-four rows* against 26, *Parts 0-40* against 45), the attachment guide's **82 KiB** measured on a capture that is not in the tree and cannot be reproduced (`UX-735`; the one export this repository can measure is 488 KiB), and a third hand-maintained copy of a fact `UX-131` guarded twice — 75 status rows in `architecture.md` outside the guard's population, one of them drifted (`UX-736`); four document groups read in parallel, every finding re-run by the session before filing |
+| 19 | 2026-09-07 | 724 | four filings, and the shape moved one step on: not a sentence no guard reads but a sentence **inside** a guarded document and **outside** its guard's population — a range checked at its endpoints, a verification log that credits a commit and never re-derives a figure, a freshness guard that only reads a fence starting `$ bga ` (`UX-748`). Plus a documented example that crashes the tool (`UX-747`), four workflows on no map with the map's own guard unable to see them (`UX-746`), and nine citations formatted as paths that do not resolve (`UX-749`) |
 
 ### Review 11 — 2026-09-02
 
@@ -1392,3 +1393,80 @@ document outside `docs/backlog/` and `docs/audits/` carries one: the
 architecture's derived counts are the mechanism instead, and
 `dev_close_task.py --check --write` moved them with this review's own
 three filings. No dated claim found stale.
+
+## Review 19 — 2026-09-07, at 724 closed rows
+
+Four readers on `sonnet`, one document group each, plus the session on
+what shipped. **The shape moved one step on.** Reviews 14-18 all found
+*a sentence no guard reads*. Three of this round's four findings are
+worse: a sentence **inside** a guarded document and **outside** its
+guard's population — the guard cites the file, runs, and passes.
+
+**1. Does the code still do what it says?** No, in one documented
+workflow. `CLAUDE.md` sends a session to the `derive` skill before it
+moves viewer code; that skill's own example raises `TypeError: '<' not
+supported between instances of 'str' and 'NoneType'` at
+`dev_js_deps.py:373`, because an unplaced declaration referencing a
+placed one puts `None` in the sort key — the normal state of the
+*partial* grouping the skill is for. The guard written for that path
+pairs a fixture in which no unplaced declaration references a placed
+one, so the failure it exists to catch cannot occur in it (`UX-747`).
+The example's symbols are stale too: `UX-337` moved them out of
+`app.js` into `views.js`/`format.js`/`structured.js`.
+
+**2. Does every published contract have a home?** Yes.
+`contracts.ids()` is 25 and `docs/README.md`'s three derived sentences
+about that population are exact. The fourth, *"Twenty-five ids"*, is
+correct today and read by nothing — one sentence short of the class
+`UX-549` built. Noted in `UX-748`'s Out of Scope as that class's own
+extension rather than a filing.
+
+**3. Is any figure invalidated?** Three, each inside a guard's file and
+outside its reach. `architecture.md:1066` says `analyze/v6` is *"still
+at 60 top-level properties"*; it is **61** since `UX-740` added
+`duration_resolution`, and the verification-log guard compares credited
+*commits*, never re-deriving the figure. `directions.md:1424` calls
+`UX-675`..`UX-684` open; four of those ten are 🟢, and the status guard
+reads a range's two literal endpoints, so a half-landed range is
+invisible — Direction 19 had drifted identically and was corrected by
+hand this round, by hand because nothing could say so.
+`real-project.md:1110` says *"3 element(s)"* over two rows with every
+`(NN.N% of the build)` suffix stripped, which `bga/findings.py:637-643`
+cannot emit; the freshness guard reads only fences opening `$ bga `, and
+that one opens with prose. All three are `UX-748`.
+
+`README.md:14`'s *"eight `captures/*` branches"* is **12** —
+`git ls-remote --heads origin 'captures/*' | wc -l` — and its guard
+tests the narrow-clone *mechanism* against a synthetic two-branch repo,
+never the live count (`UX-749`).
+
+**4. What shipped since the last review that no document names?** Two
+workflows. Every tool added since the round-102 gate is in the guide's
+§6 map, but `.github/workflows/mutation.yml` and `quality.yml` are named
+by no live document — and §6, the section headed *"don't re-derive
+this"*, names none of the four workflows that exist.
+`test_the_context_map_is_the_tree.py` walks exactly what
+`MAPPED_SUFFIXES` lists, so a directory absent from that table is absent
+from the map and from the check that the map is complete, in one motion.
+Third instance of the shape: `UX-239` filed the map, `UX-573` widened
+the walk when `hook.c` and `spine.c` were on neither (`UX-746`).
+
+**5. Does each document's own "last updated" claim match reality?**
+Yes where one exists. `decompose`'s *"8 bounded, 35 judgement, 0
+mechanical"* has moved — `dev_close_task.py --shape` gives 18 open, all
+judgement — but it is a dated record of `UX-706`'s filing with a
+derivable source, so it is dated, not deleted.
+
+**Corrected in place, not filed.** `CLAUDE.md:29` cited
+`dev_process_bands.py --runs` for "144k … 4 of 17", a split that command
+does not print — it reports the file-derived shapes, 189k and 7 of 17.
+The sentence was written two commits earlier in this same round, which
+is how fast the defect this review is for appears. Sentence and guard
+both now read what `--runs` prints.
+
+**One gap in the sweep**, from the session's own brief: it sent group B
+to `docs/style-guide.md`, which does not exist. Two files share pieces
+of that name — `docs/design/styleguide.md`, which B reviewed, and
+`docs/contributing/style-guide.md`, which only group C touched
+incidentally. The second is unreviewed at this cadence point.
+

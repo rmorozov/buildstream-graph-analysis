@@ -1683,7 +1683,7 @@ area is a field and a generated page), and a specification rewrite
 **Serves:** every implementing session, and R8 deciding whether a
 change may land — the gate is the tool's, the review is the reader's.
 
-**Status:** partial — the corrections are argued here; `UX-693`..`UX-705` are open.
+**Status:** partial — `UX-695`, `UX-697` and `UX-698` remain open; the rest of the round has closed.
 
 The user's brief: static analysis and coverage exist, but no
 refactoring cadence, so comments go stale and complexity grows; revise

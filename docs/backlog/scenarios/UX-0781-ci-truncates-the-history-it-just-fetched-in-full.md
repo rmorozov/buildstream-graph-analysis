@@ -1,6 +1,6 @@
 # UX-781: CI truncates the history it just fetched in full
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-776 (the refusal whose detector this falsifies) | **Serves:** the round reading a red CI job that the same tree passes locally | **Topic:** guards | **Area:** unassigned | **Shape:** judgement
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-776 (the refusal whose detector this falsifies) | **Serves:** the round reading a red CI job that the same tree passes locally | **Topic:** guards | **Area:** unassigned | **Shape:** judgement
 
 ## Motivation
 

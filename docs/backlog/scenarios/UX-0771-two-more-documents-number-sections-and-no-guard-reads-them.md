@@ -1,6 +1,6 @@
 # UX-771: two more documents number sections, and no guard reads them
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-763 (the guard this widens) | **Serves:** the round that renames a section and learns which id was taken from CI | **Topic:** guards | **Area:** unassigned | **Shape:** judgement
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-763 (the guard this widens) | **Serves:** the round that renames a section and learns which id was taken from CI | **Topic:** guards | **Area:** unassigned | **Shape:** judgement
 
 ## Motivation
 

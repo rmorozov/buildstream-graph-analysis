@@ -976,9 +976,4 @@ MEDIUM = (
     # browser, no subprocess, but 59 real analyses. Three
     # single-process runs alone: 4.93 / 5.17 / 5.12s.
     "tests/unit/test_the_invariants_hold_for_any_shape.py",           #    5.2s
-    # `UX-773`, tiered on landing. One browser boot, plus a killed
-    # subprocess launching a second - the class the guard above checks
-    # for, not the duration: measured 0.7s, but a real Chrome under
-    # `--user-data-dir` earns the tier regardless.
-    "tests/unit/test_a_killed_browser_does_not_outlive_the_worker.py",  #  0.7s
 )

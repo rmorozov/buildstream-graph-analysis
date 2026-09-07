@@ -1,6 +1,6 @@
 # UX-773: a killed worker leaks a browser and its profile
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Serves:** the session whose next `make test` reds on disk, on a tree nobody touched | **Topic:** guards | **Area:** unassigned | **Shape:** judgement
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — | **Serves:** the session whose next `make test` reds on disk, on a tree nobody touched | **Topic:** guards | **Area:** unassigned | **Shape:** judgement
 
 ## Motivation
 

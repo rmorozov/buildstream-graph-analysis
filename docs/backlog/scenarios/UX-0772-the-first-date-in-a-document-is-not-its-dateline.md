@@ -1,6 +1,6 @@
 # UX-772: the first date in a document is not its dateline
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-744 (the register that reads it) | **Serves:** the round whose register row disagrees with its own document | **Topic:** guards | **Area:** unassigned | **Shape:** judgement
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-744 (the register that reads it) | **Serves:** the round whose register row disagrees with its own document | **Topic:** guards | **Area:** unassigned | **Shape:** judgement
 
 ## Motivation
 

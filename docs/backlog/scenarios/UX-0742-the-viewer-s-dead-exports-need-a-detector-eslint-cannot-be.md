@@ -61,3 +61,50 @@ The detector names an export nothing reads and stays silent on one the
 page uses. Mutation: add an unread export to a viewer module and
 confirm the detector names it; import it from a real viewer module and
 confirm it goes quiet.
+
+## Outcome
+
+**The gap, measured.** `dev_js_deps`' graph over `bga/viewer`, barrel
+*counted* (every export of a module `tests/viewer.mjs` re-exports
+marked used): **0** unread - it agrees with `no-unused-modules`'
+default-scope answer for the same reason, a wildcard `export *`. Barrel
+*excluded* (only real cross-module imports inside `bga/viewer` count):
+**108** unread - next to the **121** `no-unused-modules` found scoped
+the same way, both dominated by exports a *test* reads only through the
+barrel's dynamic `await import(...)`, invisible to either instrument.
+Neither is the five: the graph alone cannot tell a dead export from one
+only a test reads. Per the row's own instruction, that is a finding
+about the question, not a number to ship - stopped there and added a
+second stage instead of shipping the 108.
+
+**The close, measured.** `dev_js_deps.dead_exports()`: barrel-excluded
+graph candidates, each confirmed against a whole-tree text search (the
+same check that cleared `UX-699`'s five by hand) before being named.
+On the current tree: **1** confirmed (`takesWindow`, `questions.js`) -
+new, not one of the five (`forgetIds`, `SPARK_WIDTH`, `sourceOf`,
+`forgetUnmapped`, `focusTargets`), all already deleted by `UX-699`. Not
+deleted here - out of this task's Required Fix, which asked for the
+detector, not a cleanup pass; left for the session to decide.
+
+Acceptance Test, on the real tree (`git diff --stat` clean before and
+after, mutation reverted):
+
+```console
+$ python3 tools/dev_js_deps.py --dead-exports bga/viewer
+questions.js: takesWindow
+$ # + `export function ux742Unused() {...}` in shapes.js
+$ python3 tools/dev_js_deps.py --dead-exports bga/viewer
+questions.js: takesWindow
+shapes.js: ux742Unused
+$ # sections.js: import { CONTROLS, classify, ux742Unused } from "./shapes.js";
+$ python3 tools/dev_js_deps.py --dead-exports bga/viewer
+questions.js: takesWindow
+```
+
+**Mutations** (`tests/unit/test_the_graph_is_derived_not_guessed.py::TestTheDeadExportDetector`,
+reverted from a pristine copy each time):
+
+| mutation | reddened | count |
+|---|---|---|
+| drop the `-1` (own declaration) term | `test_an_export_nothing_imports_is_named` | 1 failed, 12 passed → reverted: 13 passed |
+| confirm only within `directory`, not the whole tree | `test_a_reader_outside_the_directory_is_not_a_false_positive` | 1 failed, 12 passed → reverted: 13 passed |

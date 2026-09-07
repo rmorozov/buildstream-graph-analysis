@@ -29,6 +29,7 @@ import argparse
 import json
 import pathlib
 import re
+import subprocess
 import sys
 
 REPO = pathlib.Path(__file__).resolve().parents[1]
@@ -44,6 +45,14 @@ DECLARATION = re.compile(
 COMMENT_LINE = re.compile(r"^\s*(//|/\*|\*)")
 IMPORT = re.compile(r"""^[ \t]*import\s.*?from\s+["']\./([\w.-]+)["'];?""",
                     re.M | re.S)
+# Unlike `IMPORT`, run over raw text: `strip_comments` blanks a string's
+# body wholesale (see below), which would erase the module path this
+# also needs. Every import in `bga/viewer` is a destructured relative
+# one (`UX-742` checked), so the bare-name and namespace forms are not
+# handled - a module that grew one would need this widened, loudly.
+IMPORT_NAMED = re.compile(
+    r"""^[ \t]*import\s*\{(?P<names>.*?)\}\s*from\s+["']\./(?P<mod>[\w.-]+)["'];?""",
+    re.M | re.S)
 
 
 def strip_comments(source: str) -> str:
@@ -221,6 +230,76 @@ def cycles(directory):
     return found
 
 
+def imported_symbols(directory):
+    """Named imports within `directory`, module name -> symbols pulled from it.
+
+    `tests/viewer.mjs`'s `export * from` barrel lives outside
+    `directory` and is never parsed here - it is a test fixture that
+    re-exports everything, and folding it in would mark every export of
+    every module "used" the moment any one name from it is, anywhere
+    (`UX-742`).
+    """
+    used = {}
+    for path in sorted(pathlib.Path(directory).glob("*.js")):
+        text = path.read_text(encoding="utf-8")
+        for m in IMPORT_NAMED.finditer(text):
+            names = {n.strip().split(" as ")[0].strip()
+                     for n in m.group("names").split(",") if n.strip()}
+            used.setdefault(m.group("mod"), set()).update(names)
+    return used
+
+
+def dead_exports(directory, root=REPO):
+    """Exports the directory's own graph never imports, each confirmed
+    dead by a search of every tracked file rather than shipped as the
+    graph's word alone.
+
+    Excluding the barrel (above) from the import graph surfaces every
+    export a *test* reads only through the barrel's dynamic
+    `await import(...)` - invisible to any import graph - as a false
+    positive: 108 names in `bga/viewer`, next to the 121
+    `no-unused-modules` found scoped the same way. Confirming each
+    candidate against the whole tracked tree - by hand, the same check
+    that cleared `UX-699`'s five - drops that to the ones nothing
+    anywhere names.
+    """
+    directory = pathlib.Path(directory)
+    exports = {path.name: {b["name"] for b in declarations(path) if b["exported"]}
+              for path in sorted(directory.glob("*.js"))}
+    used = imported_symbols(directory)
+    candidates = [(mod, name) for mod, names in exports.items()
+                 for name in sorted(names - used.get(mod, set()))]
+    if not candidates:
+        return {}
+
+    root = pathlib.Path(root).resolve()
+    tracked = subprocess.run(["git", "ls-files"], cwd=str(root),
+                             capture_output=True, text=True,
+                             check=True).stdout.split()
+    texts = {}
+    for rel in tracked:
+        try:
+            texts[rel] = (root / rel).read_text(encoding="utf-8", errors="ignore")
+        except OSError:
+            continue
+    own_dir = directory.resolve().relative_to(root).as_posix()
+    own_of = {name: f"{own_dir}/{mod}" for mod, name in candidates}
+    # One pass per file over every candidate at once - `UX-742` measured
+    # a pattern-per-candidate version at 39 s; this at under 2.
+    combined = re.compile(
+        r"\b(" + "|".join(re.escape(n) for n in own_of) + r")\b")
+    hits = dict.fromkeys(own_of, -1)   # the declaration itself, subtracted once
+    for text in texts.values():
+        for m in combined.finditer(text):
+            hits[m.group(1)] += 1
+
+    dead = {}
+    for mod, name in candidates:
+        if hits[name] <= 0:
+            dead.setdefault(mod, []).append(name)
+    return dead
+
+
 PARAMETERS = re.compile(
     r"^(?:export\s+)?(?:async\s+)?(?:function\s+\w+\s*|"
     r"(?:const|let|var)\s+\w+\s*=\s*(?:async\s*)?)\((.*?)\)", re.S)
@@ -279,6 +358,8 @@ def main(argv=None):
                         help="FILE's top-level declarations and their spans")
     parser.add_argument("--crossings", metavar="FILE",
                         help="which symbols would cross a proposed cut of FILE")
+    parser.add_argument("--dead-exports", metavar="DIR",
+                        help="DIR's exports nothing else in the tree reads")
     parser.add_argument("--groups", metavar="JSON",
                         help="the proposed grouping: {group: [names]}, a file "
                              "or a literal. Required by --crossings")
@@ -338,8 +419,19 @@ def main(argv=None):
                 print(f"{pair:<28} {' '.join(names)}")
         return 1 if result["unplaced"] else 0
 
-    parser.error("nothing asked for: try --order, --graph, --declarations "
-                 "or --crossings")
+    if args.dead_exports:
+        dead = dead_exports(args.dead_exports)
+        total = sum(len(v) for v in dead.values())
+        if args.json:
+            print(json.dumps(dead))
+        else:
+            for mod in sorted(dead):
+                for name in dead[mod]:
+                    print(f"{mod}: {name}")
+        return 1 if total else 0
+
+    parser.error("nothing asked for: try --order, --graph, --declarations, "
+                 "--crossings or --dead-exports")
 
 
 if __name__ == "__main__":

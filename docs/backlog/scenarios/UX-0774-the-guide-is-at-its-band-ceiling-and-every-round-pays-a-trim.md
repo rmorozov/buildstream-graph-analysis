@@ -10,7 +10,8 @@ states its size in. The band's ceiling is 56,320 B, so the guide must
 stay under 55,296 B.
 
 It does not want to. §6's module map gains a row per new tool, §7a
-gained seven obligations, and the guide grew 5,871 B in two days:
+gained seven obligations, and the guide grew 7,279 B since
+2026-09-06:
 
 ```console
 $ git log --format=%h -40 -- docs/contributing/fixing-guide.md | tail -1

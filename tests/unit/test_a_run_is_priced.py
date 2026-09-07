@@ -7,11 +7,11 @@ row and re-derives the count sentence, `dev_process_bands.py --runs`
 reads the table back, and every round document from 90 on prices the
 agents it launched.
 
-The population is measured, not assumed: `docs/audits/round-*.md` runs
-90..95 and stops. Rounds the ledger prices with no document at all
-(100, 102) are `UX-744`'s, not this file's - a guard over the documents
-that exist cannot see a round that skipped one, and pretending
-otherwise is the shape `CLAUDE.md` warns about.
+The population is `UX-744`'s round register, not a glob over
+`docs/audits/round-*.md`: a glob cannot see a round that skipped its
+document, which is the shape `CLAUDE.md` warns about. The register's
+own newest round is excluded by construction (fixing-guide.md §7a),
+so this file never demands a document from a round still in progress.
 """
 import pathlib
 import subprocess
@@ -21,7 +21,7 @@ import pytest
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[2]))
 
-from tools import dev_process_bands, dev_track_cost
+from tools import dev_process_bands, dev_round_register, dev_track_cost
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 LEDGER = REPO / "docs/audits/agent-runs.md"
@@ -136,14 +136,13 @@ class TestTheTableIsRead:
             f"the other bands do not:\n{out.stdout}")
 
 
-def _round_documents():
-    """Every `docs/audits/round-N.md` from `FIRST_PRICED_ROUND` on."""
-    found = []
-    for path in AUDITS.glob("round-*.md"):
-        number = path.stem.removeprefix("round-")
-        if number.isdigit() and int(number) >= FIRST_PRICED_ROUND:
-            found.append((int(number), path))
-    return sorted(found)
+def _registered_rounds():
+    """`UX-744`'s written register, `FIRST_PRICED_ROUND` on. The newest
+    round is already excluded there - a round in progress cannot yet
+    have written its document (fixing-guide.md §7a) - so this class
+    never demands one from it."""
+    return sorted((n for n in dev_round_register.written_rounds()
+                   if int(n) >= FIRST_PRICED_ROUND), key=int)
 
 
 #: `UX-757`: named, not patterned - any other round arriving unpriced
@@ -155,23 +154,28 @@ UNPRICEABLE_ROUND_WAIVER = {
 }
 
 
-class TestEveryRoundDocumentPricesItsAgents:
-    """`UX-666`'s third bullet, over the population that exists. A round
-    document that launched agents carries the table; one that launched
-    none says so, so silence is never the answer - except the one round
-    `UNPRICEABLE_ROUND_WAIVER` names, where the ledger cannot answer
-    either way."""
+class TestEveryRegisteredRoundPricesItsAgents:
+    """`UX-666`'s third bullet, over `UX-744`'s register rather than a
+    glob: a glob cannot see a round that skipped its document, which
+    is exactly the silence this row was filed on. A round document
+    that launched agents carries the table; one that launched none
+    says so - except the one round `UNPRICEABLE_ROUND_WAIVER` names,
+    where the ledger cannot answer either way."""
 
     def test_the_population_is_not_empty(self):
-        assert len(_round_documents()) >= 6, (
-            "this class asserts nothing if the glob finds nothing - the "
-            f"documents from round {FIRST_PRICED_ROUND} on are "
-            f"{[p.name for _n, p in _round_documents()]}")
+        assert len(_registered_rounds()) >= 6, (
+            "this class asserts nothing if the register is empty - "
+            f"registered rounds from {FIRST_PRICED_ROUND} on are "
+            f"{_registered_rounds()}")
 
-    @pytest.mark.parametrize("number,path", _round_documents(),
-                             ids=lambda value: getattr(value, "stem", value))
-    def test_it_carries_an_agents_table_or_says_it_launched_none(
-            self, number, path):
+    @pytest.mark.parametrize("number", _registered_rounds())
+    def test_it_carries_a_document_or_is_waived(self, number):
+        path = AUDITS / f"round-{number}.md"
+        assert path.exists(), (
+            f"round {number} is in the register and has no "
+            f"docs/audits/round-{number}.md - UX-666 was filed on "
+            "exactly this silence, which a glob over the documents "
+            "that exist cannot see")
         text = path.read_text(encoding="utf-8")
         if "no agents launched" in text:
             return
@@ -179,7 +183,7 @@ class TestEveryRoundDocumentPricesItsAgents:
             f"round-{number}.md must carry a `## Agents` section or say "
             "'no agents launched'; a round that priced its runs nowhere "
             "is what UX-666 was filed on")
-        if str(number) in UNPRICEABLE_ROUND_WAIVER:
+        if number in UNPRICEABLE_ROUND_WAIVER:
             return
         section = text.split("\n## Agents", 1)[1].split("\n## ", 1)[0]
         rows = [line for line in section.splitlines() if line.startswith("| ")]
@@ -190,13 +194,91 @@ class TestEveryRoundDocumentPricesItsAgents:
 
     def test_the_ledger_prices_every_round_that_documents_agents(self):
         priced = {run["round"] for run in dev_process_bands.ledger_runs()}
-        missing = [number for number, path in _round_documents()
-                   if "no agents launched" not in path.read_text(
-                       encoding="utf-8") and str(number) not in priced
-                   and str(number) not in UNPRICEABLE_ROUND_WAIVER]
+        missing = [number for number in _registered_rounds()
+                   if (AUDITS / f"round-{number}.md").exists()
+                   and "no agents launched" not in
+                   (AUDITS / f"round-{number}.md").read_text(encoding="utf-8")
+                   and number not in priced
+                   and number not in UNPRICEABLE_ROUND_WAIVER]
         assert not missing, (
             f"round(s) {missing} document agents that the ledger does not "
             "price; the table is where the next round chooses a model")
+
+
+class TestTheRoundRegisterIsDerived:
+    """`UX-744`: the register is a derivation, never a hand-kept list -
+    `dev_round_register.py --check`'s own pattern, over the file this
+    task commits."""
+
+    def test_the_written_table_matches_the_derivation(self):
+        assert dev_round_register.check() == [], (
+            "docs/audits/round-register.md disagrees with "
+            "dev_round_register.written_rounds() - run --write")
+
+    def test_the_register_names_99_through_103(self):
+        registered = set(dev_round_register.rounds())
+        assert {"99", "100", "101", "102", "103"} <= registered, (
+            f"the register names {sorted(registered, key=int)} - these "
+            "five rounds are real (closed ids, a naming commit, or a "
+            "ledger row each) and must appear")
+
+    def test_the_ledgers_round_column_is_a_subset(self):
+        ledger_rounds = {run["round"] for run in dev_process_bands.ledger_runs()}
+        registered = set(dev_round_register.rounds())
+        assert ledger_rounds <= registered, (
+            f"the ledger prices round(s) {ledger_rounds - registered} that "
+            "the register does not name")
+
+
+#: `UX-744`'s verifier: `commit_signal()` cannot tell a commit that
+#: *documents* a round from one that is *in* it. `UX-757` retroactively
+#: documented round 101 and legitimately names it in prose while doing
+#: so, dragging round 101's date to `UX-757`'s own (round 106's).
+#: Dated and reasoned, not silently passed - a *new* mismatch still
+#: reds `test_a_documented_rounds_date_matches_its_document` below.
+DATE_MISMATCH_WAIVER = {
+    "101": ("2026-09-07", "UX-757's retroactive documentation commits "
+                           "name round 101 in prose; commit_signal() "
+                           "reads that as round 101's own work"),
+}
+
+
+def _documented_rounds():
+    """Every round `dev_round_register.rounds()` names, `FIRST_PRICED
+    _ROUND` on, that also has a `docs/audits/round-N.md`. Below that
+    boundary a multi-day round's own opening date legitimately differs
+    from the register's latest-commit date (round 76 opens 09-01,
+    closes 09-02; round 85 opens 09-03, closes 09-04) - a different
+    measurement, not the contamination this class exists to catch."""
+    return sorted((n for n in dev_round_register.rounds()
+                    if int(n) >= FIRST_PRICED_ROUND
+                    and (AUDITS / f"round-{n}.md").exists()), key=int)
+
+
+class TestARegisteredRoundsDateMatchesItsDocument:
+    """`UX-744`'s verifier: the ids-closed column was wrong on four of
+    the five rounds it was demonstrated on, for this same reason, and
+    was dropped rather than shipped wrong. This is the same check kept
+    on what remains - the register's date against the round's own
+    document, for every round one exists for."""
+
+    def test_the_population_is_not_empty(self):
+        assert len(_documented_rounds()) >= 6, (
+            "this class asserts nothing if no registered round has a "
+            f"document: {_documented_rounds()}")
+
+    @pytest.mark.parametrize("number", _documented_rounds())
+    def test_a_documented_rounds_date_matches_its_document(self, number):
+        register_date = dev_round_register.rounds()[number]["date"]
+        document_date = dev_round_register.document_date(number)
+        if number in DATE_MISMATCH_WAIVER:
+            assert register_date != document_date, (
+                f"round {number} is waived for a mismatch that no "
+                "longer reproduces - drop it from DATE_MISMATCH_WAIVER")
+            return
+        assert register_date == document_date, (
+            f"round {number}: the register says {register_date}, "
+            f"docs/audits/round-{number}.md says {document_date}")
 
 
 class TestATrackIsPricedByShape:

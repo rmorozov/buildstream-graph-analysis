@@ -68,7 +68,7 @@ For every task, before marking it done:
 
 1. Run the exact command(s) given in the task's **Acceptance Test** section.
 2. Paste the actual command and actual output into the task file's **Verification Log** section (append, don't overwrite prior entries).
-3. **While you work, run the tests that touch what you changed** (`UX-336`): `make test-touching` maps the working diff to the test files that name it - 31-145 of 515 test files, over every module the map names, not the seconds one machine spent on one of them (`UX-632`). `python3 tools/dev_touching.py --spread --write` is the only thing that writes that figure. It moves whenever the set of (test file, module named) pairs changes - a new test file, a new import, a renamed module, a deleted file - not only the first of those (`UX-756`: round 103 moved it with two imports and no new file, and CI reddened on the stale row). Wider than one module, run the tier (`UX-238`). Every target runs `-n auto`. **The suite's wall clock is a property of the machine, not of the suite** (`UX-551`), so budget a round against the spread and not a figure:
+3. **While you work, run the tests that touch what you changed** (`UX-336`): `make test-touching` maps the working diff to the test files that name it - 31-145 of 516 test files, over every module the map names, not the seconds one machine spent on one of them (`UX-632`). `python3 tools/dev_touching.py --spread --write` is the only thing that writes that figure. It moves whenever the set of (test file, module named) pairs changes - a new test file, a new import, a renamed module, a deleted file - not only the first of those (`UX-756`: round 103 moved it with two imports and no new file, and CI reddened on the stale row). Wider than one module, run the tier (`UX-238`). Every target runs `-n auto`. **The suite's wall clock is a property of the machine, not of the suite** (`UX-551`), so budget a round against the spread and not a figure:
 
 ```text
 round 46   3m15s                                     4 cores
@@ -83,7 +83,7 @@ Round 80's 8m52s is **not reproducible on the tree that produced it**: the same 
 
    | target | measured at `-n auto` | what is in it |
    |---|---|---|
-   | `make test-touching` | 31-145 of 515 test files | the test files that name what your diff touched |
+   | `make test-touching` | 31-145 of 516 test files | the test files that name what your diff touched |
    | `make test-small` | **20s** | pure Python over in-memory fixtures — the default tier |
    | `make test-medium` | ~2m50s | spawns a process or a node harness |
    | `make test-large` | ~2m05s | scale fixtures, real process trees |
@@ -352,6 +352,7 @@ tools/dev_refresh_analysis.py  the rule a committed analysis is written
                              under, and the command that rewrites one
                              from a fresh run (UX-486)
 tools/dev_process_bands.py  what the process did to itself, from the committed Outcomes
+tools/dev_round_register.py  which rounds happened, derived (UX-744)
 tools/dev_tier_drift.py      which files outgrew their tier, from the
                              suite's own junit report (UX-418)
 tools/dev_mutation.py        mutmut over the modules a diff touched, weekly -

@@ -1,6 +1,6 @@
 # UX-766: the forced baseline is loud only until it is committed
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-745 (which built the visibility) | **Serves:** the session reading `make lint` and believing the baseline did not grow | **Topic:** guards | **Area:** unassigned | **Shape:** judgement
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-745 (which built the visibility) | **Serves:** the session reading `make lint` and believing the baseline did not grow | **Topic:** guards | **Area:** unassigned | **Shape:** judgement
 
 ## Motivation
 

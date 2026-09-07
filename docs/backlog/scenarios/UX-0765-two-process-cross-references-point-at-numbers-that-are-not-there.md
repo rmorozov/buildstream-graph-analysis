@@ -1,6 +1,6 @@
 # UX-765: two process cross-references point at numbers that are not there
 
-**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** UX-238 (the tiers), UX-584 (the remeasurement) | **Serves:** the session that follows a cross-reference and finds the other number | **Topic:** docs | **Area:** unassigned | **Shape:** judgement
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-238 (the tiers), UX-584 (the remeasurement) | **Serves:** the session that follows a cross-reference and finds the other number | **Topic:** docs | **Area:** unassigned | **Shape:** judgement
 
 ## Motivation
 

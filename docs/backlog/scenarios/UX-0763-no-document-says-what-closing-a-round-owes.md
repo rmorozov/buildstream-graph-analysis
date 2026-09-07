@@ -1,6 +1,6 @@
 # UX-763: no document says what closing a round owes
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-744 (the register, reopened), UX-666 (the Agents table) | **Serves:** the session closing a round from memory because no list exists | **Topic:** docs | **Area:** unassigned | **Shape:** judgement
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-744 (the register, reopened), UX-666 (the Agents table) | **Serves:** the session closing a round from memory because no list exists | **Topic:** docs | **Area:** unassigned | **Shape:** judgement
 
 ## Motivation
 

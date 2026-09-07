@@ -1,6 +1,6 @@
 # UX-757: the four rounds the register names have no document
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-744 (the register and its waiver), UX-666 (the guard) | **Serves:** the reader who cannot see what rounds 99..102 launched | **Topic:** docs | **Area:** unassigned | **Shape:** bounded
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-744 (the register and its waiver), UX-666 (the guard) | **Serves:** the reader who cannot see what rounds 99..102 launched | **Topic:** docs | **Area:** unassigned | **Shape:** bounded
 
 ## Motivation
 

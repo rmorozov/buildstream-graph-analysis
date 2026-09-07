@@ -80,6 +80,14 @@ pairing for every merged row from round 103 on.
 | 105 | implementer | sonnet | UX-762 the gate binds to the commit (judgement) | 444k | 226 | 91.6 m | merged | the first parser returned at the first git invocation, so a compound command walked through; dev_touching escalates to a full suite whenever a diff touches the Makefile |
 | 105 | verifier | sonnet | UX-761 verifier | 186k | 75 | 24.4 m | held twice, then merged | re-running the track own pasted commands is what found the fabricated figure; nothing short of that would have caught it |
 | 105 | verifier | sonnet | UX-762 verifier | 252k | 130 | 66.5 m | held, then merged | the bypass was only visible by piping adversarial commands through the real hook rather than trusting the mutation table |
+| 106 | implementer | sonnet | UX-768, the closing note off the command line | 133k | 141 | 25.5 m | merged | the cost row's derived figure blocks any track adding a test file |
+| 106 | verifier | sonnet | verify UX-768 | 77k | 72 | 9.1 m | MERGE; mutations re-run, batch atomicity built | sandbox refusals on fixture-building shell forms |
+| 106 | implementer | sonnet | UX-757, rounds 99-102 documented | 486k | 159 | 68.2 m | merged after two holds | round membership disagrees between commit order and the ledger |
+| 106 | verifier | sonnet | verify UX-757 | 81k | 74 | 12.1 m | HOLD; the waiver's reason was in a comment, not the constant | a report right about most of its self-checks is harder to use than one right about none |
+| 106 | implementer | sonnet | UX-766 and UX-767, two unstated coverages | 515k | 274 | 66.5 m | merged after one hold | BGA_SKIP_SELECTOR twice, for the shared derived figure |
+| 106 | verifier | sonnet | verify UX-766 and UX-767 | 246k | 152 | 48.7 m | HOLD then MERGE; found the single forced slot and the citation-only guards | neither defect was visible from the diff; both needed a constructed case |
+| 106 | implementer | sonnet | UX-763 and UX-765, the closing section | 543k | 342 | 105.2 m | merged after two holds | the section id space spans documents no guard paired |
+| 106 | verifier | sonnet | verify UX-763 and UX-765 | 310k | 156 | 79.6 m | HOLD then MERGE; found the section collision and the guard-less dating | the commit body overage showed only by running dev_commit_bodies.py |
 
 Round 101's four tracks are **not** here: this session could not
 identify their transcripts with certainty after a context rebuild, and
@@ -92,7 +100,7 @@ committed cleanly once told to run in the foreground. Three of the five
 left a derived figure or a §6 context-map row behind - the same class
 the round itself was about, arriving in the tracks' own work.
 
-What the sixty-three rows already say: a researcher that reads a document
+What the seventy-one rows already say: a researcher that reads a document
 whole costs 100-180k; a walker that drives every control costs 336k;
 the two cuts cost a re-run each. The `walk` and `design-review`
 skills fix the report shape so the next rows are smaller, and the

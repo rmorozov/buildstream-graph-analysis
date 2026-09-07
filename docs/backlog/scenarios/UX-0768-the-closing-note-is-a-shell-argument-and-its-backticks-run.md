@@ -1,6 +1,6 @@
 # UX-768: the closing note is a shell argument, and its backticks run
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** — | **Serves:** every round that closes a row with a note naming a command | **Topic:** guards | **Area:** unassigned | **Shape:** judgement
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** — | **Serves:** every round that closes a row with a note naming a command | **Topic:** guards | **Area:** unassigned | **Shape:** judgement
 
 ## Motivation
 

@@ -1,6 +1,6 @@
 # UX-767: the push gate sees one channel, and the round used another
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-762 (the gate it limits) | **Serves:** the session that trusts the push gate to cover its branch | **Topic:** guards | **Area:** unassigned | **Shape:** judgement
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-762 (the gate it limits) | **Serves:** the session that trusts the push gate to cover its branch | **Topic:** guards | **Area:** unassigned | **Shape:** judgement
 
 ## Motivation
 

@@ -1,6 +1,6 @@
 # UX-752: the guard's spelling table ran out at forty
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-666 (the writer), UX-341 (the lesson it cites) | **Serves:** the round that appends a ledger row and finds CI red for it | **Topic:** guards | **Area:** unassigned | **Shape:** judgement
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-666 (the writer), UX-341 (the lesson it cites) | **Serves:** the round that appends a ledger row and finds CI red for it | **Topic:** guards | **Area:** unassigned | **Shape:** judgement
 
 ## Motivation
 
@@ -68,4 +68,41 @@ typed table raised.
 
 ## Outcome
 
-_Not started._
+The gap, from CI on `b0acd79`:
+
+```console
+FAILURE tests.unit.test_a_counted_figure_is_derived.
+        TestTheAuditLedgerCountsItsOwnRows::test_the_summary_counts_the_table_rows
+KeyError: 45
+```
+
+`WORDS` is now `{n: count_word(n) for n in range(1, 100)}` — the
+writer's own function, so the two cannot drift, and both stop where
+`count_word`'s domain does. The close, on the tree that reddened:
+
+```console
+$ python3 -m pytest tests/unit/test_a_counted_figure_is_derived.py -q
+39 passed in 2.25s
+```
+
+| mutation | reddened |
+|---|---|
+| the ledger at forty-five rows against the typed table | `KeyError: 45`, the CI failure above |
+| `count_word(41)` / `count_word(17)` past the old ceilings | now `forty-two` / `eighteen`, where the tables raised |
+
+**Deviation.** The Out of Scope first written here said the sibling
+tables were fine because "none of them is currently red" — true, and
+useless. Measured afterwards, two were one row from it:
+`test_the_spec_says_which_parts_are_advisory.py` at 41 against a
+population of 40, and `test_every_emitted_contract_is_answerable.py`
+at 17 against 16. Both were derived from `count_word` too, and the
+scoping paragraph rewritten to carry the measurement rather than the
+reassurance. The third has headroom 5 and is left, recorded.
+
+**Second-order cost.** The two new imports made two more test files
+name `dev_track_cost`, which moved the selector's median from 37 to 38
+(measured either side, `0c334ed` against this) and reddened
+`test_the_selection_is_a_fraction_of_the_suite`. Re-derived with
+`dev_touching.py --spread --write`; ceiling to the measurement, per
+that file's own convention. `UX-756` is the rule that said this could
+not happen.

@@ -2,11 +2,12 @@
 
 Run on 2026-09-07. A backlog round, ordered by the session:
 housekeeping and workflow first, then unblocked analysis, then bugs.
-Seven rows closed — `UX-666`, `UX-708`, `UX-742`, `UX-705`, `UX-747`,
-`UX-745` by the session, then `UX-746`, `UX-749`, `UX-748` and
-`UX-674` by four `implementer` tracks on `sonnet`, each read by a
-`verifier` on `sonnet` before its merge. Five rows filed, three of
-them also fixed.
+Twelve rows closed — `UX-666`, `UX-708`, `UX-742`, `UX-705`, `UX-747`,
+`UX-745` by the session, `UX-746`, `UX-749`, `UX-748` and `UX-674` by
+four `implementer` tracks on `sonnet`, each read by a `verifier` on
+`sonnet` before its merge, and `UX-752` and `UX-754`, filed and closed
+in the same round because CI found them. Seven rows filed, those two
+closed, five left open.
 
 The user's standing instruction mid-round — *"dispatch verifiers once
 tracks report"* — is what this round is a measurement of. The ledger
@@ -97,6 +98,12 @@ most.
 ## What the next round should read first
 
 `UX-751` and `UX-753` are the two halves this round left open on its
-own theme. `UX-744` still stands: no register says which rounds exist,
-and rounds 96-102 have no document — this one is written into the gap
-rather than closing it.
+own theme. `UX-755` is the sharper one: `make test` is called the gate
+and on this container it reports eighteen errors CI does not have, on
+a file that passes alone — a gate a session learns to discount is
+worse than a slow one. `UX-756` is the rule that told this round it
+need not re-derive a figure that then reddened CI.
+
+`UX-744` still stands: no register says which rounds exist, and rounds
+96-102 have no document — this one is written into the gap rather than
+closing it.

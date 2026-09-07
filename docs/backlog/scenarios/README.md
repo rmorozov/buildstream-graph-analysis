@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-751 scenarios: **21 open**, 730 closed.
+753 scenarios: **21 open**, 732 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -26,8 +26,8 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | viewer | 3 | 162 |
 | cli | 0 | 22 |
 | store | 0 | 16 |
-| docs | 3 | 121 |
-| guards | 8 | 179 |
+| docs | 4 | 122 |
+| guards | 7 | 180 |
 
 ## Open scenarios
 
@@ -54,9 +54,9 @@ task file, which is the only place it ever lived twice.
 | UX-744 | [no register says which rounds exist, and four records disagree](UX-0744-no-register-says-which-rounds-exist-and-four-records-disagree.md) | docs | Medium | the session opening a round, which cannot number it from any record | 🔴 |
 | UX-750 | [the map's one count is the one noun the guard does not list](UX-0750-the-map-s-one-count-is-the-one-noun-the-guard-does-not-list.md) | guards | Medium | the reader who trusts a guarded sentence because it is guarded | 🔴 |
 | UX-751 | [the landed clause reads endpoints where the open clause reads the range](UX-0751-the-landed-clause-reads-endpoints-where-the-open-clause-reads-the-range.md) | guards | Medium | the reader trusting a Direction's status line | 🔴 |
-| UX-752 | [the guard's spelling table ran out at forty](UX-0752-the-guard-s-spelling-table-ran-out-at-forty.md) | guards | Medium | the round that appends a ledger row and finds CI red for it | 🔴 |
 | UX-753 | [the flow axis is drawn by one row and read by none](UX-0753-the-flow-axis-is-drawn-by-one-row-and-read-by-none.md) | viewer | Medium | the reader of an exhibit axis, and the round that changes one | 🔴 |
-| UX-754 | [the derived-figure exclusion cannot read a merge](UX-0754-the-derived-figure-exclusion-cannot-read-a-merge.md) | guards | Medium | every round that merges a track and closes a row | 🔴 |
+| UX-755 | [the gate and CI disagree, and the gate is the one that is wrong](UX-0755-the-gate-and-ci-disagree-and-the-gate-is-the-one-that-is-wrong.md) | guards | Medium | the session that runs `make test` and believes it | 🔴 |
+| UX-756 | [the spread rule names a new file when an import is enough](UX-0756-the-spread-rule-names-a-new-file-when-an-import-is-enough.md) | docs | Low | the round that re-derives what it was told to and is red anyway | 🔴 |
 
 ## UX-706..UX-711: the ninety-fourth round — the pipeline, and which model runs which shape (2026-09-05)
 

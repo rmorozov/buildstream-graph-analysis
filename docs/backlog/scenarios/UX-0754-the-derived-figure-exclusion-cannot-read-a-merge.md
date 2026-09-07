@@ -1,6 +1,6 @@
 # UX-754: the derived-figure exclusion cannot read a merge
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-652 (the log's unit), UX-669 (the exclusion) | **Serves:** every round that merges a track and closes a row | **Topic:** guards | **Area:** unassigned | **Shape:** judgement
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-652 (the log's unit), UX-669 (the exclusion) | **Serves:** every round that merges a track and closes a row | **Topic:** guards | **Area:** unassigned | **Shape:** judgement
 
 ## Motivation
 
@@ -60,4 +60,36 @@ is green on that merge; the mutation above reddens it.
 
 ## Outcome
 
-_Not started._
+The gap, reproduced against the guard's own helpers on the merge
+commit `20615ea`, whose only change to `architecture.md` was the
+derived count `751 -> 752`:
+
+```console
+removed[0][:20] = ' **Start here to ori'
+added[0][:20]   = '+**Start here to ori'
+only_the_count_moved -> False
+_only_a_derived_figure_moved -> False
+```
+
+Identical lines; they differ only by the prefix column a combined diff
+adds and `ln[1:]` fails to strip. The close: `--first-parent -m` on
+the `git show`, which yields the two-column shape the parser assumes
+and is unchanged for an ordinary commit.
+
+```console
+merge commit 20615ea excused -> True
+$ python3 -m pytest tests/unit/test_the_verification_log_is_true.py -q
+31 passed in 2.83s
+```
+
+| mutation | reddened |
+|---|---|
+| the two flags removed again | `test_nothing_landed_after_the_commit_the_entry_credits`, `stale(['20615ea...'])` |
+
+Reverted from a pristine scratchpad copy, 31 passed again.
+
+**Deviation.** This is the second cause of the same red on `UX-748`,
+where it was recorded as the oldest-commit anchor rule alone. That
+reading was incomplete: squashing satisfied the anchor and happened to
+remove the merge, so the parsing bug went unseen. `UX-748`'s Outcome
+keeps its own account; this row carries the correction.

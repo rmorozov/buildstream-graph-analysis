@@ -378,6 +378,35 @@ class TestTheGuidesSizeCostsOneFile:
         assert "CLAUDE.md" in _size_population()
 
 
+#: `UX-765`: `Makefile:30-32`'s per-tier reading is static text, not a
+#: live measurement, so the guide's quotation of it is a transcription
+#: a guard can hold to its source - `UX-756`'s `SITES` shape, no tier
+#: re-run needed. This does not assert the guide's *own*, later
+#: (`UX-584`) reading equals `UX-238`'s; it asserts the guide's copy of
+#: `UX-238`'s reading has not drifted from what `Makefile` still says.
+_MAKEFILE_TIER = re.compile(r"#\s+(small|medium|large)\s+\d+\s+files\s+([\d.]+)s")
+_GUIDE_TIER = re.compile(
+    r"small\s+([\d.]+)s,\s*medium\s+([\d.]+)s,\s*large\s+([\d.]+)s")
+
+
+class TestTheGuideQuotesTheMakefilesReading:
+    def test_the_transcription_matches_the_source(self):
+        makefile = (REPO / "Makefile").read_text(encoding="utf-8")
+        source = {m.group(1): m.group(2)
+                  for m in _MAKEFILE_TIER.finditer(makefile)}
+        assert source.keys() == {"small", "medium", "large"}, (
+            f"Makefile:30-32 no longer names all three tiers: {source}")
+        flat = " ".join(GUIDE.read_text(encoding="utf-8").split())
+        match = _GUIDE_TIER.search(flat)
+        assert match, ("fixing-guide.md no longer quotes a small/medium/"
+                       "large reading for `UX-238`")
+        quoted = {"small": match.group(1), "medium": match.group(2),
+                  "large": match.group(3)}
+        assert quoted == source, (
+            f"fixing-guide.md quotes {quoted} as Makefile:30-32's reading; "
+            f"Makefile:30-32 now says {source} - update the quote (`UX-765`)")
+
+
 class TestTheCardsSizeCostsNoFile:
     """`UX-616`: the same coupling with the documents swapped. The guide
     stated the card's size at `round(B/1024)` - a 1,023 B band on a

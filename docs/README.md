@@ -268,6 +268,10 @@ The rounds themselves:
 [93](audits/round-93.md) ·
 [94](audits/round-94.md) ·
 [95](audits/round-95.md) ·
+[99](audits/round-99.md) ·
+[100](audits/round-100.md) ·
+[101](audits/round-101.md) ·
+[102](audits/round-102.md) ·
 [103](audits/round-103.md) ·
 [104](audits/round-104.md) ·
 [105](audits/round-105.md) ·

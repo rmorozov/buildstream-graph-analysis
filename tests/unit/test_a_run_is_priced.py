@@ -146,10 +146,21 @@ def _round_documents():
     return sorted(found)
 
 
+#: `UX-757`: named, not patterned - any other round arriving unpriced
+#: still reds.
+UNPRICEABLE_ROUND_WAIVER = {
+    "101": ("2026-09-07", "3805321: transcripts unrecoverable after a "
+                           "context rebuild, a guessed row worse than "
+                           "a missing one"),
+}
+
+
 class TestEveryRoundDocumentPricesItsAgents:
     """`UX-666`'s third bullet, over the population that exists. A round
     document that launched agents carries the table; one that launched
-    none says so, so silence is never the answer."""
+    none says so, so silence is never the answer - except the one round
+    `UNPRICEABLE_ROUND_WAIVER` names, where the ledger cannot answer
+    either way."""
 
     def test_the_population_is_not_empty(self):
         assert len(_round_documents()) >= 6, (
@@ -168,6 +179,8 @@ class TestEveryRoundDocumentPricesItsAgents:
             f"round-{number}.md must carry a `## Agents` section or say "
             "'no agents launched'; a round that priced its runs nowhere "
             "is what UX-666 was filed on")
+        if str(number) in UNPRICEABLE_ROUND_WAIVER:
+            return
         section = text.split("\n## Agents", 1)[1].split("\n## ", 1)[0]
         rows = [line for line in section.splitlines() if line.startswith("| ")]
         assert len(rows) >= 2, (
@@ -179,7 +192,8 @@ class TestEveryRoundDocumentPricesItsAgents:
         priced = {run["round"] for run in dev_process_bands.ledger_runs()}
         missing = [number for number, path in _round_documents()
                    if "no agents launched" not in path.read_text(
-                       encoding="utf-8") and str(number) not in priced]
+                       encoding="utf-8") and str(number) not in priced
+                   and str(number) not in UNPRICEABLE_ROUND_WAIVER]
         assert not missing, (
             f"round(s) {missing} document agents that the ledger does not "
             "price; the table is where the next round chooses a model")

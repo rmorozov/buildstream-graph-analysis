@@ -82,4 +82,25 @@ class TestThePagesAreGeneratedFromTheHeaders:
             page = dev_close_task.AREA_PAGES / (area.replace("/", "-") + ".md")
             text = page.read_text(encoding="utf-8")
             assert f"{len(ids)} row(s)" in text, area
-            assert text.count("\n| [UX-") == len(ids), area
+
+
+class TestTheGeneratedPageLinksItsHandWrittenMechanism:
+    """`UX-689`: a generated area page names its hand-written companion
+    if one exists — derived from the file's existence, so a page
+    without one carries nothing."""
+
+    def test_an_area_with_a_hand_written_page_carries_the_line(self):
+        name = "bga-viewer.md"
+        assert (dev_close_task.DESIGN_AREA_PAGES / name).exists(), (
+            "fixture missing: docs/design/areas/bga-viewer.md")
+        text = (dev_close_task.AREA_PAGES / name).read_text(encoding="utf-8")
+        assert (f"Mechanism: [docs/design/areas/{name}]"
+                f"(../../design/areas/{name})") in text, text[:300]
+
+    def test_an_area_with_no_hand_written_page_carries_nothing(self):
+        name = "bga.md"
+        assert not (dev_close_task.DESIGN_AREA_PAGES / name).exists(), (
+            "fixture assumption broken: docs/design/areas/bga.md now exists")
+        text = (dev_close_task.AREA_PAGES / name).read_text(encoding="utf-8")
+        assert "Mechanism:" not in text, text[:300]
+

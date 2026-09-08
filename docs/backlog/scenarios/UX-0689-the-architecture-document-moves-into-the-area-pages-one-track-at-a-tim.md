@@ -26,7 +26,12 @@ mechanism prose into the area page, leaves a one-paragraph pointer in
 contract inventory, viewer table, verification log) where the guards
 read them. The acceptance figure is the round-82 review's method run
 before and after: no sentence lost, every link resolving, the 19
-guards green throughout.
+guards green throughout. `docs/backlog/areas/*.md` are generated views
+`write_area_pages` rewrites whole on every `--check --write` (`UX-688`),
+so a hand edit there is undone by the next run; each track's area page
+is therefore a new **hand-written** `docs/design/areas/<area>.md`, and
+the generated backlog page gets one derived `Mechanism:` line pointing
+at it when that file exists.
 
 ## Out of Scope
 
@@ -39,3 +44,37 @@ guards green throughout.
 After the last track: `architecture.md` under 400 lines of pointers
 and skeletons; every former chapter's sentences found in exactly one
 area page; the 19 guards green; the link guard green.
+
+## Outcome
+
+### Track 1: the viewer axis (round 111, 2026-09-08)
+
+**Decision:** `docs/backlog/areas/*.md` are generated (`write_area_pages`,
+`UX-688`) and a hand edit is undone by `--check --write`; the
+destination is hand-written `docs/design/areas/bga-viewer.md`, and
+the generated page gets a derived `Mechanism:` line when it exists.
+
+### The gap → the close, measured
+
+```text
+$ python3 -m pytest $(grep -ln "architecture.md" tests/unit/*.py) -q
+435 passed        # before and after, unchanged
+$ wc -l docs/design/architecture.md
+1648 → 1529        # chapter 235 → 81 kept, 163 moved to the new page
+```
+
+56 of 56 sentence-chunks land in the new page or the kept skeleton.
+The Verification Log's newest entry is re-dated and re-anchored in
+this commit (`test_the_verification_log_is_true.py`), same commit as
+the substantive edit, per the log's own "the same commit" rule.
+
+### Mutations verified red and reverted (2)
+
+| # | mutation | reddened |
+|---|---|---|
+| A1 | Mechanism line always emitted | `..._carries_nothing` |
+| A2 | Mechanism line never emitted | `..._carries_the_line` |
+
+Not a committed guard: a scratch diff script (each chapter unit
+flattened, checked as a substring of the new page or architecture.md)
+dropped 50/56 → 49/56, naming the sentence deleted from a scratch copy.

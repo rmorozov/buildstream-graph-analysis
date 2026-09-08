@@ -182,6 +182,7 @@ Why it is this way. Arguments and structure, not instructions.
 |---|---|
 | [`design/architecture.md`](design/architecture.md) | the three analysis planes, how the ingestion path measures itself, and every extension beyond the spec |
 | [`design/areas/bga-viewer.md`](design/areas/bga-viewer.md) | the viewer axis's mechanism prose — the server, the CSP, the presets, the shape-to-control mapping, `--export` (`UX-689`) |
+| [`design/areas/tools-native_trace.md`](design/areas/tools-native_trace.md) | Plane 2's mechanism prose — the hook's four fields, element attribution, what is built on the per-element split (`UX-806`) |
 | [`design/directions.md`](design/directions.md) | `bga` as a local helper vs `bga` as a CI gate |
 | [`design/roles.md`](design/roles.md) | the role model — eight roles, their contradictions, and the gap analysis |
 | [`design/styleguide.md`](design/styleguide.md) | the web report's visual contract — shape→control mapping, drawings, color and emphasis budget, dark first |

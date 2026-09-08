@@ -48,3 +48,49 @@ prose against the new page's body, empty); `test_docs_links_and_commands.py`
 green; `dev_close_task.py --check --write` a no-op after the commit;
 mutation: one moved sentence deleted from a scratch copy — the diff
 names it.
+
+## Outcome
+
+### The gap → the close, measured
+
+```text
+$ python3 -m pytest $(grep -ln "architecture.md" tests/unit/*.py) -q
+437 passed   # before (this round's tip, c5c0cef2)
+437 passed   # after this commit (4981a282) — same count; the
+             # staleness clause skipped once, mid-work, uncommitted,
+             # for lack of a closing commit to anchor against
+$ python3 -m pytest tests/unit/test_docs_links_and_commands.py -q
+59 passed    # before and after, unchanged
+```
+
+25 lines moved (heading + 24 of prose); the four `tools/native_trace/`
+members the one substantive guard reads
+(`test_the_architecture_lists_every_native_trace_member`) stay named
+at "Real package structure" (line 94) and three later sites, outside
+the moved chapter, so no bullet had to stay behind it — unlike
+`UX-689`'s viewer chapter, no other guard string-matches inside lines
+153-177. `docs/README.md`'s design index gained the page's row;
+`docs/backlog/areas/tools-native_trace.md` picked up the derived
+`Mechanism:` line from the existing generic `write_area_pages` logic
+(`UX-689`), no code change needed.
+
+### The sentence diff (empty)
+
+```text
+$ diff <(sed -e '$ { /^$/d }' /tmp/plane2_body.txt) \
+       <(tail -n +7 docs/design/areas/tools-native_trace.md)
+$                    # empty — the one line diff before trimming was
+                     # the chapter-boundary blank line, not content
+```
+
+### Mutation table (scratch diff, not a guard)
+
+| # | mutation | diff names |
+|---|---|---|
+| S1 | one moved sentence ("Reported as \"no single process here exceeded this\"...the sum between them.") deleted from a scratch copy of `docs/design/areas/tools-native_trace.md` | the deleted sentence, as the sole hunk of a 1-line diff |
+
+No new guard was added by this item (the existing
+`test_the_architecture_lists_every_native_trace_member` already
+covered the population, from outside the moved chapter), so there is
+no guard to mutate — only the scratch-copy diff the Acceptance Test
+asks for.

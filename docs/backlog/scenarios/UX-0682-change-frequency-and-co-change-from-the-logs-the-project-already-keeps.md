@@ -1,6 +1,6 @@
 # UX-682: change frequency and co-change, from the logs the project already keeps
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-92 (cache effectiveness, blocked at stage 3), UX-479 (weighted blast) | **Serves:** R2 and R3 — split, consolidate, or leave alone, decided on evidence | **Topic:** analysis | **Shape:** judgement
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-92 (cache effectiveness, blocked at stage 3), UX-479 (weighted blast) | **Serves:** R2 and R3 — split, consolidate, or leave alone, decided on evidence | **Topic:** analysis | **Shape:** judgement
 
 ## Motivation
 
@@ -165,3 +165,16 @@ finding for that element, not just that consumer's group.
 | drop the non-empty shared-consumer check (two co-changing leaves with no consumer) | the no-consumer negative test | 1 of 8 failed |
 
 All four reverted from the pre-mutation copy; suite green after each revert.
+
+### Deviation
+
+The judgement was the contract, decided in the brief and written into
+the file by the tracks; the work was two `implementer` tracks on
+`sonnet` against it, each read by a `verifier` before the merge. The
+verifiers found four things the tracks' own tables did not: a
+consolidate finding on two leaves nobody consumes (fixed: the shared
+consumer set must be non-empty), a `WIDE` entry justified by a false
+cause (the real one was a test name substring-matching `_shared`;
+entry dropped), a split rule's all-or-nothing consequence unstated
+(now stated above), and two pasted counts from an intermediate fixture
+(re-run). The two halves conflicted only in this file.

@@ -110,6 +110,10 @@ pairing for every merged row from round 103 on.
 | 109 | verifier | sonnet | retro-verify UX-736 (round 100, merged unread) | 92k | 122 | 41.9 m | 1 gap, filed as UX-791: an orphan table row is invisible; the batch close 9798abe0 shipped two red guards with no gate pasted, fixed by unrelated later commits | separating diff-caused from pre-existing from later-fixed took three checkouts per failure |
 | 109 | verifier | sonnet | retro-verify UX-734 (round 100, merged unread) | 215k | 369 | 47 m | CLEAN guards; the Outcome's gap block is a paraphrase reporting PASS for a deselected class, noted in the task file; the same two batch-close reds as UX-736 | the brief did not say to check out the track's tip first; the wide --base diffed 231 later files |
 | 109 | verifier | sonnet | retro-verify UX-702 (round 102, merged unread) | 306k | 316 | 63.5 m | 1 defect, filed as UX-792: the perf-carry key's branch scoping is guarded by nothing; the pasted 1328 passed was false - the command reds the context map at that commit, noted in the task file | the scoped run at the track's own commit surfaced the false paste; the wide run would have buried it |
+| 109 | implementer | sonnet | UX-682, the Plane 3 half (change frequency, co-change) | 452k | 168 | 69.9 m | merged after its verifier; two of three prescribed mutations were mute on the first fixture and the track widened it until each reddened; two pasted counts came from an intermediate fixture, re-run on the verifier's finding | building a fixture that isolates rank-by-count from rank-by-cost and record reuse took several redesigns |
+| 109 | implementer | sonnet | UX-682, the join half (expected rebuild cost, two findings) | 375k | 443 | 68.6 m | merged after its verifier: the two-leaf consolidate case fixed, a WIDE entry with a false cause dropped, the split rule's consequence stated | two hidden guards - the finding-id table and the WIDE set - fired on adding a test file and two ids; the shared machine made each full lint or sweep 5-10 minutes |
+| 109 | verifier | sonnet | verify UX-682 Plane 3 half | 58k | 50 | 6.8 m | MERGE; developer_tax byte-identical across the refactor, five probes clean; two mutation-table pass counts did not sum to the suite and were not what the command prints | the Outcome's own mutation table did not survive its falsify check - an arithmetic slip a -q paste should never contain |
+| 109 | verifier | sonnet | verify UX-682 join half | 58k | 56 | 7.8 m | HOLD then merged: consolidate fired for two consumer-less leaves; the WIDE comment's census 30 to 31 was false (31 both sides, the cause a substring hit on shared); the split rule's all-or-nothing consequence unstated | disproving a plausible causal comment took a second worktree at the base and the selector run twice |
 
 Round 101's four tracks are **not** here: this session could not
 identify their transcripts with certainty after a context rebuild, and
@@ -122,7 +126,7 @@ committed cleanly once told to run in the foreground. Three of the five
 left a derived figure or a §6 context-map row behind - the same class
 the round itself was about, arriving in the tracks' own work.
 
-What the ninety-three rows already say: a researcher that reads a document
+What the ninety-seven rows already say: a researcher that reads a document
 whole costs 100-180k; a walker that drives every control costs 336k;
 the two cuts cost a re-run each. The `walk` and `design-review`
 skills fix the report shape so the next rows are smaller, and the

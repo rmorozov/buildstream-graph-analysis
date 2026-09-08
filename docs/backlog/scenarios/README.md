@@ -15,13 +15,13 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-790 scenarios: **33 open**, 757 closed.
+790 scenarios: **32 open**, 758 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
 | capture | 1 | 96 |
-| analysis | 6 | 107 |
+| analysis | 5 | 107 |
 | contracts | 0 | 48 |
 | viewer | 3 | 163 |
 | cli | 0 | 22 |
@@ -42,7 +42,6 @@ task file, which is the only place it ever lived twice.
 | UX-739 | [the max-jobs advice is not priced — nothing says what the build drops to](UX-0739-the-max-jobs-advice-is-not-priced-nothing-says-what-the-build-drops-to.md) | analysis | Medium | R4 and R5, deciding whether the recommendation is worth applying | 🔴 |
 | UX-679 | [a jobserver every sandbox joins — the prototype bga can run](UX-0679-a-jobserver-every-sandbox-joins-the-prototype-bga-can-run.md) | capture | Medium | R4 and R5 — dynamic sharing instead of static tuning | 🔴 |
 | UX-680 | [remote execution is priced, not built](UX-0680-remote-execution-is-priced-not-built.md) | analysis | Medium | R4 and R8 deciding whether to buy it | 🔴 |
-| UX-682 | [change frequency and co-change, from the logs the project already keeps](UX-0682-change-frequency-and-co-change-from-the-logs-the-project-already-keeps.md) | analysis | High | R2 and R3 — split, consolidate, or leave alone, decided on evidence | 🔴 |
 | UX-683 | [the foundation tier is declared, and the kind-based exemption misses it](UX-0683-the-foundation-tier-is-declared-and-the-kind-based-exemption-misses-it.md) | analysis | Medium | R2 who owns the toolchain and wants out of the noise; R3 reading the ranking | 🔴 |
 | UX-684 | [the cached-build verdict — does the graph rebuild the cheapest subgraph?](UX-0684-the-cached-build-verdict-does-the-graph-rebuild-the-cheapest-subgraph.md) | analysis | High | R3 showing evidence, R8 reading it | 🔴 |
 | UX-689 | [the architecture document moves into the area pages, one track at a time](UX-0689-the-architecture-document-moves-into-the-area-pages-one-track-at-a-tim.md) | docs | Medium | the reader pricing a change; the session restructuring without losing a sentence | 🔴 |

@@ -49,4 +49,37 @@ returned to `_NOT_CAS_WRITING` — red, naming the file and `show`.
 
 ## Outcome
 
-_Not started._
+Gap measured: `test_bst_show_to_graph.py`'s three real `extract_graph`
+calls and `test_element_kind_heuristics.py`'s one ran with the ambient
+`HOME`, both still listed in `_NOT_CAS_WRITING` despite calling `bst
+show`. A bare `HOME` swap (no `_bst_env`) reproduces `UX-84`'s
+`ModuleNotFoundError: No module named 'jinja2'` instead of the quota
+defect - confirmed, then worked around by replicating
+`_user_site_to_preserve`'s `PYTHONPATH` carry-over for the
+demonstration script. On this box's current disk state (23G/270G used,
+`df -B1 /`) the quota-overflow itself did not reproduce even
+pre-fix - a lower-disk-pressure day than round 110's gate, not a claim
+the fix is untested.
+
+Close measured (fixed, `HOME` at an empty dir, `XDG_CONFIG_HOME`
+unset, `PYTHONPATH` carrying the preserved user site):
+```
+tests/unit/test_bst_show_to_graph.py ......................  [ 66%]
+tests/unit/test_element_kind_heuristics.py ...........        [100%]
+33 passed in 3.76s
+```
+Both files now wrap every `extract_graph` call in
+`_bst_env.bst_env(tmp_path / "home")`. `_NOT_CAS_WRITING` became a
+dict of filename -> the command it runs, and a new guard,
+`test_no_excluded_file_actually_writes_the_cas`, reads each entry's
+own file for a literal `bst`-argv naming `show`/`build`/`artifact`, or
+a call to `extract_graph` (hardcodes `bst show`).
+
+Mutation table:
+
+| mutation | reddened | count |
+|---|---|---|
+| `test_bst_show_to_graph.py` returned to `_NOT_CAS_WRITING` | `test_no_excluded_file_actually_writes_the_cas` (`{'test_bst_show_to_graph.py': 'show'}`); also `test_every_cas_writing_bst_gated_file_reaches_the_isolation`'s population count (15 -> 14) | 2 failed, 14 deselected |
+
+Reverted from the saved pre-mutation copy (never `git checkout --`);
+green after: `2 passed, 14 deselected`.

@@ -87,7 +87,13 @@ the floor - a `UX-787` bank, not a shrink of the underlying code.
 |---|---|---|
 | `do_adopt`'s early `return 1` restored before `write_reference` (the pre-fix shape) | the new shrink-plus-grow fixture only | `1 failed, 9 passed` |
 | the `sizes` job dropped from `quality.yml` | the four-jobs-on-both-triggers guard only | `1 failed, 5 passed` |
+| `sizes`'s `run:` swapped for `echo skip` (verifier's gap: a job named `sizes` that runs nothing) | `test_each_shelf_job_names_its_tool`, naming `('sizes', ...)`, only | `1 failed, 6 passed` |
 
-Both mutations reverted from a saved pre-mutation copy (not
-`git checkout`, since the fix is itself uncommitted); both suites
-green again after.
+All mutations reverted from a saved pre-mutation copy (not
+`git checkout`, since the fix is itself uncommitted); all suites
+green again after. The third guard parses `quality.yml` with
+`yaml.safe_load` (`import yaml` confirmed importable) and asserts each
+shelf job's steps mention its tool - `sizes` → `dev_sizes.py --check`,
+`pip-audit` → `pip-audit`, `codeql` → `github/codeql-action/analyze`,
+`eslint` → `eslint` - so a job kept by name but emptied of its `run:`
+reds.

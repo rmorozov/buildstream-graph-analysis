@@ -1838,15 +1838,50 @@ class TestCiSuppliesTheMemoryTheRuleNeeds:
 
     def test_a_branch_reads_its_own_series(self):
         """Two branches sharing a carry would confirm one branch's
-        excursion with another's, which is not agreement about anything."""
-        text = self._text()
-        # `\S+` would stop inside `${{ github.ref }}`, which is the
-        # half that matters - take the rest of the line.
-        keys = re.findall(r"key: (tier-carry-.*)", text)
-        assert keys, "the carry cache has no key at all"
-        for key in keys:
+        excursion with another's, which is not agreement about anything.
+
+        `UX-792`: widened from `tier-carry-` alone. `perf-carry-` copied
+        the mechanism (`UX-702`) and not this guard, so the same drop of
+        `github.ref` - or of `always()` on the save step, which loses a
+        red run's finding just as silently - would have gone unread on
+        it. Read every `*-carry-` family the workflow names, not the two
+        it happens to have today.
+
+        Read with `yaml.safe_load` rather than a line regex: a key
+        written `key: >-` with its value on the next line is still one
+        scalar to the parser, and a line regex anchored at `key: `
+        never sees it - the blind spot a verifier found in the first
+        version of this clause. Parsing also finds each step's own
+        `with.key` and `if`, so a save step is judged by its own pair
+        rather than by substring proximity in the raw text.
+        """
+        jobs = yaml.safe_load(self._text())["jobs"]
+        cache_steps = [
+            step for job in jobs.values() for step in job.get("steps") or []
+            if str(step.get("uses", "")).startswith("actions/cache")
+        ]
+        carry_steps = [step for step in cache_steps
+                       if "-carry-" in str(step.get("with", {}).get("key", ""))]
+        assert carry_steps, "no cache step carries a *-carry- key"
+        for step in carry_steps:
+            key = step["with"]["key"]
             assert "github.ref" in key, (
                 f"the carry cache key {key!r} does not name the branch")
+        families = sorted({re.match(r"(\S+-carry-)", step["with"]["key"]).group(1)
+                           for step in carry_steps})
+        assert set(families) >= {"tier-carry-", "perf-carry-"}, (
+            f"expected at least the tier-carry- and perf-carry- families, "
+            f"found {families} - a family the workflow no longer names")
+        for family in families:
+            saves = [step for step in carry_steps
+                     if str(step["uses"]).startswith("actions/cache/save")
+                     and step["with"]["key"].startswith(family)]
+            assert saves, f"{family!r}: no cache/save step carries this key"
+            for step in saves:
+                assert "always()" in str(step.get("if", "")), (
+                    f"{family!r}'s save step does not run under always(), "
+                    f"so a red run's carry - the one worth remembering - "
+                    f"is never saved")
 
 class TestTheRecordStepDoesNotBuryTheFailure:
     """`UX-441`. `UX-427`'s step prints this run's timings so the

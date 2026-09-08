@@ -37,4 +37,29 @@ own rows too: an id with no task file reds naming the table.
 
 ## Outcome
 
-_Not started._
+Gap measured (pre-fix, on this checkout):
+
+```console
+$ sed -i '699a | UX-999 | a row nobody filed | 🟢 Done |' docs/design/architecture.md
+$ python3 -m pytest tests/unit/test_docs_links_and_commands.py -q
+56 passed
+```
+
+Close measured (post-fix, same mutation):
+
+```console
+$ sed -i '699a | UX-999 | a row nobody filed | 🟢 Done |' docs/design/architecture.md
+$ python3 -m pytest tests/unit/test_docs_links_and_commands.py::test_the_table_status_matches_the_task_files -q
+FAILED ... AssertionError: a status table and its task files disagree about status:
+    UX-999 (docs/design/architecture.md): a row with no task file
+$ git checkout -- docs/design/architecture.md   # restore
+$ python3 -m pytest tests/unit/test_docs_links_and_commands.py -q
+56 passed in 27.86s
+```
+
+Mutation table:
+
+| mutation | reddened | count |
+|---|---|---|
+| append `\| UX-999 \| a row nobody filed \| 🟢 Done \|` to architecture.md's history table | `test_the_table_status_matches_the_task_files`, naming `docs/design/architecture.md` | 1 failed / 56 |
+| remove it | — | 56 passed |

@@ -30,6 +30,15 @@ then lands once; the frame count goes. The guard in
 that a header taller by 4 rem still lands within the tolerance it
 already states.
 
+## Decomposition
+
+Input classes the guard covers: a rail click into an open chapter, into
+a folded chapter (the fold opens above the target), and the same two
+under a header one line taller (`UX-668`'s) and 4 rem taller; the
+journey it extends is `test_a_rail_click_lands_on_its_section.py`'s —
+rail click → landing within the stated tolerance — with the tall-header
+clause as its new last step.
+
 ## Out of Scope
 
 - The landing tolerance itself — `UX-670` measured it and it stands.

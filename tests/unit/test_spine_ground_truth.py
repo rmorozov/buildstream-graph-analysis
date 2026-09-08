@@ -40,6 +40,12 @@ SLEEP_S = 3.0
 # whole 10ms ticks, so "zero" means "below a couple of ticks" - measured
 # at exactly 0 on every one of 24 processes.
 IDLE_CPU_US = 30_000
+# UX-797: 20 bare runs at organic load 9.5-14.6 (no hogs, box already
+# loaded), max(durations)-min(durations) per run: 0.0078-0.0627s (see
+# the task file's Outcome for all 20) - 2x the observed max (0.1254s),
+# rounded up. Catches a sleeper stalled beyond that margin; it does not
+# catch one stalled inside it (measured, not typed - so it cannot).
+WALL_SPREAD_S = 0.13
 # UX-741: Plane 1's per-element lag from Plane 2 is UX-110's axis, out
 # of scope here - this only checks the two planes name the same element,
 # their intervals overlap, and Plane 2 stays inside the harness's own
@@ -111,10 +117,9 @@ def test_the_spine_measures_sleep_3_as_three_seconds_of_nothing(tmp_path):
             f"{element}: {record['cpu_us']}us of CPU for a process that slept"
         )
 
-    # 2. Eight elements doing identical work measure identically. UX-797:
-    #    wall clock stretches under organic load (reddened 1/20 bare runs
-    #    at load 7-9); CPU time does not, so the identical-work claim is
-    #    held on the eight `cpu_us` readings instead.
+    # 2a. Eight elements doing identical work measure identically on CPU
+    #     time, which no load moves - catches a sleeper that burned CPU
+    #     while still under the per-element IDLE_CPU_US bound.
     cpu_by_element = {element: r.get("cpu_us", 0) for element, r in sleepers.items()}
     lo_element = min(cpu_by_element, key=cpu_by_element.get)
     hi_element = max(cpu_by_element, key=cpu_by_element.get)
@@ -123,6 +128,19 @@ def test_the_spine_measures_sleep_3_as_three_seconds_of_nothing(tmp_path):
         f"{hi_element}: {cpu_by_element[hi_element]}us of CPU spreads "
         f"{spread}us from {lo_element}'s {cpu_by_element[lo_element]}us "
         "- not identical work"
+    )
+
+    # 2b. And on wall clock, against WALL_SPREAD_S (measured above) -
+    #     catches a sleeper stalled well past its siblings while still
+    #     inside the per-element SLEEP_S/harness_span bounds and idle on
+    #     CPU, which 2a cannot see.
+    dur_by_element = {element: r["duration_s"] for element, r in sleepers.items()}
+    lo_d = min(dur_by_element, key=dur_by_element.get)
+    hi_d = max(dur_by_element, key=dur_by_element.get)
+    wall_spread = dur_by_element[hi_d] - dur_by_element[lo_d]
+    assert wall_spread < WALL_SPREAD_S, (
+        f"{hi_d}: {dur_by_element[hi_d]:.3f}s spreads {wall_spread:.3f}s "
+        f"from {lo_d}'s {dur_by_element[lo_d]:.3f}s - not identical work"
     )
 
 

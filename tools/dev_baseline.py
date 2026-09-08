@@ -1,4 +1,4 @@
-"""UX-694: a finding baseline - zero-tolerance for a new finding.
+"""UX-694/UX-697: a finding baseline - zero-tolerance for a new finding.
 
     python3 tools/dev_baseline.py --write     # bootstrap, or full rewrite
                                                 # (needs --force to add)
@@ -6,8 +6,9 @@
     python3 tools/dev_baseline.py --shrink     # drop only what nothing
                                                 # matches now
 
-Runs ruff (json) for S, C901, PLR0912, PLR0913, PLR0915, SIM115 - not in
-the gate's own `--select` (`pyproject.toml`) - over bga, tools,
+Two producers feed one list: ruff (json) for S, C901, PLR0912, PLR0913,
+PLR0915, SIM115 - not in the gate's own `--select` (`pyproject.toml`) -
+and pyright (`--outputjson`, its own errors) over bga, tools,
 .claude/hooks (never tests - `tests/**` is a different ledger). A
 finding's identity is `(tool, rule, file, the source line's text with
 interior whitespace collapsed, nth occurrence of that identity in the
@@ -17,7 +18,7 @@ one already flagged, does not move it out from under the baseline.
 line. `--write` refuses to add a new entry without `--force`; `--check`
 also refuses an entry `git show HEAD:` doesn't carry, unstaged or not;
 `--shrink` only ever removes what nothing matches any more. A file
-ruff cannot parse aborts everything rather than risk reading its
+either tool cannot read aborts everything rather than risk reading its
 absence as a fix. Every forced batch stays named in `--check`'s output
 indefinitely, committed or not, accumulated rather than overwritten
 (`UX-766`).
@@ -39,6 +40,10 @@ DEFAULT_BASELINE = REPO / "tests" / "quality_baseline.json"
 
 class RuffFailure(Exception):
     """ruff's answer cannot be trusted: a bad exit, or a file it could not parse."""
+
+
+class PyrightFailure(Exception):
+    """pyright's answer cannot be trusted: a bad exit, or unparseable JSON."""
 
 
 def ruff_version():
@@ -64,6 +69,20 @@ def ruff_findings(root, paths, families):
     if unparsable:
         raise RuffFailure("ruff could not parse: " + ", ".join(unparsable))
     return raw
+
+
+def pyright_findings(root, paths):
+    cmd = ["pyright", *[str(p) for p in paths], "--outputjson"]
+    run = subprocess.run(cmd, cwd=root, capture_output=True,
+                          text=True, check=False)
+    if run.returncode not in (0, 1):
+        raise PyrightFailure(f"pyright exited {run.returncode}: {run.stderr.strip()}")
+    try:
+        document = json.loads(run.stdout or "{}")
+        diagnostics = document["generalDiagnostics"]
+    except (json.JSONDecodeError, KeyError, TypeError) as exc:
+        raise PyrightFailure(f"pyright's output could not be parsed: {exc}") from exc
+    return [d for d in diagnostics if d.get("severity") == "error"]
 
 
 #: `UX-705`: a suppression is a finding, so a burn-down cannot close a
@@ -164,21 +183,18 @@ def suppression_findings(root, paths):
     return out
 
 
-def normalize(raw, root):
-    """`raw` ruff findings -> the identity list, ordered and nth-assigned."""
+def _identity_list(tool, items, root):
+    """`items`: `(path, 1-indexed row, rule)` -> the identity list, ordered
+    and nth-assigned. Shared by every producer so `tool` is the only thing
+    that varies between a ruff finding and a pyright one."""
     root = pathlib.Path(root).resolve()
     lines_of = {}
     decorated = []
-    for item in raw:
-        rule = item.get("code")
-        if not rule:
-            continue
-        path = pathlib.Path(item["filename"])
+    for path, row, rule in items:
         try:
             rel = path.resolve().relative_to(root).as_posix()
         except ValueError:
             rel = path.as_posix()
-        row = item["location"]["row"]
         if path not in lines_of:
             lines_of[path] = path.read_text(
                 encoding="utf-8", errors="replace").splitlines()
@@ -192,9 +208,23 @@ def normalize(raw, root):
     for file, _row, rule, text in decorated:
         key = (rule, file, text)
         counts[key] += 1
-        findings.append({"tool": "ruff", "rule": rule, "file": file,
+        findings.append({"tool": tool, "rule": rule, "file": file,
                           "line": text, "nth": counts[key]})
     return findings
+
+
+def normalize(raw, root):
+    """`raw` ruff findings -> the identity list, ordered and nth-assigned."""
+    items = ((pathlib.Path(item["filename"]), item["location"]["row"], item.get("code"))
+             for item in raw)
+    return _identity_list("ruff", [(p, r, rule) for p, r, rule in items if rule], root)
+
+
+def normalize_pyright(raw, root):
+    """`raw` pyright diagnostics -> the identity list, ordered and nth-assigned."""
+    items = ((pathlib.Path(item["file"]), item["range"]["start"]["line"] + 1, item.get("rule"))
+             for item in raw)
+    return _identity_list("pyright", [(p, r, rule) for p, r, rule in items if rule], root)
 
 
 def identity(entry):
@@ -442,7 +472,13 @@ def main(argv=None):
     except RuffFailure as exc:
         print(f"error: {exc}")
         return 2
+    try:
+        raw_pyright = pyright_findings(args.root, paths)
+    except PyrightFailure as exc:
+        print(f"error: {exc}")
+        return 2
     current = (normalize(raw, args.root)
+               + normalize_pyright(raw_pyright, args.root)
                + suppression_findings(args.root, paths))
     existing = load_baseline(args.baseline)
 

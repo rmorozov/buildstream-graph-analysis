@@ -1,6 +1,6 @@
 # UX-802: the baseline guard files spawn pyright sixteen times
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-697 (pyright in the baseline), UX-694 (the baseline's guards), UX-503 | **Found by:** round 110, PR #218's tier-drift gate on `test (3.11)` | **Serves:** R8 reading a red drift gate on a file whose claim did not change | **Topic:** guards | **Area:** tools | **Shape:** mechanical
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-697 (pyright in the baseline), UX-694 (the baseline's guards), UX-503 | **Found by:** round 110, PR #218's tier-drift gate on `test (3.11)` | **Serves:** R8 reading a red drift gate on a file whose claim did not change | **Topic:** guards | **Area:** tools | **Shape:** mechanical
 
 ## Motivation
 
@@ -92,3 +92,5 @@ Mutation table:
 
 Reverted from the scratchpad copy, `__pycache__` cleared, re-run
 green: 25 passed in 26.13s (load 17.24/18.49/15.32).
+
+**Deviation.** The Required Fix's wall guard against `ci_reference.json` was declined for the mechanism guard — a fixture-backed `--check` runs on a built PATH without pyright, so a regression that spawns again fails loudly — with the convention `test_the_loop_stays_fast.py` states and the 25–34 s readings at load 17–24 that made a 10 s bound a property of the box; the reference rows (50.7 s, 13.2 s) overstate the files until main's adoptions move them, and the drift gate never flags a file faster than its row. `--pyright-from PATH` on the tool is the third surface. One verifier hold (a PATH strip that removed the directory holding pytest; the decline off the record), fixed in a second commit (03d10d4c). Two commits, one verifier.

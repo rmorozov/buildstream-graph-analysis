@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-801 scenarios: **15 open**, 786 closed.
+801 scenarios: **14 open**, 787 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -27,7 +27,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | cli | 0 | 22 |
 | store | 0 | 16 |
 | docs | 4 | 134 |
-| guards | 5 | 214 |
+| guards | 4 | 214 |
 
 ## Open scenarios
 
@@ -48,7 +48,6 @@ task file, which is the only place it ever lived twice.
 | UX-798 | [the directions row counts a round's closes by hand](UX-0798-the-directions-row-counts-a-round-s-closes-by-hand.md) | docs | Medium | the reader of `directions.md` deciding what a round did | 🔴 |
 | UX-799 | [the map row for the baseline tool names one of its two modes](UX-0799-the-map-row-for-the-baseline-tool-names-one-of-its-two-modes.md) | docs | Low | the reader of §6 choosing which tool prices a finding | 🔴 |
 | UX-800 | [the rail landing counts frames, and the count moved with the header](UX-0800-the-rail-landing-counts-frames-and-the-count-moved-with-the-header.md) | viewer | Medium | R8 reading a red gate on a rail click nobody touched | 🔴 |
-| UX-802 | [the baseline guard files spawn pyright sixteen times](UX-0802-the-baseline-guard-files-spawn-pyright-sixteen-times.md) | guards | Medium | R8 reading a red drift gate on a file whose claim did not change | 🔴 |
 | UX-803 | [a step change in a file's cost takes three main pushes to reach the reference](UX-0803-a-step-change-in-a-file-s-cost-takes-three-main-pushes-to-reach-the-reference.md) | guards | Medium | R8 reading a red drift gate on a PR whose diff touched a file main had already made slower | 🔴 |
 | UX-804 | [the diagnostics performance guard is a typed ten seconds of wall clock](UX-0804-the-diagnostics-performance-guard-is-a-typed-ten-seconds-of-wall-clock.md) | guards | Medium | R8 reading a red gate on a file nobody touched | 🔴 |
 

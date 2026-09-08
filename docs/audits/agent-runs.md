@@ -147,6 +147,8 @@ pairing for every merged row from round 103 on.
 | 110 | verifier | sonnet | verify `UX-780` | 40k | 26 | 5.6 m | one hold: slash-group ids skipped; fixed before merge | — |
 | 110 | implementer | sonnet | `UX-741` the spine guard reads what contention cannot move (judgement) | 91k | 73 | 19.9 m | merged b89f3ed2; green quiet and at load 16, three mutations red | the two planes' clocks are not comparable without an anchor pair; three files read to find the idiom |
 | 110 | verifier | sonnet | verify `UX-741` | 70k | 51 | 24.9 m | PASS; enclosing bound loose (4.8x) recorded, the spread clause's red filed as UX-797 | a pre-existing clause reddened 1 in 20 and had to be separated from the fix |
+| 110 | implementer | sonnet | `UX-774` the guide's size figure derived by the tool (judgement) | 102k | 95 | 25.6 m | merged f977935e; both copies written together, three mutations red | ruff's PLR0915 on main() forced a refactor and a baseline shrink |
+| 110 | verifier | sonnet | verify `UX-774` | 35k | 29 | 7.6 m | PASS; the Acceptance Test's wording reconciled in the deviation | — |
 
 Round 101's four tracks are **not** here: this session could not
 identify their transcripts with certainty after a context rebuild, and
@@ -159,7 +161,7 @@ committed cleanly once told to run in the foreground. Three of the five
 left a derived figure or a §6 context-map row behind - the same class
 the round itself was about, arriving in the tracks' own work.
 
-What the one hundred and thirty rows already say: a researcher that reads a document
+What the one hundred and thirty-two rows already say: a researcher that reads a document
 whole costs 100-180k; a walker that drives every control costs 336k;
 the two cuts cost a re-run each. The `walk` and `design-review`
 skills fix the report shape so the next rows are smaller, and the

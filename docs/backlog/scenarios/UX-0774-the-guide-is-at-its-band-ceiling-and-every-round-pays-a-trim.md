@@ -1,6 +1,6 @@
 # UX-774: the guide is at its band ceiling, and every round pays a trim
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Serves:** the round that adds a tool and finds an unrelated paragraph is what it has to delete | **Topic:** docs | **Area:** unassigned | **Shape:** judgement
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — | **Serves:** the round that adds a tool and finds an unrelated paragraph is what it has to delete | **Topic:** docs | **Area:** unassigned | **Shape:** judgement
 
 ## Motivation
 
@@ -133,3 +133,5 @@ change) · 1536 passed, 3 skipped`. `make lint`: clean after
 `dev_baseline.py --shrink` dropped one stale `PLR0912` entry for
 `dev_touching.py:main` — the `--size` block factored into a helper
 shared with `--spread`, which also shrank `main`'s own complexity.
+
+**Deviation.** Option 2 taken; option 1 is `UX-689`'s. The Acceptance Test's "add 2 KB and `make test` is green, no second document changed" reads as the state after `--size --write`: 2 KB added reds the guard until the figure is re-derived, and the tool then writes both copies together, never one alone. One refactor beyond the two declared files (`_rewrite_sites()`, a `quality_baseline.json` shrink of one row). One commit, one verifier (PASS).

@@ -166,6 +166,8 @@ pairing for every merged row from round 103 on.
 | 111 | verifier | sonnet | verify `UX-802` | 47k | 51 | 12.8 m | HOLD: the PATH strip, the undocumented decline, the walls without their load; fixed before merge | every wall read 2x the track's under load 24 |
 | 111 | implementer | sonnet | `UX-798` a directions row's counts are derived (judgement) | 268k | 118 | 38.4 m | merged 1d24f1a4; both rows corrected, one PASS finding fixed | stalled on a background wait once; pymarkdown over the tree past the 120 s cap under load |
 | 111 | verifier | sonnet | verify `UX-798` | 45k | 38 | 5.8 m | PASS; the hyphenated-word misparse found and fixed before merge | the Motivation's own grep over-counts by one |
+| 111 | implementer | sonnet | `UX-799` the baseline tool's map row names both producers (judgement) | 282k | 129 | 41.1 m | merged 0d7a7409; TOOLS made the source of main()'s producers after one PASS finding | the filing named bandit, which the module never spawns |
+| 111 | verifier | sonnet | verify `UX-799` | 41k | 26 | 7.6 m | PASS; TOOLS could drift from main() — fixed before merge | — |
 
 Round 101's four tracks are **not** here: this session could not
 identify their transcripts with certainty after a context rebuild, and
@@ -178,7 +180,7 @@ committed cleanly once told to run in the foreground. Three of the five
 left a derived figure or a §6 context-map row behind - the same class
 the round itself was about, arriving in the tracks' own work.
 
-What the one hundred and forty-nine rows already say: a researcher that reads a document
+What the one hundred and fifty-one rows already say: a researcher that reads a document
 whole costs 100-180k; a walker that drives every control costs 336k;
 the two cuts cost a re-run each. The `walk` and `design-review`
 skills fix the report shape so the next rows are smaller, and the

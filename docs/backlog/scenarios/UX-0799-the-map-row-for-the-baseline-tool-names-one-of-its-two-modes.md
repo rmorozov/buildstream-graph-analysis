@@ -1,6 +1,6 @@
 # UX-799: the map row for the baseline tool names one of its two modes
 
-**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** UX-697 (the pyright mode), UX-780 (the same row shape, one row over) | **Found by:** review 21, round 110 | **Serves:** the reader of §6 choosing which tool prices a finding | **Topic:** docs | **Area:** unassigned | **Shape:** judgement
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-697 (the pyright mode), UX-780 (the same row shape, one row over) | **Found by:** review 21, round 110 | **Serves:** the reader of §6 choosing which tool prices a finding | **Topic:** docs | **Area:** unassigned | **Shape:** judgement
 
 ## Motivation
 
@@ -85,3 +85,5 @@ clean: 567 finding(s) match tests/quality_baseline.json; ...
 `make test-touching`: `1620 passed, 3 skipped`. `make lint`: `ruff`
 clean, `dev_baseline.py --check` clean, `lint-docs` clean. Merged
 `919d4db3` (UX-802, `--pyright-from`) first, clean auto-merge.
+
+**Deviation.** The filing said "ruff, bandit and pyright"; the module prices ruff and pyright — the S family is ruff's — so the row names two. One verifier finding (PASS): `TOOLS` was read by the guard alone and `main()` could grow a producer past it; fixed in a second commit (0d7a7409) — `main()` iterates `TOOLS`, `--pyright-from` bound through it after `UX-802`'s merge. Two commits, one verifier.

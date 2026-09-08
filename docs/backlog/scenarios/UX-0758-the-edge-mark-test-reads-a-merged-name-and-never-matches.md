@@ -67,4 +67,40 @@ and both the new clause and the restored ones redden.
 
 ## Outcome
 
-_Not started._
+**Gap measured** — `EDGE_MARKS.has(tick.name)` against `mergeTicks`'
+compound name, run over the fixtures (`pytest
+tests/unit/test_the_shape_channel_is_built.py -k
+TestTheFlowLayoutMatchesItsInteriorTickCount -v`):
+
+```text
+test_one_interior_tick_with_both_edges_is_flow FAILED
+  macro_micro/element_duration_distribution: one interior tick, data-layout=None
+test_a_merged_edge_still_takes_flow_layout FAILED
+  macro_micro/element_duration_distribution: merged edge ['p95 max'], data-layout=None
+test_more_than_one_interior_tick_is_not_flow PASSED
+2 failed, 1 passed
+```
+
+**Close measured** — `isEdgeMark` reads `tick.names` (the merge's own
+components) in `exhibitAxis`; the guard's `_is_edge`/`_components` do
+the same and the `_is_merged_edge` exclusion is gone:
+
+```text
+tests/unit/test_the_shape_channel_is_built.py::TestTheFlowLayoutMatchesItsInteriorTickCount::test_one_interior_tick_with_both_edges_is_flow PASSED
+tests/unit/test_the_shape_channel_is_built.py::TestTheFlowLayoutMatchesItsInteriorTickCount::test_more_than_one_interior_tick_is_not_flow PASSED
+tests/unit/test_the_shape_channel_is_built.py::TestTheFlowLayoutMatchesItsInteriorTickCount::test_a_merged_edge_still_takes_flow_layout PASSED
+17 passed in 8.06s  (whole file)
+```
+
+**Mutation table:**
+
+| mutation | reddened | count |
+|---|---|---|
+| restore `EDGE_MARKS.has(tick.name)` in `middle`, `flow`, and the `marginLeft` guard (`drawings.js`) | `test_one_interior_tick_with_both_edges_is_flow`, `test_a_merged_edge_still_takes_flow_layout` | 2 failed, 1 passed → reverted, 17 passed |
+
+Reverted from the scratchpad's pre-mutation copy, not `git checkout --`.
+`test_more_than_one_interior_tick_is_not_flow` does not redden under
+this mutation: its own interior count stays correct off the guard's
+`_is_edge`, and the merged-edge axes never reach ≥2 interior ticks to
+trigger its clause — the exclusion it lost was redundant once the
+classification is fixed, not load-bearing.

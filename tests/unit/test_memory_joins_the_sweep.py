@@ -8,11 +8,24 @@ at capacity 4 - and check the memory-feasible ceiling and the binding
 constraint `capacity_sweep` now computes from its own replayed
 concurrency, not a top-N sum.
 """
+import json
+import subprocess
+import sys
+
 from bga.ingest.models import NormalizedTask, RunContext, TaskKey, TaskKind
 from bga.replay.scheduler import ReplayScheduler
 from bga.report.text import format_sweep_text
 
 GIB = 1024 ** 3
+FIXTURE_RUN = "tests/fixtures/macro_micro/run"
+FIXTURE_PLANE2 = "tests/fixtures/macro_micro/plane2.json"
+
+
+def _bga(args):
+    return subprocess.run(
+        [sys.executable, "-c",
+         f"from bga.cli import main; raise SystemExit(main({args!r}))"],
+        capture_output=True, text=True)
 
 
 def _task(uid, dur_us):
@@ -120,3 +133,29 @@ def test_peak_rss_and_host_memory_needs_both_halves():
     assert _peak_rss_and_host_memory(host_samples, None) == (None, None)
     assert _peak_rss_and_host_memory(host_samples, native_report) == (
         {"core.bst": 2_000_000 * 1024}, 8_000_000 * 1024)
+
+
+def test_bga_sweep_plane2_runs_end_to_end_in_text():
+    """The real CLI path: `_attach_plane2_capacity` now runs ahead of
+    the format branch for both formats, and `_finish_capacity_
+    recommendation` used to read `result.floors` on the ad-hoc holder
+    `_produce_sweep_output` builds, which has no such attribute."""
+    result = _bga(["sweep", FIXTURE_RUN, "--plane2", FIXTURE_PLANE2,
+                   "--format", "text"])
+    assert result.returncode == 0, result.stderr
+    assert "Traceback" not in result.stderr, result.stderr
+    assert "Capacity Sweep: PROCESS" in result.stdout
+
+
+def test_bga_sweep_plane2_runs_end_to_end_in_json():
+    """The mirror in JSON - the format this item's own reorder newly
+    reached, since JSON used to return before `_attach_plane2_capacity`
+    ever ran."""
+    result = _bga(["sweep", FIXTURE_RUN, "--plane2", FIXTURE_PLANE2,
+                   "--format", "json"])
+    assert result.returncode == 0, result.stderr
+    assert "Traceback" not in result.stderr, result.stderr
+    payload = json.loads(result.stdout)
+    assert payload["schema"] == "sweep/v1"
+    assert "memory_knee_points" in payload
+    assert "binding_constraints" in payload

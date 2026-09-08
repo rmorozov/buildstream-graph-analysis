@@ -2245,6 +2245,17 @@ bga sweep tests/fixtures/macro_micro/run --format json | jq '.knee_points'
 | `memory_knee_points` (`UX-678`) | per resource, the largest swept capacity whose own replayed schedule's concurrent elements' peak RSS still fit host RAM. `{}` unless `--plane2` supplied both a measured peak RSS per element and a host memory total; `0` is a real answer, unlike an absent `knee_points` entry |
 | `binding_constraints` (`UX-678`) | per resource, which of `knee_points` or `memory_knee_points` is the tighter ceiling, as `{name, builders}`. `{}` under the same condition as `memory_knee_points` |
 
+**The same two figures, on `capacity_recommendation` (`UX-678`).** The
+block above (`analyze/v6`) runs this same memory-aware sweep for its
+own `PROCESS` knee and carries the answer as `sweep_memory_builders`
+(the `memory_knee_points` value) and `sweep_binding` (the
+`binding_constraints` entry) - absent under the same condition. It sits
+beside `constraints[].name == "memory"`, which is a different
+computation (the top-N summed peaks of `memory_envelope`'s projections,
+not this replay's own concurrent set) and can disagree with it; a
+consumer wanting the sweep's own reading, not the envelope's, reads
+`sweep_binding`.
+
 It had **no `schema:` key at all** until `UX-339`, and `bga sweep
 --schema` answered the analyze contract — one this document has none of
 the required keys of. `UX-328` found that while enrolling three others,

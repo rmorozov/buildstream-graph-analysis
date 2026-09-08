@@ -245,7 +245,15 @@ def _attach_plane2_capacity(args: argparse.Namespace, analyzer, result) -> None:
 
 
 def _finish_capacity_recommendation(analyzer, result, native_report: dict) -> None:
-    """UX-116/UX-677: what only runs once the block above exists."""
+    """UX-116/UX-677: what only runs once the block above exists.
+
+    `result` is a real `AnalysisResult` from `analyze`'s pipeline, or
+    `_produce_sweep_output`'s ad-hoc holder - which carries
+    `capacity_recommendation` (this function's own gate, set directly
+    a line above the call) but never `floors`, a section that pipeline
+    never runs. `getattr` rather than `result.floors`: the holder has
+    no note to retire and reading it crashed both `bga sweep` formats.
+    """
     if not result.capacity_recommendation:
         return
     # UX-116 item 3: the "currently unmodeled axis" note is retired
@@ -253,9 +261,10 @@ def _finish_capacity_recommendation(analyzer, result, native_report: dict) -> No
     # elsewhere it is still true - and the substitution is on a named
     # constant rather than a re-typed sentence, so the two cannot
     # drift into disagreeing about which clause is being retired.
-    note = (result.floors or {}).get('capacity_model_note') or ''
-    if UNMODELED_AXIS_CLAUSE in note:
-        result.floors['capacity_model_note'] = note.replace(
+    floors = getattr(result, 'floors', None)
+    note = (floors or {}).get('capacity_model_note') or ''
+    if floors is not None and UNMODELED_AXIS_CLAUSE in note:
+        floors['capacity_model_note'] = note.replace(
             UNMODELED_AXIS_CLAUSE, MODELLED_AXIS_CLAUSE, 1)
     # UX-677: per-element `max-jobs`, on the same document - not a new
     # contract id. Joins `UX-675`'s raw host CPU series (present on

@@ -51,30 +51,37 @@ exist in the module. No `TOOLS` mapping existed to check a row against.
 **The close, measured.** Row now reads `every current ruff and pyright
 finding by identity in tests/quality_baseline.json; a new one is red,
 the list only shrinks (UX-694/697)`, three lines, guide unmoved at
-`~50 KB` (55,319 B -> 55,339 B, both round to the same 10 KB bucket -
-`tools/dev_touching.py --size`). Added `TOOLS = {"ruff": ruff_findings,
-"pyright": pyright_findings}` to `dev_baseline.py`, keyed to its own
-"two producers" docstring line (`suppression_findings`'s `"repo"`
-source is not one of the two named producers, so left out of `TOOLS`).
-New class `TestTheMapNamesEachToolsToolPrices` in
+`~50 KB` (55,319 B -> 55,339 B, same 10 KB bucket -
+`tools/dev_touching.py --size`). New class
+`TestTheMapNamesEachToolsToolPrices` in
 `test_the_context_map_is_the_tree.py`, population: `tools/dev_*.py`
 files exposing `TOOLS` - one member today, `dev_baseline.py`.
 
+**Verifier finding, fixed.** `TOOLS` first pointed at the raw fetchers
+while `main()` called them directly, so a producer wired into `main()`
+and not into `TOOLS` reddened nothing. `TOOLS` now holds
+`_ruff_producer`/`_pyright_producer` (fetch+normalize, uniform
+`(root, paths)`), `main()` builds `current` by iterating
+`TOOLS.values()` (`--pyright-from` binds via `functools.partial`
+before the loop), and `suppression_findings` is added after, with a
+one-line why: it is the repo's own scan, not a tool.
+
 ```console
-$ python3 -m pytest tests/unit/test_the_context_map_is_the_tree.py -q
-33 passed in 0.96s
 $ python3 -m pytest tests/unit/test_the_baseline_only_shrinks.py \
-    tests/unit/test_the_process_documents_derive_their_figures.py -q
-44 passed in 114.79s
+    tests/unit/test_the_context_map_is_the_tree.py -q
+53 passed in 22.12s
+$ python3 tools/dev_baseline.py --check
+clean: 567 finding(s) match tests/quality_baseline.json; ...
 ```
 
 **Mutations.**
 
 | mutation | guard | result |
 |---|---|---|
-| `pyright` dropped from the row's finding-list phrase | `test_every_tools_key_is_named_on_its_row` | `TOOLS key(s) a §6 row does not name: ["pyright in tools/dev_baseline.py's row"]` - `1 failed, 1 passed` |
-| reverted from a scratchpad copy of the guide (never `git checkout`) | same | `2 passed` |
+| `pyright` dropped from the row's finding-list phrase | `test_every_tools_key_is_named_on_its_row` | `["pyright in tools/dev_baseline.py's row"]` - `1 failed, 1 passed` |
+| fake `"bandit": _ruff_producer` added to `TOOLS` | same | `["bandit in tools/dev_baseline.py's row"]` - `1 failed, 1 passed` |
+| both reverted from a scratchpad copy, never `git checkout` | same | `2 passed` |
 
-`make test-touching`: `47 file(s) selected ... 1620 passed, 3 skipped
-in 250.44s`. `make lint`: `ruff` clean, `dev_baseline.py --check`
-clean (`567 finding(s) match`), `lint-docs` clean.
+`make test-touching`: `1620 passed, 3 skipped`. `make lint`: `ruff`
+clean, `dev_baseline.py --check` clean, `lint-docs` clean. Merged
+`919d4db3` (UX-802, `--pyright-from`) first, clean auto-merge.

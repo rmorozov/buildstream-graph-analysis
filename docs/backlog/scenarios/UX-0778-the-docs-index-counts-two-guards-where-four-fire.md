@@ -1,6 +1,6 @@
 # UX-778: the docs index counts two guards where four fire
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-584 (which fixed this sentence's twin one document over) | **Serves:** the reader deciding which style rules are mechanical and which are honour-system | **Topic:** docs | **Area:** unassigned | **Shape:** bounded
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-584 (which fixed this sentence's twin one document over) | **Serves:** the reader deciding which style rules are mechanical and which are honour-system | **Topic:** docs | **Area:** unassigned | **Shape:** bounded
 
 ## Motivation
 
@@ -100,3 +100,5 @@ figures.py`.
 
 Both restored from the scratchpad copy (not `git checkout`) and
 reconfirmed green: `25 passed`.
+
+**Deviation.** The session decided two figures; an `implementer` on `sonnet` derived both and found the Motivation's "four" was five. Its verifier read every mutation green-to-red and named one mislabel: the rule titled `Out of Scope` is §12, and §14 reuses its guard — the Outcome above says 14 where the fact belongs to 12; the counts, being literal string counts, are unaffected. Untested edge, recorded: a rule body citing the guard file twice would count twice.

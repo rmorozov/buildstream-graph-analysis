@@ -120,6 +120,8 @@ pairing for every merged row from round 103 on.
 | 109 | verifier | sonnet | verify UX-791 and UX-792 | 61k | 66 | 9.8 m | MERGE with a named fix: a key on a YAML continuation line was invisible to the regex while the restore line satisfied the family population; four orphan-row probes and a job-level always() probe all caught | the Status lines still read Not Started at verification time, which cost minutes of doubt until the pipeline note explained the close lags the merge |
 | 109 | implementer | sonnet | UX-788 and UX-787, the size ledger's guards and its adopt | 248k | 136 | 32.9 m | merged after its verifier; the shelf guard read job names only, a run-line clause added before the merge; --adopt --force wrote 46 cells upward as the UX-787 floor; the size check joined quality.yml | the base recovery across 1672 commits and splitting two tasks' edits to one test file into two clean commits |
 | 109 | verifier | sonnet | verify UX-788 and UX-787 | 45k | 50 | 8 m | MERGE with a named fix: echo skip in the sizes job left the shelf guard green (§5's proxy); every table mutation reproduces; a shrink and a grow in one file handled per cell; 46 cells all upward | make lint under a sibling's concurrent baseline check tripped the 120 s timeout |
+| 109 | implementer | sonnet | UX-778, the docs index's guard count | 92k | 67 | 14.5 m | merged after its verifier; two figures derived from the guide's text, the Motivation's four was five; four rule bodies gained the guard file's name so the guide is the source | the guide named the guard file only in §8, so deriving the README's figure honestly meant citing it in four rule bodies |
+| 109 | verifier | sonnet | verify UX-778 | 45k | 34 | 5.9 m | MERGE; every mutation reproduces including a lowercase probe; the Outcome mislabels the Out of Scope rule as 14 where it is 12 (counts unaffected); a rule citing the file twice would double-count, untested | disentangling rule 12 from rule 14, which share a word and a guard file, took reading the headers by hand |
 
 Round 101's four tracks are **not** here: this session could not
 identify their transcripts with certainty after a context rebuild, and
@@ -132,7 +134,7 @@ committed cleanly once told to run in the foreground. Three of the five
 left a derived figure or a §6 context-map row behind - the same class
 the round itself was about, arriving in the tracks' own work.
 
-What the one hundred and three rows already say: a researcher that reads a document
+What the one hundred and five rows already say: a researcher that reads a document
 whole costs 100-180k; a walker that drives every control costs 336k;
 the two cuts cost a re-run each. The `walk` and `design-review`
 skills fix the report shape so the next rows are smaller, and the

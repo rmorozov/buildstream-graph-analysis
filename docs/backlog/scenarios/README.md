@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-798 scenarios: **14 open**, 784 closed.
+799 scenarios: **15 open**, 784 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -27,7 +27,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | cli | 0 | 22 |
 | store | 0 | 16 |
 | docs | 4 | 134 |
-| guards | 4 | 211 |
+| guards | 5 | 212 |
 
 ## Open scenarios
 
@@ -50,6 +50,7 @@ task file, which is the only place it ever lived twice.
 | UX-799 | [the map row for the baseline tool names one of its two modes](UX-0799-the-map-row-for-the-baseline-tool-names-one-of-its-two-modes.md) | docs | Low | the reader of §6 choosing which tool prices a finding | 🔴 |
 | UX-800 | [the rail landing counts frames, and the count moved with the header](UX-0800-the-rail-landing-counts-frames-and-the-count-moved-with-the-header.md) | viewer | Medium | R8 reading a red gate on a rail click nobody touched | 🔴 |
 | UX-801 | [`bst show` writes the CAS, and two files still run it in the ambient HOME](UX-0801-bst-show-writes-the-cas-and-two-files-still-run-it-in-the-ambient-home.md) | guards | Medium | R8 reading a red gate on a machine whose disk casd cannot size | 🔴 |
+| UX-802 | [the baseline guard files spawn pyright sixteen times](UX-0802-the-baseline-guard-files-spawn-pyright-sixteen-times.md) | guards | Medium | R8 reading a red drift gate on a file whose claim did not change | 🔴 |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

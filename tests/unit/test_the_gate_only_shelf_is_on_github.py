@@ -30,16 +30,16 @@ def _dev_extra_names():
 
 
 class TestTheShelfIsHosted:
-    def test_the_workflow_carries_the_three_jobs_on_both_triggers(self):
+    def test_the_workflow_carries_the_four_jobs_on_both_triggers(self):
         text = QUALITY.read_text(encoding="utf-8")
         jobs = set(re.findall(r"^  ([a-z-]+):$", text, re.M))
-        assert {"eslint", "codeql", "pip-audit"} <= jobs, jobs
+        assert {"eslint", "codeql", "pip-audit", "sizes"} <= jobs, jobs
         assert "pull_request:" in text and "schedule:" in text
 
     def test_make_lint_runs_none_of_them(self):
         lint = (REPO / "Makefile").read_text(encoding="utf-8")
         target = lint[lint.index("\nlint:"):lint.index("\nlint-docs:")]
-        for word in ("codeql", "pip-audit", "eslint", "dependabot"):
+        for word in ("codeql", "pip-audit", "eslint", "dependabot", "dev_sizes"):
             assert word not in target, word
 
     def test_dependabot_covers_pip_and_actions(self):

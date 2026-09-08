@@ -117,17 +117,24 @@ class TestTheRatchet:
 
 
 class TestAdoptRefusesToMoveACellUp:
-    def test_adopt_without_force_refuses_and_writes_nothing(self, tmp_path):
-        module = tmp_path / "pkg" / "m.py"
+    def test_adopt_without_force_banks_a_shrink_and_names_the_grow(self, tmp_path):
+        """`UX-787`: one file shrunk, another grown - the shrink is
+        written in the same run that refuses the grow, not held back
+        by it."""
+        shrinking = tmp_path / "pkg" / "m.py"
+        growing = tmp_path / "pkg" / "n.py"
         reference = tmp_path / "reference.json"
-        _write(module, SMALL)
+        _write(shrinking, "def f():\n" + BODY)
+        _write(growing, SMALL)
         assert _run(tmp_path, reference, "--adopt").returncode == 0
-        before = reference.read_bytes()
-        _write(module, "def f():\n" + BODY)
+        _write(shrinking, SMALL)
+        _write(growing, "def g():\n" + BODY)
         adopt = _run(tmp_path, reference, "--adopt")
         assert adopt.returncode == 1
-        assert "refused: pkg/m.py longest_function 2 -> 9" in adopt.stdout
-        assert reference.read_bytes() == before
+        assert "refused: pkg/n.py longest_function 2 -> 9" in adopt.stdout
+        rows = _load(reference)["files"]
+        assert rows["pkg/m.py"]["longest_function"] == 2
+        assert rows["pkg/n.py"]["longest_function"] == 2
 
     def test_adopt_with_force_moves_the_cell_up(self, tmp_path):
         module = tmp_path / "pkg" / "m.py"

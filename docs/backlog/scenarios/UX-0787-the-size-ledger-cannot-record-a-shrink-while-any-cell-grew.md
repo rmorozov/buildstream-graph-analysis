@@ -46,4 +46,48 @@ red.
 
 ## Outcome
 
-_Not started._
+Two decisions taken: (1) `do_adopt` now writes `write_reference` for
+every shrink and new-file row unconditionally, then names each grown
+cell and exits 1 unless `--force` - `dev_baseline.py --shrink`'s
+write-then-report order. (2) `--check` joins the GitHub-side shelf, a
+new `sizes` job in `.github/workflows/quality.yml` beside `pip-audit`
+(`pip install -e '.[dev]' pylint`), on the same `pull_request` and
+weekly triggers as `codeql` - not `make lint`, so the inner loop stays
+at ruff's wall time.
+
+**Gap measured** (`main`, before this task, on today's tree):
+
+```console
+$ python3 tools/dev_sizes.py --check
+grew: ... (39 cells, 27 files)
+$ python3 tools/dev_sizes.py --adopt
+refused: ... (39 refusals)
+$ git diff --stat tests/quality_reference.json
+(empty)
+```
+
+**Close measured**:
+
+```console
+$ python3 -m pytest tests/unit/test_the_size_ledger_only_shrinks.py \
+    tests/unit/test_the_gate_only_shelf_is_on_github.py -q
+16 passed
+$ python3 tools/dev_sizes.py --adopt --force
+wrote 121 file(s) to tests/quality_reference.json (46 cell(s) changed)
+$ python3 tools/dev_sizes.py --check
+sizes ok: 121 file(s) measured, none above the cell ... records
+```
+
+`tests/quality_reference.json` now names today's 121 files' cells as
+the floor - a `UX-787` bank, not a shrink of the underlying code.
+
+**Mutation table**
+
+| mutation | reddened | count |
+|---|---|---|
+| `do_adopt`'s early `return 1` restored before `write_reference` (the pre-fix shape) | the new shrink-plus-grow fixture only | `1 failed, 9 passed` |
+| the `sizes` job dropped from `quality.yml` | the four-jobs-on-both-triggers guard only | `1 failed, 5 passed` |
+
+Both mutations reverted from a saved pre-mutation copy (not
+`git checkout`, since the fix is itself uncommitted); both suites
+green again after.

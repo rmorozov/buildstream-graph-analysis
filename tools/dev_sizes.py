@@ -10,8 +10,10 @@ file's own line count, and pylint's `duplicate-code` (R0801) block
 count - the one pip-installable measure with no finding identity of
 its own. Counts only, never seconds (`UX-702` is the timing ledger).
 `tests/quality_reference.json` holds one row per file, sorted; a cell
-may only shrink. `--adopt` writes a shrunk cell and adds a file's first
-row; it refuses to move any cell up without `--force`.
+may only shrink. `--adopt` writes every shrunk cell and a file's first
+row unconditionally, `dev_baseline.py --shrink`'s shape - a grown cell
+elsewhere does not hold a shrink back - then names each grown cell and
+exits 1, unless `--force` moves it up too.
 """
 import argparse
 import ast
@@ -207,14 +209,14 @@ def do_adopt(args, current, existing):
                 else:
                     blocked.append((rel, cell, before.get(cell, 0), after[cell]))
         merged[rel] = row
-    if blocked and not args.force:
+    write_reference(args.reference, merged, args.paths or list(DEFAULT_PATHS))
+    print(f"wrote {len(merged)} file(s) to {args.reference} "
+          f"({changed} cell(s) changed)")
+    if blocked:
         for rel, cell, before, after in blocked:
             print(f"refused: {rel} {cell} {before} -> {after} - rerun with "
                   "--force to move a cell upward")
         return 1
-    write_reference(args.reference, merged, args.paths or list(DEFAULT_PATHS))
-    print(f"wrote {len(merged)} file(s) to {args.reference} "
-          f"({changed} cell(s) changed)")
     return 0
 
 

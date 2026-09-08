@@ -1,8 +1,9 @@
-"""`UX-744`: `dev_round_register.py`'s pure functions, over fixtures -
-not the live repository, so a guard here does not depend on which
-commits happen to exist when the suite runs, and mutation testing does
-not need a real commit to land first.
+"""`UX-744`/`UX-782`: `dev_round_register.py`'s pure functions, over
+fixtures - not the live repository, so a guard here does not depend on
+which commits happen to exist when the suite runs, and mutation
+testing does not need a real commit to land first.
 """
+import os
 import pathlib
 import subprocess
 import sys
@@ -14,44 +15,43 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[2]))
 from tools import dev_round_register as reg
 
 
-class TestCommitSignalReadsTheSubjectOnly:
-    """A body mentioning an old round in passing must not count - this
-    task's own commits mention several by number."""
+class TestDocumentedRoundsReadsFilenames:
+    """`UX-782`: one half of the committed union - a numeric
+    `round-N.md`, never `round-register.md` itself."""
 
-    def test_a_body_mentioning_an_old_round_does_not_count(self):
-        commits = [("2026-01-01", "UX-744: the round register\n\n"
-                                   "notes about round 90 in the body")]
-        assert reg.commit_signal(commits) == {}
+    def test_a_numeric_document_is_named(self, tmp_path):
+        (tmp_path / "docs" / "audits").mkdir(parents=True)
+        (tmp_path / "docs/audits/round-9.md").write_text("x", encoding="utf-8")
+        assert reg.documented_rounds(tmp_path) == {"9"}
 
-    def test_a_subject_naming_a_round_is_matched_case_insensitively(self):
-        commits = [("2026-01-01", "round 12 closes UX-1"),
-                   ("2026-01-02", "Round 12: the document")]
-        signal = reg.commit_signal(commits)
-        assert set(signal) == {"12"}
-        assert signal["12"]["dates"] == ["2026-01-01", "2026-01-02"]
+    def test_the_register_itself_is_not_a_round(self, tmp_path):
+        (tmp_path / "docs" / "audits").mkdir(parents=True)
+        (tmp_path / "docs/audits/round-register.md").write_text(
+            "x", encoding="utf-8")
+        assert reg.documented_rounds(tmp_path) == set()
 
 
 class TestRoundsJoinsTwoSources:
-    """A commit and the ledger each contribute a round the other does
-    not know about, so removing either's contribution is visible here.
-    No ids column: a verifier found `commit_signal()` cannot tell a
-    commit that documents a round from one that is in it (round 101,
-    contaminated by `UX-757`'s retroactive documentation commit)."""
+    """A document and the ledger each contribute a round the other
+    does not know about, so removing either's contribution is visible
+    here. Never `git log` (`UX-782`): reachability is a property of
+    the clone, and the union is fixture-driven so a fixture never
+    touches disk or git either."""
 
-    def test_a_ledger_only_round_appears_with_a_dashed_date(self):
-        result = reg.rounds(commits=[], ledger_runs=[{"round": "5"}])
-        assert result == {"5": {"date": "—"}}
+    def test_a_ledger_only_round_has_no_dateline_to_read(self):
+        result = reg.rounds(documented=set(), ledger_runs=[{"round": "5"}],
+                            dates=lambda n: None)
+        assert result == {"5": {"date": ""}}
 
-    def test_a_commit_only_round_appears_with_its_date(self):
-        commits = [("2026-01-01", "round 7 closes UX-1")]
-        result = reg.rounds(commits=commits, ledger_runs=[])
+    def test_a_document_only_round_reads_its_own_dateline(self):
+        result = reg.rounds(documented={"7"}, ledger_runs=[],
+                            dates=lambda n: "2026-01-01" if n == "7" else None)
         assert result == {"7": {"date": "2026-01-01"}}
 
-    def test_the_latest_of_several_naming_commits_wins(self):
-        commits = [("2026-01-01", "round 7 opens"),
-                   ("2026-01-03", "round 7 closes")]
-        result = reg.rounds(commits=commits, ledger_runs=[])
-        assert result["7"]["date"] == "2026-01-03"
+    def test_a_round_in_both_is_named_once(self):
+        result = reg.rounds(documented={"7"}, ledger_runs=[{"round": "7"}],
+                            dates=lambda n: "2026-01-01")
+        assert set(result) == {"7"}
 
 
 class TestDocumentDate:
@@ -120,6 +120,63 @@ class TestRenderAndCheckRoundTrip:
             lambda: {"3": {"date": "d"}, "4": {"date": "e"}})
         path.write_text(reg.render(reg.written_rounds()), encoding="utf-8")
         assert reg.check() == []
+
+
+class TestFirstCommitDateReadsTheFilesOwnHistory:
+    """`UX-782`'s replacement for the tautological register-vs-document
+    comparison: an independent source, over the file's own path -
+    never a subject match, so a commit mentioning the round in prose
+    elsewhere cannot move it (the defect `commit_signal()` had)."""
+
+    @staticmethod
+    def _repo_with_a_document(root):
+        subprocess.run(["git", "init", "-q", str(root)], check=True)
+        env = ["-c", "user.email=t@t", "-c", "user.name=t"]
+        (root / "docs" / "audits").mkdir(parents=True)
+        (root / "docs/audits/round-9.md").write_text(
+            "Run on 2026-02-01.\n", encoding="utf-8")
+        subprocess.run(["git", "-C", str(root), *env, "add", "-A"],
+                       check=True)
+        commit_env = dict(os.environ, GIT_AUTHOR_DATE="2026-02-01T00:00:00",
+                          GIT_COMMITTER_DATE="2026-02-01T00:00:00")
+        subprocess.run(["git", "-C", str(root), *env, "commit", "-q", "-m",
+                        "round 9: opens"], check=True, env=commit_env)
+        return root
+
+    def test_the_add_commits_date_is_returned(self, tmp_path):
+        root = self._repo_with_a_document(tmp_path / "r")
+        assert reg.first_commit_date("9", repo=root) == "2026-02-01"
+
+    def test_a_later_prose_mention_does_not_move_it(self, tmp_path):
+        """`commit_signal()`'s defect, gone: a later commit naming the
+        round in its subject touches a different file and must not
+        change what `first_commit_date()` reads for round 9."""
+        root = self._repo_with_a_document(tmp_path / "r")
+        env = ["-c", "user.email=t@t", "-c", "user.name=t"]
+        (root / "other.txt").write_text("x", encoding="utf-8")
+        subprocess.run(["git", "-C", str(root), *env, "add", "-A"],
+                       check=True)
+        subprocess.run(["git", "-C", str(root), *env, "commit", "-q", "-m",
+                        "round 9: mentioned again, elsewhere"], check=True)
+        assert reg.first_commit_date("9", repo=root) == "2026-02-01"
+
+    def test_an_unadded_round_is_none(self, tmp_path):
+        root = self._repo_with_a_document(tmp_path / "r")
+        assert reg.first_commit_date("404", repo=root) is None
+
+
+class TestShallowDepthReadsTheMarker:
+    """`UX-782`: the number a shallow-clone skip names, read from the
+    same marker `is_shallow()` reads - no second `git` call."""
+
+    def test_no_marker_is_zero(self, tmp_path):
+        (tmp_path / ".git").mkdir()
+        assert reg.shallow_depth(tmp_path) == 0
+
+    def test_the_markers_own_entries_are_counted(self, tmp_path):
+        (tmp_path / ".git").mkdir()
+        (tmp_path / ".git/shallow").write_text("a\nb\n", encoding="utf-8")
+        assert reg.shallow_depth(tmp_path) == 2
 
 
 class TestAShallowCloneIsRefused:

@@ -143,6 +143,8 @@ pairing for every merged row from round 103 on.
 | 110 | verifier | sonnet | verify `UX-789` | 39k | 38 | 16.9 m | one hold, fixed before merge | — |
 | 110 | implementer | sonnet | `UX-775` the last two bst files build in their own home (judgement) | 267k | 134 | 37.3 m | merged e9e4c92d; guard placed in an existing file, fallocate step substituted | the brief named a guard file that did not exist; a new test file reddens the cost figure |
 | 110 | verifier | sonnet | verify `UX-775` | 42k | 37 | 5.5 m | one hold: the Outcome omitted the substitution; fixed before merge | — |
+| 110 | implementer | sonnet | `UX-780` a map row cites what shipped, or says open (judgement) | 241k | 134 | 38.3 m | merged 23cada55; one hold, slash-group ids read in a second commit | the regex was tried on the bare token, not the map's own slash form five lines away |
+| 110 | verifier | sonnet | verify `UX-780` | 40k | 26 | 5.6 m | one hold: slash-group ids skipped; fixed before merge | — |
 
 Round 101's four tracks are **not** here: this session could not
 identify their transcripts with certainty after a context rebuild, and
@@ -155,7 +157,7 @@ committed cleanly once told to run in the foreground. Three of the five
 left a derived figure or a §6 context-map row behind - the same class
 the round itself was about, arriving in the tracks' own work.
 
-What the one hundred and twenty-six rows already say: a researcher that reads a document
+What the one hundred and twenty-eight rows already say: a researcher that reads a document
 whole costs 100-180k; a walker that drives every control costs 336k;
 the two cuts cost a re-run each. The `walk` and `design-review`
 skills fix the report shape so the next rows are smaller, and the

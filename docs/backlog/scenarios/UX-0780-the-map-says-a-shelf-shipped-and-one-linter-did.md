@@ -1,6 +1,6 @@
 # UX-780: the map says a shelf shipped, and one linter did
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-746 (which built this table and checked triggers, not contents) | **Serves:** the round pricing whether the analysis shelf exists before deciding to build it | **Topic:** docs | **Area:** unassigned | **Shape:** judgement
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-746 (which built this table and checked triggers, not contents) | **Serves:** the round pricing whether the analysis shelf exists before deciding to build it | **Topic:** docs | **Area:** unassigned | **Shape:** judgement
 
 ## Motivation
 
@@ -107,3 +107,5 @@ checkout` — the fix itself was uncommitted in the same file. The
 `UX-607` headroom is now the tight resource here: the guide sits at
 55,296 B, exactly the 1,024 B floor under the ~50 KB figure's 56,320 B
 boundary, so the next row edited here has none to spend.
+
+**Deviation.** One verifier hold: the citation regex read only the first id of a slash group (`UX-698/699/787`), so an open id inside a group passed; fixed in a second commit (23cada55) with the `/689` mutation red. The guide sits 1,024 B under `UX-607`'s bucket boundary, noted in the Outcome. The file derives judgement; the brief ran it as bounded.

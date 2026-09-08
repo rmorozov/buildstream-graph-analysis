@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-793 scenarios: **16 open**, 777 closed.
+793 scenarios: **15 open**, 778 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -26,7 +26,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | viewer | 2 | 163 |
 | cli | 0 | 22 |
 | store | 0 | 16 |
-| docs | 4 | 132 |
+| docs | 3 | 132 |
 | guards | 4 | 209 |
 
 ## Open scenarios
@@ -49,7 +49,6 @@ task file, which is the only place it ever lived twice.
 | UX-695 | [the refactor stream takes the ledger's top row — renderers first](UX-0695-the-refactor-stream-takes-the-ledger-s-top-row-renderers-first.md) | docs | Medium | the session that opens a round and has no refactor to pick because none is filed | 🔴 |
 | UX-741 | [the spine's ground truth reads wall clock, and a loaded host reds it](UX-0741-the-spine-s-ground-truth-reads-wall-clock-and-a-loaded-host-reds-it.md) | guards | Medium | R8 reading a red gate on a file nobody touched | 🔴 |
 | UX-774 | [the guide is at its band ceiling, and every round pays a trim](UX-0774-the-guide-is-at-its-band-ceiling-and-every-round-pays-a-trim.md) | docs | Medium | the round that adds a tool and finds an unrelated paragraph is what it has to delete | 🔴 |
-| UX-780 | [the map says a shelf shipped, and one linter did](UX-0780-the-map-says-a-shelf-shipped-and-one-linter-did.md) | docs | Medium | the round pricing whether the analysis shelf exists before deciding to build it | 🔴 |
 | UX-782 | [the register derives its rounds from `git log`, which is a property of the clone](UX-0782-the-register-derives-its-rounds-from-git-log.md) | guards | Medium | the round whose register disagrees with itself on a second machine | 🔴 |
 | UX-796 | [the host sampler claims more busy cores than the host has, under load](UX-0796-the-host-sampler-claims-more-busy-cores-than-the-host-has-under-load.md) | guards | Medium | the gate that reds on a host reading nothing in the diff touched | 🔴 |
 

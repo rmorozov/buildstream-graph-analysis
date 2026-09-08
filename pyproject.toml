@@ -37,6 +37,9 @@ dev = [
     "pytest>=7.0",
     "pytest-cov>=4.0",
     "ruff==0.15.8",
+    # UX-697: the type ratchet reads pyright; pinned like ruff, so the
+    # baseline's identities do not move with a release.
+    "pyright==1.1.408",
     # tools/bst_extract_run.py --strict mode's project.conf reader
     # (P4-13). Listed here too (not just under `bst` below) because most
     # of its own unit tests (tests/unit/test_bst_extract_run_strict.py)
@@ -187,6 +190,15 @@ ignore = ["SIM115"]
 # tools/ prints by design; tests/ may build a dict or a list by hand.
 "tools/**" = ["T201"]
 "tests/**" = ["C408"]
+
+[tool.pyright]
+# UX-697: basic mode over the two packages the baseline reads; the gate
+# is `dev_baseline.py --check`, never a bare pyright run. `strict` lists
+# the contract surfaces once they read zero.
+include = ["bga", "tools"]
+typeCheckingMode = "basic"
+pythonVersion = "3.9"
+strict = []
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

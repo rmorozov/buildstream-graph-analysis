@@ -239,6 +239,36 @@ class TestTheGitDiffShrinkGuard:
         assert check.returncode == 0, check.stdout
 
 
+class TestUnknownKeyIsRefused:
+    def test_a_forced_by_key_reds_and_names_itself(self, tmp_path):
+        """`UX-789`: `"forced_by"` was hand-written, never `--force`'s
+        own vocabulary - `load_forced` never read it back."""
+        module = tmp_path / "pkg" / "m.py"
+        baseline = tmp_path / "baseline.json"
+        _write(module, VIOLATION)
+        assert _run(tmp_path, baseline, "--write").returncode == 0
+        document = json.loads(baseline.read_text(encoding="utf-8"))
+        document["forced_by"] = "UX-712"
+        baseline.write_text(json.dumps(document), encoding="utf-8")
+        check = _run(tmp_path, baseline, "--check")
+        assert check.returncode == 2, check.stdout
+        assert "forced_by" in check.stdout
+
+    def test_a_stray_key_on_a_finding_reds_and_names_itself(self, tmp_path):
+        """The same refusal one level down: a finding, not the document,
+        carrying a key `identity`/`describe` never read."""
+        module = tmp_path / "pkg" / "m.py"
+        baseline = tmp_path / "baseline.json"
+        _write(module, VIOLATION)
+        assert _run(tmp_path, baseline, "--write").returncode == 0
+        document = json.loads(baseline.read_text(encoding="utf-8"))
+        document["findings"][0]["line_no"] = 5
+        baseline.write_text(json.dumps(document), encoding="utf-8")
+        check = _run(tmp_path, baseline, "--check")
+        assert check.returncode == 2, check.stdout
+        assert "line_no" in check.stdout
+
+
 class TestUnparsableFileIsAnError:
     def test_invalid_syntax_exits_2_and_writes_nothing(self, tmp_path):
         module = tmp_path / "pkg" / "m.py"

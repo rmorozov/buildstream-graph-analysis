@@ -47,4 +47,52 @@ Mutation: one sleeper's recorded `cpu_us` raised past `IDLE_CPU_US`
 
 ## Outcome
 
-_Not started._
+**Route taken:** both routes, not one. The identical-work claim is
+held on the eight `cpu_us` readings (`max - min < IDLE_CPU_US`, no
+load moves it) **and** on wall clock, now with a tolerance measured
+from a population rather than typed: `WALL_SPREAD_S = 0.13`, 2× the
+observed max, rounded up. The two per-element bounds UX-741 wrote are
+unchanged. Both new clauses name the outlier element.
+
+**The population** (20 bare runs, this 4-core box, organic load
+9.5-14.6, no hogs — box already loaded): `max(durations)-min(durations)`
+per run, seconds:
+
+```text
+0.0146 0.0279 0.0326 0.0204 0.0094 0.0264 0.0229 0.0156 0.0222 0.0334
+0.0131 0.0480 0.0140 0.0200 0.0627 0.0191 0.0157 0.0078 0.0163 0.0207
+```
+
+min 0.0078, max 0.0627, mean 0.0231, p95 0.0480. Rule: `2 × max` =
+0.1254, rounded up to `WALL_SPREAD_S = 0.13`.
+
+**Gap measured** (Motivation, round 110, old code, organic load 6-12,
+no hogs, 20 bare runs): 19 × `2 passed`, 1 × `FAILED`
+(`assert max(durations) - min(durations) < 0.1`).
+
+**Close measured:** 20 bare runs, new code, organic load 6-23 (peaked
+23.38), no hogs: 20 × `2 passed`, 0 failed. File green 5× bare after
+the final restore (load 9.2-13.0): 5 × `2 passed`.
+
+**Mutation table** (each: edited, run, restored from a scratch copy,
+never `git checkout --`):
+
+| mutation | expected | got |
+|---|---|---|
+| one sleeper's `cpu_us` set to `IDLE_CPU_US` exactly | red, naming the element | red: `work-a.bst: 30000us of CPU spreads 30000us from work-b.bst's 0us` |
+| one sleeper's `duration_s` += `WALL_SPREAD_S` + 0.5 | red, naming the element | red: `work-a.bst: 3.646s spreads 0.641s from work-f.bst's 3.005s` |
+
+**What each clause discriminates.** Per-element bounds: a sleep that
+finished early, exceeded the whole build's span, or burned CPU past
+`IDLE_CPU_US`. CPU spread: a sleeper burning CPU below that bound but
+inconsistent with its siblings (boundary case; raising `cpu_us` past
+`IDLE_CPU_US` reds the per-element bound first, not this clause — the
+mutation above isolates it at the boundary). Wall spread: a sleeper
+stalled in wall clock while idle on CPU and inside the per-element
+bounds — the case the coordinator's HOLD named (a 5.0s stall against
+3.0s siblings). **What none can catch:** a sleeper stalled inside
+`WALL_SPREAD_S` (e.g. 3.10s against 3.01s siblings) — identical-ish,
+not identical, and no measured tolerance can tell the two apart.
+
+**Acceptance Test, pasted:** 20 bare runs of the file, organic load
+(peaked 23.38, no hogs needed — box was not quiet): 20 × `2 passed`.

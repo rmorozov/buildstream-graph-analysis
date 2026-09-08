@@ -1838,15 +1838,38 @@ class TestCiSuppliesTheMemoryTheRuleNeeds:
 
     def test_a_branch_reads_its_own_series(self):
         """Two branches sharing a carry would confirm one branch's
-        excursion with another's, which is not agreement about anything."""
+        excursion with another's, which is not agreement about anything.
+
+        `UX-792`: widened from `tier-carry-` alone. `perf-carry-` copied
+        the mechanism (`UX-702`) and not this guard, so the same drop of
+        `github.ref` - or of `always()` on the save step, which loses a
+        red run's finding just as silently - would have gone unread on
+        it. Read every `*-carry-` family the workflow names, not the two
+        it happens to have today.
+        """
         text = self._text()
         # `\S+` would stop inside `${{ github.ref }}`, which is the
         # half that matters - take the rest of the line.
-        keys = re.findall(r"key: (tier-carry-.*)", text)
+        keys = re.findall(r"key: (\S+-carry-.*)", text)
         assert keys, "the carry cache has no key at all"
         for key in keys:
             assert "github.ref" in key, (
                 f"the carry cache key {key!r} does not name the branch")
+        families = sorted({re.match(r"(\S+-carry-)", key).group(1) for key in keys})
+        assert set(families) >= {"tier-carry-", "perf-carry-"}, (
+            f"expected at least the tier-carry- and perf-carry- families, "
+            f"found {families} - a family the workflow no longer names")
+        for family in families:
+            saves = [block for block in text.split("      - ")
+                     if "cache/save" in block and family in block]
+            assert saves, f"{family!r}: no cache/save step carries this key"
+            for block in saves:
+                gate = [line for line in block.splitlines()
+                        if line.startswith("        if:")]
+                assert gate and "always()" in gate[0], (
+                    f"{family!r}'s save step does not run under always(), "
+                    f"so a red run's carry - the one worth remembering - "
+                    f"is never saved")
 
 class TestTheRecordStepDoesNotBuryTheFailure:
     """`UX-441`. `UX-427`'s step prints this run's timings so the

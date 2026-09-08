@@ -1,6 +1,6 @@
 # UX-758: the edge-mark test reads a merged name and never matches
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-674 (the flow layout), UX-753 (the guard that found it) | **Serves:** the reader of an exhibit axis whose labels silently stop being protected | **Topic:** viewer | **Area:** unassigned | **Shape:** judgement
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-674 (the flow layout), UX-753 (the guard that found it) | **Serves:** the reader of an exhibit axis whose labels silently stop being protected | **Topic:** viewer | **Area:** unassigned | **Shape:** judgement
 
 ## Motivation
 
@@ -104,3 +104,5 @@ this mutation: its own interior count stays correct off the guard's
 `_is_edge`, and the merged-edge axes never reach ≥2 interior ticks to
 trigger its clause — the exclusion it lost was redundant once the
 classification is fixed, not load-bearing.
+
+**Deviation.** An `implementer` on `sonnet`, read by a `verifier` on the real page: golden's absorbed axis byte-identical before and after, three distribution axes gain `data-layout="flow"`, and the clause the track's mutation left green reds under `middle.length >= 1`. No findings.

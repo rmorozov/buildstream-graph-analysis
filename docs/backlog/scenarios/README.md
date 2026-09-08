@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-793 scenarios: **20 open**, 773 closed.
+793 scenarios: **19 open**, 774 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -27,7 +27,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | cli | 0 | 22 |
 | store | 0 | 16 |
 | docs | 5 | 132 |
-| guards | 7 | 209 |
+| guards | 6 | 209 |
 
 ## Open scenarios
 
@@ -54,7 +54,6 @@ task file, which is the only place it ever lived twice.
 | UX-780 | [the map says a shelf shipped, and one linter did](UX-0780-the-map-says-a-shelf-shipped-and-one-linter-did.md) | docs | Medium | the round pricing whether the analysis shelf exists before deciding to build it | 🔴 |
 | UX-782 | [the register derives its rounds from `git log`, which is a property of the clone](UX-0782-the-register-derives-its-rounds-from-git-log.md) | guards | Medium | the round whose register disagrees with itself on a second machine | 🔴 |
 | UX-789 | [a baseline entry carries a key the tool never reads](UX-0789-a-baseline-entry-carries-a-key-the-tool-never-reads.md) | guards | Low | the `--check` output that promises to name every forced batch forever | 🔴 |
-| UX-795 | [the focus guard measures after a fixed sleep, and one runner was slower](UX-0795-the-focus-guard-measures-after-a-fixed-sleep-and-one-runner-was-slower.md) | guards | Medium | the branch that goes red on one of four matrix runners for a page it never touched | 🔴 |
 | UX-796 | [the host sampler claims more busy cores than the host has, under load](UX-0796-the-host-sampler-claims-more-busy-cores-than-the-host-has-under-load.md) | guards | Medium | the gate that reds on a host reading nothing in the diff touched | 🔴 |
 
 **The narrative round headings below are retired at round 94**

@@ -135,6 +135,8 @@ pairing for every merged row from round 103 on.
 | 110 | verifier | sonnet | verify UX-779 | 46k | 42 | 7.5 m | HOLD then merged: the 21s clock was the task's second, not tiers.py's; make test-* exempt from the guard; a wrapped comment escaped; the anchor unchecked - all four fixed | assembling the evidence against the track's citation took three files the Outcome's one line did not point at |
 | 110 | implementer | sonnet | UX-764, the register caps guarded or stated | 265k | 114 | 52.2 m | merged after a HOLD and a fix: the guard's convention substring short-circuited and any existing file passed; fixed with unconditional path checks, a whole-word match and a reads-the-register requirement | a compound cp && git diff && pytest line was refused by the shell guard, dropping the restore silently; stalled once on a background wait |
 | 110 | verifier | sonnet | verify UX-764 | 73k | 71 | 14.9 m | HOLD then merged: a bogus path with the word unconventional passed; test_cache_logs.py passed as a guard; the register's commit-body count is 5 by the tool, not wc's 9 | the permission classifier refused editing a closed record and committing on the shared branch, forcing in-memory substitutes |
+| 110 | implementer | sonnet | UX-795, the focus guard's settle | 385k | 139 | 59.3 m | merged after its verifier; settleReading on rAF with a 2 s bound that names itself, a delayed-reflow guard that reds the fixed sleep, then every mid-flow read routed the same way on the verifier's scope point; six runs green, three under load | a step-change reflow false-settled instantly and a CSS transition coincided with the settle's first frames; only a hand-stepped rAF reflow exercised the settle |
+| 110 | verifier | sonnet | verify UX-795 | 69k | 60 | 14.4 m | MERGE with one scope point: three runs green under 4-way load, the bound at 2010.9 ms with its note, smooth scroll ridden out over 91 frames, the shim census reds on createElement; four mid-flow sleeps remained, fixed | the table's second row said class-only in a parenthesis a full-file run missed |
 
 Round 101's four tracks are **not** here: this session could not
 identify their transcripts with certainty after a context rebuild, and
@@ -147,7 +149,7 @@ committed cleanly once told to run in the foreground. Three of the five
 left a derived figure or a §6 context-map row behind - the same class
 the round itself was about, arriving in the tracks' own work.
 
-What the one hundred and eighteen rows already say: a researcher that reads a document
+What the one hundred and twenty rows already say: a researcher that reads a document
 whole costs 100-180k; a walker that drives every control costs 336k;
 the two cuts cost a re-run each. The `walk` and `design-review`
 skills fix the report shape so the next rows are smaller, and the

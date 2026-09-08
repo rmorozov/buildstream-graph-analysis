@@ -1,6 +1,6 @@
 # UX-795: the focus guard measures after a fixed sleep, and one runner was slower
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-638 (the guard), UX-691 (the flake ledger this should reach) | **Found by:** round 109, on PR #215's head 8b4012ee | **Serves:** the branch that goes red on one of four matrix runners for a page it never touched | **Topic:** guards | **Area:** bga-viewer | **Shape:** bounded
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-638 (the guard), UX-691 (the flake ledger this should reach) | **Found by:** round 109, on PR #215's head 8b4012ee | **Serves:** the branch that goes red on one of four matrix runners for a page it never touched | **Topic:** guards | **Area:** bga-viewer | **Shape:** bounded
 
 ## Motivation
 
@@ -95,3 +95,5 @@ tripped `test_the_dom_shim_is_one_instrument.py`'s textual census
 (reads any file naming `createElement` as a second hand-built DOM
 shim); switched to `insertAdjacentHTML`, the pattern `tests/pages.py`
 already documents for this exact false positive.
+
+**Deviation.** An `implementer` on `sonnet`, read by a `verifier` that ran the guard under a 4-way CPU load and timed the bound at 2010.9 ms; its one scope point — four mid-flow reads still on a fixed 60 ms — was closed in a second commit before the merge, six runs green loaded and unloaded. The two httpd start-up sleeps stay: they wait for a server, not a layout.

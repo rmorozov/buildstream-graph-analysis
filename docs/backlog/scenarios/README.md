@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-803 scenarios: **5 open**, 798 closed.
+803 scenarios: **4 open**, 799 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -26,7 +26,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | viewer | 0 | 164 |
 | cli | 0 | 22 |
 | store | 0 | 16 |
-| docs | 2 | 135 |
+| docs | 1 | 135 |
 | guards | 0 | 214 |
 
 ## Open scenarios
@@ -40,7 +40,6 @@ task file, which is the only place it ever lived twice.
 | UX-679 | [a jobserver every sandbox joins — the prototype bga can run](UX-0679-a-jobserver-every-sandbox-joins-the-prototype-bga-can-run.md) | capture | Medium | R4 and R5 — dynamic sharing instead of static tuning | 🔴 |
 | UX-680 | [remote execution is priced, not built](UX-0680-remote-execution-is-priced-not-built.md) | analysis | Medium | R4 and R8 deciding whether to buy it | 🔴 |
 | UX-689 | [the architecture document moves into the area pages, one track at a time](UX-0689-the-architecture-document-moves-into-the-area-pages-one-track-at-a-tim.md) | docs | Medium | the reader pricing a change; the session restructuring without losing a sentence | 🟡 |
-| UX-806 | [the Plane 2 chapter moves into the native-trace area page](UX-0806-the-plane-2-chapter-moves-into-the-native-trace-area-page.md) | docs | Medium | the reader pricing a change to the tracer; the session restructuring without losing a sentence | 🔴 |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

@@ -1,6 +1,6 @@
 # UX-806: the Plane 2 chapter moves into the native-trace area page
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-689 (the rule and the first area), UX-688 (the generated pages) | **Found by:** round 111, `UX-689`'s first track | **Serves:** the reader pricing a change to the tracer; the session restructuring without losing a sentence | **Topic:** docs | **Area:** tools-native_trace | **Shape:** mechanical
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-689 (the rule and the first area), UX-688 (the generated pages) | **Found by:** round 111, `UX-689`'s first track | **Serves:** the reader pricing a change to the tracer; the session restructuring without losing a sentence | **Topic:** docs | **Area:** tools-native_trace | **Shape:** mechanical
 
 ## Motivation
 
@@ -94,3 +94,7 @@ No new guard was added by this item (the existing
 covered the population, from outside the moved chapter), so there is
 no guard to mutate — only the scratch-copy diff the Acceptance Test
 asks for.
+
+**Deviation.** None: the guard over the four `tools/native_trace/`
+members reads the whole document, so no bullet stayed behind. One
+commit, one verifier (PASS).

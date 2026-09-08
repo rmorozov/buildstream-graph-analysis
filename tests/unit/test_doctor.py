@@ -173,8 +173,10 @@ class TestTwoProblemsWearingOneErrorGetDifferentRemedies:
 
     def _remedy(self, project, installed, monkeypatch):
         import tools.bga_doctor as doctor
+        from tests.unit._bst_env import bst_env  # UX-801: `bst show` writes the CAS
         monkeypatch.setattr(doctor, "_plugins_package_installed", lambda: installed)
-        [finding] = doctor.check_project_loads(str(project))
+        with bst_env(project.parent / "home"):
+            [finding] = doctor.check_project_loads(str(project))
         assert finding["status"] == FAIL, finding
         return finding["remedy"]
 
@@ -356,7 +358,9 @@ class TestTheLoadProbeUsesTheProjectsOwnElements:
         os.rename(project / "elements" / "all.bst",
                   project / "elements" / "everything.bst")
 
-        [finding] = check_project_loads(str(project))
+        from tests.unit._bst_env import bst_env  # UX-801: `bst show` writes the CAS
+        with bst_env(tmp_path / "home"):
+            [finding] = check_project_loads(str(project))
 
         assert finding["status"] == OK, finding
         assert "all.bst" not in finding["summary"]
@@ -380,7 +384,9 @@ class TestTheLoadProbeUsesTheProjectsOwnElements:
         (project / "elements" / "zzz-fine.bst").write_text(
             "kind: import\nsources:\n- kind: local\n  path: files\n")
 
-        [finding] = check_project_loads(str(project))
+        from tests.unit._bst_env import bst_env  # UX-801: `bst show` writes the CAS
+        with bst_env(tmp_path / "home"):
+            [finding] = check_project_loads(str(project))
 
         assert finding["status"] == OK, finding
         assert "zzz-fine.bst" in finding["summary"]

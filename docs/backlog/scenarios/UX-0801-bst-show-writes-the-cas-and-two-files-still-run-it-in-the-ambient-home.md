@@ -63,11 +63,13 @@ the fix is untested.
 
 Close measured (fixed, `HOME` at an empty dir, `XDG_CONFIG_HOME`
 unset, `PYTHONPATH` carrying the preserved user site):
-```
+
+```text
 tests/unit/test_bst_show_to_graph.py ......................  [ 66%]
 tests/unit/test_element_kind_heuristics.py ...........        [100%]
 33 passed in 3.76s
 ```
+
 Both files now wrap every `extract_graph` call in
 `_bst_env.bst_env(tmp_path / "home")`. `_NOT_CAS_WRITING` became a
 dict of filename -> the command it runs, and a new guard,
@@ -83,3 +85,30 @@ Mutation table:
 
 Reverted from the saved pre-mutation copy (never `git checkout --`);
 green after: `2 passed, 14 deselected`.
+
+Verifier follow-up: `test_doctor.py`'s `TestTheLoadProbeUsesTheProjectsOwnElements`
+and `TestTwoProblemsWearingOneErrorGetDifferentRemedies` also called
+`check_project_loads` (`bst show --deps none`, `tools/bga_doctor.py:477`)
+in the ambient `HOME`. Proof: `~/.cache/buildstream/cas` gained 0 new
+files (`find ... -newer <marker>`) after the four real-bst tests ran,
+both before and after wrapping - before, because this box's disk state
+didn't force a write either; after, because `bst_env` now redirects
+`HOME`. All four wrapped in `_bst_env.bst_env`; `test_doctor.py` moved
+out of `_NOT_CAS_WRITING` entirely (`check_capture_chain`'s own `bst
+build` stays un-isolated, gated separately on a staged runtime this box
+lacks - the guard's textual scan does not reach it, a stated gap, not a
+silent one).
+
+`_cas_writing_subcommand` now also matches a `bst` name bound from
+`which("bst")`/`shutil.which("bst")` in the same file (not just the
+literal `"bst"` token), and `check_project_loads(` joined
+`extract_graph(` in `_KNOWN_CAS_WRITING_CALLS`. Still unseen: a
+subcommand built at runtime (an f-string or a list computed from a
+variable), rather than a literal `"show"`/`"build"`/`"artifact"` token.
+
+| mutation | reddened | count |
+|---|---|---|
+| synthetic file with `bst = shutil.which("bst"); ...[bst, "show", ...]`, added to `_NOT_CAS_WRITING` | `test_no_excluded_file_actually_writes_the_cas` (`{'..._check.py': 'show'}`) | 1 failed |
+| `test_doctor.py` returned to `_NOT_CAS_WRITING` | both guards (`check_project_loads(` -> `'show'`; population 16 -> 15) | 2 failed |
+
+Both reverted from saved copies; green after: `2 passed, 14 deselected`.

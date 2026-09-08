@@ -897,6 +897,30 @@ def test_the_readme_stays_inside_its_measured_line_budget():
             "carries no annotation restating the number and the reason")
 
 
+#: A bare duration - `5m11s`, `21s`, `5 min` - the shape `UX-236` gave
+#: the whole-suite figure `UX-551` later found was not reproducible:
+#: 333s and 418s on the same commit, an hour apart.
+_WALL_CLOCK = re.compile(r"\b\d+\s*(?:m\d+s|min(?:ute)?s?|s)\b", re.I)
+
+
+def test_no_readme_line_states_a_suite_wall_clock_beside_make_test():
+    """UX-779: the README's `make test` line is not `make test-small`
+    or another tier (`(?!-)` excludes those; their figure comes from
+    `tests/tiers.py` and is `UX-503`'s, not `UX-551`'s falsification) -
+    it is the whole suite, whose wall clock moves more than 2x with the
+    machine, so no bare second-count belongs beside it."""
+    readme = (REPO / "README.md").read_text(encoding="utf-8")
+    offenders = [
+        f"{number}: {line.strip()}"
+        for number, line in enumerate(readme.splitlines(), 1)
+        if re.search(r"\bmake test\b(?!-)", line) and _WALL_CLOCK.search(line)
+    ]
+    assert offenders == [], (
+        "README states a suite wall clock beside `make test`, which "
+        "UX-551 found is not reproducible across machines:\n  "
+        + "\n  ".join(offenders))
+
+
 def test_the_keying_claim_carries_the_provenance_it_was_accepted_with():
     """UX-174's acceptance asked for provenance on the `directory:`
     claim, measured preferred; UX-180 item 5 found none. The note names

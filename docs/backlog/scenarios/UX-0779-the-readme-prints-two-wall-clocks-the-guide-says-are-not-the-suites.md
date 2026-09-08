@@ -65,4 +65,52 @@ second-count with no date and no machine beside it — the same shape
 
 ## Outcome
 
-_Not started._
+**Gap measured** (before the fix, this session):
+
+```console
+$ sed -n '295,296p' README.md
+make test-small           # the tier to run while you work: 21s, measured
+make test                 # the whole suite: 5m11s, measured
+```
+
+**Shape chosen:** a link, not a restated range. `UX-236`'s reader wants
+"roughly what they are in for"; the fixing guide's table already
+carries dated, load-annotated readings and is the one place that
+range gets kept current (`UX-584`'s re-measure moved it without a
+second edit here). Restating a range in the README would be a second
+copy of the same fact the guide already owns, and would drift the way
+the two counts `UX-236` itself fixed did. `make test-small`'s figure
+is untouched — it is `tests/tiers.py`'s, guarded by `UX-503`, and
+`UX-551` never falsified it.
+
+**Close measured** (after the fix):
+
+```console
+$ sed -n '295,297p' README.md
+make test-small           # the tier to run while you work: 21s, measured
+make test                 # the whole suite - wall clock is a property of the machine, below
+make lint                 # ruff + markdown (`make dev-run` prints a real report)
+```
+
+Below the fence, a paragraph replaces the old bare `5m11s`: `make
+test`'s wall clock is not a number this file pins (`UX-551` retired
+the fixed figure `UX-236` chose), it moves more than 2x between runs on
+the same commit, so budget against the fixing guide's measured range —
+linked at `docs/contributing/fixing-guide.md`, anchor
+`3-definition-of-done--mandatory-verification` — rather than a reading
+dated to one afternoon.
+
+```console
+$ python3 -m pytest tests/unit/test_docs_links_and_commands.py -q
+57 passed in 19.04s
+```
+
+`UX-236` (`docs/backlog/scenarios/UX-0236-the-front-door-is-a-round-behind.md`)
+is annotated in the same commit, naming what superseded its "reader is
+deciding on" explanation.
+
+**Mutation table:**
+
+| mutation | what it reddened | count |
+|---|---|---|
+| restored `make test                 # the whole suite: 5m11s, measured` | `test_no_readme_line_states_a_suite_wall_clock_beside_make_test` | 1 failed, 56 deselected (from `-k wall_clock`); reverted to 1 passed, 56 deselected |

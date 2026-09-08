@@ -1,6 +1,6 @@
 # UX-695: the refactor stream takes the ledger's top row — renderers first
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-694 (the ledger) | **Serves:** the session that opens a round and has no refactor to pick because none is filed | **Topic:** docs | **Area:** unassigned | **Shape:** judgement
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-694 (the ledger) | **Serves:** the session that opens a round and has no refactor to pick because none is filed | **Topic:** docs | **Area:** unassigned | **Shape:** judgement
 
 ## Motivation
 
@@ -81,42 +81,26 @@ not the emitted order"; reverted from a scratchpad copy, re-ran green
 `build_document` rows the split obsoleted (`tests/quality_baseline.json`:
 ruff `C901`, `PLR0912`, `PLR0915`, all on `def build_document(...)`);
 `--check` and `make lint` both clean.
-**2026-09-08, `create_parser` split (track 3 of 3).** `create_parser`
+**2026-09-08, `create_parser` split (track 3 of 3):** `create_parser`
 in `bga/cli.py` reduced to the top-level parser plus a walk over
-`_SUBCOMMAND_BUILDERS`, one `_add_<name>_subcommand(subparsers)`
-function per subcommand (13: analyze, graph, floors, replay, sweep,
-utilisation, diagnostics, correlate, blast, whatif, cache-trend,
-compare, bundle).
+`_SUBCOMMAND_BUILDERS`, one `_add_<name>_subcommand(subparsers)` per
+subcommand (13). Ledger row `bga/cli.py`: `{"file_lines": 2401,
+"longest_function": 417}` → `{"file_lines": 2449, "longest_function":
+214}` (`--adopt --force`, 1 row; 214 is the pre-existing
+`_compare_exit_code`). Every subcommand's `--help` plus the top-level
+captured before and after: `diff -rq before/ after/` empty. Stale
+forced PLR0915 on `create_parser` retired by `dev_baseline.py --shrink`;
+`make lint` clean. Guard `test_the_native_subcommand_order_matches_the_cli`
+(`test_the_command_table_is_the_cli.py`). Mutation: dropped
+`_add_compare_subcommand` from `_SUBCOMMAND_BUILDERS` → 9 tests red
+(`invalid choice: 'compare'` in `test_compare.py`, and the table guard
+`the table names ['compare'], which bga does not have`); reverted from a
+copy, 41 passed. `make test-touching`: 147 files, 3322 passed, 72 skipped.
 
-Ledger row (`tests/quality_reference.json`, `bga/cli.py`), before ->
-after: `{"duplicate_blocks": 0, "file_lines": 2401,
-"longest_function": 417}` -> `{"duplicate_blocks": 0, "file_lines":
-2449, "longest_function": 214}`. `longest_function` shrank
-417 -> 214 (`create_parser` itself is now ~15 lines; 214 is a
-pre-existing function, `_compare_exit_code`, unrelated to this split).
-`file_lines` grew 2401 -> 2449 (48 new `def`/blank lines from splitting
-one function into fourteen); `dev_sizes.py --check` reds on that
-growth, so `--adopt --force` moved the row (2 cells changed, only
-`bga/cli.py`'s).
-
-Help diff: every subcommand's `--help` plus the top-level `--help`
-captured to files before and after the split with
-`PYTHONPATH=<worktree> python3 -m bga.cli <cmd> --help`; `diff -rq
-before/ after/` printed nothing (empty).
-
-`make lint` reds on a stale forced-violation: ruff PLR0915 on
-`create_parser`, no longer true once the function shrank.
-`dev_baseline.py --shrink` removed the one stale entry
-(`tests/quality_baseline.json`); `make lint` then clean (exit 0).
-
-Mutation: dropped `_add_compare_subcommand` from
-`_SUBCOMMAND_BUILDERS`. Reddened 9 tests naming `compare`:
-`argument COMMAND: invalid choice: 'compare'` in
-`tests/unit/test_compare.py` (8 tests) and `test_the_command_table_is_
-the_cli.py::test_no_row_names_a_command_that_does_not_exist` (`the
-table names ['compare'], which bga does not have`). Reverted from a
-pre-mutation copy of the file; `test_compare.py` +
-`test_cli_subcommands.py` + `test_the_command_table_is_the_cli.py`
-green again (41 passed).
-
-`make test-touching`: 147 files selected, 3322 passed, 72 skipped.
+**Deviation.** Three tracks, each merged behind a verifier and each held
+once: the text section order unguarded (guard added), stale baseline
+rows after the json split (`--shrink`), the subcommand order unguarded
+(guard added). The Acceptance Test's "under 80" is not met:
+`format_compare_text` (254 lines, untouched) is now `bga/report/text.py`'s
+longest function and the ledger's next top row — the fourth track is the
+next round's pick, not filed separately (the stream is this task's rule).

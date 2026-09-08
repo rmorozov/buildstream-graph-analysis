@@ -178,6 +178,12 @@ pairing for every merged row from round 103 on.
 | 111 | verifier | sonnet | verify `UX-797` | 36k | 29 | 9.2 m | HOLD: the CPU spread implied by the per-element bound, the wall half unguarded; fixed before merge | the redundancy took algebra, not a run, to see |
 | 111 | implementer | sonnet | `UX-804` the diagnostics performance guard counts work, not the clock (bounded) | 202k | 92 | 27.1 m | merged 8e1a0db6; call events after a warm-up, one hold on the cold count fixed | a line trace costs 14 s through the diagnostics pass; call events instead |
 | 111 | verifier | sonnet | verify `UX-804` | 29k | 23 | 5.9 m | HOLD: the count is cold/warm-dependent, the tracer cleared not restored; fixed before merge | one extra in-process rerun falsified the pasted number |
+| 111 | implementer | sonnet | `UX-695` the refactor stream takes the ledger's top row — `format_text` (judgement) | 378k | 140 | 57.2 m | merged 78c0f4e1; `format_text` 570→254 behind `_TEXT_REPORT_SECTIONS`, one hold on the order guard fixed | a guard reading the list it checks is circular; an independent function list was the second source |
+| 111 | verifier | sonnet | verify `UX-695` (`format_text`) | 91k | 77 | 17.9 m | HOLD: the section order unguarded; fixed before merge | a mutation copy kept under /tmp, outside the scratchpad; five concurrent worktree runs |
+| 111 | implementer | sonnet | `UX-695` the refactor stream takes the ledger's top row — `build_document` (judgement) | 145k | 61 | 30 m | merged cbac130e; `build_document` 365→107 behind `_SECTIONS`, one hold on stale baseline rows fixed | the timeout parameter is milliseconds; the golden fixture discriminated a reorder for free |
+| 111 | verifier | sonnet | verify `UX-695` (`build_document`) | 35k | 41 | 9.4 m | HOLD: three stale forced rows in the baseline; shrunk before merge | the installed `bga` script runs the main checkout from any worktree; `python -m bga.cli` inside it |
+| 111 | implementer | sonnet | `UX-695` the refactor stream takes the ledger's top row — `create_parser` (judgement) | 332k | 103 | 51.7 m | merged 9263098a; `create_parser` 417→214 behind `_SUBCOMMAND_BUILDERS`, one hold on the order guard fixed | a container restart after the touching run; the help diff and the run redone |
+| 111 | verifier | sonnet | verify `UX-695` (`create_parser`) | 31k | 31 | 6.9 m | PASS with a finding: the subcommand order unguarded; guard added before merge | byte-identity proves the split kept the order, not that the order is meant to hold |
 
 Round 101's four tracks are **not** here: this session could not
 identify their transcripts with certainty after a context rebuild, and
@@ -190,7 +196,7 @@ committed cleanly once told to run in the foreground. Three of the five
 left a derived figure or a §6 context-map row behind - the same class
 the round itself was about, arriving in the tracks' own work.
 
-What the one hundred and sixty-one rows already say: a researcher that reads a document
+What the one hundred and sixty-seven rows already say: a researcher that reads a document
 whole costs 100-180k; a walker that drives every control costs 336k;
 the two cuts cost a re-run each. The `walk` and `design-review`
 skills fix the report shape so the next rows are smaller, and the

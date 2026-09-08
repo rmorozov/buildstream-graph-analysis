@@ -95,7 +95,8 @@ Rewriting history to match current style would make it false.
 `pyproject.toml` shipped `bga*` and not `tools*`. The aliases and a CI
 job that proves all sixteen run from a clean install were the fix. The
 README then kept telling people to run the module directly — the same
-failure, in the document meant to prevent it. **Enforced by test.**
+failure, in the document meant to prevent it. **Enforced by test**
+(`tests/unit/test_docs_links_and_commands.py`).
 
 ## 4. Every number is a measurement, and says where from
 
@@ -125,7 +126,8 @@ Link to files with repository-relative paths. Do not paste a line number
 or an unanchored "see the section below".
 
 **Why:** the docs tree was reorganised in round 11 and 64 links moved
-with it. **Enforced by test** — a dangling link fails the suite.
+with it. **Enforced by test**
+(`tests/unit/test_docs_links_and_commands.py`) — a dangling link fails the suite.
 
 ## 6. Lead with the answer
 
@@ -184,7 +186,8 @@ commit messages, and have already written in every audit; padding it
 would invalidate all of that to fix a problem the filename already
 solved.
 
-**Enforced by test.**
+**Enforced by test**
+(`tests/unit/test_docs_links_and_commands.py`).
 
 ## 10. A direction or a filing says whose problem it solves
 
@@ -265,7 +268,8 @@ asymmetry rule 2 exists to prevent.
 
 Either way the id is what makes it a decision rather than a shrug. A
 filing that says "documented later" and names no id has parked the idea
-exactly where `§12` says ideas get lost. **Enforced by test** for the
+exactly where `§12` says ideas get lost. **Enforced by test**
+(`tests/unit/test_docs_links_and_commands.py`) for the
 mechanical half.
 
 **Why:** round 28 shipped three mechanisms whose only documentation was

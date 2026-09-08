@@ -302,10 +302,11 @@ changelog. Rounds 2-6 now sit with rounds 7-10, where they always
 belonged.
 
 The rules that keep it this way, and the reason for each, are in
-[`contributing/style-guide.md`](contributing/style-guide.md). Two of
+[`contributing/style-guide.md`](contributing/style-guide.md). Five of
 them are enforced by
 [`tests/unit/test_docs_links_and_commands.py`](../tests/unit/test_docs_links_and_commands.py):
-every relative link must resolve, and no instructional document may tell
+every relative link must resolve, no instructional document may tell
 a reader to run `python3 -m tools.<module>` <!-- docs-style: allow-direct-module -->
-instead of the installed
-`bga` alias.
+instead of the installed `bga` alias, scenario filenames stay
+zero-padded, every `Out of Scope` entry names a task or states a
+decline, and §8's table-cell rule in its own words.

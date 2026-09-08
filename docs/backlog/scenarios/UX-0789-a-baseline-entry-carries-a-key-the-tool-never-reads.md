@@ -84,8 +84,9 @@ forced by UX-744; 2 still forced by UX-762; 1 still forced by UX-781;
 `"forced_by"`) or on a finding (anything but `tool`/`rule`/`file`/
 `line`/`nth`), and `do_check` exits 2 naming it before any diff runs.
 
-### Mutations verified red and reverted (1)
+### Mutations verified red and reverted (2)
 
 | # | mutation | reddened | count |
 |---|---|---|---|
 | M1 | `unknown_keys` body replaced with `return []` | `TestUnknownKeyIsRefused::test_a_forced_by_key_reds_and_names_itself` | 1 failed, 17 passed |
+| M2 | `unknown_keys`' per-entry loop dropped (document-level check only) | `TestUnknownKeyIsRefused::test_a_stray_key_on_a_finding_reds_and_names_itself` | 1 failed, 1 passed (class); 1 failed, 18 passed (file) |

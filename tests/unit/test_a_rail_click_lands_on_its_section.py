@@ -12,8 +12,8 @@ restructuring         -317     critical_path_detail  +673
 ```
 
 Both directions, so it is not an offset anyone could subtract.
-`revealAndLand` opens the chapter and lands again two frames later,
-after the real height is in.
+`revealAndLand` opens the chapter and lands again as later frames
+settle, after the real height is in - three, since `UX-668`.
 
 The six sections at the document's end land where the page runs out of
 scroll, not under the header: that is the page's height, not this
@@ -48,9 +48,9 @@ from browser import NO_BROWSER, Browser, find_chrome
 chrome = find_chrome()
 needs_browser = pytest.mark.skipif(chrome is None, reason=NO_BROWSER)
 
-#: How far below the viewport top a correct landing may sit. The sticky
-#: header is 92 px and `scroll-margin-top` is `--head + .5rem` = 104, so
-#: every landing measured lands at 104-105.
+#: How far below the viewport top a correct landing may sit.
+#: `scroll-margin-top` is `--head + .5rem`, read per-measurement below
+#: rather than pasted here - `UX-668` moved it once already.
 SLACK_PX = 20
 
 #: Every rail link whose target is a published section inside a chapter
@@ -151,17 +151,19 @@ class TestTheEntryPointsLandRatherThanScroll:
         assert "revealChapter" not in app
         assert app.count("revealAndLand") == 3
 
-    def test_the_helper_lands_now_and_again_two_frames_later(self):
+    def test_the_helper_lands_now_and_again_as_frames_settle(self):
         """Both, and the source is where it is asserted: the browser
-        clauses below cannot tell the two landings apart on this
-        fixture, because the rail link's own anchor scroll supplies the
-        first. The jump box has no such scroll, and one frame lands
-        6 of 61 - worse than none - so neither half is spare."""
+        clauses below cannot tell the landings apart on this fixture,
+        because the rail link's own anchor scroll supplies the first.
+        The jump box has no such scroll, and one frame lands 6 of 61 -
+        worse than none - so neither half is spare. `UX-668`: two
+        frames stopped settling `blast` once the header and decision
+        panel moved the estimate one section further out; three does."""
         text = (REPO / "bga" / "viewer" / "chapters.js").read_text()
         body = text[text.index("export function revealAndLand("):]
         body = body[:body.index("\n}\n")]
         assert "\n  land();\n" in body
-        assert "frame(() => frame(land))" in body
+        assert "frame(() => frame(() => frame(land)))" in body
 
     def test_the_landing_is_computed_not_delegated(self):
         """`UX-722`: `scrollIntoView` aligns the nearest scroll
@@ -200,12 +202,12 @@ class TestARailClickLandsUnderTheHeader:
             "cpu_time", "document_shape", "peak_memory", "producer",
             "run_instance", "utilization_envelope"]
 
-    #: `scroll-margin-top` is `--head + .5rem` = 104. Measured tops:
-    #: 104-105 single-process, 103-105 under `-n auto` - the same
-    #: landing, rounded differently under load. A set equality on
-    #: `[104, 105]` was this clause's first form and it went red in the
-    #: suite for that pixel, so the band is +-2 and stated.
-    BAND = (102, 106)
+    #: `scroll-margin-top` is `--head + .5rem`. `UX-668`'s header
+    #: control wraps the identity line to a second row, so `--head` grew
+    #: 6rem -> 7rem and the landing moved 104 -> 119-121. A set equality
+    #: was this clause's first form and it went red in the suite for
+    #: that pixel, so the band is +-2 and stated.
+    BAND = (117, 123)
 
     def test_the_landing_is_the_header_and_not_merely_close(self, landings):
         """A narrow band, not "somewhere near the top" - which is what

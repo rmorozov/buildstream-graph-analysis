@@ -37,7 +37,8 @@ import { renderCulprits, renderElementHistory, renderHorizon,
 import { renderDecision, renderProvenanceRecords, renderInvestigation } from "./decision.js";
 import { anchor, collapsible, toc, scrollspy, stepper, runSelector,
          jumpTargets, matches, paletteResults } from "./nav.js";
-import { chapters, fileInChapter, revealAndLand, setAllOpen } from "./chapters.js";
+import { applyRole, chapters, fileInChapter, revealAndLand,
+         setAllOpen } from "./chapters.js";
 // UX-302: the second of §1's two deliberate raw-JSON sites - the one
 // the reader asks for, per section, because pasting a section into an
 // issue is what people do with a report.
@@ -893,6 +894,12 @@ async function boot() {
     const controls = collapsible(root, {
       document, storage: served() ? safeStorage() : null,
       enclosing: (open) => setAllOpen(root, open) });
+    // `UX-668`: "anyone" wears every section's reader chips, muted -
+    // run once here, over the folds `collapsible` just set, so it
+    // reproduces the landed page (`applyRole(root, null)` already had
+    // to, for the picker's own "back to anyone") and only adds the
+    // chip text nothing has filled in yet.
+    applyRole(root, null);
     const contents = toc(root, { document, controls });
     if (contents) {
       // UX-223: which actions this run can honestly offer. UX-194's

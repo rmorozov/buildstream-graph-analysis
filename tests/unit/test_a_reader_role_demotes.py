@@ -278,11 +278,19 @@ class TestARoleDemotesRatherThanHides:
                                                                   driven,
                                                                   label):
         """`UX-372`'s rule kept: with nobody chosen the page is what it
-        was. Node count, section list, folds and marks all return."""
+        was. Node count, section list, folds and marks all return.
+
+        `UX-668`: "tagged" no longer means "empty" here - the landed
+        page itself wears every declaring section's chip, muted, so a
+        reader sees what each role would promote before choosing one.
+        The clause is that driving through every role and back to
+        "anyone" reproduces that same landed set, not the promoted-only
+        set a chosen role leaves."""
         page = driven[label]
         landed, anyone = page["landed"], page["anyone"]
         assert anyone["promoted"] == [], anyone["promoted"]
-        assert anyone["tagged"] == [], anyone["tagged"]
+        assert anyone["tagged"] == landed["tagged"], (
+            anyone["tagged"], landed["tagged"])
         assert anyone["keys"] == landed["keys"]
         assert anyone["nodes"] == landed["nodes"], (anyone["nodes"],
                                                     landed["nodes"])

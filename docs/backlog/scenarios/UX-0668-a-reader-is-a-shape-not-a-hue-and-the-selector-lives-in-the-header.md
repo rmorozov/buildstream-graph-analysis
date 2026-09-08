@@ -41,3 +41,33 @@ before choosing. Zero new colors.
 Guard: the header contains the reader select on both fixtures;
 `[data-promoted]`'s `border-left-width` ≥ 3 px; every section with a
 `readers` entry renders a chip. Mutation: drop the left rule — red.
+
+## Outcome
+
+**Gap measured** (before, per the Motivation table): `[data-promoted]`
+computed `border-left-width` 0px, `background` transparent; the reader
+select lived in section `decision`, 759px above the `readers` table;
+`header select[data-role=reader]` absent from both fixtures.
+
+**Close measured**, `tests/unit/test_the_page_has_a_reader.py::TestAReaderIsAShapeNotAHue`,
+booted `golden` and `macro_micro` at 1440x900:
+
+```text
+label        select in <header>  [data-promoted] border-left  declaring  chipped
+golden       True                3px                          13         13
+macro_micro  True                3px                          15         15
+```
+
+`declaring == chipped` on both: every section `schemas._SECTION_READERS`
+names gets its muted chip under "anyone", before a role is chosen.
+`pytest tests/unit/test_the_page_has_a_reader.py::TestAReaderIsAShapeNotAHue -q`
+→ `6 passed`.
+
+**Mutation table**
+
+| guard | mutation | reddened | count |
+|---|---|---|---|
+| `test_a_promoted_section_wears_a_three_pixel_border` | dropped `section[data-promoted]{border-left:...}` from `style.css` | both fixtures | `2 failed, 4 passed` (both `border-left is 0px`) |
+
+Reverted from the pre-mutation copy (not `git checkout --`); re-run
+green, `6 passed`.

@@ -589,16 +589,16 @@ function readerLead(payload, entry) {
   return block;
 }
 
-/** The picker, over the readers this run has something for.
- *
- *  Fewer than two is not a choice, so nothing is drawn - `UX-194`'s
- *  dead-control rule. `slot` is where the answer lands. */
-function readerPicker(payload, slot) {
+/** `UX-668`: the picker, over the readers this run has something for -
+ *  wired into the header's identity line (styleguide §4 rule 7), not
+ *  drawn in the panel. Fewer than two is not a choice, so nothing is
+ *  drawn - `UX-194`'s dead-control rule. `slot` is where the answer
+ *  still lands, inside the decision panel. */
+function wireReaderControl(payload, slot) {
   const readers = (Array.isArray(payload?.readers) ? payload.readers : [])
     .filter((entry) => readerLead(payload, entry));
-  if (readers.length < 2) return null;
-  const wrap = document.createElement("div");
-  wrap.className = "reader-picker";
+  const host = document.getElementById("run-producer");
+  if (readers.length < 2 || !host) return;
   const select = document.createElement("select");
   select.className = "top-n";
   select.setAttribute("data-role", "reader");
@@ -612,10 +612,21 @@ function readerPicker(payload, slot) {
   const label = document.createElement("label");
   label.textContent = "I am ";
   labelFor(label, select, "reader");
-  select.addEventListener?.("change", () => applyReader(payload, slot,
-                                                        select.value));
-  wrap.append(label, select);
-  return wrap;
+  // The question is the chosen role's description, in place - no door,
+  // this is one line already.
+  const question = document.createElement("span");
+  question.className = "muted";
+  question.setAttribute("data-role", "reader-question");
+  const questionFor = (value) => readers.find((e) => e.id === value)
+    ?.question ?? "";
+  select.addEventListener?.("change", () => {
+    applyReader(payload, slot, select.value);
+    question.textContent = questionFor(select.value);
+  });
+  const wrap = document.createElement("span");
+  wrap.className = "reader-picker";
+  wrap.append(label, select, " — ", question);
+  host.append(" ", wrap);
 }
 
 /** The document the picker sits in, walked rather than looked up: the
@@ -666,10 +677,12 @@ export function renderDecision(payload, investigate = null, copy = null,
 
   // `UX-372`: and, for a reader who says who they are, their own
   // biggest lever. Below the diagnosis, which is true for everyone.
+  // `UX-668`: the control that picks the reader is wired into the
+  // header now; this slot only holds the answer.
   const slot = document.createElement("div");
   slot.setAttribute("data-role", "reader-slot");
-  const picker = readerPicker(payload, slot);
-  if (picker) section.append(picker, slot);
+  section.append(slot);
+  wireReaderControl(payload, slot);
 
   // UX-229: and why. Directly under the claim it explains, folded -
   // the panel is a decision, and the chain is what a reader opens

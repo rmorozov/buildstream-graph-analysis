@@ -580,16 +580,24 @@ export function applyRole(root, role) {
   const sections = [...(root?.querySelectorAll?.("section[data-section]") ?? [])];
   let promoted = 0;
   for (const section of sections) {
-    const owns = Boolean(chosen) && readersOf(section).includes(chosen);
+    const readers = readersOf(section);
+    const owns = Boolean(chosen) && readers.includes(chosen);
     if (owns) {
       promoted += 1;
       section.setAttribute("data-promoted", chosen);
     } else section.removeAttribute?.("data-promoted");
     const tag = section.querySelector?.("[data-reader-tag]");
-    if (tag) tag.textContent = owns ? chosen : "";
-    // The section holding the picker is never folded: a control that
-    // folds itself away is `UX-194`'s dead affordance made by hand.
-    if (section.querySelector?.('[data-role="reader"]')) continue;
+    // `UX-668`: "anyone" wears every declared role, muted - a reader
+    // sees what each one would promote before choosing. A chosen role
+    // still marks only what it owns (`UX-305`'s budget).
+    if (tag) {
+      tag.textContent = owns ? chosen
+        : (!chosen && readers.length ? readers.join(" ") : "");
+    }
+    // `UX-668`: the decision panel is never folded - it held the
+    // picker before this item moved the control to the header, and it
+    // is the page's first-screen answer regardless of who is reading.
+    if (section.getAttribute("data-section") === "decision") continue;
     foldSection(section, Boolean(chosen) && !owns);
   }
   for (const box of root?.querySelectorAll?.("section.chapter") ?? []) {
@@ -632,11 +640,12 @@ export function revealChapter(node) {
  * `perfetto-questions` -576, `restructuring` -317,
  * `critical_path_detail` +673.
  *
- * It lands **twice**: once now, which is the only landing the jump box
- * gets (a rail link has the browser's own anchor scroll and the jump
- * box has none), and once two frames later, when the opened chapter's
- * real height is in. Measured on `macro_micro`, the 61 folded section
- * links, section top against the 104 px a correct landing gives:
+ * It lands **three times**: once now, which is the only landing the
+ * jump box gets (a rail link has the browser's own anchor scroll and
+ * the jump box has none), and twice more as frames settle, when the
+ * opened chapter's real height is in. Measured on `macro_micro`, the
+ * 61 folded section links, section top against the 104 px a correct
+ * landing gave before `UX-668`:
  *
  * ```text
  * now only            55 correct     the browser's scroll runs after this
@@ -644,8 +653,11 @@ export function revealChapter(node) {
  * two frames later    55 correct
  * ```
  *
- * One frame is worse than none, which is why this is two and not a
- * number anybody picked. `scroll-margin-top`, where the sticky
+ * One frame is worse than none, which is why this used to be two and
+ * not a number anybody picked. `UX-668`'s header line and decision
+ * panel move the estimate one section further out, and `blast`
+ * measured wrong at two frames on a re-run this item's move made -
+ * three is what settles it. `scroll-margin-top`, where the sticky
  * header's height lives, is read off the node rather than repeated
  * here.
  *
@@ -669,7 +681,7 @@ export function revealAndLand(node, behavior) {
   };
   land();
   const frame = globalThis.requestAnimationFrame;
-  if (frame) frame(() => frame(land));
+  if (frame) frame(() => frame(() => frame(land)));
   return box;
 }
 

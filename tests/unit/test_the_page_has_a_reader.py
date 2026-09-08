@@ -420,5 +420,77 @@ class TestTheHeadlineWins:
         assert deferred[0]["leads_with"] == "time-concentration", deferred
 
 
+#: `UX-668`: the picker's own placement, and the shape §4 rule 7 spends
+#: instead of a fifth hue. `select.value = ""` last, so a fixture with
+#: no `[data-promoted]` left behind is not mistaken for one this drive
+#: never reached.
+_SHAPE = r"""
+(() => {
+  const header = document.querySelector("header");
+  const select = header?.querySelector("select[data-role=reader]") ?? null;
+  const sections = [...document.querySelectorAll("section[data-section]")];
+  const chip = (s) => (s.querySelector("[data-reader-tag]")?.textContent
+                       || "").trim();
+  const declares = (s) => (s.querySelector("[data-reader-tag]")
+                           ?.getAttribute("data-readers") || "").trim();
+  const keyed = (fn) => sections.filter(fn)
+    .map((s) => s.getAttribute("data-section"));
+  const before = { chipped: keyed((s) => chip(s)),
+                   declaring: keyed((s) => declares(s)) };
+  let borderWidth = null;
+  if (select) {
+    const last = [...select.options].filter((o) => o.value).pop();
+    select.value = last.value;
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+    const promoted = document.querySelector("[data-promoted]");
+    borderWidth = promoted
+      ? parseFloat(getComputedStyle(promoted).borderLeftWidth) : null;
+    select.value = "";
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+  }
+  return { inHeader: Boolean(select), before, borderWidth };
+})()
+"""
+
+
+@needs_browser
+@pytest.mark.medium
+class TestAReaderIsAShapeNotAHue:
+    """`UX-668`: the header carries the control (styleguide section
+    2b.2's one exception, §4 rule 7), a promoted section wears a
+    border rather than a fifth hue, and "anyone" already shows every
+    declaring section's chip - the mutation this guards against is the
+    left rule going missing, which leaves `[data-promoted]` computed
+    at 0px."""
+
+    @classmethod
+    @pytest.fixture(scope="class")
+    def shaped(cls, browser, tmp_path_factory):
+        into = tmp_path_factory.mktemp("u668")
+        return {label: browser.measure(
+            pages.export_uri(pages.FIXTURES[label], into, name=f"{label}.html"),
+            _SHAPE, 1440, 900) for label in sorted(pages.FIXTURES)}
+
+    @pytest.mark.parametrize("label", sorted(pages.FIXTURES))
+    def test_the_header_carries_the_select(self, shaped, label):
+        assert shaped[label]["inHeader"], (
+            f"{label}: no reader select inside <header>")
+
+    @pytest.mark.parametrize("label", sorted(pages.FIXTURES))
+    def test_a_promoted_section_wears_a_three_pixel_border(self, shaped,
+                                                            label):
+        width = shaped[label]["borderWidth"]
+        assert width is not None, f"{label}: no section was promoted"
+        assert width >= 3, f"{label}: [data-promoted] border-left is {width}px"
+
+    @pytest.mark.parametrize("label", sorted(pages.FIXTURES))
+    def test_every_declaring_section_renders_a_chip(self, shaped, label):
+        before = shaped[label]["before"]
+        assert before["declaring"], f"{label}: no section declares a reader"
+        assert sorted(before["chipped"]) == sorted(before["declaring"]), (
+            f"{label}: declares {sorted(before['declaring'])}, "
+            f"chips {sorted(before['chipped'])}")
+
+
 if __name__ == "__main__":  # pragma: no cover
     raise SystemExit(pytest.main([__file__, "-v"]))

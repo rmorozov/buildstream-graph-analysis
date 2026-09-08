@@ -197,7 +197,9 @@ Three placement rules the field pass earned:
 2. **The header carries identity only** — run name, stamp, verdict
    state — within a stated vertical budget (measured in lines, in
    the guard). Actions and their apparatus live in the actions
-   group; prose lives in sections.
+   group; prose lives in sections. One exception: `UX-668`'s reader
+   selector is a *whole-page* control, not apparatus for a block below
+   it, and stays on the identity line it names who is reading.
 3. **A described value shows its affordance.** §1 gave described
    values a popover; discovery was hover archaeology. A value whose
    schema carries a `description` renders a visible marker (the
@@ -299,6 +301,15 @@ the measurements:
    headline number is large once; a finding bolds its subject once;
    everything else is regular or muted. If two things in one block
    demand emphasis, the block is two blocks.
+7. **A reader is a shape, not a hue** (`UX-668`). Five roles are past
+   what §4.1 lets a drawing carry as a series and §4.2's one accent is
+   already spent on interaction, the current focus and the band — a
+   fifth hue for "which role am I" would be a second accent and the
+   CVD numbers §5 validates against were never budgeted for it. A
+   promoted section wears the accent it already has, on a channel §4.3
+   reserves for exactly this: a border, not a fill, plus the existing
+   muted chip. "Anyone" wears every declared role's chip, muted — a
+   reader sees what each role would promote before choosing one.
 
 ## 5. Dark first
 

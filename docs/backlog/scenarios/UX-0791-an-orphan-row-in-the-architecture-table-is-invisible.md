@@ -1,6 +1,6 @@
 # UX-791: an orphan row in the architecture table is invisible
 
-**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** UX-736 (the widened guard) | **Found by:** round 109, retro-verifying round 100 | **Serves:** the reader of a status row for a task that does not exist | **Topic:** docs | **Area:** unassigned | **Shape:** mechanical
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-736 (the widened guard) | **Found by:** round 109, retro-verifying round 100 | **Serves:** the reader of a status row for a task that does not exist | **Topic:** docs | **Area:** unassigned | **Shape:** mechanical
 
 ## Motivation
 
@@ -63,3 +63,5 @@ Mutation table:
 |---|---|---|
 | append `\| UX-999 \| a row nobody filed \| 🟢 Done \|` to architecture.md's history table | `test_the_table_status_matches_the_task_files`, naming `docs/design/architecture.md` | 1 failed / 56 |
 | remove it | — | 56 passed |
+
+**Deviation.** An `implementer` on `sonnet`, read by a `verifier` (four probes beyond the table, all caught: a README orphan, a zero-padded id, a closed.md orphan already `--check`'s, a duplicate row already another clause's). The first copy's worktree was removed on a clean stop and the track relaunched.

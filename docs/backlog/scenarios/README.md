@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-790 scenarios: **29 open**, 761 closed.
+791 scenarios: **25 open**, 766 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -26,8 +26,8 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | viewer | 3 | 163 |
 | cli | 0 | 22 |
 | store | 0 | 16 |
-| docs | 9 | 132 |
-| guards | 11 | 206 |
+| docs | 8 | 132 |
+| guards | 8 | 207 |
 
 ## Open scenarios
 
@@ -59,12 +59,8 @@ task file, which is the only place it ever lived twice.
 | UX-779 | [the README prints two wall clocks the guide says are not the suite's](UX-0779-the-readme-prints-two-wall-clocks-the-guide-says-are-not-the-suites.md) | docs | Medium | the newcomer budgeting a run from a number measured on someone else's afternoon | 🔴 |
 | UX-780 | [the map says a shelf shipped, and one linter did](UX-0780-the-map-says-a-shelf-shipped-and-one-linter-did.md) | docs | Medium | the round pricing whether the analysis shelf exists before deciding to build it | 🔴 |
 | UX-782 | [the register derives its rounds from `git log`, which is a property of the clone](UX-0782-the-register-derives-its-rounds-from-git-log.md) | guards | Medium | the round whose register disagrees with itself on a second machine | 🔴 |
-| UX-787 | [the size ledger cannot record a shrink while any cell grew](UX-0787-the-size-ledger-cannot-record-a-shrink-while-any-cell-grew.md) | guards | Medium | the refactor that shrinks a function and cannot bank it | 🔴 |
-| UX-788 | [the size ledger trusts a broken pylint](UX-0788-the-size-ledger-trusts-a-broken-pylint.md) | guards | Medium | the run where pylint dies and the duplicate count reads zero | 🔴 |
 | UX-789 | [a baseline entry carries a key the tool never reads](UX-0789-a-baseline-entry-carries-a-key-the-tool-never-reads.md) | guards | Low | the `--check` output that promises to name every forced batch forever | 🔴 |
 | UX-790 | [the mutation run's classifier has no fast guard](UX-0790-the-mutation-runs-classifier-has-no-fast-guard.md) | guards | Medium | the weekly run whose survivor count is the only number anyone reads | 🔴 |
-| UX-791 | [an orphan row in the architecture table is invisible](UX-0791-an-orphan-row-in-the-architecture-table-is-invisible.md) | docs | Low | the reader of a status row for a task that does not exist | 🔴 |
-| UX-792 | [the perf-carry key is scoped to a branch by nothing](UX-0792-the-perf-carry-key-is-scoped-to-a-branch-by-nothing.md) | guards | Medium | the branch whose analyzer regression is confirmed by another branch's run | 🔴 |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

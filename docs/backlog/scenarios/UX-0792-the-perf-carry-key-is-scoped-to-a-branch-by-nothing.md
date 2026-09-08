@@ -1,6 +1,6 @@
 # UX-792: the perf-carry key is scoped to a branch by nothing
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-702 (the ratchet), UX-442 (the tier-carry guard this copies) | **Found by:** round 109, retro-verifying round 102 | **Serves:** the branch whose analyzer regression is confirmed by another branch's run | **Topic:** guards | **Area:** unassigned | **Shape:** judgement
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-702 (the ratchet), UX-442 (the tier-carry guard this copies) | **Found by:** round 109, retro-verifying round 102 | **Serves:** the branch whose analyzer regression is confirmed by another branch's run | **Topic:** guards | **Area:** unassigned | **Shape:** judgement
 
 ## Motivation
 
@@ -97,3 +97,5 @@ Mutation table:
 | restore | — | 140 passed |
 | fold the perf-carry save key onto a `key: >-` continuation line, dropping `github.ref` | `test_a_branch_reads_its_own_series`, naming the folded key | 1 failed / 140 |
 | restore | — | 140 passed |
+
+**Deviation.** The judgement (`.github/` is a contract surface) was that the workflow changes only if found lacking; it was not. The verifier found the regex read a same-line key only — a folded scalar with the scoping stripped stayed green — fixed before the merge by parsing the YAML and judging each cache step by its own key.

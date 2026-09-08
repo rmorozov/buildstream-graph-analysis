@@ -116,6 +116,10 @@ pairing for every merged row from round 103 on.
 | 109 | verifier | sonnet | verify UX-682 join half | 58k | 56 | 7.8 m | HOLD then merged: consolidate fired for two consumer-less leaves; the WIDE comment's census 30 to 31 was false (31 both sides, the cause a substring hit on shared); the split rule's all-or-nothing consequence unstated | disproving a plausible causal comment took a second worktree at the base and the selector run twice |
 | 109 | implementer | sonnet | UX-785 and UX-786, the flake census and its adopt | 147k | 103 | 23 m | merged after its verifier; the first close matched the Flake field by substring, fixed as an exact token match with a clause on the verifier's finding; the copy opened nine commits behind and found the base itself | the task files lived only on the round's branch - a pointer to which commit carries a round's filings would have saved the search |
 | 109 | verifier | sonnet | verify UX-785 and UX-786 | 50k | 40 | 5.7 m | MERGE with a named fix: old_test_a.py cleared test_a.py through the substring match, no assertion caught it; the seed was misdescribed as a third file; both mutations reproduce, the three real ledger files read False | the worktree already existed under .claude/worktrees, not the path the brief named |
+| 109 | implementer | sonnet | UX-791 and UX-792, two guard widenings | 246k | 112 | 28.1 m | merged after its verifier; the carry guard's same-line regex missed a folded-scalar key, replaced by a YAML walk before the merge; ci.yml unchanged, both properties already held | the first copy's worktree was auto-removed on a clean stop, so the resume landed in the main checkout; relaunched fresh |
+| 109 | verifier | sonnet | verify UX-791 and UX-792 | 61k | 66 | 9.8 m | MERGE with a named fix: a key on a YAML continuation line was invisible to the regex while the restore line satisfied the family population; four orphan-row probes and a job-level always() probe all caught | the Status lines still read Not Started at verification time, which cost minutes of doubt until the pipeline note explained the close lags the merge |
+| 109 | implementer | sonnet | UX-788 and UX-787, the size ledger's guards and its adopt | 248k | 136 | 32.9 m | merged after its verifier; the shelf guard read job names only, a run-line clause added before the merge; --adopt --force wrote 46 cells upward as the UX-787 floor; the size check joined quality.yml | the base recovery across 1672 commits and splitting two tasks' edits to one test file into two clean commits |
+| 109 | verifier | sonnet | verify UX-788 and UX-787 | 45k | 50 | 8 m | MERGE with a named fix: echo skip in the sizes job left the shelf guard green (§5's proxy); every table mutation reproduces; a shrink and a grow in one file handled per cell; 46 cells all upward | make lint under a sibling's concurrent baseline check tripped the 120 s timeout |
 
 Round 101's four tracks are **not** here: this session could not
 identify their transcripts with certainty after a context rebuild, and
@@ -128,7 +132,7 @@ committed cleanly once told to run in the foreground. Three of the five
 left a derived figure or a §6 context-map row behind - the same class
 the round itself was about, arriving in the tracks' own work.
 
-What the ninety-nine rows already say: a researcher that reads a document
+What the one hundred and three rows already say: a researcher that reads a document
 whole costs 100-180k; a walker that drives every control costs 336k;
 the two cuts cost a re-run each. The `walk` and `design-review`
 skills fix the report shape so the next rows are smaller, and the

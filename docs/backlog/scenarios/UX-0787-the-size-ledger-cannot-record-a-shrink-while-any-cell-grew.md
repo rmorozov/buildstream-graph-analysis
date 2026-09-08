@@ -1,6 +1,6 @@
 # UX-787: the size ledger cannot record a shrink while any cell grew
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-712 (the ledger), UX-418 (`--shrink`'s shape) | **Found by:** round 109, retro-verifying round 102 | **Serves:** the refactor that shrinks a function and cannot bank it | **Topic:** guards | **Area:** tools | **Shape:** judgement
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-712 (the ledger), UX-418 (`--shrink`'s shape) | **Found by:** round 109, retro-verifying round 102 | **Serves:** the refactor that shrinks a function and cannot bank it | **Topic:** guards | **Area:** tools | **Shape:** judgement
 
 ## Motivation
 
@@ -97,3 +97,5 @@ shelf job's steps mention its tool - `sizes` → `dev_sizes.py --check`,
 `pip-audit` → `pip-audit`, `codeql` → `github/codeql-action/analyze`,
 `eslint` → `eslint` - so a job kept by name but emptied of its `run:`
 reds.
+
+**Deviation.** The judgement — write the shrink, refuse the grow, and put `--check` on the GitHub shelf beside `pip-audit` rather than in `make lint` — was the session's, in the brief; the track executed it as bounded. Its verifier found the shelf guard read job names and never a run line (`UX-698`'s own shape, §5's proxy), fixed with a YAML-parsed clause before the merge. Today's 46 cells are the `UX-787` floor, not a fix.

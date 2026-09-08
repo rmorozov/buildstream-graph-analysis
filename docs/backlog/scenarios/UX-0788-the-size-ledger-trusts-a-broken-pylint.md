@@ -1,6 +1,6 @@
 # UX-788: the size ledger trusts a broken pylint
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-712 | **Found by:** round 109, retro-verifying round 102 | **Serves:** the run where pylint dies and the duplicate count reads zero | **Topic:** guards | **Area:** tools | **Shape:** mechanical
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-712 | **Found by:** round 109, retro-verifying round 102 | **Serves:** the run where pylint dies and the duplicate count reads zero | **Topic:** guards | **Area:** tools | **Shape:** mechanical
 
 ## Motivation
 
@@ -60,3 +60,5 @@ Both fixtures raise `PylintFailure` (`main` exit 2) against the real,
 unmutated `dev_sizes.py` too, since neither exit 32 nor non-JSON
 output is ever produced by a working `pylint` — the new guards do not
 depend on the host's `pylint` behaving.
+
+**Deviation.** Same track and verifier as `UX-787`; `pylint` was already importable, so the brief's install step was not needed. A pylint that exits 0 with `[]` is accepted as zero duplicates — probed, correct.

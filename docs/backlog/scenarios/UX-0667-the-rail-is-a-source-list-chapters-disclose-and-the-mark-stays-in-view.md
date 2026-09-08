@@ -95,3 +95,5 @@ Volume budget (`test_the_page_has_a_volume_budget.py`) needed no move:
 | drop each chapter's first member (`members.slice(1)`) - a source removed from the rail | `test_a_report_you_can_navigate.py::test_the_contents_lists_exactly_what_was_rendered` (pre-existing) | toc/rendered sets disagree, 7 keys missing |
 
 All four reverted and confirmed green after.
+
+**Deviation, found by a verifier in round 109.** Two Required Fix clauses were satisfied by inheritance and not measured here: the apparatus was 116 px at the branch point (`UX-317`, `UX-435`), not the Motivation's 302 px, and the actions separator already hides with its link (`UX-435`). No live defect in 68 of 68 marks walked.

@@ -91,4 +91,4 @@ forced by UX-744; 2 still forced by UX-762; 1 still forced by UX-781;
 | M1 | `unknown_keys` body replaced with `return []` | `TestUnknownKeyIsRefused::test_a_forced_by_key_reds_and_names_itself` | 1 failed, 17 passed |
 | M2 | `unknown_keys`' per-entry loop dropped (document-level check only) | `TestUnknownKeyIsRefused::test_a_stray_key_on_a_finding_reds_and_names_itself` | 1 failed, 1 passed (class); 1 failed, 18 passed (file) |
 
-**Deviation.** One verifier hold: the first commit refused a stray key on the document only, not on a finding; the per-entry clause and its guard landed in a second commit (1f17c30f). Two commits on the track; one verifier run.
+**Deviation.** One verifier hold: the first commit refused a stray key on the document only, not on a finding; the per-entry clause and its guard landed in a second commit (0443f02a). Two commits on the track; one verifier run.

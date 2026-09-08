@@ -5,7 +5,7 @@
 ## Motivation
 
 ```console
-$ git diff cc202d2c..c8df15bb -- bga/viewer/chapters.js | grep frame
+$ git diff ab7a8647..7bb5fea9 -- bga/viewer/chapters.js | grep frame
 -  if (frame) frame(() => frame(land));
 +  if (frame) frame(() => frame(() => frame(land)));
 $ # UX-668's track: test_a_rail_click_lands_on_its_section.py under -n auto

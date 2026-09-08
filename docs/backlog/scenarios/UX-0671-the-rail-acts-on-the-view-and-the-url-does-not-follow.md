@@ -73,7 +73,7 @@ make lint             All checks passed!
 
 The pre-commit selector also caught `test_the_last_review_is_not_too_far_back`
 (26 scenarios closed since review 20, bound 25) - pre-existing on
-`c8df15bb` before this track's own change, unrelated to it, and not a
+`7bb5fea9` before this track's own change, unrelated to it, and not a
 review an implementer track runs. Committed with `BGA_SKIP_SELECTOR=1`.
 
 ### Mutation table
@@ -85,4 +85,4 @@ review an implementer track runs. Committed with `BGA_SKIP_SELECTOR=1`.
 
 Reverted from copies (`falsify`), not `git checkout --`; both green after.
 
-**Deviation.** The rail preset needed no write of its own: the href's default navigation plus `UX-647`'s document-scoped click listener already carry the anchor, so the write the first commit added was dead and the second commit (b8ad56aa) removed it, the guard's rail clauses holding the mechanism instead. The jump box's write is the fix. The golden export bound moved 453,000 → 456,000 B on a measured 453,497. The task's "§3b" cites nothing in the current spec. Two commits, one verifier (PASS with the finding above).
+**Deviation.** The rail preset needed no write of its own: the href's default navigation plus `UX-647`'s document-scoped click listener already carry the anchor, so the write the first commit added was dead and the second commit (bd01626a) removed it, the guard's rail clauses holding the mechanism instead. The jump box's write is the fix. The golden export bound moved 453,000 → 456,000 B on a measured 453,497. The task's "§3b" cites nothing in the current spec. Two commits, one verifier (PASS with the finding above).

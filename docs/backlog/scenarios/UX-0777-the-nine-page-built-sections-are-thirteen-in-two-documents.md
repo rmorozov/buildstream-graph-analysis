@@ -67,4 +67,66 @@ did not.
 
 ## Outcome
 
-_Not started._
+### The gap
+
+`_sites()` — the same population `test_a_reader_role_demotes.py:353`
+already parses over `views.js`/`element.js`/`questions.js` — counts
+**14**, not 13:
+
+```console
+$ python3 -c "..."  # _sites() over the three built-in modules
+14
+```
+
+The Motivation's own grep undercounts by missing a dynamic key:
+`element.js:577`, `section.setAttribute("data-section",
+elementAnchor(uid))`, has no literal string after the comma, so
+`'data-section", "'` never matches it. `UX-650` (round 88) counted
+13; `views.js::renderBandUnavailable` (line 214, `data-section:
+"band"`, R4) was added after that round and is the 14th — drift the
+"thirteen" this row was filed to write down had already caught up to.
+`forty-eight` is a dated measurement (round 39, `UX-286`) of a
+specific synthetic-run DOM, not a static population; re-deriving it
+needs a browser render, which `test_the_report_has_chapters.py`'s own
+docstring carries unguarded too. Chosen: derive the page-built count
+from `_sites()`; leave `forty-eight` as the round-39 figure it already
+is, made explicit in `chapters.js` ("round 39's measurement, above").
+
+### The close
+
+Both documents now state `fourteen`, and the fraction moved with it
+(`a fifth` → `over a quarter`, since 14/48 ≈ 29%):
+
+```console
+$ grep -n "Fourteen of the" bga/viewer/chapters.js
+31: * **Why the table is here and not in the schema.** Fourteen of the
+$ grep -n "fourteen of the forty-eight" docs/design/architecture.md
+796:  viewer rather than the schema because fourteen of the forty-eight
+$ python3 -m pytest tests/unit/test_a_reader_role_demotes.py -q
+21 passed in 2.63s
+```
+
+The guard is two clauses in `TestThePageBuiltCountIsDerivedInBothDocuments`,
+beside the existing count at `test_a_reader_role_demotes.py:353` (not
+`test_the_process_documents_derive_their_figures.py` — its population
+is `.claude/**.md` and `docs/contributing/*.md`, and neither
+`chapters.js` nor `architecture.md` is in it), reusing `_sites()`
+rather than a second population.
+
+`architecture.md`'s prose edit is substantive (`test_the_verification_log_is_true.py`'s
+`only_the_count_moved` exclusion does not cover it), so it re-anchors
+the document's own Verification Log in the same commit — a new
+`Updated 2026-09-08 (after UX-777)` entry, re-grounded against
+`bga.contracts`/`bga/schemas.py` the same way the entry it displaces
+was. `python3 -m pytest tests/unit/test_the_verification_log_is_true.py -q`:
+31 passed.
+
+### Mutations, red then reverted
+
+| # | mutation | reddened |
+|---|---|---|
+| M1 | `chapters.js`: `Fourteen` → `Fifteen`, population unchanged | 1 (chapters.js clause only) |
+| M2 | `views.js`: `renderBandUnavailable`'s `data-section` site removed | 2 (both documents' clauses, together — the Acceptance Test's own case) |
+
+Restored from the scratchpad copy each time; `test_a_reader_role_demotes.py`
+green (21 passed) after each revert.

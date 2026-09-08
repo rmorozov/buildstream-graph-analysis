@@ -61,4 +61,42 @@ move, or the guard red naming the one that did not.
 
 ## Outcome
 
-_Not started._
+**Gap measured:** the guide's own rows whose `**Enforced by test**`
+clause is a guard inside `test_docs_links_and_commands.py`: rules 3, 5,
+9, 14, plus §8's table-cell rule (named there in its own words already)
+— five, not the Motivation's four, which missed rule 14 (`Out of
+Scope`) — its guard,
+`test_every_out_of_scope_entry_names_a_task_or_states_a_decline`, is
+inside that same file. `docs/README.md` stated `Two`.
+
+**Two figures, kept as two** (the session's decision, implemented):
+`style-guide.md`'s own sentence still derives from
+`rules.count("**Enforced by test")` (rule text saying enforcement
+exists at all — currently 5, and includes rule 15, whose guard is
+`test_a_guard_ledger_names_its_link.py`, a different file).
+`docs/README.md`'s sentence derives from a new, separate population:
+occurrences of the literal string
+`tests/unit/test_docs_links_and_commands.py` in the guide's rule body,
+which required naming that file in rules 3, 5, 9 and 14's `Enforced by
+test` clauses (they said only `test.` before — §8 already named it).
+That count is 5 too, today — a coincidence between two different
+questions, not one figure reused; a rule enforced elsewhere (rule 15)
+or a new one enforced only in this file moves them independently, which
+is what mutation 2 below shows.
+
+**Close measured:** `docs/README.md` now reads `Five of them are
+enforced by … test_docs_links_and_commands.py`, spelled the way
+`style-guide.md`'s own clause spells it
+(`WORDS[n].capitalize()`). Both sentences are new keys/clauses in
+`_derived()`, `tests/unit/test_the_process_documents_derive_their_
+figures.py`.
+
+**Mutation table:**
+
+| mutation | reddened | count |
+|---|---|---|
+| README's figure off by one (`Five` → `Four`) | `TestTheFiguresAreDerived::test_the_document_carries_the_derived_sentence[docs/README.md]` only | 1 failed, 24 passed |
+| rule 9's `Enforced by` moved to `test_a_file_with_three_excursions_has_a_filed_task.py` | same clause only — `docs/contributing/style-guide.md`'s own clause (index 5 unchanged, count still 5) stayed green, showing the two figures move independently | 1 failed, 24 passed |
+
+Both restored from the scratchpad copy (not `git checkout`) and
+reconfirmed green: `25 passed`.

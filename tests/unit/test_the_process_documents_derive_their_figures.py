@@ -235,6 +235,11 @@ def _derived():
     # and it carries the marker in the sentence stating the count.
     rules = STYLE.read_text(encoding="utf-8").split("\n## 1.", 1)[1]
     enforced = rules.count("**Enforced by test")
+    # `UX-778`: a different population than `enforced` above - not every
+    # rule that says "Enforced by test", but the ones whose clause names
+    # this one guard file, read off the guide's own text (not the test
+    # file's functions - the guide is the contract).
+    named_here = rules.count("tests/unit/test_docs_links_and_commands.py")
     orders = _orders(RULES.stat().st_size, GUIDE.stat().st_size)
     return {
         "docs/contributing/rules.md": [f"it is ~{guide_kb} KB"],
@@ -248,6 +253,8 @@ def _derived():
             f"summary of {WORDS[len(_live_contracts())]} live contracts"],
         "docs/contributing/style-guide.md": [
             f"{WORDS[enforced].capitalize()} of the rules below close with"],
+        "docs/README.md": [
+            f"{WORDS[named_here].capitalize()} of them are enforced by"],
         ".claude/skills/decompose/SKILL.md": [f"{shared} files are shared"],
         ".claude/agents/implementer.md": [f"{shared} files are shared"],
     }

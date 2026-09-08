@@ -2,7 +2,9 @@
 
 Mirrors `test_the_baseline_only_shrinks.py`'s temporary-package harness.
 """
+import os
 import pathlib
+import shutil
 import subprocess
 import sys
 
@@ -14,10 +16,33 @@ VIOLATION = ("import subprocess\n\n\n"
              "    subprocess.run(cmd, shell=True)\n")
 
 
+def _pyright_fixture(root):
+    """UX-802: every clause here is ruff-only - read an empty pyright
+    pass rather than spawn a real one."""
+    path = root / "pyright_findings.json"
+    if not path.exists():
+        path.write_text("[]", encoding="utf-8")
+    return path
+
+
+def _without_pyright(path_value):
+    """UX-802: a regressed clause that spawns pyright anyway fails
+    loudly (`pyright` not found) rather than quietly paying for it."""
+    found = shutil.which("pyright")
+    if found is None:
+        return path_value
+    excluded = str(pathlib.Path(found).parent)
+    return os.pathsep.join(p for p in path_value.split(os.pathsep)
+                           if p and p != excluded)
+
+
 def _run(root, baseline, *flags):
+    run_env = dict(os.environ)
+    run_env["PATH"] = _without_pyright(run_env.get("PATH", ""))
     cmd = [sys.executable, str(TOOL), "--root", str(root), "--paths", "pkg",
-           "--baseline", str(baseline), *flags]
-    return subprocess.run(cmd, capture_output=True, text=True, check=False)
+           "--baseline", str(baseline), "--pyright-from", str(_pyright_fixture(root)),
+           *flags]
+    return subprocess.run(cmd, capture_output=True, text=True, check=False, env=run_env)
 
 
 def _write(path, text):

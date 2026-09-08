@@ -44,4 +44,40 @@ again — the wall guard reds naming the clause.
 
 ## Outcome
 
-_Not started._
+Gap measured, this box (`-p no:xdist`, `--durations=0`):
+
+```text
+$ python3 -m pytest tests/unit/test_the_baseline_only_shrinks.py tests/unit/test_forced_stays_named_past_commit.py -q --durations=0
+23 passed in 48.57s   # before
+```
+
+`tools/dev_baseline.py` gained `--pyright-from PATH`: `main()` reads
+`pyright_findings`' own shape from `PATH` instead of spawning, when
+given. Every ruff/bandit clause in both files now passes it (a shared
+`_pyright_fixture()` writing `[]`); `TestPyrightEntersTheSameList`'s
+four clauses keep spawning (`spawn_pyright=True`). Both files' `_run`
+also strips pyright's directory from `PATH` for a fixture-backed call,
+so a regression that ignores `--pyright-from` fails loudly (`pyright`
+not found) rather than quietly paying for the pass again.
+
+Close measured, same command and box:
+
+```text
+$ python3 -m pytest tests/unit/test_the_baseline_only_shrinks.py tests/unit/test_forced_stays_named_past_commit.py -q --durations=0
+23 passed in 13.59s   # after, under the 15s bound
+```
+
+Per file: `test_the_baseline_only_shrinks.py` alone 11.23s (19 tests,
+4 of them real pyright), `test_forced_stays_named_past_commit.py`
+alone 1.63s (4 tests, none real pyright) — both comfortably under the
+50.7s/13.2s `ci_reference.json` rows a future CI run will re-measure
+against.
+
+Mutation table:
+
+| mutation | reddened | count |
+|---|---|---|
+| `dev_baseline.py`: `if args.pyright_from is not None` → `if False and args.pyright_from is not None` (main() ignores the flag, always spawns) | every ruff/bandit clause across both files, each naming itself (PATH has no `pyright` for those calls) | 19 failed, 4 passed in 7.02s |
+
+Reverted from the scratchpad copy (`cp saved tools/dev_baseline.py`,
+`__pycache__` cleared), re-run green: 23 passed in 13.59s.

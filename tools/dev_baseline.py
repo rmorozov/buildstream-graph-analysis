@@ -485,6 +485,12 @@ def main(argv=None):
     parser.add_argument("--baseline", type=pathlib.Path, default=DEFAULT_BASELINE)
     parser.add_argument("--root", type=pathlib.Path, default=REPO)
     parser.add_argument("--paths", nargs="+", default=None)
+    # UX-802: a ruff/bandit-only caller (a test clause, mostly) pays a
+    # whole pyright pass it never reads a diagnostic from - read its
+    # `pyright_findings` shape from a fixture instead of spawning it.
+    parser.add_argument("--pyright-from", type=pathlib.Path, default=None,
+                         help="read pyright_findings' shape from PATH instead "
+                              "of spawning pyright")
     args = parser.parse_args(argv)
     if sum((args.write, args.check, args.shrink)) != 1:
         parser.error("exactly one of --write, --check, --shrink")
@@ -495,11 +501,14 @@ def main(argv=None):
     except RuffFailure as exc:
         print(f"error: {exc}")
         return 2
-    try:
-        raw_pyright = pyright_findings(args.root, paths)
-    except PyrightFailure as exc:
-        print(f"error: {exc}")
-        return 2
+    if args.pyright_from is not None:
+        raw_pyright = json.loads(args.pyright_from.read_text(encoding="utf-8"))
+    else:
+        try:
+            raw_pyright = pyright_findings(args.root, paths)
+        except PyrightFailure as exc:
+            print(f"error: {exc}")
+            return 2
     current = (normalize(raw, args.root)
                + normalize_pyright(raw_pyright, args.root)
                + suppression_findings(args.root, paths))

@@ -188,6 +188,9 @@ export const CHAPTERS = [
                "overcommitted_intervals"],
     // What the run was given and how much of it was used - the two
     // numbers the chapter's own verdict is computed from.
+    // `UX-678`: `sweep_memory_builders`/`sweep_binding` render generically
+    // as structured data on this section; naming the memory bound in this
+    // sentence is out of this track.
     answer(payload) {
       const slots = payload?.capacity_recommendation?.builders
         ?? payload?.utilisation?.effective_cpus;

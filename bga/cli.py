@@ -240,7 +240,7 @@ def _attach_plane2_capacity(args: argparse.Namespace, analyzer, result) -> None:
     # here, because the knee costs a capacity sweep and the whole block
     # is gated on Plane 2 being in hand anyway.
     result.capacity_recommendation = _capacity_recommendation(
-        analyzer, result, context)
+        analyzer, result, context, native_report)
     _finish_capacity_recommendation(analyzer, result, native_report)
 
 
@@ -267,6 +267,25 @@ def _finish_capacity_recommendation(analyzer, result, native_report: dict) -> No
         result.capacity_recommendation['max_jobs_advice'] = advice
 
 
+def _peak_rss_and_host_memory(
+    host_samples: Optional[dict], native_report: Optional[dict],
+) -> tuple[Optional[dict], Optional[int]]:
+    """UX-677/UX-678's shared inputs: measured peak RSS per element and
+    the host's measured RAM (`host-samples`, not an operator-declared
+    budget). `(None, None)` when either half is missing.
+    """
+    per_element = ((native_report or {}).get('peak_memory') or {}).get(
+        'per_element') or {}
+    peak_rss_bytes = {uid: converted
+                       for uid, entry in per_element.items()
+                       if (converted := kb_to_bytes(
+                           entry.get('peak_rss_kb'))) is not None}
+    mem_total_kb = (host_samples or {}).get('header', {}).get('mem_total_kb')
+    if not peak_rss_bytes or not mem_total_kb:
+        return None, None
+    return peak_rss_bytes, kb_to_bytes(mem_total_kb)
+
+
 def _max_jobs_advice(analyzer, native_report: dict) -> dict:
     """UX-677: the inputs `compute_max_jobs_advice` needs, gathered.
 
@@ -285,20 +304,17 @@ def _max_jobs_advice(analyzer, native_report: dict) -> dict:
               "start_us": task.start_us, "finish_us": task.finish_us}
              for task in getattr(analyzer, 'normalized_tasks', []) or []]
     max_jobs = {element.uid: element.max_jobs for element in graph.elements}
-    per_element = ((native_report or {}).get('peak_memory') or {}).get(
-        'per_element') or {}
-    peak_rss_bytes = {uid: kb_to_bytes(entry['peak_rss_kb'])
-                       for uid, entry in per_element.items()
-                       if entry.get('peak_rss_kb')}
-    mem_total_kb = (host_samples.get('header') or {}).get('mem_total_kb')
+    peak_rss_bytes, host_memory_bytes = _peak_rss_and_host_memory(
+        host_samples, native_report)
     return compute_max_jobs_advice(
         host_samples, tasks, max_jobs,
-        peak_rss_bytes=peak_rss_bytes or None,
-        host_memory_bytes=kb_to_bytes(mem_total_kb) if mem_total_kb else None,
+        peak_rss_bytes=peak_rss_bytes,
+        host_memory_bytes=host_memory_bytes,
     )
 
 
-def _capacity_recommendation(analyzer, result, context) -> dict:
+def _capacity_recommendation(analyzer, result, context,
+                             native_report: Optional[dict] = None) -> dict:
     """UX-116: the knee, the CPU draw, the memory ceiling and the host,
     intersected.
 
@@ -325,15 +341,21 @@ def _capacity_recommendation(analyzer, result, context) -> dict:
         max(builders, host_cores) * _RECOMMENDATION_SWEEP_HEADROOM,
         _RECOMMENDATION_SWEEP_CAP,
     )
+    # UX-678: the same measured peak RSS and host RAM `_max_jobs_advice`
+    # reads, so the sweep can check its own replayed concurrency against
+    # memory rather than leave that to `_memory_allows`'s top-N sum.
+    peak_rss_bytes, host_memory_bytes = _peak_rss_and_host_memory(
+        analyzer.read_host_samples(), native_report)
     try:
         sweep = analyzer.replay_scheduler.capacity_sweep(
             resource='PROCESS', min_capacity=1, max_capacity=top, step=1,
+            peak_rss_bytes=peak_rss_bytes, host_memory_bytes=host_memory_bytes,
         )
     except (AttributeError, ValueError) as exc:
         logger.info("UX-116: no capacity sweep available (%s)", exc)
         return {}
 
-    return compute_capacity_recommendation(
+    recommendation = compute_capacity_recommendation(
         plane2,
         getattr(result, 'memory_envelope', None) or {},
         knee=(sweep.knee_points or {}).get('PROCESS'),
@@ -341,6 +363,18 @@ def _capacity_recommendation(analyzer, result, context) -> dict:
         builders=builders,
         native_max_jobs=getattr(context, 'native_max_jobs', None),
     )
+    if not recommendation:
+        return recommendation
+    # UX-678: additive - the sweep's own memory-feasible ceiling (summed
+    # over its replay's real concurrent set at each step, not the
+    # envelope's top-N peaks) and which of the two capacities is
+    # tighter. Absent unless the sweep had both peak RSS and host RAM.
+    sweep_memory_cap = (sweep.memory_knee_points or {}).get('PROCESS')
+    if sweep_memory_cap is not None:
+        recommendation['sweep_memory_builders'] = sweep_memory_cap
+        recommendation['sweep_binding'] = (
+            sweep.binding_constraints or {}).get('PROCESS')
+    return recommendation
 
 
 def analyzed(args: argparse.Namespace, section: Optional[str] = None):
@@ -430,12 +464,32 @@ def _produce_sweep_output(args: argparse.Namespace) -> str:
         ]
         calibration_capacities = sorted({cap for cap in raw_capacities if cap is not None})
 
+    # UX-83: the sweep is a replay-model answer and the replay model does
+    # not know about CPU. When a Plane 2 report for the same run is
+    # supplied, the knee line says what was actually measured - read
+    # before the sweep itself runs, so UX-678's memory ceiling can join
+    # it as a second capacity rather than caption it afterwards.
+    plane2_capacity = {}
+    memory_envelope = {}
+    peak_rss_bytes, host_memory_bytes = None, None
+    if getattr(args, 'plane2', None):
+        holder = type('_R', (), {})()
+        _attach_plane2_capacity(args, analyzer, holder)
+        plane2_capacity = getattr(holder, 'plane2_capacity', {})
+        # UX-104: and the memory ceiling, for the same reason - a knee
+        # above the memory-feasible capacity is a recommendation to swap.
+        memory_envelope = getattr(holder, 'memory_envelope', {})
+        peak_rss_bytes, host_memory_bytes = _peak_rss_and_host_memory(
+            analyzer.read_host_samples(), getattr(holder, 'plane2_report', None))
+
     sweep_result = analyzer.replay_scheduler.capacity_sweep(
         resource=args.resource,
         min_capacity=args.min_capacity,
         max_capacity=args.max_capacity,
         step=args.step,
         contention_calibration=contention_calibration,
+        peak_rss_bytes=peak_rss_bytes,
+        host_memory_bytes=host_memory_bytes,
     )
 
     if args.format == 'json':
@@ -450,19 +504,11 @@ def _produce_sweep_output(args: argparse.Namespace) -> str:
             'monotonicity_violations': sweep_result.monotonicity_violations,
             'capacity_model_caveat': SWEEP_CAPACITY_MODEL_CAVEAT,
             'calibration_capacities': calibration_capacities,
+            # UX-678: absent (both `{}`) unless `--plane2` supplied both
+            # a measured peak RSS per element and a host memory total.
+            'memory_knee_points': sweep_result.memory_knee_points,
+            'binding_constraints': sweep_result.binding_constraints,
         }, indent=2, default=str)
-    # UX-83: the sweep is a replay-model answer and the replay model does
-    # not know about CPU. When a Plane 2 report for the same run is
-    # supplied, the knee line says what was actually measured.
-    plane2_capacity = {}
-    memory_envelope = {}
-    if getattr(args, 'plane2', None):
-        holder = type('_R', (), {})()
-        _attach_plane2_capacity(args, analyzer, holder)
-        plane2_capacity = getattr(holder, 'plane2_capacity', {})
-        # UX-104: and the memory ceiling, for the same reason - a knee
-        # above the memory-feasible capacity is a recommendation to swap.
-        memory_envelope = getattr(holder, 'memory_envelope', {})
     return format_sweep_text(
         args.resource, sweep_result,
         calibration_capacities=calibration_capacities,

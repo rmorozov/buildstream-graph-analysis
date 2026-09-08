@@ -32,3 +32,51 @@ constraints, and the recommendation names which one bound first.
 A synthetic run whose elements' peaks sum past host RAM at six
 builders: the sweep's knee moves to the memory-bound builder count
 and says so; mutation: remove the constraint — the knee guard reds.
+
+## Outcome
+
+**Gap measured.** Per-element peak RSS is captured (`peak_rss_kb` -
+`bga/correlate.py:834,939,1070`, `bga/cli.py:290`) and host RAM is
+recorded per capture (`mem_total_kb`, `HostSampler.__enter__`,
+`tools/bst_native_build_tracer.py:826`), but `capacity_sweep`
+(`bga/replay/scheduler.py`) swept only `PROCESS` and never read either.
+
+**Close measured.** `capacity_sweep` gained `peak_rss_bytes`/
+`host_memory_bytes`: each swept capacity's own replayed schedule is
+read for its peak concurrent RSS (sweep-line over
+`ScheduledTask.start_us/finish_us`), and `memory_knee_points`/
+`binding_constraints` publish the memory-feasible ceiling and which
+constraint bound first. Wired into `bga sweep` (JSON + text) and into
+`analyze --plane2`'s `capacity_recommendation` (`sweep_memory_builders`/
+`sweep_binding`, additive). Fixture (8 equal tasks, each 2 GiB peak,
+6.5 GiB host RAM, builder cap 8):
+
+```text
+Knee point (PROCESS): capacity 8 (diminishing returns beyond this)
+  Recommendation: memory-bound at 3 builder(s)
+```
+
+At 32 GiB host RAM (memory never binds): `Recommendation: builder-bound
+at 8 builder(s)`.
+
+### Mutations
+
+| # | mutation | reddened | count |
+|---|---|---|---|
+| 1 | `binding_constraints` comparison forced to always name `builders` | 3 of 7 new tests (both binding-name assertions + text rendering) | `pytest -q`: 3 failed |
+| 2 | `_peak_concurrent_rss_bytes`'s running sum (`+=` -> `=`) | 2 of 7 (memory cap value + text) | `pytest -q`: 2 failed |
+| 3 | `_peak_rss_and_host_memory`'s both-halves gate forced off | 1 of 7 (input-gate test) | `pytest -q`: 1 failed |
+
+All reverted from copies (never `git checkout --`); each confirmed
+green again after restore.
+
+**Deviation (flagged for the session).** `bga/capacity_model.py`'s
+queue model (`store/v1` listing, Erlang-C/Allen-Cunneen) carries no
+per-element peak RSS and no host RAM at all - only an aggregate
+`peak_rss_bytes` distribution per finished run and no memory total to
+check it against. Joining memory there needs either a new CLI input
+(a third `--capacity N,RATE,MEM` field or a separate flag) or reading a
+representative snapshot's host-samples, neither named by the brief;
+implementing it un-briefed risked exactly the kind of decision this
+track was told to report rather than take. Not implemented; the sweep
+side (which the Acceptance Test and guard are both scoped to) is.

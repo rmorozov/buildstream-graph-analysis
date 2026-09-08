@@ -1030,6 +1030,13 @@ def _capacity_recommendation_finding(result: AnalysisResult) -> list[dict]:
             "contended window can absorb."
         )
     detail.append(f"    {recommendation['caveat']}")
+    # UX-678: the sweep's own memory check, from its replayed concurrent
+    # set rather than the `memory` constraint's top-N sum above.
+    sweep_binding = recommendation.get('sweep_binding')
+    if sweep_binding:
+        detail.append(
+            f"    The sweep itself checked memory too: "
+            f"{sweep_binding['name']}-bound at {sweep_binding['builders']}.")
 
     return [_finding(
         'capacity-recommendation', severity,
@@ -1045,6 +1052,13 @@ def _capacity_recommendation_finding(result: AnalysisResult) -> list[dict]:
             'recommended_builders': recommended,
             'builders_change': recommendation['builders_change'],
             'constraints': recommendation['constraints'],
+            # UX-678: additive - the sweep's own memory-feasible ceiling,
+            # summed over its replay's real concurrent set at each swept
+            # capacity rather than the envelope's top-N peaks, and which
+            # of the two capacities is tighter. Absent unless the sweep
+            # had both a measured peak RSS per element and host RAM.
+            'sweep_memory_builders': recommendation.get('sweep_memory_builders'),
+            'sweep_binding': recommendation.get('sweep_binding'),
         },
     )]
 

@@ -90,6 +90,77 @@ def _interpolate_calibrated_duration(points: list[tuple[int, int]], cap: int) ->
     return sorted_points[-1][1], False  # unreachable given the bounds checks above
 
 
+def _peak_concurrent_rss_bytes(
+    scheduled_tasks: list, peak_rss_bytes: dict[str, int],
+) -> int:
+    """UX-678: memory's own knee input - the highest sum of peak RSS
+    held by elements building at once in *this* replayed schedule.
+
+    A sweep-line over each element's `[start_us, finish_us)`, the same
+    concurrency `capacity_sweep` already computed to get a makespan. An
+    element with no measured peak contributes nothing rather than a
+    guess, so this undercounts when Plane 2's coverage is partial.
+    """
+    events = []
+    for task in scheduled_tasks:
+        # `ScheduledTask.element_uid`'s own `':' in task_key` split never
+        # matches `TaskKey.__str__`'s real `|` separator, so the uid is
+        # read the way `TaskKey.from_string` does instead.
+        uid = task.task_key.split('|', 1)[0]
+        peak = peak_rss_bytes.get(uid)
+        if not peak:
+            continue
+        events.append((task.start_us, peak))
+        events.append((task.finish_us, -peak))
+    # Ties resolve end-before-start: `finish_us` is exclusive, so a
+    # task ending exactly when another starts never overlaps it.
+    events.sort(key=lambda event: (event[0], event[1] > 0))
+    running = peak = 0
+    for _, delta in events:
+        running += delta
+        peak = max(peak, running)
+    return peak
+
+
+def _add_memory_envelope(
+    sweep_entry: dict, scheduled_tasks: list,
+    peak_rss_bytes: Optional[dict[str, int]],
+    host_memory_bytes: Optional[int],
+) -> None:
+    """UX-678: `sweep_entry`'s own memory reading, or nothing when the
+    sweep was not given both halves of it - split out of
+    `capacity_sweep` to keep its own branch count under the guard."""
+    if not (peak_rss_bytes and host_memory_bytes):
+        return
+    envelope = _peak_concurrent_rss_bytes(scheduled_tasks, peak_rss_bytes)
+    sweep_entry['memory_envelope_bytes'] = envelope
+    sweep_entry['memory_fits'] = envelope <= host_memory_bytes
+
+
+def _memory_sweep_result(
+    sweeps: list[dict], resource: str, knee_point: Optional[int],
+    peak_rss_bytes: Optional[dict[str, int]],
+    host_memory_bytes: Optional[int],
+) -> tuple[dict[str, int], dict[str, dict]]:
+    """UX-678: `(memory_knee_points, binding_constraints)`, both `{}`
+    unless the sweep had both a measured peak RSS per element and a
+    host memory total - split out of `capacity_sweep` for the same
+    reason as `_add_memory_envelope`."""
+    if not (peak_rss_bytes and host_memory_bytes):
+        return {}, {}
+    fitting = [entry['capacity'][resource] for entry in sweeps
+              if entry.get('memory_fits')]
+    memory_cap = max(fitting) if fitting else 0
+    # Memory binds first only when it is strictly the tighter ceiling -
+    # a tie or an unmeasured graph knee both read as the builder cap,
+    # which is the only number in that case.
+    if knee_point is None or memory_cap < knee_point:
+        binding = {'name': 'memory', 'builders': memory_cap}
+    else:
+        binding = {'name': 'builders', 'builders': knee_point}
+    return {resource: memory_cap}, {resource: binding}
+
+
 @dataclass
 class ScheduledTask:
     """A task in the replay schedule."""
@@ -131,7 +202,12 @@ class CapacitySweepResult:
     sweeps: list[dict]
     knee_points: dict[str, int]
     monotonicity_violations: list[str]
-    
+    # UX-678: the memory-feasible ceiling beside the graph's own knee,
+    # and which of the two binds first - empty when the sweep was not
+    # given peak RSS and a host memory total to check against.
+    memory_knee_points: dict[str, int] = field(default_factory=dict)
+    binding_constraints: dict[str, dict] = field(default_factory=dict)
+
     def is_monotonic(self, resource: str) -> bool:
         """Check if makespan decreases monotonically with capacity."""
         makespans = [s['makespan_us'] for s in self.sweeps if s['capacity'].get(resource, 0) > 0]
@@ -481,6 +557,8 @@ class ReplayScheduler:
         step: int = 1,
         other_capacities: Optional[dict[str, int]] = None,
         contention_calibration: Optional[dict[CalibrationKey, list[tuple[int, int]]]] = None,
+        peak_rss_bytes: Optional[dict[str, int]] = None,
+        host_memory_bytes: Optional[int] = None,
     ) -> CapacitySweepResult:
         """
         Sweep capacity for a single resource (Part 19).
@@ -500,6 +578,16 @@ class ReplayScheduler:
                 every other task is untouched, still using tier 1's fixed
                 duration. `None` (the default) reproduces tier 1's own
                 existing behavior exactly, unchanged.
+            peak_rss_bytes: UX-678 - `{element_uid: measured peak RSS
+                bytes}`. With `host_memory_bytes`, each swept capacity's
+                own replayed schedule is read for its peak concurrent
+                RSS, so the memory ceiling is checked against the same
+                schedule the makespan came from rather than a top-N
+                sum. `None` (the default) reproduces the existing
+                behaviour, unchanged.
+            host_memory_bytes: UX-678 - the host's measured RAM
+                (`host-samples`), the capacity the swept memory demand
+                is checked against.
 
         Returns:
             CapacitySweepResult with sweep data and knee points
@@ -562,6 +650,11 @@ class ReplayScheduler:
             }
             if contention_model is not None:
                 sweep_entry['contention_model'] = contention_model
+            # UX-678: memory as a second capacity, read off this same
+            # replayed schedule rather than a proxy for it.
+            _add_memory_envelope(
+                sweep_entry, result.scheduled_tasks,
+                peak_rss_bytes, host_memory_bytes)
             sweeps.append(sweep_entry)
 
             # UX-30: the knee is computed after the sweep, over the whole
@@ -595,11 +688,19 @@ class ReplayScheduler:
 
         # Build result
         knee_points = {resource: knee_point} if knee_point else {}
-        
+
+        # UX-678: the largest swept capacity whose own replayed schedule
+        # fit host memory - `{}` when memory data was not supplied,
+        # never treated as an unbounded ceiling.
+        memory_knee_points, binding_constraints = _memory_sweep_result(
+            sweeps, resource, knee_point, peak_rss_bytes, host_memory_bytes)
+
         return CapacitySweepResult(
             sweeps=sweeps,
             knee_points=knee_points,
             monotonicity_violations=monotonicity_violations,
+            memory_knee_points=memory_knee_points,
+            binding_constraints=binding_constraints,
         )
     
     def multi_resource_sweep(

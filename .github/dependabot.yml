@@ -1,0 +1,18 @@
+# UX-698: the gate-only shelf - dependency updates arrive as pull
+# requests, weekly, one grouped PR per ecosystem, never in `make lint`.
+version: 2
+updates:
+  - package-ecosystem: pip
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      python:
+        patterns: ["*"]
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]

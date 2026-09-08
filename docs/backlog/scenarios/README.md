@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-781 scenarios: **25 open**, 756 closed.
+781 scenarios: **24 open**, 757 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -27,7 +27,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | cli | 0 | 22 |
 | store | 0 | 16 |
 | docs | 8 | 131 |
-| guards | 7 | 198 |
+| guards | 6 | 198 |
 
 ## Open scenarios
 
@@ -49,7 +49,6 @@ task file, which is the only place it ever lived twice.
 | UX-690 | [the suite has a shape budget, and a feature files its test analysis](UX-0690-the-suite-has-a-shape-budget-and-a-feature-files-its-test-analysis.md) | guards | Medium | R8 reading whether the suite is balanced; the implementer writing the right guard | 🔴 |
 | UX-695 | [the refactor stream takes the ledger's top row — renderers first](UX-0695-the-refactor-stream-takes-the-ledger-s-top-row-renderers-first.md) | docs | Medium | the session that opens a round and has no refactor to pick because none is filed | 🔴 |
 | UX-697 | [a type-error ratchet, contracts first](UX-0697-a-type-error-ratchet-contracts-first.md) | guards | Medium | the session editing a schema or a contract, where a wrong key is a `UX-190` bump nobody meant | 🔴 |
-| UX-698 | [the gate-only shelf on GitHub — code scanning, a lockfile and audit, Dependabot, secret scanning](UX-0698-the-gate-only-shelf-on-github-code-scanning-a-lockfile-and-audit-depen.md) | guards | High | R8 reading a red gate that a hosted tool raised, and the user who wants the heavier analyses without a slower inner loop | 🔴 |
 | UX-741 | [the spine's ground truth reads wall clock, and a loaded host reds it](UX-0741-the-spine-s-ground-truth-reads-wall-clock-and-a-loaded-host-reds-it.md) | guards | Medium | R8 reading a red gate on a file nobody touched | 🔴 |
 | UX-744 | [no register says which rounds exist, and four records disagree](UX-0744-no-register-says-which-rounds-exist-and-four-records-disagree.md) | docs | Medium | the session opening a round, which cannot number it from any record | 🔴 |
 | UX-758 | [the edge-mark test reads a merged name and never matches](UX-0758-the-edge-mark-test-reads-a-merged-name-and-never-matches.md) | viewer | Medium | the reader of an exhibit axis whose labels silently stop being protected | 🔴 |

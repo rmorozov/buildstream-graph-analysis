@@ -33,7 +33,8 @@ import statistics
 import subprocess
 import sys
 import tempfile
-import xml.etree.ElementTree as ET
+
+import defusedxml.ElementTree as ET
 
 REPO = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO))

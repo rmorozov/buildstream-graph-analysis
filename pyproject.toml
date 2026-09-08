@@ -78,6 +78,9 @@ dev = [
     # `pip install --dry-run` on 3.10, 3.11 and 3.12 here; 3.9 was not
     # available to try directly.
     "pylint>=3.3",
+    # UX-698: the two junit readers parse with defusedxml, so bandit's
+    # B314 is fixed rather than baselined.
+    "defusedxml>=0.7",
 ]
 # UX-191: `pip install bga[completion]`, then
 # `eval "$(register-python-argcomplete bga)"`. Shell completion for the

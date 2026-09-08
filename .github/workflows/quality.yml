@@ -1,10 +1,15 @@
 name: Quality
 
+# UX-698/UX-699: the gate-only shelf. Hosted, minutes, on a pull request
+# and weekly - never in `make lint`, so the inner loop stays at ruff's.
 on:
   pull_request:
     branches: [main]
   schedule:
     - cron: "0 6 * * 1"
+
+permissions:
+  contents: read
 
 jobs:
   eslint:
@@ -15,3 +20,38 @@ jobs:
         run: |
           npx --yes --package eslint@9 --package globals@17 -- \
             eslint bga/viewer
+
+  codeql:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    strategy:
+      matrix:
+        language: [python, javascript-typescript]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+      - uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:${{ matrix.language }}"
+
+  pip-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: The lockfile is the dev extra, resolved
+        run: |
+          pip install uv
+          uv pip compile pyproject.toml --extra dev -o /tmp/requirements.lock -q
+          diff <(grep -v '^#' requirements.lock) <(grep -v '^#' /tmp/requirements.lock) \
+            || { echo "requirements.lock is stale: run make lock"; exit 1; }
+      - name: Audit the lockfile
+        run: |
+          pip install pip-audit
+          pip-audit -r requirements.lock --strict

@@ -25,7 +25,7 @@ export const RAILS = ["decide", "act", "prove", "investigate", "raw"];
 // both paint from - one state, two views, never a second fold this
 // file invents.
 import { CHAPTERS, UNCHAPTERED, chapterFor, isOpen, setOpen, labelFold,
-         chapterBox } from "./chapters.js";
+         chapterBox, revealAndLand } from "./chapters.js";
 
 /** The sections the page actually rendered, in document order. */
 export function sections(root) {
@@ -83,9 +83,14 @@ function viewEntries(section, doc) {
     // rail with one label on two hrefs cannot be navigated by reading.
     link.textContent = option.textContent ?? name;
     link.addEventListener?.("click", () => {
-      if (select.value === name) return;
-      select.value = name;
-      select.dispatchEvent?.(new Event("change", { bubbles: true }));
+      if (select.value !== name) {
+        select.value = name;
+        select.dispatchEvent?.(new Event("change", { bubbles: true }));
+      }
+      // UX-671: only the reveal - `href`'s own default navigation
+      // already carries `key` into `location.hash`, and `UX-647`'s
+      // document-scoped listener recaptures the rest from there.
+      revealAndLand(section, "smooth");
     });
     item.append(link);
     list.append(item);

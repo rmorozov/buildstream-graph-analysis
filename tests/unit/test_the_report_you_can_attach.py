@@ -851,7 +851,12 @@ COMMITTED_EXPORTS = [
     # miss the round has been finding: a second bound the diff selects
     # but the track did not look at.
     # 453,000 leaves 2,683 B, the same order as the 2,441 it had.
-    ("golden", GOLDEN, 453_000),                       #  450,317 B
+    # `UX-671`: measured at `4c3fc308` before this change, 452,793 -
+    # the 450,317 above was already stale by 2,476 B, nothing having
+    # re-read it since. The rail's preset entries and the jump box now
+    # write the anchor they land on; +704 B, all source, in
+    # `nav.js`/`app.js`. 456,000 leaves 2,503 B, the same order again.
+    ("golden", GOLDEN, 456_000),                       #  453,497 B
     # `UX-297` moved this one by 385 B before that: the two-plane run
     # publishes `plane2_coverage.source`, which says which shape of
     # Plane 2 report served its numbers and what that costs to open. A

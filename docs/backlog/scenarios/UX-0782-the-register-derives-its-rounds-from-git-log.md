@@ -1,6 +1,6 @@
 # UX-782: the register derives its rounds from `git log`, which is a property of the clone
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-781 (which stopped CI cutting it), UX-772 (the datelines this would read) | **Serves:** the round whose register disagrees with itself on a second machine | **Topic:** guards | **Area:** unassigned | **Shape:** judgement
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-781 (which stopped CI cutting it), UX-772 (the datelines this would read) | **Serves:** the round whose register disagrees with itself on a second machine | **Topic:** guards | **Area:** unassigned | **Shape:** judgement
 
 ## Motivation
 
@@ -159,3 +159,5 @@ history where the two would differ. Kept because the Required Fix's
 guard text names it explicitly and it states the intent (first
 *added*, not first *touched*) even where today's data can't tell the
 two apart.
+
+**Deviation.** Two decisions taken in the brief and written into the Required Fix: the population is the documents ∪ the ledger, the 13 git-only rounds frozen as a tuple and counted; dates from datelines, an empty cell when none; the replacing guard compares a dateline to the document's first-commit date on a deep clone and skips naming the depth on a shallow one. Three surfaces beyond the declared ones: the guide's and README's one-line descriptions, and the skip-reason budget 66 → 67 for the depth-naming skip. One verifier hold (the frozen tuple read by nothing): `--check` now reds when a git-only round gains a document or a ledger row, the header derived from the tuple minus those (7b62650e). Two commits, one verifier.

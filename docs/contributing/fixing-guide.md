@@ -353,7 +353,7 @@ tools/dev_refresh_analysis.py  the rule a committed analysis is written
                              from a fresh run (UX-486)
 tools/dev_process_bands.py  what the process did to itself, from the committed Outcomes
 tools/dev_round_register.py  which rounds happened, derived from the
-                             committed union, never git log (UX-744, UX-782 (open))
+                             committed union, never git log (UX-744, UX-782)
 tools/dev_tier_drift.py      which files outgrew their tier, from the
                              suite's own junit report (UX-418)
 tools/dev_mutation.py        mutmut over the modules a diff touched, weekly -

@@ -229,3 +229,54 @@ The two clauses give the same verdict on a quiet host and a host at
 load 16 - either both pass, or the loaded one skips with the load it
 measured named in the reason. Mutation: state a `sleep 6` in the
 fixture and confirm the clause still reds on a quiet host.
+
+## Outcome
+
+**Route taken: read something the contention cannot move.**
+`SLEEP_TOLERANCE_S` became a lower bound (`duration_s >= SLEEP_S`, a
+sleep cannot finish early) and an enclosing bound (`duration_s <=`
+`time.monotonic()` span the harness took around the whole `bst build`).
+`PLANE_AGREEMENT_S` became: same element in both planes, their
+intervals overlap (Plane 1's wall-clock span translated onto Plane 2's
+`CLOCK_MONOTONIC` through a `(time.time(), time.monotonic())` anchor
+pair taken once, mirroring `UX-185`'s `bga-clocks` line), and Plane 2's
+span stays inside the same harness-enclosing bound. The lag's magnitude
+stays `UX-110`'s, out of scope here.
+
+**Gap measured** (this 4-core box, `tests/unit/test_spine_ground_truth.py`
+bare):
+
+```text
+quiet (load 2.6-2.9):  2 passed in 26.86s   [old code, pre-change]
+16 hogs (load 15.0->15.7): would have reddened both clauses under the
+  old symmetric tolerances per the task file's own sweep; not re-run
+  against old code here since the task file already has that reading.
+```
+
+**Close measured**, new code, bare, two runs each:
+
+```text
+quiet (load 2.62-2.85):  2 passed in 26.81s
+16 hogs, run 1 (load 15.02->15.71): 2 passed in 27.32s
+16 hogs, run 2 (load 15.83->16.01): 2 passed in 27.07s
+```
+
+Both clauses hold at quiet and at load 16 - no skip needed, no
+threshold to find.
+
+**Mutation table** (each: edited, run red, restored from
+`/tmp/.../test_spine_ground_truth.py.orig`, not `git checkout --`):
+
+| mutation | clause | expected | got |
+|---|---|---|---|
+| `SLEEP_S` 3.0 -> 6.0 (fixture still sleeps 3) | lower bound | red | red: `3.012 >= 6.0` false |
+| `harness_span` forced to `0.001` | enclosing bound | red | red: `3.020s exceeds ... 0.001s` |
+| Plane 1 interval shifted +1000s | overlap | red | red: `23257.97 <= 22260.15` false |
+
+All three restores verified clean (`diff` against the saved copy, `0`
+output) before the next mutation and before the final green run above.
+
+**Acceptance Test, pasted**: `sleep 6` mutation on a quiet host (load
+2.62) -> `AssertionError: work-a.bst: 3.012s for a sleep 3 - a sleep
+cannot finish early / assert 3.012273633001314 >= 6.0`. 3.0 < 6, reds
+as required.

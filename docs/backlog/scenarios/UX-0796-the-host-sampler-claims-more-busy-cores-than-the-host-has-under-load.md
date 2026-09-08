@@ -1,6 +1,6 @@
 # UX-796: the host sampler claims more busy cores than the host has, under load
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-675 (the sampler and its ceiling), UX-741 (the same shape in the spine's guard) | **Found by:** round 110, in a `make test` gate on a loaded machine | **Serves:** the gate that reds on a host reading nothing in the diff touched | **Topic:** guards | **Area:** bga | **Shape:** mechanical
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-675 (the sampler and its ceiling), UX-741 (the same shape in the spine's guard) | **Found by:** round 110, in a `make test` gate on a loaded machine | **Serves:** the gate that reds on a host reading nothing in the diff touched | **Topic:** guards | **Area:** bga | **Shape:** mechanical
 
 ## Motivation
 
@@ -27,7 +27,7 @@ with the same source it reads busy time from — the sum of all-CPU
 jiffies (busy + idle) at each read, not a wall clock beside it — so
 busy/total cannot exceed one per core by construction. The ceiling's
 one-jiffy allowance stays. (Corrected from `bga/hostinfo.py`, which
-does not exist; the sampler and its `/proc/stat` read live here.)
+is the manifest module; the sampler and its `/proc/stat` read live here.)
 
 ## Out of Scope
 
@@ -76,3 +76,5 @@ and still rides in the written sample for the timeline join
 Restored from a copy taken before the mutation
 (`tools/bst_native_build_tracer.py.orig` in the scratchpad), never
 `git checkout --`; full file re-run green after restore (20 passed).
+
+**Deviation.** The Required Fix named `bga/hostinfo.py`; the sampler is `tools/bst_native_build_tracer.py`'s, corrected in the file. The verifier's finding, recorded: the presence gate still reads wall time while the ratio divides by the jiffy window, so under a long deschedule the figure is a jiffy-window average stamped on a shorter wall bucket in `envelope.py`'s join — the ceiling holds by construction, the label does not say so; `UX-110`-adjacent, left for the row that reads the timeline. The row's own red did not reproduce under 12 hogs on 4 cores (5 of 5 green); the synthetic pair reproduces the filed 5.686 reading. One commit, one verifier (PASS).

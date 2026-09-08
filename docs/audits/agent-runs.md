@@ -158,6 +158,8 @@ pairing for every merged row from round 103 on.
 | 110 | implementer | sonnet | `UX-671` the URL follows the rail and the jump box (judgement) | 590k | 216 | 87.8 m | merged bd01626a; the rail write was dead, removed after the verifier | the rail's bug was half-masked by the document-scoped listener; resumed once after a rate limit |
 | 110 | verifier | sonnet | verify `UX-671` | 64k | 53 | 10 m | PASS with one finding: the rail write dead, its cause misnamed; fixed before merge | — |
 | 110 | researcher | sonnet | review 21: the documents rounds 109–110 touched, against the tree | 73k | 67 | 5.2 m | two findings (UX-798, UX-799); CLAUDE.md's advisory, round 109's closes and the guide's size figure sound | which commits were round 109's took git log with the round's merge markers |
+| 111 | implementer | sonnet | `UX-796` the host sampler's window is the jiffies it reads (mechanical) | 65k | 47 | 9.3 m | merged a2b3355d; the descheduled-read clause reds the old division | the filing named the manifest module, not the tracer |
+| 111 | verifier | sonnet | verify `UX-796` | 49k | 32 | 6.1 m | PASS; the jiffy-window label under a long deschedule recorded | a physically consistent synthetic pair took two tries |
 
 Round 101's four tracks are **not** here: this session could not
 identify their transcripts with certainty after a context rebuild, and
@@ -170,7 +172,7 @@ committed cleanly once told to run in the foreground. Three of the five
 left a derived figure or a §6 context-map row behind - the same class
 the round itself was about, arriving in the tracks' own work.
 
-What the one hundred and forty-one rows already say: a researcher that reads a document
+What the one hundred and forty-three rows already say: a researcher that reads a document
 whole costs 100-180k; a walker that drives every control costs 336k;
 the two cuts cost a re-run each. The `walk` and `design-review`
 skills fix the report shape so the next rows are smaller, and the

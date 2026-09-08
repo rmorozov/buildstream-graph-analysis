@@ -25,20 +25,30 @@ def _pyright_fixture(root):
     return path
 
 
-def _without_pyright(path_value):
-    """UX-802: a regressed clause that spawns pyright anyway fails
-    loudly (`pyright` not found) rather than quietly paying for it."""
-    found = shutil.which("pyright")
-    if found is None:
-        return path_value
-    excluded = str(pathlib.Path(found).parent)
-    return os.pathsep.join(p for p in path_value.split(os.pathsep)
-                           if p and p != excluded)
+# UX-802 verifier: subtracting pyright's directory from the ambient
+# PATH also lost `/root/.local/bin`'s `pytest`/`bandit` on this box -
+# built from exactly what the tool spawns instead.
+NEEDED_BINARIES = ("ruff", "git", "python3")
+
+
+def _minimal_bin(root):
+    """UX-802: every clause here is ruff-only, so a regressed one that
+    spawns pyright anyway fails loudly (`pyright` not found) rather
+    than quietly paying for it."""
+    bindir = root / "minimal_bin"
+    if bindir.exists():
+        return bindir
+    bindir.mkdir(parents=True)
+    for name in NEEDED_BINARIES:
+        found = shutil.which(name)
+        if found is not None:
+            (bindir / name).symlink_to(found)
+    return bindir
 
 
 def _run(root, baseline, *flags):
     run_env = dict(os.environ)
-    run_env["PATH"] = _without_pyright(run_env.get("PATH", ""))
+    run_env["PATH"] = str(_minimal_bin(root))
     cmd = [sys.executable, str(TOOL), "--root", str(root), "--paths", "pkg",
            "--baseline", str(baseline), "--pyright-from", str(_pyright_fixture(root)),
            *flags]
@@ -60,6 +70,14 @@ def _force_and_commit(tmp_path, baseline, reason, message):
                 "--reason", reason).returncode == 0
     _git(tmp_path, "-c", "user.email=t@example.com", "-c", "user.name=t",
          "commit", "-q", "-am", message)
+
+
+class TestTheMinimalBinHasNoPyright:
+    def test_pyright_is_absent_and_ruff_present(self, tmp_path):
+        bindir = str(_minimal_bin(tmp_path))
+        assert shutil.which("pyright", path=bindir) is None
+        assert shutil.which("ruff", path=bindir) is not None
+        assert shutil.which("git", path=bindir) is not None
 
 
 class TestForcedStaysNamedPastCommit:

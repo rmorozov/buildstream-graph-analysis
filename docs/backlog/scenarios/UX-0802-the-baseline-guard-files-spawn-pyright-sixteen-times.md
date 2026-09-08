@@ -44,40 +44,51 @@ again — the wall guard reds naming the clause.
 
 ## Outcome
 
-Gap measured, this box (`-p no:xdist`, `--durations=0`):
+Gap measured, this box (`-p no:xdist`):
 
 ```text
 $ python3 -m pytest tests/unit/test_the_baseline_only_shrinks.py tests/unit/test_forced_stays_named_past_commit.py -q --durations=0
-23 passed in 48.57s   # before
+23 passed in 48.57s   # before, CI's own reading was 91.8s
 ```
 
 `tools/dev_baseline.py` gained `--pyright-from PATH`: `main()` reads
 `pyright_findings`' own shape from `PATH` instead of spawning, when
-given. Every ruff/bandit clause in both files now passes it (a shared
-`_pyright_fixture()` writing `[]`); `TestPyrightEntersTheSameList`'s
-four clauses keep spawning (`spawn_pyright=True`). Both files' `_run`
-also strips pyright's directory from `PATH` for a fixture-backed call,
-so a regression that ignores `--pyright-from` fails loudly (`pyright`
-not found) rather than quietly paying for the pass again.
+given. Every ruff/bandit clause passes it (`_pyright_fixture()`
+writing `[]`); `TestPyrightEntersTheSameList`'s four clauses still
+spawn (`spawn_pyright=True`). A fixture-backed `_run` also sets `PATH`
+to `_minimal_bin()` — a directory of symlinks to exactly `ruff`, `git`,
+`python3` (what `dev_baseline.py` itself spawns) — not the ambient
+`PATH` minus pyright's directory: the verifier read that the first
+version also lost `/root/.local/bin`'s `pytest`/`bandit` on this box.
+A regressed clause that spawns pyright anyway now fails loudly
+(`pyright` not found), and `TestTheMinimalBinHasNoPyright` asserts the
+built `PATH` resolves `ruff`/`git` and not `pyright` directly.
 
-Close measured, same command and box:
+Close measured, same command, with load (`uptime`) alongside each:
 
 ```text
-$ python3 -m pytest tests/unit/test_the_baseline_only_shrinks.py tests/unit/test_forced_stays_named_past_commit.py -q --durations=0
-23 passed in 13.59s   # after, under the 15s bound
+load average: 17.24, 18.49, 15.32 -> 25 passed in 26.13s
+load average: 19.34, 19.12, 15.05 -> 25 passed in 33.91s
+verifier's box, load 24            -> 26-32s
 ```
 
-Per file: `test_the_baseline_only_shrinks.py` alone 11.23s (19 tests,
-4 of them real pyright), `test_forced_stays_named_past_commit.py`
-alone 1.63s (4 tests, none real pyright) — both comfortably under the
-50.7s/13.2s `ci_reference.json` rows a future CI run will re-measure
-against.
+Declined the Required Fix's literal wall guard against
+`ci_reference.json` (a `<10s` assertion in the suite): 25-34s here at
+load 17-19 makes a 10s bound flaky, not a defect, matching
+`test_the_loop_stays_fast.py`'s own convention — wall-clock numbers
+are a property of the machine and are not guarded directly; what's
+guarded is the mechanism. What enforces the cost instead: the
+mechanism guard above (a regression fails loudly, not slowly), and
+CI's own drift gate (`dev_tier_drift.against`, unedited) — its rows
+for these two files (50.7s/13.2s, refreshed round 110) now overstate
+them until main's adoptions pull the medians down, and `against` never
+flags a file *faster* than its row, so this fix cannot itself red it.
 
 Mutation table:
 
 | mutation | reddened | count |
 |---|---|---|
-| `dev_baseline.py`: `if args.pyright_from is not None` → `if False and args.pyright_from is not None` (main() ignores the flag, always spawns) | every ruff/bandit clause across both files, each naming itself (PATH has no `pyright` for those calls) | 19 failed, 4 passed in 7.02s |
+| `dev_baseline.py`: `if args.pyright_from is not None` → `if False and args.pyright_from is not None` | every ruff/bandit clause across both files, each naming itself (`pyright` not found in `_minimal_bin`) | 19 failed, 6 passed in 24.50s |
 
-Reverted from the scratchpad copy (`cp saved tools/dev_baseline.py`,
-`__pycache__` cleared), re-run green: 23 passed in 13.59s.
+Reverted from the scratchpad copy, `__pycache__` cleared, re-run
+green: 25 passed in 26.13s (load 17.24/18.49/15.32).

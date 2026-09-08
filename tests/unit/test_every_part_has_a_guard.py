@@ -64,6 +64,10 @@ ANALYSIS_ADDITIONS = {
     # express. Additive for the same reason - 32.4 states the grid but
     # not what falls through it.
     "duration_resolution",
+    # `UX-697`: set by `cli.py` since `UX-171`/`UX-202` but never a
+    # declared field until the type ratchet's `bga/report` sweep needed
+    # one to type against.
+    "resource_blast", "plane2_coverage",
 }
 
 # Likewise for 32.1's six against what `load_run_context` reads.

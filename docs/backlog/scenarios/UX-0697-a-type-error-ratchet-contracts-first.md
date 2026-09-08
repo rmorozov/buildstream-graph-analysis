@@ -34,3 +34,43 @@ not a separate `pyright` run — one gate, one list.
 `pyright bga/schemas.py bga/contracts.py bga/report` → 0 errors;
 mutation: return `str` from a function annotated `-> int` in
 `bga/report/json.py` — `--check` reddens on one new entry.
+
+## Outcome
+
+### Contract surfaces half
+
+**Gap measured** (base `47cfe060`, `pyright==1.1.408`, basic mode):
+`pyright bga/schemas.py bga/contracts.py bga/report` → 12 errors
+(schemas 4, contracts 0, report 8 — json.py 3, text.py 5).
+
+**Close measured:** same command → 0 errors. Fixes: `schemas.py`'s
+`_document(optional=, hints=)` were `dict = None` (implicit Optional,
+Python 3.9-illegal anyway); `EVIDENCE_QUANTITIES` needed an explicit
+`dict[str, dict]` annotation for `.update()` to resolve. `report/json.py`
+and `report/text.py` read `result.resource_blast` / `.plane2_coverage`
+directly after a `getattr`/`hasattr` guard that pyright does not narrow
+on; both are real fields `cli.py` sets at runtime but `AnalysisResult`
+never declared — declared them `Optional[dict] = None` instead (true
+type, not a suppression). `occupancy_stats` is a legacy name no real
+`AnalysisResult` ever carries (only a test double does); left dynamic
+via `getattr(result, 'occupancy_stats', None)`, matching the file's own
+existing pattern for genuinely-optional attributes, rather than adding
+a field that would make `hasattr(...)` always true and change the
+`occupancy` key's presence in the JSON. `text.py:272` also had a real
+bug: `joint.get('elements')` after `together` was derived from
+`(joint or {})` but read `joint` unguarded — fixed to `(joint or {})`.
+
+**Strict measured:** adding the three surfaces to `[tool.pyright]`'s
+`strict` list: 1363 errors (`pyright bga/schemas.py bga/contracts.py
+bga/report`, same base). Top three: `reportUnknownMemberType` (531),
+`reportUnknownVariableType` (400), `reportUnknownArgumentType` (196) —
+strict's largest cost here is untyped access into `dict`-shaped schema
+data, not the three modules' own signatures. Reverted `strict = []`
+(net no diff on `pyproject.toml`); listing the surfaces under `strict`
+is a later burn-down batch, not this task's close.
+
+**Mutation table:** none — this half adds no new guard; C1's
+`dev_baseline.py --check` and its `bga/report/json.py` mutation are the
+Acceptance Test's guard, run by the session after both halves merge.
+
+**Deviation:** left to the session (row move, `strict` listing).

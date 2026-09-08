@@ -19,6 +19,10 @@ from ._shared import (
 # have collided with.
 _STRUCTURAL_RENAMES = {"metrics": "graph_metrics", "summary": "graph_summary"}
 
+# UX-697: distinguishes "attribute absent" from "attribute present but
+# None" for `occupancy_stats`, a legacy name no declared field carries.
+_MISSING = object()
+
 
 def _lift(data: dict, block: dict, renames: Optional[dict] = None) -> None:
     """`UX-344`: each named table of a namespace, as a key of its own.
@@ -251,7 +255,7 @@ def build_document(result: AnalysisResult, section: Optional[str] = None, by_kin
     # inventory or nothing is shared, for the same reason `run_instance`
     # is: an empty list invites a consumer to render "no shared sources"
     # where the truth is "not looked for".
-    if section in (None, 'graph') and getattr(result, 'resource_blast', None):
+    if section in (None, 'graph') and result.resource_blast:
         blast = result.resource_blast
         if blast.get('rows'):
             data['resource_blast'] = blast
@@ -299,7 +303,7 @@ def build_document(result: AnalysisResult, section: Optional[str] = None, by_kin
     # report was in hand. Absent - not zeroed - without one, for the
     # reason `run_instance` is absent: "not looked at" and "looked at
     # and saw nothing" are different claims.
-    if section is None and getattr(result, 'plane2_coverage', None):
+    if section is None and result.plane2_coverage:
         data['plane2_coverage'] = result.plane2_coverage
 
     # UX-329: and *why* it is absent when it is. `plane2_coverage`
@@ -331,8 +335,10 @@ def build_document(result: AnalysisResult, section: Optional[str] = None, by_kin
     if section is None:
         if hasattr(result, 'occupancy') and result.occupancy:
             data['occupancy'] = result.occupancy
-        elif hasattr(result, 'occupancy_stats'):
-            data['occupancy'] = result.occupancy_stats
+        else:
+            legacy_occupancy = getattr(result, 'occupancy_stats', _MISSING)
+            if legacy_occupancy is not _MISSING:
+                data['occupancy'] = legacy_occupancy
 
     if section in (None, 'graph', 'diagnostics') and hasattr(result, 'signals') and result.signals:
         # Convert dataclasses to dicts for JSON serialization

@@ -92,6 +92,7 @@ would have caught it; a bound at it would only just have.
 | 18 | 2026-09-06 | 698 | three filings, and for the fifth review running the shape is a sentence no guard reads — three counted figures each derivable from a population already in the tree (`UX-734`: *Twenty hints* beside a table held equal to the schemas in both directions, *the twenty-four rows* against 26, *Parts 0-40* against 45), the attachment guide's **82 KiB** measured on a capture that is not in the tree and cannot be reproduced (`UX-735`; the one export this repository can measure is 488 KiB), and a third hand-maintained copy of a fact `UX-131` guarded twice — 75 status rows in `architecture.md` outside the guard's population, one of them drifted (`UX-736`); four document groups read in parallel, every finding re-run by the session before filing |
 | 19 | 2026-09-07 | 724 | four filings, and the shape moved one step on: not a sentence no guard reads but a sentence **inside** a guarded document and **outside** its guard's population — a range checked at its endpoints, a verification log that credits a commit and never re-derives a figure, a freshness guard that only reads a fence starting `$ bga ` (`UX-748`). Plus a documented example that crashes the tool (`UX-747`), four workflows on no map with the map's own guard unable to see them (`UX-746`), and nine citations formatted as paths that do not resolve (`UX-749`) |
 | 20 | 2026-09-07 | 750 | five filings, and the shape is one the log has not carried before: **a record that says a thing happened, checked against the tree that would show it.** `UX-777` — `UX-650` found the page-built sections were thirteen, fixed the code, and left both sentences saying nine. `UX-778` — `UX-584` derived the enforced-rule count and the derivation reads one of the two documents that state it. `UX-780` — the §6 map cites `UX-698/UX-699` for a workflow that runs `UX-699` alone, `UX-698` being 🔴. `UX-779` — the README's `21s`/`5m11s` predate `UX-551`, which established that a wall clock is a property of the machine. And the review caught the session that commissioned it: **round 107's document listed `UX-764` under *What closed* while both its markers correctly read 🔴** — the two-marker guard was green because the markers agree with each other, and nothing reads the round document against them |
+| 21 | 2026-09-08 | 780 | two filings, both the shape review 20 named — a record no guard reads, beside the tree that shows it. `UX-798` — `directions.md`'s round-109 row says *fourteen closed, ten filed*; the round document's own list closes 13 (`UX-789` is filed and open in that same section) and `Found by: round 109` finds 11. `UX-799` — the §6 map's `dev_baseline.py` row names the finding baseline and not the pyright mode `UX-697` gave it. Sound: `CLAUDE.md`'s advisory reproduces from `dev_process_bands.py --runs 58`; round 109's *What closed* list is 🟢 in both markers for all 13; `dev_touching.py --size` prints the figure both guides carry |
 
 ### Review 11 — 2026-09-02
 
@@ -1550,3 +1551,36 @@ six named plus §1a were checked. The §6 module map's ~103 per-row
 descriptions were checked for the CI-workflow block only — `UX-780`
 came out of that block, which is a reason to think the rest is worth a
 pass. `UX-689` owns the map's structural half.
+
+## Review 21 — 2026-09-08, at 780 closed rows
+
+Run by one reader over the five groups rounds 109 and 110 touched:
+the contributing guides, `README.md` and `CLAUDE.md`, the guides,
+round 109's document, and the directions table. Two filings.
+
+**The shape** is review 20's, one level up: the round's own records.
+`directions.md:1893` says round 109 closed fourteen and filed ten;
+`round-109.md`'s *What closed* names 14 ids and says of one, `UX-789`,
+that it is filed and open, and `Found by: round 109` finds 11 filings.
+`test_the_round_history_names_every_audit.py` reads the row's link and
+never its prose. The §6 map's `dev_baseline.py` row describes the
+finding baseline `UX-694` built and not the pyright mode `UX-697`
+added to the same file in round 109 — the `UX-780` defect, one row
+over, found by the pass review 20 said the rest of the map was worth.
+
+### The five checks
+
+| check | result |
+|---|---|
+| counts | `CLAUDE.md`'s `39 of 58 runs` reproduces from `dev_process_bands.py --runs 58`; README's twelve capture branches match `git ls-remote`; **fourteen → 13, ten → 11 (`UX-798`)** |
+| versions | not re-walked this review; review 20's readings stand |
+| paths exist | §7a's six guards all exist under the names the guide gives |
+| pasted output current | `dev_touching.py --size` prints `~50 KB`, the string both guides carry (`UX-774`); the guide's `18.2s`/`20.8s`/`184.0s`/`159.0s` are dated records |
+| a Part / invariant held | round 109's 13 closed ids are 🟢 in the task file and in `closed.md` — the round-107 defect did not recur |
+| a document describes a workflow | **the `dev_baseline.py` map row names one of its two modes (`UX-799`)** |
+
+### One gap in this sweep
+
+`docs/guides/*.md` were sampled for round 109/110 surface words only
+(`cli.md` opened, four not); the README's `50 MiB against 5.3 MiB`
+clone figure was not re-measured and carries no date.

@@ -68,7 +68,7 @@ For every task, before marking it done:
 
 1. Run the exact command(s) given in the task's **Acceptance Test** section.
 2. Paste the actual command and actual output into the task file's **Verification Log** section (append, don't overwrite prior entries).
-3. **While you work, run the tests that touch what you changed** (`UX-336`): `make test-touching` maps the working diff to the test files that name it - 31-145 of 521 test files, over every module the map names, not the seconds one machine spent on one of them (`UX-632`). `python3 tools/dev_touching.py --spread --write` is the only thing that writes that figure. It moves whenever the set of (test file, module named) pairs changes - a new test file, a new import, a renamed module, a deleted file - not only the first of those (`UX-756`: round 103 moved it with two imports and no new file, and CI reddened on the stale row). Wider than one module, run the tier (`UX-238`). Every target runs `-n auto`. **The suite's wall clock is a property of the machine, not of the suite** (`UX-551`), so budget a round against the spread and not a figure:
+3. **While you work, run the tests that touch what you changed** (`UX-336`): `make test-touching` maps the working diff to the test files that name it - 31-146 of 524 test files, over every module the map names, not the seconds one machine spent on one of them (`UX-632`). `python3 tools/dev_touching.py --spread --write` is the only thing that writes that figure. It moves whenever the set of (test file, module named) pairs changes - a new test file, a new import, a renamed module, a deleted file - not only the first of those (`UX-756`: round 103 moved it with two imports and no new file, and CI reddened on the stale row). Wider than one module, run the tier (`UX-238`). Every target runs `-n auto`. **The suite's wall clock is a property of the machine, not of the suite** (`UX-551`), so budget a round against the spread and not a figure:
 
 ```text
 round 46   3m15s                                     4 cores
@@ -83,7 +83,7 @@ Round 80's 8m52s is **not reproducible on the tree that produced it**: the same 
 
    | target | measured at `-n auto` | what is in it |
    |---|---|---|
-   | `make test-touching` | 31-145 of 521 test files | the test files that name what your diff touched |
+   | `make test-touching` | 31-146 of 524 test files | the test files that name what your diff touched |
    | `make test-small` | **20s** | pure Python over in-memory fixtures — the default tier |
    | `make test-medium` | ~2m50s | spawns a process or a node harness |
    | `make test-large` | ~2m05s | scale fixtures, real process trees |
@@ -347,7 +347,7 @@ tools/dev_touch_map.py       which test files executed which module, off CI's ow
                              coverage run - the import chain a grep cannot see (UX-524)
 tools/dev_impact.py          what a change reaches - contracts, findings, guides,
                              guards, open filings - and where it routes (UX-687, UX-701)
-tools/dev_close_task.py      the mechanical tail of closing a row (UX-336)
+tools/dev_close_task.py, dev_shape_budget.py  closing a row and its shape budget (UX-336, UX-690)
 tools/dev_refresh_analysis.py  the rule a committed analysis is written
                              under, and the command that rewrites one
                              from a fresh run (UX-486)
@@ -408,6 +408,8 @@ tools/native_trace/bwrap_shim.py  a `bwrap` shim ahead of the real one in
                              `$PATH`, so the hook reaches inside the sandbox
 ```
 
+A citation is closed or marked (open).
+
 **The CI workflows** — what each is for, and when it runs (`UX-746`):
 
 ```text
@@ -415,8 +417,8 @@ tools/native_trace/bwrap_shim.py  a `bwrap` shim ahead of the real one in
                                              (parallel + single-process),
                                              lint, tier-drift parse, the
                                              ci-reference-candidate artefact
-.github/workflows/quality.yml               PR + weekly - the gate-only
-                                             analysis shelf (UX-698/UX-699)
+.github/workflows/quality.yml               PR+weekly - eslint, codeql,
+                                             pip-audit, sizes (UX-698/699/787)
 .github/workflows/mutation.yml              weekly - mutmut over the
                                              touched modules (UX-703)
 .github/workflows/real-project-capture.yml  weekly + monthly + dispatch -
@@ -448,7 +450,7 @@ tests/flake_ledger.json    every unconfirmed excursion and confirmed drift the t
                            gate reported, one row each; appended by the default branch's
                            own run - `--adopt-flake` - and read by dev_flake_census.py (UX-691)
 tests/quality_baseline.json  every finding the widened families report today, by
-                           identity; `dev_baseline.py --check` reds a new one (UX-694)
+                           identity; reds a new one (UX-694, shape_ledger.json UX-690)
 tests/dom_shim.mjs         the one DOM every viewer guard runs on (UX-264)
 tests/viewer.mjs           the viewer's exports as one namespace, so a guard names a symbol not a module (UX-337)
 tests/cdp.mjs              headless Chrome over CDP, no dependencies (UX-257)

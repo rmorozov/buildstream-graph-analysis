@@ -169,8 +169,11 @@ class TestTheHeaderIsAsSmallAsItSays:
 
     @pytest.mark.parametrize("width,height", [(1440, 900), (390, 844)])
     def test_the_header_is_identity_and_fits(self, browser, page, width, height):
+        """`UX-668`: one exception to "zero controls" - the reader
+        selector is a whole-page control (styleguide §2b.2, §4 rule 7),
+        never a second one."""
         out = browser.measure(page, self._MEASURE, width=width, height=height)
-        assert out["controls"] == 0, out
+        assert out["controls"] <= 1, out
         assert out["blocks"] <= HEADER_LINE_BUDGET, out
         assert out["header_px"] / out["viewport"] <= self.MAX_SHARE, out
 

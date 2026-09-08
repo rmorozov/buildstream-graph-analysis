@@ -37,6 +37,9 @@ sys.path.insert(0, str(REPO))
 
 from bga import contracts, schemas
 
+sys.path.insert(0, str(REPO / "tools"))
+import dev_touching  # `UX-774`: the guide's size, derived by one tool
+
 RULES = REPO / "docs/contributing/rules.md"
 GUIDE = REPO / "docs/contributing/fixing-guide.md"
 STYLE = REPO / "docs/contributing/style-guide.md"
@@ -94,36 +97,18 @@ def _sentences(text):
         yield from re.split(r"(?<=[.:!?]) (?=[(\"A-Z*`\-—])", flat)
 
 
-#: `UX-607`: the width the guide's size is stated at. At `round(B/1024)`
-#: the band is 1 KB, so a paragraph over the headroom moved the figure -
-#: and the figure is in two documents, one of them another track's file.
-#: The figure is for a reading decision (card first, guide by paragraph),
-#: which needs an order of magnitude and not a byte.
-GUIDE_KB_STEP = 10
-
 #: What a paragraph costs. The width has to be wider than this.
 PARAGRAPH = 1024
 
-
-def _bucket(nbytes):
-    """The guide's size as it is stated: KB, to `GUIDE_KB_STEP`."""
-    return round(nbytes / 1024 / GUIDE_KB_STEP) * GUIDE_KB_STEP
-
-
-def _band():
-    """`(low, high)` bytes over which the guide states the same figure."""
-    size = GUIDE.stat().st_size
-    stated, low, high = _bucket(size), size, size
-    while _bucket(low - 1) == stated:
-        low -= 1
-    while _bucket(high) == stated:
-        high += 1
-    return low, high
-
+#: `UX-774`: the guide's own size is `dev_touching.guide_size_kb()` now,
+#: not a local copy - the band this file used to hold (`UX-607`) needed
+#: 1,024 B of headroom under a fixed ceiling, and every round paid a
+#: trim to keep it. A tool writes the figure instead, the way
+#: `--spread --write` does the cost row.
 
 #: `UX-616`: how the guide states the card's size. A constant width does
-#: not transfer downwards - `GUIDE_KB_STEP` on a 4.7 KB file states
-#: `0 KB` - and the figure is a reading decision (start at the card),
+#: not transfer downwards - `dev_touching.SIZE_KB_STEP` on a 4.7 KB file
+#: states `0 KB` - and the figure is a reading decision (start at the card),
 #: which turns on the ratio and not on a value. So the resolution is a
 #: factor of the size: one order of magnitude, sqrt(10) each way.
 ORDERS = {1: "an order of magnitude", 2: "two orders of magnitude",
@@ -229,7 +214,7 @@ def _derived():
     """`{path: [sentence fragment]}` written from the population here and
     nowhere from a literal, so the ban accepts exactly what a clause
     above has already checked (`UX-549`'s shape)."""
-    guide_kb = _bucket(GUIDE.stat().st_size)
+    guide_kb = dev_touching.guide_size_kb()
     shared = WORDS[len(_shared_paths())].capitalize()
     # The rules are the subject; the header above §1 is the argument,
     # and it carries the marker in the sentence stating the count.
@@ -324,29 +309,34 @@ class TestNoBareCountSurvives:
 
 
 class TestTheGuidesSizeCostsOneFile:
-    """`UX-607`: the derived size is in two documents, so a paragraph
-    over the headroom is a two-file change across two tracks. Twice in
-    round 84. The width is the fix - `round(B/1024)` left 33 B - and a
-    scan keeps a third copy from appearing."""
+    """`UX-607` filed the coupling; `UX-774` retired the band it fixed
+    it with. Twice in round 84 and twice more since (round 106, 107) a
+    paragraph over 1,024 B of headroom under a fixed ceiling was paid as
+    a trim, on prose picked for being cheap to cut, not least useful.
+    Now `tools/dev_touching.py --size` derives the figure the same shape
+    as the cost row (`UX-632`), and these clauses hold the documents to
+    what it writes rather than to a width under a ceiling - growth is no
+    longer the guard's business, staleness is."""
 
     def test_a_paragraph_does_not_move_the_stated_figure(self):
-        """The acceptance: 1 KB added to the guide, and no second
-        document red."""
-        size = GUIDE.stat().st_size
-        _low, high = _band()
-        assert high - size >= PARAGRAPH, (
-            f"the guide is {size:,} B and states ~{_bucket(size)} KB; the "
-            f"figure moves at {high:,} B, so only {high - size:,} B of "
-            f"prose fit before docs/contributing/rules.md must change too")
+        """The acceptance: prose added to the guide is a rerun of
+        `--size --write`, not a second document to edit by hand."""
+        row = dev_touching.size_figure()
+        for name in dev_touching.SIZE_SITES:
+            text = (REPO / name).read_text(encoding="utf-8")
+            assert row in text, (
+                f"{name} does not carry {row!r}, the guide's size as "
+                "`dev_touching.size_figure()` derives it. Run "
+                "`python3 tools/dev_touching.py --size --write`.")
 
-    def test_the_band_is_what_bought_the_headroom(self):
-        """Not the current size - the width. At `round(B/1024)` the band
-        is 1024 B, so a 1 KB paragraph crosses it wherever it lands and
-        the headroom above is luck."""
-        low, high = _band()
-        assert high - low > PARAGRAPH, (
-            f"the guide states one figure over [{low:,}, {high:,}) B, a "
-            f"{high - low:,} B band a paragraph can cross by accident")
+    def test_the_document_is_what_the_tool_would_write(self):
+        """The drift direction: a figure that was current and is not,
+        the same clause `UX-632`'s cost row is held to."""
+        for name in dev_touching.SIZE_SITES:
+            text = (REPO / name).read_text(encoding="utf-8")
+            assert dev_touching.write_size_figure(text) == text, (
+                f"{name} carries a stale copy of the guide's size. Run "
+                "`python3 tools/dev_touching.py --size --write`.")
 
     def test_no_third_document_states_the_guides_size(self):
         """The shape, not the two instances. A size claim about the

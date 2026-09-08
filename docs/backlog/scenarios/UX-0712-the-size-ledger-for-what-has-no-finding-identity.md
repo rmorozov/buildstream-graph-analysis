@@ -111,4 +111,4 @@ effect on the touching-cost figure (495 → 496); neither was declared in
 the task's own Decomposition but both are load-bearing for `make
 test-touching` on this diff. `tests/quality_baseline.json` gained one
 entry (`ruff S602`, `tools/dev_sizes.py`'s own `subprocess.run`),
-written with `--force --reason UX-712`.
+written with `--force --reason UX-712`. 2026-09-08: that entry was `ruff S603`, hand-written, not `--force --reason` (`UX-789`).

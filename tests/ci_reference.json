@@ -56,11 +56,11 @@
     "tests/unit/test_a_rebuild_is_a_wake_with_nothing_before_it.py": 0.01,
     "tests/unit/test_a_refused_timeline_says_it_was_refused.py": 3.84,
     "tests/unit/test_a_release_records_a_contract_state.py": 0.03,
-    "tests/unit/test_a_report_you_can_navigate.py": 21.63,
+    "tests/unit/test_a_report_you_can_navigate.py": 30.9,
     "tests/unit/test_a_required_set_grew_under_an_unchanged_id.py": 0.53,
     "tests/unit/test_a_retired_state_is_declared.py": 0.02,
     "tests/unit/test_a_run_bundle_you_can_carry.py": 0.27,
-    "tests/unit/test_a_run_is_priced.py": 0.14,
+    "tests/unit/test_a_run_is_priced.py": 6.7,
     "tests/unit/test_a_runbook_is_not_a_table.py": 1.08,
     "tests/unit/test_a_scenario_is_named_by_its_seed.py": 7.55,
     "tests/unit/test_a_sentence_lives_on_its_door.py": 26.6,
@@ -182,7 +182,7 @@
     "tests/unit/test_focus_is_an_investigation.py": 1.05,
     "tests/unit/test_focus_keeps_the_reading_position.py": 1.76,
     "tests/unit/test_focused_graphs_not_a_dag_viewer.py": 0.81,
-    "tests/unit/test_forced_stays_named_past_commit.py": 0.89,
+    "tests/unit/test_forced_stays_named_past_commit.py": 13.2,
     "tests/unit/test_grace_window_drains.py": 5.47,
     "tests/unit/test_granularity.py": 1.23,
     "tests/unit/test_graph_performance.py": 2.19,
@@ -311,7 +311,7 @@
     "tests/unit/test_the_architecture_counts_what_the_module_holds.py": 0.1,
     "tests/unit/test_the_architecture_names_the_commands.py": 0.02,
     "tests/unit/test_the_arrows_say_why_now.py": 0.38,
-    "tests/unit/test_the_baseline_only_shrinks.py": 2.41,
+    "tests/unit/test_the_baseline_only_shrinks.py": 50.7,
     "tests/unit/test_the_browser_is_the_library.py": 6.67,
     "tests/unit/test_the_browser_waits_for_a_condition.py": 3.57,
     "tests/unit/test_the_build_pivots_by_program.py": 2.29,
@@ -351,7 +351,7 @@
     "tests/unit/test_the_export_degrades_before_it_refuses.py": 0.48,
     "tests/unit/test_the_export_names_a_bands_absence.py": 0.75,
     "tests/unit/test_the_exports_data_half_has_a_budget.py": 39.18,
-    "tests/unit/test_the_fast_check_holds_what_the_suite_holds.py": 3.47,
+    "tests/unit/test_the_fast_check_holds_what_the_suite_holds.py": 8.8,
     "tests/unit/test_the_first_finding_is_an_action.py": 0.65,
     "tests/unit/test_the_first_screen_is_a_decision.py": 2.43,
     "tests/unit/test_the_first_view_says_what_to_do.py": 0.06,
@@ -390,12 +390,12 @@
     "tests/unit/test_the_monolith_retires.py": 0.54,
     "tests/unit/test_the_next_step_is_a_command.py": 2.42,
     "tests/unit/test_the_numbers_have_a_sentence.py": 3.62,
-    "tests/unit/test_the_order_the_page_has.py": 18.66,
+    "tests/unit/test_the_order_the_page_has.py": 32.1,
     "tests/unit/test_the_ordering_authority_is_one_place.py": 0.0,
     "tests/unit/test_the_package_runs_on_the_python_it_claims.py": 6.45,
     "tests/unit/test_the_page_conforms_to_its_sections.py": 6.44,
     "tests/unit/test_the_page_has_a_reader.py": 16.59,
-    "tests/unit/test_the_page_has_a_volume_budget.py": 41.77,
+    "tests/unit/test_the_page_has_a_volume_budget.py": 93.4,
     "tests/unit/test_the_page_has_geometry.py": 68.72,
     "tests/unit/test_the_page_keeps_the_names_it_was_given.py": 5.43,
     "tests/unit/test_the_page_moves_between_runs.py": 22.24,
@@ -475,7 +475,7 @@
     "tests/unit/test_the_value_rule_has_a_home.py": 0.02,
     "tests/unit/test_the_verdict_record_is_a_published_key.py": 0.83,
     "tests/unit/test_the_verification_log_is_true.py": 0.01,
-    "tests/unit/test_the_view_parses_nothing.py": 8.89,
+    "tests/unit/test_the_view_parses_nothing.py": 14.8,
     "tests/unit/test_the_viewer_modules_have_a_home.py": 0.61,
     "tests/unit/test_the_viewer_perfetto_boundary.py": 0.31,
     "tests/unit/test_the_viewer_renders_the_schema.py": 7.84,
@@ -876,11 +876,7 @@
       0.03
     ],
     "tests/unit/test_a_report_you_can_navigate.py": [
-      21.63,
-      21.63,
-      21.63,
-      21.63,
-      21.63
+      30.9
     ],
     "tests/unit/test_a_required_set_grew_under_an_unchanged_id.py": [
       0.53,
@@ -904,8 +900,7 @@
       0.27
     ],
     "tests/unit/test_a_run_is_priced.py": [
-      0.14,
-      0.14
+      6.7
     ],
     "tests/unit/test_a_runbook_is_not_a_table.py": [
       1.08,
@@ -1725,7 +1720,7 @@
       0.81
     ],
     "tests/unit/test_forced_stays_named_past_commit.py": [
-      0.89
+      13.2
     ],
     "tests/unit/test_grace_window_drains.py": [
       5.47,
@@ -2598,10 +2593,7 @@
       0.38
     ],
     "tests/unit/test_the_baseline_only_shrinks.py": [
-      2.41,
-      2.39,
-      2.41,
-      2.41
+      50.7
     ],
     "tests/unit/test_the_browser_is_the_library.py": [
       6.67,
@@ -2871,11 +2863,7 @@
       39.18
     ],
     "tests/unit/test_the_fast_check_holds_what_the_suite_holds.py": [
-      3.47,
-      3.46,
-      3.47,
-      3.47,
-      3.47
+      8.8
     ],
     "tests/unit/test_the_first_finding_is_an_action.py": [
       0.65,
@@ -3130,11 +3118,7 @@
       3.62
     ],
     "tests/unit/test_the_order_the_page_has.py": [
-      18.66,
-      18.66,
-      18.66,
-      18.66,
-      18.66
+      32.1
     ],
     "tests/unit/test_the_ordering_authority_is_one_place.py": [
       0.0
@@ -3161,11 +3145,7 @@
       16.59
     ],
     "tests/unit/test_the_page_has_a_volume_budget.py": [
-      41.77,
-      41.77,
-      41.77,
-      41.77,
-      41.77
+      93.4
     ],
     "tests/unit/test_the_page_has_geometry.py": [
       68.72,
@@ -3695,11 +3675,7 @@
       0.01
     ],
     "tests/unit/test_the_view_parses_nothing.py": [
-      8.89,
-      8.89,
-      8.89,
-      8.89,
-      8.89
+      14.8
     ],
     "tests/unit/test_the_viewer_modules_have_a_home.py": [
       0.61,

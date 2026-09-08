@@ -102,7 +102,19 @@ FIXTURES = {"golden": REPO / "tests/fixtures/golden/mixed_task_kinds",
 # interval tables are eleven rows of shallow columns. The bound is not
 # lowered to match - a ratio that improved on one fixture and worsened
 # on the other is the budget doing its job, not a new floor to defend.
-DEEPER_THAN_THREE = {"golden": (0.574, 0.50), "macro_micro": (0.671, 0.58)}
+#
+# `UX-683` moves the golden bound 0.50 -> 0.51, the same kind of
+# movement again: `is_foundation` is a sixth field on every
+# `elements.blast_radius.<uid>` and `elements.fan_in.<uid>` record,
+# depth four by the same construction. Measured with
+# `tools/dev_refresh_analysis.py` before -> after:
+#
+#     golden       753 -> 769 leaves, 372 -> 388 deep, 0.4940 -> 0.5046
+#     macro_micro                                       -> 0.4448
+#
+# `macro_micro` stays at 0.58 - it has the headroom and the number
+# moved the other way besides.
+DEEPER_THAN_THREE = {"golden": (0.574, 0.51), "macro_micro": (0.671, 0.58)}
 
 #: `macro_micro` keeps a seventh level, argued in the item: a step's
 #: `entering` list is four real relations, not a namespace.

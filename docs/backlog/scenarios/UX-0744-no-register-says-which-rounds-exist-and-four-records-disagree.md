@@ -1,6 +1,6 @@
 # UX-744: no register says which rounds exist, and four records disagree
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-666 (the runs ledger, and the guard that stops at the documents which exist) | **Serves:** the session opening a round, which cannot number it from any record | **Topic:** docs | **Area:** unassigned | **Shape:** judgement
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-666 (the runs ledger, and the guard that stops at the documents which exist) | **Serves:** the session opening a round, which cannot number it from any record | **Topic:** docs | **Area:** unassigned | **Shape:** judgement
 
 ## Motivation
 
@@ -143,3 +143,4 @@ reached it first.
 `UX-759`'s premise did not survive this row: the register that shipped
 has no ids column, so that row closed as a decline. That annotation
 was owed by this commit under the fixing guide's item 6.
+**Deviation (round 110).** Closed by the session on a verifier's reading of the tree at `c13297cf`: every Required Fix clause present (`cbe1ccfa`, `17bf0b8d`, `867c8b29`), the HOLD answered by `UX-772` — `document_date()` reads `None` for rounds 76 and 85 and both are waived by name — and the owed annotation above in place. Two corrections: round 107's "26 seconds" has no commit behind it (`17bf0b8d` to `51742474` is 11 m 48 s); and the Acceptance Test's "99–102 undocumented" clause is moot since `UX-757` documented them — the guard's power was shown by deleting `round-100.md` instead.

@@ -299,8 +299,15 @@ BUDGETS = (
     # measured 35,813, 87 of headroom, the same order `UX-717` left.
     # The 4,100 class is untouched at 32,000 - the fixed overhead does
     # not scale with element count, so a run there stays under it.
+    # `UX-683`: words 9,200 -> 9,300 on the 4,100 class only. The
+    # `xl` fixture declares no foundation tier, so `foundation-
+    # candidates` fires (elements at or above the top p5 fan-out, not
+    # already declared) where the two `*-foundation` findings do not -
+    # measured 9,200 -> 9,269, +69. The 50-element class is unmoved:
+    # `macro_micro`/`golden` are small enough that neither the
+    # candidate threshold nor the fixture's own kinds trip it.
     (50, 35_900, 12_700, 800, 7_900),
-    (4_100, 32_000, 9_200, 900, 5_500),
+    (4_100, 32_000, 9_300, 900, 5_500),
 )
 
 

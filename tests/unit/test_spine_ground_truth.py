@@ -11,6 +11,7 @@ Plane 2 existed, so none of this could be asked before `UX-106`.
 """
 import os
 import shutil
+import time
 
 import pytest
 
@@ -28,22 +29,21 @@ BWRAP_AVAILABLE = shutil.which("bwrap") is not None
 CC_AVAILABLE = shutil.which("cc") is not None or shutil.which("gcc") is not None
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-# The `sleep 3` the elements run. Generous on the upper side because a
-# loaded runner delays the process's own teardown, and tight on the lower
-# side because nothing can make a `sleep 3` finish early.
+# The `sleep 3` the elements run. UX-741: a `sleep` cannot finish early
+# under any load, and cannot outrun the harness's own clock around the
+# whole build - so the bound is `SLEEP_S <= duration_s <= harness span`,
+# never a symmetric tolerance on a nominal (both sides stretch under
+# contention; a fixed window round-trips through pass and fail as load
+# changes, which a one-sided bound and an enclosing bound do not).
 SLEEP_S = 3.0
-SLEEP_TOLERANCE_S = 0.5
 # `sleep` uses no CPU. The spine reads `/proc/<pid>/stat`, which reports
 # whole 10ms ticks, so "zero" means "below a couple of ticks" - measured
 # at exactly 0 on every one of 24 processes.
 IDLE_CPU_US = 30_000
-# UX-108: how far Plane 1's per-element task span may sit from the
-# spine's. Measured on a real build: six of eight elements agree to 7ms,
-# and two disagree by 0.32s - Plane 1's wrapped log is stamped when the
-# wrapper *reads* a line, and BuildStream flushes in bursts. Filed as
-# UX-110; the tolerance here is what lets this assert the agreement that
-# does hold without asserting the lag away.
-PLANE_AGREEMENT_S = 1.0
+# UX-741: Plane 1's per-element lag from Plane 2 is UX-110's axis, out
+# of scope here - this only checks the two planes name the same element,
+# their intervals overlap, and Plane 2 stays inside the harness's own
+# enclosing span (both hold at any load; the lag's *size* does not).
 
 
 @pytest.mark.bst
@@ -66,6 +66,10 @@ def test_the_spine_measures_sleep_3_as_three_seconds_of_nothing(tmp_path):
     plane1 = tmp_path / "plane1.log"
     previous = dict(os.environ)
     os.environ.update(isolated_bst_env(home))
+    # UX-741: the enclosing bound - nothing the spine reports for one
+    # process can exceed the harness's own wall clock around the whole
+    # `bst build` that drove it, at any load.
+    harness_start = time.monotonic()
     try:
         code = run_traced_build(
             project, ["bst", "--no-colors", "--builders", "2", "build", "all.bst"],
@@ -75,6 +79,7 @@ def test_the_spine_measures_sleep_3_as_three_seconds_of_nothing(tmp_path):
     finally:
         os.environ.clear()
         os.environ.update(previous)
+    harness_span = time.monotonic() - harness_start
 
     assert code == 0
     assert records, "the spine saw nothing on a build that ran 8 real commands"
@@ -94,8 +99,13 @@ def test_the_spine_measures_sleep_3_as_three_seconds_of_nothing(tmp_path):
             sleepers[record["element"]] = record
     assert len(sleepers) == 8, f"expected 8 work elements, got {sorted(sleepers)}"
     for element, record in sorted(sleepers.items()):
-        assert abs(record["duration_s"] - SLEEP_S) < SLEEP_TOLERANCE_S, (
-            f"{element}: {record['duration_s']:.3f}s for a `sleep 3`"
+        assert record["duration_s"] >= SLEEP_S, (
+            f"{element}: {record['duration_s']:.3f}s for a `sleep 3` "
+            "- a sleep cannot finish early"
+        )
+        assert record["duration_s"] <= harness_span, (
+            f"{element}: {record['duration_s']:.3f}s exceeds the harness's "
+            f"own {harness_span:.3f}s span driving the whole build"
         )
         assert record.get("cpu_us", 0) <= IDLE_CPU_US, (
             f"{element}: {record['cpu_us']}us of CPU for a process that slept"
@@ -114,15 +124,14 @@ def test_the_spine_measures_sleep_3_as_three_seconds_of_nothing(tmp_path):
     reason="bst/bwrap/cc not all found on PATH - see docs/spec/ingestion-pipeline.md",
 )
 def test_the_two_planes_agree_on_how_long_each_element_took(tmp_path):
-    """One build, both planes, per-element durations compared.
+    """One build, both planes, per-element intervals compared.
 
-    The task asks for the spine's spans to bracket Plane 1's task spans.
-    They do not, in either direction, and the reason is Plane 1's rather
-    than the spine's: its wrapped log is stamped when the wrapper reads a
-    line, and BuildStream flushes in bursts, so two of eight identical
-    elements came out 0.32s short of the `sleep 3` they ran. Agreement
-    within a stated tolerance is what can honestly be asserted, and the
-    disagreement itself is UX-110.
+    UX-741: agreement is expressed as what holds at any load - the two
+    planes name the same element, their intervals overlap, and Plane 2
+    stays inside the harness's own enclosing span - not as a magnitude
+    both planes stretch under contention (`PLANE_AGREEMENT_S` did, and
+    reddened on the *short* side under load; see the task file). The
+    lag's size is UX-110's axis, not this clause's.
     """
     from tests.unit._bst_env import isolated_bst_env
     from tools.bst_native_build_tracer import build_spans_from_wrapped_log, run_traced_build
@@ -137,6 +146,11 @@ def test_the_two_planes_agree_on_how_long_each_element_took(tmp_path):
     plane1 = tmp_path / "plane1.log"
     previous = dict(os.environ)
     os.environ.update(isolated_bst_env(home))
+    # Plane 1's spans are wall-clock, Plane 2's are `CLOCK_MONOTONIC`
+    # (UX-185's `bga-clocks` anchor pattern) - this pair translates one
+    # onto the other so their intervals can be compared directly.
+    harness_wall_before = time.time()
+    harness_mono_before = time.monotonic()
     try:
         code = run_traced_build(
             project, ["bst", "--no-colors", "--builders", "2", "build", "all.bst"],
@@ -146,12 +160,10 @@ def test_the_two_planes_agree_on_how_long_each_element_took(tmp_path):
     finally:
         os.environ.clear()
         os.environ.update(previous)
+    harness_span = time.monotonic() - harness_mono_before
 
     assert code == 0
-    spans = {
-        s["element"]: s["end"] - s["start"]
-        for s in build_spans_from_wrapped_log(str(plane1))
-    }
+    spans = {s["element"]: s for s in build_spans_from_wrapped_log(str(plane1))}
     assert spans, "Plane 1 produced no build spans from the wrapped log"
 
     by_element = {}
@@ -165,12 +177,18 @@ def test_the_two_planes_agree_on_how_long_each_element_took(tmp_path):
 
     compared = 0
     for element, (start, end) in sorted(by_element.items()):
-        plane1_duration = spans.get(element)
-        if plane1_duration is None:
+        plane1_span = spans.get(element)
+        if plane1_span is None:
             continue
         compared += 1
-        assert abs((end - start) - plane1_duration) < PLANE_AGREEMENT_S, (
-            f"{element}: Plane 2 {(end - start):.3f}s against Plane 1 "
-            f"{plane1_duration:.3f}s"
+        p1_start = harness_mono_before + (plane1_span["start"] - harness_wall_before)
+        p1_end = harness_mono_before + (plane1_span["end"] - harness_wall_before)
+        assert p1_start <= end and start <= p1_end, (
+            f"{element}: Plane 2 [{start:.3f}, {end:.3f}] does not overlap "
+            f"Plane 1 [{p1_start:.3f}, {p1_end:.3f}] - UX-110, not this clause"
+        )
+        assert (end - start) <= harness_span, (
+            f"{element}: Plane 2 {(end - start):.3f}s exceeds the harness's "
+            f"own {harness_span:.3f}s span driving the whole build"
         )
     assert compared >= 8, f"only {compared} element(s) had spans in both planes"

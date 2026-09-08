@@ -549,7 +549,8 @@
                 "is_leaf": false,
                 "risk_score": 10,
                 "element_kind": "import",
-                "is_structural_kind": true
+                "is_structural_kind": true,
+                "is_foundation": false
             },
             "core.bst": {
                 "downstream_count": 8,
@@ -557,7 +558,8 @@
                 "is_leaf": false,
                 "risk_score": 8,
                 "element_kind": "cmake",
-                "is_structural_kind": false
+                "is_structural_kind": false,
+                "is_foundation": false
             },
             "codegen.bst": {
                 "downstream_count": 8,
@@ -565,7 +567,8 @@
                 "is_leaf": false,
                 "risk_score": 0,
                 "element_kind": "cmake",
-                "is_structural_kind": false
+                "is_structural_kind": false,
+                "is_foundation": false
             },
             "lib-a.bst": {
                 "downstream_count": 7,
@@ -573,7 +576,8 @@
                 "is_leaf": false,
                 "risk_score": 7,
                 "element_kind": "cmake",
-                "is_structural_kind": false
+                "is_structural_kind": false,
+                "is_foundation": false
             },
             "lib-b.bst": {
                 "downstream_count": 6,
@@ -581,7 +585,8 @@
                 "is_leaf": false,
                 "risk_score": 6,
                 "element_kind": "cmake",
-                "is_structural_kind": false
+                "is_structural_kind": false,
+                "is_foundation": false
             },
             "lib-c.bst": {
                 "downstream_count": 5,
@@ -589,7 +594,8 @@
                 "is_leaf": false,
                 "risk_score": 5,
                 "element_kind": "cmake",
-                "is_structural_kind": false
+                "is_structural_kind": false,
+                "is_foundation": false
             },
             "lib-d.bst": {
                 "downstream_count": 4,
@@ -597,7 +603,8 @@
                 "is_leaf": false,
                 "risk_score": 4,
                 "element_kind": "cmake",
-                "is_structural_kind": false
+                "is_structural_kind": false,
+                "is_foundation": false
             },
             "lib-e.bst": {
                 "downstream_count": 3,
@@ -605,7 +612,8 @@
                 "is_leaf": false,
                 "risk_score": 3,
                 "element_kind": "cmake",
-                "is_structural_kind": false
+                "is_structural_kind": false,
+                "is_foundation": false
             },
             "lib-f.bst": {
                 "downstream_count": 2,
@@ -613,7 +621,8 @@
                 "is_leaf": false,
                 "risk_score": 2,
                 "element_kind": "cmake",
-                "is_structural_kind": false
+                "is_structural_kind": false,
+                "is_foundation": false
             },
             "app.bst": {
                 "downstream_count": 1,
@@ -621,7 +630,8 @@
                 "is_leaf": false,
                 "risk_score": 1,
                 "element_kind": "cmake",
-                "is_structural_kind": false
+                "is_structural_kind": false,
+                "is_foundation": false
             },
             "all.bst": {
                 "downstream_count": 0,
@@ -629,7 +639,8 @@
                 "is_leaf": true,
                 "risk_score": 0,
                 "element_kind": "stack",
-                "is_structural_kind": true
+                "is_structural_kind": true,
+                "is_foundation": false
             }
         },
         "fan_in": {
@@ -638,77 +649,88 @@
                 "transitive_count": 10,
                 "immediate_dominator": "app.bst",
                 "element_kind": "stack",
-                "is_structural_kind": true
+                "is_structural_kind": true,
+                "is_foundation": false
             },
             "app.bst": {
                 "direct_count": 8,
                 "transitive_count": 9,
                 "immediate_dominator": "toolchain.bst",
                 "element_kind": "cmake",
-                "is_structural_kind": false
+                "is_structural_kind": false,
+                "is_foundation": false
             },
             "codegen.bst": {
                 "direct_count": 1,
                 "transitive_count": 1,
                 "immediate_dominator": "toolchain.bst",
                 "element_kind": "cmake",
-                "is_structural_kind": false
+                "is_structural_kind": false,
+                "is_foundation": false
             },
             "core.bst": {
                 "direct_count": 1,
                 "transitive_count": 1,
                 "immediate_dominator": "toolchain.bst",
                 "element_kind": "cmake",
-                "is_structural_kind": false
+                "is_structural_kind": false,
+                "is_foundation": false
             },
             "lib-a.bst": {
                 "direct_count": 3,
                 "transitive_count": 3,
                 "immediate_dominator": "toolchain.bst",
                 "element_kind": "cmake",
-                "is_structural_kind": false
+                "is_structural_kind": false,
+                "is_foundation": false
             },
             "lib-b.bst": {
                 "direct_count": 4,
                 "transitive_count": 4,
                 "immediate_dominator": "toolchain.bst",
                 "element_kind": "cmake",
-                "is_structural_kind": false
+                "is_structural_kind": false,
+                "is_foundation": false
             },
             "lib-c.bst": {
                 "direct_count": 4,
                 "transitive_count": 5,
                 "immediate_dominator": "toolchain.bst",
                 "element_kind": "cmake",
-                "is_structural_kind": false
+                "is_structural_kind": false,
+                "is_foundation": false
             },
             "lib-d.bst": {
                 "direct_count": 4,
                 "transitive_count": 6,
                 "immediate_dominator": "toolchain.bst",
                 "element_kind": "cmake",
-                "is_structural_kind": false
+                "is_structural_kind": false,
+                "is_foundation": false
             },
             "lib-e.bst": {
                 "direct_count": 4,
                 "transitive_count": 7,
                 "immediate_dominator": "toolchain.bst",
                 "element_kind": "cmake",
-                "is_structural_kind": false
+                "is_structural_kind": false,
+                "is_foundation": false
             },
             "lib-f.bst": {
                 "direct_count": 4,
                 "transitive_count": 8,
                 "immediate_dominator": "toolchain.bst",
                 "element_kind": "cmake",
-                "is_structural_kind": false
+                "is_structural_kind": false,
+                "is_foundation": false
             },
             "toolchain.bst": {
                 "direct_count": 0,
                 "transitive_count": 0,
                 "immediate_dominator": null,
                 "element_kind": "import",
-                "is_structural_kind": true
+                "is_structural_kind": true,
+                "is_foundation": false
             }
         },
         "criticality_probability": {
@@ -1900,10 +1922,10 @@
         }
     ],
     "document_shape": {
-        "leaves": 1240,
+        "leaves": 1262,
         "deepest_depth": 7,
         "deepest_path": "findings.[].evidence.steps.[].entering.[]",
-        "deeper_than_three": 663,
-        "deeper_than_three_share": 0.5346774193548387
+        "deeper_than_three": 685,
+        "deeper_than_three_share": 0.5427892234548336
     }
 }

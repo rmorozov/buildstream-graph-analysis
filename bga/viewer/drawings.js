@@ -195,6 +195,11 @@ function mergeTicks(ticks) {
 //: gives both pairs the same edge anchor.
 const EDGE_MARKS = new Set(["first", "last", "min", "max"]);
 
+//: Edge membership read off `mergeTicks`' own components, not the
+//: compound `name` a merge produces - `"p95 max"` never matches
+//: `EDGE_MARKS.has()` on the string it becomes (`UX-758`).
+const isEdgeMark = (tick) => tick.names.some((name) => EDGE_MARKS.has(name));
+
 export function exhibitAxis(doc, ticks) {
   const row = box(doc, "div", { class: "draw-axis", "data-role": "draw-axis" });
   const merged = mergeTicks(ticks).filter(Boolean);
@@ -205,10 +210,10 @@ export function exhibitAxis(doc, ticks) {
   // `decomposition`'s case - keep the original layout;
   // `AXIS_TICK_MIN_SHARE` is what protects that one from the same
   // defect, by dropping a tick rather than moving it.
-  const middle = merged.filter((tick) => !EDGE_MARKS.has(tick.name));
+  const middle = merged.filter((tick) => !isEdgeMark(tick));
   const flow = middle.length === 1
-    && merged.some((tick) => tick.name === "first" || tick.name === "min")
-    && merged.some((tick) => tick.name === "last" || tick.name === "max");
+    && merged.some((tick) => tick.names.includes("first") || tick.names.includes("min"))
+    && merged.some((tick) => tick.names.includes("last") || tick.names.includes("max"));
   if (flow) row.setAttribute("data-layout", "flow");
   for (const tick of merged) {
     const at = tick.at.toFixed(2);
@@ -230,7 +235,7 @@ export function exhibitAxis(doc, ticks) {
     // `views.js:566` and this module reintroduced it; a property
     // assignment is not inline style and is not subject to the policy.
     if (label.style) {
-      if (flow && !EDGE_MARKS.has(tick.name)) label.style.marginLeft = `${at}%`;
+      if (flow && !isEdgeMark(tick)) label.style.marginLeft = `${at}%`;
       else if (!flow) label.style.left = `${at}%`;
     }
     row.append(label);

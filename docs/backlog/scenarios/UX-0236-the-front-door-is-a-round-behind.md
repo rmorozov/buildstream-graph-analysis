@@ -117,6 +117,11 @@ commit are gone from the README — `make test` now says `5m11s,
 measured`, which is the number a reader is deciding on — and the tier
 table's file counts are refreshed to 164/217 from `tests/tiers.py`.
 
+`UX-779` (2026-09-08): `UX-551` falsified the premise a reader is
+"deciding on" one fixed figure — the same commit read 333s and 418s an
+hour apart — so `make test`'s README line no longer states a number;
+it links the fixing guide's measured range instead.
+
 **Mutations verified red and reverted (4, plus 3 reddenings on the real
 pre-change documents):** an exempt alias deleted from `cli.md`; an
 exemption for an alias that does not exist; an alias with neither a

@@ -2564,6 +2564,11 @@ _SIGNALS_TABLES = {
                                    "duration. A ranking, not a "
                                    "measurement - comparable "
                                    "within a run, not across."},
+                "is_foundation": {
+                    "description": "Whether the project declared this "
+                                   "element foundation (`UX-683`) - "
+                                   "excluded from the ranking on that "
+                                   "declaration, not a kind guess."},
             }},
         "description": "What one element's change rebuilds, and "
                        "what that costs."},
@@ -2590,6 +2595,11 @@ _SIGNALS_TABLES = {
                                    "dependency - an element can depend "
                                    "on something that dominates "
                                    "nothing. Null for a root."},
+                "is_foundation": {
+                    "description": "Whether the project declared this "
+                                   "element foundation (`UX-683`) - "
+                                   "excluded from the ranking on that "
+                                   "declaration, not a kind guess."},
             }},
         "description": "What one element pulls in and the rebuild it "
                        "waits on. Plane 1 only - whether those edges "

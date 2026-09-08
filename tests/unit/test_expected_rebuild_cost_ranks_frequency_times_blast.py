@@ -72,6 +72,7 @@ def test_key_present_and_a_list_with_change_frequency():
     assert result['expected_rebuild_cost'] == [{
         'element': 'lib-a.bst', 'rebuilds': 30, 'weighted_blast_us': 40_000_000,
         'expected_cost_us': 1_200_000_000, 'blast_count': 4,
+        'is_foundation': False,
     }]
 
 

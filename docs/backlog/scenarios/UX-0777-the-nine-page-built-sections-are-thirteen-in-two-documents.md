@@ -1,6 +1,6 @@
 # UX-777: the nine page-built sections are thirteen, in two documents
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-650 (the round that found the count wrong and fixed only the code) | **Serves:** the reader deciding whether chaptering belongs in the schema, on a figure that is 44% low | **Topic:** docs | **Area:** unassigned | **Shape:** judgement
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-650 (the round that found the count wrong and fixed only the code) | **Serves:** the reader deciding whether chaptering belongs in the schema, on a figure that is 44% low | **Topic:** docs | **Area:** unassigned | **Shape:** judgement
 
 ## Motivation
 
@@ -67,4 +67,76 @@ did not.
 
 ## Outcome
 
-_Not started._
+### The gap
+
+`_sites()` — the same population `test_a_reader_role_demotes.py:353`
+already parses over `views.js`/`element.js`/`questions.js` — counts
+**14**, not 13:
+
+```console
+$ python3 -c "..."  # _sites() over the three built-in modules
+14
+```
+
+The Motivation's own grep undercounts by missing a dynamic key:
+`element.js:577`, `section.setAttribute("data-section",
+elementAnchor(uid))`, has no literal string after the comma, so
+`'data-section", "'` never matches it. `UX-650` (round 88) counted
+13; `views.js::renderBandUnavailable` (line 214, `data-section:
+"band"`, R4) was added after that round and is the 14th — drift the
+"thirteen" this row was filed to write down had already caught up to.
+`forty-eight` is a dated measurement (round 39, `UX-286`) of a
+specific synthetic-run DOM, not a static population; re-deriving it
+needs a browser render, which `test_the_report_has_chapters.py`'s own
+docstring carries unguarded too. The verifier's DOM census confirms
+the population, not just the figure: macro_micro's rendered page
+carries 68 `data-section`s (published + page-built), the wrong count
+for "page-built" — `_sites()`'s 14, over the three built-in modules
+alone, is what the sentence names. Chosen: derive the page-built count
+from `_sites()`; leave `forty-eight` as the round-39 figure it already
+is, its round and id now stated beside it in `chapters.js`.
+
+### The close
+
+Both documents state `fourteen`. `chapters.js` no longer types a
+fraction beside it (`over a quarter` was a figure the guard cannot
+see, in the shape this task was filed against) — the dated `forty-eight`
+now carries its round and id inline, one line: `` (`UX-286`, round 39) ``.
+The word itself is built, not tabled: `dev_track_cost.count_word`
+(`tools/dev_track_cost.py`, imported the way
+`test_a_counted_figure_is_derived.py` does), so a count past a fixed
+dict's range still reddens legibly rather than raising `KeyError`.
+
+```console
+$ grep -n "Fourteen of the\|forty-eight sections on" bga/viewer/chapters.js
+31: * **Why the table is here and not in the schema.** Fourteen of the
+32: * forty-eight sections on the synthetic run (`UX-286`, round 39) are
+$ python3 -m pytest tests/unit/test_a_reader_role_demotes.py -q
+21 passed in 2.84s
+$ make lint
+clean: 568 finding(s) match tests/quality_baseline.json; 281/1/2/1 forced
+(UX-697/UX-744/UX-762/UX-781)
+```
+
+The guard is two clauses in `TestThePageBuiltCountIsDerivedInBothDocuments`,
+beside the existing count at `test_a_reader_role_demotes.py:353` (not
+`test_the_process_documents_derive_their_figures.py` — its population
+is `.claude/**.md` and `docs/contributing/*.md`), reusing `_sites()`
+rather than a second population. `architecture.md`'s prose edit is
+substantive (`only_the_count_moved` does not excuse it), so it
+re-anchors the document's Verification Log in the same commit — a new
+`Updated 2026-09-08 (after UX-777)` entry. `test_the_verification_log_is_true.py`:
+31 passed.
+
+### Mutations, red then reverted
+
+| # | mutation | reddened |
+|---|---|---|
+| M1 | `chapters.js`: `Fourteen` → `Fifteen`, population unchanged | 1 (chapters.js clause only) |
+| M2 | `views.js`: `renderBandUnavailable`'s `data-section` site removed | 2 (both documents' clauses, together) |
+| M3 | `views.js`: 5 stub sites appended (14 → 19, past the old dict's 9–18 range) | 2, message names `'nineteen'` in both — `count_word` built it, no `KeyError` |
+
+Restored from the scratchpad copy each time; `test_a_reader_role_demotes.py`
+green (21 passed) after each revert.
+
+**Deviation.** The count is 14, not the 13 the row was filed with: `views.js::renderBandUnavailable` landed after `UX-650`. `chapters.js`'s `over a quarter` fraction was dropped rather than derived, and the count word is built by `count_word`, not tabled. Two commits on the track; one verifier run, two soft points, fixed in the second commit. The file derives judgement (no file named in Required Fix); the brief ran it as bounded.

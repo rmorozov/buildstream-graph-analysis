@@ -1,6 +1,6 @@
 # UX-764: two Register caps are guarded and two are honour-system
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-497 (the Outcome cap), UX-749 (which broke one) | **Serves:** the reader who trusts a cap because the guard reported green | **Topic:** guards | **Area:** unassigned | **Shape:** judgement
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-497 (the Outcome cap), UX-749 (which broke one) | **Serves:** the reader who trusts a cap because the guard reported green | **Topic:** guards | **Area:** unassigned | **Shape:** judgement
 
 ## Motivation
 
@@ -97,3 +97,36 @@ range - a pre-merge gate, not a retroactive audit.
 | add a bogus `UX-9999` to `NO_GUARD_OUTCOMES` | 🔴 `test_every_exemption_is_a_real_closed_task` names it | 1 failed |
 | a real 9-line-body commit on top of `origin/main` | 🔴 names the sha, subject and count (9) | 1 failed |
 | restore from a scratchpad copy after each (never `git checkout --`) | 🟢 all clauses pass; `git diff` clean | tests green
+
+**This track's share** (the code-comment cap and `rules.md`'s honesty).
+`CLAUDE.md`'s Register table's code-comment row now reads "convention,
+unguarded: a comment's length is not its register (`UX-764`)" instead
+of stating a cap indistinguishable from the three guarded ones;
+`rules.md`'s opening paragraph — the "every rule ... with its guard"
+claim `test_the_card_stays_a_card` still holds at 80 lines — now names
+that row as its one exception. New
+`TestEveryRegisterRowNamesItsEnforcement` in
+`test_the_register_is_terse.py` reads `CLAUDE.md`'s `## Register`
+table and asserts every row names an existing `tests/unit/*.py` guard
+or says "convention" - the fifth-row hole the Motivation named.
+`make test-touching`: 48 file(s) selected (21 census + 27 naming the
+change) · 1551 passed, 4 skipped in 207.00s. `make lint`: clean.
+
+The verifier read `5ac9d755` and found two holes: the `"convention" in
+detail.lower()` check ran first and short-circuited on a bogus path
+next to the word "unconventional"; a row naming a real but unrelated
+file (`test_cache_logs.py`) passed as a proxy. Fixed: every named
+`.py` path must exist unconditionally, "convention" now matches only
+as a whole word (`\bconvention\b`), and each named file's own text
+must carry `CLAUDE.md` or a `rules.md#` marker or it counts as a
+proxy.
+
+| mutation | result | count |
+|---|---|---|
+| add a fifth row naming no guard and no "convention" | 🔴 names the row: "no existing guard file and no 'convention'" | 1 failed |
+| rename a real row's guard file to one that does not exist | 🔴 same clause names the row and the bogus path | 1 failed |
+| a row with "unconventional" next to a bogus `.py` path | 🔴 `missing file(s)` names the bogus path | 1 failed |
+| a row naming `test_cache_logs.py` (real, never reads the register) | 🔴 "never reads CLAUDE.md or a rules.md heading" | 1 failed |
+| restore from a scratchpad copy after each (never `git checkout --`) | 🟢 `test_the_register_is_terse.py` 606 passed; `git diff` clean | tests green
+
+**Deviation.** The judgement — the code-comment cap is a convention, said so in the table and in `rules.md` — was the session's; an `implementer` on `sonnet` did the rows and the guard, and its `verifier` found the guard's "convention" substring short-circuited a bogus path and that any existing file passed as a guard; fixed before the merge: paths checked unconditionally, `convention` a whole word, a named guard must read `CLAUDE.md` or a `rules.md` heading.

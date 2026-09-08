@@ -1,0 +1,54 @@
+{
+  "elements": [
+    {
+      "uid": "pred0.bst",
+      "cache_key": null,
+      "requested_target": false
+    },
+    {
+      "uid": "pred1.bst",
+      "cache_key": null,
+      "requested_target": false
+    },
+    {
+      "uid": "pred2.bst",
+      "cache_key": null,
+      "requested_target": false
+    },
+    {
+      "uid": "pred3.bst",
+      "cache_key": null,
+      "requested_target": false
+    },
+    {
+      "uid": "sink.bst",
+      "cache_key": null,
+      "requested_target": true
+    }
+  ],
+  "dependencies": [
+    {
+      "predecessor": "pred0.bst",
+      "successor": "sink.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "pred1.bst",
+      "successor": "sink.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "pred2.bst",
+      "successor": "sink.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "pred3.bst",
+      "successor": "sink.bst",
+      "dependency_type": "build"
+    }
+  ],
+  "foundation": [
+    "sink.bst"
+  ]
+}

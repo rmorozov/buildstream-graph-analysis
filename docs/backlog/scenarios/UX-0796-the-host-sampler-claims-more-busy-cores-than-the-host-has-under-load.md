@@ -1,0 +1,44 @@
+# UX-796: the host sampler claims more busy cores than the host has, under load
+
+**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-675 (the sampler and its ceiling), UX-741 (the same shape in the spine's guard) | **Found by:** round 110, in a `make test` gate on a loaded machine | **Serves:** the gate that reds on a host reading nothing in the diff touched | **Topic:** guards | **Area:** bga | **Shape:** mechanical
+
+## Motivation
+
+```console
+$ make test        # load average 7.02, 10.88, 12.25 on 4 cores; seven agents running
+FAILED tests/unit/test_the_host_was_asked.py::TestTheCoresAreSampledToo::test_no_sample_claims_more_cores_busy_than_the_host_has
+E   assert 5.686 <= 4.784313725498253      # (row, gap) ... gap 0.05099999999947613
+$ for i in 1 2 3; do pytest tests/unit/test_the_host_was_asked.py -k test_no_sample_claims_more_cores_busy -q; done   # load 7.02
+1 passed / 1 passed / 1 passed
+```
+
+`UX-675`'s ceiling allows one jiffy per core over the host's count
+(4.78 on 4 cores); the sample read 5.69 busy cores. The busy jiffies
+summed across CPUs cannot exceed cores × elapsed unless the elapsed
+wall time is read short — the sampler reads `/proc/stat` and the
+clock at different instants, and under load the process is
+descheduled between them. The guard is right; the sampler's window
+is the defect.
+
+## Required Fix
+
+`bga/hostinfo.py`'s sampler measures its window with the same source
+it reads busy time from — the sum of all-CPU jiffies (busy + idle) at
+each read, not a wall clock beside it — so busy/total cannot exceed
+one per core by construction. The ceiling's one-jiffy allowance stays.
+
+## Out of Scope
+
+- Skipping the guard under load — `UX-741`'s row closed that route on
+  measurement: no threshold exists.
+
+## Acceptance Test
+
+`tests/unit/test_the_host_was_asked.py` gains a clause that feeds the
+sampler two `/proc/stat` snapshots whose wall-clock gap is shorter
+than their jiffy gap (a descheduled read) and asserts busy cores ≤
+the host's; mutation: restore the wall-clock window — red.
+
+## Outcome
+
+_Not started._

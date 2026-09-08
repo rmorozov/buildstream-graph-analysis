@@ -302,15 +302,22 @@ _CONSTRUCTED_MULTI_INTERIOR = """
 """
 
 
+def _components(mark):
+    """`mergeTicks` joins folded names with a space, so `"p95 max"`
+    splits back to its own components rather than being read as a
+    name of its own (`UX-758`)."""
+    return (mark or "").split()
+
+
+def _is_edge(mark):
+    return any(token in _EDGE_MARKS for token in _components(mark))
+
+
 def _is_merged_edge(mark):
-    """A tick whose merged name absorbed an edge without becoming one -
-    `mergeTicks` joins names with a space, so `"p95 max"` carries the
-    `"max"` token but fails `EDGE_MARKS.has()`'s exact check. `UX-758`
-    is the resulting misclassification in `exhibitAxis` itself; this
-    guard excludes such a tick's axis rather than asserting the bug is
-    the rule."""
-    return mark not in _EDGE_MARKS and any(
-        token in _EDGE_MARKS for token in (mark or "").split())
+    """A tick whose merged name absorbed an edge without becoming an
+    exact match - `"p95 max"` carries the `"max"` token but is not
+    itself in `_EDGE_MARKS`. The case `UX-758`'s fix protects."""
+    return mark not in _EDGE_MARKS and _is_edge(mark)
 
 
 def _axes(browser, pages):
@@ -346,9 +353,11 @@ class TestTheFlowLayoutMatchesItsInteriorTickCount:
         checked = 0
         for axis in _axes(browser, pages):
             edges = axis["ticks"]
-            has_first = any(t["mark"] in ("first", "min") for t in edges)
-            has_last = any(t["mark"] in ("last", "max") for t in edges)
-            interior = [t for t in edges if t["mark"] not in _EDGE_MARKS]
+            has_first = any("first" in _components(t["mark"])
+                             or "min" in _components(t["mark"]) for t in edges)
+            has_last = any("last" in _components(t["mark"])
+                            or "max" in _components(t["mark"]) for t in edges)
+            interior = [t for t in edges if not _is_edge(t["mark"])]
             if not (has_first and has_last and len(interior) == 1):
                 continue
             checked += 1
@@ -366,12 +375,7 @@ class TestTheFlowLayoutMatchesItsInteriorTickCount:
         checked = 0
         axes = _axes(browser, pages) + [_constructed_axis(browser, served_url)]
         for axis in axes:
-            # UX-758: a merged edge's axis is excluded, not asserted on
-            # - its true interior count is disputed by the bug this
-            # guard must not certify as correct.
-            if any(_is_merged_edge(t["mark"]) for t in axis["ticks"]):
-                continue
-            interior = [t for t in axis["ticks"] if t["mark"] not in _EDGE_MARKS]
+            interior = [t for t in axis["ticks"] if not _is_edge(t["mark"])]
             if len(interior) < 2:
                 continue
             checked += 1
@@ -382,7 +386,28 @@ class TestTheFlowLayoutMatchesItsInteriorTickCount:
                 f"{axis['label']}/{axis['section']}: a tick carries "
                 f"margin-left under {len(interior)} interior ticks")
         assert checked, "no axis, real or constructed, has more than " \
-            "one interior tick with no merged edge"
+            "one interior tick"
+
+    def test_a_merged_edge_still_takes_flow_layout(self, browser, pages):
+        """`UX-758`: the case the exact-name match denied - a
+        distribution axis's `p95`/`max` collision leaves one real
+        interior tick (`p50`) between two real edges, the exact case
+        flow exists to protect. Scoped to a merge that still leaves an
+        interior tick behind - golden's `first`+`peak` merge absorbs
+        its interior entirely (Out of Scope) and has none."""
+        checked = 0
+        for axis in _axes(browser, pages):
+            merged_edges = [t["mark"] for t in axis["ticks"]
+                             if _is_merged_edge(t["mark"])]
+            interior = [t for t in axis["ticks"] if not _is_edge(t["mark"])]
+            if not merged_edges or len(interior) != 1:
+                continue
+            checked += 1
+            assert axis["layout"] == "flow", (
+                f"{axis['label']}/{axis['section']}: merged edge "
+                f"{merged_edges}, data-layout={axis['layout']!r}")
+        assert checked, "no axis has a merged edge with an interior " \
+            "tick left - UX-753's population changed"
 
 
 if __name__ == "__main__":  # pragma: no cover

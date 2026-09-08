@@ -39,6 +39,12 @@ merge's `make test` already ran it, and nine sweeps at once on four
 cores never finished; `make lint` in its three pieces if the whole
 stalls. Round 109's readings are in `UX-793`.
 
+**One environment, shared.** Every worktree runs the one Python the
+main checkout installed `bga` into. Never `pip install -e .` from a
+worktree - round 109's `verify-703` did, its worktree was removed,
+and every subprocess guard on the machine lost `bga` (8 red in the
+gate). `pip install <tool>` for a tool the run needs is fine.
+
 ## What to report
 
 - **Does it do what was asked**, or something adjacent? A change that

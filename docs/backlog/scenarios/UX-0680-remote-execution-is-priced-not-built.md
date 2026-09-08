@@ -1,6 +1,6 @@
 # UX-680: remote execution is priced, not built
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-30 (the sweep), UX-9 (what the tool sees under RE) | **Serves:** R4 and R8 deciding whether to buy it | **Topic:** analysis | **Shape:** judgement
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-30 (the sweep), UX-9 (what the tool sees under RE) | **Serves:** R4 and R8 deciding whether to buy it | **Topic:** analysis | **Shape:** judgement
 
 ## Motivation
 
@@ -80,3 +80,12 @@ keep 0 — 5.25s total, not the 0.0s a single global clamp gave. On
 | compiler-offload clamp: one global `max(0, path_us − Σcompiler_us)` instead of per element | `test_compiler_offload_matches_the_by_binary_critical_path_share` (`wall_us_after` 0 ≠ 5,248,455) | 1 failed / 4 |
 
 Each reverted from a pristine copy; suite back to 4/4 green after every one.
+
+**Deviation.** The compiler-offload bound is per element — a compile
+removes at most its own element's wall on the critical path; the first
+cut clamped once globally and read "0.0 s left" on `macro_micro` where
+the per-element bound leaves 5.25 s (the verifier's arithmetic). Its
+guard could not see the critical-path restriction while the clamp
+saturated; recomputed per element. The reader is R4, the task's own,
+since R5's section needs Plane 2 and half (a) fires without it. Two
+verifier passes: HOLD (the clamp, the guard, a 10-line body), then PASS.

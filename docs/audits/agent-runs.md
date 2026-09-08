@@ -194,6 +194,8 @@ pairing for every merged row from round 103 on.
 | 111 | verifier | sonnet | verify `UX-684` | 187k | 90 | 23.4 m | HOLD: the pasted log tree had no command, the advice branch unguarded (a swap left 52 green); PASS on the follow-up | rebuilding the log tree by hand is what surfaced the unguarded branch |
 | 111 | implementer | sonnet | `UX-806` the Plane 2 chapter moves into the native-trace area page (mechanical) | 124k | 109 | 18.7 m | merged 50103ac3; 25 lines to docs/design/areas/tools-native_trace.md, 437 guards before and after, the log entry in the same commit | the bash guards refused a shell variable in a scratch path; every mutation step a script file |
 | 111 | verifier | sonnet | verify `UX-806` | 61k | 49 | 4.8 m | PASS; the log entry's second table is unguarded, hand-checked | reading the member guard's body to tell "still passes" from "never read the chapter" |
+| 111 | implementer | sonnet | `UX-680` remote execution is priced, not built (judgement) | 849k | 451 | 66.6 m | merged cf0b3b2d; two stated bounds, never summed; one hold — a global clamp read 0.0 s where the per-element bound leaves 5.25 s — fixed | five guard rounds the task file never named: units, provenance, reader promotion, the id census, README and size ratchets |
+| 111 | verifier | sonnet | verify `UX-680` | 205k | 95 | 24.4 m | HOLD: the offload guard saturated (all elements passed), a 10-line body; PASS on the amended commit | per-element arithmetic the Outcome stopped short of is what surfaced the clamp and the saturated guard |
 
 Round 101's four tracks are **not** here: this session could not
 identify their transcripts with certainty after a context rebuild, and
@@ -206,7 +208,7 @@ committed cleanly once told to run in the foreground. Three of the five
 left a derived figure or a §6 context-map row behind - the same class
 the round itself was about, arriving in the tracks' own work.
 
-What the one hundred and seventy-seven rows already say: a researcher that reads a document
+What the one hundred and seventy-nine rows already say: a researcher that reads a document
 whole costs 100-180k; a walker that drives every control costs 336k;
 the two cuts cost a re-run each. The `walk` and `design-review`
 skills fix the report shape so the next rows are smaller, and the

@@ -55,9 +55,11 @@ HISTORY_HEADING = "## Round history"
 #: older rows are records, read by nobody but a person.
 COUNTED_FROM_ROUND = 109
 
-#: Spelled words, one to thirty, built from `count_word`'s own table so
-#: the two cannot drift (`UX-752`'s reasoning, `UX-798`'s guard).
-_WORD_FOR = {n: dev_track_cost.count_word(n) for n in range(1, 31)}
+#: Spelled words, one to ninety-nine, built from `count_word`'s own
+#: table so the two cannot drift (`UX-752`'s reasoning, `UX-798`'s
+#: guard; ninety-nine because `count_word` builds hundreds separately
+#: since `UX-794` and no row here has reached one).
+_WORD_FOR = {n: dev_track_cost.count_word(n) for n in range(1, 100)}
 NUMBER_FOR_WORD = {word: n for n, word in _WORD_FOR.items()}
 
 # `[text](target)` on one line; markdown tables are one row per line.
@@ -228,18 +230,31 @@ def _closed_status():
     return status
 
 
+#: The row's tail, `"<n or word> closed, <n or word> filed |"` at the
+#: line's end. `(?<=\s)` — not `\b` — anchors the first word: `\b` sits
+#: at *every* internal hyphen too, so greedy backtracking on the row's
+#: free text read `thirty-one closed` as `one` (verifier finding on
+#: this file, `UX-798`).
+_COUNT_TRAILER = re.compile(
+    r"(?<=\s)(\d+|[A-Za-z]+(?:-[A-Za-z]+)?)\s+closed,\s+"
+    r"(\d+|[A-Za-z]+(?:-[A-Za-z]+)?)\s+filed \|$")
+
+
+def _parse_count_trailer(row):
+    """`(closed, filed)` as ints, or `None` if `row` has no such tail."""
+    m = _COUNT_TRAILER.search(row)
+    return None if m is None else (_as_number(m.group(1)), _as_number(m.group(2)))
+
+
 def _round_history_rows():
-    """(round, closed_n, filed_n) parsed from each history row's tail,
-    word or digit — `NUMBER_FOR_WORD` is the inverse of `count_word`."""
-    text = (REPO / DIRECTIONS).read_text(encoding="utf-8")
-    trailer = re.compile(
-        r"^\| \[(\d+)\]\(\.\./audits/round-\d+\.md\).*"
-        r"\b([A-Za-z][A-Za-z-]*|\d+) closed, ([A-Za-z][A-Za-z-]*|\d+) filed \|$",
-        re.M)
+    """(round, closed_n, filed_n) for every row with a count trailer."""
     rows = []
-    for round_, closed, filed in trailer.findall(text):
-        rows.append((int(round_),
-                      _as_number(closed), _as_number(filed)))
+    for row in _history_table():
+        counts = _parse_count_trailer(row)
+        if counts is None:
+            continue
+        label = LINK.search(row).group(1)
+        rows.append((int(label),) + counts)
     return rows
 
 
@@ -300,3 +315,12 @@ def test_a_history_row_s_counts_are_derived():
             f"{derived_closed} closed, {derived_filed} filed")
     assert checked >= 2, "no history row at or after round " \
         f"{COUNTED_FROM_ROUND} was checked — the scan is vacuous"
+
+
+def test_the_count_trailer_reads_a_compound_word_past_thirty():
+    """A verifier read `thirty-one closed` as `1`: a `\\b`-anchored word
+    class lets greedy backtracking start inside a hyphenated word.
+    `_parse_count_trailer` must read the whole compound, and the word
+    table must cover it (`_WORD_FOR` stops at 30 before this fix)."""
+    row = "| [111](../audits/round-111.md) | free text. thirty-one closed, twenty-two filed |"
+    assert _parse_count_trailer(row) == (31, 22)

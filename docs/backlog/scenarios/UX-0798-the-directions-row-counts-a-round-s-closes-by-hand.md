@@ -57,16 +57,24 @@ round 110: What closed 15 (🟢 all), Found-by 8 -> directions.md now
 Close measured: `test_a_history_row_s_counts_are_derived` added to
 `tests/unit/test_the_round_history_names_every_audit.py`, parsing
 words via `NUMBER_FOR_WORD`, the inverse of `tools/dev_track_cost
-.count_word` built for 1..30, against digits. `make test-touching`:
-1388 passed, 4 skipped in 180.98s. `make lint`: `lint-docs` clean,
-`ruff check` all passed, `dev_baseline.py --check` clean (567 known,
-0 new).
+.count_word`, against digits. `make test-touching`: 1388 passed, 4
+skipped in 180.98s. `make lint`: `lint-docs` clean, `ruff check` all
+passed, `dev_baseline.py --check` clean (567 known, 0 new).
+
+Verifier found a latent defect: the trailer regex used `\b` before
+the count word, and greedy backtracking on the row's free text let
+`\b` land at an internal hyphen, reading `thirty-one closed` as `1`
+(and `NUMBER_FOR_WORD` stopped at 30). Fixed with `(?<=\s)` in place
+of `\b`, and the word table extended to 1..99. Added
+`test_the_count_trailer_reads_a_compound_word_past_thirty` on a
+synthetic row.
 
 Mutation table:
 
 | mutation | reddened | count |
 |---|---|---|
 | `directions.md`: round-109 row's `Thirteen` -> `Fourteen` | `test_a_history_row_s_counts_are_derived`: "round 109: directions.md says 14 closed, 11 filed; derived 13 closed, 11 filed" | 1 failed, 8 passed |
+| `_COUNT_TRAILER` reverted to the old `\b`-anchored regex | `test_the_count_trailer_reads_a_compound_word_past_thirty`: `(1, 22) == (31, 22)` | 1 failed, 9 passed |
 
-Restored from a copy in the scratchpad (never `git checkout --`);
-re-run: 9 passed.
+Both restored from a scratchpad copy (never `git checkout --`);
+re-run: 10 passed.

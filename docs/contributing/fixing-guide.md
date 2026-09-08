@@ -380,9 +380,9 @@ tools/dev_track_cost.py      where an implementer track's tokens went,
                              by phase, from the agent transcript (UX-525)
 tools/dev_symbols.py         def, callers, importers, fan-in and dead names,
                              read off the AST, never the text (UX-700)
-tools/dev_baseline.py        every current finding by identity in
-                             tests/quality_baseline.json; a new one is red,
-                             the list only shrinks (UX-694)
+tools/dev_baseline.py       every current ruff and pyright finding
+                             by identity in tests/quality_baseline.json;
+                             a new one is red, the list only shrinks (UX-694/697)
 tools/dev_trace_coverage.py  which captured field reaches the emitted
                              trace, and which Perfetto carriers it uses (UX-466)
 tools/dev_page_census.py     the page's structure and control classes, one

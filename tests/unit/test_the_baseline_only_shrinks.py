@@ -7,6 +7,7 @@ real `tests/quality_baseline.json`.
 import json
 import os
 import pathlib
+import shutil
 import subprocess
 import sys
 
@@ -26,10 +27,47 @@ PYRIGHT_VIOLATION = 'def f() -> int:\n    return "x"\n'
 PYRIGHT_NO_RULE_VIOLATION = "return 1\n"
 
 
-def _run(root, baseline, *flags, env=None):
+def _pyright_fixture(root):
+    """UX-802: an empty pyright pass, read rather than spawned - every
+    clause here is ruff/bandit, so pyright has nothing to say."""
+    path = root / "pyright_findings.json"
+    if not path.exists():
+        path.write_text("[]", encoding="utf-8")
+    return path
+
+
+# UX-802 verifier: `PATH` minus pyright's directory left the ambient
+# PATH otherwise untouched, and on this box `/root/.local/bin` also
+# carries `pytest` and `bandit` - stripping it lost the ones nothing
+# else provides. `dev_baseline.py` spawns only these on `--check`.
+NEEDED_BINARIES = ("ruff", "git", "python3")
+
+
+def _minimal_bin(root):
+    """UX-802: a `PATH` built from exactly what the tool spawns, not
+    the ambient one with a directory subtracted - a ruff/bandit clause
+    that regresses to spawning pyright anyway fails loudly (`pyright`
+    not found) instead of quietly paying for the pass again."""
+    bindir = root / "minimal_bin"
+    if bindir.exists():
+        return bindir
+    bindir.mkdir(parents=True)
+    for name in NEEDED_BINARIES:
+        found = shutil.which(name)
+        if found is not None:
+            (bindir / name).symlink_to(found)
+    return bindir
+
+
+def _run(root, baseline, *flags, env=None, spawn_pyright=False):
     cmd = [sys.executable, str(TOOL), "--root", str(root), "--paths", "pkg",
-           "--baseline", str(baseline), *flags]
-    return subprocess.run(cmd, capture_output=True, text=True, check=False, env=env)
+           "--baseline", str(baseline)]
+    run_env = dict(os.environ if env is None else env)
+    if not spawn_pyright:
+        cmd += ["--pyright-from", str(_pyright_fixture(root))]
+        run_env["PATH"] = str(_minimal_bin(root))
+    cmd += list(flags)
+    return subprocess.run(cmd, capture_output=True, text=True, check=False, env=run_env)
 
 
 def _write(path, text):
@@ -283,14 +321,22 @@ class TestUnparsableFileIsAnError:
         assert baseline.read_text(encoding="utf-8") == before
 
 
+class TestTheMinimalBinHasNoPyright:
+    def test_pyright_is_absent_and_ruff_present(self, tmp_path):
+        bindir = str(_minimal_bin(tmp_path))
+        assert shutil.which("pyright", path=bindir) is None
+        assert shutil.which("ruff", path=bindir) is not None
+        assert shutil.which("git", path=bindir) is not None
+
+
 class TestPyrightEntersTheSameList:
     def test_a_new_pyright_error_reds_check(self, tmp_path):
         module = tmp_path / "pkg" / "m.py"
         baseline = tmp_path / "baseline.json"
         _write(module, CLEAN)
-        assert _run(tmp_path, baseline, "--write").returncode == 0
+        assert _run(tmp_path, baseline, "--write", spawn_pyright=True).returncode == 0
         _write(module, PYRIGHT_VIOLATION)
-        check = _run(tmp_path, baseline, "--check")
+        check = _run(tmp_path, baseline, "--check", spawn_pyright=True)
         assert check.returncode == 1, check.stdout
         assert "new: pyright reportReturnType" in check.stdout
 
@@ -298,7 +344,7 @@ class TestPyrightEntersTheSameList:
         module = tmp_path / "pkg" / "m.py"
         baseline = tmp_path / "baseline.json"
         _write(module, CLEAN)
-        assert _run(tmp_path, baseline, "--write").returncode == 0
+        assert _run(tmp_path, baseline, "--write", spawn_pyright=True).returncode == 0
         before = baseline.read_text(encoding="utf-8")
         fake_bin = tmp_path / "fakebin"
         fake_pyright = fake_bin / "pyright"
@@ -306,7 +352,7 @@ class TestPyrightEntersTheSameList:
         fake_pyright.chmod(0o755)
         env = dict(os.environ)
         env["PATH"] = str(fake_bin) + os.pathsep + env.get("PATH", "")
-        done = _run(tmp_path, baseline, "--write", env=env)
+        done = _run(tmp_path, baseline, "--write", env=env, spawn_pyright=True)
         assert done.returncode == 2, done.stdout + done.stderr
         assert baseline.read_text(encoding="utf-8") == before
 
@@ -314,7 +360,7 @@ class TestPyrightEntersTheSameList:
         module = tmp_path / "pkg" / "m.py"
         baseline = tmp_path / "baseline.json"
         _write(module, CLEAN)
-        assert _run(tmp_path, baseline, "--write").returncode == 0
+        assert _run(tmp_path, baseline, "--write", spawn_pyright=True).returncode == 0
         _git(tmp_path, "init", "-q")
         _git(tmp_path, "-c", "user.email=t@example.com", "-c", "user.name=t",
              "add", "-A")
@@ -322,8 +368,8 @@ class TestPyrightEntersTheSameList:
              "commit", "-q", "-m", "baseline")
         _write(module, PYRIGHT_VIOLATION)
         assert _run(tmp_path, baseline, "--write", "--force",
-                    "--reason", "UX-697").returncode == 0
-        check = _run(tmp_path, baseline, "--check")
+                    "--reason", "UX-697", spawn_pyright=True).returncode == 0
+        check = _run(tmp_path, baseline, "--check", spawn_pyright=True)
         assert check.returncode == 1, check.stdout
         assert "authorised by UX-697, red until committed" in check.stdout
         assert "pyright reportReturnType" in check.stdout
@@ -332,8 +378,8 @@ class TestPyrightEntersTheSameList:
         module = tmp_path / "pkg" / "m.py"
         baseline = tmp_path / "baseline.json"
         _write(module, CLEAN)
-        assert _run(tmp_path, baseline, "--write").returncode == 0
+        assert _run(tmp_path, baseline, "--write", spawn_pyright=True).returncode == 0
         _write(module, PYRIGHT_NO_RULE_VIOLATION)
-        check = _run(tmp_path, baseline, "--check")
+        check = _run(tmp_path, baseline, "--check", spawn_pyright=True)
         assert check.returncode == 1, check.stdout
         assert "new: pyright noRule" in check.stdout

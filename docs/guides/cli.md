@@ -429,6 +429,8 @@ The JSON carries a **`findings` array** — the same conclusions the text report
 | `merge-candidate` | medium | sibling elements spending at least half their time on sandbox toll rather than building — needs `--cache-logs` (`UX-100`) |
 | `merge-not-indicated` | info | no element pays more sandbox tax than it builds, and how far the worst one is from the line |
 | `split-candidate` | info | an element holding a material share of the critical path with real internal parallelism — evidence, never a projection (`UX-100`) |
+| `consolidate-by-co-change` | medium | two elements co-rebuild in ≥ 90% of both their histories and neither is consumed alone — needs `--cache-logs`'s change frequency (`UX-682`) |
+| `split-by-co-change` | info | an element's direct consumers split into ≥ 2 groups that never co-rebuild with each other — needs `--cache-logs`'s change frequency (`UX-682`) |
 
 `bga cache-logs --format json` → `.findings[].id` (1), built in `tools/bst_cache_logs.py` rather than `bga/findings.py` because it reads BuildStream's own logs and, optionally, a Plane 2 report — neither of which the run-directory analyzer has:
 

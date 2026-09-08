@@ -38,9 +38,55 @@ Every sentence names the counts it came from.
 - Predicting future changes — frequency is history, and the finding
   says over how many builds.
 
+## Contract (join)
+
+In `bga/correlate.py`: `expected_rebuild_cost(analysis, cache_logs) ->
+list[dict]`, one row per element present in both
+`analysis['elements']['blast_radius']` (`weighted_duration_us` the
+weighted blast, `downstream_count` the unweighted) and the Plane 3
+`elements` list: `{'element', 'rebuilds', 'weighted_blast_us',
+'expected_cost_us': rebuilds * weighted_blast_us, 'blast_count'}`,
+ranked by `expected_cost_us` desc. Returned from `correlate()` under
+`"expected_rebuild_cost"`, absent (not `[]`) when the Plane 3 payload
+lacks `change_frequency` — `_scale_of`'s rule. Two new
+`find_granularity_findings` ids: `'consolidate-by-co-change'` (a
+`co_change` pair with `min(share_of_a, share_of_b) >= 0.9` and
+`co_rebuilds >= 3`, where the two elements' consumer sets in
+`dependencies` are identical) and `'split-by-co-change'` (an element
+whose direct consumers form ≥ 2 connected components under "has a
+co_change row with `co_rebuilds > 0`", each component's members having
+`rebuilds >= 3`). Every sentence names the counts and says `over at
+least N builds` from `builds_lower_bound`.
+
 ## Acceptance Test
 
 A kept-log tree where lib-a rebuilds 30 times and codegen twice: the
 ranking puts lib-a's expected cost above codegen's despite codegen's
 larger blast; two elements that co-rebuild every time are named for
 consolidation; mutation: swap frequency for blast count — red.
+
+## Outcome
+
+### Join half
+
+**Gap measured:** `grep -rn "expected_rebuild_cost\|consolidate-by-co-change\|split-by-co-change" bga/correlate.py`
+before this change: 0 hits — the join half of `expected rebuild cost`
+and its two findings did not exist.
+
+**Close measured:** `python -m pytest
+tests/unit/test_expected_rebuild_cost_ranks_frequency_times_blast.py
+tests/unit/test_granularity.py tests/unit/test_correlate.py -q` — 49
+passed. Acceptance fixture (lib-a: blast 4/weighted 40s/30 rebuilds;
+codegen: blast 20/weighted 400s/2 rebuilds): lib-a's
+`expected_cost_us` is 1,200,000,000 (1200s), codegen's is 800,000,000
+(800s) — lib-a ranks first despite codegen's 5x larger blast.
+
+**Mutation table:**
+
+| mutation | reddened | count |
+|---|---|---|
+| `expected_cost_us` uses `blast_count` instead of `rebuilds` | ranking + exact-value tests | 2 of 7 failed |
+| drop the "neither is consumed alone" consumer-set check | the pair-x-alone-consumer negative test | 1 of 7 failed |
+| `expected_rebuild_cost` key returned unconditionally (`[]` instead of omitted) | the key-absent-without-`change_frequency` test | 1 of 7 failed |
+
+All three reverted from the pre-mutation copy; suite green after each revert.

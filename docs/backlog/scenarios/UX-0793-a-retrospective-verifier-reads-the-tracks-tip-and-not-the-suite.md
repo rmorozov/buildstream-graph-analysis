@@ -1,6 +1,6 @@
 # UX-793: a retrospective verifier reads the track's tip, and not the suite
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-761 (the verifier mandate) | **Found by:** round 109, on its own nine retrospective runs | **Serves:** the round that verifies a merged track after the fact, on a shared machine | **Topic:** guards | **Area:** unassigned | **Shape:** judgement
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-761 (the verifier mandate) | **Found by:** round 109, on its own nine retrospective runs | **Serves:** the round that verifies a merged track after the fact, on a shared machine | **Topic:** guards | **Area:** unassigned | **Shape:** judgement
 
 ## Motivation
 
@@ -42,4 +42,22 @@ a sweep that did not finish; the round document pastes them.
 
 ## Outcome
 
-_Not started._
+**Gap measured.** Nine retrospective verifiers, one machine, four cores;
+six friction lines out of nine name the load and a sweep that did not
+finish (the table in Motivation). Tokens 54k–229k, wall 10–62 min; the
+two that finished a scoped sweep are the two that found a false paste
+(`UX-702`, `UX-734`).
+
+**Close measured.** `.claude/agents/verifier.md` gains the
+retrospective paragraph: check out the close commit, run the touched
+guard files, lint in pieces. `.claude/skills/decompose/SKILL.md` §5
+states the cap: four verifiers at once, with the reading beside it.
+`UX-682`'s two verifiers ran under the new brief's rule (no sweep, the
+session's suite after the merge): 68k and 70k tokens, 7.8 and 6.8 min,
+against the retrospective batch's 150k median.
+
+**Mutation.** A judgement shape: the guard is the next batch's friction
+lines, which the round document pastes (Acceptance Test).
+
+**Deviation.** The cap is a reading, not a measurement of the knee; a
+later batch at four and at six is what would place it.

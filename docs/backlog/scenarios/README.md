@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-790 scenarios: **32 open**, 758 closed.
+790 scenarios: **31 open**, 759 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -27,7 +27,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | cli | 0 | 22 |
 | store | 0 | 16 |
 | docs | 9 | 132 |
-| guards | 14 | 206 |
+| guards | 13 | 206 |
 
 ## Open scenarios
 
@@ -67,7 +67,6 @@ task file, which is the only place it ever lived twice.
 | UX-790 | [the mutation run's classifier has no fast guard](UX-0790-the-mutation-runs-classifier-has-no-fast-guard.md) | guards | Medium | the weekly run whose survivor count is the only number anyone reads | 🔴 |
 | UX-791 | [an orphan row in the architecture table is invisible](UX-0791-an-orphan-row-in-the-architecture-table-is-invisible.md) | docs | Low | the reader of a status row for a task that does not exist | 🔴 |
 | UX-792 | [the perf-carry key is scoped to a branch by nothing](UX-0792-the-perf-carry-key-is-scoped-to-a-branch-by-nothing.md) | guards | Medium | the branch whose analyzer regression is confirmed by another branch's run | 🔴 |
-| UX-793 | [a retrospective verifier reads the track's tip, and not the suite](UX-0793-a-retrospective-verifier-reads-the-tracks-tip-and-not-the-suite.md) | guards | Medium | the round that verifies a merged track after the fact, on a shared machine | 🔴 |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

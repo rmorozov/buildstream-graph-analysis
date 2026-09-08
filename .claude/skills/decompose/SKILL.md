@@ -185,6 +185,12 @@ a declined permission interrupts the turn, and an interrupt kills every
 track with it — three tracks at 16:01 on 2026-09-05, two minutes in.
 Reads and reports only, until the last report is in.
 
+Verifiers on one machine: at most **four** at once. Round 109 ran nine
+retrospective verifiers on four cores — load 57 to 528, 275 Chrome
+processes — and six of the nine could not finish a touching sweep;
+the brief, not the machine, was the defect (`UX-793`), and the cap is
+the reading until a smaller one is measured.
+
 ## What goes in the file
 
 ```text

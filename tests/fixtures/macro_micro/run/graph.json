@@ -261,5 +261,8 @@
       "dependency_type": "build"
     }
   ],
-  "run_identity_hash": "054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec"
+  "run_identity_hash": "054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec",
+  "foundation": [
+    "toolchain.bst"
+  ]
 }

@@ -1789,6 +1789,11 @@ def expected_rebuild_cost(analysis: dict, cache_logs: Optional[dict]) -> list[di
     factor alone can say. `weighted_duration_us` (`bga/analyzer.py:293-312`)
     is the weighted blast; `downstream_count` the unweighted, carried
     through as `blast_count`.
+
+    UX-683: a declared-foundation element's cost is real and published
+    (`is_foundation`), but it never leads this ranking either - the same
+    rule the blast and fan-in rankings apply, sorted here rather than
+    filtered, since the row still belongs in the list.
     """
     change_frequency = (cache_logs or {}).get('change_frequency') or {}
     blast = (analysis.get('elements') or {}).get('blast_radius') or {}
@@ -1806,8 +1811,9 @@ def expected_rebuild_cost(analysis: dict, cache_logs: Optional[dict]) -> list[di
             'weighted_blast_us': weighted_blast_us,
             'expected_cost_us': rebuilds * weighted_blast_us,
             'blast_count': blast_entry.get('downstream_count') or 0,
+            'is_foundation': bool(blast_entry.get('is_foundation')),
         })
-    return sorted(rows, key=lambda r: -r['expected_cost_us'])
+    return sorted(rows, key=lambda r: (r['is_foundation'], -r['expected_cost_us']))
 
 
 def correlate(analysis: dict, native_report: dict, tasks=None, run_context=None,

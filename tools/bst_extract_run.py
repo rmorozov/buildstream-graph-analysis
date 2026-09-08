@@ -219,6 +219,42 @@ def _read_ref_storage(project_dir: str):
     return data.get("ref-storage", "inline")
 
 
+def _read_bga_foundation(project_dir: str) -> Optional[list]:
+    """UX-683: `project.conf`'s own declared foundation tier, the same
+    minimal-YAML read `_read_ref_storage` uses.
+
+    `variables: {bga-foundation: "a.bst,b.bst"}`, not a top-level `bga:`
+    key: BuildStream 2.8's project.conf loader validates top-level keys
+    against a fixed allowlist (`bst show` on a real project: "Unexpected
+    key: bga") and `variables:` itself only accepts scalar values (a
+    YAML list there: "Value of 'bga-foundation' is not of the expected
+    type 'scalar'") - both confirmed against real `bst`, not assumed.
+    A comma-separated string is the one shape both checks accept.
+
+    `None` (not `[]`) when `project.conf` is missing, unparsable, or
+    carries no `variables`/`bga-foundation` key - `extract_run`'s own
+    `foundation=` argument (a programmatic caller's list; no CLI flag -
+    `--help`'s line cap on this command had no room,
+    `tests/unit/test_help_is_short.py`) is the fallback only then,
+    never on an explicit `[]`.
+    """
+    try:
+        import yaml
+    except ImportError:
+        return None
+    project_conf_path = Path(project_dir) / "project.conf"
+    if not project_conf_path.exists():
+        return None
+    try:
+        data = yaml.safe_load(project_conf_path.read_text()) or {}
+    except yaml.YAMLError:
+        return None
+    declared = (data.get("variables") or {}).get("bga-foundation")
+    if not declared:
+        return None
+    return [name.strip() for name in str(declared).split(",") if name.strip()]
+
+
 def _check_project_refs_strict(project_dir: str):
     """`--strict` mode's real, opt-in guarantee (P4-13) - hardens
     `_git_consistency_note`'s best-effort whole-tree dirty warning into
@@ -316,6 +352,7 @@ def extract_run(
     memory_budget_mb: int = None,
     estimated_job_memory_mb: int = None,
     interrupted: bool = False,
+    foundation: Optional[list] = None,
 ):
     """Run the full extraction pipeline. Returns a dict summary (targets,
     span/element/dependency counts, warnings) - the CLI entry point below
@@ -369,6 +406,24 @@ def extract_run(
                               bst_options=replayed)
     except RuntimeError as e:
         raise RuntimeError(f"graph extraction failed: {e}") from e
+
+    # UX-683: `project.conf`'s `variables.bga-foundation` wins; the
+    # `foundation=` argument (a programmatic caller's own list) is the
+    # fallback, never both merged - one declaration, not a silent union
+    # of two. Validated against this graph's own uids: a name that is
+    # not one is a diagnostic, never a crash (the owner may have
+    # mistyped or the element may have been renamed since the
+    # declaration was written).
+    declared_foundation = _read_bga_foundation(project_dir)
+    if declared_foundation is None:
+        declared_foundation = list(foundation or [])
+    known_uids = {element["uid"] for element in graph["elements"]}
+    for name in declared_foundation:
+        if name not in known_uids:
+            warnings.append(
+                f"declared foundation element {name!r} is not in the graph")
+    graph["foundation"] = sorted(
+        name for name in declared_foundation if name in known_uids)
 
     consistency_warning = _git_consistency_note(project_dir)
     if consistency_warning:

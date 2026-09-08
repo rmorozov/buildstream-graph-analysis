@@ -698,6 +698,27 @@ _CLAIMS = {
             "has the widest closure. It depends on everything on "
             "purpose, so the count is the graph's shape and not a "
             "task."), ()),
+    "blast-radius-foundation": (
+        _blast_paths,
+        _unconditional(
+            "UX-683: published when the widest reach is a project-"
+            "declared foundation element - a toolchain or base image the "
+            "kind-based exemption above misses, because it is an "
+            "`autotools`/`manual`/`cmake` element by kind. Excluded from "
+            "the ranking on the declaration, not a guess."), ()),
+    "fan-in-foundation": (
+        _fan_in_paths,
+        _unconditional(
+            "UX-683: the fan-in mirror - a declared foundation element "
+            "has the widest closure on purpose, same rule as the blast "
+            "claim above."), ()),
+    "foundation-candidates": (
+        _blast_paths,
+        _unconditional(
+            "UX-683's discovery half: published when an element at or "
+            "above the top p5 fan-out is neither a structural kind nor "
+            "already declared foundation - the owner declares, the tool "
+            "only proposes."), ()),
     "criticality": (
         ("floors.t_infinity_observed",),
         _unconditional(

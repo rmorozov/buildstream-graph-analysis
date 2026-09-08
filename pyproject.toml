@@ -199,6 +199,10 @@ include = ["bga", "tools"]
 typeCheckingMode = "basic"
 pythonVersion = "3.9"
 strict = []
+# A missing import is the environment's, not the tree's: CI has no
+# buildstream, the dev box does, and a finding's identity must not move.
+reportMissingImports = false
+reportMissingModuleSource = false
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

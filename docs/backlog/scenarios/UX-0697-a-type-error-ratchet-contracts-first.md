@@ -90,3 +90,8 @@ the halves, each read by a `verifier`: the `noRule` hole and the
 overstated "real bug" sentence were theirs, fixed before the merge.
 `strict` is not listed — 1363 errors is `UX-705`'s burn-down shape,
 filed there rather than here. `make lint` carries pyright's 26 s now.
+CI's first run reddened on `reportMissingImports` for `from buildstream
+import _site`: the runner has no BuildStream, the dev box does, so the
+finding existed in one environment only. `reportMissingImports` and
+`reportMissingModuleSource` are off in `[tool.pyright]` — an identity
+must not move with what is installed.

@@ -434,8 +434,7 @@ def _unbounded_builders_projection(analyzer) -> dict:
         'builders_before': current,
         'builders_after': unbounded,
         'assumption': (
-            "the agent-side staging and wait per element are unchanged, "
-            "and remote workers never queue"
+            "staging and wait per element unchanged, workers never queue"
         ),
     }
 
@@ -481,10 +480,8 @@ def _compiler_offload_projection(result) -> dict:
         'wall_us_before': path_us,
         'wall_us_after': remaining_us,
         'assumption': (
-            "a remote compile costs zero wall-clock on the agent, "
-            "clamped per element - a compile cannot remove more than "
-            "its own element's wall - so this is an upper bound on "
-            "the gain"
+            "zero agent wall per remote compile, clamped to each "
+            "element's own wall - an upper bound"
         ),
     }
 

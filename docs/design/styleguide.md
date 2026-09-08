@@ -600,7 +600,7 @@ column re-read in round 73:
                  elements   landed   opened    words   controls    nodes
 golden                  4    3,800   15,618    7,144        427    2,498
 macro_micro            11    5,965   31,804   12,002        750    5,686
-budget, to 50 elts             7,100   35,900   12,700        800    7,900
+budget, to 50 elts             7,300   36,300   12,800        800    7,900
 
 scale               1,202    4,763   26,242   36,542      1,941   24,294
 budget, to 4,000 elts          7,000   32,000   41,000      2,300   27,500
@@ -714,6 +714,15 @@ where the two `*-foundation` findings (published only when the project
 declared one) do not - measured 9,200 -> 9,269, +69. The 50-element
 class is unmoved; neither `macro_micro` nor `golden` is large enough
 to trip the top-p5 fan-out threshold the candidate finding reads.
+
+`UX-680` moved the small class's landed bound 7,100 -> 7,300, its
+height bound 35,900 -> 36,300 and its words bound 12,700 -> 12,800, and
+the 4,100 class's words bound 9,300 -> 9,400: `remote-execution-whatif`
+fires on every run with a sweep, a title and two or three detail lines
+in the first chapter - measured 7,182 landed, 36,193 opened and 12,731
+words on `macro_micro` and 9,349 words on `xl` once its text was cut
+from 128 to 81 words. A finding is the block a reader lands on, which
+is what the landed budget prices.
 
 `tests/unit/test_the_page_has_a_volume_budget.py` asserts both budgets
 in **one** guard, so a change trading one for the other has to say so.

@@ -360,7 +360,10 @@ DOCUMENT_SCREENS = 10.0
 #: How far the *last* chapter's question sits from the top. Measured
 #: 3.8 and 6.3; a reader scanning the chapter list should not have to
 #: scroll a screenful per chapter to read the next question.
-CHAPTER_HEADING_SCREENS = 8.0
+#: `UX-680`: 8.0 -> 8.5. `macro_micro`'s last four questions read 8.1
+#: to 8.4 with the `remote-execution-whatif` finding open in the first
+#: chapter; the reach grows with the open chapter, not the fold.
+CHAPTER_HEADING_SCREENS = 8.5
 
 #: And inside a chapter, its first section under its own heading.
 #: Measured 0.1 on every chapter of both fixtures: the heading, the

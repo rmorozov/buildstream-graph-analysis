@@ -1071,9 +1071,8 @@ def _capacity_recommendation_finding(result: AnalysisResult) -> list[dict]:
 # the sandbox that does the work, compiler offload moves the compile
 # inside it - so buying both is not buying their sum.
 REMOTE_EXECUTION_NOT_ADDITIVE_SENTENCE = (
-    "Not additive: unbounded builders and compiler offload both remove "
-    "time from the same critical-path seconds, by two different means, "
-    "so buying both is not buying their sum."
+    "Not additive: both remove the same critical-path seconds, so "
+    "buying both is not buying their sum."
 )
 
 
@@ -1108,38 +1107,38 @@ def _remote_execution_findings(result: AnalysisResult) -> list[dict]:
     if unbounded:
         before, after = _s(unbounded['wall_us_before']), _s(unbounded['wall_us_after'])
         detail.append(
-            f"    Unbounded builders (BuildStream REAPI moves whole "
-            f"sandboxes to workers): {before:.1f}s -> {after:.1f}s "
-            f"({before - after:.1f}s) - assumes {unbounded['assumption']}"
+            f"    Unbounded builders (REAPI moves whole sandboxes): "
+            f"{before:.1f}s -> {after:.1f}s ({before - after:.1f}s); "
+            f"assumes {unbounded['assumption']}"
         )
     if offload:
         before, after = _s(offload['wall_us_before']), _s(offload['wall_us_after'])
         detail.append(
-            f"    Compiler offload (recc/reclient move compiles out of "
-            f"the sandbox): {before:.1f}s -> {after:.1f}s "
-            f"({before - after:.1f}s) - assumes {offload['assumption']}"
+            f"    Compiler offload (recc/reclient move compiles out): "
+            f"{before:.1f}s -> {after:.1f}s ({before - after:.1f}s); "
+            f"assumes {offload['assumption']}"
         )
     if unbounded and offload:
         detail.append(f"    {REMOTE_EXECUTION_NOT_ADDITIVE_SENTENCE}")
         title = (
-            f"Remote execution, priced two ways: unbounded builders would "
-            f"leave {_s(unbounded['wall_us_after']):.1f}s of "
-            f"{_s(unbounded['wall_us_before']):.1f}s; compiler offload "
-            f"would leave {_s(offload['wall_us_after']):.1f}s of "
-            f"{_s(offload['wall_us_before']):.1f}s - not additive, see below"
+            f"Remote execution, priced two ways: unbounded builders "
+            f"{_s(unbounded['wall_us_before']):.1f}s -> "
+            f"{_s(unbounded['wall_us_after']):.1f}s, compiler offload "
+            f"{_s(offload['wall_us_before']):.1f}s -> "
+            f"{_s(offload['wall_us_after']):.1f}s - not additive"
         )
     elif unbounded:
         title = (
-            f"Remote execution (builder cap only - no Plane 2 "
-            f"`binary_cost` for the compiler-offload half): unbounded "
-            f"builders would leave {_s(unbounded['wall_us_after']):.1f}s "
-            f"of {_s(unbounded['wall_us_before']):.1f}s"
+            f"Remote execution (builder cap only, no Plane 2 "
+            f"`binary_cost`): unbounded builders "
+            f"{_s(unbounded['wall_us_before']):.1f}s -> "
+            f"{_s(unbounded['wall_us_after']):.1f}s"
         )
     elif offload:
         title = (
-            f"Remote execution (compiler offload only): moving compiles "
-            f"off the agent would leave {_s(offload['wall_us_after']):.1f}s "
-            f"of {_s(offload['wall_us_before']):.1f}s critical path"
+            f"Remote execution (compiler offload only): "
+            f"{_s(offload['wall_us_before']):.1f}s -> "
+            f"{_s(offload['wall_us_after']):.1f}s critical path"
         )
     else:
         # Unreachable: the early return above already excludes

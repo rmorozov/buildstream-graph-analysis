@@ -88,4 +88,6 @@ the per-element bound leaves 5.25 s (the verifier's arithmetic). Its
 guard could not see the critical-path restriction while the clamp
 saturated; recomputed per element. The reader is R4, the task's own,
 since R5's section needs Plane 2 and half (a) fires without it. Two
-verifier passes: HOLD (the clamp, the guard, a 10-line body), then PASS.
+verifier passes: HOLD (the clamp, the guard, a 10-line body), then PASS. The full gate reddened five page budgets on the finding's 128 words;
+cut to 81 (`macro_micro` 7,251 → 7,182 px landed) and the budgets moved
+with the measurement the way `UX-681` and `UX-683` moved them.

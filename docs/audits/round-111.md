@@ -83,6 +83,7 @@ against 25 published contracts.
 - The size ledger re-adopted after every merge batch; `UX-695`'s merges conflicted on the task file's Outcome blocks (union) and `UX-684`'s on the CLI guide's derived key count (261, re-derived).
 - The container restarted once, cutting four agents; all resumed from their transcripts on intact worktrees. One session-side `pkill` of a gate also caught the tracks' pytest runs; each was told, and re-ran.
 - Three tracks committed with `BGA_SKIP_SELECTOR=1` on the Direction 19 red, stated in the body; the red was the round's own.
+- The last gate reddened five page budgets and the selector's ceiling on `UX-680`'s finding and the round's four new test files: the finding's text cut from 128 to 81 words, the budgets moved with the measurement (`UX-681`'s rule), the ceiling +2 as before. Neither red was visible to a track's `make test-touching`.
 - The `derive` shape held: no track edited the spec.
 
 ## Agents

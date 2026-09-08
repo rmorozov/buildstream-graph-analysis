@@ -35,4 +35,34 @@ the mutation `entries + added` → `added` in `_adopt_flake`; green restored.
 
 ## Outcome
 
-_Not started._
+### The gap, measured
+
+Before: neither clause fixtured an existing row, so `entries + added`
+and `added` were indistinguishable to the suite - the Motivation's
+own repro:
+
+```console
+$ sed -i 's/document\["entries"\] = entries + added/document["entries"] = added/' tools/dev_tier_drift.py
+$ python3 -m pytest tests/unit/test_the_flake_ledger_grows_from_the_drift_gate.py -q
+7 passed
+```
+
+### The close, measured
+
+Both `TestAdoptFlakeAppends` clauses now seed `ledger.json` with
+`_EXISTING` (`FLAKY`, the same file the run below adopts, at
+`run_id="run-0"`) before calling `--adopt-flake`, and assert it is
+still present after:
+
+```console
+$ python3 -m pytest tests/unit/test_the_flake_ledger_grows_from_the_drift_gate.py -q
+7 passed in 0.58s
+```
+
+### Mutation table
+
+| # | mutation | reddened | count |
+|---|---|---|---|
+| M1 | `entries + added` → `added` in `_adopt_flake` | `test_a_candidates_rows_are_appended`, `test_readopting_the_same_run_adds_nothing` | `2 failed, 5 passed in 0.52s` |
+
+Reverted from the scratchpad copy; `7 passed in 0.58s` restored.

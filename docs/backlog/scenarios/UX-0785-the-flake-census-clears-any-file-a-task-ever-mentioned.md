@@ -46,4 +46,52 @@ restore the substring search — red.
 
 ## Outcome
 
-_Not started._
+### The gap, measured
+
+The Motivation's own repro, on `filed()`'s substring search:
+
+```console
+$ python3 -c "
+from tools import dev_flake_census as census
+doc = {'entries': [{'file': 'tests/unit/test_the_query_asks_about_this_run.py',
+        'run_id': str(i), 'shift': 1.7, 'confirmed': False} for i in range(3)],
+       'declared': {}}
+print(census.unaccounted(doc), census.filed(doc['entries'][0]['file']))"
+[] True
+```
+
+### The close, measured
+
+Same repro, `filed()` reading only a `**Flake:**` field in a task's
+first 8 lines:
+
+```console
+$ python3 -c "
+from tools import dev_flake_census as census
+doc = {'entries': [{'file': 'tests/unit/test_the_query_asks_about_this_run.py',
+        'run_id': str(i), 'shift': 1.7, 'confirmed': False} for i in range(3)],
+       'declared': {}}
+print(census.unaccounted(doc), census.filed(doc['entries'][0]['file']))"
+[('tests/unit/test_the_query_asks_about_this_run.py', 3)] False
+$ python3 -m pytest tests/unit/test_a_file_with_three_excursions_has_a_filed_task.py -q
+8 passed in 0.10s
+```
+
+The new clause `test_a_mention_in_prose_does_not_clear_it` covers the
+unrelated closed task's prose; `test_a_filed_task_clears_it` now
+fixtures a `**Flake:**` field rather than bare prose, since bare
+prose is exactly what no longer counts. A verifier pass then found
+`filed()` still matched by substring within the field's value itself
+(`**Flake:** tools/old_test_a.py` cleared `test_a.py`); the field's
+value is now split on whitespace/commas and each token compared with
+`==`, and `test_a_longer_path_containing_the_name_does_not_clear_it`
+covers a header naming a longer path that merely contains the name.
+
+### Mutation table
+
+| # | mutation | reddened | count |
+|---|---|---|---|
+| M1 | `filed()` restored to the substring search | `test_a_mention_in_prose_does_not_clear_it` | `1 failed, 6 passed in 0.09s` |
+| M2 | the exact token comparison reverted to `name in value` | `test_a_longer_path_containing_the_name_does_not_clear_it` | `1 failed, 7 passed in 0.12s` |
+
+Both reverted from the scratchpad copy; `8 passed in 0.10s` restored.

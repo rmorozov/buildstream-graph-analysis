@@ -204,3 +204,47 @@ def _isolated(tmp_path):
     return dict(os.environ, XDG_CACHE_HOME=str(home / "cache"),
                 XDG_CONFIG_HOME=str(BST_XDG_CONFIG_HOME),
                 XDG_DATA_HOME=str(home / "data"))
+
+
+# --- UX-775: a third un-isolated CAS-writing file can't land silently ------
+
+#: gate on `bst` but never write to CAS (a `bst show`/`--version` probe
+#: only), so a full disk cannot redden them - UX-760's own Outcome.
+_NOT_CAS_WRITING = {
+    "test_bst_show_to_graph.py",
+    "test_doctor.py",
+    "test_element_kind_heuristics.py",
+    "test_the_printed_sentences_are_contracts.py",
+}
+
+#: writes to CAS and isolates, but predates `_bst_env.py` - its own
+#: `BST_XDG_CONFIG_HOME` reads the same fixture `_bst_env.py` does.
+_ISOLATES_ITS_OWN_WAY = {"test_the_journey_has_an_answer_key.py"}
+
+_GATE = 'shutil.which(' + '"bst"' + ')'  # split so this clause doesn't self-match
+
+
+def _bst_gated_files():
+    return [p for p in sorted((REPO / "tests").rglob("test_*.py"))
+            if _GATE in p.read_text(encoding="utf-8")]
+
+
+def test_every_cas_writing_bst_gated_file_reaches_the_isolation():
+    """`UX-760` moved twelve bst-gated, CAS-writing files onto
+    `_bst_env.py`'s isolated `HOME`; `UX-775` the last two. A thirteenth
+    landing without it fails only on a negative-margin host - this
+    counts the population so it fails here instead."""
+    gated = _bst_gated_files()
+    assert len(gated) == 18, sorted(p.name for p in gated)  # UX-760's own count
+
+    excluded = _NOT_CAS_WRITING | _ISOLATES_ITS_OWN_WAY
+    cas_writing = [p for p in gated if p.name not in excluded]
+    assert len(cas_writing) == 13, sorted(p.name for p in cas_writing)
+
+    missing = sorted(p.name for p in cas_writing
+                      if "_bst_env" not in p.read_text(encoding="utf-8"))
+    assert not missing, (
+        f"{missing} shell out to a real bst without tests/unit/_bst_env.py's "
+        "isolated HOME - either route the build through isolated_bst_env/"
+        "bst_env, or add the file to this guard's named exclusions with why"
+    )

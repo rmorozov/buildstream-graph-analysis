@@ -75,4 +75,55 @@ two redden.
 
 ## Outcome
 
-_Not started._
+**The gap measured.** Before the fix, ambient `$HOME`, `bst` present,
+toolchain fixture staged (`bash examples/stage_cpp_toolchain.sh`):
+
+```console
+$ python3 -m pytest tests/unit/test_native_build_tracer.py \
+    tests/unit/test_dual_plane_capture.py -m bst --durations=0 -q
+11.23s call  test_native_build_tracer.py::test_run_traced_build_captures_real_process_lifecycle
+10.13s call  test_dual_plane_capture.py::test_single_real_build_captures_both_planes_and_combined_trace_correlates
+2 passed, 38 deselected in 21.82s
+```
+
+Both pass at this machine's normal margin; the row's own defect is that
+at a negative one they still refuse (`UX-760`'s verifier confirmed this
+directly, cited there rather than re-derived here).
+
+**The close measured.** Option 1: wrapped each real end-to-end test's
+`bst artifact delete` + build in `tests/unit/_bst_env.py`'s existing
+`bst_env(tmp_path / "home")`, the same in-process route
+`test_process_spine.py` already uses for `run_traced_build`. Two runs
+after:
+
+```console
+11.87s + 12.07s = 23.94s call, 24.48s total   (run 1)
+14.76s + 11.66s = 26.42s call, 26.91s total   (run 2)
+```
+
+Ratio 1.12x–1.23x elapsed — well under the 2x bar, so the isolation is
+kept per the brief's rule, not reverted.
+
+The Acceptance Test's own `fallocate` step was not run: the machine was
+shared with other tracks mid-round (13.5 GB free, 500M reserve — filling
+to a negative margin risked every concurrent track's `bst` build, not
+just this one). Substituted: the wall-time comparison above (21.82s
+ambient to 23.94-26.91s isolated, 1.12x-1.23x) and the structural
+guard's mutation below. The functional claim — no `Cache too full` at a
+negative margin — is inherited from `UX-760`'s verification of the same
+`quota: 3G` mechanism (`_bst_env.py`'s `BST_XDG_CONFIG_HOME` fixture,
+unchanged here), not re-measured for these two files.
+
+**Mutation table.**
+
+| guard | mutation | result |
+|---|---|---|
+| `test_a_generated_project_builds.py::test_every_cas_writing_bst_gated_file_reaches_the_isolation` (13-file population, `_GATE = shutil.which("bst")` census over `tests/`) | `test_native_build_tracer.py`'s `bst_env` wrap reverted to ambient `$HOME` | `AssertionError: ['test_native_build_tracer.py'] shell out to a real bst without ... isolated HOME` |
+| same, reverted from the pre-mutation copy (not `git checkout --`) | — | `1 passed` (and `test_native_build_tracer.py` + `test_dual_plane_capture.py` both green, 41 passed together) |
+
+Guard placed inside `test_a_generated_project_builds.py` (already a
+`_bst_env` consumer, already gated on `bst`) rather than a new file: a
+new `test_*.py` moves `tools/dev_touching.py`'s file count and reddens
+`test_the_cost_row_is_derived_from_the_selector.py` against
+`docs/contributing/fixing-guide.md`'s stale figure — a file this track
+does not own.

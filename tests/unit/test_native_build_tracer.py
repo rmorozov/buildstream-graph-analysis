@@ -426,10 +426,12 @@ def test_run_traced_build_captures_real_process_lifecycle(tmp_path):
     if not os.path.isdir(os.path.join(project_dir, "files", "toolchain", "usr", "bin")):
         pytest.skip("examples/05-cmake-cpp-toolchain's toolchain isn't staged - run stage_cpp_toolchain.sh first")
 
-    subprocess.run(["bst", "artifact", "delete", "core.bst"], cwd=project_dir, capture_output=True)
+    from tests.unit._bst_env import bst_env  # UX-775: the ambient-HOME twin of the twelve UX-760 fixed
 
     raw_log = str(tmp_path / "trace.log")
-    returncode = run_traced_build(project_dir, ["bst", "--no-colors", "build", "core.bst"], raw_log)
+    with bst_env(tmp_path / "home"):
+        subprocess.run(["bst", "artifact", "delete", "core.bst"], cwd=project_dir, capture_output=True)
+        returncode = run_traced_build(project_dir, ["bst", "--no-colors", "build", "core.bst"], raw_log)
 
     assert returncode == 0
     with open(raw_log, encoding="utf-8") as f:

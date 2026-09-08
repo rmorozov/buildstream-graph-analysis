@@ -186,6 +186,8 @@ pairing for every merged row from round 103 on.
 | 111 | verifier | sonnet | verify `UX-695` (`create_parser`) | 31k | 31 | 6.9 m | PASS with a finding: the subcommand order unguarded; guard added before merge | byte-identity proves the split kept the order, not that the order is meant to hold |
 | 111 | implementer | sonnet | `UX-678` memory joins the sweep and the queue model (judgement) | 861k | 330 | 57.1 m | merged ed72bbd5; the replay's concurrent set against host RAM on sweep/v1, one hold on the CLI path fixed; the queue-model half narrowed | the timeout parameter is milliseconds; the baseline's three new findings under the forced-row noise |
 | 111 | verifier | sonnet | verify `UX-678` | 192k | 87 | 21.7 m | HOLD: `bga sweep --plane2` crashed in both formats, no CLI-path guard, two keys undocumented; PASS on the follow-up | the CLI regression was invisible to the touching sweep and the unit mutations alike |
+| 111 | implementer | sonnet | `UX-689` the architecture document moves into the area pages — the viewer area (judgement) | 498k | 210 | 47.4 m | merged 2749a34a; 56 of 56 sentence units to docs/design/areas/bga-viewer.md, a derived Mechanism link; one hold on the verification log fixed | the log guard anchors on the oldest UX-NNN commit, so the entry had to ride the same commit; a second area needs its own id |
+| 111 | verifier | sonnet | verify `UX-689` (viewer area) | 160k | 60 | 26.5 m | HOLD: the pasted 435 was 434 (no log entry credits the commit), A3 a scratch script; fixed, PASS | a detached worktree at the base to check the before figure |
 
 Round 101's four tracks are **not** here: this session could not
 identify their transcripts with certainty after a context rebuild, and
@@ -198,7 +200,7 @@ committed cleanly once told to run in the foreground. Three of the five
 left a derived figure or a §6 context-map row behind - the same class
 the round itself was about, arriving in the tracks' own work.
 
-What the one hundred and sixty-nine rows already say: a researcher that reads a document
+What the one hundred and seventy-one rows already say: a researcher that reads a document
 whole costs 100-180k; a walker that drives every control costs 336k;
 the two cuts cost a re-run each. The `walk` and `design-review`
 skills fix the report shape so the next rows are smaller, and the

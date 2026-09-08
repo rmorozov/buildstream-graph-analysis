@@ -5387,6 +5387,10 @@ _CORRELATE_REQUIRED = {
 _CORRELATE_OPTIONAL = {
     "restructuring": "array",
     "granularity": "array",
+    # `UX-684`: the cached build's verdict, `bga/correlate.py`'s
+    # `cached_shape()` - absent without Plane 3's change history or
+    # below its own trust floor (`MIN_CO_REBUILDS`).
+    "cached_shape": "object",
     "memory_envelope": "object",
     "attribution_unreliable": "",
     "attribution_partial": "",
@@ -5482,6 +5486,10 @@ _CORRELATE_HINTS = {
     "granularity": {
         QUESTION: 'Which elements pay more sandbox tax than they build?',
         RAIL: "act",
+    },
+    "cached_shape": {
+        QUESTION: 'Does the graph rebuild the cheapest subgraph?',
+        RAIL: "decide",
     },
     "memory_envelope": {
         QUESTION: 'How much memory would more builders need?',

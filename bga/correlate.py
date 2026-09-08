@@ -1372,6 +1372,19 @@ CO_CHANGE_SHARE = 0.9
 # computed from them at all.
 MIN_CO_REBUILDS = 3
 
+# UX-684: at or above this share of recorded changes landing at or under
+# the graph's own median weighted blast, most changes rebuild the
+# cheapest subgraph - `findings.py`'s `CHAIN_BOUND_RATIO` read the same
+# way, a halfway line rather than a tuned one.
+CACHED_SHAPE_CHEAP_FLOOR = 0.5
+
+# UX-684: how many of `expected_rebuild_cost`'s rows the verdict ranks
+# by height and by weight - `PAYERS_NAMED`'s reasoning, one join over.
+CACHED_SHAPE_DOMINANT_SHOWN = 5
+
+CACHED_SHAPE_REBUILDS_CHEAP = 'rebuilds_the_cheapest_subgraph'
+CACHED_SHAPE_REBUILDS_EXPENSIVE = 'rebuilds_expensive_subgraphs'
+
 
 def find_granularity_findings(
     analysis: dict, native_report: dict, cache_logs: Optional[dict] = None,
@@ -1816,6 +1829,167 @@ def expected_rebuild_cost(analysis: dict, cache_logs: Optional[dict]) -> list[di
     return sorted(rows, key=lambda r: (r['is_foundation'], -r['expected_cost_us']))
 
 
+def _successors_of(dependencies) -> dict:
+    """Every element's direct dependents, unfiltered by dependency type -
+    `bga/blast.py`'s `_by_depth` adjacency, rebuilt here from the flat
+    edge list `find_granularity_findings` already receives, since a
+    change's blast does not care whether the edge that carries it is
+    build-time or runtime.
+    """
+    successors: dict = {}
+    for dependency in dependencies or []:
+        successors.setdefault(dependency.predecessor, set()).add(dependency.successor)
+    return successors
+
+
+def _height_below(node, successors, memo, path) -> int:
+    """The longest dependent chain below `node`, in elements - the
+    downstream mirror of `compute_unweighted_depth`
+    (`bga/graph/edg.py:96`), run from one element's own blast rather
+    than from every source in the graph. `memo` is shared across calls
+    from `_dominant_elements` since a node's height does not depend on
+    where the walk started; `path` guards a cycle this repository's
+    graphs do not have rather than assuming one.
+    """
+    if node in memo:
+        return memo[node]
+    if node in path:
+        return 0
+    best = 0
+    for child in successors.get(node) or ():
+        best = max(best, 1 + _height_below(child, successors, memo, path | {node}))
+    memo[node] = best
+    return best
+
+
+def _height_vs_weight_advice(height_rank: int, weight_rank: int) -> Optional[str]:
+    """UX-684's two advices, from one element's rank in its dominant
+    peers' height order against its rank in their weight order - never
+    both, since a chain that is tall is a different fix from an element
+    that is heavy.
+    """
+    if height_rank < weight_rank:
+        return "split the tall chain"
+    if weight_rank < height_rank:
+        return "isolate the heavy element"
+    return None
+
+
+def _dominant_elements(rows: list[dict], blast: dict, dependencies) -> list[dict]:
+    """`CACHED_SHAPE_DOMINANT_SHOWN` elements ranked by duration-weighted
+    expected cost - `UX-683`'s foundation exemption applies here too, a
+    declared foundation never leading a ranking meant to point at a fix.
+    """
+    from .sources import ASSEMBLING_KINDS
+
+    ranked = sorted(
+        (r for r in rows if not r['is_foundation']),
+        key=lambda r: -r['expected_cost_us'],
+    )[:CACHED_SHAPE_DOMINANT_SHOWN]
+    if not ranked:
+        return []
+    total_expected_cost = sum(r['expected_cost_us'] for r in ranked) or 1
+    successors = _successors_of(dependencies)
+    memo: dict = {}
+    heights = {r['element']: _height_below(r['element'], successors, memo, frozenset())
+               for r in ranked}
+    by_height = sorted(ranked, key=lambda r: -heights[r['element']])
+    by_weight = sorted(ranked, key=lambda r: -r['weighted_blast_us'])
+    height_rank = {r['element']: i for i, r in enumerate(by_height, start=1)}
+    weight_rank = {r['element']: i for i, r in enumerate(by_weight, start=1)}
+    out = []
+    for r in ranked:
+        element = r['element']
+        kind = (blast.get(element) or {}).get('element_kind')
+        out.append({
+            'element': element,
+            'expected_cost_us': r['expected_cost_us'],
+            'share_of_expected_cost': r['expected_cost_us'] / total_expected_cost,
+            'height': heights[element],
+            'weight_us': r['weighted_blast_us'],
+            'height_rank': height_rank[element],
+            'weight_rank': weight_rank[element],
+            'advice': _height_vs_weight_advice(height_rank[element], weight_rank[element]),
+            'assembling_kind': kind in ASSEMBLING_KINDS,
+        })
+    return out
+
+
+def _cached_shape_sentence(cheap_share, cheap_changes, total_changes, dominant) -> str:
+    lead = (f"{cheap_changes} of {total_changes} recorded changes "
+            f"({cheap_share:.0%}) rebuilt at or under the graph's own "
+            f"median weighted blast")
+    if not dominant:
+        return lead + "."
+    top = dominant[0]
+    tag = (" (an assembling kind - it adds height for free)"
+           if top['assembling_kind'] else "")
+    advice = f"; {top['advice']}" if top['advice'] else ""
+    return (f"{lead}. {top['element']} dominates the expected cost at "
+            f"{top['share_of_expected_cost']:.0%}{tag}{advice}.")
+
+
+def cached_shape(analysis: dict, cache_logs: Optional[dict],
+                  dependencies=None) -> Optional[dict]:
+    """UX-684: the cached build's mirror of the cold verdict
+    (`bga/findings.py:1610-1637`'s `chain_bound`/`scheduler_bound`/
+    `inconclusive` rule), stated the same way - the rule and its
+    denominator named in the finding rather than left for a reader to
+    infer.
+
+    `cheap_share` is the share of recorded changes (each rebuild counted
+    once, weighted by nothing) whose element's weighted blast is at or
+    under the graph's own p50 across every element `expected_rebuild_cost`
+    could see. `rebuilds_the_cheapest_subgraph` at or above
+    `CACHED_SHAPE_CHEAP_FLOOR`, `rebuilds_expensive_subgraphs` below it.
+
+    Absent, not a hedged verdict, when there is no Plane 3 change history
+    or fewer recorded changes than `MIN_CO_REBUILDS` trusts a share
+    with - `_scale_of`'s absence rule, extended past "no shape" to "no
+    *reliable* shape": an inconclusive verdict published as data invites
+    a reader to act on a coin flip.
+    """
+    from .store_aggregate import percentile
+
+    change_frequency = (cache_logs or {}).get('change_frequency')
+    if not change_frequency:
+        return None
+    elements = change_frequency.get('elements') or []
+    total_changes = sum(entry.get('rebuilds') or 0 for entry in elements)
+    if total_changes < MIN_CO_REBUILDS:
+        return None
+
+    blast = (analysis.get('elements') or {}).get('blast_radius') or {}
+    p50 = percentile(
+        [be.get('weighted_duration_us') or 0 for be in blast.values()], 50,
+    )
+    cheap_changes = sum(
+        entry.get('rebuilds') or 0
+        for entry in elements
+        if p50 is not None
+        and (be := blast.get(entry.get('element'))) is not None
+        and (be.get('weighted_duration_us') or 0) <= p50
+    )
+    cheap_share = cheap_changes / total_changes
+    verdict = (CACHED_SHAPE_REBUILDS_CHEAP
+               if cheap_share >= CACHED_SHAPE_CHEAP_FLOOR
+               else CACHED_SHAPE_REBUILDS_EXPENSIVE)
+
+    rows = expected_rebuild_cost(analysis, cache_logs)
+    dominant = _dominant_elements(rows, blast, dependencies)
+
+    return {
+        'verdict': verdict,
+        'cheap_share': cheap_share,
+        'cheap_changes': cheap_changes,
+        'total_changes': total_changes,
+        'p50_weighted_blast_us': p50,
+        'dominant': dominant,
+        'sentence': _cached_shape_sentence(cheap_share, cheap_changes,
+                                            total_changes, dominant),
+    }
+
+
 def correlate(analysis: dict, native_report: dict, tasks=None, run_context=None,
               cache_logs: Optional[dict] = None, dependencies=None) -> dict:
     """Join a Plane 1 analysis with a Plane 2 native report.
@@ -1969,6 +2143,14 @@ def correlate(analysis: dict, native_report: dict, tasks=None, run_context=None,
         **(
             {"expected_rebuild_cost": expected_rebuild_cost(analysis, cache_logs)}
             if (cache_logs or {}).get("change_frequency") else {}
+        ),
+        # UX-684: the cached-build mirror of the cold verdict, beside the
+        # data it is drawn from - absent, not a hedged verdict, on the
+        # same two conditions `cached_shape` itself gates on.
+        **(
+            {"cached_shape": shape}
+            if (shape := cached_shape(analysis, cache_logs, dependencies)) is not None
+            else {}
         ),
         "restructuring": restructuring,
         "granularity": granularity,

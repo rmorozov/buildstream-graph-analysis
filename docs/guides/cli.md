@@ -932,7 +932,7 @@ columns are the whole statement of what one of its rows holds, and
 finding one level up: `parallelism` is a top-level *object*, its
 `levels` rows are below that, and a population reaching only under a
 top-level array published the whole of a major bump outside itself.
-The surface is **258 keys** today, and that figure is derived from the
+The surface is **259 keys** today, and that figure is derived from the
 walk rather than typed here.
 
 So the statement of coverage, which is now a statement and not a
@@ -1067,6 +1067,7 @@ can look one up.
 | `attribution_unreliable` | The producer's own note, when it says its element names are fiction. Set, the join is refused rather than rendered (`UX-56`). |
 | `attribution_partial` | The same note when the names are real but do not cover every process. The join is rendered with its coverage stated (`UX-66`). |
 | `granularity` | Elements paying more sandbox tax than they spend building. |
+| `cached_shape` | The cached-build verdict (`UX-684`): the share of `--cache-logs`'s recorded changes whose element's weighted blast is at or under the graph's own median, and which elements dominate the expected cost. Absent, not a hedged verdict, without a change history or below `MIN_CO_REBUILDS` recorded changes. |
 | `process_count_distribution` | How many processes each element ran, across this capture. Heavy-tailed: one element with 40,000 processes is the finding. |
 | `envelope_bytes` | In a `memory_envelope.projections` row, the memory that many concurrent builders would need — bounded by the elements whose peak was actually measured, so it is a floor over what was seen and not a model. |
 | `sandbox_tax_distribution` | How this capture's sandbox tax is spread, over every payer — "is this element's tax unusual" has no answer without the population. |

@@ -1,6 +1,6 @@
 # UX-805: the doctor's chain probe drops the user's cache config with its HOME
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-755 (the absolute-valued reserve, for the tests), UX-149 (the chain probe) | **Found by:** round 111, the gate on a box 13.5 GB from full | **Serves:** R8 reading `bga doctor` on a host whose free space is under 5 % of the volume | **Topic:** capture | **Area:** tools | **Shape:** mechanical
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-755 (the absolute-valued reserve, for the tests), UX-149 (the chain probe) | **Found by:** round 111, the gate on a box 13.5 GB from full | **Serves:** R8 reading `bga doctor` on a host whose free space is under 5 % of the volume | **Topic:** capture | **Area:** tools | **Shape:** mechanical
 
 ## Motivation
 
@@ -108,3 +108,9 @@ change) · 1591 passed, 30 skipped in 69.80s`. `python3
 tools/dev_sizes.py --adopt --force` moved one cell:
 `tools/bga_doctor.py` `file_lines` 943 → 982 in
 `tests/quality_reference.json`.
+
+**Deviation.** The hint fires on any `Cache too full`, config carried
+or not — bst's wording is the same for a reserve the volume cannot meet
+and a disk that is full; the verifier's finding, left as the tool's
+limit. The hint is two sentences against the register's one. One
+commit, one verifier (PASS).

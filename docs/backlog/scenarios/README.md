@@ -15,12 +15,12 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-803 scenarios: **7 open**, 796 closed.
+803 scenarios: **6 open**, 797 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
-| capture | 2 | 97 |
+| capture | 1 | 97 |
 | analysis | 3 | 107 |
 | contracts | 0 | 48 |
 | viewer | 0 | 164 |
@@ -41,7 +41,6 @@ task file, which is the only place it ever lived twice.
 | UX-680 | [remote execution is priced, not built](UX-0680-remote-execution-is-priced-not-built.md) | analysis | Medium | R4 and R8 deciding whether to buy it | 🔴 |
 | UX-684 | [the cached-build verdict — does the graph rebuild the cheapest subgraph?](UX-0684-the-cached-build-verdict-does-the-graph-rebuild-the-cheapest-subgraph.md) | analysis | High | R3 showing evidence, R8 reading it | 🔴 |
 | UX-689 | [the architecture document moves into the area pages, one track at a time](UX-0689-the-architecture-document-moves-into-the-area-pages-one-track-at-a-tim.md) | docs | Medium | the reader pricing a change; the session restructuring without losing a sentence | 🟡 |
-| UX-805 | [the doctor's chain probe drops the user's cache config with its HOME](UX-0805-the-doctor-s-chain-probe-drops-the-user-s-cache-config-with-its-home.md) | capture | Medium | R8 reading `bga doctor` on a host whose free space is under 5 % of the volume | 🔴 |
 | UX-806 | [the Plane 2 chapter moves into the native-trace area page](UX-0806-the-plane-2-chapter-moves-into-the-native-trace-area-page.md) | docs | Medium | the reader pricing a change to the tracer; the session restructuring without losing a sentence | 🔴 |
 
 **The narrative round headings below are retired at round 94**

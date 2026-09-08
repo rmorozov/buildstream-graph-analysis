@@ -188,6 +188,8 @@ pairing for every merged row from round 103 on.
 | 111 | verifier | sonnet | verify `UX-678` | 192k | 87 | 21.7 m | HOLD: `bga sweep --plane2` crashed in both formats, no CLI-path guard, two keys undocumented; PASS on the follow-up | the CLI regression was invisible to the touching sweep and the unit mutations alike |
 | 111 | implementer | sonnet | `UX-689` the architecture document moves into the area pages — the viewer area (judgement) | 498k | 210 | 47.4 m | merged 2749a34a; 56 of 56 sentence units to docs/design/areas/bga-viewer.md, a derived Mechanism link; one hold on the verification log fixed | the log guard anchors on the oldest UX-NNN commit, so the entry had to ride the same commit; a second area needs its own id |
 | 111 | verifier | sonnet | verify `UX-689` (viewer area) | 160k | 60 | 26.5 m | HOLD: the pasted 435 was 434 (no log entry credits the commit), A3 a scratch script; fixed, PASS | a detached worktree at the base to check the before figure |
+| 111 | implementer | sonnet | `UX-805` the doctor's chain probe drops the user's cache config with its HOME (mechanical) | 103k | 89 | 14.7 m | merged bb0f0d2a; the config copied into the throwaway HOME, the chain probe 2 red → 9 green on this box | the chain tests skip until examples/stage_runtimes.sh runs in the worktree |
+| 111 | verifier | sonnet | verify `UX-805` | 55k | 38 | 6.2 m | PASS; the hint cannot tell a met reserve from a full disk, two sentences | each mutation isolated with -k to get the pasted counts |
 
 Round 101's four tracks are **not** here: this session could not
 identify their transcripts with certainty after a context rebuild, and
@@ -200,7 +202,7 @@ committed cleanly once told to run in the foreground. Three of the five
 left a derived figure or a §6 context-map row behind - the same class
 the round itself was about, arriving in the tracks' own work.
 
-What the one hundred and seventy-one rows already say: a researcher that reads a document
+What the one hundred and seventy-three rows already say: a researcher that reads a document
 whole costs 100-180k; a walker that drives every control costs 336k;
 the two cuts cost a re-run each. The `walk` and `design-review`
 skills fix the report shape so the next rows are smaller, and the

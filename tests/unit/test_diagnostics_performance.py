@@ -211,9 +211,10 @@ def _traced():
 #: is somebody else's cost (the interpreter's, pytest's).
 _BGA_ROOT = os.path.dirname(_bga_pkg.__file__)
 
-#: `UX-804`: 3,630,498 calls measured for the 1500-element fixture
-#: (2420/element) - headroom to ~1.49x before the bound, comfortably
-#: under the ~2x a redundant second pass produces.
+#: `UX-804`: 3,627,224 calls measured for the 1500-element fixture
+#: (2418/element) after the warm-up below removes one-time setup -
+#: headroom to ~1.49x before the bound, comfortably under the ~2x a
+#: redundant second pass produces.
 _CALLS_PER_ELEMENT_BOUND = 3600
 
 
@@ -227,7 +228,18 @@ def _bga_calls(run_dir):
     enough to run bare and under load alike, unlike a full line trace
     over this fixture's known O(N^2) diagnostics work (P1-21, still
     live, still out of this guard's scope).
+
+    A cold process pays a one-time cost the count would otherwise
+    absorb: `bga/schemas.py`'s module-level `_check_hint`/`_distribution`
+    calls run once, on first import, so a lone run of this test counted
+    3,630,498 against 3,627,224 in this file's own suite (a 3,274-call,
+    0.09% swing - both under the bound). The 3-element warm-up below
+    forces that import before the trace starts, so the count this
+    function returns is the per-element work either way.
     """
+    warm_dir = run_dir.parent / "warm"
+    analyze_run(_linear_chain_run_dir(warm_dir, 3))
+
     calls = {"n": 0}
 
     def _count(frame, event, _arg):
@@ -235,11 +247,12 @@ def _bga_calls(run_dir):
             calls["n"] += 1
         return None
 
+    previous = sys.gettrace()
     sys.settrace(_count)
     try:
         analyze_run(run_dir)
     finally:
-        sys.settrace(None)
+        sys.settrace(previous)
     return calls["n"]
 
 

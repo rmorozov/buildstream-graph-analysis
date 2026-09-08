@@ -43,10 +43,12 @@ jump box hit "readers", after         hash "#~v.elements=All+elements&…" (no a
 The jump box's `go()` called `revealAndLand` and nothing else - no
 `location.hash` write at all, so `wireViewState`'s writer had no new
 anchor to hear. A rail preset sub-entry (`viewEntries` in `nav.js`)
-already reached the correct anchor for `macro_micro`, but only through
-the browser's own default `<a href>` navigation plus the existing
-`hashchange` listener re-parsing the anchor half - coincidental on
-the href happening to reuse `viewstate.js`'s own `~` separator.
+already reached the correct anchor: its `<a href="#key~v…">`'s own
+default navigation sets `location.hash`'s anchor half, and
+`viewstate.js:281-289` (`UX-647`) binds the writer's "click" listener
+to `root.ownerDocument`, not `root` - so that click's deferred write
+reads the anchor the href just set and recaptures the query around it.
+No second write was missing there.
 
 ### The close, measured
 
@@ -56,11 +58,11 @@ jump box Enter, after             hash "#readers~…" rectTop 120.3
 preset "Critical path", after     hash "#elements~v.elements=Critical+path&…" scrollY 6438, rectTop 119.75
 ```
 
-`go()` (`app.js`) and the preset click handler (`viewEntries`, `nav.js`)
-now write `key`'s anchor via `history.replaceState`, preserving
-`splitHash`'s query, right after landing - explicit rather than left to
-the browser default action, which the "~v…" href suffix defeats for
-the id lookup it depends on.
+`go()` (`app.js`) now writes `key`'s anchor via `history.replaceState`,
+preserving `splitHash`'s query, right after landing - the write the
+jump box genuinely lacked. `viewEntries` (`nav.js`) keeps only
+`revealAndLand`: its own explicit anchor write was dead code, per
+below, so the site now says why in one line instead of carrying it.
 
 ```text
 make test-touching   2059 passed, 14 skipped, after `dev_touching.py
@@ -78,7 +80,7 @@ review an implementer track runs. Committed with `BGA_SKIP_SELECTOR=1`.
 
 | # | mutation | reddened |
 |---|---|---|
-| M1 | drop `nav.js`'s explicit reveal+write, restore the old click handler | none - the browser's own default navigation plus `app.js`'s `hashchange` listener already lands the same anchor for this href shape. Not discriminating; kept the explicit write anyway (§3b names the interaction, and it should not depend on that coincidence) |
+| M1 | drop the anchor from `viewEntries`'s `href` (`#${key}~v…` → `#~v…`) | 4/4 rail clauses in `TestAPresetSubEntryGoesToItsSection` (errors, the guard's own selector depending on the href it just lost) |
 | M2 | drop `app.js`'s jump-box anchor write | 3/3 jump-box tests: `test_the_hit_writes_the_anchor`, `test_enter_writes_the_anchor_too`, `test_the_copied_link_reopens_where_the_jump_landed` |
 
 Reverted from copies (`falsify`), not `git checkout --`; both green after.

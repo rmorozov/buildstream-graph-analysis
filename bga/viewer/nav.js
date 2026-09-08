@@ -27,11 +27,6 @@ export const RAILS = ["decide", "act", "prove", "investigate", "raw"];
 import { CHAPTERS, UNCHAPTERED, chapterFor, isOpen, setOpen, labelFold,
          chapterBox, revealAndLand } from "./chapters.js";
 
-// UX-671: the anchor half of a rail entry's own write - `joinHash`
-// stays the one spelling of the separator, so this edge is the same
-// one `viewstate.js` already asks every control to hold to.
-import { joinHash, splitHash } from "./viewstate.js";
-
 /** The sections the page actually rendered, in document order. */
 export function sections(root) {
   return [...(root.querySelectorAll?.("section[data-section]") ?? [])];
@@ -92,18 +87,10 @@ function viewEntries(section, doc) {
         select.value = name;
         select.dispatchEvent?.(new Event("change", { bubbles: true }));
       }
-      // UX-671: a rail entry is one interaction (§3b) - it both applies
-      // the view and lands on `key`'s section, written here rather
-      // than left solely to the browser's own anchor match, which the
-      // "~v…" suffix on `href` means nothing on the page's `id`
-      // carries.
+      // UX-671: only the reveal - `href`'s own default navigation
+      // already carries `key` into `location.hash`, and `UX-647`'s
+      // document-scoped listener recaptures the rest from there.
       revealAndLand(section, "smooth");
-      const next = joinHash(key, splitHash(location.hash).query);
-      if (window.history?.replaceState) {
-        window.history.replaceState(null, "", next || " ");
-      } else {
-        location.hash = next;
-      }
     });
     item.append(link);
     list.append(item);

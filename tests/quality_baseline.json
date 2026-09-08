@@ -62,7 +62,6 @@
     {"file": "bga/cli.py", "line": "def _execute_compare_and_write(args: argparse.Namespace) -> int:", "nth": 1, "rule": "C901", "tool": "ruff"},
     {"file": "bga/cli.py", "line": "def _compare_exit_code(args: argparse.Namespace, comparison) -> int:", "nth": 1, "rule": "PLR0912", "tool": "ruff"},
     {"file": "bga/cli.py", "line": "def _execute_compare_and_write(args: argparse.Namespace) -> int:", "nth": 1, "rule": "PLR0912", "tool": "ruff"},
-    {"file": "bga/cli.py", "line": "def create_parser() -> argparse.ArgumentParser:", "nth": 1, "rule": "PLR0915", "tool": "ruff"},
     {"file": "bga/cli.py", "line": "names |= set(action.choices)", "nth": 1, "rule": "reportArgumentType", "tool": "pyright"},
     {"file": "bga/cli.py", "line": "subparsers.completer = _command_completer", "nth": 1, "rule": "reportAttributeAccessIssue", "tool": "pyright"},
     {"file": "bga/cli.py", "line": "sweep_result = analyzer.replay_scheduler.capacity_sweep(", "nth": 1, "rule": "reportOptionalMemberAccess", "tool": "pyright"},

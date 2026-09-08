@@ -1648,48 +1648,7 @@ def _command_completer(prefix, parsed_args, **_kwargs):
         return []
 
 
-def create_parser() -> argparse.ArgumentParser:
-    """
-    Create the argument parser with full inline documentation.
-
-    Implements the full spec Part 37 command list as a hybrid (P1-14):
-    `analyze` remains the primary command (full report, every section),
-    and `graph`/`floors`/`replay`/`sweep`/`utilisation`/`diagnostics` are
-    thin aliases sharing the same pipeline - each restricts output to
-    its own section rather than re-deriving shared pipeline stages
-    (ingestion, normalization, graph construction) per subcommand.
-
-    Returns:
-        Configured ArgumentParser instance
-    """
-    parser = _UsageErrorParser(
-        prog='bga',
-        description='BuildStream Build Efficiency Analyzer - Analyze build traces for efficiency metrics',
-        epilog=(
-            # UX-67: the aliases are listed here rather than registered as
-            # argparse subcommands, because registering them would import
-            # every tool to build the parser - on every `bga analyze`.
-            _tool_help() + "\n\n"
-            "See docs/guides/cli.md for detailed usage examples and workflows."
-        ),
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-    )
-
-    parser.add_argument(
-        '--version',
-        action='version',
-        version=f'%(prog)s {__version__}',
-        help='Show program version and exit'
-    )
-
-    subparsers = parser.add_subparsers(
-        dest='command', metavar='COMMAND', help='Available commands',
-        parser_class=_CompactSubParser)
-    # UX-191: completion offers the aliases too - see
-    # `_command_completer`. Attached rather than registered, so the
-    # parser stays exactly as cheap to build as it was.
-    subparsers.completer = _command_completer
-
+def _add_analyze_subcommand(subparsers) -> None:
     # analyze - primary command, full report (every section)
     analyze_parser = subparsers.add_parser(
         'analyze',
@@ -1700,6 +1659,8 @@ def create_parser() -> argparse.ArgumentParser:
     _add_common_arguments(analyze_parser, include_replay=True, include_diagnostics=True, include_cold=True)
     analyze_parser.set_defaults(func=cmd_analyze)
 
+
+def _add_graph_subcommand(subparsers) -> None:
     # graph - static dependency graph + critical path + structural metrics
     graph_parser = subparsers.add_parser(
         'graph',
@@ -1715,6 +1676,8 @@ def create_parser() -> argparse.ArgumentParser:
     )
     graph_parser.set_defaults(func=cmd_graph)
 
+
+def _add_floors_subcommand(subparsers) -> None:
     # floors - certified/advisory floors, matches spec's `bga floors RUN --cold` examples
     floors_parser = subparsers.add_parser(
         'floors',
@@ -1727,6 +1690,8 @@ def create_parser() -> argparse.ArgumentParser:
     _add_common_arguments(floors_parser, include_cold=True)
     floors_parser.set_defaults(func=cmd_floors)
 
+
+def _add_replay_subcommand(subparsers) -> None:
     # replay - deterministic replay makespan (T_C)
     replay_parser = subparsers.add_parser(
         'replay',
@@ -1736,6 +1701,8 @@ def create_parser() -> argparse.ArgumentParser:
     _add_common_arguments(replay_parser, include_replay=True)
     replay_parser.set_defaults(func=cmd_replay)
 
+
+def _add_sweep_subcommand(subparsers) -> None:
     # sweep - capacity sweep (Part 19)
     sweep_parser = subparsers.add_parser(
         'sweep',
@@ -1787,6 +1754,8 @@ def create_parser() -> argparse.ArgumentParser:
     sweep_parser.add_argument('--log-file', type=str, default=None, metavar='PATH', help='Also write logs to PATH.')
     sweep_parser.set_defaults(func=cmd_sweep)
 
+
+def _add_utilisation_subcommand(subparsers) -> None:
     # utilisation - CPU utilisation accounting
     utilisation_parser = subparsers.add_parser(
         'utilisation',
@@ -1796,6 +1765,8 @@ def create_parser() -> argparse.ArgumentParser:
     _add_common_arguments(utilisation_parser)
     utilisation_parser.set_defaults(func=cmd_utilisation)
 
+
+def _add_diagnostics_subcommand(subparsers) -> None:
     # diagnostics - advanced diagnostics
     diagnostics_parser = subparsers.add_parser(
         'diagnostics',
@@ -1805,6 +1776,8 @@ def create_parser() -> argparse.ArgumentParser:
     _add_common_arguments(diagnostics_parser)
     diagnostics_parser.set_defaults(func=cmd_diagnostics)
 
+
+def _add_correlate_subcommand(subparsers) -> None:
     # compare - run-to-run comparison (UX-01, non-spec additive command)
     correlate_parser = subparsers.add_parser(
         'correlate',
@@ -1842,6 +1815,8 @@ def create_parser() -> argparse.ArgumentParser:
     )
     correlate_parser.set_defaults(func=cmd_correlate)
 
+
+def _add_blast_subcommand(subparsers) -> None:
     blast_parser = subparsers.add_parser(
         'blast',
         help="What rebuilds if I touch this repository, path or element?",
@@ -1884,6 +1859,8 @@ def create_parser() -> argparse.ArgumentParser:
     )
     blast_parser.set_defaults(func=cmd_blast)
 
+
+def _add_whatif_subcommand(subparsers) -> None:
     whatif_parser = subparsers.add_parser(
         'whatif',
         help="What would the build drop to if I fixed these?",
@@ -1911,6 +1888,8 @@ def create_parser() -> argparse.ArgumentParser:
     )
     whatif_parser.set_defaults(func=cmd_whatif)
 
+
+def _add_cache_trend_subcommand(subparsers) -> None:
     cache_trend_parser = subparsers.add_parser(
         'cache-trend',
         help="Is the cache getting worse? A series of runs, not a pair",
@@ -1937,6 +1916,8 @@ def create_parser() -> argparse.ArgumentParser:
     )
     cache_trend_parser.set_defaults(func=cmd_cache_trend)
 
+
+def _add_compare_subcommand(subparsers) -> None:
     compare_parser = subparsers.add_parser(
         'compare',
         usage='bga compare [options] BASELINE CANDIDATE',
@@ -2033,6 +2014,8 @@ def create_parser() -> argparse.ArgumentParser:
     )
     compare_parser.set_defaults(func=cmd_compare)
 
+
+def _add_bundle_subcommand(subparsers) -> None:
     # UX-520: the capture as one file. Not `run/` - half of what a
     # reader needs sits beside it, and `UX-381`'s layout says which half.
     bundle_parser = subparsers.add_parser(
@@ -2061,6 +2044,71 @@ def create_parser() -> argparse.ArgumentParser:
         help='Leave the Plane 2 capture out. Says what it omitted, and\n'
              'the manifest records it so --load says so too.')
     bundle_parser.set_defaults(func=cmd_bundle)
+
+
+# UX-695: subcommand order, walked by `create_parser`. One function
+# per subcommand keeps a single argument change to a single diff hunk.
+_SUBCOMMAND_BUILDERS = [
+    _add_analyze_subcommand,
+    _add_graph_subcommand,
+    _add_floors_subcommand,
+    _add_replay_subcommand,
+    _add_sweep_subcommand,
+    _add_utilisation_subcommand,
+    _add_diagnostics_subcommand,
+    _add_correlate_subcommand,
+    _add_blast_subcommand,
+    _add_whatif_subcommand,
+    _add_cache_trend_subcommand,
+    _add_compare_subcommand,
+    _add_bundle_subcommand,
+]
+
+
+def create_parser() -> argparse.ArgumentParser:
+    """
+    Create the argument parser with full inline documentation.
+
+    Implements the full spec Part 37 command list as a hybrid (P1-14):
+    `analyze` remains the primary command (full report, every section),
+    and `graph`/`floors`/`replay`/`sweep`/`utilisation`/`diagnostics` are
+    thin aliases sharing the same pipeline - each restricts output to
+    its own section rather than re-deriving shared pipeline stages
+    (ingestion, normalization, graph construction) per subcommand.
+
+    Returns:
+        Configured ArgumentParser instance
+    """
+    parser = _UsageErrorParser(
+        prog='bga',
+        description='BuildStream Build Efficiency Analyzer - Analyze build traces for efficiency metrics',
+        epilog=(
+            # UX-67: the aliases are listed here rather than registered as
+            # argparse subcommands, because registering them would import
+            # every tool to build the parser - on every `bga analyze`.
+            _tool_help() + "\n\n"
+            "See docs/guides/cli.md for detailed usage examples and workflows."
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+
+    parser.add_argument(
+        '--version',
+        action='version',
+        version=f'%(prog)s {__version__}',
+        help='Show program version and exit'
+    )
+
+    subparsers = parser.add_subparsers(
+        dest='command', metavar='COMMAND', help='Available commands',
+        parser_class=_CompactSubParser)
+    # UX-191: completion offers the aliases too - see
+    # `_command_completer`. Attached rather than registered, so the
+    # parser stays exactly as cheap to build as it was.
+    subparsers.completer = _command_completer
+
+    for _builder in _SUBCOMMAND_BUILDERS:
+        _builder(subparsers)
 
     # UX-191: after every subparser exists, so the walk sees all of them.
     _attach_run_completers(parser)

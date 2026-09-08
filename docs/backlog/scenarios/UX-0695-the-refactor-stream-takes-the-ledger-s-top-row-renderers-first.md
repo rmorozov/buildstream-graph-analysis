@@ -60,3 +60,24 @@ attribution swapped in the list -> `sections rendered out of the
 declared order: [..., (7451, '_render_floors_section'), (7051,
 '_render_attribution_section'), ...]`; reverted from a copy, 19 passed.
 `ruff` baseline shrunk 3 stale findings (`--shrink`).
+**2026-09-08, `build_document` (bga/report/json.py):** split into 24
+`_add_*(data, result, section, by_kind)` functions, one per assembled
+block, walked by an ordered tuple `_SECTIONS`; `build_document`'s body
+is that loop plus the closing `schemas.stamp`. Ledger row
+(`tools/dev_sizes.py`), `bga/report/json.py`: before
+`{duplicate_blocks: 0, file_lines: 551, longest_function: 365}`, after
+`{duplicate_blocks: 0, file_lines: 640, longest_function: 107}` —
+`file_lines` grew (function boilerplate) so `--adopt --force` moved
+that one cell; `longest_function` shrank 365→107 and is the cell the
+track was filed for. Guards: `tests/unit/test_part_29_reads_the_store_it_has.py`,
+`test_what_an_element_pulls_in.py`, `test_why_bga_believes_what_it_believes.py`,
+`test_a_committed_analysis_matches_the_analyzer.py`,
+`test_the_report_has_chapters.py` — 81 passed, golden diff empty.
+Mutation: swapped `_add_findings`/`_add_floors` in `_SECTIONS` →
+`test_a_committed_analysis_matches_the_analyzer.py` reddened 2 of 6
+(`mixed_task_kinds`, `with_timeline`), naming "the committed order is
+not the emitted order"; reverted from a scratchpad copy, re-ran green
+(81 passed). `python3 tools/dev_baseline.py --shrink` retired the three
+`build_document` rows the split obsoleted (`tests/quality_baseline.json`:
+ruff `C901`, `PLR0912`, `PLR0915`, all on `def build_document(...)`);
+`--check` and `make lint` both clean.

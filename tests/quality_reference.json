@@ -48,7 +48,7 @@
     "bga/report/__init__.py": {"duplicate_blocks": 0, "file_lines": 24, "longest_function": 0},
     "bga/report/_shared.py": {"duplicate_blocks": 0, "file_lines": 169, "longest_function": 18},
     "bga/report/ci_comment.py": {"duplicate_blocks": 0, "file_lines": 416, "longest_function": 91},
-    "bga/report/json.py": {"duplicate_blocks": 0, "file_lines": 551, "longest_function": 365},
+    "bga/report/json.py": {"duplicate_blocks": 0, "file_lines": 640, "longest_function": 107},
     "bga/report/rate.py": {"duplicate_blocks": 0, "file_lines": 92, "longest_function": 21},
     "bga/report/text.py": {"duplicate_blocks": 0, "file_lines": 1825, "longest_function": 254},
     "bga/run_store.py": {"duplicate_blocks": 0, "file_lines": 688, "longest_function": 77},

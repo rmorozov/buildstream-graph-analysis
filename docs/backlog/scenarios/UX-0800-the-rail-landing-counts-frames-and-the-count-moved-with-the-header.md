@@ -51,4 +51,39 @@ frame — red on the tall-header clause.
 
 ## Outcome
 
-_Not started._
+Gap measured (Motivation, pasted): 2 of 6 red at two frames, 8 of 8
+green only at three - a count hand-retuned once already (`UX-668`) and
+due again the next header change.
+
+Close measured:
+
+```console
+$ for i in $(seq 1 10); do python3 -m pytest \
+    tests/unit/test_a_rail_click_lands_on_its_section.py -q; done
+11 passed   (x10, every run)
+$ python3 -m pytest tests/unit/test_a_rail_click_lands_on_its_section.py \
+    -q -n auto
+11 passed in 88.46s
+```
+
+`revealAndLand` now lands, waits one dead frame (so the read is never
+seeded from the paint `land()` itself just forced), then polls
+`getBoundingClientRect().top` on `requestAnimationFrame` until two
+consecutive reads agree or `LAND_SETTLE_FRAME_CAP` (12, stated) is hit,
+then lands once more. The dead frame matters: without it, `blast`'s
+two earliest reads agree on a still-stale pre-shift value and the
+settle declares early, before the fold above it actually collapses -
+measured directly (`getBoundingClientRect().top` per frame, click
+only): `119.92, 119.92, -388.95, -388.95, …` forever, once wrongly
+landed. With the dead frame the same trace reads `…, -388.95, 120.05,
+120.05, …` and lands correctly.
+
+Mutation table:
+
+| mutation | reddened | count |
+|---|---|---|
+| settle loop → `frame(land)` (single frame, no agreement wait) | source-shape assertion (`cur === prev` / `LAND_SETTLE_FRAME_CAP` absent); `blast`'s two BAND clauses at the *current* header; both tall-header clauses (`TestARailClickLandsUnderATallerHeader`) | 4 of 11 red |
+
+Reverted from the scratchpad copy (`cp` from
+`scratchpad/<worktree>/bga/viewer/chapters.js`, never `git checkout
+--`); 11 of 11 green after revert.

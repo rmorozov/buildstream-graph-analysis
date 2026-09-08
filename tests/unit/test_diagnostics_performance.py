@@ -11,11 +11,13 @@ here asserts the result is still right, with a performance assertion
 as a secondary check.
 """
 import json
+import os
 import sys
 import time
 
 import pytest
 
+import bga as _bga_pkg
 from bga import BuildEfficiencyAnalyzer, analyze_run
 from bga.diagnostics.analyzer import DiagnosticsAnalyzer
 from bga.graph.edg import analyze_graph
@@ -205,22 +207,77 @@ def _traced():
     return sys.gettrace() is not None or "coverage" in sys.modules
 
 
+#: bga's own on-disk root - a `call` event's frame is under here or it
+#: is somebody else's cost (the interpreter's, pytest's).
+_BGA_ROOT = os.path.dirname(_bga_pkg.__file__)
+
+#: `UX-804`: 3,627,224 calls measured for the 1500-element fixture
+#: (2418/element) after the warm-up below removes one-time setup -
+#: headroom to ~1.49x before the bound, comfortably under the ~2x a
+#: redundant second pass produces.
+_CALLS_PER_ELEMENT_BOUND = 3600
+
+
+def _bga_calls(run_dir):
+    """`analyze_run`'s own function-call count over `run_dir`.
+
+    `UX-804`, the same swap `UX-731` made one file over: a `call` event
+    is work the interpreter did for this code, not a property of the
+    box. Only `call` events are counted (the local trace function
+    returns `None`, so no per-line tracing is ever requested) - cheap
+    enough to run bare and under load alike, unlike a full line trace
+    over this fixture's known O(N^2) diagnostics work (P1-21, still
+    live, still out of this guard's scope).
+
+    A cold process pays a one-time cost the count would otherwise
+    absorb: `bga/schemas.py`'s module-level `_check_hint`/`_distribution`
+    calls run once, on first import, so a lone run of this test counted
+    3,630,498 against 3,627,224 in this file's own suite (a 3,274-call,
+    0.09% swing - both under the bound). The 3-element warm-up below
+    forces that import before the trace starts, so the count this
+    function returns is the per-element work either way.
+    """
+    warm_dir = run_dir.parent / "warm"
+    analyze_run(_linear_chain_run_dir(warm_dir, 3))
+
+    calls = {"n": 0}
+
+    def _count(frame, event, _arg):
+        if event == "call" and _BGA_ROOT in frame.f_code.co_filename:
+            calls["n"] += 1
+        return None
+
+    previous = sys.gettrace()
+    sys.settrace(_count)
+    try:
+        analyze_run(run_dir)
+    finally:
+        sys.settrace(previous)
+    return calls["n"]
+
+
 def test_full_pipeline_faster_after_p1_21(tmp_path):
     """Informal but real: a 1500-element linear chain (the same
-    profiling fixture used to find these hotspots) must complete well
-    under what the pre-fix O(N^2) hotspots would allow. Not a strict
+    profiling fixture used to find these hotspots) must do well under
+    what the pre-fix O(N^2) hotspots would allow. Not a strict
     benchmark - just a floor well above what any reasonable regression
     could still pass under.
 
-    The work runs either way; only the *duration* is not asserted under
-    a tracer, because under one the number is not this code's.
-    `UX-482`'s rule - a duration standing in for a condition - and the
-    condition here is "not quadratic again".
+    `UX-804`: reads the analyzer's own call count against the fixture's
+    size, not the wall clock - `UX-741` measured no load threshold
+    separates a green run from a red one, and this file's own history
+    proves it (13.93s under load 18 vs 3.91s bare, same code, same
+    commit). The trace conflicts with an active line-tracer (coverage's
+    own `sys.settrace`), so it still skips under one, as the timed
+    version did for the same reason `UX-482` names.
     """
-    run_dir = _linear_chain_run_dir(tmp_path, 1500)
-    start = time.perf_counter()
-    analyze_run(run_dir)
-    elapsed = time.perf_counter() - start
     if _traced():
         pytest.skip(TRACED)
-    assert elapsed < 10.0, f"1500-element analyze_run took {elapsed:.2f}s - regression?"
+    run_dir = _linear_chain_run_dir(tmp_path, 1500)
+    start = time.perf_counter()
+    calls = _bga_calls(run_dir)
+    elapsed = time.perf_counter() - start
+    bound = 1500 * _CALLS_PER_ELEMENT_BOUND
+    assert calls < bound, (
+        f"1500-element analyze_run made {calls} bga calls (bound {bound}) - "
+        f"regression? [{elapsed:.2f}s wall, load {os.getloadavg()}]")

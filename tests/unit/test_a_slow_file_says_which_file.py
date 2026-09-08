@@ -1044,6 +1044,81 @@ class TestAnExcursionMustRepeat:
         assert len(held["runs"]) == drift.CI_DRIFT_RUNS - 1, held["runs"]
 
 
+class TestABaseExcursionIsReportedNotFailed:
+    """`UX-803`: a file main already reads slow is the base's, not the
+    diff's - `--base-carry` reads the base's own last carried run,
+    restored under a different cache key than a PR's own `--carry`
+    (the workflow's `tier-carry-refs/heads/main-` restore-keys).
+    """
+
+    #: A file heavy enough that a step from 2.4s clears both gates.
+    NAME = "tests/unit/test_a_slow_file_says_which_file.py"
+
+    def _reference(self, seconds):
+        times = dict(tiers.recorded())
+        times[self.NAME] = seconds
+        return drift.record(times)
+
+    def _base_carry(self, tmp_path, ratio):
+        path = tmp_path / "base_carry.json"
+        drift.carry(path, {self.NAME: ratio}, "main", [])
+        return path
+
+    def test_the_acceptance_case(self, tmp_path, capsys):
+        """The task's own numbers: a 2.4s reference row, a base run and
+        a branch run both at 50s - reported as the base's, exit 0, and
+        never reaching the branch's own no-carry auto-confirm."""
+        reference = tmp_path / "ref.json"
+        reference.write_text(json.dumps(self._reference(2.4)),
+                             encoding="utf-8")
+        base_carry = self._base_carry(tmp_path, round(50.0 / 2.4, 2))
+        times = dict(tiers.recorded())
+        times[self.NAME] = 50.0
+        argv = [str(_report(tmp_path, times)), "--against", str(reference),
+                "--base-carry", str(base_carry)]
+        code = drift.main(argv)
+        said = capsys.readouterr().err
+        assert code == 0, said
+        assert "the base's" in said, said
+        assert self.NAME in said, said
+
+    def test_a_file_base_never_read_slow_still_fails(self, tmp_path,
+                                                     capsys):
+        """The clause names one file, not every excursion - a base
+        carry that never saw this file over the gates leaves it to the
+        ordinary rule (no --carry, so one sample decides, `UX-442`)."""
+        reference = tmp_path / "ref.json"
+        reference.write_text(json.dumps(self._reference(2.4)),
+                             encoding="utf-8")
+        base_carry = self._base_carry(tmp_path, 1.02)  # a different file
+        base_carry.write_text(json.dumps(
+            {"runs": [{"tests/unit/test_not_this_one.py": 1.02}]}),
+            encoding="utf-8")
+        times = dict(tiers.recorded())
+        times[self.NAME] = 50.0
+        argv = [str(_report(tmp_path, times)), "--against", str(reference),
+                "--base-carry", str(base_carry)]
+        code = drift.main(argv)
+        said = capsys.readouterr().err
+        assert code == 1, said
+        assert "slower than CI's own record" in said, said
+
+    def test_an_unreachable_base_carry_says_so(self, tmp_path, capsys):
+        """`UX-803`'s Required Fix: a main carry not reachable from a PR
+        run says so, rather than silently deciding either way."""
+        reference = tmp_path / "ref.json"
+        reference.write_text(json.dumps(self._reference(2.4)),
+                             encoding="utf-8")
+        times = dict(tiers.recorded())
+        times[self.NAME] = 50.0
+        argv = [str(_report(tmp_path, times)), "--against", str(reference),
+                "--base-carry", str(tmp_path / "missing.json")]
+        code = drift.main(argv)
+        said = capsys.readouterr().err
+        assert code == 1, said
+        assert "no carry from the base branch's own runs reachable" in said
+
+
 class TestAgreementIsNotEvidenceOnItsOwn:
     """`UX-476`: what `UX-442`'s two-run rule was actually doing.
 
@@ -1465,6 +1540,63 @@ class TestTheReferenceAdoptsWhatItDoesNotCarry:
         assert "no candidate" in capsys.readouterr().err
 
 
+class TestAStepRestartsTheSamples:
+    """`UX-803`: the Motivation's own lag - a file whose cost stepped
+    kept its old median for three main pushes, because `--adopt` only
+    ever appends one reading to a five-wide window. Two consecutive
+    main runs past both gates (`over_gate`) now restart the window at
+    the new reading instead.
+    """
+
+    NAME = "tests/unit/test_a_slow_file_says_which_file.py"
+
+    def _reference(self, samples):
+        """`tiers.recorded()` beside `NAME`, so the shift these two
+        documents agree on is 1.0 and the step is the only thing that
+        moved."""
+        document = drift.record(dict(tiers.recorded()))
+        document["files"][self.NAME] = samples[-1]
+        document["samples"][self.NAME] = list(samples)
+        return document
+
+    def _candidate(self, seconds):
+        times = dict(tiers.recorded())
+        times[self.NAME] = seconds
+        return drift.record(times)
+
+    def test_the_acceptance_case(self):
+        """The task's own shape: 2.4s-ish readings, then a step to
+        50s. One main push over the gates only appends - `files` stays
+        at the old median, the three-push lag the task measured; a
+        second, agreeing with the one before it, restarts the window."""
+        reference = self._reference([2.41, 2.39, 2.41, 2.41])
+        after_one, _added = drift.adopt(reference, self._candidate(50.0))
+        assert after_one["samples"][self.NAME] == [
+            2.41, 2.39, 2.41, 2.41, 50.0], after_one["samples"][self.NAME]
+        assert after_one["files"][self.NAME] == pytest.approx(2.41), (
+            "one push over the gates already moved the median")
+        after_two, _added = drift.adopt(after_one, self._candidate(50.0))
+        assert after_two["samples"][self.NAME] == [50.0], (
+            f"a second consecutive main run over the gates did not "
+            f"restart the window: {after_two['samples'][self.NAME]}")
+        assert after_two["files"][self.NAME] == 50.0
+        assert self.NAME in after_two["adopted"], (
+            "a restarted file's one sample is exactly as far from "
+            "measured_on as an added row's, and adopted is where that "
+            "is stated (UX-803's Required Fix)")
+
+    def test_a_single_reading_only_appends(self):
+        """The discriminator: one main run over the gates, with nothing
+        agreeing before it, must only append - a lone excursion is
+        `UX-442`'s whole argument, replayed here so one bad sample
+        cannot erase four good ones."""
+        reference = self._reference([2.41, 2.39, 2.41, 2.41])
+        after_one, _added = drift.adopt(reference, self._candidate(50.0))
+        assert after_one["samples"][self.NAME] == [
+            2.41, 2.39, 2.41, 2.41, 50.0]
+        assert self.NAME not in (after_one.get("adopted") or [])
+
+
 class TestTheRunnerVerdictNeedsASeriesToo:
     """`UX-508`: `stale` was the third one-sample verdict in this tool.
 
@@ -1865,6 +1997,13 @@ class TestCiSuppliesTheMemoryTheRuleNeeds:
         assert carry_steps, "no cache step carries a *-carry- key"
         for step in carry_steps:
             key = step["with"]["key"]
+            if "github.event.repository.default_branch" in key:
+                # `UX-803`: a base-carry read is deliberately cross-branch
+                # - always the default branch's own series, read from a
+                # PR too - so it is exempted rather than named by
+                # `github.ref`; the family's own-branch save step below
+                # still covers every entry it can restore.
+                continue
             assert "github.ref" in key, (
                 f"the carry cache key {key!r} does not name the branch")
         families = sorted({re.match(r"(\S+-carry-)", step["with"]["key"]).group(1)

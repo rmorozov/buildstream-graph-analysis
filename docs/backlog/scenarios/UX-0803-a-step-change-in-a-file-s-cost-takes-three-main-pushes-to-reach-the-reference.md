@@ -1,6 +1,6 @@
 # UX-803: a step change in a file's cost takes three main pushes to reach the reference
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-496 (the samples), UX-503 (the adopt job), UX-442 (the two-run confirmation) | **Found by:** round 110, PR #218's three CI runs | **Serves:** R8 reading a red drift gate on a PR whose diff touched a file main had already made slower | **Topic:** guards | **Area:** tools | **Shape:** bounded
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-496 (the samples), UX-503 (the adopt job), UX-442 (the two-run confirmation) | **Found by:** round 110, PR #218's three CI runs | **Serves:** R8 reading a red drift gate on a PR whose diff touched a file main had already made slower | **Topic:** guards | **Area:** tools | **Shape:** bounded
 
 ## Motivation
 
@@ -53,4 +53,54 @@ naming the file as the branch's.
 
 ## Outcome
 
-_Not started._
+**Gap measured.** Before this fix, a single-run reading past both gates
+was auto-confirmed and failed the build whenever no branch `--carry`
+existed yet - including the case where the base branch's own last run
+already read the same file the same way:
+
+```console
+$ # reference row 2.4s, base carry names the file, branch run 50.0s, no --carry
+1 file(s) slower than CI's own record of them:
+  .../test_a_slow_file_says_which_file.py  50.0s  against 2.4s recorded, x20.83 ...
+exit 1
+```
+
+`adopt` took three consecutive main pushes to move a stepped file's
+median (Motivation's own `test_the_baseline_only_shrinks.py`, 2.4s to
+50.7s): push 1 appends into the five-wide window, push 2 still loses
+the `median_low`, push 3 finally outnumbers the old readings.
+
+**Close measured.** `--base-carry` (workflow: `tier-carry-refs/heads/
+<default>-` restore-keys, main's own key already saved by the existing
+per-branch save step) splits a row the base's own last run also read
+past both gates into `based`, reported and not failed:
+
+```console
+$ # same case, --base-carry given
+1 file(s) over both gates that the base branch's own last run also
+read past them - the base's, not this branch's (UX-803):
+  .../test_a_slow_file_says_which_file.py  50.0s  against 2.4s recorded, x20.83 ...
+tiers ok: 182 file(s) measured against ref.json ...
+exit 0
+```
+
+`adopt` now restarts a file's samples at the new reading once two
+consecutive main runs clear `over_gate` (`CI_DRIFT_FACTOR` and
+`CI_DRIFT_SECONDS`, shared with `against`'s own row check): push 1
+still only appends (median stays 2.41, matching the old lag), push 2 -
+agreeing with push 1's own contributed reading - restarts the window
+to `[50.0]`, median 50.0, name in `adopted`. Two pushes, not three.
+
+**Mutation table.**
+
+| Guard | Mutation | Reddened | Count |
+|---|---|---|---|
+| `TestABaseExcursionIsReportedNotFailed` (2 of 3 tests) | base-run clause dropped (`based = []`, split removed) | file named among "slower than CI's own record" (branch's), exit 1 | 2 failed, 1 passed, 142 deselected |
+| `TestAStepRestartsTheSamples` (2 of 2 tests) | `_next_sample` step check reduced to one reading (`prior` requirement dropped) | first push alone restarts to `[50.0]`, both tests' sample-list assertions wrong | 2 failed, 143 deselected |
+| `TestCiSuppliesTheMemoryTheRuleNeeds::test_a_branch_reads_its_own_series` (pre-existing, exemption re-checked) | own-branch carry key's `github.ref` dropped (unrelated to the new exemption) | `does not name the branch` | 1 failed, 144 deselected |
+
+All three reverted from the scratchpad's pre-mutation copy, `__pycache__`
+cleared each time; `tests/unit/test_a_slow_file_says_which_file.py`
+back to 145 passed after each revert.
+
+**Deviation.** One workflow step added (main's carry restored on a PR run under the default branch's key prefix) and `--base-carry PATH` on `--against`; the pre-existing own-branch key guard gained an exemption for the cross-branch key, its own mutation still red. The verifier's note, recorded: a base carry given but unreachable still reds the branch as before — held by `test_an_unreachable_base_carry_says_so`, not narrated in the Outcome. One commit, one verifier (PASS).

@@ -746,6 +746,9 @@ def read_cpu_sample() -> dict:
                 if line.startswith("cpu "):
                     fields = [int(value) for value in line.split()[1:]]
                     sample["cpu_busy_jiffies"] = _busy_jiffies(fields)
+                    # `UX-796`: the same kernel counter as the window,
+                    # so busy/total cannot exceed one per core.
+                    sample["cpu_total_jiffies"] = sum(fields)
                 elif line.startswith("cpu"):
                     sample["cores"] = sample.get("cores", 0) + 1
                 elif sample:
@@ -811,7 +814,8 @@ class HostSampler:
         self._thread = None
         self._handle = None
         self.samples = 0
-        # `UX-675`: the pair `cpu_busy_cores` is a delta over.
+        # `UX-675`/`UX-796`: the (busy, total, t) triple `cpu_busy_cores`
+        # is a delta over.
         self._cpu = None
 
     def __enter__(self):
@@ -835,7 +839,8 @@ class HostSampler:
             # sample" are different facts.
             "available": bool(first),
         }
-        self._cpu = (first.get("cpu_busy_jiffies"), header["monotonic_at_start"])
+        self._cpu = (first.get("cpu_busy_jiffies"), first.get("cpu_total_jiffies"),
+                     header["monotonic_at_start"])
         self._write(header)
         if first:
             self._thread = threading.Thread(target=self._run, daemon=True)
@@ -874,17 +879,29 @@ class HostSampler:
             self._stop.wait(self.interval_s)
 
     def _to_cores(self, sample: dict) -> None:
-        """`cpu_busy_jiffies` in, `cpu_busy_cores` out (`UX-675`)."""
+        """`cpu_busy_jiffies` in, `cpu_busy_cores` out (`UX-675`).
+
+        `UX-796`: the window is `cpu_total_jiffies`, not the wall clock
+        beside it - under load this process can be descheduled between
+        the `/proc/stat` read and the `time.monotonic()` stamp, so the
+        wall gap it reports can be shorter than the jiffy gap it
+        actually spans. `total` is read by the same kernel counter as
+        `busy` at the same instant, so busy/total cannot exceed one per
+        core by construction; `t` still gates presence and still rides
+        in the sample for the timeline join.
+        """
         busy = sample.pop("cpu_busy_jiffies", None)
-        if busy is None:
+        total = sample.pop("cpu_total_jiffies", None)
+        if busy is None or total is None:
             return
-        was, at = self._cpu or (None, None)
-        self._cpu = (busy, sample["t"])
+        was_busy, was_total, at = self._cpu or (None, None, None)
+        self._cpu = (busy, total, sample["t"])
         elapsed = sample["t"] - at if at is not None else 0.0
-        if was is None or elapsed < _CPU_MIN_INTERVAL_S:
+        window = total - was_total if was_total is not None else 0
+        if was_busy is None or elapsed < _CPU_MIN_INTERVAL_S or window <= 0:
             return
         sample["cpu_busy_cores"] = round(
-            (busy - was) / (_TICKS_PER_S * elapsed), 3)
+            (busy - was_busy) * sample["cores"] / window, 3)
 
 
 def read_host_samples(path: str) -> dict:

@@ -1,6 +1,6 @@
 # `bga`: Current Architecture — Three Analysis Planes
 
-**Start here to orient in this codebase.** `docs/spec/specification.md` (v9) is the original design document and stays authoritative for full-length invariant/data-contract text — it is *not* wrong, but it describes the tool as originally scoped, and does not know about anything built since. This doc describes what `bga` actually does **today**, as one coherent system, and points at the real file/doc for every claim so you don't have to reconstruct that history yourself from the commit log, the 802 `docs/backlog/scenarios/` files and the 75 `docs/backlog/tasks/` files this commit carries.
+**Start here to orient in this codebase.** `docs/spec/specification.md` (v9) is the original design document and stays authoritative for full-length invariant/data-contract text — it is *not* wrong, but it describes the tool as originally scoped, and does not know about anything built since. This doc describes what `bga` actually does **today**, as one coherent system, and points at the real file/doc for every claim so you don't have to reconstruct that history yourself from the commit log, the 805 `docs/backlog/scenarios/` files and the 75 `docs/backlog/tasks/` files this commit carries.
 
 **Want to *use* the tool rather than work on it?** [`docs/guides/real-project.md`](../guides/real-project.md) is the end-to-end walkthrough on a real project, with real output at every step.
 
@@ -46,8 +46,8 @@ Confirmed against `bga/cli.py` directly, not the original spec's Part 37 proposa
 | `bga correlate RUN NATIVE_REPORT` | Joins this run with a Plane 2 native trace of the same build on element UID, and says what to fix. **Not spec-mandated**, `UX-51` | — |
 | `bga blast TARGET [RUN]` | What rebuilds if one thing changes, from whichever end the reader has it — a git url (every element sourcing that repository: the monorepo case, where one ref decides them all), a path (the elements whose `local` sources stage it), or an element name (its downstream closure). The answer says which reading it used, splits the closure into kinds that build and kinds that assemble, and prices it against the named run. A question, not a gate — always exits 0. **Not spec-mandated**, `UX-172`/`UX-173`/`UX-182` | — |
 | `bga whatif [RUN] --element UID …` | What the build drops to if those elements were fixed *together*: one longest-path recompute with each of them zeroed, never a sum of their individual savings — which is wrong the moment two of them share a chain. "Fixed" means instant over this run's measured durations, so the figure is an upper bound and not a forecast. **Not spec-mandated**, `UX-230` | — |
-| `bga compare BASELINE CANDIDATE` | Run-to-run deltas + improved/regressed verdict, and **two independent CI gates** — duration (`--fail-on-regression`, exit 4) and efficiency (`--fail-on-efficiency-regression`/`--min-efficiency`, exit 5); `--baseline-run`/`--band-k` compare against a baseline *set* instead of a fixed threshold. **Not spec-mandated**, `UX-01`/`UX-03`/`UX-39`/`UX-59` | — |
 | `bga cache-trend RUN...` | Is the cache getting worse? A chronological *series*, not a pair — hit ratio, transfer seconds, churn per step, and a finding when the newest run leaves the band its trailing window describes. **Not spec-mandated**, `UX-103` | — |
+| `bga compare BASELINE CANDIDATE` | Run-to-run deltas + improved/regressed verdict, and **two independent CI gates** — duration (`--fail-on-regression`, exit 4) and efficiency (`--fail-on-efficiency-regression`/`--min-efficiency`, exit 5); `--baseline-run`/`--band-k` compare against a baseline *set* instead of a fixed threshold. **Not spec-mandated**, `UX-01`/`UX-03`/`UX-39`/`UX-59` | — |
 | `bga cache-logs [PROJECT_DIR\|LOG_ROOT]` | **Plane 3** — BuildStream's own persisted element logs: per-element phase breakdown, sandbox tax, configure tax, developer tax. Needs no capture, and takes the project directory a user has rather than the log root they would have to derive (`UX-127`). **Not spec-mandated**, `UX-91`/`UX-99`/`UX-101`/`UX-102` | — |
 | `bga wrap PROJECT LOG -- bst build TARGET` | **Plane 1's capture.** Runs a real `bst` command and writes the wrapped-format log every later stage reads - the first command in the README's own quickstart, and what `bga snapshot` calls when it captures for you. **Not spec-mandated**, `UX-67` | — |
 | `bga capture run\|report\|census PROJECT` | **Plane 2** — trace processes inside element sandboxes (`--trace-opens`, `--trace-spine`), re-render a saved report, or run the static-binary census with no build at all. **Not spec-mandated**, `UX-11`/`UX-105`/`UX-106` | — |
@@ -152,28 +152,13 @@ away.
 
 ## Plane 2: intra-element native-build-system tracing (`UX-11`)
 
-`tools/bst_native_build_tracer.py` wraps a real `bst build` invocation: a `bwrap` shim placed ahead of the real binary in `$PATH` injects an `LD_PRELOAD` hook (`tools/native_trace/hook.c`) into every dynamically-linked process the sandbox execs, recording real `CLOCK_MONOTONIC` start/end timestamps. Validated end-to-end against a real `cmake`+`make`+`gcc` build (98 real traced processes, reproduced real `-j4` compile concurrency across independent runs). Known, honestly-reported limitation: statically-linked processes are invisible to this mechanism and there is no way to detect that gap from outside — every report carries a fixed disclaimer rather than a false completeness claim. Full design history (five brainstormed options, an external design contribution, a risk-reduction spike, a second external review that was checked and refuted, and the final validated mechanism) is in `docs/backlog/scenarios/UX-0011-native-build-system-profiler-tool.md` — read that only if you need the *why*; this doc is the *what, today*.
-
-The hook records four things per process. The first is what `UX-11` shipped; the rest arrived as later rounds found questions timing alone could not answer:
-
-1. **Lifecycle** (`UX-11`) — `CLOCK_MONOTONIC` START/END, which is what every timing analysis below is built on.
-2. **Real CPU time** (`UX-45`) — `getrusage(RUSAGE_SELF)` plus `RUSAGE_CHILDREN` in the destructor, the one place with access to the kernel's own accounting for a process about to exit. This is `bga`'s **only** CPU-time measurement anywhere; everything in Plane 1 is slot occupancy, and deliberately still says so (see `UX-36` below). Its value is a question Plane 1 structurally cannot answer — *was this element CPU-bound or waiting?* On a real capture, `core.bst` (pinned with `notparallel: True`) runs at **0.87 cores busy** while every sibling runs at ~1.7. Coverage is always reported: a process killed by a signal, or one replaced by `exec`, runs no destructor and is counted as **unmeasured**, never as zero (~19% of processes in a real `examples/06` build).
-3. **Peak resident memory** (`UX-63`) — `ru_maxrss` from that same `getrusage` call, giving a *measured* per-element peak where the memory-oversubscription guard had only ever had operator-declared estimates. Reported as "no single process here exceeded this", never summed: two processes peaking at different moments never held the sum between them.
-4. **Opened file paths** (`UX-46`, opt-in via `--trace-opens`) — `open`/`openat` interposition, deduplicated in-process and flushed once at exit, and re-flushed rather than dropped when the window fills (`UX-57` — the fixed buffer had been losing 70% of a real build's opens). Opt-in because unlike the others it runs on a genuinely hot path. Matched against `bst artifact list-contents`, this answers *"which of this element's declared build dependencies did its sandbox never read?"* — the last macro-level gap, and the one problem in `examples/06` that no Plane 1 signal could find. It **refuses rather than guesses**: an element with no observed opens (a statically-linked build looks identical to one that used nothing) or with a truncated read set is reported `uncovered`, never as having unused dependencies.
-
-### Element attribution: the hardest thing in Plane 2
-
-Every traced process is tagged with its owning BuildStream element (`UX-23`, originally parsed from BuildStream's own `--dir` bwrap option). That parse is a *path convention*, and a real project overrides it: on `freedesktop-sdk`, which sets `build-root: /buildstream-build`, **99.4% of 127,630 processes landed in one bucket that is not an element** (`UX-56`), and every per-element figure was a whole-build figure wearing an element's name.
-
-The fix does not guess. Each sandbox is correlated against Plane 1's own BUILD spans, on the sandbox's **end** edge — chosen by measurement, not by argument: requiring the whole interval inside the span resolved 2 of 9 sandboxes with 7 unmatched, because Plane 1 timestamps a line when the wrapper reads it and every sandbox therefore begins *before* its element's logged BUILD START; matching on the end edge resolved 8 of 9 with none unmatched (`UX-64`). The same work removed an unsound elimination pass: a real project runs more than one sandbox per element, so striking a resolved element from every other candidate set could attribute a sandbox to the *wrong* element.
-
-Measured on a real capture, in order: **0.6% → 14.9% → 86.1%** of processes attributed to a named element. The remainder sits in an explicitly unresolved bucket, and every consumer states its coverage rather than folding it in — including `detect_redundant_operations`, which had been counting that bucket as a second element and thereby sourcing **87% of its claimed recoverable time from an element that does not exist** (`UX-73`).
-
-### What is built on the per-element split
-
-`compute_binary_cost` (`UX-69`) reports, per element, where the CPU actually went — binaries ranked by measured CPU rather than by invocation count, with the single-process case called out separately. On a real capture `cc1plus` is **81.3% of the CPU** of the element that is 43.5% of the build, and `dwz` is **one process holding 138.6s**, a serialization point no job count can help. Ranked by count neither is visible: `as` runs twice as often as `cc1plus` for a tenth of the cost.
-
-`compute_per_element_parallelism` (`UX-32`) reports, per element, the parallelism its native build system *actually achieved* against the `-jN` it asked for - splitting real work processes (compilers, assemblers, linkers) from orchestration that spends its life waiting on children, and emitting two findings: `pinned_to_one_job` (this element asked for `-j1` while its siblings asked for more - the `notparallel` case, invisible to any achieved-vs-requested ratio, since a pinned element gets exactly what it asked for) and `underachieved_requested_jobs`. `detect_redundant_operations` (`UX-23`, rescored by `UX-37`) flags real operations repeated independently across multiple elements' own sandboxes, ranked by *recoverable wall-clock* rather than by process time summed across elements that ran concurrently, and excluding both each element's own build driver (identical across elements by construction, entirely different work in each — `UX-37`) and its own top-level command block, which bwrap's PID namespace identifies structurally rather than by string matching (`UX-73`). `tools/native_trace_to_chrome_trace.py` (`UX-24`) exports Plane 2 traces as Chrome Trace JSON, standalone or combined with Plane 1's own real export for the same run — `bst_native_build_tracer.py run --wrapped-log PATH` captures both planes from one single real `bst build` invocation.
+Rounds 11-73 built how `bga` traces inside one element's own sandbox
+— the hook's four measured fields, the element-attribution fix and
+what is built on the per-element split. That mechanism prose is in
+[`docs/design/areas/tools-native_trace.md`](areas/tools-native_trace.md);
+the four `tools/native_trace/` members it names are also named at
+"Real package structure" above, where the file-per-command guard
+reads them.
 
 ## Plane 3: BuildStream's own persisted logs (`UX-91`)
 
@@ -702,91 +687,8 @@ The table covers `UX-01`..`UX-76`: the additions that shaped the architecture th
 
 ## The viewer axis (rounds 21-26)
 
-The three planes above are how `bga` *measures*. Rounds 21 onward built
-how it is *read*, and the shape is deliberately small.
+The three planes above are how `bga` *measures*; rounds 21-26 built how it is *read* into `bga view`, a schema-driven page served with no build step, a strict CSP and one rule that holds the rest together — a viewer that derives a conclusion is a second analyzer, the no-arithmetic boundary. `--export` inlines the same served documents into one self-contained HTML file. The server, the CSP, the presets, the shape-to-control mapping and the no-arithmetic boundary are in [`docs/design/areas/bga-viewer.md`](areas/bga-viewer.md); the chapter count, the value rule and the module map below are read directly by their own guards and stay here.
 
-- **`bga view`** serves the run on `127.0.0.1` at a kernel-chosen port
-  and opens a browser at it. The server is a `ThreadingHTTPServer` with
-  a fixed document table: each url is a payload computed by the same
-  functions the CLI calls, so nothing is analysed differently. One entry
-  is conditional rather than fixed - `store-all.json`, the whole store
-  behind the windowed `store.json` (`STORE_WINDOW = 12`, `UX-528`),
-  offered only when the window hides something and fetched only when a
-  reader asks for it. Three
-  urls take a parameter - `blast.json?target=` and
-  `whatif.json?elements=`, both of which call the function their
-  subcommand calls, and `?run=<stamp>` (`UX-394`), which chooses
-  **which snapshot the whole page is of**. The server is started on one
-  run and serves any run in that project's store, building its
-  documents on demand; the stamp is the state, so a run is a link. The
-  rail draws a picker only where there is a choice - two or more runs -
-  and an export, which has no store, renders none.
-- **Startup computes nothing large** (`UX-296`, Direction 15's first
-  rule: *capture computes, view serves*). Nothing on the path to the
-  socket may do O(events) work, and a large artifact is opened only to
-  stream its bytes. So the report is the analysis `bga snapshot`
-  already ran and published beside the run (`analyze.json`); the store
-  aggregate reads the capacity scalars from the store row, written at
-  capture time (`plane2-resource.json`), rather than re-parsing every
-  snapshot's Plane 2 report for two floats; the noise band reads each
-  baseline's `run-context.json` instead of re-analysing it; and the
-  timeline is *offered* from a file test and rendered at the first
-  request for its bytes, into a file the handler streams in fixed
-  chunks - and that file is **Perfetto's own format** (`UX-298`):
-  protobuf TrackEvent, gzipped by the writer as the packets are
-  emitted, so the render is the served file and nothing passes over it
-  twice. A `Trace` is `repeated TracePacket`, which is why it can be
-  written that way at all; the legacy Chrome JSON stays behind
-  `bga timeline --format chrome` for `chrome://tracing`. There is no
-  protobuf dependency - the wire format is varints and
-  length-delimited fields, and every field number is pinned to
-  upstream's own `.proto` by a committed fixture, because a wrong
-  number is silent. Measured on a generated 247 MB report of a million process
-  records: 17.04 s and 1232.9 MB to reach the socket, against 0.04 s
-  and 39.5 MB after - and viewing a 2 MB run *beside* it cost 1233.5 MB
-  before and 39.8 MB after, because the aggregate used to walk into its
-  neighbour's monolith. A run whose capture published no analysis is
-  still analysed here from Plane 1; its Plane 2 report is refused above
-  a size bound with the sentence naming the command that publishes one.
-- **The page obeys a policy the server sets.** Every response carries
-  `default-src 'self'; frame-ancestors 'none'` and `nosniff`; the only
-  cross-origin grant is `Access-Control-Allow-Origin` for Perfetto's
-  own origin, on the trace blob alone (`UX-198`) - together with the
-  **pre-flight** that grant needs, scoped identically (`UX-265`): the
-  blob only, Perfetto only, `GET`/`HEAD` only, plus
-  `Access-Control-Allow-Private-Network`, because a public origin
-  reading `127.0.0.1` is a transition Chrome asks about by name. Two
-  consequences bind
-  the page: it may not load anything off-host, and it may not write a
-  **style attribute** - a style attribute is inline style and the
-  policy refuses it, which silently killed four of the viewer's width
-  channels until `UX-263`. Drawings set style through CSSOM
-  (`el.style.width`, `el.style.setProperty`), which the policy does not
-  cover. Relaxing it with `'unsafe-inline'` was declined: this page
-  renders element names and paths out of a build and gets attached to
-  tickets.
-- **The page is schema-driven.** `bga/viewer/` is hand-written ES
-  modules with no build step and no framework. Sections, columns, units
-  and hover text come from the *view-hints* the published schemas carry
-  (`bga:quantity`, `bga:question`, `bga:columns`, `bga:rail`,
-  `bga:markers`, `bga:presets`, ...), so a field that gains a
-  description in `bga/schemas.py` gains a tooltip in the page with no
-  page edit.
-- **A view is a named filter over one table, declared not coded**
-  (`bga:presets`, `UX-289`, round 38). One element table serving every
-  question carried 13 columns on the 1,202-element run, and the
-  questions readers actually arrive with were answered by other tables
-  the payload published separately. A preset names one question and the
-  four to six columns that answer it — `{name, question, from|where,
-  columns, sort, bound}` — and every population is a **filter over a
-  published field**: `from` reads a selection the payload publishes once
-  and takes its order from it, `where` tests a column the element
-  records carry. Nothing computes a membership the payload does not
-  have, which is why `UX-288` came first. The preset travels in
-  `UX-211`'s fragment and is named in the rail, so a view is a link.
-  `PRESET_COLUMNS_MAX` bounds a view at eight columns and the schema
-  validator refuses a wider one: a table that needs more than that to
-  answer one question is not a view of the data, it is the data.
 - **The document has chapters** (`UX-286`, round 39). Forty-eight
   sections averaging 0.24 screens, grouped by nothing, made the fragment
   the reader's only unit of navigation. `bga/viewer/chapters.js` groups
@@ -825,77 +727,6 @@ how it is *read*, and the shape is deliberately small.
   flat one of forty does not. The
   argument, and what the page looked like before the rule, is
   [Direction 12](directions.md#direction-12-the-report-is-read-not-decoded-argued-2026-08-24-round-35).
-
-- **The mapping is law** (`UX-302`, round 41). The rule above is now a
-  table — round 41's style guide
-  ([`styleguide.md` §1](styleguide.md)) maps published shape (+ hint)
-  to the one control that may render it — and
-  `bga/viewer/shapes.js` is that table as code. `classify()` returns a
-  control's name; every render path asks it rather than testing shapes
-  itself, so "which control draws this" has one answer and one place to
-  read it. **Raw JSON on the page is a defect unless it is
-  deliberate**, and there are exactly two deliberate sites: `UX-277`'s
-  labelled fold, and the per-section **"view as JSON" toggle**
-  (`bga/viewer/rawjson.js`) that a reader opens to paste a section into
-  an issue — which works in the export, because that is who needs it. A
-  shape the table does not cover renders as the fold *and* warns on the
-  console naming the payload path: the gap is a design task, not an
-  improvisation. `tests/unit/test_the_mapping_is_law.py` boots the real
-  pages and walks every text node for JSON-shaped content outside those
-  two.
-
-- **A shape draws as a shape** (`UX-303`, round 41). Two hints join the
-  vocabulary — `bga:series` for an ordered numeric array and
-  `bga:distribution` for a published percentile object — and each
-  carries the reading its control needs: the unit of one step, and the
-  key that holds the sample count. `bga/viewer/drawings.js` holds the
-  sparkline and the density strip; it imports nothing and takes its
-  formatter, so the quantity table stays in `format.js`. Under three
-  points is a sentence and no drawing. A table past the row bound
-  wears a strip built from its primary quantity column's own
-  `data-raw` values, under [`styleguide.md` §2](styleguide.md)'s
-  boundary: **a self-built strip prints no derived number** — its
-  labels are actual rows and a count of rows, and the percentile ticks
-  are geometry. That boundary is the no-arithmetic rule below, applied
-  to a drawing.
-
-- **Dark is the design surface, and a fill is not a text color**
-  (`UX-304`, round 41). `bga/viewer/style.css` holds every color the
-  product has: `:root` carries the dark tokens, `@media
-  (prefers-color-scheme: light)` is the override — it also matches a
-  reader who expressed no preference, so an unset browser is unchanged
-  — and `@media print` renders light on white, because an export is
-  attached and printed. Tokens come in two grades: **text-grade**
-  (≥4.5:1 against its surface, for reading) and **mark-grade** (≥3:1
-  and inside the surface's lightness band, for filling). The split
-  exists because the dark set had never been validated and three of
-  its four status colors were text-grade doing fill work.
-  `tests/palette.py` is the validator — WCAG contrast, CIE L\*, ΔE2000,
-  dichromat simulation, no dependency — and the guard pins the bands,
-  refuses a hex literal outside the stylesheet, and holds every
-  status-toned rule against a list naming its non-color channel
-  ([`styleguide.md` §4-5](styleguide.md)).
-
-- **`--export`** inlines every served document and every module into one
-  self-contained HTML file. Past `DATA_COMPACT_MIN_B` (200,000 B of
-  JSON) a document is inlined gzip+base64 in an
-  `application/octet-stream` block that `load()` inflates rather than as
-  readable JSON text (`UX-529`) - the same document, one order of
-  magnitude of bytes. What cannot survive the export at all - a live
-  search box, anything needing a server - is *hidden with the command
-  that answers it* rather than shipped as a control that always fails.
-- **The no-arithmetic boundary** is the axis's one rule, and it is the
-  reason the rest holds: **a viewer that derives a conclusion is a
-  second analyzer.** Diagnoses, rankings, verdicts, savings, next steps
-  and projections are all decided in the pipeline and read by the page.
-  Where a question needs a number the payload does not carry, the page
-  *asks the server* rather than computing it. Guards assert this
-  directly, and the discipline is what lets the terminal, the CI comment
-  and the page state one build's facts identically.
-
-The corollary is the constraint Direction 7 wanted: anything the viewer
-should show has to enter a published schema first, where the text
-renderer, CI and every external consumer get it too.
 
 ### Which file owns what
 
@@ -1051,6 +882,44 @@ and is superseded now is what the record says, and sweeping it forward
 with the tables above destroys the one thing the entry is for
 (`UX-653`). The newest entry is the exception: every round that
 re-grounds the document rewrites it.
+
+Updated 2026-09-08 (after `UX-806`), covering one change to this
+document — "Plane 2: intra-element native-build-system tracing"
+chapter's mechanism prose moved into
+`docs/design/areas/tools-native_trace.md` (the second area, following
+`UX-689`'s first), leaving the heading and a one-paragraph pointer;
+no bullet here was guarded, so none stayed. The chapter is
+re-grounded in `tests/unit/test_docs_links_and_commands.py`'s
+`test_the_architecture_lists_every_native_trace_member`, which reads
+the whole document rather than the chapter and stayed satisfied by
+the members already named at "Real package structure" above: every
+test file naming `architecture.md` stayed at 437 passed before and
+after (`python3 -m pytest $(grep -ln "architecture.md" tests/unit/*.py) -q`),
+and a diff of the removed prose against the new page's body was
+empty. The two contract tables above are unchanged since the last
+entry: **25 emitted ids, 10 of them superseded, and 3 read and never
+written**, 9 printable and 16 not, `analyze/v6` at **61 top-level properties**,
+and `bga/viewer/` still **22 modules**
+(`ls bga/viewer/*.js | wc -l`). The item published no id and moved no
+key.
+
+Updated 2026-09-08 (after `UX-689`), covering one change to this
+document — "The viewer axis" chapter's mechanism prose moved into
+`docs/design/areas/bga-viewer.md` (track 1 of `UX-689`), leaving the
+pointer and the two guarded bullets (chapter count, value rule) and
+the module table in place. The chapter is re-grounded in
+`tests/unit/test_a_reader_role_demotes.py`,
+`test_the_value_rule_has_a_home.py` and
+`test_the_viewer_modules_have_a_home.py`: every test file naming
+`architecture.md` stayed at 435 passed before and after
+(`python3 -m pytest $(grep -ln "architecture.md" tests/unit/*.py) -q`),
+and a sentence sweep of the moved chapter found 56 of 56 units in the
+new page or the kept skeleton. The two contract tables above are
+unchanged since the last entry: **25 emitted ids, 10 of them
+superseded, and 3 read and never written**, 9 printable and 16 not,
+`analyze/v6` at **61 top-level properties**, and `bga/viewer/` still
+**22 modules** (`ls bga/viewer/*.js | wc -l`). The item published no
+id and moved no key.
 
 Updated 2026-09-08 (after `UX-777`), covering one change to this
 document — "The document has chapters" bullet, which said nine of the

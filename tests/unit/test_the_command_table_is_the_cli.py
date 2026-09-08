@@ -71,6 +71,22 @@ def _rows():
     return frozenset(_ROW.findall(ARCHITECTURE.read_text(encoding="utf-8")))
 
 
+def _native_order():
+    """The parser's own subcommand order (`_SUBCOMMAND_BUILDERS`'s walk)."""
+    parser = cli.create_parser()
+    for action in parser._actions:
+        if getattr(action, "choices", None):
+            return list(action.choices)
+    raise AssertionError("no subparser action found on the CLI parser")
+
+
+def _documented_native_order():
+    """The doc table's row order, filtered to native subcommands only."""
+    native = _native()
+    ordered = _ROW.findall(ARCHITECTURE.read_text(encoding="utf-8"))
+    return [name for name in ordered if name in native]
+
+
 class TestEveryCommandAReaderLooksForHasARow:
 
     def test_every_native_subcommand_has_a_row(self):
@@ -92,6 +108,15 @@ class TestEveryCommandAReaderLooksForHasARow:
             assert command in _rows(), (
                 f"`bga {command}` has lost its row again. It was missing at "
                 "review 4 and is the entry point readers look for first.")
+
+    def test_the_native_subcommand_order_matches_the_cli(self):
+        """UX-695: `--help`'s usage line follows `_SUBCOMMAND_BUILDERS`'s
+        walk order, so a table in a different order is a table lying
+        about what a reader sees."""
+        assert _documented_native_order() == _native_order(), (
+            f"table order {_documented_native_order()} != CLI order "
+            f"{_native_order()} - the CLI order is what a reader sees; "
+            "reorder the table to match.")
 
 
 class TestEveryRowNamesSomethingReal:

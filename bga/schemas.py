@@ -1171,6 +1171,10 @@ _SWEEP_REQUIRED = {
     "monotonicity_violations": "array",
     "capacity_model_caveat": "string",
     "calibration_capacities": "array",
+    # UX-678: always written, `{}` when the sweep had no measured peak
+    # RSS and host RAM to check - same convention as `knee_points`.
+    "memory_knee_points": "object",
+    "binding_constraints": "object",
 }
 
 _SWEEP_HINTS = {
@@ -1231,6 +1235,23 @@ _SWEEP_HINTS = {
                        "Empty means every point is a projection - the "
                        "difference between a curve with data in it and "
                        "one without."},
+    "memory_knee_points": {
+        # Same shape as `knee_points`: a map keyed by resource name, so
+        # its values cannot be named in `properties`.
+        "additionalProperties": {QUANTITY: "count"},
+        "description": "`UX-678`: per resource, the largest swept "
+                       "capacity whose own replayed schedule's concurrent "
+                       "elements' peak RSS still fit host RAM - `{}` "
+                       "unless `--plane2` supplied both a measured peak "
+                       "RSS per element and a host memory total. `0` is a "
+                       "real answer (no capacity fits); it is present "
+                       "then, unlike `knee_points`."},
+    "binding_constraints": {
+        "description": "`UX-678`: per resource, which of the sweep's own "
+                       "two capacities - `knee_points` or "
+                       "`memory_knee_points` - is the tighter one, as "
+                       "`{name, builders}`. `{}` under the same condition "
+                       "as `memory_knee_points`."},
 }
 
 
@@ -1951,6 +1972,37 @@ EVIDENCE_QUANTITIES.update({
             QUANTITY: "duration_us",
             "description": "This element's duration, off the chain today."},
     }}},
+    # `UX-680`: the two `remote-execution-whatif` projections. A nested
+    # object each, not a row - there is exactly one of each per finding
+    # - so `properties` rather than `items`, the shape `evidence` itself
+    # already uses one level up.
+    "unbounded_builders": {"properties": {
+        "wall_us_before": {
+            QUANTITY: "duration_us",
+            "description": "The sweep's own makespan at the configured "
+                           "PROCESS capacity."},
+        "wall_us_after": {
+            QUANTITY: "duration_us",
+            "description": "The same sweep's makespan at the task count - "
+                           "the chain floor no more builders can beat."},
+        "builders_before": {
+            QUANTITY: "count",
+            "description": "The configured PROCESS capacity."},
+        "builders_after": {
+            QUANTITY: "count",
+            "description": "The task count - past this, no more work can "
+                           "start whatever the capacity."},
+    }},
+    "compiler_offload": {"properties": {
+        "wall_us_before": {
+            QUANTITY: "duration_us",
+            "description": "The critical path's own duration."},
+        "wall_us_after": {
+            QUANTITY: "duration_us",
+            "description": "The same path with its compiler/linker CPU "
+                           "seconds removed - an upper bound, not a "
+                           "measurement (`UX-680`'s assumption)."},
+    }},
 })
 
 
@@ -3165,6 +3217,22 @@ _ANALYZE_HINTS = {
                                "(`UX-14`), and one capture went in. A "
                                "consumer that drops this sentence is left "
                                "with a number that looks like a setting."},
+            "sweep_memory_builders": {
+                QUANTITY: "count",
+                "description": "`UX-678`: the largest swept builder count "
+                               "whose own replayed schedule's concurrent "
+                               "elements' peak RSS still fit host RAM - "
+                               "summed over the sweep's real concurrent "
+                               "set at each step, not `constraints[memory]`'s "
+                               "top-N sum. Absent unless the sweep had a "
+                               "measured peak RSS per element and a host "
+                               "memory total."},
+            "sweep_binding": {
+                "description": "`UX-678`: which of the sweep's own two "
+                               "capacities - the graph's knee or "
+                               "`sweep_memory_builders` - is the tighter "
+                               "one, as `{name, builders}`. Present only "
+                               "alongside `sweep_memory_builders`."},
         },
     },
     "capacity_verdict": {
@@ -5387,6 +5455,10 @@ _CORRELATE_REQUIRED = {
 _CORRELATE_OPTIONAL = {
     "restructuring": "array",
     "granularity": "array",
+    # `UX-684`: the cached build's verdict, `bga/correlate.py`'s
+    # `cached_shape()` - absent without Plane 3's change history or
+    # below its own trust floor (`MIN_CO_REBUILDS`).
+    "cached_shape": "object",
     "memory_envelope": "object",
     "attribution_unreliable": "",
     "attribution_partial": "",
@@ -5482,6 +5554,10 @@ _CORRELATE_HINTS = {
     "granularity": {
         QUESTION: 'Which elements pay more sandbox tax than they build?',
         RAIL: "act",
+    },
+    "cached_shape": {
+        QUESTION: 'Does the graph rebuild the cheapest subgraph?',
+        RAIL: "decide",
     },
     "memory_envelope": {
         QUESTION: 'How much memory would more builders need?',

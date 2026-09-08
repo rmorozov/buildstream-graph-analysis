@@ -132,6 +132,8 @@ FINDING_READERS = {
     # R5 - the fleet.
     "memory-envelope": "capacity-operator",
     "capacity-recommendation": "capacity-operator",
+    # UX-680: R4, the task's own; R5's section needs Plane 2 and half (a) fires without it.
+    "remote-execution-whatif": "ci-gatekeeper",
 }
 
 #: Rank order for choosing which of a reader's findings leads. Severity
@@ -1030,6 +1032,13 @@ def _capacity_recommendation_finding(result: AnalysisResult) -> list[dict]:
             "contended window can absorb."
         )
     detail.append(f"    {recommendation['caveat']}")
+    # UX-678: the sweep's own memory check, from its replayed concurrent
+    # set rather than the `memory` constraint's top-N sum above.
+    sweep_binding = recommendation.get('sweep_binding')
+    if sweep_binding:
+        detail.append(
+            f"    The sweep itself checked memory too: "
+            f"{sweep_binding['name']}-bound at {sweep_binding['builders']}.")
 
     return [_finding(
         'capacity-recommendation', severity,
@@ -1045,7 +1054,119 @@ def _capacity_recommendation_finding(result: AnalysisResult) -> list[dict]:
             'recommended_builders': recommended,
             'builders_change': recommendation['builders_change'],
             'constraints': recommendation['constraints'],
+            # UX-678: additive - the sweep's own memory-feasible ceiling,
+            # summed over its replay's real concurrent set at each swept
+            # capacity rather than the envelope's top-N peaks, and which
+            # of the two capacities is tighter. Absent unless the sweep
+            # had both a measured peak RSS per element and host RAM.
+            'sweep_memory_builders': recommendation.get('sweep_memory_builders'),
+            'sweep_binding': recommendation.get('sweep_binding'),
         },
+    )]
+
+
+# `UX-680`: the sentence that keeps the two remote-execution
+# projections from being read as a total. Both remove time from the
+# *same* critical-path seconds, by two different means - REAPI moves
+# the sandbox that does the work, compiler offload moves the compile
+# inside it - so buying both is not buying their sum.
+REMOTE_EXECUTION_NOT_ADDITIVE_SENTENCE = (
+    "Not additive: both remove the same critical-path seconds, so "
+    "buying both is not buying their sum."
+)
+
+
+def _remote_execution_findings(result: AnalysisResult) -> list[dict]:
+    """UX-680: what each remote-execution mechanism is worth, priced
+    from numbers this run already measured, never summed.
+
+    `bga.cli._attach_remote_execution_whatif` computes both halves onto
+    `result.remote_execution_whatif` - `unbounded_builders` from `bga
+    sweep`'s own unbounded-builder row (what BuildStream's REAPI buys:
+    it moves whole sandboxes, so it removes the builder cap) and
+    `compiler_offload` from Plane 2's compiler/linker CPU on the
+    critical path (what a compiler-level service like recc/reclient
+    buys: it moves compilations out of the sandbox, so it removes
+    compile seconds from the agent). `compiler_offload` is absent, not
+    zero, without a Plane 2 `binary_cost` for this run - then only the
+    builder-cap half publishes.
+    """
+    whatif = getattr(result, 'remote_execution_whatif', None) or {}
+    unbounded = whatif.get('unbounded_builders')
+    offload = whatif.get('compiler_offload')
+    if not unbounded and not offload:
+        return []
+
+    # UX-680/UX-351: seconds for a reader, from the published
+    # microseconds - the report's own duration unit, never re-typed as
+    # a `_s` field.
+    def _s(us):
+        return us / 1e6
+
+    detail: list[str] = []
+    if unbounded:
+        before, after = _s(unbounded['wall_us_before']), _s(unbounded['wall_us_after'])
+        detail.append(
+            f"    Unbounded builders (REAPI moves whole sandboxes): "
+            f"{before:.1f}s -> {after:.1f}s ({before - after:.1f}s); "
+            f"assumes {unbounded['assumption']}"
+        )
+    if offload:
+        before, after = _s(offload['wall_us_before']), _s(offload['wall_us_after'])
+        detail.append(
+            f"    Compiler offload (recc/reclient move compiles out): "
+            f"{before:.1f}s -> {after:.1f}s ({before - after:.1f}s); "
+            f"assumes {offload['assumption']}"
+        )
+    if unbounded and offload:
+        detail.append(f"    {REMOTE_EXECUTION_NOT_ADDITIVE_SENTENCE}")
+        title = (
+            f"Remote execution, priced two ways: unbounded builders "
+            f"{_s(unbounded['wall_us_before']):.1f}s -> "
+            f"{_s(unbounded['wall_us_after']):.1f}s, compiler offload "
+            f"{_s(offload['wall_us_before']):.1f}s -> "
+            f"{_s(offload['wall_us_after']):.1f}s - not additive"
+        )
+    elif unbounded:
+        title = (
+            f"Remote execution (builder cap only, no Plane 2 "
+            f"`binary_cost`): unbounded builders "
+            f"{_s(unbounded['wall_us_before']):.1f}s -> "
+            f"{_s(unbounded['wall_us_after']):.1f}s"
+        )
+    elif offload:
+        title = (
+            f"Remote execution (compiler offload only): "
+            f"{_s(offload['wall_us_before']):.1f}s -> "
+            f"{_s(offload['wall_us_after']):.1f}s critical path"
+        )
+    else:
+        # Unreachable: the early return above already excludes
+        # `not unbounded and not offload`. Kept so `title` is never
+        # unbound rather than trusted to the branches above.
+        title = "Remote execution: no projection could be priced"
+
+    # UX-194: absent, not null - `compiler_offload` (or, in principle,
+    # `unbounded_builders`) is left off `evidence` entirely rather than
+    # published as `None` when that half was not priced, the same
+    # "not looked for" spelling every other missing block in this report
+    # uses.
+    evidence = {
+        'additive': False,
+        'why_not_additive': REMOTE_EXECUTION_NOT_ADDITIVE_SENTENCE,
+    }
+    if unbounded:
+        evidence = evidence | {'unbounded_builders': unbounded}
+    if offload:
+        evidence = evidence | {'compiler_offload': offload}
+
+    # `info`: a projection, not a verdict on this run - it must not
+    # outrank `confidence` for `ci-gatekeeper`'s `leads_with` slot
+    # (`UX-365`'s rule, applied to the reader this shares rather than
+    # to severity ordering generally).
+    return [_finding(
+        'remote-execution-whatif', SEVERITY_INFO, title,
+        detail=detail, evidence=evidence,
     )]
 
 
@@ -1699,6 +1820,10 @@ def compute_findings(result: AnalysisResult) -> list[dict]:
     # UX-116: after the memory envelope, because it consumes it - the
     # reader meets the inputs and then the sentence that intersects them.
     findings.extend(_capacity_recommendation_finding(result))
+    # `UX-680`: beside the capacity/sweep findings it reads alongside -
+    # `ci-gatekeeper`, not `capacity-operator`, because half (a) fires
+    # without Plane 2 and R5's page section cannot.
+    findings.extend(_remote_execution_findings(result))
     findings.extend(_criticality_findings(result))
     findings.extend(_floor_findings(result))
     # UX-171: last, because it is a fact about the project's shape

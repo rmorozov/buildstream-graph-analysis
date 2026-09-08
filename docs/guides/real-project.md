@@ -584,6 +584,17 @@ With the Plane 2 report in hand, a saturated host is told not to raise
 capacity, and an element pinned to `-j1` is named first — that is
 capacity you already have, and it costs nothing to reclaim.
 
+**Remote execution is two different questions, priced two different
+ways** (`UX-680`, the `remote-execution-whatif` finding). BuildStream's
+own REAPI moves whole sandboxes to workers, so it is priced from the
+same sweep above at an unbounded builder count — it removes the
+builder cap, not the agent's own staging and wait per element.
+Compiler-level RE (`recc`, `reclient`) moves compilations *out of* the
+sandbox instead, so it is priced from Plane 2's compiler/linker CPU on
+the critical path — it removes compile seconds from the agent, not the
+builder cap. The two are never summed: both remove time from the same
+critical-path seconds, by two different means.
+
 ---
 
 ## Step 5 — go inside the elements

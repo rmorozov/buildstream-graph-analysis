@@ -188,6 +188,9 @@ export const CHAPTERS = [
                "overcommitted_intervals"],
     // What the run was given and how much of it was used - the two
     // numbers the chapter's own verdict is computed from.
+    // `UX-678`: `sweep_memory_builders`/`sweep_binding` render generically
+    // as structured data on this section; naming the memory bound in this
+    // sentence is out of this track.
     answer(payload) {
       const slots = payload?.capacity_recommendation?.builders
         ?? payload?.utilisation?.effective_cpus;
@@ -640,12 +643,12 @@ export function revealChapter(node) {
  * `perfetto-questions` -576, `restructuring` -317,
  * `critical_path_detail` +673.
  *
- * It lands **three times**: once now, which is the only landing the
- * jump box gets (a rail link has the browser's own anchor scroll and
- * the jump box has none), and twice more as frames settle, when the
- * opened chapter's real height is in. Measured on `macro_micro`, the
- * 61 folded section links, section top against the 104 px a correct
- * landing gave before `UX-668`:
+ * It lands **twice**: once now, which is the only landing the jump
+ * box gets (a rail link has the browser's own anchor scroll and the
+ * jump box has none), and once more once the opened chapter's rect
+ * has stopped moving. Measured on `macro_micro`, the 61 folded
+ * section links, section top against the 104 px a correct landing
+ * gave before `UX-668`:
  *
  * ```text
  * now only            55 correct     the browser's scroll runs after this
@@ -653,13 +656,14 @@ export function revealChapter(node) {
  * two frames later    55 correct
  * ```
  *
- * One frame is worse than none, which is why this used to be two and
- * not a number anybody picked. `UX-668`'s header line and decision
- * panel move the estimate one section further out, and `blast`
- * measured wrong at two frames on a re-run this item's move made -
- * three is what settles it. `scroll-margin-top`, where the sticky
- * header's height lives, is read off the node rather than repeated
- * here.
+ * One frame is worse than none. `UX-668`'s header line and decision
+ * panel moved the estimate one section further out and a **count** of
+ * frames - two, then three - needed hand-retuning each time; `UX-800`
+ * replaced the count with the wait it was standing in for: land again
+ * once `getBoundingClientRect().top` reads the same on two consecutive
+ * frames, so a taller header settles itself rather than waiting on a
+ * retune. `scroll-margin-top`, where the sticky header's height lives,
+ * is read off the node rather than repeated here.
  *
  * `UX-722`: computed from the rect rather than `node.scrollIntoView`.
  * A wide table (`main table`, UX-254) is a scroll container, and a
@@ -669,6 +673,10 @@ export function revealChapter(node) {
  * runs against the rect that alignment already touched. The document
  * is the only box this ever needed to move.
  */
+// `UX-800`: the settle below gives up and lands anyway past this many
+// frames, so a rect that never agrees still lands rather than hanging.
+const LAND_SETTLE_FRAME_CAP = 12;
+
 export function revealAndLand(node, behavior) {
   const box = revealChapter(node);
   const land = () => {
@@ -681,7 +689,26 @@ export function revealAndLand(node, behavior) {
   };
   land();
   const frame = globalThis.requestAnimationFrame;
-  if (frame) frame(() => frame(() => frame(land)));
+  if (frame && node?.getBoundingClientRect) {
+    let prev = null;
+    let seen = 0;
+    const settle = () => frame(() => {
+      seen += 1;
+      const cur = node.getBoundingClientRect().top;
+      if ((prev !== null && cur === prev) || seen >= LAND_SETTLE_FRAME_CAP) {
+        land();
+        return;
+      }
+      prev = cur;
+      settle();
+    });
+    // One dead frame before the first read: `land()` just ran
+    // synchronously, before this frame's own layout is in, and a
+    // `prev` seeded from that same still-stale paint agreed with the
+    // next frame's equally-stale read (`blast`, still measured wrong
+    // by `UX-800`'s own first cut) before a real, later shift ever ran.
+    frame(settle);
+  }
   return box;
 }
 

@@ -49,7 +49,7 @@
     "tests/unit/test_a_pasted_guide_block_is_fresh_or_dated.py": 5.09,
     "tests/unit/test_a_project_flag_names_a_project.py": 0.01,
     "tests/unit/test_a_pulled_dependency_gates_the_build.py": 0.13,
-    "tests/unit/test_a_rail_click_lands_on_its_section.py": 34.64,
+    "tests/unit/test_a_rail_click_lands_on_its_section.py": 58.2,
     "tests/unit/test_a_rail_click_reaches_the_writer.py": 4.59,
     "tests/unit/test_a_ranking_says_what_to_do.py": 0.01,
     "tests/unit/test_a_reader_role_demotes.py": 2.74,
@@ -143,7 +143,7 @@
     "tests/unit/test_dependency_type_gating.py": 0.01,
     "tests/unit/test_determinism.py": 4.81,
     "tests/unit/test_dev_run_script.py": 1.73,
-    "tests/unit/test_diagnostics_performance.py": 4.07,
+    "tests/unit/test_diagnostics_performance.py": 10.7,
     "tests/unit/test_docs_examples.py": 0.58,
     "tests/unit/test_docs_links_and_commands.py": 18.54,
     "tests/unit/test_doctor.py": 1.46,
@@ -829,10 +829,7 @@
       0.13
     ],
     "tests/unit/test_a_rail_click_lands_on_its_section.py": [
-      37.37,
-      34.64,
-      35.9,
-      34.64
+      58.2
     ],
     "tests/unit/test_a_rail_click_reaches_the_writer.py": [
       4.59,
@@ -1456,11 +1453,7 @@
       1.73
     ],
     "tests/unit/test_diagnostics_performance.py": [
-      4.07,
-      4.07,
-      4.07,
-      4.07,
-      4.07
+      10.7
     ],
     "tests/unit/test_docs_examples.py": [
       0.58,

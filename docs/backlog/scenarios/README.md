@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-796 scenarios: **16 open**, 780 closed.
+797 scenarios: **17 open**, 780 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -23,7 +23,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | capture | 1 | 96 |
 | analysis | 5 | 107 |
 | contracts | 0 | 48 |
-| viewer | 2 | 163 |
+| viewer | 3 | 164 |
 | cli | 0 | 22 |
 | store | 0 | 16 |
 | docs | 4 | 134 |
@@ -52,6 +52,7 @@ task file, which is the only place it ever lived twice.
 | UX-797 | [eight identical sleeps spread past a tenth, under organic load](UX-0797-eight-identical-sleeps-spread-past-a-tenth-under-organic-load.md) | guards | Medium | the gate that reds on a host reading nothing in the diff touched | 🔴 |
 | UX-798 | [the directions row counts a round's closes by hand](UX-0798-the-directions-row-counts-a-round-s-closes-by-hand.md) | docs | Medium | the reader of `directions.md` deciding what a round did | 🔴 |
 | UX-799 | [the map row for the baseline tool names one of its two modes](UX-0799-the-map-row-for-the-baseline-tool-names-one-of-its-two-modes.md) | docs | Low | the reader of §6 choosing which tool prices a finding | 🔴 |
+| UX-800 | [the rail landing counts frames, and the count moved with the header](UX-0800-the-rail-landing-counts-frames-and-the-count-moved-with-the-header.md) | viewer | Medium | R8 reading a red gate on a rail click nobody touched | 🔴 |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

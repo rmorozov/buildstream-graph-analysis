@@ -21,6 +21,9 @@ CLEAN = "def f():\n    return 1\n"
 # UX-697: pyright's own kind of finding - a type error basic mode reads
 # without any config, so this needs no fixture beyond the module itself.
 PYRIGHT_VIOLATION = 'def f() -> int:\n    return "x"\n'
+# A module-level `return` - a real error pyright reports with no `rule`
+# key at all; ruff's parser accepts the file, so nothing aborts.
+PYRIGHT_NO_RULE_VIOLATION = "return 1\n"
 
 
 def _run(root, baseline, *flags, env=None):
@@ -294,3 +297,13 @@ class TestPyrightEntersTheSameList:
         assert check.returncode == 1, check.stdout
         assert "authorised by UX-697, red until committed" in check.stdout
         assert "pyright reportReturnType" in check.stdout
+
+    def test_a_rule_less_pyright_error_is_still_new(self, tmp_path):
+        module = tmp_path / "pkg" / "m.py"
+        baseline = tmp_path / "baseline.json"
+        _write(module, CLEAN)
+        assert _run(tmp_path, baseline, "--write").returncode == 0
+        _write(module, PYRIGHT_NO_RULE_VIOLATION)
+        check = _run(tmp_path, baseline, "--check")
+        assert check.returncode == 1, check.stdout
+        assert "new: pyright noRule" in check.stdout

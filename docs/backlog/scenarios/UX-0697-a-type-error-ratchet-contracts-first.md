@@ -66,5 +66,16 @@ same 294-line reason above. `make test-touching`: 34 files (31 census +
 | treat pyright exit 3 as "no findings" | 1/3 (`test_a_broken_pyright_exits_2_and_writes_nothing`) | 16/16 green |
 | identity from line number, not line text (in shared `_identity_list`) | 2/16 (`TestIdentityIgnoresTheLineNumber`, `TestOccurrenceDisambiguates` — the ruff-side guards, since the builder is shared) | 16/16 green |
 
+**Verifier follow-up (same branch, one more commit):** `normalize_pyright`
+filtered `if rule`, so a severity-`error` diagnostic with no `rule` key
+(a module-level `return` — ruff's parser accepts it, so nothing
+aborts) was silently dropped; `--check` read clean on a real defect.
+Fixed: a rule-less error enters under `noRule`. Guard
+(`test_a_rule_less_pyright_error_is_still_new`): `return 1\n` as the
+whole file → `new: pyright noRule ... return 1`; mutation restoring
+`if rule` reddened it, `1 failed` (`assert 0 == 1`); restored, 17/17
+green. 0 `noRule` findings in the real tree today, so
+`tests/quality_baseline.json` is unchanged by this fix.
+
 At merge: C2 removes ~12 errors on the contract surfaces, so the
 session runs `--shrink` before the row move.

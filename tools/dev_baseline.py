@@ -221,10 +221,12 @@ def normalize(raw, root):
 
 
 def normalize_pyright(raw, root):
-    """`raw` pyright diagnostics -> the identity list, ordered and nth-assigned."""
-    items = ((pathlib.Path(item["file"]), item["range"]["start"]["line"] + 1, item.get("rule"))
-             for item in raw)
-    return _identity_list("pyright", [(p, r, rule) for p, r, rule in items if rule], root)
+    """`raw` pyright diagnostics -> the identity list, ordered and nth-assigned.
+    A severity-`error` diagnostic with no `rule` (e.g. a module-level
+    `return`) is still an error - `noRule` names it rather than dropping it."""
+    items = [(pathlib.Path(item["file"]), item["range"]["start"]["line"] + 1,
+              item.get("rule") or "noRule") for item in raw]
+    return _identity_list("pyright", items, root)
 
 
 def identity(entry):

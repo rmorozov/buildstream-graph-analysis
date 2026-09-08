@@ -1,6 +1,6 @@
 # UX-798: the directions row counts a round's closes by hand
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-583 (the round-history link guard), UX-772 | **Found by:** review 21, round 110 | **Serves:** the reader of `directions.md` deciding what a round did | **Topic:** docs | **Area:** unassigned | **Shape:** judgement
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-583 (the round-history link guard), UX-772 | **Found by:** review 21, round 110 | **Serves:** the reader of `directions.md` deciding what a round did | **Topic:** docs | **Area:** unassigned | **Shape:** judgement
 
 ## Motivation
 
@@ -78,3 +78,5 @@ Mutation table:
 
 Both restored from a scratchpad copy (never `git checkout --`);
 re-run: 10 passed.
+
+**Deviation.** The round-110 row was corrected too (fifteen closed, eight filed — two filings landed after the row was written). The guard reads `Found by:` on the header line only; the Motivation's own grep over-counts by one, a console-block mention. One verifier finding (PASS): a hyphenated count word misread as its last unit; fixed in a second commit (1d24f1a4) with the word table over 1..99. Two commits, one verifier.

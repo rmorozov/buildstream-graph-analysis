@@ -164,6 +164,8 @@ pairing for every merged row from round 103 on.
 | 111 | verifier | sonnet | verify `UX-801` | 43k | 36 | 5.5 m | HOLD: test_doctor.py wrote the ambient CAS through check_project_loads; lint red; fixed before merge | only a real bst run against the CAS showed the mislabelled entry |
 | 111 | implementer | sonnet | `UX-802` the baseline guard files spawn pyright four times, not sixteen (mechanical) | 337k | 112 | 46.4 m | merged 03d10d4c; the wall guard declined for a mechanism guard, one hold fixed | a PATH strip took pytest's own directory; the decline was off the record |
 | 111 | verifier | sonnet | verify `UX-802` | 47k | 51 | 12.8 m | HOLD: the PATH strip, the undocumented decline, the walls without their load; fixed before merge | every wall read 2x the track's under load 24 |
+| 111 | implementer | sonnet | `UX-798` a directions row's counts are derived (judgement) | 268k | 118 | 38.4 m | merged 1d24f1a4; both rows corrected, one PASS finding fixed | stalled on a background wait once; pymarkdown over the tree past the 120 s cap under load |
+| 111 | verifier | sonnet | verify `UX-798` | 45k | 38 | 5.8 m | PASS; the hyphenated-word misparse found and fixed before merge | the Motivation's own grep over-counts by one |
 
 Round 101's four tracks are **not** here: this session could not
 identify their transcripts with certainty after a context rebuild, and
@@ -176,7 +178,7 @@ committed cleanly once told to run in the foreground. Three of the five
 left a derived figure or a §6 context-map row behind - the same class
 the round itself was about, arriving in the tracks' own work.
 
-What the one hundred and forty-seven rows already say: a researcher that reads a document
+What the one hundred and forty-nine rows already say: a researcher that reads a document
 whole costs 100-180k; a walker that drives every control costs 336k;
 the two cuts cost a re-run each. The `walk` and `design-review`
 skills fix the report shape so the next rows are smaller, and the

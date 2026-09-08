@@ -191,6 +191,13 @@ processes — and six of the nine could not finish a touching sweep;
 the brief, not the machine, was the defect (`UX-793`), and the cap is
 the reading until a smaller one is measured.
 
+The Agent tool's worktree starts at the tip `origin/main` had when the
+session began, not at the branch's head: five tracks launched at
+`47cfe060` on 2026-09-08 opened at `0dc755f4`, eight commits behind,
+and one stopped because the task file it was briefed on did not exist
+there. The brief names the head commit and the track's first command
+is `git merge --ff-only <head>`.
+
 ## What goes in the file
 
 ```text

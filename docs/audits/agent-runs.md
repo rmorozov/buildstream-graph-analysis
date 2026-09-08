@@ -153,6 +153,8 @@ pairing for every merged row from round 103 on.
 | 110 | verifier | sonnet | verify `UX-668` | 66k | 34 | 37.6 m | PASS; the third-frame settle named as a proxy, filed UX-800 | resumed once after a rate limit |
 | 110 | implementer | sonnet | `UX-690` a shape table, a browser ratchet, and a Decomposition check (judgement) | 952k | 337 | 117.3 m | merged 70252f23; both budgets already exceeded, the browser row a ratchet, one hold folded | the recipe's budgets do not hold on the tree; an 11-line body caught by a sibling tool the track never ran |
 | 110 | verifier | sonnet | verify `UX-690` | 61k | 29 | 38.2 m | HOLD: commit body over budget, vacuous pass on a missing reference; both fixed before merge | resumed once after a rate limit |
+| 110 | implementer | sonnet | `UX-683` the foundation tier is declared (judgement) | 924k | 393 | 139.7 m | merged 88ba86fa; the declaration a project.conf variable, one hold fixed | one field on two maps moved five exact-count guards; resumed once after a rate limit |
+| 110 | verifier | sonnet | verify `UX-683` | 98k | 91 | 16.7 m | HOLD: a proxy validation test, a typed fixture field, two decisions off the record; fixed before merge | the proxy test surfaced only by mutating the real function |
 
 Round 101's four tracks are **not** here: this session could not
 identify their transcripts with certainty after a context rebuild, and
@@ -165,7 +167,7 @@ committed cleanly once told to run in the foreground. Three of the five
 left a derived figure or a §6 context-map row behind - the same class
 the round itself was about, arriving in the tracks' own work.
 
-What the one hundred and thirty-six rows already say: a researcher that reads a document
+What the one hundred and thirty-eight rows already say: a researcher that reads a document
 whole costs 100-180k; a walker that drives every control costs 336k;
 the two cuts cost a re-run each. The `walk` and `design-review`
 skills fix the report shape so the next rows are smaller, and the

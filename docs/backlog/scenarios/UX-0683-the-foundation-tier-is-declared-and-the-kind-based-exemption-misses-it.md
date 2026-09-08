@@ -1,6 +1,6 @@
 # UX-683: the foundation tier is declared, and the kind-based exemption misses it
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-479, UX-681 | **Serves:** R2 who owns the toolchain and wants out of the noise; R3 reading the ranking | **Topic:** analysis | **Shape:** judgement
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-479, UX-681 | **Serves:** R2 who owns the toolchain and wants out of the noise; R3 reading the ranking | **Topic:** analysis | **Shape:** judgement
 
 ## Motivation
 
@@ -107,3 +107,5 @@ from the copy, re-run green):
 | `bst_extract_run.py:417-424` collapsed to `graph["foundation"] = sorted(declared_foundation)` (no validation, no warning) | `test_a_name_not_in_the_graph_is_a_diagnostic_not_a_crash` | 1 failed, 13 passed |
 
 All four restored to `14 passed`.
+
+**Deviation.** The declaration is `variables: {bga-foundation: toolchain.bst}` in project.conf, not a `bga:` block: BuildStream 2.8 rejects an unknown top-level key and a list-valued variable, both shown on the real project. The `--foundation` CLI flag was dropped (the help screen sits at its 45-line cap); expected cost lives in `correlate.py`, not `findings.py`. Five exact-count guards moved with the new field, each re-derived with the number. The macro_micro fixture's field stays typed: the extractor could not run here (`Cache too full` on a shared CAS), stated in the Outcome. One verifier hold (a proxy validation test, the undisclosed decisions), fixed in a second commit (88ba86fa). Two commits, one verifier.

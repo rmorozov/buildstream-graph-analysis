@@ -58,4 +58,7 @@ Mutation: swapped `_add_findings`/`_add_floors` in `_SECTIONS` →
 `test_a_committed_analysis_matches_the_analyzer.py` reddened 2 of 6
 (`mixed_task_kinds`, `with_timeline`), naming "the committed order is
 not the emitted order"; reverted from a scratchpad copy, re-ran green
-(81 passed).
+(81 passed). `python3 tools/dev_baseline.py --shrink` retired the three
+`build_document` rows the split obsoleted (`tests/quality_baseline.json`:
+ruff `C901`, `PLR0912`, `PLR0915`, all on `def build_document(...)`);
+`--check` and `make lint` both clean.

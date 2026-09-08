@@ -128,6 +128,7 @@ pairing for every merged row from round 103 on.
 | 109 | verifier | sonnet | verify UX-697 contract half | 44k | 47 | 9.4 m | MERGE; 12 at base, 0 at close, strict 1363 digit for digit; no ignore, cast or Any in the diff; one overstated sentence (an unreachable 'real bug') corrected in the Outcome by the session | two commands over the 120 s default timeout had to be backgrounded and waited on |
 | 109 | implementer | sonnet | UX-790, the mutation run's classifier | 197k | 77 | 28.5 m | merged after its verifier; a real captured mutmut run as the fixture; the three-of-ten verdict gap closed with a synthetic all-verdicts clause on the verifier's finding | the brief's classify() return shape was ambiguous between per-mutant and aggregate; tracing render_row's needs decided it |
 | 109 | verifier | sonnet | verify UX-790 | 42k | 39 | 5.3 m | MERGE with a named fix: timeout, suspicious and skipped were unguarded because the captured run printed three verdict shapes; render_row byte-identical across the refactor; caught equals the sum over _CAUGHT | replaying the pre-refactor status dict from git show to get a byte-identical number rather than an eyeballed equivalence |
+| 110 | verifier | sonnet | verify UX-744 as it stands (the open HOLD) | 74k | 69 | 13.1 m | MERGE-AS-CLOSED; every clause traced to a commit, the HOLD closed by UX-772 (76 and 85 waived by name), the annotation present; round 107's 26 seconds has no commit behind it (11 m 48 s), and the 99-102 clause is moot since UX-757 | dev_touching --base at the pre-track commit never finished in 300 s; the two guard files the diff touches stood in |
 
 Round 101's four tracks are **not** here: this session could not
 identify their transcripts with certainty after a context rebuild, and
@@ -140,7 +141,7 @@ committed cleanly once told to run in the foreground. Three of the five
 left a derived figure or a §6 context-map row behind - the same class
 the round itself was about, arriving in the tracks' own work.
 
-What the one hundred and eleven rows already say: a researcher that reads a document
+What the one hundred and twelve rows already say: a researcher that reads a document
 whole costs 100-180k; a walker that drives every control costs 336k;
 the two cuts cost a re-run each. The `walk` and `design-review`
 skills fix the report shape so the next rows are smaller, and the

@@ -626,3 +626,12 @@ class AnalysisResult:
     # Populated only alongside `plane2_capacity`, on the same bar UX-83
     # uses: a recommendation without a measured `cores_busy` is a guess.
     capacity_recommendation: dict = field(default_factory=dict)
+    # UX-171: the resource blast table, set by `cli._attach_resource_blast`
+    # only when a source inventory is in hand. `None` - not `{}` - when
+    # it was never attempted, same "not looked for" reason `run_instance`
+    # is absent rather than empty (UX-697: was set but undeclared).
+    resource_blast: Optional[dict] = None
+    # UX-202: Plane 2's own coverage of this build, set by
+    # `cli._attach_plane2_capacity` when a Plane 2 report is in hand.
+    # `None` without one (UX-697: was set but undeclared).
+    plane2_coverage: Optional[dict] = None

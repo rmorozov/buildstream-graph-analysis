@@ -269,7 +269,7 @@ def _priced_fixes(result: AnalysisResult, findings) -> list[tuple]:
     joint = next((f for f in findings if f.get("id") == "joint-saving"), None)
     together = ((joint or {}).get("evidence") or {}).get("joint_saving_us")
     if together:
-        rows.append((f"the top {len(joint.get('elements') or [])} together",
+        rows.append((f"the top {len((joint or {}).get('elements') or [])} together",
                      together))
     return rows
 
@@ -795,10 +795,11 @@ def format_text(result: AnalysisResult, section: Optional[str] = None,
         lines.append("")
 
     # Occupancy Stats (Part 4)
-    if hasattr(result, 'occupancy_stats') and result.occupancy_stats:
+    occupancy_stats = getattr(result, 'occupancy_stats', None)
+    if occupancy_stats:
         lines.append("Occupancy Statistics:")
-        lines.append(f"  Max Parallelism: {result.occupancy_stats.get('max_parallelism', 0):.1f}x")
-        lines.append(f"  Avg Parallelism: {result.occupancy_stats.get('avg_parallelism', 0):.1f}x")
+        lines.append(f"  Max Parallelism: {occupancy_stats.get('max_parallelism', 0):.1f}x")
+        lines.append(f"  Avg Parallelism: {occupancy_stats.get('avg_parallelism', 0):.1f}x")
         lines.append("")
 
     # CPU Utilisation (Part 30, M4)
@@ -915,7 +916,7 @@ def format_text(result: AnalysisResult, section: Optional[str] = None,
                 # Handle both dict format and dataclass format
                 high_crit = 0
                 if isinstance(cp_data, dict):
-                    high_crit = sum(1 for v in cp_data.values() if (isinstance(v, dict) and v.get('probability', 0) > 0.5) or (hasattr(v, 'probability') and v.probability > 0.5))
+                    high_crit = sum(1 for v in cp_data.values() if (isinstance(v, dict) and v.get('probability', 0) > 0.5) or (not isinstance(v, dict) and getattr(v, 'probability', 0) > 0.5))
                 elif isinstance(cp_data, list):
                     high_crit = sum(1 for cp in cp_data if getattr(cp, 'probability', 0) > 0.5)
                 lines.append(f"  High Criticality Elements: {high_crit} (>50% probability)")

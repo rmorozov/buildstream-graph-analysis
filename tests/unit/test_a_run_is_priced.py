@@ -85,6 +85,11 @@ class TestTheRowIsWritten:
         assert dev_track_cost.count_word(19) == "nineteen"
         assert dev_track_cost.count_word(40) == "forty"
         assert all(dev_track_cost.count_word(n) for n in range(1, 100))
+        # UX-794: the hundredth row raised IndexError on a tens table.
+        assert dev_track_cost.count_word(100) == "one hundred"
+        assert dev_track_cost.count_word(101) == "one hundred and one"
+        assert dev_track_cost.count_word(120) == "one hundred and twenty"
+        assert len({dev_track_cost.count_word(n) for n in range(1, 1000)}) == 999
 
 
 class TestTheTableIsRead:

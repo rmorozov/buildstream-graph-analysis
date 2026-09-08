@@ -63,7 +63,7 @@ VOCABULARY_GUARD = (
 
 #: How these documents spell a count, derived from the writer's own
 #: `count_word` so the two cannot drift (`UX-752`).
-WORDS = {n: dev_track_cost.count_word(n) for n in range(1, 100)}
+WORDS = {n: dev_track_cost.count_word(n) for n in range(1, 1000)}
 
 
 def _flat(text):

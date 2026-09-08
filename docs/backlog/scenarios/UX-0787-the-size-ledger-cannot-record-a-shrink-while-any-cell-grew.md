@@ -99,3 +99,4 @@ shelf job's steps mention its tool - `sizes` → `dev_sizes.py --check`,
 reds.
 
 **Deviation.** The judgement — write the shrink, refuse the grow, and put `--check` on the GitHub shelf beside `pip-audit` rather than in `make lint` — was the session's, in the brief; the track executed it as bounded. Its verifier found the shelf guard read job names and never a run line (`UX-698`'s own shape, §5's proxy), fixed with a YAML-parsed clause before the merge. Today's 46 cells are the `UX-787` floor, not a fix.
+The first `sizes` run on CI reddened on eight cells the round's own later merges grew (six of them `UX-697`'s annotations): a floor adopted at a track's base is behind the merged head by construction, so the round re-adopts once at its close, with the cells named in its document.

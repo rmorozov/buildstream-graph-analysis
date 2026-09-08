@@ -28,15 +28,15 @@
  * worth?") and `next_steps` ("What should I run next?") are three
  * spellings of *what should I do*, and they are one chapter.
  *
- * **Why the table is here and not in the schema.** Nine of the
- * forty-eight sections on the synthetic run are built by the page and
- * published by no contract at all - the decision panel, the drawn
- * critical path, the blast box, the element blocks. A hint can only
- * name sections the schema has, so a chaptering that lived in
- * `bga:question`'s neighbourhood would leave a fifth of the document
- * unassigned. The published `bga:rail` is still what places a section
- * this table does not name: a new payload key lands in the chapter its
- * *rail* belongs to rather than in a bucket at the end.
+ * **Why the table is here and not in the schema.** Fourteen of the
+ * forty-eight sections on the synthetic run (`UX-286`, round 39) are
+ * built by the page and published by no contract at all - the decision
+ * panel, the drawn critical path, the blast box, the element blocks. A
+ * hint can only name sections the schema has, so a chaptering that
+ * lived in `bga:question`'s neighbourhood would leave them unassigned.
+ * The published `bga:rail` is still what places a section this table
+ * does not name: a new payload key lands in the chapter its *rail*
+ * belongs to rather than in a bucket at the end.
  */
 
 import { duration, quantity, title } from "./format.js";

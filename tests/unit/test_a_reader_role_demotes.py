@@ -39,7 +39,9 @@ import pytest
 REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 sys.path.insert(0, str(REPO / "tests"))
+sys.path.insert(0, str(REPO / "tools"))
 
+import dev_track_cost
 import pages
 from browser import NO_BROWSER, Browser, find_chrome
 
@@ -380,6 +382,38 @@ class TestEveryPageBuiltSectionDecidesItsReader:
             assert set(roles) <= set(schemas.READER_ROLES), (
                 f"{site} declares {sorted(set(roles) - set(schemas.READER_ROLES))} "
                 f"for {key!r}, which `findings.READERS` does not name")
+
+
+#: UX-777: `_sites()` above is the population two documents restate as
+#: a word - `UX-650` fixed the code and left the sentence at nine.
+#: `count_word` is built, not tabled (`UX-752`), so a count past what a
+#: fixed dict would have carried still reddens with a legible word
+#: rather than a `KeyError`.
+CHAPTERS_JS = REPO / "bga/viewer/chapters.js"
+ARCHITECTURE = REPO / "docs/design/architecture.md"
+
+
+class TestThePageBuiltCountIsDerivedInBothDocuments:
+    """`chapters.js`'s docstring and `architecture.md` both state how
+    many page-built sections `_sites()` counts; `forty-eight` names a
+    different, dated measurement (round 39, `UX-286`) that neither
+    clause here re-derives."""
+
+    def test_the_chapters_docstring_states_it(self):
+        word = dev_track_cost.count_word(len(_sites())).capitalize()
+        text = CHAPTERS_JS.read_text(encoding="utf-8")
+        assert f"{word} of the\n * forty-eight sections" in text, (
+            f"bga/viewer/chapters.js's docstring does not state "
+            f"{word.lower()!r} page-built sections ({len(_sites())} "
+            f"construction sites, `_sites()`)")
+
+    def test_the_architecture_document_states_it(self):
+        word = dev_track_cost.count_word(len(_sites())).lower()
+        text = " ".join(ARCHITECTURE.read_text(encoding="utf-8").split())
+        assert f"because {word} of the forty-eight sections" in text, (
+            f"docs/design/architecture.md does not state {word!r} "
+            f"page-built sections ({len(_sites())} construction sites, "
+            f"`_sites()`)")
 
 
 @needs_browser

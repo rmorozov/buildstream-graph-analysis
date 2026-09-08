@@ -793,15 +793,16 @@ how it is *read*, and the shape is deliberately small.
   them into eight chapters, each named for a question the reader has -
   and the sections that answer it are the ones whose published
   `bga:question` is a spelling of that question. The table is in the
-  viewer rather than the schema because nine of the forty-eight sections
-  are built by the page and published by no contract; `bga:rail` is the
-  fallback, so a payload key added later lands in the chapter its rail
-  already names. The rail lists the chapters and nests the sections
-  under them, which is the same grouping the document has. Grouping cost
-  no height: 18.51 screens to 18.10 on the 1,202-element run, because
-  the chapter boundary carries separation the sections no longer need
-  between them. Padding every section to one screen was refused on the
-  measurement that it adds 31.3 screens of whitespace
+  viewer rather than the schema because fourteen of the forty-eight
+  sections are built by the page and published by no contract;
+  `bga:rail` is the fallback, so a payload key added later lands in
+  the chapter its rail already names. The rail lists the chapters and
+  nests the sections under them, which is the same grouping the
+  document has. Grouping cost no height: 18.51 screens to 18.10 on the
+  1,202-element run, because the chapter boundary carries separation
+  the sections no longer need between them. Padding every section to
+  one screen was refused on the measurement that it adds 31.3 screens
+  of whitespace
   ([Direction 13](directions.md#direction-13-the-report-has-48-fragments-and-no-chapters-argued-2026-08-24-round-38)).
 - **A value is drawn by width, not depth** (`UX-267`, round
   36). The hints above decide what a field is *called* and where it
@@ -1050,6 +1051,20 @@ and is superseded now is what the record says, and sweeping it forward
 with the tables above destroys the one thing the entry is for
 (`UX-653`). The newest entry is the exception: every round that
 re-grounds the document rewrites it.
+
+Updated 2026-09-08 (after `UX-777`), covering one change to this
+document — "The document has chapters" bullet, which said nine of the
+forty-eight page-built sections declare no reader while `_sites()`
+(`tests/unit/test_a_reader_role_demotes.py`) counts fourteen: `UX-650`
+(round 88) found thirteen, and this item's own grep missed a
+fourteenth site, `views.js::renderBandUnavailable`, added since. The
+figure is now stated from that guard rather than restated by hand,
+re-grounded in the two contract tables above against `bga.contracts`
+and `bga/schemas.py`: **25 emitted ids, 10 of them superseded, and 3
+read and never written**, 9 printable and 16 not,
+`analyze/v6` at **61 top-level properties**, and `bga/viewer/` still
+**22 modules** (`ls bga/viewer/*.js | wc -l`). The item published no
+id and moved no key.
 
 Updated 2026-09-07 (after `UX-748`), covering one change to this
 document — the schema figure in this very entry, which said sixty

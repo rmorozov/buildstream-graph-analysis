@@ -44,4 +44,40 @@ fixture (a second pass in a copy) — red naming the count.
 
 ## Outcome
 
-_Not started._
+**The gap, measured.** The other three clauses in the file assert
+correctness (element counts, `is_on_critical_path`, `call_count == 1`
+via monkeypatch) - none is a bare wall bound, matching the Out of
+Scope note. Only `test_full_pipeline_faster_after_p1_21` typed a
+clock.
+
+**The close, measured.** `sys.settrace` counting `call` events (not
+`line` events - the diagnostics hotspot alone executes ~12.7M lines
+for this fixture, and per-line tracing over it cost 14s bare) whose
+frame is under `bga/`'s own root, over one `analyze_run(1500 elements)`
+call. A lone run counted 3,630,498; inside this file's own suite,
+3,627,224 - `bga/schemas.py`'s module-level `_check_hint`/
+`_distribution` calls run once, on first import, a 3,274-call (0.09%)
+one-time cost the cold reading was still paying. A 3-element warm-up
+before the traced call forces that import first, so the count is
+3,627,224 either way now (verified: three fresh-process runs, three
+identical readings). Bound: `1500 * _CALLS_PER_ELEMENT_BOUND(3600)` =
+5,400,000 - 1.49x headroom over the baseline. The wall figure is
+printed with `os.getloadavg()`, never asserted. The trace function
+active before installing the counter (a coverage lane's own) is saved
+and restored, not dropped to `None`.
+
+```console
+$ pytest tests/unit/test_diagnostics_performance.py -k test_full_pipeline_faster_after_p1_21 -q
+bare, 3 runs:   4.05s / 4.17s / 4.08s - pass
+16 hogs, 3 runs: 4.28s / 4.27s / 4.13s - pass (load 3.5-7.7, run-queue 18-21/199)
+```
+
+**The mutation table.**
+
+| mutation | clause that reds |
+|---|---|
+| `analyze_run` (scratch copy of `bga/analyzer.py`) calls `analyzer.analyze()` twice - a redundant second pass | `test_full_pipeline_faster_after_p1_21`: `1500-element analyze_run made 7224414 bga calls (bound 5400000)` |
+
+Applied to a scratch copy (`analyzer.pristine.py`), reverted by
+copying that pristine file back - not `git checkout --`; `__pycache__`
+cleared between runs.

@@ -111,12 +111,19 @@ FINDING_READERS = {
     "fan-in-structural": "recipe-author",
     "shared-source-blast": "recipe-author",
     "cache-transfer-cost": "recipe-author",
+    # `UX-683`: the declared tier, same reader as the kind-based
+    # exemption it widens - R2 owns the toolchain and wants out of the
+    # noise these two name.
+    "blast-radius-foundation": "recipe-author",
+    "fan-in-foundation": "recipe-author",
     # R3 - the structural answers.
     "mesh-graph": "graph-owner",
     "chain-graph": "graph-owner",
     "graph-width": "graph-owner",
     "criticality": "graph-owner",
     "fan-in-ranking": "graph-owner",
+    # `UX-683`: "declare or dismiss" is a graph-shape decision, R3's.
+    "foundation-candidates": "graph-owner",
     # R4 - whether the number can be trusted and whether it is normal.
     "confidence": "ci-gatekeeper",
     "efficiency-score": "ci-gatekeeper",
@@ -1280,10 +1287,19 @@ def _ranking_findings(result: AnalysisResult, chain_bound: bool) -> list[dict]:
     # Excluded from the *ranking*, never from the payload: `UX-203` was
     # filed because views were unreachable, and answering this by
     # hiding them would trade one defect for an older one.
+    # UX-683: the *declared* tier is checked first and wins the report
+    # even when the kind guess below would also have caught it - an
+    # owner's declaration is a stronger claim than a plugin-kind guess,
+    # and a toolchain the project declared foundation is reported as
+    # exactly that rather than folded into the kind-based sentence.
+    foundation = [u for u in top_blast_radius
+                  if (blast_radius.get(u) or {}).get('is_foundation')]
     structural = [u for u in top_blast_radius
-                  if (blast_radius.get(u) or {}).get('is_structural_kind')]
+                  if (blast_radius.get(u) or {}).get('is_structural_kind')
+                  and u not in foundation]
     actionable = [u for u in top_blast_radius
-                  if not (blast_radius.get(u) or {}).get('is_structural_kind')]
+                  if not (blast_radius.get(u) or {}).get('is_structural_kind')
+                  and not (blast_radius.get(u) or {}).get('is_foundation')]
 
     # `UX-474`: rank only elements that reach something.
     #
@@ -1376,7 +1392,53 @@ def _ranking_findings(result: AnalysisResult, chain_bound: bool) -> list[dict]:
             f"whose dependents are the graph's shape, not a task",
             elements=list(structural[:BLAST_RADIUS_SHOWN]),
         ))
+
+    if foundation:
+        # UX-683: present, separated, never the top row - the owner
+        # declared these, so "fix this first" would be arguing with
+        # the declaration rather than the graph. Drawing this tier on
+        # the page is a later track, not here (brief named UX-678/739;
+        # neither file is this tier - see the implementer's report).
+        named = ", ".join(
+            f"{u} ({(blast_radius.get(u) or {}).get('downstream_count', 0)} downstream)"
+            for u in foundation[:BLAST_RADIUS_SHOWN])
+        findings.append(_finding(
+            'blast-radius-foundation', SEVERITY_INFO,
+            f"Declared foundation, excluded from the ranking: {named}",
+            elements=list(foundation[:BLAST_RADIUS_SHOWN]),
+        ))
+
+    findings.extend(_foundation_candidates(blast_radius, distribution))
     return findings
+
+
+def _foundation_candidates(blast_radius: dict, distribution: Optional[dict]) -> list[dict]:
+    """UX-683's discovery half: the owner declares, the tool proposes.
+
+    Candidates are the top p5 fan-out among elements that are neither a
+    `STRUCTURAL_ELEMENT_KINDS` kind nor already declared - the same
+    population the kind exemption misses, named rather than silently
+    exempted a second way. Needs a real distribution (`p95`); a run too
+    small for one has nothing to compare a count against.
+    """
+    if not distribution or not distribution.get('p95'):
+        return []
+    threshold = distribution['p95']
+    candidates = sorted(
+        (uid for uid, row in blast_radius.items()
+         if not row.get('is_structural_kind') and not row.get('is_foundation')
+         and (row.get('downstream_count') or 0) >= threshold),
+        key=lambda uid: (-blast_radius[uid]['downstream_count'], uid))
+    if not candidates:
+        return []
+    named = ", ".join(
+        f"{u} ({blast_radius[u]['downstream_count']} downstream)"
+        for u in candidates[:BLAST_RADIUS_SHOWN])
+    return [_finding(
+        'foundation-candidates', SEVERITY_INFO,
+        f"Wide reach, not declared foundation - declare or dismiss: {named}",
+        elements=list(candidates[:BLAST_RADIUS_SHOWN]),
+    )]
 
 
 def _fan_in_findings(result: AnalysisResult) -> list[dict]:
@@ -1420,11 +1482,20 @@ def _fan_in_findings(result: AnalysisResult) -> list[dict]:
                       if distribution else {}),
         ))
 
+    # UX-683: the declared tier is checked first and wins the report
+    # even where the kind guess below would also have caught it - same
+    # precedence as the blast ranking above.
+    foundation = sorted(
+        (uid for uid, row in fan_in.items()
+         if row.get('is_foundation') and row.get('transitive_count')),
+        key=lambda uid: (-fan_in[uid]['transitive_count'], uid))
+
     # `UX-76` again, and the one place this graph's widest fan-in
     # actually lands: a stack names everything on purpose.
     structural = sorted(
         (uid for uid, row in fan_in.items()
-         if row.get('is_structural_kind') and row.get('transitive_count')),
+         if row.get('is_structural_kind') and row.get('transitive_count')
+         and uid not in foundation),
         key=lambda uid: (-fan_in[uid]['transitive_count'], uid))
     if structural:
         named = ", ".join(
@@ -1437,6 +1508,19 @@ def _fan_in_findings(result: AnalysisResult) -> list[dict]:
             f"({', '.join(sorted({fan_in[uid].get('element_kind', 'unknown') for uid in structural}))})"
             f" whose dependencies are the graph's shape, not a task",
             elements=list(structural[:BLAST_RADIUS_SHOWN]),
+        ))
+
+    # UX-683: present with its figures and excluded from the ranking
+    # above the same way `top_fan_in` already excludes it
+    # (`bga/graph/fan_in.py`) - this just says so.
+    if foundation:
+        named = ", ".join(
+            f"{uid} ({fan_in[uid]['transitive_count']} upstream)"
+            for uid in foundation[:BLAST_RADIUS_SHOWN])
+        findings.append(_finding(
+            'fan-in-foundation', SEVERITY_INFO,
+            f"Declared foundation, excluded from the ranking: {named}",
+            elements=list(foundation[:BLAST_RADIUS_SHOWN]),
         ))
     return findings
 

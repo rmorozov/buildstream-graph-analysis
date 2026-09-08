@@ -446,6 +446,9 @@ class Graph:
     """
     elements: list[Element] = field(default_factory=list)
     dependencies: list[DependencyEdge] = field(default_factory=list)
+    # UX-683: the declared foundation tier - uids validated against
+    # `elements` at extraction time, never a kind-based guess.
+    foundation: frozenset[str] = field(default_factory=frozenset)
 
     # Derived metrics (computed during analysis)
     in_degree: dict[str, int] = field(default_factory=dict)

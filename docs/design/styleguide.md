@@ -697,6 +697,13 @@ document from the first byte. Folding changed how far a reader scrolls
 past them and nothing else — which is precisely the cost this budget
 exists to keep visible.
 
+`UX-683` moved the 4,100 class's words bound 9,200 -> 9,300: the `xl`
+fixture declares no foundation tier, so `foundation-candidates` fires
+where the two `*-foundation` findings (published only when the project
+declared one) do not - measured 9,200 -> 9,269, +69. The 50-element
+class is unmoved; neither `macro_micro` nor `golden` is large enough
+to trip the top-p5 fan-out threshold the candidate finding reads.
+
 `tests/unit/test_the_page_has_a_volume_budget.py` asserts both budgets
 in **one** guard, so a change trading one for the other has to say so.
 It also holds the bounds to being reachable: the largest run in each

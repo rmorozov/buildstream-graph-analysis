@@ -160,7 +160,8 @@ class TestTheRankingKeepsTheBlastRules:
         leaves = {f"m{index}.bst": {
             "direct_count": 0, "transitive_count": 0,
             "immediate_dominator": None, "element_kind": "manual",
-            "is_structural_kind": False} for index in range(6)}
+            "is_structural_kind": False, "is_foundation": False}
+            for index in range(6)}
         assert top_fan_in(leaves) == []
 
     def test_the_ranking_is_by_closure_descending(self, rows):
@@ -180,7 +181,7 @@ class TestTheReadShareIsOnTheJoinRowAndNotHere:
     def test_the_map_carries_no_plane_two_column(self, rows):
         assert set(rows["lib-f.bst"]) == {
             "direct_count", "transitive_count", "immediate_dominator",
-            "element_kind", "is_structural_kind"}
+            "element_kind", "is_structural_kind", "is_foundation"}
 
     def test_the_share_is_of_what_plane_two_could_assess(self):
         """Not of the declared edge count. `app.bst` names eight

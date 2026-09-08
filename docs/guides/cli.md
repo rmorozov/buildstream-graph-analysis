@@ -402,8 +402,11 @@ The JSON carries a **`findings` array** — the same conclusions the text report
 | `blast-radius-reach` | medium | elements a change to which rebuilds something else, named with their downstream count. Published whatever the diagnosis says — a chain-bound build has a blast radius too (`UX-479`) |
 | `blast-radius-ranking` | varies | elements worth fixing first by downstream reach (needs `--diagnostics`) |
 | `blast-radius-structural` | info | elements whose reach is the graph's shape rather than a task — a base image, a toolchain, a stack. Reported, not ranked (`UX-258`) |
+| `blast-radius-foundation` | info | a project-declared foundation element with the widest reach — the kind exemption above misses it; the owner's declaration doesn't (`UX-683`) |
+| `foundation-candidates` | info | non-structural elements at or above the top p5 fan-out and not declared foundation — declare or dismiss (`UX-683`) |
 | `fan-in-ranking` | info | the mirror: elements that *pull in* the most, ranked by upstream closure, with each count placed in the graph's own deciles |
 | `fan-in-structural` | info | a stack or a base image whose closure is the widest — it depends on everything on purpose, so the count is shape and not a task |
+| `fan-in-foundation` | info | a project-declared foundation element with the widest closure — the fan-in mirror of `blast-radius-foundation` (`UX-683`) |
 | `criticality` | varies | elements most likely to be on the critical path under duration variance (needs `--diagnostics`) |
 | `optimization-horizon` | varies | what the build drops to after each of the next few fixes |
 | `joint-saving` | varies | whether the recommended set's savings add up or overlap |

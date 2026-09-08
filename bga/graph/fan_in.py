@@ -42,7 +42,7 @@ def immediate_dominator(dominators: dict, uid: str) -> Optional[str]:
     return max(sorted(others), key=lambda name: len(dominators.get(name) or ()))
 
 
-def compute_fan_in(graph, kinds: dict, structural_kinds) -> dict:
+def compute_fan_in(graph, kinds: dict, structural_kinds, foundation=frozenset()) -> dict:
     """Per element: what it names, what that pulls in, and its gate."""
     _downstream, upstream = compute_reachability(graph)
     dominators = compute_dominators(graph)
@@ -62,16 +62,21 @@ def compute_fan_in(graph, kinds: dict, structural_kinds) -> dict:
             "immediate_dominator": immediate_dominator(dominators, uid),
             "element_kind": kinds.get(uid, "unknown"),
             "is_structural_kind": kinds.get(uid) in structural_kinds,
+            # UX-683: declared, not guessed.
+            "is_foundation": uid in foundation,
         }
     return rows
 
 
 def top_fan_in(rows: dict, limit: int = TOP_FAN_IN) -> list:
-    """The ranking, by transitive count, structural elements excluded.
+    """The ranking, by transitive count, structural and foundation
+    elements excluded.
 
     `UX-76`'s rule, which the blast ranking applies and this mirrors: a
-    toolchain has a large fan-in *on purpose*. Excluded from the
-    ranking, never from `rows` - `UX-203` was filed because views were
+    toolchain has a large fan-in *on purpose*. `UX-683` widens it from a
+    kind guess to a declaration - foundation is validated against the
+    graph, not inferred from `element_kind`. Excluded from the ranking,
+    never from `rows` - `UX-203` was filed because views were
     unreachable and answering this by hiding them would trade one
     defect for an older one.
 
@@ -79,6 +84,7 @@ def top_fan_in(rows: dict, limit: int = TOP_FAN_IN) -> list:
     a constant is not a ranking, and a graph of leaves is all zeroes.
     """
     reaching = [uid for uid, row in rows.items()
-                if not row["is_structural_kind"] and row["transitive_count"]]
+                if not row["is_structural_kind"] and not row["is_foundation"]
+                and row["transitive_count"]]
     reaching.sort(key=lambda uid: (-rows[uid]["transitive_count"], uid))
     return reaching[:limit]

@@ -444,7 +444,8 @@
                 "is_leaf": false,
                 "risk_score": 2,
                 "element_kind": "unknown",
-                "is_structural_kind": false
+                "is_structural_kind": false,
+                "is_foundation": false
             },
             "lib.bst": {
                 "downstream_count": 1,
@@ -452,7 +453,8 @@
                 "is_leaf": false,
                 "risk_score": 1,
                 "element_kind": "unknown",
-                "is_structural_kind": false
+                "is_structural_kind": false,
+                "is_foundation": false
             },
             "extra.bst": {
                 "downstream_count": 0,
@@ -460,7 +462,8 @@
                 "is_leaf": true,
                 "risk_score": 0,
                 "element_kind": "unknown",
-                "is_structural_kind": false
+                "is_structural_kind": false,
+                "is_foundation": false
             },
             "app.bst": {
                 "downstream_count": 0,
@@ -468,7 +471,8 @@
                 "is_leaf": true,
                 "risk_score": 0,
                 "element_kind": "unknown",
-                "is_structural_kind": false
+                "is_structural_kind": false,
+                "is_foundation": false
             }
         },
         "fan_in": {
@@ -477,28 +481,32 @@
                 "transitive_count": 2,
                 "immediate_dominator": "lib.bst",
                 "element_kind": "unknown",
-                "is_structural_kind": false
+                "is_structural_kind": false,
+                "is_foundation": false
             },
             "base.bst": {
                 "direct_count": 0,
                 "transitive_count": 0,
                 "immediate_dominator": null,
                 "element_kind": "unknown",
-                "is_structural_kind": false
+                "is_structural_kind": false,
+                "is_foundation": false
             },
             "extra.bst": {
                 "direct_count": 0,
                 "transitive_count": 0,
                 "immediate_dominator": null,
                 "element_kind": "unknown",
-                "is_structural_kind": false
+                "is_structural_kind": false,
+                "is_foundation": false
             },
             "lib.bst": {
                 "direct_count": 1,
                 "transitive_count": 1,
                 "immediate_dominator": "base.bst",
                 "element_kind": "unknown",
-                "is_structural_kind": false
+                "is_structural_kind": false,
+                "is_foundation": false
             }
         },
         "criticality_probability": {
@@ -1191,10 +1199,10 @@
         }
     ],
     "document_shape": {
-        "leaves": 761,
+        "leaves": 769,
         "deepest_depth": 7,
         "deepest_path": "findings.[].evidence.steps.[].entering.[]",
-        "deeper_than_three": 380,
-        "deeper_than_three_share": 0.49934296977660975
+        "deeper_than_three": 388,
+        "deeper_than_three_share": 0.5045513654096229
     }
 }

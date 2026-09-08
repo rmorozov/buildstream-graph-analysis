@@ -1,0 +1,50 @@
+{
+  "spans": [
+    {
+      "task_key": "pred0.bst|BUILD|BUILD|0",
+      "ts_us": 0,
+      "dur_us": 10000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS"
+    },
+    {
+      "task_key": "pred1.bst|BUILD|BUILD|0",
+      "ts_us": 0,
+      "dur_us": 10000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS"
+    },
+    {
+      "task_key": "pred2.bst|BUILD|BUILD|0",
+      "ts_us": 0,
+      "dur_us": 10000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS"
+    },
+    {
+      "task_key": "pred3.bst|BUILD|BUILD|0",
+      "ts_us": 0,
+      "dur_us": 10000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS"
+    },
+    {
+      "task_key": "sink.bst|BUILD|BUILD|0",
+      "ts_us": 10000,
+      "dur_us": 10000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS"
+    }
+  ],
+  "phases": []
+}

@@ -305,7 +305,9 @@ def load_graph(path: Path) -> Graph:
         "Loaded graph from %s: %d elements, %d dependencies",
         path, len(elements), len(dependencies),
     )
-    return Graph(elements=elements, dependencies=dependencies, run_identity_hash=data.get('run_identity_hash'))
+    return Graph(elements=elements, dependencies=dependencies,
+                 foundation=frozenset(data.get('foundation') or []),
+                 run_identity_hash=data.get('run_identity_hash'))
 
 
 def load_chrome_trace(path: Path) -> Trace:

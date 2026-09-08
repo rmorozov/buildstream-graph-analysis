@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-799 scenarios: **15 open**, 784 closed.
+800 scenarios: **16 open**, 784 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -27,7 +27,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | cli | 0 | 22 |
 | store | 0 | 16 |
 | docs | 4 | 134 |
-| guards | 5 | 212 |
+| guards | 6 | 213 |
 
 ## Open scenarios
 
@@ -51,6 +51,7 @@ task file, which is the only place it ever lived twice.
 | UX-800 | [the rail landing counts frames, and the count moved with the header](UX-0800-the-rail-landing-counts-frames-and-the-count-moved-with-the-header.md) | viewer | Medium | R8 reading a red gate on a rail click nobody touched | 🔴 |
 | UX-801 | [`bst show` writes the CAS, and two files still run it in the ambient HOME](UX-0801-bst-show-writes-the-cas-and-two-files-still-run-it-in-the-ambient-home.md) | guards | Medium | R8 reading a red gate on a machine whose disk casd cannot size | 🔴 |
 | UX-802 | [the baseline guard files spawn pyright sixteen times](UX-0802-the-baseline-guard-files-spawn-pyright-sixteen-times.md) | guards | Medium | R8 reading a red drift gate on a file whose claim did not change | 🔴 |
+| UX-803 | [a step change in a file's cost takes three main pushes to reach the reference](UX-0803-a-step-change-in-a-file-s-cost-takes-three-main-pushes-to-reach-the-reference.md) | guards | Medium | R8 reading a red drift gate on a PR whose diff touched a file main had already made slower | 🔴 |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

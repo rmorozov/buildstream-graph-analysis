@@ -1,6 +1,6 @@
 # UX-789: a baseline entry carries a key the tool never reads
 
-**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** UX-694 (the baseline), UX-712, UX-703 | **Found by:** round 109, retro-verifying round 102 | **Serves:** the `--check` output that promises to name every forced batch forever | **Topic:** guards | **Area:** tools | **Shape:** mechanical
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-694 (the baseline), UX-712, UX-703 | **Found by:** round 109, retro-verifying round 102 | **Serves:** the `--check` output that promises to name every forced batch forever | **Topic:** guards | **Area:** tools | **Shape:** mechanical
 
 ## Motivation
 
@@ -90,3 +90,5 @@ forced by UX-744; 2 still forced by UX-762; 1 still forced by UX-781;
 |---|---|---|---|
 | M1 | `unknown_keys` body replaced with `return []` | `TestUnknownKeyIsRefused::test_a_forced_by_key_reds_and_names_itself` | 1 failed, 17 passed |
 | M2 | `unknown_keys`' per-entry loop dropped (document-level check only) | `TestUnknownKeyIsRefused::test_a_stray_key_on_a_finding_reds_and_names_itself` | 1 failed, 1 passed (class); 1 failed, 18 passed (file) |
+
+**Deviation.** One verifier hold: the first commit refused a stray key on the document only, not on a finding; the per-entry clause and its guard landed in a second commit (0443f02a). Two commits on the track; one verifier run.

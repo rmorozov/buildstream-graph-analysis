@@ -139,6 +139,8 @@ pairing for every merged row from round 103 on.
 | 110 | verifier | sonnet | verify UX-795 | 69k | 60 | 14.4 m | MERGE with one scope point: three runs green under 4-way load, the bound at 2010.9 ms with its note, smooth scroll ridden out over 91 frames, the shim census reds on createElement; four mid-flow sleeps remained, fixed | the table's second row said class-only in a parenthesis a full-file run missed |
 | 110 | implementer | sonnet | `UX-777` the page-built section count derived (judgement) | 321k | 167 | 54.4 m | merged 497b2539; count 14 not 13, count word built | the Motivation's grep missed a dynamic key; the verifier's two soft points cost a second commit |
 | 110 | verifier | sonnet | verify `UX-777` | 94k | 72 | 10.6 m | two soft points, both fixed before merge | — |
+| 110 | implementer | sonnet | `UX-789` a baseline entry carries only the keys the tool writes (mechanical) | 246k | 132 | 63.7 m | merged 0443f02a; one hold, per-entry clause added in a second commit | the first commit read the document's keys and not a finding's |
+| 110 | verifier | sonnet | verify `UX-789` | 39k | 38 | 16.9 m | one hold, fixed before merge | — |
 
 Round 101's four tracks are **not** here: this session could not
 identify their transcripts with certainty after a context rebuild, and
@@ -151,7 +153,7 @@ committed cleanly once told to run in the foreground. Three of the five
 left a derived figure or a §6 context-map row behind - the same class
 the round itself was about, arriving in the tracks' own work.
 
-What the one hundred and twenty-two rows already say: a researcher that reads a document
+What the one hundred and twenty-four rows already say: a researcher that reads a document
 whole costs 100-180k; a walker that drives every control costs 336k;
 the two cuts cost a re-run each. The `walk` and `design-review`
 skills fix the report shape so the next rows are smaller, and the

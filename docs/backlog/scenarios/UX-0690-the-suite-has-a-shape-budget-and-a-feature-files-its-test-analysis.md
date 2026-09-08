@@ -1,6 +1,6 @@
 # UX-690: the suite has a shape budget, and a feature files its test analysis
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-238 (the tiers), UX-400 (the population sweep), UX-498 | **Serves:** R8 reading whether the suite is balanced; the implementer writing the right guard | **Topic:** guards | **Area:** unassigned | **Shape:** judgement
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-238 (the tiers), UX-400 (the population sweep), UX-498 | **Serves:** R8 reading whether the suite is balanced; the implementer writing the right guard | **Topic:** guards | **Area:** unassigned | **Shape:** judgement
 
 ## Motivation
 
@@ -105,3 +105,5 @@ a copy (`cp`/`mv` back), never `git checkout --`.
 | 3 | a synthetic `UX-9999` filing, Topic analysis, no `## Decomposition` | `--check`'s new property | 1 problem (+1 unrelated `architecture.md` count, from adding a file) |
 | 4 | `shape_ledger.json` hand-typed to `10.0` (measured 50.5%) | `test_the_browser_row_holds_the_ledger`, naming both numbers | 1 failed, then green after revert |
 | 5 | `tests/ci_reference.json` moved aside | `test_the_browser_row_holds_the_ledger`, naming the path (`ci_seconds()` used to read `{}` and pass vacuously) | 1 failed, then green after restore |
+
+**Deviation.** The tree already exceeds both stated budgets — browser 50.5 % of CI seconds against 40, journey files 2 against 25 published contracts — so the browser row is a ratchet adopted into `tests/shape_ledger.json` (never rises, +1 point) and the journey row is reported; the 40 % and the 25 stand in the Outcome as what the budget is short by. The Required Fix's "Standing" section has not existed in a round document since round 95; from round 110 on the round document carries the table under that heading. One verifier hold (an 11-line commit body, folded to one commit; a missing `ci_reference.json` now reds, not passes). One commit, one verifier.

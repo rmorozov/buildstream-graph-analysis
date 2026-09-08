@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-797 scenarios: **16 open**, 781 closed.
+797 scenarios: **15 open**, 782 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -27,7 +27,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | cli | 0 | 22 |
 | store | 0 | 16 |
 | docs | 4 | 134 |
-| guards | 4 | 210 |
+| guards | 3 | 210 |
 
 ## Open scenarios
 
@@ -44,7 +44,6 @@ task file, which is the only place it ever lived twice.
 | UX-683 | [the foundation tier is declared, and the kind-based exemption misses it](UX-0683-the-foundation-tier-is-declared-and-the-kind-based-exemption-misses-it.md) | analysis | Medium | R2 who owns the toolchain and wants out of the noise; R3 reading the ranking | 🔴 |
 | UX-684 | [the cached-build verdict — does the graph rebuild the cheapest subgraph?](UX-0684-the-cached-build-verdict-does-the-graph-rebuild-the-cheapest-subgraph.md) | analysis | High | R3 showing evidence, R8 reading it | 🔴 |
 | UX-689 | [the architecture document moves into the area pages, one track at a time](UX-0689-the-architecture-document-moves-into-the-area-pages-one-track-at-a-tim.md) | docs | Medium | the reader pricing a change; the session restructuring without losing a sentence | 🔴 |
-| UX-690 | [the suite has a shape budget, and a feature files its test analysis](UX-0690-the-suite-has-a-shape-budget-and-a-feature-files-its-test-analysis.md) | guards | Medium | R8 reading whether the suite is balanced; the implementer writing the right guard | 🔴 |
 | UX-695 | [the refactor stream takes the ledger's top row — renderers first](UX-0695-the-refactor-stream-takes-the-ledger-s-top-row-renderers-first.md) | docs | Medium | the session that opens a round and has no refactor to pick because none is filed | 🔴 |
 | UX-782 | [the register derives its rounds from `git log`, which is a property of the clone](UX-0782-the-register-derives-its-rounds-from-git-log.md) | guards | Medium | the round whose register disagrees with itself on a second machine | 🔴 |
 | UX-796 | [the host sampler claims more busy cores than the host has, under load](UX-0796-the-host-sampler-claims-more-busy-cores-than-the-host-has-under-load.md) | guards | Medium | the gate that reds on a host reading nothing in the diff touched | 🔴 |

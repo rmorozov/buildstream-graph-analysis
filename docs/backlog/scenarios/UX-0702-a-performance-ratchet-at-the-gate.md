@@ -110,5 +110,5 @@ scalar fields. `docs/contributing/fixing-guide.md`'s derived test-count
 figure moved (495→496) from the new test file and was refreshed
 (`dev_touching.py --spread --write`); `tests/quality_baseline.json`
 gained two entries (`--force --reason UX-702`) matching the identical
-`subprocess.run(["git", …])` pattern already baselined for
-`dev_tier_drift.explained_by`.
+`subprocess.run(["git", …])` pattern already baselined for `dev_tier_drift.explained_by`.
+**Deviation (round 109's verifier).** The touching paste above is not that command's output at `a7f5552d`: it reads `1 failed, 1327 passed` there (`test_every_module_is_on_the_map`; `1250795d` added the row). The carry key's scoping: `UX-792`.

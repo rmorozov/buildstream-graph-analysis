@@ -1363,6 +1363,15 @@ SPLIT_PATH_SHARE = 0.10
 # that raising its job count would not.
 SPLIT_MEAN_CONCURRENCY = 2.0
 
+# UX-682: below this share of each element's own rebuilds, two elements
+# co-rebuilding is coincidence rather than the coupling a consolidation
+# would exploit.
+CO_CHANGE_SHARE = 0.9
+
+# ...and fewer co-rebuilds than this is too few builds to trust a share
+# computed from them at all.
+MIN_CO_REBUILDS = 3
+
 
 def find_granularity_findings(
     analysis: dict, native_report: dict, cache_logs: Optional[dict] = None,
@@ -1395,6 +1404,8 @@ def find_granularity_findings(
         _merge_candidates(dependencies, cache_logs, tasks, run_context)
     )
     findings.extend(_split_candidates(analysis, native_report))
+    findings.extend(_consolidate_by_co_change_candidates(cache_logs, dependencies))
+    findings.extend(_split_by_co_change_candidates(cache_logs, dependencies))
     return findings
 
 
@@ -1581,6 +1592,131 @@ def _split_candidates(analysis, native_report) -> list[dict]:
     return findings
 
 
+def _consumers_by_element(dependencies) -> dict:
+    """`predecessor -> {successors}`, build edges only - the consumer set
+    a co-change candidate is checked against.
+    """
+    consumers: dict = {}
+    for dependency in dependencies or []:
+        if getattr(dependency, 'dependency_type', None) == 'runtime':
+            continue
+        consumers.setdefault(dependency.predecessor, set()).add(dependency.successor)
+    return consumers
+
+
+def _consolidate_by_co_change_candidates(cache_logs, dependencies) -> list[dict]:
+    change_frequency = (cache_logs or {}).get('change_frequency')
+    if not change_frequency:
+        return []
+    rebuilds = {
+        entry['element']: entry.get('rebuilds') or 0
+        for entry in change_frequency.get('elements') or []
+        if entry.get('element')
+    }
+    builds_lower_bound = change_frequency.get('builds_lower_bound') or 0
+    consumers = _consumers_by_element(dependencies)
+    findings = []
+    for row in change_frequency.get('co_change') or []:
+        a, b = row.get('a'), row.get('b')
+        co_rebuilds = row.get('co_rebuilds') or 0
+        share_of_a = row.get('share_of_a') or 0
+        share_of_b = row.get('share_of_b') or 0
+        if co_rebuilds < MIN_CO_REBUILDS or min(share_of_a, share_of_b) < CO_CHANGE_SHARE:
+            continue
+        # Neither is consumed alone: the two elements' consumer sets are
+        # identical *and* non-empty - two co-changing leaves with nobody
+        # consuming either are not "consumed together", they are unused.
+        shared_consumers = consumers.get(a, set())
+        if not shared_consumers or shared_consumers != consumers.get(b, set()):
+            continue
+        rebuilds_a = rebuilds.get(a, 0)
+        rebuilds_b = rebuilds.get(b, 0)
+        findings.append({
+            'id': 'consolidate-by-co-change',
+            'severity': SEVERITY_MEDIUM,
+            'elements': [a, b],
+            'co_rebuilds': co_rebuilds,
+            'share_of_a': share_of_a,
+            'share_of_b': share_of_b,
+            'title': (
+                f"{a} and {b} rebuilt together in {co_rebuilds} of {rebuilds_a} "
+                f"and {co_rebuilds} of {rebuilds_b} rebuilds; no element "
+                f"consumes one without the other (over at least "
+                f"{builds_lower_bound} builds)"
+            ),
+        })
+    return findings
+
+
+def _co_change_groups(members, co_change) -> list[list]:
+    """Connected components of `members` under "has a co_change row with
+    a nonzero `co_rebuilds`" - the relation a split candidate's groups
+    must *not* cross.
+    """
+    linked: dict = {m: set() for m in members}
+    for row in co_change or []:
+        a, b = row.get('a'), row.get('b')
+        if a in linked and b in linked and (row.get('co_rebuilds') or 0) > 0:
+            linked[a].add(b)
+            linked[b].add(a)
+    seen = set()
+    groups = []
+    for member in members:
+        if member in seen:
+            continue
+        group = []
+        stack = [member]
+        while stack:
+            node = stack.pop()
+            if node in seen:
+                continue
+            seen.add(node)
+            group.append(node)
+            stack.extend(linked[node] - seen)
+        groups.append(sorted(group))
+    return groups
+
+
+def _split_by_co_change_candidates(cache_logs, dependencies) -> list[dict]:
+    change_frequency = (cache_logs or {}).get('change_frequency')
+    if not change_frequency:
+        return []
+    rebuilds = {
+        entry['element']: entry.get('rebuilds') or 0
+        for entry in change_frequency.get('elements') or []
+        if entry.get('element')
+    }
+    builds_lower_bound = change_frequency.get('builds_lower_bound') or 0
+    co_change = change_frequency.get('co_change') or []
+    consumers = _consumers_by_element(dependencies)
+    findings = []
+    for element, own_consumers in sorted(consumers.items()):
+        groups = _co_change_groups(sorted(own_consumers), co_change)
+        if len(groups) < 2:
+            continue
+        if not all(
+            all(rebuilds.get(member, 0) >= MIN_CO_REBUILDS for member in group)
+            for group in groups
+        ):
+            continue
+        described = [
+            f"{{{', '.join(group)}}} ({', '.join(str(rebuilds[m]) for m in group)} rebuilds)"
+            for group in groups
+        ]
+        findings.append({
+            'id': 'split-by-co-change',
+            'severity': SEVERITY_INFO,
+            'elements': [element],
+            'groups': groups,
+            'title': (
+                f"{element}'s consumers split into {len(groups)} groups that "
+                f"never co-rebuild with each other: {'; '.join(described)} "
+                f"(over at least {builds_lower_bound} builds)"
+            ),
+        })
+    return findings
+
+
 def find_restructuring_findings(
     analysis: dict, native_report: dict, tasks=None, run_context=None,
 ) -> list[dict]:
@@ -1646,6 +1782,32 @@ def _scale_of(cache_logs: Optional[dict], native_report: dict) -> dict:
     if processes:
         shapes['process_count_distribution'] = processes
     return shapes
+
+
+def expected_rebuild_cost(analysis: dict, cache_logs: Optional[dict]) -> list[dict]:
+    """UX-682: frequency x weighted blast, ranked - the number neither
+    factor alone can say. `weighted_duration_us` (`bga/analyzer.py:293-312`)
+    is the weighted blast; `downstream_count` the unweighted, carried
+    through as `blast_count`.
+    """
+    change_frequency = (cache_logs or {}).get('change_frequency') or {}
+    blast = (analysis.get('elements') or {}).get('blast_radius') or {}
+    rows = []
+    for entry in change_frequency.get('elements') or []:
+        element = entry.get('element')
+        blast_entry = blast.get(element)
+        if not element or blast_entry is None:
+            continue
+        rebuilds = entry.get('rebuilds') or 0
+        weighted_blast_us = blast_entry.get('weighted_duration_us') or 0
+        rows.append({
+            'element': element,
+            'rebuilds': rebuilds,
+            'weighted_blast_us': weighted_blast_us,
+            'expected_cost_us': rebuilds * weighted_blast_us,
+            'blast_count': blast_entry.get('downstream_count') or 0,
+        })
+    return sorted(rows, key=lambda r: -r['expected_cost_us'])
 
 
 def correlate(analysis: dict, native_report: dict, tasks=None, run_context=None,
@@ -1796,6 +1958,12 @@ def correlate(analysis: dict, native_report: dict, tasks=None, run_context=None,
         # `UX-259`'s rule, and the same `distribution()`, so the
         # arithmetic cannot drift from the store's or the graph's.
         **_scale_of(cache_logs, native_report),
+        # UX-682: absent, not `[]`, when Plane 3 kept no change-frequency
+        # log - `_scale_of`'s rule above, applied to the same payload.
+        **(
+            {"expected_rebuild_cost": expected_rebuild_cost(analysis, cache_logs)}
+            if (cache_logs or {}).get("change_frequency") else {}
+        ),
         "restructuring": restructuring,
         "granularity": granularity,
         "memory_envelope": memory_envelope,

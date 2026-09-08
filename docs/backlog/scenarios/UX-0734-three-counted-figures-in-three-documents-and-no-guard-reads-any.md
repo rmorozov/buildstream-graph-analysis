@@ -136,3 +136,5 @@ mutation, and the full file passed 39/39 again.
 No deviation from the brief: the styleguide sentence needed no edit
 (the twenty-hint word was already true, as the brief said); the other
 two documents' sentences were corrected to match the derived figures.
+
+**Deviation, found by a verifier in round 109.** The "Gap measured" block is a paraphrase, not terminal output: its `-k "AuditLedger or SpecsOwnRanges"` deselects the vocabulary class it reports `PASS` for. The real run at `6bfac7a6~1` is `2 failed, 37 deselected`. The three guards themselves reproduce every mutation, plus one more (`## I14`).

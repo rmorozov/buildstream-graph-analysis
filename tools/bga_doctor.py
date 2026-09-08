@@ -380,7 +380,7 @@ def check_scratch(project_dir: Optional[str] = None) -> list[dict]:
         probe = os.path.join(scratch, "probe")
         with open(probe, "w", encoding="utf-8") as handle:
             handle.write("#!/bin/sh\nexit 0\n")
-        os.chmod(probe, 0o755)
+        os.chmod(probe, 0o700)
         try:
             subprocess.run([probe], check=True, timeout=30,
                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

@@ -375,8 +375,15 @@ _UNITS = ("zero", "one", "two", "three", "four", "five", "six", "seven",
 
 
 def count_word(n):
-    """`37` -> `thirty-seven`. Built, not tabled: the guard that reads
-    the sentence back carries a table, and two tables drift."""
+    """`37` -> `thirty-seven`, `101` -> `one hundred and one`. Built, not
+    tabled: the guard that reads the sentence back carries a table, and
+    two tables drift. The hundredth row (`UX-794`) is where a table ended."""
+    if n >= 1000:
+        raise ValueError(f"count_word stops at 999, not {n}")
+    if n >= 100:
+        hundreds, rest = divmod(n, 100)
+        head = f"{_UNITS[hundreds]} hundred"
+        return f"{head} and {count_word(rest)}" if rest else head
     if n < 20:
         return _UNITS[n]
     tens, unit = divmod(n, 10)
@@ -391,7 +398,7 @@ def append_row(row, ledger=LEDGER):
             if line.startswith("| ")]
     lines.insert(body[-1] + 1, row)
     said = count_word(len(body) + 1)
-    text = re.sub(r"What the [a-z-]+ rows already say",
+    text = re.sub(r"What the [a-z -]+ rows already say",
                   f"What the {said} rows already say",
                   "\n".join(lines) + "\n")
     ledger.write_text(text, encoding="utf-8")

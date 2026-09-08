@@ -18,7 +18,8 @@ other way to match them against the suite's summary line above.
 import os
 import sys
 import time
-import xml.etree.ElementTree as ET
+
+import defusedxml.ElementTree as ET
 
 
 def failures(path):

@@ -63,6 +63,33 @@ def touched_modules(since):
         and (REPO / p).exists())
 
 
+def _verdict_lines(results_text):
+    """Yield `(mutant_id, verdict)` for every line `mutmut results` prints."""
+    for line in results_text.splitlines():
+        match = _RESULT_RE.match(line)
+        if match:
+            yield match.group(1), match.group(2)
+
+
+def classify(results_text):
+    """`mutmut results --all true`'s text -> counts by verdict.
+
+    `_CAUGHT` decides which verdicts count as caught; `"caught"` and
+    `"survivors"` are the two totals derived from it, alongside each
+    raw verdict's own count (`killed`, `survived`, `timeout`, `no
+    tests`, ...). `"no tests"` and every other non-`_CAUGHT` verdict is
+    a survivor, `run_module`'s existing rule.
+    """
+    counts = {}
+    for _, verdict in _verdict_lines(results_text):
+        counts[verdict] = counts.get(verdict, 0) + 1
+    total = sum(counts.values())
+    counts["caught"] = sum(n for verdict, n in counts.items()
+                            if verdict in _CAUGHT)
+    counts["survivors"] = total - counts["caught"]
+    return counts
+
+
 def guards_for(module):
     """The tests naming `module` - the census floor excluded (`UX-645`).
 
@@ -95,7 +122,7 @@ def _run(argv, **kw):
 
 
 def run_module(module, max_children):
-    """One module's mutation run. `{module, guards, survivors}`.
+    """One module's mutation run. `{module, guards, survivors, counts}`.
 
     `survivors`: `(mutant, status)` for every mutant no guard is known
     to have killed. The full mutant set comes from the *generated*
@@ -105,7 +132,7 @@ def run_module(module, max_children):
     never gives any of them a verdict. A mutant with no verdict is a
     mutant no guard is known to have caught, which is this task's
     question, so it counts as a survivor rather than vanishing from the
-    ledger.
+    ledger. `counts`: `classify`'s verdict totals for the same run.
     """
     guards = guards_for(module)
     if not guards:
@@ -128,15 +155,14 @@ def run_module(module, max_children):
         PYPROJECT.write_text(original, encoding="utf-8")
         _clean()
 
-    status = {}
-    for line in results.stdout.splitlines():
-        match = _RESULT_RE.match(line)
-        if match and match.group(1) in all_ids:
-            status[match.group(1)] = match.group(2)
+    counts = classify(results.stdout)
+    status = {mid: verdict for mid, verdict in _verdict_lines(results.stdout)
+              if mid in all_ids}
     survivors = [(mutant, status.get(mutant, "no verdict"))
                  for mutant in sorted(all_ids)
                  if status.get(mutant) not in _CAUGHT]
-    return {"module": module, "guards": guards, "survivors": survivors}
+    return {"module": module, "guards": guards, "survivors": survivors,
+            "counts": counts}
 
 
 _FUNC_RE = re.compile(r"^(.*)__mutmut_\d+$")

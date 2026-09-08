@@ -96,6 +96,10 @@ test-e2e:
 # Code linting (ruff, pyflakes rule set - see pyproject.toml's [tool.ruff])
 # UX-694: --check is the baselined families (S, C901, PLR0912, PLR0913,
 # PLR0915, SIM115) - zero-tolerance for a finding not in the baseline.
+# UX-698: the lockfile is the dev extra, resolved; CI diffs it.
+lock:
+	uv pip compile pyproject.toml --extra dev -o requirements.lock -q
+
 lint: lint-docs
 	ruff check bga/ tools/ tests/ .claude/hooks/
 	python3 tools/dev_baseline.py --check

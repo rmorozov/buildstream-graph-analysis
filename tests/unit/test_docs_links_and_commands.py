@@ -669,13 +669,20 @@ def test_the_table_status_matches_the_task_files():
 
     `UX-736`: a **third** copy, `docs/design/architecture.md`'s own
     history table, is checked the same way and folded into one report.
+
+    `UX-791`: the loop below only ever visits an id `_file_statuses()`
+    already knows, so a row for one it does not - no task file, no
+    index row - was never looked at. The tables' own rows are walked
+    too, and an id missing from `_file_statuses()` reds naming the
+    table it sits in.
     """
     tables = {
         "docs/backlog/scenarios/README.md or closed.md": _table_statuses(),
         "docs/design/architecture.md": _architecture_table_statuses(),
     }
+    file_statuses = _file_statuses()
     disagreements, pending = [], []
-    for number, (name, line) in sorted(_file_statuses().items()):
+    for number, (name, line) in sorted(file_statuses.items()):
         in_file = _status_marker(line or "")
         for table_name, rows in tables.items():
             if number not in rows:
@@ -697,6 +704,23 @@ def test_the_table_status_matches_the_task_files():
             disagreements.append(
                 f"UX-{number} ({table_name}): table says {in_table}, "
                 f"{name} says {in_file}"
+            )
+    # `UX-791`: absence, not disagreement - a row for an id with no task
+    # file at all. `closed.md` is out of scope: `dev_close_task.py
+    # --check` already owns that index (`topics()` calls `task_file()`
+    # on every closed row and raises on exactly this). `README.md`'s own
+    # rows are not covered by that and are read here, alongside
+    # architecture.md's.
+    readme_only = {number for number, files in _rows_by_file().items()
+                   if files == ["docs/backlog/scenarios/README.md"]}
+    orphan_tables = {
+        "docs/backlog/scenarios/README.md": readme_only,
+        "docs/design/architecture.md": set(tables["docs/design/architecture.md"]),
+    }
+    for table_name, numbers in orphan_tables.items():
+        for number in sorted(numbers - set(file_statuses)):
+            disagreements.append(
+                f"UX-{number} ({table_name}): a row with no task file"
             )
     if pending:
         print("\n".join(

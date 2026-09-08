@@ -16,6 +16,12 @@ run, not by what you promise — the Agent tool's `isolation: "worktree"`
 gives you a copy of the repository, and the orchestrating session
 merges it.
 
+**One environment, shared.** Every worktree runs the one Python the
+main checkout installed `bga` into. Never `pip install -e .` from a
+worktree - round 109's `verify-703` did, its worktree was removed,
+and every subprocess guard on the machine lost `bga` (8 red in the
+gate). `pip install <tool>` for a tool the run needs is fine.
+
 ## What you do not touch
 
 Four files are shared by every track and are the orchestrator's, once,

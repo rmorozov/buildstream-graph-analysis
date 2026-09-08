@@ -5,6 +5,7 @@ tree - move lines, add and fix findings, shrink - without touching the
 real `tests/quality_baseline.json`.
 """
 import json
+import os
 import pathlib
 import subprocess
 import sys
@@ -14,14 +15,21 @@ TOOL = REPO / "tools" / "dev_baseline.py"
 
 VIOLATION = ("import subprocess\n\n\n"
              "def f():\n"
+             "    cmd = []\n"
              "    subprocess.run(cmd, shell=True)\n")
 CLEAN = "def f():\n    return 1\n"
+# UX-697: pyright's own kind of finding - a type error basic mode reads
+# without any config, so this needs no fixture beyond the module itself.
+PYRIGHT_VIOLATION = 'def f() -> int:\n    return "x"\n'
+# A module-level `return` - a real error pyright reports with no `rule`
+# key at all; ruff's parser accepts the file, so nothing aborts.
+PYRIGHT_NO_RULE_VIOLATION = "return 1\n"
 
 
-def _run(root, baseline, *flags):
+def _run(root, baseline, *flags, env=None):
     cmd = [sys.executable, str(TOOL), "--root", str(root), "--paths", "pkg",
            "--baseline", str(baseline), *flags]
-    return subprocess.run(cmd, capture_output=True, text=True, check=False)
+    return subprocess.run(cmd, capture_output=True, text=True, check=False, env=env)
 
 
 def _write(path, text):
@@ -243,3 +251,59 @@ class TestUnparsableFileIsAnError:
         assert shrink.returncode == 2
         assert "m.py" in shrink.stdout
         assert baseline.read_text(encoding="utf-8") == before
+
+
+class TestPyrightEntersTheSameList:
+    def test_a_new_pyright_error_reds_check(self, tmp_path):
+        module = tmp_path / "pkg" / "m.py"
+        baseline = tmp_path / "baseline.json"
+        _write(module, CLEAN)
+        assert _run(tmp_path, baseline, "--write").returncode == 0
+        _write(module, PYRIGHT_VIOLATION)
+        check = _run(tmp_path, baseline, "--check")
+        assert check.returncode == 1, check.stdout
+        assert "new: pyright reportReturnType" in check.stdout
+
+    def test_a_broken_pyright_exits_2_and_writes_nothing(self, tmp_path):
+        module = tmp_path / "pkg" / "m.py"
+        baseline = tmp_path / "baseline.json"
+        _write(module, CLEAN)
+        assert _run(tmp_path, baseline, "--write").returncode == 0
+        before = baseline.read_text(encoding="utf-8")
+        fake_bin = tmp_path / "fakebin"
+        fake_pyright = fake_bin / "pyright"
+        _write(fake_pyright, "#!/bin/sh\nexit 3\n")
+        fake_pyright.chmod(0o755)
+        env = dict(os.environ)
+        env["PATH"] = str(fake_bin) + os.pathsep + env.get("PATH", "")
+        done = _run(tmp_path, baseline, "--write", env=env)
+        assert done.returncode == 2, done.stdout + done.stderr
+        assert baseline.read_text(encoding="utf-8") == before
+
+    def test_a_forced_pyright_finding_is_named_by_reason(self, tmp_path):
+        module = tmp_path / "pkg" / "m.py"
+        baseline = tmp_path / "baseline.json"
+        _write(module, CLEAN)
+        assert _run(tmp_path, baseline, "--write").returncode == 0
+        _git(tmp_path, "init", "-q")
+        _git(tmp_path, "-c", "user.email=t@example.com", "-c", "user.name=t",
+             "add", "-A")
+        _git(tmp_path, "-c", "user.email=t@example.com", "-c", "user.name=t",
+             "commit", "-q", "-m", "baseline")
+        _write(module, PYRIGHT_VIOLATION)
+        assert _run(tmp_path, baseline, "--write", "--force",
+                    "--reason", "UX-697").returncode == 0
+        check = _run(tmp_path, baseline, "--check")
+        assert check.returncode == 1, check.stdout
+        assert "authorised by UX-697, red until committed" in check.stdout
+        assert "pyright reportReturnType" in check.stdout
+
+    def test_a_rule_less_pyright_error_is_still_new(self, tmp_path):
+        module = tmp_path / "pkg" / "m.py"
+        baseline = tmp_path / "baseline.json"
+        _write(module, CLEAN)
+        assert _run(tmp_path, baseline, "--write").returncode == 0
+        _write(module, PYRIGHT_NO_RULE_VIOLATION)
+        check = _run(tmp_path, baseline, "--check")
+        assert check.returncode == 1, check.stdout
+        assert "new: pyright noRule" in check.stdout

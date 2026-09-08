@@ -35,9 +35,34 @@ def test_a_third_excursion_names_the_file(tmp_path):
 
 def test_a_filed_task_clears_it(tmp_path):
     (tmp_path / "UX-000-x.md").write_text(
-        "about tests/unit/test_x.py", encoding="utf-8")
+        "# UX-000: x\n\n**Flake:** tests/unit/test_x.py\n", encoding="utf-8")
     document = _ledger(*(["tests/unit/test_x.py"] * 3))
     assert census.unaccounted(document, scenarios=tmp_path) == []
+
+
+def test_a_longer_path_containing_the_name_does_not_clear_it(tmp_path):
+    """`UX-785`: a `**Flake:**` field names `tests/unit/old_test_x.py`,
+    a different file whose path merely contains `test_x.py` as a
+    substring - not the same file, and not a match."""
+    (tmp_path / "UX-000-x.md").write_text(
+        "# UX-000: x\n\n**Flake:** tests/unit/old_test_x.py\n",
+        encoding="utf-8")
+    document = _ledger(*(["test_x.py"] * 3))
+    assert census.unaccounted(document, scenarios=tmp_path) == [
+        ("test_x.py", 3)]
+
+
+def test_a_mention_in_prose_does_not_clear_it(tmp_path):
+    """`UX-785`: a task's header names the file only in a `**Flake:**`
+    field - being discussed in an unrelated closed task's prose is not
+    that, however specific the mention."""
+    (tmp_path / "UX-000-x.md").write_text(
+        "# UX-000: something else\n\n**Status:** closed\n\n"
+        "## Motivation\n\nthis broke tests/unit/test_x.py once.\n",
+        encoding="utf-8")
+    document = _ledger(*(["tests/unit/test_x.py"] * 3))
+    assert census.unaccounted(document, scenarios=tmp_path) == [
+        ("tests/unit/test_x.py", 3)]
 
 
 def test_a_declared_reason_clears_it_without_a_filed_task(tmp_path):

@@ -31,6 +31,20 @@ same function.
    and sees nothing once the track's commit is `HEAD`.
 4. Read the diff (`git diff main...HEAD`) against the Required Fix.
 
+**Retrospective** — a track already merged, read after the fact
+(`UX-793`): check out the track's close commit first (`git checkout
+<close sha>`), so `--base` diffs the track and not every round since;
+run the guard files the commits touched, not the touching sweep — the
+merge's `make test` already ran it, and nine sweeps at once on four
+cores never finished; `make lint` in its three pieces if the whole
+stalls. Round 109's readings are in `UX-793`.
+
+**One environment, shared.** Every worktree runs the one Python the
+main checkout installed `bga` into. Never `pip install -e .` from a
+worktree - round 109's `verify-703` did, its worktree was removed,
+and every subprocess guard on the machine lost `bga` (8 red in the
+gate). `pip install <tool>` for a tool the run needs is fine.
+
 ## What to report
 
 - **Does it do what was asked**, or something adjacent? A change that

@@ -4,6 +4,7 @@ A temporary package and a temporary reference file, so these mutate
 sizes without touching the real `tests/quality_reference.json`.
 """
 import json
+import os
 import pathlib
 import subprocess
 import sys
@@ -33,6 +34,17 @@ def _write(path, text):
 
 def _load(path):
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _fake_pylint(tmp_path, script):
+    """A `pylint` on `PATH` ahead of the real one, standing in for a
+    broken install."""
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir(exist_ok=True)
+    fake = bin_dir / "pylint"
+    fake.write_text(script, encoding="utf-8")
+    fake.chmod(0o755)
+    return bin_dir
 
 
 class TestTheThreeCells:
@@ -105,17 +117,24 @@ class TestTheRatchet:
 
 
 class TestAdoptRefusesToMoveACellUp:
-    def test_adopt_without_force_refuses_and_writes_nothing(self, tmp_path):
-        module = tmp_path / "pkg" / "m.py"
+    def test_adopt_without_force_banks_a_shrink_and_names_the_grow(self, tmp_path):
+        """`UX-787`: one file shrunk, another grown - the shrink is
+        written in the same run that refuses the grow, not held back
+        by it."""
+        shrinking = tmp_path / "pkg" / "m.py"
+        growing = tmp_path / "pkg" / "n.py"
         reference = tmp_path / "reference.json"
-        _write(module, SMALL)
+        _write(shrinking, "def f():\n" + BODY)
+        _write(growing, SMALL)
         assert _run(tmp_path, reference, "--adopt").returncode == 0
-        before = reference.read_bytes()
-        _write(module, "def f():\n" + BODY)
+        _write(shrinking, SMALL)
+        _write(growing, "def g():\n" + BODY)
         adopt = _run(tmp_path, reference, "--adopt")
         assert adopt.returncode == 1
-        assert "refused: pkg/m.py longest_function 2 -> 9" in adopt.stdout
-        assert reference.read_bytes() == before
+        assert "refused: pkg/n.py longest_function 2 -> 9" in adopt.stdout
+        rows = _load(reference)["files"]
+        assert rows["pkg/m.py"]["longest_function"] == 2
+        assert rows["pkg/n.py"]["longest_function"] == 2
 
     def test_adopt_with_force_moves_the_cell_up(self, tmp_path):
         module = tmp_path / "pkg" / "m.py"
@@ -138,3 +157,27 @@ class TestANewFileIsRecordedNotJudged:
         other = tmp_path / "pkg" / "o.py"
         _write(other, "def g():\n" + BODY)
         assert _run(tmp_path, reference, "--check").returncode == 0
+
+
+class TestABrokenPylintIsAFailureNotZeroDuplicates:
+    """`UX-788`: a swallowed pylint run must not read as a clean sweep."""
+
+    def test_a_nonzero_exit_with_no_json_raises(self, tmp_path, monkeypatch):
+        module = tmp_path / "pkg" / "m.py"
+        reference = tmp_path / "reference.json"
+        _write(module, SMALL)
+        bin_dir = _fake_pylint(tmp_path, "#!/bin/sh\nexit 32\n")
+        monkeypatch.setenv("PATH", f"{bin_dir}{os.pathsep}{os.environ['PATH']}")
+        result = _run(tmp_path, reference, "--adopt")
+        assert result.returncode == 2
+        assert "pylint exited 32" in result.stdout
+
+    def test_an_ok_exit_with_non_json_output_raises(self, tmp_path, monkeypatch):
+        module = tmp_path / "pkg" / "m.py"
+        reference = tmp_path / "reference.json"
+        _write(module, SMALL)
+        bin_dir = _fake_pylint(tmp_path, "#!/bin/sh\necho 'not json'\nexit 0\n")
+        monkeypatch.setenv("PATH", f"{bin_dir}{os.pathsep}{os.environ['PATH']}")
+        result = _run(tmp_path, reference, "--adopt")
+        assert result.returncode == 2
+        assert "pylint did not print JSON" in result.stdout

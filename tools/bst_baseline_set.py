@@ -208,7 +208,7 @@ def fetch_run_directory(remote: str, ref: dict, dest: str, cwd: Optional[str] = 
         with open(staging, 'wb') as handle:
             handle.write(archive.stdout)
         with tarfile.open(staging) as tar:
-            tar.extractall(dest)
+            _extract_within(tar, dest)
         os.remove(staging)
         run_dir = os.path.join(dest, 'run')
     elif 'capture.tar.gz' in entries:
@@ -222,7 +222,7 @@ def fetch_run_directory(remote: str, ref: dict, dest: str, cwd: Optional[str] = 
         with open(tarball, 'wb') as handle:
             handle.write(blob.stdout)
         with tarfile.open(tarball) as tar:
-            tar.extractall(dest)
+            _extract_within(tar, dest)
         os.remove(tarball)
         run_dir = _find_run_directory(dest)
     else:
@@ -233,6 +233,18 @@ def fetch_run_directory(remote: str, ref: dict, dest: str, cwd: Optional[str] = 
     if not run_dir or not os.path.isfile(os.path.join(run_dir, 'run-context.json')):
         raise RuntimeError(f"{ref['ref']} produced no usable run directory at {dest}")
     return {'ref': ref, 'run_dir': run_dir, 'context': context}
+
+
+def _extract_within(tar, dest):
+    """`extractall` over members that stay inside `dest` (bandit B202)."""
+    root = os.path.realpath(dest)
+    safe = []
+    for member in tar.getmembers():
+        target = os.path.realpath(os.path.join(root, member.name))
+        if target == root or target.startswith(root + os.sep):
+            safe.append(member)
+    for member in safe:
+        tar.extract(member, dest)
 
 
 def _find_run_directory(root: str) -> Optional[str]:

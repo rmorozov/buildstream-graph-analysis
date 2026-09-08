@@ -40,6 +40,8 @@ schema edit fails a test rather than a consumer.
 # set this round adds. No cycle: `findings` reaches only
 # `ingest.models` and `cache_effectiveness`, neither of which
 # imports this module.
+from typing import Optional
+
 from .findings import DIAGNOSES, READERS
 
 # UX-288: v2. Three fields were **removed** - `signals.critical_path`,
@@ -654,8 +656,9 @@ def _distribution(quantity: str, noun: str, description: str) -> dict:
 
 
 def _document(name: str, title: str, required: dict[str, str],
-              description: str, optional: dict[str, str] = None,
-              hints: dict[str, dict] = None,
+              description: str,
+              optional: Optional[dict[str, str]] = None,
+              hints: Optional[dict[str, dict]] = None,
               always_written: tuple[str, ...] = ()) -> dict:
     """A top-level object schema: `schema` plus the always-present keys.
 
@@ -1870,7 +1873,7 @@ _EVIDENCE_INLINE = {
 # door in another is the drift `UX-341` forbids under a new heading.
 # One name, one treatment, or neither.
 
-EVIDENCE_QUANTITIES = {
+EVIDENCE_QUANTITIES: dict[str, dict] = {
     key: ({QUANTITY: quantity, "description": sentence}
           | ({INLINE: _EVIDENCE_INLINE[key]} if key in _EVIDENCE_INLINE else {}))
     for key, (quantity, sentence) in _EVIDENCE_FIELDS.items()

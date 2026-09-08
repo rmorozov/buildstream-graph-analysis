@@ -65,4 +65,54 @@ second-count with no date and no machine beside it — the same shape
 
 ## Outcome
 
-_Not started._
+**Gap measured** (before the fix, this session):
+
+```console
+$ sed -n '295,296p' README.md
+make test-small           # the tier to run while you work: 21s, measured
+make test                 # the whole suite: 5m11s, measured
+```
+
+**Shape chosen:** a link, not a restated range, for **both** clocks
+(the verifier found `make test-small`'s figure was the same defect:
+`tests/tiers.py` holds no such figure, `UX-503` is the CI-reference
+guard, and the guide's own `make test-small` readings, 18.2s and
+20.8s, carry the identical "moves more than 2x with load" caveat).
+Restating a range in the README would be a second copy of the same
+fact the guide already owns and drift the way the two counts `UX-236`
+itself fixed did.
+
+**Close measured** (after the fix):
+
+```console
+$ sed -n '295,297p' README.md
+make test-small           # the tier to run while you work - wall clock is a property of the machine, below
+make test                 # the whole suite - wall clock is a property of the machine, below
+make lint                 # ruff + markdown (`make dev-run` prints a real report)
+```
+
+Below the fence, one paragraph replaces both old bare figures, linking
+`docs/contributing/fixing-guide.md`, anchor
+`3-definition-of-done--mandatory-verification`.
+
+```console
+$ python3 -m pytest tests/unit/test_docs_links_and_commands.py -q
+58 passed in 16.88s-27.14s (three runs)
+```
+
+`UX-236` is annotated (previous commit) naming what superseded its
+"reader is deciding on" explanation.
+
+**Mutation table:**
+
+| mutation | what it reddened | count |
+|---|---|---|
+| restored `make test  # ...5m11s, measured` | `test_no_readme_line_states_a_suite_wall_clock_beside_make_test` | 1 failed → reverted 1 passed |
+| added `make test-tiers  # 5m30s, measured` in the bash fence (proves `(?!-)` no longer exempts a `-<suffix>` target) | same test | 1 failed (2 offenders: same-line + next-line window) → reverted 1 passed |
+| added `# (roughly 5 minutes on a quiet box)` on the line directly below `make test` | same test | 1 failed → reverted 1 passed |
+| renumbered the guide's `## 3. Definition of Done` to `## 4.` | `test_the_readmes_link_into_the_guide_names_a_heading_that_exists` | 1 failed (anchor `3-definition-of-done--mandatory-verification` matches no slug) → reverted 1 passed |
+
+All four mutations applied to scratch copies (`README.md`,
+`docs/contributing/fixing-guide.md`) and reverted from those copies,
+never `git checkout`; `git diff --stat` after each revert showed no
+residual change to `fixing-guide.md`.

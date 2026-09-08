@@ -174,6 +174,8 @@ pairing for every merged row from round 103 on.
 | 111 | verifier | sonnet | verify `UX-803` | 66k | 50 | 7.7 m | PASS; the unreachable-base case held by a test, not narrated | the mutation description was ambiguous between an assignment and a block |
 | 111 | implementer | sonnet | `UX-782` the register derives its rounds from the documents (judgement) | 474k | 228 | 65 m | merged 7b62650e; two decisions written in, one hold on the frozen tuple fixed | backticked paths in the Required Fix flipped the shape derivation; a dynamic skip tripped the skip budget |
 | 111 | verifier | sonnet | verify `UX-782` | 52k | 50 | 4.9 m | HOLD: GIT_ONLY_ROUNDS unguarded — a round-26.md left --check green; fixed before merge | make lint stalls on proxy egress; pieces run instead |
+| 111 | implementer | sonnet | `UX-797` the spread clauses read a measured tolerance and the CPU readings (bounded) | 230k | 77 | 56.9 m | merged d2c9ce66; the wall bound derived from twenty runs after one hold | make lint killed twice by memory pressure; the example needed staging |
+| 111 | verifier | sonnet | verify `UX-797` | 36k | 29 | 9.2 m | HOLD: the CPU spread implied by the per-element bound, the wall half unguarded; fixed before merge | the redundancy took algebra, not a run, to see |
 
 Round 101's four tracks are **not** here: this session could not
 identify their transcripts with certainty after a context rebuild, and
@@ -186,7 +188,7 @@ committed cleanly once told to run in the foreground. Three of the five
 left a derived figure or a §6 context-map row behind - the same class
 the round itself was about, arriving in the tracks' own work.
 
-What the one hundred and fifty-seven rows already say: a researcher that reads a document
+What the one hundred and fifty-nine rows already say: a researcher that reads a document
 whole costs 100-180k; a walker that drives every control costs 336k;
 the two cuts cost a re-run each. The `walk` and `design-review`
 skills fix the report shape so the next rows are smaller, and the

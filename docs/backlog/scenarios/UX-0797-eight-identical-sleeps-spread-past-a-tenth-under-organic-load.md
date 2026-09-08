@@ -1,6 +1,6 @@
 # UX-797: eight identical sleeps spread past a tenth, under organic load
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-741 (the two clauses beside it, re-expressed), UX-110 | **Found by:** round 110, `UX-741`'s verifier, 20 bare runs of the file | **Serves:** the gate that reds on a host reading nothing in the diff touched | **Topic:** guards | **Area:** tools | **Shape:** bounded
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-741 (the two clauses beside it, re-expressed), UX-110 | **Found by:** round 110, `UX-741`'s verifier, 20 bare runs of the file | **Serves:** the gate that reds on a host reading nothing in the diff touched | **Topic:** guards | **Area:** tools | **Shape:** bounded
 
 ## Motivation
 
@@ -96,3 +96,5 @@ not identical, and no measured tolerance can tell the two apart.
 
 **Acceptance Test, pasted:** 20 bare runs of the file, organic load
 (peaked 23.38, no hogs needed — box was not quiet): 20 × `2 passed`.
+
+**Deviation.** The first commit dropped the wall-clock spread for a CPU spread the per-element bound already implied (the verifier's hold: a sleeper stalled to 5 s passed). The second commit (d2c9ce66) keeps both: the wall bound is `WALL_SPREAD_S = 0.13`, twice the maximum of twenty spreads read at load 9–15 (0.0078–0.0627, p95 0.048) — the population the Required Fix asked for, its rule stated beside the constant. What none of the three clauses can see — a stall inside 0.13 s — is stated. The filed red (past 0.1 once in twenty at load 7–9) sits above this population's maximum; a later red re-derives the rule from a larger one. Two commits, one verifier.

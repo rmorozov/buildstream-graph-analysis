@@ -1862,17 +1862,17 @@ def _height_below(node, successors, memo, path) -> int:
     return best
 
 
-def _height_vs_weight_advice(height_rank: int, weight_rank: int) -> Optional[str]:
+def _height_vs_weight_advice(height_rank: int, weight_rank: int) -> str:
     """UX-684's two advices, from one element's rank in its dominant
     peers' height order against its rank in their weight order - never
-    both, since a chain that is tall is a different fix from an element
-    that is heavy.
+    `None`: a tie (including the element that leads both rankings)
+    reads as `isolate`, the session's follow-up judgement, since
+    `weight` is the element's own number and "split" claims a shape
+    that a tie has not actually shown.
     """
     if height_rank < weight_rank:
         return "split the tall chain"
-    if weight_rank < height_rank:
-        return "isolate the heavy element"
-    return None
+    return "isolate the heavy element"
 
 
 def _dominant_elements(rows: list[dict], blast: dict, dependencies) -> list[dict]:
@@ -1916,6 +1916,11 @@ def _dominant_elements(rows: list[dict], blast: dict, dependencies) -> list[dict
 
 
 def _cached_shape_sentence(cheap_share, cheap_changes, total_changes, dominant) -> str:
+    """Height (elements) and weight (seconds) are stated in every case
+    - `UX-684`'s "stated separately" - and the tie case adds that the
+    dominant element is also the tallest, rather than leaving a reader
+    to notice the two ranks agree.
+    """
     lead = (f"{cheap_changes} of {total_changes} recorded changes "
             f"({cheap_share:.0%}) rebuilt at or under the graph's own "
             f"median weighted blast")
@@ -1924,9 +1929,11 @@ def _cached_shape_sentence(cheap_share, cheap_changes, total_changes, dominant) 
     top = dominant[0]
     tag = (" (an assembling kind - it adds height for free)"
            if top['assembling_kind'] else "")
-    advice = f"; {top['advice']}" if top['advice'] else ""
+    tallest = ", also the tallest" if top['height_rank'] == 1 == top['weight_rank'] else ""
     return (f"{lead}. {top['element']} dominates the expected cost at "
-            f"{top['share_of_expected_cost']:.0%}{tag}{advice}.")
+            f"{top['share_of_expected_cost']:.0%}{tag}{tallest}: "
+            f"{top['height']} element(s) below it, "
+            f"{top['weight_us'] / 1e6:.1f}s of its own weight; {top['advice']}.")
 
 
 def cached_shape(analysis: dict, cache_logs: Optional[dict],

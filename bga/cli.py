@@ -343,6 +343,126 @@ def _capacity_recommendation(analyzer, result, context) -> dict:
     )
 
 
+#: UX-680: compiler/linker binaries a compiler-level RE service
+#: (recc/reclient/goma) would move out of the sandbox - Plane 2's own
+#: `by_binary`/`binary_cost` vocabulary, not a new taxonomy.
+_COMPILER_LINKER_BINARIES = frozenset({'cc1plus', 'cc1', 'ld', 'lld', 'gold'})
+
+
+def _unbounded_builders_projection(analyzer) -> dict:
+    """UX-680: what REAPI buys - it moves whole sandboxes to workers, so
+    it removes the builder cap; the agent still pays its own staging and
+    wait per element, and workers are assumed never to queue.
+
+    Two points of the same `capacity_sweep` `bga sweep` already runs to
+    by default (`--max-capacity` defaults to the task count - Part 19's
+    own "unlimited", the point past which no more work can start): the
+    configured PROCESS capacity, and the task count. Not the full range
+    - `_capacity_recommendation` above bounds sweep cost the same way,
+    for the same reason: a full one-replay-per-task sweep is not needed
+    to answer a two-point question.
+    """
+    from bga.floors.capacity import compute_default_capacities
+
+    scheduler = getattr(analyzer, 'replay_scheduler', None)
+    if scheduler is None or not scheduler.tasks:
+        return {}
+    current = compute_default_capacities(scheduler.run_context).get('PROCESS') or 1
+    unbounded = len(scheduler.tasks)
+    if unbounded <= current:
+        return {}
+    try:
+        sweep = scheduler.capacity_sweep(
+            resource='PROCESS', min_capacity=current, max_capacity=unbounded,
+            step=unbounded - current,
+        )
+    except (AttributeError, ValueError) as exc:
+        logger.info("UX-680: no capacity sweep available (%s)", exc)
+        return {}
+    if not sweep.sweeps:
+        return {}
+    return {
+        # UX-680/UX-351: microseconds, like every other duration this
+        # report publishes - `bga:quantity: duration_us` is the payload's
+        # one unit for one, and a `_s` key beside `_us` neighbours is the
+        # label UX-351 renamed `plane2.wall_span_s` to avoid.
+        'wall_us_before': sweep.sweeps[0]['makespan_us'],
+        'wall_us_after': sweep.sweeps[-1]['makespan_us'],
+        'builders_before': current,
+        'builders_after': unbounded,
+        'assumption': (
+            "the agent-side staging and wait per element are unchanged, "
+            "and remote workers never queue"
+        ),
+    }
+
+
+def _compiler_offload_projection(result) -> dict:
+    """UX-680: what a compiler-level RE service buys - the compiler and
+    linker CPU seconds Plane 2 measured on the elements this run's own
+    critical path passes through, off the path. Absent, not zero,
+    without a Plane 2 `binary_cost` for this run - `UX-9` stands: the
+    tool sees nothing about a *remote* build, only about this one.
+
+    Clamped **per element**, not once over the whole path: a compile
+    cannot remove more wall-clock than its own element had, however
+    much CPU it drew doing it (concurrent compiles inside one element's
+    `-jN` build can draw more CPU-seconds than that element's own wall,
+    the reason a global clamp on this fixture read 0.0s left - a
+    compile borrowing another element's slack that was never its own
+    to spend). Summed after, so one over-subscribed element does not
+    inflate what a different element's compile is worth.
+    """
+    plane2_report = getattr(result, 'plane2_report', None) or {}
+    binary_cost = plane2_report.get('binary_cost') or {}
+    if not binary_cost:
+        return {}
+    path = (result.signals or {}).get('critical_path_detail') or []
+    path_us = sum(d.get('duration_us') or 0 for d in path)
+    if not path_us:
+        return {}
+    remaining_us = 0
+    found = False
+    for entry in path:
+        duration_us = entry.get('duration_us') or 0
+        compiler_us = 0
+        cost = binary_cost.get(entry.get('element_uid')) or {}
+        for row in cost.get('by_cpu') or []:
+            if row.get('binary') in _COMPILER_LINKER_BINARIES:
+                compiler_us += row.get('cpu_us') or 0
+                found = True
+        remaining_us += max(0, duration_us - compiler_us)
+    if not found:
+        return {}
+    return {
+        'wall_us_before': path_us,
+        'wall_us_after': remaining_us,
+        'assumption': (
+            "a remote compile costs zero wall-clock on the agent, "
+            "clamped per element - a compile cannot remove more than "
+            "its own element's wall - so this is an upper bound on "
+            "the gain"
+        ),
+    }
+
+
+def _attach_remote_execution_whatif(analyzer, result) -> None:
+    """UX-680: two remote-execution mechanisms, priced from what this
+    run already measured, held on the result the way `plane2_report`
+    is (`UX-215`) so `bga/findings.py` can read it without `analyzer` in
+    hand. Never summed - `_remote_execution_findings` is where they meet
+    and say why not.
+    """
+    whatif: dict = {}
+    unbounded = _unbounded_builders_projection(analyzer)
+    if unbounded:
+        whatif['unbounded_builders'] = unbounded
+    offload = _compiler_offload_projection(result)
+    if offload:
+        whatif['compiler_offload'] = offload
+    result.remote_execution_whatif = whatif
+
+
 def analyzed(args: argparse.Namespace, section: Optional[str] = None):
     """The analysis pipeline, once, without rendering it.
 
@@ -360,6 +480,9 @@ def analyzed(args: argparse.Namespace, section: Optional[str] = None):
     result = analyzer.analyze(run_dir, section=section)
     _attach_plane2_capacity(args, analyzer, result)
     _attach_resource_blast(run_dir, analyzer, result)
+    # UX-680: after Plane 2 is attached, so the compiler-offload half
+    # can read `result.plane2_report` when there is one.
+    _attach_remote_execution_whatif(analyzer, result)
     return result
 
 

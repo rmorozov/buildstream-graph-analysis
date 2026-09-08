@@ -1951,6 +1951,37 @@ EVIDENCE_QUANTITIES.update({
             QUANTITY: "duration_us",
             "description": "This element's duration, off the chain today."},
     }}},
+    # `UX-680`: the two `remote-execution-whatif` projections. A nested
+    # object each, not a row - there is exactly one of each per finding
+    # - so `properties` rather than `items`, the shape `evidence` itself
+    # already uses one level up.
+    "unbounded_builders": {"properties": {
+        "wall_us_before": {
+            QUANTITY: "duration_us",
+            "description": "The sweep's own makespan at the configured "
+                           "PROCESS capacity."},
+        "wall_us_after": {
+            QUANTITY: "duration_us",
+            "description": "The same sweep's makespan at the task count - "
+                           "the chain floor no more builders can beat."},
+        "builders_before": {
+            QUANTITY: "count",
+            "description": "The configured PROCESS capacity."},
+        "builders_after": {
+            QUANTITY: "count",
+            "description": "The task count - past this, no more work can "
+                           "start whatever the capacity."},
+    }},
+    "compiler_offload": {"properties": {
+        "wall_us_before": {
+            QUANTITY: "duration_us",
+            "description": "The critical path's own duration."},
+        "wall_us_after": {
+            QUANTITY: "duration_us",
+            "description": "The same path with its compiler/linker CPU "
+                           "seconds removed - an upper bound, not a "
+                           "measurement (`UX-680`'s assumption)."},
+    }},
 })
 
 

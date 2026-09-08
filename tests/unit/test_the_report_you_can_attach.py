@@ -856,7 +856,13 @@ COMMITTED_EXPORTS = [
     # re-read it since. The rail's preset entries and the jump box now
     # write the anchor they land on; +704 B, all source, in
     # `nav.js`/`app.js`. 456,000 leaves 2,503 B, the same order again.
-    ("golden", GOLDEN, 456_000),                       #  453,497 B
+    # `UX-680` moved this one by ~1,700 B, all **contract**: the new
+    # `remote-execution-whatif` finding's schema (`EVIDENCE_QUANTITIES`
+    # entries and its `provenance._CLAIMS` rule) travels with every
+    # export whether or not a run has the numbers, and golden's own
+    # builder-cap-only instance adds its own evidence and provenance
+    # record too. 458,000 leaves headroom of the same order.
+    ("golden", GOLDEN, 458_000),                       #  456,181 B
     # `UX-297` moved this one by 385 B before that: the two-plane run
     # publishes `plane2_coverage.source`, which says which shape of
     # Plane 2 report served its numbers and what that costs to open. A
@@ -982,7 +988,14 @@ COMMITTED_EXPORTS = [
     # The two landed in the same round and the figure below is the
     # merged tree's, measured once rather than added up:
     # 510,000 leaves 4,715 B, the same order of headroom above.
-    ("macro_micro", MACRO_MICRO, 510_000),             #  505,285 B
+    # `UX-680` moved this one by the same contract as `golden`'s note
+    # above, plus this run's own finding: both halves fire on
+    # `macro_micro` (it carries Plane 2's `binary_cost`), so it gains
+    # the full `unbounded_builders`/`compiler_offload` evidence and its
+    # `remote-execution-whatif` provenance record too. The session's
+    # per-element correction lengthened the `assumption` sentence
+    # `compiler_offload` carries by a further ~1,300 B.
+    ("macro_micro", MACRO_MICRO, 515_000),             #  513,054 B
 ]
 
 

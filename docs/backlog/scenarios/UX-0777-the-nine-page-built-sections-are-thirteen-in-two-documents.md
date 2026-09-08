@@ -88,37 +88,44 @@ elementAnchor(uid))`, has no literal string after the comma, so
 `forty-eight` is a dated measurement (round 39, `UX-286`) of a
 specific synthetic-run DOM, not a static population; re-deriving it
 needs a browser render, which `test_the_report_has_chapters.py`'s own
-docstring carries unguarded too. Chosen: derive the page-built count
+docstring carries unguarded too. The verifier's DOM census confirms
+the population, not just the figure: macro_micro's rendered page
+carries 68 `data-section`s (published + page-built), the wrong count
+for "page-built" — `_sites()`'s 14, over the three built-in modules
+alone, is what the sentence names. Chosen: derive the page-built count
 from `_sites()`; leave `forty-eight` as the round-39 figure it already
-is, made explicit in `chapters.js` ("round 39's measurement, above").
+is, its round and id now stated beside it in `chapters.js`.
 
 ### The close
 
-Both documents now state `fourteen`, and the fraction moved with it
-(`a fifth` → `over a quarter`, since 14/48 ≈ 29%):
+Both documents state `fourteen`. `chapters.js` no longer types a
+fraction beside it (`over a quarter` was a figure the guard cannot
+see, in the shape this task was filed against) — the dated `forty-eight`
+now carries its round and id inline, one line: `` (`UX-286`, round 39) ``.
+The word itself is built, not tabled: `dev_track_cost.count_word`
+(`tools/dev_track_cost.py`, imported the way
+`test_a_counted_figure_is_derived.py` does), so a count past a fixed
+dict's range still reddens legibly rather than raising `KeyError`.
 
 ```console
-$ grep -n "Fourteen of the" bga/viewer/chapters.js
+$ grep -n "Fourteen of the\|forty-eight sections on" bga/viewer/chapters.js
 31: * **Why the table is here and not in the schema.** Fourteen of the
-$ grep -n "fourteen of the forty-eight" docs/design/architecture.md
-796:  viewer rather than the schema because fourteen of the forty-eight
+32: * forty-eight sections on the synthetic run (`UX-286`, round 39) are
 $ python3 -m pytest tests/unit/test_a_reader_role_demotes.py -q
-21 passed in 2.63s
+21 passed in 2.84s
+$ make lint
+clean: 568 finding(s) match tests/quality_baseline.json; 281/1/2/1 forced
+(UX-697/UX-744/UX-762/UX-781)
 ```
 
 The guard is two clauses in `TestThePageBuiltCountIsDerivedInBothDocuments`,
 beside the existing count at `test_a_reader_role_demotes.py:353` (not
 `test_the_process_documents_derive_their_figures.py` — its population
-is `.claude/**.md` and `docs/contributing/*.md`, and neither
-`chapters.js` nor `architecture.md` is in it), reusing `_sites()`
-rather than a second population.
-
-`architecture.md`'s prose edit is substantive (`test_the_verification_log_is_true.py`'s
-`only_the_count_moved` exclusion does not cover it), so it re-anchors
-the document's own Verification Log in the same commit — a new
-`Updated 2026-09-08 (after UX-777)` entry, re-grounded against
-`bga.contracts`/`bga/schemas.py` the same way the entry it displaces
-was. `python3 -m pytest tests/unit/test_the_verification_log_is_true.py -q`:
+is `.claude/**.md` and `docs/contributing/*.md`), reusing `_sites()`
+rather than a second population. `architecture.md`'s prose edit is
+substantive (`only_the_count_moved` does not excuse it), so it
+re-anchors the document's Verification Log in the same commit — a new
+`Updated 2026-09-08 (after UX-777)` entry. `test_the_verification_log_is_true.py`:
 31 passed.
 
 ### Mutations, red then reverted
@@ -126,7 +133,8 @@ was. `python3 -m pytest tests/unit/test_the_verification_log_is_true.py -q`:
 | # | mutation | reddened |
 |---|---|---|
 | M1 | `chapters.js`: `Fourteen` → `Fifteen`, population unchanged | 1 (chapters.js clause only) |
-| M2 | `views.js`: `renderBandUnavailable`'s `data-section` site removed | 2 (both documents' clauses, together — the Acceptance Test's own case) |
+| M2 | `views.js`: `renderBandUnavailable`'s `data-section` site removed | 2 (both documents' clauses, together) |
+| M3 | `views.js`: 5 stub sites appended (14 → 19, past the old dict's 9–18 range) | 2, message names `'nineteen'` in both — `count_word` built it, no `KeyError` |
 
 Restored from the scratchpad copy each time; `test_a_reader_role_demotes.py`
 green (21 passed) after each revert.

@@ -39,7 +39,9 @@ import pytest
 REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 sys.path.insert(0, str(REPO / "tests"))
+sys.path.insert(0, str(REPO / "tools"))
 
+import dev_track_cost
 import pages
 from browser import NO_BROWSER, Browser, find_chrome
 
@@ -384,9 +386,9 @@ class TestEveryPageBuiltSectionDecidesItsReader:
 
 #: UX-777: `_sites()` above is the population two documents restate as
 #: a word - `UX-650` fixed the code and left the sentence at nine.
-_COUNT_WORDS = {9: "nine", 10: "ten", 11: "eleven", 12: "twelve",
-                13: "thirteen", 14: "fourteen", 15: "fifteen",
-                16: "sixteen", 17: "seventeen", 18: "eighteen"}
+#: `count_word` is built, not tabled (`UX-752`), so a count past what a
+#: fixed dict would have carried still reddens with a legible word
+#: rather than a `KeyError`.
 CHAPTERS_JS = REPO / "bga/viewer/chapters.js"
 ARCHITECTURE = REPO / "docs/design/architecture.md"
 
@@ -398,7 +400,7 @@ class TestThePageBuiltCountIsDerivedInBothDocuments:
     clause here re-derives."""
 
     def test_the_chapters_docstring_states_it(self):
-        word = _COUNT_WORDS[len(_sites())].capitalize()
+        word = dev_track_cost.count_word(len(_sites())).capitalize()
         text = CHAPTERS_JS.read_text(encoding="utf-8")
         assert f"{word} of the\n * forty-eight sections" in text, (
             f"bga/viewer/chapters.js's docstring does not state "
@@ -406,7 +408,7 @@ class TestThePageBuiltCountIsDerivedInBothDocuments:
             f"construction sites, `_sites()`)")
 
     def test_the_architecture_document_states_it(self):
-        word = _COUNT_WORDS[len(_sites())].lower()
+        word = dev_track_cost.count_word(len(_sites())).lower()
         text = " ".join(ARCHITECTURE.read_text(encoding="utf-8").split())
         assert f"because {word} of the forty-eight sections" in text, (
             f"docs/design/architecture.md does not state {word!r} "

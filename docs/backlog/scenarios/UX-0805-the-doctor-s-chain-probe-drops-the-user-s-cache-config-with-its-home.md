@@ -59,3 +59,52 @@ journey is `bga doctor`'s whole-chain probe, `chain-build` its step.
 `XDG_CONFIG_HOME` unset (the ambient config carried); mutation: the copy
 removed — the two config tests red, and the chain test red on this box
 with `Cache too full` in its stderr.
+
+## Outcome
+
+**The gap measured.** Runtimes staged (`examples/stage_runtimes.sh`,
+busybox present), `XDG_CONFIG_HOME` unset, ambient
+`~/.config/buildstream.conf` present (`quota: 3G`,
+`reserved-disk-space: 500M`, untouched):
+
+```console
+$ env -u XDG_CONFIG_HOME PYTEST_XDIST= python3 -m pytest \
+    tests/unit/test_doctor.py -q -k TheWholeChainProbe
+tests/unit/test_doctor.py ....FF
+2 failed, 4 passed, 35 deselected in 2.77s
+E   AssertionError: ['chain-shim-exec', 'chain-build']
+Cache too full
+```
+
+Exactly the row's claim: the throwaway `HOME` (`_isolated_home`) never
+saw the ambient config, so `bst` fell back to its 5%-of-total reserve.
+
+**The close measured.** `_isolated_home` now copies `buildstream.conf`
+and `buildstream2.conf` from the real config dir into `<home>/.config`
+unless `XDG_CONFIG_HOME` is already set; `chain-build`'s FAIL remedy
+gains `_chain_build_remedy`, appending the reserve-arithmetic hint only
+when the failure's tail carries `Cache too full`:
+
+```console
+$ env -u XDG_CONFIG_HOME PYTEST_XDIST= python3 -m pytest \
+    tests/unit/test_doctor.py -q -k TheWholeChainProbe
+tests/unit/test_doctor.py .........
+9 passed, 35 deselected in 5.19s
+```
+
+**Mutation table**, each reverted from a scratch copy of the file, not
+`git checkout --`:
+
+| mutation | reddened | count |
+|---|---|---|
+| the copy call replaced with `pass` | `test_the_users_config_is_copied_into_the_throwaway_home` | 1 failed, 2 passed |
+| `if not os.environ.get("XDG_CONFIG_HOME")` replaced with `if True` | `test_xdg_config_home_is_left_alone` (ambient `~/.config/buildstream.conf` copied in despite `XDG_CONFIG_HOME` being set) | 1 failed, 2 passed |
+| `_chain_build_remedy`'s `Cache too full` branch replaced with `if False` | `test_the_hint_names_the_reserve_and_its_absolute_fix` | 1 failed |
+
+All three reverted from the pre-mutation copy; the full
+`TestTheWholeChainProbe` class returned to `9 passed` after each.
+`make test-touching`: `42 file(s) selected (31 census + 11 naming the
+change) · 1591 passed, 30 skipped in 69.80s`. `python3
+tools/dev_sizes.py --adopt --force` moved one cell:
+`tools/bga_doctor.py` `file_lines` 943 → 982 in
+`tests/quality_reference.json`.

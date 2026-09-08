@@ -724,6 +724,28 @@ def _find_stageable_runtime() -> Optional[str]:
     return None
 
 
+_CHAIN_BUILD_REMEDY = (
+    "the probe project is one `manual` element; a failure here "
+    "is BuildStream or the sandbox, not bga")
+
+_CACHE_TOO_FULL_HINT = (
+    "'Cache too full' with no config carried in: bst's "
+    "`reserved-disk-space` defaults to 5% of the volume's *total* size, "
+    "not its free space, so a near-full disk can meet the reserve alone. "
+    "An absolute value sidesteps the percentage-of-total arithmetic - "
+    "`reserved-disk-space: 500M` under `cache:` in "
+    "~/.config/buildstream.conf, the way UX-755 fixed it for production "
+    "captures.")
+
+
+def _chain_build_remedy(detail: list[str]) -> str:
+    """`chain-build`'s remedy, with `UX-805`'s hint appended when the
+    failure is the disk-reserve default rather than the sandbox."""
+    if any("Cache too full" in line for line in detail):
+        return f"{_CHAIN_BUILD_REMEDY}. {_CACHE_TOO_FULL_HINT}"
+    return _CHAIN_BUILD_REMEDY
+
+
 def check_capture_chain(project_dir: Optional[str] = None) -> list[dict]:
     """UX-149: run the whole chain on a canned workload.
 
@@ -793,12 +815,12 @@ def check_capture_chain(project_dir: Optional[str] = None) -> list[dict]:
         # 2. did bst launch a sandbox?
         tasks = count_build_tasks(plane1) or 0
         if code != 0 and tasks == 0:
+            detail = _tail(plane1)
             findings.append(_check(
                 "chain-build", FAIL,
                 f"the probe build failed (exit {code}) before running any command",
-                remedy="the probe project is one `manual` element; a failure here "
-                       "is BuildStream or the sandbox, not bga",
-                detail=_tail(plane1)))
+                remedy=_chain_build_remedy(detail),
+                detail=detail))
             return findings
         findings.append(_check("chain-build", OK,
                                f"bst ran {tasks} sandboxed task(s)"))
@@ -878,6 +900,15 @@ def _isolated_home(home: str) -> dict:
     That is `UX-84` exactly, which `tests/unit/_bst_env.py` was written
     for - and this hit it again, in production code, the first time it
     ran. Carried across explicitly rather than rediscovered a third time.
+
+    `UX-805`: a throwaway `HOME` also carries no `buildstream.conf`, so
+    `bst` falls back to its 5%-of-volume-total `reserved-disk-space`
+    default, which a near-full disk can meet before any build runs. The
+    user's own config already avoids that (`UX-755`), so it is carried
+    in too: `XDG_CONFIG_HOME`, if set, is left alone - `bst` reads it
+    whatever `HOME` is; otherwise whichever of `buildstream.conf` and
+    `buildstream2.conf` exist under the real `HOME`'s config dir are
+    copied into the throwaway one.
     """
     import site
     import sys
@@ -891,6 +922,14 @@ def _isolated_home(home: str) -> dict:
         existing = os.environ.get("PYTHONPATH")
         env["PYTHONPATH"] = (f"{user_site}{os.pathsep}{existing}"
                              if existing else user_site)
+    if not os.environ.get("XDG_CONFIG_HOME"):
+        real_config = os.path.expanduser("~/.config")
+        for name in ("buildstream.conf", "buildstream2.conf"):
+            source = os.path.join(real_config, name)
+            if os.path.isfile(source):
+                target_dir = os.path.join(home, ".config")
+                os.makedirs(target_dir, exist_ok=True)
+                shutil.copy(source, os.path.join(target_dir, name))
     return env
 
 

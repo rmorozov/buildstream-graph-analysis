@@ -211,6 +211,7 @@ appended to instead of superseded:
 | [`audits/walk-seed-2.md`](audits/walk-seed-2.md) | `UX-685`'s second seeded walk — the empty-population class, hook-only Plane 2, the static export |
 | [`audits/agent-runs.md`](audits/agent-runs.md) | what each subagent run cost — tokens, tool calls, wall clock — and its own friction line, one row per run, so a model and a report shape are chosen from numbers (`UX-666`) |
 | [`audits/mutation.md`](audits/mutation.md) | the weekly mutation run's survivors — a mutant the touched modules' own guards did not kill, one dated section per run. A survivor is a filing, not a failure (`UX-703`) |
+| [`audits/round-register.md`](audits/round-register.md) | which rounds happened and when, derived from the commits naming one and the ledger's round column — a round without a document yet is never in it (`UX-744`) |
 
 The rounds themselves:
 
@@ -268,9 +269,16 @@ The rounds themselves:
 [93](audits/round-93.md) ·
 [94](audits/round-94.md) ·
 [95](audits/round-95.md) ·
+[99](audits/round-99.md) ·
+[100](audits/round-100.md) ·
+[101](audits/round-101.md) ·
+[102](audits/round-102.md) ·
 [103](audits/round-103.md) ·
 [104](audits/round-104.md) ·
 [105](audits/round-105.md) ·
+[106](audits/round-106.md) ·
+[107](audits/round-107.md) ·
+[108](audits/round-108.md) ·
 [the guard census of round 64](audits/guard-census-round-64.md)
 
 ## Backlog

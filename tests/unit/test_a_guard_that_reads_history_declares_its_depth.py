@@ -234,6 +234,86 @@ class TestEveryHistoryReadingGuardDeclaresItsDepth:
             "ci.yml's checkout does not ask for the whole history, so every "
             "clause above declines there and the sweep guards nothing")
 
+    def test_every_job_that_runs_the_suite_asks_for_it(self):
+        """`UX-784`: the clause above reads the file, and a workflow has
+        jobs. `bst-tests` runs the whole `make test` on a default-depth
+        checkout, so the register guards - which refuse a cut history
+        rather than deriving from half of one - reddened there and
+        nowhere else. One `fetch-depth: 0` anywhere satisfied the
+        sentence above while the job that needed it had none."""
+        import yaml
+        spec = yaml.safe_load(
+            (REPO / ".github/workflows/ci.yml").read_text(encoding="utf-8"))
+        short = {}
+        for name, job in (spec.get("jobs") or {}).items():
+            steps = job.get("steps") or []
+            if not any("make test" in (step.get("run") or "")
+                       for step in steps):
+                continue
+            depths = [str((step.get("with") or {}).get("fetch-depth", ""))
+                      for step in steps
+                      if "checkout" in str(step.get("uses", ""))]
+            if "0" not in depths:
+                short[name] = depths or ["no checkout step"]
+        assert short == {}, (
+            f"{short}: these jobs run the whole suite on a checkout that "
+            "did not ask for the whole history. Every history-reading "
+            "guard declines or reds there (UX-784)")
+
+    def test_no_later_step_regrafts_a_boundary_onto_it(self):
+        """`UX-781`: asking for the whole history at checkout is half
+        the sentence. A `git fetch --depth=N` later in the *same job*
+        creates `.git/shallow` on a complete clone - measured on a full
+        clone of this repository, 1,541 commits to 855 - and every step
+        after it reads a cut history. The clause above was green
+        through all of it: it read the checkout, not what the job then
+        did to the clone.
+
+        Per job, because the two are opposite operations on opposite
+        clones: `agent-config` checks out at the default depth and the
+        same flag *deepens* it. Only a job that asked for everything
+        can throw it away."""
+        import yaml
+        spec = yaml.safe_load(
+            (REPO / ".github/workflows/ci.yml").read_text(encoding="utf-8"))
+        offenders = {}
+        for name, job in (spec.get("jobs") or {}).items():
+            steps = job.get("steps") or []
+            asked = any(
+                str((step.get("with") or {}).get("fetch-depth", "")) == "0"
+                for step in steps)
+            if not asked:
+                continue
+            cutting = [step.get("name") or step.get("uses") or "?"
+                       for step in steps
+                       if any(flag in (step.get("run") or "")
+                              for flag in ("--depth", "--shallow-since",
+                                           "--shallow-exclude"))]
+            if cutting:
+                offenders[name] = cutting
+        assert offenders == {}, (
+            f"{offenders}: a job that checked out at `fetch-depth: 0` then "
+            "truncates it. A depth fetch grafts a boundary onto a complete "
+            "clone and every later step in that job reads through it "
+            "(UX-781)")
+
+    def test_the_clause_above_reads_jobs_and_not_the_whole_file(self):
+        """Its own falsification: `ci.yml` really does carry a depth
+        fetch - in `agent-config`, whose checkout is shallow, where it
+        deepens. A clause that grepped the file would red on that, so
+        the population must be jobs that asked for full history."""
+        import yaml
+        spec = yaml.safe_load(
+            (REPO / ".github/workflows/ci.yml").read_text(encoding="utf-8"))
+        deepening = [
+            name for name, job in (spec.get("jobs") or {}).items()
+            if any("--depth" in (step.get("run") or "")
+                   for step in (job.get("steps") or []))]
+        assert deepening, (
+            "no job deepens a shallow checkout any more - this clause "
+            "guarded the distinction and now guards nothing; drop it or "
+            "re-point it (UX-781)")
+
 
 def test_the_contributing_guide_tells_a_session_its_clone_may_be_shallow():
     """The developer-facing half. A guard cannot help a session that

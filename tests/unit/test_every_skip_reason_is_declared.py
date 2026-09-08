@@ -85,7 +85,13 @@ import skip_reasons
 #: the track itself added.
 #: `UX-674` argues **one** more, to 65: the forty-sixth browser
 #: guard, `test_the_type_scale_is_four_steps.py`, same form again.
-UNRESOLVABLE = 65
+#: `UX-773` argues **one** more, to 66: the forty-seventh, and the
+#: first that is not a geometry check -
+#: `test_a_killed_browser_does_not_outlive_the_worker.py`, whose
+#: `needs_browser` reads `browser.NO_BROWSER` in the same form. The
+#: reason itself is already declared; what cannot be read statically
+#: is the module attribute, which is the form this scan asks for.
+UNRESOLVABLE = 66
 
 
 def test_every_declared_skip_reason_is_known():

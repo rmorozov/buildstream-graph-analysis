@@ -82,14 +82,18 @@ class TestModuleDocstrings:
         assert set(GRANDFATHERED) <= budgeted, sorted(set(GRANDFATHERED) - budgeted)
 
 
-def _outcome_lines(text):
+def _outcome_body(text):
     m = re.search(r"^## Outcome.*$", text, re.M)
     if not m:
         return None
     rest = text[m.start():]
     nxt = re.search(r"^## (?!Outcome)", rest[1:], re.M)
-    body = rest if not nxt else rest[: nxt.start() + 1]
-    return len(body.rstrip().splitlines())
+    return rest if not nxt else rest[: nxt.start() + 1]
+
+
+def _outcome_lines(text):
+    body = _outcome_body(text)
+    return None if body is None else len(body.rstrip().splitlines())
 
 
 def _budgeted_task_files():
@@ -99,6 +103,37 @@ def _budgeted_task_files():
         if number >= FIRST_BUDGETED_ID:
             out.append(path)
     return out
+
+
+def _is_closed(text):
+    status = re.search(r"\*\*Status:\*\*[^\n|]*", text)
+    return bool(status) and "🟢" in status.group(0)
+
+
+def _closed_budgeted_task_files():
+    return [p for p in _budgeted_task_files()
+            if _is_closed(p.read_text(encoding="utf-8"))]
+
+
+#: Closed before `UX-497` on and shipped no code guard, so there is
+#: nothing a mutation table could name - checked, not assumed, by
+#: `test_every_exemption_is_a_real_closed_task` below. A permanent
+#: list, not a ratchet: a closed Outcome does not get a mutation table
+#: later, so an entry here never comes off.
+NO_GUARD_OUTCOMES = {
+    # A process/regime decision (batch gate vs. per-item); no code
+    # shipped for either regime to guard.
+    "UX-0500": "a decision between two measured regimes, no new guard",
+    # Premise falsified before any guard landed; everything it shipped
+    # was undone in the same Outcome.
+    "UX-0633": "reverted on its own Outcome; nothing left to mutate",
+    # The row is about a review process reading a moving branch, not
+    # about code the row's own commit changed.
+    "UX-0656": "the Outcome is a process finding, not a code guard",
+    # An investigation and an upstream-cause fix pinned by a fixture
+    # value, not a new guard.
+    "UX-0755": "a root-cause fix pinned by a fixture value, no new guard",
+}
 
 
 class TestOutcomes:
@@ -114,6 +149,32 @@ class TestOutcomes:
     def test_the_counter_reads_a_section_not_the_file(self):
         text = "# t\n\n## Motivation\nx\n\n## Outcome (r)\na\nb\n\n## After\nz\n"
         assert _outcome_lines(text) == 3
+
+
+class TestOutcomeContentIsGuarded:
+    """`UX-764`: the length cap says nothing about content. `round-94.md`
+    counted 55 of 60 closed Outcomes naming a mutation table - five did
+    not, and nothing reddened. This reads the section `_outcome_body`
+    already isolates, so the length and content checks cannot drift
+    about which text they mean."""
+
+    @pytest.mark.parametrize(
+        "path", [p for p in _closed_budgeted_task_files()
+                 if p.name[:7] not in NO_GUARD_OUTCOMES],
+        ids=lambda p: p.name[:7])
+    def test_a_closed_outcome_names_its_mutation(self, path):
+        body = _outcome_body(path.read_text(encoding="utf-8"))
+        assert body is not None
+        assert "mutation" in body.lower(), (
+            f"{path.name}: closed Outcome names no mutation table - the "
+            f"defect `docs/audits/round-94.md` counted five of sixty "
+            f"closed tasks having, with the suite green throughout")
+
+    def test_every_exemption_is_a_real_closed_task(self):
+        closed = {p.name[:7] for p in _closed_budgeted_task_files()}
+        assert set(NO_GUARD_OUTCOMES) <= closed, (
+            f"exempted but not a closed, budgeted task file: "
+            f"{sorted(set(NO_GUARD_OUTCOMES) - closed)}")
 
 
 class TestClaudeMdCarriesTheSameNumbers:

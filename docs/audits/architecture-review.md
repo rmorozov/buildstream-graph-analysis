@@ -91,6 +91,7 @@ would have caught it; a bound at it would only just have.
 | 17 | 2026-09-05 | 671 | three filings, all the same shape the last four reviews found — a sentence no guard reads: the `review` skill named by neither `CLAUDE.md` nor the checklist the cadence guard sends a stopped session to, the orchestrator's 73 % share carried bare in `CLAUDE.md` and measuring 46.9 % today, and *fifteen viewer modules* in an undated passage against 22 on disk; two claims checked and found sound (the `479` touching spread, `fifteen live contracts`) |
 | 18 | 2026-09-06 | 698 | three filings, and for the fifth review running the shape is a sentence no guard reads — three counted figures each derivable from a population already in the tree (`UX-734`: *Twenty hints* beside a table held equal to the schemas in both directions, *the twenty-four rows* against 26, *Parts 0-40* against 45), the attachment guide's **82 KiB** measured on a capture that is not in the tree and cannot be reproduced (`UX-735`; the one export this repository can measure is 488 KiB), and a third hand-maintained copy of a fact `UX-131` guarded twice — 75 status rows in `architecture.md` outside the guard's population, one of them drifted (`UX-736`); four document groups read in parallel, every finding re-run by the session before filing |
 | 19 | 2026-09-07 | 724 | four filings, and the shape moved one step on: not a sentence no guard reads but a sentence **inside** a guarded document and **outside** its guard's population — a range checked at its endpoints, a verification log that credits a commit and never re-derives a figure, a freshness guard that only reads a fence starting `$ bga ` (`UX-748`). Plus a documented example that crashes the tool (`UX-747`), four workflows on no map with the map's own guard unable to see them (`UX-746`), and nine citations formatted as paths that do not resolve (`UX-749`) |
+| 20 | 2026-09-07 | 750 | five filings, and the shape is one the log has not carried before: **a record that says a thing happened, checked against the tree that would show it.** `UX-777` — `UX-650` found the page-built sections were thirteen, fixed the code, and left both sentences saying nine. `UX-778` — `UX-584` derived the enforced-rule count and the derivation reads one of the two documents that state it. `UX-780` — the §6 map cites `UX-698/UX-699` for a workflow that runs `UX-699` alone, `UX-698` being 🔴. `UX-779` — the README's `21s`/`5m11s` predate `UX-551`, which established that a wall clock is a property of the machine. And the review caught the session that commissioned it: **round 107's document listed `UX-764` under *What closed* while both its markers correctly read 🔴** — the two-marker guard was green because the markers agree with each other, and nothing reads the round document against them |
 
 ### Review 11 — 2026-09-02
 
@@ -1470,3 +1471,82 @@ of that name — `docs/design/styleguide.md`, which B reviewed, and
 `docs/contributing/style-guide.md`, which only group C touched
 incidentally. The second is unreviewed at this cadence point.
 
+## Review 20 — 2026-09-07, at 750 closed rows
+
+Run with three readers over disjoint documents plus one group the
+session took itself. Five filings: `UX-777`, `UX-778`, `UX-779`,
+`UX-780`, and one correction to a document this session wrote an hour
+earlier.
+
+**The shape.** Reviews 15-19 found sentences no guard reads. This one
+found the next layer: **a record asserting an event, where the tree
+that would show the event is right there and nobody joined them.**
+
+- `UX-650` (round 88) measured the page-built sections at thirteen and
+  says so in its own Outcome — *"The nine are thirteen"*. It fixed the
+  code and the guard (`test_a_reader_role_demotes.py:353` asserts
+  `>= 13`) and left `architecture.md:796` and `chapters.js:31` both
+  saying nine. Two documents, one fix, no annotation.
+- Round 107's document listed `UX-764` under *What closed*. Its file
+  and its index row both read 🔴 Not Started, correctly — its own
+  Outcome says half the Required Fix is a sibling row's.
+  `test_the_table_status_matches_the_task_files` is green, because it
+  compares the two markers **to each other**. The round document is a
+  third statement of the same fact and is in no guard's population.
+- `UX-780`: the §6 map's `quality.yml` row names `UX-698/UX-699` for a
+  file whose only job is `UX-699`'s eslint. `UX-698` is 🔴.
+  `test_the_context_map_is_the_tree.py` passes: it reads paths, not
+  descriptions.
+
+Three instances, one sentence: **the mechanical half of each of these
+is guarded and the meaning half is not**, and the meaning half is what
+a later round reads.
+
+### The five checks
+
+| check | result |
+|---|---|
+| counts | `architecture.md`'s 775/75 derived and green; `docs/README.md`'s 25 ids exact; `README.md`'s 95-line report and 323-line budget exact; **nine → 13 (`UX-777`)**, **two → four (`UX-778`)** |
+| versions | `analyze/v6`, `compare/v2`, `blast/v2` match `bga/schemas.py:74-76`; Python floor 3.9 matches `pyproject.toml` and CI's matrix |
+| paths exist | `docs/README.md`'s round index against `ls docs/audits/round-*.md` — 63 both ways, no orphan, no dangling link |
+| pasted output current | `examples/01`'s census reproduced verbatim; `dev_touching.py --spread` prints the guide's string; `dev_process_bands.py --runs 36` prints `CLAUDE.md`'s figures |
+| a Part / invariant held | I4 still at `specification.md:2068`; §7a's seven guards all exist and 102 of their tests pass together |
+| a document describes a workflow | `real-project-capture.yml`'s crons match; **`quality.yml`'s contents do not (`UX-780`)** |
+
+### The git-depth sweep, answered
+
+`UX-776` closed this round with an Out of Scope: which other tools
+derive from git history, and is any depth-sensitive?
+
+```console
+$ grep -rn '"log"' tools/*.py | grep -v '\.\.'
+tools/dev_round_register.py:68
+tools/dev_round_register.py:112
+```
+
+Two unbounded walks, both in the file `UX-776` was filed against.
+Every other tool is bounded (`log base..HEAD`, which errors loudly
+past a shallow boundary) or HEAD-relative. So no further row — but
+`UX-776` did not close both: line 68 is the one `check()` guards, and
+line 112 (`_first_commit_date`) is reached by `document_date()`
+directly, bypassing the refusal. It is live today, on rounds 102 and
+104-106, which state no dateline and take that fallback. The in-flight
+`UX-772` removes that function outright, which closes it by
+construction; if `UX-772` does not land, the refusal needs extending.
+
+### What was checked and found sound
+
+`docs/contributing/style-guide.md` — the document review 19 recorded
+as missed and overdue by a full cadence — is **not stale**: every
+claim a guard can reach is derived and green. The six guards
+`styleguide.md` names all exist and each asserts what its rule claims.
+`test_the_verification_log_is_true.py` already handles the shallow
+clone case explicitly, which is why `UX-776` is not a recurrence there.
+
+### One gap in this sweep
+
+`docs/design/styleguide.md`'s §7 ledger runs to ~30 rows and only the
+six named plus §1a were checked. The §6 module map's ~103 per-row
+descriptions were checked for the CI-workflow block only — `UX-780`
+came out of that block, which is a reason to think the rest is worth a
+pass. `UX-689` owns the map's structural half.

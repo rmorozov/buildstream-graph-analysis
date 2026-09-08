@@ -66,40 +66,80 @@ number, where today it cannot see the absence at all.
 
 ## Outcome
 
-_Reopened._ The register landed and CI reddened it. Two findings, both
-only visible outside a worktree:
+Reopened twice. Round 104's attempt shipped a self-referencing file,
+fixed by construction (fixing-guide.md §7a): `written_rounds()` drops
+`rounds()`'s own newest number. Its verifier then found the ids-closed
+column wrong on four of five demonstrated rounds - `commit_signal()`
+cannot tell a commit that *documents* an earlier round from one that
+is *in* it, and `UX-757`'s retroactive documentation of rounds 99-102
+legitimately names them in prose while writing their history.
 
-**1. A round cannot commit the register that describes it.** The
-derivation reads commit subjects, so this round's own closing commit
-created a row for itself. The document the track generated at
-`c9698fc` was correct then and stale the moment round 104 closed:
+**The column: dropped, not fixed.** A "## What closed" paragraph
+extraction was tried against the four flagged rounds and failed on
+its own evidence: round 100's document opens a paragraph naming
+`UX-737`/`UX-738`, then says two sentences later "not closed... both
+close in round 101" - a heuristic reading the paragraph's first id
+cannot tell that apart from a real close. The register is `{round,
+date}`; `docs/README.md`'s row and the module docstring say so.
+
+**The date, tested against the round's own document**, per the hold's
+requirement: `document_date()` reads the round's own text (its first
+stated date, or the file's own first-commit date if it states none),
+compared for every `FIRST_PRICED_ROUND`-on round with a document:
 
 ```console
-$ python3 -c "... dev_round_register.rounds() ..."
-104 -> {'date': '2026-09-07', 'ids': ['UX-744', 'UX-750', 'UX-751', 'UX-753', 'UX-756']}
-$ tail -1 docs/audits/round-register.md
-| 103 | 2026-09-07 | UX-674, UX-748 |
+$ python3 -m pytest tests/unit/test_a_run_is_priced.py \
+    -k TestARegisteredRoundsDateMatchesItsDocument -q
+15 passed   # 14 rounds (90-95, 99-106) + the population check
 ```
 
-Regenerating last is the obvious answer — the index counts already work
-that way (`UX-501`) — but the round document commit names the round too,
-so "last" has to be defined rather than assumed.
+Round 101 is the same contamination the hold named (register said
+2026-09-07; its own document's "Opens at" says 2026-09-06), now
+caught and pinned (`DATE_MISMATCH_WAIVER`), not silent.
+Below `FIRST_PRICED_ROUND`, rounds 76 and 85 also mismatch, and
+verification falsified the multi-day reading first offered here: both
+are the *same* contamination. `_first_date_in_text` takes the file's
+first `YYYY-MM-DD` whatever it means - for 76 that is `UX-96`'s cron
+firing `2026-09-01`, for 85 a status-word note dated `2026-09-03` -
+and no commit touching either round's rows exists on the earlier day.
+They are outside the population only because `UX-666` set
+`FIRST_PRICED_ROUND` at 90, not because they are a different
+phenomenon. `UX-772` carries the dateline fix.
 
-**2. CI derives a different register than the branch does, and why is
-not known.** On `ff41d19` CI reported the `—` rows as `['53', '85']`
-against the branch's `['64', '85']`: round 64 gained ids and a round 53
-appeared that this branch's derivation does not produce at all. `main`
-is fully contained in the branch (`git rev-list --count HEAD..origin/main`
-→ `0`), so the checkout's ancestry is not the explanation and no
-mechanism has been established.
+**The exclusion rule** no longer drops "whichever round is highest so
+far" unconditionally: `written_rounds()` drops the newest only if that
+round has no document yet. A documented round is never held back
+waiting for a strictly higher round the naming convention might stop
+producing.
 
-A third failure was an ordinary violation, not a design problem:
-`test_no_round_number_is_in_code` reds on `tools/dev_round_register.py`,
-whose docstrings cite round 89 and round 94 as worked examples.
+**Mutation table**, this hold's fixes (the earlier table - the
+self-reference fix, phantom rounds from prose, the deletion mutation,
+the ledger-`setdefault` check - is unchanged and still green):
 
-Neither the track nor two verifier passes could see 1 or 2, because
-every one of them ran in a worktree whose commit set was the branch's.
-The reopened row's first job is to decide whether a derivation over
-commit subjects can be reproducible at all, or whether the register
-must read the tracked documents instead — which is also what `UX-759`
-asks for round 85.
+| mutation | reddened |
+|---|---|
+| `_first_date_in_text()` never finds a stated date | 5/63: the fixture, and rounds 99, 100, 101 (the pin itself), 102 against the real documents |
+| `written_rounds()` reverts to "always drop the max" | 2/63: the fixture permanence pin, and `check()` against round 106's now-documented row |
+
+`UX-759` still owns reading a round's own document as a *correct* ids
+source; this row tried exactly that within its own scope and found it
+unreliable, which is now evidence for that row rather than motivation
+alone.
+
+### The second verifier held, and the row merged anyway
+
+The re-verification of `17bf0b8` returned `## Verdict: HOLD`: the
+population claim for rounds 76 and 85 was not supported by the
+evidence given for it. The row merged 26 seconds later.
+
+The finding was **accepted, not declined** — the Outcome above was
+corrected and `UX-772` filed against `document_date()`. But `UX-761`
+says a row does not merge until the track has answered the finding or
+the session records here why it is declined, and neither happened
+before the merge. Recorded now because a reader of this file would
+otherwise learn only the corrected conclusion and not that a verifier
+reached it first.
+
+`UX-759`'s premise did not survive this row: the register that shipped
+has no ids column, so that row closed as a decline. That annotation
+was owed by this commit under the fixing guide's item 6.

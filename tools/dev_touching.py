@@ -272,8 +272,10 @@ def naming(selected, why):
 COST_SITES = ("docs/contributing/fixing-guide.md",)
 
 #: The sentence those documents carry, and the shape `--write` finds.
-FIGURE = "{min}-{max} of {files} test files, median {median}"
-FIGURE_RE = re.compile(r"\d+-\d+ of \d+ test files, median \d+")
+FIGURE = "{min}-{max} of {files} test files"
+# UX-770: the optional tail consumes the retired `, median N` so a
+# rewrite leaves no residue the figure check cannot see.
+FIGURE_RE = re.compile(r"\d+-\d+ of \d+ test files(?:, median \d+)?")
 
 
 @functools.lru_cache(maxsize=1)
@@ -293,8 +295,9 @@ def spread():
     sizes = sorted(len(select([module])[0]) for module in touch_map())
     if not sizes:
         raise RuntimeError("the touch map is empty; there is no population")
+    # UX-770: no median - 94 modules straddle 37/38, so the figure was a
+    # tie-break over a directory other tests write into mid-run.
     return {"min": sizes[0], "max": sizes[-1],
-            "median": sizes[len(sizes) // 2],
             "modules": len(sizes), "files": len(test_files())}
 
 

@@ -362,6 +362,14 @@ KNOWN_SKIP_REASONS = {
     # than passing on a check that no longer applies.
     "the floor has moved to 3.10; PEP 604 is allowed": (
         "the floor guard's own retirement, unreachable at >=3.9", 0),
+    # `UX-764`: the commit-body cap's population is `origin/main..HEAD`,
+    # the same one CI reads (`ci.yml:642`). A checkout without that
+    # remote-tracking ref (CI's own `test` job among them - it never
+    # fetches `origin/main`) cannot read the range, and "could not read
+    # it" must not report as "read it and found nothing".
+    "origin/main does not resolve in this checkout": (
+        "the commit-body population reads `origin/main..HEAD`; a "
+        "checkout without that ref cannot answer", 0),
 }
 
 # One file going quiet is what this exists to catch, and it is also the

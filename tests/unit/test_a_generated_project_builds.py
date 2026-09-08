@@ -188,11 +188,19 @@ class TestBstAcceptsWhatItWrites:
 
 def _isolated(tmp_path):
     """A bst that keeps its caches inside `tmp_path`, so the two builds
-    above are cold and do not touch the developer's own store."""
+    above are cold and do not touch the developer's own store.
+
+    `UX-760`: `XDG_CONFIG_HOME` pointed at `home / "config"` - a
+    directory this never created, so `bst` found no file there and fell
+    back to the 5% default reserve, unprotected. `_bst_env`'s shared,
+    populated fixture replaces that hole.
+    """
     import os
+
+    from tests.unit._bst_env import BST_XDG_CONFIG_HOME
 
     home = tmp_path / "home"
     home.mkdir(exist_ok=True)
     return dict(os.environ, XDG_CACHE_HOME=str(home / "cache"),
-                XDG_CONFIG_HOME=str(home / "config"),
+                XDG_CONFIG_HOME=str(BST_XDG_CONFIG_HOME),
                 XDG_DATA_HOME=str(home / "data"))

@@ -306,7 +306,7 @@ def test_a_real_extraction_writes_the_inventory(tmp_path):
     complains about, and it was found by mutating this file's own
     producer and watching nothing go red.
     """
-    from tests.unit._bst_env import isolated_bst_env
+    from tests.unit._bst_env import bst_env, isolated_bst_env
     from tools.bst_extract_run import extract_run
 
     log = tmp_path / "build.log"
@@ -317,7 +317,11 @@ def test_a_real_extraction_writes_the_inventory(tmp_path):
     log.write_text(proc.stdout + proc.stderr)
 
     out = tmp_path / "run"
-    extract_run(FIXTURE_PROJECT, str(log), str(out), log_format="auto")
+    # `UX-760`: extract_run's own internal `bst show` is a separate
+    # subprocess, inheriting this process's environment rather than the
+    # `env=` above.
+    with bst_env(tmp_path):
+        extract_run(FIXTURE_PROJECT, str(log), str(out), log_format="auto")
 
     inventory = json.loads((out / "sources.json").read_text())
     assert inventory["schema"] == sources.SCHEMA

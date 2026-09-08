@@ -1,6 +1,6 @@
 # Fixing Guide — Read This First, Every Session
 
-This is the mandatory entry point for any agent (human or LLM) picking up a task on this repository. It exists because a prior fixing session, working with limited context, marked several tasks "🟢 Fixed" that were not actually fixed — including `classify_scheduler_wait()` in `bga/attribution/blame_chain.py`, which still unconditionally `return False` after being marked complete. This guide's rules exist specifically to prevent that failure mode from repeating - the discipline below applies to any backlog in this repo, not just the one it was originally written for.
+This is the mandatory entry point for any agent (human or LLM) picking up a task on this repository. It exists because a prior fixing session, working with limited context, marked several tasks "🟢 Fixed" that were not actually fixed — including `classify_scheduler_wait()` in `bga/attribution/blame_chain.py`, which still unconditionally `return False` after being marked complete. This guide's rules exist to prevent that failure mode from repeating - the discipline below applies to any backlog in this repo, not just the one it was originally written for.
 
 **Start at [`rules.md`](rules.md)** — every rule below as one line with
 its guard, an order of magnitude smaller than this file (`UX-505`). Come
@@ -68,7 +68,7 @@ For every task, before marking it done:
 
 1. Run the exact command(s) given in the task's **Acceptance Test** section.
 2. Paste the actual command and actual output into the task file's **Verification Log** section (append, don't overwrite prior entries).
-3. **While you work, run the tests that touch what you changed** (`UX-336`): `make test-touching` maps the working diff to the test files that name it - 31-145 of 512 test files, median 38, over every module the map names, not the seconds one machine spent on one of them (`UX-632`). `python3 tools/dev_touching.py --spread --write` is the only thing that writes that figure. It moves whenever the set of (test file, module named) pairs changes - a new test file, a new import, a renamed module, a deleted file - not only the first of those (`UX-756`: round 103 moved it with two imports and no new file, and CI reddened on the stale row). Wider than one module, run the tier (`UX-238`). Every target runs `-n auto`. **The suite's wall clock is a property of the machine, not of the suite** (`UX-551`), so budget a round against the spread and not a figure:
+3. **While you work, run the tests that touch what you changed** (`UX-336`): `make test-touching` maps the working diff to the test files that name it - 31-145 of 518 test files, over every module the map names, not the seconds one machine spent on one of them (`UX-632`). `python3 tools/dev_touching.py --spread --write` is the only thing that writes that figure. It moves whenever the set of (test file, module named) pairs changes - a new test file, a new import, a renamed module, a deleted file - not only the first of those (`UX-756`: round 103 moved it with two imports and no new file, and CI reddened on the stale row). Wider than one module, run the tier (`UX-238`). Every target runs `-n auto`. **The suite's wall clock is a property of the machine, not of the suite** (`UX-551`), so budget a round against the spread and not a figure:
 
 ```text
 round 46   3m15s                                     4 cores
@@ -83,7 +83,7 @@ Round 80's 8m52s is **not reproducible on the tree that produced it**: the same 
 
    | target | measured at `-n auto` | what is in it |
    |---|---|---|
-   | `make test-touching` | 31-145 of 512 test files, median 38 | the test files that name what your diff touched |
+   | `make test-touching` | 31-145 of 518 test files | the test files that name what your diff touched |
    | `make test-small` | **20s** | pure Python over in-memory fixtures — the default tier |
    | `make test-medium` | ~2m50s | spawns a process or a node harness |
    | `make test-large` | ~2m05s | scale fixtures, real process trees |
@@ -99,6 +99,11 @@ Round 80's 8m52s is **not reproducible on the tree that produced it**: the same 
    the tier's. `PYTEST_XDIST=` turns the parallelism off for a run
    that needs one process.
 
+   `Makefile:30-32` carries `UX-238`'s dated reading (2026-08-23: small
+   18.2s, medium 184.0s, large 159.0s) — up to 35% apart on `large`,
+   neither wrong, both machine-dependent (`UX-765`). Cite this
+   paragraph's, the newer of the two.
+
    Tiers come from measured per-file duration (`tests/tiers.py`), not from taste. Use them for the edit-run loop and for re-running one guard after a mutation — **not** as a substitute for the next step.
 
 4. Also run the full existing suite to confirm you didn't regress anything else. **`UX-500` asked whether this could become one run per *batch* and the answer is no**, measured over two rounds rather than argued: run `dev_touching.select` over each responsible commit's own diff and ask whether the guard that caught the defect is in the set the cheap gate would have chosen. Round 75 (Regime A, 7 items): **2 of 5**. Round 80 (Regime B, 24 items, six parallel tracks): **4 of 9** — it did not fall when the batch got three times larger. The four have a shape: the selector maps a diff to the guards that *name* what it touched, and three of them read a **consequence** — a new contract landing in every committed fixture, a reworded sentence another file greps for, a file's own duration crossing a tier floor. No grep over a diff can find those. Figures in [`docs/audits/round-80.md`](../audits/round-80.md) and [`round-75.md`](../audits/round-75.md); the batch gate stays *in addition*, not instead:
@@ -110,7 +115,7 @@ Round 80's 8m52s is **not reproducible on the tree that produced it**: the same 
 
    `tests/test_e2e.py` is also directly runnable without pytest (`PYTHONPATH=. python3 tests/test_e2e.py`) if you want the fastest possible sanity check, but prefer the full `pytest tests/ -v` run before marking anything 🟢 — it now also covers `tests/test_cli.py` and `tests/test_synthetic_multi_subproject.py` (a larger multi-subproject fixture; see `docs/backlog/tasks/P3-10-synthetic-multi-subproject-large-test.md`), both of which the single e2e script does not run. Tests marked `xfail` (a handful, each pointing at the specific task file that will fix them) are expected — only genuinely new failures are regressions.
 5. Only then: update the status cell in the tracker (`docs/backlog/progress-tracker.md` or `docs/backlog/scenarios/README.md`) to 🟢, and update the task file's own status line. **Both, in the same commit.** These are two hand-maintained copies of one fact and they have drifted in three separate rounds — round 11 found a row 🟢 over a 🔴 file, round 12 found row wording drift, round 13 found *five* rows 🔴 over files that were 🟢 with full verification logs, because the closing commit of a range never touched the table. `tests/unit/test_docs_links_and_commands.py::test_the_table_status_matches_the_task_files` now compares the two markers and fails naming the item, so this one is caught rather than trusted (`UX-131`).
-6. **If your fix changes a number, a mechanism or an explanation an earlier task file presents as current, annotate that file in the same commit.** Not a rewrite — the old figure stays, with one line naming what changed it and when, the way `UX-118` annotated `UX-106`'s superseded explanation: *"a wrong explanation that was believed for a while is worth being able to recognise again"*. `UX-123`'s exec-chain collapse moved `examples/06` from 822 processes to 813 and left three earlier files describing a parser that no longer exists; a later task then quoted 822 fresh, because the convention lived only where one author remembered it. `git grep <old figure> docs/backlog/scenarios` before you commit. This one is judgment-shaped and cannot be a hard test — it is a checklist item precisely because of that (`UX-132`). **It covers mechanisms, not only figures** (`UX-144`), and the precedent `UX-132` itself cites is a mechanism: `UX-118` annotated `UX-106`'s superseded *explanation*. The scope was written as "a number" and the very next range showed why that is too narrow — `UX-130` deleted `UX-118`'s entire seen-set (`g_seen`/`first_stop_for`/`forget_pid`) and `UX-128`'s `initial` restart site, leaving both files describing code that no longer exists, including the worked example the convention was built on. `git grep` the removed identifier as well as the old figure.
+6. **If your fix changes a number, a mechanism or an explanation an earlier task file presents as current, annotate that file in the same commit.** Not a rewrite — the old figure stays, with one line naming what changed it and when, the way `UX-118` annotated `UX-106`'s superseded explanation: *"a wrong explanation that was believed for a while is worth being able to recognise again"*. `UX-123`'s exec-chain collapse moved `examples/06` from 822 processes to 813 and left three earlier files describing a parser that no longer exists; a later task then quoted 822 fresh, because the convention lived only where one author remembered it. `git grep <old figure> docs/backlog/scenarios` before you commit. This one is judgment-shaped and cannot be a hard test — it is a checklist item because of that (`UX-132`). **It covers mechanisms, not only figures** (`UX-144`), and the precedent `UX-132` itself cites is a mechanism: `UX-118` annotated `UX-106`'s superseded *explanation*. The scope was written as "a number" and the very next range showed why that is too narrow — `UX-130` deleted `UX-118`'s entire seen-set (`g_seen`/`first_stop_for`/`forget_pid`) and `UX-128`'s `initial` restart site, leaving both files describing code that no longer exists, including the worked example the convention was built on. `git grep` the removed identifier as well as the old figure.
    `docs/design/architecture.md`'s **Verification Log is the same shape and takes the opposite rule: it is append-only below its newest entry** (`UX-653`, held by `tests/unit/test_the_verification_log_is_true.py`). An entry names the contract id that was live the day it was written, so a grep-and-replace of a bumped id — right everywhere else in the document — reaches the one block whose whole purpose is to say what an earlier session checked: four `analyze` bumps carried the 2026-08-25 entry from `analyze/v2` to `v6`, one sweep at a time, before architecture review 16 restored it. When `tests/unit/test_no_document_serves_a_retired_contract.py` (`UX-353`) reddens on an old entry, **the green meant is the marker word** — say in that entry that the id is *superseded* — not the sweep. Both reach green; only one keeps the record, and the sweep is the cheaper reflex — which is why it won four times running and why the rule is written down here rather than remembered. The newest entry is exempt, because every round that re-grounds the document rewrites it: freezing that one would forbid the log's only working mechanism. Nothing about this applies to the contract tables above the log, where a bumped id is *supposed* to be swept forward, and the guard reads the log's entries only.
 
 7. **If your fix renames or removes a key in a published JSON output, bump that output's schema version.** `analyze/v6`, `compare/v2` and `blast/v2` (`bga/schemas.py`, spec Part 32.5) are what a consumer pins; `test_the_process_documents_derive_their_figures.py` reads the three ids off `schemas.py` so this sentence cannot age. The first bump was `UX-288`, which took the report to `analyze/v2` by removing three fields that republished element membership. Adding a *permitted* key is not a breaking change and does not bump — the schemas set `additionalProperties: true` for exactly that reason — but a key entering **`required`** under a live id **is** (`UX-629`): a document a consumer already wrote stops validating, which is a break by the only reading a consumer has. A key the emitter writes on every document therefore lands permitted-and-always-written — declared in the schema's own `bga:always_written` so `--schema` states the choice, and guaranteed against the real payload by a guard rather than by `required`. A rename is a break too, and the round-19 range shipped one (`runs_outside_band` → `edges_outside_band`) with nothing to signal it, which is what `UX-190` was filed against. `tests/unit/test_output_schemas.py` catches a removal; `ANALYZE_FULL_KEYS` catches a rename of an `analyze` key the schema cannot mark required.
@@ -125,7 +130,7 @@ Round 80's 8m52s is **not reproducible on the tree that produced it**: the same 
 12. **`docs/spec/specification.md` is ground truth, and Part 32 is the one Part a round may edit.** `UX-556` is what settled the boundary, because a round hit it and read it two ways. The spec's contract registry said "The last four are **written but not printable**" of a set that is six (`unprintable()` less `superseded()`) and that four rows follow; `UX-549` fixed the architecture's copy of the same sentence and filed the spec's, reading the rule as forbidding the edit. It does not: the sentence is at line 1673 and Part 32 spans 1515-1941, so it was inside the permitted region the whole time (the range is derived by `test_the_spec_outside_part_32_is_read_only.py`, which also digests everything outside it). **The Part, not the table** — a rule that lets you correct a registry row but not the sentence counting the rows is not a boundary, it is an accident of where someone drew the line. Everything outside Part 32 stays read-only for a round; a factual error there is filed, not fixed. And the second half, which is what stops this recurring: **a counted figure in Part 32 is derived by a guard, never restated in prose.** Both copies of this error were prose nothing checked. `tests/unit/test_a_counted_figure_is_derived.py::TestTheSpecCountsItsOwnTable` reads the count and the position off the table's own rows.
 
 13. If the acceptance test does **not** pass after your change, leave status at 🟡 (In Progress) with a note on what's blocking, and stop — do not mark it 🟢 "mostly working."
-14. **`make test` before anything is marked done" covers the commit you push, not the branch you ran it on** (`UX-762`). Round 104 ran the gate at `67cc0d1` and then pushed `4879bcc`, a round-document commit that followed it and that CI reddened on — the gate had covered a commit that was never the one that shipped. `make test`'s own recipe now writes `.gate-covered` (gitignored) with `HEAD`'s sha, only when pytest exits 0, and `.claude/hooks/gate-covers-push.sh` reads it on `git push`, refusing a `HEAD` the marker does not name and printing both shas. An amend or a further commit after the gate correctly reds — that is the point, not a bug. `BGA_SKIP_PUSH_GATE=UX-NNN` is the named escape for a push that legitimately precedes the gate (a WIP branch, a fix you want CI to see) — a bare flag is refused, the bypass is printed loudly to stderr naming the reason and the sha, and **exporting it, rather than setting it for one command, disables the gate for every push in that shell until it is unset.** It does not fire on `--dry-run`, a branch or tag delete, or anything that is not `git commit`/`git push`, and it scans a whole compound command the way `no_bulk_add.is_bulk_add` does — `git status && git push` is still seen — sharing that guard's own gap that `git -C x push`, `VAR=1 git push` and `command git push` bypass both.
+14. **`make test` before anything is marked done" covers the commit you push, not the branch you ran it on** (`UX-762`). Round 104 ran the gate at `67cc0d1` and then pushed `4879bcc`, a round-document commit that followed it and that CI reddened on — the gate had covered a commit that was never the one that shipped. `make test`'s own recipe now writes `.gate-covered` (gitignored) with `HEAD`'s sha, only when pytest exits 0, and `.claude/hooks/gate-covers-push.sh` reads it on `git push`, refusing a `HEAD` the marker does not name and printing both shas. An amend or a further commit after the gate correctly reds — that is the point, not a bug. `BGA_SKIP_PUSH_GATE=UX-NNN` is the named escape for a push that legitimately precedes the gate (a WIP branch, a fix you want CI to see) — a bare flag is refused, the bypass is printed loudly to stderr naming the reason and the sha, and **exporting it, rather than setting it for one command, disables the gate for every push in that shell until it is unset.** It does not fire on `--dry-run`, a branch or tag delete, or anything that is not `git commit`/`git push`, and it scans a whole compound command the way `no_bulk_add.is_bulk_add` does — `git status && git push` is still seen — sharing that guard's own gap that `git -C x push`, `VAR=1 git push` and `command git push` bypass both. It also only ever fires on a `git push` inside a Bash tool call in *this* session, so it is not total — the channel mix behind the 41 pushes that reached this branch across rounds 103-105 is not recoverable from committed material, but at least one used this covered channel, which is why CI on the pushed commit, not this hook, is the real backstop regardless (`UX-767`).
 
 Status legend (same as the tracker):
 
@@ -144,7 +149,7 @@ Status legend (same as the tracker):
 
 ## 4a. Repository hygiene — mandatory before every commit
 
-**A real incident, so this isn't hypothetical:** a prior fixing session ran `pip install "networkx>=2.8"` in a shell that mangled the unquoted `>`, redirecting command output into a literal file named `=2.8`, then committed it — along with `bga.egg-info/` and every package's `__pycache__/*.pyc` — straight into the repo, even though `.gitignore` already listed all of those patterns. `.gitignore` only stops *new* untracked files from being added by `git add .`/`git add -A`; it does nothing once a file is already tracked, and it does nothing to stop `git add <specific-ignored-path>` or a broad `git commit -a` from re-adding something after the fact.
+**A real incident:** a prior fixing session ran `pip install "networkx>=2.8"` in a shell that mangled the unquoted `>`, redirecting command output into a literal file named `=2.8`, then committed it — along with `bga.egg-info/` and every package's `__pycache__/*.pyc` — straight into the repo, even though `.gitignore` already listed all of those patterns. `.gitignore` only stops *new* untracked files from being added by `git add .`/`git add -A`; it does nothing once a file is already tracked, and it does nothing to stop `git add <specific-ignored-path>` or a broad `git commit -a` from re-adding something after the fact.
 
 Rules to prevent a repeat:
 
@@ -158,7 +163,7 @@ Rules to prevent a repeat:
 ## 5. Hard rules (do not violate these)
 
 - **Never mark a task 🟢 without a pasted, passing verification command.**
-- **Never leave a no-op placeholder** (`pass` inside a loop that should compute something, `return False`/`return True`/`None` standing in for real logic, empty dict/list returned where a real computation is expected) and call it "implemented." If you can't finish the real logic in your context budget, leave it 🟡 with an honest note on what's missing — don't disguise it as done.
+- **Never leave a no-op placeholder** (`pass` in a loop that should compute, `return False`/`True`/`None` standing in for real logic, an empty dict/list where a computation is expected) and call it "implemented." If you can't finish the real logic in your context budget, leave it 🟡 with an honest note on what's missing — don't disguise it as done.
 - **Never widen scope.** Fix only what the task file describes. Log anything else you notice as a new tracker row instead.
 - **Never invent data the spec says must be `UNKNOWN`/`unavailable`/absent.** E.g. Part 8 requires an unidentifiable resource holder to be reported as `blocking_tasks = UNKNOWN, ambiguous = true` — never fabricate a plausible-looking holder.
 - **Never touch `docs/spec/specification.md`.** It's the ground truth; if you think it's wrong, flag it in the tracker's notes for a human to decide, don't edit it.
@@ -347,6 +352,7 @@ tools/dev_refresh_analysis.py  the rule a committed analysis is written
                              under, and the command that rewrites one
                              from a fresh run (UX-486)
 tools/dev_process_bands.py  what the process did to itself, from the committed Outcomes
+tools/dev_round_register.py  which rounds happened, derived (UX-744)
 tools/dev_tier_drift.py      which files outgrew their tier, from the
                              suite's own junit report (UX-418)
 tools/dev_mutation.py        mutmut over the modules a diff touched, weekly -
@@ -361,13 +367,13 @@ tools/dev_sizes.py           the size ledger for what has no finding
                              a grown cell is red (UX-712)
 tools/dev_flake_census.py    which files the flake ledger says need a
                              filed task or a declared reason (UX-691)
-tools/dev_junit_tail.py      which tests failed, from the junit a red job
-                             kept - when the log tail lands on the wrong slice (UX-554)
-tools/dev_commit_bodies.py   which commits a branch adds spend more than
+tools/dev_junit_tail.py      which tests failed, from a red job's junit, when
+                             the log tail lands on the wrong slice (UX-554)
+tools/dev_commit_bodies.py   which of a branch's commits spend more than
                              eight body lines, footer excluded (UX-696)
 tools/dev_js_deps.py         the viewer's module graph, derived: order, cycles, what would cross a cut (UX-340)
-tools/dev_perfetto_queries.py  the canned questions, run against a real
-                             trace with Perfetto's own reader (UX-432)
+tools/dev_perfetto_queries.py  the canned questions, run on a real trace
+                             with Perfetto's own reader (UX-432)
 tools/dev_finding_coverage.py  which findings a committed capture really
                              produces, read off analyze (UX-460)
 tools/dev_track_cost.py      where an implementer track's tokens went,
@@ -520,3 +526,36 @@ json.dump(trace, open(f"{d}/trace.json", "w"))
 Then: `python3 -m bga.cli analyze /tmp/bga_test_run`
 
 A quick correctness sanity check with this fixture: the Attribution Breakdown should sum to the full 450000µs task horizon (I4, Σ attribution == H) - if it doesn't, something regressed in the attribution pipeline, and that's worth investigating before anything else.
+
+## 7a. Closing a round
+
+Round obligations are scattered; round 104 closed from memory and
+missed two, both caught by CI (`UX-763`). In order:
+
+1. Each row moves, both markers, one commit:
+   `dev_close_task.py UX-NNN --move --note-file F` (`UX-768`) —
+   `test_the_table_status_matches_the_task_files`.
+2. The index counts, once every row has moved:
+   `dev_close_task.py --check --write` (`UX-501`) —
+   `test_the_index_counts_match_the_rows_they_index`.
+3. A ledger row per subagent, with its friction line:
+   `dev_track_cost.py --append` (`UX-666`) —
+   `test_a_run_is_priced.py::TestTheRowIsWritten`.
+4. The touch-map spread, when the (file, module) pairs changed:
+   `dev_touching.py --spread --write` (`UX-756`) —
+   `test_the_cost_row_is_derived_from_the_selector.py`.
+5. The round document, its `## Agents` table from step 3's rows or
+   stating none ran —
+   `test_a_run_is_priced.py::TestEveryRoundDocumentPricesItsAgents`.
+6. `directions.md`'s history row and the `docs/README.md` link —
+   `test_the_round_history_names_every_audit.py` (`UX-583`).
+7. The gate, last: `make test` on the commit about to push —
+   `test_the_gate_covers_the_pushed_commit.py` (`UX-762`). Steps 1-6
+   are commits too, so a gate before them is stale by ship time.
+
+**Self-reference (`UX-744`):** a history-derived figure cannot name
+the commit that first states it. Step 2 counts rows, not commits
+(`UX-501`); a register counting *rounds* is one round behind by
+construction, caught up next round.
+
+Each step names the guard it already has, and replaces none.

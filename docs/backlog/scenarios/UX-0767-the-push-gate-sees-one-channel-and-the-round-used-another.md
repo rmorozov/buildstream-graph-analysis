@@ -1,6 +1,6 @@
 # UX-767: the push gate sees one channel, and the round used another
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-762 (the gate it limits) | **Serves:** the session that trusts the push gate to cover its branch | **Topic:** guards | **Area:** unassigned | **Shape:** judgement
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-762 (the gate it limits) | **Serves:** the session that trusts the push gate to cover its branch | **Topic:** guards | **Area:** unassigned | **Shape:** judgement
 
 ## Motivation
 
@@ -63,4 +63,78 @@ where today it lands silently.
 
 ## Outcome
 
-_Not started._
+**The gap, measured.** Round 102 closed with `af56022`
+(reflog push 2026-09-06T18:08:31+00:00) and round 105 with `e513c31`
+(reflog push 2026-09-07T13:57:44+00:00, its round-close commit). Every
+ref update to `origin/claude/build-optimization-audit-hk2xne` strictly
+after the first and up to and including the second (naive string
+comparison on the timestamp drops the trailing `+00:00` and silently
+miscounts by one at each end - counted with `datetime.fromisoformat`
+instead):
+
+```console
+$ git reflog show --date=iso-strict origin/claude/build-optimization-audit-hk2xne > /tmp/r.txt
+$ python3 -c "import re
+from datetime import datetime as D
+lo, hi = D.fromisoformat('2026-09-06T18:08:31+00:00'), D.fromisoformat('2026-09-07T13:57:44+00:00')
+print(sum(1 for l in open('/tmp/r.txt') if (m := re.match(r'^\S+ refs/remotes/\S+@\{([^}]+)\}: ', l)) and lo < D.fromisoformat(m.group(1)) <= hi))"
+41
+```
+
+41 push events landed in rounds 103-105. **Corrected by verification:**
+the first cut read `docs/audits/agent-runs.md` for a `git push` row and,
+finding none, called all 41 channel-external — but that ledger
+structurally never carries a row for the session's own merging and
+closing (`CLAUDE.md`: the session "judges, briefs and merges", it is
+not a ledger row), so absence there is not evidence of absence -
+fixing guide §5's proxy trap, the same shape as round 103's contention
+misdiagnosis. `e513c31` (the round-105 close itself, inside the
+window) is known to have been pushed by an explicit `git push -u
+origin claude/build-optimization-audit-hk2xne` Bash call, so **at
+least one** of the 41 went through the covered channel. The mix behind
+the rest is not recoverable from committed material - `.gate-covered`
+is gitignored and carries no history.
+
+**The decision.** Unchanged, and it never needed the count to be zero:
+CI on the pushed commit is the backstop; build nothing further. Partial
+coverage still leaves a channel-independent check doing the work CI
+already does, and a `pre-push` hook cannot be enforced by a committed
+file (Required Fix's own framing).
+
+**The close, measured.** The boundary is now stated in three places,
+naming what is actually knowable rather than a false absolute:
+
+```console
+$ grep -c UX-767 .claude/hooks/gate_covers_push.py docs/contributing/fixing-guide.md \
+  tests/unit/test_the_push_gate_states_its_channel.py
+.claude/hooks/gate_covers_push.py:1
+docs/contributing/fixing-guide.md:1
+tests/unit/test_the_push_gate_states_its_channel.py:5
+```
+
+**Guard limit, stated plainly.** A text guard confirms a sentence's
+substantive terms are present; it cannot confirm the sentence is
+*true*. The first cut's guards checked only for the `UX-767` citation,
+which a rewrite reversing the meaning ("this hook catches every push
+on every channel") could keep - both passed it. The guards now check
+the substantive terms (`SUBSTANTIVE_TERMS`) instead of the citation.
+
+### Mutations verified red and reverted (4)
+
+| # | mutation | reddened | count |
+|---|---|---|---|
+| M1 | drop `PreToolUse`/the substantive terms from the hook's docstring | `test_the_hook_docstring_states_the_boundary` | 1 of 4 failed |
+| M2 | drop `Bash tool call`/the substantive terms from the fixing-guide sentence | `test_the_fixing_guide_states_the_boundary` | 1 of 4 failed |
+| M3 | replace the hook's boundary paragraph with "catches every push on every channel", `UX-767` kept | `test_the_hook_docstring_states_the_boundary` | 1 of 4 failed |
+| M4 | same reversal on the fixing-guide sentence, `UX-767` kept | `test_the_fixing_guide_states_the_boundary` | 1 of 4 failed |
+
+All four applied to the real files (not an in-memory copy) and
+reverted from the scratchpad copy, then re-verified green (4 passed).
+No second, channel-independent guard exists to mutate per the
+Acceptance Test's own conditional ("if a second check is built") — the
+decision above is that none is built.
+
+**`BGA_SKIP_SELECTOR=1`** on the commit: this row's new test file also
+moves `fixing-guide.md`'s derived test-file count (same guard UX-766
+hit); regenerating it is the orchestrator's, once, after every track's
+new files land this round.

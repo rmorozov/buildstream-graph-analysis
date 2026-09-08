@@ -378,6 +378,35 @@ class TestTheGuidesSizeCostsOneFile:
         assert "CLAUDE.md" in _size_population()
 
 
+#: `UX-765`: `Makefile:30-32`'s per-tier reading is static text, not a
+#: live measurement, so the guide's quotation of it is a transcription
+#: a guard can hold to its source - `UX-756`'s `SITES` shape, no tier
+#: re-run needed. This does not assert the guide's *own*, later
+#: (`UX-584`) reading equals `UX-238`'s; it asserts the guide's copy of
+#: `UX-238`'s reading has not drifted from what `Makefile` still says.
+_MAKEFILE_TIER = re.compile(r"#\s+(small|medium|large)\s+\d+\s+files\s+([\d.]+)s")
+_GUIDE_TIER = re.compile(
+    r"small\s+([\d.]+)s,\s*medium\s+([\d.]+)s,\s*large\s+([\d.]+)s")
+
+
+class TestTheGuideQuotesTheMakefilesReading:
+    def test_the_transcription_matches_the_source(self):
+        makefile = (REPO / "Makefile").read_text(encoding="utf-8")
+        source = {m.group(1): m.group(2)
+                  for m in _MAKEFILE_TIER.finditer(makefile)}
+        assert source.keys() == {"small", "medium", "large"}, (
+            f"Makefile:30-32 no longer names all three tiers: {source}")
+        flat = " ".join(GUIDE.read_text(encoding="utf-8").split())
+        match = _GUIDE_TIER.search(flat)
+        assert match, ("fixing-guide.md no longer quotes a small/medium/"
+                       "large reading for `UX-238`")
+        quoted = {"small": match.group(1), "medium": match.group(2),
+                  "large": match.group(3)}
+        assert quoted == source, (
+            f"fixing-guide.md quotes {quoted} as Makefile:30-32's reading; "
+            f"Makefile:30-32 now says {source} - update the quote (`UX-765`)")
+
+
 class TestTheCardsSizeCostsNoFile:
     """`UX-616`: the same coupling with the documents swapped. The guide
     stated the card's size at `round(B/1024)` - a 1,023 B band on a
@@ -438,6 +467,16 @@ class TestTheCardsSizeCostsNoFile:
             if _ABOUT_THE_CARD.search(" ".join(sentence.split()))}
 
 
+def _without_task_ids(text: str) -> str:
+    """UX-769: `UX-503` is a citation, not a count."""
+    return re.sub(r"UX-\d+", "", text)
+
+
+def _states_the_number(text: str, number: int) -> bool:
+    """A count, not a digit run inside a longer one."""
+    return re.search(rf"(?<!\d){number}(?!\d)", text) is not None
+
+
 class TestTheCountNoDecisionReadsIsGone:
     """`UX-471`'s other shape: a figure no decision reads is removed, not
     kept true by a test somebody has to edit each round."""
@@ -445,9 +484,10 @@ class TestTheCountNoDecisionReadsIsGone:
     def test_the_verify_skill_no_longer_counts_the_reference(self):
         rows = len(json.loads(
             (REPO / "tests/ci_reference.json").read_text())["files"])
-        text = (REPO / ".claude/skills/verify/SKILL.md").read_text(
-            encoding="utf-8")
-        assert str(rows) not in text, (
+        text = _without_task_ids(
+            (REPO / ".claude/skills/verify/SKILL.md").read_text(
+                encoding="utf-8"))
+        assert not _states_the_number(text, rows), (
             f"the verify skill states the reference's row count ({rows}); the "
             f"default branch adopts a new row on its own (`UX-503`), so the "
             f"figure moves without anyone deciding anything")
@@ -455,9 +495,10 @@ class TestTheCountNoDecisionReadsIsGone:
     def test_the_researcher_no_longer_counts_the_backlog(self):
         files = [one for one in _tracked()
                  if one.startswith("docs/backlog/scenarios/UX-")]
-        text = (REPO / ".claude/agents/researcher.md").read_text(
-            encoding="utf-8")
-        assert str(len(files)) not in text, (
+        text = _without_task_ids(
+            (REPO / ".claude/agents/researcher.md").read_text(
+                encoding="utf-8"))
+        assert not _states_the_number(text, len(files)), (
             f"the researcher states the backlog's size ({len(files)}); it "
             f"moves on every filing and steers no decision (`UX-471`)")
 

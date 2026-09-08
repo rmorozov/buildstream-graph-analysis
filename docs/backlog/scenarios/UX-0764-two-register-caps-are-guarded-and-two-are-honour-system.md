@@ -59,4 +59,41 @@ where today the suite is green.
 
 ## Outcome
 
-_Not started._
+**The gap, measured.** `grep -rn "dev_commit_bodies" tests/unit/*.py
+.github/workflows/ci.yml` finds the tool unit-tested
+(`test_a_commit_body_is_eight_lines.py`) and CI-invoked (`ci.yml:642`),
+guarded but only there: `make test` never calls it, which is how
+round 106 shipped a ten-line body invisible in the diff and the
+track's own report, caught only by a verifier running the tool by
+hand. `grep -rln "code comment\|one line of why" tests/` finds one
+hit, a docstring naming the phrase, not a guard - the code-comment cap
+is the one actually unguarded. Outcome length is guarded
+(`test_a_budgeted_outcome_fits`); content is not -
+`docs/audits/round-94.md:20` measured 55 of 60 mutation tables, five
+missing and green throughout.
+
+**The close, measured** (this track's share: Outcome content and the
+commit-body population; the code-comment cap and `rules.md`'s honesty
+are a sibling track's row). Added `TestOutcomeContentIsGuarded` to
+`test_the_register_is_terse.py`: every closed, budgeted (`UX-497`+)
+Outcome must mention "mutation" or be named in `NO_GUARD_OUTCOMES`
+(four pre-existing exemptions, checked real by their own clause). New
+`test_the_commit_body_gate_runs_before_ci.py` runs
+`dev_commit_bodies.over_cap(base="origin/main")` inside `make test`, so
+a track's own suite now sees what round 106 needed a verifier's manual
+run to catch. Where it does **not** run: `ci.yml:642`'s call lives in
+the `agent-config` job, which fetches `origin main` first; the `test`
+job checks out without that fetch, so this guard skips there and adds
+no enforcement inside CI (`agent-config`'s own call still runs on every
+push). It earns its place on a local `make test`, where the ref
+resolves. A commit already folded into `origin/main` measures an empty
+range - a pre-merge gate, not a retroactive audit.
+
+**Mutation table.**
+
+| mutation | result | count |
+|---|---|---|
+| strip the Mutation table from `UX-0761`'s closed Outcome | 🔴 names the file: "closed Outcome names no mutation table" | 1 failed, 1 passed |
+| add a bogus `UX-9999` to `NO_GUARD_OUTCOMES` | 🔴 `test_every_exemption_is_a_real_closed_task` names it | 1 failed |
+| a real 9-line-body commit on top of `origin/main` | 🔴 names the sha, subject and count (9) | 1 failed |
+| restore from a scratchpad copy after each (never `git checkout --`) | 🟢 all clauses pass; `git diff` clean | tests green

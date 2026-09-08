@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-765 scenarios: **26 open**, 739 closed.
+781 scenarios: **25 open**, 756 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -26,8 +26,8 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | viewer | 3 | 163 |
 | cli | 0 | 22 |
 | store | 0 | 16 |
-| docs | 6 | 126 |
-| guards | 10 | 187 |
+| docs | 8 | 131 |
+| guards | 7 | 198 |
 
 ## Open scenarios
 
@@ -52,16 +52,23 @@ task file, which is the only place it ever lived twice.
 | UX-698 | [the gate-only shelf on GitHub — code scanning, a lockfile and audit, Dependabot, secret scanning](UX-0698-the-gate-only-shelf-on-github-code-scanning-a-lockfile-and-audit-depen.md) | guards | High | R8 reading a red gate that a hosted tool raised, and the user who wants the heavier analyses without a slower inner loop | 🔴 |
 | UX-741 | [the spine's ground truth reads wall clock, and a loaded host reds it](UX-0741-the-spine-s-ground-truth-reads-wall-clock-and-a-loaded-host-reds-it.md) | guards | Medium | R8 reading a red gate on a file nobody touched | 🔴 |
 | UX-744 | [no register says which rounds exist, and four records disagree](UX-0744-no-register-says-which-rounds-exist-and-four-records-disagree.md) | docs | Medium | the session opening a round, which cannot number it from any record | 🔴 |
-| UX-757 | [the four rounds the register names have no document](UX-0757-the-four-rounds-the-register-names-have-no-document.md) | docs | Medium | the reader who cannot see what rounds 99..102 launched | 🔴 |
 | UX-758 | [the edge-mark test reads a merged name and never matches](UX-0758-the-edge-mark-test-reads-a-merged-name-and-never-matches.md) | viewer | Medium | the reader of an exhibit axis whose labels silently stop being protected | 🔴 |
-| UX-759 | [the register's id column loses a subset in silence](UX-0759-the-register-s-id-column-loses-a-subset-in-silence.md) | guards | Medium | the round that reads the register to learn what an earlier round closed | 🔴 |
-| UX-760 | [six more files build against the broken reserve](UX-0760-six-more-files-build-against-the-broken-reserve.md) | guards | Medium | the session that runs `make test` on a container with a large disk and little free space | 🔴 |
-| UX-763 | [no document says what closing a round owes](UX-0763-no-document-says-what-closing-a-round-owes.md) | docs | Medium | the session closing a round from memory because no list exists | 🔴 |
 | UX-764 | [two Register caps are guarded and two are honour-system](UX-0764-two-register-caps-are-guarded-and-two-are-honour-system.md) | guards | Medium | the reader who trusts a cap because the guard reported green | 🔴 |
-| UX-765 | [two process cross-references point at numbers that are not there](UX-0765-two-process-cross-references-point-at-numbers-that-are-not-there.md) | docs | Low | the session that follows a cross-reference and finds the other number | 🔴 |
-| UX-766 | [the forced baseline is loud only until it is committed](UX-0766-the-forced-baseline-is-loud-only-until-it-is-committed.md) | guards | Medium | the session reading `make lint` and believing the baseline did not grow | 🔴 |
-| UX-767 | [the push gate sees one channel, and the round used another](UX-0767-the-push-gate-sees-one-channel-and-the-round-used-another.md) | guards | Medium | the session that trusts the push gate to cover its branch | 🔴 |
-| UX-768 | [the closing note is a shell argument, and its backticks run](UX-0768-the-closing-note-is-a-shell-argument-and-its-backticks-run.md) | guards | High | every round that closes a row with a note naming a command | 🔴 |
+| UX-774 | [the guide is at its band ceiling, and every round pays a trim](UX-0774-the-guide-is-at-its-band-ceiling-and-every-round-pays-a-trim.md) | docs | Medium | the round that adds a tool and finds an unrelated paragraph is what it has to delete | 🔴 |
+| UX-775 | [two files still build against the ambient HOME](UX-0775-two-files-still-build-against-the-ambient-home.md) | guards | Medium | the session whose `make test` reds on two files nobody touched, at a margin the other twelve survive | 🔴 |
+| UX-777 | [the nine page-built sections are thirteen, in two documents](UX-0777-the-nine-page-built-sections-are-thirteen-in-two-documents.md) | docs | Medium | the reader deciding whether chaptering belongs in the schema, on a figure that is 44% low | 🔴 |
+| UX-778 | [the docs index counts two guards where four fire](UX-0778-the-docs-index-counts-two-guards-where-four-fire.md) | docs | Medium | the reader deciding which style rules are mechanical and which are honour-system | 🔴 |
+| UX-779 | [the README prints two wall clocks the guide says are not the suite's](UX-0779-the-readme-prints-two-wall-clocks-the-guide-says-are-not-the-suites.md) | docs | Medium | the newcomer budgeting a run from a number measured on someone else's afternoon | 🔴 |
+| UX-780 | [the map says a shelf shipped, and one linter did](UX-0780-the-map-says-a-shelf-shipped-and-one-linter-did.md) | docs | Medium | the round pricing whether the analysis shelf exists before deciding to build it | 🔴 |
+| UX-782 | [the register derives its rounds from `git log`, which is a property of the clone](UX-0782-the-register-derives-its-rounds-from-git-log.md) | guards | Medium | the round whose register disagrees with itself on a second machine | 🔴 |
+
+**The narrative round headings below are retired at round 94**
+(`UX-763`): each one hand-types an id range and a date that a register
+would derive, and typing rounds 95 on by hand is the fifth disagreeing
+record `UX-763` found, not a sixth fix for it. `UX-744`'s register is
+where a later round's id range and date belong; `UX-757` is where a
+round's own document belongs. The existing headings stay, unedited,
+as the record of what each round already claimed.
 
 ## UX-706..UX-711: the ninety-fourth round — the pipeline, and which model runs which shape (2026-09-05)
 

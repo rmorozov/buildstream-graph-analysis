@@ -976,4 +976,11 @@ MEDIUM = (
     # browser, no subprocess, but 59 real analyses. Three
     # single-process runs alone: 4.93 / 5.17 / 5.12s.
     "tests/unit/test_the_invariants_hold_for_any_shape.py",           #    5.2s
+    # `UX-773`, tiered on landing. `test_the_tiers_are_a_partition.py`
+    # decides this one by construction, not duration: a file matching
+    # `BOOTS_A_BROWSER` may not sit in the small tier whatever it
+    # measures. Round 108 moved it out on the duration rule and
+    # reddened that guard - the two rules disagree here and the class
+    # one is the explicit one (UX-783).
+    "tests/unit/test_a_killed_browser_does_not_outlive_the_worker.py",  #  0.6s
 )

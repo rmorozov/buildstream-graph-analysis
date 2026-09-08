@@ -11,7 +11,7 @@ So this does the parts that are mechanical and refuses to do the parts
 that are not:
 
     python tools/dev_close_task.py UX-329 --outcome --round 47
-    python tools/dev_close_task.py UX-329 --move --note "one line for closed.md"
+    python tools/dev_close_task.py UX-329 --move --note-file /tmp/note.md
     python tools/dev_close_task.py --check
 
 `--outcome` prints a skeleton to paste and fill: it writes the headings
@@ -21,8 +21,9 @@ claim this repository keeps finding.
 
 `--move` performs the row move, flips both copies of the status marker,
 and adjusts the two index counts. It refuses when the task file has no
-Outcome section — closing a row for work with nothing written down is
-the failure mode, not the convenience.
+Outcome section, when the note is empty, or when the note carries a
+newline — a substituted note, not a written one (UX-768). `--note-file`
+keeps the note off the command line; `--note` still takes a one-liner.
 """
 import argparse
 import pathlib
@@ -985,9 +986,26 @@ def _validate_close(uid: str):
     return path, line, topic, None
 
 
-def _close_one(uid: str, note: str, path, line: str, topic) -> None:
+def _refuse_multiline_note(uid: str, note: str) -> str:
+    """`""` for a clean one-line note, the refusal text otherwise. A
+    newline embedded in the note is command substitution's mark, not a
+    typed one - `git status`'s stdout landing in a closing note is
+    `UX-768`'s measurement. Checked before any write, by every caller,
+    so the row never splits for the cell-count guard to find later."""
+    if "\n" not in note:
+        return ""
+    return (f"{uid}: --note is one line; a multi-line note is a "
+            f"substituted note (UX-768)")
+
+
+def _close_one(uid: str, note: str, path, line: str, topic) -> str:
     """The write `move()` and `move_batch()` both perform, once the
-    caller has already validated `uid` with `_validate_close`."""
+    caller has already validated `uid` with `_validate_close`. Returns
+    `""` on success or a refusal (UX-768) - the last check before the
+    write, in case a future caller forgets the earlier one."""
+    refusal = _refuse_multiline_note(uid, note)
+    if refusal:
+        return refusal
     body = close_status_line(path.read_text(encoding="utf-8"))
     # `UX-501`: the topic travels with the item. The open row carries a
     # Topic column and the closed row does not, so an item filed before
@@ -1030,10 +1048,15 @@ def _close_one(uid: str, note: str, path, line: str, topic) -> None:
     last = max(i for i, text in enumerate(closed) if text.startswith("| UX-"))
     closed.insert(last + 1, closed_row)
     CLOSED.write_text("\n".join(closed) + "\n", encoding="utf-8")
+    return ""
 
 
 def move(uid: str, note: str) -> int:
     path, line, topic, refusal = _validate_close(uid)
+    if refusal:
+        print(refusal, file=sys.stderr)
+        return 2
+    refusal = _refuse_multiline_note(uid, note)
     if refusal:
         print(refusal, file=sys.stderr)
         return 2
@@ -1081,6 +1104,10 @@ def move_batch(pairs: list) -> int:
                   f"sentence about what was found, and nothing can write "
                   f"it for you", file=sys.stderr)
             return 2
+        refusal = _refuse_multiline_note(uid, note)
+        if refusal:
+            print(refusal, file=sys.stderr)
+            return 2
         path, line, topic, refusal = _validate_close(uid)
         if refusal:
             print(refusal, file=sys.stderr)
@@ -1088,7 +1115,10 @@ def move_batch(pairs: list) -> int:
         validated.append((uid, note, path, line, topic))
 
     for uid, note, path, line, topic in validated:
-        _close_one(uid, note, path, line, topic)
+        refusal = _close_one(uid, note, path, line, topic)
+        if refusal:
+            print(refusal, file=sys.stderr)
+            return 2
         print(f"{uid}: status flipped, row moved.")
 
     write_index()
@@ -1100,8 +1130,8 @@ def move_batch(pairs: list) -> int:
 #: `UX-709`: the argparse flags that take a value, vs. the plain
 #: switches - `_split_move_batch` needs both to walk past them without
 #: mistaking a flag's value for a bare id.
-_FLAGS_WITH_VALUE = ("--note", "--scenarios", "--round", "--date",
-                     "--mutations", "--diff")
+_FLAGS_WITH_VALUE = ("--note", "--note-file", "--scenarios", "--round",
+                     "--date", "--mutations", "--diff")
 _FLAGS_BOOL = ("--move", "--check", "--write", "--shape", "--figures",
               "--outcome", "-h", "--help")
 
@@ -1153,7 +1183,12 @@ def main(argv=None) -> int:
     parser.add_argument("--move", action="store_true",
                         help="flip both markers, move the row, fix the counts")
     parser.add_argument("--note", default="",
-                        help="the one-line narrative for the closed.md row")
+                        help="the one-line narrative for the closed.md row "
+                             "- a shell word, so a backtick in it runs "
+                             "(UX-768); prefer --note-file")
+    parser.add_argument("--note-file", default=None,
+                        help="read the note from this file instead - it "
+                             "never transits a shell word (UX-768)")
     parser.add_argument("--check", action="store_true",
                         help="report every status/count disagreement")
     parser.add_argument("--write", action="store_true",
@@ -1242,11 +1277,16 @@ def main(argv=None) -> int:
     if args.move:
         if batch:
             return move_batch(pairs)
-        if not args.note:
-            parser.error("--move needs --note: the closed.md row is a "
-                         "sentence about what was found, and nothing can "
-                         "write it for you")
-        return move(args.uid, args.note)
+        if args.note and args.note_file:
+            parser.error("--note and --note-file: give one, not both")
+        note = (pathlib.Path(args.note_file).read_text(
+                    encoding="utf-8").rstrip("\n")
+                if args.note_file else args.note)
+        if not note:
+            parser.error("--move needs --note or --note-file: the "
+                         "closed.md row is a sentence about what was "
+                         "found, and nothing can write it for you")
+        return move(args.uid, note)
     parser.error("give --outcome, --move, --check or --figures")
 
 

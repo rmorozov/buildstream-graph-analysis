@@ -1,6 +1,6 @@
 # UX-803: a step change in a file's cost takes three main pushes to reach the reference
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-496 (the samples), UX-503 (the adopt job), UX-442 (the two-run confirmation) | **Found by:** round 110, PR #218's three CI runs | **Serves:** R8 reading a red drift gate on a PR whose diff touched a file main had already made slower | **Topic:** guards | **Area:** tools | **Shape:** bounded
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-496 (the samples), UX-503 (the adopt job), UX-442 (the two-run confirmation) | **Found by:** round 110, PR #218's three CI runs | **Serves:** R8 reading a red drift gate on a PR whose diff touched a file main had already made slower | **Topic:** guards | **Area:** tools | **Shape:** bounded
 
 ## Motivation
 
@@ -102,3 +102,5 @@ to `[50.0]`, median 50.0, name in `adopted`. Two pushes, not three.
 All three reverted from the scratchpad's pre-mutation copy, `__pycache__`
 cleared each time; `tests/unit/test_a_slow_file_says_which_file.py`
 back to 145 passed after each revert.
+
+**Deviation.** One workflow step added (main's carry restored on a PR run under the default branch's key prefix) and `--base-carry PATH` on `--against`; the pre-existing own-branch key guard gained an exemption for the cross-branch key, its own mutation still red. The verifier's note, recorded: a base carry given but unreachable still reds the branch as before — held by `test_an_unreachable_base_carry_says_so`, not narrated in the Outcome. One commit, one verifier (PASS).

@@ -170,6 +170,8 @@ pairing for every merged row from round 103 on.
 | 111 | verifier | sonnet | verify `UX-799` | 41k | 26 | 7.6 m | PASS; TOOLS could drift from main() — fixed before merge | — |
 | 111 | implementer | sonnet | `UX-800` the rail landing waits for the rect to settle (mechanical) | 180k | 132 | 46.5 m | merged d8514361; a premature-settle case found and fixed | the wrong-pixel failure gave no why; per-frame traces did |
 | 111 | verifier | sonnet | verify `UX-800` | 35k | 25 | 9.4 m | PASS; a too-low cap uncaught, recorded | each browser run 60-75 s under load |
+| 111 | implementer | sonnet | `UX-803` the drift gate reads the base's own run (bounded) | 383k | 131 | 59.2 m | merged 7804f026; one workflow step, a base-carry flag, a step rule in adopt | a new C901 surfaced only in make lint's full log |
+| 111 | verifier | sonnet | verify `UX-803` | 66k | 50 | 7.7 m | PASS; the unreachable-base case held by a test, not narrated | the mutation description was ambiguous between an assignment and a block |
 
 Round 101's four tracks are **not** here: this session could not
 identify their transcripts with certainty after a context rebuild, and
@@ -182,7 +184,7 @@ committed cleanly once told to run in the foreground. Three of the five
 left a derived figure or a §6 context-map row behind - the same class
 the round itself was about, arriving in the tracks' own work.
 
-What the one hundred and fifty-three rows already say: a researcher that reads a document
+What the one hundred and fifty-five rows already say: a researcher that reads a document
 whole costs 100-180k; a walker that drives every control costs 336k;
 the two cuts cost a re-run each. The `walk` and `design-review`
 skills fix the report shape so the next rows are smaller, and the

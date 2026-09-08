@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-801 scenarios: **11 open**, 790 closed.
+801 scenarios: **10 open**, 791 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -27,7 +27,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | cli | 0 | 22 |
 | store | 0 | 16 |
 | docs | 2 | 134 |
-| guards | 4 | 214 |
+| guards | 3 | 214 |
 
 ## Open scenarios
 
@@ -45,7 +45,6 @@ task file, which is the only place it ever lived twice.
 | UX-695 | [the refactor stream takes the ledger's top row — renderers first](UX-0695-the-refactor-stream-takes-the-ledger-s-top-row-renderers-first.md) | docs | Medium | the session that opens a round and has no refactor to pick because none is filed | 🔴 |
 | UX-782 | [the register derives its rounds from `git log`, which is a property of the clone](UX-0782-the-register-derives-its-rounds-from-git-log.md) | guards | Medium | the round whose register disagrees with itself on a second machine | 🔴 |
 | UX-797 | [eight identical sleeps spread past a tenth, under organic load](UX-0797-eight-identical-sleeps-spread-past-a-tenth-under-organic-load.md) | guards | Medium | the gate that reds on a host reading nothing in the diff touched | 🔴 |
-| UX-803 | [a step change in a file's cost takes three main pushes to reach the reference](UX-0803-a-step-change-in-a-file-s-cost-takes-three-main-pushes-to-reach-the-reference.md) | guards | Medium | R8 reading a red drift gate on a PR whose diff touched a file main had already made slower | 🔴 |
 | UX-804 | [the diagnostics performance guard is a typed ten seconds of wall clock](UX-0804-the-diagnostics-performance-guard-is-a-typed-ten-seconds-of-wall-clock.md) | guards | Medium | R8 reading a red gate on a file nobody touched | 🔴 |
 
 **The narrative round headings below are retired at round 94**

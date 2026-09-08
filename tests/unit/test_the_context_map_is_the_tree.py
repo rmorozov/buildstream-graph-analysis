@@ -29,6 +29,14 @@ import pytest
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 GUIDE = REPO / "docs/contributing/fixing-guide.md"
+CLOSED = REPO / "docs/backlog/scenarios/closed.md"
+
+#: `UX-780`: a citation with no `(open)` beside it reads as closed.
+#: `UX-786`: a slash group (`UX-698/699/787`) shares its `UX-` prefix
+#: across bare numbers, so the cluster is matched whole and each
+#: number read separately - `(open)` after any one marks that id.
+CITATION = re.compile(r"UX-\d+(?:\s*\(open\))?(?:/\d+(?:\s*\(open\))?)*")
+ID_IN_CITATION = re.compile(r"(\d+)(\s*\(open\))?")
 
 # Modules small enough or private enough that naming each one would make
 # the map longer without making it more useful. Each is *reachable* -
@@ -489,6 +497,28 @@ class TestTheMapNamesTheTree:
         text = _map_text()
         assert "only existing test file" not in text
         assert "tests/unit/" in text, "the map does not mention where tests live"
+
+    def test_every_cited_id_is_closed_or_marked_open(self):
+        """`UX-780`: a citation reads as provenance, so it names a
+        closed id - `UX-698` sat bare in the `quality.yml` row while
+        its own status was Not Started, and the row described the
+        ambition rather than the file. An open id may still appear,
+        spelled `(open)` beside it."""
+        closed = set(re.findall(r"UX-\d+", CLOSED.read_text(encoding="utf-8")))
+        text = _map_text()
+        bare = []
+        for cluster in CITATION.finditer(text):
+            line = (text[:cluster.start()].rsplit("\n", 1)[-1]
+                    + text[cluster.start():].split("\n", 1)[0])
+            for part in ID_IN_CITATION.finditer(cluster.group()):
+                num, marker = part.groups()
+                cited = f"UX-{num}"
+                if cited in closed or marker:
+                    continue
+                bare.append(f"{cited} in {line.strip()!r}")
+        assert bare == [], (
+            f"§6 cites open id(s) with no `(open)` marker: {bare}. "
+            f"docs/contributing/fixing-guide.md §6.")
 
 
 class TestTheMapsCapabilitiesDerive:

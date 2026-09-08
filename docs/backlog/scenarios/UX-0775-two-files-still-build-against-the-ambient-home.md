@@ -104,6 +104,16 @@ after:
 Ratio 1.12x–1.23x elapsed — well under the 2x bar, so the isolation is
 kept per the brief's rule, not reverted.
 
+The Acceptance Test's own `fallocate` step was not run: the machine was
+shared with other tracks mid-round (13.5 GB free, 500M reserve — filling
+to a negative margin risked every concurrent track's `bst` build, not
+just this one). Substituted: the wall-time comparison above (21.82s
+ambient to 23.94-26.91s isolated, 1.12x-1.23x) and the structural
+guard's mutation below. The functional claim — no `Cache too full` at a
+negative margin — is inherited from `UX-760`'s verification of the same
+`quota: 3G` mechanism (`_bst_env.py`'s `BST_XDG_CONFIG_HOME` fixture,
+unchanged here), not re-measured for these two files.
+
 **Mutation table.**
 
 | guard | mutation | result |

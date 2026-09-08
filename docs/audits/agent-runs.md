@@ -176,6 +176,8 @@ pairing for every merged row from round 103 on.
 | 111 | verifier | sonnet | verify `UX-782` | 52k | 50 | 4.9 m | HOLD: GIT_ONLY_ROUNDS unguarded — a round-26.md left --check green; fixed before merge | make lint stalls on proxy egress; pieces run instead |
 | 111 | implementer | sonnet | `UX-797` the spread clauses read a measured tolerance and the CPU readings (bounded) | 230k | 77 | 56.9 m | merged d2c9ce66; the wall bound derived from twenty runs after one hold | make lint killed twice by memory pressure; the example needed staging |
 | 111 | verifier | sonnet | verify `UX-797` | 36k | 29 | 9.2 m | HOLD: the CPU spread implied by the per-element bound, the wall half unguarded; fixed before merge | the redundancy took algebra, not a run, to see |
+| 111 | implementer | sonnet | `UX-804` the diagnostics performance guard counts work, not the clock (bounded) | 202k | 92 | 27.1 m | merged 8e1a0db6; call events after a warm-up, one hold on the cold count fixed | a line trace costs 14 s through the diagnostics pass; call events instead |
+| 111 | verifier | sonnet | verify `UX-804` | 29k | 23 | 5.9 m | HOLD: the count is cold/warm-dependent, the tracer cleared not restored; fixed before merge | one extra in-process rerun falsified the pasted number |
 
 Round 101's four tracks are **not** here: this session could not
 identify their transcripts with certainty after a context rebuild, and
@@ -188,7 +190,7 @@ committed cleanly once told to run in the foreground. Three of the five
 left a derived figure or a §6 context-map row behind - the same class
 the round itself was about, arriving in the tracks' own work.
 
-What the one hundred and fifty-nine rows already say: a researcher that reads a document
+What the one hundred and sixty-one rows already say: a researcher that reads a document
 whole costs 100-180k; a walker that drives every control costs 336k;
 the two cuts cost a re-run each. The `walk` and `design-review`
 skills fix the report shape so the next rows are smaller, and the

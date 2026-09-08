@@ -1,6 +1,6 @@
 # UX-804: the diagnostics performance guard is a typed ten seconds of wall clock
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-731 (the same swap, done once), UX-741, UX-551 | **Found by:** round 111, the first gate under eight agents | **Serves:** R8 reading a red gate on a file nobody touched | **Topic:** guards | **Area:** bga | **Shape:** bounded
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-731 (the same swap, done once), UX-741, UX-551 | **Found by:** round 111, the first gate under eight agents | **Serves:** R8 reading a red gate on a file nobody touched | **Topic:** guards | **Area:** bga | **Shape:** bounded
 
 ## Motivation
 
@@ -81,3 +81,5 @@ bare, 3 runs:   4.05s / 4.17s / 4.08s - pass
 Applied to a scratch copy (`analyzer.pristine.py`), reverted by
 copying that pristine file back - not `git checkout --`; `__pycache__`
 cleared between runs.
+
+**Deviation.** The count is of `bga`'s own call events, not line events: a full line trace over this fixture costs 14 s through the O(N²) diagnostics pass `P1-21` holds, so the cheaper deterministic counter was chosen (`UX-731`'s instrument, one level up). One verifier hold: the count was cold-start (3,630,498) against a warm 3,627,224 — a 3-element warm-up now runs first and the count reads 3,627,224 three runs in a row; the tracer is restored, not cleared (8e1a0db6). Two commits, one verifier.

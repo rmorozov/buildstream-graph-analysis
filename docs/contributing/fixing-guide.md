@@ -487,7 +487,7 @@ wrong for the rest — an audit has no row until it has been done.
 | **feature** | a 🔴 row whose Depends on is clear | code + guards + an Outcome section | §3, in full |
 | **fix** | a defect, from CI or a report | the failing case first, then the fix | the case that reproduced it is a committed guard |
 | **documentation** | a doc that is wrong, or a gap filed per `§3.11` | the correction, in the same register | the guard that would have caught it exists, or its absence is stated |
-| **refactor** | a measured cost — size, duplication, a budget | the change, plus before/after | the measurement moved, and no behaviour did |
+| **refactor** | a measured cost — size, duplication, a budget; unfiled, the candidate is the size ledger's top row by longest function, and a round with two or more tracks gives one to it (`UX-695`) | the change, plus before/after | the measurement moved, and no behaviour did |
 | **review** | the diff since the last row in [`architecture-review.md`](../audits/architecture-review.md) | filings, and that document's next row | every checklist item is answered with a measurement or a filing (`UX-241`) |
 | **release** | a contract that moved, and a review at or after the last release | a row in [`CHANGELOG.md`](../../CHANGELOG.md), a derived version, a tag | the derivation guard is green and the head names what a consumer must do (`UX-251`) |
 

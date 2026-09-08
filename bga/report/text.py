@@ -584,28 +584,8 @@ def _format_blast_ranking(signals: dict) -> list[str]:
     return lines
 
 
-def format_text(result: AnalysisResult, section: Optional[str] = None,
-                by_kind: bool = False, full_sections=frozenset(),
-                explain: bool = False) -> str:
-    """
-    Format analysis results as human-readable text.
-
-    Args:
-        result: The AnalysisResult object from the analyzer
-        section: Restrict output to one report section (see SECTIONS) -
-            None (default) produces the full `analyze` report.
-        by_kind: Show the element_kind aggregate summary (P4-12
-            Direction 3, `bga graph --by-kind`) - opt-in, since it's
-            extra detail beyond the default graph section.
-        explain: Print each claim's provenance chain under it - the
-            fields it was read from, the rule that fired, and the trace
-            query that deepens it (`UX-229`). Off by default: the
-            report is a decision, and the chain is what a reader asks
-            for after doubting one.
-
-    Returns:
-        Formatted string suitable for terminal display
-    """
+def _render_header_section(result: AnalysisResult, section, by_kind, full_sections, explain) -> list[str]:
+    """Title, run identity, duration, and the build-failed notice - always shown."""
     lines = []
     lines.append("=" * 60)
     lines.append("Build Efficiency Report")
@@ -657,24 +637,35 @@ def format_text(result: AnalysisResult, section: Optional[str] = None,
         )
         break
     lines.append("")
+    return lines
 
-    # Key Findings (P4-02) - synthesized summary, shown first, full
-    # report only (matches format_json's own confidence/violations
-    # gating: section is None). Subcommand-specific outputs (graph/
-    # floors/replay/utilisation/diagnostics) stay exactly as they were.
+
+def _render_key_findings_section(result: AnalysisResult, section, by_kind, full_sections, explain) -> list[str]:
+    """Key Findings (P4-02) - synthesized summary, full report only."""
+    lines = []
+    # (matches format_json's own confidence/violations gating: section is
+    # None). Subcommand-specific outputs (graph/floors/replay/
+    # utilisation/diagnostics) stay exactly as they were.
     if section is None:
         lines.extend(_format_key_findings(result, explain=explain))
         # UX-596: beside the savings it converts, and only when a rate
         # was supplied.
         lines.extend(_format_in_your_units(result, compute_findings(result)))
         lines.extend(_format_confidence_and_violations(result))
+    return lines
 
-    # UX-171: with the graph, because it is a fact about the graph's
-    # inputs rather than about this run's scheduling.
+
+def _render_resource_blast_section(result: AnalysisResult, section, by_kind, full_sections, explain) -> list[str]:
+    """UX-171: with the graph, a fact about the graph's inputs, not this run's scheduling."""
+    lines = []
     if section in (None, 'graph'):
         lines.extend(_format_resource_blast(result, full_sections))
+    return lines
 
-    # Certified Floors (Parts 14-17)
+
+def _render_floors_section(result: AnalysisResult, section, by_kind, full_sections, explain) -> list[str]:
+    """Certified Floors (Parts 14-17)."""
+    lines = []
     if section in (None, 'floors'):
         lines.append("Certified Floors:")
         floors = result.floors
@@ -720,9 +711,12 @@ def format_text(result: AnalysisResult, section: Optional[str] = None,
             lines.append(f"  Unmeasurable at this epsilon: "
                          f"{', '.join(resolution.get('elements', []))}")
         lines.append("")
+    return lines
 
-    # Attribution (Part 11-12) - full report only; `--format csv` already
-    # serves this slice on its own for any subcommand.
+
+def _render_attribution_section(result: AnalysisResult, section, by_kind, full_sections, explain) -> list[str]:
+    """Attribution (Part 11-12) - full report only; `--format csv` serves this slice for any subcommand."""
+    lines = []
     if section is None and hasattr(result, 'attribution') and result.attribution:
         lines.append("Attribution Breakdown:")
         total = result.total_duration_us
@@ -733,9 +727,13 @@ def format_text(result: AnalysisResult, section: Optional[str] = None,
                 f"{duration_us / 1e6:8.2f}s ({pct:5.1f}%)"
             )
         lines.append("")
+    return lines
 
-    # Replay (Part 18) - dedicated block for `bga replay RUN`; the
-    # Certified Floors block above already shows T_C for the full report.
+
+def _render_replay_section(result: AnalysisResult, section, by_kind, full_sections, explain) -> list[str]:
+    """Replay (Part 18) - dedicated block for `bga replay RUN`."""
+    lines = []
+    # The Certified Floors block above already shows T_C for the full report.
     if section == 'replay':
         lines.append("Replay:")
         t_replay = result.floors.get('t_c')
@@ -745,11 +743,16 @@ def format_text(result: AnalysisResult, section: Optional[str] = None,
         if model_slack is not None:
             lines.append(f"  Model Slack (T_C - LB): {model_slack / 1e6:.2f}s")
         lines.append("")
+    return lines
 
-    # Critical Path (Part 14.1) - result.signals['critical_path'] is a
-    # list of element UIDs (compute_critical_path's return shape), not
-    # task objects; the previous version read a nonexistent
-    # result.critical_path top-level attribute and an equally nonexistent
+
+def _render_critical_path_section(result: AnalysisResult, section, by_kind, full_sections, explain) -> list[str]:
+    """Critical Path (Part 14.1)."""
+    lines = []
+    # result.signals['critical_path'] is a list of element UIDs
+    # (compute_critical_path's return shape), not task objects; the
+    # previous version read a nonexistent result.critical_path
+    # top-level attribute and an equally nonexistent
     # task_key.element_name, so this block never actually fired for any
     # input - a pre-existing dead-code bug, fixed here since P1-14's new
     # `graph` subcommand's whole purpose depends on this content existing.
@@ -793,16 +796,74 @@ def format_text(result: AnalysisResult, section: Optional[str] = None,
             # anyway rather than falling back to the bare length.
             lines.append(f"  Path: {' → '.join(critical_path)}")
         lines.append("")
+    return lines
 
-    # Occupancy Stats (Part 4)
+
+def _render_occupancy_stats_section(result: AnalysisResult, section, by_kind, full_sections, explain) -> list[str]:
+    """Occupancy Stats (Part 4)."""
+    lines = []
     occupancy_stats = getattr(result, 'occupancy_stats', None)
     if occupancy_stats:
         lines.append("Occupancy Statistics:")
         lines.append(f"  Max Parallelism: {occupancy_stats.get('max_parallelism', 0):.1f}x")
         lines.append(f"  Avg Parallelism: {occupancy_stats.get('avg_parallelism', 0):.1f}x")
         lines.append("")
+    return lines
 
-    # CPU Utilisation (Part 30, M4)
+
+def _render_cpu_utilisation_buckets(util: dict) -> list[str]:
+    """The slot-time bucket table and its two idle-cause callouts."""
+    lines = []
+    buckets = util.get('buckets') or {}
+    if buckets:
+        # True in every case, measured or not (P1-33): the buckets
+        # are built from each task's real job-slot occupancy
+        # (task.dur_us), never from a CPU-time measurement. Stated
+        # here rather than left to the section heading, because a
+        # reader who takes them for CPU seconds draws the opposite
+        # conclusion from a real optimization - overlapping tasks
+        # that used to run serially raises total occupancy while
+        # doing identical work.
+        # ...and in *slot*-seconds, which is a different quantity
+        # from the wall-clock seconds every other number in this
+        # report is printed in: N builders running for the whole
+        # build contribute N seconds per second. Printing both as
+        # bare `s` let a 3261s build report 8626s of idle, which
+        # reads as impossible rather than as a different unit.
+        lines.append(
+            "  Buckets below are task slot-time (occupancy), not CPU time, and "
+            "are measured in slot-seconds - a build of H seconds on N builders "
+            "has N*H of them to spend:"
+        )
+    for bucket_name, bucket_us in buckets.items():
+        lines.append(
+            f"  {str(bucket_name).replace('_', ' ').title():20s} "
+            f"{bucket_us / 1e6:8.2f} slot-s"
+        )
+    # UX-48: the two idle buckets recommend opposite fixes, so
+    # whichever one dominates is the actionable part of this block.
+    # Naming that here rather than leaving a reader to infer it from
+    # two similar-looking numbers.
+    underparallel_us = buckets.get('idle_underparallel', 0)
+    no_tasks_us = buckets.get('idle_no_tasks', 0)
+    if underparallel_us > 0:
+        lines.append(
+            f"  -> {underparallel_us / 1e6:.2f} slot-s of that idle capacity had "
+            f"work ready and waiting for a builder: raising build concurrency is "
+            f"the lever here (`bga sweep` estimates the payoff)."
+        )
+    if no_tasks_us > underparallel_us and no_tasks_us > 0:
+        lines.append(
+            f"  -> {no_tasks_us / 1e6:.2f} slot-s had nothing ready to run at "
+            f"all - no amount of extra concurrency helps that; it is a "
+            f"dependency-graph shape problem."
+        )
+    return lines
+
+
+def _render_cpu_utilisation_section(result: AnalysisResult, section, by_kind, full_sections, explain) -> list[str]:
+    """CPU Utilisation (Part 30, M4)."""
+    lines = []
     if section in (None, 'utilisation') and hasattr(result, 'utilisation') and result.utilisation:
         util = result.utilisation
         # UX-36: the bucket totals are task-*occupancy* seconds (how long
@@ -844,53 +905,14 @@ def format_text(result: AnalysisResult, section: Optional[str] = None,
             # implies something was reconciled. Nothing was: I9
             # reconciliation needs a real CPU measurement.
             lines.append("  Reconciliation: not performed (I9 needs real CPU accounting, absent here)")
-        buckets = util.get('buckets') or {}
-        if buckets:
-            # True in every case, measured or not (P1-33): the buckets
-            # are built from each task's real job-slot occupancy
-            # (task.dur_us), never from a CPU-time measurement. Stated
-            # here rather than left to the section heading, because a
-            # reader who takes them for CPU seconds draws the opposite
-            # conclusion from a real optimization - overlapping tasks
-            # that used to run serially raises total occupancy while
-            # doing identical work.
-            # ...and in *slot*-seconds, which is a different quantity
-            # from the wall-clock seconds every other number in this
-            # report is printed in: N builders running for the whole
-            # build contribute N seconds per second. Printing both as
-            # bare `s` let a 3261s build report 8626s of idle, which
-            # reads as impossible rather than as a different unit.
-            lines.append(
-                "  Buckets below are task slot-time (occupancy), not CPU time, and "
-                "are measured in slot-seconds - a build of H seconds on N builders "
-                "has N*H of them to spend:"
-            )
-        for bucket_name, bucket_us in buckets.items():
-            lines.append(
-                f"  {str(bucket_name).replace('_', ' ').title():20s} "
-                f"{bucket_us / 1e6:8.2f} slot-s"
-            )
-        # UX-48: the two idle buckets recommend opposite fixes, so
-        # whichever one dominates is the actionable part of this block.
-        # Naming that here rather than leaving a reader to infer it from
-        # two similar-looking numbers.
-        underparallel_us = buckets.get('idle_underparallel', 0)
-        no_tasks_us = buckets.get('idle_no_tasks', 0)
-        if underparallel_us > 0:
-            lines.append(
-                f"  -> {underparallel_us / 1e6:.2f} slot-s of that idle capacity had "
-                f"work ready and waiting for a builder: raising build concurrency is "
-                f"the lever here (`bga sweep` estimates the payoff)."
-            )
-        if no_tasks_us > underparallel_us and no_tasks_us > 0:
-            lines.append(
-                f"  -> {no_tasks_us / 1e6:.2f} slot-s had nothing ready to run at "
-                f"all - no amount of extra concurrency helps that; it is a "
-                f"dependency-graph shape problem."
-            )
+        lines.extend(_render_cpu_utilisation_buckets(util))
         lines.append("")
+    return lines
 
-    # Diagnostics (Part 20-29, M5)
+
+def _render_diagnostics_section(result: AnalysisResult, section, by_kind, full_sections, explain) -> list[str]:
+    """Diagnostics (Part 20-29, M5)."""
+    lines = []
     if section in (None, 'diagnostics') and hasattr(result, 'signals') and result.signals:
         diagnostics_signals = {k: v for k, v in result.signals.items() if k not in GRAPH_SIGNAL_KEYS}
         if diagnostics_signals:
@@ -926,8 +948,220 @@ def format_text(result: AnalysisResult, section: Optional[str] = None,
                 # above with nothing under it and no reason given.
                 lines.append(f"  {EMPTY_POPULATION_SENTENCE}")
             lines.append("")
+    return lines
 
-    # Structural Analysis (M6) - shown alongside 'graph' since it's
+
+def _render_structural_overview(metrics: dict, bottleneck: dict, parallelism: dict) -> list[str]:
+    """Elements/Edges/Max Depth, named bottlenecks, and the parallelism profile."""
+    lines = []
+    if metrics:
+        lines.append(
+            f"  Elements: {metrics.get('num_elements', 0)}, "
+            f"Edges: {metrics.get('num_edges', 0)}, "
+            f"Max Depth: {metrics.get('max_depth', 0)}"
+        )
+    # UX-288: records in `analyze/v2`, bare uids in a v1
+    # document - `schemas` knows both, this line reads names.
+    choke_points = schemas.choke_point_uids(bottleneck)
+    if choke_points:
+        # UX-33: name them. `Bottlenecks Identified: 5` with the
+        # names only in the JSON was, on a real mis-shaped
+        # project, the single most actionable output the tool
+        # produced - reduced to an integer.
+        shown = choke_points[:_CHOKE_POINTS_SHOWN_MAX]
+        lines.append(
+            f"  Bottlenecks Identified: {len(choke_points)} - {', '.join(shown)}"
+            + (
+                f" (+{len(choke_points) - len(shown)} more, see --format json)"
+                if len(choke_points) > len(shown) else ""
+            )
+        )
+    if parallelism:
+        # UX-49: `mean_width` is the number that actually answers
+        # "how parallel is this graph" - it is average
+        # parallelism, work over depth - and it was the one the
+        # line did not show. On the real examples/06 pair it
+        # reads 1.1x for the chained baseline against 2.2x for
+        # the fan-out, which is exactly the macro improvement
+        # that project exists to demonstrate.
+        lines.append(
+            f"  Parallelism Profile: min={parallelism.get('min_width', 0):.1f}x, "
+            f"avg={parallelism.get('mean_width', 0):.1f}x, "
+            f"max={parallelism.get('max_width', 0):.1f}x"
+        )
+    return lines
+
+
+def _render_structural_consolidation(consolidation_candidates: list) -> list[str]:
+    """Stack-consolidation candidates (P4-15)."""
+    lines = []
+    if consolidation_candidates:
+        lines.append(
+            f"  Stack-Consolidation Candidates: {len(consolidation_candidates)} "
+            f"group(s) of elements always consumed together with no `stack` "
+            f"grouping them (P4-15, structural signal only - not a timing "
+            f"estimate; see `bga checkout-cost` for real measurement):"
+        )
+        for candidate in consolidation_candidates[:5]:
+            lines.append(f"    - {', '.join(candidate['elements'])}")
+    return lines
+
+
+def _render_structural_sensitivity(sensitivity: dict) -> list[str]:
+    """Top improvement opportunities and the structural elements omitted from them."""
+    lines = []
+    # UX-20: sensitivity.top_opportunities was already computed
+    # (Part 34's own docstring citation was stale - see
+    # compute_sensitivity's docstring - this is a bga-specific
+    # additive heuristic) but never rendered anywhere outside
+    # --format json's structural.sensitivity key, making it
+    # effectively invisible to a user reading the text report.
+    top_opportunities = sensitivity.get('top_opportunities') or []
+    if top_opportunities:
+        # UX-44: the numbers here used to be derived from a
+        # placeholder slack of `duration * 0.5`, which made the
+        # ranking an inverted duration sort and rendered a sum
+        # over *work* (2828s) as though it were wall-clock on a
+        # 362s build, three orders of magnitude away from the
+        # `Certified Headroom` line above it. Both quantities
+        # are now real, and both are named for what they are:
+        # per-element savings in seconds off the finish, and a
+        # structural ceiling that is explicitly not the
+        # certified one.
+        critical_path_us = sensitivity.get('critical_path_us') or 0
+        improvable_us = sensitivity.get('total_improvable_time_us', 0)
+        speedup = sensitivity.get('best_case_speedup')
+        # None means every element is on the critical path, so
+        # the ceiling is unbounded rather than 1.0 - see
+        # SensitivityResult.best_case_speedup.
+        ceiling = (
+            f"{speedup:.2f}x" if speedup is not None
+            else "unbounded (every element is on the critical path)"
+        )
+        lines.append(
+            f"  Top Improvement Opportunities (critical path "
+            f"{critical_path_us / 1e6:.2f}s; structural ceiling "
+            f"{ceiling}, i.e. up to {improvable_us / 1e6:.2f}s off it "
+            f"if every critical-path element were free):"
+        )
+        # `UX-343`: rows with named fields. The saving is read
+        # rather than recomputed here - it is published now, and
+        # two places deriving one number is how they drift.
+        for row in top_opportunities[:5]:
+            # A run captured before the producer matched its own
+            # declared columns holds `(key, score, impact)`, and
+            # a store outlives a release.
+            if isinstance(row, dict):
+                key, score = row["element_uid"], row["sensitivity"]
+                saving_us = row["saving_us"]
+            else:
+                key, score = row[0], row[1]
+                saving_us = score * critical_path_us
+            lines.append(
+                f"    - {key}: up to {saving_us / 1e6:.2f}s "
+                f"off the finish ({score * 100:.1f}%)"
+            )
+        lines.append(
+            "    (graph-only upper bound, not a target: each saving is capped "
+            "where the next path becomes critical, and the savings are not "
+            "additive. `Certified Headroom` above is the measured, certified "
+            "figure - these two answer different questions.)"
+        )
+    # UX-34: say which candidates were filtered and why, rather
+    # than silently shortening the ranking (same discipline as
+    # UX-26's omitted-groups line).
+    omitted_structural = sensitivity.get('omitted_structural_opportunities') or []
+    if omitted_structural:
+        lines.append(
+            "  ({} structural element(s) omitted - no build commands to speed up: {})".format(
+                len(omitted_structural),
+                ", ".join(
+                    f"{o['element']} [{o['element_kind']}]" for o in omitted_structural[:5]
+                ),
+            )
+        )
+    return lines
+
+
+def _render_structural_batch_opportunities(batch_opportunities: dict) -> list[str]:
+    """Independently-workable batches, and the pairs that serialize instead."""
+    lines = []
+    # UX-20 (map-reduce tier): the real, simulated combined
+    # effect of fixing several independent high-sensitivity
+    # elements together in one batch, vs. serially discovering
+    # and fixing them one bga-analyze iteration at a time - see
+    # bga/structural/batching.py's own module docstring for the
+    # "fixing = eliminate duration" definition this shares with
+    # the sensitivity best-case-speedup figure above.
+    batch_groups = batch_opportunities.get('groups') or []
+    if batch_groups:
+        # UX-74: this answers "can these be worked concurrently"
+        # - a fact about the graph, and about people. Whether the
+        # savings *add* is `joint_saving` in Key Findings, which
+        # is simulated in the same longest-path model as
+        # `realizable_saving_us`; the figures below come from the
+        # replay scheduler and are not the same quantity.
+        lines.append(
+            "  Independently workable together (graph-independent elements; "
+            "replay-model combined effect, not the longest-path joint saving "
+            "in Key Findings):"
+        )
+        for group in batch_groups:
+            lines.append(
+                f"    - {', '.join(group['elements'])}: fixing all together -> "
+                f"makespan {group['baseline_makespan_us'] / 1e6:.2f}s -> "
+                f"{group['combined_makespan_us'] / 1e6:.2f}s "
+                f"(saves {group['combined_savings_us'] / 1e6:.2f}s combined, "
+                f"vs. {', '.join(f'{k}={v / 1e6:.2f}s' for k, v in group['individual_savings_us'].items())} fixed alone)"
+            )
+    omitted_zero_savings_groups = batch_opportunities.get('omitted_zero_savings_groups') or []
+    if omitted_zero_savings_groups:
+        lines.append(
+            f"  ({len(omitted_zero_savings_groups)} further group(s) had no "
+            f"measurable combined effect, omitted)"
+        )
+    serialized_pairs = batch_opportunities.get('serialized_pairs') or []
+    if serialized_pairs:
+        # UX-187: `[:5]` was silent. A reader cannot act on a
+        # number they do not know is missing (`UX-160`).
+        hidden = len(serialized_pairs) - 5
+        # `UX-408`: the caption is the contract's own sentence,
+        # imported rather than restated. The two used to be
+        # separate strings and said opposite things - the page's
+        # said "with nothing forcing the order", which is the
+        # negation of what the computation selects for.
+        lines.append(
+            f"  Serialized ({schemas.SERIALIZED_PAIRS_MEANING[0].lower()}"
+            f"{schemas.SERIALIZED_PAIRS_MEANING[1:-1]}): "
+            + "; ".join(f"{a} -> {b}" for a, b in serialized_pairs[:5])
+            + (f" (+{hidden} more, see --format json)" if hidden > 0 else "")
+        )
+    return lines
+
+
+def _render_structural_serialization_risks(serialization_point_risks: list) -> list[str]:
+    """Parallelism-pinned elements (UX-31)."""
+    lines = []
+    # UX-22: real per-element `max-jobs` overrides that combine
+    # a long measured duration with a near-full-core setting AND
+    # genuine concurrent-dispatch potential under this run's real
+    # `builders` value - see
+    # bga/structural/serialization_points.py's own module
+    # docstring for why this is a distinct risk from
+    # _check_process_oversubscription's single-aggregate check.
+    if serialization_point_risks:
+        lines.append(
+            "  Parallelism-Pinned Elements (UX-31 - running fewer native build "
+            "jobs than the rest of this build, and expensive enough for it to matter):"
+        )
+        for risk in serialization_point_risks:
+            lines.append(f"    - {risk['hint']}")
+    return lines
+
+
+def _render_structural_section(result: AnalysisResult, section, by_kind, full_sections, explain) -> list[str]:
+    """Structural Analysis (M6) - shown alongside 'graph'."""
+    lines = []
     # graph-shape metrics (max_depth, parallelism, etc.); the spec's own
     # Part 37 command list has no dedicated `structural` subcommand.
     # result.structural is the actual field (_compute_structural_analysis's
@@ -943,188 +1177,11 @@ def format_text(result: AnalysisResult, section: Optional[str] = None,
         parallelism = sm.get('parallelism') or {}
         if metrics or bottleneck or parallelism:
             lines.append("Structural Analysis:")
-            if metrics:
-                lines.append(
-                    f"  Elements: {metrics.get('num_elements', 0)}, "
-                    f"Edges: {metrics.get('num_edges', 0)}, "
-                    f"Max Depth: {metrics.get('max_depth', 0)}"
-                )
-            # UX-288: records in `analyze/v2`, bare uids in a v1
-            # document - `schemas` knows both, this line reads names.
-            choke_points = schemas.choke_point_uids(bottleneck)
-            if choke_points:
-                # UX-33: name them. `Bottlenecks Identified: 5` with the
-                # names only in the JSON was, on a real mis-shaped
-                # project, the single most actionable output the tool
-                # produced - reduced to an integer.
-                shown = choke_points[:_CHOKE_POINTS_SHOWN_MAX]
-                lines.append(
-                    f"  Bottlenecks Identified: {len(choke_points)} - {', '.join(shown)}"
-                    + (
-                        f" (+{len(choke_points) - len(shown)} more, see --format json)"
-                        if len(choke_points) > len(shown) else ""
-                    )
-                )
-            if parallelism:
-                # UX-49: `mean_width` is the number that actually answers
-                # "how parallel is this graph" - it is average
-                # parallelism, work over depth - and it was the one the
-                # line did not show. On the real examples/06 pair it
-                # reads 1.1x for the chained baseline against 2.2x for
-                # the fan-out, which is exactly the macro improvement
-                # that project exists to demonstrate.
-                lines.append(
-                    f"  Parallelism Profile: min={parallelism.get('min_width', 0):.1f}x, "
-                    f"avg={parallelism.get('mean_width', 0):.1f}x, "
-                    f"max={parallelism.get('max_width', 0):.1f}x"
-                )
-            consolidation_candidates = sm.get('consolidation_candidates') or []
-            if consolidation_candidates:
-                lines.append(
-                    f"  Stack-Consolidation Candidates: {len(consolidation_candidates)} "
-                    f"group(s) of elements always consumed together with no `stack` "
-                    f"grouping them (P4-15, structural signal only - not a timing "
-                    f"estimate; see `bga checkout-cost` for real measurement):"
-                )
-                for candidate in consolidation_candidates[:5]:
-                    lines.append(f"    - {', '.join(candidate['elements'])}")
-            # UX-20: sensitivity.top_opportunities was already computed
-            # (Part 34's own docstring citation was stale - see
-            # compute_sensitivity's docstring - this is a bga-specific
-            # additive heuristic) but never rendered anywhere outside
-            # --format json's structural.sensitivity key, making it
-            # effectively invisible to a user reading the text report.
-            sensitivity = sm.get('sensitivity') or {}
-            top_opportunities = sensitivity.get('top_opportunities') or []
-            if top_opportunities:
-                # UX-44: the numbers here used to be derived from a
-                # placeholder slack of `duration * 0.5`, which made the
-                # ranking an inverted duration sort and rendered a sum
-                # over *work* (2828s) as though it were wall-clock on a
-                # 362s build, three orders of magnitude away from the
-                # `Certified Headroom` line above it. Both quantities
-                # are now real, and both are named for what they are:
-                # per-element savings in seconds off the finish, and a
-                # structural ceiling that is explicitly not the
-                # certified one.
-                critical_path_us = sensitivity.get('critical_path_us') or 0
-                improvable_us = sensitivity.get('total_improvable_time_us', 0)
-                speedup = sensitivity.get('best_case_speedup')
-                # None means every element is on the critical path, so
-                # the ceiling is unbounded rather than 1.0 - see
-                # SensitivityResult.best_case_speedup.
-                ceiling = (
-                    f"{speedup:.2f}x" if speedup is not None
-                    else "unbounded (every element is on the critical path)"
-                )
-                lines.append(
-                    f"  Top Improvement Opportunities (critical path "
-                    f"{critical_path_us / 1e6:.2f}s; structural ceiling "
-                    f"{ceiling}, i.e. up to {improvable_us / 1e6:.2f}s off it "
-                    f"if every critical-path element were free):"
-                )
-                # `UX-343`: rows with named fields. The saving is read
-                # rather than recomputed here - it is published now, and
-                # two places deriving one number is how they drift.
-                for row in top_opportunities[:5]:
-                    # A run captured before the producer matched its own
-                    # declared columns holds `(key, score, impact)`, and
-                    # a store outlives a release.
-                    if isinstance(row, dict):
-                        key, score = row["element_uid"], row["sensitivity"]
-                        saving_us = row["saving_us"]
-                    else:
-                        key, score = row[0], row[1]
-                        saving_us = score * critical_path_us
-                    lines.append(
-                        f"    - {key}: up to {saving_us / 1e6:.2f}s "
-                        f"off the finish ({score * 100:.1f}%)"
-                    )
-                lines.append(
-                    "    (graph-only upper bound, not a target: each saving is capped "
-                    "where the next path becomes critical, and the savings are not "
-                    "additive. `Certified Headroom` above is the measured, certified "
-                    "figure - these two answer different questions.)"
-                )
-            # UX-34: say which candidates were filtered and why, rather
-            # than silently shortening the ranking (same discipline as
-            # UX-26's omitted-groups line).
-            omitted_structural = sensitivity.get('omitted_structural_opportunities') or []
-            if omitted_structural:
-                lines.append(
-                    "  ({} structural element(s) omitted - no build commands to speed up: {})".format(
-                        len(omitted_structural),
-                        ", ".join(
-                            f"{o['element']} [{o['element_kind']}]" for o in omitted_structural[:5]
-                        ),
-                    )
-                )
-            # UX-20 (map-reduce tier): the real, simulated combined
-            # effect of fixing several independent high-sensitivity
-            # elements together in one batch, vs. serially discovering
-            # and fixing them one bga-analyze iteration at a time - see
-            # bga/structural/batching.py's own module docstring for the
-            # "fixing = eliminate duration" definition this shares with
-            # the sensitivity best-case-speedup figure above.
-            batch_opportunities = sm.get('batch_opportunities') or {}
-            batch_groups = batch_opportunities.get('groups') or []
-            if batch_groups:
-                # UX-74: this answers "can these be worked concurrently"
-                # - a fact about the graph, and about people. Whether the
-                # savings *add* is `joint_saving` in Key Findings, which
-                # is simulated in the same longest-path model as
-                # `realizable_saving_us`; the figures below come from the
-                # replay scheduler and are not the same quantity.
-                lines.append(
-                    "  Independently workable together (graph-independent elements; "
-                    "replay-model combined effect, not the longest-path joint saving "
-                    "in Key Findings):"
-                )
-                for group in batch_groups:
-                    lines.append(
-                        f"    - {', '.join(group['elements'])}: fixing all together -> "
-                        f"makespan {group['baseline_makespan_us'] / 1e6:.2f}s -> "
-                        f"{group['combined_makespan_us'] / 1e6:.2f}s "
-                        f"(saves {group['combined_savings_us'] / 1e6:.2f}s combined, "
-                        f"vs. {', '.join(f'{k}={v / 1e6:.2f}s' for k, v in group['individual_savings_us'].items())} fixed alone)"
-                    )
-            omitted_zero_savings_groups = batch_opportunities.get('omitted_zero_savings_groups') or []
-            if omitted_zero_savings_groups:
-                lines.append(
-                    f"  ({len(omitted_zero_savings_groups)} further group(s) had no "
-                    f"measurable combined effect, omitted)"
-                )
-            serialized_pairs = batch_opportunities.get('serialized_pairs') or []
-            if serialized_pairs:
-                # UX-187: `[:5]` was silent. A reader cannot act on a
-                # number they do not know is missing (`UX-160`).
-                hidden = len(serialized_pairs) - 5
-                # `UX-408`: the caption is the contract's own sentence,
-                # imported rather than restated. The two used to be
-                # separate strings and said opposite things - the page's
-                # said "with nothing forcing the order", which is the
-                # negation of what the computation selects for.
-                lines.append(
-                    f"  Serialized ({schemas.SERIALIZED_PAIRS_MEANING[0].lower()}"
-                    f"{schemas.SERIALIZED_PAIRS_MEANING[1:-1]}): "
-                    + "; ".join(f"{a} -> {b}" for a, b in serialized_pairs[:5])
-                    + (f" (+{hidden} more, see --format json)" if hidden > 0 else "")
-                )
-            # UX-22: real per-element `max-jobs` overrides that combine
-            # a long measured duration with a near-full-core setting AND
-            # genuine concurrent-dispatch potential under this run's real
-            # `builders` value - see
-            # bga/structural/serialization_points.py's own module
-            # docstring for why this is a distinct risk from
-            # _check_process_oversubscription's single-aggregate check.
-            serialization_point_risks = sm.get('serialization_point_risks') or []
-            if serialization_point_risks:
-                lines.append(
-                    "  Parallelism-Pinned Elements (UX-31 - running fewer native build "
-                    "jobs than the rest of this build, and expensive enough for it to matter):"
-                )
-                for risk in serialization_point_risks:
-                    lines.append(f"    - {risk['hint']}")
+            lines.extend(_render_structural_overview(metrics, bottleneck, parallelism))
+            lines.extend(_render_structural_consolidation(sm.get('consolidation_candidates') or []))
+            lines.extend(_render_structural_sensitivity(sm.get('sensitivity') or {}))
+            lines.extend(_render_structural_batch_opportunities(sm.get('batch_opportunities') or {}))
+            lines.extend(_render_structural_serialization_risks(sm.get('serialization_point_risks') or []))
             lines.append("")
         else:
             # `UX-724`: 0 rebuilt means no tasks to run structural
@@ -1132,27 +1189,116 @@ def format_text(result: AnalysisResult, section: Optional[str] = None,
             lines.append("Structural Analysis:")
             lines.append(f"  {EMPTY_POPULATION_SENTENCE}")
             lines.append("")
+    return lines
 
+
+def _render_by_kind_section(result: AnalysisResult, section, by_kind, full_sections, explain) -> list[str]:
+    """P4-12 Direction 3 - opt-in element_kind aggregate summary."""
+    lines = []
     if section in (None, 'graph') and by_kind:
         lines.extend(_format_by_kind_summary(result))
+    return lines
 
+
+def _render_pipeline_overhead_section(result: AnalysisResult, section, by_kind, full_sections, explain) -> list[str]:
+    """Pipeline overhead, full report only."""
+    lines = []
     if section is None:
         lines.extend(_format_pipeline_overhead(result))
+    return lines
 
-    # UX-329: why Plane 2 is not in this report, when it is not. The
-    # same sentence `--format json` publishes as `plane2_absence` and
+
+def _render_plane2_absence_section(result: AnalysisResult, section, by_kind, full_sections, explain) -> list[str]:
+    """UX-329: why Plane 2 is not in this report, when it is not."""
+    lines = []
+    # The same sentence `--format json` publishes as `plane2_absence` and
     # the page prints when it cannot offer a timeline - one absence,
     # one wording, three readers.
     if section is None:
         lines.extend(_format_plane2_absence(result))
+    return lines
 
-    # UX-218: last, because it is what the reader leaves with - and
-    # inside the `section is None` gate for the same reason every other
+
+def _render_next_steps_section(result: AnalysisResult, section, by_kind, full_sections, explain) -> list[str]:
+    """UX-218: last, because it is what the reader leaves with."""
+    lines = []
+    # Inside the `section is None` gate for the same reason every other
     # full-report block is: `bga floors` answers about floors.
     if section is None:
         lines.extend(_format_next_steps(result))
+    return lines
 
-    lines.append("=" * 60)
+
+def _render_footer_section(result: AnalysisResult, section, by_kind, full_sections, explain) -> list[str]:
+    """The closing rule."""
+    return ["=" * 60]
+
+
+# UX-695: each renderer's own heading text, read by the order guard in
+# tests/unit/test_report_key_findings.py rather than typed there too.
+_render_header_section.heading = "Build Efficiency Report"
+_render_key_findings_section.heading = "Key Findings:"
+_render_resource_blast_section.heading = "Shared Sources (blast radius by resource):"
+_render_floors_section.heading = "Certified Floors:"
+_render_attribution_section.heading = "Attribution Breakdown:"
+_render_replay_section.heading = "Replay:"
+_render_critical_path_section.heading = "Critical Path Length:"
+_render_occupancy_stats_section.heading = "Occupancy Statistics:"
+_render_cpu_utilisation_section.heading = "CPU Utilisation:"
+_render_diagnostics_section.heading = "Advanced Diagnostics:"
+_render_structural_section.heading = "Structural Analysis:"
+_render_by_kind_section.heading = "By Element Kind:"
+_render_pipeline_overhead_section.heading = "Pipeline Overhead (not attributable to individual elements):"
+_render_plane2_absence_section.heading = "Plane 2:"
+_render_next_steps_section.heading = "Next:"
+_render_footer_section.heading = None
+
+# The report's section order - what `format_text` walks.
+_TEXT_REPORT_SECTIONS = [
+    _render_header_section,
+    _render_key_findings_section,
+    _render_resource_blast_section,
+    _render_floors_section,
+    _render_attribution_section,
+    _render_replay_section,
+    _render_critical_path_section,
+    _render_occupancy_stats_section,
+    _render_cpu_utilisation_section,
+    _render_diagnostics_section,
+    _render_structural_section,
+    _render_by_kind_section,
+    _render_pipeline_overhead_section,
+    _render_plane2_absence_section,
+    _render_next_steps_section,
+    _render_footer_section,
+]
+
+
+def format_text(result: AnalysisResult, section: Optional[str] = None,
+                by_kind: bool = False, full_sections=frozenset(),
+                explain: bool = False) -> str:
+    """
+    Format analysis results as human-readable text.
+
+    Args:
+        result: The AnalysisResult object from the analyzer
+        section: Restrict output to one report section (see SECTIONS) -
+            None (default) produces the full `analyze` report.
+        by_kind: Show the element_kind aggregate summary (P4-12
+            Direction 3, `bga graph --by-kind`) - opt-in, since it's
+            extra detail beyond the default graph section.
+        explain: Print each claim's provenance chain under it - the
+            fields it was read from, the rule that fired, and the trace
+            query that deepens it (`UX-229`). Off by default: the
+            report is a decision, and the chain is what a reader asks
+            for after doubting one.
+
+    Returns:
+        Formatted string suitable for terminal display
+    """
+    lines = []
+    for render_section in _TEXT_REPORT_SECTIONS:
+        lines.extend(render_section(result, section, by_kind, full_sections, explain))
     return "\n".join(lines)
 
 

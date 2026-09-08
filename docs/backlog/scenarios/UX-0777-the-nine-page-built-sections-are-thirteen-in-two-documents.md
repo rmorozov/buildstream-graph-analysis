@@ -1,6 +1,6 @@
 # UX-777: the nine page-built sections are thirteen, in two documents
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-650 (the round that found the count wrong and fixed only the code) | **Serves:** the reader deciding whether chaptering belongs in the schema, on a figure that is 44% low | **Topic:** docs | **Area:** unassigned | **Shape:** judgement
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-650 (the round that found the count wrong and fixed only the code) | **Serves:** the reader deciding whether chaptering belongs in the schema, on a figure that is 44% low | **Topic:** docs | **Area:** unassigned | **Shape:** judgement
 
 ## Motivation
 
@@ -138,3 +138,5 @@ re-anchors the document's Verification Log in the same commit — a new
 
 Restored from the scratchpad copy each time; `test_a_reader_role_demotes.py`
 green (21 passed) after each revert.
+
+**Deviation.** The count is 14, not the 13 the row was filed with: `views.js::renderBandUnavailable` landed after `UX-650`. `chapters.js`'s `over a quarter` fraction was dropped rather than derived, and the count word is built by `count_word`, not tabled. Two commits on the track; one verifier run, two soft points, fixed in the second commit. The file derives judgement (no file named in Required Fix); the brief ran it as bounded.

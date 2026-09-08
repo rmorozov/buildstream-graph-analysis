@@ -137,6 +137,8 @@ pairing for every merged row from round 103 on.
 | 110 | verifier | sonnet | verify UX-764 | 73k | 71 | 14.9 m | HOLD then merged: a bogus path with the word unconventional passed; test_cache_logs.py passed as a guard; the register's commit-body count is 5 by the tool, not wc's 9 | the permission classifier refused editing a closed record and committing on the shared branch, forcing in-memory substitutes |
 | 110 | implementer | sonnet | UX-795, the focus guard's settle | 385k | 139 | 59.3 m | merged after its verifier; settleReading on rAF with a 2 s bound that names itself, a delayed-reflow guard that reds the fixed sleep, then every mid-flow read routed the same way on the verifier's scope point; six runs green, three under load | a step-change reflow false-settled instantly and a CSS transition coincided with the settle's first frames; only a hand-stepped rAF reflow exercised the settle |
 | 110 | verifier | sonnet | verify UX-795 | 69k | 60 | 14.4 m | MERGE with one scope point: three runs green under 4-way load, the bound at 2010.9 ms with its note, smooth scroll ridden out over 91 frames, the shim census reds on createElement; four mid-flow sleeps remained, fixed | the table's second row said class-only in a parenthesis a full-file run missed |
+| 110 | implementer | sonnet | `UX-777` the page-built section count derived (judgement) | 321k | 167 | 54.4 m | merged 497b2539; count 14 not 13, count word built | the Motivation's grep missed a dynamic key; the verifier's two soft points cost a second commit |
+| 110 | verifier | sonnet | verify `UX-777` | 94k | 72 | 10.6 m | two soft points, both fixed before merge | — |
 
 Round 101's four tracks are **not** here: this session could not
 identify their transcripts with certainty after a context rebuild, and
@@ -149,7 +151,7 @@ committed cleanly once told to run in the foreground. Three of the five
 left a derived figure or a §6 context-map row behind - the same class
 the round itself was about, arriving in the tracks' own work.
 
-What the one hundred and twenty rows already say: a researcher that reads a document
+What the one hundred and twenty-two rows already say: a researcher that reads a document
 whole costs 100-180k; a walker that drives every control costs 336k;
 the two cuts cost a re-run each. The `walk` and `design-review`
 skills fix the report shape so the next rows are smaller, and the

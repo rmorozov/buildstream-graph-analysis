@@ -97,3 +97,23 @@ range - a pre-merge gate, not a retroactive audit.
 | add a bogus `UX-9999` to `NO_GUARD_OUTCOMES` | 🔴 `test_every_exemption_is_a_real_closed_task` names it | 1 failed |
 | a real 9-line-body commit on top of `origin/main` | 🔴 names the sha, subject and count (9) | 1 failed |
 | restore from a scratchpad copy after each (never `git checkout --`) | 🟢 all clauses pass; `git diff` clean | tests green
+
+**This track's share** (the code-comment cap and `rules.md`'s honesty).
+`CLAUDE.md`'s Register table's code-comment row now reads "convention,
+unguarded: a comment's length is not its register (`UX-764`)" instead
+of stating a cap indistinguishable from the three guarded ones;
+`rules.md`'s opening paragraph — the "every rule ... with its guard"
+claim `test_the_card_stays_a_card` still holds at 80 lines — now names
+that row as its one exception. New
+`TestEveryRegisterRowNamesItsEnforcement` in
+`test_the_register_is_terse.py` reads `CLAUDE.md`'s `## Register`
+table and asserts every row names an existing `tests/unit/*.py` guard
+or says "convention" - the fifth-row hole the Motivation named.
+`make test-touching`: 48 file(s) selected (21 census + 27 naming the
+change) · 1551 passed, 4 skipped in 207.00s. `make lint`: clean.
+
+| mutation | result | count |
+|---|---|---|
+| add a fifth row naming no guard and no "convention" | 🔴 names the row: "no existing guard file and no 'convention'" | 1 failed |
+| rename a real row's guard file to one that does not exist | 🔴 same clause names the row and the bogus path | 1 failed |
+| restore from a scratchpad copy after each (never `git checkout --`) | 🟢 `test_the_register_is_terse.py` 606 passed; `git diff` clean | tests green

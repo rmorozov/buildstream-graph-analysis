@@ -177,6 +177,47 @@ class TestOutcomeContentIsGuarded:
             f"{sorted(set(NO_GUARD_OUTCOMES) - closed)}")
 
 
+def _register_rows():
+    """`[(cap, detail)]` from `CLAUDE.md`'s `## Register` table only -
+    the blank header and separator rows are dropped by shape, like
+    `_rule_rows` in `test_the_agent_configuration_holds.py`."""
+    text = CLAUDE_MD.read_text(encoding="utf-8")
+    m = re.search(r"^## Register\n(.*?)(?=^## )", text, re.M | re.S)
+    assert m, "CLAUDE.md has no ## Register section"
+    rows = []
+    for line in m.group(1).splitlines():
+        if not (line.startswith("| ") and line.count("|") == 3
+                and "---" not in line):
+            continue
+        cap, detail = (cell.strip() for cell in line.split("|")[1:3])
+        if (cap, detail) == ("", ""):
+            continue
+        rows.append((cap, detail))
+    return rows
+
+
+class TestEveryRegisterRowNamesItsEnforcement:
+    """`UX-764`: the code comment row was unguarded and read the same
+    as the three that were. Every row must now either name a guard
+    file that exists or say "convention" - so a fifth row cannot go
+    back to the honour system silently."""
+
+    def test_every_row_names_a_guard_or_says_convention(self):
+        rows = _register_rows()
+        assert len(rows) >= 4, f"CLAUDE.md's Register table has {len(rows)} rows"
+        bad = []
+        for cap, detail in rows:
+            if "convention" in detail.lower():
+                continue
+            named = re.findall(r"`([\w./-]+\.py)`", detail)
+            if named and all((REPO / n).exists() for n in named):
+                continue
+            bad.append((cap, detail))
+        assert not bad, (
+            f"Register row(s) name no existing guard file and no "
+            f"'convention': {bad}")
+
+
 class TestClaudeMdCarriesTheSameNumbers:
     def test_the_register_section_exists(self):
         assert re.search(r"^## Register", CLAUDE_MD.read_text(encoding="utf-8"), re.M)

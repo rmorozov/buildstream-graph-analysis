@@ -75,7 +75,7 @@
     "tools/__init__.py": {"duplicate_blocks": 0, "file_lines": 0, "longest_function": 0},
     "tools/_run_context_common.py": {"duplicate_blocks": 0, "file_lines": 385, "longest_function": 61},
     "tools/bga_cross_check.py": {"duplicate_blocks": 0, "file_lines": 235, "longest_function": 94},
-    "tools/bga_doctor.py": {"duplicate_blocks": 0, "file_lines": 943, "longest_function": 139},
+    "tools/bga_doctor.py": {"duplicate_blocks": 0, "file_lines": 982, "longest_function": 139},
     "tools/bga_gen_project.py": {"duplicate_blocks": 0, "file_lines": 302, "longest_function": 54},
     "tools/bga_release_notes.py": {"duplicate_blocks": 0, "file_lines": 129, "longest_function": 26},
     "tools/bga_snapshot.py": {"duplicate_blocks": 1, "file_lines": 1488, "longest_function": 178},

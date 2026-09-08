@@ -517,6 +517,61 @@ class TestTheWholeChainProbe:
         if user_site and user_site in sys.path and os.path.isdir(user_site):
             assert user_site in env["PYTHONPATH"]
 
+    def test_the_users_config_is_copied_into_the_throwaway_home(
+            self, tmp_path, monkeypatch):
+        """UX-805: without it `bst` reads no `buildstream.conf` in the
+        throwaway `HOME` and falls back to a 5%-of-total reserve that a
+        near-full disk can meet before any build runs. Both config file
+        names are carried, whichever exist."""
+        import tools.bga_doctor as doctor
+
+        fake_home = tmp_path / "fake-home"
+        (fake_home / ".config").mkdir(parents=True)
+        (fake_home / ".config" / "buildstream.conf").write_text("cache:\n  quota: 3G\n")
+        (fake_home / ".config" / "buildstream2.conf").write_text("cache:\n  quota: 2G\n")
+        monkeypatch.setenv("HOME", str(fake_home))
+        monkeypatch.delenv("XDG_CONFIG_HOME", raising=False)
+        isolated = tmp_path / "isolated-home"
+        isolated.mkdir()
+
+        doctor._isolated_home(str(isolated))
+
+        assert (isolated / ".config" / "buildstream.conf").read_text() == "cache:\n  quota: 3G\n"
+        assert (isolated / ".config" / "buildstream2.conf").read_text() == "cache:\n  quota: 2G\n"
+
+    def test_xdg_config_home_is_left_alone(self, tmp_path, monkeypatch):
+        """`bst` reads `XDG_CONFIG_HOME` whatever `HOME` is, so a caller
+        that already set one is trusted rather than overridden or
+        copied from."""
+        import tools.bga_doctor as doctor
+
+        real_xdg = tmp_path / "real-xdg-config"
+        real_xdg.mkdir()
+        monkeypatch.setenv("XDG_CONFIG_HOME", str(real_xdg))
+        isolated = tmp_path / "isolated-home"
+        isolated.mkdir()
+
+        env = doctor._isolated_home(str(isolated))
+
+        assert "XDG_CONFIG_HOME" not in env
+        assert os.environ["XDG_CONFIG_HOME"] == str(real_xdg)
+        assert not (isolated / ".config").exists()
+
+    def test_the_hint_names_the_reserve_and_its_absolute_fix(self):
+        """`chain-build`'s remedy stays the sandbox-first hint until the
+        failure output actually carries `Cache too full` - the finding
+        that would fire on this box before UX-805, 0.2 GB from green."""
+        import tools.bga_doctor as doctor
+
+        ordinary = doctor._chain_build_remedy(["some other bst error"])
+        assert "reserved-disk-space" not in ordinary
+
+        hinted = doctor._chain_build_remedy(
+            ["[main:base.bst] FAILURE Staging local files into CAS",
+             "Cache too full"])
+        assert "reserved-disk-space" in hinted
+        assert "5%" in hinted
+
     @pytest.mark.bst
     def test_the_chain_reports_every_link_in_order(self):
         """The acceptance: each link named, in chain order, with its own

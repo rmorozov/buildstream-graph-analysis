@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-794 scenarios: **14 open**, 780 closed.
+796 scenarios: **16 open**, 780 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -26,7 +26,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | viewer | 2 | 163 |
 | cli | 0 | 22 |
 | store | 0 | 16 |
-| docs | 2 | 132 |
+| docs | 4 | 134 |
 | guards | 4 | 210 |
 
 ## Open scenarios
@@ -50,6 +50,8 @@ task file, which is the only place it ever lived twice.
 | UX-782 | [the register derives its rounds from `git log`, which is a property of the clone](UX-0782-the-register-derives-its-rounds-from-git-log.md) | guards | Medium | the round whose register disagrees with itself on a second machine | 🔴 |
 | UX-796 | [the host sampler claims more busy cores than the host has, under load](UX-0796-the-host-sampler-claims-more-busy-cores-than-the-host-has-under-load.md) | guards | Medium | the gate that reds on a host reading nothing in the diff touched | 🔴 |
 | UX-797 | [eight identical sleeps spread past a tenth, under organic load](UX-0797-eight-identical-sleeps-spread-past-a-tenth-under-organic-load.md) | guards | Medium | the gate that reds on a host reading nothing in the diff touched | 🔴 |
+| UX-798 | [the directions row counts a round's closes by hand](UX-0798-the-directions-row-counts-a-round-s-closes-by-hand.md) | docs | Medium | the reader of `directions.md` deciding what a round did | 🔴 |
+| UX-799 | [the map row for the baseline tool names one of its two modes](UX-0799-the-map-row-for-the-baseline-tool-names-one-of-its-two-modes.md) | docs | Low | the reader of §6 choosing which tool prices a finding | 🔴 |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

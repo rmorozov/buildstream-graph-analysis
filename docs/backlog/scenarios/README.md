@@ -15,13 +15,13 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-801 scenarios: **6 open**, 795 closed.
+801 scenarios: **5 open**, 796 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
 | capture | 1 | 96 |
-| analysis | 4 | 107 |
+| analysis | 3 | 107 |
 | contracts | 0 | 48 |
 | viewer | 0 | 164 |
 | cli | 0 | 22 |
@@ -36,7 +36,6 @@ task file, which is the only place it ever lived twice.
 
 | ID | Scenario | Topic | Priority | Serves | Status |
 |---|---|---|---|---|---|
-| UX-678 | [memory joins the sweep and the queue model](UX-0678-memory-joins-the-sweep-and-the-queue-model.md) | analysis | Medium | R5 sizing a builder, R4 reading the sweep | 🔴 |
 | UX-739 | [the max-jobs advice is not priced — nothing says what the build drops to](UX-0739-the-max-jobs-advice-is-not-priced-nothing-says-what-the-build-drops-to.md) | analysis | Medium | R4 and R5, deciding whether the recommendation is worth applying | 🔴 |
 | UX-679 | [a jobserver every sandbox joins — the prototype bga can run](UX-0679-a-jobserver-every-sandbox-joins-the-prototype-bga-can-run.md) | capture | Medium | R4 and R5 — dynamic sharing instead of static tuning | 🔴 |
 | UX-680 | [remote execution is priced, not built](UX-0680-remote-execution-is-priced-not-built.md) | analysis | Medium | R4 and R8 deciding whether to buy it | 🔴 |

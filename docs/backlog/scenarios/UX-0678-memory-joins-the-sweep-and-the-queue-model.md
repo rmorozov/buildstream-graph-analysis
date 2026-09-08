@@ -1,6 +1,6 @@
 # UX-678: memory joins the sweep and the queue model
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-613 (capacity-model/v1), UX-30 (the sweep), UX-116 (memory envelope) | **Serves:** R5 sizing a builder, R4 reading the sweep | **Topic:** analysis | **Shape:** judgement
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-613 (capacity-model/v1), UX-30 (the sweep), UX-116 (memory envelope) | **Serves:** R5 sizing a builder, R4 reading the sweep | **Topic:** analysis | **Shape:** judgement
 
 ## Motivation
 
@@ -95,3 +95,12 @@ representative snapshot's host-samples, neither named by the brief;
 implementing it un-briefed risked exactly the kind of decision this
 track was told to report rather than take. Not implemented; the sweep
 side (which the Acceptance Test and guard are both scoped to) is.
+
+**Deviation.** The queue-model half (`bga/capacity_model.py`) is not
+joined: `store/v1` carries one aggregate `peak_rss_bytes` per run and no
+host RAM, so "the concurrent set at each step" has no input there — left
+on the record, not approximated. One verifier HOLD: `bga sweep --plane2`
+crashed in both formats on a pre-existing `result.floors` read the
+track's reorder newly reached for JSON; fixed, guarded through the real
+CLI path (mutation 4), the two recommendation keys documented. Two
+commits, one verifier (HOLD, then PASS on the follow-up).

@@ -151,7 +151,6 @@
     {"file": "tools/bst_baseline_set.py", "line": "['git', 'ls-tree', '--name-only', 'FETCH_HEAD'], cwd=cwd, capture_output=True, text=True,", "nth": 1, "rule": "S607", "tool": "ruff"},
     {"file": "tools/bst_baseline_set.py", "line": "['git', 'show', 'FETCH_HEAD:capture-context.txt'],", "nth": 1, "rule": "S607", "tool": "ruff"},
     {"file": "tools/bst_baseline_set.py", "line": "['git', 'show', 'FETCH_HEAD:capture.tar.gz'], cwd=cwd, capture_output=True,", "nth": 1, "rule": "S607", "tool": "ruff"},
-    {"file": "tools/bst_cache_logs.py", "line": "def developer_tax(records: list[dict], dependencies: Optional[list[dict]] = None) -> dict:", "nth": 1, "rule": "C901", "tool": "ruff"},
     {"file": "tools/bst_cache_logs.py", "line": "def format_report_text(report: dict) -> str:", "nth": 1, "rule": "C901", "tool": "ruff"},
     {"file": "tools/bst_cache_logs.py", "line": "def main(argv: Optional[list[str]] = None) -> int:", "nth": 1, "rule": "C901", "tool": "ruff"},
     {"file": "tools/bst_cache_logs.py", "line": "def parse_element_log(path: str, project_root: Optional[str] = None) -> Optional[dict]:", "nth": 1, "rule": "C901", "tool": "ruff"},

@@ -746,6 +746,77 @@ def _plane3_findings(plane3_configure: dict, views: dict) -> list[dict]:
 TAX_WINDOW_STRONG_BUILDS = 5
 
 
+def _build_population(records: list[dict]) -> tuple[list[dict], dict[str, list[dict]]]:
+    """Build records with a recorded duration, grouped by element and
+    ordered by start. Shared by every longitudinal report over these
+    logs - `developer_tax` and `change_frequency` both rank the same
+    population, and a second implementation is a second place to drift.
+    """
+    builds = [r for r in records if r['action'] == 'build' and r['total_us']]
+    by_element: dict[str, list[dict]] = {}
+    for record in builds:
+        by_element.setdefault(record['element'], []).append(record)
+    for history in by_element.values():
+        history.sort(key=lambda r: (r['started_us'] or 0, r['path']))
+    return builds, by_element
+
+
+def _predecessors_by_successor(dependencies: Optional[list[dict]]) -> dict[str, list[str]]:
+    predecessors: dict[str, list[str]] = {}
+    for dependency in dependencies or []:
+        predecessors.setdefault(dependency['successor'], []).append(
+            dependency['predecessor'],
+        )
+    return predecessors
+
+
+def _rebuild_causes(
+    element: str, history: list[dict], by_element: dict[str, list[dict]],
+    predecessors: dict[str, list[str]],
+) -> tuple[dict[str, int], dict[str, int]]:
+    """For each rebuild after `element`'s first: unchanged key, own key
+    changed, or changed with an upstream dependency's key changed too
+    across the same interval (`rooted_upstream`, needs `dependencies`).
+    Factored out of `developer_tax` so `change_frequency` reads the same
+    annotation rather than re-deciding what a rebuild's cause is.
+    """
+    def _key_changed_between(name: str, start_us, end_us) -> bool:
+        """Whether `name`'s cache key changed across (start_us, end_us]."""
+        other_history = by_element.get(name) or []
+        keys = [
+            record['cache_key'] for record in other_history
+            if start_us is not None and record['started_us'] is not None
+            and start_us < record['started_us'] <= (end_us or 0)
+        ]
+        if not keys:
+            return False
+        before = [
+            record['cache_key'] for record in other_history
+            if record['started_us'] is not None and record['started_us'] <= start_us
+        ]
+        return bool(before) and keys[-1] != before[-1]
+
+    causes = {'unchanged_key': 0, 'own_key_changed': 0, 'rooted_upstream': 0}
+    roots: dict[str, int] = {}
+    for previous, current in zip(history, history[1:]):
+        if current['cache_key'] == previous['cache_key']:
+            causes['unchanged_key'] += 1
+            continue
+        upstream = [
+            name for name in predecessors.get(element, [])
+            if _key_changed_between(
+                name, previous['started_us'], current['started_us'],
+            )
+        ]
+        if upstream:
+            causes['rooted_upstream'] += 1
+            for name in upstream:
+                roots[name] = roots.get(name, 0) + current['total_us']
+        else:
+            causes['own_key_changed'] += 1
+    return causes, roots
+
+
 def developer_tax(records: list[dict], dependencies: Optional[list[dict]] = None) -> dict:
     """UX-101: which element costs the most wall-clock across the whole
     log tree, and why it keeps rebuilding.
@@ -782,59 +853,16 @@ def developer_tax(records: list[dict], dependencies: Optional[list[dict]] = None
     which of the three it could distinguish rather than quietly folding
     the third into the second.
     """
-    builds = [r for r in records if r['action'] == 'build' and r['total_us']]
+    builds, by_element = _build_population(records)
     if not builds:
         return {}
 
-    by_element: dict[str, list[dict]] = {}
-    for record in builds:
-        by_element.setdefault(record['element'], []).append(record)
-    for history in by_element.values():
-        history.sort(key=lambda r: (r['started_us'] or 0, r['path']))
-
-    predecessors: dict[str, list[str]] = {}
-    for dependency in dependencies or []:
-        predecessors.setdefault(dependency['successor'], []).append(
-            dependency['predecessor'],
-        )
-
-    def _key_changed_between(element: str, start_us, end_us) -> bool:
-        """Whether `element`'s cache key changed across (start_us, end_us]."""
-        history = by_element.get(element) or []
-        keys = [
-            record['cache_key'] for record in history
-            if start_us is not None and record['started_us'] is not None
-            and start_us < record['started_us'] <= (end_us or 0)
-        ]
-        if not keys:
-            return False
-        before = [
-            record['cache_key'] for record in history
-            if record['started_us'] is not None and record['started_us'] <= start_us
-        ]
-        return bool(before) and keys[-1] != before[-1]
+    predecessors = _predecessors_by_successor(dependencies)
 
     rows = []
     for element, history in by_element.items():
         total_us = sum(record['total_us'] for record in history)
-        causes = {'unchanged_key': 0, 'own_key_changed': 0, 'rooted_upstream': 0}
-        roots: dict[str, int] = {}
-        for previous, current in zip(history, history[1:]):
-            if current['cache_key'] == previous['cache_key']:
-                causes['unchanged_key'] += 1
-                continue
-            upstream = [
-                name for name in predecessors.get(element, [])
-                if _key_changed_between(
-                    name, previous['started_us'], current['started_us'],
-                )
-            ]
-            if upstream:
-                causes['rooted_upstream'] += 1
-                for name in upstream:
-                    roots[name] = roots.get(name, 0) + current['total_us']
-            else:
-                causes['own_key_changed'] += 1
+        causes, roots = _rebuild_causes(element, history, by_element, predecessors)
         rows.append({
             'element': element,
             'build_count': len(history),
@@ -873,6 +901,107 @@ def developer_tax(records: list[dict], dependencies: Optional[list[dict]] = None
     }
 
 
+# UX-682: a build across this window of another element's is treated as
+# the same change event - long enough for a CI batch, short enough that
+# an unrelated afternoon rebuild does not get paired in.
+CO_CHANGE_WINDOW_US = 30 * 60 * 1_000_000
+
+# A pair seen once is a coincidence; the payload counts what this drops.
+CO_CHANGE_MIN_REBUILDS = 2
+
+
+def _co_rebuilds(times_a: list[int], times_b: list[int], window_us: int) -> int:
+    """How many of `times_a` and `times_b` pair within `window_us` of
+    each other, each timestamp claimed by at most one pair - greedy,
+    earliest first, the standard two-pointer matching for sorted
+    intervals."""
+    times_a = sorted(times_a)
+    times_b = sorted(times_b)
+    i = j = 0
+    count = 0
+    while i < len(times_a) and j < len(times_b):
+        diff = times_a[i] - times_b[j]
+        if abs(diff) <= window_us:
+            count += 1
+            i += 1
+            j += 1
+        elif diff < 0:
+            i += 1
+        else:
+            j += 1
+    return count
+
+
+def change_frequency(records: list[dict], dependencies: Optional[list[dict]] = None) -> dict:
+    """UX-682: how often each element rebuilds, and which elements
+    rebuild together - the two factors `blast weight` had no partner
+    for (`bga/blast.py` measures the second; nothing measured the
+    first).
+
+    Population and cause annotation are `developer_tax`'s - same logs,
+    same 'no session id' limit, so `builds_lower_bound` never claims a
+    build count it cannot know. Two elements co-rebuild when each has a
+    build within `CO_CHANGE_WINDOW_US` of the other's, paired greedily
+    earliest-first so one rebuild cannot be claimed by two pairs.
+
+    `pairs_below_floor` counts only pairs that co-rebuilt at least once
+    but fewer than `CO_CHANGE_MIN_REBUILDS` times - a pair that never
+    overlapped at all is not counted, since it was never a pair.
+    """
+    builds, by_element = _build_population(records)
+    if not by_element:
+        return {}
+
+    predecessors = _predecessors_by_successor(dependencies)
+
+    elements = []
+    for element, history in by_element.items():
+        causes, _roots = _rebuild_causes(element, history, by_element, predecessors)
+        rebuilds = len(history)
+        unchanged = causes['unchanged_key']
+        elements.append({
+            'element': element,
+            'rebuilds': rebuilds,
+            'unchanged_key_rebuilds': unchanged,
+            'unchanged_key_share': (unchanged / rebuilds) if rebuilds else 0.0,
+        })
+    elements.sort(key=lambda row: (-row['rebuilds'], row['element']))
+
+    names = sorted(by_element)
+    co_change = []
+    pairs_below_floor = 0
+    for i, a in enumerate(names):
+        times_a = [r['started_us'] for r in by_element[a] if r['started_us'] is not None]
+        for b in names[i + 1:]:
+            times_b = [r['started_us'] for r in by_element[b] if r['started_us'] is not None]
+            co_rebuilds = _co_rebuilds(times_a, times_b, CO_CHANGE_WINDOW_US)
+            if co_rebuilds < CO_CHANGE_MIN_REBUILDS:
+                if co_rebuilds:
+                    pairs_below_floor += 1
+                continue
+            co_change.append({
+                'a': a,
+                'b': b,
+                'co_rebuilds': co_rebuilds,
+                'share_of_a': co_rebuilds / len(by_element[a]),
+                'share_of_b': co_rebuilds / len(by_element[b]),
+            })
+    co_change.sort(key=lambda row: (-row['co_rebuilds'], row['a'], row['b']))
+
+    starts = [r['started_us'] for r in builds if r['started_us'] is not None]
+    return {
+        'builds_lower_bound': max((row['rebuilds'] for row in elements), default=0),
+        'window': {
+            'first_us': min(starts) if starts else None,
+            'last_us': max(starts) if starts else None,
+        },
+        'elements': elements,
+        'co_change': co_change,
+        'co_change_window_us': CO_CHANGE_WINDOW_US,
+        'pairs_below_floor': pairs_below_floor,
+    }
+
+
 def build_report(
     records: list[dict], native_report: Optional[dict] = None,
     dependencies: Optional[list[dict]] = None,
@@ -900,6 +1029,7 @@ def build_report(
         'phase_breakdown': phase_breakdown(records),
         'sandbox_tax': sandbox_tax(records),
         'developer_tax': developer_tax(records, dependencies),
+        'change_frequency': change_frequency(records, dependencies),
         'configure_tax': plane3_configure,
         'configure_views': views,
         'findings': _plane3_findings(plane3_configure, views),
@@ -1109,6 +1239,36 @@ def format_report_text(report: dict) -> str:
                 "separate them"
             )
         lines.append(f"  ({tax['caveat']})")
+        lines.append('')
+
+    freq = report.get('change_frequency') or {}
+    if freq.get('elements'):
+        # UX-682: how often each element rebuilds - blast weight's
+        # missing partner - and which elements rebuild together.
+        top = freq['elements'][0]
+        lines.append(
+            f"Change frequency across at least {freq['builds_lower_bound']} build(s): "
+            f"{top['element']} rebuilt {top['rebuilds']} time(s) "
+            f"({_pct(top['unchanged_key_share'])} with an unchanged key)"
+        )
+        for row in freq['elements'][1:_TAX_ELEMENTS_SHOWN]:
+            lines.append(
+                f"  {_elide_element(row['element']):<28s} {row['rebuilds']:>6d} rebuild(s) "
+                f"({_pct(row['unchanged_key_share'])} unchanged key)"
+            )
+        if freq['co_change']:
+            window_min = freq['co_change_window_us'] / 60_000_000
+            lines.append(
+                f"  Co-change (within {window_min:.0f}m of each other, "
+                f"{freq['pairs_below_floor']} pair(s) below the floor of "
+                f"{CO_CHANGE_MIN_REBUILDS} dropped):"
+            )
+            for pair in freq['co_change'][:_TAX_PAYERS_SHOWN]:
+                lines.append(
+                    f"    {pair['a']} + {pair['b']}: {pair['co_rebuilds']}x "
+                    f"({_pct(pair['share_of_a'])} of {pair['a']}'s, "
+                    f"{_pct(pair['share_of_b'])} of {pair['b']}'s)"
+                )
         lines.append('')
 
     for finding in report.get('findings') or []:

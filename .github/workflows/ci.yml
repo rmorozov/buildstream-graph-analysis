@@ -1004,6 +1004,12 @@ jobs:
     needs: [test, bst-smoke]
     steps:
       - uses: actions/checkout@v4
+        with:
+          # `UX-784`: this job runs the whole `make test`, and the
+          # register guards refuse a cut history rather than
+          # deriving from half of one. Without this they red here
+          # and nowhere else - which is what they did.
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5

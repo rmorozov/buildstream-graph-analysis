@@ -2,9 +2,10 @@
 
 Run on 2026-09-07.
 
-Five rows closed, three filed. Three were the round's planned tracks;
-the other two are what the round found while trying to make CI green,
-and what a verifier found in the round's own closing work.
+Six rows closed, four filed. Three were the round's planned tracks;
+the other three are what the round found while trying to make CI
+green, what a verifier found in the round's own closing work, and what
+CI found in the fix for the first of those.
 
 ## The tracks
 
@@ -105,6 +106,36 @@ the reuse path returns immediately and does not.
 Both fixes are guarded by the reuse parameter, and both mutations
 redden **only** that parameter — which is the measurement that the
 case was invisible before.
+
+## The sixth row, and the same shape a third time
+
+`UX-784`. `UX-781` shipped with a Deviation saying "with the workflow
+fixed nothing in CI is cut". The next push proved otherwise:
+`bst-tests` reddened with six failures, every one a register guard
+refusing a shallow clone. That job runs the **whole** `make test` on a
+default-depth checkout, and `UX-781` had only looked at the jobs it
+found by grepping for `checkout`.
+
+The guard that should have caught it is
+`test_ci_asks_for_the_history_these_guards_read`, and it asserts
+
+```python
+assert "fetch-depth: 0" in workflow
+```
+
+— one occurrence anywhere in the file, satisfying a sentence whose
+subject is *the machine that must not have a shallow clone*. The
+`test` matrix's copy was covering for the job that had none.
+
+That is the same defect three times in one round: `UX-781`'s two, and
+now the clause `UX-781` itself wrote a job-aware sibling for while
+leaving this one reading the file. The round's own subject turns out
+to be the population question, not the shallow clone.
+
+One thing worth keeping: the failure was legible on sight, because
+`UX-781`'s other change makes the assertion carry `check()`'s own
+words. The log said "is a shallow clone" instead of listing 55 round
+numbers.
 
 One more thing the verifier caught: `UX-773`'s Acceptance Test said
 `pgrep -f bga-geometry | wc -l` → `0`. That is machine-wide, reads 82

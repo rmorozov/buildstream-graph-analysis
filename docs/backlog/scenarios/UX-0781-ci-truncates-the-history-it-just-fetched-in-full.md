@@ -165,10 +165,18 @@ None on the four items. Two decisions taken inside them:
 
 - A shallow clone still **fails** rather than skipping. The precedent
   (`UX-637`, `tests/browser.py`) is a declared skip, and it was
-  declined here: with the workflow fixed nothing in CI is cut, a
-  developer's cut clone gets a message naming `git fetch --unshallow`,
-  and a new census reason would buy silence in exactly the job this
-  row was filed on.
+  declined here: a developer's cut clone gets a message naming `git
+  fetch --unshallow`, and a new census reason would buy silence in
+  exactly the job this row was filed on. That reasoning stands.
+
+  **The sentence that followed it did not.** This read "with the
+  workflow fixed nothing in CI is cut", and `bst-tests` reddened on the
+  next push — it runs the whole `make test` on a default-depth
+  checkout, which this row never looked at. Corrected as `UX-784`,
+  along with the guard that let it through: it asserted `"fetch-depth:
+  0" in workflow`, so the `test` matrix's copy covered for the job that
+  had none. Third instance in one round of a guard whose population is
+  the file when the claim is about jobs.
 - The register's dependence on `git log` reachability is untouched
   and filed as `UX-782`. It is a redesign of what the register is,
   and it carries its own trap (dates read from the document the guard

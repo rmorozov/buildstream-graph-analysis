@@ -234,6 +234,32 @@ class TestEveryHistoryReadingGuardDeclaresItsDepth:
             "ci.yml's checkout does not ask for the whole history, so every "
             "clause above declines there and the sweep guards nothing")
 
+    def test_every_job_that_runs_the_suite_asks_for_it(self):
+        """`UX-784`: the clause above reads the file, and a workflow has
+        jobs. `bst-tests` runs the whole `make test` on a default-depth
+        checkout, so the register guards - which refuse a cut history
+        rather than deriving from half of one - reddened there and
+        nowhere else. One `fetch-depth: 0` anywhere satisfied the
+        sentence above while the job that needed it had none."""
+        import yaml
+        spec = yaml.safe_load(
+            (REPO / ".github/workflows/ci.yml").read_text(encoding="utf-8"))
+        short = {}
+        for name, job in (spec.get("jobs") or {}).items():
+            steps = job.get("steps") or []
+            if not any("make test" in (step.get("run") or "")
+                       for step in steps):
+                continue
+            depths = [str((step.get("with") or {}).get("fetch-depth", ""))
+                      for step in steps
+                      if "checkout" in str(step.get("uses", ""))]
+            if "0" not in depths:
+                short[name] = depths or ["no checkout step"]
+        assert short == {}, (
+            f"{short}: these jobs run the whole suite on a checkout that "
+            "did not ask for the whole history. Every history-reading "
+            "guard declines or reds there (UX-784)")
+
     def test_no_later_step_regrafts_a_boundary_onto_it(self):
         """`UX-781`: asking for the whole history at checkout is half
         the sentence. A `git fetch --depth=N` later in the *same job*

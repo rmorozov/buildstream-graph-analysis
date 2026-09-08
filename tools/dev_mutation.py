@@ -77,7 +77,8 @@ def classify(results_text):
     `_CAUGHT` decides which verdicts count as caught; `"caught"` and
     `"survivors"` are the two totals derived from it, alongside each
     raw verdict's own count (`killed`, `survived`, `timeout`, `no
-    tests`, ...).
+    tests`, ...). `"no tests"` and every other non-`_CAUGHT` verdict is
+    a survivor, `run_module`'s existing rule.
     """
     counts = {}
     for _, verdict in _verdict_lines(results_text):

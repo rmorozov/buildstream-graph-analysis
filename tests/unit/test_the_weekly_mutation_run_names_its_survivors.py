@@ -12,7 +12,9 @@ applied.
 `CENSUS_RESULTS` is a real `mutmut results --all true` capture:
 `python3 tools/dev_mutation.py --module tools/dev_page_census.py
 --max-children 4` (UX-790), matching `UX-703`'s Outcome for that
-module (4 killed / 46 survivors of 50).
+module (4 killed / 46 survivors of 50). `ALL_VERDICTS` is synthetic -
+one line per verdict `mutmut/__main__.py`'s `status_by_exit_code`
+(mutmut 3.7) can print.
 """
 import pathlib
 import sys
@@ -74,6 +76,28 @@ CENSUS_RESULTS = """
     tools.dev_page_census.x_main__mutmut_36: no tests
     tools.dev_page_census.x_main__mutmut_37: no tests
 """
+
+#: Synthetic - one line per verdict `mutmut/__main__.py`'s
+#: `status_by_exit_code` (mutmut 3.7) can print, plus a colon-less line
+#: like a stray notice; not a real run.
+ALL_VERDICTS = "\n".join([
+    "mod.x_a__mutmut_1: killed",
+    "mod.x_b__mutmut_1: survived",
+    "mod.x_c__mutmut_1: no tests",
+    "mod.x_d__mutmut_1: timeout",
+    "mod.x_e__mutmut_1: suspicious",
+    "mod.x_f__mutmut_1: skipped",
+    "mod.x_g__mutmut_1: segfault",
+    "mod.x_h__mutmut_1: not checked",
+    "mod.x_i__mutmut_1: check was interrupted by user",
+    "mod.x_j__mutmut_1: caught by type check",
+    "not a real result line",
+])
+ALL_VERDICT_NAMES = (
+    "killed", "survived", "no tests", "timeout", "suspicious", "skipped",
+    "segfault", "not checked", "check was interrupted by user",
+    "caught by type check",
+)
 
 
 def test_touched_modules_keeps_only_bga_and_tools_python_source(
@@ -151,3 +175,13 @@ def test_classify_applies_caught_to_the_verdict_it_names():
     counts = dev_mutation.classify(sample)
     assert counts["caught"] == 1, "only killed is in _CAUGHT by default"
     assert counts["survivors"] == 2, "timeout and survived both count"
+
+
+def test_classify_names_every_verdict_mutmut_3_7_can_print():
+    counts = dev_mutation.classify(ALL_VERDICTS)
+    for verdict in ALL_VERDICT_NAMES:
+        assert counts[verdict] == 1, verdict
+    assert sum(counts[v] for v in ALL_VERDICT_NAMES) == len(ALL_VERDICT_NAMES), \
+        "the colon-less line is dropped, not crashed on"
+    assert counts["caught"] == 1, "only killed is in _CAUGHT by default"
+    assert counts["survivors"] == len(ALL_VERDICT_NAMES) - 1

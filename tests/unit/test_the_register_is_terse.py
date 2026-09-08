@@ -196,26 +196,45 @@ def _register_rows():
     return rows
 
 
+#: A named guard file must show it actually reads the surface it
+#: claims - either literal text `CLAUDE.md`, or a `rules.md#` heading
+#: marker (`UX-585`'s convention). Checked below so a real, unrelated
+#: file (`test_cache_logs.py`) cannot stand in for a guard (`UX-764`).
+_HOLDS_CLAUDE_MD = re.compile(r"CLAUDE\.md|rules\.md#")
+
+
 class TestEveryRegisterRowNamesItsEnforcement:
     """`UX-764`: the code comment row was unguarded and read the same
-    as the three that were. Every row must now either name a guard
-    file that exists or say "convention" - so a fifth row cannot go
-    back to the honour system silently."""
+    as the three that were. Every `.py` path a row names must exist,
+    unconditionally - "convention" does not excuse a bogus path
+    (round 108's near miss: "unconventional" matched the old
+    substring check). A row with no path passes only by the whole
+    word "convention"."""
 
     def test_every_row_names_a_guard_or_says_convention(self):
         rows = _register_rows()
         assert len(rows) >= 4, f"CLAUDE.md's Register table has {len(rows)} rows"
         bad = []
         for cap, detail in rows:
-            if "convention" in detail.lower():
-                continue
             named = re.findall(r"`([\w./-]+\.py)`", detail)
-            if named and all((REPO / n).exists() for n in named):
+            if named:
+                missing = [n for n in named if not (REPO / n).exists()]
+                if missing:
+                    bad.append((cap, detail, f"missing file(s): {missing}"))
+                    continue
+                proxies = [n for n in named
+                           if not _HOLDS_CLAUDE_MD.search(
+                               (REPO / n).read_text(encoding="utf-8"))]
+                if proxies:
+                    bad.append((cap, detail,
+                                f"names {proxies} which never reads "
+                                f"CLAUDE.md or a rules.md heading"))
                 continue
-            bad.append((cap, detail))
-        assert not bad, (
-            f"Register row(s) name no existing guard file and no "
-            f"'convention': {bad}")
+            if re.search(r"\bconvention\b", detail):
+                continue
+            bad.append((cap, detail, "names no guard file and no "
+                        "whole-word 'convention'"))
+        assert not bad, f"Register row(s) fail enforcement: {bad}"
 
 
 class TestClaudeMdCarriesTheSameNumbers:

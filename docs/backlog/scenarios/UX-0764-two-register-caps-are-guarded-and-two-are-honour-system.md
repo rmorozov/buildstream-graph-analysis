@@ -112,8 +112,19 @@ or says "convention" - the fifth-row hole the Motivation named.
 `make test-touching`: 48 file(s) selected (21 census + 27 naming the
 change) · 1551 passed, 4 skipped in 207.00s. `make lint`: clean.
 
+The verifier read `5ac9d755` and found two holes: the `"convention" in
+detail.lower()` check ran first and short-circuited on a bogus path
+next to the word "unconventional"; a row naming a real but unrelated
+file (`test_cache_logs.py`) passed as a proxy. Fixed: every named
+`.py` path must exist unconditionally, "convention" now matches only
+as a whole word (`\bconvention\b`), and each named file's own text
+must carry `CLAUDE.md` or a `rules.md#` marker or it counts as a
+proxy.
+
 | mutation | result | count |
 |---|---|---|
 | add a fifth row naming no guard and no "convention" | 🔴 names the row: "no existing guard file and no 'convention'" | 1 failed |
 | rename a real row's guard file to one that does not exist | 🔴 same clause names the row and the bogus path | 1 failed |
+| a row with "unconventional" next to a bogus `.py` path | 🔴 `missing file(s)` names the bogus path | 1 failed |
+| a row naming `test_cache_logs.py` (real, never reads the register) | 🔴 "never reads CLAUDE.md or a rules.md heading" | 1 failed |
 | restore from a scratchpad copy after each (never `git checkout --`) | 🟢 `test_the_register_is_terse.py` 606 passed; `git diff` clean | tests green

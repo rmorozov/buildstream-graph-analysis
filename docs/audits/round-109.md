@@ -74,6 +74,12 @@ the merged head by construction; re-adopted once at the close
 `bga/schemas.py` 5818→5821, `tools/dev_flake_census.py` 88→105,
 `tools/dev_track_cost.py` 448→455.
 
+It reddened a second time on the closing record: two more merges had
+landed after that adoption (`tools/dev_baseline.py` 457→495,
+`tools/dev_mutation.py` 248→274). The adoption belongs after the last
+merge, as the last step before the gate — a §7a step for the next
+round to add with its guard.
+
 ## Process, measured
 
 - The Agent tool's worktree opens at `origin/main`'s tip as of session start, eight commits behind the branch; one track stopped on a task file that did not exist there. The brief names the head now (decompose §5).

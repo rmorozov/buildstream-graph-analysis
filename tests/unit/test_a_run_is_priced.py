@@ -252,40 +252,29 @@ class TestTheRoundRegisterIsDerived:
             "the register does not name")
 
 
-#: `UX-744`'s verifier: `commit_signal()` cannot tell a commit that
-#: *documents* a round from one that is *in* it. `UX-757` retroactively
-#: documented round 101 and legitimately names it in prose while doing
-#: so, dragging round 101's date to `UX-757`'s own (round 106's).
-#: Dated and reasoned, not silently passed - a *new* mismatch still
-#: reds `test_a_documented_rounds_date_matches_its_document` below.
-DATE_MISMATCH_WAIVER = {
-    "101": ("2026-09-07", "UX-757's retroactive documentation commits "
-                           "name round 101 in prose; commit_signal() "
-                           "reads that as round 101's own work"),
-    # Two more, measured rather than assumed - and two different
-    # causes, which is why each carries its own sentence. `git log
-    # --format=%ad --date=short --grep 'round 19'` returns 2026-08-20
-    # *and* 2026-08-21, one commit opening the round and one closing
-    # it; `rounds()` takes `max`, the document states its opening.
-    # Round 22's later date is `docs: record how round 22 closed`,
-    # UX-757's shape again.
-    "19": ("2026-09-07", "a two-day round: commits on 2026-08-20 "
-                         "(opening) and 2026-08-21 (closing); the "
-                         "document states the day it opened"),
-    "22": ("2026-09-07", "`docs: record how round 22 closed` lands "
-                         "2026-08-22, a day after the round's own "
-                         "commits - a retroactive documentation commit"),
-}
+#: `UX-782`'s verifier: `first_commit_date()` reads when
+#: `docs/audits/round-N.md` was itself first added, independent of
+#: what the document's own dateline says. `UX-757` added all four of
+#: 99-102 on 2026-09-07, retroactively, from committed material; each
+#: document's own "Opens at ..." states the round's actual work date,
+#: 2026-09-06. (Rounds 19 and 22, waived under the old commit-subject
+#: mechanism, now match cleanly - their own file was added the day
+#: their dateline states - and are not carried forward.)
+DATE_MISMATCH_WAIVER = dict.fromkeys(
+    ("99", "100", "101", "102"),
+    ("2026-09-08", "UX-757 added docs/audits/round-N.md for all four "
+                   "on 2026-09-07, retroactively, from committed "
+                   "material; each document's own dateline states "
+                   "2026-09-06, the round's actual work date"))
 
 
 #: `UX-772`'s verifier: a round whose document states no recognized
 #: dateline must red, not silently skip - the same shape the row was
-#: filed on, one layer down. These ten predate the register (round 99)
+#: filed on, one layer down. These predate the register (round 99)
 #: and open with an "Input:"/prose sentence, never "Run on"/"Opens at"
 #: - closed history, not rewritten to satisfy a later guard. `(pinned
 #: on, reason)`, so a round that gains a real dateline is caught by
-#: `test_a_documented_rounds_date_matches_its_document`'s own check
-#: below rather than staying silently waived.
+#: this class's own check below rather than staying silently waived.
 NO_DATELINE_WAIVER = dict.fromkeys(
     ("75", "76", "77", "78", "80", "81", "83", "84", "85", "86"),
     ("2026-09-07", "pre-round-99 audit-cadence document, no stated "
@@ -298,32 +287,38 @@ NO_DATELINE_WAIVER.update(dict.fromkeys(
     ("7", "8", "9"),
     ("2026-09-07", "opens on a CI run id, not a date; states none "
                    "(UX-772, population widened by UX-781)")))
+#: Rounds 2-6, moved verbatim out of `docs/design/directions.md`
+#: during round 11's housekeeping - closed-history prose, never a
+#: dateline. They enter the population under `UX-782`'s committed
+#: union (they have no naming commit `git log` could find at all).
+NO_DATELINE_WAIVER.update(dict.fromkeys(
+    ("2", "3", "4", "5", "6"),
+    ("2026-09-08", "moved verbatim from docs/design/directions.md in "
+                   "round 11's housekeeping; states no dateline "
+                   "(UX-782, population widened to the committed "
+                   "union)")))
 
 
 def _documented_rounds():
-    """Every round the register names with a real date and a document
-    - no `FIRST_PRICED_ROUND` floor and no dateline-recognized filter
-    (`UX-772`'s verifier: filtering on `document_date() is not None`
-    reproduced the same defect one layer down - "the population is
-    documents whose phrasing the regex happens to recognize"). A round
-    the register cannot date at all (round 64: its naming commit is
-    not on this history) is the one exclusion left, a different
-    mechanism (`rounds()`'s reachability, not a document's dateline)."""
+    """Every registered round with a `docs/audits/round-N.md` -
+    `UX-782`'s committed union makes every document its own round in
+    the register directly, so there is no unreachable-date exclusion
+    left (round 64 used to need one; it now dates from its own
+    document, like any other)."""
     reg = dev_round_register.rounds()
-    return sorted((n for n in reg
-                   if reg[n]["date"] != "—"
-                   and (AUDITS / f"round-{n}.md").exists()), key=int)
+    return sorted((n for n in reg if (AUDITS / f"round-{n}.md").exists()),
+                  key=int)
 
 
 class TestARegisteredRoundsDateMatchesItsDocument:
-    """`UX-744`'s verifier: the ids-closed column was wrong on four of
-    the five rounds it was demonstrated on, for this same reason, and
-    was dropped rather than shipped wrong. This is the same check kept
-    on what remains - the register's date against the round's own
-    document, for every round one exists for. `UX-772`'s verifier: an
-    unrecognized dateline reds unless named in `NO_DATELINE_WAIVER`,
-    the same shape as `UNPRICEABLE_ROUND_WAIVER` - a silent skip is
-    the defect this class exists to catch, not a way to avoid it."""
+    """`UX-782`: the register's date is now `document_date()` itself
+    (UX-772's dateline), so comparing them is tautological - the
+    replacement check reads an independent source, the git commit
+    that first added the document (`first_commit_date()`), and skips,
+    naming the depth, where a shallow clone cannot answer. `UX-772`'s
+    verifier stays: an unrecognized dateline reds unless named in
+    `NO_DATELINE_WAIVER` - a silent skip is the defect this class
+    exists to catch, not a way to avoid it."""
 
     def test_the_population_is_not_empty(self):
         assert len(_documented_rounds()) >= 6, (
@@ -338,8 +333,7 @@ class TestARegisteredRoundsDateMatchesItsDocument:
             "back to it buys nothing")
 
     @pytest.mark.parametrize("number", _documented_rounds())
-    def test_a_documented_rounds_date_matches_its_document(self, number):
-        register_date = dev_round_register.rounds()[number]["date"]
+    def test_a_documents_dateline_matches_its_own_first_commit(self, number):
         document_date = dev_round_register.document_date(number)
         if number in NO_DATELINE_WAIVER:
             assert document_date is None, (
@@ -353,14 +347,23 @@ class TestARegisteredRoundsDateMatchesItsDocument:
             "...', or a heading's parenthesised date) and is not named "
             "in NO_DATELINE_WAIVER - a document that does not state its "
             "own date is exactly UX-772's defect")
+        if dev_round_register.is_shallow():
+            pytest.skip(
+                f"shallow clone (boundary names "
+                f"{dev_round_register.shallow_depth()} commit(s)) - git "
+                "log cannot see round "
+                f"{number}'s own first commit (UX-782)")
+        git_date = dev_round_register.first_commit_date(number)
         if number in DATE_MISMATCH_WAIVER:
-            assert register_date != document_date, (
+            assert git_date != document_date, (
                 f"round {number} is waived for a mismatch that no "
                 "longer reproduces - drop it from DATE_MISMATCH_WAIVER")
             return
-        assert register_date == document_date, (
-            f"round {number}: the register says {register_date}, "
-            f"docs/audits/round-{number}.md says {document_date}")
+        assert git_date == document_date, (
+            f"round {number}: docs/audits/round-{number}.md's own "
+            f"dateline says {document_date}, but it was first "
+            f"committed on {git_date} - a retroactively-written "
+            "document not named in DATE_MISMATCH_WAIVER")
 
 
 class TestATrackIsPricedByShape:

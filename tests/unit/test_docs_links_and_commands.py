@@ -898,27 +898,71 @@ def test_the_readme_stays_inside_its_measured_line_budget():
 
 
 #: A bare duration - `5m11s`, `21s`, `5 min` - the shape `UX-236` gave
-#: the whole-suite figure `UX-551` later found was not reproducible:
-#: 333s and 418s on the same commit, an hour apart.
+#: every `make test*` figure `UX-551` found was not reproducible: the
+#: whole suite read 333s and 418s on the same commit an hour apart, and
+#: the guide's own `make test-small` readings are 18.2s and 20.8s.
 _WALL_CLOCK = re.compile(r"\b\d+\s*(?:m\d+s|min(?:ute)?s?|s)\b", re.I)
+
+#: Any `make test` command line - the whole suite or a `-<suffix>`
+#: tier/alias (`test-small`, `test-tiers`, `test-touching`, ...). Not
+#: `(?!-)`, which let `test-tiers` etc. through the first version of
+#: this guard.
+_TEST_TARGET = re.compile(r"\bmake test(?:-\S+)?\b")
 
 
 def test_no_readme_line_states_a_suite_wall_clock_beside_make_test():
-    """UX-779: the README's `make test` line is not `make test-small`
-    or another tier (`(?!-)` excludes those; their figure comes from
-    `tests/tiers.py` and is `UX-503`'s, not `UX-551`'s falsification) -
-    it is the whole suite, whose wall clock moves more than 2x with the
-    machine, so no bare second-count belongs beside it."""
+    """UX-779: every `make test*` command's wall clock moves more than
+    2x with the machine (`UX-551`), so no bare second-count belongs on
+    its line inside a runnable block - or on the line directly below
+    it, which is where a comment too long for one line wraps to
+    (`(roughly 5 minutes)` on its own line reads as attached to the
+    command above it). Scoped to fenced `bash` blocks: prose elsewhere
+    in the README explains and dates the guide's own historical
+    readings, which is the fix, not the defect."""
     readme = (REPO / "README.md").read_text(encoding="utf-8")
-    offenders = [
-        f"{number}: {line.strip()}"
-        for number, line in enumerate(readme.splitlines(), 1)
-        if re.search(r"\bmake test\b(?!-)", line) and _WALL_CLOCK.search(line)
-    ]
+    offenders = []
+    for fence in re.findall(r"```bash\n(.*?)```", readme, re.S):
+        lines = fence.splitlines()
+        for number, line in enumerate(lines):
+            if not _TEST_TARGET.search(line):
+                continue
+            window = [line]
+            if number + 1 < len(lines):
+                window.append(lines[number + 1])
+            for text in window:
+                if _WALL_CLOCK.search(text):
+                    offenders.append(text.strip())
     assert offenders == [], (
-        "README states a suite wall clock beside `make test`, which "
-        "UX-551 found is not reproducible across machines:\n  "
-        + "\n  ".join(offenders))
+        "README states a wall clock beside (or directly below) a "
+        "`make test*` command, which UX-551 found is not reproducible "
+        "across machines:\n  " + "\n  ".join(offenders))
+
+
+def _github_slug(heading: str) -> str:
+    """GitHub's heading-to-anchor rule: lowercase, drop everything but
+    word characters/spaces/hyphens, then turn every remaining space
+    into a hyphen - each one, not the run, so an em dash's two
+    flanking spaces make a double hyphen. Confirmed against this repo's
+    own `real-project.md#step-7--change-something-then-prove-it`."""
+    heading = heading.strip().lower()
+    heading = re.sub(r"[^\w\s-]", "", heading)
+    return heading.replace(" ", "-")
+
+
+def test_the_readmes_link_into_the_guide_names_a_heading_that_exists():
+    """UX-779: `test_every_relative_documentation_link_resolves` strips
+    the anchor before checking the target, so a hand-derived anchor
+    that stops matching a renumbered heading is invisible to it. This
+    reads the guide's own `## ` headings and slugs each one."""
+    guide = (REPO / "docs/contributing/fixing-guide.md").read_text(encoding="utf-8")
+    slugs = {_github_slug(h) for h in re.findall(r"(?m)^## (.+)$", guide)}
+    readme = (REPO / "README.md").read_text(encoding="utf-8")
+    anchors = re.findall(r"\(docs/contributing/fixing-guide\.md#([a-z0-9-]+)\)", readme)
+    assert anchors, "README links no anchor into the fixing guide"
+    missing = [a for a in anchors if a not in slugs]
+    assert missing == [], (
+        f"README links fixing-guide.md anchor(s) {missing}, which no "
+        f"`## ` heading in the guide slugs to")
 
 
 def test_the_keying_claim_carries_the_provenance_it_was_accepted_with():

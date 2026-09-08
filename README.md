@@ -292,14 +292,16 @@ which kind of question. The three entry points:
 
 ```bash
 pip install -e '.[dev]'   # pytest + ruff; `make test`/`make lint` need this, not the base install
-make test-small           # the tier to run while you work: 21s, measured
+make test-small           # the tier to run while you work - wall clock is a property of the machine, below
 make test                 # the whole suite - wall clock is a property of the machine, below
 make lint                 # ruff + markdown (`make dev-run` prints a real report)
 ```
 
-`make test`'s own wall clock is not a number this file pins (`UX-551`
-retired the fixed figure `UX-236` chose here): it moves more than 2x
-between runs on the same commit, so budget against the
+Neither tier's wall clock above is a number this file pins (`UX-551`
+retired the fixed figures `UX-236` chose here, both of them: the guide
+carries two dated `make test-small` readings, 18.2s and 20.8s, and
+says wall clock there "moves more than 2x with load" the same as it
+does for the whole suite): budget against the
 [fixing guide's measured range](docs/contributing/fixing-guide.md#3-definition-of-done--mandatory-verification)
 rather than a reading dated to one afternoon.
 
@@ -316,12 +318,12 @@ rather than a reading dated to one afternoon.
      denominators. Round 75 takes it to 323 lines: `UX-492` dated the real-project block, which
      called itself verbatim while holding a sentence `UX-475` retired: the capture that
      produced it, what the report has changed since, and the three report lines and one clause
-     an editor had cut out of it without a marker. `UX-779` takes it to 332 lines: the whole
-     suite's bare wall-clock figure `UX-236` chose for `make test` becomes a link to the fixing
-     guide's measured range, since `UX-551` retired the premise a single number could serve -
-     `UX-236`'s own reasoning is superseded by that link. The budget is a measured target, not
-     a law - but exceeding it silently is what turned 420 into "430" once before, so the number
-     is here rather than in a commit message. -->
+     an editor had cut out of it without a marker. `UX-779` takes it to 334 lines: both bare
+     wall-clock figures `UX-236` chose - `make test-small`'s and `make test`'s - become one link
+     to the fixing guide's measured range, since `UX-551` retired the premise a single number
+     could serve for either. `UX-236`'s own reasoning is superseded by that link. The budget is a
+     measured target, not a law - but exceeding it silently is what turned 420 into "430" once
+     before, so the number is here rather than in a commit message. -->
 
 Tiers come from measured per-file duration (`tests/tiers.py`, `UX-238`), not from taste; `small` is
 the default, so a new file joins it free. `pytest -m bst` needs a real BuildStream, and CI's

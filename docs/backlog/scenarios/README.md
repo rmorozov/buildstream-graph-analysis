@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-792 scenarios: **21 open**, 771 closed.
+793 scenarios: **21 open**, 772 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -26,8 +26,8 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | viewer | 2 | 163 |
 | cli | 0 | 22 |
 | store | 0 | 16 |
-| docs | 6 | 132 |
-| guards | 7 | 208 |
+| docs | 5 | 132 |
+| guards | 8 | 209 |
 
 ## Open scenarios
 
@@ -52,11 +52,11 @@ task file, which is the only place it ever lived twice.
 | UX-774 | [the guide is at its band ceiling, and every round pays a trim](UX-0774-the-guide-is-at-its-band-ceiling-and-every-round-pays-a-trim.md) | docs | Medium | the round that adds a tool and finds an unrelated paragraph is what it has to delete | 🔴 |
 | UX-775 | [two files still build against the ambient HOME](UX-0775-two-files-still-build-against-the-ambient-home.md) | guards | Medium | the session whose `make test` reds on two files nobody touched, at a margin the other twelve survive | 🔴 |
 | UX-777 | [the nine page-built sections are thirteen, in two documents](UX-0777-the-nine-page-built-sections-are-thirteen-in-two-documents.md) | docs | Medium | the reader deciding whether chaptering belongs in the schema, on a figure that is 44% low | 🔴 |
-| UX-779 | [the README prints two wall clocks the guide says are not the suite's](UX-0779-the-readme-prints-two-wall-clocks-the-guide-says-are-not-the-suites.md) | docs | Medium | the newcomer budgeting a run from a number measured on someone else's afternoon | 🔴 |
 | UX-780 | [the map says a shelf shipped, and one linter did](UX-0780-the-map-says-a-shelf-shipped-and-one-linter-did.md) | docs | Medium | the round pricing whether the analysis shelf exists before deciding to build it | 🔴 |
 | UX-782 | [the register derives its rounds from `git log`, which is a property of the clone](UX-0782-the-register-derives-its-rounds-from-git-log.md) | guards | Medium | the round whose register disagrees with itself on a second machine | 🔴 |
 | UX-789 | [a baseline entry carries a key the tool never reads](UX-0789-a-baseline-entry-carries-a-key-the-tool-never-reads.md) | guards | Low | the `--check` output that promises to name every forced batch forever | 🔴 |
 | UX-795 | [the focus guard measures after a fixed sleep, and one runner was slower](UX-0795-the-focus-guard-measures-after-a-fixed-sleep-and-one-runner-was-slower.md) | guards | Medium | the branch that goes red on one of four matrix runners for a page it never touched | 🔴 |
+| UX-796 | [the host sampler claims more busy cores than the host has, under load](UX-0796-the-host-sampler-claims-more-busy-cores-than-the-host-has-under-load.md) | guards | Medium | the gate that reds on a host reading nothing in the diff touched | 🔴 |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

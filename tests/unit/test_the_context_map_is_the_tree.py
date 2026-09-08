@@ -31,10 +31,12 @@ REPO = pathlib.Path(__file__).resolve().parents[2]
 GUIDE = REPO / "docs/contributing/fixing-guide.md"
 CLOSED = REPO / "docs/backlog/scenarios/closed.md"
 
-#: `UX-780`: a citation with no `(open)` beside it reads as
-#: provenance - a closed id. The optional group is the marker itself,
-#: so a bare id and a marked one are two different matches.
-CITED_ID = re.compile(r"UX-\d+(?: \(open\))?")
+#: `UX-780`: a citation with no `(open)` beside it reads as closed.
+#: `UX-786`: a slash group (`UX-698/699/787`) shares its `UX-` prefix
+#: across bare numbers, so the cluster is matched whole and each
+#: number read separately - `(open)` after any one marks that id.
+CITATION = re.compile(r"UX-\d+(?:\s*\(open\))?(?:/\d+(?:\s*\(open\))?)*")
+ID_IN_CITATION = re.compile(r"(\d+)(\s*\(open\))?")
 
 # Modules small enough or private enough that naming each one would make
 # the map longer without making it more useful. Each is *reachable* -
@@ -505,13 +507,15 @@ class TestTheMapNamesTheTree:
         closed = set(re.findall(r"UX-\d+", CLOSED.read_text(encoding="utf-8")))
         text = _map_text()
         bare = []
-        for match in CITED_ID.finditer(text):
-            cited = match.group().split()[0]
-            if cited in closed or match.group().endswith("(open)"):
-                continue
-            line = (text[:match.start()].rsplit("\n", 1)[-1]
-                    + text[match.start():].split("\n", 1)[0])
-            bare.append(f"{cited} in {line.strip()!r}")
+        for cluster in CITATION.finditer(text):
+            line = (text[:cluster.start()].rsplit("\n", 1)[-1]
+                    + text[cluster.start():].split("\n", 1)[0])
+            for part in ID_IN_CITATION.finditer(cluster.group()):
+                num, marker = part.groups()
+                cited = f"UX-{num}"
+                if cited in closed or marker:
+                    continue
+                bare.append(f"{cited} in {line.strip()!r}")
         assert bare == [], (
             f"§6 cites open id(s) with no `(open)` marker: {bare}. "
             f"docs/contributing/fixing-guide.md §6.")

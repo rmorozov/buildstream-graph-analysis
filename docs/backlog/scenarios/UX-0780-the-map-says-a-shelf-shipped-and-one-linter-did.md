@@ -100,8 +100,10 @@ $ python3 -m pytest tests/unit/test_the_context_map_is_the_tree.py \
 |---|---|---|
 | appended bare `, UX-689` (open, per `README.md`) to the `quality.yml` row | `test_every_cited_id_is_closed_or_marked_open`, naming `UX-689 in 'pip-audit, sizes (UX-698/699/787), UX-689'` | `1 failed, 30 passed` |
 | same, with `(open)` added: `UX-689 (open)` | none | `31 passed` |
+| verifier's finding: `787`→`689` inside the row's own slash group `(UX-698/699/689)`, open, no `UX-` prefix | fixed regex, same guard, naming `UX-689 in 'pip-audit, sizes (UX-698/699/689)'` | `1 failed, 30 passed`; `(open)` after the group → `31 passed` |
 
-Reverted by `sed` removing the appended text (an exact-copy revert
-would have needed a scratchpad snapshot that a sandbox refusal on the
-first attempt left unwritten) — the fix itself was uncommitted in the
-same file, so `git checkout` was not an option either way.
+Reverted each time from a scratchpad copy of the guide, never `git
+checkout` — the fix itself was uncommitted in the same file. The
+`UX-607` headroom is now the tight resource here: the guide sits at
+55,296 B, exactly the 1,024 B floor under the ~50 KB figure's 56,320 B
+boundary, so the next row edited here has none to spend.

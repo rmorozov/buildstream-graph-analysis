@@ -87,17 +87,25 @@ class TestTheCandidateMatchesTheGate:
         assert json.loads(candidate.read_text(encoding="utf-8")) == []
 
 
+#: A row the ledger already carries before either clause below runs
+#: its own adopt - the case neither clause fixtured (`UX-786`).
+_EXISTING = {"file": "tests/unit/test_the_page_has_geometry.py",
+            "run_id": "run-0", "shift": 1.5, "confirmed": False}
+
+
 class TestAdoptFlakeAppends:
     def test_a_candidates_rows_are_appended(self, tmp_path, monkeypatch):
-        monkeypatch.setattr(drift, "FLAKE_LEDGER", tmp_path / "ledger.json")
+        ledger = tmp_path / "ledger.json"
+        ledger.write_text(json.dumps({"entries": [_EXISTING],
+                                      "declared": {}}), encoding="utf-8")
+        monkeypatch.setattr(drift, "FLAKE_LEDGER", ledger)
         candidate = tmp_path / "candidate.json"
         candidate.write_text(json.dumps([
             {"file": FLAKY, "run_id": "run-9", "shift": 1.8,
              "confirmed": True}]), encoding="utf-8")
         assert drift.main(["--adopt-flake", str(candidate)]) == 0
-        document = json.loads((tmp_path / "ledger.json").read_text(
-            encoding="utf-8"))
-        assert document["entries"] == [
+        document = json.loads(ledger.read_text(encoding="utf-8"))
+        assert document["entries"] == [_EXISTING,
             {"file": FLAKY, "run_id": "run-9", "shift": 1.8,
              "confirmed": True}]
 
@@ -105,16 +113,19 @@ class TestAdoptFlakeAppends:
         """The Acceptance Test's mutation stands in here: a run that
         never reaches this step, or reaches it twice for the same run
         id, must not grow the ledger a second time for one excursion."""
-        monkeypatch.setattr(drift, "FLAKE_LEDGER", tmp_path / "ledger.json")
+        ledger = tmp_path / "ledger.json"
+        ledger.write_text(json.dumps({"entries": [_EXISTING],
+                                      "declared": {}}), encoding="utf-8")
+        monkeypatch.setattr(drift, "FLAKE_LEDGER", ledger)
         candidate = tmp_path / "candidate.json"
         candidate.write_text(json.dumps([
             {"file": FLAKY, "run_id": "run-9", "shift": 1.8,
              "confirmed": True}]), encoding="utf-8")
         drift.main(["--adopt-flake", str(candidate)])
-        before = (tmp_path / "ledger.json").read_text(encoding="utf-8")
+        before = ledger.read_text(encoding="utf-8")
         assert drift.main(["--adopt-flake", str(candidate)]) == 0
-        assert (tmp_path / "ledger.json").read_text(
-            encoding="utf-8") == before
+        assert ledger.read_text(encoding="utf-8") == before
+        assert _EXISTING in json.loads(before)["entries"]
 
     def test_no_candidate_leaves_the_ledger_untouched(self, tmp_path,
                                                        monkeypatch):

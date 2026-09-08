@@ -851,7 +851,7 @@ COMMITTED_EXPORTS = [
     # miss the round has been finding: a second bound the diff selects
     # but the track did not look at.
     # 453,000 leaves 2,683 B, the same order as the 2,441 it had.
-    # `UX-671`: measured at `4c3fc308` before this change, 452,793 -
+    # `UX-671`: measured at `c8df15bb` before this change, 452,793 -
     # the 450,317 above was already stale by 2,476 B, nothing having
     # re-read it since. The rail's preset entries and the jump box now
     # write the anchor they land on; +704 B, all source, in

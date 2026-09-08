@@ -40,8 +40,8 @@ ranking — the tier guard reds.
 
 ## Outcome
 
-**Gap measured:** `git show a3bcc2c6:bga/findings.py | grep -c foundation`
-→ 0; `git show a3bcc2c6:tools/bst_extract_run.py | grep -c foundation`
+**Gap measured:** `git show cc202d2c:bga/findings.py | grep -c foundation`
+→ 0; `git show cc202d2c:tools/bst_extract_run.py | grep -c foundation`
 → 0 — no declared tier existed anywhere in the ranking or extractor.
 
 **Two decisions the code carries:**
@@ -80,7 +80,7 @@ tests/unit/test_a_committed_analysis_matches_the_analyzer.py -q` →
 `6 passed`. `PYTEST_XDIST= make test-touching` → `5910 passed, 98
 skipped`, 5 failed: 4 `Cache too full` (`@pytest.mark.bst`) and 1 the
 review-cadence guard (`closed.md` row count) - both confirmed
-identical on `a3bcc2c6` via `git stash`, unrelated to this diff.
+identical on `cc202d2c` via `git stash`, unrelated to this diff.
 `make lint` → clean, 0 new findings.
 
 **Fixture regeneration attempted, blocked, documented per-instruction:**
@@ -108,4 +108,4 @@ from the copy, re-run green):
 
 All four restored to `14 passed`.
 
-**Deviation.** The declaration is `variables: {bga-foundation: toolchain.bst}` in project.conf, not a `bga:` block: BuildStream 2.8 rejects an unknown top-level key and a list-valued variable, both shown on the real project. The `--foundation` CLI flag was dropped (the help screen sits at its 45-line cap); expected cost lives in `correlate.py`, not `findings.py`. Five exact-count guards moved with the new field, each re-derived with the number. The macro_micro fixture's field stays typed: the extractor could not run here (`Cache too full` on a shared CAS), stated in the Outcome. One verifier hold (a proxy validation test, the undisclosed decisions), fixed in a second commit (88ba86fa). Two commits, one verifier.
+**Deviation.** The declaration is `variables: {bga-foundation: toolchain.bst}` in project.conf, not a `bga:` block: BuildStream 2.8 rejects an unknown top-level key and a list-valued variable, both shown on the real project. The `--foundation` CLI flag was dropped (the help screen sits at its 45-line cap); expected cost lives in `correlate.py`, not `findings.py`. Five exact-count guards moved with the new field, each re-derived with the number. The macro_micro fixture's field stays typed: the extractor could not run here (`Cache too full` on a shared CAS), stated in the Outcome. One verifier hold (a proxy validation test, the undisclosed decisions), fixed in a second commit (8225900a). Two commits, one verifier.

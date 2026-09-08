@@ -112,7 +112,7 @@ or says "convention" - the fifth-row hole the Motivation named.
 `make test-touching`: 48 file(s) selected (21 census + 27 naming the
 change) · 1551 passed, 4 skipped in 207.00s. `make lint`: clean.
 
-The verifier read `5ac9d755` and found two holes: the `"convention" in
+The verifier read `27404b0a` and found two holes: the `"convention" in
 detail.lower()` check ran first and short-circuited on a bogus path
 next to the word "unconventional"; a row naming a real but unrelated
 file (`test_cache_logs.py`) passed as a proxy. Fixed: every named

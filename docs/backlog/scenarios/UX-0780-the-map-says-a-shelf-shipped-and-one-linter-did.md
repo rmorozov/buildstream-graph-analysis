@@ -108,4 +108,4 @@ checkout` — the fix itself was uncommitted in the same file. The
 55,296 B, exactly the 1,024 B floor under the ~50 KB figure's 56,320 B
 boundary, so the next row edited here has none to spend.
 
-**Deviation.** One verifier hold: the citation regex read only the first id of a slash group (`UX-698/699/787`), so an open id inside a group passed; fixed in a second commit (23cada55) with the `/689` mutation red. The guide sits 1,024 B under `UX-607`'s bucket boundary, noted in the Outcome. The file derives judgement; the brief ran it as bounded.
+**Deviation.** One verifier hold: the citation regex read only the first id of a slash group (`UX-698/699/787`), so an open id inside a group passed; fixed in a second commit (b7a056e4) with the `/689` mutation red. The guide sits 1,024 B under `UX-607`'s bucket boundary, noted in the Outcome. The file derives judgement; the brief ran it as bounded.

@@ -85,4 +85,51 @@ watch it red.
 
 ## Outcome
 
-_Not started._
+Decision: (2). `tools/dev_touching.py --size --write` derives and writes
+the guide's own KB figure into `docs/contributing/rules.md` and
+`docs/contributing/fixing-guide.md`, the shape `--spread --write` already
+has for the cost row. `UX-607`'s guard no longer measures headroom under
+a band; `TestTheGuidesSizeCostsOneFile` checks the two documents equal
+what the tool derives (`test_a_paragraph_does_not_move_the_stated_figure`,
+`test_the_document_is_what_the_tool_would_write`). (1), the map moving
+out, is not taken this round — `UX-689` owns that restructure.
+
+Gap measured (before this task's fix; the trims below are what the old
+band-with-headroom guard cost and are not reverted, per Out of Scope):
+
+```console
+$ wc -c docs/contributing/fixing-guide.md
+55296 docs/contributing/fixing-guide.md
+```
+
+| commit | B | Δ | what it was |
+|---|---|---|---|
+| `8997068` | 55,280 | −349 | round 106, trimmed to get under the limit |
+| `17bf0b8` | 55,253 | −96 | round 107, `UX-744`'s module row over the limit |
+
+Close measured (after — no trim, no growth; the fix removes the pressure,
+it does not touch the prose):
+
+```console
+$ wc -c docs/contributing/fixing-guide.md
+55296 docs/contributing/fixing-guide.md
+$ PYTHONPATH=. python3 tools/dev_touching.py --size
+~50 KB
+$ python3 -m pytest tests/unit/test_the_process_documents_derive_their_figures.py -q -k TestTheGuidesSizeCostsOneFile
+5 passed, 20 deselected
+```
+
+Mutation table (each edited on a copy, restored from the copy, never
+`git checkout --`):
+
+| mutation | reddened | count |
+|---|---|---|
+| (a) `rules.md`'s figure typed one step off (`~50 KB` → `~40 KB`) | `test_a_paragraph_does_not_move_the_stated_figure`, `test_the_document_is_what_the_tool_would_write`, `test_no_third_document_states_the_guides_size`, naming `~50 KB` | 3 failed, 2 passed |
+| (b) 2 KB paragraph appended to the guide, figure not re-derived | same three tests, now naming `~60 KB` | 3 failed, 2 passed |
+| (c) `dev_touching.py --size --write` run over (b) | rewrote both documents | 5 passed, 0 failed |
+
+`make test-touching`: `41 file(s) selected (26 census + 15 naming the
+change) · 1536 passed, 3 skipped`. `make lint`: clean after
+`dev_baseline.py --shrink` dropped one stale `PLR0912` entry for
+`dev_touching.py:main` — the `--size` block factored into a helper
+shared with `--spread`, which also shrank `main`'s own complexity.

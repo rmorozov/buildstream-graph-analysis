@@ -538,7 +538,6 @@
     {"file": "tools/dev_touch_map.py", "line": "parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])", "nth": 1, "rule": "reportOptionalMemberAccess", "tool": "pyright"},
     {"file": "tools/dev_touching.py", "line": "def main(argv=None) -> int:", "nth": 1, "rule": "C901", "tool": "ruff"},
     {"file": "tools/dev_touching.py", "line": "def select(changed, census=True):", "nth": 1, "rule": "C901", "tool": "ruff"},
-    {"file": "tools/dev_touching.py", "line": "def main(argv=None) -> int:", "nth": 1, "rule": "PLR0912", "tool": "ruff"},
     {"file": "tools/dev_touching.py", "line": "done = subprocess.run(argv, cwd=REPO, env=env, capture_output=True, text=True)", "nth": 1, "rule": "S603", "tool": "ruff"},
     {"file": "tools/dev_touching.py", "line": "out = subprocess.run(argv, capture_output=True, text=True, cwd=REPO)", "nth": 1, "rule": "S603", "tool": "ruff"},
     {"file": "tools/dev_touching.py", "line": "return subprocess.call(argv, cwd=REPO, env=env)", "nth": 1, "rule": "S603", "tool": "ruff"},

@@ -140,6 +140,16 @@ date became the document's own dateline.
 | M3 | `ROUND_DOC_RE` narrowed to match only `round-register.md` (no capture group) | 2/22: both `TestDocumentedRoundsReadsFilenames` cases, one an `IndexError` |
 | M4 | `rounds()`'s union dropped the ledger side (`set(docs)` only) | 1/22 fixture (`test_a_ledger_only_round_has_no_dateline_to_read`); the real-repo subset guard did not catch it — every ledger round already has a document, so nothing here discriminates that specific mutation against live data |
 | M5 | `shallow_depth()` hard-coded 0 | 1/22 (`test_the_markers_own_entries_are_counted`) |
+| M6 | `check()`'s `GIT_ONLY_ROUNDS` disjointness clause dropped | 1/28 (`test_check_reds_naming_the_round_and_where`); reproduces the verifier's HOLD exactly — a synthetic `round-26.md` left `check()` reporting only "does not exist", losing the named conflict |
+
+**Verifier HOLD, fixed**: `GIT_ONLY_ROUNDS` fed the header sentence
+only; a round given a document or ledger row left `--check` green
+while the header still called it git-only. `git_only_conflicts()` now
+checks every entry against `documented_rounds()` and the ledger,
+`check()` names a conflict by round and path/ledger before the
+generic disagreement, and `header()` derives its count/range from
+`GIT_ONLY_ROUNDS` minus the conflicted ones, so the sentence stays
+true or `--check` reds first.
 
 **Guard that did not discriminate**: `first_commit_date()`'s
 `--diff-filter=A` flag is redundant to current behaviour, since

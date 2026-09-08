@@ -122,6 +122,39 @@ class TestRenderAndCheckRoundTrip:
         assert reg.check() == []
 
 
+class TestGitOnlyRoundsAreCheckedAgainstTheTree:
+    """The verifier's HOLD on `UX-782`: a `GIT_ONLY_ROUNDS` entry that
+    gains a document or a ledger row must be a named problem, not a
+    silent header drift - a synthetic `round-26.md` left `--check`
+    green while the header still said 26 was git-only."""
+
+    def test_a_conflict_names_the_round_and_where(self):
+        found = dict(reg.git_only_conflicts(
+            documented={"29"}, ledger_runs=[{"round": "31"}]))
+        assert found == {29: "docs/audits/round-29.md",
+                         31: "the ledger's round column"}
+
+    def test_a_round_with_neither_is_not_a_conflict(self):
+        assert reg.git_only_conflicts(documented=set(), ledger_runs=[]) == []
+
+    def test_the_header_note_drops_a_conflicted_round(self):
+        effective = reg._effective_git_only(documented={"26"},
+                                            ledger_runs=[])
+        assert 26 not in effective
+        assert set(effective) == set(reg.GIT_ONLY_ROUNDS) - {26}
+
+    def test_check_reds_naming_the_round_and_where(self, tmp_path,
+                                                    monkeypatch):
+        (tmp_path / "docs" / "audits").mkdir(parents=True)
+        (tmp_path / "docs/audits/round-26.md").write_text(
+            "x\n", encoding="utf-8")
+        monkeypatch.setattr(reg, "REPO", tmp_path)
+        monkeypatch.setattr(reg, "REGISTER", tmp_path / "round-register.md")
+        problems = reg.check()
+        assert any("round 26" in p and "round-26.md" in p for p in problems), (
+            f"a synthetic round-26.md must red naming 26 and where: {problems}")
+
+
 class TestFirstCommitDateReadsTheFilesOwnHistory:
     """`UX-782`'s replacement for the tautological register-vs-document
     comparison: an independent source, over the file's own path -

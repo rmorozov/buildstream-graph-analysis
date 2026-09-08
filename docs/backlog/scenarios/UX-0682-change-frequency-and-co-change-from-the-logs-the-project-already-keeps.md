@@ -105,8 +105,8 @@ from the copy, re-run green):
 
 | mutation | reddened | count |
 |---|---|---|
-| rank `elements` by summed `total_us` instead of `rebuilds` | `test_lib_a_ranks_first_by_rebuilds`, `test_the_unchanged_key_share_is_exact`, `test_the_text_report_names_lib_as_rebuild_count` | 3 failed, 5 passed |
-| `_co_rebuilds` counts every pair within the window instead of one-per-record (greedy) | `test_a_pair_seen_once_is_dropped_and_counted`, `test_a_build_record_is_claimed_by_at_most_one_pair` | 2 failed, 7 passed |
+| rank `elements` by summed `total_us` instead of `rebuilds` | `test_lib_a_ranks_first_by_rebuilds`, `test_the_unchanged_key_share_is_exact`, `test_the_text_report_names_lib_as_rebuild_count` | 3 failed, 7 passed |
+| `_co_rebuilds` counts every pair within the window instead of one-per-record (greedy) | `test_a_pair_seen_once_is_dropped_and_counted`, `test_a_build_record_is_claimed_by_at_most_one_pair` | 2 failed, 8 passed |
 | `CO_CHANGE_WINDOW_US` widened from 30 min to a day | `test_two_hours_apart_is_outside_the_window` | 1 failed, 9 passed |
 
 All three restored to `10 passed`. The first two mutations did not

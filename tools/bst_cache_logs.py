@@ -943,6 +943,10 @@ def change_frequency(records: list[dict], dependencies: Optional[list[dict]] = N
     build count it cannot know. Two elements co-rebuild when each has a
     build within `CO_CHANGE_WINDOW_US` of the other's, paired greedily
     earliest-first so one rebuild cannot be claimed by two pairs.
+
+    `pairs_below_floor` counts only pairs that co-rebuilt at least once
+    but fewer than `CO_CHANGE_MIN_REBUILDS` times - a pair that never
+    overlapped at all is not counted, since it was never a pair.
     """
     builds, by_element = _build_population(records)
     if not by_element:

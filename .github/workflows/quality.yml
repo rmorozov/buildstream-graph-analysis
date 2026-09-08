@@ -55,3 +55,15 @@ jobs:
         run: |
           pip install pip-audit
           pip-audit -r requirements.lock --strict
+
+  sizes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: The size ledger only shrinks
+        run: |
+          pip install -e '.[dev]' pylint
+          python3 tools/dev_sizes.py --check

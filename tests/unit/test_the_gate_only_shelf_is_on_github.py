@@ -11,6 +11,8 @@ import re
 import sys
 import tarfile
 
+import yaml
+
 REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO / "tools"))
 
@@ -30,16 +32,34 @@ def _dev_extra_names():
 
 
 class TestTheShelfIsHosted:
-    def test_the_workflow_carries_the_three_jobs_on_both_triggers(self):
+    def test_the_workflow_carries_the_four_jobs_on_both_triggers(self):
         text = QUALITY.read_text(encoding="utf-8")
         jobs = set(re.findall(r"^  ([a-z-]+):$", text, re.M))
-        assert {"eslint", "codeql", "pip-audit"} <= jobs, jobs
+        assert {"eslint", "codeql", "pip-audit", "sizes"} <= jobs, jobs
         assert "pull_request:" in text and "schedule:" in text
+
+    def test_each_shelf_job_names_its_tool(self):
+        """A job named `sizes` whose `run:` was swapped for `echo skip`
+        still has a job named `sizes` - the name alone does not say
+        the job runs what it claims. Each job's steps must mention
+        the tool, in `run:` or `uses:`."""
+        workflow = yaml.safe_load(QUALITY.read_text(encoding="utf-8"))
+        expect = {
+            "sizes": "dev_sizes.py --check",
+            "pip-audit": "pip-audit",
+            "codeql": "github/codeql-action/analyze",
+            "eslint": "eslint",
+        }
+        for job, needle in expect.items():
+            steps = workflow["jobs"][job]["steps"]
+            blob = "\n".join(str(step.get("run", "")) + str(step.get("uses", ""))
+                             for step in steps)
+            assert needle in blob, (job, blob)
 
     def test_make_lint_runs_none_of_them(self):
         lint = (REPO / "Makefile").read_text(encoding="utf-8")
         target = lint[lint.index("\nlint:"):lint.index("\nlint-docs:")]
-        for word in ("codeql", "pip-audit", "eslint", "dependabot"):
+        for word in ("codeql", "pip-audit", "eslint", "dependabot", "dev_sizes"):
             assert word not in target, word
 
     def test_dependabot_covers_pip_and_actions(self):

@@ -1171,6 +1171,10 @@ _SWEEP_REQUIRED = {
     "monotonicity_violations": "array",
     "capacity_model_caveat": "string",
     "calibration_capacities": "array",
+    # UX-678: always written, `{}` when the sweep had no measured peak
+    # RSS and host RAM to check - same convention as `knee_points`.
+    "memory_knee_points": "object",
+    "binding_constraints": "object",
 }
 
 _SWEEP_HINTS = {
@@ -1231,6 +1235,23 @@ _SWEEP_HINTS = {
                        "Empty means every point is a projection - the "
                        "difference between a curve with data in it and "
                        "one without."},
+    "memory_knee_points": {
+        # Same shape as `knee_points`: a map keyed by resource name, so
+        # its values cannot be named in `properties`.
+        "additionalProperties": {QUANTITY: "count"},
+        "description": "`UX-678`: per resource, the largest swept "
+                       "capacity whose own replayed schedule's concurrent "
+                       "elements' peak RSS still fit host RAM - `{}` "
+                       "unless `--plane2` supplied both a measured peak "
+                       "RSS per element and a host memory total. `0` is a "
+                       "real answer (no capacity fits); it is present "
+                       "then, unlike `knee_points`."},
+    "binding_constraints": {
+        "description": "`UX-678`: per resource, which of the sweep's own "
+                       "two capacities - `knee_points` or "
+                       "`memory_knee_points` - is the tighter one, as "
+                       "`{name, builders}`. `{}` under the same condition "
+                       "as `memory_knee_points`."},
 }
 
 
@@ -3165,6 +3186,22 @@ _ANALYZE_HINTS = {
                                "(`UX-14`), and one capture went in. A "
                                "consumer that drops this sentence is left "
                                "with a number that looks like a setting."},
+            "sweep_memory_builders": {
+                QUANTITY: "count",
+                "description": "`UX-678`: the largest swept builder count "
+                               "whose own replayed schedule's concurrent "
+                               "elements' peak RSS still fit host RAM - "
+                               "summed over the sweep's real concurrent "
+                               "set at each step, not `constraints[memory]`'s "
+                               "top-N sum. Absent unless the sweep had a "
+                               "measured peak RSS per element and a host "
+                               "memory total."},
+            "sweep_binding": {
+                "description": "`UX-678`: which of the sweep's own two "
+                               "capacities - the graph's knee or "
+                               "`sweep_memory_builders` - is the tighter "
+                               "one, as `{name, builders}`. Present only "
+                               "alongside `sweep_memory_builders`."},
         },
     },
     "capacity_verdict": {

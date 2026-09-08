@@ -932,7 +932,7 @@ columns are the whole statement of what one of its rows holds, and
 finding one level up: `parallelism` is a top-level *object*, its
 `levels` rows are below that, and a population reaching only under a
 top-level array published the whole of a major bump outside itself.
-The surface is **258 keys** today, and that figure is derived from the
+The surface is **260 keys** today, and that figure is derived from the
 walk rather than typed here.
 
 So the statement of coverage, which is now a statement and not a
@@ -2242,6 +2242,19 @@ bga sweep tests/fixtures/macro_micro/run --format json | jq '.knee_points'
 | `monotonicity_violations` | capacities where the makespan got *worse* as capacity rose. The replay model says that cannot happen, so each is a hole in the model rather than a finding about the build |
 | `capacity_model_caveat` | what the projection does not model, carried with the numbers rather than beside them: the replay replays already-observed durations and does not model CPU contention rising with concurrency |
 | `calibration_capacities` | the capacities that had real measurements behind them. Empty means every point is a projection — the difference between a curve with data in it and one without |
+| `memory_knee_points` (`UX-678`) | per resource, the largest swept capacity whose own replayed schedule's concurrent elements' peak RSS still fit host RAM. `{}` unless `--plane2` supplied both a measured peak RSS per element and a host memory total; `0` is a real answer, unlike an absent `knee_points` entry |
+| `binding_constraints` (`UX-678`) | per resource, which of `knee_points` or `memory_knee_points` is the tighter ceiling, as `{name, builders}`. `{}` under the same condition as `memory_knee_points` |
+
+**The same two figures, on `capacity_recommendation` (`UX-678`).** The
+block above (`analyze/v6`) runs this same memory-aware sweep for its
+own `PROCESS` knee and carries the answer as `sweep_memory_builders`
+(the `memory_knee_points` value) and `sweep_binding` (the
+`binding_constraints` entry) - absent under the same condition. It sits
+beside `constraints[].name == "memory"`, which is a different
+computation (the top-N summed peaks of `memory_envelope`'s projections,
+not this replay's own concurrent set) and can disagree with it; a
+consumer wanting the sweep's own reading, not the envelope's, reads
+`sweep_binding`.
 
 It had **no `schema:` key at all** until `UX-339`, and `bga sweep
 --schema` answered the analyze contract — one this document has none of

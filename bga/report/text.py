@@ -1381,6 +1381,18 @@ def _memory_knee_caveat(memory_envelope: Optional[dict], knee) -> list[str]:
     ]
 
 
+def _sweep_recommendation_line(binding: dict) -> str:
+    """UX-678: which of the sweep's two capacities is the tighter one.
+
+    A pure function of `capacity_sweep`'s own `binding_constraints`
+    entry, so the wording a reader sees and the value a JSON consumer
+    reads cannot disagree about which constraint bound first.
+    """
+    if binding.get('name') == 'memory':
+        return f"Recommendation: memory-bound at {binding['builders']} builder(s)"
+    return f"Recommendation: builder-bound at {binding['builders']} builder(s)"
+
+
 def _plane2_knee_caveat(plane2_capacity: Optional[dict], knee) -> list[str]:
     """What Plane 2 knows about whether the knee is reachable (`UX-83`).
 
@@ -1455,6 +1467,12 @@ def format_sweep_text(resource: str, sweep_result, calibration_capacities: Optio
                 lines.append(line)
             for line in _plane2_knee_caveat(plane2_capacity, knee):
                 lines.append(line)
+            # UX-678: memory as a second capacity beside the graph's own
+            # knee, checked against the same replayed schedule - which of
+            # the two is the tighter ceiling, named.
+            binding = (sweep_result.binding_constraints or {}).get(res)
+            if binding:
+                lines.append(f"  {_sweep_recommendation_line(binding)}")
     if sweep_result.monotonicity_violations:
         lines.append("")
         lines.append("Monotonicity violations:")

@@ -1,6 +1,6 @@
 # UX-764: two Register caps are guarded and two are honour-system
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-497 (the Outcome cap), UX-749 (which broke one) | **Serves:** the reader who trusts a cap because the guard reported green | **Topic:** guards | **Area:** unassigned | **Shape:** judgement
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-497 (the Outcome cap), UX-749 (which broke one) | **Serves:** the reader who trusts a cap because the guard reported green | **Topic:** guards | **Area:** unassigned | **Shape:** judgement
 
 ## Motivation
 
@@ -128,3 +128,5 @@ proxy.
 | a row with "unconventional" next to a bogus `.py` path | 🔴 `missing file(s)` names the bogus path | 1 failed |
 | a row naming `test_cache_logs.py` (real, never reads the register) | 🔴 "never reads CLAUDE.md or a rules.md heading" | 1 failed |
 | restore from a scratchpad copy after each (never `git checkout --`) | 🟢 `test_the_register_is_terse.py` 606 passed; `git diff` clean | tests green
+
+**Deviation.** The judgement — the code-comment cap is a convention, said so in the table and in `rules.md` — was the session's; an `implementer` on `sonnet` did the rows and the guard, and its `verifier` found the guard's "convention" substring short-circuited a bogus path and that any existing file passed as a guard; fixed before the merge: paths checked unconditionally, `convention` a whole word, a named guard must read `CLAUDE.md` or a `rules.md` heading.

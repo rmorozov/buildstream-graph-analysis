@@ -133,6 +133,8 @@ pairing for every merged row from round 103 on.
 | 110 | verifier | sonnet | verify UX-758 | 76k | 74 | 9.9 m | MERGE, no findings; the guard reads the real page's data-layout, golden's absorbed axis byte-identical, three axes change as intended | a stale background output file among many sessions' task files had to be chased before blocking on the real PID |
 | 110 | implementer | sonnet | UX-779, the README's wall clocks | 236k | 128 | 40.8 m | merged after a HOLD and a fix: the first close left the second clock on a citation that did not hold; the fix removed both, scoped the guard to every test target's line and the next, and checks the anchor | the pre-commit selector caught a dangling link pasted into the Outcome; the widened guard first false-positived on the README's own prose until scoped to bash fences |
 | 110 | verifier | sonnet | verify UX-779 | 46k | 42 | 7.5 m | HOLD then merged: the 21s clock was the task's second, not tiers.py's; make test-* exempt from the guard; a wrapped comment escaped; the anchor unchecked - all four fixed | assembling the evidence against the track's citation took three files the Outcome's one line did not point at |
+| 110 | implementer | sonnet | UX-764, the register caps guarded or stated | 265k | 114 | 52.2 m | merged after a HOLD and a fix: the guard's convention substring short-circuited and any existing file passed; fixed with unconditional path checks, a whole-word match and a reads-the-register requirement | a compound cp && git diff && pytest line was refused by the shell guard, dropping the restore silently; stalled once on a background wait |
+| 110 | verifier | sonnet | verify UX-764 | 73k | 71 | 14.9 m | HOLD then merged: a bogus path with the word unconventional passed; test_cache_logs.py passed as a guard; the register's commit-body count is 5 by the tool, not wc's 9 | the permission classifier refused editing a closed record and committing on the shared branch, forcing in-memory substitutes |
 
 Round 101's four tracks are **not** here: this session could not
 identify their transcripts with certainty after a context rebuild, and
@@ -145,7 +147,7 @@ committed cleanly once told to run in the foreground. Three of the five
 left a derived figure or a §6 context-map row behind - the same class
 the round itself was about, arriving in the tracks' own work.
 
-What the one hundred and sixteen rows already say: a researcher that reads a document
+What the one hundred and eighteen rows already say: a researcher that reads a document
 whole costs 100-180k; a walker that drives every control costs 336k;
 the two cuts cost a re-run each. The `walk` and `design-review`
 skills fix the report shape so the next rows are smaller, and the

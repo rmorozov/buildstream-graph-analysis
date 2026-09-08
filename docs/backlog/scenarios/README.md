@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-793 scenarios: **21 open**, 772 closed.
+793 scenarios: **20 open**, 773 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -27,7 +27,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | cli | 0 | 22 |
 | store | 0 | 16 |
 | docs | 5 | 132 |
-| guards | 8 | 209 |
+| guards | 7 | 209 |
 
 ## Open scenarios
 
@@ -48,7 +48,6 @@ task file, which is the only place it ever lived twice.
 | UX-690 | [the suite has a shape budget, and a feature files its test analysis](UX-0690-the-suite-has-a-shape-budget-and-a-feature-files-its-test-analysis.md) | guards | Medium | R8 reading whether the suite is balanced; the implementer writing the right guard | 🔴 |
 | UX-695 | [the refactor stream takes the ledger's top row — renderers first](UX-0695-the-refactor-stream-takes-the-ledger-s-top-row-renderers-first.md) | docs | Medium | the session that opens a round and has no refactor to pick because none is filed | 🔴 |
 | UX-741 | [the spine's ground truth reads wall clock, and a loaded host reds it](UX-0741-the-spine-s-ground-truth-reads-wall-clock-and-a-loaded-host-reds-it.md) | guards | Medium | R8 reading a red gate on a file nobody touched | 🔴 |
-| UX-764 | [two Register caps are guarded and two are honour-system](UX-0764-two-register-caps-are-guarded-and-two-are-honour-system.md) | guards | Medium | the reader who trusts a cap because the guard reported green | 🔴 |
 | UX-774 | [the guide is at its band ceiling, and every round pays a trim](UX-0774-the-guide-is-at-its-band-ceiling-and-every-round-pays-a-trim.md) | docs | Medium | the round that adds a tool and finds an unrelated paragraph is what it has to delete | 🔴 |
 | UX-775 | [two files still build against the ambient HOME](UX-0775-two-files-still-build-against-the-ambient-home.md) | guards | Medium | the session whose `make test` reds on two files nobody touched, at a margin the other twelve survive | 🔴 |
 | UX-777 | [the nine page-built sections are thirteen, in two documents](UX-0777-the-nine-page-built-sections-are-thirteen-in-two-documents.md) | docs | Medium | the reader deciding whether chaptering belongs in the schema, on a figure that is 44% low | 🔴 |

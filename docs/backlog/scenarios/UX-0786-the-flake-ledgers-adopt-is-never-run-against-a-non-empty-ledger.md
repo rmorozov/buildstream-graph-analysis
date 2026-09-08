@@ -1,6 +1,6 @@
 # UX-786: the flake ledger's adopt is never run against a non-empty ledger
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-691 | **Found by:** round 109, retro-verifying round 102 | **Serves:** the CI adopt run that already carries three real entries | **Topic:** guards | **Area:** tools | **Shape:** mechanical
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-691 | **Found by:** round 109, retro-verifying round 102 | **Serves:** the CI adopt run that already carries three real entries | **Topic:** guards | **Area:** tools | **Shape:** mechanical
 
 ## Motivation
 
@@ -66,3 +66,5 @@ $ python3 -m pytest tests/unit/test_the_flake_ledger_grows_from_the_drift_gate.p
 | M1 | `entries + added` → `added` in `_adopt_flake` | `test_a_candidates_rows_are_appended`, `test_readopting_the_same_run_adds_nothing` | `2 failed, 5 passed in 0.52s` |
 
 Reverted from the scratchpad copy; `7 passed in 0.58s` restored.
+
+**Deviation.** Same track and verifier as `UX-785`; the Outcome's description of the seed was corrected on the verifier's reading (the same file at `run-0`, not a third file). None otherwise.

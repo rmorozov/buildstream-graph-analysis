@@ -1,6 +1,6 @@
 # UX-785: the flake census clears any file a task ever mentioned
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-691 (the ledger this reads) | **Found by:** round 109, retro-verifying round 102's unverified tracks | **Serves:** the round that expects the third excursion to name a file and gets silence | **Topic:** guards | **Area:** tools | **Shape:** mechanical
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-691 (the ledger this reads) | **Found by:** round 109, retro-verifying round 102's unverified tracks | **Serves:** the round that expects the third excursion to name a file and gets silence | **Topic:** guards | **Area:** tools | **Shape:** mechanical
 
 ## Motivation
 
@@ -95,3 +95,5 @@ covers a header naming a longer path that merely contains the name.
 | M2 | the exact token comparison reverted to `name in value` | `test_a_longer_path_containing_the_name_does_not_clear_it` | `1 failed, 7 passed in 0.12s` |
 
 Both reverted from the scratchpad copy; `8 passed in 0.10s` restored.
+
+**Deviation.** An `implementer` on `sonnet`, read by a `verifier`: the first close matched the field by substring (`old_test_x.py` cleared `test_x.py`), fixed as an exact token match with its own clause before the merge. The track's copy opened nine commits behind and found the base itself.

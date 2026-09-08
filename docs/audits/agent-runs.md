@@ -160,6 +160,8 @@ pairing for every merged row from round 103 on.
 | 110 | researcher | sonnet | review 21: the documents rounds 109–110 touched, against the tree | 73k | 67 | 5.2 m | two findings (UX-798, UX-799); CLAUDE.md's advisory, round 109's closes and the guide's size figure sound | which commits were round 109's took git log with the round's merge markers |
 | 111 | implementer | sonnet | `UX-796` the host sampler's window is the jiffies it reads (mechanical) | 65k | 47 | 9.3 m | merged a2b3355d; the descheduled-read clause reds the old division | the filing named the manifest module, not the tracer |
 | 111 | verifier | sonnet | verify `UX-796` | 49k | 32 | 6.1 m | PASS; the jiffy-window label under a long deschedule recorded | a physically consistent synthetic pair took two tries |
+| 111 | implementer | sonnet | `UX-801` bst show writes the CAS; every bst call in its own home (mechanical) | 250k | 131 | 39.2 m | merged 364f46d4; one hold — a wrong exclusion entry and a literal-only guard — fixed | the defect did not reproduce on a 270 GB disk; a shell-level HOME swap is blocked by the sandbox |
+| 111 | verifier | sonnet | verify `UX-801` | 43k | 36 | 5.5 m | HOLD: test_doctor.py wrote the ambient CAS through check_project_loads; lint red; fixed before merge | only a real bst run against the CAS showed the mislabelled entry |
 
 Round 101's four tracks are **not** here: this session could not
 identify their transcripts with certainty after a context rebuild, and
@@ -172,7 +174,7 @@ committed cleanly once told to run in the foreground. Three of the five
 left a derived figure or a §6 context-map row behind - the same class
 the round itself was about, arriving in the tracks' own work.
 
-What the one hundred and forty-three rows already say: a researcher that reads a document
+What the one hundred and forty-five rows already say: a researcher that reads a document
 whole costs 100-180k; a walker that drives every control costs 336k;
 the two cuts cost a re-run each. The `walk` and `design-review`
 skills fix the report shape so the next rows are smaller, and the

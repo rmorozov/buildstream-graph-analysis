@@ -1,6 +1,6 @@
 # UX-801: `bst show` writes the CAS, and two files still run it in the ambient HOME
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-775 (the isolation and its counting guard), UX-760 | **Found by:** round 110, the gate's bst tier on a shared machine | **Serves:** R8 reading a red gate on a machine whose disk casd cannot size | **Topic:** guards | **Area:** tools | **Shape:** mechanical
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-775 (the isolation and its counting guard), UX-760 | **Found by:** round 110, the gate's bst tier on a shared machine | **Serves:** R8 reading a red gate on a machine whose disk casd cannot size | **Topic:** guards | **Area:** tools | **Shape:** mechanical
 
 ## Motivation
 
@@ -112,3 +112,5 @@ variable), rather than a literal `"show"`/`"build"`/`"artifact"` token.
 | `test_doctor.py` returned to `_NOT_CAS_WRITING` | both guards (`check_project_loads(` -> `'show'`; population 16 -> 15) | 2 failed |
 
 Both reverted from saved copies; green after: `2 passed, 14 deselected`.
+
+**Deviation.** One verifier hold: the task file failed lint, `test_doctor.py`'s exclusion entry was wrong (`check_project_loads` ran `bst show` in the ambient HOME — new CAS objects after one run), and the guard read only a literal `"bst"` argv. Fixed in a second commit (364f46d4): four doctor calls isolated and the file dropped from the set, the guard reading a `which("bst")`-bound name and `check_project_loads(` too; what it cannot see — a subcommand built at runtime — is stated in the Outcome. The `Cache too full` itself did not reproduce on this box (disk 23 of 270 GB). Two commits, one verifier.

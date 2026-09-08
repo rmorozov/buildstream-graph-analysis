@@ -54,10 +54,10 @@ and `git log`, never in a comment or docstring. Numbers, not narrative.
 
 | | |
 |---|---|
-| module docstring | ≤ 25 lines — the dev tools under `tools/` and the hooks; older ones only shrink |
-| Outcome section | ≤ 80 lines from `UX-497` on: the gap measured, the close measured, the mutation table, the deviation |
-| code comment | one line of why; rejected alternatives and rationale go in the task file |
-| commit body | ≤ 8 lines; the task file is the record |
+| module docstring | ≤ 25 lines — the dev tools under `tools/` and the hooks; older ones only shrink — `tests/unit/test_the_register_is_terse.py` |
+| Outcome section | ≤ 80 lines from `UX-497` on: the gap measured, the close measured, the mutation table, the deviation — `tests/unit/test_the_register_is_terse.py` |
+| code comment | one line of why; rejected alternatives and rationale go in the task file — convention, unguarded: a comment's length is not its register (`UX-764`) |
+| commit body | ≤ 8 lines; the task file is the record — `tests/unit/test_a_commit_body_is_eight_lines.py` |
 
 ## Architecture
 

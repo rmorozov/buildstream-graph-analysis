@@ -177,6 +177,66 @@ class TestOutcomeContentIsGuarded:
             f"{sorted(set(NO_GUARD_OUTCOMES) - closed)}")
 
 
+def _register_rows():
+    """`[(cap, detail)]` from `CLAUDE.md`'s `## Register` table only -
+    the blank header and separator rows are dropped by shape, like
+    `_rule_rows` in `test_the_agent_configuration_holds.py`."""
+    text = CLAUDE_MD.read_text(encoding="utf-8")
+    m = re.search(r"^## Register\n(.*?)(?=^## )", text, re.M | re.S)
+    assert m, "CLAUDE.md has no ## Register section"
+    rows = []
+    for line in m.group(1).splitlines():
+        if not (line.startswith("| ") and line.count("|") == 3
+                and "---" not in line):
+            continue
+        cap, detail = (cell.strip() for cell in line.split("|")[1:3])
+        if (cap, detail) == ("", ""):
+            continue
+        rows.append((cap, detail))
+    return rows
+
+
+#: A named guard file must show it actually reads the surface it
+#: claims - either literal text `CLAUDE.md`, or a `rules.md#` heading
+#: marker (`UX-585`'s convention). Checked below so a real, unrelated
+#: file (`test_cache_logs.py`) cannot stand in for a guard (`UX-764`).
+_HOLDS_CLAUDE_MD = re.compile(r"CLAUDE\.md|rules\.md#")
+
+
+class TestEveryRegisterRowNamesItsEnforcement:
+    """`UX-764`: the code comment row was unguarded and read the same
+    as the three that were. Every `.py` path a row names must exist,
+    unconditionally - "convention" does not excuse a bogus path
+    (round 108's near miss: "unconventional" matched the old
+    substring check). A row with no path passes only by the whole
+    word "convention"."""
+
+    def test_every_row_names_a_guard_or_says_convention(self):
+        rows = _register_rows()
+        assert len(rows) >= 4, f"CLAUDE.md's Register table has {len(rows)} rows"
+        bad = []
+        for cap, detail in rows:
+            named = re.findall(r"`([\w./-]+\.py)`", detail)
+            if named:
+                missing = [n for n in named if not (REPO / n).exists()]
+                if missing:
+                    bad.append((cap, detail, f"missing file(s): {missing}"))
+                    continue
+                proxies = [n for n in named
+                           if not _HOLDS_CLAUDE_MD.search(
+                               (REPO / n).read_text(encoding="utf-8"))]
+                if proxies:
+                    bad.append((cap, detail,
+                                f"names {proxies} which never reads "
+                                f"CLAUDE.md or a rules.md heading"))
+                continue
+            if re.search(r"\bconvention\b", detail):
+                continue
+            bad.append((cap, detail, "names no guard file and no "
+                        "whole-word 'convention'"))
+        assert not bad, f"Register row(s) fail enforcement: {bad}"
+
+
 class TestClaudeMdCarriesTheSameNumbers:
     def test_the_register_section_exists(self):
         assert re.search(r"^## Register", CLAUDE_MD.read_text(encoding="utf-8"), re.M)

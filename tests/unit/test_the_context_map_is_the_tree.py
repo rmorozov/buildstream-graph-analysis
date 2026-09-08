@@ -29,6 +29,12 @@ import pytest
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 GUIDE = REPO / "docs/contributing/fixing-guide.md"
+CLOSED = REPO / "docs/backlog/scenarios/closed.md"
+
+#: `UX-780`: a citation with no `(open)` beside it reads as
+#: provenance - a closed id. The optional group is the marker itself,
+#: so a bare id and a marked one are two different matches.
+CITED_ID = re.compile(r"UX-\d+(?: \(open\))?")
 
 # Modules small enough or private enough that naming each one would make
 # the map longer without making it more useful. Each is *reachable* -
@@ -489,6 +495,26 @@ class TestTheMapNamesTheTree:
         text = _map_text()
         assert "only existing test file" not in text
         assert "tests/unit/" in text, "the map does not mention where tests live"
+
+    def test_every_cited_id_is_closed_or_marked_open(self):
+        """`UX-780`: a citation reads as provenance, so it names a
+        closed id - `UX-698` sat bare in the `quality.yml` row while
+        its own status was Not Started, and the row described the
+        ambition rather than the file. An open id may still appear,
+        spelled `(open)` beside it."""
+        closed = set(re.findall(r"UX-\d+", CLOSED.read_text(encoding="utf-8")))
+        text = _map_text()
+        bare = []
+        for match in CITED_ID.finditer(text):
+            cited = match.group().split()[0]
+            if cited in closed or match.group().endswith("(open)"):
+                continue
+            line = (text[:match.start()].rsplit("\n", 1)[-1]
+                    + text[match.start():].split("\n", 1)[0])
+            bare.append(f"{cited} in {line.strip()!r}")
+        assert bare == [], (
+            f"§6 cites open id(s) with no `(open)` marker: {bare}. "
+            f"docs/contributing/fixing-guide.md §6.")
 
 
 class TestTheMapsCapabilitiesDerive:

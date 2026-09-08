@@ -69,4 +69,39 @@ it — whichever (1) or (2) lands.
 
 ## Outcome
 
-_Not started._
+**The gap, measured.** The §6 row for `quality.yml` still read `PR +
+weekly - the gate-only analysis shelf (UX-698/UX-699)` while
+`quality.yml` had grown four jobs (`eslint`, `codeql`, `pip-audit`,
+`sizes`) and `UX-698` itself had closed (`🟢 Done`, `closed.md:770`).
+The row cited an id as ambition, not provenance, and nothing checked
+whether a cited id was open. All 69 ids already on the map were
+closed (`grep -c` against `closed.md`), so the defect was one row, not
+a pattern.
+
+**The close, measured.** The row now names `eslint, codeql, pip-audit,
+sizes (UX-698/699/787)` — three closed ids, none open (`UX-787`'s
+`sizes` job read off its own Outcome). A rule sentence sits beside the
+map: a citation is closed or marked `(open)`. New guard
+`test_every_cited_id_is_closed_or_marked_open` in
+`test_the_context_map_is_the_tree.py`. The row's byte cost also had to
+clear `test_a_paragraph_does_not_move_the_stated_figure` (`UX-607`) —
+the guide sits at 55,296 B, exactly the 1,024 B floor below the ~50 KB
+figure's 56,320 B boundary:
+
+```console
+$ python3 -m pytest tests/unit/test_the_context_map_is_the_tree.py \
+    tests/unit/test_the_process_documents_derive_their_figures.py -q
+56 passed in 1.07s
+```
+
+**Mutations.**
+
+| mutation | guard | result |
+|---|---|---|
+| appended bare `, UX-689` (open, per `README.md`) to the `quality.yml` row | `test_every_cited_id_is_closed_or_marked_open`, naming `UX-689 in 'pip-audit, sizes (UX-698/699/787), UX-689'` | `1 failed, 30 passed` |
+| same, with `(open)` added: `UX-689 (open)` | none | `31 passed` |
+
+Reverted by `sed` removing the appended text (an exact-copy revert
+would have needed a scratchpad snapshot that a sandbox refusal on the
+first attempt left unwritten) — the fix itself was uncommitted in the
+same file, so `git checkout` was not an option either way.

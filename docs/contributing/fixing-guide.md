@@ -408,6 +408,8 @@ tools/native_trace/bwrap_shim.py  a `bwrap` shim ahead of the real one in
                              `$PATH`, so the hook reaches inside the sandbox
 ```
 
+A citation is closed or marked (open).
+
 **The CI workflows** — what each is for, and when it runs (`UX-746`):
 
 ```text
@@ -415,8 +417,8 @@ tools/native_trace/bwrap_shim.py  a `bwrap` shim ahead of the real one in
                                              (parallel + single-process),
                                              lint, tier-drift parse, the
                                              ci-reference-candidate artefact
-.github/workflows/quality.yml               PR + weekly - the gate-only
-                                             analysis shelf (UX-698/UX-699)
+.github/workflows/quality.yml               PR+weekly - eslint, codeql,
+                                             pip-audit, sizes (UX-698/699/787)
 .github/workflows/mutation.yml              weekly - mutmut over the
                                              touched modules (UX-703)
 .github/workflows/real-project-capture.yml  weekly + monthly + dispatch -

@@ -311,10 +311,56 @@ def write_figure(text: str, row: str) -> str:
     return FIGURE_RE.sub(row, text)
 
 
+# `UX-774`: the guide's own size, stated by the same shape as the cost
+# row above - a tool writes it, so a paragraph's growth is a rerun, not
+# a trim against a fixed band (`UX-607`).
+GUIDE = REPO / "docs/contributing/fixing-guide.md"
+SIZE_SITES = ("docs/contributing/rules.md", "docs/contributing/fixing-guide.md")
+
+#: `UX-607`'s resolution: an order of magnitude, not a byte - the figure
+#: is for a reading decision (card first, guide by paragraph), and a
+#: rewrite keeps that width even though nothing needs headroom under it
+#: any more.
+SIZE_KB_STEP = 10
+SIZE_FIGURE_RE = re.compile(r"~\d+ KB")
+
+
+def guide_size_kb():
+    """The guide's size, bucketed to `SIZE_KB_STEP`."""
+    return round(GUIDE.stat().st_size / 1024 / SIZE_KB_STEP) * SIZE_KB_STEP
+
+
+def size_figure():
+    """The sentence both documents carry, and the shape `--size --write`
+    finds."""
+    return f"~{guide_size_kb()} KB"
+
+
+def write_size_figure(text: str) -> str:
+    """`text` with every stale copy of the size figure replaced."""
+    return SIZE_FIGURE_RE.sub(size_figure(), text)
+
+
 def last_line(text: str) -> str:
     """Pytest's summary line - the last non-empty one it printed."""
     lines = [line.strip() for line in text.splitlines() if line.strip()]
     return lines[-1].strip("= ") if lines else "no output"
+
+
+def _rewrite_sites(sites, row, rewrite, write):
+    """Print `row`, then rewrite every site `rewrite` finds stale, or
+    just say so without `--write`. Shared by `--spread` and `--size`
+    (`UX-774`) - one loop, not two copies of it."""
+    print(row)
+    for name in sites:
+        path = REPO / name
+        text = path.read_text(encoding="utf-8")
+        fixed = rewrite(text)
+        if fixed == text:
+            continue
+        if write:
+            path.write_text(fixed, encoding="utf-8")
+        print(f"{'rewrote' if write else 'stale'}: {name}", file=sys.stderr)
 
 
 def main(argv=None) -> int:
@@ -332,24 +378,21 @@ def main(argv=None) -> int:
     parser.add_argument("--spread", action="store_true",
                         help="print what a one-module diff selects, over "
                              "every module the map names")
+    parser.add_argument("--size", action="store_true",
+                        help="print the guide's stated size")
     parser.add_argument("--write", action="store_true",
-                        help="with --spread, put that figure in the "
-                             "documents that price this loop")
+                        help="with --spread or --size, put that figure in "
+                             "the documents that state it")
     args, rest = parser.parse_known_args(argv)
 
     if args.spread:
         row = figure()
-        print(row)
-        for name in COST_SITES:
-            path = REPO / name
-            text = path.read_text(encoding="utf-8")
-            fixed = write_figure(text, row)
-            if fixed == text:
-                continue
-            if args.write:
-                path.write_text(fixed, encoding="utf-8")
-            print(f"{'rewrote' if args.write else 'stale'}: {name}",
-                  file=sys.stderr)
+        _rewrite_sites(COST_SITES, row, lambda text: write_figure(text, row),
+                       args.write)
+        return 0
+
+    if args.size:
+        _rewrite_sites(SIZE_SITES, size_figure(), write_size_figure, args.write)
         return 0
 
     changed = changed_files(args.base, staged=args.staged)

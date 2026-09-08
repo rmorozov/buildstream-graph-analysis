@@ -153,6 +153,38 @@ def _command_rows():
     return rows
 
 
+def _row_for(text, path):
+    """The full text of `path`'s row: its own line plus every indented
+    continuation line, joined - `dev_baseline.py`'s row is three."""
+    lines = text.splitlines()
+    start = next((i for i, line in enumerate(lines) if line.startswith(path)), None)
+    if start is None:
+        return None
+    row = [lines[start]]
+    for line in lines[start + 1:]:
+        if not line.strip() or not line[:1].isspace():
+            break
+        row.append(line)
+    return " ".join(row)
+
+
+def _tools_population():
+    """`tools/dev_*.py` files exposing a `TOOLS` mapping - the guard's
+    whole population; a dev tool with no such mapping is read by
+    nothing here. `(rel path, sorted tool names)` per module."""
+    import importlib
+
+    out = []
+    for rel in sorted(_tracked()):
+        if not (rel.startswith("tools/dev_") and rel.endswith(".py")):
+            continue
+        module = importlib.import_module("tools." + rel[len("tools/"):-len(".py")])
+        tools = getattr(module, "TOOLS", None)
+        if tools:
+            out.append((rel, sorted(tools)))
+    return out
+
+
 #: A whole hyphenated lowercase word: `cache-trend` is one match, and
 #: the `format` in `--format` is none.
 WORD = re.compile(r"(?<![\w<>-])[a-z][a-z0-9]*(?:-[a-z0-9]+)*(?![\w>-])")
@@ -698,6 +730,29 @@ class TestTheMapNamesEveryCommand:
         assert len(rows) > 20, sorted(rows)
         assert "analyze" in rows, "the parser's own subcommands are gone"
         assert "snapshot" in rows, "the tools_dispatch aliases are gone"
+
+
+class TestTheMapNamesEachToolsToolPrices:
+    """`UX-799`: `dev_baseline.py`'s row named ruff, its first source,
+    and stayed that way after pyright became its second - the row's
+    prose is not checked against what the module actually prices.
+    Population: `tools/dev_*.py` files exposing a `TOOLS` mapping."""
+
+    def test_the_population_is_not_empty(self):
+        assert _tools_population(), "no tools/dev_*.py exposes TOOLS"
+
+    def test_every_tools_key_is_named_on_its_row(self):
+        text = _map_text()
+        missing = []
+        for rel, tools in _tools_population():
+            row = _row_for(text, rel)
+            assert row is not None, f"{rel} has no row on the map"
+            for tool in tools:
+                if not re.search(rf"(?<![\w-]){re.escape(tool)}(?![\w-])", row):
+                    missing.append(f"{tool} in {rel}'s row")
+        assert missing == [], (
+            f"TOOLS key(s) a §6 row does not name: {missing}. "
+            f"docs/contributing/fixing-guide.md §6.")
 
 
 class TestTheStreamsAreNamed:

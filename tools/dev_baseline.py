@@ -183,6 +183,12 @@ def suppression_findings(root, paths):
     return out
 
 
+#: UX-799: the two external tools the docstring's "two producers" names -
+#: what §6's row has to name too. `test_the_context_map_is_the_tree.py`
+#: reads these keys against the row's own text.
+TOOLS = {"ruff": ruff_findings, "pyright": pyright_findings}
+
+
 def _identity_list(tool, items, root):
     """`items`: `(path, 1-indexed row, rule)` -> the identity list, ordered
     and nth-assigned. Shared by every producer so `tool` is the only thing

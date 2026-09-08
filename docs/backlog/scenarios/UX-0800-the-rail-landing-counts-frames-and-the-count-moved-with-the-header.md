@@ -1,6 +1,6 @@
 # UX-800: the rail landing counts frames, and the count moved with the header
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-670 (the landing), UX-668 (the header that moved it), UX-795 (the settle shape) | **Found by:** round 110, `UX-668`'s verifier | **Serves:** R8 reading a red gate on a rail click nobody touched | **Topic:** viewer | **Area:** bga-viewer | **Shape:** mechanical
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-670 (the landing), UX-668 (the header that moved it), UX-795 (the settle shape) | **Found by:** round 110, `UX-668`'s verifier | **Serves:** R8 reading a red gate on a rail click nobody touched | **Topic:** viewer | **Area:** bga-viewer | **Shape:** mechanical
 
 ## Motivation
 
@@ -87,3 +87,5 @@ Mutation table:
 Reverted from the scratchpad copy (`cp` from
 `scratchpad/<worktree>/bga/viewer/chapters.js`, never `git checkout
 --`); 11 of 11 green after revert.
+
+**Deviation.** A settle declared on the first two equal reads fired early on `blast` (content-visibility corrects a frame later: 119.92, 119.92, −388.95); one dead frame before polling, stated at the site. The verifier's finding, recorded: a frame cap set too low would not redden the guard (no fixture settles past two frames). The stale "lands three times" comment in `test_the_rail_and_the_jump_box_write_the_anchor.py` is `UX-671`'s file, left. One commit, one verifier (PASS).

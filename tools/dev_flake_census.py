@@ -7,8 +7,9 @@ A file the drift gate reports keeps landing in `tests/flake_ledger.json`
 drift or only sees it once. Three appearances is the line between "one
 excursion" and "a file nobody is tracking" (the task's own Motivation).
 `unaccounted` names every file at or past that line with neither a
-filed backlog row nor a declared reason beside it in the ledger; `top`
-is what the round document's Standing prints.
+task whose header declares it in a `**Flake:**` field nor a declared
+reason beside it in the ledger; `top` is what the round document's
+Standing prints.
 """
 import argparse
 import collections
@@ -37,12 +38,22 @@ def counts(document):
                                for row in document.get("entries") or [])
 
 
+#: The header block a task's `**Flake:**` field must fall inside -
+#: past this, a file name is prose, not a declaration.
+HEADER_LINES = 8
+
+
 def filed(name, scenarios=SCENARIOS):
-    """Whether some task file under `scenarios` names this test file."""
+    """Whether some task file's header declares this file in a
+    `**Flake:**` field - a mention in prose does not count."""
     if not scenarios.is_dir():
         return False
-    return any(name in task.read_text(encoding="utf-8")
-              for task in scenarios.glob("*.md"))
+    for task in scenarios.glob("*.md"):
+        header = task.read_text(encoding="utf-8").splitlines()[:HEADER_LINES]
+        for line in header:
+            if line.startswith("**Flake:**") and name in line:
+                return True
+    return False
 
 
 def unaccounted(document, scenarios=SCENARIOS):

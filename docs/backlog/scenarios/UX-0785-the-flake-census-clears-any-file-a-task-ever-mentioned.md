@@ -46,4 +46,46 @@ restore the substring search — red.
 
 ## Outcome
 
-_Not started._
+### The gap, measured
+
+The Motivation's own repro, on `filed()`'s substring search:
+
+```console
+$ python3 -c "
+from tools import dev_flake_census as census
+doc = {'entries': [{'file': 'tests/unit/test_the_query_asks_about_this_run.py',
+        'run_id': str(i), 'shift': 1.7, 'confirmed': False} for i in range(3)],
+       'declared': {}}
+print(census.unaccounted(doc), census.filed(doc['entries'][0]['file']))"
+[] True
+```
+
+### The close, measured
+
+Same repro, `filed()` reading only a `**Flake:**` field in a task's
+first 8 lines:
+
+```console
+$ python3 -c "
+from tools import dev_flake_census as census
+doc = {'entries': [{'file': 'tests/unit/test_the_query_asks_about_this_run.py',
+        'run_id': str(i), 'shift': 1.7, 'confirmed': False} for i in range(3)],
+       'declared': {}}
+print(census.unaccounted(doc), census.filed(doc['entries'][0]['file']))"
+[('tests/unit/test_the_query_asks_about_this_run.py', 3)] False
+$ python3 -m pytest tests/unit/test_a_file_with_three_excursions_has_a_filed_task.py -q
+7 passed in 0.06s
+```
+
+The new clause `test_a_mention_in_prose_does_not_clear_it` covers the
+unrelated closed task's prose; `test_a_filed_task_clears_it` now
+fixtures a `**Flake:**` field rather than bare prose, since bare
+prose is exactly what no longer counts.
+
+### Mutation table
+
+| # | mutation | reddened | count |
+|---|---|---|---|
+| M1 | `filed()` restored to the substring search | `test_a_mention_in_prose_does_not_clear_it` | `1 failed, 6 passed in 0.09s` |
+
+Reverted from the scratchpad copy; `7 passed in 0.06s` restored.

@@ -1,6 +1,6 @@
 # UX-775: two files still build against the ambient HOME
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-760 (the twelve it did fix) | **Serves:** the session whose `make test` reds on two files nobody touched, at a margin the other twelve survive | **Topic:** guards | **Area:** unassigned | **Shape:** judgement
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-760 (the twelve it did fix) | **Serves:** the session whose `make test` reds on two files nobody touched, at a margin the other twelve survive | **Topic:** guards | **Area:** unassigned | **Shape:** judgement
 
 ## Motivation
 
@@ -127,3 +127,5 @@ new `test_*.py` moves `tools/dev_touching.py`'s file count and reddens
 `test_the_cost_row_is_derived_from_the_selector.py` against
 `docs/contributing/fixing-guide.md`'s stale figure — a file this track
 does not own.
+
+**Deviation.** The counting guard lives in `test_a_generated_project_builds.py`, not a new file: a new test file moves `dev_touching.py`'s file count and reddens the fixing guide's cost figure. The Acceptance Test's fallocate step was not run on a shared machine; the wall-time comparison and the guard mutation stood in, the functional claim inherited from `UX-760`. One verifier hold (the Outcome omitted that substitution), fixed in a second commit (e9e4c92d). The file derives judgement; the brief ran it as bounded.

@@ -283,6 +283,7 @@ The rounds themselves:
 [108](audits/round-108.md) ·
 [109](audits/round-109.md) ·
 [110](audits/round-110.md) ·
+[111](audits/round-111.md) ·
 [the guard census of round 64](audits/guard-census-round-64.md)
 
 ## Backlog

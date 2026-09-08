@@ -1,10 +1,18 @@
-"""UX-703: `dev_mutation.py`'s deterministic half - the part a fast
-unit guard can hold, since a real `mutmut` run is a weekly-only cost.
+"""UX-703/UX-790: `dev_mutation.py`'s deterministic half - the part a
+fast unit guard can hold, since a real `mutmut` run is a weekly-only
+cost.
 
-Three claims: the touched-module filter keeps only `bga`/`tools`
-Python source (not a test, not a doc); the ledger groups one row per
-mutated function rather than one per mutation site inside it; a second
-run's section appends rather than overwriting the first's.
+Four claims: the touched-module filter keeps only `bga`/`tools` Python
+source (not a test, not a doc); the ledger groups one row per mutated
+function rather than one per mutation site inside it; a second run's
+section appends rather than overwriting the first's; `classify` turns
+`mutmut results --all true`'s text into counts by verdict, `_CAUGHT`
+applied.
+
+`CENSUS_RESULTS` is a real `mutmut results --all true` capture:
+`python3 tools/dev_mutation.py --module tools/dev_page_census.py
+--max-children 4` (UX-790), matching `UX-703`'s Outcome for that
+module (4 killed / 46 survivors of 50).
 """
 import pathlib
 import sys
@@ -13,6 +21,59 @@ REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO / "tools"))
 
 import dev_mutation
+
+CENSUS_RESULTS = """
+    tools.dev_page_census.x_census__mutmut_1: survived
+    tools.dev_page_census.x_census__mutmut_2: killed
+    tools.dev_page_census.x_census__mutmut_3: killed
+    tools.dev_page_census.x_census__mutmut_4: killed
+    tools.dev_page_census.x_census__mutmut_5: killed
+    tools.dev_page_census.x_census__mutmut_6: survived
+    tools.dev_page_census.x_census__mutmut_7: survived
+    tools.dev_page_census.x_census__mutmut_8: survived
+    tools.dev_page_census.x_census__mutmut_9: survived
+    tools.dev_page_census.x_census__mutmut_10: survived
+    tools.dev_page_census.x_census__mutmut_11: survived
+    tools.dev_page_census.x_census__mutmut_12: survived
+    tools.dev_page_census.x_census__mutmut_13: survived
+    tools.dev_page_census.x_main__mutmut_1: no tests
+    tools.dev_page_census.x_main__mutmut_2: no tests
+    tools.dev_page_census.x_main__mutmut_3: no tests
+    tools.dev_page_census.x_main__mutmut_4: no tests
+    tools.dev_page_census.x_main__mutmut_5: no tests
+    tools.dev_page_census.x_main__mutmut_6: no tests
+    tools.dev_page_census.x_main__mutmut_7: no tests
+    tools.dev_page_census.x_main__mutmut_8: no tests
+    tools.dev_page_census.x_main__mutmut_9: no tests
+    tools.dev_page_census.x_main__mutmut_10: no tests
+    tools.dev_page_census.x_main__mutmut_11: no tests
+    tools.dev_page_census.x_main__mutmut_12: no tests
+    tools.dev_page_census.x_main__mutmut_13: no tests
+    tools.dev_page_census.x_main__mutmut_14: no tests
+    tools.dev_page_census.x_main__mutmut_15: no tests
+    tools.dev_page_census.x_main__mutmut_16: no tests
+    tools.dev_page_census.x_main__mutmut_17: no tests
+    tools.dev_page_census.x_main__mutmut_18: no tests
+    tools.dev_page_census.x_main__mutmut_19: no tests
+    tools.dev_page_census.x_main__mutmut_20: no tests
+    tools.dev_page_census.x_main__mutmut_21: no tests
+    tools.dev_page_census.x_main__mutmut_22: no tests
+    tools.dev_page_census.x_main__mutmut_23: no tests
+    tools.dev_page_census.x_main__mutmut_24: no tests
+    tools.dev_page_census.x_main__mutmut_25: no tests
+    tools.dev_page_census.x_main__mutmut_26: no tests
+    tools.dev_page_census.x_main__mutmut_27: no tests
+    tools.dev_page_census.x_main__mutmut_28: no tests
+    tools.dev_page_census.x_main__mutmut_29: no tests
+    tools.dev_page_census.x_main__mutmut_30: no tests
+    tools.dev_page_census.x_main__mutmut_31: no tests
+    tools.dev_page_census.x_main__mutmut_32: no tests
+    tools.dev_page_census.x_main__mutmut_33: no tests
+    tools.dev_page_census.x_main__mutmut_34: no tests
+    tools.dev_page_census.x_main__mutmut_35: no tests
+    tools.dev_page_census.x_main__mutmut_36: no tests
+    tools.dev_page_census.x_main__mutmut_37: no tests
+"""
 
 
 def test_touched_modules_keeps_only_bga_and_tools_python_source(
@@ -71,3 +132,22 @@ def test_write_ledger_appends_a_new_dated_section(tmp_path, monkeypatch):
     assert text.count("## 2026-01-01") == 1
     assert text.count("## 2026-01-08") == 1
     assert text.index("## 2026-01-01") < text.index("## 2026-01-08")
+
+
+def test_classify_matches_ux_703s_captured_census_run():
+    counts = dev_mutation.classify(CENSUS_RESULTS)
+    assert counts == {
+        "survived": 9, "killed": 4, "no tests": 37,
+        "caught": 4, "survivors": 46,
+    }
+
+
+def test_classify_applies_caught_to_the_verdict_it_names():
+    sample = "\n".join([
+        "mod.x_f__mutmut_1: killed",
+        "mod.x_f__mutmut_2: timeout",
+        "mod.x_f__mutmut_3: survived",
+    ])
+    counts = dev_mutation.classify(sample)
+    assert counts["caught"] == 1, "only killed is in _CAUGHT by default"
+    assert counts["survivors"] == 2, "timeout and survived both count"

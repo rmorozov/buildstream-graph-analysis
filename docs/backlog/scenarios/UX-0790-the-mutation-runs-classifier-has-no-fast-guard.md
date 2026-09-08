@@ -41,4 +41,32 @@ drops.
 
 ## Outcome
 
-_Not started._
+**The gap, measured.** `grep -rn "guards_for\|run_module\|_mutmut_config\|_CAUGHT"
+tests/` before this change: nothing. `run_module`'s classification lived
+inline in the subprocess call, untestable without a real `mutmut` run.
+
+**The close, measured.** `classify(results_text) -> dict` in
+`tools/dev_mutation.py`, fed by `mutmut results --all true`'s text;
+`_CAUGHT` applied inside it to split raw verdict counts into `"caught"`
+and `"survivors"` totals. `run_module` calls it (`counts` now in its
+returned dict), keeping the per-mutant `_verdict_lines` helper (shared
+with `classify`) for the ledger row's function-level grouping. Real
+capture: `python3 tools/dev_mutation.py --module
+tools/dev_page_census.py --max-children 4` (mutmut 3.7.0, already
+installed) — 50 mutants, 4 killed, 46 survivors, matching `UX-703`'s
+Outcome exactly; the raw `mutmut results --all true` text is
+`CENSUS_RESULTS` in
+`tests/unit/test_the_weekly_mutation_run_names_its_survivors.py`.
+`classify(CENSUS_RESULTS) == {"survived": 9, "killed": 4, "no tests":
+37, "caught": 4, "survivors": 46}`.
+
+**Mutations**
+(`tests/unit/test_the_weekly_mutation_run_names_its_survivors.py`):
+
+| mutation | reddened | count |
+|---|---|---|
+| `_CAUGHT \|= {"timeout"}` | `test_classify_applies_caught_to_the_verdict_it_names` | 1 failed, 5 passed |
+| `classify` counts every line as `"survived"` | `test_classify_matches_ux_703s_captured_census_run`, `test_classify_applies_caught_to_the_verdict_it_names` | 2 failed, 4 passed |
+
+Both reverted from the pre-mutation copy; full file green after each
+(`6 passed`).

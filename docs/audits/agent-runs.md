@@ -149,6 +149,8 @@ pairing for every merged row from round 103 on.
 | 110 | verifier | sonnet | verify `UX-741` | 70k | 51 | 24.9 m | PASS; enclosing bound loose (4.8x) recorded, the spread clause's red filed as UX-797 | a pre-existing clause reddened 1 in 20 and had to be separated from the fix |
 | 110 | implementer | sonnet | `UX-774` the guide's size figure derived by the tool (judgement) | 102k | 95 | 25.6 m | merged f977935e; both copies written together, three mutations red | ruff's PLR0915 on main() forced a refactor and a baseline shrink |
 | 110 | verifier | sonnet | verify `UX-774` | 35k | 29 | 7.6 m | PASS; the Acceptance Test's wording reconciled in the deviation | — |
+| 110 | implementer | sonnet | `UX-668` a reader is a shape, not a hue; the selector in the header (judgement) | 249k | 232 | 71.5 m | merged 4c3fc308; four consequential surfaces, one filed (UX-800) | the header's new line pushed a frame-counted landing past its margin; ten repeated runs to separate it from xdist noise |
+| 110 | verifier | sonnet | verify `UX-668` | 66k | 34 | 37.6 m | PASS; the third-frame settle named as a proxy, filed UX-800 | resumed once after a rate limit |
 
 Round 101's four tracks are **not** here: this session could not
 identify their transcripts with certainty after a context rebuild, and
@@ -161,7 +163,7 @@ committed cleanly once told to run in the foreground. Three of the five
 left a derived figure or a §6 context-map row behind - the same class
 the round itself was about, arriving in the tracks' own work.
 
-What the one hundred and thirty-two rows already say: a researcher that reads a document
+What the one hundred and thirty-four rows already say: a researcher that reads a document
 whole costs 100-180k; a walker that drives every control costs 336k;
 the two cuts cost a re-run each. The `walk` and `design-review`
 skills fix the report shape so the next rows are smaller, and the

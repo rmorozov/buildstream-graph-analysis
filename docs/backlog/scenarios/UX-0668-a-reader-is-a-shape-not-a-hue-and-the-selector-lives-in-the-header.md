@@ -1,6 +1,6 @@
 # UX-668: a reader is a shape, not a hue — and the selector lives in the header
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-372 (the reader select), UX-643 (the role demotes), UX-305 | **Serves:** R1..R5, the readers the select names | **Topic:** viewer | **Shape:** judgement
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-372 (the reader select), UX-643 (the role demotes), UX-305 | **Serves:** R1..R5, the readers the select names | **Topic:** viewer | **Shape:** judgement
 
 ## Motivation
 
@@ -71,3 +71,5 @@ names gets its muted chip under "anyone", before a role is chosen.
 
 Reverted from the pre-mutation copy (not `git checkout --`); re-run
 green, `6 passed`.
+
+**Deviation.** Four surfaces beyond the declared ones, each a consequence of moving the control: `viewstate.js` reads the select off the document (the `UX-372` round trip), `revealAndLand` gained a third frame, and two guards were re-keyed — `test_apparatus_in_its_place.py` now allows the one header control §2b.2 states. The third frame is a counted proxy for the section's rect settling, `UX-795`'s shape; filed as `UX-800`, not fixed here. One commit, one verifier (PASS).

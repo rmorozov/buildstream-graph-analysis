@@ -1,6 +1,6 @@
 # UX-779: the README prints two wall clocks the guide says are not the suite's
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-551 (the rule these two figures predate) | **Serves:** the newcomer budgeting a run from a number measured on someone else's afternoon | **Topic:** docs | **Area:** unassigned | **Shape:** judgement
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-551 (the rule these two figures predate) | **Serves:** the newcomer budgeting a run from a number measured on someone else's afternoon | **Topic:** docs | **Area:** unassigned | **Shape:** judgement
 
 ## Motivation
 
@@ -116,3 +116,5 @@ All four mutations applied to scratch copies (`README.md`,
 `docs/contributing/fixing-guide.md`) and reverted from those copies,
 never `git checkout`; `git diff --stat` after each revert showed no
 residual change to `fixing-guide.md`.
+
+**Deviation.** The judgement (point at the guide, state no clock) was the session's; an `implementer` on `sonnet` removed one clock and left the second on a citation that did not hold — its `verifier` read `tests/tiers.py`, `UX-503` and the guide's own table and held the row; the fix removed both, widened the guard to every test target's line and the next, and added the anchor check. Two commits, one verifier, one hold.

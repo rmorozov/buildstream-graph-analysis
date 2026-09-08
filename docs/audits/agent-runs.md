@@ -131,6 +131,8 @@ pairing for every merged row from round 103 on.
 | 110 | verifier | sonnet | verify UX-744 as it stands (the open HOLD) | 74k | 69 | 13.1 m | MERGE-AS-CLOSED; every clause traced to a commit, the HOLD closed by UX-772 (76 and 85 waived by name), the annotation present; round 107's 26 seconds has no commit behind it (11 m 48 s), and the 99-102 clause is moot since UX-757 | dev_touching --base at the pre-track commit never finished in 300 s; the two guard files the diff touches stood in |
 | 110 | implementer | sonnet | UX-758, the edge-mark test | 73k | 58 | 15.6 m | merged after its verifier; isEdgeMark reads the merge's components at three sites, an inverse check added; one clause stayed green under the named mutation and the verifier named the one that reds it | the sandbox's git heuristic refused a cp chained with git diff in one call |
 | 110 | verifier | sonnet | verify UX-758 | 76k | 74 | 9.9 m | MERGE, no findings; the guard reads the real page's data-layout, golden's absorbed axis byte-identical, three axes change as intended | a stale background output file among many sessions' task files had to be chased before blocking on the real PID |
+| 110 | implementer | sonnet | UX-779, the README's wall clocks | 236k | 128 | 40.8 m | merged after a HOLD and a fix: the first close left the second clock on a citation that did not hold; the fix removed both, scoped the guard to every test target's line and the next, and checks the anchor | the pre-commit selector caught a dangling link pasted into the Outcome; the widened guard first false-positived on the README's own prose until scoped to bash fences |
+| 110 | verifier | sonnet | verify UX-779 | 46k | 42 | 7.5 m | HOLD then merged: the 21s clock was the task's second, not tiers.py's; make test-* exempt from the guard; a wrapped comment escaped; the anchor unchecked - all four fixed | assembling the evidence against the track's citation took three files the Outcome's one line did not point at |
 
 Round 101's four tracks are **not** here: this session could not
 identify their transcripts with certainty after a context rebuild, and
@@ -143,7 +145,7 @@ committed cleanly once told to run in the foreground. Three of the five
 left a derived figure or a §6 context-map row behind - the same class
 the round itself was about, arriving in the tracks' own work.
 
-What the one hundred and fourteen rows already say: a researcher that reads a document
+What the one hundred and sixteen rows already say: a researcher that reads a document
 whole costs 100-180k; a walker that drives every control costs 336k;
 the two cuts cost a re-run each. The `walk` and `design-review`
 skills fix the report shape so the next rows are smaller, and the

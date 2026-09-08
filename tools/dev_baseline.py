@@ -278,6 +278,22 @@ def load_forced(document):
             for b in document.get("forced", ())]
 
 
+#: `write_baseline`'s own vocabulary - the only way a batch is
+#: authorised. Anything else on the document or a finding was written
+#: by hand, not by `--force` (`UX-789`: `"forced_by"` was one).
+DOCUMENT_KEYS = frozenset({"ruff_version", "families", "forced", "findings"})
+ENTRY_KEYS = frozenset({"tool", "rule", "file", "line", "nth"})
+
+
+def unknown_keys(document):
+    """Every key on `document`, or on one of its findings, that
+    `write_baseline` would never itself emit."""
+    found = set(document) - DOCUMENT_KEYS
+    for entry in document.get("findings", ()):
+        found |= set(entry) - ENTRY_KEYS
+    return sorted(found)
+
+
 def _prune_forced(batches, keep):
     """Only identities still in `keep`; a batch left with none drops out -
     a line `--shrink` or a plain `--write` removed was fixed, not forced
@@ -391,6 +407,11 @@ def do_check(args, current, existing):
     if existing is None:
         print(f"no baseline at {args.baseline} - run --write first")
         return 1
+    bad = unknown_keys(existing)
+    if bad:
+        print(f"unknown key in {args.baseline}: {', '.join(bad)} - "
+              "only --write --force writes an entry into this file")
+        return 2
     new, stale = diff(current, existing["findings"])
     batches = load_forced(existing)
     authorised, gained = gained_since_head(

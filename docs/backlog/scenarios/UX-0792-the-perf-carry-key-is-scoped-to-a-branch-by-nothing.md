@@ -69,6 +69,24 @@ $ python3 -m pytest tests/unit/test_a_slow_file_says_which_file.py -q
 '3.11'` and its key already carries `${{ github.ref }}` (lines 280, 336).
 No workflow change made - only the guard was widened.
 
+Verifier (`5873229d`) found a blind spot: the regex read only a same-line
+`key: value`, so a key written `key: >-` with the value folded onto the
+next line passed unseen. Reread with `yaml.safe_load` (importable:
+`python3 -c "import yaml"` exits 0) walking every job's `uses:
+actions/cache*` step for its own `with.key`/`if`, so a step is judged by
+its own pair rather than by text proximity.
+
+```console
+$ python3 - <<'PY'   # key: >- \n  perf-carry-global-${{ github.run_id }}
+...   (folds the perf-carry save step's key, dropping github.ref)
+PY
+$ python3 -m pytest tests/unit/test_a_slow_file_says_which_file.py::TestCiSuppliesTheMemoryTheRuleNeeds::test_a_branch_reads_its_own_series -q
+FAILED ... the carry cache key 'perf-carry-global-${{ github.run_id }}' does not name the branch
+$ git checkout -- .github/workflows/ci.yml   # restore
+$ python3 -m pytest tests/unit/test_a_slow_file_says_which_file.py -q
+140 passed
+```
+
 Mutation table:
 
 | mutation | reddened | count |
@@ -76,4 +94,6 @@ Mutation table:
 | strip `github.ref` from the perf-carry key | `test_a_branch_reads_its_own_series`, naming `perf-carry-` | 1 failed / 140 |
 | restore | — | 140 passed |
 | drop `always()` from the perf-carry save step | `test_a_branch_reads_its_own_series`, naming `perf-carry-` | 1 failed / 140 |
+| restore | — | 140 passed |
+| fold the perf-carry save key onto a `key: >-` continuation line, dropping `github.ref` | `test_a_branch_reads_its_own_series`, naming the folded key | 1 failed / 140 |
 | restore | — | 140 passed |

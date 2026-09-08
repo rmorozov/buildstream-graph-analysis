@@ -146,6 +146,19 @@ jobs:
             tier-carry-${{ github.ref }}-
         if: matrix.python-version == '3.11'
 
+      # `UX-803`: on a PR, `github.ref` above is the PR's own ref, so
+      # that restore never reaches main's carry - a separate key, always
+      # main's, so a file main's own last run already read past the
+      # gates is the base's excursion and not this diff's.
+      - name: What the last run of the default branch found over the gates
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ runner.temp }}/tier_carry_base.json
+          key: tier-carry-refs/heads/${{ github.event.repository.default_branch }}-
+          restore-keys: |
+            tier-carry-refs/heads/${{ github.event.repository.default_branch }}-
+        if: matrix.python-version == '3.11'
+
       # UX-476: `--base` is the other half of the rule. Two runs read
       # against one recording run are one measurement counted twice, so
       # confirming a file needs something in the diff that could account
@@ -185,6 +198,7 @@ jobs:
           python tools/dev_tier_drift.py "${{ runner.temp }}/junit.xml" \
             --against --carry "${{ runner.temp }}/tier_carry.json" \
             --base "origin/${{ github.event.repository.default_branch }}" \
+            --base-carry "${{ runner.temp }}/tier_carry_base.json" \
             --summary "${{ runner.temp }}/tier_gate.txt" --annotate \
             --source "github-actions ubuntu-latest, test (3.11), -n auto" \
             --flake-ledger "${{ runner.temp }}/flake_ledger.candidate.json" \

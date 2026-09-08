@@ -2,7 +2,7 @@
 
     make test-tiers                        # the floors, here
     python3 tools/dev_tier_drift.py REPORT --against --carry PATH \
-        --base REF --summary PATH --annotate  # the line: tail, API (UX-621)
+        --base REF --base-carry PATH --summary PATH --annotate  # UX-621, UX-803
     python3 tools/dev_tier_drift.py REPORT --record PATH   # CI's own numbers
     python3 tools/dev_tier_drift.py --adopt CANDIDATE      # UX-503
 
@@ -105,6 +105,18 @@ CI_DRIFT_FACTOR = 1.5
 #: that with the margin one sample deserves - `spread` on each
 #: `--record` accumulates the rest.
 CI_DRIFT_SECONDS = 5.0
+
+def over_gate(seconds, expected):
+    """Both `CI_DRIFT_FACTOR` and `CI_DRIFT_SECONDS`, on one reading.
+
+    `expected` is the reference's own number already scaled to this
+    reading's clock (`against`'s `expected`, population included where
+    it applies) - shared here so `adopt`'s step check (`UX-803`) and
+    `against`'s per-row check cannot silently disagree about the rule.
+    """
+    return (expected > 0 and seconds > CI_DRIFT_FACTOR * expected
+            and seconds - expected >= CI_DRIFT_SECONDS)
+
 
 #: `UX-442`: how many **consecutive** runs a file must exceed both gates
 #: in before it is reported. One shipped, and one file swung 7.1 to 13.9
@@ -472,6 +484,30 @@ def record(times, source="unknown", reference=None):
     return document
 
 
+def _next_sample(name, known, before, reading, shift):
+    """One name's updated `samples` entry - `(seen, stepped)`.
+
+    `UX-803`: `stepped` is true when `reading` and the run before it
+    (this list's own last entry) both clear `over_gate` against
+    `known[name]` - two consecutive main runs, not the one-sample noise
+    the sliding window is meant to absorb. Split out of `adopt` so its
+    own branching stays flat.
+    """
+    seen = list(before.get(name, []))
+    if name not in known:
+        seen = []
+    elif not seen:
+        seen = [known[name]]
+    if not reading:
+        return seen, False
+    normalised = round(reading / shift, 2)
+    prior = seen[-1] if name in known and seen else None
+    if (prior is not None and over_gate(prior, known[name])
+            and over_gate(normalised, known[name])):
+        return [normalised], True
+    return seen + [normalised], False
+
+
 def adopt(reference, candidate):
     """`UX-503`: the rows the reference does not carry yet, added to it.
 
@@ -507,6 +543,10 @@ def adopt(reference, candidate):
     there is no shift to divide them by and neither refusal applies - a
     candidate carrying them where the reference does not is the only
     condition, `dev_perf_ratchet.merge`'s own bootstrap state.
+
+    `UX-803`: a reading past `over_gate` on this run *and* the one this
+    run's own samples last carried is a step - the samples restart at
+    it instead of joining the window, and the name lands in `adopted`.
     """
     perf_added = {key: candidate[key] for key in PERF_KEYS
                   if key not in reference and key in candidate}
@@ -538,15 +578,18 @@ def adopt(reference, candidate):
     # stays the median of that list.
     before = reference.get("samples") or {}
     kept = {}
+    #: `UX-803`: files whose samples restarted this run - past both
+    #: gates on this run *and* the one before it, so the old samples
+    #: describe a cost this file no longer has. Without this a step took
+    #: three main pushes to move `files` (Motivation): one to enter the
+    #: window, one more to outnumber the old readings, one more to set
+    #: the median.
+    stepped = set()
     for name in {**known, **added}:
-        seen = list(before.get(name, []))
-        if name not in known:
-            seen = []
-        elif not seen:
-            seen = [known[name]]
-        reading = times.get(name)
-        if reading:
-            seen = seen + [round(reading / shift, 2)]
+        seen, is_step = _next_sample(name, known, before, times.get(name),
+                                     shift)
+        if is_step:
+            stepped.add(name)
         kept[name] = (seen or [known.get(name, added.get(name))]
                       )[-CI_REFERENCE_SAMPLES:]
     for name, seconds in added.items():
@@ -561,9 +604,11 @@ def adopt(reference, candidate):
     # accumulated over adoptions and dropped by the next wholesale
     # `record` - a reader comparing two rows deserves to know one of
     # them was placed on this clock by division rather than measured on
-    # it.
+    # it. `stepped` joins the same field (UX-803): a restarted file's
+    # one sample is exactly as far from `measured_on` as an added row's.
     document["adopted"] = sorted(
-        set(reference.get("adopted") or []) & set(known) | set(added))
+        (set(reference.get("adopted") or []) & set(known) | set(added))
+        | stepped)
     return document, {**added, **perf_added}
 
 
@@ -660,8 +705,7 @@ def against(times, reference):
         if population and was:
             expected *= population_size(population) / was
         seen = band.get(name) or []
-        if (ratio / shift > CI_DRIFT_FACTOR
-                and times[name] - expected >= CI_DRIFT_SECONDS
+        if (over_gate(times[name], expected)
                 and (not seen or times[name] > max(seen) * shift)):
             rows.append((name, times[name], known[name], ratio / shift))
     # A file with no reference at all is checked by nothing, which is
@@ -835,6 +879,22 @@ def explained_by(base):
         return set(chosen)
     except Exception:                                # pragma: no cover
         return None
+
+
+def based_rows(rows, base_last):
+    """`UX-803`: split off rows the base branch's own last run already
+    read past the gates - `(based, rest)`.
+
+    `base_last` is `{name: ratio}` from the base's own `--carry`
+    (`carried()`'s newest entry) - the same shape a push to main writes
+    for itself, so a file main already reads slow is the base's, not
+    this branch's diff, however this run measured it. Only rows with a
+    reference entry can match: `base_last` never names a `recorded` row
+    (`_against` only carries rows with `was is not None`).
+    """
+    based = [row for row in rows if row[2] is not None and row[0] in base_last]
+    rest = [row for row in rows if row not in based]
+    return based, rest
 
 
 def repeated(rows, history, explained=None):
@@ -1089,6 +1149,20 @@ def _against(times, path, args):
         if not args.quiet:
             print(f"tiers ok: {line}")
         return done(0, f"tiers ok: {line}")
+    based = []
+    if args.base_carry:
+        # `UX-803`: the base's own last run, restored under a different
+        # cache key than `--carry` reads on a PR (`tier-carry-refs/heads/
+        # main-`, the workflow's `--base-carry` step). A file it already
+        # read past both gates is the base's excursion, not this diff's.
+        base_history = carried(args.base_carry)
+        if base_history:
+            based, rows = based_rows(rows, base_history[0])
+        else:
+            print(f"{args.base_carry}: no carry from the base branch's "
+                  f"own runs reachable, so a file crossing the gates "
+                  f"here is read as this branch's until one is "
+                  f"(UX-803).", file=sys.stderr)
     explained = explained_by(args.base)
     if explained is NO_CAUSE_FILTER:
         # `UX-557`: the line is the gate's published sentence, and a
@@ -1162,6 +1236,15 @@ def _against(times, path, args):
               f"{CI_CANDIDATE_JOB} job's log) to give them a reference "
               f"entry; the run after that judges them for drift like "
               f"every other file.", file=sys.stderr)
+    if based:
+        # `UX-803`. Not a failure: the base branch's own last run read
+        # this file past the gates too, so the excursion is the base's
+        # and not this diff's - the refresh below is main's to make.
+        print(f"\n{len(based)} file(s) over both gates that the base "
+              f"branch's own last run also read past them - the base's, "
+              f"not this branch's (UX-803):", file=sys.stderr)
+        for row in based:
+            print(say(row), file=sys.stderr)
     if not confirmed:
         if not args.quiet:
             print(f"tiers ok: {line}")
@@ -1311,6 +1394,12 @@ def main(argv=None):
                              f"next one; a file is reported only after "
                              f"{CI_DRIFT_RUNS} consecutive runs find it "
                              f"(UX-442). Without it one sample decides")
+    parser.add_argument("--base-carry", metavar="PATH", default=None,
+                        help="the base branch's own last --carry, restored "
+                             "under its own cache key on a PR run where "
+                             "--carry reads this branch's instead; a file "
+                             "it already read past both gates is reported "
+                             "as the base's, not this diff's (UX-803)")
     parser.add_argument("--summary", metavar="PATH", default=None,
                         help="write --against's own summary line here, for "
                              "a step that runs later to print (UX-491).")

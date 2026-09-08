@@ -56,7 +56,7 @@
     "tests/unit/test_a_rebuild_is_a_wake_with_nothing_before_it.py": 0.01,
     "tests/unit/test_a_refused_timeline_says_it_was_refused.py": 3.84,
     "tests/unit/test_a_release_records_a_contract_state.py": 0.03,
-    "tests/unit/test_a_report_you_can_navigate.py": 21.63,
+    "tests/unit/test_a_report_you_can_navigate.py": 30.9,
     "tests/unit/test_a_required_set_grew_under_an_unchanged_id.py": 0.53,
     "tests/unit/test_a_retired_state_is_declared.py": 0.02,
     "tests/unit/test_a_run_bundle_you_can_carry.py": 0.27,
@@ -182,7 +182,7 @@
     "tests/unit/test_focus_is_an_investigation.py": 1.05,
     "tests/unit/test_focus_keeps_the_reading_position.py": 1.76,
     "tests/unit/test_focused_graphs_not_a_dag_viewer.py": 0.81,
-    "tests/unit/test_forced_stays_named_past_commit.py": 0.89,
+    "tests/unit/test_forced_stays_named_past_commit.py": 13.2,
     "tests/unit/test_grace_window_drains.py": 5.47,
     "tests/unit/test_granularity.py": 1.23,
     "tests/unit/test_graph_performance.py": 2.19,
@@ -311,7 +311,7 @@
     "tests/unit/test_the_architecture_counts_what_the_module_holds.py": 0.1,
     "tests/unit/test_the_architecture_names_the_commands.py": 0.02,
     "tests/unit/test_the_arrows_say_why_now.py": 0.38,
-    "tests/unit/test_the_baseline_only_shrinks.py": 2.41,
+    "tests/unit/test_the_baseline_only_shrinks.py": 50.7,
     "tests/unit/test_the_browser_is_the_library.py": 6.67,
     "tests/unit/test_the_browser_waits_for_a_condition.py": 3.57,
     "tests/unit/test_the_build_pivots_by_program.py": 2.29,
@@ -475,7 +475,7 @@
     "tests/unit/test_the_value_rule_has_a_home.py": 0.02,
     "tests/unit/test_the_verdict_record_is_a_published_key.py": 0.83,
     "tests/unit/test_the_verification_log_is_true.py": 0.01,
-    "tests/unit/test_the_view_parses_nothing.py": 8.89,
+    "tests/unit/test_the_view_parses_nothing.py": 14.8,
     "tests/unit/test_the_viewer_modules_have_a_home.py": 0.61,
     "tests/unit/test_the_viewer_perfetto_boundary.py": 0.31,
     "tests/unit/test_the_viewer_renders_the_schema.py": 7.84,
@@ -876,11 +876,7 @@
       0.03
     ],
     "tests/unit/test_a_report_you_can_navigate.py": [
-      21.63,
-      21.63,
-      21.63,
-      21.63,
-      21.63
+      30.9
     ],
     "tests/unit/test_a_required_set_grew_under_an_unchanged_id.py": [
       0.53,
@@ -1725,7 +1721,7 @@
       0.81
     ],
     "tests/unit/test_forced_stays_named_past_commit.py": [
-      0.89
+      13.2
     ],
     "tests/unit/test_grace_window_drains.py": [
       5.47,
@@ -2598,10 +2594,7 @@
       0.38
     ],
     "tests/unit/test_the_baseline_only_shrinks.py": [
-      2.41,
-      2.39,
-      2.41,
-      2.41
+      50.7
     ],
     "tests/unit/test_the_browser_is_the_library.py": [
       6.67,
@@ -3695,11 +3688,7 @@
       0.01
     ],
     "tests/unit/test_the_view_parses_nothing.py": [
-      8.89,
-      8.89,
-      8.89,
-      8.89,
-      8.89
+      14.8
     ],
     "tests/unit/test_the_viewer_modules_have_a_home.py": [
       0.61,

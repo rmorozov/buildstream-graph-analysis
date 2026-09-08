@@ -561,6 +561,51 @@ def topic_disagreements():
             if topic is not None and topic not in TOPIC_ORDER]
 
 
+#: `UX-690`: the topics a `## Decomposition` block is required for,
+#: from this item's own id on - the `UX-498` decline, revisited.
+DECOMPOSITION_TOPICS = frozenset({"analysis", "viewer", "capture"})
+DECOMPOSITION_FLOOR = 690
+
+#: `UX-690`'s own filing already had 14 ids past its floor with the
+#: matching topics and no block - filed before this check existed, so
+#: "existing filings are not retro-fitted" exempts them by number
+#: rather than by a check that could not see them yet. The same shape
+#: as `UNDOCUMENTED_WHEN_THE_POPULATION_BECAME_KEYS`
+#: (`test_the_documents_keep_up_with_the_contracts.py`): a frozen set
+#: that shrinks as rows are given the block, never grows.
+DECOMPOSITION_GRANDFATHERED = frozenset({
+    699, 717, 719, 721, 722, 724, 726, 729, 733, 738, 739, 740, 753, 758,
+})
+
+
+def decomposition_problems():
+    """A `Topic: analysis|viewer|capture` filing past `DECOMPOSITION_FLOOR`
+    with no `## Decomposition` block, naming its number.
+
+    Existing filings are not retro-fitted: `DECOMPOSITION_GRANDFATHERED`
+    is the population past the floor when this check was written, and a
+    row leaving it because it now carries the block is not put back.
+    """
+    problems = []
+    for path in sorted(SCENARIOS.glob("UX-*.md")):
+        match = _FILE_ID.match(path.name)
+        if not match:
+            continue
+        number = int(match.group(1))
+        if number <= DECOMPOSITION_FLOOR or number in DECOMPOSITION_GRANDFATHERED:
+            continue
+        text = path.read_text(encoding="utf-8")
+        topic = header_topic(text)
+        if topic not in DECOMPOSITION_TOPICS:
+            continue
+        if "\n## Decomposition" not in text:
+            problems.append(
+                f"UX-{number}: Topic {topic} needs a `## Decomposition` "
+                "block naming its input classes and the journey it "
+                "extends (`UX-690`)")
+    return problems
+
+
 def index_header():
     """The counts sentence and the topic table, derived from the rows.
 
@@ -836,6 +881,8 @@ CHECKS = (
      lambda: shape_disagreements()),
     ("every declared area is one the fixing guide's tree knows",
      lambda: area_problems()),
+    ("every analysis/viewer/capture filing past UX-690 names its "
+     "Decomposition", lambda: decomposition_problems()),
 )
 
 
@@ -1255,6 +1302,14 @@ def main(argv=None) -> int:
         rows = len(table_statuses())
         print(f"{len(problems)} problem(s) over {len(CHECKS)} propert(y/ies), "
               f"{rows} backlog row(s)")
+        # `UX-690`: the suite's shape, regenerated every run rather than
+        # typed into a round document by hand - `dev_flake_census.py`'s
+        # `top()` is the same convention, for the Standing section a
+        # round document writes.
+        sys.path.insert(0, str(REPO / "tools"))
+        import dev_shape_budget
+        print()
+        print(dev_shape_budget.table())
         if args.write:
             # `UX-617`: a caller who staged before deriving has to stage
             # again, and silence here shipped the rewrite unstaged.

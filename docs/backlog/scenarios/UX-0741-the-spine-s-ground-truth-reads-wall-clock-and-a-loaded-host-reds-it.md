@@ -1,6 +1,6 @@
 # UX-741: the spine's ground truth reads wall clock, and a loaded host reds it
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-108 (the guards), UX-731 (the same swap, done once), UX-110 | **Serves:** R8 reading a red gate on a file nobody touched | **Topic:** guards | **Shape:** judgement | **Area:** tools
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-108 (the guards), UX-731 (the same swap, done once), UX-110 | **Serves:** R8 reading a red gate on a file nobody touched | **Topic:** guards | **Shape:** judgement | **Area:** tools
 
 ## Motivation
 
@@ -280,3 +280,5 @@ output) before the next mutation and before the final green run above.
 2.62) -> `AssertionError: work-a.bst: 3.012s for a sleep 3 - a sleep
 cannot finish early / assert 3.012273633001314 >= 6.0`. 3.0 < 6, reds
 as required.
+
+**Deviation.** None on the fix. The verifier's two findings, recorded: the enclosing bound is loose — the harness span was 14.459 s against a 3.0 s sleep (4.8×), and a Plane 1 shift of +2.0 s now passes where `PLANE_AGREEMENT_S = 1.0` reddened; the lag's magnitude is `UX-110`'s by this row's Out of Scope, so that loss is stated, not fixed. The untouched eight-identical clause reddened once in 20 bare runs at load 7–9 — `UX-797`. One commit, one verifier (PASS).

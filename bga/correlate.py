@@ -1624,8 +1624,10 @@ def _consolidate_by_co_change_candidates(cache_logs, dependencies) -> list[dict]
         if co_rebuilds < MIN_CO_REBUILDS or min(share_of_a, share_of_b) < CO_CHANGE_SHARE:
             continue
         # Neither is consumed alone: the two elements' consumer sets are
-        # identical, so no successor reaches one without the other.
-        if consumers.get(a, set()) != consumers.get(b, set()):
+        # identical *and* non-empty - two co-changing leaves with nobody
+        # consuming either are not "consumed together", they are unused.
+        shared_consumers = consumers.get(a, set())
+        if not shared_consumers or shared_consumers != consumers.get(b, set()):
             continue
         rebuilds_a = rebuilds.get(a, 0)
         rebuilds_b = rebuilds.get(b, 0)

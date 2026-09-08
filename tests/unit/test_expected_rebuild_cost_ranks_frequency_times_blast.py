@@ -77,7 +77,7 @@ def test_key_present_and_a_list_with_change_frequency():
 
 # --- consolidate-by-co-change --------------------------------------------
 
-def test_consolidate_fires_on_a_full_share_pair_with_a_shared_consumer():
+def test_consolidate_fires_on_a_full_share_pair_with_a_common_consumer():
     cache_logs = {'change_frequency': _change_frequency(
         elements=[
             {'element': 'pair-x.bst', 'rebuilds': 12, 'unchanged_key_rebuilds': 0,
@@ -123,6 +123,30 @@ def test_consolidate_does_not_fire_when_a_third_element_consumes_pair_x_alone():
     ]
 
     findings = find_granularity_findings({}, {}, cache_logs, dependencies=edges)
+
+    assert [f for f in findings if f['id'] == 'consolidate-by-co-change'] == []
+
+
+def test_consolidate_does_not_fire_for_two_leaves_with_no_consumer_at_all():
+    """`consumers.get(a, set())` is `set()` for a leaf; two empty sets
+    compare equal, so "neither is consumed alone" needs its own
+    non-empty check - two co-changing leaves nobody consumes are unused,
+    not consumed together."""
+    cache_logs = {'change_frequency': _change_frequency(
+        elements=[
+            {'element': 'pair-x.bst', 'rebuilds': 12, 'unchanged_key_rebuilds': 0,
+             'unchanged_key_share': 0.0},
+            {'element': 'pair-y.bst', 'rebuilds': 13, 'unchanged_key_rebuilds': 0,
+             'unchanged_key_share': 0.0},
+        ],
+        co_change=[
+            {'a': 'pair-x.bst', 'b': 'pair-y.bst', 'co_rebuilds': 12,
+             'share_of_a': 1.0, 'share_of_b': 12 / 13},
+        ],
+        builds_lower_bound=13,
+    )}
+
+    findings = find_granularity_findings({}, {}, cache_logs, dependencies=[])
 
     assert [f for f in findings if f['id'] == 'consolidate-by-co-change'] == []
 

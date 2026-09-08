@@ -81,6 +81,10 @@ codegen: blast 20/weighted 400s/2 rebuilds): lib-a's
 `expected_cost_us` is 1,200,000,000 (1200s), codegen's is 800,000,000
 (800s) — lib-a ranks first despite codegen's 5x larger blast.
 
+The split finding is all-or-nothing per the contract: one consumer
+under `MIN_CO_REBUILDS` rebuilds blocks the whole `split-by-co-change`
+finding for that element, not just that consumer's group.
+
 **Mutation table:**
 
 | mutation | reddened | count |
@@ -88,5 +92,6 @@ codegen: blast 20/weighted 400s/2 rebuilds): lib-a's
 | `expected_cost_us` uses `blast_count` instead of `rebuilds` | ranking + exact-value tests | 2 of 7 failed |
 | drop the "neither is consumed alone" consumer-set check | the pair-x-alone-consumer negative test | 1 of 7 failed |
 | `expected_rebuild_cost` key returned unconditionally (`[]` instead of omitted) | the key-absent-without-`change_frequency` test | 1 of 7 failed |
+| drop the non-empty shared-consumer check (two co-changing leaves with no consumer) | the no-consumer negative test | 1 of 8 failed |
 
-All three reverted from the pre-mutation copy; suite green after each revert.
+All four reverted from the pre-mutation copy; suite green after each revert.

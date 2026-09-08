@@ -207,10 +207,6 @@ class TestTheSelectorStillSelects:
         # over) when `HANDFUL` moved 33 -> 45 with the census; `edg`
         # stayed (46 against 45), one file over.
         "bga/graph/edg.py",
-        # `UX-682`: 46 against 45, one file over - the join half's new
-        # test file joined the census (31, up from 30) and that alone
-        # tipped it; not wide by name or map.
-        "bga/report/_shared.py",
     }
 
     def test_a_one_module_change_selects_a_handful_not_the_suite(self):

@@ -6,13 +6,20 @@
 exempt, so it tops the ranking on every run until the owner declares
 it - the defect this closes.
 
-Acceptance Test, on `tests/fixtures/macro_micro` (example 06, real
-`toolchain.bst` declared in its committed `graph.json`): the blast
-ranking's top row is `core.bst`, `toolchain.bst` sits in the
-foundation tier with its fan-out. `tests/fixtures/foundation_declared`
+Acceptance Test, on `tests/fixtures/macro_micro` (example 06:
+`examples/06-macro-micro-optimization/project.conf` now declares
+`variables: {bga-foundation: toolchain.bst}`, the committed `graph.json`
+hand-carries the same `"foundation"` the extractor would produce from
+it - real `bst show` here hits this machine's "Cache too full" on
+*every* project, confirmed independent of this diff): its
+chain-bound shape (`UX-65`/`UX-479`) means only `blast-radius-
+foundation` and `blast-radius-reach` publish; the ranked arm is
+exercised on a synthetic, non-chain-bound population instead, where
+declaring `toolchain.bst` foundation drops it from `blast-radius-
+ranking` and `core.bst` leads. `tests/fixtures/foundation_declared`
 (a `fan_in(n=4)` topology, `sink.bst` declared) reaches the fan-in
-mirror the same way. Undeclared, `foundation-candidates` names the
-widest non-structural, non-declared reach instead.
+mirror. Undeclared, `foundation-candidates` names the widest
+non-structural, non-declared reach instead.
 """
 import contextlib
 import io
@@ -82,26 +89,37 @@ class TestExampleSix:
         assert found["elements"] == ["toolchain.bst"]
         assert "downstream" in found["title"]
 
-    def test_a_name_not_in_the_graph_is_a_diagnostic_not_a_crash(self):
-        """`bga/cli.py`'s `analyze` never runs the extractor, so this
-        exercises `_read_bga_foundation`'s caller directly - the
-        validation clause `extract_run` applies before writing
-        `graph.json`."""
+    def test_a_name_not_in_the_graph_is_a_diagnostic_not_a_crash(self, tmp_path, monkeypatch):
+        """Runs the real `extract_run`, `extract_graph` monkeypatched
+        so this needs no real `bst` - only the validation clause
+        (`tools/bst_extract_run.py:405-414`) is under test. `graph.json`
+        is real project.conf's own `variables: {bga-foundation:
+        "a.bst,not-in-graph.bst"}` YAML, read by `_read_bga_foundation`
+        exactly as a real project's would be.
+        """
         import tools.bst_extract_run as extractor
 
-        graph = {"elements": [{"uid": "a.bst"}, {"uid": "b.bst"}]}
-        warnings = []
-        declared = ["a.bst", "not-in-graph.bst"]
-        known = {e["uid"] for e in graph["elements"]}
-        for name in declared:
-            if name not in known:
-                warnings.append(
-                    f"declared foundation element {name!r} is not in the graph")
-        graph["foundation"] = sorted(n for n in declared if n in known)
+        project = tmp_path / "proj"
+        (project / "elements").mkdir(parents=True)
+        (project / "project.conf").write_text(
+            "name: p\nmin-version: 2.0\nelement-path: elements\n"
+            "variables:\n  bga-foundation: a.bst,not-in-graph.bst\n")
+        log = tmp_path / "build.log"
+        log.write_text("Targets:       a.bst\n")
 
+        def fake_extract_graph(project_dir, targets, bst_bin="bst", bst_options=None):
+            return {"elements": [{"uid": "a.bst"}, {"uid": "b.bst"}], "dependencies": []}
+
+        monkeypatch.setattr(extractor, "extract_graph", fake_extract_graph)
+
+        out = tmp_path / "out"
+        summary = extractor.extract_run(
+            str(project), str(log), str(out),
+            log_format="raw", start_time="2026-08-14T00:00:00+00:00")
+
+        assert any("not-in-graph.bst" in w for w in summary["warnings"])
+        graph = json.loads((out / "graph.json").read_text())
         assert graph["foundation"] == ["a.bst"]
-        assert warnings == ["declared foundation element 'not-in-graph.bst' is not in the graph"]
-        assert extractor._read_bga_foundation.__doc__  # the helper exists and is documented
 
 
 class TestTheFanInMirror:

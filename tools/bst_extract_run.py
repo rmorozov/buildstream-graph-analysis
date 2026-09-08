@@ -220,13 +220,23 @@ def _read_ref_storage(project_dir: str):
 
 
 def _read_bga_foundation(project_dir: str) -> Optional[list]:
-    """UX-683: `project.conf`'s own `bga: {foundation: [...]}` block,
-    the same minimal-YAML read `_read_ref_storage` uses. `None` (not
-    `[]`) when `project.conf` is missing, unparsable, or carries no
-    `bga`/`foundation` key - `extract_run`'s own `foundation=` argument
-    (a programmatic caller's list; no CLI flag - `--help`'s line cap
-    on this command had no room, `tests/unit/test_help_is_short.py`)
-    is the fallback only then, never on an explicit `[]`.
+    """UX-683: `project.conf`'s own declared foundation tier, the same
+    minimal-YAML read `_read_ref_storage` uses.
+
+    `variables: {bga-foundation: "a.bst,b.bst"}`, not a top-level `bga:`
+    key: BuildStream 2.8's project.conf loader validates top-level keys
+    against a fixed allowlist (`bst show` on a real project: "Unexpected
+    key: bga") and `variables:` itself only accepts scalar values (a
+    YAML list there: "Value of 'bga-foundation' is not of the expected
+    type 'scalar'") - both confirmed against real `bst`, not assumed.
+    A comma-separated string is the one shape both checks accept.
+
+    `None` (not `[]`) when `project.conf` is missing, unparsable, or
+    carries no `variables`/`bga-foundation` key - `extract_run`'s own
+    `foundation=` argument (a programmatic caller's list; no CLI flag -
+    `--help`'s line cap on this command had no room,
+    `tests/unit/test_help_is_short.py`) is the fallback only then,
+    never on an explicit `[]`.
     """
     try:
         import yaml
@@ -239,8 +249,10 @@ def _read_bga_foundation(project_dir: str) -> Optional[list]:
         data = yaml.safe_load(project_conf_path.read_text()) or {}
     except yaml.YAMLError:
         return None
-    foundation = (data.get("bga") or {}).get("foundation")
-    return list(foundation) if foundation else None
+    declared = (data.get("variables") or {}).get("bga-foundation")
+    if not declared:
+        return None
+    return [name.strip() for name in str(declared).split(",") if name.strip()]
 
 
 def _check_project_refs_strict(project_dir: str):
@@ -395,13 +407,13 @@ def extract_run(
     except RuntimeError as e:
         raise RuntimeError(f"graph extraction failed: {e}") from e
 
-    # UX-683: `project.conf`'s `bga: {foundation: [...]}` wins; the
+    # UX-683: `project.conf`'s `variables.bga-foundation` wins; the
     # `foundation=` argument (a programmatic caller's own list) is the
     # fallback, never both merged - one declaration, not a silent union
-    # of two. Validated
-    # against this graph's own uids: a name that is not one is a
-    # diagnostic, never a crash (the owner may have mistyped or the
-    # element may have been renamed since the declaration was written).
+    # of two. Validated against this graph's own uids: a name that is
+    # not one is a diagnostic, never a crash (the owner may have
+    # mistyped or the element may have been renamed since the
+    # declaration was written).
     declared_foundation = _read_bga_foundation(project_dir)
     if declared_foundation is None:
         declared_foundation = list(foundation or [])

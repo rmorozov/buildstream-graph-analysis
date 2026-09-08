@@ -303,7 +303,7 @@ def _blast_signals(diag_result, kind_by_uid: dict, foundation: frozenset = froze
                 'element_kind': kind_by_uid.get(br.element_uid, 'unknown'),
                 'is_structural_kind': kind_by_uid.get(br.element_uid) in STRUCTURAL_ELEMENT_KINDS,
                 # UX-683: declared, not guessed - `project.conf`'s own
-                # `bga: {foundation: [...]}`, validated at extraction.
+                # `variables.bga-foundation`, validated at extraction.
                 'is_foundation': br.element_uid in foundation,
             }
             for br in diag_result.blast_radius

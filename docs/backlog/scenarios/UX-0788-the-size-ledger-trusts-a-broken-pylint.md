@@ -36,4 +36,27 @@ prints non-JSON at exit 0: raises too.
 
 ## Outcome
 
-_Not started._
+**Gap measured** (Motivation's own repro, `PYLINT_OK_CODES` branch
+swallowed with `sed`): `8 passed` — no fixture drove `pylint` off its
+happy path, so a silently zeroed run read as a clean sweep.
+
+**Close measured**, two fixtures added to
+`tests/unit/test_the_size_ledger_only_shrinks.py`: a fake `pylint` on
+`PATH` (`monkeypatch.setenv("PATH", ...)`) that exits 32 with no
+JSON, and one that exits 0 printing non-JSON.
+
+```console
+$ python3 -m pytest tests/unit/test_the_size_ledger_only_shrinks.py -q
+10 passed
+```
+
+**Mutation table**
+
+| mutation | reddened | count |
+|---|---|---|
+| `PYLINT_OK_CODES` widened to `tuple(range(256))`, and the `json.JSONDecodeError` branch made to return `raw = []` instead of raising | the two new fixtures only, both other 8 green | `2 failed, 8 passed` |
+
+Both fixtures raise `PylintFailure` (`main` exit 2) against the real,
+unmutated `dev_sizes.py` too, since neither exit 32 nor non-JSON
+output is ever produced by a working `pylint` — the new guards do not
+depend on the host's `pylint` behaving.

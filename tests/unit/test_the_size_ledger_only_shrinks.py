@@ -4,6 +4,7 @@ A temporary package and a temporary reference file, so these mutate
 sizes without touching the real `tests/quality_reference.json`.
 """
 import json
+import os
 import pathlib
 import subprocess
 import sys
@@ -33,6 +34,17 @@ def _write(path, text):
 
 def _load(path):
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _fake_pylint(tmp_path, script):
+    """A `pylint` on `PATH` ahead of the real one, standing in for a
+    broken install."""
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir(exist_ok=True)
+    fake = bin_dir / "pylint"
+    fake.write_text(script, encoding="utf-8")
+    fake.chmod(0o755)
+    return bin_dir
 
 
 class TestTheThreeCells:
@@ -138,3 +150,27 @@ class TestANewFileIsRecordedNotJudged:
         other = tmp_path / "pkg" / "o.py"
         _write(other, "def g():\n" + BODY)
         assert _run(tmp_path, reference, "--check").returncode == 0
+
+
+class TestABrokenPylintIsAFailureNotZeroDuplicates:
+    """`UX-788`: a swallowed pylint run must not read as a clean sweep."""
+
+    def test_a_nonzero_exit_with_no_json_raises(self, tmp_path, monkeypatch):
+        module = tmp_path / "pkg" / "m.py"
+        reference = tmp_path / "reference.json"
+        _write(module, SMALL)
+        bin_dir = _fake_pylint(tmp_path, "#!/bin/sh\nexit 32\n")
+        monkeypatch.setenv("PATH", f"{bin_dir}{os.pathsep}{os.environ['PATH']}")
+        result = _run(tmp_path, reference, "--adopt")
+        assert result.returncode == 2
+        assert "pylint exited 32" in result.stdout
+
+    def test_an_ok_exit_with_non_json_output_raises(self, tmp_path, monkeypatch):
+        module = tmp_path / "pkg" / "m.py"
+        reference = tmp_path / "reference.json"
+        _write(module, SMALL)
+        bin_dir = _fake_pylint(tmp_path, "#!/bin/sh\necho 'not json'\nexit 0\n")
+        monkeypatch.setenv("PATH", f"{bin_dir}{os.pathsep}{os.environ['PATH']}")
+        result = _run(tmp_path, reference, "--adopt")
+        assert result.returncode == 2
+        assert "pylint did not print JSON" in result.stdout

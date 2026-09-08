@@ -620,6 +620,20 @@ _CLAIMS = {
             "Published whenever the four constraints could be intersected; "
             "which one binds is the finding's own `evidence`."),
         ()),
+    # `UX-680`: **no evidence path**, for `graph-width`'s reason - both
+    # halves live in `findings[].evidence.{unbounded_builders,
+    # compiler_offload}`, nested under the finding rather than at a
+    # document top level `resolve` can cite, and citing the sweep or the
+    # `binary_cost` block directly would name a population neither
+    # matches (`UX-479`/`UX-483`'s rule for `graph-width`, applied here).
+    "remote-execution-whatif": (
+        (),
+        _unconditional(
+            "Published whenever `bga sweep`'s own unbounded-capacity row "
+            "priced the builder cap; the compiler-offload half needs a "
+            "Plane 2 `binary_cost` too, and is absent without one - both "
+            "numbers are the finding's own `evidence`."),
+        ()),
     "execution-bound": (
         ("total_duration_us",),
         _rule("OPPORTUNITY_FLOOR_PCT", _findings.OPPORTUNITY_FLOOR_PCT / 100,

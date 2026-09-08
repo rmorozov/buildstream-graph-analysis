@@ -31,7 +31,7 @@ Tab completion — subcommands, flags, and `@last`/`@prev`/stamps wherever a run
 bga analyze tests/fixtures/golden/mixed_task_kinds --diagnostics   # or: make dev-run
 ```
 
-A three-element fixture that runs instantly. The report is **95 lines**;
+A three-element fixture that runs instantly. The report is **97 lines**;
 its two headline sections are below, verbatim, with every cut marked —
 `UX-192` is on file for a block that claimed to be full output and was
 not:
@@ -46,6 +46,9 @@ Key Findings:
 [... elided: the three ranked elements, the mesh note, the joint saving, the work order and the latent heavies ...]
 
   Confidence: 0.88 (high)
+
+[... elided: the remote-execution what-if ...]
+
   Efficiency Score: 1.00 (scheduling is near the certified floor for this graph - further gains need the graph or the work itself to change, not the scheduler (see Dispatch Occupancy and Critical Path))
 
 [... elided: Certified Floors, Attribution Breakdown ...]
@@ -321,7 +324,11 @@ rather than a reading dated to one afternoon.
      an editor had cut out of it without a marker. `UX-779` takes it to 334 lines: both bare
      wall-clock figures `UX-236` chose - `make test-small`'s and `make test`'s - become one link
      to the fixing guide's measured range, since `UX-551` retired the premise a single number
-     could serve for either. `UX-236`'s own reasoning is superseded by that link. The budget is a
+     could serve for either. `UX-236`'s own reasoning is superseded by that link. `UX-680`
+     takes it to 341 lines: the Quick start block's Confidence/Efficiency Score pair is no
+     longer adjacent in the report - `remote-execution-whatif` now fires between them - so an
+     elision marker sits where the two used to touch, three lines to declare the cut rather
+     than silently reordering the paste, plus this note. The budget is a
      measured target, not a law - but exceeding it silently is what turned 420 into "430" once
      before, so the number is here rather than in a commit message. -->
 

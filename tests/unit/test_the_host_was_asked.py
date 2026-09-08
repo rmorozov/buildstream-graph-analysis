@@ -194,6 +194,33 @@ class TestTheCoresAreSampledToo:
             ceiling = row["cores"] * (1.0 + 1.0 / (_TICKS_PER_S * gap))
             assert 0.0 <= row["cpu_busy_cores"] <= ceiling, (row, gap)
 
+    def test_a_descheduled_read_does_not_claim_more_cores_than_exist(self):
+        """`UX-796`: the process itself can be descheduled between the
+        `/proc/stat` read and the `time.monotonic()` stamp, so the wall
+        gap a sample reports can be shorter than the jiffy gap it
+        actually spans. Two synthetic reads reproduce exactly that -
+        3 of 4 cores busy over 2s of jiffies, stamped one tick apart -
+        and the window has to come from `cpu_total_jiffies`, the same
+        counter `cpu_busy_jiffies` is read from, not the wall clock
+        beside it, or busy/total exceeds one per core.
+        """
+        sampler = HostSampler.__new__(HostSampler)
+        sampler._cpu = None
+        cores = 4
+        total_delta = 2 * _TICKS_PER_S * cores  # a real 2s, all cores
+        busy_delta = int(0.75 * total_delta)    # 3 of 4 cores, that span
+        first = {"cpu_busy_jiffies": 10_000, "cpu_total_jiffies": 40_000,
+                 "cores": cores, "t": 0.0}
+        second = {"cpu_busy_jiffies": 10_000 + busy_delta,
+                  "cpu_total_jiffies": 40_000 + total_delta,
+                  "cores": cores,
+                  # a wall gap of exactly one tick - the descheduled read
+                  "t": 1.0 / _TICKS_PER_S}
+        sampler._to_cores(first)
+        sampler._to_cores(second)
+        assert "cpu_busy_cores" in second
+        assert 0.0 <= second["cpu_busy_cores"] <= cores, second
+
 
 class TestTheHostIsSampled:
     def test_a_sample_names_what_it_read(self):

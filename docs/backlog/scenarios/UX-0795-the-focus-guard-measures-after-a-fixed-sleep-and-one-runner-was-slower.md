@@ -43,4 +43,42 @@ waits and passes; with the fixed sleep restored, the same page reds.
 
 ## Outcome
 
-_Not started._
+**The gap measured.** `_TWO_PRESSES`'s final read fired 60ms after the
+second press, fixed, then read `window.scrollY` and `deep`'s top
+straight into `endY`/`endTop`. Replaced with `settleReading`: polls
+`(scrollY, top)` on `requestAnimationFrame`, resolves once two
+consecutive frames agree or 2000ms elapse, and reports `timedOut` for
+the assertion messages to name.
+
+**The close measured** (`_delayed_layout_script`, a page with a spacer
+armed on the second press's own click listener, landing and shrinking
+away over 500ms - built from `_TWO_PRESSES`'s own source, not a copy):
+
+```console
+$ python3 -m pytest tests/unit/test_focus_keeps_the_reading_position.py -k TestTheSettleWaitsOutADelayedReflow -v
+test_the_settled_read_passes PASSED
+test_the_fixed_sleep_reds PASSED
+$ # the raw numbers behind both:
+settled: moved=0px, viewport=900, -722 -> -722 -> PASS
+fixed sleep restored: moved=2716px, viewport=900, -722 -> 1994 -> RED
+$ # the file, three times:
+11 passed in 5.62s / 11 passed in 6.39s / 11 passed in 5.66s
+```
+
+**The mutation table.**
+
+| mutation | reddened | count |
+|---|---|---|
+| `agree = prev !== null && ... ` -> `agree = true` (settle resolves on the first frame, like the old fixed wait) | `test_the_settled_read_passes` | 1 failed, 10 passed |
+| `if (presses !== 2) return;` -> `return;` first (reflow never arms) | `test_the_fixed_sleep_reds` | 1 failed, 1 passed (class only) |
+
+Both reverted from the pre-mutation copy in the scratchpad, not
+`git checkout --`; the file returned to 11 passed after each.
+
+`make test-touching`: 32 files, 1259 passed, 3 skipped. `make lint`:
+clean against the baseline. One false positive found and fixed along
+the way: `document.createElement` inside the injected-reflow JS
+string tripped `test_the_dom_shim_is_one_instrument.py`'s textual
+census (it reads any file naming `createElement` as a second hand-built
+DOM shim); switched to `insertAdjacentHTML`, the pattern `tests/pages.py`
+already documents for this exact false positive.

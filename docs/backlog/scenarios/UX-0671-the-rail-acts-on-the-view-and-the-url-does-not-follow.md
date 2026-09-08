@@ -1,6 +1,6 @@
 # UX-671: the rail acts on the view, and the URL does not follow
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-647 (the view-state writer), UX-648 | **Serves:** anyone sharing "Copy link to this view" | **Topic:** viewer | **Shape:** judgement
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-647 (the view-state writer), UX-648 | **Serves:** anyone sharing "Copy link to this view" | **Topic:** viewer | **Shape:** judgement
 
 ## Motivation
 
@@ -84,3 +84,5 @@ review an implementer track runs. Committed with `BGA_SKIP_SELECTOR=1`.
 | M2 | drop `app.js`'s jump-box anchor write | 3/3 jump-box tests: `test_the_hit_writes_the_anchor`, `test_enter_writes_the_anchor_too`, `test_the_copied_link_reopens_where_the_jump_landed` |
 
 Reverted from copies (`falsify`), not `git checkout --`; both green after.
+
+**Deviation.** The rail preset needed no write of its own: the href's default navigation plus `UX-647`'s document-scoped click listener already carry the anchor, so the write the first commit added was dead and the second commit (1d06e87e) removed it, the guard's rail clauses holding the mechanism instead. The jump box's write is the fix. The golden export bound moved 453,000 → 456,000 B on a measured 453,497. The task's "§3b" cites nothing in the current spec. Two commits, one verifier (PASS with the finding above).

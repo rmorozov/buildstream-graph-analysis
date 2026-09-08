@@ -47,4 +47,38 @@ Mutation: one sleeper's recorded `cpu_us` raised past `IDLE_CPU_US`
 
 ## Outcome
 
-_Not started._
+**Route taken:** the wall-clock spread (`max(durations) -
+min(durations) < 0.1`) is dropped — no organic-load population was
+measured to derive a wall-clock tolerance from, so the default holds.
+The identical-work claim is held on the eight `cpu_us` readings
+instead (`max - min < IDLE_CPU_US`), naming the outlier element. The
+two per-element bounds UX-741 already wrote are unchanged.
+
+**Gap measured** (Motivation, round 110, old code, organic load 6-12,
+no hogs, this file, 20 bare runs): 19 × `2 passed`, 1 × `FAILED`
+(`assert max(durations) - min(durations) < 0.1`).
+
+**Close measured** (this 4-core box, new code, bare, organic load, no
+hogs — load ranged 4.05-23.38 across the run):
+
+```text
+20 runs: 20 × "2 passed", 0 failed
+```
+
+**Mutation table** (edited, run, restored from a scratch copy, never
+`git checkout --`):
+
+| mutation | expected | got |
+|---|---|---|
+| one sleeper's `cpu_us` set to `IDLE_CPU_US` exactly | red, naming the element | red: `work-a.bst: 30000us of CPU spreads 30000us from work-b.bst's 0us - not identical work` |
+
+**A mutation that did not discriminate.** Raising `cpu_us` *past*
+`IDLE_CPU_US` (`+1`) reds the pre-existing per-element bound at line
+110 first (`record.get("cpu_us", 0) <= IDLE_CPU_US`, which the loop
+asserts before the eight-identical clause ever runs) — that mutation
+never exercises the new clause. Setting the value to exactly
+`IDLE_CPU_US` isolates it: the per-element `<=` passes, the new
+clause's `<` reds — confirms the new clause discriminates on its own.
+
+**Acceptance Test, pasted:** 20 bare runs of the file, organic load
+(peaked 23.38, no hogs needed — box was not quiet): 20 × `2 passed`.

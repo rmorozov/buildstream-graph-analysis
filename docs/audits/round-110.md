@@ -6,7 +6,7 @@ Round 109 read the ten unread tracks and worked seven open tasks the
 same way. This round took the rest of the open list that fits a
 track — fifteen tasks — as one survey, three batches and two serial
 chains, every track an `implementer` on `sonnet` in a worktree and
-every merge behind a `verifier`. Seven filings came out of the
+every merge behind a `verifier`. Eight filings came out of the
 verifiers, the review and the drift gate; five open tasks are round-sized and stay.
 
 ## What closed
@@ -25,7 +25,8 @@ Filed: `UX-796` (the host sampler over-counts busy cores under load),
 `UX-797` (eight identical sleeps spread past a tenth), `UX-798` and
 `UX-799` (review 21), `UX-800` (the rail landing counts frames),
 `UX-801` (`bst show` writes the CAS under the ambient HOME),
-`UX-802` (the baseline guard files spawn pyright sixteen times).
+`UX-802` (the baseline guard files spawn pyright sixteen times),
+`UX-803` (a step change in a file's cost takes three main pushes to reach the reference).
 
 ## What the verifiers found
 
@@ -66,16 +67,16 @@ The suite's shape, derived by `dev_shape_budget.py` and printed by
 
 ```text
 shape         files   CI seconds    share
-unit            448       789.2s    49.3%
+unit            448       814.5s    48.5%
 sweep             1         2.1s     0.1%
 journey           2         0.1s     0.0%
-browser          53       770.0s    48.1%
-enormous         20        39.3s     2.5%
-total           524      1600.8s
+browser          53       821.7s    49.0%
+enormous         20        39.3s     2.3%
+total           524      1677.8s
 ```
 
-Browser holds a 48.1 % ratchet (50.5 % at `UX-690`'s merge, re-adopted
-after the reference refresh below) against the 40 % the row was filed
+Browser holds a 49.0% ratchet (50.5 % at `UX-690`'s merge, re-adopted
+after the reference refreshes below) against the 40 % the row was filed
 with; journey is 2 files against 25 published contracts, reported.
 
 ## Process, measured
@@ -86,7 +87,7 @@ with; journey is 2 files against 25 published contracts, reported.
 - The size ledger re-adopted once after the last merge, 19 cells (round 109's §7a note, done as the last step before the gate).
 - Two tracks committed with `BGA_SKIP_SELECTOR=1` on the review-cadence red, stated in the body.
 - The `derive` shape held: no track edited the spec.
-- PR #218's first CI run reddened the tier-drift gate on four files, confirmed on two runs: two guard files that spawn pyright per clause since `UX-697` (50.7 s and 13.2 s against 2.4 s and 0.9 s recorded — the reference was adopted at 06:18, round 109 merged at 13:54; `UX-802`), and two browser files at 1.6–1.8× that read the same on this box before and after the round (5.2 s → 5.0 s, 15.0 s → 15.1 s, two runs each). The four rows were refreshed from that run's own readings, the candidate artifact being unreachable through this container's proxy; the browser ratchet re-adopted after it.
+- PR #218's first CI run reddened the tier-drift gate on four files, confirmed on two runs: two guard files that spawn pyright per clause since `UX-697` (50.7 s and 13.2 s against 2.4 s and 0.9 s recorded — the reference was adopted at 06:18, round 109 merged at 13:54; `UX-802`), and two browser files at 1.6–1.8× that read the same on this box before and after the round (5.2 s → 5.0 s, 15.0 s → 15.1 s, two runs each). The four rows were refreshed from that run's own readings, the candidate artifact being unreachable through this container's proxy; the browser ratchet re-adopted after it. The second run and its re-run named four more, the same shape: `test_the_page_has_a_volume_budget.py` 93.4 s against 41.8 s, `test_the_order_the_page_has.py` 32.1 s against 18.7 s, `test_the_fast_check_holds_what_the_suite_holds.py` 8.8 s against 3.5 s, `test_a_run_is_priced.py` 6.7 s against 0.1 s — on this box 26.1–28.6 s, 14.2–14.6 s, 2.3 → 4.0 s and 4.3 → 4.5 s before and after the round. Eight rows refreshed from CI's readings in all; the lag itself is `UX-803`.
 
 ## Agents
 

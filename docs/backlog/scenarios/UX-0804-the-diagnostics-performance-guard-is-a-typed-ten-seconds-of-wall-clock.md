@@ -82,4 +82,6 @@ Applied to a scratch copy (`analyzer.pristine.py`), reverted by
 copying that pristine file back - not `git checkout --`; `__pycache__`
 cleared between runs.
 
-**Deviation.** The count is of `bga`'s own call events, not line events: a full line trace over this fixture costs 14 s through the O(N²) diagnostics pass `P1-21` holds, so the cheaper deterministic counter was chosen (`UX-731`'s instrument, one level up). One verifier hold: the count was cold-start (3,630,498) against a warm 3,627,224 — a 3-element warm-up now runs first and the count reads 3,627,224 three runs in a row; the tracer is restored, not cleared (8e1a0db6). Two commits, one verifier.
+**Deviation.** The count is of `bga`'s own call events, not line events: a full line trace over this fixture costs 14 s through the O(N²) diagnostics pass `P1-21` holds, so the cheaper deterministic counter was chosen (`UX-731`'s instrument, one level up). One verifier hold: the count was cold-start (3,630,498) against a warm 3,627,224 — a 3-element warm-up now runs first and the count reads 3,627,224 three runs in a row; the tracer is restored, not cleared (8e1a0db6). Two commits, one verifier. PR #219's CI read this file at 10.7 s against 4.1 s recorded (x2.46):
+the call-event trace over the 1,500-element run costs the wall the clock
+clause never paid; the `ci_reference.json` row refreshed from that reading.

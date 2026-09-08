@@ -79,7 +79,7 @@ against 25 published contracts.
 ## Process, measured
 
 - The full gate reddened three times on this box on findings nobody's diff touched: `test_diagnostics_performance.py` at load 18 (`UX-804`), the doctor's chain probe at 13.54 GB free (`UX-805`), and Direction 19's `partial` status once its last filing closed. All three fixed in the round.
-- PR #219's first CI run reddened the drift gate on `test_a_rail_click_lands_on_its_section.py`, 58.2 s against 34.6 s recorded: `UX-800`'s two tall fixtures walk every link twice more. The row refreshed from that reading (round 110's rule; `UX-803`'s lag).
+- PR #219's first CI run reddened the drift gate on `test_a_rail_click_lands_on_its_section.py`, 58.2 s against 34.6 s recorded: `UX-800`'s two tall fixtures walk every link twice more. The row refreshed from that reading (round 110's rule; `UX-803`'s lag). The second run did the same for `test_diagnostics_performance.py`, 10.7 s against 4.1 s: `UX-804`'s call-event trace costs wall the clock clause never paid; refreshed the same way.
 - The size ledger re-adopted after every merge batch; `UX-695`'s merges conflicted on the task file's Outcome blocks (union) and `UX-684`'s on the CLI guide's derived key count (261, re-derived).
 - The container restarted once, cutting four agents; all resumed from their transcripts on intact worktrees. One session-side `pkill` of a gate also caught the tracks' pytest runs; each was told, and re-ran.
 - Three tracks committed with `BGA_SKIP_SELECTOR=1` on the Direction 19 red, stated in the body; the red was the round's own.

@@ -143,7 +143,7 @@
     "tests/unit/test_dependency_type_gating.py": 0.01,
     "tests/unit/test_determinism.py": 4.81,
     "tests/unit/test_dev_run_script.py": 1.73,
-    "tests/unit/test_diagnostics_performance.py": 4.07,
+    "tests/unit/test_diagnostics_performance.py": 10.7,
     "tests/unit/test_docs_examples.py": 0.58,
     "tests/unit/test_docs_links_and_commands.py": 18.54,
     "tests/unit/test_doctor.py": 1.46,
@@ -1453,11 +1453,7 @@
       1.73
     ],
     "tests/unit/test_diagnostics_performance.py": [
-      4.07,
-      4.07,
-      4.07,
-      4.07,
-      4.07
+      10.7
     ],
     "tests/unit/test_docs_examples.py": [
       0.58,

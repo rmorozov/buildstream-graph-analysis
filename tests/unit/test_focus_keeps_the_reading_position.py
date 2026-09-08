@@ -60,14 +60,19 @@ _SETTLE_JS = """
   });
 """
 
-_TWO_PRESSES = """(async () => {
-  const settle = () => new Promise((go) => setTimeout(go, 60));""" + _SETTLE_JS + """
+_TWO_PRESSES = """(async () => {""" + _SETTLE_JS + """
   const height = () => document.documentElement.scrollHeight;
+  const deepGet = (deep) =>
+    () => [window.scrollY, Math.round(deep.getBoundingClientRect().top)];
   // The rail's own "Expand all". Every `data-expand` on a fresh load is
   // inside a shut chapter and has no box at all, so without this the
   // walk below has 13 buttons and nothing to choose from.
   document.querySelector('nav.toc [data-all="false"]').click();
-  await settle();
+  // UX-795: every mid-flow read settles the same way now, not just the
+  // one the CI flake was caught in - height and count, here, since
+  // there is no button yet to read a position off.
+  const expandSettle = await settleReading(
+    () => [height(), document.querySelectorAll("main [data-expand]").length]);
   const buttons = [...document.querySelectorAll("main [data-expand]")];
   const deep = buttons.find(
     (b) => b.getBoundingClientRect().top > window.innerHeight);
@@ -77,20 +82,22 @@ _TWO_PRESSES = """(async () => {
   // the way down, which is where it lands after reading to it.
   window.scrollTo(0, window.scrollY
     + deep.getBoundingClientRect().top - window.innerHeight / 3);
-  await settle();
-  const startY = window.scrollY;
-  const startTop = Math.round(deep.getBoundingClientRect().top);
+  const positionSettle = await settleReading(deepGet(deep));
+  const startY = positionSettle.y;
+  const startTop = positionSettle.top;
   const startHeight = height();
   const label = deep.textContent;
   const pressed = deep.getAttribute("aria-pressed");
 
   deep.click();
-  await settle();
-  const focused = document.querySelector("section[data-table-focus]");
-  const focusedY = window.scrollY;
+  const focusSettle = await settleReading(() => {
+    const el = document.querySelector("section[data-table-focus]");
+    return [window.scrollY,
+            el ? Math.round(el.getBoundingClientRect().top) : null];
+  });
+  const focusedY = focusSettle.y;
   const focusedHeight = height();
-  const focusedTop = focused
-    ? Math.round(focused.getBoundingClientRect().top) : null;
+  const focusedTop = focusSettle.top;
   const focusedLabel = deep.textContent;
   const focusedPressed = deep.getAttribute("aria-pressed");
 
@@ -102,17 +109,18 @@ _TWO_PRESSES = """(async () => {
   // 5,954 px against pristine `tablefocus.js`. One scroll inside focus
   // spends it - 5,954 -> 14,497 px, 9.5 screens.
   window.scrollTo(0, 400);
-  await settle();
-  const readAt = window.scrollY;
+  const readAtSettle = await settleReading(deepGet(deep));
+  const readAt = readAtSettle.y;
 
   deep.click();                       // the same button, a second time
   // UX-795: the read the CI flake was in - settled, not slept.
-  const settled = await settleReading(
-    () => [window.scrollY, Math.round(deep.getBoundingClientRect().top)]);
+  const settled = await settleReading(deepGet(deep));
   return {
     found: true, buttons: buttons.length, label, pressed,
     startY, startTop, startHeight,
     focusedY, focusedHeight, focusedTop, focusedLabel, focusedPressed, readAt,
+    expandSettleTimedOut: expandSettle.timedOut,
+    focusedSettleTimedOut: focusSettle.timedOut,
     stillFocused: Boolean(document.querySelector("section[data-table-focus]")),
     endY: settled.y, endHeight: height(),
     endTop: settled.top,
@@ -152,10 +160,10 @@ def two_presses(tmp_path_factory, can_drive_a_page):
         httpd.shutdown()
 
 
-def _settle_note(two_presses):
+def _settle_note(two_presses, key="endSettleTimedOut"):
     """UX-795: appended to a failing message, so a timed-out settle
     reads as one rather than as a fresh displacement."""
-    if two_presses.get("endSettleTimedOut"):
+    if two_presses.get(key):
         return " (the settle timed out)"
     return ""
 
@@ -211,7 +219,8 @@ class TestTheReaderComesBackToWhereTheyWere:
         assert two_presses["focusedTop"] is not None, two_presses
         assert two_presses["head"] > 0, two_presses["head"]
         assert 0 <= two_presses["focusedTop"] <= two_presses["head"] + 16, (
-            two_presses["focusedTop"], two_presses["head"])
+            f"{two_presses['focusedTop']}, {two_presses['head']}"
+            f"{_settle_note(two_presses, 'focusedSettleTimedOut')}")
 
 
 @pytest.mark.skipif(find_chrome() is None, reason=NO_BROWSER)
@@ -278,17 +287,18 @@ _FIXED_SLEEP_READ = """await new Promise((resolve) => setTimeout(() => resolve({
 
 def _delayed_layout_script(use_settle):
     """The fixture's own script, with the reflow above armed and the
-    final read either settled or the old fixed 60ms wait."""
+    final read either settled or the old fixed 60ms wait. The `const
+    settled = ` prefix keeps the swap to the one read the Acceptance
+    Test is about - `deepGet(deep)` is identical text at two earlier,
+    untouched settles too."""
     script = _TWO_PRESSES.replace(
         "if (!deep) return { found: false, buttons: buttons.length };",
         "if (!deep) return { found: false, buttons: buttons.length };"
         + _ARM_DELAYED_REFLOW)
     if not use_settle:
         script = script.replace(
-            "await settleReading(\n"
-            "    () => [window.scrollY, "
-            "Math.round(deep.getBoundingClientRect().top)])",
-            _FIXED_SLEEP_READ)
+            "const settled = await settleReading(deepGet(deep));",
+            "const settled = " + _FIXED_SLEEP_READ + ";")
     return script
 
 

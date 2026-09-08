@@ -50,7 +50,7 @@
     "bga/report/ci_comment.py": {"duplicate_blocks": 0, "file_lines": 416, "longest_function": 91},
     "bga/report/json.py": {"duplicate_blocks": 0, "file_lines": 551, "longest_function": 365},
     "bga/report/rate.py": {"duplicate_blocks": 0, "file_lines": 92, "longest_function": 21},
-    "bga/report/text.py": {"duplicate_blocks": 0, "file_lines": 1696, "longest_function": 570},
+    "bga/report/text.py": {"duplicate_blocks": 0, "file_lines": 1825, "longest_function": 254},
     "bga/run_store.py": {"duplicate_blocks": 0, "file_lines": 688, "longest_function": 77},
     "bga/schemas.py": {"duplicate_blocks": 0, "file_lines": 5831, "longest_function": 183},
     "bga/sources.py": {"duplicate_blocks": 0, "file_lines": 474, "longest_function": 78},

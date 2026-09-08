@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-791 scenarios: **23 open**, 768 closed.
+791 scenarios: **22 open**, 769 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -27,7 +27,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | cli | 0 | 22 |
 | store | 0 | 16 |
 | docs | 7 | 132 |
-| guards | 7 | 207 |
+| guards | 6 | 207 |
 
 ## Open scenarios
 
@@ -58,7 +58,6 @@ task file, which is the only place it ever lived twice.
 | UX-780 | [the map says a shelf shipped, and one linter did](UX-0780-the-map-says-a-shelf-shipped-and-one-linter-did.md) | docs | Medium | the round pricing whether the analysis shelf exists before deciding to build it | 🔴 |
 | UX-782 | [the register derives its rounds from `git log`, which is a property of the clone](UX-0782-the-register-derives-its-rounds-from-git-log.md) | guards | Medium | the round whose register disagrees with itself on a second machine | 🔴 |
 | UX-789 | [a baseline entry carries a key the tool never reads](UX-0789-a-baseline-entry-carries-a-key-the-tool-never-reads.md) | guards | Low | the `--check` output that promises to name every forced batch forever | 🔴 |
-| UX-790 | [the mutation run's classifier has no fast guard](UX-0790-the-mutation-runs-classifier-has-no-fast-guard.md) | guards | Medium | the weekly run whose survivor count is the only number anyone reads | 🔴 |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

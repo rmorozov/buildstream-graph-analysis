@@ -1,6 +1,6 @@
 # UX-790: the mutation run's classifier has no fast guard
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-703 | **Found by:** round 109, retro-verifying round 102 | **Serves:** the weekly run whose survivor count is the only number anyone reads | **Topic:** guards | **Area:** tools | **Shape:** mechanical
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-703 | **Found by:** round 109, retro-verifying round 102 | **Serves:** the weekly run whose survivor count is the only number anyone reads | **Topic:** guards | **Area:** tools | **Shape:** mechanical
 
 ## Motivation
 
@@ -81,3 +81,5 @@ crashing, and `"caught"`/`"survivors"` split 1/9.
 
 All three reverted from the pre-mutation copy; full file green after
 each (`6 passed` / `7 passed` post-`ALL_VERDICTS`).
+
+**Deviation.** An `implementer` on `sonnet` captured a real `mutmut` run as the fixture (4 killed / 46 survivors, `UX-703`'s numbers); its verifier found the capture carried three of the ten verdicts mutmut 3.7 prints, so a synthetic all-verdicts fixture and its clause landed before the merge. `render_row`'s output was byte-identical across the refactor, measured by the verifier.

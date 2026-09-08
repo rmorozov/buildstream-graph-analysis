@@ -126,6 +126,8 @@ pairing for every merged row from round 103 on.
 | 109 | implementer | sonnet | UX-697, the contract half (three surfaces to zero) | 265k | 130 | 24.5 m | merged after its verifier; 12 to 0 with true types, two runtime fields declared, strict measured at 1363 and reverted; stalled once waiting on a background run | the base moved twice under the worktree (a stash and pop), and background notifications never arrive - a foreground call with a timeout is the only run that returns |
 | 109 | verifier | sonnet | verify UX-697 baseline half (second run; the first was cut by a rate limit at 16/16) | 77k | 71 | 19.3 m | MERGE with a named fix: a pyright error with no rule code was dropped silently while ruff's parser accepted the file; every identity probe, --shrink and the fake-pyright exits clean; 294 = 293 + the producer's own S603 | the table's third mutation reproduces only under its stronger reading - the words alone give a weaker red |
 | 109 | verifier | sonnet | verify UX-697 contract half | 44k | 47 | 9.4 m | MERGE; 12 at base, 0 at close, strict 1363 digit for digit; no ignore, cast or Any in the diff; one overstated sentence (an unreachable 'real bug') corrected in the Outcome by the session | two commands over the 120 s default timeout had to be backgrounded and waited on |
+| 109 | implementer | sonnet | UX-790, the mutation run's classifier | 197k | 77 | 28.5 m | merged after its verifier; a real captured mutmut run as the fixture; the three-of-ten verdict gap closed with a synthetic all-verdicts clause on the verifier's finding | the brief's classify() return shape was ambiguous between per-mutant and aggregate; tracing render_row's needs decided it |
+| 109 | verifier | sonnet | verify UX-790 | 42k | 39 | 5.3 m | MERGE with a named fix: timeout, suspicious and skipped were unguarded because the captured run printed three verdict shapes; render_row byte-identical across the refactor; caught equals the sum over _CAUGHT | replaying the pre-refactor status dict from git show to get a byte-identical number rather than an eyeballed equivalence |
 
 Round 101's four tracks are **not** here: this session could not
 identify their transcripts with certainty after a context rebuild, and
@@ -138,7 +140,7 @@ committed cleanly once told to run in the foreground. Three of the five
 left a derived figure or a §6 context-map row behind - the same class
 the round itself was about, arriving in the tracks' own work.
 
-What the one hundred and nine rows already say: a researcher that reads a document
+What the one hundred and eleven rows already say: a researcher that reads a document
 whole costs 100-180k; a walker that drives every control costs 336k;
 the two cuts cost a re-run each. The `walk` and `design-review`
 skills fix the report shape so the next rows are smaller, and the

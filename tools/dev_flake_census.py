@@ -15,6 +15,7 @@ import argparse
 import collections
 import json
 import pathlib
+import re
 import sys
 
 REPO = pathlib.Path(__file__).resolve().parents[1]
@@ -45,13 +46,18 @@ HEADER_LINES = 8
 
 def filed(name, scenarios=SCENARIOS):
     """Whether some task file's header declares this file in a
-    `**Flake:**` field - a mention in prose does not count."""
+    `**Flake:**` field - a mention in prose, or of a longer path this
+    name is merely a substring of, does not count. A field may name
+    several files, whitespace- or comma-separated."""
     if not scenarios.is_dir():
         return False
     for task in scenarios.glob("*.md"):
         header = task.read_text(encoding="utf-8").splitlines()[:HEADER_LINES]
         for line in header:
-            if line.startswith("**Flake:**") and name in line:
+            if not line.startswith("**Flake:**"):
+                continue
+            value = line[len("**Flake:**"):]
+            if name in re.split(r"[\s,]+", value.strip()):
                 return True
     return False
 

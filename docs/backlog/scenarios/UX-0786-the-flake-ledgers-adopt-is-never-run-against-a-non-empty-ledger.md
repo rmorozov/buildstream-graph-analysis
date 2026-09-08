@@ -50,8 +50,9 @@ $ python3 -m pytest tests/unit/test_the_flake_ledger_grows_from_the_drift_gate.p
 ### The close, measured
 
 Both `TestAdoptFlakeAppends` clauses now seed `ledger.json` with
-`_EXISTING` (a third file, `run-0`) before calling `--adopt-flake`,
-and assert it is still present after:
+`_EXISTING` (`FLAKY`, the same file the run below adopts, at
+`run_id="run-0"`) before calling `--adopt-flake`, and assert it is
+still present after:
 
 ```console
 $ python3 -m pytest tests/unit/test_the_flake_ledger_grows_from_the_drift_gate.py -q

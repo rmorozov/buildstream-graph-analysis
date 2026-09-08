@@ -36,14 +36,29 @@ import pathlib
 import posixpath
 import re
 import subprocess
+import sys
 
 import pytest
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / "tools"))
+import dev_track_cost
+
 AUDITS = "docs/audits"
 DIRECTIONS = "docs/design/directions.md"
 README = "docs/README.md"
+SCENARIOS = "docs/backlog/scenarios"
+CLOSED = f"{SCENARIOS}/closed.md"
 HISTORY_HEADING = "## Round history"
+
+#: `UX-798`: rows from here on carry a derived "N closed, M filed";
+#: older rows are records, read by nobody but a person.
+COUNTED_FROM_ROUND = 109
+
+#: Spelled words, one to thirty, built from `count_word`'s own table so
+#: the two cannot drift (`UX-752`'s reasoning, `UX-798`'s guard).
+_WORD_FOR = {n: dev_track_cost.count_word(n) for n in range(1, 31)}
+NUMBER_FOR_WORD = {word: n for n, word in _WORD_FOR.items()}
 
 # `[text](target)` on one line; markdown tables are one row per line.
 LINK = re.compile(r"\[([^\]\n]*)\]\(([^)\s]+)\)")
@@ -199,3 +214,89 @@ def test_a_links_text_names_the_file_it_opens(doc):
         if named and named.group(0) != base:
             wrong.append(f"text names {named.group(0)}, target is {base}")
     assert not wrong, f"{doc}: " + "; ".join(wrong)
+
+
+def _closed_status():
+    """`UX-798`: id -> the marker on that id's own row in `closed.md`."""
+    status = {}
+    for line in (REPO / CLOSED).read_text(encoding="utf-8").splitlines():
+        head = re.match(r"^\| (UX-\d+) \|", line)
+        if not head:
+            continue
+        marker = re.search(r"\| ?(🟢|🔴|🟡|⚪|🟠)", line[len(head.group(0)):])
+        status[head.group(1)] = marker.group(1) if marker else None
+    return status
+
+
+def _round_history_rows():
+    """(round, closed_n, filed_n) parsed from each history row's tail,
+    word or digit — `NUMBER_FOR_WORD` is the inverse of `count_word`."""
+    text = (REPO / DIRECTIONS).read_text(encoding="utf-8")
+    trailer = re.compile(
+        r"^\| \[(\d+)\]\(\.\./audits/round-\d+\.md\).*"
+        r"\b([A-Za-z][A-Za-z-]*|\d+) closed, ([A-Za-z][A-Za-z-]*|\d+) filed \|$",
+        re.M)
+    rows = []
+    for round_, closed, filed in trailer.findall(text):
+        rows.append((int(round_),
+                      _as_number(closed), _as_number(filed)))
+    return rows
+
+
+def _as_number(word_or_digit):
+    if word_or_digit.isdigit():
+        return int(word_or_digit)
+    return NUMBER_FOR_WORD[word_or_digit.lower()]
+
+
+def _what_closed_ids(round_):
+    """The ids that head a `## What closed` bullet — never an id merely
+    named inside another bullet's prose (round 110's `UX-772`, `UX-607`)."""
+    doc = (REPO / AUDITS / f"round-{round_}.md").read_text(encoding="utf-8")
+    after = doc.split("\n## What closed\n", 1)
+    assert len(after) == 2, f"round-{round_}.md has no '## What closed' section"
+    section = after[1].split("\n## ", 1)[0]
+    ids = []
+    for line in section.splitlines():
+        if not line.startswith("- "):
+            continue
+        ids.extend(re.findall(r"UX-\d+", line.split(" — ", 1)[0]))
+    return ids
+
+
+def _found_by_round(round_):
+    """Task files whose header field, not any quoted prose, names `round_`."""
+    ids = []
+    for f in sorted((REPO / SCENARIOS).glob("UX-*.md")):
+        for line in f.read_text(encoding="utf-8").splitlines():
+            if not line.startswith("**Priority:**"):
+                continue
+            m = re.search(r"\*\*Found by:\*\* ([^|]*)\|", line)
+            if m and re.search(rf"\bround {round_}\b", m.group(1)):
+                ids.append("UX-" + f.stem.split("-")[1].lstrip("0"))
+            break
+    return ids
+
+
+def test_a_history_row_s_counts_are_derived():
+    """`UX-798`: the row's typed "N closed, M filed" against the round
+    document's own bulleted ids and the tasks that name the round."""
+    status = _closed_status()
+    checked = 0
+    for round_, said_closed, said_filed in _round_history_rows():
+        if round_ < COUNTED_FROM_ROUND:
+            continue
+        checked += 1
+        closed_ids = _what_closed_ids(round_)
+        not_green = [i for i in closed_ids if status.get(i) != "🟢"]
+        assert not not_green, (
+            f"round {round_}: What closed names {', '.join(not_green)}, "
+            f"not 🟢 in {CLOSED}")
+        derived_closed = len(closed_ids)
+        derived_filed = len(_found_by_round(round_))
+        assert (said_closed, said_filed) == (derived_closed, derived_filed), (
+            f"round {round_}: directions.md says "
+            f"{said_closed} closed, {said_filed} filed; derived "
+            f"{derived_closed} closed, {derived_filed} filed")
+    assert checked >= 2, "no history row at or after round " \
+        f"{COUNTED_FROM_ROUND} was checked — the scan is vacuous"

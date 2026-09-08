@@ -43,20 +43,20 @@ reddens.
 
 **2026-09-08, track 1 (`format_text`):** `format_text` (570 lines, `ruff`
 C901/PLR0912/PLR0915) split into one `_render_*_section` function per
-report section plus a `_TEXT_REPORT_SECTIONS` list `format_text` walks;
-`Structural Analysis` and `CPU Utilisation` further split by sub-block
-to clear 80 lines. Ledger (`tools/dev_sizes.py --check`/`--adopt
---force`, `bga/report/text.py`): `{"file_lines": 1696, "longest_function":
-570}` → `{"file_lines": 1825, "longest_function": 254}` — `file_lines`
-grew from the per-function `lines = []`/`return lines` boilerplate,
-so `--force` was needed; `longest_function` is `format_compare_text`
-now (pre-existing 254 lines, untouched — out of scope for this track,
-still over 80). `bga analyze --diagnostics` on
-`tests/fixtures/golden/mixed_task_kinds`: byte-identical before/after
-(diffed directly; no test asserts full-text order). `make
-test-touching`: 2287 passed, 4 skipped. Mutation: swapping
-`_render_floors_section`/`_render_attribution_section` in the list
-moved "Certified Floors:" after "Attribution Breakdown:" in the
-rendered text (diff below), reverted from a pre-mutation copy.
-`ruff` baseline shrunk 3 stale entries (`dev_baseline.py --shrink`)
-for `format_text`'s retired C901/PLR0912/PLR0915 findings.
+report section plus a `_TEXT_REPORT_SECTIONS` list `format_text` walks.
+Ledger (`bga/report/text.py`): `{"file_lines": 1696, "longest_function":
+570}` → `{"file_lines": 1825, "longest_function": 254}` (`--adopt
+--force`: `file_lines` grew from per-function boilerplate).
+`longest_function` is now `format_compare_text` (pre-existing 254
+lines, untouched) — the Acceptance Test's "under 80" needs a fourth
+track for it. Golden fixture text byte-identical before/after; `make
+test-touching`: 2287 passed. New guard
+`test_text_report_sections_render_in_the_declared_order`
+(`test_report_key_findings.py`) renders the golden fixture and checks
+each heading (read via `.heading`, never typed) appears in an
+independent expected order, not `_TEXT_REPORT_SECTIONS` itself, which a
+reorder would otherwise move in lockstep with. Mutation: floors/
+attribution swapped in the list -> `sections rendered out of the
+declared order: [..., (7451, '_render_floors_section'), (7051,
+'_render_attribution_section'), ...]`; reverted from a copy, 19 passed.
+`ruff` baseline shrunk 3 stale findings (`--shrink`).

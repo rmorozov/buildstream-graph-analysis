@@ -1234,9 +1234,26 @@ def _render_footer_section(result: AnalysisResult, section, by_kind, full_sectio
     return ["=" * 60]
 
 
-# The report's section order - what `format_text` walks. A refactor
-# (UX-695) split the previous 570-line body into one function per
-# section; reordering an entry here changes what a reader sees where.
+# UX-695: each renderer's own heading text, read by the order guard in
+# tests/unit/test_report_key_findings.py rather than typed there too.
+_render_header_section.heading = "Build Efficiency Report"
+_render_key_findings_section.heading = "Key Findings:"
+_render_resource_blast_section.heading = "Shared Sources (blast radius by resource):"
+_render_floors_section.heading = "Certified Floors:"
+_render_attribution_section.heading = "Attribution Breakdown:"
+_render_replay_section.heading = "Replay:"
+_render_critical_path_section.heading = "Critical Path Length:"
+_render_occupancy_stats_section.heading = "Occupancy Statistics:"
+_render_cpu_utilisation_section.heading = "CPU Utilisation:"
+_render_diagnostics_section.heading = "Advanced Diagnostics:"
+_render_structural_section.heading = "Structural Analysis:"
+_render_by_kind_section.heading = "By Element Kind:"
+_render_pipeline_overhead_section.heading = "Pipeline Overhead (not attributable to individual elements):"
+_render_plane2_absence_section.heading = "Plane 2:"
+_render_next_steps_section.heading = "Next:"
+_render_footer_section.heading = None
+
+# The report's section order - what `format_text` walks.
 _TEXT_REPORT_SECTIONS = [
     _render_header_section,
     _render_key_findings_section,

@@ -1,6 +1,6 @@
 # UX-684: the cached-build verdict — does the graph rebuild the cheapest subgraph?
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-682 (expected rebuild cost), UX-477 (the cold verdict's rule) | **Serves:** R3 showing evidence, R8 reading it | **Topic:** analysis | **Shape:** judgement
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-682 (expected rebuild cost), UX-477 (the cold verdict's rule) | **Serves:** R3 showing evidence, R8 reading it | **Topic:** analysis | **Shape:** judgement
 
 ## Motivation
 
@@ -88,15 +88,10 @@ weight agree for every element and every advice ties (`isolate`)
 here; the guard below adds a private synthetic chain to exercise
 `split`.
 
-`python3 -m pytest tests/unit/test_cached_shape_ranks_dominant_by_duration_not_count.py
-tests/unit/test_expected_rebuild_cost_ranks_frequency_times_blast.py
-tests/unit/test_correlate.py tests/unit/test_granularity.py -q` → `53
-passed`. `make test-touching` → `3379 passed, 41 skipped`, one
-pre-existing red unrelated to this diff, reproduced identically on the
-round's base commit (`test_a_partial_is_not_wholly_made_of_closed_filings`,
-Direction 19's review-cadence staleness). `make lint` (ruff +
-`dev_baseline.py --check` + `pymarkdown --config .pymarkdown.json`) →
-clean.
+The four test files naming this: `53 passed`. `make test-touching`:
+`3379 passed, 41 skipped`, one red pre-existing on the base (Direction
+19's cadence, fixed on the branch). ruff, `dev_baseline.py --check`,
+pymarkdown clean.
 
 **Mutation table** (each: copy saved, mutated, `pytest
 tests/unit/test_cached_shape_ranks_dominant_by_duration_not_count.py
@@ -109,3 +104,10 @@ tests/unit/test_cached_shape_ranks_dominant_by_duration_not_count.py
 | `_height_vs_weight_advice`'s two branches swapped | `test_the_advice_matches_an_independent_height_and_weight_rank_comparison` | 1 failed, 2 passed |
 
 All three restored to `3 passed`.
+
+**Deviation.** `cached_shape` is a top-level `correlate` key, not a
+`findings[]` id: it needs Plane 3, which `analyze` never reads. One
+verifier HOLD — the log tree had no command, the advice branch no guard
+(a swap left 52 green); fixed: the script pasted, a third guard on a
+synthetic chain, the tie ruled "isolate the heavy element, also the
+tallest". Two commits, one verifier (HOLD, then PASS).

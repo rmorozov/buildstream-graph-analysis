@@ -46,7 +46,8 @@ import { jsonToggles } from "./rawjson.js";
 // UX-334: `name` and `id` on every control the page builds - see the
 // measured counts in the module.
 import { contained } from "./controls.js";
-import { applyView, splitHash, viewLink, wireViewState } from "./viewstate.js";
+import { applyView, joinHash, splitHash, viewLink,
+         wireViewState } from "./viewstate.js";
 import { applyFocus, applyMarks, clearFocus, focusedElement, readMarks,
          renderFocusBar, renderMarkSummary } from "./focus.js";
 import { renderQuestions } from "./questions.js";
@@ -172,6 +173,20 @@ export function wireJumpBox(nav, root, payload, context = {}) {
     revealAndLand(node, "smooth");
     node.setAttribute("data-jumped", "true");
     setTimeout(() => node.removeAttribute("data-jumped"), 1600);
+    // UX-671: the jump box has no `<a href>`, so nothing writes the
+    // anchor the way a rail link's own navigation does - written here,
+    // and `wireViewState`'s delegated "change" recaptures the rest.
+    const key = target.kind === "section" ? target.key
+      : node.closest?.("[data-section]")?.getAttribute("data-section");
+    if (key) {
+      const next = joinHash(key, splitHash(location.hash).query);
+      if (window.history?.replaceState) {
+        window.history.replaceState(null, "", next || " ");
+      } else {
+        location.hash = next;
+      }
+      root.dispatchEvent?.(new Event("change", { bubbles: true }));
+    }
   };
 
   // UX-223: the same box, offering what the page can already do with

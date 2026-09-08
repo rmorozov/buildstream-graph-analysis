@@ -25,7 +25,12 @@ export const RAILS = ["decide", "act", "prove", "investigate", "raw"];
 // both paint from - one state, two views, never a second fold this
 // file invents.
 import { CHAPTERS, UNCHAPTERED, chapterFor, isOpen, setOpen, labelFold,
-         chapterBox } from "./chapters.js";
+         chapterBox, revealAndLand } from "./chapters.js";
+
+// UX-671: the anchor half of a rail entry's own write - `joinHash`
+// stays the one spelling of the separator, so this edge is the same
+// one `viewstate.js` already asks every control to hold to.
+import { joinHash, splitHash } from "./viewstate.js";
 
 /** The sections the page actually rendered, in document order. */
 export function sections(root) {
@@ -83,9 +88,22 @@ function viewEntries(section, doc) {
     // rail with one label on two hrefs cannot be navigated by reading.
     link.textContent = option.textContent ?? name;
     link.addEventListener?.("click", () => {
-      if (select.value === name) return;
-      select.value = name;
-      select.dispatchEvent?.(new Event("change", { bubbles: true }));
+      if (select.value !== name) {
+        select.value = name;
+        select.dispatchEvent?.(new Event("change", { bubbles: true }));
+      }
+      // UX-671: a rail entry is one interaction (§3b) - it both applies
+      // the view and lands on `key`'s section, written here rather
+      // than left solely to the browser's own anchor match, which the
+      // "~v…" suffix on `href` means nothing on the page's `id`
+      // carries.
+      revealAndLand(section, "smooth");
+      const next = joinHash(key, splitHash(location.hash).query);
+      if (window.history?.replaceState) {
+        window.history.replaceState(null, "", next || " ");
+      } else {
+        location.hash = next;
+      }
     });
     item.append(link);
     list.append(item);

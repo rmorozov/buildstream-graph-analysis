@@ -1,6 +1,6 @@
 # UX-815: the ingestion-path chapter moves into the tools area page
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-689 (the rule), UX-810 (the tools page it joins) | **Found by:** round 114, `UX-810`'s Out of Scope | **Serves:** the reader pricing a change to the capture path; the session finishing `UX-689` | **Topic:** docs | **Area:** tools | **Shape:** mechanical
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-689 (the rule), UX-810 (the tools page it joins) | **Found by:** round 114, `UX-810`'s Out of Scope | **Serves:** the reader pricing a change to the capture path; the session finishing `UX-689` | **Topic:** docs | **Area:** tools | **Shape:** mechanical
 
 ## Motivation
 

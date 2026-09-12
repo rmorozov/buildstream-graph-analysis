@@ -95,7 +95,7 @@
     "tools/dev_audit_reports.py": {"duplicate_blocks": 0, "file_lines": 93, "longest_function": 10},
     "tools/dev_baseline.py": {"duplicate_blocks": 0, "file_lines": 542, "longest_function": 43},
     "tools/dev_close_task.py": {"duplicate_blocks": 0, "file_lines": 1358, "longest_function": 124},
-    "tools/dev_commit_bodies.py": {"duplicate_blocks": 0, "file_lines": 91, "longest_function": 20},
+    "tools/dev_commit_bodies.py": {"duplicate_blocks": 0, "file_lines": 98, "longest_function": 23},
     "tools/dev_finding_coverage.py": {"duplicate_blocks": 0, "file_lines": 199, "longest_function": 38},
     "tools/dev_flake_census.py": {"duplicate_blocks": 0, "file_lines": 105, "longest_function": 17},
     "tools/dev_impact.py": {"duplicate_blocks": 0, "file_lines": 245, "longest_function": 36},

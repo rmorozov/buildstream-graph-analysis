@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-807 scenarios: **3 open**, 804 closed.
+808 scenarios: **4 open**, 804 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -28,6 +28,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | store | 0 | 16 |
 | docs | 2 | 137 |
 | guards | 0 | 214 |
+| process | 1 | 1 |
 
 ## Open scenarios
 
@@ -37,6 +38,7 @@ task file, which is the only place it ever lived twice.
 | ID | Scenario | Topic | Priority | Serves | Status |
 |---|---|---|---|---|---|
 | UX-689 | [the architecture document moves into the area pages, one track at a time](UX-0689-the-architecture-document-moves-into-the-area-pages-one-track-at-a-tim.md) | docs | Medium | the reader pricing a change; the session restructuring without losing a sentence | 🟡 |
+| UX-811 | [the commit-body gate reads Dependabot's generated bodies](UX-0811-the-commit-body-gate-reads-dependabot-s-generated-bodies.md) | process | Medium | the session merging the shelf's pull requests; CI reading only what the register governs | 🔴 |
 | UX-810 | [the Plane 3 chapter moves into the tools area page](UX-0810-the-plane-3-chapter-moves-into-the-tools-area-page.md) | docs | Medium | the reader pricing a change to the persisted-log reader; the session restructuring without losing a sentence | 🔴 |
 | UX-809 | [the price's two assumptions are on the payload, not in the text](UX-0809-the-price-s-two-assumptions-are-on-the-payload-not-in-the-text.md) | analysis | Medium | R4 and R5 reading the priced advice as text | 🔴 |
 

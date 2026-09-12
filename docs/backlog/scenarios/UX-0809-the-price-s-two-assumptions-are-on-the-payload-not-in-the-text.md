@@ -1,6 +1,6 @@
 # UX-809: the price's two assumptions are on the payload, not in the text
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-739 (the price) | **Found by:** round 112, `UX-739`'s verifier | **Serves:** R4 and R5 reading the priced advice as text | **Topic:** analysis | **Area:** bga | **Shape:** bounded
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-739 (the price) | **Found by:** round 112, `UX-739`'s verifier | **Serves:** R4 and R5 reading the priced advice as text | **Topic:** analysis | **Area:** bga | **Shape:** bounded
 
 ## Motivation
 
@@ -84,6 +84,11 @@ the committed fixtures carry Plane 2 priced advice).
 
 Reverted from a pristine copy of `bga/findings.py`; 11 of 11 in the
 file passed after the revert.
+
+**Verifier's finding (round 113).** The no-advice test is inert
+against this gate: `_max_jobs_advice_detail`'s own `if not advice`
+short-circuit absorbs it, so an unconditional render reds only the
+refusals-only test. Two classes discriminate; the third is the helper's.
 
 **Deviation.** None — the Required Fix named
 `_capacity_recommendation_finding`; the render sits in

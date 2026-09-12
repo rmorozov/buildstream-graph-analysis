@@ -24,7 +24,9 @@ import pytest
 # A subcommand's help is usage + a few lines of description + one line
 # per flag. 45 leaves room for the widest of those (`capture run`, 14
 # flags) without leaving room for a paragraph per flag.
-CAP = 45
+# Raised by 2 for a 15th flag on `capture run`: one option line, plus
+# the usage line's own wrap forced by `[--jobserver N]`'s width (`UX-679`).
+CAP = 47
 
 # The top level is a *list*: one line per command, and there are 23 of
 # them. Its length is the command count, not prose, so it gets its own

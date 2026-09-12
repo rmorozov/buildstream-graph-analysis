@@ -160,4 +160,4 @@ Mechanism: [docs/design/areas/tools.md](../../design/areas/tools.md)
 | [UX-805](../scenarios/UX-0805-the-doctor-s-chain-probe-drops-the-user-s-cache-config-with-its-home.md) | capture |
 | [UX-806](../scenarios/UX-0806-the-plane-2-chapter-moves-into-the-native-trace-area-page.md) | docs |
 | [UX-810](../scenarios/UX-0810-the-plane-3-chapter-moves-into-the-tools-area-page.md) | docs |
-| [UX-811](../scenarios/UX-0811-the-commit-body-gate-reads-dependabot-s-generated-bodies.md) | process |
+| [UX-811](../scenarios/UX-0811-the-commit-body-gate-reads-dependabot-s-generated-bodies.md) | guards |

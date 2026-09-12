@@ -27,8 +27,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | cli | 0 | 22 |
 | store | 0 | 16 |
 | docs | 1 | 137 |
-| guards | 0 | 214 |
-| process | 0 | 1 |
+| guards | 0 | 215 |
 
 ## Open scenarios
 

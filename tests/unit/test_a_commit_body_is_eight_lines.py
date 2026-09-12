@@ -78,6 +78,37 @@ class TestCIRunsIt:
         assert out.returncode == 1, out.stdout
         assert "over the" in out.stdout
 
+    @pytest.mark.parametrize("email, code, word", [
+        ("49699333+dependabot[bot]@users.noreply.github.com", 0, "1 by a GitHub App"),
+        ("dependabot@example.com", 1, "over the"),
+    ])
+    def test_an_app_s_generated_body_is_skipped_and_counted(
+            self, tmp_path, email, code, word):
+        """`UX-811`: Dependabot's 75-line release notes are the pull
+        request's record, not a body; a person with the same body is."""
+        repo = tmp_path / "r"
+        repo.mkdir()
+        env = {"GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@t",
+               "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t@t",
+               "PATH": "/usr/bin:/bin", "HOME": str(tmp_path)}
+        run = lambda *a, **kw: subprocess.run(
+            a, cwd=repo, env={**env, **kw}, check=True, capture_output=True)
+        run("git", "init", "-q", "-b", "main")
+        (repo / "a").write_text("1")
+        run("git", "add", "a")
+        run("git", "commit", "-qm", "base")
+        run("git", "branch", "-f", "base-ref")
+        (repo / "a").write_text("2")
+        run("git", "add", "a")
+        body = "\n".join(f"line {i}" for i in range(tool.CAP + 1))
+        run("git", "commit", "-qm", f"Bump the group\n\n{body}",
+            GIT_AUTHOR_EMAIL=email)
+        out = subprocess.run(
+            [sys.executable, str(REPO / "tools/dev_commit_bodies.py"),
+             "base-ref"], cwd=repo, env=env, capture_output=True, text=True)
+        assert out.returncode == code, out.stdout
+        assert word in out.stdout
+
     def test_it_says_how_many_commits_it_read(self, tmp_path):
         """`UX-696`: "every commit is within the cap" reads the same
         whether it checked eleven or none. The step's log line has to

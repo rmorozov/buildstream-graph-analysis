@@ -514,6 +514,8 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: "3.11"
+      - name: Install what the tool imports (UX-821)
+        run: pip install -e ".[dev]"
       - name: Fetch what test (3.11) recorded
         continue-on-error: true
         uses: actions/download-artifact@v8
@@ -562,6 +564,8 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: "3.11"
+      - name: Install what the tool imports (UX-821)
+        run: pip install -e ".[dev]"
       - name: Fetch what test (3.12) measured
         continue-on-error: true
         uses: actions/download-artifact@v8
@@ -612,6 +616,8 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: "3.11"
+      - name: Install what the tool imports (UX-821)
+        run: pip install -e ".[dev]"
       - name: Fetch what test (3.11) recorded
         continue-on-error: true
         uses: actions/download-artifact@v8

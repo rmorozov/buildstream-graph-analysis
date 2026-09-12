@@ -1,6 +1,6 @@
 # UX-679: a jobserver every sandbox joins — the prototype bga can run
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-105 (the bwrap shim), UX-675 and UX-676 (the instruments that judge it) | **Serves:** R4 and R5 — dynamic sharing instead of static tuning | **Topic:** capture | **Shape:** judgement
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-105 (the bwrap shim), UX-675 and UX-676 (the instruments that judge it) | **Serves:** R4 and R5 — dynamic sharing instead of static tuning | **Topic:** capture | **Shape:** judgement
 
 ## Motivation
 
@@ -110,3 +110,11 @@ gained the `BST_TRACE_JOBSERVER` inventory row and a capture-flags
 bullet, both required by existing guards. This is a spike: the decision
 of whether it becomes a supported mode is the orchestrator's, on the
 numbers above.
+
+**Decision (round 112).** Not a supported mode yet. R4 and R5 buy on
+the wall, and on examples/06 it did not move (30.25 s → 30.46 s) while
+the under-utilised share fell fourfold (0.857 → 0.214): this project's
+critical path is its declared chain, not its cores. The flag stays a
+capture option, off by default; it becomes a mode when a compile-bound
+capture moves its wall — and the tracer's FIFO lifecycle, unguarded
+today (the verifier's mutation passed its suite), gets its guard then.

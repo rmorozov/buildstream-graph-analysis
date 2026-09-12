@@ -93,6 +93,7 @@ would have caught it; a bound at it would only just have.
 | 19 | 2026-09-07 | 724 | four filings, and the shape moved one step on: not a sentence no guard reads but a sentence **inside** a guarded document and **outside** its guard's population — a range checked at its endpoints, a verification log that credits a commit and never re-derives a figure, a freshness guard that only reads a fence starting `$ bga ` (`UX-748`). Plus a documented example that crashes the tool (`UX-747`), four workflows on no map with the map's own guard unable to see them (`UX-746`), and nine citations formatted as paths that do not resolve (`UX-749`) |
 | 20 | 2026-09-07 | 750 | five filings, and the shape is one the log has not carried before: **a record that says a thing happened, checked against the tree that would show it.** `UX-777` — `UX-650` found the page-built sections were thirteen, fixed the code, and left both sentences saying nine. `UX-778` — `UX-584` derived the enforced-rule count and the derivation reads one of the two documents that state it. `UX-780` — the §6 map cites `UX-698/UX-699` for a workflow that runs `UX-699` alone, `UX-698` being 🔴. `UX-779` — the README's `21s`/`5m11s` predate `UX-551`, which established that a wall clock is a property of the machine. And the review caught the session that commissioned it: **round 107's document listed `UX-764` under *What closed* while both its markers correctly read 🔴** — the two-marker guard was green because the markers agree with each other, and nothing reads the round document against them |
 | 21 | 2026-09-08 | 780 | two filings, both the shape review 20 named — a record no guard reads, beside the tree that shows it. `UX-798` — `directions.md`'s round-109 row says *fourteen closed, ten filed*; the round document's own list closes 13 (`UX-789` is filed and open in that same section) and `Found by: round 109` finds 11. `UX-799` — the §6 map's `dev_baseline.py` row names the finding baseline and not the pyright mode `UX-697` gave it. Sound: `CLAUDE.md`'s advisory reproduces from `dev_process_bands.py --runs 58`; round 109's *What closed* list is 🟢 in both markers for all 13; `dev_touching.py --size` prints the figure both guides carry |
+| 22 | 2026-09-12 | 808 | two filings, both review 20's shape one turn further: a record a guard *does* read, with the guard's population narrower or self-cancelling. `UX-813` — round 111's history row derives *sixteen closed* from a bullet walk that counts `UX-695` twice (a trailing bullet with no em dash) and never sees `UX-806` (closed, listed under *In progress*); an over-count and an omission cancel to the row's number. `UX-814` — §6's `dev_commit_bodies.py` row names `UX-696` and not the App-author skip `UX-811` shipped. The area pages, the contract counts, the advisory, the capture flags and every round's closed ids reproduce |
 
 ### Review 11 — 2026-09-02
 
@@ -1551,6 +1552,45 @@ six named plus §1a were checked. The §6 module map's ~103 per-row
 descriptions were checked for the CI-workflow block only — `UX-780`
 came out of that block, which is a reason to think the rest is worth a
 pass. `UX-689` owns the map's structural half.
+
+## Review 22 — 2026-09-12, at 808 closed rows
+
+Run by one reader over the five groups rounds 111 to 113 touched: the
+four area pages and `architecture.md`'s pointers and newest log entry,
+the three round records and their directions rows, `CLAUDE.md` and the
+READMEs, `cli.md`'s guarded surfaces, and §6 and §7a of the fixing
+guide. Two filings.
+
+**The shape** is review 20's, one turn further: a record a guard *does*
+read, with the guard's population narrower or self-cancelling than the
+sentence it holds. `round-111.md`'s *What closed* derives sixteen by a
+bullet walk that counts `UX-695` twice — the trailing "Direction 19
+marked landed once `UX-695` closed" bullet has no em dash, so the whole
+line is read — and never sees `UX-806`, closed in that round but listed
+under *In progress*; `test_the_round_history_names_every_audit.py`
+reads `16 == 16` because the over-count and the omission cancel
+(`UX-813`). The §6 map's `dev_commit_bodies.py` row names `UX-696` and
+not the App-author skip `UX-811` shipped this round (`UX-814`) — the
+older shape, a mechanism the map did not follow.
+
+### The five checks
+
+| check | result |
+|---|---|
+| counts | `bga.contracts.ids()` 25, `superseded()` 10, `reads()` 3, `printable()` 9, `unprintable()` 16, `analyze/v6` 61 properties, `ls bga/viewer/*.js` 22 — every figure the newest log entry and the area pages carry; `cli.md`'s **263 keys** from `_consumer_surface()`; README's twelve capture branches from `git ls-remote`; `closed.md` 780 → 808 |
+| versions | not re-walked — no version-bearing sentence in the five groups changed |
+| paths exist | the four area pages; §7a's flags against `dev_close_task.py --help`; `docs/README.md`'s design index against `ls docs/design/areas` |
+| pasted output current | `CLAUDE.md`'s `284k … 252k (54 of 86 runs, two …)` from `dev_process_bands.py --runs`; `--jobserver N` in `run --help` and in `cli.md` with `BST_TRACE_JOBSERVER`; the newest log entry's `437 passed` reads **436** at HEAD — dated at its own commit, and the staleness clause excuses the count-only edits that followed; recorded, not filed |
+| a Part / invariant held | all 23 ids in rounds 111-113's *What closed* are 🟢 in `closed.md` |
+| a document describes a workflow | `Makefile`'s `lock` target carries `--upgrade` (round 112) and no guide describes `make lock`; **§6's `dev_commit_bodies.py` row is behind `UX-811` (`UX-814`)** |
+
+### One gap in this sweep
+
+`cli.md` was read at its guarded surfaces only; the directions rows for
+their counts only; the README's `50 MiB against 5.3 MiB` figure, flagged
+by review 21, is still undated. The main checkout changed branches under
+the reader twice (the shelf's pushes), and two transient readings were
+re-taken before they were trusted.
 
 ## Review 21 — 2026-09-08, at 780 closed rows
 

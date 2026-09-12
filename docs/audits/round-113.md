@@ -14,7 +14,20 @@ never governed.
 - `UX-809` — the price's two assumption sentences, rendered under the joint line byte-for-byte from the payload, only when a row is priced. The verifier's own mutation found one of the three guard classes inert: the no-advice case is absorbed by the helper's older short-circuit; the refusals-only test is the one that discriminates. Recorded in the Outcome.
 - `UX-811` — filed and closed on PR #217's red: Dependabot's 75-line generated body reddened `UX-696`'s commit-body gate on every shelf pull request, so the shelf could never merge. The tool skips a GitHub App's commit (`[bot]@users.noreply.github.com`) and counts it in its sentence; a person with the same body still reds. Session-side.
 
-Filed: `UX-810`, `UX-811`.
+- `UX-812` — filed and closed after the gate reddened on it a second time: the impact guard asked the backlog for an open analysis row; it now reads the tool on a synthetic index and agrees with an independent parse of the real one, empty included.
+- `UX-813` and `UX-814` — review 22's two filings, closed in-round: the history guard's bullet walk counted `UX-695` twice and never saw `UX-806`, an over-count and an omission cancelling to round 111's sixteen; §6's `dev_commit_bodies.py` row was behind `UX-811`.
+
+Filed: `UX-810`, `UX-811`, `UX-812`, `UX-813`, `UX-814`.
+
+## Review 22
+
+The cadence guard came due at 27 closes since review 21. One reader
+over the five groups rounds 111 to 113 touched: every guarded count
+reproduces (the contract inventory, 22 modules, 263 keys, the advisory,
+the capture flags); the two findings are the same shape review 20
+named, one turn further — a record a guard *does* read, with the
+guard's population narrower or self-cancelling than the sentence. The
+entry is in `docs/audits/architecture-review.md`.
 
 ## The shelf's pull requests
 
@@ -43,7 +56,8 @@ area, its own item when filed.
 
 Two verifier runs, two PASS, one with a finding the track's table could
 not see (`UX-809`'s inert class). `UX-811` had no verifier: PR #217's
-own `test (3.x)` is the check that names it.
+own `test (3.x)` is the check that names it; `UX-812` to `UX-814` were
+session-side, each a guard mutated red before the close.
 
 ## Standing
 
@@ -67,13 +81,16 @@ total           528      1708.0s
 - Gates ran 13 minutes with two of them and two tracks on four cores, against 6 quiet.
 - The `sizes` job is CI-only: a gate can be green on a commit the job reds. Adopt before the push, not after the red.
 - A verifier's second mutation (render unconditionally) is what found the inert class; the track's own table stopped at the mutation the task named.
+- The round's gate reddened twice on the same guard as round 112's (an emptied topic) and once on the review cadence; the first is fixed at the guard (`UX-812`), the second ran review 22.
 
 ## Agents
 
-Four runs — 2 `implementer`, 2 `verifier`, all on `sonnet`. Both
-tracks were mechanical or bounded; `UX-811` was the session's.
+Five runs — 2 `implementer`, 2 `verifier`, 1 `researcher` (review 22),
+all on `sonnet`. Both tracks were mechanical or bounded; `UX-811` to
+`UX-814` were the session's.
 
 | | |
 |---|---|
 | implementer | 2 tracks, both merged behind a verifier; 85k and 111k tokens; 14 and 21 m |
 | verifier | 2 runs, two PASS; 59k and 59k tokens; 10 and 12 m |
+| researcher | review 22; 175k tokens, 13 m; two filings |

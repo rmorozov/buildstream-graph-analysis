@@ -273,10 +273,26 @@ def _what_closed_ids(round_):
     section = after[1].split("\n## ", 1)[0]
     ids = []
     for line in section.splitlines():
-        if not line.startswith("- "):
+        # UX-813: a bullet with no em dash is prose, not a closed row.
+        if not line.startswith("- ") or " — " not in line:
             continue
-        ids.extend(re.findall(r"UX-\d+", line.split(" — ", 1)[0]))
+        for uid in re.findall(r"UX-\d+", line.split(" — ", 1)[0]):
+            if uid not in ids:
+                ids.append(uid)
     return ids
+
+
+def test_what_closed_ids_reads_each_bullet_s_head_once(tmp_path, monkeypatch):
+    """`UX-813`: round 111 derived sixteen from fifteen ids, one twice."""
+    (tmp_path / AUDITS).mkdir(parents=True)
+    (tmp_path / AUDITS / "round-999.md").write_text(
+        "# Round 999\n\n## What closed\n\n"
+        "- `UX-1` — a row.\n"
+        "- `UX-1`, `UX-2` — the same row named again, and another.\n"
+        "- Direction 9 marked landed once `UX-3` closed.\n\n"
+        "## In progress\n\n- `UX-4` — not closed.\n", encoding="utf-8")
+    monkeypatch.setattr(sys.modules[__name__], "REPO", tmp_path)
+    assert _what_closed_ids(999) == ["UX-1", "UX-2"]
 
 
 def _found_by_round(round_):

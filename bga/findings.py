@@ -977,6 +977,12 @@ def _max_jobs_advice_detail(advice: Optional[dict]) -> list[str]:
             f"{joint['replayed_baseline_us'] / US_PER_S:.1f} s -> at least "
             f"{joint['projected_us'] / US_PER_S:.1f} s (floor, +"
             f"{joint['cost_us'] / US_PER_S:.1f} s)")
+    # UX-809: at least one priced row is what "the price" means here -
+    # refusals alone (or none) carry no figure for these sentences to
+    # qualify, so nothing new renders.
+    if any(row.get('priced') for row in advice.get('elements') or []):
+        for sentence in advice.get('pricing_assumptions') or []:
+            lines.append(f"    {sentence}")
     return lines
 
 

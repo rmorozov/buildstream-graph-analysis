@@ -5,7 +5,13 @@ Synthetic tasks, built with the same `NormalizedTask`/`TaskKey` helpers
 because the claim is about the pricing arithmetic, not a real capture
 (the real capture is `UX-739`'s own Outcome).
 """
-from bga.correlate import price_max_jobs_advice
+from bga.correlate import (
+    _PRICE_DISPATCH_ASSUMPTION,
+    _PRICE_FLOOR_ASSUMPTION,
+    compute_capacity_recommendation,
+    price_max_jobs_advice,
+)
+from bga.findings import _capacity_recommendation_finding
 from bga.ingest.models import NormalizedTask, RunContext, TaskKey, TaskKind
 
 US = 1_000_000
@@ -166,3 +172,64 @@ class TestJointIsARecomputeNotASum:
             f"{cost_b_alone} - on this shape (a third element only "
             f"delayed once both chains stretch) it cannot, so this "
             f"guard read a sum instead of the recompute")
+
+
+def _recommendation(max_jobs_advice):
+    """A minimal `compute_capacity_recommendation` result, carrying
+    whatever `max_jobs_advice` shape a test wants to render."""
+    envelope = {
+        'host_memory_bytes': 16000, 'elements_measured': 11,
+        'largest_element_peak_bytes': 1000,
+        'projections': [
+            {'builders': n, 'envelope_bytes': 1000 * n,
+             'share_of_host': 1000 * n / 16000, 'fits': n <= 11}
+            for n in range(1, 12)],
+    }
+    recommendation = compute_capacity_recommendation(
+        {'cores_busy': 2.0, 'host_cpu_count': 4, 'saturated': False,
+         'pinned_elements': []},
+        envelope, knee=5, builders=4, native_max_jobs=4)
+    recommendation['max_jobs_advice'] = max_jobs_advice
+    return recommendation
+
+
+def _detail(max_jobs_advice):
+    result = type('_R', (), {
+        'capacity_recommendation': _recommendation(max_jobs_advice)})()
+    return "\n".join(_capacity_recommendation_finding(result)[0]['detail'])
+
+
+class TestThePriceSTwoAssumptionsRenderWithAPricedRow:
+    """UX-809: `pricing_assumptions` is on the payload and in the guide
+    already - these cover whether it also reaches the text a reader
+    sees, and only when there is a figure for it to qualify."""
+
+    def test_a_priced_row_carries_both_sentences_verbatim(self):
+        tasks = [_task("a.bst", 0, 2)]
+        run_context = RunContext(resource_capacities={"PROCESS": 4})
+        binary_cost = {"a.bst": {"available": True, "measured_cpu_us": 12 * US}}
+        advice = price_max_jobs_advice(
+            _advice(_row("a.bst", 4, 2)), tasks, run_context, binary_cost)
+
+        detail = _detail(advice)
+
+        assert _PRICE_DISPATCH_ASSUMPTION in detail
+        assert _PRICE_FLOOR_ASSUMPTION in detail
+
+    def test_refusals_only_carry_neither_sentence(self):
+        tasks = [_task("a.bst", 0, 2)]
+        run_context = RunContext(resource_capacities={"PROCESS": 4})
+        advice = price_max_jobs_advice(
+            _advice(_row("a.bst", 1, 4)), tasks, run_context, {})
+        assert "priced" not in advice["elements"][0]  # a raise, refused
+
+        detail = _detail(advice)
+
+        assert _PRICE_DISPATCH_ASSUMPTION not in detail
+        assert _PRICE_FLOOR_ASSUMPTION not in detail
+
+    def test_no_advice_carries_neither_sentence(self):
+        detail = _detail(None)
+
+        assert _PRICE_DISPATCH_ASSUMPTION not in detail
+        assert _PRICE_FLOOR_ASSUMPTION not in detail

@@ -258,8 +258,10 @@ body[data-has-toc] > header {
    1440x900 and 134px at 390x844, so 6rem and 8.5rem cover them. It had
    been 5.5rem against a **172px** header - anchors landed 84px under
    the heading, which is the "information overlaps" report in the one
-   place a reader most often looks. */
-body[data-has-toc] { --head: 6rem; }
+   place a reader most often looks.
+   `UX-668`: the reader control's identity line wraps to a second row on
+   a run with readers to offer, re-measured at 108px. */
+body[data-has-toc] { --head: 7rem; }
 body[data-has-toc] > nav.toc { top: var(--head); max-height: calc(100vh - var(--head)); }
 body[data-has-toc] main > section, body[data-has-toc] [id] { scroll-margin-top: calc(var(--head) + .5rem); }
 h2 { font-size: var(--font-h2); margin: 2rem 0 .5rem; }
@@ -679,8 +681,10 @@ th .th-filter.unparsed { border-color: var(--bad); border-style: dashed; }
 .next-step { margin: .35rem 0; }
 .next-step .why { margin: 0 0 .15rem; font-size: var(--font-small); }
 .next-step .from { display: block; font-size: var(--font-small); margin-top: .1rem; }
-/* UX-372: the reader says who they are, and gets their own lever. */
-.reader-picker { font-size: var(--font-small); margin: .1rem 0 .5rem; }
+/* UX-372: the reader says who they are, and gets their own lever.
+   UX-668: the control moved into the header's identity line, so this
+   is inline now rather than a block above the panel. */
+.reader-picker { font-size: var(--font-small); margin-left: .4rem; }
 .reader-lead { border-left: 2px solid var(--accent); padding-left: .6rem;
                margin: 0 0 .6rem; }
 .reader-lead p { margin: .15rem 0; }
@@ -695,6 +699,10 @@ th .th-filter.unparsed { border-color: var(--bad); border-style: dashed; }
   border: 1px solid var(--line); border-radius: .2rem; padding: 0 .25rem;
   vertical-align: middle;
 }
+/* UX-668 (styleguide §4 rule 7): a reader is a shape, not a hue - the
+   accent already spent on interaction and the band marks promotion
+   too, on the one non-colour channel §4.3 reserves for it. */
+section[data-promoted] { border-left: 3px solid var(--accent); }
 .status-line { margin: .2rem 0 .4rem; font-size: var(--font-small); }
 .evidence-detail > summary { cursor: pointer; font-size: var(--font-small);
                              color: var(--muted); }
@@ -999,9 +1007,10 @@ body[data-has-toc] > header { display: block; }
 /* Below `UX-254`'s breakpoint the sticky heading is taller, and
    `--head` is what every anchor's `scroll-margin-top` reads. Leaving it
    at the wide value would land a jump under the heading at exactly the
-   width where there is least room to recover. */
+   width where there is least room to recover.
+   `UX-668`: re-measured at 149px with the reader control's line. */
 @media (max-width: 60rem) {
-  body[data-has-toc] { --head: 8.5rem; }
+  body[data-has-toc] { --head: 9.5rem; }
 }
 
 /* UX-281: the way home, on every satellite page. Small and quiet - it

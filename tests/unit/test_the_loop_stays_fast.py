@@ -113,7 +113,17 @@ class TestTheSelectorStillSelects:
     # module and its selection grew by two. Measured either side:
     # median 37 at `0c334ed`, 38 with the imports, p90 and max
     # unmoved. Median at the measurement, as above.
-    CEILING = {"median": 38, "p90": 60, "max": 145}
+    #
+    # `UX-683` added one test file naming `bga.findings`,
+    # `bga.correlate`, `bga.graph.fan_in`, `bga.ingest.loader` and
+    # `bga.ingest.models` - a module already at the widest selection
+    # gained one more file. Measured: median 37, p90 59, max 145 -> 146.
+    # Only max moves, +2 headroom kept on it as above; median and p90
+    # are still under their ceiling.
+    #
+    # Round 111 added four test files (`UX-680`, `UX-684`, `UX-805`,
+    # `UX-678`'s CLI guards); max 148 -> 149, +2 headroom as above.
+    CEILING = {"median": 38, "p90": 60, "max": 151}
     POPULATION_FLOOR = 60
     #: `UX-645`: **13 census + 14 of your own**. The census floor is
     #: inside this bound because those files run - the figure is what

@@ -17,6 +17,7 @@ this writes. It skips where `bst` and `bwrap` are absent, which is CI's
 """
 import json
 import pathlib
+import re
 import shutil
 import subprocess
 
@@ -204,3 +205,97 @@ def _isolated(tmp_path):
     return dict(os.environ, XDG_CACHE_HOME=str(home / "cache"),
                 XDG_CONFIG_HOME=str(BST_XDG_CONFIG_HOME),
                 XDG_DATA_HOME=str(home / "data"))
+
+
+# --- UX-775/UX-801: a third un-isolated CAS-writing file can't land silently
+
+#: gate on `bst` but never write to CAS. `UX-801`'s verifier could not tell
+#: from a bare filename whether that was still true, so each entry carries
+#: the command the file actually runs - checked against below.
+_NOT_CAS_WRITING = {
+    "test_the_printed_sentences_are_contracts.py": "bga blast/correlate "
+                                                     "argv only, no bst call",
+}
+
+#: writes to CAS and isolates, but predates `_bst_env.py` - its own
+#: `BST_XDG_CONFIG_HOME` reads the same fixture `_bst_env.py` does.
+_ISOLATES_ITS_OWN_WAY = {"test_the_journey_has_an_answer_key.py"}
+
+_GATE = 'shutil.which(' + '"bst"' + ')'  # split so this clause doesn't self-match
+
+#: a name this file bound from `shutil.which("bst")`/`which("bst")` - the
+#: shape `tools/bga_doctor.py`'s own `bst = shutil.which("bst")` uses, so
+#: `[bst, "show", ...]` names `bst` as a bare identifier, not a literal.
+_BST_BINDING_RE = re.compile(r'''\b(\w+)\s*=\s*(?:shutil\.)?which\(\s*["']bst["']\s*\)''')
+
+#: call sites that always shell to a CAS-writing subcommand without ever
+#: spelling it as a literal argv token in the caller - `extract_graph`
+#: (tools/bst_show_to_graph.py) hardcodes `bst show`, `check_project_loads`
+#: (tools/bga_doctor.py) hardcodes `bst show --deps none`.
+_KNOWN_CAS_WRITING_CALLS = {"extract_graph(": "show", "check_project_loads(": "show"}
+
+
+def _cas_writing_subcommand(text):
+    """The `bst` subcommand `text` calls that writes the CAS, or None.
+
+    An argv list naming `bst` and, within a handful of tokens, one of the
+    CAS-writing subcommands - the shape `subprocess.run(["bst", ...])` and
+    `run_traced_build(..., ["bst", "--no-colors", "build", ...], ...)` use,
+    where `bst` is either the literal string or a name this same file bound
+    from `which("bst")`."""
+    names = ['["\']bst["\']'] + [r'\b' + re.escape(n) + r'\b'
+                                  for n in _BST_BINDING_RE.findall(text)]
+    argv_re = re.compile(
+        r'(?:' + '|'.join(names) + r')'
+        r'''(?:\s*,\s*["'][^"']*["']){0,4}\s*,\s*["'](show|build|artifact)["']'''
+    )
+    match = argv_re.search(text)
+    if match:
+        return match.group(1)
+    for call, subcommand in _KNOWN_CAS_WRITING_CALLS.items():
+        if call in text:
+            return subcommand
+    return None
+
+
+def _bst_gated_files():
+    return [p for p in sorted((REPO / "tests").rglob("test_*.py"))
+            if _GATE in p.read_text(encoding="utf-8")]
+
+
+def test_every_cas_writing_bst_gated_file_reaches_the_isolation():
+    """`UX-760` moved twelve bst-gated, CAS-writing files onto
+    `_bst_env.py`'s isolated `HOME`; `UX-775`/`UX-801` the last five. A
+    sixth landing without it fails only on a negative-margin host - this
+    counts the population so it fails here instead."""
+    gated = _bst_gated_files()
+    assert len(gated) == 18, sorted(p.name for p in gated)  # UX-760's own count
+
+    excluded = set(_NOT_CAS_WRITING) | _ISOLATES_ITS_OWN_WAY
+    cas_writing = [p for p in gated if p.name not in excluded]
+    assert len(cas_writing) == 16, sorted(p.name for p in cas_writing)
+
+    missing = sorted(p.name for p in cas_writing
+                      if "_bst_env" not in p.read_text(encoding="utf-8"))
+    assert not missing, (
+        f"{missing} shell out to a real bst without tests/unit/_bst_env.py's "
+        "isolated HOME - either route the build through isolated_bst_env/"
+        "bst_env, or add the file to this guard's named exclusions with why"
+    )
+
+
+def test_no_excluded_file_actually_writes_the_cas():
+    """`UX-775`'s verifier named the gap: a file mislabelled into
+    `_NOT_CAS_WRITING` this guard could not see. Each entry's own file is
+    read back for a `bst` call whose subcommand writes the CAS."""
+    offending = {}
+    for name in _NOT_CAS_WRITING:
+        text = (REPO / "tests/unit" / name).read_text(encoding="utf-8")
+        subcommand = _cas_writing_subcommand(text)
+        if subcommand:
+            offending[name] = subcommand
+    assert not offending, (
+        f"{offending} run a CAS-writing bst subcommand while excluded from "
+        "the isolation as _NOT_CAS_WRITING - move them onto _bst_env.bst_env "
+        "instead of excluding them"
+    )

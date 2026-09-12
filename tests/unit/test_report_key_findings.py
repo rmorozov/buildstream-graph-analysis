@@ -10,10 +10,34 @@ from pathlib import Path
 import pytest
 
 from bga import BuildEfficiencyAnalyzer
+from bga.report import text as text_module
 from bga.report.json import format_json
 from bga.report.text import format_csv, format_text
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
+
+# UX-695: the intended section order, independent of
+# `_TEXT_REPORT_SECTIONS`'s own (possibly mutated) state - a reorder
+# there must not also move this list, or the guard below blesses
+# whatever `format_text` renders instead of checking it.
+_EXPECTED_TEXT_REPORT_SECTION_ORDER = [
+    text_module._render_header_section,
+    text_module._render_key_findings_section,
+    text_module._render_resource_blast_section,
+    text_module._render_floors_section,
+    text_module._render_attribution_section,
+    text_module._render_replay_section,
+    text_module._render_critical_path_section,
+    text_module._render_occupancy_stats_section,
+    text_module._render_cpu_utilisation_section,
+    text_module._render_diagnostics_section,
+    text_module._render_structural_section,
+    text_module._render_by_kind_section,
+    text_module._render_pipeline_overhead_section,
+    text_module._render_plane2_absence_section,
+    text_module._render_next_steps_section,
+    text_module._render_footer_section,
+]
 
 
 def _write_run_dir(tmp_path, run_context, elements, dependencies, spans):
@@ -72,6 +96,30 @@ def test_key_findings_block_appears_before_certified_floors(analyzed_result):
     output = format_text(analyzed_result)
     assert "Key Findings:" in output
     assert output.index("Key Findings:") < output.index("Certified Floors:")
+
+
+def test_text_report_sections_render_in_the_declared_order():
+    """UX-695: `format_text` walks `_TEXT_REPORT_SECTIONS`; a reorder
+    there (e.g. floors/attribution swapped) must show up in what a
+    reader actually sees, not just in the list itself.
+    """
+    run_dir = REPO_ROOT / "tests" / "fixtures" / "golden" / "mixed_task_kinds"
+    analyzer = BuildEfficiencyAnalyzer(run_dir, run_diagnostics=True)
+    analyzer.load()
+    result = analyzer.analyze()
+    output = format_text(result, by_kind=True, explain=True)
+
+    positions = [
+        (output.index(section_fn.heading), section_fn.__name__)
+        for section_fn in _EXPECTED_TEXT_REPORT_SECTION_ORDER
+        if section_fn.heading and section_fn.heading in output
+    ]
+    # This fixture doesn't populate every section (no shared sources,
+    # no pipeline overhead, no occupancy stats) - enough must render to
+    # make the order claim worth checking at all.
+    assert len(positions) >= 8, f"too few sections rendered: {positions}"
+    assert positions == sorted(positions), (
+        f"sections rendered out of the declared order: {positions}")
 
 
 def test_key_findings_names_the_correct_dominant_wait_category(analyzed_result):

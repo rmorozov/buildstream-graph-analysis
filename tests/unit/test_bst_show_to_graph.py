@@ -210,7 +210,10 @@ def test_parse_notparallel_distinguishes_unset_from_false():
 @pytest.mark.bst
 @pytest.mark.skipif(not BST_AVAILABLE, reason="bst not found on PATH - see docs/spec/ingestion-pipeline.md")
 def test_real_bst_show_against_fixture_project(tmp_path):
-    graph = extract_graph(str(FIXTURE_PROJECT), targets=["app.bst"])
+    from tests.unit._bst_env import bst_env  # UX-801: `bst show` writes the CAS
+
+    with bst_env(tmp_path / "home"):
+        graph = extract_graph(str(FIXTURE_PROJECT), targets=["app.bst"])
 
     uids = {e["uid"] for e in graph["elements"]}
     assert uids == {"base.bst", "base2.bst", "subproj-junction.bst:libfoo.bst", "app.bst"}
@@ -271,17 +274,20 @@ def test_real_bst_show_captures_per_element_max_jobs_override(tmp_path):
     the host default. That is the signal every downstream consumer reads
     - it is how `analyze --plane2` names an element that asked its native
     build for -j1 as free capacity."""
-    graph = extract_graph(str(FIXTURE_PROJECT), targets=["notparallel.bst"])
-    max_jobs = {e["uid"]: e["max_jobs"] for e in graph["elements"]}
-    assert max_jobs["notparallel.bst"] == 1
-    assert max_jobs["base.bst"] == os.cpu_count()
-    assert max_jobs["notparallel.bst"] < max_jobs["base.bst"]
+    from tests.unit._bst_env import bst_env  # UX-801: `bst show` writes the CAS
 
-    # And the superseded route is inert rather than merely outranked:
-    # `manual.bst`'s `public: bst: max-jobs: 16` reaches the graph as the
-    # host default, not as 16.
-    manual = extract_graph(str(FIXTURE_PROJECT), targets=["manual.bst"])
-    assert {e["uid"]: e["max_jobs"] for e in manual["elements"]}["manual.bst"] == os.cpu_count()
+    with bst_env(tmp_path / "home"):
+        graph = extract_graph(str(FIXTURE_PROJECT), targets=["notparallel.bst"])
+        max_jobs = {e["uid"]: e["max_jobs"] for e in graph["elements"]}
+        assert max_jobs["notparallel.bst"] == 1
+        assert max_jobs["base.bst"] == os.cpu_count()
+        assert max_jobs["notparallel.bst"] < max_jobs["base.bst"]
+
+        # And the superseded route is inert rather than merely outranked:
+        # `manual.bst`'s `public: bst: max-jobs: 16` reaches the graph as
+        # the host default, not as 16.
+        manual = extract_graph(str(FIXTURE_PROJECT), targets=["manual.bst"])
+        assert {e["uid"]: e["max_jobs"] for e in manual["elements"]}["manual.bst"] == os.cpu_count()
 
 
 @pytest.mark.bst
@@ -290,8 +296,10 @@ def test_real_graph_output_loads_into_bga(tmp_path):
     """The extracted graph.json must be directly consumable by bga's
     own loader, not just superficially JSON-shaped."""
     from bga.ingest.loader import load_graph
+    from tests.unit._bst_env import bst_env  # UX-801: `bst show` writes the CAS
 
-    graph = extract_graph(str(FIXTURE_PROJECT), targets=["app.bst"])
+    with bst_env(tmp_path / "home"):
+        graph = extract_graph(str(FIXTURE_PROJECT), targets=["app.bst"])
     output_json = tmp_path / "graph.json"
     output_json.write_text(json.dumps(graph))
 

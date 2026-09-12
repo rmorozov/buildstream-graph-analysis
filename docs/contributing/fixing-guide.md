@@ -68,7 +68,7 @@ For every task, before marking it done:
 
 1. Run the exact command(s) given in the task's **Acceptance Test** section.
 2. Paste the actual command and actual output into the task file's **Verification Log** section (append, don't overwrite prior entries).
-3. **While you work, run the tests that touch what you changed** (`UX-336`): `make test-touching` maps the working diff to the test files that name it - 31-145 of 521 test files, over every module the map names, not the seconds one machine spent on one of them (`UX-632`). `python3 tools/dev_touching.py --spread --write` is the only thing that writes that figure. It moves whenever the set of (test file, module named) pairs changes - a new test file, a new import, a renamed module, a deleted file - not only the first of those (`UX-756`: round 103 moved it with two imports and no new file, and CI reddened on the stale row). Wider than one module, run the tier (`UX-238`). Every target runs `-n auto`. **The suite's wall clock is a property of the machine, not of the suite** (`UX-551`), so budget a round against the spread and not a figure:
+3. **While you work, run the tests that touch what you changed** (`UX-336`): `make test-touching` maps the working diff to the test files that name it - 31-150 of 528 test files, over every module the map names, not the seconds one machine spent on one of them (`UX-632`). `python3 tools/dev_touching.py --spread --write` is the only thing that writes that figure. It moves whenever the set of (test file, module named) pairs changes - a new test file, a new import, a renamed module, a deleted file - not only the first of those (`UX-756`: round 103 moved it with two imports and no new file, and CI reddened on the stale row). Wider than one module, run the tier (`UX-238`). Every target runs `-n auto`. **The suite's wall clock is a property of the machine, not of the suite** (`UX-551`), so budget a round against the spread and not a figure:
 
 ```text
 round 46   3m15s                                     4 cores
@@ -83,7 +83,7 @@ Round 80's 8m52s is **not reproducible on the tree that produced it**: the same 
 
    | target | measured at `-n auto` | what is in it |
    |---|---|---|
-   | `make test-touching` | 31-145 of 521 test files | the test files that name what your diff touched |
+   | `make test-touching` | 31-150 of 528 test files | the test files that name what your diff touched |
    | `make test-small` | **20s** | pure Python over in-memory fixtures — the default tier |
    | `make test-medium` | ~2m50s | spawns a process or a node harness |
    | `make test-large` | ~2m05s | scale fixtures, real process trees |
@@ -347,12 +347,13 @@ tools/dev_touch_map.py       which test files executed which module, off CI's ow
                              coverage run - the import chain a grep cannot see (UX-524)
 tools/dev_impact.py          what a change reaches - contracts, findings, guides,
                              guards, open filings - and where it routes (UX-687, UX-701)
-tools/dev_close_task.py      the mechanical tail of closing a row (UX-336)
+tools/dev_close_task.py, dev_shape_budget.py  closing a row and its shape budget (UX-336, UX-690)
 tools/dev_refresh_analysis.py  the rule a committed analysis is written
                              under, and the command that rewrites one
                              from a fresh run (UX-486)
 tools/dev_process_bands.py  what the process did to itself, from the committed Outcomes
-tools/dev_round_register.py  which rounds happened, derived (UX-744)
+tools/dev_round_register.py  which rounds happened, derived from the
+                             committed union, never git log (UX-744, UX-782)
 tools/dev_tier_drift.py      which files outgrew their tier, from the
                              suite's own junit report (UX-418)
 tools/dev_mutation.py        mutmut over the modules a diff touched, weekly -
@@ -380,9 +381,9 @@ tools/dev_track_cost.py      where an implementer track's tokens went,
                              by phase, from the agent transcript (UX-525)
 tools/dev_symbols.py         def, callers, importers, fan-in and dead names,
                              read off the AST, never the text (UX-700)
-tools/dev_baseline.py        every current finding by identity in
-                             tests/quality_baseline.json; a new one is red,
-                             the list only shrinks (UX-694)
+tools/dev_baseline.py       every current ruff and pyright finding
+                             by identity in tests/quality_baseline.json;
+                             a new one is red, the list only shrinks (UX-694/697)
 tools/dev_trace_coverage.py  which captured field reaches the emitted
                              trace, and which Perfetto carriers it uses (UX-466)
 tools/dev_page_census.py     the page's structure and control classes, one
@@ -408,6 +409,8 @@ tools/native_trace/bwrap_shim.py  a `bwrap` shim ahead of the real one in
                              `$PATH`, so the hook reaches inside the sandbox
 ```
 
+A citation is closed or marked (open).
+
 **The CI workflows** — what each is for, and when it runs (`UX-746`):
 
 ```text
@@ -415,8 +418,8 @@ tools/native_trace/bwrap_shim.py  a `bwrap` shim ahead of the real one in
                                              (parallel + single-process),
                                              lint, tier-drift parse, the
                                              ci-reference-candidate artefact
-.github/workflows/quality.yml               PR + weekly - the gate-only
-                                             analysis shelf (UX-698/UX-699)
+.github/workflows/quality.yml               PR+weekly - eslint, codeql,
+                                             pip-audit, sizes (UX-698/699/787)
 .github/workflows/mutation.yml              weekly - mutmut over the
                                              touched modules (UX-703)
 .github/workflows/real-project-capture.yml  weekly + monthly + dispatch -
@@ -448,7 +451,7 @@ tests/flake_ledger.json    every unconfirmed excursion and confirmed drift the t
                            gate reported, one row each; appended by the default branch's
                            own run - `--adopt-flake` - and read by dev_flake_census.py (UX-691)
 tests/quality_baseline.json  every finding the widened families report today, by
-                           identity; `dev_baseline.py --check` reds a new one (UX-694)
+                           identity; reds a new one (UX-694, shape_ledger.json UX-690)
 tests/dom_shim.mjs         the one DOM every viewer guard runs on (UX-264)
 tests/viewer.mjs           the viewer's exports as one namespace, so a guard names a symbol not a module (UX-337)
 tests/cdp.mjs              headless Chrome over CDP, no dependencies (UX-257)
@@ -484,7 +487,7 @@ wrong for the rest — an audit has no row until it has been done.
 | **feature** | a 🔴 row whose Depends on is clear | code + guards + an Outcome section | §3, in full |
 | **fix** | a defect, from CI or a report | the failing case first, then the fix | the case that reproduced it is a committed guard |
 | **documentation** | a doc that is wrong, or a gap filed per `§3.11` | the correction, in the same register | the guard that would have caught it exists, or its absence is stated |
-| **refactor** | a measured cost — size, duplication, a budget | the change, plus before/after | the measurement moved, and no behaviour did |
+| **refactor** | a measured cost — size, duplication, a budget; unfiled, the candidate is the size ledger's top row by longest function, and a round with two or more tracks gives one to it (`UX-695`) | the change, plus before/after | the measurement moved, and no behaviour did |
 | **review** | the diff since the last row in [`architecture-review.md`](../audits/architecture-review.md) | filings, and that document's next row | every checklist item is answered with a measurement or a filing (`UX-241`) |
 | **release** | a contract that moved, and a review at or after the last release | a row in [`CHANGELOG.md`](../../CHANGELOG.md), a derived version, a tag | the derivation guard is green and the head names what a consumer must do (`UX-251`) |
 

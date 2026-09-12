@@ -197,7 +197,9 @@ Three placement rules the field pass earned:
 2. **The header carries identity only** — run name, stamp, verdict
    state — within a stated vertical budget (measured in lines, in
    the guard). Actions and their apparatus live in the actions
-   group; prose lives in sections.
+   group; prose lives in sections. One exception: `UX-668`'s reader
+   selector is a *whole-page* control, not apparatus for a block below
+   it, and stays on the identity line it names who is reading.
 3. **A described value shows its affordance.** §1 gave described
    values a popover; discovery was hover archaeology. A value whose
    schema carries a `description` renders a visible marker (the
@@ -299,6 +301,15 @@ the measurements:
    headline number is large once; a finding bolds its subject once;
    everything else is regular or muted. If two things in one block
    demand emphasis, the block is two blocks.
+7. **A reader is a shape, not a hue** (`UX-668`). Five roles are past
+   what §4.1 lets a drawing carry as a series and §4.2's one accent is
+   already spent on interaction, the current focus and the band — a
+   fifth hue for "which role am I" would be a second accent and the
+   CVD numbers §5 validates against were never budgeted for it. A
+   promoted section wears the accent it already has, on a channel §4.3
+   reserves for exactly this: a border, not a fill, plus the existing
+   muted chip. "Anyone" wears every declared role's chip, muted — a
+   reader sees what each role would promote before choosing one.
 
 ## 5. Dark first
 
@@ -589,7 +600,7 @@ column re-read in round 73:
                  elements   landed   opened    words   controls    nodes
 golden                  4    3,800   15,618    7,144        427    2,498
 macro_micro            11    5,965   31,804   12,002        750    5,686
-budget, to 50 elts             7,100   35,900   12,700        800    7,900
+budget, to 50 elts             7,300   36,300   12,800        800    7,900
 
 scale               1,202    4,763   26,242   36,542      1,941   24,294
 budget, to 4,000 elts          7,000   32,000   41,000      2,300   27,500
@@ -696,6 +707,22 @@ their sections with CSS, so every word and every control is in the
 document from the first byte. Folding changed how far a reader scrolls
 past them and nothing else — which is precisely the cost this budget
 exists to keep visible.
+
+`UX-683` moved the 4,100 class's words bound 9,200 -> 9,300: the `xl`
+fixture declares no foundation tier, so `foundation-candidates` fires
+where the two `*-foundation` findings (published only when the project
+declared one) do not - measured 9,200 -> 9,269, +69. The 50-element
+class is unmoved; neither `macro_micro` nor `golden` is large enough
+to trip the top-p5 fan-out threshold the candidate finding reads.
+
+`UX-680` moved the small class's landed bound 7,100 -> 7,300, its
+height bound 35,900 -> 36,300 and its words bound 12,700 -> 12,800, and
+the 4,100 class's words bound 9,300 -> 9,400: `remote-execution-whatif`
+fires on every run with a sweep, a title and two or three detail lines
+in the first chapter - measured 7,182 landed, 36,193 opened and 12,731
+words on `macro_micro` and 9,349 words on `xl` once its text was cut
+from 128 to 81 words. A finding is the block a reader lands on, which
+is what the landed budget prices.
 
 `tests/unit/test_the_page_has_a_volume_budget.py` asserts both budgets
 in **one** guard, so a change trading one for the other has to say so.

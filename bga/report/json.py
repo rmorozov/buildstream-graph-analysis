@@ -170,32 +170,18 @@ def _binary_rows(binary_cost):
     return rows
 
 
-def build_document(result: AnalysisResult, section: Optional[str] = None, by_kind: bool = False) -> dict:
-    """
-    Format analysis results as JSON.
+# UX-695: `build_document` assembled the whole payload in one 365-line
+# body; each function below is the one section it used to inline, kept
+# in the order `_SECTIONS` walks. Every gate and comment is unmoved -
+# only the boundary between sections is now a function call.
 
-    Args:
-        result: The AnalysisResult object from the analyzer
-        section: Restrict output to one report section (see SECTIONS) -
-            None (default) produces the full `analyze` report. The
-            top-level key shape is unchanged either way (e.g. `floors`
-            always lives under a `"floors"` key) - only which top-level
-            keys are present differs, so existing `--format json`
-            consumers of the full report see no shape change.
-        by_kind: Include element_kind_summary (P4-12 Direction 3, `bga
-            graph --by-kind`) - opt-in, same gating as the text report.
-
-    Returns:
-        The `analyze/v1` document as a dict, stamped with its schema.
-    """
-    data = {
-        'run_id': result.run_id,
-        'total_duration_us': result.total_duration_us,
-        # UX-190: which projection this is. `None` for the full report;
-        # a section subcommand names its own restriction, so a consumer
-        # can tell "this is `bga floors`" from "the field was removed".
-        'section': section,
-    }
+def _add_header(data, result, section, by_kind):
+    data['run_id'] = result.run_id
+    data['total_duration_us'] = result.total_duration_us
+    # UX-190: which projection this is. `None` for the full report;
+    # a section subcommand names its own restriction, so a consumer
+    # can tell "this is `bga floors`" from "the field was removed".
+    data['section'] = section
     # UX-95: which capture this is, beside which captures it is
     # comparable with. Additive, and omitted entirely when the run
     # directory recorded nothing to say - an empty object would invite a
@@ -203,6 +189,8 @@ def build_document(result: AnalysisResult, section: Optional[str] = None, by_kin
     if getattr(result, 'run_instance', None):
         data['run_instance'] = result.run_instance
 
+
+def _add_findings(data, result, section, by_kind):
     # UX-75: the report's *conclusions*, not just its numbers. Every
     # other key here is raw measurement; a consumer that wanted to know
     # "is this build chain-bound", "which elements are worth fixing
@@ -211,45 +199,50 @@ def build_document(result: AnalysisResult, section: Optional[str] = None, by_kin
     # `bga/report/text.py`. This is the same list the text report
     # renders, so the two cannot disagree. Additive: no existing key
     # changes meaning or moves.
-    if section is None:
-        findings = compute_findings(result)
-        if findings:
-            data['findings'] = findings
-        # UX-207: what to fix first, and what it is worth. Decided in
-        # `findings.py` beside the ratio it comes from, so the decision
-        # panel reads a field instead of re-deriving a diagnosis the
-        # pipeline already made. Passed the findings it references so
-        # the ranking is read once.
-        data['headline'] = compute_headline(result, findings)
-        # `UX-372`: and who is served by what. Every finding already
-        # declares its `reader`; this is the index over them, so a
-        # consumer asking "what does this run say to the person who
-        # owns the machines" has one lookup rather than a scan and a
-        # severity ranking of its own. Only readers this run has
-        # something for - a report with no capacity numbers offers no
-        # capacity reader. After the headline because it defers to it.
-        if findings:
-            readers = reader_index(findings, data['headline'])
-            if readers:
-                data['readers'] = readers
-        # UX-218: and what to run next, chosen by what this run
-        # measured. Decided here for the same reason the diagnosis is:
-        # a viewer that picked the next command from `chain_share`
-        # would be a second decision-maker, and the terminal and CI
-        # would give different advice from the page.
-        data['next_steps'] = compute_next_steps(result, data['headline'])
-        # UX-224: and the text each finding pastes as. Rendered here,
-        # not in the page: the CI comment is Python and the viewer is
-        # JavaScript, so the only honest way to have *one* renderer
-        # across that boundary is to publish the string and have the
-        # page copy it rather than word it.
-        for finding in findings or []:
-            finding['copy_text'] = finding_copy_text(
-                finding, result, data['next_steps'])
+    if section is not None:
+        return
+    findings = compute_findings(result)
+    if findings:
+        data['findings'] = findings
+    # UX-207: what to fix first, and what it is worth. Decided in
+    # `findings.py` beside the ratio it comes from, so the decision
+    # panel reads a field instead of re-deriving a diagnosis the
+    # pipeline already made. Passed the findings it references so
+    # the ranking is read once.
+    data['headline'] = compute_headline(result, findings)
+    # `UX-372`: and who is served by what. Every finding already
+    # declares its `reader`; this is the index over them, so a
+    # consumer asking "what does this run say to the person who
+    # owns the machines" has one lookup rather than a scan and a
+    # severity ranking of its own. Only readers this run has
+    # something for - a report with no capacity numbers offers no
+    # capacity reader. After the headline because it defers to it.
+    if findings:
+        readers = reader_index(findings, data['headline'])
+        if readers:
+            data['readers'] = readers
+    # UX-218: and what to run next, chosen by what this run
+    # measured. Decided here for the same reason the diagnosis is:
+    # a viewer that picked the next command from `chain_share`
+    # would be a second decision-maker, and the terminal and CI
+    # would give different advice from the page.
+    data['next_steps'] = compute_next_steps(result, data['headline'])
+    # UX-224: and the text each finding pastes as. Rendered here,
+    # not in the page: the CI comment is Python and the viewer is
+    # JavaScript, so the only honest way to have *one* renderer
+    # across that boundary is to publish the string and have the
+    # page copy it rather than word it.
+    for finding in findings or []:
+        finding['copy_text'] = finding_copy_text(
+            finding, result, data['next_steps'])
 
+
+def _add_floors(data, result, section, by_kind):
     if section in (None, 'floors', 'replay'):
         data['floors'] = result.floors
 
+
+def _add_resource_blast(data, result, section, by_kind):
     # UX-171: the resource blast table, same rows the text report
     # renders. Absent - not empty - when the run carries no source
     # inventory or nothing is shared, for the same reason `run_instance`
@@ -260,6 +253,8 @@ def build_document(result: AnalysisResult, section: Optional[str] = None, by_kin
         if blast.get('rows'):
             data['resource_blast'] = blast
 
+
+def _add_capacity_verdict(data, result, section, by_kind):
     # UX-35: the already-decided capacity verdict the hints above are
     # conditioned on - published so a consumer can see *why* a hint
     # said what it said, and so `checks_ran: false` is legible rather
@@ -267,12 +262,16 @@ def build_document(result: AnalysisResult, section: Optional[str] = None, by_kin
     if section is None and getattr(result, 'capacity_verdict', None):
         data['capacity_verdict'] = result.capacity_verdict
 
+
+def _add_duration_resolution(data, result, section, by_kind):
     # `UX-740`: and which of this run's durations the grid published as
     # zero. Absent when none were, so "nothing was erased" and "the tool
     # does not check" stay distinguishable by presence.
     if section is None and getattr(result, 'duration_resolution', None):
         data['duration_resolution'] = result.duration_resolution
 
+
+def _add_capacity_recommendation(data, result, section, by_kind):
     # UX-275: and what the capacity *should* be. Computed since UX-116,
     # rendered in full by the text report, and dropped here - so the
     # tool's answer to the question this backlog opened with (`UX-09`:
@@ -286,6 +285,8 @@ def build_document(result: AnalysisResult, section: Optional[str] = None, by_kin
     if section is None and getattr(result, 'capacity_recommendation', None):
         data['capacity_recommendation'] = result.capacity_recommendation
 
+
+def _add_utilization_envelope(data, result, section, by_kind):
     # UX-676: the same question in cores. Published whenever the section
     # was computed at all, including when it computed to a named
     # absence - "this capture has no host CPU series" is the answer a
@@ -299,6 +300,8 @@ def build_document(result: AnalysisResult, section: Optional[str] = None, by_kin
             if rows:
                 data[name] = rows
 
+
+def _add_plane2_coverage(data, result, section, by_kind):
     # UX-202: Plane 2's own coverage of this build, when a Plane 2
     # report was in hand. Absent - not zeroed - without one, for the
     # reason `run_instance` is absent: "not looked at" and "looked at
@@ -306,6 +309,8 @@ def build_document(result: AnalysisResult, section: Optional[str] = None, by_kin
     if section is None and result.plane2_coverage:
         data['plane2_coverage'] = result.plane2_coverage
 
+
+def _add_plane2_absence(data, result, section, by_kind):
     # UX-329: and *why* it is absent when it is. `plane2_coverage`
     # missing has meant three different things - not captured, captured
     # with its raw log dropped, captured and declined - and a reader
@@ -315,6 +320,8 @@ def build_document(result: AnalysisResult, section: Optional[str] = None, by_kin
     if section is None and getattr(result, 'plane2_absence', None):
         data['plane2_absence'] = result.plane2_absence
 
+
+def _add_attribution(data, result, section, by_kind):
     if section is None and hasattr(result, 'attribution') and result.attribution:
         data['attribution'] = result.attribution
         # UX-04: additive sibling key, same category_us keys as
@@ -331,6 +338,8 @@ def build_document(result: AnalysisResult, section: Optional[str] = None, by_kin
             if key in ATTRIBUTION_CATEGORY_HINTS_BY_KEY
         }
 
+
+def _add_occupancy(data, result, section, by_kind):
     # occupancy field - check both occupancy (AnalysisResult field) and occupancy_stats (legacy name)
     if section is None:
         if hasattr(result, 'occupancy') and result.occupancy:
@@ -340,6 +349,8 @@ def build_document(result: AnalysisResult, section: Optional[str] = None, by_kin
             if legacy_occupancy is not _MISSING:
                 data['occupancy'] = legacy_occupancy
 
+
+def _add_signals(data, result, section, by_kind):
     if section in (None, 'graph', 'diagnostics') and hasattr(result, 'signals') and result.signals:
         # Convert dataclasses to dicts for JSON serialization
         signals_data = {}
@@ -367,6 +378,8 @@ def build_document(result: AnalysisResult, section: Optional[str] = None, by_kin
                 data['elements'] = elements
             _lift(data, signals_data)
 
+
+def _add_structural(data, result, section, by_kind):
     if section in (None, 'graph') and hasattr(result, 'structural'):
         # `UX-724`: 0 rebuilt means no tasks to run structural analysis
         # over, so this returns `{}` - publish the declared-empty shape
@@ -375,32 +388,48 @@ def build_document(result: AnalysisResult, section: Optional[str] = None, by_kin
             key: {} for key in STRUCTURAL_ALWAYS_PRESENT_KEYS}
         _lift(data, structural, _STRUCTURAL_RENAMES)
 
+
+def _add_utilisation(data, result, section, by_kind):
     if section in (None, 'utilisation') and hasattr(result, 'utilisation') and result.utilisation:
         data['utilisation'] = result.utilisation
 
+
+def _add_confidence(data, result, section, by_kind):
     if section is None and hasattr(result, 'confidence') and result.confidence:
         data['confidence'] = result.confidence
 
+
+def _add_violations(data, result, section, by_kind):
     if section is None and hasattr(result, 'violations'):
         # Always include, even when empty - an empty list means "checked,
         # none found", which is different from the key being absent.
         data['violations'] = result.violations
 
+
+def _add_model(data, result, section, by_kind):
     if section is None and hasattr(result, 'model') and result.model:
         data['model'] = result.model
 
+
+def _add_pipeline_overhead(data, result, section, by_kind):
     if section is None and hasattr(result, 'pipeline_overhead') and result.pipeline_overhead:
         data['pipeline_overhead'] = result.pipeline_overhead
 
+
+def _add_timestamp_agreement(data, result, section, by_kind):
     # UX-110: the resolution of every duration in this report, from the
     # run's own two measurements of each task. Absent when the capture
     # carries only one - which is a different claim from "they agreed".
     if section is None and getattr(result, 'timestamp_agreement', None):
         data['timestamp_agreement'] = result.timestamp_agreement
 
+
+def _add_element_kind_summary(data, result, section, by_kind):
     if section in (None, 'graph') and by_kind and hasattr(result, 'element_kind_summary') and result.element_kind_summary:
         data['element_kind_summary'] = result.element_kind_summary
 
+
+def _add_plane2_join(data, result, section, by_kind):
     # UX-215: the two-plane join, in the report rather than only in a
     # second command. Computed by the same `correlate()` the
     # `correlate/v1` document comes from - one join, so `bga analyze
@@ -413,99 +442,103 @@ def build_document(result: AnalysisResult, section: Optional[str] = None, by_kin
     # is already published in `signals`. "Not looked at" and "looked at
     # and saw nothing" are different claims.
     native_report = getattr(result, 'plane2_report', None)
-    if section is None and native_report:
-        from bga.correlate import correlate as _correlate
+    if not (section is None and native_report):
+        return
 
-        try:
-            # `UX-407`: with the tasks and the run context, so the
-            # restructuring finding carries its replay rather than a
-            # null projection.
-            joined = _correlate(
-                data, native_report,
-                tasks=getattr(result, 'normalized_tasks', None),
-                run_context=getattr(result, 'run_context', None))
-        except Exception:                       # pragma: no cover
-            # A join that cannot be computed must not cost the reader
-            # the analysis - `UX-83`'s rule for the Plane 2 path, and
-            # the reason `--plane2` is a warning rather than a failure
-            # everywhere else it appears.
-            joined = None
-        if joined:
-            data['element_join'] = joined.get('elements') or []
-            data['element_join_coverage'] = joined.get('coverage') or {}
-            # `UX-407`: **the synthesis, not only the crumbs.**
-            #
-            # `correlate` already computes the one paragraph that names
-            # a whole restructuring - the never-read edges, the elements
-            # they chain, and a replay of this run without them - and
-            # publishes it as `restructuring` in `correlate/v2`. The
-            # page renders `analyze/v5` and embeds no other document, so
-            # the largest single saving the analysis computes reached a
-            # terminal and nothing else: on the round-64 walk, 12.9s
-            # against a 6.0s headline card.
-            #
-            # The page carried the per-element crumbs
-            # (`unused_dependencies`, "opened no file staged by 3
-            # declared build dependencies"), so a reader had to open
-            # seven element folds and re-do the aggregation the tool had
-            # already done, projection and all. `UX-82` asked for this
-            # finding rounds ago; it existed and never left the
-            # terminal.
-            #
-            # An addition, so no version bump (`UX-190`) - and the same
-            # join that already runs here, so no second computation.
-            restructuring = joined.get('restructuring')
-            if restructuring:
-                data['restructuring'] = restructuring
-        # `UX-370`: what the build spent its time *running*, which
-        # Plane 2 measures and nothing carried out of it. Round 58
-        # asked what cmake configure costs and found the answer in
-        # `plane2.json` beside the run and nowhere a reader goes: the
-        # page had the binary *names* and none of the numbers.
-        #
-        # A projection, not a computation - each key is copied as the
-        # Plane 2 report published it, which is why this sits beside
-        # the join rather than in `correlate`. Absent without
-        # `--plane2` for the same reason the join is.
-        if native_report.get('by_binary'):
-            data['by_binary'] = dict(native_report['by_binary'])
-        rows = _binary_rows(native_report.get('binary_cost'))
-        if rows:
-            data['binary_cost'] = rows
-        phase = native_report.get('configure_phase')
-        if phase:
-            data['configure_phase'] = {
-                key: value for key, value in phase.items()
-                if key != 'per_element'}
+    from bga.correlate import correlate as _correlate
 
-        # `UX-383`: the three blocks `UX-370` left in the terminal.
+    try:
+        # `UX-407`: with the tasks and the run context, so the
+        # restructuring finding carries its replay rather than a
+        # null projection.
+        joined = _correlate(
+            data, native_report,
+            tasks=getattr(result, 'normalized_tasks', None),
+            run_context=getattr(result, 'run_context', None))
+    except Exception:                       # pragma: no cover
+        # A join that cannot be computed must not cost the reader
+        # the analysis - `UX-83`'s rule for the Plane 2 path, and
+        # the reason `--plane2` is a warning rather than a failure
+        # everywhere else it appears.
+        joined = None
+    if joined:
+        data['element_join'] = joined.get('elements') or []
+        data['element_join_coverage'] = joined.get('coverage') or {}
+        # `UX-407`: **the synthesis, not only the crumbs.**
         #
-        # **The per-element halves go on the join row, not into tables
-        # of their own.** `UX-382`'s placement rule: an attribute that
-        # needs Plane 2 to exist is a field on an `element_join` row.
-        # Three new per-element tables would also have drawn one
-        # population four times, which is `UX-288`'s rule and what
-        # `test_one_table_many_views.py` caught - `element_cpu_time`,
-        # `element_peak_memory` and `binary_cost` over the same nine
-        # elements. So `bga/correlate.py` carries the fields and this
-        # publishes what is genuinely run-level:
+        # `correlate` already computes the one paragraph that names
+        # a whole restructuring - the never-read edges, the elements
+        # they chain, and a replay of this run without them - and
+        # publishes it as `restructuring` in `correlate/v2`. The
+        # page renders `analyze/v5` and embeds no other document, so
+        # the largest single saving the analysis computes reached a
+        # terminal and nothing else: on the round-64 walk, 12.9s
+        # against a 6.0s headline card.
         #
-        # the totals, and each block's own `note` - which is where the
-        # rule that must not be lost lives. `peak_memory` is a
-        # per-process maximum that must never be summed and
-        # `resource_pressure` is sums that may be; both notes say so,
-        # and `UX-346`'s door is what puts a sentence in front of a
-        # reader about to add two numbers that cannot be added.
-        for key, keep in (
-                ('cpu_time', ('total_cpu_us', 'measured_processes',
-                              'unmeasured_processes',
-                              'spine_sourced_processes')),
-                ('peak_memory', ()),
-                ('resource_pressure', ('measured', 'unmeasured'))):
-            run_level = _run_level(native_report.get(key), keep)
-            if run_level:
-                data[key] = run_level
+        # The page carried the per-element crumbs
+        # (`unused_dependencies`, "opened no file staged by 3
+        # declared build dependencies"), so a reader had to open
+        # seven element folds and re-do the aggregation the tool had
+        # already done, projection and all. `UX-82` asked for this
+        # finding rounds ago; it existed and never left the
+        # terminal.
+        #
+        # An addition, so no version bump (`UX-190`) - and the same
+        # join that already runs here, so no second computation.
+        restructuring = joined.get('restructuring')
+        if restructuring:
+            data['restructuring'] = restructuring
+    # `UX-370`: what the build spent its time *running*, which
+    # Plane 2 measures and nothing carried out of it. Round 58
+    # asked what cmake configure costs and found the answer in
+    # `plane2.json` beside the run and nowhere a reader goes: the
+    # page had the binary *names* and none of the numbers.
+    #
+    # A projection, not a computation - each key is copied as the
+    # Plane 2 report published it, which is why this sits beside
+    # the join rather than in `correlate`. Absent without
+    # `--plane2` for the same reason the join is.
+    if native_report.get('by_binary'):
+        data['by_binary'] = dict(native_report['by_binary'])
+    rows = _binary_rows(native_report.get('binary_cost'))
+    if rows:
+        data['binary_cost'] = rows
+    phase = native_report.get('configure_phase')
+    if phase:
+        data['configure_phase'] = {
+            key: value for key, value in phase.items()
+            if key != 'per_element'}
 
+    # `UX-383`: the three blocks `UX-370` left in the terminal.
+    #
+    # **The per-element halves go on the join row, not into tables
+    # of their own.** `UX-382`'s placement rule: an attribute that
+    # needs Plane 2 to exist is a field on an `element_join` row.
+    # Three new per-element tables would also have drawn one
+    # population four times, which is `UX-288`'s rule and what
+    # `test_one_table_many_views.py` caught - `element_cpu_time`,
+    # `element_peak_memory` and `binary_cost` over the same nine
+    # elements. So `bga/correlate.py` carries the fields and this
+    # publishes what is genuinely run-level:
+    #
+    # the totals, and each block's own `note` - which is where the
+    # rule that must not be lost lives. `peak_memory` is a
+    # per-process maximum that must never be summed and
+    # `resource_pressure` is sums that may be; both notes say so,
+    # and `UX-346`'s door is what puts a sentence in front of a
+    # reader about to add two numbers that cannot be added.
+    for key, keep in (
+            ('cpu_time', ('total_cpu_us', 'measured_processes',
+                          'unmeasured_processes',
+                          'spine_sourced_processes')),
+            ('peak_memory', ()),
+            ('resource_pressure', ('measured', 'unmeasured'))):
+        run_level = _run_level(native_report.get(key), keep)
+        if run_level:
+            data[key] = run_level
+
+
+def _add_provenance(data, result, section, by_kind):
     # UX-229: and why every claim above is made. Last, and reading the
     # finished dict, because provenance is *references into this
     # document* - the paths are only checkable once the document they
@@ -517,6 +550,8 @@ def build_document(result: AnalysisResult, section: Optional[str] = None, by_kin
     if section is None:
         provenance.attach(data)
 
+
+def _add_producer_stamp(data, result, section, by_kind):
     # UX-249: which build wrote this. A published payload archived by a
     # CI job is re-read like any stored run, and until this landed
     # nothing in it said which `bga` produced it. The version is
@@ -530,6 +565,60 @@ def build_document(result: AnalysisResult, section: Optional[str] = None, by_kin
     # leaf at depth one that `document_shape` counts for itself.
     if section is None:
         data['document_shape'] = document_shape(data)
+
+
+# UX-695: assembly order for `build_document` - each entry is a section
+# it used to inline in place. A reorder changes the document's key
+# order and reddens the golden fixture guards (the split's mutation).
+_SECTIONS = (
+    _add_header,
+    _add_findings,
+    _add_floors,
+    _add_resource_blast,
+    _add_capacity_verdict,
+    _add_duration_resolution,
+    _add_capacity_recommendation,
+    _add_utilization_envelope,
+    _add_plane2_coverage,
+    _add_plane2_absence,
+    _add_attribution,
+    _add_occupancy,
+    _add_signals,
+    _add_structural,
+    _add_utilisation,
+    _add_confidence,
+    _add_violations,
+    _add_model,
+    _add_pipeline_overhead,
+    _add_timestamp_agreement,
+    _add_element_kind_summary,
+    _add_plane2_join,
+    _add_provenance,
+    _add_producer_stamp,
+)
+
+
+def build_document(result: AnalysisResult, section: Optional[str] = None, by_kind: bool = False) -> dict:
+    """
+    Format analysis results as JSON.
+
+    Args:
+        result: The AnalysisResult object from the analyzer
+        section: Restrict output to one report section (see SECTIONS) -
+            None (default) produces the full `analyze` report. The
+            top-level key shape is unchanged either way (e.g. `floors`
+            always lives under a `"floors"` key) - only which top-level
+            keys are present differs, so existing `--format json`
+            consumers of the full report see no shape change.
+        by_kind: Include element_kind_summary (P4-12 Direction 3, `bga
+            graph --by-kind`) - opt-in, same gating as the text report.
+
+    Returns:
+        The `analyze/v1` document as a dict, stamped with its schema.
+    """
+    data: dict = {}
+    for add_section in _SECTIONS:
+        add_section(data, result, section, by_kind)
 
     # UX-190: the version leads. A consumer reading the first line of a
     # streamed or truncated document sees what it is before it sees

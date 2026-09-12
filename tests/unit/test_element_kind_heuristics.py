@@ -32,13 +32,15 @@ BST_AVAILABLE = shutil.which("bst") is not None
 
 @pytest.mark.bst
 @pytest.mark.skipif(not BST_AVAILABLE, reason="bst not found on PATH - see docs/spec/ingestion-pipeline.md")
-def test_real_fixture_has_four_diverse_element_kinds():
+def test_real_fixture_has_four_diverse_element_kinds(tmp_path):
+    from tests.unit._bst_env import bst_env  # UX-801: `bst show` writes the CAS
     from tools.bst_show_to_graph import extract_graph
 
-    graph = extract_graph(
-        str(FIXTURE_PROJECT),
-        ["app.bst", "manual.bst", "all.bst", "subproj-junction.bst"],
-    )
+    with bst_env(tmp_path / "home"):
+        graph = extract_graph(
+            str(FIXTURE_PROJECT),
+            ["app.bst", "manual.bst", "all.bst", "subproj-junction.bst"],
+        )
     kinds_by_uid = {e["uid"]: e.get("element_kind") for e in graph["elements"]}
 
     assert kinds_by_uid["base.bst"] == "import"

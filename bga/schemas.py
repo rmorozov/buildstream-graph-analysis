@@ -1171,6 +1171,10 @@ _SWEEP_REQUIRED = {
     "monotonicity_violations": "array",
     "capacity_model_caveat": "string",
     "calibration_capacities": "array",
+    # UX-678: always written, `{}` when the sweep had no measured peak
+    # RSS and host RAM to check - same convention as `knee_points`.
+    "memory_knee_points": "object",
+    "binding_constraints": "object",
 }
 
 _SWEEP_HINTS = {
@@ -1231,6 +1235,23 @@ _SWEEP_HINTS = {
                        "Empty means every point is a projection - the "
                        "difference between a curve with data in it and "
                        "one without."},
+    "memory_knee_points": {
+        # Same shape as `knee_points`: a map keyed by resource name, so
+        # its values cannot be named in `properties`.
+        "additionalProperties": {QUANTITY: "count"},
+        "description": "`UX-678`: per resource, the largest swept "
+                       "capacity whose own replayed schedule's concurrent "
+                       "elements' peak RSS still fit host RAM - `{}` "
+                       "unless `--plane2` supplied both a measured peak "
+                       "RSS per element and a host memory total. `0` is a "
+                       "real answer (no capacity fits); it is present "
+                       "then, unlike `knee_points`."},
+    "binding_constraints": {
+        "description": "`UX-678`: per resource, which of the sweep's own "
+                       "two capacities - `knee_points` or "
+                       "`memory_knee_points` - is the tighter one, as "
+                       "`{name, builders}`. `{}` under the same condition "
+                       "as `memory_knee_points`."},
 }
 
 
@@ -1713,6 +1734,22 @@ _MAX_JOBS_ADVICE_COLUMNS = [
     {"key": "samples_in_span", "title": "Host samples in span",
      "quantity": "count", "sortable": True},
     {"key": "refusal", "title": "Refusal"},
+    # `UX-739`: this one recommendation's own replay price, applied
+    # alone - absent for an unchanged/raised/already-refused row. Its
+    # own inner shape (`replayed_baseline_us`, ...) is internal, like
+    # `dominant_binary`'s above - the outer key is what a consumer
+    # indexes.
+    {"key": "priced", "title": "Priced (floor)",
+     "description": "This recommendation's replay price, applied "
+                    "alone: `{replayed_baseline_us, projected_us, "
+                    "cost_us, duration_before_us, duration_floor_us, "
+                    "kind}`. `kind` is always `\"floor\"` - the figure "
+                    "errs optimistic, never a point prediction."},
+    {"key": "price_refusal", "title": "Price refusal",
+     "description": "Why a changed recommendation was not priced: a "
+                    "raise this run has no evidence for, or no Plane 2 "
+                    "`binary_cost` measurement. Absent when `priced` is "
+                    "set or `refusal` already explains the row."},
 ]
 
 
@@ -1951,6 +1988,37 @@ EVIDENCE_QUANTITIES.update({
             QUANTITY: "duration_us",
             "description": "This element's duration, off the chain today."},
     }}},
+    # `UX-680`: the two `remote-execution-whatif` projections. A nested
+    # object each, not a row - there is exactly one of each per finding
+    # - so `properties` rather than `items`, the shape `evidence` itself
+    # already uses one level up.
+    "unbounded_builders": {"properties": {
+        "wall_us_before": {
+            QUANTITY: "duration_us",
+            "description": "The sweep's own makespan at the configured "
+                           "PROCESS capacity."},
+        "wall_us_after": {
+            QUANTITY: "duration_us",
+            "description": "The same sweep's makespan at the task count - "
+                           "the chain floor no more builders can beat."},
+        "builders_before": {
+            QUANTITY: "count",
+            "description": "The configured PROCESS capacity."},
+        "builders_after": {
+            QUANTITY: "count",
+            "description": "The task count - past this, no more work can "
+                           "start whatever the capacity."},
+    }},
+    "compiler_offload": {"properties": {
+        "wall_us_before": {
+            QUANTITY: "duration_us",
+            "description": "The critical path's own duration."},
+        "wall_us_after": {
+            QUANTITY: "duration_us",
+            "description": "The same path with its compiler/linker CPU "
+                           "seconds removed - an upper bound, not a "
+                           "measurement (`UX-680`'s assumption)."},
+    }},
 })
 
 
@@ -2564,6 +2632,11 @@ _SIGNALS_TABLES = {
                                    "duration. A ranking, not a "
                                    "measurement - comparable "
                                    "within a run, not across."},
+                "is_foundation": {
+                    "description": "Whether the project declared this "
+                                   "element foundation (`UX-683`) - "
+                                   "excluded from the ranking on that "
+                                   "declaration, not a kind guess."},
             }},
         "description": "What one element's change rebuilds, and "
                        "what that costs."},
@@ -2590,6 +2663,11 @@ _SIGNALS_TABLES = {
                                    "dependency - an element can depend "
                                    "on something that dominates "
                                    "nothing. Null for a root."},
+                "is_foundation": {
+                    "description": "Whether the project declared this "
+                                   "element foundation (`UX-683`) - "
+                                   "excluded from the ranking on that "
+                                   "declaration, not a kind guess."},
             }},
         "description": "What one element pulls in and the rebuild it "
                        "waits on. Plane 1 only - whether those edges "
@@ -3145,8 +3223,27 @@ _ANALYZE_HINTS = {
                                "An element with too few overlapping samples, "
                                "or whose overlap already overcommits "
                                "memory, carries `refusal` instead of a "
-                               "number.",
+                               "number. `UX-739`: `priced_jointly` and "
+                               "`pricing_assumptions` price it by replay - "
+                               "see the row-level `priced`/`price_refusal` "
+                               "columns below.",
                 COLUMNS: _MAX_JOBS_ADVICE_COLUMNS,
+                "properties": {
+                    "priced_jointly": {
+                        "description": "`UX-739`: every priced, lowered "
+                                       "recommendation applied together in "
+                                       "one replay - a recompute, not a "
+                                       "sum, because prices do not add. "
+                                       "`{replayed_baseline_us, "
+                                       "projected_us, cost_us, elements}`. "
+                                       "Absent when nothing was priced."},
+                    "pricing_assumptions": {
+                        "description": "`UX-739`: two sentences, always "
+                                       "together - what dispatch order the "
+                                       "replay assumes, and which way the "
+                                       "floor errs. Absent only alongside "
+                                       "an empty `elements`."},
+                },
             },
             "caveat": {
                 "description": "What this recommendation is not. Read it "
@@ -3155,6 +3252,22 @@ _ANALYZE_HINTS = {
                                "(`UX-14`), and one capture went in. A "
                                "consumer that drops this sentence is left "
                                "with a number that looks like a setting."},
+            "sweep_memory_builders": {
+                QUANTITY: "count",
+                "description": "`UX-678`: the largest swept builder count "
+                               "whose own replayed schedule's concurrent "
+                               "elements' peak RSS still fit host RAM - "
+                               "summed over the sweep's real concurrent "
+                               "set at each step, not `constraints[memory]`'s "
+                               "top-N sum. Absent unless the sweep had a "
+                               "measured peak RSS per element and a host "
+                               "memory total."},
+            "sweep_binding": {
+                "description": "`UX-678`: which of the sweep's own two "
+                               "capacities - the graph's knee or "
+                               "`sweep_memory_builders` - is the tighter "
+                               "one, as `{name, builders}`. Present only "
+                               "alongside `sweep_memory_builders`."},
         },
     },
     "capacity_verdict": {
@@ -5377,6 +5490,10 @@ _CORRELATE_REQUIRED = {
 _CORRELATE_OPTIONAL = {
     "restructuring": "array",
     "granularity": "array",
+    # `UX-684`: the cached build's verdict, `bga/correlate.py`'s
+    # `cached_shape()` - absent without Plane 3's change history or
+    # below its own trust floor (`MIN_CO_REBUILDS`).
+    "cached_shape": "object",
     "memory_envelope": "object",
     "attribution_unreliable": "",
     "attribution_partial": "",
@@ -5472,6 +5589,10 @@ _CORRELATE_HINTS = {
     "granularity": {
         QUESTION: 'Which elements pay more sandbox tax than they build?',
         RAIL: "act",
+    },
+    "cached_shape": {
+        QUESTION: 'Does the graph rebuild the cheapest subgraph?',
+        RAIL: "decide",
     },
     "memory_envelope": {
         QUESTION: 'How much memory would more builders need?',

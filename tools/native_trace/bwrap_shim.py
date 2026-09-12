@@ -211,6 +211,7 @@ def build_shim_argv(
     trace_log: str,
     invocation_id: Optional[int] = None,
     spine: Optional[str] = None,
+    jobserver_fd: Optional[int] = None,
 ) -> list[str]:
     """The real, complete argv to exec: BuildStream's own bwrap options
     first (unmodified, including its own root-filesystem bind), then the
@@ -259,6 +260,13 @@ def build_shim_argv(
     # log path).
     if os.environ.get("BST_TRACE_OPENS"):
         injected += ["--setenv", "BST_TRACE_OPENS", "1"]
+    # UX-679 (spike): `bwrap` passes an inherited fd straight into the
+    # sandbox with no bind - so the FIFO opened by `main` reaches `make`
+    # as a jobserver via one `--setenv`, R and W the same fd (accepted by
+    # GNU Make 4.3).
+    if jobserver_fd is not None:
+        injected += ["--setenv", "MAKEFLAGS",
+                    f"--jobserver-auth={jobserver_fd},{jobserver_fd}"]
     # UX-106: the ptrace spine, prepended to the sandboxed command so it
     # becomes the parent of everything BuildStream asked to run - which
     # is what makes every descendant its own tracee, and so traceable
@@ -606,6 +614,23 @@ def exit_like(status: int) -> int:
     return os.WEXITSTATUS(status)
 
 
+def open_jobserver_fd() -> Optional[int]:
+    """The jobserver fd `main` hands `build_shim_argv`, or `None`.
+
+    UX-679 (spike): only opened when `run_traced_build` handed a FIFO
+    path down - the shim never binds one unasked. Read-write so the
+    open cannot block on a second end, and inheritable so `execv`
+    carries the fd across into the real `bwrap` (Python's `os.open`
+    marks it non-inheritable by default, PEP 446).
+    """
+    jobserver_path = os.environ.get("BST_TRACE_JOBSERVER")
+    if not jobserver_path:
+        return None
+    fd = os.open(jobserver_path, os.O_RDWR)
+    os.set_inheritable(fd, True)
+    return fd
+
+
 SELF_TEST_ARGV = "--bga-shim-self-test"
 
 
@@ -682,6 +707,7 @@ def main() -> int:
     # blames the rewrite, and one that fails both ways blames the
     # shadowing or the exec. It captures nothing, deliberately.
     inject = os.environ.get("BST_TRACE_NO_INJECT") != "1"
+    jobserver_fd = open_jobserver_fd()
     if inject:
         argv = build_shim_argv(real_bwrap, sys.argv[1:], bind_src, bind_dst,
                                preload_so, trace_log,
@@ -691,7 +717,8 @@ def main() -> int:
                                # environment, which `run_traced_build` sets -
                                # the same channel `BST_TRACE_PRELOAD_SO`
                                # already uses.
-                               spine=spine)
+                               spine=spine,
+                               jobserver_fd=jobserver_fd)
     else:
         argv = [real_bwrap, *sys.argv[1:]]
 

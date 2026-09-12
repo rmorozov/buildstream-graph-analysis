@@ -28,15 +28,15 @@
  * worth?") and `next_steps` ("What should I run next?") are three
  * spellings of *what should I do*, and they are one chapter.
  *
- * **Why the table is here and not in the schema.** Nine of the
- * forty-eight sections on the synthetic run are built by the page and
- * published by no contract at all - the decision panel, the drawn
- * critical path, the blast box, the element blocks. A hint can only
- * name sections the schema has, so a chaptering that lived in
- * `bga:question`'s neighbourhood would leave a fifth of the document
- * unassigned. The published `bga:rail` is still what places a section
- * this table does not name: a new payload key lands in the chapter its
- * *rail* belongs to rather than in a bucket at the end.
+ * **Why the table is here and not in the schema.** Fourteen of the
+ * forty-eight sections on the synthetic run (`UX-286`, round 39) are
+ * built by the page and published by no contract at all - the decision
+ * panel, the drawn critical path, the blast box, the element blocks. A
+ * hint can only name sections the schema has, so a chaptering that
+ * lived in `bga:question`'s neighbourhood would leave them unassigned.
+ * The published `bga:rail` is still what places a section this table
+ * does not name: a new payload key lands in the chapter its *rail*
+ * belongs to rather than in a bucket at the end.
  */
 
 import { duration, quantity, title } from "./format.js";
@@ -188,6 +188,9 @@ export const CHAPTERS = [
                "overcommitted_intervals"],
     // What the run was given and how much of it was used - the two
     // numbers the chapter's own verdict is computed from.
+    // `UX-678`: `sweep_memory_builders`/`sweep_binding` render generically
+    // as structured data on this section; naming the memory bound in this
+    // sentence is out of this track.
     answer(payload) {
       const slots = payload?.capacity_recommendation?.builders
         ?? payload?.utilisation?.effective_cpus;
@@ -580,16 +583,24 @@ export function applyRole(root, role) {
   const sections = [...(root?.querySelectorAll?.("section[data-section]") ?? [])];
   let promoted = 0;
   for (const section of sections) {
-    const owns = Boolean(chosen) && readersOf(section).includes(chosen);
+    const readers = readersOf(section);
+    const owns = Boolean(chosen) && readers.includes(chosen);
     if (owns) {
       promoted += 1;
       section.setAttribute("data-promoted", chosen);
     } else section.removeAttribute?.("data-promoted");
     const tag = section.querySelector?.("[data-reader-tag]");
-    if (tag) tag.textContent = owns ? chosen : "";
-    // The section holding the picker is never folded: a control that
-    // folds itself away is `UX-194`'s dead affordance made by hand.
-    if (section.querySelector?.('[data-role="reader"]')) continue;
+    // `UX-668`: "anyone" wears every declared role, muted - a reader
+    // sees what each one would promote before choosing. A chosen role
+    // still marks only what it owns (`UX-305`'s budget).
+    if (tag) {
+      tag.textContent = owns ? chosen
+        : (!chosen && readers.length ? readers.join(" ") : "");
+    }
+    // `UX-668`: the decision panel is never folded - it held the
+    // picker before this item moved the control to the header, and it
+    // is the page's first-screen answer regardless of who is reading.
+    if (section.getAttribute("data-section") === "decision") continue;
     foldSection(section, Boolean(chosen) && !owns);
   }
   for (const box of root?.querySelectorAll?.("section.chapter") ?? []) {
@@ -632,11 +643,12 @@ export function revealChapter(node) {
  * `perfetto-questions` -576, `restructuring` -317,
  * `critical_path_detail` +673.
  *
- * It lands **twice**: once now, which is the only landing the jump box
- * gets (a rail link has the browser's own anchor scroll and the jump
- * box has none), and once two frames later, when the opened chapter's
- * real height is in. Measured on `macro_micro`, the 61 folded section
- * links, section top against the 104 px a correct landing gives:
+ * It lands **twice**: once now, which is the only landing the jump
+ * box gets (a rail link has the browser's own anchor scroll and the
+ * jump box has none), and once more once the opened chapter's rect
+ * has stopped moving. Measured on `macro_micro`, the 61 folded
+ * section links, section top against the 104 px a correct landing
+ * gave before `UX-668`:
  *
  * ```text
  * now only            55 correct     the browser's scroll runs after this
@@ -644,10 +656,14 @@ export function revealChapter(node) {
  * two frames later    55 correct
  * ```
  *
- * One frame is worse than none, which is why this is two and not a
- * number anybody picked. `scroll-margin-top`, where the sticky
- * header's height lives, is read off the node rather than repeated
- * here.
+ * One frame is worse than none. `UX-668`'s header line and decision
+ * panel moved the estimate one section further out and a **count** of
+ * frames - two, then three - needed hand-retuning each time; `UX-800`
+ * replaced the count with the wait it was standing in for: land again
+ * once `getBoundingClientRect().top` reads the same on two consecutive
+ * frames, so a taller header settles itself rather than waiting on a
+ * retune. `scroll-margin-top`, where the sticky header's height lives,
+ * is read off the node rather than repeated here.
  *
  * `UX-722`: computed from the rect rather than `node.scrollIntoView`.
  * A wide table (`main table`, UX-254) is a scroll container, and a
@@ -657,6 +673,10 @@ export function revealChapter(node) {
  * runs against the rect that alignment already touched. The document
  * is the only box this ever needed to move.
  */
+// `UX-800`: the settle below gives up and lands anyway past this many
+// frames, so a rect that never agrees still lands rather than hanging.
+const LAND_SETTLE_FRAME_CAP = 12;
+
 export function revealAndLand(node, behavior) {
   const box = revealChapter(node);
   const land = () => {
@@ -669,7 +689,26 @@ export function revealAndLand(node, behavior) {
   };
   land();
   const frame = globalThis.requestAnimationFrame;
-  if (frame) frame(() => frame(land));
+  if (frame && node?.getBoundingClientRect) {
+    let prev = null;
+    let seen = 0;
+    const settle = () => frame(() => {
+      seen += 1;
+      const cur = node.getBoundingClientRect().top;
+      if ((prev !== null && cur === prev) || seen >= LAND_SETTLE_FRAME_CAP) {
+        land();
+        return;
+      }
+      prev = cur;
+      settle();
+    });
+    // One dead frame before the first read: `land()` just ran
+    // synchronously, before this frame's own layout is in, and a
+    // `prev` seeded from that same still-stale paint agreed with the
+    // next frame's equally-stale read (`blast`, still measured wrong
+    // by `UX-800`'s own first cut) before a real, later shift ever ran.
+    frame(settle);
+  }
   return box;
 }
 

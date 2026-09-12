@@ -29,6 +29,14 @@ import pytest
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 GUIDE = REPO / "docs/contributing/fixing-guide.md"
+CLOSED = REPO / "docs/backlog/scenarios/closed.md"
+
+#: `UX-780`: a citation with no `(open)` beside it reads as closed.
+#: `UX-786`: a slash group (`UX-698/699/787`) shares its `UX-` prefix
+#: across bare numbers, so the cluster is matched whole and each
+#: number read separately - `(open)` after any one marks that id.
+CITATION = re.compile(r"UX-\d+(?:\s*\(open\))?(?:/\d+(?:\s*\(open\))?)*")
+ID_IN_CITATION = re.compile(r"(\d+)(\s*\(open\))?")
 
 # Modules small enough or private enough that naming each one would make
 # the map longer without making it more useful. Each is *reachable* -
@@ -143,6 +151,38 @@ def _command_rows():
         if words:
             rows[words[0]] = words[1] if len(words) > 1 else ""
     return rows
+
+
+def _row_for(text, path):
+    """The full text of `path`'s row: its own line plus every indented
+    continuation line, joined - `dev_baseline.py`'s row is three."""
+    lines = text.splitlines()
+    start = next((i for i, line in enumerate(lines) if line.startswith(path)), None)
+    if start is None:
+        return None
+    row = [lines[start]]
+    for line in lines[start + 1:]:
+        if not line.strip() or not line[:1].isspace():
+            break
+        row.append(line)
+    return " ".join(row)
+
+
+def _tools_population():
+    """`tools/dev_*.py` files exposing a `TOOLS` mapping - the guard's
+    whole population; a dev tool with no such mapping is read by
+    nothing here. `(rel path, sorted tool names)` per module."""
+    import importlib
+
+    out = []
+    for rel in sorted(_tracked()):
+        if not (rel.startswith("tools/dev_") and rel.endswith(".py")):
+            continue
+        module = importlib.import_module("tools." + rel[len("tools/"):-len(".py")])
+        tools = getattr(module, "TOOLS", None)
+        if tools:
+            out.append((rel, sorted(tools)))
+    return out
 
 
 #: A whole hyphenated lowercase word: `cache-trend` is one match, and
@@ -490,6 +530,28 @@ class TestTheMapNamesTheTree:
         assert "only existing test file" not in text
         assert "tests/unit/" in text, "the map does not mention where tests live"
 
+    def test_every_cited_id_is_closed_or_marked_open(self):
+        """`UX-780`: a citation reads as provenance, so it names a
+        closed id - `UX-698` sat bare in the `quality.yml` row while
+        its own status was Not Started, and the row described the
+        ambition rather than the file. An open id may still appear,
+        spelled `(open)` beside it."""
+        closed = set(re.findall(r"UX-\d+", CLOSED.read_text(encoding="utf-8")))
+        text = _map_text()
+        bare = []
+        for cluster in CITATION.finditer(text):
+            line = (text[:cluster.start()].rsplit("\n", 1)[-1]
+                    + text[cluster.start():].split("\n", 1)[0])
+            for part in ID_IN_CITATION.finditer(cluster.group()):
+                num, marker = part.groups()
+                cited = f"UX-{num}"
+                if cited in closed or marker:
+                    continue
+                bare.append(f"{cited} in {line.strip()!r}")
+        assert bare == [], (
+            f"§6 cites open id(s) with no `(open)` marker: {bare}. "
+            f"docs/contributing/fixing-guide.md §6.")
+
 
 class TestTheMapsCapabilitiesDerive:
     """`UX-590`: §6's non-path claims, held to the registry.
@@ -668,6 +730,29 @@ class TestTheMapNamesEveryCommand:
         assert len(rows) > 20, sorted(rows)
         assert "analyze" in rows, "the parser's own subcommands are gone"
         assert "snapshot" in rows, "the tools_dispatch aliases are gone"
+
+
+class TestTheMapNamesEachToolsToolPrices:
+    """`UX-799`: `dev_baseline.py`'s row named ruff, its first source,
+    and stayed that way after pyright became its second - the row's
+    prose is not checked against what the module actually prices.
+    Population: `tools/dev_*.py` files exposing a `TOOLS` mapping."""
+
+    def test_the_population_is_not_empty(self):
+        assert _tools_population(), "no tools/dev_*.py exposes TOOLS"
+
+    def test_every_tools_key_is_named_on_its_row(self):
+        text = _map_text()
+        missing = []
+        for rel, tools in _tools_population():
+            row = _row_for(text, rel)
+            assert row is not None, f"{rel} has no row on the map"
+            for tool in tools:
+                if not re.search(rf"(?<![\w-]){re.escape(tool)}(?![\w-])", row):
+                    missing.append(f"{tool} in {rel}'s row")
+        assert missing == [], (
+            f"TOOLS key(s) a §6 row does not name: {missing}. "
+            f"docs/contributing/fixing-guide.md §6.")
 
 
 class TestTheStreamsAreNamed:

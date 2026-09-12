@@ -37,6 +37,7 @@ your critical path is not compute-bound, so fix how it is built, not what
 it builds"**.
 """
 
+import math
 from dataclasses import dataclass, field
 from typing import Optional
 
@@ -1328,6 +1329,139 @@ def compute_max_jobs_advice(
             "host_cores": cores, "elements": elements}
 
 
+# UX-739: the dispatch sentence. Both replays re-derive order from the
+# graph and the builder budget by the same Part 18 LPT rule rather than
+# keeping bst's own observed order, so that rule's own distance from real
+# dispatch is shared by baseline and projected and cancels to first order.
+_PRICE_DISPATCH_ASSUMPTION = (
+    "Both the baseline and the projected replay re-derive dispatch order "
+    "from the graph and the builder budget by Part 18's LPT rule rather "
+    "than keeping bst's own observed order, so that rule's own distance "
+    "from real dispatch cancels to first order between the two figures.")
+
+# UX-739: the floor sentence - two floors, and the direction they err.
+_PRICE_FLOOR_ASSUMPTION = (
+    "duration_floor_us is a floor, not a prediction: an element capped in "
+    "isolation is assumed no slower than observed and unable to finish "
+    "its measured CPU work faster than that work spread over the "
+    "recommended job count at full speed, so the priced cost errs "
+    "optimistic - the real build under these caps is this long or "
+    "longer. The benefit of less overcommit for its neighbours is not "
+    "modelled.")
+
+
+def price_max_jobs_advice(advice, tasks, run_context, binary_cost) -> dict:
+    """UX-739: prices `compute_max_jobs_advice`'s rows by replay.
+
+    Two replays of this run under `ReplayScheduler(tasks, run_context).
+    replay(compute_default_capacities(run_context))` - the same shape
+    `_project_with_reduced_durations` already uses - one baseline, one
+    with a priced element's BUILD task duration overridden to a floor.
+    Dispatch is re-derived from the graph and the builder budget, not
+    kept from the observed run (`_PRICE_DISPATCH_ASSUMPTION`).
+
+    A LOWERED recommendation is priced against a floor duration -
+    `max(observed, measured_cpu_us / recommended)` - built from Plane 2's
+    `binary_cost[element].measured_cpu_us`, the element's whole measured
+    CPU work (`_PRICE_FLOOR_ASSUMPTION`). A RAISED recommendation is
+    refused: this run has no evidence of how the element scales up. No
+    `binary_cost` (or `available` false) is refused, naming that. A row
+    that already carries `UX-677`'s own `refusal` stays unpriced with no
+    added text. An unchanged recommendation costs 0.
+
+    `priced_jointly` applies every priced, lowered recommendation in one
+    replay - a recompute, not a sum, because prices do not add.
+    """
+    from .floors.capacity import compute_default_capacities
+    from .ingest.models import TaskKind
+    from .replay.scheduler import ReplayScheduler
+
+    elements = (advice or {}).get('elements') or []
+    if not elements or not tasks:
+        return advice
+
+    binary_cost = binary_cost or {}
+    build_tasks = {t.task_key.element_uid: t for t in tasks
+                   if t.task_key.task_kind == TaskKind.BUILD}
+    capacities = compute_default_capacities(run_context)
+    baseline_us = ReplayScheduler(list(tasks), run_context).replay(
+        capacities).makespan_us
+
+    joint_overrides: dict[str, int] = {}
+    joint_elements: list[str] = []
+
+    for row in elements:
+        if row.get('refusal'):
+            continue
+        uid = row['element']
+        current = row.get('current_max_jobs')
+        recommended = row.get('recommended_max_jobs')
+        if current is None or recommended is None:
+            continue
+        task = build_tasks.get(uid)
+        observed_us = (task.finish_us - task.start_us) if task else None
+        if recommended == current:
+            row['priced'] = {
+                'replayed_baseline_us': baseline_us,
+                'projected_us': baseline_us,
+                'cost_us': 0,
+                'duration_before_us': observed_us,
+                'duration_floor_us': observed_us,
+                'kind': 'floor',
+            }
+            continue
+        if recommended > current:
+            row['price_refusal'] = (
+                f"this run measured {uid} at {current} job(s) and has no "
+                f"evidence of how it scales up")
+            continue
+        # recommended < current: needs the element's whole measured CPU
+        # work to build the floor.
+        if task is None:
+            row['price_refusal'] = (
+                f"no BUILD task for {uid} in this run - nothing to stretch")
+            continue
+        cost_entry = binary_cost.get(uid) or {}
+        measured_cpu_us = cost_entry.get('measured_cpu_us')
+        if not cost_entry.get('available') or measured_cpu_us is None:
+            row['price_refusal'] = (
+                f"no Plane 2 binary_cost measurement for {uid} - the "
+                f"price needs the element's whole measured CPU work")
+            continue
+        # `task` is confirmed above; recomputed rather than reusing
+        # `observed_us` so its type does not depend on a branch pyright
+        # cannot see this far back.
+        floor_us = max(task.finish_us - task.start_us,
+                        math.ceil(measured_cpu_us / recommended))
+        override_key = str(task.task_key)
+        projected_us = ReplayScheduler(list(tasks), run_context).replay(
+            capacities, duration_overrides={override_key: floor_us}
+        ).makespan_us
+        row['priced'] = {
+            'replayed_baseline_us': baseline_us,
+            'projected_us': projected_us,
+            'cost_us': max(0, projected_us - baseline_us),
+            'duration_before_us': observed_us,
+            'duration_floor_us': floor_us,
+            'kind': 'floor',
+        }
+        joint_overrides[override_key] = floor_us
+        joint_elements.append(uid)
+
+    if joint_overrides:
+        joint_us = ReplayScheduler(list(tasks), run_context).replay(
+            capacities, duration_overrides=joint_overrides).makespan_us
+        advice['priced_jointly'] = {
+            'replayed_baseline_us': baseline_us,
+            'projected_us': joint_us,
+            'cost_us': max(0, joint_us - baseline_us),
+            'elements': joint_elements,
+        }
+    advice['pricing_assumptions'] = [
+        _PRICE_DISPATCH_ASSUMPTION, _PRICE_FLOOR_ASSUMPTION]
+    return advice
+
+
 # UX-100: the too-fine signature, stated as a definition rather than as
 # a threshold.
 #
@@ -1371,6 +1505,19 @@ CO_CHANGE_SHARE = 0.9
 # ...and fewer co-rebuilds than this is too few builds to trust a share
 # computed from them at all.
 MIN_CO_REBUILDS = 3
+
+# UX-684: at or above this share of recorded changes landing at or under
+# the graph's own median weighted blast, most changes rebuild the
+# cheapest subgraph - `findings.py`'s `CHAIN_BOUND_RATIO` read the same
+# way, a halfway line rather than a tuned one.
+CACHED_SHAPE_CHEAP_FLOOR = 0.5
+
+# UX-684: how many of `expected_rebuild_cost`'s rows the verdict ranks
+# by height and by weight - `PAYERS_NAMED`'s reasoning, one join over.
+CACHED_SHAPE_DOMINANT_SHOWN = 5
+
+CACHED_SHAPE_REBUILDS_CHEAP = 'rebuilds_the_cheapest_subgraph'
+CACHED_SHAPE_REBUILDS_EXPENSIVE = 'rebuilds_expensive_subgraphs'
 
 
 def find_granularity_findings(
@@ -1789,6 +1936,11 @@ def expected_rebuild_cost(analysis: dict, cache_logs: Optional[dict]) -> list[di
     factor alone can say. `weighted_duration_us` (`bga/analyzer.py:293-312`)
     is the weighted blast; `downstream_count` the unweighted, carried
     through as `blast_count`.
+
+    UX-683: a declared-foundation element's cost is real and published
+    (`is_foundation`), but it never leads this ranking either - the same
+    rule the blast and fan-in rankings apply, sorted here rather than
+    filtered, since the row still belongs in the list.
     """
     change_frequency = (cache_logs or {}).get('change_frequency') or {}
     blast = (analysis.get('elements') or {}).get('blast_radius') or {}
@@ -1806,8 +1958,177 @@ def expected_rebuild_cost(analysis: dict, cache_logs: Optional[dict]) -> list[di
             'weighted_blast_us': weighted_blast_us,
             'expected_cost_us': rebuilds * weighted_blast_us,
             'blast_count': blast_entry.get('downstream_count') or 0,
+            'is_foundation': bool(blast_entry.get('is_foundation')),
         })
-    return sorted(rows, key=lambda r: -r['expected_cost_us'])
+    return sorted(rows, key=lambda r: (r['is_foundation'], -r['expected_cost_us']))
+
+
+def _successors_of(dependencies) -> dict:
+    """Every element's direct dependents, unfiltered by dependency type -
+    `bga/blast.py`'s `_by_depth` adjacency, rebuilt here from the flat
+    edge list `find_granularity_findings` already receives, since a
+    change's blast does not care whether the edge that carries it is
+    build-time or runtime.
+    """
+    successors: dict = {}
+    for dependency in dependencies or []:
+        successors.setdefault(dependency.predecessor, set()).add(dependency.successor)
+    return successors
+
+
+def _height_below(node, successors, memo, path) -> int:
+    """The longest dependent chain below `node`, in elements - the
+    downstream mirror of `compute_unweighted_depth`
+    (`bga/graph/edg.py:96`), run from one element's own blast rather
+    than from every source in the graph. `memo` is shared across calls
+    from `_dominant_elements` since a node's height does not depend on
+    where the walk started; `path` guards a cycle this repository's
+    graphs do not have rather than assuming one.
+    """
+    if node in memo:
+        return memo[node]
+    if node in path:
+        return 0
+    best = 0
+    for child in successors.get(node) or ():
+        best = max(best, 1 + _height_below(child, successors, memo, path | {node}))
+    memo[node] = best
+    return best
+
+
+def _height_vs_weight_advice(height_rank: int, weight_rank: int) -> str:
+    """UX-684's two advices, from one element's rank in its dominant
+    peers' height order against its rank in their weight order - never
+    `None`: a tie (including the element that leads both rankings)
+    reads as `isolate`, the session's follow-up judgement, since
+    `weight` is the element's own number and "split" claims a shape
+    that a tie has not actually shown.
+    """
+    if height_rank < weight_rank:
+        return "split the tall chain"
+    return "isolate the heavy element"
+
+
+def _dominant_elements(rows: list[dict], blast: dict, dependencies) -> list[dict]:
+    """`CACHED_SHAPE_DOMINANT_SHOWN` elements ranked by duration-weighted
+    expected cost - `UX-683`'s foundation exemption applies here too, a
+    declared foundation never leading a ranking meant to point at a fix.
+    """
+    from .sources import ASSEMBLING_KINDS
+
+    ranked = sorted(
+        (r for r in rows if not r['is_foundation']),
+        key=lambda r: -r['expected_cost_us'],
+    )[:CACHED_SHAPE_DOMINANT_SHOWN]
+    if not ranked:
+        return []
+    total_expected_cost = sum(r['expected_cost_us'] for r in ranked) or 1
+    successors = _successors_of(dependencies)
+    memo: dict = {}
+    heights = {r['element']: _height_below(r['element'], successors, memo, frozenset())
+               for r in ranked}
+    by_height = sorted(ranked, key=lambda r: -heights[r['element']])
+    by_weight = sorted(ranked, key=lambda r: -r['weighted_blast_us'])
+    height_rank = {r['element']: i for i, r in enumerate(by_height, start=1)}
+    weight_rank = {r['element']: i for i, r in enumerate(by_weight, start=1)}
+    out = []
+    for r in ranked:
+        element = r['element']
+        kind = (blast.get(element) or {}).get('element_kind')
+        out.append({
+            'element': element,
+            'expected_cost_us': r['expected_cost_us'],
+            'share_of_expected_cost': r['expected_cost_us'] / total_expected_cost,
+            'height': heights[element],
+            'weight_us': r['weighted_blast_us'],
+            'height_rank': height_rank[element],
+            'weight_rank': weight_rank[element],
+            'advice': _height_vs_weight_advice(height_rank[element], weight_rank[element]),
+            'assembling_kind': kind in ASSEMBLING_KINDS,
+        })
+    return out
+
+
+def _cached_shape_sentence(cheap_share, cheap_changes, total_changes, dominant) -> str:
+    """Height (elements) and weight (seconds) are stated in every case
+    - `UX-684`'s "stated separately" - and the tie case adds that the
+    dominant element is also the tallest, rather than leaving a reader
+    to notice the two ranks agree.
+    """
+    lead = (f"{cheap_changes} of {total_changes} recorded changes "
+            f"({cheap_share:.0%}) rebuilt at or under the graph's own "
+            f"median weighted blast")
+    if not dominant:
+        return lead + "."
+    top = dominant[0]
+    tag = (" (an assembling kind - it adds height for free)"
+           if top['assembling_kind'] else "")
+    tallest = ", also the tallest" if top['height_rank'] == 1 == top['weight_rank'] else ""
+    return (f"{lead}. {top['element']} dominates the expected cost at "
+            f"{top['share_of_expected_cost']:.0%}{tag}{tallest}: "
+            f"{top['height']} element(s) below it, "
+            f"{top['weight_us'] / 1e6:.1f}s of its own weight; {top['advice']}.")
+
+
+def cached_shape(analysis: dict, cache_logs: Optional[dict],
+                  dependencies=None) -> Optional[dict]:
+    """UX-684: the cached build's mirror of the cold verdict
+    (`bga/findings.py:1610-1637`'s `chain_bound`/`scheduler_bound`/
+    `inconclusive` rule), stated the same way - the rule and its
+    denominator named in the finding rather than left for a reader to
+    infer.
+
+    `cheap_share` is the share of recorded changes (each rebuild counted
+    once, weighted by nothing) whose element's weighted blast is at or
+    under the graph's own p50 across every element `expected_rebuild_cost`
+    could see. `rebuilds_the_cheapest_subgraph` at or above
+    `CACHED_SHAPE_CHEAP_FLOOR`, `rebuilds_expensive_subgraphs` below it.
+
+    Absent, not a hedged verdict, when there is no Plane 3 change history
+    or fewer recorded changes than `MIN_CO_REBUILDS` trusts a share
+    with - `_scale_of`'s absence rule, extended past "no shape" to "no
+    *reliable* shape": an inconclusive verdict published as data invites
+    a reader to act on a coin flip.
+    """
+    from .store_aggregate import percentile
+
+    change_frequency = (cache_logs or {}).get('change_frequency')
+    if not change_frequency:
+        return None
+    elements = change_frequency.get('elements') or []
+    total_changes = sum(entry.get('rebuilds') or 0 for entry in elements)
+    if total_changes < MIN_CO_REBUILDS:
+        return None
+
+    blast = (analysis.get('elements') or {}).get('blast_radius') or {}
+    p50 = percentile(
+        [be.get('weighted_duration_us') or 0 for be in blast.values()], 50,
+    )
+    cheap_changes = sum(
+        entry.get('rebuilds') or 0
+        for entry in elements
+        if p50 is not None
+        and (be := blast.get(entry.get('element'))) is not None
+        and (be.get('weighted_duration_us') or 0) <= p50
+    )
+    cheap_share = cheap_changes / total_changes
+    verdict = (CACHED_SHAPE_REBUILDS_CHEAP
+               if cheap_share >= CACHED_SHAPE_CHEAP_FLOOR
+               else CACHED_SHAPE_REBUILDS_EXPENSIVE)
+
+    rows = expected_rebuild_cost(analysis, cache_logs)
+    dominant = _dominant_elements(rows, blast, dependencies)
+
+    return {
+        'verdict': verdict,
+        'cheap_share': cheap_share,
+        'cheap_changes': cheap_changes,
+        'total_changes': total_changes,
+        'p50_weighted_blast_us': p50,
+        'dominant': dominant,
+        'sentence': _cached_shape_sentence(cheap_share, cheap_changes,
+                                            total_changes, dominant),
+    }
 
 
 def correlate(analysis: dict, native_report: dict, tasks=None, run_context=None,
@@ -1963,6 +2284,14 @@ def correlate(analysis: dict, native_report: dict, tasks=None, run_context=None,
         **(
             {"expected_rebuild_cost": expected_rebuild_cost(analysis, cache_logs)}
             if (cache_logs or {}).get("change_frequency") else {}
+        ),
+        # UX-684: the cached-build mirror of the cold verdict, beside the
+        # data it is drawn from - absent, not a hedged verdict, on the
+        # same two conditions `cached_shape` itself gates on.
+        **(
+            {"cached_shape": shape}
+            if (shape := cached_shape(analysis, cache_logs, dependencies)) is not None
+            else {}
         ),
         "restructuring": restructuring,
         "granularity": granularity,

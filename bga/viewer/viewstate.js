@@ -85,7 +85,12 @@ export function captureView(root) {
   // `UX-372`: who the reader said they are. View state by the same
   // argument as everything else here - "here is the report, read as
   // the person who owns the machines" is a link somebody pastes.
-  const reader = root.querySelector?.("select[data-role=reader]");
+  // `UX-668`: the control lives in `<header>` now, outside `root`
+  // (`#report`) - read off the owning document, the way `wireViewState`
+  // already does below, so the move did not silently stop the choice
+  // travelling in the link.
+  const reader = (root.ownerDocument ?? root)
+    .querySelector?.("select[data-role=reader]");
   if (reader?.value) params.set("r", reader.value);
 
   for (const table of root.querySelectorAll?.("table[data-table]") ?? []) {
@@ -182,7 +187,9 @@ export function applyView(root, query, { dispatch } = {}) {
   // `UX-372`. A reader this run does not offer is not applied, for the
   // reason the view above gives: a link from a run with capacity
   // numbers must not land on a different answer on a run without them.
-  const reader = root.querySelector?.("select[data-role=reader]");
+  // `UX-668`: read off the owning document - see `captureView`.
+  const reader = (root.ownerDocument ?? root)
+    .querySelector?.("select[data-role=reader]");
   const wantReader = params.get("r");
   if (reader && wantReader && reader.value !== wantReader
       && [...(reader.children ?? [])].some((o) => o.value === wantReader)) {

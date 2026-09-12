@@ -1,0 +1,14 @@
+{
+  "trace_epsilon_us": 1000,
+  "wall_clock": {
+    "start_us": 0,
+    "end_us": 20000
+  },
+  "max_jobs": 4,
+  "resource_capacities": {
+    "PROCESS": 4
+  },
+  "cpu_accounting": {
+    "effective_cpus": 4
+  }
+}

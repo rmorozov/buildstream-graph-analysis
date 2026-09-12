@@ -36,13 +36,15 @@ def test_single_real_build_captures_both_planes_and_combined_trace_correlates(tm
     if not os.path.isdir(os.path.join(project_dir, "files", "toolchain", "usr", "bin")):
         pytest.skip("examples/05-cmake-cpp-toolchain's toolchain isn't staged - run stage_cpp_toolchain.sh first")
 
-    subprocess.run(["bst", "artifact", "delete", "core.bst"], cwd=project_dir, capture_output=True)
+    from tests.unit._bst_env import bst_env  # UX-775: the ambient-HOME twin of the twelve UX-760 fixed
 
     raw_log = str(tmp_path / "raw.log")
     wrapped_log = str(tmp_path / "wrapped.log")
-    returncode = run_traced_build(
-        project_dir, ["bst", "--no-colors", "build", "core.bst"], raw_log, wrapped_log_path=wrapped_log,
-    )
+    with bst_env(tmp_path / "home"):
+        subprocess.run(["bst", "artifact", "delete", "core.bst"], cwd=project_dir, capture_output=True)
+        returncode = run_traced_build(
+            project_dir, ["bst", "--no-colors", "build", "core.bst"], raw_log, wrapped_log_path=wrapped_log,
+        )
     assert returncode == 0
 
     # Plane 2: the real native trace, element-tagged.

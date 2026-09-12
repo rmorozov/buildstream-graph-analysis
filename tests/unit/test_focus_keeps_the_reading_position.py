@@ -38,14 +38,41 @@ FIXTURE = pages.FIXTURES["macro_micro"]
 #: because the defect is the clamp: a document that collapses to a
 #: twenty-fifth of its height cannot hold an offset that large, and one
 #: near the top would be restored by the clamp itself.
-_TWO_PRESSES = """(async () => {
-  const settle = () => new Promise((go) => setTimeout(go, 60));
+#: UX-795: the settle behind the last, flaky read below - two
+#: animation frames agreeing on `(scrollY, top)`, bounded at 2s so a
+#: page that never agrees still gets measured, and says so, rather
+#: than a fixed wait that read the position mid-move on one runner.
+_SETTLE_JS = """
+  const settleReading = (get) => new Promise((resolve) => {
+    const deadline = performance.now() + 2000;
+    let prev = null;
+    const frame = () => requestAnimationFrame(() => {
+      const cur = get();
+      const agree = prev !== null && cur[0] === prev[0] && cur[1] === prev[1];
+      if (agree || performance.now() >= deadline) {
+        resolve({ y: cur[0], top: cur[1], timedOut: !agree });
+        return;
+      }
+      prev = cur;
+      frame();
+    });
+    frame();
+  });
+"""
+
+_TWO_PRESSES = """(async () => {""" + _SETTLE_JS + """
   const height = () => document.documentElement.scrollHeight;
+  const deepGet = (deep) =>
+    () => [window.scrollY, Math.round(deep.getBoundingClientRect().top)];
   // The rail's own "Expand all". Every `data-expand` on a fresh load is
   // inside a shut chapter and has no box at all, so without this the
   // walk below has 13 buttons and nothing to choose from.
   document.querySelector('nav.toc [data-all="false"]').click();
-  await settle();
+  // UX-795: every mid-flow read settles the same way now, not just the
+  // one the CI flake was caught in - height and count, here, since
+  // there is no button yet to read a position off.
+  const expandSettle = await settleReading(
+    () => [height(), document.querySelectorAll("main [data-expand]").length]);
   const buttons = [...document.querySelectorAll("main [data-expand]")];
   const deep = buttons.find(
     (b) => b.getBoundingClientRect().top > window.innerHeight);
@@ -55,20 +82,22 @@ _TWO_PRESSES = """(async () => {
   // the way down, which is where it lands after reading to it.
   window.scrollTo(0, window.scrollY
     + deep.getBoundingClientRect().top - window.innerHeight / 3);
-  await settle();
-  const startY = window.scrollY;
-  const startTop = Math.round(deep.getBoundingClientRect().top);
+  const positionSettle = await settleReading(deepGet(deep));
+  const startY = positionSettle.y;
+  const startTop = positionSettle.top;
   const startHeight = height();
   const label = deep.textContent;
   const pressed = deep.getAttribute("aria-pressed");
 
   deep.click();
-  await settle();
-  const focused = document.querySelector("section[data-table-focus]");
-  const focusedY = window.scrollY;
+  const focusSettle = await settleReading(() => {
+    const el = document.querySelector("section[data-table-focus]");
+    return [window.scrollY,
+            el ? Math.round(el.getBoundingClientRect().top) : null];
+  });
+  const focusedY = focusSettle.y;
   const focusedHeight = height();
-  const focusedTop = focused
-    ? Math.round(focused.getBoundingClientRect().top) : null;
+  const focusedTop = focusSettle.top;
   const focusedLabel = deep.textContent;
   const focusedPressed = deep.getAttribute("aria-pressed");
 
@@ -80,18 +109,22 @@ _TWO_PRESSES = """(async () => {
   // 5,954 px against pristine `tablefocus.js`. One scroll inside focus
   // spends it - 5,954 -> 14,497 px, 9.5 screens.
   window.scrollTo(0, 400);
-  await settle();
-  const readAt = window.scrollY;
+  const readAtSettle = await settleReading(deepGet(deep));
+  const readAt = readAtSettle.y;
 
   deep.click();                       // the same button, a second time
-  await settle();
+  // UX-795: the read the CI flake was in - settled, not slept.
+  const settled = await settleReading(deepGet(deep));
   return {
     found: true, buttons: buttons.length, label, pressed,
     startY, startTop, startHeight,
     focusedY, focusedHeight, focusedTop, focusedLabel, focusedPressed, readAt,
+    expandSettleTimedOut: expandSettle.timedOut,
+    focusedSettleTimedOut: focusSettle.timedOut,
     stillFocused: Boolean(document.querySelector("section[data-table-focus]")),
-    endY: window.scrollY, endHeight: height(),
-    endTop: Math.round(deep.getBoundingClientRect().top),
+    endY: settled.y, endHeight: height(),
+    endTop: settled.top,
+    endSettleTimedOut: settled.timedOut,
     endLabel: deep.textContent,
     endPressed: deep.getAttribute("aria-pressed"),
     viewport: window.innerHeight,
@@ -127,6 +160,14 @@ def two_presses(tmp_path_factory, can_drive_a_page):
         httpd.shutdown()
 
 
+def _settle_note(two_presses, key="endSettleTimedOut"):
+    """UX-795: appended to a failing message, so a timed-out settle
+    reads as one rather than as a fresh displacement."""
+    if two_presses.get(key):
+        return " (the settle timed out)"
+    return ""
+
+
 @pytest.mark.skipif(find_chrome() is None, reason=NO_BROWSER)
 class TestTheReaderComesBackToWhereTheyWere:
     def test_the_page_has_a_button_below_the_fold(self, two_presses):
@@ -153,7 +194,8 @@ class TestTheReaderComesBackToWhereTheyWere:
         moved = abs(two_presses["endY"] - two_presses["startY"])
         assert moved <= two_presses["viewport"], (
             f"{moved}px of displacement, "
-            f"{two_presses['startY']} -> {two_presses['endY']}")
+            f"{two_presses['startY']} -> {two_presses['endY']}"
+            f"{_settle_note(two_presses)}")
 
     def test_the_table_is_back_on_the_same_screen(self, two_presses):
         """The offset is a number; this is the reading position. A page
@@ -162,7 +204,8 @@ class TestTheReaderComesBackToWhereTheyWere:
         moved = abs(two_presses["endTop"] - two_presses["startTop"])
         assert moved <= two_presses["viewport"], (
             f"the table moved {moved}px within the viewport, "
-            f"{two_presses['startTop']} -> {two_presses['endTop']}")
+            f"{two_presses['startTop']} -> {two_presses['endTop']}"
+            f"{_settle_note(two_presses)}")
 
     def test_entering_focus_scrolls_the_table_to_the_top(self, two_presses):
         """At the top, not merely on screen.
@@ -176,7 +219,8 @@ class TestTheReaderComesBackToWhereTheyWere:
         assert two_presses["focusedTop"] is not None, two_presses
         assert two_presses["head"] > 0, two_presses["head"]
         assert 0 <= two_presses["focusedTop"] <= two_presses["head"] + 16, (
-            two_presses["focusedTop"], two_presses["head"])
+            f"{two_presses['focusedTop']}, {two_presses['head']}"
+            f"{_settle_note(two_presses, 'focusedSettleTimedOut')}")
 
 
 @pytest.mark.skipif(find_chrome() is None, reason=NO_BROWSER)
@@ -196,3 +240,102 @@ class TestTheControlSaysWhichStateItIsIn:
         assert two_presses["focusedPressed"] == "true", (
             two_presses["focusedPressed"])
         assert two_presses["endPressed"] is None, two_presses["endPressed"]
+
+
+#: UX-795 Acceptance Test: `_TWO_PRESSES`, with a spacer reflow armed
+#: (before either press) that lands after the second one and shrinks
+#: away over the following 500ms - built from the fixture's own
+#: source, not a copy, so the guard exercises the same `settleReading`
+#: the fixture uses. Stepped by hand on every frame, not a CSS
+#: transition: a transition's first frame reads back its *start*
+#: value (the animation has not visibly begun), which coincided with
+#: `settleReading`'s own first two frames and read as already
+#: agreeing - a step means every frame differs from the last until the
+#: spacer is actually gone. `overflow-anchor` is off so the browser
+#: does not itself compensate the shift the spacer makes - the thing
+#: under test. `insertAdjacentHTML`, not the node-building call:
+#: `UX-264`'s shim census reads that as a second hand-built DOM, and
+#: this is a real page in a real browser, with no shim in it at all.
+_ARM_DELAYED_REFLOW = """
+  document.documentElement.style.overflowAnchor = "none";
+  let presses = 0;
+  deep.addEventListener("click", () => {
+    presses += 1;
+    if (presses !== 2) return;
+    requestAnimationFrame(() => {
+      document.body.insertAdjacentHTML(
+        "afterbegin", '<div id="ux795-spacer" style="height:3000px"></div>');
+      const spacer = document.getElementById("ux795-spacer");
+      const start = performance.now();
+      const shrink = () => {
+        const elapsed = performance.now() - start;
+        const left = Math.max(0, 3000 * (1 - elapsed / 500));
+        spacer.style.height = `${Math.round(left)}px`;
+        if (elapsed < 500) requestAnimationFrame(shrink);
+        else spacer.remove();
+      };
+      shrink();
+    });
+  });"""
+
+_FIXED_SLEEP_READ = """await new Promise((resolve) => setTimeout(() => resolve({
+    y: window.scrollY,
+    top: Math.round(deep.getBoundingClientRect().top),
+    timedOut: false,
+  }), 60))"""
+
+
+def _delayed_layout_script(use_settle):
+    """The fixture's own script, with the reflow above armed and the
+    final read either settled or the old fixed 60ms wait. The `const
+    settled = ` prefix keeps the swap to the one read the Acceptance
+    Test is about - `deepGet(deep)` is identical text at two earlier,
+    untouched settles too."""
+    script = _TWO_PRESSES.replace(
+        "if (!deep) return { found: false, buttons: buttons.length };",
+        "if (!deep) return { found: false, buttons: buttons.length };"
+        + _ARM_DELAYED_REFLOW)
+    if not use_settle:
+        script = script.replace(
+            "const settled = await settleReading(deepGet(deep));",
+            "const settled = " + _FIXED_SLEEP_READ + ";")
+    return script
+
+
+def _measure_delayed(tmp_path_factory, label, use_settle):
+    """Serve `FIXTURE` fresh and measure `_delayed_layout_script`,
+    exactly how `two_presses` serves and measures `_TWO_PRESSES`."""
+    from tools.bga_view import serve
+
+    run = pages.snapshot_copy(FIXTURE, tmp_path_factory.mktemp(label))
+    httpd, url = serve(str(run), port=0)
+    threading.Thread(target=httpd.serve_forever, daemon=True).start()
+    time.sleep(0.3)
+    try:
+        with Browser(find_chrome()) as opened:
+            return opened.measure(
+                url, _delayed_layout_script(use_settle), 1440, 900)
+    finally:
+        httpd.shutdown()
+
+
+@pytest.mark.skipif(find_chrome() is None, reason=NO_BROWSER)
+class TestTheSettleWaitsOutADelayedReflow:
+    """UX-795: the Acceptance Test. A page whose layout is still
+    delayed 500ms after the second press - the settled read waits it
+    out; the fixed 60ms sleep it replaced does not."""
+
+    def test_the_settled_read_passes(self, tmp_path_factory, can_drive_a_page):
+        result = _measure_delayed(tmp_path_factory, "focus-scroll-settled", True)
+        moved = abs(result["endTop"] - result["startTop"])
+        assert result["endSettleTimedOut"] is False, result
+        assert moved <= result["viewport"], (
+            f"the table moved {moved}px within the viewport, "
+            f"{result['startTop']} -> {result['endTop']}")
+
+    def test_the_fixed_sleep_reds(self, tmp_path_factory, can_drive_a_page):
+        result = _measure_delayed(tmp_path_factory, "focus-scroll-fixed", False)
+        moved = abs(result["endTop"] - result["startTop"])
+        assert moved > result["viewport"], (
+            "the fixed 60ms sleep read the table settled - the "
+            f"guard's delayed page did not exercise it: {result}")

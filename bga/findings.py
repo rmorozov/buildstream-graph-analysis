@@ -39,7 +39,7 @@ from .cache_effectiveness import (
     TRANSFER_SHARE_NOTABLE,
 )
 from .ingest.models import AnalysisResult
-from .units import GIB
+from .units import GIB, US_PER_S
 
 # Severity is about what it means for the reader, not about size:
 #   critical - the run itself is not what it appears to be
@@ -111,12 +111,19 @@ FINDING_READERS = {
     "fan-in-structural": "recipe-author",
     "shared-source-blast": "recipe-author",
     "cache-transfer-cost": "recipe-author",
+    # `UX-683`: the declared tier, same reader as the kind-based
+    # exemption it widens - R2 owns the toolchain and wants out of the
+    # noise these two name.
+    "blast-radius-foundation": "recipe-author",
+    "fan-in-foundation": "recipe-author",
     # R3 - the structural answers.
     "mesh-graph": "graph-owner",
     "chain-graph": "graph-owner",
     "graph-width": "graph-owner",
     "criticality": "graph-owner",
     "fan-in-ranking": "graph-owner",
+    # `UX-683`: "declare or dismiss" is a graph-shape decision, R3's.
+    "foundation-candidates": "graph-owner",
     # R4 - whether the number can be trusted and whether it is normal.
     "confidence": "ci-gatekeeper",
     "efficiency-score": "ci-gatekeeper",
@@ -125,6 +132,8 @@ FINDING_READERS = {
     # R5 - the fleet.
     "memory-envelope": "capacity-operator",
     "capacity-recommendation": "capacity-operator",
+    # UX-680: R4, the task's own; R5's section needs Plane 2 and half (a) fires without it.
+    "remote-execution-whatif": "ci-gatekeeper",
 }
 
 #: Rank order for choosing which of a reader's findings leads. Severity
@@ -936,6 +945,41 @@ def _memory_finding(result: AnalysisResult) -> list[dict]:
     )]
 
 
+def _max_jobs_advice_detail(advice: Optional[dict]) -> list[str]:
+    """UX-739: the per-element price beside each `max_jobs_advice` row
+    that actually changes something, plus the joint line once - the
+    only rendering surface `capacity-recommendation` has, since neither
+    `bga/cli.py`'s text format nor the viewer draws `max_jobs_advice`
+    on their own (`grep -rn max_jobs_advice bga/viewer` finds nothing).
+    """
+    if not advice:
+        return []
+    lines = []
+    for row in advice.get('elements') or []:
+        priced = row.get('priced')
+        if not priced or not row.get('max_jobs_change'):
+            continue
+        lines.append(
+            f"    {row['element']}: max-jobs {row['current_max_jobs']} -> "
+            f"{row['recommended_max_jobs']}: build "
+            f"{priced['replayed_baseline_us'] / US_PER_S:.1f} s -> at least "
+            f"{priced['projected_us'] / US_PER_S:.1f} s (floor, +"
+            f"{priced['cost_us'] / US_PER_S:.1f} s)")
+        if row.get('price_refusal'):
+            lines.append(f"      Unpriced: {row['price_refusal']}")
+    for row in advice.get('elements') or []:
+        if row.get('price_refusal') and not row.get('priced'):
+            lines.append(f"    {row['element']}: unpriced - {row['price_refusal']}")
+    joint = advice.get('priced_jointly')
+    if joint:
+        lines.append(
+            f"    Together ({', '.join(joint['elements'])}): build "
+            f"{joint['replayed_baseline_us'] / US_PER_S:.1f} s -> at least "
+            f"{joint['projected_us'] / US_PER_S:.1f} s (floor, +"
+            f"{joint['cost_us'] / US_PER_S:.1f} s)")
+    return lines
+
+
 def _capacity_recommendation_finding(result: AnalysisResult) -> list[dict]:
     """UX-116: the paragraph that intersects the four constraints.
 
@@ -1023,6 +1067,14 @@ def _capacity_recommendation_finding(result: AnalysisResult) -> list[dict]:
             "contended window can absorb."
         )
     detail.append(f"    {recommendation['caveat']}")
+    # UX-678: the sweep's own memory check, from its replayed concurrent
+    # set rather than the `memory` constraint's top-N sum above.
+    sweep_binding = recommendation.get('sweep_binding')
+    if sweep_binding:
+        detail.append(
+            f"    The sweep itself checked memory too: "
+            f"{sweep_binding['name']}-bound at {sweep_binding['builders']}.")
+    detail.extend(_max_jobs_advice_detail(recommendation.get('max_jobs_advice')))
 
     return [_finding(
         'capacity-recommendation', severity,
@@ -1038,7 +1090,119 @@ def _capacity_recommendation_finding(result: AnalysisResult) -> list[dict]:
             'recommended_builders': recommended,
             'builders_change': recommendation['builders_change'],
             'constraints': recommendation['constraints'],
+            # UX-678: additive - the sweep's own memory-feasible ceiling,
+            # summed over its replay's real concurrent set at each swept
+            # capacity rather than the envelope's top-N peaks, and which
+            # of the two capacities is tighter. Absent unless the sweep
+            # had both a measured peak RSS per element and host RAM.
+            'sweep_memory_builders': recommendation.get('sweep_memory_builders'),
+            'sweep_binding': recommendation.get('sweep_binding'),
         },
+    )]
+
+
+# `UX-680`: the sentence that keeps the two remote-execution
+# projections from being read as a total. Both remove time from the
+# *same* critical-path seconds, by two different means - REAPI moves
+# the sandbox that does the work, compiler offload moves the compile
+# inside it - so buying both is not buying their sum.
+REMOTE_EXECUTION_NOT_ADDITIVE_SENTENCE = (
+    "Not additive: both remove the same critical-path seconds, so "
+    "buying both is not buying their sum."
+)
+
+
+def _remote_execution_findings(result: AnalysisResult) -> list[dict]:
+    """UX-680: what each remote-execution mechanism is worth, priced
+    from numbers this run already measured, never summed.
+
+    `bga.cli._attach_remote_execution_whatif` computes both halves onto
+    `result.remote_execution_whatif` - `unbounded_builders` from `bga
+    sweep`'s own unbounded-builder row (what BuildStream's REAPI buys:
+    it moves whole sandboxes, so it removes the builder cap) and
+    `compiler_offload` from Plane 2's compiler/linker CPU on the
+    critical path (what a compiler-level service like recc/reclient
+    buys: it moves compilations out of the sandbox, so it removes
+    compile seconds from the agent). `compiler_offload` is absent, not
+    zero, without a Plane 2 `binary_cost` for this run - then only the
+    builder-cap half publishes.
+    """
+    whatif = getattr(result, 'remote_execution_whatif', None) or {}
+    unbounded = whatif.get('unbounded_builders')
+    offload = whatif.get('compiler_offload')
+    if not unbounded and not offload:
+        return []
+
+    # UX-680/UX-351: seconds for a reader, from the published
+    # microseconds - the report's own duration unit, never re-typed as
+    # a `_s` field.
+    def _s(us):
+        return us / 1e6
+
+    detail: list[str] = []
+    if unbounded:
+        before, after = _s(unbounded['wall_us_before']), _s(unbounded['wall_us_after'])
+        detail.append(
+            f"    Unbounded builders (REAPI moves whole sandboxes): "
+            f"{before:.1f}s -> {after:.1f}s ({before - after:.1f}s); "
+            f"assumes {unbounded['assumption']}"
+        )
+    if offload:
+        before, after = _s(offload['wall_us_before']), _s(offload['wall_us_after'])
+        detail.append(
+            f"    Compiler offload (recc/reclient move compiles out): "
+            f"{before:.1f}s -> {after:.1f}s ({before - after:.1f}s); "
+            f"assumes {offload['assumption']}"
+        )
+    if unbounded and offload:
+        detail.append(f"    {REMOTE_EXECUTION_NOT_ADDITIVE_SENTENCE}")
+        title = (
+            f"Remote execution, priced two ways: unbounded builders "
+            f"{_s(unbounded['wall_us_before']):.1f}s -> "
+            f"{_s(unbounded['wall_us_after']):.1f}s, compiler offload "
+            f"{_s(offload['wall_us_before']):.1f}s -> "
+            f"{_s(offload['wall_us_after']):.1f}s - not additive"
+        )
+    elif unbounded:
+        title = (
+            f"Remote execution (builder cap only, no Plane 2 "
+            f"`binary_cost`): unbounded builders "
+            f"{_s(unbounded['wall_us_before']):.1f}s -> "
+            f"{_s(unbounded['wall_us_after']):.1f}s"
+        )
+    elif offload:
+        title = (
+            f"Remote execution (compiler offload only): "
+            f"{_s(offload['wall_us_before']):.1f}s -> "
+            f"{_s(offload['wall_us_after']):.1f}s critical path"
+        )
+    else:
+        # Unreachable: the early return above already excludes
+        # `not unbounded and not offload`. Kept so `title` is never
+        # unbound rather than trusted to the branches above.
+        title = "Remote execution: no projection could be priced"
+
+    # UX-194: absent, not null - `compiler_offload` (or, in principle,
+    # `unbounded_builders`) is left off `evidence` entirely rather than
+    # published as `None` when that half was not priced, the same
+    # "not looked for" spelling every other missing block in this report
+    # uses.
+    evidence = {
+        'additive': False,
+        'why_not_additive': REMOTE_EXECUTION_NOT_ADDITIVE_SENTENCE,
+    }
+    if unbounded:
+        evidence = evidence | {'unbounded_builders': unbounded}
+    if offload:
+        evidence = evidence | {'compiler_offload': offload}
+
+    # `info`: a projection, not a verdict on this run - it must not
+    # outrank `confidence` for `ci-gatekeeper`'s `leads_with` slot
+    # (`UX-365`'s rule, applied to the reader this shares rather than
+    # to severity ordering generally).
+    return [_finding(
+        'remote-execution-whatif', SEVERITY_INFO, title,
+        detail=detail, evidence=evidence,
     )]
 
 
@@ -1280,10 +1444,19 @@ def _ranking_findings(result: AnalysisResult, chain_bound: bool) -> list[dict]:
     # Excluded from the *ranking*, never from the payload: `UX-203` was
     # filed because views were unreachable, and answering this by
     # hiding them would trade one defect for an older one.
+    # UX-683: the *declared* tier is checked first and wins the report
+    # even when the kind guess below would also have caught it - an
+    # owner's declaration is a stronger claim than a plugin-kind guess,
+    # and a toolchain the project declared foundation is reported as
+    # exactly that rather than folded into the kind-based sentence.
+    foundation = [u for u in top_blast_radius
+                  if (blast_radius.get(u) or {}).get('is_foundation')]
     structural = [u for u in top_blast_radius
-                  if (blast_radius.get(u) or {}).get('is_structural_kind')]
+                  if (blast_radius.get(u) or {}).get('is_structural_kind')
+                  and u not in foundation]
     actionable = [u for u in top_blast_radius
-                  if not (blast_radius.get(u) or {}).get('is_structural_kind')]
+                  if not (blast_radius.get(u) or {}).get('is_structural_kind')
+                  and not (blast_radius.get(u) or {}).get('is_foundation')]
 
     # `UX-474`: rank only elements that reach something.
     #
@@ -1376,7 +1549,53 @@ def _ranking_findings(result: AnalysisResult, chain_bound: bool) -> list[dict]:
             f"whose dependents are the graph's shape, not a task",
             elements=list(structural[:BLAST_RADIUS_SHOWN]),
         ))
+
+    if foundation:
+        # UX-683: present, separated, never the top row - the owner
+        # declared these, so "fix this first" would be arguing with
+        # the declaration rather than the graph. Drawing this tier on
+        # the page is a later track, not here (brief named UX-678/739;
+        # neither file is this tier - see the implementer's report).
+        named = ", ".join(
+            f"{u} ({(blast_radius.get(u) or {}).get('downstream_count', 0)} downstream)"
+            for u in foundation[:BLAST_RADIUS_SHOWN])
+        findings.append(_finding(
+            'blast-radius-foundation', SEVERITY_INFO,
+            f"Declared foundation, excluded from the ranking: {named}",
+            elements=list(foundation[:BLAST_RADIUS_SHOWN]),
+        ))
+
+    findings.extend(_foundation_candidates(blast_radius, distribution))
     return findings
+
+
+def _foundation_candidates(blast_radius: dict, distribution: Optional[dict]) -> list[dict]:
+    """UX-683's discovery half: the owner declares, the tool proposes.
+
+    Candidates are the top p5 fan-out among elements that are neither a
+    `STRUCTURAL_ELEMENT_KINDS` kind nor already declared - the same
+    population the kind exemption misses, named rather than silently
+    exempted a second way. Needs a real distribution (`p95`); a run too
+    small for one has nothing to compare a count against.
+    """
+    if not distribution or not distribution.get('p95'):
+        return []
+    threshold = distribution['p95']
+    candidates = sorted(
+        (uid for uid, row in blast_radius.items()
+         if not row.get('is_structural_kind') and not row.get('is_foundation')
+         and (row.get('downstream_count') or 0) >= threshold),
+        key=lambda uid: (-blast_radius[uid]['downstream_count'], uid))
+    if not candidates:
+        return []
+    named = ", ".join(
+        f"{u} ({blast_radius[u]['downstream_count']} downstream)"
+        for u in candidates[:BLAST_RADIUS_SHOWN])
+    return [_finding(
+        'foundation-candidates', SEVERITY_INFO,
+        f"Wide reach, not declared foundation - declare or dismiss: {named}",
+        elements=list(candidates[:BLAST_RADIUS_SHOWN]),
+    )]
 
 
 def _fan_in_findings(result: AnalysisResult) -> list[dict]:
@@ -1420,11 +1639,20 @@ def _fan_in_findings(result: AnalysisResult) -> list[dict]:
                       if distribution else {}),
         ))
 
+    # UX-683: the declared tier is checked first and wins the report
+    # even where the kind guess below would also have caught it - same
+    # precedence as the blast ranking above.
+    foundation = sorted(
+        (uid for uid, row in fan_in.items()
+         if row.get('is_foundation') and row.get('transitive_count')),
+        key=lambda uid: (-fan_in[uid]['transitive_count'], uid))
+
     # `UX-76` again, and the one place this graph's widest fan-in
     # actually lands: a stack names everything on purpose.
     structural = sorted(
         (uid for uid, row in fan_in.items()
-         if row.get('is_structural_kind') and row.get('transitive_count')),
+         if row.get('is_structural_kind') and row.get('transitive_count')
+         and uid not in foundation),
         key=lambda uid: (-fan_in[uid]['transitive_count'], uid))
     if structural:
         named = ", ".join(
@@ -1437,6 +1665,19 @@ def _fan_in_findings(result: AnalysisResult) -> list[dict]:
             f"({', '.join(sorted({fan_in[uid].get('element_kind', 'unknown') for uid in structural}))})"
             f" whose dependencies are the graph's shape, not a task",
             elements=list(structural[:BLAST_RADIUS_SHOWN]),
+        ))
+
+    # UX-683: present with its figures and excluded from the ranking
+    # above the same way `top_fan_in` already excludes it
+    # (`bga/graph/fan_in.py`) - this just says so.
+    if foundation:
+        named = ", ".join(
+            f"{uid} ({fan_in[uid]['transitive_count']} upstream)"
+            for uid in foundation[:BLAST_RADIUS_SHOWN])
+        findings.append(_finding(
+            'fan-in-foundation', SEVERITY_INFO,
+            f"Declared foundation, excluded from the ranking: {named}",
+            elements=list(foundation[:BLAST_RADIUS_SHOWN]),
         ))
     return findings
 
@@ -1615,6 +1856,10 @@ def compute_findings(result: AnalysisResult) -> list[dict]:
     # UX-116: after the memory envelope, because it consumes it - the
     # reader meets the inputs and then the sentence that intersects them.
     findings.extend(_capacity_recommendation_finding(result))
+    # `UX-680`: beside the capacity/sweep findings it reads alongside -
+    # `ci-gatekeeper`, not `capacity-operator`, because half (a) fires
+    # without Plane 2 and R5's page section cannot.
+    findings.extend(_remote_execution_findings(result))
     findings.extend(_criticality_findings(result))
     findings.extend(_floor_findings(result))
     # UX-171: last, because it is a fact about the project's shape

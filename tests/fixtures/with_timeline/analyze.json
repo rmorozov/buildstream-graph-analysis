@@ -310,6 +310,29 @@
             "trace_query": null
         },
         {
+            "id": "remote-execution-whatif",
+            "severity": "info",
+            "title": "Remote execution (builder cap only, no Plane 2 `binary_cost`): unbounded builders 43.2s -> 43.2s",
+            "detail": [
+                "    Unbounded builders (REAPI moves whole sandboxes): 43.2s -> 43.2s (0.0s); assumes staging and wait per element unchanged, workers never queue"
+            ],
+            "elements": [],
+            "evidence": {
+                "additive": false,
+                "why_not_additive": "Not additive: both remove the same critical-path seconds, so buying both is not buying their sum.",
+                "unbounded_builders": {
+                    "wall_us_before": 43200000,
+                    "wall_us_after": 43200000,
+                    "builders_before": 4,
+                    "builders_after": 11,
+                    "assumption": "staging and wait per element unchanged, workers never queue"
+                }
+            },
+            "reader": "ci-gatekeeper",
+            "copy_text": "BGA finding: Remote execution (builder cap only, no Plane 2 `binary_cost`): unbounded builders 43.2s -> 43.2s\n      Unbounded builders (REAPI moves whole sandboxes): 43.2s -> 43.2s (0.0s); assumes staging and wait per element unchanged, workers never queue\n  additive False\n  why_not_additive Not additive: both remove the same critical-path seconds, so buying both is not buying their sum.\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
+            "trace_query": null
+        },
+        {
             "id": "efficiency-score",
             "severity": "info",
             "title": "Efficiency Score: 1.00 (scheduling is near the certified floor for this graph - further gains need the graph or the work itself to change, not the scheduler (see Dispatch Occupancy and Critical Path))",
@@ -399,6 +422,7 @@
             "findings": [
                 "cache-hit-ratio",
                 "confidence",
+                "remote-execution-whatif",
                 "efficiency-score"
             ]
         }
@@ -549,7 +573,8 @@
                 "is_leaf": false,
                 "risk_score": 10,
                 "element_kind": "import",
-                "is_structural_kind": true
+                "is_structural_kind": true,
+                "is_foundation": false
             },
             "core.bst": {
                 "downstream_count": 8,
@@ -557,7 +582,8 @@
                 "is_leaf": false,
                 "risk_score": 8,
                 "element_kind": "cmake",
-                "is_structural_kind": false
+                "is_structural_kind": false,
+                "is_foundation": false
             },
             "codegen.bst": {
                 "downstream_count": 8,
@@ -565,7 +591,8 @@
                 "is_leaf": false,
                 "risk_score": 0,
                 "element_kind": "cmake",
-                "is_structural_kind": false
+                "is_structural_kind": false,
+                "is_foundation": false
             },
             "lib-a.bst": {
                 "downstream_count": 7,
@@ -573,7 +600,8 @@
                 "is_leaf": false,
                 "risk_score": 7,
                 "element_kind": "cmake",
-                "is_structural_kind": false
+                "is_structural_kind": false,
+                "is_foundation": false
             },
             "lib-b.bst": {
                 "downstream_count": 6,
@@ -581,7 +609,8 @@
                 "is_leaf": false,
                 "risk_score": 6,
                 "element_kind": "cmake",
-                "is_structural_kind": false
+                "is_structural_kind": false,
+                "is_foundation": false
             },
             "lib-c.bst": {
                 "downstream_count": 5,
@@ -589,7 +618,8 @@
                 "is_leaf": false,
                 "risk_score": 5,
                 "element_kind": "cmake",
-                "is_structural_kind": false
+                "is_structural_kind": false,
+                "is_foundation": false
             },
             "lib-d.bst": {
                 "downstream_count": 4,
@@ -597,7 +627,8 @@
                 "is_leaf": false,
                 "risk_score": 4,
                 "element_kind": "cmake",
-                "is_structural_kind": false
+                "is_structural_kind": false,
+                "is_foundation": false
             },
             "lib-e.bst": {
                 "downstream_count": 3,
@@ -605,7 +636,8 @@
                 "is_leaf": false,
                 "risk_score": 3,
                 "element_kind": "cmake",
-                "is_structural_kind": false
+                "is_structural_kind": false,
+                "is_foundation": false
             },
             "lib-f.bst": {
                 "downstream_count": 2,
@@ -613,7 +645,8 @@
                 "is_leaf": false,
                 "risk_score": 2,
                 "element_kind": "cmake",
-                "is_structural_kind": false
+                "is_structural_kind": false,
+                "is_foundation": false
             },
             "app.bst": {
                 "downstream_count": 1,
@@ -621,7 +654,8 @@
                 "is_leaf": false,
                 "risk_score": 1,
                 "element_kind": "cmake",
-                "is_structural_kind": false
+                "is_structural_kind": false,
+                "is_foundation": false
             },
             "all.bst": {
                 "downstream_count": 0,
@@ -629,7 +663,8 @@
                 "is_leaf": true,
                 "risk_score": 0,
                 "element_kind": "stack",
-                "is_structural_kind": true
+                "is_structural_kind": true,
+                "is_foundation": false
             }
         },
         "fan_in": {
@@ -638,77 +673,88 @@
                 "transitive_count": 10,
                 "immediate_dominator": "app.bst",
                 "element_kind": "stack",
-                "is_structural_kind": true
+                "is_structural_kind": true,
+                "is_foundation": false
             },
             "app.bst": {
                 "direct_count": 8,
                 "transitive_count": 9,
                 "immediate_dominator": "toolchain.bst",
                 "element_kind": "cmake",
-                "is_structural_kind": false
+                "is_structural_kind": false,
+                "is_foundation": false
             },
             "codegen.bst": {
                 "direct_count": 1,
                 "transitive_count": 1,
                 "immediate_dominator": "toolchain.bst",
                 "element_kind": "cmake",
-                "is_structural_kind": false
+                "is_structural_kind": false,
+                "is_foundation": false
             },
             "core.bst": {
                 "direct_count": 1,
                 "transitive_count": 1,
                 "immediate_dominator": "toolchain.bst",
                 "element_kind": "cmake",
-                "is_structural_kind": false
+                "is_structural_kind": false,
+                "is_foundation": false
             },
             "lib-a.bst": {
                 "direct_count": 3,
                 "transitive_count": 3,
                 "immediate_dominator": "toolchain.bst",
                 "element_kind": "cmake",
-                "is_structural_kind": false
+                "is_structural_kind": false,
+                "is_foundation": false
             },
             "lib-b.bst": {
                 "direct_count": 4,
                 "transitive_count": 4,
                 "immediate_dominator": "toolchain.bst",
                 "element_kind": "cmake",
-                "is_structural_kind": false
+                "is_structural_kind": false,
+                "is_foundation": false
             },
             "lib-c.bst": {
                 "direct_count": 4,
                 "transitive_count": 5,
                 "immediate_dominator": "toolchain.bst",
                 "element_kind": "cmake",
-                "is_structural_kind": false
+                "is_structural_kind": false,
+                "is_foundation": false
             },
             "lib-d.bst": {
                 "direct_count": 4,
                 "transitive_count": 6,
                 "immediate_dominator": "toolchain.bst",
                 "element_kind": "cmake",
-                "is_structural_kind": false
+                "is_structural_kind": false,
+                "is_foundation": false
             },
             "lib-e.bst": {
                 "direct_count": 4,
                 "transitive_count": 7,
                 "immediate_dominator": "toolchain.bst",
                 "element_kind": "cmake",
-                "is_structural_kind": false
+                "is_structural_kind": false,
+                "is_foundation": false
             },
             "lib-f.bst": {
                 "direct_count": 4,
                 "transitive_count": 8,
                 "immediate_dominator": "toolchain.bst",
                 "element_kind": "cmake",
-                "is_structural_kind": false
+                "is_structural_kind": false,
+                "is_foundation": false
             },
             "toolchain.bst": {
                 "direct_count": 0,
                 "transitive_count": 0,
                 "immediate_dominator": null,
                 "element_kind": "import",
-                "is_structural_kind": true
+                "is_structural_kind": true,
+                "is_foundation": false
             }
         },
         "criticality_probability": {
@@ -1866,6 +1912,22 @@
             "unpublished_inputs": []
         },
         {
+            "claim": "remote-execution-whatif",
+            "kind": "finding",
+            "document": "analyze/v6",
+            "evidence": [],
+            "rule": {
+                "name": null,
+                "threshold": null,
+                "comparison": "present",
+                "observed_path": null,
+                "sentence": "Published whenever `bga sweep`'s own unbounded-capacity row priced the builder cap; the compiler-offload half needs a Plane 2 `binary_cost` too, and is absent without one - both numbers are the finding's own `evidence`.",
+                "module": "bga/findings.py"
+            },
+            "trace_query": null,
+            "unpublished_inputs": []
+        },
+        {
             "claim": "efficiency-score",
             "kind": "finding",
             "document": "analyze/v6",
@@ -1900,10 +1962,10 @@
         }
     ],
     "document_shape": {
-        "leaves": 1240,
+        "leaves": 1287,
         "deepest_depth": 7,
         "deepest_path": "findings.[].evidence.steps.[].entering.[]",
-        "deeper_than_three": 663,
-        "deeper_than_three_share": 0.5346774193548387
+        "deeper_than_three": 700,
+        "deeper_than_three_share": 0.5439005439005439
     }
 }

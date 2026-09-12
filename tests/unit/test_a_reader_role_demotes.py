@@ -39,7 +39,9 @@ import pytest
 REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 sys.path.insert(0, str(REPO / "tests"))
+sys.path.insert(0, str(REPO / "tools"))
 
+import dev_track_cost
 import pages
 from browser import NO_BROWSER, Browser, find_chrome
 
@@ -276,11 +278,19 @@ class TestARoleDemotesRatherThanHides:
                                                                   driven,
                                                                   label):
         """`UX-372`'s rule kept: with nobody chosen the page is what it
-        was. Node count, section list, folds and marks all return."""
+        was. Node count, section list, folds and marks all return.
+
+        `UX-668`: "tagged" no longer means "empty" here - the landed
+        page itself wears every declaring section's chip, muted, so a
+        reader sees what each role would promote before choosing one.
+        The clause is that driving through every role and back to
+        "anyone" reproduces that same landed set, not the promoted-only
+        set a chosen role leaves."""
         page = driven[label]
         landed, anyone = page["landed"], page["anyone"]
         assert anyone["promoted"] == [], anyone["promoted"]
-        assert anyone["tagged"] == [], anyone["tagged"]
+        assert anyone["tagged"] == landed["tagged"], (
+            anyone["tagged"], landed["tagged"])
         assert anyone["keys"] == landed["keys"]
         assert anyone["nodes"] == landed["nodes"], (anyone["nodes"],
                                                     landed["nodes"])
@@ -380,6 +390,38 @@ class TestEveryPageBuiltSectionDecidesItsReader:
             assert set(roles) <= set(schemas.READER_ROLES), (
                 f"{site} declares {sorted(set(roles) - set(schemas.READER_ROLES))} "
                 f"for {key!r}, which `findings.READERS` does not name")
+
+
+#: UX-777: `_sites()` above is the population two documents restate as
+#: a word - `UX-650` fixed the code and left the sentence at nine.
+#: `count_word` is built, not tabled (`UX-752`), so a count past what a
+#: fixed dict would have carried still reddens with a legible word
+#: rather than a `KeyError`.
+CHAPTERS_JS = REPO / "bga/viewer/chapters.js"
+ARCHITECTURE = REPO / "docs/design/architecture.md"
+
+
+class TestThePageBuiltCountIsDerivedInBothDocuments:
+    """`chapters.js`'s docstring and `architecture.md` both state how
+    many page-built sections `_sites()` counts; `forty-eight` names a
+    different, dated measurement (round 39, `UX-286`) that neither
+    clause here re-derives."""
+
+    def test_the_chapters_docstring_states_it(self):
+        word = dev_track_cost.count_word(len(_sites())).capitalize()
+        text = CHAPTERS_JS.read_text(encoding="utf-8")
+        assert f"{word} of the\n * forty-eight sections" in text, (
+            f"bga/viewer/chapters.js's docstring does not state "
+            f"{word.lower()!r} page-built sections ({len(_sites())} "
+            f"construction sites, `_sites()`)")
+
+    def test_the_architecture_document_states_it(self):
+        word = dev_track_cost.count_word(len(_sites())).lower()
+        text = " ".join(ARCHITECTURE.read_text(encoding="utf-8").split())
+        assert f"because {word} of the forty-eight sections" in text, (
+            f"docs/design/architecture.md does not state {word!r} "
+            f"page-built sections ({len(_sites())} construction sites, "
+            f"`_sites()`)")
 
 
 @needs_browser

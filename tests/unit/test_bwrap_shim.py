@@ -11,6 +11,8 @@ REAL_BWRAP_ARGV below is a trimmed-but-real shape captured from a real
 `bst build core.bst` invocation against examples/05-cmake-cpp-toolchain
 during that Deep Experiment - real option ordering/arity, not invented.
 """
+import os
+
 from tools.native_trace.bwrap_shim import build_shim_argv, extract_element_name, split_bwrap_args
 
 REAL_BWRAP_ARGV = [
@@ -204,3 +206,47 @@ def test_build_shim_argv_omits_bst_trace_element_when_no_real_dir_present():
     )
 
     assert "BST_TRACE_ELEMENT" not in argv
+
+
+# --- jobserver fd injection (UX-679, a spike) ------------------------------
+
+def test_build_shim_argv_omits_makeflags_when_no_jobserver_fd():
+    """The flag's own promise: the FIFO is bound only when it is given."""
+    argv = build_shim_argv(
+        real_bwrap="/usr/bin/bwrap",
+        bst_args=REAL_BWRAP_ARGV,
+        bind_src="/tmp/host-trace-dir",
+        bind_dst="/tmp/.bst-native-trace",
+        preload_so="/tmp/.bst-native-trace/hook.so",
+        trace_log="/tmp/.bst-native-trace/trace.log",
+    )
+
+    assert "MAKEFLAGS" not in argv
+
+
+def test_build_shim_argv_injects_one_makeflags_setenv_naming_a_real_open_fd():
+    read_fd, write_fd = os.pipe()
+    try:
+        argv = build_shim_argv(
+            real_bwrap="/usr/bin/bwrap",
+            bst_args=REAL_BWRAP_ARGV,
+            bind_src="/tmp/host-trace-dir",
+            bind_dst="/tmp/.bst-native-trace",
+            preload_so="/tmp/.bst-native-trace/hook.so",
+            trace_log="/tmp/.bst-native-trace/trace.log",
+            jobserver_fd=read_fd,
+        )
+
+        setenv_makeflags = [
+            i for i, tok in enumerate(argv)
+            if tok == "--setenv" and argv[i + 1] == "MAKEFLAGS"
+        ]
+        assert len(setenv_makeflags) == 1
+        idx = setenv_makeflags[0]
+        assert argv[idx:idx + 3] == [
+            "--setenv", "MAKEFLAGS", f"--jobserver-auth={read_fd},{read_fd}",
+        ]
+        os.fstat(read_fd)  # the fd named is real and still open
+    finally:
+        os.close(read_fd)
+        os.close(write_fd)

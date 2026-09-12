@@ -1,6 +1,6 @@
 # UX-690: the suite has a shape budget, and a feature files its test analysis
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-238 (the tiers), UX-400 (the population sweep), UX-498 | **Serves:** R8 reading whether the suite is balanced; the implementer writing the right guard | **Topic:** guards | **Area:** unassigned | **Shape:** judgement
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-238 (the tiers), UX-400 (the population sweep), UX-498 | **Serves:** R8 reading whether the suite is balanced; the implementer writing the right guard | **Topic:** guards | **Area:** unassigned | **Shape:** judgement
 
 ## Motivation
 
@@ -40,3 +40,70 @@ rounds later it is measurable.
 The shape table's counts match `ls`/markers; mutation: add a browser
 file past the 40 % row — the budget guard reds; a feature filing
 without the block — the row guard reds.
+
+## Outcome (2026-09-08)
+
+### The gap, measured
+
+No purpose classification existed; `tests/tiers.py` measures duration
+only. `tools/dev_shape_budget.py` derives five disjoint classes
+(precedence enormous → journey → browser → sweep → unit) from the
+tree and `tests/ci_reference.json`:
+
+```text
+$ python3 tools/dev_shape_budget.py
+shape         files   CI seconds    share
+unit            447       713.4s    46.8%
+sweep             1         2.1s     0.1%
+journey           2         0.1s     0.0%
+browser          52       770.0s    50.5%
+enormous          20        39.3s     2.6%
+total           522      1525.0s
+browser budget: 50.5% measured, 40% the Required Fix states, 50.5% the ledger holds
+journey budget: 2 file(s) measured, 25 published contract(s) (`bga.contracts.ids()`) - not held; UX-690's Outcome names the gap
+```
+
+Both budgets the Required Fix states are already exceeded by the
+committed tree — browser at 50.5% against a 40% ceiling, journey at 2
+files against 25 published contracts (`bga.contracts.ids()`, the count
+`_published_schemas()` already uses), stated here as what the budget
+stands at rather than hidden. **Session decision**: the browser row
+holds "never rises" against an *adopted* figure, `tests/shape_ledger.json`
+(`dev_shape_budget.py --adopt` writes it, the shape `dev_sizes.py
+--adopt` holds its own floor in) - not a typed `RATCHET_PCT`. The
+journey row stays reported, not gated.
+
+### The close, measured
+
+```text
+$ python3 tools/dev_close_task.py --check
+0 problem(s) over 10 propert(y/ies), 793 backlog row(s)
+$ PYTHONPATH=. python3 -m pytest tests/unit/test_the_suite_holds_its_shape_budget.py tests/unit/test_the_cost_row_is_derived_from_the_selector.py -q
+115 passed in ...
+```
+
+`dev_close_task.py --check` prints the same table (`dev_flake_census.py`'s
+`top()` is the same convention) for a round document's Standing to
+copy, and its `CHECKS` gained a tenth property: a `Topic:
+analysis|viewer|capture` filing past UX-690 with no `## Decomposition`
+block. Fourteen ids already past 690 predate the check
+(`DECOMPOSITION_GRANDFATHERED`, the same shape as
+`UNDOCUMENTED_WHEN_THE_POPULATION_BECAME_KEYS`) — not retro-fitted, so
+`--check` still reports 0 on the real tree. A new test file moved
+`dev_touching.py`'s file-count figure (31-144 → 31-145 of 522);
+`dev_touching.py --spread --write` re-derived it.
+
+### Mutations verified red and reverted
+
+Each edited on the real file (or moved aside), run red, restored from
+a copy (`cp`/`mv` back), never `git checkout --`.
+
+| # | mutation | reddened | count |
+|---|---|---|---|
+| 1 | `ci_reference.json` + a synthetic browser-boot file: +500s to `browser` | `test_the_browser_row_holds_the_ledger` | 1 failed, then green after revert |
+| 2 | `_BST` regex changed to match no marker | `test_the_enormous_row_matches_the_bst_marker` | 1 failed, then green after revert |
+| 3 | a synthetic `UX-9999` filing, Topic analysis, no `## Decomposition` | `--check`'s new property | 1 problem (+1 unrelated `architecture.md` count, from adding a file) |
+| 4 | `shape_ledger.json` hand-typed to `10.0` (measured 50.5%) | `test_the_browser_row_holds_the_ledger`, naming both numbers | 1 failed, then green after revert |
+| 5 | `tests/ci_reference.json` moved aside | `test_the_browser_row_holds_the_ledger`, naming the path (`ci_seconds()` used to read `{}` and pass vacuously) | 1 failed, then green after restore |
+
+**Deviation.** The tree already exceeds both stated budgets — browser 50.5 % of CI seconds against 40, journey files 2 against 25 published contracts — so the browser row is a ratchet adopted into `tests/shape_ledger.json` (never rises, +1 point) and the journey row is reported; the 40 % and the 25 stand in the Outcome as what the budget is short by. The Required Fix's "Standing" section has not existed in a round document since round 95; from round 110 on the round document carries the table under that heading. One verifier hold (an 11-line commit body, folded to one commit; a missing `ci_reference.json` now reds, not passes). One commit, one verifier.

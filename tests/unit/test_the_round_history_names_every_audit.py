@@ -36,14 +36,31 @@ import pathlib
 import posixpath
 import re
 import subprocess
+import sys
 
 import pytest
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / "tools"))
+import dev_track_cost
+
 AUDITS = "docs/audits"
 DIRECTIONS = "docs/design/directions.md"
 README = "docs/README.md"
+SCENARIOS = "docs/backlog/scenarios"
+CLOSED = f"{SCENARIOS}/closed.md"
 HISTORY_HEADING = "## Round history"
+
+#: `UX-798`: rows from here on carry a derived "N closed, M filed";
+#: older rows are records, read by nobody but a person.
+COUNTED_FROM_ROUND = 109
+
+#: Spelled words, one to ninety-nine, built from `count_word`'s own
+#: table so the two cannot drift (`UX-752`'s reasoning, `UX-798`'s
+#: guard; ninety-nine because `count_word` builds hundreds separately
+#: since `UX-794` and no row here has reached one).
+_WORD_FOR = {n: dev_track_cost.count_word(n) for n in range(1, 100)}
+NUMBER_FOR_WORD = {word: n for n, word in _WORD_FOR.items()}
 
 # `[text](target)` on one line; markdown tables are one row per line.
 LINK = re.compile(r"\[([^\]\n]*)\]\(([^)\s]+)\)")
@@ -199,3 +216,111 @@ def test_a_links_text_names_the_file_it_opens(doc):
         if named and named.group(0) != base:
             wrong.append(f"text names {named.group(0)}, target is {base}")
     assert not wrong, f"{doc}: " + "; ".join(wrong)
+
+
+def _closed_status():
+    """`UX-798`: id -> the marker on that id's own row in `closed.md`."""
+    status = {}
+    for line in (REPO / CLOSED).read_text(encoding="utf-8").splitlines():
+        head = re.match(r"^\| (UX-\d+) \|", line)
+        if not head:
+            continue
+        marker = re.search(r"\| ?(🟢|🔴|🟡|⚪|🟠)", line[len(head.group(0)):])
+        status[head.group(1)] = marker.group(1) if marker else None
+    return status
+
+
+#: The row's tail, `"<n or word> closed, <n or word> filed |"` at the
+#: line's end. `(?<=\s)` — not `\b` — anchors the first word: `\b` sits
+#: at *every* internal hyphen too, so greedy backtracking on the row's
+#: free text read `thirty-one closed` as `one` (verifier finding on
+#: this file, `UX-798`).
+_COUNT_TRAILER = re.compile(
+    r"(?<=\s)(\d+|[A-Za-z]+(?:-[A-Za-z]+)?)\s+closed,\s+"
+    r"(\d+|[A-Za-z]+(?:-[A-Za-z]+)?)\s+filed \|$")
+
+
+def _parse_count_trailer(row):
+    """`(closed, filed)` as ints, or `None` if `row` has no such tail."""
+    m = _COUNT_TRAILER.search(row)
+    return None if m is None else (_as_number(m.group(1)), _as_number(m.group(2)))
+
+
+def _round_history_rows():
+    """(round, closed_n, filed_n) for every row with a count trailer."""
+    rows = []
+    for row in _history_table():
+        counts = _parse_count_trailer(row)
+        if counts is None:
+            continue
+        label = LINK.search(row).group(1)
+        rows.append((int(label),) + counts)
+    return rows
+
+
+def _as_number(word_or_digit):
+    if word_or_digit.isdigit():
+        return int(word_or_digit)
+    return NUMBER_FOR_WORD[word_or_digit.lower()]
+
+
+def _what_closed_ids(round_):
+    """The ids that head a `## What closed` bullet — never an id merely
+    named inside another bullet's prose (round 110's `UX-772`, `UX-607`)."""
+    doc = (REPO / AUDITS / f"round-{round_}.md").read_text(encoding="utf-8")
+    after = doc.split("\n## What closed\n", 1)
+    assert len(after) == 2, f"round-{round_}.md has no '## What closed' section"
+    section = after[1].split("\n## ", 1)[0]
+    ids = []
+    for line in section.splitlines():
+        if not line.startswith("- "):
+            continue
+        ids.extend(re.findall(r"UX-\d+", line.split(" — ", 1)[0]))
+    return ids
+
+
+def _found_by_round(round_):
+    """Task files whose header field, not any quoted prose, names `round_`."""
+    ids = []
+    for f in sorted((REPO / SCENARIOS).glob("UX-*.md")):
+        for line in f.read_text(encoding="utf-8").splitlines():
+            if not line.startswith("**Priority:**"):
+                continue
+            m = re.search(r"\*\*Found by:\*\* ([^|]*)\|", line)
+            if m and re.search(rf"\bround {round_}\b", m.group(1)):
+                ids.append("UX-" + f.stem.split("-")[1].lstrip("0"))
+            break
+    return ids
+
+
+def test_a_history_row_s_counts_are_derived():
+    """`UX-798`: the row's typed "N closed, M filed" against the round
+    document's own bulleted ids and the tasks that name the round."""
+    status = _closed_status()
+    checked = 0
+    for round_, said_closed, said_filed in _round_history_rows():
+        if round_ < COUNTED_FROM_ROUND:
+            continue
+        checked += 1
+        closed_ids = _what_closed_ids(round_)
+        not_green = [i for i in closed_ids if status.get(i) != "🟢"]
+        assert not not_green, (
+            f"round {round_}: What closed names {', '.join(not_green)}, "
+            f"not 🟢 in {CLOSED}")
+        derived_closed = len(closed_ids)
+        derived_filed = len(_found_by_round(round_))
+        assert (said_closed, said_filed) == (derived_closed, derived_filed), (
+            f"round {round_}: directions.md says "
+            f"{said_closed} closed, {said_filed} filed; derived "
+            f"{derived_closed} closed, {derived_filed} filed")
+    assert checked >= 2, "no history row at or after round " \
+        f"{COUNTED_FROM_ROUND} was checked — the scan is vacuous"
+
+
+def test_the_count_trailer_reads_a_compound_word_past_thirty():
+    """A verifier read `thirty-one closed` as `1`: a `\\b`-anchored word
+    class lets greedy backtracking start inside a hyphenated word.
+    `_parse_count_trailer` must read the whole compound, and the word
+    table must cover it (`_WORD_FOR` stops at 30 before this fix)."""
+    row = "| [111](../audits/round-111.md) | free text. thirty-one closed, twenty-two filed |"
+    assert _parse_count_trailer(row) == (31, 22)

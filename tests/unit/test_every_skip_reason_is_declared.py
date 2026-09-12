@@ -91,7 +91,13 @@ import skip_reasons
 #: `needs_browser` reads `browser.NO_BROWSER` in the same form. The
 #: reason itself is already declared; what cannot be read statically
 #: is the module attribute, which is the form this scan asks for.
-UNRESOLVABLE = 66
+#: `UX-782` argues **one** more, to 67: not a browser guard - the
+#: round-register date guard's shallow-clone skip names the depth
+#: (`git rev-list --count HEAD`), so the reason is an f-string by the
+#: Required Fix's own words ("skips ... naming the depth"). A static
+#: constant would have to drop the number to be readable, which is the
+#: opposite of what the row asked for.
+UNRESOLVABLE = 67
 
 
 def test_every_declared_skip_reason_is_known():

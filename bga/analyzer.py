@@ -281,7 +281,7 @@ def distribution(values):
     return shape
 
 
-def _blast_signals(diag_result, kind_by_uid: dict) -> dict:
+def _blast_signals(diag_result, kind_by_uid: dict, foundation: frozenset = frozenset()) -> dict:
     """Part 25's four keys, lifted out of `_compute_diagnostics` whole.
 
     `UX-681`: a move, not a change - the statement budget the baseline
@@ -302,6 +302,9 @@ def _blast_signals(diag_result, kind_by_uid: dict) -> dict:
                 # above, which stay the real, directly-observed data).
                 'element_kind': kind_by_uid.get(br.element_uid, 'unknown'),
                 'is_structural_kind': kind_by_uid.get(br.element_uid) in STRUCTURAL_ELEMENT_KINDS,
+                # UX-683: declared, not guessed - `project.conf`'s own
+                # `variables.bga-foundation`, validated at extraction.
+                'is_foundation': br.element_uid in foundation,
             }
             for br in diag_result.blast_radius
         }
@@ -348,7 +351,7 @@ def _fan_in_signals(graph, kinds: dict) -> dict:
 
     if not (graph and graph.elements):
         return {}
-    rows = compute_fan_in(graph, kinds, STRUCTURAL_ELEMENT_KINDS)
+    rows = compute_fan_in(graph, kinds, STRUCTURAL_ELEMENT_KINDS, graph.foundation)
     out = {'fan_in': rows, 'top_fan_in': top_fan_in(rows)}
     shape = blast_radius_distribution(
         [row['transitive_count'] for row in rows.values()])
@@ -2265,7 +2268,9 @@ class BuildEfficiencyAnalyzer:
                 'nonzero_fraction': diag_result.ready_queue.nonzero_fraction,
             }
         
-        signals.update(_blast_signals(diag_result, kind_by_uid))
+        signals.update(_blast_signals(
+            diag_result, kind_by_uid,
+            self.graph.foundation if self.graph else frozenset()))
 
         # `UX-681`: fan-in, the mirror of the blast radius above.
         signals.update(_fan_in_signals(self.graph, kind_by_uid))

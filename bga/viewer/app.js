@@ -37,7 +37,8 @@ import { renderCulprits, renderElementHistory, renderHorizon,
 import { renderDecision, renderProvenanceRecords, renderInvestigation } from "./decision.js";
 import { anchor, collapsible, toc, scrollspy, stepper, runSelector,
          jumpTargets, matches, paletteResults } from "./nav.js";
-import { chapters, fileInChapter, revealAndLand, setAllOpen } from "./chapters.js";
+import { applyRole, chapters, fileInChapter, revealAndLand,
+         setAllOpen } from "./chapters.js";
 // UX-302: the second of §1's two deliberate raw-JSON sites - the one
 // the reader asks for, per section, because pasting a section into an
 // issue is what people do with a report.
@@ -45,7 +46,8 @@ import { jsonToggles } from "./rawjson.js";
 // UX-334: `name` and `id` on every control the page builds - see the
 // measured counts in the module.
 import { contained } from "./controls.js";
-import { applyView, splitHash, viewLink, wireViewState } from "./viewstate.js";
+import { applyView, joinHash, splitHash, viewLink,
+         wireViewState } from "./viewstate.js";
 import { applyFocus, applyMarks, clearFocus, focusedElement, readMarks,
          renderFocusBar, renderMarkSummary } from "./focus.js";
 import { renderQuestions } from "./questions.js";
@@ -171,6 +173,20 @@ export function wireJumpBox(nav, root, payload, context = {}) {
     revealAndLand(node, "smooth");
     node.setAttribute("data-jumped", "true");
     setTimeout(() => node.removeAttribute("data-jumped"), 1600);
+    // UX-671: the jump box has no `<a href>`, so nothing writes the
+    // anchor the way a rail link's own navigation does - written here,
+    // and `wireViewState`'s delegated "change" recaptures the rest.
+    const key = target.kind === "section" ? target.key
+      : node.closest?.("[data-section]")?.getAttribute("data-section");
+    if (key) {
+      const next = joinHash(key, splitHash(location.hash).query);
+      if (window.history?.replaceState) {
+        window.history.replaceState(null, "", next || " ");
+      } else {
+        location.hash = next;
+      }
+      root.dispatchEvent?.(new Event("change", { bubbles: true }));
+    }
   };
 
   // UX-223: the same box, offering what the page can already do with
@@ -893,6 +909,12 @@ async function boot() {
     const controls = collapsible(root, {
       document, storage: served() ? safeStorage() : null,
       enclosing: (open) => setAllOpen(root, open) });
+    // `UX-668`: "anyone" wears every section's reader chips, muted -
+    // run once here, over the folds `collapsible` just set, so it
+    // reproduces the landed page (`applyRole(root, null)` already had
+    // to, for the picker's own "back to anyone") and only adds the
+    // chip text nothing has filled in yet.
+    applyRole(root, null);
     const contents = toc(root, { document, controls });
     if (contents) {
       // UX-223: which actions this run can honestly offer. UX-194's

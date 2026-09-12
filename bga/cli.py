@@ -240,12 +240,20 @@ def _attach_plane2_capacity(args: argparse.Namespace, analyzer, result) -> None:
     # here, because the knee costs a capacity sweep and the whole block
     # is gated on Plane 2 being in hand anyway.
     result.capacity_recommendation = _capacity_recommendation(
-        analyzer, result, context)
+        analyzer, result, context, native_report)
     _finish_capacity_recommendation(analyzer, result, native_report)
 
 
 def _finish_capacity_recommendation(analyzer, result, native_report: dict) -> None:
-    """UX-116/UX-677: what only runs once the block above exists."""
+    """UX-116/UX-677: what only runs once the block above exists.
+
+    `result` is a real `AnalysisResult` from `analyze`'s pipeline, or
+    `_produce_sweep_output`'s ad-hoc holder - which carries
+    `capacity_recommendation` (this function's own gate, set directly
+    a line above the call) but never `floors`, a section that pipeline
+    never runs. `getattr` rather than `result.floors`: the holder has
+    no note to retire and reading it crashed both `bga sweep` formats.
+    """
     if not result.capacity_recommendation:
         return
     # UX-116 item 3: the "currently unmodeled axis" note is retired
@@ -253,9 +261,10 @@ def _finish_capacity_recommendation(analyzer, result, native_report: dict) -> No
     # elsewhere it is still true - and the substitution is on a named
     # constant rather than a re-typed sentence, so the two cannot
     # drift into disagreeing about which clause is being retired.
-    note = (result.floors or {}).get('capacity_model_note') or ''
-    if UNMODELED_AXIS_CLAUSE in note:
-        result.floors['capacity_model_note'] = note.replace(
+    floors = getattr(result, 'floors', None)
+    note = (floors or {}).get('capacity_model_note') or ''
+    if floors is not None and UNMODELED_AXIS_CLAUSE in note:
+        floors['capacity_model_note'] = note.replace(
             UNMODELED_AXIS_CLAUSE, MODELLED_AXIS_CLAUSE, 1)
     # UX-677: per-element `max-jobs`, on the same document - not a new
     # contract id. Joins `UX-675`'s raw host CPU series (present on
@@ -264,18 +273,52 @@ def _finish_capacity_recommendation(analyzer, result, native_report: dict) -> No
     # and is skipped rather than assumed when absent.
     advice = _max_jobs_advice(analyzer, native_report)
     if advice:
+        # UX-739: priced by replay, where the normalized tasks (for
+        # `ReplayScheduler`) and `run_context` (for its default
+        # capacities) are already in hand.
+        from bga.correlate import price_max_jobs_advice
+
+        advice = price_max_jobs_advice(
+            advice, getattr(analyzer, 'normalized_tasks', None) or [],
+            getattr(analyzer, 'run_context', None),
+            (native_report or {}).get('binary_cost'))
         result.capacity_recommendation['max_jobs_advice'] = advice
 
 
+def _peak_rss_and_host_memory(
+    host_samples: Optional[dict], native_report: Optional[dict],
+) -> tuple[Optional[dict], Optional[int]]:
+    """UX-677/UX-678's shared inputs: measured peak RSS per element and
+    the host's measured RAM (`host-samples`, not an operator-declared
+    budget). `(None, None)` when either half is missing.
+    """
+    per_element = ((native_report or {}).get('peak_memory') or {}).get(
+        'per_element') or {}
+    peak_rss_bytes = {uid: converted
+                       for uid, entry in per_element.items()
+                       if (converted := kb_to_bytes(
+                           entry.get('peak_rss_kb'))) is not None}
+    mem_total_kb = (host_samples or {}).get('header', {}).get('mem_total_kb')
+    if not peak_rss_bytes or not mem_total_kb:
+        return None, None
+    return peak_rss_bytes, kb_to_bytes(mem_total_kb)
+
+
 def _max_jobs_advice(analyzer, native_report: dict) -> dict:
-    """UX-677: the inputs `compute_max_jobs_advice` needs, gathered.
+    """UX-677/UX-808: the inputs `compute_max_jobs_advice` needs, gathered.
 
     Host samples are read directly (`UX-675` is on every capture, not
     gated on Plane 2) - only the per-element peak RSS and the host
     memory total, both genuinely Plane 2/host-sample facts, come from
     this call's own arguments.
+
+    BUILD tasks only (`UX-808`) - the same filter `_project_with_reduced_
+    durations` applies - so a cold build's FETCH task does not add a
+    second, thinly-evidenced row per element and does not count as
+    "building" for `_building`'s overlap check.
     """
     from bga.correlate import compute_max_jobs_advice
+    from bga.ingest.models import TaskKind
 
     host_samples = analyzer.read_host_samples()
     graph = getattr(analyzer, 'graph', None)
@@ -283,22 +326,20 @@ def _max_jobs_advice(analyzer, native_report: dict) -> dict:
         return {}
     tasks = [{"element": task.task_key.element_uid,
               "start_us": task.start_us, "finish_us": task.finish_us}
-             for task in getattr(analyzer, 'normalized_tasks', []) or []]
+             for task in getattr(analyzer, 'normalized_tasks', []) or []
+             if task.task_key.task_kind == TaskKind.BUILD]
     max_jobs = {element.uid: element.max_jobs for element in graph.elements}
-    per_element = ((native_report or {}).get('peak_memory') or {}).get(
-        'per_element') or {}
-    peak_rss_bytes = {uid: kb_to_bytes(entry['peak_rss_kb'])
-                       for uid, entry in per_element.items()
-                       if entry.get('peak_rss_kb')}
-    mem_total_kb = (host_samples.get('header') or {}).get('mem_total_kb')
+    peak_rss_bytes, host_memory_bytes = _peak_rss_and_host_memory(
+        host_samples, native_report)
     return compute_max_jobs_advice(
         host_samples, tasks, max_jobs,
-        peak_rss_bytes=peak_rss_bytes or None,
-        host_memory_bytes=kb_to_bytes(mem_total_kb) if mem_total_kb else None,
+        peak_rss_bytes=peak_rss_bytes,
+        host_memory_bytes=host_memory_bytes,
     )
 
 
-def _capacity_recommendation(analyzer, result, context) -> dict:
+def _capacity_recommendation(analyzer, result, context,
+                             native_report: Optional[dict] = None) -> dict:
     """UX-116: the knee, the CPU draw, the memory ceiling and the host,
     intersected.
 
@@ -325,15 +366,21 @@ def _capacity_recommendation(analyzer, result, context) -> dict:
         max(builders, host_cores) * _RECOMMENDATION_SWEEP_HEADROOM,
         _RECOMMENDATION_SWEEP_CAP,
     )
+    # UX-678: the same measured peak RSS and host RAM `_max_jobs_advice`
+    # reads, so the sweep can check its own replayed concurrency against
+    # memory rather than leave that to `_memory_allows`'s top-N sum.
+    peak_rss_bytes, host_memory_bytes = _peak_rss_and_host_memory(
+        analyzer.read_host_samples(), native_report)
     try:
         sweep = analyzer.replay_scheduler.capacity_sweep(
             resource='PROCESS', min_capacity=1, max_capacity=top, step=1,
+            peak_rss_bytes=peak_rss_bytes, host_memory_bytes=host_memory_bytes,
         )
     except (AttributeError, ValueError) as exc:
         logger.info("UX-116: no capacity sweep available (%s)", exc)
         return {}
 
-    return compute_capacity_recommendation(
+    recommendation = compute_capacity_recommendation(
         plane2,
         getattr(result, 'memory_envelope', None) or {},
         knee=(sweep.knee_points or {}).get('PROCESS'),
@@ -341,6 +388,135 @@ def _capacity_recommendation(analyzer, result, context) -> dict:
         builders=builders,
         native_max_jobs=getattr(context, 'native_max_jobs', None),
     )
+    if not recommendation:
+        return recommendation
+    # UX-678: additive - the sweep's own memory-feasible ceiling (summed
+    # over its replay's real concurrent set at each step, not the
+    # envelope's top-N peaks) and which of the two capacities is
+    # tighter. Absent unless the sweep had both peak RSS and host RAM.
+    sweep_memory_cap = (sweep.memory_knee_points or {}).get('PROCESS')
+    if sweep_memory_cap is not None:
+        recommendation['sweep_memory_builders'] = sweep_memory_cap
+        recommendation['sweep_binding'] = (
+            sweep.binding_constraints or {}).get('PROCESS')
+    return recommendation
+
+
+#: UX-680: compiler/linker binaries a compiler-level RE service
+#: (recc/reclient/goma) would move out of the sandbox - Plane 2's own
+#: `by_binary`/`binary_cost` vocabulary, not a new taxonomy.
+_COMPILER_LINKER_BINARIES = frozenset({'cc1plus', 'cc1', 'ld', 'lld', 'gold'})
+
+
+def _unbounded_builders_projection(analyzer) -> dict:
+    """UX-680: what REAPI buys - it moves whole sandboxes to workers, so
+    it removes the builder cap; the agent still pays its own staging and
+    wait per element, and workers are assumed never to queue.
+
+    Two points of the same `capacity_sweep` `bga sweep` already runs to
+    by default (`--max-capacity` defaults to the task count - Part 19's
+    own "unlimited", the point past which no more work can start): the
+    configured PROCESS capacity, and the task count. Not the full range
+    - `_capacity_recommendation` above bounds sweep cost the same way,
+    for the same reason: a full one-replay-per-task sweep is not needed
+    to answer a two-point question.
+    """
+    from bga.floors.capacity import compute_default_capacities
+
+    scheduler = getattr(analyzer, 'replay_scheduler', None)
+    if scheduler is None or not scheduler.tasks:
+        return {}
+    current = compute_default_capacities(scheduler.run_context).get('PROCESS') or 1
+    unbounded = len(scheduler.tasks)
+    if unbounded <= current:
+        return {}
+    try:
+        sweep = scheduler.capacity_sweep(
+            resource='PROCESS', min_capacity=current, max_capacity=unbounded,
+            step=unbounded - current,
+        )
+    except (AttributeError, ValueError) as exc:
+        logger.info("UX-680: no capacity sweep available (%s)", exc)
+        return {}
+    if not sweep.sweeps:
+        return {}
+    return {
+        # UX-680/UX-351: microseconds, like every other duration this
+        # report publishes - `bga:quantity: duration_us` is the payload's
+        # one unit for one, and a `_s` key beside `_us` neighbours is the
+        # label UX-351 renamed `plane2.wall_span_s` to avoid.
+        'wall_us_before': sweep.sweeps[0]['makespan_us'],
+        'wall_us_after': sweep.sweeps[-1]['makespan_us'],
+        'builders_before': current,
+        'builders_after': unbounded,
+        'assumption': (
+            "staging and wait per element unchanged, workers never queue"
+        ),
+    }
+
+
+def _compiler_offload_projection(result) -> dict:
+    """UX-680: what a compiler-level RE service buys - the compiler and
+    linker CPU seconds Plane 2 measured on the elements this run's own
+    critical path passes through, off the path. Absent, not zero,
+    without a Plane 2 `binary_cost` for this run - `UX-9` stands: the
+    tool sees nothing about a *remote* build, only about this one.
+
+    Clamped **per element**, not once over the whole path: a compile
+    cannot remove more wall-clock than its own element had, however
+    much CPU it drew doing it (concurrent compiles inside one element's
+    `-jN` build can draw more CPU-seconds than that element's own wall,
+    the reason a global clamp on this fixture read 0.0s left - a
+    compile borrowing another element's slack that was never its own
+    to spend). Summed after, so one over-subscribed element does not
+    inflate what a different element's compile is worth.
+    """
+    plane2_report = getattr(result, 'plane2_report', None) or {}
+    binary_cost = plane2_report.get('binary_cost') or {}
+    if not binary_cost:
+        return {}
+    path = (result.signals or {}).get('critical_path_detail') or []
+    path_us = sum(d.get('duration_us') or 0 for d in path)
+    if not path_us:
+        return {}
+    remaining_us = 0
+    found = False
+    for entry in path:
+        duration_us = entry.get('duration_us') or 0
+        compiler_us = 0
+        cost = binary_cost.get(entry.get('element_uid')) or {}
+        for row in cost.get('by_cpu') or []:
+            if row.get('binary') in _COMPILER_LINKER_BINARIES:
+                compiler_us += row.get('cpu_us') or 0
+                found = True
+        remaining_us += max(0, duration_us - compiler_us)
+    if not found:
+        return {}
+    return {
+        'wall_us_before': path_us,
+        'wall_us_after': remaining_us,
+        'assumption': (
+            "zero agent wall per remote compile, clamped to each "
+            "element's own wall - an upper bound"
+        ),
+    }
+
+
+def _attach_remote_execution_whatif(analyzer, result) -> None:
+    """UX-680: two remote-execution mechanisms, priced from what this
+    run already measured, held on the result the way `plane2_report`
+    is (`UX-215`) so `bga/findings.py` can read it without `analyzer` in
+    hand. Never summed - `_remote_execution_findings` is where they meet
+    and say why not.
+    """
+    whatif: dict = {}
+    unbounded = _unbounded_builders_projection(analyzer)
+    if unbounded:
+        whatif['unbounded_builders'] = unbounded
+    offload = _compiler_offload_projection(result)
+    if offload:
+        whatif['compiler_offload'] = offload
+    result.remote_execution_whatif = whatif
 
 
 def analyzed(args: argparse.Namespace, section: Optional[str] = None):
@@ -360,6 +536,9 @@ def analyzed(args: argparse.Namespace, section: Optional[str] = None):
     result = analyzer.analyze(run_dir, section=section)
     _attach_plane2_capacity(args, analyzer, result)
     _attach_resource_blast(run_dir, analyzer, result)
+    # UX-680: after Plane 2 is attached, so the compiler-offload half
+    # can read `result.plane2_report` when there is one.
+    _attach_remote_execution_whatif(analyzer, result)
     return result
 
 
@@ -430,12 +609,32 @@ def _produce_sweep_output(args: argparse.Namespace) -> str:
         ]
         calibration_capacities = sorted({cap for cap in raw_capacities if cap is not None})
 
+    # UX-83: the sweep is a replay-model answer and the replay model does
+    # not know about CPU. When a Plane 2 report for the same run is
+    # supplied, the knee line says what was actually measured - read
+    # before the sweep itself runs, so UX-678's memory ceiling can join
+    # it as a second capacity rather than caption it afterwards.
+    plane2_capacity = {}
+    memory_envelope = {}
+    peak_rss_bytes, host_memory_bytes = None, None
+    if getattr(args, 'plane2', None):
+        holder = type('_R', (), {})()
+        _attach_plane2_capacity(args, analyzer, holder)
+        plane2_capacity = getattr(holder, 'plane2_capacity', {})
+        # UX-104: and the memory ceiling, for the same reason - a knee
+        # above the memory-feasible capacity is a recommendation to swap.
+        memory_envelope = getattr(holder, 'memory_envelope', {})
+        peak_rss_bytes, host_memory_bytes = _peak_rss_and_host_memory(
+            analyzer.read_host_samples(), getattr(holder, 'plane2_report', None))
+
     sweep_result = analyzer.replay_scheduler.capacity_sweep(
         resource=args.resource,
         min_capacity=args.min_capacity,
         max_capacity=args.max_capacity,
         step=args.step,
         contention_calibration=contention_calibration,
+        peak_rss_bytes=peak_rss_bytes,
+        host_memory_bytes=host_memory_bytes,
     )
 
     if args.format == 'json':
@@ -450,19 +649,11 @@ def _produce_sweep_output(args: argparse.Namespace) -> str:
             'monotonicity_violations': sweep_result.monotonicity_violations,
             'capacity_model_caveat': SWEEP_CAPACITY_MODEL_CAVEAT,
             'calibration_capacities': calibration_capacities,
+            # UX-678: absent (both `{}`) unless `--plane2` supplied both
+            # a measured peak RSS per element and a host memory total.
+            'memory_knee_points': sweep_result.memory_knee_points,
+            'binding_constraints': sweep_result.binding_constraints,
         }, indent=2, default=str)
-    # UX-83: the sweep is a replay-model answer and the replay model does
-    # not know about CPU. When a Plane 2 report for the same run is
-    # supplied, the knee line says what was actually measured.
-    plane2_capacity = {}
-    memory_envelope = {}
-    if getattr(args, 'plane2', None):
-        holder = type('_R', (), {})()
-        _attach_plane2_capacity(args, analyzer, holder)
-        plane2_capacity = getattr(holder, 'plane2_capacity', {})
-        # UX-104: and the memory ceiling, for the same reason - a knee
-        # above the memory-feasible capacity is a recommendation to swap.
-        memory_envelope = getattr(holder, 'memory_envelope', {})
     return format_sweep_text(
         args.resource, sweep_result,
         calibration_capacities=calibration_capacities,
@@ -1648,48 +1839,7 @@ def _command_completer(prefix, parsed_args, **_kwargs):
         return []
 
 
-def create_parser() -> argparse.ArgumentParser:
-    """
-    Create the argument parser with full inline documentation.
-
-    Implements the full spec Part 37 command list as a hybrid (P1-14):
-    `analyze` remains the primary command (full report, every section),
-    and `graph`/`floors`/`replay`/`sweep`/`utilisation`/`diagnostics` are
-    thin aliases sharing the same pipeline - each restricts output to
-    its own section rather than re-deriving shared pipeline stages
-    (ingestion, normalization, graph construction) per subcommand.
-
-    Returns:
-        Configured ArgumentParser instance
-    """
-    parser = _UsageErrorParser(
-        prog='bga',
-        description='BuildStream Build Efficiency Analyzer - Analyze build traces for efficiency metrics',
-        epilog=(
-            # UX-67: the aliases are listed here rather than registered as
-            # argparse subcommands, because registering them would import
-            # every tool to build the parser - on every `bga analyze`.
-            _tool_help() + "\n\n"
-            "See docs/guides/cli.md for detailed usage examples and workflows."
-        ),
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-    )
-
-    parser.add_argument(
-        '--version',
-        action='version',
-        version=f'%(prog)s {__version__}',
-        help='Show program version and exit'
-    )
-
-    subparsers = parser.add_subparsers(
-        dest='command', metavar='COMMAND', help='Available commands',
-        parser_class=_CompactSubParser)
-    # UX-191: completion offers the aliases too - see
-    # `_command_completer`. Attached rather than registered, so the
-    # parser stays exactly as cheap to build as it was.
-    subparsers.completer = _command_completer
-
+def _add_analyze_subcommand(subparsers) -> None:
     # analyze - primary command, full report (every section)
     analyze_parser = subparsers.add_parser(
         'analyze',
@@ -1700,6 +1850,8 @@ def create_parser() -> argparse.ArgumentParser:
     _add_common_arguments(analyze_parser, include_replay=True, include_diagnostics=True, include_cold=True)
     analyze_parser.set_defaults(func=cmd_analyze)
 
+
+def _add_graph_subcommand(subparsers) -> None:
     # graph - static dependency graph + critical path + structural metrics
     graph_parser = subparsers.add_parser(
         'graph',
@@ -1715,6 +1867,8 @@ def create_parser() -> argparse.ArgumentParser:
     )
     graph_parser.set_defaults(func=cmd_graph)
 
+
+def _add_floors_subcommand(subparsers) -> None:
     # floors - certified/advisory floors, matches spec's `bga floors RUN --cold` examples
     floors_parser = subparsers.add_parser(
         'floors',
@@ -1727,6 +1881,8 @@ def create_parser() -> argparse.ArgumentParser:
     _add_common_arguments(floors_parser, include_cold=True)
     floors_parser.set_defaults(func=cmd_floors)
 
+
+def _add_replay_subcommand(subparsers) -> None:
     # replay - deterministic replay makespan (T_C)
     replay_parser = subparsers.add_parser(
         'replay',
@@ -1736,6 +1892,8 @@ def create_parser() -> argparse.ArgumentParser:
     _add_common_arguments(replay_parser, include_replay=True)
     replay_parser.set_defaults(func=cmd_replay)
 
+
+def _add_sweep_subcommand(subparsers) -> None:
     # sweep - capacity sweep (Part 19)
     sweep_parser = subparsers.add_parser(
         'sweep',
@@ -1787,6 +1945,8 @@ def create_parser() -> argparse.ArgumentParser:
     sweep_parser.add_argument('--log-file', type=str, default=None, metavar='PATH', help='Also write logs to PATH.')
     sweep_parser.set_defaults(func=cmd_sweep)
 
+
+def _add_utilisation_subcommand(subparsers) -> None:
     # utilisation - CPU utilisation accounting
     utilisation_parser = subparsers.add_parser(
         'utilisation',
@@ -1796,6 +1956,8 @@ def create_parser() -> argparse.ArgumentParser:
     _add_common_arguments(utilisation_parser)
     utilisation_parser.set_defaults(func=cmd_utilisation)
 
+
+def _add_diagnostics_subcommand(subparsers) -> None:
     # diagnostics - advanced diagnostics
     diagnostics_parser = subparsers.add_parser(
         'diagnostics',
@@ -1805,6 +1967,8 @@ def create_parser() -> argparse.ArgumentParser:
     _add_common_arguments(diagnostics_parser)
     diagnostics_parser.set_defaults(func=cmd_diagnostics)
 
+
+def _add_correlate_subcommand(subparsers) -> None:
     # compare - run-to-run comparison (UX-01, non-spec additive command)
     correlate_parser = subparsers.add_parser(
         'correlate',
@@ -1842,6 +2006,8 @@ def create_parser() -> argparse.ArgumentParser:
     )
     correlate_parser.set_defaults(func=cmd_correlate)
 
+
+def _add_blast_subcommand(subparsers) -> None:
     blast_parser = subparsers.add_parser(
         'blast',
         help="What rebuilds if I touch this repository, path or element?",
@@ -1884,6 +2050,8 @@ def create_parser() -> argparse.ArgumentParser:
     )
     blast_parser.set_defaults(func=cmd_blast)
 
+
+def _add_whatif_subcommand(subparsers) -> None:
     whatif_parser = subparsers.add_parser(
         'whatif',
         help="What would the build drop to if I fixed these?",
@@ -1911,6 +2079,8 @@ def create_parser() -> argparse.ArgumentParser:
     )
     whatif_parser.set_defaults(func=cmd_whatif)
 
+
+def _add_cache_trend_subcommand(subparsers) -> None:
     cache_trend_parser = subparsers.add_parser(
         'cache-trend',
         help="Is the cache getting worse? A series of runs, not a pair",
@@ -1937,6 +2107,8 @@ def create_parser() -> argparse.ArgumentParser:
     )
     cache_trend_parser.set_defaults(func=cmd_cache_trend)
 
+
+def _add_compare_subcommand(subparsers) -> None:
     compare_parser = subparsers.add_parser(
         'compare',
         usage='bga compare [options] BASELINE CANDIDATE',
@@ -2033,6 +2205,8 @@ def create_parser() -> argparse.ArgumentParser:
     )
     compare_parser.set_defaults(func=cmd_compare)
 
+
+def _add_bundle_subcommand(subparsers) -> None:
     # UX-520: the capture as one file. Not `run/` - half of what a
     # reader needs sits beside it, and `UX-381`'s layout says which half.
     bundle_parser = subparsers.add_parser(
@@ -2061,6 +2235,71 @@ def create_parser() -> argparse.ArgumentParser:
         help='Leave the Plane 2 capture out. Says what it omitted, and\n'
              'the manifest records it so --load says so too.')
     bundle_parser.set_defaults(func=cmd_bundle)
+
+
+# UX-695: subcommand order, walked by `create_parser`. One function
+# per subcommand keeps a single argument change to a single diff hunk.
+_SUBCOMMAND_BUILDERS = [
+    _add_analyze_subcommand,
+    _add_graph_subcommand,
+    _add_floors_subcommand,
+    _add_replay_subcommand,
+    _add_sweep_subcommand,
+    _add_utilisation_subcommand,
+    _add_diagnostics_subcommand,
+    _add_correlate_subcommand,
+    _add_blast_subcommand,
+    _add_whatif_subcommand,
+    _add_cache_trend_subcommand,
+    _add_compare_subcommand,
+    _add_bundle_subcommand,
+]
+
+
+def create_parser() -> argparse.ArgumentParser:
+    """
+    Create the argument parser with full inline documentation.
+
+    Implements the full spec Part 37 command list as a hybrid (P1-14):
+    `analyze` remains the primary command (full report, every section),
+    and `graph`/`floors`/`replay`/`sweep`/`utilisation`/`diagnostics` are
+    thin aliases sharing the same pipeline - each restricts output to
+    its own section rather than re-deriving shared pipeline stages
+    (ingestion, normalization, graph construction) per subcommand.
+
+    Returns:
+        Configured ArgumentParser instance
+    """
+    parser = _UsageErrorParser(
+        prog='bga',
+        description='BuildStream Build Efficiency Analyzer - Analyze build traces for efficiency metrics',
+        epilog=(
+            # UX-67: the aliases are listed here rather than registered as
+            # argparse subcommands, because registering them would import
+            # every tool to build the parser - on every `bga analyze`.
+            _tool_help() + "\n\n"
+            "See docs/guides/cli.md for detailed usage examples and workflows."
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+
+    parser.add_argument(
+        '--version',
+        action='version',
+        version=f'%(prog)s {__version__}',
+        help='Show program version and exit'
+    )
+
+    subparsers = parser.add_subparsers(
+        dest='command', metavar='COMMAND', help='Available commands',
+        parser_class=_CompactSubParser)
+    # UX-191: completion offers the aliases too - see
+    # `_command_completer`. Attached rather than registered, so the
+    # parser stays exactly as cheap to build as it was.
+    subparsers.completer = _command_completer
+
+    for _builder in _SUBCOMMAND_BUILDERS:
+        _builder(subparsers)
 
     # UX-191: after every subparser exists, so the walk sees all of them.
     _attach_run_completers(parser)

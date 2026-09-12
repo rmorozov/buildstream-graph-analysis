@@ -25,6 +25,7 @@ indefinitely, committed or not, accumulated rather than overwritten
 """
 import argparse
 import collections
+import functools
 import json
 import pathlib
 import re
@@ -229,6 +230,26 @@ def normalize_pyright(raw, root):
     return _identity_list("pyright", items, root)
 
 
+def _ruff_producer(root, paths):
+    """`TOOLS["ruff"]`: fetch and normalize in one call."""
+    return normalize(ruff_findings(root, paths, FAMILIES), root)
+
+
+def _pyright_producer(root, paths, pyright_from=None):
+    """`TOOLS["pyright"]`: `--pyright-from` (`UX-802`) reads a fixture
+    instead of spawning pyright; `main()` binds it before iterating."""
+    raw = (json.loads(pyright_from.read_text(encoding="utf-8"))
+           if pyright_from is not None else pyright_findings(root, paths))
+    return normalize_pyright(raw, root)
+
+
+#: UX-799: the single source `main()` sums into `current` - a producer
+#: prices only if it is a value here, and §6's row must name every key.
+#: `suppression_findings` is the repo's own scan, not a tool, so it is
+#: added in `main()` directly and is not a `TOOLS` entry.
+TOOLS = {"ruff": _ruff_producer, "pyright": _pyright_producer}
+
+
 def identity(entry):
     return (entry["tool"], entry["rule"], entry["file"], entry["line"], entry["nth"])
 
@@ -276,6 +297,22 @@ def load_forced(document):
     `[(reason, {identity, ...})]`."""
     return [(b["reason"], {tuple(i) for i in b["identities"]})
             for b in document.get("forced", ())]
+
+
+#: `write_baseline`'s own vocabulary - the only way a batch is
+#: authorised. Anything else on the document or a finding was written
+#: by hand, not by `--force` (`UX-789`: `"forced_by"` was one).
+DOCUMENT_KEYS = frozenset({"ruff_version", "families", "forced", "findings"})
+ENTRY_KEYS = frozenset({"tool", "rule", "file", "line", "nth"})
+
+
+def unknown_keys(document):
+    """Every key on `document`, or on one of its findings, that
+    `write_baseline` would never itself emit."""
+    found = set(document) - DOCUMENT_KEYS
+    for entry in document.get("findings", ()):
+        found |= set(entry) - ENTRY_KEYS
+    return sorted(found)
 
 
 def _prune_forced(batches, keep):
@@ -391,6 +428,11 @@ def do_check(args, current, existing):
     if existing is None:
         print(f"no baseline at {args.baseline} - run --write first")
         return 1
+    bad = unknown_keys(existing)
+    if bad:
+        print(f"unknown key in {args.baseline}: {', '.join(bad)} - "
+              "only --write --force writes an entry into this file")
+        return 2
     new, stale = diff(current, existing["findings"])
     batches = load_forced(existing)
     authorised, gained = gained_since_head(
@@ -464,24 +506,29 @@ def main(argv=None):
     parser.add_argument("--baseline", type=pathlib.Path, default=DEFAULT_BASELINE)
     parser.add_argument("--root", type=pathlib.Path, default=REPO)
     parser.add_argument("--paths", nargs="+", default=None)
+    # UX-802: a ruff/bandit-only caller (a test clause, mostly) pays a
+    # whole pyright pass it never reads a diagnostic from - read its
+    # `pyright_findings` shape from a fixture instead of spawning it.
+    parser.add_argument("--pyright-from", type=pathlib.Path, default=None,
+                         help="read pyright_findings' shape from PATH instead "
+                              "of spawning pyright")
     args = parser.parse_args(argv)
     if sum((args.write, args.check, args.shrink)) != 1:
         parser.error("exactly one of --write, --check, --shrink")
 
     paths = args.paths or list(DEFAULT_PATHS)
+    producers = dict(TOOLS)
+    if args.pyright_from is not None:
+        producers["pyright"] = functools.partial(
+            _pyright_producer, pyright_from=args.pyright_from)
+    current = []
     try:
-        raw = ruff_findings(args.root, paths, FAMILIES)
-    except RuffFailure as exc:
+        for producer in producers.values():
+            current += producer(args.root, paths)
+    except (RuffFailure, PyrightFailure) as exc:
         print(f"error: {exc}")
         return 2
-    try:
-        raw_pyright = pyright_findings(args.root, paths)
-    except PyrightFailure as exc:
-        print(f"error: {exc}")
-        return 2
-    current = (normalize(raw, args.root)
-               + normalize_pyright(raw_pyright, args.root)
-               + suppression_findings(args.root, paths))
+    current += suppression_findings(args.root, paths)
     existing = load_baseline(args.baseline)
 
     if args.write:

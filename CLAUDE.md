@@ -26,7 +26,7 @@ file is the day-one summary, and
 ## The pipeline
 
 `orient` → `decompose` (the **shape**, derived by `dev_close_task.py --shape`) → tracks → `verifier` → merge → close (row moves, derived counts, ledger rows, round document — fixing guide §7a) → one `make test`, push.
-Mechanical and bounded shapes are `implementer` tracks on `sonnet` in worktrees; a judgement shape is the session's own — the *judgement*, not the work: the rows that say the session took it in the brief ran on `sonnet` for a 287k median against bounded's 252k (31 of 48 runs, two whose own cell disagrees; `dev_process_bands.py --runs`).
+Mechanical and bounded shapes are `implementer` tracks on `sonnet` in worktrees; a judgement shape is the session's own — the *judgement*, not the work: the rows that say the session took it in the brief ran on `sonnet` for a 284k median against bounded's 256k (54 of 84 runs, two whose own cell disagrees; `dev_process_bands.py --runs`).
 `researcher` and `verifier` read on `sonnet`; the session judges, briefs and merges, and reads reports, never diffs or logs — its cost is the live
 context at each rebuild — the `decompose` skill carries the measured share, with its window; a result over a screen goes to the scratchpad (`UX-711`). `measure`, `falsify`, `verify`
 (which calls `self-review` last) run inside a track; `derive` before moving viewer code; `walk` and `design-review` audit the page and `review` the documents; every run is a row in `docs/audits/agent-runs.md`.
@@ -54,10 +54,10 @@ and `git log`, never in a comment or docstring. Numbers, not narrative.
 
 | | |
 |---|---|
-| module docstring | ≤ 25 lines — the dev tools under `tools/` and the hooks; older ones only shrink |
-| Outcome section | ≤ 80 lines from `UX-497` on: the gap measured, the close measured, the mutation table, the deviation |
-| code comment | one line of why; rejected alternatives and rationale go in the task file |
-| commit body | ≤ 8 lines; the task file is the record |
+| module docstring | ≤ 25 lines — the dev tools under `tools/` and the hooks; older ones only shrink — `tests/unit/test_the_register_is_terse.py` |
+| Outcome section | ≤ 80 lines from `UX-497` on: the gap measured, the close measured, the mutation table, the deviation — `tests/unit/test_the_register_is_terse.py` |
+| code comment | one line of why; rejected alternatives and rationale go in the task file — convention, unguarded: a comment's length is not its register (`UX-764`) |
+| commit body | ≤ 8 lines; the task file is the record — `tests/unit/test_a_commit_body_is_eight_lines.py` |
 
 ## Architecture
 

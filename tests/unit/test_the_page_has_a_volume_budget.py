@@ -111,7 +111,11 @@ needs_browser = pytest.mark.skipif(chrome is None, reason=NO_BROWSER)
 #: hundred px of headroom rather than nineteen, so the next column does
 #: not spend a round on this line; the *reason* the budget exists is a
 #: page a reader can take in, and one table column is not that.
-LANDED_HEIGHT_PX = 7_100
+#: `UX-680`: 7,100 -> 7,300. `macro_micro` landed at 7,251 with the
+#: `remote-execution-whatif` finding open in the first chapter, 7,182
+#: once its text was cut from 128 to 81 words; a finding is a block the
+#: reader lands on, which is what the budget prices. 118 of headroom.
+LANDED_HEIGHT_PX = 7_300
 
 #: `UX-367`: the opened bounds, per size class, largest class last.
 #: Each row is `(elements at most, opened px, words, controls, nodes)`,
@@ -299,8 +303,23 @@ BUDGETS = (
     # measured 35,813, 87 of headroom, the same order `UX-717` left.
     # The 4,100 class is untouched at 32,000 - the fixed overhead does
     # not scale with element count, so a run there stays under it.
-    (50, 35_900, 12_700, 800, 7_900),
-    (4_100, 32_000, 9_200, 900, 5_500),
+    # `UX-683`: words 9,200 -> 9,300 on the 4,100 class only. The
+    # `xl` fixture declares no foundation tier, so `foundation-
+    # candidates` fires (elements at or above the top p5 fan-out, not
+    # already declared) where the two `*-foundation` findings do not -
+    # measured 9,200 -> 9,269, +69. The 50-element class is unmoved:
+    # `macro_micro`/`golden` are small enough that neither the
+    # candidate threshold nor the fixture's own kinds trip it.
+    # `UX-680`: px 35,900 -> 36,300 and words 12,700 -> 12,800 on the
+    # 50 class, words 9,300 -> 9,400 on the 4,100 class.
+    # `remote-execution-whatif` fires on every run with a sweep - one
+    # title and two or three detail lines - measured 36,263 px at 128
+    # words of finding text, 36,193 px and 12,731 words at 81 after the
+    # text was cut; `xl` 9,376 -> 9,349 words the same way. The budget
+    # bounds growth rather than forbidding it (`UX-681`); 107, 69 and
+    # 51 of headroom, the order `UX-717` left.
+    (50, 36_300, 12_800, 800, 7_900),
+    (4_100, 32_000, 9_400, 900, 5_500),
 )
 
 

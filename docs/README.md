@@ -181,6 +181,9 @@ Why it is this way. Arguments and structure, not instructions.
 | document | what it covers |
 |---|---|
 | [`design/architecture.md`](design/architecture.md) | the three analysis planes, how the ingestion path measures itself, and every extension beyond the spec |
+| [`design/areas/bga-viewer.md`](design/areas/bga-viewer.md) | the viewer axis's mechanism prose — the server, the CSP, the presets, the shape-to-control mapping, `--export` (`UX-689`) |
+| [`design/areas/tools-native_trace.md`](design/areas/tools-native_trace.md) | Plane 2's mechanism prose — the hook's four fields, element attribution, what is built on the per-element split (`UX-806`) |
+| [`design/areas/bga-replay.md`](design/areas/bga-replay.md) | why a `bga whatif` projection is a bound, not a forecast, and how joint savings compose (`UX-807`) |
 | [`design/directions.md`](design/directions.md) | `bga` as a local helper vs `bga` as a CI gate |
 | [`design/roles.md`](design/roles.md) | the role model — eight roles, their contradictions, and the gap analysis |
 | [`design/styleguide.md`](design/styleguide.md) | the web report's visual contract — shape→control mapping, drawings, color and emphasis budget, dark first |
@@ -211,7 +214,7 @@ appended to instead of superseded:
 | [`audits/walk-seed-2.md`](audits/walk-seed-2.md) | `UX-685`'s second seeded walk — the empty-population class, hook-only Plane 2, the static export |
 | [`audits/agent-runs.md`](audits/agent-runs.md) | what each subagent run cost — tokens, tool calls, wall clock — and its own friction line, one row per run, so a model and a report shape are chosen from numbers (`UX-666`) |
 | [`audits/mutation.md`](audits/mutation.md) | the weekly mutation run's survivors — a mutant the touched modules' own guards did not kill, one dated section per run. A survivor is a filing, not a failure (`UX-703`) |
-| [`audits/round-register.md`](audits/round-register.md) | which rounds happened and when, derived from the commits naming one and the ledger's round column — a round without a document yet is never in it (`UX-744`) |
+| [`audits/round-register.md`](audits/round-register.md) | which rounds happened and when, derived from the committed union — every round document plus the ledger's round column, never `git log` — dated by the document's own dateline; a round without a document yet is never in it (`UX-744`, `UX-782`) |
 
 The rounds themselves:
 
@@ -280,6 +283,9 @@ The rounds themselves:
 [107](audits/round-107.md) ·
 [108](audits/round-108.md) ·
 [109](audits/round-109.md) ·
+[110](audits/round-110.md) ·
+[111](audits/round-111.md) ·
+[112](audits/round-112.md) ·
 [the guard census of round 64](audits/guard-census-round-64.md)
 
 ## Backlog

@@ -746,6 +746,9 @@ def read_cpu_sample() -> dict:
                 if line.startswith("cpu "):
                     fields = [int(value) for value in line.split()[1:]]
                     sample["cpu_busy_jiffies"] = _busy_jiffies(fields)
+                    # `UX-796`: the same kernel counter as the window,
+                    # so busy/total cannot exceed one per core.
+                    sample["cpu_total_jiffies"] = sum(fields)
                 elif line.startswith("cpu"):
                     sample["cores"] = sample.get("cores", 0) + 1
                 elif sample:
@@ -811,7 +814,8 @@ class HostSampler:
         self._thread = None
         self._handle = None
         self.samples = 0
-        # `UX-675`: the pair `cpu_busy_cores` is a delta over.
+        # `UX-675`/`UX-796`: the (busy, total, t) triple `cpu_busy_cores`
+        # is a delta over.
         self._cpu = None
 
     def __enter__(self):
@@ -835,7 +839,8 @@ class HostSampler:
             # sample" are different facts.
             "available": bool(first),
         }
-        self._cpu = (first.get("cpu_busy_jiffies"), header["monotonic_at_start"])
+        self._cpu = (first.get("cpu_busy_jiffies"), first.get("cpu_total_jiffies"),
+                     header["monotonic_at_start"])
         self._write(header)
         if first:
             self._thread = threading.Thread(target=self._run, daemon=True)
@@ -874,17 +879,29 @@ class HostSampler:
             self._stop.wait(self.interval_s)
 
     def _to_cores(self, sample: dict) -> None:
-        """`cpu_busy_jiffies` in, `cpu_busy_cores` out (`UX-675`)."""
+        """`cpu_busy_jiffies` in, `cpu_busy_cores` out (`UX-675`).
+
+        `UX-796`: the window is `cpu_total_jiffies`, not the wall clock
+        beside it - under load this process can be descheduled between
+        the `/proc/stat` read and the `time.monotonic()` stamp, so the
+        wall gap it reports can be shorter than the jiffy gap it
+        actually spans. `total` is read by the same kernel counter as
+        `busy` at the same instant, so busy/total cannot exceed one per
+        core by construction; `t` still gates presence and still rides
+        in the sample for the timeline join.
+        """
         busy = sample.pop("cpu_busy_jiffies", None)
-        if busy is None:
+        total = sample.pop("cpu_total_jiffies", None)
+        if busy is None or total is None:
             return
-        was, at = self._cpu or (None, None)
-        self._cpu = (busy, sample["t"])
+        was_busy, was_total, at = self._cpu or (None, None, None)
+        self._cpu = (busy, total, sample["t"])
         elapsed = sample["t"] - at if at is not None else 0.0
-        if was is None or elapsed < _CPU_MIN_INTERVAL_S:
+        window = total - was_total if was_total is not None else 0
+        if was_busy is None or elapsed < _CPU_MIN_INTERVAL_S or window <= 0:
             return
         sample["cpu_busy_cores"] = round(
-            (busy - was) / (_TICKS_PER_S * elapsed), 3)
+            (busy - was_busy) * sample["cores"] / window, 3)
 
 
 def read_host_samples(path: str) -> dict:
@@ -916,7 +933,8 @@ def read_host_samples(path: str) -> dict:
 def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrapped_log_path: Optional[str] = None, trace_opens: bool = False, argv_log_path: Optional[str] = None, invocation_log_path: Optional[str] = None,
                      trace_spine=False, diagnostics_path: Optional[str] = None,
                      no_inject: bool = False, inhibit: bool = False,
-                     host_samples_path: Optional[str] = None) -> int:
+                     host_samples_path: Optional[str] = None,
+                     jobserver: Optional[int] = None) -> int:
     """Run cmd (a real `bst` invocation) with the bwrap shim + LD_PRELOAD
     hook active, writing raw START/END lines to raw_log_path. Returns
     cmd's own real exit code - a trace is captured best-effort and must
@@ -931,6 +949,12 @@ def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrappe
     `tools/native_trace_to_chrome_trace.py`'s combined mode. `None` (the
     default) reproduces this function's own prior plain-`subprocess.run`
     behavior exactly, unchanged.
+
+    `jobserver` (UX-679): a GNU jobserver's token count, or `None` for
+    off. When given, a FIFO is opened host-side, seeded with
+    `jobserver - 1` tokens, and its path handed to the shim through
+    `BST_TRACE_JOBSERVER` - the same channel `BST_TRACE_LOG` already
+    uses - so every sandbox's `make` can join it via `--jobserver-auth`.
     """
     # UX-161: before the build, because after it the same fact is only
     # one of three guesses about a zero-invocation capture.
@@ -1080,6 +1104,21 @@ def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrappe
         else:
             env.pop("BST_TRACE_NO_INJECT", None)
 
+        # UX-679: a FIFO opened read-write host-side never blocks for a
+        # second end, and stays open for the build - a FIFO's kernel
+        # buffer is discarded once every fd on it closes, which would
+        # lose the seeded tokens before any sandbox could read them.
+        jobserver_fifo = None
+        jobserver_fd = None
+        if jobserver:
+            jobserver_fifo = os.path.join(bind_dir, "jobserver")
+            os.mkfifo(jobserver_fifo)
+            jobserver_fd = os.open(jobserver_fifo, os.O_RDWR)
+            os.write(jobserver_fd, b"+" * (jobserver - 1))
+            env["BST_TRACE_JOBSERVER"] = jobserver_fifo
+        else:
+            env.pop("BST_TRACE_JOBSERVER", None)
+
         def copy_out():
             """Move everything the shim wrote out of the scratch.
 
@@ -1149,6 +1188,10 @@ def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrappe
             ) from None
         finally:
             copy_out()
+            if jobserver_fd is not None:
+                os.close(jobserver_fd)
+            if jobserver_fifo is not None:
+                os.remove(jobserver_fifo)
         return returncode
 
 
@@ -6772,6 +6815,10 @@ def main(argv: Optional[list[str]] = None) -> int:
         help="UX-185: stop the machine sleeping while the build runs, via "
              "systemd-inhibit (and gnome-session-inhibit when present)."
     )
+    run_parser.add_argument(
+        "--jobserver", type=int, default=None, metavar="N",
+        help="Bind an N-token jobserver into every sandbox (UX-679)."
+    )
     run_parser.add_argument("--json", action="store_true", help="Print the report as JSON to stdout too")
     run_parser.add_argument("cmd", nargs=argparse.REMAINDER, help="The bst command to run, e.g. -- bst build core.bst")
 
@@ -6895,7 +6942,8 @@ def main(argv: Optional[list[str]] = None) -> int:
                                           no_inject=args.no_inject,
                                           inhibit=args.inhibit,
                                           host_samples_path=getattr(
-                                              args, "host_samples", None))
+                                              args, "host_samples", None),
+                                          jobserver=args.jobserver)
         except CaptureInterrupted:
             # UX-157: everything below this point is salvage, and it is
             # the same salvage a failed build already got. The trace was
@@ -6951,6 +6999,9 @@ def main(argv: Optional[list[str]] = None) -> int:
                                         invocation_log_path=invocation_log_path,
                                         plane1_log_path=wrapped_log_path)
             report["wrapped_command_exit_code"] = returncode
+            # UX-679 (spike): the capture option a supported mode would
+            # be judged against, whether or not this run used it.
+            report["jobserver"] = args.jobserver
             with open(args.output, "w", encoding="utf-8") as f:
                 json.dump(report, f, indent=2)
             # UX-296: and the two capacity scalars the store's aggregate

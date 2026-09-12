@@ -39,7 +39,7 @@ from .cache_effectiveness import (
     TRANSFER_SHARE_NOTABLE,
 )
 from .ingest.models import AnalysisResult
-from .units import GIB
+from .units import GIB, US_PER_S
 
 # Severity is about what it means for the reader, not about size:
 #   critical - the run itself is not what it appears to be
@@ -945,6 +945,41 @@ def _memory_finding(result: AnalysisResult) -> list[dict]:
     )]
 
 
+def _max_jobs_advice_detail(advice: Optional[dict]) -> list[str]:
+    """UX-739: the per-element price beside each `max_jobs_advice` row
+    that actually changes something, plus the joint line once - the
+    only rendering surface `capacity-recommendation` has, since neither
+    `bga/cli.py`'s text format nor the viewer draws `max_jobs_advice`
+    on their own (`grep -rn max_jobs_advice bga/viewer` finds nothing).
+    """
+    if not advice:
+        return []
+    lines = []
+    for row in advice.get('elements') or []:
+        priced = row.get('priced')
+        if not priced or not row.get('max_jobs_change'):
+            continue
+        lines.append(
+            f"    {row['element']}: max-jobs {row['current_max_jobs']} -> "
+            f"{row['recommended_max_jobs']}: build "
+            f"{priced['replayed_baseline_us'] / US_PER_S:.1f} s -> at least "
+            f"{priced['projected_us'] / US_PER_S:.1f} s (floor, +"
+            f"{priced['cost_us'] / US_PER_S:.1f} s)")
+        if row.get('price_refusal'):
+            lines.append(f"      Unpriced: {row['price_refusal']}")
+    for row in advice.get('elements') or []:
+        if row.get('price_refusal') and not row.get('priced'):
+            lines.append(f"    {row['element']}: unpriced - {row['price_refusal']}")
+    joint = advice.get('priced_jointly')
+    if joint:
+        lines.append(
+            f"    Together ({', '.join(joint['elements'])}): build "
+            f"{joint['replayed_baseline_us'] / US_PER_S:.1f} s -> at least "
+            f"{joint['projected_us'] / US_PER_S:.1f} s (floor, +"
+            f"{joint['cost_us'] / US_PER_S:.1f} s)")
+    return lines
+
+
 def _capacity_recommendation_finding(result: AnalysisResult) -> list[dict]:
     """UX-116: the paragraph that intersects the four constraints.
 
@@ -1039,6 +1074,7 @@ def _capacity_recommendation_finding(result: AnalysisResult) -> list[dict]:
         detail.append(
             f"    The sweep itself checked memory too: "
             f"{sweep_binding['name']}-bound at {sweep_binding['builders']}.")
+    detail.extend(_max_jobs_advice_detail(recommendation.get('max_jobs_advice')))
 
     return [_finding(
         'capacity-recommendation', severity,

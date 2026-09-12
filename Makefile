@@ -98,7 +98,7 @@ test-e2e:
 # PLR0915, SIM115) - zero-tolerance for a finding not in the baseline.
 # UX-698: the lockfile is the dev extra, resolved; CI diffs it.
 lock:
-	uv pip compile pyproject.toml --extra dev -o requirements.lock -q
+	uv pip compile pyproject.toml --extra dev -o requirements.lock -q --upgrade
 
 lint: lint-docs
 	ruff check bga/ tools/ tests/ .claude/hooks/

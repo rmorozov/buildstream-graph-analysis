@@ -196,6 +196,12 @@ pairing for every merged row from round 103 on.
 | 111 | verifier | sonnet | verify `UX-806` | 61k | 49 | 4.8 m | PASS; the log entry's second table is unguarded, hand-checked | reading the member guard's body to tell "still passes" from "never read the chapter" |
 | 111 | implementer | sonnet | `UX-680` remote execution is priced, not built (judgement) | 849k | 451 | 66.6 m | merged cf0b3b2d; two stated bounds, never summed; one hold — a global clamp read 0.0 s where the per-element bound leaves 5.25 s — fixed | five guard rounds the task file never named: units, provenance, reader promotion, the id census, README and size ratchets |
 | 111 | verifier | sonnet | verify `UX-680` | 205k | 95 | 24.4 m | HOLD: the offload guard saturated (all elements passed), a 10-line body; PASS on the amended commit | per-element arithmetic the Outcome stopped short of is what surfaced the clamp and the saturated guard |
+| 112 | implementer | sonnet | `UX-807` the projection chapter into the replay area page (mechanical) | 96k | 90 | 15.9 m | merged 8410f618; 437 guards before and after, the "never a sum" paragraph kept where its guard reads it | finding the one paragraph a guard reads from inside the chapter, across 20 files |
+| 112 | verifier | sonnet | verify `UX-807` | 61k | 51 | 9.4 m | PASS; an independent line-by-line diff, 0 missing | its own diff script double-rebased a link before it matched |
+| 112 | implementer | sonnet | `UX-679` a jobserver every sandbox joins, the spike (judgement) | 240k | 211 | 36 m | merged 30ecabb5; share 0.857 → 0.214 at an unchanged wall; not a mode yet | the capture help cap had zero headroom; a bare project.conf JOBS override did not compose over the cmake kind |
+| 112 | verifier | sonnet | verify `UX-679` | 86k | 68 | 11.3 m | PASS; all four figures reproduced; the tracer FIFO lifecycle unguarded, sizes ledger grown | the host series must be named host-samples.jsonl beside the run |
+| 112 | implementer | sonnet | `UX-808` one row per built element (bounded) then `UX-739` the advice priced by replay (judgement) | 272k | 270 | 40.1 m | merged 36f59572; 22 → 11 rows; codegen.bst costs 0, the six lowered elements +0.9 s, a floor | the renderer lived in findings.py, not cli.py; the golden export bound and the touching spread moved; a filing gap surfaced mid-track |
+| 112 | verifier | sonnet | verify `UX-808`, `UX-739` | 97k | 99 | 15.7 m | PASS; every figure reproduced; the no-BUILD-task clause raised, guarded by the session | the sandbox split every multi-statement script into a write and a run |
 
 Round 101's four tracks are **not** here: this session could not
 identify their transcripts with certainty after a context rebuild, and
@@ -208,7 +214,7 @@ committed cleanly once told to run in the foreground. Three of the five
 left a derived figure or a §6 context-map row behind - the same class
 the round itself was about, arriving in the tracks' own work.
 
-What the one hundred and seventy-nine rows already say: a researcher that reads a document
+What the one hundred and eighty-five rows already say: a researcher that reads a document
 whole costs 100-180k; a walker that drives every control costs 336k;
 the two cuts cost a re-run each. The `walk` and `design-review`
 skills fix the report shape so the next rows are smaller, and the

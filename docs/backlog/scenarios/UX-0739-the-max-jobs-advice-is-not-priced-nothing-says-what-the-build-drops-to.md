@@ -1,6 +1,6 @@
 # UX-739: the max-jobs advice is not priced — nothing says what the build drops to
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-677 (which produces the recommendation this would price), UX-219 (what-if, the projection that exists), UX-116 | **Serves:** R4 and R5, deciding whether the recommendation is worth applying | **Topic:** analysis | **Shape:** judgement | **Area:** bga
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-677 (which produces the recommendation this would price), UX-219 (what-if, the projection that exists), UX-116 | **Serves:** R4 and R5, deciding whether the recommendation is worth applying | **Topic:** analysis | **Shape:** judgement | **Area:** bga
 
 ## Motivation
 
@@ -58,3 +58,59 @@ A priced recommendation on a real two-plane capture: each recommended
 states whether it is a prediction or a bound. Mutation: change a
 recommendation and the price must move with it — a price that does
 not track its recommendation is not reading it.
+
+## Outcome
+
+**Gap measured.** `compute_max_jobs_advice`'s rows carried a
+recommendation and no price - `UX-677`'s own Deviation named this
+row as the missing half.
+
+**Close measured.** `price_max_jobs_advice(advice, tasks, run_context,
+binary_cost)` (`bga/correlate.py`) replays `ReplayScheduler(tasks,
+run_context).replay(compute_default_capacities(run_context))` once for
+a baseline, then once per lowered recommendation with its BUILD task's
+duration overridden to `max(observed, ceil(measured_cpu_us /
+recommended))` - Plane 2's `binary_cost[element]`. A raise is refused
+outright; an unchanged recommendation costs 0; missing `binary_cost`
+is a named refusal; an existing `UX-677` refusal stays untouched.
+`priced_jointly` recomputes one replay with every priced, lowered
+element's floor applied together. Called from `_finish_capacity_
+recommendation` (`bga/cli.py`), where `analyzer.normalized_tasks`/
+`.run_context` are already in hand. Rendered from `bga/findings.py`'s
+`_capacity_recommendation_finding` - the only place `max_jobs_advice`
+was already surfacing as text (`grep -rn max_jobs_advice bga/viewer`
+finds nothing; the viewer draws none of this block today and is
+untouched, as the judgement allows).
+
+Round-112 capture, real: `codegen.bst` - `binary_cost.measured_cpu_us`
+9,434,151 us, BUILD duration 6.0 s, floor 9.43 s (the CPU term wins),
+baseline 29.6 s, projected 29.6 s, `cost_us` 0 - slack absorbs it, the
+graph's real bottleneck is elsewhere. `lib-f.bst` (4->1) costs 0.9s
+alone. Joint line: `Together (codegen.bst, lib-a..f.bst): build 29.6 s
+-> at least 30.5 s (floor, +0.9 s)` - not the sum of the six individual
+costs (five of which are 0). Both assumption sentences are on the
+payload and in the guide; the text shows the `(floor, +N s)` mark.
+
+**Mutation table** (`tests/unit/test_the_max_jobs_price_moves_with_
+the_recommendation.py`, synthetic tasks, no fixture).
+
+| mutation | reddened | count |
+|---|---|---|
+| floor ignores CPU (`max(dur, 0)`) | mutation-test + joint-not-a-sum test | 2 of 7 |
+| raise branch prices anyway (drops the `>` refusal) | raise-is-a-refusal test | 1 of 7 |
+| joint sums the per-row costs | joint-not-a-sum test | 1 of 7 |
+| drop the no-BUILD-task refusal (session, after the verifier) | no-build-task test (`AttributeError` before) | 1 of 8 |
+
+All reverted from a pristine copy of `bga/correlate.py`; 7 passed after
+each revert.
+
+**Deviation.** The Required Fix named "the text renderer in bga/cli.py
+for `max_jobs_advice`"; none exists there or anywhere - the block was
+JSON-only. Extended `bga/findings.py`'s `_capacity_recommendation_
+finding` instead, the one place this document already narrates as
+text. `docs/guides/cli.md`'s guarded key surface moved 261 -> 263
+keys (`priced`/`price_refusal`; `priced_jointly`/`pricing_assumptions`
+are internal shape, like `caveat`, and are documented but not counted).
+`tests/unit/test_the_report_you_can_attach.py`'s golden export bound
+moved 458,000 -> 462,000 (measured 457,357 -> 458,519, all contract -
+golden has no Plane 2 so carries none of the priced data itself).

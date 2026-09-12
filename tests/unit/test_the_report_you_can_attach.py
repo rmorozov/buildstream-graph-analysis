@@ -862,7 +862,13 @@ COMMITTED_EXPORTS = [
     # export whether or not a run has the numbers, and golden's own
     # builder-cap-only instance adds its own evidence and provenance
     # record too. 458,000 leaves headroom of the same order.
-    ("golden", GOLDEN, 458_000),                       #  456,181 B
+    # `UX-739` moved this one by ~1,162 B, all **contract**: the
+    # `priced`/`price_refusal` row columns and the `priced_jointly`/
+    # `pricing_assumptions` schema prose on `max_jobs_advice`, which
+    # travels whether or not a run was priced - golden has no Plane 2
+    # at all. Measured before this change: 457,357 B. 462,000 leaves
+    # headroom of the same order.
+    ("golden", GOLDEN, 462_000),                       #  458,519 B
     # `UX-297` moved this one by 385 B before that: the two-plane run
     # publishes `plane2_coverage.source`, which says which shape of
     # Plane 2 report served its numbers and what that costs to open. A

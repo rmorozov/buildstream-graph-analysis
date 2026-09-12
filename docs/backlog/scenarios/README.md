@@ -15,18 +15,18 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-803 scenarios: **3 open**, 800 closed.
+806 scenarios: **2 open**, 804 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
-| capture | 1 | 97 |
-| analysis | 1 | 107 |
+| capture | 0 | 97 |
+| analysis | 1 | 109 |
 | contracts | 0 | 48 |
 | viewer | 0 | 164 |
 | cli | 0 | 22 |
 | store | 0 | 16 |
-| docs | 1 | 135 |
+| docs | 1 | 136 |
 | guards | 0 | 214 |
 
 ## Open scenarios
@@ -36,9 +36,8 @@ task file, which is the only place it ever lived twice.
 
 | ID | Scenario | Topic | Priority | Serves | Status |
 |---|---|---|---|---|---|
-| UX-739 | [the max-jobs advice is not priced — nothing says what the build drops to](UX-0739-the-max-jobs-advice-is-not-priced-nothing-says-what-the-build-drops-to.md) | analysis | Medium | R4 and R5, deciding whether the recommendation is worth applying | 🔴 |
-| UX-679 | [a jobserver every sandbox joins — the prototype bga can run](UX-0679-a-jobserver-every-sandbox-joins-the-prototype-bga-can-run.md) | capture | Medium | R4 and R5 — dynamic sharing instead of static tuning | 🔴 |
 | UX-689 | [the architecture document moves into the area pages, one track at a time](UX-0689-the-architecture-document-moves-into-the-area-pages-one-track-at-a-tim.md) | docs | Medium | the reader pricing a change; the session restructuring without losing a sentence | 🟡 |
+| UX-809 | [the price's two assumptions are on the payload, not in the text](UX-0809-the-price-s-two-assumptions-are-on-the-payload-not-in-the-text.md) | analysis | Medium | R4 and R5 reading the priced advice as text | 🔴 |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

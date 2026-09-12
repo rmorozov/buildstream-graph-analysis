@@ -712,6 +712,7 @@ into the child environment and the shim requires them:
 | `BST_TRACE_INVOCATION` | which invocation of that element, so a retry is not merged into its first attempt | `tools/native_trace/bwrap_shim.py` |
 | `BST_TRACE_INVOCATION_LOG` | the host-side file the shim appends one line to per invocation | `tools/bst_native_build_tracer.py` |
 | `BST_TRACE_ARGV_LOG` | the host-side `argv` log, written only when argv recording is on | `tools/bst_native_build_tracer.py` |
+| `BST_TRACE_JOBSERVER` | the jobserver FIFO's path; `run --jobserver N` sets it, the shim opens it read-write and injects `MAKEFLAGS=--jobserver-auth` (`UX-679`, a spike) | `tools/native_trace/bwrap_shim.py` |
 
 **What a test sets to reach a failure path.** The spine's degrade and
 refusal branches are unreachable on a machine that *has* `ptrace`, so
@@ -933,7 +934,7 @@ columns are the whole statement of what one of its rows holds, and
 finding one level up: `parallelism` is a top-level *object*, its
 `levels` rows are below that, and a population reaching only under a
 top-level array published the whole of a major bump outside itself.
-The surface is **261 keys** today, and that figure is derived from the
+The surface is **263 keys** today, and that figure is derived from the
 walk rather than typed here.
 
 So the statement of coverage, which is now a statement and not a
@@ -2047,6 +2048,7 @@ Documented here because they exist and nothing user-facing said so:
 - `bga sweep --calibration-dir DIR` (`UX-14` tier 2) — replaces the sweep's fixed-duration model with a contention-aware one calibrated from real runs in `DIR`. Without it the sweep's own caveat applies: the predicted curve is a shape, not a runtime prediction, because the replay model does not know about CPU.
 - `bga capture run --diagnose` / `--no-inject` (`UX-146`) — what the bwrap shim received and what it exec'd, one JSON line per sandbox, written as `<output>.diagnostics.jsonl` with a summary that **leads with the invocation count**. Zero means the `$PATH` shadow never reached `buildbox-run` and the build ran unmodified, which is a different problem from a sandbox that failed; the two are otherwise the same silence. `--no-inject` runs the build with the shim installed and injecting nothing — it captures nothing and says so, and exists to bisect the argv rewrite against the shadowing itself. Both are on `bga snapshot` too, and neither is sticky.
 - `bga capture run --invocation-log PATH` / `--argv-log PATH` / `--raw-log PATH` — where Plane 2 writes its own capture logs. `--invocation-log` defaults to a path beside the report (`UX-80`); `--no-invocation-log` turns it off.
+- `bga capture run --jobserver N` (`UX-679`, a design spike, not a supported mode) — runs a GNU jobserver with `N` tokens outside every sandbox and binds its FIFO into each one via the shim, so `make`/`cmake`'s Makefiles generator can join it instead of each sandbox believing it owns `N` cores alone. Recorded in the report as `jobserver`.
 - `bga correlate --cache-logs PLANE3.json` — adds the per-element sandbox tax from a Plane 3 report, which is what the merge half of the granularity findings is computed from (`UX-100`). Without it the split half still runs; the merge half is silent, because the toll is the whole basis for calling an element too small.
 - `bga compare --baseline-plane2 A.json --candidate-plane2 B.json` — notes when the candidate's measured memory envelope grew (`UX-104`). Two flags, because reusing one report for both runs would compare a run against itself. A note, never a gate: peak RSS has no measured noise band.
 - `bga cache-trend RUN...` — a series, oldest first: per-run hit ratio, transfer seconds and seconds per artifact, churn against the predecessor (with `UX-93`'s labels), and a finding when the newest run leaves the band its trailing window describes (`UX-103`). Refuses a verdict, with exit 6, over a series whose runs are not of the same project and targets — the band would describe neither (`UX-111`). The *commit* is deliberately allowed to vary: a cache-health trend across commits is the only kind there is. The noise model is `bga compare`'s, widened to the fixed rule when the measured band is narrower. Four runs minimum — three trailing plus the one being judged — and it says so rather than trending fewer.
@@ -2226,6 +2228,29 @@ tables above.
 | `local_max_concurrency` | the most elements ever seen building at once in a host-sample interval this element's span touches |
 | `samples_in_span` | how many host-CPU-sample intervals overlap this element's span; too few and the row refuses rather than guesses |
 | `refusal` | why no number was published - thin evidence, or an overlap whose measured peak RSS already exceeds the host's memory |
+| `priced` | `UX-739`: this recommendation's own replay price, applied alone - `{replayed_baseline_us, projected_us, cost_us, duration_before_us, duration_floor_us, kind: "floor"}`. Absent for an unchanged/raised/already-refused row |
+| `price_refusal` | `UX-739`: why a changed recommendation was not priced - a raise this run has no evidence for, or no Plane 2 `binary_cost` measurement. Absent when `priced` is set or `refusal` already explains the row |
+
+**Priced by replay (`UX-739`).** Two replays of this run under
+`ReplayScheduler(tasks, run_context).replay(compute_default_capacities
+(run_context))` - one baseline, one with a lowered element's BUILD
+task duration overridden to a floor,
+`max(observed_build_dur_us, binary_cost[element].measured_cpu_us /
+recommended)`: an element capped in isolation is no slower than
+observed, and cannot finish its measured CPU work faster than that
+work spread over the recommended job count. The figure therefore errs
+**optimistic** - the real build under these caps is this long or
+longer - and the neighbours' benefit (less overcommit) is not
+modelled. Dispatch order is re-derived from the graph and the builder
+budget by Part 18's LPT rule for both replays rather than kept from
+bst's own observed order, so that rule's own distance from real
+dispatch cancels to first order between the two. A raised
+recommendation is refused outright: this run has no evidence of how
+the element scales up. `priced_jointly` (on the document, not the row)
+applies every priced, lowered recommendation together in one replay -
+a recompute, not a sum - as `{replayed_baseline_us, projected_us,
+cost_us, elements}`; `pricing_assumptions` carries the two sentences
+above, machine-readable.
 
 **The sweep behind it, as data: `sweep/v1`** (`UX-339`). The graph
 constraint above is the *knee* of a capacity sweep, and `bga sweep`

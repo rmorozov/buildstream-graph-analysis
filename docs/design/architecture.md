@@ -545,19 +545,12 @@ The spec's invariants (full text: `docs/spec/specification.md`) remain the real 
 ## What a projection is, and why it is a bound (`UX-230`, `UX-74`)
 
 `bga whatif` and the page's what-if panel answer one question — *what
-would the build drop to if these were fixed together* — and the answer
-is a **bound**, not a forecast. Two things make it one, and both are
-stated in every `whatif/v1` answer (`bga/whatif.py`'s `CONVENTION`) and
-in [`../guides/cli.md`](../guides/cli.md); this is where the reasoning
-behind them lives.
-
-**"Fixed" means instant.** The projection zeroes each chosen element's
-measured duration and recomputes the longest path. A real fix that
-makes an element *faster* rather than instant lands under the figure; a
-fix that changes the graph — splitting an element, moving a dependency,
-caching a source — is not modelled at all. So the number is a ceiling
-on what the selection can be worth over this run's durations. A
-re-capture is still the ground truth.
+would the build drop to if these were fixed together* — and why the
+answer is a **bound**, not a forecast, plus what is built on the one
+recompute, is in
+[`docs/design/areas/bga-replay.md`](areas/bga-replay.md) (`UX-807`);
+the non-summing arithmetic worked example below stays here, where
+`tests/unit/test_the_whatif_convention_is_one_claim.py` reads it.
 
 **It is one recompute, never a sum.** Whether two savings add is a
 property of *this* graph, and it is the opposite of the intuition:
@@ -571,33 +564,6 @@ freedesktop-sdk capture, measured by UX-74:
                   individually 1569.8s + 547.7s          = 2117.5s
                   jointly                                  1569.8s   (takes the maximum)
 ```
-
-Being in **series** is what makes savings compose — shortening two
-links of one chain shortens the chain by both. Being **parallel** is
-what makes them not — the other chain was never binding.
-
-And summing is not merely optimistic: it is wrong in **both**
-directions. On the committed `examples/06` run, `codegen.bst` is worth
-**nothing** alone and the pair is worth more than either:
-
-```text
-$ bga whatif examples/06-…/run --element core.bst --element codegen.bst
-  Makespan 43.200s -> 24.150s (saves 19.050s)
-  Their individual savings add up to 12.050s, which is not what they are
-  worth together (19.050s) - what one fix is worth depends on the others.
-```
-
-`codegen.bst` sits on the chain that becomes binding the moment
-`core.bst` is fixed, so an element a reader would strike off the list
-today is worth seven seconds tomorrow. That is the same effect the
-optimization horizon (`UX-74`) projects forward, seen from one
-selection: what a fix is worth is a property of the set it is in, and
-no per-element table can carry it.
-
-`compute_joint_saving` (`bga/graph/edg.py`) is the one recompute, and
-`whatif/v1` publishes `sum_of_individual_us` **beside**
-`joint_saving_us` rather than instead of it, so the difference is
-visible in the payload rather than reproduced by the consumer.
 
 ## Real extensions beyond the original spec
 
@@ -882,6 +848,26 @@ and is superseded now is what the record says, and sweeping it forward
 with the tables above destroys the one thing the entry is for
 (`UX-653`). The newest entry is the exception: every round that
 re-grounds the document rewrites it.
+
+Updated 2026-09-12 (after `UX-807`), covering one change to this
+document — "What a projection is, and why it is a bound" chapter's
+mechanism prose moved into `docs/design/areas/bga-replay.md` (the
+third area, following `UX-806`'s second), leaving the heading, a
+one-paragraph pointer, and the one guarded paragraph (the non-summing
+arithmetic worked example) in place. The chapter is re-grounded in
+`tests/unit/test_the_whatif_convention_is_one_claim.py`'s
+`TestTheReasoningHasAHome`, which reads the chapter text itself for
+"never a sum", "same chain", "different chains", "maximum", "1569.8"
+and "2605.8" — all of which stayed, so no other line had to: every
+test file naming `architecture.md` stayed at 437 passed before and
+after (`python3 -m pytest $(grep -ln "architecture.md" tests/unit/*.py) -q`),
+and a diff of the removed prose against the new page's body was
+empty. The two contract tables above are unchanged since the last
+entry: **25 emitted ids, 10 of them superseded, and 3 read and never
+written**, 9 printable and 16 not, `analyze/v6` at **61 top-level properties**,
+and `bga/viewer/` still **22 modules**
+(`ls bga/viewer/*.js | wc -l`). The item published no id and moved no
+key.
 
 Updated 2026-09-08 (after `UX-806`), covering one change to this
 document — "Plane 2: intra-element native-build-system tracing"

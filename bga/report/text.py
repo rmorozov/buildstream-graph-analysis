@@ -1817,10 +1817,9 @@ def format_compare_text(comparison) -> str:
         do = d.get('occupancy_share')
         bo_s = f"{bo * 100:.1f}%" if bo is not None else "n/a"
         co_s = f"{co * 100:.1f}%" if co is not None else "n/a"
-        do_s = (
-            f"{'+' if do is not None and do >= 0 else ''}{do * 100:.1f}pp"
-            if do is not None else "n/a"
-        )
+        do_s = "n/a"
+        if do is not None:
+            do_s = f"{'+' if do >= 0 else ''}{do * 100:.1f}pp"
         lines.append(f"  {'Dispatch Occupancy':20s} {bo_s:>10s} -> {co_s:>10s}   ({do_s})")
     lines.append("")
 

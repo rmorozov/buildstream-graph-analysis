@@ -35,6 +35,15 @@ in `bga/correlate.py`), so the advice has one row per built element and
 beside it) feeds an element with a BUILD and a FETCH task through the
 CLI-side gatherer and asserts one row; mutation: drop the filter, two.
 
+## Decomposition
+
+Input classes the guard covers: an element with a BUILD task alone, one
+with a BUILD and a FETCH task, and one with only a FETCH task (no row at
+all — nothing was built); the journey it extends is
+`test_the_max_jobs_advisor_does_not_overcommit.py`'s — host series +
+spans → one recommendation per element under the no-overcommit
+constraint — with "per built element" as its first step.
+
 ## Out of Scope
 
 - The price beside each row — `UX-739`.

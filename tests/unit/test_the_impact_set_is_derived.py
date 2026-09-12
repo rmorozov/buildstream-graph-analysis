@@ -43,8 +43,28 @@ class TestTheSetNamesWhatTheChangeReaches:
         rows = self._report()["guards"]
         assert any("test_correlate" in row for row in rows), rows[:5]
 
-    def test_an_open_filing_on_the_same_topic_is_named(self):
-        assert self._report()["filings"], "no open row on the module's topic"
+    def test_the_filings_are_the_open_rows_on_the_module_s_topic(self, tmp_path, monkeypatch):
+        """`UX-812`: the guard reads the tool, on an index it wrote."""
+        index = tmp_path / "README.md"
+        index.write_text(
+            "| ID | Title | Topic | Priority | Serves | Status |\n"
+            "|---|---|---|---|---|---|\n"
+            "| UX-1 | [an analysis row](UX-0001-x.md) | analysis | Medium | R4 | 🔴 |\n"
+            "| UX-2 | [a docs row](UX-0002-y.md) | docs | Medium | R1 | 🟡 |\n",
+            encoding="utf-8")
+        monkeypatch.setattr(dev_impact, "INDEX", index)
+        assert dev_impact.filings_of("bga/correlate.py") == ["UX-1 an analysis row"]
+
+    def test_the_real_index_agrees_with_an_independent_parse(self):
+        """Empty when the backlog has no open analysis row - that is the
+        backlog's state, not the tool's defect (`UX-812`)."""
+        expected = []
+        for line in (REPO / "docs/backlog/scenarios/README.md").read_text(
+                encoding="utf-8").splitlines():
+            cells = [c.strip() for c in line.split("|")]
+            if len(cells) > 4 and cells[1].startswith("UX-") and cells[3] == "analysis":
+                expected.append(f"{cells[1]} {cells[2].split(']')[0].lstrip('[')}")
+        assert self._report()["filings"] == expected
 
 
 class TestTheContractRowSaysWhatItCannotPlace:

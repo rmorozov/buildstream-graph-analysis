@@ -17,7 +17,9 @@ capture every number below is pasted from.
 - `UX-739` — the max-jobs advice priced by replay. The judgement was taken in the brief: two replays of the run under Part 18's LPT rule, each lowered element's build floored at `max(observed, cpu / recommended)` from Plane 2's own CPU, published as a **floor** that errs optimistic, a raise refused, the joint figure a recompute and never a sum. On the probe: `codegen.bst` 4 → 1 costs 0 (slack absorbs it), the six lowered elements together +0.9 s on 29.6 s.
 - `UX-679` — the jobserver every sandbox joins, as a spike: `bga capture run --jobserver N` opens a FIFO, writes N−1 tokens, and the shim hands the fd into the sandbox through `--setenv MAKEFLAGS --jobserver-auth=fd,fd` — bwrap passes inherited fds, and the sandbox's make 4.3 speaks only that style. On `examples/06`, the under-utilised share fell 0.857 → 0.214 at an unchanged wall (30.25 → 30.46 s). **Decision:** not a mode yet; the wall is what R4 and R5 buy on, and this project's critical path is its declared chain. The flag stays, off by default.
 
-Filed: `UX-807`, `UX-808`.
+Filed: `UX-807`, `UX-808`, and `UX-809` — the price's two assumption
+sentences are on the payload and in the guide, not in the text a reader
+sees (the verifier's finding), a bounded row for the next round.
 
 ## In progress
 
@@ -55,6 +57,7 @@ total           528      1708.0s
 - Every track ran the CLI from its worktree by `PYTHONPATH`, because `bga` on PATH is the main checkout's editable install — a brief line that saved three tracks from measuring the wrong tree.
 - `UX-679`'s capture help had zero headroom in `test_help_is_short.py`'s cap (45 of 45 lines); a fifteenth flag moved it to 47, stated in the Deviation.
 - The size ledger adopted once, after the last merge, before the gate.
+- The gate reddened once, on `test_the_impact_set_is_derived.py` asking for an open analysis filing to name: with `UX-739` and `UX-808` closed the backlog had none. The guard reads the backlog's state, not the tool; `UX-809`, already owed, is the open row it names now.
 
 ## Agents
 

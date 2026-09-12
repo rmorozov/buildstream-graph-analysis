@@ -46,7 +46,7 @@ Every row is tagged, and every tag names the commit that set its
 version and is reachable from `main`:
 
 ```text
-v0.2.0  3ebe7e1b5    v0.3.0  bc1593557    v0.4.0  679b9cf87    v0.4.1  1fb8ddb8
+v0.2.0  3ebe7e1b5    v0.3.0  bc1593557    v0.4.0  679b9cf87    v0.4.1  8f238642
 ```
 
 `tests/unit/test_a_release_records_a_contract_state.py` reads them, so

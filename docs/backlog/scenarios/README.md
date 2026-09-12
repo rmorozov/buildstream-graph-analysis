@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-816 scenarios: **6 open**, 810 closed.
+816 scenarios: **5 open**, 811 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -26,7 +26,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | viewer | 1 | 165 |
 | cli | 0 | 22 |
 | store | 0 | 16 |
-| docs | 3 | 140 |
+| docs | 2 | 140 |
 | guards | 1 | 218 |
 
 ## Open scenarios
@@ -41,7 +41,6 @@ task file, which is the only place it ever lived twice.
 | UX-818 | [two canned queries error when an element is given](UX-0818-two-canned-queries-error-when-an-element-is-given.md) | guards | Medium | R1 at the Perfetto handoff | 🔴 |
 | UX-819 | [the export's Perfetto handoff fetches a quoted data: URI](UX-0819-the-export-s-perfetto-handoff-fetches-a-quoted-data-uri.md) | viewer | Medium | R1 opening the timeline from an export | 🔴 |
 | UX-816 | [the bga area's five chapters move into its page](UX-0816-the-bga-area-s-five-chapters-move-into-its-page.md) | docs | Medium | the reader pricing a change to the analysis; the session finishing `UX-689` | 🔴 |
-| UX-815 | [the ingestion-path chapter moves into the tools area page](UX-0815-the-ingestion-path-chapter-moves-into-the-tools-area-page.md) | docs | Medium | the reader pricing a change to the capture path; the session finishing `UX-689` | 🔴 |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

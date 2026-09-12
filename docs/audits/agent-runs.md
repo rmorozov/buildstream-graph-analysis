@@ -208,6 +208,8 @@ pairing for every merged row from round 103 on.
 | 113 | verifier | sonnet | verify `UX-810` | 48k | 43 | 11.9 m | PASS; the blank-and-rerun reproduced, 0 sentences missing | the sweeps exceed the default Bash timeout |
 | 113 | researcher | sonnet | review 22 of the documents (`review`) | 172k | 108 | 13.2 m | two filings, both closed in-round (UX-813, UX-814); the shape: a guard whose population cancels its own errors | git archaeology on a log count; the main checkout changed branches under the reader twice |
 | 114 | general-purpose | sonnet | walk seed 3, the driving half (`walk`) | 174k | 59 | 8.4 m | three filings carried into 0.4.1 (UX-817, UX-818, UX-819); one answer-key row | three driver scripts to see the quoted data: URI; the Write tool refused the report file |
+| 114 | implementer | sonnet | `UX-815` the ingestion-path chapter into the tools area page (mechanical) | 89k | 90 | 15.6 m | merged; 437 guards both ways, the whole 217-line chapter moved | proving the box's baseline red was pre-existing (ruff/pyright behind the pins) cost a stash round trip |
+| 114 | verifier | sonnet | verify `UX-815` | 49k | 43 | 12.2 m | PASS; 0 sentences missing, the blank-and-rerun reproduced | the sandbox refused plain commands that looked git-adjacent |
 
 Round 101's four tracks are **not** here: this session could not
 identify their transcripts with certainty after a context rebuild, and
@@ -220,7 +222,7 @@ committed cleanly once told to run in the foreground. Three of the five
 left a derived figure or a §6 context-map row behind - the same class
 the round itself was about, arriving in the tracks' own work.
 
-What the one hundred and ninety-one rows already say: a researcher that reads a document
+What the one hundred and ninety-three rows already say: a researcher that reads a document
 whole costs 100-180k; a walker that drives every control costs 336k;
 the two cuts cost a re-run each. The `walk` and `design-review`
 skills fix the report shape so the next rows are smaller, and the

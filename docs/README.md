@@ -184,6 +184,7 @@ Why it is this way. Arguments and structure, not instructions.
 | [`design/areas/bga-viewer.md`](design/areas/bga-viewer.md) | the viewer axis's mechanism prose — the server, the CSP, the presets, the shape-to-control mapping, `--export` (`UX-689`) |
 | [`design/areas/tools-native_trace.md`](design/areas/tools-native_trace.md) | Plane 2's mechanism prose — the hook's four fields, element attribution, what is built on the per-element split (`UX-806`) |
 | [`design/areas/bga-replay.md`](design/areas/bga-replay.md) | why a `bga whatif` projection is a bound, not a forecast, and how joint savings compose (`UX-807`) |
+| [`design/areas/tools.md`](design/areas/tools.md) | the tools area's mechanism prose — Plane 3's persisted-log reader: the sandbox, configure and developer taxes, and why none may feed a certified floor (`UX-810`) |
 | [`design/directions.md`](design/directions.md) | `bga` as a local helper vs `bga` as a CI gate |
 | [`design/roles.md`](design/roles.md) | the role model — eight roles, their contradictions, and the gap analysis |
 | [`design/styleguide.md`](design/styleguide.md) | the web report's visual contract — shape→control mapping, drawings, color and emphasis budget, dark first |

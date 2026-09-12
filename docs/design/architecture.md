@@ -162,49 +162,10 @@ reads them.
 
 ## Plane 3: BuildStream's own persisted logs (`UX-91`)
 
-BuildStream writes a per-element log for every task it runs, and keeps
-them: `$XDG_CACHE_HOME/buildstream/logs/<project>/<element>/<key>-<action>.<timestamp>.log`.
-They were sitting on every developer's machine, unread by anything.
-
-`bga cache-logs PROJECT_DIR` reads them. It is the only
-part of this tool that needs **no capture, no flags and no foresight** —
-the evidence is a by-product of builds that already happened, including
-builds nobody thought to instrument.
-
-What that buys, and what it costs:
-
-- **Per-element phase breakdown.** Each log carries BuildStream's own
-  timed activities — `Staging dependencies`, `Integrating sandbox`,
-  `Running commands`, `Caching artifact` — at one-second resolution.
-- **The sandbox tax** (`UX-99`): how much of each element's time went to
-  staging, integrating and caching rather than to the build itself. On
-  freedesktop-sdk it is **13.0s of 4409.0s (0.3%)** — and the answer
-  being *small* is the point: the toll is what the merge half of the
-  granularity advice is computed from (`UX-100`), and a project where it
-  is 0.3% has no elements that are too small to be worth their own
-  sandbox.
-- **The configure tax** (`UX-102`): what the build tools themselves say
-  they spent answering configure questions. Counted only where the build
-  tool reports it — cmake does, autotools' `configure` and meson do not
-  — so on an autotools project this is a floor of zero rather than a
-  measurement, and the report says so and points at Plane 2's traced
-  view instead. With `--native-report`, both figures are shown per
-  element, side by side and **never summed**: one is wall-clock the tool
-  self-reported, the other is CPU seconds traced, and adding them would
-  invent a quantity.
-- **The developer tax** (`UX-101`): which elements this project has spent
-  the most time rebuilding, across every build in the tree. With
-  `--graph` it can separate a rebuild caused by an upstream key change
-  from one whose own definition changed — the logs alone carry no
-  dependency edges.
-
-The costs are stated in the report itself, every time: one-second
-resolution, no `--builders`, no `--max-jobs`, no scheduler context, no
-timestamps inside `Running commands`, and **no session id** — a log's
-header is its own task's start, not its build's, so the number of builds
-is a lower bound taken from the most-rebuilt element, never a count.
-Nothing in Plane 3 may feed a certified floor, and the report says that
-too.
+`bga cache-logs PROJECT_DIR` reads BuildStream's own per-element logs
+with no capture, no flags and no foresight — what each report buys
+and costs, and why nothing it finds may feed a certified floor, is in
+[`docs/design/areas/tools.md`](areas/tools.md) (`UX-810`).
 
 ## Joining the planes (`UX-51`, `UX-100`)
 
@@ -848,6 +809,24 @@ and is superseded now is what the record says, and sweeping it forward
 with the tables above destroys the one thing the entry is for
 (`UX-653`). The newest entry is the exception: every round that
 re-grounds the document rewrites it.
+
+Updated 2026-09-12 (after `UX-810`), covering one change to this
+document — "Plane 3: BuildStream's own persisted logs" chapter's
+mechanism prose moved into `docs/design/areas/tools.md` (the fourth
+area, following `UX-807`'s third), leaving the heading and a
+one-paragraph pointer in place. The move is re-grounded in the 21 test
+files naming `architecture.md`: blanking the chapter body and
+rerunning all of them before writing the replacement found no line
+inside the chapter string-matched by any guard, so nothing besides the
+heading stayed behind.
+`python3 -m pytest $(grep -ln "architecture.md" tests/unit/*.py) -q`
+stayed at 437 passed before and after, and a diff of the removed prose
+against the new page's body was empty. The two contract tables above
+are unchanged since the last entry: **25 emitted ids, 10 of them
+superseded, and 3 read and never written**, 9 printable and 16 not,
+`analyze/v6` at **61 top-level properties**, and `bga/viewer/` still
+**22 modules** (`ls bga/viewer/*.js | wc -l`). The item published no
+id and moved no key.
 
 Updated 2026-09-12 (after `UX-807`), covering one change to this
 document — "What a projection is, and why it is a bound" chapter's

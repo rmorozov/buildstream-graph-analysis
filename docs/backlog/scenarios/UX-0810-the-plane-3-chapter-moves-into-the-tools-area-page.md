@@ -51,3 +51,59 @@ new page or the kept pointer (a diff of the removed prose against the
 new page's body, empty); `test_docs_links_and_commands.py` green;
 `dev_close_task.py --check --write` a no-op after the commit; mutation:
 one moved sentence deleted from a scratch copy — the diff names it.
+
+## Outcome
+
+### The gap → the close, measured
+
+```text
+$ python3 -m pytest $(grep -ln "architecture.md" tests/unit/*.py) -q
+437 passed   # before (this round's tip, f16c2ee9)
+436 passed, 1 skipped   # after (uncommitted) — the one skip is
+                        # test_nothing_landed_after_the_commit_the_entry_credits,
+                        # which has no `UX-810:` commit to anchor on yet
+437 passed   # after this commit (the anchor now resolves) — same count
+$ python3 -m pytest tests/unit/test_docs_links_and_commands.py -q
+59 passed    # before and after, unchanged
+$ PYTHONPATH=. python3 tools/dev_close_task.py --check --write
+0 problem(s) over 10 propert(y/ies), 807 backlog row(s)
+--write changed no file(s).
+```
+
+Empirical check, not a string search: every one of the 21 test files
+naming `architecture.md` was re-run against a scratch copy with lines
+164-207 (the chapter's body) blanked, before the replacement was
+written — still 437 passed, so **no line inside the chapter is read by
+any guard**; only the heading and a one-paragraph pointer stay in
+`architecture.md`. `docs/README.md`'s design index gained the page's
+row; `docs/backlog/areas/tools.md` picked up the derived `Mechanism:`
+line from the existing `write_area_pages` logic (`UX-689`/`UX-807`),
+no code change needed. `PYTHONPATH=. python3 tools/dev_sizes.py
+--check` reports `sizes ok` — the ledger tracks code files only, so a
+doc-only move has no row to move or adopt.
+
+### The sentence diff (empty)
+
+```text
+$ diff removed_prose.txt <(sed -n '8,$p' docs/design/areas/tools.md)
+$                    # empty — removed_prose.txt is lines 163-207 of
+                     # the pre-move chapter, verbatim (no links to
+                     # re-base; the chapter has none)
+```
+
+### Mutation table (scratch diff, not a guard)
+
+| # | mutation | diff names |
+|---|---|---|
+| S1 | the sentence "Nothing in Plane 3 may feed a certified floor, and the report says that too." deleted from a scratch copy of `docs/design/areas/tools.md` | the deleted sentence, as the sole hunk of a 2-line diff |
+
+No new guard was added by this item — no existing guard reads inside
+the chapter (confirmed above), so there was none to mutate; only the
+scratch-copy diff the Acceptance Test asks for.
+
+**Deviation.** None: unlike `UX-807`, no line of this chapter is read
+by a guard from inside it, so the whole chapter moved and only the
+heading plus a fresh one-paragraph pointer stay in `architecture.md`.
+The page's H1 names the area ("The tools area") rather than the
+chapter, per the brief, since later chapters on `tools/` are expected
+to join it. One commit, one verifier (PASS).

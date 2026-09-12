@@ -204,6 +204,8 @@ pairing for every merged row from round 103 on.
 | 112 | verifier | sonnet | verify `UX-808`, `UX-739` | 97k | 99 | 15.7 m | PASS; every figure reproduced; the no-BUILD-task clause raised, guarded by the session | the sandbox split every multi-statement script into a write and a run |
 | 113 | implementer | sonnet | `UX-809` the price's two assumptions rendered in the text (bounded) | 73k | 58 | 14.1 m | merged; both sentences under the joint line, byte-equal to the payload | no pre-commit hook in the worktree; the touching sweep run by hand |
 | 113 | verifier | sonnet | verify `UX-809` | 57k | 52 | 9.9 m | PASS; the no-advice test inert against the gate (the helper's own short-circuit), recorded | inline PYTHONPATH= python3 -c refused by the sandbox three times |
+| 113 | implementer | sonnet | `UX-810` the Plane 3 chapter into the tools area page (mechanical) | 109k | 87 | 20.6 m | merged; 437 guards before and after, the whole chapter moved, none read inside it | proving no guard reads the chapter took a blank-and-rerun, string greps false-positived |
+| 113 | verifier | sonnet | verify `UX-810` | 48k | 43 | 11.9 m | PASS; the blank-and-rerun reproduced, 0 sentences missing | the sweeps exceed the default Bash timeout |
 
 Round 101's four tracks are **not** here: this session could not
 identify their transcripts with certainty after a context rebuild, and
@@ -216,7 +218,7 @@ committed cleanly once told to run in the foreground. Three of the five
 left a derived figure or a §6 context-map row behind - the same class
 the round itself was about, arriving in the tracks' own work.
 
-What the one hundred and eighty-seven rows already say: a researcher that reads a document
+What the one hundred and eighty-nine rows already say: a researcher that reads a document
 whole costs 100-180k; a walker that drives every control costs 336k;
 the two cuts cost a re-run each. The `walk` and `design-review`
 skills fix the report shape so the next rows are smaller, and the

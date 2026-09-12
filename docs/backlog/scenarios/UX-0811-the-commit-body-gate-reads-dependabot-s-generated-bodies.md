@@ -1,6 +1,6 @@
 # UX-811: the commit-body gate reads Dependabot's generated bodies
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-696 (the gate), UX-698 (the shelf that sends Dependabot's pull requests) | **Found by:** round 113, PR #217's red `test (3.x)` | **Serves:** the session merging the shelf's pull requests; CI reading only what the register governs | **Topic:** process | **Area:** tools | **Shape:** bounded
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-696 (the gate), UX-698 (the shelf that sends Dependabot's pull requests) | **Found by:** round 113, PR #217's red `test (3.x)` | **Serves:** the session merging the shelf's pull requests; CI reading only what the register governs | **Topic:** process | **Area:** tools | **Shape:** bounded
 
 ## Motivation
 

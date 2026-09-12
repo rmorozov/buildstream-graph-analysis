@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-816 scenarios: **5 open**, 811 closed.
+816 scenarios: **3 open**, 813 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -26,7 +26,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | viewer | 1 | 165 |
 | cli | 0 | 22 |
 | store | 0 | 16 |
-| docs | 2 | 140 |
+| docs | 0 | 140 |
 | guards | 1 | 218 |
 
 ## Open scenarios
@@ -36,11 +36,9 @@ task file, which is the only place it ever lived twice.
 
 | ID | Scenario | Topic | Priority | Serves | Status |
 |---|---|---|---|---|---|
-| UX-689 | [the architecture document moves into the area pages, one track at a time](UX-0689-the-architecture-document-moves-into-the-area-pages-one-track-at-a-tim.md) | docs | Medium | the reader pricing a change; the session restructuring without losing a sentence | 🟡 |
 | UX-817 | [the join calls a zero-rebuilt run an attribution failure](UX-0817-the-join-calls-a-zero-rebuilt-run-an-attribution-failure.md) | analysis | Medium | R1 reading `bga correlate` after an incremental build | 🔴 |
 | UX-818 | [two canned queries error when an element is given](UX-0818-two-canned-queries-error-when-an-element-is-given.md) | guards | Medium | R1 at the Perfetto handoff | 🔴 |
 | UX-819 | [the export's Perfetto handoff fetches a quoted data: URI](UX-0819-the-export-s-perfetto-handoff-fetches-a-quoted-data-uri.md) | viewer | Medium | R1 opening the timeline from an export | 🔴 |
-| UX-816 | [the bga area's five chapters move into its page](UX-0816-the-bga-area-s-five-chapters-move-into-its-page.md) | docs | Medium | the reader pricing a change to the analysis; the session finishing `UX-689` | 🔴 |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

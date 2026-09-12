@@ -210,6 +210,8 @@ pairing for every merged row from round 103 on.
 | 114 | general-purpose | sonnet | walk seed 3, the driving half (`walk`) | 174k | 59 | 8.4 m | three filings carried into 0.4.1 (UX-817, UX-818, UX-819); one answer-key row | three driver scripts to see the quoted data: URI; the Write tool refused the report file |
 | 114 | implementer | sonnet | `UX-815` the ingestion-path chapter into the tools area page (mechanical) | 89k | 90 | 15.6 m | merged; 437 guards both ways, the whole 217-line chapter moved | proving the box's baseline red was pre-existing (ruff/pyright behind the pins) cost a stash round trip |
 | 114 | verifier | sonnet | verify `UX-815` | 49k | 43 | 12.2 m | PASS; 0 sentences missing, the blank-and-rerun reproduced | the sandbox refused plain commands that looked git-adjacent |
+| 114 | implementer | sonnet | `UX-816` the bga area's five chapters into its page (mechanical) | 187k | 157 | 34.5 m | merged; four chapters moved, the real-extensions table kept where its guard reads it; 593 → 490 lines outside the log | a bare stash reverted the work mid-track and had to be re-applied |
+| 114 | verifier | sonnet | verify `UX-816` | 62k | 50 | 10.1 m | PASS; 0 sentences missing; the blank-and-rerun red on a docs-wide key guard, the Outcome had named it | a partial checkout for the before snapshot, caught and redone |
 
 Round 101's four tracks are **not** here: this session could not
 identify their transcripts with certainty after a context rebuild, and
@@ -222,7 +224,7 @@ committed cleanly once told to run in the foreground. Three of the five
 left a derived figure or a §6 context-map row behind - the same class
 the round itself was about, arriving in the tracks' own work.
 
-What the one hundred and ninety-three rows already say: a researcher that reads a document
+What the one hundred and ninety-five rows already say: a researcher that reads a document
 whole costs 100-180k; a walker that drives every control costs 336k;
 the two cuts cost a re-run each. The `walk` and `design-review`
 skills fix the report shape so the next rows are smaller, and the

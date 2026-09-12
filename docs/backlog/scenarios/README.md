@@ -15,13 +15,13 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-804 scenarios: **4 open**, 800 closed.
+805 scenarios: **5 open**, 800 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
 | capture | 1 | 97 |
-| analysis | 1 | 107 |
+| analysis | 2 | 108 |
 | contracts | 0 | 48 |
 | viewer | 0 | 164 |
 | cli | 0 | 22 |
@@ -37,6 +37,7 @@ task file, which is the only place it ever lived twice.
 | ID | Scenario | Topic | Priority | Serves | Status |
 |---|---|---|---|---|---|
 | UX-739 | [the max-jobs advice is not priced — nothing says what the build drops to](UX-0739-the-max-jobs-advice-is-not-priced-nothing-says-what-the-build-drops-to.md) | analysis | Medium | R4 and R5, deciding whether the recommendation is worth applying | 🔴 |
+| UX-808 | [the max-jobs advice lists one row per task, not per element](UX-0808-the-max-jobs-advice-lists-one-row-per-task-not-per-element.md) | analysis | Medium | R4 and R5 reading the recommendation table | 🔴 |
 | UX-679 | [a jobserver every sandbox joins — the prototype bga can run](UX-0679-a-jobserver-every-sandbox-joins-the-prototype-bga-can-run.md) | capture | Medium | R4 and R5 — dynamic sharing instead of static tuning | 🔴 |
 | UX-689 | [the architecture document moves into the area pages, one track at a time](UX-0689-the-architecture-document-moves-into-the-area-pages-one-track-at-a-tim.md) | docs | Medium | the reader pricing a change; the session restructuring without losing a sentence | 🟡 |
 | UX-807 | [the projection chapter moves into the replay area page](UX-0807-the-projection-chapter-moves-into-the-replay-area-page.md) | docs | Medium | the reader pricing a change to a projection; the session restructuring without losing a sentence | 🔴 |

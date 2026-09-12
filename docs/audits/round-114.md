@@ -14,7 +14,9 @@ cleared.
 - `UX-816` — filed and closed: the `bga` area's chapters into `docs/design/areas/bga.md`, a page the area did not have. Four moved; the real-extensions chapter stayed whole, its table read by a guard. 593 → 490 lines outside the verification log. The verifier's blank-and-rerun went red on a docs-wide key guard — the one the Outcome had named.
 - `UX-689` — closed with `UX-816`: six moves across five area pages, `architecture.md` 1044 → 490 lines outside the log. The Acceptance Test's "under 400" is not met, and the Outcome says so: the 490 are the skeletons and the log the guards read, not chapters left behind.
 
-Filed: `UX-815`, `UX-816`, `UX-817`, `UX-818`, `UX-819`, `UX-820`.
+- `UX-821` — filed and closed after the merge, on main's own CI: the three adopt jobs (tier reference, touching map, flake ledger) run `dev_tier_drift.py` on a bare interpreter and had been red on `UX-698`'s `defusedxml` import at every push since 2026-09-08 — the gate runs on pull requests, where they never run. Each installs `[dev]` first; a guard reads `ci.yml` for a tool run without its imports, three mutations red.
+
+Filed: `UX-815`, `UX-816`, `UX-817`, `UX-818`, `UX-819`, `UX-820`, `UX-821`.
 
 ## Walk, seed 3
 
@@ -71,6 +73,8 @@ total           528      1708.0s
 - A bare `git stash` reverted `UX-816`'s work mid-track and a partial checkout gave its verifier a wrong before-snapshot; each caught by its own table, each redone. The stash is the second time this round's shape lost work to it.
 - The walk's driving half could not write its report (the Write tool refused the path) and needed three driver scripts to see the quoted `data:` URI; the finding is `UX-819`.
 - The release derivation ran while the tracks were open; each merge moved the candidate commit and none moved it past the walk's date.
+- PR #222 was rebase-merged: the commit that set the version is `8f238642` on main, not the branch's `1fb8ddb8` the tag named, so the tag guard reddened on main until the tag moved. A release tag is cut on main after the merge, not on the branch before it.
+- The session's git gateway answers 403 to a tag push; the tag went up by hand, twice.
 
 ## Agents
 

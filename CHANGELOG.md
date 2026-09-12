@@ -37,12 +37,14 @@ derivation actually reads.
 
 | release | date | closed rows | kind |
 |---|---|---|---|
+| [0.4.1](#041--the-tool-says-what-it-assumes-2026-09-12) | 2026-09-12 | 813 | patch |
 | [0.4.0](#040--a-capture-you-can-carry-2026-09-03) | 2026-09-03 | 537 | breaking |
 | [0.3.0](#030--every-document-says-what-shape-it-is-2026-08-27) | 2026-08-27 | 332 | breaking |
 | [0.2.0](#020--the-build-that-says-what-it-is-2026-08-24) | 2026-08-24 | 243 | initial |
 
-All three rows are tagged, and all three tags name the commit that set
-their version and are reachable from `main`:
+Every row is tagged, and every tag names the commit that set its
+version and is reachable from `main` (`0.4.1`'s tag is named below its
+row's commit, once cut):
 
 ```text
 v0.2.0  3ebe7e1b5    v0.3.0  bc1593557    v0.4.0  679b9cf87
@@ -56,6 +58,359 @@ round 86 first "corrected" that to *a lineage `main` cannot reach*.
 Both are wrong: `pyproject.toml` enters this history at `4ace856`
 (2026-08-13) and `0.2.0` is an ordinary release. The wrong correction
 was read off a shallow clone — `UX-633`, and `UX-637` for the cause.
+
+## 0.4.1 — the tool says what it assumes (2026-09-12)
+
+Named for what every new number in it carries: the assumption it
+rests on, stated beside it. The max-jobs advice (`UX-677`) is priced by
+replay (`UX-739`) — two runs of the scheduler's own rule, each capped
+element's build floored at its measured CPU over the recommended jobs
+— and the figure is published as a **floor** that errs optimistic, with
+the two sentences that say so rendered under it (`UX-809`). Remote
+execution is priced two ways and never summed (`UX-680`); the cached
+build gets a verdict with its dominant elements (`UX-684`); memory
+joins the capacity sweep (`UX-678`); the utilisation envelope reads
+real cores rather than slots (`UX-675`, `UX-676`). A jobserver every
+sandbox joins was built and measured (`UX-679`): the under-utilised
+share fell fourfold on `examples/06` at an unchanged wall, so it stays
+a capture flag, off by default, until a compile-bound capture moves
+its wall.
+
+The architecture document's chapters moved into hand-written area
+pages beside the derived tables that keep them honest (`UX-689`, six
+moves, no sentence lost), the shelf's Dependabot pull requests can merge
+again (`UX-811`), and review 22 found the round records holding.
+
+**Contract delta:** none — the twenty-five contracts and the command
+surface are `0.4.0`'s, which makes the row `patch`. What moved sits
+inside them: `analyze/v6` gained `utilization_envelope`,
+`max_jobs_advice` with its `priced` rows and `priced_jointly`,
+`cached_shape` and the `remote-execution-whatif` finding; `sweep/v1`
+gained `memory_knee_points` and `binding_constraints`; `bga capture run`
+gained `--jobserver N`; the guide's key table stands at 263.
+
+**Upgrade note:** none. Every addition is a new key beside the old
+ones, and an older reader ignores what it does not name.
+
+**Carried findings.** Review 22 (closed-row marker 808) filed `UX-813`
+and `UX-814`, both closed in the same round. Walk seed 3 (2026-09-12,
+on this release's candidate commit) filed three, open at this cut and
+named here so "we knew" is on the record: `UX-817` — the join names
+the wrong absence on a zero-rebuilt run; `UX-818` — two canned Perfetto
+questions error under `--element`; `UX-819` — the export's Perfetto
+handoff fetches a quoted `data:` URI. They are the three rows open at
+the cut.
+
+```text state
+contracts: analyze/v2 analyze/v3 analyze/v4 analyze/v5 analyze/v6 blast/v1 blast/v2 bundle-manifest/v1 capacity-model/v1 capture-layout/v1 compare/v1 compare/v2 correlate/v1 correlate/v2 host-samples/v1 host/v1 host/v2 plane2/v1 plane2/v2 plane2/v3 sources/v1 store-aggregate/v1 store/v1 sweep/v1 whatif/v1
+commands: analyze baseline blast bundle cache-logs cache-trend capture checkout-cost chrome-to-trace compare correlate cross-check diagnostics doctor extract floors gen-synthetic graph graph-from-show log-to-chrome native-to-chrome rebuild-set release-notes replay run-context snapshot sweep timeline utilisation view whatif wrap
+```
+
+### What landed
+
+<!-- generated: UX-252 537→813 -->
+276 scenarios closed (closed-row markers 537 → 813).
+
+**contracts**
+
+- [UX-553](UX-0553-the-holder-set-is-mandated-and-unread.md) — [the resource-holder set is spec-mandated and reaches no reader](UX-0553-the-holder-set-is-mandated-and-unread.md)
+- [UX-540](UX-0540-the-three-contracts-bga-reads-and-never-registers.md) — [the three contracts `bga` reads and never registers](UX-0540-the-three-contracts-bga-reads-and-never-registers.md)
+- [UX-550](UX-0550-the-newest-release-row-records-the-state-now.md) — [the newest release row records the state *now*, not the one it shipped](UX-0550-the-newest-release-row-records-the-state-now.md)
+- [UX-602](UX-0602-two-hard-gates-are-published-and-named-nowhere.md) — [two hard gates are published and named nowhere](UX-0602-two-hard-gates-are-published-and-named-nowhere.md)
+- [UX-598](UX-0598-two-of-the-four-percentile-rows-publish-no-distribution.md) — [two of the four percentile rows publish no distribution](UX-0598-two-of-the-four-percentile-rows-publish-no-distribution.md)
+- [UX-610](UX-0610-the-verdict-record-is-not-a-published-key.md) — [the verdict record is not a published key](UX-0610-the-verdict-record-is-not-a-published-key.md)
+- [UX-613](UX-0613-the-capacity-model-emits-no-document.md) — [the capacity model emits no document](UX-0613-the-capacity-model-emits-no-document.md)
+- [UX-628](UX-0628-five-published-keys-no-document-names.md) — [five published keys no document names](UX-0628-five-published-keys-no-document-names.md)
+- [UX-629](UX-0629-a-required-set-grew-under-an-unchanged-id.md) — [a required set grew under an unchanged id](UX-0629-a-required-set-grew-under-an-unchanged-id.md)
+- [UX-637](UX-0637-a-shallow-clone-answers-and-does-not-say-so.md) — [a shallow clone answers, and does not say so](UX-0637-a-shallow-clone-answers-and-does-not-say-so.md)
+- [UX-659](UX-0659-two-superseded-ids-sit-on-a-live-line.md) — [two superseded ids sit on a live line of the spec's registry](UX-0659-two-superseded-ids-sit-on-a-live-line.md)
+
+**cli**
+
+- [UX-574](UX-0574-invalid-arguments-exit-2-which-the-table-gives-to-ingestion.md) — ["invalid arguments" exit 2, which the table gives to ingestion](UX-0574-invalid-arguments-exit-2-which-the-table-gives-to-ingestion.md)
+- [UX-575](UX-0575-a-documented-pipe-prints-a-traceback.md) — [a documented pipe prints a traceback](UX-0575-a-documented-pipe-prints-a-traceback.md)
+- [UX-725](UX-0725-view-export-prints-two-error-lines-and-exits-zero.md) — [`bga view --export` prints two ERROR lines and exits 0](UX-0725-view-export-prints-two-error-lines-and-exits-zero.md)
+
+**analysis**
+
+- [UX-541](UX-0541-the-gap-sweep-is-cut-but-still-quadratic.md) — [the gap sweep is cut and still quadratic, and the reason is a contract](UX-0541-the-gap-sweep-is-cut-but-still-quadratic.md)
+- [UX-542](UX-0542-diagnostics-is-now-the-largest-phase.md) — [`_compute_diagnostics` is now the largest phase of `analyze`](UX-0542-diagnostics-is-now-the-largest-phase.md)
+- [UX-563](UX-0563-part-8-2-s-unknown-holder-is-a-state-the-code-cannot-reach.md) — [Part 8.2's `UNKNOWN` holder is a state the code cannot reach](UX-0563-part-8-2-s-unknown-holder-is-a-state-the-code-cannot-reach.md)
+- [UX-564](UX-0564-parts-23-and-27-exist-in-the-spec-and-nowhere-else.md) — [Parts 23 and 27 exist in the spec and nowhere else](UX-0564-parts-23-and-27-exist-in-the-spec-and-nowhere-else.md)
+- [UX-565](UX-0565-part-29-is-wired-to-none-while-the-store-holds-the-series-it-needs.md) — [Part 29 is wired to `None` while the store holds the series it needs](UX-0565-part-29-is-wired-to-none-while-the-store-holds-the-series-it-needs.md)
+- [UX-593](UX-0593-the-regression-verdict-carries-no-evidence-chain.md) — [the regression verdict carries no evidence chain](UX-0593-the-regression-verdict-carries-no-evidence-chain.md)
+- [UX-596](UX-0596-build-time-in-the-team-s-units.md) — [build time in the team's units](UX-0596-build-time-in-the-team-s-units.md)
+- [UX-611](UX-0611-whatifs-saving-is-still-in-build-seconds.md) — [what-if's saving is still in build seconds](UX-0611-whatifs-saving-is-still-in-build-seconds.md)
+- [UX-641](UX-0641-the-levels-key-is-the-identity-function.md) — [the levels key is the identity function](UX-0641-the-levels-key-is-the-identity-function.md)
+- [UX-676](UX-0676-the-utilization-envelope-and-the-intervals-that-violate-it.md) — [the utilization envelope, and the intervals that violate it](UX-0676-the-utilization-envelope-and-the-intervals-that-violate-it.md)
+- [UX-681](UX-0681-fan-in-what-an-element-depends-on-ranked.md) — [fan-in — what an element depends on, ranked](UX-0681-fan-in-what-an-element-depends-on-ranked.md)
+- [UX-724](UX-0724-the-diagnostics-blocks-vanish-on-a-fully-cached-run.md) — [the diagnostics blocks vanish on a fully cached run](UX-0724-the-diagnostics-blocks-vanish-on-a-fully-cached-run.md)
+- [UX-719](UX-0719-the-bottleneck-fan-in-and-fan-out-labels-are-swapped.md) — [the bottleneck fan-in and fan-out labels are swapped](UX-0719-the-bottleneck-fan-in-and-fan-out-labels-are-swapped.md)
+- [UX-733](UX-0733-the-two-fan-averages-are-the-same-number-and-both-described-wrong.md) — [the two fan averages are the same number, and both described wrong](UX-0733-the-two-fan-averages-are-the-same-number-and-both-described-wrong.md)
+- [UX-677](UX-0677-the-max-jobs-advisor-per-element-under-a-no-overcommit-constraint.md) — [the max-jobs advisor — per element, under a no-overcommit constraint](UX-0677-the-max-jobs-advisor-per-element-under-a-no-overcommit-constraint.md)
+- [UX-740](UX-0740-a-span-under-the-epsilon-grid-becomes-a-zero-width-segment-and-nothing-says-so.md) — [a span under the epsilon grid becomes a zero-width segment, and nothing says so](UX-0740-a-span-under-the-epsilon-grid-becomes-a-zero-width-segment-and-nothing-says-so.md)
+- [UX-682](UX-0682-change-frequency-and-co-change-from-the-logs-the-project-already-keeps.md) — [change frequency and co-change, from the logs the project already keeps](UX-0682-change-frequency-and-co-change-from-the-logs-the-project-already-keeps.md)
+- [UX-683](UX-0683-the-foundation-tier-is-declared-and-the-kind-based-exemption-misses-it.md) — [the foundation tier is declared, and the kind-based exemption misses it](UX-0683-the-foundation-tier-is-declared-and-the-kind-based-exemption-misses-it.md)
+- [UX-678](UX-0678-memory-joins-the-sweep-and-the-queue-model.md) — [memory joins the sweep and the queue model](UX-0678-memory-joins-the-sweep-and-the-queue-model.md)
+- [UX-684](UX-0684-the-cached-build-verdict-does-the-graph-rebuild-the-cheapest-subgraph.md) — [the cached-build verdict — does the graph rebuild the cheapest subgraph?](UX-0684-the-cached-build-verdict-does-the-graph-rebuild-the-cheapest-subgraph.md)
+- [UX-680](UX-0680-remote-execution-is-priced-not-built.md) — [remote execution is priced, not built](UX-0680-remote-execution-is-priced-not-built.md)
+- [UX-808](UX-0808-the-max-jobs-advice-lists-one-row-per-task-not-per-element.md) — [the max-jobs advice lists one row per task, not per element](UX-0808-the-max-jobs-advice-lists-one-row-per-task-not-per-element.md)
+- [UX-739](UX-0739-the-max-jobs-advice-is-not-priced-nothing-says-what-the-build-drops-to.md) — [the max-jobs advice is not priced — nothing says what the build drops to](UX-0739-the-max-jobs-advice-is-not-priced-nothing-says-what-the-build-drops-to.md)
+- [UX-809](UX-0809-the-price-s-two-assumptions-are-on-the-payload-not-in-the-text.md) — [the price's two assumptions are on the payload, not in the text](UX-0809-the-price-s-two-assumptions-are-on-the-payload-not-in-the-text.md)
+
+**capture**
+
+- [UX-594](UX-0594-a-capture-cannot-say-when-the-build-was-requested.md) — [a capture cannot say when the build was requested](UX-0594-a-capture-cannot-say-when-the-build-was-requested.md)
+- [UX-612](UX-0612-the-start-clock-has-no-provenance.md) — [the start clock has no provenance](UX-0612-the-start-clock-has-no-provenance.md)
+- [UX-675](UX-0675-the-host-series-has-memory-and-no-cores.md) — [the host series has memory and no cores](UX-0675-the-host-series-has-memory-and-no-cores.md)
+- [UX-726](UX-0726-no-flag-omits-plane-2-and-the-empty-one-says-nothing.md) — [no flag omits Plane 2, and the empty one says nothing](UX-0726-no-flag-omits-plane-2-and-the-empty-one-says-nothing.md)
+- [UX-738](UX-0738-a-build-that-could-not-write-reports-as-a-clean-run-and-exit-255.md) — [a build that could not write reports as a clean run and exit 255](UX-0738-a-build-that-could-not-write-reports-as-a-clean-run-and-exit-255.md)
+- [UX-805](UX-0805-the-doctor-s-chain-probe-drops-the-user-s-cache-config-with-its-home.md) — [the doctor's chain probe drops the user's cache config with its HOME](UX-0805-the-doctor-s-chain-probe-drops-the-user-s-cache-config-with-its-home.md)
+- [UX-679](UX-0679-a-jobserver-every-sandbox-joins-the-prototype-bga-can-run.md) — [a jobserver every sandbox joins — the prototype bga can run](UX-0679-a-jobserver-every-sandbox-joins-the-prototype-bga-can-run.md)
+
+**viewer**
+
+- [UX-545](UX-0545-a-refused-timeline-says-the-wrong-thing.md) — [a refused timeline tells the reader the snapshot has no build log](UX-0545-a-refused-timeline-says-the-wrong-thing.md)
+- [UX-555](UX-0555-with-trace-false-blames-a-missing-plane-2.md) — [`--no-trace` tells a two-plane run it kept no Plane 2 log](UX-0555-with-trace-false-blames-a-missing-plane-2.md)
+- [UX-559](UX-0559-serve-leaks-a-scratch-directory-per-run.md) — [`bga view --serve` leaks a scratch directory per served run](UX-0559-serve-leaks-a-scratch-directory-per-run.md)
+- [UX-640](UX-0640-the-rail-names-the-key-the-heading-asks-the-question.md) — [the rail names the key, the heading asks the question](UX-0640-the-rail-names-the-key-the-heading-asks-the-question.md)
+- [UX-642](UX-0642-a-structured-fold-forgets-it-was-open.md) — [a structured fold forgets it was open](UX-0642-a-structured-fold-forgets-it-was-open.md)
+- [UX-638](UX-0638-table-focus-destroys-the-reading-position.md) — [table focus destroys the reading position](UX-0638-table-focus-destroys-the-reading-position.md)
+- [UX-639](UX-0639-the-rail-is-dead-while-a-table-is-focused.md) — [the rail is dead while a table is focused](UX-0639-the-rail-is-dead-while-a-table-is-focused.md)
+- [UX-648](UX-0648-the-jump-box-names-sections-the-old-way.md) — [the jump box names sections the old way](UX-0648-the-jump-box-names-sections-the-old-way.md)
+- [UX-643](UX-0643-a-reader-role-that-demotes-rather-than-hides.md) — [a reader role that demotes rather than hides](UX-0643-a-reader-role-that-demotes-rather-than-hides.md)
+- [UX-647](UX-0647-a-rail-click-never-reaches-the-view-state-writer.md) — [a rail click never reaches the view-state writer](UX-0647-a-rail-click-never-reaches-the-view-state-writer.md)
+- [UX-646](UX-0646-the-fragment-is-one-event-behind-the-fold.md) — [the fragment is one event behind the fold](UX-0646-the-fragment-is-one-event-behind-the-fold.md)
+- [UX-650](UX-0650-nine-page-built-sections-declare-no-reader.md) — [nine page-built sections declare no reader](UX-0650-nine-page-built-sections-declare-no-reader.md)
+- [UX-654](UX-0654-the-vocabulary-module-still-says-nine-hints.md) — [the vocabulary module still says nine hints](UX-0654-the-vocabulary-module-still-says-nine-hints.md)
+- [UX-672](UX-0672-a-blocked-pop-up-s-refusal-never-renders.md) — [a blocked pop-up's refusal never renders](UX-0672-a-blocked-pop-up-s-refusal-never-renders.md)
+- [UX-673](UX-0673-sixteen-tables-offer-a-top-10-they-cannot-fill.md) — [sixteen tables offer a Top 10 they cannot fill](UX-0673-sixteen-tables-offer-a-top-10-they-cannot-fill.md)
+- [UX-669](UX-0669-a-runbook-is-a-shape-the-next-steps-rendered-once-as-steps.md) — [a runbook is a shape — the next steps rendered once, as steps](UX-0669-a-runbook-is-a-shape-the-next-steps-rendered-once-as-steps.md)
+- [UX-670](UX-0670-the-first-rail-click-into-a-folded-chapter-lands-687-px-above-its-sect.md) — [the first rail click into a folded chapter lands 687 px above its section](UX-0670-the-first-rail-click-into-a-folded-chapter-lands-687-px-above-its-sect.md)
+- [UX-721](UX-0721-an-aliased-import-is-silently-dropped-by-the-export.md) — [an aliased import is silently dropped by the export](UX-0721-an-aliased-import-is-silently-dropped-by-the-export.md)
+- [UX-722](UX-0722-a-rail-target-inside-a-scrolling-table-lands-under-the-header.md) — [a rail target inside a scrolling table lands under the header](UX-0722-a-rail-target-inside-a-scrolling-table-lands-under-the-header.md)
+- [UX-729](UX-0729-two-modules-declare-one-name-and-the-satellite-bundle-would-take-both.md) — [two modules declare one name, and the satellite bundle would take both](UX-0729-two-modules-declare-one-name-and-the-satellite-bundle-would-take-both.md)
+- [UX-717](UX-0717-the-host-series-is-on-the-trace-and-in-no-question.md) — [the host series is on the trace and in no question](UX-0717-the-host-series-is-on-the-trace-and-in-no-question.md)
+- [UX-667](UX-0667-the-rail-is-a-source-list-chapters-disclose-and-the-mark-stays-in-view.md) — [the rail is a source list — chapters disclose, and the mark stays in view](UX-0667-the-rail-is-a-source-list-chapters-disclose-and-the-mark-stays-in-view.md)
+- [UX-699](UX-0699-the-viewer-linted-as-one-module-graph.md) — [the viewer linted as one module graph](UX-0699-the-viewer-linted-as-one-module-graph.md)
+- [UX-674](UX-0674-eighteen-font-sizes-an-h3-larger-than-its-h2-and-130-character-lines.md) — [eighteen font sizes, an h3 larger than its h2, and 130-character lines](UX-0674-eighteen-font-sizes-an-h3-larger-than-its-h2-and-130-character-lines.md)
+- [UX-753](UX-0753-the-flow-axis-is-drawn-by-one-row-and-read-by-none.md) — [the flow axis is drawn by one row and read by none](UX-0753-the-flow-axis-is-drawn-by-one-row-and-read-by-none.md)
+- [UX-758](UX-0758-the-edge-mark-test-reads-a-merged-name-and-never-matches.md) — [the edge-mark test reads a merged name and never matches](UX-0758-the-edge-mark-test-reads-a-merged-name-and-never-matches.md)
+- [UX-668](UX-0668-a-reader-is-a-shape-not-a-hue-and-the-selector-lives-in-the-header.md) — [a reader is a shape, not a hue — and the selector lives in the header](UX-0668-a-reader-is-a-shape-not-a-hue-and-the-selector-lives-in-the-header.md)
+- [UX-671](UX-0671-the-rail-acts-on-the-view-and-the-url-does-not-follow.md) — [the rail acts on the view, and the URL does not follow](UX-0671-the-rail-acts-on-the-view-and-the-url-does-not-follow.md)
+- [UX-800](UX-0800-the-rail-landing-counts-frames-and-the-count-moved-with-the-header.md) — [the rail landing counts frames, and the count moved with the header](UX-0800-the-rail-landing-counts-frames-and-the-count-moved-with-the-header.md)
+
+**store**
+
+- [UX-577](UX-0577-the-committed-example-s-own-next-step-refuses.md) — [the committed example's own next step refuses](UX-0577-the-committed-example-s-own-next-step-refuses.md)
+- [UX-595](UX-0595-the-capacity-model-has-a-fact-base-and-no-model.md) — [the capacity model has a fact base and no model](UX-0595-the-capacity-model-has-a-fact-base-and-no-model.md)
+
+**guards**
+
+- [UX-544](UX-0544-the-node-census-has-a-hole.md) — [the hand-built *node* census has a hole the document census does not](UX-0544-the-node-census-has-a-hole.md)
+- [UX-547](UX-0547-the-fixture-differ-cannot-see-key-order.md) — [the fixture differ compares parsed JSON, so key order drifts unseen](UX-0547-the-fixture-differ-cannot-see-key-order.md)
+- [UX-554](UX-0554-a-failed-suite-takes-its-junit-with-it.md) — [a failed CI suite takes the record of what failed with it](UX-0554-a-failed-suite-takes-its-junit-with-it.md)
+- [UX-543](UX-0543-a-second-ranking-clause-under-contention.md) — [a second clause of the answer key ranks under contention](UX-0543-a-second-ranking-clause-under-contention.md)
+- [UX-546](UX-0546-the-fetch-guard-is-flaky-under-load.md) — [the fetch-counting handoff guard is flaky under the full suite](UX-0546-the-fetch-guard-is-flaky-under-load.md)
+- [UX-557](UX-0557-the-cause-filter-admits-the-whole-suite.md) — [the drift gate's cause filter admits all 424 files](UX-0557-the-cause-filter-admits-the-whole-suite.md)
+- [UX-558](UX-0558-the-failure-name-is-3800-lines-from-the-end.md) — [the failure's name is 3,800 lines from the end of the 3.11 job](UX-0558-the-failure-name-is-3800-lines-from-the-end.md)
+- [UX-560](UX-0560-a-worktree-track-starts-from-origin-main.md) — [a worktree track starts from `origin/main`, whatever base its brief names](UX-0560-a-worktree-track-starts-from-origin-main.md)
+- [UX-561](UX-0561-a-track-cannot-pass-its-own-commit-hook.md) — [a track that closes an item cannot pass its own pre-commit selector](UX-0561-a-track-cannot-pass-its-own-commit-hook.md)
+- [UX-562](UX-0562-the-empty-backlog-reds-its-own-topic-guard.md) — [the guard that reds when the backlog it reads reaches zero open rows](UX-0562-the-empty-backlog-reds-its-own-topic-guard.md)
+- [UX-586](UX-0586-the-premise-detector-reads-a-proxy.md) — [the premise detector reads a proxy](UX-0586-the-premise-detector-reads-a-proxy.md)
+- [UX-587](UX-0587-the-reference-goes-stale-as-the-backlog-it-walks-grows.md) — [a guard whose cost is the backlog's size drifts past a reference `--adopt` cannot refresh](UX-0587-the-reference-goes-stale-as-the-backlog-it-walks-grows.md)
+- [UX-579](UX-0579-the-docs-guard-reads-command-words-not-commands.md) — [the docs guard reads command words, not commands](UX-0579-the-docs-guard-reads-command-words-not-commands.md)
+- [UX-588](UX-0588-the-python-floor-is-in-the-matrix-and-in-no-guard.md) — [the Python floor is in the CI matrix and in no guard](UX-0588-the-python-floor-is-in-the-matrix-and-in-no-guard.md)
+- [UX-573](UX-0573-the-context-map-cannot-see-below-tools.md) — [the context map cannot see below `tools/`](UX-0573-the-context-map-cannot-see-below-tools.md)
+- [UX-592](UX-0592-two-rail-harnesses-press-before-the-mark-they-depend-on.md) — [two rail harnesses press before the mark they depend on](UX-0592-two-rail-harnesses-press-before-the-mark-they-depend-on.md)
+- [UX-585](UX-0585-the-card-s-guard-column-is-counted-not-read.md) — [the card's guard column is counted, not read](UX-0585-the-card-s-guard-column-is-counted-not-read.md)
+- [UX-567](UX-0567-two-invariants-have-no-guard-and-one-has-no-code.md) — [two invariants have no guard, and one has no code](UX-0567-two-invariants-have-no-guard-and-one-has-no-code.md)
+- [UX-568](UX-0568-the-spec-has-no-index-of-which-part-a-guard-holds.md) — [the spec has no index of which Part a guard holds](UX-0568-the-spec-has-no-index-of-which-part-a-guard-holds.md)
+- [UX-589](UX-0589-the-namer-reads-a-junit-the-run-did-not-write.md) — [the failure namer reads a junit the run did not write](UX-0589-the-namer-reads-a-junit-the-run-did-not-write.md)
+- [UX-605](UX-0605-the-touching-map-adopted-a-selection-that-is-everything.md) — [the touching map adopted a selection that is everything](UX-0605-the-touching-map-adopted-a-selection-that-is-everything.md)
+- [UX-599](UX-0599-a-guard-pins-a-contract-version-by-typing-it.md) — [a guard pins a contract version by typing it](UX-0599-a-guard-pins-a-contract-version-by-typing-it.md)
+- [UX-600](UX-0600-the-rules-card-has-one-guard-it-cannot-mark.md) — [the rules card has one guard it cannot mark](UX-0600-the-rules-card-has-one-guard-it-cannot-mark.md)
+- [UX-590](UX-0590-the-context-map-s-non-path-claims-are-unguarded.md) — [the context map's non-path claims are unguarded](UX-0590-the-context-map-s-non-path-claims-are-unguarded.md)
+- [UX-606](UX-0606-the-selectors-bound-is-measured-on-one-module.md) — [the selector's bound is measured on one module](UX-0606-the-selectors-bound-is-measured-on-one-module.md)
+- [UX-609](UX-0609-the-invariants-docstring-lists-five-of-six-gates.md) — [the invariants docstring lists five of six gates](UX-0609-the-invariants-docstring-lists-five-of-six-gates.md)
+- [UX-604](UX-0604-the-verification-log-clause-reads-the-entry-below.md) — [the verification-log clause reads the entry below it](UX-0604-the-verification-log-clause-reads-the-entry-below.md)
+- [UX-618](UX-0618-the-step-that-fails-most-writes-no-record.md) — [the step that fails most writes no record](UX-0618-the-step-that-fails-most-writes-no-record.md)
+- [UX-620](UX-0620-a-derived-count-re-dates-the-document-it-grounds.md) — [a derived count re-dates the document it grounds](UX-0620-a-derived-count-re-dates-the-document-it-grounds.md)
+- [UX-619](UX-0619-four-small-tier-failures-nobody-can-name.md) — [four small-tier failures nobody can name](UX-0619-four-small-tier-failures-nobody-can-name.md)
+- [UX-617](UX-0617-the-derived-count-cannot-see-an-unstaged-row.md) — [the derived count cannot see an unstaged row](UX-0617-the-derived-count-cannot-see-an-unstaged-row.md)
+- [UX-614](UX-0614-a-track-starts-on-the-default-branch.md) — [a track starts on the default branch, not the round's](UX-0614-a-track-starts-on-the-default-branch.md)
+- [UX-615](UX-0615-the-scratchpad-is-shared-between-tracks.md) — [the scratchpad is shared between tracks](UX-0615-the-scratchpad-is-shared-between-tracks.md)
+- [UX-621](UX-0621-a-drift-gate-red-nobody-can-read.md) — [a drift-gate red nobody can read](UX-0621-a-drift-gate-red-nobody-can-read.md)
+- [UX-624](UX-0624-the-cap-dropped-a-guard-that-was-not-noise.md) — [the cap dropped a guard that was not noise](UX-0624-the-cap-dropped-a-guard-that-was-not-noise.md)
+- [UX-623](UX-0623-a-track-cannot-read-the-tree-it-was-copied-from.md) — [a track cannot read the tree it was copied from](UX-0623-a-track-cannot-read-the-tree-it-was-copied-from.md)
+- [UX-626](UX-0626-a-brief-names-a-commit-nobody-resolved.md) — [a brief names a commit nobody resolved](UX-0626-a-brief-names-a-commit-nobody-resolved.md)
+- [UX-625](UX-0625-reverting-a-mutation-can-discard-the-work.md) — [reverting a mutation can discard the work](UX-0625-reverting-a-mutation-can-discard-the-work.md)
+- [UX-622](UX-0622-the-derived-count-and-its-guard-read-two-populations.md) — [the derived count and its guard read two populations](UX-0622-the-derived-count-and-its-guard-read-two-populations.md)
+- [UX-627](UX-0627-closing-a-row-writes-done-open.md) — [closing a row writes `🟢 Done Open`](UX-0627-closing-a-row-writes-done-open.md)
+- [UX-644](UX-0644-main-is-red-a-map-entry-under-the-cap-widened-a-module.md) — [main is red — a map entry under the cap widened a module](UX-0644-main-is-red-a-map-entry-under-the-cap-widened-a-module.md)
+- [UX-649](UX-0649-the-spread-bound-was-set-on-one-machine.md) — [the spread bound was set on one machine](UX-0649-the-spread-bound-was-set-on-one-machine.md)
+- [UX-645](UX-0645-the-census-floor-spends-half-the-width-bound.md) — [the census floor spends half the width bound](UX-0645-the-census-floor-spends-half-the-width-bound.md)
+- [UX-656](UX-0656-main-is-red-a-closed-outcome-is-eight-lines-over-the-cap.md) — [main is red: a closed outcome is eight lines over the cap](UX-0656-main-is-red-a-closed-outcome-is-eight-lines-over-the-cap.md)
+- [UX-657](UX-0657-the-priority-column-has-no-guard.md) — [the priority column has no guard](UX-0657-the-priority-column-has-no-guard.md)
+- [UX-658](UX-0658-a-ninth-topic-exists-that-no-open-row-may-carry.md) — [a ninth topic exists that no open row may carry](UX-0658-a-ninth-topic-exists-that-no-open-row-may-carry.md)
+- [UX-704](UX-0704-check-lists-the-backlog-once-per-row.md) — [`--check` lists the backlog once per row](UX-0704-check-lists-the-backlog-once-per-row.md)
+- [UX-706](UX-0706-a-task-s-shape-is-derived-from-its-text-and-names-the-model-that-runs-it.md) — [a task's shape is derived from its text, and names the model that runs it](UX-0706-a-task-s-shape-is-derived-from-its-text-and-names-the-model-that-runs-it.md)
+- [UX-693](UX-0693-the-lint-rule-set-widened-by-layer-in-one-auto-fix-commit-with-the-too.md) — [the lint rule set widened by layer, in one auto-fix commit, with the tools pinned](UX-0693-the-lint-rule-set-widened-by-layer-in-one-auto-fix-commit-with-the-too.md)
+- [UX-700](UX-0700-the-symbol-index-and-codeql-declined-for-navigation.md) — [the symbol index — and CodeQL declined for navigation](UX-0700-the-symbol-index-and-codeql-declined-for-navigation.md)
+- [UX-707](UX-0707-the-orchestrator-s-rebuilds-are-counted-and-priced-per-session.md) — [the orchestrator's rebuilds are counted and priced, per session](UX-0707-the-orchestrator-s-rebuilds-are-counted-and-priced-per-session.md)
+- [UX-709](UX-0709-close-a-batch-of-ids-in-one-move.md) — [close a batch of ids in one `--move`](UX-0709-close-a-batch-of-ids-in-one-move.md)
+- [UX-694](UX-0694-a-finding-baseline-and-a-size-ledger-for-what-has-no-identity.md) — [a finding baseline, and a size ledger for what has no identity](UX-0694-a-finding-baseline-and-a-size-ledger-for-what-has-no-identity.md)
+- [UX-662](UX-0662-the-adopted-map-made-the-selector-guard-a-hundred-times-dearer.md) — [the adopted touching map made the selector guard a hundred times dearer](UX-0662-the-adopted-map-made-the-selector-guard-a-hundred-times-dearer.md)
+- [UX-661](UX-0661-the-fourth-copy-of-the-topic-set-orders-a-release.md) — [the second copy of the topic set orders a release body](UX-0661-the-fourth-copy-of-the-topic-set-orders-a-release.md)
+- [UX-687](UX-0687-the-impact-set-is-derived-by-one-tool-not-five-greps.md) — [the impact set is derived by one tool, not five greps](UX-0687-the-impact-set-is-derived-by-one-tool-not-five-greps.md)
+- [UX-718](UX-0718-the-census-omits-the-guard-its-own-docstring-names.md) — [the census omits the guard its own docstring names](UX-0718-the-census-omits-the-guard-its-own-docstring-names.md)
+- [UX-665](UX-0665-the-page-s-census-is-a-tool-so-a-walk-reads-it-instead-of-driving-it.md) — [the page's census is a tool, so a walk reads it instead of driving it](UX-0665-the-page-s-census-is-a-tool-so-a-walk-reads-it-instead-of-driving-it.md)
+- [UX-685](UX-0685-exploration-is-a-seeded-scenario-and-every-finding-grows-the-answer-ke.md) — [exploration is a seeded scenario, and every finding grows the answer key](UX-0685-exploration-is-a-seeded-scenario-and-every-finding-grows-the-answer-ke.md)
+- [UX-723](UX-0723-the-scenario-recipe-prints-commands-that-do-not-run.md) — [the scenario recipe prints commands that do not run](UX-0723-the-scenario-recipe-prints-commands-that-do-not-run.md)
+- [UX-727](UX-0727-a-design-review-report-has-no-shape-a-guard-can-read.md) — [a design review report has no shape a guard can read](UX-0727-a-design-review-report-has-no-shape-a-guard-can-read.md)
+- [UX-732](UX-0732-the-verification-logs-anchor-cannot-survive-a-merge.md) — [the verification log's anchor cannot survive a merge](UX-0732-the-verification-logs-anchor-cannot-survive-a-merge.md)
+- [UX-731](UX-0731-a-ratio-guard-with-a-two-millisecond-denominator.md) — [a ratio guard with a two-millisecond denominator](UX-0731-a-ratio-guard-with-a-two-millisecond-denominator.md)
+- [UX-736](UX-0736-the-architectures-status-table-is-a-third-copy-of-a-guarded-fact.md) — [the architecture's status table is a third copy of a guarded fact](UX-0736-the-architectures-status-table-is-a-third-copy-of-a-guarded-fact.md)
+- [UX-730](UX-0730-a-derived-figure-over-the-whole-test-tree-has-no-refresh-route.md) — [a derived figure over the whole test tree has no refresh route](UX-0730-a-derived-figure-over-the-whole-test-tree-has-no-refresh-route.md)
+- [UX-728](UX-0728-a-tracks-repro-runs-the-sessions-checkout-not-its-worktree.md) — [a track's repro runs the session's checkout, not its worktree](UX-0728-a-tracks-repro-runs-the-sessions-checkout-not-its-worktree.md)
+- [UX-737](UX-0737-the-census-detectors-other-half-thirteen-guards-a-subprocess-hides.md) — [the census detector's other half — thirteen guards a subprocess hides](UX-0737-the-census-detectors-other-half-thirteen-guards-a-subprocess-hides.md)
+- [UX-716](UX-0716-a-guard-whose-cost-is-its-population-has-no-refresh-route.md) — [a guard whose cost is its population has no refresh route](UX-0716-a-guard-whose-cost-is-its-population-has-no-refresh-route.md)
+- [UX-692](UX-0692-the-invariants-hold-for-any-shape-a-seeded-sweep-over-generated-projec.md) — [the invariants hold for any shape — a seeded sweep over generated projects](UX-0692-the-invariants-hold-for-any-shape-a-seeded-sweep-over-generated-projec.md)
+- [UX-691](UX-0691-a-flake-ledger-so-an-excursion-is-counted-before-it-is-a-flake.md) — [a flake ledger, so an excursion is counted before it is a flake](UX-0691-a-flake-ledger-so-an-excursion-is-counted-before-it-is-a-flake.md)
+- [UX-702](UX-0702-a-performance-ratchet-at-the-gate.md) — [a performance ratchet at the gate](UX-0702-a-performance-ratchet-at-the-gate.md)
+- [UX-712](UX-0712-the-size-ledger-for-what-has-no-finding-identity.md) — [the size ledger, for what has no finding identity](UX-0712-the-size-ledger-for-what-has-no-finding-identity.md)
+- [UX-703](UX-0703-a-mutation-run-on-the-touched-modules-weekly.md) — [a mutation run on the touched modules, weekly](UX-0703-a-mutation-run-on-the-touched-modules-weekly.md)
+- [UX-743](UX-0743-the-small-tier-backstop-was-sized-against-a-suite-half-this-size.md) — [the small tier's backstop was sized against a suite half this size](UX-0743-the-small-tier-backstop-was-sized-against-a-suite-half-this-size.md)
+- [UX-696](UX-0696-the-register-s-unguarded-rows-no-round-in-code-a-dated-count-the-commi.md) — [the register's unguarded rows — no round in code, a dated count, the commit body](UX-0696-the-register-s-unguarded-rows-no-round-in-code-a-dated-count-the-commi.md)
+- [UX-742](UX-0742-the-viewer-s-dead-exports-need-a-detector-eslint-cannot-be.md) — [the viewer's dead exports need a detector eslint cannot be](UX-0742-the-viewer-s-dead-exports-need-a-detector-eslint-cannot-be.md)
+- [UX-705](UX-0705-the-burn-down-runs-on-the-reporters-model-a-batch-a-commit-never-a-supp.md) — [the burn-down runs on the reporters' model — a batch a commit, never a suppression](UX-0705-the-burn-down-runs-on-the-reporters-model-a-batch-a-commit-never-a-supp.md)
+- [UX-747](UX-0747-the-derive-skill-s-own-example-crashes-the-tool-it-documents.md) — [the `derive` skill's own example crashes the tool it documents](UX-0747-the-derive-skill-s-own-example-crashes-the-tool-it-documents.md)
+- [UX-745](UX-0745-a-track-can-authorise-its-own-baseline-growth-and-did.md) — [a track can authorise its own baseline growth, and did](UX-0745-a-track-can-authorise-its-own-baseline-growth-and-did.md)
+- [UX-748](UX-0748-three-guards-read-a-narrower-population-than-the-sentence-they-check.md) — [three guards read a narrower population than the sentence they check](UX-0748-three-guards-read-a-narrower-population-than-the-sentence-they-check.md)
+- [UX-752](UX-0752-the-guard-s-spelling-table-ran-out-at-forty.md) — [the guard's spelling table ran out at forty](UX-0752-the-guard-s-spelling-table-ran-out-at-forty.md)
+- [UX-754](UX-0754-the-derived-figure-exclusion-cannot-read-a-merge.md) — [the derived-figure exclusion cannot read a merge](UX-0754-the-derived-figure-exclusion-cannot-read-a-merge.md)
+- [UX-750](UX-0750-the-map-s-one-count-is-the-one-noun-the-guard-does-not-list.md) — [the map's one count is the one noun the guard does not list](UX-0750-the-map-s-one-count-is-the-one-noun-the-guard-does-not-list.md)
+- [UX-751](UX-0751-the-landed-clause-reads-endpoints-where-the-open-clause-reads-the-range.md) — [the landed clause reads endpoints where the open clause reads the range](UX-0751-the-landed-clause-reads-endpoints-where-the-open-clause-reads-the-range.md)
+- [UX-755](UX-0755-the-gate-and-ci-disagree-and-the-gate-is-the-one-that-is-wrong.md) — [the gate and CI disagree, and the gate is the one that is wrong](UX-0755-the-gate-and-ci-disagree-and-the-gate-is-the-one-that-is-wrong.md)
+- [UX-762](UX-0762-the-gate-binds-to-a-branch-not-to-the-commit-that-is-pushed.md) — [the gate binds to a branch, not to the commit that is pushed](UX-0762-the-gate-binds-to-a-branch-not-to-the-commit-that-is-pushed.md)
+- [UX-769](UX-0769-the-count-guard-matches-a-task-id.md) — [the count guard matches a task id, not a count](UX-0769-the-count-guard-matches-a-task-id.md)
+- [UX-770](UX-0770-the-cost-row-median-sits-on-a-tie.md) — [the cost row's median sits on a tie, and the population moves under it](UX-0770-the-cost-row-median-sits-on-a-tie.md)
+- [UX-768](UX-0768-the-closing-note-is-a-shell-argument-and-its-backticks-run.md) — [the closing note is a shell argument, and its backticks run](UX-0768-the-closing-note-is-a-shell-argument-and-its-backticks-run.md)
+- [UX-766](UX-0766-the-forced-baseline-is-loud-only-until-it-is-committed.md) — [the forced baseline is loud only until it is committed](UX-0766-the-forced-baseline-is-loud-only-until-it-is-committed.md)
+- [UX-767](UX-0767-the-push-gate-sees-one-channel-and-the-round-used-another.md) — [the push gate sees one channel, and the round used another](UX-0767-the-push-gate-sees-one-channel-and-the-round-used-another.md)
+- [UX-759](UX-0759-the-register-s-id-column-loses-a-subset-in-silence.md) — [the register's id column loses a subset in silence](UX-0759-the-register-s-id-column-loses-a-subset-in-silence.md)
+- [UX-760](UX-0760-six-more-files-build-against-the-broken-reserve.md) — [six more files build against the broken reserve](UX-0760-six-more-files-build-against-the-broken-reserve.md)
+- [UX-776](UX-0776-a-derivation-from-git-history-is-a-property-of-the-clone.md) — [a derivation from git history is a property of the clone](UX-0776-a-derivation-from-git-history-is-a-property-of-the-clone.md)
+- [UX-771](UX-0771-two-more-documents-number-sections-and-no-guard-reads-them.md) — [two more documents number sections, and no guard reads them](UX-0771-two-more-documents-number-sections-and-no-guard-reads-them.md)
+- [UX-772](UX-0772-the-first-date-in-a-document-is-not-its-dateline.md) — [the first date in a document is not its dateline](UX-0772-the-first-date-in-a-document-is-not-its-dateline.md)
+- [UX-773](UX-0773-a-killed-worker-leaks-a-browser-and-its-profile.md) — [a killed worker leaks a browser and its profile](UX-0773-a-killed-worker-leaks-a-browser-and-its-profile.md)
+- [UX-781](UX-0781-ci-truncates-the-history-it-just-fetched-in-full.md) — [CI truncates the history it just fetched in full](UX-0781-ci-truncates-the-history-it-just-fetched-in-full.md)
+- [UX-783](UX-0783-two-tier-rules-disagree-and-a-sweep-does-not-wait.md) — [two tier rules disagree about one file, and a sweep does not wait for what it killed](UX-0783-two-tier-rules-disagree-and-a-sweep-does-not-wait.md)
+- [UX-784](UX-0784-one-fetch-depth-anywhere-satisfied-a-sentence-about-every-job.md) — [one `fetch-depth: 0` anywhere satisfied a sentence about every job](UX-0784-one-fetch-depth-anywhere-satisfied-a-sentence-about-every-job.md)
+- [UX-698](UX-0698-the-gate-only-shelf-on-github-code-scanning-a-lockfile-and-audit-depen.md) — [the gate-only shelf on GitHub — code scanning, a lockfile and audit, Dependabot, secret scanning](UX-0698-the-gate-only-shelf-on-github-code-scanning-a-lockfile-and-audit-depen.md)
+- [UX-793](UX-0793-a-retrospective-verifier-reads-the-tracks-tip-and-not-the-suite.md) — [a retrospective verifier reads the track's tip, and not the suite](UX-0793-a-retrospective-verifier-reads-the-tracks-tip-and-not-the-suite.md)
+- [UX-785](UX-0785-the-flake-census-clears-any-file-a-task-ever-mentioned.md) — [the flake census clears any file a task ever mentioned](UX-0785-the-flake-census-clears-any-file-a-task-ever-mentioned.md)
+- [UX-786](UX-0786-the-flake-ledgers-adopt-is-never-run-against-a-non-empty-ledger.md) — [the flake ledger's adopt is never run against a non-empty ledger](UX-0786-the-flake-ledgers-adopt-is-never-run-against-a-non-empty-ledger.md)
+- [UX-792](UX-0792-the-perf-carry-key-is-scoped-to-a-branch-by-nothing.md) — [the perf-carry key is scoped to a branch by nothing](UX-0792-the-perf-carry-key-is-scoped-to-a-branch-by-nothing.md)
+- [UX-787](UX-0787-the-size-ledger-cannot-record-a-shrink-while-any-cell-grew.md) — [the size ledger cannot record a shrink while any cell grew](UX-0787-the-size-ledger-cannot-record-a-shrink-while-any-cell-grew.md)
+- [UX-788](UX-0788-the-size-ledger-trusts-a-broken-pylint.md) — [the size ledger trusts a broken pylint](UX-0788-the-size-ledger-trusts-a-broken-pylint.md)
+- [UX-794](UX-0794-the-ledgers-count-word-stopped-at-ninety-nine.md) — [the ledger's count word stopped at ninety-nine](UX-0794-the-ledgers-count-word-stopped-at-ninety-nine.md)
+- [UX-697](UX-0697-a-type-error-ratchet-contracts-first.md) — [a type-error ratchet, contracts first](UX-0697-a-type-error-ratchet-contracts-first.md)
+- [UX-790](UX-0790-the-mutation-runs-classifier-has-no-fast-guard.md) — [the mutation run's classifier has no fast guard](UX-0790-the-mutation-runs-classifier-has-no-fast-guard.md)
+- [UX-764](UX-0764-two-register-caps-are-guarded-and-two-are-honour-system.md) — [two Register caps are guarded and two are honour-system](UX-0764-two-register-caps-are-guarded-and-two-are-honour-system.md)
+- [UX-795](UX-0795-the-focus-guard-measures-after-a-fixed-sleep-and-one-runner-was-slower.md) — [the focus guard measures after a fixed sleep, and one runner was slower](UX-0795-the-focus-guard-measures-after-a-fixed-sleep-and-one-runner-was-slower.md)
+- [UX-789](UX-0789-a-baseline-entry-carries-a-key-the-tool-never-reads.md) — [a baseline entry carries a key the tool never reads](UX-0789-a-baseline-entry-carries-a-key-the-tool-never-reads.md)
+- [UX-775](UX-0775-two-files-still-build-against-the-ambient-home.md) — [two files still build against the ambient HOME](UX-0775-two-files-still-build-against-the-ambient-home.md)
+- [UX-741](UX-0741-the-spine-s-ground-truth-reads-wall-clock-and-a-loaded-host-reds-it.md) — [the spine's ground truth reads wall clock, and a loaded host reds it](UX-0741-the-spine-s-ground-truth-reads-wall-clock-and-a-loaded-host-reds-it.md)
+- [UX-690](UX-0690-the-suite-has-a-shape-budget-and-a-feature-files-its-test-analysis.md) — [the suite has a shape budget, and a feature files its test analysis](UX-0690-the-suite-has-a-shape-budget-and-a-feature-files-its-test-analysis.md)
+- [UX-796](UX-0796-the-host-sampler-claims-more-busy-cores-than-the-host-has-under-load.md) — [the host sampler claims more busy cores than the host has, under load](UX-0796-the-host-sampler-claims-more-busy-cores-than-the-host-has-under-load.md)
+- [UX-801](UX-0801-bst-show-writes-the-cas-and-two-files-still-run-it-in-the-ambient-home.md) — [`bst show` writes the CAS, and two files still run it in the ambient HOME](UX-0801-bst-show-writes-the-cas-and-two-files-still-run-it-in-the-ambient-home.md)
+- [UX-802](UX-0802-the-baseline-guard-files-spawn-pyright-sixteen-times.md) — [the baseline guard files spawn pyright sixteen times](UX-0802-the-baseline-guard-files-spawn-pyright-sixteen-times.md)
+- [UX-803](UX-0803-a-step-change-in-a-file-s-cost-takes-three-main-pushes-to-reach-the-reference.md) — [a step change in a file's cost takes three main pushes to reach the reference](UX-0803-a-step-change-in-a-file-s-cost-takes-three-main-pushes-to-reach-the-reference.md)
+- [UX-782](UX-0782-the-register-derives-its-rounds-from-git-log.md) — [the register derives its rounds from `git log`, which is a property of the clone](UX-0782-the-register-derives-its-rounds-from-git-log.md)
+- [UX-797](UX-0797-eight-identical-sleeps-spread-past-a-tenth-under-organic-load.md) — [eight identical sleeps spread past a tenth, under organic load](UX-0797-eight-identical-sleeps-spread-past-a-tenth-under-organic-load.md)
+- [UX-804](UX-0804-the-diagnostics-performance-guard-is-a-typed-ten-seconds-of-wall-clock.md) — [the diagnostics performance guard is a typed ten seconds of wall clock](UX-0804-the-diagnostics-performance-guard-is-a-typed-ten-seconds-of-wall-clock.md)
+- [UX-811](UX-0811-the-commit-body-gate-reads-dependabot-s-generated-bodies.md) — [the commit-body gate reads Dependabot's generated bodies](UX-0811-the-commit-body-gate-reads-dependabot-s-generated-bodies.md)
+- [UX-812](UX-0812-the-impact-guard-needs-an-open-analysis-row-to-be-green.md) — [the impact guard needs an open analysis row to be green](UX-0812-the-impact-guard-needs-an-open-analysis-row-to-be-green.md)
+- [UX-813](UX-0813-the-history-row-s-count-is-right-because-two-errors-cancel.md) — [the history row's count is right because two errors cancel](UX-0813-the-history-row-s-count-is-right-because-two-errors-cancel.md)
+
+**docs**
+
+- [UX-548](UX-0548-round-80s-viewer-axis-reaches-no-guide.md) — [five mechanisms round 80 shipped, and no guide names one](UX-0548-round-80s-viewer-axis-reaches-no-guide.md)
+- [UX-552](UX-0552-the-alias-table-is-two-rows-short.md) — [the CLI guide's alias table is two rows short](UX-0552-the-alias-table-is-two-rows-short.md)
+- [UX-549](UX-0549-five-counted-figures-a-reader-reads-as-current.md) — [five counted figures, read as current, wrong](UX-0549-five-counted-figures-a-reader-reads-as-current.md)
+- [UX-551](UX-0551-the-loop-is-planned-against-a-suite-that-is-gone.md) — [every session plans its loop against a suite 62% faster than the real one](UX-0551-the-loop-is-planned-against-a-suite-that-is-gone.md)
+- [UX-556](UX-0556-the-spec-carries-the-sentence-ux-549-fixed.md) — [the spec still says "the last four are written but not printable"](UX-0556-the-spec-carries-the-sentence-ux-549-fixed.md)
+- [UX-566](UX-0566-two-recommended-parts-describe-a-tool-that-was-never-built-that-way.md) — [two "recommended" Parts describe a tool that was never built that way](UX-0566-two-recommended-parts-describe-a-tool-that-was-never-built-that-way.md)
+- [UX-576](UX-0576-the-question-count-is-stated-three-ways.md) — [the question count is stated three ways](UX-0576-the-question-count-is-stated-three-ways.md)
+- [UX-570](UX-0570-the-capture-workflow-document-describes-a-workflow-that-has-moved-on.md) — [the capture workflow document describes a workflow that has moved on](UX-0570-the-capture-workflow-document-describes-a-workflow-that-has-moved-on.md)
+- [UX-572](UX-0572-by-construction-survived-the-construction-it-now-depends-on.md) — ["by construction" survived the construction it now depends on](UX-0572-by-construction-survived-the-construction-it-now-depends-on.md)
+- [UX-571](UX-0571-the-ingestion-facts-were-confirmed-on-a-buildstream-this-machine-no-lo.md) — [the ingestion facts were confirmed on a BuildStream this machine no longer has](UX-0571-the-ingestion-facts-were-confirmed-on-a-buildstream-this-machine-no-lo.md)
+- [UX-582](UX-0582-the-styleguide-s-ledger-says-seven-sections-have-no-guard.md) — [the styleguide's ledger says seven sections have no guard](UX-0582-the-styleguide-s-ledger-says-seven-sections-have-no-guard.md)
+- [UX-583](UX-0583-the-round-history-is-typed-and-three-rounds-are-missing-from-it.md) — [the round history is typed, and three rounds are missing from it](UX-0583-the-round-history-is-typed-and-three-rounds-are-missing-from-it.md)
+- [UX-581](UX-0581-a-direction-has-no-status-so-a-tail-goes-silent.md) — [a direction has no status, so a tail goes silent](UX-0581-a-direction-has-no-status-so-a-tail-goes-silent.md)
+- [UX-580](UX-0580-the-roles-table-says-nothing-aggregates-across-builds.md) — [the roles table says nothing aggregates across builds](UX-0580-the-roles-table-says-nothing-aggregates-across-builds.md)
+- [UX-569](UX-0569-the-architecture-document-s-prose-is-not-what-its-guards-read.md) — [the architecture document's prose is not what its guards read](UX-0569-the-architecture-document-s-prose-is-not-what-its-guards-read.md)
+- [UX-578](UX-0578-the-verbatim-blocks-that-are-neither-dated-nor-fresh.md) — [the verbatim blocks that are neither dated nor fresh](UX-0578-the-verbatim-blocks-that-are-neither-dated-nor-fresh.md)
+- [UX-584](UX-0584-the-figures-nothing-reads-thirteen-stale-numbers-in-the-process-layer.md) — [the figures nothing reads — thirteen stale numbers in the process layer](UX-0584-the-figures-nothing-reads-thirteen-stale-numbers-in-the-process-layer.md)
+- [UX-591](UX-0591-the-architecture-review-log-is-in-no-index.md) — [the architecture review log is in no index](UX-0591-the-architecture-review-log-is-in-no-index.md)
+- [UX-603](UX-0603-the-python-floor-reaches-no-reader.md) — [the Python floor reaches no reader](UX-0603-the-python-floor-reaches-no-reader.md)
+- [UX-607](UX-0607-a-paragraph-in-the-guide-is-a-two-file-change.md) — [a paragraph in the guide is a two-file change](UX-0607-a-paragraph-in-the-guide-is-a-two-file-change.md)
+- [UX-608](UX-0608-fifteen-commands-the-context-map-never-names.md) — [fifteen commands the context map never names](UX-0608-fifteen-commands-the-context-map-never-names.md)
+- [UX-601](UX-0601-two-guard-ledgers-of-the-same-kind.md) — [two guard ledgers of the same kind, two mechanisms](UX-0601-two-guard-ledgers-of-the-same-kind.md)
+- [UX-616](UX-0616-the-coupling-runs-the-other-way-too.md) — [the coupling runs the other way too](UX-0616-the-coupling-runs-the-other-way-too.md)
+- [UX-597](UX-0597-three-release-rows-and-no-tag.md) — [three release rows and no tag](UX-0597-three-release-rows-and-no-tag.md)
+- [UX-634](UX-0634-the-tag-is-cut-and-nothing-is-published.md) — [the tag is cut and nothing is published](UX-0634-the-tag-is-cut-and-nothing-is-published.md)
+- [UX-633](UX-0633-a-release-tag-names-a-commit-main-cannot-reach.md) — [a release tag names a commit `main` cannot reach](UX-0633-a-release-tag-names-a-commit-main-cannot-reach.md)
+- [UX-630](UX-0630-two-environment-variables-no-inventory-sees.md) — [two environment variables no inventory sees](UX-0630-two-environment-variables-no-inventory-sees.md)
+- [UX-631](UX-0631-the-context-map-guard-cannot-see-a-package-file.md) — [the context map's guard cannot see a file inside a package](UX-0631-the-context-map-guard-cannot-see-a-package-file.md)
+- [UX-632](UX-0632-the-touching-figure-is-the-sample-its-own-round-disproved.md) — [the touching figure is the sample its own round disproved](UX-0632-the-touching-figure-is-the-sample-its-own-round-disproved.md)
+- [UX-635](UX-0635-the-inventory-stops-at-one-namespace.md) — [the environment inventory stops at one namespace](UX-0635-the-inventory-stops-at-one-namespace.md)
+- [UX-636](UX-0636-eighty-published-keys-no-document-names.md) — [eighty published keys no document names](UX-0636-eighty-published-keys-no-document-names.md)
+- [UX-651](UX-0651-the-spec-s-part-32-block-is-two-ids-behind.md) — [the spec's Part 32 block is two ids behind](UX-0651-the-spec-s-part-32-block-is-two-ids-behind.md)
+- [UX-652](UX-0652-the-currency-guard-resolves-to-a-day-and-a-day-holds-three-rounds.md) — [the currency guard resolves to a day, and a day holds three rounds](UX-0652-the-currency-guard-resolves-to-a-day-and-a-day-holds-three-rounds.md)
+- [UX-653](UX-0653-a-contract-bump-rewrites-the-record-of-what-it-superseded.md) — [a contract bump rewrites the record of what it superseded](UX-0653-a-contract-bump-rewrites-the-record-of-what-it-superseded.md)
+- [UX-655](UX-0655-a-contract-bump-landed-one-level-below-the-key-population.md) — [a contract bump landed one level below the key population](UX-0655-a-contract-bump-landed-one-level-below-the-key-population.md)
+- [UX-663](UX-0663-reading-and-checking-run-on-a-smaller-model-and-the-frontmatter-says-s.md) — [reading and checking run on a smaller model, and the frontmatter says so](UX-0663-reading-and-checking-run-on-a-smaller-model-and-the-frontmatter-says-s.md)
+- [UX-664](UX-0664-the-walk-and-the-design-review-are-protocols-not-prompts.md) — [the walk and the design review are protocols, not prompts](UX-0664-the-walk-and-the-design-review-are-protocols-not-prompts.md)
+- [UX-710](UX-0710-a-ledger-row-is-derived-from-the-transcript-not-typed.md) — [a ledger row is derived from the transcript, not typed](UX-0710-a-ledger-row-is-derived-from-the-transcript-not-typed.md)
+- [UX-660](UX-0660-one-sentence-two-figures-one-guarded.md) — [one sentence, two line numbers, and only one of them is guarded](UX-0660-one-sentence-two-figures-one-guarded.md)
+- [UX-711](UX-0711-a-tool-result-longer-than-a-screen-goes-to-a-file.md) — [a tool result longer than a screen goes to a file](UX-0711-a-tool-result-longer-than-a-screen-goes-to-a-file.md)
+- [UX-701](UX-0701-the-self-review-skill-the-existing-policy-on-the-diff-on-the-reporters.md) — [the `self-review` skill — the existing policy on the diff, on the reporters' model](UX-0701-the-self-review-skill-the-existing-policy-on-the-diff-on-the-reporters.md)
+- [UX-688](UX-0688-every-task-carries-an-area-and-the-area-pages-are-generated.md) — [every task carries an area, and the area pages are generated](UX-0688-every-task-carries-an-area-and-the-area-pages-are-generated.md)
+- [UX-686](UX-0686-a-release-waits-for-the-walk-that-read-its-candidate.md) — [a release waits for the walk that read its candidate](UX-0686-a-release-waits-for-the-walk-that-read-its-candidate.md)
+- [UX-713](UX-0713-the-skill-that-runs-the-review-is-named-by-neither-document.md) — [the skill that runs the review is named by neither document](UX-0713-the-skill-that-runs-the-review-is-named-by-neither-document.md)
+- [UX-714](UX-0714-the-orchestrators-share-is-a-bare-figure-that-has-moved.md) — [the orchestrator's share is a bare figure that has moved](UX-0714-the-orchestrators-share-is-a-bare-figure-that-has-moved.md)
+- [UX-715](UX-0715-fifteen-viewer-modules-in-a-passage-with-no-date.md) — [fifteen viewer modules, in a passage with no date](UX-0715-fifteen-viewer-modules-in-a-passage-with-no-date.md)
+- [UX-734](UX-0734-three-counted-figures-in-three-documents-and-no-guard-reads-any.md) — [three counted figures in three documents, and no guard reads any](UX-0734-three-counted-figures-in-three-documents-and-no-guard-reads-any.md)
+- [UX-735](UX-0735-the-attachment-guides-export-size-measures-a-capture-not-in-the-tree.md) — [the attachment guide's export size measures a capture not in the tree](UX-0735-the-attachment-guides-export-size-measures-a-capture-not-in-the-tree.md)
+- [UX-666](UX-0666-a-subagent-s-cost-is-written-down-and-its-friction-with-it.md) — [a subagent's cost is written down, and its friction with it](UX-0666-a-subagent-s-cost-is-written-down-and-its-friction-with-it.md)
+- [UX-708](UX-0708-the-first-batch-under-the-pipeline-priced-per-shape.md) — [the first batch under the pipeline, priced per shape](UX-0708-the-first-batch-under-the-pipeline-priced-per-shape.md)
+- [UX-746](UX-0746-four-workflows-are-on-no-map-and-the-map-s-guard-cannot-see-them.md) — [four workflows are on no map, and the map's guard cannot see them](UX-0746-four-workflows-are-on-no-map-and-the-map-s-guard-cannot-see-them.md)
+- [UX-749](UX-0749-a-citation-that-looks-like-a-path-and-a-count-of-branches-that-moved.md) — [a citation that looks like a path, and a count of branches that moved](UX-0749-a-citation-that-looks-like-a-path-and-a-count-of-branches-that-moved.md)
+- [UX-756](UX-0756-the-spread-rule-names-a-new-file-when-an-import-is-enough.md) — [the spread rule names a new file when an import is enough](UX-0756-the-spread-rule-names-a-new-file-when-an-import-is-enough.md)
+- [UX-761](UX-0761-the-verifier-is-mandated-in-the-one-document-the-guide-outranks.md) — [the verifier is mandated in the one document the guide outranks](UX-0761-the-verifier-is-mandated-in-the-one-document-the-guide-outranks.md)
+- [UX-757](UX-0757-the-four-rounds-the-register-names-have-no-document.md) — [the four rounds the register names have no document](UX-0757-the-four-rounds-the-register-names-have-no-document.md)
+- [UX-763](UX-0763-no-document-says-what-closing-a-round-owes.md) — [no document says what closing a round owes](UX-0763-no-document-says-what-closing-a-round-owes.md)
+- [UX-765](UX-0765-two-process-cross-references-point-at-numbers-that-are-not-there.md) — [two process cross-references point at numbers that are not there](UX-0765-two-process-cross-references-point-at-numbers-that-are-not-there.md)
+- [UX-791](UX-0791-an-orphan-row-in-the-architecture-table-is-invisible.md) — [an orphan row in the architecture table is invisible](UX-0791-an-orphan-row-in-the-architecture-table-is-invisible.md)
+- [UX-778](UX-0778-the-docs-index-counts-two-guards-where-four-fire.md) — [the docs index counts two guards where four fire](UX-0778-the-docs-index-counts-two-guards-where-four-fire.md)
+- [UX-744](UX-0744-no-register-says-which-rounds-exist-and-four-records-disagree.md) — [no register says which rounds exist, and four records disagree](UX-0744-no-register-says-which-rounds-exist-and-four-records-disagree.md)
+- [UX-779](UX-0779-the-readme-prints-two-wall-clocks-the-guide-says-are-not-the-suites.md) — [the README prints two wall clocks the guide says are not the suite's](UX-0779-the-readme-prints-two-wall-clocks-the-guide-says-are-not-the-suites.md)
+- [UX-777](UX-0777-the-nine-page-built-sections-are-thirteen-in-two-documents.md) — [the nine page-built sections are thirteen, in two documents](UX-0777-the-nine-page-built-sections-are-thirteen-in-two-documents.md)
+- [UX-780](UX-0780-the-map-says-a-shelf-shipped-and-one-linter-did.md) — [the map says a shelf shipped, and one linter did](UX-0780-the-map-says-a-shelf-shipped-and-one-linter-did.md)
+- [UX-774](UX-0774-the-guide-is-at-its-band-ceiling-and-every-round-pays-a-trim.md) — [the guide is at its band ceiling, and every round pays a trim](UX-0774-the-guide-is-at-its-band-ceiling-and-every-round-pays-a-trim.md)
+- [UX-798](UX-0798-the-directions-row-counts-a-round-s-closes-by-hand.md) — [the directions row counts a round's closes by hand](UX-0798-the-directions-row-counts-a-round-s-closes-by-hand.md)
+- [UX-799](UX-0799-the-map-row-for-the-baseline-tool-names-one-of-its-two-modes.md) — [the map row for the baseline tool names one of its two modes](UX-0799-the-map-row-for-the-baseline-tool-names-one-of-its-two-modes.md)
+- [UX-695](UX-0695-the-refactor-stream-takes-the-ledger-s-top-row-renderers-first.md) — [the refactor stream takes the ledger's top row — renderers first](UX-0695-the-refactor-stream-takes-the-ledger-s-top-row-renderers-first.md)
+- [UX-806](UX-0806-the-plane-2-chapter-moves-into-the-native-trace-area-page.md) — [the Plane 2 chapter moves into the native-trace area page](UX-0806-the-plane-2-chapter-moves-into-the-native-trace-area-page.md)
+- [UX-807](UX-0807-the-projection-chapter-moves-into-the-replay-area-page.md) — [the projection chapter moves into the replay area page](UX-0807-the-projection-chapter-moves-into-the-replay-area-page.md)
+- [UX-810](UX-0810-the-plane-3-chapter-moves-into-the-tools-area-page.md) — [the Plane 3 chapter moves into the tools area page](UX-0810-the-plane-3-chapter-moves-into-the-tools-area-page.md)
+- [UX-814](UX-0814-the-map-s-commit-body-row-is-behind-the-app-author-skip.md) — [the map's commit-body row is behind the App-author skip](UX-0814-the-map-s-commit-body-row-is-behind-the-app-author-skip.md)
+- [UX-815](UX-0815-the-ingestion-path-chapter-moves-into-the-tools-area-page.md) — [the ingestion-path chapter moves into the tools area page](UX-0815-the-ingestion-path-chapter-moves-into-the-tools-area-page.md)
+- [UX-816](UX-0816-the-bga-area-s-five-chapters-move-into-its-page.md) — [the bga area's five chapters move into its page](UX-0816-the-bga-area-s-five-chapters-move-into-its-page.md)
+- [UX-689](UX-0689-the-architecture-document-moves-into-the-area-pages-one-track-at-a-tim.md) — [the architecture document moves into the area pages, one track at a time](UX-0689-the-architecture-document-moves-into-the-area-pages-one-track-at-a-tim.md)
+<!-- /generated -->
 
 ## 0.4.0 — a capture you can carry (2026-09-03)
 
@@ -106,6 +461,7 @@ so "we knew" is on the record rather than in someone's memory, along
 with the thirteen backlog rows open at the cut.
 
 ```text state
+digest: 32a915ff3719
 contracts: analyze/v2 analyze/v3 analyze/v4 analyze/v5 analyze/v6 blast/v1 blast/v2 bundle-manifest/v1 capacity-model/v1 capture-layout/v1 compare/v1 compare/v2 correlate/v1 correlate/v2 host-samples/v1 host/v1 host/v2 plane2/v1 plane2/v2 plane2/v3 sources/v1 store-aggregate/v1 store/v1 sweep/v1 whatif/v1
 commands: analyze baseline blast bundle cache-logs cache-trend capture checkout-cost chrome-to-trace compare correlate cross-check diagnostics doctor extract floors gen-synthetic graph graph-from-show log-to-chrome native-to-chrome rebuild-set release-notes replay run-context snapshot sweep timeline utilisation view whatif wrap
 ```

@@ -1734,6 +1734,22 @@ _MAX_JOBS_ADVICE_COLUMNS = [
     {"key": "samples_in_span", "title": "Host samples in span",
      "quantity": "count", "sortable": True},
     {"key": "refusal", "title": "Refusal"},
+    # `UX-739`: this one recommendation's own replay price, applied
+    # alone - absent for an unchanged/raised/already-refused row. Its
+    # own inner shape (`replayed_baseline_us`, ...) is internal, like
+    # `dominant_binary`'s above - the outer key is what a consumer
+    # indexes.
+    {"key": "priced", "title": "Priced (floor)",
+     "description": "This recommendation's replay price, applied "
+                    "alone: `{replayed_baseline_us, projected_us, "
+                    "cost_us, duration_before_us, duration_floor_us, "
+                    "kind}`. `kind` is always `\"floor\"` - the figure "
+                    "errs optimistic, never a point prediction."},
+    {"key": "price_refusal", "title": "Price refusal",
+     "description": "Why a changed recommendation was not priced: a "
+                    "raise this run has no evidence for, or no Plane 2 "
+                    "`binary_cost` measurement. Absent when `priced` is "
+                    "set or `refusal` already explains the row."},
 ]
 
 
@@ -3207,8 +3223,27 @@ _ANALYZE_HINTS = {
                                "An element with too few overlapping samples, "
                                "or whose overlap already overcommits "
                                "memory, carries `refusal` instead of a "
-                               "number.",
+                               "number. `UX-739`: `priced_jointly` and "
+                               "`pricing_assumptions` price it by replay - "
+                               "see the row-level `priced`/`price_refusal` "
+                               "columns below.",
                 COLUMNS: _MAX_JOBS_ADVICE_COLUMNS,
+                "properties": {
+                    "priced_jointly": {
+                        "description": "`UX-739`: every priced, lowered "
+                                       "recommendation applied together in "
+                                       "one replay - a recompute, not a "
+                                       "sum, because prices do not add. "
+                                       "`{replayed_baseline_us, "
+                                       "projected_us, cost_us, elements}`. "
+                                       "Absent when nothing was priced."},
+                    "pricing_assumptions": {
+                        "description": "`UX-739`: two sentences, always "
+                                       "together - what dispatch order the "
+                                       "replay assumes, and which way the "
+                                       "floor errs. Absent only alongside "
+                                       "an empty `elements`."},
+                },
             },
             "caveat": {
                 "description": "What this recommendation is not. Read it "

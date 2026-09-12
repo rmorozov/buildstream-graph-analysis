@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-806 scenarios: **2 open**, 804 closed.
+807 scenarios: **3 open**, 804 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -26,7 +26,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | viewer | 0 | 164 |
 | cli | 0 | 22 |
 | store | 0 | 16 |
-| docs | 1 | 136 |
+| docs | 2 | 137 |
 | guards | 0 | 214 |
 
 ## Open scenarios
@@ -37,6 +37,7 @@ task file, which is the only place it ever lived twice.
 | ID | Scenario | Topic | Priority | Serves | Status |
 |---|---|---|---|---|---|
 | UX-689 | [the architecture document moves into the area pages, one track at a time](UX-0689-the-architecture-document-moves-into-the-area-pages-one-track-at-a-tim.md) | docs | Medium | the reader pricing a change; the session restructuring without losing a sentence | 🟡 |
+| UX-810 | [the Plane 3 chapter moves into the tools area page](UX-0810-the-plane-3-chapter-moves-into-the-tools-area-page.md) | docs | Medium | the reader pricing a change to the persisted-log reader; the session restructuring without losing a sentence | 🔴 |
 | UX-809 | [the price's two assumptions are on the payload, not in the text](UX-0809-the-price-s-two-assumptions-are-on-the-payload-not-in-the-text.md) | analysis | Medium | R4 and R5 reading the priced advice as text | 🔴 |
 
 **The narrative round headings below are retired at round 94**

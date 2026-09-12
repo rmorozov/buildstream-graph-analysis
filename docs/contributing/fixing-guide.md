@@ -371,7 +371,8 @@ tools/dev_flake_census.py    which files the flake ledger says need a
 tools/dev_junit_tail.py      which tests failed, from a red job's junit, when
                              the log tail lands on the wrong slice (UX-554)
 tools/dev_commit_bodies.py   which of a branch's commits spend more than
-                             eight body lines, footer excluded (UX-696)
+                             eight body lines, footer excluded; a GitHub
+                             App's skipped and counted (UX-696, UX-811)
 tools/dev_js_deps.py         the viewer's module graph, derived: order, cycles, what would cross a cut (UX-340)
 tools/dev_perfetto_queries.py  the canned questions, run on a real trace
                              with Perfetto's own reader (UX-432)

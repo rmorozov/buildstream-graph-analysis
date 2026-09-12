@@ -17,6 +17,7 @@ its own gates produced, and one area of `UX-689`.
 - `UX-805` — filed on the third gate and closed: the doctor's chain probe ran under a throwaway HOME with no BuildStream config, so bst's default reserve (5 % of the volume's total, 13.53 GB) met 13.54 GB free and every chain build read "Cache too full". The probe carries the user's config now.
 - `UX-684` — the cached-build verdict: the share of recorded changes at or under the graph's own p50 weighted blast, the dominant elements by duration-weighted expected cost, height and weight stated separately with the two advices.
 - `UX-680` — remote execution priced two ways, never summed: unbounded builders (the sweep's own row) and compiler offload (per-element, on the critical path), each a stated bound.
+- `UX-806` — filed and closed: the Plane 2 chapter (25 lines) into `docs/design/areas/tools-native_trace.md`, the second area, a pointer and a log entry in the same commit.
 - Direction 19 marked landed once `UX-695` closed.
 
 Filed: `UX-804`, `UX-805`, `UX-806`.

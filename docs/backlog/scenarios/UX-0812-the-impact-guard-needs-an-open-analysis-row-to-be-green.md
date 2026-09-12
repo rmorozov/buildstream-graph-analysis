@@ -1,6 +1,6 @@
 # UX-812: the impact guard needs an open analysis row to be green
 
-**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-687 (the impact tool and its guard) | **Found by:** rounds 112 and 113, the round gate | **Serves:** the session closing a round; a guard that reads the tool, not the backlog | **Topic:** guards | **Area:** tools | **Shape:** bounded
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-687 (the impact tool and its guard) | **Found by:** round 113, the round gate, red on it a second time | **Serves:** the session closing a round; a guard that reads the tool, not the backlog | **Topic:** guards | **Area:** tools | **Shape:** bounded
 
 ## Motivation
 

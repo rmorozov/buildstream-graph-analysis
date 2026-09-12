@@ -206,6 +206,7 @@ pairing for every merged row from round 103 on.
 | 113 | verifier | sonnet | verify `UX-809` | 57k | 52 | 9.9 m | PASS; the no-advice test inert against the gate (the helper's own short-circuit), recorded | inline PYTHONPATH= python3 -c refused by the sandbox three times |
 | 113 | implementer | sonnet | `UX-810` the Plane 3 chapter into the tools area page (mechanical) | 109k | 87 | 20.6 m | merged; 437 guards before and after, the whole chapter moved, none read inside it | proving no guard reads the chapter took a blank-and-rerun, string greps false-positived |
 | 113 | verifier | sonnet | verify `UX-810` | 48k | 43 | 11.9 m | PASS; the blank-and-rerun reproduced, 0 sentences missing | the sweeps exceed the default Bash timeout |
+| 113 | researcher | sonnet | review 22 of the documents (`review`) | 172k | 108 | 13.2 m | two filings, both closed in-round (UX-813, UX-814); the shape: a guard whose population cancels its own errors | git archaeology on a log count; the main checkout changed branches under the reader twice |
 
 Round 101's four tracks are **not** here: this session could not
 identify their transcripts with certainty after a context rebuild, and
@@ -218,7 +219,7 @@ committed cleanly once told to run in the foreground. Three of the five
 left a derived figure or a §6 context-map row behind - the same class
 the round itself was about, arriving in the tracks' own work.
 
-What the one hundred and eighty-nine rows already say: a researcher that reads a document
+What the one hundred and ninety rows already say: a researcher that reads a document
 whole costs 100-180k; a walker that drives every control costs 336k;
 the two cuts cost a re-run each. The `walk` and `design-review`
 skills fix the report shape so the next rows are smaller, and the

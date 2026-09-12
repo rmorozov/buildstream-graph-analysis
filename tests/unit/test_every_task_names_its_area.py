@@ -98,9 +98,19 @@ class TestTheGeneratedPageLinksItsHandWrittenMechanism:
                 f"(../../design/areas/{name})") in text, text[:300]
 
     def test_an_area_with_no_hand_written_page_carries_nothing(self):
-        name = "bga.md"
+        name = "bga-attribution.md"
         assert not (dev_close_task.DESIGN_AREA_PAGES / name).exists(), (
-            "fixture assumption broken: docs/design/areas/bga.md now exists")
+            "fixture assumption broken: docs/design/areas/"
+            "bga-attribution.md now exists")
         text = (dev_close_task.AREA_PAGES / name).read_text(encoding="utf-8")
         assert "Mechanism:" not in text, text[:300]
+
+    def test_the_bga_area_gained_its_hand_written_page(self):
+        """`UX-816`: `bga` was the first area with rows and no page."""
+        name = "bga.md"
+        assert (dev_close_task.DESIGN_AREA_PAGES / name).exists(), (
+            "fixture missing: docs/design/areas/bga.md")
+        text = (dev_close_task.AREA_PAGES / name).read_text(encoding="utf-8")
+        assert (f"Mechanism: [docs/design/areas/{name}]"
+                f"(../../design/areas/{name})") in text, text[:300]
 

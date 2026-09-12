@@ -273,6 +273,15 @@ def _finish_capacity_recommendation(analyzer, result, native_report: dict) -> No
     # and is skipped rather than assumed when absent.
     advice = _max_jobs_advice(analyzer, native_report)
     if advice:
+        # UX-739: priced by replay, where the normalized tasks (for
+        # `ReplayScheduler`) and `run_context` (for its default
+        # capacities) are already in hand.
+        from bga.correlate import price_max_jobs_advice
+
+        advice = price_max_jobs_advice(
+            advice, getattr(analyzer, 'normalized_tasks', None) or [],
+            getattr(analyzer, 'run_context', None),
+            (native_report or {}).get('binary_cost'))
         result.capacity_recommendation['max_jobs_advice'] = advice
 
 

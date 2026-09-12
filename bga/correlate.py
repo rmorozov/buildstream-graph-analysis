@@ -37,6 +37,7 @@ your critical path is not compute-bound, so fix how it is built, not what
 it builds"**.
 """
 
+import math
 from dataclasses import dataclass, field
 from typing import Optional
 
@@ -1326,6 +1327,135 @@ def compute_max_jobs_advice(
 
     return {"min_samples_in_span": MIN_HOST_SAMPLES_IN_SPAN,
             "host_cores": cores, "elements": elements}
+
+
+# UX-739: the dispatch sentence. Both replays re-derive order from the
+# graph and the builder budget by the same Part 18 LPT rule rather than
+# keeping bst's own observed order, so that rule's own distance from real
+# dispatch is shared by baseline and projected and cancels to first order.
+_PRICE_DISPATCH_ASSUMPTION = (
+    "Both the baseline and the projected replay re-derive dispatch order "
+    "from the graph and the builder budget by Part 18's LPT rule rather "
+    "than keeping bst's own observed order, so that rule's own distance "
+    "from real dispatch cancels to first order between the two figures.")
+
+# UX-739: the floor sentence - two floors, and the direction they err.
+_PRICE_FLOOR_ASSUMPTION = (
+    "duration_floor_us is a floor, not a prediction: an element capped in "
+    "isolation is assumed no slower than observed and unable to finish "
+    "its measured CPU work faster than that work spread over the "
+    "recommended job count at full speed, so the priced cost errs "
+    "optimistic - the real build under these caps is this long or "
+    "longer. The benefit of less overcommit for its neighbours is not "
+    "modelled.")
+
+
+def price_max_jobs_advice(advice, tasks, run_context, binary_cost) -> dict:
+    """UX-739: prices `compute_max_jobs_advice`'s rows by replay.
+
+    Two replays of this run under `ReplayScheduler(tasks, run_context).
+    replay(compute_default_capacities(run_context))` - the same shape
+    `_project_with_reduced_durations` already uses - one baseline, one
+    with a priced element's BUILD task duration overridden to a floor.
+    Dispatch is re-derived from the graph and the builder budget, not
+    kept from the observed run (`_PRICE_DISPATCH_ASSUMPTION`).
+
+    A LOWERED recommendation is priced against a floor duration -
+    `max(observed, measured_cpu_us / recommended)` - built from Plane 2's
+    `binary_cost[element].measured_cpu_us`, the element's whole measured
+    CPU work (`_PRICE_FLOOR_ASSUMPTION`). A RAISED recommendation is
+    refused: this run has no evidence of how the element scales up. No
+    `binary_cost` (or `available` false) is refused, naming that. A row
+    that already carries `UX-677`'s own `refusal` stays unpriced with no
+    added text. An unchanged recommendation costs 0.
+
+    `priced_jointly` applies every priced, lowered recommendation in one
+    replay - a recompute, not a sum, because prices do not add.
+    """
+    from .floors.capacity import compute_default_capacities
+    from .ingest.models import TaskKind
+    from .replay.scheduler import ReplayScheduler
+
+    elements = (advice or {}).get('elements') or []
+    if not elements or not tasks:
+        return advice
+
+    binary_cost = binary_cost or {}
+    build_tasks = {t.task_key.element_uid: t for t in tasks
+                   if t.task_key.task_kind == TaskKind.BUILD}
+    capacities = compute_default_capacities(run_context)
+    baseline_us = ReplayScheduler(list(tasks), run_context).replay(
+        capacities).makespan_us
+
+    joint_overrides: dict[str, int] = {}
+    joint_elements: list[str] = []
+
+    for row in elements:
+        if row.get('refusal'):
+            continue
+        uid = row['element']
+        current = row.get('current_max_jobs')
+        recommended = row.get('recommended_max_jobs')
+        if current is None or recommended is None:
+            continue
+        task = build_tasks.get(uid)
+        observed_us = (task.finish_us - task.start_us) if task else None
+        if recommended == current:
+            row['priced'] = {
+                'replayed_baseline_us': baseline_us,
+                'projected_us': baseline_us,
+                'cost_us': 0,
+                'duration_before_us': observed_us,
+                'duration_floor_us': observed_us,
+                'kind': 'floor',
+            }
+            continue
+        if recommended > current:
+            row['price_refusal'] = (
+                f"this run measured {uid} at {current} job(s) and has no "
+                f"evidence of how it scales up")
+            continue
+        # recommended < current: needs the element's whole measured CPU
+        # work to build the floor.
+        cost_entry = binary_cost.get(uid) or {}
+        measured_cpu_us = cost_entry.get('measured_cpu_us')
+        if task is None or not cost_entry.get('available') or measured_cpu_us is None:
+            row['price_refusal'] = (
+                f"no Plane 2 binary_cost measurement for {uid} - the "
+                f"price needs the element's whole measured CPU work")
+            continue
+        # `task` is confirmed above; recomputed rather than reusing
+        # `observed_us` so its type does not depend on a branch pyright
+        # cannot see this far back.
+        floor_us = max(task.finish_us - task.start_us,
+                        math.ceil(measured_cpu_us / recommended))
+        override_key = str(task.task_key)
+        projected_us = ReplayScheduler(list(tasks), run_context).replay(
+            capacities, duration_overrides={override_key: floor_us}
+        ).makespan_us
+        row['priced'] = {
+            'replayed_baseline_us': baseline_us,
+            'projected_us': projected_us,
+            'cost_us': max(0, projected_us - baseline_us),
+            'duration_before_us': observed_us,
+            'duration_floor_us': floor_us,
+            'kind': 'floor',
+        }
+        joint_overrides[override_key] = floor_us
+        joint_elements.append(uid)
+
+    if joint_overrides:
+        joint_us = ReplayScheduler(list(tasks), run_context).replay(
+            capacities, duration_overrides=joint_overrides).makespan_us
+        advice['priced_jointly'] = {
+            'replayed_baseline_us': baseline_us,
+            'projected_us': joint_us,
+            'cost_us': max(0, joint_us - baseline_us),
+            'elements': joint_elements,
+        }
+    advice['pricing_assumptions'] = [
+        _PRICE_DISPATCH_ASSUMPTION, _PRICE_FLOOR_ASSUMPTION]
+    return advice
 
 
 # UX-100: the too-fine signature, stated as a definition rather than as

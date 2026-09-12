@@ -201,7 +201,8 @@ def write_bwrap_shim(shim_dir: str) -> str:
     with open(shim_path, "w", encoding="utf-8") as handle:
         handle.write(source)
     st = os.stat(shim_path)
-    os.chmod(shim_path, st.st_mode | stat.S_IEXEC | stat.S_IXGRP | stat.S_IXOTH)
+    # bst runs the shim as this user; the owner's bit is all PATH needs.
+    os.chmod(shim_path, st.st_mode | stat.S_IXUSR)
     return shim_path
 
 

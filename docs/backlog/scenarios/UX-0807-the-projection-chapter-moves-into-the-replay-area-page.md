@@ -1,6 +1,6 @@
 # UX-807: the projection chapter moves into the replay area page
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-689 (the rule and the first area), UX-806 (the second, and the one-id-per-chapter rule) | **Found by:** round 112, `UX-806`'s Out of Scope | **Serves:** the reader pricing a change to a projection; the session restructuring without losing a sentence | **Topic:** docs | **Area:** bga-replay | **Shape:** mechanical
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-689 (the rule and the first area), UX-806 (the second, and the one-id-per-chapter rule) | **Found by:** round 112, `UX-806`'s Out of Scope | **Serves:** the reader pricing a change to a projection; the session restructuring without losing a sentence | **Topic:** docs | **Area:** bga-replay | **Shape:** mechanical
 
 ## Motivation
 

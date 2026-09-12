@@ -104,6 +104,20 @@ class TestTheFloorReadsPlaneTwo:
         assert "priced" not in row
         assert row["price_refusal"] and "binary_cost" in row["price_refusal"]
 
+    def test_an_element_with_no_build_task_is_a_named_refusal(self):
+        # The verifier's mutation (round 112): dropping the `task is None`
+        # clause raised AttributeError here instead of refusing by name.
+        tasks = [_task("a.bst", 0, 2)]
+        run_context = RunContext(resource_capacities={"PROCESS": 4})
+        binary_cost = {"b.bst": {"available": True, "measured_cpu_us": 8 * US}}
+
+        priced = price_max_jobs_advice(
+            _advice(_row("b.bst", 4, 1)), tasks, run_context, binary_cost)
+
+        row = priced["elements"][0]
+        assert "priced" not in row
+        assert "no BUILD task for b.bst" in row["price_refusal"]
+
     def test_a_refusal_already_on_the_row_stays_unpriced_with_no_extra_text(self):
         tasks = [_task("a.bst", 0, 10)]
         run_context = RunContext(resource_capacities={"PROCESS": 4})

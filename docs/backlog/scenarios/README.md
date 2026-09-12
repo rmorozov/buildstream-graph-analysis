@@ -15,13 +15,13 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-805 scenarios: **3 open**, 802 closed.
+805 scenarios: **1 open**, 804 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
 | capture | 0 | 97 |
-| analysis | 2 | 108 |
+| analysis | 0 | 108 |
 | contracts | 0 | 48 |
 | viewer | 0 | 164 |
 | cli | 0 | 22 |
@@ -36,8 +36,6 @@ task file, which is the only place it ever lived twice.
 
 | ID | Scenario | Topic | Priority | Serves | Status |
 |---|---|---|---|---|---|
-| UX-739 | [the max-jobs advice is not priced — nothing says what the build drops to](UX-0739-the-max-jobs-advice-is-not-priced-nothing-says-what-the-build-drops-to.md) | analysis | Medium | R4 and R5, deciding whether the recommendation is worth applying | 🔴 |
-| UX-808 | [the max-jobs advice lists one row per task, not per element](UX-0808-the-max-jobs-advice-lists-one-row-per-task-not-per-element.md) | analysis | Medium | R4 and R5 reading the recommendation table | 🔴 |
 | UX-689 | [the architecture document moves into the area pages, one track at a time](UX-0689-the-architecture-document-moves-into-the-area-pages-one-track-at-a-tim.md) | docs | Medium | the reader pricing a change; the session restructuring without losing a sentence | 🟡 |
 
 **The narrative round headings below are retired at round 94**

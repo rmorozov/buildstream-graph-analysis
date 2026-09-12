@@ -26,7 +26,7 @@ def _run_from(cwd: Path) -> str:
         [sys.executable, "-c", _SCRIPT, str(REPO)],
         cwd=cwd, capture_output=True, text=True, timeout=30,
     )
-    assert proc.stdout.strip() == "bga 0.4.0", proc.stdout + proc.stderr
+    assert proc.stdout.strip() == "bga 0.4.1", proc.stdout + proc.stderr
     return proc.stderr
 
 

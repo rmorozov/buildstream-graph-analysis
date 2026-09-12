@@ -23,8 +23,11 @@ PR #217 (six action bumps) and PR #216 (ruff 0.15.8 → 0.16.6, pyright
 #216 on `make lint` at a base 158 commits old. Each branch got main
 merged in, `UX-811`'s tool and tests ported (three files — the filing's
 index hunks conflict), and #216 its lock recompiled with the bumped
-pins and the baseline's `ruff_version` refreshed; the new ruff and
-pyright report the same 560 baselined findings on today's tree. Each
+pins and the baseline's `ruff_version` refreshed. The new ruff and
+pyright read today's tree differently: two new findings (`S103` on the
+shim's world-executable chmod, `reportOptionalOperand` on a delta
+format) and one stale row — fixed and shrunk on the branch, not
+baselined (`UX-693`'s rule). Each
 was gated in its own worktree (8,287 passed, 13 min under the round's
 load) and pushed. PR #217's `sizes` job then reddened on the ported
 tool's growth — that job is not in `make test` — so both branches

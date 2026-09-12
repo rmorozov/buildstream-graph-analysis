@@ -39,7 +39,6 @@
     "tests/unit/test_a_format_says_what_it_drops.py": 0.01,
     "tests/unit/test_a_generated_project_builds.py": 0.19,
     "tests/unit/test_a_guard_ledger_names_its_link.py": 0.11,
-    "tests/unit/test_a_guard_reads_only_what_a_clone_has.py": 23.97,
     "tests/unit/test_a_guard_that_reads_history_declares_its_depth.py": 1.09,
     "tests/unit/test_a_killed_browser_does_not_outlive_the_worker.py": 2.8,
     "tests/unit/test_a_level_names_who_is_in_it.py": 2.98,
@@ -68,14 +67,12 @@
     "tests/unit/test_a_sentence_lives_on_its_door.py": 26.6,
     "tests/unit/test_a_shadowed_checkout_warns_at_startup.py": 0.97,
     "tests/unit/test_a_shapeable_population_is_drawn.py": 3.2,
-    "tests/unit/test_a_slow_file_says_which_file.py": 37.8,
     "tests/unit/test_a_span_under_the_grid_says_so.py": 1.09,
     "tests/unit/test_a_spine_record_carries_what_the_hook_would_have.py": 0.65,
     "tests/unit/test_a_suppression_is_a_finding.py": 0.02,
     "tests/unit/test_a_table_cell_obeys_the_value_rule.py": 3.54,
     "tests/unit/test_a_task_declares_its_shape.py": 0.57,
     "tests/unit/test_a_task_uid_is_not_a_label.py": 2.64,
-    "tests/unit/test_a_track_costs_what_it_reads.py": 0.03,
     "tests/unit/test_a_value_shows_what_it_is.py": 1.55,
     "tests/unit/test_all_rows_means_all_rows.py": 16.08,
     "tests/unit/test_an_aliased_import_is_refused.py": 0.3,
@@ -344,7 +341,6 @@
     "tests/unit/test_the_contract_is_described_as_what_it_is.py": 0.02,
     "tests/unit/test_the_contract_names_its_vocabulary.py": 0.01,
     "tests/unit/test_the_cores_were_or_were_not_binding.py": 0.04,
-    "tests/unit/test_the_cost_row_is_derived_from_the_selector.py": 9.68,
     "tests/unit/test_the_counter_the_constant_was_waiting_for.py": 0.02,
     "tests/unit/test_the_declared_signals_are_the_published_ones.py": 1.11,
     "tests/unit/test_the_diagnosis_follows_the_shape.py": 0.01,
@@ -365,7 +361,6 @@
     "tests/unit/test_the_first_screen_is_a_decision.py": 2.43,
     "tests/unit/test_the_first_view_says_what_to_do.py": 0.06,
     "tests/unit/test_the_fixture_differ_sees_key_order.py": 1.42,
-    "tests/unit/test_the_flake_ledger_grows_from_the_drift_gate.py": 0.39,
     "tests/unit/test_the_floor_is_stated_where_it_is_read.py": 0.01,
     "tests/unit/test_the_fold_says_how_deep_it_goes.py": 10.94,
     "tests/unit/test_the_foundation_tier_is_declared.py": 0.25,
@@ -385,7 +380,6 @@
     "tests/unit/test_the_handoff_says_whether_perfetto_fetched.py": 5.63,
     "tests/unit/test_the_hard_gates_are_named.py": 0.07,
     "tests/unit/test_the_host_was_asked.py": 0.55,
-    "tests/unit/test_the_impact_set_is_derived.py": 1.57,
     "tests/unit/test_the_ingestion_facts_name_the_bst_they_ran_on.py": 0.01,
     "tests/unit/test_the_invariants_hold_for_any_shape.py": 8.02,
     "tests/unit/test_the_journey_has_an_answer_key.py": 0.0,
@@ -396,7 +390,6 @@
     "tests/unit/test_the_lead_names_the_planes_it_has.py": 11.92,
     "tests/unit/test_the_ledger_row_is_the_transcript_s.py": 0.01,
     "tests/unit/test_the_lint_reads_its_own_tree.py": 0.29,
-    "tests/unit/test_the_loop_stays_fast.py": 17.07,
     "tests/unit/test_the_mapping_is_law.py": 5.47,
     "tests/unit/test_the_max_jobs_advisor_does_not_overcommit.py": 0.06,
     "tests/unit/test_the_max_jobs_price_moves_with_the_recommendation.py": 0.01,
@@ -459,7 +452,6 @@
     "tests/unit/test_the_round_history_names_every_audit.py": 0.03,
     "tests/unit/test_the_round_register_is_derived.py": 0.25,
     "tests/unit/test_the_schema_says_what_things_are.py": 0.89,
-    "tests/unit/test_the_selector_carries_the_census.py": 24.55,
     "tests/unit/test_the_self_review_reads_the_policy_it_has.py": 0.0,
     "tests/unit/test_the_served_handoff_counts_its_edges.py": 0.0,
     "tests/unit/test_the_served_scratch_is_not_leaked.py": 1.81,
@@ -485,7 +477,6 @@
     "tests/unit/test_the_tiers_are_a_partition.py": 2.37,
     "tests/unit/test_the_timeline_speaks_perfetto.py": 7.18,
     "tests/unit/test_the_tools_scale_with_the_table.py": 20.67,
-    "tests/unit/test_the_touching_map_is_measured.py": 0.31,
     "tests/unit/test_the_trace_census_reads_both_ends.py": 8.71,
     "tests/unit/test_the_trace_knows_whose_build.py": 0.07,
     "tests/unit/test_the_two_capabilities_are_offered.py": 32.83,
@@ -789,9 +780,6 @@
       0.11,
       0.11
     ],
-    "tests/unit/test_a_guard_reads_only_what_a_clone_has.py": [
-      23.97
-    ],
     "tests/unit/test_a_guard_that_reads_history_declares_its_depth.py": [
       1.09,
       1.09,
@@ -970,9 +958,6 @@
       3.2,
       3.2
     ],
-    "tests/unit/test_a_slow_file_says_which_file.py": [
-      37.8
-    ],
     "tests/unit/test_a_span_under_the_grid_says_so.py": [
       1.09,
       1.09,
@@ -1010,9 +995,6 @@
       2.64,
       2.64,
       2.64
-    ],
-    "tests/unit/test_a_track_costs_what_it_reads.py": [
-      0.03
     ],
     "tests/unit/test_a_value_shows_what_it_is.py": [
       1.55,
@@ -2823,9 +2805,6 @@
       0.04,
       0.04
     ],
-    "tests/unit/test_the_cost_row_is_derived_from_the_selector.py": [
-      9.68
-    ],
     "tests/unit/test_the_counter_the_constant_was_waiting_for.py": [
       0.03,
       0.02,
@@ -2963,9 +2942,6 @@
       1.42,
       1.42
     ],
-    "tests/unit/test_the_flake_ledger_grows_from_the_drift_gate.py": [
-      0.39
-    ],
     "tests/unit/test_the_floor_is_stated_where_it_is_read.py": [
       0.01,
       0.01,
@@ -3089,9 +3065,6 @@
       0.55,
       0.55
     ],
-    "tests/unit/test_the_impact_set_is_derived.py": [
-      1.57
-    ],
     "tests/unit/test_the_ingestion_facts_name_the_bst_they_ran_on.py": [
       0.01,
       0.01,
@@ -3155,9 +3128,6 @@
       0.29,
       0.29,
       0.29
-    ],
-    "tests/unit/test_the_loop_stays_fast.py": [
-      17.07
     ],
     "tests/unit/test_the_mapping_is_law.py": [
       5.47,
@@ -3565,9 +3535,6 @@
       0.89,
       0.89
     ],
-    "tests/unit/test_the_selector_carries_the_census.py": [
-      24.55
-    ],
     "tests/unit/test_the_self_review_reads_the_policy_it_has.py": [
       0.0
     ],
@@ -3728,9 +3695,6 @@
       20.67,
       20.67,
       20.67
-    ],
-    "tests/unit/test_the_touching_map_is_measured.py": [
-      0.31
     ],
     "tests/unit/test_the_trace_census_reads_both_ends.py": [
       8.71,

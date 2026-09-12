@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-816 scenarios: **3 open**, 813 closed.
+817 scenarios: **4 open**, 813 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -26,7 +26,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | viewer | 1 | 165 |
 | cli | 0 | 22 |
 | store | 0 | 16 |
-| docs | 0 | 140 |
+| docs | 1 | 141 |
 | guards | 1 | 218 |
 
 ## Open scenarios
@@ -39,6 +39,7 @@ task file, which is the only place it ever lived twice.
 | UX-817 | [the join calls a zero-rebuilt run an attribution failure](UX-0817-the-join-calls-a-zero-rebuilt-run-an-attribution-failure.md) | analysis | Medium | R1 reading `bga correlate` after an incremental build | 🔴 |
 | UX-818 | [two canned queries error when an element is given](UX-0818-two-canned-queries-error-when-an-element-is-given.md) | guards | Medium | R1 at the Perfetto handoff | 🔴 |
 | UX-819 | [the export's Perfetto handoff fetches a quoted data: URI](UX-0819-the-export-s-perfetto-handoff-fetches-a-quoted-data-uri.md) | viewer | Medium | R1 opening the timeline from an export | 🔴 |
+| UX-820 | [the generated release body ends its list on the closing marker](UX-0820-the-generated-release-body-ends-its-list-on-the-closing-marker.md) | docs | Low | the reader of CHANGELOG.md, and `make lint` reading it | 🔴 |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

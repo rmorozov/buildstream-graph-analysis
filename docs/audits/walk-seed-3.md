@@ -2,7 +2,7 @@
 
 `UX-685`'s third seeded walk: the process storm, spine on, cold then
 incremental, real Chrome. Base `5bcd026d`, 2026-09-12. Driven on the
-reporters' model (177k tokens, 59 calls, 8.4 m); judged here.
+reporters' model (174k tokens, 59 calls, 8.4 m); judged here.
 
 ```text
 $ python3 tools/dev_scenario.py --seed 3

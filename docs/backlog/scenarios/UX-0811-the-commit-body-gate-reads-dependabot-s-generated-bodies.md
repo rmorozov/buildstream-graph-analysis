@@ -77,5 +77,8 @@ Reverted; 14 passed. The person-authored case (`dependabot@example.com`,
 exit 1) stays red under the same body, so the exemption is the App's
 address, not its name.
 
-**Deviation.** None. Session-side, one commit; the verifier is PR
-#217's own `test (3.x)` on its next run.
+**Deviation.** Session-side, one commit; the verifier is PR #217's own
+`test (3.x)` on its next run. The fix was ported onto both shelf
+branches (`tools/` and the two tests only, the index conflicts) and each
+gated in its own worktree; the push hook reads the main checkout's
+HEAD, so each push checked the gated commit out there first.

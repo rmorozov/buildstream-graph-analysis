@@ -15,7 +15,9 @@ REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 
 from bga.analyzer import BuildEfficiencyAnalyzer
+from bga.cli import _max_jobs_advice
 from bga.correlate import MIN_HOST_SAMPLES_IN_SPAN, compute_max_jobs_advice
+from bga.ingest.models import Element, Graph, NormalizedTask, TaskKey, TaskKind
 from bga.utilisation.envelope import intervals, wall_samples
 
 FIXTURE = REPO / "tests" / "fixtures" / "host_cpu"
@@ -144,6 +146,59 @@ class TestTheMemoryConstraint:
         row = next(r for r in advice["elements"] if r["element"] == "core.bst")
         assert row["recommended_max_jobs"] == 2
         assert row["refusal"] is None
+
+
+class _FakeAnalyzer:
+    """The shape `_max_jobs_advice` reads: `read_host_samples()`,
+    `.graph`, `.normalized_tasks` - a fresh double per test rather than
+    the real analyzer, so a BUILD+FETCH pair can be asserted without a
+    capture (`tests/fixtures/host_cpu` is warm on sources and has none,
+    `UX-808`'s own Motivation)."""
+
+    def __init__(self, host_samples, graph, normalized_tasks):
+        self._host_samples = host_samples
+        self.graph = graph
+        self.normalized_tasks = normalized_tasks
+
+    def read_host_samples(self):
+        return self._host_samples
+
+
+class TestOneRowPerBuiltElement:
+    """UX-808: a cold element carries a FETCH task beside its BUILD
+    task; the advice must judge it once, on the BUILD span, not twice."""
+
+    _HOST_SAMPLES = {
+        "header": {"schema": "host-samples/v1", "wall_at_start": 0.0,
+                   "monotonic_at_start": 0.0},
+        "samples": [
+            {"t": 0.0, "cores": 4, "cpu_busy_cores": 3.9},
+            {"t": 2.0, "cores": 4, "cpu_busy_cores": 3.9},
+            {"t": 4.0, "cores": 4, "cpu_busy_cores": 3.9},
+        ],
+    }
+
+    def _inputs(self):
+        graph = Graph(elements=[Element(uid="a.bst", max_jobs=4)])
+        tasks = [
+            NormalizedTask(
+                task_key=TaskKey(element_uid="a.bst", task_kind=TaskKind.FETCH,
+                                  phase="fetch"),
+                ready_us=0, start_us=0, finish_us=1_000_000, dependencies=[],
+                resources=[], primary_resource=None,
+            ),
+            NormalizedTask(
+                task_key=TaskKey(element_uid="a.bst", task_kind=TaskKind.BUILD,
+                                  phase="build"),
+                ready_us=0, start_us=1_000_000, finish_us=5_000_000,
+                dependencies=[], resources=[], primary_resource=None,
+            ),
+        ]
+        return _FakeAnalyzer(self._HOST_SAMPLES, graph, tasks)
+
+    def test_a_build_and_fetch_task_yield_one_row(self):
+        advice = _max_jobs_advice(self._inputs(), native_report={})
+        assert len([r for r in advice["elements"] if r["element"] == "a.bst"]) == 1
 
 
 class TestWhatItRefusesToSay:

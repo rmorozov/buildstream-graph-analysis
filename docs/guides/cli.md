@@ -934,7 +934,7 @@ columns are the whole statement of what one of its rows holds, and
 finding one level up: `parallelism` is a top-level *object*, its
 `levels` rows are below that, and a population reaching only under a
 top-level array published the whole of a major bump outside itself.
-The surface is **261 keys** today, and that figure is derived from the
+The surface is **263 keys** today, and that figure is derived from the
 walk rather than typed here.
 
 So the statement of coverage, which is now a statement and not a
@@ -2228,6 +2228,29 @@ tables above.
 | `local_max_concurrency` | the most elements ever seen building at once in a host-sample interval this element's span touches |
 | `samples_in_span` | how many host-CPU-sample intervals overlap this element's span; too few and the row refuses rather than guesses |
 | `refusal` | why no number was published - thin evidence, or an overlap whose measured peak RSS already exceeds the host's memory |
+| `priced` | `UX-739`: this recommendation's own replay price, applied alone - `{replayed_baseline_us, projected_us, cost_us, duration_before_us, duration_floor_us, kind: "floor"}`. Absent for an unchanged/raised/already-refused row |
+| `price_refusal` | `UX-739`: why a changed recommendation was not priced - a raise this run has no evidence for, or no Plane 2 `binary_cost` measurement. Absent when `priced` is set or `refusal` already explains the row |
+
+**Priced by replay (`UX-739`).** Two replays of this run under
+`ReplayScheduler(tasks, run_context).replay(compute_default_capacities
+(run_context))` - one baseline, one with a lowered element's BUILD
+task duration overridden to a floor,
+`max(observed_build_dur_us, binary_cost[element].measured_cpu_us /
+recommended)`: an element capped in isolation is no slower than
+observed, and cannot finish its measured CPU work faster than that
+work spread over the recommended job count. The figure therefore errs
+**optimistic** - the real build under these caps is this long or
+longer - and the neighbours' benefit (less overcommit) is not
+modelled. Dispatch order is re-derived from the graph and the builder
+budget by Part 18's LPT rule for both replays rather than kept from
+bst's own observed order, so that rule's own distance from real
+dispatch cancels to first order between the two. A raised
+recommendation is refused outright: this run has no evidence of how
+the element scales up. `priced_jointly` (on the document, not the row)
+applies every priced, lowered recommendation together in one replay -
+a recompute, not a sum - as `{replayed_baseline_us, projected_us,
+cost_us, elements}`; `pricing_assumptions` carries the two sentences
+above, machine-readable.
 
 **The sweep behind it, as data: `sweep/v1`** (`UX-339`). The graph
 constraint above is the *knee* of a capacity sweep, and `bga sweep`

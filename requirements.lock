@@ -58,7 +58,7 @@ pylint==4.0.8
     # via bga (pyproject.toml)
 pymarkdownlnt==0.9.39
     # via bga (pyproject.toml)
-pyright==1.1.408
+pyright==1.1.411
     # via bga (pyproject.toml)
 pytest==9.1.1
     # via
@@ -81,7 +81,7 @@ rpds-py==2026.6.3
     # via
     #   jsonschema
     #   referencing
-ruff==0.15.8
+ruff==0.16.6
     # via bga (pyproject.toml)
 sly==0.5
     # via py-walk

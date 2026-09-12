@@ -39,7 +39,7 @@ def _base_resolves():
 @pytest.mark.skipif(not _base_resolves(),
                      reason="origin/main does not resolve in this checkout")
 def test_the_checkout_stays_within_the_commit_body_cap():
-    over, considered, in_range = tool.over_cap(base=BASE)
+    over, considered, in_range, _skipped = tool.over_cap(base=BASE)
     assert over == [], (
         f"{len(over)} of {considered} commit(s) considered in "
         f"{BASE}..HEAD are over CLAUDE.md's {tool.CAP}-line commit-body "

@@ -1,6 +1,6 @@
 # UX-808: the max-jobs advice lists one row per task, not per element
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-677 (the advice) | **Found by:** round 112, a fresh two-plane capture of `examples/06` taken to price the advice (`UX-739`) | **Serves:** R4 and R5 reading the recommendation table | **Topic:** analysis | **Area:** bga | **Shape:** bounded
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-677 (the advice) | **Found by:** round 112, a fresh two-plane capture of `examples/06` taken to price the advice (`UX-739`) | **Serves:** R4 and R5 reading the recommendation table | **Topic:** analysis | **Area:** bga | **Shape:** bounded
 
 ## Motivation
 

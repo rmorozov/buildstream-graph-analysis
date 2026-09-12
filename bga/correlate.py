@@ -1417,9 +1417,13 @@ def price_max_jobs_advice(advice, tasks, run_context, binary_cost) -> dict:
             continue
         # recommended < current: needs the element's whole measured CPU
         # work to build the floor.
+        if task is None:
+            row['price_refusal'] = (
+                f"no BUILD task for {uid} in this run - nothing to stretch")
+            continue
         cost_entry = binary_cost.get(uid) or {}
         measured_cpu_us = cost_entry.get('measured_cpu_us')
-        if task is None or not cost_entry.get('available') or measured_cpu_us is None:
+        if not cost_entry.get('available') or measured_cpu_us is None:
             row['price_refusal'] = (
                 f"no Plane 2 binary_cost measurement for {uid} - the "
                 f"price needs the element's whole measured CPU work")

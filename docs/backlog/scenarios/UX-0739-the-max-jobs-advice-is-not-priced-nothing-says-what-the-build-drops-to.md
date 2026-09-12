@@ -1,6 +1,6 @@
 # UX-739: the max-jobs advice is not priced — nothing says what the build drops to
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-677 (which produces the recommendation this would price), UX-219 (what-if, the projection that exists), UX-116 | **Serves:** R4 and R5, deciding whether the recommendation is worth applying | **Topic:** analysis | **Shape:** judgement | **Area:** bga
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-677 (which produces the recommendation this would price), UX-219 (what-if, the projection that exists), UX-116 | **Serves:** R4 and R5, deciding whether the recommendation is worth applying | **Topic:** analysis | **Shape:** judgement | **Area:** bga
 
 ## Motivation
 
@@ -88,8 +88,8 @@ baseline 29.6 s, projected 29.6 s, `cost_us` 0 - slack absorbs it, the
 graph's real bottleneck is elsewhere. `lib-f.bst` (4->1) costs 0.9s
 alone. Joint line: `Together (codegen.bst, lib-a..f.bst): build 29.6 s
 -> at least 30.5 s (floor, +0.9 s)` - not the sum of the six individual
-costs (five of which are 0). Both assumption sentences render as
-stated in the Required Fix.
+costs (five of which are 0). Both assumption sentences are on the
+payload and in the guide; the text shows the `(floor, +N s)` mark.
 
 **Mutation table** (`tests/unit/test_the_max_jobs_price_moves_with_
 the_recommendation.py`, synthetic tasks, no fixture).
@@ -99,6 +99,7 @@ the_recommendation.py`, synthetic tasks, no fixture).
 | floor ignores CPU (`max(dur, 0)`) | mutation-test + joint-not-a-sum test | 2 of 7 |
 | raise branch prices anyway (drops the `>` refusal) | raise-is-a-refusal test | 1 of 7 |
 | joint sums the per-row costs | joint-not-a-sum test | 1 of 7 |
+| drop the no-BUILD-task refusal (session, after the verifier) | no-build-task test (`AttributeError` before) | 1 of 8 |
 
 All reverted from a pristine copy of `bga/correlate.py`; 7 passed after
 each revert.

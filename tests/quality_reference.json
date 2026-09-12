@@ -20,7 +20,7 @@
     "bga/diagnostics/__init__.py": {"duplicate_blocks": 0, "file_lines": 31, "longest_function": 0},
     "bga/diagnostics/analyzer.py": {"duplicate_blocks": 2, "file_lines": 1164, "longest_function": 116},
     "bga/exceptions.py": {"duplicate_blocks": 0, "file_lines": 55, "longest_function": 0},
-    "bga/findings.py": {"duplicate_blocks": 0, "file_lines": 2428, "longest_function": 172},
+    "bga/findings.py": {"duplicate_blocks": 0, "file_lines": 2434, "longest_function": 172},
     "bga/floors/__init__.py": {"duplicate_blocks": 0, "file_lines": 15, "longest_function": 0},
     "bga/floors/capacity.py": {"duplicate_blocks": 0, "file_lines": 77, "longest_function": 24},
     "bga/floors/cold.py": {"duplicate_blocks": 0, "file_lines": 195, "longest_function": 143},

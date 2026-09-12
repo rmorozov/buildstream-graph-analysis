@@ -1,6 +1,6 @@
 # UX-810: the Plane 3 chapter moves into the tools area page
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-689 (the rule and the first area), UX-807 (the third, and the one-id-per-chapter rule) | **Found by:** round 113, `UX-807`'s Out of Scope | **Serves:** the reader pricing a change to the persisted-log reader; the session restructuring without losing a sentence | **Topic:** docs | **Area:** tools | **Shape:** mechanical
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-689 (the rule and the first area), UX-807 (the third, and the one-id-per-chapter rule) | **Found by:** round 113, `UX-807`'s Out of Scope | **Serves:** the reader pricing a change to the persisted-log reader; the session restructuring without losing a sentence | **Topic:** docs | **Area:** tools | **Shape:** mechanical
 
 ## Motivation
 

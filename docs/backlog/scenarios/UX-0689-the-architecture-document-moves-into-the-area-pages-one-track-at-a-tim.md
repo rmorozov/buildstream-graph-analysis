@@ -1,6 +1,6 @@
 # UX-689: the architecture document moves into the area pages, one track at a time
 
-**Priority:** Medium | **Status:** 🟡 In Progress | **Depends on:** UX-688 (the pages), UX-569 (the prose its guards do not read), UX-568 (the spec's Part→guard index) | **Serves:** the reader pricing a change; the session restructuring without losing a sentence | **Topic:** docs | **Area:** unassigned | **Shape:** judgement
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-688 (the pages), UX-569 (the prose its guards do not read), UX-568 (the spec's Part→guard index) | **Serves:** the reader pricing a change; the session restructuring without losing a sentence | **Topic:** docs | **Area:** unassigned | **Shape:** judgement
 
 ## Motivation
 
@@ -78,3 +78,26 @@ the substantive edit, per the log's own "the same commit" rule.
 Not a committed guard: a scratch diff script (each chapter unit
 flattened, checked as a substring of the new page or architecture.md)
 dropped 50/56 → 49/56, naming the sentence deleted from a scratch copy.
+
+### The series closed (round 114, 2026-09-12)
+
+Six moves, one item each after the first (`UX-806`, `UX-807`, `UX-810`,
+`UX-815`, `UX-816`), into five hand-written pages under
+`docs/design/areas/`: `bga-viewer`, `tools-native_trace`, `bga-replay`,
+`tools` (two chapters), `bga` (four chapters). Every move's sentence
+diff was empty and every one's verifier reproduced it; the 21 guard
+files read 437 before and after each.
+
+```text
+$ awk '/^## Verification Log/{exit} {n++} END{print n}' docs/design/architecture.md
+1044   # at 2749a34a~1, before the series
+490    # after UX-816
+```
+
+**Deviation.** The Acceptance Test's "under 400 lines of pointers and
+skeletons" is not met: 490 stay, and what stays is what the Required
+Fix said stays — the CLI table, the package structure, the two
+contract inventories, the real-extensions table (its guard reads the
+whole table under its own heading, so the chapter stayed whole rather
+than move a pointer beside a copy), the frame and six pointers. The
+figure was a guess at the skeletons' size; the skeletons are the 490.

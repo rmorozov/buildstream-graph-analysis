@@ -1555,7 +1555,7 @@ tool prices it and does not watch it).
 **Serves:** R8 (the maintainer deciding when to release), and every
 implementing session — the suite is theirs, the walk is the reader's.
 
-**Status:** partial — `UX-685`, `UX-686`, `UX-687`, `UX-688`, `UX-691` and `UX-692` landed; `UX-689` and `UX-690` are open.
+**Status:** landed — `UX-685`, `UX-686`, `UX-687`, `UX-688`, `UX-691` and `UX-692` first, `UX-690` in round 110, and `UX-689` in round 114 after six moves (`UX-806`, `UX-807`, `UX-810`, `UX-815`, `UX-816`).
 
 The last of them tested this direction's own claim rather than
 restating it: `UX-692`'s seeded sweep found a real defect on its

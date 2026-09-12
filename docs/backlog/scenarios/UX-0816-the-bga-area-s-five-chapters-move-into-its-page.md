@@ -1,6 +1,6 @@
 # UX-816: the bga area's five chapters move into its page
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-689 (the rule), UX-815 (landed before this, the anchor rule) | **Found by:** round 114, `UX-815`'s Out of Scope | **Serves:** the reader pricing a change to the analysis; the session finishing `UX-689` | **Topic:** docs | **Area:** bga | **Shape:** mechanical
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-689 (the rule), UX-815 (landed before this, the anchor rule) | **Found by:** round 114, `UX-815`'s Out of Scope | **Serves:** the reader pricing a change to the analysis; the session finishing `UX-689` | **Topic:** docs | **Area:** bga | **Shape:** mechanical
 
 ## Motivation
 

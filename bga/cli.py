@@ -296,14 +296,20 @@ def _peak_rss_and_host_memory(
 
 
 def _max_jobs_advice(analyzer, native_report: dict) -> dict:
-    """UX-677: the inputs `compute_max_jobs_advice` needs, gathered.
+    """UX-677/UX-808: the inputs `compute_max_jobs_advice` needs, gathered.
 
     Host samples are read directly (`UX-675` is on every capture, not
     gated on Plane 2) - only the per-element peak RSS and the host
     memory total, both genuinely Plane 2/host-sample facts, come from
     this call's own arguments.
+
+    BUILD tasks only (`UX-808`) - the same filter `_project_with_reduced_
+    durations` applies - so a cold build's FETCH task does not add a
+    second, thinly-evidenced row per element and does not count as
+    "building" for `_building`'s overlap check.
     """
     from bga.correlate import compute_max_jobs_advice
+    from bga.ingest.models import TaskKind
 
     host_samples = analyzer.read_host_samples()
     graph = getattr(analyzer, 'graph', None)
@@ -311,7 +317,8 @@ def _max_jobs_advice(analyzer, native_report: dict) -> dict:
         return {}
     tasks = [{"element": task.task_key.element_uid,
               "start_us": task.start_us, "finish_us": task.finish_us}
-             for task in getattr(analyzer, 'normalized_tasks', []) or []]
+             for task in getattr(analyzer, 'normalized_tasks', []) or []
+             if task.task_key.task_kind == TaskKind.BUILD]
     max_jobs = {element.uid: element.max_jobs for element in graph.elements}
     peak_rss_bytes, host_memory_bytes = _peak_rss_and_host_memory(
         host_samples, native_report)

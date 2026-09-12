@@ -56,3 +56,31 @@ On the round-112 capture above, 11 rows for 11 elements after the fix
 (pasted), `codegen.bst`'s recommendation unchanged at 1 or moved with
 the reason stated; the guard red under the mutation and green after
 the revert.
+
+## Outcome
+
+**Gap measured.** Before the fix, the round-112 capture's own
+`analyze.json` gave 22 rows for 11 elements (Motivation). `_max_jobs_
+advice` (`bga/cli.py`) built its `tasks` list from every normalized
+task with no `task_kind` filter.
+
+**Close measured.** `_max_jobs_advice` now keeps only
+`task.task_key.task_kind == TaskKind.BUILD`. Re-run on the same
+capture (`PYTHONPATH=<worktree> python3 -c "...main()..." analyze
+$RUN/run --plane2 $RUN/plane2.json --format json`):
+`capacity_recommendation.max_jobs_advice.elements` has **11 rows for
+11 elements** (one each), `codegen.bst` unchanged at
+`current_max_jobs: 4, recommended_max_jobs: 1, samples_in_span: 4,
+refusal: None`. Full set: `core.bst` 1→1; `toolchain.bst`, `app.bst`,
+`all.bst` refuse (thin evidence); `lib-a..e.bst` 4→2; `lib-f.bst` 4→1.
+
+**Mutation table.**
+
+| mutation | reddened | count |
+|---|---|---|
+| drop the `TaskKind.BUILD` filter | `TestOneRowPerBuiltElement::test_a_build_and_fetch_task_yield_one_row` (2 rows, not 1) | 1 of 10 in the file |
+
+Reverted from a pristine copy of `bga/cli.py`; file green after
+revert (`10 passed`).
+
+**Deviation.** None.

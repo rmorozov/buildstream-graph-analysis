@@ -272,6 +272,7 @@ export function exhibitTwin(doc, headers, rows) {
   table.hidden = true;
   const button = box(doc, "button", {
     type: "button", class: "twin-toggle", "data-drawing-twin": "closed",
+    "aria-expanded": "false",
     // `UX-279`'s rule: a control says what it does before it is
     // pressed, and it says it in a title a reader can reach.
     title: "Show the values this drawing was made from, as a table",
@@ -279,6 +280,7 @@ export function exhibitTwin(doc, headers, rows) {
   button.addEventListener("click", () => {
     const open = button.getAttribute("data-drawing-twin") === "open";
     button.setAttribute("data-drawing-twin", open ? "closed" : "open");
+    button.setAttribute("aria-expanded", open ? "false" : "true");
     button.textContent = open ? "as table" : "as drawing";
     table.hidden = open;
   });

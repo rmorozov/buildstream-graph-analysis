@@ -806,6 +806,8 @@ class StructuralAnalyzer:
         and then re-checked, so it ends this chain and starts its own.
         """
         G = self._graph
+        if G is None:
+            return [start, first]
         members = [start, first]
         current = first
         while G.in_degree(current) == 1 and G.out_degree(current) == 1:
@@ -823,6 +825,8 @@ class StructuralAnalyzer:
         chain that reaches it and the head of its own).
         """
         G = self._graph
+        if G is None:
+            return []
         durations = self._durations()
         longest_path = self._longest_path_us()
         rows = []

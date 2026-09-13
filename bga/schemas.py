@@ -3060,7 +3060,23 @@ _ANALYZE_HINTS = {
         }},
     "run_instance": _RUN_INSTANCE_HINT,
     "producer": {QUESTION: 'Which build of bga measured this?', RAIL: 'raw'},
-    "resource_blast": {QUESTION: 'What does one shared resource rebuild?', RAIL: 'investigate'},
+    "resource_blast": {QUESTION: 'What does one shared resource rebuild?', RAIL: 'investigate',
+        "properties": {
+            # UX-833: additive - both empty for a project with no
+            # `bga-source-kinds` declaration.
+            "source_kind_map": {
+                "additionalProperties": {"type": "string"},
+                "description": "`project.conf`'s declared "
+                               "`bga-source-kinds`: a custom plugin "
+                               "kind onto the known kind whose keying "
+                               "it inherits."},
+            "unmapped_source_kinds": {
+                "type": "array", "items": {"type": "string"},
+                "description": "Kinds this run saw with no keying, "
+                               "sorted - an unmapped custom plugin, "
+                               "named rather than folded silently "
+                               "into an unestimated blast."},
+        }},
     "utilization_envelope": {
         QUESTION: 'Were the cores the binding resource?',
         RAIL: 'act',

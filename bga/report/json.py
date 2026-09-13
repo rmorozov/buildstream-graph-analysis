@@ -250,7 +250,10 @@ def _add_resource_blast(data, result, section, by_kind):
     # where the truth is "not looked for".
     if section in (None, 'graph') and result.resource_blast:
         blast = result.resource_blast
-        if blast.get('rows'):
+        # UX-833: an unmapped custom source kind is published even with
+        # no shared resource to blast - the whole point is naming it,
+        # not waiting for a row to hang it on.
+        if blast.get('rows') or blast.get('unmapped_source_kinds'):
             data['resource_blast'] = blast
 
 

@@ -225,6 +225,19 @@ pairing for every merged row from round 103 on.
 | 116 | verifier | sonnet | verify `UX-834` | 44k | 45 | 7.9 m | PASS; the mutation reproduced, eslint clean | a malformed pymarkdown invocation scanned the whole tree once |
 | 116 | implementer | sonnet | `UX-826` bare task ids and the task key (mechanical) | 531k | 249 | 61.8 m | HOLD: findings.py untouched, ~40 citations left, the Outcome without commands; resumed | `python3 -c` resolving the cwd package; content-visibility hiding text from innerText |
 | 116 | verifier | sonnet | verify `UX-826` | 102k | 76 | 13.1 m | HOLD: findings.py:879 (UX-104) reader-facing; the Acceptance Test named a guard that does not exist | reproducing the doors-open count without matching the track |
+| 116 | implementer | sonnet | `UX-822` the readers table goes (bounded) | 201k | 173 | 35.5 m | merged; `DRAWN_ELSEWHERE` names the section, two rail guards re-pointed to `evidence`; the guard 2.3 s | stopped at a decision the file did not make (which section the rail guards read); resumed with the answer |
+| 116 | verifier | sonnet | verify `UX-822` | 81k | 83 | 13.8 m | HOLD on the orchestrator's tier row only; the diff and mutation held | the tier row is not the track's to add, so the HOLD was a merge item |
+| 116 | implementer | sonnet | `UX-835` a capped table filters what it sorts (bounded) | 188k | 145 | 37.4 m | merged; a real defect in `elementSignalTable`'s `?? "count"` fallback; the guard 3.6 s | the guard mirrors the census badge JS instead of importing it |
+| 116 | verifier | sonnet | verify `UX-835` | 46k | 41 | 10.6 m | PASS; the mutation reproduced | none |
+| 116 | verifier | sonnet | re-verify `UX-826` after the sweep | 92k | 88 | 12.1 m | PASS; 48 lines over 11 modules, 0 ids left in reader-facing text | the second read of a 475k track |
+| 116 | implementer | sonnet | `UX-828` the header is identity only (bounded) | 285k | 264 | 54.3 m | merged; 108 → 45 px on the golden export, the path in the run section; `BAND` re-measured, `PAGE_BUDGET` +1,453 B | the Required Fix named `tools/bga_view.py`; the header lives in `index.html` |
+| 116 | verifier | sonnet | verify `UX-828` | 90k | 86 | 11.7 m | PASS; the tier row the sole red | none |
+| 116 | implementer | sonnet | `UX-824` the reader-facing strings guard (bounded) | 454k | 185 | 167.7 m | merged after a HOLD; item 3 widened from `td` to every block; four mutations, one unreachable and substituted | the session limit stopped the first run mid-mutation; resumed 20 min later |
+| 116 | verifier | sonnet | verify `UX-824` | 58k | 62 | 12.6 m | HOLD, one finding: item 3 read `td` only while the pipe keys render in a `dd` | found by probing the DOM, not by the diff or the green run |
+| 116 | implementer | sonnet | `UX-817` a zero-rebuilt run says nothing was rebuilt (judgement, decision in the brief) | 79k | 90 | 14.8 m | merged; two guards red when the sentences swap; the journey case skips here | a `git stash push -u` on its own tree, recovered by sha |
+| 116 | verifier | sonnet | verify `UX-817` | 36k | 24 | 4.4 m | PASS; both mutation directions covered | proving the lint red was not the track's |
+| 116 | implementer | sonnet | `UX-818` every canned query renders with and without an element (judgement, decision in the brief) | 272k | 119 | 24.6 m | merged with a parity fix at merge: the tool emptied tokens the page keeps; 18 of 18 on the seed-3 trace | telling a base red from its own: the spread figure moved on the file's existence |
+| 116 | verifier | sonnet | verify `UX-818` | 40k | 35 | 9.6 m | PASS with two divergences from `renderedSql` and a syntax-only guard; a swapped window passed | parity was claimed in a docstring and checked nowhere; node + python by hand |
 
 Round 101's four tracks are **not** here: this session could not
 identify their transcripts with certainty after a context rebuild, and
@@ -237,7 +250,7 @@ committed cleanly once told to run in the foreground. Three of the five
 left a derived figure or a §6 context-map row behind - the same class
 the round itself was about, arriving in the tracks' own work.
 
-What the two hundred and eight rows already say: a researcher that reads a document
+What the two hundred and twenty-one rows already say: a researcher that reads a document
 whole costs 100-180k; a walker that drives every control costs 336k;
 the two cuts cost a re-run each. The `walk` and `design-review`
 skills fix the report shape so the next rows are smaller, and the

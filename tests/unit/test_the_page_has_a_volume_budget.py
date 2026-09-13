@@ -318,7 +318,12 @@ BUDGETS = (
     # text was cut; `xl` 9,376 -> 9,349 words the same way. The budget
     # bounds growth rather than forbidding it (`UX-681`); 107, 69 and
     # 51 of headroom, the order `UX-717` left.
-    (50, 36_300, 12_800, 800, 7_900),
+    # `UX-827`: px 36,300 -> 36,900 on the 50 class. The distribution
+    # twin draws every mark the JSON carries - fifteen rows (deciles,
+    # p99, mean) where it drew nine - measured 35,900 -> 36,822 px on
+    # `macro_micro` at the twin's commit, 36,815 at the round's head;
+    # words, controls and nodes unmoved. 85 of headroom.
+    (50, 36_900, 12_800, 800, 7_900),
     (4_100, 32_000, 9_400, 900, 5_500),
 )
 

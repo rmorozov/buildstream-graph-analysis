@@ -20,6 +20,7 @@ import argparse
 import csv
 import io
 import json
+import math
 import os
 import pathlib
 import re
@@ -45,6 +46,32 @@ READER_URL = ("https://commondatastorage.googleapis.com/perfetto-luci-artifacts/
 
 #: Lines the shell writes around the result set.
 NOISE = re.compile(r"^(Loading trace|\[\d|column \d+ =)")
+
+#: The two tokens `renderedSql` in `bga/viewer/questions.js` fills.
+ELEMENT_TOKEN = "{element}"
+WINDOW_TOKEN = "{window}"
+
+
+def _finite(value):
+    """`Number.isFinite`, since Python has no exact counterpart."""
+    try:
+        return math.isfinite(float(value))
+    except (TypeError, ValueError):
+        return False
+
+
+def rendered_sql(question, element=None, bounds=None):
+    """The SQL as the page's `renderedSql` fills it - same clause, same
+    empty fill when there is no element or no bounds (`UX-818`)."""
+    start = _finite(bounds and bounds.get("start_ns"))
+    end = _finite(bounds and bounds.get("end_ns"))
+    if start and end:
+        window = (f"and c.ts between {bounds['start_ns']} "
+                  f"and {bounds['end_ns']}")
+    else:
+        window = WINDOW_TOKEN if bounds else ""
+    return (question["sql"].replace(ELEMENT_TOKEN, element or "")
+                            .replace(WINDOW_TOKEN, window))
 
 
 def questions():
@@ -172,7 +199,7 @@ def main(argv=None):
 
     results, empty, broken = [], [], []
     for question in library:
-        sql = question["sql"].replace("{element}", element or "")
+        sql = rendered_sql(question, element)
         rows, error = ask(shell, trace, sql, workdir)
         results.append({"id": question["id"], "plane": question.get("plane"),
                         "rows": None if error else len(rows), "error": error,

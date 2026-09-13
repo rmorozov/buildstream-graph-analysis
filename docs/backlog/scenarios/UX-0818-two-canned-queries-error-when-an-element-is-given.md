@@ -32,3 +32,41 @@ question, both ways. Mutation: put a stray `{` in one question — red.
 
 18 of 18 answered or legitimately empty on seed 3's trace with
 `--element storm.bst`; the guard green; the mutation red.
+
+## Outcome
+
+**Gap measured.** Old `{element}`-only fill against all 18 questions,
+`storm.bst`, bare-sqlite `EXPLAIN` (same probe the guard uses):
+`concurrency-curve -> unrecognized token: "{"`, `were-the-cores-busy
+-> unrecognized token: "{"`; the other 16 read `no such table: slice`
+(or `flow`/`counter`). Both reads `{window}` and neither was filled.
+
+**Close measured.** `tools/dev_perfetto_queries.rendered_sql` now fills
+`{window}` the way `renderedSql` in `questions.js` does (same clause
+for a given element/bounds, same empty fill for none). Run on round
+114's own seed-3 capture (`cold.pftrace`, 74,802 B,
+`.bga/runs/20260912T114117Z`) with `--element storm.bst`:
+
+```text
+empty:  2/18  ['failed-processes', 'waited-on-flow']
+errors: 0/18  []
+```
+
+18/18 answered or legitimately empty (16 rows, 2 legitimately-empty
+fixture facts unrelated to this fix, per `UX-432`'s own reading of
+this project). `concurrency-curve` now returns 25 rows,
+`were-the-cores-busy` 4.
+
+**Mutations verified red and reverted (1):** a stray `{` inserted into
+`element-time`'s SQL in `questions.js` (`limit 25;` -> `limit 25{;`)
+reddened exactly `test_question_parses[no-element-element-time]` and
+`test_question_parses[with-element-and-bounds-element-time]` with
+`unrecognized token: "{"`, all 34 other cases stayed green; reverted
+from the scratchpad copy, 36/36 green again.
+
+**Trace-processor-only syntax:** none. All 18 questions, both fills,
+parsed against a bare `:memory:` connection with no error worse than
+`no such table`/`no such function` - `stalls`'s window function and
+the two counter-table questions included. No question is skipped.
+
+**Deviation from the Required Fix:** none.

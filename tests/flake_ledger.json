@@ -18,6 +18,18 @@
       "run_id": "34133997279",
       "shift": 2.549,
       "confirmed": false
+    },
+    {
+      "file": "tests/unit/test_the_fold_says_how_deep_it_goes.py",
+      "run_id": "34778362447",
+      "shift": 1.538,
+      "confirmed": false
+    },
+    {
+      "file": "tests/unit/test_a_new_control_class_lands_declared.py",
+      "run_id": "34778362447",
+      "shift": 2.73,
+      "confirmed": false
     }
   ],
   "declared": {}

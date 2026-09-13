@@ -2229,9 +2229,21 @@ def correlate(analysis: dict, native_report: dict, tasks=None, run_context=None,
     # element UID at all and every "joined" row was meaningless. The
     # producer now says so; refuse the join rather than render it.
     attribution = native_report.get("element_attribution") or {}
-    attribution_unreliable = (
-        attribution.get("note") if attribution.get("reliable") is False else None
+    # UX-817: nothing rebuilt is not attribution failing - it is nothing
+    # for it to attribute. `assess_element_attribution` cannot see Plane
+    # 1, so it reports the hook's own note either way; the join is the
+    # first place both planes are visible together.
+    from .ingest.models import TaskKind
+    nothing_rebuilt = (
+        native_report.get("process_count") == 0
+        and not any(t.task_key.task_kind == TaskKind.BUILD for t in (tasks or []))
     )
+    attribution_unreliable = None
+    if attribution.get("reliable") is False:
+        attribution_unreliable = (
+            "nothing was rebuilt, so there is nothing to join"
+            if nothing_rebuilt else attribution.get("note")
+        )
     # UX-66: a partial attribution is not an unreliable one. When the
     # names present are real but do not cover every process, the join is
     # correct for the elements it names and silent about the rest - so it

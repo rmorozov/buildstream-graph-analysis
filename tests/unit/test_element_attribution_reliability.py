@@ -22,6 +22,7 @@ resting on a convention a real project is free to override.
 import pytest
 
 from bga.correlate import correlate, format_correlation
+from bga.ingest.models import TaskKey, TaskKind, TaskSpan
 from tools.bst_native_build_tracer import assess_element_attribution
 
 
@@ -170,3 +171,37 @@ def test_a_report_without_the_field_correlates_as_before():
 
     assert result["attribution_unreliable"] is None
     assert "Joined" in format_correlation(result)
+
+
+# --- UX-817: a zero-rebuilt run is not attribution failing --------------
+
+
+def _build_task(element):
+    return TaskSpan(
+        task_key=TaskKey(element_uid=element, task_kind=TaskKind.BUILD, phase="BUILD"),
+        ts_us=0, dur_us=1, resources=[], primary_resource=None,
+    )
+
+
+def test_correlate_says_nothing_was_rebuilt_when_nothing_was():
+    """0 BUILD tasks, 0 traced processes: the hook's note ("no process
+    carried a tag") is right about Plane 2 and misleading about why."""
+    report = _native({"reliable": False, "note": "no process carried an element tag at all"})
+    report["process_count"] = 0
+
+    result = correlate(_ANALYSIS, report, tasks=[])
+
+    assert result["attribution_unreliable"].startswith("nothing was rebuilt")
+
+
+def test_correlate_keeps_the_unreliable_sentence_when_something_ran():
+    """BUILD tasks ran and processes were traced; none carried a tag -
+    `UX-56`'s class, not `UX-817`'s - so the original sentence stands."""
+    note = "none of 5 traced processes carry a name that looks like a BuildStream element"
+    report = _native({"reliable": False, "note": note})
+    report["process_count"] = 5
+
+    result = correlate(_ANALYSIS, report, tasks=[_build_task("core.bst")])
+
+    assert result["attribution_unreliable"] == note
+    assert "nothing was rebuilt" not in result["attribution_unreliable"]

@@ -651,13 +651,13 @@ class TestTheIncrementalRunIsStillAReport:
             "both blocks should say which absence it is")
 
     def test_the_join_on_a_zero_rebuilt_run_recommends_nothing(self, walked):
-        """`UX-685` seed 3's answer-key row, recorded (`UX-817` open).
+        """`UX-685` seed 3's answer-key row, closed by `UX-817`.
 
         On the 0-rebuilt warm run `bga correlate` refuses and recommends
-        nothing - held here. It names the absence as untagged processes
+        nothing - held here. It named the absence as untagged processes
         ("no process carried an element tag at all") when nothing was
-        built to carry one; `UX-817` flips this row to "nothing was
-        rebuilt" when it lands.
+        built to carry one; now it says so - "nothing was rebuilt, so
+        there is nothing to join".
         """
         plane2 = str(pathlib.Path(walked["warm_run"]).parent / "plane2.json")
         done = _run([sys.executable, "-m", "bga.cli", "correlate",
@@ -665,7 +665,7 @@ class TestTheIncrementalRunIsStillAReport:
                     walked["project"], walked["env"], timeout=300)
         text = done.stdout + done.stderr
         assert "Nothing is recommended" in text, text[-2000:]
-        assert "no process carried an element tag" in text, text[-2000:]
+        assert "nothing was rebuilt, so there is nothing to join" in text, text[-2000:]
 
     def test_the_page_says_the_analysis_found_none(self, exported):
         """Read through the shared node probe, which now can read it.

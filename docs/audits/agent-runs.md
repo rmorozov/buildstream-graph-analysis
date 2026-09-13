@@ -213,6 +213,18 @@ pairing for every merged row from round 103 on.
 | 114 | implementer | sonnet | `UX-816` the bga area's five chapters into its page (mechanical) | 187k | 157 | 34.5 m | merged; four chapters moved, the real-extensions table kept where its guard reads it; 593 → 490 lines outside the log | a bare stash reverted the work mid-track and had to be re-applied |
 | 114 | verifier | sonnet | verify `UX-816` | 62k | 50 | 10.1 m | PASS; 0 sentences missing; the blank-and-rerun red on a docs-wide key guard, the Outcome had named it | a partial checkout for the before snapshot, caught and redone |
 | 115 | general-purpose | sonnet | the design review on the all-planes walk capture (`design-review`), plus the 1,202-element export re-measured by the session | 205k | 137 | 20.5 m | eight own findings and the owner's ten claims measured; fifteen filings (UX-822 to UX-836) and four styleguide sections | one CDP dead end (a stale listener on the first port) before every call worked; measurements one node invocation at a time |
+| 116 | implementer | sonnet | `UX-832` the foundation declaration in the guides (mechanical) | 436k | 186 | 49.9 m | merged after a HOLD: the snapshot --help sentence fits the cap at 47/47; two guide paragraphs with real output | the sandbox refused heredocs and variable paths; literal rewrites cost retries |
+| 116 | verifier | sonnet | verify `UX-832` | 67k | 62 | 18.6 m | HOLD, one finding: "no room" for the help line was wrong (47 ≤ 47) | which python `bga` resolves to (worktree vs the main install) before any re-run |
+| 116 | implementer | sonnet | `UX-820` the generated release body ends on a blank line (bounded) | 294k | 456 | 42.9 m | merged; MD032 4 → 0, CHANGELOG.md in the lint list, one guard over every generated block | a one-line Makefile edit selected 529 files; the sweep took 34 m under six tracks |
+| 116 | verifier | sonnet | verify `UX-820` | 41k | 55 | 24.9 m | PASS; the mutation reproduced, the guard reads all four blocks | the touching sweep at 680 s on the loaded box |
+| 116 | implementer | sonnet | `UX-825` the section key off the heading (bounded) | 132k | 141 | 32.7 m | merged after a HOLD on two orchestrator rows (tier, §7) and a label-in-name fix; 0 spans, 35 of 35 toggles named | contention made every wait exceed the 120 s threshold |
+| 116 | verifier | sonnet | verify `UX-825` | 120k | 52 | 13.8 m | HOLD: the new guard reddened the §7 table and the tier partition — both orchestrator rows | dev_touching and make lint needing background runs under load |
+| 116 | implementer | sonnet | `UX-836` the census lists tables (mechanical) | 378k | 144 | 58 m | merged after a HOLD: the filter count had matched the copy checkbox; now `input.table-filter`, 0 on golden, 1 on the scale elements table | none reported |
+| 116 | verifier | sonnet | verify `UX-836` | 57k | 70 | 12.8 m | HOLD: filters:1 on 14 of 18 golden tables was the copy-markdown checkbox | three browser boots to find what the count selected |
+| 116 | implementer | sonnet | `UX-834` aria-expanded and the path-box name (mechanical) | 151k | 167 | 38.5 m | merged; both mutations red; a redundant skip site removed instead of raising the ceiling | two touching sweeps at 8-9 m each under load |
+| 116 | verifier | sonnet | verify `UX-834` | 44k | 45 | 7.9 m | PASS; the mutation reproduced, eslint clean | a malformed pymarkdown invocation scanned the whole tree once |
+| 116 | implementer | sonnet | `UX-826` bare task ids and the task key (mechanical) | 531k | 249 | 61.8 m | HOLD: findings.py untouched, ~40 citations left, the Outcome without commands; resumed | `python3 -c` resolving the cwd package; content-visibility hiding text from innerText |
+| 116 | verifier | sonnet | verify `UX-826` | 102k | 76 | 13.1 m | HOLD: findings.py:879 (UX-104) reader-facing; the Acceptance Test named a guard that does not exist | reproducing the doors-open count without matching the track |
 
 Round 101's four tracks are **not** here: this session could not
 identify their transcripts with certainty after a context rebuild, and
@@ -225,7 +237,7 @@ committed cleanly once told to run in the foreground. Three of the five
 left a derived figure or a §6 context-map row behind - the same class
 the round itself was about, arriving in the tracks' own work.
 
-What the one hundred and ninety-six rows already say: a researcher that reads a document
+What the two hundred and eight rows already say: a researcher that reads a document
 whole costs 100-180k; a walker that drives every control costs 336k;
 the two cuts cost a re-run each. The `walk` and `design-review`
 skills fix the report shape so the next rows are smaller, and the

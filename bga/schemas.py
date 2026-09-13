@@ -1757,7 +1757,10 @@ _MAX_JOBS_ADVICE_COLUMNS = [
 
 
 _INTERVAL_COLUMNS = [
-    {"key": "start_us", "title": "From", "quantity": "duration_us"},
+    # `UX-823`: an offset from the run's start; `start_us` stays on the
+    # row for the Perfetto bounds and is not a column.
+    {"key": "start_offset_us", "title": "From (after the run's start)",
+     "quantity": "duration_us"},
     {"key": "duration_us", "title": "For", "quantity": "duration_us"},
     {"key": "busy_cores", "title": "Cores busy", "quantity": "ratio",
      "sortable": True},

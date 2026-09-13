@@ -15,13 +15,13 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-833 scenarios: **9 open**, 824 closed.
+833 scenarios: **8 open**, 825 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
 | capture | 0 | 97 |
-| analysis | 4 | 115 |
+| analysis | 3 | 115 |
 | contracts | 0 | 48 |
 | viewer | 3 | 171 |
 | cli | 0 | 22 |
@@ -38,7 +38,6 @@ task file, which is the only place it ever lived twice.
 |---|---|---|---|---|---|
 | UX-817 | [the join calls a zero-rebuilt run an attribution failure](UX-0817-the-join-calls-a-zero-rebuilt-run-an-attribution-failure.md) | analysis | Medium | R1 reading `bga correlate` after an incremental build | 🔴 |
 | UX-818 | [two canned queries error when an element is given](UX-0818-two-canned-queries-error-when-an-element-is-given.md) | guards | Medium | R1 at the Perfetto handoff | 🔴 |
-| UX-823 | [the intervals' From column renders a monotonic epoch as a duration](UX-0823-the-intervals-from-column-renders-a-monotonic-epoch-as-a-duration.md) | analysis | High | R5 reading an idle window | 🔴 |
 | UX-824 | [reader-facing strings: the rule, and a guard that reads the page](UX-0824-reader-facing-strings-the-rule-and-a-guard-that-reads-the-page.md) | guards | High | every reader of the page | 🔴 |
 | UX-828 | [the header spends 14% of the viewport on a filesystem path](UX-0828-the-header-spends-14-of-the-viewport-on-a-filesystem-path.md) | viewer | High | every reader, on every load | 🔴 |
 | UX-829 | [five of seven joined fields on the elements table draw no column](UX-0829-five-of-seven-joined-fields-on-the-elements-table-draw-no-column.md) | viewer | High | R2 and R3 reading one element's row | 🔴 |

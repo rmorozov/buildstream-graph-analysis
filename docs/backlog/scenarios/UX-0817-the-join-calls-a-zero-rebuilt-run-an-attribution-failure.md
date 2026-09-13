@@ -1,6 +1,6 @@
 # UX-817: the join calls a zero-rebuilt run an attribution failure
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-388 (which absence it is), UX-724 (the text report's half) | **Found by:** round 114, walk seed 3 | **Serves:** R1 reading `bga correlate` after an incremental build | **Topic:** analysis | **Area:** bga | **Shape:** judgement
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-388 (which absence it is), UX-724 (the text report's half) | **Found by:** round 114, walk seed 3 | **Serves:** R1 reading `bga correlate` after an incremental build | **Topic:** analysis | **Area:** bga | **Shape:** judgement
 
 ## Motivation
 
@@ -96,3 +96,8 @@ docstrings already named this row for `UX-817`); its
 instead of the old note. Not runnable here — `make test-touching`
 selected the file and skipped all 26 cases: "the journey needs bst,
 bwrap and example 06's staged toolchain".
+
+Deviation: none in the fix. The journey's warm-run case carries the new
+sentence but skips on this host (no `bst`/`bwrap`); CI's journey job is
+the reading. The `NO USABLE JOIN` header line above the note is
+unchanged - a second wording for the empty rebuild is not filed.

@@ -620,5 +620,16 @@ export function decisionInvestigation(action, payload) {
 
 export function traceUrl() {
   const node = document.getElementById("bga-trace");
-  return node ? node.textContent.trim() : "timeline.json.gz";
+  if (!node) return "timeline.json.gz";
+  const text = node.textContent.trim();
+  // The export writes the URI as a JSON string, quotes and all
+  // (`tools/bga_view.py`); a bare path is what the shims and a served
+  // page hand over, and it passes through unparsed.
+  try {
+    const parsed = JSON.parse(text);
+    if (typeof parsed === "string") return parsed;
+  } catch {
+    // not JSON - a bare path
+  }
+  return text;
 }

@@ -1,6 +1,6 @@
 # UX-819: the export's Perfetto handoff fetches a quoted data: URI
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-299 (the handoff carries the trace), UX-314 (the fetchable rule) | **Found by:** round 114, walk seed 3 | **Serves:** R1 opening the timeline from an export | **Topic:** viewer | **Area:** bga-viewer | **Shape:** judgement
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-299 (the handoff carries the trace), UX-314 (the fetchable rule) | **Found by:** round 114, walk seed 3 | **Serves:** R1 opening the timeline from an export | **Topic:** viewer | **Area:** bga-viewer | **Shape:** judgement
 
 ## Motivation
 
@@ -44,3 +44,40 @@ with the URL's shape as its first step.
 
 On seed 3's export, `traceUrl()` returns a string starting `data:`;
 the guard green; the mutation red.
+
+## Outcome
+
+**Gap measured.** Walk seed 3, real Chrome, "Open timeline in Perfetto"
+on the export (`docs/audits/walk-seed-3.md`):
+
+```text
+Access to fetch at 'file:///…/%22data:application/gzip;base64,H4sICJo6pW…==%22'
+… blocked by CORS policy
+$ sed -n 621,624p bga/viewer/sections.js          # before
+export function traceUrl() {
+  const node = document.getElementById("bga-trace");
+  return node ? node.textContent.trim() : "timeline.json.gz";
+```
+
+**Close measured.** `traceUrl()` parses the node's JSON when it is
+JSON and passes a bare path through; the guard is a node harness over
+the three input classes:
+
+```text
+$ python3 -m pytest -q -p no:xdist tests/unit/test_the_perfetto_handoff.py -k TheExportsTraceIsABareUri
+3 passed, 62 deselected in 0.42s
+  export node  '"data:application/gzip;base64,H4sIAAAAAAAAA"' → 'data:application/gzip;base64,H4sIAAAAAAAAA'
+  bare path    'trace/timeline.json.gz' → unchanged
+  no node      → 'timeline.json.gz'
+$ npx --yes --package eslint@9 --package globals@17 -- eslint bga/viewer
+(clean)
+```
+
+| mutation | result |
+|---|---|
+| the parse dropped (`JSON.parse(text)` with its value discarded) | 1 failed, 2 passed — `'"data:applic…"' == 'data:applica…'` |
+
+**Deviation.** The click path was not driven in Chrome: the handoff
+fetches whatever `traceUrl()` returns, and the harness reads that
+return; the CORS line above is the walk's reading of the same call
+before the fix.

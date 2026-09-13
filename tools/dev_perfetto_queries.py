@@ -60,17 +60,26 @@ def _finite(value):
         return False
 
 
+def _number(value):
+    """`${Number(x)}` - an integral float prints without its `.0`."""
+    number = float(value)
+    return int(number) if number.is_integer() else number
+
+
 def rendered_sql(question, element=None, bounds=None):
-    """The SQL as the page's `renderedSql` fills it - same clause, same
-    empty fill when there is no element or no bounds (`UX-818`)."""
-    start = _finite(bounds and bounds.get("start_ns"))
-    end = _finite(bounds and bounds.get("end_ns"))
-    if start and end:
-        window = (f"and c.ts between {bounds['start_ns']} "
-                  f"and {bounds['end_ns']}")
+    """The SQL as the page's `renderedSql` fills it (`UX-818`): no
+    element keeps the token visible (`UX-369`), an incomplete window
+    keeps its token (`UX-676`), and only a missing `bounds` empties it."""
+    target = element if element is not None else question.get("example")
+    if target is None:
+        target = ELEMENT_TOKEN
+    start = bounds.get("start_ns") if bounds is not None else None
+    end = bounds.get("end_ns") if bounds is not None else None
+    if _finite(start) and _finite(end):
+        window = f"and c.ts between {_number(start)} and {_number(end)}"
     else:
-        window = WINDOW_TOKEN if bounds else ""
-    return (question["sql"].replace(ELEMENT_TOKEN, element or "")
+        window = WINDOW_TOKEN if bounds is not None else ""
+    return (question["sql"].replace(ELEMENT_TOKEN, target)
                             .replace(WINDOW_TOKEN, window))
 
 

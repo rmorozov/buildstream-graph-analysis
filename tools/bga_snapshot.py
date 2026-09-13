@@ -28,7 +28,9 @@ HELP = """Capture, analyze, and compare against the previous run - one command.
 
 Runs the build under the tracer, stores the capture in `.bga/runs/`, prints
 the analysis, and compares it against the last healthy snapshot. Run it once
-before your change and once after; the comparison is automatic.
+before your change and once after; the comparison is automatic. Declare a
+foundation tier with project.conf's variables: {bga-foundation:
+"a.bst,b.bst"} (docs/guides/cli.md#declaring-a-foundation-tier-ux-683).
 
 Full background: docs/guides/real-project.md
 """

@@ -38,3 +38,38 @@ served page's store section; the journey is any rail landing.
 
 `span.section-key` absent from the DOM; every `button.json-toggle`
 carries the key in `title`; the §4g guard's key line goes green.
+
+## Outcome
+
+**Gap measured**, golden export (`tests/pages.export_uri`,
+`tests/fixtures/golden/mixed_task_kinds`), `span.section-key`
+`getComputedStyle(...).display`:
+
+```text
+spans: 33   visible: 33   sections: 47
+button.json-toggle with a title: 0 of 35
+```
+
+(round 115's 37/47 was on a different export; 33/47 is this round's
+own tree.)
+
+**Close measured**, same fixture, after the fix:
+
+```text
+spans: 0   sections: 47
+button.json-toggle with a title: 35 of 35
+every title/aria-label contains its own data-json-toggle key
+```
+
+`tests/unit/test_the_json_toggle_carries_the_key.py` (new) holds both
+clauses on the golden export.
+
+**Mutations verified red and reverted (2):**
+
+| mutation | file | reddened | count |
+|---|---|---|---|
+| restored `span.section-key.muted` in `sectionHead` | `bga/viewer/format.js` | `test_no_section_key_span_is_in_the_dom` (`spans: 33`) | 1 |
+| `SHOWN_TITLE` dropped the key (`"...this section"`) | `bga/viewer/rawjson.js` | `test_every_toggle_carries_its_key` (35 toggles missing their key) | 1 |
+
+Both reverted from the scratchpad copy; `test_the_json_toggle_carries_the_key.py`
+green after each revert. Neither mutation touched a second guard.

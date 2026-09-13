@@ -45,6 +45,12 @@ export function recordSource(section, value) {
 export const SHOW = "view as JSON";
 export const HIDE = "hide JSON";
 
+// `UX-825`: the payload key, carried on the toggle rather than the
+// heading - `title` and `aria-label` both, since it is what a hover
+// and a screen reader each read for this control.
+const SHOWN_TITLE = (key) => `Show the JSON behind ${key}`;
+const HIDDEN_TITLE = (key) => `Hide the JSON for ${key}`;
+
 /** Two-space indent: this is read and pasted, not transmitted. */
 export function sectionJson(value) {
   return JSON.stringify(value, null, 2);
@@ -74,6 +80,11 @@ export function jsonToggles(root, { document: doc } = {}) {
     button.setAttribute("data-json-toggle", key);
     button.setAttribute("aria-expanded", "false");
     button.textContent = SHOW;
+    // `UX-825` (styleguide §4g.2): the payload key `sectionHead` no
+    // longer puts beside the heading rides here instead - the toggle
+    // is the one control the key is actually about.
+    button.title = SHOWN_TITLE(key);
+    button.setAttribute("aria-label", SHOWN_TITLE(key));
 
     let shown = null;
     button.addEventListener("click", () => {
@@ -82,6 +93,8 @@ export function jsonToggles(root, { document: doc } = {}) {
         shown = null;
         button.setAttribute("aria-expanded", "false");
         button.textContent = SHOW;
+        button.title = SHOWN_TITLE(key);
+        button.setAttribute("aria-label", SHOWN_TITLE(key));
         return;
       }
       const box = doc.createElement("div");
@@ -98,6 +111,8 @@ export function jsonToggles(root, { document: doc } = {}) {
       shown = box;
       button.setAttribute("aria-expanded", "true");
       button.textContent = HIDE;
+      button.title = HIDDEN_TITLE(key);
+      button.setAttribute("aria-label", HIDDEN_TITLE(key));
     });
 
     heading.append(button);

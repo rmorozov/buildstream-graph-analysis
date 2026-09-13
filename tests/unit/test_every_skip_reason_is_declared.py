@@ -97,7 +97,10 @@ import skip_reasons
 #: Required Fix's own words ("skips ... naming the depth"). A static
 #: constant would have to drop the number to be readable, which is the
 #: opposite of what the row asked for.
-UNRESOLVABLE = 67
+#: `UX-825` argues **one** more, to 68: the forty-eighth browser
+#: guard, `test_the_json_toggle_carries_the_key.py`, whose
+#: `needs_browser` reads `browser.NO_BROWSER` in the same form.
+UNRESOLVABLE = 68
 
 
 def test_every_declared_skip_reason_is_known():

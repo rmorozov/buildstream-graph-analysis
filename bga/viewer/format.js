@@ -349,9 +349,11 @@ export function cssId(uid) {
 export function sectionHead(key, hint = {}) {
   const info = heading(key, hint);
   const node = el("h2", {}, info.label);
-  if (info.subtitle) {
-    node.append(el("span", { class: "section-key muted" }, info.subtitle));
-  }
+  // `UX-825` (styleguide §4g.2): the payload key stopped riding beside
+  // the question here - `rawjson.js` carries it into the JSON toggle's
+  // `title`/`aria-label` instead, the one place it is still contract
+  // vocabulary rather than a heading's own text. `data-section` still
+  // carries it for the guards.
   // `UX-643`: the tag a promoted block wears, built here because this
   // is the one place a section's head is made - and built **empty**,
   // because `UX-305`'s budget is spent on the sections one chosen role

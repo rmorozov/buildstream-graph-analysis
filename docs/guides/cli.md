@@ -2272,7 +2272,12 @@ tables above.
 | `samples_in_span` | how many host-CPU-sample intervals overlap this element's span; too few and the row refuses rather than guesses |
 | `refusal` | why no number was published - thin evidence, or an overlap whose measured peak RSS already exceeds the host's memory |
 | `priced` | `UX-739`: this recommendation's own replay price, applied alone - `{replayed_baseline_us, projected_us, cost_us, duration_before_us, duration_floor_us, kind: "floor"}`. Absent for an unchanged/raised/already-refused row |
+| `price_cost_us`, `price_kind` | `UX-831`: `priced.cost_us`/`priced.kind`, read out flat - `priced` stayed nested and drew its own table per row; these two are what the page's `elements` table draws as columns |
 | `price_refusal` | `UX-739`: why a changed recommendation was not priced - a raise this run has no evidence for, or no Plane 2 `binary_cost` measurement. Absent when `priced` is set or `refusal` already explains the row |
+
+`elements` is ranked (`UX-831`): priced lowerings first, by
+`price_cost_us` ascending, then everything else, refusals last - the
+order in the JSON is the order the page draws.
 
 **Priced by replay (`UX-739`).** Two replays of this run under
 `ReplayScheduler(tasks, run_context).replay(compute_default_capacities

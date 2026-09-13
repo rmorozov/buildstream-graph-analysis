@@ -1350,6 +1350,24 @@ _PRICE_FLOOR_ASSUMPTION = (
     "modelled.")
 
 
+def _advice_row_rank(row: dict) -> tuple:
+    """UX-831: priced lowerings first (cheapest first), refusals last.
+
+    `(0, cost)` for a priced LOWERED row, `(1, 0)` for everything else
+    still worth a glance (unchanged, thin evidence not yet refused),
+    `(2, 0)` for a row `refusal`/`price_refusal` already explains.
+    """
+    if row.get('refusal') or row.get('price_refusal'):
+        return (2, 0)
+    current = row.get('current_max_jobs')
+    recommended = row.get('recommended_max_jobs')
+    priced = row.get('priced')
+    if (priced is not None and current is not None
+            and recommended is not None and recommended < current):
+        return (0, priced['cost_us'])
+    return (1, 0)
+
+
 def price_max_jobs_advice(advice, tasks, run_context, binary_cost) -> dict:
     """UX-739: prices `compute_max_jobs_advice`'s rows by replay.
 
@@ -1409,6 +1427,10 @@ def price_max_jobs_advice(advice, tasks, run_context, binary_cost) -> dict:
                 'duration_floor_us': observed_us,
                 'kind': 'floor',
             }
+            # `UX-831`: the two columns the table draws - `priced`
+            # itself stays on the row, undisturbed.
+            row['price_cost_us'] = row['priced']['cost_us']
+            row['price_kind'] = row['priced']['kind']
             continue
         if recommended > current:
             row['price_refusal'] = (
@@ -1445,8 +1467,16 @@ def price_max_jobs_advice(advice, tasks, run_context, binary_cost) -> dict:
             'duration_floor_us': floor_us,
             'kind': 'floor',
         }
+        row['price_cost_us'] = row['priced']['cost_us']
+        row['price_kind'] = row['priced']['kind']
         joint_overrides[override_key] = floor_us
         joint_elements.append(uid)
+
+    # `UX-831`: the order in the JSON is the order drawn - priced
+    # lowerings first (cheapest `price_cost_us` first), refusals last.
+    # Stable, so ties (an unchanged row's cost is always 0) keep
+    # `compute_max_jobs_advice`'s own order.
+    elements.sort(key=_advice_row_rank)
 
     if joint_overrides:
         joint_us = ReplayScheduler(list(tasks), run_context).replay(

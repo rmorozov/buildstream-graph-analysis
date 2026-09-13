@@ -1737,18 +1737,13 @@ _MAX_JOBS_ADVICE_COLUMNS = [
     {"key": "samples_in_span", "title": "Host samples in span",
      "quantity": "count", "sortable": True},
     {"key": "refusal", "title": "Refusal"},
-    # `UX-739`: this one recommendation's own replay price, applied
-    # alone - absent for an unchanged/raised/already-refused row. Its
-    # own inner shape (`replayed_baseline_us`, ...) is internal, like
-    # `dominant_binary`'s above - the outer key is what a consumer
-    # indexes.
-    {"key": "priced", "title": "Priced (floor)",
-     "description": "This recommendation's replay price, applied "
-                    "alone: `{replayed_baseline_us, projected_us, "
-                    "cost_us, duration_before_us, duration_floor_us, "
-                    "kind}`. `kind` is always `\"floor\"` - the figure "
-                    "errs optimistic, never a point prediction."},
-    {"key": "price_refusal", "title": "Price refusal",
+    # `UX-831`: flat, not `priced.cost_us` - a nested `priced` object
+    # drew its own table per row, four levels deep. `priced` stays on
+    # the row (see the array's own description) so a consumer keeps
+    # the whole replay record; these two columns are what a reader sees.
+    {"key": "price_cost_us", "title": "Price", "quantity": "duration_us",
+     DIRECTION: "lower_is_better", "sortable": True},
+    {"key": "price_refusal", "title": "Why not priced",
      "description": "Why a changed recommendation was not priced: a "
                     "raise this run has no evidence for, or no Plane 2 "
                     "`binary_cost` measurement. Absent when `priced` is "
@@ -3228,10 +3223,29 @@ _ANALYZE_HINTS = {
                                "memory, carries `refusal` instead of a "
                                "number. `UX-739`: `priced_jointly` and "
                                "`pricing_assumptions` price it by replay - "
-                               "see the row-level `priced`/`price_refusal` "
-                               "columns below.",
-                COLUMNS: _MAX_JOBS_ADVICE_COLUMNS,
+                               "see `elements[].price_cost_us` below.",
                 "properties": {
+                    # `UX-831`: the COLUMNS hint moved here, onto the
+                    # array the rows live in - it sat on this object
+                    # before and drew the whole record (`elements`
+                    # included) as one three-table fold.
+                    "elements": {
+                        "type": "array",
+                        COLUMNS: _MAX_JOBS_ADVICE_COLUMNS,
+                        "description": "One row per element. Ranked "
+                                       "priced lowerings first (cheapest "
+                                       "`price_cost_us` first), refusals "
+                                       "last. `priced` stays on each row: "
+                                       "`{replayed_baseline_us, "
+                                       "projected_us, cost_us, "
+                                       "duration_before_us, "
+                                       "duration_floor_us, kind}` - "
+                                       "`kind` is always `\"floor\"`, and "
+                                       "`price_cost_us`/`price_kind` "
+                                       "below are its `cost_us`/`kind` "
+                                       "read out flat. Absent for a row "
+                                       "`refusal` or `price_refusal` "
+                                       "already explains."},
                     "priced_jointly": {
                         "description": "`UX-739`: every priced, lowered "
                                        "recommendation applied together in "

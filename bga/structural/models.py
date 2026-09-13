@@ -40,22 +40,39 @@ class StructuralMetrics:
 
 
 @dataclass(frozen=True)
+class SerialChain:
+    """One maximal non-branching walk, ranked by weighted duration.
+
+    UX-830: `longest_serial_chain` keeps the one exhibit; this is the
+    ranked set it is drawn from - `best_split` names the member whose
+    removal shortens the chain most.
+    """
+    rank: int
+    members: list[str]
+    length: int
+    weighted_duration_us: int
+    wall_share: float
+    best_split: str
+
+
+@dataclass(frozen=True)
 class BottleneckAnalysis:
     """Bottleneck detection results.
-    
+
     Part 32: Identifies structural bottlenecks that limit parallelism.
     """
     # Key bottlenecks
     choke_points: list[str]  # Element keys that are choke points
     choke_point_impact: dict[str, int]  # Downstream count per choke point
-    
+
     # Resource bottlenecks (structural)
     resource_contention: dict[str, list[str]]  # resource_type -> [element_keys]
-    
+
     # Serialization chains
     longest_serial_chain: list[str]
     serial_chain_length: int
-    
+    serial_chains: list[SerialChain]  # UX-830: every chain, ranked
+
     # Fan-in/fan-out imbalances
     high_fanin_elements: list[tuple]  # [(key, fanin_count), ...]
     high_fanout_elements: list[tuple]  # [(key, fanout_count), ...]

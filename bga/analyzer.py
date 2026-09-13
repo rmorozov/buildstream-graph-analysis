@@ -2632,6 +2632,15 @@ class BuildEfficiencyAnalyzer:
                 'resource_contention': result.bottleneck.resource_contention,
                 'longest_serial_chain': result.bottleneck.longest_serial_chain,
                 'serial_chain_length': result.bottleneck.serial_chain_length,
+                # UX-830: every chain, ranked by weighted duration -
+                # `longest_serial_chain` above keeps its one exhibit
+                # byte for byte; this is the table it was missing.
+                'serial_chains': [
+                    {'rank': c.rank, 'members': c.members, 'length': c.length,
+                     'weighted_duration_us': c.weighted_duration_us,
+                     'wall_share': c.wall_share, 'best_split': c.best_split}
+                    for c in result.bottleneck.serial_chains
+                ],
                 # `UX-343`: rows, not positional pairs - the columns
                 # have had names since `UX-290` and the payload did not.
                 'high_fanin_elements': [

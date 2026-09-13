@@ -1211,6 +1211,239 @@
             "toolchain.bst"
         ],
         "serial_chain_length": 1,
+        "serial_chains": [
+            {
+                "rank": 1,
+                "members": [
+                    "toolchain.bst",
+                    "core.bst"
+                ],
+                "length": 2,
+                "weighted_duration_us": 19050000,
+                "wall_share": 0.4409722222222222,
+                "best_split": "core.bst"
+            },
+            {
+                "rank": 2,
+                "members": [
+                    "lib-b.bst",
+                    "app.bst"
+                ],
+                "length": 2,
+                "weighted_duration_us": 7150000,
+                "wall_share": 0.16550925925925927,
+                "best_split": "lib-b.bst"
+            },
+            {
+                "rank": 3,
+                "members": [
+                    "lib-d.bst",
+                    "app.bst"
+                ],
+                "length": 2,
+                "weighted_duration_us": 7150000,
+                "wall_share": 0.16550925925925927,
+                "best_split": "lib-d.bst"
+            },
+            {
+                "rank": 4,
+                "members": [
+                    "lib-f.bst",
+                    "app.bst"
+                ],
+                "length": 2,
+                "weighted_duration_us": 7150000,
+                "wall_share": 0.16550925925925927,
+                "best_split": "lib-f.bst"
+            },
+            {
+                "rank": 5,
+                "members": [
+                    "lib-a.bst",
+                    "lib-b.bst"
+                ],
+                "length": 2,
+                "weighted_duration_us": 7000000,
+                "wall_share": 0.16203703703703703,
+                "best_split": "lib-b.bst"
+            },
+            {
+                "rank": 6,
+                "members": [
+                    "lib-b.bst",
+                    "lib-c.bst"
+                ],
+                "length": 2,
+                "weighted_duration_us": 7000000,
+                "wall_share": 0.16203703703703703,
+                "best_split": "lib-b.bst"
+            },
+            {
+                "rank": 7,
+                "members": [
+                    "lib-c.bst",
+                    "lib-d.bst"
+                ],
+                "length": 2,
+                "weighted_duration_us": 7000000,
+                "wall_share": 0.16203703703703703,
+                "best_split": "lib-d.bst"
+            },
+            {
+                "rank": 8,
+                "members": [
+                    "lib-d.bst",
+                    "lib-e.bst"
+                ],
+                "length": 2,
+                "weighted_duration_us": 7000000,
+                "wall_share": 0.16203703703703703,
+                "best_split": "lib-d.bst"
+            },
+            {
+                "rank": 9,
+                "members": [
+                    "lib-e.bst",
+                    "lib-f.bst"
+                ],
+                "length": 2,
+                "weighted_duration_us": 7000000,
+                "wall_share": 0.16203703703703703,
+                "best_split": "lib-f.bst"
+            },
+            {
+                "rank": 10,
+                "members": [
+                    "toolchain.bst",
+                    "codegen.bst"
+                ],
+                "length": 2,
+                "weighted_duration_us": 7000000,
+                "wall_share": 0.16203703703703703,
+                "best_split": "codegen.bst"
+            },
+            {
+                "rank": 11,
+                "members": [
+                    "lib-a.bst",
+                    "app.bst"
+                ],
+                "length": 2,
+                "weighted_duration_us": 6150000,
+                "wall_share": 0.1423611111111111,
+                "best_split": "app.bst"
+            },
+            {
+                "rank": 12,
+                "members": [
+                    "lib-c.bst",
+                    "app.bst"
+                ],
+                "length": 2,
+                "weighted_duration_us": 6150000,
+                "wall_share": 0.1423611111111111,
+                "best_split": "app.bst"
+            },
+            {
+                "rank": 13,
+                "members": [
+                    "lib-e.bst",
+                    "app.bst"
+                ],
+                "length": 2,
+                "weighted_duration_us": 6150000,
+                "wall_share": 0.1423611111111111,
+                "best_split": "app.bst"
+            },
+            {
+                "rank": 14,
+                "members": [
+                    "toolchain.bst",
+                    "lib-b.bst"
+                ],
+                "length": 2,
+                "weighted_duration_us": 4000000,
+                "wall_share": 0.09259259259259259,
+                "best_split": "lib-b.bst"
+            },
+            {
+                "rank": 15,
+                "members": [
+                    "toolchain.bst",
+                    "lib-d.bst"
+                ],
+                "length": 2,
+                "weighted_duration_us": 4000000,
+                "wall_share": 0.09259259259259259,
+                "best_split": "lib-d.bst"
+            },
+            {
+                "rank": 16,
+                "members": [
+                    "toolchain.bst",
+                    "lib-f.bst"
+                ],
+                "length": 2,
+                "weighted_duration_us": 4000000,
+                "wall_share": 0.09259259259259259,
+                "best_split": "lib-f.bst"
+            },
+            {
+                "rank": 17,
+                "members": [
+                    "app.bst",
+                    "all.bst"
+                ],
+                "length": 2,
+                "weighted_duration_us": 3150000,
+                "wall_share": 0.07291666666666667,
+                "best_split": "app.bst"
+            },
+            {
+                "rank": 18,
+                "members": [
+                    "toolchain.bst",
+                    "app.bst"
+                ],
+                "length": 2,
+                "weighted_duration_us": 3150000,
+                "wall_share": 0.07291666666666667,
+                "best_split": "app.bst"
+            },
+            {
+                "rank": 19,
+                "members": [
+                    "toolchain.bst",
+                    "lib-a.bst"
+                ],
+                "length": 2,
+                "weighted_duration_us": 3000000,
+                "wall_share": 0.06944444444444445,
+                "best_split": "lib-a.bst"
+            },
+            {
+                "rank": 20,
+                "members": [
+                    "toolchain.bst",
+                    "lib-c.bst"
+                ],
+                "length": 2,
+                "weighted_duration_us": 3000000,
+                "wall_share": 0.06944444444444445,
+                "best_split": "lib-c.bst"
+            },
+            {
+                "rank": 21,
+                "members": [
+                    "toolchain.bst",
+                    "lib-e.bst"
+                ],
+                "length": 2,
+                "weighted_duration_us": 3000000,
+                "wall_share": 0.06944444444444445,
+                "best_split": "lib-e.bst"
+            }
+        ],
         "high_fanin_elements": [
             {
                 "element_uid": "app.bst",
@@ -2021,10 +2254,10 @@
         }
     ],
     "document_shape": {
-        "leaves": 1325,
+        "leaves": 1472,
         "deepest_depth": 7,
         "deepest_path": "findings.[].evidence.steps.[].entering.[]",
-        "deeper_than_three": 735,
-        "deeper_than_three_share": 0.5547169811320755
+        "deeper_than_three": 882,
+        "deeper_than_three_share": 0.5991847826086957
     }
 }

@@ -97,10 +97,16 @@ from bga.structural.models import (
     LevelOccupancy,
     ParallelismProfile,
     SensitivityResult,
+    SerialChain,
     StructuralAnalysisResult,
     StructuralMetrics,
     deferral_risk_for,
 )
+
+#: UX-830: mirrors `TABLE_OPENS_BOUNDED_ABOVE` in `bga/viewer/structured.js`
+#: - the row cap the ranked table opens bounded above, so the two stay
+#: the same number rather than drifting apart.
+SERIAL_CHAINS_MAX = 40
 
 #: `UX-539` used `int.bit_count()`, which is **3.10+**, and
 #: `requires-python` is `>=3.9`: 358 failed and 156 errored on the 3.9
@@ -325,7 +331,9 @@ class StructuralAnalyzer:
                 chain = self._find_longest_serial_chain_from(start)
                 if len(chain) > len(longest_chain):
                     longest_chain = chain
-        
+
+        serial_chains = self._find_serial_chains()
+
         # High fan-in/fan-out elements
         fanin_list = [(n, G.in_degree(n)) for n in G.nodes() if G.in_degree(n) > 2]
         fanout_list = [(n, G.out_degree(n)) for n in G.nodes() if G.out_degree(n) > 2]
@@ -338,6 +346,7 @@ class StructuralAnalyzer:
             resource_contention=dict(resource_contention),
             longest_serial_chain=longest_chain,
             serial_chain_length=len(longest_chain),
+            serial_chains=serial_chains,
             high_fanin_elements=fanin_list[:10],  # Top 10
             high_fanout_elements=fanout_list[:10],
         )
@@ -782,9 +791,65 @@ class StructuralAnalyzer:
                 break  # Branching point or leaf
             current = successors[0]
             chain.append(current)
-        
+
         return chain
-    
+
+    def _extend_chain(self, start: str, first: str) -> list[str]:
+        """`[start, first, ...]`, continuing only through 1-in-1-out nodes.
+
+        UX-830 (round-verifier fix): `_find_longest_serial_chain_from`
+        checks only the *current* node's out-degree, so a walk sails
+        straight through a join with several parents instead of ending
+        there - on a diamond `A,B -> C -> D -> E` the old walk from `A`
+        never stopped at `C`. An interior member must be 1-in-1-out;
+        the first member past a join is the join itself, appended once
+        and then re-checked, so it ends this chain and starts its own.
+        """
+        G = self._graph
+        members = [start, first]
+        current = first
+        while G.in_degree(current) == 1 and G.out_degree(current) == 1:
+            current = next(iter(G.successors(current)))
+            members.append(current)
+        return members
+
+    def _find_serial_chains(self) -> list[SerialChain]:
+        """Every maximal non-branching walk, ranked by weighted duration.
+
+        UX-830: a start is a root or join point (in-degree != 1); a
+        branching start's each out-edge begins its own walk via
+        `_extend_chain`, which stops at the next join or leaf - so
+        chains overlap only at their ends (a join is the tail of every
+        chain that reaches it and the head of its own).
+        """
+        G = self._graph
+        durations = self._durations()
+        longest_path = self._longest_path_us()
+        rows = []
+        for node in G.nodes():
+            if G.in_degree(node) == 1:
+                continue
+            for succ in G.successors(node):
+                members = self._extend_chain(node, succ)
+                if len(members) < 2:
+                    continue
+                weighted = sum(durations.get(m, 0) for m in members)
+                # The split that shortens the chain most: largest
+                # duration first, name breaks a tie deterministically.
+                best_split = min(members, key=lambda m: (-durations.get(m, 0), m))
+                wall_share = weighted / longest_path if longest_path else 0.0
+                rows.append((weighted, len(members), members, best_split, wall_share))
+        # Duration descending; length, then the start's own name, break
+        # a tie so the order is deterministic rather than iteration luck.
+        rows.sort(key=lambda row: (-row[0], -row[1], row[2][0]))
+        return [
+            SerialChain(rank=i + 1, members=members, length=length,
+                        weighted_duration_us=weighted, wall_share=wall_share,
+                        best_split=best_split)
+            for i, (weighted, length, members, best_split, wall_share)
+            in enumerate(rows[:SERIAL_CHAINS_MAX])
+        ]
+
     def _durations(self) -> dict[str, int]:
         """Duration in microseconds for every *graph* node.
 

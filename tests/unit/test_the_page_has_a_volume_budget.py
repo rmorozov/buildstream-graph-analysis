@@ -323,8 +323,29 @@ BUDGETS = (
     # p99, mean) where it drew nine - measured 35,900 -> 36,822 px on
     # `macro_micro` at the twin's commit, 36,815 at the round's head;
     # words, controls and nodes unmoved. 85 of headroom.
-    (50, 36_900, 12_800, 800, 7_900),
-    (4_100, 32_000, 9_400, 900, 5_500),
+    # `UX-830`: px 36,900 -> 38,200 on the 50 class; px 32,000 ->
+    # 36,500, words 9,400 -> 9,600, nodes 5,500 -> 6,000 on the 4,100
+    # class. `bottleneck.serial_chains` is a new ranked table on every
+    # run; caught by `make test`, not the track's own `make
+    # test-touching`, the same miss `UX-717`'s note names - this file
+    # was not selected until a later commit touched `styleguide.md`
+    # for an unrelated reason. Measured with and without (returning
+    # `[]` from `_find_serial_chains`), `_LOOK`'s `opened` state:
+    #
+    #             px (with)  px (without)   nodes (with)  nodes (without)
+    #     macro_micro 37,719      36,842(*)         5,767            5,548
+    #     scale       32,869      30,420            5,453            5,052
+    #     xl          35,646(*)   31,376             5,782            5,346
+    #
+    # (*) `macro_micro`'s "without" and `xl`'s "with" are read off a
+    # direct fixture path rather than through `pages.pages()`'s
+    # snapshot copy - the other three pairs matched the guard's own
+    # numbers exactly, so the small offset this can carry is inside
+    # the headroom below. Controls and `golden`/`macro_micro` words
+    # are unmoved (each within its budget already). 481, 854/162/218
+    # of headroom, the order the notes above leave.
+    (50, 38_200, 12_800, 800, 7_900),
+    (4_100, 36_500, 9_600, 900, 6_000),
 )
 
 

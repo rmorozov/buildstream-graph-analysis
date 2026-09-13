@@ -2287,6 +2287,38 @@ _STRUCTURAL_TABLES = {
                 QUANTITY: "count",
                 "description": "The longest run of elements that must "
                                "go one after another."},
+            # UX-830: `longest_serial_chain` keeps one exhibit; a
+            # second chain a second shorter than the first moves the
+            # critical path there the moment the first is split, and
+            # this is where a reader finds it before the next capture.
+            "serial_chains": {
+                "description": "Every maximal non-branching run of "
+                               "elements, ranked by how much of the "
+                               "build's duration it accounts for - "
+                               "capped the same as any other table "
+                               "(`SERIAL_CHAINS_MAX`).",
+                QUESTION: "Which chain should I split first?",
+                COLUMNS: [
+                    {"key": "rank", "title": "Rank",
+                     "quantity": "count", "sortable": True},
+                    {"key": "best_split", "title": "Split this first",
+                     "role": "element", "sortable": True,
+                     "description": "The member whose duration is "
+                                    "largest - splitting it shortens "
+                                    "this chain the most."},
+                    {"key": "length", "title": "Length",
+                     "quantity": "count", "sortable": True},
+                    {"key": "weighted_duration_us", "title": "Duration",
+                     "quantity": "duration_us", "sortable": True,
+                     "description": "The members' durations, summed."},
+                    {"key": "wall_share", "title": "Of longest path",
+                     "quantity": "share", "sortable": True,
+                     "description": "This chain's duration over the "
+                                    "run's longest weighted path."},
+                    {"key": "members", "title": "Members",
+                     "sortable": False,
+                     "description": "The chain, in walk order."},
+                ]},
             # UX-283: the choke points are an element table like
             # any other, so they earn the Inspect route and the
             # sort every other element table has. Before this

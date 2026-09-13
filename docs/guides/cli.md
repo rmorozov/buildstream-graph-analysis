@@ -992,7 +992,7 @@ columns are the whole statement of what one of its rows holds, and
 finding one level up: `parallelism` is a top-level *object*, its
 `levels` rows are below that, and a population reaching only under a
 top-level array published the whole of a major bump outside itself.
-The surface is **263 keys** today, and that figure is derived from the
+The surface is **269 keys** today, and that figure is derived from the
 walk rather than typed here.
 
 So the statement of coverage, which is now a statement and not a
@@ -1073,6 +1073,7 @@ can look one up.
 |---|---|
 | `level`, `width`, `elements` | A row of `parallelism.levels`, one per level of the graph from the roots down: its longest path in edges from a source (roots are `level` 0), how many elements sit there, and which ones — what could run at once, once everything above it is built. |
 | `fan_in`, `fan_out` | A row of `bottleneck.high_fanin_elements` and `high_fanout_elements`: dependencies this element names, and elements naming this one as a dependency. Degrees of the graph, never a transitive count — `blast_radius` is that. |
+| `rank`, `best_split`, `weighted_duration_us`, `wall_share`, `members` | A row of `bottleneck.serial_chains` (`UX-830`): every maximal non-branching run, ranked by summed duration, not the single `longest_serial_chain` exhibit above it. `best_split` is the member whose own duration is largest — splitting it shortens the chain most; `wall_share` is `weighted_duration_us` over the run's longest weighted path; `length` (shared with the fan-degree rows above) is the member count. |
 | `direct_count`, `transitive_count`, `immediate_dominator` | A row of `elements.fan_in` (`UX-681`): the dependencies this element names, everything those pull in behind them, and the nearest element every path from a root passes through — the rebuild it waits on, which is not the same as a dependency. `direct_count` is the degree `bottleneck.high_fanin_elements` ranks the top five of; whether those edges were read is `element_join.dependency_read_share`. |
 | `assessed_dependencies`, `dependency_read_share` | A row of `element_join`: how many of this element's dependencies Plane 2 could judge — the ones it saw opened plus the ones it saw nothing from — and how many of those were read. What `unused_dependencies` is a list *of*. A dependency with no observed opens at all is uncovered and in neither, so the share is absent rather than 1.0. |
 | `phase`, `elapsed_us` | A row of `pipeline_overhead`: the named stage of the run, and the wall-clock it spanned. |

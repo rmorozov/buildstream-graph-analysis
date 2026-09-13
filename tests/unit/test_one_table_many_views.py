@@ -74,15 +74,23 @@ PUBLISHED_VIEWS = {
     "Choke points": "bottleneck.choke_points",
 }
 
-# The one pair of tables that draw the same elements on this fixture and
+# The pairs of tables that draw the same elements on this fixture and
 # not on the 1,202-element run - see
 # `test_no_two_tables_carry_the_same_elements` for the measurement.
 # UX-285: by `data-table` path rather than by position, so it names the
 # two tables the docstring names and survives a section moving.
 # `UX-344` lifted `structural`, so `top_opportunities` is drawn in a
 # section of its own and the path it is named by lost a level.
+# `UX-830`: `serial_chains` and `binary_cost` draw the same nine
+# elements on this fixture - every element but `toolchain.bst` and
+# `all.bst`, which run no binary of their own and never win a chain's
+# `best_split` (the only column `serial_chains` names an element by
+# outside the folded `members` cell). `binary_cost` needs Plane 2,
+# which only this committed fixture carries, so there is no second run
+# to measure the coincidence away on.
 KNOWN_COINCIDENCE = ["batch_opportunities.serialized_pairs and "
-                     "top_opportunities (5)"]
+                     "top_opportunities (5)",
+                     "binary_cost and serial_chains (9)"]
 
 # The bound, stated here rather than read from `schemas`. Reading the
 # constant and asserting against it is the mutation that passes:

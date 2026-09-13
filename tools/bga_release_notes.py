@@ -104,7 +104,7 @@ def render(start: int, end: int) -> str:
         for row in grouped[topic]:
             lines.append(f"- {row['link']} — {_first_sentence(row['summary'])}")
         lines.append("")
-    return "\n".join(lines)
+    return "\n".join(lines) + "\n"
 
 
 def main(argv=None) -> int:

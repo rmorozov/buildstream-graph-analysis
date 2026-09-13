@@ -1,6 +1,6 @@
 # `bga`: Current Architecture — Three Analysis Planes
 
-**Start here to orient in this codebase.** `docs/spec/specification.md` (v9) is the original design document and stays authoritative for full-length invariant/data-contract text — it is *not* wrong, but it describes the tool as originally scoped, and does not know about anything built since. This doc describes what `bga` actually does **today**, as one coherent system, and points at the real file/doc for every claim so you don't have to reconstruct that history yourself from the commit log, the 835 `docs/backlog/scenarios/` files and the 75 `docs/backlog/tasks/` files this commit carries.
+**Start here to orient in this codebase.** `docs/spec/specification.md` (v9) is the original design document and stays authoritative for full-length invariant/data-contract text — it is *not* wrong, but it describes the tool as originally scoped, and does not know about anything built since. This doc describes what `bga` actually does **today**, as one coherent system, and points at the real file/doc for every claim so you don't have to reconstruct that history yourself from the commit log, the 836 `docs/backlog/scenarios/` files and the 75 `docs/backlog/tasks/` files this commit carries.
 
 **Want to *use* the tool rather than work on it?** [`docs/guides/real-project.md`](../guides/real-project.md) is the end-to-end walkthrough on a real project, with real output at every step.
 
@@ -363,7 +363,7 @@ description, and this table's job is only to say which one to open.
 | `tables.js` | the element table, its columns, sorting and the preset filters `bga:presets` declares |
 | `nav.js` | the rail, the anchors, section collapse, and the jump box / command palette |
 | `chapters.js` | the chapter grouping that turns forty-eight sections into a document (`UX-286`) |
-| `viewstate.js` | the URL fragment contract — the working set `UX-211` and `UX-225` publish links against |
+| `viewstate.js` | the URL fragment contract — the working set `UX-211` and `UX-225` publish links against — and the one per-browser preference that stays in storage, the copy format (`UX-280`) |
 | `focus.js` | focusing one element and dimming the rest (`UX-222`) |
 | `tablefocus.js` | opening one nested or capped table full width, and putting it back (`UX-318`) |
 | `drawings.js` | sparklines and density strips: the size scale, the two drawing grades, and the boundary on what one may print (`UX-303`, `UX-316`) |
@@ -497,6 +497,26 @@ and is superseded now is what the record says, and sweeping it forward
 with the tables above destroys the one thing the entry is for
 (`UX-653`). The newest entry is the exception: every round that
 re-grounds the document rewrites it.
+
+Updated 2026-09-13 (after `UX-837`), covering one change to this
+document — the `viewstate.js` row in "Which file owns what" now names
+the copy-format preference (`UX-280`'s `COPY_FORMAT_KEY`,
+`COPY_FORMAT_MIRROR`, `readCopyFormat`, `writeCopyFormat`; 31 lines),
+which moved there from `structured.js` when `UX-829`'s sixth preset
+put that module at 1,502 lines against `UX-337`'s 1,500 ceiling
+(1,472 and 356 lines after; `wc -l`). The move is re-grounded in the
+derived seam and the 21 test files naming `architecture.md`:
+`python3 tools/dev_js_deps.py --crossings bga/viewer/structured.js`
+showed the group needed nothing from the rest and the rest needed
+its three names, `--order` stays acyclic with `viewstate.js` inlined
+before `structured.js`, and `python3 -m pytest $(grep -ln
+"architecture.md" tests/unit/*.py) -q` ran 434 passed with this guard
+the only red before this entry. The two contract tables above are
+unchanged: **25 emitted ids**, and `analyze/v6` at **61 top-level properties**,
+and `bga/viewer/` still **22 modules** (`ls bga/viewer/*.js | wc -l`).
+The round published keys under existing sections (`serial_chains`,
+`fan_in[].direct`, `price_cost_us`, `start_offset_us`,
+`source_kind_map`) and moved none.
 
 Updated 2026-09-12 (after `UX-816`), covering one change to this
 document — the `bga` area's five chapters ("Joining the planes", "What

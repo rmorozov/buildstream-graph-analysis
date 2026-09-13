@@ -343,7 +343,12 @@ BUDGETS = (
     # numbers exactly, so the small offset this can carry is inside
     # the headroom below. Controls and `golden`/`macro_micro` words
     # are unmoved (each within its budget already). 481, 854/162/218
-    # of headroom, the order the notes above leave.
+    # of headroom, the order the notes above leave. Re-measured on
+    # the round's merged tree (`UX-827`'s twin, `UX-829`'s preset and
+    # `UX-831`'s columns beside it): macro_micro 37,743 px, 12,769
+    # words, 5,770 nodes; xl 35,669 px, 9,456 words, 5,785 nodes;
+    # scale 32,893 px, 9,321 words, 5,456 nodes - 457/31/2,130 and
+    # 831/144/215 of headroom.
     (50, 38_200, 12_800, 800, 7_900),
     (4_100, 36_500, 9_600, 900, 6_000),
 )

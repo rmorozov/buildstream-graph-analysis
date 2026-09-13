@@ -739,6 +739,9 @@ every run, measured `opened` with and without it (returning `[]` from
 5,782 nodes. Caught by `make test`, not `make test-touching` - the same
 miss `UX-717`'s note names, one commit later than the change that
 caused it.
+Re-measured on the round's merged tree: macro_micro 37,743 px and
+12,769 words, xl 35,669 px, 9,456 words and 5,785 nodes - 457, 31 and
+831, 144, 215 of headroom.
 
 `tests/unit/test_the_page_has_a_volume_budget.py` asserts both budgets
 in **one** guard, so a change trading one for the other has to say so.

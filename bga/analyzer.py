@@ -2056,6 +2056,7 @@ class BuildEfficiencyAnalyzer:
             "max_jobs": {element.uid: element.max_jobs
                          for element in self.graph.elements},
             "successors": successors,
+            "started_us": self.run_context.wall_start_us,
         })
 
     def _compute_utilization(self, occupancy_stats: dict) -> dict:

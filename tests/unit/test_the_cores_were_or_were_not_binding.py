@@ -246,3 +246,22 @@ class TestTheFixtureSaysWhatItMeasured:
 
 if __name__ == "__main__":  # pragma: no cover
     raise SystemExit(pytest.main([__file__, "-v"]))
+
+
+class TestARowSaysWhenAfterTheRunsStart:
+    """`UX-823`: From is an offset into the run, never a wall-clock base."""
+
+    def test_every_interval_carries_the_offset(self, analysed):
+        started = analysed.run_context.wall_start_us
+        span = analysed.run_context.wall_end_us - started
+        rows = (analysed.underutilized_intervals
+                + analysed.overcommitted_intervals)
+        assert rows, "no interval to read - the fixture lost its host series"
+        for row in rows:
+            assert row["start_offset_us"] == row["start_us"] - started, row
+            assert 0 <= row["start_offset_us"] < 2 * span, row
+
+    def test_the_from_column_reads_the_offset(self):
+        from bga.schemas import _INTERVAL_COLUMNS
+        keys = [c["key"] for c in _INTERVAL_COLUMNS]
+        assert "start_offset_us" in keys and "start_us" not in keys, keys

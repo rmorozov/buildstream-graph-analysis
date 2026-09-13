@@ -137,6 +137,10 @@ def _row(window: dict, run: dict, binding: float) -> dict:
                      - set(who["building"]))
     row = {
         "start_us": window["start_us"], "end_us": window["end_us"],
+        # `UX-823`: the reader's "when" - an offset from the run's start.
+        # `start_us` stays for the Perfetto bounds; a wall-clock base
+        # rendered as a duration read "497003.7 h".
+        "start_offset_us": window["start_us"] - run["started_us"],
         "duration_us": window["duration_us"],
         "busy_cores": window["busy_cores"],
         "capacity_cores": binding,
@@ -187,6 +191,9 @@ def compute(samples: dict, run: dict) -> dict:
                 "`builders x max-jobs`, so there is no capacity to read "
                 "the series against"}
     windows = intervals(series)
+    if run.get("started_us") is None:
+        run = {**run, "started_us": min((t["start_us"] for t in run["tasks"]),
+                                          default=windows[0]["start_us"] if windows else 0)}
     busy = [window["busy_cores"] for window in windows]
     under = [window for window in windows
              if binding - window["busy_cores"] >= IDLE_CORES_FLOOR

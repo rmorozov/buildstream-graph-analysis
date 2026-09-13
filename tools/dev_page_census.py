@@ -4,13 +4,17 @@
 Boots an export once through `tests/browser.py` and prints its
 structure as JSON: sections (id, chapter, depth), rail entries,
 controls grouped by selector class (selector, label, count, one
-example section), tables with a nested table inside a cell (`UX-532`'s
-shape), drawings and whether each carries its table twin (styleguide
-§2a), which planes the run carries, and the counters
+example section), every `<table>` (rows, visible rows, badge, filter
+and sort counts, `data-joined`, `data-levels`, a "show all" control -
+`UX-836`), tables with a nested table inside a cell (`UX-532`'s shape),
+drawings and whether each carries its table twin (styleguide §2a),
+which planes the run carries, and the counters
 `test_the_page_has_a_volume_budget.py` already takes.
 
 A walker or a design review reads this before touching the page and
-drives one instance per class it names; this tool drives nothing.
+drives one instance per class it names; this tool drives nothing -
+chapters and folds are opened by attribute, not by click, so a table
+behind one is not missed.
 """
 import argparse
 import json
@@ -132,8 +136,79 @@ CENSUS_JS = r"""
   const trace = document.querySelector("#perfetto-questions [data-planes]")
     ?.getAttribute("data-planes") || null;
 
+  // The same instrument `test_the_page_has_a_volume_budget.py` reads, at
+  // the page's landed state - read *before* `tables` opens anything
+  // below, so this still reports what the export loads with, not what
+  // this run went on to unfold.
+  const counters = {
+    height: document.documentElement.scrollHeight,
+    words: (main.textContent || "").trim().split(/\s+/).filter(Boolean).length,
+    controls: document.querySelectorAll("button, input, select, a").length,
+    nodes: document.querySelectorAll("*").length,
+    sections: sections.length,
+  };
+
+  // `UX-836`: a chapter, a collapsed section and a value fold all close
+  // by attribute or by `open`, never by leaving the DOM - `sections`
+  // above already finds every one of them shut. Opened here the same
+  // way, by attribute, so a table sitting behind one is not missed for
+  // a reason a reader's own click would have fixed; the row-level Top-N
+  // bound is a different control and stays untouched (`UX-665`'s "the
+  // census reads, it does not click", and the only one this file may
+  // still miss a nested table behind).
+  document.querySelectorAll("section.chapter").forEach(
+    (c) => c.setAttribute("data-open", "true"));
+  document.querySelectorAll("section[data-section][data-collapsed]").forEach(
+    (s) => s.setAttribute("data-collapsed", "false"));
+  document.querySelectorAll("details").forEach((d) => { d.open = true; });
+
+  const ownTbody = (t) => [...t.children].find((c) => c.tagName === "TBODY")
+    || null;
+  const ownThead = (t) => [...t.children].find((c) => c.tagName === "THEAD")
+    || null;
+
+  // `UX-836`: one entry per `<table>`, own-scoped throughout - a nested
+  // table's badge, filters and header cells are its own, never counted
+  // against the table that holds it (`UX-532`'s shape again).
+  const tables = [...main.querySelectorAll("table")].map((t) => {
+    const body = ownTbody(t);
+    const visibleRows = body
+      ? [...body.children].filter((tr) => tr.tagName === "TR").length : 0;
+    const declaredRows = t.getAttribute("data-rows");
+    const wrapper = t.parentElement;
+    // The nearest `.badge` that is not itself inside this table: tools
+    // sit before the table in document order, so the first match found
+    // this way is this table's own, never a nested table's.
+    const badgeEl = wrapper ? [...wrapper.querySelectorAll(".badge")]
+      .find((b) => !t.contains(b)) : null;
+    // `input.table-filter` only - `UX-349`'s row-cap search box, not
+    // the `.copy-markdown` checkbox every table's tools also carry.
+    const filters = wrapper ? [...wrapper.querySelectorAll("input.table-filter")]
+      .filter((inp) => !t.contains(inp)).length : 0;
+    const thead = ownThead(t);
+    const sortable = thead
+      ? thead.querySelectorAll('th[data-sortable="true"]').length : 0;
+    const joinedAncestor = t.closest("[data-joined]");
+    const foldAncestor = t.closest("details[data-levels]");
+    return {
+      section: nearestSection(t),
+      rows: declaredRows !== null ? Number(declaredRows) : visibleRows,
+      visible_rows: visibleRows,
+      badge: badgeEl ? badgeEl.textContent.trim() : null,
+      filters,
+      sortable,
+      data_joined: joinedAncestor?.getAttribute("data-joined") ?? null,
+      data_levels: foldAncestor?.getAttribute("data-levels") ?? null,
+      // `select.top-n`'s "All rows" option, or a fold's own "+N more":
+      // the table's own way past whatever bounded it.
+      show_all: Boolean(wrapper?.querySelector?.("select.top-n"))
+        || Boolean(wrapper?.querySelector?.(".fold-more")),
+    };
+  });
+
   return {
     sections, rail, controls,
+    tables,
     tables_with_nested: tablesWithNested,
     drawings,
     planes: {
@@ -141,15 +216,7 @@ CENSUS_JS = r"""
              && !statusText.includes("Plane 2 not captured"),
       trace,
     },
-    // The same instrument `test_the_page_has_a_volume_budget.py` reads,
-    // at the page's landed state - this boots once and drives nothing.
-    counters: {
-      height: document.documentElement.scrollHeight,
-      words: (main.textContent || "").trim().split(/\s+/).filter(Boolean).length,
-      controls: document.querySelectorAll("button, input, select, a").length,
-      nodes: document.querySelectorAll("*").length,
-      sections: sections.length,
-    },
+    counters,
   };
 })()
 """.replace("__ROLE_ATTRS__", json.dumps(_ROLE_ATTRS))

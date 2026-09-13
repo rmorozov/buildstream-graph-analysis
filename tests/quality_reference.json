@@ -102,7 +102,7 @@
     "tools/dev_js_deps.py": {"duplicate_blocks": 0, "file_lines": 486, "longest_function": 81},
     "tools/dev_junit_tail.py": {"duplicate_blocks": 0, "file_lines": 95, "longest_function": 23},
     "tools/dev_mutation.py": {"duplicate_blocks": 0, "file_lines": 274, "longest_function": 45},
-    "tools/dev_page_census.py": {"duplicate_blocks": 0, "file_lines": 192, "longest_function": 15},
+    "tools/dev_page_census.py": {"duplicate_blocks": 0, "file_lines": 259, "longest_function": 15},
     "tools/dev_perf_ratchet.py": {"duplicate_blocks": 0, "file_lines": 249, "longest_function": 44},
     "tools/dev_perfetto_queries.py": {"duplicate_blocks": 0, "file_lines": 214, "longest_function": 63},
     "tools/dev_plane_capability.py": {"duplicate_blocks": 0, "file_lines": 384, "longest_function": 48},

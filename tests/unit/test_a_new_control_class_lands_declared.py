@@ -138,5 +138,65 @@ class TestEveryControlClassIsDeclared:
             f"{censuses['shared_resource']['tables_with_nested']}")
 
 
+#: `tools/dev_page_census.py`'s `tables` entry, per `UX-836`.
+TABLE_KEYS = {"section", "rows", "visible_rows", "badge", "filters",
+              "sortable", "data_joined", "data_levels", "show_all"}
+
+
+@pytest.fixture(scope="module")
+def scale_census(tmp_path_factory, browser):
+    """The 1,202-element synthetic run, the only committed-or-built page
+    whose tables cross `UX-349`'s row cap - `golden`'s longest table is
+    25 rows, and the cap is 40. Not a fixture: `pages.scale_run` is a
+    deterministic `gen-synthetic --seed 1`, 2.6s to generate and export.
+    """
+    import tools.bga_view as view
+
+    into = tmp_path_factory.mktemp("table-census-scale")
+    run = pages.scale_run(into)
+    page = into / "scale.html"
+    view.export(str(run), str(page))
+    return census_tool.census(page.as_uri(), browser)
+
+
+@needs_browser
+@pytest.mark.medium
+class TestTheTableCensus:
+    def test_every_table_entry_carries_the_declared_keys(self, censuses):
+        for label in pages.FIXTURES:
+            for entry in censuses[label]["tables"]:
+                assert set(entry) == TABLE_KEYS, (label, entry)
+
+    def test_the_table_count_matches_the_dom_independently(
+            self, censuses, tmp_path_factory, browser):
+        """`UX-836`: the census's own count against a plain DOM query on
+        a fresh boot - not the call `censuses` already made, so a count
+        that only holds for one shared page load cannot hide here."""
+        uri = pages.export_uri(
+            pages.FIXTURES["golden"], tmp_path_factory.mktemp("table-census"))
+        dom_count = browser.measure(
+            uri, "(document.querySelector('main') || document.body)"
+                 ".querySelectorAll('table').length")
+        assert len(censuses["golden"]["tables"]) == dom_count
+
+    def test_filters_excludes_the_copy_checkbox(self, censuses):
+        """Every `golden` table is under `UX-349`'s cap, so none carries
+        `input.table-filter` - but 14 of its 18 tables carry
+        `input.copy-markdown`, the control a wider `input` selector
+        would have miscounted as a filter."""
+        assert all(t["filters"] == 0 for t in censuses["golden"]["tables"]), (
+            censuses["golden"]["tables"])
+        checkbox = next(c for c in censuses["golden"]["controls"]
+                        if c["selector"] == "input.copy-markdown")
+        assert checkbox["count"] >= 1, checkbox
+
+    def test_a_bounded_table_reports_its_own_filter(self, scale_census):
+        """The one table on `scale` past the cap: badge `25 of 1,202`,
+        one `input.table-filter` in its own tools."""
+        elements = next(t for t in scale_census["tables"]
+                        if t["section"] == "elements")
+        assert elements["filters"] >= 1, elements
+
+
 if __name__ == "__main__":  # pragma: no cover
     raise SystemExit(pytest.main([__file__, "-v"]))

@@ -67,6 +67,15 @@ measured 3 with the reason.
   on the 50-element class, 32,000 → 36,500 px on the 4,100 class,
   re-measured on the merged tree (macro_micro 37,743, xl 35,669).
 
+## Review 23
+
+The cadence guard reddened at the gate — 26 closed rows since review
+22 — so review 23 ran there, over rounds 114–116's documents: three
+filings (`UX-838` to `UX-840`), two of them review 22's shape one turn
+further (a guard satisfied by the sentence beside the drifted table or
+key), one the README's undated clone figure. The §3e table this round
+left one item behind was corrected at filing; the rest stay open.
+
 ## Process, measured
 
 - Six tracks at once pushed load to 30+ on four cores; one selector
@@ -95,7 +104,7 @@ measured 3 with the reason.
 
 ## Agents
 
-Thirty-three runs — 16 `implementer` (five resumed), 17 `verifier`,
+Thirty-four runs — 16 `implementer` (five resumed), 17 `verifier`, 1 `general-purpose` (review 23),
 all on `sonnet`; the session took `UX-819`, `UX-823`, `UX-827` and
 the `UX-818` parity fix. The rows are in the ledger.
 

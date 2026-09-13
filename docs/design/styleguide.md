@@ -730,6 +730,16 @@ where it drew nine - measured 35,900 -> 36,822 opened on `macro_micro`
 at the twin's commit, 36,815 at the round's head; words, controls and
 nodes unmoved.
 
+`UX-830` moved the small class's height bound 36,900 -> 38,200, and the
+4,100 class's height 32,000 -> 36,500, words 9,400 -> 9,600 and nodes
+5,500 -> 6,000: `bottleneck.serial_chains` is a new ranked table on
+every run, measured `opened` with and without it (returning `[]` from
+`_find_serial_chains`) - macro_micro 36,842 -> 37,719 px, scale 30,420
+-> 32,869 px / 5,052 -> 5,453 nodes, xl 31,376 -> 35,646 px / 5,346 ->
+5,782 nodes. Caught by `make test`, not `make test-touching` - the same
+miss `UX-717`'s note names, one commit later than the change that
+caused it.
+
 `tests/unit/test_the_page_has_a_volume_budget.py` asserts both budgets
 in **one** guard, so a change trading one for the other has to say so.
 It also holds the bounds to being reachable: the largest run in each
@@ -1691,7 +1701,7 @@ headings, so a renumber there moves it.
 | §2e | | no guard cites it |
 | §2f | `test_a_distribution_twin_draws_every_mark.py` | |
 | §3 | `test_the_tools_scale_with_the_table.py`, `test_one_click_from_investigation.py` | named |
-| §3a | `test_a_level_names_who_is_in_it.py`, `test_a_value_shows_what_it_is.py`, `test_the_chain_folds_and_clicks_are_counted.py`, `test_the_fold_says_how_deep_it_goes.py`, `test_the_max_jobs_advice_is_one_level.py`, `test_the_merge_carries_every_field.py`, `test_the_page_conforms_to_its_sections.py`, `test_the_provenance_names_its_rule.py`, `test_the_report_you_can_attach.py`, `test_the_store_section_takes_a_window.py`, `test_why_bga_believes_what_it_believes.py` | |
+| §3a | `test_a_level_names_who_is_in_it.py`, `test_a_value_shows_what_it_is.py`, `test_the_chain_folds_and_clicks_are_counted.py`, `test_the_fold_says_how_deep_it_goes.py`, `test_the_max_jobs_advice_is_one_level.py`, `test_the_merge_carries_every_field.py`, `test_the_page_conforms_to_its_sections.py`, `test_the_provenance_names_its_rule.py`, `test_the_report_you_can_attach.py`, `test_the_serial_chains_are_ranked.py`, `test_the_store_section_takes_a_window.py`, `test_why_bga_believes_what_it_believes.py` | |
 | §3b | `test_the_chain_folds_and_clicks_are_counted.py`, `test_the_page_conforms_to_its_sections.py` | |
 | §3c | `test_a_new_control_class_lands_declared.py`, `test_the_merge_carries_every_field.py` | `UX-665`'s registry names the § each control class belongs to, so the census cites this one for the rail's; §3e's volume budget is still the measured half |
 | §3d | `test_a_capped_table_filters_what_it_sorts.py`, `test_a_new_control_class_lands_declared.py`, `test_the_max_jobs_advice_is_one_level.py`, `test_the_merge_carries_every_field.py` | `UX-349`'s `test_the_tools_scale_with_the_table.py` also holds it and cites §3 |

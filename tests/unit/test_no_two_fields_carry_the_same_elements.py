@@ -170,6 +170,17 @@ def _is_a_fan_in_measure(path):
     already excuses twice.
     """
     return bool(re.match(r"^elements\.fan_in\.[\w./-]+\.bst\.direct$", path))
+def _is_a_two_hop_chain(path, members):
+    """`UX-830`'s `bottleneck.serial_chains[].members` at length 2 is
+    the same coincidence `_is_an_edge` already excuses, one field over:
+    a two-element chain *is* a graph edge under another name, and it
+    coincides with `restructuring[0].edges` by the same construction -
+    `lib-a.bst -> lib-b.bst` is both an unread declared edge and the
+    whole of a length-2 chain. A **longer** chain is not exempted: three
+    or more elements is a real walk, and a duplicate of one there would
+    be worth seeing.
+    """
+    return bool(re.search(r"serial_chains\[\d+\]\.members$", path)) and len(members) == 2
 
 
 def _clashes(payload):
@@ -221,7 +232,9 @@ def _clashes(payload):
                 continue
             if _is_narrative(name) or _is_narrative(other):
                 continue
-            if _is_an_edge(name) and _is_an_edge(other):
+            name_is_edge = _is_an_edge(name) or _is_a_two_hop_chain(name, members)
+            other_is_edge = _is_an_edge(other) or _is_a_two_hop_chain(other, members)
+            if name_is_edge and other_is_edge:
                 continue
             if name in measures or other in measures:
                 continue

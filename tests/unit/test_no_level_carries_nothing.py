@@ -114,7 +114,19 @@ FIXTURES = {"golden": REPO / "tests/fixtures/golden/mixed_task_kinds",
 #
 # `macro_micro` stays at 0.58 - it has the headroom and the number
 # moved the other way besides.
-DEEPER_THAN_THREE = {"golden": (0.574, 0.51), "macro_micro": (0.671, 0.58)}
+#
+# `UX-830` moves the golden bound 0.51 -> 0.52: `bottleneck.serial_chains`
+# is a fourth array-of-records field with a nested leaf population, and
+# its `members` cell is a list one level below that - depth four by the
+# same construction as `blast_radius`/`fan_in`. Measured live (this
+# guard reads `tools.bga_view.payloads`, not a committed snapshot):
+#
+#     golden       794 -> 802 leaves, 403 -> 411 deep, 0.5076 -> 0.5125
+#     macro_micro 2401 -> 2559 leaves, 1075 -> 1233 deep, 0.4477 -> 0.4818
+#
+# `macro_micro` stays at 0.58 - it moved the same direction but has
+# more headroom (11 elements' worth of chains against golden's 4).
+DEEPER_THAN_THREE = {"golden": (0.574, 0.52), "macro_micro": (0.671, 0.58)}
 
 #: `macro_micro` keeps a seventh level, argued in the item: a step's
 #: `entering` list is four real relations, not a namespace.

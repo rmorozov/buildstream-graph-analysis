@@ -19,15 +19,26 @@
      and `tests/unit/test_apparatus_in_its_place.py` holds them: the
      save-the-trace sentence used to render here, two blocks above the
      control it explains, and it "occupies precious vertical height"
-     before the reader has seen a single number. -->
+     before the reader has seen a single number.
+     UX-828 (styleguide §3i): at most 72px. The wordmark is the brand,
+     never overwritten; the alias and start instant are the run's
+     identity, beside the reader picker `UX-668` wires into
+     `#run-producer`. The absolute path left for `run_instance`
+     (`UX-285`) and `#wordmark`'s `title`; the version line left for
+     the footer. -->
 <header>
-  <h1 id="run-name">bga</h1>
-  <p id="run-path" class="muted"></p>
-  <!-- UX-255: which build measured this run (UX-249's producer stamp).
-       Hidden until app.js has a payload to fill it from, so a page that
-       failed to load never shows a heading that claims something. -->
+  <h1 id="wordmark">bga</h1>
+  <p id="run-identity" class="muted">
+    <span id="run-name"></span><span id="run-instant"></span>
+  </p>
+  <!-- UX-668 (styleguide §4 rule 7): the reader picker's home. Hidden
+       until `decision.js` has two readers to offer - `UX-194`'s
+       dead-control rule. -->
   <p id="run-producer" class="muted" hidden></p>
 </header>
+<!-- UX-828: the path is data for `#wordmark`'s `title`, never shown -
+     `run_instance.run_dir` (styleguide §3i) is where a reader reads it. -->
+<p id="run-path" hidden></p>
 <!-- UX-317 (styleguide §2b.1): **a control's explanation lives with the
      control.** The Perfetto button, the link that works when the pop-up
      does not, and the file to drag into Perfetto yourself are one group
@@ -93,6 +104,10 @@
   <p class="muted">Loading…</p>
 </main>
 <footer class="muted">
+  <!-- UX-828 (styleguide §3i): which build measured this run
+       (`UX-249`'s producer stamp), off the sticky header. Hidden until
+       app.js has a payload to fill it from. -->
+  <p id="version-line" class="muted" hidden></p>
   <p>Rendered from this run's published JSON — the same document
      <code>bga analyze --format json</code> prints.
      <a href="report.json">report.json</a> ·

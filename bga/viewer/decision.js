@@ -631,6 +631,9 @@ function wireReaderControl(payload, slot) {
   wrap.className = "reader-picker";
   wrap.append(label, select, " — ", question);
   host.append(" ", wrap);
+  // `UX-828`: `host` starts `hidden` now that it holds only the picker
+  // - the producer stamp that used to unhide it moved to the footer.
+  host.hidden = false;
 }
 
 /** The document the picker sits in, walked rather than looked up: the

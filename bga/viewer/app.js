@@ -59,18 +59,40 @@ import { decisionInvestigation, investigate, investigateButton, render,
 
 /** Type-ahead over section names and element uids. Scrolls; never filters. */
 /**
- * UX-255: the heading says which build measured this run.
+ * UX-255: which build measured this run.
  *
- * `UX-249`'s producer stamp, rendered where a reader who screenshots
- * the top of the page captures it. Deliberately one line: a heading
- * that grows into a second report is `UX-254`'s defect moved upward.
+ * `UX-249`'s producer stamp. `UX-828` (styleguide §3i) moved it into
+ * the footer, off the sticky header it used to cost on every screen.
  *
  * An unstamped run - every artifact written before `UX-249` - says so,
  * because "we do not know which build wrote this" and "this build"
  * must not look alike.
  */
+/**
+ * `UX-828` (styleguide §3i): the header's middle line - the run's
+ * alias and, when the capture recorded one, its start instant. The
+ * path this used to hold moves to `run_instance` (`UX-285`, already
+ * generic-rendered from `payload.run_instance.run_dir`) and onto
+ * `#wordmark`'s `title`, so a reader who wants it still has it.
+ */
+export function stampIdentity(doc, payload, run) {
+  const name = doc.getElementById("run-name");
+  if (name) name.textContent = run?.name ?? "bga";
+  const instant = doc.getElementById("run-instant");
+  const started = payload?.run_instance?.started_at;
+  if (instant) instant.textContent = started ? ` — ${started}` : "";
+  const path = run?.run ?? "";
+  const pathSlot = doc.getElementById("run-path");
+  if (pathSlot) pathSlot.textContent = path;
+  const wordmark = doc.getElementById("wordmark");
+  if (wordmark) {
+    if (path) wordmark.setAttribute("title", path);
+    else wordmark.removeAttribute("title");
+  }
+}
+
 export function stampHeader(doc, payload, run) {
-  const slot = doc.getElementById("run-producer");
+  const slot = doc.getElementById("version-line");
   if (!slot) return;
   const stamp = payload?.producer;
   const version = typeof stamp?.version === "string" ? stamp.version : null;
@@ -655,8 +677,7 @@ async function boot() {
       load("schemas"),
       load("run", {}),
     ]);
-    document.getElementById("run-name").textContent = run.name ?? "bga";
-    document.getElementById("run-path").textContent = run.run ?? "";
+    stampIdentity(document, payload, run);
     // UX-255: what qualifies the run, beside what names it. A report is
     // usually read by someone it was sent to, and "which bga measured
     // this" (UX-249) is the first thing that decides whether the rest

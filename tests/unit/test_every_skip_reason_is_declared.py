@@ -102,7 +102,9 @@ import skip_reasons
 #: `needs_browser` reads `browser.NO_BROWSER` in the same form.
 #: `UX-822` argues **one** more, to 69: the forty-ninth browser
 #: guard, `test_the_readers_are_drawn_once.py`, same form again.
-UNRESOLVABLE = 69
+#: `UX-828` argues **one** more, to 70: the fiftieth browser
+#: guard, `test_the_header_keeps_its_budget.py`, same form again.
+UNRESOLVABLE = 70
 
 
 def test_every_declared_skip_reason_is_known():

@@ -264,12 +264,12 @@ class TestARailClickLandsUnderTheHeader:
             "cpu_time", "document_shape", "peak_memory", "producer",
             "run_instance", "utilization_envelope"]
 
-    #: `scroll-margin-top` is `--head + .5rem`. `UX-668`'s header
-    #: control wraps the identity line to a second row, so `--head` grew
-    #: 6rem -> 7rem and the landing moved 104 -> 119-121. A set equality
-    #: was this clause's first form and it went red in the suite for
-    #: that pixel, so the band is +-2 and stated.
-    BAND = (117, 123)
+    #: `scroll-margin-top` is `--head + .5rem`. `UX-828` shrank the
+    #: header (the path and the version line left it) and `--head` with
+    #: it, 7rem -> 3.25rem, so the landing moved 119-121 -> 59-60. A set
+    #: equality was this clause's first form and it went red in the
+    #: suite for that pixel, so the band is +-3 and stated.
+    BAND = (57, 63)
 
     def test_the_landing_is_the_header_and_not_merely_close(self, landings):
         """A narrow band, not "somewhere near the top" - which is what

@@ -1,6 +1,6 @@
 # UX-833: a declared source-kind map for custom source plugins
 
-**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** UX-192 (the source kind behind a heuristic), UX-683 (a declaration in project.conf) | **Found by:** round 115, the design review | **Serves:** R2 whose sources come through a custom plugin | **Topic:** analysis | **Area:** bga | **Shape:** judgement
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-192 (the source kind behind a heuristic), UX-683 (a declaration in project.conf) | **Found by:** round 115, the design review | **Serves:** R2 whose sources come through a custom plugin | **Topic:** analysis | **Area:** bga | **Shape:** judgement
 
 ## Motivation
 
@@ -86,3 +86,11 @@ confirmed via `git stash` against `e81cc62f`) were left untouched.
 tests (a ledger count, an undocumented `start_offset_us`, two
 `TestTheSizeDiscipline` path-length overages) plus this task's own
 spread figure, fixed by `dev_touching.py --spread --write`.
+
+Deviation: the unmapped kinds are named on `resource_blast`, not
+`element_join_coverage` - that block is the Plane 1/Plane 2 join and
+carries no source-kind concept - and `bga/report/json.py`'s publish
+gate widened so a run with unmapped kinds and no shared resource still
+publishes the block. The delivery through `bga/cli.py` and that gate
+had no guard until the verifier mutated both green; the end-to-end
+case was added at the HOLD. The spread was rewritten at merge.

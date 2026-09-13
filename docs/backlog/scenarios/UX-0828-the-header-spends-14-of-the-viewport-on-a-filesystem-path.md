@@ -1,6 +1,6 @@
 # UX-828: the header spends 14% of the viewport on a filesystem path
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-668 (the picker in the identity line), UX-285 (identity is reference) | **Found by:** round 115, the design review | **Serves:** every reader, on every load | **Topic:** viewer | **Area:** bga-viewer | **Shape:** bounded
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-668 (the picker in the identity line), UX-285 (identity is reference) | **Found by:** round 115, the design review | **Serves:** every reader, on every load | **Topic:** viewer | **Area:** bga-viewer | **Shape:** bounded
 
 ## Motivation
 
@@ -89,3 +89,9 @@ worktree either side); the `macro_micro` committed-export row moved
 `test_every_browser_guard_is_listed`, which needs the new guard's row
 in `tests/tiers.py` - the orchestrator's file per this track's rules,
 not this commit's to add.
+
+Deviation: the Required Fix names `tools/bga_view.py`; the header
+lives in `bga/viewer/index.html` and the tool was not touched. The
+track re-measured `BAND` to (57, 63) and raised `PAGE_BUDGET` by
+1,453 B for the folded path and its title. The tier row (2.9 s) was added at
+merge; `UNRESOLVABLE` 70 and the spread 534 absorb this and `UX-822`.

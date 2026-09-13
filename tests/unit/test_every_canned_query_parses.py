@@ -73,3 +73,42 @@ def test_question_parses(qid, element, bounds):
         message = str(error)
         assert any(reason in message for reason in ALLOWED), \
             f"{qid} ({element!r}): {message}"
+
+
+#: The fills that separate the two renderers if they drift: no element
+#: (the token stays), an empty `bounds` (the window token stays), a
+#: half window, a string-numbered window, an empty-string element.
+PARITY_CASES = [
+    (None, None),
+    ("storm.bst", BOUNDS),
+    ("storm.bst", {}),
+    (None, {"start_ns": 5}),
+    ("storm.bst", {"start_ns": "10000", "end_ns": "20000"}),
+    ("", BOUNDS),
+]
+
+
+@functools.lru_cache(maxsize=1)
+def page_renders():
+    """Every question through the page's own `renderedSql`, per case."""
+    script = ('const { QUESTIONS, renderedSql } = '
+              'await import("./bga/viewer/questions.js");'
+              f'const cases = {json.dumps(PARITY_CASES)};'
+              'console.log(JSON.stringify(QUESTIONS.map((q) => '
+              'cases.map(([e, b]) => renderedSql(q, e, b)))));')
+    done = subprocess.run([node, "--input-type=module", "-e", script],
+                          capture_output=True, text=True, cwd=REPO,
+                          timeout=120)
+    assert done.returncode == 0, done.stderr
+    return json.loads(done.stdout)
+
+
+@needs_node
+@pytest.mark.parametrize("qid", _ids())
+def test_the_tool_renders_what_the_page_renders(qid):
+    """`UX-818`: the tool's fill is the page's fill, byte for byte -
+    a guard that only parses the SQL would pass a swapped window."""
+    index = [q["id"] for q in library()].index(qid)
+    for case, (element, bounds) in enumerate(PARITY_CASES):
+        assert rendered_sql(_question(qid), element, bounds) == \
+            page_renders()[index][case], f"{qid} {element!r} {bounds!r}"

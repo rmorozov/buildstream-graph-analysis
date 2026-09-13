@@ -73,6 +73,11 @@ export const INLINE = "bga:inline";
 // The composite is right as identity - a retry and a fetch of one
 // element are different rows - so it stays as the row's `data-key` and
 // what changes is only what is shown.
+//
+// `UX-826`: the same declaration, read for a plain array's *items*
+// rather than a map's keys - `duration_resolution.tasks` publishes the
+// join key for a machine consumer (the description says so), and a
+// reader is shown `taskUid`'s split instead.
 export const KEYED_BY = "bga:keyed_by";
 
 /**
@@ -122,6 +127,19 @@ export const KEYED_BY_TASK_UID = "task_uid";
  */
 export function keyAsShown(name, hint = {}) {
   return hint[KEYED_BY] === KEYED_BY_TASK_UID ? taskUid(name) : null;
+}
+
+/**
+ * `UX-826`: a scalar array's own items, shown the way `keyAsShown`
+ * shows a map's keys - `null` where the array is not task uids, so the
+ * call site is one branch rather than a rule restated there.
+ */
+export function itemsAsShown(value, hint = {}) {
+  if (hint[KEYED_BY] !== KEYED_BY_TASK_UID) return null;
+  return value.map((item) => {
+    const { element, qualifier } = taskUid(item);
+    return qualifier ? `${element} · ${qualifier}` : element;
+  });
 }
 
 /** `element|kind|phase|attempt` split into a name and a qualifier. */

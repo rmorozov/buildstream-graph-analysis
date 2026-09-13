@@ -235,8 +235,9 @@ def describe(classification: dict,
     if status == "unknown":
         missing = " and ".join(classification.get("missing") or ["one run"])
         return (f"Host unknown: the {missing} carries no host manifest (captured "
-                f"before `UX-186`), so this comparison cannot tell whether both "
-                f"runs were measured on the same machine.")
+                f"before host manifests were recorded), so this comparison "
+                f"cannot tell whether both runs were measured on the same "
+                f"machine.")
     parts = []
     for field in classification.get("differing") or []:
         label = _FIELD_LABELS.get(field, field)
@@ -244,7 +245,7 @@ def describe(classification: dict,
                      f"{(candidate or {}).get(field)}")
     return ("Cross-host comparison: these runs were measured on different "
             "machines (" + "; ".join(parts) + "). Run-to-run noise on one "
-            "machine already reaches 33% (`UX-92`); across machines the "
+            "machine already reaches 33%; across machines the "
             "difference between the two runs is not evidence about the change.")
 
 

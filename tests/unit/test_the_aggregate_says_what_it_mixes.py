@@ -129,7 +129,7 @@ class TestItRidesWithTheDocument:
 
         sentence = schemas.description(
             schemas.STORE_AGGREGATE, "contract_composition")
-        assert "UX-253" in sentence, sentence
+        assert "movement in the contracts" in sentence, sentence
         assert "contract set" in sentence
         # And the sub-fields a reader will actually look up.
         assert "explicit unknown" in schemas.description(

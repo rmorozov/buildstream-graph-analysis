@@ -1178,7 +1178,7 @@ def compute_capacity_recommendation(
         # this host would.
         'caveat': (
             "Derived from this run's shape: the sweep replays observed durations "
-            "and does not model contention (UX-14), and cores-busy is an average "
+            "and does not model contention, and cores-busy is an average "
             "over the whole run rather than over the contended window. One capture "
             "in, one recommendation out - no configuration was tried."
         ),
@@ -1292,7 +1292,7 @@ def compute_max_jobs_advice(
             row["refusal"] = (
                 f"only {len(span)} host CPU sample interval(s) fall "
                 f"inside this element's BUILD span - "
-                f"{MIN_HOST_SAMPLES_IN_SPAN} needed (UX-677)")
+                f"{MIN_HOST_SAMPLES_IN_SPAN} needed")
             row["recommended_max_jobs"] = None
             elements.append(row)
             continue
@@ -1616,7 +1616,7 @@ def _merge_candidates(dependencies, cache_logs, tasks, run_context) -> list[dict
                 + (
                     f" and at least a replayed {projection['saving_us'] / 1e6:.1f}s "
                     f"of build - a floor, because the replay shortens the tasks "
-                    f"without collapsing them into one (UX-120)"
+                    f"without collapsing them into one"
                     if projection else ""
                 )
                 + ". It also merges their cache granularity: one source change then "
@@ -1640,7 +1640,7 @@ def _merge_candidates(dependencies, cache_logs, tasks, run_context) -> list[dict
             f"{worst['toll_share'] * 100:.0f}% ({worst['element']}, "
             f"{worst['toll_us'] / 1e6:.1f}s of {worst['total_us'] / 1e6:.1f}s), "
             f"against the {MERGE_TOLL_AT_LEAST_WORK * 100:.0f}% that would make a "
-            f"merge worth its cache cost (UX-100)"
+            f"merge worth its cache cost"
         ),
     }]
 
@@ -2427,7 +2427,7 @@ def format_correlation(result: dict) -> str:
         lines.append(
             f"  {coverage['aggregating_dependency_pairs']} further dependency "
             f"pair(s) set aside as aggregating - they stage almost nothing of "
-            f"their own, so 'nobody opened it' says nothing about them (UX-68); "
+            f"their own, so 'nobody opened it' says nothing about them; "
             f"see --format json for the list"
         )
     # UX-104: the whole-build memory answer, once, before the per-element

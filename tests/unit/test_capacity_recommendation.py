@@ -140,7 +140,7 @@ class TestWhatItRefusesToSay:
         recommendation = compute_capacity_recommendation(
             _plane2(), _envelope(11), knee=5, builders=4)
 
-        assert "does not model contention (UX-14)" in recommendation['caveat']
+        assert "does not model contention" in recommendation['caveat']
         assert "no configuration was tried" in recommendation['caveat']
 
 

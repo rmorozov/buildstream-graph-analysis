@@ -17,8 +17,8 @@ import { served, safeStorage } from "./primitives.js";
 import { COMMAND, QUANTITY, COLUMNS, DIRECTION, SERIES, DISTRIBUTION, QUESTION,
          PRESETS, INLINE, bytes, childNode, cssId, dataKeyed,
          describedTerm, el, elementColumn, guessQuantity, heading, hintsOf,
-         adviceFor, keyAsShown, quantity, quantityFor, sectionHead,
-         title } from "./format.js";
+         adviceFor, itemsAsShown, keyAsShown, quantity, quantityFor,
+         sectionHead, title } from "./format.js";
 import { commandLine, identify, labelFor } from "./controls.js";
 // UX-303: §2's two drawings. They import nothing and take their
 // formatter, so the quantity table stays here and the geometry stays
@@ -418,8 +418,12 @@ export function renderStructured(key, value, hint = {}, node = undefined,
                   path);
   }
   if (Array.isArray(value)) {
+    // `UX-826`: a task-uid array shows `taskUid`'s split, not the raw
+    // join key - the same declaration `keyAsShown` reads for a map's
+    // keys, read here for a plain array's items.
+    const shown = itemsAsShown(value, hint) ?? value;
     if (control === CONTROLS.INLINE_LIST) {
-      return el("span", {}, value.map(String).join(", "));
+      return el("span", {}, shown.map(String).join(", "));
     }
     if (control === CONTROLS.FOLDED_LIST) {
       // `UX-641`: **past the row bound a cell's list is bounded too**,
@@ -434,11 +438,11 @@ export function renderStructured(key, value, hint = {}, node = undefined,
       // replaces that bound where it applied rather than adding a
       // second: measured on both committed fixtures, no cell is over
       // it; at 1,202 elements twelve are and all twelve are this key.
-      if (value.length > TABLE_OPENS_BOUNDED_ABOVE) {
+      if (shown.length > TABLE_OPENS_BOUNDED_ABOVE) {
         return folded(title(key), value,
-                      boundedList(value, title(key).toLowerCase()), path);
+                      boundedList(shown, title(key).toLowerCase()), path);
       }
-      const rows = value.map((item, at) => ({ key: String(at), value: item }));
+      const rows = shown.map((item, at) => ({ key: String(at), value: item }));
       return folded(title(key), value,
                     mapTable(key, rows, hint, node, false, depth + 1, path),
                     path);

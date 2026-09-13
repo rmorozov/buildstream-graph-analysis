@@ -2232,7 +2232,7 @@ hypothesis to time, not a setting to apply.
 
 **How it is derived, and what it will not do.** One capture in, one
 recommendation out: no configuration is tried. The sweep replays the
-durations it observed and does not model contention (`UX-14`), and
+durations it observed and does not model contention, and
 cores-busy is an average over the whole run rather than over the
 contended window — both stated in the payload's own `caveat`, because a
 recommendation that hides its shape is worse than none.

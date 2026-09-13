@@ -109,7 +109,7 @@ def test_the_page_carries_the_bands_reason(tmp_path):
     reason = run_doc.get("comparison_unavailable")
     assert reason, "the export has nothing to say about the missing band"
     assert "incremental run" in reason and "candidate is full" in reason, reason
-    assert "UX-55" in reason, reason
+    assert "same kind" in reason, reason
 
 
 def test_a_comparable_pair_carries_no_such_note(tmp_path):

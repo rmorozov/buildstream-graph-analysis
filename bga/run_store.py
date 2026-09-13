@@ -398,7 +398,7 @@ def _write_gitignore(project: str) -> None:
     os.makedirs(store_dir(project), exist_ok=True)
     with open(path, "w", encoding="utf-8") as handle:
         handle.write(
-            "# Written by `bga snapshot` (UX-126). Captures are build\n"
+            "# Written by `bga snapshot`. Captures are build\n"
             "# artifacts: they are reproducible from the build and are\n"
             "# large. Delete entries under runs/ whenever you like.\n"
             "*\n"
@@ -587,18 +587,18 @@ DERIVED = "derived"            # absent means nothing; it is rebuilt on demand
 CAPTURE_LAYOUT = (
     # (path relative to the project, presence, contract, what it is)
     (f"{STORE_DIRNAME}/", REQUIRED, None,
-     "the project-local store `UX-126` introduced. Everything below is "
+     "the project-local store. Everything below is "
      "relative to it; `bga` creates it on the first capture."),
     (f"{STORE_DIRNAME}/.gitignore", DERIVED, None,
-     "written once so a clone does not ship the capture archive "
-     "(`UX-189`). Absent only in a store made before that item; the "
+     "written once so a clone does not ship the capture archive. "
+     "Absent only in a store made before that was written; the "
      "next capture writes it."),
     (f"{STORE_DIRNAME}/{CONFIG_NAME}", CONDITIONAL, None,
      "the store's own settings, written when one is set. Absent means "
      "every setting is at its default."),
     (f"{STORE_DIRNAME}/{SCRATCH_DIRNAME}/", DERIVED, None,
      "`bga`'s scratch: the `$PATH` shim, the compiled hook and spine, "
-     "and unnamed intermediates (`UX-155`). Never read across "
+     "and unnamed intermediates. Never read across "
      "captures; safe to delete."),
     (f"{STORE_DIRNAME}/{RUNS_DIRNAME}/", REQUIRED, None,
      "one directory per capture, named by UTC stamp. `@last` and "
@@ -611,7 +611,7 @@ CAPTURE_LAYOUT = (
     (f"{STORE_DIRNAME}/{RUNS_DIRNAME}/<stamp>/{RUN_SUBDIR}/", REQUIRED, None,
      "the run directory - the unit every published command line takes "
      "a path to. Absent on a build that failed before any element "
-     "completed (`UX-156`), which is a capture with nothing to "
+     "completed, which is a capture with nothing to "
      "analyse rather than a corrupt one."),
     (f"{STORE_DIRNAME}/{RUNS_DIRNAME}/<stamp>/{RUN_SUBDIR}/graph.json", REQUIRED, "graph/v9",
      "the declared element graph, from `bst show`."),
@@ -620,19 +620,18 @@ CAPTURE_LAYOUT = (
     (f"{STORE_DIRNAME}/{RUNS_DIRNAME}/<stamp>/{RUN_SUBDIR}/run-context.json", REQUIRED,
      "run-context/v9",
      "what the run was: identity, host manifest (`host/v2` inside it), "
-     "scheduler configuration, and the resolved `native_max_jobs` "
-     "(`UX-377`)."),
+     "scheduler configuration, and the resolved `native_max_jobs`."),
     (f"{STORE_DIRNAME}/{RUNS_DIRNAME}/<stamp>/{RUN_SUBDIR}/chrome_trace.json", DERIVED,
      None,
      "the Plane 1 trace in the legacy Chrome JSON shape. Present only "
-     "on a capture taken before `UX-452`: the extraction wrote it for "
-     "a person to drag into perfetto.dev, `UX-437`'s census measured "
-     "that no reader opens it, and `bga timeline --format chrome` "
+     "on a capture taken before extraction stopped writing it: it was "
+     "written for a person to drag into perfetto.dev, a later census "
+     "measured that no reader opens it, and `bga timeline --format chrome` "
      "renders the same shape on demand from `trace.json`. Safe to "
      "delete; nothing rewrites it."),
     (f"{STORE_DIRNAME}/{RUNS_DIRNAME}/<stamp>/{RUN_SUBDIR}/sources.json", CONDITIONAL,
      "sources/v1",
-     "the source inventory (`UX-171`), read by `bga blast`. Absent "
+     "the source inventory, read by `bga blast`. Absent "
      "means the capture could not resolve the project's sources, and "
      "`blast` says so rather than reporting an empty inventory."),
     (f"{STORE_DIRNAME}/{RUNS_DIRNAME}/<stamp>/{PLANE2_NAME}", CONDITIONAL, "plane2/v3",
@@ -642,24 +641,23 @@ CAPTURE_LAYOUT = (
     (f"{STORE_DIRNAME}/{RUNS_DIRNAME}/<stamp>/{RAW_LOG_NAME}", CONDITIONAL, None,
      "the raw per-process trace the report was folded from, gzipped. "
      "`bga timeline` renders from this; absent means no timeline, "
-     "which is a different absence from no report (`UX-329`)."),
+     "which is a different absence from no report."),
     (f"{STORE_DIRNAME}/{RUNS_DIRNAME}/<stamp>/{RESOURCE_NAME}", CONDITIONAL, None,
      "the two capacity scalars, beside the report so the aggregator "
-     "never opens the big file for them (`UX-296`). Absent where the "
+     "never opens the big file for them. Absent where the "
      "report is."),
     (f"{STORE_DIRNAME}/{RUNS_DIRNAME}/<stamp>/{HOST_SAMPLES_NAME}", CONDITIONAL,
      "host-samples/v1",
      "the host's memory, swap and CPU while the build ran, one JSON "
-     "per line (`UX-378`). Absent on a capture taken before that item "
+     "per line. Absent on a capture taken before that was recorded "
      "or with sampling unavailable."),
     (f"{STORE_DIRNAME}/{RUNS_DIRNAME}/<stamp>/{ANALYSIS_NAME}", CONDITIONAL, "analyze/v6",
      "the analysis this capture published, so `bga view` renders "
-     "rather than re-deriving (`UX-296`). Absent means the viewer "
-     "parses the run itself, and the trace carries no graph structure "
-     "(`UX-380`)."),
+     "rather than re-deriving. Absent means the viewer "
+     "parses the run itself, and the trace carries no graph structure."),
     (f"{STORE_DIRNAME}/{RUNS_DIRNAME}/<stamp>/build.log", CONDITIONAL, None,
      "the wrapped BuildStream log, kept because its first line records "
-     "the real invocation (`UX-29`). `bga timeline` needs it and "
+     "the real invocation. `bga timeline` needs it and "
      "refuses without it."),
     (f"{STORE_DIRNAME}/{RUNS_DIRNAME}/<stamp>/element-slice.json", CONDITIONAL, None,
      "which elements the capture was asked for, where it was asked "

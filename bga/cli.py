@@ -1006,7 +1006,7 @@ def _compare_exit_code(args: argparse.Namespace, comparison) -> int:
         print(
             f"Cross-host gate FAILED: baseline and candidate were measured on "
             f"different machines ({differing}). Run-to-run noise on one machine "
-            f"already reaches 33% (UX-92); across machines the difference between "
+            f"already reaches 33%; across machines the difference between "
             f"the two runs is not evidence about the change. Pass "
             f"--allow-cross-host if your runners are uniform and you accept that.",
             file=sys.stderr,
@@ -2017,8 +2017,8 @@ def _add_blast_subcommand(subparsers) -> None:
                     'directory (the elements whose `local` sources stage it), or an '
                     'element name (its downstream closure). Reports the direct '
                     'elements, the closure split into kinds that build and kinds '
-                    'that assemble, and the measured cost from the named run '
-                    '(UX-172). A question, not a gate: always exits 0.',
+                    'that assemble, and the measured cost from the named run. '
+                    'A question, not a gate: always exits 0.',
     )
     blast_parser.add_argument(
         'target', metavar='TARGET',
@@ -2039,7 +2039,7 @@ def _add_blast_subcommand(subparsers) -> None:
         '--no-cost', action='store_true',
         help='Skip the measured rebuild time. The rest of the answer comes from\n'
              'the graph and the source inventory alone, which on a large project\n'
-             'is the difference between a lookup and a full analysis (UX-182).'
+             'is the difference between a lookup and a full analysis.'
     )
     blast_parser.add_argument(
         '-f', '--format', choices=['text', 'json'], default='text',
@@ -2218,7 +2218,7 @@ def _add_bundle_subcommand(subparsers) -> None:
                     'into a single archive to carry to another machine, and load one '
                     'back into this project\'s store under its own stamp. Each member '
                     'carries its contract version, so a bundle from a newer bga is '
-                    'refused rather than half-read (UX-520).',
+                    'refused rather than half-read.',
     )
     bundle_group = bundle_parser.add_mutually_exclusive_group(required=True)
     bundle_group.add_argument(

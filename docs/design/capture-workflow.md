@@ -340,6 +340,33 @@ whose raw trace stayed under 40 MB has no `native-trace.head.log` and
 no `native-trace.log.omitted`, and one over it has no
 `native-trace.log`.
 
+`graph-declared.json` carries whatever the captured project's own
+`project.conf` declares foundation (`UX-683`): `variables:
+{bga-foundation: "a.bst,b.bst"}`, a comma-separated string —
+BuildStream 2.8 rejects both a top-level `bga:` key and a list-valued
+variable. Read by `_read_bga_foundation`
+(`tools/bst_extract_run.py:222-260`) and validated against the
+extracted graph's own uids; a declared name the graph does not have is
+a warning, never a crash:
+
+```text
+$ cat project.conf
+variables:
+  bga-foundation: sink.bst,not-in-graph.bst
+
+$ bga extract PROJECT build.log run/
+...
+warnings: ["declared foundation element 'not-in-graph.bst' is not in the graph"]
+```
+
+(`extract_run("proj", "build.log", "out", ...)` against a graph of
+`a.bst`/`b.bst`/`sink.bst`/`pred*.bst`, real code, no real `bst` — the
+same harness `tests/unit/test_the_foundation_tier_is_declared.py`'s
+`test_a_name_not_in_the_graph_is_a_diagnostic_not_a_crash` uses.)
+`freedesktop-sdk`'s own captured `project.conf` declares none today;
+what changes on the page once one does is in
+[`docs/guides/cli.md`](../guides/cli.md#declaring-a-foundation-tier-ux-683).
+
 After publishing, the job trends itself against its own history: `bga
 baseline -n 8` over the retained refs of the same shape, then `bga
 cache-trend`. It is `continue-on-error` — a degrading cache is a finding

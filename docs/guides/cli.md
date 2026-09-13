@@ -377,6 +377,48 @@ bga analyze RUN/ --format json > report.json
 
 The JSON carries a **`findings` array** — the same conclusions the text report's `Key Findings` block renders, as data. Each entry has a stable `id` (what a CI gate keys on, and what a run-to-run diff joins on — it does not change when the wording does), a `severity` (`critical`/`high`/`medium`/`info`), the `elements` it concerns, and an `evidence` object with the raw numbers behind the sentence. Both formats render from this one list, so they cannot disagree, and a consumer never has to re-derive a threshold from `bga/report/text.py`:
 
+#### Declaring a foundation tier (`UX-683`)
+
+A toolchain or base image can have the widest reach in the graph *by
+design*, and the kind-based exemption (`blast-radius-structural`,
+`fan-in-structural`) only misses it when it is built as an
+`autotools`/`manual`/`cmake` element rather than an `import`/`stack`.
+`project.conf`'s own `variables: {bga-foundation: "a.bst,b.bst"}` — a
+comma-separated string, not a list, and not a top-level `bga:` key: real
+`bst show` rejects both — declares it instead. Read at extraction
+(`tools/bst_extract_run.py:222-260`) and validated against the graph; a
+declared name absent from it is a warning, never a crash.
+
+Declared, the element publishes at `blast-radius-foundation` /
+`fan-in-foundation` below — present, separated, never the top row of
+`blast-radius-ranking` / `fan-in-ranking` — and its
+`expected_rebuild_cost` row sorts last regardless of cost. Undeclared,
+`foundation-candidates` proposes it: the owner declares, the tool only
+proposes. On `tests/fixtures/foundation_declared` (`sink.bst` is the
+sole consumer of four dependencies, and its own `graph.json` declares
+it foundation):
+
+```bash
+bga analyze tests/fixtures/foundation_declared/run --diagnostics --format json \
+  | jq -c '{top_fan_in: .elements.top_fan_in, fan_in_findings: [.findings[] | select(.id | test("fan-in")) | .id]}'
+```
+
+```text
+{"top_fan_in":[],"fan_in_findings":["fan-in-foundation"]}
+```
+
+With the same graph's `"foundation": ["sink.bst"]` key removed (the same
+command against a copy):
+
+```text
+{"top_fan_in":["sink.bst"],"fan_in_findings":["fan-in-ranking"]}
+```
+
+`sink.bst` leads `top_fan_in` and `fan-in-ranking` undeclared, and
+neither once declared — the tier, not the graph, moved. One
+comma-separated `bga-foundation` line is the whole declaration; nothing
+downstream of it needs its own flag.
+
 #### The full `findings[].id` set
 
 `id` is the contract — it does not change when the wording does, so a CI gate keys on it. Every id `bga` can emit, and nothing else:
@@ -403,7 +445,7 @@ The JSON carries a **`findings` array** — the same conclusions the text report
 | `blast-radius-ranking` | varies | elements worth fixing first by downstream reach (needs `--diagnostics`) |
 | `blast-radius-structural` | info | elements whose reach is the graph's shape rather than a task — a base image, a toolchain, a stack. Reported, not ranked (`UX-258`) |
 | `blast-radius-foundation` | info | a project-declared foundation element with the widest reach — the kind exemption above misses it; the owner's declaration doesn't (`UX-683`) |
-| `foundation-candidates` | info | non-structural elements at or above the top p5 fan-out and not declared foundation — declare or dismiss (`UX-683`) |
+| `foundation-candidates` | info | non-structural elements at or above the top p5 fan-out and not declared foundation — [declare or dismiss](#declaring-a-foundation-tier-ux-683) (`UX-683`) |
 | `fan-in-ranking` | info | the mirror: elements that *pull in* the most, ranked by upstream closure, with each count placed in the graph's own deciles |
 | `fan-in-structural` | info | a stack or a base image whose closure is the widest — it depends on everything on purpose, so the count is shape and not a task |
 | `fan-in-foundation` | info | a project-declared foundation element with the widest closure — the fan-in mirror of `blast-radius-foundation` (`UX-683`) |

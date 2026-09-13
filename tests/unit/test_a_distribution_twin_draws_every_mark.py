@@ -8,7 +8,6 @@ mean, n in the population's order; this reads it through node, and the
 booted export once, on the section the measurement named.
 """
 import json
-import os
 import pathlib
 import shutil
 import subprocess
@@ -19,8 +18,8 @@ import pytest
 REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 
-from tests import pages  # noqa: E402
-from tests.browser import NO_BROWSER, Browser, find_chrome  # noqa: E402
+from tests import pages
+from tests.browser import NO_BROWSER, Browser, find_chrome
 
 node = shutil.which("node")
 needs_node = pytest.mark.skipif(node is None, reason="node is not installed")

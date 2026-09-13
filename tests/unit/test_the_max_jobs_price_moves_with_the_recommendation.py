@@ -174,6 +174,36 @@ class TestJointIsARecomputeNotASum:
             f"guard read a sum instead of the recompute")
 
 
+class TestTheRowsAreRankedPricedFirstRefusalsLast:
+    """UX-831: the order in the JSON is the order drawn - priced
+    lowerings first (cheapest first), refusals last. Python-only,
+    against the real function: no browser reads this order, only the
+    published list does."""
+
+    def test_the_order_is_cost_ascending_then_the_rest_then_refusals(self):
+        tasks = [_task("cheap.bst", 0, 2), _task("costly.bst", 0, 2),
+                 _task("same.bst", 0, 2), _task("up.bst", 0, 2)]
+        run_context = RunContext(resource_capacities={"PROCESS": 4})
+        binary_cost = {
+            "cheap.bst": {"available": True, "measured_cpu_us": 3 * US},
+            "costly.bst": {"available": True, "measured_cpu_us": 20 * US},
+        }
+        # Scrambled input order - `price_max_jobs_advice` must not just
+        # preserve `compute_max_jobs_advice`'s own order.
+        advice = _advice(
+            _row("up.bst", 1, 4),                 # raised -> refused
+            _row("costly.bst", 4, 1),              # lowered, larger cost
+            _row("same.bst", 2, 2),                # unchanged
+            _row("cheap.bst", 4, 2))               # lowered, smaller cost
+
+        priced = price_max_jobs_advice(advice, tasks, run_context, binary_cost)
+        order = [row["element"] for row in priced["elements"]]
+
+        assert order == ["cheap.bst", "costly.bst", "same.bst", "up.bst"], (
+            f"got {order} - priced lowerings must sort by price_cost_us "
+            f"ascending, the refusal must sort last")
+
+
 def _recommendation(max_jobs_advice):
     """A minimal `compute_capacity_recommendation` result, carrying
     whatever `max_jobs_advice` shape a test wants to render."""

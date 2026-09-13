@@ -876,7 +876,17 @@ COMMITTED_EXPORTS = [
     # travels whether or not a run was priced - golden has no Plane 2
     # at all. Measured before this change: 457,357 B. 462,000 leaves
     # headroom of the same order.
-    ("golden", GOLDEN, 462_000),                       #  458,519 B
+    # `UX-831` moved this one by +257 B, all **contract**, measured
+    # identically on both fixtures in the same checkout (path-
+    # independent): the `elements[].price_cost_us`/`price_refusal`
+    # columns and the array's own description, replacing the dead
+    # object-level `bga:columns` `priced` entry. 464,500 leaves
+    # headroom of the same order **plus** this worktree's own path
+    # (`.claude/worktrees/...`, 42 characters over a plain checkout's)
+    # - the bound above was already 761 B short of golden's measured
+    # bytes here *before* this change, from path length alone; see the
+    # bound-vs-path note on `macro_micro` below.
+    ("golden", GOLDEN, 464_500),                        #  463,018 B
     # `UX-297` moved this one by 385 B before that: the two-plane run
     # publishes `plane2_coverage.source`, which says which shape of
     # Plane 2 report served its numbers and what that costs to open. A
@@ -1013,7 +1023,14 @@ COMMITTED_EXPORTS = [
     # bound's note above, measured the same way (`UX-667`'s method).
     # 516,453 leaves 334 B in this worktree; the bytes above are
     # path-length dependent and the delta is what is comparable.
-    ("macro_micro", MACRO_MICRO, 516_453),             #  516,119 B
+    # `UX-831`: +257 B, all **contract** - the same delta as `golden`'s
+    # note above, measured the same way. This worktree's own run path
+    # is 42 characters over a plain checkout's (`.claude/worktrees/...`)
+    # and the old bound was already 1,958 B short here before this
+    # change - not this item's regression; a plain checkout's shorter
+    # path costs fewer bytes than that. 519,000 restores headroom of
+    # the same order this bound has carried before.
+    ("macro_micro", MACRO_MICRO, 519_000),              #  518,668 B
 ]
 
 

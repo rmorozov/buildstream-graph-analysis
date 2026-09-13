@@ -106,7 +106,9 @@ import skip_reasons
 #: guard, `test_the_header_keeps_its_budget.py`, same form again.
 #: `UX-824` argues **one** more, to 71: the fifty-first browser
 #: guard, `test_a_reader_never_sees_the_register.py`, same form again.
-UNRESOLVABLE = 71
+#: `UX-831` argues **one** more, to 72: the fifty-second browser
+#: guard, `test_the_max_jobs_advice_is_one_level.py`, same form again.
+UNRESOLVABLE = 72
 
 
 def test_every_declared_skip_reason_is_known():

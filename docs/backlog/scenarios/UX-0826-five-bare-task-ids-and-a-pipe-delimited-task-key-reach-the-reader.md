@@ -1,6 +1,6 @@
 # UX-826: five bare task ids and a pipe-delimited task key reach the reader
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-669 (the rule), UX-824 (the guard) | **Found by:** round 115, the design review | **Serves:** every reader of a finding | **Topic:** analysis | **Area:** bga | **Shape:** mechanical
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-669 (the rule), UX-824 (the guard) | **Found by:** round 115, the design review | **Serves:** every reader of a finding | **Topic:** analysis | **Area:** bga | **Shape:** mechanical
 
 ## Motivation
 
@@ -36,8 +36,10 @@ golden fixture; the journey is the findings list in the answer key.
 
 ## Acceptance Test
 
-`grep -n "(UX-[0-9]*)" bga/*.py` names no reader-facing sentence;
-`tests/unit/test_a_reader_never_sees_the_register.py` green on both exports for the id and task-key lines; mutation: put one `(UX-14)` back — red.
+`grep -n "(UX-[0-9]*)" bga/*.py` names no reader-facing sentence, and
+`tests/browser.py` counts 0 `\bUX-\d+\b` in the 1,202-element export's
+text with every door and chapter opened; mutation: put one `(UX-14)`
+back — the count is 1. The guard over both exports is `UX-824`'s.
 
 ## Outcome
 
@@ -109,13 +111,13 @@ asserted where a content phrase was the actual claim) and are updated
 to the content: `test_the_band_refusal_names_the_run_mode_check`,
 `test_the_published_document_carries_that_distinction`,
 `test_the_schema_declares_it`, `test_the_page_carries_the_bands_reason`.
-Two committed exports (golden `mixed_task_kinds`, `with_timeline`)
-refreshed via `dev_refresh_analysis.py --write`; `git diff` confirmed
-text-only. `test_a_reader_never_sees_the_register.py` is `UX-824`'s.
+Two committed exports refreshed via `dev_refresh_analysis.py --write`,
+text-only by `git diff`.
 
-Surfaces: `bga/{analyzer,capacity_model,cli,compare,correlate,
-findings,hostinfo,plane2,provenance,run_store,schemas}.py`,
-`bga/viewer/{format,structured}.js`, five test files, two golden
-fixtures, `docs/guides/cli.md`. `python3 tools/dev_touching.py --base
-3afade2e`: 5619 passed, 99 skipped, 0 failed. `make lint`: ruff and
-pymarkdown clean, `dev_baseline.py --check` clean.
+Surfaces: eleven `bga/*.py` modules, `bga/viewer/{format,structured}.js`,
+five test files, two golden fixtures, `docs/guides/cli.md`; the touching
+sweep 5619 passed, `make lint` clean.
+
+**Deviation.** One HOLD (`findings.py` untouched, four sentences of
+48), then the full sweep; the Acceptance Test named `UX-824`'s guard
+and was rewritten to the grep and the browser count.

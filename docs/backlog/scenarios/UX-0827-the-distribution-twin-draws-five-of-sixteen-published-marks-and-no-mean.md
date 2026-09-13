@@ -1,6 +1,6 @@
 # UX-827: the distribution twin draws five of sixteen published marks, and no mean
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-598 (the distributions published), UX-343 (their quantities) | **Found by:** round 115, the design review | **Serves:** R3 reading a graph's shape; the owner asking for deciles | **Topic:** analysis | **Area:** bga | **Shape:** judgement
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-598 (the distributions published), UX-343 (their quantities) | **Found by:** round 115, the design review | **Serves:** R3 reading a graph's shape; the owner asking for deciles | **Topic:** analysis | **Area:** bga | **Shape:** judgement
 
 ## Motivation
 
@@ -42,3 +42,35 @@ key.
 On the scale export every `*_distribution` twin has 17 rows; `mean`
 declared in `schemas.py`; mutation: drop a decile row — the §2f guard
 reds.
+
+## Outcome
+
+**Gap measured.** Round 115, the 1,202-element synthetic export
+(`bga gen-synthetic --seed 1`), `blast_radius_distribution`:
+
+```text
+payload   n, min, max, deciles p10..p90, p95, p99, is_flat      16 marks
+twin      min 0 · median 30 · p95 575 · max 1201 · n 1202       5 rows
+mean      not published
+```
+
+**Close measured.** `distribution()` publishes `mean`; `_distribution()`
+declares it; `twinRows` lists every published mark in order.
+
+```text
+$ python3 -c "from bga.analyzer import distribution; print(distribution(range(1, 101)))"
+{'n': 100, 'min': 1, 'max': 100, 'deciles': {...}, 'p95': 95, 'p99': 99, 'mean': 50, 'is_flat': False}
+$ python3 -m pytest -q -p no:xdist tests/unit/test_a_distribution_twin_draws_every_mark.py --durations=0
+3 passed · 4.04 s the booted scale export: blast twin = min, p10..p40, median, p60..p90, p95, p99, max, mean, n (15 rows)
+$ python3 tools/dev_refresh_analysis.py --write      # with_timeline's analyze.json gains `mean`; golden unchanged (no shape)
+```
+
+| mutation | result |
+|---|---|
+| the p99 row dropped from `twinRows` | 2 failed, 1 passed (the full-shape order and the booted twin) |
+
+**Deviation.** The Acceptance Test said 17 rows; the published shape
+has fifteen marks (min, nine deciles, p95, p99, max, mean, n) and the
+guard holds fifteen. `test_one_unit_per_dimension.py`'s statistic
+list gained `mean`, the same exemption `min`, `max` and the
+percentiles already had.

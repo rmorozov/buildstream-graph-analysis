@@ -699,6 +699,7 @@ MEDIUM = (
     "tests/unit/test_the_json_toggle_carries_the_key.py",          #  2.0s
     "tests/unit/test_the_readers_are_drawn_once.py",               #  2.3s
     "tests/unit/test_a_capped_table_filters_what_it_sorts.py",     #  3.6s
+    "tests/unit/test_a_distribution_twin_draws_every_mark.py",    #  3.5s
     # `UX-433`, tiered on landing. One `gen-synthetic` run and one
     # render of a 1,202-element two-plane snapshot, then the pivot
     # queries against a SQLite table. 1.6s.

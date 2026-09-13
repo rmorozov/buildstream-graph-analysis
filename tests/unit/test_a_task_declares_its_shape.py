@@ -85,7 +85,13 @@ class TestTheRealBacklogAgrees:
         into.mkdir()
         for path in (REPO / "docs/backlog/scenarios").glob("*.md"):
             shutil.copy(path, into / path.name)
-        uid = sorted(tool.open_uids())[0]
+        # Round 116 closed every open row, so the copy reopens one:
+        # the index the tool reads is the copy's own (`--scenarios`).
+        rows = [line for line in (into / "closed.md").read_text(encoding="utf-8").splitlines()
+                if tool._TABLE_ROW.match(line)]
+        uid = int(tool._TABLE_ROW.match(rows[-1]).group(1))
+        with (into / "README.md").open("a", encoding="utf-8") as index:
+            index.write("\n" + rows[-1] + "\n")
         target = next(into.glob(f"UX-{uid:04d}-*.md"))
         text = target.read_text(encoding="utf-8")
         derived = tool.derived_shape(text)

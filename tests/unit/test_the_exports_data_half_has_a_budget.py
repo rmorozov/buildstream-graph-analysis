@@ -63,9 +63,13 @@ needs_node = pytest.mark.skipif(node is None, reason="node is not installed")
 #: `macro_micro` does not, and 70 KB of gzip is 629 KB of JSON. Each
 #: class is set at ~1.25x the largest run in it, which is the headroom
 #: an ordinary round's new key fits in and a new population does not.
+#: `UX-829` and `UX-830`, round 116: `xl` 194,536 -> 266,945. Measured
+#: on the gzip beneath the embedding: `fan_in[*].direct` is 20,047 B
+#: (forty names on each of 4,002 elements), `serial_chains` 812 B,
+#: 196,138 -> 175,327 without both. 335,000 is the class's 1.25x.
 DATA_BUDGETS = (
     (50, 100_000),
-    (4_100, 240_000),
+    (4_100, 335_000),
 )
 
 #: The four runs, and what builds each. The two generated members are

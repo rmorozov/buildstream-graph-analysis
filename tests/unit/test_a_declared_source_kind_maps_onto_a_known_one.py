@@ -130,7 +130,7 @@ class TestTheCoverageReachesTheCliOutput:
     This drives the real CLI so both are exercised.
     """
 
-    def test_an_unmapped_kind_with_no_shared_resource_still_publishes(self, tmp_path):
+    def test_an_unmapped_kind_with_nothing_in_common_still_publishes(self, tmp_path):
         run_dir = tmp_path / "run"
         shutil.copytree(REPO_ROOT / "tests/fixtures/with_timeline/run", run_dir)
         sources_path = run_dir / "sources.json"

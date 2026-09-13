@@ -63,7 +63,11 @@ _RAIL = """(async () => {
       const x = r.left + r.width / 2, y = r.top + r.height / 2;
       if (r.width <= 0 || r.height <= 0) continue;
       if (y < box.top || y > box.bottom) continue;
-      if (y < 0 || y > window.innerHeight || x < 0 || x > window.innerWidth) {
+      // A centre in the viewport's last fractional pixel is outside it
+      // to `elementFromPoint` (null at y 899.9 of 900, where `UX-828`'s
+      // shorter header put one link) - so a whole pixel inside counts.
+      const view = document.documentElement;
+      if (y < 1 || y > view.clientHeight - 1 || x < 1 || x > view.clientWidth - 1) {
         continue;
       }
       onScreen += 1;

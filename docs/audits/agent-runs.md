@@ -238,6 +238,12 @@ pairing for every merged row from round 103 on.
 | 116 | verifier | sonnet | verify `UX-817` | 36k | 24 | 4.4 m | PASS; both mutation directions covered | proving the lint red was not the track's |
 | 116 | implementer | sonnet | `UX-818` every canned query renders with and without an element (judgement, decision in the brief) | 272k | 119 | 24.6 m | merged with a parity fix at merge: the tool emptied tokens the page keeps; 18 of 18 on the seed-3 trace | telling a base red from its own: the spread figure moved on the file's existence |
 | 116 | verifier | sonnet | verify `UX-818` | 40k | 35 | 9.6 m | PASS with two divergences from `renderedSql` and a syntax-only guard; a swapped window passed | parity was claimed in a docstring and checked nowhere; node + python by hand |
+| 116 | implementer | sonnet | `UX-831` the max-jobs advice is one flat table (judgement, decision in the brief) | 710k | 324 | 77.1 m | merged after a HOLD; "Price" and "Why not priced" columns, ranked, capped; 33.8 px per row; the Acceptance's `data-levels=1` refiled to the measured 3 | proving the depth floor empirically; the row-height clause read zeros inside a closed fold |
+| 116 | verifier | sonnet | verify `UX-831` | 115k | 78 | 15 m | HOLD, three findings: §3a/§3d rows, a dead row-height clause, the unreachable depth figure | a 10-minute touching sweep on a loaded box |
+| 116 | implementer | sonnet | `UX-829` every joined field draws a column (judgement, decision in the brief) | 523k | 244 | 43.4 m | merged; a sixth preset covers the five wide fields, `fan_in.direct` on the element card; two byte bounds moved, measured | finding the element card: `bga/viewer/element.js` via the inspect click, not by grep |
+| 116 | verifier | sonnet | verify `UX-829` | 107k | 54 | 11.8 m | PASS; coverage reproduced with its own script, both mutations red | two throwaway worktrees to prove the base reds |
+| 116 | implementer | sonnet | `UX-833` a declared source-kind map (judgement, decision in the brief) | 505k | 276 | 63.3 m | merged after a HOLD; `bga-source-kinds` validated at extraction, mapped kinds inherit keying, unmapped kinds named on `resource_blast`; end-to-end guard added at the HOLD | the baseline writer sweeps every unauthorized finding under one reason; two stash round-trips to prove the base reds |
+| 116 | verifier | sonnet | verify `UX-833` | 87k | 91 | 14.3 m | HOLD, one finding: the cli/report delivery had no guard - two mutations left the suite green | ground-truthing the baseline rename and the base reds in a scratch worktree |
 
 Round 101's four tracks are **not** here: this session could not
 identify their transcripts with certainty after a context rebuild, and
@@ -250,7 +256,7 @@ committed cleanly once told to run in the foreground. Three of the five
 left a derived figure or a §6 context-map row behind - the same class
 the round itself was about, arriving in the tracks' own work.
 
-What the two hundred and twenty-one rows already say: a researcher that reads a document
+What the two hundred and twenty-seven rows already say: a researcher that reads a document
 whole costs 100-180k; a walker that drives every control costs 336k;
 the two cuts cost a re-run each. The `walk` and `design-review`
 skills fix the report shape so the next rows are smaller, and the

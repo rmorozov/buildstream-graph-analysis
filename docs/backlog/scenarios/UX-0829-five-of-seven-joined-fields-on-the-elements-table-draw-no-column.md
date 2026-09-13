@@ -46,3 +46,60 @@ On the scale export `th[data-column]` covers every `data-joined` field
 or the lead sentence names the rest; the element card lists direct
 fan-in; mutation: drop a header — `test_the_merge_carries_every_field.py`
 extended to this table reds.
+
+## Outcome
+
+**Gap measured.** On the scale export (`gen-synthetic --seed 1`,
+1,202 elements), cycling every `elements` preset's `<select>` and
+collecting `th[data-column]`: the "All elements" default carried
+`element, element_durations, downstream_count, is_leaf, element_kind,
+observed_critical` only; across all five presets `unweighted_depth`
+and `fan_in` (any of `direct_count`/`transitive_count`/
+`immediate_dominator`) drew no column at all, and `criticality_
+probability`/`blast_radius` reached one (`probability`,
+`weighted_duration_us`) only by riding a different question's columns.
+
+**Close measured.** A sixth preset, "What does my element wait on"
+(`element, slack, unweighted_depth, probability, direct_count,
+weighted_duration_us`), covers all 7 `data-joined` signal names once
+`elementSignalTable`'s flattening is accounted for (`blast_radius` ->
+`weighted_duration_us`, `fan_in` -> `direct_count`, `criticality_
+probability` -> `probability`). `fan_in[uid].direct` (sorted incoming
+names, capped at 40 via `DIRECT_NAMES_CAP`, mirroring `structured.js`'s
+`TABLE_OPENS_BOUNDED_ABOVE`) is excluded from the table by construction
+(arrays never flatten into a row) and drawn on the element card instead
+— measured on the scale export, 9 on-demand cards built by clicking
+every `a.inspect`, all 9 print `Depends on: <names>`. The elements
+table's lead sentence now names where it went. Python: the golden and
+macro_micro committed fixtures each carry `direct` per element (refreshed
+via `dev_refresh_analysis.py --write`); a synthetic 1,004-predecessor
+graph asserts `direct_count == 1004` and `len(direct) == 40`.
+
+**Mutations verified red and reverted (2):**
+
+| mutation | file | guard reddened | count |
+|---|---|---|---|
+| drop `direct_count` from the new preset's columns | `bga/schemas.py` | `TestEveryJoinedFieldOnTheElementsTableDrawsAColumn::test_every_signal_reaches_a_column_or_the_lead_names_it` — `fan_in` uncovered | 1 failed |
+| drop the `[:DIRECT_NAMES_CAP]` slice | `bga/graph/fan_in.py` | `TestTheDirectListIsCappedAndNamed::test_the_cap_class` — `1004 == 40` | 1 failed |
+
+Both reverted from copies under the scratchpad (never `git checkout`),
+confirmed green after.
+
+Extended beyond the declared surfaces, to keep the existing suite
+green rather than narrow this item's fix: `docs/design/styleguide.md`
+(§3c/§3d now name this test file, matching `test_the_styleguide_names_
+its_guards.py`); `tests/unit/test_no_two_fields_carry_the_same_
+elements.py` (the new `direct` list coincidentally names the same
+3 elements as `bottleneck.high_fanout_elements` on `macro_micro` —
+excluded the same way two earlier coincidences on this fixture already
+are, documented in `_is_a_fan_in_measure`); `tests/unit/test_the_
+report_you_can_attach.py` (the two committed-export byte bounds moved
+by the added schema prose and per-element data, following that file's
+own convention for a additive move).
+
+Pre-existing, unrelated to this diff (confirmed by `git diff` touching
+neither file): `test_a_new_key_with_no_prose_reddens_naming_the_key`
+(`start_offset_us`, from `UX-823`) and `test_the_style_guide_states_
+every_budget` (§3e's "36,300" vs the code's "36,900", from `UX-827`);
+`make lint`'s `dev_baseline.py --check` also reports one new pyright
+finding on `bga/analyzer.py`, a file this track never touched.

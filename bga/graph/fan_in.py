@@ -26,6 +26,11 @@ from .edg import compute_dominators, compute_reachability
 #: different sizes.
 TOP_FAN_IN = 5
 
+#: `UX-829`: mirrors `structured.js`'s `TABLE_OPENS_BOUNDED_ABOVE` (40) -
+#: the element card's list and the table's own fold agree on how many
+#: names a reader is shown before "+N more".
+DIRECT_NAMES_CAP = 40
+
 
 def immediate_dominator(dominators: dict, uid: str) -> Optional[str]:
     """The nearest element every path from a root passes through.
@@ -54,6 +59,9 @@ def compute_fan_in(graph, kinds: dict, structural_kinds, foundation=frozenset())
     for uid in sorted(direct):
         rows[uid] = {
             "direct_count": len(direct[uid]),
+            # `UX-829`: the names themselves, for the element card -
+            # `direct_count` is the population, this is the capped list.
+            "direct": sorted(direct[uid])[:DIRECT_NAMES_CAP],
             # `compute_reachability` excludes the element itself, so
             # this is the closure and not the closure plus one - held
             # by a clause on that helper rather than by a subtraction

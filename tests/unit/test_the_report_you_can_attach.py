@@ -886,7 +886,13 @@ COMMITTED_EXPORTS = [
     # - the bound above was already 761 B short of golden's measured
     # bytes here *before* this change, from path length alone; see the
     # bound-vs-path note on `macro_micro` below.
-    ("golden", GOLDEN, 464_500),                        #  463,018 B
+    # `UX-829` moved this one by 5,179 B, contract and data both:
+    # `fan_in`'s new `direct` field's schema prose, plus each of
+    # golden's four elements' own (short) `direct` list, and the new
+    # "What does my element wait on?" preset's column titles. Measured
+    # before this change: 458,519 B. 468,000 leaves headroom again,
+    # with `UX-831`'s +257 B merged beside it (463,955 B here).
+    ("golden", GOLDEN, 468_000),                       #  463,698 B
     # `UX-297` moved this one by 385 B before that: the two-plane run
     # publishes `plane2_coverage.source`, which says which shape of
     # Plane 2 report served its numbers and what that costs to open. A
@@ -1030,7 +1036,12 @@ COMMITTED_EXPORTS = [
     # change - not this item's regression; a plain checkout's shorter
     # path costs fewer bytes than that. 519,000 restores headroom of
     # the same order this bound has carried before.
-    ("macro_micro", MACRO_MICRO, 519_000),              #  518,668 B
+    # `UX-829`: +3,769 B, the same fan-in/preset move as `golden`'s
+    # note above, larger here because eleven elements each carry a
+    # `direct` list rather than four. Measured before this change:
+    # 516,119 B. 524,000 leaves headroom of the same
+    # order, with `UX-831`'s +257 B merged beside it (520,145 B here).
+    ("macro_micro", MACRO_MICRO, 524_000),             #  519,888 B
 ]
 
 

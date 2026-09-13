@@ -273,5 +273,105 @@ class TestTheEvidenceFoldAnnouncesItsDepth:
                 assert binary in text, binary
 
 
+#: `UX-829`: how a `data-joined` **signal** name surfaces once
+#: `elementSignalTable` flattens it into row fields - a scalar signal
+#: keeps its own name, a record contributes its members (an array
+#: member is excluded, `structured.js`'s own rule, which is why
+#: `fan_in.direct` needs no entry here at all). Mirrored rather than
+#: imported, the way `CAPPED_TABLE_JS` mirrors `dev_page_census.py`.
+_FLATTENS_TO = {
+    "element_durations": {"element_durations"},
+    "slack": {"slack"},
+    "downstream_count": {"downstream_count"},
+    "unweighted_depth": {"unweighted_depth"},
+    "blast_radius": {"weighted_duration_us", "risk_score", "is_foundation"},
+    "fan_in": {"direct_count", "transitive_count", "immediate_dominator",
+               "is_foundation"},
+    "criticality_probability": {"probability", "slack_us"},
+}
+
+_ELEMENTS_COVERAGE_JS = r"""
+(() => {
+  const box = document.querySelector('[data-section="elements"] .map-table');
+  const joined = box ? (box.getAttribute('data-joined') || '')
+    .split(',').filter(Boolean) : [];
+  const select = document.querySelector('select[data-table="elements"]');
+  const columns = new Set();
+  const collect = () => {
+    document.querySelectorAll('[data-section="elements"] th[data-column]')
+      .forEach((th) => columns.add(th.getAttribute('data-column')));
+  };
+  collect();
+  for (const option of select ? [...select.options] : []) {
+    select.value = option.value;
+    select.dispatchEvent(new Event('change'));
+    collect();
+  }
+  return { joined, columns: [...columns],
+          lead: box?.querySelector('p.muted')?.textContent || '' };
+})()
+"""
+
+_CLICK_INSPECT_JS = r"""
+(() => {
+  for (const link of document.querySelectorAll('a.inspect')) link.click();
+  return [...document.querySelectorAll('[data-list="direct"]')].map((n) => ({
+    element: n.closest('section')?.getAttribute('data-element'),
+    text: n.textContent,
+  }));
+})()
+"""
+
+
+@pytest.fixture(scope="module")
+def scale_page(tmp_path_factory):
+    """`UX-829`'s own population: the scale run, where the table's
+    width budget (§3d) actually bites - the two committed fixtures are
+    small enough that every column would fit in "All elements"."""
+    import tools.bga_view as view
+
+    into = tmp_path_factory.mktemp("elements-joined-scale")
+    run = pages.scale_run(into)
+    page = into / "scale.html"
+    view.export(str(run), str(page))
+    return page.as_uri()
+
+
+@needs_browser
+@pytest.mark.medium
+class TestEveryJoinedFieldOnTheElementsTableDrawsAColumn:
+    """UX-829 (styleguide §1b, §3a): a different `data-joined` from
+    `element_join` above - the element-keyed *signals* `UX-268` merged
+    into the `elements` table's own rows, against `presetTable`'s
+    views rather than against one rendered table."""
+
+    def test_every_signal_reaches_a_column_or_the_lead_names_it(
+            self, browser, scale_page):
+        out = browser.measure(scale_page, _ELEMENTS_COVERAGE_JS, 1440, 900)
+        assert out["joined"], "no data-joined signals on the scale export"
+        columns = set(out["columns"])
+        uncovered = [signal for signal in out["joined"]
+                     if not (_FLATTENS_TO.get(signal, {signal}) & columns)
+                     and signal not in out["lead"]]
+        assert uncovered == [], (
+            f"joined field(s) with no column in any preset and not named "
+            f"in the lead sentence: {uncovered} (columns seen: "
+            f"{sorted(columns)})")
+
+
+@needs_browser
+@pytest.mark.medium
+class TestTheElementCardListsDirectFanIn:
+    """UX-829: `fan_in[uid].direct` - drawn on the element card because
+    a table cell does not survive forty names (§3c)."""
+
+    def test_an_element_with_direct_dependencies_lists_them(
+            self, browser, scale_page):
+        out = browser.measure(scale_page, _CLICK_INSPECT_JS, 1440, 900)
+        assert out, "no element card named its direct dependencies"
+        for entry in out:
+            assert entry["text"].startswith("Depends on: "), entry
+
+
 if __name__ == "__main__":  # pragma: no cover
     raise SystemExit(pytest.main([__file__, "-v"]))

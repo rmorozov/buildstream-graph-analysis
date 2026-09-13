@@ -671,6 +671,9 @@
         "fan_in": {
             "all.bst": {
                 "direct_count": 1,
+                "direct": [
+                    "app.bst"
+                ],
                 "transitive_count": 10,
                 "immediate_dominator": "app.bst",
                 "element_kind": "stack",
@@ -679,6 +682,16 @@
             },
             "app.bst": {
                 "direct_count": 8,
+                "direct": [
+                    "core.bst",
+                    "lib-a.bst",
+                    "lib-b.bst",
+                    "lib-c.bst",
+                    "lib-d.bst",
+                    "lib-e.bst",
+                    "lib-f.bst",
+                    "toolchain.bst"
+                ],
                 "transitive_count": 9,
                 "immediate_dominator": "toolchain.bst",
                 "element_kind": "cmake",
@@ -687,6 +700,9 @@
             },
             "codegen.bst": {
                 "direct_count": 1,
+                "direct": [
+                    "toolchain.bst"
+                ],
                 "transitive_count": 1,
                 "immediate_dominator": "toolchain.bst",
                 "element_kind": "cmake",
@@ -695,6 +711,9 @@
             },
             "core.bst": {
                 "direct_count": 1,
+                "direct": [
+                    "toolchain.bst"
+                ],
                 "transitive_count": 1,
                 "immediate_dominator": "toolchain.bst",
                 "element_kind": "cmake",
@@ -703,6 +722,11 @@
             },
             "lib-a.bst": {
                 "direct_count": 3,
+                "direct": [
+                    "codegen.bst",
+                    "core.bst",
+                    "toolchain.bst"
+                ],
                 "transitive_count": 3,
                 "immediate_dominator": "toolchain.bst",
                 "element_kind": "cmake",
@@ -711,6 +735,12 @@
             },
             "lib-b.bst": {
                 "direct_count": 4,
+                "direct": [
+                    "codegen.bst",
+                    "core.bst",
+                    "lib-a.bst",
+                    "toolchain.bst"
+                ],
                 "transitive_count": 4,
                 "immediate_dominator": "toolchain.bst",
                 "element_kind": "cmake",
@@ -719,6 +749,12 @@
             },
             "lib-c.bst": {
                 "direct_count": 4,
+                "direct": [
+                    "codegen.bst",
+                    "core.bst",
+                    "lib-b.bst",
+                    "toolchain.bst"
+                ],
                 "transitive_count": 5,
                 "immediate_dominator": "toolchain.bst",
                 "element_kind": "cmake",
@@ -727,6 +763,12 @@
             },
             "lib-d.bst": {
                 "direct_count": 4,
+                "direct": [
+                    "codegen.bst",
+                    "core.bst",
+                    "lib-c.bst",
+                    "toolchain.bst"
+                ],
                 "transitive_count": 6,
                 "immediate_dominator": "toolchain.bst",
                 "element_kind": "cmake",
@@ -735,6 +777,12 @@
             },
             "lib-e.bst": {
                 "direct_count": 4,
+                "direct": [
+                    "codegen.bst",
+                    "core.bst",
+                    "lib-d.bst",
+                    "toolchain.bst"
+                ],
                 "transitive_count": 7,
                 "immediate_dominator": "toolchain.bst",
                 "element_kind": "cmake",
@@ -743,6 +791,12 @@
             },
             "lib-f.bst": {
                 "direct_count": 4,
+                "direct": [
+                    "codegen.bst",
+                    "core.bst",
+                    "lib-e.bst",
+                    "toolchain.bst"
+                ],
                 "transitive_count": 8,
                 "immediate_dominator": "toolchain.bst",
                 "element_kind": "cmake",
@@ -751,6 +805,7 @@
             },
             "toolchain.bst": {
                 "direct_count": 0,
+                "direct": [],
                 "transitive_count": 0,
                 "immediate_dominator": null,
                 "element_kind": "import",
@@ -1966,10 +2021,10 @@
         }
     ],
     "document_shape": {
-        "leaves": 1291,
+        "leaves": 1325,
         "deepest_depth": 7,
         "deepest_path": "findings.[].evidence.steps.[].entering.[]",
-        "deeper_than_three": 701,
-        "deeper_than_three_share": 0.5429899302865996
+        "deeper_than_three": 735,
+        "deeper_than_three_share": 0.5547169811320755
     }
 }

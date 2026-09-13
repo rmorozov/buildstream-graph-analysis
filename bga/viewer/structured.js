@@ -1465,21 +1465,25 @@ export function renderPairs(key, object, hint = {}, node = undefined,
     // being the only thing on offer.
     const views = presetTable("elements", joined.rows, hint[PRESETS],
                               joined.hint, node, payload);
+    // `UX-829` (styleguide §1b): `fan_in[uid].direct` is a joined field
+    // this table deliberately does not draw a column for - a capped
+    // name list is a card fact, not a cell (§3c) - so the lead names
+    // where it went, the same clause `DRAWN_ELSEWHERE` states for a
+    // whole section.
+    const leadText = `One row per element, joined from `
+      + `${joined.merged.length} signals. Each element's direct `
+      + `dependencies are listed on its own card, not here.`;
     if (views) {
       parts.push(el("div", { class: "map-table", "data-bounded": "map",
                              "data-joined": joined.merged.join(",") },
-                    el("p", { class: "muted" },
-                       `One row per element, joined from `
-                       + `${joined.merged.length} signals.`),
+                    el("p", { class: "muted" }, leadText),
                     views.node));
     } else {
       const { table, tools } = buildTable("elements", joined.rows,
                                           joined.hint, node);
       parts.push(el("div", { class: "map-table", "data-bounded": "map",
                              "data-joined": joined.merged.join(",") },
-                    el("p", { class: "muted" },
-                       `One row per element, joined from `
-                       + `${joined.merged.length} signals.`),
+                    el("p", { class: "muted" }, leadText),
                     tools, table));
     }
   }

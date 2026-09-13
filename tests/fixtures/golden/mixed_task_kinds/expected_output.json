@@ -502,6 +502,9 @@
         "fan_in": {
             "app.bst": {
                 "direct_count": 1,
+                "direct": [
+                    "lib.bst"
+                ],
                 "transitive_count": 2,
                 "immediate_dominator": "lib.bst",
                 "element_kind": "unknown",
@@ -510,6 +513,7 @@
             },
             "base.bst": {
                 "direct_count": 0,
+                "direct": [],
                 "transitive_count": 0,
                 "immediate_dominator": null,
                 "element_kind": "unknown",
@@ -518,6 +522,7 @@
             },
             "extra.bst": {
                 "direct_count": 0,
+                "direct": [],
                 "transitive_count": 0,
                 "immediate_dominator": null,
                 "element_kind": "unknown",
@@ -526,6 +531,9 @@
             },
             "lib.bst": {
                 "direct_count": 1,
+                "direct": [
+                    "base.bst"
+                ],
                 "transitive_count": 1,
                 "immediate_dominator": "base.bst",
                 "element_kind": "unknown",
@@ -1239,10 +1247,10 @@
         }
     ],
     "document_shape": {
-        "leaves": 794,
+        "leaves": 796,
         "deepest_depth": 7,
         "deepest_path": "findings.[].evidence.steps.[].entering.[]",
-        "deeper_than_three": 403,
-        "deeper_than_three_share": 0.5075566750629723
+        "deeper_than_three": 405,
+        "deeper_than_three_share": 0.5087939698492462
     }
 }

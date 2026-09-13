@@ -602,11 +602,15 @@ function wireReaderControl(payload, slot) {
   const select = document.createElement("select");
   select.className = "top-n";
   select.setAttribute("data-role", "reader");
-  for (const [value, text] of [["", "anyone"],
-                               ...readers.map((e) => [e.id, e.label])]) {
+  for (const [value, text, question] of [["", "anyone", null],
+      ...readers.map((e) => [e.id, e.label, e.question])]) {
     const option = document.createElement("option");
     option.setAttribute("value", value);
     option.textContent = text;
+    // `UX-822` (styleguide §5b): the question the `readers` table used
+    // to spell out in its own column, on the option itself - the one
+    // copy, where the choice is made.
+    if (question) option.title = question;
     select.append(option);
   }
   const label = document.createElement("label");

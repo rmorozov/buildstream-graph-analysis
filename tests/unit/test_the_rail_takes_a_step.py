@@ -188,10 +188,17 @@ class TestTheStepFollowsTheDeclaredOrder:
             "below measured the from-nowhere rule, not the order")
 
     def test_next_walks_the_order_the_page_declares(self, walked):
-        """Not the DOM's accident - `UX-235`'s order, via the rail."""
-        assert walked["order"][:7] == ["#decision", "#readers", "#evidence",
+        """Not the DOM's accident - `UX-235`'s order, via the rail.
+
+        `UX-822` took `readers` out from between
+        `decision` and `evidence` - the header picker says its five
+        labels once now, not the section too - so `evidence` moves up
+        one step rather than the walk losing a step.
+        """
+        assert walked["order"][:7] == ["#decision", "#evidence",
                                        "#overview", "#findings", "#headline",
-                                       "#next_steps"], walked["order"][:7]
+                                       "#next_steps", "#blast"], (
+            walked["order"][:7])
         assert walked["forward"] == walked["order"][1:7], walked["forward"]
 
     def test_two_presses_move_two_sections(self, walked):
@@ -204,7 +211,10 @@ class TestTheStepFollowsTheDeclaredOrder:
         assert len(set(walked["forward"])) == 6, walked["forward"]
 
     def test_previous_walks_back(self, walked):
-        assert walked["back"] == ["#headline", "#findings"], walked["back"]
+        # `UX-822`: `readers`'s removal shifts six presses forward from
+        # `#next_steps` to `#blast`, so two steps back land one section
+        # later than before.
+        assert walked["back"] == ["#next_steps", "#headline"], walked["back"]
 
     def test_next_past_the_end_stops(self, walked):
         """Clamped, not wrapped.
@@ -295,9 +305,10 @@ class TestTheKeyboardReaches:
     def test_the_bracket_keys_step(self, uri):
         with Browser(find_chrome()) as browser:
             seen = browser.measure(uri, _KEYS, 1440, 900)
-        # Two presses of `]` from the top: `#readers`, then `#evidence`.
-        assert seen["afterTwo"] == "#evidence", seen
-        assert seen["afterBack"] == "#readers", seen
+        # Two presses of `]` from the top: `#evidence`, then `#overview` -
+        # `UX-822` took `#readers` out of the order.
+        assert seen["afterTwo"] == "#overview", seen
+        assert seen["afterBack"] == "#evidence", seen
 
     def test_they_are_ignored_while_typing(self, uri):
         """`]` is a character somebody may be typing into the palette,

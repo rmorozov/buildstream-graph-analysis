@@ -78,12 +78,13 @@ export const CHAPTERS = [
     title: "What should I do?",
     // `UX-207`'s first screen, plus the diagnosis that justifies it.
     // `UX-372` put `readers` directly after the decision panel whose
-    // picker narrows it: the panel answers for the reader who says who
-    // they are, and this says who else this run has something for.
+    // picker narrows it; `UX-822` (styleguide §5b) took the section
+    // back out - the picker already says the five labels, in the
+    // header, and `readers` is `sections.js`'s `DRAWN_ELSEWHERE` now.
     // Ahead of `findings` because `UX-285`'s geometry - nothing but
     // the diagnosis between the findings and the blast control -
     // is a claim about what sits *after* them.
-    sections: ["decision", "readers", "evidence", "overview",
+    sections: ["decision", "evidence", "overview",
                "findings", "headline", "next_steps"],
   },
   {

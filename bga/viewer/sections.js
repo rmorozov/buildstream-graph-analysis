@@ -281,6 +281,16 @@ export function renderVerdict(payload) {
 //: saying where is what stops this becoming a place to hide a section
 //: nobody wants to fix.
 export const DRAWN_ELSEWHERE = {
+  // `UX-822` (styleguide §5b): the header's reader picker already
+  // holds this index - one `option` per reader, its `label` the text
+  // and its `question` the `title` - and the chosen reader's lead
+  // lands in the decision panel's slot (`decision.js`'s `readerLead`).
+  // A table repeating the same five labels 411px below the picker was
+  // the same five sentences twice.
+  readers: "the header's reader picker (`decision.js`'s "
+    + "`wireReaderControl`) - one `option` per reader, `label` as its "
+    + "text and `question` on its `title` - and the chosen one's lead "
+    + "in the decision panel (`readerLead`)",
   element_join: "merged into the one element table (`elements`) and the "
     + "element sections beneath it, which is `UX-289`'s rule applied to "
     + "the columns `UX-215` added - it is the same eleven elements, and "

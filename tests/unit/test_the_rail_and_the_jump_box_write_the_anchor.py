@@ -60,7 +60,7 @@ _PRESET = _WAIT + """(async () => {
 })()"""
 
 #: The jump box, landed by the hit and by Enter - the two ways in the
-#: Required Fix names. `readers` is not the run's first section, so a
+#: Required Fix names. `evidence` is not the run's first section, so a
 #: write that only ever preserved whatever anchor was already there
 #: would still show `""`.
 _JUMP = _WAIT + """(async () => {
@@ -73,10 +73,10 @@ _JUMP = _WAIT + """(async () => {
     setter.call(box, "e");
     box.dispatchEvent(new Event("input", { bubbles: true }));
     await waitFor(() => document.querySelector(
-      '.jump-hits button[data-jump="readers"]'));
+      '.jump-hits button[data-jump="evidence"]'));
     const hit = document.querySelector(
-      '.jump-hits button[data-jump="readers"]');
-    const section = document.getElementById("readers");
+      '.jump-hits button[data-jump="evidence"]');
+    const section = document.getElementById("evidence");
     const before = { hash: location.hash, scrollY: window.scrollY };
     if (mode === "enter") {
       box.dispatchEvent(new KeyboardEvent("keydown",
@@ -84,7 +84,7 @@ _JUMP = _WAIT + """(async () => {
     } else {
       hit.click();
     }
-    await waitFor(() => location.hash.startsWith("#readers~"));
+    await waitFor(() => location.hash.startsWith("#evidence~"));
     await waitFor(() => Math.abs(section.getBoundingClientRect().top - 105) < 40);
     return { before, after: { hash: location.hash, scrollY: window.scrollY,
                               rectTop: section.getBoundingClientRect().top },
@@ -166,17 +166,17 @@ class TestTheJumpBoxWritesWhatItScrolledTo:
     def test_the_hit_writes_the_anchor(self, jumped):
         out = jumped["hit"]
         assert out["before"]["hash"] == "", out["before"]
-        assert out["after"]["hash"].startswith("#readers~"), out["after"]
+        assert out["after"]["hash"].startswith("#evidence~"), out["after"]
         assert abs(out["after"]["rectTop"] - 105) < 40, out["after"]
 
     def test_enter_writes_the_anchor_too(self, jumped):
         out = jumped["enter"]
-        assert out["after"]["hash"].startswith("#readers~"), out["after"]
+        assert out["after"]["hash"].startswith("#evidence~"), out["after"]
         assert abs(out["after"]["rectTop"] - 105) < 40, out["after"]
 
     def test_the_copied_link_reopens_where_the_jump_landed(self, jumped):
         out = _reopened(jumped["hit"]["link"], "jump")
-        assert out["key"] == "readers", out
+        assert out["key"] == "evidence", out
 
 
 if __name__ == "__main__":  # pragma: no cover

@@ -1704,7 +1704,7 @@ headings, so a renumber there moves it.
 | §4g | `test_the_json_toggle_carries_the_key.py` | item 2; the rest filed as `UX-824` |
 | §5 | | named; `test_the_palette_is_validated.py`, named in §5's own prose, cites §4.3 and §4.5 only |
 | §5a | | no guard cites it; the easy one passes forever, below |
-| §5b | | filed as `UX-822` |
+| §5b | `test_the_readers_are_drawn_once.py` | |
 | §6 | | named; `test_the_numbers_have_a_sentence.py` and `test_the_shape_before_the_rows.py` hold the sentence and the `n`; neither cites §6 |
 | §6a | `test_every_control_has_a_resting_appearance.py` | named; §6a's refusal, not a fifth copy of four rules |
 | §6b | `test_one_factory_builds_every_table.py`, `test_the_handoff_rides_the_rail.py` | |

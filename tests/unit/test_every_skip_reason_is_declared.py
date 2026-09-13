@@ -100,7 +100,9 @@ import skip_reasons
 #: `UX-825` argues **one** more, to 68: the forty-eighth browser
 #: guard, `test_the_json_toggle_carries_the_key.py`, whose
 #: `needs_browser` reads `browser.NO_BROWSER` in the same form.
-UNRESOLVABLE = 68
+#: `UX-822` argues **one** more, to 69: the forty-ninth browser
+#: guard, `test_the_readers_are_drawn_once.py`, same form again.
+UNRESOLVABLE = 69
 
 
 def test_every_declared_skip_reason_is_known():

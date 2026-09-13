@@ -15,13 +15,13 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-833 scenarios: **1 open**, 832 closed.
+833 scenarios: **0 open**, 833 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
 | capture | 0 | 97 |
-| analysis | 1 | 115 |
+| analysis | 0 | 115 |
 | contracts | 0 | 48 |
 | viewer | 0 | 171 |
 | cli | 0 | 22 |
@@ -36,7 +36,6 @@ task file, which is the only place it ever lived twice.
 
 | ID | Scenario | Topic | Priority | Serves | Status |
 |---|---|---|---|---|---|
-| UX-830 | [the serial chains, ranked, not the longest one](UX-0830-the-serial-chains-ranked-not-the-longest-one.md) | analysis | Medium | R3 deciding which chain to split | 🔴 |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

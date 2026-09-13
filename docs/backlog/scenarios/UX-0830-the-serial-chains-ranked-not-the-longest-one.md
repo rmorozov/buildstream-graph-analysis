@@ -1,6 +1,6 @@
 # UX-830: the serial chains, ranked, not the longest one
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-719 (the bottleneck view), UX-681 (fan-in) | **Found by:** round 115, the design review | **Serves:** R3 deciding which chain to split | **Topic:** analysis | **Area:** bga | **Shape:** judgement
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-719 (the bottleneck view), UX-681 (fan-in) | **Found by:** round 115, the design review | **Serves:** R3 deciding which chain to split | **Topic:** analysis | **Area:** bga | **Shape:** judgement
 
 ## Motivation
 
@@ -97,3 +97,12 @@ Left alone, pre-existing on the true baseline (`git stash`-verified):
 already over in this worktree's path length, CLAUDE.md's stale ledger
 figure, and `test_a_distribution_twin_draws_every_mark.py`'s (`UX-827`)
 lint failure.
+
+Deviation: the first walk ran through join nodes - a diamond gave
+three near-duplicate chains, on no fixture the suite had - fixed at
+the verifier's HOLD with the diamond as a guard; the scale run's first
+chain moved from 7 elements to 2. The Acceptance Test's equality with
+`longest_serial_chain` holds on golden and not where the old walk
+degenerates to one root. The page budgets moved for the new table
+(re-measured on the merged tree); the tier row (5.4 s) and the spread
+were added at merge; the fixtures were refreshed.

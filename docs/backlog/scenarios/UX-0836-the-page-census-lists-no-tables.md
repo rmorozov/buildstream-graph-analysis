@@ -1,6 +1,6 @@
 # UX-836: the page census lists no tables
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-665 (the census) | **Found by:** round 115, the design review | **Serves:** the walk and the design review, which drove 28 tables by hand this round | **Topic:** guards | **Area:** tools | **Shape:** mechanical
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-665 (the census) | **Found by:** round 115, the design review | **Serves:** the walk and the design review, which drove 28 tables by hand this round | **Topic:** guards | **Area:** tools | **Shape:** mechanical
 
 ## Motivation
 
@@ -79,3 +79,5 @@ opening step has no discriminating power alone on the three committed
 fixtures (`main.querySelectorAll("table")` already finds all of
 golden/macro_micro/shared_resource's 18/35/61 regardless of open
 state); it only matters combined with the `offsetParent` mutation.
+
+**Deviation.** The first close counted the copy-markdown checkbox as a filter on 14 of 18 golden tables; the verifier found it and the amended commit counts `input.table-filter` only, with a golden-zero and a scale-one guard. Opening chapters by attribute does not change the count on any fixture — kept as a guard against a visibility-based discovery, and said so in the Outcome.

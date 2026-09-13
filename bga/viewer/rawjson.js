@@ -48,8 +48,8 @@ export const HIDE = "hide JSON";
 // `UX-825`: the payload key, carried on the toggle rather than the
 // heading - `title` and `aria-label` both, since it is what a hover
 // and a screen reader each read for this control.
-const SHOWN_TITLE = (key) => `Show the JSON behind ${key}`;
-const HIDDEN_TITLE = (key) => `Hide the JSON for ${key}`;
+const SHOWN_TITLE = (key) => `view as JSON — ${key}`;
+const HIDDEN_TITLE = (key) => `hide JSON — ${key}`;
 
 /** Two-space indent: this is read and pasted, not transmitted. */
 export function sectionJson(value) {

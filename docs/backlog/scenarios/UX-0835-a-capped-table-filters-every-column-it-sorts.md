@@ -33,3 +33,41 @@ it reads.
 ## Acceptance Test
 
 `tests/unit/test_a_capped_table_filters_what_it_sorts.py` green on the scale export once `leaf_analysis` filters its quantity columns; mutation: remove one filter — red.
+
+## Outcome
+
+**Gap measured**, on `scale` (`gen-synthetic --seed 1`), with `data-quantity`
+added to every `<th>` (`buildTable`, this task) so a declared quantity is
+readable without re-deriving `columnSpecs`, and the guard run against the
+base's `elementSignalTable` (`?? "count"` still in place):
+
+```text
+$ python3 -m pytest tests/unit/test_a_capped_table_filters_what_it_sorts.py -v
+FAILED ...AssertionError: a capped table sorts a declared-quantity column
+with no filter (§3d): [('elements', '25 of 1,202', 'is_leaf', 'count'),
+('elements', '25 of 1,202', 'element_kind', 'count'),
+('elements', '25 of 1,202', 'observed_critical', 'count')]
+1 failed in 3.49s
+```
+
+Not `leaf_analysis`: `leaves_detail` declares no `bga:quantity` on any of
+its four fields, so its 0-of-5 was already correct. The red table is
+`elements` - `elementSignalTable`'s join hint defaulted every column with
+no declared or guessed quantity to `"count"` (the same shape `mapTable`'s
+record branch had already learned to avoid), so three boolean/categorical
+join columns were flagged as quantities with no filter.
+
+**Close measured**, same export, `?? "count"` removed:
+
+```text
+$ python3 -m pytest tests/unit/test_a_capped_table_filters_what_it_sorts.py -v
+1 passed in 3.92s
+```
+
+| mutation | result |
+|---|---|
+| `downstream_count`'s `th-filter` creation skipped (`spec.key === "downstream_count"` added to the gate) | reds: `[('elements', '25 of 1,202', 'downstream_count', 'count')]` |
+
+Reverted from a saved copy (not `git checkout`) and re-run green, `1
+passed in 3.92s`. Guard runtime: **3.4-3.9s** (own run, not the suite's
+touching set).

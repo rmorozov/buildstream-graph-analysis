@@ -518,6 +518,10 @@ export function buildTable(key, rows, hint = {}, node = undefined,
       class: spec.numeric ? "num" : null,
       scope: "col", "data-column": spec.key,
       "data-sortable": String(spec.sortable),
+      // `UX-835`: the declared quantity, not the sampled `num` class
+      // above - so a guard can tell "quantity, unfiltered" from
+      // "no quantity" without re-deriving `columnSpecs`.
+      "data-quantity": spec.quantity ?? null,
       title: spec.description ?? null,
     }, spec.title));
   }
@@ -1230,9 +1234,14 @@ export function elementSignalTable(elements, node, join = null,
   const hint = {
     [COLUMNS]: [{ key: "element", title: "element" },
                 ...columns.map((name) => {
+                  // `UX-835`: no blanket "count" here - `mapTable`'s
+                  // record branch above already learned this default
+                  // invents a unit a boolean or categorical join column
+                  // never declared, which is what left it unfiltered
+                  // and unflagged as exempt.
                   const measure = quantityFor(origin.get(name)
                                               ?? childNode(node, name), name)
-                    ?? guessQuantity(name) ?? "count";
+                    ?? guessQuantity(name);
                   return { key: name, title: title(name, measure),
                            quantity: measure };
                 })],

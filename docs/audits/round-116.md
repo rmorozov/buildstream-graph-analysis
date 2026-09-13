@@ -83,6 +83,13 @@ measured 3 with the reason.
 - A track's `dev_baseline.py --write --force` would have swept three
   unrelated findings under its reason; the track folded one entry by
   hand instead.
+- The batch gate found seven reds no track's selector had: `xl`'s data
+  half (194,536 → 266,945 B, the direct lists 20,047 B gzipped and the
+  chains 812), macro_micro's export bytes, `bga/report/_shared.py` wide
+  by a test-method substring, three rail guards still landing at the
+  old header's 105 px (60 now; one link's centre at 899.9 of 900), and
+  `structured.js` at 1,502 lines — the copy-format preference moved to
+  `viewstate.js` behind `dev_js_deps.py --order`.
 
 ## Agents
 

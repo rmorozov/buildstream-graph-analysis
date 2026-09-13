@@ -42,6 +42,11 @@ const waitFor = async (check, tries = 60, ms = 50) => {
 #: A preset sub-entry belonging to the `elements` section, on a run
 #: whose `elements` section sits thousands of pixels below the top -
 #: the exact shape the motivation measured.
+#: Where a landed section's top rests, under the sticky header: 105
+#: while the header carried the path, 60 since `UX-828` (round 116;
+#: `test_a_rail_click_lands_on_its_section.py` bands it at 57-63).
+LANDING_PX = 60
+
 _PRESET = _WAIT + """(async () => {
   const link = document.querySelector(
     'a[data-toc-view][href^="#elements~"][data-toc-view="Critical path"]');
@@ -52,7 +57,7 @@ _PRESET = _WAIT + """(async () => {
   // `UX-670`: `revealAndLand` lands three times as a folded chapter's
   // `content-visibility` estimate corrects, so the settled rect is
   // what the guard waits for - not the first, approximate, landing.
-  await waitFor(() => Math.abs(section.getBoundingClientRect().top - 105) < 40);
+  await waitFor(() => Math.abs(section.getBoundingClientRect().top - 60) < 40);  // LANDING_PX
   const after = { hash: location.hash, scrollY: window.scrollY,
                    rectTop: section.getBoundingClientRect().top };
   const link1 = location.href;
@@ -85,7 +90,7 @@ _JUMP = _WAIT + """(async () => {
       hit.click();
     }
     await waitFor(() => location.hash.startsWith("#evidence~"));
-    await waitFor(() => Math.abs(section.getBoundingClientRect().top - 105) < 40);
+    await waitFor(() => Math.abs(section.getBoundingClientRect().top - 60) < 40);  // LANDING_PX
     return { before, after: { hash: location.hash, scrollY: window.scrollY,
                               rectTop: section.getBoundingClientRect().top },
              link: location.href };
@@ -102,7 +107,7 @@ _REOPEN = _WAIT + """(async (target) => {
   const key = location.hash.replace(/^#/, "").split("~")[0];
   const node = key ? document.getElementById(key) : null;
   await waitFor(() => node && Math.abs(
-    window.scrollY + node.getBoundingClientRect().top - 105) < 40);
+    window.scrollY + node.getBoundingClientRect().top - 60) < 40);  // LANDING_PX
   return { key, rectTop: node ? node.getBoundingClientRect().top : null };
 })()"""
 
@@ -154,7 +159,7 @@ class TestAPresetSubEntryGoesToItsSection:
         assert preset["after"]["hash"].startswith("#elements~"), preset
 
     def test_the_landing_is_at_the_section_not_past_it(self, preset):
-        assert abs(preset["after"]["rectTop"] - 105) < 40, preset["after"]
+        assert abs(preset["after"]["rectTop"] - LANDING_PX) < 40, preset["after"]
 
     def test_the_copied_link_reopens_on_the_same_section(self, preset):
         out = _reopened(preset["link1"], "preset")
@@ -167,12 +172,12 @@ class TestTheJumpBoxWritesWhatItScrolledTo:
         out = jumped["hit"]
         assert out["before"]["hash"] == "", out["before"]
         assert out["after"]["hash"].startswith("#evidence~"), out["after"]
-        assert abs(out["after"]["rectTop"] - 105) < 40, out["after"]
+        assert abs(out["after"]["rectTop"] - LANDING_PX) < 40, out["after"]
 
     def test_enter_writes_the_anchor_too(self, jumped):
         out = jumped["enter"]
         assert out["after"]["hash"].startswith("#evidence~"), out["after"]
-        assert abs(out["after"]["rectTop"] - 105) < 40, out["after"]
+        assert abs(out["after"]["rectTop"] - LANDING_PX) < 40, out["after"]
 
     def test_the_copied_link_reopens_where_the_jump_landed(self, jumped):
         out = _reopened(jumped["hit"]["link"], "jump")

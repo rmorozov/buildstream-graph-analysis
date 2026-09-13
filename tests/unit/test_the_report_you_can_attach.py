@@ -1041,7 +1041,9 @@ COMMITTED_EXPORTS = [
     # `direct` list rather than four. Measured before this change:
     # 516,119 B. 524,000 leaves headroom of the same
     # order, with `UX-831`'s +257 B merged beside it (520,145 B here).
-    ("macro_micro", MACRO_MICRO, 524_000),             #  519,888 B
+    # `UX-830`'s chains table: 524,965 B from a 68-character path at
+    # the round's gate; 526,000 keeps the same order of headroom.
+    ("macro_micro", MACRO_MICRO, 526_000),             #  524,965 B
 ]
 
 

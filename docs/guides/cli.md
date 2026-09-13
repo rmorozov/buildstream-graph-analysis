@@ -419,6 +419,22 @@ neither once declared — the tier, not the graph, moved. One
 comma-separated `bga-foundation` line is the whole declaration; nothing
 downstream of it needs its own flag.
 
+#### Declaring a custom source kind (`UX-833`)
+
+`bga/blast.py` names a source kind by heuristic over the kinds
+BuildStream ships — a project sourcing through a custom plugin (a
+Gerrit source, an internal mirror) matches nothing and its blast goes
+unreported. The sibling declaration, beside `bga-foundation`:
+`variables: {bga-source-kinds: "gerrit=git,mirror=tar"}` — each entry
+maps a plugin kind onto a kind `bga/sources.py`'s `KEYING_BY_KIND`
+already knows, whose keying (`ref` or `content`) it then inherits.
+Read and validated at extraction (`tools/bst_extract_run.py`,
+`_read_bga_source_kind_map`): an entry that is not `custom=known`, or
+whose right side names no known kind, raises, naming the entry. A kind
+still unmapped after resolution stays `unknown` and is named in
+`bga analyze --format json`'s `resource_blast.unmapped_source_kinds`,
+never silently folded into an unestimated blast.
+
 #### The full `findings[].id` set
 
 `id` is the contract — it does not change when the wording does, so a CI gate keys on it. Every id `bga` can emit, and nothing else:

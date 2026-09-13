@@ -137,6 +137,11 @@ def _attach_resource_blast(run_dir, analyzer, result) -> None:
         'element_count': len(graph.elements),
         'headline': sources_module.monorepo_headline(rows, len(graph.elements)),
         'unreadable': inventory.get('unreadable') or {},
+        # UX-833: the declared map, and the kinds it left unresolved -
+        # named, so a custom plugin is reported rather than folded
+        # silently into an unestimated blast.
+        'source_kind_map': inventory.get('source_kind_map') or {},
+        'unmapped_source_kinds': sources_module.unmapped_kinds(inventory),
     }
 
 

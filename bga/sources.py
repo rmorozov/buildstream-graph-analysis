@@ -116,8 +116,25 @@ def format_kind_split(building: int, assembling: int) -> str:
     return (f"{total} element(s) ({building} that build, "
             f"{assembling} that assemble)")
 
-def keying_of(kind: str) -> str:
-    return KEYING_BY_KIND.get(kind, "unknown")
+def keying_of(kind: str, kind_map: Optional[dict] = None) -> str:
+    # UX-833: a custom kind declared in `kind_map` inherits the keying
+    # of the known kind it was mapped onto, rather than reporting unknown.
+    return KEYING_BY_KIND.get((kind_map or {}).get(kind, kind), "unknown")
+
+
+def unmapped_kinds(inventory: dict) -> list[str]:
+    """Kinds this inventory saw with no keying - sorted, by name.
+
+    `UX-833`: `keying_of` returning "unknown" says nothing about *why*;
+    this is what a coverage block reads to name the custom plugin
+    rather than silently folding it into an unestimated blast.
+    """
+    kinds = {resource.get("kind")
+             for resources in (inventory.get("elements") or {}).values()
+             for resource in resources or []
+             if resource.get("keying") == "unknown"}
+    kinds.discard(None)
+    return sorted(kinds)
 
 
 # Schemes whose `://` prefix is decoration on a url this can read. Any
@@ -199,13 +216,16 @@ def _unkeyable_path(kind: str, path: str) -> Optional[str]:
     return None
 
 
-def resource_of_source(source) -> tuple[Optional[dict], Optional[str]]:
+def resource_of_source(source, kind_map: Optional[dict] = None) -> tuple[Optional[dict], Optional[str]]:
     """One `sources:` stanza as `(resource, complaint)`.
 
     Exactly one of the two is ever set. A stanza this cannot read is
     *named*, not skipped: `UX-160` is the standing lesson that a reader
     which silently drops what it does not understand reports zero and
     looks like an answer.
+
+    `kind_map` is `UX-833`'s declared `bga-source-kinds`: a custom
+    plugin `kind` resolves its keying through the known kind it names.
     """
     if not isinstance(source, dict):
         return None, f"source entry is {type(source).__name__}, not a mapping"
@@ -245,7 +265,7 @@ def resource_of_source(source) -> tuple[Optional[dict], Optional[str]]:
         # A source with nothing to share - `bst`'s own `workspace`, or a
         # plugin whose identity lives under a key this does not know.
         return None, f"`{kind}` source has none of {', '.join(_IDENTITY_KEYS)}"
-    keying = keying_of(kind)
+    keying = keying_of(kind, kind_map)
     if keying == "content":
         # UX-184: `bst` itself rejects a `local` path that is absolute or
         # escapes the project (`node_get_project_path` raises LoadError),
@@ -279,7 +299,8 @@ def resource_of_source(source) -> tuple[Optional[dict], Optional[str]]:
     return resource, None
 
 
-def resources_from_element(data: Optional[dict]) -> tuple[list[dict], list[str]]:
+def resources_from_element(data: Optional[dict],
+                           kind_map: Optional[dict] = None) -> tuple[list[dict], list[str]]:
     """`(resources, complaints)` for one parsed `.bst` file."""
     if not isinstance(data, dict):
         return [], ["element file could not be read"]
@@ -291,7 +312,7 @@ def resources_from_element(data: Optional[dict]) -> tuple[list[dict], list[str]]
     resources: list[dict] = []
     complaints: list[str] = []
     for stanza in stanzas:
-        resource, complaint = resource_of_source(stanza)
+        resource, complaint = resource_of_source(stanza, kind_map)
         if resource is not None:
             resources.append(resource)
         elif complaint:
@@ -300,12 +321,18 @@ def resources_from_element(data: Optional[dict]) -> tuple[list[dict], list[str]]
 
 
 def build_inventory(per_element: dict[str, list[dict]],
-                    complaints: Optional[dict[str, list[str]]] = None) -> dict:
-    """The on-disk shape, `sources/v1`."""
+                    complaints: Optional[dict[str, list[str]]] = None,
+                    kind_map: Optional[dict[str, str]] = None) -> dict:
+    """The on-disk shape, `sources/v1`.
+
+    `source_kind_map` (`UX-833`) is additive: `project.conf`'s declared
+    `bga-source-kinds`, empty for a project with no declaration.
+    """
     return {
         "schema": SCHEMA,
         "elements": {uid: list(resources) for uid, resources in sorted(per_element.items())},
         "unreadable": {uid: list(notes) for uid, notes in sorted((complaints or {}).items())},
+        "source_kind_map": dict(sorted((kind_map or {}).items())),
     }
 
 
@@ -346,8 +373,12 @@ def resource_blast(inventory: dict,
     Cost is `unmeasured` rather than `0` when the run has no duration
     for an element: this is the same distinction the rest of the tool
     keeps between "measured as nothing" and "not measured".
+    `UX-833`: keying is resolved through the inventory's own
+    `source_kind_map`, so a resource whose stanza named a declared
+    custom kind ranks and reads exactly as the known kind it inherits.
     """
     durations = element_durations_us or {}
+    kind_map = inventory.get("source_kind_map") or {}
     rows: list[dict] = []
     for (kind, identity), direct in elements_by_resource(inventory).items():
         if len(direct) < minimum_elements:
@@ -367,7 +398,7 @@ def resource_blast(inventory: dict,
         rows.append({
             "kind": kind,
             "identity": identity,
-            "keying": keying_of(kind),
+            "keying": keying_of(kind, kind_map),
             "direct_elements": direct,
             "direct_count": len(direct),
             "blast_elements": sorted(blast),

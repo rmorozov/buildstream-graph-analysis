@@ -255,6 +255,60 @@ def _read_bga_foundation(project_dir: str) -> Optional[list]:
     return [name.strip() for name in str(declared).split(",") if name.strip()]
 
 
+def _read_bga_source_kind_map(project_dir: str) -> Optional[dict]:
+    """`UX-833`: `project.conf`'s declared custom-source-kind map, the
+    same minimal-YAML read `_read_bga_foundation` uses.
+
+    `variables: {bga-source-kinds: "gerrit=git,mirror=tar"}` - each
+    entry maps one plugin kind `bga`'s heuristic has never heard of onto
+    a kind `sources.KEYING_BY_KIND` already knows, whose keying it then
+    inherits. Validated the moment it is read, the same class of error
+    `bga-foundation`'s own docstring records `bst show` raising for a
+    wrong-shaped declaration: an entry that is not `custom=known`, or
+    whose right side names no known kind, raises `RuntimeError` naming
+    the entry - never silently dropped or half-applied.
+
+    `None` (not `{}`) when `project.conf` is missing, unparsable, or
+    carries no `variables`/`bga-source-kinds` key.
+    """
+    try:
+        import yaml
+    except ImportError:
+        return None
+    project_conf_path = Path(project_dir) / "project.conf"
+    if not project_conf_path.exists():
+        return None
+    try:
+        data = yaml.safe_load(project_conf_path.read_text()) or {}
+    except yaml.YAMLError:
+        return None
+    declared = (data.get("variables") or {}).get("bga-source-kinds")
+    if not declared:
+        return None
+    from bga.sources import KEYING_BY_KIND
+    mapping: dict = {}
+    for entry in str(declared).split(","):
+        entry = entry.strip()
+        if not entry:
+            continue
+        custom, sep, target = entry.partition("=")
+        custom, target = custom.strip(), target.strip()
+        if not sep or not custom or not target:
+            raise RuntimeError(
+                f"bga-source-kinds entry {entry!r} in {project_conf_path} is not "
+                f"`custom=known` - each entry maps one plugin kind onto one kind "
+                f"already in sources.KEYING_BY_KIND"
+            )
+        if target not in KEYING_BY_KIND:
+            raise RuntimeError(
+                f"bga-source-kinds entry {entry!r} in {project_conf_path} maps "
+                f"onto {target!r}, which is not a kind this tool keys - known "
+                f"kinds are {', '.join(sorted(KEYING_BY_KIND))}"
+            )
+        mapping[custom] = target
+    return mapping
+
+
 def _check_project_refs_strict(project_dir: str):
     """`--strict` mode's real, opt-in guarantee (P4-13) - hardens
     `_git_consistency_note`'s best-effort whole-tree dirty warning into
@@ -644,8 +698,12 @@ def extract_run(
     # hand - `bga analyze` reads a run directory and nothing else, and
     # keeping it that way is what makes a published capture analyzable
     # anywhere.
+    # UX-833: `bga-source-kinds` is read and validated here too, the
+    # same moment, and the resolved map travels baked into every
+    # resource's own keying rather than needing project.conf again.
     inventory = build_source_inventory(
-        project_dir, [element["uid"] for element in graph["elements"]])
+        project_dir, [element["uid"] for element in graph["elements"]],
+        kind_map=_read_bga_source_kind_map(project_dir))
     (out_dir / "sources.json").write_text(json.dumps(inventory, indent=2))
 
     return {
@@ -716,7 +774,8 @@ def _resolve_junctioned(project_dir: str, uid: str) -> tuple[Optional[str], Opti
     return current, parts[-1], ":".join(prefix_parts)
 
 
-def build_source_inventory(project_dir: str, element_uids) -> dict:
+def build_source_inventory(project_dir: str, element_uids,
+                           kind_map: Optional[dict] = None) -> dict:
     """`sources/v1` for the elements this run built (`UX-171`).
 
     Read from the `.bst` files, with the census's own memoised reader,
@@ -757,7 +816,7 @@ def build_source_inventory(project_dir: str, element_uids) -> dict:
             ]
             continue
         data = read_element_yaml(os.path.join(elements_dir_for(subproject), name))
-        resources, notes = sources_module.resources_from_element(data)
+        resources, notes = sources_module.resources_from_element(data, kind_map)
         resources, symlink_notes = _resolve_symlinked(subproject, resources)
         notes = list(notes) + symlink_notes
         if prefix:
@@ -766,7 +825,7 @@ def build_source_inventory(project_dir: str, element_uids) -> dict:
             per_element[uid] = resources
         if notes:
             complaints[uid] = notes
-    return sources_module.build_inventory(per_element, complaints)
+    return sources_module.build_inventory(per_element, complaints, kind_map)
 
 
 def _resolve_symlinked(project_dir: str, resources):

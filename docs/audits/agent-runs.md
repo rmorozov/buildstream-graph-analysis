@@ -212,6 +212,7 @@ pairing for every merged row from round 103 on.
 | 114 | verifier | sonnet | verify `UX-815` | 49k | 43 | 12.2 m | PASS; 0 sentences missing, the blank-and-rerun reproduced | the sandbox refused plain commands that looked git-adjacent |
 | 114 | implementer | sonnet | `UX-816` the bga area's five chapters into its page (mechanical) | 187k | 157 | 34.5 m | merged; four chapters moved, the real-extensions table kept where its guard reads it; 593 → 490 lines outside the log | a bare stash reverted the work mid-track and had to be re-applied |
 | 114 | verifier | sonnet | verify `UX-816` | 62k | 50 | 10.1 m | PASS; 0 sentences missing; the blank-and-rerun red on a docs-wide key guard, the Outcome had named it | a partial checkout for the before snapshot, caught and redone |
+| 115 | general-purpose | sonnet | the design review on the all-planes walk capture (`design-review`), plus the 1,202-element export re-measured by the session | 205k | 137 | 20.5 m | eight own findings and the owner's ten claims measured; fifteen filings (UX-822 to UX-836) and four styleguide sections | one CDP dead end (a stale listener on the first port) before every call worked; measurements one node invocation at a time |
 
 Round 101's four tracks are **not** here: this session could not
 identify their transcripts with certainty after a context rebuild, and
@@ -224,7 +225,7 @@ committed cleanly once told to run in the foreground. Three of the five
 left a derived figure or a §6 context-map row behind - the same class
 the round itself was about, arriving in the tracks' own work.
 
-What the one hundred and ninety-five rows already say: a researcher that reads a document
+What the one hundred and ninety-six rows already say: a researcher that reads a document
 whole costs 100-180k; a walker that drives every control costs 336k;
 the two cuts cost a re-run each. The `walk` and `design-review`
 skills fix the report shape so the next rows are smaller, and the

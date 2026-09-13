@@ -1545,6 +1545,98 @@ declaration are actually in `style.css`, independent of any render.
 
 `UX-674` is the item.
 
+## 2f. A distribution twin draws every mark it publishes (round 115)
+
+Measured on the 1,202-element synthetic export, `blast_radius_distribution`:
+
+```text
+payload   n, min, max, deciles p10..p90, p95, p99, is_flat        16 marks
+sentence  "0 → 1201, median 30, p95 575 — n=1202."
+twin      min 0 · median 30 · p95 575 · max 1201 · n 1202          5 rows
+mean      not published
+```
+
+§2a says a drawing carries its table twin; the twin is the drawing's
+data, not a second sentence. **A distribution's twin is one row per
+published mark, in the population's order — min, the deciles, p95,
+p99, max, mean, n — and the sentence stays on the median and p95.**
+The mean joins the shape as a declared quantity; on a heavy tail it is
+the mark that most needs the median beside it, which is why the
+sentence does not move to it. A flat population keeps its one line.
+
+`UX-827` is the item.
+
+## 3i. The header budget (round 115)
+
+Measured at 1440×900 on the walk capture and the synthetic export:
+
+```text
+header     128.5 px · position: sticky · pinned after scrollTo(0, 2000)     14.3% of the viewport
+line 2     the run's absolute path, 149 characters, wrapping to two lines
+contents   title · path · "measured by … — analysed here by …" · the reader picker
+```
+
+The picker is the one control the header holds that a reader uses
+(§4 rule 7); the path is `run_instance`'s fact (`UX-285`: identity is
+reference, and reference goes last), drawn first and largest on every
+load. **The header is at most 72 px and sticky. It holds a wordmark
+on the left, the run's alias and start instant in the middle beside
+the picker, and nothing else.** The path lives in `run_instance` and
+on the title's `title` attribute; the version line is the footer's.
+Run navigation and the Perfetto handoff stay in the rail, as
+disclosures whose resting state is closed (§6d).
+
+`UX-828` is the item.
+
+## 4g. Reader-facing strings (round 115)
+
+§4a puts a description behind a door, §4b says a citation is a
+question, §4f extends that to the sentence around it. Three rules in
+three places, and no guard reads the page for any of them. Measured
+on `document.body.innerText`:
+
+```text
+synthetic export   bare task ids   UX-478, UX-478, UX-345, UX-477
+walk capture       UX-14 in a finding's caveat ("does not model contention (UX-14)")
+span.section-key   visible on 37 of 47 sections (synthetic), 47 of 47 with every section open
+duration_resolution "Tasks?" row   all.bst|FETCH|FETCH|0
+underutilized_intervals From      "497003.7 h" — a monotonic base rendered as a duration
+```
+
+**The list, for the person writing a sentence the page will show:**
+
+1. No task id. The register is `git log`'s; a reader has no `UX-`.
+2. No payload key outside the JSON door — a heading is a question,
+   a cell is a value, the key is the toggle's `title`.
+3. No internal key — a task is an element and a kind, never
+   `element|KIND|KIND|n`.
+4. No "payload", "contract", "schema", "Part N" — those are the
+   producer's words; the reader's are "this run", "this report".
+5. A quantity carries its unit and an instant carries its origin —
+   an offset says "+12.4 s", never a raw clock.
+6. A superlative is a measurement (§1c) and a label is its effect
+   (§4c).
+
+`UX-824` holds it with one guard over both exports; `UX-825` and
+`UX-826` are the sentences it found.
+
+## 5b. What the header already says is not said again (round 115)
+
+Measured on the walk capture:
+
+```text
+select[name=reader]   five options: "I own the dependency graph", …
+section#readers       five rows, Reader column = the same five labels, 411 px below
+```
+
+§5a spends repetition from the volume budget; this is the case where
+the repeated thing is a control's own option list. **A section whose
+rows are the options of a control the header holds is drawn once, as
+the control:** the option carries the question on its `title`, and the
+chosen reader's lead lands where the decision is.
+
+`UX-822` is the item.
+
 ## 7. Enforcement
 
 What keeps this true after the commit that lands it: the booted
@@ -1591,6 +1683,7 @@ headings, so a renumber there moves it.
 | §2c | | `UX-350`'s `test_the_shape_channel_is_built.py` built the channel and cites §2 |
 | §2d | `test_the_vocabulary_has_the_shape.py` | |
 | §2e | | no guard cites it |
+| §2f | | filed as `UX-827` |
 | §3 | `test_the_tools_scale_with_the_table.py`, `test_one_click_from_investigation.py` | named |
 | §3a | `test_a_level_names_who_is_in_it.py`, `test_a_value_shows_what_it_is.py`, `test_the_chain_folds_and_clicks_are_counted.py`, `test_the_fold_says_how_deep_it_goes.py`, `test_the_merge_carries_every_field.py`, `test_the_page_conforms_to_its_sections.py`, `test_the_provenance_names_its_rule.py`, `test_the_report_you_can_attach.py`, `test_the_store_section_takes_a_window.py`, `test_why_bga_believes_what_it_believes.py` | |
 | §3b | `test_the_chain_folds_and_clicks_are_counted.py`, `test_the_page_conforms_to_its_sections.py` | |
@@ -1600,6 +1693,7 @@ headings, so a renumber there moves it.
 | §3f | `test_the_handoff_box_is_measured_served.py` | |
 | §3g | `test_the_ceilings_reach_a_reader.py` | |
 | §3h | `test_the_rail_is_a_source_list.py` | |
+| §3i | | filed as `UX-828` |
 | §4 | `test_emphasis_is_a_budget.py`, `test_the_palette_is_validated.py`, `test_a_drawing_is_graded.py`, `test_apparatus_in_its_place.py`, `test_the_browser_is_the_library.py` | named |
 | §4a | | named; `UX-346`'s `test_a_sentence_lives_on_its_door.py` holds it and cites no section |
 | §4b | `test_a_runbook_is_not_a_table.py` | `UX-351`'s `test_the_label_is_for_the_reader.py` holds it and cites no section; `UX-669`'s clause holds the half that says a citation is a question, never a key |
@@ -1607,8 +1701,10 @@ headings, so a renumber there moves it.
 | §4d | `test_a_new_control_class_lands_declared.py` | `UX-665`'s registry names the § each class belongs to, which is how this one first acquired a guard; `UX-368` and `UX-369` are still the filed items |
 | §4e | `test_the_ceilings_reach_a_reader.py`, `test_the_served_handoff_counts_its_edges.py` | |
 | §4f | `test_the_type_scale_is_four_steps.py` | |
+| §4g | | filed as `UX-824` |
 | §5 | | named; `test_the_palette_is_validated.py`, named in §5's own prose, cites §4.3 and §4.5 only |
 | §5a | | no guard cites it; the easy one passes forever, below |
+| §5b | | filed as `UX-822` |
 | §6 | | named; `test_the_numbers_have_a_sentence.py` and `test_the_shape_before_the_rows.py` hold the sentence and the `n`; neither cites §6 |
 | §6a | `test_every_control_has_a_resting_appearance.py` | named; §6a's refusal, not a fifth copy of four rules |
 | §6b | `test_one_factory_builds_every_table.py`, `test_the_handoff_rides_the_rail.py` | |

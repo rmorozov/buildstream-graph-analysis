@@ -1,6 +1,6 @@
 # UX-818: two canned queries error when an element is given
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-432 (the library runs) | **Found by:** round 114, walk seed 3 | **Serves:** R1 at the Perfetto handoff | **Topic:** guards | **Area:** tools | **Shape:** judgement
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-432 (the library runs) | **Found by:** round 114, walk seed 3 | **Serves:** R1 at the Perfetto handoff | **Topic:** guards | **Area:** tools | **Shape:** judgement
 
 ## Motivation
 
@@ -70,3 +70,9 @@ parsed against a bare `:memory:` connection with no error worse than
 the two counter-table questions included. No question is skipped.
 
 **Deviation from the Required Fix:** none.
+
+Deviation: the track's `rendered_sql` emptied a missing element and an
+empty `bounds` where the page keeps both tokens, and the guard proved
+syntax only - a swapped window passed. Closed at merge: the fill
+matches `renderedSql` byte for byte and a parity case per question
+runs through node (54 passed; swap 2 red, emptied element 4 red).

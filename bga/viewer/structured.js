@@ -13,7 +13,8 @@
  * - is a parameter, which is why the crossing count was taken with
  * comments and strings stripped and then read, rather than trusted.
  */
-import { served, safeStorage } from "./primitives.js";
+import { served } from "./primitives.js";
+import { COPY_FORMAT_MIRROR, readCopyFormat, writeCopyFormat } from "./viewstate.js";
 import { COMMAND, QUANTITY, COLUMNS, DIRECTION, SERIES, DISTRIBUTION, QUESTION,
          PRESETS, INLINE, bytes, childNode, cssId, dataKeyed,
          describedTerm, el, elementColumn, guessQuantity, heading, hintsOf,
@@ -1015,37 +1016,6 @@ export function interrogable(table, specs, total, depth = 0) {
   tools.addEventListener?.("input", label);
   tools.addEventListener?.("change", label);
   return tools;
-}
-
-// UX-280: which form the reader last chose, remembered for them alone.
-//
-// `localStorage` is the right channel and `UX-211` says why: it
-// remembers for *me*, on *this* browser, and it is not part of the link
-// anybody pastes. An export opened from `file://` may get no storage at
-// all, and a page that threw there would lose the report rather than
-// the preference - so both sides are guarded and the default is what
-// the page did before.
-const COPY_FORMAT_KEY = "bga.copy-format";
-
-// `UX-536`: what one box tells the other 28. Its own event rather than
-// `change`, so mirroring cannot re-enter the handler that started it.
-const COPY_FORMAT_MIRROR = "bga:copy-format";
-
-export function readCopyFormat() {
-  try {
-    return safeStorage()?.getItem(COPY_FORMAT_KEY) === "markdown"
-      ? "markdown" : "json";
-  } catch (error) {
-    return "json";
-  }
-}
-
-export function writeCopyFormat(format) {
-  try {
-    safeStorage()?.setItem(COPY_FORMAT_KEY, format);
-  } catch (error) {
-    /* a private window, blocked site data, an export from a folder */
-  }
 }
 
 // What to type, in the unit the column publishes.

@@ -1,6 +1,6 @@
 # UX-824: reader-facing strings: the rule, and a guard that reads the page
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-669 (a task id is never bare in prose), UX-665 (the census) | **Found by:** round 115, the design review | **Serves:** every reader of the page | **Topic:** guards | **Area:** tools | **Shape:** bounded
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-669 (a task id is never bare in prose), UX-665 (the census) | **Found by:** round 115, the design review | **Serves:** every reader of the page | **Topic:** guards | **Area:** tools | **Shape:** bounded
 
 ## Motivation
 
@@ -85,3 +85,10 @@ track's - `fixing-guide.md`'s touching-map figure (532 vs a measured
 (83 lines) - the last already fixed upstream to 80 lines on the round
 branch (`65efded3`), not yet merged into this base. Committed with
 `BGA_SKIP_SELECTOR=1`.
+
+Deviation: the brief's first mutation (`UX-14` in the capacity caveat)
+reaches neither fixture - `capacity_recommendation` is null on both -
+so `UX-478` in the `dependency_stages` hint stood in. Item 3 read `td`
+only until the verifier's mutation showed the pipe keys in a `dd`;
+widened to item 4's cell set, red at 2 of 10 here. The tier row
+(3.6 s), `UNRESOLVABLE` 71 and the spread were added at merge.

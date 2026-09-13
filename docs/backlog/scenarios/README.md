@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-833 scenarios: **5 open**, 828 closed.
+833 scenarios: **4 open**, 829 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -27,7 +27,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | cli | 0 | 22 |
 | store | 0 | 16 |
 | docs | 0 | 142 |
-| guards | 1 | 222 |
+| guards | 0 | 222 |
 
 ## Open scenarios
 
@@ -36,7 +36,6 @@ task file, which is the only place it ever lived twice.
 
 | ID | Scenario | Topic | Priority | Serves | Status |
 |---|---|---|---|---|---|
-| UX-824 | [reader-facing strings: the rule, and a guard that reads the page](UX-0824-reader-facing-strings-the-rule-and-a-guard-that-reads-the-page.md) | guards | High | every reader of the page | 🔴 |
 | UX-829 | [five of seven joined fields on the elements table draw no column](UX-0829-five-of-seven-joined-fields-on-the-elements-table-draw-no-column.md) | viewer | High | R2 and R3 reading one element's row | 🔴 |
 | UX-830 | [the serial chains, ranked, not the longest one](UX-0830-the-serial-chains-ranked-not-the-longest-one.md) | analysis | Medium | R3 deciding which chain to split | 🔴 |
 | UX-831 | [a max-jobs advice row is four levels deep](UX-0831-a-max-jobs-advice-row-is-four-levels-deep.md) | viewer | Medium | R5 setting max-jobs across a large project | 🔴 |

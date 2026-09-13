@@ -60,11 +60,9 @@ needs_browser = pytest.mark.skipif(chrome is None, reason=NO_BROWSER)
 #:
 #: The heading's **own** text. `sectionHead` writes `heading().label`
 #: into the `h2` as text and everything else in there is an element -
-#: the collapse control, the `section-key` span, the JSON toggle - so
-#: the text nodes are the label and nothing else is. Read positionally
-#: rather than by subtracting the controls' strings: `cache`'s key span
-#: reads `cache` and its label ends `...from the cache?`, and a search
-#: takes the wrong one.
+#: the collapse control, the JSON toggle (`UX-825` moved the payload
+#: key off the heading and onto the toggle's `title`) - so the text
+#: nodes are the label and nothing else is.
 _LABELS = """
 (() => {
   const own = (node) => [...node.childNodes]

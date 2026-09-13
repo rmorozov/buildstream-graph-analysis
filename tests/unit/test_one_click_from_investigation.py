@@ -138,12 +138,14 @@ class TestSectionsAreNamedAsQuestions:
         assert out["rail"] == "raw", "no rail means raw, never nowhere"
 
     def test_the_rendered_page_uses_the_declared_questions(self):
+        """`UX-825`: the key stays off the heading now - `data-section`
+        is where a question heading's key lives."""
         out = _render(_report())
         headings = out["headings"]
         assert any(h["label"].endswith("?") for h in headings), headings
         for h in headings:
             if h["label"].endswith("?"):
-                assert h["subtitle"], "a question heading keeps its key"
+                assert h["key"], "a question heading's section keeps its key"
 
 
 def _chapters():
@@ -412,14 +414,12 @@ const sections = all(root, (n) => n.attrs["data-section"])
   .map((n) => n.attrs["data-section"]);
 
 const headings = all(root, (n) => n.tagName === "h2").map((n) => {
-  const key = n.children.find((c) => c.className === "section-key muted");
-  // The heading's *own* text, not the concatenation of its subtree: a
-  // real DOM's `textContent` includes the `section-key` child, so
-  // `label` used to read "Which capture is this?run_instance"
-  // (`UX-264`).
-  const own = n.children.filter((c) => c !== key)
-    .map((c) => c.textContent).join("") || n._text;
-  return { label: own, subtitle: key ? key.textContent : null };
+  // `UX-825`: the payload key no longer rides a `section-key` span in
+  // the heading, so this reads it off the enclosing section's
+  // `data-section` instead - the surface the key still carries.
+  const own = n.children.map((c) => c.textContent).join("") || n._text;
+  return { label: own, key: n.closest?.("[data-section]")?.attrs?.["data-section"]
+                          ?? null };
 });
 
 const contents = nav.toc(root, { document: globalThis.document });

@@ -148,7 +148,10 @@ const shim = await import(process.env.BGA_DOM_SHIM);
 const slot = shim.makeNode("p");
 slot.hidden = true;
 shim.installDocument({
-  getElementById: (id) => (id === "run-producer" ? slot : null),
+  // `UX-828`: the producer stamp moved to the footer's
+  // `#version-line` - `#run-producer` now holds only the reader
+  // picker.
+  getElementById: (id) => (id === "version-line" ? slot : null),
 });
 const app = await import("./tests/viewer.mjs");
 
@@ -168,7 +171,7 @@ console.log(JSON.stringify({
   current: app.analysisSentence(CURRENT),
   here: app.analysisSentence(HERE),
   absent: app.analysisSentence(undefined),
-  header: slot._text ?? "",
+  footer: slot._text ?? "",
   source: slot.attrs["data-analysis-source"],
   flagged: slot.attrs["data-analysis-stale"],
 }));
@@ -205,9 +208,11 @@ class TestThePageStatesIt:
     def test_a_run_with_no_note_says_nothing(self, probed):
         assert probed["absent"] is None
 
-    def test_the_heading_carries_it_beside_the_producer_stamp(self, probed):
-        assert "measured by bga 0.3.0" in probed["header"], probed["header"]
-        assert "analysed at capture" in probed["header"], probed["header"]
+    def test_the_footer_carries_it_beside_the_producer_stamp(self, probed):
+        """`UX-828`: the stamp moved off the sticky header, into the
+        footer."""
+        assert "measured by bga 0.3.0" in probed["footer"], probed["footer"]
+        assert "analysed at capture" in probed["footer"], probed["footer"]
         assert probed["source"] == "capture"
         assert probed["flagged"] == "true"
 

@@ -1693,7 +1693,7 @@ headings, so a renumber there moves it.
 | §3f | `test_the_handoff_box_is_measured_served.py` | |
 | §3g | `test_the_ceilings_reach_a_reader.py` | |
 | §3h | `test_the_rail_is_a_source_list.py` | |
-| §3i | | filed as `UX-828` |
+| §3i | `test_the_header_keeps_its_budget.py` | |
 | §4 | `test_emphasis_is_a_budget.py`, `test_the_palette_is_validated.py`, `test_a_drawing_is_graded.py`, `test_apparatus_in_its_place.py`, `test_the_browser_is_the_library.py` | named |
 | §4a | | named; `UX-346`'s `test_a_sentence_lives_on_its_door.py` holds it and cites no section |
 | §4b | `test_a_runbook_is_not_a_table.py` | `UX-351`'s `test_the_label_is_for_the_reader.py` holds it and cites no section; `UX-669`'s clause holds the half that says a citation is a question, never a key |

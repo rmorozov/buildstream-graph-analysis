@@ -515,7 +515,15 @@ END pid=101 ppid=1 ts=1002.500000 element=work-a.bst cmd=cc -c main.c
 #
 # 322,000 leaves 5,948 B, the same order of headroom the moves above
 # chose.
-PAGE_BUDGET_B = 322_000
+# `UX-828`: the header's identity line split in two (a wordmark and
+# the alias/instant beside the picker), the version line moved to the
+# footer and `--head` was re-derived - all source, measured with the
+# diff toggled in one worktree either side:
+#
+#     page   321,493 -> 322,946   (+1,453 B, all source)
+#
+# 325,000 leaves 2,054 B.
+PAGE_BUDGET_B = 325_000
 
 #: `UX-444`: the claim, stated once. **The run's data is at least twice
 #: the page a reader is permitted to download.**
@@ -1001,7 +1009,11 @@ COMMITTED_EXPORTS = [
     # `remote-execution-whatif` provenance record too. The session's
     # per-element correction lengthened the `assumption` sentence
     # `compiler_offload` carries by a further ~1,300 B.
-    ("macro_micro", MACRO_MICRO, 515_000),             #  513,054 B
+    # `UX-828`: +1,453 B, all source - the same delta as the `golden`
+    # bound's note above, measured the same way (`UX-667`'s method).
+    # 516,453 leaves 334 B in this worktree; the bytes above are
+    # path-length dependent and the delta is what is comparable.
+    ("macro_micro", MACRO_MICRO, 516_453),             #  516,119 B
 ]
 
 

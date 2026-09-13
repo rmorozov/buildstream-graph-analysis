@@ -45,7 +45,7 @@ Then write the proposed grouping down and ask what would have to cross:
 python3 tools/dev_js_deps.py --crossings bga/viewer/app.js --groups '{
   "fetch":   ["FETCH_POLL_MS", "FETCH_POLL_LIMIT", "TRACE_STATUS_URL", "watchTheFetch"],
   "handoff": ["announceHandoff", "wireTheHandoff", "inlined", "inflated", "offered", "optional"],
-  "app":     ["stampHeader", "analysisSentence", "foldOnNarrow", "wireJumpBox", "runQuery", "load", "boot", "wireFocusAndMarks"]
+  "app":     ["stampHeader", "stampIdentity", "analysisSentence", "foldOnNarrow", "wireJumpBox", "runQuery", "load", "boot", "wireFocusAndMarks"]
 }'
 ```
 

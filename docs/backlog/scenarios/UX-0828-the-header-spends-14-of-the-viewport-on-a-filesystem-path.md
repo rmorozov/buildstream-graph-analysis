@@ -43,3 +43,49 @@ changes.
 `header.getBoundingClientRect().height <= 72` at 1440 and 1024 wide;
 the absolute path absent from the header's text and present in
 `run_instance`; the §3i guard red on the path line reintroduced.
+
+## Outcome
+
+**Gap measured**, golden export, 1440x900 and 1024x768, `scrollTo(0,
+2000)` first:
+
+```text
+1440x900   header_px 108   sticky   text starts "mixed_task_kinds\n\n/tmp/.../snapshot/mixed_task_kinds\n\nmeasured by bga 0.4.1 — analysed here by bga 0.4.1 I am ..."
+1024x768   header_px 108   (same text)
+```
+
+**Close measured**, same export, after the fix:
+
+```text
+$ python3 -m pytest tests/unit/test_the_header_keeps_its_budget.py -q
+........                                                                [100%]
+8 passed in 3.13s
+```
+
+macro_micro, 1440x900: `header_px 45`, text `"bga \n\nrun — 2026-08-21
+17:01:28 UTC\n\n \n\nI am \nanyone\n..."` (alias + start instant, no
+path); `wordmark.title` = the run's absolute path;
+`[data-section="run_instance"]` includes `Run dir <path>`; footer
+carries `measured by bga 0.4.1 — analysed here by bga 0.4.1`.
+
+| mutation | result |
+|---|---|
+| `stampIdentity` appends the path back onto `#run-name`'s text (the header's identity line) | `test_the_path_is_absent_from_the_header_text` reds on both fixtures; `test_the_height_is_within_budget_at_both_widths` reds too (macro_micro/1024: 76px, over the wrapped path) — 3 of 8 red |
+
+Reverted from the pre-mutation copy (not `git checkout`), re-run green
+(8 passed).
+
+`--head` (`style.css`) was re-derived from the new, much smaller
+header — 7rem→3.25rem wide, 9.5rem→4.5rem narrow — which
+`test_a_rail_click_lands_on_its_section.py`'s pasted `BAND` (117,123)
+also needed re-measuring: new landing 59-60px, band moved to (57,63).
+
+`PAGE_BUDGET_B` (`test_the_report_you_can_attach.py`) moved 322,000 →
+325,000 (+1,453 B, all source, measured with the diff toggled in one
+worktree either side); the `macro_micro` committed-export row moved
+515,000 → 516,453 for the same delta.
+
+`BGA_SKIP_SELECTOR=1` on the commit: the one red guard left is
+`test_every_browser_guard_is_listed`, which needs the new guard's row
+in `tests/tiers.py` - the orchestrator's file per this track's rules,
+not this commit's to add.

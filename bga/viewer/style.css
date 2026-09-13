@@ -248,20 +248,26 @@ body[data-has-toc] > header {
   border-bottom: 1px solid var(--line);
   padding: .2rem 0 .5rem; margin: 0 0 1rem;
 }
-#run-path, #run-producer { margin: .1rem 0 0; font-size: var(--font-small); }
+/* `UX-828` (styleguide §3i): the wordmark and the identity line sit on
+   one row where there is width for it - the header's whole budget is
+   72px, and three stacked blocks at the h1 size alone spend more.
+   `header` itself stays `display: block` (one column of identity,
+   above) - only its own children go inline. */
+#wordmark { display: inline-block; margin-right: .75rem; vertical-align: middle; }
+#run-identity, #run-producer {
+  display: inline-block; vertical-align: middle;
+  margin: 0; font-size: var(--font-small);
+}
 /* The height the sticky heading occupies, named once so the rail's
    offset and every anchor's landing clear it by the same amount. A
    jump that lands under the header is the "information overlaps"
    report, in the one place a reader most often looks. */
-/* UX-317: the sticky header's height, and every anchor's landing clears
-   it by this. Measured in Chromium after the actions moved out: 92px at
-   1440x900 and 134px at 390x844, so 6rem and 8.5rem cover them. It had
-   been 5.5rem against a **172px** header - anchors landed 84px under
-   the heading, which is the "information overlaps" report in the one
-   place a reader most often looks.
-   `UX-668`: the reader control's identity line wraps to a second row on
-   a run with readers to offer, re-measured at 108px. */
-body[data-has-toc] { --head: 7rem; }
+/* UX-828 (styleguide §3i): the header lost the path and the version
+   line, and shrank with them. Measured in Chromium: 45px at 1440x900
+   and 1024x768, 68px at 390x844 (the identity line wraps) - 3.25rem
+   and 4.5rem cover them without landing an anchor under a header that
+   is no longer 92-134px tall. */
+body[data-has-toc] { --head: 3.25rem; }
 body[data-has-toc] > nav.toc { top: var(--head); max-height: calc(100vh - var(--head)); }
 body[data-has-toc] main > section, body[data-has-toc] [id] { scroll-margin-top: calc(var(--head) + .5rem); }
 h2 { font-size: var(--font-h2); margin: 2rem 0 .5rem; }
@@ -1008,9 +1014,10 @@ body[data-has-toc] > header { display: block; }
    `--head` is what every anchor's `scroll-margin-top` reads. Leaving it
    at the wide value would land a jump under the heading at exactly the
    width where there is least room to recover.
-   `UX-668`: re-measured at 149px with the reader control's line. */
+   `UX-828`: re-measured at 68px, the identity line wrapped, with the
+   path and the version line gone. */
 @media (max-width: 60rem) {
-  body[data-has-toc] { --head: 9.5rem; }
+  body[data-has-toc] { --head: 4.5rem; }
 }
 
 /* UX-281: the way home, on every satellite page. Small and quiet - it

@@ -39,6 +39,10 @@ _ROW = re.compile(
     r"^\|\s*\[?(\d+\.\d+\.\d+)\]?[^|]*\|\s*([\d-]+)\s*\|\s*(\d+)\s*\|"
     r"\s*(\w+)\s*\|")
 _STATE = re.compile(r"```text state\n(.*?)```", re.S)
+#: `UX-820`: the generated block's body, to check what its last line is -
+#: the marker pair itself, not the range or its content.
+_GENERATED = re.compile(
+    r"<!-- generated: UX-252 \d+→\d+ -->\n(.*?)<!-- /generated -->", re.S)
 
 
 def _rows():
@@ -124,6 +128,18 @@ class TestTheLedgerIsWellFormed:
             f"release(s) with no ```text state``` block: {missing}. The "
             f"derivation reads that block; a row without one records no "
             f"contract state and is a date with a number attached.")
+
+    def test_every_generated_block_ends_on_a_blank_line(self):
+        """`UX-820`: `<!-- /generated -->` on the next line after the
+        last bullet is a list with no blank line after it - MD032."""
+        text = CHANGELOG.read_text(encoding="utf-8")
+        blocks = _GENERATED.findall(text)
+        assert blocks, "CHANGELOG.md has no generated block this guard can read"
+        not_blank = [i for i, body in enumerate(blocks)
+                     if not body.endswith("\n\n")]
+        assert not_blank == [], (
+            f"generated block(s) at index {not_blank} do not end on a "
+            f"blank line before `<!-- /generated -->`")
 
     def test_every_kind_is_one_of_the_four(self):
         wrong = [(row["version"], row["kind"]) for row in _rows()

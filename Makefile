@@ -116,7 +116,7 @@ lint: lint-docs
 # pymarkdown 0.9.34+, and the 3.9 lane resolves to 0.9.33. The cost is
 # that a brand-new .md is linted from its first `git add`, not before.
 lint-docs:
-	git ls-files -z -- README.md CLAUDE.md REVIEW.md 'docs/*.md' '.claude/*.md' \
+	git ls-files -z -- README.md CLAUDE.md REVIEW.md CHANGELOG.md 'docs/*.md' '.claude/*.md' \
 	  | xargs -0 -r python3 -m pymarkdown --config .pymarkdown.json scan
 
 # UX-712: the size ledger - a file's longest function, its own line

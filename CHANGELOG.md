@@ -409,6 +409,7 @@ commands: analyze baseline blast bundle cache-logs cache-trend capture checkout-
 - [UX-815](UX-0815-the-ingestion-path-chapter-moves-into-the-tools-area-page.md) — [the ingestion-path chapter moves into the tools area page](UX-0815-the-ingestion-path-chapter-moves-into-the-tools-area-page.md)
 - [UX-816](UX-0816-the-bga-area-s-five-chapters-move-into-its-page.md) — [the bga area's five chapters move into its page](UX-0816-the-bga-area-s-five-chapters-move-into-its-page.md)
 - [UX-689](UX-0689-the-architecture-document-moves-into-the-area-pages-one-track-at-a-tim.md) — [the architecture document moves into the area pages, one track at a time](UX-0689-the-architecture-document-moves-into-the-area-pages-one-track-at-a-tim.md)
+
 <!-- /generated -->
 
 ## 0.4.0 — a capture you can carry (2026-09-03)
@@ -695,6 +696,7 @@ commands: analyze baseline blast bundle cache-logs cache-trend capture checkout-
 - [UX-517](UX-0517-a-closed-outcome-quotes-a-bucket-that-is-now-empty.md) — [a closed Outcome quotes a bucket that is now empty](UX-0517-a-closed-outcome-quotes-a-bucket-that-is-now-empty.md)
 - [UX-525](UX-0525-a-track-costs-tokens-and-nobody-knows-where.md) — [a track costs 81k-131k tokens, and nobody knows where](UX-0525-a-track-costs-tokens-and-nobody-knows-where.md)
 - [UX-500](UX-0500-the-batch-gate-measured-against-the-per-item-suite.md) — [the batch gate, measured against the per-item suite](UX-0500-the-batch-gate-measured-against-the-per-item-suite.md)
+
 <!-- /generated -->
 
 ## 0.3.0 — every document says what shape it is (2026-08-27)
@@ -884,6 +886,7 @@ commands: analyze baseline blast cache-logs cache-trend capture checkout-cost ch
 - [UX-294](UX-0294-eleven-viewer-modules-are-named-in-no-document.md) — review 3 found the viewer's fifteen ES modules named a handful of times in the architecture - `views.js` at 2,400 lines, `nav.js`, and `viewstate.js` at **zero** - so a reader opening `bga/viewer/`…
 - [UX-295](UX-0295-whatif-v1-is-in-no-guide.md) — review 3 counted contract homes and found `whatif/v1` named four times across the spec, the architecture and a direction, and **zero** times in `docs/guides/` - the command documented, the document…
 - [UX-306](UX-0306-the-guide-joins-the-tree.md) — round 41 wrote the web report's visual contract and left it beside the tree it governs;
+
 <!-- /generated -->
 
 ## 0.2.0 — the build that says what it is (2026-08-24)
@@ -940,6 +943,7 @@ commands: analyze baseline blast cache-logs cache-trend capture checkout-cost ch
 
 - [UX-251](UX-0251-a-release-is-a-contract-state-not-a-date.md) — `bga --version` said `0.1.0`, unmoved across 29 rounds and 247 scenarios;
 - [UX-252](UX-0252-the-release-notes-should-be-generated-from-the-closed-rows.md) — Hand-writing release notes would make a third copy of facts that already live in the task file's Outcome and the closed row - and two hand-maintained copies of one fact drifting is this repository's…
+
 <!-- /generated -->
 
 Rows 1–238 predate recorded releases: they landed across twenty-nine

@@ -34,3 +34,37 @@ joins `lint-docs`' file list so the next release's block is read.
 
 `make lint` reads `CHANGELOG.md` and is clean; mutation: delete the
 blank line before one `<!-- /generated -->` — `make lint` red.
+
+## Outcome
+
+Gap measured:
+
+```text
+$ python3 -m pymarkdown --config .pymarkdown.json scan CHANGELOG.md | grep -c MD032
+4
+```
+
+Close measured: `render()` in `tools/bga_release_notes.py` now returns
+`"\n".join(lines) + "\n"`, the four generated blocks in `CHANGELOG.md`
+each gained the blank line before `<!-- /generated -->`, and
+`lint-docs` in the Makefile added `CHANGELOG.md` to its file list.
+
+```text
+$ python3 -m pymarkdown --config .pymarkdown.json scan CHANGELOG.md | grep -c MD032
+0
+$ make lint   # tail
+clean: 559 finding(s) match tests/quality_baseline.json; 280 still forced
+by UX-697; 1 still forced by UX-744; 2 still forced by UX-762; 1 still
+forced by UX-781; 2 still forced by UX-789
+[exited with code 0]
+```
+
+Mutation table:
+
+| guard | mutation | result |
+|---|---|---|
+| `test_every_generated_block_ends_on_a_blank_line` (new, in `tests/unit/test_a_release_records_a_contract_state.py`) | drop the blank line before the 0.4.1 block's `<!-- /generated -->` | FAILED — `generated block(s) at index [0] do not end on a blank line`; reverted from the scratchpad copy, then 52/52 passed in both release-guard files |
+
+Same mutation independently confirmed against the real Acceptance Test
+tool: `python3 -m pymarkdown --config .pymarkdown.json scan CHANGELOG.md
+\| grep -c MD032` read `1` with the blank line dropped, `0` restored.

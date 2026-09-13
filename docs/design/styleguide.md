@@ -600,7 +600,7 @@ column re-read in round 73:
                  elements   landed   opened    words   controls    nodes
 golden                  4    3,800   15,618    7,144        427    2,498
 macro_micro            11    5,965   31,804   12,002        750    5,686
-budget, to 50 elts             7,300   36,900   12,800        800    7,900
+budget, to 50 elts             7,300   38,200   12,800        800    7,900
 
 scale               1,202    4,763   26,242   36,542      1,941   24,294
 budget, to 4,000 elts          7,000   32,000   41,000      2,300   27,500
@@ -627,7 +627,7 @@ in it hidden, and the class is bounded at both ends:
                  elements   landed   opened    words   controls    nodes
 scale               1,202    5,007   26,584    8,259        787    4,732
 xl                  4,002    4,937   27,230    8,275        812    4,960
-budget, to 4,100 elts          7,000   32,000    9,000        900    5,500
+budget, to 4,100 elts          7,000   36,500    9,600        900    6,000
 ```
 
 Height does not move at all — a bounded row costs no pixels, which is

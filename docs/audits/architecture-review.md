@@ -94,6 +94,7 @@ would have caught it; a bound at it would only just have.
 | 20 | 2026-09-07 | 750 | five filings, and the shape is one the log has not carried before: **a record that says a thing happened, checked against the tree that would show it.** `UX-777` — `UX-650` found the page-built sections were thirteen, fixed the code, and left both sentences saying nine. `UX-778` — `UX-584` derived the enforced-rule count and the derivation reads one of the two documents that state it. `UX-780` — the §6 map cites `UX-698/UX-699` for a workflow that runs `UX-699` alone, `UX-698` being 🔴. `UX-779` — the README's `21s`/`5m11s` predate `UX-551`, which established that a wall clock is a property of the machine. And the review caught the session that commissioned it: **round 107's document listed `UX-764` under *What closed* while both its markers correctly read 🔴** — the two-marker guard was green because the markers agree with each other, and nothing reads the round document against them |
 | 21 | 2026-09-08 | 780 | two filings, both the shape review 20 named — a record no guard reads, beside the tree that shows it. `UX-798` — `directions.md`'s round-109 row says *fourteen closed, ten filed*; the round document's own list closes 13 (`UX-789` is filed and open in that same section) and `Found by: round 109` finds 11. `UX-799` — the §6 map's `dev_baseline.py` row names the finding baseline and not the pyright mode `UX-697` gave it. Sound: `CLAUDE.md`'s advisory reproduces from `dev_process_bands.py --runs 58`; round 109's *What closed* list is 🟢 in both markers for all 13; `dev_touching.py --size` prints the figure both guides carry |
 | 22 | 2026-09-12 | 808 | two filings, both review 20's shape one turn further: a record a guard *does* read, with the guard's population narrower or self-cancelling. `UX-813` — round 111's history row derives *sixteen closed* from a bullet walk that counts `UX-695` twice (a trailing bullet with no em dash) and never sees `UX-806` (closed, listed under *In progress*); an over-count and an omission cancel to the row's number. `UX-814` — §6's `dev_commit_bodies.py` row names `UX-696` and not the App-author skip `UX-811` shipped. The area pages, the contract counts, the advisory, the capture flags and every round's closed ids reproduce |
+| 23 | 2026-09-13 | 834 | three filings, two of them review 22's shape one turn further — a guard whose presence-check is satisfied by the sentence stating a delta, not the table it should hold equal to it: `UX-838` — `UX-829`'s `fan_in[uid].direct` ships in round 116 with no document naming it and no guard able to, because `additionalProperties`-shaped rows are invisible to both of `_row_keys`'s two cases; `UX-840` — §3e's two reference tables sit one to three deltas behind `UX-830`'s own guarded bound, and `test_the_style_guide_states_every_budget` is green throughout because the missing number is present anyway, inside the narrative paragraph beside the stale table. `UX-839` — the shape review 20 named: a bare figure with no guard at all, the README's clone-size claim flagged undated by reviews 21 and 22 and now measured roughly 2x-9x what it states |
 
 ### Review 11 — 2026-09-02
 
@@ -1552,6 +1553,52 @@ six named plus §1a were checked. The §6 module map's ~103 per-row
 descriptions were checked for the CI-workflow block only — `UX-780`
 came out of that block, which is a reason to think the rest is worth a
 pass. `UX-689` owns the map's structural half.
+
+## Review 23 — 2026-09-13, at 834 closed rows
+
+Run by one reader over rounds 114-116 and the documents they touched:
+the three round records, their `directions.md` and `round-register.md`
+rows; `architecture.md`'s two newest Verification Log entries and its
+"Which file owns what" table; `styleguide.md`'s four new sections
+(§2f, §3i, §4g, §5b) and its §7 ledger; `cli.md`'s rows for the keys
+this round published; `CLAUDE.md`'s advisory sentence; `CHANGELOG.md`'s
+0.4.1 entry; `fixing-guide.md` §6 and §7a; the README's figures. Three
+filings.
+
+**The shape** is review 22's one turn further, twice, and review 20's
+once more. `UX-838` and `UX-840` are each a guard whose assertion
+passes on text that is not the claim under test — a key's presence
+*anywhere* in a schema walk that never visits `additionalProperties`,
+and a number's presence *anywhere* in a styleguide section that
+includes the very delta-narrative sentence explaining why the table
+should have changed. Both guards are green because the sentence that
+would falsify the drifted one sits right beside it, read by the same
+clause, satisfying it instead of catching it. `UX-839` is the older
+and plainer shape: a figure with no guard whatsoever, named as a gap
+by two consecutive reviews and never filed until this one measured it.
+
+### The five checks
+
+| check | result |
+|---|---|
+| counts | `bga.contracts.ids()` 25, `superseded()` 10, `reads()` 3, `printable()` 9, `unprintable()` 16, `analyze/v6` 61 properties, `ls bga/viewer/*.js` 22 — unchanged since review 22; `_consumer_surface()` 269 keys (263 at review 22, moved by `UX-830`'s own Outcome, `cli.md:937` states 269 and `test_the_guide_states_the_reach_it_actually_has` holds it); `closed.md` 808 → 834 (`sum(1 for l in open(...) if l.startswith("\| UX-"))`, the cadence guard's own method) |
+| versions | not re-walked — no version-bearing sentence in the nine groups changed since review 22 |
+| paths exist | `docs/audits/walk-seed-3.md`; all five `docs/design/areas/*.md` files match `docs/README.md`'s five rows; §7a's `--move`/`--note-file`/`--check`/`--write` all present in `dev_close_task.py --help`; `dev_track_cost.py --append` and `dev_touching.py --spread --write` both present |
+| pasted output current | `architecture.md`'s newest entry states `434 passed`, reads **435** at HEAD (`python3 -m pytest $(grep -ln "architecture.md" tests/unit/*.py) -q`) — dated at its own commit, the same excused count-only drift review 22 found on the entry before it; recorded, not filed. `CLAUDE.md`'s `302k … 259k (60 of 104 runs, four …)` reproduces exactly from `dev_process_bands.py --runs 104`. CHANGELOG's `263` key-table figure was accurate at the release commit (`git archive 8f238642` + the same walk → 263); a dated record, not a finding |
+| a Part / invariant held | `UX-817`..`UX-837` (21 ids) all 🟢 in `closed.md`; `dev_round_register.py --check` clean over rounds 114-116's rows |
+| a document describes a workflow | `fixing-guide.md` §6's context map guard (`test_the_context_map_is_the_tree.py`) green, 33 assertions; §7a's seven steps each name a guard that exists and passes; `docs/design/architecture.md`'s "Which file owns what" table (`test_the_viewer_modules_have_a_home.py`) green against `ls bga/viewer/*.js` |
+
+### One gap in this sweep
+
+Styleguide's dated pixel and node-count readings (§3i's `128.5 px`,
+§4g's `37 of 47`/`47 of 47` section-key counts) were taken as the
+dated records the review method treats them as, not re-driven through
+a real browser this sweep — a design-review, not this review, is what
+re-measures those. `UX-838`'s fix is scoped to the one instance found
+(`fan_in`); whether a second `additionalProperties`-shaped row carries
+the same silent gap across the other eight printable schemas was not
+walked, and is named `UX-838`'s own Out of Scope rather than assumed
+clean.
 
 ## Review 22 — 2026-09-12, at 808 closed rows
 

@@ -251,7 +251,7 @@ UNDISTRIBUTED_QUANTITIES = {
 
 
 def distribution(values):
-    """`{n, deciles, p95, p99, min, max, is_flat}` - or `None`.
+    """`{n, deciles, p95, p99, min, max, mean, is_flat}` - or `None`.
 
     Returns `None` for a population too small to have a shape, so a
     consumer can tell "no distribution" from "a flat one" - `UX-249`'s
@@ -275,6 +275,10 @@ def distribution(values):
     }
     for p in BLAST_DISTRIBUTION_TAIL:
         shape[f'p{p}'] = percentile(numbers, p)
+    # The mean, in the population's own unit; on a heavy tail it is the
+    # mark that most needs the median beside it, which is why the
+    # sentence stays on the median (styleguide §2f).
+    shape['mean'] = int(round(sum(numbers) / len(numbers)))
     # A population where every value is the same has no shape to
     # describe, and ten identical buckets would imply one.
     shape['is_flat'] = numbers[0] == numbers[-1]

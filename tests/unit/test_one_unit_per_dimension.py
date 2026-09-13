@@ -50,7 +50,7 @@ COLUMNS = schemas.COLUMNS
 #: parent's, not their own, so `element_duration_distribution.max` and
 #: `blast_radius_distribution.max` legitimately differ - the name `max`
 #: says which statistic, and the block above it says of what.
-_STATISTIC = re.compile(r"^(n|samples|min|max|median|mad|p\d{1,2})$")
+_STATISTIC = re.compile(r"^(n|samples|min|max|mean|median|mad|p\d{1,2})$")
 
 #: Suffixes that promise a unit, and the one they promise. A key whose
 #: name ends in `_us` and is declared `share` is a payload a consumer

@@ -618,7 +618,7 @@ def _check_hint(document: str, key: str, hint: dict) -> None:
 def _distribution(quantity: str, noun: str, description: str) -> dict:
     """`UX-343`: a distribution declares the unit of its own leaves.
 
-    `{n, min, max, deciles{p10..p90}, p95, p99, is_flat}` is one shape
+    `{n, min, max, deciles{p10..p90}, p95, p99, mean, is_flat}` is one shape
     published twice, and declaring `bga:quantity` on the *object* left
     every percentile inside it undeclared - measured through the page's
     own `quantityFor`, `min`, `max`, `p95`, `p99` and all nine deciles
@@ -647,6 +647,11 @@ def _distribution(quantity: str, noun: str, description: str) -> dict:
                                "an opinion."},
             "min": extreme("smallest"), "max": extreme("largest"),
             "p95": rank(95), "p99": rank(99),
+            "mean": {QUANTITY: quantity,
+                     "description": f"The mean {noun}; on a heavy tail the "
+                                    "mark that most needs the median beside "
+                                    "it, which is why the sentence stays on "
+                                    "the median."},
             "deciles": {
                 "description": "The nine deciles, nearest-rank.",
                 "properties": {f"p{step}": rank(step)

@@ -417,9 +417,34 @@ export function marksOf(distribution, countKey = "n") {
     p50: median,
     p95: numeric(distribution.p95) ? distribution.p95 : null,
     max: numeric(distribution.max) ? distribution.max : null,
+    // §2f: the marks the strip does not draw still reach the twin -
+    // every decile, p99 and the mean, in the population's order.
+    deciles: Object.fromEntries(
+      Object.entries(deciles).filter(([, v]) => numeric(v))),
+    p99: numeric(distribution.p99) ? distribution.p99 : null,
+    mean: numeric(distribution.mean) ? distribution.mean : null,
   };
   if (marks.min === null || marks.max === null) return null;
   return marks;
+}
+
+/** §2f: one twin row per published mark - min, the deciles, p95, p99,
+ *  max, mean, n - in the population's order, whatever the strip drew. */
+export function twinRows(marks, format) {
+  const decile = (step) => {
+    const value = marks.deciles?.[`p${step}`];
+    if (numeric(value)) return [[step === 50 ? "median" : `p${step}`, format(value)]];
+    return step === 50 && marks.p50 !== null ? [["median", format(marks.p50)]] : [];
+  };
+  return [
+    ["min", format(marks.min)],
+    ...[10, 20, 30, 40, 50, 60, 70, 80, 90].flatMap(decile),
+    ...(marks.p95 === null ? [] : [["p95", format(marks.p95)]]),
+    ...(marks.p99 === null ? [] : [["p99", format(marks.p99)]]),
+    ["max", format(marks.max)],
+    ...(marks.mean === null ? [] : [["mean", format(marks.mean)]]),
+    ...(marks.n === null ? [] : [["n", String(marks.n)]]),
+  ];
 }
 
 function stripSvg(doc, marks, { printed, size }) {
@@ -513,13 +538,7 @@ export function strip(distribution, {
                   `${parts.join(", ")}`
                   + (marks.n === null ? "." : ` — n=${marks.n}.`)));
   if (grade === GRADE_EXHIBIT) {
-    wrap.append(exhibitTwin(doc, ["mark", "value"], [
-      ["min", format(marks.min)],
-      ...(marks.p50 === null ? [] : [["median", format(marks.p50)]]),
-      ...(marks.p95 === null ? [] : [["p95", format(marks.p95)]]),
-      ["max", format(marks.max)],
-      ...(marks.n === null ? [] : [["n", String(marks.n)]]),
-    ]));
+    wrap.append(exhibitTwin(doc, ["mark", "value"], twinRows(marks, format)));
   }
   return wrap;
 }

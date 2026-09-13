@@ -1,6 +1,6 @@
 # UX-829: five of seven joined fields on the elements table draw no column
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-681 (fan-in joined), UX-382 (the join), UX-808 (§1b's last instance) | **Found by:** round 115, the design review | **Serves:** R2 and R3 reading one element's row | **Topic:** viewer | **Area:** bga-viewer | **Shape:** judgement
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-681 (fan-in joined), UX-382 (the join), UX-808 (§1b's last instance) | **Found by:** round 115, the design review | **Serves:** R2 and R3 reading one element's row | **Topic:** viewer | **Area:** bga-viewer | **Shape:** judgement
 
 ## Motivation
 
@@ -103,3 +103,11 @@ neither file): `test_a_new_key_with_no_prose_reddens_naming_the_key`
 every_budget` (§3e's "36,300" vs the code's "36,900", from `UX-827`);
 `make lint`'s `dev_baseline.py --check` also reports one new pyright
 finding on `bga/analyzer.py`, a file this track never touched.
+
+Deviation: the five wide columns sit in a sixth preset of the view
+select, not a "more columns" disclosure - the one-level door the page
+already has (§3a). The element card is `bga/viewer/element.js`'s
+per-element section, not named in the brief. Two export byte bounds
+moved (+5,179 B golden, +3,769 B macro_micro, measured) and the
+same-elements guard excludes `fan_in.direct` against the fan-out list
+in its own shape. No new test file, so no tier row.

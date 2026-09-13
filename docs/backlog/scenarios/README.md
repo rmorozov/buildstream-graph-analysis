@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-833 scenarios: **12 open**, 821 closed.
+833 scenarios: **11 open**, 822 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -23,7 +23,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | capture | 0 | 97 |
 | analysis | 6 | 115 |
 | contracts | 0 | 48 |
-| viewer | 4 | 171 |
+| viewer | 3 | 171 |
 | cli | 0 | 22 |
 | store | 0 | 16 |
 | docs | 0 | 142 |
@@ -38,7 +38,6 @@ task file, which is the only place it ever lived twice.
 |---|---|---|---|---|---|
 | UX-817 | [the join calls a zero-rebuilt run an attribution failure](UX-0817-the-join-calls-a-zero-rebuilt-run-an-attribution-failure.md) | analysis | Medium | R1 reading `bga correlate` after an incremental build | 🔴 |
 | UX-818 | [two canned queries error when an element is given](UX-0818-two-canned-queries-error-when-an-element-is-given.md) | guards | Medium | R1 at the Perfetto handoff | 🔴 |
-| UX-819 | [the export's Perfetto handoff fetches a quoted data: URI](UX-0819-the-export-s-perfetto-handoff-fetches-a-quoted-data-uri.md) | viewer | Medium | R1 opening the timeline from an export | 🔴 |
 | UX-823 | [the intervals' From column renders a monotonic epoch as a duration](UX-0823-the-intervals-from-column-renders-a-monotonic-epoch-as-a-duration.md) | analysis | High | R5 reading an idle window | 🔴 |
 | UX-824 | [reader-facing strings: the rule, and a guard that reads the page](UX-0824-reader-facing-strings-the-rule-and-a-guard-that-reads-the-page.md) | guards | High | every reader of the page | 🔴 |
 | UX-826 | [five bare task ids and a pipe-delimited task key reach the reader](UX-0826-five-bare-task-ids-and-a-pipe-delimited-task-key-reach-the-reader.md) | analysis | Medium | every reader of a finding | 🔴 |

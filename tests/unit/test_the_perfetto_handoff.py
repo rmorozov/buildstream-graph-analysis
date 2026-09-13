@@ -1170,3 +1170,38 @@ globalThis.scenario = async function ({
 
 if __name__ == "__main__":  # pragma: no cover
     raise SystemExit(pytest.main([__file__, "-v"]))
+
+
+# `UX-819`: the export writes the trace as a JSON string, quotes and all,
+# and `traceUrl()` handed the quotes to `fetch` - `file:///…/%22data:…%22`.
+_TRACE_URL_HARNESS = """
+const text = %s;
+const nodes = text === null ? {} : { "bga-trace": { textContent: text } };
+globalThis._installDocument ??= (await import(process.env.BGA_DOM_SHIM)).installDocument;
+_installDocument({ getElementById: (id) => nodes[id] ?? null });
+const { traceUrl } = await import("./tests/viewer.mjs");
+console.log(JSON.stringify(traceUrl()));
+"""
+
+
+@needs_node
+class TestTheExportsTraceIsABareUri:
+    """`UX-819`: `traceUrl()` returns the URI, never its JSON quotes."""
+
+    def _url(self, text):
+        script = _TRACE_URL_HARNESS % json.dumps(text)
+        result = subprocess.run(
+            [node, "--input-type=module", "-e", script],
+            capture_output=True, text=True, cwd=os.getcwd(), timeout=60)
+        assert result.returncode == 0, result.stderr
+        return json.loads(result.stdout)
+
+    def test_the_export_node_yields_the_bare_data_uri(self):
+        uri = "data:application/gzip;base64,H4sIAAAAAAAAA"
+        assert self._url(json.dumps(uri)) == uri
+
+    def test_a_bare_path_passes_through(self):
+        assert self._url("trace/timeline.json.gz") == "trace/timeline.json.gz"
+
+    def test_no_node_means_the_served_default(self):
+        assert self._url(None) == "timeline.json.gz"

@@ -702,6 +702,7 @@ MEDIUM = (
     "tests/unit/test_a_distribution_twin_draws_every_mark.py",    #  3.5s
     "tests/unit/test_the_header_keeps_its_budget.py",             #  2.9s
     "tests/unit/test_a_reader_never_sees_the_register.py",        #  3.6s
+    "tests/unit/test_the_max_jobs_advice_is_one_level.py",        #  1.3s
     # `UX-433`, tiered on landing. One `gen-synthetic` run and one
     # render of a 1,202-element two-plane snapshot, then the pivot
     # queries against a SQLite table. 1.6s.

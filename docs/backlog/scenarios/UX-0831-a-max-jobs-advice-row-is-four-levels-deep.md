@@ -1,6 +1,6 @@
 # UX-831: a max-jobs advice row is four levels deep
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-677 (the advice), UX-739 (the price), UX-808 (one row per element) | **Found by:** round 115, the design review | **Serves:** R5 setting max-jobs across a large project | **Topic:** viewer | **Area:** bga-viewer | **Shape:** judgement
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-677 (the advice), UX-739 (the price), UX-808 (one row per element) | **Found by:** round 115, the design review | **Serves:** R5 setting max-jobs across a large project | **Topic:** viewer | **Area:** bga-viewer | **Shape:** judgement
 
 ## Motivation
 
@@ -37,9 +37,13 @@ in the answer key.
 
 ## Acceptance Test
 
-`data-levels="1"` on the advice table; ≤ 40 px per row at 1440; on a
-Plane 2 run with more than the cap the badge reads `N of M` and a filter
-is present; mutation: nest `priced` again — the levels guard reds.
+The advice draws as one flat table — "Price" and "Why not priced"
+headers, no nested table — with `data-levels="3"` on its fold (refiled
+at close: `shapeOf` reads the value, two for any array of records and
+one more for `priced`, kept nested per the contract; a `v7` that drops
+it reads 2); ≤ 40 px per row at 1440; on a run over the cap the badge
+reads `N of M` and a filter is present; mutation: nest `priced` again
+— the headers guard reds.
 
 ## Outcome
 
@@ -103,3 +107,9 @@ red - `36815 px, over the 36300 px budget`. Reproduced identically
 one guard this track was pre-authorised to skip past
 (`test_every_browser_guard_is_listed`); flagging the deviation here
 since the authorisation named a different guard.
+
+Deviation: the Acceptance Test's `data-levels="1"` was unreachable as
+filed - the fold measures the value, and `priced` stays nested by the
+no-bump decision - so it is refiled to the measured 3 with the reason.
+The tier row (1.3 s), `UNRESOLVABLE` 72 and the spread were added at
+merge; `docs/guides/cli.md` and `PAGE_BUDGET` (+257 B) moved with it.

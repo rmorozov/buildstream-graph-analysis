@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-833 scenarios: **4 open**, 829 closed.
+833 scenarios: **3 open**, 830 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -23,7 +23,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | capture | 0 | 97 |
 | analysis | 2 | 115 |
 | contracts | 0 | 48 |
-| viewer | 2 | 171 |
+| viewer | 1 | 171 |
 | cli | 0 | 22 |
 | store | 0 | 16 |
 | docs | 0 | 142 |
@@ -38,7 +38,6 @@ task file, which is the only place it ever lived twice.
 |---|---|---|---|---|---|
 | UX-829 | [five of seven joined fields on the elements table draw no column](UX-0829-five-of-seven-joined-fields-on-the-elements-table-draw-no-column.md) | viewer | High | R2 and R3 reading one element's row | 🔴 |
 | UX-830 | [the serial chains, ranked, not the longest one](UX-0830-the-serial-chains-ranked-not-the-longest-one.md) | analysis | Medium | R3 deciding which chain to split | 🔴 |
-| UX-831 | [a max-jobs advice row is four levels deep](UX-0831-a-max-jobs-advice-row-is-four-levels-deep.md) | viewer | Medium | R5 setting max-jobs across a large project | 🔴 |
 | UX-833 | [a declared source-kind map for custom source plugins](UX-0833-a-declared-source-kind-map-for-custom-source-plugins.md) | analysis | Low | R2 whose sources come through a custom plugin | 🔴 |
 
 **The narrative round headings below are retired at round 94**

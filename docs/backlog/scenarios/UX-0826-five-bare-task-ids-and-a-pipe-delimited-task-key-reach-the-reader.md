@@ -38,3 +38,84 @@ golden fixture; the journey is the findings list in the answer key.
 
 `grep -n "(UX-[0-9]*)" bga/*.py` names no reader-facing sentence;
 `tests/unit/test_a_reader_never_sees_the_register.py` green on both exports for the id and task-key lines; mutation: put one `(UX-14)` back — red.
+
+## Outcome
+
+**Gap measured.** Fixture: `bga gen-synthetic <dir> --seed 1 && bga
+analyze <dir> --diagnostics && bga view <dir> --export <file>`
+(1,202 elements). Command (`tests/browser.py`'s `Browser.measure`,
+pasted in full below):
+
+```python
+CLOSED = "document.body.innerText.match(/\\bUX-\\d+\\b/g) || []"
+OPEN_THEN_SCAN = """(() => {
+  document.querySelectorAll('.description[hidden]').forEach(n => n.hidden = false);
+  document.querySelectorAll('section[data-section][data-collapsed]')
+    .forEach(n => n.setAttribute('data-collapsed', 'false'));
+  document.querySelectorAll('section.chapter[data-open]')
+    .forEach(n => n.setAttribute('data-open', 'true'));
+  document.querySelectorAll('section.chapter > section[data-section]')
+    .forEach(n => { n.style.contentVisibility = 'visible'; });  // UX-399 defers layout off-screen
+  return document.body.innerText.match(/\\bUX-\\d+\\b/g) || [];
+})()"""
+```
+
+Before this item's fixes: `closed` (page as loaded) read 0 - every hit
+was behind a closed chapter or `.description` door; `opened` (every
+door/chapter forced, `content-visibility` lifted so `innerText` sees
+what a reader who expands the report does) read **9**:
+`UX-478×2, UX-345, UX-477, UX-341×3, UX-09, UX-15, UX-378, UX-344`,
+plus `pipe` (`/[\w.-]+\|[A-Z]+\|[A-Z]+\|\d+/`) = 2 on the erased-span
+fixture. Source: `bga/correlate.py:1181`'s caveat; `dependency_stages`/
+`widest_stage`/`chain_share_of`/`occupancy_share`/`cores_busy`/
+`builders_change` (`bga/schemas.py`); `UNMODELED_AXIS_CLAUSE`, the
+oversub branch and the skip-clause (`bga/analyzer.py`); the
+`utilization_envelope` absence string; `duration_resolution.tasks`
+rendered verbatim by `structured.js`'s `INLINE_LIST`.
+
+**Close measured**, same command, same fixture, current commit:
+`closed: 0, opened: 0` on both the 1,202-element export and the
+erased-span fixture. `dt[data-key="tasks"] + dd` reads
+`all.bst · FETCH`. The prior report's "5 remaining" was measured on an
+export the fix had not yet reached (`UX-341`/`UX-09`/`UX-15`/`UX-378`/
+`UX-344` above) - now fixed, not a live gap.
+
+**The sweep.** `grep -n "(UX-[0-9]*)" bga/*.py` drove a second pass:
+an AST walk (`ast.parse`) marks every hit inside a
+module/function/class's first `Expr` `Constant` string (a docstring);
+a hit whose stripped line starts with `#` is a comment; every other
+hit is a candidate, checked for its actual renderer (schema
+`description`, an f-string reaching a finding/CLI print, argparse
+`help=`) before editing. The 48 hits matching the acceptance pattern
+are fixed. Two do not classify as docstring/comment and stay:
+`bga/cli.py:2439` (the checkout-mismatch warning -
+`test_a_shadowed_checkout_warns_at_startup.py` asserts `"UX-728" in
+stderr`; a dev/tooling diagnostic, not a report reader) and
+`bga/plane2.py:97` (a trailing same-line comment `startswith` misses).
+
+**Mutation table.**
+
+| instrument | mutation | reddened | count |
+|---|---|---|---|
+| `re.findall(r"\bUX-\d+\b", caveat)` on `compute_capacity_recommendation`'s output | restore `(UX-14)` | `['UX-14']` | 1 |
+| same regex, 3 schema descriptions | restore `` (`UX-478`) `` on `dependency_stages` | `['UX-478']` | 1 |
+| node + `dom_shim.mjs`, `format.itemsAsShown` | `if (hint[KEYED_BY]!==KEYED_BY_TASK_UID) return null` → `if (true) return null` | `structured.js`'s `?? value` fallback surfaces the raw join key | 1 |
+
+`test_capacity_recommendation.py`'s existing assertion (the literal
+`"(UX-14)"` substring) does not discriminate the id's removal alone
+(remaining check is a superset substring) - the regex instrument is
+what falsifies. Four more guards had the same shape (an id substring
+asserted where a content phrase was the actual claim) and are updated
+to the content: `test_the_band_refusal_names_the_run_mode_check`,
+`test_the_published_document_carries_that_distinction`,
+`test_the_schema_declares_it`, `test_the_page_carries_the_bands_reason`.
+Two committed exports (golden `mixed_task_kinds`, `with_timeline`)
+refreshed via `dev_refresh_analysis.py --write`; `git diff` confirmed
+text-only. `test_a_reader_never_sees_the_register.py` is `UX-824`'s.
+
+Surfaces: `bga/{analyzer,capacity_model,cli,compare,correlate,
+findings,hostinfo,plane2,provenance,run_store,schemas}.py`,
+`bga/viewer/{format,structured}.js`, five test files, two golden
+fixtures, `docs/guides/cli.md`. `python3 tools/dev_touching.py --base
+3afade2e`: 5619 passed, 99 skipped, 0 failed. `make lint`: ruff and
+pymarkdown clean, `dev_baseline.py --check` clean.

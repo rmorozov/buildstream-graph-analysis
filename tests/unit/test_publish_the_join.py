@@ -520,7 +520,7 @@ class TestTheUndeclaredGateIsLoadBearing:
         declared = schemas.schema(schemas.CORRELATE)["properties"][
             "elements"]["items"]["properties"]["declared"]
         assert declared["type"] == "boolean"
-        assert "UX-66" in declared["description"]
+        assert "is not one" in declared["description"]
 
 
 if __name__ == "__main__":  # pragma: no cover

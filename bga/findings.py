@@ -876,7 +876,7 @@ def _memory_refuses_more_builders(result: AnalysisResult) -> Optional[str]:
         f"{ceiling} builders at ~{next(p['envelope_bytes'] for p in envelope['projections'] if p['builders'] == ceiling) / GIB:.1f} GB "
         f"against {envelope['host_memory_bytes'] / GIB:.1f} GB of RAM, so the extra "
         f"builder would swap. Swapping is the worst build slowdown there is and no "
-        f"CPU-side signal predicts it (UX-104)"
+        f"CPU-side signal predicts it"
     )
 
 
@@ -1247,14 +1247,14 @@ def _plane2_capacity_hint(result: AnalysisResult, category: str) -> Optional[str
             f"{lead}{names} asked its native build for -j1 while the rest of this "
             f"build asked for more: remove `notparallel` or raise that element's "
             f"job count first. That is capacity you already have, and unlike "
-            f"`--builders` it cannot contend with itself (`UX-83`)."
+            f"`--builders` it cannot contend with itself."
         )
     if plane2.get('saturated') and measured:
         return (
             f"do NOT raise capacity on this host - {measured}, so another builder "
             f"would contend for CPU rather than add throughput. The wait is real; "
             f"the remedy is less work or better intra-element parallelism, not more "
-            f"concurrent elements (`UX-83`)."
+            f"concurrent elements."
         )
     return None
 

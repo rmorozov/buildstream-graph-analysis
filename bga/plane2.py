@@ -164,7 +164,7 @@ DESTINATIONS = {
     "redundant_operations_coverage": (
         TERMINAL, "",
         "What the redundancy scan excluded and why. A caveat on a "
-        "population the join already caps (`UX-375`), and the cap is "
+        "population the join already caps, and the cap is "
         "stated where the rows are."),
     "matched_count": (
         TERMINAL, "",
@@ -179,7 +179,7 @@ DESTINATIONS = {
     "wrapped_command_exit_code": (
         TERMINAL, "",
         "Whether the wrapped `bst` command succeeded. Plane 1 publishes "
-        "the run's outcome (`UX-156`), and two documents answering that "
+        "the run's outcome, and two documents answering that "
         "differently is the disagreement this tool exists not to have."),
 }
 
@@ -399,6 +399,6 @@ def attachable(run_dir: str):
     return None, (
         f"Plane 2 is {run_store.human_bytes(size)} and this run published no "
         f"analysis, so the report is rendered from Plane 1 alone - parsing it "
-        f"here costs about {run_store.human_bytes(int(size * 2.9))} of memory "
-        f"(UX-296). `bga snapshot -- bst build TARGET` publishes an analysis "
+        f"here costs about {run_store.human_bytes(int(size * 2.9))} of memory. "
+        f"`bga snapshot -- bst build TARGET` publishes an analysis "
         f"that carries both planes.")

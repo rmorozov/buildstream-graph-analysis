@@ -1289,7 +1289,7 @@ def compare_runs(baseline_dir: Path, candidate_dir: Path,
                 raise RunsNotComparableError(
                     f"baseline run {run_dir} is a {mode} run but the candidate is "
                     f"{candidate_mode} - a noise band may only be built from runs of "
-                    "the same kind (UX-55)"
+                    "the same kind"
                 )
             durations.append(duration)
         band = compute_band(durations, k=band_k)

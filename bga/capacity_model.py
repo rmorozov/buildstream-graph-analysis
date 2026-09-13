@@ -40,8 +40,8 @@ ASSUMPTIONS = {
     "arrivals_poisson":
         "Arrivals are Poisson - independent, memoryless, at a constant "
         "long-run rate, squared coefficient of variation 1. Nothing "
-        "here measures that. `UX-594` records a request instant where "
-        "a CI system offers one; no store carries enough of them yet.",
+        "here measures that: a request instant is recorded where a CI "
+        "system offers one, but no store carries enough of them yet.",
     "whole_arrival_stream":
         "This store holds more than one host class, and each model "
         "below sends the whole arrival stream to builders of its own "
@@ -52,7 +52,7 @@ ASSUMPTIONS = {
         "what this store built.",
     "finished_runs_only":
         "A failed, interrupted or suspended capture is not a sample "
-        "and is excluded from the service time (`UX-156`).",
+        "and is excluded from the service time.",
     "service_general":
         "The service time is not assumed exponential. The M/M/c wait "
         "is scaled by (CV_a^2 + CV_s^2)/2 - Allen-Cunneen - which is "
@@ -68,7 +68,7 @@ ASSUMPTIONS = {
         "batching, no reordering.",
     "per_host_class":
         "Modelled per host class and never across them - durations "
-        "are not scaled between machines (`UX-186`).",
+        "are not scaled between machines.",
     "littles_law":
         "The queue length is Little's law on the wait above: "
         "Lq = arrival rate x wait.",

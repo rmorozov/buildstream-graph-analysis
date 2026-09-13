@@ -682,7 +682,7 @@ _CLAIMS = {
             "who-depends-on-me ordering is a different claim and stays "
             "on the scheduler-bound arm - but the answer to the "
             "recipe-author's own question, which is true whichever way "
-            "the build is bound (`UX-479`). Elements with no dependents "
+            "the build is bound. Elements with no dependents "
             "are left out rather than listed at zero: a row reading "
             "\"0 downstream\" answers the question with a number "
             "meaning nobody."), ()),
@@ -700,7 +700,7 @@ _CLAIMS = {
             "Published for every graph with something to rank - an "
             "element that pulls in nothing is left out rather than "
             "listed at zero, and a structural kind is reported by the "
-            "claim below rather than ranked here (`UX-76`). Unlike its "
+            "claim below rather than ranked here. Unlike its "
             "mirror it is not gated on the diagnosis: what an element "
             "is built on is true whichever way the build is bound, and "
             "the claim is a description of the graph rather than an "

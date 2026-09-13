@@ -235,7 +235,7 @@ def test_a_cross_mode_band_member_is_not_comparable_not_a_usage_error(tmp_path):
 
 
 def test_the_band_refusal_names_the_run_mode_check(tmp_path):
-    """`UX-55` is the check; a refusal that did not name it would send
+    """The check is run mode; a refusal that did not name it would send
     the reader to the wrong half of the problem."""
     band, candidate = _cross_mode_band(tmp_path)
 
@@ -244,7 +244,8 @@ def test_the_band_refusal_names_the_run_mode_check(tmp_path):
         + [arg for run in band for arg in ("--baseline-run", str(run))]
     )
 
-    assert "UX-55" in result.stderr
+    assert "a noise band may only be built from runs of the same kind" \
+        in result.stderr
     assert str(band[0]) in result.stderr
 
 

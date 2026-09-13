@@ -897,7 +897,7 @@ _PROVENANCE = {
                            "where this names a quantity the finding's own "
                            "`evidence` also carries, the finding's is the "
                            "one to believe, and a guard holds the two "
-                           "equal (UX-291).",
+                           "equal.",
             "items": {
                 "type": "object",
                 "properties": {
@@ -912,8 +912,8 @@ _PROVENANCE = {
                                        "`value` because a provenance row "
                                        "carries whatever field the rule "
                                        "read, so no single declaration "
-                                       "on the key could be right "
-                                       "(`UX-343`). Absent where the "
+                                       "on the key could be right. "
+                                       "Absent where the "
                                        "path names something the schema "
                                        "does not describe."},
                     "value": {"description": "What that path held when the "
@@ -927,10 +927,9 @@ _PROVENANCE = {
                                        "`value` is absent. A record cites "
                                        "this document; copying a "
                                        "population into it would publish "
-                                       "that population twice, which is "
-                                       "the defect `UX-288` fixed one "
-                                       "level up and `UX-483` fixed here. "
-                                       "Follow the path (`UX-483`)."},
+                                       "that population twice - the same "
+                                       "defect fixed one level up. "
+                                       "Follow the path instead."},
                     "resolved": {"description": "False where the path did "
                                                 "not resolve - published "
                                                 "rather than dropped, so a "
@@ -960,7 +959,7 @@ _PROVENANCE = {
                                    "against. Absent where the rule "
                                    "compares against a quantity the "
                                    "finding computes rather than "
-                                   "publishes (`UX-343`)."},
+                                   "publishes."},
                 "threshold": {"description": "That constant's value, read "
                                              "live: change the constant and "
                                              "this changes with it."},
@@ -1049,8 +1048,8 @@ _CAPACITY_MODEL_HINTS = {
         "items": {
             "properties": {
                 "host_class": {"description": "The machine class these "
-                                              "runs were measured on "
-                                              "(`UX-186`'s manifest)."},
+                                              "runs were measured on, "
+                                              "from the host manifest."},
                 "runs": {
                     QUANTITY: "count",
                     "description": "Finished runs on this class - the "
@@ -1109,8 +1108,7 @@ _CAPACITY_MODEL_HINTS = {
                                                "list carries three "
                                                "different quantities, "
                                                "so no declaration on "
-                                               "the key could be right "
-                                               "(`UX-343`)."},
+                                               "the key could be right."},
                             "value": {"description": "The figure, in the "
                                                      "unit `quantity` "
                                                      "names."},
@@ -1590,8 +1588,8 @@ _JOIN_ITEM_PROPERTIES = {
         "type": "boolean",
         "description": "Whether Plane 1's declared graph knows this "
                        "element. False means Plane 2 produced a name "
-                       "that looks like an element and is not one "
-                       "(UX-66), and nothing may be recommended for "
+                       "that looks like an element and is not one, "
+                       "and nothing may be recommended for "
                        "it."},
     "on_critical_path": {
         "type": "boolean",
@@ -1653,7 +1651,7 @@ _JOIN_ITEM_PROPERTIES = {
                        "multiplied against. A **maximum**: adding two "
                        "elements' peaks claims they overlapped, which "
                        "this cannot say - unlike the counters below, "
-                       "which are sums and may be added (`UX-383`)."},
+                       "which are sums and may be added."},
     # `UX-383`: the CPU quantity beside `cores_busy`'s ratio, and
     # `UX-379`'s three pressure axes. All four counters are summed over
     # the element's processes - the opposite of `peak_rss_bytes` above,
@@ -1836,15 +1834,14 @@ _EVIDENCE_FIELDS = {
     "dependency_stages": ("count",
         "Levels the graph's elements group into by their dependencies "
         "alone - nothing in a stage can start before the stage above it "
-        "finishes, whatever the capacity (`UX-478`)."),
+        "finishes, whatever the capacity."),
     "widest_stage": ("count",
         "Elements in the largest dependency stage - the ceiling on how "
-        "many can ever build at once, which no number of builders lifts "
-        "(`UX-478`)."),
+        "many can ever build at once, which no number of builders lifts."),
     "zero_slack_off_path": ("count",
         "Zero-slack elements that are not on the critical path this run "
         "reported - each one is a second path of the same length. Zero "
-        "means one chain (`UX-475`)."),
+        "means one chain."),
     "builders": ("count",
         "Builder slots this run recorded. BuildStream's scheduler slots, "
         "not host cores."),
@@ -2022,7 +2019,7 @@ EVIDENCE_QUANTITIES.update({
             QUANTITY: "duration_us",
             "description": "The same path with its compiler/linker CPU "
                            "seconds removed - an upper bound, not a "
-                           "measurement (`UX-680`'s assumption)."},
+                           "measurement, on a declared assumption."},
     }},
 })
 
@@ -2478,7 +2475,7 @@ _SIGNALS_TABLES = {
                        "realizable saving at each step, which is a "
                        "different question from "
                        "`elements.top_blast_radius` and gives a "
-                       "different order (`UX-440`).",
+                       "different order.",
         COLUMNS: [
             {"key": "element_uid", "title": "Element",
              "role": "element", "sortable": True},
@@ -2639,7 +2636,7 @@ _SIGNALS_TABLES = {
                                    "within a run, not across."},
                 "is_foundation": {
                     "description": "Whether the project declared this "
-                                   "element foundation (`UX-683`) - "
+                                   "element foundation - "
                                    "excluded from the ranking on that "
                                    "declaration, not a kind guess."},
             }},
@@ -2670,7 +2667,7 @@ _SIGNALS_TABLES = {
                                    "nothing. Null for a root."},
                 "is_foundation": {
                     "description": "Whether the project declared this "
-                                   "element foundation (`UX-683`) - "
+                                   "element foundation - "
                                    "excluded from the ranking on that "
                                    "declaration, not a kind guess."},
             }},
@@ -2682,7 +2679,7 @@ _SIGNALS_TABLES = {
         "description": "The widest fan-in, ranked by closure. "
                        "Structural kinds are excluded from the ranking "
                        "and never from `fan_in` - a stack depends on "
-                       "everything on purpose (`UX-76`)."},
+                       "everything on purpose."},
     "fan_in_distribution": _distribution(
         "count", "fan-in in this graph",
         "How many elements each pulls in, spread across this graph. "
@@ -3047,7 +3044,7 @@ _ANALYZE_HINTS = {
         QUESTION: 'Were the cores the binding resource?',
         RAIL: 'act',
         "description": "Cores busy over the build, from the host's own "
-                       "`/proc/stat` series (`UX-675`), against the smaller "
+                       "`/proc/stat` series, against the smaller "
                        "of what the scheduler was configured to allow and "
                        "what the machine has. `traced processes running` "
                        "cannot answer this: a process blocked on I/O holds "
@@ -3152,7 +3149,7 @@ _ANALYZE_HINTS = {
             "native_max_jobs": {
                 QUANTITY: "count",
                 "description": "The `-j` each element's own build used, "
-                               "recovered from the log (`UX-29`). Null when "
+                               "recovered from the log. Null when "
                                "the log did not record it, which is a "
                                "different claim from 1."},
             "host_cpu_count": {
@@ -3170,12 +3167,10 @@ _ANALYZE_HINTS = {
                                "run, from Plane 2 - CPU-seconds per "
                                "wall-second, which is the same measurement "
                                "`element_join[].cores_busy` publishes and "
-                               "so carries the same unit (UX-341: this "
-                               "declared `count` and that declared "
-                               "`ratio`). An average, not a peak: during "
-                               "the parallel stretch each element draws "
-                               "more, so the CPU ceiling below is "
-                               "optimistic."},
+                               "so carries the same unit. An average, not "
+                               "a peak: during the parallel stretch each "
+                               "element draws more, so the CPU ceiling "
+                               "below is optimistic."},
             "constraints": {
                 "description": "One record per ceiling that could be "
                                "measured. A constraint with no measurement "
@@ -3206,8 +3201,8 @@ _ANALYZE_HINTS = {
                 QUANTITY: "count", DIRECTION: "higher_is_better",
                 "description": "`recommended_builders` minus `builders`, "
                                "signed - negative means the run asked for "
-                               "more than something can serve. UX-341: "
-                               "named for what it counts, because "
+                               "more than something can serve. Named for "
+                               "what it counts, because "
                                "`findings[].evidence.change` is a share and "
                                "one name may not mean two things."},
             "pinned_elements": {
@@ -3253,8 +3248,8 @@ _ANALYZE_HINTS = {
             "caveat": {
                 "description": "What this recommendation is not. Read it "
                                "before acting: the sweep replays observed "
-                               "durations and does not model contention "
-                               "(`UX-14`), and one capture went in. A "
+                               "durations and does not model contention, "
+                               "and one capture went in. A "
                                "consumer that drops this sentence is left "
                                "with a number that looks like a setting."},
             "sweep_memory_builders": {
@@ -3323,6 +3318,9 @@ _ANALYZE_HINTS = {
                 "description": "Which ones, so a figure resting on one is "
                                "visible."},
             "tasks": {
+                # `UX-826`: published verbatim for the join; shown to a
+                # reader as `taskUid`'s split (§4g item 3).
+                KEYED_BY: KEYED_BY_TASK_UID,
                 "description": "The task keys behind them, for a consumer "
                                "joining on the trace."},
             "note": {
@@ -3372,7 +3370,8 @@ _ANALYZE_HINTS = {
             "deeper_than_three": {
                 QUANTITY: "count",
                 "description": "Leaves more than three levels down - the "
-                               "count `UX-344` was filed on."},
+                               "count the document's own nesting is "
+                               "measured by."},
             "deeper_than_three_share": {
                 QUANTITY: "share",
                 "description": "Those leaves as a share of all of them."},
@@ -3569,8 +3568,8 @@ _ANALYZE_HINTS = {
                 "description": "Makespan against the certified floor. `LB / "
                                "horizon`, so it is bounded at 1 - a share "
                                "against a bound this run proved, never "
-                               "against an ideal build. UX-341: the finding "
-                               "that quotes this declared `share` while the "
+                               "against an ideal build. The finding that "
+                               "quotes this declared `share` while the "
                                "floor itself declared `ratio`; one number "
                                "cannot have two units."},
             "occupancy_share": {
@@ -4011,8 +4010,8 @@ _ANALYZE_HINTS = {
                                "whose attribution is missing, where the two "
                                "are equal anyway - published rather than "
                                "assumed, because a share whose denominator "
-                               "a reader has to guess is UX-345's defect "
-                               "(UX-477)."},
+                               "a reader has to guess is not a share the "
+                               "reader can trust."},
             "certified_headroom_us": {
                 QUANTITY: "duration_us",
                 "description": "What scheduling alone could still recover, "
@@ -4331,11 +4330,11 @@ _ANALYZE_HINTS = {
                                "numbers came from. `plane2/v3` is a "
                                "report about one build - run-level "
                                "measurements, with the per-element "
-                               "reductions among them (`UX-386`); the "
+                               "reductions among them; the "
                                "unstamped `plane2/v1` a capture before "
-                               "`UX-297` wrote also embeds every "
-                               "per-process record, which no published "
-                               "number reads.",
+                               "the reductions were added also embeds "
+                               "every per-process record, which no "
+                               "published number reads.",
                 "properties": {
                     "schema": {"description": "The report's contract id."},
                     "records_embedded": {
@@ -4551,7 +4550,7 @@ ELEMENT_PLACEMENT_RULE = (
     "An attribute the analysis knows from the graph and Plane 1 alone "
     "is a map under `elements`, keyed by the element uid: it is on "
     "every capture, and `additionalProperties` declares its value type "
-    "once for a population of any size (`UX-343`). An attribute that "
+    "once for a population of any size. An attribute that "
     "needs Plane 2 to exist is a field on an `element_join` row, which "
     "is present only where a capture supplied a Plane 2 report - there "
     "is no join with one plane. A Plane 1 value repeated on a join row "
@@ -4856,7 +4855,7 @@ _COMPARE_HINTS = {
         QUESTION: 'What did this change add or remove?',
         RAIL: 'investigate',
         "description": "The elements this change introduced, removed, or "
-                       "moved onto the critical path (UX-79). Complements "
+                       "moved onto the critical path. Complements "
                        "`element_deltas`, which covers the elements both "
                        "runs share.",
     },
@@ -5124,7 +5123,7 @@ _STORE_AGGREGATE_HINTS = {
         "description": "What was left out and why, counted by reason. "
                        "Published rather than dropped: \"we had nine "
                        "runs\" and \"we had nine and threw two away\" "
-                       "are different claims (UX-156).",
+                       "are different claims.",
         "properties": {
             "count": {
                 QUANTITY: "count",
@@ -5136,15 +5135,14 @@ _STORE_AGGREGATE_HINTS = {
     "contract_composition": {
         QUESTION: 'Were these runs written under the same definitions?',
         "description": "Which contract sets the aggregated runs were "
-                       "produced under (UX-253). A store can hold runs "
+                       "produced under. A store can hold runs "
                        "from several builds of `bga`, and \"we "
                        "aggregated thirty runs\" and \"we aggregated "
                        "thirty runs written under two different "
                        "definitions of the fields\" are different "
-                       "claims. The rule is UX-250's, applied to a set: "
-                       "what decides comparability is movement in the "
-                       "contracts this document *reads*, never the "
-                       "package version.",
+                       "claims. What decides comparability is movement "
+                       "in the contracts this document *reads*, never "
+                       "the package version.",
         "properties": {
             "sets": {"description": "Each distinct contract set found, "
                                     "with how many runs carry it, "
@@ -5153,7 +5151,7 @@ _STORE_AGGREGATE_HINTS = {
                 QUANTITY: "count",
                 "description": "Runs whose producer recorded no "
                                "contracts - every artifact predating "
-                               "UX-249. An explicit unknown, never "
+                               "that. An explicit unknown, never "
                                "read as agreement."},
             "reads": {"description": "The contracts this document "
                                      "itself reads. A set that moved "
@@ -5196,7 +5194,7 @@ _STORE_AGGREGATE_HINTS = {
                                           "a figure can be traced to the "
                                           "runs behind it. The most recent "
                                           "`store_aggregate.STAMPS_MAX` of "
-                                          "them (UX-528)."},
+                                          "them."},
                 "stamps_total": {
                     QUANTITY: "count",
                     "description": "How many runs are in this class, which "
@@ -5670,7 +5668,7 @@ _SCHEMAS = {
         _COMPARE_REQUIRED,
         "Two runs, their signed deltas and the verdict - which is "
         "`improved`, `regressed`, `no significant change`, `within the "
-        "baseline set's own observed range` (UX-170), or a `not "
+        "baseline set's own observed range`, or a `not "
         "comparable (...)` refusal.",
         optional=_COMPARE_OPTIONAL, hints=_COMPARE_HINTS,
         always_written=_COMPARE_ALWAYS_WRITTEN),

@@ -187,7 +187,7 @@ _RESOLUTION_MATERIAL_SHARE = 0.05
 # else it stays, because everywhere else it is still true.
 UNMODELED_AXIS_CLAUSE = (
     "native build-system parallelism (--max-jobs) is a separate, currently "
-    "unmodeled axis (see UX-09/UX-15)."
+    "unmodeled axis."
 )
 
 # What replaces it when UX-116's block ran: the axis was modelled for this
@@ -196,7 +196,7 @@ UNMODELED_AXIS_CLAUSE = (
 MODELLED_AXIS_CLAUSE = (
     "native build-system parallelism (--max-jobs) is modelled for this "
     "capture from its own Plane 2 measurements; see the capacity "
-    "recommendation below (`UX-116`)."
+    "recommendation below."
 )
 
 
@@ -244,7 +244,7 @@ UNDISTRIBUTED_QUANTITIES = {
                 'percentile of',
     'efficiency_score': 'a run-level singleton with no population to be a '
                         'percentile of',
-    'wall_clock': 'one number per run; the store aggregate (`UX-234`) is '
+    'wall_clock': 'one number per run; the store aggregate is '
                   'where its distribution across runs already lives',
     'optimization_horizon': 'one number per run, same as wall-clock - and it is\n                             already a projection, so a percentile of it would rank\n                             guesses against each other',
 }
@@ -1362,7 +1362,7 @@ class BuildEfficiencyAnalyzer:
                 f"= {oversub.get('actual_demand')} processes vs {ceiling_desc}) - LB/Efficiency "
                 f"Score certify against recorded resource capacities, not real host CPU cores "
                 f"(or your declared budget), so Efficiency Score may overstate real efficiency "
-                f"here (see UX-09/UX-15)."
+                f"here."
             )
         note = (
             "LB/Efficiency Score certify against this run's recorded resource "
@@ -1380,7 +1380,7 @@ class BuildEfficiencyAnalyzer:
                 " Capacity checks (over/under-subscription, memory) did not run for "
                 "this run - missing: " + ", ".join(self.capacity_check_skipped_inputs)
                 + ". They are inert here, not passing; a wrapped log records "
-                "--max-jobs on its own first line (UX-29), or declare the missing "
+                "--max-jobs on its own first line, or declare the missing "
                 "value explicitly at extraction time."
             )
         return note
@@ -2038,8 +2038,9 @@ class BuildEfficiencyAnalyzer:
                                    "series against"}
             from .run_store import HOST_SAMPLES_NAME
             return {"absence": f"this capture has no {HOST_SAMPLES_NAME} - "
-                               f"it was taken before `UX-378`, or the host "
-                               f"exposes no /proc/meminfo"}
+                               f"it was taken before host memory sampling "
+                               f"was added, or the host exposes no "
+                               f"/proc/meminfo"}
         tasks = [{"element": task.task_key.element_uid,
                   "start_us": task.start_us, "finish_us": task.finish_us,
                   "ready_us": task.ready_us}

@@ -465,7 +465,7 @@
         "cold_confidence": null,
         "cold_duration_sources": {},
         "cold_critical_path_duration_sources": {},
-        "capacity_model_note": "LB/Efficiency Score certify against this run's recorded resource capacities (builders/fetchers/pushers), not real host CPU cores or any declared CPU budget - native build-system parallelism (--max-jobs) is a separate, currently unmodeled axis (see UX-09/UX-15). Capacity checks (over/under-subscription, memory) did not run for this run - missing: native_max_jobs. They are inert here, not passing; a wrapped log records --max-jobs on its own first line (UX-29), or declare the missing value explicitly at extraction time."
+        "capacity_model_note": "LB/Efficiency Score certify against this run's recorded resource capacities (builders/fetchers/pushers), not real host CPU cores or any declared CPU budget - native build-system parallelism (--max-jobs) is a separate, currently unmodeled axis. Capacity checks (over/under-subscription, memory) did not run for this run - missing: native_max_jobs. They are inert here, not passing; a wrapped log records --max-jobs on its own first line, or declare the missing value explicitly at extraction time."
     },
     "capacity_verdict": {
         "oversubscribed": false,
@@ -477,7 +477,7 @@
     },
     "utilization_envelope": {
         "available": false,
-        "absence": "this capture has no host-samples.jsonl - it was taken before `UX-378`, or the host exposes no /proc/meminfo"
+        "absence": "this capture has no host-samples.jsonl - it was taken before host memory sampling was added, or the host exposes no /proc/meminfo"
     },
     "plane2_absence": "Plane 2 was not captured for this run, so there is no per-process detail. `bga snapshot -- bst build TARGET` captures both planes.",
     "attribution": {
@@ -1631,7 +1631,7 @@
                 "threshold": null,
                 "comparison": "present",
                 "observed_path": null,
-                "sentence": "Published for every non-structural element something actually depends on. Not a ranking - `UX-65`'s who-depends-on-me ordering is a different claim and stays on the scheduler-bound arm - but the answer to the recipe-author's own question, which is true whichever way the build is bound (`UX-479`). Elements with no dependents are left out rather than listed at zero: a row reading \"0 downstream\" answers the question with a number meaning nobody.",
+                "sentence": "Published for every non-structural element something actually depends on. Not a ranking - `UX-65`'s who-depends-on-me ordering is a different claim and stays on the scheduler-bound arm - but the answer to the recipe-author's own question, which is true whichever way the build is bound. Elements with no dependents are left out rather than listed at zero: a row reading \"0 downstream\" answers the question with a number meaning nobody.",
                 "module": "bga/findings.py"
             },
             "trace_query": "dependency-wait",
@@ -1689,7 +1689,7 @@
                 "threshold": null,
                 "comparison": "present",
                 "observed_path": null,
-                "sentence": "Published for every graph with something to rank - an element that pulls in nothing is left out rather than listed at zero, and a structural kind is reported by the claim below rather than ranked here (`UX-76`). Unlike its mirror it is not gated on the diagnosis: what an element is built on is true whichever way the build is bound, and the claim is a description of the graph rather than an ordering of work.",
+                "sentence": "Published for every graph with something to rank - an element that pulls in nothing is left out rather than listed at zero, and a structural kind is reported by the claim below rather than ranked here. Unlike its mirror it is not gated on the diagnosis: what an element is built on is true whichever way the build is bound, and the claim is a description of the graph rather than an ordering of work.",
                 "module": "bga/findings.py"
             },
             "trace_query": "dependency-wait",

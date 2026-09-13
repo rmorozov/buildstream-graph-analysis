@@ -1,6 +1,6 @@
 # UX-820: the generated release body ends its list on the closing marker
 
-**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** UX-252 (the generated body) | **Found by:** round 114, the 0.4.1 cut | **Serves:** the reader of CHANGELOG.md, and `make lint` reading it | **Topic:** docs | **Area:** tools | **Shape:** bounded
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-252 (the generated body) | **Found by:** round 114, the 0.4.1 cut | **Serves:** the reader of CHANGELOG.md, and `make lint` reading it | **Topic:** docs | **Area:** tools | **Shape:** bounded
 
 ## Motivation
 
@@ -68,3 +68,5 @@ Mutation table:
 Same mutation independently confirmed against the real Acceptance Test
 tool: `python3 -m pymarkdown --config .pymarkdown.json scan CHANGELOG.md
 \| grep -c MD032` read `1` with the blank line dropped, `0` restored.
+
+**Deviation.** None. The touching sweep widened to 529 files on the Makefile edit and took 34 minutes under six tracks; the verifier re-ran it green.

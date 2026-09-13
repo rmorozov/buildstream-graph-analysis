@@ -1,6 +1,6 @@
 # UX-834: a disclosure without aria-expanded, and a link whose name glues three values
 
-**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** UX-716 (every control has a resting appearance), UX-532 (the twin) | **Found by:** round 115, the design review | **Serves:** a keyboard or screen-reader user | **Topic:** viewer | **Area:** bga-viewer | **Shape:** mechanical
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-716 (every control has a resting appearance), UX-532 (the twin) | **Found by:** round 115, the design review | **Serves:** a keyboard or screen-reader user | **Topic:** viewer | **Area:** bga-viewer | **Shape:** mechanical
 
 ## Motivation
 
@@ -59,3 +59,5 @@ class `TestDisclosuresAndLinksAreLegible`, `PYTHONDONTWRITEBYTECODE=1`):
 | drop `box.setAttribute("aria-label", ...)` on `a.path-box` | `test_path_box_name_separates_its_three_values` | 1 failed, 8 passed |
 
 Both reverted from the pre-mutation copy; full file green again (9 passed) after each.
+
+**Deviation.** The new fixture's redundant `NO_BROWSER` skip site was removed rather than the skip-reason ceiling raised; the class marks cover it, verified by the verifier reading the marks.

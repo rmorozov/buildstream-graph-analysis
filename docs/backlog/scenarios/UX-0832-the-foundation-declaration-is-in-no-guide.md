@@ -1,6 +1,6 @@
 # UX-832: the foundation declaration is in no guide
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-683 (the tier), UX-684 (the cached-build verdict) | **Found by:** round 115, the design review | **Serves:** R3 whose base runtime leads every ranking | **Topic:** docs | **Area:** bga | **Shape:** mechanical
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-683 (the tier), UX-684 (the cached-build verdict) | **Found by:** round 115, the design review | **Serves:** R3 whose base runtime leads every ranking | **Topic:** docs | **Area:** bga | **Shape:** mechanical
 
 ## Motivation
 
@@ -86,3 +86,5 @@ all, only a `description=` (`tools/bga_snapshot.py:27-33`, not
 verbatim, in two different tables (`blast_radius`, `fan_in`) — not the
 "one string" the task allowed an edit for — reported as a follow-up
 rather than edited.
+
+**Deviation.** The `snapshot --help` sentence landed on the verifier's HOLD: the track had read the help cap as "no room" and the render with the sentence is exactly 47 of 47. The two identical `is_foundation` descriptions in `bga/schemas.py` stay — a link there is a contract string, not this row's.

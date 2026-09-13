@@ -1,6 +1,6 @@
 # UX-825: thirty-seven raw section keys are visible beside their headings
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-669 (a citation is a question, not a key) | **Found by:** round 115, the design review | **Serves:** every reader opening a section | **Topic:** viewer | **Area:** bga-viewer | **Shape:** bounded
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-669 (a citation is a question, not a key) | **Found by:** round 115, the design review | **Serves:** every reader opening a section | **Topic:** viewer | **Area:** bga-viewer | **Shape:** bounded
 
 ## Motivation
 
@@ -73,3 +73,5 @@ clauses on the golden export.
 
 Both reverted from the scratchpad copy; `test_the_json_toggle_carries_the_key.py`
 green after each revert. Neither mutation touched a second guard.
+
+**Deviation.** HOLD for two rows that are the orchestrator's — the guard's tier (`tests/tiers.py`, 2.0 s, medium) and §7's row for §4g naming it — and one wording change at merge: the toggle's accessible name now starts with its visible label ("view as JSON — <key>"), the verifier's label-in-name note.

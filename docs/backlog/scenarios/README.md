@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-833 scenarios: **19 open**, 814 closed.
+833 scenarios: **14 open**, 819 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -23,11 +23,11 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | capture | 0 | 97 |
 | analysis | 6 | 115 |
 | contracts | 0 | 48 |
-| viewer | 7 | 171 |
+| viewer | 5 | 171 |
 | cli | 0 | 22 |
 | store | 0 | 16 |
-| docs | 2 | 142 |
-| guards | 4 | 222 |
+| docs | 0 | 142 |
+| guards | 3 | 222 |
 
 ## Open scenarios
 
@@ -39,22 +39,17 @@ task file, which is the only place it ever lived twice.
 | UX-817 | [the join calls a zero-rebuilt run an attribution failure](UX-0817-the-join-calls-a-zero-rebuilt-run-an-attribution-failure.md) | analysis | Medium | R1 reading `bga correlate` after an incremental build | 🔴 |
 | UX-818 | [two canned queries error when an element is given](UX-0818-two-canned-queries-error-when-an-element-is-given.md) | guards | Medium | R1 at the Perfetto handoff | 🔴 |
 | UX-819 | [the export's Perfetto handoff fetches a quoted data: URI](UX-0819-the-export-s-perfetto-handoff-fetches-a-quoted-data-uri.md) | viewer | Medium | R1 opening the timeline from an export | 🔴 |
-| UX-820 | [the generated release body ends its list on the closing marker](UX-0820-the-generated-release-body-ends-its-list-on-the-closing-marker.md) | docs | Low | the reader of CHANGELOG.md, and `make lint` reading it | 🔴 |
 | UX-822 | [the readers table repeats the header picker's five labels](UX-0822-the-readers-table-repeats-the-header-picker-s-five-labels.md) | viewer | Medium | anyone landing on the decision | 🔴 |
 | UX-823 | [the intervals' From column renders a monotonic epoch as a duration](UX-0823-the-intervals-from-column-renders-a-monotonic-epoch-as-a-duration.md) | analysis | High | R5 reading an idle window | 🔴 |
 | UX-824 | [reader-facing strings: the rule, and a guard that reads the page](UX-0824-reader-facing-strings-the-rule-and-a-guard-that-reads-the-page.md) | guards | High | every reader of the page | 🔴 |
-| UX-825 | [thirty-seven raw section keys are visible beside their headings](UX-0825-thirty-seven-raw-section-keys-are-visible-beside-their-headings.md) | viewer | Medium | every reader opening a section | 🔴 |
 | UX-826 | [five bare task ids and a pipe-delimited task key reach the reader](UX-0826-five-bare-task-ids-and-a-pipe-delimited-task-key-reach-the-reader.md) | analysis | Medium | every reader of a finding | 🔴 |
 | UX-827 | [the distribution twin draws five of sixteen published marks, and no mean](UX-0827-the-distribution-twin-draws-five-of-sixteen-published-marks-and-no-mean.md) | analysis | Medium | R3 reading a graph's shape; the owner asking for deciles | 🔴 |
 | UX-828 | [the header spends 14% of the viewport on a filesystem path](UX-0828-the-header-spends-14-of-the-viewport-on-a-filesystem-path.md) | viewer | High | every reader, on every load | 🔴 |
 | UX-829 | [five of seven joined fields on the elements table draw no column](UX-0829-five-of-seven-joined-fields-on-the-elements-table-draw-no-column.md) | viewer | High | R2 and R3 reading one element's row | 🔴 |
 | UX-830 | [the serial chains, ranked, not the longest one](UX-0830-the-serial-chains-ranked-not-the-longest-one.md) | analysis | Medium | R3 deciding which chain to split | 🔴 |
 | UX-831 | [a max-jobs advice row is four levels deep](UX-0831-a-max-jobs-advice-row-is-four-levels-deep.md) | viewer | Medium | R5 setting max-jobs across a large project | 🔴 |
-| UX-832 | [the foundation declaration is in no guide](UX-0832-the-foundation-declaration-is-in-no-guide.md) | docs | High | R3 whose base runtime leads every ranking | 🔴 |
 | UX-833 | [a declared source-kind map for custom source plugins](UX-0833-a-declared-source-kind-map-for-custom-source-plugins.md) | analysis | Low | R2 whose sources come through a custom plugin | 🔴 |
-| UX-834 | [a disclosure without aria-expanded, and a link whose name glues three values](UX-0834-a-disclosure-without-aria-expanded-and-a-link-whose-name-glues-three-values.md) | viewer | Low | a keyboard or screen-reader user | 🔴 |
 | UX-835 | [a capped table filters every column it sorts](UX-0835-a-capped-table-filters-every-column-it-sorts.md) | guards | Low | the owner filtering a large project's tables | 🔴 |
-| UX-836 | [the page census lists no tables](UX-0836-the-page-census-lists-no-tables.md) | guards | Medium | the walk and the design review, which drove 28 tables by hand this round | 🔴 |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

@@ -1071,6 +1071,11 @@ function pathBox(entry) {
     badge.textContent = entry.element_kind;
     box.append(badge);
   }
+  // UX-834: three stacked spans glue into one run with no separator -
+  // the accessible name is the same three values, comma-joined.
+  box.setAttribute("aria-label",
+    [name.textContent, time.textContent, entry.element_kind]
+      .filter(Boolean).join(", "));
   return box;
 }
 

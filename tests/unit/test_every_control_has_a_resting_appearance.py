@@ -158,3 +158,81 @@ class TestNoControlIsTheBrowsers:
             moving = [one for one in looks
                       if one[6] not in ("0s", "0s, 0s", "") or one[7] != "none"]
             assert moving == [], (name, moving[:2])
+
+
+#: `UX-834`: the disclosure buttons this repository already gives
+#: `aria-expanded` (round 115's design review), plus `twin-toggle` -
+#: named explicitly because it is the one the review found missing.
+#: `path-more` is excluded on purpose: it reveals once and hides
+#: itself rather than toggling back, so it is not this shape.
+DISCLOSURE_BUTTONS = (
+    "button.collapse", "button.json-toggle", "button.chapter-open",
+    "button.twin-toggle",
+)
+
+DISCLOSURE_JS = (
+    "(() => { const selectors = " + json.dumps(DISCLOSURE_BUTTONS) + "; "
+    "const out = {}; "
+    "for (const sel of selectors) { "
+    "  const button = document.querySelector(sel); "
+    "  if (!button) { out[sel] = null; continue; } "
+    "  const before = button.getAttribute('aria-expanded'); "
+    "  button.click(); "
+    "  const after = button.getAttribute('aria-expanded'); "
+    "  button.click(); "
+    "  const restored = button.getAttribute('aria-expanded'); "
+    "  out[sel] = {before, after, restored}; "
+    "} "
+    "const box = document.querySelector('a.path-box'); "
+    "out['a.path-box'] = box ? box.getAttribute('aria-label') : null; "
+    "return JSON.stringify(out); })()"
+)
+
+
+@pytest.fixture(scope="module")
+def disclosures(tmp_path_factory):
+    """Every named disclosure button's `aria-expanded`, clicked twice,
+    plus `a.path-box`'s `aria-label` - on the same two pages `drawn`
+    boots, so a fold (`scale`, folded past `PATH_HEAD+PATH_TAIL`) and
+    an unfolded path (`macro_micro`) are both read. No `chrome`/`node`
+    guard here: `TestDisclosuresAndLinksAreLegible`'s own `@needs_browser`
+    `@needs_node` already skip every test that would request this
+    fixture, so a second `NO_BROWSER` site would count nothing new."""
+    scale = scale_run(tmp_path_factory.mktemp("scale-834"))
+    pages = {"macro_micro": export_uri(MACRO, tmp_path_factory.mktemp("macro-834")),
+             "scale": export_uri(scale, tmp_path_factory.mktemp("page-834"))}
+    with Browser(chrome) as opened:
+        yield {name: json.loads(opened.observe(uri, DISCLOSURE_JS)["value"])
+               for name, uri in pages.items()}
+
+
+@needs_browser
+@needs_node
+class TestDisclosuresAndLinksAreLegible:
+    """UX-834. Measured on the golden export before the fix:
+    `twin-toggle` had no `aria-expanded` at all (`null` before and
+    after a click); `path-box`'s accessible name glued three spans
+    into `"base.bst0.0 sunknown"`, no separator."""
+
+    def test_every_named_disclosure_flips_aria_expanded(self, disclosures):
+        for name, found in disclosures.items():
+            for sel in DISCLOSURE_BUTTONS:
+                state = found.get(sel)
+                if state is None:
+                    continue    # not every page carries every control
+                assert state["before"] in ("true", "false"), (name, sel, state)
+                assert state["after"] != state["before"], (name, sel, state)
+                assert state["restored"] == state["before"], (name, sel, state)
+
+    def test_the_twin_toggle_is_checked_on_both_pages(self, disclosures):
+        """The field pass's own example - if this selector ever stops
+        matching, the clause above silently checks nothing for it."""
+        for name, found in disclosures.items():
+            assert found.get("button.twin-toggle") is not None, name
+
+    def test_path_box_name_separates_its_three_values(self, disclosures):
+        for name, found in disclosures.items():
+            label = found.get("a.path-box")
+            assert label, name
+            parts = [part.strip() for part in label.split(",")]
+            assert len(parts) >= 2 and all(parts), (name, label)

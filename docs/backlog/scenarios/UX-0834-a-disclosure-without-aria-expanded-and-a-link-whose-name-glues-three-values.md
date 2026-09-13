@@ -31,3 +31,31 @@ with fifteen boxes; the journey is the timeline handoff's keyboard path.
 `button` that toggles a sibling's `hidden` carries `aria-expanded`;
 `a.path-box` accessible name contains a separator; mutation: drop
 either — red.
+
+## Outcome
+
+**Gap measured**, golden export (`bga view tests/fixtures/golden/mixed_task_kinds
+--export`), driven with `tests/browser.py`, before the fix:
+
+```text
+twin_before: null  twin_after: null   (aria-expanded absent, click is a no-op on it)
+path_box_name:        "base.bst0.0 sunknown"   (textContent, no separator)
+path_box_aria_label:  null
+```
+
+**Close measured**, same page, same driver, after the fix:
+
+```text
+twin_before: "false"  twin_after: "true"   (flips on click, both directions)
+path_box_aria_label:  "base.bst, 0.0 s, unknown"
+```
+
+**Mutation table** (`tests/unit/test_every_control_has_a_resting_appearance.py`,
+class `TestDisclosuresAndLinksAreLegible`, `PYTHONDONTWRITEBYTECODE=1`):
+
+| mutation | reddened | count |
+|---|---|---|
+| drop `"aria-expanded": "false"` from `twin-toggle` | `test_every_named_disclosure_flips_aria_expanded` | 1 failed, 8 passed |
+| drop `box.setAttribute("aria-label", ...)` on `a.path-box` | `test_path_box_name_separates_its_three_values` | 1 failed, 8 passed |
+
+Both reverted from the pre-mutation copy; full file green again (9 passed) after each.

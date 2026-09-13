@@ -2070,6 +2070,19 @@ _ELEMENT_PRESETS = [
      "columns": ["element", "element_durations", "slack",
                  "downstream_count", "risk_score"],
      "sort": {"column": "element_durations", "direction": "desc"}},
+    # `UX-829`: the joined fields with no view of their own - measured
+    # on the scale export, `unweighted_depth`, `criticality_probability`
+    # and `fan_in` reached no column at all, and `slack` and
+    # `blast_radius.weighted_duration_us` reached one only by accident
+    # of being in a different question's columns.
+    # `UX-829`: the name carries no punctuation, matching every other
+    # preset here - `test_the_rail_names_every_view_and_links_to_it`
+    # only URL-encodes the space, and a `?` would need `%3F` too.
+    {"name": "What does my element wait on",
+     "question": "What does my element wait on?",
+     "columns": ["element", "slack", "unweighted_depth", "probability",
+                 "direct_count", "weighted_duration_us"],
+     "sort": {"column": "slack", "direction": "asc"}},
     # UX-338: the two-plane join, as a *view* of this table
     # rather than a second table of the same eleven elements.
     # `UX-215` published `element_join` and the page drew it on
@@ -2650,6 +2663,16 @@ _SIGNALS_TABLES = {
                                    "`bottleneck.high_fanin_elements` "
                                    "ranks the top five of, over every "
                                    "element rather than five."},
+                # `UX-829`: named, sorted, capped at 40
+                # (`DIRECT_NAMES_CAP`) - `direct_count`'s population,
+                # not a second count. Drawn on the element card, never
+                # in the elements table (styleguide §3c: forty names
+                # is a cell no row survives).
+                "direct": {
+                    "description": "This element's direct dependencies "
+                                   "by name, sorted, capped at 40. "
+                                   "`direct_count` is the count "
+                                   "whether or not it hit the cap."},
                 "transitive_count": {
                     QUANTITY: "count",
                     "description": "Everything it pulls in through "

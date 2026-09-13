@@ -292,6 +292,13 @@ const ELEMENT_MAPS = [
    "Could be deferred", null],
 ];
 
+// `UX-829`: `ELEMENT_MAPS`'s list-valued cousin - `fan_in[uid].direct`
+// is capped-and-sorted names, not a scalar, so it renders through
+// `record.lists` (§3c: no table cell survives forty names).
+const ELEMENT_LIST_MAPS = [
+  ["elements.fan_in", "direct", "Depends on"],
+];
+
 /**
  * One element's record, whether or not the report's ranking reached it.
  *
@@ -375,6 +382,14 @@ export function elementFactsFor(payload, uid) {
       // as a key on an object.
       path: `${path}[${uid}]${field === null ? "" : `.${field}`}`,
     });
+  }
+  const heldLists = new Set(record.lists.map((l) => l.key));
+  for (const [path, field, label] of ELEMENT_LIST_MAPS) {
+    const map = path.split(".").reduce((node, key) => node?.[key], payload);
+    const items = map?.[uid]?.[field];
+    if (!Array.isArray(items) || !items.length || heldLists.has(field)) continue;
+    heldLists.add(field);
+    record.lists.push({ key: field, label, items: items.map(String) });
   }
   if (known) return record;
   for (const finding of payload?.findings ?? []) {

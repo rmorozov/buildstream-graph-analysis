@@ -180,8 +180,9 @@ class TestTheReadShareIsOnTheJoinRowAndNotHere:
 
     def test_the_map_carries_no_plane_two_column(self, rows):
         assert set(rows["lib-f.bst"]) == {
-            "direct_count", "transitive_count", "immediate_dominator",
-            "element_kind", "is_structural_kind", "is_foundation"}
+            "direct_count", "direct", "transitive_count",
+            "immediate_dominator", "element_kind", "is_structural_kind",
+            "is_foundation"}
 
     def test_the_share_is_of_what_plane_two_could_assess(self):
         """Not of the declared edge count. `app.bst` names eight
@@ -264,6 +265,40 @@ class TestTheDominatorHelperOnItsOwn:
         assert immediate_dominator(dominators, "c") == "b"
         assert immediate_dominator(dominators, "b") == "a"
         assert immediate_dominator(dominators, "a") is None
+
+
+class TestTheDirectListIsCappedAndNamed:
+    """`UX-829`: `direct` is `direct_count`'s population, capped at
+    `DIRECT_NAMES_CAP` - the element card's list, never the table."""
+
+    def test_a_root_has_no_direct_names(self, rows):
+        assert rows["toolchain.bst"]["direct_count"] == 0
+        assert rows["toolchain.bst"]["direct"] == []
+
+    def test_several_names_are_sorted(self, rows):
+        assert rows["lib-f.bst"]["direct_count"] == 4
+        assert rows["lib-f.bst"]["direct"] == sorted(rows["lib-f.bst"]["direct"])
+        assert len(rows["lib-f.bst"]["direct"]) == 4
+
+    def test_the_cap_class(self):
+        """A synthetic graph one element cannot produce: 1,004
+        predecessors of one successor. `direct_count` keeps the true
+        population; `direct` stops at the cap."""
+        from bga.graph.fan_in import DIRECT_NAMES_CAP, compute_fan_in
+        from bga.ingest.models import DependencyEdge, Element, Graph
+
+        names = [f"p{index:04d}.bst" for index in range(1004)]
+        graph = Graph(
+            elements=[Element(uid="successor.bst")]
+                     + [Element(uid=name) for name in names],
+            dependencies=[DependencyEdge(predecessor=name,
+                                         successor="successor.bst")
+                         for name in names])
+        rows = compute_fan_in(graph, {}, set())
+        row = rows["successor.bst"]
+        assert row["direct_count"] == 1004
+        assert len(row["direct"]) == DIRECT_NAMES_CAP == 40
+        assert row["direct"] == sorted(names)[:40]
 
 
 if __name__ == "__main__":  # pragma: no cover

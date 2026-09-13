@@ -157,6 +157,21 @@ def _is_an_edge(path):
     return bool(re.search(r"(edges|_pairs)\[\d+\]$", path))
 
 
+def _is_a_fan_in_measure(path):
+    """`UX-829`: `elements.fan_in.<uid>.direct` is `direct_count`'s own
+    population, one element at a time - a *measure* by construction,
+    the list-typed sibling of `blast_radius`/`element_durations`'s
+    scalar ones. The full-population exclusion above cannot catch it:
+    no single element's `direct` list is the *whole* population, and
+    `_per_element_measures`'s row-count cannot either, because most
+    small fixtures cross the two-element floor on only one element -
+    `lib-a.bst` against `bottleneck.high_fanout_elements` here, by
+    coincidence, the same shape `_per_element_measures`'s own docstring
+    already excuses twice.
+    """
+    return bool(re.match(r"^elements\.fan_in\.[\w./-]+\.bst\.direct$", path))
+
+
 def _clashes(payload):
     """Every pair of published fields carrying one element selection.
 
@@ -209,6 +224,8 @@ def _clashes(payload):
             if _is_an_edge(name) and _is_an_edge(other):
                 continue
             if name in measures or other in measures:
+                continue
+            if _is_a_fan_in_measure(name) or _is_a_fan_in_measure(other):
                 continue
             clashes.append(f"`{name}` and `{other}` ({len(members)} elements)")
     return clashes

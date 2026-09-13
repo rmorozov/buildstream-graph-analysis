@@ -47,9 +47,9 @@ READER_URL = ("https://commondatastorage.googleapis.com/perfetto-luci-artifacts/
 #: Lines the shell writes around the result set.
 NOISE = re.compile(r"^(Loading trace|\[\d|column \d+ =)")
 
-#: The two tokens `renderedSql` in `bga/viewer/questions.js` fills.
-ELEMENT_TOKEN = "{element}"
-WINDOW_TOKEN = "{window}"
+#: The two placeholders `renderedSql` in `bga/viewer/questions.js` fills.
+ELEMENT_PLACEHOLDER = "{element}"
+WINDOW_PLACEHOLDER = "{window}"
 
 
 def _finite(value):
@@ -72,15 +72,15 @@ def rendered_sql(question, element=None, bounds=None):
     keeps its token (`UX-676`), and only a missing `bounds` empties it."""
     target = element if element is not None else question.get("example")
     if target is None:
-        target = ELEMENT_TOKEN
+        target = ELEMENT_PLACEHOLDER
     start = bounds.get("start_ns") if bounds is not None else None
     end = bounds.get("end_ns") if bounds is not None else None
     if _finite(start) and _finite(end):
         window = f"and c.ts between {_number(start)} and {_number(end)}"
     else:
-        window = WINDOW_TOKEN if bounds is not None else ""
-    return (question["sql"].replace(ELEMENT_TOKEN, target)
-                            .replace(WINDOW_TOKEN, window))
+        window = WINDOW_PLACEHOLDER if bounds is not None else ""
+    return (question["sql"].replace(ELEMENT_PLACEHOLDER, target)
+                            .replace(WINDOW_PLACEHOLDER, window))
 
 
 def questions():

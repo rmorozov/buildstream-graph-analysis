@@ -1,6 +1,6 @@
 # UX-822: the readers table repeats the header picker's five labels
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-668 (the picker in the header), UX-372 (the section after the decision) | **Found by:** round 115, the design review | **Serves:** anyone landing on the decision | **Topic:** viewer | **Area:** bga-viewer | **Shape:** bounded
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-668 (the picker in the header), UX-372 (the section after the decision) | **Found by:** round 115, the design review | **Serves:** anyone landing on the decision | **Topic:** viewer | **Area:** bga-viewer | **Shape:** bounded
 
 ## Motivation
 
@@ -97,3 +97,5 @@ counts a new tracked test file moves.
 orchestrator's, per the track rules) — `test_the_tiers_are_a_partition.py::test_every_browser_guard_is_listed`
 still names `tests/unit/test_the_readers_are_drawn_once.py` as
 unlisted; `--durations=0` above is the number for that row.
+
+**Deviation.** The table is drawn by `sections.js`'s generic renderer, not `chapters.js`, so `DRAWN_ELSEWHERE` and two rail guards (their example section moved to `evidence`) joined the surfaces — the track stopped and the session took it. The Decomposition's one-reader fixture does not exist: every committed fixture carries 3-5 readers, so the fewer-than-two class was checked by hand on a truncated payload and has no guard. The tier row landed at the merge.

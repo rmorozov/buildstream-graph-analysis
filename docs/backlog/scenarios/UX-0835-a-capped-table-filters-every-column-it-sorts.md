@@ -1,6 +1,6 @@
 # UX-835: a capped table filters every column it sorts
 
-**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** UX-392 (the filter over the preset), §3d | **Found by:** round 115, the design review | **Serves:** the owner filtering a large project's tables | **Topic:** guards | **Area:** tools | **Shape:** mechanical
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-392 (the filter over the preset), §3d | **Found by:** round 115, the design review | **Serves:** the owner filtering a large project's tables | **Topic:** guards | **Area:** tools | **Shape:** mechanical
 
 ## Motivation
 
@@ -71,3 +71,5 @@ $ python3 -m pytest tests/unit/test_a_capped_table_filters_what_it_sorts.py -v
 Reverted from a saved copy (not `git checkout`) and re-run green, `1
 passed in 3.92s`. Guard runtime: **3.4-3.9s** (own run, not the suite's
 touching set).
+
+**Deviation.** The filing pointed at `leaf_analysis`; its four fields declare no quantity and it was compliant. The defect was one table over — `elementSignalTable`'s `?? "count"` fallback. The guard mirrors the census's badge detection rather than importing it, since the census rows carry no per-column quantity. The tier row landed at the merge.

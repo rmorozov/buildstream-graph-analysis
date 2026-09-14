@@ -6553,6 +6553,28 @@ def _spine_policy(flag: str):
     return {"off": False, "on": True, "auto": "auto"}[flag]
 
 
+def _jobserver_block(report: dict) -> dict:
+    """UX-851: the `run-context.json` fact this capture recorded, from
+    this same report and `BGA_JOBSERVER_MODE` - `bga capture` sets the
+    latter beside the `--jobserver N` it already resolves, so this needs
+    no CLI parsing of its own to know which mode ran. `off` when the
+    variable is absent, which is also the direct-tracer-invocation case
+    (`python3 -m tools.bst_native_build_tracer run ...`, never through
+    `bga capture`).
+
+    `auth`/`project_max_jobs` read `report.get(...)` rather than a named
+    argument: `jobserver_auth` (`UX-841`) and `project_max_jobs`
+    (`UX-842`) are not both landed yet, and this reads whichever of them
+    the report in hand actually carries, `None` otherwise.
+    """
+    return {
+        "mode": os.environ.get("BGA_JOBSERVER_MODE") or "off",
+        "ceiling": report.get("jobserver"),
+        "auth": report.get("jobserver_auth"),
+        "project_max_jobs": report.get("project_max_jobs"),
+    }
+
+
 def read_capture_fingerprint(path: str) -> Optional[dict]:
     """The `UX-151` header line, if the record has one."""
     try:
@@ -7499,7 +7521,8 @@ def main(argv: Optional[list[str]] = None) -> int:
                 print("Extracting run data (bst show)...", file=sys.stderr)
                 try:
                     extract_run(args.project_dir, wrapped_log_path, args.run_dir,
-                                log_format="wrapped", interrupted=interrupted)
+                                log_format="wrapped", interrupted=interrupted,
+                                jobserver=_jobserver_block(report))
                 except Exception as exc:
                     print(f"Warning: could not extract a run directory into "
                           f"{args.run_dir}: {exc}", file=sys.stderr)

@@ -309,6 +309,56 @@ def _read_bga_source_kind_map(project_dir: str) -> Optional[dict]:
     return mapping
 
 
+def _read_bga_jobserver_env(project_dir: str) -> list:
+    """`UX-851`: `project.conf`'s declared jobserver env-var prefixes,
+    the same minimal-YAML read `_read_bga_source_kind_map` uses.
+
+    `variables: {bga-jobserver-env: "MYJOBS=-j"}` - each entry is one
+    environment variable a custom build-system plugin reads its `-j`
+    flag from, `NAME=PREFIX`, so `UX-843`'s unknown-kind handling can
+    set it the way the shipped kinds' `MAKEFLAGS`/`JOBS` already are.
+    Validated the moment it is read, the same class of error
+    `_read_bga_source_kind_map` raises: an entry that is not
+    `NAME=PREFIX`, or whose `NAME` is not a shell-safe identifier,
+    raises `RuntimeError` naming the entry.
+
+    `[]` (not `None`) when `project.conf` is missing, unparsable, or
+    carries no `variables`/`bga-jobserver-env` key - this is stored
+    straight into the extracted run's `jobserver_env`, which reads as
+    "no custom variable" the same way an empty list always has here.
+    """
+    import re
+    try:
+        import yaml
+    except ImportError:
+        return []
+    project_conf_path = Path(project_dir) / "project.conf"
+    if not project_conf_path.exists():
+        return []
+    try:
+        data = yaml.safe_load(project_conf_path.read_text()) or {}
+    except yaml.YAMLError:
+        return []
+    declared = (data.get("variables") or {}).get("bga-jobserver-env")
+    if not declared:
+        return []
+    name_re = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+    entries = []
+    for entry in str(declared).split(","):
+        entry = entry.strip()
+        if not entry:
+            continue
+        name, sep, prefix = entry.partition("=")
+        name, prefix = name.strip(), prefix.strip()
+        if not sep or not name or not prefix or not name_re.match(name):
+            raise RuntimeError(
+                f"bga-jobserver-env entry {entry!r} in {project_conf_path} is "
+                f"not `NAME=PREFIX` with NAME a shell-safe identifier"
+            )
+        entries.append({"name": name, "prefix": prefix})
+    return entries
+
+
 def _check_project_refs_strict(project_dir: str):
     """`--strict` mode's real, opt-in guarantee (P4-13) - hardens
     `_git_consistency_note`'s best-effort whole-tree dirty warning into
@@ -407,10 +457,17 @@ def extract_run(
     estimated_job_memory_mb: int = None,
     interrupted: bool = False,
     foundation: Optional[list] = None,
+    jobserver: Optional[dict] = None,
 ):
     """Run the full extraction pipeline. Returns a dict summary (targets,
     span/element/dependency counts, warnings) - the CLI entry point below
     prints it; callers embedding this can use it directly.
+
+    `jobserver` (`UX-851`): the `{mode, ceiling, auth, project_max_jobs}`
+    fact `tools/bst_native_build_tracer.py run` assembles from its own
+    report and `BGA_JOBSERVER_MODE` - this function only writes what it
+    is given, straight into `run_context`, the same pass-through
+    `_read_bga_jobserver_env` below feeds for `jobserver_env`.
     """
     warnings = []
 
@@ -659,6 +716,11 @@ def extract_run(
     run_context["run_identity"] = run_identity
     graph["run_identity_hash"] = run_identity["manifest_hash"]
     trace["run_identity_hash"] = run_identity["manifest_hash"]
+    # UX-851: `bga-jobserver-env`, read and validated the same moment as
+    # `bga-source-kinds` above - `[]` for a project that declares none.
+    run_context["jobserver_env"] = _read_bga_jobserver_env(project_dir)
+    if jobserver is not None:
+        run_context["jobserver"] = jobserver
 
     out_dir = Path(output_dir)
     out_dir.mkdir(parents=True, exist_ok=True)

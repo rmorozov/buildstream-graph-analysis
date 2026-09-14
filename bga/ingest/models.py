@@ -191,6 +191,14 @@ class RunContext:
     # has no second measurement - and "not compared" must stay
     # distinguishable from "compared and agreed".
     timestamp_agreement: Optional[dict] = None
+    # UX-851: the mode `bga capture` ran the jobserver in, and what it
+    # weighed to size it. `{"mode": "off"|"auto"|"n", "ceiling":
+    # Optional[int], "auth": Optional[str], "project_max_jobs":
+    # Optional[int]}`. `None` (not the off-shaped dict) for a capture
+    # older than this field - `_run_instance` fills the off default only
+    # at publish time, so this stays a genuine absence here, the same
+    # convention `host_manifest` above already holds.
+    jobserver: Optional[dict] = None
 
     @property
     def plane1_resolution_s(self) -> Optional[float]:

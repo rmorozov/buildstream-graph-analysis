@@ -3044,6 +3044,25 @@ _RUN_INSTANCE_HINT = {
                 "description": "Memory the host reported, which the "
                                "memory ceiling is computed against."},
         }},
+        # UX-851: additive, no version bump - absent for a capture older
+        # than `bga capture --jobserver`.
+        "jobserver": {"properties": {
+            "mode": {
+                "description": "off, auto or n - how bga capture sized "
+                               "this run's jobserver."},
+            "ceiling": {
+                QUANTITY: "count",
+                "description": "The token count given or derived; null "
+                               "when off."},
+            "auth": {
+                "description": "fd or fifo, the auth style the tracer "
+                               "used; null when the jobserver was off."},
+            "project_max_jobs": {
+                QUANTITY: "count",
+                "description": "The target element's own declared "
+                               "max-jobs, from `bst show`; null when "
+                               "bst was unavailable."},
+        }},
     }}
 
 

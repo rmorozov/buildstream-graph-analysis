@@ -77,6 +77,8 @@ RUN_CONTEXT_ADDITIONS = {
     "estimated_job_memory_mb", "exclusive_resources", "pipeline_overhead",
     "run_identity", "host_manifest", "producer", "build_outcome",
     "queue_summary", "timestamp_agreement",
+    # `UX-851`: the mode `bga capture` ran the jobserver in.
+    "jobserver",
 }
 
 

@@ -31,7 +31,9 @@ import pytest
 # Raised by 8 for two more flags, `--jobserver-pool {fixed,dynamic}` and
 # `--jobserver-capacity N`: each its own usage-line wrap plus a two-line
 # help (`UX-845`).
-CAP = 59
+# Raised by 4 for `--plan PATH`: its own usage-line wrap plus a
+# three-line help (`UX-849`).
+CAP = 63
 
 # The top level is a *list*: one line per command, and there are 23 of
 # them. Its length is the command count, not prose, so it gets its own

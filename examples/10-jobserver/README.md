@@ -58,3 +58,21 @@ as much as `mod-a.bst`/`mod-b.bst` (`autotools`, the pair that does join
 the jobserver today), which is what "cmake does not join yet" predicts.
 The session re-runs this capture after those two land, and Direction
 20's `Status` for the mode is decided on that later row, not this one.
+
+**Stage-3 numbers, this box, 2026-09-14 (`UX-849`, `UX-846`/`UX-843`
+both in this branch's base now).** This box's `make --version` is
+4.3 - `--jobserver-auth` reads `fd` here (UX-841), and `UX-849`'s
+proxies now follow that same style rather than always `fifo:`:
+
+```
+bga capture run --run-dir run-C --jobserver auto examples/10-jobserver plane2-C.json -- bst build all.bst
+bga analyze run-C --plane2 plane2-C.json -f json -o plan-C.json
+bga capture run --run-dir run-D --jobserver auto --plan plan-C.json examples/10-jobserver plane2-D.json -- bst build all.bst
+```
+
+`--jobserver auto` (no `--plan`): **32.23s**. `--jobserver auto --plan
+plan-C.json`: **41.41s** - slower, not faster: the broker (`grants: 3,
+drains: 3, elements_in_plan: 6`) redistributes an already 16-way-
+oversubscribed 4-core box (Motivation above), and a 100ms broker
+thread on top of `PoolController`'s own 250ms one is a second real
+cost with nothing idle for either to hand out.

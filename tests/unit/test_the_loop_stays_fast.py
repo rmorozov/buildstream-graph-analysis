@@ -220,6 +220,13 @@ class TestTheSelectorStillSelects:
         # over) when `HANDFUL` moved 33 -> 45 with the census; `edg`
         # stayed (46 against 45), one file over.
         "bga/graph/edg.py",
+        # `UX-849`: 46 against 45, one file over - its own new tests
+        # (`test_the_broker_grants_by_slack.py`'s Broker fixtures,
+        # `test_bwrap_shim.py`'s proxy-auth cases) plus
+        # `test_sandbox_stderr_and_replay.py`'s own shim import name it,
+        # the same shape `edg`/`fan_in` already carry: the tree's own
+        # growth, not a loose rule.
+        "tools/native_trace/bwrap_shim.py",
     }
 
     def test_a_one_module_change_selects_a_handful_not_the_suite(self):

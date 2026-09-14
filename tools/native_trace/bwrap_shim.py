@@ -325,9 +325,12 @@ def probe_ninja(real_bwrap: str, opts: list[str], cache_path: Optional[str],
     return result
 
 
-# UX-846: where the wrapper directory lands inside the sandbox - fixed
-# and key-invisible like `bind_dst`, so no cache key ever names it.
-WRAPPER_BIND_SUBDIR = "wrappers"  # under bind_dst: the sandbox root is read-only
+# UX-846: where the wrapper directory lands inside the sandbox - under
+# the trace bind rather than a new top-level path, since a real sandbox
+# root is not writable for an unbound directory (`bwrap: Can't mkdir
+# parents for /.bga/wrappers: Read-only file system`, measured live).
+# Key-invisible like `bind_dst` itself, so no cache key ever names it.
+WRAPPER_BIND_SUBDIR = "wrappers"
 
 
 def _setenv_value(opts: list[str], name: str) -> Optional[str]:
@@ -363,6 +366,66 @@ def _wrapper_mount(opts: list[str], wrapper_dir: str, wrapper_cap: Optional[str]
     return mount
 
 
+def _jobserver_injection(opts: list[str], bind_dst: str, decision: str,
+                         pool: dict, kind_context: dict) -> list[str]:
+    """`build_shim_argv`'s own jobserver branch, split out to keep its
+    complexity under the baseline's cap. `pool` is `{fd, fifo, proxy_fd,
+    proxy_fifo}` - UX-679/UX-841's global pair, UX-849's proxy pair,
+    which wins outright over the global one when either is set. A
+    proxy follows the *same* auth style the global FIFO resolved to
+    (`BST_TRACE_JOBSERVER_AUTH` - UX-841 already reads it from `make
+    --version`; a proxy has no version of its own to probe), the
+    coordinator's fix for GNU Make 4.3 rejecting `fifo:` outright
+    (measured live: `internal error: invalid --jobserver-auth string`).
+    `kind_context` is `_resolve_kind_and_probe`'s own shape one module
+    over, plus `wrapper_cap`. `[]` for a pinned decision or with
+    nothing active - argv byte for byte."""
+    fd, fifo = pool.get("fd"), pool.get("fifo")
+    proxy_fd, proxy_fifo = pool.get("proxy_fd"), pool.get("proxy_fifo")
+    proxy_active = proxy_fd is not None or proxy_fifo is not None
+    if decision == JOBSERVER_PINNED or (fd is None and fifo is None and not proxy_active):
+        return []
+    # UX-679 (spike) / UX-841: fd style passes an inherited fd straight
+    # into the sandbox with no bind; fifo style (GNU Make >= 4.4) needs
+    # the FIFO's own path bound into the sandbox, since `make` opens it
+    # there itself (`--ro-bind` is wrong - both ends write it). UX-849:
+    # a proxy mirrors this exact pair, `main` having already opened its
+    # own fd (fd style) or left only the path set (fifo style).
+    if proxy_active:
+        auth_value = (f"--jobserver-auth={proxy_fd},{proxy_fd}"
+                     if proxy_fd is not None
+                     else f"--jobserver-auth=fifo:{proxy_fifo}")
+        needs_bind, bind_path = proxy_fd is None, proxy_fifo
+    else:
+        auth_value = (f"--jobserver-auth={fd},{fd}" if fd is not None
+                     else f"--jobserver-auth=fifo:{fifo}")
+        needs_bind, bind_path = fd is None, fifo
+    # UX-843: the per-kind table - a kind not in it gets nothing
+    # (`unknown_kind`), and cmake/meson consult the ninja probe.
+    pairs, unsets, _policy = kind_job_env(
+        kind_context.get("element_kind"), auth_value,
+        kind_context.get("ninja_probe"), kind_context.get("wrappers_dir"))
+    auth_injected = any(var == "MAKEFLAGS" for var, _ in pairs)
+    tokens = []
+    if needs_bind and auth_injected:
+        tokens += ["--bind", bind_path, bind_path]
+    for var, value in pairs:
+        tokens += ["--setenv", var, value]
+    for var in unsets:
+        tokens += ["--unsetenv", var]
+    # UX-846: a tool that will not read the pipe (lld below LLVM 22,
+    # gold, mold, ninja) holds tokens instead - bind a read-only `PATH`
+    # of wrappers ahead of BuildStream's own, only when an auth was
+    # actually injected above (an empty MAKEFLAGS is nothing to hold
+    # from). `bst_native_build_tracer.probe_jobserver_wrapper_policy`
+    # decides which tools this directory covers before the build.
+    wrapper_dir = kind_context.get("wrappers_dir")
+    if wrapper_dir is not None and auth_injected:
+        tokens += _wrapper_mount(opts, wrapper_dir,
+                                 kind_context.get("wrapper_cap"), bind_dst)
+    return tokens
+
+
 def build_shim_argv(
     real_bwrap: str,
     bst_args: list[str],
@@ -379,6 +442,8 @@ def build_shim_argv(
     ninja_probe: Optional[dict] = None,
     wrapper_dir: Optional[str] = None,
     wrapper_cap: Optional[str] = None,
+    proxy_fd: Optional[int] = None,
+    proxy_fifo: Optional[str] = None,
 ) -> list[str]:
     """The real, complete argv to exec: BuildStream's own bwrap options
     first (unmodified, including its own root-filesystem bind), then the
@@ -399,6 +464,12 @@ def build_shim_argv(
     stayed silently inert exactly as designed for the "no tracing
     requested" case - which is indistinguishable from "tracing was
     requested but the env var didn't arrive" without this fix.
+
+    `proxy_fd`/`proxy_fifo` (UX-849): when the `Broker` pre-created this
+    element's own proxy, exactly one wins over `jobserver_fd`/
+    `jobserver_fifo` outright - `main` already opened the proxy under
+    the *same* style the global FIFO resolved to (mirroring UX-841
+    exactly; a proxy has no `make --version` of its own to probe).
     """
     opts, cmd = split_bwrap_args(bst_args)
     injected = [
@@ -433,34 +504,12 @@ def build_shim_argv(
     # workaround for a defect in the native build system, and the mode
     # must not override it.
     decision = jobserver_decision(parse_element_max_jobs(opts), project_max_jobs)
-    if decision != JOBSERVER_PINNED and (jobserver_fd is not None
-                                         or jobserver_fifo is not None):
-        # UX-679 (spike) / UX-841: fd style passes an inherited fd straight
-        # into the sandbox with no bind; fifo style (GNU Make >= 4.4) needs
-        # the FIFO's own path bound into the sandbox, since `make` opens it
-        # there itself (`--ro-bind` is wrong - both ends write it).
-        auth_value = (f"--jobserver-auth={jobserver_fd},{jobserver_fd}"
-                     if jobserver_fd is not None
-                     else f"--jobserver-auth=fifo:{jobserver_fifo}")
-        # UX-843: the per-kind table - a kind not in it gets nothing
-        # (`unknown_kind`), and cmake/meson consult the ninja probe.
-        pairs, unsets, _policy = kind_job_env(element_kind, auth_value,
-                                              ninja_probe, wrapper_dir)
-        auth_injected = any(var == "MAKEFLAGS" for var, _ in pairs)
-        if jobserver_fd is None and auth_injected:
-            injected += ["--bind", jobserver_fifo, jobserver_fifo]
-        for var, value in pairs:
-            injected += ["--setenv", var, value]
-        for var in unsets:
-            injected += ["--unsetenv", var]
-        # UX-846: a tool that will not read the pipe (lld below LLVM 22,
-        # gold, mold, ninja) holds tokens instead - bind a read-only `PATH`
-        # of wrappers ahead of BuildStream's own, only when an auth was
-        # actually injected above (an empty MAKEFLAGS is nothing to hold
-        # from). `bst_native_build_tracer.probe_jobserver_wrapper_policy`
-        # decides which tools this directory covers before the build.
-        if wrapper_dir is not None and auth_injected:
-            injected += _wrapper_mount(opts, wrapper_dir, wrapper_cap, bind_dst)
+    injected += _jobserver_injection(
+        opts, bind_dst, decision,
+        pool={"fd": jobserver_fd, "fifo": jobserver_fifo,
+             "proxy_fd": proxy_fd, "proxy_fifo": proxy_fifo},
+        kind_context={"element_kind": element_kind, "ninja_probe": ninja_probe,
+                     "wrappers_dir": wrapper_dir, "wrapper_cap": wrapper_cap})
     # UX-106: the ptrace spine, prepended to the sandboxed command so it
     # becomes the parent of everything BuildStream asked to run - which
     # is what makes every descendant its own tracee, and so traceable
@@ -858,6 +907,28 @@ def exit_like(status: int) -> int:
     return os.WEXITSTATUS(status)
 
 
+def run_and_mark_done(real_bwrap: str, argv: list[str], done_path: str) -> int:
+    """UX-849: run the real bwrap as a forked child - like `run_teed`,
+    this shim becomes a genuine parent rather than `execv`-replacing
+    itself, only because the broker needs to know, from outside, the
+    moment this sandbox is gone. Reproduces `exit_like`'s own exit
+    contract; the marker write happens after `waitpid` returns, so a
+    signal that kills the sandbox still gets its own `.done` first."""
+    pid = os.fork()
+    if pid == 0:  # pragma: no cover - the child never returns
+        try:
+            os.execv(real_bwrap, argv)
+        except BaseException as error:
+            try:
+                os.write(2, f"bga: could not exec {real_bwrap}: {error}\n".encode())
+            finally:
+                os._exit(127)
+    _, status = os.waitpid(pid, 0)
+    with contextlib.suppress(OSError):
+        open(done_path, "w").close()
+    return exit_like(status)
+
+
 def open_jobserver_fd() -> tuple[Optional[int], Optional[str]]:
     """The `(fd, fifo_path)` `main` hands `build_shim_argv` - exactly one
     of the pair set, or both `None`.
@@ -888,6 +959,44 @@ def _project_max_jobs_env() -> Optional[int]:
         return int(raw) if raw else None
     except ValueError:
         return None
+
+
+def _element_proxy_paths(element: Optional[str],
+                         pinned: bool) -> tuple[Optional[str], Optional[str]]:
+    """UX-849: `(proxy_fifo, done_path)` when `BST_TRACE_PROXY_DIR` names
+    a proxy the tracer pre-created for this element, else `(None,
+    None)` - the shim binds the global FIFO as today. `pinned` (Direction
+    20 argument 1): a `notparallel` element never joins anything, proxy
+    included, so its sandbox is `execv`'d exactly as before - the fork
+    below exists only for a sandbox that actually binds one."""
+    if pinned:
+        return None, None
+    proxy_dir = os.environ.get("BST_TRACE_PROXY_DIR")
+    if not proxy_dir or element is None:
+        return None, None
+    fifo_path = os.path.join(proxy_dir, f"{element}.fifo")
+    if not os.path.exists(fifo_path):
+        return None, None
+    return fifo_path, os.path.join(proxy_dir, f"{element}.done")
+
+
+def _resolve_proxy_auth(proxy_fifo: Optional[str]) -> tuple[Optional[int], Optional[str]]:
+    """`(proxy_fd, proxy_fifo)` for `build_shim_argv` - exactly one set,
+    or both `None` when there is no proxy. Mirrors `open_jobserver_fd`'s
+    own style read exactly: `BST_TRACE_JOBSERVER_AUTH == "fifo"` binds
+    the path unchanged (GNU Make >= 4.4); anything else (including
+    unset) opens the proxy itself here, inheritable, the fd style a
+    proxy has no `make --version` of its own to have chosen. The
+    coordinator's fix: a proxy has to follow the *same* style the
+    global FIFO already resolved to, not always `fifo:` - GNU Make 4.3
+    (this box, CI) rejects that string outright."""
+    if proxy_fifo is None:
+        return None, None
+    if os.environ.get("BST_TRACE_JOBSERVER_AUTH") == "fifo":
+        return None, proxy_fifo
+    fd = os.open(proxy_fifo, os.O_RDWR)
+    os.set_inheritable(fd, True)
+    return fd, None
 
 
 def _element_kind_env(element: Optional[str]) -> Optional[str]:
@@ -1017,6 +1126,18 @@ def main() -> int:
         os.environ.get("BST_TRACE_JOBSERVER_DECISIONS"), sys.argv[1:],
         element, project_max_jobs, kind_context=kind_context,
     )
+    # UX-849: a plan-active sandbox binds its own proxy and, only then,
+    # marks `proxy_done_path` when it exits - a build with no `--plan`
+    # never sets `BST_TRACE_PROXY_DIR`, so `proxy_fifo` is always `None`
+    # and this whole item costs nothing. The proxy's own auth (fd or
+    # the host path, unchanged - same-path bind, exactly as the global
+    # FIFO's own) follows `BST_TRACE_JOBSERVER_AUTH`, the coordinator's
+    # fix: GNU Make 4.3 (this box, CI) rejects `fifo:` outright.
+    opts_now, _cmd_now = split_bwrap_args(sys.argv[1:])
+    pinned_now = jobserver_decision(
+        parse_element_max_jobs(opts_now), project_max_jobs) == JOBSERVER_PINNED
+    proxy_fifo_host, proxy_done_path = _element_proxy_paths(element, pinned_now)
+    proxy_fd, proxy_fifo = _resolve_proxy_auth(proxy_fifo_host)
     if inject:
         argv = build_shim_argv(real_bwrap, sys.argv[1:], bind_src, bind_dst,
                                preload_so, trace_log,
@@ -1033,9 +1154,12 @@ def main() -> int:
                                element_kind=kind_context["element_kind"],
                                ninja_probe=kind_context["ninja_probe"],
                                wrapper_dir=kind_context["wrappers_dir"],
-                               wrapper_cap=os.environ.get("BST_TRACE_WRAPPER_CAP"))
+                               wrapper_cap=os.environ.get("BST_TRACE_WRAPPER_CAP"),
+                               proxy_fd=proxy_fd,
+                               proxy_fifo=proxy_fifo)
     else:
         argv = [real_bwrap, *sys.argv[1:]]
+        proxy_done_path = None
 
     # UX-148: under `--diagnose` only, run the real bwrap as a child so
     # its stderr can be kept. `buildbox-run` reports only a return code
@@ -1054,15 +1178,37 @@ def main() -> int:
                        argv, real_bwrap, element, spine, inject,
                        stderr_path=stderr_path)
 
+    return _exec_or_run(real_bwrap, argv, stderr_path, proxy_done_path)
+
+
+def _exec_or_run(real_bwrap: str, argv: list[str], stderr_path: Optional[str],
+                 proxy_done_path: Optional[str]) -> int:
+    """`main`'s own exec dispatch, split out to keep its branching under
+    the baseline's cap: `--diagnose` tees (`run_teed`), a proxy-bound
+    sandbox forks so its `.done` marker can be written after it exits
+    (`run_and_mark_done`), and the default path still `execv`'s exactly
+    as before - unreachable except by returning, since `execv` replaces
+    this process outright on success."""
     if stderr_path:
         try:
-            return exit_like(run_teed(real_bwrap, argv, stderr_path))
+            status = exit_like(run_teed(real_bwrap, argv, stderr_path))
+            if proxy_done_path:
+                with contextlib.suppress(OSError):
+                    open(proxy_done_path, "w").close()
+            return status
         except OSError as error:
             # Falling through to the plain exec is the safe direction: a
             # capture that cannot tee is still a capture.
             sys.stderr.write(
                 f"bga: could not tee this sandbox's stderr ({error}); "
                 f"running it without the record.\n")
+
+    # UX-849: a proxy-bound sandbox is forked, not `execv`'d, so the
+    # `.done` marker below can be written once it actually exits - the
+    # only case, beside `--diagnose` above, where this shim outlives the
+    # real bwrap rather than becoming it.
+    if proxy_done_path:
+        return run_and_mark_done(real_bwrap, argv, proxy_done_path)
 
     try:
         os.execv(real_bwrap, argv)

@@ -1111,6 +1111,11 @@ JOBSERVER_POOL_INTERVAL_S = 0.25
 #: `some avg10` above this is "the machine is suffering", not just busy.
 JOBSERVER_POOL_PSI_BOUND = 10.0
 
+#: UX-852: how often outstanding wrapper tokens are audited against the
+#: process table - decoupled from the pool's own 250ms cadence, since a
+#: `kill(pid, 0)` sweep is a different concern at a different price.
+JOBSERVER_AUDIT_INTERVAL_S = 1.0
+
 _PSI_CPU_PATH = "/proc/pressure/cpu"
 
 #: UX-844: `bst show`'s own timeout for the pre-build cache key set -
@@ -1189,6 +1194,30 @@ def bst_command_targets(cmd: list[str]) -> list[str]:
     not an option and ends `.bst`, the shape every target BuildStream
     accepts takes."""
     return [arg for arg in cmd if arg.endswith(".bst") and not arg.startswith("-")]
+def summarize_jobserver_leaks(path: str) -> tuple[int, int]:
+    """`(leaks, tokens_refilled)` from a `PoolController` ledger's own
+    `leaked` rows (UX-852) - the same skip-per-row tolerance as
+    `summarize_jobserver_ledger` for the shapes this file shares."""
+    leaks, tokens_refilled = 0, 0
+    try:
+        with open(path, encoding="utf-8") as handle:
+            for line in handle:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    row = json.loads(line)
+                    if row["event"] != "leaked":
+                        continue
+                    tokens_refilled += int(row["tokens"])
+                except (ValueError, KeyError):
+                    continue
+                leaks += 1
+    except OSError:
+        return 0, 0
+    return leaks, tokens_refilled
+
+
 #: UX-846: the tools this item wires a wrapper for - none of them reads
 #: `MAKEFLAGS`. `gcc -flto=jobserver` and cargo are pass-through by
 #: construction (no wrapper directory entry), so they are not probed.
@@ -1235,6 +1264,46 @@ def probe_jobserver_wrapper_policy(
     return rows
 
 
+def _outstanding_wrapper_holders(ledger_path: str) -> dict[int, tuple[str, int]]:
+    """UX-852: `{pid: (tool, tokens)}` for every wrapper `acquire` row in
+    `ledger_path` not yet closed by a `release` or a `leaked` row - the
+    same skip-per-row tolerance the other ledger readers use for the
+    shapes (`PoolController` ticks) this file also holds."""
+    outstanding: dict[int, tuple[str, int]] = {}
+    try:
+        with open(ledger_path, encoding="utf-8") as handle:
+            for line in handle:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    row = json.loads(line)
+                    event = row["event"]
+                    pid = int(row["pid"])
+                except (ValueError, KeyError):
+                    continue
+                if event == "acquire":
+                    outstanding[pid] = (row["tool"], int(row["tokens"]))
+                elif event in ("release", "leaked"):
+                    outstanding.pop(pid, None)
+    except OSError:
+        return {}
+    return outstanding
+
+
+def _holder_is_gone(pid: int) -> bool:
+    """UX-852: `kill(pid, 0)` raising `ProcessLookupError` is the
+    liveness test - any other outcome (alive, or a signal this process
+    may not send) is treated as "cannot tell", not as gone."""
+    try:
+        os.kill(pid, 0)
+        return False
+    except ProcessLookupError:
+        return True
+    except OSError:
+        return False
+
+
 class PoolController:
     """UX-845: the jobserver as a client of its own FIFO.
 
@@ -1248,6 +1317,11 @@ class PoolController:
     nothing, and the pool shrinks on whichever later tick finds a token
     to read. `busy_cores`/`psi_some10` passed to `tick()` let a caller
     (the guard) script the series directly instead of reading `/proc`.
+
+    UX-852: `start()` also runs `audit_leaks()` on its own
+    `JOBSERVER_AUDIT_INTERVAL_S` cadence - a wrapper `SIGKILL`ed between
+    its own `acquire` row and its trap's `release` never returns its
+    tokens on its own; see `audit_leaks` for the liveness test.
     """
 
     def __init__(self, fd: int, ceiling: int, capacity: Optional[int] = None,
@@ -1270,6 +1344,7 @@ class PoolController:
         self._cpu = None  # (busy, total, t) - own delta state
         self._stop = threading.Event()
         self._thread = None
+        self._audit_thread = None
         # A controller that never `start()`s is trivially stopped -
         # `fixed` mode's report reads this without ever constructing one.
         self.stopped = True
@@ -1357,14 +1432,49 @@ class PoolController:
                 handle.write(json.dumps(row, separators=(",", ":")) + "\n")
         return row
 
+    def audit_leaks(self) -> list[dict]:
+        """UX-852: outstanding wrapper tokens vs. the process table.
+
+        Rebuilt fresh from `ledger_path` every call: a wrapper `acquire`
+        row is outstanding until a `release` *or a `leaked` row of this
+        method's own* closes it, so a pid this call already refilled
+        never surfaces again on a later read of the same file - no
+        separate "already handled" state to keep in sync with it.
+        `_holder_is_gone` is the liveness test. Returns the `leaked`
+        rows this call wrote.
+        """
+        if not self.ledger_path:
+            return []
+        leaked_rows = []
+        for pid, (tool, tokens) in _outstanding_wrapper_holders(self.ledger_path).items():
+            if not _holder_is_gone(pid):
+                continue  # alive, or a signal this process may not send
+            try:
+                os.write(self.fd, b"+" * tokens)
+            except OSError:
+                continue
+            row = {"event": "leaked", "tool": tool, "pid": pid,
+                  "tokens": tokens, "t": time.time()}
+            with open(self.ledger_path, "a", encoding="utf-8") as ledger:
+                ledger.write(json.dumps(row, separators=(",", ":")) + "\n")
+            leaked_rows.append(row)
+        return leaked_rows
+
     def _run(self) -> None:
         while not self._stop.is_set():
             self.tick()
             self._stop.wait(self.interval_s)
 
+    def _run_audit(self) -> None:
+        while not self._stop.is_set():
+            self.audit_leaks()
+            self._stop.wait(JOBSERVER_AUDIT_INTERVAL_S)
+
     def start(self) -> None:
         self._thread = threading.Thread(target=self._run, daemon=True)
         self._thread.start()
+        self._audit_thread = threading.Thread(target=self._run_audit, daemon=True)
+        self._audit_thread.start()
 
     def stop(self) -> None:
         self._stop.set()
@@ -1377,6 +1487,14 @@ class PoolController:
                 # than trust the first timeout.
                 self._thread.join(timeout=2.0)
             self.stopped = not self._thread.is_alive()
+        if self._audit_thread is not None:
+            # UX-852's verifier: the audit writes the same fd, so it too
+            # must be caught up before `close_jobserver` - two joins,
+            # and its liveness folds into `stopped`.
+            self._audit_thread.join(timeout=JOBSERVER_AUDIT_INTERVAL_S + 2.0)
+            if self._audit_thread.is_alive():
+                self._audit_thread.join(timeout=2.0)
+            self.stopped = self.stopped and not self._audit_thread.is_alive()
 # BuildStream subcommands whose trailing non-flag tokens name elements -
 # what `_cmd_target` scans a `bst [OPTS] SUBCOMMAND [OPTS] TARGET...`
 # argv for (UX-842's real shape: `bst --config bst-b.conf build all.bst`).
@@ -7749,9 +7867,15 @@ def main(argv: Optional[list[str]] = None) -> int:
                 # caught up with the thread before `close_jobserver` ran -
                 # `fixed` never started one, so it is trivially `True`.
                 controller_stopped = True
+                # UX-852: the audit's own record - zero unless the dynamic
+                # pool ran and its ledger survived the copy out.
+                leaks, tokens_refilled = 0, 0
                 if args.jobserver_pool == "dynamic" and jobserver_ledger_path:
                     moves, pool_min, pool_max = summarize_jobserver_ledger(
                         jobserver_ledger_path, args.jobserver)
+                    if os.path.exists(jobserver_ledger_path):
+                        leaks, tokens_refilled = summarize_jobserver_leaks(
+                            jobserver_ledger_path)
                     if jobserver_status_path and os.path.exists(jobserver_status_path):
                         with open(jobserver_status_path, encoding="utf-8") as handle:
                             controller_stopped = json.load(handle)["controller_stopped"]
@@ -7765,6 +7889,7 @@ def main(argv: Optional[list[str]] = None) -> int:
                     "pool_min": pool_min, "pool_max": pool_max,
                     "psi_present": os.path.exists(_PSI_CPU_PATH),
                     "controller_stopped": controller_stopped,
+                    "leaks": leaks, "tokens_refilled": tokens_refilled,
                 }
             else:
                 report["jobserver_pool"] = None

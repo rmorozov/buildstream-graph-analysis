@@ -34,3 +34,34 @@ without the hook) - counted as unknown, not refilled.
 `tests/unit/test_a_leaked_token_is_refilled.py` kills a fake holder
 and asserts the pool is back to its count within two seconds; mutation:
 refill unconditionally - red on the live-holder case.
+
+## Outcome
+
+**Gap measured.** `PoolController` (UX-845) tracked its own moves but
+never read a wrapper's own `acquire`/`release` rows (UX-846) - a
+`SIGKILL`ed wrapper (its trap never runs) held its tokens for the rest
+of the build with nothing to say so. `git grep -n "def audit_leaks"
+tools/bst_native_build_tracer.py` before this change: no match.
+
+**Close measured**, `PYTHONDONTWRITEBYTECODE=1 timeout 120 python3 -m
+pytest -q tests/unit/test_a_leaked_token_is_refilled.py
+tests/unit/test_the_pool_follows_the_machine.py
+tests/unit/test_a_held_tool_returns_its_tokens.py`:
+
+```text
+tests/unit/test_a_leaked_token_is_refilled.py ......                     [ 22%]
+tests/unit/test_the_pool_follows_the_machine.py ..........               [ 59%]
+tests/unit/test_a_held_tool_returns_its_tokens.py ...........            [100%]
+
+============================== 27 passed in 7.64s ==============================
+```
+
+**Mutation verified red and reverted (1):** `_holder_is_gone` returns
+`True` unconditionally (refill regardless of liveness).
+
+| mutation | reddened | revert |
+|---|---|---|
+| `_holder_is_gone` always `True` | `TestALiveHolderKeepsItsTokens::test_a_sleeping_holder_is_left_alone` (live holder's 2 tokens refilled anyway: `4 == 2` failed) and `TestOutstandingPidsAreCheckedIndependently::test_the_live_pid_is_kept_the_dead_one_is_refilled` (this test's own alive pid refilled too) | green, 6/6, from the pre-mutation copy |
+
+`python3 tools/dev_baseline.py --check`: exit 0, no `new:` line.
+`make lint`: exit 0, ruff and pymarkdown both clean.

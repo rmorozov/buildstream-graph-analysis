@@ -1819,7 +1819,7 @@ reporters' model, a batch a commit, never a suppression (High).
 owner sizing a machine) — dynamic sharing of the cores across every
 sandbox, instead of a static `max-jobs` each sandbox believes it owns.
 
-**Status:** partial — argued here; `UX-841` to `UX-852` open, the spike `UX-679` landed the mechanism in round 100 and round 112 declined the mode on one number.
+**Status:** partial — argued here; `UX-849` and `UX-850` open, `UX-841` to `UX-848`, `UX-851` and `UX-852` landed in round 118, the spike `UX-679` landed the mechanism in round 100 and round 112 declined the mode on one number.
 
 The user's brief: design the full jobserver on `UX-679`'s spike, and
 (1) never override an explicitly pinned element to `-j1`, because a pin

@@ -1511,6 +1511,41 @@ jobs:
           test -d "$RUN" || { echo "no capture at $RUN" >&2; exit 1; }
           python3 tools/dev_finding_coverage.py --also "$RUN"
 
+      - name: Build + capture + compare 10-jobserver (UX-848)
+        # The compile-bound evaluation Direction 20's `--jobserver auto`
+        # needs: examples/06 is a declared chain (round 112 declined the
+        # mode there - the wall never moved). This project is four
+        # independent elements linking real binaries from 64 generated C
+        # files each, so idle cores exist for the mode to redistribute.
+        #
+        # Cold artifact cache both times, same mechanism as 06's own
+        # step above (`rm -rf ~/.cache/buildstream ~/.local/share/
+        # buildstream`) - the artifact key is equal either way (UX-844),
+        # so a warm second run would be a near-total cache hit with
+        # nothing left for either mode to schedule.
+        run: |
+          set -euo pipefail
+          PROJ=examples/10-jobserver
+          OUT=artifacts/10-jobserver
+          mkdir -p "$OUT"
+
+          rm -rf ~/.cache/buildstream ~/.local/share/buildstream
+          bga capture run --run-dir "$OUT/run-off" --jobserver off \
+            "$PROJ" "$OUT/plane2-off.json" -- bst build all.bst
+
+          rm -rf ~/.cache/buildstream ~/.local/share/buildstream
+          bga capture run --run-dir "$OUT/run-auto" --jobserver auto \
+            "$PROJ" "$OUT/plane2-auto.json" -- bst build all.bst
+
+          bga compare "$OUT/run-off" "$OUT/run-auto" | tee "$OUT/compare-off-vs-auto.txt"
+
+          # UX-848's acceptance test: a wall for each run, not just a delta.
+          grep -qE 'Total Duration +[0-9.]+s +-> +[0-9.]+s' "$OUT/compare-off-vs-auto.txt" || {
+            echo "compare did not print a wall for each run:" >&2
+            cat "$OUT/compare-off-vs-auto.txt" >&2
+            exit 1
+          }
+
       - name: Upload real-build artifacts
         if: always()
         uses: actions/upload-artifact@v7

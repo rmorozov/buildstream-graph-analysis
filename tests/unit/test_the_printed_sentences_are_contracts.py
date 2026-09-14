@@ -36,6 +36,7 @@ import re
 import shutil
 import subprocess
 import sys
+import tempfile
 
 import pytest
 
@@ -53,6 +54,11 @@ from tools import bga_snapshot
 ALIAS_PARSERS = {"snapshot": bga_snapshot.create_parser}
 
 FIXTURE_RUN = REPO / "tests/fixtures/macro_micro/run"
+# UX-848: `bga compare` now refuses two runs at the same resolved path
+# - a byte-identical copy keeps this file's "compare a run against
+# itself" fixtures working (the verdict content is not what they read).
+_FIXTURE_RUN_TWIN = pathlib.Path(tempfile.mkdtemp(prefix="bga-macro-micro-twin-")) / "run"
+shutil.copytree(FIXTURE_RUN, _FIXTURE_RUN_TWIN)
 
 # A step whose command cannot be run by a test, and why. The same shape
 # `tests/installed_command_sweep.py` uses: an exemption has to be argued
@@ -214,7 +220,7 @@ class TestNoSentenceClaimsAFlagThatWasNotPassed:
         note, since neither fixture carries a stamp - print no flag."""
         done = subprocess.run(
             [sys.executable, "-m", "bga.cli", "compare",
-             str(FIXTURE_RUN), str(FIXTURE_RUN)],
+             str(FIXTURE_RUN), str(_FIXTURE_RUN_TWIN)],
             capture_output=True, text=True, cwd=str(REPO), timeout=300)
         assert done.returncode == 0, done.stderr[-800:]
         assert "Warning:" in done.stdout, (

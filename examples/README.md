@@ -249,6 +249,16 @@ Generate the bulk tree once (it is gitignored, like the toolchain):
 examples/09-fine-grained-siblings/generate_bulk.py
 ```
 
+## 10-jobserver
+
+Four independent elements (two `autotools`, two `cmake`), each linking
+one binary from 64 C files generated inside the sandbox at build time -
+the compile-bound evaluation Direction 20's `--jobserver auto` needs
+(`UX-848`): `06-macro-micro-optimization`'s critical path is a declared
+chain, so its wall never moved under the mode (round 112). Same staged
+sysroot as `05`/`06`/`09`. Full detail, real captures and the honest
+result in that project's own [`README.md`](10-jobserver/README.md).
+
 ## Shared setup
 
 `01-resource-contention`, `02-deep-chain-mixed-kinds`, and

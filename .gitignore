@@ -199,6 +199,10 @@ examples/09-fine-grained-siblings/files/bulk/
 examples/09-fine-grained-siblings/merged/files/toolchain/
 examples/09-fine-grained-siblings/merged/files/bulk/
 
+# examples/10-jobserver (UX-848) stages the identical sysroot (another
+# hardlink clone). Same reasoning as 05-09.
+examples/10-jobserver/files/toolchain/
+
 # Agent worktrees: whole clones the Agent tool makes under the repo (UX-509).
 .claude/worktrees/
 

@@ -218,10 +218,13 @@ def test_the_gate_still_fails_the_bad_add_where_the_whole_build_gate_goes_blind(
 
 
 def test_an_empty_check_says_so_rather_than_reporting_green(tmp_path):
+    # UX-848: `bga compare` now refuses two runs at the same resolved
+    # path - a byte-identical twin keeps "no additions" true.
     base, _good, _bad = _trio(tmp_path, 10)
+    twin = _write_run(tmp_path, "base10-twin", *_shape(10))
 
     result = _run_bga([
-        "compare", str(base), str(base), "--fail-on-inefficient-additions",
+        "compare", str(base), str(twin), "--fail-on-inefficient-additions",
     ])
 
     assert result.returncode == EXIT_OK

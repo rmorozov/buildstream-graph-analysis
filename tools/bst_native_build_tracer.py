@@ -95,6 +95,7 @@ from bga import progress
 from bga.plane2 import SCHEMA as PLANE2_SCHEMA
 
 from .bst_run_wrapped import run_wrapped, shutdown_build_group
+from .native_trace.bwrap_shim import JOBSERVER_PINNED
 from .native_trace.bwrap_shim import __file__ as _bwrap_shim_source
 
 STATIC_BINARY_DISCLAIMER = (
@@ -1495,6 +1496,244 @@ class PoolController:
             if self._audit_thread.is_alive():
                 self._audit_thread.join(timeout=2.0)
             self.stopped = self.stopped and not self._audit_thread.is_alive()
+
+
+#: UX-849: 100ms - an order of magnitude faster than `PoolController`'s
+#: own 250ms tick, since a proxy grant only has to beat the sandbox that
+#: is about to ask its own `make` to wait on it.
+JOBSERVER_BROKER_INTERVAL_S = 0.1
+
+
+def read_plan_slack(path: Optional[str]) -> dict:
+    """UX-849: `--plan`'s `analyze.json`, reduced to `{element: slack_us}`
+    - `report["elements"]["slack"]`, the per-element key `bga analyze`
+    already publishes. `{}` on any failure (missing file, bad JSON, no
+    `elements`/`slack` key) - the caller then runs with an empty plan,
+    same as no `--plan` for every element's ordering."""
+    if not path:
+        return {}
+    try:
+        with open(path, encoding="utf-8") as handle:
+            data = json.load(handle)
+    except (OSError, ValueError):
+        return {}
+    slack = data.get("elements", {}).get("slack", {})
+    return dict(slack) if isinstance(slack, dict) else {}
+
+
+def create_jobserver_proxies(proxies_dir: str, elements: dict) -> dict:
+    """UX-849: one FIFO per element named in `elements` (the kinds map -
+    every element `bst show` resolved), under `proxies_dir`. Returns
+    `{element: fd}`, each opened read-write and non-blocking so a
+    withdrawal from an empty proxy never stalls the broker. Mirrors
+    `open_jobserver`'s own O_RDWR-self-holding-fd shape, one FIFO
+    per element instead of one FIFO for the whole build."""
+    os.makedirs(proxies_dir, exist_ok=True)
+    fds = {}
+    for element in elements:
+        path = os.path.join(proxies_dir, f"{element}.fifo")
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        os.mkfifo(path)
+        fd = os.open(path, os.O_RDWR)
+        os.set_blocking(fd, False)
+        fds[element] = fd
+    return fds
+
+
+class Broker:
+    """UX-849: `PoolController`'s sibling - it never resizes the global
+    pool, it only moves tokens already in it into the proxy of whichever
+    *running* element has the least slack (`plan`, `{element: slack_us}`
+    from `--plan`'s `analyze.json`). An element `plan` does not name gets
+    the plan's own median slack, so an unplanned element is treated as
+    "average", neither starved nor favoured. A tie is broken by name -
+    deterministic, not insertion order.
+
+    `note_running`/`note_done` are the broker's view of which sandboxes
+    are alive, fed by the caller from the shim's own decision rows and
+    `.done` markers (never `/proc`). `tick()` is the distribution step,
+    callable directly by a guard exactly like `PoolController.tick()`;
+    `poll()` is what `_run()` calls, folding the decisions-file/`.done`
+    scan in front of it for the real capture.
+    """
+
+    def __init__(self, global_fd: int, proxy_fds: dict, plan: dict,
+                 ledger_path: Optional[str] = None,
+                 scratch: Optional[dict] = None):
+        """`scratch` (UX-849's own arg-count cap, the `kind_context`
+        shape `_resolve_kind_and_probe` already uses one module over):
+        `{"decisions": path, "proxies_dir": path}`, the two inputs
+        `poll()`'s file scan reads - both optional, `None` for a guard
+        driving `tick()`/`note_running`/`note_done` directly."""
+        scratch = scratch or {}
+        self.global_fd = global_fd
+        self.proxy_fds = dict(proxy_fds)
+        self.plan = dict(plan)
+        self.median_slack = statistics.median(self.plan.values()) if self.plan else 0
+        self.element_max_jobs: dict = {}
+        self.running: set = set()
+        self.granted = dict.fromkeys(self.proxy_fds, 0)
+        self.grants = 0
+        self.drains = 0
+        self.ledger_path = ledger_path
+        self.decisions_path = scratch.get("decisions")
+        self.proxies_dir = scratch.get("proxies_dir")
+        self._decisions_read = 0
+        self._done_seen: set = set()
+        self.interval_s = JOBSERVER_BROKER_INTERVAL_S
+        self._stop = threading.Event()
+        self._thread = None
+        self.stopped = True
+        os.set_blocking(global_fd, False)
+
+    def slack_for(self, element: str):
+        return self.plan.get(element, self.median_slack)
+
+    def _cap_for(self, element: str) -> Optional[int]:
+        max_jobs = self.element_max_jobs.get(element)
+        return None if max_jobs is None else max(0, max_jobs - 1)
+
+    def _log(self, row: dict) -> None:
+        if self.ledger_path:
+            with open(self.ledger_path, "a", encoding="utf-8") as handle:
+                handle.write(json.dumps(row, separators=(",", ":")) + "\n")
+
+    def note_running(self, element: str, max_jobs: Optional[int] = None) -> None:
+        """A sandbox for `element` started (the shim's own decision row)."""
+        if element not in self.proxy_fds:
+            return  # no proxy was pre-created for it - nothing to grant
+        self.running.add(element)
+        if max_jobs is not None:
+            self.element_max_jobs[element] = max_jobs
+
+    def note_done(self, element: str) -> None:
+        """`element`'s sandbox exited - drain its proxy back to the
+        global FIFO, non-blocking, one `read` per byte held."""
+        self.running.discard(element)
+        fd = self.proxy_fds.get(element)
+        if fd is None:
+            return
+        drained = 0
+        while True:
+            try:
+                if not os.read(fd, 1):
+                    break
+            except BlockingIOError:
+                break
+            drained += 1
+        if drained:
+            os.write(self.global_fd, b"+" * drained)
+            self.granted[element] = max(0, self.granted[element] - drained)
+            self.drains += 1
+            self._log({"event": "drain", "element": element,
+                       "tokens": drained, "t": time.time()})
+
+    def _drain_global(self) -> int:
+        moved = 0
+        while True:
+            try:
+                if not os.read(self.global_fd, 1):
+                    break
+            except BlockingIOError:
+                break
+            moved += 1
+        return moved
+
+    def tick(self) -> None:
+        """One control step: whatever is readable on the global FIFO
+        right now is handed to the running element with the least slack
+        first, filling it to its own cap before moving to the next -
+        never round-robin, so the element that most needs a core gets
+        every token it can use before the next one sees any."""
+        moved = self._drain_global()
+        if moved == 0:
+            return
+        order = sorted((self.running & self.proxy_fds.keys()),
+                       key=lambda element: (self.slack_for(element), element))
+        remaining = moved
+        for element in order:
+            if remaining <= 0:
+                break
+            cap = self._cap_for(element)
+            room = remaining if cap is None else max(0, cap - self.granted[element])
+            grant_n = min(remaining, room)
+            if grant_n <= 0:
+                continue
+            os.write(self.proxy_fds[element], b"+" * grant_n)
+            self.granted[element] += grant_n
+            self.grants += 1
+            remaining -= grant_n
+            self._log({"event": "grant", "element": element,
+                       "tokens": grant_n, "t": time.time()})
+        if remaining > 0:
+            # No running element in the plan could take the rest (every
+            # proxy at its cap, or nothing running yet) - hand it back
+            # rather than let it sit lost in this tick's own read.
+            os.write(self.global_fd, b"+" * remaining)
+
+    def _scan_decisions(self) -> None:
+        if not self.decisions_path:
+            return
+        try:
+            with open(self.decisions_path, encoding="utf-8") as handle:
+                lines = handle.readlines()
+        except OSError:
+            return
+        for line in lines[self._decisions_read:]:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                row = json.loads(line)
+            except ValueError:
+                continue
+            element, decision = row.get("element"), row.get("decision")
+            if element and decision and decision != JOBSERVER_PINNED:
+                self.note_running(element, row.get("max_jobs"))
+        self._decisions_read = len(lines)
+
+    def _scan_done(self) -> None:
+        if not self.proxies_dir:
+            return
+        try:
+            names = os.listdir(self.proxies_dir)
+        except OSError:
+            return
+        for name in names:
+            if not name.endswith(".done"):
+                continue
+            element = name[:-len(".done")]
+            if element not in self._done_seen:
+                self._done_seen.add(element)
+                self.note_done(element)
+
+    def poll(self) -> None:
+        """`_run()`'s own step: learn who is running or done, then
+        distribute. Split from `tick()` so a guard can drive the
+        distribution directly against a scripted population instead of
+        real decision/`.done` files."""
+        self._scan_decisions()
+        self._scan_done()
+        self.tick()
+
+    def _run(self) -> None:
+        while not self._stop.is_set():
+            self.poll()
+            self._stop.wait(self.interval_s)
+
+    def start(self) -> None:
+        self._thread = threading.Thread(target=self._run, daemon=True)
+        self._thread.start()
+
+    def stop(self) -> None:
+        self._stop.set()
+        if self._thread is not None:
+            self._thread.join(timeout=self.interval_s + 1.0)
+            if self._thread.is_alive():
+                self._thread.join(timeout=2.0)
+            self.stopped = not self._thread.is_alive()
+
+
 # BuildStream subcommands whose trailing non-flag tokens name elements -
 # what `_cmd_target` scans a `bst [OPTS] SUBCOMMAND [OPTS] TARGET...`
 # argv for (UX-842's real shape: `bst --config bst-b.conf build all.bst`).
@@ -1624,7 +1863,9 @@ def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrappe
                      jobserver_status_path: Optional[str] = None,
                      project_max_jobs: Optional[int] = None,
                      jobserver_decisions_path: Optional[str] = None,
-                     element_kinds: Optional[dict] = None) -> int:
+                     element_kinds: Optional[dict] = None,
+                     plan_path: Optional[str] = None,
+                     broker_status_path: Optional[str] = None) -> int:
     """Run cmd (a real `bst` invocation) with the bwrap shim + LD_PRELOAD
     hook active, writing raw START/END lines to raw_log_path. Returns
     cmd's own real exit code - a trace is captured best-effort and must
@@ -1665,6 +1906,12 @@ def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrappe
     the caller's `read_element_kinds_for_jobserver`, written once into
     the scratch and passed through `BST_TRACE_ELEMENT_KINDS` so the shim
     can apply the per-kind table.
+
+    `plan_path` (UX-849): an `analyze.json`, or `None` for today's single
+    shared FIFO, byte for byte. Given, one proxy FIFO per `element_kinds`
+    entry is pre-created under `proxies/` beside the global FIFO, and a
+    `Broker` thread redistributes the global pool into them by ascending
+    slack - the shim binds a sandbox its own proxy when one exists.
     """
     # UX-161: before the build, because after it the same fact is only
     # one of three guesses about a zero-invocation capture.
@@ -1821,6 +2068,8 @@ def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrappe
         jobserver_fifo = None
         jobserver_fd = None
         pool_controller = None
+        broker = None
+        proxy_fds: dict = {}
         captured_jobserver_ledger = os.path.join(bind_dir, "jobserver_ledger.jsonl")
         # UX-842: one JSON line per sandbox - `{element, max_jobs,
         # decision}` - written by the shim beside the FIFO, so it shares
@@ -1860,6 +2109,23 @@ def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrappe
                 env["BST_TRACE_ELEMENT_KINDS"] = captured_kinds
             else:
                 env.pop("BST_TRACE_ELEMENT_KINDS", None)
+            # UX-849: a proxy per element named in the kinds map, and a
+            # `Broker` thread to move tokens into them by slack - only
+            # when a plan was actually given, so a capture with no
+            # `--plan` keeps this whole block inert and the argv/report
+            # byte for byte with before this item.
+            proxies_dir = os.path.join(bind_dir, "proxies")
+            if plan_path and element_kinds:
+                proxy_fds = create_jobserver_proxies(proxies_dir, element_kinds)
+                env["BST_TRACE_PROXY_DIR"] = proxies_dir
+                broker = Broker(
+                    jobserver_fd, proxy_fds, read_plan_slack(plan_path),
+                    ledger_path=captured_jobserver_ledger,
+                    scratch={"decisions": captured_decisions,
+                            "proxies_dir": proxies_dir})
+                broker.start()
+            else:
+                env.pop("BST_TRACE_PROXY_DIR", None)
         else:
             env.pop("BST_TRACE_JOBSERVER", None)
             env.pop("BST_TRACE_JOBSERVER_AUTH", None)
@@ -1868,6 +2134,7 @@ def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrappe
             env.pop("BST_TRACE_ELEMENT_KINDS", None)
             env.pop("BST_TRACE_WRAPPER_DIR", None)
             env.pop("BST_TRACE_WRAPPER_CAP", None)
+            env.pop("BST_TRACE_PROXY_DIR", None)
 
         def copy_out():
             """Move everything the shim wrote out of the scratch.
@@ -1949,6 +2216,21 @@ def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrappe
                 if jobserver_status_path is not None:
                     with open(jobserver_status_path, "w", encoding="utf-8") as handle:
                         json.dump({"controller_stopped": pool_controller.stopped}, handle)
+            # UX-849: stopped for the same reason `pool_controller` is -
+            # before `copy_out` reads the shared ledger it also writes
+            # to, and before the proxy fds it holds are closed below.
+            if broker is not None:
+                broker.stop()
+                if broker_status_path is not None:
+                    with open(broker_status_path, "w", encoding="utf-8") as handle:
+                        json.dump({
+                            "grants": broker.grants, "drains": broker.drains,
+                            "elements_in_plan": len(broker.plan),
+                            "elements_median_slack": broker.median_slack,
+                        }, handle)
+            for fd in proxy_fds.values():
+                with contextlib.suppress(OSError):
+                    os.close(fd)
             copy_out()
             close_jobserver(jobserver_fifo, jobserver_fd)
         return returncode
@@ -7615,6 +7897,12 @@ def main(argv: Optional[list[str]] = None) -> int:
         help="UX-845: override the host core count the dynamic pool "
              "compares busy cores against (default: os.cpu_count())."
     )
+    run_parser.add_argument(
+        "--plan", metavar="PATH", default=None,
+        help="UX-849: an analyze.json naming this project's own slack - "
+             "a per-element proxy replaces the shared FIFO, granted by "
+             "least slack first. Off (no proxies) without it."
+    )
     run_parser.add_argument("--json", action="store_true", help="Print the report as JSON to stdout too")
     run_parser.add_argument("cmd", nargs=argparse.REMAINDER, help="The bst command to run, e.g. -- bst build core.bst")
 
@@ -7754,6 +8042,12 @@ def main(argv: Optional[list[str]] = None) -> int:
             os.path.join(scratch_mkdtemp(args.project_dir, "jobserver-"),
                         "jobserver_decisions.jsonl")
             if args.jobserver else None)
+        # UX-849: the broker's own grants/drains counts, read back after
+        # `run_traced_build` returns - it never leaves the function any
+        # other way, the same shape `jobserver_status_path` already uses
+        # for `PoolController.stopped`.
+        broker_status_path = (f"{args.output}.jobserver_broker_status.json"
+                              if (args.jobserver and args.plan) else None)
         # UX-844: the key set before the build starts, so a later capture
         # (with or without the mode) is comparable against it. Never an
         # abort - a project `bst show` cannot resolve is still traced.
@@ -7793,7 +8087,9 @@ def main(argv: Optional[list[str]] = None) -> int:
                                           jobserver_status_path=jobserver_status_path,
                                           project_max_jobs=project_max_jobs,
                                           jobserver_decisions_path=jobserver_decisions_path,
-                                          element_kinds=element_kinds)
+                                          element_kinds=element_kinds,
+                                          plan_path=args.plan,
+                                          broker_status_path=broker_status_path)
         except CaptureInterrupted:
             # UX-157: everything below this point is salvage, and it is
             # the same salvage a failed build already got. The trace was
@@ -7891,6 +8187,15 @@ def main(argv: Optional[list[str]] = None) -> int:
                     "controller_stopped": controller_stopped,
                     "leaks": leaks, "tokens_refilled": tokens_refilled,
                 }
+                # UX-849: only added when a plan was actually given -
+                # without `--plan` the whole capture, argv included,
+                # stays byte for byte what it was before this item.
+                if args.plan and broker_status_path and os.path.exists(broker_status_path):
+                    with open(broker_status_path, encoding="utf-8") as handle:
+                        broker_status = json.load(handle)
+                    report["jobserver_pool"]["broker"] = {
+                        "plan": args.plan, **broker_status,
+                    }
             else:
                 report["jobserver_pool"] = None
             # UX-842: the project's own `max-jobs`, and each sandbox's

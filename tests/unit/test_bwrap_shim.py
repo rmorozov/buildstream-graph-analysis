@@ -18,6 +18,7 @@ from tools.native_trace.bwrap_shim import (
     JOBSERVER_JOINED,
     JOBSERVER_PINNED,
     JOBSERVER_UNKNOWN_KIND,
+    _resolve_proxy_auth,
     build_shim_argv,
     extract_element_name,
     jobserver_decision,
@@ -638,3 +639,75 @@ def test_ninja_1_11_1s_real_help_names_no_jobserver_client():
 
 def test_a_help_naming_jobserver_is_read_as_a_client():
     assert parse_ninja_help(_NINJA_SYNTHETIC_HELP_WITH_CLIENT) is True
+
+
+# --- UX-849's proxy: the same auth style as the global FIFO ---------------
+#
+# The coordinator's fix: a proxy always used `fifo:` regardless of the
+# host's own `make --version` - GNU Make 4.3 (this box, CI's runner)
+# rejects that string outright (`internal error: invalid --jobserver-auth
+# string`, measured live). `_resolve_proxy_auth` reads the same
+# `BST_TRACE_JOBSERVER_AUTH` the global FIFO already resolved from.
+
+def test_a_proxy_under_fd_style_opens_its_own_fd_and_binds_nothing(tmp_path, monkeypatch):
+    monkeypatch.setenv("BST_TRACE_JOBSERVER_AUTH", "fd")
+    fifo = str(tmp_path / "mod-a.bst.fifo")
+    os.mkfifo(fifo)
+    proxy_fd, proxy_fifo = _resolve_proxy_auth(fifo)
+    try:
+        assert proxy_fifo is None
+        assert proxy_fd is not None
+        os.fstat(proxy_fd)  # a real, open fd
+        argv = build_shim_argv(
+            real_bwrap="/usr/bin/bwrap", bst_args=REAL_BWRAP_ARGV,
+            bind_src="/tmp/host-trace-dir", bind_dst="/tmp/.bst-native-trace",
+            preload_so="/tmp/.bst-native-trace/hook.so",
+            trace_log="/tmp/.bst-native-trace/trace.log",
+            project_max_jobs=4, element_kind="make",
+            proxy_fd=proxy_fd, proxy_fifo=proxy_fifo)
+        assert _job_env_ops(argv) == [
+            ("--setenv", "MAKEFLAGS", f"--jobserver-auth={proxy_fd},{proxy_fd}")]
+        assert fifo not in argv, "fd style binds nothing - the fd travels through exec"
+    finally:
+        os.close(proxy_fd)
+
+
+def test_a_proxy_under_fifo_style_binds_its_path_unchanged(tmp_path, monkeypatch):
+    monkeypatch.setenv("BST_TRACE_JOBSERVER_AUTH", "fifo")
+    fifo = str(tmp_path / "mod-a.bst.fifo")
+    os.mkfifo(fifo)
+    proxy_fd, proxy_fifo = _resolve_proxy_auth(fifo)
+    assert proxy_fd is None
+    assert proxy_fifo == fifo
+    argv = build_shim_argv(
+        real_bwrap="/usr/bin/bwrap", bst_args=REAL_BWRAP_ARGV,
+        bind_src="/tmp/host-trace-dir", bind_dst="/tmp/.bst-native-trace",
+        preload_so="/tmp/.bst-native-trace/hook.so",
+        trace_log="/tmp/.bst-native-trace/trace.log",
+        project_max_jobs=4, element_kind="make",
+        proxy_fd=proxy_fd, proxy_fifo=proxy_fifo)
+    assert _job_env_ops(argv) == [
+        ("--setenv", "MAKEFLAGS", f"--jobserver-auth=fifo:{fifo}")]
+    idx = argv.index(fifo)
+    assert argv[idx - 1] == "--bind"
+    assert argv[idx:idx + 2] == [fifo, fifo]
+
+
+def test_no_proxy_leaves_build_shim_argv_byte_for_byte():
+    """No `BST_TRACE_JOBSERVER_AUTH` set at all (`_resolve_proxy_auth`
+    never called - no `BST_TRACE_PROXY_DIR`, `main`'s own gate) - the
+    default `proxy_fd`/`proxy_fifo` both `None` change nothing."""
+    read_fd, write_fd = os.pipe()
+    try:
+        kwargs = dict(
+            real_bwrap="/usr/bin/bwrap", bst_args=REAL_BWRAP_ARGV,
+            bind_src="/tmp/host-trace-dir", bind_dst="/tmp/.bst-native-trace",
+            preload_so="/tmp/.bst-native-trace/hook.so",
+            trace_log="/tmp/.bst-native-trace/trace.log",
+            jobserver_fd=read_fd, project_max_jobs=4, element_kind="make",
+        )
+        assert build_shim_argv(**kwargs) == build_shim_argv(
+            proxy_fd=None, proxy_fifo=None, **kwargs)
+    finally:
+        os.close(read_fd)
+        os.close(write_fd)

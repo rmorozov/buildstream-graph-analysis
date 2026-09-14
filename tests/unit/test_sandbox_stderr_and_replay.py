@@ -203,11 +203,18 @@ class TestTheDefaultPathStillExecs:
     def test_the_shim_only_tees_under_diagnose(self):
         """`--diagnose` is a one-session debugging mode, so the extra
         process is in scope there and only there. Everywhere else the pure
-        exec is the contract."""
+        exec is the contract.
+
+        UX-849 split this dispatch out of `main` into `_exec_or_run` (to
+        keep `main`'s own branching under the baseline's complexity cap)
+        - `main` still calls it, and the tee/exec contract this guards
+        now lives in that one function's source instead."""
         import inspect
 
         from tools.native_trace import bwrap_shim
-        source = inspect.getsource(bwrap_shim.main)
+        main_source = inspect.getsource(bwrap_shim.main)
+        assert "_exec_or_run(" in main_source, "main must still reach the dispatch"
+        source = inspect.getsource(bwrap_shim._exec_or_run)
         tee_line = [ln for ln in source.splitlines() if "run_teed" in ln]
         assert tee_line, "the tee must be reachable"
         assert "if stderr_path:" in source

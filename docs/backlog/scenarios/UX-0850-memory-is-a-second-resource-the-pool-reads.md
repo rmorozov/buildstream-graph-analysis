@@ -1,6 +1,6 @@
 # UX-850: memory is a second resource the pool reads
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-845, UX-849 | **Found by:** round 117, Direction 20 | **Serves:** R5 (a machine that overcommitted memory before) | **Topic:** capture | **Area:** tools | **Shape:** mechanical
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-845, UX-849 | **Found by:** round 117, Direction 20 | **Serves:** R5 (a machine that overcommitted memory before) | **Topic:** capture | **Area:** tools | **Shape:** mechanical
 
 ## Motivation
 
@@ -90,3 +90,11 @@ rather than naming `run_teed` in its own source, which the guard reads
 literally (`inspect.getsource`). `git show 7a2c08cd:tools/native_trace/
 bwrap_shim.py` has the identical split already - pre-existing at this
 item's own base commit, in a file this diff never touches.
+
+Deviation (merge): `psi_path` became `psi_paths` (cpu, memory) under
+the argument cap, and every pinned guard on the round branch now pins
+both files - CI's runner has `/proc/pressure/memory` too; the guide's
+prose for `jobserver_pool.memory` was added at merge; an unreadable
+`/proc/meminfo` grants (fails open), a withheld element writes one row
+per tick, and the gate is per element - two elements each under the
+bound can jointly exceed the host, noted for a later row.

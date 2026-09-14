@@ -15,12 +15,12 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-849 scenarios: **1 open**, 848 closed.
+849 scenarios: **0 open**, 849 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
-| capture | 1 | 106 |
+| capture | 0 | 106 |
 | analysis | 0 | 116 |
 | contracts | 0 | 50 |
 | viewer | 0 | 173 |
@@ -36,7 +36,6 @@ task file, which is the only place it ever lived twice.
 
 | ID | Scenario | Topic | Priority | Serves | Status |
 |---|---|---|---|---|---|
-| UX-850 | [memory is a second resource the pool reads](UX-0850-memory-is-a-second-resource-the-pool-reads.md) | capture | Medium | R5 (a machine that overcommitted memory before) | 🔴 Not Started |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

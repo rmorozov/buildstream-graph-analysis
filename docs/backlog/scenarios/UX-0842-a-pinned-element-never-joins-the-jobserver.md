@@ -1,6 +1,6 @@
 # UX-842: a pinned element never joins the jobserver
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-679, UX-841 | **Found by:** round 117, Direction 20 | **Serves:** R2 (an element pinned for a build-system defect keeps its pin) | **Topic:** capture | **Area:** tools | **Shape:** mechanical
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-679, UX-841 | **Found by:** round 117, Direction 20 | **Serves:** R2 (an element pinned for a build-system defect keeps its pin) | **Topic:** capture | **Area:** tools | **Shape:** mechanical
 
 ## Motivation
 
@@ -103,3 +103,10 @@ dropping the bare-int branch reddened the meson case the same way;
 its many-rows case (`[]` vs 1 row). All reverted from scratchpad
 copies; `test_bwrap_shim.py` 20/20 and `test_native_build_tracer.py`
 42/42 green again.
+
+Deviation (merge): the verifier held the first commit on a defect the
+filing itself carried - meson composes `JOBS` as a bare integer, not
+`-jN` - and the amended parser accepts both; `_cmd_target` stays
+unguarded and degrades to `project_max_jobs` unknown, the safe branch;
+the Acceptance Test was refiled from peak 1 to the measured 2, read
+with the mode on and off alike.

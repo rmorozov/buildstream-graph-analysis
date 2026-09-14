@@ -1,6 +1,6 @@
 # UX-853: the memory gate sums the elements that run together
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-850 | **Found by:** round 118, UX-850's verifier | **Serves:** R5 (two elements each under the bound do not jointly exceed the host) | **Topic:** capture | **Area:** tools | **Shape:** mechanical
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-850 | **Found by:** round 118, UX-850's verifier | **Serves:** R5 (two elements each under the bound do not jointly exceed the host) | **Topic:** capture | **Area:** tools | **Shape:** mechanical
 
 ## Motivation
 
@@ -72,3 +72,7 @@ test_count_memory_psi_withdraws_reads_the_ledger_it_writes_beside PASSED
 
 Reverted from the pre-mutation copy in the scratchpad; the same 12
 cases pass again.
+
+Deviation (merge): none in the code; the verifier's one uncovered
+input - another element's held count feeding this element's reserve
+across two ticks rather than one - is noted, not guarded.

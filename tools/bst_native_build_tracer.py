@@ -991,12 +991,212 @@ def jobserver_auth_style(requested: str, make_version_output: Optional[str] = No
     return "fifo" if version >= (4, 4) else "fd"
 
 
+#: UX-845 / Direction 20 argument 2: how often the pool is reconsidered -
+#: an order of magnitude faster than `make -l`'s one-minute EMA, read
+#: only at job start.
+JOBSERVER_POOL_INTERVAL_S = 0.25
+
+#: `some avg10` above this is "the machine is suffering", not just busy.
+JOBSERVER_POOL_PSI_BOUND = 10.0
+
+_PSI_CPU_PATH = "/proc/pressure/cpu"
+_PSI_SOME_AVG10_RE = re.compile(r"avg10=([\d.]+)")
+
+
+def read_psi_some_avg10(path: str = _PSI_CPU_PATH) -> Optional[float]:
+    """The `some` line's `avg10` field from `/proc/pressure/cpu`, or
+    `None` where the file is absent (kernel < 4.20) or unreadable."""
+    try:
+        with open(path, encoding="utf-8") as handle:
+            for line in handle:
+                if line.startswith("some "):
+                    match = _PSI_SOME_AVG10_RE.search(line)
+                    if match:
+                        return float(match.group(1))
+    except OSError:
+        return None
+    return None
+
+
+def summarize_jobserver_ledger(path: str, ceiling: int) -> tuple[int, int, int]:
+    """`(moves, pool_min, pool_max)` from a `PoolController` ledger.
+
+    `moves` counts only `add`/`withdraw` - `hold` and `withdraw_held`
+    changed nothing. A ledger with no rows (the build was shorter than
+    one tick) reports the pool it started at, `ceiling - 1`.
+    """
+    moves, pool_min, pool_max = 0, ceiling - 1, ceiling - 1
+    seen = False
+    try:
+        with open(path, encoding="utf-8") as handle:
+            for line in handle:
+                line = line.strip()
+                if not line:
+                    continue
+                row = json.loads(line)
+                pool = row["pool"]
+                pool_min = pool if not seen else min(pool_min, pool)
+                pool_max = pool if not seen else max(pool_max, pool)
+                seen = True
+                if row["action"] in ("add", "withdraw"):
+                    moves += 1
+    except (OSError, ValueError, KeyError):
+        return 0, ceiling - 1, ceiling - 1
+    return moves, pool_min, pool_max
+
+
+class PoolController:
+    """UX-845: the jobserver as a client of its own FIFO.
+
+    Every `INTERVAL_S`, `tick()` samples `cpu_busy_cores` (the same
+    `/proc/stat` jiffy delta `HostSampler._to_cores` computes, :883-904)
+    and, where `/proc/pressure/cpu` exists, PSI's `some avg10`, and moves
+    the pool by at most one token: two consecutive samples below
+    `capacity - 1` write a `+`; a sample above `capacity`, or PSI above
+    `JOBSERVER_POOL_PSI_BOUND`, reads one token back - non-blocking, so a
+    tick where every token is held records `withdraw_held` and does
+    nothing, and the pool shrinks on whichever later tick finds a token
+    to read. `busy_cores`/`psi_some10` passed to `tick()` let a caller
+    (the guard) script the series directly instead of reading `/proc`.
+    """
+
+    def __init__(self, fd: int, ceiling: int, capacity: Optional[int] = None,
+                 ledger_path: Optional[str] = None, psi_path: str = _PSI_CPU_PATH):
+        self.fd = fd
+        self.ceiling = ceiling
+        self.capacity = capacity if capacity is not None else (os.cpu_count() or 1)
+        self.psi_path = psi_path
+        self.psi_present = os.path.exists(psi_path)
+        self.interval_s = JOBSERVER_POOL_INTERVAL_S
+        self.psi_bound = JOBSERVER_POOL_PSI_BOUND
+        # Matches what `open_jobserver` already seeded: the FIFO starts
+        # holding `ceiling - 1` tokens, and this is that same count kept
+        # host-side - never below zero, never above `ceiling - 1`.
+        self.pool = ceiling - 1
+        self.moves = 0
+        self._below_streak = 0
+        self._cpu = None  # (busy, total, t) - own delta state
+        self._stop = threading.Event()
+        self._thread = None
+        # A controller that never `start()`s is trivially stopped -
+        # `fixed` mode's report reads this without ever constructing one.
+        self.stopped = True
+        self.ledger_path = ledger_path
+        if ledger_path:
+            open(ledger_path, "w", encoding="utf-8").close()  # truncate/create
+        os.set_blocking(fd, False)  # a withdrawal must never block on a client
+
+    def _sample_busy_cores(self) -> Optional[float]:
+        sample = read_cpu_sample()
+        if not sample or "cpu_busy_jiffies" not in sample:
+            return None
+        busy, total = sample["cpu_busy_jiffies"], sample["cpu_total_jiffies"]
+        t = time.monotonic()
+        was_busy, was_total, at = self._cpu or (None, None, None)
+        self._cpu = (busy, total, t)
+        elapsed = t - at if at is not None else 0.0
+        window = total - was_total if was_total is not None else 0
+        if was_busy is None or elapsed < _CPU_MIN_INTERVAL_S or window <= 0:
+            return None
+        return round((busy - was_busy) * sample.get("cores", self.capacity) / window, 3)
+
+    def _try_withdraw(self) -> bool:
+        try:
+            return bool(os.read(self.fd, 1))
+        except BlockingIOError:
+            return False
+        except OSError as exc:
+            if exc.errno == errno.EAGAIN:
+                return False
+            raise
+
+    def _handle_overload(self, busy_cores: float, psi_some10: Optional[float],
+                          psi_over: bool) -> tuple[str, str]:
+        """`busy_cores`/PSI is over the bound - withdraw one token, unless
+        the pool is already empty (the verifier's floor edge: nothing to
+        read, so no attempt is made and no move is counted)."""
+        self._below_streak = 0
+        if self.pool == 0:
+            return "hold", "pool at floor"
+        action = "withdraw_held"
+        if self._try_withdraw():
+            self.pool -= 1
+            action = "withdraw"
+        reason = (f"psi {psi_some10}>{self.psi_bound}" if psi_over
+                  else f"busy {busy_cores}>capacity {self.capacity}")
+        return action, reason
+
+    def _handle_underload(self, busy_cores: float) -> tuple[str, str]:
+        """Below `capacity - 1` - the two-sample hysteresis before a
+        `+` lands, gated by the ceiling."""
+        self._below_streak += 1
+        if self._below_streak >= 2 and self.pool < self.ceiling - 1:
+            os.write(self.fd, b"+")
+            self.pool += 1
+            return "add", f"busy {busy_cores}<capacity-1, streak 2"
+        return "hold", f"busy {busy_cores}<capacity-1, streak {self._below_streak}"
+
+    def tick(self, busy_cores: Optional[float] = None,
+             psi_some10: Optional[float] = None) -> dict:
+        """One control step - the whole decision, callable directly by
+        the guard with a scripted `(busy_cores, psi_some10)` pair, or by
+        `run()` with both left `None` to read `/proc`."""
+        if busy_cores is None:
+            busy_cores = self._sample_busy_cores()
+        if psi_some10 is None and self.psi_present:
+            psi_some10 = read_psi_some_avg10(self.psi_path)
+        action, reason = "hold", "no sample yet"
+        if busy_cores is not None:
+            psi_over = psi_some10 is not None and psi_some10 > self.psi_bound
+            if busy_cores > self.capacity or psi_over:
+                action, reason = self._handle_overload(busy_cores, psi_some10, psi_over)
+            elif busy_cores < self.capacity - 1:
+                action, reason = self._handle_underload(busy_cores)
+            else:
+                self._below_streak = 0
+                reason = f"busy {busy_cores} within band"
+        if action in ("add", "withdraw"):
+            self.moves += 1
+        row = {"t_us": int(time.time() * 1_000_000), "busy_cores": busy_cores,
+               "psi_some10": psi_some10, "pool": self.pool, "action": action,
+               "reason": reason}
+        if self.ledger_path:
+            with open(self.ledger_path, "a", encoding="utf-8") as handle:
+                handle.write(json.dumps(row, separators=(",", ":")) + "\n")
+        return row
+
+    def _run(self) -> None:
+        while not self._stop.is_set():
+            self.tick()
+            self._stop.wait(self.interval_s)
+
+    def start(self) -> None:
+        self._thread = threading.Thread(target=self._run, daemon=True)
+        self._thread.start()
+
+    def stop(self) -> None:
+        self._stop.set()
+        if self._thread is not None:
+            self._thread.join(timeout=self.interval_s + 1.0)
+            if self._thread.is_alive():
+                # UX-845's verifier: the first join can be outlived by a
+                # tick already in flight - `close_jobserver` removing the
+                # FIFO under it is the hazard, so wait once more rather
+                # than trust the first timeout.
+                self._thread.join(timeout=2.0)
+            self.stopped = not self._thread.is_alive()
+
+
 def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrapped_log_path: Optional[str] = None, trace_opens: bool = False, argv_log_path: Optional[str] = None, invocation_log_path: Optional[str] = None,
                      trace_spine=False, diagnostics_path: Optional[str] = None,
                      no_inject: bool = False, inhibit: bool = False,
                      host_samples_path: Optional[str] = None,
                      jobserver: Optional[int] = None,
-                     jobserver_auth: Optional[str] = None) -> int:
+                     jobserver_auth: Optional[str] = None,
+                     jobserver_pool: str = "dynamic",
+                     jobserver_capacity: Optional[int] = None,
+                     jobserver_ledger_path: Optional[str] = None,
+                     jobserver_status_path: Optional[str] = None) -> int:
     """Run cmd (a real `bst` invocation) with the bwrap shim + LD_PRELOAD
     hook active, writing raw START/END lines to raw_log_path. Returns
     cmd's own real exit code - a trace is captured best-effort and must
@@ -1020,6 +1220,16 @@ def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrappe
     `--jobserver-auth`. `jobserver_auth` (UX-841): `fd` or `fifo`, the
     style already resolved by the caller and passed through
     `BST_TRACE_JOBSERVER_AUTH` for the shim to read.
+
+    `jobserver_pool` (UX-845): `"dynamic"` starts a `PoolController`
+    daemon thread between `open_jobserver` and `close_jobserver`;
+    `"fixed"` leaves the pool at `open_jobserver`'s static seed, as
+    before. `jobserver_capacity` overrides the host core count the
+    controller compares busy cores against. `jobserver_ledger_path`, when
+    given, receives a copy of the controller's per-tick ledger.
+    `jobserver_status_path`, when given, receives `{"controller_stopped":
+    bool}` - whether `stop()`'s joins actually caught up with the thread
+    before `close_jobserver` runs (UX-845's verifier).
     """
     # UX-161: before the build, because after it the same fact is only
     # one of three guesses about a zero-invocation capture.
@@ -1175,10 +1385,21 @@ def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrappe
         # lose the seeded tokens before any sandbox could read them.
         jobserver_fifo = None
         jobserver_fd = None
+        pool_controller = None
+        captured_jobserver_ledger = os.path.join(bind_dir, "jobserver_ledger.jsonl")
         if jobserver:
             jobserver_fifo, jobserver_fd, _tokens = open_jobserver(jobserver, bind_dir)
             env["BST_TRACE_JOBSERVER"] = jobserver_fifo
             env["BST_TRACE_JOBSERVER_AUTH"] = jobserver_auth or "fd"
+            # UX-845: the pool moves with the machine rather than staying
+            # at the static seed - a daemon client of the same FIFO,
+            # started after the seed lands and stopped before the FIFO
+            # closes underneath it.
+            if jobserver_pool == "dynamic":
+                pool_controller = PoolController(
+                    jobserver_fd, jobserver, capacity=jobserver_capacity,
+                    ledger_path=captured_jobserver_ledger)
+                pool_controller.start()
         else:
             env.pop("BST_TRACE_JOBSERVER", None)
             env.pop("BST_TRACE_JOBSERVER_AUTH", None)
@@ -1219,6 +1440,9 @@ def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrappe
                                     dirs_exist_ok=True)
             if invocation_log_path is not None and os.path.exists(captured_invocations):
                 shutil.copyfile(captured_invocations, invocation_log_path)
+            if (jobserver_ledger_path is not None
+                    and os.path.exists(captured_jobserver_ledger)):
+                shutil.copyfile(captured_jobserver_ledger, jobserver_ledger_path)
 
         # `UX-378`: the host's own memory, sampled while the build runs.
         # Around the build and nothing else - the census and the shim
@@ -1251,6 +1475,13 @@ def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrappe
                 "the capture was interrupted; the trace captured so far was kept"
             ) from None
         finally:
+            # UX-845: stopped before `copy_out` reads its ledger, and
+            # before the FIFO it writes to closes underneath it.
+            if pool_controller is not None:
+                pool_controller.stop()
+                if jobserver_status_path is not None:
+                    with open(jobserver_status_path, "w", encoding="utf-8") as handle:
+                        json.dump({"controller_stopped": pool_controller.stopped}, handle)
             copy_out()
             close_jobserver(jobserver_fifo, jobserver_fd)
         return returncode
@@ -6885,6 +7116,16 @@ def main(argv: Optional[list[str]] = None) -> int:
         help="UX-841: the --jobserver-auth style; auto picks fifo: from "
              "GNU Make 4.4, fd below, by the host's own `make --version`."
     )
+    run_parser.add_argument(
+        "--jobserver-pool", choices=("fixed", "dynamic"), default="dynamic",
+        help="UX-845: dynamic follows busy cores and PSI every "
+             f"{JOBSERVER_POOL_INTERVAL_S:g}s; fixed keeps the static seed."
+    )
+    run_parser.add_argument(
+        "--jobserver-capacity", type=int, default=None, metavar="N",
+        help="UX-845: override the host core count the dynamic pool "
+             "compares busy cores against (default: os.cpu_count())."
+    )
     run_parser.add_argument("--json", action="store_true", help="Print the report as JSON to stdout too")
     run_parser.add_argument("cmd", nargs=argparse.REMAINDER, help="The bst command to run, e.g. -- bst build core.bst")
 
@@ -6985,6 +7226,13 @@ def main(argv: Optional[list[str]] = None) -> int:
         # user sends on.
         diagnostics_path = (f"{args.output}.diagnostics.jsonl"
                             if (args.diagnose or args.no_inject) else None)
+        # UX-845: beside the report, only when the dynamic pool ran.
+        jobserver_ledger_path = (f"{args.output}.jobserver_ledger.jsonl"
+                                 if (args.jobserver and args.jobserver_pool == "dynamic")
+                                 else None)
+        jobserver_status_path = (f"{args.output}.jobserver_status.json"
+                                 if (args.jobserver and args.jobserver_pool == "dynamic")
+                                 else None)
         # UX-126: a run directory is extracted *from* the Plane 1 log, so
         # asking for one asks for the log. Same shape as UX-80's implied
         # invocation record: named, it is kept; unnamed, it goes to a
@@ -7014,7 +7262,11 @@ def main(argv: Optional[list[str]] = None) -> int:
                                           host_samples_path=getattr(
                                               args, "host_samples", None),
                                           jobserver=args.jobserver,
-                                          jobserver_auth=jobserver_auth)
+                                          jobserver_auth=jobserver_auth,
+                                          jobserver_pool=args.jobserver_pool,
+                                          jobserver_capacity=args.jobserver_capacity,
+                                          jobserver_ledger_path=jobserver_ledger_path,
+                                          jobserver_status_path=jobserver_status_path)
         except CaptureInterrupted:
             # UX-157: everything below this point is salvage, and it is
             # the same salvage a failed build already got. The trace was
@@ -7076,6 +7328,33 @@ def main(argv: Optional[list[str]] = None) -> int:
             # UX-841: the style actually used, next to it - `None` when
             # the jobserver itself is off.
             report["jobserver_auth"] = jobserver_auth
+            # UX-845: the dynamic pool's own record - `None` when the
+            # jobserver is off, static facts when it ran `fixed`.
+            if args.jobserver:
+                capacity = args.jobserver_capacity or os.cpu_count() or 1
+                # UX-845's verifier: read back whether `stop()` actually
+                # caught up with the thread before `close_jobserver` ran -
+                # `fixed` never started one, so it is trivially `True`.
+                controller_stopped = True
+                if args.jobserver_pool == "dynamic" and jobserver_ledger_path:
+                    moves, pool_min, pool_max = summarize_jobserver_ledger(
+                        jobserver_ledger_path, args.jobserver)
+                    if jobserver_status_path and os.path.exists(jobserver_status_path):
+                        with open(jobserver_status_path, encoding="utf-8") as handle:
+                            controller_stopped = json.load(handle)["controller_stopped"]
+                    else:
+                        controller_stopped = False
+                else:
+                    moves, pool_min, pool_max = 0, args.jobserver - 1, args.jobserver - 1
+                report["jobserver_pool"] = {
+                    "mode": args.jobserver_pool, "ceiling": args.jobserver,
+                    "capacity": capacity, "moves": moves,
+                    "pool_min": pool_min, "pool_max": pool_max,
+                    "psi_present": os.path.exists(_PSI_CPU_PATH),
+                    "controller_stopped": controller_stopped,
+                }
+            else:
+                report["jobserver_pool"] = None
             with open(args.output, "w", encoding="utf-8") as f:
                 json.dump(report, f, indent=2)
             # UX-296: and the two capacity scalars the store's aggregate

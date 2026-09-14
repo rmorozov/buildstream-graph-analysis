@@ -42,7 +42,11 @@ def _fifo(tmp_path, tokens):
 
 def _controller(tmp_path, fd, ceiling=8):
     ledger = str(tmp_path / "ledger.jsonl")
-    pc = tracer.PoolController(fd, ceiling, capacity=ceiling, ledger_path=ledger)
+    # The pool thread must not move tokens under the audit's own guard:
+    # capacity far above any busy-core reading, and the PSI path pinned
+    # away from the host's file (CI's runner has one, avg10 19.31).
+    pc = tracer.PoolController(fd, ceiling, capacity=10**6, ledger_path=ledger,
+                               psi_path=str(tmp_path / "no-psi"))
     return pc, ledger
 
 

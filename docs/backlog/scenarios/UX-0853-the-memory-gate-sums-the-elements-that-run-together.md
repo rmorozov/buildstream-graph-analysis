@@ -20,6 +20,13 @@ running element with no planned peak counts as the plan's median peak.
 The `memory_withheld` row gains `reserved` (the sum). Nothing else in
 the broker moves.
 
+## Decomposition
+
+Input classes: one running element, two whose peaks each fit and whose
+sum does not, an element on its implicit token only, an unplanned
+element at the median; the journey it extends is R5's "does this
+machine fit this build" under the mode.
+
 ## Out of Scope
 
 Reading memory from the hook per process (a live RSS rather than the

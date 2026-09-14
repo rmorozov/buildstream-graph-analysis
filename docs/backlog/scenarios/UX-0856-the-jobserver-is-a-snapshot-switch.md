@@ -22,6 +22,12 @@ records both, and the compare header names each side's mode (the
 `run_instance.jobserver` fact `UX-851` writes). `docs/guides/cli.md`'s
 snapshot section shows the pair.
 
+## Decomposition
+
+Input classes: `off`, an int, `auto` with and without `--builders`,
+`--plan` as a path and as `@prev`, `--plan` without the mode; the
+journey it extends is R4's local loop - a snapshot pair off then auto.
+
 ## Out of Scope
 
 A sticky setting in `.bga/config` - the flag is per capture, like

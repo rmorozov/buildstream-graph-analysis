@@ -254,16 +254,22 @@ class TestPart32sOpeningBlockIsTheRegistry:
 def _row_keys(node, found):
     """Every key of every row `node` hands a consumer, at any depth.
 
-    Two declarations, because a row has two: an array's `items`, and
-    the `bga:columns` an array node carries. `UX-655` measured why both
-    are needed - `analyze/v6`'s `parallelism.levels` has no `type` and
+    Three declarations, because a row has three: an array's `items`,
+    the `bga:columns` an array node carries, and a dict's
+    `additionalProperties.properties` - a row keyed by something that
+    is not an array index at all. `UX-655` measured why the first two
+    both matter - `analyze/v6`'s `parallelism.levels` has no `type` and
     no `items` at all, so its columns are the only statement of what a
-    row of it holds, and `level` and `width` are in no `items` anywhere.
+    row of it holds. `UX-838` measured the third: `elements.fan_in` is
+    `additionalProperties` keyed by element uid, invisible to both.
     """
     if isinstance(node, dict):
         items = node.get("items")
         if isinstance(items, dict):
             found |= set(items.get("properties", {}))
+        additional = node.get("additionalProperties")
+        if isinstance(additional, dict):
+            found |= set(additional.get("properties", {}))
         for column in node.get("bga:columns") or ():
             if isinstance(column, dict) and isinstance(column.get("key"), str):
                 found.add(column["key"])
@@ -544,6 +550,27 @@ class TestThePopulationIsKeysAndNotIds:
             "an items-only walk reaches level or width, so reading "
             "bga:columns is not what carries this row and the clause above "
             "would pass without it")
+
+    def test_a_row_can_be_declared_by_additional_properties_alone(self):
+        """`UX-838`'s regression fixture. `elements.fan_in` is keyed by
+        element uid - `additionalProperties`, not an array - so it has
+        neither an `items` nor a `bga:columns` for the two-case walk to
+        read. A small schema stands in, with one key named nowhere in
+        the real documents: if the third case in `_row_keys` regresses,
+        the key never enters the surface, and the undocumented-key
+        clause (`test_a_new_key_with_no_prose_reddens_naming_the_key`)
+        has nothing to catch it on."""
+        marker = "zz_ux838_regression_marker"
+        assert marker not in _named_in_the_documents(), (
+            f"{marker!r} collided with real prose; pick another fixture key")
+        schema = {"properties": {"widgets": {
+            "additionalProperties": {"properties": {marker: {}}}}}}
+        reached = _row_keys(schema, set())
+        assert marker in reached, (
+            "additionalProperties.properties is not reached by the walk, "
+            "so a row keyed by something other than an array index - "
+            "elements.fan_in among them - never enters the consumer "
+            "surface, and an undocumented key inside one never reddens")
 
     def test_the_guide_states_the_reach_it_actually_has(self):
         """The other half of the Required Fix. The statement was

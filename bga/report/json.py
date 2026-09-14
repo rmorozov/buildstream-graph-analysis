@@ -541,6 +541,29 @@ def _add_plane2_join(data, result, section, by_kind):
             data[key] = run_level
 
 
+def _add_jobserver_block(data, result, section, by_kind):
+    # UX-847: additive, `analyze/v6`'s `jobserver` - present only when
+    # `--plane2`'s report carries a mode, same gate `_add_plane2_join`
+    # reads `native_report` under. Every element Plane 1 saw, not only
+    # the ones the shim wrote a decision for - `compute_jobserver_block`
+    # is what turns a missing decision into `unknown_kind` rather than
+    # a dropped row.
+    if section is not None:
+        return
+    native_report = getattr(result, 'plane2_report', None)
+    if not native_report:
+        return
+    from bga.correlate import compute_jobserver_block
+
+    elements = sorted({task.task_key.element_uid
+                       for task in getattr(result, 'normalized_tasks', None) or []})
+    block = compute_jobserver_block(
+        native_report, elements,
+        tokens_by_element=native_report.get('jobserver_tokens_by_element'))
+    if block:
+        data['jobserver'] = block
+
+
 def _add_provenance(data, result, section, by_kind):
     # UX-229: and why every claim above is made. Last, and reading the
     # finished dict, because provenance is *references into this
@@ -596,6 +619,7 @@ _SECTIONS = (
     _add_timestamp_agreement,
     _add_element_kind_summary,
     _add_plane2_join,
+    _add_jobserver_block,
     _add_provenance,
     _add_producer_stamp,
 )

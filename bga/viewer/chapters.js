@@ -186,7 +186,12 @@ export const CHAPTERS = [
                // machine used well", and splitting the two would put
                // the verdict and its evidence in different chapters.
                "utilization_envelope", "underutilized_intervals",
-               "overcommitted_intervals"],
+               "overcommitted_intervals",
+               // UX-847: the pool's own record - "was the machine used
+               // well" is what tokens idle/starved answer; `act` rail
+               // alone would route it to "Where did the time go?"
+               // instead, beside attribution categories it is not one of.
+               "jobserver"],
     // What the run was given and how much of it was used - the two
     // numbers the chapter's own verdict is computed from.
     // `UX-678`: `sweep_memory_builders`/`sweep_binding` render generically

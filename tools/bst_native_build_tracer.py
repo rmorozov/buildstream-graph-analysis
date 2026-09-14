@@ -77,6 +77,7 @@ import platform
 import re
 import shutil
 import stat
+import statistics
 import struct
 import subprocess
 import sys
@@ -988,6 +989,92 @@ def read_jobserver_decisions(path: Optional[str]) -> list:
     except OSError:
         return []
     return decisions
+
+
+def read_jobserver_ledger(path: Optional[str]) -> list:
+    """UX-847: the raw ledger, one dict per line, for `report["jobserver_
+    ledger"]`. Two row shapes share this file - `PoolController.tick`'s
+    (`action`, `pool`, `busy_cores`, ...) and UX-846's wrapper rows
+    (`event`, `tool`, `pid`, `tokens`, `t`) - and both are kept
+    unmodified: this is the raw list `analyze/v6`'s `jobserver` block
+    reads, not a summary. Same tolerant posture as
+    `read_jobserver_decisions`."""
+    if not path:
+        return []
+    rows = []
+    try:
+        with open(path, encoding="utf-8") as handle:
+            for line in handle:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    rows.append(json.loads(line))
+                except ValueError:
+                    continue
+    except OSError:
+        return []
+    return rows
+
+
+def read_pid_to_element(raw_log_path: str) -> dict:
+    """UX-847: pid -> element, from the same raw log `load_and_summarize`
+    already folds - `stream_records`' own `pid`/`element` fields
+    (`Plane2Fold.add` reads the same two). A second streaming pass
+    rather than threading a second output through the fold's whole call
+    graph, the same move `bga_timeline.element_spans` already makes for
+    its own second reading of one log. `{}` on any failure -
+    best-effort, the posture every other jobserver reader takes.
+    """
+    pid_to_element: dict = {}
+    try:
+        with _open_maybe_gzipped(raw_log_path) as handle:
+            for record in stream_records(stream_trace_events(handle)):
+                pid, element = record.get("pid"), record.get("element")
+                if pid is not None and element and element != "unknown":
+                    pid_to_element[pid] = element
+    except OSError:
+        return {}
+    return pid_to_element
+
+
+def tokens_by_element(ledger_rows: list, pid_to_element: dict) -> tuple:
+    """UX-847: UX-846's wrapper `acquire` rows, joined to the element
+    that owned the pid - `{element: [tokens, ...]}`, and the count of
+    `acquire` rows no element owns (`unmapped`), for `jobserver_tokens_
+    unmapped`. `release` rows carry no new count (the paired `acquire`
+    already named it) and are skipped; a malformed row is skipped, not
+    raised on - the same posture every other ledger reader takes.
+    """
+    per_element: dict = {}
+    unmapped = 0
+    for row in ledger_rows or []:
+        if not isinstance(row, dict) or row.get("event") != "acquire":
+            continue
+        pid, tokens = row.get("pid"), row.get("tokens")
+        if pid is None or tokens is None:
+            continue
+        element = (pid_to_element or {}).get(pid)
+        if element is None:
+            unmapped += 1
+            continue
+        per_element.setdefault(element, []).append(tokens)
+    return per_element, unmapped
+
+
+def summarize_jobserver_tokens_by_element(ledger_rows: list,
+                                          pid_to_element: dict) -> tuple:
+    """UX-847: `tokens_by_element`'s raw lists, reduced to the p50/max
+    `analyze/v6`'s per-element table reads - `({element: {tokens_held_
+    p50, tokens_held_max}}, unmapped)`, the shape `report["jobserver_
+    tokens_by_element"]` publishes.
+    """
+    raw, unmapped = tokens_by_element(ledger_rows, pid_to_element)
+    return {
+        element: {"tokens_held_p50": statistics.median(values),
+                  "tokens_held_max": max(values)}
+        for element, values in raw.items()
+    }, unmapped
 
 
 _MAKE_VERSION_RE = re.compile(r"GNU Make (\d+)\.(\d+)")
@@ -7693,6 +7780,23 @@ def main(argv: Optional[list[str]] = None) -> int:
             # the mode itself is off, since nothing was wrapped.
             report["jobserver_wrappers"] = (
                 probe_jobserver_wrapper_policy() if args.jobserver else None)
+            # UX-847: the raw ledger, embedded - `analyze/v6`'s `jobserver`
+            # block is the only reader, and it needs the rows themselves,
+            # not a summary. Absent (not `[]`) when the mode did not run,
+            # matching `jobserver_pool`/`jobserver_decisions`'s own
+            # `None`/`[]` split above, but as a missing key rather than
+            # `None`: a `[]` here would read as "ran, held nothing".
+            if args.jobserver and jobserver_ledger_path:
+                ledger_rows = read_jobserver_ledger(jobserver_ledger_path)
+                report["jobserver_ledger"] = ledger_rows
+                # UX-847: UX-846's wrapper `acquire` rows joined by pid to
+                # the element that owned that process - the producer the
+                # verifier's hold named; `held`/`tokens_held_*` were
+                # always null without it.
+                by_element, unmapped = summarize_jobserver_tokens_by_element(
+                    ledger_rows, read_pid_to_element(raw_log_path))
+                report["jobserver_tokens_by_element"] = by_element
+                report["jobserver_tokens_unmapped"] = unmapped
             with open(args.output, "w", encoding="utf-8") as f:
                 json.dump(report, f, indent=2)
             # UX-296: and the two capacity scalars the store's aggregate

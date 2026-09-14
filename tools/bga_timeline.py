@@ -54,7 +54,7 @@ RUN_SUBDIR = "run"
 # `UX-380`: the analysis the capture wrote beside the run, which is
 # where the graph-structural facts a slice now carries come from.
 # Named in `run_store` so the layout has one authority.
-from bga.run_store import ANALYSIS_NAME
+from bga.run_store import ANALYSIS_NAME, PLANE2_NAME
 
 # `UX-298`: the two shapes this command can write. TrackEvent is
 # Perfetto's own - a stream of packets, written as the records arrive
@@ -591,6 +591,29 @@ def host_series(snapshot: str) -> list[tuple]:
             continue
         out.append(((float(wall) + float(at) - float(start)) * 1e6, sample))
     return out
+
+
+def jobserver_pool_series(snapshot: Optional[str]) -> list[tuple]:
+    """UX-847: `(wall-clock microseconds, pool)` from `plane2.json`'s
+    embedded `jobserver_ledger` - `PoolController.tick` rows only (an
+    `action` row), never a wrapper's `event` row (UX-846), which does
+    not move the pool. `t_us` is already wall-clock microseconds since
+    the epoch (`PoolController.tick` stamps it with `time.time()`), so
+    unlike `host_series` this needs no monotonic-to-wall walk.
+
+    `[]` when the snapshot has no `plane2.json`, or the mode did not
+    run - a counter track with nothing to plot is simply not drawn.
+    """
+    if not snapshot:
+        return []
+    try:
+        with open(os.path.join(snapshot, PLANE2_NAME), encoding="utf-8") as handle:
+            report = json.load(handle)
+    except (OSError, ValueError):
+        return []
+    return [(row["t_us"], row["pool"]) for row in report.get("jobserver_ledger") or []
+            if isinstance(row, dict) and "action" in row
+            and "t_us" in row and "pool" in row]
 
 
 def concurrency_series(records, windows: int = COUNTER_WINDOWS):
@@ -1385,6 +1408,17 @@ def _write_trackevent(plane1_events, raw_log, spans, anchor_element, output,
                 trace.counter(int(round(at_us * NS_PER_US)),
                               track, int(round(value * scale)))
                 host_points += 1
+
+        # UX-847: the dynamic pool's own record, drawn the same way -
+        # one counter, "pool" over time, not the wrapper's individual
+        # acquire/release rows (Direction 20's "a counter, not slices").
+        for t_us, pool in jobserver_pool_series(snapshot):
+            track = host_tracks.get("jobserver pool")
+            if track is None:
+                track = host_tracks["jobserver pool"] = trace.counter_track(
+                    "jobserver pool", parent=plane1_track, unit_name="tokens")
+            trace.counter(int(round(t_us * NS_PER_US)), track, int(pool))
+            host_points += 1
 
         threads = {}
         names = {}

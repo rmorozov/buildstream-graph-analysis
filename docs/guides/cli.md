@@ -1005,7 +1005,7 @@ finding one level up: `parallelism` is a top-level *object*, its
 top-level array published the whole of a major bump outside itself.
 The third is `UX-838`: `elements.fan_in` and five other rows are keyed
 by something that is not an array index at all, so neither `items` nor
-`bga:columns` sees them. The surface is **289 keys** today, and that
+`bga:columns` sees them. The surface is **293 keys** today, and that
 figure is derived from the walk rather than typed here.
 
 So the statement of coverage, which is now a statement and not a
@@ -1062,6 +1062,7 @@ can look one up.
 | `serialization_point_risks` | Where the run is forced to serialize. Each entry carries `pinned_elements` (what was pinned, and to what), `governing_cores` (the cores they competed for) and `typical_max_jobs` (the `-j` their own builds used). |
 | `resource_blast` | What one shared resource rebuilds. `null` where no source inventory was captured. |
 | `run_instance.jobserver` | `UX-851`: the jobserver `bga capture` ran with. `mode` (`off`/`auto`/`n`), `ceiling` (the token count given or derived, `null` when off), `auth` (`fd`/`fifo`, `null` when off), `project_max_jobs` (the target element's own declared `max-jobs`, `null` when `bst` was unavailable). Absent, not defaulted, on a capture older than the field - `bga compare`'s header reads that absence as `jobserver off`. |
+| `jobserver` | `UX-847`: the pool's own record - `mode` (`fixed`/`dynamic`), `pool_ceiling`, `tokens_idle_share` (controller ticks with cores idle and tokens still in the pool) and `tokens_starved_share` (cores idle with the pool empty) - and `per_element`, keyed by uid: `joined` (`yes`/`pinned`/`held`/`unknown_kind`), `tokens_held_p50`/`tokens_held_max` (UX-846's own acquire rows joined to this element by the pid that acquired them, `null` when the element ran no wrapped tool). Present only when `--plane2`'s report carries a mode. |
 | `trace_queries` | Every timeline query that shows a finding or deepens a claim, best first; `trace_query` is its first entry. Absent where there is a single grain. |
 | `unused_dependencies`, `redundancy_count`, `worst_redundancy`, `native_findings` | The Plane 2 half of an `element_join` row: declared-and-never-read dependencies, how often this element repeated work it had already done, the repetition it paid most for, and the producer's own per-element tags. |
 | `edges`, `projection` | Inside a `restructuring` finding: the declared build edges Plane 2 measured never-read, and the replay with those edges removed (`replayed_baseline_us`, `projected_us`, `saving_us`). Evidence, not a verdict. |

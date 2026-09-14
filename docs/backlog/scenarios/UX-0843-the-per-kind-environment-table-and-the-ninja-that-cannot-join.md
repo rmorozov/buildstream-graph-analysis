@@ -1,6 +1,6 @@
 # UX-843: the per-kind environment table, and the ninja that cannot join
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-842 | **Found by:** round 117, Direction 20 | **Serves:** R4 (cmake and meson elements join instead of resetting the jobserver) | **Topic:** capture | **Area:** tools | **Shape:** mechanical
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-842 | **Found by:** round 117, Direction 20 | **Serves:** R4 (cmake and meson elements join instead of resetting the jobserver) | **Topic:** capture | **Area:** tools | **Shape:** mechanical
 
 ## Motivation
 

@@ -15,6 +15,10 @@ def _controller(tmp_path, ceiling=4, capacity=4, **kwargs):
     path, fd, tokens = tracer.open_jobserver(ceiling, str(tmp_path))
     assert tokens == ceiling - 1
     ledger = str(tmp_path / "ledger.jsonl")
+    # Pinned away from /proc/pressure/cpu: CI's runner has it (avg10
+    # 19.31 on 2026-09-14), this box does not, and a scripted series
+    # must read the same on both.
+    kwargs.setdefault("psi_path", str(tmp_path / "no-psi"))
     pc = tracer.PoolController(fd, ceiling, capacity=capacity,
                                ledger_path=ledger, **kwargs)
     return pc, path, fd, ledger
@@ -161,7 +165,8 @@ class TestStopActuallyWaitsForTheThread:
 
     def test_a_slow_tick_in_flight_is_still_caught_by_the_second_join(self, tmp_path):
         path, fd, tokens = tracer.open_jobserver(4, str(tmp_path))
-        pc = tracer.PoolController(fd, 4, capacity=4)
+        pc = tracer.PoolController(fd, 4, capacity=4,
+                                   psi_path=str(tmp_path / "no-psi"))
 
         def slow_fake_sample():
             time.sleep(1.5)  # longer than the first join (interval_s + 1.0 = 1.25s)
@@ -174,3 +179,18 @@ class TestStopActuallyWaitsForTheThread:
         assert pc.stopped is True
         assert not pc._thread.is_alive()
         tracer.close_jobserver(path, fd)
+
+
+class TestAHostWithPSIReadsItsOwnFile:
+    """The CI-only class: `/proc/pressure/cpu` present, `some avg10`
+    over the bound withdraws even while busy cores read low."""
+
+    def test_the_hosts_avg10_over_the_bound_withdraws(self, tmp_path):
+        psi = tmp_path / "pressure-cpu"
+        psi.write_text("some avg10=19.31 avg60=12.00 avg300=8.00 total=1\n"
+                       "full avg10=0.00 avg60=0.00 avg300=0.00 total=0\n")
+        pc, path, fd, ledger = _controller(tmp_path, psi_path=str(psi))
+        assert pc.psi_present
+        row = pc.tick(busy_cores=0.5)
+        assert row["action"] == "withdraw" and row["psi_some10"] == 19.31
+        os.close(fd)

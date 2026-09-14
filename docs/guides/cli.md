@@ -774,7 +774,9 @@ into the child environment and the shim requires them:
 | `BST_TRACE_JOBSERVER` | the jobserver FIFO's path; `run --jobserver N` sets it, the shim opens it read-write and injects `MAKEFLAGS=--jobserver-auth` (`UX-679`, a spike) | `tools/native_trace/bwrap_shim.py` |
 | `BST_TRACE_JOBSERVER_AUTH` | `fd` or `fifo`, resolved from `--jobserver-auth` before the build starts; the shim reads it to choose which `--jobserver-auth` style to inject (`UX-841`) | `tools/native_trace/bwrap_shim.py` |
 | `BST_TRACE_PROJECT_MAX_JOBS` | the project's own `max-jobs`, read once from `bst show` before the build; the shim compares it against each sandbox's own `-j` to tell a `notparallel` pin from an element-level cap (`UX-842`) | `tools/native_trace/bwrap_shim.py` |
-| `BST_TRACE_JOBSERVER_DECISIONS` | the host-side path the shim appends one `{element, max_jobs, decision}` line to per sandbox, folded into the report as `jobserver_decisions` (`UX-842`) | `tools/native_trace/bwrap_shim.py` |
+| `BST_TRACE_JOBSERVER_DECISIONS` | the host-side path the shim appends one `{element, max_jobs, decision, kind, policy}` line to per sandbox, folded into the report as `jobserver_decisions` (`UX-842`/`UX-843`) | `tools/native_trace/bwrap_shim.py` |
+| `BST_TRACE_ELEMENT_KINDS` | a JSON `{name: kind}` map, read once from `bst show` before the build; the shim looks its own element up in it to pick a row from the per-kind environment table (`UX-843`) | `tools/native_trace/bwrap_shim.py` |
+| `BST_TRACE_WRAPPERS_DIR` | a bind-mounted `PATH` of token-holding wrappers, when one is staged; the shim reads only whether it is set, to choose between `ninja_wrapper` and `ninja_static` for a ninja generator with no jobserver client (`UX-843`; the wrappers themselves are `UX-846`) | `tools/native_trace/bwrap_shim.py` |
 
 **What a test sets to reach a failure path.** The spine's degrade and
 refusal branches are unreachable on a machine that *has* `ptrace`, so

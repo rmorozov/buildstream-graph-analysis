@@ -14,6 +14,7 @@ import subprocess
 
 import pytest
 
+import tools.bst_native_build_tracer as tracer
 from tools.bst_native_build_tracer import (
     STATIC_BINARY_DISCLAIMER,
     compute_max_concurrency,
@@ -636,3 +637,46 @@ def test_read_jobserver_decisions_reads_zero_one_and_many_rows(tmp_path):
     rows = read_jobserver_decisions(str(many))
     assert [r["element"] for r in rows] == ["core.bst", "lib-a.bst", "lib-b.bst"]
     assert rows[2]["decision"] == "capped_pending"
+
+
+# --- _parse_element_kinds (UX-843) -----------------------------------------
+
+# Real, pasted: `bst show --format '%{name} %{kind}' core.bst` against
+# examples/06-macro-micro-optimization (BuildStream 2.8.0, this box,
+# after `examples/stage_cpp_toolchain.sh`) - stdout only, the scheduler's
+# own progress lines land on stderr and never reach this parse.
+_REAL_NAME_KIND_STDOUT = "toolchain.bst import\ncore.bst cmake\n"
+
+
+def test_parse_element_kinds_reads_real_bst_show_stdout():
+    from tools.bst_native_build_tracer import _parse_element_kinds
+
+    assert _parse_element_kinds(_REAL_NAME_KIND_STDOUT) == {
+        "toolchain.bst": "import", "core.bst": "cmake"}
+
+
+def test_parse_element_kinds_skips_a_malformed_line():
+    from tools.bst_native_build_tracer import _parse_element_kinds
+
+    assert _parse_element_kinds("core.bst cmake\nnot-two-tokens\n") == {
+        "core.bst": "cmake"}
+
+
+def test_parse_element_kinds_of_empty_text_is_empty():
+    from tools.bst_native_build_tracer import _parse_element_kinds
+
+    assert _parse_element_kinds("") == {}
+
+
+class TestAFailedKindsReadIsLoud:
+    """UX-843's verifier: kinds unknown means no sandbox joins - said."""
+
+    def test_the_mode_off_says_nothing(self):
+        assert tracer.jobserver_kinds_warning(None, None) is None
+
+    def test_kinds_present_say_nothing(self):
+        assert tracer.jobserver_kinds_warning(4, {"core.bst": "cmake"}) is None
+
+    def test_kinds_missing_under_the_mode_warn_of_unknown_kind(self):
+        line = tracer.jobserver_kinds_warning(4, None)
+        assert line and "unknown_kind" in line and line.startswith("Warning:")

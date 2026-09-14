@@ -1274,6 +1274,58 @@ def read_project_max_jobs(project_dir: str, cmd: list[str]) -> Optional[int]:
     return _parse_max_jobs_from_vars(proc.stdout)
 
 
+def _parse_element_kinds(show_output: str) -> dict:
+    """UX-843: `%{name} %{kind}` lines -> `{name: kind}`. A line that
+    does not split into exactly two tokens is skipped, not raised on -
+    the same degrade-not-raise posture as `_parse_max_jobs_from_vars`."""
+    kinds = {}
+    for line in show_output.splitlines():
+        parts = line.split()
+        if len(parts) == 2:
+            kinds[parts[0]] = parts[1]
+    return kinds
+
+
+def jobserver_kinds_warning(jobserver: Optional[int],
+                            element_kinds: Optional[dict]) -> Optional[str]:
+    """UX-843's verifier: a failed kinds read must not switch the mode
+    off silently - every sandbox would read `unknown_kind` and join
+    nothing. The line to print, or `None` when there is nothing to say."""
+    if not jobserver or element_kinds is not None:
+        return None
+    return ("Warning: bst show gave no element kinds - no sandbox joins the "
+            "jobserver this capture (every decision reads unknown_kind)")
+
+
+def read_element_kinds_for_jobserver(project_dir: str, cmd: list[str]) -> Optional[dict]:
+    """UX-843: every element's own kind, one `bst show --format '%{name}
+    %{kind}'` on the build's own target before the build - same shape as
+    `read_project_max_jobs`, one call, one timeout. `None` on any
+    failure (no target, `bst` missing, a non-zero exit, no parseable
+    line) - the shim then treats every element as `unknown_kind`.
+
+    Not `read_element_kinds` (below): that one reads `.bst` files
+    directly, for UX-68's project-directory-only use; this reads `bst
+    show`, the same way `read_project_max_jobs` does, so the two agree
+    on what a `bst show`-composed sandbox actually saw.
+    """
+    target = _cmd_target(cmd)
+    if target is None:
+        return None
+    try:
+        proc = subprocess.run(
+            [cmd[0], "show", "--format", "%{name} %{kind}", target],
+            cwd=project_dir, capture_output=True, text=True, check=False,
+            timeout=120,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    if proc.returncode != 0:
+        return None
+    kinds = _parse_element_kinds(proc.stdout)
+    return kinds or None
+
+
 def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrapped_log_path: Optional[str] = None, trace_opens: bool = False, argv_log_path: Optional[str] = None, invocation_log_path: Optional[str] = None,
                      trace_spine=False, diagnostics_path: Optional[str] = None,
                      no_inject: bool = False, inhibit: bool = False,
@@ -1285,7 +1337,8 @@ def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrappe
                      jobserver_ledger_path: Optional[str] = None,
                      jobserver_status_path: Optional[str] = None,
                      project_max_jobs: Optional[int] = None,
-                     jobserver_decisions_path: Optional[str] = None) -> int:
+                     jobserver_decisions_path: Optional[str] = None,
+                     element_kinds: Optional[dict] = None) -> int:
     """Run cmd (a real `bst` invocation) with the bwrap shim + LD_PRELOAD
     hook active, writing raw START/END lines to raw_log_path. Returns
     cmd's own real exit code - a trace is captured best-effort and must
@@ -1322,7 +1375,10 @@ def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrappe
     (UX-842): the caller's `read_project_max_jobs`, passed through
     `BST_TRACE_PROJECT_MAX_JOBS` so the shim can tell a pin from a cap;
     `jobserver_decisions_path`, given, gets one JSON line per sandbox
-    copied out of the scratch beside the FIFO.
+    copied out of the scratch beside the FIFO. `element_kinds` (UX-843):
+    the caller's `read_element_kinds_for_jobserver`, written once into
+    the scratch and passed through `BST_TRACE_ELEMENT_KINDS` so the shim
+    can apply the per-kind table.
     """
     # UX-161: before the build, because after it the same fact is only
     # one of three guesses about a zero-invocation capture.
@@ -1502,11 +1558,22 @@ def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrappe
                 env["BST_TRACE_PROJECT_MAX_JOBS"] = str(project_max_jobs)
             else:
                 env.pop("BST_TRACE_PROJECT_MAX_JOBS", None)
+            # UX-843: the per-kind table's input - written once here so
+            # every sandbox's shim reads the same file rather than each
+            # shelling out to `bst show` itself.
+            if element_kinds:
+                captured_kinds = os.path.join(bind_dir, "element_kinds.json")
+                with open(captured_kinds, "w", encoding="utf-8") as handle:
+                    json.dump(element_kinds, handle)
+                env["BST_TRACE_ELEMENT_KINDS"] = captured_kinds
+            else:
+                env.pop("BST_TRACE_ELEMENT_KINDS", None)
         else:
             env.pop("BST_TRACE_JOBSERVER", None)
             env.pop("BST_TRACE_JOBSERVER_AUTH", None)
             env.pop("BST_TRACE_JOBSERVER_DECISIONS", None)
             env.pop("BST_TRACE_PROJECT_MAX_JOBS", None)
+            env.pop("BST_TRACE_ELEMENT_KINDS", None)
 
         def copy_out():
             """Move everything the shim wrote out of the scratch.
@@ -7382,6 +7449,13 @@ def main(argv: Optional[list[str]] = None) -> int:
         # what the project's own `max-jobs` is.
         project_max_jobs = (read_project_max_jobs(args.project_dir, cmd)
                             if args.jobserver else None)
+        # UX-843: the same shape, one call, before the build - the
+        # per-kind table's input.
+        element_kinds = (read_element_kinds_for_jobserver(args.project_dir, cmd)
+                         if args.jobserver else None)
+        kinds_warning = jobserver_kinds_warning(args.jobserver, element_kinds)
+        if kinds_warning:
+            print(kinds_warning, file=sys.stderr)
         jobserver_decisions_path = (
             os.path.join(scratch_mkdtemp(args.project_dir, "jobserver-"),
                         "jobserver_decisions.jsonl")
@@ -7405,7 +7479,8 @@ def main(argv: Optional[list[str]] = None) -> int:
                                           jobserver_ledger_path=jobserver_ledger_path,
                                           jobserver_status_path=jobserver_status_path,
                                           project_max_jobs=project_max_jobs,
-                                          jobserver_decisions_path=jobserver_decisions_path)
+                                          jobserver_decisions_path=jobserver_decisions_path,
+                                          element_kinds=element_kinds)
         except CaptureInterrupted:
             # UX-157: everything below this point is salvage, and it is
             # the same salvage a failed build already got. The trace was
@@ -7498,6 +7573,8 @@ def main(argv: Optional[list[str]] = None) -> int:
             # pinned/joined/capped_pending decision against it - both
             # `None`/`[]` when the jobserver itself is off.
             report["project_max_jobs"] = project_max_jobs
+            report["jobserver_kinds_read"] = (
+                element_kinds is not None if args.jobserver else None)
             report["jobserver_decisions"] = read_jobserver_decisions(
                 jobserver_decisions_path)
             with open(args.output, "w", encoding="utf-8") as f:

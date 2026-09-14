@@ -1,6 +1,6 @@
 # UX-844: the cache key is equal with and without the jobserver
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-843 | **Found by:** round 117, Direction 20 | **Serves:** R4 (artifacts built either way are shared) | **Topic:** guards | **Area:** tools | **Shape:** judgement
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-843 | **Found by:** round 117, Direction 20 | **Serves:** R4 (artifacts built either way are shared) | **Topic:** guards | **Area:** tools | **Shape:** judgement
 
 ## Motivation
 
@@ -82,3 +82,11 @@ figure (541→543 test files, both new files stayed under the map's own
 reconciles. One new `S603` baseline entry (`tools/bst_native_build_tracer.py`,
 the pre-build `bst show`), authorised `UX-844`, matching `UX-841`'s
 precedent (`shutil.which` first avoids `S607`).
+
+Deviation (merge): the guard's sentence names the alphabetically first
+element whose key moved (`app.bst`, the consumer) and the list names
+the plugin's own `mutant.bst` - the Acceptance Test's "naming the
+element" holds in the list, not always in the sentence; dropping
+`MAKEFLAGS` from the leak set reddens nothing (BuildStream nocaches it
+by construction). The bst-tier pin moved to 51 at merge (UX-851's two
+and this row's two).

@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-849 scenarios: **7 open**, 842 closed.
+849 scenarios: **6 open**, 843 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -27,7 +27,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | cli | 0 | 22 |
 | store | 0 | 16 |
 | docs | 0 | 143 |
-| guards | 1 | 223 |
+| guards | 0 | 223 |
 
 ## Open scenarios
 
@@ -36,7 +36,6 @@ task file, which is the only place it ever lived twice.
 
 | ID | Scenario | Topic | Priority | Serves | Status |
 |---|---|---|---|---|---|
-| UX-844 | [the cache key is equal with and without the jobserver](UX-0844-the-cache-key-is-equal-with-and-without-the-jobserver.md) | guards | High | R4 (artifacts built either way are shared) | 🔴 Not Started |
 | UX-846 | [a tool that will not read the pipe holds tokens instead](UX-0846-a-tool-that-will-not-read-the-pipe-holds-tokens-instead.md) | capture | High | R4 (links stop oversubscribing under the mode) | 🔴 Not Started |
 | UX-847 | [the token ledger lands in Plane 2 and the page](UX-0847-the-token-ledger-lands-in-plane-2-and-the-page.md) | analysis | Medium | R4 and R5 (was the pool or the graph the bound) | 🔴 Not Started |
 | UX-848 | [a compile-bound example is the jobserver's evaluation](UX-0848-a-compile-bound-example-is-the-jobservers-evaluation.md) | capture | High | R4 (the number round 112 asked for) | 🔴 Not Started |

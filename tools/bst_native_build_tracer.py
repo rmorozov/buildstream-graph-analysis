@@ -1111,12 +1111,14 @@ class PoolController:
     """
 
     def __init__(self, fd: int, ceiling: int, capacity: Optional[int] = None,
-                 ledger_path: Optional[str] = None, psi_path: str = _PSI_CPU_PATH):
+                 ledger_path: Optional[str] = None, psi_path: Optional[str] = None):
         self.fd = fd
         self.ceiling = ceiling
         self.capacity = capacity if capacity is not None else (os.cpu_count() or 1)
-        self.psi_path = psi_path
-        self.psi_present = os.path.exists(psi_path)
+        # Resolved at call time so a guard can point it away from the
+        # host's own file - CI's runner has PSI, this box does not.
+        self.psi_path = psi_path if psi_path is not None else _PSI_CPU_PATH
+        self.psi_present = os.path.exists(self.psi_path)
         self.interval_s = JOBSERVER_POOL_INTERVAL_S
         self.psi_bound = JOBSERVER_POOL_PSI_BOUND
         # Matches what `open_jobserver` already seeded: the FIFO starts

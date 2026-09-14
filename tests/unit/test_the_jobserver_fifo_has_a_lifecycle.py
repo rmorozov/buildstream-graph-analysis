@@ -68,6 +68,7 @@ class TestTheShimsArgvCarriesTheChosenStyle:
             preload_so="/tmp/.bst-native-trace/hook.so",
             trace_log="/tmp/.bst-native-trace/trace.log",
             jobserver_fifo=fifo_path,
+            element_kind="make",  # UX-843: the table needs a kind now
         )
 
         binds = [i for i, tok in enumerate(argv) if tok == "--bind"]
@@ -91,6 +92,7 @@ class TestTheShimsArgvCarriesTheChosenStyle:
                 preload_so="/tmp/.bst-native-trace/hook.so",
                 trace_log="/tmp/.bst-native-trace/trace.log",
                 jobserver_fd=read_fd,
+                element_kind="make",  # UX-843: the table needs a kind now
             )
             setenv = argv.index("MAKEFLAGS")
             assert argv[setenv + 1] == f"--jobserver-auth={read_fd},{read_fd}"

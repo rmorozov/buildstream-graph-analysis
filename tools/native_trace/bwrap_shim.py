@@ -33,6 +33,7 @@ import os
 import re
 import select
 import signal
+import subprocess
 import sys
 import time
 from typing import Optional
@@ -252,6 +253,77 @@ def jobserver_decision(element_max_jobs: Optional[int],
     return JOBSERVER_CAPPED_PENDING
 
 
+JOBSERVER_UNKNOWN_KIND = "unknown_kind"
+
+# UX-843: cmake and meson compose `JOBS: -j%{max-jobs}` as a literal
+# flag on the generator's own command line - beside a jobserver auth
+# that resets `make` (Motivation). make/autotools already join via
+# MAKEFLAGS alone; cargo is a client and only needs its own env unset.
+_MAKE_LIKE_KINDS = frozenset({"make", "autotools"})
+_NINJA_CAPABLE_KINDS = frozenset({"cmake", "meson"})
+
+
+def kind_job_env(kind, auth_value, ninja_probe=None, wrappers_dir=None):
+    """The `(setenv_pairs, unsetenv_vars, policy)` this element's kind
+    gets, applied only for a `joined`/`capped_pending` decision.
+    `ninja_probe` is `{"available", "jobserver_client"}` or `None` (not
+    run, or no ninja in the sandbox - the make path, same injection as
+    a plain make generator)."""
+    if kind in _MAKE_LIKE_KINDS:
+        return [("MAKEFLAGS", auth_value)], [], "make"
+    if kind == "cargo":
+        return [("MAKEFLAGS", auth_value)], ["CARGO_BUILD_JOBS"], "cargo"
+    if kind in _NINJA_CAPABLE_KINDS:
+        if ninja_probe and ninja_probe.get("available"):
+            if ninja_probe.get("jobserver_client"):
+                return [("JOBS", ""), ("MAKEFLAGS", auth_value)], [], "ninja_client"
+            if wrappers_dir:
+                return [("JOBS", "")], [], "ninja_wrapper"
+            return [], [], "ninja_static"
+        return [("JOBS", ""), ("MAKEFLAGS", auth_value)], [], "cmake_meson"
+    return [], [], JOBSERVER_UNKNOWN_KIND
+
+
+def parse_ninja_help(text: str) -> bool:
+    """UX-843: does `ninja --help`'s text name a jobserver client? 1.11.1
+    on this box does not (pasted in the task file's Outcome); a ninja
+    that speaks the protocol names it in its own help text."""
+    return "jobserver" in text.lower()
+
+
+def probe_ninja(real_bwrap: str, opts: list[str], cache_path: Optional[str],
+                timeout: float = 5.0) -> dict:
+    """UX-843: `ninja --version` then `--help`, run through this same
+    sandbox argv with the trailing command replaced - once per capture,
+    cached at `cache_path` beside the FIFO. Never raises: a probe that
+    cannot run just means no ninja client, the safer of the two guesses.
+    """
+    if cache_path:
+        with contextlib.suppress(OSError, ValueError), \
+                open(cache_path, encoding="utf-8") as handle:
+            return json.load(handle)
+    result = {"available": False, "version": None, "jobserver_client": None}
+    try:
+        version = subprocess.run(
+            [real_bwrap, *opts, "ninja", "--version"],
+            capture_output=True, text=True, timeout=timeout, check=False)
+        if version.returncode == 0 and version.stdout.strip():
+            result["available"] = True
+            result["version"] = version.stdout.strip()
+            helptext = subprocess.run(
+                [real_bwrap, *opts, "ninja", "--help"],
+                capture_output=True, text=True, timeout=timeout, check=False)
+            result["jobserver_client"] = parse_ninja_help(
+                helptext.stdout + helptext.stderr)
+    except (OSError, subprocess.TimeoutExpired):
+        pass
+    if cache_path:
+        with contextlib.suppress(OSError), \
+                open(cache_path, "w", encoding="utf-8") as handle:
+            json.dump(result, handle)
+    return result
+
+
 def build_shim_argv(
     real_bwrap: str,
     bst_args: list[str],
@@ -264,6 +336,9 @@ def build_shim_argv(
     jobserver_fd: Optional[int] = None,
     jobserver_fifo: Optional[str] = None,
     project_max_jobs: Optional[int] = None,
+    element_kind: Optional[str] = None,
+    ninja_probe: Optional[dict] = None,
+    wrappers_dir: Optional[str] = None,
 ) -> list[str]:
     """The real, complete argv to exec: BuildStream's own bwrap options
     first (unmodified, including its own root-filesystem bind), then the
@@ -318,23 +393,25 @@ def build_shim_argv(
     # workaround for a defect in the native build system, and the mode
     # must not override it.
     decision = jobserver_decision(parse_element_max_jobs(opts), project_max_jobs)
-    if decision != JOBSERVER_PINNED:
-        # UX-679 (spike): `bwrap` passes an inherited fd straight into the
-        # sandbox with no bind - so the FIFO opened by `main` reaches `make`
-        # as a jobserver via one `--setenv`, R and W the same fd (accepted by
-        # GNU Make 4.3).
-        if jobserver_fd is not None:
-            injected += ["--setenv", "MAKEFLAGS",
-                        f"--jobserver-auth={jobserver_fd},{jobserver_fd}"]
-        # UX-841: GNU Make >= 4.4's `fifo:PATH` style - `make` opens PATH
-        # itself inside the sandbox, so no fd is passed; the path must
-        # resolve there, hence a `--bind` of the FIFO onto its own path
-        # (`--ro-bind` is wrong - both the host and the sandbox write it).
-        elif jobserver_fifo is not None:
-            injected += [
-                "--bind", jobserver_fifo, jobserver_fifo,
-                "--setenv", "MAKEFLAGS", f"--jobserver-auth=fifo:{jobserver_fifo}",
-            ]
+    if decision != JOBSERVER_PINNED and (jobserver_fd is not None
+                                         or jobserver_fifo is not None):
+        # UX-679 (spike) / UX-841: fd style passes an inherited fd straight
+        # into the sandbox with no bind; fifo style (GNU Make >= 4.4) needs
+        # the FIFO's own path bound into the sandbox, since `make` opens it
+        # there itself (`--ro-bind` is wrong - both ends write it).
+        auth_value = (f"--jobserver-auth={jobserver_fd},{jobserver_fd}"
+                     if jobserver_fd is not None
+                     else f"--jobserver-auth=fifo:{jobserver_fifo}")
+        # UX-843: the per-kind table - a kind not in it gets nothing
+        # (`unknown_kind`), and cmake/meson consult the ninja probe.
+        pairs, unsets, _policy = kind_job_env(element_kind, auth_value,
+                                              ninja_probe, wrappers_dir)
+        if jobserver_fd is None and any(var == "MAKEFLAGS" for var, _ in pairs):
+            injected += ["--bind", jobserver_fifo, jobserver_fifo]
+        for var, value in pairs:
+            injected += ["--setenv", var, value]
+        for var in unsets:
+            injected += ["--unsetenv", var]
     # UX-106: the ptrace spine, prepended to the sandboxed command so it
     # becomes the parent of everything BuildStream asked to run - which
     # is what makes every descendant its own tracee, and so traceable
@@ -502,18 +579,30 @@ def record_invocation(log_path: Optional[str], invocation_id: int,
 
 def record_jobserver_decision(log_path: Optional[str], opts: list[str],
                               element: Optional[str],
-                              project_max_jobs: Optional[int]) -> bool:
-    """UX-842: one JSON line per sandbox - `{element, max_jobs,
-    decision}` - beside the FIFO in the capture scratch. When the shim
-    could not name the element (`extract_element_name` found no
-    `--dir`), falls back to the sandbox's own `--chdir`, then to the
-    `-j` value itself, and says so with `element_unresolved`. Never
+                              project_max_jobs: Optional[int],
+                              kind_context: Optional[dict] = None) -> bool:
+    """UX-842/UX-843: one JSON line per sandbox - `{element, max_jobs,
+    decision, kind, policy}` - beside the FIFO in the capture scratch.
+    When the shim could not name the element (`extract_element_name`
+    found no `--dir`), falls back to the sandbox's own `--chdir`, then
+    to the `-j` value itself, and says so with `element_unresolved`.
+    `policy` is `None` for a `pinned` decision (the table is never
+    consulted). `kind_context` is `_resolve_kind_and_probe`'s
+    `{element_kind, ninja_probe, wrappers_dir}` - bundled into one
+    optional param to keep this under ruff's argument-count cap. Never
     raises, same contract as `record_diagnostics`."""
     if not log_path:
         return False
+    kind_context = kind_context or {}
+    element_kind = kind_context.get("element_kind")
     try:
         element_max_jobs = parse_element_max_jobs(opts)
         decision = jobserver_decision(element_max_jobs, project_max_jobs)
+        policy = None
+        if decision != JOBSERVER_PINNED:
+            _pairs, _unsets, policy = kind_job_env(
+                element_kind, "--jobserver-auth=0,0",
+                kind_context.get("ninja_probe"), kind_context.get("wrappers_dir"))
         name, unresolved = element, False
         if name is None:
             unresolved = True
@@ -524,7 +613,7 @@ def record_jobserver_decision(log_path: Optional[str], opts: list[str],
             if name is None and element_max_jobs is not None:
                 name = f"-j{element_max_jobs}"
         record = {"element": name, "max_jobs": element_max_jobs,
-                 "decision": decision}
+                 "decision": decision, "kind": element_kind, "policy": policy}
         if unresolved:
             record["element_unresolved"] = True
         line = json.dumps(record, sort_keys=True) + "\n"
@@ -752,6 +841,49 @@ def _project_max_jobs_env() -> Optional[int]:
         return None
 
 
+def _element_kind_env(element: Optional[str]) -> Optional[str]:
+    """UX-843: `BST_TRACE_ELEMENT_KINDS`'s map (a JSON `{name: kind}`,
+    written once by the tracer from `bst show`), looked up for this
+    sandbox's element. `None` on an unset/unreadable file or an element
+    the map does not name - both degrade to `unknown_kind`."""
+    path = os.environ.get("BST_TRACE_ELEMENT_KINDS")
+    if not path or element is None:
+        return None
+    try:
+        with open(path, encoding="utf-8") as handle:
+            kinds = json.load(handle)
+    except (OSError, ValueError):
+        return None
+    return kinds.get(element) if isinstance(kinds, dict) else None
+
+
+def _resolve_kind_and_probe(element, jobserver_fd, jobserver_fifo,
+                            project_max_jobs, real_bwrap):
+    """UX-843: `{element_kind, ninja_probe, wrappers_dir}` for `main` -
+    pulled out of it (a dict, not a tuple, so both call sites in `main`
+    pass it straight through as one argument) so the mode's env-reading
+    and gating (`_element_kind_env`, the ninja probe's own gate) don't
+    inflate `main`'s own statement count. The probe runs only for a
+    cmake/meson element whose decision would otherwise consult it (mode
+    active, not pinned)."""
+    element_kind = _element_kind_env(element)
+    wrappers_dir = os.environ.get("BST_TRACE_WRAPPERS_DIR")
+    base = {"element_kind": element_kind, "ninja_probe": None,
+           "wrappers_dir": wrappers_dir}
+    active = jobserver_fd is not None or jobserver_fifo is not None
+    if element_kind not in _NINJA_CAPABLE_KINDS or not active:
+        return base
+    opts, _cmd = split_bwrap_args(sys.argv[1:])
+    decision = jobserver_decision(parse_element_max_jobs(opts), project_max_jobs)
+    if decision == JOBSERVER_PINNED:
+        return base
+    jobserver_path = os.environ.get("BST_TRACE_JOBSERVER")
+    cache_path = (os.path.join(os.path.dirname(jobserver_path), "ninja_probe.json")
+                 if jobserver_path else None)
+    base["ninja_probe"] = probe_ninja(real_bwrap, opts, cache_path)
+    return base
+
+
 SELF_TEST_ARGV = "--bga-shim-self-test"
 
 
@@ -788,10 +920,7 @@ def main() -> int:
             sys.stderr.write(f"bga: and could not exec it: {error}\n")
             return 127
         return 1
-    bind_src = os.environ["BST_TRACE_BIND_SRC"]
-    bind_dst = os.environ["BST_TRACE_BIND_DST"]
-    preload_so = os.environ["BST_TRACE_PRELOAD_SO"]
-    trace_log = os.environ["BST_TRACE_LOG_DST"]
+    bind_src, bind_dst, preload_so, trace_log = (os.environ[name] for name in required)
     # UX-58: opt-in, like --trace-opens, and recorded *before* the
     # rewrite so the file holds what BuildStream actually generated
     # rather than what this shim turned it into.
@@ -830,9 +959,14 @@ def main() -> int:
     inject = os.environ.get("BST_TRACE_NO_INJECT") != "1"
     jobserver_fd, jobserver_fifo = open_jobserver_fd()
     project_max_jobs = _project_max_jobs_env()
+    # UX-846 (another track): a bind-mounted `PATH` of token-holding
+    # wrappers - `_resolve_kind_and_probe` reads only whether it is set,
+    # to choose the ninja policy; this shim does not create or size them.
+    kind_context = _resolve_kind_and_probe(
+        element, jobserver_fd, jobserver_fifo, project_max_jobs, real_bwrap)
     record_jobserver_decision(
         os.environ.get("BST_TRACE_JOBSERVER_DECISIONS"), sys.argv[1:],
-        element, project_max_jobs,
+        element, project_max_jobs, kind_context=kind_context,
     )
     if inject:
         argv = build_shim_argv(real_bwrap, sys.argv[1:], bind_src, bind_dst,
@@ -846,7 +980,10 @@ def main() -> int:
                                spine=spine,
                                jobserver_fd=jobserver_fd,
                                jobserver_fifo=jobserver_fifo,
-                               project_max_jobs=project_max_jobs)
+                               project_max_jobs=project_max_jobs,
+                               element_kind=kind_context["element_kind"],
+                               ninja_probe=kind_context["ninja_probe"],
+                               wrappers_dir=kind_context["wrappers_dir"])
     else:
         argv = [real_bwrap, *sys.argv[1:]]
 

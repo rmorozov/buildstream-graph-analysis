@@ -17,10 +17,13 @@ from tools.native_trace.bwrap_shim import (
     JOBSERVER_CAPPED_PENDING,
     JOBSERVER_JOINED,
     JOBSERVER_PINNED,
+    JOBSERVER_UNKNOWN_KIND,
     build_shim_argv,
     extract_element_name,
     jobserver_decision,
+    kind_job_env,
     parse_element_max_jobs,
+    parse_ninja_help,
     split_bwrap_args,
 )
 
@@ -234,6 +237,9 @@ def test_build_shim_argv_omits_makeflags_when_no_jobserver_fd():
 
 
 def test_build_shim_argv_injects_one_makeflags_setenv_naming_a_real_open_fd():
+    """UX-843: the table applies only to a recognized kind - `"make"`
+    here, since this test exercises the fd-injection mechanism itself,
+    not which kind gets which env (see the per-kind cases below)."""
     read_fd, write_fd = os.pipe()
     try:
         argv = build_shim_argv(
@@ -244,6 +250,7 @@ def test_build_shim_argv_injects_one_makeflags_setenv_naming_a_real_open_fd():
             preload_so="/tmp/.bst-native-trace/hook.so",
             trace_log="/tmp/.bst-native-trace/trace.log",
             jobserver_fd=read_fd,
+            element_kind="make",
         )
 
         setenv_makeflags = [
@@ -331,7 +338,8 @@ def test_a_mesons_bare_integer_jobs_of_1_is_also_pinned():
 
 def test_an_element_at_the_projects_own_max_jobs_joins():
     """`-jK` equal to the project's own `max-jobs` (read once by the
-    tracer from `bst show`) joins uncapped, exactly as today."""
+    tracer from `bst show`) joins uncapped, exactly as today. `"make"`
+    kind, for the same reason as the fd-injection test above."""
     argv = _bwrap_argv_with_job_setenv("JOBS", "-j8")
     read_fd, write_fd = os.pipe()
     try:
@@ -344,6 +352,7 @@ def test_an_element_at_the_projects_own_max_jobs_joins():
             trace_log="/tmp/.bst-native-trace/trace.log",
             jobserver_fd=read_fd,
             project_max_jobs=8,
+            element_kind="make",
         )
 
         setenv_makeflags = [i for i, tok in enumerate(result)
@@ -359,7 +368,8 @@ def test_an_element_capped_above_the_project_default_records_capped_pending_and_
     """`-jK` unequal to the project's `max-jobs` is an element-level
     cap; until `UX-849`'s proxy it joins uncapped and is recorded
     `capped_pending`, not `joined` - the two must stay distinguishable
-    even though the injected argv is identical today."""
+    even though the injected argv is identical today. `"make"` kind,
+    for the same reason as the fd-injection test above."""
     argv = _bwrap_argv_with_job_setenv("JOBS", "-j16")
     read_fd, write_fd = os.pipe()
     try:
@@ -372,6 +382,7 @@ def test_an_element_capped_above_the_project_default_records_capped_pending_and_
             trace_log="/tmp/.bst-native-trace/trace.log",
             jobserver_fd=read_fd,
             project_max_jobs=8,
+            element_kind="make",
         )
 
         setenv_makeflags = [i for i, tok in enumerate(result)
@@ -381,3 +392,189 @@ def test_an_element_capped_above_the_project_default_records_capped_pending_and_
     finally:
         os.close(read_fd)
         os.close(write_fd)
+
+
+# --- the per-kind environment table (UX-843) -------------------------------
+
+def _job_env_ops(argv):
+    """The job-related `--setenv`/`--unsetenv` ops this shim injected,
+    in order - scanned from after `LD_PRELOAD` (the first thing this
+    shim itself adds) so REAL_BWRAP_ARGV's own pre-existing `--setenv
+    JOBS -j4` (BuildStream's, untouched) is never mistaken for one."""
+    names = ("MAKEFLAGS", "JOBS", "CARGO_BUILD_JOBS")
+    start = argv.index("LD_PRELOAD")
+    argv = argv[start:]
+    ops, i = [], 0
+    while i < len(argv):
+        if argv[i] == "--setenv" and argv[i + 1] in names:
+            ops.append(("--setenv", argv[i + 1], argv[i + 2]))
+            i += 3
+        elif argv[i] == "--unsetenv" and argv[i + 1] in names:
+            ops.append(("--unsetenv", argv[i + 1]))
+            i += 2
+        else:
+            i += 1
+    return ops
+
+
+def _build_with_kind(kind, **extra):
+    """REAL_BWRAP_ARGV (`-j4`), a real fd, `project_max_jobs=4` (joined -
+    the table applies) - the one input this whole section varies is the
+    element's own kind and, for cmake/meson, the ninja probe."""
+    read_fd, write_fd = os.pipe()
+    try:
+        return build_shim_argv(
+            real_bwrap="/usr/bin/bwrap",
+            bst_args=REAL_BWRAP_ARGV,
+            bind_src="/tmp/host-trace-dir",
+            bind_dst="/tmp/.bst-native-trace",
+            preload_so="/tmp/.bst-native-trace/hook.so",
+            trace_log="/tmp/.bst-native-trace/trace.log",
+            jobserver_fd=read_fd,
+            project_max_jobs=4,
+            element_kind=kind,
+            **extra,
+        ), read_fd
+    finally:
+        os.close(write_fd)
+
+
+def test_make_and_autotools_get_makeflags_auth_only():
+    for kind in ("make", "autotools"):
+        argv, read_fd = _build_with_kind(kind)
+        try:
+            assert _job_env_ops(argv) == [
+                ("--setenv", "MAKEFLAGS", f"--jobserver-auth={read_fd},{read_fd}")]
+        finally:
+            os.close(read_fd)
+
+
+def test_cmake_and_meson_get_jobs_emptied_and_makeflags_auth():
+    for kind in ("cmake", "meson"):
+        argv, read_fd = _build_with_kind(kind)
+        try:
+            assert _job_env_ops(argv) == [
+                ("--setenv", "JOBS", ""),
+                ("--setenv", "MAKEFLAGS", f"--jobserver-auth={read_fd},{read_fd}")]
+        finally:
+            os.close(read_fd)
+
+
+def test_cargo_unsets_cargo_build_jobs_and_carries_the_auth_in_makeflags():
+    argv, read_fd = _build_with_kind("cargo")
+    try:
+        assert _job_env_ops(argv) == [
+            ("--setenv", "MAKEFLAGS", f"--jobserver-auth={read_fd},{read_fd}"),
+            ("--unsetenv", "CARGO_BUILD_JOBS")]
+    finally:
+        os.close(read_fd)
+
+
+def test_an_unknown_kind_gets_no_injection():
+    for kind in ("manual", "script", "import", "some-custom-plugin"):
+        argv, read_fd = _build_with_kind(kind)
+        try:
+            assert _job_env_ops(argv) == []
+            assert kind_job_env(kind, "AUTH")[2] == JOBSERVER_UNKNOWN_KIND
+        finally:
+            os.close(read_fd)
+
+
+def test_an_element_absent_from_the_map_gets_no_injection():
+    """`element_kind=None` - what `_element_kind_env` returns for an
+    element the map does not name, same as no map at all."""
+    argv, read_fd = _build_with_kind(None)
+    try:
+        assert _job_env_ops(argv) == []
+        assert kind_job_env(None, "AUTH")[2] == JOBSERVER_UNKNOWN_KIND
+    finally:
+        os.close(read_fd)
+
+
+def test_cmake_ninja_with_a_jobserver_client_passes_the_auth_through():
+    probe = {"available": True, "version": "1.12.0", "jobserver_client": True}
+    argv, read_fd = _build_with_kind("cmake", ninja_probe=probe)
+    try:
+        assert _job_env_ops(argv) == [
+            ("--setenv", "JOBS", ""),
+            ("--setenv", "MAKEFLAGS", f"--jobserver-auth={read_fd},{read_fd}")]
+    finally:
+        os.close(read_fd)
+
+
+def test_ninja_without_a_client_and_no_wrapper_dir_is_static_and_untouched():
+    """`ninja_static`: JOBS is neither emptied nor overwritten - the
+    element's own `-jN` (BuildStream's own, already in REAL_BWRAP_ARGV)
+    is the pre-mode behaviour, and no oversubscription beyond it."""
+    probe = {"available": True, "version": "1.11.1", "jobserver_client": False}
+    argv, read_fd = _build_with_kind("meson", ninja_probe=probe)
+    try:
+        assert _job_env_ops(argv) == []
+        assert argv.count("JOBS") == 1  # BuildStream's own, unmodified
+        idx = argv.index("JOBS")
+        assert argv[idx - 1:idx + 1] == ["--setenv", "JOBS"]
+        assert argv[idx + 1] == "-j4"
+    finally:
+        os.close(read_fd)
+
+
+def test_ninja_without_a_client_and_a_wrapper_dir_empties_jobs_only():
+    probe = {"available": True, "version": "1.11.1", "jobserver_client": False}
+    argv, read_fd = _build_with_kind(
+        "cmake", ninja_probe=probe, wrappers_dir="/tmp/.bst-native-trace/wrappers")
+    try:
+        assert _job_env_ops(argv) == [("--setenv", "JOBS", "")]
+    finally:
+        os.close(read_fd)
+
+
+# --- mutations (UX-843: falsify) -------------------------------------------
+
+def test_dropping_the_cargo_row_is_caught_by_the_exact_set_assertion():
+    """What `--mutate: drop the cargo row` looks like from the test
+    side - documented so the mutation table's claim is checked against
+    real code, not asserted from memory."""
+    pairs, unsets, policy = kind_job_env("cargo", "AUTH")
+    assert pairs == [("MAKEFLAGS", "AUTH")]
+    assert unsets == ["CARGO_BUILD_JOBS"]
+    assert policy == "cargo"
+
+
+# --- the ninja probe parser (UX-843) ----------------------------------------
+
+# Real, pasted: `ninja --help` on this box, ninja 1.11.1 - no jobserver
+# mention at all.
+_NINJA_1_11_1_HELP = """usage: ninja [options] [targets...]
+
+if targets are unspecified, builds the 'default' target (see manual).
+
+options:
+  --version      print ninja version ("1.11.1")
+  -v, --verbose  show all command lines while building
+  --quiet        don't show progress status, just command output
+
+  -C DIR   change to DIR before doing anything else
+  -f FILE  specify input build file [default=build.ninja]
+
+  -j N     run N jobs in parallel (0 means infinity) [default=6 on this system]
+  -k N     keep going until N jobs fail (0 means infinity) [default=1]
+  -l N     do not start new jobs if the load average is greater than N
+  -n       dry run (don't run commands but act like they succeeded)
+
+  -d MODE  enable debugging (use '-d list' to list modes)
+  -t TOOL  run a subtool (use '-t list' to list subtools)
+    terminates toplevel options; further flags are passed to the tool
+  -w FLAG  adjust warnings (use '-w list' to list warnings)
+"""
+
+_NINJA_SYNTHETIC_HELP_WITH_CLIENT = _NINJA_1_11_1_HELP + (
+    "  --jobserver     participate in a POSIX jobserver, if one is "
+    "available via MAKEFLAGS\n")
+
+
+def test_ninja_1_11_1s_real_help_names_no_jobserver_client():
+    assert parse_ninja_help(_NINJA_1_11_1_HELP) is False
+
+
+def test_a_help_naming_jobserver_is_read_as_a_client():
+    assert parse_ninja_help(_NINJA_SYNTHETIC_HELP_WITH_CLIENT) is True

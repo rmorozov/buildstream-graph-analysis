@@ -67,6 +67,7 @@ import array
 import atexit
 import contextlib
 import errno
+import fcntl
 import gzip
 import itertools
 import json
@@ -79,6 +80,7 @@ import struct
 import subprocess
 import sys
 import tempfile
+import termios
 import threading
 import time
 from collections import defaultdict
@@ -931,11 +933,70 @@ def read_host_samples(path: str) -> dict:
     return {"header": header, "samples": samples}
 
 
+def open_jobserver(n: int, scratch: str) -> tuple[str, int, int]:
+    """UX-841: make a FIFO under `scratch`, seed `n - 1` `+` tokens, and
+    confirm the seed landed by reading the FIFO's own readable byte count
+    back (`FIONREAD`) rather than trusting the write call. Returns the
+    path, a host-side fd kept open for the FIFO's whole life (UX-679:
+    its buffer is discarded once every fd on it closes), and the token
+    count written. Cleans up after itself and raises on a mismatch.
+    """
+    path = os.path.join(scratch, "jobserver")
+    os.mkfifo(path)
+    fd = os.open(path, os.O_RDWR)
+    tokens = n - 1
+    os.write(fd, b"+" * tokens)
+    readable = array.array("i", [0])
+    fcntl.ioctl(fd, termios.FIONREAD, readable, True)
+    if readable[0] != tokens:
+        os.close(fd)
+        os.remove(path)
+        raise RuntimeError(
+            f"jobserver FIFO {path} holds {readable[0]} readable bytes "
+            f"after seeding {tokens}")
+    return path, fd, tokens
+
+
+def close_jobserver(path: Optional[str], fd: Optional[int]) -> None:
+    """UX-841: `open_jobserver`'s pair - close the fd, then remove the FIFO."""
+    if fd is not None:
+        os.close(fd)
+    if path is not None:
+        os.remove(path)
+
+
+_MAKE_VERSION_RE = re.compile(r"GNU Make (\d+)\.(\d+)")
+
+
+def jobserver_auth_style(requested: str, make_version_output: Optional[str] = None) -> str:
+    """`requested` is `fd`, `fifo`, or `auto`; returns `fd` or `fifo`.
+
+    UX-841: `auto` runs `make --version` **on the host** and picks
+    `fifo:` from GNU Make 4.4, `fd` below - the sandboxes here run the
+    host's own toolchain, so the host's version is representative.
+    `make_version_output` lets a caller (or a test) supply the text
+    instead of shelling out.
+    """
+    if requested != "auto":
+        return requested
+    if make_version_output is None:
+        make_path = shutil.which("make")
+        make_version_output = subprocess.run(
+            [make_path, "--version"], capture_output=True, text=True,
+            check=False).stdout if make_path else ""
+    match = _MAKE_VERSION_RE.search(make_version_output)
+    if not match:
+        return "fd"
+    version = (int(match.group(1)), int(match.group(2)))
+    return "fifo" if version >= (4, 4) else "fd"
+
+
 def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrapped_log_path: Optional[str] = None, trace_opens: bool = False, argv_log_path: Optional[str] = None, invocation_log_path: Optional[str] = None,
                      trace_spine=False, diagnostics_path: Optional[str] = None,
                      no_inject: bool = False, inhibit: bool = False,
                      host_samples_path: Optional[str] = None,
-                     jobserver: Optional[int] = None) -> int:
+                     jobserver: Optional[int] = None,
+                     jobserver_auth: Optional[str] = None) -> int:
     """Run cmd (a real `bst` invocation) with the bwrap shim + LD_PRELOAD
     hook active, writing raw START/END lines to raw_log_path. Returns
     cmd's own real exit code - a trace is captured best-effort and must
@@ -952,10 +1013,13 @@ def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrappe
     behavior exactly, unchanged.
 
     `jobserver` (UX-679): a GNU jobserver's token count, or `None` for
-    off. When given, a FIFO is opened host-side, seeded with
-    `jobserver - 1` tokens, and its path handed to the shim through
-    `BST_TRACE_JOBSERVER` - the same channel `BST_TRACE_LOG` already
-    uses - so every sandbox's `make` can join it via `--jobserver-auth`.
+    off. When given, a FIFO is opened host-side (`open_jobserver`),
+    seeded with `jobserver - 1` tokens, and its path handed to the shim
+    through `BST_TRACE_JOBSERVER` - the same channel `BST_TRACE_LOG`
+    already uses - so every sandbox's `make` can join it via
+    `--jobserver-auth`. `jobserver_auth` (UX-841): `fd` or `fifo`, the
+    style already resolved by the caller and passed through
+    `BST_TRACE_JOBSERVER_AUTH` for the shim to read.
     """
     # UX-161: before the build, because after it the same fact is only
     # one of three guesses about a zero-invocation capture.
@@ -1112,13 +1176,12 @@ def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrappe
         jobserver_fifo = None
         jobserver_fd = None
         if jobserver:
-            jobserver_fifo = os.path.join(bind_dir, "jobserver")
-            os.mkfifo(jobserver_fifo)
-            jobserver_fd = os.open(jobserver_fifo, os.O_RDWR)
-            os.write(jobserver_fd, b"+" * (jobserver - 1))
+            jobserver_fifo, jobserver_fd, _tokens = open_jobserver(jobserver, bind_dir)
             env["BST_TRACE_JOBSERVER"] = jobserver_fifo
+            env["BST_TRACE_JOBSERVER_AUTH"] = jobserver_auth or "fd"
         else:
             env.pop("BST_TRACE_JOBSERVER", None)
+            env.pop("BST_TRACE_JOBSERVER_AUTH", None)
 
         def copy_out():
             """Move everything the shim wrote out of the scratch.
@@ -1189,10 +1252,7 @@ def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrappe
             ) from None
         finally:
             copy_out()
-            if jobserver_fd is not None:
-                os.close(jobserver_fd)
-            if jobserver_fifo is not None:
-                os.remove(jobserver_fifo)
+            close_jobserver(jobserver_fifo, jobserver_fd)
         return returncode
 
 
@@ -6820,6 +6880,11 @@ def main(argv: Optional[list[str]] = None) -> int:
         "--jobserver", type=int, default=None, metavar="N",
         help="Bind an N-token jobserver into every sandbox (UX-679)."
     )
+    run_parser.add_argument(
+        "--jobserver-auth", choices=("fd", "fifo", "auto"), default="auto",
+        help="UX-841: the --jobserver-auth style; auto picks fifo: from "
+             "GNU Make 4.4, fd below, by the host's own `make --version`."
+    )
     run_parser.add_argument("--json", action="store_true", help="Print the report as JSON to stdout too")
     run_parser.add_argument("cmd", nargs=argparse.REMAINDER, help="The bst command to run, e.g. -- bst build core.bst")
 
@@ -6932,6 +6997,10 @@ def main(argv: Optional[list[str]] = None) -> int:
         args.wrapped_log = wrapped_log_path
         invocation_log_path = resolve_invocation_log_path(args)
         interrupted = False
+        # UX-841: resolved once, here - `run_traced_build` and the report
+        # both need the same answer, and `auto` shells out only once.
+        jobserver_auth = (jobserver_auth_style(args.jobserver_auth)
+                          if args.jobserver else None)
         try:
             returncode = run_traced_build(args.project_dir, cmd, raw_log_path,
                                           wrapped_log_path=wrapped_log_path,
@@ -6944,7 +7013,8 @@ def main(argv: Optional[list[str]] = None) -> int:
                                           inhibit=args.inhibit,
                                           host_samples_path=getattr(
                                               args, "host_samples", None),
-                                          jobserver=args.jobserver)
+                                          jobserver=args.jobserver,
+                                          jobserver_auth=jobserver_auth)
         except CaptureInterrupted:
             # UX-157: everything below this point is salvage, and it is
             # the same salvage a failed build already got. The trace was
@@ -7003,6 +7073,9 @@ def main(argv: Optional[list[str]] = None) -> int:
             # UX-679 (spike): the capture option a supported mode would
             # be judged against, whether or not this run used it.
             report["jobserver"] = args.jobserver
+            # UX-841: the style actually used, next to it - `None` when
+            # the jobserver itself is off.
+            report["jobserver_auth"] = jobserver_auth
             with open(args.output, "w", encoding="utf-8") as f:
                 json.dump(report, f, indent=2)
             # UX-296: and the two capacity scalars the store's aggregate

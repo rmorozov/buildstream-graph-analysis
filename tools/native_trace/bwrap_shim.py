@@ -212,6 +212,7 @@ def build_shim_argv(
     invocation_id: Optional[int] = None,
     spine: Optional[str] = None,
     jobserver_fd: Optional[int] = None,
+    jobserver_fifo: Optional[str] = None,
 ) -> list[str]:
     """The real, complete argv to exec: BuildStream's own bwrap options
     first (unmodified, including its own root-filesystem bind), then the
@@ -267,6 +268,15 @@ def build_shim_argv(
     if jobserver_fd is not None:
         injected += ["--setenv", "MAKEFLAGS",
                     f"--jobserver-auth={jobserver_fd},{jobserver_fd}"]
+    # UX-841: GNU Make >= 4.4's `fifo:PATH` style - `make` opens PATH
+    # itself inside the sandbox, so no fd is passed; the path must
+    # resolve there, hence a `--bind` of the FIFO onto its own path
+    # (`--ro-bind` is wrong - both the host and the sandbox write it).
+    elif jobserver_fifo is not None:
+        injected += [
+            "--bind", jobserver_fifo, jobserver_fifo,
+            "--setenv", "MAKEFLAGS", f"--jobserver-auth=fifo:{jobserver_fifo}",
+        ]
     # UX-106: the ptrace spine, prepended to the sandboxed command so it
     # becomes the parent of everything BuildStream asked to run - which
     # is what makes every descendant its own tracee, and so traceable
@@ -614,21 +624,26 @@ def exit_like(status: int) -> int:
     return os.WEXITSTATUS(status)
 
 
-def open_jobserver_fd() -> Optional[int]:
-    """The jobserver fd `main` hands `build_shim_argv`, or `None`.
+def open_jobserver_fd() -> tuple[Optional[int], Optional[str]]:
+    """The `(fd, fifo_path)` `main` hands `build_shim_argv` - exactly one
+    of the pair set, or both `None`.
 
-    UX-679 (spike): only opened when `run_traced_build` handed a FIFO
-    path down - the shim never binds one unasked. Read-write so the
-    open cannot block on a second end, and inheritable so `execv`
-    carries the fd across into the real `bwrap` (Python's `os.open`
-    marks it non-inheritable by default, PEP 446).
+    UX-679 (spike) / UX-841: only acted on when `run_traced_build` handed
+    a FIFO path down. `fd` style (`BST_TRACE_JOBSERVER_AUTH` unset or
+    `fd`) opens it read-write here so the open cannot block on a second
+    end, and inheritable so `execv` carries the fd into the real `bwrap`
+    (Python's `os.open` marks it non-inheritable by default, PEP 446).
+    `fifo:` style (GNU Make >= 4.4) opens nothing here - `make` opens the
+    bound path itself inside the sandbox - so only the path is returned.
     """
     jobserver_path = os.environ.get("BST_TRACE_JOBSERVER")
     if not jobserver_path:
-        return None
+        return None, None
+    if os.environ.get("BST_TRACE_JOBSERVER_AUTH") == "fifo":
+        return None, jobserver_path
     fd = os.open(jobserver_path, os.O_RDWR)
     os.set_inheritable(fd, True)
-    return fd
+    return fd, None
 
 
 SELF_TEST_ARGV = "--bga-shim-self-test"
@@ -707,7 +722,7 @@ def main() -> int:
     # blames the rewrite, and one that fails both ways blames the
     # shadowing or the exec. It captures nothing, deliberately.
     inject = os.environ.get("BST_TRACE_NO_INJECT") != "1"
-    jobserver_fd = open_jobserver_fd()
+    jobserver_fd, jobserver_fifo = open_jobserver_fd()
     if inject:
         argv = build_shim_argv(real_bwrap, sys.argv[1:], bind_src, bind_dst,
                                preload_so, trace_log,
@@ -718,7 +733,8 @@ def main() -> int:
                                # the same channel `BST_TRACE_PRELOAD_SO`
                                # already uses.
                                spine=spine,
-                               jobserver_fd=jobserver_fd)
+                               jobserver_fd=jobserver_fd,
+                               jobserver_fifo=jobserver_fifo)
     else:
         argv = [real_bwrap, *sys.argv[1:]]
 

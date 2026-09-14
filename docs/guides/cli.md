@@ -779,7 +779,7 @@ into the child environment and the shim requires them:
 | `BST_TRACE_PROJECT_MAX_JOBS` | the project's own `max-jobs`, read once from `bst show` before the build; the shim compares it against each sandbox's own `-j` to tell a `notparallel` pin from an element-level cap (`UX-842`) | `tools/native_trace/bwrap_shim.py` |
 | `BST_TRACE_JOBSERVER_DECISIONS` | the host-side path the shim appends one `{element, max_jobs, decision, kind, policy}` line to per sandbox, folded into the report as `jobserver_decisions` (`UX-842`/`UX-843`) | `tools/native_trace/bwrap_shim.py` |
 | `BST_TRACE_ELEMENT_KINDS` | a JSON `{name: kind}` map, read once from `bst show` before the build; the shim looks its own element up in it to pick a row from the per-kind environment table (`UX-843`) | `tools/native_trace/bwrap_shim.py` |
-| `BST_TRACE_WRAPPER_DIR` | the host path of `tools/native_trace/wrappers/`, bound read-only at `/.bga/wrappers` and prepended to `PATH` ahead of BuildStream's own (`UX-846`) | `tools/native_trace/bwrap_shim.py` |
+| `BST_TRACE_WRAPPER_DIR` | the host path of `tools/native_trace/wrappers/`, bound read-only at `wrappers/` under the trace bind (`/tmp/.bst-native-trace/wrappers`; the sandbox root is read-only, measured on examples/06) and prepended to `PATH` ahead of BuildStream's own (`UX-846`) | `tools/native_trace/bwrap_shim.py` |
 | `BST_TRACE_JOBSERVER_LEDGER` | the in-sandbox path a wrapper appends an acquire or release row to — the same file `PoolController`'s own ticks land in, under the existing trace bind (`UX-846`) | `tools/native_trace/wrappers/_common.sh` |
 
 **What a test sets to reach a failure path.** The spine's degrade and

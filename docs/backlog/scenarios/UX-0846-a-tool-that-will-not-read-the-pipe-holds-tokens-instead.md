@@ -54,7 +54,7 @@ Live probe, this box (`probe_jobserver_wrapper_policy()`): `ld.lld`
 `ld.gold` 1.16 `held`, `mold` `absent`. `bwrap --setenv PATH a --setenv
 PATH b` confirmed the last `--setenv` wins outright (`$PATH` came out
 `b`, not `a:b`), so the shim reads BuildStream's own `PATH` value from
-its argv and prepends `/.bga/wrappers` rather than appending a second
+its argv and prepends the wrappers' bind (moved under the trace bind at merge: the sandbox root is read-only) rather than appending a second
 `--setenv`. `exec 9<&"$r"` with a real two-digit inherited fd (common
 once bwrap's own fds are open) failed dash with "Bad fd number" -
 `/dev/fd/$r` does not, since it is an ordinary path argument to the

@@ -327,7 +327,7 @@ def probe_ninja(real_bwrap: str, opts: list[str], cache_path: Optional[str],
 
 # UX-846: where the wrapper directory lands inside the sandbox - fixed
 # and key-invisible like `bind_dst`, so no cache key ever names it.
-WRAPPER_BIND_DST = "/.bga/wrappers"
+WRAPPER_BIND_SUBDIR = "wrappers"  # under bind_dst: the sandbox root is read-only
 
 
 def _setenv_value(opts: list[str], name: str) -> Optional[str]:
@@ -351,9 +351,10 @@ def _wrapper_mount(opts: list[str], wrapper_dir: str, wrapper_cap: Optional[str]
     `PATH` (bwrap: the last `--setenv` wins outright, measured), with
     the ledger path and the cap the wrapper reads."""
     bst_path = _setenv_value(opts, "PATH") or "/usr/bin:/bin"
+    dst = os.path.join(bind_dst, WRAPPER_BIND_SUBDIR)
     mount = [
-        "--ro-bind", wrapper_dir, WRAPPER_BIND_DST,
-        "--setenv", "PATH", f"{WRAPPER_BIND_DST}:{bst_path}",
+        "--ro-bind", wrapper_dir, dst,
+        "--setenv", "PATH", f"{dst}:{bst_path}",
         "--setenv", "BST_TRACE_JOBSERVER_LEDGER",
         os.path.join(bind_dst, "jobserver_ledger.jsonl"),
     ]

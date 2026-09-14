@@ -530,7 +530,7 @@ def test_ninja_without_a_client_and_a_wrapper_dir_empties_jobs_and_mounts_the_wr
         assert ops[0] == ("--setenv", "JOBS", "")
         assert ops[1][:2] == ("--setenv", "MAKEFLAGS") and "--jobserver-auth=" in ops[1][2]
         assert argv[argv.index("--ro-bind") + 1:argv.index("--ro-bind") + 3] == [
-            "/host/wrappers", "/.bga/wrappers"]
+            "/host/wrappers", "/tmp/.bst-native-trace/wrappers"]
     finally:
         os.close(read_fd)
 
@@ -549,7 +549,7 @@ def test_the_wrapper_path_is_prepended_to_buildstreams_own():
         bst_path = [REAL_BWRAP_ARGV[i + 2] for i, a in enumerate(REAL_BWRAP_ARGV)
                     if a == "--setenv" and REAL_BWRAP_ARGV[i + 1] == "PATH"]
         assert bst_path, "the fixture argv carries BuildStream's own PATH"
-        assert _path_setenv(argv) == "/.bga/wrappers:" + bst_path[-1]
+        assert _path_setenv(argv) == "/tmp/.bst-native-trace/wrappers:" + bst_path[-1]
         assert argv[argv.index("BST_TRACE_WRAPPER_CAP") + 1] == "3"
     finally:
         os.close(read_fd)
@@ -567,7 +567,7 @@ def test_no_path_from_buildstream_falls_back_to_the_system_one():
             bind_dst="/tmp/.bst-native-trace", preload_so="/tmp/.bst-native-trace/hook.so",
             trace_log="/tmp/.bst-native-trace/trace.log", jobserver_fd=read_fd,
             project_max_jobs=4, element_kind="make", wrapper_dir="/host/wrappers")
-        assert _path_setenv(argv) == "/.bga/wrappers:/usr/bin:/bin"
+        assert _path_setenv(argv) == "/tmp/.bst-native-trace/wrappers:/usr/bin:/bin"
     finally:
         os.close(write_fd)
         os.close(read_fd)
@@ -582,7 +582,7 @@ def test_a_pinned_element_mounts_no_wrappers():
             bind_dst="/tmp/.bst-native-trace", preload_so="/tmp/.bst-native-trace/hook.so",
             trace_log="/tmp/.bst-native-trace/trace.log", jobserver_fd=read_fd,
             project_max_jobs=4, element_kind="make", wrapper_dir="/host/wrappers")
-        assert "--ro-bind" not in argv and _path_setenv(argv) is None or "/.bga/wrappers" not in (_path_setenv(argv) or "")
+        assert "--ro-bind" not in argv and _path_setenv(argv) is None or "/tmp/.bst-native-trace/wrappers" not in (_path_setenv(argv) or "")
     finally:
         os.close(write_fd)
         os.close(read_fd)

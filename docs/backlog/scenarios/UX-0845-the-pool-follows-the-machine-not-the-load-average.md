@@ -1,6 +1,6 @@
 # UX-845: the pool follows the machine, not the load average
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-841 | **Found by:** round 117, Direction 20 | **Serves:** R4 (a build whose elements alternate compile-bound and link-bound) | **Topic:** capture | **Area:** tools | **Shape:** mechanical
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-841 | **Found by:** round 117, Direction 20 | **Serves:** R4 (a build whose elements alternate compile-bound and link-bound) | **Topic:** capture | **Area:** tools | **Shape:** mechanical
 
 ## Motivation
 
@@ -98,3 +98,10 @@ after `dev_baseline.py --check` flagged new `C901`/`PLR0913`/`SIM115`
 findings in the first draft. `closed.md:851`'s malformed-table failure
 pre-dates this track (confirmed via `git stash` against the base
 commit) and is not this row's to fix.
+
+Deviation (merge): the verifier caught two edges the first draft left
+unguarded - the floor withdraw counted as a move, and `stop()` without
+`is_alive` - both closed and reddened before merge; the ledger row is
+written every tick, not only on a move, so the file is a trace and not
+a change log; and the pool cannot rise from a cold start - `add` needs
+the headroom a prior `withdraw` made.

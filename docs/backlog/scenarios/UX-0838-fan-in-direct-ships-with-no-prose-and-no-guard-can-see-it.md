@@ -1,6 +1,6 @@
 # UX-838: `fan_in[].direct` ships with no prose, and no guard can see it
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-628 (the undocumented-key ratchet), UX-655 (a walk that stops one level short), UX-829 (which added the key) | **Found by:** review 23 | **Serves:** anyone reading `elements.fan_in` against the guide that describes it | **Topic:** contracts | **Area:** bga | **Shape:** judgement
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-628 (the undocumented-key ratchet), UX-655 (a walk that stops one level short), UX-829 (which added the key) | **Found by:** review 23 | **Serves:** anyone reading `elements.fan_in` against the guide that describes it | **Topic:** contracts | **Area:** bga | **Shape:** judgement
 
 ## Motivation
 
@@ -108,3 +108,12 @@ Confirmed: `_named_in_the_documents()` holds `'direct'` before and
 after the cli.md edit. Substituted `risk_score`/`is_foundation`
 (named nowhere else) above to prove the same clause does discriminate
 on a real gap; `direct`'s cli.md prose stands per the Required Fix.
+
+Deviation: the widened walk surfaced eleven more undocumented keys
+under `additionalProperties` rows, and the session had them documented
+here rather than filed as the Out of Scope line asked - the walk is
+global, so the guard would have reddened on them otherwise. One of
+the new sentences called `p75_us` a fast end; corrected at merge to
+the slow side at three runs in four. Dropping `direct` alone stays
+green because `architecture.md`'s log names it - the guard's rule, not
+a hole this row opens.

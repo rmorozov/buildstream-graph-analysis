@@ -37,8 +37,10 @@ import json
 import os
 import pathlib
 import re
+import shutil
 import subprocess
 import sys
+import tempfile
 
 import pytest
 
@@ -50,6 +52,10 @@ sys.path.insert(0, str(REPO))
 from bga import contracts, schemas
 
 RUN = REPO / "tests/fixtures/golden/mixed_task_kinds"
+# UX-848: `bga compare` now refuses two runs at the same resolved path
+# - a byte-identical copy keeps the "compare" emitter entry below working.
+_RUN_TWIN = pathlib.Path(tempfile.mkdtemp(prefix="bga-run-twin-")) / "run"
+shutil.copytree(RUN, _RUN_TWIN)
 #: The two-plane fixture, because `correlate` is a *join* - it refuses
 #: a run with no Plane 2 report, and rightly.
 MACRO = REPO / "tests/fixtures/macro_micro/run"
@@ -61,7 +67,7 @@ PLANE2 = REPO / "tests/fixtures/macro_micro/plane2.json"
 #: exists to replace.
 EMITTERS = {
     "analyze": ["analyze", str(RUN), "--format", "json"],
-    "compare": ["compare", str(RUN), str(RUN), "--format", "json"],
+    "compare": ["compare", str(RUN), str(_RUN_TWIN), "--format", "json"],
     "blast": ["blast", "toolchain.bst", str(RUN), "--format", "json"],
     "correlate": ["correlate", str(MACRO), str(PLANE2),
                   "--format", "json"],

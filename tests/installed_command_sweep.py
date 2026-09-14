@@ -184,7 +184,10 @@ def invocations(fx: Fixtures):
     return {
         # --- the eleven that read a run directory -------------------
         "analyze": (OK, ["analyze", run]),
-        "compare": (OK, ["compare", run, run]),
+        # UX-848: `bga compare` now refuses two runs at the same
+        # resolved path - `fx.snapshot / "run"` is a byte-identical
+        # copy of `fx.run` at a distinct one, built for this purpose.
+        "compare": (OK, ["compare", run, str(fx.snapshot / "run")]),
         "correlate": (OK, ["correlate", run, str(fx.plane2)]),
         "floors": (OK, ["floors", run]),
         "graph": (OK, ["graph", run]),

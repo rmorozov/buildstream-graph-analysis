@@ -1184,6 +1184,19 @@ def _execute_compare_and_write(args: argparse.Namespace) -> int:
             print(f"Error: {label} path is not a directory: {run_dir}", file=sys.stderr)
             return 1
 
+    # UX-848: a capture pointed at itself (e.g. a CI step's second
+    # capture wired to the first's output by mistake) compares a run
+    # against itself and reports "no significant change" - correct
+    # arithmetic on a question nobody meant to ask. Resolved, not raw,
+    # so `run` and `./run` refuse identically.
+    if Path(args.baseline).resolve() == Path(args.candidate).resolve():
+        print(
+            f"Error: baseline and candidate are the same run "
+            f"({Path(args.baseline).resolve()}) - nothing to compare.",
+            file=sys.stderr,
+        )
+        return EXIT_CODE_MISMATCHED_RUNS
+
     try:
         output, comparison = _produce_compare_output(args)
 

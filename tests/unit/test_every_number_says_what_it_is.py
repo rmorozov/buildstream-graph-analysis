@@ -50,6 +50,7 @@ import pathlib
 import shutil
 import subprocess
 import sys
+import tempfile
 
 import pytest
 
@@ -58,6 +59,13 @@ FIXTURES = {"golden": REPO / "tests/fixtures/golden/mixed_task_kinds",
             "macro_micro": REPO / "tests/fixtures/macro_micro/run"}
 node = shutil.which("node")
 needs_node = pytest.mark.skipif(node is None, reason="node is not installed")
+
+# UX-848: `bga compare` now refuses two runs at the same resolved path
+# (a capture pointed at itself) - a byte-identical copy at a distinct
+# path keeps this census's compare/v2 sample (the verdict content is
+# not what this file reads).
+_GOLDEN_TWIN = pathlib.Path(tempfile.mkdtemp(prefix="bga-golden-twin-")) / "run"
+shutil.copytree(FIXTURES["golden"], _GOLDEN_TWIN)
 
 # The numbers that genuinely cannot resolve a unit, and why. An
 # allowlist with reasons rather than a count: a count says how many are
@@ -210,7 +218,7 @@ CONTRACT_RUNS = {
     "analyze/v6": ["analyze", str(FIXTURES["macro_micro"]), "--format",
                    "json"],
     "compare/v2": ["compare", str(FIXTURES["golden"]),
-                   str(FIXTURES["golden"]), "--format", "json"],
+                   str(_GOLDEN_TWIN), "--format", "json"],
     "correlate/v2": ["correlate", str(FIXTURES["macro_micro"]),
                      str(REPO / "tests/fixtures/macro_micro/plane2.json"),
                      "--format", "json"],

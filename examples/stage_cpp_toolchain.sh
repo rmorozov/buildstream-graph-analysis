@@ -264,7 +264,8 @@ for clone in \
     "$HERE/07-declared-vs-used-dependencies/files/toolchain" \
     "$HERE/08-process-storm/files/toolchain" \
     "$HERE/09-fine-grained-siblings/files/toolchain" \
-    "$HERE/09-fine-grained-siblings/merged/files/toolchain"; do
+    "$HERE/09-fine-grained-siblings/merged/files/toolchain" \
+    "$HERE/10-jobserver/files/toolchain"; do
   rm -rf "$clone"
   mkdir -p "$(dirname "$clone")"
   cp -al "$DEST" "$clone"

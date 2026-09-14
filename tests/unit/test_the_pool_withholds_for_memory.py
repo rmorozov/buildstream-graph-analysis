@@ -157,7 +157,7 @@ class TestThePoolReadsMemoryPSI:
         tracer.close_jobserver(path, fd)
 
 
-def test_count_memory_psi_withdraws_reads_the_shared_ledger(tmp_path):
+def test_count_memory_psi_withdraws_reads_the_ledger_it_writes_beside(tmp_path):
     """UX-850: the report's `psi_memory_withdraws` scalar comes from
     this reader against the same ledger `Broker` and `PoolController`
     both write to - it must not count a CPU-PSI or busy withdraw."""

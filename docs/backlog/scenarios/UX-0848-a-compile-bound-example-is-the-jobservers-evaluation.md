@@ -1,6 +1,6 @@
 # UX-848: a compile-bound example is the jobserver's evaluation
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-843, UX-846 | **Found by:** round 117, Direction 20 | **Serves:** R4 (the number round 112 asked for) | **Topic:** capture | **Area:** tools | **Shape:** judgement
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-843, UX-846 | **Found by:** round 117, Direction 20 | **Serves:** R4 (the number round 112 asked for) | **Topic:** capture | **Area:** tools | **Shape:** judgement
 
 ## Motivation
 
@@ -81,3 +81,11 @@ to redistribute; see the example's own README for the full reading.
 | Guard | Mutation | Reddened | Count |
 |---|---|---|---|
 | `bga/cli.py`'s identical-run refusal (`_execute_compare_and_write`) | `if False and Path(args.baseline)...` | `test_a_capture_pointed_at_its_own_run_is_refused`, `test_a_capture_pointed_at_its_own_run_via_a_relative_path_is_also_refused` | 2 of 5 tests in the file |
+
+Deviation (merge): the example is `examples/10-jobserver` - 07 was
+taken; the track's two commits (the example, then twin fixtures for
+five tests that compared a run against itself) merged as one; the
+generated files are 1800 lines each, compiling in 0.11 s, not "a few
+hundred"; the pasted walls are stage-1 (before the kind table and the
+wrappers) and read REGRESSED +5.6% on a box already oversubscribed at
+`off` - Direction 20's Status is decided on the post-merge re-run.

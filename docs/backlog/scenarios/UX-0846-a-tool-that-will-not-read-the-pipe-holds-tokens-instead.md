@@ -1,6 +1,6 @@
 # UX-846: a tool that will not read the pipe holds tokens instead
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-843 | **Found by:** round 117, Direction 20 | **Serves:** R4 (links stop oversubscribing under the mode) | **Topic:** capture | **Area:** tools | **Shape:** mechanical
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-843 | **Found by:** round 117, Direction 20 | **Serves:** R4 (links stop oversubscribing under the mode) | **Topic:** capture | **Area:** tools | **Shape:** mechanical
 
 ## Motivation
 
@@ -104,3 +104,12 @@ pre-commit selector's own `make test-touching` hitting the pre-existing
 retry without running the very `test-touching` the coordinator asked
 this resume not to run again on a box just recovered from the
 incident; once more for this final amend, on the same grounds.
+
+Deviation (merge): the wrapper directory's env name is `BST_TRACE_WRAPPER_DIR`
+(UX-843's track read `BST_TRACE_WRAPPERS_DIR`; one name now); the ninja
+wrapper row of the kind table carries the auth in `MAKEFLAGS`, which
+the wrapper reads; the mount moved to `_wrapper_mount` under the
+complexity cap; three shim cases the verifier found missing (PATH
+prepended, the system fallback, a pin mounts nothing) are in, red
+when the prepend is dropped (`2 failed, 32 passed`); with both guards
+removed together the recursion is unbounded on a root box, noted.

@@ -15,12 +15,12 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-854 scenarios: **2 open**, 852 closed.
+854 scenarios: **1 open**, 853 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
-| capture | 2 | 110 |
+| capture | 1 | 110 |
 | analysis | 0 | 116 |
 | contracts | 0 | 50 |
 | viewer | 0 | 173 |
@@ -36,7 +36,6 @@ task file, which is the only place it ever lived twice.
 
 | ID | Scenario | Topic | Priority | Serves | Status |
 |---|---|---|---|---|---|
-| UX-854 | [a proxy token held by a killed job is audited too](UX-0854-a-proxy-token-held-by-a-killed-job-is-audited-too.md) | capture | Medium | R4 (a killed link does not shrink the pool for the rest of the build) | 🔴 Not Started |
 | UX-857 | [one long element under a cap is the server's shape](UX-0857-one-long-element-under-a-cap-is-the-servers-shape.md) | capture | High | R4 (an llvm-sized element alone on the critical path takes the whole machine) | 🔴 Not Started |
 
 **The narrative round headings below are retired at round 94**

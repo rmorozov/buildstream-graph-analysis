@@ -1813,6 +1813,175 @@ a performance ratchet at the gate (Medium) · `UX-703` a mutation run on
 the touched modules, weekly (Low) · `UX-705` the burn-down on the
 reporters' model, a batch a commit, never a suppression (High).
 
+## Direction 20: the jobserver is a mode, and bga is the only tool placed to run it well (argued 2026-09-14, round 117)
+
+**Serves:** R4 (the CI owner buying wall clock) and R5 (the capacity
+owner sizing a machine) — dynamic sharing of the cores across every
+sandbox, instead of a static `max-jobs` each sandbox believes it owns.
+
+**Status:** partial — argued here; `UX-841` to `UX-852` open, the spike `UX-679` landed the mechanism in round 100 and round 112 declined the mode on one number.
+
+The user's brief: design the full jobserver on `UX-679`'s spike, and
+(1) never override an explicitly pinned element to `-j1`, because a pin
+can be a workaround for a defect in the native build system; (2) a
+load-average approach, because `make` sizes its jobs on the immediate
+slot count and never recomputes; (3) the propagation (`MAKEFLAGS=`) must
+not enter BuildStream's cache key nor spoil artifacts between jobserver
+and non-jobserver builds; (4) multithreaded linkers such as `lld`
+oversubscribe — LLVM 22 speaks the jobserver across the toolchain, and
+older ones need a safe default; (5) the corner cases missed and the
+killer features. Round 117 read the tree against each
+([round 117](../audits/round-117.md)) and argues six points.
+
+### What the spike left (facts, this box)
+
+- The mechanism: `bst_native_build_tracer.py run --jobserver N` makes a
+  FIFO, writes `N-1` tokens, exports `BST_TRACE_JOBSERVER`; the shim
+  opens it and splices `--setenv MAKEFLAGS --jobserver-auth=<fd>,<fd>`
+  into `bwrap`'s argv **after** BuildStream's own options
+  (`bwrap_shim.py:263-269`). Two guards on the shim; none on the
+  tracer's FIFO lifecycle (`UX-679`'s Outcome says so).
+- The key: `Element._calculate_cache_key` folds `self.__environment`
+  minus `environment-nocache` into the key (`element.py:2319-2339`,
+  BuildStream 2.8.0), composed at load time, never at sandbox time. The
+  shim's variable never passes through it. The installed plugins already
+  declare `JOBS` (cmake, meson) and `MAKEFLAGS`, `V` (autotools, make)
+  as nocache — so even an element-level `-j` change is key-neutral for
+  the four shipped kinds. What is unguarded is a *custom* plugin that
+  keys its `JOBS`.
+- The `-j` on the command line: `cmake.yaml:38` runs
+  `cmake --build … -- ${JOBS}` with `JOBS: -j%{max-jobs}`; a `-jN`
+  beside a jobserver makes `make` reset to its own (`UX-679` measured
+  the warning). autotools and make carry `MAKEFLAGS: -j%{max-jobs}`,
+  which the shim's later `--setenv` replaces.
+- The pins: `examples/06`'s `core.bst` is `notparallel: True`; the spike
+  joined it anyway (peak concurrency 4) — the user's point 1 names a
+  real defect of the spike, not a preference.
+- The toolchain here: GNU Make 4.3 (fd-style auth only; `fifo:` needs
+  4.4), ninja 1.11.1 (no jobserver client), cargo 1.94 (client),
+  cmake 3.28, lld 18.1 (`--threads` defaults to every core), gold 1.16,
+  gcc 13.3 (`-flto=jobserver`), clang 18, no mold, no `/proc/pressure`.
+- The analysis already carries: `pinned_elements`, per-element peak
+  RSS, the host sampler's `cpu_busy_cores` from `/proc/stat` and
+  `load1`, the critical path, `slack` and `criticality_probability` per
+  element, and `max_jobs_advice` — which has no pinned-element rule.
+
+### Six arguments
+
+**1. A pin is a declaration, and the mode reads it from BuildStream's
+own argv.** BuildStream composes `max-jobs` into the sandbox
+environment (`-j1` for `notparallel`, `-jK` otherwise), and the shim
+sees that `--setenv` in the argv it wraps. So the rule needs no
+project change: `-j1` means the element never joins — no `MAKEFLAGS`
+auth, no `JOBS` change, the sandbox runs exactly as without the mode;
+`-jK` equal to the project's `max-jobs` means join uncapped; any other
+`-jK` is an element-level cap and joins through a proxy capped at K
+(argument 6). The spike's per-kind `JOBS: ''` override is withdrawn:
+it joined the pinned element, and it edits the project.
+
+**2. Load average is the wrong signal; the pool should move.** Under a
+jobserver every `make` re-reads the pipe at each job start, so the
+"immediate value never recomputed" defect is the static `-jN`'s, not
+the jobserver's. What the brief is right about is that a *fixed* pool
+is blind: `N-1` tokens written once cannot follow a build whose
+elements are alternately compile-bound and link-bound. `make -l`
+(`/proc/loadavg`, a one-minute EMA, read only at job start) is too slow
+by an order of magnitude. The server is itself a client of its own
+pipe: it **writes** a token when `cpu_busy_cores` (the sampler already
+reads `/proc/stat` at 250 ms) sits below capacity for two samples and
+**reads** one back when busy cores exceed capacity or, where the kernel
+exposes it, `/proc/pressure/cpu` `some avg10` rises above a bound. It
+never reads below zero pool tokens: every client keeps its implicit
+one, so the floor is `builders` running jobs, never a deadlock.
+`load1` stays a recorded signal, not a control input.
+
+**3. The key is safe by construction, and a guard says so.** The
+injection lives in `bwrap`'s argv, outside the composed environment;
+the shipped plugins nocache `JOBS` and `MAKEFLAGS` besides. The guard is
+the measurement the tree never took: `bst show --format '%{full-key}'`
+for every element of the example project with and without the mode,
+equal byte for byte, and a build made one way reported cached the
+other way. A project whose custom plugin keys `JOBS` fails that guard
+by name, which is the right failure.
+
+**4. A tool that will not read the pipe holds tokens instead.** `lld`
+below 22, gold, mold, ninja 1.11, rustc's codegen threads, ThinLTO's
+job count — each sizes itself to every core. The mode bind-mounts a
+`PATH` of wrappers (key-invisible like the hook): a wrapper acquires
+`K = min(cap, tokens available now)` from the pool, runs the tool with
+`--threads=K` (or `-jK`), and returns them on exit; if acquisition
+would block longer than a bound it runs with the implicit token alone.
+A tool that speaks the protocol — `gcc -flto=jobserver`, cargo, and the
+LLVM 22 toolchain the brief names — gets the auth passed through and
+holds nothing; the capture probes each tool once (`--help` names the
+flag or not) and records the policy table in the run, so the page says
+which tools joined and which were held.
+
+**5. The corner cases have a ledger.** Tokens leak when a client is
+killed between acquire and release; the hook already records every
+process exit, so the server audits outstanding tokens against live
+processes and refills. Make 4.3 needs the fd style and inherits the fd
+through `bwrap`; 4.4's `fifo:` style survives an `env -i` and a tool
+that closes inherited fds, so the shim binds the FIFO path in and picks
+the style by the sandbox's `make --version`. `bst --builders B` and the
+pool compose: `B` implicit tokens plus the pool, and the dynamic pool
+absorbs the rest. Memory is a second resource no token expresses:
+per-element peak RSS from the previous capture lets the server withhold
+tokens before a heavy element starts (argument 6, stage 3). Remote
+execution stays priced, not built (`UX-680`).
+
+**6. The killer feature is the analysis feeding the scheduler.** A
+generic jobserver is first-come; bga knows the graph. The critical path,
+slack and criticality per element, and each element's measured peak
+RSS and achieved parallelism from the previous capture, are a *plan*:
+per-element proxy FIFOs behind one broker grant tokens to the element
+with the least slack first and cap a pinned-K element at K — the
+mechanism argument 1 needs and the priority no other tool can compute.
+Every acquire and release lands in Plane 2 as a token lane, and the
+analysis gains a `jobserver` block: tokens-idle share, tokens-starved
+share, per-element tokens held — the finding that says whether the
+pool or the graph bound the wall.
+
+### The mode, in three stages
+
+| stage | what lands | judged by |
+|---|---|---|
+| 1 | the pin rule, the per-kind environment table, the wrappers, the FIFO guard, the key guard, `--jobserver auto` | the key equal both ways; a pinned element unjoined; the envelope on a compile-bound example |
+| 2 | the dynamic pool, the leak audit, the token ledger in Plane 2 and the page | tokens-idle and tokens-starved shares; wall clock on the compile-bound example against the static build |
+| 3 | per-element proxies with priority by slack; memory as a second resource | wall clock on the example against stage 2; no memory refusal on a run that overcommitted before |
+
+The bar is round 112's own: the mode is supported when a compile-bound
+capture's **wall** moves, not its utilisation. `examples/06` cannot show
+it (its chain is the bound); stage 1 adds the example that can.
+
+### What follows
+
+- `UX-841` — the tracer's FIFO lifecycle guarded, and the auth style by
+  `make` version (fd for 4.3, `fifo:` from 4.4).
+- `UX-842` — the pin rule: the shim reads the element's own `-j` from
+  BuildStream's argv; `-j1` never joins.
+- `UX-843` — the per-kind environment table: `JOBS` emptied for cmake
+  and meson, `MAKEFLAGS` for make and autotools, cargo's variable, the
+  ordering after BuildStream's options; ninja detected.
+- `UX-844` — the key guard: `%{full-key}` equal with and without the
+  mode, an artifact built one way used the other.
+- `UX-845` — the dynamic pool: busy cores at 250 ms, PSI where present,
+  tokens written and read back by the server.
+- `UX-846` — token-holding wrappers for tools that will not read the
+  pipe, pass-through for those that do, the policy table recorded.
+- `UX-847` — the token ledger: acquire and release in Plane 2, a
+  Perfetto lane, the `jobserver` block and its two shares.
+- `UX-848` — a compile-bound example project as the evaluation, in CI's
+  examples job: envelope and wall, static against the mode.
+- `UX-849` — per-element proxies and priority by slack from the
+  previous capture's plan.
+- `UX-850` — memory as a second resource: peak RSS from the plan, PSI
+  memory where present.
+- `UX-851` — the mode as a capture option and a snapshot fact:
+  `--jobserver auto|N|off`, recorded, read by `analyze` and `compare`.
+- `UX-852` — the leak audit: outstanding tokens against live processes,
+  refilled, guarded by a killed client.
+
 ## Round history
 
 This document used to carry the findings of rounds 2-6 inline, which
@@ -1898,6 +2067,7 @@ the other rounds now:
 | [114](../audits/round-114.md) | `UX-689`'s last two chapters, each its own row in a serial track behind a verifier: the ingestion path into the tools area page (`UX-815`), the `bga` area's chapters into a page of their own (`UX-816`), `architecture.md` 1044 → 490 lines outside the log and the series closed; walk seed 3 (the process storm, spine on) found three rows carried into the release (`UX-817`, `UX-818`, `UX-819`); 0.4.1 cut as a patch, the contract state 0.4.0's; after the merge, main's three adopt jobs found red since 2026-09-08 on a bare interpreter (`UX-821`). Four closed, seven filed |
 | [115](../audits/round-115.md) | the owner's twelve considerations on the 0.4.1 page, each measured on the all-planes walk capture and the 1,202-element export and challenged against the guide: nine agreed, two declined as designed (filters under the cap, the run chapter as reference), one whose premise the page no longer shows (the twin is a toggle); a design review found eight more — a monotonic base rendered as "497003.7 h", five bare task ids, 47 visible payload keys, five joined fields with no column, the header's 149-char path. Four styleguide sections (§2f, §3i, §4g, §5b) and fifteen filings, `UX-822` to `UX-836`; none closed |
 | [116](../audits/round-116.md) | the nineteen open rows in three waves of `implementer` tracks behind `verifier`s, judgement shapes with the decision in the brief: the header is identity only, the readers table gone, the From column an offset, the twin draws fifteen marks, the max-jobs advice one flat table, every joined field a column, the serial chains ranked, a declared source-kind map, and a guard that reads both exports for the register. Nine of seventeen verifier runs held, four on a guard that could not fail; `UX-817` to `UX-837` closed, the last filed at the gate for `structured.js`'s ceiling; review 23 at the gate, three filings open |
+| [117](../audits/round-117.md) | a design round on the jobserver as a mode, on `UX-679`'s spike: a pin read from BuildStream's own argv is never joined, the pool follows busy cores and PSI rather than the load average by being a client of its own pipe, the key is safe by construction and guarded by `%{full-key}` both ways, tools that will not read the pipe hold tokens through a bind-mounted wrapper, and the analysis feeds the scheduler — priority by slack, memory from the plan, a token ledger in Plane 2. Direction 20; twelve filings, `UX-841` to `UX-852`; none closed |
 
 ## Verification Log
 

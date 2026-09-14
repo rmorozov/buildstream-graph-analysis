@@ -15,19 +15,19 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-837 scenarios: **3 open**, 834 closed.
+849 scenarios: **15 open**, 834 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
-| capture | 0 | 97 |
-| analysis | 0 | 115 |
-| contracts | 1 | 49 |
+| capture | 9 | 106 |
+| analysis | 1 | 116 |
+| contracts | 2 | 50 |
 | viewer | 1 | 173 |
 | cli | 0 | 22 |
 | store | 0 | 16 |
 | docs | 1 | 143 |
-| guards | 0 | 222 |
+| guards | 1 | 223 |
 
 ## Open scenarios
 
@@ -36,6 +36,18 @@ task file, which is the only place it ever lived twice.
 
 | ID | Scenario | Topic | Priority | Serves | Status |
 |---|---|---|---|---|---|
+| UX-841 | [the tracer's FIFO lifecycle is guarded, and the auth style follows `make`](UX-0841-the-tracers-fifo-lifecycle-is-guarded-and-the-auth-style-follows-make.md) | capture | Medium | R4, before any jobserver capture is trusted | 🔴 Not Started |
+| UX-842 | [a pinned element never joins the jobserver](UX-0842-a-pinned-element-never-joins-the-jobserver.md) | capture | High | R2 (an element pinned for a build-system defect keeps its pin) | 🔴 Not Started |
+| UX-843 | [the per-kind environment table, and the ninja that cannot join](UX-0843-the-per-kind-environment-table-and-the-ninja-that-cannot-join.md) | capture | High | R4 (cmake and meson elements join instead of resetting the jobserver) | 🔴 Not Started |
+| UX-844 | [the cache key is equal with and without the jobserver](UX-0844-the-cache-key-is-equal-with-and-without-the-jobserver.md) | guards | High | R4 (artifacts built either way are shared) | 🔴 Not Started |
+| UX-845 | [the pool follows the machine, not the load average](UX-0845-the-pool-follows-the-machine-not-the-load-average.md) | capture | High | R4 (a build whose elements alternate compile-bound and link-bound) | 🔴 Not Started |
+| UX-846 | [a tool that will not read the pipe holds tokens instead](UX-0846-a-tool-that-will-not-read-the-pipe-holds-tokens-instead.md) | capture | High | R4 (links stop oversubscribing under the mode) | 🔴 Not Started |
+| UX-847 | [the token ledger lands in Plane 2 and the page](UX-0847-the-token-ledger-lands-in-plane-2-and-the-page.md) | analysis | Medium | R4 and R5 (was the pool or the graph the bound) | 🔴 Not Started |
+| UX-848 | [a compile-bound example is the jobserver's evaluation](UX-0848-a-compile-bound-example-is-the-jobservers-evaluation.md) | capture | High | R4 (the number round 112 asked for) | 🔴 Not Started |
+| UX-849 | [per-element proxies grant tokens by slack](UX-0849-per-element-proxies-grant-tokens-by-slack.md) | capture | Medium | R4 (the critical path gets the cores first) | 🔴 Not Started |
+| UX-850 | [memory is a second resource the pool reads](UX-0850-memory-is-a-second-resource-the-pool-reads.md) | capture | Medium | R5 (a machine that overcommitted memory before) | 🔴 Not Started |
+| UX-851 | [the jobserver is a capture option and a snapshot fact](UX-0851-the-jobserver-is-a-capture-option-and-a-snapshot-fact.md) | contracts | Medium | R4 (the mode travels with the run) | 🔴 Not Started |
+| UX-852 | [outstanding tokens are audited against live processes](UX-0852-outstanding-tokens-are-audited-against-live-processes.md) | capture | Medium | R4 (a killed link does not shrink the pool for the rest of the build) | 🔴 Not Started |
 | UX-838 | [`fan_in[].direct` ships with no prose, and no guard can see it](UX-0838-fan-in-direct-ships-with-no-prose-and-no-guard-can-see-it.md) | contracts | Medium | anyone reading `elements.fan_in` against the guide that describes it | 🔴 Not Started |
 | UX-839 | [the clone-size claim is half what a clone now costs](UX-0839-the-clone-size-claim-is-half-what-a-clone-now-costs.md) | docs | Low | someone deciding whether `--single-branch` is worth typing | 🔴 Not Started |
 | UX-840 | [the §3e summary table is one item behind the bound it summarises](UX-0840-the-3e-summary-table-is-one-item-behind-the-bound-it-summarises.md) | viewer | Medium | anyone reading §3e's table for "what is the current bound" rather than its history | 🔴 Not Started |

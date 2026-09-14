@@ -273,10 +273,11 @@ class TestEveryDirectionSaysWhereItStands:
 
     def test_the_walk_finds_every_direction_the_document_argues(self):
         """A guard over an empty population passes vacuously, and the
-        `## Direction N` numbering runs 1-19 out of order."""
+        `## Direction N` numbering runs 1-20 out of order (20 argued in
+        round 117)."""
         numbered = {int(re.match(r"## Direction (\d+)", section).group(1))
                     for section in _direction_sections()}
-        assert numbered == set(range(1, 20)), sorted(numbered)
+        assert numbered == set(range(1, 21)), sorted(numbered)
 
 
 class TestEveryNewFilingNamesItsReader:

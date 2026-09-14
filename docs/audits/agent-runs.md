@@ -275,6 +275,10 @@ pairing for every merged row from round 103 on.
 | 118 | implementer | sonnet | UX-852 (implementer) | 129k | 99 | 25.8 m | the leak audit | the fixing guide's spread figure went stale from a new test file |
 | 118 | verifier | sonnet | UX-852 (verifier) | 54k | 47 | 8.7 m | PASS; the audit thread's join folded into controller_stopped at merge | make lint's docs sweep stalled past 120 s |
 | 118 | verifier | sonnet | UX-845 (verifier) | 87k | 47 | 12.4 m | PASS after two unguarded edges (the floor withdraw counted as a move, stop without is_alive) were closed on the track | - |
+| 118 | implementer | sonnet | UX-849 (implementer) | 860k | 388 | 80.4 m | proxies by slack; the fifo: decision in the brief failed on make 4.3, amended to follow the host style; both walls read (plan slower) | the worktree diverged from the named base by a stray CI-adopted commit; the auto-mode classifier blocked checkout -b |
+| 118 | verifier | sonnet | UX-849 (verifier) | 104k | 80 | 17.8 m | PASS; a name-only grant order passed the guard (fixture names aligned with slack) - fixed at merge; a proxy token held by a killed job is lost | a listed guard file belonged to another track's branch |
+| 118 | implementer | sonnet | UX-850 (implementer) | 186k | 188 | 30.3 m | memory gate in the broker, memory PSI in the pool; psi_path folded into psi_paths under the argument cap | the constructor was already at ruff's argument cap |
+| 118 | verifier | sonnet | UX-850 (verifier) | 54k | 41 | 7.3 m | PASS; no guide prose for jobserver_pool.memory (added at merge); the gate is per element, not summed | - |
 
 Round 101's four tracks are **not** here: this session could not
 identify their transcripts with certainty after a context rebuild, and
@@ -287,7 +291,7 @@ committed cleanly once told to run in the foreground. Three of the five
 left a derived figure or a §6 context-map row behind - the same class
 the round itself was about, arriving in the tracks' own work.
 
-What the two hundred and fifty-eight rows already say: a researcher that reads a document
+What the two hundred and sixty-two rows already say: a researcher that reads a document
 whole costs 100-180k; a walker that drives every control costs 336k;
 the two cuts cost a re-run each. The `walk` and `design-review`
 skills fix the report shape so the next rows are smaller, and the

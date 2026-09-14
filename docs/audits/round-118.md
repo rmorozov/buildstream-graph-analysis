@@ -19,8 +19,8 @@ Fifteen rows open: `UX-838` to `UX-840` from review 23 and `UX-841` to
 
 ## What closed
 
-Thirteen of the fifteen at this commit, in the order they merged; every
-row a verified track, its Deviation at merge in the task file.
+All fifteen, in the order they merged; every row a verified track,
+its Deviation at merge in the task file.
 
 | row | what landed | at merge |
 |---|---|---|
@@ -36,9 +36,9 @@ row a verified track, its Deviation at merge in the task file.
 | `UX-848` | `examples/10-jobserver`, two captures in CI | two commits squashed; stage-1 walls REGRESSED +5.6 % |
 | `UX-846` | token-holding wrappers for lld, gold, mold, ninja | the mount moved under the trace bind (the sandbox root is read-only, found by CI); the env name unified; three shim cases |
 | `UX-847` | the `jobserver` block in `analyze/v6` and the page | two holds closed on the track; the golden export bound to 474,000 |
-| `UX-852` | leaked tokens audited against live pids | the audit thread joined before the FIFO closes |
-
-Open: `UX-849` (proxies by slack) and `UX-850` (memory) - see the end.
+| `UX-852` | leaked tokens audited against live pids | the audit thread joined before the FIFO closes; the guard's pool thread stilled after CI's PSI file moved tokens under it |
+| `UX-849` | per-element proxies granted by slack, `--plan` | the brief's `fifo:` proxy auth failed on make 4.3 - the host's style now; a name-adverse fixture |
+| `UX-850` | memory as a second resource: the broker's gate, the pool's memory PSI | both PSI paths pinned in every guard; the guide's memory prose |
 
 ## The verifiers found
 
@@ -55,19 +55,22 @@ Open: `UX-849` (proxies by slack) and `UX-850` (memory) - see the end.
   per-element held-token figures shipped with no producer (`UX-847`).
 - A failed `bst show` for kinds switched the whole mode off silently
   (`UX-843`); zero and negative ceilings passed unvalidated (`UX-851`).
+- A brief's decision can be the defect: proxies under `fifo:` auth on
+  a GNU Make 4.3 box (`UX-849`); a guard whose fixture names sort the
+  same as its slack ranking cannot see a name-only order (`UX-849`).
 
 ## Agents
 
-Twenty-seven runs at this commit, every one a row in the ledger:
-thirteen `implementer` tracks and fourteen `verifier` reads, all on
-`sonnet`, one verifier cut off by the session during the fork storm.
-Three tracks were resumed three times (`UX-846`, `UX-847`, `UX-841`
-once); two verifiers held and re-checked (`UX-842`, `UX-847`).
+Thirty-one runs, every one a row in the ledger: fifteen `implementer`
+tracks and sixteen `verifier` reads, all on `sonnet`, one verifier cut
+off by the session during the fork storm. Four tracks were resumed
+(`UX-846` and `UX-847` three times, `UX-841` and `UX-849` once); three
+verifiers held and re-checked (`UX-842`, `UX-847` twice).
 
 | role | runs | tokens | calls | minutes |
 |---|---|---|---|---|
-| implementer | 13 | 8768k | 4004 | 854 m |
-| verifier | 14 | 1330k | 962 | 249 m |
+| implementer | 15 | 9814k | 4580 | 965 m |
+| verifier | 16 | 1488k | 1083 | 274 m |
 
 ## The gate, ten times
 
@@ -83,8 +86,10 @@ once); two verifiers held and re-checked (`UX-842`, `UX-847`).
 | 8 | `e027391b` | red: one merge commit body of nine lines |
 | 9 | `e55c5474` | red: Direction 20's Status read as wholly closed |
 | 10 | `e416e2bc` | green, 8680 - pushed |
+| 11 | `9f499397` | green, 8680 - pushed; CI then green end to end |
+| 12 | the close | see the pull request |
 
-CI added what no local run could: the runner's PSI file, and the
+CI added what no local run could: the runner's two PSI files, and the
 read-only sandbox root that refused the wrappers' mount at `/`.
 
 ## Standing
@@ -92,9 +97,12 @@ read-only sandbox root that refused the wrappers' mount at `/`.
 - The mode builds `examples/06` end to end on this box after the mount
   fix: exit 0, `core.bst` pinned, eight cmake elements joined on the
   make path (ninja probe: no ninja in that sandbox).
-- `examples/10-jobserver` read REGRESSED +5.6 % before the kind table
-  and the wrappers merged; Direction 20's Status is decided on the
-  post-merge re-run, not on that row.
+- `examples/10-jobserver` read the mode slower at every stage: off
+  21.62 s, auto 22.83 s (stage 1), then 32.23 s without and 41.41 s
+  with a plan on the merged tree (stage 3) - four elements on four
+  cores, already oversubscribed at `off`. Direction 20 is *landed* as
+  a mechanism and a capture option, off by default; its value is a
+  measurement still to be made on a box with more cores than elements.
 - The size ledger was adopted three times in one round; `dev_sizes.py
   --check` belongs beside `dev_baseline.py --check` before every gate.
 - Disk: 64 stale agent worktrees and old scratch (23 GB) removed at 97 %.

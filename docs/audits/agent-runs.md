@@ -248,6 +248,33 @@ pairing for every merged row from round 103 on.
 | 116 | verifier | sonnet | verify `UX-830` | 72k | 63 | 17.4 m | HOLD, three findings: chains through join nodes on a constructed diamond, the §3a row, a claim golden contradicts | the touching sweep past the tool timeout; the diamond had to be constructed - no fixture has one |
 | 116 | general-purpose | sonnet | architecture review 23 (`review`), over rounds 114-116's documents | 200k | 117 | 13.2 m | three filings, `UX-838` to `UX-840`; the §3e table corrected at filing; the cadence guard green at 834 rows | a clone measured for the README figure; the review ran at the gate because the cadence guard reddened there |
 | 117 | researcher | sonnet | the jobserver facts in the tree and the installed BuildStream (`researcher`) | 149k | 60 | 12.1 m | five answers with citations: the key composed at load time, the plugins nocache JOBS/MAKEFLAGS, ninja 1.11 no client, no PSI, the spike joined the pinned element | `bst` refuses a direct invocation in the sandbox; a subprocess heredoc answered |
+| 118 | implementer | sonnet | UX-840 (implementer) | 100k | 124 | 16.2 m | landed, verifier PASS | - |
+| 118 | verifier | sonnet | UX-840 (verifier) | 40k | 26 | 9 m | PASS | - |
+| 118 | implementer | sonnet | UX-838 (implementer) | 116k | 127 | 19.4 m | twelve keys documented under the brief's decision; one p75 sentence corrected at merge | - |
+| 118 | verifier | sonnet | UX-838 (verifier) | 50k | 42 | 12.3 m | PASS | - |
+| 118 | implementer | sonnet | UX-839 (implementer) | 67k | 64 | 22.5 m | 104 and 47 MiB measured, landed | - |
+| 118 | verifier | sonnet | UX-839 (verifier) | 27k | 20 | 7.8 m | PASS | - |
+| 118 | implementer | sonnet | UX-841 (implementer) | 457k | 278 | 37.8 m | the FIFO lifecycle and the auth style after make's version; one resume | bst refuses a direct call here (O_NONBLOCK on stdout); a subprocess wrapper works |
+| 118 | verifier | sonnet | UX-841 (verifier) | 64k | 47 | 9.9 m | PASS | - |
+| 118 | implementer | sonnet | UX-845 (implementer) | 477k | 241 | 58.9 m | PoolController; amended for the verifier's floor and stop edges | a closed row with a pipe inside backticks broke the table guard |
+| 118 | implementer | sonnet | UX-842 (implementer) | 578k | 278 | 82.5 m | pin rule; HOLD on meson's bare JOBS, amended, PASS | the shared artifact cache kept hiding the element under test |
+| 118 | verifier | sonnet | UX-842 (verifier) | 265k | 123 | 35.6 m | HOLD (meson composes a bare integer), then PASS on the amend | full make lint and a real capture both outran the foreground timeout |
+| 118 | implementer | sonnet | UX-851 (implementer) | 1402k | 292 | 81.5 m | capture option and snapshot fact; resumed for the tracer-side write | - |
+| 118 | verifier | sonnet | UX-851 (verifier) | 89k | 53 | 14.9 m | PASS; two edges (zero and negative ceilings, a stale mode variable) closed at merge | the Outcome's bst-marked count read 5 where 2 collect |
+| 118 | implementer | sonnet | UX-846 (implementer) | 1530k | 381 | 162.3 m | wrappers; the first version fork-bombed the box through a symlink; re-entry guard, acquire budget knob; three resumes | dash lexes only a single-digit fd before <&; root ignores ulimit -u |
+| 118 | verifier | sonnet | UX-846 (verifier, cut off) | 70k | 131 | 27 m | stopped by the session during the fork storm its symlink mutation started | the storm took the container down |
+| 118 | verifier | sonnet | UX-846 (verifier) | 94k | 73 | 18.4 m | PASS; the shim's wrapper-dir PATH path unguarded, three cases added at merge | ulimit -u does not bound a root process |
+| 118 | implementer | sonnet | UX-844 (implementer) | 235k | 230 | 57.9 m | key-equality guard, CI step, cache_key_set; shape judgement flagged, decisions given | a test docstring naming bwrap_shim.py widened the touching map |
+| 118 | verifier | sonnet | UX-844 (verifier) | 202k | 114 | 36.4 m | PASS; the failure sentence names the consumer, the list the plugin | the box hit fork exhaustion mid-sweep |
+| 118 | implementer | sonnet | UX-843 (implementer) | 261k | 203 | 45.1 m | per-kind table and ninja probe; no live capture | the disk hit 98 percent mid-task |
+| 118 | verifier | sonnet | UX-843 (verifier) | 87k | 123 | 25.6 m | PASS; a failed kinds read was silent, made loud at merge | load 22 broke the touching sweep |
+| 118 | implementer | sonnet | UX-848 (implementer) | 1162k | 1211 | 101 m | examples/10-jobserver, two commits squashed at merge; stage-1 walls REGRESSED +5.6 percent | the container restarted mid-task; make lint starved at load 12 |
+| 118 | verifier | sonnet | UX-848 (verifier) | 51k | 41 | 10 m | PASS | load 13 blocked the one live capture check |
+| 118 | implementer | sonnet | UX-847 (implementer) | 2254k | 476 | 143.2 m | the jobserver block; two holds (no producer for held tokens, then its guard) closed on the track; three resumes | the container restarted mid-task; the branch ref detached from the worktree |
+| 118 | verifier | sonnet | UX-847 (verifier) | 150k | 75 | 21.4 m | HOLD twice (an always-null field, then its unguarded producer); the third amend checked by the session | the installed bga runs the main checkout, not the worktree |
+| 118 | implementer | sonnet | UX-852 (implementer) | 129k | 99 | 25.8 m | the leak audit | the fixing guide's spread figure went stale from a new test file |
+| 118 | verifier | sonnet | UX-852 (verifier) | 54k | 47 | 8.7 m | PASS; the audit thread's join folded into controller_stopped at merge | make lint's docs sweep stalled past 120 s |
+| 118 | verifier | sonnet | UX-845 (verifier) | 87k | 47 | 12.4 m | PASS after two unguarded edges (the floor withdraw counted as a move, stop without is_alive) were closed on the track | - |
 
 Round 101's four tracks are **not** here: this session could not
 identify their transcripts with certainty after a context rebuild, and
@@ -260,7 +287,7 @@ committed cleanly once told to run in the foreground. Three of the five
 left a derived figure or a §6 context-map row behind - the same class
 the round itself was about, arriving in the tracks' own work.
 
-What the two hundred and thirty-one rows already say: a researcher that reads a document
+What the two hundred and fifty-eight rows already say: a researcher that reads a document
 whole costs 100-180k; a walker that drives every control costs 336k;
 the two cuts cost a re-run each. The `walk` and `design-review`
 skills fix the report shape so the next rows are smaller, and the

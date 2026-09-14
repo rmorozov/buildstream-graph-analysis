@@ -30,6 +30,24 @@
       "run_id": "34778362447",
       "shift": 2.73,
       "confirmed": false
+    },
+    {
+      "file": "tests/unit/test_the_view_parses_nothing.py",
+      "run_id": "34888036702",
+      "shift": 1.988,
+      "confirmed": false
+    },
+    {
+      "file": "tests/unit/test_every_skip_reason_is_declared.py",
+      "run_id": "34888036702",
+      "shift": 1.54,
+      "confirmed": false
+    },
+    {
+      "file": "tests/unit/test_the_size_ledger_only_shrinks.py",
+      "run_id": "34888036702",
+      "shift": 1.693,
+      "confirmed": false
     }
   ],
   "declared": {}

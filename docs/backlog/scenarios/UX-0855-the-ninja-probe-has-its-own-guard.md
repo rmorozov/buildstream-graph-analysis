@@ -1,6 +1,6 @@
 # UX-855: the ninja probe has its own guard
 
-**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** UX-843 | **Found by:** round 118, UX-843's verifier | **Serves:** R4 (a cmake element joins the jobserver the way its generator can) | **Topic:** guards | **Area:** tools | **Shape:** bounded
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-843 | **Found by:** round 118, UX-843's verifier | **Serves:** R4 (a cmake element joins the jobserver the way its generator can) | **Topic:** guards | **Area:** tools | **Shape:** bounded
 
 ## Motivation
 
@@ -50,3 +50,8 @@ none raised, none hung past its timeout, no field was missing.
 | mutation | reddened | count |
 |---|---|---|
 | `probe_ninja`'s cache-write body replaced with `pass` | `test_a_second_probe_ninja_call_is_served_from_the_cache_without_rerunning` | 1 failed (`['run', 'run'] == ['run']`); reverted: full file 42 passed |
+
+Deviation (merge): the verifier found no probe-driven help text without
+`jobserver` - a 1.11.1-shaped case added at merge, red when the parser
+returns True (`1 failed, 42 passed`); the track's first commit was blocked
+by the opening base's own reds and re-based on their fix.

@@ -1,6 +1,6 @@
 # UX-856: the jobserver is a snapshot switch
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-851, UX-849 | **Found by:** round 119, the user | **Serves:** R4 (the local loop captures under the mode with one flag) | **Topic:** capture | **Area:** tools | **Shape:** mechanical
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-851, UX-849 | **Found by:** round 119, the user | **Serves:** R4 (the local loop captures under the mode with one flag) | **Topic:** capture | **Area:** tools | **Shape:** mechanical
 
 ## Motivation
 
@@ -116,3 +116,8 @@ plus a fourth after the `--plan` help-text edit
 (`tools/bga_snapshot.py` `file_lines` +1) - both adopted via
 `dev_sizes.py --adopt --force` into `tests/quality_reference.json`.
 `--plan`'s help gained the clause naming where `@prev`/`@last` resolve.
+
+Deviation (merge): the verifier held once - the compare header's print
+was unguarded (a case now drives `_compare` itself) and the size ledger
+had grown - both closed on the track; a side that predates `UX-851`
+prints as `off`, the same as a run that was off, noted.

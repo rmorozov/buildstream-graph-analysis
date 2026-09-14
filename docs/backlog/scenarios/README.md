@@ -15,19 +15,19 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-849 scenarios: **0 open**, 849 closed.
+854 scenarios: **5 open**, 849 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
-| capture | 0 | 106 |
+| capture | 4 | 110 |
 | analysis | 0 | 116 |
 | contracts | 0 | 50 |
 | viewer | 0 | 173 |
 | cli | 0 | 22 |
 | store | 0 | 16 |
 | docs | 0 | 143 |
-| guards | 0 | 223 |
+| guards | 1 | 224 |
 
 ## Open scenarios
 
@@ -36,6 +36,11 @@ task file, which is the only place it ever lived twice.
 
 | ID | Scenario | Topic | Priority | Serves | Status |
 |---|---|---|---|---|---|
+| UX-853 | [the memory gate sums the elements that run together](UX-0853-the-memory-gate-sums-the-elements-that-run-together.md) | capture | Medium | R5 (two elements each under the bound do not jointly exceed the host) | 🔴 Not Started |
+| UX-854 | [a proxy token held by a killed job is audited too](UX-0854-a-proxy-token-held-by-a-killed-job-is-audited-too.md) | capture | Medium | R4 (a killed link does not shrink the pool for the rest of the build) | 🔴 Not Started |
+| UX-855 | [the ninja probe has its own guard](UX-0855-the-ninja-probe-has-its-own-guard.md) | guards | Low | R4 (a cmake element joins the jobserver the way its generator can) | 🔴 Not Started |
+| UX-856 | [the jobserver is a snapshot switch](UX-0856-the-jobserver-is-a-snapshot-switch.md) | capture | High | R4 (the local loop captures under the mode with one flag) | 🔴 Not Started |
+| UX-857 | [one long element under a cap is the server's shape](UX-0857-one-long-element-under-a-cap-is-the-servers-shape.md) | capture | High | R4 (an llvm-sized element alone on the critical path takes the whole machine) | 🔴 Not Started |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

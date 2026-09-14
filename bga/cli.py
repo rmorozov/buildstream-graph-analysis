@@ -2528,6 +2528,17 @@ def resolve_jobserver_ceiling(
     return ('n', ceiling) if ceiling > 0 else (None, None)
 
 
+def set_jobserver_mode_env(mode: Optional[str]) -> None:
+    """The one place `BGA_JOBSERVER_MODE` is set (UX-856): `None`/absent
+    reads as `off`, so a stale value from an earlier in-process call
+    cannot claim a mode this capture never ran. Shared by
+    `_translate_capture_jobserver` and `tools/bga_snapshot.py`'s
+    `take_snapshot`, the two callers that resolve a mode in-process
+    before the tracer's `main()` reads it back for `run-context.json`.
+    """
+    os.environ['BGA_JOBSERVER_MODE'] = mode or 'off'
+
+
 def _translate_capture_jobserver(argv: list) -> list:
     """Rewrite `bga capture run ... --jobserver auto|N|off ...` into the
     tracer's own vocabulary (UX-851): an int `--jobserver N`, or no flag
@@ -2551,7 +2562,7 @@ def _translate_capture_jobserver(argv: list) -> list:
         return argv
     # Absent means off - a stale value from an earlier call in the same
     # process must not name a mode this capture never ran.
-    os.environ['BGA_JOBSERVER_MODE'] = 'off'
+    set_jobserver_mode_env('off')
     rest = argv[2:]
     if '--' in rest:
         split = rest.index('--')
@@ -2569,7 +2580,7 @@ def _translate_capture_jobserver(argv: list) -> list:
             if mode is None:
                 out.extend([tok, tracer_args[i + 1]])
             else:
-                os.environ['BGA_JOBSERVER_MODE'] = mode
+                set_jobserver_mode_env(mode)
                 if mode != 'off':
                     out.extend([tok, str(ceiling)])
             i += 2
@@ -2579,7 +2590,7 @@ def _translate_capture_jobserver(argv: list) -> list:
             if mode is None:
                 out.append(tok)
             else:
-                os.environ['BGA_JOBSERVER_MODE'] = mode
+                set_jobserver_mode_env(mode)
                 if mode != 'off':
                     out.append(f'--jobserver={ceiling}')
             i += 1

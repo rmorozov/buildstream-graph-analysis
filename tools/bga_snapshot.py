@@ -67,14 +67,20 @@ HOST_SAMPLES_NAME = run_store.HOST_SAMPLES_NAME
 CONTEXT_NAME = "capture-context.txt"
 
 
-def _capture_context(project: str, command: list[str], config: dict) -> str:
+def _capture_context(project: str, command: list[str], config: dict,
+                     jobserver: tuple = ("off", None),
+                     plan: Optional[str] = None) -> str:
     """What this capture was, in the terms UX-95 made the report carry.
 
     Written before the build rather than after, so a snapshot of a build
-    that died still says what was attempted.
+    that died still says what was attempted. `jobserver`/`plan` default
+    to off/none so the pre-UX-856 call site (and its guard) keep working
+    unchanged. `jobserver` is `(mode, ceiling)` rather than two
+    parameters - a fifth positional-ish argument here is `PLR0913`'s cap.
     """
     import platform
 
+    mode, ceiling = jobserver
     return "\n".join([
         f"project={project}",
         f"command={' '.join(command)}",
@@ -82,6 +88,8 @@ def _capture_context(project: str, command: list[str], config: dict) -> str:
         f"trace_spine={config.get('trace_spine', 'auto')}",
         f"runner_os={platform.platform()}",
         f"nproc={os.cpu_count()}",
+        f"jobserver: {mode} {ceiling if ceiling is not None else '-'}",
+        f"plan: {plan or '-'}",
     ]) + "\n"
 
 
@@ -184,6 +192,28 @@ def why_the_build_cannot_start(command: list[str]):
     return None
 
 
+def _resolve_plan(project: str, token: str) -> tuple[Optional[str], Optional[str]]:
+    """`--plan`'s value, resolved: `(path, None)` or `(None, refusal)`.
+
+    `@prev`/`@last` name a snapshot, not a file - UX-849's `--plan` wants
+    that snapshot's own `analyze.json`, published beside it (`main`'s
+    `publish_to=...ANALYSIS_NAME`), not its run directory. A path is
+    passed through untouched, same as every other alias in this store.
+    """
+    if not run_store.is_alias(token):
+        return token, None
+    try:
+        snapshot = run_store.resolve_snapshot(token, start=project)
+    except run_store.StoreError as error:
+        return None, str(error)
+    candidate = os.path.join(snapshot, run_store.ANALYSIS_NAME)
+    if not os.path.isfile(candidate):
+        return None, (f"{token} resolves to "
+                       f"{os.path.basename(snapshot.rstrip('/'))}, which has no "
+                       f"{run_store.ANALYSIS_NAME} - nothing to plan from.")
+    return candidate, None
+
+
 def build_ever_started(snapshot: str):
     """Did the build this snapshot was taken for ever launch? Or unknown.
 
@@ -225,14 +255,31 @@ def build_ever_started(snapshot: str):
 def take_snapshot(project: str, command: list[str], config: dict,
                   snapshot: Optional[str] = None, diagnose: bool = False,
                   no_inject: bool = False, inhibit: bool = False,
-                  keep_raw: bool = True) -> tuple[str, int]:
+                  keep_raw: bool = True, jobserver: str = "off",
+                  plan: Optional[str] = None,
+                  cpu_count: Optional[int] = None) -> tuple[str, int]:
     """Capture into a new snapshot directory. Returns it and the build's
-    own exit code - which is the build's answer, not the capture's."""
+    own exit code - which is the build's answer, not the capture's.
+
+    `jobserver`/`plan` (UX-856): the same three forms and the same
+    resolution `bga capture run --jobserver` uses
+    (`bga.cli.resolve_jobserver_ceiling`) - this composes the tracer's
+    own argv directly rather than through `bga capture`, so the
+    resolution happens here instead of in `_translate_capture_jobserver`.
+    `cpu_count` is a seam for `auto` in tests, as in
+    `resolve_jobserver_ceiling` itself.
+    """
+    from bga.cli import resolve_jobserver_ceiling, set_jobserver_mode_env
+
     from .bst_native_build_tracer import main as capture_main
 
     snapshot = snapshot or run_store.new_snapshot_dir(project)
+    mode, ceiling = resolve_jobserver_ceiling(jobserver, command, cpu_count=cpu_count)
+    set_jobserver_mode_env(mode)
     with open(os.path.join(snapshot, CONTEXT_NAME), "w", encoding="utf-8") as handle:
-        handle.write(_capture_context(project, command, config))
+        handle.write(_capture_context(project, command, config,
+                                      jobserver=(mode or "off", ceiling),
+                                      plan=plan))
 
     argv = ["run", "--wrapped-log", os.path.join(snapshot, WRAPPED_LOG_NAME),
             "--run-dir", os.path.join(snapshot, RUN_SUBDIR)]
@@ -260,6 +307,10 @@ def take_snapshot(project: str, command: list[str], config: dict,
         argv.append("--no-inject")
     if inhibit:
         argv.append("--inhibit")
+    if mode and mode != "off":
+        argv += ["--jobserver", str(ceiling)]
+    if plan:
+        argv += ["--plan", plan]
     argv += [project, os.path.join(snapshot, PLANE2_NAME), "--"] + list(command)
 
     print(f"Capturing into {snapshot}", file=sys.stderr)
@@ -294,6 +345,23 @@ def _CompactRawHelp(prog):
     this module stays runnable on its own."""
     from bga.help_format import CompactRawHelp
     return CompactRawHelp(prog)
+
+def _jobserver_value(text: str) -> str:
+    """`--jobserver`'s argparse `type`: refuse anything but the three
+    forms `resolve_jobserver_ceiling` accepts, before a snapshot
+    directory is created (UX-856, the `why_the_project_is_not_one`
+    refusal's own reason)."""
+    if text in ("auto", "off"):
+        return text
+    try:
+        ceiling = int(text)
+    except ValueError:
+        raise argparse.ArgumentTypeError(
+            f"{text!r} is none of auto, off, or an integer") from None
+    if ceiling < 0:
+        raise argparse.ArgumentTypeError(f"{text!r}: a jobserver is never negative")
+    return text
+
 
 def create_parser() -> argparse.ArgumentParser:
     """`bga snapshot`'s own parser, built where a caller can reach it.
@@ -401,6 +469,17 @@ def create_parser() -> argparse.ArgumentParser:
         "--no-progress", action="store_true",
         help="No in-phase progress line. Same as BGA_NO_PROGRESS=1."
     )
+    parser.add_argument(
+        "--jobserver", type=_jobserver_value, default="off", metavar="MODE",
+        help="auto|N|off (default off): cap sandbox concurrency, as "
+             "`bga capture run --jobserver` (UX-851). Per capture, not sticky."
+    )
+    parser.add_argument(
+        "--plan", default=None, metavar="PATH",
+        help="An analyze.json (@prev/@last resolve to that snapshot's own, "
+             "beside its run), naming this project's own slack (UX-849). "
+             "Needs --jobserver auto|N."
+    )
     parser.add_argument("cmd", nargs=argparse.REMAINDER,
                         help="The build to run, e.g. -- bst build all.bst.")
     return parser
@@ -504,6 +583,21 @@ def main(argv: Optional[list[str]] = None) -> int:
         print(refusal, file=sys.stderr)
         return 2
 
+    # UX-856: a plan biases the jobserver, so one named without a
+    # jobserver running has nothing to bias - refused before any write,
+    # the same posture as the two refusals above.
+    if args.plan is not None and args.jobserver == "off":
+        print("Error: --plan needs --jobserver auto|N - off runs no "
+              "jobserver, so a plan has nothing to bias. Nothing was "
+              "captured.", file=sys.stderr)
+        return 2
+    plan_path = None
+    if args.plan is not None:
+        plan_path, plan_refusal = _resolve_plan(project, args.plan)
+        if plan_refusal is not None:
+            print(f"Error: {plan_refusal}", file=sys.stderr)
+            return 2
+
     config = _sticky_config(project, args)
     # `list_runs`, not `list_snapshots`: a capture whose build died
     # before any element completed has no run directory to compare
@@ -514,7 +608,9 @@ def main(argv: Optional[list[str]] = None) -> int:
                                          diagnose=args.diagnose,
                                          no_inject=args.no_inject,
                                          inhibit=args.inhibit,
-                                         keep_raw=not args.no_keep_raw)
+                                         keep_raw=not args.no_keep_raw,
+                                         jobserver=args.jobserver,
+                                         plan=plan_path)
 
     if args.no_inject:
         # Nothing was captured, so there is nothing to analyze and
@@ -940,6 +1036,40 @@ def _compare_refs(baseline_snapshot: str, candidate_snapshot: str) -> str:
     return f"{ref(baseline_snapshot)} {ref(candidate_snapshot)}"
 
 
+def _read_analysis(snapshot: str) -> dict:
+    """The published `analyze.json` beside a snapshot, or `{}`.
+
+    `{}` for a snapshot with no published analysis (predates `UX-296`,
+    or its build never completed) - the same absent-fact posture
+    `read_element_slice` takes, and cheap enough for the compare path.
+    """
+    try:
+        with open(os.path.join(snapshot, run_store.ANALYSIS_NAME),
+                  encoding="utf-8") as handle:
+            payload = json.load(handle)
+    except (OSError, ValueError):
+        return {}
+    return payload if isinstance(payload, dict) else {}
+
+
+def _jobserver_label(analysis: dict) -> str:
+    """`off` / `auto (4)` / `n (4)` from one side's `run_instance.jobserver`
+    (`UX-851`) - `off` for a snapshot that predates the fact entirely."""
+    job = (analysis.get("run_instance") or {}).get("jobserver") or {}
+    mode = job.get("mode") or "off"
+    ceiling = job.get("ceiling")
+    return f"{mode} ({ceiling})" if ceiling is not None else mode
+
+
+def _jobserver_compare_line(baseline_snapshot: str, candidate_snapshot: str) -> str:
+    """The one-glance line `bga snapshot`'s pair asks for (UX-856), beside
+    `bga compare`'s own two-line `jobserver ...` header
+    (`format_compare_text`) for each side separately."""
+    baseline = _jobserver_label(_read_analysis(baseline_snapshot))
+    candidate = _jobserver_label(_read_analysis(candidate_snapshot))
+    return f"jobserver: {baseline} -> {candidate}"
+
+
 def _compare(baseline_snapshot: str, candidate_snapshot: str) -> int:
     """The loop's whole point, and the reason the store exists.
 
@@ -960,6 +1090,7 @@ def _compare(baseline_snapshot: str, candidate_snapshot: str) -> int:
             argv += [flag, plane2]
     print(f"$ bga compare {_compare_refs(baseline_snapshot, candidate_snapshot)}"
           f"   # {' '.join(argv[1:3])}")
+    print(_jobserver_compare_line(baseline_snapshot, candidate_snapshot))
     return cli_main(argv)
 
 

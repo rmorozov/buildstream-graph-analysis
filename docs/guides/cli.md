@@ -182,13 +182,27 @@ is safe because every report records what actually ran (`UX-95`,
 `UX-113`), so a remembered flag cannot make a capture *claim* something
 it did not do.
 
-### Other flags
+### The jobserver, as a pair (`UX-856`)
+
+`--jobserver auto|N|off` (default `off`) and `--plan @prev|@last|PATH`
+compose into the capture exactly as `bga capture run --jobserver` does
+(`resolve_jobserver_ceiling`, `UX-851`) — nothing to invent, one flag
+per capture, like `--diagnose` (`UX-146`). The comparison a mode's value
+is read from is the pair itself:
+
+```bash
+bga snapshot --jobserver off -- bst build all.bst    # the baseline
+bga snapshot --jobserver auto -- bst build all.bst    # ...and the mode
+jobserver: off -> auto (4)                            # the compare header names both
+```
 
 | flag | what it does |
 |---|---|
 | `--list` | List this project's snapshots with their sizes, showing which are `@last`/`@prev` |
 | `--no-compare` | Take the snapshot and report on it; skip the comparison |
 | `--project PATH` | Snapshot a project other than the enclosing one |
+| `--jobserver auto\|N\|off` | Cap sandbox concurrency for this capture (default `off`) |
+| `--plan @prev\|@last\|PATH` | Bias the jobserver by a prior run's own slack; needs `--jobserver auto\|N` |
 | `prune --keep N` / `--older-than DAYS` / `--max-store SIZE` | Delete old snapshots; `--dry-run` says what would go |
 
 `bga snapshot` exits with **the wrapped build's own exit code**. A

@@ -15,14 +15,14 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-849 scenarios: **9 open**, 840 closed.
+849 scenarios: **8 open**, 841 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
 | capture | 6 | 106 |
 | analysis | 1 | 116 |
-| contracts | 1 | 50 |
+| contracts | 0 | 50 |
 | viewer | 0 | 173 |
 | cli | 0 | 22 |
 | store | 0 | 16 |
@@ -43,7 +43,6 @@ task file, which is the only place it ever lived twice.
 | UX-848 | [a compile-bound example is the jobserver's evaluation](UX-0848-a-compile-bound-example-is-the-jobservers-evaluation.md) | capture | High | R4 (the number round 112 asked for) | 🔴 Not Started |
 | UX-849 | [per-element proxies grant tokens by slack](UX-0849-per-element-proxies-grant-tokens-by-slack.md) | capture | Medium | R4 (the critical path gets the cores first) | 🔴 Not Started |
 | UX-850 | [memory is a second resource the pool reads](UX-0850-memory-is-a-second-resource-the-pool-reads.md) | capture | Medium | R5 (a machine that overcommitted memory before) | 🔴 Not Started |
-| UX-851 | [the jobserver is a capture option and a snapshot fact](UX-0851-the-jobserver-is-a-capture-option-and-a-snapshot-fact.md) | contracts | Medium | R4 (the mode travels with the run) | 🔴 Not Started |
 | UX-852 | [outstanding tokens are audited against live processes](UX-0852-outstanding-tokens-are-audited-against-live-processes.md) | capture | Medium | R4 (a killed link does not shrink the pool for the rest of the build) | 🔴 Not Started |
 
 **The narrative round headings below are retired at round 94**

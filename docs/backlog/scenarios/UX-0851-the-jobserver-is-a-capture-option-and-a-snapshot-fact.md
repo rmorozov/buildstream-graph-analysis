@@ -1,6 +1,6 @@
 # UX-851: the jobserver is a capture option and a snapshot fact
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-841 | **Found by:** round 117, Direction 20 | **Serves:** R4 (the mode travels with the run) | **Topic:** contracts | **Area:** tools | **Shape:** judgement
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-841 | **Found by:** round 117, Direction 20 | **Serves:** R4 (the mode travels with the run) | **Topic:** contracts | **Area:** tools | **Shape:** judgement
 
 ## Motivation
 

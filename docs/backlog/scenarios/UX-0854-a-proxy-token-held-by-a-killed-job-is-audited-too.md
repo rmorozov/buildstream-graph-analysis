@@ -1,6 +1,6 @@
 # UX-854: a proxy token held by a killed job is audited too
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-849, UX-852 | **Found by:** round 118, UX-849's verifier | **Serves:** R4 (a killed link does not shrink the pool for the rest of the build) | **Topic:** capture | **Area:** tools | **Shape:** mechanical
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-849, UX-852 | **Found by:** round 118, UX-849's verifier | **Serves:** R4 (a killed link does not shrink the pool for the rest of the build) | **Topic:** capture | **Area:** tools | **Shape:** mechanical
 
 ## Motivation
 
@@ -76,3 +76,9 @@ tests/unit/test_the_pool_withholds_for_memory.py .........
 All four reverted from pre-mutation copies saved to the scratchpad;
 `git diff --stat`/`grep MUTATION` after each revert showed nothing
 remaining, and the full guard file returned to 13 passed each time.
+
+Deviation (merge): the verifier held once - the pool's audit and the
+broker's could both refill one dead holder, and the once-a-second
+refresh was unguarded; one auditor per capture now (the broker when a
+plan runs), both guarded on the track; pids the hook never saw stay
+with UX-852's rule.

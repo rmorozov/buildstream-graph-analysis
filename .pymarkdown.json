@@ -45,6 +45,8 @@
     "md041": { "enabled": false, "//": "first line need not be a heading in an appended fragment" },
     "md044": { "enabled": false, "//": "proper-name capitalisation needs a word list nobody will maintain" },
     "md046": { "enabled": false, "//": "code block style: fenced and indented both appear deliberately" },
-    "md048": { "enabled": false, "//": "code fence style, pure preference" }
+    "md048": { "enabled": false, "//": "code fence style, pure preference" },
+    "md049": { "enabled": false, "//": "round 117: emphasis style (asterisk vs underscore), added by pymarkdownlnt 0.9.40; its 14 hits were identifiers such as `_landed_after` read as emphasis, pure preference" },
+    "md050": { "enabled": false, "//": "round 117: strong style, the same rule family and the same release; three hits in closed.md's rows" }
   }
 }

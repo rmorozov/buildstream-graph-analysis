@@ -279,6 +279,16 @@ pairing for every merged row from round 103 on.
 | 118 | verifier | sonnet | UX-849 (verifier) | 104k | 80 | 17.8 m | PASS; a name-only grant order passed the guard (fixture names aligned with slack) - fixed at merge; a proxy token held by a killed job is lost | a listed guard file belonged to another track's branch |
 | 118 | implementer | sonnet | UX-850 (implementer) | 186k | 188 | 30.3 m | memory gate in the broker, memory PSI in the pool; psi_path folded into psi_paths under the argument cap | the constructor was already at ruff's argument cap |
 | 118 | verifier | sonnet | UX-850 (verifier) | 54k | 41 | 7.3 m | PASS; no guide prose for jobserver_pool.memory (added at merge); the gate is per element, not summed | - |
+| 119 | implementer | sonnet | UX-853 (implementer) | 84k | 77 | 20.3 m | the memory gate sums peak x (1 + held) over every running element; 8 cases, two mutations red | - |
+| 119 | verifier | sonnet | UX-853 (verifier) | 39k | 21 | 4.5 m | PASS; a held count carried across ticks by another element is untested (noted in the Deviation) | - |
+| 119 | implementer | sonnet | UX-854 (implementer) | 307k | 181 | 54.2 m | the broker audits proxy leaks and is the sole auditor when a plan runs; poll refreshes pid_to_element from the live raw log; resumed once | the pool audit and the broker audit both refilled one leak until a broker_owns_audit flag chose one |
+| 119 | verifier | sonnet | UX-854 (verifier) | 116k | 55 | 33.6 m | HOLD (double refill between the two audits, poll refresh unguarded, guide prose), then PASS on the re-check | - |
+| 119 | implementer | sonnet | UX-855 (implementer) | 246k | 140 | 41.7 m | probe_ninja guarded through a fake bwrap that prints ninja's help; resumed once to commit | the commit hook was red on the opening base and the classifier refused the skip flag; stash, ff-only, pop |
+| 119 | verifier | sonnet | UX-855 (verifier) | 34k | 21 | 2.5 m | PASS; a help text naming no jobserver had no case (added at merge) | - |
+| 119 | implementer | sonnet | UX-856 (implementer) | 507k | 287 | 54.2 m | bga snapshot --jobserver and --plan through one shared mode helper; the compare header names each side's mode; resumed once | the size ledger grew in bga/cli.py and tools/bga_snapshot.py, adopted at merge |
+| 119 | verifier | sonnet | UX-856 (verifier) | 102k | 42 | 26.4 m | HOLD (the compare header's print unguarded, sizes grown), then PASS on the re-check | - |
+| 119 | implementer | sonnet | UX-857 (implementer) | 1108k | 282 | 99.2 m | examples/11-serial-giant with max-jobs 2 via XDG_CONFIG_HOME, a CI step asserting auto under off; resumed twice - first to make the giant compile-bound (1800 to 9800 lines), then for the verifier's four points | two loaded pairs (load 7-13) read auto REGRESSED +10.9%; the quiet pair the session ran read IMPROVED -10.6% - the reading followed the box, not the example |
+| 119 | verifier | sonnet | UX-857 (verifier) | 79k | 61 | 17.4 m | HOLD: an MD032 line, no expected ratio beside the measured one, the assertion's risk in a test docstring only, no quiet-pair sentence; a tie boundary uncovered (fixture added on the resume) | make lint and dev_touching hit the 120 s timeout on the loaded box and had to be split |
 
 Round 101's four tracks are **not** here: this session could not
 identify their transcripts with certainty after a context rebuild, and
@@ -291,7 +301,7 @@ committed cleanly once told to run in the foreground. Three of the five
 left a derived figure or a §6 context-map row behind - the same class
 the round itself was about, arriving in the tracks' own work.
 
-What the two hundred and sixty-two rows already say: a researcher that reads a document
+What the two hundred and seventy-two rows already say: a researcher that reads a document
 whole costs 100-180k; a walker that drives every control costs 336k;
 the two cuts cost a re-run each. The `walk` and `design-review`
 skills fix the report shape so the next rows are smaller, and the

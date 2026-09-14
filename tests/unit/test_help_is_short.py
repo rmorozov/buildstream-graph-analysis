@@ -28,7 +28,10 @@ import pytest
 # the usage line's own wrap forced by `[--jobserver N]`'s width (`UX-679`).
 # Raised by 4 for a 16th flag, `--jobserver-auth {fd,fifo,auto}`: its own
 # usage-line wrap plus a two-line choices help (`UX-841`).
-CAP = 51
+# Raised by 8 for two more flags, `--jobserver-pool {fixed,dynamic}` and
+# `--jobserver-capacity N`: each its own usage-line wrap plus a two-line
+# help (`UX-845`).
+CAP = 59
 
 # The top level is a *list*: one line per command, and there are 23 of
 # them. Its length is the command count, not prose, so it gets its own

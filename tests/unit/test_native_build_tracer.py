@@ -581,3 +581,58 @@ def test_a_shell_wrapper_does_not_hide_the_program_it_runs():
     assert is_configure_root("env CFLAGS=-O2 /bin/sh ../configure")
     # But a shell running an inline script is not its `-c`.
     assert not is_configure_root("/bin/sh -c 'make -j4'")
+
+
+# --- _parse_max_jobs_from_vars / read_jobserver_decisions (UX-842) --------
+
+# Trimmed but real: `bst show --format '%{vars}' core.bst` against
+# examples/06-macro-micro-optimization (BuildStream 2.8.0, this box) -
+# the boilerplate install-dir variables cut, the `notparallel`
+# element's own block kept whole around `max-jobs`.
+_REAL_VARS_WITH_MAX_JOBS = r"""build-root: /buildstream/macro-micro-optimization-example/core.bst
+conf-root: .
+install-root: /buildstream-install
+project-name: macro-micro-optimization-example
+max-jobs: 1
+build-dir: _builddir
+generator: Unix Makefiles
+make: cmake --build _builddir -- ${JOBS}
+notparallel: True
+element-name: core.bst
+"""
+
+_REAL_VARS_WITHOUT_MAX_JOBS = _REAL_VARS_WITH_MAX_JOBS.replace("max-jobs: 1\n", "")
+
+
+def test_parse_max_jobs_from_vars_reads_a_present_line():
+    from tools.bst_native_build_tracer import _parse_max_jobs_from_vars
+
+    assert _parse_max_jobs_from_vars(_REAL_VARS_WITH_MAX_JOBS) == 1
+
+
+def test_parse_max_jobs_from_vars_is_none_when_the_line_is_absent():
+    from tools.bst_native_build_tracer import _parse_max_jobs_from_vars
+
+    assert _parse_max_jobs_from_vars(_REAL_VARS_WITHOUT_MAX_JOBS) is None
+
+
+def test_read_jobserver_decisions_reads_zero_one_and_many_rows(tmp_path):
+    from tools.bst_native_build_tracer import read_jobserver_decisions
+
+    assert read_jobserver_decisions(None) == []
+    assert read_jobserver_decisions(str(tmp_path / "missing.jsonl")) == []
+
+    one = tmp_path / "one.jsonl"
+    one.write_text('{"element": "core.bst", "max_jobs": 1, "decision": "pinned"}\n')
+    assert read_jobserver_decisions(str(one)) == [
+        {"element": "core.bst", "max_jobs": 1, "decision": "pinned"}]
+
+    many = tmp_path / "many.jsonl"
+    many.write_text(
+        '{"element": "core.bst", "max_jobs": 1, "decision": "pinned"}\n'
+        '{"element": "lib-a.bst", "max_jobs": 4, "decision": "joined"}\n'
+        '{"element": "lib-b.bst", "max_jobs": 16, "decision": "capped_pending"}\n'
+    )
+    rows = read_jobserver_decisions(str(many))
+    assert [r["element"] for r in rows] == ["core.bst", "lib-a.bst", "lib-b.bst"]
+    assert rows[2]["decision"] == "capped_pending"

@@ -1685,22 +1685,37 @@ class Broker:
     def slack_for(self, element: str):
         return self.plan.get(element, self.median_slack)
 
+    def _peak_for(self, element: str, median_peak) -> int:
+        """The element's own planned peak, or `median_peak` (the plan's
+        median, over `self.peak_rss`'s own values) for one `note_running`
+        named but `--plan` did not (UX-853)."""
+        peak = self.peak_rss.get(element)
+        return median_peak if peak is None else peak
+
     def _memory_gate(self, element: str, grant_n: int,
                       mem_available: Optional[int]) -> int:
-        """UX-850: `grant_n` if granting it still fits the element's
-        planned peak RSS against `MemAvailable`, else 0 and a ledger row.
-        Whole-or-nothing per tick - a shrunk grant is still a decision
-        this tick's later elements would have to re-derive room for."""
-        peak = self.peak_rss.get(element)
-        if peak is None or mem_available is None:
+        """UX-850/853: `grant_n` if granting it still fits under
+        `MemAvailable` once every *running* element's own peak RSS times
+        its held tokens (`reserved`) is set aside first, else 0 and a
+        ledger row carrying `reserved`. Whole-or-nothing per tick - a
+        shrunk grant is still a decision this tick's later elements
+        would have to re-derive room for. `reserved` is read fresh each
+        call, so an element already granted earlier this tick counts at
+        its new total, not its start-of-tick one."""
+        if not self.peak_rss or mem_available is None:
             return grant_n
-        held_after = 1 + self.granted[element] + grant_n  # +1: implicit
-        if mem_available >= peak * held_after:
+        median_peak = statistics.median(self.peak_rss.values())
+        candidate_peak = self._peak_for(element, median_peak)
+        reserved = sum(self._peak_for(running, median_peak)
+                       * (1 + self.granted[running])
+                       for running in self.running)  # +1 each: implicit
+        if mem_available - reserved - candidate_peak * grant_n >= 0:
             return grant_n
         self.memory_withheld += 1
         self._log({"event": "memory_withheld", "element": element,
                    "tokens": grant_n, "mem_available": mem_available,
-                   "peak_rss": peak, "t": time.time()})
+                   "peak_rss": candidate_peak, "reserved": reserved,
+                   "t": time.time()})
         return 0
 
     def _cap_for(self, element: str) -> Optional[int]:

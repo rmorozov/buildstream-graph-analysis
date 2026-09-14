@@ -66,3 +66,45 @@ green with `direct` reachable from `_consumer_surface()['direct']`
 naming `analyze/v6`; mutation: revert `_row_keys` to the two-case walk
 — the new regression fixture's undocumented-key clause reds, proving
 the case, not just the row, is what closes the gap.
+
+## Outcome
+
+**Gap measured.** Before: `_consumer_surface()['direct']` raised
+`KeyError` — the two-case walk never put `direct` in the surface, so
+`'direct' in _undocumented_keys()` read `False` for absence, not
+clearance. After the third case, `_consumer_surface()['direct'] ==
+['analyze/v6']`. The wider walk reached **289** keys (was 269), 20 of
+them newly reachable, 12 named nowhere in the documents:
+`baseline_share`, `candidate_share`, `coefficient_of_variation`,
+`delta_share`, `high_variability`, `is_foundation`, `median_us`,
+`p75_us`, `p95_us`, `probability`, `risk_score`, `slack_us` — across
+`elements.blast_radius`, `elements.criticality_probability`,
+`elements.duration_variability` and `compare/v2`'s
+`attribution_deltas`, all `additionalProperties` rows like `fan_in`.
+Per this round's decision, each got one sentence in `cli.md`'s
+contract table rather than narrowing the walk to `fan_in`.
+
+**Close measured.** `python3 -m pytest
+tests/unit/test_the_documents_keep_up_with_the_contracts.py -q` — 25
+passed (was 24). `make test-touching`: 52 files (27 census + 25
+naming the change), 1654 passed, 4 skipped. `make lint`: clean, 0 new
+findings.
+
+**Mutations verified red and reverted (2 discriminating, 1 rejected):**
+
+| mutation | file | guard reddened | count |
+|---|---|---|---|
+| drop `additionalProperties` from `_row_keys` | test file | new fixture `test_a_row_can_be_declared_by_additional_properties_alone`, plus `test_the_guide_states_the_reach_it_actually_has` (289 stated, 269 actual) | 2 failed |
+| walk restored; drop the `risk_score`/`is_foundation` row from cli.md | `docs/guides/cli.md` | `test_a_new_key_with_no_prose_reddens_naming_the_key` — `is_foundation (analyze/v6)`, `risk_score (analyze/v6)` | 1 failed |
+
+**A guard that did not discriminate.** The Acceptance Test's own
+mutation — dropping `direct` alone from cli.md's `fan_in` row, walk
+restored — passed all 25 clean. `direct` is already named in
+`docs/design/architecture.md:518` (UX-829/UX-837's changelog:
+`` `fan_in[].direct`, `price_cost_us`, ... ``), which
+`test_a_new_key_with_no_prose_reddens_naming_the_key`'s own message
+accepts ("...or the row in docs/design/architecture.md's inventory").
+Confirmed: `_named_in_the_documents()` holds `'direct'` before and
+after the cli.md edit. Substituted `risk_score`/`is_foundation`
+(named nowhere else) above to prove the same clause does discriminate
+on a real gap; `direct`'s cli.md prose stands per the Required Fix.

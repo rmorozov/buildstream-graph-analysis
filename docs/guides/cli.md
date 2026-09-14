@@ -983,17 +983,20 @@ this was written, 84 of them named in no document outside
 guard is empty, so the figure it holds and this sentence is checked
 against is **0 undocumented keys**.
 
-A row is found **at any depth**, and by either of the two things that
-declare one: an array's `items`, and the `bga:columns` an array node
-carries. Both are needed, and `UX-655` measured why — `analyze/v6`'s
+A row is found **at any depth**, and by any of the three things that
+declare one: an array's `items`, the `bga:columns` an array node
+carries, and a dict's `additionalProperties.properties`. The first two
+are needed, and `UX-655` measured why — `analyze/v6`'s
 `parallelism.levels` has no `type` and no `items` at all, so its
 columns are the whole statement of what one of its rows holds, and
 `level` and `width` are in no `items` anywhere. Depth is the same
 finding one level up: `parallelism` is a top-level *object*, its
 `levels` rows are below that, and a population reaching only under a
 top-level array published the whole of a major bump outside itself.
-The surface is **269 keys** today, and that figure is derived from the
-walk rather than typed here.
+The third is `UX-838`: `elements.fan_in` and five other rows are keyed
+by something that is not an array index at all, so neither `items` nor
+`bga:columns` sees them. The surface is **289 keys** today, and that
+figure is derived from the walk rather than typed here.
 
 So the statement of coverage, which is now a statement and not a
 promise:
@@ -1074,7 +1077,10 @@ can look one up.
 | `level`, `width`, `elements` | A row of `parallelism.levels`, one per level of the graph from the roots down: its longest path in edges from a source (roots are `level` 0), how many elements sit there, and which ones — what could run at once, once everything above it is built. |
 | `fan_in`, `fan_out` | A row of `bottleneck.high_fanin_elements` and `high_fanout_elements`: dependencies this element names, and elements naming this one as a dependency. Degrees of the graph, never a transitive count — `blast_radius` is that. |
 | `rank`, `best_split`, `weighted_duration_us`, `wall_share`, `members` | A row of `bottleneck.serial_chains` (`UX-830`): every maximal non-branching run, ranked by summed duration, not the single `longest_serial_chain` exhibit above it. `best_split` is the member whose own duration is largest — splitting it shortens the chain most; `wall_share` is `weighted_duration_us` over the run's longest weighted path; `length` (shared with the fan-degree rows above) is the member count. |
-| `direct_count`, `transitive_count`, `immediate_dominator` | A row of `elements.fan_in` (`UX-681`): the dependencies this element names, everything those pull in behind them, and the nearest element every path from a root passes through — the rebuild it waits on, which is not the same as a dependency. `direct_count` is the degree `bottleneck.high_fanin_elements` ranks the top five of; whether those edges were read is `element_join.dependency_read_share`. |
+| `direct`, `direct_count`, `transitive_count`, `immediate_dominator` | A row of `elements.fan_in` (`UX-681`): the dependencies this element names, everything those pull in behind them, and the nearest element every path from a root passes through — the rebuild it waits on, which is not the same as a dependency. `direct` is those dependencies by name, sorted and capped at 40 (`UX-829`); excluded from the elements table by construction (arrays don't flatten into a row) and drawn on the element card instead. `direct_count` is that list's length whether or not it hit the cap, and the degree `bottleneck.high_fanin_elements` ranks the top five of; whether those edges were read is `element_join.dependency_read_share`. |
+| `risk_score`, `is_foundation` | A row of `elements.blast_radius`, beside `downstream_count` and `weighted_duration_us` above: `risk_score` is downstream work weighted by duration, a ranking comparable within a run and not across; `is_foundation` (shared with the `fan_in` row above) is whether the project declared this element foundation — excluded from the ranking on that declaration, not a kind guess. |
+| `probability`, `slack_us` | A row of `elements.criticality_probability`: how often this element lands on the critical path under the run's own perturbation — 1.0 is always — and how long it could have been delayed before it would, zero meaning it is already on the chain. |
+| `median_us`, `p75_us`, `p95_us`, `coefficient_of_variation`, `high_variability` | A row of `elements.duration_variability`, beside `mean_us`, `samples` and `host_class`: how steady this element's duration is across the store's earlier runs on the same host class — the middle of the series, the fast and slow ends, the spread over the mean (Part 29), and whether that spread crosses the threshold the ranking warning applies at. |
 | `assessed_dependencies`, `dependency_read_share` | A row of `element_join`: how many of this element's dependencies Plane 2 could judge — the ones it saw opened plus the ones it saw nothing from — and how many of those were read. What `unused_dependencies` is a list *of*. A dependency with no observed opens at all is uncovered and in neither, so the share is absent rather than 1.0. |
 | `phase`, `elapsed_us` | A row of `pipeline_overhead`: the named stage of the run, and the wall-clock it spanned. |
 | `finding_id` | In a `headline.top_actions` row, the finding the action's reasoning is in — so the headline's advice can be read back to the evidence that chose it. |
@@ -1096,7 +1102,7 @@ can look one up.
 |---|---|
 | `baseline_run_id`, `candidate_run_id` | The run id of each side, so a verdict can be traced to the two captures behind it. |
 | `deltas` | The run-level signed changes — makespan, contention, serialization and the rest, each `candidate - baseline`. |
-| `attribution_deltas` | The same, per wait category: `baseline_us`, `candidate_us`, `delta_us`. |
+| `attribution_deltas` | The same, per wait category: `baseline_us`, `candidate_us`, `delta_us`, and each as a share of its own run's total — `baseline_share`, `candidate_share`, `delta_share` — since a category can grow in absolute time and shrink there, which is why both are published. |
 | `element_deltas` | Every element in either run with its duration on each side and the signed change, ranked by what moved most. Deliberately **not** banded. |
 | `cache_churn` | How many cache keys moved: `comparable_elements` as the population, then `unchanged_keys` and `changed_keys` out of it. |
 | `baseline_confidence`, `candidate_confidence` | How much of each run the comparison could see — the share of its elements carrying what the verdict is computed from. |

@@ -25,6 +25,7 @@ from tools.native_trace.bwrap_shim import (
     kind_job_env,
     parse_element_max_jobs,
     parse_ninja_help,
+    probe_ninja,
     split_bwrap_args,
 )
 
@@ -711,3 +712,94 @@ def test_no_proxy_leaves_build_shim_argv_byte_for_byte():
     finally:
         os.close(read_fd)
         os.close(write_fd)
+
+
+# --- UX-855: probe_ninja's own outcomes, not a hand-built dict ------------
+#
+# `real_bwrap` is a shell script in tmp_path, passed straight through as
+# the `real_bwrap` argument - never placed on PATH. It looks at its own
+# trailing args to tell `ninja --version` from `ninja --help`.
+
+def _fake_real_bwrap(path, marker, body):
+    """Appends one line to `marker` per invocation, so the cache case can
+    count how many times the fake actually ran."""
+    path.write_text(f'#!/bin/sh\necho run >> "{marker}"\n{body}')
+    path.chmod(0o755)
+    return str(path)
+
+
+def test_probe_ninja_records_availability_version_and_a_jobserver_client(tmp_path):
+    marker = tmp_path / "marker"
+    fake = _fake_real_bwrap(
+        tmp_path / "bwrap", marker,
+        'case "$*" in\n'
+        '  *"ninja --version") echo "1.12.0" ;;\n'
+        '  *"ninja --help") printf '
+        "'usage: ninja\\n  --jobserver   participate in a POSIX jobserver\\n' ;;\n"
+        "esac\n")
+
+    result = probe_ninja(fake, [], str(tmp_path / "cache-a.json"))
+
+    assert result == {"available": True, "version": "1.12.0", "jobserver_client": True}
+    assert marker.read_text().splitlines() == ["run", "run"]
+
+
+def test_probe_ninja_reads_a_help_text_that_names_no_jobserver_as_no_client(tmp_path):
+    """The verifier's case: ninja 1.11.1's own help never says jobserver,
+    and the probe must say so rather than assume a client."""
+    marker = tmp_path / "marker"
+    fake = _fake_real_bwrap(
+        tmp_path / "bwrap", marker,
+        'case "$*" in\n'
+        '  *"ninja --version") echo "1.11.1" ;;\n'
+        '  *"ninja --help") printf '
+        "'usage: ninja [options] [targets...]\\n  -j N  run N jobs in parallel\\n' ;;\n"
+        "esac\n")
+
+    result = probe_ninja(fake, [], str(tmp_path / "cache-n.json"))
+
+    assert result == {"available": True, "version": "1.11.1", "jobserver_client": False}
+
+
+def test_probe_ninja_treats_exit_127_as_no_ninja(tmp_path):
+    marker = tmp_path / "marker"
+    fake = _fake_real_bwrap(tmp_path / "bwrap", marker, "exit 127\n")
+
+    result = probe_ninja(fake, [], str(tmp_path / "cache-b.json"))
+
+    assert result == {"available": False, "version": None, "jobserver_client": None}
+    assert marker.read_text().splitlines() == ["run"]
+
+
+def test_probe_ninja_treats_a_hang_past_its_timeout_as_no_ninja(tmp_path):
+    marker = tmp_path / "marker"
+    fake = _fake_real_bwrap(tmp_path / "bwrap", marker, "sleep 2\n")
+
+    result = probe_ninja(fake, [], str(tmp_path / "cache-c.json"), timeout=0.2)
+
+    assert result == {"available": False, "version": None, "jobserver_client": None}
+    assert marker.read_text().splitlines() == ["run"]
+
+
+def test_probe_ninja_treats_a_failing_bwrap_as_no_ninja(tmp_path):
+    marker = tmp_path / "marker"
+    fake = _fake_real_bwrap(
+        tmp_path / "bwrap", marker,
+        'echo "bwrap: cannot bind /nonexistent" >&2\nexit 1\n')
+
+    result = probe_ninja(fake, [], str(tmp_path / "cache-d.json"))
+
+    assert result == {"available": False, "version": None, "jobserver_client": None}
+    assert marker.read_text().splitlines() == ["run"]
+
+
+def test_a_second_probe_ninja_call_is_served_from_the_cache_without_rerunning(tmp_path):
+    marker = tmp_path / "marker"
+    fake = _fake_real_bwrap(tmp_path / "bwrap", marker, "exit 127\n")
+    cache_path = str(tmp_path / "cache-e.json")
+
+    first = probe_ninja(fake, [], cache_path)
+    second = probe_ninja(fake, [], cache_path)
+
+    assert first == second == {"available": False, "version": None, "jobserver_client": None}
+    assert marker.read_text().splitlines() == ["run"]

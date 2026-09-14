@@ -27,3 +27,26 @@ A real bwrap in a unit test.
 
 The four cases and the cache case green; mutation: skip the cache
 write, so the second call runs the fake again - red.
+
+## Outcome
+
+**Gap measured:** every ninja case in `tests/unit/test_bwrap_shim.py`
+fed `kind_job_env`/`build_shim_argv` a hand-built probe dict; no case
+called `probe_ninja` itself. `grep -c "probe_ninja(" tests/unit/test_bwrap_shim.py`
+before this change: 0.
+
+**Close measured:** 5 cases added, each driving `probe_ninja` with a
+fake `real_bwrap` shell script in `tmp_path` (per the decision already
+taken, passed straight through as the `real_bwrap` argument, never
+placed on PATH) - available+jobserver-client, exit 127, a hang past a
+0.2s timeout, a failing bwrap (exit 1, stderr), and a cache hit. `python3 -m
+pytest tests/unit/test_bwrap_shim.py -v`: 42 passed in 0.40s (was 37).
+No probe change: all three failure paths converge on the same
+`{"available": False, "version": None, "jobserver_client": None}` -
+none raised, none hung past its timeout, no field was missing.
+
+**Mutation table:**
+
+| mutation | reddened | count |
+|---|---|---|
+| `probe_ninja`'s cache-write body replaced with `pass` | `test_a_second_probe_ninja_call_is_served_from_the_cache_without_rerunning` | 1 failed (`['run', 'run'] == ['run']`); reverted: full file 42 passed |

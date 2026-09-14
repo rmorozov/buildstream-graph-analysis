@@ -336,10 +336,15 @@ def _max_jobs_advice(analyzer, native_report: dict) -> dict:
     max_jobs = {element.uid: element.max_jobs for element in graph.elements}
     peak_rss_bytes, host_memory_bytes = _peak_rss_and_host_memory(
         host_samples, native_report)
+    # UX-847: the shim's own pin reading (UX-842), not a re-derivation -
+    # a pinned element's advice row refuses rather than guesses a number.
+    pinned_elements = {
+        row["element"] for row in (native_report or {}).get("jobserver_decisions") or []
+        if row.get("decision") == "pinned" and row.get("element")}
     return compute_max_jobs_advice(
         host_samples, tasks, max_jobs,
-        peak_rss_bytes=peak_rss_bytes,
-        host_memory_bytes=host_memory_bytes,
+        memory=(peak_rss_bytes, host_memory_bytes),
+        pinned_elements=pinned_elements,
     )
 
 

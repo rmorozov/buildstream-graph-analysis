@@ -129,8 +129,8 @@ class TestTheMemoryConstraint:
         host_samples, tasks, max_jobs = _real_inputs()
         peak_rss_bytes = {"core.bst": 3_000_000_000, "lib-a.bst": 2_000_000_000}
         advice = compute_max_jobs_advice(
-            host_samples, tasks, max_jobs, peak_rss_bytes=peak_rss_bytes,
-            host_memory_bytes=4_000_000_000)
+            host_samples, tasks, max_jobs,
+            memory=(peak_rss_bytes, 4_000_000_000))
         by_uid = {r["element"]: r for r in advice["elements"]}
         for uid in ("core.bst", "lib-a.bst"):
             assert by_uid[uid]["recommended_max_jobs"] is None
@@ -141,8 +141,8 @@ class TestTheMemoryConstraint:
         host_samples, tasks, max_jobs = _real_inputs()
         peak_rss_bytes = {"core.bst": 1_000_000, "lib-a.bst": 1_000_000}
         advice = compute_max_jobs_advice(
-            host_samples, tasks, max_jobs, peak_rss_bytes=peak_rss_bytes,
-            host_memory_bytes=4_000_000_000)
+            host_samples, tasks, max_jobs,
+            memory=(peak_rss_bytes, 4_000_000_000))
         row = next(r for r in advice["elements"] if r["element"] == "core.bst")
         assert row["recommended_max_jobs"] == 2
         assert row["refusal"] is None

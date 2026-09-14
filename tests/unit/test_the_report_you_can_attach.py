@@ -892,7 +892,11 @@ COMMITTED_EXPORTS = [
     # "What does my element wait on?" preset's column titles. Measured
     # before this change: 458,519 B. 468,000 leaves headroom again,
     # with `UX-831`'s +257 B merged beside it (463,955 B here).
-    ("golden", GOLDEN, 468_000),                       #  463,698 B
+    # `UX-847` moved this one by 4,328 B: the `jobserver` block's schema
+    # prose (two shares, the per-element table) and the block itself,
+    # absent from a run without the mode - 468,026 B measured at the
+    # merge, 26 B over the old bound. 474,000 leaves headroom again.
+    ("golden", GOLDEN, 474_000),                       #  468,026 B
     # `UX-297` moved this one by 385 B before that: the two-plane run
     # publishes `plane2_coverage.source`, which says which shape of
     # Plane 2 report served its numbers and what that costs to open. A
@@ -1043,7 +1047,11 @@ COMMITTED_EXPORTS = [
     # order, with `UX-831`'s +257 B merged beside it (520,145 B here).
     # `UX-830`'s chains table: 524,965 B from a 68-character path at
     # the round's gate; 526,000 keeps the same order of headroom.
-    ("macro_micro", MACRO_MICRO, 526_000),             #  524,965 B
+    # `UX-847`: +2,364 B, all **contract** - the `jobserver` block's
+    # schema prose, which travels whether or not this run's Plane 2
+    # report carries the mode (it does not; macro_micro is a static
+    # capture). 528,000 keeps the same order of headroom.
+    ("macro_micro", MACRO_MICRO, 528_000),             #  527,329 B
 ]
 
 

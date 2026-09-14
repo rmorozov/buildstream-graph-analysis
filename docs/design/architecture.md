@@ -498,15 +498,17 @@ with the tables above destroys the one thing the entry is for
 (`UX-653`). The newest entry is the exception: every round that
 re-grounds the document rewrites it.
 
-Updated 2026-09-14 (after `UX-846`), covering one change to this
-document — the `bga capture` line under "Real package structure" now
+Updated 2026-09-14 (after `UX-847`), covering two changes to this
+document — UX-847's `jobserver` block under `analyze/v6` (the ledger's
+two shares and the per-element table, computed in `bga/correlate.py`
+and wired in `bga/report/json.py`), and the `bga capture` line under "Real package structure" now
 names `tools/native_trace/wrappers/` (UX-846's token-holding wrapper
 scripts for the linkers and ninja that read no jobserver pipe), the
 fifth member of `tools/native_trace/`; the member-count guard
 collapses the directory to one entry so a sixth wrapped tool needs
 no edit here. The line is re-grounded in `ls tools/native_trace`
 (`__init__.py`, `bwrap_shim.py`, `hook.c`, `spine.c`, `trackevent.py`,
-`wrappers/`), in `bga analyze --schema` (`analyze/v6`: **61 top-level properties**),
+`wrappers/`), in `bga analyze --schema` (`analyze/v6`: **62 top-level properties**),
 and in `python3 -m pytest $(grep -ln "architecture.md" tests/unit/*.py)
 -q`, run at this commit.
 
@@ -524,8 +526,9 @@ its three names, `--order` stays acyclic with `viewstate.js` inlined
 before `structured.js`, and `python3 -m pytest $(grep -ln
 "architecture.md" tests/unit/*.py) -q` ran 434 passed with this guard
 the only red before this entry. The two contract tables above are
-unchanged: **25 emitted ids**, and `analyze/v6` at **61 top-level properties**,
-and `bga/viewer/` still **22 modules** (`ls bga/viewer/*.js | wc -l`).
+unchanged: **25 emitted ids**, and `analyze/v6` at **62 top-level properties**
+(`UX-847` added `jobserver` after this entry was written), and
+`bga/viewer/` still **22 modules** (`ls bga/viewer/*.js | wc -l`).
 The round published keys under existing sections (`serial_chains`,
 `fan_in[].direct`, `price_cost_us`, `start_offset_us`,
 `source_kind_map`) and moved none.

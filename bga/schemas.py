@@ -855,6 +855,9 @@ _ANALYZE_OPTIONAL = {
     # UX-207: what to fix first, and what it is worth.
     "headline": "object",
     "next_steps": "array",
+    # UX-847: the pool's own record, present only when `--plane2`'s
+    # report carries a mode - additive, so `analyze/v6` does not bump.
+    "jobserver": "object",
 }
 
 # What a *full* `bga analyze --format json` of a normal run contains.
@@ -4720,6 +4723,76 @@ _ELEMENTS = {
                            "`measured-rebuild-time` weights each "
                            "dependent by how long it took in this run, "
                            "`downstream-count` counts them."},
+    },
+}
+
+# UX-847: `--plane2`'s own record of the mode - a sibling of
+# `run_instance.jobserver` (UX-851's `{mode, ceiling, auth,
+# project_max_jobs}`, `bga capture`'s own selection) rather than a
+# rename of it: this block is what the pool *did*, measured, and is
+# absent whenever `run_instance.jobserver` says the mode ran off or the
+# capture predates it.
+_ANALYZE_HINTS["jobserver"] = {
+    QUESTION: 'Did the pool or the graph bind the wall?', RAIL: 'act',
+    "description": "The dynamic pool's own record (Direction 20, "
+                   "UX-845/UX-846): tokens on offer with nothing "
+                   "claiming them against tokens everyone waited on, "
+                   "and which elements actually drew from the shared "
+                   "pool. Present only when this run's `--plane2` "
+                   "report carries a mode.",
+    "properties": {
+        "mode": {
+            "description": "fixed or dynamic - whether the pool moved "
+                           "with busy cores (UX-845) or held its "
+                           "seeded token count for the whole run."},
+        "pool_ceiling": {
+            QUANTITY: "count",
+            "description": "The token count the pool was seeded with "
+                           "(`--jobserver N`'s `N`)."},
+        "tokens_idle_share": {
+            QUANTITY: "share", DIRECTION: "lower_is_better",
+            "description": "Share of controller ticks with cores idle "
+                           "and tokens still in the pool - tokens on "
+                           "offer that nothing took."},
+        "tokens_starved_share": {
+            QUANTITY: "share", DIRECTION: "lower_is_better",
+            "description": "Share of controller ticks with cores idle "
+                           "and the pool empty - the graph, not the "
+                           "pool, bound the wall at that tick."},
+        "per_element": {
+            "description": "Every element Plane 1 saw, and how it met "
+                           "the pool.",
+            "additionalProperties": {
+                "properties": {
+                    "joined": {
+                        "description": "yes, pinned, held or "
+                                       "unknown_kind - pinned is "
+                                       "BuildStream's own `-j1` "
+                                       "(UX-842), held is a wrapper "
+                                       "tool that kept its tokens "
+                                       "instead of reading the pipe "
+                                       "(UX-846), unknown_kind is "
+                                       "neither the shim nor a wrapper "
+                                       "named this element."},
+                    "tokens_held_p50": {
+                        QUANTITY: "count",
+                        "description": "Median tokens a wrapper tool "
+                                       "held at once, for this "
+                                       "element - from UX-846's own "
+                                       "acquire rows, joined to this "
+                                       "element by the pid that "
+                                       "acquired them; null when the "
+                                       "element ran no wrapped tool."},
+                    "tokens_held_max": {
+                        QUANTITY: "count",
+                        "description": "The most tokens a wrapper "
+                                       "tool held at once, for this "
+                                       "element - the same join as "
+                                       "`tokens_held_p50`; null when "
+                                       "the element ran no wrapped "
+                                       "tool."},
+                }},
+        },
     },
 }
 

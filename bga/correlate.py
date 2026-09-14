@@ -1235,8 +1235,8 @@ def compute_max_jobs_advice(
     host_samples: dict,
     tasks: list[dict],
     max_jobs: dict,
-    peak_rss_bytes: Optional[dict] = None,
-    host_memory_bytes: Optional[int] = None,
+    memory: Optional[tuple] = None,
+    pinned_elements: Optional[set] = None,
 ) -> dict:
     """UX-677: per-element `max-jobs`, under the no-overcommit constraint.
 
@@ -1261,14 +1261,24 @@ def compute_max_jobs_advice(
     of a number - a recommendation resting on one reading is a guess
     wearing a measurement's clothes (the same bar `UX-83` uses).
 
-    **Memory.** When `peak_rss_bytes` is known for every element
-    building alongside e at some instant in its span, and their sum
-    there exceeds `host_memory_bytes`, e also gets a refusal: no
-    `max-jobs` value un-spends memory already measured spent.
+    **Memory.** `memory` is `(peak_rss_bytes, host_memory_bytes)` - the
+    two always travel together, so `UX-847`'s `pinned_elements` shares
+    the slot rather than pushing the signature past five (`PLR0913`).
+    When `peak_rss_bytes` is known for every element building alongside
+    e at some instant in its span, and their sum there exceeds
+    `host_memory_bytes`, e also gets a refusal: no `max-jobs` value
+    un-spends memory already measured spent.
+
+    **Pinned.** `UX-847`: `pinned_elements` (UX-842's own `-j1` reading,
+    passed through by the caller) overrides every other refusal - a
+    number here would be a recommendation the mode already refuses to
+    apply (Direction 20 argument 1: a pin is a declaration, not a
+    misconfiguration to correct).
     """
     from .utilisation.envelope import intervals as _intervals
     from .utilisation.envelope import wall_samples as _wall_samples
 
+    peak_rss_bytes, host_memory_bytes = memory or (None, None)
     windows = _intervals(_wall_samples(host_samples or {}))
     cores = windows[-1].get("cores") if windows else None
     if not windows or not cores:
@@ -1279,6 +1289,7 @@ def compute_max_jobs_advice(
                 if t["start_us"] < window["end_us"]
                 and t["finish_us"] > window["start_us"]}
 
+    pinned_elements = pinned_elements or set()
     elements = []
     for task in tasks:
         uid = task["element"]
@@ -1288,6 +1299,11 @@ def compute_max_jobs_advice(
                 and task["finish_us"] > w["start_us"]]
         row = {"element": uid, "current_max_jobs": current,
                "samples_in_span": len(span)}
+        if uid in pinned_elements:
+            row["refusal"] = "pinned by the project"
+            row["recommended_max_jobs"] = None
+            elements.append(row)
+            continue
         if len(span) < MIN_HOST_SAMPLES_IN_SPAN:
             row["refusal"] = (
                 f"only {len(span)} host CPU sample interval(s) fall "
@@ -1327,6 +1343,114 @@ def compute_max_jobs_advice(
 
     return {"min_samples_in_span": MIN_HOST_SAMPLES_IN_SPAN,
             "host_cores": cores, "elements": elements}
+
+
+#: UX-847: which `jobserver_decisions` decisions mean "this element
+#: joined the pool", for the `jobserver.per_element` enum below - both
+#: read as `yes` there, because that block asks only whether the
+#: element is drawing from the shared pool, not how it is capped.
+_JOBSERVER_JOINED_DECISIONS = ("joined", "capped_pending")
+
+
+def compute_jobserver_shares(ledger_rows: list, capacity: Optional[int]) -> tuple:
+    """UX-847: `(tokens_idle_share, tokens_starved_share)` over the
+    `PoolController` ticks in `ledger_rows` - rows carrying `action`
+    (UX-845's `tick()`), never a wrapper's `event` row (UX-846), which
+    is not a control step and is skipped rather than misread as one.
+
+    `tokens_idle_share`: ticks with `busy_cores < capacity - 1` and
+    `pool > 0` - tokens on offer, nothing claiming them.
+    `tokens_starved_share`: the same busy-cores reading with `pool == 0`
+    - cores idle while the pool itself is empty. `(0.0, 0.0)` with no
+    ticks or an unknown capacity.
+    """
+    ticks = [row for row in ledger_rows or []
+             if isinstance(row, dict) and "action" in row]
+    if not ticks or not capacity:
+        return 0.0, 0.0
+    idle = starved = 0
+    for row in ticks:
+        busy, pool = row.get("busy_cores"), row.get("pool")
+        if busy is None or pool is None or not (busy < capacity - 1):
+            continue
+        if pool > 0:
+            idle += 1
+        elif pool == 0:
+            starved += 1
+    total = len(ticks)
+    return idle / total, starved / total
+
+
+def compute_jobserver_per_element(
+    elements: list, decision_rows: list,
+    tokens_by_element: Optional[dict] = None,
+) -> dict:
+    """UX-847: per-element `joined` (yes/pinned/held/unknown_kind) and
+    the wrapper's own held-token stats, keyed by every element Plane 1
+    saw - not only the ones `jobserver_decisions` named, so an element
+    the shim never wrote a decision for (a capture older than UX-842,
+    or one that built nothing under a sandbox) reads `unknown_kind`
+    rather than being silently dropped from the table.
+
+    `held` (UX-846) wins over a `joined`/`capped_pending` decision - a
+    tool that held its own tokens instead of reading the pipe is the
+    more specific fact - but never over `pinned`: Direction 20 argument
+    1 makes `-j1` never join, so a pin sourced from BuildStream's own
+    argv outranks a wrapper pid match, which is inference.
+    """
+    by_element = {}
+    for row in decision_rows or []:
+        uid = row.get("element")
+        if uid:
+            by_element[uid] = row
+    tokens_by_element = tokens_by_element or {}
+    per_element = {}
+    for uid in elements:
+        decision_row = by_element.get(uid)
+        decision = (decision_row or {}).get("decision")
+        held = uid in tokens_by_element
+        if decision == "pinned":
+            joined = "pinned"
+        elif held:
+            joined = "held"
+        elif decision_row is None or decision_row.get("kind") == "unknown" \
+                or decision not in _JOBSERVER_JOINED_DECISIONS:
+            joined = "unknown_kind"
+        else:
+            joined = "yes"
+        held_stats = tokens_by_element.get(uid) or {}
+        per_element[uid] = {
+            "joined": joined,
+            "tokens_held_p50": held_stats.get("tokens_held_p50"),
+            "tokens_held_max": held_stats.get("tokens_held_max"),
+        }
+    return per_element
+
+
+def compute_jobserver_block(
+    native_report: dict, elements: list,
+    tokens_by_element: Optional[dict] = None,
+) -> Optional[dict]:
+    """UX-847: `analyze/v6`'s additive `jobserver` block, pure over
+    Plane 2's tracer report and Plane 1's element population. `None`
+    when this run's Plane 2 report carries no mode - a run without
+    `--jobserver` produces today's `analyze/v6` byte for byte.
+    """
+    if not native_report or not native_report.get("jobserver"):
+        return None
+    pool = native_report.get("jobserver_pool") or {}
+    idle_share, starved_share = compute_jobserver_shares(
+        native_report.get("jobserver_ledger") or [], pool.get("capacity"))
+    per_element = compute_jobserver_per_element(
+        elements, native_report.get("jobserver_decisions") or [],
+        tokens_by_element)
+    return {
+        "mode": pool.get("mode"),
+        "pool_ceiling": pool.get("ceiling"),
+        "tokens_idle_share": idle_share,
+        "tokens_starved_share": starved_share,
+        "per_element": per_element,
+    }
 
 
 # UX-739: the dispatch sentence. Both replays re-derive order from the

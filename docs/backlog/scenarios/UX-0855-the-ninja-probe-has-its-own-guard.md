@@ -7,8 +7,8 @@
 `UX-843`'s `probe_ninja` runs the sandbox's own `ninja --version` and
 `--help` through bwrap and caches the result per capture; every guard
 feeds the decision function a hand-built probe dict, so the probe itself
-- exit 127 when the sandbox has no ninja, bwrap failing, the timeout,
-the cache hit - is exercised by no test.
+(exit 127 when the sandbox has no ninja, bwrap failing, the timeout,
+the cache hit) is exercised by no test.
 
 ## Required Fix
 
@@ -25,5 +25,5 @@ A real bwrap in a unit test.
 
 ## Acceptance Test
 
-The four cases and the cache case green; mutation: skip the cache write
-- the second call runs the fake again, red.
+The four cases and the cache case green; mutation: skip the cache
+write, so the second call runs the fake again - red.

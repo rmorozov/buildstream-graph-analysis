@@ -22,6 +22,12 @@ global FIFO and recorded as a `leaked` row naming the element - the
 row `UX-852` writes, with `element` beside `pid`. `jobserver_pool.broker`
 counts `leaks`.
 
+## Decomposition
+
+Input classes: a holder killed before `note_done`, a holder killed
+while its element runs on, a live holder, a pid no element maps to;
+the journey it extends is R4's interrupted capture under a plan.
+
 ## Out of Scope
 
 A token held by a client the hook never saw (a static binary without

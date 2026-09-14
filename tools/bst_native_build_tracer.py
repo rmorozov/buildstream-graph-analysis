@@ -965,6 +965,30 @@ def close_jobserver(path: Optional[str], fd: Optional[int]) -> None:
         os.remove(path)
 
 
+def read_jobserver_decisions(path: Optional[str]) -> list:
+    """UX-842: the shim's `jobserver_decisions.jsonl` folded into a list
+    of `{element, max_jobs, decision}` for the report. `[]` when the
+    path is absent or unreadable, or a line is malformed - the same
+    tolerant posture `read_host_samples` takes for an interrupted
+    capture's truncated last line."""
+    if not path:
+        return []
+    decisions = []
+    try:
+        with open(path, encoding="utf-8") as handle:
+            for line in handle:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    decisions.append(json.loads(line))
+                except ValueError:
+                    continue
+    except OSError:
+        return []
+    return decisions
+
+
 _MAKE_VERSION_RE = re.compile(r"GNU Make (\d+)\.(\d+)")
 
 
@@ -1185,6 +1209,69 @@ class PoolController:
                 # than trust the first timeout.
                 self._thread.join(timeout=2.0)
             self.stopped = not self._thread.is_alive()
+# BuildStream subcommands whose trailing non-flag tokens name elements -
+# what `_cmd_target` scans a `bst [OPTS] SUBCOMMAND [OPTS] TARGET...`
+# argv for (UX-842's real shape: `bst --config bst-b.conf build all.bst`).
+_BST_TARGET_SUBCOMMANDS = frozenset({"build", "show", "track", "checkout"})
+
+
+def _cmd_target(cmd: list[str]) -> Optional[str]:
+    """UX-842: the first element name in the `bst` command about to run,
+    best-effort. An invocation shaped unlike this project's own captures
+    degrades to `None`, which `read_project_max_jobs` turns into an
+    unknown `project_max_jobs` rather than a wrong one."""
+    for i, tok in enumerate(cmd):
+        if tok in _BST_TARGET_SUBCOMMANDS:
+            for later in cmd[i + 1:]:
+                if not later.startswith("-"):
+                    return later
+    return None
+
+
+def _parse_max_jobs_from_vars(vars_raw: str) -> Optional[int]:
+    """UX-842: `%{vars}`'s own `max-jobs:` line. `None` on any
+    unparseable shape - a future bst version changing it must degrade,
+    not raise (same posture as `bst_show_to_graph._parse_yaml_mapping`)."""
+    try:
+        import yaml
+    except ImportError:
+        return None
+    try:
+        data = yaml.safe_load(vars_raw)
+    except yaml.YAMLError:
+        return None
+    if not isinstance(data, dict):
+        return None
+    value = data.get("max-jobs")
+    if value is None:
+        return None
+    try:
+        return int(str(value).strip())
+    except (TypeError, ValueError):
+        return None
+
+
+def read_project_max_jobs(project_dir: str, cmd: list[str]) -> Optional[int]:
+    """UX-842: the project's own `max-jobs`, read once before the build
+    via `bst show --format '%{vars}'` on the build's own target - the
+    same value BuildStream composes into every non-pinned sandbox's
+    `-j`. `None` on any failure (no target recoverable, `bst` missing, a
+    non-zero exit, an unparseable value) - the shim then treats every
+    `-jK` as `joined`, this mode's behavior before this row."""
+    target = _cmd_target(cmd)
+    if target is None:
+        return None
+    try:
+        proc = subprocess.run(
+            [cmd[0], "show", "--format", "%{vars}", target],
+            cwd=project_dir, capture_output=True, text=True, check=False,
+            timeout=120,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    if proc.returncode != 0:
+        return None
+    return _parse_max_jobs_from_vars(proc.stdout)
 
 
 def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrapped_log_path: Optional[str] = None, trace_opens: bool = False, argv_log_path: Optional[str] = None, invocation_log_path: Optional[str] = None,
@@ -1196,7 +1283,9 @@ def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrappe
                      jobserver_pool: str = "dynamic",
                      jobserver_capacity: Optional[int] = None,
                      jobserver_ledger_path: Optional[str] = None,
-                     jobserver_status_path: Optional[str] = None) -> int:
+                     jobserver_status_path: Optional[str] = None,
+                     project_max_jobs: Optional[int] = None,
+                     jobserver_decisions_path: Optional[str] = None) -> int:
     """Run cmd (a real `bst` invocation) with the bwrap shim + LD_PRELOAD
     hook active, writing raw START/END lines to raw_log_path. Returns
     cmd's own real exit code - a trace is captured best-effort and must
@@ -1229,7 +1318,11 @@ def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrappe
     given, receives a copy of the controller's per-tick ledger.
     `jobserver_status_path`, when given, receives `{"controller_stopped":
     bool}` - whether `stop()`'s joins actually caught up with the thread
-    before `close_jobserver` runs (UX-845's verifier).
+    before `close_jobserver` runs (UX-845's verifier). `project_max_jobs`
+    (UX-842): the caller's `read_project_max_jobs`, passed through
+    `BST_TRACE_PROJECT_MAX_JOBS` so the shim can tell a pin from a cap;
+    `jobserver_decisions_path`, given, gets one JSON line per sandbox
+    copied out of the scratch beside the FIFO.
     """
     # UX-161: before the build, because after it the same fact is only
     # one of three guesses about a zero-invocation capture.
@@ -1387,6 +1480,10 @@ def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrappe
         jobserver_fd = None
         pool_controller = None
         captured_jobserver_ledger = os.path.join(bind_dir, "jobserver_ledger.jsonl")
+        # UX-842: one JSON line per sandbox - `{element, max_jobs,
+        # decision}` - written by the shim beside the FIFO, so it shares
+        # the FIFO's own lifecycle (only exists under `--jobserver`).
+        captured_decisions = os.path.join(bind_dir, "jobserver_decisions.jsonl")
         if jobserver:
             jobserver_fifo, jobserver_fd, _tokens = open_jobserver(jobserver, bind_dir)
             env["BST_TRACE_JOBSERVER"] = jobserver_fifo
@@ -1400,9 +1497,16 @@ def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrappe
                     jobserver_fd, jobserver, capacity=jobserver_capacity,
                     ledger_path=captured_jobserver_ledger)
                 pool_controller.start()
+            env["BST_TRACE_JOBSERVER_DECISIONS"] = captured_decisions
+            if project_max_jobs is not None:
+                env["BST_TRACE_PROJECT_MAX_JOBS"] = str(project_max_jobs)
+            else:
+                env.pop("BST_TRACE_PROJECT_MAX_JOBS", None)
         else:
             env.pop("BST_TRACE_JOBSERVER", None)
             env.pop("BST_TRACE_JOBSERVER_AUTH", None)
+            env.pop("BST_TRACE_JOBSERVER_DECISIONS", None)
+            env.pop("BST_TRACE_PROJECT_MAX_JOBS", None)
 
         def copy_out():
             """Move everything the shim wrote out of the scratch.
@@ -1443,6 +1547,8 @@ def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrappe
             if (jobserver_ledger_path is not None
                     and os.path.exists(captured_jobserver_ledger)):
                 shutil.copyfile(captured_jobserver_ledger, jobserver_ledger_path)
+            if jobserver_decisions_path is not None and os.path.exists(captured_decisions):
+                shutil.copyfile(captured_decisions, jobserver_decisions_path)
 
         # `UX-378`: the host's own memory, sampled while the build runs.
         # Around the build and nothing else - the census and the shim
@@ -7249,6 +7355,15 @@ def main(argv: Optional[list[str]] = None) -> int:
         # both need the same answer, and `auto` shells out only once.
         jobserver_auth = (jobserver_auth_style(args.jobserver_auth)
                           if args.jobserver else None)
+        # UX-842: read once, before the build, from `bst show` - a pin
+        # (`-j1`) vs. an element-level cap can only be told apart from
+        # what the project's own `max-jobs` is.
+        project_max_jobs = (read_project_max_jobs(args.project_dir, cmd)
+                            if args.jobserver else None)
+        jobserver_decisions_path = (
+            os.path.join(scratch_mkdtemp(args.project_dir, "jobserver-"),
+                        "jobserver_decisions.jsonl")
+            if args.jobserver else None)
         try:
             returncode = run_traced_build(args.project_dir, cmd, raw_log_path,
                                           wrapped_log_path=wrapped_log_path,
@@ -7266,7 +7381,9 @@ def main(argv: Optional[list[str]] = None) -> int:
                                           jobserver_pool=args.jobserver_pool,
                                           jobserver_capacity=args.jobserver_capacity,
                                           jobserver_ledger_path=jobserver_ledger_path,
-                                          jobserver_status_path=jobserver_status_path)
+                                          jobserver_status_path=jobserver_status_path,
+                                          project_max_jobs=project_max_jobs,
+                                          jobserver_decisions_path=jobserver_decisions_path)
         except CaptureInterrupted:
             # UX-157: everything below this point is salvage, and it is
             # the same salvage a failed build already got. The trace was
@@ -7355,6 +7472,12 @@ def main(argv: Optional[list[str]] = None) -> int:
                 }
             else:
                 report["jobserver_pool"] = None
+            # UX-842: the project's own `max-jobs`, and each sandbox's
+            # pinned/joined/capped_pending decision against it - both
+            # `None`/`[]` when the jobserver itself is off.
+            report["project_max_jobs"] = project_max_jobs
+            report["jobserver_decisions"] = read_jobserver_decisions(
+                jobserver_decisions_path)
             with open(args.output, "w", encoding="utf-8") as f:
                 json.dump(report, f, indent=2)
             # UX-296: and the two capacity scalars the store's aggregate

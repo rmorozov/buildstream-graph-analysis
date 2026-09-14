@@ -30,6 +30,7 @@ UX-11's own prototype run).
 import contextlib
 import json
 import os
+import re
 import select
 import signal
 import sys
@@ -202,6 +203,55 @@ def element_from_build_root(path: str) -> Optional[str]:
     return parts[-1] if parts else None
 
 
+# make/autotools compose `MAKEFLAGS: -j%{max-jobs}`; cmake composes
+# `JOBS: -j%{max-jobs}` too, but meson composes `JOBS` as a bare
+# integer (verified: `bst show --format '%{env}'` on a `notparallel`
+# meson element prints `JOBS: 1`, not `JOBS: -j1`) - so `JOBS` alone
+# also accepts a bare int, `MAKEFLAGS` never does.
+_JOB_SETENV_VARS = ("MAKEFLAGS", "JOBS")
+_JOB_FLAG_RE = re.compile(r"-j\s*(\d+)|--jobs=(\d+)")
+_BARE_INT_RE = re.compile(r"^(\d+)$")
+
+JOBSERVER_PINNED = "pinned"
+JOBSERVER_JOINED = "joined"
+JOBSERVER_CAPPED_PENDING = "capped_pending"
+
+
+def parse_element_max_jobs(opts: list[str]) -> Optional[int]:
+    """UX-842/UX-843: the element's own `-jK`, read from BuildStream's
+    own composed `--setenv MAKEFLAGS`/`--setenv JOBS` - the argv-level
+    fact that a `notparallel` pin (`-j1`, or meson's bare `1`) really
+    is. `None` when neither shape matches (no `-j` at all)."""
+    for i, opt in enumerate(opts):
+        if (opt == "--setenv" and i + 2 < len(opts)
+                and opts[i + 1] in _JOB_SETENV_VARS):
+            value = opts[i + 2]
+            match = _JOB_FLAG_RE.search(value)
+            if match:
+                return int(match.group(1) or match.group(2))
+            if opts[i + 1] == "JOBS":
+                bare = _BARE_INT_RE.match(value.strip())
+                if bare:
+                    return int(bare.group(1))
+    return None
+
+
+def jobserver_decision(element_max_jobs: Optional[int],
+                       project_max_jobs: Optional[int]) -> str:
+    """UX-842: `pinned` (`-j1` - no injection at all), `joined` (`-jK`
+    equal to the project's own `max-jobs`, no `-j` entry at all, or the
+    project's `max-jobs` itself unknown - `project_max_jobs_unknown`),
+    `capped_pending` (any other `K` - joins uncapped until `UX-849`'s
+    proxy caps it)."""
+    if element_max_jobs == 1:
+        return JOBSERVER_PINNED
+    if element_max_jobs is None or project_max_jobs is None:
+        return JOBSERVER_JOINED
+    if element_max_jobs == project_max_jobs:
+        return JOBSERVER_JOINED
+    return JOBSERVER_CAPPED_PENDING
+
+
 def build_shim_argv(
     real_bwrap: str,
     bst_args: list[str],
@@ -213,6 +263,7 @@ def build_shim_argv(
     spine: Optional[str] = None,
     jobserver_fd: Optional[int] = None,
     jobserver_fifo: Optional[str] = None,
+    project_max_jobs: Optional[int] = None,
 ) -> list[str]:
     """The real, complete argv to exec: BuildStream's own bwrap options
     first (unmodified, including its own root-filesystem bind), then the
@@ -261,22 +312,29 @@ def build_shim_argv(
     # log path).
     if os.environ.get("BST_TRACE_OPENS"):
         injected += ["--setenv", "BST_TRACE_OPENS", "1"]
-    # UX-679 (spike): `bwrap` passes an inherited fd straight into the
-    # sandbox with no bind - so the FIFO opened by `main` reaches `make`
-    # as a jobserver via one `--setenv`, R and W the same fd (accepted by
-    # GNU Make 4.3).
-    if jobserver_fd is not None:
-        injected += ["--setenv", "MAKEFLAGS",
-                    f"--jobserver-auth={jobserver_fd},{jobserver_fd}"]
-    # UX-841: GNU Make >= 4.4's `fifo:PATH` style - `make` opens PATH
-    # itself inside the sandbox, so no fd is passed; the path must
-    # resolve there, hence a `--bind` of the FIFO onto its own path
-    # (`--ro-bind` is wrong - both the host and the sandbox write it).
-    elif jobserver_fifo is not None:
-        injected += [
-            "--bind", jobserver_fifo, jobserver_fifo,
-            "--setenv", "MAKEFLAGS", f"--jobserver-auth=fifo:{jobserver_fifo}",
-        ]
+    # UX-842: a `notparallel` element's own `-j1` (Direction 20 argument
+    # 1) means this sandbox never joins - no MAKEFLAGS auth, no fifo:
+    # bind, argv byte for byte as without the mode - a pin can be the
+    # workaround for a defect in the native build system, and the mode
+    # must not override it.
+    decision = jobserver_decision(parse_element_max_jobs(opts), project_max_jobs)
+    if decision != JOBSERVER_PINNED:
+        # UX-679 (spike): `bwrap` passes an inherited fd straight into the
+        # sandbox with no bind - so the FIFO opened by `main` reaches `make`
+        # as a jobserver via one `--setenv`, R and W the same fd (accepted by
+        # GNU Make 4.3).
+        if jobserver_fd is not None:
+            injected += ["--setenv", "MAKEFLAGS",
+                        f"--jobserver-auth={jobserver_fd},{jobserver_fd}"]
+        # UX-841: GNU Make >= 4.4's `fifo:PATH` style - `make` opens PATH
+        # itself inside the sandbox, so no fd is passed; the path must
+        # resolve there, hence a `--bind` of the FIFO onto its own path
+        # (`--ro-bind` is wrong - both the host and the sandbox write it).
+        elif jobserver_fifo is not None:
+            injected += [
+                "--bind", jobserver_fifo, jobserver_fifo,
+                "--setenv", "MAKEFLAGS", f"--jobserver-auth=fifo:{jobserver_fifo}",
+            ]
     # UX-106: the ptrace spine, prepended to the sandboxed command so it
     # becomes the parent of everything BuildStream asked to run - which
     # is what makes every descendant its own tracee, and so traceable
@@ -432,6 +490,44 @@ def record_invocation(log_path: Optional[str], invocation_id: int,
             # them is a coverage gap.
             "spine_traced": spine_traced,
         }, sort_keys=True) + "\n"
+        fd = os.open(log_path, os.O_WRONLY | os.O_APPEND | os.O_CREAT, 0o644)
+        try:
+            os.write(fd, line.encode("utf-8"))
+        finally:
+            os.close(fd)
+        return True
+    except Exception:
+        return False
+
+
+def record_jobserver_decision(log_path: Optional[str], opts: list[str],
+                              element: Optional[str],
+                              project_max_jobs: Optional[int]) -> bool:
+    """UX-842: one JSON line per sandbox - `{element, max_jobs,
+    decision}` - beside the FIFO in the capture scratch. When the shim
+    could not name the element (`extract_element_name` found no
+    `--dir`), falls back to the sandbox's own `--chdir`, then to the
+    `-j` value itself, and says so with `element_unresolved`. Never
+    raises, same contract as `record_diagnostics`."""
+    if not log_path:
+        return False
+    try:
+        element_max_jobs = parse_element_max_jobs(opts)
+        decision = jobserver_decision(element_max_jobs, project_max_jobs)
+        name, unresolved = element, False
+        if name is None:
+            unresolved = True
+            for i, opt in enumerate(opts):
+                if opt == "--chdir" and i + 1 < len(opts):
+                    name = opts[i + 1]
+                    break
+            if name is None and element_max_jobs is not None:
+                name = f"-j{element_max_jobs}"
+        record = {"element": name, "max_jobs": element_max_jobs,
+                 "decision": decision}
+        if unresolved:
+            record["element_unresolved"] = True
+        line = json.dumps(record, sort_keys=True) + "\n"
         fd = os.open(log_path, os.O_WRONLY | os.O_APPEND | os.O_CREAT, 0o644)
         try:
             os.write(fd, line.encode("utf-8"))
@@ -646,6 +742,16 @@ def open_jobserver_fd() -> tuple[Optional[int], Optional[str]]:
     return fd, None
 
 
+def _project_max_jobs_env() -> Optional[int]:
+    """UX-842: `BST_TRACE_PROJECT_MAX_JOBS`, parsed defensively - unset
+    or unparseable both mean "unknown", and every `-jK` then joins."""
+    raw = os.environ.get("BST_TRACE_PROJECT_MAX_JOBS")
+    try:
+        return int(raw) if raw else None
+    except ValueError:
+        return None
+
+
 SELF_TEST_ARGV = "--bga-shim-self-test"
 
 
@@ -723,6 +829,11 @@ def main() -> int:
     # shadowing or the exec. It captures nothing, deliberately.
     inject = os.environ.get("BST_TRACE_NO_INJECT") != "1"
     jobserver_fd, jobserver_fifo = open_jobserver_fd()
+    project_max_jobs = _project_max_jobs_env()
+    record_jobserver_decision(
+        os.environ.get("BST_TRACE_JOBSERVER_DECISIONS"), sys.argv[1:],
+        element, project_max_jobs,
+    )
     if inject:
         argv = build_shim_argv(real_bwrap, sys.argv[1:], bind_src, bind_dst,
                                preload_so, trace_log,
@@ -734,7 +845,8 @@ def main() -> int:
                                # already uses.
                                spine=spine,
                                jobserver_fd=jobserver_fd,
-                               jobserver_fifo=jobserver_fifo)
+                               jobserver_fifo=jobserver_fifo,
+                               project_max_jobs=project_max_jobs)
     else:
         argv = [real_bwrap, *sys.argv[1:]]
 

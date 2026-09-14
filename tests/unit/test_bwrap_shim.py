@@ -13,7 +13,16 @@ during that Deep Experiment - real option ordering/arity, not invented.
 """
 import os
 
-from tools.native_trace.bwrap_shim import build_shim_argv, extract_element_name, split_bwrap_args
+from tools.native_trace.bwrap_shim import (
+    JOBSERVER_CAPPED_PENDING,
+    JOBSERVER_JOINED,
+    JOBSERVER_PINNED,
+    build_shim_argv,
+    extract_element_name,
+    jobserver_decision,
+    parse_element_max_jobs,
+    split_bwrap_args,
+)
 
 REAL_BWRAP_ARGV = [
     "--unshare-pid", "--die-with-parent",
@@ -247,6 +256,128 @@ def test_build_shim_argv_injects_one_makeflags_setenv_naming_a_real_open_fd():
             "--setenv", "MAKEFLAGS", f"--jobserver-auth={read_fd},{read_fd}",
         ]
         os.fstat(read_fd)  # the fd named is real and still open
+    finally:
+        os.close(read_fd)
+        os.close(write_fd)
+
+
+# --- pinned/joined/capped_pending decisions (UX-842) -----------------------
+
+def _bwrap_argv_with_job_setenv(var, value):
+    """REAL_BWRAP_ARGV, with its `--setenv JOBS -j4` triple replaced by
+    `--setenv var value` - the argv-level fact a real `notparallel`
+    element (`-j1`) or an element-level cap (any other `-jK`) is."""
+    argv = list(REAL_BWRAP_ARGV)
+    idx = argv.index("JOBS")
+    argv[idx - 1:idx + 2] = ["--setenv", var, value]
+    return argv
+
+
+def test_a_pinned_elements_makeflags_j1_leaves_the_argv_unchanged():
+    """`-j1` - the Motivation's `notparallel` pin - means the shim
+    injects nothing for the jobserver mode at all: the argv with
+    jobserver_fd given is byte for byte the argv without it."""
+    pinned_argv = _bwrap_argv_with_job_setenv("MAKEFLAGS", "-j1")
+    read_fd, write_fd = os.pipe()
+    try:
+        kwargs = dict(
+            real_bwrap="/usr/bin/bwrap",
+            bst_args=pinned_argv,
+            bind_src="/tmp/host-trace-dir",
+            bind_dst="/tmp/.bst-native-trace",
+            preload_so="/tmp/.bst-native-trace/hook.so",
+            trace_log="/tmp/.bst-native-trace/trace.log",
+        )
+        with_mode = build_shim_argv(jobserver_fd=read_fd, project_max_jobs=4, **kwargs)
+        without_mode = build_shim_argv(**kwargs)
+
+        assert with_mode == without_mode
+        assert not any(tok.startswith("--jobserver-auth") for tok in with_mode)
+        assert jobserver_decision(parse_element_max_jobs(split_bwrap_args(pinned_argv)[0]), 4) == JOBSERVER_PINNED
+    finally:
+        os.close(read_fd)
+        os.close(write_fd)
+
+
+def test_a_mesons_bare_integer_jobs_of_1_is_also_pinned():
+    """UX-843: meson composes `JOBS` as a bare integer, not `-jN`
+    (verified against installed `buildstream-plugins` 2.7.0: `bst show
+    --format '%{env}'` on a `notparallel` meson element prints
+    `JOBS: 1`). Before this shape was parsed, `parse_element_max_jobs`
+    returned `None` for it, the decision was `joined`, and the auth was
+    injected - the exact bug this row exists to close."""
+    pinned_argv = _bwrap_argv_with_job_setenv("JOBS", "1")
+    read_fd, write_fd = os.pipe()
+    try:
+        kwargs = dict(
+            real_bwrap="/usr/bin/bwrap",
+            bst_args=pinned_argv,
+            bind_src="/tmp/host-trace-dir",
+            bind_dst="/tmp/.bst-native-trace",
+            preload_so="/tmp/.bst-native-trace/hook.so",
+            trace_log="/tmp/.bst-native-trace/trace.log",
+        )
+        with_mode = build_shim_argv(jobserver_fd=read_fd, project_max_jobs=4, **kwargs)
+        without_mode = build_shim_argv(**kwargs)
+
+        assert with_mode == without_mode
+        assert not any(tok.startswith("--jobserver-auth") for tok in with_mode)
+        assert parse_element_max_jobs(split_bwrap_args(pinned_argv)[0]) == 1
+        assert jobserver_decision(1, 4) == JOBSERVER_PINNED
+    finally:
+        os.close(read_fd)
+        os.close(write_fd)
+
+
+def test_an_element_at_the_projects_own_max_jobs_joins():
+    """`-jK` equal to the project's own `max-jobs` (read once by the
+    tracer from `bst show`) joins uncapped, exactly as today."""
+    argv = _bwrap_argv_with_job_setenv("JOBS", "-j8")
+    read_fd, write_fd = os.pipe()
+    try:
+        result = build_shim_argv(
+            real_bwrap="/usr/bin/bwrap",
+            bst_args=argv,
+            bind_src="/tmp/host-trace-dir",
+            bind_dst="/tmp/.bst-native-trace",
+            preload_so="/tmp/.bst-native-trace/hook.so",
+            trace_log="/tmp/.bst-native-trace/trace.log",
+            jobserver_fd=read_fd,
+            project_max_jobs=8,
+        )
+
+        setenv_makeflags = [i for i, tok in enumerate(result)
+                            if tok == "--setenv" and result[i + 1] == "MAKEFLAGS"]
+        assert len(setenv_makeflags) == 1
+        assert jobserver_decision(8, 8) == JOBSERVER_JOINED
+    finally:
+        os.close(read_fd)
+        os.close(write_fd)
+
+
+def test_an_element_capped_above_the_project_default_records_capped_pending_and_joins():
+    """`-jK` unequal to the project's `max-jobs` is an element-level
+    cap; until `UX-849`'s proxy it joins uncapped and is recorded
+    `capped_pending`, not `joined` - the two must stay distinguishable
+    even though the injected argv is identical today."""
+    argv = _bwrap_argv_with_job_setenv("JOBS", "-j16")
+    read_fd, write_fd = os.pipe()
+    try:
+        result = build_shim_argv(
+            real_bwrap="/usr/bin/bwrap",
+            bst_args=argv,
+            bind_src="/tmp/host-trace-dir",
+            bind_dst="/tmp/.bst-native-trace",
+            preload_so="/tmp/.bst-native-trace/hook.so",
+            trace_log="/tmp/.bst-native-trace/trace.log",
+            jobserver_fd=read_fd,
+            project_max_jobs=8,
+        )
+
+        setenv_makeflags = [i for i, tok in enumerate(result)
+                            if tok == "--setenv" and result[i + 1] == "MAKEFLAGS"]
+        assert len(setenv_makeflags) == 1  # joins uncapped, same injection as `joined`
+        assert jobserver_decision(16, 8) == JOBSERVER_CAPPED_PENDING
     finally:
         os.close(read_fd)
         os.close(write_fd)

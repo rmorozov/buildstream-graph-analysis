@@ -1,6 +1,6 @@
 # UX-839: the clone-size claim is half what a clone now costs
 
-**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** UX-551 (a machine-dependent figure is not reproducible), UX-779 (the wall-clock guard this extends) | **Found by:** review 23 | **Serves:** someone deciding whether `--single-branch` is worth typing | **Topic:** docs | **Area:** unassigned | **Shape:** judgement
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-551 (a machine-dependent figure is not reproducible), UX-779 (the wall-clock guard this extends) | **Found by:** review 23 | **Serves:** someone deciding whether `--single-branch` is worth typing | **Topic:** docs | **Area:** unassigned | **Shape:** judgement
 
 ## Motivation
 
@@ -98,3 +98,8 @@ both substrings) pick up `--heads` from the neighbouring
 `git ls-remote --heads` clause as a bogus documented clone flag (5 red).
 Rewritten to `git clone` / `git clone --single-branch` "of this
 repository" without repeating the URL; both files pass together.
+
+Deviation: none. The first draft restated the clone URL in the
+parenthetical and tripped `test_a_clone_without_the_archive.py`'s
+same-line flag scan on the neighbouring `--heads`; the sentence names
+the commands without the URL.

@@ -15,12 +15,12 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-849 scenarios: **11 open**, 838 closed.
+849 scenarios: **10 open**, 839 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
-| capture | 8 | 106 |
+| capture | 7 | 106 |
 | analysis | 1 | 116 |
 | contracts | 1 | 50 |
 | viewer | 0 | 173 |
@@ -39,7 +39,6 @@ task file, which is the only place it ever lived twice.
 | UX-842 | [a pinned element never joins the jobserver](UX-0842-a-pinned-element-never-joins-the-jobserver.md) | capture | High | R2 (an element pinned for a build-system defect keeps its pin) | 🔴 Not Started |
 | UX-843 | [the per-kind environment table, and the ninja that cannot join](UX-0843-the-per-kind-environment-table-and-the-ninja-that-cannot-join.md) | capture | High | R4 (cmake and meson elements join instead of resetting the jobserver) | 🔴 Not Started |
 | UX-844 | [the cache key is equal with and without the jobserver](UX-0844-the-cache-key-is-equal-with-and-without-the-jobserver.md) | guards | High | R4 (artifacts built either way are shared) | 🔴 Not Started |
-| UX-845 | [the pool follows the machine, not the load average](UX-0845-the-pool-follows-the-machine-not-the-load-average.md) | capture | High | R4 (a build whose elements alternate compile-bound and link-bound) | 🔴 Not Started |
 | UX-846 | [a tool that will not read the pipe holds tokens instead](UX-0846-a-tool-that-will-not-read-the-pipe-holds-tokens-instead.md) | capture | High | R4 (links stop oversubscribing under the mode) | 🔴 Not Started |
 | UX-847 | [the token ledger lands in Plane 2 and the page](UX-0847-the-token-ledger-lands-in-plane-2-and-the-page.md) | analysis | Medium | R4 and R5 (was the pool or the graph the bound) | 🔴 Not Started |
 | UX-848 | [a compile-bound example is the jobserver's evaluation](UX-0848-a-compile-bound-example-is-the-jobservers-evaluation.md) | capture | High | R4 (the number round 112 asked for) | 🔴 Not Started |

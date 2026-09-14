@@ -247,6 +247,7 @@ pairing for every merged row from round 103 on.
 | 116 | implementer | sonnet | `UX-830` the serial chains ranked (judgement, decision in the brief) | 825k | 449 | 89 m | merged after a HOLD; top 40 chains by weighted duration, members folded; the walk stopped at join nodes at the HOLD, with a diamond guard; page budgets moved for the new table | four pre-existing reds proved by stash round-trips; the volume guard was not selected until a later commit touched the styleguide |
 | 116 | verifier | sonnet | verify `UX-830` | 72k | 63 | 17.4 m | HOLD, three findings: chains through join nodes on a constructed diamond, the §3a row, a claim golden contradicts | the touching sweep past the tool timeout; the diamond had to be constructed - no fixture has one |
 | 116 | general-purpose | sonnet | architecture review 23 (`review`), over rounds 114-116's documents | 200k | 117 | 13.2 m | three filings, `UX-838` to `UX-840`; the §3e table corrected at filing; the cadence guard green at 834 rows | a clone measured for the README figure; the review ran at the gate because the cadence guard reddened there |
+| 117 | researcher | sonnet | the jobserver facts in the tree and the installed BuildStream (`researcher`) | 149k | 60 | 12.1 m | five answers with citations: the key composed at load time, the plugins nocache JOBS/MAKEFLAGS, ninja 1.11 no client, no PSI, the spike joined the pinned element | `bst` refuses a direct invocation in the sandbox; a subprocess heredoc answered |
 
 Round 101's four tracks are **not** here: this session could not
 identify their transcripts with certainty after a context rebuild, and
@@ -259,7 +260,7 @@ committed cleanly once told to run in the foreground. Three of the five
 left a derived figure or a §6 context-map row behind - the same class
 the round itself was about, arriving in the tracks' own work.
 
-What the two hundred and thirty rows already say: a researcher that reads a document
+What the two hundred and thirty-one rows already say: a researcher that reads a document
 whole costs 100-180k; a walker that drives every control costs 336k;
 the two cuts cost a re-run each. The `walk` and `design-review`
 skills fix the report shape so the next rows are smaller, and the

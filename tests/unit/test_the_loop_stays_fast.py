@@ -126,7 +126,12 @@ class TestTheSelectorStillSelects:
     #
     # Round 116 added seven test files over nineteen rows; measured
     # median 37, p90 57, max 152 over 539 files. Max 152 -> 154, +2.
-    CEILING = {"median": 38, "p90": 60, "max": 154}
+    #
+    # Round 119 added four test files over five rows (the snapshot
+    # switch, the broker's memory sum and leak audit, the probe's
+    # guard); measured median 37, p90 58, max 155 over 551 files.
+    # Max 154 -> 157, +2 headroom as above.
+    CEILING = {"median": 38, "p90": 60, "max": 157}
     POPULATION_FLOOR = 60
     #: `UX-645`: **13 census + 14 of your own**. The census floor is
     #: inside this bound because those files run - the figure is what

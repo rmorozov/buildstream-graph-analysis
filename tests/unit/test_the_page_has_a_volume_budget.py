@@ -39,6 +39,7 @@ the next person to raise it rather than to think.
 """
 import collections
 import pathlib
+import re
 import sys
 
 import pytest
@@ -741,6 +742,47 @@ class TestTheBudgetIsWrittenWhereItIsRead:
             assert f"{number:,}" in section, (
                 f"§3e does not state the {number:,} bound this file "
                 f"asserts")
+
+    def test_the_summary_rows_match_the_budgets_structurally(self):
+        """`UX-840`: the membership clause above is satisfied by a
+        number appearing *anywhere* in §3e, including inside a delta
+        sentence like `UX-830`'s own "36,900 -> 38,200" - so a summary
+        row that never caught up to the last delta was invisible to it.
+        This parses each `budget, to N elts` row's five numbers -
+        landed, opened, words, controls, nodes - and checks them against
+        this file's own tuple for that class, not against prose beside
+        it.
+
+        The landed column is not part of `BUDGETS`: one bound,
+        `LANDED_HEIGHT_PX`, is asserted for every class
+        (`TestBothBudgetsAreBound.test_the_landed_page_is_short`), so a
+        row's landed cell is checked against that constant rather than
+        against a per-class figure.
+        """
+        text = (REPO / "docs/design/styleguide.md").read_text(encoding="utf-8")
+        section = text.split("## 3e.", 1)[1].split("\n## ", 1)[0]
+        row_re = re.compile(
+            r"budget, to ([\d,]+) elts\s+([\d,]+)\s+([\d,]+)\s+([\d,]+)"
+            r"\s+([\d,]+)\s+([\d,]+)")
+        found = {}
+        for match in row_re.finditer(section):
+            klass = int(match.group(1).replace(",", ""))
+            landed, opened, words, controls, nodes = (
+                int(group.replace(",", "")) for group in match.groups()[1:])
+            found[klass] = (landed, opened, words, controls, nodes)
+        for row in BUDGETS:
+            klass, opened, words, controls, nodes = row
+            assert klass in found, (
+                f"§3e states no 'budget, to {klass:,} elts' summary row "
+                f"for a class this file bounds")
+            landed, *rest = found[klass]
+            assert tuple(rest) == (opened, words, controls, nodes), (
+                f"§3e's 'to {klass:,} elts' row reads "
+                f"{found[klass][1:]}, not this file's {row[1:]}")
+            assert landed == LANDED_HEIGHT_PX, (
+                f"§3e's 'to {klass:,} elts' row states a landed height "
+                f"of {landed:,} px; every class shares the one landed "
+                f"bound, {LANDED_HEIGHT_PX:,}")
 
     def test_the_size_classes_are_stated_too(self):
         """A budget per class is only readable if the guide says which

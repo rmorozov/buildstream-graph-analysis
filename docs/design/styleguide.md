@@ -627,7 +627,7 @@ in it hidden, and the class is bounded at both ends:
                  elements   landed   opened    words   controls    nodes
 scale               1,202    5,007   26,584    8,259        787    4,732
 xl                  4,002    4,937   27,230    8,275        812    4,960
-budget, to 4,100 elts          7,000   36,500    9,600        900    6,000
+budget, to 4,100 elts          7,300   36,500    9,600        900    6,000
 ```
 
 Height does not move at all — a bounded row costs no pixels, which is

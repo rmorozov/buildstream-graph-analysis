@@ -73,3 +73,49 @@ cell (`38,200` back to `36,900`) with the narrative paragraph left
 alone — the new clause reds by cell, where
 `test_the_style_guide_states_every_budget` stays green throughout,
 proving which guard the fix depends on.
+
+## Outcome
+
+**Gap measured.** With the two rows already hand-corrected (round 116's
+gate), `test_the_style_guide_states_every_budget` was green against a
+row that has since drifted again: the 4,100-class row's landed cell
+read `7,000`, but `LANDED_HEIGHT_PX` - the one bound shared by every
+class (`TestBothBudgetsAreBound.test_the_landed_page_is_short`) - is
+`7,300`. The membership clause passed because `7,000` never appears as
+a number this file asserts, so nothing checked the cell at all.
+
+**Row moved.** `docs/design/styleguide.md:630`, `budget, to 4,100
+elts`: landed `7,000` -> `7,300`. The 50-class row (line 603) already
+read the guard's tuple exactly and needed no change. The `4,000`-elt
+row inside the round-66 historical block (line 606) is untouched - it
+is the pre-`UX-526` reading the narrative right after it supersedes,
+not a live summary row, and its class is not in `BUDGETS`.
+
+**Close measured.**
+`python3 -m pytest tests/unit/test_the_page_has_a_volume_budget.py -q`
+
+```text
+26 passed, 2 skipped in 55.71s
+```
+
+New clause alone:
+
+```text
+TestTheBudgetIsWrittenWhereItIsRead::test_the_style_guide_states_every_budget PASSED
+TestTheBudgetIsWrittenWhereItIsRead::test_the_summary_rows_match_the_budgets_structurally PASSED
+TestTheBudgetIsWrittenWhereItIsRead::test_the_size_classes_are_stated_too PASSED
+```
+
+**Mutation table.**
+
+| mutation | reddened | old guard |
+|---|---|---|
+| `docs/design/styleguide.md:603` `38,200` -> `36,900` (narrative paragraph at line 733 left alone) | `test_the_summary_rows_match_the_budgets_structurally`: `"§3e's 'to 50 elts' row reads (36900, 12800, 800, 7900), not this file's (38200, 12800, 800, 7900)"` | `test_the_style_guide_states_every_budget` stayed **PASSED** (1 failed, 2 passed) |
+
+Reverted from the scratch copy (`falsify` step 4), re-ran:
+
+```text
+TestTheBudgetIsWrittenWhereItIsRead::test_the_style_guide_states_every_budget PASSED
+TestTheBudgetIsWrittenWhereItIsRead::test_the_summary_rows_match_the_budgets_structurally PASSED
+TestTheBudgetIsWrittenWhereItIsRead::test_the_size_classes_are_stated_too PASSED
+```

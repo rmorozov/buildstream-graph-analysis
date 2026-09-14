@@ -11,16 +11,20 @@ import time
 from tools import bst_native_build_tracer as tracer
 
 
-def _controller(tmp_path, ceiling=4, capacity=4, **kwargs):
+def _controller(tmp_path, ceiling=4, capacity=4, psi_path=None, **kwargs):
     path, fd, tokens = tracer.open_jobserver(ceiling, str(tmp_path))
     assert tokens == ceiling - 1
     ledger = str(tmp_path / "ledger.jsonl")
     # Pinned away from /proc/pressure/cpu: CI's runner has it (avg10
     # 19.31 on 2026-09-14), this box does not, and a scripted series
-    # must read the same on both.
-    kwargs.setdefault("psi_path", str(tmp_path / "no-psi"))
+    # must read the same on both. UX-850: `PoolController`'s own
+    # arg-count cap folded this into `psi_paths` - kept as a `psi_path`
+    # kwarg here so every existing call site stays unchanged.
+    psi_path = psi_path or str(tmp_path / "no-psi")
     pc = tracer.PoolController(fd, ceiling, capacity=capacity,
-                               ledger_path=ledger, **kwargs)
+                               ledger_path=ledger,
+                               psi_paths={"cpu": psi_path, "memory": str(tmp_path / "no-memory-psi")},
+                               **kwargs)
     return pc, path, fd, ledger
 
 
@@ -166,7 +170,8 @@ class TestStopActuallyWaitsForTheThread:
     def test_a_slow_tick_in_flight_is_still_caught_by_the_second_join(self, tmp_path):
         path, fd, tokens = tracer.open_jobserver(4, str(tmp_path))
         pc = tracer.PoolController(fd, 4, capacity=4,
-                                   psi_path=str(tmp_path / "no-psi"))
+                                   psi_paths={"cpu": str(tmp_path / "no-psi"),
+                                              "memory": str(tmp_path / "no-memory-psi")})
 
         def slow_fake_sample():
             time.sleep(1.5)  # longer than the first join (interval_s + 1.0 = 1.25s)

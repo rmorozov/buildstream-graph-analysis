@@ -1116,8 +1116,12 @@ JOBSERVER_POOL_PSI_BOUND = 10.0
 #: process table - decoupled from the pool's own 250ms cadence, since a
 #: `kill(pid, 0)` sweep is a different concern at a different price.
 JOBSERVER_AUDIT_INTERVAL_S = 1.0
+#: UX-850: memory's own bound, same reading, same threshold - a second
+#: axis the CPU one says nothing about.
+JOBSERVER_POOL_MEMORY_PSI_BOUND = 10.0
 
 _PSI_CPU_PATH = "/proc/pressure/cpu"
+_PSI_MEMORY_PATH = "/proc/pressure/memory"
 
 #: UX-844: `bst show`'s own timeout for the pre-build cache key set -
 #: generous because a cold project can still be resolving sources.
@@ -1174,6 +1178,30 @@ def summarize_jobserver_ledger(path: str, ceiling: int) -> tuple[int, int, int]:
     except OSError:
         return 0, ceiling - 1, ceiling - 1
     return moves, pool_min, pool_max
+
+
+def count_memory_psi_withdraws(path: str) -> int:
+    """UX-850: `withdraw` rows the memory-PSI bound caused, in the same
+    ledger `summarize_jobserver_ledger` reads - distinguished only by
+    `_handle_overload`'s own `memory psi ...` reason text, so no schema
+    change to the row itself was needed."""
+    count = 0
+    try:
+        with open(path, encoding="utf-8") as handle:
+            for line in handle:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    row = json.loads(line)
+                except ValueError:
+                    continue
+                if (row.get("action") == "withdraw"
+                        and str(row.get("reason", "")).startswith("memory psi")):
+                    count += 1
+    except OSError:
+        return 0
+    return count
 
 
 def hash_cache_key_lines(text: str) -> dict:
@@ -1326,16 +1354,26 @@ class PoolController:
     """
 
     def __init__(self, fd: int, ceiling: int, capacity: Optional[int] = None,
-                 ledger_path: Optional[str] = None, psi_path: Optional[str] = None):
+                 ledger_path: Optional[str] = None,
+                 psi_paths: Optional[dict] = None):
+        """`psi_paths` (UX-850's own arg-count cap, `Broker`'s `scratch`
+        one class up): `{"cpu": path, "memory": path}`, both optional -
+        `None`/absent resolves to the real `/proc/pressure/*` file, so a
+        guard scripts either or both away from the host's own."""
+        psi_paths = psi_paths or {}
         self.fd = fd
         self.ceiling = ceiling
         self.capacity = capacity if capacity is not None else (os.cpu_count() or 1)
         # Resolved at call time so a guard can point it away from the
         # host's own file - CI's runner has PSI, this box does not.
-        self.psi_path = psi_path if psi_path is not None else _PSI_CPU_PATH
+        self.psi_path = psi_paths.get("cpu") or _PSI_CPU_PATH
         self.psi_present = os.path.exists(self.psi_path)
+        self.psi_memory_path = psi_paths.get("memory") or _PSI_MEMORY_PATH
+        self.psi_memory_present = os.path.exists(self.psi_memory_path)
+        self.memory_psi_withdraws = 0
         self.interval_s = JOBSERVER_POOL_INTERVAL_S
         self.psi_bound = JOBSERVER_POOL_PSI_BOUND
+        self.memory_psi_bound = JOBSERVER_POOL_MEMORY_PSI_BOUND
         # Matches what `open_jobserver` already seeded: the FIFO starts
         # holding `ceiling - 1` tokens, and this is that same count kept
         # host-side - never below zero, never above `ceiling - 1`.
@@ -1379,10 +1417,13 @@ class PoolController:
             raise
 
     def _handle_overload(self, busy_cores: float, psi_some10: Optional[float],
-                          psi_over: bool) -> tuple[str, str]:
+                          psi_over: bool, psi_mem10: Optional[float] = None,
+                          psi_mem_over: bool = False) -> tuple[str, str]:
         """`busy_cores`/PSI is over the bound - withdraw one token, unless
         the pool is already empty (the verifier's floor edge: nothing to
-        read, so no attempt is made and no move is counted)."""
+        read, so no attempt is made and no move is counted). UX-850:
+        memory PSI is checked first so its reason - `_handle_overload`'s
+        `memory psi` text - survives even when CPU is also over."""
         self._below_streak = 0
         if self.pool == 0:
             return "hold", "pool at floor"
@@ -1390,8 +1431,12 @@ class PoolController:
         if self._try_withdraw():
             self.pool -= 1
             action = "withdraw"
-        reason = (f"psi {psi_some10}>{self.psi_bound}" if psi_over
-                  else f"busy {busy_cores}>capacity {self.capacity}")
+        if psi_mem_over:
+            reason = f"memory psi {psi_mem10}>{self.memory_psi_bound}"
+        elif psi_over:
+            reason = f"psi {psi_some10}>{self.psi_bound}"
+        else:
+            reason = f"busy {busy_cores}>capacity {self.capacity}"
         return action, reason
 
     def _handle_underload(self, busy_cores: float) -> tuple[str, str]:
@@ -1405,19 +1450,24 @@ class PoolController:
         return "hold", f"busy {busy_cores}<capacity-1, streak {self._below_streak}"
 
     def tick(self, busy_cores: Optional[float] = None,
-             psi_some10: Optional[float] = None) -> dict:
+             psi_some10: Optional[float] = None,
+             psi_mem10: Optional[float] = None) -> dict:
         """One control step - the whole decision, callable directly by
-        the guard with a scripted `(busy_cores, psi_some10)` pair, or by
-        `run()` with both left `None` to read `/proc`."""
+        the guard with a scripted `(busy_cores, psi_some10, psi_mem10)`
+        triple, or by `run()` with all three left `None` to read `/proc`."""
         if busy_cores is None:
             busy_cores = self._sample_busy_cores()
         if psi_some10 is None and self.psi_present:
             psi_some10 = read_psi_some_avg10(self.psi_path)
+        if psi_mem10 is None and self.psi_memory_present:
+            psi_mem10 = read_psi_some_avg10(self.psi_memory_path)
         action, reason = "hold", "no sample yet"
         if busy_cores is not None:
             psi_over = psi_some10 is not None and psi_some10 > self.psi_bound
-            if busy_cores > self.capacity or psi_over:
-                action, reason = self._handle_overload(busy_cores, psi_some10, psi_over)
+            psi_mem_over = psi_mem10 is not None and psi_mem10 > self.memory_psi_bound
+            if busy_cores > self.capacity or psi_over or psi_mem_over:
+                action, reason = self._handle_overload(
+                    busy_cores, psi_some10, psi_over, psi_mem10, psi_mem_over)
             elif busy_cores < self.capacity - 1:
                 action, reason = self._handle_underload(busy_cores)
             else:
@@ -1425,9 +1475,11 @@ class PoolController:
                 reason = f"busy {busy_cores} within band"
         if action in ("add", "withdraw"):
             self.moves += 1
+            if action == "withdraw" and psi_mem_over:
+                self.memory_psi_withdraws += 1
         row = {"t_us": int(time.time() * 1_000_000), "busy_cores": busy_cores,
-               "psi_some10": psi_some10, "pool": self.pool, "action": action,
-               "reason": reason}
+               "psi_some10": psi_some10, "psi_mem10": psi_mem10,
+               "pool": self.pool, "action": action, "reason": reason}
         if self.ledger_path:
             with open(self.ledger_path, "a", encoding="utf-8") as handle:
                 handle.write(json.dumps(row, separators=(",", ":")) + "\n")
@@ -1521,6 +1573,42 @@ def read_plan_slack(path: Optional[str]) -> dict:
     return dict(slack) if isinstance(slack, dict) else {}
 
 
+def read_plan_peak_rss(path: Optional[str]) -> dict:
+    """UX-850: the same `analyze.json` `read_plan_slack` reads, this time
+    `{element: peak_rss_bytes}` from `elements.peak_rss_bytes`. `{}` on
+    any failure or absence - the caller then withholds nothing, same
+    posture as `read_plan_slack`."""
+    if not path:
+        return {}
+    try:
+        with open(path, encoding="utf-8") as handle:
+            data = json.load(handle)
+    except (OSError, ValueError):
+        return {}
+    peak = data.get("elements", {}).get("peak_rss_bytes", {})
+    return dict(peak) if isinstance(peak, dict) else {}
+
+
+#: UX-850: `/proc/meminfo`'s own path, parameterised the same way
+#: `_PSI_CPU_PATH` is - a guard scripts it, `Broker` reads the real file.
+_MEMINFO_PATH = "/proc/meminfo"
+
+
+def read_mem_available_bytes(path: str = _MEMINFO_PATH) -> Optional[int]:
+    """`MemAvailable` from `/proc/meminfo`, in bytes so it compares
+    directly against `peak_rss_bytes`. `None` on any failure (missing
+    file, unreadable, no `MemAvailable` line) - the caller then
+    withholds nothing rather than guess."""
+    try:
+        with open(path, encoding="utf-8") as handle:
+            for line in handle:
+                if line.startswith("MemAvailable:"):
+                    return int(line.split()[1]) * 1024
+    except (OSError, ValueError, IndexError):
+        return None
+    return None
+
+
 def create_jobserver_proxies(proxies_dir: str, elements: dict) -> dict:
     """UX-849: one FIFO per element named in `elements` (the kinds map -
     every element `bst show` resolved), under `proxies_dir`. Returns
@@ -1562,9 +1650,11 @@ class Broker:
                  scratch: Optional[dict] = None):
         """`scratch` (UX-849's own arg-count cap, the `kind_context`
         shape `_resolve_kind_and_probe` already uses one module over):
-        `{"decisions": path, "proxies_dir": path}`, the two inputs
-        `poll()`'s file scan reads - both optional, `None` for a guard
-        driving `tick()`/`note_running`/`note_done` directly."""
+        `{"decisions": path, "proxies_dir": path, "peak_rss": {element:
+        bytes}, "meminfo_path": path}` - UX-850 added the last two, the
+        per-element planned peak RSS and where to read `MemAvailable`
+        from, both optional (`{}`/the real file) for a guard driving
+        `tick()`/`note_running`/`note_done` directly."""
         scratch = scratch or {}
         self.global_fd = global_fd
         self.proxy_fds = dict(proxy_fds)
@@ -1578,6 +1668,12 @@ class Broker:
         self.ledger_path = ledger_path
         self.decisions_path = scratch.get("decisions")
         self.proxies_dir = scratch.get("proxies_dir")
+        # UX-850: memory is a second resource the pool reads - withheld
+        # when granting would push an element's held tokens past what
+        # its own planned peak RSS leaves room for.
+        self.peak_rss = dict(scratch.get("peak_rss") or {})
+        self.meminfo_path = scratch.get("meminfo_path") or _MEMINFO_PATH
+        self.memory_withheld = 0
         self._decisions_read = 0
         self._done_seen: set = set()
         self.interval_s = JOBSERVER_BROKER_INTERVAL_S
@@ -1588,6 +1684,24 @@ class Broker:
 
     def slack_for(self, element: str):
         return self.plan.get(element, self.median_slack)
+
+    def _memory_gate(self, element: str, grant_n: int,
+                      mem_available: Optional[int]) -> int:
+        """UX-850: `grant_n` if granting it still fits the element's
+        planned peak RSS against `MemAvailable`, else 0 and a ledger row.
+        Whole-or-nothing per tick - a shrunk grant is still a decision
+        this tick's later elements would have to re-derive room for."""
+        peak = self.peak_rss.get(element)
+        if peak is None or mem_available is None:
+            return grant_n
+        held_after = 1 + self.granted[element] + grant_n  # +1: implicit
+        if mem_available >= peak * held_after:
+            return grant_n
+        self.memory_withheld += 1
+        self._log({"event": "memory_withheld", "element": element,
+                   "tokens": grant_n, "mem_available": mem_available,
+                   "peak_rss": peak, "t": time.time()})
+        return 0
 
     def _cap_for(self, element: str) -> Optional[int]:
         max_jobs = self.element_max_jobs.get(element)
@@ -1650,6 +1764,10 @@ class Broker:
             return
         order = sorted((self.running & self.proxy_fds.keys()),
                        key=lambda element: (self.slack_for(element), element))
+        # UX-850: read once per tick, not per element - `MemAvailable`
+        # moves on the host's own clock, not the broker's ordering.
+        mem_available = (read_mem_available_bytes(self.meminfo_path)
+                         if self.peak_rss else None)
         remaining = moved
         for element in order:
             if remaining <= 0:
@@ -1657,6 +1775,9 @@ class Broker:
             cap = self._cap_for(element)
             room = remaining if cap is None else max(0, cap - self.granted[element])
             grant_n = min(remaining, room)
+            if grant_n <= 0:
+                continue
+            grant_n = self._memory_gate(element, grant_n, mem_available)
             if grant_n <= 0:
                 continue
             os.write(self.proxy_fds[element], b"+" * grant_n)
@@ -2122,7 +2243,8 @@ def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrappe
                     jobserver_fd, proxy_fds, read_plan_slack(plan_path),
                     ledger_path=captured_jobserver_ledger,
                     scratch={"decisions": captured_decisions,
-                            "proxies_dir": proxies_dir})
+                            "proxies_dir": proxies_dir,
+                            "peak_rss": read_plan_peak_rss(plan_path)})
                 broker.start()
             else:
                 env.pop("BST_TRACE_PROXY_DIR", None)
@@ -2227,6 +2349,7 @@ def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrappe
                             "grants": broker.grants, "drains": broker.drains,
                             "elements_in_plan": len(broker.plan),
                             "elements_median_slack": broker.median_slack,
+                            "memory_withheld": broker.memory_withheld,
                         }, handle)
             for fd in proxy_fds.values():
                 with contextlib.suppress(OSError):
@@ -8166,12 +8289,15 @@ def main(argv: Optional[list[str]] = None) -> int:
                 # UX-852: the audit's own record - zero unless the dynamic
                 # pool ran and its ledger survived the copy out.
                 leaks, tokens_refilled = 0, 0
+                psi_memory_withdraws, memory_withheld = 0, 0
                 if args.jobserver_pool == "dynamic" and jobserver_ledger_path:
                     moves, pool_min, pool_max = summarize_jobserver_ledger(
                         jobserver_ledger_path, args.jobserver)
                     if os.path.exists(jobserver_ledger_path):
                         leaks, tokens_refilled = summarize_jobserver_leaks(
                             jobserver_ledger_path)
+                    psi_memory_withdraws = count_memory_psi_withdraws(
+                        jobserver_ledger_path)
                     if jobserver_status_path and os.path.exists(jobserver_status_path):
                         with open(jobserver_status_path, encoding="utf-8") as handle:
                             controller_stopped = json.load(handle)["controller_stopped"]
@@ -8193,9 +8319,19 @@ def main(argv: Optional[list[str]] = None) -> int:
                 if args.plan and broker_status_path and os.path.exists(broker_status_path):
                     with open(broker_status_path, encoding="utf-8") as handle:
                         broker_status = json.load(handle)
+                    memory_withheld = broker_status.get("memory_withheld", 0)
                     report["jobserver_pool"]["broker"] = {
                         "plan": args.plan, **broker_status,
                     }
+                # UX-850: memory is a second resource the pool reads -
+                # `withheld` from the broker's per-element gate, the PSI
+                # pair from the controller's own bound, both `0`/`False`
+                # where nothing ran (plan absent, or `fixed` mode).
+                report["jobserver_pool"]["memory"] = {
+                    "withheld": memory_withheld,
+                    "psi_memory_present": os.path.exists(_PSI_MEMORY_PATH),
+                    "psi_memory_withdraws": psi_memory_withdraws,
+                }
             else:
                 report["jobserver_pool"] = None
             # UX-842: the project's own `max-jobs`, and each sandbox's

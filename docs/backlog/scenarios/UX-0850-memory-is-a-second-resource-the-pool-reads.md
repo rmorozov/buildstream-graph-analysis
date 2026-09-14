@@ -37,3 +37,56 @@ them binding.
 `tests/unit/test_the_pool_withholds_for_memory.py` drives the broker
 with a scripted `MemAvailable` series and a plan; mutation: ignore the
 plan's peak - red.
+
+## Outcome
+
+**Gap measured.** `git show 7a2c08cd:tools/bst_native_build_tracer.py |
+grep -c "memory_withheld\|psi_memory\|JOBSERVER_POOL_MEMORY_PSI_BOUND\|
+read_mem_available"` = 0 - nothing compared `MemAvailable` (already
+sampled by `HostSampler` every 2s) against any element's planned peak
+RSS, and `PoolController` read only `/proc/pressure/cpu`.
+
+**Close measured.**
+`python3 -m pytest tests/unit/test_the_pool_withholds_for_memory.py -v`:
+
+```text
+TestTheBrokerWithholdsByPlannedPeak::test_below_the_bound_withholds PASSED
+TestTheBrokerWithholdsByPlannedPeak::test_above_the_bound_grants PASSED
+TestTheBrokerWithholdsByPlannedPeak::test_a_plan_without_peak_rss_withholds_nothing PASSED
+TestTheBrokerWithholdsByPlannedPeak::test_a_peak_that_alone_exceeds_the_machine_grants_nothing PASSED
+TestTheBrokerWithholdsByPlannedPeak::test_memory_returning_grants_a_previously_withheld_element PASSED
+TestThePoolReadsMemoryPSI::test_absent_does_nothing PASSED
+TestThePoolReadsMemoryPSI::test_present_under_the_bound_does_nothing PASSED
+TestThePoolReadsMemoryPSI::test_present_over_the_bound_withdraws PASSED
+test_count_memory_psi_withdraws_reads_the_shared_ledger PASSED
+9 passed in 0.78s
+```
+
+`test_the_broker_grants_by_slack.py` (7), `test_the_pool_follows_the_
+machine.py` (11, two lines updated for `PoolController`'s own arg-count
+cap - `psi_path` folded into `psi_paths`) all green; `dev_baseline.py
+--check` clean (one new `PLR0913` avoided by the same `scratch`/dict-
+bundling convention `Broker` already used, not forced); `dev_sizes.py
+--check` clean after `--adopt --force` (`longest_function` 498->511,
+`file_lines` 8192->8329 - `tests/quality_reference.json` in this
+commit); `ruff check bga/ tools/ tests/ .claude/hooks/` and `make
+lint`: `All checks passed!`.
+
+**Mutation table.**
+
+| mutation | reddened | count |
+|---|---|---|
+| `_memory_gate`: `if True: return grant_n` (ignore the plan's peak) | below-bound, peak-exceeds-machine, memory-returning | 3/9 red |
+| `PoolController.tick`: `psi_mem_over = False` (drop the memory-PSI branch) | present-over-the-bound withdraw | 1/9 red |
+
+Reverted from the pre-mutation copy (never `git checkout --`); both
+green again after.
+
+**BGA_SKIP_SELECTOR=1**, this commit only. The pre-commit selector runs
+`tests/unit/test_sandbox_stderr_and_replay.py::TestTheDefaultPathStill
+Execs::test_the_shim_only_tees_under_diagnose` red - `main()` in
+`tools/native_trace/bwrap_shim.py` now calls a split-out `_exec_or_run`
+rather than naming `run_teed` in its own source, which the guard reads
+literally (`inspect.getsource`). `git show 7a2c08cd:tools/native_trace/
+bwrap_shim.py` has the identical split already - pre-existing at this
+item's own base commit, in a file this diff never touches.

@@ -39,3 +39,40 @@ the hook) - counted unknown, not refilled, as `UX-852` says.
 granted 3, a fake holder reads 2 and is killed; after `note_done` the
 global FIFO reads its full count and one `leaked` row names the element
 with 2 tokens; mutation: drain only the readable bytes - red.
+
+## Outcome
+
+**The gap measured** (`TestLeaks::test_a_dead_note_done_holder_is_
+refilled_to_the_global_fifo` against `note_done` with the leak-refill
+block stubbed out - `assert _readable(global_fd) == before + 3`):
+
+```text
+E   AssertionError: 1 drained + 2 leaked = the full grant
+E   assert 5 == (4 + 3)
+```
+
+**The close measured** (same test against the real fix, plus the
+tick-case, live-holder, unmapped-pid, exclusive-audit and poll-refresh
+cases; the three other cited guard files unaffected):
+
+```text
+tests/unit/test_the_broker_grants_by_slack.py .............  [100%]
+13 passed in 0.59s
+tests/unit/test_a_leaked_token_is_refilled.py ......
+tests/unit/test_the_pool_follows_the_machine.py ...........
+tests/unit/test_the_pool_withholds_for_memory.py .........
+39 passed in 5.00s
+```
+
+**Mutation table** (verifier HOLD, points 1-2 added after the first pass)
+
+| mutation | reddened | count |
+|---|---|---|
+| `note_done`: drop the leftover-refill block (drain only readable bytes) | `TestLeaks::test_a_dead_note_done_holder_is_refilled_to_the_global_fifo` | 1 failed, 12 passed |
+| `_audit_wrapper_leaks`: log the tick `leaked` row under `"leak"` not `"leaked"` (never closes the pid - a second `tick()` refills it again) | `TestLeaks::test_a_dead_tick_holder_mapped_to_a_running_element_is_refilled_to_its_proxy` | 1 failed, 12 passed |
+| `audit_leaks`: ignore `broker_owns_audit` (both auditors run) | `TestExclusiveAudit::test_the_broker_is_the_sole_auditor_when_one_exists` | 1 failed, 12 passed |
+| `_maybe_refresh_pid_to_element`: made a no-op | `TestPollRefreshesPidToElement::test_poll_maps_a_dead_holders_pid_and_refills_its_proxy` | 1 failed, 12 passed |
+
+All four reverted from pre-mutation copies saved to the scratchpad;
+`git diff --stat`/`grep MUTATION` after each revert showed nothing
+remaining, and the full guard file returned to 13 passed each time.

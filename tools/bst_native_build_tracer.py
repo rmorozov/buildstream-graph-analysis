@@ -1359,8 +1359,14 @@ class PoolController:
         """`psi_paths` (UX-850's own arg-count cap, `Broker`'s `scratch`
         one class up): `{"cpu": path, "memory": path}`, both optional -
         `None`/absent resolves to the real `/proc/pressure/*` file, so a
-        guard scripts either or both away from the host's own."""
+        guard scripts either or both away from the host's own.
+        `psi_paths["broker_owns_audit"]` (UX-854's verifier, same cap):
+        `True` when a `Broker` exists for this same ledger/FIFO - one
+        auditor per capture, so `audit_leaks` is a no-op and `start`
+        never spins its thread, rather than the two racing the same
+        ledger unlocked."""
         psi_paths = psi_paths or {}
+        self.broker_owns_audit = bool(psi_paths.get("broker_owns_audit"))
         self.fd = fd
         self.ceiling = ceiling
         self.capacity = capacity if capacity is not None else (os.cpu_count() or 1)
@@ -1494,9 +1500,10 @@ class PoolController:
         never surfaces again on a later read of the same file - no
         separate "already handled" state to keep in sync with it.
         `_holder_is_gone` is the liveness test. Returns the `leaked`
-        rows this call wrote.
+        rows this call wrote. A no-op when `broker_owns_audit` - the
+        `Broker` this ledger also belongs to is the sole auditor.
         """
-        if not self.ledger_path:
+        if not self.ledger_path or self.broker_owns_audit:
             return []
         leaked_rows = []
         for pid, (tool, tokens) in _outstanding_wrapper_holders(self.ledger_path).items():
@@ -1526,8 +1533,9 @@ class PoolController:
     def start(self) -> None:
         self._thread = threading.Thread(target=self._run, daemon=True)
         self._thread.start()
-        self._audit_thread = threading.Thread(target=self._run_audit, daemon=True)
-        self._audit_thread.start()
+        if not self.broker_owns_audit:
+            self._audit_thread = threading.Thread(target=self._run_audit, daemon=True)
+            self._audit_thread.start()
 
     def stop(self) -> None:
         self._stop.set()
@@ -1651,10 +1659,11 @@ class Broker:
         """`scratch` (UX-849's own arg-count cap, the `kind_context`
         shape `_resolve_kind_and_probe` already uses one module over):
         `{"decisions": path, "proxies_dir": path, "peak_rss": {element:
-        bytes}, "meminfo_path": path}` - UX-850 added the last two, the
-        per-element planned peak RSS and where to read `MemAvailable`
-        from, both optional (`{}`/the real file) for a guard driving
-        `tick()`/`note_running`/`note_done` directly."""
+        bytes}, "meminfo_path": path, "raw_log_path": path}` - UX-850
+        added the peak-RSS pair, UX-854 the raw log path `poll()` rereads
+        for `pid_to_element` once a second; all optional (`{}`/the real
+        file) for a guard driving `tick()`/`note_running`/`note_done`
+        directly."""
         scratch = scratch or {}
         self.global_fd = global_fd
         self.proxy_fds = dict(proxy_fds)
@@ -1665,6 +1674,11 @@ class Broker:
         self.granted = dict.fromkeys(self.proxy_fds, 0)
         self.grants = 0
         self.drains = 0
+        # UX-854: leaks refilled either at `note_done` (proxy remainder
+        # to the global FIFO) or on `tick()` (a dead wrapper holder's
+        # tokens back to the still-running element's proxy).
+        self.leaks = 0
+        self.tokens_refilled = 0
         self.ledger_path = ledger_path
         self.decisions_path = scratch.get("decisions")
         self.proxies_dir = scratch.get("proxies_dir")
@@ -1674,6 +1688,10 @@ class Broker:
         self.peak_rss = dict(scratch.get("peak_rss") or {})
         self.meminfo_path = scratch.get("meminfo_path") or _MEMINFO_PATH
         self.memory_withheld = 0
+        self.raw_log_path = scratch.get("raw_log_path")
+        self.pid_to_element: dict = {}
+        self._pid_map_interval_s = 1.0
+        self._pid_map_read_at = 0.0
         self._decisions_read = 0
         self._done_seen: set = set()
         self.interval_s = JOBSERVER_BROKER_INTERVAL_S
@@ -1737,7 +1755,11 @@ class Broker:
 
     def note_done(self, element: str) -> None:
         """`element`'s sandbox exited - drain its proxy back to the
-        global FIFO, non-blocking, one `read` per byte held."""
+        global FIFO, non-blocking, one `read` per byte held. UX-854:
+        whatever `granted` still exceeds the drained bytes was held by a
+        wrapper holder now gone with the sandbox - written back to the
+        global FIFO too, as a `leaked` row (`pid: null`, the holders are
+        gone or unknown) rather than left to shrink the pool."""
         self.running.discard(element)
         fd = self.proxy_fds.get(element)
         if fd is None:
@@ -1756,6 +1778,14 @@ class Broker:
             self.drains += 1
             self._log({"event": "drain", "element": element,
                        "tokens": drained, "t": time.time()})
+        leaked = self.granted[element]
+        if leaked > 0:
+            os.write(self.global_fd, b"+" * leaked)
+            self.granted[element] = 0
+            self.leaks += 1
+            self.tokens_refilled += leaked
+            self._log({"event": "leaked", "element": element, "pid": None,
+                       "tokens": leaked, "t": time.time()})
 
     def _drain_global(self) -> int:
         moved = 0
@@ -1768,12 +1798,51 @@ class Broker:
             moved += 1
         return moved
 
-    def tick(self) -> None:
+    def _audit_wrapper_leaks(self, pid_to_element: dict) -> None:
+        """UX-854's verifier (point 1): when a `Broker` exists, it is the
+        *sole* auditor of wrapper holders on this ledger -
+        `PoolController.audit_leaks` stays off (`broker_owns_audit`), so
+        the two never race the same file unlocked. A gone pid mapped to
+        a *running* element goes back to that element's own proxy (it
+        may take the tokens again); anything else - unmapped, or mapped
+        to an element not running - goes back to the global FIFO with
+        `PoolController.audit_leaks`'s own row shape plus `element:
+        null`. A pid this call already closed with a `leaked` row does
+        not resurface: the next read of `ledger_path` pops it."""
+        if not self.ledger_path:
+            return
+        for pid, (tool, tokens) in _outstanding_wrapper_holders(self.ledger_path).items():
+            if not _holder_is_gone(pid):
+                continue
+            element = pid_to_element.get(pid)
+            if element is not None and element in self.running:
+                fd = self.proxy_fds.get(element)
+                if fd is None:
+                    continue
+                os.write(fd, b"+" * tokens)
+                self.leaks += 1
+                self.tokens_refilled += tokens
+                self._log({"event": "leaked", "element": element, "pid": pid,
+                           "tokens": tokens, "t": time.time()})
+            else:
+                try:
+                    os.write(self.global_fd, b"+" * tokens)
+                except OSError:
+                    continue
+                self.leaks += 1
+                self.tokens_refilled += tokens
+                self._log({"event": "leaked", "tool": tool, "pid": pid,
+                           "tokens": tokens, "element": None, "t": time.time()})
+
+    def tick(self, pid_to_element: Optional[dict] = None) -> None:
         """One control step: whatever is readable on the global FIFO
         right now is handed to the running element with the least slack
         first, filling it to its own cap before moving to the next -
         never round-robin, so the element that most needs a core gets
-        every token it can use before the next one sees any."""
+        every token it can use before the next one sees any. UX-854's
+        wrapper-leak audit runs every call, independent of whether the
+        global FIFO had anything to distribute this tick."""
+        self._audit_wrapper_leaks(pid_to_element or {})
         moved = self._drain_global()
         if moved == 0:
             return
@@ -1843,6 +1912,17 @@ class Broker:
                 self._done_seen.add(element)
                 self.note_done(element)
 
+    def _maybe_refresh_pid_to_element(self) -> None:
+        """UX-854: `read_pid_to_element` re-streams the whole raw log -
+        once a second, not once a 100ms tick, is the cap the task set."""
+        if not self.raw_log_path:
+            return
+        now = time.monotonic()
+        if now - self._pid_map_read_at < self._pid_map_interval_s:
+            return
+        self._pid_map_read_at = now
+        self.pid_to_element = read_pid_to_element(self.raw_log_path)
+
     def poll(self) -> None:
         """`_run()`'s own step: learn who is running or done, then
         distribute. Split from `tick()` so a guard can drive the
@@ -1850,7 +1930,8 @@ class Broker:
         real decision/`.done` files."""
         self._scan_decisions()
         self._scan_done()
-        self.tick()
+        self._maybe_refresh_pid_to_element()
+        self.tick(self.pid_to_element)
 
     def _run(self) -> None:
         while not self._stop.is_set():
@@ -2226,9 +2307,13 @@ def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrappe
             # started after the seed lands and stopped before the FIFO
             # closes underneath it.
             if jobserver_pool == "dynamic":
+                # UX-854's verifier: a plan means a `Broker` is about to
+                # own this same ledger's audit below - the controller's
+                # own audit thread must not also run against it.
                 pool_controller = PoolController(
                     jobserver_fd, jobserver, capacity=jobserver_capacity,
-                    ledger_path=captured_jobserver_ledger)
+                    ledger_path=captured_jobserver_ledger,
+                    psi_paths={"broker_owns_audit": bool(plan_path and element_kinds)})
                 pool_controller.start()
             env["BST_TRACE_JOBSERVER_DECISIONS"] = captured_decisions
             if project_max_jobs is not None:
@@ -2259,7 +2344,11 @@ def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrappe
                     ledger_path=captured_jobserver_ledger,
                     scratch={"decisions": captured_decisions,
                             "proxies_dir": proxies_dir,
-                            "peak_rss": read_plan_peak_rss(plan_path)})
+                            "peak_rss": read_plan_peak_rss(plan_path),
+                            # UX-854: the *live* host-side log the hook
+                            # is still writing to - `raw_log_path` only
+                            # gets a copy after the build (`copy_out`).
+                            "raw_log_path": os.path.join(bind_dir, "trace.log")})
                 broker.start()
             else:
                 env.pop("BST_TRACE_PROXY_DIR", None)
@@ -2365,6 +2454,8 @@ def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrappe
                             "elements_in_plan": len(broker.plan),
                             "elements_median_slack": broker.median_slack,
                             "memory_withheld": broker.memory_withheld,
+                            "leaks": broker.leaks,
+                            "tokens_refilled": broker.tokens_refilled,
                         }, handle)
             for fd in proxy_fds.values():
                 with contextlib.suppress(OSError):

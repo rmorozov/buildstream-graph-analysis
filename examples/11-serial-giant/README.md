@@ -113,6 +113,24 @@ off` check stands on the CI runner's own quiet reading, not this one -
 if it reds there too, that is the finding, and the assertion should
 drop in favour of the two printed walls, not be tuned to pass.
 
-**Still open.** The quiet-box pair (load under 2, no other agents) is
-still to be measured; the session runs it at the round's close and
-writes the numbers here.
+**Quiet-box pair, measured at the round's close** (same box, `/proc/
+loadavg` 1.58 at the start of `off`, 2.83 at the end of `auto`, no
+other agents or suite running; fresh `XDG_CACHE_HOME`/`XDG_DATA_HOME`
+per run, the two `bga capture run` commands above, then `bga compare
+run-off run-auto`):
+
+```text
+Verdict: IMPROVED  (total duration -30.47s, -10.6%, 286.53s -> 256.06s)
+  giant.bst: -31.05s (281.30s -> 250.25s)
+```
+
+`giant.bst`'s `peak_work_concurrency` 2 -> 3, its measured-process span
+71.19s -> 47.54s (x 0.668 against the 2/3 the width predicts), `cc1`
+CPU 122.6s -> 121.3s - the same work, one job wider. The walls are
+twice the loaded pairs' because the sandbox is: plain `bst build
+all.bst` with no `bga` in the same environment took 276.3s (`giant.bst`
+"Running commands" 4:31), the recipe standalone on this host 76.1s
+(`sh generate.sh giant 256 9800` 8.75s, `cmake` 0.28s, `make -j2`
+67.06s), and the capture itself 281.30s - the hook's share is ~10s,
+BuildStream's own staging under `buildbox-run` the rest. The CI step's
+`auto < off` assertion stands on this reading.

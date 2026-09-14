@@ -203,6 +203,14 @@ examples/09-fine-grained-siblings/merged/files/bulk/
 # hardlink clone). Same reasoning as 05-09.
 examples/10-jobserver/files/toolchain/
 
+# examples/11-serial-giant (UX-857) stages the identical sysroot (another
+# hardlink clone), and stage_cpp_toolchain.sh also hardlink-clones
+# 10-jobserver's own files/gen/cmake/generate.sh in - reused, not a
+# second copy someone edits out of sync; regenerated at build time,
+# never committed twice.
+examples/11-serial-giant/files/toolchain/
+examples/11-serial-giant/files/gen/
+
 # Agent worktrees: whole clones the Agent tool makes under the repo (UX-509).
 .claude/worktrees/
 

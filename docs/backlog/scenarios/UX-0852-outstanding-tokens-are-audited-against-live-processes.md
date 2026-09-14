@@ -1,6 +1,6 @@
 # UX-852: outstanding tokens are audited against live processes
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-845, UX-846 | **Found by:** round 117, Direction 20 | **Serves:** R4 (a killed link does not shrink the pool for the rest of the build) | **Topic:** capture | **Area:** tools | **Shape:** mechanical
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-845, UX-846 | **Found by:** round 117, Direction 20 | **Serves:** R4 (a killed link does not shrink the pool for the rest of the build) | **Topic:** capture | **Area:** tools | **Shape:** mechanical
 
 ## Motivation
 
@@ -65,3 +65,10 @@ tests/unit/test_a_held_tool_returns_its_tokens.py ...........            [100%]
 
 `python3 tools/dev_baseline.py --check`: exit 0, no `new:` line.
 `make lint`: exit 0, ruff and pymarkdown both clean.
+
+Deviation (merge): `stop()` now joins the audit thread twice and folds
+its liveness into `controller_stopped` (the verifier read a single 3 s
+join that never fed the flag); a pid reused by an unrelated live
+process is left alone for good - the accepted limit of `os.kill(pid, 0)`
+as the liveness test - and the `EAGAIN` retry on a full FIFO stays
+unguarded.

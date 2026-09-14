@@ -1557,8 +1557,8 @@ jobs:
         # comment has the why - the CLI `--max-jobs` flag desyncs `bst
         # show`'s own graph, UX-377).
         #
-        # UX-856's `bga snapshot --jobserver` lands the same round; the
-        # session swaps this step to it at merge if it lands first.
+        # UX-856's `bga snapshot --jobserver` landed the same round; this
+        # step keeps `capture run` beside step 10's, one shape for both.
         #
         # This box read auto over off twice at load 7-13; the assertion
         # stands on the CI runner's own quiet reading - if it reds there,

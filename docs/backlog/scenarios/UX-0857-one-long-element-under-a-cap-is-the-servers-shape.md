@@ -1,6 +1,6 @@
 # UX-857: one long element under a cap is the server's shape
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-848, UX-856 | **Found by:** round 119, the user | **Serves:** R4 (an llvm-sized element alone on the critical path takes the whole machine) | **Topic:** capture | **Area:** examples | **Shape:** judgement
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-848, UX-856 | **Found by:** round 119, the user | **Serves:** R4 (an llvm-sized element alone on the critical path takes the whole machine) | **Topic:** capture | **Area:** tools | **Shape:** judgement
 
 ## Motivation
 
@@ -23,6 +23,12 @@ cache (`bga snapshot --jobserver off`, then `--jobserver auto`, the
 switch from `UX-856`) and `bga compare` prints both walls; the README
 carries this box's two numbers, dated, with the expected ratio (the
 giant at 2 jobs against 4 tokens) beside the measured one.
+
+## Decomposition
+
+Input classes: the giant alone (the pool's whole width against `-j2`),
+the three leaves after it, cold cache both ways; the journey it extends
+is R4's first capture of a build serialised on one long element.
 
 ## Out of Scope
 
@@ -87,9 +93,17 @@ back pair (also +10.9%). `auto` genuinely ran wider (mean concurrency
 span), but the element's own wall still grew - three compiler processes
 plus `PoolController`'s 250ms thread on an already ~8-loadavg 4-core
 box leaves less slack than `off`'s two, the same finding `10-jobserver`
-made for its own saturated-box reason. Not tuned to read IMPROVED. The
-quiet-box pair (load under 2, no other agents) is still to be measured;
-the session runs it at the round's close and writes the numbers here.
+made for its own saturated-box reason. Not tuned to read IMPROVED.
+
+**Quiet-box pair** (session, at the round's close, load 1.58 -> 2.83, no
+agents or suite running; same two commands, fresh caches):
+`Verdict: IMPROVED (total duration -30.47s, -10.6%, 286.53s -> 256.06s)`,
+`giant.bst: -31.05s (281.30s -> 250.25s)`; `peak_work_concurrency` 2 ->
+3, measured-process span 71.19s -> 47.54s, `cc1` 122.6s -> 121.3s CPU.
+The walls double the loaded pairs' because the sandbox does: plain `bst
+build all.bst` without `bga` read 276.3s in the same environment, the
+recipe standalone 76.1s (generate 8.75s, cmake 0.28s, `make -j2`
+67.06s). The mode's reading follows the box's load, not the example.
 
 **Mutation table:**
 
@@ -98,3 +112,11 @@ the session runs it at the round's close and writes the numbers here.
 | CI step's `awk` ordering check (`auto` under `off`) | `exit !(auto < off)` -> `exit !(auto > off)` | `test_the_ci_steps_11_ordering_check_accepts_an_auto_under_off_reading`, `test_the_ci_steps_11_ordering_check_refuses_this_box_s_own_real_capture` | 2 of 9 |
 | CI step's `XDG_CONFIG_HOME` export | line deleted | `test_the_ci_step_11_captures_both_modes_from_a_cold_cache` | 1 of 9 |
 | CI step's ordering check on a tie (`auto == off`) | `exit !(auto < off)` -> `exit !(auto <= off)` | `test_the_ci_steps_11_ordering_check_refuses_a_tie` | 1 of 10 |
+
+Deviation (merge): the verifier held once - an MD032 line, no expected
+ratio beside the measured one, the assertion's risk written only in a
+test docstring, no quiet-pair sentence - all closed on the track with a
+tie fixture added; the session ran the quiet pair itself (IMPROVED
+-10.6%, above) and wrote it into the README and here; the CI step keeps
+`bga capture run` beside step 10's rather than swapping to `UX-856`'s
+snapshot switch.

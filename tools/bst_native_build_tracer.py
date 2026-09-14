@@ -1053,6 +1053,11 @@ def summarize_jobserver_ledger(path: str, ceiling: int) -> tuple[int, int, int]:
     `moves` counts only `add`/`withdraw` - `hold` and `withdraw_held`
     changed nothing. A ledger with no rows (the build was shorter than
     one tick) reports the pool it started at, `ceiling - 1`.
+
+    UX-846: a wrapper's own `acquire`/`release` rows share this same
+    file (`event`/`tool`/`pid` keys, no `pool`) - skipped per-row rather
+    than aborting the whole read, which the previous single `try` around
+    the loop did on the first row missing `"pool"`.
     """
     moves, pool_min, pool_max = 0, ceiling - 1, ceiling - 1
     seen = False
@@ -1062,14 +1067,18 @@ def summarize_jobserver_ledger(path: str, ceiling: int) -> tuple[int, int, int]:
                 line = line.strip()
                 if not line:
                     continue
-                row = json.loads(line)
-                pool = row["pool"]
+                try:
+                    row = json.loads(line)
+                    pool = row["pool"]
+                    action = row["action"]
+                except (ValueError, KeyError):
+                    continue
                 pool_min = pool if not seen else min(pool_min, pool)
                 pool_max = pool if not seen else max(pool_max, pool)
                 seen = True
-                if row["action"] in ("add", "withdraw"):
+                if action in ("add", "withdraw"):
                     moves += 1
-    except (OSError, ValueError, KeyError):
+    except OSError:
         return 0, ceiling - 1, ceiling - 1
     return moves, pool_min, pool_max
 
@@ -1093,6 +1102,50 @@ def bst_command_targets(cmd: list[str]) -> list[str]:
     not an option and ends `.bst`, the shape every target BuildStream
     accepts takes."""
     return [arg for arg in cmd if arg.endswith(".bst") and not arg.startswith("-")]
+#: UX-846: the tools this item wires a wrapper for - none of them reads
+#: `MAKEFLAGS`. `gcc -flto=jobserver` and cargo are pass-through by
+#: construction (no wrapper directory entry), so they are not probed.
+JOBSERVER_WRAPPED_TOOLS = ("ld.lld", "lld", "ld.gold", "mold", "ninja")
+
+#: The wrapper scripts, bind-mounted read-only ahead of `PATH` (UX-846).
+JOBSERVER_WRAPPERS_DIR = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "native_trace", "wrappers")
+
+
+def probe_jobserver_wrapper_policy(
+        tools: tuple[str, ...] = JOBSERVER_WRAPPED_TOOLS) -> list[dict]:
+    """UX-846: one row per wrapped tool name, `{tool, version, policy}`.
+
+    Run once, host-side, before the build - one `--version` per tool,
+    not two: its first output line is the version, and the same output
+    is checked for a `jobserver` mention (`pass-through`, routed around
+    the wrapper - the wrapper checks the same fact again at run time,
+    belt and braces). `absent`: not on the host `PATH`. `held`: found
+    and silent about the protocol - the wrapper sizes it. Bounded at 2s;
+    a tool that hangs is reported `held`, the safe assumption, rather
+    than blocking the capture.
+    """
+    rows = []
+    tick = progress.ticker("jobserver wrapper policy", total=len(tools))
+    for index, tool in enumerate(tools, 1):
+        tick.step(index)
+        path = shutil.which(tool)
+        if not path:
+            rows.append({"tool": tool, "version": None, "policy": "absent"})
+            continue
+        version, policy = None, "held"
+        try:
+            probed = subprocess.run([path, "--version"], capture_output=True,
+                                    text=True, timeout=2, check=False)
+            out = probed.stdout.strip()
+            version = out.splitlines()[0] if out else None
+            if "jobserver" in (probed.stdout + probed.stderr).lower():
+                policy = "pass-through"
+        except (OSError, subprocess.TimeoutExpired):
+            pass
+        rows.append({"tool": tool, "version": version, "policy": policy})
+    tick.done()
+    return rows
 
 
 class PoolController:
@@ -1572,6 +1625,12 @@ def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrappe
             jobserver_fifo, jobserver_fd, _tokens = open_jobserver(jobserver, bind_dir)
             env["BST_TRACE_JOBSERVER"] = jobserver_fifo
             env["BST_TRACE_JOBSERVER_AUTH"] = jobserver_auth or "fd"
+            # UX-846: a wrapper directory per capture - static content,
+            # bound straight from the tree rather than staged, and
+            # capped at this pool's own ceiling (its widest possible
+            # ask, whatever the dynamic pool does to it afterwards).
+            env["BST_TRACE_WRAPPER_DIR"] = JOBSERVER_WRAPPERS_DIR
+            env["BST_TRACE_WRAPPER_CAP"] = str(jobserver)
             # UX-845: the pool moves with the machine rather than staying
             # at the static seed - a daemon client of the same FIFO,
             # started after the seed lands and stopped before the FIFO
@@ -1602,6 +1661,8 @@ def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrappe
             env.pop("BST_TRACE_JOBSERVER_DECISIONS", None)
             env.pop("BST_TRACE_PROJECT_MAX_JOBS", None)
             env.pop("BST_TRACE_ELEMENT_KINDS", None)
+            env.pop("BST_TRACE_WRAPPER_DIR", None)
+            env.pop("BST_TRACE_WRAPPER_CAP", None)
 
         def copy_out():
             """Move everything the shim wrote out of the scratch.
@@ -7628,6 +7689,10 @@ def main(argv: Optional[list[str]] = None) -> int:
                 element_kinds is not None if args.jobserver else None)
             report["jobserver_decisions"] = read_jobserver_decisions(
                 jobserver_decisions_path)
+            # UX-846: the pass-through table, probed once - `None` when
+            # the mode itself is off, since nothing was wrapped.
+            report["jobserver_wrappers"] = (
+                probe_jobserver_wrapper_policy() if args.jobserver else None)
             with open(args.output, "w", encoding="utf-8") as f:
                 json.dump(report, f, indent=2)
             # UX-296: and the two capacity scalars the store's aggregate

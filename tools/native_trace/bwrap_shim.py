@@ -278,7 +278,8 @@ def kind_job_env(kind, auth_value, ninja_probe=None, wrappers_dir=None):
             if ninja_probe.get("jobserver_client"):
                 return [("JOBS", ""), ("MAKEFLAGS", auth_value)], [], "ninja_client"
             if wrappers_dir:
-                return [("JOBS", "")], [], "ninja_wrapper"
+                # UX-846's ninja wrapper reads the auth from MAKEFLAGS.
+                return [("JOBS", ""), ("MAKEFLAGS", auth_value)], [], "ninja_wrapper"
             return [], [], "ninja_static"
         return [("JOBS", ""), ("MAKEFLAGS", auth_value)], [], "cmake_meson"
     return [], [], JOBSERVER_UNKNOWN_KIND
@@ -324,6 +325,43 @@ def probe_ninja(real_bwrap: str, opts: list[str], cache_path: Optional[str],
     return result
 
 
+# UX-846: where the wrapper directory lands inside the sandbox - fixed
+# and key-invisible like `bind_dst`, so no cache key ever names it.
+WRAPPER_BIND_DST = "/.bga/wrappers"
+
+
+def _setenv_value(opts: list[str], name: str) -> Optional[str]:
+    """The value of BuildStream's own `--setenv <name> <value>`, if any.
+
+    UX-846: bwrap's last `--setenv` for a variable wins outright rather
+    than merging (measured with a real `bwrap --setenv PATH a --setenv
+    PATH b` - `$PATH` inside came out `b`, not `a:b`) - so a wrapper
+    `PATH` splice has to read BuildStream's own value and prepend to it,
+    not just append a second `--setenv`.
+    """
+    for i, opt in enumerate(opts):
+        if opt == "--setenv" and i + 1 < len(opts) and opts[i + 1] == name and i + 2 < len(opts):
+            return opts[i + 2]
+    return None
+
+
+def _wrapper_mount(opts: list[str], wrapper_dir: str, wrapper_cap: Optional[str],
+                   bind_dst: str) -> list[str]:
+    """UX-846: the wrappers bound read-only ahead of BuildStream's own
+    `PATH` (bwrap: the last `--setenv` wins outright, measured), with
+    the ledger path and the cap the wrapper reads."""
+    bst_path = _setenv_value(opts, "PATH") or "/usr/bin:/bin"
+    mount = [
+        "--ro-bind", wrapper_dir, WRAPPER_BIND_DST,
+        "--setenv", "PATH", f"{WRAPPER_BIND_DST}:{bst_path}",
+        "--setenv", "BST_TRACE_JOBSERVER_LEDGER",
+        os.path.join(bind_dst, "jobserver_ledger.jsonl"),
+    ]
+    if wrapper_cap:
+        mount += ["--setenv", "BST_TRACE_WRAPPER_CAP", str(wrapper_cap)]
+    return mount
+
+
 def build_shim_argv(
     real_bwrap: str,
     bst_args: list[str],
@@ -338,7 +376,8 @@ def build_shim_argv(
     project_max_jobs: Optional[int] = None,
     element_kind: Optional[str] = None,
     ninja_probe: Optional[dict] = None,
-    wrappers_dir: Optional[str] = None,
+    wrapper_dir: Optional[str] = None,
+    wrapper_cap: Optional[str] = None,
 ) -> list[str]:
     """The real, complete argv to exec: BuildStream's own bwrap options
     first (unmodified, including its own root-filesystem bind), then the
@@ -405,13 +444,22 @@ def build_shim_argv(
         # UX-843: the per-kind table - a kind not in it gets nothing
         # (`unknown_kind`), and cmake/meson consult the ninja probe.
         pairs, unsets, _policy = kind_job_env(element_kind, auth_value,
-                                              ninja_probe, wrappers_dir)
-        if jobserver_fd is None and any(var == "MAKEFLAGS" for var, _ in pairs):
+                                              ninja_probe, wrapper_dir)
+        auth_injected = any(var == "MAKEFLAGS" for var, _ in pairs)
+        if jobserver_fd is None and auth_injected:
             injected += ["--bind", jobserver_fifo, jobserver_fifo]
         for var, value in pairs:
             injected += ["--setenv", var, value]
         for var in unsets:
             injected += ["--unsetenv", var]
+        # UX-846: a tool that will not read the pipe (lld below LLVM 22,
+        # gold, mold, ninja) holds tokens instead - bind a read-only `PATH`
+        # of wrappers ahead of BuildStream's own, only when an auth was
+        # actually injected above (an empty MAKEFLAGS is nothing to hold
+        # from). `bst_native_build_tracer.probe_jobserver_wrapper_policy`
+        # decides which tools this directory covers before the build.
+        if wrapper_dir is not None and auth_injected:
+            injected += _wrapper_mount(opts, wrapper_dir, wrapper_cap, bind_dst)
     # UX-106: the ptrace spine, prepended to the sandboxed command so it
     # becomes the parent of everything BuildStream asked to run - which
     # is what makes every descendant its own tracee, and so traceable
@@ -867,7 +915,7 @@ def _resolve_kind_and_probe(element, jobserver_fd, jobserver_fifo,
     cmake/meson element whose decision would otherwise consult it (mode
     active, not pinned)."""
     element_kind = _element_kind_env(element)
-    wrappers_dir = os.environ.get("BST_TRACE_WRAPPERS_DIR")
+    wrappers_dir = os.environ.get("BST_TRACE_WRAPPER_DIR")
     base = {"element_kind": element_kind, "ninja_probe": None,
            "wrappers_dir": wrappers_dir}
     active = jobserver_fd is not None or jobserver_fifo is not None
@@ -983,7 +1031,8 @@ def main() -> int:
                                project_max_jobs=project_max_jobs,
                                element_kind=kind_context["element_kind"],
                                ninja_probe=kind_context["ninja_probe"],
-                               wrappers_dir=kind_context["wrappers_dir"])
+                               wrapper_dir=kind_context["wrappers_dir"],
+                               wrapper_cap=os.environ.get("BST_TRACE_WRAPPER_CAP"))
     else:
         argv = [real_bwrap, *sys.argv[1:]]
 

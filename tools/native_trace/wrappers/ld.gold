@@ -1,0 +1,7 @@
+#!/bin/sh
+# UX-846: ld.gold does not read a jobserver pipe below LLVM 22 (or ever,
+# for gold/mold) - this holds tokens for it instead of oversubscribing.
+set -eu
+_bga_self=$(readlink -f -- "$0" 2>/dev/null || printf '%s\n' "$0")
+. "$(CDPATH= cd -- "$(dirname -- "$_bga_self")" && pwd)/_common.sh"
+bga_run_wrapped threads "$@"

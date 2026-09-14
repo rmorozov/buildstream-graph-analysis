@@ -518,13 +518,73 @@ def test_ninja_without_a_client_and_no_wrapper_dir_is_static_and_untouched():
         os.close(read_fd)
 
 
-def test_ninja_without_a_client_and_a_wrapper_dir_empties_jobs_only():
+def test_ninja_without_a_client_and_a_wrapper_dir_empties_jobs_and_mounts_the_wrappers():
+    """UX-843 + UX-846: the wrapper reads the auth from MAKEFLAGS, so
+    JOBS is emptied, the auth stays, and the wrapper directory is bound
+    ahead of BuildStream's own PATH."""
     probe = {"available": True, "version": "1.11.1", "jobserver_client": False}
     argv, read_fd = _build_with_kind(
-        "cmake", ninja_probe=probe, wrappers_dir="/tmp/.bst-native-trace/wrappers")
+        "cmake", ninja_probe=probe, wrapper_dir="/host/wrappers")
     try:
-        assert _job_env_ops(argv) == [("--setenv", "JOBS", "")]
+        ops = _job_env_ops(argv)
+        assert ops[0] == ("--setenv", "JOBS", "")
+        assert ops[1][:2] == ("--setenv", "MAKEFLAGS") and "--jobserver-auth=" in ops[1][2]
+        assert argv[argv.index("--ro-bind") + 1:argv.index("--ro-bind") + 3] == [
+            "/host/wrappers", "/.bga/wrappers"]
     finally:
+        os.close(read_fd)
+
+
+def _path_setenv(argv):
+    """The last `--setenv PATH` value in argv - the one bwrap keeps."""
+    values = [argv[i + 2] for i, a in enumerate(argv) if a == "--setenv" and argv[i + 1] == "PATH"]
+    return values[-1] if values else None
+
+
+def test_the_wrapper_path_is_prepended_to_buildstreams_own():
+    """UX-846's verifier: the sandbox PATH BuildStream composed survives
+    behind the wrapper directory, and the cap rides along."""
+    argv, read_fd = _build_with_kind("make", wrapper_dir="/host/wrappers", wrapper_cap="3")
+    try:
+        bst_path = [REAL_BWRAP_ARGV[i + 2] for i, a in enumerate(REAL_BWRAP_ARGV)
+                    if a == "--setenv" and REAL_BWRAP_ARGV[i + 1] == "PATH"]
+        assert bst_path, "the fixture argv carries BuildStream's own PATH"
+        assert _path_setenv(argv) == "/.bga/wrappers:" + bst_path[-1]
+        assert argv[argv.index("BST_TRACE_WRAPPER_CAP") + 1] == "3"
+    finally:
+        os.close(read_fd)
+
+
+def test_no_path_from_buildstream_falls_back_to_the_system_one():
+    stripped = [a for i, a in enumerate(REAL_BWRAP_ARGV)
+                if not (a == "--setenv" and REAL_BWRAP_ARGV[i + 1] == "PATH")
+                and not (i >= 1 and REAL_BWRAP_ARGV[i - 1] == "--setenv" and a == "PATH")
+                and not (i >= 2 and REAL_BWRAP_ARGV[i - 2] == "--setenv" and REAL_BWRAP_ARGV[i - 1] == "PATH")]
+    read_fd, write_fd = os.pipe()
+    try:
+        argv = build_shim_argv(
+            real_bwrap="/usr/bin/bwrap", bst_args=stripped, bind_src="/tmp/host-trace-dir",
+            bind_dst="/tmp/.bst-native-trace", preload_so="/tmp/.bst-native-trace/hook.so",
+            trace_log="/tmp/.bst-native-trace/trace.log", jobserver_fd=read_fd,
+            project_max_jobs=4, element_kind="make", wrapper_dir="/host/wrappers")
+        assert _path_setenv(argv) == "/.bga/wrappers:/usr/bin:/bin"
+    finally:
+        os.close(write_fd)
+        os.close(read_fd)
+
+
+def test_a_pinned_element_mounts_no_wrappers():
+    read_fd, write_fd = os.pipe()
+    try:
+        pinned = [("-j1" if a == "-j4" else a) for a in REAL_BWRAP_ARGV]
+        argv = build_shim_argv(
+            real_bwrap="/usr/bin/bwrap", bst_args=pinned, bind_src="/tmp/host-trace-dir",
+            bind_dst="/tmp/.bst-native-trace", preload_so="/tmp/.bst-native-trace/hook.so",
+            trace_log="/tmp/.bst-native-trace/trace.log", jobserver_fd=read_fd,
+            project_max_jobs=4, element_kind="make", wrapper_dir="/host/wrappers")
+        assert "--ro-bind" not in argv and _path_setenv(argv) is None or "/.bga/wrappers" not in (_path_setenv(argv) or "")
+    finally:
+        os.close(write_fd)
         os.close(read_fd)
 
 

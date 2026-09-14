@@ -91,7 +91,7 @@ report/       -> text/JSON rendering (presentation only, since UX-75)
 
 - `bga wrap` -> `tools/bst_run_wrapped.py` — Plane 1's capture
 - `bga extract` -> `tools/bst_extract_run.py` — a log plus a project becomes a run directory
-- `bga capture` -> `tools/bst_native_build_tracer.py` — Plane 2's tracer, over `tools/native_trace/bwrap_shim.py` (the shim ahead of the real `bwrap`), `tools/native_trace/hook.c` (the `LD_PRELOAD` hook), `tools/native_trace/spine.c` (the ptrace spine, for static binaries) and `tools/native_trace/trackevent.py` (Perfetto's own TrackEvent writer)
+- `bga capture` -> `tools/bst_native_build_tracer.py` — Plane 2's tracer, over `tools/native_trace/bwrap_shim.py` (the shim ahead of the real `bwrap`), `tools/native_trace/hook.c` (the `LD_PRELOAD` hook), `tools/native_trace/spine.c` (the ptrace spine, for static binaries), `tools/native_trace/trackevent.py` (Perfetto's own TrackEvent writer) and `tools/native_trace/wrappers/` (UX-846's jobserver token-holding wrappers)
 - `bga cache-logs` -> `tools/bst_cache_logs.py` — Plane 3's reader
 - `bga snapshot` -> `tools/bga_snapshot.py` — the local loop as one command
 - `bga timeline` -> `tools/bga_timeline.py` — both planes on one clock
@@ -497,6 +497,18 @@ and is superseded now is what the record says, and sweeping it forward
 with the tables above destroys the one thing the entry is for
 (`UX-653`). The newest entry is the exception: every round that
 re-grounds the document rewrites it.
+
+Updated 2026-09-14 (after `UX-846`), covering one change to this
+document — the `bga capture` line under "Real package structure" now
+names `tools/native_trace/wrappers/` (UX-846's token-holding wrapper
+scripts for the linkers and ninja that read no jobserver pipe), the
+fifth member of `tools/native_trace/`; the member-count guard
+collapses the directory to one entry so a sixth wrapped tool needs
+no edit here. The line is re-grounded in `ls tools/native_trace`
+(`__init__.py`, `bwrap_shim.py`, `hook.c`, `spine.c`, `trackevent.py`,
+`wrappers/`), in `bga analyze --schema` (`analyze/v6`: **61 top-level properties**),
+and in `python3 -m pytest $(grep -ln "architecture.md" tests/unit/*.py)
+-q`, run at this commit.
 
 Updated 2026-09-13 (after `UX-837`), covering one change to this
 document — the `viewstate.js` row in "Which file owns what" now names

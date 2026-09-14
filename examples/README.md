@@ -259,6 +259,19 @@ chain, so its wall never moved under the mode (round 112). Same staged
 sysroot as `05`/`06`/`09`. Full detail, real captures and the honest
 result in that project's own [`README.md`](10-jobserver/README.md).
 
+## 11-serial-giant
+
+One `cmake` element (`giant.bst`, 256 C files generated inside the
+sandbox - four times `10`'s per-element 64) alone on the critical path
+under three small leaves that wait on it, `max-jobs: 2` (`10`'s host
+default is 4) - the server's shape (`UX-857`): a 40-core server caps one
+element at 8 by default, and `10`'s four saturated cores cannot show
+what happens when one long element is capped below the core count with
+half the graph idle behind it. Same staged sysroot as `05`-`10`; the
+generator is `10`'s own script, hardlink-cloned in, not a second copy.
+Full detail, real captures and the ratio in that project's own
+[`README.md`](11-serial-giant/README.md).
+
 ## Shared setup
 
 `01-resource-contention`, `02-deep-chain-mixed-kinds`, and

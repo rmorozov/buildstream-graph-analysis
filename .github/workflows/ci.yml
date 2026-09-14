@@ -1546,6 +1546,57 @@ jobs:
             exit 1
           }
 
+      - name: Build + capture + compare 11-serial-giant (UX-857)
+        # The server's shape: a 40-core server caps one element's
+        # `max-jobs` at 8 by default - an llvm-sized element alone on
+        # the critical path idles 32 cores under `off`. `10-jobserver`
+        # cannot show this (four independent elements already saturate
+        # four cores at `off`); this project is one long cmake element
+        # (256 generated C files) with three small leaves waiting on it,
+        # `max-jobs: 2` via `$XDG_CONFIG_HOME` (project.conf's own
+        # comment has the why - the CLI `--max-jobs` flag desyncs `bst
+        # show`'s own graph, UX-377).
+        #
+        # UX-856's `bga snapshot --jobserver` lands the same round; the
+        # session swaps this step to it at merge if it lands first.
+        #
+        # This box read auto over off twice at load 7-13; the assertion
+        # stands on the CI runner's own quiet reading - if it reds there,
+        # the reading is the finding, drop the assertion, keep the walls.
+        run: |
+          set -euo pipefail
+          PROJ=examples/11-serial-giant
+          OUT=artifacts/11-serial-giant
+          mkdir -p "$OUT"
+          export XDG_CONFIG_HOME="$GITHUB_WORKSPACE/$PROJ/xdg_config_home"
+
+          rm -rf ~/.cache/buildstream ~/.local/share/buildstream
+          bga capture run --run-dir "$OUT/run-off" --jobserver off \
+            "$PROJ" "$OUT/plane2-off.json" -- bst build all.bst
+
+          rm -rf ~/.cache/buildstream ~/.local/share/buildstream
+          bga capture run --run-dir "$OUT/run-auto" --jobserver auto \
+            "$PROJ" "$OUT/plane2-auto.json" -- bst build all.bst
+
+          bga compare "$OUT/run-off" "$OUT/run-auto" | tee "$OUT/compare-off-vs-auto.txt"
+
+          # UX-857's acceptance test: a wall for each run, and auto's
+          # under off's - the assertion this example exists for.
+          grep -qE 'Total Duration +[0-9.]+s +-> +[0-9.]+s' "$OUT/compare-off-vs-auto.txt" || {
+            echo "compare did not print a wall for each run:" >&2
+            cat "$OUT/compare-off-vs-auto.txt" >&2
+            exit 1
+          }
+          read -r OFF_WALL AUTO_WALL < <(awk '/Total Duration/ {
+            gsub(/s/, "", $3); gsub(/s/, "", $5); print $3, $5; exit
+          }' "$OUT/compare-off-vs-auto.txt")
+          echo "off=${OFF_WALL}s auto=${AUTO_WALL}s"
+          awk -v off="$OFF_WALL" -v auto="$AUTO_WALL" 'BEGIN { exit !(auto < off) }' || {
+            echo "auto (${AUTO_WALL}s) is not under off (${OFF_WALL}s):" >&2
+            cat "$OUT/compare-off-vs-auto.txt" >&2
+            exit 1
+          }
+
       - name: Upload real-build artifacts
         if: always()
         uses: actions/upload-artifact@v7

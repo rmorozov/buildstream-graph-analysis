@@ -161,6 +161,14 @@ def _run_instance(run_context, loaded_from) -> dict:
     stamp = getattr(run_context, 'producer', None) if run_context else None
     if stamp:
         instance['producer'] = stamp
+    # UX-851: the mode `bga capture` ran the jobserver in, beside the
+    # rest of the capture facts. Absent, not defaulted, for a capture
+    # that recorded nothing - `bga compare`'s own formatter is where
+    # "no record" reads as "off", the same split `plane2_absence` (UX-329)
+    # already draws between a fact and its display default.
+    jobserver = getattr(run_context, 'jobserver', None) if run_context else None
+    if jobserver:
+        instance['jobserver'] = jobserver
     # UX-202: why this run is not a measurement, if it is not - the one
     # `UX-185` accessor, published rather than left for a consumer to
     # re-derive from `build_outcome`. The evidence header states what

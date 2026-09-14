@@ -84,6 +84,20 @@ def _format_instance(instance: dict) -> str:
     )
 
 
+def _format_jobserver_mode(instance: dict) -> str:
+    """UX-851: `jobserver off` / `jobserver auto (ceiling 7)` / `jobserver
+    n (ceiling 4)` - always renders, unlike `_format_instance` above,
+    because a run that recorded nothing is exactly the `off` case
+    `bga compare`'s header names (a snapshot older than this field reads
+    the same as one that genuinely ran without a jobserver)."""
+    job = instance.get('jobserver') or {}
+    mode = job.get('mode') or 'off'
+    if mode == 'off':
+        return "jobserver off"
+    ceiling = job.get('ceiling')
+    return f"jobserver {mode}" + (f" (ceiling {ceiling})" if ceiling is not None else "")
+
+
 def _format_violation_summary(violation: dict) -> str:
     """One-line, human-readable summary for a single violation dict -
     every `type` currently produced anywhere in bga/ (P4-02's own
@@ -1618,10 +1632,15 @@ def format_compare_text(comparison) -> str:
     baseline_instance = getattr(comparison, 'baseline_run_instance', None) or {}
     if baseline_instance:
         lines.append(f"           {_format_instance(baseline_instance)}")
+    # UX-851: always printed, even when the instance line above is not -
+    # a header that names one side's jobserver mode and stays silent on
+    # the other would read as "this one had none to say", not "off".
+    lines.append(f"           {_format_jobserver_mode(baseline_instance)}")
     lines.append(f"Candidate: {comparison.candidate_run_id or '(no run identity)'}")
     candidate_instance = getattr(comparison, 'candidate_run_instance', None) or {}
     if candidate_instance:
         lines.append(f"           {_format_instance(candidate_instance)}")
+    lines.append(f"           {_format_jobserver_mode(candidate_instance)}")
     lines.append("")
 
     baseline_total = b.get('total_duration_us')

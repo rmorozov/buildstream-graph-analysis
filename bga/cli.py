@@ -2460,6 +2460,118 @@ def _maybe_complete() -> None:
     argcomplete.autocomplete(create_parser())
 
 
+def _capture_builders(wrapped_cmd: list) -> Optional[int]:
+    """The `--builders N` BuildStream's own argv, inside `bga capture
+    run ... -- bst build --builders N ...`'s trailing command - `None`
+    when it named none, which `auto` below then reads as "unknown"."""
+    for i, tok in enumerate(wrapped_cmd):
+        if tok == '--builders' and i + 1 < len(wrapped_cmd):
+            try:
+                return int(wrapped_cmd[i + 1])
+            except ValueError:
+                return None
+        if tok.startswith('--builders='):
+            try:
+                return int(tok.split('=', 1)[1])
+            except ValueError:
+                return None
+    return None
+
+
+def resolve_jobserver_ceiling(
+    value: str, wrapped_cmd: list, cpu_count: Optional[int] = None,
+) -> tuple[Optional[str], Optional[int]]:
+    """`bga capture --jobserver auto|N|off` (UX-851) -> `(mode,
+    ceiling)`, the tracer's own `--jobserver N` never sees `auto`/`off`.
+
+    `auto` sizes the pool to the host's cores minus BuildStream's own
+    `--builders` in the wrapped command, or minus 1 when that is not
+    named - floored at 1, since a jobserver of zero tokens is not one.
+    `cpu_count` is a parameter (default `os.cpu_count()`) so this is
+    testable against a fake host rather than the real one.
+    """
+    if value == 'off':
+        return 'off', None
+    if value == 'auto':
+        cores = cpu_count if cpu_count is not None else os.cpu_count()
+        if cores is None:
+            return 'auto', 1
+        builders = _capture_builders(wrapped_cmd)
+        headroom = builders if builders is not None else 1
+        return 'auto', max(1, cores - headroom)
+    try:
+        ceiling = int(value)
+    except ValueError:
+        return None, None
+    # A pool of no tokens is the mode off; a negative one is a typo the
+    # tracer's own parser reports (UX-851's verifier).
+    if ceiling == 0:
+        return 'off', None
+    return ('n', ceiling) if ceiling > 0 else (None, None)
+
+
+def _translate_capture_jobserver(argv: list) -> list:
+    """Rewrite `bga capture run ... --jobserver auto|N|off ...` into the
+    tracer's own vocabulary (UX-851): an int `--jobserver N`, or no flag
+    at all. `tools/bst_native_build_tracer.py`'s `--jobserver` (UX-679)
+    and the sibling `--jobserver-auth` (UX-841, merged separately) stay
+    untouched - this only ever rewrites the value `bga` itself hands it.
+
+    A value this cannot resolve (not `off`, `auto`, or an integer) is
+    passed through unchanged, so the tracer's own argparse reports it -
+    two error messages for one bad flag would be worse than one.
+
+    Also sets `BGA_JOBSERVER_MODE` in this process's own environment
+    when a mode resolves - `dispatch()` calls the tracer's `main()`
+    in-process, never a subprocess, so this is the only channel that
+    survives to the point the tracer writes `run-context.json`; the
+    tracer has no CLI of its own to parse for the distinction between
+    `auto` and an explicit `N` once `bga` has already resolved both to
+    the same `--jobserver <int>`.
+    """
+    if len(argv) < 2 or argv[0] != 'capture' or argv[1] != 'run':
+        return argv
+    # Absent means off - a stale value from an earlier call in the same
+    # process must not name a mode this capture never ran.
+    os.environ['BGA_JOBSERVER_MODE'] = 'off'
+    rest = argv[2:]
+    if '--' in rest:
+        split = rest.index('--')
+        tracer_args, wrapped_cmd = rest[:split], rest[split + 1:]
+        has_sep = True
+    else:
+        tracer_args, wrapped_cmd = rest, []
+        has_sep = False
+    out = []
+    i = 0
+    while i < len(tracer_args):
+        tok = tracer_args[i]
+        if tok == '--jobserver' and i + 1 < len(tracer_args):
+            mode, ceiling = resolve_jobserver_ceiling(tracer_args[i + 1], wrapped_cmd)
+            if mode is None:
+                out.extend([tok, tracer_args[i + 1]])
+            else:
+                os.environ['BGA_JOBSERVER_MODE'] = mode
+                if mode != 'off':
+                    out.extend([tok, str(ceiling)])
+            i += 2
+            continue
+        if tok.startswith('--jobserver='):
+            mode, ceiling = resolve_jobserver_ceiling(tok.split('=', 1)[1], wrapped_cmd)
+            if mode is None:
+                out.append(tok)
+            else:
+                os.environ['BGA_JOBSERVER_MODE'] = mode
+                if mode != 'off':
+                    out.append(f'--jobserver={ceiling}')
+            i += 1
+            continue
+        out.append(tok)
+        i += 1
+    new_rest = out + (['--'] + wrapped_cmd if has_sep else [])
+    return argv[:2] + new_rest
+
+
 def _maybe_print_schema(argv: list) -> Optional[int]:
     """`bga <command> --schema` -> the JSON Schema of its output, exit 0.
 
@@ -2619,6 +2731,11 @@ def _run(argv: Optional[list[str]] = None) -> int:
     schema_exit = _maybe_print_schema(raw_argv)
     if schema_exit is not None:
         return schema_exit
+
+    # UX-851: `bga capture --jobserver auto|N|off` is `bga`'s own
+    # vocabulary, resolved before the tracer ever sees it - see
+    # `_translate_capture_jobserver`.
+    raw_argv = _translate_capture_jobserver(raw_argv)
 
     from .tools_dispatch import dispatch
     tool_exit = dispatch(raw_argv)

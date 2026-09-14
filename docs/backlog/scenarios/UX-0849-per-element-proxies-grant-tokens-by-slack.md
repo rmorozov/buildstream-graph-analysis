@@ -1,6 +1,6 @@
 # UX-849: per-element proxies grant tokens by slack
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-845, UX-847 | **Found by:** round 117, Direction 20 | **Serves:** R4 (the critical path gets the cores first) | **Topic:** capture | **Area:** tools | **Shape:** mechanical
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-845, UX-847 | **Found by:** round 117, Direction 20 | **Serves:** R4 (the critical path gets the cores first) | **Topic:** capture | **Area:** tools | **Shape:** mechanical
 
 ## Motivation
 
@@ -103,3 +103,11 @@ broker (`grants: 3, drains: 3`) redistributing an already 16-way-
 oversubscribed 4-core box, a second real cost (100ms) on top of
 `PoolController`'s own (250ms) with nothing idle either can hand out.
 Dated stage-3 line added under the README's stage-1 paragraph.
+
+Deviation (merge): the brief fixed proxies at `fifo:` auth, which GNU
+Make 4.3 (this box, CI's runner) rejects - a proxy now follows the
+host style, `fd` opening the proxy in the shim; the least-slack case's
+names were re-ordered so a name-only grant order reds it (1 of 7); the
+shim case count read 44 where 37 collect; a token held by a job killed
+mid-recipe is lost to the build (no audit for proxies), noted; with a
+plan the example ran slower (41.41 s against 32.23 s).

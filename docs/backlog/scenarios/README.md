@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-849 scenarios: **15 open**, 834 closed.
+849 scenarios: **14 open**, 835 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -23,7 +23,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | capture | 9 | 106 |
 | analysis | 1 | 116 |
 | contracts | 2 | 50 |
-| viewer | 1 | 173 |
+| viewer | 0 | 173 |
 | cli | 0 | 22 |
 | store | 0 | 16 |
 | docs | 1 | 143 |
@@ -50,7 +50,6 @@ task file, which is the only place it ever lived twice.
 | UX-852 | [outstanding tokens are audited against live processes](UX-0852-outstanding-tokens-are-audited-against-live-processes.md) | capture | Medium | R4 (a killed link does not shrink the pool for the rest of the build) | 🔴 Not Started |
 | UX-838 | [`fan_in[].direct` ships with no prose, and no guard can see it](UX-0838-fan-in-direct-ships-with-no-prose-and-no-guard-can-see-it.md) | contracts | Medium | anyone reading `elements.fan_in` against the guide that describes it | 🔴 Not Started |
 | UX-839 | [the clone-size claim is half what a clone now costs](UX-0839-the-clone-size-claim-is-half-what-a-clone-now-costs.md) | docs | Low | someone deciding whether `--single-branch` is worth typing | 🔴 Not Started |
-| UX-840 | [the §3e summary table is one item behind the bound it summarises](UX-0840-the-3e-summary-table-is-one-item-behind-the-bound-it-summarises.md) | viewer | Medium | anyone reading §3e's table for "what is the current bound" rather than its history | 🔴 Not Started |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

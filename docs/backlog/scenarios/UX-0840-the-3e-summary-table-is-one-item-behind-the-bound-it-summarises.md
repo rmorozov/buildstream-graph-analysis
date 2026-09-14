@@ -1,6 +1,6 @@
 # UX-840: the §3e summary table is one item behind the bound it summarises
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-367 (the per-class bound table), UX-830 (which last moved it) | **Found by:** review 23 | **Serves:** anyone reading §3e's table for "what is the current bound" rather than its history | **Topic:** viewer | **Area:** bga-viewer | **Shape:** judgement
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-367 (the per-class bound table), UX-830 (which last moved it) | **Found by:** review 23 | **Serves:** anyone reading §3e's table for "what is the current bound" rather than its history | **Topic:** viewer | **Area:** bga-viewer | **Shape:** judgement
 
 ## Motivation
 
@@ -119,3 +119,7 @@ TestTheBudgetIsWrittenWhereItIsRead::test_the_style_guide_states_every_budget PA
 TestTheBudgetIsWrittenWhereItIsRead::test_the_summary_rows_match_the_budgets_structurally PASSED
 TestTheBudgetIsWrittenWhereItIsRead::test_the_size_classes_are_stated_too PASSED
 ```
+
+Deviation: none. The 4,100-class row's landed cell read 7,000 against
+`LANDED_HEIGHT_PX` 7,300 and moved with the guard; the historical
+"to 4,000 elts" row stays a dated record outside `BUDGETS`.

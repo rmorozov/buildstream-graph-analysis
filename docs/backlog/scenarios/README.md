@@ -15,13 +15,13 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-849 scenarios: **4 open**, 845 closed.
+849 scenarios: **3 open**, 846 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
 | capture | 3 | 106 |
-| analysis | 1 | 116 |
+| analysis | 0 | 116 |
 | contracts | 0 | 50 |
 | viewer | 0 | 173 |
 | cli | 0 | 22 |
@@ -36,7 +36,6 @@ task file, which is the only place it ever lived twice.
 
 | ID | Scenario | Topic | Priority | Serves | Status |
 |---|---|---|---|---|---|
-| UX-847 | [the token ledger lands in Plane 2 and the page](UX-0847-the-token-ledger-lands-in-plane-2-and-the-page.md) | analysis | Medium | R4 and R5 (was the pool or the graph the bound) | 🔴 Not Started |
 | UX-849 | [per-element proxies grant tokens by slack](UX-0849-per-element-proxies-grant-tokens-by-slack.md) | capture | Medium | R4 (the critical path gets the cores first) | 🔴 Not Started |
 | UX-850 | [memory is a second resource the pool reads](UX-0850-memory-is-a-second-resource-the-pool-reads.md) | capture | Medium | R5 (a machine that overcommitted memory before) | 🔴 Not Started |
 | UX-852 | [outstanding tokens are audited against live processes](UX-0852-outstanding-tokens-are-audited-against-live-processes.md) | capture | Medium | R4 (a killed link does not shrink the pool for the rest of the build) | 🔴 Not Started |

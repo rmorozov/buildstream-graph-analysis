@@ -1,6 +1,6 @@
 # UX-847: the token ledger lands in Plane 2 and the page
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-845, UX-846 | **Found by:** round 117, Direction 20 | **Serves:** R4 and R5 (was the pool or the graph the bound) | **Topic:** analysis | **Area:** bga | **Shape:** judgement
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-845, UX-846 | **Found by:** round 117, Direction 20 | **Serves:** R4 and R5 (was the pool or the graph the bound) | **Topic:** analysis | **Area:** bga | **Shape:** judgement
 
 ## Motivation
 
@@ -104,3 +104,9 @@ Each reverted from a scratch copy, re-confirmed 19 passed before commit.
 `jobserver_tokens_by_element` having no producer (always null, an
 undisclosed proxy), then on the producer itself having no guard
 (`return {}` stayed green) - both closed by code, not by disclosure.
+
+Deviation (merge): two holds - the per-element `held` figures had no
+producer, then the producer's raw-log pass had no guard; both closed on
+the track (19 cases, four mutations red); the golden export moved by
+4,328 B for the block's schema prose, bound restated to 474,000; the
+architecture document re-grounded at 62 top-level properties.

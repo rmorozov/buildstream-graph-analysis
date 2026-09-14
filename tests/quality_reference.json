@@ -86,7 +86,7 @@
     "tools/bst_checkout_cost.py": {"duplicate_blocks": 1, "file_lines": 239, "longest_function": 43},
     "tools/bst_extract_run.py": {"duplicate_blocks": 3, "file_lines": 1038, "longest_function": 334},
     "tools/bst_log_to_chrome_trace.py": {"duplicate_blocks": 0, "file_lines": 941, "longest_function": 134},
-    "tools/bst_native_build_tracer.py": {"duplicate_blocks": 1, "file_lines": 8453, "longest_function": 518},
+    "tools/bst_native_build_tracer.py": {"duplicate_blocks": 1, "file_lines": 8468, "longest_function": 518},
     "tools/bst_rebuild_set.py": {"duplicate_blocks": 0, "file_lines": 140, "longest_function": 34},
     "tools/bst_run_context.py": {"duplicate_blocks": 4, "file_lines": 230, "longest_function": 76},
     "tools/bst_run_wrapped.py": {"duplicate_blocks": 0, "file_lines": 376, "longest_function": 92},

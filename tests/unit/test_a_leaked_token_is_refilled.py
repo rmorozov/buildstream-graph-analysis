@@ -46,7 +46,8 @@ def _controller(tmp_path, fd, ceiling=8):
     # capacity far above any busy-core reading, and the PSI path pinned
     # away from the host's file (CI's runner has one, avg10 19.31).
     pc = tracer.PoolController(fd, ceiling, capacity=10**6, ledger_path=ledger,
-                               psi_path=str(tmp_path / "no-psi"))
+                               psi_paths={"cpu": str(tmp_path / "no-psi"),
+                                          "memory": str(tmp_path / "no-memory-psi")})
     return pc, ledger
 
 

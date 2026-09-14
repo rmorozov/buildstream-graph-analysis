@@ -938,6 +938,38 @@ def test_no_readme_line_states_a_suite_wall_clock_beside_make_test():
         "across machines:\n  " + "\n  ".join(offenders))
 
 
+#: A clone-size figure - `50 MiB`, `5.3 MiB`, `47 KiB` - ages the way
+#: `UX-551` found a wall clock does: the `captures/*` branches this repo
+#: carries only grow (`UX-839`).
+_CLONE_SIZE = re.compile(r"\d[\d.]*\s*(?:MiB|KiB)\b")
+_CLONE_SIZE_DATE = re.compile(r"\b20\d\d-\d\d-\d\d\b")
+_CLONE_SIZE_CMD = re.compile(r"`[^`]*\b(?:du|git clone)\b[^`]*`")
+_PAREN_GROUP = re.compile(r"\(([^()]*)\)")
+
+
+def test_every_readme_clone_size_sits_in_a_dated_commanded_parenthetical():
+    """UX-839: the Install section's default-vs-`--single-branch` sizes
+    grow with every `captures/*` branch the repository picks up, so a
+    bare figure ages like the wall clock above - each one must sit
+    inside a parenthetical that also names a date and a `du`/`git
+    clone` command, the shape the branch-count clause beside it already
+    has."""
+    readme = (REPO / "README.md").read_text(encoding="utf-8")
+    install = readme.split("\n## Install", 1)[1].split("\n## ", 1)[0]
+    offenders = []
+    for figure in _CLONE_SIZE.finditer(install):
+        start, end = figure.span()
+        group = next((p.group(1) for p in _PAREN_GROUP.finditer(install)
+                       if p.start() <= start and end <= p.end()), None)
+        if (group is None or not _CLONE_SIZE_DATE.search(group)
+                or not _CLONE_SIZE_CMD.search(group)):
+            offenders.append(figure.group(0))
+    assert offenders == [], (
+        "README's Install section states a clone-size figure that is "
+        "not inside a parenthetical naming both a date and a `du`/`git "
+        "clone` command:\n  " + "\n  ".join(offenders))
+
+
 def _github_slug(heading: str) -> str:
     """GitHub's heading-to-anchor rule: lowercase, drop everything but
     word characters/spaces/hyphens, then turn every remaining space

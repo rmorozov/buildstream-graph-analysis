@@ -52,3 +52,49 @@ that also names a date (`YYYY-MM-DD`) and a `du`/`git clone` command,
 the same shape the branch-count clause already passes. Mutation: drop
 the parenthetical back to a bare `(50 MiB against 5.3 MiB)` — the new
 guard reds, naming the line.
+
+## Outcome
+
+Gap measured, today (`git clone` then `du -sh`, remote clone — the
+proxy allowed it, no local-`.git` fallback needed):
+
+```text
+$ git clone --quiet https://github.com/rmorozov/buildstream-graph-analysis default
+$ du -sh default default/.git
+104M  default
+74M   default/.git
+$ git clone --quiet --single-branch --branch main https://github.com/rmorozov/buildstream-graph-analysis single
+$ du -sh single single/.git
+47M   single
+17M   single/.git
+```
+
+104 MiB / 47 MiB against the sentence's stated 50 MiB / 5.3 MiB — both
+roughly 2x the earlier figures, consistent with the growth the
+Motivation predicted. `README.md:14`'s figure restated in the
+branch-count clause's own shape: `(104 MiB against 47 MiB as of
+2026-09-14: \`git clone\` vs \`git clone --single-branch\` of this
+repository, each then \`du -sh\`)`.
+
+Close measured: `test_every_readme_clone_size_sits_in_a_dated_commanded_parenthetical`
+added to `tests/unit/test_docs_links_and_commands.py`, sibling to the
+wall-clock guard. `python3 -m pytest tests/unit/test_docs_links_and_commands.py
+tests/unit/test_a_clone_without_the_archive.py -q` → `69 passed`.
+`make test-touching`: `63 file(s) selected (21 census + 42 naming the
+change) · 1799 passed, 3 skipped in 279.68s`.
+
+Mutation table:
+
+| mutation | reddened | count |
+|---|---|---|
+| `(104 MiB against 47 MiB as of 2026-09-14: ...)` → bare `(50 MiB against 5.3 MiB)` | `test_every_readme_clone_size_sits_in_a_dated_commanded_parenthetical` (offenders `['50 MiB', '5.3 MiB']`) | 1 failed / 58 deselected, then reverted → 59 passed |
+
+One collision found and fixed in the same pass: the first draft's
+parenthetical restated the full `git clone
+https://.../buildstream-graph-analysis` command, which put a second
+"git clone" + "buildstream-graph-analysis" line into README.md and made
+`test_a_clone_without_the_archive.py`'s flag-scanner (any line with
+both substrings) pick up `--heads` from the neighbouring
+`git ls-remote --heads` clause as a bogus documented clone flag (5 red).
+Rewritten to `git clone` / `git clone --single-branch` "of this
+repository" without repeating the URL; both files pass together.

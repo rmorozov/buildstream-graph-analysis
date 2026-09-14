@@ -26,7 +26,9 @@ import pytest
 # flags) without leaving room for a paragraph per flag.
 # Raised by 2 for a 15th flag on `capture run`: one option line, plus
 # the usage line's own wrap forced by `[--jobserver N]`'s width (`UX-679`).
-CAP = 47
+# Raised by 4 for a 16th flag, `--jobserver-auth {fd,fifo,auto}`: its own
+# usage-line wrap plus a two-line choices help (`UX-841`).
+CAP = 51
 
 # The top level is a *list*: one line per command, and there are 23 of
 # them. Its length is the command count, not prose, so it gets its own

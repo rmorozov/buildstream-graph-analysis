@@ -69,6 +69,7 @@ import contextlib
 import errno
 import fcntl
 import gzip
+import hashlib
 import itertools
 import json
 import os
@@ -1024,6 +1025,10 @@ JOBSERVER_POOL_INTERVAL_S = 0.25
 JOBSERVER_POOL_PSI_BOUND = 10.0
 
 _PSI_CPU_PATH = "/proc/pressure/cpu"
+
+#: UX-844: `bst show`'s own timeout for the pre-build cache key set -
+#: generous because a cold project can still be resolving sources.
+CACHE_KEY_SET_TIMEOUT_S = 300
 _PSI_SOME_AVG10_RE = re.compile(r"avg10=([\d.]+)")
 
 
@@ -1067,6 +1072,27 @@ def summarize_jobserver_ledger(path: str, ceiling: int) -> tuple[int, int, int]:
     except (OSError, ValueError, KeyError):
         return 0, ceiling - 1, ceiling - 1
     return moves, pool_min, pool_max
+
+
+def hash_cache_key_lines(text: str) -> dict:
+    """UX-844: an order-independent digest of `bst show --format
+    '%{name} %{full-key}'` output - `{"sha256": ..., "elements": N}`.
+
+    Sorted before hashing so two runs that resolved elements in a
+    different order still compare equal; a later capture's own
+    `cache_key_set` is comparable against this one only when both
+    hashed the same shape.
+    """
+    lines = sorted(line for line in text.splitlines() if line.strip())
+    digest = hashlib.sha256("\n".join(lines).encode()).hexdigest()
+    return {"sha256": digest, "elements": len(lines)}
+
+
+def bst_command_targets(cmd: list[str]) -> list[str]:
+    """Element names named on a `bst` command line - anything that is
+    not an option and ends `.bst`, the shape every target BuildStream
+    accepts takes."""
+    return [arg for arg in cmd if arg.endswith(".bst") and not arg.startswith("-")]
 
 
 class PoolController:
@@ -7460,6 +7486,25 @@ def main(argv: Optional[list[str]] = None) -> int:
             os.path.join(scratch_mkdtemp(args.project_dir, "jobserver-"),
                         "jobserver_decisions.jsonl")
             if args.jobserver else None)
+        # UX-844: the key set before the build starts, so a later capture
+        # (with or without the mode) is comparable against it. Never an
+        # abort - a project `bst show` cannot resolve is still traced.
+        cache_key_set = None
+        cache_key_targets = bst_command_targets(cmd)
+        bst_path = shutil.which("bst") if cache_key_targets else None
+        if cache_key_targets and bst_path:
+            try:
+                key_result = subprocess.run(
+                    [bst_path, "show", "--format", "%{name} %{full-key}",
+                     *cache_key_targets],
+                    cwd=args.project_dir, capture_output=True, text=True,
+                    timeout=CACHE_KEY_SET_TIMEOUT_S, check=True,
+                )
+            except (subprocess.SubprocessError, OSError) as exc:
+                print(f"Warning: could not read the cache key set ({exc})",
+                      file=sys.stderr)
+            else:
+                cache_key_set = hash_cache_key_lines(key_result.stdout)
         try:
             returncode = run_traced_build(args.project_dir, cmd, raw_log_path,
                                           wrapped_log_path=wrapped_log_path,
@@ -7542,6 +7587,10 @@ def main(argv: Optional[list[str]] = None) -> int:
             # UX-841: the style actually used, next to it - `None` when
             # the jobserver itself is off.
             report["jobserver_auth"] = jobserver_auth
+            # UX-844: `{"sha256": ..., "elements": N}` from `bst show`
+            # before the build, or `None` when it could not be read -
+            # comparable against another capture's own field.
+            report["cache_key_set"] = cache_key_set
             # UX-845: the dynamic pool's own record - `None` when the
             # jobserver is off, static facts when it ran `fixed`.
             if args.jobserver:

@@ -1,6 +1,6 @@
 # UX-841: the tracer's FIFO lifecycle is guarded, and the auth style follows `make`
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-679 (the spike) | **Found by:** round 117, Direction 20 | **Serves:** R4, before any jobserver capture is trusted | **Topic:** capture | **Area:** tools | **Shape:** mechanical
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-679 (the spike) | **Found by:** round 117, Direction 20 | **Serves:** R4, before any jobserver capture is trusted | **Topic:** capture | **Area:** tools | **Shape:** mechanical
 
 ## Motivation
 
@@ -88,3 +88,12 @@ tree in its own `finally` regardless, masking a `close_jobserver` that
 skipped its `os.remove`. The direct `open_jobserver`/`close_jobserver`
 test is what actually discriminates that mutation; the raises-test's
 job is proving the *try/finally shape*, not this specific line.
+
+Deviation: the "build that raises" case proves the FIFO exists when
+the build starts and that the error propagates, not the teardown -
+`capture_scratch`'s own `rmtree` masks a skipped `os.remove` there;
+the direct `close_jobserver` case is the guard for that line. The
+help cap moved by four lines, one `S603` entry joined the baseline
+for the `make --version` subprocess, and the `BST_TRACE_JOBSERVER_AUTH`
+row joined the inventory. The pinned `core.bst` still joined at peak
+2 in the live run - `UX-842`'s row.

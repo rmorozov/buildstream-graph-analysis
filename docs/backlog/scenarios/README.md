@@ -15,12 +15,12 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-849 scenarios: **12 open**, 837 closed.
+849 scenarios: **11 open**, 838 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
-| capture | 9 | 106 |
+| capture | 8 | 106 |
 | analysis | 1 | 116 |
 | contracts | 1 | 50 |
 | viewer | 0 | 173 |
@@ -36,7 +36,6 @@ task file, which is the only place it ever lived twice.
 
 | ID | Scenario | Topic | Priority | Serves | Status |
 |---|---|---|---|---|---|
-| UX-841 | [the tracer's FIFO lifecycle is guarded, and the auth style follows `make`](UX-0841-the-tracers-fifo-lifecycle-is-guarded-and-the-auth-style-follows-make.md) | capture | Medium | R4, before any jobserver capture is trusted | 🔴 Not Started |
 | UX-842 | [a pinned element never joins the jobserver](UX-0842-a-pinned-element-never-joins-the-jobserver.md) | capture | High | R2 (an element pinned for a build-system defect keeps its pin) | 🔴 Not Started |
 | UX-843 | [the per-kind environment table, and the ninja that cannot join](UX-0843-the-per-kind-environment-table-and-the-ninja-that-cannot-join.md) | capture | High | R4 (cmake and meson elements join instead of resetting the jobserver) | 🔴 Not Started |
 | UX-844 | [the cache key is equal with and without the jobserver](UX-0844-the-cache-key-is-equal-with-and-without-the-jobserver.md) | guards | High | R4 (artifacts built either way are shared) | 🔴 Not Started |

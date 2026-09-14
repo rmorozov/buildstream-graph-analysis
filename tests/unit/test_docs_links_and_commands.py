@@ -1617,16 +1617,24 @@ def test_the_architecture_names_the_file_behind_each_command():
 
 
 def test_the_architecture_lists_every_native_trace_member():
-    """Plane 2's mechanism is four files under `tools/native_trace/`; the
-    document named three in prose and the map named none. `bwrap_shim.py`,
-    the piece that puts the hook in front of the real `bwrap`, was
-    nowhere."""
-    members = [one for one in _tracked_paths()
-               # A package marker is not a member of the mechanism.
-               if one.startswith("tools/native_trace/")
-               and not one.endswith("__init__.py")]
-    assert len(members) == 4, (
-        "tools/native_trace/ no longer holds the four members this guard "
+    """Plane 2's mechanism is five members under `tools/native_trace/`;
+    the document named three in prose and the map named none.
+    `bwrap_shim.py`, the piece that puts the hook in front of the real
+    `bwrap`, was nowhere.
+
+    UX-846: `wrappers/` holds one script per tool - collapsed to the
+    directory, the same way `__init__.py` is not a member on its own,
+    so a sixth wrapped tool does not need a doc edit of its own.
+    """
+    raw = [one for one in _tracked_paths()
+           # A package marker is not a member of the mechanism.
+           if one.startswith("tools/native_trace/")
+           and not one.endswith("__init__.py")]
+    wrappers = "tools/native_trace/wrappers/"
+    members = sorted({wrappers if one.startswith(wrappers) else one
+                      for one in raw})
+    assert len(members) == 5, (
+        "tools/native_trace/ no longer holds the five members this guard "
         "is for", members)
     text = _ARCHITECTURE.read_text(encoding="utf-8")
     missing = [one for one in members if one not in text]

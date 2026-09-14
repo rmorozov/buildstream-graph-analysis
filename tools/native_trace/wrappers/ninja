@@ -1,0 +1,7 @@
+#!/bin/sh
+# UX-846: ninja 1.11 has no jobserver client - this holds tokens for it
+# instead of the implicit-one-token default oversubscribing every core.
+set -eu
+_bga_self=$(readlink -f -- "$0" 2>/dev/null || printf '%s\n' "$0")
+. "$(CDPATH= cd -- "$(dirname -- "$_bga_self")" && pwd)/_common.sh"
+bga_run_wrapped dashj "$@"

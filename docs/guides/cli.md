@@ -719,11 +719,12 @@ What you can set:
 | `BGA_INTERRUPT_GRACE_SECONDS` | seconds a wrapped `bst` gets to stop by itself after `SIGINT` before `bga` escalates; 300 by default, and raising it is how a big build keeps the `queue_summary` written during that shutdown | `tools/bst_run_wrapped.py` |
 | `BGA_JOBSERVER_MODE` | `off`/`auto`/`n` — `bga capture` sets it beside the `--jobserver N` it already resolves from `--jobserver auto\|N\|off` (`UX-851`), so `tools/bst_native_build_tracer.py run` can record which mode ran without parsing its own argv for the distinction. Unset (read as `off`) when the tracer's `run` command is invoked directly, outside `bga capture` | `tools/bst_native_build_tracer.py` |
 | `BGA_NO_PROGRESS` | suppresses the in-phase progress line even on a terminal — the same off-switch as `bga snapshot --no-progress` | `bga/progress.py` |
+| `BGA_WRAPPER_ACQUIRE_MS` | how long a jobserver wrapper (`ld.lld`, `lld`, `ld.gold`, `mold`, `ninja`) may spend acquiring tokens before running its tool; 50 by default, passed to `timeout` as seconds with three decimals. Raised by the test suite so an exact-token-count assertion is never also a bet against `make test`'s own xdist contention (`UX-846`) | `tools/native_trace/wrappers/_common.sh` |
 | `BGA_RATE` | adds the *In Your Units* block to `bga analyze` and `bga whatif`, converting build seconds at `<amount> <unit>/machine-hour` (or `/build-hour`). Unset, nothing is converted and no block is printed; malformed, the block says why rather than staying silent | `bga/report/rate.py` |
 | `BGA_REQUESTED_AT` | the ISO-8601 instant a capture publishes as `requested_at_us`, and the `queue_wait_us` it derives from that. `CI_PIPELINE_CREATED_AT` is the fallback, and the published `requested_at_source` says which was used | `tools/_run_context_common.py` |
 | `BGA_TRACE_PROCESSOR` | the Perfetto `trace_processor_shell` the canned-question runner uses, ahead of `PATH` and ahead of the pinned download | `tests/trace_processor.py` |
 
-Three more names sit in the same namespace and are **not** switches to
+Four more names sit in the same namespace and are **not** switches to
 use. They are listed because a reader who greps the tree finds them and
 deserves an answer:
 
@@ -732,6 +733,7 @@ deserves an answer:
 | `BGA_FORCE_PROGRESS` | draws the progress line onto a pipe, so a test can compare a run with progress genuinely on against one with it off. Deliberately not a user-facing switch: it writes control characters into a redirected stderr, which is the one thing `UX-183` exists to prevent | `bga/progress.py` |
 | `BGA_STRICT_HINTS` | not an environment variable at all — a page global, set from the browser console, that makes the report complain about a number carrying no declared `bga:quantity` | `bga/viewer/format.js` |
 | `BGA_TIER_ANY` | set into the child environment by `make test-touching` and by the pre-commit selector, and read by nothing in this tree (`UX-630`) | `tools/dev_touching.py` |
+| `BGA_WRAPPER_TOOL` | set by a jobserver wrapper on itself before running the real tool or its `--help`, so a re-entry (a symlink or a relocated copy that fooled `bga_find_real`) refuses outright rather than recursing (`UX-846`, a post-merge incident) | `tools/native_trace/wrappers/_common.sh` |
 
 ### `BST_TRACE_*` — Plane 2 and Plane 3 (`UX-635`)
 
@@ -754,6 +756,7 @@ is which before touching any of them.
 | `BST_TRACE_NO_INJECT` | `=1` runs the shim through to the real `bwrap` injecting nothing, so a refusal can be told from a capture defect. `bga snapshot --no-inject` sets it | `tools/native_trace/bwrap_shim.py` |
 | `BST_TRACE_DIAGNOSTICS` | a path the shim writes `bwrap`'s own stderr to, so a sandbox that refused says what it objected to | `tools/native_trace/bwrap_shim.py` |
 | `BST_TRACE_ARGV_MAX` | how much of a recorded `argv` is kept before truncation; the default is the shim's `DEFAULT_ARGV_RECORD_LIMIT` | `tools/native_trace/bwrap_shim.py` |
+| `BST_TRACE_WRAPPER_CAP` | the most tokens one jobserver wrapper (`ld.lld`, `lld`, `ld.gold`, `mold`, `ninja`) may acquire before running its tool — the pool's own ceiling, set only when `--jobserver` is on (`UX-846`) | `tools/native_trace/wrappers/_common.sh` |
 
 **What the capture path sets for you.** Setting these by hand does not
 configure a capture, it desynchronises one — the tracer writes them
@@ -776,7 +779,8 @@ into the child environment and the shim requires them:
 | `BST_TRACE_PROJECT_MAX_JOBS` | the project's own `max-jobs`, read once from `bst show` before the build; the shim compares it against each sandbox's own `-j` to tell a `notparallel` pin from an element-level cap (`UX-842`) | `tools/native_trace/bwrap_shim.py` |
 | `BST_TRACE_JOBSERVER_DECISIONS` | the host-side path the shim appends one `{element, max_jobs, decision, kind, policy}` line to per sandbox, folded into the report as `jobserver_decisions` (`UX-842`/`UX-843`) | `tools/native_trace/bwrap_shim.py` |
 | `BST_TRACE_ELEMENT_KINDS` | a JSON `{name: kind}` map, read once from `bst show` before the build; the shim looks its own element up in it to pick a row from the per-kind environment table (`UX-843`) | `tools/native_trace/bwrap_shim.py` |
-| `BST_TRACE_WRAPPERS_DIR` | a bind-mounted `PATH` of token-holding wrappers, when one is staged; the shim reads only whether it is set, to choose between `ninja_wrapper` and `ninja_static` for a ninja generator with no jobserver client (`UX-843`; the wrappers themselves are `UX-846`) | `tools/native_trace/bwrap_shim.py` |
+| `BST_TRACE_WRAPPER_DIR` | the host path of `tools/native_trace/wrappers/`, bound read-only at `/.bga/wrappers` and prepended to `PATH` ahead of BuildStream's own (`UX-846`) | `tools/native_trace/bwrap_shim.py` |
+| `BST_TRACE_JOBSERVER_LEDGER` | the in-sandbox path a wrapper appends an acquire or release row to — the same file `PoolController`'s own ticks land in, under the existing trace bind (`UX-846`) | `tools/native_trace/wrappers/_common.sh` |
 
 **What a test sets to reach a failure path.** The spine's degrade and
 refusal branches are unreachable on a machine that *has* `ptrace`, so

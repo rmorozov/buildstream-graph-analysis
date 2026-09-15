@@ -66,11 +66,20 @@
  * cmake configure opens thousands of files). It is written to fail
  * silently into "no tracing" rather than to ever break the wrapped
  * build, per this file's own standing requirement.
+ *
+ * UX-865: a relative path is joined against the opener's own cwd
+ * (cached, refreshed by interposing chdir/fchdir) and recorded as if
+ * it were absolute, since compute_declared_vs_used matches exact
+ * strings against `bst artifact list-contents`. Lexical only - `.`
+ * and `..` are collapsed without touching the filesystem, so a path
+ * reached under a symlinked alias still will not match.
  */
 #define _GNU_SOURCE
 #include <dlfcn.h>
 #include <errno.h>
+#include <limits.h>
 #include <stdarg.h>
+#include <stdatomic.h>
 #include <string.h>
 #include <fcntl.h>
 #include <stdio.h>
@@ -120,6 +129,13 @@ static const char *g_invocation = NULL;
 #ifndef OPEN_ARENA_BYTES
 #define OPEN_ARENA_BYTES 1048576  /* 1 MiB of path text per process */
 #endif
+#ifndef PATH_MAX
+#define PATH_MAX 4096  /* not guaranteed by POSIX; glibc's <limits.h> value */
+#endif
+/* Bounds the fixed stack array `normalize_abs_path` walks a path's
+ * segments into - deep enough for any real path, and a path deeper
+ * than this is refused (record nothing) rather than overflowed. */
+#define MAX_PATH_SEGMENTS 512
 
 static int g_record_opens = 0;
 static __thread int g_in_hook = 0;
@@ -129,13 +145,39 @@ static size_t g_open_arena_used = 0;
 static unsigned g_open_unique = 0;
 static unsigned g_open_dropped = 0;
 static unsigned g_open_part = 0;
+/* UX-865: running per-process totals, reported the same way `dropped`
+ * is - re-emitted in full in every window rather than reset on flush,
+ * since a count of events is not part of the window it happened to
+ * land in. */
+static unsigned g_open_relative = 0;
+static unsigned g_open_dirfd = 0;
+
+/* UX-865: the opener's cwd, cached per thread and validated against a
+ * process-wide generation. Two threads opening relative paths while a
+ * third `chdir`s is a real race - a bare `g_cwd`/`g_have_cwd` pair
+ * shared by every thread is a data race, torn or not. A `chdir` racing
+ * an `open` is inherently racy at the kernel too (there is no instant
+ * at which "the cwd" is well-defined across two threads that disagree
+ * about it); this scheme only guarantees each thread reads a cwd that
+ * was current at *some* instant, never a torn buffer. `chdir`/`fchdir`
+ * bump the generation atomically rather than re-reading eagerly, to
+ * keep them on the fast path; each thread re-reads `getcwd` lazily,
+ * only when its own cached generation is stale. */
+static _Atomic unsigned g_cwd_generation = 0;
+static __thread char t_cwd[PATH_MAX];
+static __thread unsigned t_cwd_generation = 0;
+static __thread int t_have_cwd = 0;
 
 typedef int (*open_fn)(const char *, int, ...);
 typedef int (*openat_fn)(int, const char *, int, ...);
+typedef int (*chdir_fn)(const char *);
+typedef int (*fchdir_fn)(int);
 static open_fn g_real_open = NULL;
 static open_fn g_real_open64 = NULL;
 static openat_fn g_real_openat = NULL;
 static openat_fn g_real_openat64 = NULL;
+static chdir_fn g_real_chdir = NULL;
+static fchdir_fn g_real_fchdir = NULL;
 
 static void write_open_record(void);
 
@@ -170,12 +212,115 @@ static unsigned long path_hash(const char *s) {
     return h ? h : 1;
 }
 
+/* UX-865: bumping the generation is the whole invalidation - no thread
+ * re-reads `getcwd` until it next opens a relative path and notices
+ * its own cached generation no longer matches. */
+static void bump_cwd_generation(void) {
+    atomic_fetch_add_explicit(&g_cwd_generation, 1, memory_order_release);
+}
+
+static const char *current_cwd(void) {
+    unsigned gen = atomic_load_explicit(&g_cwd_generation, memory_order_acquire);
+    if (!t_have_cwd || t_cwd_generation != gen) {
+        if (getcwd(t_cwd, sizeof(t_cwd)) == NULL) {
+            t_have_cwd = 0;
+            return NULL;
+        }
+        t_cwd_generation = gen;
+        t_have_cwd = 1;
+    }
+    return t_cwd;
+}
+
+/* UX-865: collapse `.` and `..` segments of an absolute path lexically,
+ * writing the result into `out`. No filesystem access - no `stat`, no
+ * `readlink` - so a symlinked segment is not resolved; that alias gap
+ * stays a caveat (bst_native_build_tracer.py's declared-vs-used note),
+ * not a bug here. `in` and `out` may not overlap. Returns 0 (record
+ * nothing) rather than overflow on a path deeper than
+ * MAX_PATH_SEGMENTS or longer than `outsz`. */
+static int normalize_abs_path(const char *in, char *out, size_t outsz) {
+    size_t marks[MAX_PATH_SEGMENTS];
+    int n = 0;
+    size_t pos = 0;
+    if (outsz < 2) {
+        return 0;
+    }
+    out[pos++] = '/';
+    const char *p = in;
+    while (*p == '/') {
+        p++;
+    }
+    while (*p) {
+        const char *seg = p;
+        while (*p && *p != '/') {
+            p++;
+        }
+        size_t seglen = (size_t)(p - seg);
+        while (*p == '/') {
+            p++;
+        }
+        if (seglen == 0 || (seglen == 1 && seg[0] == '.')) {
+            continue;
+        }
+        if (seglen == 2 && seg[0] == '.' && seg[1] == '.') {
+            if (n > 0) {
+                n--;
+                pos = marks[n];
+            }
+            continue;
+        }
+        if (n >= MAX_PATH_SEGMENTS) {
+            return 0;
+        }
+        marks[n++] = pos;
+        if (pos > 1) {
+            if (pos + 1 >= outsz) {
+                return 0;
+            }
+            out[pos++] = '/';
+        }
+        if (pos + seglen >= outsz) {
+            return 0;
+        }
+        memcpy(out + pos, seg, seglen);
+        pos += seglen;
+    }
+    out[pos] = '\0';
+    return 1;
+}
+
 static void record_open(const char *path) {
-    if (!g_record_opens || path == NULL || path[0] != '/') {
-        /* Relative paths are recorded by their opener's own cwd, which
-         * we do not know and which differs per process; only absolute
-         * paths can be matched against an artifact's contents. */
+    if (!g_record_opens || path == NULL || path[0] == '\0') {
         return;
+    }
+    char joined[PATH_MAX];
+    char resolved[PATH_MAX];
+    if (path[0] != '/') {
+        /* UX-865: joined against the opener's own cwd rather than
+         * dropped - a compiler handed `-I../staged/include` opens
+         * exactly this, and without the join the read is lost. Every
+         * way the join itself can fail (no cwd, too long, too deep) is
+         * counted in `dropped` too - a read this element made but this
+         * analysis could not record is exactly what `dropped` already
+         * means for the arena-overflow case, and the declared-vs-used
+         * analysis already refuses to trust a truncated read set. */
+        const char *cwd = current_cwd();
+        if (cwd == NULL) {
+            g_open_dropped++;  /* getcwd failed - cannot join safely */
+            return;
+        }
+        int written = snprintf(joined, sizeof(joined), "%s/%s", cwd, path);
+        if (written <= 0 || (size_t)written >= sizeof(joined)) {
+            g_open_dropped++;  /* joined path too long to record */
+            return;
+        }
+        if (!normalize_abs_path(joined, resolved, sizeof(resolved))) {
+            g_open_dropped++;  /* too deep for MAX_PATH_SEGMENTS/outsz */
+            return;
+        }
+        path = resolved;
+        g_open_relative++;
     }
     size_t len = strlen(path);
     if (len + 1 > OPEN_ARENA_BYTES) {
@@ -219,6 +364,19 @@ static void record_open(const char *path) {
         }
     }
     g_open_dropped++;  /* unreachable: kept so a future edit cannot silently lose paths */
+}
+
+/* UX-865: `openat`'s dirfd is only in play when `path` is relative and
+ * `dirfd` is not AT_FDCWD - resolving that would need a directory-fd
+ * to path lookup (`/proc/self/fd/N`), out of scope by the task's own
+ * word, so it is counted and not joined against the process cwd,
+ * which would be wrong. */
+static void record_openat(int dirfd, const char *path) {
+    if (path != NULL && path[0] != '/' && dirfd != AT_FDCWD) {
+        g_open_dirfd++;
+        return;
+    }
+    record_open(path);
 }
 
 /* Resolved lazily rather than in the constructor: the constructor may
@@ -291,7 +449,7 @@ int openat(int dirfd, const char *path, int flags, ...) {
     }
     if (!g_in_hook) {
         g_in_hook = 1;
-        record_open(path);  /* absolute paths only; dirfd-relative skipped */
+        record_openat(dirfd, path);
         g_in_hook = 0;
     }
     return g_real_openat(dirfd, path, flags, mode);
@@ -313,10 +471,43 @@ int openat64(int dirfd, const char *path, int flags, ...) {
     }
     if (!g_in_hook) {
         g_in_hook = 1;
-        record_open(path);
+        record_openat(dirfd, path);
         g_in_hook = 0;
     }
     return g_real_openat64(dirfd, path, flags, mode);
+}
+
+/* UX-865: the cached cwd is only valid until the process moves, so
+ * both ways it can move are interposed the same way `open` is - no
+ * `g_in_hook` guard needed, since neither calls back into `open`. */
+int chdir(const char *path) {
+    if (g_real_chdir == NULL) {
+        g_real_chdir = (chdir_fn)resolve("chdir");
+        if (g_real_chdir == NULL) {
+            errno = ENOSYS;
+            return -1;
+        }
+    }
+    int rc = g_real_chdir(path);
+    if (rc == 0) {
+        bump_cwd_generation();
+    }
+    return rc;
+}
+
+int fchdir(int fd) {
+    if (g_real_fchdir == NULL) {
+        g_real_fchdir = (fchdir_fn)resolve("fchdir");
+        if (g_real_fchdir == NULL) {
+            errno = ENOSYS;
+            return -1;
+        }
+    }
+    int rc = g_real_fchdir(fd);
+    if (rc == 0) {
+        bump_cwd_generation();
+    }
+    return rc;
 }
 
 static double monotonic_seconds(void) {
@@ -500,12 +691,15 @@ static void write_open_record(void) {
     /* UX-57: `part` distinguishes several windows written by one process
      * (see flush_open_window) from several processes. Appended rather
      * than inserted so a reader of older logs, where it is absent, keeps
-     * working. */
+     * working. UX-865: `relative`/`dirfd` appended the same way, for the
+     * same reason. */
     int n = snprintf(header, sizeof(header),
-                     "OPENS pid=%d element=%s inv=%s unique=%u dropped=%u part=%u\n",
+                     "OPENS pid=%d element=%s inv=%s unique=%u dropped=%u"
+                     " part=%u relative=%u dirfd=%u\n",
                      (int)g_pid, g_element ? g_element : "unknown",
                      g_invocation ? g_invocation : "none",
-                     g_open_unique, g_open_dropped, g_open_part);
+                     g_open_unique, g_open_dropped, g_open_part,
+                     g_open_relative, g_open_dirfd);
     if (n > 0 && (size_t)n < sizeof(header)) {
         ssize_t w = write(fd, header, (size_t)n);
         (void)w;

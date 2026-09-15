@@ -15,12 +15,12 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-870 scenarios: **3 open**, 867 closed.
+870 scenarios: **2 open**, 868 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
-| capture | 3 | 118 |
+| capture | 2 | 118 |
 | analysis | 0 | 118 |
 | contracts | 0 | 50 |
 | viewer | 0 | 177 |
@@ -37,7 +37,6 @@ task file, which is the only place it ever lived twice.
 | ID | Scenario | Topic | Priority | Serves | Status |
 |---|---|---|---|---|---|
 | UX-873 | [the target read knows the subcommand's own option arity](UX-0873-the-target-read-knows-the-subcommands-own-option-arity.md) | capture | Medium | R2 (a `bst build --deps all t.bst` capture reads its kinds and its max-jobs) | 🔴 Not Started |
-| UX-869 | [the jobserver FIFO mounts under the bind destination](UX-0869-the-jobserver-fifo-mounts-under-the-bind-destination.md) | capture | High | R2 (a cmake element builds under the mode on a project that is not under /tmp) | 🔴 Not Started |
 | UX-872 | [a junctioned example builds under the mode in CI](UX-0872-a-junctioned-example-builds-under-the-mode-in-ci.md) | capture | Medium | R4 (the snapshot entry point with the jobserver on runs in CI, on a junction) | 🔴 Not Started |
 
 **The narrative round headings below are retired at round 94**

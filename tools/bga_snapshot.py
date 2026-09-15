@@ -68,19 +68,21 @@ CONTEXT_NAME = "capture-context.txt"
 
 
 def _capture_context(project: str, command: list[str], config: dict,
-                     jobserver: tuple = ("off", None),
+                     jobserver: tuple = ("off", None, None),
                      plan: Optional[str] = None) -> str:
     """What this capture was, in the terms UX-95 made the report carry.
 
     Written before the build rather than after, so a snapshot of a build
     that died still says what was attempted. `jobserver`/`plan` default
     to off/none so the pre-UX-856 call site (and its guard) keep working
-    unchanged. `jobserver` is `(mode, ceiling)` rather than two
+    unchanged. `jobserver` is `(mode, ceiling, seed)` rather than three
     parameters - a fifth positional-ish argument here is `PLR0913`'s cap.
+    `seed` (UX-858) only prints beside a ceiling that itself printed.
     """
     import platform
 
-    mode, ceiling = jobserver
+    mode, ceiling, seed = jobserver
+    seed_text = f" seed={seed}" if ceiling is not None and seed is not None else ""
     return "\n".join([
         f"project={project}",
         f"command={' '.join(command)}",
@@ -88,7 +90,7 @@ def _capture_context(project: str, command: list[str], config: dict,
         f"trace_spine={config.get('trace_spine', 'auto')}",
         f"runner_os={platform.platform()}",
         f"nproc={os.cpu_count()}",
-        f"jobserver: {mode} {ceiling if ceiling is not None else '-'}",
+        f"jobserver: {mode} {ceiling if ceiling is not None else '-'}{seed_text}",
         f"plan: {plan or '-'}",
     ]) + "\n"
 
@@ -274,11 +276,11 @@ def take_snapshot(project: str, command: list[str], config: dict,
     from .bst_native_build_tracer import main as capture_main
 
     snapshot = snapshot or run_store.new_snapshot_dir(project)
-    mode, ceiling = resolve_jobserver_ceiling(jobserver, command, cpu_count=cpu_count)
+    mode, ceiling, seed = resolve_jobserver_ceiling(jobserver, command, cpu_count=cpu_count)
     set_jobserver_mode_env(mode)
     with open(os.path.join(snapshot, CONTEXT_NAME), "w", encoding="utf-8") as handle:
         handle.write(_capture_context(project, command, config,
-                                      jobserver=(mode or "off", ceiling),
+                                      jobserver=(mode or "off", ceiling, seed),
                                       plan=plan))
 
     argv = ["run", "--wrapped-log", os.path.join(snapshot, WRAPPED_LOG_NAME),
@@ -309,6 +311,8 @@ def take_snapshot(project: str, command: list[str], config: dict,
         argv.append("--inhibit")
     if mode and mode != "off":
         argv += ["--jobserver", str(ceiling)]
+        if seed is not None:
+            argv += ["--jobserver-seed", str(seed)]
     if plan:
         argv += ["--plan", plan]
     argv += [project, os.path.join(snapshot, PLANE2_NAME), "--"] + list(command)
@@ -1053,12 +1057,16 @@ def _read_analysis(snapshot: str) -> dict:
 
 
 def _jobserver_label(analysis: dict) -> str:
-    """`off` / `auto (4)` / `n (4)` from one side's `run_instance.jobserver`
-    (`UX-851`) - `off` for a snapshot that predates the fact entirely."""
+    """`off` / `auto (4)` / `n (4, seed 2)` from one side's
+    `run_instance.jobserver` (`UX-851`/`UX-858`) - `off` for a snapshot
+    that predates the fact, `seed` only shown when the snapshot has it."""
     job = (analysis.get("run_instance") or {}).get("jobserver") or {}
     mode = job.get("mode") or "off"
     ceiling = job.get("ceiling")
-    return f"{mode} ({ceiling})" if ceiling is not None else mode
+    if ceiling is None:
+        return mode
+    seed = job.get("seed")
+    return f"{mode} ({ceiling}, seed {seed})" if seed is not None else f"{mode} ({ceiling})"
 
 
 def _jobserver_compare_line(baseline_snapshot: str, candidate_snapshot: str) -> str:

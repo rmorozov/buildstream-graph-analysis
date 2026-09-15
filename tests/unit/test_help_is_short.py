@@ -33,7 +33,9 @@ import pytest
 # help (`UX-845`).
 # Raised by 4 for `--plan PATH`: its own usage-line wrap plus a
 # three-line help (`UX-849`).
-CAP = 63
+# Raised by 3 for `--jobserver-seed N`: its own usage-line wrap plus a
+# two-line help (`UX-858`).
+CAP = 66
 
 # The top level is a *list*: one line per command, and there are 23 of
 # them. Its length is the command count, not prose, so it gets its own

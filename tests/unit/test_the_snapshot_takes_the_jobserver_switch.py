@@ -70,8 +70,11 @@ class TestTheModePassesThroughToCaptureRun:
                       {"trace_opens": True, "trace_spine": "auto"},
                       jobserver="auto", cpu_count=8)
 
+        # UX-858: the ceiling is the host's cores (8), never cores minus
+        # builders - the seed (5, cores - 3 builders) is what shrinks.
         [argv] = recorded
-        assert argv[argv.index("--jobserver") + 1] == "5"
+        assert argv[argv.index("--jobserver") + 1] == "8"
+        assert argv[argv.index("--jobserver-seed") + 1] == "5"
 
     def test_an_explicit_int_passes_through(self, project, recorded):
         take_snapshot(str(project), ["bst", "build", "all.bst"],

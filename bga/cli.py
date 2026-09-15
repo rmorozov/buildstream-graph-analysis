@@ -2498,34 +2498,42 @@ def _capture_builders(wrapped_cmd: list) -> Optional[int]:
 
 def resolve_jobserver_ceiling(
     value: str, wrapped_cmd: list, cpu_count: Optional[int] = None,
-) -> tuple[Optional[str], Optional[int]]:
-    """`bga capture --jobserver auto|N|off` (UX-851) -> `(mode,
-    ceiling)`, the tracer's own `--jobserver N` never sees `auto`/`off`.
+) -> tuple[Optional[str], Optional[int], Optional[int]]:
+    """`bga capture --jobserver auto|N|off` (UX-851) -> `(mode, ceiling,
+    seed)`, the tracer's own `--jobserver N` never sees `auto`/`off`.
 
-    `auto` sizes the pool to the host's cores minus BuildStream's own
-    `--builders` in the wrapped command, or minus 1 when that is not
-    named - floored at 1, since a jobserver of zero tokens is not one.
+    UX-858: the ceiling is the pool's *capacity*, not its opening seed -
+    `auto` sizes it to the host's cores, floor and all, so a pool can
+    always grow to fill the machine. The seed - what the FIFO opens
+    holding - is `cores - builders`, or `cores - 1` when `--builders`
+    was not named, floored at 0 and capped at `ceiling - 1` (never the
+    full ceiling, `PoolController`'s own invariant); with 16 builders on
+    16 cores that floors at 0 rather than stalling the ceiling itself at
+    1, and `--builders 0` caps at `ceiling - 1` rather than filling the
+    FIFO to capacity. This changes the no-`--builders` case: on 4 cores
+    the ceiling was 3 seeded 2 before UX-858, is 4 seeded 3 now - a lone
+    element now runs 4 jobs on 4 cores, not 3 (examples/11's README).
     `cpu_count` is a parameter (default `os.cpu_count()`) so this is
     testable against a fake host rather than the real one.
     """
     if value == 'off':
-        return 'off', None
+        return 'off', None, None
     if value == 'auto':
         cores = cpu_count if cpu_count is not None else os.cpu_count()
         if cores is None:
-            return 'auto', 1
+            return 'auto', 1, 0
         builders = _capture_builders(wrapped_cmd)
         headroom = builders if builders is not None else 1
-        return 'auto', max(1, cores - headroom)
+        return 'auto', cores, min(cores - 1, max(0, cores - headroom))
     try:
         ceiling = int(value)
     except ValueError:
-        return None, None
+        return None, None, None
     # A pool of no tokens is the mode off; a negative one is a typo the
     # tracer's own parser reports (UX-851's verifier).
     if ceiling == 0:
-        return 'off', None
-    return ('n', ceiling) if ceiling > 0 else (None, None)
+        return 'off', None, None
+    return ('n', ceiling, max(0, ceiling - 1)) if ceiling > 0 else (None, None, None)
 
 
 def set_jobserver_mode_env(mode: Optional[str]) -> None:
@@ -2537,6 +2545,25 @@ def set_jobserver_mode_env(mode: Optional[str]) -> None:
     before the tracer's `main()` reads it back for `run-context.json`.
     """
     os.environ['BGA_JOBSERVER_MODE'] = mode or 'off'
+
+
+def _jobserver_argv_tokens(mode: Optional[str], ceiling: Optional[int],
+                           seed: Optional[int], eq: bool) -> list:
+    """UX-858: the `--jobserver`/`--jobserver-seed` tokens a resolved
+    mode translates to - `[]` for `off`, `=`-joined when `eq` (the
+    `--jobserver=N` spelling). Split out of `_translate_capture_jobserver`
+    to keep its own branch count where `dev_baseline.py --check` had it."""
+    if mode == 'off':
+        return []
+    if eq:
+        tokens = [f'--jobserver={ceiling}']
+        if seed is not None:
+            tokens.append(f'--jobserver-seed={seed}')
+        return tokens
+    tokens = ['--jobserver', str(ceiling)]
+    if seed is not None:
+        tokens.extend(['--jobserver-seed', str(seed)])
+    return tokens
 
 
 def _translate_capture_jobserver(argv: list) -> list:
@@ -2576,23 +2603,21 @@ def _translate_capture_jobserver(argv: list) -> list:
     while i < len(tracer_args):
         tok = tracer_args[i]
         if tok == '--jobserver' and i + 1 < len(tracer_args):
-            mode, ceiling = resolve_jobserver_ceiling(tracer_args[i + 1], wrapped_cmd)
+            mode, ceiling, seed = resolve_jobserver_ceiling(tracer_args[i + 1], wrapped_cmd)
             if mode is None:
                 out.extend([tok, tracer_args[i + 1]])
             else:
                 set_jobserver_mode_env(mode)
-                if mode != 'off':
-                    out.extend([tok, str(ceiling)])
+                out.extend(_jobserver_argv_tokens(mode, ceiling, seed, eq=False))
             i += 2
             continue
         if tok.startswith('--jobserver='):
-            mode, ceiling = resolve_jobserver_ceiling(tok.split('=', 1)[1], wrapped_cmd)
+            mode, ceiling, seed = resolve_jobserver_ceiling(tok.split('=', 1)[1], wrapped_cmd)
             if mode is None:
                 out.append(tok)
             else:
                 set_jobserver_mode_env(mode)
-                if mode != 'off':
-                    out.append(f'--jobserver={ceiling}')
+                out.extend(_jobserver_argv_tokens(mode, ceiling, seed, eq=True))
             i += 1
             continue
         out.append(tok)

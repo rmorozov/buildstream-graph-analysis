@@ -29,3 +29,39 @@ Labels outside §6.
 
 The case above green on the fixed map; mutation: restore the stale
 label - red.
+
+## Outcome
+
+**Gap measured.** §6 (lines 173-481) carried exactly one `UX-NNN
+(open)` label: `(UX-846 (open))` on the
+`tools/native_trace/wrappers/_common.sh` row (line 414,
+`grep -n "UX-[0-9]\+ (open)" docs/contributing/fixing-guide.md`
+after slicing to §6). `UX-846`'s Status line reads `🟢 Done` and its
+`closed.md` row confirms it (round 118). No other `(open)` label
+exists in §6, so the sweep found one stale citation, not several.
+
+**Close measured**,
+`PYTHONDONTWRITEBYTECODE=1 python3 -m pytest -q tests/unit/test_the_context_map_is_the_tree.py`:
+
+```text
+tests/unit/test_the_context_map_is_the_tree.py ......................... [ 73%]
+.........                                                                [100%]
+34 passed in 0.79s
+```
+
+**Mutation table:**
+
+| Guard | Mutation | Reddened | Count |
+|---|---|---|---|
+| `test_every_open_label_names_a_row_that_is_still_open` | restored `(UX-846 (open))` in §6 (sed on the fixed label) | only this case: `AssertionError: §6 marks id(s) \`(open)\` whose own Status line reads Done: ['UX-846']` | 1 failed, 33 passed |
+
+Reverted from the pre-mutation copy
+(`/tmp/.../scratchpad/agent-a1f151ae756c6aa95/fixing-guide.md.orig`);
+re-run confirmed 34 passed, 0 failed.
+
+`test_docs_links_and_commands.py`: 59 passed
+(`PYTHONDONTWRITEBYTECODE=1 python3 -m pytest -q
+tests/unit/test_docs_links_and_commands.py`). `make test-touching`: 44
+files, 1777 passed, 3 skipped. `ruff check`, `dev_sizes.py --check`,
+`dev_baseline.py --check` (pre-existing forced findings only),
+`pymarkdown scan docs/contributing/fixing-guide.md` all clean.

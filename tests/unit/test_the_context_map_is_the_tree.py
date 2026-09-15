@@ -333,6 +333,18 @@ def _named(text, name):
             or name.rstrip("/").split("/")[-1].removesuffix(".py") in text)
 
 
+def _file_statuses():
+    """`{item number: status line}` - `dev_close_task.py`'s own reader,
+    so a row's liveness is read once and not re-derived here (`UX-387`)."""
+    import sys
+
+    sys.path.insert(0, str(REPO))
+    from tools.dev_close_task import file_statuses, status_marker
+
+    return {num: status_marker(line) for num, (_name, line) in
+            file_statuses().items() if line}
+
+
 def _names_the_module(text, rel):
     """The map names a module by its path, or by its filename **on a row
     that names its directory**.
@@ -550,6 +562,29 @@ class TestTheMapNamesTheTree:
                 bare.append(f"{cited} in {line.strip()!r}")
         assert bare == [], (
             f"§6 cites open id(s) with no `(open)` marker: {bare}. "
+            f"docs/contributing/fixing-guide.md §6.")
+
+    def test_every_open_label_names_a_row_that_is_still_open(self):
+        """`UX-867`: the clause above catches a bare id with no marker;
+        it says nothing about a marker that has gone stale. `UX-846`
+        closed in round 118 and stayed `(open)` in §6 for three rounds -
+        the map's own guard read the tree's shape, not the labels'
+        tense. An id with no task file is stale the same way: its
+        verifier found `UX-999 (open)` passing silently."""
+        text = _map_text()
+        statuses = _file_statuses()
+        stale = []
+        for cluster in CITATION.finditer(text):
+            for part in ID_IN_CITATION.finditer(cluster.group()):
+                num, marker = part.groups()
+                if not marker:
+                    continue
+                status = statuses.get(int(num))
+                if status is None or status == "🟢":
+                    stale.append(f"UX-{num}")
+        assert stale == [], (
+            f"§6 marks id(s) `(open)` whose own Status line reads Done, "
+            f"or that name no task file: {stale}. "
             f"docs/contributing/fixing-guide.md §6.")
 
 

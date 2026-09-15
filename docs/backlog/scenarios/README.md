@@ -15,12 +15,12 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-869 scenarios: **4 open**, 865 closed.
+870 scenarios: **5 open**, 865 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
-| capture | 4 | 117 |
+| capture | 5 | 118 |
 | analysis | 0 | 118 |
 | contracts | 0 | 50 |
 | viewer | 0 | 177 |
@@ -36,6 +36,7 @@ task file, which is the only place it ever lived twice.
 
 | ID | Scenario | Topic | Priority | Serves | Status |
 |---|---|---|---|---|---|
+| UX-873 | [the target read knows the subcommand's own option arity](UX-0873-the-target-read-knows-the-subcommands-own-option-arity.md) | capture | Medium | R2 (a `bst build --deps all t.bst` capture reads its kinds and its max-jobs) | 🔴 Not Started |
 | UX-869 | [the jobserver FIFO mounts under the bind destination](UX-0869-the-jobserver-fifo-mounts-under-the-bind-destination.md) | capture | High | R2 (a cmake element builds under the mode on a project that is not under /tmp) | 🔴 Not Started |
 | UX-870 | [the kinds read carries the user's own bst options and says why it failed](UX-0870-the-kinds-read-carries-the-users-own-bst-options-and-says-why-it-failed.md) | capture | High | R2 (every element joins by its kind on a project built with -o and --config) | 🔴 Not Started |
 | UX-871 | [a junctioned element finds its kind](UX-0871-a-junctioned-element-finds-its-kind.md) | capture | High | R2 (an element behind a junction joins the jobserver by its kind) | 🔴 Not Started |

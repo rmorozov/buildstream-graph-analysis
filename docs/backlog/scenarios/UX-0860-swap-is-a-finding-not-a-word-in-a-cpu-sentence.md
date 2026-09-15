@@ -1,6 +1,6 @@
 # UX-860: swap is a finding, not a word in a CPU sentence
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-676 | **Found by:** round 120, the user (a 16-core, 32 GB host, `--builders 16 --jobserver auto`) | **Serves:** R5 (the build swapped from here to here, and these elements were running) | **Topic:** analysis | **Area:** bga | **Shape:** judgement
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-676 | **Found by:** round 120, the user (a 16-core, 32 GB host, `--builders 16 --jobserver auto`) | **Serves:** R5 (the build swapped from here to here, and these elements were running) | **Topic:** analysis | **Area:** bga | **Shape:** judgement
 
 ## Motivation
 
@@ -95,3 +95,12 @@ fixtures at `ede1ce6f` and at this commit) - `golden` 468,388 ->
 528,230 (+341 B, bound 528,000 -> 529,000, `test_the_report_you_can_attach.py`
 raised); `PAGE_BUDGET_B`'s page half unmoved at 324,864 B on both
 (no viewer/source change).
+
+Deviation (merge): the verifier held once - the macro_micro export ran
+230 B over its bound, the schema prose shipping in every export - and
+the track measured both fixtures either side and raised the one bound;
+at merge the four rows that moved the same bound landed together at
+533,000, and the guide's key count re-derived to 295 with `UX-861`'s.
+`docs/spec/specification.md` Part 32 carries no per-column row for
+the intervals, so it stayed untouched; `swap-observed` is UNREACHABLE
+in the coverage census because no committed capture swaps.

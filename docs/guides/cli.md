@@ -577,15 +577,16 @@ With `--plane2`, both consult what was actually measured inside the sandboxes:
   recommendation naming the binding one (`UX-116`), instead of four blocks a reader has to reconcile:
 
 ```text
-Capacity: builders 4 x max-jobs unrecorded on 4 core(s): graph binds at 6 - there is room for 2 more builder(s)
+Capacity: builders 4 x max-jobs unrecorded on 4 core(s): CPU binds at 4 (the host's cores bound it, not the raw 7) - at the 4 configured
   graph allows 6: the sweep's knee is at 6 builder(s)
-  CPU allows 7: 2.11 of 4 core(s) busy at builders=4, i.e. 0.53 core(s) per concurrent element
+  CPU allows 4: 2.11 of 4 core(s) busy at builders=4, i.e. 0.53 core(s) per concurrent element - 7 before the host's 4 cores bound it
   memory allows 9: the 9-builder envelope fits in 15.7 GB (measured over 9 element peak(s), so it says nothing above 9)
   Free capacity you already have: core.bst asked its native build for -j1 - a builder slot drawing one core.
 ```
 
   The CPU ceiling is derived, not assumed: `cores_busy / builders` is what one concurrently-building element
-  actually drew, and the ceiling is how many of those the host's cores can feed. A constraint nothing measured
+  actually drew, and the ceiling is how many of those the host's cores can feed - never more builders than
+  the host has cores (`UX-861`; the raw figure stays beside it as `clamped_from`). A constraint nothing measured
   is omitted rather than treated as unbounded, and the whole block declines to appear at all when Plane 2 has
   no `cores_busy` — the same bar `UX-83` uses.
 
@@ -1020,7 +1021,7 @@ finding one level up: `parallelism` is a top-level *object*, its
 top-level array published the whole of a major bump outside itself.
 The third is `UX-838`: `elements.fan_in` and five other rows are keyed
 by something that is not an array index at all, so neither `items` nor
-`bga:columns` sees them. The surface is **293 keys** today, and that
+`bga:columns` sees them. The surface is **294 keys** today, and that
 figure is derived from the walk rather than typed here.
 
 So the statement of coverage, which is now a statement and not a
@@ -1120,6 +1121,7 @@ can look one up.
 | `start_offset_us` | In an interval row, how long after the run started the window opens (`UX-823`) - the figure the From column draws; `start_us` stays the wall-clock base the Perfetto link needs. |
 | `start_us`, `load1` | In an interval row, where the window starts on the build's own wall clock, and the host's one-minute load average through it — runnable *and* uninterruptible tasks, which is what separates a busy machine from a blocked one. |
 | `allows` | In a `capacity_recommendation.constraints` row, how many builders that one ceiling permits, beside the `name` of the ceiling and the `reason` it was measured. A ceiling with no measurement behind it is absent rather than infinite. |
+| `clamped_from` | In the CPU row of `capacity_recommendation.constraints`, the raw builder count before it was capped to `host_cpu_count` (`UX-861`) - present only when `allows` was clamped down to the host's own cores. |
 | `realizable_saving_us` | What removing this element entirely takes off the **makespan** — not off the path. In a `critical_path_detail` row and in a finding's `evidence.rows`, where the two differ whenever something else is ready to take the freed time. |
 | `elided`, `resolved` | In a `provenance` (or `compare/v2` `verdict_provenance`) evidence row: the shape a path held where the value was a container — `object[1202]`, `array[15]` — published instead of copying that population in twice, and `false` where the path did not resolve at all, so a broken reference is visible rather than missing. |
 
@@ -2252,7 +2254,7 @@ bga analyze tests/fixtures/macro_micro/run \
 ```text
   Capacity: builders 4 x max-jobs unrecorded on 4 core(s): graph binds at 2, below the 4 configured - more builders contend rather than overlap here
     graph allows 2: the sweep's knee is at 2 builder(s)
-    CPU allows 9: 1.60 of 4 core(s) busy at builders=4, i.e. 0.40 core(s) per concurrent element
+    CPU allows 4: 1.60 of 4 core(s) busy at builders=4, i.e. 0.40 core(s) per concurrent element
     memory allows 9: the 9-builder envelope fits in 15.7 GB (measured over 9 element peak(s), so it says nothing above 9)
     Free capacity you already have: core.bst asked its native build for -j1 - a builder slot drawing one core. Fix that before raising anything, then re-measure.
 ```

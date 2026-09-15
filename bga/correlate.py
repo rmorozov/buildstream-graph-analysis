@@ -1112,7 +1112,10 @@ def compute_capacity_recommendation(
     number of builders the host's cores can feed at that draw is
     `host_cores * builders / cores_busy`, floored. It is an average over
     the whole run, not over the contended window, so it is a guide and
-    the payload says so.
+    the payload says so. `UX-861`: the ratio can put that figure above
+    the host's own cores, which is never a recommendation - it is
+    clamped to `host_cpu_count`, and the constraint row keeps the
+    unclamped figure as `clamped_from` so the reason stays legible.
 
     **What it will not do.** It never recommends a value it has no
     measurement for, and it does not try configurations - one capture
@@ -1141,7 +1144,13 @@ def compute_capacity_recommendation(
         })
     cpu_allows = int(host_cores * builders / cores_busy) if cores_busy > 0 else None
     if cpu_allows:
-        constraints.append({
+        # UX-861: the ratio is derived from a whole-run average, so it can
+        # exceed the host's own cores - a figure above what the machine
+        # has is never the recommendation, whatever the arithmetic says.
+        clamped_from = cpu_allows if cpu_allows > host_cores else None
+        if clamped_from:
+            cpu_allows = host_cores
+        constraint = {
             'name': 'CPU',
             'allows': cpu_allows,
             'reason': (
@@ -1149,7 +1158,10 @@ def compute_capacity_recommendation(
                 f"{builders}, i.e. {cores_busy / builders:.2f} core(s) per "
                 f"concurrent element"
             ),
-        })
+        }
+        if clamped_from:
+            constraint['clamped_from'] = clamped_from
+        constraints.append(constraint)
     memory_allows = _memory_allows(memory_envelope)
     if memory_allows:
         constraints.append({

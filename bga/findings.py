@@ -1017,6 +1017,15 @@ def _capacity_recommendation_finding(result: AnalysisResult) -> list[dict]:
     # and "builders 4 x max-jobs unrecorded" does not, which is the
     # honest shape when UX-29 could not recover it from the log.
     setting = f"builders {builders} x max-jobs {jobs if jobs else 'unrecorded'}"
+    # UX-861: a CPU-bound figure is clamped to the host's cores in
+    # `compute_capacity_recommendation`, so the sentence says so rather
+    # than leaving the clamp implicit in the number alone.
+    binding_row = next(
+        c for c in recommendation['constraints'] if c['name'] == binding)
+    clamped_from = binding_row.get('clamped_from')
+    clamp_note = (
+        f" (the host's cores bound it, not the raw {clamped_from})"
+        if clamped_from else "")
     if recommended > builders:
         # Deliberately weaker than "raise it to N". Measured on a
         # reconstructed macro-fixed `examples/06` where this block said
@@ -1030,21 +1039,23 @@ def _capacity_recommendation_finding(result: AnalysisResult) -> list[dict]:
         # it, and saying otherwise would be UX-14's caveat with the
         # caveat removed.
         verdict = (
-            f"{binding} binds first, at {recommended} - nothing measured here "
-            f"rules out {recommended - builders} more builder(s), which is a "
-            f"hypothesis to time rather than a setting to apply"
+            f"{binding} binds first, at {recommended}{clamp_note} - nothing "
+            f"measured here rules out {recommended - builders} more "
+            f"builder(s), which is a hypothesis to time rather than a "
+            f"setting to apply"
         )
         severity = SEVERITY_MEDIUM
     elif recommended < builders:
         verdict = (
-            f"{binding} binds at {recommended}, below the {builders} configured - "
-            f"more builders contend rather than overlap here"
+            f"{binding} binds at {recommended}{clamp_note}, below the "
+            f"{builders} configured - more builders contend rather than "
+            f"overlap here"
         )
         severity = SEVERITY_HIGH
     else:
         verdict = (
-            f"{binding} binds at exactly {recommended} - this run is already at "
-            f"the setting its own measurements support"
+            f"{binding} binds at exactly {recommended}{clamp_note} - this "
+            f"run is already at the setting its own measurements support"
         )
         severity = SEVERITY_INFO
 

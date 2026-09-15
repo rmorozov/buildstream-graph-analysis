@@ -1067,9 +1067,15 @@ COMMITTED_EXPORTS = [
     # capture). 528,000 keeps the same order of headroom.
     # `UX-864`: +1,531 B, all **source** - the same move as `golden`'s
     # note above. Measured before this change: 527,489 B (this
-    # worktree's path length). 531,000 restores headroom of the same
-    # order.
-    ("macro_micro", MACRO_MICRO, 531_000),             #  529,020 B
+    # worktree's path length).
+    # `UX-861`: +712 B, all **contract** - `clamped_from`'s schema prose
+    # on `capacity_recommendation.constraints` and the extended
+    # `cores_busy` sentence. macro_micro's own CPU figure is not
+    # clamped (host 4, allows 4), so none of this is payload; it
+    # travels because the schema does, whether or not this run's
+    # constraint row carries the key. The two land together in round
+    # 120: 532,000 keeps the same order of headroom over their sum.
+    ("macro_micro", MACRO_MICRO, 532_000),             #  529,732 B
 ]
 
 

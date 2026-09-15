@@ -48,6 +48,12 @@
       "run_id": "34888036702",
       "shift": 1.693,
       "confirmed": false
+    },
+    {
+      "file": "tests/unit/test_a_drawing_is_graded.py",
+      "run_id": "34933450749",
+      "shift": 1.701,
+      "confirmed": false
     }
   ],
   "declared": {}

@@ -2031,12 +2031,15 @@ def _parse_element_kinds(show_output: str) -> dict:
 def jobserver_kinds_warning(jobserver: Optional[int],
                             element_kinds: Optional[dict]) -> Optional[str]:
     """UX-843's verifier: a failed kinds read must not switch the mode
-    off silently - every sandbox would read `unknown_kind` and join
-    nothing. The line to print, or `None` when there is nothing to say."""
+    off silently - no sandbox kind is resolved, so only a recipe whose
+    own env still carries `JOBS` joins (`jobs_env`, UX-859); every
+    other decision reads `unknown_kind`. The line to print, or `None`
+    when there is nothing to say."""
     if not jobserver or element_kinds is not None:
         return None
-    return ("Warning: bst show gave no element kinds - no sandbox joins the "
-            "jobserver this capture (every decision reads unknown_kind)")
+    return ("Warning: bst show gave no element kinds - only a recipe that "
+            "itself spends JOBS joins the jobserver this capture (every "
+            "other decision reads unknown_kind)")
 
 
 def read_element_kinds_for_jobserver(project_dir: str, cmd: list[str]) -> Optional[dict]:

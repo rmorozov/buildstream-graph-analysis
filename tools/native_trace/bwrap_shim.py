@@ -263,25 +263,41 @@ _MAKE_LIKE_KINDS = frozenset({"make", "autotools"})
 _NINJA_CAPABLE_KINDS = frozenset({"cmake", "meson"})
 
 
-def kind_job_env(kind, auth_value, ninja_probe=None, wrappers_dir=None):
+def _ninja_aware_env(ninja_probe, wrappers_dir, auth_value, base_policy):
+    """UX-843/UX-859: `JOBS` emptied, `MAKEFLAGS` injected, gated on
+    what the sandbox's own `ninja --version`/`--help` probe found -
+    shared by the cmake/meson table row and a table-less kind that
+    spends `JOBS` itself (`base_policy` names the no-ninja-info case)."""
+    if ninja_probe and ninja_probe.get("available"):
+        if ninja_probe.get("jobserver_client"):
+            return [("JOBS", ""), ("MAKEFLAGS", auth_value)], [], "ninja_client"
+        if wrappers_dir:
+            # UX-846's ninja wrapper reads the auth from MAKEFLAGS.
+            return [("JOBS", ""), ("MAKEFLAGS", auth_value)], [], "ninja_wrapper"
+        return [], [], "ninja_static"
+    return [("JOBS", ""), ("MAKEFLAGS", auth_value)], [], base_policy
+
+
+def kind_job_env(kind, auth_value, ninja_probe=None, wrappers_dir=None,
+                 jobs_present=None):
     """The `(setenv_pairs, unsetenv_vars, policy)` this element's kind
     gets, applied only for a `joined`/`capped_pending` decision.
     `ninja_probe` is `{"available", "jobserver_client"}` or `None` (not
     run, or no ninja in the sandbox - the make path, same injection as
-    a plain make generator)."""
+    a plain make generator). `jobs_present` (UX-859, default `None` so
+    every prior caller stands) is whether BuildStream's own composed
+    argv set `JOBS` for this sandbox - a kind outside the table gets
+    the cmake treatment under it (policy `jobs_env`) rather than
+    `unknown_kind` when it carries one, since `JOBS` is the recipe's
+    own promise to spend it, whatever its kind."""
     if kind in _MAKE_LIKE_KINDS:
         return [("MAKEFLAGS", auth_value)], [], "make"
     if kind == "cargo":
         return [("MAKEFLAGS", auth_value)], ["CARGO_BUILD_JOBS"], "cargo"
     if kind in _NINJA_CAPABLE_KINDS:
-        if ninja_probe and ninja_probe.get("available"):
-            if ninja_probe.get("jobserver_client"):
-                return [("JOBS", ""), ("MAKEFLAGS", auth_value)], [], "ninja_client"
-            if wrappers_dir:
-                # UX-846's ninja wrapper reads the auth from MAKEFLAGS.
-                return [("JOBS", ""), ("MAKEFLAGS", auth_value)], [], "ninja_wrapper"
-            return [], [], "ninja_static"
-        return [("JOBS", ""), ("MAKEFLAGS", auth_value)], [], "cmake_meson"
+        return _ninja_aware_env(ninja_probe, wrappers_dir, auth_value, "cmake_meson")
+    if jobs_present:
+        return _ninja_aware_env(ninja_probe, wrappers_dir, auth_value, "jobs_env")
     return [], [], JOBSERVER_UNKNOWN_KIND
 
 
@@ -400,11 +416,14 @@ def _jobserver_injection(opts: list[str], bind_dst: str, decision: str,
         auth_value = (f"--jobserver-auth={fd},{fd}" if fd is not None
                      else f"--jobserver-auth=fifo:{fifo}")
         needs_bind, bind_path = fd is None, fifo
-    # UX-843: the per-kind table - a kind not in it gets nothing
-    # (`unknown_kind`), and cmake/meson consult the ninja probe.
+    # UX-843/UX-859: the per-kind table - a kind not in it gets nothing
+    # (`unknown_kind`) unless its own sandbox env carries `JOBS`
+    # (`jobs_env`); cmake/meson and a `jobs_env` kind both consult the
+    # ninja probe.
     pairs, unsets, _policy = kind_job_env(
         kind_context.get("element_kind"), auth_value,
-        kind_context.get("ninja_probe"), kind_context.get("wrappers_dir"))
+        kind_context.get("ninja_probe"), kind_context.get("wrappers_dir"),
+        jobs_present=_setenv_value(opts, "JOBS") is not None)
     auth_injected = any(var == "MAKEFLAGS" for var, _ in pairs)
     tokens = []
     if needs_bind and auth_injected:
@@ -700,7 +719,8 @@ def record_jobserver_decision(log_path: Optional[str], opts: list[str],
         if decision != JOBSERVER_PINNED:
             _pairs, _unsets, policy = kind_job_env(
                 element_kind, "--jobserver-auth=0,0",
-                kind_context.get("ninja_probe"), kind_context.get("wrappers_dir"))
+                kind_context.get("ninja_probe"), kind_context.get("wrappers_dir"),
+                jobs_present=_setenv_value(opts, "JOBS") is not None)
         name, unresolved = element, False
         if name is None:
             unresolved = True
@@ -1017,21 +1037,28 @@ def _element_kind_env(element: Optional[str]) -> Optional[str]:
 
 def _resolve_kind_and_probe(element, jobserver_fd, jobserver_fifo,
                             project_max_jobs, real_bwrap):
-    """UX-843: `{element_kind, ninja_probe, wrappers_dir}` for `main` -
-    pulled out of it (a dict, not a tuple, so both call sites in `main`
-    pass it straight through as one argument) so the mode's env-reading
-    and gating (`_element_kind_env`, the ninja probe's own gate) don't
-    inflate `main`'s own statement count. The probe runs only for a
-    cmake/meson element whose decision would otherwise consult it (mode
-    active, not pinned)."""
+    """UX-843/UX-859: `{element_kind, ninja_probe, wrappers_dir}` for
+    `main` - pulled out of it (a dict, not a tuple, so both call sites
+    in `main` pass it straight through as one argument) so the mode's
+    env-reading and gating (`_element_kind_env`, the ninja probe's own
+    gate) don't inflate `main`'s own statement count. The probe runs
+    for a cmake/meson element, or any other kind whose own sandbox env
+    carries `JOBS` (UX-859: a manual `-G Ninja` recipe is exactly as
+    much at risk of the cores+2 regression UX-843 found), whose
+    decision would otherwise consult it (mode active, not pinned).
+    Cached per capture (UX-855), so this is one `ninja --help` per
+    capture even with the gate widened."""
     element_kind = _element_kind_env(element)
     wrappers_dir = os.environ.get("BST_TRACE_WRAPPER_DIR")
     base = {"element_kind": element_kind, "ninja_probe": None,
            "wrappers_dir": wrappers_dir}
     active = jobserver_fd is not None or jobserver_fifo is not None
-    if element_kind not in _NINJA_CAPABLE_KINDS or not active:
+    if not active:
         return base
     opts, _cmd = split_bwrap_args(sys.argv[1:])
+    jobs_present = _setenv_value(opts, "JOBS") is not None
+    if element_kind not in _NINJA_CAPABLE_KINDS and not jobs_present:
+        return base
     decision = jobserver_decision(parse_element_max_jobs(opts), project_max_jobs)
     if decision == JOBSERVER_PINNED:
         return base

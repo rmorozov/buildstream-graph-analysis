@@ -148,6 +148,15 @@ and max are rows; hover names rows); percentile *positions* are
 geometry only. The moment a derived percentile deserves printing,
 it enters the published payload first, and the strip upgrades.
 
+**At exhibit grade** (§2a), the strip ticks every mark its table twin
+lists as a percentile — the nine deciles, p95, p99 — not only p50 and
+p95; p95 and p99 draw lighter (a second stroke class, being the tail
+beyond the deciles), and only p10, p50, p90 and p99 are candidates for
+a text label — a candidate too close to its kept neighbour (measured
+by combined character count, there being no layout to measure at
+generation time) loses the label and keeps the tick. The sentence
+beneath the strip names exactly the labels the axis kept (`UX-863`).
+
 **The strip beside the table** (the user's fourth item, adopted):
 every table longer than the row cap (§3) whose primary column is a
 quantity carries the strip in its header region — the reader sees

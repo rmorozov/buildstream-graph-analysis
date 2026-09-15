@@ -357,17 +357,24 @@ console.log(JSON.stringify({ annotation: at("annotation"), exhibit: at("exhibit"
             "two drew different pictures")
 
     def test_an_exhibit_labels_its_ends(self):
+        """UX-863: the labelled set is min, p10, p50, p90, p99, max -
+        p95 ticks (below) but does not label, so a fifth label does not
+        collide with a sixth. Spread wide enough apart that none of the
+        six collides with a neighbour (`test_a_close_pair_drops_one_
+        label_rather_than_overlap` covers the case where one does)."""
         out = _ok("""
 const { strip } = await import("./bga/viewer/drawings.js");
-const block = strip({ n: 11, min: 0, max: 100, deciles: { p50: 25 }, p95: 90 },
+const block = strip({ n: 11, min: 0, max: 120,
+                      deciles: { p10: 10, p50: 30, p90: 60 }, p95: 75, p99: 90 },
                     { grade: "exhibit", format: (n) => `${n}u` });
 const axis = all(block, (n) => n.attrs["data-role"] === "draw-axis")[0];
 console.log(JSON.stringify(
   (axis?.children ?? []).map((n) => [n.attrs["data-mark"], n.attrs["data-at"],
                                      text(n)])));
 """)
-        assert out == [["min", "0.00", "0u"], ["p50", "25.00", "25u"],
-                       ["p95", "90.00", "90u"], ["max", "100.00", "100u"]]
+        assert out == [["min", "0.00", "0u"], ["p10", "8.33", "10u"],
+                       ["p50", "25.00", "30u"], ["p90", "50.00", "60u"],
+                       ["p99", "75.00", "90u"], ["max", "100.00", "120u"]]
 
     def test_every_tick_sits_where_the_drawing_puts_that_mark(self):
         """The label and the mark are one reading, so they are asserted
@@ -460,6 +467,122 @@ console.log(JSON.stringify(seen));
                    for one in blocks), "the twin does not print open"
         assert any("twin-toggle" in one and "display: none" in one
                    for one in blocks), "the toggle prints as a dead control"
+
+
+@needs_node
+class TestTheStripTicksEveryMarkTheTwinLists:
+    """UX-863: `stripSvg` used to hardcode p50 and p95 while `twinRows`
+    listed the nine deciles, p95, p99 - a reader who opened the twin saw
+    marks the strip never ticked. The property worth guarding is the
+    count: one tick per twin row that is a percentile (not min, max,
+    mean or n, which the strip already draws or does not draw at all)."""
+
+    def _ticks_and_twin(self, distribution):
+        out = _ok(f"""
+const {{ strip }} = await import("./bga/viewer/drawings.js");
+const block = strip({json.dumps(distribution)}, {{ grade: "exhibit" }});
+const svg = all(block, (n) => n.tagName === "svg")[0];
+const ticks = all(svg, (n) => n.tagName === "line"
+  && (n.attrs.class || "").split(" ").includes("density-tick"));
+const twin = all(block, (n) => n.attrs["data-role"] === "drawing-twin")[0];
+const rows = (twin.children[1].children ?? []).map((tr) => tr.children[0]._text);
+console.log(JSON.stringify({{
+  tickMarks: ticks.map((n) => n.attrs["data-mark"]),
+  outer: ticks.filter((n) => (n.attrs.class || "").includes("density-tick-outer"))
+    .map((n) => n.attrs["data-mark"]),
+  rows,
+}}));
+""")
+        return out
+
+    #: `analyze/v6`'s full shape - nine deciles, p95, p99 - and
+    #: `analyze/v2`'s narrower one, which the styleguide names as the
+    #: two shapes a `bga:distribution` reaches (drawings.js:400-408).
+    #: Evenly spread (each decile a round tenth of the range) rather
+    #: than clustered, so the tick-count and outer-class clauses below
+    #: are not answered by the collision-avoidance dropping every
+    #: interior label - that property has its own case, next.
+    V6 = {"n": 5000, "min": 0, "max": 1000,
+          "deciles": {"p10": 100, "p20": 200, "p30": 300, "p40": 400,
+                      "p50": 500, "p60": 600, "p70": 700, "p80": 800,
+                      "p90": 900},
+          "p95": 950, "p99": 990, "mean": 500}
+    V2 = {"n": 20, "min": 0, "max": 100, "deciles": {"p50": 40}, "p95": 90}
+
+    @pytest.mark.parametrize("shape,label", [(V6, "v6"), (V2, "v2")])
+    def test_the_tick_count_equals_the_twins_percentile_rows(self, shape, label):
+        out = self._ticks_and_twin(shape)
+        percentile_rows = [r for r in out["rows"]
+                           if r == "median" or re.fullmatch(r"p\d+", r)]
+        assert out["tickMarks"], (label, out)
+        assert len(out["tickMarks"]) == len(percentile_rows), (
+            label, out["tickMarks"], percentile_rows)
+
+    def test_the_outer_marks_carry_the_second_stroke_class(self):
+        out = self._ticks_and_twin(self.V6)
+        assert out["outer"] == ["p95", "p99"], out
+
+    def test_a_shape_missing_p99_and_most_deciles_ticks_only_what_it_has(self):
+        out = self._ticks_and_twin(self.V2)
+        assert out["tickMarks"] == ["p50", "p95"], out
+
+    def test_the_sentence_names_the_same_set_the_axis_labels(self):
+        """Not that all four survive - `STRIP_LABEL_GAP_PCT_PER_CHAR`
+        may drop one to keep the axis readable (see the next test) -
+        the property worth guarding is that whichever the axis labels,
+        the sentence names, and no more."""
+        out = _ok(f"""
+const {{ strip }} = await import("./bga/viewer/drawings.js");
+const block = strip({json.dumps(self.V6)}, {{ grade: "exhibit" }});
+const axis = all(block, (n) => n.attrs["data-role"] === "draw-axis")[0];
+const sentence = all(block, (n) => n.attrs["data-role"] === "density-sentence")[0];
+console.log(JSON.stringify({{
+  labels: (axis.children ?? []).flatMap(
+    (n) => n.attrs["data-mark"].split(" ")),
+  sentence: text(sentence),
+}}));
+""")
+        for mark in ("p10", "p50", "p90", "p99"):
+            named = "median" if mark == "p50" else mark
+            if mark in out["labels"]:
+                assert named in out["sentence"], out
+            else:
+                assert named not in out["sentence"], out
+
+    def test_a_close_pair_drops_one_label_rather_than_overlap(self):
+        """`UX-863`'s own regression: on the real `macro_micro` export,
+        adding p10/p50/p90 labels put one within a character-width of
+        its neighbour twice (`fan_in_distribution`'s p90/p99, `element_
+        duration_distribution`'s min-p10 merge/p50) - both real
+        collisions `tests/unit/test_the_shape_channel_is_built.py`
+        caught in a browser this file cannot drive. Here on `V6`: p99
+        (990) sits 1% from max (1000), too close for both labels."""
+        out = self._ticks_and_twin(self.V6)
+        axis = _ok(f"""
+const {{ strip }} = await import("./bga/viewer/drawings.js");
+const block = strip({json.dumps(self.V6)}, {{ grade: "exhibit" }});
+const row = all(block, (n) => n.attrs["data-role"] === "draw-axis")[0];
+console.log(JSON.stringify(
+  (row.children ?? []).flatMap((n) => n.attrs["data-mark"].split(" "))));
+""")
+        assert "p99" not in axis, axis
+        assert "p90" in axis and "p10" in axis and "p50" in axis, axis
+        # The tick itself is undiminished - only the label was dropped.
+        assert "p99" in out["tickMarks"], out
+
+    @pytest.mark.parametrize("distribution", [
+        {"n": 20, "min": 50, "max": 50, "is_flat": True,
+         "deciles": {f"p{s}": 50 for s in range(10, 91, 10)},
+         "p95": 50, "p99": 50, "mean": 50},
+        {"n": 1, "min": 7, "max": 7},
+    ])
+    def test_a_flat_distribution_and_n_of_one_draw_without_error(self, distribution):
+        result = _js(f"""
+const {{ strip }} = await import("./bga/viewer/drawings.js");
+strip({json.dumps(distribution)}, {{ grade: "exhibit" }});
+console.log("{{}}");
+""")
+        assert result.returncode == 0, result.stderr[-2000:]
 
 
 # --------------------------------------------------------------------------

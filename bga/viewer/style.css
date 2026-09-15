@@ -1122,9 +1122,10 @@ button.json-toggle:hover { color: var(--fg); }
 .density-range { fill: var(--line); }
 .density-end { stroke: var(--fg); stroke-width: 1; }
 .density-tick { stroke: var(--accent-mark); stroke-width: 1.4; }
-/* p50 and p95 are two positions on one axis, so they differ by dash
-   rather than by hue - a percentile is not a verdict. */
-.density-tick.density-p95 { stroke-dasharray: 1.5 1.5; }
+/* UX-863: p95 and p99 sit beyond the deciles the strip already ticks -
+   lighter by opacity and dash, not by hue, so the tail reads as
+   secondary without spending §4.5's one accent on a second colour. */
+.density-tick.density-tick-outer { opacity: .55; stroke-dasharray: 1.5 1.5; }
 /* Served only: an export's strip is a picture, and a cursor promising
    a click that does nothing is `UX-194`'s dead affordance. */
 .density[data-interactive="true"] .density-strip { cursor: pointer; }
@@ -1185,10 +1186,14 @@ button.json-toggle:hover { color: var(--fg); }
   font-variant-numeric: tabular-nums;
 }
 .draw-tick { position: absolute; transform: translateX(-50%); white-space: nowrap; }
-.draw-tick[data-mark="min"], .draw-tick[data-mark="first"] {
+/* UX-863: `~=` reads `data-mark` as the space-separated token list
+   `mergeTicks` writes (`"p99 max"`), not the whole string - an exact
+   match left a merged edge centred rather than flush, which is how a
+   third label (`p90`) came close enough to collide with it. */
+.draw-tick[data-mark~="min"], .draw-tick[data-mark~="first"] {
   transform: none; left: 0;
 }
-.draw-tick[data-mark="max"], .draw-tick[data-mark="last"] {
+.draw-tick[data-mark~="max"], .draw-tick[data-mark~="last"] {
   transform: translateX(-100%);
 }
 /* `UX-674`: a single middle tick between two edge ticks lays out in
@@ -1202,8 +1207,8 @@ button.json-toggle:hover { color: var(--fg); }
 .draw-axis[data-layout="flow"] .draw-tick {
   position: static; transform: none;
 }
-.draw-axis[data-layout="flow"] .draw-tick[data-mark="max"],
-.draw-axis[data-layout="flow"] .draw-tick[data-mark="last"] {
+.draw-axis[data-layout="flow"] .draw-tick[data-mark~="max"],
+.draw-axis[data-layout="flow"] .draw-tick[data-mark~="last"] {
   margin-left: auto;
 }
 

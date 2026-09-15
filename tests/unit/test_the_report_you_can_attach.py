@@ -530,8 +530,15 @@ END pid=101 ppid=1 ts=1002.500000 element=work-a.bst cmd=cc -c main.c
 #
 #     page   324,921 -> 326,452   (+1,531 B, all source)
 #
-# 328,000 leaves 1,548 B.
-PAGE_BUDGET_B = 328_000
+# `UX-863`: the density strip ticks every mark its table twin lists
+# instead of two hardcoded ones, and the strip's sentence names the
+# labelled set - all source, measured the same way:
+#
+#     page   324,881 -> 325,660   (+779 B, all source)
+#
+# The two land together in round 120: 329,000 leaves the same order
+# of headroom over their summed 327,231 B.
+PAGE_BUDGET_B = 329_000
 
 #: `UX-444`: the claim, stated once. **The run's data is at least twice
 #: the page a reader is permitted to download.**
@@ -1073,9 +1080,12 @@ COMMITTED_EXPORTS = [
     # `cores_busy` sentence. macro_micro's own CPU figure is not
     # clamped (host 4, allows 4), so none of this is payload; it
     # travels because the schema does, whether or not this run's
-    # constraint row carries the key. The two land together in round
-    # 120: 532,000 keeps the same order of headroom over their sum.
-    ("macro_micro", MACRO_MICRO, 532_000),             #  529,732 B
+    # constraint row carries the key.
+    # `UX-863`: +779 B, all source - the same delta as `PAGE_BUDGET_B`'s
+    # note above, measured the same way.
+    # The three land together in round 120: 533,000 keeps the same order
+    # of headroom over their summed 530,511 B (`UX-860` adds 341 B more).
+    ("macro_micro", MACRO_MICRO, 533_000),             #  530,511 B
 ]
 
 

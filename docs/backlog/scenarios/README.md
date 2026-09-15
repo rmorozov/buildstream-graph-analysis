@@ -15,13 +15,13 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-862 scenarios: **1 open**, 861 closed.
+862 scenarios: **0 open**, 862 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
 | capture | 0 | 113 |
-| analysis | 1 | 118 |
+| analysis | 0 | 118 |
 | contracts | 0 | 50 |
 | viewer | 0 | 176 |
 | cli | 0 | 22 |
@@ -36,7 +36,6 @@ task file, which is the only place it ever lived twice.
 
 | ID | Scenario | Topic | Priority | Serves | Status |
 |---|---|---|---|---|---|
-| UX-860 | [swap is a finding, not a word in a CPU sentence](UX-0860-swap-is-a-finding-not-a-word-in-a-cpu-sentence.md) | analysis | Medium | R5 (the build swapped from here to here, and these elements were running) | 🔴 Not Started |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

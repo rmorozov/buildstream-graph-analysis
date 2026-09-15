@@ -1076,6 +1076,7 @@
   "tests/unit/test_the_shape_before_the_rows.py",
   "tests/unit/test_the_shape_channel_is_built.py",
   "tests/unit/test_the_synthesis_reaches_the_page.py",
+  "tests/unit/test_the_token_ledger_has_two_shares.py",
   "tests/unit/test_the_tools_scale_with_the_table.py",
   "tests/unit/test_the_two_capabilities_are_offered.py",
   "tests/unit/test_the_two_remote_execution_projections_do_not_add.py",
@@ -4366,6 +4367,7 @@
   "tests/unit/test_stream_merge.py",
   "tests/unit/test_the_advised_comparison_is_one_the_store_makes.py",
   "tests/unit/test_the_arrows_say_why_now.py",
+  "tests/unit/test_the_broker_grants_by_slack.py",
   "tests/unit/test_the_browser_is_the_library.py",
   "tests/unit/test_the_build_pivots_by_program.py",
   "tests/unit/test_the_builders_question_has_a_document.py",
@@ -4448,6 +4450,7 @@
   "tests/unit/test_the_struct_it_already_read.py",
   "tests/unit/test_the_synthesis_reaches_the_page.py",
   "tests/unit/test_the_timeline_speaks_perfetto.py",
+  "tests/unit/test_the_token_ledger_has_two_shares.py",
   "tests/unit/test_the_tools_scale_with_the_table.py",
   "tests/unit/test_the_trace_knows_whose_build.py",
   "tests/unit/test_the_two_capabilities_are_offered.py",
@@ -7660,7 +7663,8 @@
   "tests/unit/test_every_captured_file_has_a_consumer.py",
   "tests/unit/test_every_finding_reaches_a_fixture.py",
   "tests/unit/test_the_cores_were_or_were_not_binding.py",
-  "tests/unit/test_the_max_jobs_advisor_does_not_overcommit.py"
+  "tests/unit/test_the_max_jobs_advisor_does_not_overcommit.py",
+  "tests/unit/test_the_token_ledger_has_two_shares.py"
  ],
  "bga/validation/determinism.py": [
   "tests/unit/test_determinism.py",
@@ -8505,6 +8509,7 @@
   "tests/unit/test_the_stranger_has_a_seed.py",
   "tests/unit/test_the_struct_it_already_read.py",
   "tests/unit/test_the_timeline_speaks_perfetto.py",
+  "tests/unit/test_the_token_ledger_has_two_shares.py",
   "tests/unit/test_the_trace_knows_whose_build.py",
   "tests/unit/test_three_reasons_for_no_timeline.py",
   "tests/unit/test_trace_stream_and_census_scale.py",

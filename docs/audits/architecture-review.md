@@ -95,6 +95,7 @@ would have caught it; a bound at it would only just have.
 | 21 | 2026-09-08 | 780 | two filings, both the shape review 20 named — a record no guard reads, beside the tree that shows it. `UX-798` — `directions.md`'s round-109 row says *fourteen closed, ten filed*; the round document's own list closes 13 (`UX-789` is filed and open in that same section) and `Found by: round 109` finds 11. `UX-799` — the §6 map's `dev_baseline.py` row names the finding baseline and not the pyright mode `UX-697` gave it. Sound: `CLAUDE.md`'s advisory reproduces from `dev_process_bands.py --runs 58`; round 109's *What closed* list is 🟢 in both markers for all 13; `dev_touching.py --size` prints the figure both guides carry |
 | 22 | 2026-09-12 | 808 | two filings, both review 20's shape one turn further: a record a guard *does* read, with the guard's population narrower or self-cancelling. `UX-813` — round 111's history row derives *sixteen closed* from a bullet walk that counts `UX-695` twice (a trailing bullet with no em dash) and never sees `UX-806` (closed, listed under *In progress*); an over-count and an omission cancel to the row's number. `UX-814` — §6's `dev_commit_bodies.py` row names `UX-696` and not the App-author skip `UX-811` shipped. The area pages, the contract counts, the advisory, the capture flags and every round's closed ids reproduce |
 | 23 | 2026-09-13 | 834 | three filings, two of them review 22's shape one turn further — a guard whose presence-check is satisfied by the sentence stating a delta, not the table it should hold equal to it: `UX-838` — `UX-829`'s `fan_in[uid].direct` ships in round 116 with no document naming it and no guard able to, because `additionalProperties`-shaped rows are invisible to both of `_row_keys`'s two cases; `UX-840` — §3e's two reference tables sit one to three deltas behind `UX-830`'s own guarded bound, and `test_the_style_guide_states_every_budget` is green throughout because the missing number is present anyway, inside the narrative paragraph beside the stale table. `UX-839` — the shape review 20 named: a bare figure with no guard at all, the README's clone-size claim flagged undated by reviews 21 and 22 and now measured roughly 2x-9x what it states |
+| 24 | 2026-09-15 | 862 | one finding in two facets, both `UX-858`'s own gap - `cli.md`'s jobserver flag list has no line for `--jobserver-seed N`, and `run_instance.jobserver`'s documented four keys are five in the schema hint (`seed` missing), invisible to the coverage guard because `run_instance` is typed as a bare `object` in the published schema: `UX-866`; the context map's `UX-846 (open)` label two rounds after the row closed: `UX-867`; and `UX-863`'s merged-edge selector fix that reddens no guard, named by its verifier: `UX-868` |
 
 ### Review 11 — 2026-09-02
 
@@ -1553,6 +1554,44 @@ six named plus §1a were checked. The §6 module map's ~103 per-row
 descriptions were checked for the CI-workflow block only — `UX-780`
 came out of that block, which is a reason to think the rest is worth a
 pass. `UX-689` owns the map's structural half.
+
+## Review 24 — 2026-09-15, at 862 closed rows
+
+Run by one reader over the document group rounds 119 and 120 moved:
+`docs/guides/cli.md`'s jobserver paragraphs, capacity block (both
+instances) and `bga:columns` key-count sentence; `examples/11-serial-
+giant/README.md`, `examples/10-jobserver/README.md` and
+`examples/README.md`'s `## 11` section; Direction 20's section in
+`docs/design/directions.md`. One finding in two facets, plus one stale
+label outside the group and one guard gap a verifier named this round.
+Three filings.
+
+**The shape** is review 23's, unchanged: a sentence no guard reads, and
+this time the guard's own population is the reason - the coverage
+walk finds "0 undocumented keys" for the printable contracts because
+`run_instance` is a bare `object` in the published schema, so a key
+added under it (`seed`, `UX-858`) is structurally outside what the
+guard can see, the shape `additionalProperties`-shaped rows gave
+`UX-838` two reviews ago, one level up the schema.
+
+### The five checks
+
+| check | result |
+|---|---|
+| counts | `bga.contracts.ids()` 25, `superseded()` 10, `reads()` 3, `printable()` 9, `unprintable()` 16 - unchanged since review 23; `analyze/v6` 62 properties (61 at review 23, `UX-860` and `UX-861` additive); `ls bga/viewer/*.js` 22 unchanged; `cli.md`'s **295 keys** reproduces from `_consumer_surface()`; `closed.md` 834 to 862 |
+| versions | not re-walked - no version-bearing sentence in the four groups changed since review 23 |
+| paths exist | both example READMEs present and cross-linked from `examples/README.md`'s `## 10` and `## 11` sections; the two CI step names `test_the_examples_build.py` expects are in `ci.yml` |
+| pasted output current | `cli.md`'s macro_micro capacity block reproduces byte for byte (`bga analyze tests/fixtures/macro_micro/run --plane2 ...`); the findings table's 31 ids equal `FINDING_READERS`; both example READMEs' capture blocks are dated records, not re-run |
+| a flag or option | `--jobserver-seed N` exists in `bga capture run --help` and the tracer's, matters to the mode, and is named in no `cli.md` flag list - the finding |
+| a Part or invariant held | `UX-841` to `UX-852` and `UX-857` to `UX-859` all 🟢 in `closed.md`; Direction 20's Status line reproduces against the tree figure for figure |
+
+### One gap in this sweep
+
+The findings table's own claim to be "test-enforced against this
+table" was checked for content (31 of 31 ids match) but not for the
+claimed mechanism - the search for a guard naming both `cli.md` and a
+findings-id set was a name-match sweep over `tests/unit`, not a read
+of every file.
 
 ## Review 23 — 2026-09-13, at 834 closed rows
 

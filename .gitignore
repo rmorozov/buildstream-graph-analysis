@@ -211,6 +211,12 @@ examples/10-jobserver/files/toolchain/
 examples/11-serial-giant/files/toolchain/
 examples/11-serial-giant/files/gen/
 
+# examples/12-junctioned (UX-872) stages the identical sysroot (another
+# hardlink clone) into its junctioned subproject's own files/toolchain/
+# - a junction is a separate BuildStream project, so `kind: local`
+# sources resolve inside sub/, not the parent. Same reasoning as 05-11.
+examples/12-junctioned/sub/files/toolchain/
+
 # Agent worktrees: whole clones the Agent tool makes under the repo (UX-509).
 .claude/worktrees/
 

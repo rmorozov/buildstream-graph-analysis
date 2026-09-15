@@ -266,7 +266,8 @@ for clone in \
     "$HERE/09-fine-grained-siblings/files/toolchain" \
     "$HERE/09-fine-grained-siblings/merged/files/toolchain" \
     "$HERE/10-jobserver/files/toolchain" \
-    "$HERE/11-serial-giant/files/toolchain"; do
+    "$HERE/11-serial-giant/files/toolchain" \
+    "$HERE/12-junctioned/sub/files/toolchain"; do
   rm -rf "$clone"
   mkdir -p "$(dirname "$clone")"
   cp -al "$DEST" "$clone"

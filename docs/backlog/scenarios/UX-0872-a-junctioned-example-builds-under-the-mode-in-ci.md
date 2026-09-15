@@ -1,6 +1,6 @@
 # UX-872: a junctioned example builds under the mode in CI
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-869, UX-871, UX-856 | **Found by:** round 121, the user (a real project under a junction, GNU Make 4.4 on the host) | **Serves:** R4 (the snapshot entry point with the jobserver on runs in CI, on a junction) | **Topic:** capture | **Area:** tools | **Shape:** judgement
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-869, UX-871, UX-856 | **Found by:** round 121, the user (a real project under a junction, GNU Make 4.4 on the host) | **Serves:** R4 (the snapshot entry point with the jobserver on runs in CI, on a junction) | **Topic:** capture | **Area:** tools | **Shape:** judgement
 
 ## Motivation
 
@@ -86,3 +86,12 @@ the capture's own `with capture_scratch(...)` block exits):
 
 Both ci.yml mutations were applied to the real file, run, and reverted
 from a saved copy (never `git checkout --`).
+
+**Deviation (merge):** the track stopped once uncommitted when the box
+ran out of disk (9.9 GB of pytest temp dirs, freed) and resumed to
+commit. The verifier ran the example for real (`EXIT=0`, 16.9 s;
+`core.bst` `joined`, `cmake`, `cmake_meson`) and read `make lint` red
+on the base - `UX-871`'s untyped parser return - already typed on the
+branch before this merge. The decision check lives in a committed
+script because `UX-354` refuses a workflow that names the report's
+keys inline. Nothing added at merge.

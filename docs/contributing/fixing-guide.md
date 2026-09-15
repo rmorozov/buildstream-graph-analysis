@@ -411,7 +411,7 @@ tools/native_trace/bwrap_shim.py  a `bwrap` shim ahead of the real one in
 tools/native_trace/wrappers/_common.sh  the jobserver token-holding
                              wrappers' shared logic - `ld.lld`/`lld`/
                              `ld.gold`/`mold`/`ninja` each source it
-                             (UX-846 (open))
+                             (UX-846)
 ```
 
 A citation is closed or marked (open).

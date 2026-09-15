@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-869 scenarios: **5 open**, 864 closed.
+869 scenarios: **4 open**, 865 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -26,7 +26,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | viewer | 0 | 177 |
 | cli | 0 | 22 |
 | store | 0 | 16 |
-| docs | 1 | 145 |
+| docs | 0 | 145 |
 | guards | 0 | 224 |
 
 ## Open scenarios
@@ -40,7 +40,6 @@ task file, which is the only place it ever lived twice.
 | UX-870 | [the kinds read carries the user's own bst options and says why it failed](UX-0870-the-kinds-read-carries-the-users-own-bst-options-and-says-why-it-failed.md) | capture | High | R2 (every element joins by its kind on a project built with -o and --config) | 🔴 Not Started |
 | UX-871 | [a junctioned element finds its kind](UX-0871-a-junctioned-element-finds-its-kind.md) | capture | High | R2 (an element behind a junction joins the jobserver by its kind) | 🔴 Not Started |
 | UX-872 | [a junctioned example builds under the mode in CI](UX-0872-a-junctioned-example-builds-under-the-mode-in-ci.md) | capture | Medium | R4 (the snapshot entry point with the jobserver on runs in CI, on a junction) | 🔴 Not Started |
-| UX-866 | [a key under a bare object is still a documented key](UX-0866-a-key-under-a-bare-object-is-still-a-documented-key.md) | docs | Medium | R4 (the guide names every flag and key the capture writes) | 🔴 Not Started |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

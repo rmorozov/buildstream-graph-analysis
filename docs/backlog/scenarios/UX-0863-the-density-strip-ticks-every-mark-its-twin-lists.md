@@ -1,6 +1,6 @@
 # UX-863: the density strip ticks every mark its twin lists
 
-**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** UX-195 | **Found by:** round 120, the user (a 16-core, 32 GB host, `--builders 16 --jobserver auto`) | **Serves:** R1 (the strip and the table under it say the same percentiles) | **Topic:** viewer | **Area:** bga-viewer | **Shape:** mechanical
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-195 | **Found by:** round 120, the user (a 16-core, 32 GB host, `--builders 16 --jobserver auto`) | **Serves:** R1 (the strip and the table under it say the same percentiles) | **Topic:** viewer | **Area:** bga-viewer | **Shape:** mechanical
 
 ## Motivation
 
@@ -84,3 +84,13 @@ growth; same convention as every prior bump in that file).
 | `test_a_close_pair_drops_one_label_rather_than_overlap` | same mutation | yes | (same run) |
 | `test_a_close_pair_drops_one_label_rather_than_overlap` | `STRIP_LABEL_GAP_PCT_PER_CHAR = 0` | yes | 1/8 failed, 36 passed after revert |
 | `test_no_axis_overlaps` (pre-existing) | CSS `~=`→`=` on `[data-mark]` | no | did not discriminate - (3) above |
+
+Deviation (merge): the track found three defects past the task's text,
+NaN ticks on a strip with no deciles, label collisions on both
+committed fixtures (a character-width gap constant, derived against
+the four known cases) and a `[data-mark]` exact match that never met a
+merged name (`~=` now), and the verifier passed it; the `~=` fix
+reddens no guard on its own (a merged edge tick's flush alignment has
+no case), left as a gap for a later row rather than a Chrome layout
+test written at merge; the export bounds land with `UX-861` and
+`UX-864`'s at 329,000 and 533,000 over the summed deltas.

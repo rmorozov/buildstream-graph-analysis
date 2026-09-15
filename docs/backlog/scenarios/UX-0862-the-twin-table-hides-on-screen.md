@@ -1,6 +1,6 @@
 # UX-862: the twin table hides on screen
 
-**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** UX-195 | **Found by:** round 120, the user (a 16-core, 32 GB host, `--builders 16 --jobserver auto`) | **Serves:** R1 (a closed twin is closed) | **Topic:** viewer | **Area:** bga-viewer | **Shape:** mechanical
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-195 | **Found by:** round 120, the user (a 16-core, 32 GB host, `--builders 16 --jobserver auto`) | **Serves:** R1 (a closed twin is closed) | **Topic:** viewer | **Area:** bga-viewer | **Shape:** mechanical
 
 ## Motivation
 
@@ -64,3 +64,6 @@ section.py` (the other three files naming `main table`) - 51 passed,
 | Guard | Mutation | Reddened | Count |
 |---|---|---|---|
 | `test_the_twin_is_hidden_until_toggled_open` | restore `main table { display: block; ... }` (drop `:not(.twin-table)`) | yes | 1 failed, 27 passed -> 28 passed after revert |
+
+Deviation (merge): none - the verifier passed it as filed; the Chrome
+case reads the computed display.

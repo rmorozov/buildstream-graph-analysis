@@ -38,3 +38,36 @@ the map records and the first wins; a later row if it happens).
 a `bst show` line `sdk.bst:foo/bar.bst cmake` resolves `--dir
 buildstream/proj/foo/bar.bst` to `cmake`; an unjunctioned name still
 resolves; mutation: store the full name only - red.
+
+## Outcome
+
+**Gap measured.** Pre-fix `_parse_element_kinds` stores each line under
+its one printed spelling only. On `sdk.bst:foo/bar.bst cmake\nplain.bst
+autotools\na.bst:b.bst:deep.bst meson\n`, the pre-fix shape (reproduced
+by the "store the full name only" mutation below) leaves `foo/bar.bst`
+and `deep.bst` absent from the map, so `element_from_build_root`'s
+project-relative name never matches: `_element_kind_env("foo/bar.bst")
+-> None` where the fix gives `"cmake"` - the exact silent
+`unknown_kind` the Motivation names.
+
+**Close measured.** `_parse_element_kinds` now stores both the full
+(junction-qualified) spelling and the name after the last `:`, first
+junction wins a collision, and the map carries `.junctions`/
+`.collisions` counts. `tests/unit/test_native_build_tracer.py -k
+parse_element_kinds`: `6 passed` (3 new: both spellings + `.junctions
+== 2`, a collision keeps `cmake` and counts 1, an unjunctioned map
+counts 0). `tests/unit/test_bwrap_shim.py -k junctioned`: `1 passed` -
+the map written the way the tracer writes it, `_element_kind_env`
+(unchanged, exact lookup) resolves `foo/bar.bst`, `plain.bst`,
+`deep.bst`. `make test-touching` (104 files, direct `pytest -n 4`,
+timeout under load): `2672 passed, 35 skipped in 459.62s`. `ruff
+check`: clean. `dev_sizes.py --check`: `tools/bst_native_build_tracer.py`
+grew 8614->8644 lines, adopted (`--adopt --force`). `dev_baseline.py
+--check`: clean, no new findings.
+
+**Mutation table.**
+
+| mutation | reddened | count |
+|---|---|---|
+| store the full name only (drop the short-spelling/junctions/collisions logic) | `test_parse_element_kinds_resolves_both_spellings_of_a_junctioned_name`, `test_parse_element_kinds_a_collision_keeps_the_first_and_counts_it`, `test_a_junctioned_elements_kind_resolves_through_the_real_env_map` | 3 reddened -> reverted, 7/7 green |
+| drop the collision count (`elif owner != name: pass`) | `test_parse_element_kinds_a_collision_keeps_the_first_and_counts_it` | 1 reddened -> reverted, 6/6 green |

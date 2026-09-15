@@ -21,9 +21,11 @@ from tools.native_trace.bwrap_shim import (
     JOBSERVER_JOINED,
     JOBSERVER_PINNED,
     JOBSERVER_UNKNOWN_KIND,
+    _element_kind_env,
     _resolve_kind_and_probe,
     _resolve_proxy_auth,
     build_shim_argv,
+    element_from_build_root,
     extract_element_name,
     jobserver_decision,
     kind_job_env,
@@ -516,6 +518,29 @@ def test_an_element_absent_from_the_map_gets_no_injection():
         assert kind_job_env(None, "AUTH")[2] == JOBSERVER_UNKNOWN_KIND
     finally:
         os.close(read_fd)
+
+
+def test_a_junctioned_elements_kind_resolves_through_the_real_env_map(
+        tmp_path, monkeypatch):
+    """UX-871: the map is the tracer's own `_parse_element_kinds`
+    output, written to disk the way the tracer writes `element_kinds.json`
+    - the shim's `_element_kind_env` still does the exact lookup
+    (UX-843), but the element it looks up, `element_from_build_root`'s
+    project-relative name, is now a key the junctioned map carries too."""
+    from tools.bst_native_build_tracer import _parse_element_kinds
+
+    kinds = _parse_element_kinds(
+        "sdk.bst:foo/bar.bst cmake\nplain.bst autotools\n"
+        "a.bst:b.bst:deep.bst meson\n")
+    kinds_path = tmp_path / "element_kinds.json"
+    kinds_path.write_text(json.dumps(kinds))
+    monkeypatch.setenv("BST_TRACE_ELEMENT_KINDS", str(kinds_path))
+
+    element = element_from_build_root("buildstream/proj/foo/bar.bst")
+    assert element == "foo/bar.bst"
+    assert _element_kind_env(element) == "cmake"
+    assert _element_kind_env("plain.bst") == "autotools"
+    assert _element_kind_env("deep.bst") == "meson"
 
 
 def test_a_table_less_kind_that_spends_jobs_gets_the_jobs_env_policy():

@@ -25,6 +25,9 @@ if [ -n "$FAKE_BST_EMPTY" ]; then
 fi
 echo "core.bst cmake"
 echo "toolchain.bst import"
+if [ -n "$FAKE_BST_JUNCTION" ]; then
+    echo "sdk.bst:zlib.bst cmake"
+fi
 """
 
 
@@ -46,7 +49,7 @@ def test_global_options_and_their_values_precede_show(fake_bst, tmp_path):
     assert diag["argv"] == [fake_bst, "-o", "arch", "x86_64", "--config", "c.yml",
                             "show", "--format", "%{name} %{kind}", "t.bst"]
     assert kinds == {"core.bst": "cmake", "toolchain.bst": "import"}
-    assert diag == {"argv": diag["argv"], "count": 2}
+    assert diag == {"argv": diag["argv"], "count": 2, "junctions": 0, "collisions": 0}
 
 
 def test_options_after_the_subcommand_do_not_leak_into_show(fake_bst, tmp_path):
@@ -109,7 +112,8 @@ def test_a_success_file_records_argv_and_count(fake_bst, tmp_path):
     bind_dir.mkdir()
     warning = _write_kinds_read(str(bind_dir), 4, kinds, diag)
     written = json.loads((bind_dir / "kinds_read.json").read_text())
-    assert written == {"argv": diag["argv"], "count": 2}
+    assert written == {"argv": diag["argv"], "count": 2,
+                       "junctions": 0, "collisions": 0}
     assert warning is None  # kinds resolved - jobserver_kinds_warning says nothing
 
 
@@ -147,3 +151,14 @@ def test_every_valued_option_of_the_installed_bst_consumes_its_values():
         if got != ([opt, *values], True):
             wrong.append((opt, got))
     assert wrong == [], wrong
+
+
+def test_a_success_file_counts_the_junctioned_names_it_resolved(
+        fake_bst, tmp_path, monkeypatch):
+    """`UX-871`: the record says how many names came through a junction,
+    so a `zlib.bst` reached as `sdk.bst:zlib.bst` is visibly resolved."""
+    monkeypatch.setenv("FAKE_BST_JUNCTION", "1")
+    kinds, diag = read_element_kinds_for_jobserver(
+        str(tmp_path), [fake_bst, "build", "t.bst"])
+    assert kinds["zlib.bst"] == "cmake"
+    assert (diag["count"], diag["junctions"], diag["collisions"]) == (4, 1, 0)

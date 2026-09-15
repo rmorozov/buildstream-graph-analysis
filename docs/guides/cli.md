@@ -800,7 +800,7 @@ into the child environment and the shim requires them:
 | `BST_TRACE_ELEMENT_KINDS` | a JSON `{name: kind}` map, read once from `bst show` before the build; the shim looks its own element up in it to pick a row from the per-kind environment table (`UX-843`) | `tools/native_trace/bwrap_shim.py` |
 | `BST_TRACE_WRAPPER_DIR` | the host path of `tools/native_trace/wrappers/`, bound read-only at `wrappers/` under the trace bind (`/tmp/.bst-native-trace/wrappers`; the sandbox root is read-only, measured on examples/06) and prepended to `PATH` ahead of BuildStream's own (`UX-846`) | `tools/native_trace/bwrap_shim.py` |
 | `BST_TRACE_JOBSERVER_LEDGER` | the in-sandbox path a wrapper appends an acquire or release row to — the same file `PoolController`'s own ticks land in, under the existing trace bind (`UX-846`) | `tools/native_trace/wrappers/_common.sh` |
-| `BST_TRACE_PROXY_DIR` | the host directory holding one jobserver proxy FIFO per element, set only when `run --plan` named an `analyze.json`; the shim looks its own element up in it and binds that proxy instead of the global FIFO when one exists (`UX-849`) | `tools/native_trace/bwrap_shim.py` |
+| `BST_TRACE_PROXY_DIR` | the host directory holding one jobserver proxy FIFO per element, set only when `run --plan` named an `analyze.json`; the shim looks its own element up in it and injects that proxy's auth instead of the global FIFO's when one exists — its path already lands under `BST_TRACE_BIND_DST`, no bind of its own (`UX-849`, `UX-869`) | `tools/native_trace/bwrap_shim.py` |
 
 **What a test sets to reach a failure path.** The spine's degrade and
 refusal branches are unreachable on a machine that *has* `ptrace`, so

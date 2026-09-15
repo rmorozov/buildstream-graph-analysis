@@ -382,40 +382,67 @@ def _wrapper_mount(opts: list[str], wrapper_dir: str, wrapper_cap: Optional[str]
     return mount
 
 
-def _jobserver_injection(opts: list[str], bind_dst: str, decision: str,
+def _active_jobserver_fifo(pool: dict) -> Optional[str]:
+    """The host FIFO path fifo-style auth would bind, or `None` for fd
+    style / nothing active - the proxy-over-global precedence
+    `_jobserver_injection` applies, factored out for `main`'s own
+    diagnostics record."""
+    proxy_fd, proxy_fifo = pool.get("proxy_fd"), pool.get("proxy_fifo")
+    if proxy_fd is not None or proxy_fifo is not None:
+        return proxy_fifo
+    if pool.get("fd") is not None:
+        return None
+    return pool.get("fifo")
+
+
+def _sandbox_fifo_path(bind_src: str, bind_dst: str, host_path: Optional[str]) -> str:
+    """UX-869: the jobserver/proxy FIFO already lives inside `bind_src`,
+    which `build_shim_argv` binds whole at `bind_dst` - no `--bind` of
+    its own is needed, just the path rewritten under that mount (a
+    second, own-path bind failed on a read-only sandbox root whenever
+    `bind_src` was not already under `/tmp`). `host_path` is `Optional`
+    only because the caller's own dict is - both callers only reach here
+    once fd style is already ruled out."""
+    if host_path is None:
+        raise ValueError("no FIFO host path to rewrite under bind_dst")
+    return os.path.join(bind_dst, os.path.relpath(host_path, bind_src))
+
+
+def _jobserver_injection(opts: list[str], binds: tuple, decision: str,
                          pool: dict, kind_context: dict) -> list[str]:
     """`build_shim_argv`'s own jobserver branch, split out to keep its
-    complexity under the baseline's cap. `pool` is `{fd, fifo, proxy_fd,
-    proxy_fifo}` - UX-679/UX-841's global pair, UX-849's proxy pair,
-    which wins outright over the global one when either is set. A
-    proxy follows the *same* auth style the global FIFO resolved to
-    (`BST_TRACE_JOBSERVER_AUTH` - UX-841 already reads it from `make
+    complexity under the baseline's cap. `binds` is `(bind_src,
+    bind_dst)`, kept as one param for PLR0913's cap. `pool` is `{fd,
+    fifo, proxy_fd, proxy_fifo}` - UX-679/UX-841's global pair, UX-849's
+    proxy pair, which wins outright over the global one when either is
+    set. A proxy follows the *same* auth style the global FIFO resolved
+    to (`BST_TRACE_JOBSERVER_AUTH` - UX-841 already reads it from `make
     --version`; a proxy has no version of its own to probe), the
     coordinator's fix for GNU Make 4.3 rejecting `fifo:` outright
     (measured live: `internal error: invalid --jobserver-auth string`).
     `kind_context` is `_resolve_kind_and_probe`'s own shape one module
     over, plus `wrapper_cap`. `[]` for a pinned decision or with
     nothing active - argv byte for byte."""
+    bind_src, bind_dst = binds
     fd, fifo = pool.get("fd"), pool.get("fifo")
     proxy_fd, proxy_fifo = pool.get("proxy_fd"), pool.get("proxy_fifo")
     proxy_active = proxy_fd is not None or proxy_fifo is not None
     if decision == JOBSERVER_PINNED or (fd is None and fifo is None and not proxy_active):
         return []
     # UX-679 (spike) / UX-841: fd style passes an inherited fd straight
-    # into the sandbox with no bind; fifo style (GNU Make >= 4.4) needs
-    # the FIFO's own path bound into the sandbox, since `make` opens it
-    # there itself (`--ro-bind` is wrong - both ends write it). UX-849:
-    # a proxy mirrors this exact pair, `main` having already opened its
-    # own fd (fd style) or left only the path set (fifo style).
+    # into the sandbox with no bind. Fifo style (GNU Make >= 4.4) names
+    # the FIFO's in-sandbox path - already reachable under `bind_dst`
+    # (UX-869: no bind of its own, which failed read-only outside
+    # `/tmp`). UX-849: a proxy mirrors this exact pair, `main` having
+    # already opened its own fd (fd style) or left only the path set
+    # (fifo style).
     if proxy_active:
         auth_value = (f"--jobserver-auth={proxy_fd},{proxy_fd}"
                      if proxy_fd is not None
-                     else f"--jobserver-auth=fifo:{proxy_fifo}")
-        needs_bind, bind_path = proxy_fd is None, proxy_fifo
+                     else f"--jobserver-auth=fifo:{_sandbox_fifo_path(bind_src, bind_dst, proxy_fifo)}")
     else:
         auth_value = (f"--jobserver-auth={fd},{fd}" if fd is not None
-                     else f"--jobserver-auth=fifo:{fifo}")
-        needs_bind, bind_path = fd is None, fifo
+                     else f"--jobserver-auth=fifo:{_sandbox_fifo_path(bind_src, bind_dst, fifo)}")
     # UX-843/UX-859: the per-kind table - a kind not in it gets nothing
     # (`unknown_kind`) unless its own sandbox env carries `JOBS`
     # (`jobs_env`); cmake/meson and a `jobs_env` kind both consult the
@@ -426,8 +453,6 @@ def _jobserver_injection(opts: list[str], bind_dst: str, decision: str,
         jobs_present=_setenv_value(opts, "JOBS") is not None)
     auth_injected = any(var == "MAKEFLAGS" for var, _ in pairs)
     tokens = []
-    if needs_bind and auth_injected:
-        tokens += ["--bind", bind_path, bind_path]
     for var, value in pairs:
         tokens += ["--setenv", var, value]
     for var in unsets:
@@ -524,7 +549,7 @@ def build_shim_argv(
     # must not override it.
     decision = jobserver_decision(parse_element_max_jobs(opts), project_max_jobs)
     injected += _jobserver_injection(
-        opts, bind_dst, decision,
+        opts, (bind_src, bind_dst), decision,
         pool={"fd": jobserver_fd, "fifo": jobserver_fifo,
              "proxy_fd": proxy_fd, "proxy_fifo": proxy_fifo},
         kind_context={"element_kind": element_kind, "ninja_probe": ninja_probe,
@@ -749,7 +774,9 @@ def record_diagnostics(log_path: Optional[str], received: list[str],
                        exec_argv: list[str], real_bwrap: str,
                        element: Optional[str], spine: Optional[str],
                        injected: bool,
-                       stderr_path: Optional[str] = None) -> bool:
+                       stderr_path: Optional[str] = None,
+                       jobserver_fifo_host: Optional[str] = None,
+                       jobserver_fifo_sandbox: Optional[str] = None) -> bool:
     """UX-146: one line per invocation, holding both argvs.
 
     A capture that fails tells the user `buildbox-run failed with
@@ -799,6 +826,11 @@ def record_diagnostics(log_path: Optional[str], received: list[str],
             # capture ran under `--diagnose`. `None` on the default path,
             # which still execs and therefore has nowhere to put it.
             "stderr_path": stderr_path,
+            # UX-869: fifo style names no host path in `exec_argv` any
+            # more (no bind of its own) - both `None` for fd style or
+            # nothing active.
+            "jobserver_fifo_host": jobserver_fifo_host,
+            "jobserver_fifo_sandbox": jobserver_fifo_sandbox,
         }
         line = json.dumps(record, sort_keys=True) + "\n"
         fd = os.open(log_path, os.O_WRONLY | os.O_APPEND | os.O_CREAT, 0o644)
@@ -1156,10 +1188,10 @@ def main() -> int:
     # UX-849: a plan-active sandbox binds its own proxy and, only then,
     # marks `proxy_done_path` when it exits - a build with no `--plan`
     # never sets `BST_TRACE_PROXY_DIR`, so `proxy_fifo` is always `None`
-    # and this whole item costs nothing. The proxy's own auth (fd or
-    # the host path, unchanged - same-path bind, exactly as the global
-    # FIFO's own) follows `BST_TRACE_JOBSERVER_AUTH`, the coordinator's
-    # fix: GNU Make 4.3 (this box, CI) rejects `fifo:` outright.
+    # and this whole item costs nothing. The proxy's own auth (fd, or
+    # its path rewritten under `bind_dst` - UX-869, no bind of its own)
+    # follows `BST_TRACE_JOBSERVER_AUTH`, the coordinator's fix: GNU
+    # Make 4.3 (this box, CI) rejects `fifo:` outright.
     opts_now, _cmd_now = split_bwrap_args(sys.argv[1:])
     pinned_now = jobserver_decision(
         parse_element_max_jobs(opts_now), project_max_jobs) == JOBSERVER_PINNED
@@ -1201,9 +1233,16 @@ def main() -> int:
         except OSError:
             stderr_path = None  # a diagnostic must never fail a build
 
+    fifo_host = _active_jobserver_fifo(
+        {"fd": jobserver_fd, "fifo": jobserver_fifo,
+         "proxy_fd": proxy_fd, "proxy_fifo": proxy_fifo})
+    fifo_sandbox = (_sandbox_fifo_path(bind_src, bind_dst, fifo_host)
+                    if fifo_host else None)
     record_diagnostics(diagnostics_path, list(sys.argv[1:]),
                        argv, real_bwrap, element, spine, inject,
-                       stderr_path=stderr_path)
+                       stderr_path=stderr_path,
+                       jobserver_fifo_host=fifo_host,
+                       jobserver_fifo_sandbox=fifo_sandbox)
 
     return _exec_or_run(real_bwrap, argv, stderr_path, proxy_done_path)
 

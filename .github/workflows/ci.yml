@@ -1597,6 +1597,37 @@ jobs:
             exit 1
           }
 
+      - name: Build + capture 12-junctioned (UX-872)
+        # UX-869/UX-871 were real first-day defects on the user's own
+        # junctioned project, and no example had a junction, so neither
+        # had a CI step to fail on. `sub/` is a real second BuildStream
+        # project, reached only through elements/junction.bst; the
+        # assertion below is UX-871's own fix, exercised for real: the
+        # junctioned cmake element's decision must read `joined` with a
+        # real kind, never `unknown_kind`. Out of scope: a remote
+        # junction, and a second example for fifo-style auth (this
+        # runner's own `make`, like the box the README was measured on,
+        # is 4.3 - see examples/12-junctioned/README.md).
+        run: |
+          set -euo pipefail
+          PROJ=examples/12-junctioned
+          OUT=artifacts/12-junctioned
+          mkdir -p "$OUT"
+          JUNCTIONED_ELEMENT=core.bst
+
+          rm -rf ~/.cache/buildstream ~/.local/share/buildstream
+          status=0
+          (cd "$PROJ" && bga snapshot --jobserver auto -- bst --builders 2 build all.bst) \
+            > "$OUT/snapshot.txt" 2>&1 || status=$?
+          cat "$OUT/snapshot.txt"
+          echo "bga snapshot exited $status"
+          test "$status" -eq 0
+
+          PLANE2=$(echo "$PROJ"/.bga/runs/*/plane2.json)
+          cp "$PLANE2" "$OUT/plane2.json"
+
+          python3 "$PROJ/check_jobserver_decision.py" "$OUT/plane2.json" "$JUNCTIONED_ELEMENT"
+
       - name: Upload real-build artifacts
         if: always()
         uses: actions/upload-artifact@v7

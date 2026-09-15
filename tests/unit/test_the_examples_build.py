@@ -15,6 +15,14 @@ more assertion: `auto`'s wall must read under `off`'s, the reading this
 example exists for. The refusal mutation is `bga compare`'s own,
 already covered above for 10 - the same binary, not step-11-specific
 code, so it is not re-mutated here.
+
+UX-872 adds `examples/12-junctioned`'s step: `bga snapshot --jobserver
+auto` (not `bga capture run`, UX-856's own entry point) on a project
+reached through a real junction, checked by the example's own
+`check_jobserver_decision.py` (a real script, not an inline workflow
+one-liner - `UX-354`) against the junctioned cmake element's
+`jobserver_decisions` row. The mutation is pointing that check at an
+unjunctioned element name, which the same script refuses.
 """
 import json
 import os
@@ -28,6 +36,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 CI_WORKFLOW = REPO_ROOT / ".github" / "workflows" / "ci.yml"
 STEP_NAME = "Build + capture + compare 10-jobserver (UX-848)"
 STEP_NAME_11 = "Build + capture + compare 11-serial-giant (UX-857)"
+STEP_NAME_12 = "Build + capture 12-junctioned (UX-872)"
 
 EXIT_OK = 0
 EXIT_MISMATCHED_RUNS = 6
@@ -247,3 +256,80 @@ def test_the_ci_steps_11_ordering_check_refuses_a_tie(tmp_path):
 
     assert result.returncode != 0
     assert "is not under" in result.stdout + result.stderr
+
+
+# --- UX-872: examples/12-junctioned's own step ---------------------------
+
+CHECK_DECISION_SCRIPT = (REPO_ROOT / "examples" / "12-junctioned"
+                         / "check_jobserver_decision.py")
+
+
+def test_the_ci_step_12_captures_via_bga_snapshot_with_the_jobserver_on():
+    step = _extract_ci_step(STEP_NAME_12)
+    body = step[step.index("run: |"):]
+    assert "examples/12-junctioned" in body
+    assert "bga snapshot --jobserver auto" in body
+    assert "bst --builders 2 build all.bst" in body
+    assert "JUNCTIONED_ELEMENT=core.bst" in body
+    assert 'test "$status" -eq 0' in body
+    # UX-354: the step must go through the real, committed script
+    # (below) rather than naming `jobserver_decisions`'s own keys
+    # itself - `test_the_workflow_does_not_know_the_payload.py` refuses
+    # a workflow `run:` block that parses this repository's own JSON
+    # and subscripts a literal key.
+    assert "check_jobserver_decision.py" in body
+    assert CHECK_DECISION_SCRIPT.is_file()
+
+
+def _run_decision_check(plane2_report, element, tmp_path):
+    plane2_path = tmp_path / "plane2.json"
+    plane2_path.write_text(json.dumps(plane2_report))
+    return subprocess.run(
+        [sys.executable, str(CHECK_DECISION_SCRIPT), str(plane2_path), element],
+        capture_output=True, text=True,
+    )
+
+
+def test_the_ci_steps_12_decision_check_accepts_a_joined_real_kind(tmp_path):
+    """This box's own real reading (UX-872's Outcome): `core.bst`
+    `joined`, kind `cmake` - the step's check must pass it."""
+    report = {"jobserver_decisions": [
+        {"element": "core.bst", "max_jobs": 4, "decision": "joined",
+         "kind": "cmake", "policy": "cmake_meson"},
+    ]}
+
+    result = _run_decision_check(report, "core.bst", tmp_path)
+
+    assert result.returncode == 0, result.stderr
+    assert "core.bst decision:" in result.stdout
+
+
+def test_the_ci_steps_12_decision_check_refuses_unknown_kind(tmp_path):
+    """A failed kinds read degrades every decision to `unknown_kind`
+    (`jobserver_kinds_warning`) - the exact regression UX-871 fixed and
+    this step exists to catch a return of."""
+    report = {"jobserver_decisions": [
+        {"element": "core.bst", "max_jobs": 4, "decision": "joined",
+         "kind": "unknown_kind", "policy": None},
+    ]}
+
+    result = _run_decision_check(report, "core.bst", tmp_path)
+
+    assert result.returncode != 0
+    assert "real kind" in result.stderr
+
+
+def test_the_ci_steps_12_decision_check_refuses_an_unjunctioned_element(tmp_path):
+    """UX-872's Acceptance Test mutation: point the assertion at an
+    unjunctioned element - a name `jobserver_decisions` never carries
+    for this report must refuse, not silently pass the row that is
+    there for a different element."""
+    report = {"jobserver_decisions": [
+        {"element": "core.bst", "max_jobs": 4, "decision": "joined",
+         "kind": "cmake", "policy": "cmake_meson"},
+    ]}
+
+    result = _run_decision_check(report, "unjunctioned.bst", tmp_path)
+
+    assert result.returncode != 0
+    assert "no jobserver_decisions row" in result.stderr

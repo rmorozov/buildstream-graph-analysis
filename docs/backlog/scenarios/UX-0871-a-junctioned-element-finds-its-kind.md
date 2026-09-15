@@ -1,6 +1,6 @@
 # UX-871: a junctioned element finds its kind
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-843 | **Found by:** round 121, the user (a real project under a junction, GNU Make 4.4 on the host) | **Serves:** R2 (an element behind a junction joins the jobserver by its kind) | **Topic:** capture | **Area:** tools-native_trace | **Shape:** mechanical
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-843 | **Found by:** round 121, the user (a real project under a junction, GNU Make 4.4 on the host) | **Serves:** R2 (an element behind a junction joins the jobserver by its kind) | **Topic:** capture | **Area:** tools-native_trace | **Shape:** mechanical
 
 ## Motivation
 
@@ -71,3 +71,15 @@ grew 8614->8644 lines, adopted (`--adopt --force`). `dev_baseline.py
 |---|---|---|
 | store the full name only (drop the short-spelling/junctions/collisions logic) | `test_parse_element_kinds_resolves_both_spellings_of_a_junctioned_name`, `test_parse_element_kinds_a_collision_keeps_the_first_and_counts_it`, `test_a_junctioned_elements_kind_resolves_through_the_real_env_map` | 3 reddened -> reverted, 7/7 green |
 | drop the collision count (`elif owner != name: pass`) | `test_parse_element_kinds_a_collision_keeps_the_first_and_counts_it` | 1 reddened -> reverted, 6/6 green |
+
+**Deviation (merge):** the track left the Required Fix's count clause
+("the capture counts the junctioned elements it resolved") to `UX-870`,
+whose diagnostic dict it would have collided with. Merged after
+`UX-870`: the success record in `kinds_read.json` now carries
+`junctions` and `collisions` beside `count`; guard
+`test_a_success_file_counts_the_junctioned_names_it_resolved` (a fake
+`bst` emitting `sdk.bst:zlib.bst cmake`), mutation: write `0` for
+`junctions` - `2 failed`. `report["jobserver_kinds_read"]` stays the
+boolean it was. `create_jobserver_proxies` (`UX-849`, `--plan`) now
+makes one FIFO per spelling of a junctioned element; the extra one is
+never looked up and was not measured here.

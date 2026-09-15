@@ -15,15 +15,15 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-862 scenarios: **4 open**, 858 closed.
+862 scenarios: **1 open**, 861 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
-| capture | 1 | 113 |
+| capture | 0 | 113 |
 | analysis | 1 | 118 |
 | contracts | 0 | 50 |
-| viewer | 2 | 176 |
+| viewer | 0 | 176 |
 | cli | 0 | 22 |
 | store | 0 | 16 |
 | docs | 0 | 143 |
@@ -36,10 +36,7 @@ task file, which is the only place it ever lived twice.
 
 | ID | Scenario | Topic | Priority | Serves | Status |
 |---|---|---|---|---|---|
-| UX-858 | [the pool grows toward the machine, not its opening seed](UX-0858-the-pool-grows-toward-the-machine-not-its-opening-seed.md) | capture | High | R5 (an llvm-sized element takes the cores the other builders leave idle) | 🔴 Not Started |
 | UX-860 | [swap is a finding, not a word in a CPU sentence](UX-0860-swap-is-a-finding-not-a-word-in-a-cpu-sentence.md) | analysis | Medium | R5 (the build swapped from here to here, and these elements were running) | 🔴 Not Started |
-| UX-862 | [the twin table hides on screen](UX-0862-the-twin-table-hides-on-screen.md) | viewer | Low | R1 (a closed twin is closed) | 🔴 Not Started |
-| UX-863 | [the density strip ticks every mark its twin lists](UX-0863-the-density-strip-ticks-every-mark-its-twin-lists.md) | viewer | Low | R1 (the strip and the table under it say the same percentiles) | 🔴 Not Started |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

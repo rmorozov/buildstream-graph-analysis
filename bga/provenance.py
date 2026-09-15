@@ -620,6 +620,17 @@ _CLAIMS = {
             "Published whenever the four constraints could be intersected; "
             "which one binds is the finding's own `evidence`."),
         ()),
+    # `UX-860`: **no evidence path**, `graph-width`'s reason again - the
+    # span and page count are read from `overcommitted_intervals`' rows
+    # and summed into the finding's own `evidence`, and no document
+    # field names that sum directly.
+    "swap-observed": (
+        (),
+        _unconditional(
+            "Published whenever an overcommitted window's own `swapped_out` "
+            "count is over zero - the span and the pages are the finding's "
+            "own `evidence`."),
+        ()),
     # `UX-680`: **no evidence path**, for `graph-width`'s reason - both
     # halves live in `findings[].evidence.{unbounded_builders,
     # compiler_offload}`, nested under the finding rather than at a

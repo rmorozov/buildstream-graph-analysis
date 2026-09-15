@@ -488,6 +488,7 @@ never silently folded into an unestimated blast.
 | `latent-heavies` | info | heavy elements off the critical path, worth nothing to fix today |
 | `capacity-recommendation` | varies | the joint `--builders` × `--max-jobs` answer (`UX-116`): the sweep's scheduling knee, Plane 2's measured cores-busy, the `UX-104` memory ceiling and the host's cores, intersected, with the **binding** constraint named and the others shown beneath it. `high` when the run is configured above what its own measurements support, `medium` when there is room to grow, `info` when it is already at its ceiling. Needs `--plane2` |
 | `memory-envelope` | varies | what this build's measured per-element peak RSS implies for `--builders` against the host's RAM — `high` when the current builders count does not fit, `medium` when one more would not, `info` otherwise. Needs `--plane2` and a capture that recorded the host's memory (`UX-104`) |
+| `swap-observed` | high | pages were written to swap while the host's CPU was oversampled — the window span and the elements building in it, from `overcommitted_intervals`' own `swapped_out` count (`UX-676`, `UX-860`). Needs a capture with a host CPU series that recorded a rising `pswpout` |
 | `remote-execution-whatif` | info | what remote execution would buy, priced two ways and never summed (`UX-680`): `bga sweep`'s own unbounded-builder row (BuildStream REAPI moves whole sandboxes, so it removes the builder cap) and Plane 2's compiler/linker CPU on the critical path (compiler-level RE like recc/reclient moves compiles out of the sandbox, so it removes compile seconds from the agent). `evidence.additive` is always `false` - both remove the same critical-path seconds. The compiler-offload half needs `--plane2` and a capture with `binary_cost`; without one, only the builder-cap half publishes |
 | `shared-source-blast` | medium | one repository's ref decides most of this build's rebuilds: any commit to it rebuilds N of M elements, because its direct elements key on its ref rather than on the files they stage (`UX-171`). Needs a run whose `sources.json` the extraction wrote |
 
@@ -1024,7 +1025,7 @@ finding one level up: `parallelism` is a top-level *object*, its
 top-level array published the whole of a major bump outside itself.
 The third is `UX-838`: `elements.fan_in` and five other rows are keyed
 by something that is not an array index at all, so neither `items` nor
-`bga:columns` sees them. The surface is **294 keys** today, and that
+`bga:columns` sees them. The surface is **295 keys** today, and that
 figure is derived from the walk rather than typed here.
 
 So the statement of coverage, which is now a statement and not a

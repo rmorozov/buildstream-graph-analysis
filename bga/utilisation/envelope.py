@@ -148,6 +148,10 @@ def _row(window: dict, run: dict, binding: float) -> dict:
                        if binding else None),
         "lost_core_seconds": round(idle * window["duration_us"] / 1e6, 3),
         "load1": window["load1"],
+        # `UX-860`: the other half of `overcommitted`'s own test - a
+        # window can qualify on load alone with nothing swapped, so the
+        # count is published rather than folded back into a boolean.
+        "swapped_out": window["swapped_out"],
         # Plane 1 records which spans overlap a window, not which
         # builder ran them - there is no lane id in `trace/v9` - so the
         # column is the concurrent set against `builders`, and each

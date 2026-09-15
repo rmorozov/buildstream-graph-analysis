@@ -916,8 +916,12 @@ COMMITTED_EXPORTS = [
     # `wall_clock_share_us` both stay under `classify`'s inline
     # threshold (0 and 4 keys), so nothing here is content. Measured
     # before this change: 468,068 B (this worktree's path length).
-    # 474,000 keeps the same headroom.
-    ("golden", GOLDEN, 474_000),                       #  469,599 B
+    # `UX-860`: +421 B, all **contract** - the `overcommitted_intervals`
+    # row's new `swapped_out` column and its four evidence-key entries
+    # (`EVIDENCE_QUANTITIES`), which travel whether or not a run's host
+    # series ever swapped; golden has none. 474,000 still holds over
+    # the summed 470,020 B.
+    ("golden", GOLDEN, 474_000),                       #  470,020 B
     # `UX-297` moved this one by 385 B before that: the two-plane run
     # publishes `plane2_coverage.source`, which says which shape of
     # Plane 2 report served its numbers and what that costs to open. A
@@ -1083,9 +1087,12 @@ COMMITTED_EXPORTS = [
     # constraint row carries the key.
     # `UX-863`: +779 B, all source - the same delta as `PAGE_BUDGET_B`'s
     # note above, measured the same way.
-    # The three land together in round 120: 533,000 keeps the same order
-    # of headroom over their summed 530,511 B (`UX-860` adds 341 B more).
-    ("macro_micro", MACRO_MICRO, 533_000),             #  530,511 B
+    # `UX-860`: +341 B, all **contract** - the `swapped_out` column and
+    # its four evidence-key entries; no window in this run's host series
+    # swaps, so nothing in the finding itself fired.
+    # The four land together in round 120: 533,000 keeps the same order
+    # of headroom over their summed 530,852 B.
+    ("macro_micro", MACRO_MICRO, 533_000),             #  530,852 B
 ]
 
 

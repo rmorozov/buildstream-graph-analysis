@@ -20,6 +20,7 @@ import pytest
 REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 
+from bga import findings
 from bga.analyzer import BuildEfficiencyAnalyzer
 from bga.utilisation import envelope
 
@@ -190,6 +191,19 @@ class TestTheRulesAreWhatTheyClaim:
         assert len(out["overcommitted_intervals"]) == 2
         assert out["envelope"]["verdict"] == "overcommitted"
 
+    def test_the_row_carries_the_page_count(self):
+        """`UX-860`: `_row` used to drop `swapped_out` on the floor even
+        though `intervals()` already computed it."""
+        out = envelope.compute(self._samples([1.0, 1.0, 1.0], pswpout=7),
+                               self._run(self._building()))
+        assert [row["swapped_out"] for row in out["overcommitted_intervals"]] \
+            == [7, 7]
+
+    def test_the_swap_column_is_declared(self):
+        from bga.schemas import _INTERVAL_COLUMNS
+        keys = [c["key"] for c in _INTERVAL_COLUMNS]
+        assert "swapped_out" in keys, keys
+
     def test_overcommit_beats_under_use_in_the_verdict(self):
         """Both are true of this run - an idle core *and* swapping - and
         the answer is overcommit: a build that is swapping is past
@@ -218,6 +232,75 @@ class TestTheRulesAreWhatTheyClaim:
         rows = out["underutilized_intervals"]
         assert len(rows) == envelope.INTERVALS_MAX
         assert all(row["lost_core_seconds"] > 0 for row in rows)
+
+
+class TestSwapIsAFinding:
+    """`UX-860`: `overcommitted_intervals`' own `swapped_out` count, read
+    as `swap-observed` rather than left as a word in the headline."""
+
+    def _samples(self, rows):
+        header = {"schema": "host-samples/v1", "monotonic_at_start": 100.0,
+                  "wall_at_start": 1_700_000_000.0}
+        return {"header": header, "samples": rows}
+
+    def _run(self, tasks):
+        return {"builders": 4, "native_max_jobs": 4, "tasks": tasks,
+                "max_jobs": {}, "successors": {}}
+
+    def _task(self, element):
+        return {"element": element, "start_us": 0,
+                "finish_us": 1_800_000_000_000_000, "ready_us": 0}
+
+    def _finding_for(self, rows):
+        result = type("_R", (), {"overcommitted_intervals": rows})()
+        return findings._swap_observed_finding(result)
+
+    def test_a_swapping_window_names_its_span_and_elements(self):
+        samples = self._samples([
+            {"t": 100.0, "cores": 4, "load1": 0.0, "pswpout": 0},
+            {"t": 102.0, "cores": 4, "load1": 0.0, "pswpout": 0,
+             "cpu_busy_cores": 1.0},
+            {"t": 104.0, "cores": 4, "load1": 0.0, "pswpout": 9,
+             "cpu_busy_cores": 1.0},
+        ])
+        out = envelope.compute(samples, self._run([self._task("a.bst")]))
+        rows = out["overcommitted_intervals"]
+        assert len(rows) == 1 and rows[0]["swapped_out"] == 9
+
+        finding = self._finding_for(rows)
+        assert len(finding) == 1
+        f = finding[0]
+        assert f["id"] == "swap-observed"
+        assert f["elements"] == ["a.bst"]
+        assert f["evidence"] == {
+            "swapped_out_pages": 9,
+            "swap_window_count": 1,
+            "swap_start_offset_us": rows[0]["start_offset_us"],
+            "swap_end_offset_us": (rows[0]["start_offset_us"]
+                                    + rows[0]["duration_us"]),
+        }
+        assert "a.bst" in f["title"] and "9" in f["title"]
+
+    def test_no_swap_is_no_finding(self):
+        assert self._finding_for([]) == []
+        assert self._finding_for([{"swapped_out": 0, "start_offset_us": 0,
+                                    "duration_us": 1000, "building": []}]) == []
+
+    def test_many_windows_span_first_start_to_last_end(self):
+        rows = [
+            {"swapped_out": 3, "start_offset_us": 0, "duration_us": 2_000_000,
+             "building": [{"element": "a.bst", "max_jobs": 1}]},
+            {"swapped_out": 0, "start_offset_us": 2_000_000,
+             "duration_us": 2_000_000, "building": [{"element": "a.bst"}]},
+            {"swapped_out": 5, "start_offset_us": 8_000_000,
+             "duration_us": 3_000_000, "building": [{"element": "b.bst"}]},
+        ]
+        finding = self._finding_for(rows)[0]
+        assert finding["evidence"]["swap_start_offset_us"] == 0
+        assert finding["evidence"]["swap_end_offset_us"] == 11_000_000
+        assert finding["evidence"]["swap_window_count"] == 2
+        assert finding["evidence"]["swapped_out_pages"] == 8
+        assert finding["elements"] == ["a.bst", "b.bst"]
 
 
 class TestTheFixtureSaysWhatItMeasured:

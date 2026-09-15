@@ -1767,6 +1767,10 @@ _INTERVAL_COLUMNS = [
     {"key": "lost_core_seconds", "title": "Lost core-seconds",
      "quantity": "ratio", "sortable": True},
     {"key": "load1", "title": "Load", "quantity": "ratio"},
+    # `UX-860`: additive - `overcommitted`'s own test reads this,
+    # `_row` only started publishing it.
+    {"key": "swapped_out", "title": "Pages swapped out",
+     "quantity": "count", "sortable": True},
     {"key": "building", "title": "Building (with its max-jobs)"},
     {"key": "ready_not_dispatched", "title": "Ready, not dispatched"},
     {"key": "just_finished", "title": "Just finished"},
@@ -1796,6 +1800,12 @@ _EVIDENCE_FIELDS = {
     "sum_of_individual_us": ("duration_us",
         "The savings added one at a time, which double-counts the "
         "overlap. Published beside `joint_saving_us` to show the gap."),
+    "swap_start_offset_us": ("duration_us",
+        "Offset from the run's start where the earliest swapping window "
+        "opens."),
+    "swap_end_offset_us": ("duration_us",
+        "Offset from the run's start where the latest swapping window "
+        "closes."),
     "t_infinity_us": ("duration_us",
         "The critical path with builders unlimited - the floor the "
         "graph's shape imposes by itself."),
@@ -1878,6 +1888,11 @@ _EVIDENCE_FIELDS = {
     "recommended_builders": ("count",
         "The builder count this run's evidence supports, bounded by "
         "memory wherever memory was measured."),
+    "swap_window_count": ("count",
+        "Overcommitted windows that recorded a page written to swap."),
+    "swapped_out_pages": ("count",
+        "Pages written to swap across the named windows - `pswpout`'s "
+        "delta, summed."),
     "violation_count": ("count",
         "Ordering violations in the recorded log. Each one weakens every "
         "timing conclusion drawn from it."),

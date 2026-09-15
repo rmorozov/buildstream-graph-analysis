@@ -9,6 +9,7 @@ import pytest
 
 from tools.bst_native_build_tracer import (
     _bst_global_options,
+    _cmd_target,
     _write_kinds_read,
     jobserver_kinds_warning,
     read_element_kinds_for_jobserver,
@@ -151,6 +152,42 @@ def test_every_valued_option_of_the_installed_bst_consumes_its_values():
         if got != ([opt, *values], True):
             wrong.append((opt, got))
     assert wrong == [], wrong
+
+
+def test_every_valued_option_of_the_installed_build_skips_its_value():
+    """UX-873: `build`'s own arity table is read off the installed
+    `build` command, so the case list is - a bst release adding a
+    valued option reds here before `_cmd_target` reads it as the
+    target."""
+    cli = pytest.importorskip("buildstream._frontend.cli")
+    build = cli.cli.commands["build"]
+    valued = [(opt, param.nargs) for param in build.params
+              if not getattr(param, "is_flag", False) and param.nargs > 0
+              for opt in param.opts]
+    assert valued, "the installed build command defines no valued option"
+    wrong = []
+    for opt, nargs in valued:
+        values = [f"v{i}" for i in range(nargs)]
+        got = _cmd_target(["bst", "build", opt, *values, "t.bst"])
+        if got != "t.bst":
+            wrong.append((opt, got))
+    assert wrong == [], wrong
+
+
+def test_a_bare_flag_before_the_target_is_not_swallowed():
+    assert _cmd_target(["bst", "build", "--retry-failed", "t.bst"]) == "t.bst"
+
+
+def test_a_repeated_valued_option_still_finds_the_target():
+    cmd = ["bst", "build", "--artifact-remote", "u1",
+           "--artifact-remote", "u2", "t.bst"]
+    assert _cmd_target(cmd) == "t.bst"
+
+
+def test_the_kinds_read_argv_keeps_the_target_past_deps_all(fake_bst, tmp_path):
+    cmd = [fake_bst, "build", "--deps", "all", "t.bst"]
+    _kinds, diag = read_element_kinds_for_jobserver(str(tmp_path), cmd)
+    assert diag["argv"][-1] == "t.bst"
 
 
 def test_a_success_file_counts_the_junctioned_names_it_resolved(

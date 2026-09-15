@@ -1962,6 +1962,10 @@ EVIDENCE_QUANTITIES.update({
         "allows": {
             QUANTITY: "count",
             "description": "How many builders this particular ceiling permits."},
+        "clamped_from": {
+            QUANTITY: "count",
+            "description": "`UX-861`: the CPU figure before it was capped "
+                           "to `host_cpu_count` - present only when it was."},
     }}},
     "rows": {"items": {"properties": {
         "duration_us": {
@@ -3261,7 +3265,10 @@ _ANALYZE_HINTS = {
                                "so carries the same unit. An average, not "
                                "a peak: during the parallel stretch each "
                                "element draws more, so the CPU ceiling "
-                               "below is optimistic."},
+                               "below is optimistic - and, when the raw "
+                               "figure exceeds the host's own cores, "
+                               "clamped to them (`UX-861`; see "
+                               "`clamped_from`)."},
             "constraints": {
                 "description": "One record per ceiling that could be "
                                "measured. A constraint with no measurement "
@@ -3276,6 +3283,13 @@ _ANALYZE_HINTS = {
                     {"key": "reason", "title": "Why",
                      "description": "The measurement this ceiling was read "
                                     "off, in the units it was measured in."},
+                    {"key": "clamped_from", "title": "Before clamping",
+                     "quantity": "count", "sortable": True,
+                     "description": "`UX-861`: present only on the CPU row, "
+                                    "and only when the derived figure "
+                                    "exceeded `host_cpu_count` - the "
+                                    "unclamped value `allows` was capped "
+                                    "from."},
                 ]},
             "binding_constraint": {
                 "description": "The name of the smallest constraint. This "

@@ -281,6 +281,22 @@ def _row_keys(node, found):
     return found
 
 
+def _hint_keys(node, found):
+    """Keys a view-hint describes under a key typed as a bare `object`,
+    at any depth - `_RUN_INSTANCE_HINT`'s own `properties`, not a row
+    `items`/`additionalProperties` repeats, so none of `_row_keys`'s
+    three cases reach it. `UX-838` fixed the sibling gap for a row keyed
+    by something that is not an array index; `UX-866` measured this
+    one: `run_instance` publishes `seed` (`UX-858`) this way and stayed
+    invisible to the walk.
+    """
+    if isinstance(node, dict):
+        for key, sub in (node.get("properties") or {}).items():
+            found.add(key)
+            _hint_keys(sub, found)
+    return found
+
+
 def _consumer_surface():
     """`{key: [contract, ...]}` - the keys a consumer of a printable
     document meets.
@@ -291,12 +307,14 @@ def _consumer_surface():
     `UX-655`: `parallelism` is a top-level *object* and its `levels`
     rows one level below that, so a walk stopping under a top-level
     array published `level` and `width` outside its own population.
+    `UX-866` adds `run_instance`'s own hint-declared keys, a bare
+    `object` in the schema rather than a row.
 
     Still not the full recursive key set - 514 distinct keys over the
     nine printable schemas, 891 counting repeats - most of them
     internal shapes of one block, and a document naming all of them
     would be the second copy of the schemas `UX-384` already banned
-    from the inventory. This walk is 236.
+    from the inventory; the guide states what this walk reaches.
     """
     from bga import contracts, schemas
 
@@ -305,6 +323,7 @@ def _consumer_surface():
         schema = schemas.schema(name)
         keys = set(schema.get("properties", {}))
         _row_keys(schema, keys)
+        _hint_keys(schema.get("properties", {}).get("run_instance"), keys)
         for key in keys:
             found.setdefault(key, []).append(name)
     return found
@@ -570,6 +589,24 @@ class TestThePopulationIsKeysAndNotIds:
             "additionalProperties.properties is not reached by the walk, "
             "so a row keyed by something other than an array index - "
             "elements.fan_in among them - never enters the consumer "
+            "surface, and an undocumented key inside one never reddens")
+
+    def test_a_key_under_a_bare_object_is_reached_via_its_hint(self):
+        """`UX-866`'s regression fixture. `run_instance` is typed as a
+        bare `object`, and `_RUN_INSTANCE_HINT`'s own `properties` -
+        two levels deep for `run_instance.jobserver.seed` - is the only
+        place its keys are declared. If `_hint_keys` regresses, a key
+        added there (`seed`, `UX-858`) never enters the surface and the
+        undocumented-key clause has nothing to catch it on."""
+        marker = "zz_ux866_regression_marker"
+        assert marker not in _named_in_the_documents(), (
+            f"{marker!r} collided with real prose; pick another fixture key")
+        node = {"properties": {"nested": {"properties": {marker: {}}}}}
+        reached = _hint_keys(node, set())
+        assert marker in reached, (
+            "a hint's own nested properties are not reached, so a key "
+            "typed as a bare object with no items or additionalProperties "
+            "- run_instance among them - never enters the consumer "
             "surface, and an undocumented key inside one never reddens")
 
     def test_the_guide_states_the_reach_it_actually_has(self):

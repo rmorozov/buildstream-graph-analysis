@@ -15,12 +15,12 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-862 scenarios: **5 open**, 857 closed.
+862 scenarios: **4 open**, 858 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
-| capture | 2 | 113 |
+| capture | 1 | 113 |
 | analysis | 1 | 118 |
 | contracts | 0 | 50 |
 | viewer | 2 | 176 |
@@ -40,7 +40,6 @@ task file, which is the only place it ever lived twice.
 | UX-860 | [swap is a finding, not a word in a CPU sentence](UX-0860-swap-is-a-finding-not-a-word-in-a-cpu-sentence.md) | analysis | Medium | R5 (the build swapped from here to here, and these elements were running) | 🔴 Not Started |
 | UX-862 | [the twin table hides on screen](UX-0862-the-twin-table-hides-on-screen.md) | viewer | Low | R1 (a closed twin is closed) | 🔴 Not Started |
 | UX-863 | [the density strip ticks every mark its twin lists](UX-0863-the-density-strip-ticks-every-mark-its-twin-lists.md) | viewer | Low | R1 (the strip and the table under it say the same percentiles) | 🔴 Not Started |
-| UX-865 | [a relative open is recorded against its cwd](UX-0865-a-relative-open-is-recorded-against-its-cwd.md) | capture | Medium | R2 (a header reached through a relative include path still counts as read) | 🔴 Not Started |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

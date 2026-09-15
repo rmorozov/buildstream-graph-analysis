@@ -35,9 +35,11 @@ pytestmark = pytest.mark.skipif(
 )
 
 # UX-56 added `inv=` between the element and the counts; optional here
-# so this reads a pre-UX-56 header too.
+# so this reads a pre-UX-56 header too. UX-865 appended `relative=`/
+# `dirfd=`, also optional, for the same reason.
 HEADER_RE = re.compile(
-    r"^OPENS pid=(\d+) element=(\S+)(?: inv=\S+)? unique=(\d+) dropped=(\d+) part=(\d+)$"
+    r"^OPENS pid=(\d+) element=(\S+)(?: inv=\S+)? unique=(\d+) dropped=(\d+) part=(\d+)"
+    r"(?: relative=\d+)?(?: dirfd=\d+)?$"
 )
 
 

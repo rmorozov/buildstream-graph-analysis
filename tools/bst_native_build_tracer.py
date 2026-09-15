@@ -2497,10 +2497,11 @@ _PRESSURE_FIELDS = ("read_bytes", "written_bytes", "major_faults",
 
 # UX-57: `part=` is appended by hooks that flush more than one window
 # per process, and absent in logs written before that existed - optional
-# so one parser reads both.
+# so one parser reads both. UX-865: `relative=`/`dirfd=` appended the
+# same way, for the same reason.
 _OPENS_HEADER_RE = re.compile(
     r"^OPENS pid=(\d+) element=(\S+)(?: inv=(\S+))? unique=(\d+) dropped=(\d+)"
-    r"(?: part=(\d+))?$"
+    r"(?: part=(\d+))?(?: relative=(\d+))?(?: dirfd=(\d+))?$"
 )
 
 
@@ -2527,6 +2528,9 @@ def parse_open_lines(lines, open_element_overrides: Optional[dict[str, str]] = N
     and a subset is exactly the input that would turn a used dependency
     into a false "unused" - so any drop makes this element's verdict
     unsafe and is reported as such rather than quietly rounded away.
+
+    UX-865: `relative`/`dirfd` are carried the same way - running
+    per-process totals the hook re-reports in every window.
     """
     open_element_overrides = open_element_overrides or {}
     per_element: dict[str, dict] = {}
@@ -2554,7 +2558,7 @@ def parse_open_lines(lines, open_element_overrides: Optional[dict[str, str]] = N
             if line.startswith("/"):
                 entry["paths"].add(line)
             continue
-        pid, element, invocation, unique, dropped, _part = match.groups()
+        pid, element, invocation, unique, dropped, _part, relative, dirfd = match.groups()
         # UX-56: when the element name collapsed, the sandbox id is
         # what lets the correlation relabel this block too - without
         # it declared-vs-used stays keyed on a name that is not an
@@ -2564,22 +2568,30 @@ def parse_open_lines(lines, open_element_overrides: Optional[dict[str, str]] = N
             element = open_element_overrides.get(invocation, element)
         entry = per_element.setdefault(
             element,
-            {"paths": set(), "dropped": 0, "processes": 0, "dropped_by_pid": {}, "windows": 0},
+            {"paths": set(), "dropped": 0, "processes": 0, "dropped_by_pid": {},
+             "windows": 0, "relative": 0, "dirfd": 0,
+             "relative_by_pid": {}, "dirfd_by_pid": {}},
         )
         # UX-57: one process may now write several windows, so counting
         # blocks would overstate the process count. `dropped` is a
         # running total the process re-reports each time, so the last
         # window's value is the total rather than their sum.
         entry["windows"] += 1
-        # `dropped` is a running per-process total that the process
-        # re-reports in every window it writes, so the largest value seen
-        # for a pid is that pid's total; the element's total is their sum
-        # across pids. Summing every block instead would multiply one
-        # process's drops by how many windows it happened to flush.
-        by_pid = entry["dropped_by_pid"]
-        by_pid[pid] = max(by_pid.get(pid, 0), int(dropped))
-        entry["processes"] = len(by_pid)
-        entry["dropped"] = sum(by_pid.values())
+        # `dropped`/`relative`/`dirfd` are each a running per-process
+        # total the process re-reports in every window it writes, so the
+        # largest value seen for a pid is that pid's total; the element's
+        # total is their sum across pids. Summing every block instead
+        # would multiply one process's count by how many windows it
+        # happened to flush.
+        for count_key, pid_key, raw in (
+            ("dropped", "dropped_by_pid", dropped),
+            ("relative", "relative_by_pid", relative),
+            ("dirfd", "dirfd_by_pid", dirfd),
+        ):
+            by_pid = entry[pid_key]
+            by_pid[pid] = max(by_pid.get(pid, 0), int(raw or 0))
+            entry[count_key] = sum(by_pid.values())
+        entry["processes"] = len(entry["dropped_by_pid"])
         # A header arriving mid-block ends the previous one, which the
         # loop above gets for free by testing the header first.
         remaining = int(unique)
@@ -5050,7 +5062,10 @@ def compute_declared_vs_used(
             "dependencies needed only for a directory's existence all look the "
             "same from here. Elements with no observed opens, or with a "
             "truncated read set, are reported as uncovered rather than as "
-            "having unused dependencies."
+            "having unused dependencies. UX-865: a relative open is joined "
+            "against its opener's cwd and matched like an absolute one, but "
+            "a path reached under another spelling - a symlink alias - is "
+            "not matched, since the join is lexical and never resolves one."
         ),
     }
 
@@ -6648,7 +6663,10 @@ def load_and_summarize(raw_log_path: str, project_dir: Optional[str] = None,
                   # UX-57: how many times a process filled its window and
                   # flushed rather than dropping. Zero on any build small
                   # enough never to fill one, which is most of them.
-                  "windows": entry["windows"]}
+                  "windows": entry["windows"],
+                  # UX-865: relative opens joined against a cwd, and
+                  # opens under a non-cwd dirfd counted but not resolved.
+                  "relative": entry["relative"], "dirfd": entry["dirfd"]}
         for element, entry in sorted(opens_by_element.items())
     }
     return report

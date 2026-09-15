@@ -15,15 +15,15 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-854 scenarios: **0 open**, 854 closed.
+862 scenarios: **8 open**, 854 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
-| capture | 0 | 110 |
-| analysis | 0 | 116 |
+| capture | 3 | 113 |
+| analysis | 2 | 118 |
 | contracts | 0 | 50 |
-| viewer | 0 | 173 |
+| viewer | 3 | 176 |
 | cli | 0 | 22 |
 | store | 0 | 16 |
 | docs | 0 | 143 |
@@ -36,6 +36,14 @@ task file, which is the only place it ever lived twice.
 
 | ID | Scenario | Topic | Priority | Serves | Status |
 |---|---|---|---|---|---|
+| UX-858 | [the pool grows toward the machine, not its opening seed](UX-0858-the-pool-grows-toward-the-machine-not-its-opening-seed.md) | capture | High | R5 (an llvm-sized element takes the cores the other builders leave idle) | 🔴 Not Started |
+| UX-859 | [a recipe that spends `JOBS` joins the jobserver, whatever its kind](UX-0859-a-recipe-that-spends-jobs-joins-the-jobserver-whatever-its-kind.md) | capture | High | R2 (a manual element calling `cmake --build ${JOBS}` by hand builds under the mode like a cmake one) | 🔴 Not Started |
+| UX-860 | [swap is a finding, not a word in a CPU sentence](UX-0860-swap-is-a-finding-not-a-word-in-a-cpu-sentence.md) | analysis | Medium | R5 (the build swapped from here to here, and these elements were running) | 🔴 Not Started |
+| UX-861 | [a builder count above the host's cores is never recommended verbatim](UX-0861-a-builder-count-above-the-hosts-cores-is-never-recommended-verbatim.md) | analysis | Medium | R5 (a recommendation the operator can apply as read) | 🔴 Not Started |
+| UX-862 | [the twin table hides on screen](UX-0862-the-twin-table-hides-on-screen.md) | viewer | Low | R1 (a closed twin is closed) | 🔴 Not Started |
+| UX-863 | [the density strip ticks every mark its twin lists](UX-0863-the-density-strip-ticks-every-mark-its-twin-lists.md) | viewer | Low | R1 (the strip and the table under it say the same percentiles) | 🔴 Not Started |
+| UX-864 | [a one-key-per-item map is a table with filters](UX-0864-a-one-key-per-item-map-is-a-table-with-filters.md) | viewer | Medium | R2 (find one binary or one task among a thousand) | 🔴 Not Started |
+| UX-865 | [a relative open is recorded against its cwd](UX-0865-a-relative-open-is-recorded-against-its-cwd.md) | capture | Medium | R2 (a header reached through a relative include path still counts as read) | 🔴 Not Started |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

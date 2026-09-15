@@ -271,9 +271,16 @@ def drawn(tmp_path_factory):
         pytest.skip(NO_BROWSER)
     look = """(() => {
       const out = {};
+      // `UX-864`: a bare `.density`/`svg` also matches `columnStrip`'s
+      // annotation-grade shape, which any long table with a declared
+      // quantity column now carries beside it (`distributionStrip`) -
+      // `RANKED_MAP`'s own reason text names it and says it is not a
+      // sixth instrument. `data-grade="exhibit"` is what the four
+      // section-level instruments carry and an annotation never does.
       for (const s of document.querySelectorAll("section[data-section]")) {
         out[s.getAttribute("data-section")] = Boolean(
-          s.querySelector("figure, svg, .density, .decomposition"));
+          s.querySelector('figure, .density.exhibit, .decomposition.exhibit, '
+                          + '.series.exhibit, .interval.exhibit'));
       }
       return out;
     })()"""

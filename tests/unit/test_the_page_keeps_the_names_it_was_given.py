@@ -113,6 +113,16 @@ _LOOK = r"""
     seen.push({ key: span.getAttribute("data-key"),
                 shown: (span.textContent || "").trim(), where: "inline" });
   }
+  // `UX-864`: a one-key-per-item map past the pairs threshold is now a
+  // table, and its "key" column carries the same `data-key` the `<dt>`
+  // did - the label is the cell's own first child, the same as a
+  // `<dt>`'s, so a task-uid qualifier's separate span does not fold in.
+  for (const td of document.querySelectorAll(
+      'td[data-column="key"][data-key]')) {
+    seen.push({ key: td.getAttribute("data-key"), shown: label(td),
+                where: (td.closest("section[data-section]") || {})
+                  .getAttribute?.("data-section") || null });
+  }
   return { seen };
 })()
 """

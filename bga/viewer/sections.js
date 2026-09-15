@@ -25,15 +25,15 @@ import { chapters } from "./chapters.js";
 import { renderProvenance } from "./decision.js";
 import { GRADE_EXHIBIT, decomposition, interval, strip } from "./drawings.js";
 import { resolvePath } from "./element.js";
-import { COLUMNS, DECOMPOSITION, DISTRIBUTION, INLINE, INTERVAL, QUANTITY, RUNBOOK, SERIES, SEVERITY, bytes, childNode, cssId, describedTerm, el, guessQuantity, heading, hintsOf, quantity, quantityFor, sectionHead, title } from "./format.js";
+import { COLUMNS, DECOMPOSITION, DISTRIBUTION, INLINE, INTERVAL, KEYED_BY, KEYED_BY_TASK_UID, QUANTITY, RUNBOOK, SERIES, SEVERITY, bytes, childNode, cssId, describedTerm, el, guessQuantity, heading, hintsOf, keyAsShown, quantity, quantityFor, sectionHead, title } from "./format.js";
 import { matches } from "./nav.js";
 import { handOff } from "./perfetto.js";
 import { served } from "./primitives.js";
 import { byId, copyButton } from "./questions.js";
 import { recordSource } from "./rawjson.js";
 import { CONTROLS, classify } from "./shapes.js";
-import { ARRAY_INLINE_ITEMS, CELL_NEST_LIMIT, LIFTED_SECTION, OBJECT_INLINE_FIELDS, TABLE_OPENS_BOUNDED_ABOVE, liftedCriticalPath, renderPairs, renderStructured, renderTable } from "./structured.js";
-import { boundCards } from "./tables.js";
+import { ARRAY_INLINE_ITEMS, CELL_NEST_LIMIT, LIFTED_SECTION, OBJECT_INLINE_FIELDS, TABLE_OPENS_BOUNDED_ABOVE, liftedCriticalPath, mapTable, renderPairs, renderStructured, renderTable } from "./structured.js";
+import { boundCards, columnCells } from "./tables.js";
 import { investigationsFor } from "./trace_context.js";
 import { INCOMPLETE, PLANE2_NOT_CAPTURED, renderEvidence }
   from "./views.js";
@@ -378,6 +378,70 @@ function renderEmptySection(key, hint, node, sentence = null) {
   return section;
 }
 
+/**
+ * `UX-864`: the one place `mapTable`'s call for a top-level map
+ * differs from its call for a nested cell.
+ *
+ * `mapTable` itself is unchanged - a cell's fold already labels the
+ * value, so its "name"/section-title header pair is right there. A
+ * section standing on its own names the key's own noun (`Task`,
+ * `Binary`) and the value's declared unit instead, and every row
+ * still carries the raw published key verbatim in `data-key` -
+ * `describedTerm`'s own rule for a `<dt>` (`UX-374`), read off
+ * `data-raw` so no lookup has to survive a Top-N rank reordering the
+ * rows. Where the map is keyed by task uid (`UX-391`) the shown text
+ * is the element the composite names rather than the composite
+ * itself; everywhere else `buildTable` already rendered the key
+ * verbatim, so only the attribute is added.
+ */
+// `UX-835` (§3d): a quantity column's `<th>` may already carry an
+// `input.th-filter` `interrogable` appended after its label - a plain
+// `th.textContent = …` replaces every child and takes the filter with
+// it. Detach the filter first (if there is one), relabel, then
+// reattach the same element - `append` moves rather than copies, in
+// the DOM and in the shim both, so no listener or id is lost.
+function relabelHead(th, label) {
+  if (!th) return;
+  const filter = th.querySelector?.("input.th-filter");
+  th.textContent = label;
+  if (filter) th.append(filter);
+}
+
+function mapSectionLabels(box, key, hint, node) {
+  const table = box.querySelector?.("table");
+  if (!table) return box;
+  const keyHead = [...table.querySelectorAll("th")].find(
+    (th) => th.getAttribute("data-column") === "key");
+  const taskUidKeyed = hint[KEYED_BY] === KEYED_BY_TASK_UID;
+  relabelHead(keyHead, taskUidKeyed ? "Task" : title(key.replace(/^by_/, "")));
+  const valueHead = [...table.querySelectorAll("th")].find(
+    (th) => th.getAttribute("data-column") === "value");
+  if (valueHead) {
+    const record = Boolean(node?.properties);
+    const measure = hintsOf(node)[QUANTITY] ?? guessQuantity(key)
+      ?? (record ? null : "count");
+    relabelHead(valueHead, measure ? title(measure, measure) : "value");
+  }
+  for (const cell of columnCells(table, "key")) {
+    const raw = cell.getAttribute("data-raw");
+    cell.setAttribute("data-key", raw);
+    if (!taskUidKeyed) continue;
+    const shown = keyAsShown(raw, hint);
+    if (!shown) continue;
+    // `UX-374`: the element is the label's own first child, the way a
+    // `<dt>`'s is - the qualifier is a second, separately-marked node
+    // (`renderPairs`'s own `task-qualifier` span), never folded into
+    // one string, or the reader's search target stops being a single
+    // field of the composite.
+    cell.textContent = shown.element;
+    if (shown.qualifier) {
+      cell.append(el("span", { class: "task-qualifier muted" },
+                     ` ${shown.qualifier}`));
+    }
+  }
+  return box;
+}
+
 export function renderSection(key, value, hint = {}, node = undefined,
                               investigate = null, payload = undefined,
                               root = undefined) {
@@ -467,6 +531,26 @@ export function renderSection(key, value, hint = {}, node = undefined,
                 }));
     }
     if (!Object.keys(value).length) return null;
+    // `UX-864`: §1's own row - "object map, one key per element" is a
+    // table, not a `<dl>` of a thousand rows. A **record** (the
+    // schema names its members in `properties`) is the opposite
+    // shape - one value per *named* field - and `classify` cannot
+    // tell the two apart by looking at the value alone, so the map
+    // test is read off the schema, the same way `mapTable`'s own
+    // `record` check already is (`UX-407`).
+    const isMap = Boolean(node?.additionalProperties) && !node?.properties;
+    const control = isMap ? classify(value, {
+      nestLimit: CELL_NEST_LIMIT,
+      inlineFields: OBJECT_INLINE_FIELDS, inlineItems: ARRAY_INLINE_ITEMS,
+    }) : null;
+    if (control === CONTROLS.MAP_TABLE) {
+      const rows = Object.entries(value).map(
+        ([name, member]) => ({ key: name, value: member }));
+      const box = mapTable(key, rows, hint, node, false, 0, key);
+      return el("section", { "data-section": key,
+                             "data-rail": heading(key, hint).rail },
+                sectionHead(key, hint), mapSectionLabels(box, key, hint, node));
+    }
     // `UX-361` (§2d): a section whose declaration says its numbers are
     // a *total split into parts*, or *values on one axis*, draws that
     // before it lists them. The declaration names published paths and

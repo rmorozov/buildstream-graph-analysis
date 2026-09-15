@@ -523,7 +523,15 @@ END pid=101 ppid=1 ts=1002.500000 element=work-a.bst cmd=cc -c main.c
 #     page   321,493 -> 322,946   (+1,453 B, all source)
 #
 # 325,000 leaves 2,054 B.
-PAGE_BUDGET_B = 325_000
+# `UX-864`: `renderSection`'s object branch now calls `classify` and
+# `mapTable` gained the top-level noun/unit header pair and the
+# task-uid `data-key` pass - all source, measured on identical
+# fixture paths either side so no path noise is in it:
+#
+#     page   324,921 -> 326,452   (+1,531 B, all source)
+#
+# 328,000 leaves 1,548 B.
+PAGE_BUDGET_B = 328_000
 
 #: `UX-444`: the claim, stated once. **The run's data is at least twice
 #: the page a reader is permitted to download.**
@@ -896,7 +904,13 @@ COMMITTED_EXPORTS = [
     # prose (two shares, the per-element table) and the block itself,
     # absent from a run without the mode - 468,026 B measured at the
     # merge, 26 B over the old bound. 474,000 leaves headroom again.
-    ("golden", GOLDEN, 474_000),                       #  468,026 B
+    # `UX-864` moved this one by 1,531 B, all **source** - see the
+    # note on `PAGE_BUDGET_B` above; golden's `by_binary`/
+    # `wall_clock_share_us` both stay under `classify`'s inline
+    # threshold (0 and 4 keys), so nothing here is content. Measured
+    # before this change: 468,068 B (this worktree's path length).
+    # 474,000 keeps the same headroom.
+    ("golden", GOLDEN, 474_000),                       #  469,599 B
     # `UX-297` moved this one by 385 B before that: the two-plane run
     # publishes `plane2_coverage.source`, which says which shape of
     # Plane 2 report served its numbers and what that costs to open. A
@@ -1051,7 +1065,11 @@ COMMITTED_EXPORTS = [
     # schema prose, which travels whether or not this run's Plane 2
     # report carries the mode (it does not; macro_micro is a static
     # capture). 528,000 keeps the same order of headroom.
-    ("macro_micro", MACRO_MICRO, 528_000),             #  527,329 B
+    # `UX-864`: +1,531 B, all **source** - the same move as `golden`'s
+    # note above. Measured before this change: 527,489 B (this
+    # worktree's path length). 531,000 restores headroom of the same
+    # order.
+    ("macro_micro", MACRO_MICRO, 531_000),             #  529,020 B
 ]
 
 

@@ -108,7 +108,11 @@ class TestOnTheRealPage:
           const s = document.querySelector(
             'section[data-section="wall_clock_share_us"]');
           if (!s) return { found: false };
-          const terms = [...s.querySelectorAll("dt")];
+          // `UX-864`: eleven keys is past `classify`'s inline
+          // threshold, so this section is now the map table, not the
+          // `<dl>` this guard was written against - the row's own
+          // identity moved from `<dt data-key>` to `<td data-key>`.
+          const terms = [...s.querySelectorAll('td[data-column="key"]')];
           return {
             found: true,
             rows: terms.length,

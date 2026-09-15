@@ -477,6 +477,170 @@ console.log(JSON.stringify({
         assert [note["where"] for note in probed["noted"]].count("odd_shape") >= 1
 
 
+@needs_node
+class TestAOneKeyPerItemMapIsATable:
+    """UX-864: `renderSection`'s object branch never called `classify`,
+    so `by_binary` and `wall_clock_share_us` - one key per binary, one
+    per task - drew as a `<dl>` of a thousand rows with no filter, sort
+    or top-N, though `classify` already named the shape `MAP_TABLE` and
+    `renderStructured` reads it one level down. §1's threshold
+    (`classify`'s `inlineFields`, 4) is the one place "small" is
+    decided."""
+
+    _PROBE = r"""
+globalThis._makeNode ??= (await import(process.env.BGA_DOM_SHIM)).makeNode;
+globalThis._installDocument ??= (await import(process.env.BGA_DOM_SHIM)).installDocument;
+_installDocument();
+const app = await import("./tests/viewer.mjs");
+const { readFileSync } = await import("node:fs");
+const schema = JSON.parse(readFileSync(process.env.BGA_SCHEMA, "utf8"));
+
+const text = (n) => !n ? "" : ((n.children ?? []).length
+  ? (n._text ?? "") + n.children.map(text).join("") : (n._text ?? ""));
+const find = (n, pred) => {
+  if (!n) return null;
+  if (pred(n)) return n;
+  for (const c of n.children ?? []) { const hit = find(c, pred); if (hit) return hit; }
+  return null;
+};
+const all = (n, pred, out = []) => {
+  if (!n) return out;
+  if (pred(n)) out.push(n);
+  for (const c of n.children ?? []) all(c, pred, out);
+  return out;
+};
+
+function draw(key, size, taskUidKeyed) {
+  const node = schema.properties[key];
+  const value = {};
+  for (let i = 0; i < size; i++) {
+    value[taskUidKeyed ? `el-${i}.bst|BUILD|BUILD|0` : `binary-${i}`] = i;
+  }
+  const section = app.renderSection(key, value, app.hintsOf(node), node);
+  const table = find(section, (n) => n.tagName === "table");
+  const filter = find(section, (n) => n.tagName === "input"
+                       && n.attrs?.class === "table-filter");
+  const heads = table
+    ? [...(find(table, (n) => n.tagName === "thead")
+              ?.children?.[0]?.children ?? [])] : [];
+  const keyCells = all(table, (n) => n.tagName === "td"
+                        && n.attrs?.["data-column"] === "key");
+  return {
+    hasTable: Boolean(table),
+    dataRows: table?.attrs?.["data-rows"],
+    hasFilter: Boolean(filter),
+    sortable: heads.map((h) => h.attrs?.["data-sortable"]),
+    headers: heads.map(text),
+    firstKeyLabel: text(keyCells[0]),
+    firstKeyRaw: keyCells[0]?.attrs?.["data-key"] ?? null,
+  };
+}
+
+function drawSmall() {
+  const value = { a: 1, b: 2, c: 3 };
+  const node = { additionalProperties: { "bga:quantity": "count" } };
+  const section = app.renderSection("small_map", value, {}, node);
+  return {
+    hasTable: Boolean(find(section, (n) => n.tagName === "table")),
+    hasDl: Boolean(find(section, (n) => n.tagName === "dl")),
+  };
+}
+
+function drawRecordWithCatchAll() {
+  // Eight named members past the threshold, beside a documented
+  // catch-all: a record, never a map, whatever its size.
+  const value = {};
+  for (let i = 0; i < 8; i++) value[`member_${i}`] = i;
+  const node = { properties: Object.fromEntries(
+                   Object.keys(value).map((k) => [k, { type: "integer" }])),
+                 additionalProperties: { "bga:quantity": "count" } };
+  const section = app.renderSection("record_map", value, {}, node);
+  return {
+    hasTable: Boolean(find(section, (n) => n.tagName === "table")),
+    hasDl: Boolean(find(section, (n) => n.tagName === "dl")),
+  };
+}
+
+function drawEmpty(key) {
+  const node = schema.properties[key];
+  try {
+    const section = app.renderSection(key, {}, app.hintsOf(node), node);
+    return { threw: false,
+             ok: section === null || section.attrs?.["data-empty"] === "true" };
+  } catch (error) {
+    return { threw: true, message: String(error && error.message) };
+  }
+}
+
+console.log = (...a) => process.stdout.write(a.join(" ") + "\n");
+console.log(JSON.stringify({
+  by_binary: draw("by_binary", 41, false),
+  wall_clock_share_us: draw("wall_clock_share_us", 1202, true),
+  small: drawSmall(),
+  record: drawRecordWithCatchAll(),
+  empty: drawEmpty("by_binary"),
+}));
+"""
+
+    @classmethod
+    @pytest.fixture(scope="class")
+    def probed(cls, tmp_path_factory):
+        from bga import schemas
+
+        into = tmp_path_factory.mktemp("u864-schema")
+        schema_path = into / "schema.json"
+        schema_path.write_text(
+            json.dumps(schemas.schema(schemas.ANALYZE)), encoding="utf-8")
+        result = subprocess.run(
+            [node, "--input-type=module", "-e", cls._PROBE],
+            capture_output=True, text=True, cwd=REPO, timeout=120,
+            env=dict(os.environ,
+                     BGA_DOM_SHIM=str(REPO / "tests" / "dom_shim.mjs"),
+                     BGA_SCHEMA=str(schema_path)))
+        assert result.returncode == 0, result.stderr[-3000:]
+        return json.loads(result.stdout)
+
+    def test_forty_one_binaries_render_a_table_with_filter_and_sort(
+            self, probed):
+        seen = probed["by_binary"]
+        assert seen["hasTable"], seen
+        assert seen["dataRows"] == "41", seen
+        assert seen["hasFilter"], "a table over the bound has no filter"
+        assert seen["sortable"] == ["true", "true"], seen
+        assert seen["headers"] == ["Binary", "Count"], (
+            "the key's own noun and the value's declared unit: " + str(seen))
+
+    def test_twelve_hundred_tasks_render_a_table_with_filter_and_sort(
+            self, probed):
+        seen = probed["wall_clock_share_us"]
+        assert seen["hasTable"], seen
+        assert seen["dataRows"] == "1202", seen
+        assert seen["hasFilter"], seen
+        assert seen["sortable"] == ["true", "true"], seen
+        assert seen["headers"] == ["Task", "Duration"], seen
+        # `UX-391`'s rule, read here: the composite survives as the
+        # row's identity and the reader sees the element it names -
+        # `renderPairs`'s own qualifier span, no separator invented.
+        assert seen["firstKeyLabel"] == "el-1201.bst BUILD", seen
+        assert seen["firstKeyRaw"] == "el-1201.bst|BUILD|BUILD|0", seen
+
+    def test_a_three_key_object_still_renders_pairs(self, probed):
+        seen = probed["small"]
+        assert seen["hasDl"] and not seen["hasTable"], seen
+
+    def test_a_record_with_a_catch_all_is_not_a_map(self, probed):
+        # The verifier's uncovered class: no shipped section declares
+        # both `properties` and `additionalProperties`, so the gate's
+        # record clause had no fixture behind it.
+        seen = probed["record"]
+        assert seen["hasDl"] and not seen["hasTable"], seen
+
+    def test_an_empty_map_renders_without_error(self, probed):
+        seen = probed["empty"]
+        assert not seen["threw"], seen
+        assert seen["ok"], seen
+
+
 class TestStringifyIsAllowlisted:
     """`JSON.stringify` in the viewer, site by site.
 

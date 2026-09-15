@@ -1,6 +1,6 @@
 # UX-866: a key under a bare object is still a documented key
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-858, UX-838 | **Found by:** round 120, review 24 | **Serves:** R4 (the guide names every flag and key the capture writes) | **Topic:** docs | **Area:** bga | **Shape:** mechanical
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-858, UX-838 | **Found by:** round 120, review 24 | **Serves:** R4 (the guide names every flag and key the capture writes) | **Topic:** docs | **Area:** bga | **Shape:** mechanical
 
 ## Motivation
 
@@ -90,3 +90,12 @@ committed to it) - documented in the same `run_instance.jobserver` row
 alongside `host_manifest.cpu_count`/`.memory_bytes`, one clause,
 rather than opening a second row or narrowing the walk to `jobserver`
 alone.
+
+**Deviation (merge):** the verifier replayed both mutations and the
+task's own `seed` one (26 passed - `seed` is a bare token from
+`gen-synthetic --seed 1` elsewhere); of the eight keys the walk gained
+only `started_at_us` reds when its prose goes. A fully generic walk
+would have added 171 undocumented internal keys (578 in all); the plane2
+`jobserver` block alone adds 4, every one already named. At merge the
+walk's docstring lost its stale "This walk is 236" figure, which no
+guard read.

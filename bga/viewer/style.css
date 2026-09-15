@@ -568,7 +568,10 @@ section[data-section="evidence"] .verdict { margin: .4rem 0 .8rem; }
    the page. Measured at 390px before this: tables 217px wide ending at
    x=423 against a 390px viewport, so the whole report scrolled
    sideways and every line of prose moved with it. */
-main table { display: block; max-width: 100%; overflow-x: auto; }
+/* UX-862: excludes `.twin-table` - the author-origin `display: block`
+   here beat the browser's `[hidden] { display: none }` on every table
+   regardless of selector specificity, so a closed twin still rendered. */
+main table:not(.twin-table) { display: block; max-width: 100%; overflow-x: auto; }
 /* UX-318: and only the outermost one. A table inside another table's
    cell is not the widest thing on screen - its own sideways scroll is
    the second box in a chain, and the outer table's is the one a reader

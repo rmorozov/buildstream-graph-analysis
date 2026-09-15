@@ -2069,15 +2069,45 @@ def read_project_max_jobs(project_dir: str, cmd: list[str]) -> Optional[int]:
     return _parse_max_jobs_from_vars(proc.stdout)
 
 
-def _parse_element_kinds(show_output: str) -> dict:
-    """UX-843: `%{name} %{kind}` lines -> `{name: kind}`. A line that
-    does not split into exactly two tokens is skipped, not raised on -
-    the same degrade-not-raise posture as `_parse_max_jobs_from_vars`."""
-    kinds = {}
+class _ElementKindsMap(dict):
+    """UX-871: `_parse_element_kinds`'s return - a `{name: kind}` dict
+    (compares equal to a plain one) plus `.junctions`/`.collisions`,
+    the summary of what a junction-qualified `bst show` resolved."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.junctions = 0
+        self.collisions = 0
+
+
+def _parse_element_kinds(show_output: str) -> "_ElementKindsMap":
+    """UX-843/871: `%{name} %{kind}` lines -> `{name: kind}`, under
+    both the full spelling `bst show` prints (`Plugin._get_full_name`,
+    junction-qualified) and, when it carries a `:`, the bit after its
+    last one too - the shim derives only that from bwrap's `--dir`
+    (`element_from_build_root`), never the junction prefix. The first
+    junction to claim a given short spelling wins; a later one shipping
+    the same relative name is a collision, counted, not stored. A line
+    that does not split into exactly two tokens is skipped, not raised
+    on - the same degrade-not-raise posture as `_parse_max_jobs_from_vars`."""
+    kinds = _ElementKindsMap()
+    short_owners = {}
     for line in show_output.splitlines():
         parts = line.split()
-        if len(parts) == 2:
-            kinds[parts[0]] = parts[1]
+        if len(parts) != 2:
+            continue
+        name, kind = parts
+        kinds[name] = kind
+        if ":" not in name:
+            continue
+        kinds.junctions += 1
+        short = name.rsplit(":", 1)[-1]
+        owner = short_owners.get(short)
+        if owner is None:
+            short_owners[short] = name
+            kinds.setdefault(short, kind)
+        elif owner != name:
+            kinds.collisions += 1
     return kinds
 
 
@@ -2115,7 +2145,9 @@ def read_element_kinds_for_jobserver(project_dir: str,
     Returns `(kinds, diagnostic)`. `kinds` is `None` on any failure -
     the shim then treats every element as `unknown_kind`. `diagnostic`
     is always given back (`caller` writes it to `kinds_read.json`):
-    `{"argv": [...], "count": N}` on success, `{"argv": [...] or None,
+    `{"argv": [...], "count": N, "junctions": N, "collisions": N}` on
+    success (UX-871: the junctioned names stored under both
+    spellings, and the short spellings that collided), `{"argv": [...] or None,
     "returncode": N or None, "stderr_tail": "...", "reason":
     "no-target"|"exit"|"no-lines"|"timeout"|"oserror"}` on failure -
     `no-target` only when `cmd` carries no subcommand at all, so there
@@ -2153,7 +2185,8 @@ def read_element_kinds_for_jobserver(project_dir: str,
     if not kinds:
         return None, {"argv": argv, "returncode": proc.returncode,
                       "stderr_tail": proc.stderr[-2000:], "reason": "no-lines"}
-    return kinds, {"argv": argv, "count": len(kinds)}
+    return kinds, {"argv": argv, "count": len(kinds),
+                   "junctions": kinds.junctions, "collisions": kinds.collisions}
 
 
 def _write_kinds_read(bind_dir: str, jobserver: Optional[int],

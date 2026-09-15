@@ -668,6 +668,48 @@ def test_parse_element_kinds_of_empty_text_is_empty():
     assert _parse_element_kinds("") == {}
 
 
+# --- _parse_element_kinds, junction spellings (UX-871) ---------------------
+
+_JUNCTIONED_NAME_KIND_STDOUT = (
+    "sdk.bst:foo/bar.bst cmake\n"
+    "plain.bst autotools\n"
+    "a.bst:b.bst:deep.bst meson\n")
+
+
+def test_parse_element_kinds_resolves_both_spellings_of_a_junctioned_name():
+    from tools.bst_native_build_tracer import _parse_element_kinds
+
+    kinds = _parse_element_kinds(_JUNCTIONED_NAME_KIND_STDOUT)
+
+    assert kinds == {
+        "sdk.bst:foo/bar.bst": "cmake", "foo/bar.bst": "cmake",
+        "plain.bst": "autotools",
+        "a.bst:b.bst:deep.bst": "meson", "deep.bst": "meson"}
+    assert kinds.junctions == 2
+
+
+def test_parse_element_kinds_a_collision_keeps_the_first_and_counts_it():
+    from tools.bst_native_build_tracer import _parse_element_kinds
+
+    kinds = _parse_element_kinds(
+        "x.bst:same.bst cmake\ny.bst:same.bst meson\n")
+
+    assert kinds["same.bst"] == "cmake"
+    assert kinds["x.bst:same.bst"] == "cmake"
+    assert kinds["y.bst:same.bst"] == "meson"
+    assert kinds.junctions == 2
+    assert kinds.collisions == 1
+
+
+def test_parse_element_kinds_an_unjunctioned_map_counts_no_junctions():
+    from tools.bst_native_build_tracer import _parse_element_kinds
+
+    kinds = _parse_element_kinds(_REAL_NAME_KIND_STDOUT)
+
+    assert kinds.junctions == 0
+    assert kinds.collisions == 0
+
+
 class TestAFailedKindsReadIsLoud:
     """UX-843's verifier: kinds unknown means no sandbox joins - said."""
 

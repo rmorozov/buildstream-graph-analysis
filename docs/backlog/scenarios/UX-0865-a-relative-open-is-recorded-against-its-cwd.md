@@ -1,6 +1,6 @@
 # UX-865: a relative open is recorded against its cwd
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-57 | **Found by:** round 120, the user (a 16-core, 32 GB host, `--builders 16 --jobserver auto`) | **Serves:** R2 (a header reached through a relative include path still counts as read) | **Topic:** capture | **Area:** tools-native_trace | **Shape:** mechanical
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-57 | **Found by:** round 120, the user (a 16-core, 32 GB host, `--builders 16 --jobserver auto`) | **Serves:** R2 (a header reached through a relative include path still counts as read) | **Topic:** capture | **Area:** tools-native_trace | **Shape:** mechanical
 
 ## Motivation
 
@@ -99,3 +99,10 @@ matches - `compute_declared_vs_used` never joins anything, so a
 
 Each reverted from the pre-mutation copy and re-run green (5 of 5,
 against the 5-case hook test file - the full run above is 804).
+
+Deviation (merge): the verifier held once - a real-dirfd `openat` had
+no guard and a mutation joining it against the cwd passed, a `getcwd`
+failure dropped the open uncounted, and the cached cwd was a plain
+global two threads could race - and the track closed all three (a
+dirfd case, `dropped` counted, an atomic generation with a per-thread
+cache) plus an `fchdir` twin; the re-check passed.

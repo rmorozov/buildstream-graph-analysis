@@ -105,8 +105,19 @@ needs a 4.4 host, the user's.
 |---|---|---|
 | 0 | `a29ca6b5` (the filings) | 8810 passed, 83 skipped, 1084.92 s |
 | 1 | the close | the run this commit is pushed under; the pull request carries the figure |
+| 2 | the reference refresh | the run this commit is pushed under |
 
 ## Standing
+
+PR #231's first CI run reddened the drift gate on
+`test_the_query_asks_about_this_run.py`, 26.4 s against 19.7 s
+recorded (x1.82 after the run's x0.74 shift), and the one re-run read
+28.8 s at x0.87 (x1.69) - confirmed over two runs, every test green
+both times. The file runs 34.9 s on the head and 35.4 s on main on
+this box, and the round touched neither it nor `bga/`; the row was
+refreshed from the re-run's gate line to 33.1 (rounds 110 and 111's
+rule, `UX-716`'s form), the candidate artifact being unreachable
+through this container's proxy.
 
 The box ran out of disk once mid-round: 9.9 GB of pytest temp
 directories under `/tmp/pytest-of-root` from every sweep this session

@@ -15,12 +15,12 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-865 scenarios: **3 open**, 862 closed.
+869 scenarios: **7 open**, 862 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
-| capture | 0 | 113 |
+| capture | 4 | 117 |
 | analysis | 0 | 118 |
 | contracts | 0 | 50 |
 | viewer | 1 | 177 |
@@ -36,6 +36,10 @@ task file, which is the only place it ever lived twice.
 
 | ID | Scenario | Topic | Priority | Serves | Status |
 |---|---|---|---|---|---|
+| UX-869 | [the jobserver FIFO mounts under the bind destination](UX-0869-the-jobserver-fifo-mounts-under-the-bind-destination.md) | capture | High | R2 (a cmake element builds under the mode on a project that is not under /tmp) | 🔴 Not Started |
+| UX-870 | [the kinds read carries the user's own bst options and says why it failed](UX-0870-the-kinds-read-carries-the-users-own-bst-options-and-says-why-it-failed.md) | capture | High | R2 (every element joins by its kind on a project built with -o and --config) | 🔴 Not Started |
+| UX-871 | [a junctioned element finds its kind](UX-0871-a-junctioned-element-finds-its-kind.md) | capture | High | R2 (an element behind a junction joins the jobserver by its kind) | 🔴 Not Started |
+| UX-872 | [a junctioned example builds under the mode in CI](UX-0872-a-junctioned-example-builds-under-the-mode-in-ci.md) | capture | Medium | R4 (the snapshot entry point with the jobserver on runs in CI, on a junction) | 🔴 Not Started |
 | UX-866 | [a key under a bare object is still a documented key](UX-0866-a-key-under-a-bare-object-is-still-a-documented-key.md) | docs | Medium | R4 (the guide names every flag and key the capture writes) | 🔴 Not Started |
 | UX-867 | [the context map's open labels read the status they name](UX-0867-the-context-maps-open-labels-read-the-status-they-name.md) | docs | Low | R4 (the map says which rows are still open, truthfully) | 🔴 Not Started |
 | UX-868 | [a merged edge tick sits flush with its edge](UX-0868-a-merged-edge-tick-sits-flush-with-its-edge.md) | viewer | Low | R1 (a merged p99-and-max tick reads at the strip's edge, not its middle) | 🔴 Not Started |

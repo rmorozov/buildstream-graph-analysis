@@ -142,3 +142,14 @@ all.bst` with no `bga` in the same environment took 276.3s (`giant.bst`
 67.06s), and the capture itself 281.30s - the hook's share is ~10s,
 BuildStream's own staging under `buildbox-run` the rest. The CI step's
 `auto < off` assertion stands on this reading.
+
+2026-09-15, `UX-869`: the same shape with `--jobserver-auth fd` then
+`fifo` (`--jobserver auto --diagnose`, `--builders 4`, cold caches, a
+quiet box). fd built in 260.7 s, `rc=0`. fifo opened its sandbox - the
+shim rewrote 1 argv, no `bwrap: can't mkdir parents` line, the
+`--diagnose` record naming the FIFO under `.bga/tmp/trace-*/bind` on
+the host and `/tmp/.bst-native-trace/jobserver` inside - and the
+sandbox's GNU Make 4.3 stopped on `invalid --jobserver-auth string
+'fifo:...'`, so `rc=255` and `bga compare` says NOT COMPARABLE. The
+class fifo-style auth measures needs a 4.4 host; on this one it proves
+only that the bind defect is gone.

@@ -1,6 +1,6 @@
 # UX-869: the jobserver FIFO mounts under the bind destination
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-841, UX-846 | **Found by:** round 121, the user (a real project under a junction, GNU Make 4.4 on the host) | **Serves:** R2 (a cmake element builds under the mode on a project that is not under /tmp) | **Topic:** capture | **Area:** tools-native_trace | **Shape:** mechanical
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-841, UX-846 | **Found by:** round 121, the user (a real project under a junction, GNU Make 4.4 on the host) | **Serves:** R2 (a cmake element builds under the mode on a project that is not under /tmp) | **Topic:** capture | **Area:** tools-native_trace | **Shape:** mechanical
 
 ## Motivation
 
@@ -97,3 +97,19 @@ One run: `test_bwrap_shim.py`/`test_the_jobserver_fifo_has_a_lifecycle.py`/
 source mutation too - it proves the fake bwrap itself refuses the
 defect shape, not that the shim still produces it; the three rows
 above are what discriminates the real change.
+
+**Deviation (merge):** the verifier found `record_diagnostics`'s two
+new fields unguarded (forcing both to `None` at the call site passed
+153); at merge `test_fifo_style_records_the_host_path_and_the_sandbox_path`
+runs the real shim with `BST_TRACE_JOBSERVER_AUTH=fifo` - mutation, the
+same `None` pair: `1 failed`. The pair, `examples/11` copied to a
+quiet box, `--builders 4 --jobserver auto --diagnose`, `--jobserver-auth
+fd` then `fifo` (`r121/fifo_pair.py`): fd `rc=0`, 260.7 s; fifo
+`rc=255`, 220.9 s - the sandbox opened (`bwrap shim ran 1 time(s); 1
+rewritten`, no `mkdir parents` line anywhere in the log; the record
+names `<project>/.bga/tmp/trace-*/bind/jobserver` and
+`/tmp/.bst-native-trace/jobserver`) and the sandbox's GNU Make 4.3
+then stopped on `invalid --jobserver-auth string 'fifo:...'`, the
+refusal `UX-841` documents and the reason `auto` picks fd here. So the
+bind defect is gone on this box, and the timing half of the pair waits
+for a 4.4 host (`bga compare`: NOT COMPARABLE, the candidate failed).

@@ -43,3 +43,43 @@ element); a subcommand the installed `bst` does not define.
 valued option of the installed `build` command,
 `_cmd_target(['bst', 'build', opt, *values, 't.bst'])` is `'t.bst'`;
 mutation: drop `--deps` from the arity set - red.
+
+## Outcome
+
+**Gap measured.** Pre-fix, `_cmd_target(['bst', 'build', '--deps',
+'all', 't.bst'])` returned `'all'` - the first non-dash token after
+`build`, `--deps`'s own value, not the element - so
+`read_element_kinds_for_jobserver`'s composed `bst show` argv ended in
+`'all'` too.
+
+**Close measured.** Same call now returns `'t.bst'`
+(`_BST_SUBCOMMAND_OPTIONS_ONE_VALUE['build']`, read off
+`buildstream._frontend.cli.cli.commands['build'].params`, BuildStream
+2.8.0 this box - `--deps`/`-d`, `--artifact-remote`, `--source-remote`;
+`--retry-failed` and the two `--ignore-project-*-remotes` flags are
+bare, unchanged). `show`'s own table is read the same way
+(`--except`, `--deps`/`-d`, `--order`, `--format`/`-f`); `track` and
+`checkout` are not top-level commands in this installed bst (only
+`source track`/`source checkout`), so carry no entry, unchanged
+behavior for either.
+
+`pytest tests/unit/test_the_kinds_read_carries_the_options.py`: `16
+passed in 0.62s`. `make test-touching`: `105 file(s) selected (30
+census + 75 naming the change) - 2700 passed, 35 skipped in 90.56s`.
+`ruff check tools/bst_native_build_tracer.py
+tests/unit/test_the_kinds_read_carries_the_options.py`: `All checks
+passed!`. `python3 tools/dev_sizes.py --check` (post `--adopt --force`,
+1 cell changed - `tools/bst_native_build_tracer.py` grew 8745 -> 8768
+lines): `sizes ok`. `python3 tools/dev_baseline.py --check`: the two
+`reportAttributeAccessIssue` lines it names on `kinds.junctions` /
+`kinds.collisions` are pre-existing (measured on the unmodified base
+commit `44be6778`, same finding, same "new" status - this task never
+touches that line). `python3 -m pymarkdown --config .pymarkdown.json
+scan` on this file: clean. `make check-clean`: `OK: no ignored files
+are tracked`.
+
+**Mutation table.**
+
+| mutation | reddened | count |
+|---|---|---|
+| drop `--deps` from `_BST_SUBCOMMAND_OPTIONS_ONE_VALUE['build']` (kept `-d`) | `test_every_valued_option_of_the_installed_build_skips_its_value`, `test_the_kinds_read_argv_keeps_the_target_past_deps_all` | 2 failed, 14 passed -> reverted, 16/16 |

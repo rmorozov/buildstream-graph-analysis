@@ -1968,15 +1968,38 @@ class Broker:
 # argv for (UX-842's real shape: `bst --config bst-b.conf build all.bst`).
 _BST_TARGET_SUBCOMMANDS = frozenset({"build", "show", "track", "checkout"})
 
+# UX-873: each subcommand's own valued options, read off
+# `buildstream._frontend.cli.cli.commands[name].params` (BuildStream
+# 2.8.0, this box) the same way UX-870 read the global group's - every
+# one of them takes exactly one value, so one arity is enough. `track`
+# and `checkout` are not top-level commands in this installed bst (only
+# `source track`/`source checkout`, out of scope), so carry no entry -
+# `_cmd_target` skips nothing extra for either, as before this task.
+_BST_SUBCOMMAND_OPTIONS_ONE_VALUE = {
+    "build": frozenset({"--deps", "-d", "--artifact-remote", "--source-remote"}),
+    "show": frozenset({"--except", "--deps", "-d", "--order", "--format", "-f"}),
+}
+
 
 def _cmd_target(cmd: list[str]) -> Optional[str]:
-    """UX-842: the first element name in the `bst` command about to run,
-    best-effort. An invocation shaped unlike this project's own captures
+    """UX-842/873: the first element name in the `bst` command about to
+    run, best-effort - a subcommand option's own value
+    (`_BST_SUBCOMMAND_OPTIONS_ONE_VALUE`) is skipped rather than read as
+    the target, so `bst build --deps all t.bst` reads `t.bst`, not
+    `all`. An invocation shaped unlike this project's own captures
     degrades to `None`, which `read_project_max_jobs` turns into an
     unknown `project_max_jobs` rather than a wrong one."""
     for i, tok in enumerate(cmd):
         if tok in _BST_TARGET_SUBCOMMANDS:
+            valued = _BST_SUBCOMMAND_OPTIONS_ONE_VALUE.get(tok, frozenset())
+            skip_value = False
             for later in cmd[i + 1:]:
+                if skip_value:
+                    skip_value = False
+                    continue
+                if later in valued:
+                    skip_value = True
+                    continue
                 if not later.startswith("-"):
                     return later
     return None

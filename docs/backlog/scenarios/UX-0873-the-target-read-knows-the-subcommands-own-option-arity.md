@@ -1,6 +1,6 @@
 # UX-873: the target read knows the subcommand's own option arity
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-842, UX-870 | **Found by:** round 121, UX-870's verifier | **Serves:** R2 (a `bst build --deps all t.bst` capture reads its kinds and its max-jobs) | **Topic:** capture | **Area:** tools | **Shape:** mechanical
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-842, UX-870 | **Found by:** round 121, UX-870's verifier | **Serves:** R2 (a `bst build --deps all t.bst` capture reads its kinds and its max-jobs) | **Topic:** capture | **Area:** tools | **Shape:** mechanical
 
 ## Motivation
 
@@ -83,3 +83,12 @@ are tracked`.
 | mutation | reddened | count |
 |---|---|---|
 | drop `--deps` from `_BST_SUBCOMMAND_OPTIONS_ONE_VALUE['build']` (kept `-d`) | `test_every_valued_option_of_the_installed_build_skips_its_value`, `test_the_kinds_read_argv_keeps_the_target_past_deps_all` | 2 failed, 14 passed -> reverted, 16/16 |
+
+**Deviation (merge):** the verifier replayed the claimed mutation and
+two of its own (a `skip_value` that never resets, a dash token that
+always consumes the next) - each reddened a named case. `track` and
+`checkout` stay in `_BST_TARGET_SUBCOMMANDS` from `UX-842` though the
+installed bst reaches them only under `source`, so
+`bst source track --deps all t.bst` still reads `all`; a capture wraps
+`build`, and the row is not filed until a capture is wrapped around
+`source`. Nothing added at merge.

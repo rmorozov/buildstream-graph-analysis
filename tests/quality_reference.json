@@ -16,7 +16,7 @@
     "bga/cli.py": {"duplicate_blocks": 0, "file_lines": 2791, "longest_function": 214},
     "bga/compare.py": {"duplicate_blocks": 0, "file_lines": 1482, "longest_function": 262},
     "bga/contracts.py": {"duplicate_blocks": 0, "file_lines": 177, "longest_function": 26},
-    "bga/correlate.py": {"duplicate_blocks": 0, "file_lines": 2732, "longest_function": 218},
+    "bga/correlate.py": {"duplicate_blocks": 0, "file_lines": 2736, "longest_function": 218},
     "bga/diagnostics/__init__.py": {"duplicate_blocks": 0, "file_lines": 31, "longest_function": 0},
     "bga/diagnostics/analyzer.py": {"duplicate_blocks": 2, "file_lines": 1164, "longest_function": 116},
     "bga/exceptions.py": {"duplicate_blocks": 0, "file_lines": 55, "longest_function": 0},
@@ -86,7 +86,7 @@
     "tools/bst_checkout_cost.py": {"duplicate_blocks": 1, "file_lines": 239, "longest_function": 43},
     "tools/bst_extract_run.py": {"duplicate_blocks": 3, "file_lines": 1038, "longest_function": 334},
     "tools/bst_log_to_chrome_trace.py": {"duplicate_blocks": 0, "file_lines": 941, "longest_function": 134},
-    "tools/bst_native_build_tracer.py": {"duplicate_blocks": 1, "file_lines": 8559, "longest_function": 518},
+    "tools/bst_native_build_tracer.py": {"duplicate_blocks": 1, "file_lines": 8562, "longest_function": 518},
     "tools/bst_rebuild_set.py": {"duplicate_blocks": 0, "file_lines": 140, "longest_function": 34},
     "tools/bst_run_context.py": {"duplicate_blocks": 4, "file_lines": 230, "longest_function": 76},
     "tools/bst_run_wrapped.py": {"duplicate_blocks": 0, "file_lines": 376, "longest_function": 92},
@@ -120,7 +120,7 @@
     "tools/dev_track_cost.py": {"duplicate_blocks": 0, "file_lines": 455, "longest_function": 44},
     "tools/gen_synthetic_scale_run.py": {"duplicate_blocks": 0, "file_lines": 616, "longest_function": 131},
     "tools/native_trace/__init__.py": {"duplicate_blocks": 0, "file_lines": 0, "longest_function": 0},
-    "tools/native_trace/bwrap_shim.py": {"duplicate_blocks": 0, "file_lines": 1228, "longest_function": 134},
+    "tools/native_trace/bwrap_shim.py": {"duplicate_blocks": 0, "file_lines": 1255, "longest_function": 134},
     "tools/native_trace/trackevent.py": {"duplicate_blocks": 0, "file_lines": 576, "longest_function": 31},
     "tools/native_trace_to_chrome_trace.py": {"duplicate_blocks": 0, "file_lines": 303, "longest_function": 80}
   }

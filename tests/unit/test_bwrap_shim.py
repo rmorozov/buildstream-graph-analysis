@@ -11,13 +11,16 @@ REAL_BWRAP_ARGV below is a trimmed-but-real shape captured from a real
 `bst build core.bst` invocation against examples/05-cmake-cpp-toolchain
 during that Deep Experiment - real option ordering/arity, not invented.
 """
+import json
 import os
+import sys
 
 from tools.native_trace.bwrap_shim import (
     JOBSERVER_CAPPED_PENDING,
     JOBSERVER_JOINED,
     JOBSERVER_PINNED,
     JOBSERVER_UNKNOWN_KIND,
+    _resolve_kind_and_probe,
     _resolve_proxy_auth,
     build_shim_argv,
     extract_element_name,
@@ -26,6 +29,7 @@ from tools.native_trace.bwrap_shim import (
     parse_element_max_jobs,
     parse_ninja_help,
     probe_ninja,
+    record_jobserver_decision,
     split_bwrap_args,
 )
 
@@ -419,15 +423,17 @@ def _job_env_ops(argv):
     return ops
 
 
-def _build_with_kind(kind, **extra):
+def _build_with_kind(kind, bst_args=None, **extra):
     """REAL_BWRAP_ARGV (`-j4`), a real fd, `project_max_jobs=4` (joined -
     the table applies) - the one input this whole section varies is the
-    element's own kind and, for cmake/meson, the ninja probe."""
+    element's own kind and, for cmake/meson, the ninja probe. `bst_args`
+    overrides the fixture argv (UX-859: a table-less kind's policy turns
+    on whether `JOBS` is in it)."""
     read_fd, write_fd = os.pipe()
     try:
         return build_shim_argv(
             real_bwrap="/usr/bin/bwrap",
-            bst_args=REAL_BWRAP_ARGV,
+            bst_args=bst_args if bst_args is not None else REAL_BWRAP_ARGV,
             bind_src="/tmp/host-trace-dir",
             bind_dst="/tmp/.bst-native-trace",
             preload_so="/tmp/.bst-native-trace/hook.so",
@@ -439,6 +445,24 @@ def _build_with_kind(kind, **extra):
         ), read_fd
     finally:
         os.close(write_fd)
+
+
+def _argv_without_jobs():
+    """REAL_BWRAP_ARGV with its own `--setenv JOBS -j4` triple removed -
+    UX-859: a table-less kind with no `JOBS` at all stays `unknown_kind`."""
+    argv = list(REAL_BWRAP_ARGV)
+    i = argv.index("JOBS")
+    del argv[i - 1:i + 2]
+    return argv
+
+
+def _argv_with_jobs(value):
+    """REAL_BWRAP_ARGV with its own `--setenv JOBS` value swapped - a
+    value distinct from the cmake/meson fixtures' `-j4` so a passing
+    assertion proves the read, not a coincidence of the shared fixture."""
+    argv = list(REAL_BWRAP_ARGV)
+    argv[argv.index("JOBS") + 1] = value
+    return argv
 
 
 def test_make_and_autotools_get_makeflags_auth_only():
@@ -472,9 +496,9 @@ def test_cargo_unsets_cargo_build_jobs_and_carries_the_auth_in_makeflags():
         os.close(read_fd)
 
 
-def test_an_unknown_kind_gets_no_injection():
+def test_an_unknown_kind_with_no_jobs_gets_no_injection():
     for kind in ("manual", "script", "import", "some-custom-plugin"):
-        argv, read_fd = _build_with_kind(kind)
+        argv, read_fd = _build_with_kind(kind, bst_args=_argv_without_jobs())
         try:
             assert _job_env_ops(argv) == []
             assert kind_job_env(kind, "AUTH")[2] == JOBSERVER_UNKNOWN_KIND
@@ -485,10 +509,48 @@ def test_an_unknown_kind_gets_no_injection():
 def test_an_element_absent_from_the_map_gets_no_injection():
     """`element_kind=None` - what `_element_kind_env` returns for an
     element the map does not name, same as no map at all."""
-    argv, read_fd = _build_with_kind(None)
+    argv, read_fd = _build_with_kind(None, bst_args=_argv_without_jobs())
     try:
         assert _job_env_ops(argv) == []
         assert kind_job_env(None, "AUTH")[2] == JOBSERVER_UNKNOWN_KIND
+    finally:
+        os.close(read_fd)
+
+
+def test_a_table_less_kind_that_spends_jobs_gets_the_jobs_env_policy():
+    """UX-859: a manual-kind recipe calling `cmake --build … ${JOBS}` by
+    hand carries `JOBS` in its own sandbox env just like a cmake
+    element's does - through `build_shim_argv`'s real argv path, not
+    `kind_job_env` called alone."""
+    argv, read_fd = _build_with_kind("manual", bst_args=_argv_with_jobs("-j8"))
+    try:
+        assert _job_env_ops(argv) == [
+            ("--setenv", "JOBS", ""),
+            ("--setenv", "MAKEFLAGS", f"--jobserver-auth={read_fd},{read_fd}")]
+        assert kind_job_env("manual", "AUTH", jobs_present=True)[2] == "jobs_env"
+    finally:
+        os.close(read_fd)
+
+
+def test_a_table_less_kind_with_no_jobs_stays_unknown_kind():
+    argv, read_fd = _build_with_kind("manual", bst_args=_argv_without_jobs())
+    try:
+        assert _job_env_ops(argv) == []
+        assert kind_job_env("manual", "AUTH", jobs_present=False)[2] == \
+            JOBSERVER_UNKNOWN_KIND
+    finally:
+        os.close(read_fd)
+
+
+def test_a_table_kind_is_unaffected_by_jobs_present():
+    """cmake is already in the table - `jobs_present` never reaches its
+    branch, so its own policy and injection are unchanged (UX-843)."""
+    argv, read_fd = _build_with_kind("cmake", bst_args=_argv_with_jobs("-j8"))
+    try:
+        assert _job_env_ops(argv) == [
+            ("--setenv", "JOBS", ""),
+            ("--setenv", "MAKEFLAGS", f"--jobserver-auth={read_fd},{read_fd}")]
+        assert kind_job_env("cmake", "AUTH", jobs_present=True)[2] == "cmake_meson"
     finally:
         os.close(read_fd)
 
@@ -803,3 +865,95 @@ def test_a_second_probe_ninja_call_is_served_from_the_cache_without_rerunning(tm
 
     assert first == second == {"available": False, "version": None, "jobserver_client": None}
     assert marker.read_text().splitlines() == ["run"]
+
+
+# --- UX-859 (verifier): the widened gate - a table-less kind that spends
+# `JOBS` gets the same real ninja probe cmake/meson do, not a skip ---------
+
+_NINJA_WITH_CLIENT = (
+    'case "$*" in\n'
+    '  *"ninja --version") echo "1.12.0" ;;\n'
+    '  *"ninja --help") printf '
+    "'usage: ninja\\n  --jobserver   participate in a POSIX jobserver\\n' ;;\n"
+    "esac\n")
+
+_NINJA_NO_CLIENT = (
+    'case "$*" in\n'
+    '  *"ninja --version") echo "1.11.1" ;;\n'
+    '  *"ninja --help") printf '
+    "'usage: ninja [options] [targets...]\\n  -j N  run N jobs in parallel\\n' ;;\n"
+    "esac\n")
+
+
+def _decide_through_the_real_gate(tmp_path, monkeypatch, kind, argv,
+                                  ninja_body, wrappers_dir=None):
+    """Drives `_resolve_kind_and_probe` then `record_jobserver_decision`
+    for real - a fake bwrap on the probe's own subprocess path (UX-855's
+    `_fake_real_bwrap`), not a hand-built `ninja_probe` dict - and
+    returns `(policy, marker)` from the decision log actually written."""
+    kinds_path = tmp_path / "kinds.json"
+    kinds_path.write_text(json.dumps({"el": kind}))
+    monkeypatch.setenv("BST_TRACE_ELEMENT_KINDS", str(kinds_path))
+    monkeypatch.delenv("BST_TRACE_JOBSERVER", raising=False)
+    if wrappers_dir is not None:
+        monkeypatch.setenv("BST_TRACE_WRAPPER_DIR", wrappers_dir)
+    else:
+        monkeypatch.delenv("BST_TRACE_WRAPPER_DIR", raising=False)
+    monkeypatch.setattr(sys, "argv", ["bwrap-shim", *argv])
+    marker = tmp_path / "marker"
+    fake = _fake_real_bwrap(tmp_path / "bwrap", marker, ninja_body)
+
+    kind_context = _resolve_kind_and_probe("el", 9, None, 4, fake)
+    log_path = str(tmp_path / "decisions.jsonl")
+    record_jobserver_decision(log_path, argv, "el", 4, kind_context=kind_context)
+    with open(log_path, encoding="utf-8") as handle:
+        record = json.loads(handle.readline())
+    return record["policy"], marker
+
+
+def test_a_table_less_kind_with_jobs_probes_ninja_and_reads_ninja_client(
+        tmp_path, monkeypatch):
+    """A manual `-G Ninja` recipe is exactly as much at risk of the
+    cores+2 regression UX-843 found for cmake/meson - the widened gate
+    must run the real probe, not skip it because the kind isn't cmake."""
+    policy, marker = _decide_through_the_real_gate(
+        tmp_path, monkeypatch, "manual", _argv_with_jobs("-j4"), _NINJA_WITH_CLIENT)
+    assert policy == "ninja_client"
+    assert marker.read_text().splitlines() == ["run", "run"]
+
+
+def test_a_table_less_kind_with_jobs_and_a_wrapper_dir_reads_ninja_wrapper(
+        tmp_path, monkeypatch):
+    policy, _marker = _decide_through_the_real_gate(
+        tmp_path, monkeypatch, "manual", _argv_with_jobs("-j4"), _NINJA_NO_CLIENT,
+        wrappers_dir=str(tmp_path / "wrappers"))
+    assert policy == "ninja_wrapper"
+
+
+def test_a_table_less_kind_with_jobs_no_client_and_no_wrapper_dir_stays_static(
+        tmp_path, monkeypatch):
+    """Reuses cmake/meson's own `ninja_static` outcome (UX-843): ninja
+    confirmed present, no client, nothing to hold tokens - emptying
+    `JOBS` would run ninja at cores+2, worse than BuildStream's own
+    `-jN` left alone, whatever the kind."""
+    policy, _marker = _decide_through_the_real_gate(
+        tmp_path, monkeypatch, "manual", _argv_with_jobs("-j4"), _NINJA_NO_CLIENT)
+    assert policy == "ninja_static"
+
+
+def test_a_table_less_kind_with_no_ninja_at_all_falls_back_to_jobs_env(
+        tmp_path, monkeypatch):
+    policy, marker = _decide_through_the_real_gate(
+        tmp_path, monkeypatch, "manual", _argv_with_jobs("-j4"), "exit 127\n")
+    assert policy == "jobs_env"
+    assert marker.read_text().splitlines() == ["run"]
+
+
+def test_a_table_less_kind_with_no_jobs_never_runs_the_probe(tmp_path, monkeypatch):
+    """The gate's other half: no `JOBS` in the sandbox env stays
+    `unknown_kind` and the probe never runs - the fake bwrap's own
+    marker file, written on every invocation, never appears."""
+    policy, marker = _decide_through_the_real_gate(
+        tmp_path, monkeypatch, "manual", _argv_without_jobs(), _NINJA_WITH_CLIENT)
+    assert policy == JOBSERVER_UNKNOWN_KIND
+    assert not marker.exists()

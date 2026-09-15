@@ -1397,6 +1397,10 @@ def compute_jobserver_per_element(
     more specific fact - but never over `pinned`: Direction 20 argument
     1 makes `-j1` never join, so a pin sourced from BuildStream's own
     argv outranks a wrapper pid match, which is inference.
+
+    `decision` alone decides `yes` - a table-less kind that spent
+    `JOBS` (`jobs_env`, UX-859) reads `joined`/`capped_pending` exactly
+    as a table kind does, so it needs no policy name of its own here.
     """
     by_element = {}
     for row in decision_rows or []:

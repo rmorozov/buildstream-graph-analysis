@@ -52,6 +52,8 @@ import re
 import shutil
 import subprocess
 import sys
+import threading
+import time
 from pathlib import Path
 
 import pytest
@@ -869,3 +871,97 @@ class TestTheTwinReallyHidesOnScreen:
 """)
         assert out["before"] == "none", out
         assert out["after"] == "table", out
+
+
+# --------------------------------------------------------------------------
+# 7. A merged edge tick sits flush with its edge, not centred over it.
+# --------------------------------------------------------------------------
+
+@pytest.fixture(scope="module")
+def browser():
+    with Browser(chrome) as opened:
+        yield opened
+
+
+@pytest.fixture(scope="module")
+def served_url(tmp_path_factory):
+    """A live origin serving `drawings.js` unbundled, so `exhibitAxis`
+    can be driven directly - an export inlines the module (`UX-863`'s
+    `served_url` in `test_the_shape_channel_is_built.py`, mirrored)."""
+    from tools.bga_view import serve
+
+    run = snapshot_copy(MACRO, tmp_path_factory.mktemp("edge-tick-served"))
+    httpd, url = serve(str(run), port=0)
+    threading.Thread(target=httpd.serve_forever, daemon=True).start()
+    time.sleep(0.3)
+    try:
+        yield url
+    finally:
+        httpd.shutdown()
+        httpd.server_close()
+
+
+#: A constructed axis with three unmerged interior ticks (so `flow`
+#: layout - which repositions with `margin-left`, not the edge rule
+#: under test - never triggers), a merged left edge (`min`+`p10`, both
+#: at 0) and a merged right edge (`p99`+`max`, both at 100).
+_CONSTRUCTED_EDGE_TICKS = """
+(async () => {
+  const mod = await import("./drawings.js");
+  const row = mod.exhibitAxis(document, [
+    { name: "min", at: 0, label: "0 ms" },
+    { name: "p10", at: 0, label: "0 ms" },
+    { name: "p25", at: 25, label: "25 ms" },
+    { name: "p50", at: 50, label: "50 ms" },
+    { name: "p75", at: 75, label: "75 ms" },
+    { name: "p99", at: 100, label: "100 ms" },
+    { name: "max", at: 100, label: "100 ms" },
+  ]);
+  document.body.append(row);
+  const rowRect = row.getBoundingClientRect();
+  const ticks = [...row.querySelectorAll(".draw-tick")].map((tick) => {
+    const rect = tick.getBoundingClientRect();
+    return { mark: tick.getAttribute("data-mark"),
+             transform: getComputedStyle(tick).transform,
+             left: rect.left, right: rect.right };
+  });
+  return { layout: row.getAttribute("data-layout"),
+           rowLeft: rowRect.left, rowRight: rowRect.right, ticks };
+})()
+"""
+
+
+@needs_browser
+class TestAMergedEdgeTickSitsFlushWithItsEdge:
+    """UX-868: `UX-863` moved `.draw-tick[data-mark=...]` to `~=` so a
+    merged name (`"p99 max"`) still meets the edge rule
+    (`transform: translateX(-100%)` at `left: 100%`, flush with the
+    row's own right edge) rather than falling back to the default
+    `translateX(-50%)`, which centres the label over the 100% point and
+    lets it hang off the row - `UX-863`'s own comment on the CSS. No
+    case read the rendered position of a merged edge tick; this one
+    does, off the computed geometry, not an invented pixel."""
+
+    def test_a_merged_right_edge_sits_flush_right(self, browser, served_url):
+        out = browser.measure(served_url, _CONSTRUCTED_EDGE_TICKS, 800, 600)
+        assert out["layout"] is None, out  # three interior ticks: not flow
+        by_mark = {t["mark"]: t for t in out["ticks"]}
+        right = by_mark["p99 max"]
+        assert abs(right["right"] - out["rowRight"]) < 1, (right, out)
+
+    def test_a_merged_left_edge_sits_flush_left(self, browser, served_url):
+        out = browser.measure(served_url, _CONSTRUCTED_EDGE_TICKS, 800, 600)
+        left = {t["mark"]: t for t in out["ticks"]}["min p10"]
+        assert left["transform"] == "none", left
+        assert abs(left["left"] - out["rowLeft"]) < 1, (left, out)
+
+    def test_an_unmerged_interior_tick_is_centred(self, browser, served_url):
+        out = browser.measure(served_url, _CONSTRUCTED_EDGE_TICKS, 800, 600)
+        interior = {t["mark"]: t for t in out["ticks"]}["p50"]
+        nominal = out["rowLeft"] + 0.5 * (out["rowRight"] - out["rowLeft"])
+        centre = (interior["left"] + interior["right"]) / 2
+        assert abs(centre - nominal) < 1, (interior, out)
+        # neither edge - the CSS rule the edge ticks above take does not
+        # apply here, so it sits away from both.
+        assert interior["left"] > out["rowLeft"] + 1, (interior, out)
+        assert interior["right"] < out["rowRight"] - 1, (interior, out)

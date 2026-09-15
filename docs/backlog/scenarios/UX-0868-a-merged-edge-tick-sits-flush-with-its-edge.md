@@ -32,3 +32,52 @@ The label collision rule; the print block.
 
 The case green; mutation: `~=` back to `=` on the four selectors -
 red.
+
+## Outcome
+
+**Gap measured.** Mutating the four `.draw-tick[data-mark~=...]`
+selectors in `bga/viewer/style.css` back to `=` and running the
+pre-existing suite (`test_a_drawing_is_graded.py`,
+`test_the_shape_channel_is_built.py`) before this track's new case
+existed: both stayed green - no case read a merged edge tick's
+rendered position.
+
+**Close measured** (`tests/unit/test_a_drawing_is_graded.py -q -n 2`):
+
+```text
+39 passed in 22.82s
+```
+
+Full touching selection (32 files, `python tools/dev_touching.py`):
+
+```text
+1468 passed, 3 skipped in 80.49s
+```
+
+`ruff check tests/unit/test_a_drawing_is_graded.py`: All checks
+passed. `python3 tools/dev_sizes.py --check`: sizes ok, 122 files
+measured, none above the recorded cell. `python3 tools/dev_baseline.py
+--check`: clean, no finding beyond the already-forced set.
+`pymarkdown scan` on this file: clean.
+
+### Mutation table
+
+| Guard | Mutation | Reddened | Count |
+|---|---|---|---|
+| `test_a_merged_right_edge_sits_flush_right` | `~=`→`=` on the four `.draw-tick[data-mark]` selectors | yes | 2/39 failed, 39 passed after revert |
+| `test_a_merged_left_edge_sits_flush_left` | same | yes | (same run) |
+| `test_an_unmerged_interior_tick_is_centred` | same | no | a single-token `data-mark` (`"p50"`) matches `~=` and `=` alike, so this clause does not discriminate the mutation; kept as the control the other two are measured against |
+
+**Deviation.** `UX-863`'s `_constructed_merged_edge_axis` (in
+`test_the_shape_channel_is_built.py`) merges `p95`+`max` only and
+reads `data-layout`/`marginLeft` - the flow-layout rule, not the CSS
+edge rule this task guards - so it does not serve here. A new fixture
+(`_CONSTRUCTED_EDGE_TICKS`) was constructed the same way (a served
+origin, `exhibitAxis` imported directly) with a merged left edge
+(`min`+`p10`), a merged right edge (`p99`+`max`) and three unmerged
+interior ticks so `flow` layout - which repositions with
+`margin-left`, not the edge rule under test - never triggers. The
+case reads `getComputedStyle(...).transform` and
+`getBoundingClientRect()` against the row's own rect, not an invented
+pixel. No viewer change: the case found no defect - `~=` already
+flush-aligns a merged edge on both sides.

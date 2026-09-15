@@ -571,16 +571,23 @@ class TestTheRealPagesDrawThem:
                      if "density-self" not in (one["klass"] or "")]
         sentences = [one["sentence"] for one in published]
         assert len(sentences) == 3, sentences
-        assert "0 ms → 19.1 s, median 3.1 s, p95 19.1 s — n=11." in sentences
+        # `UX-863`: `median` (p50) is too close to the wide `min`/`p10`
+        # merge here (both 0 ms) to keep its own label -
+        # `STRIP_LABEL_GAP_PCT_PER_CHAR` drops it, not the strip.
+        assert ("0 ms → 19.1 s, p10 0 ms, p90 7.0 s, "
+                "p99 19.1 s — n=11.") in sentences
         # `UX-681`: two of the three, and they are **the same
         # sentence** - blast radius and fan-in are different maps on
         # this fixture (`toolchain` is 10 and 0, `all` is 0 and 10) and
-        # their five published figures happen to coincide. Asserted as
-        # a count rather than a set, because a sentence is not an
+        # their five published figures happen to coincide (`p90`, the
+        # one figure `UX-863` measured them apart on - 8 vs 9 - is
+        # itself too close to the merged `p99`/`max` to keep a label
+        # here, so the coincidence is visible again). Asserted as a
+        # count rather than a set, because a sentence is not an
         # identity and a reader of this clause should not conclude the
         # two strips are one.
-        assert sentences.count("0 → 10, median 5, p95 10 — n=11.") == 2, (
-            sentences)
+        assert sentences.count(
+            "0 → 10, p10 1, median 5, p99 10 — n=11.") == 2, sentences
         assert not [one for one in booted["golden"]["density"]
                     if "density-self" not in (one["klass"] or "")]
 

@@ -341,6 +341,38 @@ def _constructed_axis(browser, served_url):
     return {**out, "label": "constructed", "section": "synthetic"}
 
 
+#: `UX-863`: a merged edge with exactly one interior tick left - built,
+#: not found, because dropping p95's label (so p10/p50/p90/p99 are the
+#: candidates instead of p50/p95 alone) means a two-mark merge on these
+#: two fixtures now either leaves zero interior ticks or more than one,
+#: not the exact one `UX-758` protects. `p95` here folds into `max`
+#: (both at 100) and leaves `p50` as the sole interior tick, the same
+#: shape a distribution's `p95`/`max` collision used to produce.
+_CONSTRUCTED_MERGED_EDGE = """
+(async () => {
+  const mod = await import("./drawings.js");
+  const row = mod.exhibitAxis(document, [
+    { name: "min", at: 0, label: "0 ms" },
+    { name: "p50", at: 40, label: "40 ms" },
+    { name: "p95", at: 100, label: "100 ms" },
+    { name: "max", at: 100, label: "100 ms" },
+  ]);
+  document.body.append(row);
+  return {
+    layout: row.getAttribute("data-layout"),
+    ticks: [...row.querySelectorAll(".draw-tick")].map((tick) => ({
+      mark: tick.getAttribute("data-mark"), marginLeft: tick.style.marginLeft,
+    })),
+  };
+})()
+"""
+
+
+def _constructed_merged_edge_axis(browser, served_url):
+    out = browser.measure(served_url, _CONSTRUCTED_MERGED_EDGE, 800, 600)
+    return {**out, "label": "constructed", "section": "synthetic"}
+
+
 @needs_browser
 @pytest.mark.medium
 class TestTheFlowLayoutMatchesItsInteriorTickCount:
@@ -388,15 +420,24 @@ class TestTheFlowLayoutMatchesItsInteriorTickCount:
         assert checked, "no axis, real or constructed, has more than " \
             "one interior tick"
 
-    def test_a_merged_edge_still_takes_flow_layout(self, browser, pages):
+    def test_a_merged_edge_still_takes_flow_layout(
+            self, browser, pages, served_url):
         """`UX-758`: the case the exact-name match denied - a
         distribution axis's `p95`/`max` collision leaves one real
         interior tick (`p50`) between two real edges, the exact case
         flow exists to protect. Scoped to a merge that still leaves an
         interior tick behind - golden's `first`+`peak` merge absorbs
-        its interior entirely (Out of Scope) and has none."""
+        its interior entirely (Out of Scope) and has none.
+
+        `UX-863` retired the fixture case (the docstring on
+        `_constructed_merged_edge_axis` says why), so the constructed
+        axis joins the population the same way
+        `test_more_than_one_interior_tick_is_not_flow` already does for
+        its own retired case."""
         checked = 0
-        for axis in _axes(browser, pages):
+        axes = _axes(browser, pages) + [
+            _constructed_merged_edge_axis(browser, served_url)]
+        for axis in axes:
             merged_edges = [t["mark"] for t in axis["ticks"]
                              if _is_merged_edge(t["mark"])]
             interior = [t for t in axis["ticks"] if not _is_edge(t["mark"])]
@@ -406,8 +447,8 @@ class TestTheFlowLayoutMatchesItsInteriorTickCount:
             assert axis["layout"] == "flow", (
                 f"{axis['label']}/{axis['section']}: merged edge "
                 f"{merged_edges}, data-layout={axis['layout']!r}")
-        assert checked, "no axis has a merged edge with an interior " \
-            "tick left - UX-753's population changed"
+        assert checked, "no axis, real or constructed, has a merged " \
+            "edge with an interior tick left"
 
 
 if __name__ == "__main__":  # pragma: no cover

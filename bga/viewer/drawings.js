@@ -417,8 +417,8 @@ export function marksOf(distribution, countKey = "n") {
     p50: median,
     p95: numeric(distribution.p95) ? distribution.p95 : null,
     max: numeric(distribution.max) ? distribution.max : null,
-    // §2f: the marks the strip does not draw still reach the twin -
-    // every decile, p99 and the mean, in the population's order.
+    // §2f, UX-863: every decile ticks on the strip too now; mean and n
+    // are not positions on this axis and reach the twin only.
     deciles: Object.fromEntries(
       Object.entries(deciles).filter(([, v]) => numeric(v))),
     p99: numeric(distribution.p99) ? distribution.p99 : null,
@@ -428,17 +428,40 @@ export function marksOf(distribution, countKey = "n") {
   return marks;
 }
 
+/** UX-863: the nine decile steps, once, so the twin and the strip read
+ *  the same list rather than two independently-typed copies of it. */
+export const STRIP_DECILES = [10, 20, 30, 40, 50, 60, 70, 80, 90];
+
+/** UX-863: p95 and p99 sit beyond where the deciles reach - the tail,
+ *  not the shape - so they draw with the second, lighter stroke class. */
+const STRIP_OUTER = new Set(["p95", "p99"]);
+
+/** UX-863: of every mark the strip ticks, only these get a text label -
+ *  the rest would collide at the strip's width (styleguide §2a's
+ *  bound, applied to a fifth label rather than a sixth column). */
+const STRIP_LABELED = new Set(["p10", "p50", "p90", "p99"]);
+
+/** A decile's value, `deciles.pNN` first and `marks.p50` as the only
+ *  fallback - `marksOf` puts the payload's `median` there when a shape
+ *  publishes one but no `deciles.p50`. `null` when the shape has
+ *  neither, which is how a guard tells "missing" from "zero". */
+function decileValue(marks, step) {
+  const value = marks.deciles?.[`p${step}`];
+  if (numeric(value)) return value;
+  return step === 50 && marks.p50 !== null ? marks.p50 : null;
+}
+
 /** §2f: one twin row per published mark - min, the deciles, p95, p99,
  *  max, mean, n - in the population's order, whatever the strip drew. */
 export function twinRows(marks, format) {
   const decile = (step) => {
-    const value = marks.deciles?.[`p${step}`];
-    if (numeric(value)) return [[step === 50 ? "median" : `p${step}`, format(value)]];
-    return step === 50 && marks.p50 !== null ? [["median", format(marks.p50)]] : [];
+    const value = decileValue(marks, step);
+    return value === null ? []
+      : [[step === 50 ? "median" : `p${step}`, format(value)]];
   };
   return [
     ["min", format(marks.min)],
-    ...[10, 20, 30, 40, 50, 60, 70, 80, 90].flatMap(decile),
+    ...STRIP_DECILES.flatMap(decile),
     ...(marks.p95 === null ? [] : [["p95", format(marks.p95)]]),
     ...(marks.p99 === null ? [] : [["p99", format(marks.p99)]]),
     ["max", format(marks.max)],
@@ -468,10 +491,22 @@ function stripSvg(doc, marks, { printed, size }) {
     class: "density-range", x: "0", y: String(size.strip / 2 - bar / 2),
     width: "100", height: String(bar),
   }));
-  for (const [name, value] of [["p50", marks.p50], ["p95", marks.p95]]) {
-    if (value === null) continue;
+  // UX-863: every mark the twin lists as a percentile - the nine
+  // deciles, p95, p99 - not the two this used to hardcode, so a reader
+  // who opens the twin sees no mark the strip did not already tick.
+  const percentiles = [
+    ...STRIP_DECILES.map((step) => [
+      step === 50 ? "p50" : `p${step}`, decileValue(marks, step)]),
+    ["p95", marks.p95], ["p99", marks.p99],
+  ];
+  for (const [name, value] of percentiles) {
+    // `numeric`, not `!== null`: a self-built strip's `marks` (no
+    // `deciles`, no `p99`) reads those keys as `undefined`, which a
+    // strict null check let through as a tick at `NaN`.
+    if (!numeric(value)) continue;
     strip.append(make(doc, "line", {
-      class: `density-tick density-${name}`,
+      class: `density-tick density-${name}`
+        + (STRIP_OUTER.has(name) ? " density-tick-outer" : ""),
       x1: at(value).toFixed(2), x2: at(value).toFixed(2),
       y1: "0", y2: String(size.strip),
       "data-mark": name, "data-value": String(value),
@@ -529,10 +564,17 @@ export function strip(distribution, {
   wrap.setAttribute("data-drawn", "true");
   wrap.setAttribute("data-n", marks.n === null ? "" : String(marks.n));
   wrap.append(stripSvg(doc, marks, { printed: "published", size }));
+  // UX-863: which names `stripTicks` kept a label for - derived, not
+  // restated, so the sentence can never name a mark the axis dropped
+  // to avoid a collision (`STRIP_LABEL_GAP_PCT_PER_CHAR`, above).
+  const axisTicks = stripTicks(marks, format);
+  const labelled = new Set(axisTicks.flatMap((tick) => tick.name.split(" ")));
   const parts = [`${format(marks.min)} → ${format(marks.max)}`];
-  if (marks.p50 !== null) parts.push(`median ${format(marks.p50)}`);
-  if (marks.p95 !== null) parts.push(`p95 ${format(marks.p95)}`);
-  if (grade === GRADE_EXHIBIT) wrap.append(exhibitAxis(doc, stripTicks(marks, format)));
+  if (labelled.has("p10")) parts.push(`p10 ${format(decileValue(marks, 10))}`);
+  if (labelled.has("p50")) parts.push(`median ${format(marks.p50)}`);
+  if (labelled.has("p90")) parts.push(`p90 ${format(decileValue(marks, 90))}`);
+  if (labelled.has("p99")) parts.push(`p99 ${format(marks.p99)}`);
+  if (grade === GRADE_EXHIBIT) wrap.append(exhibitAxis(doc, axisTicks));
   wrap.append(box(doc, "span", { class: "density-sentence",
                                  "data-role": "density-sentence" },
                   `${parts.join(", ")}`
@@ -543,18 +585,51 @@ export function strip(distribution, {
   return wrap;
 }
 
-/** Where an exhibit strip's four marks sit, as percentages. */
+//: UX-863: combined character count as a width estimate, in axis
+//: percentage points per character - there is no layout to measure a
+//: real one at generation time (`UX-257`'s own reason the geometry
+//: guards need a real browser at all). Tuned against both committed
+//: fixtures' known cases: 1.5 keeps `fan_in_distribution`'s min/p10
+//: (short labels, a real 10-point gap) and separates its p90 from a
+//: merged p99/max (wide label, the same 10-point gap), and keeps
+//: `element_duration_distribution`'s p50/p90 (20 points) while
+//: dropping p50 against the wide min/p10 merge (16 points) - a plain
+//: percentage bound cannot pass both without seeing the text.
+const STRIP_LABEL_GAP_PCT_PER_CHAR = 1.5;
+
+/** UX-863: where the strip's labelled marks sit, as percentages - the
+ *  `STRIP_LABELED` set (min, p10, p50, p90, p99, max), minus whichever
+ *  of those collide once `mergeTicks` combines exact duplicates (a
+ *  reader who cannot read two labels is better served by one); the
+ *  rest of `stripSvg`'s ticks draw with no label regardless. */
 function stripTicks(marks, format) {
   const span = marks.max - marks.min;
   const at = (v) => span === 0 ? 50 : ((v - marks.min) / span) * 100;
-  return [
-    { name: "min", at: at(marks.min), label: format(marks.min) },
-    marks.p50 === null ? null
-      : { name: "p50", at: at(marks.p50), label: format(marks.p50) },
-    marks.p95 === null ? null
-      : { name: "p95", at: at(marks.p95), label: format(marks.p95) },
-    { name: "max", at: at(marks.max), label: format(marks.max) },
-  ];
+  const build = (name, value) => value === null ? null
+    : { name, at: at(value), label: format(value) };
+  const raw = [
+    build("min", marks.min),
+    ...STRIP_DECILES.map((step) => build(
+      step === 50 ? "p50" : `p${step}`, decileValue(marks, step)))
+      .filter((tick) => tick && STRIP_LABELED.has(tick.name)),
+    build("p99", marks.p99),
+    build("max", marks.max),
+  ].filter(Boolean);
+  const merged = mergeTicks(raw).filter(Boolean);
+  const fits = (a, b) => (b.at - a.at) >=
+    (a.label.length + b.label.length) * STRIP_LABEL_GAP_PCT_PER_CHAR;
+  const kept = [merged[0]];                      // min (or its merge) stays
+  for (let i = 1; i < merged.length - 1; i++) {   // interior candidates
+    if (fits(kept[kept.length - 1], merged[i])) kept.push(merged[i]);
+  }
+  if (merged.length > 1) {
+    const edge = merged[merged.length - 1];       // max (or its merge) stays
+    if (kept.length > 1 && !fits(kept[kept.length - 1], edge)) kept.pop();
+    kept.push(edge);
+  }
+  const keptNames = new Set();
+  for (const tick of kept) for (const one of tick.names) keptNames.add(one);
+  return raw.filter((tick) => keptNames.has(tick.name));
 }
 
 /**

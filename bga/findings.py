@@ -132,6 +132,9 @@ FINDING_READERS = {
     # R5 - the fleet.
     "memory-envelope": "capacity-operator",
     "capacity-recommendation": "capacity-operator",
+    # `UX-860`: the envelope's own overcommit test, half of which is
+    # swap - previously a word in the headline sentence and nowhere else.
+    "swap-observed": "capacity-operator",
     # UX-680: R4, the task's own; R5's section needs Plane 2 and half (a) fires without it.
     "remote-execution-whatif": "ci-gatekeeper",
 }
@@ -1118,6 +1121,43 @@ def _capacity_recommendation_finding(result: AnalysisResult) -> list[dict]:
     )]
 
 
+def _swap_observed_finding(result: AnalysisResult) -> list[dict]:
+    """`UX-860`: the CPU envelope's own `swapped_out` count, as a
+    finding - `_headline` already names swap as one clause of an
+    overcommit sentence ("load above N cores or pages written to
+    swap"); this is the sentence that owns it when it happened.
+
+    Present only where a window actually swapped, not wherever the
+    table has a row - `overcommitted_intervals` also holds windows that
+    qualified on load alone (`utilisation.envelope`'s own
+    `test_load_above_the_cores_is_overcommit`), and reporting those as
+    swap would be the word this item was filed to retire, restated.
+    """
+    rows = [row for row in (getattr(result, 'overcommitted_intervals', None) or [])
+            if (row.get('swapped_out') or 0) > 0]
+    if not rows:
+        return []
+    total_pages = sum(row['swapped_out'] for row in rows)
+    start = min(row['start_offset_us'] for row in rows)
+    end = max(row['start_offset_us'] + row['duration_us'] for row in rows)
+    elements = sorted({entry['element'] for row in rows
+                       for entry in row.get('building') or ()})
+    building = f", while building {', '.join(elements)}" if elements else ""
+    return [_finding(
+        'swap-observed', SEVERITY_HIGH,
+        f"Swap: {len(rows)} window(s) wrote {total_pages} page(s) to "
+        f"swap, {start / 1e6:.1f}s-{end / 1e6:.1f}s into the build"
+        f"{building}",
+        elements=elements,
+        evidence={
+            'swapped_out_pages': total_pages,
+            'swap_window_count': len(rows),
+            'swap_start_offset_us': start,
+            'swap_end_offset_us': end,
+        },
+    )]
+
+
 # `UX-680`: the sentence that keeps the two remote-execution
 # projections from being read as a total. Both remove time from the
 # *same* critical-path seconds, by two different means - REAPI moves
@@ -1873,6 +1913,9 @@ def compute_findings(result: AnalysisResult) -> list[dict]:
     # UX-116: after the memory envelope, because it consumes it - the
     # reader meets the inputs and then the sentence that intersects them.
     findings.extend(_capacity_recommendation_finding(result))
+    # `UX-860`: beside the fleet's other R5 findings, after capacity -
+    # the reader has met the configuration before meeting what it cost.
+    findings.extend(_swap_observed_finding(result))
     # `UX-680`: beside the capacity/sweep findings it reads alongside -
     # `ci-gatekeeper`, not `capacity-operator`, because half (a) fires
     # without Plane 2 and R5's page section cannot.

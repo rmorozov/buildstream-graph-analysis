@@ -46,6 +46,10 @@ UNREACHABLE = {
     "failed-task-time":
         "same - it accounts for time spent in tasks that failed, and no "
         "committed capture has any",
+    "swap-observed":
+        "the only committed capture with a host CPU series, "
+        "tests/fixtures/host_cpu, never wrote a page to swap (UX-860); "
+        "this finding needs one whose pswpout rises",
 }
 
 

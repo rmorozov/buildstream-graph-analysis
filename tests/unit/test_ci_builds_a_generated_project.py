@@ -149,9 +149,12 @@ class TestTheCensusCanBeToldAboutARunOutsideTheTree:
         assert census.label(inside_bga) == "myproject"
 
     def test_the_declared_pair_is_what_only_a_generated_build_reaches(self):
-        """The two findings this whole step exists for. If either stops
-        being declared unreachable, a committed capture now produces it
-        and the step's justification has changed."""
-        assert set(census.UNREACHABLE) == {"build-failed", "failed-task-time"}
+        """The two findings this whole step exists for, plus `UX-860`'s
+        `swap-observed` - declared unreachable for an unrelated reason
+        (no committed capture's `pswpout` rises), not by this step. If
+        the pair stops being declared, a committed capture now produces
+        one and the step's justification has changed."""
+        assert set(census.UNREACHABLE) == {
+            "build-failed", "failed-task-time", "swap-observed"}
         for name in census.UNREACHABLE:
             assert name in FINDING_READERS, name

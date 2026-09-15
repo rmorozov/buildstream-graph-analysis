@@ -13,6 +13,7 @@ during that Deep Experiment - real option ordering/arity, not invented.
 """
 import json
 import os
+import subprocess
 import sys
 
 from tools.native_trace.bwrap_shim import (
@@ -735,25 +736,32 @@ def test_a_proxy_under_fd_style_opens_its_own_fd_and_binds_nothing(tmp_path, mon
         os.close(proxy_fd)
 
 
-def test_a_proxy_under_fifo_style_binds_its_path_unchanged(tmp_path, monkeypatch):
+def test_a_proxy_under_fifo_style_names_the_bind_dst_path_with_no_bind_of_its_own(
+        tmp_path, monkeypatch):
+    """UX-869: the proxy dir (`bind_src/proxies`) already lives inside
+    the whole-tree bind at `bind_dst` - a second `--bind` of the FIFO
+    onto its own host path failed on a read-only sandbox root whenever
+    the project was not under `/tmp`."""
     monkeypatch.setenv("BST_TRACE_JOBSERVER_AUTH", "fifo")
-    fifo = str(tmp_path / "mod-a.bst.fifo")
+    bind_src = str(tmp_path / "host-trace-dir")
+    os.makedirs(os.path.join(bind_src, "proxies"))
+    fifo = os.path.join(bind_src, "proxies", "mod-a.bst.fifo")
     os.mkfifo(fifo)
     proxy_fd, proxy_fifo = _resolve_proxy_auth(fifo)
     assert proxy_fd is None
     assert proxy_fifo == fifo
     argv = build_shim_argv(
         real_bwrap="/usr/bin/bwrap", bst_args=REAL_BWRAP_ARGV,
-        bind_src="/tmp/host-trace-dir", bind_dst="/tmp/.bst-native-trace",
+        bind_src=bind_src, bind_dst="/tmp/.bst-native-trace",
         preload_so="/tmp/.bst-native-trace/hook.so",
         trace_log="/tmp/.bst-native-trace/trace.log",
         project_max_jobs=4, element_kind="make",
         proxy_fd=proxy_fd, proxy_fifo=proxy_fifo)
     assert _job_env_ops(argv) == [
-        ("--setenv", "MAKEFLAGS", f"--jobserver-auth=fifo:{fifo}")]
-    idx = argv.index(fifo)
-    assert argv[idx - 1] == "--bind"
-    assert argv[idx:idx + 2] == [fifo, fifo]
+        ("--setenv", "MAKEFLAGS",
+         "--jobserver-auth=fifo:/tmp/.bst-native-trace/proxies/mod-a.bst.fifo")]
+    assert fifo not in argv
+    assert "--bind" not in argv[argv.index("MAKEFLAGS"):]
 
 
 def test_no_proxy_leaves_build_shim_argv_byte_for_byte():
@@ -774,6 +782,128 @@ def test_no_proxy_leaves_build_shim_argv_byte_for_byte():
     finally:
         os.close(read_fd)
         os.close(write_fd)
+
+
+# --- UX-869: a real read-only sandbox root refuses a bind outside the
+# trace mount - a fake `bwrap` on `PATH`, built on UX-855's
+# `_fake_real_bwrap`, that behaves the way the real one did on the user's
+# report (`Can't mkdir parents for <dst>: Read-only file system`).
+
+def _fake_readonly_root_bwrap(path, marker, bind_dst):
+    """Refuses any `--bind`/`--ro-bind`/`--dev-bind` whose destination is
+    not under `bind_dst` or `/tmp` - real bwrap's own read-only-root
+    refusal, reproduced without a real sandbox."""
+    body = (
+        'while [ $# -gt 0 ]; do\n'
+        '  case "$1" in\n'
+        '    --bind|--ro-bind|--dev-bind)\n'
+        '      dst="$3"\n'
+        '      case "$dst" in\n'
+        f'        {bind_dst}|{bind_dst}/*|/tmp|/tmp/*) ;;\n'
+        '        *) echo "bwrap: Can'"'"'t mkdir parents for $dst: '
+        'Read-only file system" >&2; exit 1 ;;\n'
+        '      esac\n'
+        '      shift 3\n'
+        '      ;;\n'
+        '    *) shift ;;\n'
+        '  esac\n'
+        'done\n'
+        'exit 0\n'
+    )
+    return _fake_real_bwrap(path, marker, body)
+
+
+def _run_argv_through(fake_bwrap, argv, tmp_path):
+    """Runs the composed argv's own tail (everything after the
+    `real_bwrap` element `build_shim_argv` returns) through `fake_bwrap`,
+    with it on `PATH` under its real name so it is found the way a
+    shadowed real `bwrap` is."""
+    on_path = tmp_path / "on-path"
+    on_path.mkdir(exist_ok=True)
+    bwrap_on_path = on_path / "bwrap"
+    if not bwrap_on_path.exists():
+        bwrap_on_path.symlink_to(fake_bwrap)
+    env = {**os.environ, "PATH": f"{on_path}{os.pathsep}{os.environ['PATH']}"}
+    return subprocess.run(["bwrap", *argv[1:]], env=env,
+                          capture_output=True, text=True, check=False)
+
+
+def test_fifo_style_runs_clean_through_a_bwrap_that_refuses_binds_outside_bind_dst_or_tmp(
+        tmp_path):
+    """The bind dir sits under a fake project path, not `/tmp` - the
+    user's report. No FIFO `--bind` of its own means the composed argv
+    holds no destination outside `bind_dst`/`/tmp`, and the fake refuses
+    nothing."""
+    marker = tmp_path / "marker"
+    bind_dst = "/tmp/.bst-native-trace"
+    fake = _fake_readonly_root_bwrap(tmp_path / "real-bwrap", marker, bind_dst)
+    bind_src = "/not/tmp/my_project/.bga/tmp/trace-1/bind"
+
+    argv = build_shim_argv(
+        real_bwrap=fake,
+        bst_args=["--unshare-pid", "--dir", "core.bst", "--chdir", "core.bst",
+                 "sh", "-c", "make"],
+        bind_src=bind_src, bind_dst=bind_dst,
+        preload_so=f"{bind_dst}/hook.so", trace_log=f"{bind_dst}/trace.log",
+        jobserver_fifo=f"{bind_src}/jobserver", element_kind="make")
+
+    result = _run_argv_through(fake, argv, tmp_path)
+
+    assert result.returncode == 0, result.stderr
+    setenv = argv.index("MAKEFLAGS")
+    assert argv[setenv + 1] == f"--jobserver-auth=fifo:{bind_dst}/jobserver"
+
+
+def test_fd_style_still_runs_clean_through_the_same_bwrap(tmp_path):
+    marker = tmp_path / "marker"
+    bind_dst = "/tmp/.bst-native-trace"
+    fake = _fake_readonly_root_bwrap(tmp_path / "real-bwrap", marker, bind_dst)
+    bind_src = "/not/tmp/my_project/.bga/tmp/trace-1/bind"
+
+    read_fd, write_fd = os.pipe()
+    try:
+        argv = build_shim_argv(
+            real_bwrap=fake,
+            bst_args=["--unshare-pid", "--dir", "core.bst", "--chdir", "core.bst",
+                     "sh", "-c", "make"],
+            bind_src=bind_src, bind_dst=bind_dst,
+            preload_so=f"{bind_dst}/hook.so", trace_log=f"{bind_dst}/trace.log",
+            jobserver_fd=read_fd, element_kind="make")
+
+        result = _run_argv_through(fake, argv, tmp_path)
+
+        assert result.returncode == 0, result.stderr
+    finally:
+        os.close(read_fd)
+        os.close(write_fd)
+
+
+def test_a_fifo_bound_onto_its_own_host_path_reds_under_the_same_bwrap(tmp_path):
+    """The mutation `falsify` checks: restoring `--bind <fifo> <fifo>`
+    (the defect) makes the fake refuse it exactly as the user's real
+    sandbox root did."""
+    marker = tmp_path / "marker"
+    bind_dst = "/tmp/.bst-native-trace"
+    fake = _fake_readonly_root_bwrap(tmp_path / "real-bwrap", marker, bind_dst)
+    bind_src = "/not/tmp/my_project/.bga/tmp/trace-1/bind"
+    fifo_path = f"{bind_src}/jobserver"
+
+    argv = build_shim_argv(
+        real_bwrap=fake,
+        bst_args=["--unshare-pid", "--dir", "core.bst", "--chdir", "core.bst",
+                 "sh", "-c", "make"],
+        bind_src=bind_src, bind_dst=bind_dst,
+        preload_so=f"{bind_dst}/hook.so", trace_log=f"{bind_dst}/trace.log",
+        jobserver_fifo=fifo_path, element_kind="make")
+    # The mutation itself: re-inject the own-path bind `_jobserver_injection`
+    # used to add, right where it used to land - before the MAKEFLAGS setenv.
+    setenv = argv.index("MAKEFLAGS") - 2  # the "--setenv" token before it
+    mutated = argv[:setenv] + ["--bind", fifo_path, fifo_path] + argv[setenv:]
+
+    result = _run_argv_through(fake, mutated, tmp_path)
+
+    assert result.returncode == 1
+    assert "Read-only file system" in result.stderr
 
 
 # --- UX-855: probe_ninja's own outcomes, not a hand-built dict ------------

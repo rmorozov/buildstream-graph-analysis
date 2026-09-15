@@ -1982,6 +1982,47 @@ def _cmd_target(cmd: list[str]) -> Optional[str]:
     return None
 
 
+# UX-870: the `cli` click group's own options in
+# `buildstream/_frontend/cli.py` (BuildStream 2.8.0, this box), read off
+# the installed package rather than guessed - `-o`/`--option` is the
+# only one that takes two values (`click.Tuple([str, str])`); the rest
+# below take exactly one; anything else the group defines (`--verbose`,
+# `--strict`, `--pull-buildtrees`, ...) is a bare flag, zero.
+_BST_GLOBAL_OPTIONS_TWO_VALUES = frozenset({"-o", "--option"})
+_BST_GLOBAL_OPTIONS_ONE_VALUE = frozenset({
+    "--config", "-c", "--directory", "-C", "--on-error", "--fetchers",
+    "--builders", "--pushers", "--max-jobs", "--network-retries",
+    "--error-lines", "--message-lines", "--log-file", "--default-mirror",
+    "--cache-buildtrees",
+})
+
+
+def _bst_global_options(cmd: list[str]) -> tuple[list[str], bool]:
+    """UX-870: the tokens between `cmd[0]` and the subcommand, each
+    consumed by its own arity so a value (`c.yml`, a second `-o` value)
+    is never mistaken for the subcommand itself. `(opts, True)` once a
+    bare token is reached - the subcommand, discarded here since the
+    caller always inserts its own `show`. `(opts, False)` when the whole
+    of `cmd[1:]` parses as option-shaped and no subcommand ever turns
+    up - the one case this read cannot graft `show` onto at all."""
+    opts: list[str] = []
+    i, n = 1, len(cmd)
+    while i < n:
+        tok = cmd[i]
+        if not tok.startswith("-"):
+            return opts, True
+        if tok in _BST_GLOBAL_OPTIONS_TWO_VALUES and i + 3 <= n:
+            opts.extend(cmd[i:i + 3])
+            i += 3
+        elif tok in _BST_GLOBAL_OPTIONS_ONE_VALUE and i + 2 <= n:
+            opts.extend(cmd[i:i + 2])
+            i += 2
+        else:
+            opts.append(tok)
+            i += 1
+    return opts, False
+
+
 def _parse_max_jobs_from_vars(vars_raw: str) -> Optional[int]:
     """UX-842: `%{vars}`'s own `max-jobs:` line. `None` on any
     unparseable shape - a future bst version changing it must degrade,
@@ -2041,46 +2082,90 @@ def _parse_element_kinds(show_output: str) -> dict:
 
 
 def jobserver_kinds_warning(jobserver: Optional[int],
-                            element_kinds: Optional[dict]) -> Optional[str]:
+                            element_kinds: Optional[dict],
+                            diagnostic: Optional[dict] = None,
+                            kinds_read_path: Optional[str] = None) -> Optional[str]:
     """UX-843's verifier: a failed kinds read must not switch the mode
     off silently - no sandbox kind is resolved, so only a recipe whose
     own env still carries `JOBS` joins (`jobs_env`, UX-859); every
     other decision reads `unknown_kind`. The line to print, or `None`
-    when there is nothing to say."""
+    when there is nothing to say. UX-870: `diagnostic`'s `reason` and
+    `kinds_read_path` (the written `kinds_read.json`) are named too,
+    when given, so the warning is answerable without a second run."""
     if not jobserver or element_kinds is not None:
         return None
-    return ("Warning: bst show gave no element kinds - only a recipe that "
+    line = ("Warning: bst show gave no element kinds - only a recipe that "
             "itself spends JOBS joins the jobserver this capture (every "
             "other decision reads unknown_kind)")
+    if diagnostic and diagnostic.get("reason"):
+        line += f" ({diagnostic['reason']}"
+        line += f", see {kinds_read_path})" if kinds_read_path else ")"
+    return line
 
 
-def read_element_kinds_for_jobserver(project_dir: str, cmd: list[str]) -> Optional[dict]:
-    """UX-843: every element's own kind, one `bst show --format '%{name}
-    %{kind}'` on the build's own target before the build - same shape as
-    `read_project_max_jobs`, one call, one timeout. `None` on any
-    failure (no target, `bst` missing, a non-zero exit, no parseable
-    line) - the shim then treats every element as `unknown_kind`.
+def read_element_kinds_for_jobserver(project_dir: str,
+                                     cmd: list[str]) -> tuple[Optional[dict], dict]:
+    """UX-843/UX-870: every element's own kind, one `bst show --format
+    '%{name} %{kind}'` before the build - the *user's own* global
+    options (`_bst_global_options`) placed before `show`, since `-o`,
+    `--config`, `--directory` change what a project resolves to; no
+    target runs with none (BuildStream's own default-target rule), same
+    shape as `read_project_max_jobs` otherwise: one call, one timeout.
+
+    Returns `(kinds, diagnostic)`. `kinds` is `None` on any failure -
+    the shim then treats every element as `unknown_kind`. `diagnostic`
+    is always given back (`caller` writes it to `kinds_read.json`):
+    `{"argv": [...], "count": N}` on success, `{"argv": [...] or None,
+    "returncode": N or None, "stderr_tail": "...", "reason":
+    "no-target"|"exit"|"no-lines"|"timeout"|"oserror"}` on failure -
+    `no-target` only when `cmd` carries no subcommand at all, so there
+    is nowhere to graft `show` onto; a real command with a subcommand
+    but no positional element still runs, per the rule above.
 
     Not `read_element_kinds` (below): that one reads `.bst` files
     directly, for UX-68's project-directory-only use; this reads `bst
     show`, the same way `read_project_max_jobs` does, so the two agree
     on what a `bst show`-composed sandbox actually saw.
     """
+    global_opts, has_subcommand = _bst_global_options(cmd)
+    if not has_subcommand:
+        return None, {"argv": None, "returncode": None, "stderr_tail": "",
+                      "reason": "no-target"}
     target = _cmd_target(cmd)
-    if target is None:
-        return None
+    argv = [cmd[0], *global_opts, "show", "--format", "%{name} %{kind}"]
+    if target is not None:
+        argv.append(target)
     try:
         proc = subprocess.run(
-            [cmd[0], "show", "--format", "%{name} %{kind}", target],
-            cwd=project_dir, capture_output=True, text=True, check=False,
-            timeout=120,
+            argv, cwd=project_dir, capture_output=True, text=True,
+            check=False, timeout=120,
         )
-    except (OSError, subprocess.TimeoutExpired):
-        return None
+    except subprocess.TimeoutExpired:
+        return None, {"argv": argv, "returncode": None, "stderr_tail": "",
+                      "reason": "timeout"}
+    except OSError as exc:
+        return None, {"argv": argv, "returncode": None,
+                      "stderr_tail": str(exc)[-2000:], "reason": "oserror"}
     if proc.returncode != 0:
-        return None
+        return None, {"argv": argv, "returncode": proc.returncode,
+                      "stderr_tail": proc.stderr[-2000:], "reason": "exit"}
     kinds = _parse_element_kinds(proc.stdout)
-    return kinds or None
+    if not kinds:
+        return None, {"argv": argv, "returncode": proc.returncode,
+                      "stderr_tail": proc.stderr[-2000:], "reason": "no-lines"}
+    return kinds, {"argv": argv, "count": len(kinds)}
+
+
+def _write_kinds_read(bind_dir: str, jobserver: Optional[int],
+                      element_kinds: Optional[dict],
+                      diagnostic: dict) -> Optional[str]:
+    """UX-870: `kinds_read.json` beside `element_kinds.json`, and the
+    warning to print (or `None`) - split out of `run_traced_build` so
+    the write+warn pairing is testable without a real sandbox."""
+    path = os.path.join(bind_dir, "kinds_read.json")
+    with open(path, "w", encoding="utf-8") as handle:
+        json.dump(diagnostic, handle)
+    return jobserver_kinds_warning(jobserver, element_kinds, diagnostic, path)
 
 
 def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrapped_log_path: Optional[str] = None, trace_opens: bool = False, argv_log_path: Optional[str] = None, invocation_log_path: Optional[str] = None,
@@ -2097,6 +2182,7 @@ def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrappe
                      project_max_jobs: Optional[int] = None,
                      jobserver_decisions_path: Optional[str] = None,
                      element_kinds: Optional[dict] = None,
+                     kinds_read_diagnostic: Optional[dict] = None,
                      plan_path: Optional[str] = None,
                      broker_status_path: Optional[str] = None) -> int:
     """Run cmd (a real `bst` invocation) with the bwrap shim + LD_PRELOAD
@@ -2140,7 +2226,9 @@ def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrappe
     copied out of the scratch beside the FIFO. `element_kinds` (UX-843):
     the caller's `read_element_kinds_for_jobserver`, written once into
     the scratch and passed through `BST_TRACE_ELEMENT_KINDS` so the shim
-    can apply the per-kind table.
+    can apply the per-kind table. `kinds_read_diagnostic` (UX-870): that
+    same call's second return value, written beside it as
+    `kinds_read.json` and named in the printed warning.
 
     `plan_path` (UX-849): an `analyze.json`, or `None` for today's single
     shared FIFO, byte for byte. Given, one proxy FIFO per `element_kinds`
@@ -2350,6 +2438,15 @@ def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrappe
                 env["BST_TRACE_ELEMENT_KINDS"] = captured_kinds
             else:
                 env.pop("BST_TRACE_ELEMENT_KINDS", None)
+            # UX-870: always written beside `element_kinds.json` when the
+            # read ran at all - argv+count on success, argv+exit/stderr/
+            # reason on failure - so a silent `unknown_kind` capture has
+            # a file naming why, not just a one-line warning.
+            if kinds_read_diagnostic is not None:
+                kinds_warning = _write_kinds_read(
+                    bind_dir, jobserver, element_kinds, kinds_read_diagnostic)
+                if kinds_warning:
+                    print(kinds_warning, file=sys.stderr)
             # UX-849: a proxy per element named in the kinds map, and a
             # `Broker` thread to move tokens into them by slack - only
             # when a plan was actually given, so a capture with no
@@ -8312,12 +8409,12 @@ def main(argv: Optional[list[str]] = None) -> int:
         project_max_jobs = (read_project_max_jobs(args.project_dir, cmd)
                             if args.jobserver else None)
         # UX-843: the same shape, one call, before the build - the
-        # per-kind table's input.
-        element_kinds = (read_element_kinds_for_jobserver(args.project_dir, cmd)
-                         if args.jobserver else None)
-        kinds_warning = jobserver_kinds_warning(args.jobserver, element_kinds)
-        if kinds_warning:
-            print(kinds_warning, file=sys.stderr)
+        # per-kind table's input. UX-870: the diagnostic (argv, reason)
+        # is printed and written to `kinds_read.json` once `bind_dir`
+        # exists, inside `run_traced_build`, not here.
+        element_kinds, kinds_read_diagnostic = (
+            read_element_kinds_for_jobserver(args.project_dir, cmd)
+            if args.jobserver else (None, None))
         jobserver_decisions_path = (
             os.path.join(scratch_mkdtemp(args.project_dir, "jobserver-"),
                         "jobserver_decisions.jsonl")
@@ -8369,6 +8466,7 @@ def main(argv: Optional[list[str]] = None) -> int:
                                           project_max_jobs=project_max_jobs,
                                           jobserver_decisions_path=jobserver_decisions_path,
                                           element_kinds=element_kinds,
+                                          kinds_read_diagnostic=kinds_read_diagnostic,
                                           plan_path=args.plan,
                                           broker_status_path=broker_status_path)
         except CaptureInterrupted:

@@ -59,7 +59,11 @@ import pytest
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 sys.path.insert(0, str(REPO / "tests"))
-from pages import snapshot_copy
+from browser import NO_BROWSER, Browser, find_chrome
+from pages import export_uri, snapshot_copy
+
+chrome = find_chrome()
+needs_browser = pytest.mark.skipif(chrome is None, reason=NO_BROWSER)
 
 node = shutil.which("node")
 needs_node = pytest.mark.skipif(node is None, reason="node is not installed")
@@ -713,3 +717,32 @@ console.log(JSON.stringify({{
             "observed high", "baseline 1", "baseline 2", "baseline 3"]
         assert [row[1] for row in out["twin"]] == [
             "230", "100", "200", "80", "260", "90", "150", "250"]
+
+
+# --------------------------------------------------------------------------
+# 6. And in a real Chrome: the shim's `hidden` is not what a reader sees.
+# --------------------------------------------------------------------------
+
+@needs_browser
+class TestTheTwinReallyHidesOnScreen:
+    """UX-862: `table.hidden = true` (section 4, above) passed on the DOM
+    shim, which has no layout engine and so never saw that `style.css`'s
+    `main table { display: block; ... }` outranks the browser's
+    `[hidden] { display: none }` on every selector's specificity - the
+    twin rendered open. Only a real Chrome's `getComputedStyle` can tell
+    the two apart."""
+
+    def test_the_twin_is_hidden_until_toggled_open(self, tmp_path):
+        uri = export_uri(MACRO, tmp_path)
+        with Browser(chrome) as opened:
+            out = opened.measure(uri, """
+(() => {
+  const table = document.querySelector("table.twin-table");
+  const before = getComputedStyle(table).display;
+  document.querySelector("button.twin-toggle").click();
+  const after = getComputedStyle(table).display;
+  return { before, after };
+})()
+""")
+        assert out["before"] == "none", out
+        assert out["after"] == "table", out

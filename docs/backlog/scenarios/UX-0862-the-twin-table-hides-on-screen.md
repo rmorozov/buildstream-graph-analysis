@@ -31,3 +31,36 @@ The print block, which already forces the twin open.
 
 `tests/unit/test_a_drawing_is_graded.py` gains the computed-style
 case in Chrome; mutation: restore the unconditional rule - red.
+
+## Outcome
+
+**Gap measured.** With the unconditional rule restored (the round's own
+mutation), the new Chrome case:
+
+```text
+AssertionError: {'before': 'block', 'after': 'block'}
+assert 'block' == 'none'
+```
+
+- confirming the twin renders open while `hidden` is true, exactly as
+the motivation states.
+
+**Close measured**, `bga/viewer/style.css:574` reading
+`main table:not(.twin-table) { display: block; ... }`:
+
+```text
+tests/unit/test_a_drawing_is_graded.py::TestTheTwinReallyHidesOnScreen
+::test_the_twin_is_hidden_until_toggled_open PASSED
+28 passed in 8.45s   (whole file, real Chrome)
+```
+
+Wider: `test_the_fold_says_how_deep_it_goes.py`,
+`test_the_report_has_two_panes.py`, `test_a_rail_click_lands_on_its_
+section.py` (the other three files naming `main table`) - 51 passed,
+71.84s - unaffected, since only the excluded selector changed.
+
+### Mutation table
+
+| Guard | Mutation | Reddened | Count |
+|---|---|---|---|
+| `test_the_twin_is_hidden_until_toggled_open` | restore `main table { display: block; ... }` (drop `:not(.twin-table)`) | yes | 1 failed, 27 passed -> 28 passed after revert |

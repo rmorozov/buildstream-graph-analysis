@@ -1,6 +1,6 @@
 # UX-859: a recipe that spends `JOBS` joins the jobserver, whatever its kind
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-843, UX-846 | **Found by:** round 120, the user (a 16-core, 32 GB host, `--builders 16 --jobserver auto`) | **Serves:** R2 (a manual element calling `cmake --build ${JOBS}` by hand builds under the mode like a cmake one) | **Topic:** capture | **Area:** tools-native_trace | **Shape:** mechanical
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-843, UX-846 | **Found by:** round 120, the user (a 16-core, 32 GB host, `--builders 16 --jobserver auto`) | **Serves:** R2 (a manual element calling `cmake --build ${JOBS}` by hand builds under the mode like a cmake one) | **Topic:** capture | **Area:** tools-native_trace | **Shape:** mechanical
 
 ## Motivation
 
@@ -89,3 +89,11 @@ unchanged at BuildStream's own static `-jN` (no injection, avoiding the
 cores+2 regression UX-843 found) when neither; joined via MAKEFLAGS,
 `JOBS` emptied, when the probe finds no ninja in the sandbox at all
 (the "make treatment", same as before this correction).
+
+Deviation (merge): the verifier held once - the ninja probe still ran
+for cmake and meson only, so a manual `-G Ninja` recipe would have run
+ninja at cores + 2 outside the pool - and the track widened the gate to
+any `JOBS`-carrying sandbox with five guards through the real gate;
+a present ninja with no client and no wrapper dir keeps `ninja_static`,
+cmake's own reading, dead in a real capture where the wrappers are
+always mounted.

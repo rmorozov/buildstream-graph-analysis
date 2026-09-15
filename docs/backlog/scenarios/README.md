@@ -15,12 +15,12 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-862 scenarios: **8 open**, 854 closed.
+862 scenarios: **7 open**, 855 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
-| capture | 3 | 113 |
+| capture | 2 | 113 |
 | analysis | 2 | 118 |
 | contracts | 0 | 50 |
 | viewer | 3 | 176 |
@@ -37,7 +37,6 @@ task file, which is the only place it ever lived twice.
 | ID | Scenario | Topic | Priority | Serves | Status |
 |---|---|---|---|---|---|
 | UX-858 | [the pool grows toward the machine, not its opening seed](UX-0858-the-pool-grows-toward-the-machine-not-its-opening-seed.md) | capture | High | R5 (an llvm-sized element takes the cores the other builders leave idle) | 🔴 Not Started |
-| UX-859 | [a recipe that spends `JOBS` joins the jobserver, whatever its kind](UX-0859-a-recipe-that-spends-jobs-joins-the-jobserver-whatever-its-kind.md) | capture | High | R2 (a manual element calling `cmake --build ${JOBS}` by hand builds under the mode like a cmake one) | 🔴 Not Started |
 | UX-860 | [swap is a finding, not a word in a CPU sentence](UX-0860-swap-is-a-finding-not-a-word-in-a-cpu-sentence.md) | analysis | Medium | R5 (the build swapped from here to here, and these elements were running) | 🔴 Not Started |
 | UX-861 | [a builder count above the host's cores is never recommended verbatim](UX-0861-a-builder-count-above-the-hosts-cores-is-never-recommended-verbatim.md) | analysis | Medium | R5 (a recommendation the operator can apply as read) | 🔴 Not Started |
 | UX-862 | [the twin table hides on screen](UX-0862-the-twin-table-hides-on-screen.md) | viewer | Low | R1 (a closed twin is closed) | 🔴 Not Started |

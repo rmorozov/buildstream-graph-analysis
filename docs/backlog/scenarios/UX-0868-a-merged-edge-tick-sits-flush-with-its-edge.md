@@ -1,6 +1,6 @@
 # UX-868: a merged edge tick sits flush with its edge
 
-**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** UX-863, UX-758 | **Found by:** round 120, UX-863's verifier | **Serves:** R1 (a merged p99-and-max tick reads at the strip's edge, not its middle) | **Topic:** viewer | **Area:** bga-viewer | **Shape:** bounded
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-863, UX-758 | **Found by:** round 120, UX-863's verifier | **Serves:** R1 (a merged p99-and-max tick reads at the strip's edge, not its middle) | **Topic:** viewer | **Area:** bga-viewer | **Shape:** bounded
 
 ## Motivation
 
@@ -81,3 +81,11 @@ case reads `getComputedStyle(...).transform` and
 `getBoundingClientRect()` against the row's own rect, not an invented
 pixel. No viewer change: the case found no defect - `~=` already
 flush-aligns a merged edge on both sides.
+
+**Deviation (merge):** the verifier held once - the mutation table's
+control row ran two cells together and reddened
+`test_every_table_row_has_its_header_cell_count`, so the pasted
+touching count had not been clean. The track split the row and
+re-measured (`1468 passed, 3 skipped`); the re-check passed. The
+verifier's own mutation (the `translateX(-100%)` off the right-edge
+rule) reddened only the right-edge case. Nothing added at merge.

@@ -1,6 +1,6 @@
 # UX-861: a builder count above the host's cores is never recommended verbatim
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-116 | **Found by:** round 120, the user (a 16-core, 32 GB host, `--builders 16 --jobserver auto`) | **Serves:** R5 (a recommendation the operator can apply as read) | **Topic:** analysis | **Area:** bga | **Shape:** judgement
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-116 | **Found by:** round 120, the user (a 16-core, 32 GB host, `--builders 16 --jobserver auto`) | **Serves:** R5 (a recommendation the operator can apply as read) | **Topic:** analysis | **Area:** bga | **Shape:** judgement
 
 ## Motivation
 
@@ -86,3 +86,10 @@ builders contend rather than overlap here
 $ python3 -m pytest tests/unit/test_capacity_recommendation.py -q
 29 passed in 0.52s   (mutation reverted)
 ```
+
+Deviation (merge): the verifier passed it and named the guide's
+illustrative capacity block (`docs/guides/cli.md`, the 4-core example)
+as wrong under the clamp - CPU now binds at 4, not the graph at 6 -
+so the session rewrote that block at merge and named the clamp in the
+sentence under it; the macro_micro export bound lands with `UX-864`'s
+at 532,000 over their summed deltas.

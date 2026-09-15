@@ -1,6 +1,6 @@
 # UX-870: the kinds read carries the user's own bst options and says why it failed
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-843 | **Found by:** round 121, the user (a real project under a junction, GNU Make 4.4 on the host) | **Serves:** R2 (every element joins by its kind on a project built with -o and --config) | **Topic:** capture | **Area:** tools | **Shape:** mechanical
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-843 | **Found by:** round 121, the user (a real project under a junction, GNU Make 4.4 on the host) | **Serves:** R2 (every element joins by its kind on a project built with -o and --config) | **Topic:** capture | **Area:** tools | **Shape:** mechanical
 
 ## Motivation
 
@@ -87,3 +87,14 @@ warning's print call moved from `main()` (before `bind_dir` exists) into
 `run_traced_build` (where the file's real path is known), so it can name
 the file. `read_element_kinds_for_jobserver` returns `(kinds,
 diagnostic)` rather than `Optional[dict]` - no other caller existed.
+
+**Deviation (merge):** the verifier read the arity table complete
+against the installed `cli` group (BuildStream 2.8.0) but found only
+`-o` and `--config` exercised - dropping `--directory` passed the whole
+file. At merge a guard derives its cases from the installed group's
+own `params` (every valued option, its `nargs`); mutation: drop
+`--directory` from the set - `1 failed`, naming it. `bst build --deps
+all t.bst` still resolves `all` as the target through `_cmd_target`
+(`UX-842`); this row makes that failure visible in `kinds_read.json`
+and `UX-873` is filed for the arity. `timeout`/`oserror` reasons stay
+unguarded by a dedicated case.

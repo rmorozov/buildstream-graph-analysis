@@ -1,6 +1,6 @@
 # UX-867: the context map's open labels read the status they name
 
-**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** UX-846 | **Found by:** round 120, review 24 | **Serves:** R4 (the map says which rows are still open, truthfully) | **Topic:** docs | **Area:** unassigned | **Shape:** judgement
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-846 | **Found by:** round 120, review 24 | **Serves:** R4 (the map says which rows are still open, truthfully) | **Topic:** docs | **Area:** unassigned | **Shape:** judgement
 
 ## Motivation
 
@@ -65,3 +65,10 @@ tests/unit/test_docs_links_and_commands.py`). `make test-touching`: 44
 files, 1777 passed, 3 skipped. `ruff check`, `dev_sizes.py --check`,
 `dev_baseline.py --check` (pre-existing forced findings only),
 `pymarkdown scan docs/contributing/fixing-guide.md` all clean.
+
+**Deviation (merge):** the verifier read the guard passing for an
+`(open)` label naming an id with no task file (`statuses.get` answers
+`None`, which is not `🟢`). At merge the guard treats `None` as stale
+too. Mutation: `UX-8NN/999 (open)` on §6's first `UX-8` row, then
+`pytest -k open_label`: `1 failed` with
+`... or that name no task file: ['UX-999']`; restored, `1 passed`.

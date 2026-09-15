@@ -43,28 +43,42 @@ def _no_stray_jobserver_mode():
 
 class TestTheCLIParsesTheThreeModes:
     def test_off_passes_nothing(self):
-        assert resolve_jobserver_ceiling('off', []) == ('off', None)
+        assert resolve_jobserver_ceiling('off', []) == ('off', None, None)
 
     def test_an_explicit_n_passes_through(self):
-        assert resolve_jobserver_ceiling('4', []) == ('n', 4)
+        assert resolve_jobserver_ceiling('4', []) == ('n', 4, 3)
 
-    def test_auto_sizes_to_cores_minus_builders(self):
+    # UX-858: the ceiling is the host's cores (the capacity a pool can
+    # grow to), never `cores - builders` - only the seed reads builders.
+    def test_auto_ceiling_is_always_the_hosts_cores(self):
         wrapped = ['bst', 'build', '--builders', '3', 'all.bst']
-        assert resolve_jobserver_ceiling('auto', wrapped, cpu_count=8) == ('auto', 5)
+        assert resolve_jobserver_ceiling('auto', wrapped, cpu_count=8) == ('auto', 8, 5)
+
+    def test_auto_with_builders_equal_to_cores_seeds_zero(self):
+        wrapped = ['bst', 'build', '--builders', '16']
+        assert resolve_jobserver_ceiling('auto', wrapped, cpu_count=16) == ('auto', 16, 0)
+
+    def test_auto_with_builders_above_cores_seeds_zero_not_negative(self):
+        wrapped = ['bst', 'build', '--builders', '30']
+        assert resolve_jobserver_ceiling('auto', wrapped, cpu_count=8) == ('auto', 8, 0)
 
     def test_auto_with_no_named_builders_reserves_one_core(self):
-        assert resolve_jobserver_ceiling('auto', ['bst', 'build'], cpu_count=8) == ('auto', 7)
+        assert resolve_jobserver_ceiling('auto', ['bst', 'build'], cpu_count=8) == ('auto', 8, 7)
 
-    def test_auto_floors_at_one(self):
-        wrapped = ['bst', 'build', '--builders', '30']
-        assert resolve_jobserver_ceiling('auto', wrapped, cpu_count=8) == ('auto', 1)
+    # UX-858's verifier: `--builders 0` leaves no headroom subtracted -
+    # the seed must still cap below the ceiling, never equal it
+    # (`PoolController`'s own invariant, `test_addition_never_goes_above_
+    # ceiling_minus_one`).
+    def test_auto_with_builders_zero_caps_the_seed_below_the_ceiling(self):
+        wrapped = ['bst', 'build', '--builders', '0']
+        assert resolve_jobserver_ceiling('auto', wrapped, cpu_count=8) == ('auto', 8, 7)
 
     def test_an_unrecognised_value_resolves_to_nothing(self):
-        assert resolve_jobserver_ceiling('bogus', []) == (None, None)
+        assert resolve_jobserver_ceiling('bogus', []) == (None, None, None)
 
     def test_zero_tokens_is_off_and_a_negative_is_passed_through(self):
-        assert resolve_jobserver_ceiling('0', []) == ('off', None)
-        assert resolve_jobserver_ceiling('-3', []) == (None, None)
+        assert resolve_jobserver_ceiling('0', []) == ('off', None, None)
+        assert resolve_jobserver_ceiling('-3', []) == (None, None, None)
 
     def test_a_later_call_without_the_flag_resets_the_variable(self, monkeypatch):
         monkeypatch.delenv('BGA_JOBSERVER_MODE', raising=False)
@@ -194,14 +208,16 @@ class TestTheTracerAssemblesTheBlockFromItsReportAndTheEnvironment:
 
     def test_a_resolved_capture_carries_every_field(self, monkeypatch):
         monkeypatch.setenv('BGA_JOBSERVER_MODE', 'n')
-        report = {'jobserver': 4, 'jobserver_auth': 'fd', 'project_max_jobs': 8}
+        report = {'jobserver': 4, 'jobserver_seed': 3, 'jobserver_auth': 'fd',
+                 'project_max_jobs': 8}
         assert _jobserver_block(report) == {
-            'mode': 'n', 'ceiling': 4, 'auth': 'fd', 'project_max_jobs': 8}
+            'mode': 'n', 'ceiling': 4, 'seed': 3, 'auth': 'fd', 'project_max_jobs': 8}
 
     def test_no_jobserver_and_no_variable_reads_off(self, monkeypatch):
         monkeypatch.delenv('BGA_JOBSERVER_MODE', raising=False)
         assert _jobserver_block({}) == {
-            'mode': 'off', 'ceiling': None, 'auth': None, 'project_max_jobs': None}
+            'mode': 'off', 'ceiling': None, 'seed': None, 'auth': None,
+            'project_max_jobs': None}
 
     def test_the_translate_step_sets_the_variable_for_auto(self, monkeypatch):
         monkeypatch.delenv('BGA_JOBSERVER_MODE', raising=False)
@@ -240,4 +256,5 @@ class TestExtractionWritesTheJobserverBlockToRunContext:
         block = _jobserver_block({})
         run_context = self._extracted(tmp_path, block)
         assert run_context["jobserver"] == {
-            "mode": "off", "ceiling": None, "auth": None, "project_max_jobs": None}
+            "mode": "off", "ceiling": None, "seed": None, "auth": None,
+            "project_max_jobs": None}

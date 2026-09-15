@@ -187,8 +187,11 @@ it did not do.
 `--jobserver auto|N|off` (default `off`) and `--plan @prev|@last|PATH`
 compose into the capture exactly as `bga capture run --jobserver` does
 (`resolve_jobserver_ceiling`, `UX-851`) — nothing to invent, one flag
-per capture, like `--diagnose` (`UX-146`). The comparison a mode's value
-is read from is the pair itself:
+per capture, like `--diagnose` (`UX-146`). `auto`'s ceiling is the
+host's cores and it opens seeded to `max(0, cores - builders)`, so the
+pool can grow to fill the machine rather than stall at a ceiling of 1
+(`UX-858`). The comparison a mode's value is read from is the pair
+itself:
 
 ```bash
 bga snapshot --jobserver off -- bst build all.bst    # the baseline

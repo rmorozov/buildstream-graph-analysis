@@ -936,18 +936,24 @@ def read_host_samples(path: str) -> dict:
     return {"header": header, "samples": samples}
 
 
-def open_jobserver(n: int, scratch: str) -> tuple[str, int, int]:
-    """UX-841: make a FIFO under `scratch`, seed `n - 1` `+` tokens, and
+def open_jobserver(n: int, scratch: str, seed: Optional[int] = None) -> tuple[str, int, int]:
+    """UX-841: make a FIFO under `scratch`, seed it with `+` tokens, and
     confirm the seed landed by reading the FIFO's own readable byte count
     back (`FIONREAD`) rather than trusting the write call. Returns the
     path, a host-side fd kept open for the FIFO's whole life (UX-679:
     its buffer is discarded once every fd on it closes), and the token
     count written. Cleans up after itself and raises on a mismatch.
+
+    `seed` (UX-858): `n - 1` when omitted, `open_jobserver`'s own prior
+    behaviour - `n` is the pool's ceiling (its capacity), not
+    necessarily what it should open holding. Clamped at `n - 1`
+    (never the full ceiling) so a hand-typed `--jobserver-seed` cannot
+    fill the FIFO past what `PoolController` is willing to track.
     """
     path = os.path.join(scratch, "jobserver")
     os.mkfifo(path)
     fd = os.open(path, os.O_RDWR)
-    tokens = n - 1
+    tokens = n - 1 if seed is None else min(seed, n - 1)
     os.write(fd, b"+" * tokens)
     readable = array.array("i", [0])
     fcntl.ioctl(fd, termios.FIONREAD, readable, True)
@@ -1364,7 +1370,9 @@ class PoolController:
         `True` when a `Broker` exists for this same ledger/FIFO - one
         auditor per capture, so `audit_leaks` is a no-op and `start`
         never spins its thread, rather than the two racing the same
-        ledger unlocked."""
+        ledger unlocked. `psi_paths["seed"]` (UX-858, same cap): where
+        the pool starts - `ceiling - 1` when absent, matching
+        `open_jobserver`'s own default seed."""
         psi_paths = psi_paths or {}
         self.broker_owns_audit = bool(psi_paths.get("broker_owns_audit"))
         self.fd = fd
@@ -1380,10 +1388,14 @@ class PoolController:
         self.interval_s = JOBSERVER_POOL_INTERVAL_S
         self.psi_bound = JOBSERVER_POOL_PSI_BOUND
         self.memory_psi_bound = JOBSERVER_POOL_MEMORY_PSI_BOUND
-        # Matches what `open_jobserver` already seeded: the FIFO starts
-        # holding `ceiling - 1` tokens, and this is that same count kept
-        # host-side - never below zero, never above `ceiling - 1`.
-        self.pool = ceiling - 1
+        # Matches what `open_jobserver` already seeded, and this is that
+        # same count kept host-side - never below zero, never above
+        # `ceiling - 1` (UX-858: the seed, not necessarily `ceiling - 1`).
+        seed = psi_paths.get("seed")
+        # UX-858's verifier: clamped, not refused - a hand-typed
+        # --jobserver-seed above the ceiling must not start the pool
+        # past the invariant every other guard holds (pool < ceiling).
+        self.pool = ceiling - 1 if seed is None else min(seed, ceiling - 1)
         self.moves = 0
         self._below_streak = 0
         self._cpu = None  # (busy, total, t) - own delta state
@@ -2076,6 +2088,7 @@ def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrappe
                      no_inject: bool = False, inhibit: bool = False,
                      host_samples_path: Optional[str] = None,
                      jobserver: Optional[int] = None,
+                     jobserver_seed: Optional[int] = None,
                      jobserver_auth: Optional[str] = None,
                      jobserver_pool: str = "dynamic",
                      jobserver_capacity: Optional[int] = None,
@@ -2101,14 +2114,16 @@ def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrappe
     default) reproduces this function's own prior plain-`subprocess.run`
     behavior exactly, unchanged.
 
-    `jobserver` (UX-679): a GNU jobserver's token count, or `None` for
-    off. When given, a FIFO is opened host-side (`open_jobserver`),
-    seeded with `jobserver - 1` tokens, and its path handed to the shim
-    through `BST_TRACE_JOBSERVER` - the same channel `BST_TRACE_LOG`
-    already uses - so every sandbox's `make` can join it via
-    `--jobserver-auth`. `jobserver_auth` (UX-841): `fd` or `fifo`, the
-    style already resolved by the caller and passed through
-    `BST_TRACE_JOBSERVER_AUTH` for the shim to read.
+    `jobserver` (UX-679): a GNU jobserver's token count (its ceiling,
+    the pool's capacity), or `None` for off. When given, a FIFO is
+    opened host-side (`open_jobserver`), seeded with `jobserver_seed`
+    tokens (UX-858: `jobserver - 1` when `None`, `open_jobserver`'s own
+    default), and its path handed to the shim through
+    `BST_TRACE_JOBSERVER` - the same channel `BST_TRACE_LOG` already
+    uses - so every sandbox's `make` can join it via `--jobserver-auth`.
+    `jobserver_auth` (UX-841): `fd` or `fifo`, the style already
+    resolved by the caller and passed through `BST_TRACE_JOBSERVER_AUTH`
+    for the shim to read.
 
     `jobserver_pool` (UX-845): `"dynamic"` starts a `PoolController`
     daemon thread between `open_jobserver` and `close_jobserver`;
@@ -2296,7 +2311,8 @@ def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrappe
         # the FIFO's own lifecycle (only exists under `--jobserver`).
         captured_decisions = os.path.join(bind_dir, "jobserver_decisions.jsonl")
         if jobserver:
-            jobserver_fifo, jobserver_fd, _tokens = open_jobserver(jobserver, bind_dir)
+            jobserver_fifo, jobserver_fd, _tokens = open_jobserver(
+                jobserver, bind_dir, seed=jobserver_seed)
             env["BST_TRACE_JOBSERVER"] = jobserver_fifo
             env["BST_TRACE_JOBSERVER_AUTH"] = jobserver_auth or "fd"
             # UX-846: a wrapper directory per capture - static content,
@@ -2316,7 +2332,8 @@ def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrappe
                 pool_controller = PoolController(
                     jobserver_fd, jobserver, capacity=jobserver_capacity,
                     ledger_path=captured_jobserver_ledger,
-                    psi_paths={"broker_owns_audit": bool(plan_path and element_kinds)})
+                    psi_paths={"broker_owns_audit": bool(plan_path and element_kinds),
+                              "seed": jobserver_seed})
                 pool_controller.start()
             env["BST_TRACE_JOBSERVER_DECISIONS"] = captured_decisions
             if project_max_jobs is not None:
@@ -7458,11 +7475,14 @@ def _jobserver_block(report: dict) -> dict:
     `auth`/`project_max_jobs` read `report.get(...)` rather than a named
     argument: `jobserver_auth` (`UX-841`) and `project_max_jobs`
     (`UX-842`) are not both landed yet, and this reads whichever of them
-    the report in hand actually carries, `None` otherwise.
+    the report in hand actually carries, `None` otherwise. `seed`
+    (`UX-858`): what the FIFO opened holding, beside the ceiling it can
+    grow toward.
     """
     return {
         "mode": os.environ.get("BGA_JOBSERVER_MODE") or "off",
         "ceiling": report.get("jobserver"),
+        "seed": report.get("jobserver_seed"),
         "auth": report.get("jobserver_auth"),
         "project_max_jobs": report.get("project_max_jobs"),
     }
@@ -8148,6 +8168,11 @@ def main(argv: Optional[list[str]] = None) -> int:
              "compares busy cores against (default: os.cpu_count())."
     )
     run_parser.add_argument(
+        "--jobserver-seed", type=int, default=None, metavar="N",
+        help="UX-858: tokens the FIFO opens holding (default: "
+             "--jobserver's N minus one)."
+    )
+    run_parser.add_argument(
         "--plan", metavar="PATH", default=None,
         help="UX-849: an analyze.json naming this project's own slack - "
              "a per-element proxy replaces the shared FIFO, granted by "
@@ -8276,6 +8301,11 @@ def main(argv: Optional[list[str]] = None) -> int:
         # both need the same answer, and `auto` shells out only once.
         jobserver_auth = (jobserver_auth_style(args.jobserver_auth)
                           if args.jobserver else None)
+        # UX-858: resolved once, here too - the FIFO's seed, the report,
+        # and the fixed-mode fallback pool bounds all read this one value.
+        jobserver_seed = (
+            args.jobserver_seed if args.jobserver_seed is not None
+            else (args.jobserver - 1 if args.jobserver else None))
         # UX-842: read once, before the build, from `bst show` - a pin
         # (`-j1`) vs. an element-level cap can only be told apart from
         # what the project's own `max-jobs` is.
@@ -8330,6 +8360,7 @@ def main(argv: Optional[list[str]] = None) -> int:
                                           host_samples_path=getattr(
                                               args, "host_samples", None),
                                           jobserver=args.jobserver,
+                                          jobserver_seed=jobserver_seed,
                                           jobserver_auth=jobserver_auth,
                                           jobserver_pool=args.jobserver_pool,
                                           jobserver_capacity=args.jobserver_capacity,
@@ -8398,6 +8429,8 @@ def main(argv: Optional[list[str]] = None) -> int:
             # UX-679 (spike): the capture option a supported mode would
             # be judged against, whether or not this run used it.
             report["jobserver"] = args.jobserver
+            # UX-858: the ceiling's own opening seed, beside it.
+            report["jobserver_seed"] = jobserver_seed
             # UX-841: the style actually used, next to it - `None` when
             # the jobserver itself is off.
             report["jobserver_auth"] = jobserver_auth
@@ -8431,9 +8464,10 @@ def main(argv: Optional[list[str]] = None) -> int:
                     else:
                         controller_stopped = False
                 else:
-                    moves, pool_min, pool_max = 0, args.jobserver - 1, args.jobserver - 1
+                    moves, pool_min, pool_max = 0, jobserver_seed, jobserver_seed
                 report["jobserver_pool"] = {
                     "mode": args.jobserver_pool, "ceiling": args.jobserver,
+                    "seed": jobserver_seed,
                     "capacity": capacity, "moves": moves,
                     "pool_min": pool_min, "pool_max": pool_max,
                     "psi_present": os.path.exists(_PSI_CPU_PATH),

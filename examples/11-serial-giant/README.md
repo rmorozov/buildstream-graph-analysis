@@ -99,7 +99,15 @@ rather than the pool sitting idle after one element.
 (`auto`) - pool ceiling 3 = 1 implicit job + 2 FIFO-seeded tokens
 (`ceiling - 1`); measured 2 -> 3 (`per_element_parallelism.peak_work_
 concurrency`, `plane2-off.json`/`plane2-auto.json`, the two `bga
-capture run` commands above). Wall: compile share 64% (`off`,
+capture run` commands above). From UX-858, 2026-09-15, the pool's
+ceiling is the host's own capacity rather than `cores - builders` - 4
+here, not 3 - seeded at `ceiling - 1` = 3, so the giant's expected
+width is now 4 against 2; the dated readings above were taken at
+ceiling 3, before this change. Measured 2026-09-15 with `--builders 4`
+(builders equal to the cores, which opened at ceiling 1 before
+UX-858), quiet box, fresh caches: `off` 296.26s, `auto` 256.47s
+(IMPROVED -13.4%), the giant 291.30s -> 250.30s, its width 2 -> 4,
+its compile span 76.66s -> 39.08s, the pool 0 -> 3 over three adds. Wall: compile share 64% (`off`,
 `work_span_s 89.01s` / `giant.bst|BUILD dur_us 140.246s` in
 `run-off/trace.json`) gives an Amdahl-style expected `auto` wall of
 147.16s x (0.36 + 0.64 x 2/3) = 115.8s if only the compile phase moved

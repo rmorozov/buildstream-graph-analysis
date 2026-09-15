@@ -4,16 +4,22 @@ own FIFO, following `cpu_busy_cores` and PSI at 250ms rather than
 drives `tick()` directly with a scripted `(busy_cores, psi)` series
 against a real FIFO, never the daemon thread.
 """
+import array
+import fcntl
 import json
 import os
+import termios
 import time
 
 from tools import bst_native_build_tracer as tracer
 
 
-def _controller(tmp_path, ceiling=4, capacity=4, psi_path=None, **kwargs):
-    path, fd, tokens = tracer.open_jobserver(ceiling, str(tmp_path))
-    assert tokens == ceiling - 1
+def _controller(tmp_path, ceiling=4, capacity=4, psi_path=None, seed=None, **kwargs):
+    path, fd, tokens = tracer.open_jobserver(ceiling, str(tmp_path), seed=seed)
+    # UX-858's verifier: open_jobserver clamps a seed above the ceiling
+    # the same way PoolController does, so this asserts the clamped
+    # value, not the raw one a caller passed.
+    assert tokens == (ceiling - 1 if seed is None else min(seed, ceiling - 1))
     ledger = str(tmp_path / "ledger.jsonl")
     # Pinned away from /proc/pressure/cpu: CI's runner has it (avg10
     # 19.31 on 2026-09-14), this box does not, and a scripted series
@@ -23,9 +29,19 @@ def _controller(tmp_path, ceiling=4, capacity=4, psi_path=None, **kwargs):
     psi_path = psi_path or str(tmp_path / "no-psi")
     pc = tracer.PoolController(fd, ceiling, capacity=capacity,
                                ledger_path=ledger,
-                               psi_paths={"cpu": psi_path, "memory": str(tmp_path / "no-memory-psi")},
+                               psi_paths={"cpu": psi_path,
+                                         "memory": str(tmp_path / "no-memory-psi"),
+                                         "seed": seed},
                                **kwargs)
     return pc, path, fd, ledger
+
+
+def _readable(fd):
+    """The FIFO's own readable byte count (`FIONREAD`) - non-destructive,
+    unlike `os.read`, so a test can check it between ticks."""
+    buf = array.array("i", [0])
+    fcntl.ioctl(fd, termios.FIONREAD, buf, True)
+    return buf[0]
 
 
 def _rows(ledger):
@@ -199,3 +215,38 @@ class TestAHostWithPSIReadsItsOwnFile:
         row = pc.tick(busy_cores=0.5)
         assert row["action"] == "withdraw" and row["psi_some10"] == 19.31
         os.close(fd)
+
+
+class TestThePoolGrowsTowardTheMachineNotItsOpeningSeed:
+    """UX-858: 16 `--builders` on a 16-core host used to size the
+    ceiling at `cores - builders`, floored at 1 - a pool that could
+    never grow, since `_handle_underload` only adds while `pool <
+    ceiling - 1`. The ceiling is now the host's own capacity; only the
+    seed reads `--builders`."""
+
+    def test_ten_idle_ticks_grow_the_pool_from_a_zero_seed(self, tmp_path):
+        from bga.cli import resolve_jobserver_ceiling
+        mode, ceiling, seed = resolve_jobserver_ceiling(
+            'auto', ['bst', 'build', '--builders', '16'], cpu_count=16)
+        assert (mode, ceiling, seed) == ('auto', 16, 0)
+
+        pc, path, fd, ledger = _controller(tmp_path, ceiling=ceiling,
+                                           capacity=ceiling, seed=seed)
+        assert pc.pool == 0
+        readings = [pc.tick(busy_cores=0.1)["pool"] for _ in range(10)]
+        assert readings == sorted(readings), "never shrinks on an idle series"
+        assert readings[-1] > 0, "ten idle ticks on a 16-core box must add tokens"
+        assert readings[-1] <= ceiling - 1, "never crosses the ceiling"
+        assert _readable(fd) == pc.pool, "the FIFO holds exactly what the pool tracks"
+        pc.stop()
+        tracer.close_jobserver(path, fd)
+
+    def test_a_seed_above_the_ceiling_clamps_rather_than_starting_full(self, tmp_path):
+        """UX-858's verifier: a hand-typed `--jobserver-seed` above the
+        ceiling must not start the pool - or the FIFO - past `ceiling -
+        1`, the invariant every other guard here holds."""
+        pc, path, fd, ledger = _controller(tmp_path, ceiling=4, capacity=4, seed=4)
+        assert pc.pool == 3
+        assert _readable(fd) == 3, "open_jobserver clamps the FIFO the same way"
+        pc.stop()
+        tracer.close_jobserver(path, fd)

@@ -3059,8 +3059,14 @@ _RUN_INSTANCE_HINT = {
                                "this run's jobserver."},
             "ceiling": {
                 QUANTITY: "count",
-                "description": "The token count given or derived; null "
-                               "when off."},
+                "description": "The pool's capacity: the host's cores "
+                               "under auto, the value given under n; "
+                               "null when off."},
+            "seed": {
+                QUANTITY: "count",
+                "description": "Tokens the FIFO opened holding (UX-858): "
+                               "max(0, ceiling - builders) under auto, "
+                               "ceiling - 1 otherwise; null when off."},
             "auth": {
                 "description": "fd or fifo, the auth style the tracer "
                                "used; null when the jobserver was off."},

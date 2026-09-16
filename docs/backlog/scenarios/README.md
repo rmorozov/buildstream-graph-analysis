@@ -15,12 +15,12 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-874 scenarios: **0 open**, 874 closed.
+875 scenarios: **1 open**, 874 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
-| capture | 0 | 122 |
+| capture | 1 | 123 |
 | analysis | 0 | 118 |
 | contracts | 0 | 50 |
 | viewer | 0 | 177 |
@@ -36,6 +36,7 @@ task file, which is the only place it ever lived twice.
 
 | ID | Scenario | Topic | Priority | Serves | Status |
 |---|---|---|---|---|---|
+| UX-878 | the injected jobserver never reaches gcc's lto-wrapper as an fd it can't use | capture | High | R2 | 🔴 Not Started |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

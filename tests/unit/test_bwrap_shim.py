@@ -21,7 +21,9 @@ from tools.native_trace.bwrap_shim import (
     JOBSERVER_JOINED,
     JOBSERVER_PINNED,
     JOBSERVER_UNKNOWN_KIND,
+    _downgrade_fifo_to_fd_if_sandbox_make_rejects_it,
     _element_kind_env,
+    _make_probe_cache_path,
     _resolve_kind_and_probe,
     _resolve_proxy_auth,
     build_shim_argv,
@@ -31,9 +33,12 @@ from tools.native_trace.bwrap_shim import (
     kind_job_env,
     parse_element_max_jobs,
     parse_ninja_help,
+    probe_make,
     probe_ninja,
     record_jobserver_decision,
+    sandbox_make_auth_style,
     split_bwrap_args,
+    style_for_make_version,
 )
 
 REAL_BWRAP_ARGV = [
@@ -929,6 +934,211 @@ def test_a_fifo_bound_onto_its_own_host_path_reds_under_the_same_bwrap(tmp_path)
 
     assert result.returncode == 1
     assert "Read-only file system" in result.stderr
+
+
+# --- UX-874: the jobserver auth style follows the make that consumes it --
+#
+# `_fake_bwrap_with_make` extends `_fake_readonly_root_bwrap`'s own
+# read-only-root refusal with a `make --version` case ahead of it - one
+# fake `real_bwrap` serves both UX-874's sandbox-make probe and the
+# final composed argv's own real run, the way one real sandbox's make is
+# probed and then actually invoked.
+
+def _fake_bwrap_with_make(path, marker, bind_dst, version):
+    body = (
+        'case "$*" in\n'
+        f'  *"make --version") printf "GNU Make {version}\\n"; exit 0 ;;\n'
+        'esac\n'
+        'while [ $# -gt 0 ]; do\n'
+        '  case "$1" in\n'
+        '    --bind|--ro-bind|--dev-bind)\n'
+        '      dst="$3"\n'
+        '      case "$dst" in\n'
+        f'        {bind_dst}|{bind_dst}/*|/tmp|/tmp/*) ;;\n'
+        '        *) echo "bwrap: Can'"'"'t mkdir parents for $dst: '
+        'Read-only file system" >&2; exit 1 ;;\n'
+        '      esac\n'
+        '      shift 3\n'
+        '      ;;\n'
+        '    *) shift ;;\n'
+        '  esac\n'
+        'done\n'
+        'exit 0\n'
+    )
+    return _fake_real_bwrap(path, marker, body)
+
+
+def test_fifo_style_downgrades_to_fd_when_the_sandbox_make_is_4_3(tmp_path):
+    """Motivation, pasted live: GNU Make 4.3 rejects `fifo:` outright
+    (`internal error: invalid --jobserver-auth string`) - `fifo:/tmp/
+    .bst-native-trace/jobserver` would kill this element's build. The
+    shim probes this element's own sandbox make, finds 4.3, and opens
+    the fd fallback instead - a real, open, inheritable fd threaded
+    through `--jobserver-auth=<fd>,<fd>`, not the string."""
+    bind_dst = "/tmp/.bst-native-trace"
+    fake = _fake_bwrap_with_make(tmp_path / "real-bwrap", tmp_path / "marker",
+                                 bind_dst, "4.3")
+    bind_src = str(tmp_path / "host-trace-dir")
+    os.makedirs(bind_src)
+    fifo_path = os.path.join(bind_src, "jobserver")
+    os.mkfifo(fifo_path)
+
+    pool = _downgrade_fifo_to_fd_if_sandbox_make_rejects_it(
+        "make", fake, [], str(tmp_path / "make_probe.json"),
+        pool={"fd": None, "fifo": fifo_path, "proxy_fd": None, "proxy_fifo": None})
+    try:
+        assert pool["fifo"] is None
+        assert pool["fd"] is not None
+        os.fstat(pool["fd"])  # a real, open fd
+
+        argv = build_shim_argv(
+            real_bwrap=fake,
+            bst_args=["--unshare-pid", "--dir", "core.bst", "--chdir", "core.bst",
+                     "sh", "-c", "make"],
+            bind_src=bind_src, bind_dst=bind_dst,
+            preload_so=f"{bind_dst}/hook.so", trace_log=f"{bind_dst}/trace.log",
+            jobserver_fd=pool["fd"], jobserver_fifo=pool["fifo"], element_kind="make")
+
+        setenv = argv.index("MAKEFLAGS")
+        assert argv[setenv + 1] == f"--jobserver-auth={pool['fd']},{pool['fd']}"
+        assert "fifo:" not in argv[setenv + 1]
+
+        result = _run_argv_through(fake, argv, tmp_path)
+
+        assert result.returncode == 0, result.stderr
+    finally:
+        os.close(pool["fd"])
+
+
+def test_fifo_style_stands_when_the_sandbox_make_is_4_4(tmp_path):
+    """The other side of the same cutoff: a sandbox make new enough to
+    parse `fifo:` gets it unchanged - the probe narrows, never widens."""
+    bind_dst = "/tmp/.bst-native-trace"
+    fake = _fake_bwrap_with_make(tmp_path / "real-bwrap", tmp_path / "marker",
+                                 bind_dst, "4.4")
+    bind_src = str(tmp_path / "host-trace-dir")
+    os.makedirs(bind_src)
+    fifo_path = os.path.join(bind_src, "jobserver")
+    os.mkfifo(fifo_path)
+
+    pool = _downgrade_fifo_to_fd_if_sandbox_make_rejects_it(
+        "make", fake, [], str(tmp_path / "make_probe.json"),
+        pool={"fd": None, "fifo": fifo_path, "proxy_fd": None, "proxy_fifo": None})
+
+    assert pool["fd"] is None
+    assert pool["fifo"] == fifo_path
+
+    argv = build_shim_argv(
+        real_bwrap=fake,
+        bst_args=["--unshare-pid", "--dir", "core.bst", "--chdir", "core.bst",
+                 "sh", "-c", "make"],
+        bind_src=bind_src, bind_dst=bind_dst,
+        preload_so=f"{bind_dst}/hook.so", trace_log=f"{bind_dst}/trace.log",
+        jobserver_fifo=pool["fifo"], element_kind="make")
+
+    setenv = argv.index("MAKEFLAGS")
+    assert argv[setenv + 1] == f"--jobserver-auth=fifo:{bind_dst}/jobserver"
+
+    result = _run_argv_through(fake, argv, tmp_path)
+
+    assert result.returncode == 0, result.stderr
+
+
+def test_the_proxy_follows_the_same_downgrade_as_the_global_fifo(tmp_path):
+    """`UX-849`'s per-element proxy is consumed by the same sandbox make
+    as the global FIFO - the downgrade has to apply to both."""
+    bind_dst = "/tmp/.bst-native-trace"
+    fake = _fake_bwrap_with_make(tmp_path / "real-bwrap", tmp_path / "marker",
+                                 bind_dst, "4.3")
+    proxy_fifo_path = str(tmp_path / "proxy.fifo")
+    os.mkfifo(proxy_fifo_path)
+
+    pool = _downgrade_fifo_to_fd_if_sandbox_make_rejects_it(
+        "make", fake, [], str(tmp_path / "make_probe.json"),
+        pool={"fd": None, "fifo": None, "proxy_fd": None, "proxy_fifo": proxy_fifo_path})
+
+    try:
+        assert pool["proxy_fifo"] is None
+        assert pool["proxy_fd"] is not None
+        os.fstat(pool["proxy_fd"])
+    finally:
+        os.close(pool["proxy_fd"])
+
+
+def test_a_kind_outside_make_like_is_never_probed_and_never_narrowed(tmp_path):
+    """Only a make-like kind's own make ever reads the auth string
+    directly (`_MAKE_LIKE_KINDS`) - a cmake element gets `fifo` back
+    unnarrowed, and the fake's marker (written on every invocation)
+    never appears, so the probe never ran."""
+    marker = tmp_path / "marker"
+    fake = _fake_bwrap_with_make(tmp_path / "real-bwrap", marker,
+                                 "/tmp/.bst-native-trace", "4.3")
+
+    style = sandbox_make_auth_style("cmake", fake, [], str(tmp_path / "make_probe.json"))
+
+    assert style == "fifo"
+    assert not marker.exists()
+
+
+def test_a_second_probe_make_call_is_served_from_the_cache_without_rerunning(tmp_path):
+    marker = tmp_path / "marker"
+    fake = _fake_bwrap_with_make(tmp_path / "real-bwrap", marker,
+                                 "/tmp/.bst-native-trace", "4.3")
+    cache_path = str(tmp_path / "make_probe.json")
+
+    first = probe_make(fake, [], cache_path)
+    second = probe_make(fake, [], cache_path)
+
+    assert first == second == {"available": True, "version": "GNU Make 4.3"}
+    assert marker.read_text().splitlines() == ["run"]
+
+
+def test_style_for_make_version_shares_the_4_4_cutoff_with_jobserver_auth_style():
+    """`jobserver_auth_style`'s own host-probe values (UX-841), read
+    through the shared function rather than a second regex/tuple."""
+    assert style_for_make_version("GNU Make 4.4\n") == "fifo"
+    assert style_for_make_version("GNU Make 4.3\n") == "fd"
+    assert style_for_make_version("GNU Make 5.0\n") == "fifo"
+    assert style_for_make_version("") == "fd"
+    assert style_for_make_version(None) == "fd"
+    assert style_for_make_version("not a version string") == "fd"
+
+
+def test_make_probe_cache_path_is_keyed_per_element():
+    """`_make_probe_cache_path` (verifier): two elements share
+    `dirname(BST_TRACE_JOBSERVER)` but must not share a probe file -
+    `ninja_probe.json`'s own per-capture sharing is wrong for a make
+    that can genuinely differ element to element."""
+    jobserver_path = "/tmp/.bst-native-trace/jobserver"
+
+    cache_a = _make_probe_cache_path(jobserver_path, "mod-a.bst")
+    cache_b = _make_probe_cache_path(jobserver_path, "mod-b.bst")
+
+    assert cache_a != cache_b
+    assert os.path.dirname(cache_a) == os.path.dirname(cache_b) == "/tmp/.bst-native-trace"
+    assert _make_probe_cache_path(None, "mod-a.bst") is None
+
+
+def test_two_make_kind_elements_in_one_capture_each_probe_their_own_sandbox_make(
+        tmp_path):
+    """UX-874 (verifier): the junctioned/toolchain shape - two make-kind
+    elements in one capture whose own tar-staged makes genuinely differ
+    (4.4 and 4.3) must each get their own style, not the first
+    element's cached answer."""
+    jobserver_path = str(tmp_path / "jobserver")
+    fake_new = _fake_bwrap_with_make(tmp_path / "bwrap-new", tmp_path / "marker-new",
+                                     "/tmp/.bst-native-trace", "4.4")
+    fake_old = _fake_bwrap_with_make(tmp_path / "bwrap-old", tmp_path / "marker-old",
+                                     "/tmp/.bst-native-trace", "4.3")
+
+    cache_a = _make_probe_cache_path(jobserver_path, "mod-a.bst")
+    cache_b = _make_probe_cache_path(jobserver_path, "mod-b.bst")
+
+    style_a = sandbox_make_auth_style("make", fake_new, [], cache_a)
+    style_b = sandbox_make_auth_style("make", fake_old, [], cache_b)
+
+    assert style_a == "fifo"
+    assert style_b == "fd"
 
 
 # --- UX-855: probe_ninja's own outcomes, not a hand-built dict ------------

@@ -308,6 +308,17 @@ def parse_ninja_help(text: str) -> bool:
     return "jobserver" in text.lower()
 
 
+def _probe_tool_version(real_bwrap: str, opts: list[str], tool: str,
+                        timeout: float) -> subprocess.CompletedProcess:
+    """The one `<tool> --version` subprocess call site `probe_ninja` and
+    `probe_make` (UX-874) both use - a second sandbox-tool probe is a
+    new caller of the same forced S603 (UX-843), not a new finding."""
+    version = subprocess.run(
+        [real_bwrap, *opts, tool, "--version"],
+        capture_output=True, text=True, timeout=timeout, check=False)
+    return version
+
+
 def probe_ninja(real_bwrap: str, opts: list[str], cache_path: Optional[str],
                 timeout: float = 5.0) -> dict:
     """UX-843: `ninja --version` then `--help`, run through this same
@@ -321,9 +332,7 @@ def probe_ninja(real_bwrap: str, opts: list[str], cache_path: Optional[str],
             return json.load(handle)
     result = {"available": False, "version": None, "jobserver_client": None}
     try:
-        version = subprocess.run(
-            [real_bwrap, *opts, "ninja", "--version"],
-            capture_output=True, text=True, timeout=timeout, check=False)
+        version = _probe_tool_version(real_bwrap, opts, "ninja", timeout)
         if version.returncode == 0 and version.stdout.strip():
             result["available"] = True
             result["version"] = version.stdout.strip()
@@ -339,6 +348,83 @@ def probe_ninja(real_bwrap: str, opts: list[str], cache_path: Optional[str],
                 open(cache_path, "w", encoding="utf-8") as handle:
             json.dump(result, handle)
     return result
+
+
+_MAKE_VERSION_RE = re.compile(r"GNU Make (\d+)\.(\d+)")
+_MAKE_JOBSERVER_AUTH_MIN_VERSION = (4, 4)
+
+
+def style_for_make_version(make_version_output: Optional[str]) -> str:
+    """UX-841's cutoff, shared: `"fifo"` for GNU Make >= 4.4, `"fd"`
+    otherwise (absent/unparseable included). `jobserver_auth_style`'s
+    host pick and UX-874's sandbox probe below both apply this one
+    function rather than each carrying its own regex and tuple."""
+    match = _MAKE_VERSION_RE.search(make_version_output or "")
+    if not match:
+        return "fd"
+    version = (int(match.group(1)), int(match.group(2)))
+    return "fifo" if version >= _MAKE_JOBSERVER_AUTH_MIN_VERSION else "fd"
+
+
+def probe_make(real_bwrap: str, opts: list[str], cache_path: Optional[str],
+               timeout: float = 5.0) -> dict:
+    """UX-874: `make --version` run through this same sandbox argv -
+    `probe_ninja`'s own shape, cached at `cache_path`
+    (`_make_probe_cache_path`: per element, not per capture -
+    `ninja_probe.json`'s own sharing is wrong for a make that can
+    genuinely differ element to element). Never raises: a probe that
+    cannot run just means an absent sandbox make, exactly
+    `style_for_make_version`'s own "fd" case."""
+    if cache_path:
+        with contextlib.suppress(OSError, ValueError), \
+                open(cache_path, encoding="utf-8") as handle:
+            return json.load(handle)
+    result = {"available": False, "version": None}
+    try:
+        version = _probe_tool_version(real_bwrap, opts, "make", timeout)
+        if version.returncode == 0 and version.stdout.strip():
+            result["available"] = True
+            result["version"] = version.stdout.strip()
+    except (OSError, subprocess.TimeoutExpired):
+        pass
+    if cache_path:
+        with contextlib.suppress(OSError), \
+                open(cache_path, "w", encoding="utf-8") as handle:
+            json.dump(result, handle)
+    return result
+
+
+def _make_probe_cache_path(jobserver_path: Optional[str],
+                           element: Optional[str]) -> Optional[str]:
+    """UX-874 (verifier): `ninja_probe.json`'s own cache is shared by
+    the whole capture (one `dirname(BST_TRACE_JOBSERVER)`, set once in
+    `run_traced_build`) - real for ninja (one generator per build) but
+    wrong for make: two make-kind elements can genuinely tar-stage
+    different makes (the junctioned/toolchain shape), and a shared key
+    would hand the second element the first one's stale answer,
+    reproducing the exact defect this item fixes. Keyed per element
+    (`main`'s own `element`, already derived by `extract_element_name`)
+    - `ninja_probe.json`'s per-capture cache is unchanged, a separate,
+    pre-existing matter."""
+    if not jobserver_path:
+        return None
+    tag = (element or "unknown").replace("/", "_")
+    return os.path.join(os.path.dirname(jobserver_path), f"make_probe-{tag}.json")
+
+
+def sandbox_make_auth_style(element_kind: Optional[str], real_bwrap: str,
+                            opts: list[str], cache_path: Optional[str]) -> str:
+    """UX-874: this element's own sandbox `make --version`, probed
+    through the real bwrap - `"fd"` when the sandbox make can't parse
+    `fifo:` (absent, unparseable, or below 4.4), `"fifo"` otherwise.
+    Only a make-like kind's own make ever reads the auth string
+    directly (`_MAKE_LIKE_KINDS`), so any other kind is reported
+    unnarrowed - the style the host already resolved stands, never
+    widened by this probe."""
+    if element_kind not in _MAKE_LIKE_KINDS:
+        return "fifo"
+    probe = probe_make(real_bwrap, opts, cache_path)
+    return style_for_make_version(probe.get("version"))
 
 
 # UX-846: where the wrapper directory lands inside the sandbox - under
@@ -981,6 +1067,17 @@ def run_and_mark_done(real_bwrap: str, argv: list[str], done_path: str) -> int:
     return exit_like(status)
 
 
+def _open_inheritable_rdwr(path: str) -> int:
+    """The one way this module opens a jobserver FIFO for `fd` style -
+    read-write so the open cannot block on a second end, inheritable so
+    `execv` carries it into the real bwrap (`os.open` marks a new fd
+    non-inheritable by default, PEP 446). Shared by `open_jobserver_fd`,
+    `_resolve_proxy_auth`, and UX-874's downgrade below."""
+    fd = os.open(path, os.O_RDWR)
+    os.set_inheritable(fd, True)
+    return fd
+
+
 def open_jobserver_fd() -> tuple[Optional[int], Optional[str]]:
     """The `(fd, fifo_path)` `main` hands `build_shim_argv` - exactly one
     of the pair set, or both `None`.
@@ -998,9 +1095,7 @@ def open_jobserver_fd() -> tuple[Optional[int], Optional[str]]:
         return None, None
     if os.environ.get("BST_TRACE_JOBSERVER_AUTH") == "fifo":
         return None, jobserver_path
-    fd = os.open(jobserver_path, os.O_RDWR)
-    os.set_inheritable(fd, True)
-    return fd, None
+    return _open_inheritable_rdwr(jobserver_path), None
 
 
 def _project_max_jobs_env() -> Optional[int]:
@@ -1046,9 +1141,50 @@ def _resolve_proxy_auth(proxy_fifo: Optional[str]) -> tuple[Optional[int], Optio
         return None, None
     if os.environ.get("BST_TRACE_JOBSERVER_AUTH") == "fifo":
         return None, proxy_fifo
-    fd = os.open(proxy_fifo, os.O_RDWR)
-    os.set_inheritable(fd, True)
-    return fd, None
+    return _open_inheritable_rdwr(proxy_fifo), None
+
+
+def _downgrade_fifo_to_fd_if_sandbox_make_rejects_it(
+        element_kind: Optional[str], real_bwrap: str, opts: list[str],
+        cache_path: Optional[str], pool: dict) -> dict:
+    """UX-874: `pool` (`{fd, fifo, proxy_fd, proxy_fifo}`) unchanged
+    unless the request is `fifo` (a `fifo` entry present) and this
+    element's own sandbox make - probed once, cached at `cache_path`
+    (`_make_probe_cache_path`, per element) - is below
+    4.4/absent/unparseable, in which case both the global FIFO and
+    UX-849's per-element proxy (the same sandbox make consumes either)
+    are opened `fd` style instead. Never widens: a request already `fd`
+    has no `fifo` entry to act on.
+    """
+    if pool.get("fifo") is None and pool.get("proxy_fifo") is None:
+        return pool
+    if sandbox_make_auth_style(element_kind, real_bwrap, opts, cache_path) != "fd":
+        return pool
+    downgraded = dict(pool)
+    if pool.get("fifo") is not None:
+        downgraded["fd"] = _open_inheritable_rdwr(pool["fifo"])
+        downgraded["fifo"] = None
+    if pool.get("proxy_fifo") is not None:
+        downgraded["proxy_fd"] = _open_inheritable_rdwr(pool["proxy_fifo"])
+        downgraded["proxy_fifo"] = None
+    return downgraded
+
+
+def _narrow_jobserver_to_sandbox_make(probe: dict, pinned: bool, pool: dict) -> dict:
+    """`main`'s own UX-874 wiring, split out to keep its statement count
+    under `PLR0915`'s cap and its argument count under `PLR0913`'s -
+    `probe` (`{element, element_kind, real_bwrap, opts}`) and `pool`
+    (`{fd, fifo, proxy_fd, proxy_fifo}`) kept as one param each, the
+    same grouping `_jobserver_injection`'s own `binds`/`pool` already
+    use. `_make_probe_cache_path` (per element) then
+    `_downgrade_fifo_to_fd_if_sandbox_make_rejects_it`. `pool` unchanged
+    for a pinned element - nothing is injected for it either way."""
+    if pinned:
+        return pool
+    cache_path = _make_probe_cache_path(
+        os.environ.get("BST_TRACE_JOBSERVER"), probe["element"])
+    return _downgrade_fifo_to_fd_if_sandbox_make_rejects_it(
+        probe["element_kind"], probe["real_bwrap"], probe["opts"], cache_path, pool)
 
 
 def _element_kind_env(element: Optional[str]) -> Optional[str]:
@@ -1197,6 +1333,15 @@ def main() -> int:
         parse_element_max_jobs(opts_now), project_max_jobs) == JOBSERVER_PINNED
     proxy_fifo_host, proxy_done_path = _element_proxy_paths(element, pinned_now)
     proxy_fd, proxy_fifo = _resolve_proxy_auth(proxy_fifo_host)
+    # UX-874: the host chose `fifo:` from *its own* `make --version`
+    # (jobserver_auth_style, UX-841) - narrowed here, per element.
+    jobserver_pool = _narrow_jobserver_to_sandbox_make(
+        {"element": element, "element_kind": kind_context["element_kind"],
+         "real_bwrap": real_bwrap, "opts": opts_now}, pinned_now,
+        pool={"fd": jobserver_fd, "fifo": jobserver_fifo,
+             "proxy_fd": proxy_fd, "proxy_fifo": proxy_fifo})
+    jobserver_fd, jobserver_fifo = jobserver_pool["fd"], jobserver_pool["fifo"]
+    proxy_fd, proxy_fifo = jobserver_pool["proxy_fd"], jobserver_pool["proxy_fifo"]
     if inject:
         argv = build_shim_argv(real_bwrap, sys.argv[1:], bind_src, bind_dst,
                                preload_so, trace_log,

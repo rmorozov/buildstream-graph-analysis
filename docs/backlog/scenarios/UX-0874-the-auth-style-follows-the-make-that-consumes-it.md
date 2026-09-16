@@ -55,8 +55,10 @@ nothing; parallel with UX-875 (disjoint surfaces).
 
 The host request default (`UX-841`'s `auto` -> fifo/fd from the host
 make) - only the sandbox-consumer narrowing is new here. Making a
-sandbox with no make at all join anything. Caching the sandbox make
-probe across elements (per-element like `ninja_probe` is enough).
+sandbox with no make at all join anything. The make probe's own cache
+is keyed per element (`_make_probe_cache_path`), not per capture -
+`ninja_probe.json`'s own per-capture sharing is a separate,
+pre-existing matter, not claimed fixed here.
 
 ## Acceptance Test
 
@@ -70,3 +72,60 @@ verbatim - the `4.3` case keeps `fifo:` and reddens. A live pair on a
 make-kind element whose sysroot make is below 4.4, pasted in the
 Outcome (or, if this box has only one make, a fake-make sandbox
 reading pasted instead, said to be that).
+
+## Outcome
+
+**Gap measured.** This box's own `make --version` is `GNU Make 4.3`
+(`apt list --installed`: `make/noble,now 4.3-4.1build2`) - one make,
+already below the 4.4 cutoff, so `jobserver_auth_style("auto")` never
+even reaches `fifo` here on its own; the field defect (host 4.4,
+sandbox 4.3) needs a fake sandbox make to reproduce, per the
+Acceptance Test's own fallback. Pre-fix, `build_shim_argv` with
+`BST_TRACE_JOBSERVER_AUTH=fifo` and `element_kind="make"` always
+injected `--jobserver-auth=fifo:<path>` regardless of what the
+sandbox's own make could parse.
+
+**Close measured.** `sandbox_make_auth_style`/`probe_make` (modeled on
+`probe_ninja` via a shared `_probe_tool_version` call site, so a second
+sandbox-tool probe adds no new `S603` finding) now probe this element's
+own sandbox `make --version` through the real bwrap whenever the
+request is `fifo`, and `_downgrade_fifo_to_fd_if_sandbox_make_rejects_
+it` opens the fd (`_open_inheritable_rdwr`, shared with
+`open_jobserver_fd`/`_resolve_proxy_auth`) for both the global FIFO and
+UX-849's proxy when that probe resolves `fd`. `jobserver_auth_style`'s
+own 4.4 cutoff is now `bwrap_shim.style_for_make_version`, imported,
+not re-coded. Verifier fix: the cache is keyed per element
+(`_make_probe_cache_path`, `make_probe-<element>.json`), not shared
+per capture like `ninja_probe.json` - two make-kind elements whose own
+sandbox makes genuinely differ (the junctioned/toolchain shape) each
+probe their own now, instead of the second reading the first's stale
+answer. `main`'s own wiring moved into `_narrow_jobserver_to_sandbox_
+make` (verifier fix: kept `main` under `PLR0915`'s 50-statement cap;
+`{probe}`/`{pool}` dict params kept it under `PLR0913`'s arg cap too).
+
+Fake-make sandbox reading (this box has one make; said to be a fake,
+GNU Make 4.3/4.4 built by `_fake_bwrap_with_make`), pasted:
+`pytest -q tests/unit/test_bwrap_shim.py -k "fifo_style_downgrades or
+fifo_style_stands or proxy_follows_the_same_downgrade or
+outside_make_like or second_probe_make or style_for_make_version or
+cache_path_is_keyed or two_make_kind_elements"`: `8 passed in 0.15s`.
+Full file plus the lifecycle guard: `pytest -q
+tests/unit/test_bwrap_shim.py
+tests/unit/test_the_jobserver_fifo_has_a_lifecycle.py`: `71 passed in
+0.56s`. `make test-touching` (post-amend diff, narrower than the
+first close's): `47 file(s) selected (28 census + 19 naming the
+change) - 1809 passed, 7 skipped in 41.81s`. `make lint`:
+`clean: 566 finding(s) match tests/quality_baseline.json; ...`, exit
+0 - no `new:` line (the earlier commit's `PLR0915` on `main` and the
+duplicate `S603` on `probe_make` are both gone). `python3
+tools/dev_sizes.py --check` (post `--adopt --force`, 2 cells changed):
+`sizes ok: 122 file(s) measured`. `python3 tools/dev_baseline.py
+--check`: exit 0, no `new:` line. `pymarkdown scan` on this file:
+clean. `make check-clean`: `OK: no ignored files are tracked`.
+
+**Mutation table.**
+
+| mutation | reddened | count |
+|---|---|---|
+| `sandbox_make_auth_style` returns `"fifo"` unconditionally (probe dropped) | `test_fifo_style_downgrades_to_fd_when_the_sandbox_make_is_4_3`, `test_the_proxy_follows_the_same_downgrade_as_the_global_fifo`, `test_two_make_kind_elements_in_one_capture_each_probe_their_own_sandbox_make` | 3 failed, 5 passed -> reverted, 71/71 |
+| `_make_probe_cache_path` drops the element tag (shared `make_probe.json`) | `test_make_probe_cache_path_is_keyed_per_element`, `test_two_make_kind_elements_in_one_capture_each_probe_their_own_sandbox_make` | 2 failed, 6 passed -> reverted, 71/71 |

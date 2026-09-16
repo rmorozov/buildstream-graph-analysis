@@ -2626,6 +2626,53 @@ def _translate_capture_jobserver(argv: list) -> list:
     return argv[:2] + new_rest
 
 
+def _translate_capture_jobserver_auth_override(argv: list) -> list:
+    """`bga capture run ... --jobserver-auth-override 'fd:<glob>[,<glob>]
+    fifo:<glob> off:<glob>' ...` (UX-879) -> `BST_TRACE_JOBSERVER_AUTH_MAP`
+    in this process's own environment, and the flag stripped from argv -
+    the tracer's own argparse never sees it. Repeatable (each occurrence's
+    groups join into the one map, `;`-separated) or one value with
+    space-separated groups, since a shell hands a quoted string through
+    as a single argv token either way.
+
+    Always resolves (or clears) the env var on every `capture run`, the
+    same stale-value discipline `set_jobserver_mode_env` documents for
+    `BGA_JOBSERVER_MODE` - a prior in-process call's map must not survive
+    into a capture that named none.
+    """
+    if len(argv) < 2 or argv[0] != 'capture' or argv[1] != 'run':
+        return argv
+    rest = argv[2:]
+    if '--' in rest:
+        split = rest.index('--')
+        tracer_args, wrapped_cmd = rest[:split], rest[split + 1:]
+        has_sep = True
+    else:
+        tracer_args, wrapped_cmd = rest, []
+        has_sep = False
+    out = []
+    groups = []
+    i = 0
+    while i < len(tracer_args):
+        tok = tracer_args[i]
+        if tok == '--jobserver-auth-override' and i + 1 < len(tracer_args):
+            groups.append(';'.join(tracer_args[i + 1].split()))
+            i += 2
+            continue
+        if tok.startswith('--jobserver-auth-override='):
+            groups.append(';'.join(tok.split('=', 1)[1].split()))
+            i += 1
+            continue
+        out.append(tok)
+        i += 1
+    if groups:
+        os.environ['BST_TRACE_JOBSERVER_AUTH_MAP'] = ';'.join(groups)
+    else:
+        os.environ.pop('BST_TRACE_JOBSERVER_AUTH_MAP', None)
+    new_rest = out + (['--'] + wrapped_cmd if has_sep else [])
+    return argv[:2] + new_rest
+
+
 def _maybe_print_schema(argv: list) -> Optional[int]:
     """`bga <command> --schema` -> the JSON Schema of its output, exit 0.
 
@@ -2790,6 +2837,9 @@ def _run(argv: Optional[list[str]] = None) -> int:
     # vocabulary, resolved before the tracer ever sees it - see
     # `_translate_capture_jobserver`.
     raw_argv = _translate_capture_jobserver(raw_argv)
+    # UX-879: `--jobserver-auth-override` is `bga`'s own flag too, never
+    # the tracer's - see `_translate_capture_jobserver_auth_override`.
+    raw_argv = _translate_capture_jobserver_auth_override(raw_argv)
 
     from .tools_dispatch import dispatch
     tool_exit = dispatch(raw_argv)

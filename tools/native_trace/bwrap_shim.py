@@ -28,6 +28,7 @@ reintroduce by hand and easy to miss without a fixture-driven test
 UX-11's own prototype run).
 """
 import contextlib
+import fnmatch
 import json
 import os
 import re
@@ -443,6 +444,55 @@ _MAKE_CONSUMER_POLICIES = frozenset({"make", "cargo", "cmake_meson", "jobs_env"}
 # a raw fd is valid.
 _COMPILER_SAFE_POLICIES = frozenset({"cmake_meson", "jobs_env", "cargo"})
 
+# UX-879: the styles a per-element override may force.
+_AUTH_OVERRIDE_STYLES = frozenset({"fd", "fifo", "off"})
+
+
+def resolve_auth_override(auth_map_str: Optional[str],
+                          element: Optional[str]) -> Optional[str]:
+    """`BST_TRACE_JOBSERVER_AUTH_MAP`'s own serialization -
+    `style:glob[,glob];style:glob...` (`bga capture run
+    --jobserver-auth-override`, UX-879) - resolved against one element
+    name. First matching style wins across the `;`-separated groups.
+    `None` for an empty/absent map, no element name, or no glob match -
+    the caller's own auto/compiler_safe path then stands unchanged.
+    Pure (no I/O), so this is unit-testable without a sandbox.
+    """
+    if not auth_map_str or not element:
+        return None
+    for group in auth_map_str.split(";"):
+        style, sep, globs = group.partition(":")
+        style = style.strip()
+        if not sep or style not in _AUTH_OVERRIDE_STYLES:
+            continue
+        for glob in globs.split(","):
+            if glob.strip() and fnmatch.fnmatch(element, glob.strip()):
+                return style
+    return None
+
+
+def _forced_auth(override: str, auth_value: str, ctx: dict) -> Optional[str]:
+    """UX-879: `auth_value` narrowed by a matched per-element override
+    instead of `_compiler_safe_makeflags` - `fd` keeps `auth_value` raw,
+    exactly as `_jobserver_injection` computed it pre-UX-878 (no fifo
+    rewrite, no scrub); `off` scrubs it (`None`), reusing the same
+    downstream MAKEFLAGS/JOBS drop UX-878's own scrub already triggers;
+    `fifo` rewrites to the `fifo:` path when one is derivable (the same
+    lookup `_compiler_safe_makeflags` uses), else leaves `auth_value`
+    unchanged rather than crash on an element with no FIFO to name.
+    `ctx`: `{bind_src, bind_dst, pool, element}` - the same bundling
+    `_compiler_safe_makeflags` uses for PLR0913's cap.
+    """
+    if override == "off":
+        return None
+    if override == "fifo" and "fifo:" not in auth_value:
+        host_fifo = _compiler_safe_fifo_host(ctx["pool"], ctx.get("element"))
+        if host_fifo is not None:
+            sandbox_fifo_path = _sandbox_fifo_path(
+                ctx["bind_src"], ctx["bind_dst"], host_fifo)
+            return f"--jobserver-auth=fifo:{sandbox_fifo_path}"
+    return auth_value
+
 
 def sandbox_make_auth_style(element_kind: Optional[str], real_bwrap: str,
                             opts: list[str], cache_path: Optional[str],
@@ -640,15 +690,23 @@ def _jobserver_injection(opts: list[str], binds: tuple, decision: str,
         kind_context.get("element_kind"), auth_value,
         kind_context.get("ninja_probe"), kind_context.get("wrappers_dir"),
         jobs_present=_setenv_value(opts, "JOBS") is not None)
-    # UX-878: for the policies an unwrapped compiler/cargo reads
-    # MAKEFLAGS directly (gcc-lto, cargo), narrow the auth to a form that
-    # survives the sandbox boundary - `None` scrubs it outright rather
-    # than hand a raw fd to a deep grandchild that cannot use it.
-    safe_auth = _compiler_safe_makeflags(
-        auth_value, policy, opts,
-        ctx={"bind_src": bind_src, "bind_dst": bind_dst, "pool": pool,
-             "real_bwrap": kind_context.get("real_bwrap"),
-             "element": kind_context.get("element")})
+    ctx = {"bind_src": bind_src, "bind_dst": bind_dst, "pool": pool,
+          "real_bwrap": kind_context.get("real_bwrap"),
+          "element": kind_context.get("element")}
+    # UX-879: a per-element override takes precedence over the
+    # auto/compiler_safe/downgrade path below - matched, it forces the
+    # style outright and `_compiler_safe_makeflags` never runs.
+    override = resolve_auth_override(
+        os.environ.get("BST_TRACE_JOBSERVER_AUTH_MAP"), ctx["element"])
+    if override is not None:
+        safe_auth = _forced_auth(override, auth_value, ctx)
+    else:
+        # UX-878: for the policies an unwrapped compiler/cargo reads
+        # MAKEFLAGS directly (gcc-lto, cargo), narrow the auth to a form
+        # that survives the sandbox boundary - `None` scrubs it outright
+        # rather than hand a raw fd to a deep grandchild that cannot use
+        # it.
+        safe_auth = _compiler_safe_makeflags(auth_value, policy, opts, ctx=ctx)
     if safe_auth != auth_value:
         pairs = [pair for pair in pairs if pair[0] != "MAKEFLAGS"]
         if safe_auth is not None:

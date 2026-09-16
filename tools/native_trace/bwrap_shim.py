@@ -263,6 +263,26 @@ _MAKE_LIKE_KINDS = frozenset({"make", "autotools"})
 _NINJA_CAPABLE_KINDS = frozenset({"cmake", "meson"})
 
 
+def compiler_safe_auth(auth_value: str, sandbox_fifo_path: Optional[str],
+                       make_below_44: bool) -> Optional[str]:
+    """UX-878: the `MAKEFLAGS` auth an *unwrapped* native jobserver
+    client (gcc's lto-wrapper, cargo) reads directly - unlike `ninja`/
+    `ld.*`/`mold`, no shell wrapper stands between it and the string bga
+    injected. A `fifo:` auth is already path-based and stands. A raw
+    `fd` auth is only valid for a direct child - gcc's lto-wrapper is a
+    deep grandchild, so the fd number is not open there (measured:
+    GCC-13 ICE, `opts-common.cc:2123`) - rewritten to `fifo:
+    <sandbox_fifo_path>` instead, which gcc-13 reopens by path. Unless a
+    sub-4.4 make shares the recipe and would reject that `fifo:` outright
+    (UX-874): then `None`, so the caller scrubs the auth for both rather
+    than re-arm either defect."""
+    if "fifo:" in auth_value:
+        return auth_value
+    if make_below_44:
+        return None
+    return f"--jobserver-auth=fifo:{sandbox_fifo_path}"
+
+
 def _ninja_aware_env(ninja_probe, wrappers_dir, auth_value, base_policy):
     """UX-843/UX-859: `JOBS` emptied, `MAKEFLAGS` injected, gated on
     what the sandbox's own `ninja --version`/`--help` probe found -
@@ -417,6 +437,12 @@ def _make_probe_cache_path(jobserver_path: Optional[str],
 # nothing) to ninja, not make, so fifo is never a problem for them.
 _MAKE_CONSUMER_POLICIES = frozenset({"make", "cargo", "cmake_meson", "jobs_env"})
 
+# UX-878: of those, the policies whose MAKEFLAGS an *unwrapped* native
+# jobserver client (gcc-lto, cargo) reads directly - "make" excluded,
+# since its MAKEFLAGS consumer is make itself, a direct child, for which
+# a raw fd is valid.
+_COMPILER_SAFE_POLICIES = frozenset({"cmake_meson", "jobs_env", "cargo"})
+
 
 def sandbox_make_auth_style(element_kind: Optional[str], real_bwrap: str,
                             opts: list[str], cache_path: Optional[str],
@@ -511,6 +537,66 @@ def _sandbox_fifo_path(bind_src: str, bind_dst: str, host_path: Optional[str]) -
     return os.path.join(bind_dst, os.path.relpath(host_path, bind_src))
 
 
+def _compiler_safe_fifo_host(pool: dict, element: Optional[str]) -> Optional[str]:
+    """UX-878 (verifier fix): the host FIFO an unwrapped compiler's
+    rewritten auth must name - a UX-849 per-element proxy's own FIFO,
+    never the *global* jobserver a proxy exists specifically not to be,
+    whichever style each happens to be in. Mirrors `_jobserver_injection`'s
+    own "proxy wins outright" precedence (`:600`), which the original
+    fix missed: `pool["proxy_fifo"]` is `None` under `fd` style
+    (`_resolve_proxy_auth` opens the fd and discards the path), so a
+    proxy active in the *default* `fd`/`auto` style is re-derived from
+    `BST_TRACE_PROXY_DIR` + `element` - `_element_proxy_paths`'s own
+    construction, at the point its own fd was opened from. `None` only
+    when a proxy is active and neither is available (defensive; not
+    reachable in practice, since a live `proxy_fd` was itself opened
+    from that same path in this same process)."""
+    proxy_active = pool.get("proxy_fd") is not None or pool.get("proxy_fifo") is not None
+    if proxy_active:
+        if pool.get("proxy_fifo") is not None:
+            return pool["proxy_fifo"]
+        proxy_dir = os.environ.get("BST_TRACE_PROXY_DIR")
+        if proxy_dir and element is not None:
+            return os.path.join(proxy_dir, f"{element}.fifo")
+        return None
+    return pool.get("fifo") or os.environ.get("BST_TRACE_JOBSERVER")
+
+
+def _compiler_safe_makeflags(auth_value: str, policy: str, opts: list[str],
+                             ctx: dict) -> Optional[str]:
+    """UX-878: `auth_value` narrowed through `compiler_safe_auth` for the
+    policies an unwrapped compiler/cargo actually reads
+    (`_COMPILER_SAFE_POLICIES`); every other policy - `make` included -
+    passes `auth_value` straight through, unchanged. Takes precedence
+    over UX-874's downgrade above it: this reads the *resolved* pool
+    (already fd if that downgrade fired) and re-derives `make_below_44`
+    from the same cached probe, so a downgraded fd is scrubbed here
+    rather than re-armed. `ctx` (`{bind_src, bind_dst, pool, real_bwrap,
+    element}`, PLR0913's cap) bundles `_jobserver_injection`'s own
+    `binds`/`pool` plus `kind_context`'s `real_bwrap`/`element`.
+    `sandbox_fifo_path`'s own host FIFO is `_compiler_safe_fifo_host`'s
+    (a proxy's own FIFO over the global one, `BST_TRACE_JOBSERVER` the
+    last resort for an fd opened from it, `open_jobserver_fd`) - `None`
+    when nothing names one (a bare fd with no FIFO behind it, e.g. a
+    unit test's own pipe) or `real_bwrap` is unknown, in which case no
+    `fifo:` rewrite is possible and `auth_value` stands, same as today.
+    """
+    if policy not in _COMPILER_SAFE_POLICIES or "fifo:" in auth_value:
+        return auth_value
+    pool = ctx["pool"]
+    real_bwrap = ctx.get("real_bwrap")
+    host_fifo = _compiler_safe_fifo_host(pool, ctx.get("element"))
+    if host_fifo is None or real_bwrap is None:
+        return auth_value
+    sandbox_fifo_path = _sandbox_fifo_path(ctx["bind_src"], ctx["bind_dst"], host_fifo)
+    cache_path = _make_probe_cache_path(
+        os.environ.get("BST_TRACE_JOBSERVER"), ctx.get("element"))
+    probe = probe_make(real_bwrap, opts, cache_path)
+    make_below_44 = bool(probe.get("available")) and \
+        style_for_make_version(probe.get("version")) == "fd"
+    return compiler_safe_auth(auth_value, sandbox_fifo_path, make_below_44)
+
+
 def _jobserver_injection(opts: list[str], binds: tuple, decision: str,
                          pool: dict, kind_context: dict) -> list[str]:
     """`build_shim_argv`'s own jobserver branch, split out to keep its
@@ -550,10 +636,23 @@ def _jobserver_injection(opts: list[str], binds: tuple, decision: str,
     # (`unknown_kind`) unless its own sandbox env carries `JOBS`
     # (`jobs_env`); cmake/meson and a `jobs_env` kind both consult the
     # ninja probe.
-    pairs, unsets, _policy = kind_job_env(
+    pairs, unsets, policy = kind_job_env(
         kind_context.get("element_kind"), auth_value,
         kind_context.get("ninja_probe"), kind_context.get("wrappers_dir"),
         jobs_present=_setenv_value(opts, "JOBS") is not None)
+    # UX-878: for the policies an unwrapped compiler/cargo reads
+    # MAKEFLAGS directly (gcc-lto, cargo), narrow the auth to a form that
+    # survives the sandbox boundary - `None` scrubs it outright rather
+    # than hand a raw fd to a deep grandchild that cannot use it.
+    safe_auth = _compiler_safe_makeflags(
+        auth_value, policy, opts,
+        ctx={"bind_src": bind_src, "bind_dst": bind_dst, "pool": pool,
+             "real_bwrap": kind_context.get("real_bwrap"),
+             "element": kind_context.get("element")})
+    if safe_auth != auth_value:
+        pairs = [pair for pair in pairs if pair[0] != "MAKEFLAGS"]
+        if safe_auth is not None:
+            pairs.append(("MAKEFLAGS", safe_auth))
     auth_injected = any(var == "MAKEFLAGS" for var, _ in pairs)
     tokens = []
     for var, value in pairs:
@@ -656,7 +755,8 @@ def build_shim_argv(
         pool={"fd": jobserver_fd, "fifo": jobserver_fifo,
              "proxy_fd": proxy_fd, "proxy_fifo": proxy_fifo},
         kind_context={"element_kind": element_kind, "ninja_probe": ninja_probe,
-                     "wrappers_dir": wrapper_dir, "wrapper_cap": wrapper_cap})
+                     "wrappers_dir": wrapper_dir, "wrapper_cap": wrapper_cap,
+                     "real_bwrap": real_bwrap, "element": element})
     # UX-106: the ptrace spine, prepended to the sandboxed command so it
     # becomes the parent of everything BuildStream asked to run - which
     # is what makes every descendant its own tracee, and so traceable

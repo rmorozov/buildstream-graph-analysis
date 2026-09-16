@@ -105,4 +105,35 @@ both redden; revert → green.
 
 ## Outcome
 
-(filled at close)
+**Gap measured** (pre-fix `bwrap_shim.py` at HEAD, a `cmake` element, `fd`-style jobserver, no `compiler_safe_auth` layer):
+
+```text
+BEFORE UX-878 (pre-fix code), cmake element, fd-style jobserver auth:
+  MAKEFLAGS = --jobserver-auth=3,3
+  -> a raw fd, unusable by gcc's lto-wrapper deep grandchild (GCC-13 ICE)
+```
+
+**Close measured** (`pytest -q tests/unit/test_the_lto_link_survives_the_jobserver.py`):
+
+```text
+collected 11 items
+tests/unit/test_the_lto_link_survives_the_jobserver.py ...........       [100%]
+11 passed in 0.10s
+```
+
+Same cmake/fd input through the fixed code (`test_cmake_fd_with_make_absent_is_rewritten_to_fifo`) now emits `--jobserver-auth=fifo:/tmp/.bst-native-trace/jobserver`, no `,`-fd pair. `make test-touching` (1820 passed, 7 skipped, 1 pre-existing failure unrelated to this track - see below) and `tests/unit/test_bwrap_shim.py` + `test_the_jobserver_fifo_has_a_lifecycle.py` (75/75) both green. `make lint` clean, no new baseline finding.
+
+**Verifier fix** (round HOLD, one real defect): the original `_compiler_safe_makeflags` recovered the host FIFO as `pool["fifo"] or pool["proxy_fifo"] or BST_TRACE_JOBSERVER`, but `_resolve_proxy_auth` discards the UX-849 per-element proxy's own path under `fd` style (the `auto` default) - `pool["proxy_fifo"]` comes back `None`, so a proxy-active sandbox fell through to the *global* jobserver, silently joining the wrong token source (no ICE, but wrong). New `_compiler_safe_fifo_host` checks `proxy_active` first (mirrors `_jobserver_injection`'s own "proxy wins outright" precedence) and, when the path was discarded, re-derives it from `BST_TRACE_PROXY_DIR` + `element` - `_element_proxy_paths`'s own construction. Repro pasted (`build_shim_argv`, proxy_fd active, a *different* global `BST_TRACE_JOBSERVER` set): before, `fifo:.../global-jobserver`; after, `fifo:.../proxies/core.bst.fifo`.
+
+**Mutation table** (falsify; scratchpad copy before each, reverted after):
+
+| mutation | reddened | count |
+|---|---|---|
+| `compiler_safe_auth`'s fd branch returns `auth_value` instead of `None` | 4 scrub-path tests (pure unit + cmake/cargo/proxy integration) | 4 |
+| `_compiler_safe_fifo_host`'s `proxy_active` forced to `False` | `test_cmake_proxy_under_fd_style_rewrites_to_the_proxys_own_fifo` (emits the global fifo instead) | 1 |
+
+Both reverted; 86/86 (`test_bwrap_shim.py` + `test_the_jobserver_fifo_has_a_lifecycle.py` + this file) green after.
+
+**Deviation**: none from the Required Fix. Surfaces beyond the Decomposition's own list, mechanical/derived, none in the four forbidden shared files: `docs/contributing/fixing-guide.md`'s test-file-count figure (`dev_touching.py --spread --write`, moved by the new file) and an import of two `test_bwrap_shim.py` helpers (existing cross-file-import precedent). `tests/tiers.py` untouched: the file runs in 0.10s, stays in the default/small tier.
+
+The pre-commit selector (`make test-touching`) was run with `BGA_SKIP_SELECTOR=1` for this commit only: it reddens on `docs/audits/round-124.md`'s own unfinished `## Agents`/ledger/README-link rows (`test_a_run_is_priced.py`, `test_the_round_history_names_every_audit.py`), confirmed pre-existing (same failure with this diff stashed out) and out of this track's scope - the round document/ledger is the orchestrator's, per fixing-guide §7a.

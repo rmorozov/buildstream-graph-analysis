@@ -95,7 +95,7 @@ from bga import progress
 from bga.plane2 import SCHEMA as PLANE2_SCHEMA
 
 from .bst_run_wrapped import run_wrapped, shutdown_build_group
-from .native_trace.bwrap_shim import JOBSERVER_PINNED
+from .native_trace.bwrap_shim import JOBSERVER_PINNED, style_for_make_version
 from .native_trace.bwrap_shim import __file__ as _bwrap_shim_source
 
 STATIC_BINARY_DISCLAIMER = (
@@ -1084,9 +1084,6 @@ def summarize_jobserver_tokens_by_element(ledger_rows: list,
     }, unmapped
 
 
-_MAKE_VERSION_RE = re.compile(r"GNU Make (\d+)\.(\d+)")
-
-
 def jobserver_auth_style(requested: str, make_version_output: Optional[str] = None) -> str:
     """`requested` is `fd`, `fifo`, or `auto`; returns `fd` or `fifo`.
 
@@ -1094,7 +1091,10 @@ def jobserver_auth_style(requested: str, make_version_output: Optional[str] = No
     `fifo:` from GNU Make 4.4, `fd` below - the sandboxes here run the
     host's own toolchain, so the host's version is representative.
     `make_version_output` lets a caller (or a test) supply the text
-    instead of shelling out.
+    instead of shelling out. UX-874: the 4.4 cutoff itself is
+    `bwrap_shim.style_for_make_version`, shared with the per-element
+    sandbox-make probe that narrows this host pick down to `fd` when
+    the sandbox that actually runs the string is older.
     """
     if requested != "auto":
         return requested
@@ -1103,11 +1103,7 @@ def jobserver_auth_style(requested: str, make_version_output: Optional[str] = No
         make_version_output = subprocess.run(
             [make_path, "--version"], capture_output=True, text=True,
             check=False).stdout if make_path else ""
-    match = _MAKE_VERSION_RE.search(make_version_output)
-    if not match:
-        return "fd"
-    version = (int(match.group(1)), int(match.group(2)))
-    return "fifo" if version >= (4, 4) else "fd"
+    return style_for_make_version(make_version_output)
 
 
 #: UX-845 / Direction 20 argument 2: how often the pool is reconsidered -

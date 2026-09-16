@@ -1,6 +1,6 @@
 # UX-877: the sandbox-make downgrade covers every kind that injects MAKEFLAGS
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-874 | **Found by:** round 123, the user (a cmake element whose sandbox-built cmake runs /usr/sysroot/bin/make, GNU Make 4.4 on the host) | **Serves:** R2 (an explicit --jobserver-auth fifo still narrows for a cmake element's own make) | **Topic:** capture | **Area:** tools-native_trace | **Shape:** judgement
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-874 | **Found by:** round 123, the user (a cmake element whose sandbox-built cmake runs /usr/sysroot/bin/make, GNU Make 4.4 on the host) | **Serves:** R2 (an explicit --jobserver-auth fifo still narrows for a cmake element's own make) | **Topic:** capture | **Area:** tools-native_trace | **Shape:** judgement
 
 ## Motivation
 
@@ -99,3 +99,15 @@ Mutation table:
 
 Reverted from a saved copy (`cp` to scratchpad before mutating, `cp`
 back after) - full file green again, 67 passed.
+
+**Deviation (merge):** the covered set is `_MAKE_CONSUMER_POLICIES =
+{make, cargo, cmake_meson, jobs_env}`, read off `kind_job_env`'s own
+policy tags rather than a second kind list; `ninja_client`/
+`ninja_wrapper` (ninja consumes the auth, not a foreign make) and
+`ninja_static`/`unknown_kind` (no MAKEFLAGS) stay unnarrowed. The
+guard's `makeflags_injected` half has no reddening mutation - every
+make-consumer policy always pairs a MAKEFLAGS today, so the clause is
+derived-safety against a future policy, not load-bearing now. The
+commit footer named Sonnet 5 (the track's own reminder) and was
+normalized to Opus 4.8 at merge. `PLR0913` pushed the new inputs into
+one dict param, the codebase's existing grouping.

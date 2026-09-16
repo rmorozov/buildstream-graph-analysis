@@ -79,8 +79,9 @@ withholds it, and this override is the per-element lever. The operator
 can now force `fd` on a pinned ≤4.2.1 element so it fills the pool while
 its make is migrated, `off` on an LTO one, and leave the rest `auto`.
 Left standing for round 126: the compiler shim, so an `fd`-forced
-element that *does* LTO fills the box without the gcc-13 ICE (today `fd`
-+ LTO still crashes — the caveat the guide documents); the `public:
-bga.jobserver-auth` annotation as the version-controlled second surface;
+element that *does* LTO fills the box without the gcc-13 ICE (today an
+`fd`-forced LTO element still crashes — the caveat the guide documents);
+the `public: bga.jobserver-auth` annotation as the version-controlled
+second surface;
 and the note that `main()`'s earlier sandbox-make probe still runs for
 an overridden element (harmless, `_forced_auth` ignores the pool style).

@@ -1,6 +1,6 @@
 # UX-874: the jobserver auth style follows the make that consumes it
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-841, UX-869 | **Found by:** round 122, the user (a make-kind element from a tar source, GNU Make 4.4 on the host) | **Serves:** R2 (a make element joins the jobserver whatever make its own sysroot ships) | **Topic:** capture | **Area:** tools-native_trace | **Shape:** mechanical
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-841, UX-869 | **Found by:** round 122, the user (a make-kind element from a tar source, GNU Make 4.4 on the host) | **Serves:** R2 (a make element joins the jobserver whatever make its own sysroot ships) | **Topic:** capture | **Area:** tools-native_trace | **Shape:** mechanical
 
 ## Motivation
 
@@ -129,3 +129,15 @@ clean. `make check-clean`: `OK: no ignored files are tracked`.
 |---|---|---|
 | `sandbox_make_auth_style` returns `"fifo"` unconditionally (probe dropped) | `test_fifo_style_downgrades_to_fd_when_the_sandbox_make_is_4_3`, `test_the_proxy_follows_the_same_downgrade_as_the_global_fifo`, `test_two_make_kind_elements_in_one_capture_each_probe_their_own_sandbox_make` | 3 failed, 5 passed -> reverted, 71/71 |
 | `_make_probe_cache_path` drops the element tag (shared `make_probe.json`) | `test_make_probe_cache_path_is_keyed_per_element`, `test_two_make_kind_elements_in_one_capture_each_probe_their_own_sandbox_make` | 2 failed, 6 passed -> reverted, 71/71 |
+
+**Deviation (merge):** the verifier held once - `make lint` was red
+(PLR0915 on `main()`, S603 on `probe_make`) though the Outcome claimed
+exit 0, and the make probe was cached per capture, not per element, so
+two make-kind elements with different sandbox makes would share one
+answer. Both fixed on the amend: the downgrade factored into
+`_narrow_jobserver_to_sandbox_make`, `probe_make` sharing
+`_probe_tool_version` so it adds no baseline entry, and the cache
+keyed `make_probe-<element>.json` with a guard that reds on a shared
+key. `ninja_probe.json`'s own per-capture cache is left as a separate
+pre-existing matter. The box has only GNU Make 4.3, so the pair is a
+fake-make sandbox reading, not a live host-4.4/sandbox-4.3 build.

@@ -15,12 +15,12 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-872 scenarios: **1 open**, 871 closed.
+872 scenarios: **0 open**, 872 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
-| capture | 1 | 120 |
+| capture | 0 | 120 |
 | analysis | 0 | 118 |
 | contracts | 0 | 50 |
 | viewer | 0 | 177 |
@@ -36,7 +36,6 @@ task file, which is the only place it ever lived twice.
 
 | ID | Scenario | Topic | Priority | Serves | Status |
 |---|---|---|---|---|---|
-| UX-874 | [the jobserver auth style follows the make that consumes it](UX-0874-the-auth-style-follows-the-make-that-consumes-it.md) | capture | High | R2 (a make element joins the jobserver whatever make its own sysroot ships) | 🔴 Not Started |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

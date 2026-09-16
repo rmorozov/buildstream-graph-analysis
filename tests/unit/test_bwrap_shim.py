@@ -984,7 +984,8 @@ def test_fifo_style_downgrades_to_fd_when_the_sandbox_make_is_4_3(tmp_path):
     os.mkfifo(fifo_path)
 
     pool = _downgrade_fifo_to_fd_if_sandbox_make_rejects_it(
-        "make", fake, [], str(tmp_path / "make_probe.json"),
+        {"element_kind": "make", "real_bwrap": fake, "opts": []},
+        str(tmp_path / "make_probe.json"),
         pool={"fd": None, "fifo": fifo_path, "proxy_fd": None, "proxy_fifo": None})
     try:
         assert pool["fifo"] is None
@@ -1022,7 +1023,8 @@ def test_fifo_style_stands_when_the_sandbox_make_is_4_4(tmp_path):
     os.mkfifo(fifo_path)
 
     pool = _downgrade_fifo_to_fd_if_sandbox_make_rejects_it(
-        "make", fake, [], str(tmp_path / "make_probe.json"),
+        {"element_kind": "make", "real_bwrap": fake, "opts": []},
+        str(tmp_path / "make_probe.json"),
         pool={"fd": None, "fifo": fifo_path, "proxy_fd": None, "proxy_fifo": None})
 
     assert pool["fd"] is None
@@ -1054,7 +1056,8 @@ def test_the_proxy_follows_the_same_downgrade_as_the_global_fifo(tmp_path):
     os.mkfifo(proxy_fifo_path)
 
     pool = _downgrade_fifo_to_fd_if_sandbox_make_rejects_it(
-        "make", fake, [], str(tmp_path / "make_probe.json"),
+        {"element_kind": "make", "real_bwrap": fake, "opts": []},
+        str(tmp_path / "make_probe.json"),
         pool={"fd": None, "fifo": None, "proxy_fd": None, "proxy_fifo": proxy_fifo_path})
 
     try:
@@ -1065,16 +1068,74 @@ def test_the_proxy_follows_the_same_downgrade_as_the_global_fifo(tmp_path):
         os.close(pool["proxy_fd"])
 
 
-def test_a_kind_outside_make_like_is_never_probed_and_never_narrowed(tmp_path):
-    """Only a make-like kind's own make ever reads the auth string
-    directly (`_MAKE_LIKE_KINDS`) - a cmake element gets `fifo` back
-    unnarrowed, and the fake's marker (written on every invocation)
-    never appears, so the probe never ran."""
+def test_a_kind_with_no_makeflags_is_never_probed_and_never_narrowed(tmp_path):
+    """`unknown_kind` never gets a `MAKEFLAGS` from `kind_job_env` - the
+    fake's marker (written on every invocation) never appears, so the
+    probe never ran."""
     marker = tmp_path / "marker"
     fake = _fake_bwrap_with_make(tmp_path / "real-bwrap", marker,
                                  "/tmp/.bst-native-trace", "4.3")
 
+    style = sandbox_make_auth_style("unknown_kind", fake, [],
+                                    str(tmp_path / "make_probe.json"))
+
+    assert style == "fifo"
+    assert not marker.exists()
+
+
+def test_ninja_static_is_never_probed_and_never_narrowed(tmp_path):
+    """UX-877: a cmake element whose sandbox has an available, non-client
+    ninja gets `ninja_static` - `[]` pairs, no `MAKEFLAGS` at all, so the
+    probe never runs."""
+    marker = tmp_path / "marker"
+    fake = _fake_bwrap_with_make(tmp_path / "real-bwrap", marker,
+                                 "/tmp/.bst-native-trace", "4.3")
+    ninja_probe = {"available": True, "jobserver_client": False}
+
+    style = sandbox_make_auth_style("cmake", fake, [], str(tmp_path / "make_probe.json"),
+                                    kind_probe={"ninja_probe": ninja_probe})
+
+    assert style == "fifo"
+    assert not marker.exists()
+
+
+def test_cmake_on_the_makefiles_path_is_now_narrowed(tmp_path):
+    """UX-877: `cmake --build ... -- ${JOBS}` invokes the sandbox make
+    directly when there is no jobserver-client ninja to hand `MAKEFLAGS`
+    to instead - the exact defect UX-874 was meant to stop, skipped
+    because `cmake` was outside `_MAKE_LIKE_KINDS`."""
+    fake = _fake_bwrap_with_make(tmp_path / "real-bwrap", tmp_path / "marker",
+                                 "/tmp/.bst-native-trace", "4.3")
+
     style = sandbox_make_auth_style("cmake", fake, [], str(tmp_path / "make_probe.json"))
+
+    assert style == "fd"
+
+
+def test_a_jobs_env_kind_is_now_narrowed(tmp_path):
+    """UX-877: a table-less kind carrying its own `JOBS` gets the same
+    `cmake_meson`-shaped injection (policy `jobs_env`) and so the same
+    narrowing."""
+    fake = _fake_bwrap_with_make(tmp_path / "real-bwrap", tmp_path / "marker",
+                                 "/tmp/.bst-native-trace", "4.3")
+
+    style = sandbox_make_auth_style("manual", fake, [], str(tmp_path / "make_probe.json"),
+                                    kind_probe={"jobs_present": True})
+
+    assert style == "fd"
+
+
+def test_a_cmake_element_resolving_to_a_jobserver_client_ninja_is_unnarrowed(tmp_path):
+    """UX-877: a jobserver-client ninja reads `MAKEFLAGS` itself, not a
+    make - ninja accepts the `fifo:` path, so this case stays unnarrowed
+    even though `kind_job_env` does inject `MAKEFLAGS` for it."""
+    marker = tmp_path / "marker"
+    fake = _fake_bwrap_with_make(tmp_path / "real-bwrap", marker,
+                                 "/tmp/.bst-native-trace", "4.3")
+    ninja_probe = {"available": True, "jobserver_client": True}
+
+    style = sandbox_make_auth_style("cmake", fake, [], str(tmp_path / "make_probe.json"),
+                                    kind_probe={"ninja_probe": ninja_probe})
 
     assert style == "fifo"
     assert not marker.exists()

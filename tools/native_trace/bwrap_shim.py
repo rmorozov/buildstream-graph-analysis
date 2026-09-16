@@ -412,16 +412,33 @@ def _make_probe_cache_path(jobserver_path: Optional[str],
     return os.path.join(os.path.dirname(jobserver_path), f"make_probe-{tag}.json")
 
 
+# UX-877: `kind_job_env`'s own policy names whose MAKEFLAGS a *make*
+# reads - ninja_client/ninja_wrapper/ninja_static hand MAKEFLAGS (or
+# nothing) to ninja, not make, so fifo is never a problem for them.
+_MAKE_CONSUMER_POLICIES = frozenset({"make", "cargo", "cmake_meson", "jobs_env"})
+
+
 def sandbox_make_auth_style(element_kind: Optional[str], real_bwrap: str,
-                            opts: list[str], cache_path: Optional[str]) -> str:
-    """UX-874: this element's own sandbox `make --version`, probed
-    through the real bwrap - `"fd"` when the sandbox make can't parse
-    `fifo:` (absent, unparseable, or below 4.4), `"fifo"` otherwise.
-    Only a make-like kind's own make ever reads the auth string
-    directly (`_MAKE_LIKE_KINDS`), so any other kind is reported
-    unnarrowed - the style the host already resolved stands, never
-    widened by this probe."""
-    if element_kind not in _MAKE_LIKE_KINDS:
+                            opts: list[str], cache_path: Optional[str],
+                            kind_probe: Optional[dict] = None) -> str:
+    """UX-874/UX-877: this element's own sandbox `make --version`,
+    probed through the real bwrap - `"fd"` when the sandbox make can't
+    parse `fifo:` (absent, unparseable, or below 4.4), `"fifo"`
+    otherwise. Probed for every kind `kind_job_env` would actually hand
+    a `MAKEFLAGS` a *make* reads - derived by calling it with a
+    sentinel auth rather than hand-keeping a second kind list, so a
+    kind added to the table there is covered here for free. `kind_probe`
+    (`{ninja_probe, wrappers_dir, jobs_present}` or `None`, PLR0913's
+    cap) is `kind_job_env`'s own remaining inputs. A kind whose own
+    result carries no `MAKEFLAGS`, or hands it to ninja instead
+    (`_MAKE_CONSUMER_POLICIES`), is reported unnarrowed - the style the
+    host already resolved stands, never widened by this probe."""
+    kind_probe = kind_probe or {}
+    pairs, _unsets, policy = kind_job_env(
+        element_kind, "fifo:sentinel", kind_probe.get("ninja_probe"),
+        kind_probe.get("wrappers_dir"), kind_probe.get("jobs_present"))
+    makeflags_injected = any(var == "MAKEFLAGS" for var, _ in pairs)
+    if not makeflags_injected or policy not in _MAKE_CONSUMER_POLICIES:
         return "fifo"
     probe = probe_make(real_bwrap, opts, cache_path)
     return style_for_make_version(probe.get("version"))
@@ -1145,20 +1162,24 @@ def _resolve_proxy_auth(proxy_fifo: Optional[str]) -> tuple[Optional[int], Optio
 
 
 def _downgrade_fifo_to_fd_if_sandbox_make_rejects_it(
-        element_kind: Optional[str], real_bwrap: str, opts: list[str],
-        cache_path: Optional[str], pool: dict) -> dict:
-    """UX-874: `pool` (`{fd, fifo, proxy_fd, proxy_fifo}`) unchanged
-    unless the request is `fifo` (a `fifo` entry present) and this
-    element's own sandbox make - probed once, cached at `cache_path`
-    (`_make_probe_cache_path`, per element) - is below
+        probe: dict, cache_path: Optional[str], pool: dict) -> dict:
+    """UX-874/UX-877: `pool` (`{fd, fifo, proxy_fd, proxy_fifo}`)
+    unchanged unless the request is `fifo` (a `fifo` entry present) and
+    this element's own sandbox make - probed once, cached at
+    `cache_path` (`_make_probe_cache_path`, per element) - is below
     4.4/absent/unparseable, in which case both the global FIFO and
     UX-849's per-element proxy (the same sandbox make consumes either)
     are opened `fd` style instead. Never widens: a request already `fd`
-    has no `fifo` entry to act on.
+    has no `fifo` entry to act on. `probe` (`{element_kind, real_bwrap,
+    opts, ninja_probe, wrappers_dir, jobs_present}`, PLR0913's cap)
+    threads its last three straight to `sandbox_make_auth_style` so its
+    kind gate matches `kind_job_env`'s own injection.
     """
     if pool.get("fifo") is None and pool.get("proxy_fifo") is None:
         return pool
-    if sandbox_make_auth_style(element_kind, real_bwrap, opts, cache_path) != "fd":
+    if sandbox_make_auth_style(
+            probe["element_kind"], probe["real_bwrap"], probe["opts"], cache_path,
+            kind_probe=probe) != "fd":
         return pool
     downgraded = dict(pool)
     if pool.get("fifo") is not None:
@@ -1171,20 +1192,20 @@ def _downgrade_fifo_to_fd_if_sandbox_make_rejects_it(
 
 
 def _narrow_jobserver_to_sandbox_make(probe: dict, pinned: bool, pool: dict) -> dict:
-    """`main`'s own UX-874 wiring, split out to keep its statement count
-    under `PLR0915`'s cap and its argument count under `PLR0913`'s -
-    `probe` (`{element, element_kind, real_bwrap, opts}`) and `pool`
-    (`{fd, fifo, proxy_fd, proxy_fifo}`) kept as one param each, the
-    same grouping `_jobserver_injection`'s own `binds`/`pool` already
-    use. `_make_probe_cache_path` (per element) then
+    """`main`'s own UX-874/UX-877 wiring, split out to keep its
+    statement count under `PLR0915`'s cap and its argument count under
+    `PLR0913`'s - `probe` (`{element, element_kind, real_bwrap, opts,
+    ninja_probe, wrappers_dir, jobs_present}`) and `pool` (`{fd, fifo,
+    proxy_fd, proxy_fifo}`) kept as one param each, the same grouping
+    `_jobserver_injection`'s own `binds`/`pool` already use.
+    `_make_probe_cache_path` (per element) then
     `_downgrade_fifo_to_fd_if_sandbox_make_rejects_it`. `pool` unchanged
     for a pinned element - nothing is injected for it either way."""
     if pinned:
         return pool
     cache_path = _make_probe_cache_path(
         os.environ.get("BST_TRACE_JOBSERVER"), probe["element"])
-    return _downgrade_fifo_to_fd_if_sandbox_make_rejects_it(
-        probe["element_kind"], probe["real_bwrap"], probe["opts"], cache_path, pool)
+    return _downgrade_fifo_to_fd_if_sandbox_make_rejects_it(probe, cache_path, pool)
 
 
 def _element_kind_env(element: Optional[str]) -> Optional[str]:
@@ -1337,7 +1358,10 @@ def main() -> int:
     # (jobserver_auth_style, UX-841) - narrowed here, per element.
     jobserver_pool = _narrow_jobserver_to_sandbox_make(
         {"element": element, "element_kind": kind_context["element_kind"],
-         "real_bwrap": real_bwrap, "opts": opts_now}, pinned_now,
+         "real_bwrap": real_bwrap, "opts": opts_now,
+         "ninja_probe": kind_context["ninja_probe"],
+         "wrappers_dir": kind_context["wrappers_dir"],
+         "jobs_present": _setenv_value(opts_now, "JOBS") is not None}, pinned_now,
         pool={"fd": jobserver_fd, "fifo": jobserver_fifo,
              "proxy_fd": proxy_fd, "proxy_fifo": proxy_fifo})
     jobserver_fd, jobserver_fifo = jobserver_pool["fd"], jobserver_pool["fifo"]

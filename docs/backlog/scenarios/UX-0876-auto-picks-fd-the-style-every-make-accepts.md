@@ -57,3 +57,51 @@ still shared with the sandbox probe.
 return `style_for_make_version(...)` again - the 4.4 case reads `fifo`
 and reddens. The guide's `--jobserver-auth` row read against the code
 by the doc-parse guard.
+
+## Outcome
+
+Gap measured: `jobserver_auth_style("auto", "GNU Make 4.4\n")` returned
+`fifo` before this change (host-probe cutoff at 4.4), which is exactly
+the string the user's sandbox-built `/usr/sysroot/bin/make` (below
+4.4, invoked by absolute path from a `cmake` recipe) rejects with
+`internal error: invalid --jobserver-auth string`. `auto`'s branch in
+`jobserver_auth_style` now returns `"fd"` unconditionally, no host
+probe, no `shutil.which("make")`, no `subprocess.run`; an explicit
+`fd`/`fifo` request is untouched. The now-unused
+`from .native_trace.bwrap_shim import style_for_make_version` import
+was dropped from `tools/bst_native_build_tracer.py`; the function
+itself is untouched and still imported and used inside
+`tools/native_trace/bwrap_shim.py` for the per-element sandbox probe
+(`UX-874`). `docs/guides/cli.md`'s `--jobserver-auth` row now states
+`auto` resolves to `fd` and `fifo` is the opt-in for a toolchain known
+to be GNU Make 4.4 or newer throughout.
+
+Close measured, `tests/unit/test_the_jobserver_fifo_has_a_lifecycle.py::TestJobserverAuthStyleFollowsMake`:
+
+```text
+test_gnu_make_4_4_picks_fd PASSED
+test_gnu_make_4_3_picks_fd PASSED
+test_an_explicit_style_is_never_overridden PASSED
+8 passed in 0.45s
+```
+
+The touching set (126 files, 3008 items):
+`2972 passed, 36 skipped in 138.46s`. `ruff check` clean on both
+touched Python files. `dev_baseline.py --check` found one stale entry
+(the removed `subprocess.run` call's own forced `S603` finding);
+`--shrink` dropped it, `--check` then reports clean plus the
+pre-existing forced counts, unchanged. `dev_sizes.py --check`: sizes
+ok, 122 files measured, none above cell. `pymarkdown scan` on
+`docs/guides/cli.md` and this file: no output, clean. The doc-parse
+guards (`test_the_documented_bga_lines_parse.py`,
+`test_docs_links_and_commands.py`): 71 passed. `make check-clean`: OK.
+
+Mutation table:
+
+| guard | mutation | reddened | count |
+|---|---|---|---|
+| `TestJobserverAuthStyleFollowsMake` | `auto` branch reverted to `return style_for_make_version(make_version_output)` (import restored) | `test_gnu_make_4_4_picks_fd` | 1 failed, 2 passed |
+
+Reverted from a saved copy of the pre-mutation file (not `git
+checkout`); re-run after revert: 8 passed, 0 diff against the saved
+copy.

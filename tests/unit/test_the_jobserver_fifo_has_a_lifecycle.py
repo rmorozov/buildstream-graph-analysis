@@ -35,14 +35,14 @@ class TestOpenJobserverSeedsExactlyNMinusOneTokens:
 
 
 class TestJobserverAuthStyleFollowsMake:
-    """UX-841: `auto` reads the host's `make --version` - the version
-    string is passed in here, never shelled out to, per the falsify
-    skill's "instrument that reads a proxy" caution."""
+    """UX-876: `auto` is always `fd` - no host `make --version` probe, a
+    mixed toolchain's recipe can invoke a make below 4.4 by absolute
+    path from inside its own sandbox. `fifo` stays an explicit opt-in."""
 
-    def test_gnu_make_4_4_picks_fifo(self):
+    def test_gnu_make_4_4_picks_fd(self):
         assert tracer.jobserver_auth_style(
             "auto", "GNU Make 4.4\nBuilt for x86_64-pc-linux-gnu\n"
-        ) == "fifo"
+        ) == "fd"
 
     def test_gnu_make_4_3_picks_fd(self):
         assert tracer.jobserver_auth_style(
@@ -63,7 +63,7 @@ class TestTheShimsArgvCarriesTheChosenStyle:
         `/tmp`."""
         bind_src = "/tmp/host-trace-dir"
         fifo_path = bind_src + "/jobserver"
-        style = tracer.jobserver_auth_style("auto", "GNU Make 4.4\n")
+        style = tracer.jobserver_auth_style("fifo", "GNU Make 4.4\n")
         assert style == "fifo"
 
         argv = build_shim_argv(

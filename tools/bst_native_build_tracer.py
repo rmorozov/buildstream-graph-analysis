@@ -95,7 +95,7 @@ from bga import progress
 from bga.plane2 import SCHEMA as PLANE2_SCHEMA
 
 from .bst_run_wrapped import run_wrapped, shutdown_build_group
-from .native_trace.bwrap_shim import JOBSERVER_PINNED, style_for_make_version
+from .native_trace.bwrap_shim import JOBSERVER_PINNED
 from .native_trace.bwrap_shim import __file__ as _bwrap_shim_source
 
 STATIC_BINARY_DISCLAIMER = (
@@ -1087,23 +1087,20 @@ def summarize_jobserver_tokens_by_element(ledger_rows: list,
 def jobserver_auth_style(requested: str, make_version_output: Optional[str] = None) -> str:
     """`requested` is `fd`, `fifo`, or `auto`; returns `fd` or `fifo`.
 
-    UX-841: `auto` runs `make --version` **on the host** and picks
-    `fifo:` from GNU Make 4.4, `fd` below - the sandboxes here run the
-    host's own toolchain, so the host's version is representative.
-    `make_version_output` lets a caller (or a test) supply the text
-    instead of shelling out. UX-874: the 4.4 cutoff itself is
-    `bwrap_shim.style_for_make_version`, shared with the per-element
-    sandbox-make probe that narrows this host pick down to `fd` when
-    the sandbox that actually runs the string is older.
+    UX-876: `auto` is always `fd` - no host `make --version` probe. A
+    mixed toolchain's recipe can invoke a sandbox-built make below 4.4
+    by absolute path (`UX-876`'s cmake element), and there is no way to
+    know that ahead of the build; `fd` is accepted by every GNU Make
+    from 4.2 up. `fifo` stays available as an explicit opt-in for an
+    operator whose whole sandbox toolchain is known to be >= 4.4
+    (`bwrap_shim.style_for_make_version`, UX-874, narrows an explicit
+    `fifo` to `fd` per element when the sandbox make is older).
+    `make_version_output` is unused by `auto` now; kept so an explicit
+    `fd`/`fifo` caller (and existing tests) can still pass it.
     """
     if requested != "auto":
         return requested
-    if make_version_output is None:
-        make_path = shutil.which("make")
-        make_version_output = subprocess.run(
-            [make_path, "--version"], capture_output=True, text=True,
-            check=False).stdout if make_path else ""
-    return style_for_make_version(make_version_output)
+    return "fd"
 
 
 #: UX-845 / Direction 20 argument 2: how often the pool is reconsidered -

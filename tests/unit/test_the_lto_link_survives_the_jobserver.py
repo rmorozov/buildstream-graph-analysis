@@ -70,6 +70,13 @@ def _makeflags_value(argv):
     return argv[idx + 1]
 
 
+def _setenv_values(argv, name):
+    """Every value bga's argv sets `name` to, in order (bwrap takes the
+    last). `["-j4", ""]` means the recipe's own JOBS then bga's override."""
+    return [argv[i + 2] for i in range(len(argv) - 2)
+            if argv[i] == "--setenv" and argv[i + 1] == name]
+
+
 def _build_cmake_with_fd(real_bwrap, tmp_path, monkeypatch, element_kind="cmake",
                          **extra):
     bind_src = str(tmp_path / "host-trace-dir")
@@ -96,6 +103,9 @@ def test_cmake_fd_with_make_absent_is_rewritten_to_fifo(tmp_path, monkeypatch):
         value = _makeflags_value(argv)
         assert value == f"--jobserver-auth=fifo:{BIND_DST}/jobserver"
         assert f"{read_fd}," not in value
+        # A rewrite keeps a jobserver, so JOBS stays emptied (the fifo
+        # governs parallelism) - the scrub-only JOBS drop must not reach here.
+        assert _setenv_values(argv, "JOBS") == ["-j4", ""]
     finally:
         os.close(read_fd)
 
@@ -125,6 +135,9 @@ def test_cmake_fd_with_make_4_3_is_scrubbed_with_no_wrapper_mount(
         assert "MAKEFLAGS" not in argv
         assert not any("--jobserver-auth" in tok for tok in argv)
         assert "--ro-bind" not in argv
+        # A scrub must not leave JOBS emptied - that serialises the build
+        # (cmake `-- ${JOBS}` -> no -j); the recipe's own `-j4` stands.
+        assert _setenv_values(argv, "JOBS") == ["-j4"]
     finally:
         os.close(read_fd)
 

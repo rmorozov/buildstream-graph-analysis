@@ -653,6 +653,9 @@ def _jobserver_injection(opts: list[str], binds: tuple, decision: str,
         pairs = [pair for pair in pairs if pair[0] != "MAKEFLAGS"]
         if safe_auth is not None:
             pairs.append(("MAKEFLAGS", safe_auth))
+        else:
+            # UX-878: a scrub leaves no jobserver, so an emptied JOBS would serialize the build; drop it too and the recipe's own -jN stands (jobserver-off behaviour).
+            pairs = [pair for pair in pairs if pair[0] != "JOBS"]
     auth_injected = any(var == "MAKEFLAGS" for var, _ in pairs)
     tokens = []
     for var, value in pairs:

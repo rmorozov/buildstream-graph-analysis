@@ -331,6 +331,10 @@ pairing for every merged row from round 103 on.
 | 122 | verifier | sonnet | UX-874 (verifier) | 173k | 58 | 34.1 m | HOLD (make lint red - PLR0915 on main, S603 on probe_make; the make probe cached per capture not per element), then PASS on the re-check | two pasted register numbers were wrong on rerun in five minutes |
 | 122 | implementer | sonnet | UX-875 (implementer) | 64k | 62 | 10.3 m | bga snapshot gains --jobserver-auth and forwards it to the tracer, which resolves it; appended only when the jobserver is on | - |
 | 122 | verifier | sonnet | UX-875 (verifier) | 39k | 30 | 5.5 m | PASS; ran a second mutation of its own to prove all three new assertions load-bearing | - |
+| 123 | implementer | sonnet | UX-876 (implementer) | 73k | 62 | 10.3 m | jobserver_auth_style auto returns fd unconditionally, the host make probe removed; the stale S603 forced entry shrunk from the baseline | make test-touching overshot the 120s timeout; the -list + direct xdist fallback worked |
+| 123 | verifier | sonnet | UX-876 (verifier) | 57k | 33 | 6.9 m | PASS; the argv test's auto->explicit fifo switch is legitimate, the baseline shrink dropped exactly the removed subprocess line, make lint green via the full target | the touching figure re-measured 128 files against the Outcome's 126, 0 failed either way |
+| 123 | implementer | sonnet | UX-877 (implementer) | 113k | 81 | 18.4 m | sandbox_make_auth_style narrows fifo for every kind_job_env policy whose consumer is make (make/cargo/cmake_meson/jobs_env), derived from the injection; PLR0913 bundled into a dict param | a plain pytest run gave no signal the fix grew a new PLR0913 until make lint |
+| 123 | verifier | sonnet | UX-877 (verifier) | 48k | 33 | 6.3 m | PASS; the policy set matches kind_job_env's own MAKEFLAGS-emitting tags, ninja_client/wrapper rightly unnarrowed; the makeflags_injected half of the guard has no reddening mutation, derived-safety not load-bearing | make lint runtime past the 120s bash default, backgrounded |
 
 Round 101's four tracks are **not** here: this session could not
 identify their transcripts with certainty after a context rebuild, and
@@ -343,7 +347,7 @@ committed cleanly once told to run in the foreground. Three of the five
 left a derived figure or a §6 context-map row behind - the same class
 the round itself was about, arriving in the tracks' own work.
 
-What the three hundred and fourteen rows already say: a researcher that reads a document
+What the three hundred and eighteen rows already say: a researcher that reads a document
 whole costs 100-180k; a walker that drives every control costs 336k;
 the two cuts cost a re-run each. The `walk` and `design-review`
 skills fix the report shape so the next rows are smaller, and the

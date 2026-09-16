@@ -1,6 +1,6 @@
 # UX-875: bga snapshot forwards the jobserver auth style
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-856, UX-841 | **Found by:** round 122, the user (a make-kind element from a tar source, GNU Make 4.4 on the host) | **Serves:** R4 (the snapshot entry point can force the auth style capture run already can) | **Topic:** capture | **Area:** tools | **Shape:** bounded
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-856, UX-841 | **Found by:** round 122, the user (a make-kind element from a tar source, GNU Make 4.4 on the host) | **Serves:** R4 (the snapshot entry point can force the auth style capture run already can) | **Topic:** capture | **Area:** tools | **Shape:** bounded
 
 ## Motivation
 
@@ -73,3 +73,10 @@ clean. `make check-clean`: `OK: no ignored files are tracked`.
 | mutation | reddened | count |
 |---|---|---|
 | drop `argv += ["--jobserver-auth", jobserver_auth]` (flag stays accepted, silently dropped) | `test_fifo_reaches_the_tracer_argv`, `test_the_cli_flag_reaches_take_snapshot` | 2 failed, 11 passed -> reverted, 13/13 |
+
+**Deviation (merge):** none. The verifier replayed the drop-forward
+mutation (2 red) and a second of its own - moving the append outside
+the `mode != "off"` guard reds the third test - so each of the three
+new assertions is independently load-bearing. The tracer accepts the
+forwarded `--jobserver-auth` and resolves it there; snapshot adds no
+resolution. Nothing added at merge.

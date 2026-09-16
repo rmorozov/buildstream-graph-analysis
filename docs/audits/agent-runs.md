@@ -337,6 +337,8 @@ pairing for every merged row from round 103 on.
 | 123 | verifier | sonnet | UX-877 (verifier) | 48k | 33 | 6.3 m | PASS; the policy set matches kind_job_env's own MAKEFLAGS-emitting tags, ninja_client/wrapper rightly unnarrowed; the makeflags_injected half of the guard has no reddening mutation, derived-safety not load-bearing | make lint runtime past the 120s bash default, backgrounded |
 | 124 | implementer | sonnet | UX-878 (implementer) | 464k | 172 | 44.3 m | compiler_safe_auth normalizes the injected auth at the source (fd->fifo: for cmake/meson/jobs_env/cargo, scrub for a sub-4.4 make); _compiler_safe_fifo_host targets the per-element proxy's own fifo, not the global | the pre-commit selector reddened on the round doc's own unfinished ledger/Agents rows (pre-existing); BGA_SKIP_SELECTOR for the commit |
 | 124 | verifier | sonnet | UX-878 (verifier) | 214k | 78 | 22.6 m | HOLD then PASS: the proxy fifo path recovery fell back to the global jobserver under fd style; fixed to re-derive the per-element proxy fifo; 11-test guard, both scrub and proxy mutations reddened | a bare git stash pop in the shared worktree applied a foreign WIP stash; reset --hard recovered it, the foreign entry preserved |
+| 125 | implementer | sonnet | UX-879 (implementer) | 183k | 127 | 24.7 m | --jobserver-auth-override -> BST_TRACE_JOBSERVER_AUTH_MAP -> resolve_auth_override in the shim forces fd/fifo/off by element glob, bypassing UX-878's compiler-safe scrub; off keeps the recipe JOBS | first off-test was vacuous on make 4.3 (auto already scrubs); rewrote against 4.4 so the mutation reddens it |
+| 125 | verifier | sonnet | UX-879 (verifier) | 90k | 44 | 10.7 m | HOLD then PASS: make lint red on 3 pymarkdown findings in the Outcome's own fence (MD031/MD040); fd-force defeats scrub confirmed non-vacuous, mutation 8/11, no UX-874/878 regression (78) | distinguishing the two make-probe call sites (compiler_safe vs main's earlier narrow) to scope what the override bypasses |
 
 Round 101's four tracks are **not** here: this session could not
 identify their transcripts with certainty after a context rebuild, and
@@ -349,7 +351,7 @@ committed cleanly once told to run in the foreground. Three of the five
 left a derived figure or a §6 context-map row behind - the same class
 the round itself was about, arriving in the tracks' own work.
 
-What the three hundred and twenty rows already say: a researcher that reads a document
+What the three hundred and twenty-two rows already say: a researcher that reads a document
 whole costs 100-180k; a walker that drives every control costs 336k;
 the two cuts cost a re-run each. The `walk` and `design-review`
 skills fix the report shape so the next rows are smaller, and the

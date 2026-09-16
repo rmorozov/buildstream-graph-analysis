@@ -91,6 +91,37 @@ class TestTheModePassesThroughToCaptureRun:
         assert "--jobserver" not in argv
 
 
+class TestTheAuthStylePassesThroughToCaptureRun:
+    """UX-875: `--jobserver-auth` reaches the tracer's own flag of the
+    same name, beside `--jobserver`/`--jobserver-seed` - and only when
+    the jobserver itself is on, the same posture those two already take.
+    """
+
+    def test_fifo_reaches_the_tracer_argv(self, project, recorded):
+        take_snapshot(str(project), ["bst", "build", "all.bst"],
+                      {"trace_opens": True, "trace_spine": "auto"},
+                      jobserver="4", jobserver_auth="fifo")
+
+        [argv] = recorded
+        assert argv[argv.index("--jobserver-auth") + 1] == "fifo"
+
+    def test_off_passes_no_auth_token_either(self, project, recorded):
+        take_snapshot(str(project), ["bst", "build", "all.bst"],
+                      {"trace_opens": True, "trace_spine": "auto"},
+                      jobserver_auth="fifo")
+
+        [argv] = recorded
+        assert "--jobserver-auth" not in argv
+
+    def test_the_cli_flag_reaches_take_snapshot(self, project, recorded):
+        assert main(["--project", str(project), "--jobserver", "4",
+                     "--jobserver-auth", "fd",
+                     "--", "bst", "build", "all.bst"]) == 0
+
+        [argv] = recorded
+        assert argv[argv.index("--jobserver-auth") + 1] == "fd"
+
+
 class TestPlanResolvesAtPrev:
     def test_plan_at_prev_resolves_to_that_snapshots_analysis(
             self, project, recorded, monkeypatch):

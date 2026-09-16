@@ -205,6 +205,7 @@ jobserver: off -> auto (4)                            # the compare header names
 | `--no-compare` | Take the snapshot and report on it; skip the comparison |
 | `--project PATH` | Snapshot a project other than the enclosing one |
 | `--jobserver auto\|N\|off` | Cap sandbox concurrency for this capture (default `off`) |
+| `--jobserver-auth fd\|fifo\|auto` | The `--jobserver-auth` style forwarded to the tracer (default `auto`), as `bga capture run --jobserver-auth` (`UX-841`, `UX-875`); unused when `--jobserver` is off |
 | `--plan @prev\|@last\|PATH` | Bias the jobserver by a prior run's own slack; needs `--jobserver auto\|N` |
 | `prune --keep N` / `--older-than DAYS` / `--max-store SIZE` | Delete old snapshots; `--dry-run` says what would go |
 

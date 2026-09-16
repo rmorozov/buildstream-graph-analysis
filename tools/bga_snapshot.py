@@ -258,6 +258,7 @@ def take_snapshot(project: str, command: list[str], config: dict,
                   snapshot: Optional[str] = None, diagnose: bool = False,
                   no_inject: bool = False, inhibit: bool = False,
                   keep_raw: bool = True, jobserver: str = "off",
+                  jobserver_auth: str = "auto",
                   plan: Optional[str] = None,
                   cpu_count: Optional[int] = None) -> tuple[str, int]:
     """Capture into a new snapshot directory. Returns it and the build's
@@ -270,6 +271,10 @@ def take_snapshot(project: str, command: list[str], config: dict,
     resolution happens here instead of in `_translate_capture_jobserver`.
     `cpu_count` is a seam for `auto` in tests, as in
     `resolve_jobserver_ceiling` itself.
+
+    `jobserver_auth` (UX-875): forwarded to the tracer's own
+    `--jobserver-auth` unchanged - the tracer resolves it
+    (`jobserver_auth_style`), this only carries it through.
     """
     from bga.cli import resolve_jobserver_ceiling, set_jobserver_mode_env
 
@@ -313,6 +318,7 @@ def take_snapshot(project: str, command: list[str], config: dict,
         argv += ["--jobserver", str(ceiling)]
         if seed is not None:
             argv += ["--jobserver-seed", str(seed)]
+        argv += ["--jobserver-auth", jobserver_auth]
     if plan:
         argv += ["--plan", plan]
     argv += [project, os.path.join(snapshot, PLANE2_NAME), "--"] + list(command)
@@ -479,6 +485,11 @@ def create_parser() -> argparse.ArgumentParser:
              "`bga capture run --jobserver` (UX-851). Per capture, not sticky."
     )
     parser.add_argument(
+        "--jobserver-auth", choices=("fd", "fifo", "auto"), default="auto",
+        help="UX-875: forwarded to the tracer's own --jobserver-auth "
+             "(UX-841), unused when --jobserver is off."
+    )
+    parser.add_argument(
         "--plan", default=None, metavar="PATH",
         help="An analyze.json (@prev/@last resolve to that snapshot's own, "
              "beside its run), naming this project's own slack (UX-849). "
@@ -614,6 +625,7 @@ def main(argv: Optional[list[str]] = None) -> int:
                                          inhibit=args.inhibit,
                                          keep_raw=not args.no_keep_raw,
                                          jobserver=args.jobserver,
+                                         jobserver_auth=args.jobserver_auth,
                                          plan=plan_path)
 
     if args.no_inject:

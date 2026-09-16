@@ -327,6 +327,10 @@ pairing for every merged row from round 103 on.
 | 121 | verifier | sonnet | UX-873 (verifier) | 79k | 59 | 20.4 m | PASS; source track still reads all as the target (track left in the target set from UX-842) | one touching sweep threw two unrelated failures that vanished on rerun |
 | 121 | implementer | sonnet | UX-872 (implementer) | 462k | 248 | 48.9 m | examples/12-junctioned (a local junction over one cmake element), a bst-examples step under bga snapshot --jobserver auto with a committed decision-check script; this box: exit 0, core.bst joined as cmake, 3 junctioned names; resumed once when the disk filled | the box hit 0 bytes free mid-sweep (pytest temp dirs); UX-354 refused an inline JSON read in the workflow |
 | 121 | verifier | sonnet | UX-872 (verifier) | 97k | 74 | 13.1 m | PASS; ran the example for real (EXIT=0, 16.9 s, core.bst joined as cmake); make lint red on the base from UX-871's untyped return, typed on the branch before the merge | an isolated worktree at the base was needed to prove the lint break was not the diff's |
+| 122 | implementer | sonnet | UX-874 (implementer) | 362k | 170 | 44.8 m | the shim probes the sandbox make and narrows fifo to fd below 4.4, sharing the 4.4 cutoff with the host function; resumed once for a lint red and a per-capture cache | the first Outcome trusted a standalone dev_baseline.py --check that make lint later reddened |
+| 122 | verifier | sonnet | UX-874 (verifier) | 173k | 58 | 34.1 m | HOLD (make lint red - PLR0915 on main, S603 on probe_make; the make probe cached per capture not per element), then PASS on the re-check | two pasted register numbers were wrong on rerun in five minutes |
+| 122 | implementer | sonnet | UX-875 (implementer) | 64k | 62 | 10.3 m | bga snapshot gains --jobserver-auth and forwards it to the tracer, which resolves it; appended only when the jobserver is on | - |
+| 122 | verifier | sonnet | UX-875 (verifier) | 39k | 30 | 5.5 m | PASS; ran a second mutation of its own to prove all three new assertions load-bearing | - |
 
 Round 101's four tracks are **not** here: this session could not
 identify their transcripts with certainty after a context rebuild, and
@@ -339,7 +343,7 @@ committed cleanly once told to run in the foreground. Three of the five
 left a derived figure or a §6 context-map row behind - the same class
 the round itself was about, arriving in the tracks' own work.
 
-What the three hundred and ten rows already say: a researcher that reads a document
+What the three hundred and fourteen rows already say: a researcher that reads a document
 whole costs 100-180k; a walker that drives every control costs 336k;
 the two cuts cost a re-run each. The `walk` and `design-review`
 skills fix the report shape so the next rows are smaller, and the

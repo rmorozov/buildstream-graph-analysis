@@ -55,3 +55,47 @@ element on the Makefiles path narrows to `fd` (was left `fifo`), and a
 jobserver-client ninja (no `MAKEFLAGS`) is unnarrowed. Mutation:
 restore `element_kind not in _MAKE_LIKE_KINDS: return "fifo"` - the
 cmake case keeps `fifo` and reddens.
+
+## Outcome
+
+Gap measured: `sandbox_make_auth_style("cmake", fake_4_3_make, ...)`
+returned `"fifo"` before this fix, reproduced by the old
+`test_a_kind_outside_make_like_is_never_probed_and_never_narrowed`
+(the fake's marker never appeared, meaning the probe never ran for
+cmake) - exactly the user's Makefiles-path `cmake` element handed a
+`fifo` `MAKEFLAGS` its sandbox make cannot parse.
+
+Close measured, `pytest -q tests/unit/test_bwrap_shim.py -k
+"narrowed or unnarrowed" -v`:
+
+```text
+test_a_kind_with_no_makeflags_is_never_probed_and_never_narrowed PASSED
+test_ninja_static_is_never_probed_and_never_narrowed PASSED
+test_cmake_on_the_makefiles_path_is_now_narrowed PASSED
+test_a_jobs_env_kind_is_now_narrowed PASSED
+test_a_cmake_element_resolving_to_a_jobserver_client_ninja_is_unnarrowed PASSED
+5 passed, 62 deselected in 0.07s
+```
+
+Full file: `pytest -q tests/unit/test_bwrap_shim.py` - 67 passed;
+`test_the_jobserver_fifo_has_a_lifecycle.py` - 8 passed, both green.
+
+Derivation: `sandbox_make_auth_style` now calls `kind_job_env` with a
+sentinel auth and narrows when a `MAKEFLAGS` pair comes back AND the
+returned policy is one whose consumer is make
+(`_MAKE_CONSUMER_POLICIES = {make, cargo, cmake_meson, jobs_env}`) -
+not `ninja_client`/`ninja_wrapper`/`ninja_static`/`unknown_kind`. The
+new `kind_probe` dict param (`{ninja_probe, wrappers_dir,
+jobs_present}`) threads through `_downgrade_fifo_to_fd_if_sandbox_
+make_rejects_it` (now takes a `probe: dict` to stay under PLR0913's
+cap) and `_narrow_jobserver_to_sandbox_make`, filled in `main` from
+`kind_context` and `_setenv_value(opts_now, "JOBS")`.
+
+Mutation table:
+
+| mutation | reddened | count |
+|---|---|---|
+| restore `if element_kind not in _MAKE_LIKE_KINDS: return "fifo"` | `test_cmake_on_the_makefiles_path_is_now_narrowed`, `test_a_jobs_env_kind_is_now_narrowed` | 65 passed, 2 failed |
+
+Reverted from a saved copy (`cp` to scratchpad before mutating, `cp`
+back after) - full file green again, 67 passed.

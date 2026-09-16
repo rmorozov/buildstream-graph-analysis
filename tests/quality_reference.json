@@ -120,7 +120,7 @@
     "tools/dev_track_cost.py": {"duplicate_blocks": 0, "file_lines": 455, "longest_function": 44},
     "tools/gen_synthetic_scale_run.py": {"duplicate_blocks": 0, "file_lines": 616, "longest_function": 131},
     "tools/native_trace/__init__.py": {"duplicate_blocks": 0, "file_lines": 0, "longest_function": 0},
-    "tools/native_trace/bwrap_shim.py": {"duplicate_blocks": 0, "file_lines": 1439, "longest_function": 150},
+    "tools/native_trace/bwrap_shim.py": {"duplicate_blocks": 0, "file_lines": 1463, "longest_function": 153},
     "tools/native_trace/trackevent.py": {"duplicate_blocks": 0, "file_lines": 576, "longest_function": 31},
     "tools/native_trace_to_chrome_trace.py": {"duplicate_blocks": 0, "file_lines": 303, "longest_function": 80}
   }

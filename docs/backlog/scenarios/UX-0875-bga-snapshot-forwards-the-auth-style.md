@@ -1,0 +1,43 @@
+# UX-875: bga snapshot forwards the jobserver auth style
+
+**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-856, UX-841 | **Found by:** round 122, the user (a make-kind element from a tar source, GNU Make 4.4 on the host) | **Serves:** R4 (the snapshot entry point can force the auth style capture run already can) | **Topic:** capture | **Area:** tools | **Shape:** bounded
+
+## Motivation
+
+`bga capture run` exposes `--jobserver-auth {fd,fifo,auto}`
+(`UX-841`), but `bga snapshot` (`UX-856`) exposes only `--jobserver
+MODE`; there is no way to force the style from the snapshot entry
+point. Until `UX-874` lands, `auto` is the only choice a snapshot user
+has, and on a host whose make is 4.4 over a sandbox make below it that
+choice fails the build (`UX-874`'s motivation). Even with `UX-874` an
+operator wants the escape hatch `capture run` already gives.
+
+## Required Fix
+
+`tools/bga_snapshot.py`: a `--jobserver-auth {fd,fifo,auto}`
+argument (default `auto`, matching `capture run`) forwarded to the
+tracer's own `--jobserver-auth` in the composed argv, beside the
+`--jobserver <int>`/`--jobserver-seed` it already appends; the
+`snapshot()` signature carries it the way it carries `jobserver`.
+
+## Decomposition
+
+Input classes: auth unset (default auto), fd, fifo; each with
+jobserver off (no auth token appended) and on. Surfaces:
+`tools/bga_snapshot.py` (the argument, the signature, the argv
+compose) · `tests/unit/test_the_snapshot_records_the_jobserver.py` or
+the snapshot's own test file. Parallel with UX-874 (disjoint
+surfaces).
+
+## Out of Scope
+
+The auth style's own meaning (`UX-841`, `UX-874`) - this only
+forwards the flag. Any new resolution logic; `snapshot` composes the
+tracer argv and the tracer resolves as it does for `capture run`.
+
+## Acceptance Test
+
+The snapshot test asserts `--jobserver-auth fifo` on the command
+line reaches the tracer argv as `--jobserver-auth fifo`, and that with
+the jobserver off no auth token is appended. Mutation: drop the
+forward - the flag is accepted and silently dropped, red.

@@ -83,7 +83,13 @@ gcc-lto-driving element a path-based `fifo:` auth its GCC-13 (or modern
 LLVM) reopens inside the sandbox, or nothing when a sub-4.4 make shares
 the recipe — never a raw fd the compiler's lto-wrapper aborts on. The
 `requirements.lock` was refreshed (`platformdirs` 4.11.9) to clear the
-pip-audit freshness check. Left standing: the fix assumes a gcc-lto
+pip-audit freshness check. `bst-examples` then caught a real cost the
+unit guard missed: the scrub emptied `JOBS` without giving a jobserver,
+so `examples/11`'s `giant.bst` (cmake, this box's make 4.3 -> scrub) ran
+serial - a deterministic +40.1s over jobserver-off across two runs. The
+scrub now drops the emptied `JOBS` too, so a scrubbed element keeps its
+recipe's own `-jN` (the jobserver-off parallelism it falls back to),
+guarded by a new test assertion. Left standing: the fix assumes a gcc-lto
 consumer supports the `fifo:` style (GCC-13 and LLVM ≥19 do); a
 toolchain that reads `MAKEFLAGS` but supports neither `fifo` nor a
 sandbox-valid fd would get a clean rejection, not an ICE, and would be

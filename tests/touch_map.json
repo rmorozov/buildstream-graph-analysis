@@ -8760,6 +8760,7 @@
   "tests/unit/test_tools_dispatch.py"
  ],
  "tools/native_trace/bwrap_shim.py": [
+  "tests/unit/test_a_per_element_switch_forces_the_auth_style.py",
   "tests/unit/test_bwrap_argv_capture.py",
   "tests/unit/test_bwrap_shim.py",
   "tests/unit/test_capture_diagnostics.py",
@@ -8770,6 +8771,7 @@
   "tests/unit/test_spine_auto_policy.py",
   "tests/unit/test_the_broker_grants_by_slack.py",
   "tests/unit/test_the_jobserver_fifo_has_a_lifecycle.py",
+  "tests/unit/test_the_lto_link_survives_the_jobserver.py",
   "tests/unit/test_trace_stream_and_census_scale.py"
  ],
  "tools/native_trace/trackevent.py": [

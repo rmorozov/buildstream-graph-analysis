@@ -1,6 +1,6 @@
 # UX-876: jobserver auto picks fd, the style every make accepts
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-841, UX-874 | **Found by:** round 123, the user (a cmake element whose sandbox-built cmake runs /usr/sysroot/bin/make, GNU Make 4.4 on the host) | **Serves:** R2 (a project builds under --jobserver auto whatever makes its sandboxes ship) | **Topic:** capture | **Area:** tools | **Shape:** mechanical
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-841, UX-874 | **Found by:** round 123, the user (a cmake element whose sandbox-built cmake runs /usr/sysroot/bin/make, GNU Make 4.4 on the host) | **Serves:** R2 (a project builds under --jobserver auto whatever makes its sandboxes ship) | **Topic:** capture | **Area:** tools | **Shape:** mechanical
 
 ## Motivation
 
@@ -105,3 +105,14 @@ Mutation table:
 Reverted from a saved copy of the pre-mutation file (not `git
 checkout`); re-run after revert: 8 passed, 0 diff against the saved
 copy.
+
+**Deviation (merge):** the track switched one argv test
+(`test_a_4_4_version_string_carries_fifo_...`) from `auto`+4.4 to an
+explicit `fifo` request, since it exercised shim argv construction, not
+auto selection; the verifier confirmed the 4.4 auto behavior stays
+pinned by its own flipped test. Removing the host `make --version`
+subprocess left a stale `UX-841` ruff S603 forced entry, dropped with
+`dev_baseline.py --shrink` (one entry, verified structurally). The
+Outcome's touching figure (126 files, 2972 passed) re-measured 128
+files, 3001 passed on the verifier's pinned worktree, 0 failed either
+way, the map having grown between runs.

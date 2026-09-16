@@ -15,12 +15,12 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-874 scenarios: **2 open**, 872 closed.
+874 scenarios: **1 open**, 873 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
-| capture | 2 | 122 |
+| capture | 1 | 122 |
 | analysis | 0 | 118 |
 | contracts | 0 | 50 |
 | viewer | 0 | 177 |
@@ -36,7 +36,6 @@ task file, which is the only place it ever lived twice.
 
 | ID | Scenario | Topic | Priority | Serves | Status |
 |---|---|---|---|---|---|
-| UX-876 | [jobserver auto picks fd, the style every make accepts](UX-0876-auto-picks-fd-the-style-every-make-accepts.md) | capture | High | R2 (a project builds under --jobserver auto whatever makes its sandboxes ship) | 🔴 Not Started |
 | UX-877 | [the sandbox-make downgrade covers every kind that injects MAKEFLAGS](UX-0877-the-downgrade-covers-every-kind-that-injects-makeflags.md) | capture | High | R2 (an explicit --jobserver-auth fifo still narrows for a cmake element's own make) | 🔴 Not Started |
 
 **The narrative round headings below are retired at round 94**

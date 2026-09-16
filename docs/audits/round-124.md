@@ -38,20 +38,53 @@ One row filed.
 
 | row | what landed |
 |---|---|
-| `UX-878` | (filled at close) |
+| `UX-878` | the injected jobserver auth is normalized at the one channel that reaches an absolute-path, custom-prefix compiler — the sandbox `MAKEFLAGS`. For the kinds whose auth an unwrapped native client reads (`cmake`/`meson`/`jobs_env`, cargo), `compiler_safe_auth` rewrites an `fd` auth to `fifo:<path>` (gcc-13 and modern LLVM reopen the bind-mounted path in-sandbox; a raw fd does not survive the boundary) or, when a sub-4.4 make shares the string, scrubs it (serial, never an ICE). Takes precedence over UX-874's `fifo→fd` downgrade for those kinds. `_compiler_safe_fifo_host` targets the element's own per-element proxy FIFO, not the global one. Pure `make`/`autotools` keep raw `fd` (their consumer is make itself, a direct child) |
 
 ## The verifiers found
 
-(filled at close)
+- `UX-878`: HOLD, then PASS. The HOLD was real and would have hit the
+  field: for a UX-849 per-element proxy under the default `fd` style,
+  `pool["proxy_fifo"]` is `None` (the path is discarded when the fd is
+  opened), so the rewrite fell back to the *global* jobserver path and
+  silently named the wrong FIFO — no ICE, but the wrong token source.
+  The fix re-derives the element's own proxy FIFO
+  (`BST_TRACE_PROXY_DIR` + element) and a new proxy input class guards
+  it. On PASS: 11 tests, both mutations (the scrub branch and the
+  proxy-host resolution) reddened their tests, no UX-874 regression
+  (75/75), scope and derived count clean.
 
 ## Agents
 
-(filled at close)
+2 runs priced, one `implementer` track and one `verifier` read, both
+on `sonnet`; the track was resumed once for the proxy fix and the
+verifier once to re-check it. A `researcher` (the jobserver plumbing)
+and a `Plan` read (the interception mechanism) ran before the filing;
+their reads are the session's own context, not priced tracks.
+
+| role | runs | tokens | calls | minutes |
+|---|---|---|---|---|
+| implementer | 1 | 464k | 172 | 44 m |
+| verifier | 1 | 214k | 78 | 23 m |
 
 ## The gate
 
-(filled at close)
+| run | head | result |
+|---|---|---|
+| 0 | `4bc02b33` (the filing) | red only on the round-open bootstrap guards (Agents/ledger/register empty, README link) and an upstream `platformdirs` lock drift; docs-only |
+| 1 | the close | the run this commit is pushed under; the pull request carries the figure |
 
 ## Standing
 
-(filled at close)
+The box has no cross toolchain and cannot build a real cmake+LTO
+element, so the guard drives the auth-form decision through
+`build_shim_argv` and a fake sandbox make — the same instrument
+rounds 122–123 used. On the user's host, `bga snapshot` now hands a
+gcc-lto-driving element a path-based `fifo:` auth its GCC-13 (or modern
+LLVM) reopens inside the sandbox, or nothing when a sub-4.4 make shares
+the recipe — never a raw fd the compiler's lto-wrapper aborts on. The
+`requirements.lock` was refreshed (`platformdirs` 4.11.9) to clear the
+pip-audit freshness check. Left standing: the fix assumes a gcc-lto
+consumer supports the `fifo:` style (GCC-13 and LLVM ≥19 do); a
+toolchain that reads `MAKEFLAGS` but supports neither `fifo` nor a
+sandbox-valid fd would get a clean rejection, not an ICE, and would be
+the next field signal.

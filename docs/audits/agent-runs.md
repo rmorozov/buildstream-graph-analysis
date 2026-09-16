@@ -335,6 +335,8 @@ pairing for every merged row from round 103 on.
 | 123 | verifier | sonnet | UX-876 (verifier) | 57k | 33 | 6.9 m | PASS; the argv test's auto->explicit fifo switch is legitimate, the baseline shrink dropped exactly the removed subprocess line, make lint green via the full target | the touching figure re-measured 128 files against the Outcome's 126, 0 failed either way |
 | 123 | implementer | sonnet | UX-877 (implementer) | 113k | 81 | 18.4 m | sandbox_make_auth_style narrows fifo for every kind_job_env policy whose consumer is make (make/cargo/cmake_meson/jobs_env), derived from the injection; PLR0913 bundled into a dict param | a plain pytest run gave no signal the fix grew a new PLR0913 until make lint |
 | 123 | verifier | sonnet | UX-877 (verifier) | 48k | 33 | 6.3 m | PASS; the policy set matches kind_job_env's own MAKEFLAGS-emitting tags, ninja_client/wrapper rightly unnarrowed; the makeflags_injected half of the guard has no reddening mutation, derived-safety not load-bearing | make lint runtime past the 120s bash default, backgrounded |
+| 124 | implementer | sonnet | UX-878 (implementer) | 464k | 172 | 44.3 m | compiler_safe_auth normalizes the injected auth at the source (fd->fifo: for cmake/meson/jobs_env/cargo, scrub for a sub-4.4 make); _compiler_safe_fifo_host targets the per-element proxy's own fifo, not the global | the pre-commit selector reddened on the round doc's own unfinished ledger/Agents rows (pre-existing); BGA_SKIP_SELECTOR for the commit |
+| 124 | verifier | sonnet | UX-878 (verifier) | 214k | 78 | 22.6 m | HOLD then PASS: the proxy fifo path recovery fell back to the global jobserver under fd style; fixed to re-derive the per-element proxy fifo; 11-test guard, both scrub and proxy mutations reddened | a bare git stash pop in the shared worktree applied a foreign WIP stash; reset --hard recovered it, the foreign entry preserved |
 
 Round 101's four tracks are **not** here: this session could not
 identify their transcripts with certainty after a context rebuild, and
@@ -347,7 +349,7 @@ committed cleanly once told to run in the foreground. Three of the five
 left a derived figure or a §6 context-map row behind - the same class
 the round itself was about, arriving in the tracks' own work.
 
-What the three hundred and eighteen rows already say: a researcher that reads a document
+What the three hundred and twenty rows already say: a researcher that reads a document
 whole costs 100-180k; a walker that drives every control costs 336k;
 the two cuts cost a re-run each. The `walk` and `design-review`
 skills fix the report shape so the next rows are smaller, and the

@@ -1,6 +1,6 @@
 # UX-878: the injected jobserver never reaches gcc's lto-wrapper as an fd it can't use
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-874, UX-876 | **Found by:** round 124, the user (a `kind: cmake` element building ninja 1.10.2 with a relocatable GCC-13 cross toolchain, glibc 2.17, invoked by absolute path) | **Serves:** R2 (a cmake/ninja element's LTO link completes under the trace jobserver) | **Topic:** capture | **Area:** tools-native_trace | **Shape:** mechanical
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-874, UX-876 | **Found by:** round 124, the user (a `kind: cmake` element building ninja 1.10.2 with a relocatable GCC-13 cross toolchain, glibc 2.17, invoked by absolute path) | **Serves:** R2 (a cmake/ninja element's LTO link completes under the trace jobserver) | **Topic:** capture | **Area:** tools-native_trace | **Shape:** mechanical
 
 ## Motivation
 

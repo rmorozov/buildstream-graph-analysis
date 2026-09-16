@@ -2258,7 +2258,10 @@ def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrappe
     uses - so every sandbox's `make` can join it via `--jobserver-auth`.
     `jobserver_auth` (UX-841): `fd` or `fifo`, the style already
     resolved by the caller and passed through `BST_TRACE_JOBSERVER_AUTH`
-    for the shim to read.
+    for the shim to read. UX-879: a per-element override
+    (`BST_TRACE_JOBSERVER_AUTH_MAP`, `bga`'s own `--jobserver-auth-override`)
+    is read straight from this process's own environment and carried
+    through unchanged - no decision made here, the shim resolves it.
 
     `jobserver_pool` (UX-845): `"dynamic"` starts a `PoolController`
     daemon thread between `open_jobserver` and `close_jobserver`;
@@ -2452,6 +2455,16 @@ def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrappe
                 jobserver, bind_dir, seed=jobserver_seed)
             env["BST_TRACE_JOBSERVER"] = jobserver_fifo
             env["BST_TRACE_JOBSERVER_AUTH"] = jobserver_auth or "fd"
+            # UX-879: `bga`'s own `--jobserver-auth-override` already
+            # resolved to this one var in `bga/cli.py`'s process env - no
+            # decision here, just carried into the sandbox the same way
+            # BST_TRACE_JOBSERVER_AUTH above is; the shim resolves it
+            # against the element name.
+            auth_map = os.environ.get("BST_TRACE_JOBSERVER_AUTH_MAP")
+            if auth_map:
+                env["BST_TRACE_JOBSERVER_AUTH_MAP"] = auth_map
+            else:
+                env.pop("BST_TRACE_JOBSERVER_AUTH_MAP", None)
             # UX-846: a wrapper directory per capture - static content,
             # bound straight from the tree rather than staged, and
             # capped at this pool's own ceiling (its widest possible
@@ -2521,6 +2534,7 @@ def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrappe
         else:
             env.pop("BST_TRACE_JOBSERVER", None)
             env.pop("BST_TRACE_JOBSERVER_AUTH", None)
+            env.pop("BST_TRACE_JOBSERVER_AUTH_MAP", None)
             env.pop("BST_TRACE_JOBSERVER_DECISIONS", None)
             env.pop("BST_TRACE_PROJECT_MAX_JOBS", None)
             env.pop("BST_TRACE_ELEMENT_KINDS", None)

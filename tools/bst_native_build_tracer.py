@@ -95,7 +95,9 @@ from bga import progress
 from bga.plane2 import SCHEMA as PLANE2_SCHEMA
 
 from .bst_run_wrapped import run_wrapped, shutdown_build_group
+from .bst_show_to_graph import FIELD_SEP, RECORD_SEP, _parse_yaml_mapping
 from .native_trace.bwrap_shim import (
+    _AUTH_OVERRIDE_STYLES,
     _COMPILER_SAFE_POLICIES,
     JOBSERVER_PINNED,
     _make_probe_cache_path,
@@ -2257,6 +2259,65 @@ def read_element_kinds_for_jobserver(project_dir: str,
                    "junctions": kinds.junctions, "collisions": kinds.collisions}
 
 
+def _public_auth_style(public_raw: str) -> Optional[str]:
+    """UX-882: `%{public}`'s own `bga: jobserver-auth:` sub-domain -
+    `yaml.safe_load` via `_parse_yaml_mapping`, so a malformed or absent
+    block degrades to `{}` rather than raising. `None` for no `bga:`
+    key, a non-mapping `bga:` block, or a value outside the four
+    override styles `resolve_auth_override` already accepts."""
+    bga_block = _parse_yaml_mapping(public_raw).get("bga")
+    if not isinstance(bga_block, dict):
+        return None
+    style = bga_block.get("jobserver-auth")
+    if style is False:  # YAML 1.1: unquoted "off" loads as a bool
+        style = "off"
+    return style if style in _AUTH_OVERRIDE_STYLES else None
+
+
+def read_element_auth_map_for_jobserver(project_dir: str,
+                                        cmd: list[str]) -> dict:
+    """UX-882: a *separate* `bst show --format '%{name}<US>%{public}<RS>'`
+    call (the RS/US-delimited scheme `bst_show_to_graph.py` already
+    uses) - never appended to `read_element_kinds_for_jobserver`'s
+    `%{name} %{kind}` line read, whose `line.split()` parse breaks on
+    `%{public}`'s multi-line YAML. Returns `{element: style}` for every
+    element whose `public: bga: jobserver-auth:` names one of the four
+    override styles; `{}` on any failure (no subcommand, timeout,
+    non-zero exit, unparseable output) - the build must not depend on
+    this succeeding, so this never raises.
+    """
+    global_opts, has_subcommand = _bst_global_options(cmd)
+    if not has_subcommand:
+        return {}
+    target = _cmd_target(cmd)
+    fmt = FIELD_SEP.join(["%{name}", "%{public}"]) + RECORD_SEP
+    argv = [cmd[0], *global_opts, "show", "--format", fmt]
+    if target is not None:
+        argv.append(target)
+    try:
+        proc = subprocess.run(
+            argv, cwd=project_dir, capture_output=True, text=True,
+            check=False, timeout=120,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return {}
+    if proc.returncode != 0:
+        return {}
+    auth_map = {}
+    for record in proc.stdout.split(RECORD_SEP):
+        if not record.strip():
+            continue
+        parts = record.split(FIELD_SEP, 1)
+        if len(parts) != 2:
+            continue
+        name, public_raw = parts
+        name = name.strip()
+        style = _public_auth_style(public_raw)
+        if name and style is not None:
+            auth_map[name] = style
+    return auth_map
+
+
 def _write_kinds_read(bind_dir: str, jobserver: Optional[int],
                       element_kinds: Optional[dict],
                       diagnostic: dict) -> Optional[str]:
@@ -2284,6 +2345,7 @@ def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrappe
                      jobserver_decisions_path: Optional[str] = None,
                      element_kinds: Optional[dict] = None,
                      kinds_read_diagnostic: Optional[dict] = None,
+                     element_auth_map: Optional[dict] = None,
                      plan_path: Optional[str] = None,
                      broker_status_path: Optional[str] = None) -> int:
     """Run cmd (a real `bst` invocation) with the bwrap shim + LD_PRELOAD
@@ -2332,7 +2394,12 @@ def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrappe
     the scratch and passed through `BST_TRACE_ELEMENT_KINDS` so the shim
     can apply the per-kind table. `kinds_read_diagnostic` (UX-870): that
     same call's second return value, written beside it as
-    `kinds_read.json` and named in the printed warning.
+    `kinds_read.json` and named in the printed warning. `element_auth_map`
+    (UX-882): the caller's `read_element_auth_map_for_jobserver`, written
+    once into the scratch and passed through `BST_TRACE_ELEMENT_AUTH_MAP`
+    so the shim can fall back to a `public: bga: jobserver-auth:`
+    annotation when `BST_TRACE_JOBSERVER_AUTH_MAP` (UX-879's command-line
+    override) does not match the element.
 
     `plan_path` (UX-849): an `analyze.json`, or `None` for today's single
     shared FIFO, byte for byte. Given, one proxy FIFO per `element_kinds`
@@ -2573,6 +2640,18 @@ def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrappe
                 env["BST_TRACE_ELEMENT_KINDS"] = captured_kinds
             else:
                 env.pop("BST_TRACE_ELEMENT_KINDS", None)
+            # UX-882: the per-element annotation table's input, same
+            # shape as `element_kinds.json` beside it - the shim falls
+            # back to it only when the command-line override does not
+            # match the element.
+            if element_auth_map:
+                captured_auth_map = os.path.join(
+                    bind_dir, "element_auth_map.json")
+                with open(captured_auth_map, "w", encoding="utf-8") as handle:
+                    json.dump(element_auth_map, handle)
+                env["BST_TRACE_ELEMENT_AUTH_MAP"] = captured_auth_map
+            else:
+                env.pop("BST_TRACE_ELEMENT_AUTH_MAP", None)
             # UX-870: always written beside `element_kinds.json` when the
             # read ran at all - argv+count on success, argv+exit/stderr/
             # reason on failure - so a silent `unknown_kind` capture has
@@ -2611,6 +2690,7 @@ def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrappe
             env.pop("BST_TRACE_JOBSERVER_DECISIONS", None)
             env.pop("BST_TRACE_PROJECT_MAX_JOBS", None)
             env.pop("BST_TRACE_ELEMENT_KINDS", None)
+            env.pop("BST_TRACE_ELEMENT_AUTH_MAP", None)
             env.pop("BST_TRACE_WRAPPER_DIR", None)
             env.pop("BST_TRACE_WRAPPER_CAP", None)
             env.pop("BST_TRACE_LTO_CAP", None)
@@ -8560,6 +8640,14 @@ def main(argv: Optional[list[str]] = None) -> int:
         element_kinds, kinds_read_diagnostic = (
             read_element_kinds_for_jobserver(args.project_dir, cmd)
             if args.jobserver else (None, None))
+        # UX-882: a second, separate `bst show` call for `%{public}` -
+        # never folded into the kinds read above, whose `line.split()`
+        # parse breaks on `%{public}`'s multi-line YAML. `{}` (never
+        # `None`) on any failure - an annotation read gone wrong must
+        # not change what the build does.
+        element_auth_map = (
+            read_element_auth_map_for_jobserver(args.project_dir, cmd)
+            if args.jobserver else {})
         jobserver_decisions_path = (
             os.path.join(scratch_mkdtemp(args.project_dir, "jobserver-"),
                         "jobserver_decisions.jsonl")
@@ -8612,6 +8700,7 @@ def main(argv: Optional[list[str]] = None) -> int:
                                           jobserver_decisions_path=jobserver_decisions_path,
                                           element_kinds=element_kinds,
                                           kinds_read_diagnostic=kinds_read_diagnostic,
+                                          element_auth_map=element_auth_map,
                                           plan_path=args.plan,
                                           broker_status_path=broker_status_path)
         except CaptureInterrupted:

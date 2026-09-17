@@ -61,7 +61,65 @@ bga_release() {
     bga_ledger release
 }
 
-# `flag_style` is `threads` (--threads=N) or `dashj` (-j N).
+# UX-880: the GCC-driver LTO shim - a grandchild across bwrap cannot
+# open the raw fd `--jobserver-auth` names, so this strips it from the
+# MAKEFLAGS it hands the real compiler unconditionally, and only when
+# `-flto` is already requested, pins it to a static `-flto=N` cap
+# lto-wrapper can honour without a jobserver. A non-LTO invocation's
+# argv is untouched - this must never *introduce* LTO.
+#
+# UX-880 (verifier fix): these scripts sit in the one shared wrapper
+# directory every jobserver-active sandbox mounts (UX-846), so they are
+# on `PATH` whether or not *this* element's own override resolved to
+# `flto` - gated on `BST_TRACE_FLTO_ACTIVE=1`, set only by
+# `_jobserver_injection` for a matched element, never re-derived here.
+# Unset (or anything but `1`): pure pass-through, argv and MAKEFLAGS
+# both untouched - a working dynamic-fifo build must not be silently
+# pinned to a static cap just because this shim happens to be on PATH.
+bga_run_flto() {
+    real=$1
+    shift
+
+    if [ "${BST_TRACE_FLTO_ACTIVE:-}" != "1" ]; then
+        exec "$real" "$@"
+    fi
+
+    stripped=
+    for flag in ${MAKEFLAGS:-}; do
+        case "$flag" in
+            --jobserver-auth=*) ;;
+            *) stripped="$stripped $flag" ;;
+        esac
+    done
+    export MAKEFLAGS=${stripped# }
+
+    has_flto=0
+    for arg in "$@"; do
+        case "$arg" in
+            -flto | -flto=jobserver | -flto=auto) has_flto=1 ;;
+        esac
+    done
+    if [ "$has_flto" -eq 0 ]; then
+        exec "$real" "$@"
+    fi
+
+    cap=${BST_TRACE_LTO_CAP:-$(nproc 2>/dev/null || echo 1)}
+    n=$#
+    i=0
+    while [ "$i" -lt "$n" ]; do
+        i=$((i + 1))
+        arg=$1
+        shift
+        case "$arg" in
+            -flto | -flto=jobserver | -flto=auto) arg="-flto=$cap" ;;
+        esac
+        set -- "$@" "$arg"
+    done
+    exec "$real" "$@"
+}
+
+# `flag_style` is `threads` (--threads=N), `dashj` (-j N) or `flto`
+# (UX-880 - not a token-holder at all, see `bga_run_flto` above).
 bga_run_wrapped() {
     flag_style=$1
     shift
@@ -82,6 +140,10 @@ bga_run_wrapped() {
         echo "bga: $bga_tool: no real tool found on PATH past $bga_self_dir" >&2
         exit 127
     }
+
+    if [ "$flag_style" = "flto" ]; then
+        bga_run_flto "$real" "$@"
+    fi
 
     auth=
     for flag in ${MAKEFLAGS:-}; do

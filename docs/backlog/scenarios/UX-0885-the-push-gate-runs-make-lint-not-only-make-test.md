@@ -1,6 +1,6 @@
 # UX-885: the push gate runs `make lint`, not only `make test`
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** round 125 (PR #235's test matrix went red on a `make lint` PyMarkdown finding the local push gate had passed — the gate covers `make test`, which writes `.gate-covered`, but not `make lint`, so a lint-clean-locally-but-not-in-CI blob still pushed) | **Serves:** the pipeline (a push that CI will fail on lint is caught before the push, not after) | **Topic:** guards | **Area:** tools-dev | **Shape:** judgement
+**Priority:** Medium | **Status:** 🟡 In Progress | **Depends on:** — | **Found by:** round 125 (PR #235's test matrix went red on a `make lint` PyMarkdown finding the local push gate had passed — the gate covers `make test`, which writes `.gate-covered`, but not `make lint`, so a lint-clean-locally-but-not-in-CI blob still pushed) | **Serves:** the pipeline (a push that CI will fail on lint is caught before the push, not after) | **Topic:** guards | **Area:** tools-dev | **Shape:** judgement
 
 ## Motivation
 

@@ -2673,6 +2673,46 @@ def _translate_capture_jobserver_auth_override(argv: list) -> list:
     return argv[:2] + new_rest
 
 
+def _translate_capture_lto_cap(argv: list) -> list:
+    """`bga capture run ... --lto-cap N ...` (UX-880) -> `BST_TRACE_LTO_CAP`
+    in this process's own environment, the flag stripped from argv - the
+    same channel `--jobserver-auth-override` uses, the tracer's own
+    argparse never seeing either. Last occurrence wins; absent clears a
+    stale value, the same discipline as the sibling translation above.
+    """
+    if len(argv) < 2 or argv[0] != 'capture' or argv[1] != 'run':
+        return argv
+    rest = argv[2:]
+    if '--' in rest:
+        split = rest.index('--')
+        tracer_args, wrapped_cmd = rest[:split], rest[split + 1:]
+        has_sep = True
+    else:
+        tracer_args, wrapped_cmd = rest, []
+        has_sep = False
+    out = []
+    value = None
+    i = 0
+    while i < len(tracer_args):
+        tok = tracer_args[i]
+        if tok == '--lto-cap' and i + 1 < len(tracer_args):
+            value = tracer_args[i + 1]
+            i += 2
+            continue
+        if tok.startswith('--lto-cap='):
+            value = tok.split('=', 1)[1]
+            i += 1
+            continue
+        out.append(tok)
+        i += 1
+    if value:
+        os.environ['BST_TRACE_LTO_CAP'] = value
+    else:
+        os.environ.pop('BST_TRACE_LTO_CAP', None)
+    new_rest = out + (['--'] + wrapped_cmd if has_sep else [])
+    return argv[:2] + new_rest
+
+
 def _maybe_print_schema(argv: list) -> Optional[int]:
     """`bga <command> --schema` -> the JSON Schema of its output, exit 0.
 
@@ -2840,6 +2880,8 @@ def _run(argv: Optional[list[str]] = None) -> int:
     # UX-879: `--jobserver-auth-override` is `bga`'s own flag too, never
     # the tracer's - see `_translate_capture_jobserver_auth_override`.
     raw_argv = _translate_capture_jobserver_auth_override(raw_argv)
+    # UX-880: same shape, one value - see `_translate_capture_lto_cap`.
+    raw_argv = _translate_capture_lto_cap(raw_argv)
 
     from .tools_dispatch import dispatch
     tool_exit = dispatch(raw_argv)

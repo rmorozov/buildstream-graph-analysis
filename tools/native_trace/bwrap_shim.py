@@ -444,8 +444,11 @@ _MAKE_CONSUMER_POLICIES = frozenset({"make", "cargo", "cmake_meson", "jobs_env"}
 # a raw fd is valid.
 _COMPILER_SAFE_POLICIES = frozenset({"cmake_meson", "jobs_env", "cargo"})
 
-# UX-879: the styles a per-element override may force.
-_AUTH_OVERRIDE_STYLES = frozenset({"fd", "fifo", "off"})
+# UX-879: the styles a per-element override may force. UX-880: `flto`
+# added - keeps the raw auth like `fd` (falls through `_forced_auth`
+# the same way), and is the glob a wrapper-directory GCC-driver shim
+# (tools/native_trace/wrappers/gcc et al.) reads `-flto` for.
+_AUTH_OVERRIDE_STYLES = frozenset({"fd", "fifo", "off", "flto"})
 
 
 def resolve_auth_override(auth_map_str: Optional[str],
@@ -480,8 +483,12 @@ def _forced_auth(override: str, auth_value: str, ctx: dict) -> Optional[str]:
     `fifo` rewrites to the `fifo:` path when one is derivable (the same
     lookup `_compiler_safe_makeflags` uses), else leaves `auth_value`
     unchanged rather than crash on an element with no FIFO to name.
-    `ctx`: `{bind_src, bind_dst, pool, element}` - the same bundling
-    `_compiler_safe_makeflags` uses for PLR0913's cap.
+    UX-880: `flto` falls through to the same raw-`auth_value` branch as
+    `fd` - `make` keeps filling the pool, and it is the wrapper-mounted
+    GCC-driver shim, not this function, that strips the fd auth before
+    it ever reaches `lto-wrapper`. `ctx`: `{bind_src, bind_dst, pool,
+    element}` - the same bundling `_compiler_safe_makeflags` uses for
+    PLR0913's cap.
     """
     if override == "off":
         return None
@@ -543,11 +550,23 @@ def _setenv_value(opts: list[str], name: str) -> Optional[str]:
     return None
 
 
-def _wrapper_mount(opts: list[str], wrapper_dir: str, wrapper_cap: Optional[str],
-                   bind_dst: str) -> list[str]:
+def _wrapper_mount(opts: list[str], wrapper_dir: str, bind_dst: str,
+                   caps: Optional[dict] = None) -> list[str]:
     """UX-846: the wrappers bound read-only ahead of BuildStream's own
     `PATH` (bwrap: the last `--setenv` wins outright, measured), with
-    the ledger path and the cap the wrapper reads."""
+    the ledger path and the cap the wrapper reads. `caps` (PLR0913's
+    cap, UX-880 pushed a 4th env past the 5-arg baseline): `{wrapper_cap,
+    lto_cap, flto_active}`. `lto_cap` (`BST_TRACE_LTO_CAP`) is the same
+    shape as `wrapper_cap` - read by the GCC-driver shim in this same
+    directory, not the held-tool wrappers `wrapper_cap` sizes.
+    `flto_active` (verifier fix): the GCC-driver shim scripts live in
+    this same shared directory and are therefore on `PATH` for *every*
+    sandbox this mounts, matched or not - `BST_TRACE_FLTO_ACTIVE=1` is
+    the one bit that tells the shim "this element's own override
+    resolved to `flto`", set only here, from `_jobserver_injection`'s
+    already-resolved `override`, never re-derived (re-matching the glob
+    in the shell would drift from the Python side's own decision)."""
+    caps = caps or {}
     bst_path = _setenv_value(opts, "PATH") or "/usr/bin:/bin"
     dst = os.path.join(bind_dst, WRAPPER_BIND_SUBDIR)
     mount = [
@@ -556,8 +575,12 @@ def _wrapper_mount(opts: list[str], wrapper_dir: str, wrapper_cap: Optional[str]
         "--setenv", "BST_TRACE_JOBSERVER_LEDGER",
         os.path.join(bind_dst, "jobserver_ledger.jsonl"),
     ]
-    if wrapper_cap:
-        mount += ["--setenv", "BST_TRACE_WRAPPER_CAP", str(wrapper_cap)]
+    if caps.get("wrapper_cap"):
+        mount += ["--setenv", "BST_TRACE_WRAPPER_CAP", str(caps["wrapper_cap"])]
+    if caps.get("lto_cap"):
+        mount += ["--setenv", "BST_TRACE_LTO_CAP", str(caps["lto_cap"])]
+    if caps.get("flto_active"):
+        mount += ["--setenv", "BST_TRACE_FLTO_ACTIVE", "1"]
     return mount
 
 
@@ -728,8 +751,11 @@ def _jobserver_injection(opts: list[str], binds: tuple, decision: str,
     # decides which tools this directory covers before the build.
     wrapper_dir = kind_context.get("wrappers_dir")
     if wrapper_dir is not None and auth_injected:
-        tokens += _wrapper_mount(opts, wrapper_dir,
-                                 kind_context.get("wrapper_cap"), bind_dst)
+        tokens += _wrapper_mount(opts, wrapper_dir, bind_dst, caps={
+            "wrapper_cap": kind_context.get("wrapper_cap"),
+            "lto_cap": kind_context.get("lto_cap"),
+            "flto_active": override == "flto",
+        })
     return tokens
 
 
@@ -751,6 +777,7 @@ def build_shim_argv(
     wrapper_cap: Optional[str] = None,
     proxy_fd: Optional[int] = None,
     proxy_fifo: Optional[str] = None,
+    lto_cap: Optional[str] = None,
 ) -> list[str]:
     """The real, complete argv to exec: BuildStream's own bwrap options
     first (unmodified, including its own root-filesystem bind), then the
@@ -777,6 +804,11 @@ def build_shim_argv(
     `jobserver_fifo` outright - `main` already opened the proxy under
     the *same* style the global FIFO resolved to (mirroring UX-841
     exactly; a proxy has no `make --version` of its own to probe).
+
+    `lto_cap` (UX-880): `BST_TRACE_LTO_CAP`, read straight from this
+    process's own environment by the caller - the static `-flto=N` cap
+    the wrapper-mounted GCC-driver shim rewrites to, same channel as
+    `wrapper_cap`.
     """
     opts, cmd = split_bwrap_args(bst_args)
     injected = [
@@ -817,7 +849,8 @@ def build_shim_argv(
              "proxy_fd": proxy_fd, "proxy_fifo": proxy_fifo},
         kind_context={"element_kind": element_kind, "ninja_probe": ninja_probe,
                      "wrappers_dir": wrapper_dir, "wrapper_cap": wrapper_cap,
-                     "real_bwrap": real_bwrap, "element": element})
+                     "real_bwrap": real_bwrap, "element": element,
+                     "lto_cap": lto_cap})
     # UX-106: the ptrace spine, prepended to the sandboxed command so it
     # becomes the parent of everything BuildStream asked to run - which
     # is what makes every descendant its own tracee, and so traceable
@@ -1545,7 +1578,8 @@ def main() -> int:
                                wrapper_dir=kind_context["wrappers_dir"],
                                wrapper_cap=os.environ.get("BST_TRACE_WRAPPER_CAP"),
                                proxy_fd=proxy_fd,
-                               proxy_fifo=proxy_fifo)
+                               proxy_fifo=proxy_fifo,
+                               lto_cap=os.environ.get("BST_TRACE_LTO_CAP"))
     else:
         argv = [real_bwrap, *sys.argv[1:]]
         proxy_done_path = None

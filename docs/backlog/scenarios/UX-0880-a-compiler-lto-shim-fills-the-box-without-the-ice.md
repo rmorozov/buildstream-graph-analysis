@@ -91,4 +91,69 @@ Mutation: make the `flto` branch fall through to `off` (scrub) — the
 
 ## Outcome
 
-_(filled at close)_
+**Gap measured** (base `986ffdfb`, before this task's changes):
+
+```text
+$ python3 -c "
+from tools.native_trace.bwrap_shim import resolve_auth_override, _AUTH_OVERRIDE_STYLES
+print('_AUTH_OVERRIDE_STYLES:', sorted(_AUTH_OVERRIDE_STYLES))
+print('resolve_auth_override(\"flto:llvm*\", \"llvm.bst\"):', resolve_auth_override('flto:llvm*', 'llvm.bst'))
+"
+_AUTH_OVERRIDE_STYLES: ['fd', 'fifo', 'off']
+resolve_auth_override("flto:llvm*", "llvm.bst"): None
+
+$ ls tools/native_trace/wrappers/
+_common.sh  ld.gold  ld.lld  lld  mold  ninja
+$ test -e tools/native_trace/wrappers/gcc && echo "gcc shim exists" || echo "no gcc shim on this commit"
+no gcc shim on this commit
+```
+
+Verifier's own gap measured (round-1 diff, before the `BST_TRACE_FLTO_ACTIVE`
+gate): an unmatched element with a working dynamic-fifo jobserver auth still
+had its compiler's auth stripped and `-flto` pinned, because the four shim
+scripts share `tools/native_trace/wrappers/`'s one mount with every other
+element:
+
+```text
+$ python3 -c "
+import subprocess, os
+env = dict(os.environ)
+env['PATH'] = '/tmp/fake-gcc-bin' + os.pathsep + env['PATH']
+env['MAKEFLAGS'] = '--jobserver-auth=fifo:/tmp/x.fifo -j8'
+env['BST_TRACE_LTO_CAP'] = '4'
+r = subprocess.run(['sh', 'tools/native_trace/wrappers/gcc', '-flto', '-c', 'x.c'],
+                   env=env, capture_output=True, text=True)
+print(r.stdout)
+"
+MAKEFLAGS=-j8 ARGV=-flto=4 -c x.c
+```
+
+**Close measured**:
+
+```text
+$ python3 -m pytest tests/unit/test_a_compiler_lto_shim_fills_the_box.py -q
+tests/unit/test_a_compiler_lto_shim_fills_the_box.py ........            [100%]
+8 passed in 0.18s
+```
+
+Post-fix, the same unmatched-element repro above passes through untouched
+(`MAKEFLAGS=--jobserver-auth=fifo:/tmp/x.fifo -j8 ARGV=-flto -c x.c`).
+
+`python3 tools/dev_touching.py --base 986ffdfb` (232 files, the amended
+commit against the task's base): 4935 passed, 97 skipped, 3 failed — all 3
+pre-existing at base `986ffdfb` (`tests/unit/test_a_run_is_priced.py`'s
+round-126 Agents-ledger rows, the orchestrator's own close step, confirmed
+unrelated by re-running the same file against the base commit before this
+diff). `make lint`: exit 0, clean (`ruff`/`pymarkdown`,
+`python3 tools/dev_baseline.py --check` shows no `new:` line —
+`_wrapper_mount`'s extra `flto_active`/`lto_cap` params were folded into one
+`caps` dict to stay under ruff's PLR0913 5-arg cap rather than growing
+`quality_baseline.json`; the MD040 finding on this section's fences is fixed
+by the `text` language tags above).
+
+**Mutation table**:
+
+| mutation | reddened | count |
+|---|---|---|
+| `_forced_auth`: `if override in ("off", "flto"): return None` (flto falls through to scrub) | `TestAFltoMatchedElementKeepsFdAndIsNotScrubbed::test_matched_element_emits_raw_fd_and_mounts_the_wrapper` | 1 failed, 7 passed (was 8/0; reverted from a pre-mutation scratchpad copy, not `git checkout --`, re-confirmed 8 passed) |
+| `bga_run_flto`: `if false; then` (gate ignored, always transforms) | `TestTheShimIsGatedOnFltoActive::test_unset_is_a_pure_pass_through_even_with_flto_in_argv` | 1 failed, 7 passed (was 8/0; reverted from a pre-mutation scratchpad copy, `__pycache__` cleared, re-confirmed 8 passed) |

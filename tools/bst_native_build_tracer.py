@@ -1246,9 +1246,11 @@ def summarize_jobserver_leaks(path: str) -> tuple[int, int]:
     return leaks, tokens_refilled
 
 
-#: UX-846: the tools this item wires a wrapper for - none of them reads
-#: `MAKEFLAGS`. `gcc -flto=jobserver` and cargo are pass-through by
-#: construction (no wrapper directory entry), so they are not probed.
+#: UX-846: the tools this *held-token* wrapper covers - none of them
+#: reads `MAKEFLAGS`. Cargo is pass-through by construction (no wrapper
+#: directory entry), so it is not probed. UX-880's GCC-driver shim (also
+#: in the wrapper directory) is a different mechanism - it never holds a
+#: token, so it is not in this probe either.
 JOBSERVER_WRAPPED_TOOLS = ("ld.lld", "lld", "ld.gold", "mold", "ninja")
 
 #: The wrapper scripts, bind-mounted read-only ahead of `PATH` (UX-846).
@@ -2465,6 +2467,14 @@ def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrappe
                 env["BST_TRACE_JOBSERVER_AUTH_MAP"] = auth_map
             else:
                 env.pop("BST_TRACE_JOBSERVER_AUTH_MAP", None)
+            # UX-880: `--lto-cap`'s own translation (`bga/cli.py`) or a
+            # by-hand env var, carried the same way - the GCC-driver
+            # shim falls back to `nproc` on its own when this is unset.
+            lto_cap = os.environ.get("BST_TRACE_LTO_CAP")
+            if lto_cap:
+                env["BST_TRACE_LTO_CAP"] = lto_cap
+            else:
+                env.pop("BST_TRACE_LTO_CAP", None)
             # UX-846: a wrapper directory per capture - static content,
             # bound straight from the tree rather than staged, and
             # capped at this pool's own ceiling (its widest possible
@@ -2540,6 +2550,7 @@ def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrappe
             env.pop("BST_TRACE_ELEMENT_KINDS", None)
             env.pop("BST_TRACE_WRAPPER_DIR", None)
             env.pop("BST_TRACE_WRAPPER_CAP", None)
+            env.pop("BST_TRACE_LTO_CAP", None)
             env.pop("BST_TRACE_PROXY_DIR", None)
 
         def copy_out():

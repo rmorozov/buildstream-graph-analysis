@@ -1,0 +1,12 @@
+#!/bin/sh
+# UX-880: a grandchild across bwrap cannot open the raw fd
+# --jobserver-auth names - this strips it before the real GCC driver's
+# lto-wrapper reads MAKEFLAGS (GCC-13 ICE, opts-common.cc:2123) and pins
+# an already-requested -flto to a static cap. In this subdir, on PATH
+# only for a flto-matched element - a bystander sandbox (minimal, no
+# coreutils) never sees it (_wrapper_mount, the bst-examples 255).
+set -eu
+_bga_dir=${0%/*}
+[ "$_bga_dir" = "$0" ] && _bga_dir=.
+. "$_bga_dir/../_common.sh"
+bga_run_wrapped flto "$@"

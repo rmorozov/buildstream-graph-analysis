@@ -1,6 +1,6 @@
 # UX-882: a `public:` annotation sets the jobserver auth style, version-controlled
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-879, UX-880 | **Found by:** round 125 Out of Scope + the user ("maybe i can mark some packages by hand for bga to utilize jobserver") | **Serves:** R2 (an element carries its own jobserver policy in the project, not in the operator's command line) | **Topic:** capture | **Area:** tools-native_trace | **Shape:** bounded
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-879, UX-880 | **Found by:** round 125 Out of Scope + the user ("maybe i can mark some packages by hand for bga to utilize jobserver") | **Serves:** R2 (an element carries its own jobserver policy in the project, not in the operator's command line) | **Topic:** capture | **Area:** tools-native_trace | **Shape:** bounded
 
 ## Motivation
 
@@ -82,4 +82,35 @@ assertions redden.
 
 ## Outcome
 
-_(filed round 126, not built — deferred to a later round)_
+**Gap measured** (base `f5bd0af`, before this change): `_jobserver_injection`'s
+only per-element source was the command-line `BST_TRACE_JOBSERVER_AUTH_MAP`
+(`override = resolve_auth_override(os.environ.get(...), ctx["element"])`,
+one source) — no project-committed annotation existed.
+
+**Close measured**:
+
+```text
+$ python3 -m pytest tests/unit/test_a_public_annotation_sets_the_auth_style.py -q
+7 passed in 0.21s
+```
+
+`make test-touching` 3048 passed, 62 skipped (only the two expected
+`fixing-guide.md` test-file-count failures, the orchestrator's re-derive
+at merge); `make lint` exit 0 with the pinned `ruff 0.16.7`.
+
+**Mutation table**:
+
+| mutation | reddened | count |
+|---|---|---|
+| drop `or _annotation_style(ctx["element"])` from the `_jobserver_injection` resolve | `test_an_off_annotation_scrubs_where_auto_would_fifo` (MAKEFLAGS reappears — annotation never consulted, auto's fifo rewrite runs) | 1 failed, 6 passed (reverted from scratchpad copy, `__pycache__` cleared, 7 passed after) |
+
+**Deviation**: the `%{public}` read is a **separate** RS/US-delimited
+`bst show %{name}<US>%{public}<RS>` call, not folded into the existing
+`%{name} %{kind}` line read whose `line.split()` breaks on multi-line YAML.
+The YAML 1.1 gotcha — unquoted `off` loads as bool `False` — is handled
+explicitly (`if style is False: style = "off"`). The annotation is advisory
+**input** (like the `kind`/`%{vars}` reads), so no `bga.contracts` `/vN` id
+and no `specification.md` Part-32 edit (round-127 researcher). One
+authorized `tests/quality_baseline.json` S603 entry (the new
+`subprocess.run`, via `dev_baseline.py --write --force --reason UX-882`).
+`keep` (auto-but-never-scrub) deferred to a follow-up. Verifier PASS.

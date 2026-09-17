@@ -1,6 +1,6 @@
 # UX-881: an operator ships their own wrapper directory for a custom-prefix toolchain
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-880 | **Found by:** round 126 + the user (toolchains built in-sandbox with custom prefixes — the compiler is invoked by absolute path, which PATH-shadowing cannot reach; and the user already runs their own clang-shim pattern) | **Serves:** R2 (a project whose compilers live at custom prefixes still gets the jobserver's effect) | **Topic:** capture | **Area:** tools-native_trace | **Shape:** bounded
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-880 | **Found by:** round 126 + the user (toolchains built in-sandbox with custom prefixes — the compiler is invoked by absolute path, which PATH-shadowing cannot reach; and the user already runs their own clang-shim pattern) | **Serves:** R2 (a project whose compilers live at custom prefixes still gets the jobserver's effect) | **Topic:** capture | **Area:** tools-native_trace | **Shape:** bounded
 
 ## Motivation
 

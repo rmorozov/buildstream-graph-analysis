@@ -44,22 +44,61 @@ make/autotools LTO gap (`UX-884`) and the two process rows (`UX-885`,
 
 ## What closed
 
-_(filled at close)_
+| row | what landed |
+|---|---|
+| `UX-881` | `bga capture run --wrapper-dir <path>` (augment by default, `--wrapper-dir-mode replace` for a fully custom set) → `BST_TRACE_WRAPPER_DIR_OVERRIDE`/`BST_TRACE_WRAPPER_MODE`, mirroring the UX-879/880 translate-to-env pattern; `_wrapper_mount` binds the operator dir ahead of the shipped one on PATH (augment) or in its place (replace, no shipped `flto/`). A published `docs/guides/wrapper-contract.md` states what an operator's shim must satisfy — so a custom-prefix compiler PATH-shadowing can't reach is covered by a shim they wire in |
+| `UX-882` | a `public: { bga: { jobserver-auth: fd\|fifo\|off\|flto } }` element annotation, read via a **separate** `bst show %{public}` (RS/US-delimited, YAML-parsed, the `off`→bool-`False` gotcha handled) → `BST_TRACE_ELEMENT_AUTH_MAP`, resolved in `_jobserver_injection` as command-line override **wins**, then annotation, then auto. The per-element style committed with the element; advisory input, no contract version bump |
 
 ## The verifiers found
 
-_(filled at close)_
+- `UX-881`: **PASS** (first pass). Augment emits two `--ro-bind` mounts with
+  the operator dir first on PATH; replace binds only the operator dir and
+  never adds the shipped `flto/` subdir; the mutation (`_wrapper_mount`
+  ignores the override) reddened 4 of 10; the contract doc mirrors the real
+  `_common.sh` entry points. It confirmed a `bst_cache_logs.py` pyright
+  `new:` finding pre-existed on the base — a local pyright-version artifact
+  that is clean under the pinned toolchain.
+- `UX-882`: **PASS** (first pass). Annotation `off` scrubs where auto fifos;
+  a command-line override beats it; unmatched falls to auto. The `%{public}`
+  read is a separate call, never raises, and the YAML `off`→`False` gotcha
+  is handled. The one `quality_baseline.json` change is a single authorised
+  S603 entry (the new `subprocess.run`) plus the `ruff_version` corrected to
+  the 0.16.7 pin — not a rewrite.
 
 ## Agents
 
-_(filled at close)_
+Two `implementer` tracks and two `verifier` reads, all on `sonnet`; **both
+rows passed on the first verify** — no HOLD this round. A `researcher` read
+(the de-risk: `%{public}` feasibility and the `--wrapper-dir` plumbing) ran
+before the tracks — the session's own context, not a priced track.
+
+| role | runs | tokens | calls | minutes |
+|---|---|---|---|---|
+| implementer | 2 | 326k | 257 | 42 m |
+| verifier | 2 | 142k | 91 | 19 m |
 
 ## The gate
 
 | run | head | result |
 |---|---|---|
-| 0 | the filing | red only on the round-open bootstrap guards; docs-only |
+| 0 | `f5bd0af` (the filing) | red only on the round-open bootstrap guards (`test_a_run_is_priced`); docs-only |
+| 1 | the close | the run this commit is pushed under; the pull request carries the figure |
 
 ## Standing
 
-_(filled at close)_
+The custom-prefix shim story is complete: round 126 shipped the `flto`
+shim and reference GCC-driver wrappers; round 127 gives the two surfaces
+that reach a real in-sandbox toolchain — `--wrapper-dir` (the operator's
+own shim, against a published contract) and the `public: bga.jobserver-auth`
+annotation (the per-element style, committed). An operator can now cover a
+custom-prefix compiler and pin an LTO element's style from the project.
+
+An environment hazard surfaced and is filed (`UX-887`): the implementer
+brief's `pip install -e '.[dev]'` fallback repoints the shared editable
+`bga` install at a worktree (the round-109 mode) and a stale
+`/root/.local/bin/ruff` shadows the pinned one — both tracks caught and
+restored, and the merge gate ran with the editable install repointed at
+the main checkout and the pinned `ruff 0.16.7`/`pyright 1.1.414`. Left
+standing for a later round: `keep` (auto-but-never-scrub), the
+make/autotools LTO gap (`UX-884`), and the process rows (`UX-885`,
+`UX-886`, `UX-887`).

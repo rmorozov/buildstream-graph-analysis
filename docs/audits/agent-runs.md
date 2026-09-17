@@ -343,6 +343,10 @@ pairing for every merged row from round 103 on.
 | 126 | verifier | sonnet | UX-880 (verifier) | 151k | 47 | 16.3 m | HOLD then PASS: reproduced the universal-mount scoping leak by direct shim invocation with no auth map set (auth stripped, -flto pinned on an unmatched element); after the fix, unmatched = pure pass-through, both mutations redden, lint clean | the leak was invisible from the diff; only surfaced by executing the shim under a constructed unmatched-element MAKEFLAGS, since the guard's own unmatched test used a combo the scrub already excludes |
 | 126 | implementer | sonnet | UX-883 (implementer) | 169k | 115 | 14.5 m | PASS: capture-run preflight warning for a sub-4.4-make compiler-driving element, mirroring the scrub condition; reads the cached probe, never re-probes; two independent mutations (version gate, kind gate) both reddened | splitting the task's single suggested mutation into two once the implementation gated on two independent conditions (falsify: a mutation that does not discriminate) |
 | 126 | verifier | sonnet | UX-883 (verifier) | 62k | 35 | 6.0 m | PASS: warning gates byte-for-byte on _compiler_safe_makeflags's own condition; both mutations reproduced; probe read not re-run | the "suppressible with a quiet flag" clause required tracing bga-level -q down into the tracer's own argparse to establish no such flag exists to hook |
+| 127 | implementer | sonnet | UX-881 (implementer) | 178k | 131 | 20.3 m | PASS first pass: --wrapper-dir override (augment/replace) → BST_TRACE_WRAPPER_DIR_OVERRIDE/_MODE, _wrapper_mount two-dir, a published wrapper-contract.md; 10-test guard, mutation reddened 4 | the brief's `pip install -e '.[dev]'` fallback repointed the shared editable bga install at the worktree (round-109 mode); caught via `pip show bga`, restored to the main checkout (filed UX-887) |
+| 127 | verifier | sonnet | UX-881 (verifier) | 84k | 52 | 10.4 m | PASS: augment two mounts operator-first, replace drops shipped flto/, contract doc accurate; confirmed a bst_cache_logs.py pyright new: finding pre-exists the base (a local pyright-version artifact) | the make lint pyright/ruff-baseline dump is ~300 "still forced by" lines ahead of the one `new:` line; had to grep `^new:` to find it |
+| 127 | implementer | sonnet | UX-882 (implementer) | 148k | 126 | 21.9 m | PASS first pass: public: bga.jobserver-auth read via a separate bst show %{public} → BST_TRACE_ELEMENT_AUTH_MAP, resolved after the command-line override; 7-test guard, mutation reddened; one authorized quality_baseline.json S603 entry | same editable-install footgun (caught, restored); a stale /root/.local/bin/ruff 0.15.8 shadowed the pinned 0.16.7, nearly writing a bad quality_baseline.json ruff_version |
+| 127 | verifier | sonnet | UX-882 (verifier) | 58k | 39 | 8.3 m | PASS: annotation off scrubs where auto fifos, command-line wins, unmatched falls to auto; the YAML off->False gotcha handled; quality_baseline.json is one S603 entry not a rewrite | git diff on single-line-JSON quality_baseline.json is whole-line noise; had to json.load both revisions and diff the forced/findings lists structurally |
 
 Round 101's four tracks are **not** here: this session could not
 identify their transcripts with certainty after a context rebuild, and
@@ -355,7 +359,7 @@ committed cleanly once told to run in the foreground. Three of the five
 left a derived figure or a §6 context-map row behind - the same class
 the round itself was about, arriving in the tracks' own work.
 
-What the three hundred and twenty-six rows already say: a researcher that reads a document
+What the three hundred and thirty rows already say: a researcher that reads a document
 whole costs 100-180k; a walker that drives every control costs 336k;
 the two cuts cost a re-run each. The `walk` and `design-review`
 skills fix the report shape so the next rows are smaller, and the

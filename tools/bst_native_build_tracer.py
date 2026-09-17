@@ -2531,6 +2531,19 @@ def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrappe
             # ask, whatever the dynamic pool does to it afterwards).
             env["BST_TRACE_WRAPPER_DIR"] = JOBSERVER_WRAPPERS_DIR
             env["BST_TRACE_WRAPPER_CAP"] = str(jobserver)
+            # UX-881: an operator's own wrapper directory (and augment/
+            # replace mode), carried the same way as the auth map and
+            # the LTO cap above - `bwrap_shim.py` resolves what it means.
+            wrapper_dir_override = os.environ.get("BST_TRACE_WRAPPER_DIR_OVERRIDE")
+            if wrapper_dir_override:
+                env["BST_TRACE_WRAPPER_DIR_OVERRIDE"] = wrapper_dir_override
+            else:
+                env.pop("BST_TRACE_WRAPPER_DIR_OVERRIDE", None)
+            wrapper_mode = os.environ.get("BST_TRACE_WRAPPER_MODE")
+            if wrapper_mode:
+                env["BST_TRACE_WRAPPER_MODE"] = wrapper_mode
+            else:
+                env.pop("BST_TRACE_WRAPPER_MODE", None)
             # UX-845: the pool moves with the machine rather than staying
             # at the static seed - a daemon client of the same FIFO,
             # started after the seed lands and stopped before the FIFO
@@ -2601,6 +2614,8 @@ def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrappe
             env.pop("BST_TRACE_WRAPPER_DIR", None)
             env.pop("BST_TRACE_WRAPPER_CAP", None)
             env.pop("BST_TRACE_LTO_CAP", None)
+            env.pop("BST_TRACE_WRAPPER_DIR_OVERRIDE", None)
+            env.pop("BST_TRACE_WRAPPER_MODE", None)
             env.pop("BST_TRACE_PROXY_DIR", None)
 
         def copy_out():

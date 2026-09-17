@@ -60,4 +60,39 @@ Mutation: ignore the override env (always mount the shipped dir) — the
 
 ## Outcome
 
-_(filed round 126, not built — deferred to a later round)_
+**Gap measured** (base `f5bd0af`, `git show f5bd0af:bga/cli.py | grep -c
+"wrapper-dir"` → `0`; after this change,
+`_translate_capture_wrapper_dir(['capture', 'run', 'proj', 'out.json',
+'--wrapper-dir', '/opt/my-shims', '--wrapper-dir-mode', 'replace', '--',
+'bst', 'build'])` in a subprocess):
+
+```text
+translated argv: ['capture', 'run', 'proj', 'out.json', '--', 'bst', 'build']
+BST_TRACE_WRAPPER_DIR_OVERRIDE = /opt/my-shims
+BST_TRACE_WRAPPER_MODE = replace
+```
+
+**Close measured** (`pytest -q tests/unit/test_an_operator_wrapper_dir_is_mounted.py`):
+
+```text
+collected 10 items
+tests/unit/test_an_operator_wrapper_dir_is_mounted.py ..........  [100%]
+10 passed in 0.45s
+```
+
+**Mutation table** (`falsify`, on `_wrapper_mount`'s `override_dir =
+caps.get("wrapper_dir_override")` → `override_dir = None`, reverted from
+the scratchpad's own copy, `__pycache__` cleared, re-confirmed green):
+
+| mutation | reddened | count |
+|---|---|---|
+| `override_dir` forced to `None` (augment/replace both ignore the operator override) | `test_an_operator_dir_augments_and_goes_first_on_path`, `test_augment_is_also_the_default_with_no_mode_named`, `test_replace_mounts_only_the_operator_directory`, `test_flto_active_replace_never_adds_the_shipped_flto_subdir` | 4 of 10 |
+
+`make test-touching`: 4656 passed, 130 skipped, 2 failed — both
+`docs/contributing/fixing-guide.md`'s test-file-count guard
+(`test_the_cost_row_is_derived_from_the_selector.py`), stale because this
+round added a test file; unchanged at baseline
+(`git stash`, same two tests pass). `make lint`: `ruff check` and
+`pymarkdown` both clean; `dev_baseline.py --check` reports one
+pre-existing `new:` pyright finding in `tools/bst_cache_logs.py`
+(untouched by this track), identical with and without this diff stashed.

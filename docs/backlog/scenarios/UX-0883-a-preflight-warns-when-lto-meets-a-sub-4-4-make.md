@@ -59,4 +59,31 @@ non-compiler-kind "no warning" assertions redden.
 
 ## Outcome
 
-_(filled at close)_
+**Gap measured:** `gap_repro.py` (run_traced_build, `Popen` faked, a
+`cmake_meson`-policy element's decision + a `GNU Make 4.3` probe cache
+written into `bind_dir` the way a real sandbox does) against
+`986ffdfb`, before the fix — stderr carries only `Compiling the trace
+hook...`, no mention of `core.bst`, `scrubbed` or `4.4`.
+
+**Close measured:** `python3 -m pytest
+tests/unit/test_a_preflight_warns_on_lto_meeting_old_make.py -q` →
+`11 passed in 0.21s`. The same repro against the fix prints:
+`Warning: core.bst scrubbed to recipe -jN (sandbox make <4.4); move it
+to make >=4.4 for fifo pool-fill, or force fd/flto (UX-879/880)`.
+
+**Mutations verified red and reverted (2):**
+
+1. `make_below_44 = (bool(probe.get("available")) and
+   style_for_make_version(...) == "fd")` → `= True` (drop the version
+   comparison) — reddened `test_make_4_4_gets_no_warning`,
+   `test_boundary_exactly_4_4_is_no_warning`,
+   `test_no_probe_cached_yet_is_silent_not_a_re_probe`,
+   `test_make_4_4_prints_nothing` (4); left the two non-compiler-kind
+   assertions green — a separate gate, so a second mutation covers it.
+2. Dropped `policy not in _COMPILER_SAFE_POLICIES` from the skip
+   condition — reddened `test_a_non_compiler_kind_on_make_4_3_gets_no_
+   warning` and `test_a_non_compiler_kind_prints_nothing` (2); left
+   every version-gated assertion green.
+
+Both reverted from the scratchpad copy (not `git checkout --`); full
+suite green after each revert.

@@ -95,7 +95,12 @@ from bga import progress
 from bga.plane2 import SCHEMA as PLANE2_SCHEMA
 
 from .bst_run_wrapped import run_wrapped, shutdown_build_group
-from .native_trace.bwrap_shim import JOBSERVER_PINNED
+from .native_trace.bwrap_shim import (
+    _COMPILER_SAFE_POLICIES,
+    JOBSERVER_PINNED,
+    _make_probe_cache_path,
+    style_for_make_version,
+)
 from .native_trace.bwrap_shim import __file__ as _bwrap_shim_source
 
 STATIC_BINARY_DISCLAIMER = (
@@ -996,6 +1001,51 @@ def read_jobserver_decisions(path: Optional[str]) -> list:
     except OSError:
         return []
     return decisions
+
+
+def _read_make_probe(cache_path: Optional[str]) -> dict:
+    """The cached probe `_compiler_safe_makeflags` already wrote
+    (`_make_probe_cache_path`) - read only, never re-run. `{}` for no
+    path, no file, or a malformed one, the same tolerant posture
+    `read_jobserver_decisions` takes."""
+    if not cache_path:
+        return {}
+    try:
+        with open(cache_path, encoding="utf-8") as handle:
+            return json.load(handle)
+    except (OSError, ValueError):
+        return {}
+
+
+def lto_preflight_warnings(decisions: list, jobserver_fifo: Optional[str]) -> list[str]:
+    """UX-883: one line per element that is both on a sub-4.4 sandbox
+    make and drives a compiler directly (`_COMPILER_SAFE_POLICIES`,
+    UX-878's own scrub target) - the scrub is silent otherwise, so this
+    names the element and the make-4.4 remedy. `make_below_44` mirrors
+    `_compiler_safe_makeflags`'s own reading exactly (`available` and
+    `style_for_make_version` == `"fd"`), so this warns on precisely the
+    elements that function scrubbed. De-duplicated per element; `[]`
+    with no jobserver FIFO (nothing was probed) or nothing qualifies."""
+    if not jobserver_fifo:
+        return []
+    lines = []
+    seen = set()
+    for row in decisions or []:
+        element = row.get("element")
+        policy = row.get("policy")
+        if not element or element in seen or policy not in _COMPILER_SAFE_POLICIES:
+            continue
+        probe = _read_make_probe(_make_probe_cache_path(jobserver_fifo, element))
+        make_below_44 = (bool(probe.get("available"))
+                         and style_for_make_version(probe.get("version")) == "fd")
+        if not make_below_44:
+            continue
+        seen.add(element)
+        lines.append(
+            f"Warning: {element} scrubbed to recipe -jN (sandbox make <4.4); "
+            f"move it to make >=4.4 for fifo pool-fill, or force fd/flto "
+            f"(UX-879/880)")
+    return lines
 
 
 def read_jobserver_ledger(path: Optional[str]) -> list:
@@ -2652,6 +2702,12 @@ def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrappe
                 with contextlib.suppress(OSError):
                     os.close(fd)
             copy_out()
+            # UX-883: the elements UX-878's compiler-safe scrub silently
+            # narrowed - named here, before `close_jobserver` removes
+            # the FIFO whose dirname the probe cache is keyed under.
+            for line in lto_preflight_warnings(
+                    read_jobserver_decisions(captured_decisions), jobserver_fifo):
+                print(line, file=sys.stderr)
             close_jobserver(jobserver_fifo, jobserver_fd)
         return returncode
 

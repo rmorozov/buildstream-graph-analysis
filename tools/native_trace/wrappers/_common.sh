@@ -222,6 +222,33 @@ bga_run_wrapped() {
     trap bga_release EXIT INT TERM HUP
 
     width=$((bga_held + 1))
+    # UX-888: the wrapper owns ninja's -j. Strip the recipe's own
+    # -jN/--jobs=N and a lone -j (dropping a following bare-integer arg,
+    # but leaving a non-integer - a dangling -j from an emptied `${JOBS}`,
+    # e.g. before -C) so the token-held -j<width> below is the only -j
+    # ninja sees. POSIX argv rotation: shift from the front, re-append
+    # kept args to the back, so args with spaces survive.
+    if [ "$flag_style" = dashj ]; then
+        n=$#
+        i=0
+        while [ "$i" -lt "$n" ]; do
+            i=$((i + 1))
+            arg=$1
+            shift
+            case "$arg" in
+                -j[0-9]* | --jobs=*) continue ;;
+                -j)
+                    if [ "$i" -lt "$n" ]; then
+                        case "$1" in
+                            '' | *[!0-9]*) : ;;
+                            *) shift; i=$((i + 1)) ;;
+                        esac
+                    fi
+                    continue ;;
+            esac
+            set -- "$@" "$arg"
+        done
+    fi
     case "$flag_style" in
         dashj) "$real" -j "$width" "$@" ;;
         *) "$real" "--threads=$width" "$@" ;;

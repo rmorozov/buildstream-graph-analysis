@@ -35,24 +35,40 @@ stands and `-j ${JOBS}` is valid).
 
 ## What closed
 
-_(filled at close)_
+`UX-888`. `bga_run_wrapped`'s `dashj` branch now strips the recipe's own
+`-jN`/`--jobs=N`/dangling-`-j` before prepending the wrapper's token-held
+`-j<width>`, so the wrapper is ninja's single source of `-j` whatever
+shape the recipe wrote it. `+18 -1` in `tools/native_trace/wrappers/_common.sh`;
+no `bwrap_shim.py` change. Guard: `test_the_ninja_wrapper_owns_the_j_flag.py`
+(new, 5 tests, the real wrapper under `sh` over a seeded pipe pair).
 
 ## The verifiers found
 
-_(filled at close)_
+No verifier track — the session held the change and its falsify pass
+(the strip block deleted reddens 4 of the 5 guards, the field-bug
+dangling-`-j` case among them; reverted, all green). `make test-touching`
+green over the diff but for the round's own close markers; the full
+`make test` gate is the row below.
 
 ## Agents
 
-No agents launched — the fix was the session's own (a single shell
-branch in `bga_run_wrapped` plus one under-`sh` guard), too small to
-brief a track and cheaper done in place than through a worktree round.
+This round has no agents launched — the fix was the session's own (a
+single shell branch in `bga_run_wrapped` plus one under-`sh` guard), too
+small to brief a track and cheaper done in place than through a worktree
+round.
 
 ## The gate
 
 | run | head | result |
 |---|---|---|
 | 0 | the filing | red only on the round-open bootstrap guards; docs-only |
+| 1 | the fix + close | `make test` green; the gate the push hook covers |
 
 ## Standing
 
-_(filled at close)_
+One field bug closed. A ninja recipe under `--jobserver auto` now builds
+whatever shape it writes `-j` — the flag inside `${JOBS}` (cmake), a bare
+count in `${JOBS}` (the crash), an explicit `-jN`, or none — because the
+wrapper strips the recipe's and owns its own. The `threads`-style analog
+(`mold`/`lld --threads` beside a recipe's own) is unreported and unfiled;
+if it bites, it is a one-line symmetric strip in the same branch.

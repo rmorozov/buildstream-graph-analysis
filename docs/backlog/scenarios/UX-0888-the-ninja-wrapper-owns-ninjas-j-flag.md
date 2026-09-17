@@ -1,6 +1,6 @@
 # UX-888: the ninja wrapper owns ninja's -j, stripping the recipe's own
 
-**Priority:** High | **Status:** 🟡 In Progress | **Depends on:** UX-846, UX-843 | **Found by:** round 128, the user (a `kind: cmake`/`meson` element whose recipe is `ninja -v -j ${JOBS} -C _builddir` — the `-j` literal, `JOBS` a bare count — crashed `ninja: fatal: invalid -j parameter` under `--jobserver auto`) | **Serves:** R2 (a project builds under the jobserver whatever shape its ninja recipe writes `-j`) | **Topic:** capture | **Area:** tools-native_trace | **Shape:** bounded
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-846, UX-843 | **Found by:** round 128, the user (a `kind: cmake`/`meson` element whose recipe is `ninja -v -j ${JOBS} -C _builddir` — the `-j` literal, `JOBS` a bare count — crashed `ninja: fatal: invalid -j parameter` under `--jobserver auto`) | **Serves:** R2 (a project builds under the jobserver whatever shape its ninja recipe writes `-j`) | **Topic:** capture | **Area:** tools-native_trace | **Shape:** bounded
 
 ## Motivation
 
@@ -70,4 +70,35 @@ stands; `-j8` and `--jobs=8` likewise. Mutation: delete the strip block
 
 ## Outcome
 
-_(filled at close)_
+**The gap.** `bga_run_wrapped`'s `dashj` branch was `"$real" -j "$width"
+"$@"` — the recipe's own `-j` rode along in `"$@"`. Three shapes broke:
+a dangling `-j` (from an emptied `${JOBS}` before a non-integer, e.g.
+`-C`) crashed ninja `invalid -j parameter`; an explicit `-jN`/`--jobs=N`
+landed a second `-j` and ninja took the last, defeating the token width.
+
+**The close.** A strip loop guards the final `case` when `flag_style =
+dashj`: POSIX argv rotation drops `-j[0-9]*`/`--jobs=*` and a lone `-j`
+(consuming a following bare integer, leaving a non-integer in place), so
+the wrapper's prepended `-j<width>` is the only `-j` the real ninja sees.
+`+18 -1` in `_common.sh`; no `bwrap_shim.py` change — the strip makes the
+empty-`JOBS` dangling `-j` moot for a wrapped ninja.
+
+**Guard.** `test_the_ninja_wrapper_owns_the_j_flag.py` (new, 5 tests)
+runs the real `ninja` wrapper under `sh` against a seeded pipe pair (2
+tokens, cap 8 → width 3) with a fake ninja that echoes its argv, reusing
+UX-846's `test_a_held_tool_returns_its_tokens` harness.
+
+**Mutation** (delete the strip block, `make test-touching`):
+
+| the argv the guard sends | real ninja receives (mutant) | verdict |
+|---|---|---|
+| `-v -j -C _builddir` (dangling) | `-j 3 -C _builddir` — the `-C` is now the width | RED |
+| `-j 8 build` | `-j 3 -j 8 build` | RED |
+| `-j8 build` | `-j 3 -j8 build` | RED |
+| `--jobs=8 build` | `-j 3 --jobs=8 build` | RED |
+| `-C _builddir` (no recipe `-j`) | `-j 3 -C _builddir` | green (nothing to strip) |
+
+4 of 5 red; reverted, all 5 green.
+
+**Deviation.** None. Scope held to the `dashj` style; the symmetric
+`threads` (`--threads`) case is unreported and stays Out of Scope.

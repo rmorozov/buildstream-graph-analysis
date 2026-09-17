@@ -303,6 +303,7 @@ The rounds themselves:
 [124](audits/round-124.md) ·
 [125](audits/round-125.md) ·
 [126](audits/round-126.md) ·
+[127](audits/round-127.md) ·
 [the guard census of round 64](audits/guard-census-round-64.md)
 
 ## Backlog

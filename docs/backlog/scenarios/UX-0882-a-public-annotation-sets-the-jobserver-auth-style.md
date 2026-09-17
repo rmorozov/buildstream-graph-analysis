@@ -1,6 +1,6 @@
 # UX-882: a `public:` annotation sets the jobserver auth style, version-controlled
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-879, UX-880 | **Found by:** round 125 Out of Scope + the user ("maybe i can mark some packages by hand for bga to utilize jobserver") | **Serves:** R2 (an element carries its own jobserver policy in the project, not in the operator's command line) | **Topic:** capture | **Area:** tools-native_trace | **Shape:** judgement
+**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-879, UX-880 | **Found by:** round 125 Out of Scope + the user ("maybe i can mark some packages by hand for bga to utilize jobserver") | **Serves:** R2 (an element carries its own jobserver policy in the project, not in the operator's command line) | **Topic:** capture | **Area:** tools-native_trace | **Shape:** bounded
 
 ## Motivation
 
@@ -21,45 +21,64 @@ bga already threads a per-element `kind` map into the sandbox via
 
 ## Required Fix
 
-Read a `public: { bga: { jobserver-auth: keep|fifo|off|fd|flto } }`
-annotation off each element (via `bst show %{public}` or the `.bst` YAML,
-alongside the existing `kind` read), thread it into the sandbox as a
-per-element map (a new env beside `BST_TRACE_ELEMENT_KINDS`, or folded
-into `BST_TRACE_JOBSERVER_AUTH_MAP`), and resolve it in `_jobserver_injection`
-with a defined precedence: an explicit `--jobserver-auth-override` from the
-command line **wins** over the annotation (the operator can override the
-committed default for one run), the annotation wins over `auto`. `keep`
-means "auto, do not scrub even on <4.4" (the escape hatch for an element
-whose owner knows its make is fine).
+Read a `public: { bga: { jobserver-auth: fd|fifo|off|flto } }` annotation
+off each element and let it set the per-element auth style the same way
+UX-879's command-line `--jobserver-auth-override` does — a second, in-tree
+*source* for the same four styles, not a new mechanism.
 
-Surfaces: `tools/bst_native_build_tracer.py` (read `public: bga:`,
-new env), `bwrap_shim.py` (resolve annotation vs override vs auto),
-`docs/guides/cli.md` + `docs/spec/specification.md` §3.12 (the annotation
-key — a published contract surface, so a version bump per §3.7 if it
-counts as a schema key).
+- **Read** via a **separate** `bst show --format` call for
+  `%{name}<US>%{public}<RS>` (the RS/US-delimited scheme
+  `bst_show_to_graph.py` already uses for `%{public}`), parsed with
+  `yaml.safe_load` and `data.get("bga", {}).get("jobserver-auth")` — NOT
+  appended to the existing `%{name} %{kind}` line read, whose `line.split()`
+  parse breaks on `%{public}`'s multi-line YAML (researcher, round 127).
+  Written to a new env `BST_TRACE_ELEMENT_AUTH_MAP` (JSON `{element: style}`)
+  beside `BST_TRACE_ELEMENT_KINDS`.
+- **Resolve** in `_jobserver_injection`: the command-line
+  `--jobserver-auth-override` (BST_TRACE_JOBSERVER_AUTH_MAP) **wins**, then
+  the annotation, then `auto` — `override = resolve_auth_override(cmdline,
+  elem) or _annotation_style(annotation_map, elem)`, so a run can override
+  a committed default and an unmatched element still falls to auto.
+- **Not a versioned contract.** The annotation is advisory *input* bga
+  reads from a project (like the `kind`/`%{vars}` reads), not a bga-published
+  output document — so no `bga.contracts` `/vN` id and no `specification.md`
+  Part-32 edit (researcher, round 127: every `/vN` id is on the output
+  side; §3.7's rename/remove rule governs published JSON, not an input key).
+  Documented in `docs/guides/cli.md` only.
 
 ## Decomposition
 
-surfaces: `tools/bst_native_build_tracer.py` (public read + env) · `bwrap_shim.py` (precedence resolve) · `docs/guides/cli.md` · `docs/spec/specification.md` §3.12
-guards: `test_a_public_annotation_sets_the_auth_style.py` (new): an element with `public: bga: jobserver-auth: off` scrubs even where auto would fifo; a command-line override for the same element wins; `keep` suppresses the <4.4 scrub
-gap: whether the annotation key is a versioned contract (§3.7 bump) or advisory-only — decide at build time; the `public:` read path's cost on a large graph (one extra `bst show` field) unmeasured
-track: bounded `implementer`; serial after UX-880 (shares the resolve precedence in `_jobserver_injection`)
-gate: a later round (filed this round, not built)
+surfaces: `tools/bst_native_build_tracer.py` (a second `bst show %{public}` read → `BST_TRACE_ELEMENT_AUTH_MAP` json) · `bwrap_shim.py` (`_annotation_style` + the `or`-fallback in `_jobserver_injection`, and read the new env inventory-side) · `docs/guides/cli.md` (§3.10 env + the annotation)
+guards: `test_a_public_annotation_sets_the_auth_style.py` (new): an element whose annotation says `off` scrubs where auto would fifo (make 4.4 fixture); a command-line override for the same element beats the annotation; an unmatched element falls to auto; a pure-unit on the `%{public}` YAML → style parse
+gap: `keep` (auto-but-never-scrub, for a sub-4.4 element whose owner knows its make is fine) is a new auto-path behaviour, not one of the four override styles — deferred to a follow-up; the extra `bst show` call's cost on a large graph is unmeasured
+track: bounded `implementer` on `sonnet`; parallel with UX-881 (shares `bga/cli.py`? no — 882's read is tracer-side; the only shared file is `bwrap_shim.py`, different regions from 881's `_wrapper_mount`, merge-additive)
+gate: batch PR (round 127)
+
+Input classes: annotation `off` → scrub on make 4.4 where auto fifos;
+annotation `fd`/`fifo`/`flto` → that style; command-line override for the
+same element → command-line wins; no annotation, no override → auto
+(UX-878, the anchor); malformed/absent `%{public}` → `{}`, treated as no
+annotation (never raises).
 
 ## Out of Scope
 
-UX-880's `flto` mechanism (this is a second *surface* onto the same
-styles). The command-line override (UX-879, shipped). `--wrapper-dir`
-(UX-881).
+`keep` (the auto-but-no-scrub escape hatch — a follow-up). UX-880's `flto`
+mechanism itself (this only adds a second source for the style). The
+command-line override (UX-879, shipped). `--wrapper-dir` (UX-881). Any
+`specification.md`/`bga.contracts` version bump (advisory input, decided
+above).
 
 ## Acceptance Test
 
-`tests/unit/`: `build_shim_argv` for an element whose annotation map says
-`off` scrubs on a make-4.4 fixture where auto would rewrite to `fifo:`; a
-command-line `fd:<that element>` override beats the annotation; `keep`
-leaves auto's fifo rewrite in place but suppresses a <4.4 scrub. Mutation:
-ignore the annotation map (annotation never consulted) — the `off`-forced
-and `keep`-suppresses-scrub assertions redden.
+`tests/unit/`: `build_shim_argv` for an element whose
+`BST_TRACE_ELEMENT_AUTH_MAP` says `off` scrubs on a make-4.4 fixture where
+auto would rewrite to `fifo:`; a command-line `fd:<that element>` override
+beats the annotation (command-line wins); an element in neither map falls
+to auto (fifo on 4.4). Plus a pure-unit: the `%{public}` YAML
+`bga:\n  jobserver-auth: off` parses to `off`, and a `%{public}` with no
+`bga:` key to `None`. Mutation: drop the annotation from the `or` fallback
+(annotation never consulted) — the `off`-forced and its precedence
+assertions redden.
 
 ## Outcome
 

@@ -48,10 +48,13 @@ PYTEST_XDIST ?= -n auto
 # produced (`UX-418`) rather than running it twice.
 PYTEST_ARGS ?=
 
-# UX-762: the sha this run covered, written only when pytest exits 0 -
-# make aborts the recipe on the line above's failure, so a red suite
-# never reaches this one. `.claude/hooks/gate-covers-push.sh` reads it.
-test:
+# UX-762: the sha this run covered, written only when the suite exits 0 -
+# make aborts on any recipe line's failure, so a red suite never reaches
+# it. UX-885: `lint` is a prerequisite, so a lint-red tree (ruff, or the
+# markdown/baseline checks) never covers a sha either - the round-125 gap,
+# where a blob CI's pinned PyMarkdown reddened still pushed because the
+# gate ran `make test` alone. `.claude/hooks/gate-covers-push.sh` reads it.
+test: lint
 	python -m pytest tests/ -q $(PYTEST_XDIST) $(PYTEST_ARGS)
 	@git rev-parse HEAD > .gate-covered
 

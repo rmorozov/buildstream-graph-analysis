@@ -1,6 +1,6 @@
 # UX-886: the token-refill guard has a 2s SIGKILL-timing flake
 
-**Priority:** Medium | **Status:** 🟡 In Progress | **Depends on:** UX-852 | **Found by:** round 125 (PR #235 test 3.11 went red on `test_a_leaked_token_is_refilled::test_sigkilled_holder_is_refilled_and_named` with `assert 0 == 1`, while 3.9/3.10/3.12 passed the same commit and the local gate was green — a confirmed timing flake, re-run passed) | **Serves:** the pipeline (a green suite means green, not "green four times out of five") | **Topic:** guards | **Area:** tools-native_trace | **Shape:** bounded
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-852 | **Found by:** round 125 (PR #235 test 3.11 went red on `test_a_leaked_token_is_refilled::test_sigkilled_holder_is_refilled_and_named` with `assert 0 == 1`, while 3.9/3.10/3.12 passed the same commit and the local gate was green — a confirmed timing flake, re-run passed) | **Serves:** the pipeline (a green suite means green, not "green four times out of five") | **Topic:** guards | **Area:** tools-native_trace | **Shape:** bounded
 
 ## Motivation
 

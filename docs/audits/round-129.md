@@ -51,15 +51,49 @@ resolve once at close.
 
 ## What closed
 
-_(filled at close)_
+Three of the four rows; `UX-884` stays open (below).
+
+- **UX-886** (implementer track): `test_sigkilled_holder_is_refilled_and_named`
+  now polls a 10s bounded retry (returning as soon as `_readable(fd) ==
+  4`) instead of a fixed 2s window, so its refill+naming claim gates and
+  the audit thread's ~1s cycle no longer reddens a loaded runner. The
+  stale class name `…WithinTwoSeconds` was dropped at merge.
+- **UX-885**: `test: lint` in the `Makefile` — `.gate-covered` is written
+  only when lint (ruff, PyMarkdown, baseline) and the suite both pass.
+  Guard `test_the_push_gate_includes_lint.py` reads the gate's own recipe
+  through `make -n test`.
+- **UX-887**: `tools/dev_env_check.py` (guard
+  `test_the_env_check_catches_a_repoint.py`) catches a worktree-repointed
+  `bga` or a shadowed non-pinned `ruff` before a merge gate;
+  `implementer.md`/`verifier.md` now name the pinned-`ruff` PATH trap.
+  Live-confirmed: the tool caught this machine's stale `ruff 0.15.8`.
+
+- **UX-884** (held open): the measurement is in the task file — a
+  `make`-kind LTO element gets a raw fd unprotected, but the ICE is
+  confined to make < 4.4 + gcc ≥ 13 `-flto` (make ≥ 4.4 resolves to
+  `fifo:`, which lto-wrapper opens). No field report; the fix (the flto
+  shim for `make`) re-risks round 126's minimal-sandbox breakage, so it
+  waits for a field report.
 
 ## The verifiers found
 
-_(filled at close)_
+UX-886 (the round's one track) was read by a `verifier` on `sonnet`
+after merge — verdict in the ledger row below. The session verified it
+independently too (guard green, the refill mutation in `audit_leaks`
+reddens `test_sigkilled_holder_is_refilled_and_named` at `assert 2 ==
+4`, reverted green). UX-885 and UX-887 are the session's own; each new
+guard was falsified (drop the `lint` prerequisite → 4 red; drop the
+worktree exclusion → the round-109 case reddens).
 
 ## Agents
 
-_(filled at close)_
+| round | agent | model | task | tokens | tool calls | wall | outcome | what cost the most / what went wrong |
+|---|---|---|---|---|---|---|---|---|
+| 129 | implementer | sonnet | UX-886 (implementer) | 38k | 22 | ~5 m | merged: 2s deadline → 10s bounded retry, refill+naming unchanged | worktree two commits behind the base, one extra `checkout -B`; no harness wall-clock |
+| 129 | verifier | sonnet | UX-886 (verifier) | 44k | 24 | 3.6 m | PASS: early return unloaded, refill-skip mutation reddens, revert green | a dirty close-window worktree makes "what does HEAD contain" ambiguous |
+
+UX-885 and UX-887 were the session's own (judgement / process surface),
+committed and self-verified in place — no track, so no row here.
 
 ## The gate
 
@@ -69,4 +103,9 @@ _(filled at close)_
 
 ## Standing
 
-_(filled at close)_
+Three deferred rows cleared, one held with its measurement. The pipeline
+gained two guards it wanted: a lint-inclusive gate (a lint-red tree can
+no longer cover a pushable sha) and an env check that names the two
+footguns round 127's tracks hit. The token-refill guard is deterministic
+now. `UX-884` is the round's one open remainder — characterized, not
+built, awaiting a make < 4.4 + gcc ≥ 13 LTO field report.

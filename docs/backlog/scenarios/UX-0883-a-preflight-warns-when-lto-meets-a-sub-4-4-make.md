@@ -1,6 +1,6 @@
 # UX-883: a preflight warns when an LTO element meets a sub-4.4 make
 
-**Priority:** Medium | **Status:** 🟡 In Progress | **Depends on:** UX-878 | **Found by:** round 126 (the clean path off the scrub is make 4.4 + fifo, but nothing tells the operator that the element they are staring at is the one that would benefit) | **Serves:** R2 (an operator migrating make version by version is told which elements the migration unblocks) | **Topic:** capture | **Area:** tools-native_trace | **Shape:** bounded
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-878 | **Found by:** round 126 (the clean path off the scrub is make 4.4 + fifo, but nothing tells the operator that the element they are staring at is the one that would benefit) | **Serves:** R2 (an operator migrating make version by version is told which elements the migration unblocks) | **Topic:** capture | **Area:** tools-native_trace | **Shape:** bounded
 
 ## Motivation
 
@@ -86,4 +86,15 @@ to make >=4.4 for fifo pool-fill, or force fd/flto (UX-879/880)`.
    every version-gated assertion green.
 
 Both reverted from the scratchpad copy (not `git checkout --`); full
-suite green after each revert.
+suite green after each revert. Verifier PASS.
+
+**Deviation**: the Required Fix said the warning should be "suppressible
+with an existing verbosity/quiet flag." `tools/bst_native_build_tracer.py`
+has no `-q`/`-v`/quiet flag in its own argparse (the `bga`-level `-q` does
+not reach it), so the warning prints unconditionally to stderr — consistent
+with the file's own precedent (`stale_casd`, the UX-870 kinds warning both
+print unconditionally). Left as-is (a de-duplicated one line per affected
+element, low-noise) rather than adding a flag outside this bounded track's
+scope. The test-file-count figure in `docs/contributing/fixing-guide.md`
+(556→557 across both round-126 tracks) is the orchestrator's
+`dev_touching --spread --write` at merge, not this track's.

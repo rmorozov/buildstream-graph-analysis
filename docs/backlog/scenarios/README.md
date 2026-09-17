@@ -15,12 +15,12 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-883 scenarios: **7 open**, 876 closed.
+883 scenarios: **5 open**, 878 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
-| capture | 5 | 129 |
+| capture | 3 | 129 |
 | analysis | 0 | 118 |
 | contracts | 0 | 50 |
 | viewer | 0 | 177 |
@@ -36,10 +36,8 @@ task file, which is the only place it ever lived twice.
 
 | ID | Scenario | Topic | Priority | Serves | Status |
 |---|---|---|---|---|---|
-| UX-880 | [a compiler-LTO shim fills the box without the gcc-13 ICE](UX-0880-a-compiler-lto-shim-fills-the-box-without-the-ice.md) | capture | High | R2 | 🟡 In Progress |
 | UX-881 | [an operator ships their own wrapper directory for a custom-prefix toolchain](UX-0881-an-operator-ships-their-own-wrapper-directory.md) | capture | High | R2 | 🔴 Not Started |
 | UX-882 | [a `public:` annotation sets the jobserver auth style, version-controlled](UX-0882-a-public-annotation-sets-the-jobserver-auth-style.md) | capture | Medium | R2 | 🔴 Not Started |
-| UX-883 | [a preflight warns when an LTO element meets a sub-4.4 make](UX-0883-a-preflight-warns-when-lto-meets-a-sub-4-4-make.md) | capture | Medium | R2 | 🟡 In Progress |
 | UX-884 | [the LTO scrub covers make/autotools kinds, not only cmake/meson/cargo](UX-0884-the-lto-scrub-covers-make-and-autotools-kinds.md) | capture | Medium | R2 | 🔴 Not Started |
 | UX-885 | [the push gate runs `make lint`, not only `make test`](UX-0885-the-push-gate-runs-make-lint-not-only-make-test.md) | guards | Medium | pipeline | 🔴 Not Started |
 | UX-886 | [the token-refill guard has a 2s SIGKILL-timing flake](UX-0886-the-token-refill-guard-has-a-2s-timing-flake.md) | guards | Medium | pipeline | 🔴 Not Started |

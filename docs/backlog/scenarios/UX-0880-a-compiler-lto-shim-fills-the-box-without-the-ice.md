@@ -1,6 +1,6 @@
 # UX-880: a compiler-LTO shim fills the box without the gcc-13 ICE
 
-**Priority:** High | **Status:** 🟡 In Progress | **Depends on:** UX-878, UX-879 | **Found by:** round 125's Standing + the user (a pinned ≤4.2.1 element that *does* LTO on the cross-gcc-13 still ICEs under a forced `fd` — round 125's documented caveat) | **Serves:** R2 (an element that does GCC LTO fills the pool under the jobserver without crashing lto-wrapper) | **Topic:** capture | **Area:** tools-native_trace | **Shape:** bounded
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-878, UX-879 | **Found by:** round 125's Standing + the user (a pinned ≤4.2.1 element that *does* LTO on the cross-gcc-13 still ICEs under a forced `fd` — round 125's documented caveat) | **Serves:** R2 (an element that does GCC LTO fills the pool under the jobserver without crashing lto-wrapper) | **Topic:** capture | **Area:** tools-native_trace | **Shape:** bounded
 
 ## Motivation
 
@@ -157,3 +157,15 @@ by the `text` language tags above).
 |---|---|---|
 | `_forced_auth`: `if override in ("off", "flto"): return None` (flto falls through to scrub) | `TestAFltoMatchedElementKeepsFdAndIsNotScrubbed::test_matched_element_emits_raw_fd_and_mounts_the_wrapper` | 1 failed, 7 passed (was 8/0; reverted from a pre-mutation scratchpad copy, not `git checkout --`, re-confirmed 8 passed) |
 | `bga_run_flto`: `if false; then` (gate ignored, always transforms) | `TestTheShimIsGatedOnFltoActive::test_unset_is_a_pure_pass_through_even_with_flto_in_argv` | 1 failed, 7 passed (was 8/0; reverted from a pre-mutation scratchpad copy, `__pycache__` cleared, re-confirmed 8 passed) |
+
+**Deviation**: verifier returned HOLD once — the first cut mounted the four
+GCC-driver shims in the shared wrapper dir with no per-element gate, so an
+*unmatched* make≥4.4 element on the UX-878 fifo path had its auth stripped
+and `-flto` pinned too (a static-cap regression that would oversubscribe a
+multi-builder box). Fixed by a per-element `--setenv BST_TRACE_FLTO_ACTIVE 1`
+set only when the element resolves to `flto`, which `bga_run_flto` gates on
+(pure pass-through otherwise); the leak now has its own guard
+(`test_unmatched_element_wrapper_mounted_for_other_reasons_gets_no_flag`,
+the `make`-kind mount-without-match case). The reference shim covers only
+PATH-reachable driver names — a custom-prefix compiler needs the operator's
+own shim via `--wrapper-dir` (UX-881, filed).

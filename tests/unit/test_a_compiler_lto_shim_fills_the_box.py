@@ -55,7 +55,7 @@ def _run_gcc(tmp_path, argv, makeflags, lto_cap=None, flto_active=True):
         env["BST_TRACE_FLTO_ACTIVE"] = "1"
     else:
         env.pop("BST_TRACE_FLTO_ACTIVE", None)
-    result = subprocess.run(["sh", str(WRAPPERS / "gcc"), *argv], env=env,
+    result = subprocess.run(["sh", str(WRAPPERS / "flto" / "gcc"), *argv], env=env,
                             capture_output=True, text=True, timeout=5)
     assert result.returncode == 0, (result.stdout, result.stderr)
     makeflags_out, argv_out = (tmp_path / "out").read_text().rstrip("\n").split("|", 1)
@@ -162,6 +162,18 @@ def _makeflags_value(argv):
     return argv[idx + 1]
 
 
+def _path_value(argv):
+    """The last `--setenv PATH` value - the one `_wrapper_mount` sets."""
+    last = None
+    for i, tok in enumerate(argv):
+        if tok == "--setenv" and argv[i + 1] == "PATH":
+            last = argv[i + 2]
+    return last
+
+
+FLTO_SUBDIR = os.path.join(BIND_DST, "wrappers", "flto")
+
+
 class TestAFltoMatchedElementKeepsFdAndIsNotScrubbed:
     def test_matched_element_emits_raw_fd_and_mounts_the_wrapper(
             self, tmp_path, monkeypatch):
@@ -180,6 +192,9 @@ class TestAFltoMatchedElementKeepsFdAndIsNotScrubbed:
             assert "BST_TRACE_FLTO_ACTIVE" in argv
             flag_idx = argv.index("BST_TRACE_FLTO_ACTIVE")
             assert argv[flag_idx + 1] == "1"
+            # The GCC shims' `flto/` subdir is on PATH ahead of the
+            # held-tool dir only for this matched element.
+            assert _path_value(argv).startswith(FLTO_SUBDIR + ":")
         finally:
             os.close(read_fd)
 
@@ -218,5 +233,10 @@ class TestAFltoMatchedElementKeepsFdAndIsNotScrubbed:
             assert _makeflags_value(argv) == f"--jobserver-auth={read_fd},{read_fd}"
             assert "--ro-bind" in argv, "held-tool coverage still mounts the directory"
             assert "BST_TRACE_FLTO_ACTIVE" not in argv
+            # The bst-examples 255 regression: the GCC shims' `flto/`
+            # subdir must NOT be on PATH for a bystander element, or its
+            # `cc`/`gcc` is shadowed by a shim a minimal sandbox cannot
+            # source (`dirname: not found`).
+            assert FLTO_SUBDIR not in (_path_value(argv) or "").split(":")
         finally:
             os.close(read_fd)

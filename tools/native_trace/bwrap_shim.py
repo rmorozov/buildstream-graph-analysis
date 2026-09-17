@@ -559,19 +559,28 @@ def _wrapper_mount(opts: list[str], wrapper_dir: str, bind_dst: str,
     lto_cap, flto_active}`. `lto_cap` (`BST_TRACE_LTO_CAP`) is the same
     shape as `wrapper_cap` - read by the GCC-driver shim in this same
     directory, not the held-tool wrappers `wrapper_cap` sizes.
-    `flto_active` (verifier fix): the GCC-driver shim scripts live in
-    this same shared directory and are therefore on `PATH` for *every*
-    sandbox this mounts, matched or not - `BST_TRACE_FLTO_ACTIVE=1` is
-    the one bit that tells the shim "this element's own override
-    resolved to `flto`", set only here, from `_jobserver_injection`'s
-    already-resolved `override`, never re-derived (re-matching the glob
-    in the shell would drift from the Python side's own decision)."""
+    `flto_active`: the GCC-driver shims live in a `flto/` subdir put on
+    `PATH` (ahead of the held-tool dir) ONLY for a flto-matched element,
+    so a bystander sandbox this mounts for held-tool coverage never has
+    `cc`/`gcc` shadowed by a shim it cannot source (a minimal make
+    element has no `dirname`: bst-examples exit 255). Belt-and-suspenders,
+    `BST_TRACE_FLTO_ACTIVE=1` is also set, and the shim gates on it too;
+    both come from `_jobserver_injection`'s already-resolved `override`,
+    never re-derived (re-matching the glob in the shell would drift)."""
     caps = caps or {}
     bst_path = _setenv_value(opts, "PATH") or "/usr/bin:/bin"
     dst = os.path.join(bind_dst, WRAPPER_BIND_SUBDIR)
+    # The GCC-driver shims live in a `flto/` subdir put on PATH ONLY for a
+    # flto-matched element - a bystander sandbox (a minimal make element
+    # with no coreutils) that gets this mount for held-tool coverage must
+    # not have `cc`/`gcc` shadowed by a shim it cannot even source
+    # (bst-examples exit 255: `dirname: not found`).
+    path_head = dst
+    if caps.get("flto_active"):
+        path_head = f"{os.path.join(dst, 'flto')}:{dst}"
     mount = [
         "--ro-bind", wrapper_dir, dst,
-        "--setenv", "PATH", f"{dst}:{bst_path}",
+        "--setenv", "PATH", f"{path_head}:{bst_path}",
         "--setenv", "BST_TRACE_JOBSERVER_LEDGER",
         os.path.join(bind_dst, "jobserver_ledger.jsonl"),
     ]

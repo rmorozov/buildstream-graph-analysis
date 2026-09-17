@@ -2713,6 +2713,61 @@ def _translate_capture_lto_cap(argv: list) -> list:
     return argv[:2] + new_rest
 
 
+def _translate_capture_wrapper_dir(argv: list) -> list:
+    """`bga capture run ... --wrapper-dir PATH [--wrapper-dir-mode
+    augment|replace] ...` (UX-881) -> `BST_TRACE_WRAPPER_DIR_OVERRIDE` /
+    `BST_TRACE_WRAPPER_MODE` in this process's own environment, both
+    flags stripped from argv - the same channel `--lto-cap` uses.
+    `docs/guides/wrapper-contract.md` states what the directory must
+    satisfy. Last occurrence of either wins; absent clears a stale
+    value, the same discipline as the sibling translations above.
+    """
+    if len(argv) < 2 or argv[0] != 'capture' or argv[1] != 'run':
+        return argv
+    rest = argv[2:]
+    if '--' in rest:
+        split = rest.index('--')
+        tracer_args, wrapped_cmd = rest[:split], rest[split + 1:]
+        has_sep = True
+    else:
+        tracer_args, wrapped_cmd = rest, []
+        has_sep = False
+    out = []
+    wrapper_dir = None
+    wrapper_mode = None
+    i = 0
+    while i < len(tracer_args):
+        tok = tracer_args[i]
+        if tok == '--wrapper-dir' and i + 1 < len(tracer_args):
+            wrapper_dir = tracer_args[i + 1]
+            i += 2
+            continue
+        if tok.startswith('--wrapper-dir='):
+            wrapper_dir = tok.split('=', 1)[1]
+            i += 1
+            continue
+        if tok == '--wrapper-dir-mode' and i + 1 < len(tracer_args):
+            wrapper_mode = tracer_args[i + 1]
+            i += 2
+            continue
+        if tok.startswith('--wrapper-dir-mode='):
+            wrapper_mode = tok.split('=', 1)[1]
+            i += 1
+            continue
+        out.append(tok)
+        i += 1
+    if wrapper_dir:
+        os.environ['BST_TRACE_WRAPPER_DIR_OVERRIDE'] = wrapper_dir
+    else:
+        os.environ.pop('BST_TRACE_WRAPPER_DIR_OVERRIDE', None)
+    if wrapper_mode:
+        os.environ['BST_TRACE_WRAPPER_MODE'] = wrapper_mode
+    else:
+        os.environ.pop('BST_TRACE_WRAPPER_MODE', None)
+    new_rest = out + (['--'] + wrapped_cmd if has_sep else [])
+    return argv[:2] + new_rest
+
+
 def _maybe_print_schema(argv: list) -> Optional[int]:
     """`bga <command> --schema` -> the JSON Schema of its output, exit 0.
 
@@ -2882,6 +2937,9 @@ def _run(argv: Optional[list[str]] = None) -> int:
     raw_argv = _translate_capture_jobserver_auth_override(raw_argv)
     # UX-880: same shape, one value - see `_translate_capture_lto_cap`.
     raw_argv = _translate_capture_lto_cap(raw_argv)
+    # UX-881: an operator's own wrapper directory, augmenting or
+    # replacing the shipped one - see `_translate_capture_wrapper_dir`.
+    raw_argv = _translate_capture_wrapper_dir(raw_argv)
 
     from .tools_dispatch import dispatch
     tool_exit = dispatch(raw_argv)

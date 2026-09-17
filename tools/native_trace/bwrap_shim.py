@@ -556,30 +556,50 @@ def _wrapper_mount(opts: list[str], wrapper_dir: str, bind_dst: str,
     `PATH` (bwrap: the last `--setenv` wins outright, measured), with
     the ledger path and the cap the wrapper reads. `caps` (PLR0913's
     cap, UX-880 pushed a 4th env past the 5-arg baseline): `{wrapper_cap,
-    lto_cap, flto_active}`. `lto_cap` (`BST_TRACE_LTO_CAP`) is the same
-    shape as `wrapper_cap` - read by the GCC-driver shim in this same
-    directory, not the held-tool wrappers `wrapper_cap` sizes.
-    `flto_active`: the GCC-driver shims live in a `flto/` subdir put on
-    `PATH` (ahead of the held-tool dir) ONLY for a flto-matched element,
-    so a bystander sandbox this mounts for held-tool coverage never has
-    `cc`/`gcc` shadowed by a shim it cannot source (a minimal make
-    element has no `dirname`: bst-examples exit 255). Belt-and-suspenders,
-    `BST_TRACE_FLTO_ACTIVE=1` is also set, and the shim gates on it too;
-    both come from `_jobserver_injection`'s already-resolved `override`,
-    never re-derived (re-matching the glob in the shell would drift)."""
+    lto_cap, flto_active, wrapper_dir_override, wrapper_mode}`. `lto_cap`
+    (`BST_TRACE_LTO_CAP`) is the same shape as `wrapper_cap` - read by
+    the GCC-driver shim in this same directory, not the held-tool
+    wrappers `wrapper_cap` sizes. `flto_active`: the GCC-driver shims
+    live in a `flto/` subdir put on `PATH` (ahead of the held-tool dir)
+    ONLY for a flto-matched element, so a bystander sandbox this mounts
+    for held-tool coverage never has `cc`/`gcc` shadowed by a shim it
+    cannot source (a minimal make element has no `dirname`: bst-examples
+    exit 255). Belt-and-suspenders, `BST_TRACE_FLTO_ACTIVE=1` is also
+    set, and the shim gates on it too; both come from
+    `_jobserver_injection`'s already-resolved `override`, never
+    re-derived (re-matching the glob in the shell would drift).
+
+    UX-881: `wrapper_dir_override` (an operator's own directory,
+    matching bga's published wrapper contract) is prepended to `PATH`
+    ahead of the shipped one when `wrapper_mode` is `augment` (default,
+    or unset) - a second `--ro-bind`, so a replace loses nothing this
+    element already had. `replace` binds ONLY the operator's directory
+    at the shipped mount point - no shipped dir, no shipped `flto/`
+    subdir, since the operator's directory is theirs to populate. No
+    override: today's single-mount behaviour, byte for byte."""
     caps = caps or {}
     bst_path = _setenv_value(opts, "PATH") or "/usr/bin:/bin"
     dst = os.path.join(bind_dst, WRAPPER_BIND_SUBDIR)
+    override_dir = caps.get("wrapper_dir_override")
+    replace = bool(override_dir) and caps.get("wrapper_mode") == "replace"
     # The GCC-driver shims live in a `flto/` subdir put on PATH ONLY for a
     # flto-matched element - a bystander sandbox (a minimal make element
     # with no coreutils) that gets this mount for held-tool coverage must
     # not have `cc`/`gcc` shadowed by a shim it cannot even source
-    # (bst-examples exit 255: `dirname: not found`).
+    # (bst-examples exit 255: `dirname: not found`). A `replace` drops
+    # the shipped directory entirely, so its `flto/` subdir never applies.
     path_head = dst
-    if caps.get("flto_active"):
+    if caps.get("flto_active") and not replace:
         path_head = f"{os.path.join(dst, 'flto')}:{dst}"
-    mount = [
-        "--ro-bind", wrapper_dir, dst,
+    if replace:
+        mount = ["--ro-bind", override_dir, dst]
+    else:
+        mount = ["--ro-bind", wrapper_dir, dst]
+        if override_dir:
+            operator_dst = f"{dst}-operator"
+            mount += ["--ro-bind", override_dir, operator_dst]
+            path_head = f"{operator_dst}:{path_head}"
+    mount += [
         "--setenv", "PATH", f"{path_head}:{bst_path}",
         "--setenv", "BST_TRACE_JOBSERVER_LEDGER",
         os.path.join(bind_dst, "jobserver_ledger.jsonl"),
@@ -764,6 +784,10 @@ def _jobserver_injection(opts: list[str], binds: tuple, decision: str,
             "wrapper_cap": kind_context.get("wrapper_cap"),
             "lto_cap": kind_context.get("lto_cap"),
             "flto_active": override == "flto",
+            # UX-881: an operator's own wrapper directory and its mode,
+            # carried straight through from `main` (never re-derived here).
+            "wrapper_dir_override": kind_context.get("wrapper_dir_override"),
+            "wrapper_mode": kind_context.get("wrapper_mode"),
         })
     return tokens
 
@@ -787,6 +811,8 @@ def build_shim_argv(
     proxy_fd: Optional[int] = None,
     proxy_fifo: Optional[str] = None,
     lto_cap: Optional[str] = None,
+    wrapper_dir_override: Optional[str] = None,
+    wrapper_mode: Optional[str] = None,
 ) -> list[str]:
     """The real, complete argv to exec: BuildStream's own bwrap options
     first (unmodified, including its own root-filesystem bind), then the
@@ -818,6 +844,11 @@ def build_shim_argv(
     process's own environment by the caller - the static `-flto=N` cap
     the wrapper-mounted GCC-driver shim rewrites to, same channel as
     `wrapper_cap`.
+
+    `wrapper_dir_override`/`wrapper_mode` (UX-881): `bga capture run
+    --wrapper-dir`/`--wrapper-dir-mode`, read the same way - an
+    operator's own wrapper directory, mounted alongside (`augment`,
+    default) or instead of (`replace`) the shipped one.
     """
     opts, cmd = split_bwrap_args(bst_args)
     injected = [
@@ -859,7 +890,9 @@ def build_shim_argv(
         kind_context={"element_kind": element_kind, "ninja_probe": ninja_probe,
                      "wrappers_dir": wrapper_dir, "wrapper_cap": wrapper_cap,
                      "real_bwrap": real_bwrap, "element": element,
-                     "lto_cap": lto_cap})
+                     "lto_cap": lto_cap,
+                     "wrapper_dir_override": wrapper_dir_override,
+                     "wrapper_mode": wrapper_mode})
     # UX-106: the ptrace spine, prepended to the sandboxed command so it
     # becomes the parent of everything BuildStream asked to run - which
     # is what makes every descendant its own tracee, and so traceable
@@ -1439,11 +1472,19 @@ def _resolve_kind_and_probe(element, jobserver_fd, jobserver_fifo,
     much at risk of the cores+2 regression UX-843 found), whose
     decision would otherwise consult it (mode active, not pinned).
     Cached per capture (UX-855), so this is one `ninja --help` per
-    capture even with the gate widened."""
+    capture even with the gate widened.
+
+    UX-881: `wrapper_dir_override`/`wrapper_mode`
+    (`BST_TRACE_WRAPPER_DIR_OVERRIDE`/`BST_TRACE_WRAPPER_MODE`) ride
+    along the same way - an operator's own wrapper directory, read
+    here so `main`'s single call site stays the only place environment
+    is consulted."""
     element_kind = _element_kind_env(element)
     wrappers_dir = os.environ.get("BST_TRACE_WRAPPER_DIR")
     base = {"element_kind": element_kind, "ninja_probe": None,
-           "wrappers_dir": wrappers_dir}
+           "wrappers_dir": wrappers_dir,
+           "wrapper_dir_override": os.environ.get("BST_TRACE_WRAPPER_DIR_OVERRIDE"),
+           "wrapper_mode": os.environ.get("BST_TRACE_WRAPPER_MODE")}
     active = jobserver_fd is not None or jobserver_fifo is not None
     if not active:
         return base
@@ -1588,7 +1629,9 @@ def main() -> int:
                                wrapper_cap=os.environ.get("BST_TRACE_WRAPPER_CAP"),
                                proxy_fd=proxy_fd,
                                proxy_fifo=proxy_fifo,
-                               lto_cap=os.environ.get("BST_TRACE_LTO_CAP"))
+                               lto_cap=os.environ.get("BST_TRACE_LTO_CAP"),
+                               wrapper_dir_override=kind_context["wrapper_dir_override"],
+                               wrapper_mode=kind_context["wrapper_mode"])
     else:
         argv = [real_bwrap, *sys.argv[1:]]
         proxy_done_path = None

@@ -1,6 +1,6 @@
 # UX-884: the LTO scrub covers make/autotools kinds, not only cmake/meson/cargo
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-878 | **Found by:** round 126 (UX-878's `_COMPILER_SAFE_POLICIES` names `cmake_meson`, `jobs_env`, `cargo` — a `make`/autotools element that itself drives GCC LTO is excluded on purpose, but the exclusion's safety is unproven for the LTO case) | **Serves:** R2 (a make/autotools element that does GCC LTO does not ICE under the injected jobserver) | **Topic:** capture | **Area:** tools-native_trace | **Shape:** judgement
+**Priority:** Medium | **Status:** 🟡 In Progress | **Depends on:** UX-878 | **Found by:** round 126 (UX-878's `_COMPILER_SAFE_POLICIES` names `cmake_meson`, `jobs_env`, `cargo` — a `make`/autotools element that itself drives GCC LTO is excluded on purpose, but the exclusion's safety is unproven for the LTO case) | **Serves:** R2 (a make/autotools element that does GCC LTO does not ICE under the injected jobserver) | **Topic:** capture | **Area:** tools-native_trace | **Shape:** judgement
 
 ## Motivation
 

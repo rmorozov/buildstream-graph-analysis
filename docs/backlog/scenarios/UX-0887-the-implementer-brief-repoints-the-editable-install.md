@@ -1,6 +1,6 @@
 # UX-887: the implementer brief's dev-deps reinstall repoints the shared editable install
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** round 127 (both UX-881 and UX-882 tracks: the brief's "reinstall dev deps if missing: `pip install -e '.[dev]'`" fallback repointed the shared editable `bga` install at the worktree it ran from — the round-109 failure mode CLAUDE.md opens with; both caught it via `pip show bga` and restored) | **Serves:** the pipeline (a track's env setup does not silently redirect every other track's and the orchestrator's `import bga`) | **Topic:** guards | **Area:** tools-dev | **Shape:** judgement
+**Priority:** Medium | **Status:** 🟡 In Progress | **Depends on:** — | **Found by:** round 127 (both UX-881 and UX-882 tracks: the brief's "reinstall dev deps if missing: `pip install -e '.[dev]'`" fallback repointed the shared editable `bga` install at the worktree it ran from — the round-109 failure mode CLAUDE.md opens with; both caught it via `pip show bga` and restored) | **Serves:** the pipeline (a track's env setup does not silently redirect every other track's and the orchestrator's `import bga`) | **Topic:** guards | **Area:** tools-dev | **Shape:** judgement
 
 ## Motivation
 

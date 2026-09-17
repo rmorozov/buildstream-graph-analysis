@@ -347,6 +347,8 @@ pairing for every merged row from round 103 on.
 | 127 | verifier | sonnet | UX-881 (verifier) | 84k | 52 | 10.4 m | PASS: augment two mounts operator-first, replace drops shipped flto/, contract doc accurate; confirmed a bst_cache_logs.py pyright new: finding pre-exists the base (a local pyright-version artifact) | the make lint pyright/ruff-baseline dump is ~300 "still forced by" lines ahead of the one `new:` line; had to grep `^new:` to find it |
 | 127 | implementer | sonnet | UX-882 (implementer) | 148k | 126 | 21.9 m | PASS first pass: public: bga.jobserver-auth read via a separate bst show %{public} → BST_TRACE_ELEMENT_AUTH_MAP, resolved after the command-line override; 7-test guard, mutation reddened; one authorized quality_baseline.json S603 entry | same editable-install footgun (caught, restored); a stale /root/.local/bin/ruff 0.15.8 shadowed the pinned 0.16.7, nearly writing a bad quality_baseline.json ruff_version |
 | 127 | verifier | sonnet | UX-882 (verifier) | 58k | 39 | 8.3 m | PASS: annotation off scrubs where auto fifos, command-line wins, unmatched falls to auto; the YAML off->False gotcha handled; quality_baseline.json is one S603 entry not a rewrite | git diff on single-line-JSON quality_baseline.json is whole-line noise; had to json.load both revisions and diff the forced/findings lists structurally |
+| 129 | implementer | sonnet | UX-886 (implementer) | 38k | 22 | ~5 m | merged: the token-refill guard's fixed 2s deadline replaced with a 10s bounded retry that returns as soon as _readable(fd)==4; refill+naming assertions unchanged; audit_leaks untouched; the refill-skip mutation reddened it | worktree opened two commits behind the round base (01094122 vs 6e3a7d72), one extra `git checkout -B` before work; the harness gave no wall-clock, ~5 m launch-to-commit |
+| 129 | verifier | sonnet | UX-886 (verifier) | 44k | 24 | 3.6 m | PASS: bounded retry returns early (1.2 s unloaded), the refill-skip mutation reddens at `assert 2 == 4` after the full bound, revert green; only the two declared surfaces touched | flagged the stale `…WithinTwoSeconds` class name (already renamed in the close tree); a dirty/shared worktree at close makes "what does HEAD contain" ambiguous for the verifier |
 
 Round 101's four tracks are **not** here: this session could not
 identify their transcripts with certainty after a context rebuild, and
@@ -359,7 +361,7 @@ committed cleanly once told to run in the foreground. Three of the five
 left a derived figure or a §6 context-map row behind - the same class
 the round itself was about, arriving in the tracks' own work.
 
-What the three hundred and thirty rows already say: a researcher that reads a document
+What the three hundred and thirty-two rows already say: a researcher that reads a document
 whole costs 100-180k; a walker that drives every control costs 336k;
 the two cuts cost a re-run each. The `walk` and `design-review`
 skills fix the report shape so the next rows are smaller, and the

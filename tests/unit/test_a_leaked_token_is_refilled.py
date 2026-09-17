@@ -93,7 +93,7 @@ def _spawn_holder(tmp_path, fifo_path, tokens, ledger, tool="ld.lld"):
     return proc
 
 
-class TestAKilledHolderIsRefilledWithinTwoSeconds:
+class TestAKilledHolderIsRefilled:
     """The Acceptance Test: SIGKILL a fake holder between its own
     `acquire` row and the release it will now never write; the pool's
     own audit thread (started by `start()`) must find it and refill."""

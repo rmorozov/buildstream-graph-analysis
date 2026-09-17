@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-885 scenarios: **4 open**, 881 closed.
+885 scenarios: **1 open**, 884 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -27,7 +27,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | cli | 0 | 22 |
 | store | 0 | 16 |
 | docs | 0 | 145 |
-| guards | 3 | 227 |
+| guards | 0 | 227 |
 
 ## Open scenarios
 
@@ -36,10 +36,7 @@ task file, which is the only place it ever lived twice.
 
 | ID | Scenario | Topic | Priority | Serves | Status |
 |---|---|---|---|---|---|
-| UX-884 | [the LTO scrub covers make/autotools kinds, not only cmake/meson/cargo](UX-0884-the-lto-scrub-covers-make-and-autotools-kinds.md) | capture | Medium | R2 | 🟡 In Progress |
-| UX-885 | [the push gate runs `make lint`, not only `make test`](UX-0885-the-push-gate-runs-make-lint-not-only-make-test.md) | guards | Medium | pipeline | 🟡 In Progress |
-| UX-886 | [the token-refill guard has a 2s SIGKILL-timing flake](UX-0886-the-token-refill-guard-has-a-2s-timing-flake.md) | guards | Medium | pipeline | 🟡 In Progress |
-| UX-887 | [the implementer brief's dev-deps reinstall repoints the shared editable install](UX-0887-the-implementer-brief-repoints-the-editable-install.md) | guards | Medium | pipeline | 🟡 In Progress |
+| UX-884 | [the LTO scrub covers make/autotools kinds, not only cmake/meson/cargo](UX-0884-the-lto-scrub-covers-make-and-autotools-kinds.md) | capture | Medium | R2 | 🔴 Not Started |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

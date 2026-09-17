@@ -1,6 +1,6 @@
 # UX-887: the implementer brief's dev-deps reinstall repoints the shared editable install
 
-**Priority:** Medium | **Status:** 🟡 In Progress | **Depends on:** — | **Found by:** round 127 (both UX-881 and UX-882 tracks: the brief's "reinstall dev deps if missing: `pip install -e '.[dev]'`" fallback repointed the shared editable `bga` install at the worktree it ran from — the round-109 failure mode CLAUDE.md opens with; both caught it via `pip show bga` and restored) | **Serves:** the pipeline (a track's env setup does not silently redirect every other track's and the orchestrator's `import bga`) | **Topic:** guards | **Area:** tools-dev | **Shape:** judgement
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — | **Found by:** round 127 (both UX-881 and UX-882 tracks: the brief's "reinstall dev deps if missing: `pip install -e '.[dev]'`" fallback repointed the shared editable `bga` install at the worktree it ran from — the round-109 failure mode CLAUDE.md opens with; both caught it via `pip show bga` and restored) | **Serves:** the pipeline (a track's env setup does not silently redirect every other track's and the orchestrator's `import bga`) | **Topic:** guards | **Area:** tools-dev | **Shape:** judgement
 
 ## Motivation
 
@@ -44,4 +44,38 @@ because the fix is partly to session guidance, not only code.
 
 ## Outcome
 
-_(filed round 127, not built — deferred)_
+**The gap.** Two footguns, both live-confirmed this round on the dev
+container: (1) a brief's `pip install -e '.[dev]'` fallback, run from a
+worktree, repoints the shared editable `bga` at that worktree (round
+109's 8-red gate); (2) bare `ruff` on `PATH` resolves to a stale
+`~/.local/bin/ruff` (measured `0.15.8`) over the pinned
+`/usr/local/bin/ruff` (`0.16.7`, `requirements.lock:84`), and
+`dev_baseline.py:50` calls bare `ruff --version` — the UX-882 near-miss
+that nearly rewrote `quality_baseline.json`'s `ruff_version`.
+
+**The close.** Three parts:
+
+- `.claude/agents/implementer.md` and `verifier.md`: the "one
+  environment, shared" paragraph already forbade `pip install -e .` from
+  a worktree; added the pinned-`ruff` `PATH` trap (put `/usr/local/bin`
+  first or call the binary by path) and a pointer to the check below.
+- `tools/dev_env_check.py` (new): the orchestrator's cheap pre-gate check
+  — pure decisions (`bga_install_ok`: `import bga` resolves under the
+  main checkout, not `.claude/worktrees/`; `ruff_version_ok`: PATH ruff
+  == `pinned_ruff_version(requirements.lock)`) plus a thin I/O `main`.
+  Run here: bare-`ruff` env → exit 1 naming the stale shadow;
+  `PATH=/usr/local/bin` → `env ok`.
+- The session's own briefs no longer name the repointing command —
+  applied this round in the UX-886 track brief (pinned tools by path, no
+  `-e .`).
+
+**Guard.** `test_the_env_check_catches_a_repoint.py` (9 tests) over the
+pure decisions. Mutation: drop the `.claude/worktrees/` exclusion from
+`bga_install_ok` → `test_a_worktree_path_is_the_round_109_repoint`
+reddens (8 pass); reverted, 9 green.
+
+**Deviation.** Not a `Makefile` change: bare `ruff` is correct in a clean
+env and in CI (the pinned `ruff` is installed there), so the stale shadow
+is a dev-container artifact. The fix is the check + guidance, not rewiring
+`make lint`. The `quality_baseline.json` single-line-JSON friction stays
+Out of Scope.

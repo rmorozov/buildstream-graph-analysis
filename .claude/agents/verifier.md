@@ -43,7 +43,12 @@ stalls. Round 109's readings are in `UX-793`.
 main checkout installed `bga` into. Never `pip install -e .` from a
 worktree - round 109's `verify-703` did, its worktree was removed,
 and every subprocess guard on the machine lost `bga` (8 red in the
-gate). `pip install <tool>` for a tool the run needs is fine.
+gate). `pip install <tool>` for a tool the run needs is fine. `make
+lint` and `dev_baseline.py` call bare `ruff`, and a stale
+`~/.local/bin/ruff` can shadow the pinned one on `PATH` (a UX-882
+near-miss rewrote the baseline's `ruff_version`): put `/usr/local/bin`
+first, or call the pinned binary by path. `tools/dev_env_check.py`
+catches both this and a repointed `bga`.
 
 ## What to report
 

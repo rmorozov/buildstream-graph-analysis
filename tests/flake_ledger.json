@@ -66,6 +66,24 @@
       "run_id": "35078687035",
       "shift": 1.573,
       "confirmed": false
+    },
+    {
+      "file": "tests/unit/test_docs_links_and_commands.py",
+      "run_id": "35199472344",
+      "shift": 1.824,
+      "confirmed": false
+    },
+    {
+      "file": "tests/unit/test_the_trace_census_reads_both_ends.py",
+      "run_id": "35199472344",
+      "shift": 1.601,
+      "confirmed": false
+    },
+    {
+      "file": "tests/unit/test_the_size_ledger_only_shrinks.py",
+      "run_id": "35199472344",
+      "shift": 1.725,
+      "confirmed": false
     }
   ],
   "declared": {}

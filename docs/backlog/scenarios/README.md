@@ -15,12 +15,12 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-884 scenarios: **4 open**, 880 closed.
+885 scenarios: **5 open**, 880 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
-| capture | 1 | 129 |
+| capture | 2 | 130 |
 | analysis | 0 | 118 |
 | contracts | 0 | 50 |
 | viewer | 0 | 177 |
@@ -40,6 +40,7 @@ task file, which is the only place it ever lived twice.
 | UX-885 | [the push gate runs `make lint`, not only `make test`](UX-0885-the-push-gate-runs-make-lint-not-only-make-test.md) | guards | Medium | pipeline | 🔴 Not Started |
 | UX-886 | [the token-refill guard has a 2s SIGKILL-timing flake](UX-0886-the-token-refill-guard-has-a-2s-timing-flake.md) | guards | Medium | pipeline | 🔴 Not Started |
 | UX-887 | [the implementer brief's dev-deps reinstall repoints the shared editable install](UX-0887-the-implementer-brief-repoints-the-editable-install.md) | guards | Medium | pipeline | 🔴 Not Started |
+| UX-888 | [the ninja wrapper owns ninja's -j, stripping the recipe's own](UX-0888-the-ninja-wrapper-owns-ninjas-j-flag.md) | capture | High | R2 | 🟡 In Progress |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

@@ -50,4 +50,33 @@ claim, not just the timing).
 
 ## Outcome
 
-_(filed round 126, not built — deferred)_
+Gap measured: the fixed `deadline = time.monotonic() + 2.0` in
+`test_sigkilled_holder_is_refilled_and_named` races the audit thread's
+~1s cycle; round 125's PR #235 3.11 shard read `assert 0 == 1` while
+3.9/3.10/3.12 passed the identical sha and the local gate was green — a
+confirmed timing flake, and a re-run of the same shard passed.
+
+Close measured: replaced the fixed 2.0s deadline with a 10.0s bounded
+retry that still returns as soon as `_readable(fd) == 4` (sub-second in
+the unloaded case — `1 passed in 1.50s`, `6 passed in 7.63s` for the
+whole file); the assertion message no longer claims "within 2s". The
+refill+naming assertions (`pid`, `tool == "ninja"`, `tokens == 2`) are
+untouched.
+
+Mutation table:
+
+| mutation | reddened | count |
+|---|---|---|
+| `audit_leaks` returns `[]` before the refill loop (tools/bst_native_build_tracer.py:1566) | `test_sigkilled_holder_is_refilled_and_named` — polls the full 10s bound then `assert 2 == 4` | `1 failed in 10.42s` |
+
+Reverted the mutation from the pre-edit copy; `1 passed in 1.50s` after.
+
+Round-125 incident record (per Required Fix, kept here — no new flake-ledger
+doc; `tests/flake_ledger.json` is CI-adopted and out of scope for a
+hand-edit): PR #235, `test_a_leaked_token_is_refilled::
+test_sigkilled_holder_is_refilled_and_named`, 3.11 shard `assert 0 == 1`;
+3.9/3.10/3.12 shards green on the same sha; the local gate was green;
+a re-run of the 3.11 shard passed. One data point, now closed by this
+task's fix rather than accumulated as a second.
+
+Deviation: _(orchestrator)_

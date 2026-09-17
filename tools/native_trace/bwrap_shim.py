@@ -747,9 +747,12 @@ def _jobserver_injection(opts: list[str], binds: tuple, decision: str,
           "element": kind_context.get("element")}
     # UX-879: a per-element override takes precedence over the
     # auto/compiler_safe/downgrade path below - matched, it forces the
-    # style outright and `_compiler_safe_makeflags` never runs.
+    # style outright and `_compiler_safe_makeflags` never runs. UX-882:
+    # the command-line map wins outright; only when it does not match
+    # does a committed `public: bga: jobserver-auth:` annotation apply.
     override = resolve_auth_override(
-        os.environ.get("BST_TRACE_JOBSERVER_AUTH_MAP"), ctx["element"])
+        os.environ.get("BST_TRACE_JOBSERVER_AUTH_MAP"), ctx["element"]
+    ) or _annotation_style(ctx["element"])
     if override is not None:
         safe_auth = _forced_auth(override, auth_value, ctx)
     else:
@@ -1458,6 +1461,28 @@ def _element_kind_env(element: Optional[str]) -> Optional[str]:
     except (OSError, ValueError):
         return None
     return kinds.get(element) if isinstance(kinds, dict) else None
+
+
+def _annotation_style(element: Optional[str]) -> Optional[str]:
+    """UX-882: `BST_TRACE_ELEMENT_AUTH_MAP`'s map (a JSON `{name: style}`,
+    written once by the tracer from each element's own `public: bga:
+    jobserver-auth:` annotation), looked up the same way
+    `_element_kind_env` reads `BST_TRACE_ELEMENT_KINDS`. `None` on an
+    unset/unreadable file, an element the map does not name, or a
+    stored value outside the four override styles - all three degrade
+    to "no annotation", the same as `resolve_auth_override`'s own miss."""
+    path = os.environ.get("BST_TRACE_ELEMENT_AUTH_MAP")
+    if not path or element is None:
+        return None
+    try:
+        with open(path, encoding="utf-8") as handle:
+            auth_map = json.load(handle)
+    except (OSError, ValueError):
+        return None
+    if not isinstance(auth_map, dict):
+        return None
+    style = auth_map.get(element)
+    return style if style in _AUTH_OVERRIDE_STYLES else None
 
 
 def _resolve_kind_and_probe(element, jobserver_fd, jobserver_fifo,

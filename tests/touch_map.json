@@ -669,6 +669,7 @@
   "tests/unit/test_a_shapeable_population_is_drawn.py",
   "tests/unit/test_a_task_uid_is_not_a_label.py",
   "tests/unit/test_all_rows_means_all_rows.py",
+  "tests/unit/test_an_operator_wrapper_dir_is_mounted.py",
   "tests/unit/test_apparatus_in_its_place.py",
   "tests/unit/test_build_failure_visibility.py",
   "tests/unit/test_buttons_that_know_why.py",
@@ -8496,6 +8497,7 @@
   "tests/unit/test_a_held_tool_returns_its_tokens.py",
   "tests/unit/test_a_leaked_token_is_refilled.py",
   "tests/unit/test_a_preflight_warns_on_lto_meeting_old_make.py",
+  "tests/unit/test_a_public_annotation_sets_the_auth_style.py",
   "tests/unit/test_a_refused_timeline_says_it_was_refused.py",
   "tests/unit/test_a_relative_open_is_joined_to_its_cwd.py",
   "tests/unit/test_a_spine_record_carries_what_the_hook_would_have.py",
@@ -8602,6 +8604,7 @@
   "tests/unit/test_interrupted_capture.py"
  ],
  "tools/bst_show_to_graph.py": [
+  "tests/unit/test_a_public_annotation_sets_the_auth_style.py",
   "tests/unit/test_bst_extract_run.py",
   "tests/unit/test_bst_show_to_graph.py",
   "tests/unit/test_help_is_short.py",
@@ -8765,6 +8768,8 @@
   "tests/unit/test_a_compiler_lto_shim_fills_the_box.py",
   "tests/unit/test_a_per_element_switch_forces_the_auth_style.py",
   "tests/unit/test_a_preflight_warns_on_lto_meeting_old_make.py",
+  "tests/unit/test_a_public_annotation_sets_the_auth_style.py",
+  "tests/unit/test_an_operator_wrapper_dir_is_mounted.py",
   "tests/unit/test_bwrap_argv_capture.py",
   "tests/unit/test_bwrap_shim.py",
   "tests/unit/test_capture_diagnostics.py",

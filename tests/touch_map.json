@@ -8650,6 +8650,9 @@
   "tests/unit/test_the_commit_body_gate_runs_before_ci.py",
   "tests/unit/test_the_context_map_is_the_tree.py"
  ],
+ "tools/dev_env_check.py": [
+  "tests/unit/test_the_env_check_catches_a_repoint.py"
+ ],
  "tools/dev_finding_coverage.py": [
   "tests/unit/test_a_release_records_a_contract_state.py",
   "tests/unit/test_a_scenario_is_named_by_its_seed.py",

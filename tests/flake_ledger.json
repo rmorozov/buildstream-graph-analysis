@@ -84,6 +84,18 @@
       "run_id": "35199472344",
       "shift": 1.725,
       "confirmed": false
+    },
+    {
+      "file": "tests/unit/test_the_loop_stays_fast.py",
+      "run_id": "35330268532",
+      "shift": 1.663,
+      "confirmed": false
+    },
+    {
+      "file": "tests/unit/test_the_trace_census_reads_both_ends.py",
+      "run_id": "35330268532",
+      "shift": 1.535,
+      "confirmed": false
     }
   ],
   "declared": {}

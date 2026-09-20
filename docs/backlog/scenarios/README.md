@@ -15,13 +15,13 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-887 scenarios: **2 open**, 885 closed.
+891 scenarios: **6 open**, 885 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
-| capture | 1 | 130 |
-| analysis | 0 | 118 |
+| capture | 4 | 133 |
+| analysis | 1 | 119 |
 | contracts | 0 | 50 |
 | viewer | 0 | 177 |
 | cli | 0 | 22 |
@@ -38,6 +38,10 @@ task file, which is the only place it ever lived twice.
 |---|---|---|---|---|---|
 | UX-884 | [the LTO scrub covers make/autotools kinds, not only cmake/meson/cargo](UX-0884-the-lto-scrub-covers-make-and-autotools-kinds.md) | capture | Medium | R2 | 🔴 Not Started |
 | UX-890 | [the trace-census guard has three unconfirmed CI excursions and no filing](UX-0890-the-trace-census-guard-has-three-unconfirmed-excursions.md) | guards | Medium | the round whose push gate is blocked | 🔴 Not Started |
+| UX-891 | [the certified floors never divide by the machine's cores](UX-0891-the-certified-floors-never-divide-by-the-machines-cores.md) | analysis | Medium | R5 | 🔴 Not Started |
+| UX-892 | [the per-element token record drops the timestamp it was given](UX-0892-the-per-element-token-record-drops-the-timestamp-it-was-given.md) | capture | Medium | R2 | 🔴 Not Started |
+| UX-893 | [cores busy is an average over the span, not a curve](UX-0893-cores-busy-is-an-average-over-the-span-not-a-curve.md) | capture | Medium | R5 | 🔴 Not Started |
+| UX-894 | [the requested -j is an argv regex over three binaries, not the element's resolved width](UX-0894-the-requested-j-is-an-argv-regex-over-three-binaries.md) | capture | Medium | R2 | 🔴 Not Started |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

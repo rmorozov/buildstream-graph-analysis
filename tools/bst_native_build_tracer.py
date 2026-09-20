@@ -917,6 +917,223 @@ class HostSampler:
             (busy - was_busy) * sample["cores"] / window, 3)
 
 
+#: `UX-893`: how many points one element's CPU curve may publish. The
+#: same bound, for the same reason, as `JOBSERVER_SERIES_CAP` - the
+#: report carries reductions and the samples stay in their own file.
+ELEMENT_CPU_SERIES_CAP = 200
+
+_TRACE_PID_RE = re.compile(r"^(START|END) pid=(\d+) ")
+_TRACE_ELEMENT_RE = re.compile(r" element=(\S+) ")
+
+
+def read_pid_cpu_us(pid: int) -> Optional[int]:
+    """`utime + stime` for one pid, in microseconds, from
+    `/proc/<pid>/stat` - the same two fields `spine.c`'s
+    `read_cpu_times` reads once at exit, read here on a tick.
+
+    `None` - absent, never zero - where the file could not be read. The
+    rule `hook.c:523-528` already states for an unmeasured CPU time: a
+    process whose `/proc` entry is gone is unmeasured, not idle.
+
+    Self only, not the `c`-prefixed children's totals: every child is
+    sampled in its own right.
+    """
+    try:
+        with open(f"/proc/{int(pid)}/stat", encoding="utf-8") as handle:
+            raw = handle.read()
+    except (OSError, ValueError):
+        return None
+    tail = raw.rpartition(")")[2]
+    fields = tail.split()
+    # After the comm's closing paren: state ppid pgrp session tty_nr
+    # tpgid flags minflt cminflt majflt cmajflt utime stime.
+    if len(fields) < 13:
+        return None
+    try:
+        jiffies = int(fields[11]) + int(fields[12])
+    except ValueError:
+        return None
+    return int(jiffies * 1_000_000 / _TICKS_PER_S)
+
+
+def element_cpu_series(rows: list, cap: int = ELEMENT_CPU_SERIES_CAP) -> dict:
+    """`UX-893`: `{element: [[t_us, cores], ...]}` from the sampler's rows.
+
+    Per-element CPU was read once, at exit, so everything downstream was
+    a total divided by a span: a build that pinned four cores for
+    seventeen seconds and idled for twenty-six reported the same
+    `cores_busy` as one half-busy throughout. This is the rate between
+    consecutive samples - a **curve**, published beside the total and
+    never instead of it.
+
+    A pid alive across several ticks contributes a rate; a pid shorter
+    than one tick has no second sample and is absent from the curve
+    while still in the total. A `/proc` read that failed wrote no row,
+    so the series ends rather than reading zero.
+    """
+    by_pid: dict = {}
+    for row in rows or []:
+        if not isinstance(row, dict):
+            continue
+        pid, element = row.get("pid"), row.get("element")
+        t, cpu_us = row.get("t"), row.get("cpu_us")
+        if pid is None or not element or t is None or cpu_us is None:
+            continue
+        by_pid.setdefault((element, pid), []).append((float(t), int(cpu_us)))
+    deltas: dict = {}
+    for (element, _pid), samples in by_pid.items():
+        samples.sort()
+        for (t0, cpu0), (t1, cpu1) in zip(samples, samples[1:]):
+            window = t1 - t0
+            if window <= 0:
+                continue
+            bucket = deltas.setdefault(element, {})
+            bucket[t1] = bucket.get(t1, 0.0) + (cpu1 - cpu0) / 1e6 / window
+    return {
+        element: [[int(t * 1_000_000), round(cores, 3)]
+                  for t, cores in sorted(bucket.items())][:cap]
+        for element, bucket in sorted(deltas.items()) if bucket
+    }
+
+
+class ElementCpuSampler:
+    """`UX-893`: one `/proc/<pid>/stat` read per traced pid per tick.
+
+    The tick is the host sampler's own 2.0 s (`HOST_SAMPLE_INTERVAL_S`)
+    and the clock is the trace's own `CLOCK_MONOTONIC`, so a sample and
+    a process record sit on one timeline. The pid set is read from the
+    raw trace log as the hook and the spine append to it - both write
+    `START`/`END` lines to the same stream, so a process either plane
+    saw is sampled.
+
+    Best-effort throughout, like `HostSampler`: nothing here may change
+    whether the build succeeds.
+    """
+
+    def __init__(self, path: str, trace_log_path: str,
+                 interval_s: float = HOST_SAMPLE_INTERVAL_S):
+        self.path = path
+        self.trace_log_path = trace_log_path
+        self.interval_s = interval_s
+        self._stop = threading.Event()
+        self._thread = None
+        self._handle = None
+        self._offset = 0
+        self._live: dict = {}
+        self.samples = 0
+
+    def __enter__(self):
+        try:
+            self._handle = open(self.path, "w", encoding="utf-8")
+        except OSError:
+            return self
+        # No contract id: this file is an intermediate beside the raw
+        # log, like the jobserver ledger and the invocation log, and
+        # nothing but `attach_element_cpu_series` ever opens it. The
+        # published document is `cpu_time.per_element_series`.
+        self._write({"kind": "element cpu samples",
+                     "interval_s": self.interval_s,
+                     "clock": "CLOCK_MONOTONIC",
+                     "wall_at_start": time.time(),
+                     "monotonic_at_start": time.monotonic()})
+        self._thread = threading.Thread(target=self._run, daemon=True)
+        self._thread.start()
+        return self
+
+    def __exit__(self, *exc):
+        self._stop.set()
+        if self._thread is not None:
+            self._thread.join(timeout=self.interval_s + 1.0)
+        if self._handle is not None:
+            with contextlib.suppress(OSError):
+                self._handle.close()
+        return False
+
+    def _write(self, row: dict) -> None:
+        if self._handle is None:
+            return
+        try:
+            self._handle.write(json.dumps(row, separators=(",", ":")) + "\n")
+            self._handle.flush()
+        except (OSError, ValueError):
+            pass
+
+    def _follow(self) -> None:
+        """New `START`/`END` lines since the last tick, into the live
+        pid set. The log is append-only, so an offset resumed from where
+        the last tick stopped is the whole mechanism - and no handle
+        outlives the tick."""
+        try:
+            with open(self.trace_log_path, encoding="utf-8",
+                      errors="replace") as handle:
+                handle.seek(self._offset)
+                lines = handle.readlines()
+                self._offset = handle.tell()
+        except OSError:
+            return
+        for line in lines:
+            match = _TRACE_PID_RE.match(line)
+            if not match:
+                continue
+            event, pid = match.group(1), int(match.group(2))
+            if event == "END":
+                self._live.pop(pid, None)
+                continue
+            element = _TRACE_ELEMENT_RE.search(line)
+            self._live[pid] = element.group(1) if element else "unknown"
+
+    def _run(self) -> None:
+        while not self._stop.is_set():
+            self._follow()
+            at = round(time.monotonic(), 3)
+            for pid, element in list(self._live.items()):
+                cpu_us = read_pid_cpu_us(pid)
+                if cpu_us is None:
+                    # Absent, not zero: the process is gone, and the
+                    # series ends where the readings do.
+                    self._live.pop(pid, None)
+                    continue
+                self._write({"t": at, "pid": pid, "element": element,
+                             "cpu_us": cpu_us})
+                self.samples += 1
+            self._stop.wait(self.interval_s)
+
+
+def read_element_cpu_samples(path: str) -> list:
+    """The sampler's rows back. Tolerates a truncated last line, which
+    is what an interrupted capture leaves."""
+    rows = []
+    try:
+        with open(path, encoding="utf-8") as handle:
+            for line in handle:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    row = json.loads(line)
+                except ValueError:
+                    continue
+                if isinstance(row, dict) and "pid" in row:
+                    rows.append(row)
+    except OSError:
+        return []
+    return rows
+
+
+def attach_element_cpu_series(report: dict, path: Optional[str]) -> None:
+    """`UX-893`: the curve beside the total, when the sampler wrote one.
+
+    `cpu_time.total_cpu_us` and every per-element total stay the
+    exit-time sum - this says what shape that total had, which "four
+    cores for seventeen seconds then idle" and "1.6 cores throughout"
+    could not be told apart by. Nothing published when no sampler ran,
+    which is every re-render of a saved report.
+    """
+    series = element_cpu_series(read_element_cpu_samples(path or ""))
+    if series:
+        report.setdefault("cpu_time", {})["per_element_series"] = series
+
+
 def read_host_samples(path: str) -> dict:
     """A written series back, as `{header, samples}`.
 
@@ -1097,43 +1314,168 @@ def read_pid_to_element(raw_log_path: str) -> dict:
     return pid_to_element
 
 
+#: `UX-892`: how many points one element's width series may publish.
+#: `UX-297`'s rule - the report carries reductions and the raw rows stay
+#: in the ledger, which the snapshot keeps either way.
+JOBSERVER_SERIES_CAP = 200
+
+#: The binaries that can hold a jobserver token at all. The denominator
+#: of `UX-892`'s wrapped share: a real `make` reads the pipe itself and
+#: writes no ledger row, so its holdings are in nobody's series.
+JOBSERVER_TOOLS = frozenset({"make", "gmake", "ninja"})
+
+
 def tokens_by_element(ledger_rows: list, pid_to_element: dict) -> tuple:
     """UX-847: UX-846's wrapper `acquire` rows, joined to the element
-    that owned the pid - `{element: [tokens, ...]}`, and the count of
-    `acquire` rows no element owns (`unmapped`), for `jobserver_tokens_
-    unmapped`. `release` rows carry no new count (the paired `acquire`
-    already named it) and are skipped; a malformed row is skipped, not
-    raised on - the same posture every other ledger reader takes.
+    that owned the pid - `{element: [(t, tokens), ...]}`, and the count
+    of `acquire` rows no element owns (`unmapped`), for
+    `jobserver_tokens_unmapped`.
+
+    `UX-892`: `release` rows are kept, because a `release` closes an
+    interval - the wrapper stamps every row with `date +%s.%N` and this
+    reader used to drop it, so "four tokens for two seconds of a
+    ninety-second element" and "four tokens throughout" reduced to the
+    same pair. A malformed row is skipped, not raised on - the same
+    posture every other ledger reader takes.
     """
     per_element: dict = {}
     unmapped = 0
     for row in ledger_rows or []:
-        if not isinstance(row, dict) or row.get("event") != "acquire":
+        if not isinstance(row, dict):
+            continue
+        event = row.get("event")
+        if event not in ("acquire", "release"):
             continue
         pid, tokens = row.get("pid"), row.get("tokens")
         if pid is None or tokens is None:
             continue
         element = (pid_to_element or {}).get(pid)
         if element is None:
-            unmapped += 1
+            if event == "acquire":
+                unmapped += 1
             continue
-        per_element.setdefault(element, []).append(tokens)
+        per_element.setdefault(element, []).append((event, pid, row.get("t"), tokens))
     return per_element, unmapped
 
 
-def summarize_jobserver_tokens_by_element(ledger_rows: list,
-                                          pid_to_element: dict) -> tuple:
-    """UX-847: `tokens_by_element`'s raw lists, reduced to the p50/max
-    `analyze/v6`'s per-element table reads - `({element: {tokens_held_
-    p50, tokens_held_max}}, unmapped)`, the shape `report["jobserver_
-    tokens_by_element"]` publishes.
+def _width_series(events: list, end_us: Optional[int] = None) -> tuple:
+    """`UX-892`: one element's held-token width over time, and how many
+    intervals never closed.
+
+    A step function, not a sample: an `acquire` opens an interval at the
+    count it read and a `release` closes it, so the published point is
+    the element's total holding *after* that event. A `release` with no
+    paired `acquire` is skipped rather than driving the sum negative; a
+    wrapper killed before its trap (`UX-852`'s leak) never releases, so
+    its interval is closed at the element's span end when one is known
+    and counted as open either way.
+    """
+    ordered = sorted(
+        ((int(float(t) * 1_000_000), event, pid, tokens)
+         for event, pid, t, tokens in events if t is not None),
+        key=lambda row: row[0])
+    held: dict = {}
+    series: list = []
+    for t_us, event, pid, tokens in ordered:
+        if event == "acquire":
+            held[pid] = tokens
+        elif pid in held:
+            del held[pid]
+        else:
+            continue
+        series.append([t_us, sum(held.values())])
+    open_intervals = len(held)
+    if held and end_us is not None:
+        series.append([int(end_us), 0])
+    return series, open_intervals
+
+
+def summarize_jobserver_tokens_by_element(
+        ledger_rows: list, pid_to_element: dict,
+        tool_pids_by_element: Optional[dict] = None,
+        element_end_us: Optional[dict] = None) -> tuple:
+    """UX-847: `tokens_by_element`'s raw rows, reduced to what
+    `analyze/v6`'s per-element table reads - `({element: {...}},
+    unmapped)`, the shape `report["jobserver_tokens_by_element"]`
+    publishes.
+
+    `UX-892` adds the width series beside the two scalars, and the
+    share of this element's token-holding tools that wrote the rows it
+    is built from. Only wrapped tools write them: a real `make` reads
+    the jobserver pipe itself and holds tokens nobody logs, so the
+    series covers the wrapped share and says which - never a series
+    that reads as the whole element.
+
+    `tool_pids_by_element` is `{element: {pid, ...}}` over
+    `JOBSERVER_TOOLS` (the denominator); `element_end_us` is
+    `{element: t_us}` for closing a leaked interval. Both optional: the
+    share is `None` without the first, which is the honest answer, not
+    1.0.
     """
     raw, unmapped = tokens_by_element(ledger_rows, pid_to_element)
-    return {
-        element: {"tokens_held_p50": statistics.median(values),
-                  "tokens_held_max": max(values)}
-        for element, values in raw.items()
-    }, unmapped
+    tool_pids = tool_pids_by_element or {}
+    by_element: dict = {}
+    for element in sorted(set(raw) | set(tool_pids)):
+        events = raw.get(element) or []
+        acquired = [tokens for event, _pid, _t, tokens in events
+                    if event == "acquire"]
+        wrapped_pids = {pid for event, pid, _t, _tokens in events
+                        if event == "acquire"}
+        tools = tool_pids.get(element)
+        record: dict = {
+            "tokens_held_p50": statistics.median(acquired) if acquired else None,
+            "tokens_held_max": max(acquired) if acquired else None,
+            # The wrapped share, as a number, the way `UX-891` publishes
+            # `lb_cpu_coverage`. `None` where the tools are unknown.
+            "tokens_series_coverage": (
+                len(wrapped_pids & tools) / len(tools) if tools else None),
+        }
+        series, open_intervals = _width_series(
+            events, (element_end_us or {}).get(element))
+        # Absent rather than empty: a zero-width series reads as an
+        # element that held nothing, and a row with no `t` at all is a
+        # row this series cannot be built from - the scalars above
+        # still stand.
+        if series:
+            record["tokens_held_series"] = series[:JOBSERVER_SERIES_CAP]
+            record["tokens_series_truncated"] = len(series) > JOBSERVER_SERIES_CAP
+            record["tokens_series_open"] = open_intervals
+        by_element[element] = record
+    return by_element, unmapped
+
+
+def read_jobserver_tool_pids(raw_log_path: str) -> tuple:
+    """`UX-892`: `({element: {pid, ...}}, {element: end_t_us})`.
+
+    The first is over `JOBSERVER_TOOLS` and is the denominator of the
+    wrapped share; the second is where each element's last observed
+    process exited, in the same epoch-microsecond clock
+    `PoolController.tick` stamps, which is what closes an interval a
+    killed wrapper never released (`UX-852`).
+
+    A second streaming pass over the same raw log `read_pid_to_element`
+    walks, for the same reason that one is a second pass: threading a
+    third output through the fold's whole call graph costs more than
+    re-reading a log the snapshot already has. `({}, {})` on failure.
+    """
+    tool_pids: dict = {}
+    ends: dict = {}
+    try:
+        with _open_maybe_gzipped(raw_log_path) as handle:
+            for record in stream_records(stream_trace_events(handle)):
+                pid, element = record.get("pid"), record.get("element")
+                if pid is None or not element or element == "unknown":
+                    continue
+                if _binary_name(record.get("cmd") or "") in JOBSERVER_TOOLS:
+                    tool_pids.setdefault(element, set()).add(pid)
+                end = record.get("end_ts")
+                if end is not None:
+                    end_us = int(float(end) * 1_000_000)
+                    if end_us > ends.get(element, 0):
+                        ends[element] = end_us
+    except OSError:
+        return {}, {}
+    return tool_pids, ends
 
 
 def jobserver_auth_style(requested: str, make_version_output: Optional[str] = None) -> str:
@@ -2334,6 +2676,7 @@ def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrappe
                      trace_spine=False, diagnostics_path: Optional[str] = None,
                      no_inject: bool = False, inhibit: bool = False,
                      host_samples_path: Optional[str] = None,
+                     cpu_samples_path: Optional[str] = None,
                      jobserver: Optional[int] = None,
                      jobserver_seed: Optional[int] = None,
                      jobserver_auth: Optional[str] = None,
@@ -2746,8 +3089,15 @@ def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrappe
         # them would describe this tool rather than the build.
         sampler = (HostSampler(host_samples_path) if host_samples_path
                    else contextlib.nullcontext())
+        # `UX-893`: and the per-element half of the same question, on
+        # the same tick. `captured_log` is the raw log as the hook and
+        # the spine append to it, which is where the live pid set is.
+        cpu_sampler = (
+            ElementCpuSampler(cpu_samples_path,
+                              os.path.join(bind_dir, "trace.log"))
+            if cpu_samples_path else contextlib.nullcontext())
         try:
-            with sampler:
+            with sampler, cpu_sampler:
                 if wrapped_log_path is not None:
                     with open(wrapped_log_path, "w", encoding="utf-8") as out_f:
                         returncode = run_wrapped(project_dir, cmd, out_f,
@@ -4112,15 +4462,20 @@ class _PerElementParallelism:
                 "work_span_s": profile["span_s"],
                 "work_process_lifetime_s": profile["total_lifetime_s"],
                 "requested_jobs": requested_jobs,
-                # Deliberately None rather than a guess when either half is
-                # unknown. Note this is NOT on its own the finding: an
-                # element pinned to `-j1` achieves 100% (or more, since a
-                # gcc driver pipelines cc1plus into as) of what it asked for
-                # while being exactly the problem. See `findings` below.
-                "achieved_vs_requested": (
-                    profile["peak"] / requested_jobs
-                    if requested_jobs else None
-                ),
+                # `UX-894`: the recipe's own `-jN` stays published -
+                # it is what a recipe author edits - but it is no
+                # longer the denominator. The element's *resolved*
+                # width is in `graph.json`, which the capture writes
+                # after this report, so these three are filled by
+                # `bga.plane2.apply_resolved_widths` the first time a
+                # graph is in hand. Absent, not a guess: an element
+                # with no resolved width gets no ratio. Note the ratio
+                # is NOT on its own the finding - an element pinned to
+                # one job achieves 100% of what it was granted while
+                # being exactly the problem. See `findings` below.
+                "resolved_jobs": None,
+                "jobs_denominator": None,
+                "achieved_vs_requested": None,
                 "unclassified_binaries": dict(sorted(unclassified.items(), key=lambda kv: -kv[1])),
             })
         # Two distinct real findings, decided across the whole trace rather
@@ -6809,7 +7164,8 @@ def _open_maybe_gzipped(path: str):
 
 def load_and_summarize(raw_log_path: str, project_dir: Optional[str] = None,
                        invocation_log_path: Optional[str] = None,
-                       plane1_log_path: Optional[str] = None) -> dict:
+                       plane1_log_path: Optional[str] = None,
+                       cpu_samples_path: Optional[str] = None) -> dict:
     """Parse a raw trace log into a report.
 
     `project_dir` (UX-46) enables the declared-vs-used dependency
@@ -6996,6 +7352,7 @@ def load_and_summarize(raw_log_path: str, project_dir: Optional[str] = None,
                     "analysis needs the BuildStream project directory to read "
                     "each dependency's artifact contents - pass --project-dir.",
         }
+    attach_element_cpu_series(report, cpu_samples_path)
     report["opens_captured"] = {
         element: {"paths": len(entry["paths"]), "dropped": entry["dropped"],
                   "processes": entry["processes"],
@@ -7773,6 +8130,20 @@ def resolve_invocation_log_path(args) -> Optional[str]:
         "invocations.jsonl",
     )
 
+
+
+def _cpu_samples_path(args) -> str:
+    """`UX-893`: where the per-element CPU sampler writes.
+
+    A scratch path, **not** beside the raw log: `bga snapshot` points
+    `--raw-log` into the snapshot directory, whose file list is a
+    contract (`capture-layout/v1`), and these samples are an
+    intermediate the report reduces and no reader opens.
+    """
+    return os.path.join(
+        scratch_mkdtemp(getattr(args, "project_dir", None) or "", "cpu-samples-"),
+        "element-cpu-samples.jsonl",
+    )
 
 
 def _spine_policy(flag: str):
@@ -8618,6 +8989,8 @@ def main(argv: Optional[list[str]] = None) -> int:
                 scratch_mkdtemp(args.project_dir, "plane1-"), "build.log")
         args.wrapped_log = wrapped_log_path
         invocation_log_path = resolve_invocation_log_path(args)
+        # `UX-893`: an intermediate in scratch, never in the snapshot.
+        cpu_samples_path = _cpu_samples_path(args)
         interrupted = False
         # UX-841: resolved once, here - `run_traced_build` and the report
         # both need the same answer, and `auto` shells out only once.
@@ -8689,6 +9062,7 @@ def main(argv: Optional[list[str]] = None) -> int:
                                           inhibit=args.inhibit,
                                           host_samples_path=getattr(
                                               args, "host_samples", None),
+                                          cpu_samples_path=cpu_samples_path,
                                           jobserver=args.jobserver,
                                           jobserver_seed=jobserver_seed,
                                           jobserver_auth=jobserver_auth,
@@ -8756,7 +9130,8 @@ def main(argv: Optional[list[str]] = None) -> int:
             print("Analyzing the captured trace...", file=sys.stderr)
             report = load_and_summarize(raw_log_path, project_dir=args.project_dir,
                                         invocation_log_path=invocation_log_path,
-                                        plane1_log_path=wrapped_log_path)
+                                        plane1_log_path=wrapped_log_path,
+                                        cpu_samples_path=cpu_samples_path)
             report["wrapped_command_exit_code"] = returncode
             # UX-679 (spike): the capture option a supported mode would
             # be judged against, whether or not this run used it.
@@ -8852,8 +9227,13 @@ def main(argv: Optional[list[str]] = None) -> int:
                 # the element that owned that process - the producer the
                 # verifier's hold named; `held`/`tokens_held_*` were
                 # always null without it.
+                # `UX-892`: the width series needs the element's own
+                # span to close a leaked interval, and the tools it ran
+                # to say what share of them the series covers.
+                tool_pids, element_ends = read_jobserver_tool_pids(raw_log_path)
                 by_element, unmapped = summarize_jobserver_tokens_by_element(
-                    ledger_rows, read_pid_to_element(raw_log_path))
+                    ledger_rows, read_pid_to_element(raw_log_path),
+                    tool_pids, element_ends)
                 report["jobserver_tokens_by_element"] = by_element
                 report["jobserver_tokens_unmapped"] = unmapped
             with open(args.output, "w", encoding="utf-8") as f:
@@ -8884,6 +9264,17 @@ def main(argv: Optional[list[str]] = None) -> int:
                           f"{args.run_dir}: {exc}", file=sys.stderr)
                 else:
                     print(f"Run directory: {args.run_dir}", file=sys.stderr)
+                    # `UX-894`: `graph.json` exists only now, and it
+                    # carries the width every element actually resolved
+                    # to. Rewritten rather than left for a reader: the
+                    # capture is the one moment both documents are in
+                    # hand on the machine that produced them.
+                    from bga.plane2 import apply_resolved_widths, resolved_widths
+
+                    if apply_resolved_widths(report, resolved_widths(
+                            os.path.join(args.run_dir, "graph.json"))):
+                        with open(args.output, "w") as f:
+                            json.dump(report, f, indent=2)
             if args.json:
                 print(json.dumps(report, indent=2))
             else:

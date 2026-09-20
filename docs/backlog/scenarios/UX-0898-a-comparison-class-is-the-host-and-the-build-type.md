@@ -29,6 +29,22 @@ population is refused with its own exit code rather than averaged.
 Where the type is absent — every capture taken before this row — the
 behaviour is today's, so an old store still compares.
 
+## What the owner answered (2026-09-20)
+
+The types in the field are **night**, **review** and **guard** (an
+asynchronous build from `main` every n hours), and there may be others,
+so the value is **free text a pipeline declares** rather than an enum
+this repository maintains. A typo therefore creates a third class rather
+than an error, which is the cost of the choice: the refusal names both
+values it saw, so a typo is visible the first time it splits a
+population.
+
+There is a second axis under it — the **variant** (per instruction set,
+release-with-symbols, address sanitizer, coverage) — filed separately as
+`UX-903`, because a variant changes what the build *does* and a type
+changes when and why it ran. The class this row establishes is the pair,
+with the variant's half landing with that row.
+
 ## Decomposition
 
 surfaces: `tools/bst_run_context.py` and `bga/hostinfo.py` (the declared value), `bga/compare.py` (`_check_comparability`), `bga/store_aggregate.py` (the population), the run-context contract in Part 32, and the CLI flag that declares it

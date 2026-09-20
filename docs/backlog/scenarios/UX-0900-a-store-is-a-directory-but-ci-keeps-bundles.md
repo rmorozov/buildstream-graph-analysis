@@ -19,14 +19,18 @@ cannot move.
 
 ## Required Fix
 
-Let a store be assembled from bundles: a command that materialises a
-store from a directory tree of them (idempotent, so a nightly can run it
-over a growing tree), or a store reader that accepts bundles directly.
-Choose one and say why in the task file — the first is cheaper and keeps
-`run_store`'s invariants, the second avoids a second copy of every
-capture on disk. Either way the aggregate, the trend and the capacity
-model read the result unchanged, and a bundle that fails its manifest
-check is refused and named rather than skipped in silence.
+**Both**, which the owner asked for on 2026-09-20 and which is the right
+answer for different call sites: a command that **materialises** a store
+from a directory tree of bundles (idempotent, so a nightly can run it
+over a growing tree, and `run_store`'s invariants hold unchanged), and a
+reader that takes the **bundles in place** for the one-shot case where a
+second copy of every capture is not worth its disk. The two share one
+loader and one refusal: a bundle that fails its manifest check is named
+and refused rather than skipped in silence.
+
+Which one a caller wants is a disk-versus-repetition trade, so the task
+states the measured cost of both on the committed fixture rather than
+asserting a default.
 
 ## Decomposition
 

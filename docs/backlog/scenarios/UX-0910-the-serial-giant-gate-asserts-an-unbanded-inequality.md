@@ -1,6 +1,6 @@
 # UX-910: the serial-giant gate asserts an unbanded inequality the jobserver cannot satisfy
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-857, UX-905 | **Found by:** round 132 — `bst-examples` is red on `main` at `395ebdc0` and at `6e410ab7`, both times on the same step, so every branch inherits it; `UX-857`'s own step comment pre-authorised the remedy | **Serves:** every round whose CI is red for a reason its diff did not cause | **Topic:** guards | **Area:** tools | **Shape:** judgement
+**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-857, UX-905 | **Found by:** round 132 — `bst-examples` is red on `main` at `395ebdc0` and at `6e410ab7`, both times on the same step, so every branch inherits it; `UX-857`'s own step comment pre-authorised the remedy | **Serves:** every round whose CI is red for a reason its diff did not cause | **Topic:** guards | **Area:** tools | **Shape:** mechanical
 
 ## Motivation
 
@@ -13,13 +13,31 @@ on `main` twice running, and on every branch that inherits it:
 run 35511368643 (6e410ab7, main)  off=170.94s  auto=174.76s  +2.2%  REGRESSED
 run 35536366563 (395ebdc0, main)  off=173.41s  auto=174.54s  +0.6%  no significant change
 run 35542312865 (PR #246)         off=218.41s  auto=218.42s  +0.0%  no significant change
+run 35541259164 (PR #245)         off=217.88s  auto=217.98s  +0.0%  no significant change
 ```
 
-Three pairs on the CI runner, and `auto` is never faster. Once it is
-significantly slower by `bga compare`'s own rule
-(`_SIGNIFICANCE_PCT = 1`), and the other two are ties. This is not a
-gate tripping on noise; it is a gate failing because the thing it
-asserts is not true here.
+Four pairs on the CI runner, over three branches, and `auto` is never
+faster. Once it is significantly slower by `bga compare`'s own rule
+(`_SIGNIFICANCE_PCT = 1`); the other three are ties. This is not a gate
+tripping on noise; it is a gate failing because the thing it asserts is
+not true here.
+
+The fourth is the sharpest, because in it the element the example
+exists to measure **improved** and the step failed anyway:
+
+```text
+Which Elements Changed:
+  3 grew, 1 shrank (per-element deltas are not noise-banded)
+  leaf-a.bst: +0.10s (3.20s -> 3.30s)
+  leaf-b.bst: +0.10s (3.20s -> 3.30s)
+  leaf-c.bst: +0.10s (3.20s -> 3.30s)
+  giant.bst: -0.05s (212.25s -> 212.20s)
+```
+
+`giant.bst` went 212.25s to 212.20s. The whole +0.11s that failed the
+run is three leaves off the critical path, each +0.10s. A gate that
+rejects a run in which its own subject got faster is measuring the
+wrong thing.
 
 Why it is not true is the finding. From the `auto` capture's own report
 in run 35536366563, taken with a ceiling of 4:

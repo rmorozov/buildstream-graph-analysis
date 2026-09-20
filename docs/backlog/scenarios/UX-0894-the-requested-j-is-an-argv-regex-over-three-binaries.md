@@ -1,6 +1,6 @@
 # UX-894: the requested -j is an argv regex over three binaries, not the element's resolved width
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-32, UX-377 | **Found by:** round 131, [`docs/design/in-step-parallelism.md`](../../design/in-step-parallelism.md) §6 item 4 — filing it showed `graph.json` already carries the resolved number, so this is a join and not the capture change the document costed it as | **Serves:** R2 (the recipe author whose element is scored against the width it was actually given) | **Topic:** capture | **Area:** tools-native_trace | **Shape:** judgement
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-32, UX-377 | **Found by:** round 131, [`docs/design/in-step-parallelism.md`](../../design/in-step-parallelism.md) §6 item 4 — filing it showed `graph.json` already carries the resolved number, so this is a join and not the capture change the document costed it as | **Serves:** R2 (the recipe author whose element is scored against the width it was actually given) | **Topic:** capture | **Area:** tools-native_trace | **Shape:** judgement
 
 ## Motivation
 
@@ -100,4 +100,73 @@ request is absent and the ratio is still computed.
    only the recipe request goes absent. Catches the two fields collapsed
    back into one.
 
-## Outcome
+## Outcome (round 132, 2026-09-20) — 🟢 Done
+
+**Premise:** held. `core.bst` is `notparallel`, ran two overlapping work
+processes, and scored 2.0 against a width of one.
+
+### The gap, measured
+
+```text
+core.bst     graph.max_jobs=1   notparallel=True  regex=1   peak=2   achieved_vs_requested=2.0
+codegen.bst  graph.max_jobs=4   notparallel=None  regex=4   peak=4   achieved_vs_requested=1.0
+```
+
+The denominator was `-j(\d+)` over the argv of `make`, `gmake` and
+`ninja`, highest wins. It is right wherever the recipe writes the
+number the element resolved to — every element of this fixture — and
+silently absent or wrong wherever it does not.
+
+### After
+
+```text
+core.bst     graph=1   recipe=1    denominator=graph  findings=['pinned_to_one_job', 'overlap_exceeds_granted_width']
+codegen.bst  graph=4   recipe=4    denominator=graph  findings=[]
+```
+
+Two numbers that can disagree are two fields: `resolved_jobs` from
+`graph.json` (`notparallel` is a width of one, not a missing value),
+`requested_jobs` still the recipe's own request, and
+`jobs_denominator` naming which the ratio divided by. Overlap the
+element was never granted is a finding about the sandbox, so the ratio
+is held at 1.0 and `overlap_exceeds_granted_width` carries the fact.
+An element with no resolved width gets no ratio; an element that ran
+neither make nor ninja still gets one.
+
+### Mutations verified red and reverted (6)
+
+| # | mutation | reddened |
+|---|---|---|
+| B1 | `notparallel` read as a plain `max_jobs` | `test_notparallel_is_a_width_of_one_and_not_a_missing_value` (1) |
+| B2 | the denominator swapped back to `requested_jobs` | `test_the_graph_wins_where_the_two_disagree` (1) |
+| B3 | the two fields collapsed back into one | the same clause (1) |
+| B4 | a missing width read as one | `test_no_resolved_width_is_no_ratio` (1) |
+| B5 | the ungranted overlap not reported | `test_notparallel_is_a_width_of_one...` (1) |
+| B6 | the ratio gated on a recipe request again | `test_an_element_running_neither_make_nor_ninja_still_scores` (1) |
+
+The disagreement case has no committed fixture — every element of
+`macro_micro` agrees, which is why the regex survived — so the guard
+builds one: an element `graph.json` resolves to 8 whose recipe writes
+`make -j2`.
+
+### Deviation from the Required Fix
+
+Mutation 1 as filed — swap the denominator back, `core.bst` returns to
+2.0 — cannot discriminate on `core.bst`: both widths are 1 there, and
+what moved its 2.0 is the overlap finding, not the divisor. B2 runs it
+on the disagreement fixture, where the two give 0.5 and 2.0.
+
+The join's two functions are in `bga/plane2.py`, not in the tracer the
+Required Fix names: `graph.json` is written by `extract_run` **after**
+the report, so the tracer cannot read it when it computes the ratio.
+`_PerElementParallelism.finish()` therefore publishes no ratio at all
+and the capture fills it the moment `extract_run` returns; the same
+function runs at read time in `bga analyze`, so a capture taken before
+this item stops dividing by the wrong number rather than waiting for a
+re-capture. Dependency direction is tools → bga, so the shared
+functions live on the bga side.
+
+```text
+make test: 8955 passed, 174 skipped, 1 warning in 329.80s (0:05:29)
+make lint: All checks passed! / clean: 567 finding(s) match tests/quality_baseline.json
+```

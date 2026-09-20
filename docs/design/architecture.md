@@ -1,6 +1,6 @@
 # `bga`: Current Architecture — Three Analysis Planes
 
-**Start here to orient in this codebase.** `docs/spec/specification.md` (v9) is the original design document and stays authoritative for full-length invariant/data-contract text — it is *not* wrong, but it describes the tool as originally scoped, and does not know about anything built since. This doc describes what `bga` actually does **today**, as one coherent system, and points at the real file/doc for every claim so you don't have to reconstruct that history yourself from the commit log, the 905 `docs/backlog/scenarios/` files and the 75 `docs/backlog/tasks/` files this commit carries.
+**Start here to orient in this codebase.** `docs/spec/specification.md` (v9) is the original design document and stays authoritative for full-length invariant/data-contract text — it is *not* wrong, but it describes the tool as originally scoped, and does not know about anything built since. This doc describes what `bga` actually does **today**, as one coherent system, and points at the real file/doc for every claim so you don't have to reconstruct that history yourself from the commit log, the 906 `docs/backlog/scenarios/` files and the 75 `docs/backlog/tasks/` files this commit carries.
 
 **Want to *use* the tool rather than work on it?** [`docs/guides/real-project.md`](../guides/real-project.md) is the end-to-end walkthrough on a real project, with real output at every step.
 
@@ -73,7 +73,8 @@ normalize/    -> timestamp quantization, clamp, violation reporting (Part 3)
 occupancy/    -> per-resource interval sweep (Part 4)
 graph/        -> EDG, critical path, dominators, depth (Part 5, 14.1)
 attribution/  -> blame-chain walk, 8-category wait-gap classification (Part 7-12)
-floors/       -> LB/capacity/cold/serialization floors (Part 14-17)
+floors/       -> LB/capacity/cold/serialization floors (Part 14-17), and
+                 LB_cpu, the one that divides by cores not slots (UX-891)
 replay/       -> deterministic scheduler, capacity sweep, duration_overrides hook (Part 18-19)
 utilisation/  -> CPU accounting (Part 30, M4)
 diagnostics/  -> blast radius, Monte-Carlo criticality, leaf/deferrability (Part 20-29, M5)

@@ -662,6 +662,36 @@ bga analyze RUN/ --cold --history-dir PRIOR-RUN-1/ --history-dir PRIOR-RUN-2/
 - By default, if any element on the resolved cold critical path has no resolvable historical duration, `T∞,cold` reports as unavailable rather than a misleading partial number.
 - `--allow-partial-cold` (only meaningful together with `--cold`; a no-op with a warning if passed alone) instead publishes a value with `partial=true`/`confidence=low` in that case.
 
+#### CPU floor (`UX-891`, needs Plane 2)
+
+Every other certified floor divides by **builder slots**. A build whose
+elements each run a native build system under one slot can be core-bound
+long before it is slot-bound, and no slot-denominated floor can see it.
+When a Plane 2 report is joined in, `analyze` publishes a second floor
+that divides total measured CPU time by the governing core count:
+
+```text
+  LB_cpu (CPU over cores):     17.45s (4 cores from host_cpu_count, coverage 0.82)
+```
+
+It sits **beside** `LB`, never folded into it: `LB` stays the certified
+slot-denominated floor, and the capacity-model note says which of the two
+binds. In `--format json` the five keys under `floors` are
+
+| key | meaning |
+|---|---|
+| `lb_cpu_us` | the floor, integer µs; **absent** without Plane 2 or without a governing core count, never `0` |
+| `lb_cpu_coverage` | `measured_processes / (measured + unmeasured)` - how much of the seen process population the number rests on |
+| `lb_cpu_governing_cores` | the core count it divided by |
+| `lb_cpu_cores_source` | `cpu_budget` when the run declared one, otherwise `host_cpu_count` |
+| `lb_cpu_binds` | whether `lb_cpu_us` exceeds `lb` |
+
+None of them is in `required` - a run without Plane 2 carries none, which
+is the same contract the cold fields keep. The three assumptions the
+number rests on are printed under it in the text report, as
+`bga/floors/cpu.py` declares them. See section 4c of
+`in-step-parallelism.md` for why it stays beside `LB`.
+
 ## Advanced Commands
 
 ### Version
@@ -686,7 +716,7 @@ bga analyze RUN/ --verbose
 
 ```bash
 bga graph RUN/          # static dependency graph, critical path, structural metrics
-bga floors RUN/ --cold  # certified/advisory floors (T-infinity, LB, certified headroom, cold floor)
+bga floors RUN/ --cold  # certified/advisory floors (T-infinity, LB, LB_cpu, certified headroom, cold floor)
 bga replay RUN/ --heuristic spt   # deterministic replay makespan (T_C)
 bga sweep RUN/ --resource PROCESS --min-capacity 1 --max-capacity 16  # capacity sweep (Part 19)
 bga utilisation RUN/    # CPU utilisation accounting
@@ -1035,7 +1065,7 @@ by something that is not an array index at all, so neither `items` nor
 `bga:columns` sees them. The fourth is `UX-866`: `run_instance` is
 typed as a bare `object`, not a row at all - its keys (`seed` among
 them, `UX-858`) are declared only by its own view-hint's `properties`,
-read at any depth the same way. The surface is **303 keys** today, and
+read at any depth the same way. The surface is **309 keys** today, and
 that figure is derived from the walk rather than typed here.
 
 So the statement of coverage, which is now a statement and not a
@@ -1092,7 +1122,7 @@ can look one up.
 | `serialization_point_risks` | Where the run is forced to serialize. Each entry carries `pinned_elements` (what was pinned, and to what), `governing_cores` (the cores they competed for) and `typical_max_jobs` (the `-j` their own builds used). |
 | `resource_blast` | What one shared resource rebuilds. `null` where no source inventory was captured. |
 | `run_instance.jobserver` | `UX-851`: the jobserver `bga capture` ran with, inside `run_instance` (`UX-404`'s capture identity, which also carries `started_at_us` - when the capture began - and `host_manifest.cpu_count`/`.memory_bytes` - what the host reported, the ceilings are computed against). `mode` (`off`/`auto`/`n`), `ceiling` (the token count given or derived, `null` when off), `seed` (tokens the FIFO opened holding, `UX-858`: `max(0, ceiling - builders)` under `auto`, `ceiling - 1` otherwise, `null` when off), `auth` (`fd`/`fifo`, `null` when off), `project_max_jobs` (the target element's own declared `max-jobs`, `null` when `bst` was unavailable). Absent, not defaulted, on a capture older than the field - `bga compare`'s header reads that absence as `jobserver off`. |
-| `jobserver` | `UX-847`: the pool's own record - `mode` (`fixed`/`dynamic`), `pool_ceiling`, `tokens_idle_share` (controller ticks with cores idle and tokens still in the pool) and `tokens_starved_share` (cores idle with the pool empty) - and `per_element`, keyed by uid: `joined` (`yes`/`pinned`/`held`/`unknown_kind`), `tokens_held_p50`/`tokens_held_max` (UX-846's own acquire rows joined to this element by the pid that acquired them, `null` when the element ran no wrapped tool). Present only when `--plane2`'s report carries a mode. |
+| `jobserver` | `UX-847`: the pool's own record - `mode` (`fixed`/`dynamic`), `pool_ceiling`, `tokens_idle_share` (controller ticks with cores idle and tokens still in the pool) and `tokens_starved_share` (cores idle with the pool empty) - and `per_element`, keyed by uid: `joined` (`yes`/`pinned`/`held`/`unknown_kind`), `tokens_held_p50`/`tokens_held_max` (UX-846's own acquire rows joined to this element by the pid that acquired them, `null` when the element ran no wrapped tool), and `UX-892`'s width over time: `tokens_held_series` (`[t_us, tokens]` steps, an acquire opening an interval and a release closing one - absent, not empty, when the element ran no wrapped tool), `tokens_series_coverage` (the share of the element's token-holding tools that wrote those rows - a real `make` reads the pipe itself and logs nothing), `tokens_series_open` (intervals no release closed, UX-852's leak) and `tokens_series_truncated` (whether the series hit its per-element cap). Present only when `--plane2`'s report carries a mode. |
 | `trace_queries` | Every timeline query that shows a finding or deepens a claim, best first; `trace_query` is its first entry. Absent where there is a single grain. |
 | `unused_dependencies`, `redundancy_count`, `worst_redundancy`, `native_findings` | The Plane 2 half of an `element_join` row: declared-and-never-read dependencies, how often this element repeated work it had already done, the repetition it paid most for, and the producer's own per-element tags. |
 | `edges`, `projection` | Inside a `restructuring` finding: the declared build edges Plane 2 measured never-read, and the replay with those edges removed (`replayed_baseline_us`, `projected_us`, `saving_us`). Evidence, not a verdict. |
@@ -1467,7 +1497,7 @@ One row per element, from both planes:
 | | |
 | --- | --- |
 | Plane 1 | `on_critical_path`, `critical_path_share`, `potential_saving_us`, `saving_share`, `blast_radius` |
-| Plane 2 | `cores_busy`, `cpu_coverage`, `requested_jobs`, `peak_rss_bytes`, `dominant_binary`, `serial_binary` |
+| Plane 2 | `cores_busy`, `cpu_coverage`, `requested_jobs`, `resolved_jobs` (`UX-894`: the width BuildStream resolved for the element, read from the run's graph document, where a non-parallel element is a width of one and not a missing value), `jobs_denominator` (which of the two widths the achieved ratio divided by, or absent when no ratio was computed), `peak_rss_bytes`, `dominant_binary`, `serial_binary` |
 
 `bga analyze --plane2 PLANE2.json` now carries the same rows as
 `element_join`, from the same function — so the report and the command

@@ -1,6 +1,6 @@
 # UX-891: the certified floors never divide by the machine's cores
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** round 131, [`docs/design/in-step-parallelism.md`](../../design/in-step-parallelism.md) §8 — the design document argued the axis and named this as the one increment that needs no new capture | **Serves:** R5 (the capacity operator asking whether zero headroom on a four-core box is true), R2 second | **Topic:** analysis | **Area:** bga | **Shape:** judgement
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — | **Found by:** round 131, [`docs/design/in-step-parallelism.md`](../../design/in-step-parallelism.md) §8 — the design document argued the axis and named this as the one increment that needs no new capture | **Serves:** R5 (the capacity operator asking whether zero headroom on a four-core box is true), R2 second | **Topic:** analysis | **Area:** bga | **Shape:** judgement
 
 ## Motivation
 
@@ -133,4 +133,75 @@ candidate divisors give 8723282 and 17446564.
    Catches a coverage derived from the floor's own inputs.
 3. Halve `host_cpu_count`. The floor doubles. Catches the divisor.
 
-## Outcome
+## Outcome (round 132, 2026-09-20) — 🟢 Done
+
+**Premise:** held. Every floor in Part 16 divides by a builder slot
+count, and the CPU the same capture measured sat a few sections further
+down the same report, divided by nothing.
+
+### The gap, measured
+
+```text
+$ python3 -m bga.cli analyze tests/fixtures/macro_micro/run \
+    --plane2 tests/fixtures/macro_micro/plane2.json -f json -o /tmp/mm.json
+$ python3 -c '...'      # floors, plane2 cpu_time, run-context
+lb 43200000  headroom 0  efficiency 1.0  occupancy 0.2905
+total_cpu_us 69786259  wall_span_s 43.508  cores_busy 1.60
+host_cpu_count 4  cpu_budget None  max_jobs 4  PROCESS 4
+total_cpu_us // host_cpu_count 17446564   coverage 663/813
+```
+
+Four builder slots 29.1% used, certified headroom zero, and 1.60 of
+four cores busy over the same span. The division on the last line was
+the whole missing step.
+
+### After
+
+```text
+lb 43200000  headroom 0  efficiency 1.0  occupancy 0.2905
+lb_cpu_us 17446564  coverage 0.8155  cores 4 (host_cpu_count)  binds False
+```
+
+`lb` and every other Part 16 term is byte-identical; the CPU floor is
+published beside it with its divisor, its provenance and its coverage,
+and the standing note gained one clause naming which of the two binds.
+On this capture LB binds — the answer the report could not give before
+is that the scheduler, not the machine, is the constraint here. The
+three assumptions print with the number in the Certified Floors block,
+the form `bga/capacity_model.py` uses.
+
+### Mutations verified red and reverted (6)
+
+| # | mutation | reddened |
+|---|---|---|
+| A1 | the floor summed from `measured_processes`, not `total_cpu_us` | `test_the_floor_is_the_measured_cpu_over_the_governing_cores` (1) |
+| A2 | coverage derived from the floor's own inputs (`(m+u)/seen`) | the same clause (1) |
+| A3 | `governing_cores` returning `max_jobs` — the builder count | `test_the_divisor_is_the_cores_and_not_the_builder_slots` (1) |
+| A4 | a declared `cpu_budget` losing to the detected host | `test_a_declared_budget_governs_over_the_detected_host` (1) |
+| A5 | an absent Plane 2 publishing `lb_cpu_us: 0` | `test_no_plane_two_leaves_the_floors_and_the_note_as_they_were` (1) |
+| A6 | the CPU clause appended to a run with no CPU floor | the same clause (1) |
+
+**A guard whose population excluded what it checks.**
+`test_the_numbers_have_a_sentence.py`'s phantom clause read one
+fixture, `golden`, which carries no Plane 2 — so a Plane-2-conditional
+member could only ever read there as a sentence about a field nobody
+emits. Its population is now `golden` **and** `macro_micro` with its
+Plane 2 report, which is the shape `CLAUDE.md` lists third.
+
+### Deviation from the Required Fix
+
+Mutation 1 as filed — drop one element's `cpu_us`, the floor falls —
+does not redden this implementation: the floor reads the capture's
+published `cpu_time.total_cpu_us` aggregate, which the Required Fix
+names, rather than re-summing `per_element`. Measured: dropping
+`core.bst`'s 16,431,740 us leaves `lb_cpu_us` at 17,446,564 and moves
+coverage to 0.8155. A1 above is the discriminating form. The floor is
+computed at the Plane 2 join in `bga/cli.py`, not in `_compute_floors`,
+because the CPU it divides is joined after `analyze()` runs (`UX-215`).
+Five `floors` properties are declared, not four: the Required Fix's
+four-row table names five keys.
+
+```text
+make test: 8955 passed, 174 skipped, 1 warning in 329.80s (0:05:29)
+make lint: All checks passed! / clean: 567 finding(s) match tests/quality_baseline.json
+```

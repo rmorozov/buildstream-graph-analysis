@@ -1,6 +1,6 @@
 # UX-892: the per-element token record drops the timestamp it was given
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-847, UX-846 | **Found by:** round 131, [`docs/design/in-step-parallelism.md`](../../design/in-step-parallelism.md) §6 item 2 — reading the ledger to file it showed the timestamp is already on disk, which the document did not know | **Serves:** R2 (the recipe author asking how wide their element actually ran, and when) | **Topic:** capture | **Area:** tools-native_trace | **Shape:** judgement
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-847, UX-846 | **Found by:** round 131, [`docs/design/in-step-parallelism.md`](../../design/in-step-parallelism.md) §6 item 2 — reading the ledger to file it showed the timestamp is already on disk, which the document did not know | **Serves:** R2 (the recipe author asking how wide their element actually ran, and when) | **Topic:** capture | **Area:** tools-native_trace | **Shape:** judgement
 
 ## Motivation
 
@@ -101,4 +101,68 @@ fixture also holds an unwrapped `make`.
    series is absent rather than empty. Catches an absent series
    published as zero width.
 
-## Outcome
+## Outcome (round 132, 2026-09-20) — 🟢 Done
+
+**Premise:** held. The wrapper stamps `date +%s.%N` on every ledger row
+and `tokens_by_element` read `pid` and `tokens` and never `t`.
+
+### The gap, measured
+
+```text
+$ sed -n '50,52p' tools/native_trace/wrappers/_common.sh
+    printf '{"event":"%s","tool":"%s","pid":%s,"tokens":%s,"t":%s}\n' \
+        "$1" "$bga_tool" "$$" "$bga_held" "$(date +%s.%N)" \
+        >>"$BST_TRACE_JOBSERVER_LEDGER" 2>/dev/null || :
+
+$ python3 -c '<the per_element properties of the jobserver block>'
+['joined', 'tokens_held_p50', 'tokens_held_max']
+```
+
+Four tokens for two seconds of a ninety-second element and four tokens
+throughout reduce to the same pair.
+
+### After
+
+```text
+acquire 4 tokens at t0, release at t0+2s, element span 90s:
+  tokens_held_p50 4   tokens_held_max 4
+  tokens_held_series [[1700000000000000, 4], [1700000002000000, 0]]
+  mean width over the span 0.0889, not 4
+  tokens_series_coverage 0.5   (an unwrapped make in the same element)
+```
+
+The series is a step function, not a sample: an `acquire` opens an
+interval and a `release` closes one, so a point is the element's total
+holding after that event. Only wrapped tools write these rows, so the
+wrapped share is published as a number the way `UX-891` publishes
+`lb_cpu_coverage` — never a series that reads as the whole element. A
+wrapper killed before its trap (`UX-852`) has its interval closed at
+the element's span end and counted in `tokens_series_open`. The series
+is capped at 200 points per element; the raw rows stay in the ledger.
+`bga timeline` draws one counter track per element beside the global
+pool track.
+
+### Mutations verified red and reverted (6)
+
+| # | mutation | reddened |
+|---|---|---|
+| C1 | a row with no clock reconstructed anyway | `test_a_row_with_no_timestamp_leaves_the_scalars_and_drops_the_series` (1) |
+| C2 | a release read as a sample, not an interval close | `test_two_seconds_of_four_tokens_is_not_four_tokens_throughout` (1) |
+| C3 | the wrapped share published as 1.0 | `test_the_series_covers_the_wrapped_share_and_says_so` (1) |
+| C4 | an unpaired release driving the sum | `test_a_release_without_its_acquire_is_skipped_not_negative` (1) |
+| C5 | a leaked interval left running | `test_a_wrapper_killed_before_its_trap_leaves_the_interval_open` (1) |
+| C6 | the series unbounded | `test_the_series_is_bounded_and_says_when_it_was_cut` (1) |
+
+### Deviation from the Required Fix
+
+The ledger fixture is a synthetic row list rather than `UX-846`'s
+fifo/fake-tool harness: the claim under test is the reducer's, and the
+rows the harness produces are the rows the guard writes. The wrapped
+share's denominator is the element's `make`/`gmake`/`ninja` pids read
+from the raw log, which needed one more streaming pass — folded into
+the pass that also reads each element's span end, not a third.
+
+```text
+make test: 8955 passed, 174 skipped, 1 warning in 329.80s (0:05:29)
+make lint: All checks passed! / clean: 567 finding(s) match tests/quality_baseline.json
+```

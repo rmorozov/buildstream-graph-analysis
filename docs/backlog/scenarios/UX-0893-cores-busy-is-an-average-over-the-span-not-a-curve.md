@@ -1,6 +1,6 @@
 # UX-893: cores busy is an average over the span, not a curve
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-675 | **Found by:** round 131, [`docs/design/in-step-parallelism.md`](../../design/in-step-parallelism.md) §6 item 3 | **Serves:** R5 (the capacity operator distinguishing a box half-idle throughout from one saturated for half the span), R2 second | **Topic:** capture | **Area:** tools-native_trace | **Shape:** judgement
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-675 | **Found by:** round 131, [`docs/design/in-step-parallelism.md`](../../design/in-step-parallelism.md) §6 item 3 | **Serves:** R5 (the capacity operator distinguishing a box half-idle throughout from one saturated for half the span), R2 second | **Topic:** capture | **Area:** tools-native_trace | **Shape:** judgement
 
 ## Motivation
 
@@ -93,4 +93,83 @@ an unmeasured CPU time.
    and the others are unchanged. Catches an unreadable pid billed as
    idle.
 
-## Outcome
+## Outcome (round 132, 2026-09-20) — 🟢 Done
+
+**Premise:** held. Per-element CPU is read once, at exit, so everything
+downstream is a total divided by a span.
+
+### The gap, measured
+
+```text
+$ sed -n '1018,1023p' bga/correlate.py
+    measured_cpu_us = sum(
+        (entry.get("cpu_us") or 0) for entry in per_element.values()
+    )
+    cores_busy = (
+        (measured_cpu_us / 1e6) / wall_span if wall_span and measured_cpu_us else None
+    )
+```
+
+`cores_busy` is 1.60 on `tests/fixtures/macro_micro` (69,786,259 us
+over 43.508 s). A build that pinned four cores for seventeen seconds
+and idled for twenty-six reports the same 1.60.
+
+### After
+
+```text
+two elements, 8 core-seconds each over the same four ticks:
+  front.bst  [4.0, 4.0, 0.0, 0.0]
+  flat.bst   [2.0, 2.0, 2.0, 2.0]
+  same total, same cores_busy, two curves
+```
+
+`cpu_time.per_element_series` is the rate between consecutive samples,
+published beside the totals and never instead of them —
+`total_cpu_us` and every per-element total stay the exit-time sum that
+`UX-891`'s floor reads. A pid shorter than one tick has no second
+sample and is in the total and absent from the curve, stated rather
+than hidden. A `/proc` read that failed ends a series rather than
+reading zero, the rule `hook.c:523-528` already states.
+
+Cost, measured rather than described: one `/proc/<pid>/stat` read per
+live traced pid per 2.0 s tick (210 us on this host), and the curve is
+capped at 200 points per element.
+
+### Mutations verified red and reverted (6)
+
+| # | mutation | reddened |
+|---|---|---|
+| D1 | a rate published as a level | `test_two_elements_with_one_total_have_two_curves` (1) |
+| D2 | a lone sample given a rate from an assumed zero | `test_a_pid_shorter_than_one_tick_is_absent_from_the_curve` (1) |
+| D3 | an element's pids collapsed into one series | `test_one_element_with_two_pids_sums_them_at_the_same_instant` (1) |
+| D4 | the ticks after a failed read billed as idle | `test_a_read_that_failed_ends_the_series_and_does_not_read_zero` (1) |
+| D5 | the curve unbounded | `test_the_curve_is_bounded` (1) |
+| D6 | an unreadable pid billed as zero | `test_a_pid_with_no_proc_entry_is_none_and_not_zero` (1) |
+
+**A mutation that did not discriminate, first time.** D2 first gave a
+lone sample a rate from `(0.0, 0)` and stayed green: that fixture's
+only sample was stamped `t=0.0`, so the window was zero and the
+existing `window <= 0` guard caught it — a second defence, not the
+clause's own. The sample is stamped `t=2.0` now, which is where a
+process that lived inside one tick is really sampled, and D2 reddens.
+
+### Deviation from the Required Fix
+
+The sampler is the tracer's own thread, not `spine.c`'s
+`read_cpu_times` on a tick. The spine's loop blocks in
+`waitpid(-1, __WALL)` and has no timer, so a tick there fires on tracee
+events — none of which arrive during exactly the long compile the curve
+exists for — and giving it one means a non-restarting signal handler in
+the file whose whole promise is never to change the build. The new
+sampler reads the same two `/proc/<pid>/stat` fields on the host
+sampler's existing 2.0 s tick, over the pid set it follows from the raw
+log both planes append to, so it covers hook-traced and spine-traced
+processes alike. The samples land in scratch, not in the snapshot: `bga snapshot`
+points `--raw-log` into a directory whose file list is a contract, and
+the curve is a reduction the report carries — so no new flag, no new
+store name and no new snapshot file.
+
+```text
+make test: 8955 passed, 174 skipped, 1 warning in 329.80s (0:05:29)
+make lint: All checks passed! / clean: 567 finding(s) match tests/quality_baseline.json
+```

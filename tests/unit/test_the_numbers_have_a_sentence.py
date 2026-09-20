@@ -28,6 +28,7 @@ import pytest
 from bga import schemas
 
 GOLDEN = Path(__file__).parent.parent / "fixtures" / "golden" / "mixed_task_kinds"
+MACRO_MICRO = Path(__file__).parent.parent / "fixtures" / "macro_micro"
 
 
 def _quantity_leaves(document):
@@ -91,34 +92,54 @@ class TestTheSchemaDescribesWhatIsPublished:
     """
 
     @staticmethod
-    def _analyze():
-        proc = subprocess.run(
-            [sys.executable, "-m", "bga.cli", "analyze", str(GOLDEN),
-             "--format", "json", "--diagnostics"],
-            capture_output=True, text=True)
+    def _analyze(run, plane2=None):
+        argv = [sys.executable, "-m", "bga.cli", "analyze", str(run),
+                "--format", "json", "--diagnostics"]
+        argv += ["--plane2", str(plane2)] if plane2 else ["--no-plane2"]
+        proc = subprocess.run(argv, capture_output=True, text=True)
         assert proc.returncode == 0, proc.stderr
         return json.loads(proc.stdout)
+
+    @classmethod
+    def _documents(cls):
+        """Both runs, because one of them cannot publish half the schema.
+
+        `UX-891`: the golden run carries no Plane 2 report, so a member
+        computed from Plane 2 - the CPU floor's five - is absent from it
+        by design and would read here as a phantom. A guard whose only
+        fixture structurally excludes what it is checking for is the
+        shape `CLAUDE.md` lists third, so the population is a run
+        without Plane 2 and a run with one.
+        """
+        if not getattr(cls, "_cache", None):
+            cls._cache = [
+                cls._analyze(GOLDEN),
+                cls._analyze(MACRO_MICRO / "run", MACRO_MICRO / "plane2.json"),
+            ]
+        return cls._cache
 
     @pytest.mark.parametrize("section", [
         "floors", "capacity_verdict", "occupancy", "utilisation"])
     def test_every_described_member_is_one_the_payload_carries(self, section):
-        payload = self._analyze()[section]
+        published = set().union(
+            *(document[section] for document in self._documents()))
         declared = set(
             schemas.schema(schemas.ANALYZE)["properties"][section]
              .get("properties") or {})
         assert declared, f"{section} declares no members at all"
-        phantom = sorted(declared - set(payload))
+        phantom = sorted(declared - published)
         assert phantom == [], (
-            f"analyze/v2.{section} describes {phantom}, which this run does "
-            f"not publish - a sentence about a field nobody emits")
+            f"analyze/v2.{section} describes {phantom}, which neither run "
+            f"publishes - a sentence about a field nobody emits")
 
     @pytest.mark.parametrize("section", [
         "floors", "capacity_verdict", "occupancy", "utilisation"])
     def test_every_published_member_is_described(self, section):
-        payload = self._analyze()[section]
         properties = (schemas.schema(schemas.ANALYZE)["properties"][section]
                       .get("properties") or {})
-        mute = sorted(k for k in payload if not properties.get(k, {}).get("description"))
+        published = set().union(
+            *(document[section] for document in self._documents()))
+        mute = sorted(k for k in published if not properties.get(k, {}).get("description"))
         assert mute == [], f"analyze/v2.{section}: undescribed members {mute}"
 
 

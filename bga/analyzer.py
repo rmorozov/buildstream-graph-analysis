@@ -21,6 +21,8 @@ from .floors import (
     compute_exclusive_serialization_bound,
     compute_t_infinity_observed,
 )
+from .floors.cpu import CAPACITY_SOURCE
+from .floors.cpu import governing_cores as _governing_cores
 from .graph.edg import (
     JOINT_SAVING_SET_SIZE,
     analyze_graph,
@@ -1063,8 +1065,11 @@ class BuildEfficiencyAnalyzer:
                 'host_cpu_count': host_cpu_count,
             })
 
-        governing_cores = cpu_budget if cpu_budget is not None else host_cpu_count
-        capacity_source = 'declared_cpu_budget' if cpu_budget is not None else 'detected_host_cpu_count'
+        # UX-891: the one derivation, in bga/floors/cpu.py, which the CPU
+        # floor divides by - so the floor and this check cannot disagree
+        # about which number governs.
+        governing_cores, cores_source = _governing_cores(self.run_context)
+        capacity_source = CAPACITY_SOURCE[cores_source]
         # UX-16: explicit `is None` checks, not truthiness - `builders`/
         # `native_max_jobs`/`governing_cores` of 0 are real, present data
         # (BuildStream's own documented `--max-jobs 0` sentinel, resolved

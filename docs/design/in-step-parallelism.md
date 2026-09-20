@@ -353,9 +353,12 @@ Items 2-4 are each a filing. None is a precondition for item 1.
 
 ## 8. The recommended first increment
 
-One filing, one commit, `Shape: mechanical`, `Serves: R5, R2`,
-`Topic: analysis`, `Area: bga`. Publish the CPU floor from the
-contracted aggregate that already exists.
+One filing, one commit, `Serves: R5, R2`, `Topic: analysis`,
+`Area: bga`. Publish the CPU floor from the contracted aggregate that
+already exists. Filed as `UX-891`; the shape this text derives is
+`judgement`, not the `mechanical` this section first claimed — the four
+keys are declared in `bga/schemas.py`, which `dev_close_task.py
+--shape` reads as a contract surface.
 
 **Required fix.** In `bga/floors/`, a `cpu.py` beside `capacity.py`
 computing `total_cpu_us // governing_cores` from the joined Plane 2
@@ -421,4 +424,14 @@ which asserts the numbering is exactly `range(1, 21)`, and would want a
 round-history row pointing at an audit document that does not exist.
 Both are one-line moves for a session that is running that round; both
 are out of scope for a document that changes no code. Until then this
-file is the argument, and §8 is the row to file.
+file is the argument, and §8 is the row to file — filed as `UX-891`,
+with §6's items 2-4 as `UX-892`, `UX-893` and `UX-894`.
+
+One trap for whoever cites this file next. Writing its name immediately
+before a section id — the `<document> §N` shape — pulls it into
+`test_the_styleguide_names_its_guards.py`'s population of process
+documents, where its §1-§9 collide with five documents that already
+number those ids. Measured: four reds in that file the first time the
+filings above cited it that way. Cite it as "section 4c of
+`in-step-parallelism.md`" instead; it is an argument, not a process
+document, and it does not belong in that id space.

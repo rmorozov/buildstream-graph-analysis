@@ -386,8 +386,8 @@ tools/dev_baseline.py       every current ruff and pyright finding
                              by identity in tests/quality_baseline.json;
                              a new one is red, the list only shrinks (UX-694/697)
 tools/dev_env_check.py       the pre-gate env check: `import bga` resolves
-                             under the main checkout, and PATH's ruff is the
-                             pinned one (UX-887)
+                             under the main checkout, and PATH's ruff, pyright
+                             and node are the pinned ones (UX-887/889)
 tools/dev_trace_coverage.py  which captured field reaches the emitted
                              trace, and which Perfetto carriers it uses (UX-466)
 tools/dev_page_census.py     the page's structure and control classes, one

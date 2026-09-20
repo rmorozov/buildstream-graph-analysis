@@ -108,12 +108,29 @@ Direction 20 already requires before the mode goes on by default.
 Diagnosing why the giant stayed at width 2 (its own row). Changing any
 jobserver default. Touching `10-jobserver`'s or `12-junctioned`'s steps.
 
+**And, explicitly: removing or banding the assertion is not the fix.**
+It is the unblock, and it is all the Required Fix above asks for today.
+A closed row whose subject is the jobserver reads, to a round with no
+other context, as "this was measured and found fine" — which is the
+opposite of what the four pairs say. So this row does not close on a
+green job.
+
 ## Acceptance Test
 
-`bst-examples` is green on a branch whose only change is this one, with
-`off=…s auto=…s` still in the step's log and both runs still uploaded;
-`python3 -m pytest tests/unit/test_the_examples_build.py -q` green, and
-a mutation removing the `off=`/`auto=` echo reddens the guard that
-replaces the three.
+Two parts, and the second is what lets the row close.
+
+**The unblock.** `bst-examples` is green on a branch whose only change
+is this one, with `off=…s auto=…s` still in the step's log and both
+runs still uploaded; `python3 -m pytest
+tests/unit/test_the_examples_build.py -q` green, and a mutation
+removing the `off=`/`auto=` echo reddens the guard that replaces the
+three.
+
+**The close.** Either `11-serial-giant` reads `peak > 2` under `auto`
+on the runner — the fixture granting width, which is what the example
+was built to show — or a filed row establishes that it never could at
+`max-jobs: 2` and replaces the example with one that can. Until one of
+those, this row stays open with the assertion removed, which is the
+honest state: the tree is unblocked and the question is unanswered.
 
 ## Outcome

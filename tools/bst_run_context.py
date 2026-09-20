@@ -61,12 +61,14 @@ from typing import Optional
 
 from ._run_context_common import (
     add_build_class,
+    add_build_class_arguments,
     add_cpu_capacity_fields,
     add_host_manifest,
     add_memory_capacity_fields,
     add_producer,
     add_queue_seam,
     add_start_clock_source,
+    build_class_from_args,
 )
 from .bst_log_to_chrome_trace import (
     WrapperTraceConverter,
@@ -180,20 +182,7 @@ def main() -> int:
     )
     parser.add_argument("--host", default=None,
                         help="Optional host identifier to record.")
-    parser.add_argument(
-        "--build-type", default=None,
-        help="What kind of build this was - night, review, guard, or "
-        "whatever else the pipeline declares. Free text; two runs "
-        "declaring different types are not one population (UX-898). "
-        "Defaults to $BGA_BUILD_TYPE.",
-    )
-    parser.add_argument(
-        "--variant", action="append", default=None, metavar="NAME=VALUE",
-        help="A named dimension of what this build did - arch=aarch64, "
-        "sanitizer=address, coverage=on. Repeatable, because several are "
-        "true at once (UX-903). Defaults to $BGA_BUILD_VARIANT, which "
-        "takes the same pairs comma-separated.",
-    )
+    add_build_class_arguments(parser)
     parser.add_argument(
         "--native-max-jobs", type=int, default=None,
         help="Override the per-element `make -jN` parallelism (not --builders). "
@@ -219,13 +208,10 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    from bga import buildclass
-
-    try:
-        variant = buildclass.parse_variant(args.variant)
-    except ValueError as error:
-        print(f"Error: {error}", file=sys.stderr)
+    declared = build_class_from_args(args)
+    if declared is None:
         return 1
+    build_type, variant = declared
 
     try:
         run_context = build_run_context(
@@ -238,7 +224,7 @@ def main() -> int:
             cpu_budget=args.cpu_budget,
             memory_budget_mb=args.memory_budget_mb,
             estimated_job_memory_mb=args.estimated_job_memory_mb,
-            build_type=args.build_type,
+            build_type=build_type,
             variant=variant,
         )
     except FileNotFoundError:

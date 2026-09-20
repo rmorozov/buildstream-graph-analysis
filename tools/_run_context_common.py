@@ -12,6 +12,7 @@ requiring a second, easy-to-forget edit.
 """
 import contextlib
 import os
+import sys
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -199,6 +200,43 @@ def add_host_manifest(run_context: dict) -> None:
 
     with contextlib.suppress(Exception):
         run_context["host_manifest"] = hostinfo.collect()
+
+
+#: `UX-898`/`UX-903`: the declaration flags, written once. Both
+#: producers take them and must not drift - which is what this module
+#: is for (`UX-18`) - and pylint counted the second copy as a
+#: duplicate block the moment it landed.
+_BUILD_TYPE_HELP = (
+    "What kind of build this was - night, review, guard, or whatever else "
+    "the pipeline declares. Free text; two runs declaring different types "
+    "are not one population (UX-898). Defaults to $BGA_BUILD_TYPE.")
+_VARIANT_HELP = (
+    "A named dimension of what this build did - arch=aarch64, "
+    "sanitizer=address, coverage=on. Repeatable, because several are true "
+    "at once (UX-903). Defaults to $BGA_BUILD_VARIANT, which takes the "
+    "same pairs comma-separated.")
+
+
+def add_build_class_arguments(parser) -> None:
+    """`--build-type` and `--variant` on a run-context producer."""
+    parser.add_argument("--build-type", default=None, help=_BUILD_TYPE_HELP)
+    parser.add_argument("--variant", action="append", default=None,
+                        metavar="NAME=VALUE", help=_VARIANT_HELP)
+
+
+def build_class_from_args(args) -> Optional[tuple]:
+    """`(build_type, variant)`, or `None` after naming the bad entry.
+
+    `None` rather than an exception so neither `main` grows the same
+    four-line `try` - the duplication the ledger caught.
+    """
+    from bga import buildclass
+
+    try:
+        return args.build_type, buildclass.parse_variant(args.variant)
+    except ValueError as error:
+        print(f"Error: {error}", file=sys.stderr)
+        return None
 
 
 def add_build_class(run_context: dict,

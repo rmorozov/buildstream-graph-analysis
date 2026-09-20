@@ -35,12 +35,14 @@ from typing import Optional
 
 from ._run_context_common import (
     add_build_class,
+    add_build_class_arguments,
     add_cpu_capacity_fields,
     add_host_manifest,
     add_memory_capacity_fields,
     add_producer,
     add_queue_seam,
     add_start_clock_source,
+    build_class_from_args,
     typical_resolved_max_jobs,
 )
 from .bst_log_to_chrome_trace import WrapperTraceConverter, _resolve_start_time_source, _resolve_start_time_us
@@ -1004,19 +1006,7 @@ def main() -> int:
         "--estimated-job-memory-mb", type=int, default=None,
         help='A rough, operator-supplied estimate of one concurrent build job\'s memory footprint (MB) - a single configurable constant, not a real per-task measurement (no such measurement source exists in this pipeline, see UX-21).'
     )
-    parser.add_argument(
-        "--build-type", default=None,
-        help="What kind of build this was - night, review, guard, or whatever "
-        "else the pipeline declares. Free text; two runs declaring different "
-        "types are not one population (UX-898). Defaults to $BGA_BUILD_TYPE."
-    )
-    parser.add_argument(
-        "--variant", action="append", default=None, metavar="NAME=VALUE",
-        help="A named dimension of what this build did - arch=aarch64, "
-        "sanitizer=address, coverage=on. Repeatable, because several are true "
-        "at once (UX-903). Defaults to $BGA_BUILD_VARIANT, which takes the "
-        "same pairs comma-separated."
-    )
+    add_build_class_arguments(parser)
     parser.add_argument(
         "--interrupted", action="store_true",
         help="Record that this log's build was interrupted, so the run declares "
@@ -1025,13 +1015,10 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    from bga import buildclass
-
-    try:
-        variant = buildclass.parse_variant(args.variant)
-    except ValueError as error:
-        print(f"Error: {error}", file=sys.stderr)
+    declared = build_class_from_args(args)
+    if declared is None:
         return 1
+    build_type, variant = declared
 
     try:
         summary = extract_run(
@@ -1046,7 +1033,7 @@ def main() -> int:
             # command line could set it, so the recovery path UX-163
             # printed produced a run that had forgotten it was partial.
             interrupted=args.interrupted,
-            build_type=args.build_type,
+            build_type=build_type,
             variant=variant,
         )
     except (RuntimeError, FileNotFoundError) as e:

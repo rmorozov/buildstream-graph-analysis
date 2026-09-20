@@ -1907,6 +1907,24 @@ _EVIDENCE_FIELDS = {
         "parallelism its own build actually achieved."),
     "measured_us": ("duration_us",
         "Wall-clock actually measured, as opposed to estimated."),
+    # `UX-896`: the cache's ceiling. Every one of these is null rather
+    # than zero when the capture did not record it.
+    "quota_bytes": ("bytes",
+        "The local artifact cache's configured ceiling, resolved against "
+        "the volume it sits on."),
+    "volume_total_bytes": ("bytes",
+        "The size of the filesystem the cache directory is on."),
+    "quota_over_volume_bytes": ("bytes",
+        "How much the quota exceeds what that volume can give after the "
+        "reserved share - a ceiling the disk will not let the cache reach."),
+    "cache_used_bytes": ("bytes",
+        "What the CAS occupies, walked at capture time."),
+    "used_share": ("share",
+        "What the cache holds over what its quota allows it to."),
+    "headroom_bytes": ("bytes",
+        "Quota less what is used; negative is the shortfall."),
+    "low_watermark_share": ("share",
+        "The share of the quota BuildStream retains when it cleans up."),
 }
 
 # `UX-346`: the evidence keys whose sentence stays beside the number,
@@ -2823,6 +2841,76 @@ _SIGNALS_TABLES = {
                 "description": "The sum of `transfer_us` over the "
                                "run's wall-clock - how much of this "
                                "build was moving artifacts."},
+            # `UX-896`: the cache's ceiling, beside what it did with it.
+            # Present only where the capture recorded a capacity block,
+            # and every number inside it null rather than zero when
+            # unread: a quota of `infinity` is a cache with no ceiling,
+            # not a cache with a ceiling of nothing, and a sizing
+            # decision taken on the second would be wrong by the whole
+            # disk.
+            "capacity": {
+                "description": "What the local cache was configured to "
+                               "hold and what the volume under it can "
+                               "give. Does not carry per-element "
+                               "artifact size: BuildStream 2.8.0 has no "
+                               "cheap exact source for it (UX-907).",
+                "properties": {
+                    "cachedir": {
+                        "description": "The cache directory these "
+                                       "numbers are about."},
+                    "quota_declared": {
+                        "description": "The quota as the configuration "
+                                       "spells it - a size, a "
+                                       "percentage, or `infinity`."},
+                    "quota_bytes": {
+                        QUANTITY: "bytes",
+                        "description": "The quota resolved against the "
+                                       "volume, or null where it is "
+                                       "`infinity` or unparseable."},
+                    "volume_total_bytes": {
+                        QUANTITY: "bytes",
+                        "description": "The size of the filesystem the "
+                                       "cache directory is on."},
+                    "volume_free_bytes": {
+                        QUANTITY: "bytes",
+                        "description": "Free space on that filesystem "
+                                       "at capture time."},
+                    "cache_used_bytes": {
+                        QUANTITY: "bytes",
+                        "description": "What the CAS occupies, from an "
+                                       "opt-in walk at capture time; "
+                                       "null when nobody walked it."},
+                    "cache_used_source": {
+                        "description": "How `cache_used_bytes` was "
+                                       "obtained: `cas_walk`, "
+                                       "`not_walked`, `absent`, or "
+                                       "`budget_exceeded`."},
+                    "low_watermark_share": {
+                        QUANTITY: "share",
+                        "description": "The share of the quota "
+                                       "BuildStream retains when it "
+                                       "cleans up."},
+                    "used_share": {
+                        QUANTITY: "share",
+                        "description": "What the cache holds over what "
+                                       "its quota allows it to."},
+                    "headroom_bytes": {
+                        QUANTITY: "bytes",
+                        "description": "Quota less what is used. "
+                                       "Negative is the shortfall - one "
+                                       "signed field rather than two "
+                                       "halves of the same "
+                                       "subtraction."},
+                    "at_low_watermark": {
+                        "description": "Whether the cache is at or past "
+                                       "the watermark, so BuildStream "
+                                       "is already evicting."},
+                    "quota_over_volume_bytes": {
+                        QUANTITY: "bytes",
+                        "description": "How much the quota exceeds what "
+                                       "the volume can give after the "
+                                       "reserved share; absent when it "
+                                       "does not."}}},
             "target_closure": {
                 "description": "The same question restricted to "
                                "what the target actually needs.",
@@ -4865,7 +4953,9 @@ for _table, _node in list(_STRUCTURAL_TABLES.items()) + list(_SIGNALS_TABLES.ite
 # stays folded under every role and reachable under all of them, which
 # is what it does today.
 _SECTION_READERS = {
-    "cache": ("R2", "R4"),
+    # `UX-896` adds R5: `cache-capacity` cites `cache.capacity.*`, and
+    # how large an agent's cache has to be is a fleet question.
+    "cache": ("R2", "R4", "R5"),
     "capacity_recommendation": ("R5",),
     "confidence": ("R1", "R4"),
     "elements": ("R3",),

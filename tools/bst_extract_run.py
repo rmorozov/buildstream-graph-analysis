@@ -34,6 +34,7 @@ from pathlib import Path
 from typing import Optional
 
 from ._run_context_common import (
+    add_cache_capacity,
     add_cpu_capacity_fields,
     add_host_manifest,
     add_memory_capacity_fields,
@@ -458,6 +459,7 @@ def extract_run(
     interrupted: bool = False,
     foundation: Optional[list] = None,
     jobserver: Optional[dict] = None,
+    cache_usage: bool = False,
 ):
     """Run the full extraction pipeline. Returns a dict summary (targets,
     span/element/dependency counts, warnings) - the CLI entry point below
@@ -610,6 +612,12 @@ def extract_run(
     # runs can be told apart - or told to be the same - rather than
     # compared on the assumption that they are.
     add_host_manifest(run_context)
+    # UX-896: what the cache was configured to hold. Beside the host
+    # manifest because it is the same class of fact - a property of the
+    # machine at capture time, not of the build - and because a cache
+    # too small to hold the project is otherwise indistinguishable from
+    # a cache whose keys move.
+    add_cache_capacity(run_context, with_usage=cache_usage)
     add_producer(run_context)
     if wall_start_us is not None and wall_end_us is not None:
         run_context["wall_clock"] = {"start_us": wall_start_us, "end_us": wall_end_us}
@@ -1004,6 +1012,13 @@ def main() -> int:
         "itself unfinished. Needed when re-running this command from the hint an "
         "interrupted capture printed; `bga snapshot` sets it for you."
     )
+    parser.add_argument(
+        "--cache-usage", action="store_true",
+        help="Walk the local CAS to record what the cache currently holds "
+        "(UX-896). Off by default: it is the only part of the capacity block "
+        "that costs anything, and without it the block still carries the "
+        "configured quota and the volume under it."
+    )
     args = parser.parse_args()
 
     try:
@@ -1019,6 +1034,7 @@ def main() -> int:
             # command line could set it, so the recovery path UX-163
             # printed produced a run that had forgotten it was partial.
             interrupted=args.interrupted,
+            cache_usage=args.cache_usage,
         )
     except (RuntimeError, FileNotFoundError) as e:
         print(f"Error: {e}", file=sys.stderr)

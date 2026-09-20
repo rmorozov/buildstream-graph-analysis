@@ -39,7 +39,7 @@ from .cache_effectiveness import (
     TRANSFER_SHARE_NOTABLE,
 )
 from .ingest.models import AnalysisResult
-from .units import GIB, US_PER_S
+from .units import GIB, US_PER_S, human_bytes
 
 # Severity is about what it means for the reader, not about size:
 #   critical - the run itself is not what it appears to be
@@ -132,6 +132,11 @@ FINDING_READERS = {
     # R5 - the fleet.
     "memory-envelope": "capacity-operator",
     "capacity-recommendation": "capacity-operator",
+    # `UX-896`: how big the cache has to be is a fleet question, and it
+    # is the one the field case asked - an agent holding most of a
+    # project and evicting the rest rebuilds, which every other cache
+    # finding reads as a key that moved.
+    "cache-capacity": "capacity-operator",
     # `UX-860`: the envelope's own overcommit test, half of which is
     # swap - previously a word in the headline sentence and nowhere else.
     "swap-observed": "capacity-operator",
@@ -396,9 +401,14 @@ def _cache_findings(result: AnalysisResult) -> list[dict]:
     changes is the severity and the sentence, not whether it appears.
     """
     cache = (result.signals or {}).get('cache') or {}
+    # `UX-896`: capacity is a fact about the machine, so it does not
+    # wait on the Pipeline Summary that gives the ratio below its
+    # population. A capture that recorded a quota and no summary still
+    # answers the sizing question.
+    capacity_findings = _cache_capacity_findings(cache.get('capacity') or {})
     hit_share = cache.get('hit_share')
     if hit_share is None:
-        return []
+        return capacity_findings
 
     built = cache.get('built_elements')
     cached = cache.get('cached_elements')
@@ -472,6 +482,60 @@ def _cache_findings(result: AnalysisResult) -> list[dict]:
             f"{share * 100:.0f}% of wall-clock was artifact transfer ({parts}) - "
             f"this build spent it moving artifacts rather than making them",
             evidence={'transfer_share': share, 'transfer_us': transfer},
+        ))
+    findings.extend(capacity_findings)
+    return findings
+
+
+def _cache_capacity_findings(capacity: dict) -> list[dict]:
+    """`UX-896`: the cache's ceiling against what it holds.
+
+    Two claims, and both are about the machine rather than the project,
+    which is why they carry `capacity-operator` and not the reader every
+    other cache finding has. Neither fires on an absent number: a
+    capture with no quota recorded says nothing here, because "this
+    cache has no ceiling" and "nobody looked" are different facts and a
+    sizing decision must not be made on the second.
+    """
+    findings = []
+    over_volume = capacity.get('quota_over_volume_bytes')
+    if over_volume:
+        findings.append(_finding(
+            'cache-capacity', SEVERITY_MEDIUM,
+            f"The cache quota ({capacity['quota_declared']}) is "
+            f"{human_bytes(over_volume)} larger than the volume under it can "
+            f"give - the cache will be evicted by the disk filling up rather "
+            f"than by the quota, so the quota is not the ceiling it looks like",
+            evidence={
+                'quota_bytes': capacity.get('quota_bytes'),
+                'volume_total_bytes': capacity.get('volume_total_bytes'),
+                'quota_over_volume_bytes': over_volume,
+            },
+        ))
+    if capacity.get('at_low_watermark'):
+        headroom = capacity.get('headroom_bytes') or 0
+        # Negative headroom is over the quota outright; at or above the
+        # watermark and still under it is the case BuildStream is
+        # already cleaning up in, which is the one the field case hit.
+        state = (
+            f"{human_bytes(-headroom)} over it"
+            if headroom < 0 else f"{human_bytes(headroom)} from it"
+        )
+        findings.append(_finding(
+            'cache-capacity', SEVERITY_HIGH,
+            f"The cache holds {human_bytes(capacity['cache_used_bytes'])} of a "
+            f"{capacity['quota_declared']} quota ({capacity['used_share'] * 100:.0f}%, "
+            f"{state}) - past the "
+            f"{capacity['low_watermark_share'] * 100:.0f}% low watermark, so "
+            f"BuildStream is evicting, and an element that rebuilt here may have "
+            f"had its artifact removed rather than its cache key moved",
+            evidence={
+                'cache_used_bytes': capacity.get('cache_used_bytes'),
+                'quota_bytes': capacity.get('quota_bytes'),
+                'used_share': capacity.get('used_share'),
+                'headroom_bytes': capacity.get('headroom_bytes'),
+                'low_watermark_share': capacity.get('low_watermark_share'),
+            },
         ))
     return findings
 

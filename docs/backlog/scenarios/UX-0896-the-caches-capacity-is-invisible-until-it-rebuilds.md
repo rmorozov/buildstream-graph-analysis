@@ -1,6 +1,6 @@
 # UX-896: the cache's capacity is invisible until it rebuilds
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-92 (the cache report card) | **Found by:** the 2026-09-20 rollout brief ([`continuous-build-improvement.md`](../../design/continuous-build-improvement.md), section 1) — a field case where the local cache could not hold the project's artifacts, so reaching for one triggered a rebuild | **Serves:** R5 (how large an agent's cache has to be), R2 (which element's artifacts are the expensive ones) | **Topic:** capture | **Area:** tools | **Shape:** judgement
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-92 (the cache report card) | **Found by:** the 2026-09-20 rollout brief ([`continuous-build-improvement.md`](../../design/continuous-build-improvement.md), section 1) — a field case where the local cache could not hold the project's artifacts, so reaching for one triggered a rebuild | **Serves:** R5 (how large an agent's cache has to be), R2 (which element's artifacts are the expensive ones) | **Topic:** capture | **Area:** tools | **Shape:** judgement
 
 ## Motivation
 
@@ -67,4 +67,74 @@ halve the quota (the finding appears), drop one element's size (the
 total falls and the element list loses a row), set the quota absent (the
 finding disappears rather than reading zero).
 
-## Outcome
+## Outcome (round 131, 2026-09-20) — 🟢 Done
+
+**Premise:** held — nothing in `bga` read the cache's capacity, and the
+field case rebuilt for want of disk while every signal named keys.
+
+### The gap, measured
+
+```text
+$ git grep -lE "artifact_size|cache_quota|cas_size|quota_bytes|disk_free" main -- bga tools
+(no matches)
+```
+
+A capture recorded what the cache *did* and never what it was allowed
+to hold, so eviction and a moving key produced the same rebuild and only
+the second had a name.
+
+### After
+
+`tools/bst_extract_run.py` records `cache_capacity` at extraction (the
+`cache:` block of BuildStream's own user configuration, and
+`shutil.disk_usage` on the cachedir); `--cache-usage` adds a walk of
+`<cachedir>/cas`. `compute_cache_capacity` derives the ceiling, and
+`cache-capacity` (R5) is the finding. On the committed capture that now
+carries a full cache:
+
+```text
+$ python3 -m bga.cli analyze tests/fixtures/a_build_that_pulls/run
+  Cache hit ratio: 75% (3 cached, 1 rebuilt) - the cache did most of the work
+  25% of wall-clock was artifact transfer (download 3.0s) - ...
+  The cache holds 62.0G of a 64G quota (97%, 2.0G from it) - past the 80%
+  low watermark, so BuildStream is evicting, and an element that rebuilt
+  here may have had its artifact removed rather than its cache key moved
+```
+
+### The gap the Decomposition asked to measure, measured
+
+Which BuildStream version exposes artifact sizes cheaply, and whether
+reading them costs a second pipeline pass. Read against BuildStream
+2.8.0's own source (`pypi buildstream-2.8.0.tar.gz`):
+
+| candidate | what it actually yields |
+|---|---|
+| `bst show --format %{artifact-cas-digest}` | `hash/size_bytes` of the **root `Directory` proto**, `_frontend/widget.py:462` calling `_casbaseddirectory.py:546` — the serialized listing, hundreds of bytes, not the artifact |
+| `bst artifact list-contents --long` | every file, stat by stat (`widget.py:987`), deduplicated by nothing |
+| the `Artifact` proto | digests only; no total (`_protos/.../artifact.proto`) |
+| `GetLocalDiskUsage` on `buildbox-casd` | exact, host-level, needs casd running — and its display is the TTY status bar only (`_frontend/status.py:405`), never the log |
+
+So there is **no cheap exact per-element artifact weight** in 2.8.0, and
+the one key that looks like one is a proxy for something else. The
+host-level fork ships here; the per-element fork is `UX-907`.
+
+### Mutations verified red and reverted (5)
+
+| # | mutation | reddened |
+|---|---|---|
+| A1 | absent quota read as `0` | 2 clauses |
+| A2 | `at_low_watermark` always `True` | 2 clauses |
+| A3 | CAS walk counts a hardlinked blob per link | 1 clause |
+| A4 | budget-exceeded walk returns its partial sum | 1 clause |
+| A5 | quota-over-volume ignores `reserved-disk-space` | 1 clause |
+
+### Deviation from the Required Fix
+
+Per-element artifact size is not carried, and the finding names the
+shortfall in bytes without the elements that make it up: 2.8.0 has no
+cheap exact source (table above), and `%{artifact-cas-digest}`'s
+`size_bytes` is the wrong number under the right name. `UX-907` carries
+it. The retention pair the Required Fix asks for is already computed by
+`compute_cache_churn` (`rebuilt_in_both_*`) and is unchanged here; what
+this row adds is the capacity fact that lets a reader choose eviction
+from the three causes that line already lists.

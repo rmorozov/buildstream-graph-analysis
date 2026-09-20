@@ -28,6 +28,10 @@ from typing import Optional
 
 from . import progress
 
+# `UX-896`: `human_bytes` lives in `units` now; re-exported here so
+# every existing `run_store.human_bytes` caller keeps working.
+from .units import human_bytes as human_bytes
+
 STORE_DIRNAME = ".bga"
 RUNS_DIRNAME = "runs"
 CONFIG_NAME = "config"
@@ -536,13 +540,7 @@ def store_size_bytes(project: str) -> int:
     return sum(snapshot_size_bytes(s) for s in list_snapshots(project))
 
 
-def human_bytes(size: int) -> str:
-    """`du -h`-style, because that is what the user will compare against."""
-    for unit in ("B", "K", "M", "G", "T"):
-        if size < 1024 or unit == "T":
-            return f"{size:.0f}{unit}" if unit == "B" else f"{size:.1f}{unit}"
-        size /= 1024.0
-    return f"{size:.1f}T"
+
 
 
 # `UX-381`: the capture directory as a stated contract.

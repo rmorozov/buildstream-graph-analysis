@@ -41,7 +41,7 @@ reimplemented, the rule `cache_trend` already follows.
 
 surfaces: `bga/compare.py` (the mode and its verdict), the CLI flag and its exit code, `docs/guides/ci-comment.md`, and the `compare/v2` document's verdict keys
 guards: a candidate inside the band, one above it, one with too few baselines (refusal), and one whose baselines are of a different class (refused by `UX-898`)
-gap: how many runs make a review band, and whether the band is a rolling window or a fixed count — needs one real review population to settle, so the first cut states the number and the reason
+gap: the population is **several hundred review builds a day** (the owner, 2026-09-20), so the band is not starved and the open question is the opposite one — how far back a window may reach before it is describing a different tree; the first cut states the window and the reason
 track: `implementer` once the band population is decided; deciding it is the session's
 gate: after `UX-898`
 

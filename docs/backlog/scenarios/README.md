@@ -15,14 +15,14 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-899 scenarios: **14 open**, 885 closed.
+903 scenarios: **18 open**, 885 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
-| capture | 8 | 137 |
-| analysis | 2 | 120 |
-| contracts | 1 | 51 |
+| capture | 10 | 139 |
+| analysis | 3 | 121 |
+| contracts | 2 | 52 |
 | viewer | 0 | 177 |
 | cli | 0 | 22 |
 | store | 1 | 17 |
@@ -46,6 +46,10 @@ task file, which is the only place it ever lived twice.
 | UX-900 | [a store is a directory, but CI will keep bundles in versioned directories](UX-0900-a-store-is-a-directory-but-ci-keeps-bundles.md) | store | Medium | R5, R7, R8 | 🔴 Not Started |
 | UX-901 | [the jobserver is a subtool behind a boundary](UX-0901-the-jobserver-is-a-subtool-behind-a-boundary.md) | capture | Medium | R5, R4, R2 | 🔴 Not Started |
 | UX-902 | [a showcase case is two captures, and there is nowhere to put one](UX-0902-the-showcase-case-file-and-its-two-capture-rule.md) | docs | High | R1, R2, R8 | 🔴 Not Started |
+| UX-903 | [a variant is a second axis under the build type, and nothing records it](UX-0903-a-variant-is-a-second-axis-under-the-build-type.md) | contracts | High | R4, R5, R7, R2 | 🔴 Not Started |
+| UX-904 | [nothing prices N separate CI builds against one junctioned invocation](UX-0904-separate-invocations-or-one-junctioned-build.md) | analysis | High | R5, R3, R4, R6 | 🔴 Not Started |
+| UX-905 | [the jobserver has no compile-bound project at the scale it is meant for](UX-0905-the-jobserver-has-no-compile-bound-project-at-scale.md) | capture | High | R5, R4, R2 | 🔴 Not Started |
+| UX-906 | [the jobserver's corner cases live in twelve task files and no register](UX-0906-the-jobservers-corner-cases-are-a-register-not-a-memory.md) | capture | Medium | R2, R5, R4 | 🔴 Not Started |
 | UX-891 | [the certified floors never divide by the machine's cores](UX-0891-the-certified-floors-never-divide-by-the-machines-cores.md) | analysis | Medium | R5 | 🔴 Not Started |
 | UX-892 | [the per-element token record drops the timestamp it was given](UX-0892-the-per-element-token-record-drops-the-timestamp-it-was-given.md) | capture | Medium | R2 | 🔴 Not Started |
 | UX-893 | [cores busy is an average over the span, not a curve](UX-0893-cores-busy-is-an-average-over-the-span-not-a-curve.md) | capture | Medium | R5 | 🔴 Not Started |

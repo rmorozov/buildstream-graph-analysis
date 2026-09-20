@@ -45,6 +45,18 @@ below is shaped by:
 - **Runs live in versioned directories**, as bundles, keyed by a build
   number whose form already separates the build types: nightly
   `27.0.0.<seq>`, review `27.0.999.<seq>`.
+- **Types are free text, and there is a second axis under them.** The
+  types in the field are night, review and guard (an asynchronous build
+  from `main` every n hours), with others possible, so a pipeline
+  declares the value rather than choosing from an enum. Under the type
+  sits the **variant** — per instruction set, release with symbols,
+  address sanitizer, coverage — which changes what the build does rather
+  than when it ran. The class is the pair (`UX-898`, `UX-903`), and
+  whether those variants should be separate CI builds at all is itself
+  one of the questions bga is asked to answer (`UX-904`).
+- **The review population is several hundred builds a day**, so the
+  band `UX-899` needs is not starved; the open question is how far back
+  a window may reach before it describes a different tree.
 - **The gate says seconds.** Not only the diff-only verdict
   `--fail-on-inefficient-additions` publishes today: the owner wants
   "this PR made the build N seconds slower".
@@ -173,6 +185,37 @@ Two cases are already in hand and are filed as the first entries
   cause. The case is a developer scenario, needs no new code, and can be
   captured this week.
 
+## 7a. The jobserver's corner cases, written down
+
+The owner asked which corner cases the integration has to survive. This
+is the list read out of the tree and out of what an injected token pool
+implies; it is a **brainstorm, not a measurement**, which is why
+`UX-906` exists to give each row a state — guarded, known and unguarded,
+or unexamined — rather than letting this table read as a claim.
+
+| corner case | why it bites | where it stands today |
+|---|---|---|
+| **ninja** | speaks no GNU jobserver in the versions most projects have; its `-j` is decided at launch | `UX-888` gave the wrapper ownership of ninja's `-j`. The owner's own project is blocked here, so the field has already found this one |
+| **multithreaded linkers** (`lld`, `gold -threads`) | a link step spawns threads the pool never handed a token to, and oversubscribes exactly when memory is tightest | Direction 20's fourth point names it; LLVM 22 speaks the protocol and older ones do not |
+| **GCC LTO** | the link spawns `lto-wrapper`, a grandchild that reads `MAKEFLAGS` and ICEs on a raw fd | `UX-878` fixed it for cmake/meson; `UX-884` is held open for `make`/autotools |
+| **a pinned `-j1`** | a pin is often a workaround for a defect in the recipe's own build system, so overriding it is a correctness bug, not a speed win | `UX-842`'s pin rule: `-j1` never joins |
+| **recursive make** | sub-makes re-derive their own `-j` and can multiply the pool | the policy table's `make` branch; no example covers a deep recursion |
+| **cargo, and rustc's own threads** | cargo is a jobserver client already, and codegen units add a second layer under it | `cargo` is one of the shim's policies |
+| **compiler caches and distributors** (`ccache`, `distcc`, `icecc`) | parallelism that lives outside the machine the pool is counting | unexamined |
+| **sanitizer and coverage variants** | memory per job rises sharply, so a token count that fits a release build overcommits an ASan one | `UX-850` makes memory a second resource; the variant axis is `UX-903` |
+| **cross-compilation toolchains** | deeper process trees, `binfmt`/qemu hops, and statically linked stages the hook cannot see | the ptrace spine covers the blindness; the combination is unexamined |
+| **tests inside the build** (`make check -j`) | a second parallel phase with a different memory profile, after the compile the pool was sized for | unexamined |
+| **long-lived daemons** (gradle, `sccache`, a language server) | a process that holds a token across elements, or never exits | `UX-852`'s leak audit refills tokens against live processes |
+| **minimal sandboxes** | a shim that needs `dirname` breaks a sandbox without coreutils | round 126's incident, why the flto shim sits behind an explicit override |
+| **project-level `max-jobs`** | pinned in `project.conf` rather than per element, so the pin rule has to read both | the shim reads BuildStream's argv; the project-level case is unexamined |
+
+Two of these are worth more than the rest for the rollout, because the
+owner has met them: **ninja**, which is what blocks the LLVM case today,
+and **sanitizer memory**, which is where a token pool sized on a release
+build does real harm. `UX-905` is the project to meet them on, since the
+examples in this repository are minutes long and the case the mode
+exists for is forty.
+
 ## 8. What this declines, and what it files
 
 Declined, on purpose: a monitoring system, a scheduler, a dashboard
@@ -192,14 +235,19 @@ Filed with this document:
 | `UX-900` | a store assembled from the bundles CI keeps in versioned directories | |
 | `UX-901` | the jobserver behind a subtool boundary | |
 | `UX-902` | the showcase case file, and its two-capture rule | |
+| `UX-903` | the variant as a second axis under the type | with `UX-898` |
+| `UX-904` | N separate CI builds priced against one junctioned invocation | after `UX-903` |
+| `UX-905` | a compile-bound project at the scale the jobserver is for | after `UX-895` |
+| `UX-906` | the corner-case register, and a state per row | with `UX-905` |
 
 ## 9. The guidelines this document states
 
 Four, each one a sentence a later round can be held to:
 
-1. **A comparison class is the host class and the build type together.**
-   A review build compares against review builds. Blending is refused
-   the way host classes already are (`UX-898`).
+1. **A comparison class is the host class, the build type and the
+   variant together.** A review build compares against review builds, an
+   address-sanitizer build against address-sanitizer builds. Blending is
+   refused the way host classes already are (`UX-898`, `UX-903`).
 2. **A showcase case is two captures** (section 7).
 3. **New instrumentation lands at the ingest seam** (section 4).
 4. **An intervention is a subtool behind a boundary, and bga never

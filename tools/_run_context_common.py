@@ -201,6 +201,37 @@ def add_host_manifest(run_context: dict) -> None:
         run_context["host_manifest"] = hostinfo.collect()
 
 
+def add_build_class(run_context: dict,
+                    build_type: Optional[str] = None,
+                    variant: Optional[dict] = None) -> None:
+    """UX-898/UX-903: what this build was - its type and its variant.
+
+    Declared, never guessed. The type says when and why the build ran
+    (`night`, `review`, `guard`), the variant what it did
+    (`arch=aarch64`, `sanitizer=address`), and the comparison class is
+    the pair - `bga/buildclass.py` carries the argument.
+
+    Two declaration paths, the environment behind the argument, because
+    `bga snapshot` drives the capture through two more processes and a
+    CI job has an environment before it has a command line. Same
+    precedent as `BGA_JOBSERVER_MODE` (`UX-851`).
+
+    Omitted entirely when nothing is declared, so a capture that says
+    nothing is byte-identical to one taken before this existed.
+    """
+    from bga import buildclass
+
+    with contextlib.suppress(Exception):
+        kind = build_type or os.environ.get("BGA_BUILD_TYPE")
+        dimensions = dict(variant or {})
+        if not dimensions:
+            dimensions = buildclass.parse_variant_env(
+                os.environ.get("BGA_BUILD_VARIANT"))
+        declared = buildclass.declare(kind, dimensions)
+        if declared:
+            run_context["build_class"] = declared
+
+
 def add_producer(run_context: dict) -> None:
     """UX-249: which build of `bga` wrote this run directory.
 

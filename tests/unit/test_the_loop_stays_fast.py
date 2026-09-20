@@ -131,7 +131,12 @@ class TestTheSelectorStillSelects:
     # switch, the broker's memory sum and leak audit, the probe's
     # guard); measured median 37, p90 58, max 155 over 551 files.
     # Max 154 -> 157, +2 headroom as above.
-    CEILING = {"median": 38, "p90": 60, "max": 157}
+    #
+    # `UX-898`/`UX-903` added two test files over one contract move
+    # touching 22 files; measured median 36, p90 59, max 159 over 564
+    # files. Max 157 -> 161, +2 headroom as above; median and p90 both
+    # fell and keep their ceilings.
+    CEILING = {"median": 38, "p90": 60, "max": 161}
     POPULATION_FLOOR = 60
     #: `UX-645`: **13 census + 14 of your own**. The census floor is
     #: inside this bound because those files run - the figure is what

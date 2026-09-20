@@ -34,6 +34,7 @@ from pathlib import Path
 from typing import Optional
 
 from ._run_context_common import (
+    add_build_class,
     add_cpu_capacity_fields,
     add_host_manifest,
     add_memory_capacity_fields,
@@ -458,6 +459,8 @@ def extract_run(
     interrupted: bool = False,
     foundation: Optional[list] = None,
     jobserver: Optional[dict] = None,
+    build_type: Optional[str] = None,
+    variant: Optional[dict] = None,
 ):
     """Run the full extraction pipeline. Returns a dict summary (targets,
     span/element/dependency counts, warnings) - the CLI entry point below
@@ -610,6 +613,9 @@ def extract_run(
     # runs can be told apart - or told to be the same - rather than
     # compared on the assumption that they are.
     add_host_manifest(run_context)
+    # UX-898/UX-903: and what build it was. Parity with
+    # `tools/bst_run_context.py`, which UX-18 exists to keep.
+    add_build_class(run_context, build_type=build_type, variant=variant)
     add_producer(run_context)
     if wall_start_us is not None and wall_end_us is not None:
         run_context["wall_clock"] = {"start_us": wall_start_us, "end_us": wall_end_us}
@@ -999,12 +1005,33 @@ def main() -> int:
         help='A rough, operator-supplied estimate of one concurrent build job\'s memory footprint (MB) - a single configurable constant, not a real per-task measurement (no such measurement source exists in this pipeline, see UX-21).'
     )
     parser.add_argument(
+        "--build-type", default=None,
+        help="What kind of build this was - night, review, guard, or whatever "
+        "else the pipeline declares. Free text; two runs declaring different "
+        "types are not one population (UX-898). Defaults to $BGA_BUILD_TYPE."
+    )
+    parser.add_argument(
+        "--variant", action="append", default=None, metavar="NAME=VALUE",
+        help="A named dimension of what this build did - arch=aarch64, "
+        "sanitizer=address, coverage=on. Repeatable, because several are true "
+        "at once (UX-903). Defaults to $BGA_BUILD_VARIANT, which takes the "
+        "same pairs comma-separated."
+    )
+    parser.add_argument(
         "--interrupted", action="store_true",
         help="Record that this log's build was interrupted, so the run declares "
         "itself unfinished. Needed when re-running this command from the hint an "
         "interrupted capture printed; `bga snapshot` sets it for you."
     )
     args = parser.parse_args()
+
+    from bga import buildclass
+
+    try:
+        variant = buildclass.parse_variant(args.variant)
+    except ValueError as error:
+        print(f"Error: {error}", file=sys.stderr)
+        return 1
 
     try:
         summary = extract_run(
@@ -1019,6 +1046,8 @@ def main() -> int:
             # command line could set it, so the recovery path UX-163
             # printed produced a run that had forgotten it was partial.
             interrupted=args.interrupted,
+            build_type=args.build_type,
+            variant=variant,
         )
     except (RuntimeError, FileNotFoundError) as e:
         print(f"Error: {e}", file=sys.stderr)

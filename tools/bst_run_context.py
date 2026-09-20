@@ -57,8 +57,10 @@ log instead:
 import argparse
 import json
 import sys
+from typing import Optional
 
 from ._run_context_common import (
+    add_build_class,
     add_cpu_capacity_fields,
     add_host_manifest,
     add_memory_capacity_fields,
@@ -84,6 +86,8 @@ def build_run_context(
     cpu_budget: int = None,
     memory_budget_mb: int = None,
     estimated_job_memory_mb: int = None,
+    build_type: Optional[str] = None,
+    variant: Optional[dict] = None,
 ) -> dict:
     """Run the real log converter against `log_path` and derive a
     run-context/v9 dict from its output - the same converter
@@ -145,6 +149,9 @@ def build_run_context(
     # runs can be told apart - or told to be the same - rather than
     # compared on the assumption that they are.
     add_host_manifest(run_context)
+    # UX-898/UX-903: and what build it was. Beside the host manifest
+    # because the comparison class is both - the machine and the build.
+    add_build_class(run_context, build_type=build_type, variant=variant)
     add_producer(run_context)
     # `UX-594`: after `wall_clock`, whose `start_us` is the other instant.
     add_queue_seam(run_context)
@@ -174,6 +181,20 @@ def main() -> int:
     parser.add_argument("--host", default=None,
                         help="Optional host identifier to record.")
     parser.add_argument(
+        "--build-type", default=None,
+        help="What kind of build this was - night, review, guard, or "
+        "whatever else the pipeline declares. Free text; two runs "
+        "declaring different types are not one population (UX-898). "
+        "Defaults to $BGA_BUILD_TYPE.",
+    )
+    parser.add_argument(
+        "--variant", action="append", default=None, metavar="NAME=VALUE",
+        help="A named dimension of what this build did - arch=aarch64, "
+        "sanitizer=address, coverage=on. Repeatable, because several are "
+        "true at once (UX-903). Defaults to $BGA_BUILD_VARIANT, which "
+        "takes the same pairs comma-separated.",
+    )
+    parser.add_argument(
         "--native-max-jobs", type=int, default=None,
         help="Override the per-element `make -jN` parallelism (not --builders). "
         "A wrapped log records it; pass this for a raw log (UX-29).",
@@ -198,6 +219,14 @@ def main() -> int:
     )
     args = parser.parse_args()
 
+    from bga import buildclass
+
+    try:
+        variant = buildclass.parse_variant(args.variant)
+    except ValueError as error:
+        print(f"Error: {error}", file=sys.stderr)
+        return 1
+
     try:
         run_context = build_run_context(
             args.input_log,
@@ -209,6 +238,8 @@ def main() -> int:
             cpu_budget=args.cpu_budget,
             memory_budget_mb=args.memory_budget_mb,
             estimated_job_memory_mb=args.estimated_job_memory_mb,
+            build_type=args.build_type,
+            variant=variant,
         )
     except FileNotFoundError:
         print(f"Error: Could not find input file '{args.input_log}'", file=sys.stderr)

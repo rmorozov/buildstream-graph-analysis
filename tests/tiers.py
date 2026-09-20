@@ -821,6 +821,7 @@ MEDIUM = (
     "tests/unit/test_correlate.py",                             #    1.2s
     "tests/unit/test_focus_and_the_working_set.py",             #    1.2s
     "tests/unit/test_the_tiers_are_a_partition.py",             #    1.2s
+    "tests/unit/test_a_comparison_class_is_the_host_and_the_build_type.py",  # 1.1s
     "tests/unit/test_ci_comment.py",                            #    1.1s
     "tests/unit/test_open_window_flush.py",                     #    1.1s
     "tests/unit/test_focus_is_an_investigation.py",             #    1.1s

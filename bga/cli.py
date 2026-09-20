@@ -1023,6 +1023,35 @@ def _compare_exit_code(args: argparse.Namespace, comparison) -> int:
         )
         return EXIT_CODE_MISMATCHED_RUNS
 
+    # UX-898/UX-903: and whether they are the same build at all. The
+    # same shape, the same code and the same place in the order as the
+    # cross-host gate above, because it is the same kind of refusal: a
+    # review build against a nightly, or a sanitizer build against a
+    # release one, is two populations however uniform the runners are.
+    # The escape hatch is `--blend` rather than a second `--allow-*`
+    # spelling: the store aggregate has meant "I take the mixed claim
+    # myself" by that word since UX-234, and one word for one act is
+    # worth more than symmetry with the flag above.
+    class_comparison = getattr(comparison, 'build_class_comparison', None) or {}
+    if (class_comparison.get('status') == 'different'
+            and not getattr(args, 'blend', False)):
+        baseline_class = (getattr(comparison, 'baseline_run_instance', None)
+                          or {}).get('build_class')
+        candidate_class = (getattr(comparison, 'candidate_run_instance', None)
+                           or {}).get('build_class')
+        from .buildclass import label as _class_label
+        print(
+            f"Mixed build class gate FAILED: baseline declares "
+            f"{_class_label(baseline_class)} and candidate declares "
+            f"{_class_label(candidate_class)}. A build type says when and why "
+            f"a build ran and a variant says what it did, so these are two "
+            f"populations and the difference between them is not evidence "
+            f"about the change. Pass --blend to state the mixed claim "
+            f"yourself.",
+            file=sys.stderr,
+        )
+        return EXIT_CODE_MISMATCHED_RUNS
+
     if comparison.low_confidence:
         # UX-40: failing open is the right default (do not block a
         # pipeline on a signal you do not trust), but a gate that
@@ -2173,6 +2202,13 @@ def _add_compare_subcommand(subparsers) -> None:
         '--allow-cross-host', action='store_true',
         help='UX-186: let the CI gates pass on runs measured on different '
              'machines. For a farm of uniform runners, opted into once.'
+    )
+    compare_parser.add_argument(
+        '--blend', action='store_true',
+        help='UX-898/UX-903: let the CI gates pass on runs declaring '
+             'different build types or variants. The same word `bga '
+             'snapshot --aggregate` already uses for taking a mixed claim '
+             'yourself.'
     )
     compare_parser.add_argument('-v', '--verbose', action='store_true', help='Verbose (DEBUG) logging.')
     compare_parser.add_argument('-q', '--quiet', action='store_true', help='Errors only.')

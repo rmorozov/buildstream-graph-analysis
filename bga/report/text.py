@@ -84,6 +84,19 @@ def _format_instance(instance: dict) -> str:
     )
 
 
+def _format_build_class(instance: dict) -> Optional[str]:
+    """UX-898/UX-903: `Build class: review · sanitizer=address`, or None.
+
+    `None` rather than "undeclared" when the capture declared nothing:
+    that is every capture taken before the field existed, and a line
+    saying so on all of them is noise on the one screen a reader reads.
+    """
+    from ..buildclass import label
+
+    declared = label(instance.get('build_class'))
+    return f"Build class: {declared}" if declared else None
+
+
 def _format_jobserver_mode(instance: dict) -> str:
     """UX-851: `jobserver off` / `jobserver auto (ceiling 7)` / `jobserver
     n (ceiling 4)` - always renders, unlike `_format_instance` above,
@@ -611,6 +624,13 @@ def _render_header_section(result: AnalysisResult, section, by_kind, full_sectio
     instance = getattr(result, 'run_instance', None) or {}
     if instance:
         lines.append(f"Instance: {_format_instance(instance)}")
+    # UX-903: and which build these durations describe. A reader who
+    # opens a capture has no other way to know the numbers in front of
+    # them are a sanitizer's. Nothing when nothing was declared, so a
+    # report from a capture without it is byte-identical to today's.
+    declared = _format_build_class(instance)
+    if declared:
+        lines.append(declared)
     lines.append(f"Total Duration: {result.total_duration_us / 1e6:.1f}s")
     # UX-156 item 2: before any efficiency number, because every one of
     # them describes a build that stopped early. `_format_key_findings`

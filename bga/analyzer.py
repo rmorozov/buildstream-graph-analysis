@@ -1627,9 +1627,15 @@ class BuildEfficiencyAnalyzer:
         # efficiency mechanism while every other signal here describes
         # only the work that was not cached. Absent rather than
         # zero-filled when the capture records no Pipeline Summary.
+        # `UX-897`: the host's own interface counters over the build's
+        # span, so "40% of this build was transfer" gains the rate that
+        # says whether the link was the cause. Absent on any capture
+        # without a host-samples series, which is where the clause
+        # disappears rather than printing a zero.
         cache_accounting = compute_cache_accounting(
             self.run_context, self.graph, self.normalized_tasks,
             result.total_duration_us,
+            network_bytes=self._network_bytes(),
         )
         if cache_accounting:
             result.signals['cache'] = cache_accounting
@@ -2010,6 +2016,18 @@ class BuildEfficiencyAnalyzer:
             from .findings import confidence_band
             confidence['band'] = confidence_band(primary)
         return confidence
+
+    def _network_bytes(self) -> Optional[dict]:
+        """`UX-897`: `{rx_bytes, tx_bytes, span_s}` from the run's
+        host-samples series, or `None` when there is no series, no
+        counters in it, or fewer than two samples carrying them."""
+        read = self.read_host_samples()
+        if not read:
+            return None
+        from .tools_dispatch import _import_tool
+
+        tracer = _import_tool("tools.bst_native_build_tracer")
+        return tracer.network_bytes(read) or None
 
     def read_host_samples(self) -> Optional[dict]:
         """`UX-675`'s raw `{header, samples}`, or `None`.

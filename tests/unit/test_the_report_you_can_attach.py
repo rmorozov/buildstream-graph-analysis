@@ -921,7 +921,15 @@ COMMITTED_EXPORTS = [
     # (`EVIDENCE_QUANTITIES`), which travel whether or not a run's host
     # series ever swapped; golden has none. 474,000 still holds over
     # the summed 470,020 B.
-    ("golden", GOLDEN, 474_000),                       #  470,020 B
+    # `UX-896`/`UX-897`: +7,433 B, all **contract** - the `capacity`
+    # block's eleven schema nodes and the three transfer-rate ones,
+    # plus their ten `EVIDENCE_QUANTITIES` entries. Golden records no
+    # quota and no host counters, so it carries none of the values:
+    # what grew is the embedded schema's prose for them, which travels
+    # whether or not a run fills them. Measured before this change:
+    # 470,020 B; after, 477,453 B. 482,000 keeps the same order of
+    # headroom.
+    ("golden", GOLDEN, 482_000),                       #  477,453 B
     # `UX-297` moved this one by 385 B before that: the two-plane run
     # publishes `plane2_coverage.source`, which says which shape of
     # Plane 2 report served its numbers and what that costs to open. A
@@ -1092,7 +1100,12 @@ COMMITTED_EXPORTS = [
     # swaps, so nothing in the finding itself fired.
     # The four land together in round 120: 533,000 keeps the same order
     # of headroom over their summed 530,852 B.
-    ("macro_micro", MACRO_MICRO, 533_000),             #  530,852 B
+    # `UX-896`/`UX-897`: +6,059 B, the same contract as golden's note
+    # above and for the same reason - this run records neither a quota
+    # nor a byte counter, so nothing here is payload. Measured before
+    # this change: 530,852 B; after, 536,911 B. 541,000 keeps the same
+    # order of headroom.
+    ("macro_micro", MACRO_MICRO, 541_000),             #  536,911 B
 ]
 
 

@@ -477,11 +477,33 @@ def _cache_findings(result: AnalysisResult) -> list[dict]:
         parts = ", ".join(
             f"{name.lower()} {us / 1e6:.1f}s" for name, us in sorted(transfer.items())
         )
+        # `UX-897`: the share alone cannot separate a slow link from a
+        # slow remote from an object count that would be slow on any
+        # link. The rate can, and it is absent rather than zero on a
+        # capture with no counters - the clause simply does not appear.
+        rate = cache.get('transfer_rate_bytes_per_s')
+        moved = cache.get('transfer_bytes') or {}
+        evidence = {'transfer_share': share, 'transfer_us': transfer}
+        rate_clause = ""
+        if rate:
+            window_s = (cache.get('transfer_window_us') or 0) / 1e6
+            rate_clause = (
+                f", and the host moved {human_bytes(moved['total'])} over the "
+                f"{window_s:.1f}s it was transferring - {human_bytes(rate)}/s, "
+                f"which is the whole host's traffic and so an upper bound on "
+                f"this build's"
+            )
+            evidence.update({
+                'transfer_bytes': moved['total'],
+                'transfer_rate_bytes_per_s': rate,
+                'transfer_window_us': cache.get('transfer_window_us'),
+            })
         findings.append(_finding(
             'cache-transfer-cost', SEVERITY_MEDIUM,
             f"{share * 100:.0f}% of wall-clock was artifact transfer ({parts}) - "
-            f"this build spent it moving artifacts rather than making them",
-            evidence={'transfer_share': share, 'transfer_us': transfer},
+            f"this build spent it moving artifacts rather than making them"
+            f"{rate_clause}",
+            evidence=evidence,
         ))
     findings.extend(capacity_findings)
     return findings

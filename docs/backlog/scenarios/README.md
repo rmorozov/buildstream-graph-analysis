@@ -15,12 +15,12 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-904 scenarios: **18 open**, 886 closed.
+904 scenarios: **17 open**, 887 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
-| capture | 10 | 140 |
+| capture | 9 | 140 |
 | analysis | 3 | 121 |
 | contracts | 2 | 52 |
 | viewer | 0 | 177 |
@@ -39,7 +39,6 @@ task file, which is the only place it ever lived twice.
 | UX-884 | [the LTO scrub covers make/autotools kinds, not only cmake/meson/cargo](UX-0884-the-lto-scrub-covers-make-and-autotools-kinds.md) | capture | Medium | R2 | 🔴 Not Started |
 | UX-890 | [the trace-census guard has three unconfirmed CI excursions and no filing](UX-0890-the-trace-census-guard-has-three-unconfirmed-excursions.md) | guards | Medium | the round whose push gate is blocked | 🔴 Not Started |
 | UX-895 | [the capture's own overhead is unmeasured, so Plane 2 on every build is a guess](UX-0895-the-captures-own-overhead-is-unmeasured.md) | capture | High | R4, R5, R1 | 🔴 Not Started |
-| UX-897 | [transfer is measured in seconds and never in bytes](UX-0897-transfer-is-seconds-and-never-bytes.md) | capture | Medium | R5, R6 | 🔴 Not Started |
 | UX-898 | [a comparison class is the host class and the build type together](UX-0898-a-comparison-class-is-the-host-and-the-build-type.md) | contracts | High | R4, R5, R7 | 🔴 Not Started |
 | UX-899 | ["this PR made the build N seconds slower" needs a band, not a pair](UX-0899-the-seconds-slower-gate-needs-a-band-not-a-pair.md) | analysis | High | R4, R6 | 🔴 Not Started |
 | UX-900 | [a store is a directory, but CI will keep bundles in versioned directories](UX-0900-a-store-is-a-directory-but-ci-keeps-bundles.md) | store | Medium | R5, R7, R8 | 🔴 Not Started |

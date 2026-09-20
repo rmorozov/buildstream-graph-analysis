@@ -103,6 +103,35 @@ def _transfer_us(tasks) -> dict[str, int]:
     return totals
 
 
+def _transfer_window_us(tasks) -> Optional[int]:
+    """How long this build was transferring, as a union of spans.
+
+    `UX-897`: `_transfer_us` above *sums* task durations, so two
+    concurrent pulls count twice - which is right for "how much pulling
+    did this build do" and wrong for the denominator of a throughput,
+    where it would halve the rate a link actually achieved. The union is
+    the wall-clock the transfers occupied, so bytes over it is a rate a
+    reader can compare against a link's capability.
+
+    `None` when the run has no transfer span at all.
+    """
+    spans = sorted(
+        (task.start_us, task.finish_us) for task in tasks or []
+        if getattr(getattr(task, 'primary_resource', None), 'value',
+                   getattr(task, 'primary_resource', None)) in ('DOWNLOAD', 'UPLOAD')
+    )
+    if not spans:
+        return None
+    total, open_start, open_end = 0, spans[0][0], spans[0][1]
+    for start, finish in spans[1:]:
+        if start > open_end:
+            total += open_end - open_start
+            open_start, open_end = start, finish
+        else:
+            open_end = max(open_end, finish)
+    return total + (open_end - open_start)
+
+
 def compute_cache_capacity(run_context) -> dict:
     """UX-896: whether the cache was big enough to hold what it was
     asked to hold.
@@ -167,8 +196,32 @@ def compute_cache_capacity(run_context) -> dict:
     return capacity
 
 
+def _transfer_bytes(network_bytes: Optional[dict]) -> dict:
+    """The run's own byte counts, or `{}`.
+
+    `UX-897`: BuildStream reports none - `_artifactcache.py` logs
+    `Pulled artifact <key> <- <remote>` with no size, per element or per
+    session - so these are the host's interface counters over the
+    build's span, read by the same sampler that already reads
+    `/proc/meminfo`. They are the host's traffic, not BuildStream's, and
+    the schema and the finding both say so: on a shared machine they are
+    an upper bound on what the build moved.
+
+    `{}` rather than zeros when the capture carries no counters, which
+    is every capture older than this field.
+    """
+    if not network_bytes:
+        return {}
+    rx = network_bytes.get('rx_bytes')
+    tx = network_bytes.get('tx_bytes')
+    if not isinstance(rx, int) or not isinstance(tx, int):
+        return {}
+    return {'rx': rx, 'tx': tx, 'total': rx + tx, 'source': 'host_counters'}
+
+
 def compute_cache_accounting(
     run_context, graph=None, tasks=None, total_duration_us: Optional[int] = None,
+    network_bytes: Optional[dict] = None,
 ) -> dict:
     """UX-92 stage 1: the cache's own report card for one run.
 
@@ -203,6 +256,21 @@ def compute_cache_accounting(
         accounting['transfer_us'] = transfer
         if total_duration_us:
             accounting['transfer_share'] = sum(transfer.values()) / total_duration_us
+        # `UX-897`: the share says how much of the build was transfer
+        # and cannot say whether the link, the remote or the object
+        # count is why - three causes, three fixes, and one of them is
+        # hardware somebody would be asked to buy. The window is
+        # published whether or not bytes arrived, because it is the
+        # denominator a later capture's bytes would divide by.
+        window_us = _transfer_window_us(tasks)
+        if window_us:
+            accounting['transfer_window_us'] = window_us
+        moved = _transfer_bytes(network_bytes)
+        if moved:
+            accounting['transfer_bytes'] = moved
+            if window_us:
+                accounting['transfer_rate_bytes_per_s'] = (
+                    moved['total'] / (window_us / 1e6))
 
     # The requested target's own closure, which is the number a build
     # owner actually asked about: a project-wide 72% means little when

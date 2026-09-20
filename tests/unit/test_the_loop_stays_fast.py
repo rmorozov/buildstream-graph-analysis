@@ -131,7 +131,12 @@ class TestTheSelectorStillSelects:
     # switch, the broker's memory sum and leak audit, the probe's
     # guard); measured median 37, p90 58, max 155 over 551 files.
     # Max 154 -> 157, +2 headroom as above.
-    CEILING = {"median": 38, "p90": 60, "max": 157}
+    #
+    # Round 131 added two test files over two rows (the cache's ceiling,
+    # the transfer rate); measured median 36, p90 59, max 158 over 564
+    # files - only max moves, and median and p90 fell. Max 157 -> 160,
+    # +2 headroom as above.
+    CEILING = {"median": 38, "p90": 60, "max": 160}
     POPULATION_FLOOR = 60
     #: `UX-645`: **13 census + 14 of your own**. The census floor is
     #: inside this bound because those files run - the figure is what

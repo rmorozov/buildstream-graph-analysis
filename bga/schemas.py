@@ -1925,6 +1925,15 @@ _EVIDENCE_FIELDS = {
         "Quota less what is used; negative is the shortfall."),
     "low_watermark_share": ("share",
         "The share of the quota BuildStream retains when it cleans up."),
+    # `UX-897`: the rate beside the share.
+    "transfer_bytes": ("bytes",
+        "What the host moved while this build ran - its own interface "
+        "counters, so an upper bound on what the build moved."),
+    "transfer_rate_bytes_per_s": ("bytes",
+        "Bytes over the wall-clock the transfers occupied, which is the "
+        "rate the link actually achieved."),
+    "transfer_window_us": ("duration_us",
+        "The wall-clock the transfers occupied, as a union of their spans."),
 }
 
 # `UX-346`: the evidence keys whose sentence stays beside the number,
@@ -2841,6 +2850,43 @@ _SIGNALS_TABLES = {
                 "description": "The sum of `transfer_us` over the "
                                "run's wall-clock - how much of this "
                                "build was moving artifacts."},
+            # `UX-897`: the share says how much of the build was
+            # transfer and cannot say why. These three make it a rate.
+            "transfer_window_us": {
+                QUANTITY: "duration_us",
+                "description": "The wall-clock the transfers occupied, "
+                               "as a union of their spans rather than a "
+                               "sum - the denominator a throughput "
+                               "needs, where `transfer_us` counts two "
+                               "concurrent pulls twice."},
+            "transfer_bytes": {
+                "description": "What the host moved while this build "
+                               "ran. BuildStream reports no byte count, "
+                               "per element or per session, so these "
+                               "are the host's own interface counters "
+                               "over the build's span: on a shared "
+                               "machine they are an upper bound on what "
+                               "the build moved, and loopback is "
+                               "excluded.",
+                "properties": {
+                    "rx": {QUANTITY: "bytes",
+                           "description": "Bytes the host received."},
+                    "tx": {QUANTITY: "bytes",
+                           "description": "Bytes the host sent."},
+                    "total": {QUANTITY: "bytes",
+                              "description": "`rx` and `tx` together."},
+                    "source": {
+                        "description": "Where the counts came from; "
+                                       "`host_counters` is the only "
+                                       "source today."}}},
+            "transfer_rate_bytes_per_s": {
+                QUANTITY: "bytes",
+                "description": "`transfer_bytes.total` over "
+                               "`transfer_window_us` - the rate the "
+                               "link achieved while this build was "
+                               "transferring, which says whether more "
+                               "bandwidth would help or the object "
+                               "count would be slow on any link."},
             # `UX-896`: the cache's ceiling, beside what it did with it.
             # Present only where the capture recorded a capacity block,
             # and every number inside it null rather than zero when

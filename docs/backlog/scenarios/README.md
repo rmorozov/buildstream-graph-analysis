@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-904 scenarios: **17 open**, 887 closed.
+905 scenarios: **18 open**, 887 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -27,7 +27,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | cli | 0 | 22 |
 | store | 1 | 17 |
 | docs | 1 | 146 |
-| guards | 1 | 229 |
+| guards | 2 | 230 |
 
 ## Open scenarios
 
@@ -49,6 +49,7 @@ task file, which is the only place it ever lived twice.
 | UX-905 | [the jobserver has no compile-bound project at the scale it is meant for](UX-0905-the-jobserver-has-no-compile-bound-project-at-scale.md) | capture | High | R5, R4, R2 | 🔴 Not Started |
 | UX-906 | [the jobserver's corner cases live in twelve task files and no register](UX-0906-the-jobservers-corner-cases-are-a-register-not-a-memory.md) | capture | Medium | R2, R5, R4 | 🔴 Not Started |
 | UX-907 | [an artifact's weight has no cheap source](UX-0907-an-artifacts-weight-has-no-cheap-source.md) | capture | Medium | R2, R5 | 🔴 Not Started |
+| UX-908 | [the drawing-grade guard has three unconfirmed CI excursions, and they are rising](UX-0908-the-drawing-grade-guard-excurses-three-times-and-rising.md) | guards | Medium | the round whose push gate is blocked | 🔴 Not Started |
 | UX-891 | [the certified floors never divide by the machine's cores](UX-0891-the-certified-floors-never-divide-by-the-machines-cores.md) | analysis | Medium | R5 | 🔴 Not Started |
 | UX-892 | [the per-element token record drops the timestamp it was given](UX-0892-the-per-element-token-record-drops-the-timestamp-it-was-given.md) | capture | Medium | R2 | 🔴 Not Started |
 | UX-893 | [cores busy is an average over the span, not a curve](UX-0893-cores-busy-is-an-average-over-the-span-not-a-curve.md) | capture | Medium | R5 | 🔴 Not Started |

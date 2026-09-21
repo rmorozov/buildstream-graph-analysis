@@ -1,6 +1,6 @@
 # UX-909: the documentation guard cannot see a published block's own keys
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-628, UX-655, UX-866 | **Found by:** architecture review 25 (2026-09-20) — `UX-891` added five `floors` keys to `analyze/v6` and no clause went red, because the walk that defines the guard's population never descends into a top-level object | **Serves:** R1 and R3, who read `floors` and `attribution` before anything else in the report and have only the documents to read them by | **Topic:** guards | **Area:** bga | **Shape:** judgement
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-628, UX-655, UX-866 | **Found by:** architecture review 25 (2026-09-20) — `UX-891` added five `floors` keys to `analyze/v6` and no clause went red, because the walk that defines the guard's population never descends into a top-level object | **Serves:** R1 and R3, who read `floors` and `attribution` before anything else in the report and have only the documents to read them by | **Topic:** guards | **Area:** bga | **Shape:** judgement
 
 ## Motivation
 
@@ -100,3 +100,71 @@ green on `main` today. And a mutation that moves an existing key's only
 mention into a `**Status:** proposed` design document reddens it too.
 
 ## Outcome
+
+**The gap, measured.** The filing said 302 keys outside the population;
+at `70765b0` it is **305**, and `certified_headroom` — the number Key
+Findings leads with — was not in it:
+
+```text
+$ python3 - <<'PY'   # the filing's own probe, re-run
+filed measurement: 305 certified_headroom in surface: False
+surface size: 313
+PY
+```
+
+**The boundary, and why it is not the one the Required Fix worded.**
+The fix asked for "a top-level object whose children are scalars". That
+is a fifth *shape*, and the Motivation's own argument is that buying
+shapes back one at a time is what produces the next one — `UX-838`'s
+`additionalProperties` row, `UX-866`'s bare `object`, this row's block
+of scalars. It also excludes `cache`, which the Motivation names as one
+that must be reached, since four of its eleven children are objects. So
+the walk takes a **depth** instead: every key declared one level below a
+top-level property, whatever shape it is. `_block_keys` is eight lines
+and has no cases. The deep set stays out, which is `UX-384`'s ban and
+the line the guide now states: `blast_radius_distribution.deciles` is in
+the population and its own nine buckets are not.
+
+**The close, measured.** The surface goes 313 → **562 keys**, and the
+undocumented register stays at zero because all of them were named:
+
+```text
+$ pytest tests/unit/test_the_documents_keep_up_with_the_contracts.py
+before documenting: 153 published key(s) no document names
+after:              29 passed
+```
+
+**The backlog, read rather than argued.** All 153 are in
+`docs/guides/cli.md`'s new `### Inside a published block (UX-909)`,
+grouped by the block that publishes them, one line each. **None was
+argued out** — the register is still `frozenset()`. 352 of the 362
+block children carry a schema `description`, so the rows are condensed
+from the schema rather than invented; the ten without were read at the
+site that computes them.
+
+**The second half stopped being latent.** The filing measured 0 surface
+keys resting only on a `**Status:** proposed` design document. With the
+widened walk there are **four** — `mean`, `skipped_inputs`,
+`t_infinity_cold`, `unmeasured_processes` — so the exclusion is load
+bearing now rather than a matching argument. The subject is the
+**header**, what precedes the first `## `: `directions.md` gives each
+numbered Direction its own `**Status:**` line, and a landed document
+must not become proposed because one section inside it is. That is
+asserted, not assumed.
+
+**The mutation table.** Applied, confirmed landed, guard watched red for
+the right reason, reverted, watched green:
+
+| mutation | guard |
+|---|---|
+| a scalar added to `floors` in `bga/schemas.py`, no prose | red — `test_a_new_key_with_no_prose_reddens_naming_the_key`, naming `zz_floors_probe`; **green on `main`'s own guard**, which is the Acceptance Test's other half |
+| `mixes`'s only mention moved into `in-step-parallelism.md` | red — same clause, naming `mixes` |
+| `_block_keys` stops descending | red — `test_a_scalar_of_a_published_block_is_in_the_population` |
+| `_block_keys` recurses past one level | red — `test_the_walk_stops_one_level_below_a_top_level_property` |
+| the proposed-design clause returns `False` | red — `test_a_proposed_design_document_does_not_document_a_key` |
+
+**The deviation.** Beyond the boundary above: the guide's coverage
+section now states the depth rule and the proposed-design exclusion,
+and both figures in it (`562 keys`, `0 undocumented keys`) are read off
+the walk and the register rather than typed, so the next widening moves
+the guide or reddens.

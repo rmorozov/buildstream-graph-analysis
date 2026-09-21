@@ -6,39 +6,48 @@
 
 `UX-857` added an ordering check to the `11-serial-giant` CI step: run
 the project with `--jobserver off`, again with `--jobserver auto`, and
-fail the step unless `auto`'s wall is strictly under `off`'s. Five
+fail the step unless `auto`'s wall is strictly under `off`'s. Six
 pairs on the CI runner, over three branches, on unchanged workflow
 code:
 
 ```text
-run 35511368643 (6e410ab7, main)  off=170.94s  auto=174.76s  +2.2%  REGRESSED
-run 35536366563 (395ebdc0, main)  off=173.41s  auto=174.54s  +0.6%  no significant change
-run 35541259164 (PR #245)         off=217.88s  auto=217.98s  +0.0%  no significant change
-run 35542312865 (PR #246)         off=218.41s  auto=218.42s  +0.0%  no significant change
-run 35545829617 (PR #246)         off=218.69s  auto=216.09s  -1.2%  IMPROVED
+run 35511368643    (6e410ab7, main)  off=170.94s  auto=174.76s  +2.2%  REGRESSED
+run 35536366563    (395ebdc0, main)  off=173.41s  auto=174.54s  +0.6%  no significant change
+run 35541259164 #1 (d64d67f2, #245)  off=219.02s  auto=220.15s  +0.5%  no significant change
+run 35541259164 #2 (d64d67f2, #245)  off=217.88s  auto=217.98s  +0.0%  no significant change
+run 35542312865    (PR #246)         off=218.41s  auto=218.42s  +0.0%  no significant change
+run 35545829617    (9679d398, #246)  off=218.69s  auto=216.09s  -1.2%  IMPROVED
 ```
 
-Four fail the step and the fifth passes it, with nothing in the
+Five fail the step and the sixth passes it, with nothing in the
 workflow or the example different between them. The deltas run from
--1.2% to +2.2% and sit around zero. That is the run-to-run spread of a
-218-second build, and the step asserts a strict inequality over one
-sample of it with no band — so whether CI is green is decided by which
-side of zero the noise lands on.
+-1.2% to +2.2% and sit around zero, and the step asserts a strict
+inequality over one sample of that with no band — so whether CI is
+green is decided by which side of zero the run lands on.
+
+The two rows for run `35541259164` are its two attempts, the same sha
+re-run, so they measure the noise directly rather than by inference:
+`off` moved 219.02s → 217.88s and `auto` moved 220.15s → 217.98s, a
+0.5% and a 1.0% swing with nothing changed at all. The four ~218s
+pairs are one machine class and the two ~172s pairs another, so the
++2.2% outlier is not even from the same population as the rest; within
+the ~218s class alone the deltas still span +0.5% to -1.2% and still
+straddle zero.
 
 `bga compare`, which the step itself calls, already applies the band
 (`_SIGNIFICANCE_PCT = 1`) and the step discards its verdict to
-re-derive a cruder one by `awk`. Three of the five pairs are inside
-that band; the two outside it point in opposite directions.
+re-derive a cruder one by `awk`. Four of the six pairs are inside that
+band; the two outside it point in opposite directions.
 
 The element's own measured concurrency is flat across every one of the
-five, including the improved run:
+six, including the improved run:
 
 ```text
   element                  peak  req  achieved     span work
   giant.bst                   2    2      100%   43.53s  530
 ```
 
-`peak 2` against a ceiling of 4, on all five. So the measured width
+`peak 2` against a ceiling of 4, on all six. So the measured width
 does not move under `auto`, while the wall moves either way by up to
 three seconds — in the improved run `giant.bst` itself went 213.25s to
 210.20s with the same peak of 2. Whatever the wall is doing here, this
@@ -62,13 +71,14 @@ guard — replaced by one holding that the step still prints both walls.
 the walls and asserts no ordering.
 
 Banding it instead is not available today: a band has to be chosen
-against a measured spread, and the five pairs above are the only ones
-there are. `bga compare`'s own ±1% would still fail the +2.2% pair, so
-adopting it here would trade an assertion that fails four times in five
-for one that fails once in five, on the same unmeasured variance.
+against a measured spread, and the six pairs above are the only ones
+there are. `bga compare`'s own ±1% would still fail the +2.2% pair, and
+the same-sha re-run already moved `auto` by 1.0% on its own, so
+adopting that band here would trade an assertion that fails five times
+in six for one that fails on whichever run drifts furthest.
 
 Removing the gate is not a verdict that the jobserver is fine, and this
-task must not be read as one. The five readings say nothing about the
+task must not be read as one. The six readings say nothing about the
 jobserver in either direction: their deltas are the example's own
 run-to-run spread, and `peak 2` holds on every one of them, so the
 example never granted the width whose effect the step was asserting.
@@ -98,7 +108,7 @@ jobserver default. Touching `10-jobserver`'s or `12-junctioned`'s steps.
 It is the unblock, and it is all the Required Fix above asks for today.
 A closed row whose subject is the jobserver reads, to a round with no
 other context, as "this was measured and found fine" — which is not
-what the five pairs say either. They say the example cannot tell. So
+what the six pairs say either. They say the example cannot tell. So
 this row does not close on a green job.
 
 ## Acceptance Test
@@ -115,7 +125,10 @@ three.
 **The close.** Either `11-serial-giant` reads `peak > 2` under `auto`
 on the runner — the fixture granting width, which is what the example
 was built to show — or a filed row establishes that it never could at
-`max-jobs: 2` and replaces the example with one that can. Until one of
+`max-jobs: 2` and replaces the example with one that can. A band is
+not an alternative to either: choosing one needs the example's own
+spread measured on one sha, and the two attempts of `35541259164` are
+the only such pair on record. Until one of
 those, this row stays open with the assertion removed, which is the
 honest state: the tree is unblocked and the question is unanswered.
 

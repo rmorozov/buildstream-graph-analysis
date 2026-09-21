@@ -174,6 +174,48 @@ honesty come first. `bga baseline` warns when a set spans machines
 rather than refusing — a band across a fleet is a real thing to look at,
 it is just not the thing the band's arithmetic claims to be.
 
+## Comparing like with like (`UX-898`, `UX-903`)
+
+The machine is half a comparison class. The other half is what the
+build *was*, and the pipeline declares it because nothing in a log can
+infer it:
+
+| axis | says | examples |
+|---|---|---|
+| **type** | when and why the build ran | `night`, `review`, `guard` |
+| **variant** | what it did — several true at once | `arch=aarch64`, `sanitizer=address`, `coverage=on` |
+
+Both are free text. No enum here fits a pipeline nobody has seen, so
+the cost is that a typo makes a third class rather than an error —
+which is why every refusal below prints both values it saw. Comparison
+is exact and case-sensitive: `Nightly` and `nightly` are two
+declarations, not one.
+
+Declare it on either run-context producer, or in the capture's
+environment, which is what `bga snapshot` carries through:
+
+```bash
+export BGA_BUILD_TYPE=review
+export BGA_BUILD_VARIANT=arch=aarch64,sanitizer=address
+bga snapshot -- bst build "$TARGET"
+```
+
+| the two runs | what happens |
+|---|---|
+| same class | today's behaviour, unchanged |
+| **different type or variant** | the comparison prints with a caveat naming both values, confidence is capped below `high`, and any `--fail-on-*` gate refuses with **exit 6** unless `--blend` is passed |
+| one declares, one does not | a caveat only |
+| neither declares | nothing is printed and nothing refuses — every capture taken before this existed compares exactly as it did |
+
+`bga snapshot --aggregate` applies the same rule to a store: two
+classes are two populations, so it publishes the per-class figures and
+refuses the blended one. `--blend` there has meant "I take the mixed
+claim myself" since `UX-234`, and it means the same word on `compare`.
+
+A report from a capture that declared a class names it in the header,
+so a reader who opens one knows whether the durations in front of them
+are a sanitizer's.
+
 ## Wiring it into GitHub Actions
 
 The comment carries a marker, `<!-- bga-ci-comment -->`, as its first

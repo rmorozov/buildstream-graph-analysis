@@ -15,7 +15,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
 
-from . import hostinfo, producer, schemas
+from . import buildclass, hostinfo, producer, schemas
 from .analyzer import BuildEfficiencyAnalyzer
 from .cache_effectiveness import compute_cache_churn
 from .ingest.models import AnalysisResult, Element
@@ -257,6 +257,11 @@ class ComparisonResult:
     # for a capture taken before the manifest existed, which still
     # compares - with the caveat, and without the refusal.
     host_comparison: Optional[dict] = None
+    # UX-898/UX-903: and whether both runs built the same thing.
+    # `{"status": same|different|unknown|absent, "differing": [...]}`.
+    # `absent` - neither run declared a build class - is every capture
+    # taken before the field existed, and renders and refuses nothing.
+    build_class_comparison: Optional[dict] = None
     # UX-54: which of the two runs describe a build that did not
     # complete ("baseline" and/or "candidate"). Kept separate from
     # `low_confidence`, which is about a signal being noisy: a failed
@@ -320,6 +325,7 @@ class ComparisonResult:
             'baseline_run_id': self.baseline_run_id,
             'candidate_run_id': self.candidate_run_id,
             'host_comparison': self.host_comparison,
+            'build_class_comparison': self.build_class_comparison,
             'baseline_run_instance': self.baseline_run_instance,
             'candidate_run_instance': self.candidate_run_instance,
             'memory_envelope_delta': self.memory_envelope_delta,
@@ -1050,6 +1056,33 @@ def _compare_results(
             else host_warning
         )
 
+    # UX-898/UX-903: and whether the two runs are even the same build.
+    # The machine above is half a comparison class; the declared type
+    # and variant are the other half. Unlike the host, this is declared
+    # rather than collected, so its absence is the norm rather than an
+    # old capture - `absent` therefore says nothing at all, and only a
+    # one-sided declaration earns the caveat.
+    baseline_class = (getattr(baseline_result, 'run_instance', None)
+                      or {}).get('build_class')
+    candidate_class = (getattr(candidate_result, 'run_instance', None)
+                       or {}).get('build_class')
+    build_class_comparison = buildclass.classify(baseline_class, candidate_class)
+    class_warning = buildclass.describe(
+        build_class_comparison, baseline_class, candidate_class)
+    if build_class_comparison['status'] == 'different':
+        # Same cap and the same reason as the cross-host case: a
+        # sanitizer build against a release one is not one measurement,
+        # whatever each run's own analysis thought of its coverage.
+        low_confidence = True
+    if class_warning:
+        # Beside the host caveat rather than in `mismatches`, for the
+        # reason stated there: looking at a mixed pair is fine, gating
+        # on it is not, and the refusal lives on the gate.
+        comparability_warning = (
+            f"{comparability_warning}; {class_warning}" if comparability_warning
+            else class_warning
+        )
+
     # UX-250: and whether one tool measured both. The refusal is on
     # *contract movement*, never on the version number - two runs from
     # 0.1.0 and 0.9.0 still compare when every contract a comparison
@@ -1174,6 +1207,7 @@ def _compare_results(
         baseline_run_id=baseline_result.run_id,
         candidate_run_id=candidate_result.run_id,
         host_comparison=host_comparison,
+        build_class_comparison=build_class_comparison,
         baseline_run_instance=getattr(baseline_result, 'run_instance', None) or {},
         candidate_run_instance=getattr(candidate_result, 'run_instance', None) or {},
         baseline_metrics=baseline_metrics,

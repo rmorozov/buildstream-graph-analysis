@@ -1,6 +1,6 @@
 # UX-898: a comparison class is the host class and the build type together
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-234 (host classes), UX-250 (the contract-move refusal) | **Found by:** the 2026-09-20 rollout brief ([`continuous-build-improvement.md`](../../design/continuous-build-improvement.md), section 1) — CI will keep bundles under build numbers whose form already separates nightly (`27.0.0.<seq>`) from review (`27.0.999.<seq>`) | **Serves:** R4 (a gate that compares like with like), R5 and R7 (an aggregate that is not two populations averaged) | **Topic:** contracts | **Area:** bga | **Shape:** judgement
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-234 (host classes), UX-250 (the contract-move refusal) | **Found by:** the 2026-09-20 rollout brief ([`continuous-build-improvement.md`](../../design/continuous-build-improvement.md), section 1) — CI will keep bundles under build numbers whose form already separates nightly (`27.0.0.<seq>`) from review (`27.0.999.<seq>`) | **Serves:** R4 (a gate that compares like with like), R5 and R7 (an aggregate that is not two populations averaged) | **Topic:** contracts | **Area:** bga | **Shape:** judgement
 
 ## Motivation
 
@@ -72,3 +72,77 @@ message (the guard names it); treat absent as equal to present (two runs
 one of which is typed must not be refused).
 
 ## Outcome
+
+**The gap, measured.** At `395ebdc`, `grep -rc build_class bga/ tools/`
+returns no hits. A review capture declaring `{"type": "review",
+"variant": {"sanitizer": "address"}}` gated against an untyped nightly:
+
+```text
+$ bga compare /tmp/gapruns/review /tmp/gapruns/night --fail-on-regression
+exit 0, and zero mentions of a build class in the output
+```
+
+**The close, measured.** The same pair here:
+
+```text
+Mixed build class gate FAILED: baseline declares review · sanitizer=address
+and candidate declares night. ... Pass --blend to state the mixed claim
+yourself.                                                          exit 6
+$ ... --blend                                                      exit 0
+```
+
+The aggregate refuses the same mix (`check: mixed_class_aggregate`,
+naming both populations); `--blend` publishes it with `mixes: 2`. A
+store whose rows declare nothing keeps `check: cross_host_aggregate`
+and today's sentence, and its class entries carry no `build_class`.
+
+**The shape.** `bga/buildclass.py` mirrors `hostinfo`'s API and the
+class is `{type, variant}` inside `run-context/v9` — a permitted
+addition under Part 32's rule, so no id moved, `comparison_movement`
+stays silent and every old capture still compares. Declared by
+`--build-type` on either run-context producer or `$BGA_BUILD_TYPE` in
+the capture's environment, which `bga snapshot` carries through without
+new plumbing (the `BGA_JOBSERVER_MODE` precedent, `UX-851`).
+
+**What is not byte-identical**, stated rather than glossed: `compare
+--format json` gains one key. `build_class_comparison` is always
+written — `{"status": "absent"}` where neither run declared — the shape
+`host_comparison` already has, so it is in `compare/v2`'s
+`bga:always_written`, not `required`. The aggregate document and the
+report header, which are what the Acceptance Tests name, were diffed
+against `395ebdc` for undeclared input: identical.
+
+**The mutation table.** Each applied, confirmed landed, the guard
+watched red, reverted, watched green:
+
+| mutation | guard |
+|---|---|
+| the type comparison is case-insensitive | red — `test_case_is_a_difference_not_a_match` |
+| the refusal message drops the type | red — `test_two_types_refuse_with_exit_6` |
+| absent is treated as equal to present | red — `test_one_side_declaring_is_unknown_and_not_a_difference` |
+| only the type is compared (`UX-903`) | red — `test_one_type_and_two_variants_is_a_difference` |
+| the message drops the variant (`UX-903`) | red — `test_the_sentence_names_the_dimension_and_both_values` |
+| an absent dimension matches a declared one (`UX-903`) | red — `test_a_dimension_present_on_one_side_only_is_a_difference` |
+
+**The deviation.** Three:
+
+1. **A fourth status, `absent`.** Both runs declaring nothing is every
+   capture in history. `hostinfo` says "host unknown" there because a
+   manifest is *collected*; a build class is *declared*, so absence is
+   the norm. `absent` renders and refuses nothing, which is what makes
+   the Acceptance Test's byte-identity true rather than approximate.
+2. **`--blend` on `compare`**, as the Acceptance Test asked by name,
+   rather than a second `--allow-*`. `--allow-cross-host` keeps its own
+   gate.
+3. **The aggregate's `host_class` still names the machine alone**, with
+   `build_class` beside it. The grouping is on the pair; only the label
+   is split, because widening a field consumers read is `UX-190`'s drift.
+
+**Registers this move touched**, each derived and re-run: the
+environment inventory (two rows), the touching spread (562 → 564 files,
+max 157 → 159), the selector ceiling, Part 32's line range and the line
+the fixing guide cites inside it, and the schema-walk key count (303 →
+307). A contract move is six derived figures wide here.
+
+**Tier.** This row's guard file measured 1.09s and is `medium`;
+`UX-903`'s measured 0.73s and stays `small` by the floor.

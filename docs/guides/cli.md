@@ -766,6 +766,8 @@ What you can set:
 
 | name | what it changes | where |
 |---|---|---|
+| `BGA_BUILD_TYPE` | what kind of build this was — `night`, `review`, `guard`, or whatever else the pipeline declares (`UX-898`). Free text: two runs declaring different types are two populations, and `bga compare`'s gates refuse the pair with exit 6 unless `--blend` is passed. Unset, nothing is recorded and every comparison behaves as it did | `tools/_run_context_common.py` |
+| `BGA_BUILD_VARIANT` | the named dimensions of what the build did, comma-separated — `arch=aarch64,sanitizer=address,coverage=on` (`UX-903`). Several are true at once, which is why it is a map and not a string; the comparison class is the pair with `BGA_BUILD_TYPE`. An entry without `=` is refused naming it | `tools/_run_context_common.py` |
 | `BGA_INTERRUPT_GRACE_SECONDS` | seconds a wrapped `bst` gets to stop by itself after `SIGINT` before `bga` escalates; 300 by default, and raising it is how a big build keeps the `queue_summary` written during that shutdown | `tools/bst_run_wrapped.py` |
 | `BGA_JOBSERVER_MODE` | `off`/`auto`/`n` — `bga capture` sets it beside the `--jobserver N` it already resolves from `--jobserver auto\|N\|off` (`UX-851`), so `tools/bst_native_build_tracer.py run` can record which mode ran without parsing its own argv for the distinction. Unset (read as `off`) when the tracer's `run` command is invoked directly, outside `bga capture` | `tools/bst_native_build_tracer.py` |
 | `BGA_NO_PROGRESS` | suppresses the in-phase progress line even on a terminal — the same off-switch as `bga snapshot --no-progress` | `bga/progress.py` |
@@ -1021,7 +1023,8 @@ permitted rather than required, and named in the schema's own
 the real payload instead of by validation:
 
 ```bash
-bga compare --schema | jq '."bga:always_written"'   # ["verdict_provenance"]
+bga compare --schema | jq '."bga:always_written"'
+# ["verdict_provenance", "build_class_comparison"]
 ```
 
 `compare/v2`'s `verdict_provenance` is the worked example. `UX-610`
@@ -1065,7 +1068,7 @@ by something that is not an array index at all, so neither `items` nor
 `bga:columns` sees them. The fourth is `UX-866`: `run_instance` is
 typed as a bare `object`, not a row at all - its keys (`seed` among
 them, `UX-858`) are declared only by its own view-hint's `properties`,
-read at any depth the same way. The surface is **309 keys** today, and
+read at any depth the same way. The surface is **313 keys** today, and
 that figure is derived from the walk rather than typed here.
 
 So the statement of coverage, which is now a statement and not a

@@ -104,6 +104,32 @@ def _display_name(path):
     return path.stem
 
 
+@functools.lru_cache(maxsize=1)
+def _markdown_texts(tracked):
+    """`UX-911`: every tracked `.md`, read once. `_cites_own_id` read
+    the tree per candidate *and* per alias - 9,152 whole-file reads
+    over 1,145 documents, a full pass for each of the five candidates
+    nothing cites, and the 0.14s reference entry CI measured at 7.9s.
+    A tracked file deleted but not committed is skipped, the same
+    reading `_unit_tests` takes of one. Keyed on `tracked` alone, so
+    a caller that rewrites a file it already listed clears this."""
+    return tuple((rel, (REPO / rel).read_text(encoding="utf-8",
+                                              errors="replace"))
+                 for rel in sorted(tracked)
+                 if rel.endswith(".md") and (REPO / rel).exists())
+
+
+@functools.lru_cache(maxsize=1)
+def _citing_texts(tracked):
+    """`UX-911`: the documents a citation could be in at all. The
+    reads were never the cost - measured, one pass over the tree
+    instead of nine saved 8 % - the regex over 13.1 MB was. A
+    document with no `§` in it cannot match `CITATION`, and 286 of
+    1,148 have one: 3.6 MB."""
+    return tuple((rel, text) for rel, text in _markdown_texts(tracked)
+                 if "§" in text)
+
+
 def _cites_own_id(path, ids, tracked):
     """`UX-771`: the heading shape alone is not enough - `review`'s own
     §1-§5 pass it, and `directions.md`'s "review §6/§7" does not name
@@ -113,16 +139,18 @@ def _cites_own_id(path, ids, tracked):
     The lookbehind guards the boundary a verifier found missing: with
     none, `self-review §3` reads as `review` cited at `3`, since
     `self-review` ends in `review` - pulling `review/SKILL.md` into
-    the population on a citation nobody wrote about it."""
+    the population on a citation nobody wrote about it.
+
+    `UX-911`: two literal prefilters before the regex, both implied
+    by a match, so the population this returns is unchanged."""
     name = _display_name(path)
     rel = path.relative_to(REPO).as_posix()
     for alias in {name, name.replace("-", " ")}:
         cite = re.compile(r"(?<![\w-])" + re.escape(alias)
                           + r"(?:\.md)?`?\s*§([0-9]+[a-z]?)")
-        for other in tracked:
-            if other == rel or not other.endswith(".md"):
+        for other, text in _citing_texts(tracked):
+            if other == rel or alias not in text:
                 continue
-            text = (REPO / other).read_text(encoding="utf-8", errors="replace")
             if any(found in ids for found in cite.findall(text)):
                 return True
     return False
@@ -139,16 +167,13 @@ def _process_documents():
     then requires it be named elsewhere at one of its own ids."""
     tracked = _tracked()
     candidates = []
-    for rel in tracked:
-        if not rel.endswith(".md"):
-            continue
+    # `UX-911`: over the texts read once above, so no document in
+    # `_PROCESS_DIRS` is read here and again by `_cites_own_id`.
+    for rel, text in _markdown_texts(tracked):
         if not (rel.startswith(_PROCESS_DIRS)
                 or (rel.startswith(".claude/skills/") and rel.endswith("/SKILL.md"))):
             continue
         path = REPO / rel
-        if not path.exists():
-            continue
-        text = path.read_text(encoding="utf-8", errors="replace")
         total = len(re.findall(r"^#{2,3} ", text, re.M))
         numbered = HEADING.findall(text)
         if not total or len(numbered) < 2 or len(numbered) / total < 0.5:
@@ -255,10 +280,18 @@ class TestTheIdSpaceGrowsNoSilentCollision:
         ids = frozenset(_sections(review))
         probe = tmp_path / "probe.md"
         tracked = _tracked() | {str(probe)}
-        probe.write_text("See self-review §3 for detail.\n", encoding="utf-8")
+
+        def rewrite(line):
+            """`UX-911` cached the texts against `tracked`, and this
+            probe changes a file's contents without changing it."""
+            probe.write_text(line, encoding="utf-8")
+            _markdown_texts.cache_clear()
+            _citing_texts.cache_clear()
+
+        rewrite("See self-review §3 for detail.\n")
         assert not _cites_own_id(review, ids, tracked), (
             "self-review §3 pulled review into the population")
-        probe.write_text("See review §3 for detail.\n", encoding="utf-8")
+        rewrite("See review §3 for detail.\n")
         assert _cites_own_id(review, ids, tracked), (
             "a genuine review §3 did not pull review in")
 
@@ -380,6 +413,65 @@ class TestTheCountedFiguresDerive:
             assert row, f"§6b states no count of {what}"
             assert int(row.group(1)) == count, (
                 f"§6b says {row.group(1)} {what}; git ls-files says {count}")
+
+
+def test_the_scan_reads_the_tree_once(monkeypatch):
+    """`UX-911`: this file's own cost, counted rather than timed.
+
+    `_cites_own_id` walked every tracked `.md` per candidate and per
+    alias, and CI read the file at 7.9s against a 0.14s record. The
+    reads were the smaller half - measured, one pass instead of nine
+    saved 8 % - so the claim is both numbers:
+
+    ```text
+    before  md reads 9,630 over 1,148 files (worst 13)
+            regex passes 9,604 over 107.67 MB
+    after   md reads 1,148 over 1,148 files (worst 1)
+            regex passes   369 over   8.31 MB
+    ```
+
+    A wall clock is not the instrument: on a developer machine it
+    writes the wrong number, which this repository has been wrong
+    about twice (`UX-418`, `UX-447`).
+    """
+    for cached in (_markdown_texts, _citing_texts, _process_documents):
+        cached.cache_clear()
+    reads, passes = collections.Counter(), collections.Counter()
+    real_read, real_compile = pathlib.Path.read_text, re.compile
+
+    def counted_read(self, *args, **kwargs):
+        if self.suffix == ".md":
+            reads[self.as_posix()] += 1
+        return real_read(self, *args, **kwargs)
+
+    def counted_compile(pattern, *args, **kwargs):
+        got = real_compile(pattern, *args, **kwargs)
+        if not (isinstance(pattern, str) and "§" in pattern):
+            return got
+
+        class Counting:
+            """Only `findall` is reached from `_cites_own_id`."""
+
+            def findall(self, text):
+                passes["over"] += 1
+                return got.findall(text)
+
+        return Counting()
+
+    monkeypatch.setattr(pathlib.Path, "read_text", counted_read)
+    monkeypatch.setattr(re, "compile", counted_compile)
+    _process_documents()
+    for cached in (_markdown_texts, _citing_texts, _process_documents):
+        cached.cache_clear()
+
+    assert reads, "the scan opened no document at all"
+    assert max(reads.values()) == 1, (
+        f"{sum(reads.values())} reads over {len(reads)} documents, worst "
+        f"{max(reads.values())} - a document is read once per session")
+    assert passes["over"] < len(reads), (
+        f"{passes['over']} citation passes over {len(reads)} documents - "
+        "a candidate scans only the documents carrying both a section "
+        "mark and its own name")
 
 
 if __name__ == "__main__":  # pragma: no cover

@@ -37,12 +37,24 @@ tree, and there are five of them:
   OUT docs/design/areas/bga.md                      scanned=1144
 ```
 
-9,152 whole-file reads and regex passes over 1,145 tracked documents,
-before the five cited candidates are resolved. The candidate set is
-identical on `main` and on the branch, which is the measurement that
-says the growth is the population's and not any one diff's: the
-0.14s record predates `in-step-parallelism.md` and
+The candidate set is identical on `main` and on the branch, which is
+the measurement that says the growth is the population's and not any
+one diff's: the 0.14s record predates `in-step-parallelism.md` and
 `continuous-build-improvement.md` joining it.
+
+**The reads are not the cost, and this row first said they were.**
+Counted rather than estimated, `_process_documents()` on this tree:
+
+```text
+md reads 9,630 over 1,148 files (worst 13)
+regex passes 9,604 over 107.67 MB
+```
+
+Reading each document once and keeping the same per-candidate regex
+took 2.91s to 2.67s - 8 %, three runs each, same container. The 107 MB
+the `CITATION` pattern is dragged over is the cost. The earlier figure
+of "9,152 whole-file reads" in this row was arithmetic, not a
+measurement, and it pointed the fix at the wrong half.
 
 **Why the gate is intermittent, and it is not the carry.** `over_gate`
 needs **both** rules, and the second is absolute:
@@ -99,12 +111,13 @@ carry is only what decides which branch pays for it.
 
 Make the scan cheap, which is the remedy the gate's own message asks
 for first, and the one that does not adopt a 45x regression as normal.
-`_cites_own_id` re-reads each document from disk for every candidate
-and every alias. Read the tracked `.md` texts once per session and
-match against that mapping, so the cost is one pass over the tree
-rather than one per uncited candidate. The helpers are already
-`functools.lru_cache`d for `_tracked` and `_process_documents`; this is
-the same treatment for the texts they read.
+Two literal prefilters, both implied by a match, so the population the
+scan returns is unchanged: a document with no `§` in it cannot match
+`CITATION` (286 of 1,148 have one, 3.6 MB of 13.1 MB), and within
+those, a document not containing the alias literal cannot match it.
+Read the texts once as well - `_tracked` and `_process_documents` are
+already `functools.lru_cache`d, and this is the same treatment for the
+texts they read.
 
 Then refresh the entry in `tests/ci_reference.json` from a CI run's
 own `ci-reference-candidate` artifact — never `--record` on a
@@ -133,13 +146,32 @@ cell is a defect before it is a number to adopt.
 ## Acceptance Test
 
 `python3 -m pytest tests/unit/test_the_styleguide_names_its_guards.py -q`
-green, and the file's own count of whole-file reads falls from 9,152
-to one pass over the tracked `.md` set — asserted by a guard that
-counts the reads, not by a wall clock, since the wall clock on a
-developer machine is the thing this repository has already been wrong
-about twice.
+green, and both counts fall — asserted by a guard that counts them,
+not by a wall clock, since the wall clock on a developer machine is
+the thing this repository has already been wrong about twice.
 
-A mutation restoring the per-candidate re-read must redden that guard.
+**Measured**, `test_the_scan_reads_the_tree_once`:
+
+```text
+before  md reads 9,630 over 1,148 files (worst 13)
+        regex passes 9,604 over 107.67 MB
+after   md reads 1,148 over 1,148 files (worst 1)
+        regex passes   369 over   8.31 MB
+        14 passed in 0.83s, against 4.4s on this container before
+```
+
+The mutation table:
+
+| mutation | guard | reads | passes |
+|---|---|---|---|
+| re-read each document inside the alias loop | red | 3,943, worst 15 | 369 |
+| drop the `alias not in text` prefilter | red | 1,148 | 1,148 |
+| none | green | 1,148, worst 1 | 369 |
+
+A third mutation, dropping both `lru_cache` decorators, reddens the
+guard on an `AttributeError` from its own `cache_clear` rather than on
+the count. It is recorded here as a mutation that does **not** count:
+a guard that dies in its setup has not measured anything.
 
 The gate closes it: one CI run on `test (3.11)` reporting `tiers ok`
 with the refreshed record, on a branch whose diff is this row.

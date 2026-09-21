@@ -171,6 +171,21 @@ def test_partial_overlap_counts_as_used():
     assert result["used"][0]["opened_files"] == 1
 
 
+def test_a_joined_relative_path_counts_as_used():
+    """UX-865: the hook joins a relative open against its opener's cwd
+    before recording it, so by the time this analysis sees it, a read
+    of `../include/foo.h` from `/build/x` is already the absolute
+    `/build/include/foo.h` - and matches like any other opened path."""
+    result = compute_declared_vs_used(
+        {"app.bst": _opens(["/build/include/foo.h"])},
+        {"app.bst": ["dep.bst"]},
+        {"dep.bst": {"/build/include/foo.h", "/build/include/other.h"}},
+    )
+
+    assert result["unused_candidates"] == []
+    assert result["used"][0]["opened_files"] == 1
+
+
 def test_no_opens_at_all_reports_unavailable():
     result = compute_declared_vs_used({}, {"a.bst": ["b.bst"]}, {"b.bst": {"/x"}})
 

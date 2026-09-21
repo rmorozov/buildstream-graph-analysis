@@ -148,8 +148,10 @@ class TestBothVerdictsAreReachable:
 
     def test_the_hook_interposes_the_open_family_and_nothing_else(self, report):
         """What the hook can see about a process is what it interposes,
-        and it is four symbols. Asserted so that a fifth arriving has
-        to come and change this line - the capability side of the
-        census is the half no emitted artifact states."""
-        assert report["interposed"] == ["open", "open64", "openat",
-                                        "openat64"], report["interposed"]
+        and it is six symbols: the open family and, from `UX-865`, the
+        cwd pair it joins a relative open against. Asserted so that a
+        seventh arriving has to come and change this line - the
+        capability side of the census is the half no emitted artifact
+        states."""
+        assert report["interposed"] == ["chdir", "fchdir", "open", "open64",
+                                        "openat", "openat64"], report["interposed"]

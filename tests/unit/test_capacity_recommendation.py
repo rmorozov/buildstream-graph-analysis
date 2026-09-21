@@ -82,16 +82,43 @@ class TestWhichConstraintBinds:
     def test_the_cpu_ceiling_is_derived_from_the_measured_draw(self):
         """Not a rule of thumb: `cores_busy / builders` is what one
         concurrently-building element actually drew, and the ceiling is
-        how many of those the host's cores can feed."""
+        how many of those the host's cores can feed - clamped to the
+        host's own cores, since a figure above them is never a
+        recommendation (`UX-861`)."""
         recommendation = compute_capacity_recommendation(
             _plane2(cores_busy=2.0, host=8), _envelope(64), knee=64,
             builders=4, native_max_jobs=4,
         )
 
         cpu = next(c for c in recommendation['constraints'] if c['name'] == 'CPU')
-        # 0.5 cores per element, 8 cores -> 16.
-        assert cpu['allows'] == 16
+        # 0.5 cores per element, 8 cores -> 16, clamped to the 8 the host has.
+        assert cpu['allows'] == 8
+        assert cpu['clamped_from'] == 16
         assert "0.50 core(s) per concurrent element" in cpu['reason']
+
+    def test_a_cpu_figure_under_the_cores_is_not_clamped(self):
+        """The clamp only fires when the raw figure exceeds the host's
+        own cores - most runs never reach it."""
+        recommendation = compute_capacity_recommendation(
+            _plane2(cores_busy=3.4, host=4), _envelope(11), knee=5,
+            builders=4, native_max_jobs=4,
+        )
+
+        cpu = next(c for c in recommendation['constraints'] if c['name'] == 'CPU')
+        assert cpu['allows'] == 4
+        assert 'clamped_from' not in cpu
+
+    def test_a_clamped_cpu_figure_never_exceeds_the_host(self):
+        """`UX-861`'s motivating report: a builder count above the host's
+        cores is never recommended verbatim, whatever the raw arithmetic
+        says."""
+        recommendation = compute_capacity_recommendation(
+            _plane2(cores_busy=2.0, host=8), _envelope(64), knee=64,
+            builders=16, native_max_jobs=16,
+        )
+
+        assert recommendation['binding_constraint'] == 'CPU'
+        assert recommendation['recommended_builders'] == 8
 
 
 class TestWhatItRefusesToSay:
@@ -151,6 +178,18 @@ class TestTheFinding:
     def test_no_recommendation_emits_no_finding(self):
         assert _capacity_recommendation_finding(self._result({})) == []
 
+    def test_the_title_says_the_hosts_cores_bound_a_clamped_figure(self):
+        """`UX-861`: a CPU-bound builder count above the host's cores is
+        never recommended verbatim, and the sentence says why."""
+        recommendation = compute_capacity_recommendation(
+            _plane2(cores_busy=2.0, host=8), _envelope(64), knee=64,
+            builders=16, native_max_jobs=16)
+
+        finding = _capacity_recommendation_finding(self._result(recommendation))[0]
+
+        assert "the host's cores bound it, not the raw 64" in finding['title']
+        assert "CPU binds at 8" in finding['title']
+
     def test_the_title_names_the_setting_the_constraint_and_the_verdict(self):
         recommendation = compute_capacity_recommendation(
             _plane2(cores_busy=3.4, host=4), _envelope(11), knee=5,
@@ -205,9 +244,10 @@ class TestTheFinding:
         the one fix that was actually available. A pinned element holds a
         builder slot while drawing one core - the slot is the waste when
         CPU binds, and the element's own length is the waste when the
-        graph does."""
+        graph does. `host=8`, not the original 4: on a 4-core host `UX-861`'s
+        clamp caps CPU at 4, below the knee, and CPU would bind instead."""
         recommendation = compute_capacity_recommendation(
-            _plane2(cores_busy=2.11, host=4, pinned=['core.bst']),
+            _plane2(cores_busy=2.11, host=8, pinned=['core.bst']),
             _envelope(9), knee=6, builders=4)
 
         finding = _capacity_recommendation_finding(self._result(recommendation))[0]

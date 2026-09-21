@@ -40,7 +40,7 @@ nodeenv==1.10.0
     # via pyright
 packaging==26.3
     # via pytest
-platformdirs==4.11.8
+platformdirs==4.11.11
     # via pylint
 pluggy==1.6.0
     # via
@@ -58,7 +58,7 @@ pylint==4.0.8
     # via bga (pyproject.toml)
 pymarkdownlnt==0.9.40
     # via bga (pyproject.toml)
-pyright==1.1.411
+pyright==1.1.414
     # via bga (pyproject.toml)
 pytest==9.1.1
     # via
@@ -81,7 +81,7 @@ rpds-py==2026.6.3
     # via
     #   jsonschema
     #   referencing
-ruff==0.16.6
+ruff==0.16.7
     # via bga (pyproject.toml)
 sly==0.5
     # via py-walk
@@ -98,5 +98,5 @@ typing-extensions==4.16.0
     #   pymarkdownlnt
     #   pyright
     #   referencing
-wcwidth==0.8.3
+wcwidth==0.8.4
     # via columnar

@@ -43,7 +43,17 @@ stalls. Round 109's readings are in `UX-793`.
 main checkout installed `bga` into. Never `pip install -e .` from a
 worktree - round 109's `verify-703` did, its worktree was removed,
 and every subprocess guard on the machine lost `bga` (8 red in the
-gate). `pip install <tool>` for a tool the run needs is fine.
+gate). `pip install <tool>` for a tool the run needs is fine. `make
+lint` and `dev_baseline.py` call bare `ruff` and bare `pyright`, and a
+stale `~/.local/bin/` copy can shadow either (a UX-882 near-miss
+rewrote the baseline's `ruff_version`): call the pinned binary by its
+own path, or refresh the shadowing copy in place
+(`uv tool install --force <tool>==<pinned>`).
+Do **not** prepend `/usr/local/bin` to `PATH` - `UX-889` measured that
+it also sits ahead of the `/opt/nodeNN/bin` entry that selects node,
+so a `use-node-20` selection silently becomes v22.
+`tools/dev_env_check.py` catches all of that, a repointed `bga`, and a
+node off the major `.node-version` declares.
 
 ## What to report
 

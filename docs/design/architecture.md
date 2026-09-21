@@ -1,6 +1,6 @@
 # `bga`: Current Architecture — Three Analysis Planes
 
-**Start here to orient in this codebase.** `docs/spec/specification.md` (v9) is the original design document and stays authoritative for full-length invariant/data-contract text — it is *not* wrong, but it describes the tool as originally scoped, and does not know about anything built since. This doc describes what `bga` actually does **today**, as one coherent system, and points at the real file/doc for every claim so you don't have to reconstruct that history yourself from the commit log, the 856 `docs/backlog/scenarios/` files and the 75 `docs/backlog/tasks/` files this commit carries.
+**Start here to orient in this codebase.** `docs/spec/specification.md` (v9) is the original design document and stays authoritative for full-length invariant/data-contract text — it is *not* wrong, but it describes the tool as originally scoped, and does not know about anything built since. This doc describes what `bga` actually does **today**, as one coherent system, and points at the real file/doc for every claim so you don't have to reconstruct that history yourself from the commit log, the 917 `docs/backlog/scenarios/` files and the 75 `docs/backlog/tasks/` files this commit carries.
 
 **Want to *use* the tool rather than work on it?** [`docs/guides/real-project.md`](../guides/real-project.md) is the end-to-end walkthrough on a real project, with real output at every step.
 
@@ -73,7 +73,8 @@ normalize/    -> timestamp quantization, clamp, violation reporting (Part 3)
 occupancy/    -> per-resource interval sweep (Part 4)
 graph/        -> EDG, critical path, dominators, depth (Part 5, 14.1)
 attribution/  -> blame-chain walk, 8-category wait-gap classification (Part 7-12)
-floors/       -> LB/capacity/cold/serialization floors (Part 14-17)
+floors/       -> LB/capacity/cold/serialization floors (Part 14-17), and
+                 LB_cpu, the one that divides by cores not slots (UX-891)
 replay/       -> deterministic scheduler, capacity sweep, duration_overrides hook (Part 18-19)
 utilisation/  -> CPU accounting (Part 30, M4)
 diagnostics/  -> blast radius, Monte-Carlo criticality, leaf/deferrability (Part 20-29, M5)
@@ -390,7 +391,7 @@ renderers are built against, so nothing here is a second copy to drift.
 | schema | what it is | printed by |
 |---|---|---|
 | `analyze/v6` | one run's analysis: attribution, floors, the element population, the graph's shape, findings, the headline decision, next steps, who each finding is for (`readers`, `UX-372`), and the provenance behind each claim. **v6** (`UX-641`) changed `parallelism.levels` from an array of level *numbers* — always `[0 … n-1]`, the row number under `width_at_level`'s description — to one row per level naming its width and its members, taken from `_compute_level_decomposition` on the **gating** graph; a consumer indexing it as integers breaks. **v5** (`UX-535`) removed `graph_summary.total_elements`, `graph_summary.critical_path_length` and `graph_summary.max_parallelism` — three facts assigned from the same `StructuralMetrics` object `graph_metrics` publishes, so the document carried one number under two spellings in two sections; they are read from `graph_metrics.num_elements`, `graph_metrics.critical_path_length` and `graph_metrics.max_parallelism`. **v4** (`UX-344`) removed the two namespaces — `signals` and `structural` were maps of named tables that held no value of their own, so each table is a top-level key now, `metrics` and `summary` renamed to `graph_metrics` and `graph_summary` and the six element-keyed maps grouped under `elements`; `provenance` is published once per claim at the top level rather than written into every finding, the headline and each top action; and `findings[].evidence.blast_radius` is gone by `UX-288`'s rule, being a slice of a population published in full beside it. Measured on the two fixtures: leaves deeper than three fell from 57% to 40% and from 67% to 53%, and the golden report's deepest path from six levels to five. **v3** (`UX-341`) renamed every key that carried a retired unit — `measured_us`, `peak_rss_bytes`, `useful_share`, `occupancy_share` and the rest — so the payload measures time in µs, memory in bytes and a bounded fraction in 0..1, one spelling each. **v2** (`UX-288`) had removed three fields that republished element membership already published beside them — `signals.critical_path`, `signals.leaf_analysis.leaves`, and `structural.deferrability`'s two uid lists (their names at the time). `UX-345` removed one more on the same rule — `signals.critical_path_length`, which held `floors.t_infinity_observed`'s microseconds under a `count` — and renamed `signals.wall_clock_share` to `wall_clock_share_us` | `bga analyze --schema` |
-| `compare/v2` | two runs, their signed deltas, the verdict and its noise band, the per-element culprits, the candidate's diagnosis chain, and `verdict_provenance` (`UX-610`) - the chain behind the *verdict* rather than behind the candidate run, `null` on a refusal | `bga compare --schema` |
+| `compare/v2` | two runs, their signed deltas, the verdict and its noise band, the per-element culprits, the candidate's diagnosis chain, `verdict_provenance` (`UX-610`) - the chain behind the *verdict* rather than behind the candidate run, `null` on a refusal - and `build_class_comparison` (`UX-898`, `UX-903`): whether the two runs declared the same build type and variant, `{"status": "absent"}` where neither declared one | `bga compare --schema` |
 | `blast/v2` | what rebuilds if one repository, path or element changes | `bga blast --schema` |
 | `correlate/v2` | the two planes joined on element uid, with the coverage of the join | `bga correlate --schema` |
 | `store/v1` | what the run store holds: one row per snapshot, with the alias, the verdict and why a capture is not a measurement - and, per row, `queue_wait_us`, the gap between the instant a build was requested and the instant it started, with `queue_wait_absent_reason` naming why where that is `null` rather than zero (`UX-594`) | `bga snapshot --list --format json` |
@@ -497,6 +498,47 @@ and is superseded now is what the record says, and sweeping it forward
 with the tables above destroys the one thing the entry is for
 (`UX-653`). The newest entry is the exception: every round that
 re-grounds the document rewrites it.
+
+Updated 2026-09-20 (after `UX-898`), covering one change to this
+document — the `compare/v2` row in the contract table now names
+`build_class_comparison` (`UX-898`, `UX-903`): whether the two runs
+declared the same build type and variant, `{"status": "absent"}` where
+neither declared one, and in `compare/v2`'s `bga:always_written`
+rather than `required` because required under a live id breaks every
+document written before it. The row is re-grounded in `bga compare
+--schema | jq '."bga:always_written"'` (`["verdict_provenance",
+"build_class_comparison"]`), in `bga/buildclass.py`, which owns the
+vocabulary and declares no contract id of its own — the class is two
+declared fields inside `run-context/v9`, a permitted addition — and in
+`python3 -m pytest $(grep -ln "architecture.md" tests/unit/*.py) -q`,
+run at this commit: 438 passed with this guard the only red before
+this entry. The two contract tables above are unchanged: **25 emitted
+ids**, and `analyze/v6` at **62 top-level properties**.
+Updated 2026-09-20 (after `UX-891`), covering one change to this
+document — the `floors/` row in the module map now names `LB_cpu`
+beside the four certified floors it already listed. `UX-891` publishes
+it from `bga/floors/cpu.py`, the fifth module in that package, as
+`total_cpu_us // governing_cores`: every other floor divides by builder
+slots, so a build that is core-bound inside one slot was outside all of
+them. It is published *beside* `lb` and enters no certified term, which
+is the whole of the row's argument and what
+`tests/unit/test_the_cpu_floor_divides_by_cores.py` holds.
+
+The line is re-grounded in `ls bga/floors` (`__init__.py`,
+`capacity.py`, `cold.py`, `cpu.py`, `observed.py`, `serialization.py`),
+in `bga analyze --schema` (`analyze/v6`: **62 top-level properties**),
+and in `python3 -m pytest $(grep -ln "architecture.md" tests/unit/*.py)
+-q`, which ran 438 passed with this guard the only red before this
+entry.
+
+The contract tables above are unchanged: **25 emitted ids**, and
+`bga/viewer/` still **22 modules** (`ls bga/viewer/*.js | wc -l`). The
+62 is the point rather than an aside — round 132 added five keys
+(`lb_cpu_us`, `lb_cpu_coverage`, `lb_cpu_governing_cores`,
+`lb_cpu_cores_source`, `lb_cpu_binds`) and the figure did not move,
+because they live under `floors`, which is one of those 62. `UX-909`
+is filed against the documentation guard that could not see them for
+the same reason.
 
 Updated 2026-09-14 (after `UX-847`), covering two changes to this
 document — UX-847's `jobserver` block under `analyze/v6` (the ledger's

@@ -35,14 +35,14 @@ class TestOpenJobserverSeedsExactlyNMinusOneTokens:
 
 
 class TestJobserverAuthStyleFollowsMake:
-    """UX-841: `auto` reads the host's `make --version` - the version
-    string is passed in here, never shelled out to, per the falsify
-    skill's "instrument that reads a proxy" caution."""
+    """UX-876: `auto` is always `fd` - no host `make --version` probe, a
+    mixed toolchain's recipe can invoke a make below 4.4 by absolute
+    path from inside its own sandbox. `fifo` stays an explicit opt-in."""
 
-    def test_gnu_make_4_4_picks_fifo(self):
+    def test_gnu_make_4_4_picks_fd(self):
         assert tracer.jobserver_auth_style(
             "auto", "GNU Make 4.4\nBuilt for x86_64-pc-linux-gnu\n"
-        ) == "fifo"
+        ) == "fd"
 
     def test_gnu_make_4_3_picks_fd(self):
         assert tracer.jobserver_auth_style(
@@ -55,15 +55,21 @@ class TestJobserverAuthStyleFollowsMake:
 
 
 class TestTheShimsArgvCarriesTheChosenStyle:
-    def test_a_4_4_version_string_carries_fifo_and_a_bind(self, tmp_path):
-        fifo_path = str(tmp_path / "jobserver")
-        style = tracer.jobserver_auth_style("auto", "GNU Make 4.4\n")
+    def test_a_4_4_version_string_carries_fifo_under_bind_dst_and_no_bind_of_its_own(self):
+        """UX-869: `open_jobserver` makes the FIFO under `bind_src`
+        (`scratch`), which is already bound whole at `bind_dst` - a
+        second `--bind` of the FIFO onto its own host path failed on a
+        read-only sandbox root whenever the project was not under
+        `/tmp`."""
+        bind_src = "/tmp/host-trace-dir"
+        fifo_path = bind_src + "/jobserver"
+        style = tracer.jobserver_auth_style("fifo", "GNU Make 4.4\n")
         assert style == "fifo"
 
         argv = build_shim_argv(
             real_bwrap="/usr/bin/bwrap",
             bst_args=["--unshare-pid", "sh", "-c", "true"],
-            bind_src="/tmp/host-trace-dir",
+            bind_src=bind_src,
             bind_dst="/tmp/.bst-native-trace",
             preload_so="/tmp/.bst-native-trace/hook.so",
             trace_log="/tmp/.bst-native-trace/trace.log",
@@ -72,11 +78,10 @@ class TestTheShimsArgvCarriesTheChosenStyle:
         )
 
         binds = [i for i, tok in enumerate(argv) if tok == "--bind"]
-        assert len(binds) == 2, "the general trace bind, then the jobserver one"
-        idx = binds[1]
-        assert argv[idx + 1:idx + 3] == [fifo_path, fifo_path]
+        assert len(binds) == 1, "only the general trace bind - none for the FIFO"
+        assert fifo_path not in argv
         setenv = argv.index("MAKEFLAGS")
-        assert argv[setenv + 1] == f"--jobserver-auth=fifo:{fifo_path}"
+        assert argv[setenv + 1] == "--jobserver-auth=fifo:/tmp/.bst-native-trace/jobserver"
 
     def test_a_4_3_version_string_carries_fd_fd(self):
         style = tracer.jobserver_auth_style("auto", "GNU Make 4.3\n")

@@ -272,6 +272,18 @@ generator is `10`'s own script, hardlink-cloned in, not a second copy.
 Full detail, real captures and the ratio in that project's own
 [`README.md`](11-serial-giant/README.md).
 
+## 12-junctioned
+
+A local junction (`elements/junction.bst`) into `sub/`, a real second
+BuildStream project holding one `cmake` element and the stack that
+groups it - the shape `UX-869` (the FIFO under `bind_dst`) and `UX-871`
+(a junctioned element's kind) were both real first-day defects on, with
+no example project to catch either in CI (`UX-872`). Same staged
+sysroot as `05`-`11`, cloned into `sub/files/toolchain/` (a junctioned
+subproject is a real, separate project). Full detail, the real
+`bga snapshot --jobserver auto` reading and `kinds_read.json`'s own
+diagnostic in that project's own [`README.md`](12-junctioned/README.md).
+
 ## Shared setup
 
 `01-resource-contention`, `02-deep-chain-mixed-kinds`, and

@@ -523,7 +523,22 @@ END pid=101 ppid=1 ts=1002.500000 element=work-a.bst cmd=cc -c main.c
 #     page   321,493 -> 322,946   (+1,453 B, all source)
 #
 # 325,000 leaves 2,054 B.
-PAGE_BUDGET_B = 325_000
+# `UX-864`: `renderSection`'s object branch now calls `classify` and
+# `mapTable` gained the top-level noun/unit header pair and the
+# task-uid `data-key` pass - all source, measured on identical
+# fixture paths either side so no path noise is in it:
+#
+#     page   324,921 -> 326,452   (+1,531 B, all source)
+#
+# `UX-863`: the density strip ticks every mark its table twin lists
+# instead of two hardcoded ones, and the strip's sentence names the
+# labelled set - all source, measured the same way:
+#
+#     page   324,881 -> 325,660   (+779 B, all source)
+#
+# The two land together in round 120: 329,000 leaves the same order
+# of headroom over their summed 327,231 B.
+PAGE_BUDGET_B = 329_000
 
 #: `UX-444`: the claim, stated once. **The run's data is at least twice
 #: the page a reader is permitted to download.**
@@ -896,7 +911,40 @@ COMMITTED_EXPORTS = [
     # prose (two shares, the per-element table) and the block itself,
     # absent from a run without the mode - 468,026 B measured at the
     # merge, 26 B over the old bound. 474,000 leaves headroom again.
-    ("golden", GOLDEN, 474_000),                       #  468,026 B
+    # `UX-864` moved this one by 1,531 B, all **source** - see the
+    # note on `PAGE_BUDGET_B` above; golden's `by_binary`/
+    # `wall_clock_share_us` both stay under `classify`'s inline
+    # threshold (0 and 4 keys), so nothing here is content. Measured
+    # before this change: 468,068 B (this worktree's path length).
+    # `UX-860`: +421 B, all **contract** - the `overcommitted_intervals`
+    # row's new `swapped_out` column and its four evidence-key entries
+    # (`EVIDENCE_QUANTITIES`), which travel whether or not a run's host
+    # series ever swapped; golden has none. 474,000 still holds over
+    # the summed 470,020 B.
+    # `UX-896`/`UX-897` moved this one by 7,433 B, all **contract** -
+    # the `capacity` block's eleven schema nodes and the three
+    # transfer-rate ones, plus their ten `EVIDENCE_QUANTITIES` entries.
+    # Golden records no quota and no host counters, so it carries none
+    # of the values: what grew is the embedded schema's prose for them,
+    # which travels whether or not a run fills them. Measured on that
+    # branch: 470,020 B before, 477,453 B after.
+    # Round 132 moved this one by 2,806 B, **all contract**: golden has
+    # no Plane 2 report, so it carries none of the eleven new keys -
+    # what grew is the embedded schema's prose for them (the CPU floor's
+    # five, the resolved width's two, the token series' four), which
+    # every export carries whether or not the run has the data.
+    # Measured on that branch: 473,028 B before, 475,834 B after, with
+    # the page half unmoved at 328,396 B either side.
+    # Merged: the two rounds ran in parallel off one base and neither
+    # note's "after" is the other's "before", so the merged figure is
+    # the measurement rather than either sum. Both growths are contract
+    # and they are disjoint, so they add: 480,265 B measured over the
+    # merge. 482,000 keeps headroom of the same order.
+    # `UX-898`/`UX-903` then merged in and added 341 B of the same
+    # contract - the `build_class` block's schema nodes, which golden
+    # does not declare and so carries only as prose. 480,606 B measured
+    # over that merge; the bound holds unmoved.
+    ("golden", GOLDEN, 482_000),                       #  480,606 B
     # `UX-297` moved this one by 385 B before that: the two-plane run
     # publishes `plane2_coverage.source`, which says which shape of
     # Plane 2 report served its numbers and what that costs to open. A
@@ -1051,7 +1099,38 @@ COMMITTED_EXPORTS = [
     # schema prose, which travels whether or not this run's Plane 2
     # report carries the mode (it does not; macro_micro is a static
     # capture). 528,000 keeps the same order of headroom.
-    ("macro_micro", MACRO_MICRO, 528_000),             #  527,329 B
+    # `UX-864`: +1,531 B, all **source** - the same move as `golden`'s
+    # note above. Measured before this change: 527,489 B (this
+    # worktree's path length).
+    # `UX-861`: +712 B, all **contract** - `clamped_from`'s schema prose
+    # on `capacity_recommendation.constraints` and the extended
+    # `cores_busy` sentence. macro_micro's own CPU figure is not
+    # clamped (host 4, allows 4), so none of this is payload; it
+    # travels because the schema does, whether or not this run's
+    # constraint row carries the key.
+    # `UX-863`: +779 B, all source - the same delta as `PAGE_BUDGET_B`'s
+    # note above, measured the same way.
+    # `UX-860`: +341 B, all **contract** - the `swapped_out` column and
+    # its four evidence-key entries; no window in this run's host series
+    # swaps, so nothing in the finding itself fired.
+    # The four land together in round 120: 533,000 keeps the same order
+    # of headroom over their summed 530,852 B.
+    # `UX-896`/`UX-897` moved this one by 6,059 B, the same contract as
+    # golden's note above and for the same reason - this run records
+    # neither a quota nor a byte counter, so nothing here is payload.
+    # Measured on that branch: 530,852 B before, 536,911 B after.
+    # Round 132 moved this one by 3,701 B - the same 2,806 of contract
+    # as golden, plus **895 of this run's own measurements**: it carries
+    # Plane 2, so the CPU floor and the resolved width are rows here and
+    # not only prose. Measured on that branch: 532,486 B before,
+    # 536,187 B after.
+    # Merged, as golden above: 540,618 B measured. 542,000 keeps
+    # headroom of the same order.
+    # `UX-898`/`UX-903` then merged in and added the same 341 B of
+    # contract golden's note carries - this run declares no build class
+    # either, so none of it is payload. 540,959 B measured over that
+    # merge; the bound holds unmoved.
+    ("macro_micro", MACRO_MICRO, 542_000),             #  540,959 B
 ]
 
 

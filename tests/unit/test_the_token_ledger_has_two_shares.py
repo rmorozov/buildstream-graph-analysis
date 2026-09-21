@@ -146,13 +146,27 @@ class TestTheTokensByElementProducer:
         assert producer_tokens_by_element([], {1: "a.bst"}) == ({}, 0)
 
     def test_one_acquire_row(self):
+        """`UX-892` widened the raw shape to `(event, pid, t, tokens)`:
+        a `release` closes an interval, so the reducer keeps it and the
+        clock that came with it."""
         rows = [_wrapper_row(pid=1, tokens=3)]
-        assert producer_tokens_by_element(rows, {1: "held.bst"}) == (
-            {"held.bst": [3]}, 0)
+        raw, unmapped = producer_tokens_by_element(rows, {1: "held.bst"})
+        assert [(event, tokens) for event, _pid, _t, tokens
+                in raw["held.bst"]] == [("acquire", 3)]
+        assert unmapped == 0
 
-    def test_a_release_row_is_ignored(self):
+    def test_a_release_row_is_not_a_hold(self):
+        """Kept as an interval close (`UX-892`) and still not counted as
+        a grant: the reduction below reads `acquire` rows alone."""
         rows = [_wrapper_row(event="release", pid=1, tokens=3)]
-        assert producer_tokens_by_element(rows, {1: "held.bst"}) == ({}, 0)
+        raw, unmapped = producer_tokens_by_element(rows, {1: "held.bst"})
+        assert [event for event, _pid, _t, _tokens
+                in raw["held.bst"]] == ["release"]
+        assert unmapped == 0
+        by_element, _ = summarize_jobserver_tokens_by_element(
+            rows, {1: "held.bst"})
+        assert by_element["held.bst"]["tokens_held_p50"] is None
+        assert by_element["held.bst"]["tokens_held_max"] is None
 
     def test_a_pid_no_element_owns_is_unmapped(self):
         rows = [_wrapper_row(pid=99, tokens=3)]
@@ -164,12 +178,16 @@ class TestTheTokensByElementProducer:
         to disagree about which one to report."""
         rows = [_wrapper_row(pid=1, tokens=2), _wrapper_row(pid=1, tokens=4)]
         raw, unmapped = producer_tokens_by_element(rows, {1: "held.bst"})
-        assert raw == {"held.bst": [2, 4]}
+        assert [tokens for _event, _pid, _t, tokens
+                in raw["held.bst"]] == [2, 4]
         assert unmapped == 0
         by_element, unmapped = summarize_jobserver_tokens_by_element(
             rows, {1: "held.bst"})
-        assert by_element == {
-            "held.bst": {"tokens_held_p50": 3, "tokens_held_max": 4}}
+        assert by_element["held.bst"]["tokens_held_p50"] == 3
+        assert by_element["held.bst"]["tokens_held_max"] == 4
+        # `UX-892`'s share is `None`, not 1.0, where the element's own
+        # token-holding tools were not passed in: unknown is not full.
+        assert by_element["held.bst"]["tokens_series_coverage"] is None
         assert unmapped == 0
 
     def test_a_malformed_row_does_not_raise(self):

@@ -208,6 +208,10 @@ class ElementJoin:
     major_faults: Optional[int] = None
     involuntary_switches: Optional[int] = None
     requested_jobs: Optional[int] = None
+    # `UX-894`: the width BuildStream granted, and which of the two the
+    # ratio beside them divided by.
+    resolved_jobs: Optional[int] = None
+    jobs_denominator: Optional[str] = None
     native_findings: list[str] = field(default_factory=list)
     unused_dependencies: list[str] = field(default_factory=list)
     # `UX-681`: what "3 unused" is 3 *of*. The denominator is the
@@ -352,6 +356,10 @@ def _plane2_view(native_report: dict) -> dict[str, dict]:
         view.setdefault(element, {}).update(
             {
                 "requested_jobs": entry.get("requested_jobs"),
+                # `UX-894`: and the width the element was granted,
+                # which is what the ratio beside it divided by.
+                "resolved_jobs": entry.get("resolved_jobs"),
+                "jobs_denominator": entry.get("jobs_denominator"),
                 "native_findings": list(entry.get("findings") or []),
             }
         )
@@ -1112,7 +1120,10 @@ def compute_capacity_recommendation(
     number of builders the host's cores can feed at that draw is
     `host_cores * builders / cores_busy`, floored. It is an average over
     the whole run, not over the contended window, so it is a guide and
-    the payload says so.
+    the payload says so. `UX-861`: the ratio can put that figure above
+    the host's own cores, which is never a recommendation - it is
+    clamped to `host_cpu_count`, and the constraint row keeps the
+    unclamped figure as `clamped_from` so the reason stays legible.
 
     **What it will not do.** It never recommends a value it has no
     measurement for, and it does not try configurations - one capture
@@ -1141,7 +1152,13 @@ def compute_capacity_recommendation(
         })
     cpu_allows = int(host_cores * builders / cores_busy) if cores_busy > 0 else None
     if cpu_allows:
-        constraints.append({
+        # UX-861: the ratio is derived from a whole-run average, so it can
+        # exceed the host's own cores - a figure above what the machine
+        # has is never the recommendation, whatever the arithmetic says.
+        clamped_from = cpu_allows if cpu_allows > host_cores else None
+        if clamped_from:
+            cpu_allows = host_cores
+        constraint = {
             'name': 'CPU',
             'allows': cpu_allows,
             'reason': (
@@ -1149,7 +1166,10 @@ def compute_capacity_recommendation(
                 f"{builders}, i.e. {cores_busy / builders:.2f} core(s) per "
                 f"concurrent element"
             ),
-        })
+        }
+        if clamped_from:
+            constraint['clamped_from'] = clamped_from
+        constraints.append(constraint)
     memory_allows = _memory_allows(memory_envelope)
     if memory_allows:
         constraints.append({
@@ -1397,6 +1417,10 @@ def compute_jobserver_per_element(
     more specific fact - but never over `pinned`: Direction 20 argument
     1 makes `-j1` never join, so a pin sourced from BuildStream's own
     argv outranks a wrapper pid match, which is inference.
+
+    `decision` alone decides `yes` - a table-less kind that spent
+    `JOBS` (`jobs_env`, UX-859) reads `joined`/`capped_pending` exactly
+    as a table kind does, so it needs no policy name of its own here.
     """
     by_element = {}
     for row in decision_rows or []:
@@ -2335,6 +2359,8 @@ def correlate(analysis: dict, native_report: dict, tasks=None, run_context=None,
             major_faults=p2.get("major_faults"),
             involuntary_switches=p2.get("involuntary_switches"),
             requested_jobs=p2.get("requested_jobs"),
+            resolved_jobs=p2.get("resolved_jobs"),
+            jobs_denominator=p2.get("jobs_denominator"),
             native_findings=p2.get("native_findings", []),
             unused_dependencies=p2.get("unused_dependencies", []),
             assessed_dependencies=p2.get("assessed_dependencies"),

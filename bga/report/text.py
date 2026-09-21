@@ -4,6 +4,7 @@ from typing import Optional
 from .. import findings as findings_mod
 from .. import provenance, schemas, sources
 from ..findings import compute_findings, compute_headline, compute_next_steps, render_findings
+from ..floors.cpu import ASSUMPTIONS as cpu_floor_assumptions
 from ..ingest.models import AnalysisResult
 from ..units import GIB, US_PER_S
 from . import rate
@@ -82,6 +83,19 @@ def _format_instance(instance: dict) -> str:
     return "  ".join(
         instance[key] for key in ('started_at', 'run_dir') if instance.get(key)
     )
+
+
+def _format_build_class(instance: dict) -> Optional[str]:
+    """UX-898/UX-903: `Build class: review · sanitizer=address`, or None.
+
+    `None` rather than "undeclared" when the capture declared nothing:
+    that is every capture taken before the field existed, and a line
+    saying so on all of them is noise on the one screen a reader reads.
+    """
+    from ..buildclass import label
+
+    declared = label(instance.get('build_class'))
+    return f"Build class: {declared}" if declared else None
 
 
 def _format_jobserver_mode(instance: dict) -> str:
@@ -611,6 +625,13 @@ def _render_header_section(result: AnalysisResult, section, by_kind, full_sectio
     instance = getattr(result, 'run_instance', None) or {}
     if instance:
         lines.append(f"Instance: {_format_instance(instance)}")
+    # UX-903: and which build these durations describe. A reader who
+    # opens a capture has no other way to know the numbers in front of
+    # them are a sanitizer's. Nothing when nothing was declared, so a
+    # report from a capture without it is byte-identical to today's.
+    declared = _format_build_class(instance)
+    if declared:
+        lines.append(declared)
     lines.append(f"Total Duration: {result.total_duration_us / 1e6:.1f}s")
     # UX-156 item 2: before any efficiency number, because every one of
     # them describes a build that stopped early. `_format_key_findings`
@@ -704,6 +725,23 @@ def _render_floors_section(result: AnalysisResult, section, by_kind, full_sectio
                 f"  Dispatch Occupancy:          {occupancy_share * 100:.1f}% "
                 f"({schemas.description(schemas.ANALYZE, 'floors.occupancy_share')})"
             )
+        # `UX-891`: the floor above divides by builder slots; this one
+        # divides the CPU this capture measured by the machine's cores.
+        # Its assumptions print with it, the way `bga/capacity_model.py`
+        # prints its own - a floor whose caveats live in a task file is
+        # a floor a reader takes on trust.
+        lb_cpu_us = floors.get('lb_cpu_us')
+        if lb_cpu_us is not None:
+            coverage = floors.get('lb_cpu_coverage')
+            share = f", coverage {coverage:.2f}" if coverage is not None else ""
+            lines.append(
+                f"  LB_cpu (CPU over cores):     {lb_cpu_us / 1e6:.2f}s "
+                f"({floors.get('lb_cpu_governing_cores')} cores from "
+                f"{floors.get('lb_cpu_cores_source')}{share})"
+                + (" - binding" if floors.get('lb_cpu_binds') else "")
+            )
+            for sentence in cpu_floor_assumptions.values():
+                lines.append(f"    assumes: {sentence}")
         if floors.get('t_infinity_cold') is not None:
             partial_note = " (partial, confidence=low)" if floors.get('cold_partial') else ""
             lines.append(f"  T∞,cold (advisory):          {floors['t_infinity_cold'] / 1e6:.2f}s{partial_note}")

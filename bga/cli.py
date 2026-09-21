@@ -145,6 +145,33 @@ def _attach_resource_blast(run_dir, analyzer, result) -> None:
     }
 
 
+def _add_cpu_floor(result, native_report: dict, context) -> None:
+    """UX-891: `lb_cpu_us` beside `lb`, and the clause saying which binds.
+
+    `macro_micro` certifies four builder slots 29.1% used with zero
+    headroom, while 1.60 of its four cores were busy over the same
+    span. The second number was already in the same report and divided
+    by nothing.
+    """
+    from bga.floors.cpu import compute_cpu_floor
+
+    floors = getattr(result, 'floors', None)
+    if floors is None:
+        return
+    cpu_floor = compute_cpu_floor(native_report, context, floors.get('lb'))
+    if not cpu_floor:
+        return
+    floors.update(cpu_floor)
+    binds = 'the CPU floor' if cpu_floor['lb_cpu_binds'] else 'LB'
+    floors['capacity_model_note'] = (floors.get('capacity_model_note') or '') + (
+        f" This run also has a CPU floor, beside LB and not folded into "
+        f"it: {cpu_floor['lb_cpu_us'] / 1e6:.2f}s, the CPU this capture "
+        f"measured over {cpu_floor['lb_cpu_governing_cores']} governing "
+        f"cores ({cpu_floor['lb_cpu_cores_source']}) - {binds} is the "
+        f"binding one."
+    )
+
+
 def _attach_plane2_capacity(args: argparse.Namespace, analyzer, result) -> None:
     """UX-83: let Plane 1's capacity advice consult Plane 2, when Plane 2
     is in hand for the same run.
@@ -228,7 +255,26 @@ def _attach_plane2_capacity(args: argparse.Namespace, analyzer, result) -> None:
     # `bga correlate` calls. Held rather than joined here because the
     # join reads the finished analysis document, which does not exist
     # yet at this point in the pipeline.
+    # `UX-894`: score each element against the width BuildStream
+    # resolved for it, from the `graph.json` sitting in the same
+    # snapshot, rather than against the `-jN` its recipe wrote. Applied
+    # at read time as well as at capture time, so a report written
+    # before this item stops publishing a ratio over the wrong
+    # denominator the moment a graph is in hand.
+    run_dir = getattr(analyzer, 'run_dir', None) or directory
+    if run_dir:
+        plane2_shape.apply_resolved_widths(
+            native_report,
+            plane2_shape.resolved_widths(
+                os.path.join(str(run_dir), 'graph.json')))
     result.plane2_report = native_report
+    # UX-891: the one floor in this report divided by the machine's
+    # cores rather than by the scheduler's builder slots. Published
+    # beside `lb`, never folded into it - Part 16's terms certify
+    # against recorded capacities and still do. Here rather than in
+    # `_compute_floors` because the CPU it divides is Plane 2's, which
+    # is joined at this point in the pipeline and not before.
+    _add_cpu_floor(result, native_report, context)
     # UX-104: the memory half of the same question. `--builders` is the
     # knob both halves are about, and advice that clears the CPU check
     # and blows the memory one is advice to build into swap - the worst
@@ -1019,6 +1065,35 @@ def _compare_exit_code(args: argparse.Namespace, comparison) -> int:
             f"already reaches 33%; across machines the difference between "
             f"the two runs is not evidence about the change. Pass "
             f"--allow-cross-host if your runners are uniform and you accept that.",
+            file=sys.stderr,
+        )
+        return EXIT_CODE_MISMATCHED_RUNS
+
+    # UX-898/UX-903: and whether they are the same build at all. The
+    # same shape, the same code and the same place in the order as the
+    # cross-host gate above, because it is the same kind of refusal: a
+    # review build against a nightly, or a sanitizer build against a
+    # release one, is two populations however uniform the runners are.
+    # The escape hatch is `--blend` rather than a second `--allow-*`
+    # spelling: the store aggregate has meant "I take the mixed claim
+    # myself" by that word since UX-234, and one word for one act is
+    # worth more than symmetry with the flag above.
+    class_comparison = getattr(comparison, 'build_class_comparison', None) or {}
+    if (class_comparison.get('status') == 'different'
+            and not getattr(args, 'blend', False)):
+        baseline_class = (getattr(comparison, 'baseline_run_instance', None)
+                          or {}).get('build_class')
+        candidate_class = (getattr(comparison, 'candidate_run_instance', None)
+                           or {}).get('build_class')
+        from .buildclass import label as _class_label
+        print(
+            f"Mixed build class gate FAILED: baseline declares "
+            f"{_class_label(baseline_class)} and candidate declares "
+            f"{_class_label(candidate_class)}. A build type says when and why "
+            f"a build ran and a variant says what it did, so these are two "
+            f"populations and the difference between them is not evidence "
+            f"about the change. Pass --blend to state the mixed claim "
+            f"yourself.",
             file=sys.stderr,
         )
         return EXIT_CODE_MISMATCHED_RUNS
@@ -2174,6 +2249,13 @@ def _add_compare_subcommand(subparsers) -> None:
         help='UX-186: let the CI gates pass on runs measured on different '
              'machines. For a farm of uniform runners, opted into once.'
     )
+    compare_parser.add_argument(
+        '--blend', action='store_true',
+        help='UX-898/UX-903: let the CI gates pass on runs declaring '
+             'different build types or variants. The same word `bga '
+             'snapshot --aggregate` already uses for taking a mixed claim '
+             'yourself.'
+    )
     compare_parser.add_argument('-v', '--verbose', action='store_true', help='Verbose (DEBUG) logging.')
     compare_parser.add_argument('-q', '--quiet', action='store_true', help='Errors only.')
     compare_parser.add_argument('--log-file', type=str, default=None, metavar='PATH', help='Also write logs to PATH.')
@@ -2498,34 +2580,42 @@ def _capture_builders(wrapped_cmd: list) -> Optional[int]:
 
 def resolve_jobserver_ceiling(
     value: str, wrapped_cmd: list, cpu_count: Optional[int] = None,
-) -> tuple[Optional[str], Optional[int]]:
-    """`bga capture --jobserver auto|N|off` (UX-851) -> `(mode,
-    ceiling)`, the tracer's own `--jobserver N` never sees `auto`/`off`.
+) -> tuple[Optional[str], Optional[int], Optional[int]]:
+    """`bga capture --jobserver auto|N|off` (UX-851) -> `(mode, ceiling,
+    seed)`, the tracer's own `--jobserver N` never sees `auto`/`off`.
 
-    `auto` sizes the pool to the host's cores minus BuildStream's own
-    `--builders` in the wrapped command, or minus 1 when that is not
-    named - floored at 1, since a jobserver of zero tokens is not one.
+    UX-858: the ceiling is the pool's *capacity*, not its opening seed -
+    `auto` sizes it to the host's cores, floor and all, so a pool can
+    always grow to fill the machine. The seed - what the FIFO opens
+    holding - is `cores - builders`, or `cores - 1` when `--builders`
+    was not named, floored at 0 and capped at `ceiling - 1` (never the
+    full ceiling, `PoolController`'s own invariant); with 16 builders on
+    16 cores that floors at 0 rather than stalling the ceiling itself at
+    1, and `--builders 0` caps at `ceiling - 1` rather than filling the
+    FIFO to capacity. This changes the no-`--builders` case: on 4 cores
+    the ceiling was 3 seeded 2 before UX-858, is 4 seeded 3 now - a lone
+    element now runs 4 jobs on 4 cores, not 3 (examples/11's README).
     `cpu_count` is a parameter (default `os.cpu_count()`) so this is
     testable against a fake host rather than the real one.
     """
     if value == 'off':
-        return 'off', None
+        return 'off', None, None
     if value == 'auto':
         cores = cpu_count if cpu_count is not None else os.cpu_count()
         if cores is None:
-            return 'auto', 1
+            return 'auto', 1, 0
         builders = _capture_builders(wrapped_cmd)
         headroom = builders if builders is not None else 1
-        return 'auto', max(1, cores - headroom)
+        return 'auto', cores, min(cores - 1, max(0, cores - headroom))
     try:
         ceiling = int(value)
     except ValueError:
-        return None, None
+        return None, None, None
     # A pool of no tokens is the mode off; a negative one is a typo the
     # tracer's own parser reports (UX-851's verifier).
     if ceiling == 0:
-        return 'off', None
-    return ('n', ceiling) if ceiling > 0 else (None, None)
+        return 'off', None, None
+    return ('n', ceiling, max(0, ceiling - 1)) if ceiling > 0 else (None, None, None)
 
 
 def set_jobserver_mode_env(mode: Optional[str]) -> None:
@@ -2537,6 +2627,25 @@ def set_jobserver_mode_env(mode: Optional[str]) -> None:
     before the tracer's `main()` reads it back for `run-context.json`.
     """
     os.environ['BGA_JOBSERVER_MODE'] = mode or 'off'
+
+
+def _jobserver_argv_tokens(mode: Optional[str], ceiling: Optional[int],
+                           seed: Optional[int], eq: bool) -> list:
+    """UX-858: the `--jobserver`/`--jobserver-seed` tokens a resolved
+    mode translates to - `[]` for `off`, `=`-joined when `eq` (the
+    `--jobserver=N` spelling). Split out of `_translate_capture_jobserver`
+    to keep its own branch count where `dev_baseline.py --check` had it."""
+    if mode == 'off':
+        return []
+    if eq:
+        tokens = [f'--jobserver={ceiling}']
+        if seed is not None:
+            tokens.append(f'--jobserver-seed={seed}')
+        return tokens
+    tokens = ['--jobserver', str(ceiling)]
+    if seed is not None:
+        tokens.extend(['--jobserver-seed', str(seed)])
+    return tokens
 
 
 def _translate_capture_jobserver(argv: list) -> list:
@@ -2576,27 +2685,167 @@ def _translate_capture_jobserver(argv: list) -> list:
     while i < len(tracer_args):
         tok = tracer_args[i]
         if tok == '--jobserver' and i + 1 < len(tracer_args):
-            mode, ceiling = resolve_jobserver_ceiling(tracer_args[i + 1], wrapped_cmd)
+            mode, ceiling, seed = resolve_jobserver_ceiling(tracer_args[i + 1], wrapped_cmd)
             if mode is None:
                 out.extend([tok, tracer_args[i + 1]])
             else:
                 set_jobserver_mode_env(mode)
-                if mode != 'off':
-                    out.extend([tok, str(ceiling)])
+                out.extend(_jobserver_argv_tokens(mode, ceiling, seed, eq=False))
             i += 2
             continue
         if tok.startswith('--jobserver='):
-            mode, ceiling = resolve_jobserver_ceiling(tok.split('=', 1)[1], wrapped_cmd)
+            mode, ceiling, seed = resolve_jobserver_ceiling(tok.split('=', 1)[1], wrapped_cmd)
             if mode is None:
                 out.append(tok)
             else:
                 set_jobserver_mode_env(mode)
-                if mode != 'off':
-                    out.append(f'--jobserver={ceiling}')
+                out.extend(_jobserver_argv_tokens(mode, ceiling, seed, eq=True))
             i += 1
             continue
         out.append(tok)
         i += 1
+    new_rest = out + (['--'] + wrapped_cmd if has_sep else [])
+    return argv[:2] + new_rest
+
+
+def _translate_capture_jobserver_auth_override(argv: list) -> list:
+    """`bga capture run ... --jobserver-auth-override 'fd:<glob>[,<glob>]
+    fifo:<glob> off:<glob>' ...` (UX-879) -> `BST_TRACE_JOBSERVER_AUTH_MAP`
+    in this process's own environment, and the flag stripped from argv -
+    the tracer's own argparse never sees it. Repeatable (each occurrence's
+    groups join into the one map, `;`-separated) or one value with
+    space-separated groups, since a shell hands a quoted string through
+    as a single argv token either way.
+
+    Always resolves (or clears) the env var on every `capture run`, the
+    same stale-value discipline `set_jobserver_mode_env` documents for
+    `BGA_JOBSERVER_MODE` - a prior in-process call's map must not survive
+    into a capture that named none.
+    """
+    if len(argv) < 2 or argv[0] != 'capture' or argv[1] != 'run':
+        return argv
+    rest = argv[2:]
+    if '--' in rest:
+        split = rest.index('--')
+        tracer_args, wrapped_cmd = rest[:split], rest[split + 1:]
+        has_sep = True
+    else:
+        tracer_args, wrapped_cmd = rest, []
+        has_sep = False
+    out = []
+    groups = []
+    i = 0
+    while i < len(tracer_args):
+        tok = tracer_args[i]
+        if tok == '--jobserver-auth-override' and i + 1 < len(tracer_args):
+            groups.append(';'.join(tracer_args[i + 1].split()))
+            i += 2
+            continue
+        if tok.startswith('--jobserver-auth-override='):
+            groups.append(';'.join(tok.split('=', 1)[1].split()))
+            i += 1
+            continue
+        out.append(tok)
+        i += 1
+    if groups:
+        os.environ['BST_TRACE_JOBSERVER_AUTH_MAP'] = ';'.join(groups)
+    else:
+        os.environ.pop('BST_TRACE_JOBSERVER_AUTH_MAP', None)
+    new_rest = out + (['--'] + wrapped_cmd if has_sep else [])
+    return argv[:2] + new_rest
+
+
+def _translate_capture_lto_cap(argv: list) -> list:
+    """`bga capture run ... --lto-cap N ...` (UX-880) -> `BST_TRACE_LTO_CAP`
+    in this process's own environment, the flag stripped from argv - the
+    same channel `--jobserver-auth-override` uses, the tracer's own
+    argparse never seeing either. Last occurrence wins; absent clears a
+    stale value, the same discipline as the sibling translation above.
+    """
+    if len(argv) < 2 or argv[0] != 'capture' or argv[1] != 'run':
+        return argv
+    rest = argv[2:]
+    if '--' in rest:
+        split = rest.index('--')
+        tracer_args, wrapped_cmd = rest[:split], rest[split + 1:]
+        has_sep = True
+    else:
+        tracer_args, wrapped_cmd = rest, []
+        has_sep = False
+    out = []
+    value = None
+    i = 0
+    while i < len(tracer_args):
+        tok = tracer_args[i]
+        if tok == '--lto-cap' and i + 1 < len(tracer_args):
+            value = tracer_args[i + 1]
+            i += 2
+            continue
+        if tok.startswith('--lto-cap='):
+            value = tok.split('=', 1)[1]
+            i += 1
+            continue
+        out.append(tok)
+        i += 1
+    if value:
+        os.environ['BST_TRACE_LTO_CAP'] = value
+    else:
+        os.environ.pop('BST_TRACE_LTO_CAP', None)
+    new_rest = out + (['--'] + wrapped_cmd if has_sep else [])
+    return argv[:2] + new_rest
+
+
+def _translate_capture_wrapper_dir(argv: list) -> list:
+    """`bga capture run ... --wrapper-dir PATH [--wrapper-dir-mode
+    augment|replace] ...` (UX-881) -> `BST_TRACE_WRAPPER_DIR_OVERRIDE` /
+    `BST_TRACE_WRAPPER_MODE` in this process's own environment, both
+    flags stripped from argv - the same channel `--lto-cap` uses.
+    `docs/guides/wrapper-contract.md` states what the directory must
+    satisfy. Last occurrence of either wins; absent clears a stale
+    value, the same discipline as the sibling translations above.
+    """
+    if len(argv) < 2 or argv[0] != 'capture' or argv[1] != 'run':
+        return argv
+    rest = argv[2:]
+    if '--' in rest:
+        split = rest.index('--')
+        tracer_args, wrapped_cmd = rest[:split], rest[split + 1:]
+        has_sep = True
+    else:
+        tracer_args, wrapped_cmd = rest, []
+        has_sep = False
+    out = []
+    wrapper_dir = None
+    wrapper_mode = None
+    i = 0
+    while i < len(tracer_args):
+        tok = tracer_args[i]
+        if tok == '--wrapper-dir' and i + 1 < len(tracer_args):
+            wrapper_dir = tracer_args[i + 1]
+            i += 2
+            continue
+        if tok.startswith('--wrapper-dir='):
+            wrapper_dir = tok.split('=', 1)[1]
+            i += 1
+            continue
+        if tok == '--wrapper-dir-mode' and i + 1 < len(tracer_args):
+            wrapper_mode = tracer_args[i + 1]
+            i += 2
+            continue
+        if tok.startswith('--wrapper-dir-mode='):
+            wrapper_mode = tok.split('=', 1)[1]
+            i += 1
+            continue
+        out.append(tok)
+        i += 1
+    if wrapper_dir:
+        os.environ['BST_TRACE_WRAPPER_DIR_OVERRIDE'] = wrapper_dir
+    else:
+        os.environ.pop('BST_TRACE_WRAPPER_DIR_OVERRIDE', None)
+    if wrapper_mode:
+        os.environ['BST_TRACE_WRAPPER_MODE'] = wrapper_mode
+    else:
+        os.environ.pop('BST_TRACE_WRAPPER_MODE', None)
     new_rest = out + (['--'] + wrapped_cmd if has_sep else [])
     return argv[:2] + new_rest
 
@@ -2765,6 +3014,14 @@ def _run(argv: Optional[list[str]] = None) -> int:
     # vocabulary, resolved before the tracer ever sees it - see
     # `_translate_capture_jobserver`.
     raw_argv = _translate_capture_jobserver(raw_argv)
+    # UX-879: `--jobserver-auth-override` is `bga`'s own flag too, never
+    # the tracer's - see `_translate_capture_jobserver_auth_override`.
+    raw_argv = _translate_capture_jobserver_auth_override(raw_argv)
+    # UX-880: same shape, one value - see `_translate_capture_lto_cap`.
+    raw_argv = _translate_capture_lto_cap(raw_argv)
+    # UX-881: an operator's own wrapper directory, augmenting or
+    # replacing the shipped one - see `_translate_capture_wrapper_dir`.
+    raw_argv = _translate_capture_wrapper_dir(raw_argv)
 
     from .tools_dispatch import dispatch
     tool_exit = dispatch(raw_argv)

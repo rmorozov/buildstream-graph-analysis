@@ -22,6 +22,7 @@ that "not measured" and "measured as none" are different facts.
 """
 from typing import Optional
 
+from .cache_capacity import parse_percentage
 from .sources import split_by_kind
 
 # A hit ratio at or above this is not worth a line of report: the cache
@@ -102,8 +103,125 @@ def _transfer_us(tasks) -> dict[str, int]:
     return totals
 
 
+def _transfer_window_us(tasks) -> Optional[int]:
+    """How long this build was transferring, as a union of spans.
+
+    `UX-897`: `_transfer_us` above *sums* task durations, so two
+    concurrent pulls count twice - which is right for "how much pulling
+    did this build do" and wrong for the denominator of a throughput,
+    where it would halve the rate a link actually achieved. The union is
+    the wall-clock the transfers occupied, so bytes over it is a rate a
+    reader can compare against a link's capability.
+
+    `None` when the run has no transfer span at all.
+    """
+    spans = sorted(
+        (task.start_us, task.finish_us) for task in tasks or []
+        if getattr(getattr(task, 'primary_resource', None), 'value',
+                   getattr(task, 'primary_resource', None)) in ('DOWNLOAD', 'UPLOAD')
+    )
+    if not spans:
+        return None
+    total, open_start, open_end = 0, spans[0][0], spans[0][1]
+    for start, finish in spans[1:]:
+        if start > open_end:
+            total += open_end - open_start
+            open_start, open_end = start, finish
+        else:
+            open_end = max(open_end, finish)
+    return total + (open_end - open_start)
+
+
+def compute_cache_capacity(run_context) -> dict:
+    """UX-896: whether the cache was big enough to hold what it was
+    asked to hold.
+
+    The three behaviour numbers above describe a cache that rebuilt;
+    they cannot say *why*. A volatile key and a cache too small to keep
+    the artifact both produce a rebuild, and until this block only the
+    first had a name - so the field case (an agent holding most of a
+    project and evicting the rest) read as a cache-key problem and got
+    cache-key advice.
+
+    Every value here is derived from what the capture recorded and is
+    `None` when its inputs are. A quota of `infinity` records a declared
+    quota with no byte value, so `quota_bytes` is `None` and nothing
+    below it fires: that is a cache with no ceiling, not a cache with a
+    ceiling of nothing.
+
+    Not published here: what this project's artifacts weigh. See
+    `cache_capacity`'s own docstring for why BuildStream 2.8.0 has no
+    cheap exact source for it, and `UX-907` for the question.
+    """
+    recorded = getattr(run_context, 'cache_capacity', None) or {}
+    if not recorded:
+        return {}
+
+    quota = recorded.get('quota_bytes')
+    used = recorded.get('cache_used_bytes')
+    volume_total = recorded.get('volume_total_bytes')
+    reserved = recorded.get('reserved_bytes')
+    watermark = parse_percentage(recorded.get('low_watermark_declared'))
+
+    capacity = {
+        'cachedir': recorded.get('cachedir'),
+        'quota_declared': recorded.get('quota_declared'),
+        'quota_bytes': quota,
+        'volume_total_bytes': volume_total,
+        'volume_free_bytes': recorded.get('volume_free_bytes'),
+        'cache_used_bytes': used,
+        'cache_used_source': recorded.get('cache_used_source'),
+        'low_watermark_share': watermark,
+        'used_share': None,
+        'headroom_bytes': None,
+        'at_low_watermark': None,
+        'quota_over_volume_bytes': None,
+    }
+    if quota and used is not None:
+        capacity['used_share'] = used / quota
+        # Signed on purpose: negative headroom is the shortfall the
+        # acceptance test asks for, and one field that can go below zero
+        # beats two that each mean half of the same subtraction.
+        capacity['headroom_bytes'] = quota - used
+        if watermark is not None:
+            capacity['at_low_watermark'] = capacity['used_share'] >= watermark
+    # What the volume can actually give the cache: its whole size less
+    # the share BuildStream is configured to keep free. A quota above
+    # that is a ceiling the disk will never let the cache reach, which
+    # is a sizing answer on its own and needs no walk to find.
+    if quota and volume_total:
+        usable = volume_total - (reserved or 0)
+        if quota > usable:
+            capacity['quota_over_volume_bytes'] = quota - usable
+    return capacity
+
+
+def _transfer_bytes(network_bytes: Optional[dict]) -> dict:
+    """The run's own byte counts, or `{}`.
+
+    `UX-897`: BuildStream reports none - `_artifactcache.py` logs
+    `Pulled artifact <key> <- <remote>` with no size, per element or per
+    session - so these are the host's interface counters over the
+    build's span, read by the same sampler that already reads
+    `/proc/meminfo`. They are the host's traffic, not BuildStream's, and
+    the schema and the finding both say so: on a shared machine they are
+    an upper bound on what the build moved.
+
+    `{}` rather than zeros when the capture carries no counters, which
+    is every capture older than this field.
+    """
+    if not network_bytes:
+        return {}
+    rx = network_bytes.get('rx_bytes')
+    tx = network_bytes.get('tx_bytes')
+    if not isinstance(rx, int) or not isinstance(tx, int):
+        return {}
+    return {'rx': rx, 'tx': tx, 'total': rx + tx, 'source': 'host_counters'}
+
+
 def compute_cache_accounting(
     run_context, graph=None, tasks=None, total_duration_us: Optional[int] = None,
+    network_bytes: Optional[dict] = None,
 ) -> dict:
     """UX-92 stage 1: the cache's own report card for one run.
 
@@ -113,8 +231,12 @@ def compute_cache_accounting(
     """
     build = _queue(run_context, 'build')
     fetch = _queue(run_context, 'fetch')
+    # UX-896: capacity is a fact about the machine, not about the queue,
+    # so a capture that recorded it is worth a block even where no
+    # Pipeline Summary says what the queues did.
+    capacity = compute_cache_capacity(run_context)
     if not build and not fetch:
-        return {}
+        return {'capacity': capacity} if capacity else {}
 
     built = build.get('processed')
     cached = build.get('skipped')
@@ -134,6 +256,21 @@ def compute_cache_accounting(
         accounting['transfer_us'] = transfer
         if total_duration_us:
             accounting['transfer_share'] = sum(transfer.values()) / total_duration_us
+        # `UX-897`: the share says how much of the build was transfer
+        # and cannot say whether the link, the remote or the object
+        # count is why - three causes, three fixes, and one of them is
+        # hardware somebody would be asked to buy. The window is
+        # published whether or not bytes arrived, because it is the
+        # denominator a later capture's bytes would divide by.
+        window_us = _transfer_window_us(tasks)
+        if window_us:
+            accounting['transfer_window_us'] = window_us
+        moved = _transfer_bytes(network_bytes)
+        if moved:
+            accounting['transfer_bytes'] = moved
+            if window_us:
+                accounting['transfer_rate_bytes_per_s'] = (
+                    moved['total'] / (window_us / 1e6))
 
     # The requested target's own closure, which is the number a build
     # owner actually asked about: a project-wide 72% means little when
@@ -160,6 +297,8 @@ def compute_cache_accounting(
                 (len(closure) - len(in_closure_built)) / len(closure) if closure else None
             ),
         }
+    if capacity:
+        accounting['capacity'] = capacity
     return accounting
 
 

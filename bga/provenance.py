@@ -553,6 +553,22 @@ _CLAIMS = {
         ("cache.hit_share", "cache.built_elements",
          "cache.cached_elements", "confidence.run_mode"),
         _cache_hit_rule, ()),
+    # `UX-896`: two claims under one id, and both fire on a recorded
+    # fact rather than on a threshold this repository chose - the
+    # watermark is BuildStream's own configuration, and the volume is
+    # the disk. `_unconditional` is the honest rule shape for that.
+    "cache-capacity": (
+        ("cache.capacity.quota_bytes", "cache.capacity.cache_used_bytes",
+         "cache.capacity.used_share", "cache.capacity.headroom_bytes",
+         "cache.capacity.low_watermark_share",
+         "cache.capacity.quota_over_volume_bytes"),
+        _unconditional(
+            "Published when the capture recorded a quota and the cache is "
+            "at or past the low watermark BuildStream itself is configured "
+            "with, or the quota exceeds what its volume can give. No "
+            "threshold of this repository's own: both comparisons are "
+            "against numbers the host declared."),
+        ()),
     "cache-transfer-cost": (
         ("cache.transfer_share",),
         _rule("TRANSFER_SHARE_NOTABLE", TRANSFER_SHARE_NOTABLE, ">=",
@@ -619,6 +635,17 @@ _CLAIMS = {
         _unconditional(
             "Published whenever the four constraints could be intersected; "
             "which one binds is the finding's own `evidence`."),
+        ()),
+    # `UX-860`: **no evidence path**, `graph-width`'s reason again - the
+    # span and page count are read from `overcommitted_intervals`' rows
+    # and summed into the finding's own `evidence`, and no document
+    # field names that sum directly.
+    "swap-observed": (
+        (),
+        _unconditional(
+            "Published whenever an overcommitted window's own `swapped_out` "
+            "count is over zero - the span and the pages are the finding's "
+            "own `evidence`."),
         ()),
     # `UX-680`: **no evidence path**, for `graph-width`'s reason - both
     # halves live in `findings[].evidence.{unbounded_builders,

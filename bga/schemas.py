@@ -1450,7 +1450,7 @@ _COMPARE_REQUIRED = {
 # live id stops a document a consumer already wrote from validating.
 # The guarantee is the emitter's, held against the real payload by
 # `tests/unit/test_a_required_set_grew_under_an_unchanged_id.py`.
-_COMPARE_ALWAYS_WRITTEN = ("verdict_provenance",)
+_COMPARE_ALWAYS_WRITTEN = ("verdict_provenance", "build_class_comparison")
 
 # UX-221: `element_diff` has been emitted since UX-79 and declared by
 # nothing, so `UX-190`'s contract never covered it and `bga view` had no
@@ -1474,6 +1474,13 @@ _COMPARE_OPTIONAL = {
     # it is `_COMPARE_ALWAYS_WRITTEN` above rather than required
     # (`UX-629`): required would break every document written before it.
     "verdict_provenance": "object",
+    # `UX-898`/`UX-903`: whether the two runs declared the same build.
+    # Written on every comparison - `{"status": "absent"}` when neither
+    # run declared one, which is every capture taken before the field -
+    # so `_COMPARE_ALWAYS_WRITTEN` rather than required, the same third
+    # state `verdict_provenance` above is in and the same shape
+    # `host_comparison` already has.
+    "build_class_comparison": "object",
 }
 
 _BLAST_REQUIRED = {
@@ -1647,6 +1654,20 @@ _JOIN_ITEM_PROPERTIES = {
         "description": "The parallelism the element's own build "
                        "commands asked for, read from the observed "
                        "argv - not what BuildStream granted."},
+    # `UX-894`: what BuildStream granted, which is the number the ratio
+    # divides by. Two numbers that can disagree are two fields.
+    "resolved_jobs": {
+        QUANTITY: "count",
+        "description": "The width BuildStream resolved for this "
+                       "element, from `graph.json`. `notparallel` is a "
+                       "width of one, not a missing value; an element "
+                       "with no resolved width gets no ratio."},
+    "jobs_denominator": {
+        "description": "Which of the two widths the achieved ratio "
+                       "divided by. `graph` is the resolved width; "
+                       "absent means no ratio was computed. Achieved "
+                       "concurrency above the granted width is held at "
+                       "1.0 and reported as a finding instead."},
     "peak_rss_bytes": {
         QUANTITY: "bytes",
         "description": "The largest single process's resident memory, "
@@ -1767,6 +1788,10 @@ _INTERVAL_COLUMNS = [
     {"key": "lost_core_seconds", "title": "Lost core-seconds",
      "quantity": "ratio", "sortable": True},
     {"key": "load1", "title": "Load", "quantity": "ratio"},
+    # `UX-860`: additive - `overcommitted`'s own test reads this,
+    # `_row` only started publishing it.
+    {"key": "swapped_out", "title": "Pages swapped out",
+     "quantity": "count", "sortable": True},
     {"key": "building", "title": "Building (with its max-jobs)"},
     {"key": "ready_not_dispatched", "title": "Ready, not dispatched"},
     {"key": "just_finished", "title": "Just finished"},
@@ -1796,6 +1821,12 @@ _EVIDENCE_FIELDS = {
     "sum_of_individual_us": ("duration_us",
         "The savings added one at a time, which double-counts the "
         "overlap. Published beside `joint_saving_us` to show the gap."),
+    "swap_start_offset_us": ("duration_us",
+        "Offset from the run's start where the earliest swapping window "
+        "opens."),
+    "swap_end_offset_us": ("duration_us",
+        "Offset from the run's start where the latest swapping window "
+        "closes."),
     "t_infinity_us": ("duration_us",
         "The critical path with builders unlimited - the floor the "
         "graph's shape imposes by itself."),
@@ -1878,6 +1909,11 @@ _EVIDENCE_FIELDS = {
     "recommended_builders": ("count",
         "The builder count this run's evidence supports, bounded by "
         "memory wherever memory was measured."),
+    "swap_window_count": ("count",
+        "Overcommitted windows that recorded a page written to swap."),
+    "swapped_out_pages": ("count",
+        "Pages written to swap across the named windows - `pswpout`'s "
+        "delta, summed."),
     "violation_count": ("count",
         "Ordering violations in the recorded log. Each one weakens every "
         "timing conclusion drawn from it."),
@@ -1892,6 +1928,33 @@ _EVIDENCE_FIELDS = {
         "parallelism its own build actually achieved."),
     "measured_us": ("duration_us",
         "Wall-clock actually measured, as opposed to estimated."),
+    # `UX-896`: the cache's ceiling. Every one of these is null rather
+    # than zero when the capture did not record it.
+    "quota_bytes": ("bytes",
+        "The local artifact cache's configured ceiling, resolved against "
+        "the volume it sits on."),
+    "volume_total_bytes": ("bytes",
+        "The size of the filesystem the cache directory is on."),
+    "quota_over_volume_bytes": ("bytes",
+        "How much the quota exceeds what that volume can give after the "
+        "reserved share - a ceiling the disk will not let the cache reach."),
+    "cache_used_bytes": ("bytes",
+        "What the CAS occupies, walked at capture time."),
+    "used_share": ("share",
+        "What the cache holds over what its quota allows it to."),
+    "headroom_bytes": ("bytes",
+        "Quota less what is used; negative is the shortfall."),
+    "low_watermark_share": ("share",
+        "The share of the quota BuildStream retains when it cleans up."),
+    # `UX-897`: the rate beside the share.
+    "transfer_bytes": ("bytes",
+        "What the host moved while this build ran - its own interface "
+        "counters, so an upper bound on what the build moved."),
+    "transfer_rate_bytes_per_s": ("bytes",
+        "Bytes over the wall-clock the transfers occupied, which is the "
+        "rate the link actually achieved."),
+    "transfer_window_us": ("duration_us",
+        "The wall-clock the transfers occupied, as a union of their spans."),
 }
 
 # `UX-346`: the evidence keys whose sentence stays beside the number,
@@ -1962,6 +2025,10 @@ EVIDENCE_QUANTITIES.update({
         "allows": {
             QUANTITY: "count",
             "description": "How many builders this particular ceiling permits."},
+        "clamped_from": {
+            QUANTITY: "count",
+            "description": "`UX-861`: the CPU figure before it was capped "
+                           "to `host_cpu_count` - present only when it was."},
     }}},
     "rows": {"items": {"properties": {
         "duration_us": {
@@ -2804,6 +2871,113 @@ _SIGNALS_TABLES = {
                 "description": "The sum of `transfer_us` over the "
                                "run's wall-clock - how much of this "
                                "build was moving artifacts."},
+            # `UX-897`: the share says how much of the build was
+            # transfer and cannot say why. These three make it a rate.
+            "transfer_window_us": {
+                QUANTITY: "duration_us",
+                "description": "The wall-clock the transfers occupied, "
+                               "as a union of their spans rather than a "
+                               "sum - the denominator a throughput "
+                               "needs, where `transfer_us` counts two "
+                               "concurrent pulls twice."},
+            "transfer_bytes": {
+                "description": "What the host moved while this build "
+                               "ran. BuildStream reports no byte count, "
+                               "per element or per session, so these "
+                               "are the host's own interface counters "
+                               "over the build's span: on a shared "
+                               "machine they are an upper bound on what "
+                               "the build moved, and loopback is "
+                               "excluded.",
+                "properties": {
+                    "rx": {QUANTITY: "bytes",
+                           "description": "Bytes the host received."},
+                    "tx": {QUANTITY: "bytes",
+                           "description": "Bytes the host sent."},
+                    "total": {QUANTITY: "bytes",
+                              "description": "`rx` and `tx` together."},
+                    "source": {
+                        "description": "Where the counts came from; "
+                                       "`host_counters` is the only "
+                                       "source today."}}},
+            "transfer_rate_bytes_per_s": {
+                QUANTITY: "bytes",
+                "description": "`transfer_bytes.total` over "
+                               "`transfer_window_us` - the rate the "
+                               "link achieved while this build was "
+                               "transferring, which says whether more "
+                               "bandwidth would help or the object "
+                               "count would be slow on any link."},
+            # `UX-896`: the cache's ceiling, beside what it did with it.
+            # Present only where the capture recorded a capacity block,
+            # and every number inside it null rather than zero when
+            # unread: a quota of `infinity` is a cache with no ceiling,
+            # not a cache with a ceiling of nothing, and a sizing
+            # decision taken on the second would be wrong by the whole
+            # disk.
+            "capacity": {
+                "description": "What the local cache was configured to "
+                               "hold and what the volume under it can "
+                               "give. Does not carry per-element "
+                               "artifact size: BuildStream 2.8.0 has no "
+                               "cheap exact source for it (UX-907).",
+                "properties": {
+                    "cachedir": {
+                        "description": "The cache directory these "
+                                       "numbers are about."},
+                    "quota_declared": {
+                        "description": "The quota as the configuration "
+                                       "spells it - a size, a "
+                                       "percentage, or `infinity`."},
+                    "quota_bytes": {
+                        QUANTITY: "bytes",
+                        "description": "The quota resolved against the "
+                                       "volume, or null where it is "
+                                       "`infinity` or unparseable."},
+                    "volume_total_bytes": {
+                        QUANTITY: "bytes",
+                        "description": "The size of the filesystem the "
+                                       "cache directory is on."},
+                    "volume_free_bytes": {
+                        QUANTITY: "bytes",
+                        "description": "Free space on that filesystem "
+                                       "at capture time."},
+                    "cache_used_bytes": {
+                        QUANTITY: "bytes",
+                        "description": "What the CAS occupies, from an "
+                                       "opt-in walk at capture time; "
+                                       "null when nobody walked it."},
+                    "cache_used_source": {
+                        "description": "How `cache_used_bytes` was "
+                                       "obtained: `cas_walk`, "
+                                       "`not_walked`, `absent`, or "
+                                       "`budget_exceeded`."},
+                    "low_watermark_share": {
+                        QUANTITY: "share",
+                        "description": "The share of the quota "
+                                       "BuildStream retains when it "
+                                       "cleans up."},
+                    "used_share": {
+                        QUANTITY: "share",
+                        "description": "What the cache holds over what "
+                                       "its quota allows it to."},
+                    "headroom_bytes": {
+                        QUANTITY: "bytes",
+                        "description": "Quota less what is used. "
+                                       "Negative is the shortfall - one "
+                                       "signed field rather than two "
+                                       "halves of the same "
+                                       "subtraction."},
+                    "at_low_watermark": {
+                        "description": "Whether the cache is at or past "
+                                       "the watermark, so BuildStream "
+                                       "is already evicting."},
+                    "quota_over_volume_bytes": {
+                        QUANTITY: "bytes",
+                        "description": "How much the quota exceeds what "
+                                       "the volume can give after the "
+                                       "reserved share; absent when it "
+                                       "does not."}}},
             "target_closure": {
                 "description": "The same question restricted to "
                                "what the target actually needs.",
@@ -3047,6 +3221,19 @@ _RUN_INSTANCE_HINT = {
                 "description": "Memory the host reported, which the "
                                "memory ceiling is computed against."},
         }},
+        # UX-898/UX-903: additive, no version bump - absent for a
+        # capture that declared neither half of its build class.
+        "build_class": {"properties": {
+            "type": {
+                "description": "What kind of build this was - night, "
+                               "review, guard. Free text the pipeline "
+                               "declares; two runs declaring different "
+                               "types are two populations."},
+            "variant": {
+                "description": "The named dimensions of what the build "
+                               "did - arch, sanitizer, coverage - "
+                               "several of which are true at once."},
+        }},
         # UX-851: additive, no version bump - absent for a capture older
         # than `bga capture --jobserver`.
         "jobserver": {"properties": {
@@ -3055,8 +3242,14 @@ _RUN_INSTANCE_HINT = {
                                "this run's jobserver."},
             "ceiling": {
                 QUANTITY: "count",
-                "description": "The token count given or derived; null "
-                               "when off."},
+                "description": "The pool's capacity: the host's cores "
+                               "under auto, the value given under n; "
+                               "null when off."},
+            "seed": {
+                QUANTITY: "count",
+                "description": "Tokens the FIFO opened holding (UX-858): "
+                               "max(0, ceiling - builders) under auto, "
+                               "ceiling - 1 otherwise; null when off."},
             "auth": {
                 "description": "fd or fifo, the auth style the tracer "
                                "used; null when the jobserver was off."},
@@ -3261,7 +3454,10 @@ _ANALYZE_HINTS = {
                                "so carries the same unit. An average, not "
                                "a peak: during the parallel stretch each "
                                "element draws more, so the CPU ceiling "
-                               "below is optimistic."},
+                               "below is optimistic - and, when the raw "
+                               "figure exceeds the host's own cores, "
+                               "clamped to them (`UX-861`; see "
+                               "`clamped_from`)."},
             "constraints": {
                 "description": "One record per ceiling that could be "
                                "measured. A constraint with no measurement "
@@ -3276,6 +3472,13 @@ _ANALYZE_HINTS = {
                     {"key": "reason", "title": "Why",
                      "description": "The measurement this ceiling was read "
                                     "off, in the units it was measured in."},
+                    {"key": "clamped_from", "title": "Before clamping",
+                     "quantity": "count", "sortable": True,
+                     "description": "`UX-861`: present only on the CPU row, "
+                                    "and only when the derived figure "
+                                    "exceeded `host_cpu_count` - the "
+                                    "unclamped value `allows` was capped "
+                                    "from."},
                 ]},
             "binding_constraint": {
                 "description": "The name of the smallest constraint. This "
@@ -3709,6 +3912,37 @@ _ANALYZE_HINTS = {
             "cold_critical_path_duration_sources": {
                 "description": "The same provenance, narrowed to the "
                                "elements actually on the cold path."},
+            # `UX-891`: the one floor divided by the machine rather than
+            # by the scheduler. Additive under `analyze/v6` - published
+            # beside `lb`, declared outside `required`, and absent
+            # (never zero) on a run with no Plane 2.
+            "lb_cpu_us": {
+                QUANTITY: "duration_us",
+                "description": "The CPU floor: this capture's measured CPU "
+                               "time over the cores that govern it. No "
+                               "schedule of the same CPU work on the same "
+                               "machine finishes sooner. Absent without "
+                               "Plane 2 or without a governing core count, "
+                               "and a floor on the measured share only - "
+                               "see `lb_cpu_coverage`."},
+            "lb_cpu_coverage": {
+                QUANTITY: "share",
+                "description": "The share of the processes Plane 2 saw "
+                               "whose CPU time it could measure. The floor "
+                               "is published rather than corrected for it."},
+            "lb_cpu_governing_cores": {
+                QUANTITY: "count",
+                "description": "The core count the CPU floor divided by - "
+                               "the whole machine or the whole declared "
+                               "budget, with no co-tenant modelled."},
+            "lb_cpu_cores_source": {
+                "description": "Where that count came from: `cpu_budget` "
+                               "if one was declared, else `host_cpu_count`."},
+            "lb_cpu_binds": {
+                "description": "Whether the CPU floor sits above `lb`. "
+                               "True means the machine's cores, not the "
+                               "scheduler's builder slots, are the "
+                               "constraint this run proved."},
             "capacity_model_note": {
                 "description": "What these floors certify against, in "
                                "words - and, as importantly, what they do "
@@ -4248,6 +4482,21 @@ _ANALYZE_HINTS = {
                 QUANTITY: "count",
                 "description": "Of the measured, how many came from the "
                                "ptrace spine rather than the hook."},
+            # `UX-893`: per-element CPU was read once, at exit, so
+            # everything downstream was a total over a span. A build
+            # that pinned four cores for seventeen seconds and idled
+            # for twenty-six reported the same `cores_busy` as one
+            # half-busy throughout.
+            "per_element_series": {
+                "description": "Each element's CPU rate over time, as "
+                               "`[t_us, cores]` points sampled on the "
+                               "host sampler's tick. The totals beside "
+                               "it are unchanged: this says what shape "
+                               "a total had. A process shorter than one "
+                               "tick is in the total and absent from "
+                               "the curve, and a `/proc` read that "
+                               "failed ends a series rather than "
+                               "reading zero."},
             "note": {"description": "What a CPU figure here means, in a "
                                     "sentence - `UX-346`'s door."},
         },
@@ -4791,6 +5040,44 @@ _ANALYZE_HINTS["jobserver"] = {
                                        "`tokens_held_p50`; null when "
                                        "the element ran no wrapped "
                                        "tool."},
+                    # `UX-892`: the two scalars above cannot tell "four
+                    # tokens for two seconds of a ninety-second
+                    # element" from "four tokens throughout". The
+                    # wrapper stamped every row and the reducer threw
+                    # the stamp away.
+                    "tokens_held_series": {
+                        "description": "This element's held width over "
+                                       "time, as `[t_us, tokens]` "
+                                       "steps: an acquire opens an "
+                                       "interval and a release closes "
+                                       "one, so a point is the total "
+                                       "held after that event, not a "
+                                       "sample. Absent when the "
+                                       "element ran no wrapped tool."},
+                    "tokens_series_coverage": {
+                        QUANTITY: "share",
+                        "description": "The share of this element's "
+                                       "token-holding tools that wrote "
+                                       "the rows the series is built "
+                                       "from. A real `make` reads the "
+                                       "pipe itself and logs nothing, "
+                                       "so below 1.0 the series is the "
+                                       "wrapped share and not the "
+                                       "element. Null where the tools "
+                                       "are unknown."},
+                    "tokens_series_open": {
+                        QUANTITY: "count",
+                        "description": "Intervals no release ever "
+                                       "closed - a wrapper killed "
+                                       "before its trap (UX-852). "
+                                       "Closed at the element's span "
+                                       "end and counted here rather "
+                                       "than left running."},
+                    "tokens_series_truncated": {
+                        "description": "Whether the series hit its "
+                                       "per-element cap. The raw rows "
+                                       "stay in the ledger either "
+                                       "way."},
                 }},
         },
     },
@@ -4830,7 +5117,9 @@ for _table, _node in list(_STRUCTURAL_TABLES.items()) + list(_SIGNALS_TABLES.ite
 # stays folded under every role and reachable under all of them, which
 # is what it does today.
 _SECTION_READERS = {
-    "cache": ("R2", "R4"),
+    # `UX-896` adds R5: `cache-capacity` cites `cache.capacity.*`, and
+    # how large an agent's cache has to be is a fleet question.
+    "cache": ("R2", "R4", "R5"),
     "capacity_recommendation": ("R5",),
     "confidence": ("R1", "R4"),
     "elements": ("R3",),
@@ -5358,6 +5647,14 @@ _STORE_AGGREGATE_HINTS = {
                                                  "class, or null where "
                                                  "the captures predate "
                                                  "it."},
+                # UX-898/UX-903: additive - absent for a class whose
+                # runs declared no build type or variant, which is
+                # every store written before the field existed.
+                "build_class": {"description": "The build these runs "
+                                               "declared themselves to "
+                                               "be - `{type, variant}`. "
+                                               "Absent where none was "
+                                               "declared."},
                 "runs": {
                     QUANTITY: "count",
                     "description": "Finished runs in this class."},

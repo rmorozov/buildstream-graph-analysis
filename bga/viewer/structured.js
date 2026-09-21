@@ -133,8 +133,13 @@ function inlineObject(value, node) {
 /**
  * A map as a bounded, searchable table - the table only, never a
  * section (`buildTable`, not `renderTable`).
+ *
+ * `UX-864` exports this: `renderSection`'s own map routing is its
+ * only caller outside this file. The header/noun/task-uid pass a
+ * top-level section needs lives there, beside that one call, so this
+ * function's body is unchanged from its cell-only years.
  */
-function mapTable(key, rows, hint, node, nested, depth = 0, path = key) {
+export function mapTable(key, rows, hint, node, nested, depth = 0, path = key) {
   let declared = hint;
   if (!nested) {
     // A `{name: number}` map's value column has to *declare* a

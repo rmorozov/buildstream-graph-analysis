@@ -95,7 +95,14 @@ from bga import progress
 from bga.plane2 import SCHEMA as PLANE2_SCHEMA
 
 from .bst_run_wrapped import run_wrapped, shutdown_build_group
-from .native_trace.bwrap_shim import JOBSERVER_PINNED
+from .bst_show_to_graph import FIELD_SEP, RECORD_SEP, _parse_yaml_mapping
+from .native_trace.bwrap_shim import (
+    _AUTH_OVERRIDE_STYLES,
+    _COMPILER_SAFE_POLICIES,
+    JOBSERVER_PINNED,
+    _make_probe_cache_path,
+    style_for_make_version,
+)
 from .native_trace.bwrap_shim import __file__ as _bwrap_shim_source
 
 STATIC_BINARY_DISCLAIMER = (
@@ -696,6 +703,16 @@ _MEMINFO_KEYS = {
 #: that decision with the reader rather than baking a window in here.
 _VMSTAT_KEYS = ("pgmajfault", "pswpin", "pswpout")
 
+#: `UX-897`: the interfaces a build's transfer does *not* cross.
+#: Loopback carries this host talking to itself - a local `buildbox-casd`
+#: is on the other end of most of it - and counting it as network would
+#: make a cache that never left the machine look like a saturated link.
+_NET_SKIP_PREFIXES = ("lo",)
+
+#: `/proc/net/dev`'s columns after the interface name: receive bytes is
+#: the first, transmit bytes the ninth. Positional because the header is
+#: two lines of ASCII art and has been these columns since 2.6.
+
 #: `UX-675`: which of `/proc/stat`'s first-line jiffy fields are a busy
 #: core. Positions after the `cpu` label, in the order the kernel writes
 #: them - user, nice, system, idle, iowait, irq, softirq, steal, guest,
@@ -730,6 +747,75 @@ except (ValueError, OSError, AttributeError):  # pragma: no cover
 #: elapsed)` cores - 0.005 at the 2-second default - and the trace
 #: dictionary states it.
 _CPU_MIN_INTERVAL_S = 1.0 / _TICKS_PER_S
+
+
+def read_net_sample() -> dict:
+    """Bytes in and out since boot, summed over every real interface.
+
+    `UX-897`: `cache_effectiveness` names transfer as a *share of wall
+    clock* and `cache_trend`'s own docstring opens on "a remote that
+    slows from 40MB/s to 5MB/s" - a throughput nothing could compute,
+    because no byte count was captured anywhere. BuildStream does not
+    supply one either: `_artifactcache.py` logs `Pulled artifact <key>
+    <- <remote>` and no size, per element or per session, so the log
+    seam this row was filed against has nothing to read.
+
+    The host's own counters do, at the cost of one more small file per
+    sample. **They are the host's, not the build's**: anything else
+    running on the machine is inside them. On a dedicated build agent
+    that is the build, and the caveat rides with the number all the way
+    to the report rather than being resolved by a model here.
+    """
+    try:
+        with open("/proc/net/dev") as handle:
+            return sum_net_dev(handle)
+    except (OSError, ValueError, IndexError):
+        return {}
+
+
+def sum_net_dev(lines) -> dict:
+    """`/proc/net/dev`'s two byte columns, summed over real interfaces.
+
+    Split from the read so a guard can feed it a constructed file: the
+    exclusion below is a claim no reading of *this* host can settle,
+    since whether dropping `lo` changes the total depends on what the
+    host happens to be doing. Same shape as `_busy_jiffies` above, for
+    the same reason.
+    """
+    rx, tx = 0, 0
+    for line in lines:
+        name, _, rest = line.partition(":")
+        name = name.strip()
+        if not rest or name.startswith(_NET_SKIP_PREFIXES):
+            continue
+        fields = rest.split()
+        rx += int(fields[0])
+        tx += int(fields[8])
+    return {"net_rx_bytes": rx, "net_tx_bytes": tx}
+
+
+def network_bytes(read: dict) -> dict:
+    """`{rx_bytes, tx_bytes, span_s}` across a written series, or `{}`.
+
+    The counters are cumulative since boot, so the build's own traffic
+    is the last sample's reading less the first's. Two samples are the
+    minimum: one reading is a number with nothing to subtract, and a
+    build too short to be sampled twice gets an empty dict rather than a
+    zero that reads as "this build moved nothing".
+    """
+    carrying = [row for row in (read or {}).get("samples") or []
+                if "net_rx_bytes" in row and "net_tx_bytes" in row]
+    if len(carrying) < 2:
+        return {}
+    first, last = carrying[0], carrying[-1]
+    span = (last.get("t") or 0) - (first.get("t") or 0)
+    return {
+        # A counter that went backwards is an interface that was reset
+        # or removed mid-build, not negative traffic.
+        "rx_bytes": max(0, last["net_rx_bytes"] - first["net_rx_bytes"]),
+        "tx_bytes": max(0, last["net_tx_bytes"] - first["net_tx_bytes"]),
+        "span_s": span if span > 0 else None,
+    }
 
 
 def read_cpu_sample() -> dict:
@@ -792,6 +878,7 @@ def read_host_sample() -> dict:
     except (OSError, ValueError):
         pass
     sample.update(read_cpu_sample())
+    sample.update(read_net_sample())
     return sample
 
 
@@ -910,6 +997,223 @@ class HostSampler:
             (busy - was_busy) * sample["cores"] / window, 3)
 
 
+#: `UX-893`: how many points one element's CPU curve may publish. The
+#: same bound, for the same reason, as `JOBSERVER_SERIES_CAP` - the
+#: report carries reductions and the samples stay in their own file.
+ELEMENT_CPU_SERIES_CAP = 200
+
+_TRACE_PID_RE = re.compile(r"^(START|END) pid=(\d+) ")
+_TRACE_ELEMENT_RE = re.compile(r" element=(\S+) ")
+
+
+def read_pid_cpu_us(pid: int) -> Optional[int]:
+    """`utime + stime` for one pid, in microseconds, from
+    `/proc/<pid>/stat` - the same two fields `spine.c`'s
+    `read_cpu_times` reads once at exit, read here on a tick.
+
+    `None` - absent, never zero - where the file could not be read. The
+    rule `hook.c:523-528` already states for an unmeasured CPU time: a
+    process whose `/proc` entry is gone is unmeasured, not idle.
+
+    Self only, not the `c`-prefixed children's totals: every child is
+    sampled in its own right.
+    """
+    try:
+        with open(f"/proc/{int(pid)}/stat", encoding="utf-8") as handle:
+            raw = handle.read()
+    except (OSError, ValueError):
+        return None
+    tail = raw.rpartition(")")[2]
+    fields = tail.split()
+    # After the comm's closing paren: state ppid pgrp session tty_nr
+    # tpgid flags minflt cminflt majflt cmajflt utime stime.
+    if len(fields) < 13:
+        return None
+    try:
+        jiffies = int(fields[11]) + int(fields[12])
+    except ValueError:
+        return None
+    return int(jiffies * 1_000_000 / _TICKS_PER_S)
+
+
+def element_cpu_series(rows: list, cap: int = ELEMENT_CPU_SERIES_CAP) -> dict:
+    """`UX-893`: `{element: [[t_us, cores], ...]}` from the sampler's rows.
+
+    Per-element CPU was read once, at exit, so everything downstream was
+    a total divided by a span: a build that pinned four cores for
+    seventeen seconds and idled for twenty-six reported the same
+    `cores_busy` as one half-busy throughout. This is the rate between
+    consecutive samples - a **curve**, published beside the total and
+    never instead of it.
+
+    A pid alive across several ticks contributes a rate; a pid shorter
+    than one tick has no second sample and is absent from the curve
+    while still in the total. A `/proc` read that failed wrote no row,
+    so the series ends rather than reading zero.
+    """
+    by_pid: dict = {}
+    for row in rows or []:
+        if not isinstance(row, dict):
+            continue
+        pid, element = row.get("pid"), row.get("element")
+        t, cpu_us = row.get("t"), row.get("cpu_us")
+        if pid is None or not element or t is None or cpu_us is None:
+            continue
+        by_pid.setdefault((element, pid), []).append((float(t), int(cpu_us)))
+    deltas: dict = {}
+    for (element, _pid), samples in by_pid.items():
+        samples.sort()
+        for (t0, cpu0), (t1, cpu1) in zip(samples, samples[1:]):
+            window = t1 - t0
+            if window <= 0:
+                continue
+            bucket = deltas.setdefault(element, {})
+            bucket[t1] = bucket.get(t1, 0.0) + (cpu1 - cpu0) / 1e6 / window
+    return {
+        element: [[int(t * 1_000_000), round(cores, 3)]
+                  for t, cores in sorted(bucket.items())][:cap]
+        for element, bucket in sorted(deltas.items()) if bucket
+    }
+
+
+class ElementCpuSampler:
+    """`UX-893`: one `/proc/<pid>/stat` read per traced pid per tick.
+
+    The tick is the host sampler's own 2.0 s (`HOST_SAMPLE_INTERVAL_S`)
+    and the clock is the trace's own `CLOCK_MONOTONIC`, so a sample and
+    a process record sit on one timeline. The pid set is read from the
+    raw trace log as the hook and the spine append to it - both write
+    `START`/`END` lines to the same stream, so a process either plane
+    saw is sampled.
+
+    Best-effort throughout, like `HostSampler`: nothing here may change
+    whether the build succeeds.
+    """
+
+    def __init__(self, path: str, trace_log_path: str,
+                 interval_s: float = HOST_SAMPLE_INTERVAL_S):
+        self.path = path
+        self.trace_log_path = trace_log_path
+        self.interval_s = interval_s
+        self._stop = threading.Event()
+        self._thread = None
+        self._handle = None
+        self._offset = 0
+        self._live: dict = {}
+        self.samples = 0
+
+    def __enter__(self):
+        try:
+            self._handle = open(self.path, "w", encoding="utf-8")
+        except OSError:
+            return self
+        # No contract id: this file is an intermediate beside the raw
+        # log, like the jobserver ledger and the invocation log, and
+        # nothing but `attach_element_cpu_series` ever opens it. The
+        # published document is `cpu_time.per_element_series`.
+        self._write({"kind": "element cpu samples",
+                     "interval_s": self.interval_s,
+                     "clock": "CLOCK_MONOTONIC",
+                     "wall_at_start": time.time(),
+                     "monotonic_at_start": time.monotonic()})
+        self._thread = threading.Thread(target=self._run, daemon=True)
+        self._thread.start()
+        return self
+
+    def __exit__(self, *exc):
+        self._stop.set()
+        if self._thread is not None:
+            self._thread.join(timeout=self.interval_s + 1.0)
+        if self._handle is not None:
+            with contextlib.suppress(OSError):
+                self._handle.close()
+        return False
+
+    def _write(self, row: dict) -> None:
+        if self._handle is None:
+            return
+        try:
+            self._handle.write(json.dumps(row, separators=(",", ":")) + "\n")
+            self._handle.flush()
+        except (OSError, ValueError):
+            pass
+
+    def _follow(self) -> None:
+        """New `START`/`END` lines since the last tick, into the live
+        pid set. The log is append-only, so an offset resumed from where
+        the last tick stopped is the whole mechanism - and no handle
+        outlives the tick."""
+        try:
+            with open(self.trace_log_path, encoding="utf-8",
+                      errors="replace") as handle:
+                handle.seek(self._offset)
+                lines = handle.readlines()
+                self._offset = handle.tell()
+        except OSError:
+            return
+        for line in lines:
+            match = _TRACE_PID_RE.match(line)
+            if not match:
+                continue
+            event, pid = match.group(1), int(match.group(2))
+            if event == "END":
+                self._live.pop(pid, None)
+                continue
+            element = _TRACE_ELEMENT_RE.search(line)
+            self._live[pid] = element.group(1) if element else "unknown"
+
+    def _run(self) -> None:
+        while not self._stop.is_set():
+            self._follow()
+            at = round(time.monotonic(), 3)
+            for pid, element in list(self._live.items()):
+                cpu_us = read_pid_cpu_us(pid)
+                if cpu_us is None:
+                    # Absent, not zero: the process is gone, and the
+                    # series ends where the readings do.
+                    self._live.pop(pid, None)
+                    continue
+                self._write({"t": at, "pid": pid, "element": element,
+                             "cpu_us": cpu_us})
+                self.samples += 1
+            self._stop.wait(self.interval_s)
+
+
+def read_element_cpu_samples(path: str) -> list:
+    """The sampler's rows back. Tolerates a truncated last line, which
+    is what an interrupted capture leaves."""
+    rows = []
+    try:
+        with open(path, encoding="utf-8") as handle:
+            for line in handle:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    row = json.loads(line)
+                except ValueError:
+                    continue
+                if isinstance(row, dict) and "pid" in row:
+                    rows.append(row)
+    except OSError:
+        return []
+    return rows
+
+
+def attach_element_cpu_series(report: dict, path: Optional[str]) -> None:
+    """`UX-893`: the curve beside the total, when the sampler wrote one.
+
+    `cpu_time.total_cpu_us` and every per-element total stay the
+    exit-time sum - this says what shape that total had, which "four
+    cores for seventeen seconds then idle" and "1.6 cores throughout"
+    could not be told apart by. Nothing published when no sampler ran,
+    which is every re-render of a saved report.
+    """
+    series = element_cpu_series(read_element_cpu_samples(path or ""))
+    if series:
+        report.setdefault("cpu_time", {})["per_element_series"] = series
+
+
 def read_host_samples(path: str) -> dict:
     """A written series back, as `{header, samples}`.
 
@@ -936,18 +1240,24 @@ def read_host_samples(path: str) -> dict:
     return {"header": header, "samples": samples}
 
 
-def open_jobserver(n: int, scratch: str) -> tuple[str, int, int]:
-    """UX-841: make a FIFO under `scratch`, seed `n - 1` `+` tokens, and
+def open_jobserver(n: int, scratch: str, seed: Optional[int] = None) -> tuple[str, int, int]:
+    """UX-841: make a FIFO under `scratch`, seed it with `+` tokens, and
     confirm the seed landed by reading the FIFO's own readable byte count
     back (`FIONREAD`) rather than trusting the write call. Returns the
     path, a host-side fd kept open for the FIFO's whole life (UX-679:
     its buffer is discarded once every fd on it closes), and the token
     count written. Cleans up after itself and raises on a mismatch.
+
+    `seed` (UX-858): `n - 1` when omitted, `open_jobserver`'s own prior
+    behaviour - `n` is the pool's ceiling (its capacity), not
+    necessarily what it should open holding. Clamped at `n - 1`
+    (never the full ceiling) so a hand-typed `--jobserver-seed` cannot
+    fill the FIFO past what `PoolController` is willing to track.
     """
     path = os.path.join(scratch, "jobserver")
     os.mkfifo(path)
     fd = os.open(path, os.O_RDWR)
-    tokens = n - 1
+    tokens = n - 1 if seed is None else min(seed, n - 1)
     os.write(fd, b"+" * tokens)
     readable = array.array("i", [0])
     fcntl.ioctl(fd, termios.FIONREAD, readable, True)
@@ -990,6 +1300,51 @@ def read_jobserver_decisions(path: Optional[str]) -> list:
     except OSError:
         return []
     return decisions
+
+
+def _read_make_probe(cache_path: Optional[str]) -> dict:
+    """The cached probe `_compiler_safe_makeflags` already wrote
+    (`_make_probe_cache_path`) - read only, never re-run. `{}` for no
+    path, no file, or a malformed one, the same tolerant posture
+    `read_jobserver_decisions` takes."""
+    if not cache_path:
+        return {}
+    try:
+        with open(cache_path, encoding="utf-8") as handle:
+            return json.load(handle)
+    except (OSError, ValueError):
+        return {}
+
+
+def lto_preflight_warnings(decisions: list, jobserver_fifo: Optional[str]) -> list[str]:
+    """UX-883: one line per element that is both on a sub-4.4 sandbox
+    make and drives a compiler directly (`_COMPILER_SAFE_POLICIES`,
+    UX-878's own scrub target) - the scrub is silent otherwise, so this
+    names the element and the make-4.4 remedy. `make_below_44` mirrors
+    `_compiler_safe_makeflags`'s own reading exactly (`available` and
+    `style_for_make_version` == `"fd"`), so this warns on precisely the
+    elements that function scrubbed. De-duplicated per element; `[]`
+    with no jobserver FIFO (nothing was probed) or nothing qualifies."""
+    if not jobserver_fifo:
+        return []
+    lines = []
+    seen = set()
+    for row in decisions or []:
+        element = row.get("element")
+        policy = row.get("policy")
+        if not element or element in seen or policy not in _COMPILER_SAFE_POLICIES:
+            continue
+        probe = _read_make_probe(_make_probe_cache_path(jobserver_fifo, element))
+        make_below_44 = (bool(probe.get("available"))
+                         and style_for_make_version(probe.get("version")) == "fd")
+        if not make_below_44:
+            continue
+        seen.add(element)
+        lines.append(
+            f"Warning: {element} scrubbed to recipe -jN (sandbox make <4.4); "
+            f"move it to make >=4.4 for fifo pool-fill, or force fd/flto "
+            f"(UX-879/880)")
+    return lines
 
 
 def read_jobserver_ledger(path: Optional[str]) -> list:
@@ -1039,69 +1394,187 @@ def read_pid_to_element(raw_log_path: str) -> dict:
     return pid_to_element
 
 
+#: `UX-892`: how many points one element's width series may publish.
+#: `UX-297`'s rule - the report carries reductions and the raw rows stay
+#: in the ledger, which the snapshot keeps either way.
+JOBSERVER_SERIES_CAP = 200
+
+#: The binaries that can hold a jobserver token at all. The denominator
+#: of `UX-892`'s wrapped share: a real `make` reads the pipe itself and
+#: writes no ledger row, so its holdings are in nobody's series.
+JOBSERVER_TOOLS = frozenset({"make", "gmake", "ninja"})
+
+
 def tokens_by_element(ledger_rows: list, pid_to_element: dict) -> tuple:
     """UX-847: UX-846's wrapper `acquire` rows, joined to the element
-    that owned the pid - `{element: [tokens, ...]}`, and the count of
-    `acquire` rows no element owns (`unmapped`), for `jobserver_tokens_
-    unmapped`. `release` rows carry no new count (the paired `acquire`
-    already named it) and are skipped; a malformed row is skipped, not
-    raised on - the same posture every other ledger reader takes.
+    that owned the pid - `{element: [(t, tokens), ...]}`, and the count
+    of `acquire` rows no element owns (`unmapped`), for
+    `jobserver_tokens_unmapped`.
+
+    `UX-892`: `release` rows are kept, because a `release` closes an
+    interval - the wrapper stamps every row with `date +%s.%N` and this
+    reader used to drop it, so "four tokens for two seconds of a
+    ninety-second element" and "four tokens throughout" reduced to the
+    same pair. A malformed row is skipped, not raised on - the same
+    posture every other ledger reader takes.
     """
     per_element: dict = {}
     unmapped = 0
     for row in ledger_rows or []:
-        if not isinstance(row, dict) or row.get("event") != "acquire":
+        if not isinstance(row, dict):
+            continue
+        event = row.get("event")
+        if event not in ("acquire", "release"):
             continue
         pid, tokens = row.get("pid"), row.get("tokens")
         if pid is None or tokens is None:
             continue
         element = (pid_to_element or {}).get(pid)
         if element is None:
-            unmapped += 1
+            if event == "acquire":
+                unmapped += 1
             continue
-        per_element.setdefault(element, []).append(tokens)
+        per_element.setdefault(element, []).append((event, pid, row.get("t"), tokens))
     return per_element, unmapped
 
 
-def summarize_jobserver_tokens_by_element(ledger_rows: list,
-                                          pid_to_element: dict) -> tuple:
-    """UX-847: `tokens_by_element`'s raw lists, reduced to the p50/max
-    `analyze/v6`'s per-element table reads - `({element: {tokens_held_
-    p50, tokens_held_max}}, unmapped)`, the shape `report["jobserver_
-    tokens_by_element"]` publishes.
+def _width_series(events: list, end_us: Optional[int] = None) -> tuple:
+    """`UX-892`: one element's held-token width over time, and how many
+    intervals never closed.
+
+    A step function, not a sample: an `acquire` opens an interval at the
+    count it read and a `release` closes it, so the published point is
+    the element's total holding *after* that event. A `release` with no
+    paired `acquire` is skipped rather than driving the sum negative; a
+    wrapper killed before its trap (`UX-852`'s leak) never releases, so
+    its interval is closed at the element's span end when one is known
+    and counted as open either way.
+    """
+    ordered = sorted(
+        ((int(float(t) * 1_000_000), event, pid, tokens)
+         for event, pid, t, tokens in events if t is not None),
+        key=lambda row: row[0])
+    held: dict = {}
+    series: list = []
+    for t_us, event, pid, tokens in ordered:
+        if event == "acquire":
+            held[pid] = tokens
+        elif pid in held:
+            del held[pid]
+        else:
+            continue
+        series.append([t_us, sum(held.values())])
+    open_intervals = len(held)
+    if held and end_us is not None:
+        series.append([int(end_us), 0])
+    return series, open_intervals
+
+
+def summarize_jobserver_tokens_by_element(
+        ledger_rows: list, pid_to_element: dict,
+        tool_pids_by_element: Optional[dict] = None,
+        element_end_us: Optional[dict] = None) -> tuple:
+    """UX-847: `tokens_by_element`'s raw rows, reduced to what
+    `analyze/v6`'s per-element table reads - `({element: {...}},
+    unmapped)`, the shape `report["jobserver_tokens_by_element"]`
+    publishes.
+
+    `UX-892` adds the width series beside the two scalars, and the
+    share of this element's token-holding tools that wrote the rows it
+    is built from. Only wrapped tools write them: a real `make` reads
+    the jobserver pipe itself and holds tokens nobody logs, so the
+    series covers the wrapped share and says which - never a series
+    that reads as the whole element.
+
+    `tool_pids_by_element` is `{element: {pid, ...}}` over
+    `JOBSERVER_TOOLS` (the denominator); `element_end_us` is
+    `{element: t_us}` for closing a leaked interval. Both optional: the
+    share is `None` without the first, which is the honest answer, not
+    1.0.
     """
     raw, unmapped = tokens_by_element(ledger_rows, pid_to_element)
-    return {
-        element: {"tokens_held_p50": statistics.median(values),
-                  "tokens_held_max": max(values)}
-        for element, values in raw.items()
-    }, unmapped
+    tool_pids = tool_pids_by_element or {}
+    by_element: dict = {}
+    for element in sorted(set(raw) | set(tool_pids)):
+        events = raw.get(element) or []
+        acquired = [tokens for event, _pid, _t, tokens in events
+                    if event == "acquire"]
+        wrapped_pids = {pid for event, pid, _t, _tokens in events
+                        if event == "acquire"}
+        tools = tool_pids.get(element)
+        record: dict = {
+            "tokens_held_p50": statistics.median(acquired) if acquired else None,
+            "tokens_held_max": max(acquired) if acquired else None,
+            # The wrapped share, as a number, the way `UX-891` publishes
+            # `lb_cpu_coverage`. `None` where the tools are unknown.
+            "tokens_series_coverage": (
+                len(wrapped_pids & tools) / len(tools) if tools else None),
+        }
+        series, open_intervals = _width_series(
+            events, (element_end_us or {}).get(element))
+        # Absent rather than empty: a zero-width series reads as an
+        # element that held nothing, and a row with no `t` at all is a
+        # row this series cannot be built from - the scalars above
+        # still stand.
+        if series:
+            record["tokens_held_series"] = series[:JOBSERVER_SERIES_CAP]
+            record["tokens_series_truncated"] = len(series) > JOBSERVER_SERIES_CAP
+            record["tokens_series_open"] = open_intervals
+        by_element[element] = record
+    return by_element, unmapped
 
 
-_MAKE_VERSION_RE = re.compile(r"GNU Make (\d+)\.(\d+)")
+def read_jobserver_tool_pids(raw_log_path: str) -> tuple:
+    """`UX-892`: `({element: {pid, ...}}, {element: end_t_us})`.
+
+    The first is over `JOBSERVER_TOOLS` and is the denominator of the
+    wrapped share; the second is where each element's last observed
+    process exited, in the same epoch-microsecond clock
+    `PoolController.tick` stamps, which is what closes an interval a
+    killed wrapper never released (`UX-852`).
+
+    A second streaming pass over the same raw log `read_pid_to_element`
+    walks, for the same reason that one is a second pass: threading a
+    third output through the fold's whole call graph costs more than
+    re-reading a log the snapshot already has. `({}, {})` on failure.
+    """
+    tool_pids: dict = {}
+    ends: dict = {}
+    try:
+        with _open_maybe_gzipped(raw_log_path) as handle:
+            for record in stream_records(stream_trace_events(handle)):
+                pid, element = record.get("pid"), record.get("element")
+                if pid is None or not element or element == "unknown":
+                    continue
+                if _binary_name(record.get("cmd") or "") in JOBSERVER_TOOLS:
+                    tool_pids.setdefault(element, set()).add(pid)
+                end = record.get("end_ts")
+                if end is not None:
+                    end_us = int(float(end) * 1_000_000)
+                    if end_us > ends.get(element, 0):
+                        ends[element] = end_us
+    except OSError:
+        return {}, {}
+    return tool_pids, ends
 
 
 def jobserver_auth_style(requested: str, make_version_output: Optional[str] = None) -> str:
     """`requested` is `fd`, `fifo`, or `auto`; returns `fd` or `fifo`.
 
-    UX-841: `auto` runs `make --version` **on the host** and picks
-    `fifo:` from GNU Make 4.4, `fd` below - the sandboxes here run the
-    host's own toolchain, so the host's version is representative.
-    `make_version_output` lets a caller (or a test) supply the text
-    instead of shelling out.
+    UX-876: `auto` is always `fd` - no host `make --version` probe. A
+    mixed toolchain's recipe can invoke a sandbox-built make below 4.4
+    by absolute path (`UX-876`'s cmake element), and there is no way to
+    know that ahead of the build; `fd` is accepted by every GNU Make
+    from 4.2 up. `fifo` stays available as an explicit opt-in for an
+    operator whose whole sandbox toolchain is known to be >= 4.4
+    (`bwrap_shim.style_for_make_version`, UX-874, narrows an explicit
+    `fifo` to `fd` per element when the sandbox make is older).
+    `make_version_output` is unused by `auto` now; kept so an explicit
+    `fd`/`fifo` caller (and existing tests) can still pass it.
     """
     if requested != "auto":
         return requested
-    if make_version_output is None:
-        make_path = shutil.which("make")
-        make_version_output = subprocess.run(
-            [make_path, "--version"], capture_output=True, text=True,
-            check=False).stdout if make_path else ""
-    match = _MAKE_VERSION_RE.search(make_version_output)
-    if not match:
-        return "fd"
-    version = (int(match.group(1)), int(match.group(2)))
-    return "fifo" if version >= (4, 4) else "fd"
+    return "fd"
 
 
 #: UX-845 / Direction 20 argument 2: how often the pool is reconsidered -
@@ -1247,9 +1720,11 @@ def summarize_jobserver_leaks(path: str) -> tuple[int, int]:
     return leaks, tokens_refilled
 
 
-#: UX-846: the tools this item wires a wrapper for - none of them reads
-#: `MAKEFLAGS`. `gcc -flto=jobserver` and cargo are pass-through by
-#: construction (no wrapper directory entry), so they are not probed.
+#: UX-846: the tools this *held-token* wrapper covers - none of them
+#: reads `MAKEFLAGS`. Cargo is pass-through by construction (no wrapper
+#: directory entry), so it is not probed. UX-880's GCC-driver shim (also
+#: in the wrapper directory) is a different mechanism - it never holds a
+#: token, so it is not in this probe either.
 JOBSERVER_WRAPPED_TOOLS = ("ld.lld", "lld", "ld.gold", "mold", "ninja")
 
 #: The wrapper scripts, bind-mounted read-only ahead of `PATH` (UX-846).
@@ -1364,7 +1839,9 @@ class PoolController:
         `True` when a `Broker` exists for this same ledger/FIFO - one
         auditor per capture, so `audit_leaks` is a no-op and `start`
         never spins its thread, rather than the two racing the same
-        ledger unlocked."""
+        ledger unlocked. `psi_paths["seed"]` (UX-858, same cap): where
+        the pool starts - `ceiling - 1` when absent, matching
+        `open_jobserver`'s own default seed."""
         psi_paths = psi_paths or {}
         self.broker_owns_audit = bool(psi_paths.get("broker_owns_audit"))
         self.fd = fd
@@ -1380,10 +1857,14 @@ class PoolController:
         self.interval_s = JOBSERVER_POOL_INTERVAL_S
         self.psi_bound = JOBSERVER_POOL_PSI_BOUND
         self.memory_psi_bound = JOBSERVER_POOL_MEMORY_PSI_BOUND
-        # Matches what `open_jobserver` already seeded: the FIFO starts
-        # holding `ceiling - 1` tokens, and this is that same count kept
-        # host-side - never below zero, never above `ceiling - 1`.
-        self.pool = ceiling - 1
+        # Matches what `open_jobserver` already seeded, and this is that
+        # same count kept host-side - never below zero, never above
+        # `ceiling - 1` (UX-858: the seed, not necessarily `ceiling - 1`).
+        seed = psi_paths.get("seed")
+        # UX-858's verifier: clamped, not refused - a hand-typed
+        # --jobserver-seed above the ceiling must not start the pool
+        # past the invariant every other guard holds (pool < ceiling).
+        self.pool = ceiling - 1 if seed is None else min(seed, ceiling - 1)
         self.moves = 0
         self._below_streak = 0
         self._cpu = None  # (busy, total, t) - own delta state
@@ -1956,18 +2437,82 @@ class Broker:
 # argv for (UX-842's real shape: `bst --config bst-b.conf build all.bst`).
 _BST_TARGET_SUBCOMMANDS = frozenset({"build", "show", "track", "checkout"})
 
+# UX-873: each subcommand's own valued options, read off
+# `buildstream._frontend.cli.cli.commands[name].params` (BuildStream
+# 2.8.0, this box) the same way UX-870 read the global group's - every
+# one of them takes exactly one value, so one arity is enough. `track`
+# and `checkout` are not top-level commands in this installed bst (only
+# `source track`/`source checkout`, out of scope), so carry no entry -
+# `_cmd_target` skips nothing extra for either, as before this task.
+_BST_SUBCOMMAND_OPTIONS_ONE_VALUE = {
+    "build": frozenset({"--deps", "-d", "--artifact-remote", "--source-remote"}),
+    "show": frozenset({"--except", "--deps", "-d", "--order", "--format", "-f"}),
+}
+
 
 def _cmd_target(cmd: list[str]) -> Optional[str]:
-    """UX-842: the first element name in the `bst` command about to run,
-    best-effort. An invocation shaped unlike this project's own captures
+    """UX-842/873: the first element name in the `bst` command about to
+    run, best-effort - a subcommand option's own value
+    (`_BST_SUBCOMMAND_OPTIONS_ONE_VALUE`) is skipped rather than read as
+    the target, so `bst build --deps all t.bst` reads `t.bst`, not
+    `all`. An invocation shaped unlike this project's own captures
     degrades to `None`, which `read_project_max_jobs` turns into an
     unknown `project_max_jobs` rather than a wrong one."""
     for i, tok in enumerate(cmd):
         if tok in _BST_TARGET_SUBCOMMANDS:
+            valued = _BST_SUBCOMMAND_OPTIONS_ONE_VALUE.get(tok, frozenset())
+            skip_value = False
             for later in cmd[i + 1:]:
+                if skip_value:
+                    skip_value = False
+                    continue
+                if later in valued:
+                    skip_value = True
+                    continue
                 if not later.startswith("-"):
                     return later
     return None
+
+
+# UX-870: the `cli` click group's own options in
+# `buildstream/_frontend/cli.py` (BuildStream 2.8.0, this box), read off
+# the installed package rather than guessed - `-o`/`--option` is the
+# only one that takes two values (`click.Tuple([str, str])`); the rest
+# below take exactly one; anything else the group defines (`--verbose`,
+# `--strict`, `--pull-buildtrees`, ...) is a bare flag, zero.
+_BST_GLOBAL_OPTIONS_TWO_VALUES = frozenset({"-o", "--option"})
+_BST_GLOBAL_OPTIONS_ONE_VALUE = frozenset({
+    "--config", "-c", "--directory", "-C", "--on-error", "--fetchers",
+    "--builders", "--pushers", "--max-jobs", "--network-retries",
+    "--error-lines", "--message-lines", "--log-file", "--default-mirror",
+    "--cache-buildtrees",
+})
+
+
+def _bst_global_options(cmd: list[str]) -> tuple[list[str], bool]:
+    """UX-870: the tokens between `cmd[0]` and the subcommand, each
+    consumed by its own arity so a value (`c.yml`, a second `-o` value)
+    is never mistaken for the subcommand itself. `(opts, True)` once a
+    bare token is reached - the subcommand, discarded here since the
+    caller always inserts its own `show`. `(opts, False)` when the whole
+    of `cmd[1:]` parses as option-shaped and no subcommand ever turns
+    up - the one case this read cannot graft `show` onto at all."""
+    opts: list[str] = []
+    i, n = 1, len(cmd)
+    while i < n:
+        tok = cmd[i]
+        if not tok.startswith("-"):
+            return opts, True
+        if tok in _BST_GLOBAL_OPTIONS_TWO_VALUES and i + 3 <= n:
+            opts.extend(cmd[i:i + 3])
+            i += 3
+        elif tok in _BST_GLOBAL_OPTIONS_ONE_VALUE and i + 2 <= n:
+            opts.extend(cmd[i:i + 2])
+            i += 2
+        else:
+            opts.append(tok)
+            i += 1
+    return opts, False
 
 
 def _parse_max_jobs_from_vars(vars_raw: str) -> Optional[int]:
@@ -2016,63 +2561,204 @@ def read_project_max_jobs(project_dir: str, cmd: list[str]) -> Optional[int]:
     return _parse_max_jobs_from_vars(proc.stdout)
 
 
-def _parse_element_kinds(show_output: str) -> dict:
-    """UX-843: `%{name} %{kind}` lines -> `{name: kind}`. A line that
-    does not split into exactly two tokens is skipped, not raised on -
-    the same degrade-not-raise posture as `_parse_max_jobs_from_vars`."""
-    kinds = {}
+class _ElementKindsMap(dict):
+    """UX-871: `_parse_element_kinds`'s return - a `{name: kind}` dict
+    (compares equal to a plain one) plus `.junctions`/`.collisions`,
+    the summary of what a junction-qualified `bst show` resolved."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.junctions = 0
+        self.collisions = 0
+
+
+def _parse_element_kinds(show_output: str) -> "_ElementKindsMap":
+    """UX-843/871: `%{name} %{kind}` lines -> `{name: kind}`, under
+    both the full spelling `bst show` prints (`Plugin._get_full_name`,
+    junction-qualified) and, when it carries a `:`, the bit after its
+    last one too - the shim derives only that from bwrap's `--dir`
+    (`element_from_build_root`), never the junction prefix. The first
+    junction to claim a given short spelling wins; a later one shipping
+    the same relative name is a collision, counted, not stored. A line
+    that does not split into exactly two tokens is skipped, not raised
+    on - the same degrade-not-raise posture as `_parse_max_jobs_from_vars`."""
+    kinds = _ElementKindsMap()
+    short_owners = {}
     for line in show_output.splitlines():
         parts = line.split()
-        if len(parts) == 2:
-            kinds[parts[0]] = parts[1]
+        if len(parts) != 2:
+            continue
+        name, kind = parts
+        kinds[name] = kind
+        if ":" not in name:
+            continue
+        kinds.junctions += 1
+        short = name.rsplit(":", 1)[-1]
+        owner = short_owners.get(short)
+        if owner is None:
+            short_owners[short] = name
+            kinds.setdefault(short, kind)
+        elif owner != name:
+            kinds.collisions += 1
     return kinds
 
 
 def jobserver_kinds_warning(jobserver: Optional[int],
-                            element_kinds: Optional[dict]) -> Optional[str]:
+                            element_kinds: Optional[dict],
+                            diagnostic: Optional[dict] = None,
+                            kinds_read_path: Optional[str] = None) -> Optional[str]:
     """UX-843's verifier: a failed kinds read must not switch the mode
-    off silently - every sandbox would read `unknown_kind` and join
-    nothing. The line to print, or `None` when there is nothing to say."""
+    off silently - no sandbox kind is resolved, so only a recipe whose
+    own env still carries `JOBS` joins (`jobs_env`, UX-859); every
+    other decision reads `unknown_kind`. The line to print, or `None`
+    when there is nothing to say. UX-870: `diagnostic`'s `reason` and
+    `kinds_read_path` (the written `kinds_read.json`) are named too,
+    when given, so the warning is answerable without a second run."""
     if not jobserver or element_kinds is not None:
         return None
-    return ("Warning: bst show gave no element kinds - no sandbox joins the "
-            "jobserver this capture (every decision reads unknown_kind)")
+    line = ("Warning: bst show gave no element kinds - only a recipe that "
+            "itself spends JOBS joins the jobserver this capture (every "
+            "other decision reads unknown_kind)")
+    if diagnostic and diagnostic.get("reason"):
+        line += f" ({diagnostic['reason']}"
+        line += f", see {kinds_read_path})" if kinds_read_path else ")"
+    return line
 
 
-def read_element_kinds_for_jobserver(project_dir: str, cmd: list[str]) -> Optional[dict]:
-    """UX-843: every element's own kind, one `bst show --format '%{name}
-    %{kind}'` on the build's own target before the build - same shape as
-    `read_project_max_jobs`, one call, one timeout. `None` on any
-    failure (no target, `bst` missing, a non-zero exit, no parseable
-    line) - the shim then treats every element as `unknown_kind`.
+def read_element_kinds_for_jobserver(project_dir: str,
+                                     cmd: list[str]) -> tuple[Optional[dict], dict]:
+    """UX-843/UX-870: every element's own kind, one `bst show --format
+    '%{name} %{kind}'` before the build - the *user's own* global
+    options (`_bst_global_options`) placed before `show`, since `-o`,
+    `--config`, `--directory` change what a project resolves to; no
+    target runs with none (BuildStream's own default-target rule), same
+    shape as `read_project_max_jobs` otherwise: one call, one timeout.
+
+    Returns `(kinds, diagnostic)`. `kinds` is `None` on any failure -
+    the shim then treats every element as `unknown_kind`. `diagnostic`
+    is always given back (`caller` writes it to `kinds_read.json`):
+    `{"argv": [...], "count": N, "junctions": N, "collisions": N}` on
+    success (UX-871: the junctioned names stored under both
+    spellings, and the short spellings that collided), `{"argv": [...] or None,
+    "returncode": N or None, "stderr_tail": "...", "reason":
+    "no-target"|"exit"|"no-lines"|"timeout"|"oserror"}` on failure -
+    `no-target` only when `cmd` carries no subcommand at all, so there
+    is nowhere to graft `show` onto; a real command with a subcommand
+    but no positional element still runs, per the rule above.
 
     Not `read_element_kinds` (below): that one reads `.bst` files
     directly, for UX-68's project-directory-only use; this reads `bst
     show`, the same way `read_project_max_jobs` does, so the two agree
     on what a `bst show`-composed sandbox actually saw.
     """
+    global_opts, has_subcommand = _bst_global_options(cmd)
+    if not has_subcommand:
+        return None, {"argv": None, "returncode": None, "stderr_tail": "",
+                      "reason": "no-target"}
     target = _cmd_target(cmd)
-    if target is None:
-        return None
+    argv = [cmd[0], *global_opts, "show", "--format", "%{name} %{kind}"]
+    if target is not None:
+        argv.append(target)
     try:
         proc = subprocess.run(
-            [cmd[0], "show", "--format", "%{name} %{kind}", target],
-            cwd=project_dir, capture_output=True, text=True, check=False,
-            timeout=120,
+            argv, cwd=project_dir, capture_output=True, text=True,
+            check=False, timeout=120,
+        )
+    except subprocess.TimeoutExpired:
+        return None, {"argv": argv, "returncode": None, "stderr_tail": "",
+                      "reason": "timeout"}
+    except OSError as exc:
+        return None, {"argv": argv, "returncode": None,
+                      "stderr_tail": str(exc)[-2000:], "reason": "oserror"}
+    if proc.returncode != 0:
+        return None, {"argv": argv, "returncode": proc.returncode,
+                      "stderr_tail": proc.stderr[-2000:], "reason": "exit"}
+    kinds = _parse_element_kinds(proc.stdout)
+    if not kinds:
+        return None, {"argv": argv, "returncode": proc.returncode,
+                      "stderr_tail": proc.stderr[-2000:], "reason": "no-lines"}
+    return kinds, {"argv": argv, "count": len(kinds),
+                   "junctions": kinds.junctions, "collisions": kinds.collisions}
+
+
+def _public_auth_style(public_raw: str) -> Optional[str]:
+    """UX-882: `%{public}`'s own `bga: jobserver-auth:` sub-domain -
+    `yaml.safe_load` via `_parse_yaml_mapping`, so a malformed or absent
+    block degrades to `{}` rather than raising. `None` for no `bga:`
+    key, a non-mapping `bga:` block, or a value outside the four
+    override styles `resolve_auth_override` already accepts."""
+    bga_block = _parse_yaml_mapping(public_raw).get("bga")
+    if not isinstance(bga_block, dict):
+        return None
+    style = bga_block.get("jobserver-auth")
+    if style is False:  # YAML 1.1: unquoted "off" loads as a bool
+        style = "off"
+    return style if style in _AUTH_OVERRIDE_STYLES else None
+
+
+def read_element_auth_map_for_jobserver(project_dir: str,
+                                        cmd: list[str]) -> dict:
+    """UX-882: a *separate* `bst show --format '%{name}<US>%{public}<RS>'`
+    call (the RS/US-delimited scheme `bst_show_to_graph.py` already
+    uses) - never appended to `read_element_kinds_for_jobserver`'s
+    `%{name} %{kind}` line read, whose `line.split()` parse breaks on
+    `%{public}`'s multi-line YAML. Returns `{element: style}` for every
+    element whose `public: bga: jobserver-auth:` names one of the four
+    override styles; `{}` on any failure (no subcommand, timeout,
+    non-zero exit, unparseable output) - the build must not depend on
+    this succeeding, so this never raises.
+    """
+    global_opts, has_subcommand = _bst_global_options(cmd)
+    if not has_subcommand:
+        return {}
+    target = _cmd_target(cmd)
+    fmt = FIELD_SEP.join(["%{name}", "%{public}"]) + RECORD_SEP
+    argv = [cmd[0], *global_opts, "show", "--format", fmt]
+    if target is not None:
+        argv.append(target)
+    try:
+        proc = subprocess.run(
+            argv, cwd=project_dir, capture_output=True, text=True,
+            check=False, timeout=120,
         )
     except (OSError, subprocess.TimeoutExpired):
-        return None
+        return {}
     if proc.returncode != 0:
-        return None
-    kinds = _parse_element_kinds(proc.stdout)
-    return kinds or None
+        return {}
+    auth_map = {}
+    for record in proc.stdout.split(RECORD_SEP):
+        if not record.strip():
+            continue
+        parts = record.split(FIELD_SEP, 1)
+        if len(parts) != 2:
+            continue
+        name, public_raw = parts
+        name = name.strip()
+        style = _public_auth_style(public_raw)
+        if name and style is not None:
+            auth_map[name] = style
+    return auth_map
+
+
+def _write_kinds_read(bind_dir: str, jobserver: Optional[int],
+                      element_kinds: Optional[dict],
+                      diagnostic: dict) -> Optional[str]:
+    """UX-870: `kinds_read.json` beside `element_kinds.json`, and the
+    warning to print (or `None`) - split out of `run_traced_build` so
+    the write+warn pairing is testable without a real sandbox."""
+    path = os.path.join(bind_dir, "kinds_read.json")
+    with open(path, "w", encoding="utf-8") as handle:
+        json.dump(diagnostic, handle)
+    return jobserver_kinds_warning(jobserver, element_kinds, diagnostic, path)
 
 
 def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrapped_log_path: Optional[str] = None, trace_opens: bool = False, argv_log_path: Optional[str] = None, invocation_log_path: Optional[str] = None,
                      trace_spine=False, diagnostics_path: Optional[str] = None,
                      no_inject: bool = False, inhibit: bool = False,
                      host_samples_path: Optional[str] = None,
+                     cpu_samples_path: Optional[str] = None,
                      jobserver: Optional[int] = None,
+                     jobserver_seed: Optional[int] = None,
                      jobserver_auth: Optional[str] = None,
                      jobserver_pool: str = "dynamic",
                      jobserver_capacity: Optional[int] = None,
@@ -2081,6 +2767,8 @@ def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrappe
                      project_max_jobs: Optional[int] = None,
                      jobserver_decisions_path: Optional[str] = None,
                      element_kinds: Optional[dict] = None,
+                     kinds_read_diagnostic: Optional[dict] = None,
+                     element_auth_map: Optional[dict] = None,
                      plan_path: Optional[str] = None,
                      broker_status_path: Optional[str] = None) -> int:
     """Run cmd (a real `bst` invocation) with the bwrap shim + LD_PRELOAD
@@ -2098,14 +2786,19 @@ def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrappe
     default) reproduces this function's own prior plain-`subprocess.run`
     behavior exactly, unchanged.
 
-    `jobserver` (UX-679): a GNU jobserver's token count, or `None` for
-    off. When given, a FIFO is opened host-side (`open_jobserver`),
-    seeded with `jobserver - 1` tokens, and its path handed to the shim
-    through `BST_TRACE_JOBSERVER` - the same channel `BST_TRACE_LOG`
-    already uses - so every sandbox's `make` can join it via
-    `--jobserver-auth`. `jobserver_auth` (UX-841): `fd` or `fifo`, the
-    style already resolved by the caller and passed through
-    `BST_TRACE_JOBSERVER_AUTH` for the shim to read.
+    `jobserver` (UX-679): a GNU jobserver's token count (its ceiling,
+    the pool's capacity), or `None` for off. When given, a FIFO is
+    opened host-side (`open_jobserver`), seeded with `jobserver_seed`
+    tokens (UX-858: `jobserver - 1` when `None`, `open_jobserver`'s own
+    default), and its path handed to the shim through
+    `BST_TRACE_JOBSERVER` - the same channel `BST_TRACE_LOG` already
+    uses - so every sandbox's `make` can join it via `--jobserver-auth`.
+    `jobserver_auth` (UX-841): `fd` or `fifo`, the style already
+    resolved by the caller and passed through `BST_TRACE_JOBSERVER_AUTH`
+    for the shim to read. UX-879: a per-element override
+    (`BST_TRACE_JOBSERVER_AUTH_MAP`, `bga`'s own `--jobserver-auth-override`)
+    is read straight from this process's own environment and carried
+    through unchanged - no decision made here, the shim resolves it.
 
     `jobserver_pool` (UX-845): `"dynamic"` starts a `PoolController`
     daemon thread between `open_jobserver` and `close_jobserver`;
@@ -2122,7 +2815,14 @@ def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrappe
     copied out of the scratch beside the FIFO. `element_kinds` (UX-843):
     the caller's `read_element_kinds_for_jobserver`, written once into
     the scratch and passed through `BST_TRACE_ELEMENT_KINDS` so the shim
-    can apply the per-kind table.
+    can apply the per-kind table. `kinds_read_diagnostic` (UX-870): that
+    same call's second return value, written beside it as
+    `kinds_read.json` and named in the printed warning. `element_auth_map`
+    (UX-882): the caller's `read_element_auth_map_for_jobserver`, written
+    once into the scratch and passed through `BST_TRACE_ELEMENT_AUTH_MAP`
+    so the shim can fall back to a `public: bga: jobserver-auth:`
+    annotation when `BST_TRACE_JOBSERVER_AUTH_MAP` (UX-879's command-line
+    override) does not match the element.
 
     `plan_path` (UX-849): an `analyze.json`, or `None` for today's single
     shared FIFO, byte for byte. Given, one proxy FIFO per `element_kinds`
@@ -2293,15 +2993,47 @@ def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrappe
         # the FIFO's own lifecycle (only exists under `--jobserver`).
         captured_decisions = os.path.join(bind_dir, "jobserver_decisions.jsonl")
         if jobserver:
-            jobserver_fifo, jobserver_fd, _tokens = open_jobserver(jobserver, bind_dir)
+            jobserver_fifo, jobserver_fd, _tokens = open_jobserver(
+                jobserver, bind_dir, seed=jobserver_seed)
             env["BST_TRACE_JOBSERVER"] = jobserver_fifo
             env["BST_TRACE_JOBSERVER_AUTH"] = jobserver_auth or "fd"
+            # UX-879: `bga`'s own `--jobserver-auth-override` already
+            # resolved to this one var in `bga/cli.py`'s process env - no
+            # decision here, just carried into the sandbox the same way
+            # BST_TRACE_JOBSERVER_AUTH above is; the shim resolves it
+            # against the element name.
+            auth_map = os.environ.get("BST_TRACE_JOBSERVER_AUTH_MAP")
+            if auth_map:
+                env["BST_TRACE_JOBSERVER_AUTH_MAP"] = auth_map
+            else:
+                env.pop("BST_TRACE_JOBSERVER_AUTH_MAP", None)
+            # UX-880: `--lto-cap`'s own translation (`bga/cli.py`) or a
+            # by-hand env var, carried the same way - the GCC-driver
+            # shim falls back to `nproc` on its own when this is unset.
+            lto_cap = os.environ.get("BST_TRACE_LTO_CAP")
+            if lto_cap:
+                env["BST_TRACE_LTO_CAP"] = lto_cap
+            else:
+                env.pop("BST_TRACE_LTO_CAP", None)
             # UX-846: a wrapper directory per capture - static content,
             # bound straight from the tree rather than staged, and
             # capped at this pool's own ceiling (its widest possible
             # ask, whatever the dynamic pool does to it afterwards).
             env["BST_TRACE_WRAPPER_DIR"] = JOBSERVER_WRAPPERS_DIR
             env["BST_TRACE_WRAPPER_CAP"] = str(jobserver)
+            # UX-881: an operator's own wrapper directory (and augment/
+            # replace mode), carried the same way as the auth map and
+            # the LTO cap above - `bwrap_shim.py` resolves what it means.
+            wrapper_dir_override = os.environ.get("BST_TRACE_WRAPPER_DIR_OVERRIDE")
+            if wrapper_dir_override:
+                env["BST_TRACE_WRAPPER_DIR_OVERRIDE"] = wrapper_dir_override
+            else:
+                env.pop("BST_TRACE_WRAPPER_DIR_OVERRIDE", None)
+            wrapper_mode = os.environ.get("BST_TRACE_WRAPPER_MODE")
+            if wrapper_mode:
+                env["BST_TRACE_WRAPPER_MODE"] = wrapper_mode
+            else:
+                env.pop("BST_TRACE_WRAPPER_MODE", None)
             # UX-845: the pool moves with the machine rather than staying
             # at the static seed - a daemon client of the same FIFO,
             # started after the seed lands and stopped before the FIFO
@@ -2313,7 +3045,8 @@ def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrappe
                 pool_controller = PoolController(
                     jobserver_fd, jobserver, capacity=jobserver_capacity,
                     ledger_path=captured_jobserver_ledger,
-                    psi_paths={"broker_owns_audit": bool(plan_path and element_kinds)})
+                    psi_paths={"broker_owns_audit": bool(plan_path and element_kinds),
+                              "seed": jobserver_seed})
                 pool_controller.start()
             env["BST_TRACE_JOBSERVER_DECISIONS"] = captured_decisions
             if project_max_jobs is not None:
@@ -2330,6 +3063,27 @@ def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrappe
                 env["BST_TRACE_ELEMENT_KINDS"] = captured_kinds
             else:
                 env.pop("BST_TRACE_ELEMENT_KINDS", None)
+            # UX-882: the per-element annotation table's input, same
+            # shape as `element_kinds.json` beside it - the shim falls
+            # back to it only when the command-line override does not
+            # match the element.
+            if element_auth_map:
+                captured_auth_map = os.path.join(
+                    bind_dir, "element_auth_map.json")
+                with open(captured_auth_map, "w", encoding="utf-8") as handle:
+                    json.dump(element_auth_map, handle)
+                env["BST_TRACE_ELEMENT_AUTH_MAP"] = captured_auth_map
+            else:
+                env.pop("BST_TRACE_ELEMENT_AUTH_MAP", None)
+            # UX-870: always written beside `element_kinds.json` when the
+            # read ran at all - argv+count on success, argv+exit/stderr/
+            # reason on failure - so a silent `unknown_kind` capture has
+            # a file naming why, not just a one-line warning.
+            if kinds_read_diagnostic is not None:
+                kinds_warning = _write_kinds_read(
+                    bind_dir, jobserver, element_kinds, kinds_read_diagnostic)
+                if kinds_warning:
+                    print(kinds_warning, file=sys.stderr)
             # UX-849: a proxy per element named in the kinds map, and a
             # `Broker` thread to move tokens into them by slack - only
             # when a plan was actually given, so a capture with no
@@ -2355,11 +3109,16 @@ def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrappe
         else:
             env.pop("BST_TRACE_JOBSERVER", None)
             env.pop("BST_TRACE_JOBSERVER_AUTH", None)
+            env.pop("BST_TRACE_JOBSERVER_AUTH_MAP", None)
             env.pop("BST_TRACE_JOBSERVER_DECISIONS", None)
             env.pop("BST_TRACE_PROJECT_MAX_JOBS", None)
             env.pop("BST_TRACE_ELEMENT_KINDS", None)
+            env.pop("BST_TRACE_ELEMENT_AUTH_MAP", None)
             env.pop("BST_TRACE_WRAPPER_DIR", None)
             env.pop("BST_TRACE_WRAPPER_CAP", None)
+            env.pop("BST_TRACE_LTO_CAP", None)
+            env.pop("BST_TRACE_WRAPPER_DIR_OVERRIDE", None)
+            env.pop("BST_TRACE_WRAPPER_MODE", None)
             env.pop("BST_TRACE_PROXY_DIR", None)
 
         def copy_out():
@@ -2410,8 +3169,15 @@ def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrappe
         # them would describe this tool rather than the build.
         sampler = (HostSampler(host_samples_path) if host_samples_path
                    else contextlib.nullcontext())
+        # `UX-893`: and the per-element half of the same question, on
+        # the same tick. `captured_log` is the raw log as the hook and
+        # the spine append to it, which is where the live pid set is.
+        cpu_sampler = (
+            ElementCpuSampler(cpu_samples_path,
+                              os.path.join(bind_dir, "trace.log"))
+            if cpu_samples_path else contextlib.nullcontext())
         try:
-            with sampler:
+            with sampler, cpu_sampler:
                 if wrapped_log_path is not None:
                     with open(wrapped_log_path, "w", encoding="utf-8") as out_f:
                         returncode = run_wrapped(project_dir, cmd, out_f,
@@ -2461,6 +3227,12 @@ def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrappe
                 with contextlib.suppress(OSError):
                     os.close(fd)
             copy_out()
+            # UX-883: the elements UX-878's compiler-safe scrub silently
+            # narrowed - named here, before `close_jobserver` removes
+            # the FIFO whose dirname the probe cache is keyed under.
+            for line in lto_preflight_warnings(
+                    read_jobserver_decisions(captured_decisions), jobserver_fifo):
+                print(line, file=sys.stderr)
             close_jobserver(jobserver_fifo, jobserver_fd)
         return returncode
 
@@ -2494,10 +3266,11 @@ _PRESSURE_FIELDS = ("read_bytes", "written_bytes", "major_faults",
 
 # UX-57: `part=` is appended by hooks that flush more than one window
 # per process, and absent in logs written before that existed - optional
-# so one parser reads both.
+# so one parser reads both. UX-865: `relative=`/`dirfd=` appended the
+# same way, for the same reason.
 _OPENS_HEADER_RE = re.compile(
     r"^OPENS pid=(\d+) element=(\S+)(?: inv=(\S+))? unique=(\d+) dropped=(\d+)"
-    r"(?: part=(\d+))?$"
+    r"(?: part=(\d+))?(?: relative=(\d+))?(?: dirfd=(\d+))?$"
 )
 
 
@@ -2524,6 +3297,9 @@ def parse_open_lines(lines, open_element_overrides: Optional[dict[str, str]] = N
     and a subset is exactly the input that would turn a used dependency
     into a false "unused" - so any drop makes this element's verdict
     unsafe and is reported as such rather than quietly rounded away.
+
+    UX-865: `relative`/`dirfd` are carried the same way - running
+    per-process totals the hook re-reports in every window.
     """
     open_element_overrides = open_element_overrides or {}
     per_element: dict[str, dict] = {}
@@ -2551,7 +3327,7 @@ def parse_open_lines(lines, open_element_overrides: Optional[dict[str, str]] = N
             if line.startswith("/"):
                 entry["paths"].add(line)
             continue
-        pid, element, invocation, unique, dropped, _part = match.groups()
+        pid, element, invocation, unique, dropped, _part, relative, dirfd = match.groups()
         # UX-56: when the element name collapsed, the sandbox id is
         # what lets the correlation relabel this block too - without
         # it declared-vs-used stays keyed on a name that is not an
@@ -2561,22 +3337,30 @@ def parse_open_lines(lines, open_element_overrides: Optional[dict[str, str]] = N
             element = open_element_overrides.get(invocation, element)
         entry = per_element.setdefault(
             element,
-            {"paths": set(), "dropped": 0, "processes": 0, "dropped_by_pid": {}, "windows": 0},
+            {"paths": set(), "dropped": 0, "processes": 0, "dropped_by_pid": {},
+             "windows": 0, "relative": 0, "dirfd": 0,
+             "relative_by_pid": {}, "dirfd_by_pid": {}},
         )
         # UX-57: one process may now write several windows, so counting
         # blocks would overstate the process count. `dropped` is a
         # running total the process re-reports each time, so the last
         # window's value is the total rather than their sum.
         entry["windows"] += 1
-        # `dropped` is a running per-process total that the process
-        # re-reports in every window it writes, so the largest value seen
-        # for a pid is that pid's total; the element's total is their sum
-        # across pids. Summing every block instead would multiply one
-        # process's drops by how many windows it happened to flush.
-        by_pid = entry["dropped_by_pid"]
-        by_pid[pid] = max(by_pid.get(pid, 0), int(dropped))
-        entry["processes"] = len(by_pid)
-        entry["dropped"] = sum(by_pid.values())
+        # `dropped`/`relative`/`dirfd` are each a running per-process
+        # total the process re-reports in every window it writes, so the
+        # largest value seen for a pid is that pid's total; the element's
+        # total is their sum across pids. Summing every block instead
+        # would multiply one process's count by how many windows it
+        # happened to flush.
+        for count_key, pid_key, raw in (
+            ("dropped", "dropped_by_pid", dropped),
+            ("relative", "relative_by_pid", relative),
+            ("dirfd", "dirfd_by_pid", dirfd),
+        ):
+            by_pid = entry[pid_key]
+            by_pid[pid] = max(by_pid.get(pid, 0), int(raw or 0))
+            entry[count_key] = sum(by_pid.values())
+        entry["processes"] = len(entry["dropped_by_pid"])
         # A header arriving mid-block ends the previous one, which the
         # loop above gets for free by testing the header first.
         remaining = int(unique)
@@ -3758,15 +4542,20 @@ class _PerElementParallelism:
                 "work_span_s": profile["span_s"],
                 "work_process_lifetime_s": profile["total_lifetime_s"],
                 "requested_jobs": requested_jobs,
-                # Deliberately None rather than a guess when either half is
-                # unknown. Note this is NOT on its own the finding: an
-                # element pinned to `-j1` achieves 100% (or more, since a
-                # gcc driver pipelines cc1plus into as) of what it asked for
-                # while being exactly the problem. See `findings` below.
-                "achieved_vs_requested": (
-                    profile["peak"] / requested_jobs
-                    if requested_jobs else None
-                ),
+                # `UX-894`: the recipe's own `-jN` stays published -
+                # it is what a recipe author edits - but it is no
+                # longer the denominator. The element's *resolved*
+                # width is in `graph.json`, which the capture writes
+                # after this report, so these three are filled by
+                # `bga.plane2.apply_resolved_widths` the first time a
+                # graph is in hand. Absent, not a guess: an element
+                # with no resolved width gets no ratio. Note the ratio
+                # is NOT on its own the finding - an element pinned to
+                # one job achieves 100% of what it was granted while
+                # being exactly the problem. See `findings` below.
+                "resolved_jobs": None,
+                "jobs_denominator": None,
+                "achieved_vs_requested": None,
                 "unclassified_binaries": dict(sorted(unclassified.items(), key=lambda kv: -kv[1])),
             })
         # Two distinct real findings, decided across the whole trace rather
@@ -5047,7 +5836,10 @@ def compute_declared_vs_used(
             "dependencies needed only for a directory's existence all look the "
             "same from here. Elements with no observed opens, or with a "
             "truncated read set, are reported as uncovered rather than as "
-            "having unused dependencies."
+            "having unused dependencies. UX-865: a relative open is joined "
+            "against its opener's cwd and matched like an absolute one, but "
+            "a path reached under another spelling - a symlink alias - is "
+            "not matched, since the join is lexical and never resolves one."
         ),
     }
 
@@ -6452,7 +7244,8 @@ def _open_maybe_gzipped(path: str):
 
 def load_and_summarize(raw_log_path: str, project_dir: Optional[str] = None,
                        invocation_log_path: Optional[str] = None,
-                       plane1_log_path: Optional[str] = None) -> dict:
+                       plane1_log_path: Optional[str] = None,
+                       cpu_samples_path: Optional[str] = None) -> dict:
     """Parse a raw trace log into a report.
 
     `project_dir` (UX-46) enables the declared-vs-used dependency
@@ -6639,13 +7432,17 @@ def load_and_summarize(raw_log_path: str, project_dir: Optional[str] = None,
                     "analysis needs the BuildStream project directory to read "
                     "each dependency's artifact contents - pass --project-dir.",
         }
+    attach_element_cpu_series(report, cpu_samples_path)
     report["opens_captured"] = {
         element: {"paths": len(entry["paths"]), "dropped": entry["dropped"],
                   "processes": entry["processes"],
                   # UX-57: how many times a process filled its window and
                   # flushed rather than dropping. Zero on any build small
                   # enough never to fill one, which is most of them.
-                  "windows": entry["windows"]}
+                  "windows": entry["windows"],
+                  # UX-865: relative opens joined against a cwd, and
+                  # opens under a non-cwd dirfd counted but not resolved.
+                  "relative": entry["relative"], "dirfd": entry["dirfd"]}
         for element, entry in sorted(opens_by_element.items())
     }
     return report
@@ -7415,6 +8212,20 @@ def resolve_invocation_log_path(args) -> Optional[str]:
 
 
 
+def _cpu_samples_path(args) -> str:
+    """`UX-893`: where the per-element CPU sampler writes.
+
+    A scratch path, **not** beside the raw log: `bga snapshot` points
+    `--raw-log` into the snapshot directory, whose file list is a
+    contract (`capture-layout/v1`), and these samples are an
+    intermediate the report reduces and no reader opens.
+    """
+    return os.path.join(
+        scratch_mkdtemp(getattr(args, "project_dir", None) or "", "cpu-samples-"),
+        "element-cpu-samples.jsonl",
+    )
+
+
 def _spine_policy(flag: str):
     """`--trace-spine`'s three values, as `run_traced_build` wants them.
 
@@ -7437,11 +8248,14 @@ def _jobserver_block(report: dict) -> dict:
     `auth`/`project_max_jobs` read `report.get(...)` rather than a named
     argument: `jobserver_auth` (`UX-841`) and `project_max_jobs`
     (`UX-842`) are not both landed yet, and this reads whichever of them
-    the report in hand actually carries, `None` otherwise.
+    the report in hand actually carries, `None` otherwise. `seed`
+    (`UX-858`): what the FIFO opened holding, beside the ceiling it can
+    grow toward.
     """
     return {
         "mode": os.environ.get("BGA_JOBSERVER_MODE") or "off",
         "ceiling": report.get("jobserver"),
+        "seed": report.get("jobserver_seed"),
         "auth": report.get("jobserver_auth"),
         "project_max_jobs": report.get("project_max_jobs"),
     }
@@ -8127,6 +8941,11 @@ def main(argv: Optional[list[str]] = None) -> int:
              "compares busy cores against (default: os.cpu_count())."
     )
     run_parser.add_argument(
+        "--jobserver-seed", type=int, default=None, metavar="N",
+        help="UX-858: tokens the FIFO opens holding (default: "
+             "--jobserver's N minus one)."
+    )
+    run_parser.add_argument(
         "--plan", metavar="PATH", default=None,
         help="UX-849: an analyze.json naming this project's own slack - "
              "a per-element proxy replaces the shared FIFO, granted by "
@@ -8250,23 +9069,38 @@ def main(argv: Optional[list[str]] = None) -> int:
                 scratch_mkdtemp(args.project_dir, "plane1-"), "build.log")
         args.wrapped_log = wrapped_log_path
         invocation_log_path = resolve_invocation_log_path(args)
+        # `UX-893`: an intermediate in scratch, never in the snapshot.
+        cpu_samples_path = _cpu_samples_path(args)
         interrupted = False
         # UX-841: resolved once, here - `run_traced_build` and the report
         # both need the same answer, and `auto` shells out only once.
         jobserver_auth = (jobserver_auth_style(args.jobserver_auth)
                           if args.jobserver else None)
+        # UX-858: resolved once, here too - the FIFO's seed, the report,
+        # and the fixed-mode fallback pool bounds all read this one value.
+        jobserver_seed = (
+            args.jobserver_seed if args.jobserver_seed is not None
+            else (args.jobserver - 1 if args.jobserver else None))
         # UX-842: read once, before the build, from `bst show` - a pin
         # (`-j1`) vs. an element-level cap can only be told apart from
         # what the project's own `max-jobs` is.
         project_max_jobs = (read_project_max_jobs(args.project_dir, cmd)
                             if args.jobserver else None)
         # UX-843: the same shape, one call, before the build - the
-        # per-kind table's input.
-        element_kinds = (read_element_kinds_for_jobserver(args.project_dir, cmd)
-                         if args.jobserver else None)
-        kinds_warning = jobserver_kinds_warning(args.jobserver, element_kinds)
-        if kinds_warning:
-            print(kinds_warning, file=sys.stderr)
+        # per-kind table's input. UX-870: the diagnostic (argv, reason)
+        # is printed and written to `kinds_read.json` once `bind_dir`
+        # exists, inside `run_traced_build`, not here.
+        element_kinds, kinds_read_diagnostic = (
+            read_element_kinds_for_jobserver(args.project_dir, cmd)
+            if args.jobserver else (None, None))
+        # UX-882: a second, separate `bst show` call for `%{public}` -
+        # never folded into the kinds read above, whose `line.split()`
+        # parse breaks on `%{public}`'s multi-line YAML. `{}` (never
+        # `None`) on any failure - an annotation read gone wrong must
+        # not change what the build does.
+        element_auth_map = (
+            read_element_auth_map_for_jobserver(args.project_dir, cmd)
+            if args.jobserver else {})
         jobserver_decisions_path = (
             os.path.join(scratch_mkdtemp(args.project_dir, "jobserver-"),
                         "jobserver_decisions.jsonl")
@@ -8308,7 +9142,9 @@ def main(argv: Optional[list[str]] = None) -> int:
                                           inhibit=args.inhibit,
                                           host_samples_path=getattr(
                                               args, "host_samples", None),
+                                          cpu_samples_path=cpu_samples_path,
                                           jobserver=args.jobserver,
+                                          jobserver_seed=jobserver_seed,
                                           jobserver_auth=jobserver_auth,
                                           jobserver_pool=args.jobserver_pool,
                                           jobserver_capacity=args.jobserver_capacity,
@@ -8317,6 +9153,8 @@ def main(argv: Optional[list[str]] = None) -> int:
                                           project_max_jobs=project_max_jobs,
                                           jobserver_decisions_path=jobserver_decisions_path,
                                           element_kinds=element_kinds,
+                                          kinds_read_diagnostic=kinds_read_diagnostic,
+                                          element_auth_map=element_auth_map,
                                           plan_path=args.plan,
                                           broker_status_path=broker_status_path)
         except CaptureInterrupted:
@@ -8372,11 +9210,14 @@ def main(argv: Optional[list[str]] = None) -> int:
             print("Analyzing the captured trace...", file=sys.stderr)
             report = load_and_summarize(raw_log_path, project_dir=args.project_dir,
                                         invocation_log_path=invocation_log_path,
-                                        plane1_log_path=wrapped_log_path)
+                                        plane1_log_path=wrapped_log_path,
+                                        cpu_samples_path=cpu_samples_path)
             report["wrapped_command_exit_code"] = returncode
             # UX-679 (spike): the capture option a supported mode would
             # be judged against, whether or not this run used it.
             report["jobserver"] = args.jobserver
+            # UX-858: the ceiling's own opening seed, beside it.
+            report["jobserver_seed"] = jobserver_seed
             # UX-841: the style actually used, next to it - `None` when
             # the jobserver itself is off.
             report["jobserver_auth"] = jobserver_auth
@@ -8410,9 +9251,10 @@ def main(argv: Optional[list[str]] = None) -> int:
                     else:
                         controller_stopped = False
                 else:
-                    moves, pool_min, pool_max = 0, args.jobserver - 1, args.jobserver - 1
+                    moves, pool_min, pool_max = 0, jobserver_seed, jobserver_seed
                 report["jobserver_pool"] = {
                     "mode": args.jobserver_pool, "ceiling": args.jobserver,
+                    "seed": jobserver_seed,
                     "capacity": capacity, "moves": moves,
                     "pool_min": pool_min, "pool_max": pool_max,
                     "psi_present": os.path.exists(_PSI_CPU_PATH),
@@ -8465,8 +9307,13 @@ def main(argv: Optional[list[str]] = None) -> int:
                 # the element that owned that process - the producer the
                 # verifier's hold named; `held`/`tokens_held_*` were
                 # always null without it.
+                # `UX-892`: the width series needs the element's own
+                # span to close a leaked interval, and the tools it ran
+                # to say what share of them the series covers.
+                tool_pids, element_ends = read_jobserver_tool_pids(raw_log_path)
                 by_element, unmapped = summarize_jobserver_tokens_by_element(
-                    ledger_rows, read_pid_to_element(raw_log_path))
+                    ledger_rows, read_pid_to_element(raw_log_path),
+                    tool_pids, element_ends)
                 report["jobserver_tokens_by_element"] = by_element
                 report["jobserver_tokens_unmapped"] = unmapped
             with open(args.output, "w", encoding="utf-8") as f:
@@ -8497,6 +9344,17 @@ def main(argv: Optional[list[str]] = None) -> int:
                           f"{args.run_dir}: {exc}", file=sys.stderr)
                 else:
                     print(f"Run directory: {args.run_dir}", file=sys.stderr)
+                    # `UX-894`: `graph.json` exists only now, and it
+                    # carries the width every element actually resolved
+                    # to. Rewritten rather than left for a reader: the
+                    # capture is the one moment both documents are in
+                    # hand on the machine that produced them.
+                    from bga.plane2 import apply_resolved_widths, resolved_widths
+
+                    if apply_resolved_widths(report, resolved_widths(
+                            os.path.join(args.run_dir, "graph.json"))):
+                        with open(args.output, "w") as f:
+                            json.dump(report, f, indent=2)
             if args.json:
                 print(json.dumps(report, indent=2))
             else:

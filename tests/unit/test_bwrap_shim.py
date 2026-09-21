@@ -11,22 +11,34 @@ REAL_BWRAP_ARGV below is a trimmed-but-real shape captured from a real
 `bst build core.bst` invocation against examples/05-cmake-cpp-toolchain
 during that Deep Experiment - real option ordering/arity, not invented.
 """
+import json
 import os
+import subprocess
+import sys
 
 from tools.native_trace.bwrap_shim import (
     JOBSERVER_CAPPED_PENDING,
     JOBSERVER_JOINED,
     JOBSERVER_PINNED,
     JOBSERVER_UNKNOWN_KIND,
+    _downgrade_fifo_to_fd_if_sandbox_make_rejects_it,
+    _element_kind_env,
+    _make_probe_cache_path,
+    _resolve_kind_and_probe,
     _resolve_proxy_auth,
     build_shim_argv,
+    element_from_build_root,
     extract_element_name,
     jobserver_decision,
     kind_job_env,
     parse_element_max_jobs,
     parse_ninja_help,
+    probe_make,
     probe_ninja,
+    record_jobserver_decision,
+    sandbox_make_auth_style,
     split_bwrap_args,
+    style_for_make_version,
 )
 
 REAL_BWRAP_ARGV = [
@@ -419,15 +431,17 @@ def _job_env_ops(argv):
     return ops
 
 
-def _build_with_kind(kind, **extra):
+def _build_with_kind(kind, bst_args=None, **extra):
     """REAL_BWRAP_ARGV (`-j4`), a real fd, `project_max_jobs=4` (joined -
     the table applies) - the one input this whole section varies is the
-    element's own kind and, for cmake/meson, the ninja probe."""
+    element's own kind and, for cmake/meson, the ninja probe. `bst_args`
+    overrides the fixture argv (UX-859: a table-less kind's policy turns
+    on whether `JOBS` is in it)."""
     read_fd, write_fd = os.pipe()
     try:
         return build_shim_argv(
             real_bwrap="/usr/bin/bwrap",
-            bst_args=REAL_BWRAP_ARGV,
+            bst_args=bst_args if bst_args is not None else REAL_BWRAP_ARGV,
             bind_src="/tmp/host-trace-dir",
             bind_dst="/tmp/.bst-native-trace",
             preload_so="/tmp/.bst-native-trace/hook.so",
@@ -439,6 +453,24 @@ def _build_with_kind(kind, **extra):
         ), read_fd
     finally:
         os.close(write_fd)
+
+
+def _argv_without_jobs():
+    """REAL_BWRAP_ARGV with its own `--setenv JOBS -j4` triple removed -
+    UX-859: a table-less kind with no `JOBS` at all stays `unknown_kind`."""
+    argv = list(REAL_BWRAP_ARGV)
+    i = argv.index("JOBS")
+    del argv[i - 1:i + 2]
+    return argv
+
+
+def _argv_with_jobs(value):
+    """REAL_BWRAP_ARGV with its own `--setenv JOBS` value swapped - a
+    value distinct from the cmake/meson fixtures' `-j4` so a passing
+    assertion proves the read, not a coincidence of the shared fixture."""
+    argv = list(REAL_BWRAP_ARGV)
+    argv[argv.index("JOBS") + 1] = value
+    return argv
 
 
 def test_make_and_autotools_get_makeflags_auth_only():
@@ -472,9 +504,9 @@ def test_cargo_unsets_cargo_build_jobs_and_carries_the_auth_in_makeflags():
         os.close(read_fd)
 
 
-def test_an_unknown_kind_gets_no_injection():
+def test_an_unknown_kind_with_no_jobs_gets_no_injection():
     for kind in ("manual", "script", "import", "some-custom-plugin"):
-        argv, read_fd = _build_with_kind(kind)
+        argv, read_fd = _build_with_kind(kind, bst_args=_argv_without_jobs())
         try:
             assert _job_env_ops(argv) == []
             assert kind_job_env(kind, "AUTH")[2] == JOBSERVER_UNKNOWN_KIND
@@ -485,10 +517,71 @@ def test_an_unknown_kind_gets_no_injection():
 def test_an_element_absent_from_the_map_gets_no_injection():
     """`element_kind=None` - what `_element_kind_env` returns for an
     element the map does not name, same as no map at all."""
-    argv, read_fd = _build_with_kind(None)
+    argv, read_fd = _build_with_kind(None, bst_args=_argv_without_jobs())
     try:
         assert _job_env_ops(argv) == []
         assert kind_job_env(None, "AUTH")[2] == JOBSERVER_UNKNOWN_KIND
+    finally:
+        os.close(read_fd)
+
+
+def test_a_junctioned_elements_kind_resolves_through_the_real_env_map(
+        tmp_path, monkeypatch):
+    """UX-871: the map is the tracer's own `_parse_element_kinds`
+    output, written to disk the way the tracer writes `element_kinds.json`
+    - the shim's `_element_kind_env` still does the exact lookup
+    (UX-843), but the element it looks up, `element_from_build_root`'s
+    project-relative name, is now a key the junctioned map carries too."""
+    from tools.bst_native_build_tracer import _parse_element_kinds
+
+    kinds = _parse_element_kinds(
+        "sdk.bst:foo/bar.bst cmake\nplain.bst autotools\n"
+        "a.bst:b.bst:deep.bst meson\n")
+    kinds_path = tmp_path / "element_kinds.json"
+    kinds_path.write_text(json.dumps(kinds))
+    monkeypatch.setenv("BST_TRACE_ELEMENT_KINDS", str(kinds_path))
+
+    element = element_from_build_root("buildstream/proj/foo/bar.bst")
+    assert element == "foo/bar.bst"
+    assert _element_kind_env(element) == "cmake"
+    assert _element_kind_env("plain.bst") == "autotools"
+    assert _element_kind_env("deep.bst") == "meson"
+
+
+def test_a_table_less_kind_that_spends_jobs_gets_the_jobs_env_policy():
+    """UX-859: a manual-kind recipe calling `cmake --build … ${JOBS}` by
+    hand carries `JOBS` in its own sandbox env just like a cmake
+    element's does - through `build_shim_argv`'s real argv path, not
+    `kind_job_env` called alone."""
+    argv, read_fd = _build_with_kind("manual", bst_args=_argv_with_jobs("-j8"))
+    try:
+        assert _job_env_ops(argv) == [
+            ("--setenv", "JOBS", ""),
+            ("--setenv", "MAKEFLAGS", f"--jobserver-auth={read_fd},{read_fd}")]
+        assert kind_job_env("manual", "AUTH", jobs_present=True)[2] == "jobs_env"
+    finally:
+        os.close(read_fd)
+
+
+def test_a_table_less_kind_with_no_jobs_stays_unknown_kind():
+    argv, read_fd = _build_with_kind("manual", bst_args=_argv_without_jobs())
+    try:
+        assert _job_env_ops(argv) == []
+        assert kind_job_env("manual", "AUTH", jobs_present=False)[2] == \
+            JOBSERVER_UNKNOWN_KIND
+    finally:
+        os.close(read_fd)
+
+
+def test_a_table_kind_is_unaffected_by_jobs_present():
+    """cmake is already in the table - `jobs_present` never reaches its
+    branch, so its own policy and injection are unchanged (UX-843)."""
+    argv, read_fd = _build_with_kind("cmake", bst_args=_argv_with_jobs("-j8"))
+    try:
+        assert _job_env_ops(argv) == [
+            ("--setenv", "JOBS", ""),
+            ("--setenv", "MAKEFLAGS", f"--jobserver-auth={read_fd},{read_fd}")]
+        assert kind_job_env("cmake", "AUTH", jobs_present=True)[2] == "cmake_meson"
     finally:
         os.close(read_fd)
 
@@ -673,25 +766,32 @@ def test_a_proxy_under_fd_style_opens_its_own_fd_and_binds_nothing(tmp_path, mon
         os.close(proxy_fd)
 
 
-def test_a_proxy_under_fifo_style_binds_its_path_unchanged(tmp_path, monkeypatch):
+def test_a_proxy_under_fifo_style_names_the_bind_dst_path_with_no_bind_of_its_own(
+        tmp_path, monkeypatch):
+    """UX-869: the proxy dir (`bind_src/proxies`) already lives inside
+    the whole-tree bind at `bind_dst` - a second `--bind` of the FIFO
+    onto its own host path failed on a read-only sandbox root whenever
+    the project was not under `/tmp`."""
     monkeypatch.setenv("BST_TRACE_JOBSERVER_AUTH", "fifo")
-    fifo = str(tmp_path / "mod-a.bst.fifo")
+    bind_src = str(tmp_path / "host-trace-dir")
+    os.makedirs(os.path.join(bind_src, "proxies"))
+    fifo = os.path.join(bind_src, "proxies", "mod-a.bst.fifo")
     os.mkfifo(fifo)
     proxy_fd, proxy_fifo = _resolve_proxy_auth(fifo)
     assert proxy_fd is None
     assert proxy_fifo == fifo
     argv = build_shim_argv(
         real_bwrap="/usr/bin/bwrap", bst_args=REAL_BWRAP_ARGV,
-        bind_src="/tmp/host-trace-dir", bind_dst="/tmp/.bst-native-trace",
+        bind_src=bind_src, bind_dst="/tmp/.bst-native-trace",
         preload_so="/tmp/.bst-native-trace/hook.so",
         trace_log="/tmp/.bst-native-trace/trace.log",
         project_max_jobs=4, element_kind="make",
         proxy_fd=proxy_fd, proxy_fifo=proxy_fifo)
     assert _job_env_ops(argv) == [
-        ("--setenv", "MAKEFLAGS", f"--jobserver-auth=fifo:{fifo}")]
-    idx = argv.index(fifo)
-    assert argv[idx - 1] == "--bind"
-    assert argv[idx:idx + 2] == [fifo, fifo]
+        ("--setenv", "MAKEFLAGS",
+         "--jobserver-auth=fifo:/tmp/.bst-native-trace/proxies/mod-a.bst.fifo")]
+    assert fifo not in argv
+    assert "--bind" not in argv[argv.index("MAKEFLAGS"):]
 
 
 def test_no_proxy_leaves_build_shim_argv_byte_for_byte():
@@ -712,6 +812,394 @@ def test_no_proxy_leaves_build_shim_argv_byte_for_byte():
     finally:
         os.close(read_fd)
         os.close(write_fd)
+
+
+# --- UX-869: a real read-only sandbox root refuses a bind outside the
+# trace mount - a fake `bwrap` on `PATH`, built on UX-855's
+# `_fake_real_bwrap`, that behaves the way the real one did on the user's
+# report (`Can't mkdir parents for <dst>: Read-only file system`).
+
+def _fake_readonly_root_bwrap(path, marker, bind_dst):
+    """Refuses any `--bind`/`--ro-bind`/`--dev-bind` whose destination is
+    not under `bind_dst` or `/tmp` - real bwrap's own read-only-root
+    refusal, reproduced without a real sandbox."""
+    body = (
+        'while [ $# -gt 0 ]; do\n'
+        '  case "$1" in\n'
+        '    --bind|--ro-bind|--dev-bind)\n'
+        '      dst="$3"\n'
+        '      case "$dst" in\n'
+        f'        {bind_dst}|{bind_dst}/*|/tmp|/tmp/*) ;;\n'
+        '        *) echo "bwrap: Can'"'"'t mkdir parents for $dst: '
+        'Read-only file system" >&2; exit 1 ;;\n'
+        '      esac\n'
+        '      shift 3\n'
+        '      ;;\n'
+        '    *) shift ;;\n'
+        '  esac\n'
+        'done\n'
+        'exit 0\n'
+    )
+    return _fake_real_bwrap(path, marker, body)
+
+
+def _run_argv_through(fake_bwrap, argv, tmp_path):
+    """Runs the composed argv's own tail (everything after the
+    `real_bwrap` element `build_shim_argv` returns) through `fake_bwrap`,
+    with it on `PATH` under its real name so it is found the way a
+    shadowed real `bwrap` is."""
+    on_path = tmp_path / "on-path"
+    on_path.mkdir(exist_ok=True)
+    bwrap_on_path = on_path / "bwrap"
+    if not bwrap_on_path.exists():
+        bwrap_on_path.symlink_to(fake_bwrap)
+    env = {**os.environ, "PATH": f"{on_path}{os.pathsep}{os.environ['PATH']}"}
+    return subprocess.run(["bwrap", *argv[1:]], env=env,
+                          capture_output=True, text=True, check=False)
+
+
+def test_fifo_style_runs_clean_through_a_bwrap_that_refuses_binds_outside_bind_dst_or_tmp(
+        tmp_path):
+    """The bind dir sits under a fake project path, not `/tmp` - the
+    user's report. No FIFO `--bind` of its own means the composed argv
+    holds no destination outside `bind_dst`/`/tmp`, and the fake refuses
+    nothing."""
+    marker = tmp_path / "marker"
+    bind_dst = "/tmp/.bst-native-trace"
+    fake = _fake_readonly_root_bwrap(tmp_path / "real-bwrap", marker, bind_dst)
+    bind_src = "/not/tmp/my_project/.bga/tmp/trace-1/bind"
+
+    argv = build_shim_argv(
+        real_bwrap=fake,
+        bst_args=["--unshare-pid", "--dir", "core.bst", "--chdir", "core.bst",
+                 "sh", "-c", "make"],
+        bind_src=bind_src, bind_dst=bind_dst,
+        preload_so=f"{bind_dst}/hook.so", trace_log=f"{bind_dst}/trace.log",
+        jobserver_fifo=f"{bind_src}/jobserver", element_kind="make")
+
+    result = _run_argv_through(fake, argv, tmp_path)
+
+    assert result.returncode == 0, result.stderr
+    setenv = argv.index("MAKEFLAGS")
+    assert argv[setenv + 1] == f"--jobserver-auth=fifo:{bind_dst}/jobserver"
+
+
+def test_fd_style_still_runs_clean_through_the_same_bwrap(tmp_path):
+    marker = tmp_path / "marker"
+    bind_dst = "/tmp/.bst-native-trace"
+    fake = _fake_readonly_root_bwrap(tmp_path / "real-bwrap", marker, bind_dst)
+    bind_src = "/not/tmp/my_project/.bga/tmp/trace-1/bind"
+
+    read_fd, write_fd = os.pipe()
+    try:
+        argv = build_shim_argv(
+            real_bwrap=fake,
+            bst_args=["--unshare-pid", "--dir", "core.bst", "--chdir", "core.bst",
+                     "sh", "-c", "make"],
+            bind_src=bind_src, bind_dst=bind_dst,
+            preload_so=f"{bind_dst}/hook.so", trace_log=f"{bind_dst}/trace.log",
+            jobserver_fd=read_fd, element_kind="make")
+
+        result = _run_argv_through(fake, argv, tmp_path)
+
+        assert result.returncode == 0, result.stderr
+    finally:
+        os.close(read_fd)
+        os.close(write_fd)
+
+
+def test_a_fifo_bound_onto_its_own_host_path_reds_under_the_same_bwrap(tmp_path):
+    """The mutation `falsify` checks: restoring `--bind <fifo> <fifo>`
+    (the defect) makes the fake refuse it exactly as the user's real
+    sandbox root did."""
+    marker = tmp_path / "marker"
+    bind_dst = "/tmp/.bst-native-trace"
+    fake = _fake_readonly_root_bwrap(tmp_path / "real-bwrap", marker, bind_dst)
+    bind_src = "/not/tmp/my_project/.bga/tmp/trace-1/bind"
+    fifo_path = f"{bind_src}/jobserver"
+
+    argv = build_shim_argv(
+        real_bwrap=fake,
+        bst_args=["--unshare-pid", "--dir", "core.bst", "--chdir", "core.bst",
+                 "sh", "-c", "make"],
+        bind_src=bind_src, bind_dst=bind_dst,
+        preload_so=f"{bind_dst}/hook.so", trace_log=f"{bind_dst}/trace.log",
+        jobserver_fifo=fifo_path, element_kind="make")
+    # The mutation itself: re-inject the own-path bind `_jobserver_injection`
+    # used to add, right where it used to land - before the MAKEFLAGS setenv.
+    setenv = argv.index("MAKEFLAGS") - 2  # the "--setenv" token before it
+    mutated = argv[:setenv] + ["--bind", fifo_path, fifo_path] + argv[setenv:]
+
+    result = _run_argv_through(fake, mutated, tmp_path)
+
+    assert result.returncode == 1
+    assert "Read-only file system" in result.stderr
+
+
+# --- UX-874: the jobserver auth style follows the make that consumes it --
+#
+# `_fake_bwrap_with_make` extends `_fake_readonly_root_bwrap`'s own
+# read-only-root refusal with a `make --version` case ahead of it - one
+# fake `real_bwrap` serves both UX-874's sandbox-make probe and the
+# final composed argv's own real run, the way one real sandbox's make is
+# probed and then actually invoked.
+
+def _fake_bwrap_with_make(path, marker, bind_dst, version):
+    body = (
+        'case "$*" in\n'
+        f'  *"make --version") printf "GNU Make {version}\\n"; exit 0 ;;\n'
+        'esac\n'
+        'while [ $# -gt 0 ]; do\n'
+        '  case "$1" in\n'
+        '    --bind|--ro-bind|--dev-bind)\n'
+        '      dst="$3"\n'
+        '      case "$dst" in\n'
+        f'        {bind_dst}|{bind_dst}/*|/tmp|/tmp/*) ;;\n'
+        '        *) echo "bwrap: Can'"'"'t mkdir parents for $dst: '
+        'Read-only file system" >&2; exit 1 ;;\n'
+        '      esac\n'
+        '      shift 3\n'
+        '      ;;\n'
+        '    *) shift ;;\n'
+        '  esac\n'
+        'done\n'
+        'exit 0\n'
+    )
+    return _fake_real_bwrap(path, marker, body)
+
+
+def test_fifo_style_downgrades_to_fd_when_the_sandbox_make_is_4_3(tmp_path):
+    """Motivation, pasted live: GNU Make 4.3 rejects `fifo:` outright
+    (`internal error: invalid --jobserver-auth string`) - `fifo:/tmp/
+    .bst-native-trace/jobserver` would kill this element's build. The
+    shim probes this element's own sandbox make, finds 4.3, and opens
+    the fd fallback instead - a real, open, inheritable fd threaded
+    through `--jobserver-auth=<fd>,<fd>`, not the string."""
+    bind_dst = "/tmp/.bst-native-trace"
+    fake = _fake_bwrap_with_make(tmp_path / "real-bwrap", tmp_path / "marker",
+                                 bind_dst, "4.3")
+    bind_src = str(tmp_path / "host-trace-dir")
+    os.makedirs(bind_src)
+    fifo_path = os.path.join(bind_src, "jobserver")
+    os.mkfifo(fifo_path)
+
+    pool = _downgrade_fifo_to_fd_if_sandbox_make_rejects_it(
+        {"element_kind": "make", "real_bwrap": fake, "opts": []},
+        str(tmp_path / "make_probe.json"),
+        pool={"fd": None, "fifo": fifo_path, "proxy_fd": None, "proxy_fifo": None})
+    try:
+        assert pool["fifo"] is None
+        assert pool["fd"] is not None
+        os.fstat(pool["fd"])  # a real, open fd
+
+        argv = build_shim_argv(
+            real_bwrap=fake,
+            bst_args=["--unshare-pid", "--dir", "core.bst", "--chdir", "core.bst",
+                     "sh", "-c", "make"],
+            bind_src=bind_src, bind_dst=bind_dst,
+            preload_so=f"{bind_dst}/hook.so", trace_log=f"{bind_dst}/trace.log",
+            jobserver_fd=pool["fd"], jobserver_fifo=pool["fifo"], element_kind="make")
+
+        setenv = argv.index("MAKEFLAGS")
+        assert argv[setenv + 1] == f"--jobserver-auth={pool['fd']},{pool['fd']}"
+        assert "fifo:" not in argv[setenv + 1]
+
+        result = _run_argv_through(fake, argv, tmp_path)
+
+        assert result.returncode == 0, result.stderr
+    finally:
+        os.close(pool["fd"])
+
+
+def test_fifo_style_stands_when_the_sandbox_make_is_4_4(tmp_path):
+    """The other side of the same cutoff: a sandbox make new enough to
+    parse `fifo:` gets it unchanged - the probe narrows, never widens."""
+    bind_dst = "/tmp/.bst-native-trace"
+    fake = _fake_bwrap_with_make(tmp_path / "real-bwrap", tmp_path / "marker",
+                                 bind_dst, "4.4")
+    bind_src = str(tmp_path / "host-trace-dir")
+    os.makedirs(bind_src)
+    fifo_path = os.path.join(bind_src, "jobserver")
+    os.mkfifo(fifo_path)
+
+    pool = _downgrade_fifo_to_fd_if_sandbox_make_rejects_it(
+        {"element_kind": "make", "real_bwrap": fake, "opts": []},
+        str(tmp_path / "make_probe.json"),
+        pool={"fd": None, "fifo": fifo_path, "proxy_fd": None, "proxy_fifo": None})
+
+    assert pool["fd"] is None
+    assert pool["fifo"] == fifo_path
+
+    argv = build_shim_argv(
+        real_bwrap=fake,
+        bst_args=["--unshare-pid", "--dir", "core.bst", "--chdir", "core.bst",
+                 "sh", "-c", "make"],
+        bind_src=bind_src, bind_dst=bind_dst,
+        preload_so=f"{bind_dst}/hook.so", trace_log=f"{bind_dst}/trace.log",
+        jobserver_fifo=pool["fifo"], element_kind="make")
+
+    setenv = argv.index("MAKEFLAGS")
+    assert argv[setenv + 1] == f"--jobserver-auth=fifo:{bind_dst}/jobserver"
+
+    result = _run_argv_through(fake, argv, tmp_path)
+
+    assert result.returncode == 0, result.stderr
+
+
+def test_the_proxy_follows_the_same_downgrade_as_the_global_fifo(tmp_path):
+    """`UX-849`'s per-element proxy is consumed by the same sandbox make
+    as the global FIFO - the downgrade has to apply to both."""
+    bind_dst = "/tmp/.bst-native-trace"
+    fake = _fake_bwrap_with_make(tmp_path / "real-bwrap", tmp_path / "marker",
+                                 bind_dst, "4.3")
+    proxy_fifo_path = str(tmp_path / "proxy.fifo")
+    os.mkfifo(proxy_fifo_path)
+
+    pool = _downgrade_fifo_to_fd_if_sandbox_make_rejects_it(
+        {"element_kind": "make", "real_bwrap": fake, "opts": []},
+        str(tmp_path / "make_probe.json"),
+        pool={"fd": None, "fifo": None, "proxy_fd": None, "proxy_fifo": proxy_fifo_path})
+
+    try:
+        assert pool["proxy_fifo"] is None
+        assert pool["proxy_fd"] is not None
+        os.fstat(pool["proxy_fd"])
+    finally:
+        os.close(pool["proxy_fd"])
+
+
+def test_a_kind_with_no_makeflags_is_never_probed_and_never_narrowed(tmp_path):
+    """`unknown_kind` never gets a `MAKEFLAGS` from `kind_job_env` - the
+    fake's marker (written on every invocation) never appears, so the
+    probe never ran."""
+    marker = tmp_path / "marker"
+    fake = _fake_bwrap_with_make(tmp_path / "real-bwrap", marker,
+                                 "/tmp/.bst-native-trace", "4.3")
+
+    style = sandbox_make_auth_style("unknown_kind", fake, [],
+                                    str(tmp_path / "make_probe.json"))
+
+    assert style == "fifo"
+    assert not marker.exists()
+
+
+def test_ninja_static_is_never_probed_and_never_narrowed(tmp_path):
+    """UX-877: a cmake element whose sandbox has an available, non-client
+    ninja gets `ninja_static` - `[]` pairs, no `MAKEFLAGS` at all, so the
+    probe never runs."""
+    marker = tmp_path / "marker"
+    fake = _fake_bwrap_with_make(tmp_path / "real-bwrap", marker,
+                                 "/tmp/.bst-native-trace", "4.3")
+    ninja_probe = {"available": True, "jobserver_client": False}
+
+    style = sandbox_make_auth_style("cmake", fake, [], str(tmp_path / "make_probe.json"),
+                                    kind_probe={"ninja_probe": ninja_probe})
+
+    assert style == "fifo"
+    assert not marker.exists()
+
+
+def test_cmake_on_the_makefiles_path_is_now_narrowed(tmp_path):
+    """UX-877: `cmake --build ... -- ${JOBS}` invokes the sandbox make
+    directly when there is no jobserver-client ninja to hand `MAKEFLAGS`
+    to instead - the exact defect UX-874 was meant to stop, skipped
+    because `cmake` was outside `_MAKE_LIKE_KINDS`."""
+    fake = _fake_bwrap_with_make(tmp_path / "real-bwrap", tmp_path / "marker",
+                                 "/tmp/.bst-native-trace", "4.3")
+
+    style = sandbox_make_auth_style("cmake", fake, [], str(tmp_path / "make_probe.json"))
+
+    assert style == "fd"
+
+
+def test_a_jobs_env_kind_is_now_narrowed(tmp_path):
+    """UX-877: a table-less kind carrying its own `JOBS` gets the same
+    `cmake_meson`-shaped injection (policy `jobs_env`) and so the same
+    narrowing."""
+    fake = _fake_bwrap_with_make(tmp_path / "real-bwrap", tmp_path / "marker",
+                                 "/tmp/.bst-native-trace", "4.3")
+
+    style = sandbox_make_auth_style("manual", fake, [], str(tmp_path / "make_probe.json"),
+                                    kind_probe={"jobs_present": True})
+
+    assert style == "fd"
+
+
+def test_a_cmake_element_resolving_to_a_jobserver_client_ninja_is_unnarrowed(tmp_path):
+    """UX-877: a jobserver-client ninja reads `MAKEFLAGS` itself, not a
+    make - ninja accepts the `fifo:` path, so this case stays unnarrowed
+    even though `kind_job_env` does inject `MAKEFLAGS` for it."""
+    marker = tmp_path / "marker"
+    fake = _fake_bwrap_with_make(tmp_path / "real-bwrap", marker,
+                                 "/tmp/.bst-native-trace", "4.3")
+    ninja_probe = {"available": True, "jobserver_client": True}
+
+    style = sandbox_make_auth_style("cmake", fake, [], str(tmp_path / "make_probe.json"),
+                                    kind_probe={"ninja_probe": ninja_probe})
+
+    assert style == "fifo"
+    assert not marker.exists()
+
+
+def test_a_second_probe_make_call_is_served_from_the_cache_without_rerunning(tmp_path):
+    marker = tmp_path / "marker"
+    fake = _fake_bwrap_with_make(tmp_path / "real-bwrap", marker,
+                                 "/tmp/.bst-native-trace", "4.3")
+    cache_path = str(tmp_path / "make_probe.json")
+
+    first = probe_make(fake, [], cache_path)
+    second = probe_make(fake, [], cache_path)
+
+    assert first == second == {"available": True, "version": "GNU Make 4.3"}
+    assert marker.read_text().splitlines() == ["run"]
+
+
+def test_style_for_make_version_shares_the_4_4_cutoff_with_jobserver_auth_style():
+    """`jobserver_auth_style`'s own host-probe values (UX-841), read
+    through the shared function rather than a second regex/tuple."""
+    assert style_for_make_version("GNU Make 4.4\n") == "fifo"
+    assert style_for_make_version("GNU Make 4.3\n") == "fd"
+    assert style_for_make_version("GNU Make 5.0\n") == "fifo"
+    assert style_for_make_version("") == "fd"
+    assert style_for_make_version(None) == "fd"
+    assert style_for_make_version("not a version string") == "fd"
+
+
+def test_make_probe_cache_path_is_keyed_per_element():
+    """`_make_probe_cache_path` (verifier): two elements share
+    `dirname(BST_TRACE_JOBSERVER)` but must not share a probe file -
+    `ninja_probe.json`'s own per-capture sharing is wrong for a make
+    that can genuinely differ element to element."""
+    jobserver_path = "/tmp/.bst-native-trace/jobserver"
+
+    cache_a = _make_probe_cache_path(jobserver_path, "mod-a.bst")
+    cache_b = _make_probe_cache_path(jobserver_path, "mod-b.bst")
+
+    assert cache_a != cache_b
+    assert os.path.dirname(cache_a) == os.path.dirname(cache_b) == "/tmp/.bst-native-trace"
+    assert _make_probe_cache_path(None, "mod-a.bst") is None
+
+
+def test_two_make_kind_elements_in_one_capture_each_probe_their_own_sandbox_make(
+        tmp_path):
+    """UX-874 (verifier): the junctioned/toolchain shape - two make-kind
+    elements in one capture whose own tar-staged makes genuinely differ
+    (4.4 and 4.3) must each get their own style, not the first
+    element's cached answer."""
+    jobserver_path = str(tmp_path / "jobserver")
+    fake_new = _fake_bwrap_with_make(tmp_path / "bwrap-new", tmp_path / "marker-new",
+                                     "/tmp/.bst-native-trace", "4.4")
+    fake_old = _fake_bwrap_with_make(tmp_path / "bwrap-old", tmp_path / "marker-old",
+                                     "/tmp/.bst-native-trace", "4.3")
+
+    cache_a = _make_probe_cache_path(jobserver_path, "mod-a.bst")
+    cache_b = _make_probe_cache_path(jobserver_path, "mod-b.bst")
+
+    style_a = sandbox_make_auth_style("make", fake_new, [], cache_a)
+    style_b = sandbox_make_auth_style("make", fake_old, [], cache_b)
+
+    assert style_a == "fifo"
+    assert style_b == "fd"
 
 
 # --- UX-855: probe_ninja's own outcomes, not a hand-built dict ------------
@@ -803,3 +1291,95 @@ def test_a_second_probe_ninja_call_is_served_from_the_cache_without_rerunning(tm
 
     assert first == second == {"available": False, "version": None, "jobserver_client": None}
     assert marker.read_text().splitlines() == ["run"]
+
+
+# --- UX-859 (verifier): the widened gate - a table-less kind that spends
+# `JOBS` gets the same real ninja probe cmake/meson do, not a skip ---------
+
+_NINJA_WITH_CLIENT = (
+    'case "$*" in\n'
+    '  *"ninja --version") echo "1.12.0" ;;\n'
+    '  *"ninja --help") printf '
+    "'usage: ninja\\n  --jobserver   participate in a POSIX jobserver\\n' ;;\n"
+    "esac\n")
+
+_NINJA_NO_CLIENT = (
+    'case "$*" in\n'
+    '  *"ninja --version") echo "1.11.1" ;;\n'
+    '  *"ninja --help") printf '
+    "'usage: ninja [options] [targets...]\\n  -j N  run N jobs in parallel\\n' ;;\n"
+    "esac\n")
+
+
+def _decide_through_the_real_gate(tmp_path, monkeypatch, kind, argv,
+                                  ninja_body, wrappers_dir=None):
+    """Drives `_resolve_kind_and_probe` then `record_jobserver_decision`
+    for real - a fake bwrap on the probe's own subprocess path (UX-855's
+    `_fake_real_bwrap`), not a hand-built `ninja_probe` dict - and
+    returns `(policy, marker)` from the decision log actually written."""
+    kinds_path = tmp_path / "kinds.json"
+    kinds_path.write_text(json.dumps({"el": kind}))
+    monkeypatch.setenv("BST_TRACE_ELEMENT_KINDS", str(kinds_path))
+    monkeypatch.delenv("BST_TRACE_JOBSERVER", raising=False)
+    if wrappers_dir is not None:
+        monkeypatch.setenv("BST_TRACE_WRAPPER_DIR", wrappers_dir)
+    else:
+        monkeypatch.delenv("BST_TRACE_WRAPPER_DIR", raising=False)
+    monkeypatch.setattr(sys, "argv", ["bwrap-shim", *argv])
+    marker = tmp_path / "marker"
+    fake = _fake_real_bwrap(tmp_path / "bwrap", marker, ninja_body)
+
+    kind_context = _resolve_kind_and_probe("el", 9, None, 4, fake)
+    log_path = str(tmp_path / "decisions.jsonl")
+    record_jobserver_decision(log_path, argv, "el", 4, kind_context=kind_context)
+    with open(log_path, encoding="utf-8") as handle:
+        record = json.loads(handle.readline())
+    return record["policy"], marker
+
+
+def test_a_table_less_kind_with_jobs_probes_ninja_and_reads_ninja_client(
+        tmp_path, monkeypatch):
+    """A manual `-G Ninja` recipe is exactly as much at risk of the
+    cores+2 regression UX-843 found for cmake/meson - the widened gate
+    must run the real probe, not skip it because the kind isn't cmake."""
+    policy, marker = _decide_through_the_real_gate(
+        tmp_path, monkeypatch, "manual", _argv_with_jobs("-j4"), _NINJA_WITH_CLIENT)
+    assert policy == "ninja_client"
+    assert marker.read_text().splitlines() == ["run", "run"]
+
+
+def test_a_table_less_kind_with_jobs_and_a_wrapper_dir_reads_ninja_wrapper(
+        tmp_path, monkeypatch):
+    policy, _marker = _decide_through_the_real_gate(
+        tmp_path, monkeypatch, "manual", _argv_with_jobs("-j4"), _NINJA_NO_CLIENT,
+        wrappers_dir=str(tmp_path / "wrappers"))
+    assert policy == "ninja_wrapper"
+
+
+def test_a_table_less_kind_with_jobs_no_client_and_no_wrapper_dir_stays_static(
+        tmp_path, monkeypatch):
+    """Reuses cmake/meson's own `ninja_static` outcome (UX-843): ninja
+    confirmed present, no client, nothing to hold tokens - emptying
+    `JOBS` would run ninja at cores+2, worse than BuildStream's own
+    `-jN` left alone, whatever the kind."""
+    policy, _marker = _decide_through_the_real_gate(
+        tmp_path, monkeypatch, "manual", _argv_with_jobs("-j4"), _NINJA_NO_CLIENT)
+    assert policy == "ninja_static"
+
+
+def test_a_table_less_kind_with_no_ninja_at_all_falls_back_to_jobs_env(
+        tmp_path, monkeypatch):
+    policy, marker = _decide_through_the_real_gate(
+        tmp_path, monkeypatch, "manual", _argv_with_jobs("-j4"), "exit 127\n")
+    assert policy == "jobs_env"
+    assert marker.read_text().splitlines() == ["run"]
+
+
+def test_a_table_less_kind_with_no_jobs_never_runs_the_probe(tmp_path, monkeypatch):
+    """The gate's other half: no `JOBS` in the sandbox env stays
+    `unknown_kind` and the probe never runs - the fake bwrap's own
+    marker file, written on every invocation, never appears."""
+    policy, marker = _decide_through_the_real_gate(
+        tmp_path, monkeypatch, "manual", _argv_without_jobs(), _NINJA_WITH_CLIENT)
+    assert policy == JOBSERVER_UNKNOWN_KIND
+    assert not marker.exists()

@@ -28,6 +28,7 @@ reintroduce by hand and easy to miss without a fixture-driven test
 UX-11's own prototype run).
 """
 import contextlib
+import fnmatch
 import json
 import os
 import re
@@ -263,25 +264,61 @@ _MAKE_LIKE_KINDS = frozenset({"make", "autotools"})
 _NINJA_CAPABLE_KINDS = frozenset({"cmake", "meson"})
 
 
-def kind_job_env(kind, auth_value, ninja_probe=None, wrappers_dir=None):
+def compiler_safe_auth(auth_value: str, sandbox_fifo_path: Optional[str],
+                       make_below_44: bool) -> Optional[str]:
+    """UX-878: the `MAKEFLAGS` auth an *unwrapped* native jobserver
+    client (gcc's lto-wrapper, cargo) reads directly - unlike `ninja`/
+    `ld.*`/`mold`, no shell wrapper stands between it and the string bga
+    injected. A `fifo:` auth is already path-based and stands. A raw
+    `fd` auth is only valid for a direct child - gcc's lto-wrapper is a
+    deep grandchild, so the fd number is not open there (measured:
+    GCC-13 ICE, `opts-common.cc:2123`) - rewritten to `fifo:
+    <sandbox_fifo_path>` instead, which gcc-13 reopens by path. Unless a
+    sub-4.4 make shares the recipe and would reject that `fifo:` outright
+    (UX-874): then `None`, so the caller scrubs the auth for both rather
+    than re-arm either defect."""
+    if "fifo:" in auth_value:
+        return auth_value
+    if make_below_44:
+        return None
+    return f"--jobserver-auth=fifo:{sandbox_fifo_path}"
+
+
+def _ninja_aware_env(ninja_probe, wrappers_dir, auth_value, base_policy):
+    """UX-843/UX-859: `JOBS` emptied, `MAKEFLAGS` injected, gated on
+    what the sandbox's own `ninja --version`/`--help` probe found -
+    shared by the cmake/meson table row and a table-less kind that
+    spends `JOBS` itself (`base_policy` names the no-ninja-info case)."""
+    if ninja_probe and ninja_probe.get("available"):
+        if ninja_probe.get("jobserver_client"):
+            return [("JOBS", ""), ("MAKEFLAGS", auth_value)], [], "ninja_client"
+        if wrappers_dir:
+            # UX-846's ninja wrapper reads the auth from MAKEFLAGS.
+            return [("JOBS", ""), ("MAKEFLAGS", auth_value)], [], "ninja_wrapper"
+        return [], [], "ninja_static"
+    return [("JOBS", ""), ("MAKEFLAGS", auth_value)], [], base_policy
+
+
+def kind_job_env(kind, auth_value, ninja_probe=None, wrappers_dir=None,
+                 jobs_present=None):
     """The `(setenv_pairs, unsetenv_vars, policy)` this element's kind
     gets, applied only for a `joined`/`capped_pending` decision.
     `ninja_probe` is `{"available", "jobserver_client"}` or `None` (not
     run, or no ninja in the sandbox - the make path, same injection as
-    a plain make generator)."""
+    a plain make generator). `jobs_present` (UX-859, default `None` so
+    every prior caller stands) is whether BuildStream's own composed
+    argv set `JOBS` for this sandbox - a kind outside the table gets
+    the cmake treatment under it (policy `jobs_env`) rather than
+    `unknown_kind` when it carries one, since `JOBS` is the recipe's
+    own promise to spend it, whatever its kind."""
     if kind in _MAKE_LIKE_KINDS:
         return [("MAKEFLAGS", auth_value)], [], "make"
     if kind == "cargo":
         return [("MAKEFLAGS", auth_value)], ["CARGO_BUILD_JOBS"], "cargo"
     if kind in _NINJA_CAPABLE_KINDS:
-        if ninja_probe and ninja_probe.get("available"):
-            if ninja_probe.get("jobserver_client"):
-                return [("JOBS", ""), ("MAKEFLAGS", auth_value)], [], "ninja_client"
-            if wrappers_dir:
-                # UX-846's ninja wrapper reads the auth from MAKEFLAGS.
-                return [("JOBS", ""), ("MAKEFLAGS", auth_value)], [], "ninja_wrapper"
-            return [], [], "ninja_static"
-        return [("JOBS", ""), ("MAKEFLAGS", auth_value)], [], "cmake_meson"
+        return _ninja_aware_env(ninja_probe, wrappers_dir, auth_value, "cmake_meson")
+    if jobs_present:
+        return _ninja_aware_env(ninja_probe, wrappers_dir, auth_value, "jobs_env")
     return [], [], JOBSERVER_UNKNOWN_KIND
 
 
@@ -290,6 +327,17 @@ def parse_ninja_help(text: str) -> bool:
     on this box does not (pasted in the task file's Outcome); a ninja
     that speaks the protocol names it in its own help text."""
     return "jobserver" in text.lower()
+
+
+def _probe_tool_version(real_bwrap: str, opts: list[str], tool: str,
+                        timeout: float) -> subprocess.CompletedProcess:
+    """The one `<tool> --version` subprocess call site `probe_ninja` and
+    `probe_make` (UX-874) both use - a second sandbox-tool probe is a
+    new caller of the same forced S603 (UX-843), not a new finding."""
+    version = subprocess.run(
+        [real_bwrap, *opts, tool, "--version"],
+        capture_output=True, text=True, timeout=timeout, check=False)
+    return version
 
 
 def probe_ninja(real_bwrap: str, opts: list[str], cache_path: Optional[str],
@@ -305,9 +353,7 @@ def probe_ninja(real_bwrap: str, opts: list[str], cache_path: Optional[str],
             return json.load(handle)
     result = {"available": False, "version": None, "jobserver_client": None}
     try:
-        version = subprocess.run(
-            [real_bwrap, *opts, "ninja", "--version"],
-            capture_output=True, text=True, timeout=timeout, check=False)
+        version = _probe_tool_version(real_bwrap, opts, "ninja", timeout)
         if version.returncode == 0 and version.stdout.strip():
             result["available"] = True
             result["version"] = version.stdout.strip()
@@ -323,6 +369,162 @@ def probe_ninja(real_bwrap: str, opts: list[str], cache_path: Optional[str],
                 open(cache_path, "w", encoding="utf-8") as handle:
             json.dump(result, handle)
     return result
+
+
+_MAKE_VERSION_RE = re.compile(r"GNU Make (\d+)\.(\d+)")
+_MAKE_JOBSERVER_AUTH_MIN_VERSION = (4, 4)
+
+
+def style_for_make_version(make_version_output: Optional[str]) -> str:
+    """UX-841's cutoff, shared: `"fifo"` for GNU Make >= 4.4, `"fd"`
+    otherwise (absent/unparseable included). `jobserver_auth_style`'s
+    host pick and UX-874's sandbox probe below both apply this one
+    function rather than each carrying its own regex and tuple."""
+    match = _MAKE_VERSION_RE.search(make_version_output or "")
+    if not match:
+        return "fd"
+    version = (int(match.group(1)), int(match.group(2)))
+    return "fifo" if version >= _MAKE_JOBSERVER_AUTH_MIN_VERSION else "fd"
+
+
+def probe_make(real_bwrap: str, opts: list[str], cache_path: Optional[str],
+               timeout: float = 5.0) -> dict:
+    """UX-874: `make --version` run through this same sandbox argv -
+    `probe_ninja`'s own shape, cached at `cache_path`
+    (`_make_probe_cache_path`: per element, not per capture -
+    `ninja_probe.json`'s own sharing is wrong for a make that can
+    genuinely differ element to element). Never raises: a probe that
+    cannot run just means an absent sandbox make, exactly
+    `style_for_make_version`'s own "fd" case."""
+    if cache_path:
+        with contextlib.suppress(OSError, ValueError), \
+                open(cache_path, encoding="utf-8") as handle:
+            return json.load(handle)
+    result = {"available": False, "version": None}
+    try:
+        version = _probe_tool_version(real_bwrap, opts, "make", timeout)
+        if version.returncode == 0 and version.stdout.strip():
+            result["available"] = True
+            result["version"] = version.stdout.strip()
+    except (OSError, subprocess.TimeoutExpired):
+        pass
+    if cache_path:
+        with contextlib.suppress(OSError), \
+                open(cache_path, "w", encoding="utf-8") as handle:
+            json.dump(result, handle)
+    return result
+
+
+def _make_probe_cache_path(jobserver_path: Optional[str],
+                           element: Optional[str]) -> Optional[str]:
+    """UX-874 (verifier): `ninja_probe.json`'s own cache is shared by
+    the whole capture (one `dirname(BST_TRACE_JOBSERVER)`, set once in
+    `run_traced_build`) - real for ninja (one generator per build) but
+    wrong for make: two make-kind elements can genuinely tar-stage
+    different makes (the junctioned/toolchain shape), and a shared key
+    would hand the second element the first one's stale answer,
+    reproducing the exact defect this item fixes. Keyed per element
+    (`main`'s own `element`, already derived by `extract_element_name`)
+    - `ninja_probe.json`'s per-capture cache is unchanged, a separate,
+    pre-existing matter."""
+    if not jobserver_path:
+        return None
+    tag = (element or "unknown").replace("/", "_")
+    return os.path.join(os.path.dirname(jobserver_path), f"make_probe-{tag}.json")
+
+
+# UX-877: `kind_job_env`'s own policy names whose MAKEFLAGS a *make*
+# reads - ninja_client/ninja_wrapper/ninja_static hand MAKEFLAGS (or
+# nothing) to ninja, not make, so fifo is never a problem for them.
+_MAKE_CONSUMER_POLICIES = frozenset({"make", "cargo", "cmake_meson", "jobs_env"})
+
+# UX-878: of those, the policies whose MAKEFLAGS an *unwrapped* native
+# jobserver client (gcc-lto, cargo) reads directly - "make" excluded,
+# since its MAKEFLAGS consumer is make itself, a direct child, for which
+# a raw fd is valid.
+_COMPILER_SAFE_POLICIES = frozenset({"cmake_meson", "jobs_env", "cargo"})
+
+# UX-879: the styles a per-element override may force. UX-880: `flto`
+# added - keeps the raw auth like `fd` (falls through `_forced_auth`
+# the same way), and is the glob a wrapper-directory GCC-driver shim
+# (tools/native_trace/wrappers/gcc et al.) reads `-flto` for.
+_AUTH_OVERRIDE_STYLES = frozenset({"fd", "fifo", "off", "flto"})
+
+
+def resolve_auth_override(auth_map_str: Optional[str],
+                          element: Optional[str]) -> Optional[str]:
+    """`BST_TRACE_JOBSERVER_AUTH_MAP`'s own serialization -
+    `style:glob[,glob];style:glob...` (`bga capture run
+    --jobserver-auth-override`, UX-879) - resolved against one element
+    name. First matching style wins across the `;`-separated groups.
+    `None` for an empty/absent map, no element name, or no glob match -
+    the caller's own auto/compiler_safe path then stands unchanged.
+    Pure (no I/O), so this is unit-testable without a sandbox.
+    """
+    if not auth_map_str or not element:
+        return None
+    for group in auth_map_str.split(";"):
+        style, sep, globs = group.partition(":")
+        style = style.strip()
+        if not sep or style not in _AUTH_OVERRIDE_STYLES:
+            continue
+        for glob in globs.split(","):
+            if glob.strip() and fnmatch.fnmatch(element, glob.strip()):
+                return style
+    return None
+
+
+def _forced_auth(override: str, auth_value: str, ctx: dict) -> Optional[str]:
+    """UX-879: `auth_value` narrowed by a matched per-element override
+    instead of `_compiler_safe_makeflags` - `fd` keeps `auth_value` raw,
+    exactly as `_jobserver_injection` computed it pre-UX-878 (no fifo
+    rewrite, no scrub); `off` scrubs it (`None`), reusing the same
+    downstream MAKEFLAGS/JOBS drop UX-878's own scrub already triggers;
+    `fifo` rewrites to the `fifo:` path when one is derivable (the same
+    lookup `_compiler_safe_makeflags` uses), else leaves `auth_value`
+    unchanged rather than crash on an element with no FIFO to name.
+    UX-880: `flto` falls through to the same raw-`auth_value` branch as
+    `fd` - `make` keeps filling the pool, and it is the wrapper-mounted
+    GCC-driver shim, not this function, that strips the fd auth before
+    it ever reaches `lto-wrapper`. `ctx`: `{bind_src, bind_dst, pool,
+    element}` - the same bundling `_compiler_safe_makeflags` uses for
+    PLR0913's cap.
+    """
+    if override == "off":
+        return None
+    if override == "fifo" and "fifo:" not in auth_value:
+        host_fifo = _compiler_safe_fifo_host(ctx["pool"], ctx.get("element"))
+        if host_fifo is not None:
+            sandbox_fifo_path = _sandbox_fifo_path(
+                ctx["bind_src"], ctx["bind_dst"], host_fifo)
+            return f"--jobserver-auth=fifo:{sandbox_fifo_path}"
+    return auth_value
+
+
+def sandbox_make_auth_style(element_kind: Optional[str], real_bwrap: str,
+                            opts: list[str], cache_path: Optional[str],
+                            kind_probe: Optional[dict] = None) -> str:
+    """UX-874/UX-877: this element's own sandbox `make --version`,
+    probed through the real bwrap - `"fd"` when the sandbox make can't
+    parse `fifo:` (absent, unparseable, or below 4.4), `"fifo"`
+    otherwise. Probed for every kind `kind_job_env` would actually hand
+    a `MAKEFLAGS` a *make* reads - derived by calling it with a
+    sentinel auth rather than hand-keeping a second kind list, so a
+    kind added to the table there is covered here for free. `kind_probe`
+    (`{ninja_probe, wrappers_dir, jobs_present}` or `None`, PLR0913's
+    cap) is `kind_job_env`'s own remaining inputs. A kind whose own
+    result carries no `MAKEFLAGS`, or hands it to ninja instead
+    (`_MAKE_CONSUMER_POLICIES`), is reported unnarrowed - the style the
+    host already resolved stands, never widened by this probe."""
+    kind_probe = kind_probe or {}
+    pairs, _unsets, policy = kind_job_env(
+        element_kind, "fifo:sentinel", kind_probe.get("ninja_probe"),
+        kind_probe.get("wrappers_dir"), kind_probe.get("jobs_present"))
+    makeflags_injected = any(var == "MAKEFLAGS" for var, _ in pairs)
+    if not makeflags_injected or policy not in _MAKE_CONSUMER_POLICIES:
+        return "fifo"
+    probe = probe_make(real_bwrap, opts, cache_path)
+    return style_for_make_version(probe.get("version"))
 
 
 # UX-846: where the wrapper directory lands inside the sandbox - under
@@ -348,67 +550,227 @@ def _setenv_value(opts: list[str], name: str) -> Optional[str]:
     return None
 
 
-def _wrapper_mount(opts: list[str], wrapper_dir: str, wrapper_cap: Optional[str],
-                   bind_dst: str) -> list[str]:
+def _wrapper_mount(opts: list[str], wrapper_dir: str, bind_dst: str,
+                   caps: Optional[dict] = None) -> list[str]:
     """UX-846: the wrappers bound read-only ahead of BuildStream's own
     `PATH` (bwrap: the last `--setenv` wins outright, measured), with
-    the ledger path and the cap the wrapper reads."""
+    the ledger path and the cap the wrapper reads. `caps` (PLR0913's
+    cap, UX-880 pushed a 4th env past the 5-arg baseline): `{wrapper_cap,
+    lto_cap, flto_active, wrapper_dir_override, wrapper_mode}`. `lto_cap`
+    (`BST_TRACE_LTO_CAP`) is the same shape as `wrapper_cap` - read by
+    the GCC-driver shim in this same directory, not the held-tool
+    wrappers `wrapper_cap` sizes. `flto_active`: the GCC-driver shims
+    live in a `flto/` subdir put on `PATH` (ahead of the held-tool dir)
+    ONLY for a flto-matched element, so a bystander sandbox this mounts
+    for held-tool coverage never has `cc`/`gcc` shadowed by a shim it
+    cannot source (a minimal make element has no `dirname`: bst-examples
+    exit 255). Belt-and-suspenders, `BST_TRACE_FLTO_ACTIVE=1` is also
+    set, and the shim gates on it too; both come from
+    `_jobserver_injection`'s already-resolved `override`, never
+    re-derived (re-matching the glob in the shell would drift).
+
+    UX-881: `wrapper_dir_override` (an operator's own directory,
+    matching bga's published wrapper contract) is prepended to `PATH`
+    ahead of the shipped one when `wrapper_mode` is `augment` (default,
+    or unset) - a second `--ro-bind`, so a replace loses nothing this
+    element already had. `replace` binds ONLY the operator's directory
+    at the shipped mount point - no shipped dir, no shipped `flto/`
+    subdir, since the operator's directory is theirs to populate. No
+    override: today's single-mount behaviour, byte for byte."""
+    caps = caps or {}
     bst_path = _setenv_value(opts, "PATH") or "/usr/bin:/bin"
     dst = os.path.join(bind_dst, WRAPPER_BIND_SUBDIR)
-    mount = [
-        "--ro-bind", wrapper_dir, dst,
-        "--setenv", "PATH", f"{dst}:{bst_path}",
+    override_dir = caps.get("wrapper_dir_override")
+    replace = bool(override_dir) and caps.get("wrapper_mode") == "replace"
+    # The GCC-driver shims live in a `flto/` subdir put on PATH ONLY for a
+    # flto-matched element - a bystander sandbox (a minimal make element
+    # with no coreutils) that gets this mount for held-tool coverage must
+    # not have `cc`/`gcc` shadowed by a shim it cannot even source
+    # (bst-examples exit 255: `dirname: not found`). A `replace` drops
+    # the shipped directory entirely, so its `flto/` subdir never applies.
+    path_head = dst
+    if caps.get("flto_active") and not replace:
+        path_head = f"{os.path.join(dst, 'flto')}:{dst}"
+    if replace:
+        mount = ["--ro-bind", override_dir, dst]
+    else:
+        mount = ["--ro-bind", wrapper_dir, dst]
+        if override_dir:
+            operator_dst = f"{dst}-operator"
+            mount += ["--ro-bind", override_dir, operator_dst]
+            path_head = f"{operator_dst}:{path_head}"
+    mount += [
+        "--setenv", "PATH", f"{path_head}:{bst_path}",
         "--setenv", "BST_TRACE_JOBSERVER_LEDGER",
         os.path.join(bind_dst, "jobserver_ledger.jsonl"),
     ]
-    if wrapper_cap:
-        mount += ["--setenv", "BST_TRACE_WRAPPER_CAP", str(wrapper_cap)]
+    if caps.get("wrapper_cap"):
+        mount += ["--setenv", "BST_TRACE_WRAPPER_CAP", str(caps["wrapper_cap"])]
+    if caps.get("lto_cap"):
+        mount += ["--setenv", "BST_TRACE_LTO_CAP", str(caps["lto_cap"])]
+    if caps.get("flto_active"):
+        mount += ["--setenv", "BST_TRACE_FLTO_ACTIVE", "1"]
     return mount
 
 
-def _jobserver_injection(opts: list[str], bind_dst: str, decision: str,
+def _active_jobserver_fifo(pool: dict) -> Optional[str]:
+    """The host FIFO path fifo-style auth would bind, or `None` for fd
+    style / nothing active - the proxy-over-global precedence
+    `_jobserver_injection` applies, factored out for `main`'s own
+    diagnostics record."""
+    proxy_fd, proxy_fifo = pool.get("proxy_fd"), pool.get("proxy_fifo")
+    if proxy_fd is not None or proxy_fifo is not None:
+        return proxy_fifo
+    if pool.get("fd") is not None:
+        return None
+    return pool.get("fifo")
+
+
+def _sandbox_fifo_path(bind_src: str, bind_dst: str, host_path: Optional[str]) -> str:
+    """UX-869: the jobserver/proxy FIFO already lives inside `bind_src`,
+    which `build_shim_argv` binds whole at `bind_dst` - no `--bind` of
+    its own is needed, just the path rewritten under that mount (a
+    second, own-path bind failed on a read-only sandbox root whenever
+    `bind_src` was not already under `/tmp`). `host_path` is `Optional`
+    only because the caller's own dict is - both callers only reach here
+    once fd style is already ruled out."""
+    if host_path is None:
+        raise ValueError("no FIFO host path to rewrite under bind_dst")
+    return os.path.join(bind_dst, os.path.relpath(host_path, bind_src))
+
+
+def _compiler_safe_fifo_host(pool: dict, element: Optional[str]) -> Optional[str]:
+    """UX-878 (verifier fix): the host FIFO an unwrapped compiler's
+    rewritten auth must name - a UX-849 per-element proxy's own FIFO,
+    never the *global* jobserver a proxy exists specifically not to be,
+    whichever style each happens to be in. Mirrors `_jobserver_injection`'s
+    own "proxy wins outright" precedence (`:600`), which the original
+    fix missed: `pool["proxy_fifo"]` is `None` under `fd` style
+    (`_resolve_proxy_auth` opens the fd and discards the path), so a
+    proxy active in the *default* `fd`/`auto` style is re-derived from
+    `BST_TRACE_PROXY_DIR` + `element` - `_element_proxy_paths`'s own
+    construction, at the point its own fd was opened from. `None` only
+    when a proxy is active and neither is available (defensive; not
+    reachable in practice, since a live `proxy_fd` was itself opened
+    from that same path in this same process)."""
+    proxy_active = pool.get("proxy_fd") is not None or pool.get("proxy_fifo") is not None
+    if proxy_active:
+        if pool.get("proxy_fifo") is not None:
+            return pool["proxy_fifo"]
+        proxy_dir = os.environ.get("BST_TRACE_PROXY_DIR")
+        if proxy_dir and element is not None:
+            return os.path.join(proxy_dir, f"{element}.fifo")
+        return None
+    return pool.get("fifo") or os.environ.get("BST_TRACE_JOBSERVER")
+
+
+def _compiler_safe_makeflags(auth_value: str, policy: str, opts: list[str],
+                             ctx: dict) -> Optional[str]:
+    """UX-878: `auth_value` narrowed through `compiler_safe_auth` for the
+    policies an unwrapped compiler/cargo actually reads
+    (`_COMPILER_SAFE_POLICIES`); every other policy - `make` included -
+    passes `auth_value` straight through, unchanged. Takes precedence
+    over UX-874's downgrade above it: this reads the *resolved* pool
+    (already fd if that downgrade fired) and re-derives `make_below_44`
+    from the same cached probe, so a downgraded fd is scrubbed here
+    rather than re-armed. `ctx` (`{bind_src, bind_dst, pool, real_bwrap,
+    element}`, PLR0913's cap) bundles `_jobserver_injection`'s own
+    `binds`/`pool` plus `kind_context`'s `real_bwrap`/`element`.
+    `sandbox_fifo_path`'s own host FIFO is `_compiler_safe_fifo_host`'s
+    (a proxy's own FIFO over the global one, `BST_TRACE_JOBSERVER` the
+    last resort for an fd opened from it, `open_jobserver_fd`) - `None`
+    when nothing names one (a bare fd with no FIFO behind it, e.g. a
+    unit test's own pipe) or `real_bwrap` is unknown, in which case no
+    `fifo:` rewrite is possible and `auth_value` stands, same as today.
+    """
+    if policy not in _COMPILER_SAFE_POLICIES or "fifo:" in auth_value:
+        return auth_value
+    pool = ctx["pool"]
+    real_bwrap = ctx.get("real_bwrap")
+    host_fifo = _compiler_safe_fifo_host(pool, ctx.get("element"))
+    if host_fifo is None or real_bwrap is None:
+        return auth_value
+    sandbox_fifo_path = _sandbox_fifo_path(ctx["bind_src"], ctx["bind_dst"], host_fifo)
+    cache_path = _make_probe_cache_path(
+        os.environ.get("BST_TRACE_JOBSERVER"), ctx.get("element"))
+    probe = probe_make(real_bwrap, opts, cache_path)
+    make_below_44 = bool(probe.get("available")) and \
+        style_for_make_version(probe.get("version")) == "fd"
+    return compiler_safe_auth(auth_value, sandbox_fifo_path, make_below_44)
+
+
+def _jobserver_injection(opts: list[str], binds: tuple, decision: str,
                          pool: dict, kind_context: dict) -> list[str]:
     """`build_shim_argv`'s own jobserver branch, split out to keep its
-    complexity under the baseline's cap. `pool` is `{fd, fifo, proxy_fd,
-    proxy_fifo}` - UX-679/UX-841's global pair, UX-849's proxy pair,
-    which wins outright over the global one when either is set. A
-    proxy follows the *same* auth style the global FIFO resolved to
-    (`BST_TRACE_JOBSERVER_AUTH` - UX-841 already reads it from `make
+    complexity under the baseline's cap. `binds` is `(bind_src,
+    bind_dst)`, kept as one param for PLR0913's cap. `pool` is `{fd,
+    fifo, proxy_fd, proxy_fifo}` - UX-679/UX-841's global pair, UX-849's
+    proxy pair, which wins outright over the global one when either is
+    set. A proxy follows the *same* auth style the global FIFO resolved
+    to (`BST_TRACE_JOBSERVER_AUTH` - UX-841 already reads it from `make
     --version`; a proxy has no version of its own to probe), the
     coordinator's fix for GNU Make 4.3 rejecting `fifo:` outright
     (measured live: `internal error: invalid --jobserver-auth string`).
     `kind_context` is `_resolve_kind_and_probe`'s own shape one module
     over, plus `wrapper_cap`. `[]` for a pinned decision or with
     nothing active - argv byte for byte."""
+    bind_src, bind_dst = binds
     fd, fifo = pool.get("fd"), pool.get("fifo")
     proxy_fd, proxy_fifo = pool.get("proxy_fd"), pool.get("proxy_fifo")
     proxy_active = proxy_fd is not None or proxy_fifo is not None
     if decision == JOBSERVER_PINNED or (fd is None and fifo is None and not proxy_active):
         return []
     # UX-679 (spike) / UX-841: fd style passes an inherited fd straight
-    # into the sandbox with no bind; fifo style (GNU Make >= 4.4) needs
-    # the FIFO's own path bound into the sandbox, since `make` opens it
-    # there itself (`--ro-bind` is wrong - both ends write it). UX-849:
-    # a proxy mirrors this exact pair, `main` having already opened its
-    # own fd (fd style) or left only the path set (fifo style).
+    # into the sandbox with no bind. Fifo style (GNU Make >= 4.4) names
+    # the FIFO's in-sandbox path - already reachable under `bind_dst`
+    # (UX-869: no bind of its own, which failed read-only outside
+    # `/tmp`). UX-849: a proxy mirrors this exact pair, `main` having
+    # already opened its own fd (fd style) or left only the path set
+    # (fifo style).
     if proxy_active:
         auth_value = (f"--jobserver-auth={proxy_fd},{proxy_fd}"
                      if proxy_fd is not None
-                     else f"--jobserver-auth=fifo:{proxy_fifo}")
-        needs_bind, bind_path = proxy_fd is None, proxy_fifo
+                     else f"--jobserver-auth=fifo:{_sandbox_fifo_path(bind_src, bind_dst, proxy_fifo)}")
     else:
         auth_value = (f"--jobserver-auth={fd},{fd}" if fd is not None
-                     else f"--jobserver-auth=fifo:{fifo}")
-        needs_bind, bind_path = fd is None, fifo
-    # UX-843: the per-kind table - a kind not in it gets nothing
-    # (`unknown_kind`), and cmake/meson consult the ninja probe.
-    pairs, unsets, _policy = kind_job_env(
+                     else f"--jobserver-auth=fifo:{_sandbox_fifo_path(bind_src, bind_dst, fifo)}")
+    # UX-843/UX-859: the per-kind table - a kind not in it gets nothing
+    # (`unknown_kind`) unless its own sandbox env carries `JOBS`
+    # (`jobs_env`); cmake/meson and a `jobs_env` kind both consult the
+    # ninja probe.
+    pairs, unsets, policy = kind_job_env(
         kind_context.get("element_kind"), auth_value,
-        kind_context.get("ninja_probe"), kind_context.get("wrappers_dir"))
+        kind_context.get("ninja_probe"), kind_context.get("wrappers_dir"),
+        jobs_present=_setenv_value(opts, "JOBS") is not None)
+    ctx = {"bind_src": bind_src, "bind_dst": bind_dst, "pool": pool,
+          "real_bwrap": kind_context.get("real_bwrap"),
+          "element": kind_context.get("element")}
+    # UX-879: a per-element override takes precedence over the
+    # auto/compiler_safe/downgrade path below - matched, it forces the
+    # style outright and `_compiler_safe_makeflags` never runs. UX-882:
+    # the command-line map wins outright; only when it does not match
+    # does a committed `public: bga: jobserver-auth:` annotation apply.
+    override = resolve_auth_override(
+        os.environ.get("BST_TRACE_JOBSERVER_AUTH_MAP"), ctx["element"]
+    ) or _annotation_style(ctx["element"])
+    if override is not None:
+        safe_auth = _forced_auth(override, auth_value, ctx)
+    else:
+        # UX-878: for the policies an unwrapped compiler/cargo reads
+        # MAKEFLAGS directly (gcc-lto, cargo), narrow the auth to a form
+        # that survives the sandbox boundary - `None` scrubs it outright
+        # rather than hand a raw fd to a deep grandchild that cannot use
+        # it.
+        safe_auth = _compiler_safe_makeflags(auth_value, policy, opts, ctx=ctx)
+    if safe_auth != auth_value:
+        pairs = [pair for pair in pairs if pair[0] != "MAKEFLAGS"]
+        if safe_auth is not None:
+            pairs.append(("MAKEFLAGS", safe_auth))
+        else:
+            # UX-878: a scrub leaves no jobserver, so an emptied JOBS would serialize the build; drop it too and the recipe's own -jN stands (jobserver-off behaviour).
+            pairs = [pair for pair in pairs if pair[0] != "JOBS"]
     auth_injected = any(var == "MAKEFLAGS" for var, _ in pairs)
     tokens = []
-    if needs_bind and auth_injected:
-        tokens += ["--bind", bind_path, bind_path]
     for var, value in pairs:
         tokens += ["--setenv", var, value]
     for var in unsets:
@@ -421,8 +783,15 @@ def _jobserver_injection(opts: list[str], bind_dst: str, decision: str,
     # decides which tools this directory covers before the build.
     wrapper_dir = kind_context.get("wrappers_dir")
     if wrapper_dir is not None and auth_injected:
-        tokens += _wrapper_mount(opts, wrapper_dir,
-                                 kind_context.get("wrapper_cap"), bind_dst)
+        tokens += _wrapper_mount(opts, wrapper_dir, bind_dst, caps={
+            "wrapper_cap": kind_context.get("wrapper_cap"),
+            "lto_cap": kind_context.get("lto_cap"),
+            "flto_active": override == "flto",
+            # UX-881: an operator's own wrapper directory and its mode,
+            # carried straight through from `main` (never re-derived here).
+            "wrapper_dir_override": kind_context.get("wrapper_dir_override"),
+            "wrapper_mode": kind_context.get("wrapper_mode"),
+        })
     return tokens
 
 
@@ -444,6 +813,9 @@ def build_shim_argv(
     wrapper_cap: Optional[str] = None,
     proxy_fd: Optional[int] = None,
     proxy_fifo: Optional[str] = None,
+    lto_cap: Optional[str] = None,
+    wrapper_dir_override: Optional[str] = None,
+    wrapper_mode: Optional[str] = None,
 ) -> list[str]:
     """The real, complete argv to exec: BuildStream's own bwrap options
     first (unmodified, including its own root-filesystem bind), then the
@@ -470,6 +842,16 @@ def build_shim_argv(
     `jobserver_fifo` outright - `main` already opened the proxy under
     the *same* style the global FIFO resolved to (mirroring UX-841
     exactly; a proxy has no `make --version` of its own to probe).
+
+    `lto_cap` (UX-880): `BST_TRACE_LTO_CAP`, read straight from this
+    process's own environment by the caller - the static `-flto=N` cap
+    the wrapper-mounted GCC-driver shim rewrites to, same channel as
+    `wrapper_cap`.
+
+    `wrapper_dir_override`/`wrapper_mode` (UX-881): `bga capture run
+    --wrapper-dir`/`--wrapper-dir-mode`, read the same way - an
+    operator's own wrapper directory, mounted alongside (`augment`,
+    default) or instead of (`replace`) the shipped one.
     """
     opts, cmd = split_bwrap_args(bst_args)
     injected = [
@@ -505,11 +887,15 @@ def build_shim_argv(
     # must not override it.
     decision = jobserver_decision(parse_element_max_jobs(opts), project_max_jobs)
     injected += _jobserver_injection(
-        opts, bind_dst, decision,
+        opts, (bind_src, bind_dst), decision,
         pool={"fd": jobserver_fd, "fifo": jobserver_fifo,
              "proxy_fd": proxy_fd, "proxy_fifo": proxy_fifo},
         kind_context={"element_kind": element_kind, "ninja_probe": ninja_probe,
-                     "wrappers_dir": wrapper_dir, "wrapper_cap": wrapper_cap})
+                     "wrappers_dir": wrapper_dir, "wrapper_cap": wrapper_cap,
+                     "real_bwrap": real_bwrap, "element": element,
+                     "lto_cap": lto_cap,
+                     "wrapper_dir_override": wrapper_dir_override,
+                     "wrapper_mode": wrapper_mode})
     # UX-106: the ptrace spine, prepended to the sandboxed command so it
     # becomes the parent of everything BuildStream asked to run - which
     # is what makes every descendant its own tracee, and so traceable
@@ -700,7 +1086,8 @@ def record_jobserver_decision(log_path: Optional[str], opts: list[str],
         if decision != JOBSERVER_PINNED:
             _pairs, _unsets, policy = kind_job_env(
                 element_kind, "--jobserver-auth=0,0",
-                kind_context.get("ninja_probe"), kind_context.get("wrappers_dir"))
+                kind_context.get("ninja_probe"), kind_context.get("wrappers_dir"),
+                jobs_present=_setenv_value(opts, "JOBS") is not None)
         name, unresolved = element, False
         if name is None:
             unresolved = True
@@ -729,7 +1116,9 @@ def record_diagnostics(log_path: Optional[str], received: list[str],
                        exec_argv: list[str], real_bwrap: str,
                        element: Optional[str], spine: Optional[str],
                        injected: bool,
-                       stderr_path: Optional[str] = None) -> bool:
+                       stderr_path: Optional[str] = None,
+                       jobserver_fifo_host: Optional[str] = None,
+                       jobserver_fifo_sandbox: Optional[str] = None) -> bool:
     """UX-146: one line per invocation, holding both argvs.
 
     A capture that fails tells the user `buildbox-run failed with
@@ -779,6 +1168,11 @@ def record_diagnostics(log_path: Optional[str], received: list[str],
             # capture ran under `--diagnose`. `None` on the default path,
             # which still execs and therefore has nowhere to put it.
             "stderr_path": stderr_path,
+            # UX-869: fifo style names no host path in `exec_argv` any
+            # more (no bind of its own) - both `None` for fd style or
+            # nothing active.
+            "jobserver_fifo_host": jobserver_fifo_host,
+            "jobserver_fifo_sandbox": jobserver_fifo_sandbox,
         }
         line = json.dumps(record, sort_keys=True) + "\n"
         fd = os.open(log_path, os.O_WRONLY | os.O_APPEND | os.O_CREAT, 0o644)
@@ -929,6 +1323,17 @@ def run_and_mark_done(real_bwrap: str, argv: list[str], done_path: str) -> int:
     return exit_like(status)
 
 
+def _open_inheritable_rdwr(path: str) -> int:
+    """The one way this module opens a jobserver FIFO for `fd` style -
+    read-write so the open cannot block on a second end, inheritable so
+    `execv` carries it into the real bwrap (`os.open` marks a new fd
+    non-inheritable by default, PEP 446). Shared by `open_jobserver_fd`,
+    `_resolve_proxy_auth`, and UX-874's downgrade below."""
+    fd = os.open(path, os.O_RDWR)
+    os.set_inheritable(fd, True)
+    return fd
+
+
 def open_jobserver_fd() -> tuple[Optional[int], Optional[str]]:
     """The `(fd, fifo_path)` `main` hands `build_shim_argv` - exactly one
     of the pair set, or both `None`.
@@ -946,9 +1351,7 @@ def open_jobserver_fd() -> tuple[Optional[int], Optional[str]]:
         return None, None
     if os.environ.get("BST_TRACE_JOBSERVER_AUTH") == "fifo":
         return None, jobserver_path
-    fd = os.open(jobserver_path, os.O_RDWR)
-    os.set_inheritable(fd, True)
-    return fd, None
+    return _open_inheritable_rdwr(jobserver_path), None
 
 
 def _project_max_jobs_env() -> Optional[int]:
@@ -994,9 +1397,54 @@ def _resolve_proxy_auth(proxy_fifo: Optional[str]) -> tuple[Optional[int], Optio
         return None, None
     if os.environ.get("BST_TRACE_JOBSERVER_AUTH") == "fifo":
         return None, proxy_fifo
-    fd = os.open(proxy_fifo, os.O_RDWR)
-    os.set_inheritable(fd, True)
-    return fd, None
+    return _open_inheritable_rdwr(proxy_fifo), None
+
+
+def _downgrade_fifo_to_fd_if_sandbox_make_rejects_it(
+        probe: dict, cache_path: Optional[str], pool: dict) -> dict:
+    """UX-874/UX-877: `pool` (`{fd, fifo, proxy_fd, proxy_fifo}`)
+    unchanged unless the request is `fifo` (a `fifo` entry present) and
+    this element's own sandbox make - probed once, cached at
+    `cache_path` (`_make_probe_cache_path`, per element) - is below
+    4.4/absent/unparseable, in which case both the global FIFO and
+    UX-849's per-element proxy (the same sandbox make consumes either)
+    are opened `fd` style instead. Never widens: a request already `fd`
+    has no `fifo` entry to act on. `probe` (`{element_kind, real_bwrap,
+    opts, ninja_probe, wrappers_dir, jobs_present}`, PLR0913's cap)
+    threads its last three straight to `sandbox_make_auth_style` so its
+    kind gate matches `kind_job_env`'s own injection.
+    """
+    if pool.get("fifo") is None and pool.get("proxy_fifo") is None:
+        return pool
+    if sandbox_make_auth_style(
+            probe["element_kind"], probe["real_bwrap"], probe["opts"], cache_path,
+            kind_probe=probe) != "fd":
+        return pool
+    downgraded = dict(pool)
+    if pool.get("fifo") is not None:
+        downgraded["fd"] = _open_inheritable_rdwr(pool["fifo"])
+        downgraded["fifo"] = None
+    if pool.get("proxy_fifo") is not None:
+        downgraded["proxy_fd"] = _open_inheritable_rdwr(pool["proxy_fifo"])
+        downgraded["proxy_fifo"] = None
+    return downgraded
+
+
+def _narrow_jobserver_to_sandbox_make(probe: dict, pinned: bool, pool: dict) -> dict:
+    """`main`'s own UX-874/UX-877 wiring, split out to keep its
+    statement count under `PLR0915`'s cap and its argument count under
+    `PLR0913`'s - `probe` (`{element, element_kind, real_bwrap, opts,
+    ninja_probe, wrappers_dir, jobs_present}`) and `pool` (`{fd, fifo,
+    proxy_fd, proxy_fifo}`) kept as one param each, the same grouping
+    `_jobserver_injection`'s own `binds`/`pool` already use.
+    `_make_probe_cache_path` (per element) then
+    `_downgrade_fifo_to_fd_if_sandbox_make_rejects_it`. `pool` unchanged
+    for a pinned element - nothing is injected for it either way."""
+    if pinned:
+        return pool
+    cache_path = _make_probe_cache_path(
+        os.environ.get("BST_TRACE_JOBSERVER"), probe["element"])
+    return _downgrade_fifo_to_fd_if_sandbox_make_rejects_it(probe, cache_path, pool)
 
 
 def _element_kind_env(element: Optional[str]) -> Optional[str]:
@@ -1015,23 +1463,60 @@ def _element_kind_env(element: Optional[str]) -> Optional[str]:
     return kinds.get(element) if isinstance(kinds, dict) else None
 
 
+def _annotation_style(element: Optional[str]) -> Optional[str]:
+    """UX-882: `BST_TRACE_ELEMENT_AUTH_MAP`'s map (a JSON `{name: style}`,
+    written once by the tracer from each element's own `public: bga:
+    jobserver-auth:` annotation), looked up the same way
+    `_element_kind_env` reads `BST_TRACE_ELEMENT_KINDS`. `None` on an
+    unset/unreadable file, an element the map does not name, or a
+    stored value outside the four override styles - all three degrade
+    to "no annotation", the same as `resolve_auth_override`'s own miss."""
+    path = os.environ.get("BST_TRACE_ELEMENT_AUTH_MAP")
+    if not path or element is None:
+        return None
+    try:
+        with open(path, encoding="utf-8") as handle:
+            auth_map = json.load(handle)
+    except (OSError, ValueError):
+        return None
+    if not isinstance(auth_map, dict):
+        return None
+    style = auth_map.get(element)
+    return style if style in _AUTH_OVERRIDE_STYLES else None
+
+
 def _resolve_kind_and_probe(element, jobserver_fd, jobserver_fifo,
                             project_max_jobs, real_bwrap):
-    """UX-843: `{element_kind, ninja_probe, wrappers_dir}` for `main` -
-    pulled out of it (a dict, not a tuple, so both call sites in `main`
-    pass it straight through as one argument) so the mode's env-reading
-    and gating (`_element_kind_env`, the ninja probe's own gate) don't
-    inflate `main`'s own statement count. The probe runs only for a
-    cmake/meson element whose decision would otherwise consult it (mode
-    active, not pinned)."""
+    """UX-843/UX-859: `{element_kind, ninja_probe, wrappers_dir}` for
+    `main` - pulled out of it (a dict, not a tuple, so both call sites
+    in `main` pass it straight through as one argument) so the mode's
+    env-reading and gating (`_element_kind_env`, the ninja probe's own
+    gate) don't inflate `main`'s own statement count. The probe runs
+    for a cmake/meson element, or any other kind whose own sandbox env
+    carries `JOBS` (UX-859: a manual `-G Ninja` recipe is exactly as
+    much at risk of the cores+2 regression UX-843 found), whose
+    decision would otherwise consult it (mode active, not pinned).
+    Cached per capture (UX-855), so this is one `ninja --help` per
+    capture even with the gate widened.
+
+    UX-881: `wrapper_dir_override`/`wrapper_mode`
+    (`BST_TRACE_WRAPPER_DIR_OVERRIDE`/`BST_TRACE_WRAPPER_MODE`) ride
+    along the same way - an operator's own wrapper directory, read
+    here so `main`'s single call site stays the only place environment
+    is consulted."""
     element_kind = _element_kind_env(element)
     wrappers_dir = os.environ.get("BST_TRACE_WRAPPER_DIR")
     base = {"element_kind": element_kind, "ninja_probe": None,
-           "wrappers_dir": wrappers_dir}
+           "wrappers_dir": wrappers_dir,
+           "wrapper_dir_override": os.environ.get("BST_TRACE_WRAPPER_DIR_OVERRIDE"),
+           "wrapper_mode": os.environ.get("BST_TRACE_WRAPPER_MODE")}
     active = jobserver_fd is not None or jobserver_fifo is not None
-    if element_kind not in _NINJA_CAPABLE_KINDS or not active:
+    if not active:
         return base
     opts, _cmd = split_bwrap_args(sys.argv[1:])
+    jobs_present = _setenv_value(opts, "JOBS") is not None
+    if element_kind not in _NINJA_CAPABLE_KINDS and not jobs_present:
+        return base
     decision = jobserver_decision(parse_element_max_jobs(opts), project_max_jobs)
     if decision == JOBSERVER_PINNED:
         return base
@@ -1129,15 +1614,27 @@ def main() -> int:
     # UX-849: a plan-active sandbox binds its own proxy and, only then,
     # marks `proxy_done_path` when it exits - a build with no `--plan`
     # never sets `BST_TRACE_PROXY_DIR`, so `proxy_fifo` is always `None`
-    # and this whole item costs nothing. The proxy's own auth (fd or
-    # the host path, unchanged - same-path bind, exactly as the global
-    # FIFO's own) follows `BST_TRACE_JOBSERVER_AUTH`, the coordinator's
-    # fix: GNU Make 4.3 (this box, CI) rejects `fifo:` outright.
+    # and this whole item costs nothing. The proxy's own auth (fd, or
+    # its path rewritten under `bind_dst` - UX-869, no bind of its own)
+    # follows `BST_TRACE_JOBSERVER_AUTH`, the coordinator's fix: GNU
+    # Make 4.3 (this box, CI) rejects `fifo:` outright.
     opts_now, _cmd_now = split_bwrap_args(sys.argv[1:])
     pinned_now = jobserver_decision(
         parse_element_max_jobs(opts_now), project_max_jobs) == JOBSERVER_PINNED
     proxy_fifo_host, proxy_done_path = _element_proxy_paths(element, pinned_now)
     proxy_fd, proxy_fifo = _resolve_proxy_auth(proxy_fifo_host)
+    # UX-874: the host chose `fifo:` from *its own* `make --version`
+    # (jobserver_auth_style, UX-841) - narrowed here, per element.
+    jobserver_pool = _narrow_jobserver_to_sandbox_make(
+        {"element": element, "element_kind": kind_context["element_kind"],
+         "real_bwrap": real_bwrap, "opts": opts_now,
+         "ninja_probe": kind_context["ninja_probe"],
+         "wrappers_dir": kind_context["wrappers_dir"],
+         "jobs_present": _setenv_value(opts_now, "JOBS") is not None}, pinned_now,
+        pool={"fd": jobserver_fd, "fifo": jobserver_fifo,
+             "proxy_fd": proxy_fd, "proxy_fifo": proxy_fifo})
+    jobserver_fd, jobserver_fifo = jobserver_pool["fd"], jobserver_pool["fifo"]
+    proxy_fd, proxy_fifo = jobserver_pool["proxy_fd"], jobserver_pool["proxy_fifo"]
     if inject:
         argv = build_shim_argv(real_bwrap, sys.argv[1:], bind_src, bind_dst,
                                preload_so, trace_log,
@@ -1156,7 +1653,10 @@ def main() -> int:
                                wrapper_dir=kind_context["wrappers_dir"],
                                wrapper_cap=os.environ.get("BST_TRACE_WRAPPER_CAP"),
                                proxy_fd=proxy_fd,
-                               proxy_fifo=proxy_fifo)
+                               proxy_fifo=proxy_fifo,
+                               lto_cap=os.environ.get("BST_TRACE_LTO_CAP"),
+                               wrapper_dir_override=kind_context["wrapper_dir_override"],
+                               wrapper_mode=kind_context["wrapper_mode"])
     else:
         argv = [real_bwrap, *sys.argv[1:]]
         proxy_done_path = None
@@ -1174,9 +1674,16 @@ def main() -> int:
         except OSError:
             stderr_path = None  # a diagnostic must never fail a build
 
+    fifo_host = _active_jobserver_fifo(
+        {"fd": jobserver_fd, "fifo": jobserver_fifo,
+         "proxy_fd": proxy_fd, "proxy_fifo": proxy_fifo})
+    fifo_sandbox = (_sandbox_fifo_path(bind_src, bind_dst, fifo_host)
+                    if fifo_host else None)
     record_diagnostics(diagnostics_path, list(sys.argv[1:]),
                        argv, real_bwrap, element, spine, inject,
-                       stderr_path=stderr_path)
+                       stderr_path=stderr_path,
+                       jobserver_fifo_host=fifo_host,
+                       jobserver_fifo_sandbox=fifo_sandbox)
 
     return _exec_or_run(real_bwrap, argv, stderr_path, proxy_done_path)
 

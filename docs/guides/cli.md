@@ -187,8 +187,11 @@ it did not do.
 `--jobserver auto|N|off` (default `off`) and `--plan @prev|@last|PATH`
 compose into the capture exactly as `bga capture run --jobserver` does
 (`resolve_jobserver_ceiling`, `UX-851`) — nothing to invent, one flag
-per capture, like `--diagnose` (`UX-146`). The comparison a mode's value
-is read from is the pair itself:
+per capture, like `--diagnose` (`UX-146`). `auto`'s ceiling is the
+host's cores and it opens seeded to `max(0, cores - builders)`, so the
+pool can grow to fill the machine rather than stall at a ceiling of 1
+(`UX-858`). The comparison a mode's value is read from is the pair
+itself:
 
 ```bash
 bga snapshot --jobserver off -- bst build all.bst    # the baseline
@@ -202,6 +205,7 @@ jobserver: off -> auto (4)                            # the compare header names
 | `--no-compare` | Take the snapshot and report on it; skip the comparison |
 | `--project PATH` | Snapshot a project other than the enclosing one |
 | `--jobserver auto\|N\|off` | Cap sandbox concurrency for this capture (default `off`) |
+| `--jobserver-auth fd\|fifo\|auto` | The `--jobserver-auth` style forwarded to the tracer (default `auto`), as `bga capture run --jobserver-auth` (`UX-841`, `UX-875`); unused when `--jobserver` is off |
 | `--plan @prev\|@last\|PATH` | Bias the jobserver by a prior run's own slack; needs `--jobserver auto\|N` |
 | `prune --keep N` / `--older-than DAYS` / `--max-store SIZE` | Delete old snapshots; `--dry-run` says what would go |
 
@@ -462,6 +466,7 @@ never silently folded into an unestimated blast.
 | `confidence` | varies | the confidence headline and any failed hard gates |
 | `run-mode-incremental` | info | this run was incremental, so its durations are not a cold-build baseline |
 | `cache-hit-ratio` | varies | how much of the project the cache reused, and for the requested target's own closure. On a caches-off run it reports the fact at `info` rather than banding it (`UX-86`) |
+| `cache-capacity` | varies | the local cache is at or past the low watermark it is configured with, or its quota is larger than the volume under it can give - so a rebuild here may be an evicted artifact rather than a moved cache key (`UX-896`) |
 | `cache-transfer-cost` | medium | this build spent a notable share of wall-clock moving artifacts rather than making them |
 | `wait-category` | varies | the single largest non-execution wait category, when it clears the 1% floor |
 | `execution-bound` | info | no wait category clears the floor — the time is in the work itself |
@@ -485,6 +490,7 @@ never silently folded into an unestimated blast.
 | `latent-heavies` | info | heavy elements off the critical path, worth nothing to fix today |
 | `capacity-recommendation` | varies | the joint `--builders` × `--max-jobs` answer (`UX-116`): the sweep's scheduling knee, Plane 2's measured cores-busy, the `UX-104` memory ceiling and the host's cores, intersected, with the **binding** constraint named and the others shown beneath it. `high` when the run is configured above what its own measurements support, `medium` when there is room to grow, `info` when it is already at its ceiling. Needs `--plane2` |
 | `memory-envelope` | varies | what this build's measured per-element peak RSS implies for `--builders` against the host's RAM — `high` when the current builders count does not fit, `medium` when one more would not, `info` otherwise. Needs `--plane2` and a capture that recorded the host's memory (`UX-104`) |
+| `swap-observed` | high | pages were written to swap while the host's CPU was oversampled — the window span and the elements building in it, from `overcommitted_intervals`' own `swapped_out` count (`UX-676`, `UX-860`). Needs a capture with a host CPU series that recorded a rising `pswpout` |
 | `remote-execution-whatif` | info | what remote execution would buy, priced two ways and never summed (`UX-680`): `bga sweep`'s own unbounded-builder row (BuildStream REAPI moves whole sandboxes, so it removes the builder cap) and Plane 2's compiler/linker CPU on the critical path (compiler-level RE like recc/reclient moves compiles out of the sandbox, so it removes compile seconds from the agent). `evidence.additive` is always `false` - both remove the same critical-path seconds. The compiler-offload half needs `--plane2` and a capture with `binary_cost`; without one, only the builder-cap half publishes |
 | `shared-source-blast` | medium | one repository's ref decides most of this build's rebuilds: any commit to it rebuilds N of M elements, because its direct elements key on its ref rather than on the files they stage (`UX-171`). Needs a run whose `sources.json` the extraction wrote |
 
@@ -577,15 +583,16 @@ With `--plane2`, both consult what was actually measured inside the sandboxes:
   recommendation naming the binding one (`UX-116`), instead of four blocks a reader has to reconcile:
 
 ```text
-Capacity: builders 4 x max-jobs unrecorded on 4 core(s): graph binds at 6 - there is room for 2 more builder(s)
+Capacity: builders 4 x max-jobs unrecorded on 4 core(s): CPU binds at 4 (the host's cores bound it, not the raw 7) - at the 4 configured
   graph allows 6: the sweep's knee is at 6 builder(s)
-  CPU allows 7: 2.11 of 4 core(s) busy at builders=4, i.e. 0.53 core(s) per concurrent element
+  CPU allows 4: 2.11 of 4 core(s) busy at builders=4, i.e. 0.53 core(s) per concurrent element - 7 before the host's 4 cores bound it
   memory allows 9: the 9-builder envelope fits in 15.7 GB (measured over 9 element peak(s), so it says nothing above 9)
   Free capacity you already have: core.bst asked its native build for -j1 - a builder slot drawing one core.
 ```
 
   The CPU ceiling is derived, not assumed: `cores_busy / builders` is what one concurrently-building element
-  actually drew, and the ceiling is how many of those the host's cores can feed. A constraint nothing measured
+  actually drew, and the ceiling is how many of those the host's cores can feed - never more builders than
+  the host has cores (`UX-861`; the raw figure stays beside it as `clamped_from`). A constraint nothing measured
   is omitted rather than treated as unbounded, and the whole block declines to appear at all when Plane 2 has
   no `cores_busy` — the same bar `UX-83` uses.
 
@@ -656,6 +663,36 @@ bga analyze RUN/ --cold --history-dir PRIOR-RUN-1/ --history-dir PRIOR-RUN-2/
 - By default, if any element on the resolved cold critical path has no resolvable historical duration, `T∞,cold` reports as unavailable rather than a misleading partial number.
 - `--allow-partial-cold` (only meaningful together with `--cold`; a no-op with a warning if passed alone) instead publishes a value with `partial=true`/`confidence=low` in that case.
 
+#### CPU floor (`UX-891`, needs Plane 2)
+
+Every other certified floor divides by **builder slots**. A build whose
+elements each run a native build system under one slot can be core-bound
+long before it is slot-bound, and no slot-denominated floor can see it.
+When a Plane 2 report is joined in, `analyze` publishes a second floor
+that divides total measured CPU time by the governing core count:
+
+```text
+  LB_cpu (CPU over cores):     17.45s (4 cores from host_cpu_count, coverage 0.82)
+```
+
+It sits **beside** `LB`, never folded into it: `LB` stays the certified
+slot-denominated floor, and the capacity-model note says which of the two
+binds. In `--format json` the five keys under `floors` are
+
+| key | meaning |
+|---|---|
+| `lb_cpu_us` | the floor, integer µs; **absent** without Plane 2 or without a governing core count, never `0` |
+| `lb_cpu_coverage` | `measured_processes / (measured + unmeasured)` - how much of the seen process population the number rests on |
+| `lb_cpu_governing_cores` | the core count it divided by |
+| `lb_cpu_cores_source` | `cpu_budget` when the run declared one, otherwise `host_cpu_count` |
+| `lb_cpu_binds` | whether `lb_cpu_us` exceeds `lb` |
+
+None of them is in `required` - a run without Plane 2 carries none, which
+is the same contract the cold fields keep. The three assumptions the
+number rests on are printed under it in the text report, as
+`bga/floors/cpu.py` declares them. See section 4c of
+`in-step-parallelism.md` for why it stays beside `LB`.
+
 ## Advanced Commands
 
 ### Version
@@ -680,7 +717,7 @@ bga analyze RUN/ --verbose
 
 ```bash
 bga graph RUN/          # static dependency graph, critical path, structural metrics
-bga floors RUN/ --cold  # certified/advisory floors (T-infinity, LB, certified headroom, cold floor)
+bga floors RUN/ --cold  # certified/advisory floors (T-infinity, LB, LB_cpu, certified headroom, cold floor)
 bga replay RUN/ --heuristic spt   # deterministic replay makespan (T_C)
 bga sweep RUN/ --resource PROCESS --min-capacity 1 --max-capacity 16  # capacity sweep (Part 19)
 bga utilisation RUN/    # CPU utilisation accounting
@@ -730,6 +767,8 @@ What you can set:
 
 | name | what it changes | where |
 |---|---|---|
+| `BGA_BUILD_TYPE` | what kind of build this was — `night`, `review`, `guard`, or whatever else the pipeline declares (`UX-898`). Free text: two runs declaring different types are two populations, and `bga compare`'s gates refuse the pair with exit 6 unless `--blend` is passed. Unset, nothing is recorded and every comparison behaves as it did | `tools/_run_context_common.py` |
+| `BGA_BUILD_VARIANT` | the named dimensions of what the build did, comma-separated — `arch=aarch64,sanitizer=address,coverage=on` (`UX-903`). Several are true at once, which is why it is a map and not a string; the comparison class is the pair with `BGA_BUILD_TYPE`. An entry without `=` is refused naming it | `tools/_run_context_common.py` |
 | `BGA_INTERRUPT_GRACE_SECONDS` | seconds a wrapped `bst` gets to stop by itself after `SIGINT` before `bga` escalates; 300 by default, and raising it is how a big build keeps the `queue_summary` written during that shutdown | `tools/bst_run_wrapped.py` |
 | `BGA_JOBSERVER_MODE` | `off`/`auto`/`n` — `bga capture` sets it beside the `--jobserver N` it already resolves from `--jobserver auto\|N\|off` (`UX-851`), so `tools/bst_native_build_tracer.py run` can record which mode ran without parsing its own argv for the distinction. Unset (read as `off`) when the tracer's `run` command is invoked directly, outside `bga capture` | `tools/bst_native_build_tracer.py` |
 | `BGA_NO_PROGRESS` | suppresses the in-phase progress line even on a terminal — the same off-switch as `bga snapshot --no-progress` | `bga/progress.py` |
@@ -771,6 +810,9 @@ is which before touching any of them.
 | `BST_TRACE_DIAGNOSTICS` | a path the shim writes `bwrap`'s own stderr to, so a sandbox that refused says what it objected to | `tools/native_trace/bwrap_shim.py` |
 | `BST_TRACE_ARGV_MAX` | how much of a recorded `argv` is kept before truncation; the default is the shim's `DEFAULT_ARGV_RECORD_LIMIT` | `tools/native_trace/bwrap_shim.py` |
 | `BST_TRACE_WRAPPER_CAP` | the most tokens one jobserver wrapper (`ld.lld`, `lld`, `ld.gold`, `mold`, `ninja`) may acquire before running its tool — the pool's own ceiling, set only when `--jobserver` is on (`UX-846`) | `tools/native_trace/wrappers/_common.sh` |
+| `BST_TRACE_LTO_CAP` | the static `-flto=N` cap the GCC-driver shim (`gcc`/`g++`/`cc`/`c++`) rewrites an already-present `-flto`/`-flto=jobserver`/`-flto=auto` to — default `nproc`, the same ceiling `resolve_jobserver_ceiling`'s own `auto` uses; `bga capture run --lto-cap N` sets it (`UX-880`) | `tools/native_trace/wrappers/_common.sh` |
+| `BST_TRACE_WRAPPER_DIR_OVERRIDE` | an operator's own wrapper directory (`docs/guides/wrapper-contract.md`), mounted alongside or instead of the shipped one; `bga capture run --wrapper-dir PATH` sets it (`UX-881`) | `tools/native_trace/bwrap_shim.py` |
+| `BST_TRACE_WRAPPER_MODE` | `augment` (default) or `replace` — whether the operator's directory above adds to the shipped mount or takes its place entirely; `bga capture run --wrapper-dir-mode` sets it (`UX-881`) | `tools/native_trace/bwrap_shim.py` |
 
 **What the capture path sets for you.** Setting these by hand does not
 configure a capture, it desynchronises one — the tracer writes them
@@ -790,12 +832,15 @@ into the child environment and the shim requires them:
 | `BST_TRACE_ARGV_LOG` | the host-side `argv` log, written only when argv recording is on | `tools/bst_native_build_tracer.py` |
 | `BST_TRACE_JOBSERVER` | the jobserver FIFO's path; `run --jobserver N` sets it, the shim opens it read-write and injects `MAKEFLAGS=--jobserver-auth` (`UX-679`, a spike) | `tools/native_trace/bwrap_shim.py` |
 | `BST_TRACE_JOBSERVER_AUTH` | `fd` or `fifo`, resolved from `--jobserver-auth` before the build starts; the shim reads it to choose which `--jobserver-auth` style to inject (`UX-841`) | `tools/native_trace/bwrap_shim.py` |
+| `BST_TRACE_JOBSERVER_AUTH_MAP` | `bga capture run --jobserver-auth-override`'s own map (`style:glob[,glob];...`, styles `fd`/`fifo`/`off`/`flto`), resolved in `bga/cli.py` and carried unchanged through `tools/bst_native_build_tracer.py`; the shim's `resolve_auth_override` matches it against the element name and forces the style, ahead of the auto/`compiler_safe` path (`UX-879`, `flto` `UX-880`) | `tools/native_trace/bwrap_shim.py` |
 | `BST_TRACE_PROJECT_MAX_JOBS` | the project's own `max-jobs`, read once from `bst show` before the build; the shim compares it against each sandbox's own `-j` to tell a `notparallel` pin from an element-level cap (`UX-842`) | `tools/native_trace/bwrap_shim.py` |
 | `BST_TRACE_JOBSERVER_DECISIONS` | the host-side path the shim appends one `{element, max_jobs, decision, kind, policy}` line to per sandbox, folded into the report as `jobserver_decisions` (`UX-842`/`UX-843`) | `tools/native_trace/bwrap_shim.py` |
 | `BST_TRACE_ELEMENT_KINDS` | a JSON `{name: kind}` map, read once from `bst show` before the build; the shim looks its own element up in it to pick a row from the per-kind environment table (`UX-843`) | `tools/native_trace/bwrap_shim.py` |
-| `BST_TRACE_WRAPPER_DIR` | the host path of `tools/native_trace/wrappers/`, bound read-only at `wrappers/` under the trace bind (`/tmp/.bst-native-trace/wrappers`; the sandbox root is read-only, measured on examples/06) and prepended to `PATH` ahead of BuildStream's own (`UX-846`) | `tools/native_trace/bwrap_shim.py` |
+| `BST_TRACE_ELEMENT_AUTH_MAP` | a JSON `{name: style}` map, read once from a *separate* `bst show --format '%{name}<US>%{public}<RS>'` before the build - each element's own `public: bga: jobserver-auth: fd\|fifo\|off\|flto` annotation, version-controlled in the project; the shim falls back to it in `resolve_auth_override or _annotation_style` only when `BST_TRACE_JOBSERVER_AUTH_MAP` (the command-line override) does not match the element (`UX-882`) | `tools/native_trace/bwrap_shim.py` |
+| `BST_TRACE_WRAPPER_DIR` | the host path of `tools/native_trace/wrappers/`, bound read-only at `wrappers/` under the trace bind (`/tmp/.bst-native-trace/wrappers`; the sandbox root is read-only, measured on examples/06) and prepended to `PATH` ahead of BuildStream's own (`UX-846`; also holds the `flto` shim's `gcc`/`g++`/`cc`/`c++` scripts, `UX-880`) | `tools/native_trace/bwrap_shim.py` |
 | `BST_TRACE_JOBSERVER_LEDGER` | the in-sandbox path a wrapper appends an acquire or release row to — the same file `PoolController`'s own ticks land in, under the existing trace bind (`UX-846`) | `tools/native_trace/wrappers/_common.sh` |
-| `BST_TRACE_PROXY_DIR` | the host directory holding one jobserver proxy FIFO per element, set only when `run --plan` named an `analyze.json`; the shim looks its own element up in it and binds that proxy instead of the global FIFO when one exists (`UX-849`) | `tools/native_trace/bwrap_shim.py` |
+| `BST_TRACE_FLTO_ACTIVE` | `1` when *this* element's own `--jobserver-auth-override` resolved to `flto` — set only by `_jobserver_injection`, never by hand; the GCC-driver shim gates its entire strip-auth/rewrite-`-flto` transform on it, since the shim scripts sit in the one wrapper directory every jobserver-active sandbox mounts and would otherwise touch every element's compiler, matched or not (`UX-880`, verifier fix) | `tools/native_trace/bwrap_shim.py` |
+| `BST_TRACE_PROXY_DIR` | the host directory holding one jobserver proxy FIFO per element, set only when `run --plan` named an `analyze.json`; the shim looks its own element up in it and injects that proxy's auth instead of the global FIFO's when one exists — its path already lands under `BST_TRACE_BIND_DST`, no bind of its own (`UX-849`, `UX-869`) | `tools/native_trace/bwrap_shim.py` |
 
 **What a test sets to reach a failure path.** The spine's degrade and
 refusal branches are unreachable on a machine that *has* `ptrace`, so
@@ -979,7 +1024,8 @@ permitted rather than required, and named in the schema's own
 the real payload instead of by validation:
 
 ```bash
-bga compare --schema | jq '."bga:always_written"'   # ["verdict_provenance"]
+bga compare --schema | jq '."bga:always_written"'
+# ["verdict_provenance", "build_class_comparison"]
 ```
 
 `compare/v2`'s `verdict_provenance` is the worked example. `UX-610`
@@ -1020,8 +1066,11 @@ finding one level up: `parallelism` is a top-level *object*, its
 top-level array published the whole of a major bump outside itself.
 The third is `UX-838`: `elements.fan_in` and five other rows are keyed
 by something that is not an array index at all, so neither `items` nor
-`bga:columns` sees them. The surface is **293 keys** today, and that
-figure is derived from the walk rather than typed here.
+`bga:columns` sees them. The fourth is `UX-866`: `run_instance` is
+typed as a bare `object`, not a row at all - its keys (`seed` among
+them, `UX-858`) are declared only by its own view-hint's `properties`,
+read at any depth the same way. The surface is **313 keys** today, and
+that figure is derived from the walk rather than typed here.
 
 So the statement of coverage, which is now a statement and not a
 promise:
@@ -1076,8 +1125,8 @@ can look one up.
 | `joint_saving` | What fixing the top candidates *together* is worth, simulated, beside `sum_of_individual_us` — they differ when savings overlap. |
 | `serialization_point_risks` | Where the run is forced to serialize. Each entry carries `pinned_elements` (what was pinned, and to what), `governing_cores` (the cores they competed for) and `typical_max_jobs` (the `-j` their own builds used). |
 | `resource_blast` | What one shared resource rebuilds. `null` where no source inventory was captured. |
-| `run_instance.jobserver` | `UX-851`: the jobserver `bga capture` ran with. `mode` (`off`/`auto`/`n`), `ceiling` (the token count given or derived, `null` when off), `auth` (`fd`/`fifo`, `null` when off), `project_max_jobs` (the target element's own declared `max-jobs`, `null` when `bst` was unavailable). Absent, not defaulted, on a capture older than the field - `bga compare`'s header reads that absence as `jobserver off`. |
-| `jobserver` | `UX-847`: the pool's own record - `mode` (`fixed`/`dynamic`), `pool_ceiling`, `tokens_idle_share` (controller ticks with cores idle and tokens still in the pool) and `tokens_starved_share` (cores idle with the pool empty) - and `per_element`, keyed by uid: `joined` (`yes`/`pinned`/`held`/`unknown_kind`), `tokens_held_p50`/`tokens_held_max` (UX-846's own acquire rows joined to this element by the pid that acquired them, `null` when the element ran no wrapped tool). Present only when `--plane2`'s report carries a mode. |
+| `run_instance.jobserver` | `UX-851`: the jobserver `bga capture` ran with, inside `run_instance` (`UX-404`'s capture identity, which also carries `started_at_us` - when the capture began - and `host_manifest.cpu_count`/`.memory_bytes` - what the host reported, the ceilings are computed against). `mode` (`off`/`auto`/`n`), `ceiling` (the token count given or derived, `null` when off), `seed` (tokens the FIFO opened holding, `UX-858`: `max(0, ceiling - builders)` under `auto`, `ceiling - 1` otherwise, `null` when off), `auth` (`fd`/`fifo`, `null` when off), `project_max_jobs` (the target element's own declared `max-jobs`, `null` when `bst` was unavailable). Absent, not defaulted, on a capture older than the field - `bga compare`'s header reads that absence as `jobserver off`. |
+| `jobserver` | `UX-847`: the pool's own record - `mode` (`fixed`/`dynamic`), `pool_ceiling`, `tokens_idle_share` (controller ticks with cores idle and tokens still in the pool) and `tokens_starved_share` (cores idle with the pool empty) - and `per_element`, keyed by uid: `joined` (`yes`/`pinned`/`held`/`unknown_kind`), `tokens_held_p50`/`tokens_held_max` (UX-846's own acquire rows joined to this element by the pid that acquired them, `null` when the element ran no wrapped tool), and `UX-892`'s width over time: `tokens_held_series` (`[t_us, tokens]` steps, an acquire opening an interval and a release closing one - absent, not empty, when the element ran no wrapped tool), `tokens_series_coverage` (the share of the element's token-holding tools that wrote those rows - a real `make` reads the pipe itself and logs nothing), `tokens_series_open` (intervals no release closed, UX-852's leak) and `tokens_series_truncated` (whether the series hit its per-element cap). Present only when `--plane2`'s report carries a mode. |
 | `trace_queries` | Every timeline query that shows a finding or deepens a claim, best first; `trace_query` is its first entry. Absent where there is a single grain. |
 | `unused_dependencies`, `redundancy_count`, `worst_redundancy`, `native_findings` | The Plane 2 half of an `element_join` row: declared-and-never-read dependencies, how often this element repeated work it had already done, the repetition it paid most for, and the producer's own per-element tags. |
 | `edges`, `projection` | Inside a `restructuring` finding: the declared build edges Plane 2 measured never-read, and the replay with those edges removed (`replayed_baseline_us`, `projected_us`, `saving_us`). Evidence, not a verdict. |
@@ -1120,6 +1169,7 @@ can look one up.
 | `start_offset_us` | In an interval row, how long after the run started the window opens (`UX-823`) - the figure the From column draws; `start_us` stays the wall-clock base the Perfetto link needs. |
 | `start_us`, `load1` | In an interval row, where the window starts on the build's own wall clock, and the host's one-minute load average through it — runnable *and* uninterruptible tasks, which is what separates a busy machine from a blocked one. |
 | `allows` | In a `capacity_recommendation.constraints` row, how many builders that one ceiling permits, beside the `name` of the ceiling and the `reason` it was measured. A ceiling with no measurement behind it is absent rather than infinite. |
+| `clamped_from` | In the CPU row of `capacity_recommendation.constraints`, the raw builder count before it was capped to `host_cpu_count` (`UX-861`) - present only when `allows` was clamped down to the host's own cores. |
 | `realizable_saving_us` | What removing this element entirely takes off the **makespan** — not off the path. In a `critical_path_detail` row and in a finding's `evidence.rows`, where the two differ whenever something else is ready to take the freed time. |
 | `elided`, `resolved` | In a `provenance` (or `compare/v2` `verdict_provenance`) evidence row: the shape a path held where the value was a container — `object[1202]`, `array[15]` — published instead of copying that population in twice, and `false` where the path did not resolve at all, so a broken reference is visible rather than missing. |
 
@@ -1451,7 +1501,7 @@ One row per element, from both planes:
 | | |
 | --- | --- |
 | Plane 1 | `on_critical_path`, `critical_path_share`, `potential_saving_us`, `saving_share`, `blast_radius` |
-| Plane 2 | `cores_busy`, `cpu_coverage`, `requested_jobs`, `peak_rss_bytes`, `dominant_binary`, `serial_binary` |
+| Plane 2 | `cores_busy`, `cpu_coverage`, `requested_jobs`, `resolved_jobs` (`UX-894`: the width BuildStream resolved for the element, read from the run's graph document, where a non-parallel element is a width of one and not a missing value), `jobs_denominator` (which of the two widths the achieved ratio divided by, or absent when no ratio was computed), `peak_rss_bytes`, `dominant_binary`, `serial_binary` |
 
 `bga analyze --plane2 PLANE2.json` now carries the same rows as
 `element_join`, from the same function — so the report and the command
@@ -2141,10 +2191,16 @@ Documented here because they exist and nothing user-facing said so:
 - `bga sweep --calibration-dir DIR` (`UX-14` tier 2) — replaces the sweep's fixed-duration model with a contention-aware one calibrated from real runs in `DIR`. Without it the sweep's own caveat applies: the predicted curve is a shape, not a runtime prediction, because the replay model does not know about CPU.
 - `bga capture run --diagnose` / `--no-inject` (`UX-146`) — what the bwrap shim received and what it exec'd, one JSON line per sandbox, written as `<output>.diagnostics.jsonl` with a summary that **leads with the invocation count**. Zero means the `$PATH` shadow never reached `buildbox-run` and the build ran unmodified, which is a different problem from a sandbox that failed; the two are otherwise the same silence. `--no-inject` runs the build with the shim installed and injecting nothing — it captures nothing and says so, and exists to bisect the argv rewrite against the shadowing itself. Both are on `bga snapshot` too, and neither is sticky.
 - `bga capture run --invocation-log PATH` / `--argv-log PATH` / `--raw-log PATH` — where Plane 2 writes its own capture logs. `--invocation-log` defaults to a path beside the report (`UX-80`); `--no-invocation-log` turns it off.
-- `bga capture run --jobserver auto|N|off` (`UX-679`'s spike, `UX-851`'s mode; default `off`) — runs a GNU jobserver outside every sandbox and binds its FIFO into each one via the shim, so `make`/`cmake`'s Makefiles generator can join it instead of each sandbox believing it owns `N` cores alone. `N` binds that many tokens; `auto` sizes the pool to the host's cores minus BuildStream's own `--builders` in the wrapped command (or minus 1 when that is not named), floored at 1 — `bga` resolves `auto`/`off` to the tracer's own `--jobserver N`/absent before dispatching, so `tools/bst_native_build_tracer.py --help` still only shows the integer form. Recorded in the report as `jobserver`, and in the snapshot's `run_instance.jobserver` (below) as the mode actually used. The report also carries `cache_key_set`, a hash of one pre-build `bst show --format '%{name} %{full-key}'`, comparable against a later capture's own field — `bst show` reads the same key with or without the mode, because the shim's injection never passes through BuildStream's own environment composition (`UX-844`); a custom plugin whose own `environment:` declares `JOBS` or `MAKEFLAGS` must nocache them (`environment-nocache`) to keep that promise for itself, the way the shipped kinds already do.
-- `bga capture run --jobserver-auth fd|fifo|auto` (`UX-841`; default `auto`) — the `--jobserver-auth` style handed to `make`: `auto` picks `fifo:` from GNU Make 4.4, `fd` below, by the host's own `make --version`. Recorded in the report as `jobserver_auth`.
+- `bga capture run --jobserver auto|N|off` (`UX-679`'s spike, `UX-851`'s mode; default `off`) — runs a GNU jobserver outside every sandbox and binds its FIFO into each one via the shim, so `make`/`cmake`'s Makefiles generator can join it instead of each sandbox believing it owns `N` cores alone. `N` binds that many tokens; `auto` sizes the pool to the host's cores minus BuildStream's own `--builders` in the wrapped command (or minus 1 when that is not named), floored at 1 — `bga` resolves `auto`/`off` to the tracer's own `--jobserver N`/absent before dispatching, so `tools/bst_native_build_tracer.py --help` still only shows the integer form. Recorded in the report as `jobserver`, and in the snapshot's `run_instance.jobserver` (below) as the mode actually used. The report also carries `cache_key_set`, a hash of one pre-build `bst show --format '%{name} %{full-key}'`, comparable against a later capture's own field — `bst show` reads the same key with or without the mode, because the shim's injection never passes through BuildStream's own environment composition (`UX-844`); a custom plugin whose own `environment:` declares `JOBS` or `MAKEFLAGS` must nocache them (`environment-nocache`) to keep that promise for itself, the way the shipped kinds already do. A manual-kind recipe that spends BuildStream's own composed `JOBS` (a `cmake --build … ${JOBS}` call inside a `manual` element, say) joins the jobserver too, whatever its kind - `JOBS` set is the recipe's own promise to spend it (`UX-859`). The per-kind table's own read (`bst show --format '%{name} %{kind}'`) carries every global option the wrapped command gave `bst` - `-o`, `--config`, `--directory` included - and on any failure writes `kinds_read.json` beside `element_kinds.json` naming the argv, the exit status and why (`UX-870`).
+- `bga capture run --jobserver-auth fd|fifo|auto` (`UX-841`, `UX-876`; default `auto`) — the `--jobserver-auth` style handed to `make`: `auto` always resolves to `fd`, accepted by every GNU Make from 4.2 up, because a recipe can invoke a make below 4.4 by absolute path from inside its own sandbox and there is no way to know that ahead of the build. `fifo` is the opt-in, for an operator whose whole sandbox toolchain is known to be GNU Make 4.4 or newer (`UX-874` narrows an explicit `fifo` to `fd` per element when the sandbox make it actually runs is older). Recorded in the report as `jobserver_auth`. For the cmake/meson/manual-with-`JOBS` and cargo elements whose own `MAKEFLAGS` an *unwrapped* native jobserver client reads directly — `gcc -flto`'s lto-wrapper, cargo — a resolved `fd` auth is normalized to a path-based `fifo:` (or dropped entirely when a sub-4.4 make shares the recipe and would reject `fifo:` too): a raw fd is only valid for a direct child, and the compiler's lto-wrapper is a deep grandchild that cannot use it (`UX-878`, GCC-13 ICE `opts-common.cc:2123`).
+- `bga capture run --jobserver` (with the jobserver active): a one-line preflight warning to stderr for every element that is both on a sub-4.4 sandbox make and one of the compiler-driving kinds `UX-878`'s scrub above narrows (cmake/meson, `jobs_env`, cargo) — `Warning: <element> scrubbed to recipe -jN (sandbox make <4.4); move it to make >=4.4 for fifo pool-fill, or force fd/flto (UX-879/880)`. Reads the per-element sandbox-make probe UX-874/878 already cached, never re-probes; one line per element, de-duplicated (`UX-883`). Advisory only — the scrub itself is unchanged.
+- `bga capture run --jobserver-auth-override 'fd:<glob>[,<glob>] fifo:<glob> off:<glob> flto:<glob>'` (`UX-879`, `flto` added `UX-880`; repeatable, or one value with space-separated groups) — a per-element override of the style above, resolved by the shim against the element name (`fnmatch`) and taking precedence over the auto/`compiler_safe` decision: `fd` forces the raw, pre-`compiler_safe` auth (no fifo rewrite, no scrub); `fifo` forces the `fifo:` path; `off` scrubs (no `--jobserver-auth`, no wrapper mount, `JOBS` left alone so the recipe's own `-jN` stands); `flto` keeps the raw `fd` auth like `fd` does (`make` still fills the pool) **and** mounts a reference GCC-driver shim (`gcc`/`g++`/`cc`/`c++`) ahead of `PATH` — the shim strips `--jobserver-auth=…` from the `MAKEFLAGS` it hands the real compiler unconditionally, and only when `-flto`/`-flto=jobserver`/`-flto=auto` is already in argv, rewrites it to a static `-flto=$BST_TRACE_LTO_CAP` lto-wrapper can honour without a jobserver; a non-LTO invocation's argv is untouched. First matching glob wins. Translated to `BST_TRACE_JOBSERVER_AUTH_MAP` before the tracer ever sees it, same channel as `--jobserver`'s own `auto`/`N`/`off` resolution. **Caveat**: forcing plain `fd` (not `flto`) on an element that does LTO will still hit the GCC-13 ICE `compiler_safe` exists to avoid — use `flto` for an LTO element on a make ≤4.2.1, `off` for one the shim's static cap is not wanted for.
+- `public: { bga: { jobserver-auth: fd|fifo|off|flto } }` (`UX-882`) — an element annotation naming the same four styles, version-controlled in the project instead of the operator's command line. Read from a *separate* `bst show --format '%{name}<US>%{public}<RS>'` call (never folded into the per-kind read: its `line.split()` parse breaks on `%{public}`'s multi-line YAML) into `BST_TRACE_ELEMENT_AUTH_MAP`. Resolved **after** `--jobserver-auth-override` and before auto — a run's own override still wins over a committed default, and an element with neither falls through to auto unchanged. Advisory input, not a versioned contract: no `bga.contracts` id, no `specification.md` edit; a malformed or absent `public:` block is silently no annotation, never a build failure.
+- `bga capture run --lto-cap N` (`UX-880`) — the static `-flto=N` cap the `flto` override's GCC-driver shim rewrites an already-present `-flto` to; default `nproc`, read inside the shim itself. Sets `BST_TRACE_LTO_CAP`, translated before the tracer ever sees the flag.
+- `bga capture run --wrapper-dir PATH` / `--wrapper-dir-mode augment|replace` (`UX-881`; default `augment`) — an operator's own wrapper directory, for a custom-prefix toolchain invoked by absolute path or via `toolchain.cmake`'s `CMAKE_C_COMPILER`, which PATH-shadowing cannot reach and which `bga`'s own shipped shims (`tools/native_trace/wrappers/`) cannot be edited to add. The directory must satisfy `docs/guides/wrapper-contract.md`'s published contract (`_common.sh`'s `bga_run_wrapped <flag_style> "$@"` entry point). `augment` mounts the operator's directory ahead of the shipped one on `PATH` — the shipped `ninja`/`ld.lld`/… coverage stays; `replace` mounts only the operator's directory, dropping the shipped shims and the shipped `flto/` subdir entirely. Sets `BST_TRACE_WRAPPER_DIR_OVERRIDE`/`BST_TRACE_WRAPPER_MODE`, translated before the tracer ever sees either flag.
 - `bga capture run --jobserver-pool fixed|dynamic` (`UX-845`; default `dynamic`) — dynamic runs a `PoolController` daemon that writes or withdraws a token every 250ms from `cpu_busy_cores` and, where present, `/proc/pressure/cpu`'s `some avg10`, rather than leaving the pool at its static seed; `fixed` is `UX-679`/`UX-841`'s prior behaviour. Recorded in the report as `jobserver_pool`. With `--plan` the report's `jobserver_pool.memory` block (`UX-850`) counts the grants the broker withheld because `MemAvailable` fell under the element's planned peak RSS times the tokens it would hold (`withheld`), whether `/proc/pressure/memory` was present, and the tokens the pool withdrew on its `some avg10` over the same bound the CPU one uses (`psi_memory_withdraws`); an unreadable `/proc/meminfo` withholds nothing.
 - `bga capture run --jobserver-capacity N` (`UX-845`) — overrides the host core count the dynamic pool compares busy cores against; defaults to `os.cpu_count()`.
+- `bga capture run --jobserver-seed N` (`UX-858`) — overrides the FIFO's opening token count the resolved ceiling would otherwise seed to (`max(0, ceiling - builders)` under `auto`, `ceiling - 1` otherwise), clamped below the ceiling either way. Recorded in the snapshot's `run_instance.jobserver.seed`.
 - `bga capture run --plan analyze.json` (`UX-849`; needs `--jobserver`) — a per-element proxy replaces the shared FIFO's first-come order: the tracer pre-creates one proxy per element in the kinds map, and a `Broker` thread moves the global pool's tokens into the proxy of whichever *running* element has the least slack (`analyze.json`'s own `elements.slack`) first, capped at that element's own `-jK` minus one, and drains a proxy back to the global pool the moment its sandbox ends. An element the plan does not name is treated as the plan's own median slack. Without `--plan` nothing changes — no proxies, the global FIFO as today, byte for byte. Recorded in the report as `jobserver_pool.broker` (`plan`, `grants`, `drains`, `elements_in_plan`, `elements_median_slack`, `leaks`, `tokens_refilled`), present only when a plan actually ran.
 - `bga correlate --cache-logs PLANE3.json` — adds the per-element sandbox tax from a Plane 3 report, which is what the merge half of the granularity findings is computed from (`UX-100`). Without it the split half still runs; the merge half is silent, because the toll is the whole basis for calling an element too small.
 - `bga compare --baseline-plane2 A.json --candidate-plane2 B.json` — notes when the candidate's measured memory envelope grew (`UX-104`). Two flags, because reusing one report for both runs would compare a run against itself. A note, never a gate: peak RSS has no measured noise band.
@@ -2252,7 +2308,7 @@ bga analyze tests/fixtures/macro_micro/run \
 ```text
   Capacity: builders 4 x max-jobs unrecorded on 4 core(s): graph binds at 2, below the 4 configured - more builders contend rather than overlap here
     graph allows 2: the sweep's knee is at 2 builder(s)
-    CPU allows 9: 1.60 of 4 core(s) busy at builders=4, i.e. 0.40 core(s) per concurrent element
+    CPU allows 4: 1.60 of 4 core(s) busy at builders=4, i.e. 0.40 core(s) per concurrent element
     memory allows 9: the 9-builder envelope fits in 15.7 GB (measured over 9 element peak(s), so it says nothing above 9)
     Free capacity you already have: core.bst asked its native build for -j1 - a builder slot drawing one core. Fix that before raising anything, then re-measure.
 ```

@@ -12,6 +12,7 @@ requiring a second, easy-to-forget edit.
 """
 import contextlib
 import os
+import sys
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -199,6 +200,95 @@ def add_host_manifest(run_context: dict) -> None:
 
     with contextlib.suppress(Exception):
         run_context["host_manifest"] = hostinfo.collect()
+
+
+def add_cache_capacity(run_context: dict, with_usage: bool = False) -> None:
+    """UX-896: what BuildStream was configured to hold, and what the
+    volume under it can give.
+
+    Same best-effort rule as `add_host_manifest` above - a host whose
+    configuration cannot be read still gets a run directory, and every
+    field inside degrades to `None` rather than to a zero that reads as
+    a measured emptiness.
+
+    `with_usage` gates the one part that costs anything, the walk of
+    `<cachedir>/cas`. Off, the block still carries the quota and the
+    volume, which is what sizing an agent needs; on, it also carries
+    what the cache currently holds.
+    """
+    from bga import cache_capacity
+
+    with contextlib.suppress(Exception):
+        run_context["cache_capacity"] = cache_capacity.collect(
+            with_usage=with_usage)
+
+
+#: `UX-898`/`UX-903`: the declaration flags, written once. Both
+#: producers take them and must not drift - which is what this module
+#: is for (`UX-18`) - and pylint counted the second copy as a
+#: duplicate block the moment it landed.
+_BUILD_TYPE_HELP = (
+    "What kind of build this was - night, review, guard, or whatever else "
+    "the pipeline declares. Free text; two runs declaring different types "
+    "are not one population (UX-898). Defaults to $BGA_BUILD_TYPE.")
+_VARIANT_HELP = (
+    "A named dimension of what this build did - arch=aarch64, "
+    "sanitizer=address, coverage=on. Repeatable, because several are true "
+    "at once (UX-903). Defaults to $BGA_BUILD_VARIANT, which takes the "
+    "same pairs comma-separated.")
+
+
+def add_build_class_arguments(parser) -> None:
+    """`--build-type` and `--variant` on a run-context producer."""
+    parser.add_argument("--build-type", default=None, help=_BUILD_TYPE_HELP)
+    parser.add_argument("--variant", action="append", default=None,
+                        metavar="NAME=VALUE", help=_VARIANT_HELP)
+
+
+def build_class_from_args(args) -> Optional[tuple]:
+    """`(build_type, variant)`, or `None` after naming the bad entry.
+
+    `None` rather than an exception so neither `main` grows the same
+    four-line `try` - the duplication the ledger caught.
+    """
+    from bga import buildclass
+
+    try:
+        return args.build_type, buildclass.parse_variant(args.variant)
+    except ValueError as error:
+        print(f"Error: {error}", file=sys.stderr)
+        return None
+
+
+def add_build_class(run_context: dict,
+                    build_type: Optional[str] = None,
+                    variant: Optional[dict] = None) -> None:
+    """UX-898/UX-903: what this build was - its type and its variant.
+
+    Declared, never guessed. The type says when and why the build ran
+    (`night`, `review`, `guard`), the variant what it did
+    (`arch=aarch64`, `sanitizer=address`), and the comparison class is
+    the pair - `bga/buildclass.py` carries the argument.
+
+    Two declaration paths, the environment behind the argument, because
+    `bga snapshot` drives the capture through two more processes and a
+    CI job has an environment before it has a command line. Same
+    precedent as `BGA_JOBSERVER_MODE` (`UX-851`).
+
+    Omitted entirely when nothing is declared, so a capture that says
+    nothing is byte-identical to one taken before this existed.
+    """
+    from bga import buildclass
+
+    with contextlib.suppress(Exception):
+        kind = build_type or os.environ.get("BGA_BUILD_TYPE")
+        dimensions = dict(variant or {})
+        if not dimensions:
+            dimensions = buildclass.parse_variant_env(
+                os.environ.get("BGA_BUILD_VARIANT"))
+        declared = buildclass.declare(kind, dimensions)
+        if declared:
+            run_context["build_class"] = declared
 
 
 def add_producer(run_context: dict) -> None:

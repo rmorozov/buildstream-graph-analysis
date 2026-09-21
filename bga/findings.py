@@ -39,7 +39,7 @@ from .cache_effectiveness import (
     TRANSFER_SHARE_NOTABLE,
 )
 from .ingest.models import AnalysisResult
-from .units import GIB, US_PER_S
+from .units import GIB, US_PER_S, human_bytes
 
 # Severity is about what it means for the reader, not about size:
 #   critical - the run itself is not what it appears to be
@@ -132,6 +132,14 @@ FINDING_READERS = {
     # R5 - the fleet.
     "memory-envelope": "capacity-operator",
     "capacity-recommendation": "capacity-operator",
+    # `UX-896`: how big the cache has to be is a fleet question, and it
+    # is the one the field case asked - an agent holding most of a
+    # project and evicting the rest rebuilds, which every other cache
+    # finding reads as a key that moved.
+    "cache-capacity": "capacity-operator",
+    # `UX-860`: the envelope's own overcommit test, half of which is
+    # swap - previously a word in the headline sentence and nowhere else.
+    "swap-observed": "capacity-operator",
     # UX-680: R4, the task's own; R5's section needs Plane 2 and half (a) fires without it.
     "remote-execution-whatif": "ci-gatekeeper",
 }
@@ -393,9 +401,14 @@ def _cache_findings(result: AnalysisResult) -> list[dict]:
     changes is the severity and the sentence, not whether it appears.
     """
     cache = (result.signals or {}).get('cache') or {}
+    # `UX-896`: capacity is a fact about the machine, so it does not
+    # wait on the Pipeline Summary that gives the ratio below its
+    # population. A capture that recorded a quota and no summary still
+    # answers the sizing question.
+    capacity_findings = _cache_capacity_findings(cache.get('capacity') or {})
     hit_share = cache.get('hit_share')
     if hit_share is None:
-        return []
+        return capacity_findings
 
     built = cache.get('built_elements')
     cached = cache.get('cached_elements')
@@ -464,11 +477,87 @@ def _cache_findings(result: AnalysisResult) -> list[dict]:
         parts = ", ".join(
             f"{name.lower()} {us / 1e6:.1f}s" for name, us in sorted(transfer.items())
         )
+        # `UX-897`: the share alone cannot separate a slow link from a
+        # slow remote from an object count that would be slow on any
+        # link. The rate can, and it is absent rather than zero on a
+        # capture with no counters - the clause simply does not appear.
+        rate = cache.get('transfer_rate_bytes_per_s')
+        moved = cache.get('transfer_bytes') or {}
+        evidence = {'transfer_share': share, 'transfer_us': transfer}
+        rate_clause = ""
+        if rate:
+            window_s = (cache.get('transfer_window_us') or 0) / 1e6
+            rate_clause = (
+                f", and the host moved {human_bytes(moved['total'])} over the "
+                f"{window_s:.1f}s it was transferring - {human_bytes(rate)}/s, "
+                f"which is the whole host's traffic and so an upper bound on "
+                f"this build's"
+            )
+            evidence.update({
+                'transfer_bytes': moved['total'],
+                'transfer_rate_bytes_per_s': rate,
+                'transfer_window_us': cache.get('transfer_window_us'),
+            })
         findings.append(_finding(
             'cache-transfer-cost', SEVERITY_MEDIUM,
             f"{share * 100:.0f}% of wall-clock was artifact transfer ({parts}) - "
-            f"this build spent it moving artifacts rather than making them",
-            evidence={'transfer_share': share, 'transfer_us': transfer},
+            f"this build spent it moving artifacts rather than making them"
+            f"{rate_clause}",
+            evidence=evidence,
+        ))
+    findings.extend(capacity_findings)
+    return findings
+
+
+def _cache_capacity_findings(capacity: dict) -> list[dict]:
+    """`UX-896`: the cache's ceiling against what it holds.
+
+    Two claims, and both are about the machine rather than the project,
+    which is why they carry `capacity-operator` and not the reader every
+    other cache finding has. Neither fires on an absent number: a
+    capture with no quota recorded says nothing here, because "this
+    cache has no ceiling" and "nobody looked" are different facts and a
+    sizing decision must not be made on the second.
+    """
+    findings = []
+    over_volume = capacity.get('quota_over_volume_bytes')
+    if over_volume:
+        findings.append(_finding(
+            'cache-capacity', SEVERITY_MEDIUM,
+            f"The cache quota ({capacity['quota_declared']}) is "
+            f"{human_bytes(over_volume)} larger than the volume under it can "
+            f"give - the cache will be evicted by the disk filling up rather "
+            f"than by the quota, so the quota is not the ceiling it looks like",
+            evidence={
+                'quota_bytes': capacity.get('quota_bytes'),
+                'volume_total_bytes': capacity.get('volume_total_bytes'),
+                'quota_over_volume_bytes': over_volume,
+            },
+        ))
+    if capacity.get('at_low_watermark'):
+        headroom = capacity.get('headroom_bytes') or 0
+        # Negative headroom is over the quota outright; at or above the
+        # watermark and still under it is the case BuildStream is
+        # already cleaning up in, which is the one the field case hit.
+        state = (
+            f"{human_bytes(-headroom)} over it"
+            if headroom < 0 else f"{human_bytes(headroom)} from it"
+        )
+        findings.append(_finding(
+            'cache-capacity', SEVERITY_HIGH,
+            f"The cache holds {human_bytes(capacity['cache_used_bytes'])} of a "
+            f"{capacity['quota_declared']} quota ({capacity['used_share'] * 100:.0f}%, "
+            f"{state}) - past the "
+            f"{capacity['low_watermark_share'] * 100:.0f}% low watermark, so "
+            f"BuildStream is evicting, and an element that rebuilt here may have "
+            f"had its artifact removed rather than its cache key moved",
+            evidence={
+                'cache_used_bytes': capacity.get('cache_used_bytes'),
+                'quota_bytes': capacity.get('quota_bytes'),
+                'used_share': capacity.get('used_share'),
+                'headroom_bytes': capacity.get('headroom_bytes'),
+                'low_watermark_share': capacity.get('low_watermark_share'),
+            },
         ))
     return findings
 
@@ -1017,6 +1106,15 @@ def _capacity_recommendation_finding(result: AnalysisResult) -> list[dict]:
     # and "builders 4 x max-jobs unrecorded" does not, which is the
     # honest shape when UX-29 could not recover it from the log.
     setting = f"builders {builders} x max-jobs {jobs if jobs else 'unrecorded'}"
+    # UX-861: a CPU-bound figure is clamped to the host's cores in
+    # `compute_capacity_recommendation`, so the sentence says so rather
+    # than leaving the clamp implicit in the number alone.
+    binding_row = next(
+        c for c in recommendation['constraints'] if c['name'] == binding)
+    clamped_from = binding_row.get('clamped_from')
+    clamp_note = (
+        f" (the host's cores bound it, not the raw {clamped_from})"
+        if clamped_from else "")
     if recommended > builders:
         # Deliberately weaker than "raise it to N". Measured on a
         # reconstructed macro-fixed `examples/06` where this block said
@@ -1030,21 +1128,23 @@ def _capacity_recommendation_finding(result: AnalysisResult) -> list[dict]:
         # it, and saying otherwise would be UX-14's caveat with the
         # caveat removed.
         verdict = (
-            f"{binding} binds first, at {recommended} - nothing measured here "
-            f"rules out {recommended - builders} more builder(s), which is a "
-            f"hypothesis to time rather than a setting to apply"
+            f"{binding} binds first, at {recommended}{clamp_note} - nothing "
+            f"measured here rules out {recommended - builders} more "
+            f"builder(s), which is a hypothesis to time rather than a "
+            f"setting to apply"
         )
         severity = SEVERITY_MEDIUM
     elif recommended < builders:
         verdict = (
-            f"{binding} binds at {recommended}, below the {builders} configured - "
-            f"more builders contend rather than overlap here"
+            f"{binding} binds at {recommended}{clamp_note}, below the "
+            f"{builders} configured - more builders contend rather than "
+            f"overlap here"
         )
         severity = SEVERITY_HIGH
     else:
         verdict = (
-            f"{binding} binds at exactly {recommended} - this run is already at "
-            f"the setting its own measurements support"
+            f"{binding} binds at exactly {recommended}{clamp_note} - this "
+            f"run is already at the setting its own measurements support"
         )
         severity = SEVERITY_INFO
 
@@ -1103,6 +1203,43 @@ def _capacity_recommendation_finding(result: AnalysisResult) -> list[dict]:
             # had both a measured peak RSS per element and host RAM.
             'sweep_memory_builders': recommendation.get('sweep_memory_builders'),
             'sweep_binding': recommendation.get('sweep_binding'),
+        },
+    )]
+
+
+def _swap_observed_finding(result: AnalysisResult) -> list[dict]:
+    """`UX-860`: the CPU envelope's own `swapped_out` count, as a
+    finding - `_headline` already names swap as one clause of an
+    overcommit sentence ("load above N cores or pages written to
+    swap"); this is the sentence that owns it when it happened.
+
+    Present only where a window actually swapped, not wherever the
+    table has a row - `overcommitted_intervals` also holds windows that
+    qualified on load alone (`utilisation.envelope`'s own
+    `test_load_above_the_cores_is_overcommit`), and reporting those as
+    swap would be the word this item was filed to retire, restated.
+    """
+    rows = [row for row in (getattr(result, 'overcommitted_intervals', None) or [])
+            if (row.get('swapped_out') or 0) > 0]
+    if not rows:
+        return []
+    total_pages = sum(row['swapped_out'] for row in rows)
+    start = min(row['start_offset_us'] for row in rows)
+    end = max(row['start_offset_us'] + row['duration_us'] for row in rows)
+    elements = sorted({entry['element'] for row in rows
+                       for entry in row.get('building') or ()})
+    building = f", while building {', '.join(elements)}" if elements else ""
+    return [_finding(
+        'swap-observed', SEVERITY_HIGH,
+        f"Swap: {len(rows)} window(s) wrote {total_pages} page(s) to "
+        f"swap, {start / 1e6:.1f}s-{end / 1e6:.1f}s into the build"
+        f"{building}",
+        elements=elements,
+        evidence={
+            'swapped_out_pages': total_pages,
+            'swap_window_count': len(rows),
+            'swap_start_offset_us': start,
+            'swap_end_offset_us': end,
         },
     )]
 
@@ -1862,6 +1999,9 @@ def compute_findings(result: AnalysisResult) -> list[dict]:
     # UX-116: after the memory envelope, because it consumes it - the
     # reader meets the inputs and then the sentence that intersects them.
     findings.extend(_capacity_recommendation_finding(result))
+    # `UX-860`: beside the fleet's other R5 findings, after capacity -
+    # the reader has met the configuration before meeting what it cost.
+    findings.extend(_swap_observed_finding(result))
     # `UX-680`: beside the capacity/sweep findings it reads alongside -
     # `ci-gatekeeper`, not `capacity-operator`, because half (a) fires
     # without Plane 2 and R5's page section cannot.

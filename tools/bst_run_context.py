@@ -57,14 +57,18 @@ log instead:
 import argparse
 import json
 import sys
+from typing import Optional
 
 from ._run_context_common import (
+    add_build_class,
+    add_build_class_arguments,
     add_cpu_capacity_fields,
     add_host_manifest,
     add_memory_capacity_fields,
     add_producer,
     add_queue_seam,
     add_start_clock_source,
+    build_class_from_args,
 )
 from .bst_log_to_chrome_trace import (
     WrapperTraceConverter,
@@ -84,6 +88,8 @@ def build_run_context(
     cpu_budget: int = None,
     memory_budget_mb: int = None,
     estimated_job_memory_mb: int = None,
+    build_type: Optional[str] = None,
+    variant: Optional[dict] = None,
 ) -> dict:
     """Run the real log converter against `log_path` and derive a
     run-context/v9 dict from its output - the same converter
@@ -145,6 +151,9 @@ def build_run_context(
     # runs can be told apart - or told to be the same - rather than
     # compared on the assumption that they are.
     add_host_manifest(run_context)
+    # UX-898/UX-903: and what build it was. Beside the host manifest
+    # because the comparison class is both - the machine and the build.
+    add_build_class(run_context, build_type=build_type, variant=variant)
     add_producer(run_context)
     # `UX-594`: after `wall_clock`, whose `start_us` is the other instant.
     add_queue_seam(run_context)
@@ -173,6 +182,7 @@ def main() -> int:
     )
     parser.add_argument("--host", default=None,
                         help="Optional host identifier to record.")
+    add_build_class_arguments(parser)
     parser.add_argument(
         "--native-max-jobs", type=int, default=None,
         help="Override the per-element `make -jN` parallelism (not --builders). "
@@ -198,6 +208,11 @@ def main() -> int:
     )
     args = parser.parse_args()
 
+    declared = build_class_from_args(args)
+    if declared is None:
+        return 1
+    build_type, variant = declared
+
     try:
         run_context = build_run_context(
             args.input_log,
@@ -209,6 +224,8 @@ def main() -> int:
             cpu_budget=args.cpu_budget,
             memory_budget_mb=args.memory_budget_mb,
             estimated_job_memory_mb=args.estimated_job_memory_mb,
+            build_type=build_type,
+            variant=variant,
         )
     except FileNotFoundError:
         print(f"Error: Could not find input file '{args.input_log}'", file=sys.stderr)

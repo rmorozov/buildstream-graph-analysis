@@ -21,6 +21,8 @@ from .floors import (
     compute_exclusive_serialization_bound,
     compute_t_infinity_observed,
 )
+from .floors.cpu import CAPACITY_SOURCE
+from .floors.cpu import governing_cores as _governing_cores
 from .graph.edg import (
     JOINT_SAVING_SET_SIZE,
     analyze_graph,
@@ -145,6 +147,14 @@ def _run_instance(run_context, loaded_from) -> dict:
         # bytes. Measured: the committed `macro_micro` run does exactly
         # that.
         instance['host_manifest'] = hostinfo.normalised(manifest)
+    # UX-898/UX-903: and what build it was. Rides with the host manifest
+    # for the same reason - the comparison class is the pair, so a
+    # reader that loaded one and not the other holds half a class.
+    # Omitted when nothing was declared, which keeps every document a
+    # capture without it produces byte-identical to today's.
+    declared = getattr(run_context, 'build_class', None) if run_context else None
+    if declared:
+        instance['build_class'] = declared
     # UX-326: what was asked to be built. Published because the advice
     # block has to *spell* the command that would capture this run
     # again, and `bga snapshot <project>` - which is what it printed
@@ -1063,8 +1073,11 @@ class BuildEfficiencyAnalyzer:
                 'host_cpu_count': host_cpu_count,
             })
 
-        governing_cores = cpu_budget if cpu_budget is not None else host_cpu_count
-        capacity_source = 'declared_cpu_budget' if cpu_budget is not None else 'detected_host_cpu_count'
+        # UX-891: the one derivation, in bga/floors/cpu.py, which the CPU
+        # floor divides by - so the floor and this check cannot disagree
+        # about which number governs.
+        governing_cores, cores_source = _governing_cores(self.run_context)
+        capacity_source = CAPACITY_SOURCE[cores_source]
         # UX-16: explicit `is None` checks, not truthiness - `builders`/
         # `native_max_jobs`/`governing_cores` of 0 are real, present data
         # (BuildStream's own documented `--max-jobs 0` sentinel, resolved
@@ -1627,9 +1640,15 @@ class BuildEfficiencyAnalyzer:
         # efficiency mechanism while every other signal here describes
         # only the work that was not cached. Absent rather than
         # zero-filled when the capture records no Pipeline Summary.
+        # `UX-897`: the host's own interface counters over the build's
+        # span, so "40% of this build was transfer" gains the rate that
+        # says whether the link was the cause. Absent on any capture
+        # without a host-samples series, which is where the clause
+        # disappears rather than printing a zero.
         cache_accounting = compute_cache_accounting(
             self.run_context, self.graph, self.normalized_tasks,
             result.total_duration_us,
+            network_bytes=self._network_bytes(),
         )
         if cache_accounting:
             result.signals['cache'] = cache_accounting
@@ -2010,6 +2029,18 @@ class BuildEfficiencyAnalyzer:
             from .findings import confidence_band
             confidence['band'] = confidence_band(primary)
         return confidence
+
+    def _network_bytes(self) -> Optional[dict]:
+        """`UX-897`: `{rx_bytes, tx_bytes, span_s}` from the run's
+        host-samples series, or `None` when there is no series, no
+        counters in it, or fewer than two samples carrying them."""
+        read = self.read_host_samples()
+        if not read:
+            return None
+        from .tools_dispatch import _import_tool
+
+        tracer = _import_tool("tools.bst_native_build_tracer")
+        return tracer.network_bytes(read) or None
 
     def read_host_samples(self) -> Optional[dict]:
         """`UX-675`'s raw `{header, samples}`, or `None`.

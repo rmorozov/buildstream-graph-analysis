@@ -242,6 +242,19 @@ class TestTheShimActuallyWritesIt:
         assert entry["injected"] is True
         assert entry["exec_argv"] != REAL_ARGV, "the rewrite is not recorded"
 
+    def test_fifo_style_records_the_host_path_and_the_sandbox_path(self, tmp_path):
+        """`UX-869`: with no `--bind` of its own, `exec_argv` no longer
+        carries the FIFO's host path - the record names both spellings."""
+        fifo = tmp_path / "jobserver"
+        fifo.touch()
+        [entry] = self._run_shim(tmp_path, {
+            "BST_TRACE_JOBSERVER": str(fifo),
+            "BST_TRACE_JOBSERVER_AUTH": "fifo",
+        })
+
+        assert entry["jobserver_fifo_host"] == str(fifo)
+        assert entry["jobserver_fifo_sandbox"] == "/tmp/.bst-native-trace/jobserver"
+
     def test_no_inject_execs_buildstreams_argv_untouched(self, tmp_path):
         """The bisection only means anything if the passthrough really is
         one: same argv, plus the binary in front."""

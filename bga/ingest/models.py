@@ -154,6 +154,13 @@ class RunContext:
     # refused every baseline older than itself would be telling users to
     # throw away the ones they came with.
     host_manifest: Optional[dict] = None
+    # UX-898/UX-903: what the build *was* - `{type, variant}`, declared
+    # at capture time. `host_manifest` above says which machine ran it;
+    # this says whether it was a nightly or a review build and whether
+    # it was under a sanitizer. `None` for every capture that declared
+    # neither, which is every capture taken before this field existed,
+    # and those compare exactly as they did.
+    build_class: Optional[dict] = None
     # UX-249: which build of `bga` wrote this run directory, and the
     # contract set it had. Same path and same rule as `host_manifest`
     # above, for the same reason - it is a fact about *which run this
@@ -199,6 +206,19 @@ class RunContext:
     # at publish time, so this stays a genuine absence here, the same
     # convention `host_manifest` above already holds.
     jobserver: Optional[dict] = None
+    # UX-896: what the local cache was configured to hold, and what the
+    # volume under it can give - `{"cachedir", "quota_declared",
+    # "quota_bytes", "reserved_declared", "reserved_bytes",
+    # "low_watermark_declared", "volume_total_bytes",
+    # "volume_free_bytes", "cache_used_bytes", "cache_used_source"}`.
+    # Another additive run-context/v9 extension, and the only thing in a
+    # capture that separates a cache too small to hold the project from
+    # a cache whose keys move: both rebuild, and before this only the
+    # second had a name. `None` for every capture taken before the
+    # field existed, and each field inside `None` rather than `0` when
+    # unread - a quota of `infinity` is a declared quota with no byte
+    # value, not a quota of nothing.
+    cache_capacity: Optional[dict] = None
 
     @property
     def plane1_resolution_s(self) -> Optional[float]:

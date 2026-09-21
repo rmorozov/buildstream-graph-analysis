@@ -68,19 +68,21 @@ CONTEXT_NAME = "capture-context.txt"
 
 
 def _capture_context(project: str, command: list[str], config: dict,
-                     jobserver: tuple = ("off", None),
+                     jobserver: tuple = ("off", None, None),
                      plan: Optional[str] = None) -> str:
     """What this capture was, in the terms UX-95 made the report carry.
 
     Written before the build rather than after, so a snapshot of a build
     that died still says what was attempted. `jobserver`/`plan` default
     to off/none so the pre-UX-856 call site (and its guard) keep working
-    unchanged. `jobserver` is `(mode, ceiling)` rather than two
+    unchanged. `jobserver` is `(mode, ceiling, seed)` rather than three
     parameters - a fifth positional-ish argument here is `PLR0913`'s cap.
+    `seed` (UX-858) only prints beside a ceiling that itself printed.
     """
     import platform
 
-    mode, ceiling = jobserver
+    mode, ceiling, seed = jobserver
+    seed_text = f" seed={seed}" if ceiling is not None and seed is not None else ""
     return "\n".join([
         f"project={project}",
         f"command={' '.join(command)}",
@@ -88,7 +90,7 @@ def _capture_context(project: str, command: list[str], config: dict,
         f"trace_spine={config.get('trace_spine', 'auto')}",
         f"runner_os={platform.platform()}",
         f"nproc={os.cpu_count()}",
-        f"jobserver: {mode} {ceiling if ceiling is not None else '-'}",
+        f"jobserver: {mode} {ceiling if ceiling is not None else '-'}{seed_text}",
         f"plan: {plan or '-'}",
     ]) + "\n"
 
@@ -256,6 +258,7 @@ def take_snapshot(project: str, command: list[str], config: dict,
                   snapshot: Optional[str] = None, diagnose: bool = False,
                   no_inject: bool = False, inhibit: bool = False,
                   keep_raw: bool = True, jobserver: str = "off",
+                  jobserver_auth: str = "auto",
                   plan: Optional[str] = None,
                   cpu_count: Optional[int] = None) -> tuple[str, int]:
     """Capture into a new snapshot directory. Returns it and the build's
@@ -268,17 +271,21 @@ def take_snapshot(project: str, command: list[str], config: dict,
     resolution happens here instead of in `_translate_capture_jobserver`.
     `cpu_count` is a seam for `auto` in tests, as in
     `resolve_jobserver_ceiling` itself.
+
+    `jobserver_auth` (UX-875): forwarded to the tracer's own
+    `--jobserver-auth` unchanged - the tracer resolves it
+    (`jobserver_auth_style`), this only carries it through.
     """
     from bga.cli import resolve_jobserver_ceiling, set_jobserver_mode_env
 
     from .bst_native_build_tracer import main as capture_main
 
     snapshot = snapshot or run_store.new_snapshot_dir(project)
-    mode, ceiling = resolve_jobserver_ceiling(jobserver, command, cpu_count=cpu_count)
+    mode, ceiling, seed = resolve_jobserver_ceiling(jobserver, command, cpu_count=cpu_count)
     set_jobserver_mode_env(mode)
     with open(os.path.join(snapshot, CONTEXT_NAME), "w", encoding="utf-8") as handle:
         handle.write(_capture_context(project, command, config,
-                                      jobserver=(mode or "off", ceiling),
+                                      jobserver=(mode or "off", ceiling, seed),
                                       plan=plan))
 
     argv = ["run", "--wrapped-log", os.path.join(snapshot, WRAPPED_LOG_NAME),
@@ -309,6 +316,9 @@ def take_snapshot(project: str, command: list[str], config: dict,
         argv.append("--inhibit")
     if mode and mode != "off":
         argv += ["--jobserver", str(ceiling)]
+        if seed is not None:
+            argv += ["--jobserver-seed", str(seed)]
+        argv += ["--jobserver-auth", jobserver_auth]
     if plan:
         argv += ["--plan", plan]
     argv += [project, os.path.join(snapshot, PLANE2_NAME), "--"] + list(command)
@@ -475,6 +485,11 @@ def create_parser() -> argparse.ArgumentParser:
              "`bga capture run --jobserver` (UX-851). Per capture, not sticky."
     )
     parser.add_argument(
+        "--jobserver-auth", choices=("fd", "fifo", "auto"), default="auto",
+        help="UX-875: forwarded to the tracer's own --jobserver-auth "
+             "(UX-841), unused when --jobserver is off."
+    )
+    parser.add_argument(
         "--plan", default=None, metavar="PATH",
         help="An analyze.json (@prev/@last resolve to that snapshot's own, "
              "beside its run), naming this project's own slack (UX-849). "
@@ -610,6 +625,7 @@ def main(argv: Optional[list[str]] = None) -> int:
                                          inhibit=args.inhibit,
                                          keep_raw=not args.no_keep_raw,
                                          jobserver=args.jobserver,
+                                         jobserver_auth=args.jobserver_auth,
                                          plan=plan_path)
 
     if args.no_inject:
@@ -1053,12 +1069,16 @@ def _read_analysis(snapshot: str) -> dict:
 
 
 def _jobserver_label(analysis: dict) -> str:
-    """`off` / `auto (4)` / `n (4)` from one side's `run_instance.jobserver`
-    (`UX-851`) - `off` for a snapshot that predates the fact entirely."""
+    """`off` / `auto (4)` / `n (4, seed 2)` from one side's
+    `run_instance.jobserver` (`UX-851`/`UX-858`) - `off` for a snapshot
+    that predates the fact, `seed` only shown when the snapshot has it."""
     job = (analysis.get("run_instance") or {}).get("jobserver") or {}
     mode = job.get("mode") or "off"
     ceiling = job.get("ceiling")
-    return f"{mode} ({ceiling})" if ceiling is not None else mode
+    if ceiling is None:
+        return mode
+    seed = job.get("seed")
+    return f"{mode} ({ceiling}, seed {seed})" if seed is not None else f"{mode} ({ceiling})"
 
 
 def _jobserver_compare_line(baseline_snapshot: str, candidate_snapshot: str) -> str:
@@ -1168,6 +1188,13 @@ def store_listing(project: str, window: Optional[int] = None) -> dict:
             "host_class": store_aggregate.host_class(
                 measured.get("host_manifest")),
         })
+        # UX-898/UX-903: and what build it declared itself to be, off
+        # the same one small read. The block rather than its label,
+        # because the aggregate publishes the declaration and a label
+        # cannot be read back into one. Absent on every capture that
+        # declared nothing, so the listing is byte-identical to today's.
+        if measured.get("build_class"):
+            rows[-1]["build_class"] = measured["build_class"]
     # Before the window, not after: a verdict compares a run with the
     # one before it, and the first row of a window has a predecessor.
     _mark_verdicts(rows)
@@ -1214,6 +1241,11 @@ def _run_measurements(snapshot: str) -> dict:
     manifest = context.get("host_manifest")
     if manifest:
         out["host_manifest"] = manifest
+
+    # UX-898/UX-903: the declared build class, from the same read.
+    declared = context.get("build_class")
+    if declared:
+        out["build_class"] = declared
 
     # `UX-594`: the seam the capture recorded, read from the same one
     # small read. A capture older than it carries neither key.

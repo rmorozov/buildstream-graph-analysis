@@ -3,7 +3,7 @@
 Every rule this repository holds a session to, one line each, with the
 guard that catches it and the [fixing guide](fixing-guide.md) section
 that argues it. **Read the guide's paragraph for the rule you are about
-to break, not the whole guide** — it is ~50 KB because every rule carries
+to break, not the whole guide** — it is ~60 KB because every rule carries
 the incident that produced it, and the incidents are why the rules are
 trusted (`UX-505`). One exception: `CLAUDE.md`'s Register table's fourth row, the code-comment cap, is a convention rather than a guarded rule here — a comment's length is not its register (`UX-764`).
 

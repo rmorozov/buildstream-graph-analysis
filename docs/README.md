@@ -187,6 +187,8 @@ Why it is this way. Arguments and structure, not instructions.
 | [`design/areas/tools.md`](design/areas/tools.md) | the tools area's mechanism prose — Plane 3's persisted-log reader: the sandbox, configure and developer taxes, and why none may feed a certified floor (`UX-810`) |
 | [`design/areas/bga.md`](design/areas/bga.md) | the `bga` area's mechanism prose — joining the planes, the two round-history chapters, and the core invariants still load-bearing (`UX-816`) |
 | [`design/directions.md`](design/directions.md) | `bga` as a local helper vs `bga` as a CI gate |
+| [`design/continuous-build-improvement.md`](design/continuous-build-improvement.md) | what changes when four modelled roles become a real team — the rollout's four constraints, instrument versus intervention, and the four guidelines the filings are held to |
+| [`design/in-step-parallelism.md`](design/in-step-parallelism.md) | why the certified floors read builder slots and not cores, what the capture already measures about parallelism inside an element, and the one increment to file first |
 | [`design/roles.md`](design/roles.md) | the role model — eight roles, their contradictions, and the gap analysis |
 | [`design/styleguide.md`](design/styleguide.md) | the web report's visual contract — shape→control mapping, drawings, color and emphasis budget, dark first |
 
@@ -296,6 +298,17 @@ The rounds themselves:
 [117](audits/round-117.md) ·
 [118](audits/round-118.md) ·
 [119](audits/round-119.md) ·
+[120](audits/round-120.md) ·
+[121](audits/round-121.md) ·
+[122](audits/round-122.md) ·
+[123](audits/round-123.md) ·
+[124](audits/round-124.md) ·
+[125](audits/round-125.md) ·
+[126](audits/round-126.md) ·
+[127](audits/round-127.md) ·
+[128](audits/round-128.md) ·
+[129](audits/round-129.md) ·
+[130](audits/round-130.md) ·
 [the guard census of round 64](audits/guard-census-round-64.md)
 
 ## Backlog

@@ -205,12 +205,24 @@ def test_the_ci_step_11_goes_through_the_committed_width_check():
     assert 'echo "off=${OFF_WALL}s auto=${AUTO_WALL}s"' in body
 
 
+#: UX-916's arms, crossing the switch, so the rows above stay about
+#: width. `test_the_version_switch_has_two_live_arms.py` is where a
+#: disagreeing pair is read.
+SWITCH_ROWS = [
+    {"element": "switch-4-4.bst", "sandbox_make": "GNU Make 4.4.1",
+     "auth_style": "fifo"},
+    {"element": "switch-4-2.bst", "sandbox_make": "GNU Make 4.2.1",
+     "auth_style": "fd"},
+]
+
+
 def _run_width_check(off_row, auto_row, element, tmp_path, scrub=False):
     off_path = tmp_path / "plane2-off.json"
     auto_path = tmp_path / "plane2-auto.json"
     log_path = tmp_path / "capture-auto.txt"
     off_path.write_text(json.dumps({"per_element_parallelism": [off_row]}))
-    auto_path.write_text(json.dumps({"per_element_parallelism": [auto_row]}))
+    auto_path.write_text(json.dumps({"per_element_parallelism": [auto_row],
+                                     "jobserver_decisions": SWITCH_ROWS}))
     log_path.write_text(
         "bga capture: 4 elements\n" + (SCRUB_LINE if scrub else ""))
     return subprocess.run(

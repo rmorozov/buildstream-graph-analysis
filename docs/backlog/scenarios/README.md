@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-916 scenarios: **16 open**, 900 closed.
+916 scenarios: **14 open**, 902 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -27,7 +27,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | cli | 0 | 22 |
 | store | 1 | 17 |
 | docs | 1 | 146 |
-| guards | 8 | 241 |
+| guards | 6 | 241 |
 
 ## Open scenarios
 
@@ -48,8 +48,6 @@ task file, which is the only place it ever lived twice.
 | UX-908 | [the drawing-grade guard has three unconfirmed CI excursions, and they are rising](UX-0908-the-drawing-grade-guard-excurses-three-times-and-rising.md) | guards | Medium | the round whose push gate is blocked | 🔴 Not Started |
 | UX-912 | [the timing reference is unrepresentative on four files, and branches pay for it](UX-0912-the-timing-reference-is-unrepresentative-and-branches-pay-for-it.md) | guards | High | every branch charged for a cost main carries | 🔴 Not Started |
 | UX-914 | [the examples' sysroot is the host's own /usr/bin](UX-0914-the-examples-sysroot-is-the-hosts-so-the-examples-measure-the-host.md) | guards | High | every example, and every reading taken from one | 🔴 Not Started |
-| UX-915 | [the examples stage the host's own make, so `--jobserver auto` has never met a make 4.4](UX-0915-the-examples-stage-the-hosts-make-so-auto-never-meets-a-4-4.md) | guards | High | every example whose element joins the jobserver | 🔴 Not Started |
-| UX-916 | [only one make is ever staged, so the version switch has one live branch](UX-0916-only-one-make-is-staged-so-the-version-switch-has-one-live-branch.md) | guards | Medium | every host that runs the examples, whatever its own make | 🔴 Not Started |
 | UX-917 | [the fold-depth guard has three unconfirmed CI excursions, spread over three weeks](UX-0917-the-fold-depth-guard-has-three-unconfirmed-excursions.md) | guards | Medium | the round whose push gate is blocked by a file nobody has named | 🔴 Not Started |
 | UX-920 | [two task files can share one backlog id, and no guard reads ids for uniqueness](UX-0920-two-task-files-can-share-one-id-and-nothing-reads-it.md) | guards | Medium | every round that runs more than one branch at a time, which is now the normal case | 🔴 Not Started |
 

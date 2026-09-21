@@ -51,6 +51,17 @@ PINS = {
                 "sha256": ("0e8fca4b762af3cc369c319d7332b84e"
                            "87a298fc259f8bc14e1bfab655ec651e"),
             },
+            # UX-916: the other side of `style_for_make_version`. Same
+            # channel, same glibc reference, so it costs one more nar.
+            "make-4.2": {
+                "version": "GNU Make 4.2.1",
+                "store_path": (
+                    "/nix/store/4320g8b6bl4wpgbmk0mdjr3rr2jr4xh6-gnumake-4.2.1"),
+                "url": ("https://cache.nixos.org/nar/095yb6353v0ww7pjjyqwvaiqj"
+                        "8i36qabanbhvk3dwm64gxvym5x3.nar.xz"),
+                "sha256": ("a397ea777fc454dec6dc7059b5143623"
+                           "2289a3da1c7b29efe11cec518659be24"),
+            },
         },
     },
 }
@@ -201,10 +212,33 @@ def stage_interpreter_link(dest: str, group: dict) -> str:
     return link
 
 
+#: UX-916: the stable name an element selects a staged make by, so a
+#: `.bst` file names a version series rather than a pin's own hash.
+ALIAS_ROOT = "/usr/lib/bga-make"
+
+
+def alias_path(name: str) -> str:
+    """`make-4.2` -> `/usr/lib/bga-make/4.2/make`."""
+    return os.path.join(ALIAS_ROOT, name.split("-", 1)[1], "make")
+
+
+def stage_alias(dest: str, pin: dict) -> str:
+    """The series alias for one staged pin, relative for the same
+    reason `stage_interpreter_link`'s link is."""
+    link = dest + alias_path(pin["name"])
+    os.makedirs(os.path.dirname(link), exist_ok=True)
+    if os.path.lexists(link):
+        os.unlink(link)
+    os.symlink(os.path.relpath(dest + pin["store_path"] + "/bin/make",
+                               os.path.dirname(link)), link)
+    return link
+
+
 def stage(dest: str, names=None, arch: Optional[str] = None,
           cache_dir: Optional[str] = None) -> list:
     """Each named pin unpacked under `dest` at its own absolute store
-    path, plus the interpreter link. Returns the pin records staged."""
+    path, with its series alias, plus the interpreter link. Returns the
+    pin records staged."""
     group = host_arch(arch)
     cache_dir = cache_dir or os.path.join(
         os.environ.get("XDG_CACHE_HOME") or os.path.expanduser("~/.cache"),
@@ -215,7 +249,9 @@ def stage(dest: str, names=None, arch: Optional[str] = None,
         target = dest + pin["store_path"]
         if not os.path.isdir(target):
             unpack_nar(fetch(pin["url"], pin["sha256"], cache_dir), target)
-        staged.append(dict(pin, name=name))
+        record = dict(pin, name=name)
+        stage_alias(dest, record)
+        staged.append(record)
     stage_interpreter_link(dest, group)
     return staged
 

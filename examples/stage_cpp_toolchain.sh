@@ -245,9 +245,12 @@ ln -sfn usr/bin "$DEST/bin"
 # element carried a `public: bga: jobserver-auth: fd` override standing
 # in for that host fact. tools/nix_store_fetch.py carries the pin, its
 # checksum, and why a download beats a source build here.
-PINNED_MAKE="$(cd "$HERE/.." && python3 -m tools.nix_store_fetch "$DEST" --pin make-4.4)"
-MAKE_STORE_PATH="$(printf '%s\n' "$PINNED_MAKE" | cut -f2)"
-PINNED_MAKE_VERSION="$(printf '%s\n' "$PINNED_MAKE" | cut -f3)"
+# UX-916 stages a 4.2 beside it, at /usr/lib/bga-make/<series>/make,
+# so an element can name a version series without naming a pin hash;
+# /usr/bin/make - what every element resolves by default - is the 4.4.
+PINNED_MAKE="$(cd "$HERE/.." && python3 -m tools.nix_store_fetch "$DEST")"
+MAKE_STORE_PATH="$(printf '%s\n' "$PINNED_MAKE" | awk -F'\t' '$1 == "make-4.4" {print $2}')"
+PINNED_MAKE_VERSION="$(printf '%s\n' "$PINNED_MAKE" | awk -F'\t' '$1 == "make-4.4" {print $3}')"
 INTERPRETER_DIR="$(cd "$HERE/.." && python3 -m tools.nix_store_fetch --interpreter-dir "$DEST")"
 # Relative, not absolute: an absolute /nix/store link dangles on the
 # staging host, so the verification below - and `-e` in the MISSING
@@ -271,6 +274,7 @@ if [ "$STAGED_MAKE_VERSION" != "$PINNED_MAKE_VERSION" ]; then
   exit 1
 fi
 echo "Pinned $STAGED_MAKE_VERSION from $MAKE_STORE_PATH"
+printf '%s\n' "$PINNED_MAKE" | awk -F'\t' '{print "  staged " $3 " as /usr/lib/bga-make/" substr($1, 6) "/make"}'
 
 # Loud, early verification rather than a silent, "succeeded" staging step
 # that turns out unusable three layers deep into a real build (exactly

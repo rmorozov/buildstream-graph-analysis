@@ -1316,6 +1316,34 @@ def _read_make_probe(cache_path: Optional[str]) -> dict:
         return {}
 
 
+def write_decisions_with_sandbox_make(captured: str, destination: str,
+                                     jobserver_fifo: Optional[str]) -> None:
+    """UX-916: the shim's decisions file copied out with each row
+    carrying the sandbox `make` that element was probed on, and the auth
+    style that version implies (`style_for_make_version`).
+
+    Without it the report says which *policy* an element took and never
+    which make decided its style, so a capture that crossed
+    `style_for_make_version` one way and one that crossed it the other
+    are indistinguishable in the report - `UX-916`'s own clause. Read
+    from the probe cache the shim already wrote, never re-probed, and
+    here rather than at report assembly because that cache is keyed on
+    the FIFO's dirname and `close_jobserver` removes it.
+
+    A row whose element was never probed - a kind whose MAKEFLAGS no
+    make reads, a pinned decision, the mode off - is written through
+    unchanged rather than carrying a null, so a reader can tell "not
+    probed" from "probed and absent"."""
+    with open(destination, "w", encoding="utf-8") as handle:
+        for row in read_jobserver_decisions(captured):
+            probe = _read_make_probe(
+                _make_probe_cache_path(jobserver_fifo, row.get("element")))
+            if probe.get("available"):
+                row = dict(row, sandbox_make=probe.get("version"),
+                          auth_style=style_for_make_version(probe.get("version")))
+            handle.write(json.dumps(row, sort_keys=True) + "\n")
+
+
 def lto_preflight_warnings(decisions: list, jobserver_fifo: Optional[str]) -> list[str]:
     """UX-883: one line per element that is both on a sub-4.4 sandbox
     make and drives a compiler directly (`_COMPILER_SAFE_POLICIES`,
@@ -3161,7 +3189,10 @@ def run_traced_build(project_dir: str, cmd: list[str], raw_log_path: str, wrappe
                     and os.path.exists(captured_jobserver_ledger)):
                 shutil.copyfile(captured_jobserver_ledger, jobserver_ledger_path)
             if jobserver_decisions_path is not None and os.path.exists(captured_decisions):
-                shutil.copyfile(captured_decisions, jobserver_decisions_path)
+                # UX-916: enriched on the way out, not copied - the probe
+                # cache this reads dies with the FIFO.
+                write_decisions_with_sandbox_make(
+                    captured_decisions, jobserver_decisions_path, jobserver_fifo)
 
         # `UX-378`: the host's own memory, sampled while the build runs.
         # Around the build and nothing else - the census and the shim

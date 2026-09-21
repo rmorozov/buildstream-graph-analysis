@@ -71,6 +71,14 @@ class TestThePinIsVerified:
             nix_store_fetch.fetch(source.as_uri(), "00" * 32, str(tmp_path / "cache"))
         assert "00" * 32 in str(raised.value)
 
+    def test_both_branches_of_the_version_switch_are_pinned(self):
+        """`UX-916`: one staged make can only exercise one branch of
+        `style_for_make_version`, so the table carries both."""
+        for group in nix_store_fetch.PINS.values():
+            series = {name.split("-", 1)[1] for name in group["paths"]}
+
+            assert {"4.2", "4.4"} <= series, series
+
     def test_every_pin_names_its_own_version_in_its_store_path(self):
         for group in nix_store_fetch.PINS.values():
             for name, pin in group["paths"].items():
@@ -94,14 +102,26 @@ class TestTheStagedMake:
 
         assert target.endswith(pin["store_path"] + "/bin/make"), target
 
+    def _version_of(self, group, binary):
+        loader = os.path.join(SYSROOT + group["interpreter_dir"], group["loader"])
+        result = subprocess.run([loader, binary, "--version"],
+                                capture_output=True, text=True, timeout=30)
+        assert result.returncode == 0, result.stderr
+        return result.stdout.splitlines()[0]
+
     def test_the_staged_make_reports_the_pinned_version(self):
         group = nix_store_fetch.host_arch()
-        pin = group["paths"]["make-4.4"]
-        loader = os.path.join(SYSROOT + group["interpreter_dir"], group["loader"])
 
-        result = subprocess.run(
-            [loader, os.path.join(SYSROOT, "usr", "bin", "make"), "--version"],
-            capture_output=True, text=True, timeout=30)
+        version = self._version_of(group, os.path.join(SYSROOT, "usr", "bin", "make"))
 
-        assert result.returncode == 0, result.stderr
-        assert result.stdout.splitlines()[0] == pin["version"], result.stdout
+        assert version == group["paths"]["make-4.4"]["version"]
+
+    def test_each_series_alias_runs_its_own_make(self):
+        """`UX-916`: the name a `.bst` selects a make by. A `.bst` that
+        named a store path would break on every pin bump."""
+        group = nix_store_fetch.host_arch()
+
+        staged = {name: self._version_of(group, SYSROOT + nix_store_fetch.alias_path(name))
+                  for name in group["paths"]}
+
+        assert staged == {name: pin["version"] for name, pin in group["paths"].items()}

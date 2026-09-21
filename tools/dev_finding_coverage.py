@@ -50,6 +50,14 @@ UNREACHABLE = {
         "the only committed capture with a host CPU series, "
         "tests/fixtures/host_cpu, never wrote a page to swap (UX-860); "
         "this finding needs one whose pswpout rises",
+    "artifact-weight":
+        "the block it reads is walked out of the capture host's own CAS "
+        "at capture time (UX-907, `bga extract --artifact-weights`), and "
+        "every committed capture predates the flag - the cache those runs "
+        "used is gone, so the block cannot be added to them after the "
+        "fact. A capture taken with the flag is the fixture this needs; "
+        "tests/fixtures/cas_artifact is a real BuildStream CAS and guards "
+        "the walk itself, but it is not a capture",
 }
 
 

@@ -467,6 +467,7 @@ never silently folded into an unestimated blast.
 | `run-mode-incremental` | info | this run was incremental, so its durations are not a cold-build baseline |
 | `cache-hit-ratio` | varies | how much of the project the cache reused, and for the requested target's own closure. On a caches-off run it reports the fact at `info` rather than banding it (`UX-86`) |
 | `cache-capacity` | varies | the local cache is at or past the low watermark it is configured with, or its quota is larger than the volume under it can give - so a rebuild here may be an evicted artifact rather than a moved cache key (`UX-896`) |
+| `artifact-weight` | info | which elements' artifacts are the heaviest in the local cache, walked per element from the CAS (`bga extract --artifact-weights`). Each figure is that artifact's whole weight, so the rows overlap where two artifacts share a blob; the finding says by how much (`UX-907`) |
 | `cache-transfer-cost` | medium | this build spent a notable share of wall-clock moving artifacts rather than making them |
 | `wait-category` | varies | the single largest non-execution wait category, when it clears the 1% floor |
 | `execution-bound` | info | no wait category clears the floor — the time is in the work itself |

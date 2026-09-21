@@ -2,7 +2,7 @@
 
 Run on 2026-09-21. The checkout arrived shallow, with only `work` and no
 configured remote. Main was fetched explicitly from the repository URL and
-the branch rebased to `86515212`; the two earlier local review commits were
+the branch rebased to `70765b09`; the two earlier local review commits were
 already superseded by main's rounds 120–129 and were dropped. The measurements
 below were then re-checked against that rebased tree.
 

@@ -297,6 +297,30 @@ def _hint_keys(node, found):
     return found
 
 
+def _block_keys(node, found):
+    """Every key declared one level below a top-level property.
+
+    A *depth* and not a shape, which is `UX-909`'s whole point. The
+    three walks above are each a shape bought back after it escaped -
+    a row's `items`, its `bga:columns`, a dict keyed by something that
+    is not an index, a bare `object`'s view-hint - and a top-level
+    object of scalars was simply the next one: `floors`, `attribution`
+    and `cache` are not internal shapes of a block, they *are* the
+    report's blocks, and `certified_headroom` - the number Key
+    Findings leads with - had never been in the population. Measured
+    at filing: 302 such keys outside it, 305 by the time this landed.
+
+    One level, not recursion: the full nested key set is `UX-384`'s
+    second copy of the schemas, which `UX-628` declined and `UX-655`
+    re-measured. So `blast_radius_distribution.deciles` enters as a
+    key and its own nine buckets do not.
+    """
+    for value in (node or {}).values():
+        if isinstance(value, dict):
+            found |= set(value.get("properties") or {})
+    return found
+
+
 def _consumer_surface():
     """`{key: [contract, ...]}` - the keys a consumer of a printable
     document meets.
@@ -308,13 +332,18 @@ def _consumer_surface():
     rows one level below that, so a walk stopping under a top-level
     array published `level` and `width` outside its own population.
     `UX-866` adds `run_instance`'s own hint-declared keys, a bare
-    `object` in the schema rather than a row.
+    `object` in the schema rather than a row. `UX-909` adds every key
+    one level below a top-level property, which is where the report's
+    own blocks declare their scalars.
 
     Still not the full recursive key set - 514 distinct keys over the
-    nine printable schemas, 891 counting repeats - most of them
-    internal shapes of one block, and a document naming all of them
-    would be the second copy of the schemas `UX-384` already banned
-    from the inventory; the guide states what this walk reaches.
+    nine printable schemas, 891 counting repeats - and a document
+    naming all of them would be the second copy of the schemas
+    `UX-384` already banned from the inventory; the guide states what
+    this walk reaches. The docstring used to add "most of them
+    internal shapes of one block", and `UX-909` measured that as false
+    of the ones a reader meets first: two of the three blocks Key
+    Findings quotes were in it.
     """
     from bga import contracts, schemas
 
@@ -324,6 +353,7 @@ def _consumer_surface():
         keys = set(schema.get("properties", {}))
         _row_keys(schema, keys)
         _hint_keys(schema.get("properties", {}).get("run_instance"), keys)
+        _block_keys(schema.get("properties", {}), keys)
         for key in keys:
             found.setdefault(key, []).append(name)
     return found
@@ -346,20 +376,38 @@ def code_spanned(text):
     return found
 
 
-def _named_in_the_documents():
-    """`code_spanned` over the documents, less the ones that argue.
+PROPOSED_HEADER = re.compile(r"^\*\*Status:\*\* proposed\b", re.M)
 
-    `docs/backlog/` and `docs/audits/` are excluded because a task file
+
+def _argues_rather_than_documents(relative, text):
+    """Whether a document is the argument for a key rather than its
+    description.
+
+    `docs/backlog/` and `docs/audits/` by path, because a task file
     naming the key it added is the argument, not the document - the
     failure mode the `falsify` skill calls *the guard that matches its
-    own explanation*.
+    own explanation*. `UX-909`: a `docs/design/*.md` whose **header**
+    says `**Status:** proposed` is the same thing by its own
+    declaration, and the path list could not see it. The header is
+    what precedes the first `## ` - `directions.md` gives each of its
+    numbered Directions a `**Status:**` line of its own, and a landed
+    document is not proposed because one section inside it is.
     """
+    if relative.startswith(("docs/backlog/", "docs/audits/")):
+        return True
+    return (relative.startswith("docs/design/")
+            and bool(PROPOSED_HEADER.search(text.split("\n## ", 1)[0])))
+
+
+def _named_in_the_documents():
+    """`code_spanned` over the documents, less the ones that argue."""
     text = []
     for path in sorted(REPO.glob("docs/**/*.md")):
         relative = path.relative_to(REPO).as_posix()
-        if relative.startswith(("docs/backlog/", "docs/audits/")):
+        body = path.read_text(encoding="utf-8")
+        if _argues_rather_than_documents(relative, body):
             continue
-        text.append(path.read_text(encoding="utf-8"))
+        text.append(body)
     text.append((REPO / "README.md").read_text(encoding="utf-8"))
     return code_spanned("\n".join(text))
 
@@ -608,6 +656,75 @@ class TestThePopulationIsKeysAndNotIds:
             "typed as a bare object with no items or additionalProperties "
             "- run_instance among them - never enters the consumer "
             "surface, and an undocumented key inside one never reddens")
+
+    def test_a_scalar_of_a_published_block_is_in_the_population(self):
+        """`UX-909`'s regression fixture. A top-level object of
+        scalars is neither a top-level key nor a row, so none of the
+        three walks above reaches its children: `certified_headroom`,
+        the number Key Findings leads with, had never been in the
+        population, and `UX-891` added five `floors` keys with every
+        clause green. A small schema stands in, with one key named
+        nowhere in the real documents - if `_block_keys` regresses,
+        the key never enters the surface and the undocumented-key
+        clause has nothing to catch it on."""
+        marker = "zz_ux909_regression_marker"
+        assert marker not in _named_in_the_documents(), (
+            f"{marker!r} collided with real prose; pick another fixture key")
+        schema = {"properties": {"floors": {"properties": {marker: {}}}}}
+        assert marker in _block_keys(schema["properties"], set()), (
+            "a published block's own scalars are not reached by the walk, "
+            "so floors, attribution and cache - the blocks a reader meets "
+            "first - publish their keys outside the population")
+
+    def test_the_walk_stops_one_level_below_a_top_level_property(self):
+        """The other side of that boundary, asserted because it is the
+        line the guide states and `UX-384` banned the far side of. A
+        key two levels down is *not* in the population, so a reader
+        trusting the guide's sentence is trusting something checked."""
+        marker = "zz_ux909_depth_marker"
+        schema = {"properties": {"cache": {"properties": {
+            "transfer_bytes": {"properties": {marker: {}}}}}}}
+        reached = _block_keys(schema["properties"], set())
+        assert "transfer_bytes" in reached, "the one level is not walked"
+        assert marker not in reached, (
+            "the walk descends past one level below a top-level property, "
+            "so it is the full nested key set UX-384 banned rather than the "
+            "boundary the guide states")
+
+    def test_a_proposed_design_document_does_not_document_a_key(self):
+        """`UX-909`'s second half. `docs/backlog/` and `docs/audits/`
+        are excluded because an argument for a key is not its
+        description; a design document whose header says `**Status:**
+        proposed` says the same thing about itself and was counted
+        anyway. Latent when filed - 0 surface keys rested on one - and
+        live the moment the walk widened: `mean`, `skipped_inputs`,
+        `t_infinity_cold` and `unmeasured_processes` were named
+        nowhere else.
+
+        The subject is the **header**, not the file: `directions.md`
+        gives each numbered Direction its own `**Status:**` line, and
+        a landed document must not become proposed because a section
+        inside it is.
+        """
+        proposed = "# D\n\n**Status:** proposed - an argument\n"
+        assert _argues_rather_than_documents(
+            "docs/design/whatever.md", proposed)
+        assert not _argues_rather_than_documents(
+            "docs/guides/cli.md", proposed), (
+            "the exclusion is not held to docs/design/, so a guide "
+            "quoting the marker stops documenting anything")
+        sectioned = "# D\n\n**Status:** landed\n\n## 2\n\n**Status:** proposed\n"
+        assert not _argues_rather_than_documents(
+            "docs/design/directions.md", sectioned), (
+            "a section's own Status line is read as the document's, so "
+            "directions.md stops documenting every key it names")
+        live = [path for path in sorted(REPO.glob("docs/design/*.md"))
+                if _argues_rather_than_documents(
+                    path.relative_to(REPO).as_posix(),
+                    path.read_text(encoding="utf-8"))]
+        assert live, (
+            "no docs/design/*.md declares itself proposed any more, so the "
+            "clause above is checking a shape the tree no longer has")
 
     def test_the_guide_states_the_reach_it_actually_has(self):
         """The other half of the Required Fix. The statement was

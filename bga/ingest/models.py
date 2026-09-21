@@ -220,6 +220,13 @@ class RunContext:
     # value, not a quota of nothing.
     cache_capacity: Optional[dict] = None
 
+    # `UX-907`: and what each element's artifact weighs inside that
+    # cache - `{elements: {uid: {files_bytes, buildtree_bytes, source}},
+    # run_unique_bytes, walk_dirs_read}`, from a walk of the CAS the
+    # refs point into. `None` for every capture taken without
+    # `--artifact-weights`, which is the default.
+    artifact_weights: Optional[dict] = None
+
     @property
     def plane1_resolution_s(self) -> Optional[float]:
         """UX-110: how far a Plane 1 duration in this run may be from the

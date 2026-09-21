@@ -10,13 +10,12 @@ A cache with no recorded quota must produce *no* capacity claim, because
 "this cache has no ceiling" and "nobody looked" are the same silence to a
 reader and a different decision to an operator sizing an agent.
 
-The per-element half of the row is deliberately not here. BuildStream
-2.8.0 exposes no cheap exact artifact weight - `%{artifact-cas-digest}`
-renders the serialized root `Directory` proto's own size, not the
-artifact's, and `bst artifact list-contents --long` enumerates every
-file and deduplicates nothing. `UX-907` carries that question, and
-`test_the_capacity_block_claims_no_artifact_weight` holds this module to
-not quietly growing one.
+The per-element half is still deliberately not here. `UX-907` answered
+it by walking the CAS, in `bga/artifact_weight.py` and its own block;
+what this module must never grow is an artifact figure among host-level
+ones, which is where `%{artifact-cas-digest}` - free, already in the
+`bst show` the extractor runs, and 165x to 530,682x under the artifact
+on a real cache - would land.
 """
 import json
 import os
@@ -276,10 +275,13 @@ class TestTheWalkCountsTheVolumeNotTheNames:
 
 
 class TestTheRowKnowsWhatItDoesNotCarry:
-    def test_the_capacity_block_claims_no_artifact_weight(self):
-        """The gap this row measured and did not close. A later round
-        that adds a per-element weight has to move this guard, which is
-        the point: the proxy that looks like one (`artifact-cas-digest`)
-        must not arrive under a name that reads as the real thing."""
+    def test_the_capacity_block_still_claims_no_artifact_weight(self):
+        """`UX-907` closed the gap this guard held open, and it stays
+        here narrowed rather than deleted. The per-element weight lives
+        in its own block, walked out of the CAS
+        (`test_an_artifact_has_a_weight.py`); what must never appear is
+        an artifact figure *here*, in a block whose every other number
+        is host-level, because that is where the free proxy
+        (`%{artifact-cas-digest}`) would land if anyone reached for it."""
         assert not [key for key in _capacity()
                     if "artifact" in key or "element" in key]

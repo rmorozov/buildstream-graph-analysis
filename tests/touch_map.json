@@ -495,7 +495,8 @@
   "tests/unit/test_a_pulled_dependency_gates_the_build.py",
   "tests/unit/test_bst_extract_run.py",
   "tests/unit/test_every_finding_reaches_a_fixture.py",
-  "tests/unit/test_the_cache_has_a_ceiling.py"
+  "tests/unit/test_the_cache_has_a_ceiling.py",
+  "tests/unit/test_the_foundation_tier_is_declared.py"
  ],
  "bga/cache_effectiveness.py": [
   "tests/test_e2e.py",
@@ -7634,6 +7635,7 @@
   "tests/unit/test_the_views_that_draw.py",
   "tests/unit/test_the_vocabulary_has_the_shape.py",
   "tests/unit/test_three_reasons_for_no_timeline.py",
+  "tests/unit/test_what_a_snapshot_weighs.py",
   "tests/unit/test_what_an_element_pulls_in.py",
   "tests/unit/test_whatifs_saving_is_in_the_teams_units.py"
  ],

@@ -123,14 +123,16 @@ def test_cmake_fd_with_make_4_4_is_rewritten_to_fifo(tmp_path, monkeypatch):
         os.close(read_fd)
 
 
-def test_cmake_fd_with_make_4_3_keeps_the_auth_and_mounts_the_flto_shims(
+def test_cmake_fd_with_make_4_3_keeps_the_auth_without_the_flto_shims(
         tmp_path, monkeypatch):
     """UX-913 replaced the scrub this class used to assert. `make` is the
-    MAKEFLAGS consumer here and a direct child, so the fd is valid for
-    it; the only unwrapped reader is lto-wrapper, and UX-880's GCC-driver
-    shims strip the auth before it. So the auth stands, `JOBS` stays
-    emptied (a jobserver survives to govern the width), and the shims go
-    on `PATH` gated by `BST_TRACE_FLTO_ACTIVE`."""
+    MAKEFLAGS consumer here and a direct child, so the fd is valid for it
+    and the auth stands, with `JOBS` emptied (a jobserver survives to
+    govern the width). The shims do NOT ride along: `flto/` shadows the
+    staged `cc`/`gcc` with a script that opens on `dirname`, which
+    `examples/stage_cpp_toolchain.sh:36` does not stage - mounting them
+    for every cmake element failed `examples/06` with exit 255 (run
+    35610762079). An element that also drives LTO takes the override."""
     fake = _fake_bwrap_with_make(tmp_path / "real-bwrap", tmp_path / "marker",
                                  BIND_DST, "4.3")
     wrapper_dir = str(tmp_path / "wrappers")
@@ -141,8 +143,7 @@ def test_cmake_fd_with_make_4_3_keeps_the_auth_and_mounts_the_flto_shims(
         assert _makeflags_value(argv) == f"--jobserver-auth={read_fd},{read_fd}"
         assert "--ro-bind" in argv
         assert wrapper_dir in argv
-        flag_idx = argv.index("BST_TRACE_FLTO_ACTIVE")
-        assert argv[flag_idx + 1] == "1"
+        assert "BST_TRACE_FLTO_ACTIVE" not in argv
         assert _setenv_values(argv, "JOBS") == ["-j4", ""]
     finally:
         os.close(read_fd)

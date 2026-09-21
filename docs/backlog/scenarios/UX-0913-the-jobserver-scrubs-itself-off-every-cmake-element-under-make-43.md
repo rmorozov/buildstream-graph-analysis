@@ -4,12 +4,12 @@
 
 ## Decomposition
 
-surfaces: `tools/native_trace/bwrap_shim.py` (`_FLTO_SHIM_POLICIES`,
-`_compiler_safe_makeflags` now returns `(auth, flto_shims)`) ·
-`tools/bst_native_build_tracer.py` (`lto_preflight_warnings`, two-sided)
-· `docs/guides/cli.md` (§3.10, three lines) ·
-`examples/11-serial-giant/elements/*.bst` (the four annotations, dropped
-as the acceptance test). No published key moves, so no version bump.
+surfaces: `tools/native_trace/bwrap_shim.py` (`_FD_DIRECT_POLICIES`,
+the scrub not applied to it) · `tools/bst_native_build_tracer.py`
+(`lto_preflight_warnings`, two-sided) · `docs/guides/cli.md` (§3.10,
+three lines) · `examples/11-serial-giant/elements/*.bst` (the four
+annotations, dropped as the acceptance test). No published key moves,
+so no version bump.
 
 guards: `test_the_lto_link_survives_the_jobserver.py` (policy: cmake
 kept / cargo still scrubbed; make version: absent, 4.3, 4.4) ·
@@ -28,6 +28,50 @@ examples and must not run beside it.
 
 gate: one `make test` here, then CI's `bst-examples` step 21, which is
 the only place the acceptance test can actually run.
+
+## The shim route was tried first, and CI measured it wrong
+
+Design (B) of this row's two candidates — keep the auth **and** mount
+`UX-880`'s `flto/` GCC-driver shims, so `lto-wrapper` never reads the
+raw fd — shipped at `f8657034` and failed `bst-examples` on run
+35610762079, at the step before this row's own:
+
+```text
+OK: 11 element key(s) equal with and without the mode's environment
+##[error]Process completed with exit code 255.
+```
+
+The step is `The cache key is equal with and without the jobserver
+(UX-844)`, `.github/workflows/ci.yml:1409`, and the 255 is the
+`--jobserver 4` build of `examples/06-macro-micro-optimization` — nine
+`kind: cmake` elements, every one of which design (B) newly put the
+`flto/` subdir on `PATH` for.
+
+`_wrapper_mount`'s own docstring had already recorded the failure mode
+(`bwrap_shim.py:571`): the shims shadow `cc`, `gcc`, `g++` and `c++`,
+and open on
+
+```sh
+bga_self_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+```
+
+under `set -eu`. `examples/stage_cpp_toolchain.sh:36` stages exactly
+`gcc g++ cc c++ cmake make ld ld.bfd as ar ranlib nm strip env sh uname
+sort cat` — no `dirname`, `basename`, `head`, `grep`, `date` or
+`readlink`. All four shadowed names are staged; none of the tools the
+shim needs is. So every cmake element compiled through a script it
+could not source.
+
+**So the shims stay behind the `flto` override and this row ships
+design (A):** `cmake_meson` keeps its auth because `make` is a direct
+child, and nothing is mounted with it. `11-serial-giant` uses no `-flto`
+at all (`grep -rn flto examples/11-serial-giant` finds only the width
+check's own comment), so the acceptance test never needed them.
+
+The half this leaves open is real and filed separately: a cmake element
+that *does* drive LTO now keeps a raw fd `lto-wrapper` cannot use, and
+the shims that would defuse it are unmountable in a staged-toolchain
+sandbox until `wrappers/_common.sh` stops needing coreutils.
 
 ## Motivation
 

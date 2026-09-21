@@ -99,7 +99,7 @@ from .bst_show_to_graph import FIELD_SEP, RECORD_SEP, _parse_yaml_mapping
 from .native_trace.bwrap_shim import (
     _AUTH_OVERRIDE_STYLES,
     _COMPILER_SAFE_POLICIES,
-    _FLTO_SHIM_POLICIES,
+    _FD_DIRECT_POLICIES,
     JOBSERVER_PINNED,
     _make_probe_cache_path,
     style_for_make_version,
@@ -1247,7 +1247,7 @@ def lto_preflight_warnings(decisions: list, jobserver_fifo: Optional[str]) -> li
     elements that function scrubbed. De-duplicated per element; `[]`
     with no jobserver FIFO (nothing was probed) or nothing qualifies.
 
-    UX-913: a `_FLTO_SHIM_POLICIES` element is no longer scrubbed, so it
+    UX-913: a `_FD_DIRECT_POLICIES` element is no longer scrubbed, so it
     gets the other line instead of none - silence would leave a reader
     unable to tell an engaged mode from a broken warning, which is how
     eight CI pairs carried `peak 2` unread."""
@@ -1266,11 +1266,11 @@ def lto_preflight_warnings(decisions: list, jobserver_fifo: Optional[str]) -> li
         if not make_below_44:
             continue
         seen.add(element)
-        if policy in _FLTO_SHIM_POLICIES:
+        if policy in _FD_DIRECT_POLICIES:
             lines.append(
                 f"Note: {element} keeps its jobserver auth (sandbox make "
-                f"<4.4, {policy}); make reads the fd and the GCC driver "
-                f"shims strip it before lto-wrapper (UX-913)")
+                f"<4.4, {policy}); make reads the fd directly. An element "
+                f"that also drives LTO needs the flto override (UX-913)")
             continue
         lines.append(
             f"Warning: {element} scrubbed to recipe -jN (sandbox make <4.4); "

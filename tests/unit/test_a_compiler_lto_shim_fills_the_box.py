@@ -218,11 +218,15 @@ class TestAFltoMatchedElementKeepsFdAndIsNotScrubbed:
         finally:
             os.close(read_fd)
 
-    def test_unmatched_cmake_element_gets_the_shims_rather_than_the_scrub(
+    def test_unmatched_cmake_element_keeps_the_auth_and_not_the_shims(
             self, tmp_path, monkeypatch):
         """UX-913: the element the override does not match is exactly the
-        case that cost `11-serial-giant` its width - it now takes the same
-        shim route a matched one does, without anyone annotating it."""
+        case that cost `11-serial-giant` its width, so its auth now
+        stands. The shims stay behind the override: `flto/` shadows the
+        staged `cc`/`gcc`, and the shim opens on `dirname`, which
+        `examples/stage_cpp_toolchain.sh:36` does not stage - putting it
+        on every cmake element's `PATH` failed `examples/06` with exit
+        255 (run 35610762079)."""
         monkeypatch.setenv("BST_TRACE_JOBSERVER_AUTH_MAP", "flto:llvm*")
         fake = _fake_bwrap_with_make(tmp_path / "real-bwrap", tmp_path / "marker",
                                      BIND_DST, "4.3")
@@ -231,9 +235,8 @@ class TestAFltoMatchedElementKeepsFdAndIsNotScrubbed:
         argv, read_fd = _build(fake, tmp_path, "other", wrapper_dir, monkeypatch)
         try:
             assert _makeflags_value(argv) == f"--jobserver-auth={read_fd},{read_fd}"
-            flag_idx = argv.index("BST_TRACE_FLTO_ACTIVE")
-            assert argv[flag_idx + 1] == "1"
-            assert _path_value(argv).startswith(FLTO_SUBDIR + ":")
+            assert "BST_TRACE_FLTO_ACTIVE" not in argv
+            assert FLTO_SUBDIR not in _path_value(argv).split(":")
         finally:
             os.close(read_fd)
 

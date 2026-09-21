@@ -95,8 +95,35 @@ genuinely differ.
 
 ## Acceptance Test
 
-One `bst-examples` run on a branch carrying the annotation, with the
-`Per-element native parallelism` table read for `giant.bst`:
+**Measured, run `35564652560` on `a14ba0c1`.** The annotation landed
+and the width did not move — a fourth outcome the three below did not
+enumerate:
+
+```text
+scrub warnings: mod-c.bst, mod-d.bst (example 10), core.bst (example 12)
+                giant/leaf-a/leaf-b/leaf-c: absent
+
+  element                  peak  req  achieved     span work
+  giant.bst                   2    2      100%   45.36s  530
+  leaf-a/b/c                  2    2      100%    ~1.4s   34
+```
+
+The warning is element-scoped and still fires for the three
+unannotated elements, so its absence for these four is evidence the
+annotation took effect rather than evidence the warning stopped. The
+step read `off=218.52s auto=215.46s`, IMPROVED -1.4% — inside the
++-2% spread `UX-910` measured over six pairs, and with `peak`
+unchanged, so the green gate is the coin flip landing heads and is
+**not** evidence for this row.
+
+So the scrub was necessary but not sufficient: there is a second gate
+between "the pool is reachable" and "`make` draws from it", and it is
+unidentified. `req 2` is `UX-894`'s static resolved width and cannot
+distinguish "make asked for two" from "make was granted two", so the
+printed table cannot answer it either.
+
+The three outcomes this section originally listed, kept because the
+first two remain open for the *next* attempt:
 
 - `peak > 2` means the mode is restored and `UX-910`'s close condition
   is met.
@@ -107,8 +134,16 @@ One `bst-examples` run on a branch carrying the annotation, with the
   match the element, which is a defect in
   `read_element_auth_map_for_jobserver`'s own lookup and its own row.
 
-The warning's absence for the four annotated elements is the guard
-that the annotation took effect at all, and it is read from the run's
-log, not assumed.
+What the reading now needs is the run's own `plane2.json`, which
+carries the per-sandbox decision and which `examples/10-jobserver`'s
+`check_jobserver_decision.py` already reads. It is uploaded as a CI
+artifact and unreachable from a dev container behind the egress proxy
+(403), which is itself the finding below.
+
+**The asymmetry to fix first.** bga warns loudly when it scrubs the
+jobserver and prints nothing when it keeps it, so a reader can see the
+mode give up but never see it engage. That is why six runs carried
+`peak 2` before anyone read the warning, and it costs every user the
+same way, not only this fixture. The decision belongs in the report.
 
 ## Outcome

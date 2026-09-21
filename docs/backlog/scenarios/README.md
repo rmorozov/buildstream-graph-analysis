@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-907 scenarios: **18 open**, 889 closed.
+908 scenarios: **19 open**, 889 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -27,7 +27,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | cli | 0 | 22 |
 | store | 1 | 17 |
 | docs | 1 | 146 |
-| guards | 5 | 233 |
+| guards | 6 | 234 |
 
 ## Open scenarios
 
@@ -54,6 +54,7 @@ task file, which is the only place it ever lived twice.
 | UX-909 | [the documentation guard cannot see a published block's own keys](UX-0909-the-documentation-guard-cannot-see-a-blocks-own-keys.md) | guards | Medium | R1, R3 | 🔴 Not Started |
 | UX-910 | [the serial-giant gate asserts an unbanded inequality the jobserver cannot satisfy](UX-0910-the-serial-giant-gate-asserts-an-unbanded-inequality.md) | guards | High | the round whose CI is red for a reason its diff did not cause | 🔴 Not Started |
 | UX-911 | [the styleguide scan re-reads every tracked document once per candidate](UX-0911-the-styleguide-scan-rereads-every-document-once-per-candidate.md) | guards | High | every branch whose CI is red for a cost main already carries | 🔴 Not Started |
+| UX-912 | [the timing reference is unrepresentative on four files, and branches pay for it](UX-0912-the-timing-reference-is-unrepresentative-and-branches-pay-for-it.md) | guards | High | every branch charged for a cost main carries | 🔴 Not Started |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

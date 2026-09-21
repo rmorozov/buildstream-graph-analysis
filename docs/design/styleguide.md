@@ -1665,6 +1665,20 @@ chosen reader's lead lands where the decision is.
 
 `UX-822` is the item.
 
+## 3j. A visual fold also bounds interactive descendants (round 130)
+
+At 120 synthetic findings, the finding fold shows 40 cards but leaves all
+120 cards and 121 controls materialised; 80 buttons belong to hidden cards.
+The visible distance is bounded while browser, tab-order and accessibility
+work still follows the input population.
+
+**A population fold bounds both visible objects and their interactive
+descendants.** Objects beyond the opening bound retain a lightweight fragment
+target, not live controls. Following that fragment hydrates its object; the
+explicit Show all path hydrates the population once and in source order.
+
+`UX-921` is the item; its DOM census will own this row.
+
 ## 7. Enforcement
 
 What keeps this true after the commit that lands it: the booted
@@ -1722,6 +1736,7 @@ headings, so a renumber there moves it.
 | §3g | `test_the_ceilings_reach_a_reader.py` | |
 | §3h | `test_the_rail_is_a_source_list.py` | |
 | §3i | `test_the_header_keeps_its_budget.py` | |
+| §3j | | `UX-921` will add the hidden-control population guard; open finding |
 | §4 | `test_emphasis_is_a_budget.py`, `test_the_palette_is_validated.py`, `test_a_drawing_is_graded.py`, `test_apparatus_in_its_place.py`, `test_the_browser_is_the_library.py` | named |
 | §4a | | named; `UX-346`'s `test_a_sentence_lives_on_its_door.py` holds it and cites no section |
 | §4b | `test_a_runbook_is_not_a_table.py` | `UX-351`'s `test_the_label_is_for_the_reader.py` holds it and cites no section; `UX-669`'s clause holds the half that says a citation is a question, never a key |

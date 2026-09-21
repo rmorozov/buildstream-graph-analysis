@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-916 scenarios: **19 open**, 897 closed.
+917 scenarios: **20 open**, 897 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -23,7 +23,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | capture | 6 | 140 |
 | analysis | 2 | 121 |
 | contracts | 0 | 52 |
-| viewer | 0 | 177 |
+| viewer | 1 | 178 |
 | cli | 0 | 22 |
 | store | 1 | 17 |
 | docs | 1 | 146 |
@@ -55,6 +55,7 @@ task file, which is the only place it ever lived twice.
 | UX-916 | [only one make is ever staged, so the version switch has one live branch](UX-0916-only-one-make-is-staged-so-the-version-switch-has-one-live-branch.md) | guards | Medium | every host that runs the examples, whatever its own make | 🔴 Not Started |
 | UX-917 | [the fold-depth guard has three unconfirmed CI excursions, spread over three weeks](UX-0917-the-fold-depth-guard-has-three-unconfirmed-excursions.md) | guards | Medium | the round whose push gate is blocked by a file nobody has named | 🔴 Not Started |
 | UX-920 | [two task files can share one backlog id, and no guard reads ids for uniqueness](UX-0920-two-task-files-can-share-one-id-and-nothing-reads-it.md) | guards | Medium | every round that runs more than one branch at a time, which is now the normal case | 🔴 Not Started |
+| UX-921 | [hidden findings keep live controls](UX-0921-hidden-findings-keep-live-controls.md) | viewer | Medium | R1, R4 and assistive-technology users reading a report with many findings | 🔴 Not Started |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

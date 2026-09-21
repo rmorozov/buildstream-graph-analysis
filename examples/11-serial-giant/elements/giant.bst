@@ -24,3 +24,4 @@ config:
   - sh generate.sh giant 256 9800
   - |
     %{cmake}
+

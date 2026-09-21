@@ -44,6 +44,36 @@ So this row needs either `UX-914`'s network precondition carried, or a
 vendored source with its checksum in the tree. Pick one and record the
 reading that picked it; the rest of this row does not depend on which.
 
+**Settled 2026-09-21: the source is the Nix binary cache, and it is a
+download rather than a build.** `*.nixos.org` is already in the
+environment's Trusted allowlist, so no policy change and no vendoring
+is needed. Measured from the development container:
+
+```text
+cache.nixos.org 200 · releases.nixos.org 200 · hydra.nixos.org 200
+  (bare nixos.org is 000 - subdomains only)
+channels.nixos.org/nixos-25.11/store-paths.xz -> 216,353 paths, incl.
+  /nix/store/1kxihdh72rdyl170dh19zka2nmd179cc-gnumake-4.4.1
+  /nix/store/4320g8b6bl4wpgbmk0mdjr3rr2jr4xh6-gnumake-4.2.1
+cache.nixos.org/1kxihdh....narinfo
+  References: gnumake-4.4.1 glibc-2.40-224 · FileSize 302608
+cache.nixos.org/nar/1jkn9z....nar.xz -> 302 KB -> 1.66 MB, "GNU Make" in it
+```
+
+This supersedes both earlier candidates - building from `ftp.gnu.org`
+(refused) and the `mirror/make` + `coreutils/gnulib` clone pair (works,
+but needs a gnulib bootstrap and `autopoint`/`gettext`/`makeinfo`,
+none of which the host has). Keep them as fallbacks, not the plan.
+
+Two constraints the implementation carries. A Nix store path is
+absolute and baked into each binary's interpreter and RPATH, so the
+sandbox must carry `/nix/store` at that exact path - stage the closure
+there rather than relocating it, which is *more* reproducible than
+today's host staging, not less, since the paths are content-addressed
+and pinned. And unpacking a `.nar` needs either Nix (root, a daemon)
+or a small reader; write the reader, walking the closure through each
+narinfo's `References` field.
+
 ## Out of Scope
 
 Everything else in the sysroot — that is `UX-914`'s axis A, and this

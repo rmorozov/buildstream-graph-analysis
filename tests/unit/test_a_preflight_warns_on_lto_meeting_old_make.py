@@ -24,7 +24,26 @@ def _write_probe(jobserver_fifo, element, version, available=True):
 
 
 class TestLtoPreflightWarnings:
-    def test_a_compiler_driving_kind_on_make_4_3_warns(self, tmp_path):
+    def test_a_scrubbed_policy_on_make_4_3_warns(self, tmp_path):
+        """`cargo` rather than `cmake_meson`: UX-913 left the scrub in
+        place only for the policies with no shim between an unwrapped
+        client and MAKEFLAGS, and this is the line that names it."""
+        fifo = str(tmp_path / "jobserver")
+        _write_probe(fifo, "core.bst", "GNU Make 4.3")
+
+        lines = tracer.lto_preflight_warnings(
+            [_decision("core.bst", "cargo")], fifo)
+
+        assert len(lines) == 1
+        assert "core.bst" in lines[0]
+        assert "make >=4.4" in lines[0]
+
+    def test_a_shim_defused_policy_on_make_4_3_says_the_auth_was_kept(
+            self, tmp_path):
+        """UX-913's other side. Silence here would be the defect this row
+        was filed for: a reader could not tell an engaged mode from a
+        warning that stopped firing, which is how eight CI pairs carried
+        `peak 2` with nobody reading them."""
         fifo = str(tmp_path / "jobserver")
         _write_probe(fifo, "core.bst", "GNU Make 4.3")
 
@@ -33,7 +52,8 @@ class TestLtoPreflightWarnings:
 
         assert len(lines) == 1
         assert "core.bst" in lines[0]
-        assert "make >=4.4" in lines[0]
+        assert "keeps its jobserver auth" in lines[0]
+        assert "scrubbed" not in lines[0]
 
     def test_make_4_4_gets_no_warning(self, tmp_path):
         fifo = str(tmp_path / "jobserver")
@@ -140,12 +160,23 @@ class TestLtoPreflightThroughRunTracedBuild:
 
     def test_stderr_names_the_element_and_the_remedy(self, tmp_path, monkeypatch, capsys):
         self._run(tmp_path, monkeypatch, [
-            {**_decision("core.bst", "cmake_meson"), "_probe": "GNU Make 4.3"},
+            {**_decision("core.bst", "cargo"), "_probe": "GNU Make 4.3"},
         ])
 
         err = capsys.readouterr().err
         assert "core.bst" in err
         assert "make >=4.4" in err
+
+    def test_stderr_carries_the_kept_auth_line_too(self, tmp_path, monkeypatch, capsys):
+        """The capture's own warnings are the only place a reader sees
+        this decision (UX-913), so the shim route has to reach stderr by
+        the same path the scrub line does."""
+        self._run(tmp_path, monkeypatch, [
+            {**_decision("core.bst", "cmake_meson"), "_probe": "GNU Make 4.3"},
+        ])
+
+        err = capsys.readouterr().err
+        assert "keeps its jobserver auth" in err
 
     def test_make_4_4_prints_nothing(self, tmp_path, monkeypatch, capsys):
         self._run(tmp_path, monkeypatch, [

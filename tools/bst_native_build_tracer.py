@@ -99,6 +99,7 @@ from .bst_show_to_graph import FIELD_SEP, RECORD_SEP, _parse_yaml_mapping
 from .native_trace.bwrap_shim import (
     _AUTH_OVERRIDE_STYLES,
     _COMPILER_SAFE_POLICIES,
+    _FD_DIRECT_POLICIES,
     JOBSERVER_PINNED,
     _make_probe_cache_path,
     style_for_make_version,
@@ -1352,7 +1353,12 @@ def lto_preflight_warnings(decisions: list, jobserver_fifo: Optional[str]) -> li
     `_compiler_safe_makeflags`'s own reading exactly (`available` and
     `style_for_make_version` == `"fd"`), so this warns on precisely the
     elements that function scrubbed. De-duplicated per element; `[]`
-    with no jobserver FIFO (nothing was probed) or nothing qualifies."""
+    with no jobserver FIFO (nothing was probed) or nothing qualifies.
+
+    UX-913: a `_FD_DIRECT_POLICIES` element is no longer scrubbed, so it
+    gets the other line instead of none - silence would leave a reader
+    unable to tell an engaged mode from a broken warning, which is how
+    eight CI pairs carried `peak 2` unread."""
     if not jobserver_fifo:
         return []
     lines = []
@@ -1368,6 +1374,12 @@ def lto_preflight_warnings(decisions: list, jobserver_fifo: Optional[str]) -> li
         if not make_below_44:
             continue
         seen.add(element)
+        if policy in _FD_DIRECT_POLICIES:
+            lines.append(
+                f"Note: {element} keeps its jobserver auth (sandbox make "
+                f"<4.4, {policy}); make reads the fd directly. An element "
+                f"that also drives LTO needs the flto override (UX-913)")
+            continue
         lines.append(
             f"Warning: {element} scrubbed to recipe -jN (sandbox make <4.4); "
             f"move it to make >=4.4 for fifo pool-fill, or force fd/flto "

@@ -19,3 +19,4 @@ config:
   - sh generate.sh leaf_a 8 1800
   - |
     %{cmake}
+

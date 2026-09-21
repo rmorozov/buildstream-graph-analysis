@@ -201,7 +201,32 @@ class TestAFltoMatchedElementKeepsFdAndIsNotScrubbed:
     def test_unmatched_element_on_the_same_4_3_make_is_still_scrubbed(
             self, tmp_path, monkeypatch):
         """The UX-878 anchor: `flto:llvm*` naming a different element must
-        not widen the scrub for one it does not match."""
+        not widen the scrub for one it does not match. Read on `cargo`
+        since UX-913 took `cmake_meson` out of the scrubbed set - cargo is
+        where an unwrapped client still reads MAKEFLAGS with no shim
+        between, so it is the policy this anchor still has to hold on."""
+        monkeypatch.setenv("BST_TRACE_JOBSERVER_AUTH_MAP", "flto:llvm*")
+        fake = _fake_bwrap_with_make(tmp_path / "real-bwrap", tmp_path / "marker",
+                                     BIND_DST, "4.3")
+        wrapper_dir = str(tmp_path / "wrappers")
+
+        argv, read_fd = _build(fake, tmp_path, "other", wrapper_dir, monkeypatch,
+                               element_kind="cargo")
+        try:
+            assert "MAKEFLAGS" not in argv
+            assert not any("--jobserver-auth" in tok for tok in argv)
+        finally:
+            os.close(read_fd)
+
+    def test_unmatched_cmake_element_keeps_the_auth_and_not_the_shims(
+            self, tmp_path, monkeypatch):
+        """UX-913: the element the override does not match is exactly the
+        case that cost `11-serial-giant` its width, so its auth now
+        stands. The shims stay behind the override: `flto/` shadows the
+        staged `cc`/`gcc`, and the shim opens on `dirname`, which
+        `examples/stage_cpp_toolchain.sh:36` does not stage - putting it
+        on every cmake element's `PATH` failed `examples/06` with exit
+        255 (run 35610762079)."""
         monkeypatch.setenv("BST_TRACE_JOBSERVER_AUTH_MAP", "flto:llvm*")
         fake = _fake_bwrap_with_make(tmp_path / "real-bwrap", tmp_path / "marker",
                                      BIND_DST, "4.3")
@@ -209,9 +234,9 @@ class TestAFltoMatchedElementKeepsFdAndIsNotScrubbed:
 
         argv, read_fd = _build(fake, tmp_path, "other", wrapper_dir, monkeypatch)
         try:
-            assert "MAKEFLAGS" not in argv
-            assert not any("--jobserver-auth" in tok for tok in argv)
-            assert "--ro-bind" not in argv
+            assert _makeflags_value(argv) == f"--jobserver-auth={read_fd},{read_fd}"
+            assert "BST_TRACE_FLTO_ACTIVE" not in argv
+            assert FLTO_SUBDIR not in _path_value(argv).split(":")
         finally:
             os.close(read_fd)
 

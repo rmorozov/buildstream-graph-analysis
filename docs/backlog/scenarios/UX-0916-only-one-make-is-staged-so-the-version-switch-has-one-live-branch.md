@@ -28,6 +28,15 @@ Whatever it is, the selection has to be visible in the report: a
 capture that took the `fd` path and one that took `fifo` must be
 distinguishable without reading the workflow that produced them.
 
+
+**Settled 2026-09-21: both makes come from one source.** The Nix
+channel `UX-915` now stages from carries `gnumake-4.2.1` beside
+`gnumake-4.4.1`, each its own pinned store path (the measurement is in
+`UX-915`'s Required Fix). So this row is a second closure fetch rather
+than a second build, and the two branches of
+`style_for_make_version` get a live example each without either one
+depending on what the staging host happens to ship.
+
 ## Out of Scope
 
 Staging make 4.4 at all, which is `UX-915` and comes first. The rest of

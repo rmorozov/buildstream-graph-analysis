@@ -1188,6 +1188,13 @@ def store_listing(project: str, window: Optional[int] = None) -> dict:
             "host_class": store_aggregate.host_class(
                 measured.get("host_manifest")),
         })
+        # UX-898/UX-903: and what build it declared itself to be, off
+        # the same one small read. The block rather than its label,
+        # because the aggregate publishes the declaration and a label
+        # cannot be read back into one. Absent on every capture that
+        # declared nothing, so the listing is byte-identical to today's.
+        if measured.get("build_class"):
+            rows[-1]["build_class"] = measured["build_class"]
     # Before the window, not after: a verdict compares a run with the
     # one before it, and the first row of a window has a predecessor.
     _mark_verdicts(rows)
@@ -1234,6 +1241,11 @@ def _run_measurements(snapshot: str) -> dict:
     manifest = context.get("host_manifest")
     if manifest:
         out["host_manifest"] = manifest
+
+    # UX-898/UX-903: the declared build class, from the same read.
+    declared = context.get("build_class")
+    if declared:
+        out["build_class"] = declared
 
     # `UX-594`: the seam the capture recorded, read from the same one
     # small read. A capture older than it carries neither key.

@@ -41,7 +41,7 @@ import os
 import statistics
 from typing import Optional
 
-from . import hostinfo, run_store, schemas
+from . import buildclass, hostinfo, run_store, schemas
 from .compare import MIN_BASELINE_RUNS
 
 # The class a run belongs to when its capture predates `UX-186`'s
@@ -141,6 +141,17 @@ def host_class(manifest: Optional[dict]) -> str:
     return " · ".join(parts)
 
 
+def class_label(host_label: str, declared: Optional[dict]) -> str:
+    """The full comparison class: the machine and the build together.
+
+    `UX-898`/`UX-903`. Falls back to the host label alone when nothing
+    was declared, so a store of captures taken before the field existed
+    groups, labels and refuses byte-identically to how it always did.
+    """
+    build = buildclass.label(declared)
+    return f"{host_label} · {build}" if build else host_label
+
+
 def _manifest_of(snapshot: str) -> Optional[dict]:
     """The host manifest a snapshot's run context recorded, or None."""
     import json
@@ -176,11 +187,20 @@ def _resource_profile(row: dict) -> dict:
 
 
 def _class_aggregate(label: str, manifest: Optional[dict],
-                     rows: list[dict]) -> dict:
-    """One host class's distributions, or its shortfall."""
+                     rows: list[dict],
+                     declared: Optional[dict] = None,
+                     host_label: Optional[str] = None) -> dict:
+    """One comparison class's distributions, or its shortfall.
+
+    `label` is the whole class - the machine and the declared build
+    together - and is what a shortfall sentence names, because that is
+    the population a reader has too few runs of. `host_class` below
+    stays the machine alone: the field has meant that since `UX-234`
+    and widening it silently is the drift `UX-190` was filed about.
+    """
     durations = [row["total_duration_us"] for row in rows]
     entry = {
-        "host_class": label,
+        "host_class": host_label if host_label is not None else label,
         "host_manifest": manifest,
         "runs": len(rows),
         "duration_us": distribution(durations),
@@ -209,6 +229,13 @@ def _class_aggregate(label: str, manifest: Optional[dict],
         "stamps": [row["stamp"] for row in rows][-STAMPS_MAX:],
         "stamps_total": len(rows),
     }
+    # UX-898/UX-903: what these runs declared they were building.
+    # Gated on the *label* rather than on the block, so a block that
+    # names nothing groups and renders as the undeclared case it is -
+    # and a store of captures from before the field byte-identically
+    # produces the document it always did.
+    if buildclass.label(declared):
+        entry["build_class"] = declared
     # UX-296: a class whose runs carry no capacity scalars says why, and
     # what produces them. The old code reached into every snapshot's
     # `plane2.json` for these; a capture written before the sidecar has
@@ -355,20 +382,32 @@ def aggregate(listing: dict, blend: bool = False) -> dict:
 
     by_class: dict[str, list[dict]] = {}
     manifests: dict[str, Optional[dict]] = {}
+    declarations: dict[str, Optional[dict]] = {}
+    host_labels: dict[str, str] = {}
     for row in usable:
         # The label is on the row (the listing computed it once); the
         # full manifest is read here, once per class, because a reader
         # asking "which machine is that" wants the kernel and the
         # distro too and the listing deliberately does not carry them.
-        label = row.get("host_class") or UNKNOWN_HOST_CLASS
+        # UX-898/UX-903: the class is the pair. The host label is on
+        # the row and so is the declared build class - the listing's
+        # one small read of `run-context.json` carries both, so this
+        # groups on the whole class without a second pass.
+        declared = row.get("build_class")
+        host_label = row.get("host_class") or UNKNOWN_HOST_CLASS
+        label = class_label(host_label, declared)
         manifest = manifests.get(label)
         if label not in manifests:
             manifest = _manifest_of(row.get("path") or "")
             manifests[label] = manifest
+        declarations[label] = declared
+        host_labels[label] = host_label
         by_class.setdefault(label, []).append(dict(
             row, resource=_resource_profile(row)))
 
-    classes = [_class_aggregate(label, manifests[label], by_class[label])
+    classes = [_class_aggregate(label, manifests[label], by_class[label],
+                                declared=declarations.get(label),
+                                host_label=host_labels.get(label))
                for label in sorted(by_class)]
 
     document = {
@@ -402,18 +441,40 @@ def aggregate(listing: dict, blend: bool = False) -> dict:
     }
 
     if len(classes) > 1:
-        names = ", ".join(entry["host_class"] for entry in classes)
-        refusal = {
-            "check": "cross_host_aggregate",
-            "classes": len(classes),
-            "sentence": (
-                f"This store holds finished runs from {len(classes)} host "
-                f"classes ({names}). Durations are not scaled across "
-                f"machines here and should not be, so a blended "
-                f"distribution is not published: read the per-class "
-                f"figures, or pass --blend to state the mixed claim "
-                f"yourself."),
-        }
+        # UX-898/UX-903: which axis the mix is on decides the sentence.
+        # No run declaring a build class is every store written before
+        # the field existed, and it takes today's wording unchanged -
+        # the same document, byte for byte.
+        declared = [entry for entry in classes if entry.get("build_class")]
+        if declared:
+            names = ", ".join(
+                class_label(entry["host_class"], entry.get("build_class"))
+                for entry in classes)
+            refusal = {
+                "check": "mixed_class_aggregate",
+                "classes": len(classes),
+                "sentence": (
+                    f"This store holds finished runs from {len(classes)} "
+                    f"comparison classes ({names}). A comparison class is the "
+                    f"machine and the declared build together - a build type "
+                    f"says when and why a build ran, a variant says what it "
+                    f"did - so a blended distribution is a median describing "
+                    f"no build anyone runs: read the per-class figures, or "
+                    f"pass --blend to state the mixed claim yourself."),
+            }
+        else:
+            names = ", ".join(entry["host_class"] for entry in classes)
+            refusal = {
+                "check": "cross_host_aggregate",
+                "classes": len(classes),
+                "sentence": (
+                    f"This store holds finished runs from {len(classes)} host "
+                    f"classes ({names}). Durations are not scaled across "
+                    f"machines here and should not be, so a blended "
+                    f"distribution is not published: read the per-class "
+                    f"figures, or pass --blend to state the mixed claim "
+                    f"yourself."),
+            }
         document["refusal"] = refusal
         if blend:
             document["blended"] = _blended(by_class)

@@ -17,13 +17,23 @@ run 35541259164 #1 (d64d67f2, #245)  off=219.02s  auto=220.15s  +0.5%  no signif
 run 35541259164 #2 (d64d67f2, #245)  off=217.88s  auto=217.98s  +0.0%  no significant change
 run 35542312865    (PR #246)         off=218.41s  auto=218.42s  +0.0%  no significant change
 run 35545829617    (9679d398, #246)  off=218.69s  auto=216.09s  -1.2%  IMPROVED
+run 35564652560    (a14ba0c1, #246)  off=218.52s  auto=215.46s  -1.4%  IMPROVED
+run 35572266477    (2f17171b, #246)  off=212.40s  auto=214.43s  +1.0%  no significant change
 ```
 
-Five fail the step and the sixth passes it, with nothing in the
+Six fail the step and two pass it, with nothing in the
 workflow or the example different between them. The deltas run from
--1.2% to +2.2% and sit around zero, and the step asserts a strict
+-1.4% to +2.2% and sit around zero, and the step asserts a strict
 inequality over one sample of that with no band — so whether CI is
 green is decided by which side of zero the run lands on.
+
+The last two rows are the sharpest pair in the table: `a14ba0c1` and
+`2f17171b` differ only by `UX-911`'s change to a unit test, which the
+examples do not run, and they land on opposite sides of the assertion.
+`a14ba0c1` also carries the `jobserver-auth: fd` annotation `UX-913`
+added, and `peak` stayed at 2 with it, so the two arms are still the
+same configuration - the inequality is asserted between a thing and
+itself, and the sign of the noise decides the build.
 
 The two rows for run `35541259164` are its two attempts, the same sha
 re-run, so they measure the noise directly rather than by inference:

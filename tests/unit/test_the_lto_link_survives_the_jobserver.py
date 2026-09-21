@@ -123,8 +123,16 @@ def test_cmake_fd_with_make_4_4_is_rewritten_to_fifo(tmp_path, monkeypatch):
         os.close(read_fd)
 
 
-def test_cmake_fd_with_make_4_3_is_scrubbed_with_no_wrapper_mount(
+def test_cmake_fd_with_make_4_3_keeps_the_auth_without_the_flto_shims(
         tmp_path, monkeypatch):
+    """UX-913 replaced the scrub this class used to assert. `make` is the
+    MAKEFLAGS consumer here and a direct child, so the fd is valid for it
+    and the auth stands, with `JOBS` emptied (a jobserver survives to
+    govern the width). The shims do NOT ride along: `flto/` shadows the
+    staged `cc`/`gcc` with a script that opens on `dirname`, which
+    `examples/stage_cpp_toolchain.sh:36` does not stage - mounting them
+    for every cmake element failed `examples/06` with exit 255 (run
+    35610762079). An element that also drives LTO takes the override."""
     fake = _fake_bwrap_with_make(tmp_path / "real-bwrap", tmp_path / "marker",
                                  BIND_DST, "4.3")
     wrapper_dir = str(tmp_path / "wrappers")
@@ -132,12 +140,29 @@ def test_cmake_fd_with_make_4_3_is_scrubbed_with_no_wrapper_mount(
     argv, read_fd = _build_cmake_with_fd(
         fake, tmp_path, monkeypatch, wrapper_dir=wrapper_dir)
     try:
-        assert "MAKEFLAGS" not in argv
-        assert not any("--jobserver-auth" in tok for tok in argv)
-        assert "--ro-bind" not in argv
-        # A scrub must not leave JOBS emptied - that serialises the build
-        # (cmake `-- ${JOBS}` -> no -j); the recipe's own `-j4` stands.
-        assert _setenv_values(argv, "JOBS") == ["-j4"]
+        assert _makeflags_value(argv) == f"--jobserver-auth={read_fd},{read_fd}"
+        assert "--ro-bind" in argv
+        assert wrapper_dir in argv
+        assert "BST_TRACE_FLTO_ACTIVE" not in argv
+        assert _setenv_values(argv, "JOBS") == ["-j4", ""]
+    finally:
+        os.close(read_fd)
+
+
+def test_cmake_fd_with_make_4_3_and_no_wrapper_dir_still_keeps_the_auth(
+        tmp_path, monkeypatch):
+    """The boundary the class above hides: with no wrapper directory to
+    mount there are no shims, and the auth still stands. That is the
+    honest reading - a capture with no wrapper directory has no LTO
+    defusal, which `UX-884`'s row owns, not a reason to take make's
+    jobserver away."""
+    fake = _fake_bwrap_with_make(tmp_path / "real-bwrap", tmp_path / "marker",
+                                 BIND_DST, "4.3")
+
+    argv, read_fd = _build_cmake_with_fd(fake, tmp_path, monkeypatch)
+    try:
+        assert _makeflags_value(argv) == f"--jobserver-auth={read_fd},{read_fd}"
+        assert "BST_TRACE_FLTO_ACTIVE" not in argv
     finally:
         os.close(read_fd)
 
@@ -234,15 +259,18 @@ def test_cmake_proxy_under_fd_style_rewrites_to_the_proxys_own_fifo(
     assert "global-jobserver" not in value
 
 
-def test_cmake_proxy_under_fd_style_with_sub_4_4_make_is_scrubbed(
+def test_cmake_proxy_under_fd_style_with_sub_4_4_make_keeps_the_proxy_auth(
         tmp_path, monkeypatch):
+    """UX-913 on the proxy path: the element must keep the *proxy's* own
+    fd, not fall back to the global FIFO the proxy exists not to be."""
     fake = _fake_bwrap_with_make(tmp_path / "real-bwrap", tmp_path / "marker",
                                  BIND_DST, "4.3")
 
     argv = _build_cmake_with_proxy(fake, tmp_path, monkeypatch)
 
-    assert "MAKEFLAGS" not in argv
-    assert not any("--jobserver-auth" in tok for tok in argv)
+    value = _makeflags_value(argv)
+    assert value.startswith("--jobserver-auth=")
+    assert "fifo:" not in value
 
 
 # --- non-regression: a pure make/autotools element is untouched ------------

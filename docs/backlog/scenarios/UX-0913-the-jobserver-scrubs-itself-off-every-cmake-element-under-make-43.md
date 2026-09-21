@@ -1,6 +1,77 @@
 # UX-913: the jobserver scrubs itself off every cmake element under a make-4.3 sandbox, so auto and off are the same build
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-874, UX-878, UX-879, UX-882 | **Blocks:** UX-910 | **Found by:** round 132 — `11-serial-giant` reads `peak 2` under `auto` on six consecutive CI pairs, and the capture's own warning says why | **Serves:** every example and every real project whose sandbox ships GNU Make 4.3 | **Topic:** guards | **Area:** tools | **Shape:** judgement
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-874, UX-878, UX-879, UX-882 | **Blocks:** UX-910 | **Found by:** round 132 — `11-serial-giant` reads `peak 2` under `auto` on six consecutive CI pairs, and the capture's own warning says why | **Serves:** every example and every real project whose sandbox ships GNU Make 4.3 | **Topic:** guards | **Area:** tools | **Shape:** judgement
+
+## Decomposition
+
+surfaces: `tools/native_trace/bwrap_shim.py` (`_FD_DIRECT_POLICIES`,
+the scrub not applied to it) · `tools/bst_native_build_tracer.py`
+(`lto_preflight_warnings`, two-sided) · `docs/guides/cli.md` (§3.10,
+three lines) · `examples/11-serial-giant/elements/*.bst` (the four
+annotations, dropped as the acceptance test). No published key moves,
+so no version bump.
+
+guards: `test_the_lto_link_survives_the_jobserver.py` (policy: cmake
+kept / cargo still scrubbed; make version: absent, 4.3, 4.4) ·
+`test_a_compiler_lto_shim_fills_the_box.py` (override: matched,
+unmatched-cmake, unmatched-cargo) ·
+`test_a_preflight_warns_on_lto_meeting_old_make.py` (the line's two
+sides).
+
+gap: **no LTO cmake fixture exists**, so "the shims defuse a real
+`gcc -flto` under cmake" is guarded at the argv level and never end to
+end. That is the same gap `UX-880` shipped with, not one this row
+opens; the live ICE reproduction it would need is `UX-884`'s.
+
+track: serial after nothing; `UX-915` and `UX-916` touch the same
+examples and must not run beside it.
+
+gate: one `make test` here, then CI's `bst-examples` step 21, which is
+the only place the acceptance test can actually run.
+
+## The shim route was tried first, and CI measured it wrong
+
+Design (B) of this row's two candidates — keep the auth **and** mount
+`UX-880`'s `flto/` GCC-driver shims, so `lto-wrapper` never reads the
+raw fd — shipped at `f8657034` and failed `bst-examples` on run
+35610762079, at the step before this row's own:
+
+```text
+OK: 11 element key(s) equal with and without the mode's environment
+##[error]Process completed with exit code 255.
+```
+
+The step is `The cache key is equal with and without the jobserver
+(UX-844)`, `.github/workflows/ci.yml:1409`, and the 255 is the
+`--jobserver 4` build of `examples/06-macro-micro-optimization` — nine
+`kind: cmake` elements, every one of which design (B) newly put the
+`flto/` subdir on `PATH` for.
+
+`_wrapper_mount`'s own docstring had already recorded the failure mode
+(`bwrap_shim.py:571`): the shims shadow `cc`, `gcc`, `g++` and `c++`,
+and open on
+
+```sh
+bga_self_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+```
+
+under `set -eu`. `examples/stage_cpp_toolchain.sh:36` stages exactly
+`gcc g++ cc c++ cmake make ld ld.bfd as ar ranlib nm strip env sh uname
+sort cat` — no `dirname`, `basename`, `head`, `grep`, `date` or
+`readlink`. All four shadowed names are staged; none of the tools the
+shim needs is. So every cmake element compiled through a script it
+could not source.
+
+**So the shims stay behind the `flto` override and this row ships
+design (A):** `cmake_meson` keeps its auth because `make` is a direct
+child, and nothing is mounted with it. `11-serial-giant` uses no `-flto`
+at all (`grep -rn flto examples/11-serial-giant` finds only the width
+check's own comment), so the acceptance test never needed them.
+
+The half this leaves open is real and filed separately: a cmake element
+that *does* drive LTO now keeps a raw fd `lto-wrapper` cannot use, and
+the shims that would defuse it are unmountable in a staged-toolchain
+sandbox until `wrappers/_common.sh` stops needing coreutils.
 
 ## Motivation
 
@@ -174,3 +245,69 @@ mode give up but never see it engage. That is why six runs carried
 same way, not only this fixture. The decision belongs in the report.
 
 ## Outcome
+
+**The gap.** The default scrubbed every `cmake_meson` element under a
+sub-4.4 sandbox make, so `--jobserver auto` and `off` built identically
+unless each element carried `public: bga: jobserver-auth: fd` by hand.
+`11-serial-giant` wore four such annotations; `12-junctioned`'s
+`core.bst` did not, and read `peak 2` against a ceiling of 4 in the same
+run.
+
+**The close.** The four annotations are gone (`76c3fe2f`), and
+`_FD_DIRECT_POLICIES = frozenset({"cmake_meson"})` exempts the policy
+from `compiler_safe_auth`'s scrub without mounting anything. Measured by
+CI's own `bst-examples` step 21 on `851f8b55`, run `35625287116`, job
+`106426877997`, both arms in one run:
+
+```text
+Note: giant.bst keeps its jobserver auth (sandbox make <4.4,
+cmake_meson); make reads the fd directly. An element that also drives
+LTO needs the flto override (UX-913)
+
+  element                  peak  req  achieved     span work
+  giant.bst                   2    2      100%   37.17s  530   <- off
+  giant.bst                   4    ?      100%   28.26s  530   <- auto
+
+  off   70.83s CPU over 38.13s wall = 1.86 cores busy
+  auto 107.07s CPU over 29.04s wall = 3.69 cores busy
+
+off=185.70s auto=178.12s
+giant.bst: off peak 2, auto peak 4, resolved width 2
+giant.bst: auto exceeded its resolved width of 2 (UX-913)
+```
+
+`work 530` is identical across the arms, so `peak 4` is four concurrent
+compilers on the same work, not more work. The wall moved -4.1% on
+**one** pair; `UX-910` measured +-2% over six, so that number sizes
+nothing and is recorded, not claimed. The structural reading is the
+peak and the 1.86 -> 3.69 cores.
+
+The same job's step 16 (`06-macro-micro-optimization`) and step 17 (the
+`UX-844` cache-key equality, `ci.yml:1409`) both passed - the two that
+exited 255 under design (B), on run `35610762079`.
+
+**Mutations.** 34 guards over the three files, each mutation applied to
+`bwrap_shim.py` alone:
+
+| mutation | reddens |
+|---|---|
+| `_FD_DIRECT_POLICIES = frozenset()` (the old default) | 6: `..._keeps_the_auth_without_the_flto_shims`, `..._and_no_wrapper_dir_still_keeps_the_auth`, `..._proxy_auth`, `test_unmatched_cmake_element_keeps_the_auth_and_not_the_shims`, and the preflight's two kept-auth sides |
+| `frozenset({"cmake_meson", "cargo"})` (too wide) | 4: `test_cargo_fd_with_make_4_3_is_also_scrubbed`, `test_unmatched_element_on_the_same_4_3_make_is_still_scrubbed`, and the preflight's two scrub sides |
+| `"flto_active": True` (design (B), the mount) | 3: `..._keeps_the_auth_without_the_flto_shims`, `test_unmatched_cmake_element_keeps_the_auth_and_not_the_shims`, `..._wrapper_mounted_for_other_reasons_gets_no_flag` |
+
+Both directions redden, and the third reddens the exact change CI
+measured at exit 255 - so the guard would have caught design (B)
+locally had it existed first.
+
+**Deviation.** The row set out to ship design (B) and shipped (A); the
+paragraph above the Motivation carries why, with the measurement. Two
+things this row does not close:
+
+- A `cmake_meson` element that *does* drive `-flto` now keeps a raw fd
+  `lto-wrapper` cannot use, and must take the `flto` override by hand.
+  `UX-918` made `wrappers/_common.sh` shell-only so that override is
+  deliverable on a staged sandbox, but mounting the shims for
+  `cmake_meson` by default is not re-attempted here and has no filing.
+- The Decomposition's declared gap stands: no LTO cmake fixture exists,
+  so "the shims defuse a real `gcc -flto` under cmake" is still guarded
+  at argv level only. That is `UX-880`'s gap, not one this row opened.

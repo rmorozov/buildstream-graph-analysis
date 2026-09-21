@@ -112,6 +112,12 @@ working: symlink chains through `/etc/alternatives`, this host's usrmerge
 layout, GNU ld linker scripts with embedded `AS_NEEDED` paths, and
 liblto_plugin.so's two real install locations all had to be handled).
 
+`make` is the one exception, pinned rather than copied (`UX-915`): its
+version decides every example's jobserver auth style, so a sysroot
+carrying whatever the staging host installed would let the host decide
+what the examples measure. `tools/nix_store_fetch.py` holds the store
+path, its checksum, and the one download the staging needs.
+
 ```
 sudo apt-get install -y build-essential cmake
 ../examples/stage_cpp_toolchain.sh   # (or ./stage_cpp_toolchain.sh from examples/)

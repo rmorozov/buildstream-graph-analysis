@@ -444,6 +444,15 @@ _MAKE_CONSUMER_POLICIES = frozenset({"make", "cargo", "cmake_meson", "jobs_env"}
 # a raw fd is valid.
 _COMPILER_SAFE_POLICIES = frozenset({"cmake_meson", "jobs_env", "cargo"})
 
+# UX-913: of those, the policies whose MAKEFLAGS consumer is `make`
+# itself - a direct child, for which a raw fd is valid - and whose only
+# unwrapped reader is the GCC driver's lto-wrapper, which UX-880's
+# `flto/` shims already strip the auth for. Scrubbing these cost every
+# make-4.3 cmake element its jobserver (measured: `11-serial-giant` read
+# `peak 2` against a ceiling of 4 on eight CI pairs); mounting the shims
+# instead keeps make's fd and defuses LTO where LTO is known.
+_FLTO_SHIM_POLICIES = frozenset({"cmake_meson"})
+
 # UX-879: the styles a per-element override may force. UX-880: `flto`
 # added - keeps the raw auth like `fd` (falls through `_forced_auth`
 # the same way), and is the glob a wrapper-directory GCC-driver shim
@@ -665,7 +674,7 @@ def _compiler_safe_fifo_host(pool: dict, element: Optional[str]) -> Optional[str
 
 
 def _compiler_safe_makeflags(auth_value: str, policy: str, opts: list[str],
-                             ctx: dict) -> Optional[str]:
+                             ctx: dict) -> tuple:
     """UX-878: `auth_value` narrowed through `compiler_safe_auth` for the
     policies an unwrapped compiler/cargo actually reads
     (`_COMPILER_SAFE_POLICIES`); every other policy - `make` included -
@@ -682,21 +691,30 @@ def _compiler_safe_makeflags(auth_value: str, policy: str, opts: list[str],
     when nothing names one (a bare fd with no FIFO behind it, e.g. a
     unit test's own pipe) or `real_bwrap` is unknown, in which case no
     `fifo:` rewrite is possible and `auth_value` stands, same as today.
+
+    UX-913: returns `(auth, flto_shims)`. For a `_FLTO_SHIM_POLICIES`
+    policy the scrub is replaced rather than applied - the auth stands
+    and `flto_shims` is True, which puts UX-880's GCC-driver shims on
+    the sandbox `PATH` so lto-wrapper never reads the raw fd `make`
+    itself can use. Every other policy returns `(., False)`.
     """
     if policy not in _COMPILER_SAFE_POLICIES or "fifo:" in auth_value:
-        return auth_value
+        return auth_value, False
     pool = ctx["pool"]
     real_bwrap = ctx.get("real_bwrap")
     host_fifo = _compiler_safe_fifo_host(pool, ctx.get("element"))
     if host_fifo is None or real_bwrap is None:
-        return auth_value
+        return auth_value, False
     sandbox_fifo_path = _sandbox_fifo_path(ctx["bind_src"], ctx["bind_dst"], host_fifo)
     cache_path = _make_probe_cache_path(
         os.environ.get("BST_TRACE_JOBSERVER"), ctx.get("element"))
     probe = probe_make(real_bwrap, opts, cache_path)
     make_below_44 = bool(probe.get("available")) and \
         style_for_make_version(probe.get("version")) == "fd"
-    return compiler_safe_auth(auth_value, sandbox_fifo_path, make_below_44)
+    safe = compiler_safe_auth(auth_value, sandbox_fifo_path, make_below_44)
+    if safe is None and policy in _FLTO_SHIM_POLICIES:
+        return auth_value, True
+    return safe, False
 
 
 def _jobserver_injection(opts: list[str], binds: tuple, decision: str,
@@ -753,6 +771,7 @@ def _jobserver_injection(opts: list[str], binds: tuple, decision: str,
     override = resolve_auth_override(
         os.environ.get("BST_TRACE_JOBSERVER_AUTH_MAP"), ctx["element"]
     ) or _annotation_style(ctx["element"])
+    flto_shims = False
     if override is not None:
         safe_auth = _forced_auth(override, auth_value, ctx)
     else:
@@ -761,7 +780,8 @@ def _jobserver_injection(opts: list[str], binds: tuple, decision: str,
         # that survives the sandbox boundary - `None` scrubs it outright
         # rather than hand a raw fd to a deep grandchild that cannot use
         # it.
-        safe_auth = _compiler_safe_makeflags(auth_value, policy, opts, ctx=ctx)
+        safe_auth, flto_shims = _compiler_safe_makeflags(
+            auth_value, policy, opts, ctx=ctx)
     if safe_auth != auth_value:
         pairs = [pair for pair in pairs if pair[0] != "MAKEFLAGS"]
         if safe_auth is not None:
@@ -786,7 +806,9 @@ def _jobserver_injection(opts: list[str], binds: tuple, decision: str,
         tokens += _wrapper_mount(opts, wrapper_dir, bind_dst, caps={
             "wrapper_cap": kind_context.get("wrapper_cap"),
             "lto_cap": kind_context.get("lto_cap"),
-            "flto_active": override == "flto",
+            # UX-913: a `_FLTO_SHIM_POLICIES` element that would have
+            # been scrubbed gets the shims too, not only a matched override.
+            "flto_active": override == "flto" or flto_shims,
             # UX-881: an operator's own wrapper directory and its mode,
             # carried straight through from `main` (never re-derived here).
             "wrapper_dir_override": kind_context.get("wrapper_dir_override"),

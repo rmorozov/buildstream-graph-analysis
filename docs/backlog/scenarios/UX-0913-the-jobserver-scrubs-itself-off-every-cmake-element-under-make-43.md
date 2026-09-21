@@ -2,6 +2,33 @@
 
 **Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-874, UX-878, UX-879, UX-882 | **Blocks:** UX-910 | **Found by:** round 132 — `11-serial-giant` reads `peak 2` under `auto` on six consecutive CI pairs, and the capture's own warning says why | **Serves:** every example and every real project whose sandbox ships GNU Make 4.3 | **Topic:** guards | **Area:** tools | **Shape:** judgement
 
+## Decomposition
+
+surfaces: `tools/native_trace/bwrap_shim.py` (`_FLTO_SHIM_POLICIES`,
+`_compiler_safe_makeflags` now returns `(auth, flto_shims)`) ·
+`tools/bst_native_build_tracer.py` (`lto_preflight_warnings`, two-sided)
+· `docs/guides/cli.md` (§3.10, three lines) ·
+`examples/11-serial-giant/elements/*.bst` (the four annotations, dropped
+as the acceptance test). No published key moves, so no version bump.
+
+guards: `test_the_lto_link_survives_the_jobserver.py` (policy: cmake
+kept / cargo still scrubbed; make version: absent, 4.3, 4.4) ·
+`test_a_compiler_lto_shim_fills_the_box.py` (override: matched,
+unmatched-cmake, unmatched-cargo) ·
+`test_a_preflight_warns_on_lto_meeting_old_make.py` (the line's two
+sides).
+
+gap: **no LTO cmake fixture exists**, so "the shims defuse a real
+`gcc -flto` under cmake" is guarded at the argv level and never end to
+end. That is the same gap `UX-880` shipped with, not one this row
+opens; the live ICE reproduction it would need is `UX-884`'s.
+
+track: serial after nothing; `UX-915` and `UX-916` touch the same
+examples and must not run beside it.
+
+gate: one `make test` here, then CI's `bst-examples` step 21, which is
+the only place the acceptance test can actually run.
+
 ## Motivation
 
 `UX-910` asks why `11-serial-giant` reads `peak 2` against a ceiling of

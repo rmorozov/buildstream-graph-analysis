@@ -110,14 +110,35 @@ def test_fifo_override_forces_the_fifo_path(tmp_path, monkeypatch):
 
 def test_an_unmatched_element_on_make_4_3_is_scrubbed(tmp_path, monkeypatch):
     """Non-regression anchor: a map that names no glob for this element
-    falls straight through to UX-878's own auto/scrub behaviour."""
+    falls straight through to UX-878's own auto/scrub behaviour. Read on
+    `cargo`, since UX-913 moved `cmake_meson` out of the scrubbed set -
+    the anchor is "the map did not apply", and cargo is where that still
+    ends in a scrub."""
+    fake = _fake_bwrap_with_make(tmp_path / "real-bwrap", tmp_path / "marker",
+                                 BIND_DST, "4.3")
+    monkeypatch.setenv("BST_TRACE_JOBSERVER_AUTH_MAP", "fd:llvm*.bst")
+
+    argv, read_fd = _build_cmake_with_fd(fake, tmp_path, monkeypatch,
+                                         element_kind="cargo")
+    try:
+        assert "MAKEFLAGS" not in argv
+        assert not any("--jobserver-auth" in tok for tok in argv)
+    finally:
+        os.close(read_fd)
+
+
+def test_an_unmatched_cmake_element_on_make_4_3_keeps_its_auth(
+        tmp_path, monkeypatch):
+    """The other half of the same anchor after UX-913: not matching the
+    map must leave a cmake element on the shim route, not take its
+    jobserver away. This is the case `11-serial-giant` lived in for eight
+    CI pairs."""
     fake = _fake_bwrap_with_make(tmp_path / "real-bwrap", tmp_path / "marker",
                                  BIND_DST, "4.3")
     monkeypatch.setenv("BST_TRACE_JOBSERVER_AUTH_MAP", "fd:llvm*.bst")
 
     argv, read_fd = _build_cmake_with_fd(fake, tmp_path, monkeypatch)
     try:
-        assert "MAKEFLAGS" not in argv
-        assert not any("--jobserver-auth" in tok for tok in argv)
+        assert _makeflags_value(argv) == f"--jobserver-auth={read_fd},{read_fd}"
     finally:
         os.close(read_fd)

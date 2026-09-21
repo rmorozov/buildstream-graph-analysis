@@ -1647,6 +1647,20 @@ _JOIN_ITEM_PROPERTIES = {
         "description": "The parallelism the element's own build "
                        "commands asked for, read from the observed "
                        "argv - not what BuildStream granted."},
+    # `UX-894`: what BuildStream granted, which is the number the ratio
+    # divides by. Two numbers that can disagree are two fields.
+    "resolved_jobs": {
+        QUANTITY: "count",
+        "description": "The width BuildStream resolved for this "
+                       "element, from `graph.json`. `notparallel` is a "
+                       "width of one, not a missing value; an element "
+                       "with no resolved width gets no ratio."},
+    "jobs_denominator": {
+        "description": "Which of the two widths the achieved ratio "
+                       "divided by. `graph` is the resolved width; "
+                       "absent means no ratio was computed. Achieved "
+                       "concurrency above the granted width is held at "
+                       "1.0 and reported as a finding instead."},
     "peak_rss_bytes": {
         QUANTITY: "bytes",
         "description": "The largest single process's resident memory, "
@@ -3878,6 +3892,37 @@ _ANALYZE_HINTS = {
             "cold_critical_path_duration_sources": {
                 "description": "The same provenance, narrowed to the "
                                "elements actually on the cold path."},
+            # `UX-891`: the one floor divided by the machine rather than
+            # by the scheduler. Additive under `analyze/v6` - published
+            # beside `lb`, declared outside `required`, and absent
+            # (never zero) on a run with no Plane 2.
+            "lb_cpu_us": {
+                QUANTITY: "duration_us",
+                "description": "The CPU floor: this capture's measured CPU "
+                               "time over the cores that govern it. No "
+                               "schedule of the same CPU work on the same "
+                               "machine finishes sooner. Absent without "
+                               "Plane 2 or without a governing core count, "
+                               "and a floor on the measured share only - "
+                               "see `lb_cpu_coverage`."},
+            "lb_cpu_coverage": {
+                QUANTITY: "share",
+                "description": "The share of the processes Plane 2 saw "
+                               "whose CPU time it could measure. The floor "
+                               "is published rather than corrected for it."},
+            "lb_cpu_governing_cores": {
+                QUANTITY: "count",
+                "description": "The core count the CPU floor divided by - "
+                               "the whole machine or the whole declared "
+                               "budget, with no co-tenant modelled."},
+            "lb_cpu_cores_source": {
+                "description": "Where that count came from: `cpu_budget` "
+                               "if one was declared, else `host_cpu_count`."},
+            "lb_cpu_binds": {
+                "description": "Whether the CPU floor sits above `lb`. "
+                               "True means the machine's cores, not the "
+                               "scheduler's builder slots, are the "
+                               "constraint this run proved."},
             "capacity_model_note": {
                 "description": "What these floors certify against, in "
                                "words - and, as importantly, what they do "
@@ -4417,6 +4462,21 @@ _ANALYZE_HINTS = {
                 QUANTITY: "count",
                 "description": "Of the measured, how many came from the "
                                "ptrace spine rather than the hook."},
+            # `UX-893`: per-element CPU was read once, at exit, so
+            # everything downstream was a total over a span. A build
+            # that pinned four cores for seventeen seconds and idled
+            # for twenty-six reported the same `cores_busy` as one
+            # half-busy throughout.
+            "per_element_series": {
+                "description": "Each element's CPU rate over time, as "
+                               "`[t_us, cores]` points sampled on the "
+                               "host sampler's tick. The totals beside "
+                               "it are unchanged: this says what shape "
+                               "a total had. A process shorter than one "
+                               "tick is in the total and absent from "
+                               "the curve, and a `/proc` read that "
+                               "failed ends a series rather than "
+                               "reading zero."},
             "note": {"description": "What a CPU figure here means, in a "
                                     "sentence - `UX-346`'s door."},
         },
@@ -4960,6 +5020,44 @@ _ANALYZE_HINTS["jobserver"] = {
                                        "`tokens_held_p50`; null when "
                                        "the element ran no wrapped "
                                        "tool."},
+                    # `UX-892`: the two scalars above cannot tell "four
+                    # tokens for two seconds of a ninety-second
+                    # element" from "four tokens throughout". The
+                    # wrapper stamped every row and the reducer threw
+                    # the stamp away.
+                    "tokens_held_series": {
+                        "description": "This element's held width over "
+                                       "time, as `[t_us, tokens]` "
+                                       "steps: an acquire opens an "
+                                       "interval and a release closes "
+                                       "one, so a point is the total "
+                                       "held after that event, not a "
+                                       "sample. Absent when the "
+                                       "element ran no wrapped tool."},
+                    "tokens_series_coverage": {
+                        QUANTITY: "share",
+                        "description": "The share of this element's "
+                                       "token-holding tools that wrote "
+                                       "the rows the series is built "
+                                       "from. A real `make` reads the "
+                                       "pipe itself and logs nothing, "
+                                       "so below 1.0 the series is the "
+                                       "wrapped share and not the "
+                                       "element. Null where the tools "
+                                       "are unknown."},
+                    "tokens_series_open": {
+                        QUANTITY: "count",
+                        "description": "Intervals no release ever "
+                                       "closed - a wrapper killed "
+                                       "before its trap (UX-852). "
+                                       "Closed at the element's span "
+                                       "end and counted here rather "
+                                       "than left running."},
+                    "tokens_series_truncated": {
+                        "description": "Whether the series hit its "
+                                       "per-element cap. The raw rows "
+                                       "stay in the ledger either "
+                                       "way."},
                 }},
         },
     },

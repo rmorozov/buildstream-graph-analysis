@@ -402,3 +402,82 @@ def attachable(run_dir: str):
         f"here costs about {run_store.human_bytes(int(size * 2.9))} of memory. "
         f"`bga snapshot -- bst build TARGET` publishes an analysis "
         f"that carries both planes.")
+
+
+# `UX-894`: the denominator a per-element parallelism ratio divided by.
+# Two numbers that can disagree are two fields, so the ratio says which
+# one it used rather than leaving a reader to infer it.
+GRAPH_DENOMINATOR = "graph"
+
+#: What an element achieved that it was never granted. `core.bst` on
+#: `tests/fixtures/macro_micro` is `notparallel`, ran two overlapping
+#: work processes, and scored 2.0 against a width of one - a fact about
+#: the sandbox, not a parallelism score, so it is a finding and the
+#: ratio is held at 1.0.
+OVERLAP_FINDING = "overlap_exceeds_granted_width"
+
+
+def resolved_widths(graph_path: str) -> dict[str, int]:
+    """Element uid -> the native width BuildStream resolved for it.
+
+    `UX-377` put `max_jobs` and `notparallel` in `graph.json` per
+    element, because `--max-jobs` reaches a command line on exactly one
+    of its three routes. `notparallel` is a width of one and not a
+    missing value; an element with neither is absent here, and an
+    absent element gets no ratio rather than a ratio of one.
+
+    `{}` on any failure - best-effort, the posture every other
+    cross-document read in this module takes.
+    """
+    try:
+        with open(graph_path, encoding="utf-8") as handle:
+            graph = json.load(handle)
+    except (OSError, json.JSONDecodeError):
+        return {}
+    widths: dict[str, int] = {}
+    for element in graph.get("elements") or []:
+        uid = element.get("uid")
+        if not uid:
+            continue
+        width = 1 if element.get("notparallel") else element.get("max_jobs")
+        if width is not None:
+            widths[uid] = int(width)
+    return widths
+
+
+def apply_resolved_widths(native_report: dict, widths: dict[str, int]) -> int:
+    """Score each element against the width it was granted. Rows filled.
+
+    `UX-894`: `requested_jobs` is `-j(\\d+)` over the argv of `make`,
+    `gmake` and `ninja` - a per-invocation flag, so the published ratio
+    could exceed 1.0 on an element BuildStream declared `notparallel`.
+    The recipe's own request stays published, because that is what a
+    recipe author edits; the ratio divides by the resolved width, and
+    `jobs_denominator` names which.
+
+    Idempotent, so a capture that carried no `graph.json` when its
+    report was written is corrected the first time one is in hand.
+    """
+    filled = 0
+    for entry in native_report.get("per_element_parallelism") or []:
+        width = widths.get(entry.get("element"))
+        entry["resolved_jobs"] = width
+        if width is None:
+            entry["jobs_denominator"] = None
+            entry["achieved_vs_requested"] = None
+            continue
+        filled += 1
+        entry["jobs_denominator"] = GRAPH_DENOMINATOR
+        peak = entry.get("peak_work_concurrency") or 0
+        findings = [f for f in (entry.get("findings") or [])
+                    if f != OVERLAP_FINDING]
+        if width > 0 and peak > width:
+            findings.append(OVERLAP_FINDING)
+        entry["findings"] = findings
+        # Held at 1.0 rather than published above it: overlap the
+        # element was not granted is the finding above, and a
+        # parallelism score that reads 2.0 against a width of one is
+        # the number `UX-894` was filed for.
+        entry["achieved_vs_requested"] = (
+            min(1.0, peak / width) if width > 0 else None)
+    return filled

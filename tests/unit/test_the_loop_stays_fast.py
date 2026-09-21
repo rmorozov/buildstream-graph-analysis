@@ -133,10 +133,20 @@ class TestTheSelectorStillSelects:
     # Max 154 -> 157, +2 headroom as above.
     #
     # Round 131 added two test files over two rows (the cache's ceiling,
-    # the transfer rate); measured median 36, p90 59, max 158 over 564
-    # files - only max moves, and median and p90 fell. Max 157 -> 160,
-    # +2 headroom as above.
-    CEILING = {"median": 38, "p90": 60, "max": 160}
+    # the transfer rate); measured on that branch median 36, p90 59,
+    # max 158 over 564 files.
+    #
+    # Round 132 added four test files over four rows (the CPU floor, the
+    # resolved width, the token width series, the CPU curve); measured
+    # on that branch median 36, p90 59, max 159 over 566 files.
+    #
+    # Merged: the two rounds ran in parallel off one base, and their
+    # files name overlapping modules, so the widest selection lands
+    # above either branch's own reading rather than at the larger of
+    # them. Measured over the merge: median 36, p90 59, max 160 over
+    # 568 files (105 modules). Max 161 -> 162, +2 headroom as above;
+    # median and p90 are still under their ceiling.
+    CEILING = {"median": 38, "p90": 60, "max": 162}
     POPULATION_FLOOR = 60
     #: `UX-645`: **13 census + 14 of your own**. The census floor is
     #: inside this bound because those files run - the figure is what

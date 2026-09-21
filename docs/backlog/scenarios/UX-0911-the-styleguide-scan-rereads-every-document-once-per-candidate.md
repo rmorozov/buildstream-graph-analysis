@@ -15,6 +15,7 @@ branch  3ea48a73  run 35542312865  4.43s   gate: tiers ok
 branch  9679d398  run 35545829617  7.28s   gate: tiers ok
 branch  54538fdc  run 35549224094  7.75s   gate: RED, x49.20
 branch  1048f6ce  run 35550039297  6.07s   gate: RED, x37.23
+branch  a14ba0c1  run 35564652560  4.27s   gate: tiers ok
 ```
 
 `main` reads it at 6.75s against its own 0.14s record and reports
@@ -42,6 +43,40 @@ identical on `main` and on the branch, which is the measurement that
 says the growth is the population's and not any one diff's: the
 0.14s record predates `in-step-parallelism.md` and
 `continuous-build-improvement.md` joining it.
+
+**Why the gate is intermittent, and it is not the carry.** `over_gate`
+needs **both** rules, and the second is absolute:
+
+```python
+return (expected > 0 and seconds > CI_DRIFT_FACTOR * expected
+        and seconds - expected >= CI_DRIFT_SECONDS)   # 1.5x, and 5.0s
+```
+
+`expected` is `known[name] * shift`, so at a 0.14s record and a shift
+near 1 the file crosses only when it reads above about **5.1s**. Every
+reading in the table above is on one side of that line or the other:
+
+```text
+4.43s  ok        4.27s  ok        under the floor, not even waiting
+7.28s  ok                         over it, first crossing - waiting (UX-442)
+7.75s  RED       6.07s  RED       over it, second consecutive - confirmed
+```
+
+Run `35564652560` on `a14ba0c1` is the clearest case: the candidate's
+newest sample for this file is `4.27` (`files` is the *median* of
+`samples`, `dev_tier_drift.py:456`, so the `0.12` beside it is not the
+reading), the run's shift was `x0.82`, and the step printed `tiers ok`
+while the scan cost what it always costs. `main()` returns at
+`if verdict == "ok"` (`:1148`) **before** `--base-carry` is read
+(`:1153`), so on that run the carry decided nothing.
+
+So the 45x ratio is real and the gate is blind to it at this
+magnitude, by design - `CI_DRIFT_SECONDS`' own comment sizes 5.0s from
+run `33306283177`, where a ratio alone reported 24 files under a
+second. The file sits astride that floor, so which side it lands on is
+the runner's speed that day. That is the same coin flip `UX-910`
+found in another gate, and it is why a green run here is not evidence
+the cost went away.
 
 **Why a branch reds and `main` does not.** `UX-803` excuses a file the
 base branch's own last run already read past both gates. On a pull

@@ -22,5 +22,18 @@
       "skipped": 0,
       "failed": 0
     }
+  },
+  "cache_capacity": {
+    "config_path": "/home/ci/.config/buildstream.conf",
+    "cachedir": "/home/ci/.cache/buildstream",
+    "quota_declared": "64G",
+    "reserved_declared": "5%",
+    "low_watermark_declared": "80%",
+    "volume_total_bytes": 536870912000,
+    "volume_free_bytes": 42949672960,
+    "quota_bytes": 68719476736,
+    "reserved_bytes": 26843545600,
+    "cache_used_bytes": 66571993088,
+    "cache_used_source": "cas_walk"
   }
 }

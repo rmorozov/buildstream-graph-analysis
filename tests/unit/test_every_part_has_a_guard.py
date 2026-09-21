@@ -79,6 +79,9 @@ RUN_CONTEXT_ADDITIONS = {
     "queue_summary", "timestamp_agreement",
     # `UX-851`: the mode `bga capture` ran the jobserver in.
     "jobserver",
+    # `UX-896`: what the local cache was configured to hold, and what
+    # the volume under it can give.
+    "cache_capacity",
 }
 
 

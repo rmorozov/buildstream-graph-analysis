@@ -1,0 +1,4 @@
+{"schema":"host-samples/v1","interval_s":2.0,"clock":"CLOCK_MONOTONIC","wall_at_start":1758400000.0,"monotonic_at_start":100.0,"mem_total_kb":32768000,"swap_total_kb":0,"available":true}
+{"mem_free_kb":8000000,"mem_available_kb":20000000,"cached_kb":4000000,"swap_free_kb":0,"pgmajfault":12,"pswpin":0,"pswpout":0,"cores":8,"load1":4.2,"net_rx_bytes":4000000000,"net_tx_bytes":900000000,"t":100.0}
+{"mem_free_kb":7900000,"mem_available_kb":20000000,"cached_kb":4000000,"swap_free_kb":0,"pgmajfault":13,"pswpin":0,"pswpout":0,"cores":8,"load1":4.2,"net_rx_bytes":4062914560,"net_tx_bytes":902097152,"t":102.0}
+{"mem_free_kb":7800000,"mem_available_kb":20000000,"cached_kb":4000000,"swap_free_kb":0,"pgmajfault":14,"pswpin":0,"pswpout":0,"cores":8,"load1":4.2,"net_rx_bytes":4125829120,"net_tx_bytes":905242880,"t":104.0}

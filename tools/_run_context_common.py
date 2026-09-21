@@ -202,6 +202,27 @@ def add_host_manifest(run_context: dict) -> None:
         run_context["host_manifest"] = hostinfo.collect()
 
 
+def add_cache_capacity(run_context: dict, with_usage: bool = False) -> None:
+    """UX-896: what BuildStream was configured to hold, and what the
+    volume under it can give.
+
+    Same best-effort rule as `add_host_manifest` above - a host whose
+    configuration cannot be read still gets a run directory, and every
+    field inside degrades to `None` rather than to a zero that reads as
+    a measured emptiness.
+
+    `with_usage` gates the one part that costs anything, the walk of
+    `<cachedir>/cas`. Off, the block still carries the quota and the
+    volume, which is what sizing an agent needs; on, it also carries
+    what the cache currently holds.
+    """
+    from bga import cache_capacity
+
+    with contextlib.suppress(Exception):
+        run_context["cache_capacity"] = cache_capacity.collect(
+            with_usage=with_usage)
+
+
 #: `UX-898`/`UX-903`: the declaration flags, written once. Both
 #: producers take them and must not drift - which is what this module
 #: is for (`UX-18`) - and pylint counted the second copy as a

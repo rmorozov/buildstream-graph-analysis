@@ -220,6 +220,7 @@ Mechanism: [docs/design/areas/tools.md](../../design/areas/tools.md)
 | [UX-901](../scenarios/UX-0901-the-jobserver-is-a-subtool-behind-a-boundary.md) | capture |
 | [UX-905](../scenarios/UX-0905-the-jobserver-has-no-compile-bound-project-at-scale.md) | capture |
 | [UX-906](../scenarios/UX-0906-the-jobservers-corner-cases-are-a-register-not-a-memory.md) | capture |
+| [UX-907](../scenarios/UX-0907-an-artifacts-weight-has-no-cheap-source.md) | capture |
 | [UX-908](../scenarios/UX-0908-the-drawing-grade-guard-excurses-three-times-and-rising.md) | guards |
 | [UX-910](../scenarios/UX-0910-the-serial-giant-gate-asserts-an-unbanded-inequality.md) | guards |
 | [UX-911](../scenarios/UX-0911-the-styleguide-scan-rereads-every-document-once-per-candidate.md) | guards |

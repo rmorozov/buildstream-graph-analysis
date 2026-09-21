@@ -150,11 +150,20 @@ replaces the ordering `awk`: three assertions (no scrubbed auth in the
 than `off`) and one printed reading (whether `auto` exceeded the
 resolved width - `UX-913`'s second gate, deliberately not asserted).
 `UX-848`'s wall grep, the `off=...s auto=...s` echo and both uploads are
-untouched. The three guards over the removed `awk` are gone and six
+untouched. The three guards over the removed `awk` are gone and eight
 replace them: `python3 -m pytest tests/unit/test_the_examples_build.py
--q` reads **18 passed in 6.36s**, against 15 before.
+-q` reads **20 passed in 1.70s**, against 15 before.
 
-**The mutation table.** Six applied, six distinct guards red, no
+**The printed reading is two shapes, not one,** and the second was
+missed in the first draft. The `auto` arm has been seen publishing no
+resolved width at all (`req ?` in its per-element table), and the
+first version folded that into `did not exceed its resolved width` -
+which would have reported an `auto` peak of 4 against `off`'s 2 as a
+pool going undrawn. The width is the real denominator, so it leads
+when it is there; `off`'s measured peak is a labelled fallback only
+when it is not, because a peak under its own width says nothing.
+
+**The mutation table.** Nine applied, nine distinct guards red, no
 collateral:
 
 | mutation | guard reddened |
@@ -165,6 +174,9 @@ collateral:
 | a missing row reads as absent | `test_the_width_check_refuses_an_element_neither_arm_carries` |
 | the `UX-913` reading is not printed | `test_the_width_check_accepts_a_granted_pool`, `..._passes_the_reading_on_record_and_says_so` |
 | the step's call to the script removed | `test_the_ci_step_11_goes_through_the_committed_width_check` |
+| a missing width reads as a width nothing exceeded | `test_the_width_check_says_so_when_no_resolved_width_is_published` |
+| `off`'s peak stands in for the resolved width | `test_the_width_check_passes_the_reading_on_record_and_says_so`, `..._does_not_read_a_peak_under_its_width_as_a_draw` |
+| the fallback comparison is read backwards | `test_the_width_check_says_so_when_no_resolved_width_is_published` |
 
 **Deviations, two.**
 

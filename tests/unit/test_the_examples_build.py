@@ -232,7 +232,7 @@ def test_the_width_check_accepts_a_granted_pool(tmp_path):
 
     assert result.returncode == 0, result.stderr
     assert "off peak 2, auto peak 4, resolved width 2" in result.stdout
-    assert "auto exceeded its resolved width" in result.stdout
+    assert "auto exceeded its resolved width of 2 (UX-913)" in result.stdout
 
 
 def test_the_width_check_passes_the_reading_on_record_and_says_so(tmp_path):
@@ -244,7 +244,37 @@ def test_the_width_check_passes_the_reading_on_record_and_says_so(tmp_path):
     result = _run_width_check(_row(2), _row(2), "giant.bst", tmp_path)
 
     assert result.returncode == 0, result.stderr
-    assert "auto did not exceed its resolved width (UX-913)" in result.stdout
+    assert "auto did not exceed its resolved width of 2 (UX-913)" in result.stdout
+
+
+def test_the_width_check_says_so_when_no_resolved_width_is_published(tmp_path):
+    """The `auto` arm has been seen publishing no resolved width at all
+    (`req ?` in the per-element table). A missing width must read as
+    missing: folding it into the same sentence as a width nothing
+    exceeded would report `auto peak 4` against `off`'s 2 as the pool
+    going undrawn, which is the defect this whole row is about, in the
+    other direction."""
+    result = _run_width_check(_row(2, width=None), _row(4), "giant.bst",
+                              tmp_path)
+
+    assert result.returncode == 0, result.stderr
+    assert "resolved width unknown" in result.stdout
+    assert "no resolved width was published" in result.stdout
+    assert "auto ran wider than off (4 against 2)" in result.stdout
+    # The reading it must not make: there is no width to exceed.
+    assert "resolved width of" not in result.stdout
+
+
+def test_the_width_check_does_not_read_a_peak_under_its_width_as_a_draw(tmp_path):
+    """`off`'s measured peak is a weaker denominator than the resolved
+    width, and reaching for it when the width is there would call
+    `auto` 2 against `off` 1 a pool draw - when 2 is exactly the width
+    the recipe already asked for and no token was needed."""
+    result = _run_width_check(_row(1), _row(2), "giant.bst", tmp_path)
+
+    assert result.returncode == 0, result.stderr
+    assert "auto did not exceed its resolved width of 2 (UX-913)" in result.stdout
+    assert "wider than off" not in result.stdout
 
 
 def test_the_width_check_refuses_a_scrubbed_auth(tmp_path):

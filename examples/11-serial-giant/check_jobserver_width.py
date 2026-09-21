@@ -43,12 +43,21 @@ def check(off_path, auto_path, element, auto_log_path):
     auto_peak = auto.get("peak_work_concurrency") or 0
     width = off.get("resolved_jobs")
     print(f"{element}: off peak {off_peak}, auto peak {auto_peak}, "
-          f"resolved width {width}")
-    # UX-913's own reading, printed by both arms and asserted by
-    # neither: the pool is reachable here and still not drawn from.
-    granted = width is not None and auto_peak > width
-    print(f"{element}: auto {'exceeded' if granted else 'did not exceed'} "
-          f"its resolved width (UX-913)")
+          f"resolved width {width if width is not None else 'unknown'}")
+    # UX-913's own reading, printed and asserted by neither arm. The
+    # resolved width is the real denominator and a peak under it says
+    # nothing, so `off`'s measured peak is only the fallback, labelled
+    # as one: the auto arm has been seen publishing no width at all,
+    # and a missing width must not read as a width nothing exceeded.
+    if width is not None:
+        verb = "exceeded" if auto_peak > width else "did not exceed"
+        print(f"{element}: auto {verb} its resolved width of {width} "
+              f"(UX-913)")
+    else:
+        rel = "wider than" if auto_peak > off_peak else "no wider than"
+        print(f"{element}: no resolved width was published, so the only "
+              f"reading is that auto ran {rel} off ({auto_peak} against "
+              f"{off_peak}) (UX-913)")
     scrubbed = _scrub_lines(auto_log_path)
     if scrubbed:
         return f"the auto capture scrubbed an auth: {scrubbed}"

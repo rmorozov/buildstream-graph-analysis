@@ -15,13 +15,13 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-916 scenarios: **18 open**, 898 closed.
+916 scenarios: **16 open**, 900 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
 | capture | 5 | 140 |
-| analysis | 2 | 121 |
+| analysis | 1 | 121 |
 | contracts | 0 | 52 |
 | viewer | 0 | 177 |
 | cli | 0 | 22 |

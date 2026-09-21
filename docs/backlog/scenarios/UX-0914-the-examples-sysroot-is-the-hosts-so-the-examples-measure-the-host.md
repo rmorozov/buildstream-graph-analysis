@@ -111,6 +111,22 @@ through the same proxy — both recorded with their real error text in
 that acceptable, given every example figure in the docs is currently
 re-derivable locally?*
 
+**All four of A1..A4 need a host this container cannot reach**,
+measured 2026-09-21: `deb.debian.org`, `dl-cdn.alpinelinux.org`,
+`ftp.gnu.org` and `cdn.registry.gitlab-static.net` all fail at
+`CONNECT` through the egress proxy:
+
+```text
+$ curl -sS -o /dev/null -w "%{http_code}\n" -L \
+    https://deb.debian.org/debian/dists/trixie/Release
+000
+```
+
+So the reading that picks the base has to be taken somewhere the
+mirror is reachable, or the environment's network policy has to
+carry these four first. That is a precondition of this row, not a
+finding against any candidate.
+
 ### Axis B — the toolchain
 
 Host-staged gcc is in this repository for one reason, which the
@@ -122,19 +138,25 @@ binary, so either unpacks anywhere inside a sysroot and works. That
 is a real answer to the constraint that shaped the current design,
 and it is worth its own row. Two costs first:
 
-- **Network at staging.** Both candidates are GitHub-hosted, and
-  this container's proxy refuses that host:
+- **Network at staging.** Both are *builders*, not tarballs, and
+  their outputs are GitHub release assets. The repositories clone
+  from this container; the assets do not:
 
   ```text
-  $ curl -sS -o /dev/null -w "%{http_code}\n" -L \
-      https://github.com/crosstool-ng/crosstool-ng
-  403
+  git clone --depth 1 .../cross-tools/clang-cross        -> ok, 604K
+  curl -L .../cross-tools/clang-cross/releases/latest    -> 403
   ```
 
-  `crosstool-ng` is also a *builder*, not a tarball: it fetches
-  sources and builds a toolchain, so it is not a drop-in for a
-  staging script. `cross-tools/clang-cross` does ship prebuilt
-  tarballs, which makes it the cheaper of the two — and clang.
+  `crosstool-ng` fetches sources and builds a toolchain, so it is
+  not a drop-in for a staging script at all. `clang-cross` is a
+  `release.yaml` that publishes one `<target>.tar.xz` per target, so
+  it is a drop-in *if* the asset can be fetched — which is a network
+  policy question, not a design one.
+
+  Its 44 targets carry both libcs, `x86_64-unknown-linux-gnu` and
+  `aarch64-unknown-linux-gnu` among them at glibc 2.44 (clang
+  22.1.8). **So this axis does not force musl.** Only Alpine as a
+  runtime does, and that is axis A. The two are independent.
 
 - **clang is not gcc, and bga already counts them differently.**
   `gcc`/`g++` sit in `ORCHESTRATION_BINARIES`

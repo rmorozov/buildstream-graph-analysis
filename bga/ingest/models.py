@@ -154,6 +154,13 @@ class RunContext:
     # refused every baseline older than itself would be telling users to
     # throw away the ones they came with.
     host_manifest: Optional[dict] = None
+    # UX-898/UX-903: what the build *was* - `{type, variant}`, declared
+    # at capture time. `host_manifest` above says which machine ran it;
+    # this says whether it was a nightly or a review build and whether
+    # it was under a sanitizer. `None` for every capture that declared
+    # neither, which is every capture taken before this field existed,
+    # and those compare exactly as they did.
+    build_class: Optional[dict] = None
     # UX-249: which build of `bga` wrote this run directory, and the
     # contract set it had. Same path and same rule as `host_manifest`
     # above, for the same reason - it is a fact about *which run this

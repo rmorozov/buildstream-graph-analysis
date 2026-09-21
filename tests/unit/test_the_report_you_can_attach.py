@@ -940,7 +940,11 @@ COMMITTED_EXPORTS = [
     # the measurement rather than either sum. Both growths are contract
     # and they are disjoint, so they add: 480,265 B measured over the
     # merge. 482,000 keeps headroom of the same order.
-    ("golden", GOLDEN, 482_000),                       #  480,265 B
+    # `UX-898`/`UX-903` then merged in and added 341 B of the same
+    # contract - the `build_class` block's schema nodes, which golden
+    # does not declare and so carries only as prose. 480,606 B measured
+    # over that merge; the bound holds unmoved.
+    ("golden", GOLDEN, 482_000),                       #  480,606 B
     # `UX-297` moved this one by 385 B before that: the two-plane run
     # publishes `plane2_coverage.source`, which says which shape of
     # Plane 2 report served its numbers and what that costs to open. A
@@ -1122,7 +1126,11 @@ COMMITTED_EXPORTS = [
     # 536,187 B after.
     # Merged, as golden above: 540,618 B measured. 542,000 keeps
     # headroom of the same order.
-    ("macro_micro", MACRO_MICRO, 542_000),             #  540,618 B
+    # `UX-898`/`UX-903` then merged in and added the same 341 B of
+    # contract golden's note carries - this run declares no build class
+    # either, so none of it is payload. 540,959 B measured over that
+    # merge; the bound holds unmoved.
+    ("macro_micro", MACRO_MICRO, 542_000),             #  540,959 B
 ]
 
 

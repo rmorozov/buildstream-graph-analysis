@@ -15,14 +15,14 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-911 scenarios: **19 open**, 892 closed.
+911 scenarios: **17 open**, 894 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
 | capture | 6 | 140 |
 | analysis | 2 | 121 |
-| contracts | 2 | 52 |
+| contracts | 0 | 52 |
 | viewer | 0 | 177 |
 | cli | 0 | 22 |
 | store | 1 | 17 |
@@ -39,12 +39,10 @@ task file, which is the only place it ever lived twice.
 | UX-884 | [the LTO scrub covers make/autotools kinds, not only cmake/meson/cargo](UX-0884-the-lto-scrub-covers-make-and-autotools-kinds.md) | capture | Medium | R2 | 🔴 Not Started |
 | UX-890 | [the trace-census guard has three unconfirmed CI excursions and no filing](UX-0890-the-trace-census-guard-has-three-unconfirmed-excursions.md) | guards | Medium | the round whose push gate is blocked | 🔴 Not Started |
 | UX-895 | [the capture's own overhead is unmeasured, so Plane 2 on every build is a guess](UX-0895-the-captures-own-overhead-is-unmeasured.md) | capture | High | R4, R5, R1 | 🔴 Not Started |
-| UX-898 | [a comparison class is the host class and the build type together](UX-0898-a-comparison-class-is-the-host-and-the-build-type.md) | contracts | High | R4, R5, R7 | 🔴 Not Started |
 | UX-899 | ["this PR made the build N seconds slower" needs a band, not a pair](UX-0899-the-seconds-slower-gate-needs-a-band-not-a-pair.md) | analysis | High | R4, R6 | 🔴 Not Started |
 | UX-900 | [a store is a directory, but CI will keep bundles in versioned directories](UX-0900-a-store-is-a-directory-but-ci-keeps-bundles.md) | store | Medium | R5, R7, R8 | 🔴 Not Started |
 | UX-901 | [the jobserver is a subtool behind a boundary](UX-0901-the-jobserver-is-a-subtool-behind-a-boundary.md) | capture | Medium | R5, R4, R2 | 🔴 Not Started |
 | UX-902 | [a showcase case is two captures, and there is nowhere to put one](UX-0902-the-showcase-case-file-and-its-two-capture-rule.md) | docs | High | R1, R2, R8 | 🔴 Not Started |
-| UX-903 | [a variant is a second axis under the build type, and nothing records it](UX-0903-a-variant-is-a-second-axis-under-the-build-type.md) | contracts | High | R4, R5, R7, R2 | 🔴 Not Started |
 | UX-904 | [nothing prices N separate CI builds against one junctioned invocation](UX-0904-separate-invocations-or-one-junctioned-build.md) | analysis | High | R5, R3, R4, R6 | 🔴 Not Started |
 | UX-905 | [the jobserver has no compile-bound project at the scale it is meant for](UX-0905-the-jobserver-has-no-compile-bound-project-at-scale.md) | capture | High | R5, R4, R2 | 🔴 Not Started |
 | UX-906 | [the jobserver's corner cases live in twelve task files and no register](UX-0906-the-jobservers-corner-cases-are-a-register-not-a-memory.md) | capture | Medium | R2, R5, R4 | 🔴 Not Started |

@@ -147,6 +147,14 @@ def _run_instance(run_context, loaded_from) -> dict:
         # bytes. Measured: the committed `macro_micro` run does exactly
         # that.
         instance['host_manifest'] = hostinfo.normalised(manifest)
+    # UX-898/UX-903: and what build it was. Rides with the host manifest
+    # for the same reason - the comparison class is the pair, so a
+    # reader that loaded one and not the other holds half a class.
+    # Omitted when nothing was declared, which keeps every document a
+    # capture without it produces byte-identical to today's.
+    declared = getattr(run_context, 'build_class', None) if run_context else None
+    if declared:
+        instance['build_class'] = declared
     # UX-326: what was asked to be built. Published because the advice
     # block has to *spell* the command that would capture this run
     # again, and `bga snapshot <project>` - which is what it printed

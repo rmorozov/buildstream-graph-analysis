@@ -34,6 +34,8 @@ from pathlib import Path
 from typing import Optional
 
 from ._run_context_common import (
+    add_build_class,
+    add_build_class_arguments,
     add_cache_capacity,
     add_cpu_capacity_fields,
     add_host_manifest,
@@ -41,6 +43,7 @@ from ._run_context_common import (
     add_producer,
     add_queue_seam,
     add_start_clock_source,
+    build_class_from_args,
     typical_resolved_max_jobs,
 )
 from .bst_log_to_chrome_trace import WrapperTraceConverter, _resolve_start_time_source, _resolve_start_time_us
@@ -460,6 +463,8 @@ def extract_run(
     foundation: Optional[list] = None,
     jobserver: Optional[dict] = None,
     cache_usage: bool = False,
+    build_type: Optional[str] = None,
+    variant: Optional[dict] = None,
 ):
     """Run the full extraction pipeline. Returns a dict summary (targets,
     span/element/dependency counts, warnings) - the CLI entry point below
@@ -618,6 +623,9 @@ def extract_run(
     # too small to hold the project is otherwise indistinguishable from
     # a cache whose keys move.
     add_cache_capacity(run_context, with_usage=cache_usage)
+    # UX-898/UX-903: and what build it was. Parity with
+    # `tools/bst_run_context.py`, which UX-18 exists to keep.
+    add_build_class(run_context, build_type=build_type, variant=variant)
     add_producer(run_context)
     if wall_start_us is not None and wall_end_us is not None:
         run_context["wall_clock"] = {"start_us": wall_start_us, "end_us": wall_end_us}
@@ -1006,6 +1014,7 @@ def main() -> int:
         "--estimated-job-memory-mb", type=int, default=None,
         help='A rough, operator-supplied estimate of one concurrent build job\'s memory footprint (MB) - a single configurable constant, not a real per-task measurement (no such measurement source exists in this pipeline, see UX-21).'
     )
+    add_build_class_arguments(parser)
     parser.add_argument(
         "--interrupted", action="store_true",
         help="Record that this log's build was interrupted, so the run declares "
@@ -1021,6 +1030,11 @@ def main() -> int:
     )
     args = parser.parse_args()
 
+    declared = build_class_from_args(args)
+    if declared is None:
+        return 1
+    build_type, variant = declared
+
     try:
         summary = extract_run(
             args.project_dir, args.log_path, args.output_dir,
@@ -1035,6 +1049,8 @@ def main() -> int:
             # printed produced a run that had forgotten it was partial.
             interrupted=args.interrupted,
             cache_usage=args.cache_usage,
+            build_type=build_type,
+            variant=variant,
         )
     except (RuntimeError, FileNotFoundError) as e:
         print(f"Error: {e}", file=sys.stderr)

@@ -1,6 +1,6 @@
 # UX-903: a variant is a second axis under the build type, and nothing records it
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-898 (the type) | **Found by:** the 2026-09-20 rollout thread — the owner's pipeline builds per instruction set, release-with-symbols, address sanitizer and coverage, and every one of those is a different build of the same tree | **Serves:** R4 (a gate that does not compare a sanitizer build against a release one), R5 and R7 (a population that is one thing), R2 (whose element's cost is a different number per variant) | **Topic:** contracts | **Area:** bga | **Shape:** judgement
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-898 (the type) | **Found by:** the 2026-09-20 rollout thread — the owner's pipeline builds per instruction set, release-with-symbols, address sanitizer and coverage, and every one of those is a different build of the same tree | **Serves:** R4 (a gate that does not compare a sanitizer build against a release one), R5 and R7 (a population that is one thing), R2 (whose element's cost is a different number per variant) | **Topic:** contracts | **Area:** bga | **Shape:** judgement
 
 ## Motivation
 
@@ -62,3 +62,63 @@ message (the guard names it), treat absent as matching declared (must
 not).
 
 ## Outcome
+
+Landed with `UX-898` in one commit — the Decomposition of both rows
+said one contract move rather than two, and the class is the pair, so
+half of it is not a shippable state.
+
+**The open question, answered.** *One free-text field or several named
+dimensions?* **Several named dimensions**, because the owner's matrix
+is per instruction set *and* release-with-symbols *and* sanitizer *and*
+coverage: `arch=aarch64` with `sanitizer=address` is one build, and an
+opaque `aarch64-asan` string cannot answer "every sanitizer build,
+whatever the arch" without `bga` parsing a convention it did not
+define. Dimension names are free text the pipeline picks, so no enum
+is maintained here either. `--variant arch=aarch64 --variant
+sanitizer=address`, repeatable; `$BGA_BUILD_VARIANT` takes the same
+pairs comma-separated. A `--variant` with no `=` is refused naming the
+entry: inventing the dimension name is how `asan` and `sanitizer=asan`
+become two classes.
+
+**The gap, measured.** At `395ebdc` the word "variant" appears nowhere
+in `bga/` or `tools/`; a sanitizer review build and a coverage review
+build were one population with no way to say otherwise.
+
+**The close, measured.**
+
+```text
+$ bga compare asan-run coverage-run --fail-on-regression
+Mixed build class gate FAILED: baseline declares review · arch=x86_64 ·
+sanitizer=address and candidate declares review · arch=x86_64 ·
+coverage=on. ...
+exit 6
+$ ... --blend                                    exit 0
+$ aggregate over a mixed-variant store  refusal check mixed_class_aggregate,
+                                        naming sanitizer=address and coverage=on
+```
+
+The report header prints `Build class: review · arch=x86_64 ·
+sanitizer=address` when declared, and nothing at all when not — the
+reader who opens a capture now knows whether the durations in front of
+them are a sanitizer's.
+
+**The mutation table.** Applied, confirmed landed, guard watched red,
+reverted, watched green:
+
+| mutation | guard |
+|---|---|
+| only the type is compared | red — `test_one_type_and_two_variants_is_a_difference` |
+| the message drops the variant | red — `test_the_sentence_names_the_dimension_and_both_values` |
+| an absent dimension matches a declared one | red — `test_a_dimension_present_on_one_side_only_is_a_difference` |
+
+`UX-898`'s three mutations are in its own Outcome; two of them
+(case-insensitivity, the dropped type) redden guards in this file too,
+because the class is the pair.
+
+**The deviation.** The filing's Required Fix asked for "a report that
+names its own variant". It names the whole class — type and variant
+together — because a header that said `sanitizer=address` while
+withholding `review` would be the same half-a-class the rest of this
+row rejects. `_format_build_class` returns `None` rather than
+"undeclared" for a capture that declared nothing, which is what keeps
+the byte-identity clause of the Acceptance Test literally true.

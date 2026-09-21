@@ -1542,11 +1542,28 @@ host/v1                                                       (read, normalised 
   "trace_epsilon_us": 50000,
   "wall_clock": {},
   "host": {},
+  "build_class": {"type": "review", "variant": {"sanitizer": "address"}},
   "resource_capacities": {},
   "max_jobs": {},
   "cpu_accounting": {}
 }
 ```
+
+`build_class` (`UX-898`, `UX-903`) is a permitted addition under the
+versioning rule above and absent on every capture that declared
+neither half. The **type** says when and why a build ran (`night`,
+`review`, `guard`), the **variant** what it did (`arch`, `sanitizer`,
+`coverage` — several true at once), and the comparison class is the
+pair. Both halves are free text a pipeline declares, via
+`--build-type`/`--variant` on either run-context producer or
+`$BGA_BUILD_TYPE`/`$BGA_BUILD_VARIANT` in the capture's environment:
+no enum here fits a pipeline nobody has seen, and the cost is that a
+typo makes a third class rather than an error, which is why every
+refusal prints both values it saw. Comparison is exact and
+case-sensitive. Two runs declaring different classes are refused by
+`bga compare`'s gates with `EXIT_MISMATCHED_RUNS` unless `--blend` is
+passed, and a store holding more than one is refused by `bga snapshot
+--aggregate` the way two host classes already are.
 
 ---
 
@@ -1767,7 +1784,7 @@ cannot tell a broken capture from a cheap one:
 | `.bga/runs/<stamp>/run/` | required | — | the run directory - the unit every published command line takes a path to. Absent on a build that failed before any element completed (`UX-156`), which is a capture with nothing to analyse rather than a corrupt one. |
 | `.bga/runs/<stamp>/run/graph.json` | required | `graph/v9` | the declared element graph, from `bst show`. |
 | `.bga/runs/<stamp>/run/trace.json` | required | `trace/v9` | the scheduler's own spans and phases - Plane 1. |
-| `.bga/runs/<stamp>/run/run-context.json` | required | `run-context/v9` | what the run was: identity, host manifest (`host/v2` inside it), scheduler configuration, and the resolved `native_max_jobs` (`UX-377`). |
+| `.bga/runs/<stamp>/run/run-context.json` | required | `run-context/v9` | what the run was: identity, host manifest (`host/v2` inside it), the declared build class (`UX-898`, `UX-903`), scheduler configuration, and the resolved `native_max_jobs` (`UX-377`). |
 | `.bga/runs/<stamp>/run/chrome_trace.json` | derived | — | the Plane 1 trace in the legacy Chrome JSON shape. Present only on a capture taken before `UX-452`: the extraction wrote it for a person to drag into perfetto.dev, `UX-437`'s census measured that no reader opens it, and `bga timeline --format chrome` renders the same shape on demand from `trace.json`. Safe to delete; nothing rewrites it. |
 | `.bga/runs/<stamp>/run/sources.json` | conditional | `sources/v1` | the source inventory (`UX-171`), read by `bga blast`. Absent means the capture could not resolve the project's sources, and `blast` says so rather than reporting an empty inventory. |
 | `.bga/runs/<stamp>/plane2.json` | conditional | `plane2/v3` | the Plane 2 report - what ran inside the sandboxes. Absent on a capture taken without Plane 2, and every Plane 2 section of every output is then absent rather than empty. |

@@ -1450,7 +1450,7 @@ _COMPARE_REQUIRED = {
 # live id stops a document a consumer already wrote from validating.
 # The guarantee is the emitter's, held against the real payload by
 # `tests/unit/test_a_required_set_grew_under_an_unchanged_id.py`.
-_COMPARE_ALWAYS_WRITTEN = ("verdict_provenance",)
+_COMPARE_ALWAYS_WRITTEN = ("verdict_provenance", "build_class_comparison")
 
 # UX-221: `element_diff` has been emitted since UX-79 and declared by
 # nothing, so `UX-190`'s contract never covered it and `bga view` had no
@@ -1474,6 +1474,13 @@ _COMPARE_OPTIONAL = {
     # it is `_COMPARE_ALWAYS_WRITTEN` above rather than required
     # (`UX-629`): required would break every document written before it.
     "verdict_provenance": "object",
+    # `UX-898`/`UX-903`: whether the two runs declared the same build.
+    # Written on every comparison - `{"status": "absent"}` when neither
+    # run declared one, which is every capture taken before the field -
+    # so `_COMPARE_ALWAYS_WRITTEN` rather than required, the same third
+    # state `verdict_provenance` above is in and the same shape
+    # `host_comparison` already has.
+    "build_class_comparison": "object",
 }
 
 _BLAST_REQUIRED = {
@@ -3213,6 +3220,19 @@ _RUN_INSTANCE_HINT = {
                 QUANTITY: "bytes",
                 "description": "Memory the host reported, which the "
                                "memory ceiling is computed against."},
+        }},
+        # UX-898/UX-903: additive, no version bump - absent for a
+        # capture that declared neither half of its build class.
+        "build_class": {"properties": {
+            "type": {
+                "description": "What kind of build this was - night, "
+                               "review, guard. Free text the pipeline "
+                               "declares; two runs declaring different "
+                               "types are two populations."},
+            "variant": {
+                "description": "The named dimensions of what the build "
+                               "did - arch, sanitizer, coverage - "
+                               "several of which are true at once."},
         }},
         # UX-851: additive, no version bump - absent for a capture older
         # than `bga capture --jobserver`.
@@ -5627,6 +5647,14 @@ _STORE_AGGREGATE_HINTS = {
                                                  "class, or null where "
                                                  "the captures predate "
                                                  "it."},
+                # UX-898/UX-903: additive - absent for a class whose
+                # runs declared no build type or variant, which is
+                # every store written before the field existed.
+                "build_class": {"description": "The build these runs "
+                                               "declared themselves to "
+                                               "be - `{type, variant}`. "
+                                               "Absent where none was "
+                                               "declared."},
                 "runs": {
                     QUANTITY: "count",
                     "description": "Finished runs in this class."},

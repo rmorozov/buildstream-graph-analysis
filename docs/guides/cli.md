@@ -467,6 +467,7 @@ never silently folded into an unestimated blast.
 | `run-mode-incremental` | info | this run was incremental, so its durations are not a cold-build baseline |
 | `cache-hit-ratio` | varies | how much of the project the cache reused, and for the requested target's own closure. On a caches-off run it reports the fact at `info` rather than banding it (`UX-86`) |
 | `cache-capacity` | varies | the local cache is at or past the low watermark it is configured with, or its quota is larger than the volume under it can give - so a rebuild here may be an evicted artifact rather than a moved cache key (`UX-896`) |
+| `artifact-weight` | info | which elements' artifacts are the heaviest in the local cache, walked per element from the CAS (`bga extract --artifact-weights`). Each figure is that artifact's whole weight, so the rows overlap where two artifacts share a blob; the finding says by how much (`UX-907`) |
 | `cache-transfer-cost` | medium | this build spent a notable share of wall-clock moving artifacts rather than making them |
 | `wait-category` | varies | the single largest non-execution wait category, when it clears the 1% floor |
 | `execution-bound` | info | no wait category clears the floor — the time is in the work itself |
@@ -1045,14 +1046,14 @@ on `compare/v2`, `queue_wait_us` and `queue_wait_absent_reason` on
 
 The guard that was supposed to stop that had contract **ids** for a
 population, so it could not see a key. It has keys now: the printable
-contracts' *consumer surface* — each schema's top-level properties plus
-every **row** the document hands you, since a row of `store/v1`'s
-`snapshots` is what you actually read. That surface was 199 keys when
-this was written, 84 of them named in no document outside
-`docs/backlog/` and `docs/audits/`; naming the five above left 80, and
-`UX-636` paid those 80 off in the section below. The register in the
-guard is empty, so the figure it holds and this sentence is checked
-against is **0 undocumented keys**.
+contracts' *consumer surface* — each schema's top-level properties, the
+keys **one level below** one of them, and every **row** the document
+hands you, since a row of `store/v1`'s `snapshots` is what you actually
+read. That surface was 199 keys when this was written, 84 of them named
+in no document outside `docs/backlog/` and `docs/audits/`; naming the
+five above left 80, and `UX-636` paid those 80 off in the section below.
+The register in the guard is empty, so the figure it holds and this
+sentence is checked against is **0 undocumented keys**.
 
 A row is found **at any depth**, and by any of the three things that
 declare one: an array's `items`, the `bga:columns` an array node
@@ -1069,23 +1070,43 @@ by something that is not an array index at all, so neither `items` nor
 `bga:columns` sees them. The fourth is `UX-866`: `run_instance` is
 typed as a bare `object`, not a row at all - its keys (`seed` among
 them, `UX-858`) are declared only by its own view-hint's `properties`,
-read at any depth the same way. The surface is **314 keys** today, and
+read at any depth the same way.
+
+Each of those four is a **shape** bought back after it escaped, and
+buying shapes back one at a time is what produced the next one. `UX-909`
+stopped that with a **depth** instead: every key declared one level
+below a top-level property is in the population, whatever shape it is.
+That is where the report's own blocks declare their scalars — `floors`,
+`attribution` and `cache` are not internal shapes of a block, they *are*
+the blocks a reader meets first, and `certified_headroom`, the number
+Key Findings leads with, had never been in the population at all. It was
+302 such keys when that was filed and 305 when it landed. One level and
+no further: `blast_radius_distribution.deciles` is in the population and
+its own nine buckets are not. The surface is **562 keys** today, and
 that figure is derived from the walk rather than typed here.
 
 So the statement of coverage, which is now a statement and not a
 promise:
 
 - **every key of every printable contract you are handed is named in a
-  document** — its top-level keys, and the columns and `items` of
-  every row inside it at any depth — and a key added to one of those
-  schemas has prose or the guard reddens naming it;
-- what is *not* in it is the internal shape of a block that is neither
-  a top-level key nor a row: 514 distinct keys over the nine printable
-  schemas if every nested `properties` object is walked, against the
-  236 above. `--schema` stays the complete list, and a document
-  reproducing all 514 would be the second copy of the schemas
-  `UX-384` banned (`UX-628` declined it, and `UX-655` re-measured it
-  rather than inheriting it);
+  document** — its top-level keys, the keys one level below one of
+  them, and the columns and `items` of every row inside it at any
+  depth — and a key added to one of those schemas has prose or the
+  guard reddens naming it;
+- what is *not* in it is anything more than one level below a
+  top-level key that is not also a row: 514 distinct keys over the
+  nine printable schemas if every nested `properties` object is
+  walked, against the 562 above. `--schema` stays the complete list,
+  and a document reproducing all of them would be the second copy of
+  the schemas `UX-384` banned (`UX-628` declined it, `UX-655`
+  re-measured it, and `UX-909` moved the line down one level rather
+  than removing it);
+- a document that **argues for** a key is not a document that
+  describes it: `docs/backlog/` and `docs/audits/` never counted, and
+  since `UX-909` neither does a `docs/design/*.md` whose header says
+  `**Status:** proposed`. Four keys rested on one of those alone the
+  moment the walk widened — `mean`, `skipped_inputs`,
+  `t_infinity_cold` and `unmeasured_processes`;
 - the register the debt was held in may only shrink and is at zero, so
   a key going undocumented is a decision somebody argues, not a number
   that drifts;
@@ -1245,6 +1266,162 @@ can look one up.
 | key | what it is |
 |---|---|
 | `makespan_us` | In a `sweeps` row, the makespan the replay produced at that capacity, beside the `capacity` vector tried and the `normalized_improvement` that capacity bought over the point before it. |
+
+### Inside a published block (`UX-909`)
+
+The blocks above are objects, and a reader meets their scalars
+directly — `floors.certified_headroom` is the number Key Findings
+leads with. Those scalars were outside the guard's population until
+`UX-909`: 305 of them, including every `floors` key `UX-891` added.
+They are one line each here, on the same terms as the rows above.
+
+`analyze/v6` — `floors`, the lower bounds this run certifies:
+
+| key | what it is |
+|---|---|
+| `t_c` | The makespan a replay of this run's recorded work produces. A check on the model behind the floors, not a prediction. |
+| `model_slack` | How far that replay sits above the lower bound — the model's own slack, published so it cannot be read as headroom. |
+| `t_infinity_cold` | The critical path with cached elements costed at what building them would take. Advisory: it rests on other runs' durations, so it certifies nothing here. |
+| `cold_partial` | Whether some elements had no duration to draw on, making the cold path partial rather than complete. |
+| `cold_confidence` | How far the cold path can be trusted — it is only as good as the history its durations came from. |
+| `cold_duration_sources`, `cold_critical_path_duration_sources` | Where each cold duration came from, by tier; the second narrowed to the elements on the cold path. |
+| `capacity_model_note` | What these floors certify against, in words — and what they do not. |
+
+`analyze/v6` — the run-level blocks' own scalars:
+
+| key | what it is |
+|---|---|
+| `untracked_head_us`, `untracked_tail_us` | In `attribution`: wall-clock before the first tracked task started and after the last one finished — BuildStream's own startup and teardown, outside per-task tracking. |
+| `horizon_start_us`, `horizon_end_us` | In `occupancy`: where the slot-time accounting starts and ends, offset from the run's own zero. Beyond the end nothing was scheduled, so nothing is counted. |
+| `resource_occupancy`, `peak_resource_occupancy` | Occupancy per resource kind, and the most in flight at once per kind — so a saturated fetcher is not averaged away by idle builders. |
+| `top_blast_radius`, `blast_radius_ranked_by` | In `elements`: the elements whose change rebuilds the most, in that order, and what the order was computed from (`measured-rebuild-time` weights each dependent by its duration here, `downstream-count` counts them). Not the order to fix things in — that is `optimization_horizon`, and the two legitimately disagree. |
+| `average_depth`, `peak_depth`, `nonzero_fraction` | In `ready_queue`: elements ready with nowhere to run, averaged and at peak, and the share of the build spent with anything waiting. High means capacity bound, not graph bound. |
+| `overlap_us`, `fetch_prefix_us`, `build_suffix_us`, `fraction` | In `fetch_build_overlap`: wall-clock where fetching and building ran together, the fetching prefix with nothing building, the building suffix with nothing left to fetch, and the overlap over the span the two phases covered. |
+| `deferrable_count` | In `leaf_analysis`: leaf elements nothing else waits on, which could be built later or not at all. |
+| `total_deferrable_work_us` | In `deferrability`: work that could be moved out of this build without anything waiting for it. |
+| `serial_chain_length` | In `bottleneck`: the longest run of elements that must go one after another. |
+| `total_us`, `fraction_of_horizon` | In `pipeline_overhead`: time BuildStream spent outside any element — loading, resolving, cache queries — and that time as a share of the run. No builder count reduces it. |
+| `chain_bound_share`, `chain_share_of`, `certified_headroom_us`, `scheduling_gap_us` | In `headline`: the threshold `chain_share` is compared against, which span it is a share of (`task_horizon`, published rather than left to guess), the headroom repeated from `floors` so the decision needs no second lookup, and wall-clock beyond the critical path. |
+
+`analyze/v6` — the graph's shape, in `graph_metrics`, `graph_summary`
+and `parallelism`:
+
+| key | what it is |
+|---|---|
+| `max_depth` | The longest chain of dependencies, counted in edges. |
+| `avg_fanin`, `avg_fanout` | Direct dependencies and direct dependents per element, averaged — equal by construction, since every edge is one of each. |
+| `avg_parallelism` | Elements that could run at once, averaged over the graph's levels. |
+| `serialization_share` | How much of the graph has to run one thing after another. |
+| `cyclomatic_complexity` | Edges minus elements plus one — how tangled the graph is. |
+| `bottleneck_count`, `deferrable_leaves` | In `graph_summary`: elements everything funnels through, and leaf elements nothing downstream waits on. |
+| `best_case_speedup` | How much faster an unlimited-capacity replay of this graph would be. A multiplier, and a ceiling rather than a plan. Published in `graph_summary` and in `sensitivity`. |
+| `min_width`, `max_width`, `mean_width`, `width_uniformity` | In `parallelism`: the narrowest and widest levels, elements per level averaged, and how evenly that width is spread. Low uniformity means the graph pinches somewhere. |
+| `critical_path_us`, `total_improvable_time_us` | In `sensitivity`: the chain's duration, which the savings are measured against, and how much of it sits in elements that could move. |
+| `deepest_depth`, `deepest_path`, `deeper_than_three`, `deeper_than_three_share` | In `document_shape`, measured on the document as published: how far down its deepest leaf sits, one path that reaches it (`[]` for a list step), and the leaves more than three levels down as a count and a share. |
+
+`analyze/v6` — `cache`, what this run built and what it restored:
+
+| key | what it is |
+|---|---|
+| `built_elements`, `cached_elements`, `hit_share` | Elements built, elements restored, and restored over considered. |
+| `transfer_us`, `transfer_share` | Wall-clock moving artifacts rather than making them, keyed by direction, and that sum over the run's wall-clock. Summed over task duration, so two concurrent pulls count twice — the question is how much pulling the build did, not how long the pull window was. |
+| `transfer_window_us` | The wall-clock those transfers occupied, as a union of their spans rather than a sum — the denominator a throughput needs. |
+| `transfer_bytes`, `transfer_rate_bytes_per_s` | What the host moved while the build ran, and `transfer_bytes.total` over `transfer_window_us`. BuildStream reports no byte count, so these are the host's own interface counters over the build's span: on a shared machine an upper bound, loopback excluded. The rate says whether more bandwidth would help or the object count would be slow on any link. |
+| `target_closure` | The same question restricted to what the target actually needs. |
+
+`analyze/v6` — `utilisation`, where the run's slot-time went:
+
+| key | what it is |
+|---|---|
+| `cpu_accounting_available` | Whether the run recorded enough to account for its slot-time at all. When false every figure below is absent, not zero. |
+| `effective_cpus`, `effective_cpus_source` | The capacity this accounting divides by — builder slots as recorded, not host cores — and how it was established. An assumed capacity makes every share below assumed. |
+| `wall_clock_us`, `capacity_cpu_us` | The span this accounting covers, and the slot-time available across it: wall-clock times the capacity, the denominator of the shares. |
+| `total_accounted_us`, `unaccounted_us`, `reconciliation_error_share` | The buckets summed, the slot-time no bucket claimed, and that gap as a share of capacity. The honesty check on the whole block: near zero means the buckets really do cover it. |
+| `potential_oversubscription`, `oversubscription_evidence` | Whether this accounting hints the run asked for more than it could get, and what the hint rests on — including the case where there was not enough to say. A hint, not the capacity verdict. |
+| `max_observed_concurrency` | The most tasks seen running together in this accounting's own view of the run. |
+| `idle_share`, `wasted_share` | Slot-time with nothing to run — bounded below by the graph's shape, so never entirely recoverable — and slot-time spent on work then thrown away. The second is the recoverable share. |
+
+`analyze/v6` — `utilization_envelope`, cores busy from the host's own
+`/proc/stat` series:
+
+| key | what it is |
+|---|---|
+| `absence` | Why there is no envelope, in the sentence the terminal and the page both print. `null` when there is one. |
+| `configured_capacity_cores` | `builders` times `max-jobs` — what the scheduler was allowed to start. `null` when the capture recorded neither. |
+| `busy_cores_p50`, `busy_cores_p95` | Median cores busy and the peak worth acting on, nearest-rank over the intervals rather than the single highest sample. |
+| `busy_share_p50`, `busy_share_p95` | Both against the capacity that could actually be reached. |
+| `underutilized_share`, `overcommitted_share` | Share of the sampled build holding at least one idle core while Plane 1 says there was work, and share with load above the core count or a page written to swap. |
+
+`analyze/v6` — `confidence`, `capacity_verdict` and
+`capacity_recommendation`:
+
+| key | what it is |
+|---|---|
+| `primary` | How much of this run's own record supports the conclusions above — coverage, provenance and model fit combined. |
+| `coverage_score`, `task_coverage` | How much of the run the record accounts for, and the share of tasks carrying the timings this analysis needs. A high score on a thin record still means the record was thin; tasks without timings are excluded, never assumed. |
+| `model_score`, `provenance_score` | How closely the replay reproduced the run it models, and how much of what this report claims resolves back to a published field. |
+| `task_count`, `failed_task_count`, `failed_task_us` | Tasks recorded at all, tasks that failed, and the wall-clock they took. A failed run is not a slow run, and the two must not be read together. |
+| `explained_untracked_us` | How much of the untracked time this report can account for. |
+| `undersubscribed`, `skipped_inputs` | In `capacity_verdict`: whether the host could have served more parallelism than the run asked for, and the missing inputs named — so a reader can supply them rather than guess why the check said nothing. A check that did not run is inert, not passing. |
+| `binding_constraint`, `builders_change` | In `capacity_recommendation`: the name of the smallest of the four constraints, which is the one that changes what to do, and `recommended_builders` minus `builders`, signed. Negative means the run asked for more than something can serve. |
+
+`analyze/v6` — the two-plane blocks:
+
+| key | what it is |
+|---|---|
+| `resolution_us`, `shortest_task_us` | In `timestamp_agreement`: the finest interval the two planes' clocks can tell apart, and the shortest task measured — the case that resolution matters most for. |
+| `worst_excess_us`, `worst_shortfall_us` | The largest amounts by which one plane's duration exceeded and fell short of the other's. |
+| `material_share`, `tasks_where_material` | The share of tasks, and the count, where the disagreement is large enough to change a reading. |
+| `tasks_compared`, `tasks_measured`, `tasks_shorter_than_bst` | Tasks both planes recorded, tasks with a duration in both, and tasks the sandbox measured as shorter than BuildStream did. |
+| `plane1_elements`, `plane2_elements`, `aggregating_dependency_pairs` | In `element_join_coverage` (and `correlate/v2`'s `coverage`): elements the scheduling record knows, elements the process capture saw inside — fewer whenever a capture was partial — and dependency pairs where one element's measurement includes another's. |
+| `cpu_reconciled_processes`, `cpu_from_spine_only`, `cpu_disagreement_count` | In `plane2_coverage`: processes both planes agree the CPU of, processes only the ptrace spine saw, and processes the hook and the spine costed differently. Each disagreement is a place the two record streams differ, not an error. |
+| `opens_covered_processes`, `opens_coverage` | Processes the open-file hook covered, and the share whose opened paths were recorded. Only the hook can see them. |
+| `fork_only_exits`, `unmatched_ends` | Exits for a process that only ever forked, so there is no command to name, and process ends with no matching start. Non-zero in the second weakens every per-process figure. |
+| `exec_chains_collapsed` | Exec chains billed to one process rather than counted repeatedly — a shell that execs a compiler is one process, not two. |
+| `by_coverage` | How many processes each coverage class accounts for, keyed by the class. |
+| `wall_span_us` | The window the hook was actually watching. Shorter than the build means part of it ran uninstrumented. |
+| `spine_policy`, `static_census` | Whether the ptrace spine ran and over how many sandboxes — with `policy: off` every CPU figure is the hook's alone, which is a floor — and which elements could be hiding a statically-linked binary the hook can never see, read from the project's own sources before anything runs. |
+| `open_records_note`, `static_binary_disclaimer` | Why a process may be missing from `max_concurrency`, and what `LD_PRELOAD` cannot see in the capture's own words. The census above bounds it; this says what is being bounded. |
+| `configure_cpu_us`, `configure_share` | In `configure_phase`: CPU spent in configure work across the run, summed over processes so it exceeds wall-clock where they ran in parallel, and that as a share of all CPU Plane 2 saw. A floor, for the reason its `note` gives. |
+| `unmeasured_processes`, `spine_sourced_processes` | In `cpu_time`: processes no CPU could be read from — a signal death or an exec replacement leaves no rusage behind — and how many of the measured came from the spine rather than the hook. |
+| `per_element_series` | Each element's CPU rate over time, as `[t_us, cores]` points on the host sampler's tick. The totals beside it are unchanged: this says what shape a total had. A process shorter than one tick is in the total and absent from the curve, and a failed `/proc` read ends a series rather than reading zero. |
+
+The distributions — `element_duration_distribution`,
+`blast_radius_distribution`, `fan_in_distribution`, and `correlate/v2`'s
+`sandbox_tax_distribution` and `process_count_distribution` — share
+three:
+
+| key | what it is |
+|---|---|
+| `p99` | The 99th percentile of that block's own population, nearest-rank. |
+| `mean` | Its mean; on a heavy tail the mark that most needs the median beside it, which is why each block's sentence stays on the median. |
+| `deciles` | The nine deciles, nearest-rank. Their own nine buckets are the internal shape of a block, and outside this coverage. |
+
+`compare/v2` — inside a published block:
+
+| key | what it is |
+|---|---|
+| `t_c` | In `baseline`, `candidate` and `deltas` (and `analyze/v6`'s `floors`): the makespan a replay of that run's recorded work produces, and its signed change. |
+| `contention_us`, `serialization_us` | In `deltas`: change in time lost waiting for a busy resource, and change in time independent work spent running one after another. |
+| `efficiency_share` | Change in makespan against the certified floor. Each run is measured against its own floor, so this compares two ratios and not two durations. |
+| `inefficiency_ratio` | Change in the gate's ratio — the figure `--fail-on` thresholds are read against. |
+| `ranked_by`, `banded`, `counts` | In `element_deltas`: what the ordering means, so a consumer does not re-sort by something else and call it the same ranking; `banded` is always `false` and published rather than left implicit, because no per-element noise band exists; and how many elements grew, shrank, stayed put, appeared and disappeared. |
+| `baseline_element_count`, `candidate_element_count` | In `element_diff`: elements each run had, against which the appeared and removed lists balance. |
+| `baseline_path_us`, `candidate_path_us` | Each run's critical path, so a path that moved reads beside the elements that moved it. |
+| `rebuilt_in_both_count`, `rebuilt_in_both_us` | In `cache_churn`: elements that rebuilt in both runs, and what those rebuilds cost, summed over the candidate. |
+| `churned_count`, `wasted_rebuild_us` | Of those, the ones whose key was unchanged — work the cache should have served — and what that churn cost. The number the block exists to put a figure on. |
+
+`correlate/v2` and the store contracts — inside a published block:
+
+| key | what it is |
+|---|---|
+| `tied_saving_us` | In `ranking`: the saving every tied element shares. When the ranking degenerates into a tie this is the one number it has left. |
+| `largest_element_peak_bytes`, `at_observed_builders` | In `memory_envelope`: the heaviest single element measured, which one builder must fit no matter how few run, and the envelope's own `builders`, `envelope_bytes` and `share_of_host` at the builder count this run really used. |
+| `classes` | In `capacity-model/v1`'s and `store-aggregate/v1`'s `refusal`: how many host classes the store holds. More than one is why no fleet-wide or blended figure is published. |
+| `by_reason` | In `excluded`: how many runs were left out for each distinct reason. "We had nine runs" and "we had nine and threw two away" are different claims. |
+| `sets`, `unstamped_runs`, `mixed` | In `contract_composition`: each distinct contract set found with how many runs carry it, runs whose producer recorded no contracts — an explicit unknown, never read as agreement — and whether more than one set is present. |
+| `measured_total` | In `store_bytes`: the subset of runs that did finish, which the distributions are computed over. |
+| `mixes` | In `blended`: how many host classes were mixed. 1 means nothing was. |
 
 ### What a build here costs (`UX-234`)
 

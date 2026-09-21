@@ -968,13 +968,21 @@ def report_figures(diff: str, skip=None) -> int:
 
 
 def working_diff() -> str:
-    """Staged and unstaged, against `HEAD`. Empty when git cannot answer."""
+    """Staged and unstaged, against `HEAD`. Empty when git cannot answer.
+
+    Decoded leniently rather than strictly: a diff touching a binary
+    file carries bytes no codec has to accept, and `UX-907`'s CAS
+    fixture - the tree's first - made `--move` crash on a
+    `UnicodeDecodeError` where the only reader is a grep for figures.
+    """
     try:
         done = subprocess.run(["git", "diff", "HEAD"], cwd=str(REPO),
-                              capture_output=True, text=True, timeout=60)
+                              capture_output=True, timeout=60)
     except OSError:
         return ""
-    return done.stdout if done.returncode == 0 else ""
+    if done.returncode != 0:
+        return ""
+    return done.stdout.decode("utf-8", "replace")
 
 
 def _closed_rows_left_open():

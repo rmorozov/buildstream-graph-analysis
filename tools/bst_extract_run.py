@@ -34,6 +34,7 @@ from pathlib import Path
 from typing import Optional
 
 from ._run_context_common import (
+    add_artifact_weights,
     add_build_class,
     add_build_class_arguments,
     add_cache_capacity,
@@ -221,6 +222,27 @@ def _read_ref_storage(project_dir: str):
     except yaml.YAMLError as e:
         raise RuntimeError(f"could not parse {project_conf_path} as YAML: {e}") from e
     return data.get("ref-storage", "inline")
+
+
+def _read_project_name(project_dir: str) -> Optional[str]:
+    """`project.conf`'s `name:`, the same minimal-YAML read
+    `_read_ref_storage` uses. `UX-907` needs it because BuildStream keys
+    an artifact ref on it (`element.py:3456`); `None` rather than a
+    guess, which would weigh an empty directory and call it an artifact.
+    """
+    try:
+        import yaml
+    except ImportError:
+        return None
+    project_conf_path = Path(project_dir) / "project.conf"
+    if not project_conf_path.exists():
+        return None
+    try:
+        data = yaml.safe_load(project_conf_path.read_text()) or {}
+    except yaml.YAMLError:
+        return None
+    name = data.get("name")
+    return str(name) if name else None
 
 
 def _read_bga_foundation(project_dir: str) -> Optional[list]:
@@ -463,6 +485,7 @@ def extract_run(
     foundation: Optional[list] = None,
     jobserver: Optional[dict] = None,
     cache_usage: bool = False,
+    artifact_weights: bool = False,
     build_type: Optional[str] = None,
     variant: Optional[dict] = None,
 ):
@@ -623,6 +646,12 @@ def extract_run(
     # too small to hold the project is otherwise indistinguishable from
     # a cache whose keys move.
     add_cache_capacity(run_context, with_usage=cache_usage)
+    # UX-907: and what each element's artifact weighs inside it. Under
+    # the same cachedir, off by default for the same reason - it walks
+    # the CAS - and separate from `--cache-usage` because they answer
+    # different questions: one sizes the cache, one ranks the elements.
+    if artifact_weights:
+        add_artifact_weights(run_context, _read_project_name(project_dir), graph)
     # UX-898/UX-903: and what build it was. Parity with
     # `tools/bst_run_context.py`, which UX-18 exists to keep.
     add_build_class(run_context, build_type=build_type, variant=variant)
@@ -1028,6 +1057,13 @@ def main() -> int:
         "that costs anything, and without it the block still carries the "
         "configured quota and the volume under it."
     )
+    parser.add_argument(
+        "--artifact-weights", action="store_true",
+        help="Walk each element's artifact in the local CAS to record what it "
+        "weighs (UX-907). Off by default: it reads one blob per directory in "
+        "every artifact. BuildStream publishes no such number - the one key "
+        "that looks like it renders the root proto's own length."
+    )
     args = parser.parse_args()
 
     declared = build_class_from_args(args)
@@ -1049,6 +1085,7 @@ def main() -> int:
             # printed produced a run that had forgotten it was partial.
             interrupted=args.interrupted,
             cache_usage=args.cache_usage,
+            artifact_weights=args.artifact_weights,
             build_type=build_type,
             variant=variant,
         )

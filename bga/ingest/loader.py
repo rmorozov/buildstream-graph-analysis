@@ -68,6 +68,7 @@ def load_run_context(path: Path) -> RunContext:
         timestamp_agreement=data.get('timestamp_agreement'),
         jobserver=data.get('jobserver'),
         cache_capacity=data.get('cache_capacity'),
+        artifact_weights=data.get('artifact_weights'),
     )
 
 

@@ -219,6 +219,48 @@ def _transfer_bytes(network_bytes: Optional[dict]) -> dict:
     return {'rx': rx, 'tx': tx, 'total': rx + tx, 'source': 'host_counters'}
 
 
+def compute_artifact_weights(run_context, top: int = 5) -> dict:
+    """UX-907: what this project's artifacts weigh, per element.
+
+    `compute_cache_capacity` above says how big the cache is;
+    this says what one element puts in it. BuildStream 2.8.0 publishes
+    no such figure - `%{artifact-cas-digest}` renders the root
+    `Directory` proto's own length - so `bga/artifact_weight.py` walks
+    the CAS the refs point into and every byte here came from that walk.
+
+    `heaviest` is the ranking R2 asks for. `walked_bytes` sums the rows
+    and `run_unique_bytes` walks them under one seen-set, so the first
+    exceeds the second by whatever the artifacts share: an element's own
+    weight is what it would need alone, not its marginal cost in a cache
+    that already holds its neighbours. `{}` when nothing was walked.
+    """
+    recorded = getattr(run_context, 'artifact_weights', None) or {}
+    rows = recorded.get('elements') or {}
+    walked = {uid: row for uid, row in rows.items()
+              if row.get('source') == 'cas_walk' and row.get('files_bytes') is not None}
+    if not walked:
+        return {}
+    unique = recorded.get('run_unique_bytes')
+    total = sum(row['files_bytes'] for row in walked.values())
+    ranked = sorted(walked.items(), key=lambda item: -item[1]['files_bytes'])
+    return {
+        'source': 'cas_walk',
+        'elements_walked': len(walked),
+        'elements_unweighed': len(rows) - len(walked),
+        'walked_bytes': total,
+        'run_unique_bytes': unique,
+        # What the rows double-count: the bytes more than one artifact
+        # holds. `None` rather than zero when the walk recorded no
+        # deduplicated total to subtract from.
+        'shared_bytes': (total - unique) if isinstance(unique, int) else None,
+        'heaviest': [
+            {'element': uid, 'files_bytes': row['files_bytes'],
+             'buildtree_bytes': row.get('buildtree_bytes')}
+            for uid, row in ranked[:top]
+        ],
+    }
+
+
 def compute_cache_accounting(
     run_context, graph=None, tasks=None, total_duration_us: Optional[int] = None,
     network_bytes: Optional[dict] = None,
@@ -235,8 +277,14 @@ def compute_cache_accounting(
     # so a capture that recorded it is worth a block even where no
     # Pipeline Summary says what the queues did.
     capacity = compute_cache_capacity(run_context)
+    # UX-907: the per-element half, beside the host-level one and on the
+    # same terms - a capture that walked the CAS gets a block whether or
+    # not the log says what the queues did.
+    weights = compute_artifact_weights(run_context)
+    machine = {key: block for key, block in
+               (('capacity', capacity), ('artifact_weights', weights)) if block}
     if not build and not fetch:
-        return {'capacity': capacity} if capacity else {}
+        return machine
 
     built = build.get('processed')
     cached = build.get('skipped')
@@ -297,8 +345,7 @@ def compute_cache_accounting(
                 (len(closure) - len(in_closure_built)) / len(closure) if closure else None
             ),
         }
-    if capacity:
-        accounting['capacity'] = capacity
+    accounting.update(machine)
     return accounting
 
 

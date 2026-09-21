@@ -20,14 +20,14 @@ Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
-| capture | 6 | 140 |
-| analysis | 1 | 121 |
+| capture | 5 | 140 |
+| analysis | 2 | 121 |
 | contracts | 0 | 52 |
 | viewer | 0 | 177 |
 | cli | 0 | 22 |
 | store | 1 | 17 |
 | docs | 1 | 146 |
-| guards | 9 | 241 |
+| guards | 8 | 241 |
 
 ## Open scenarios
 
@@ -45,9 +45,7 @@ task file, which is the only place it ever lived twice.
 | UX-904 | [nothing prices N separate CI builds against one junctioned invocation](UX-0904-separate-invocations-or-one-junctioned-build.md) | analysis | High | R5, R3, R4, R6 | 🔴 Not Started |
 | UX-905 | [the jobserver has no compile-bound project at the scale it is meant for](UX-0905-the-jobserver-has-no-compile-bound-project-at-scale.md) | capture | High | R5, R4, R2 | 🔴 Not Started |
 | UX-906 | [the jobserver's corner cases live in twelve task files and no register](UX-0906-the-jobservers-corner-cases-are-a-register-not-a-memory.md) | capture | Medium | R2, R5, R4 | 🔴 Not Started |
-| UX-907 | [an artifact's weight has no cheap source](UX-0907-an-artifacts-weight-has-no-cheap-source.md) | capture | Medium | R2, R5 | 🔴 Not Started |
 | UX-908 | [the drawing-grade guard has three unconfirmed CI excursions, and they are rising](UX-0908-the-drawing-grade-guard-excurses-three-times-and-rising.md) | guards | Medium | the round whose push gate is blocked | 🔴 Not Started |
-| UX-909 | [the documentation guard cannot see a published block's own keys](UX-0909-the-documentation-guard-cannot-see-a-blocks-own-keys.md) | guards | Medium | R1, R3 | 🔴 Not Started |
 | UX-912 | [the timing reference is unrepresentative on four files, and branches pay for it](UX-0912-the-timing-reference-is-unrepresentative-and-branches-pay-for-it.md) | guards | High | every branch charged for a cost main carries | 🔴 Not Started |
 | UX-914 | [the examples' sysroot is the host's own /usr/bin](UX-0914-the-examples-sysroot-is-the-hosts-so-the-examples-measure-the-host.md) | guards | High | every example, and every reading taken from one | 🔴 Not Started |
 | UX-915 | [the examples stage the host's own make, so `--jobserver auto` has never met a make 4.4](UX-0915-the-examples-stage-the-hosts-make-so-auto-never-meets-a-4-4.md) | guards | High | every example whose element joins the jobserver | 🔴 Not Started |

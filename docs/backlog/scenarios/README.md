@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-910 scenarios: **19 open**, 891 closed.
+912 scenarios: **21 open**, 891 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -27,7 +27,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | cli | 0 | 22 |
 | store | 1 | 17 |
 | docs | 1 | 146 |
-| guards | 6 | 236 |
+| guards | 8 | 238 |
 
 ## Open scenarios
 
@@ -55,6 +55,8 @@ task file, which is the only place it ever lived twice.
 | UX-912 | [the timing reference is unrepresentative on four files, and branches pay for it](UX-0912-the-timing-reference-is-unrepresentative-and-branches-pay-for-it.md) | guards | High | every branch charged for a cost main carries | 🔴 Not Started |
 | UX-913 | [the jobserver scrubs itself off every cmake element under a make-4.3 sandbox](UX-0913-the-jobserver-scrubs-itself-off-every-cmake-element-under-make-43.md) | guards | High | every example whose sandbox ships GNU Make 4.3 | 🔴 Not Started |
 | UX-914 | [the examples' sysroot is the host's own /usr/bin](UX-0914-the-examples-sysroot-is-the-hosts-so-the-examples-measure-the-host.md) | guards | High | every example, and every reading taken from one | 🔴 Not Started |
+| UX-915 | [the examples stage the host's own make, so `--jobserver auto` has never met a make 4.4](UX-0915-the-examples-stage-the-hosts-make-so-auto-never-meets-a-4-4.md) | guards | High | every example whose element joins the jobserver | 🔴 Not Started |
+| UX-916 | [only one make is ever staged, so the version switch has one live branch](UX-0916-only-one-make-is-staged-so-the-version-switch-has-one-live-branch.md) | guards | Medium | every host that runs the examples, whatever its own make | 🔴 Not Started |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

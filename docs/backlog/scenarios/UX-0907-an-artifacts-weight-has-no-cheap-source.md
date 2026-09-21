@@ -123,10 +123,9 @@ narrowed rather than moved - the proxy must still never land among
 host-level numbers - and renamed `..._still_claims_...`.
 
 One defect fell out of the fixture rather than the feature:
-`dev_close_task.py --move` crashed on a `UnicodeDecodeError`, because
+`dev_close_task.py --move` crashed on a `UnicodeDecodeError` because
 `working_diff()` decoded `git diff HEAD` strictly and this is the
-tree's first binary fixture. Decoded with `errors="replace"` now - the
-only reader is a grep for figures.
+tree's first binary fixture. `errors="replace"` now.
 
 **Not closed.** No committed capture produces `artifact-weight`: the
 block is walked from the capture host's own cache, and every fixture
@@ -135,5 +134,6 @@ rather than a covered one. `tests/fixtures/cas_artifact` is a real
 BuildStream CAS and guards the walk, but it is not a capture. The
 scaling to a 1,202-element run is arithmetic on 137us/dir, not a
 reading: nothing here measured a real project's directory count.
-`UX-919` was filed along the way - `main` was red at `70765b09` on an
-unfiled flake excursion, which blocked this row's push gate.
+`main` was red at `70765b09` on an unfiled flake excursion, blocking
+this row's push gate; `#248`'s `UX-917` is taken verbatim rather than a
+third id invented for one defect, as `#250` also did.

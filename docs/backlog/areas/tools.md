@@ -229,4 +229,4 @@ Mechanism: [docs/design/areas/tools.md](../../design/areas/tools.md)
 | [UX-914](../scenarios/UX-0914-the-examples-sysroot-is-the-hosts-so-the-examples-measure-the-host.md) | guards |
 | [UX-915](../scenarios/UX-0915-the-examples-stage-the-hosts-make-so-auto-never-meets-a-4-4.md) | guards |
 | [UX-916](../scenarios/UX-0916-only-one-make-is-staged-so-the-version-switch-has-one-live-branch.md) | guards |
-| [UX-919](../scenarios/UX-0919-the-fold-guard-has-three-unconfirmed-excursions.md) | guards |
+| [UX-917](../scenarios/UX-0917-the-fold-depth-guard-has-three-unconfirmed-excursions.md) | guards |

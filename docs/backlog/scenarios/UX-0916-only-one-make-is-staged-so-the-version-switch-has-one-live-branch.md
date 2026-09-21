@@ -61,8 +61,7 @@ scrubbed auth under either arm.
 CI run reads the two arms.
 
 **Both makes are staged.** The same channel carries 4.2.1 beside
-4.4.1, both `x86_64`, both referencing one glibc, so the second pin
-costs one 247 KB nar:
+4.4.1, both `x86_64`, one glibc, so the second pin costs one 247 KB nar:
 
 ```text
 $ examples/stage_cpp_toolchain.sh | head -3
@@ -71,10 +70,9 @@ Pinned GNU Make 4.4.1 from /nix/store/fnvsac4yaw2146ig4p54xnnm6b6alkjw-gnumake-4
   staged GNU Make 4.4.1 as /usr/lib/bga-make/4.4/make
 ```
 
-The selection mechanism is that alias, not a store path: an element
-puts `/usr/lib/bga-make/4.2` ahead of `/usr/bin` on its own `PATH`, so
-a `.bst` file names a version series and survives a pin bump. The
-sysroot grew 270M → 272M.
+The selection is that alias, not a store path: an element puts
+`/usr/lib/bga-make/4.2` ahead of `/usr/bin` on its own `PATH`, so a
+`.bst` file names a series and survives a pin bump. Sysroot 270M → 272M.
 
 **The selection is visible in the report.** A probed element's
 `jobserver_decisions` row now carries `sandbox_make` (the sandbox
@@ -82,7 +80,16 @@ sysroot grew 270M → 272M.
 decisions file is copied out of the capture, because the probe cache is
 keyed on the FIFO's dirname and `close_jobserver` removes it before
 report assembly. An unprobed element is written through unchanged: a
-null would say "probed, and no make", which is a different fact.
+null would say "probed, and no make", which is a different fact. Read
+back off a real capture, `bst-examples` on `33884772`:
+
+```text
+core.bst decision: {'auth_style': 'fifo', 'kind': 'cmake',
+ 'policy': 'cmake_meson', 'sandbox_make': 'GNU Make 4.4.1\n...'}
+```
+
+That `\n...` is `probe_make` caching `make --version`'s whole stdout;
+only the first line lands in a row now.
 
 **The two arms are `cmake`, which `UX-913` is what makes possible.**
 Under `--jobserver auto` the resolved auth is `fd` (`UX-876`), so
@@ -97,11 +104,10 @@ $ grep -n "_FD_DIRECT_POLICIES" tools/native_trace/bwrap_shim.py
 
 so a `cmake` arm on 4.2.1 keeps its raw `fd` rather than being
 scrubbed, and `lto_preflight_warnings` prints `keeps its jobserver
-auth` where it printed `scrubbed to recipe -jN` — the line
+auth` where it printed the `scrubbed to recipe -jN` that
 `check_jobserver_width.py` fails on. An earlier draft of this Outcome
-read the pre-#248 tree, concluded the third clause was blocked and
-added a `Depends on: UX-913`; the reading was stale on the merged tree
-and both are withdrawn.
+read the pre-#248 tree, called the third clause blocked and added a
+`Depends on: UX-913`; both are withdrawn.
 
 `switch-4-4.bst` and `switch-4-2.bst` are that pair: identical `cmake`
 elements on `toolchain.bst` alone, differing only in the alias their
@@ -113,20 +119,19 @@ the one `auto` capture it already takes, so no workflow edit is needed.
 
 | mutation | guard | result |
 |---|---|---|
-| both series aliases on the 4.4 binary | `test_each_series_alias_runs_its_own_make` | 🔴 |
-| `auth_style` written as a constant | `test_a_4_2_sandbox_reads_fd` | 🔴 |
-| the enrichment dropped, rows copied | all three style clauses | 🔴 |
+| both aliases on the 4.4 binary | `test_each_series_alias_runs_its_own_make` | 🔴 |
+| `auth_style` a constant | `test_a_4_2_sandbox_reads_fd` | 🔴 |
+| the enrichment dropped | all three style clauses | 🔴 |
 | both arms' `PATH` on one alias | `..._selects_the_series_its_own_expectation_names` | 🔴 |
 | an arm dropped from `all.bst` | `test_both_arms_are_built` | 🔴 |
-| `check_switch` returns `None` unread | all five refusal rows | 🔴 |
+| `check_switch` returns unread | all five refusal rows | 🔴 |
 | a partial miss tolerated | `test_a_missing_arm_is_refused` (KeyError) | 🔴 |
-| the 4.2 pin dropped from `PINS` | `test_the_arms_and_the_pins_name_the_same_series` | 🔴 |
+| the 4.2 pin dropped | `test_the_arms_and_the_pins_name_the_same_series` | 🔴 |
 
 Reverted, 26 passed across the three files.
 
-**Deviation from the Required Fix.** The fix asks for "a 4.3 and a
-4.4"; this stages 4.2.1, which the channel carries and 4.3 it does
-not. Both sit below `UX-841`'s cutoff, the only property the switch
-reads, so the branch under test is the same one.
+**Deviation from the Required Fix.** It asks for "a 4.3 and a 4.4";
+this stages 4.2.1, which the channel carries and 4.3 it does not. Both
+sit below `UX-841`'s cutoff, the only property the switch reads.
 
 **Suite.** This branch's full run is in the pull request.

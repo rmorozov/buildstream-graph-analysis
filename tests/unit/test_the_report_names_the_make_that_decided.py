@@ -19,6 +19,17 @@ def _decision(element, policy="cmake_meson", kind="cmake"):
             "kind": kind, "policy": policy}
 
 
+#: What `probe_make` really caches - `make --version`'s whole stdout,
+#: copied from `bst-examples`' own run on `33884772`.
+REAL_PROBE = (
+    "GNU Make 4.4.1\n"
+    "Built for x86_64-pc-linux-gnu\n"
+    "Copyright (C) 1988-2023 Free Software Foundation, Inc.\n"
+    "License GPLv3+: GNU GPL version 3 or later <https://gnu.org/licenses/gpl.html>\n"
+    "This is free software: you are free to change and redistribute it.\n"
+    "There is NO WARRANTY, to the extent permitted by law.")
+
+
 def _capture(tmp_path, rows, probes):
     fifo = str(tmp_path / "jobserver")
     captured = str(tmp_path / "captured.jsonl")
@@ -45,6 +56,16 @@ class TestTheStyleIsReadableFromTheReport:
 
         assert rows[0]["sandbox_make"] == "GNU Make 4.2.1"
         assert rows[0]["auth_style"] == "fd"
+
+    def test_only_the_first_line_of_make_s_own_output_lands(self, tmp_path):
+        """`probe_make` caches `make --version`'s whole stdout, so the
+        first CI run to read this key published six lines of GPL notice
+        inside one JSON field (`bst-examples` on `33884772`). The style
+        still comes off the text the probe stored."""
+        rows = _capture(tmp_path, [_decision("a.bst")], {"a.bst": REAL_PROBE})
+
+        assert rows[0]["sandbox_make"] == "GNU Make 4.4.1"
+        assert rows[0]["auth_style"] == "fifo"
 
     def test_two_elements_on_two_makes_are_distinguishable(self, tmp_path):
         """The whole point of the row: one capture, both branches."""

@@ -340,7 +340,7 @@ tools/bga_view.py            the viewer's server and `--export`
 tools/bga_timeline.py        one trace, both planes
 tools/bst_baseline_set.py    assembling a baseline set from published refs
 tools/nix_store_fetch.py     the examples' pinned make, fetched and
-                         unpacked without Nix (UX-915 (open))
+                         unpacked without Nix (UX-915)
 tools/bst_show_to_graph.py, bst_rebuild_set.py, bst_checkout_cost.py,
 tools/bga_release_notes.py  a release body, generated from the closed rows (UX-252)
 tools/bga_cross_check.py, gen_synthetic_scale_run.py, chrome_trace_to_bga_trace.py,

@@ -1339,14 +1339,22 @@ def write_decisions_with_sandbox_make(captured: str, destination: str,
     This re-serialises rather than copying bytes, so a malformed line
     `read_jobserver_decisions` drops no longer reaches the destination.
     `read_jobserver_decisions` was already the only reader of that
-    file."""
+    file.
+
+    `probe_make` caches `make --version`'s whole stdout, six lines of
+    it, because `style_for_make_version` reads a version out of the
+    text and does not care where. A report row is read by a person, so
+    only the first line lands here; the style is still derived from
+    what the probe stored."""
     with open(destination, "w", encoding="utf-8") as handle:
         for row in read_jobserver_decisions(captured):
             probe = _read_make_probe(
                 _make_probe_cache_path(jobserver_fifo, row.get("element")))
             if probe.get("available"):
-                row = dict(row, sandbox_make=probe.get("version"),
-                          auth_style=style_for_make_version(probe.get("version")))
+                version = probe.get("version")
+                row = dict(row,
+                           sandbox_make=(version or "").splitlines()[0],
+                           auth_style=style_for_make_version(version))
             handle.write(json.dumps(row, sort_keys=True) + "\n")
 
 

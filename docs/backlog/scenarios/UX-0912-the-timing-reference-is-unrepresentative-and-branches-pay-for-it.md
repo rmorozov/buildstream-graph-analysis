@@ -19,6 +19,23 @@ over both gates on this run only:
   tests/unit/test_the_documented_invocations_parse.py  17.7s  against 9.2s   x1.63
 ```
 
+A third file joined them on `89f3edd3`, run `35578708249`, on the
+slowest runner any of these has seen:
+
+```text
+this run x1.18, 1 file(s) slower than ci_reference.json records:
+  tests/unit/test_the_size_ledger_only_shrinks.py  14.7s against 7.4s  x1.69
+```
+
+The obvious excuse does not apply. `POPULATION_CLASS` scales
+`expected` for a guard whose cost follows a directory's size, and two
+files are in it; this one is not a candidate, because it runs
+`dev_sizes.py` against a `tmp_path` package with a faked `pylint`
+rather than against the tree. Its cost follows how many subprocesses
+it launches - one per case - so a record taken when the file had fewer
+cases is stale for a reason the reading has to name before the number
+is adopted.
+
 The diff that run carried was four documentation files. Timed against
 a clean `origin/main` worktree on one machine, one interpreter, the
 two confirmed files read:
@@ -56,20 +73,56 @@ crossing the gates here is read as this branch's until one is (UX-803).
 
 `main` saves under `tier-carry-refs/heads/<default>-<run_id>` and the
 base restore asks for prefix `tier-carry-refs/heads/<default>-`, which
-should match. Whether the miss is cache scoping, eviction, or the key
-is **not established here and this row does not guess** — establishing
-it is the row's first task, because it decides whether the fix is a
-key, a save, or nothing at all.
+should match.
+
+**Narrowed, not settled.** Two of the three hypotheses are ruled out
+by four readings of `actions/cache` across three refs. Two of them are
+the *perf* carry - a different prefix through the same action and the
+same `<name>-<run_id>` key shape - because that is what the available
+logs show restoring; the tier carry's own same-ref restore is inferred
+from the gate reporting a two-consecutive-run window, not read:
+
+```text
+main  run 35536366563  step 16 "Leave it for the next run"  success 20:57:02
+main  run 35536366563  restore, own ref                     HIT
+        Cache hit for restore-key: perf-carry-refs/heads/main-35511368643
+#246  run 35564652560  restore, own ref                     HIT
+        Cache hit for restore-key: perf-carry-refs/pull/246/merge-35554538952
+#246  run 35569523700  restore, base ref                    MISS
+        Cache not found for input keys: tier-carry-refs/heads/main-,
+                                        tier-carry-refs/heads/main-
+```
+
+So the key's prefix form works — it is the form that hits, twice, on
+two different refs — and `main` does run its save step. **A restore
+succeeds within a ref and fails across one**, which leaves cache
+scoping and rules out the key and a missing save.
+
+The remaining unknown is *why* the cross-ref read is refused, and it
+is not answerable from here: this repository's tooling can read job
+logs but not the cache registry, so nothing available says whether the
+entry is scoped, evicted or simply unreadable from a `refs/pull/N/merge`
+run. **This row does not guess past that.**
+
+What it does change is the fix's shape. If the base carry can only
+arrive by a cross-ref cache read, `UX-803` is inert on every pull
+request for reasons outside this repository. A carry that travels by a
+means the repository controls — committed beside the reference, or
+published as an artifact the PR job downloads — does not depend on the
+answer.
 
 ## Required Fix
 
 Two parts, in this order, because the second is worthless without the
 first.
 
-**Establish the base-carry miss.** Read one PR run and the `main` run
-it should have restored from, and say which of scoping, eviction or
-the key itself accounts for it. `UX-803`'s excusal is inert on every
-pull request while this holds.
+**Decide how the base carry travels.** The Motivation narrows the miss
+to cross-ref cache scoping and says why the last step is not
+answerable from here. The decision this row owes is therefore not
+"which of the three" but whether to keep depending on a cross-ref
+cache read at all, against publishing `main`'s carry as an artifact
+the pull-request job downloads. `UX-803`'s excusal is inert on every
+pull request until one of them holds.
 
 It is the second gate, not the first. `over_gate` needs an absolute
 `seconds - expected >= CI_DRIFT_SECONDS` (5.0s), so a stale cell only
@@ -102,9 +155,10 @@ read — a grown cell is a defect before it is a number to adopt.
 
 ## Acceptance Test
 
-The miss is named: one sentence in the Outcome saying what accounts
-for `tier_carry_base.json` being absent, with the two run ids it was
-read from.
+The base carry arrives: one `test (3.11)` run on a pull request whose
+log reports a restored `tier_carry_base.json` rather than
+`no carry from the base branch's own runs reachable`, with the `main`
+run it came from named in the Outcome.
 
 `tests/ci_reference.json` refreshed from a CI artifact, and one
 `test (3.11)` run on a branch carrying only this change reporting

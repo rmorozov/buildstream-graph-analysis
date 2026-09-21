@@ -1,6 +1,6 @@
 # UX-918: the wrapper shims open on `dirname`, which a staged-toolchain sandbox has not got
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-846, UX-880, UX-913 | **Found by:** UX-913's first design, measured red on run 35610762079 — nine cmake elements compiled through a shim they could not source | **Serves:** any element that drives LTO under a jobserver, and every future wrapper | **Topic:** guards | **Area:** tools | **Shape:** judgement
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-846, UX-880, UX-913 | **Found by:** UX-913's first design, measured red on run 35610762079 — nine cmake elements compiled through a shim they could not source | **Serves:** any element that drives LTO under a jobserver, and every future wrapper | **Topic:** guards | **Area:** tools | **Shape:** judgement
 
 ## Motivation
 
@@ -64,4 +64,46 @@ cmake element.
 
 ## Outcome
 
-Not started.
+**The gap measured.** Every wrapper died at source time on a staged
+sandbox. Run with `PATH` holding only what
+`examples/stage_cpp_toolchain.sh:36` stages:
+
+```text
+tools/native_trace/wrappers/lld: 6: dirname: not found
+tools/native_trace/wrappers/lld: 6: .: cannot open .../_common.sh: No such file
+5 failed, 6 passed
+```
+
+The new guard found a **second copy of the defect this row was filed
+for**: the five held-tool wrappers each carried their own `dirname` on
+line 6, before `_common.sh` was sourced at all. Only the four `flto/`
+shims already used `${0%/*}`. The row was filed against the library; it
+was the library and the five wrappers.
+
+**The close measured.** `_common.sh`: `${0%/*}`/`${0##*/}` for
+`dirname`/`basename`, `bga_marks_self` (a bounded three-line `read`
+loop) for `head -3 | grep -q`, and `date +%s.%N 2>/dev/null || echo 0`
+in the ledger. The five held-tool wrappers take the same `${var%/*}`
+form the shims had. `readlink -f` and `nproc` were already guarded.
+
+```text
+11 passed in 0.14s          the new guard
+52 passed, 1 skipped        the six neighbouring wrapper guards
+```
+
+**The mutation table.** One mutation, one claim:
+
+| mutation | guard that reddened |
+|---|---|
+| `bga_tool=$(basename -- "$0")` | all 11 — source-time death |
+| `head -3 \| grep -q "UX-846"` restored | `test_the_recursion_marker_is_still_read_with_no_grep` only |
+| `_bga_dir=$(dirname -- "$_bga_self")` in `ninja` | `...[ninja]` only |
+
+**The deviation.** The Acceptance Test also asked that `examples/06`
+build green with `flto_active` forced on for every cmake element. That
+is not run here: this session has no `bwrap` and no `bst`, so the only
+instrument for it is CI, and forcing `flto_active` back on is the
+re-widening this row's Out of Scope forbids. What is established is
+that the shims now *run* on the staged toolchain; whether re-widening
+`_FD_DIRECT_POLICIES` is right is the separate decision that Out of
+Scope names, and it needs the `UX-884` LTO fixture to be worth taking.

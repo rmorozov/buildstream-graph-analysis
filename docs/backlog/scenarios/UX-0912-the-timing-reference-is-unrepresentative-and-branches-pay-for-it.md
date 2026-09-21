@@ -2,6 +2,74 @@
 
 **Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-442, UX-476, UX-503, UX-803 | **Found by:** round 132 — one `test (3.11)` run reported four files whose records the runner disagrees with, none named by the diff | **Serves:** every branch charged for a cost `main` carries | **Topic:** guards | **Area:** tools | **Shape:** judgement
 
+## What the gate actually costs, measured 2026-09-21
+
+The tier gate is not a nuisance on the side of the run. It **suppresses
+the jobserver measurement entirely**, and that went unread for two runs
+of `#248`.
+
+`bst-examples` — the job that builds `examples/11-serial-giant` in both
+arms and prints `giant.bst`'s peak width, the only instrument that can
+close `UX-913` — declares:
+
+```yaml
+bst-examples:
+  needs: [test, bst-smoke]
+```
+
+with no `if: always()`. So any red in the `test` matrix skips it. On run
+35617305041 the suite passed (`9031 passed, 172 skipped`) and only the
+tier gate failed, on one file the branch does not touch:
+
+```text
+tests/unit/test_the_documented_invocations_parse.py 16.7s against 9.2s recorded, x1.53
+```
+
+and the job list records the consequence:
+
+```text
+bst-examples          skipped
+bst-tests             skipped
+bst-smoke             skipped
+flake-ledger-adopt    skipped
+tier-reference-adopt  skipped
+touch-map-adopt       skipped
+```
+
+`ci.yml:1141` calls `bst-examples` "not correctness-gating (a failure
+here doesn't mean ...)". The dependency is the other way round: a gate
+that **can only read runner noise** (`CI_DRIFT_SECONDS`' 5s floor, and
+`UX-908`'s own record of six runs landing on both sides) decides whether
+the corner-case data is gathered at all. The three adopt jobs are the
+same shape, so a noisy run also stops `main` from adopting the reference
+that would have excused it — the miss feeds itself.
+
+**Two separable defects, and the second is cheap.** The base-carry miss
+below is the reason the branch is charged. But `bst-examples` being
+downstream of it is independent of who pays, and would be fixed by the
+`always()` that the steps immediately either side of the gate already
+carry:
+
+```yaml
+- name: The branch's own diff, ...      if: always() && matrix... == '3.11'
+- name: Tiers match CI's own record ... if: matrix... == '3.11'       # <- no always()
+- name: Leave it for the next run       if: always() && matrix... == '3.11'
+```
+
+**Retracted before it was written down.** "Main never saves a base
+carry" was the first hypothesis and it is false. Run 35605347763's
+`test (3.11)` job records step 15 `Tiers match CI's own record of them`
+**success** and step 16 `Leave it for the next run` **success**, at
+13:5x; `#248`'s run at 15:12 still reported no reachable base carry
+~70 minutes later. `carry()`'s own docstring says it is written on every
+`--against` run "including the runs that find nothing", so a clean main
+run leaves one too. What a red main run does skip is the gate step —
+7 of the last 12 `main` push runs failed — but a prefix `restore-keys`
+would fall back to an older carry, so sparseness alone cannot produce
+"not found". The reachability question is still open, and the Actions
+caches API is 403 through the agent proxy, so it needs either a run that
+prints the cache id or an owner-side read.
+
 ## Motivation
 
 `UX-911` is one file. This is the population it sits in. One run,

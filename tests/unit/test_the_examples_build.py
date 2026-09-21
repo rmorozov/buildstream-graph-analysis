@@ -25,7 +25,6 @@ one-liner - `UX-354`) against the junctioned cmake element's
 unjunctioned element name, which the same script refuses.
 """
 import json
-import os
 import re
 import subprocess
 import sys
@@ -181,81 +180,140 @@ def test_the_ci_steps_11_own_wall_assertion_matches_real_compare_output():
     assert re.search(pattern, result.stdout), result.stdout
 
 
-def _extract_ordering_check(step):
-    """UX-857's own addition past UX-848's wall assertion - the `read -r
-    ... awk ...` block that fails the step when `auto` is not under
-    `off`, verbatim from the step's own `run:` block."""
-    body = step[step.index("run: |"):]
-    return body[body.index("read -r OFF_WALL"):]
+CHECK_WIDTH_SCRIPT = (REPO_ROOT / "examples" / "11-serial-giant"
+                      / "check_jobserver_width.py")
+
+#: `lto_preflight_warnings`' real line, verbatim.
+SCRUB_LINE = ("Warning: giant.bst scrubbed to recipe -jN (sandbox make "
+              "<4.4); move it to make >=4.4 for fifo pool-fill, or force "
+              "fd/flto (UX-879/880)\n")
 
 
-def _run_ordering_check(step, compare_text, tmp_path):
-    """Runs the step's own extracted fragment against a real file at the
-    `$OUT/compare-off-vs-auto.txt` path it names - not a paraphrase of
-    the shell, the shell itself."""
-    out_dir = tmp_path / "out"
-    out_dir.mkdir()
-    (out_dir / "compare-off-vs-auto.txt").write_text(compare_text)
-    env = dict(os.environ, OUT=str(out_dir))
-    return subprocess.run(
-        ["bash", "-c", _extract_ordering_check(step)],
-        capture_output=True, text=True, env=env,
-    )
-
-
-def test_the_ci_steps_11_ordering_check_accepts_an_auto_under_off_reading(tmp_path):
-    """A synthetic pass case, deliberately not claimed as this box's own
-    reading - this box's own two real captures (UX-857's Outcome) read
-    `auto` at or above `off` both times, which is the refusal case
-    below, not this one. The ordering check must still accept the shape
-    it exists to pass: some `Total Duration` line with `auto` under
-    `off`."""
+def test_the_ci_step_11_goes_through_the_committed_width_check():
+    """UX-910 replaced the `awk ... auto < off` ordering assertion with
+    a width one. The step must name the committed script (UX-354 refuses
+    a `run:` block that subscripts this repository's own JSON itself),
+    tee the auto capture the scrub check reads, and no longer carry the
+    ordering `awk`."""
     step = _extract_ci_step(STEP_NAME_11)
-    synthetic_pass = (
-        "Verdict: IMPROVED  (total duration -1.19s, -1.5%, 81.04s -> 79.85s)\n"
-        "Certified Floors:\n"
-        "  Total Duration           81.04s ->     79.85s   (-1.19s)\n"
+    body = step[step.index("run: |"):]
+    assert "check_jobserver_width.py" in body
+    assert CHECK_WIDTH_SCRIPT.is_file()
+    assert 'tee "$OUT/capture-auto.txt"' in body
+    assert "auto < off" not in body
+    # UX-848's wall survives as a recorded number, not an assertion.
+    assert 'echo "off=${OFF_WALL}s auto=${AUTO_WALL}s"' in body
+
+
+def _run_width_check(off_row, auto_row, element, tmp_path, scrub=False):
+    off_path = tmp_path / "plane2-off.json"
+    auto_path = tmp_path / "plane2-auto.json"
+    log_path = tmp_path / "capture-auto.txt"
+    off_path.write_text(json.dumps({"per_element_parallelism": [off_row]}))
+    auto_path.write_text(json.dumps({"per_element_parallelism": [auto_row]}))
+    log_path.write_text(
+        "bga capture: 4 elements\n" + (SCRUB_LINE if scrub else ""))
+    return subprocess.run(
+        [sys.executable, str(CHECK_WIDTH_SCRIPT), str(off_path),
+         str(auto_path), element, str(log_path)],
+        capture_output=True, text=True,
     )
 
-    result = _run_ordering_check(step, synthetic_pass, tmp_path)
+
+def _row(peak, width=2):
+    return {"element": "giant.bst", "peak_work_concurrency": peak,
+            "resolved_jobs": width, "jobs_denominator": "graph"}
+
+
+def test_the_width_check_accepts_a_granted_pool(tmp_path):
+    """The reading this example was built to show: `off` held its two,
+    `auto` reached four."""
+    result = _run_width_check(_row(2), _row(4), "giant.bst", tmp_path)
 
     assert result.returncode == 0, result.stderr
+    assert "off peak 2, auto peak 4, resolved width 2" in result.stdout
+    assert "auto exceeded its resolved width of 2 (UX-913)" in result.stdout
 
 
-def test_the_ci_steps_11_ordering_check_refuses_this_box_s_own_real_capture(tmp_path):
-    """UX-857's Acceptance Test mutation for this new check, satisfied
-    by a real reading rather than a synthetic one: this box's own two
-    back-to-back captures at 9800 lines/file both read `auto` at 163.14s
-    against `off`'s 147.16s (REGRESSED +10.9%, reproduced twice) - the
-    step's own ordering check must fail the step on exactly that text,
-    not pass it silently."""
-    step = _extract_ci_step(STEP_NAME_11)
-    real_regressed_output = (
-        "Verdict: REGRESSED  (total duration +15.98s, +10.9%, 147.16s -> 163.14s)\n"
-        "Certified Floors:\n"
-        "  Total Duration          147.16s ->    163.14s   (+15.98s)\n"
-    )
+def test_the_width_check_passes_the_reading_on_record_and_says_so(tmp_path):
+    """Today's real reading, `peak 2` under both arms with the auth kept
+    (`a14ba0c1`'s annotation): it passes, because a pool that is
+    reachable and undrawn is `UX-913`'s open question and not this
+    step's regression. What the step owes a reader is that it says so
+    rather than reporting green and nothing else."""
+    result = _run_width_check(_row(2), _row(2), "giant.bst", tmp_path)
 
-    result = _run_ordering_check(step, real_regressed_output, tmp_path)
+    assert result.returncode == 0, result.stderr
+    assert "auto did not exceed its resolved width of 2 (UX-913)" in result.stdout
+
+
+def test_the_width_check_says_so_when_no_resolved_width_is_published(tmp_path):
+    """The `auto` arm has been seen publishing no resolved width at all
+    (`req ?` in the per-element table). A missing width must read as
+    missing: folding it into the same sentence as a width nothing
+    exceeded would report `auto peak 4` against `off`'s 2 as the pool
+    going undrawn, which is the defect this whole row is about, in the
+    other direction."""
+    result = _run_width_check(_row(2, width=None), _row(4), "giant.bst",
+                              tmp_path)
+
+    assert result.returncode == 0, result.stderr
+    assert "resolved width unknown" in result.stdout
+    assert "no resolved width was published" in result.stdout
+    assert "auto ran wider than off (4 against 2)" in result.stdout
+    # The reading it must not make: there is no width to exceed.
+    assert "resolved width of" not in result.stdout
+
+
+def test_the_width_check_does_not_read_a_peak_under_its_width_as_a_draw(tmp_path):
+    """`off`'s measured peak is a weaker denominator than the resolved
+    width, and reaching for it when the width is there would call
+    `auto` 2 against `off` 1 a pool draw - when 2 is exactly the width
+    the recipe already asked for and no token was needed."""
+    result = _run_width_check(_row(1), _row(2), "giant.bst", tmp_path)
+
+    assert result.returncode == 0, result.stderr
+    assert "auto did not exceed its resolved width of 2 (UX-913)" in result.stdout
+    assert "wider than off" not in result.stdout
+
+
+def test_the_width_check_refuses_a_scrubbed_auth(tmp_path):
+    """`UX-913`'s own defect, which ran silently under eight off/auto
+    pairs: the capture printed this line four times a run and the step
+    asserted a wall instead of reading it."""
+    result = _run_width_check(_row(2), _row(2), "giant.bst", tmp_path,
+                              scrub=True)
 
     assert result.returncode != 0
-    assert "is not under" in result.stdout + result.stderr
+    assert "scrubbed an auth" in result.stderr
 
 
-def test_the_ci_steps_11_ordering_check_refuses_a_tie(tmp_path):
-    """`auto == off` is not `auto` under `off` either - the check's own
-    `<`, not `<=`, must refuse a tie rather than pass it."""
-    step = _extract_ci_step(STEP_NAME_11)
-    tied_output = (
-        "Verdict: NO SIGNIFICANT CHANGE  (total duration +0.00s, +0.0%, 100.00s -> 100.00s)\n"
-        "Certified Floors:\n"
-        "  Total Duration          100.00s ->    100.00s   (+0.00s)\n"
-    )
-
-    result = _run_ordering_check(step, tied_output, tmp_path)
+def test_the_width_check_refuses_auto_narrower_than_off(tmp_path):
+    """Width is an integer read off process overlap, so unlike the wall
+    this direction is a result and not a coin flip."""
+    result = _run_width_check(_row(2), _row(1), "giant.bst", tmp_path)
 
     assert result.returncode != 0
-    assert "is not under" in result.stdout + result.stderr
+    assert "narrower than off" in result.stderr
+
+
+def test_the_width_check_refuses_an_off_arm_over_its_resolved_width(tmp_path):
+    """`off` joins no pool, so a baseline wider than the width the graph
+    resolved is the baseline being something else."""
+    result = _run_width_check(_row(3), _row(4), "giant.bst", tmp_path)
+
+    assert result.returncode != 0
+    assert "wider than its resolved width" in result.stderr
+
+
+def test_the_width_check_refuses_an_element_neither_arm_carries(tmp_path):
+    """The `12-junctioned` mutation, applied here: point it at a name no
+    row carries and it must refuse rather than read the row that is
+    there for a different element."""
+    result = _run_width_check(_row(2), _row(4), "leaf-a.bst", tmp_path)
+
+    assert result.returncode != 0
+    assert "no per_element_parallelism row" in result.stderr
 
 
 # --- UX-872: examples/12-junctioned's own step ---------------------------

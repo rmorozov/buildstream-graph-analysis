@@ -1,6 +1,6 @@
 # UX-910: the serial-giant gate asserts an unbanded inequality the jobserver cannot satisfy
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-857, UX-905 | **Found by:** round 132 — `bst-examples` is red on `main` at `395ebdc0` and at `6e410ab7`, both times on the same step, so every branch inherits it; `UX-857`'s own step comment pre-authorised the remedy | **Serves:** every round whose CI is red for a reason its diff did not cause | **Topic:** guards | **Area:** tools | **Shape:** mechanical
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-857, UX-905 | **Found by:** round 132 — `bst-examples` is red on `main` at `395ebdc0` and at `6e410ab7`, both times on the same step, so every branch inherits it; `UX-857`'s own step comment pre-authorised the remedy | **Serves:** every round whose CI is red for a reason its diff did not cause | **Topic:** guards | **Area:** tools | **Shape:** mechanical
 
 ## Motivation
 
@@ -75,76 +75,119 @@ answer arrives as a coin-flipping pipeline.
 
 ## Required Fix
 
-Drop the ordering check from the step; keep the wall assertion
-(`UX-848`'s), the `off=…s auto=…s` line and the uploaded artifacts, so
-every run still records both numbers for a reader. The three guards in
-`tests/unit/test_the_examples_build.py` that exercise the extracted
-`awk` fragment go with it — a guard over a removed assertion is not a
-guard — replaced by one holding that the step still prints both walls.
-`10-jobserver`'s step (`UX-848`) is the shape to match: it greps for
-the walls and asserts no ordering.
+**Replace the assertion, do not remove it.** The step's defect is not
+only that its inequality is unbanded; it is that it asserts on **wall**,
+which is a proxy for the thing the step names. That is the instrument
+shape `CLAUDE.md` warns about, and it is why eight pairs taught nothing.
+Width is an integer read off process overlap, so it carries a direction
+a 218-second wall cannot.
 
-Banding it instead is not available today, and the same-sha pair is
-why: a bare re-run of `d64d67f2` moved `auto` by 1.0% with nothing
-changed, so ±1% is already inside this example's idle variance on one
-machine class, before the other class is considered at all. `bga
-compare`'s own ±1% would also still fail the +2.2% pair, which the
-step cannot decline to run on. A band has to be chosen against a
-measured spread, and the six pairs above are the only ones there are.
+`examples/11-serial-giant/check_jobserver_width.py`, a committed module
+because `UX-354` refuses a `run:` block that subscripts this
+repository's own JSON, takes both `plane2.json` reports and the `auto`
+capture's own log. Three assertions, each able to fail only on
+something real:
 
-Removing the gate is not a verdict that the jobserver is fine, and this
-task must not be read as one. The six readings say nothing about the
-jobserver in either direction: their deltas are the example's own
-run-to-run spread, and `peak 2` holds on every one of them, so the
-example never granted the width whose effect the step was asserting.
-What the task decides is only that a strict inequality over two
-unbanded runs, in a step that already calls `bga compare` and then
-discards its banded verdict, cannot carry a result of any sign — it
-reports a coin flip as a broken pipeline, and blocks every unrelated
-round while it does.
+1. **the `auto` capture named no scrubbed auth.** `UX-883`'s
+   `lto_preflight_warnings` line is what `UX-913` was found by, and it
+   printed four times a run under all eight pairs while the step
+   asserted a wall instead of reading it;
+2. **`off` held its resolved width**, so the baseline is a baseline;
+3. **`auto` was never narrower than `off`.**
 
-The `peak 2` reading needs its own root cause: either the wrapper never
-rewrote the giant's `-j`, or it did and `make` declined the tokens, or
-`giant.bst`'s own `max-jobs: 2` caps the element below the ceiling of 4
-before the jobserver is consulted at all. That is not this task, and it
-must be filed before this one closes, because it is the question
-`11-serial-giant` was built to answer and it is currently answering
-nothing in a red pipeline nobody reads as a measurement. It belongs
-beside `UX-905`'s compile-bound project at scale and the three off/auto
-pairs on a 16-core host that Direction 20 already requires before the
-mode goes on by default.
+And one **reading, printed and not asserted**: whether `auto` exceeded
+the resolved width. That is `UX-913`'s second gate, and asserting it
+today would red `main` on a question this row does not own. The step
+prints it every run so the state is visible instead of implied.
+
+`UX-848`'s wall check survives unchanged - both walls are still
+computed, echoed as `off=…s auto=…s`, and uploaded. Only the ordering
+`awk` goes, and with it the three guards that exercised it: a guard
+over a removed assertion is not a guard.
 
 ## Out of Scope
 
-Diagnosing why the giant stayed at width 2 (its own row). Changing any
-jobserver default. Touching `10-jobserver`'s or `12-junctioned`'s steps.
-
-**And, explicitly: removing or banding the assertion is not the fix.**
-It is the unblock, and it is all the Required Fix above asks for today.
-A closed row whose subject is the jobserver reads, to a round with no
-other context, as "this was measured and found fine" — which is not
-what the six pairs say either. They say the example cannot tell. So
-this row does not close on a green job.
+Diagnosing why the giant stays at width 2 with the auth kept - that is
+`UX-913`'s second gate, and this row's printed reading is what makes it
+visible. Changing any jobserver default. Touching `10-jobserver`'s or
+`12-junctioned`'s steps. Banding a wall, which remains unavailable and
+is no longer wanted: the same-sha pair moved `auto` 0.99% with nothing
+changed, so a ±1% band sits inside the noise it would be drawn from.
 
 ## Acceptance Test
 
-Two parts, and the second is what lets the row close.
+`bst-examples` is green on a branch whose only change is this one, with
+`off=…s auto=…s` still in the log and both runs still uploaded.
 
-**The unblock.** `bst-examples` is green on a branch whose only change
-is this one, with `off=…s auto=…s` still in the step's log and both
-runs still uploaded; `python3 -m pytest
-tests/unit/test_the_examples_build.py -q` green, and a mutation
-removing the `off=`/`auto=` echo reddens the guard that replaces the
-three.
+`python3 -m pytest tests/unit/test_the_examples_build.py -q` is green,
+and six mutations redden six distinct guards: dropping each of the
+three assertions, dropping the `UX-913` reading, reading a row for an
+element neither arm carries, and removing the script's call from the
+step.
 
-**The close.** Either `11-serial-giant` reads `peak > 2` under `auto`
-on the runner — the fixture granting width, which is what the example
-was built to show — or a filed row establishes that it never could at
-`max-jobs: 2` and replaces the example with one that can. A band is
-not an alternative to either: choosing one needs the example's own
-spread measured on one sha, and the two attempts of `35541259164` are
-the only such pair on record. Until one of
-those, this row stays open with the assertion removed, which is the
-honest state: the tree is unblocked and the question is unanswered.
+The step must **pass** on today's real reading - `peak 2` under both
+arms with the auth kept - and say in its own output that the width was
+not granted. A check that greens silently on that reading would repeat
+the defect this row is about in the other direction.
 
 ## Outcome
+
+**The gap, measured.** Eight off/auto pairs on the CI runner, three
+branches, unchanged workflow code: -1.4%, +0.6%, +0.0%, +0.0%, +0.5%,
++0.04%, +2.2%, +1.0%. Six failed the step. The load-bearing one is the
+same-sha pair, two runs of an identical tree: `off` moved 0.52% and
+`auto` 0.99% with nothing differing, so a +-1% band sits inside the
+noise it would be drawn from. `peak_work_concurrency` read **2** on
+every one of the eight, so the example never granted the width whose
+effect the step asserted. `UX-883`'s `scrubbed to recipe -jN` line
+printed four times per run through all of it, unread - that line is
+what `UX-913` was eventually found by, and the step that existed to
+catch this defect was reading a wall instead.
+
+**The close, measured.** `examples/11-serial-giant/check_jobserver_width.py`
+replaces the ordering `awk`: three assertions (no scrubbed auth in the
+`auto` capture, `off` within its resolved width, `auto` never narrower
+than `off`) and one printed reading (whether `auto` exceeded the
+resolved width - `UX-913`'s second gate, deliberately not asserted).
+`UX-848`'s wall grep, the `off=...s auto=...s` echo and both uploads are
+untouched. The three guards over the removed `awk` are gone and eight
+replace them: `python3 -m pytest tests/unit/test_the_examples_build.py
+-q` reads **20 passed in 1.70s**, against 15 before.
+
+**The printed reading is two shapes, not one,** and the second was
+missed in the first draft. The `auto` arm has been seen publishing no
+resolved width at all (`req ?` in its per-element table), and the
+first version folded that into `did not exceed its resolved width` -
+which would have reported an `auto` peak of 4 against `off`'s 2 as a
+pool going undrawn. The width is the real denominator, so it leads
+when it is there; `off`'s measured peak is a labelled fallback only
+when it is not, because a peak under its own width says nothing.
+
+**The mutation table.** Nine applied, nine distinct guards red, no
+collateral:
+
+| mutation | guard reddened |
+|---|---|
+| `if scrubbed:` never fires | `test_the_width_check_refuses_a_scrubbed_auth` |
+| `if auto_peak < off_peak:` never fires | `test_the_width_check_refuses_auto_narrower_than_off` |
+| `if ... off_peak > width:` never fires | `test_the_width_check_refuses_an_off_arm_over_its_resolved_width` |
+| a missing row reads as absent | `test_the_width_check_refuses_an_element_neither_arm_carries` |
+| the `UX-913` reading is not printed | `test_the_width_check_accepts_a_granted_pool`, `..._passes_the_reading_on_record_and_says_so` |
+| the step's call to the script removed | `test_the_ci_step_11_goes_through_the_committed_width_check` |
+| a missing width reads as a width nothing exceeded | `test_the_width_check_says_so_when_no_resolved_width_is_published` |
+| `off`'s peak stands in for the resolved width | `test_the_width_check_passes_the_reading_on_record_and_says_so`, `..._does_not_read_a_peak_under_its_width_as_a_draw` |
+| the fallback comparison is read backwards | `test_the_width_check_says_so_when_no_resolved_width_is_published` |
+
+**Deviations, two.**
+
+The Required Fix this row was filed with asked for the assertion to be
+**removed**, and said in its own Out of Scope that removal is the
+unblock and never the fix. Ruslan chose replacement on 2026-09-21, and
+the row above was rewritten to it before any code was written. The
+earlier text is in `git log`; nothing here silently reinterprets it.
+
+The Acceptance Test's first clause - `bst-examples` green on a branch
+carrying only this change - is CI's to report, not this container's.
+There is no BuildStream sandbox here and the example is a ~218s build
+on a machine class this box is not. The six mutations and the guard
+count above are this box's; the step's own green is the CI run's.

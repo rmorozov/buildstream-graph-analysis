@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-911 scenarios: **17 open**, 894 closed.
+913 scenarios: **18 open**, 895 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -27,7 +27,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | cli | 0 | 22 |
 | store | 1 | 17 |
 | docs | 1 | 146 |
-| guards | 7 | 236 |
+| guards | 8 | 238 |
 
 ## Open scenarios
 
@@ -49,10 +49,11 @@ task file, which is the only place it ever lived twice.
 | UX-907 | [an artifact's weight has no cheap source](UX-0907-an-artifacts-weight-has-no-cheap-source.md) | capture | Medium | R2, R5 | 🔴 Not Started |
 | UX-908 | [the drawing-grade guard has three unconfirmed CI excursions, and they are rising](UX-0908-the-drawing-grade-guard-excurses-three-times-and-rising.md) | guards | Medium | the round whose push gate is blocked | 🔴 Not Started |
 | UX-909 | [the documentation guard cannot see a published block's own keys](UX-0909-the-documentation-guard-cannot-see-a-blocks-own-keys.md) | guards | Medium | R1, R3 | 🔴 Not Started |
-| UX-910 | [the serial-giant gate asserts an unbanded inequality the jobserver cannot satisfy](UX-0910-the-serial-giant-gate-asserts-an-unbanded-inequality.md) | guards | High | the round whose CI is red for a reason its diff did not cause | 🔴 Not Started |
 | UX-912 | [the timing reference is unrepresentative on four files, and branches pay for it](UX-0912-the-timing-reference-is-unrepresentative-and-branches-pay-for-it.md) | guards | High | every branch charged for a cost main carries | 🔴 Not Started |
 | UX-913 | [the jobserver scrubs itself off every cmake element under a make-4.3 sandbox](UX-0913-the-jobserver-scrubs-itself-off-every-cmake-element-under-make-43.md) | guards | High | every example whose sandbox ships GNU Make 4.3 | 🔴 Not Started |
 | UX-914 | [the examples' sysroot is the host's own /usr/bin](UX-0914-the-examples-sysroot-is-the-hosts-so-the-examples-measure-the-host.md) | guards | High | every example, and every reading taken from one | 🔴 Not Started |
+| UX-915 | [the examples stage the host's own make, so `--jobserver auto` has never met a make 4.4](UX-0915-the-examples-stage-the-hosts-make-so-auto-never-meets-a-4-4.md) | guards | High | every example whose element joins the jobserver | 🔴 Not Started |
+| UX-916 | [only one make is ever staged, so the version switch has one live branch](UX-0916-only-one-make-is-staged-so-the-version-switch-has-one-live-branch.md) | guards | Medium | every host that runs the examples, whatever its own make | 🔴 Not Started |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

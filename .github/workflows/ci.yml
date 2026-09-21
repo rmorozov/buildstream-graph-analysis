@@ -1560,9 +1560,10 @@ jobs:
         # UX-856's `bga snapshot --jobserver` landed the same round; this
         # step keeps `capture run` beside step 10's, one shape for both.
         #
-        # This box read auto over off twice at load 7-13; the assertion
-        # stands on the CI runner's own quiet reading - if it reds there,
-        # the reading is the finding, drop the assertion, keep the walls.
+        # UX-910: the assertion is on width, not wall. Eight off/auto
+        # pairs read -1.4%..+2.2% on a ~218s build whose same-sha spread
+        # is 1%, so an unbanded `auto < off` resolved the sign of the
+        # noise. `check_jobserver_width.py` carries what replaced it.
         run: |
           set -euo pipefail
           PROJ=examples/11-serial-giant
@@ -1572,16 +1573,19 @@ jobs:
 
           rm -rf ~/.cache/buildstream ~/.local/share/buildstream
           bga capture run --run-dir "$OUT/run-off" --jobserver off \
-            "$PROJ" "$OUT/plane2-off.json" -- bst build all.bst
+            "$PROJ" "$OUT/plane2-off.json" -- bst build all.bst \
+            2>&1 | tee "$OUT/capture-off.txt"
 
           rm -rf ~/.cache/buildstream ~/.local/share/buildstream
           bga capture run --run-dir "$OUT/run-auto" --jobserver auto \
-            "$PROJ" "$OUT/plane2-auto.json" -- bst build all.bst
+            "$PROJ" "$OUT/plane2-auto.json" -- bst build all.bst \
+            2>&1 | tee "$OUT/capture-auto.txt"
 
           bga compare "$OUT/run-off" "$OUT/run-auto" | tee "$OUT/compare-off-vs-auto.txt"
 
-          # UX-857's acceptance test: a wall for each run, and auto's
-          # under off's - the assertion this example exists for.
+          # UX-857's wall, still printed and uploaded for every run.
+          # UX-910 removed the ordering assertion over it; the
+          # assertion this example exists for is the width below.
           grep -qE 'Total Duration +[0-9.]+s +-> +[0-9.]+s' "$OUT/compare-off-vs-auto.txt" || {
             echo "compare did not print a wall for each run:" >&2
             cat "$OUT/compare-off-vs-auto.txt" >&2
@@ -1591,11 +1595,10 @@ jobs:
             gsub(/s/, "", $3); gsub(/s/, "", $5); print $3, $5; exit
           }' "$OUT/compare-off-vs-auto.txt")
           echo "off=${OFF_WALL}s auto=${AUTO_WALL}s"
-          awk -v off="$OFF_WALL" -v auto="$AUTO_WALL" 'BEGIN { exit !(auto < off) }' || {
-            echo "auto (${AUTO_WALL}s) is not under off (${OFF_WALL}s):" >&2
-            cat "$OUT/compare-off-vs-auto.txt" >&2
-            exit 1
-          }
+
+          python3 "$PROJ/check_jobserver_width.py" \
+            "$OUT/plane2-off.json" "$OUT/plane2-auto.json" \
+            giant.bst "$OUT/capture-auto.txt"
 
       - name: Build + capture 12-junctioned (UX-872)
         # UX-869/UX-871 were real first-day defects on the user's own

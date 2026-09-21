@@ -116,23 +116,50 @@ step read `off=218.52s auto=215.46s`, IMPROVED -1.4% — inside the
 unchanged, so the green gate is the coin flip landing heads and is
 **not** evidence for this row.
 
-So the scrub was necessary but not sufficient: there is a second gate
-between "the pool is reachable" and "`make` draws from it", and it is
-unidentified. `req 2` is `UX-894`'s static resolved width and cannot
-distinguish "make asked for two" from "make was granted two", so the
-printed table cannot answer it either.
+**RETRACTED by two later readings.** The paragraph that stood here
+said the scrub was necessary but not sufficient and that a second,
+unidentified gate sat between "the pool is reachable" and "`make`
+draws from it". Both arms of two later CI runs say otherwise:
 
-The three outcomes this section originally listed, kept because the
-first two remain open for the *next* attempt:
+```text
+job 106314552412, head 0567ee72:
+  giant.bst   off peak 2 / req 2, work 530     auto peak 4, work 530
+run 35592532623, job 106317022896, head ef9d3629 (UX-910's own check):
+  off=217.80s auto=215.04s
+  giant.bst: off peak 2, auto peak 4, resolved width 2
+  giant.bst: auto exceeded its resolved width (UX-913)
+  compare: giant.bst -3.05s (212.25s -> 209.20s), total -1.3%
+```
 
-- `peak > 2` means the mode is restored and `UX-910`'s close condition
-  is met.
-- `peak 1` means the fd does not cross the sandbox boundary, and the
-  row closes on that reading with the `fifo`/`make >= 4.4` route named
-  as the remaining one.
-- `peak 2` with the warning still printed means the annotation did not
-  match the element, which is a defect in
-  `read_element_auth_map_for_jobserver`'s own lookup and its own row.
+So the annotation is sufficient and `make` does draw from the pool.
+What the retracted reading rested on was **one table of unrecorded
+arm**: run `35564652560` printed a table per capture, and nothing in
+the record says the quoted one came from `run-auto`. The instrument
+did not move under it - `git log a14ba0c1..46e16112 -- tools/` carries
+only `53bc5992`, whose tracer hunks are the token ledger and
+`requested_jobs`, not `_concurrency_profile`, and `work 530` is
+identical across all three readings. The lesson is the one `UX-910`
+shipped: read **both** arms in the same run and print which is which.
+
+`req 2` is still `UX-894`'s static resolved width and still cannot
+distinguish "make asked for two" from "make was granted two" - that is
+why the reading above is `peak` against `req`, not `req` alone.
+
+What remains of this row is the default: `cmake_meson` stays in
+`_COMPILER_SAFE_POLICIES`, so every make-4.3 cmake element still
+scrubs unless annotated one by one. `12-junctioned`'s `core.bst` does,
+in the same run (`core.bst 2 4 ? 0.36s 18`), and `10-jobserver`'s
+`mod-c`/`mod-d` with it.
+
+The three outcomes this section originally listed. The first is the
+one that happened:
+
+- **`peak > 2` means the mode is restored** - measured, `peak 4`,
+  twice.
+- `peak 1` would have meant the fd does not cross the sandbox
+  boundary. It does.
+- `peak 2` with the warning still printed would have meant the
+  annotation did not match the element. It matched.
 
 What the reading now needs is the run's own `plane2.json`, which
 carries the per-sandbox decision and which `examples/10-jobserver`'s

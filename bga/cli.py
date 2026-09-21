@@ -145,6 +145,33 @@ def _attach_resource_blast(run_dir, analyzer, result) -> None:
     }
 
 
+def _add_cpu_floor(result, native_report: dict, context) -> None:
+    """UX-891: `lb_cpu_us` beside `lb`, and the clause saying which binds.
+
+    `macro_micro` certifies four builder slots 29.1% used with zero
+    headroom, while 1.60 of its four cores were busy over the same
+    span. The second number was already in the same report and divided
+    by nothing.
+    """
+    from bga.floors.cpu import compute_cpu_floor
+
+    floors = getattr(result, 'floors', None)
+    if floors is None:
+        return
+    cpu_floor = compute_cpu_floor(native_report, context, floors.get('lb'))
+    if not cpu_floor:
+        return
+    floors.update(cpu_floor)
+    binds = 'the CPU floor' if cpu_floor['lb_cpu_binds'] else 'LB'
+    floors['capacity_model_note'] = (floors.get('capacity_model_note') or '') + (
+        f" This run also has a CPU floor, beside LB and not folded into "
+        f"it: {cpu_floor['lb_cpu_us'] / 1e6:.2f}s, the CPU this capture "
+        f"measured over {cpu_floor['lb_cpu_governing_cores']} governing "
+        f"cores ({cpu_floor['lb_cpu_cores_source']}) - {binds} is the "
+        f"binding one."
+    )
+
+
 def _attach_plane2_capacity(args: argparse.Namespace, analyzer, result) -> None:
     """UX-83: let Plane 1's capacity advice consult Plane 2, when Plane 2
     is in hand for the same run.
@@ -228,7 +255,26 @@ def _attach_plane2_capacity(args: argparse.Namespace, analyzer, result) -> None:
     # `bga correlate` calls. Held rather than joined here because the
     # join reads the finished analysis document, which does not exist
     # yet at this point in the pipeline.
+    # `UX-894`: score each element against the width BuildStream
+    # resolved for it, from the `graph.json` sitting in the same
+    # snapshot, rather than against the `-jN` its recipe wrote. Applied
+    # at read time as well as at capture time, so a report written
+    # before this item stops publishing a ratio over the wrong
+    # denominator the moment a graph is in hand.
+    run_dir = getattr(analyzer, 'run_dir', None) or directory
+    if run_dir:
+        plane2_shape.apply_resolved_widths(
+            native_report,
+            plane2_shape.resolved_widths(
+                os.path.join(str(run_dir), 'graph.json')))
     result.plane2_report = native_report
+    # UX-891: the one floor in this report divided by the machine's
+    # cores rather than by the scheduler's builder slots. Published
+    # beside `lb`, never folded into it - Part 16's terms certify
+    # against recorded capacities and still do. Here rather than in
+    # `_compute_floors` because the CPU it divides is Plane 2's, which
+    # is joined at this point in the pipeline and not before.
+    _add_cpu_floor(result, native_report, context)
     # UX-104: the memory half of the same question. `--builders` is the
     # knob both halves are about, and advice that clears the CPU check
     # and blows the memory one is advice to build into swap - the worst

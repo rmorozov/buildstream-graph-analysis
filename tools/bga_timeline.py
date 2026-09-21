@@ -616,6 +616,31 @@ def jobserver_pool_series(snapshot: Optional[str]) -> list[tuple]:
             and "t_us" in row and "pool" in row]
 
 
+def jobserver_element_series(snapshot: Optional[str]) -> dict:
+    """`UX-892`: `{element: [(wall-clock microseconds, tokens), ...]}`
+    from `plane2.json`'s `jobserver_tokens_by_element`.
+
+    The global pool track above is one number for the whole pool; this
+    is one per element, on the same epoch-microsecond clock, so "wide
+    for two seconds of a ninety-second element" and "wide throughout"
+    stop drawing identically. `{}` when the mode did not run.
+    """
+    if not snapshot:
+        return {}
+    try:
+        with open(os.path.join(snapshot, PLANE2_NAME), encoding="utf-8") as handle:
+            report = json.load(handle)
+    except (OSError, ValueError):
+        return {}
+    series = {}
+    for element, record in (report.get("jobserver_tokens_by_element") or {}).items():
+        points = (record or {}).get("tokens_held_series")
+        if points:
+            series[element] = [(row[0], row[1]) for row in points
+                               if isinstance(row, (list, tuple)) and len(row) == 2]
+    return series
+
+
 def concurrency_series(records, windows: int = COUNTER_WINDOWS):
     """`(timestamp_s, running processes)` over the build, strided.
 
@@ -1419,6 +1444,19 @@ def _write_trackevent(plane1_events, raw_log, spans, anchor_element, output,
                     "jobserver pool", parent=plane1_track, unit_name="tokens")
             trace.counter(int(round(t_us * NS_PER_US)), track, int(pool))
             host_points += 1
+
+        # `UX-892`: and one track per element beside it. The pool track
+        # says how wide the pool was; these say which element was
+        # holding it, which is the question a recipe author has.
+        for element, points in sorted(jobserver_element_series(snapshot).items()):
+            label = f"jobserver tokens: {element}"
+            track = host_tracks.get(label)
+            if track is None:
+                track = host_tracks[label] = trace.counter_track(
+                    label, parent=plane1_track, unit_name="tokens")
+            for t_us, tokens in points:
+                trace.counter(int(round(t_us * NS_PER_US)), track, int(tokens))
+                host_points += 1
 
         threads = {}
         names = {}

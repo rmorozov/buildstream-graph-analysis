@@ -1,6 +1,6 @@
 # `bga`: Current Architecture — Three Analysis Planes
 
-**Start here to orient in this codebase.** `docs/spec/specification.md` (v9) is the original design document and stays authoritative for full-length invariant/data-contract text — it is *not* wrong, but it describes the tool as originally scoped, and does not know about anything built since. This doc describes what `bga` actually does **today**, as one coherent system, and points at the real file/doc for every claim so you don't have to reconstruct that history yourself from the commit log, the 906 `docs/backlog/scenarios/` files and the 75 `docs/backlog/tasks/` files this commit carries.
+**Start here to orient in this codebase.** `docs/spec/specification.md` (v9) is the original design document and stays authoritative for full-length invariant/data-contract text — it is *not* wrong, but it describes the tool as originally scoped, and does not know about anything built since. This doc describes what `bga` actually does **today**, as one coherent system, and points at the real file/doc for every claim so you don't have to reconstruct that history yourself from the commit log, the 912 `docs/backlog/scenarios/` files and the 75 `docs/backlog/tasks/` files this commit carries.
 
 **Want to *use* the tool rather than work on it?** [`docs/guides/real-project.md`](../guides/real-project.md) is the end-to-end walkthrough on a real project, with real output at every step.
 
@@ -73,7 +73,8 @@ normalize/    -> timestamp quantization, clamp, violation reporting (Part 3)
 occupancy/    -> per-resource interval sweep (Part 4)
 graph/        -> EDG, critical path, dominators, depth (Part 5, 14.1)
 attribution/  -> blame-chain walk, 8-category wait-gap classification (Part 7-12)
-floors/       -> LB/capacity/cold/serialization floors (Part 14-17)
+floors/       -> LB/capacity/cold/serialization floors (Part 14-17), and
+                 LB_cpu, the one that divides by cores not slots (UX-891)
 replay/       -> deterministic scheduler, capacity sweep, duration_overrides hook (Part 18-19)
 utilisation/  -> CPU accounting (Part 30, M4)
 diagnostics/  -> blast radius, Monte-Carlo criticality, leaf/deferrability (Part 20-29, M5)
@@ -513,6 +514,31 @@ declared fields inside `run-context/v9`, a permitted addition — and in
 run at this commit: 438 passed with this guard the only red before
 this entry. The two contract tables above are unchanged: **25 emitted
 ids**, and `analyze/v6` at **62 top-level properties**.
+Updated 2026-09-20 (after `UX-891`), covering one change to this
+document — the `floors/` row in the module map now names `LB_cpu`
+beside the four certified floors it already listed. `UX-891` publishes
+it from `bga/floors/cpu.py`, the fifth module in that package, as
+`total_cpu_us // governing_cores`: every other floor divides by builder
+slots, so a build that is core-bound inside one slot was outside all of
+them. It is published *beside* `lb` and enters no certified term, which
+is the whole of the row's argument and what
+`tests/unit/test_the_cpu_floor_divides_by_cores.py` holds.
+
+The line is re-grounded in `ls bga/floors` (`__init__.py`,
+`capacity.py`, `cold.py`, `cpu.py`, `observed.py`, `serialization.py`),
+in `bga analyze --schema` (`analyze/v6`: **62 top-level properties**),
+and in `python3 -m pytest $(grep -ln "architecture.md" tests/unit/*.py)
+-q`, which ran 438 passed with this guard the only red before this
+entry.
+
+The contract tables above are unchanged: **25 emitted ids**, and
+`bga/viewer/` still **22 modules** (`ls bga/viewer/*.js | wc -l`). The
+62 is the point rather than an aside — round 132 added five keys
+(`lb_cpu_us`, `lb_cpu_coverage`, `lb_cpu_governing_cores`,
+`lb_cpu_cores_source`, `lb_cpu_binds`) and the figure did not move,
+because they live under `floors`, which is one of those 62. `UX-909`
+is filed against the documentation guard that could not see them for
+the same reason.
 
 Updated 2026-09-14 (after `UX-847`), covering two changes to this
 document — UX-847's `jobserver` block under `analyze/v6` (the ledger's

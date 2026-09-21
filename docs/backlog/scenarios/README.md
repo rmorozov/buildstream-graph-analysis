@@ -15,19 +15,19 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-904 scenarios: **17 open**, 887 closed.
+910 scenarios: **18 open**, 892 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
-| capture | 10 | 139 |
-| analysis | 3 | 121 |
+| capture | 7 | 139 |
+| analysis | 2 | 121 |
 | contracts | 0 | 52 |
 | viewer | 0 | 177 |
 | cli | 0 | 22 |
 | store | 1 | 17 |
 | docs | 1 | 146 |
-| guards | 2 | 230 |
+| guards | 7 | 236 |
 
 ## Open scenarios
 
@@ -49,10 +49,11 @@ task file, which is the only place it ever lived twice.
 | UX-905 | [the jobserver has no compile-bound project at the scale it is meant for](UX-0905-the-jobserver-has-no-compile-bound-project-at-scale.md) | capture | High | R5, R4, R2 | 🔴 Not Started |
 | UX-906 | [the jobserver's corner cases live in twelve task files and no register](UX-0906-the-jobservers-corner-cases-are-a-register-not-a-memory.md) | capture | Medium | R2, R5, R4 | 🔴 Not Started |
 | UX-908 | [the drawing-grade guard has three unconfirmed CI excursions, and they are rising](UX-0908-the-drawing-grade-guard-excurses-three-times-and-rising.md) | guards | Medium | the round whose push gate is blocked | 🔴 Not Started |
-| UX-891 | [the certified floors never divide by the machine's cores](UX-0891-the-certified-floors-never-divide-by-the-machines-cores.md) | analysis | Medium | R5 | 🔴 Not Started |
-| UX-892 | [the per-element token record drops the timestamp it was given](UX-0892-the-per-element-token-record-drops-the-timestamp-it-was-given.md) | capture | Medium | R2 | 🔴 Not Started |
-| UX-893 | [cores busy is an average over the span, not a curve](UX-0893-cores-busy-is-an-average-over-the-span-not-a-curve.md) | capture | Medium | R5 | 🔴 Not Started |
-| UX-894 | [the requested -j is an argv regex over three binaries, not the element's resolved width](UX-0894-the-requested-j-is-an-argv-regex-over-three-binaries.md) | capture | Medium | R2 | 🔴 Not Started |
+| UX-909 | [the documentation guard cannot see a published block's own keys](UX-0909-the-documentation-guard-cannot-see-a-blocks-own-keys.md) | guards | Medium | R1, R3 | 🔴 Not Started |
+| UX-910 | [the serial-giant gate asserts an unbanded inequality the jobserver cannot satisfy](UX-0910-the-serial-giant-gate-asserts-an-unbanded-inequality.md) | guards | High | the round whose CI is red for a reason its diff did not cause | 🔴 Not Started |
+| UX-912 | [the timing reference is unrepresentative on four files, and branches pay for it](UX-0912-the-timing-reference-is-unrepresentative-and-branches-pay-for-it.md) | guards | High | every branch charged for a cost main carries | 🔴 Not Started |
+| UX-913 | [the jobserver scrubs itself off every cmake element under a make-4.3 sandbox](UX-0913-the-jobserver-scrubs-itself-off-every-cmake-element-under-make-43.md) | guards | High | every example whose sandbox ships GNU Make 4.3 | 🔴 Not Started |
+| UX-914 | [the examples' sysroot is the host's own /usr/bin](UX-0914-the-examples-sysroot-is-the-hosts-so-the-examples-measure-the-host.md) | guards | High | every example, and every reading taken from one | 🔴 Not Started |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

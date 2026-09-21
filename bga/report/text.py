@@ -4,6 +4,7 @@ from typing import Optional
 from .. import findings as findings_mod
 from .. import provenance, schemas, sources
 from ..findings import compute_findings, compute_headline, compute_next_steps, render_findings
+from ..floors.cpu import ASSUMPTIONS as cpu_floor_assumptions
 from ..ingest.models import AnalysisResult
 from ..units import GIB, US_PER_S
 from . import rate
@@ -724,6 +725,23 @@ def _render_floors_section(result: AnalysisResult, section, by_kind, full_sectio
                 f"  Dispatch Occupancy:          {occupancy_share * 100:.1f}% "
                 f"({schemas.description(schemas.ANALYZE, 'floors.occupancy_share')})"
             )
+        # `UX-891`: the floor above divides by builder slots; this one
+        # divides the CPU this capture measured by the machine's cores.
+        # Its assumptions print with it, the way `bga/capacity_model.py`
+        # prints its own - a floor whose caveats live in a task file is
+        # a floor a reader takes on trust.
+        lb_cpu_us = floors.get('lb_cpu_us')
+        if lb_cpu_us is not None:
+            coverage = floors.get('lb_cpu_coverage')
+            share = f", coverage {coverage:.2f}" if coverage is not None else ""
+            lines.append(
+                f"  LB_cpu (CPU over cores):     {lb_cpu_us / 1e6:.2f}s "
+                f"({floors.get('lb_cpu_governing_cores')} cores from "
+                f"{floors.get('lb_cpu_cores_source')}{share})"
+                + (" - binding" if floors.get('lb_cpu_binds') else "")
+            )
+            for sentence in cpu_floor_assumptions.values():
+                lines.append(f"    assumes: {sentence}")
         if floors.get('t_infinity_cold') is not None:
             partial_note = " (partial, confidence=low)" if floors.get('cold_partial') else ""
             lines.append(f"  T∞,cold (advisory):          {floors['t_infinity_cold'] / 1e6:.2f}s{partial_note}")

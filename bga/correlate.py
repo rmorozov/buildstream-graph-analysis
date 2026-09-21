@@ -208,6 +208,10 @@ class ElementJoin:
     major_faults: Optional[int] = None
     involuntary_switches: Optional[int] = None
     requested_jobs: Optional[int] = None
+    # `UX-894`: the width BuildStream granted, and which of the two the
+    # ratio beside them divided by.
+    resolved_jobs: Optional[int] = None
+    jobs_denominator: Optional[str] = None
     native_findings: list[str] = field(default_factory=list)
     unused_dependencies: list[str] = field(default_factory=list)
     # `UX-681`: what "3 unused" is 3 *of*. The denominator is the
@@ -352,6 +356,10 @@ def _plane2_view(native_report: dict) -> dict[str, dict]:
         view.setdefault(element, {}).update(
             {
                 "requested_jobs": entry.get("requested_jobs"),
+                # `UX-894`: and the width the element was granted,
+                # which is what the ratio beside it divided by.
+                "resolved_jobs": entry.get("resolved_jobs"),
+                "jobs_denominator": entry.get("jobs_denominator"),
                 "native_findings": list(entry.get("findings") or []),
             }
         )
@@ -2351,6 +2359,8 @@ def correlate(analysis: dict, native_report: dict, tasks=None, run_context=None,
             major_faults=p2.get("major_faults"),
             involuntary_switches=p2.get("involuntary_switches"),
             requested_jobs=p2.get("requested_jobs"),
+            resolved_jobs=p2.get("resolved_jobs"),
+            jobs_denominator=p2.get("jobs_denominator"),
             native_findings=p2.get("native_findings", []),
             unused_dependencies=p2.get("unused_dependencies", []),
             assessed_dependencies=p2.get("assessed_dependencies"),

@@ -921,7 +921,14 @@ COMMITTED_EXPORTS = [
     # (`EVIDENCE_QUANTITIES`), which travel whether or not a run's host
     # series ever swapped; golden has none. 474,000 still holds over
     # the summed 470,020 B.
-    ("golden", GOLDEN, 474_000),                       #  470,020 B
+    # Round 132 moved this one by 2,806 B, **all contract**: golden has
+    # no Plane 2 report, so it carries none of the eleven new keys -
+    # what grew is the embedded schema's prose for them (the CPU floor's
+    # five, the resolved width's two, the token series' four), which
+    # every export carries whether or not the run has the data.
+    # Measured before the round: 473,028 B; after: 475,834 B, with the
+    # page half unmoved at 328,396 B either side.
+    ("golden", GOLDEN, 477_000),                       #  475,834 B
     # `UX-297` moved this one by 385 B before that: the two-plane run
     # publishes `plane2_coverage.source`, which says which shape of
     # Plane 2 report served its numbers and what that costs to open. A
@@ -1092,7 +1099,11 @@ COMMITTED_EXPORTS = [
     # swaps, so nothing in the finding itself fired.
     # The four land together in round 120: 533,000 keeps the same order
     # of headroom over their summed 530,852 B.
-    ("macro_micro", MACRO_MICRO, 533_000),             #  530,852 B
+    # Round 132 moved this one by 3,701 B - the same 2,806 of contract
+    # as golden, plus **895 of this run's own measurements**: it carries
+    # Plane 2, so the CPU floor and the resolved width are rows here and
+    # not only prose. Measured before the round: 532,486 B.
+    ("macro_micro", MACRO_MICRO, 538_000),             #  536,187 B
 ]
 
 

@@ -137,6 +137,10 @@ FINDING_READERS = {
     # project and evicting the rest rebuilds, which every other cache
     # finding reads as a key that moved.
     "cache-capacity": "capacity-operator",
+    # `UX-907`: which artifacts are the expensive ones is the other half
+    # of the same sizing question, and the one a developer shrinking an
+    # element reads too.
+    "artifact-weight": "capacity-operator",
     # `UX-860`: the envelope's own overcommit test, half of which is
     # swap - previously a word in the headline sentence and nowhere else.
     "swap-observed": "capacity-operator",
@@ -406,6 +410,10 @@ def _cache_findings(result: AnalysisResult) -> list[dict]:
     # population. A capture that recorded a quota and no summary still
     # answers the sizing question.
     capacity_findings = _cache_capacity_findings(cache.get('capacity') or {})
+    # `UX-907`: and the per-element half, on the same terms - a capture
+    # that walked the CAS answers "which artifacts are the expensive
+    # ones" whether or not the summary says what the queues did.
+    capacity_findings += _artifact_weight_findings(cache.get('artifact_weights') or {})
     hit_share = cache.get('hit_share')
     if hit_share is None:
         return capacity_findings
@@ -560,6 +568,56 @@ def _cache_capacity_findings(capacity: dict) -> list[dict]:
             },
         ))
     return findings
+
+
+def _artifact_weight_findings(weights: dict) -> list[dict]:
+    """`UX-907`: which elements' artifacts are the expensive ones.
+
+    One claim, and the sentence has to carry what the number is as
+    plainly as the number. Each figure is that artifact's whole weight -
+    every distinct blob under its `files` tree - which is what it would
+    need in an empty cache, not what it adds to this one. The two differ
+    by the bytes its neighbours already hold, and that difference is
+    stated rather than modelled away, because an operator sizing an
+    agent and a developer shrinking one element read the same row for
+    opposite purposes.
+    """
+    heaviest = weights.get('heaviest') or []
+    if not heaviest:
+        return []
+    top = heaviest[0]
+    walked = weights.get('elements_walked')
+    shared = weights.get('shared_bytes')
+    detail = [
+        f"{row['element']}: {human_bytes(row['files_bytes'])}"
+        + (f" (+{human_bytes(row['buildtree_bytes'])} buildtree)"
+           if row.get('buildtree_bytes') else "")
+        for row in heaviest
+    ]
+    if isinstance(shared, int) and shared > 0:
+        detail.append(
+            f"These are whole weights, so they overlap: the {walked} artifacts "
+            f"walked sum to {human_bytes(weights['walked_bytes'])} but hold "
+            f"{human_bytes(weights['run_unique_bytes'])} of distinct content, "
+            f"{human_bytes(shared)} of it in more than one artifact")
+    return [_finding(
+        'artifact-weight', SEVERITY_INFO,
+        f"The heaviest artifact this run put in the cache is "
+        f"{top['element']} at {human_bytes(top['files_bytes'])} - walked from "
+        f"the CAS, so it is that artifact's own weight rather than a proxy "
+        f"for it",
+        detail=detail,
+        elements=[row['element'] for row in heaviest],
+        evidence={
+            'source': weights.get('source'),
+            'elements_walked': walked,
+            'elements_unweighed': weights.get('elements_unweighed'),
+            'walked_bytes': weights.get('walked_bytes'),
+            'run_unique_bytes': weights.get('run_unique_bytes'),
+            'shared_bytes': shared,
+            'heaviest': heaviest,
+        },
+    )]
 
 
 def _run_scope_findings(result: AnalysisResult) -> list[dict]:

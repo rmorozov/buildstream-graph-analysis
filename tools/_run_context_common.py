@@ -223,6 +223,31 @@ def add_cache_capacity(run_context: dict, with_usage: bool = False) -> None:
             with_usage=with_usage)
 
 
+def add_artifact_weights(run_context: dict, project_name: Optional[str],
+                         graph: Optional[dict]) -> None:
+    """UX-907: what each element's artifact weighs, exactly.
+
+    Same best-effort rule as `add_cache_capacity` above, and the same
+    cachedir: this reads the refs BuildStream wrote under it, so a run
+    whose capacity block was not collected has nothing to walk. Skipped
+    without a project name, because the ref path is keyed on it and a
+    guessed one would silently weigh nothing.
+    """
+    from bga import artifact_weight
+
+    cachedir = (run_context.get("cache_capacity") or {}).get("cachedir")
+    if not cachedir or not project_name or not graph:
+        return
+    elements = [(element.get("uid"), element.get("cache_key"))
+                for element in graph.get("elements") or []
+                if element.get("uid")]
+    if not elements:
+        return
+    with contextlib.suppress(Exception):
+        run_context["artifact_weights"] = artifact_weight.weigh_elements(
+            cachedir, project_name, elements)
+
+
 #: `UX-898`/`UX-903`: the declaration flags, written once. Both
 #: producers take them and must not drift - which is what this module
 #: is for (`UX-18`) - and pylint counted the second copy as a

@@ -82,6 +82,9 @@ RUN_CONTEXT_ADDITIONS = {
     # `UX-896`: what the local cache was configured to hold, and what
     # the volume under it can give.
     "cache_capacity",
+    # `UX-907`: and what each element's artifact weighs inside it,
+    # walked from the CAS the refs point into.
+    "artifact_weights",
 }
 
 

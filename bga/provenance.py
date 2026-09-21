@@ -569,6 +569,21 @@ _CLAIMS = {
             "threshold of this repository's own: both comparisons are "
             "against numbers the host declared."),
         ()),
+    # `UX-907`: one claim on a walked number. No threshold - the row is
+    # published whenever a capture walked the CAS, because "which
+    # artifact is heaviest" has an answer at every size.
+    "artifact-weight": (
+        ("cache.artifact_weights.walked_bytes",
+         "cache.artifact_weights.run_unique_bytes",
+         "cache.artifact_weights.shared_bytes",
+         "cache.artifact_weights.elements_walked"),
+        _unconditional(
+            "Published when the capture walked the local CAS for each "
+            "element's artifact (`--artifact-weights`). Every byte is that "
+            "artifact's own, summed over the distinct blobs under its "
+            "`files` tree - not BuildStream's `%{artifact-cas-digest}`, "
+            "which renders the root directory proto's own length."),
+        ()),
     "cache-transfer-cost": (
         ("cache.transfer_share",),
         _rule("TRANSFER_SHARE_NOTABLE", TRANSFER_SHARE_NOTABLE, ">=",

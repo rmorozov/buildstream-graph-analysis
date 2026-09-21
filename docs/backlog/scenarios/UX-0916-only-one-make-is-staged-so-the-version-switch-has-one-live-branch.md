@@ -1,6 +1,6 @@
 # UX-916: only one make is ever staged, so `style_for_make_version`'s two branches are never both exercised
 
-**Priority:** Medium | **Status:** 🟡 In Progress | **Depends on:** UX-915, UX-913 | **Found by:** round 133 — Ruslan asked for the corner cases to be covered after the fast unblock lands (2026-09-21) | **Serves:** every host that runs the examples, whatever its own make | **Topic:** guards | **Area:** tools | **Shape:** judgement
+**Priority:** Medium | **Status:** 🟡 In Progress | **Depends on:** UX-915 | **Found by:** round 133 — Ruslan asked for the corner cases to be covered after the fast unblock lands (2026-09-21) | **Serves:** every host that runs the examples, whatever its own make | **Topic:** guards | **Area:** tools | **Shape:** judgement
 
 ## Motivation
 
@@ -57,8 +57,8 @@ scrubbed auth under either arm.
 
 ## Outcome
 
-**Round 134, 2026-09-21 — two of the three clauses are in, and the
-third turned out to depend on `UX-913`.** Status 🟡.
+**Round 134, 2026-09-21 — all three clauses are in.** Status 🟡 until a
+CI run reads the two arms.
 
 **Both makes are staged.** The same channel carries 4.2.1 beside
 4.4.1, both `x86_64`, both referencing one glibc, so the second pin
@@ -84,44 +84,49 @@ keyed on the FIFO's dirname and `close_jobserver` removes it before
 report assembly. An unprobed element is written through unchanged: a
 null would say "probed, and no make", which is a different fact.
 
-**The third clause needs `UX-913`, and this is the reading that says
-so.** Under `--jobserver auto` the resolved auth is `fd` (`UX-876`),
-so `style_for_make_version` is consulted on exactly one route -
-`_compiler_safe_makeflags`, for the `_COMPILER_SAFE_POLICIES`. That
-gives two arms and neither works today:
+**The two arms are `cmake`, which `UX-913` is what makes possible.**
+Under `--jobserver auto` the resolved auth is `fd` (`UX-876`), so
+`style_for_make_version` is consulted on one route,
+`_compiler_safe_makeflags`. `UX-913` (PR #248, merged) narrowed it:
 
-| arm's kind | policy | on 4.4.1 | on 4.2.1 |
-|---|---|---|---|
-| `cmake` | `cmake_meson` | probed, `fifo:` kept | probed, **scrubbed** |
-| `autotools` | `make` | never probed | never probed |
+```text
+$ grep -n "_FD_DIRECT_POLICIES" tools/native_trace/bwrap_shim.py
+454:_FD_DIRECT_POLICIES = frozenset({"cmake_meson"})
+713:    if safe is None and policy in _FD_DIRECT_POLICIES:
+```
 
-A `cmake` arm on 4.2.1 emits `scrubbed to recipe -jN`, which
-`check_jobserver_width.py` fails on by design; an `autotools` arm is
-never probed at all, so it publishes no style to differ. So "one CI
-run captures the same element under both staged makes and the two
-captures report different styles, each the one its version implies"
-needs `UX-913`'s narrowing (PR #248) first - after it, a `cmake` arm on
-4.2.1 keeps its raw `fd` instead of being scrubbed, and both arms
-publish a style. `Depends on` now says `UX-913` as well.
+so a `cmake` arm on 4.2.1 keeps its raw `fd` rather than being
+scrubbed, and `lto_preflight_warnings` prints `keeps its jobserver
+auth` where it printed `scrubbed to recipe -jN` — the line
+`check_jobserver_width.py` fails on. An earlier draft of this Outcome
+read the pre-#248 tree, concluded the third clause was blocked and
+added a `Depends on: UX-913`; the reading was stale on the merged tree
+and both are withdrawn.
 
-That last clause is also why no example gained an arm here: adding one
-now would red `examples/11-serial-giant`'s existing CI check rather
-than exercise anything.
+`switch-4-4.bst` and `switch-4-2.bst` are that pair: identical `cmake`
+elements on `toolchain.bst` alone, differing only in the alias their
+`PATH` leads with, so neither sits on `UX-857`'s critical path.
+`check_jobserver_width.py`'s fourth assertion reads both rows out of
+the one `auto` capture it already takes, so no workflow edit is needed.
 
 **Mutations.**
 
 | mutation | guard | result |
 |---|---|---|
-| both series aliases point at the 4.4 binary | `test_each_series_alias_runs_its_own_make` | 🔴 |
-| `auth_style` written as a constant `"fifo"` | `test_a_4_2_sandbox_reads_fd`, `test_two_elements_on_two_makes_are_distinguishable` | 🔴 |
-| the enrichment dropped, rows copied through | all three style clauses | 🔴 |
+| both series aliases on the 4.4 binary | `test_each_series_alias_runs_its_own_make` | 🔴 |
+| `auth_style` written as a constant | `test_a_4_2_sandbox_reads_fd` | 🔴 |
+| the enrichment dropped, rows copied | all three style clauses | 🔴 |
+| both arms' `PATH` on one alias | `..._selects_the_series_its_own_expectation_names` | 🔴 |
+| an arm dropped from `all.bst` | `test_both_arms_are_built` | 🔴 |
+| `check_switch` returns `None` unread | all five refusal rows | 🔴 |
+| a partial miss tolerated | `test_a_missing_arm_is_refused` (KeyError) | 🔴 |
+| the 4.2 pin dropped from `PINS` | `test_the_arms_and_the_pins_name_the_same_series` | 🔴 |
 
-Reverted, 15 passed across the two files.
+Reverted, 26 passed across the three files.
 
-**Deviation from the Required Fix.** The fix asks for "a 4.3 and a 4.4";
-this stages 4.2.1, which the channel carries and 4.3 it does not. Both
-sit below `UX-841`'s cutoff, which is the only property the switch
+**Deviation from the Required Fix.** The fix asks for "a 4.3 and a
+4.4"; this stages 4.2.1, which the channel carries and 4.3 it does
+not. Both sit below `UX-841`'s cutoff, the only property the switch
 reads, so the branch under test is the same one.
 
-**Suite.** With `UX-915`'s commit: see that row's Outcome for the
-figure; this branch's full run is in the pull request.
+**Suite.** This branch's full run is in the pull request.

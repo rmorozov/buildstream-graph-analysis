@@ -1334,7 +1334,12 @@ def write_decisions_with_sandbox_make(captured: str, destination: str,
     A row whose element was never probed - a kind whose MAKEFLAGS no
     make reads, a pinned decision, the mode off - is written through
     unchanged rather than carrying a null, so a reader can tell "not
-    probed" from "probed and absent"."""
+    probed" from "probed and absent".
+
+    This re-serialises rather than copying bytes, so a malformed line
+    `read_jobserver_decisions` drops no longer reaches the destination.
+    `read_jobserver_decisions` was already the only reader of that
+    file."""
     with open(destination, "w", encoding="utf-8") as handle:
         for row in read_jobserver_decisions(captured):
             probe = _read_make_probe(

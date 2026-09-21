@@ -230,6 +230,7 @@ bga/whatif.py          the projection for a chosen set of fixes (UX-230)
 bga/cache_trend.py     a series of runs, not a pair
 bga/cache_effectiveness.py  the cache's own numbers
 bga/cache_capacity.py  what the cache was configured to hold (UX-896)
+bga/artifact_weight.py what one element's artifact weighs, walked from the CAS (UX-907)
 bga/store_aggregate.py the store as a distribution, per host class (UX-234)
 bga/capacity_model.py  Allen-Cunneen M/G/c over that distribution, each
                        assumption recorded where the arithmetic uses it (UX-595)

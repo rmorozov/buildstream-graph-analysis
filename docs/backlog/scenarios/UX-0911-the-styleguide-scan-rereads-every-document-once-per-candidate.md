@@ -1,6 +1,6 @@
 # UX-911: the styleguide scan re-reads every tracked document once per candidate, and its reference is 45x stale
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-771, UX-803 | **Found by:** round 132 — the tier-drift gate reddened `test (3.11)` on `claude/project-thread-ukafz5` for a file the branch does not touch | **Serves:** every branch whose CI is red for a cost `main` already carries | **Topic:** guards | **Area:** tools | **Shape:** mechanical
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-771, UX-803 | **Found by:** round 132 — the tier-drift gate reddened `test (3.11)` on `claude/project-thread-ukafz5` for a file the branch does not touch | **Serves:** every branch whose CI is red for a cost `main` already carries | **Topic:** guards | **Area:** tools | **Shape:** mechanical
 
 ## Motivation
 
@@ -177,3 +177,53 @@ The gate closes it: one CI run on `test (3.11)` reporting `tiers ok`
 with the refreshed record, on a branch whose diff is this row.
 
 ## Outcome
+
+**The gap.** `tests/ci_reference.json` recorded
+`test_the_styleguide_names_its_guards.py` at 0.14s. CI read it at 4.43,
+7.28, 7.75, 6.07, 4.27 and 7.9 seconds across six runs of this branch,
+and at 6.75s on `main`. Counted rather than timed, `_process_documents()`
+cost 9,630 whole-file reads (worst file 13) and 9,604 regex passes over
+107.67 MB.
+
+**The wrong half, measured.** This row was filed saying the re-reads
+were the cost. Reading each document once and keeping the per-candidate
+regex moved the scan 2.91s to 2.67s - 8 %, three runs each, one
+container. The regex was the cost.
+
+**The close.** Two literal prefilters a match already implies: a
+document with no `§` in it cannot match `CITATION` (286 of 1,148 carry
+one, 3.6 MB of 13.1 MB), and within those a document not containing the
+candidate's own alias cannot match it either. `_process_documents()`
+returns the same five documents.
+
+```text
+        md reads                        regex passes
+before  9,630 over 1,148 (worst 13)     9,604 over 107.67 MB
+after   1,148 over 1,148 (worst 1)        369 over   8.31 MB
+
+file       14 passed in 0.83s, against 4.4s on this container before
+CI         run 35572266477 on 2f17171b, shift x1.10: 1.11s, `tiers ok`
+           the run before it, shift x1.12: 7.9s, RED
+```
+
+**The mutation table.**
+
+| mutation | guard | reads | passes |
+|---|---|---|---|
+| re-read each document inside the alias loop | red | 3,943, worst 15 | 369 |
+| drop the `alias not in text` prefilter | red | 1,148 | 1,148 |
+| drop both `lru_cache` decorators | red **on a traceback** | - | - |
+| none | green | 1,148, worst 1 | 369 |
+
+The third is recorded because it does not count: it reddens on an
+`AttributeError` from the guard's own `cache_clear`, and a guard that
+dies in its setup has measured nothing.
+
+**The deviation.** `test_self_review_cannot_stand_in_for_review`
+rewrites one probe file twice under one `tracked` set and reads the
+result back, which the text cache made stale. It now clears the cache
+between writes; its two assertions are unchanged.
+
+`1.11s` still sits above the 0.15s the reference carries, and the
+refresh belongs to `UX-912` - at that delta the 5.0s floor can never
+fire, so it is no longer this row's alarm.

@@ -703,6 +703,16 @@ _MEMINFO_KEYS = {
 #: that decision with the reader rather than baking a window in here.
 _VMSTAT_KEYS = ("pgmajfault", "pswpin", "pswpout")
 
+#: `UX-897`: the interfaces a build's transfer does *not* cross.
+#: Loopback carries this host talking to itself - a local `buildbox-casd`
+#: is on the other end of most of it - and counting it as network would
+#: make a cache that never left the machine look like a saturated link.
+_NET_SKIP_PREFIXES = ("lo",)
+
+#: `/proc/net/dev`'s columns after the interface name: receive bytes is
+#: the first, transmit bytes the ninth. Positional because the header is
+#: two lines of ASCII art and has been these columns since 2.6.
+
 #: `UX-675`: which of `/proc/stat`'s first-line jiffy fields are a busy
 #: core. Positions after the `cpu` label, in the order the kernel writes
 #: them - user, nice, system, idle, iowait, irq, softirq, steal, guest,
@@ -737,6 +747,75 @@ except (ValueError, OSError, AttributeError):  # pragma: no cover
 #: elapsed)` cores - 0.005 at the 2-second default - and the trace
 #: dictionary states it.
 _CPU_MIN_INTERVAL_S = 1.0 / _TICKS_PER_S
+
+
+def read_net_sample() -> dict:
+    """Bytes in and out since boot, summed over every real interface.
+
+    `UX-897`: `cache_effectiveness` names transfer as a *share of wall
+    clock* and `cache_trend`'s own docstring opens on "a remote that
+    slows from 40MB/s to 5MB/s" - a throughput nothing could compute,
+    because no byte count was captured anywhere. BuildStream does not
+    supply one either: `_artifactcache.py` logs `Pulled artifact <key>
+    <- <remote>` and no size, per element or per session, so the log
+    seam this row was filed against has nothing to read.
+
+    The host's own counters do, at the cost of one more small file per
+    sample. **They are the host's, not the build's**: anything else
+    running on the machine is inside them. On a dedicated build agent
+    that is the build, and the caveat rides with the number all the way
+    to the report rather than being resolved by a model here.
+    """
+    try:
+        with open("/proc/net/dev") as handle:
+            return sum_net_dev(handle)
+    except (OSError, ValueError, IndexError):
+        return {}
+
+
+def sum_net_dev(lines) -> dict:
+    """`/proc/net/dev`'s two byte columns, summed over real interfaces.
+
+    Split from the read so a guard can feed it a constructed file: the
+    exclusion below is a claim no reading of *this* host can settle,
+    since whether dropping `lo` changes the total depends on what the
+    host happens to be doing. Same shape as `_busy_jiffies` above, for
+    the same reason.
+    """
+    rx, tx = 0, 0
+    for line in lines:
+        name, _, rest = line.partition(":")
+        name = name.strip()
+        if not rest or name.startswith(_NET_SKIP_PREFIXES):
+            continue
+        fields = rest.split()
+        rx += int(fields[0])
+        tx += int(fields[8])
+    return {"net_rx_bytes": rx, "net_tx_bytes": tx}
+
+
+def network_bytes(read: dict) -> dict:
+    """`{rx_bytes, tx_bytes, span_s}` across a written series, or `{}`.
+
+    The counters are cumulative since boot, so the build's own traffic
+    is the last sample's reading less the first's. Two samples are the
+    minimum: one reading is a number with nothing to subtract, and a
+    build too short to be sampled twice gets an empty dict rather than a
+    zero that reads as "this build moved nothing".
+    """
+    carrying = [row for row in (read or {}).get("samples") or []
+                if "net_rx_bytes" in row and "net_tx_bytes" in row]
+    if len(carrying) < 2:
+        return {}
+    first, last = carrying[0], carrying[-1]
+    span = (last.get("t") or 0) - (first.get("t") or 0)
+    return {
+        # A counter that went backwards is an interface that was reset
+        # or removed mid-build, not negative traffic.
+        "rx_bytes": max(0, last["net_rx_bytes"] - first["net_rx_bytes"]),
+        "tx_bytes": max(0, last["net_tx_bytes"] - first["net_tx_bytes"]),
+        "span_s": span if span > 0 else None,
+    }
 
 
 def read_cpu_sample() -> dict:
@@ -799,6 +878,7 @@ def read_host_sample() -> dict:
     except (OSError, ValueError):
         pass
     sample.update(read_cpu_sample())
+    sample.update(read_net_sample())
     return sample
 
 

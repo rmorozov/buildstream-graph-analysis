@@ -206,6 +206,19 @@ class RunContext:
     # at publish time, so this stays a genuine absence here, the same
     # convention `host_manifest` above already holds.
     jobserver: Optional[dict] = None
+    # UX-896: what the local cache was configured to hold, and what the
+    # volume under it can give - `{"cachedir", "quota_declared",
+    # "quota_bytes", "reserved_declared", "reserved_bytes",
+    # "low_watermark_declared", "volume_total_bytes",
+    # "volume_free_bytes", "cache_used_bytes", "cache_used_source"}`.
+    # Another additive run-context/v9 extension, and the only thing in a
+    # capture that separates a cache too small to hold the project from
+    # a cache whose keys move: both rebuild, and before this only the
+    # second had a name. `None` for every capture taken before the
+    # field existed, and each field inside `None` rather than `0` when
+    # unread - a quota of `infinity` is a declared quota with no byte
+    # value, not a quota of nothing.
+    cache_capacity: Optional[dict] = None
 
     @property
     def plane1_resolution_s(self) -> Optional[float]:

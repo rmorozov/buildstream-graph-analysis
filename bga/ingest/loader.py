@@ -67,6 +67,7 @@ def load_run_context(path: Path) -> RunContext:
         queue_summary=data.get('queue_summary'),
         timestamp_agreement=data.get('timestamp_agreement'),
         jobserver=data.get('jobserver'),
+        cache_capacity=data.get('cache_capacity'),
     )
 
 

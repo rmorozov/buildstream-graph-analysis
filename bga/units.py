@@ -62,3 +62,20 @@ def s_to_us(value) -> Optional[int]:
     the honest answer rather than the one that always reads low.
     """
     return None if value is None else int(round(float(value) * US_PER_S))
+
+
+def human_bytes(size) -> str:
+    """`du -h`-style, because that is what the user will compare against.
+
+    `UX-896` moved it here from `run_store`: a finding needs it, and
+    `findings` reaches only `ingest.models`, `cache_effectiveness` and
+    this module by design (`schemas`' own docstring states the shape) -
+    importing the snapshot store for a formatter would have made that
+    sentence false.
+    """
+    size = float(size)
+    for unit in ("B", "K", "M", "G", "T"):
+        if size < 1024 or unit == "T":
+            return f"{size:.0f}{unit}" if unit == "B" else f"{size:.1f}{unit}"
+        size /= 1024.0
+    return f"{size:.1f}T"

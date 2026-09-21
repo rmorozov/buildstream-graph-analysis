@@ -41,6 +41,7 @@ from typing import Optional
 
 from .cache_effectiveness import compute_cache_accounting, compute_cache_churn
 from .compare import _SIGNIFICANCE_PCT, MIN_BASELINE_RUNS, compute_band
+from .units import human_bytes
 
 # A metric whose newest reading sits outside the trailing window's band
 # is worth a finding. Each entry is `(key, label, direction)`, where
@@ -114,11 +115,23 @@ def _subject(run_context) -> Optional[tuple[str, tuple[str, ...]]]:
     return (project or 'unknown', tuple(targets or ()))
 
 
-def _row(name: str, result, run_context, graph, tasks, previous) -> dict:
-    """One run's cache reading, plus its churn against its predecessor."""
+def _row(name: str, analyzer, result, previous) -> dict:
+    """One run's cache reading, plus its churn against its predecessor.
+
+    Takes the analyzer rather than the four pieces it holds: `UX-897`
+    added a fifth (the run's byte counters) and a parameter list that
+    grows with every fact the reading needs is a list nobody reads.
+    """
+    graph = analyzer.graph
+    tasks = analyzer.normalized_tasks
+    run_context = analyzer.run_context
     accounting = compute_cache_accounting(
         run_context, graph=graph, tasks=tasks,
         total_duration_us=getattr(result, 'total_duration_us', None),
+        # `UX-897`: the series this module's own docstring opens on -
+        # "a remote that slows from 40MB/s to 5MB/s" - and could not
+        # draw, because no run carried a byte count.
+        network_bytes=analyzer._network_bytes(),
     )
     transfer = accounting.get('transfer_us') or {}
     transfer_us = sum(transfer.values()) if transfer else None
@@ -154,6 +167,11 @@ def _row(name: str, result, run_context, graph, tasks, previous) -> dict:
             transfer_us / pulled if transfer_us and pulled else None
         ),
         'rebuild_us': _rebuild_us(tasks),
+        # `UX-897`: bytes over the wall-clock the transfers occupied.
+        # None where the run carries no counters, which is every run
+        # captured before the sampler read them - a trend must not plot
+        # a zero for a reading nobody took.
+        'transfer_rate_bytes_per_s': accounting.get('transfer_rate_bytes_per_s'),
         'churn': None,
     }
     if previous is not None:
@@ -291,11 +309,13 @@ def build_trend(rows: list[dict]) -> dict:
             if len(rows) <= MIN_BASELINE_RUNS and not heterogeneous else None
         ),
         'note': (
-            "Transfer figures are wall-clock seconds, not bytes: Plane 1 does not "
-            "record artifact sizes, so a rise in seconds per artifact is a slower "
-            "remote or a larger artifact and this cannot tell them apart. A capture "
-            "taken with remotes ignored has no transfer at all and reports None "
-            "rather than zero."
+            "Transfer seconds per artifact cannot separate a slower remote from a "
+            "larger artifact: Plane 1 records no artifact size (UX-907). The rate "
+            "column can, where the capture carries host byte counters (UX-897) - "
+            "it is the host's whole traffic over the wall-clock the transfers "
+            "occupied, so an upper bound on this build's. A capture taken with "
+            "remotes ignored has no transfer at all and reports None rather than "
+            "zero."
         ),
     }
 
@@ -322,10 +342,7 @@ def trend_from_run_dirs(run_dirs, **analyzer_kwargs) -> dict:
         # path from the left throws away the only part that differs.
         path = Path(run_dir)
         label = os.path.join(path.parent.name, path.name) if path.parent.name else path.name
-        rows.append(_row(
-            label, result, analyzer.run_context, graph,
-            analyzer.normalized_tasks, previous,
-        ))
+        rows.append(_row(label, analyzer, result, previous))
         previous = {
             'elements': graph.elements if graph else [],
             'durations': _element_durations(result),
@@ -343,7 +360,7 @@ def format_trend_text(trend: dict) -> str:
         'Cache Health Trend',
         '=' * 60,
         f"{'run':<28s} {'hit':>6s} {'built':>6s} {'cached':>7s} "
-        f"{'xfer':>8s} {'/artifact':>10s} {'churn':>7s}",
+        f"{'xfer':>8s} {'/artifact':>10s} {'rate':>9s} {'churn':>7s}",
     ]
     for row in trend['runs']:
         churn = row.get('churn') or {}
@@ -361,6 +378,7 @@ def format_trend_text(trend: dict) -> str:
         cached = row['cached_elements']
         transfer = row['transfer_us']
         per_artifact = row['transfer_per_artifact_us']
+        rate = row.get('transfer_rate_bytes_per_s')
         lines.append(
             f"{row['run'][:28]:<28s} "
             f"{hit_cell:>6s} "
@@ -368,6 +386,7 @@ def format_trend_text(trend: dict) -> str:
             f"{(cached if cached is not None else '-'):>7} "
             f"{(f'{transfer / 1e6:.1f}s' if transfer else '-'):>8s} "
             f"{(f'{per_artifact / 1e6:.2f}s' if per_artifact else '-'):>10s} "
+            f"{(f'{human_bytes(rate)}/s' if rate else '-'):>9s} "
             f"{churn_cell:>7s}"
         )
     lines.append('')

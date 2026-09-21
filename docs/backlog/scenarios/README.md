@@ -15,12 +15,12 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-912 scenarios: **19 open**, 893 closed.
+913 scenarios: **18 open**, 895 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
 |---|---|---|
-| capture | 7 | 139 |
+| capture | 6 | 140 |
 | analysis | 2 | 121 |
 | contracts | 0 | 52 |
 | viewer | 0 | 177 |
@@ -39,8 +39,6 @@ task file, which is the only place it ever lived twice.
 | UX-884 | [the LTO scrub covers make/autotools kinds, not only cmake/meson/cargo](UX-0884-the-lto-scrub-covers-make-and-autotools-kinds.md) | capture | Medium | R2 | 🔴 Not Started |
 | UX-890 | [the trace-census guard has three unconfirmed CI excursions and no filing](UX-0890-the-trace-census-guard-has-three-unconfirmed-excursions.md) | guards | Medium | the round whose push gate is blocked | 🔴 Not Started |
 | UX-895 | [the capture's own overhead is unmeasured, so Plane 2 on every build is a guess](UX-0895-the-captures-own-overhead-is-unmeasured.md) | capture | High | R4, R5, R1 | 🔴 Not Started |
-| UX-896 | [the cache's capacity is invisible until it rebuilds](UX-0896-the-caches-capacity-is-invisible-until-it-rebuilds.md) | capture | High | R5, R2 | 🔴 Not Started |
-| UX-897 | [transfer is measured in seconds and never in bytes](UX-0897-transfer-is-seconds-and-never-bytes.md) | capture | Medium | R5, R6 | 🔴 Not Started |
 | UX-899 | ["this PR made the build N seconds slower" needs a band, not a pair](UX-0899-the-seconds-slower-gate-needs-a-band-not-a-pair.md) | analysis | High | R4, R6 | 🔴 Not Started |
 | UX-900 | [a store is a directory, but CI will keep bundles in versioned directories](UX-0900-a-store-is-a-directory-but-ci-keeps-bundles.md) | store | Medium | R5, R7, R8 | 🔴 Not Started |
 | UX-901 | [the jobserver is a subtool behind a boundary](UX-0901-the-jobserver-is-a-subtool-behind-a-boundary.md) | capture | Medium | R5, R4, R2 | 🔴 Not Started |
@@ -48,6 +46,7 @@ task file, which is the only place it ever lived twice.
 | UX-904 | [nothing prices N separate CI builds against one junctioned invocation](UX-0904-separate-invocations-or-one-junctioned-build.md) | analysis | High | R5, R3, R4, R6 | 🔴 Not Started |
 | UX-905 | [the jobserver has no compile-bound project at the scale it is meant for](UX-0905-the-jobserver-has-no-compile-bound-project-at-scale.md) | capture | High | R5, R4, R2 | 🔴 Not Started |
 | UX-906 | [the jobserver's corner cases live in twelve task files and no register](UX-0906-the-jobservers-corner-cases-are-a-register-not-a-memory.md) | capture | Medium | R2, R5, R4 | 🔴 Not Started |
+| UX-907 | [an artifact's weight has no cheap source](UX-0907-an-artifacts-weight-has-no-cheap-source.md) | capture | Medium | R2, R5 | 🔴 Not Started |
 | UX-908 | [the drawing-grade guard has three unconfirmed CI excursions, and they are rising](UX-0908-the-drawing-grade-guard-excurses-three-times-and-rising.md) | guards | Medium | the round whose push gate is blocked | 🔴 Not Started |
 | UX-909 | [the documentation guard cannot see a published block's own keys](UX-0909-the-documentation-guard-cannot-see-a-blocks-own-keys.md) | guards | Medium | R1, R3 | 🔴 Not Started |
 | UX-912 | [the timing reference is unrepresentative on four files, and branches pay for it](UX-0912-the-timing-reference-is-unrepresentative-and-branches-pay-for-it.md) | guards | High | every branch charged for a cost main carries | 🔴 Not Started |

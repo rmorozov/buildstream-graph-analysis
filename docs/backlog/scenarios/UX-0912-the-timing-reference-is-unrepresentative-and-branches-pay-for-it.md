@@ -69,8 +69,17 @@ first.
 **Establish the base-carry miss.** Read one PR run and the `main` run
 it should have restored from, and say which of scoping, eviction or
 the key itself accounts for it. `UX-803`'s excusal is inert on every
-pull request while this holds, which is what converts `main`'s ambient
-staleness into a red on whichever branch crosses twice first.
+pull request while this holds.
+
+It is the second gate, not the first. `over_gate` needs an absolute
+`seconds - expected >= CI_DRIFT_SECONDS` (5.0s), so a stale cell only
+reaches the carry at all once the file's own reading crosses that
+floor - measured in `UX-911`, run `35564652560` read the same file at
+4.27s against a 0.12s expectation and the step returned `tiers ok` at
+`dev_tier_drift.py:1148`, before `--base-carry` was read at `:1153`.
+So the four files above are four *different* distances from the floor,
+and only the ones that clear it can be charged to a branch. The miss
+decides who pays; the floor decides whether anyone does.
 
 **Refresh the reference.** Take a CI run's own `ci-reference-candidate`
 artifact and adopt it, so the record is what the runner reads. Never

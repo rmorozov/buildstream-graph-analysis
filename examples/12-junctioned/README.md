@@ -23,10 +23,11 @@ bga snapshot --jobserver auto -- bst --builders 2 build all.bst
 
 **Out of scope.** A remote junction (`kind: local` only, same as every
 other example's junction). A second example forcing fifo-style
-`--jobserver-auth` (`UX-869`'s own class) - this runner's own `make` is
-GNU Make 4.3, so `bga capture`'s auth auto-detection already picks
-`fd` style here; that class is CI-only in the sense that it needs a
-4.4 host to actually exercise, not that it belongs to this project.
+`--jobserver-auth` (`UX-869`'s own class). That paragraph used to say
+the auto-detection picks `fd` here because this runner's own `make` is
+GNU Make 4.3; since `UX-915` the sysroot carries a pinned 4.4.1, so the
+style is the pin's, not the runner's, and crossing the switch on
+purpose is `UX-916`'s own row rather than this project's.
 
 ## Real reading, this box, 2026-09-15
 

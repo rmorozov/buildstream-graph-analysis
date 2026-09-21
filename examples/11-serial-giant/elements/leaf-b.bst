@@ -19,14 +19,3 @@ config:
   - sh generate.sh leaf_b 8 1800
   - |
     %{cmake}
-
-# UX-913: force the fd auth style. The sandbox's make is the host's
-# (GNU Make 4.3), which rejects a `fifo:` auth, so UX-874 downgrades to
-# `fd` and UX-878's compiler-safety guard then scrubs it outright - the
-# capture warns `scrubbed to recipe -jN` and the element runs at its own
-# `-j2` under `auto` as much as under `off`. UX-878 guards an unwrapped
-# grandchild (gcc's lto-wrapper); here the consumer is `make`, a direct
-# child, and this element requests no LTO.
-public:
-  bga:
-    jobserver-auth: fd

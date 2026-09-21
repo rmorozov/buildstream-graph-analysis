@@ -1677,20 +1677,7 @@ descendants.** Objects beyond the opening bound retain a lightweight fragment
 target, not live controls. Following that fragment hydrates its object; the
 explicit Show all path hydrates the population once and in source order.
 
-`UX-917` is the item; its DOM census will own this row.
-
-## 3k. Snapshot navigation and management have different loci (round 130)
-
-At 100 snapshots, the rail's picker is correctly capped at 12 runs plus one
-typed-id field, while the Store chapter containing count, bytes and retention
-context is about 6,007px away. **Choosing the report stays in one compact Run
-disclosure in the rail; managing the store lives with the Store evidence.** A
-single Snapshots link bridges them. The Store locus offers whole-store facts
-and copyable list/dry-run commands; destructive pruning remains CLI-only.
-Exports and read-only service omit management rather than showing dead
-controls.
-
-`UX-918` is the item; its served-page guard will own this row.
+`UX-921` is the item; its DOM census will own this row.
 
 ## 7. Enforcement
 
@@ -1749,8 +1736,7 @@ headings, so a renumber there moves it.
 | §3g | `test_the_ceilings_reach_a_reader.py` | |
 | §3h | `test_the_rail_is_a_source_list.py` | |
 | §3i | `test_the_header_keeps_its_budget.py` | |
-| §3j | | `UX-917` will add the hidden-control population guard; open finding |
-| §3k | | `UX-918` will add the snapshot-management locus guard; open finding |
+| §3j | | `UX-921` will add the hidden-control population guard; open finding |
 | §4 | `test_emphasis_is_a_budget.py`, `test_the_palette_is_validated.py`, `test_a_drawing_is_graded.py`, `test_apparatus_in_its_place.py`, `test_the_browser_is_the_library.py` | named |
 | §4a | | named; `UX-346`'s `test_a_sentence_lives_on_its_door.py` holds it and cites no section |
 | §4b | `test_a_runbook_is_not_a_table.py` | `UX-351`'s `test_the_label_is_for_the_reader.py` holds it and cites no section; `UX-669`'s clause holds the half that says a citation is a question, never a key |

@@ -1,15 +1,15 @@
-# Round 130 — navigation chooses; the Store section manages
+# Round 130 — a visual fold still pays for hidden controls
 
 Run on 2026-09-21. The checkout arrived shallow, with only `work` and no
 configured remote. Main was fetched explicitly from the repository URL and
-the branch rebased to `70765b09`; the two earlier local review commits were
+the branch rebased to `1448fddf`; the earlier local review commits were
 already superseded by main's rounds 120–129 and were dropped. The measurements
 below were then re-checked against that rebased tree.
 
 ```text
 design review   all-plane export plus served 100-run store, Chrome 153, 1440×900
 controls        run navigation, finding actions and store disclosure; 0 differ from label
-filed           UX-917, UX-918
+filed           UX-921
 ```
 
 ## Seen before measuring
@@ -66,18 +66,14 @@ decisions. Browser-side pruning is also rejected: the report is read-only, and
 the CLI already supplies its explicit confirmation boundary. A fixed global
 toolbar loses the evidence that makes the choice intelligible. A separate
 management page is unnecessary for three policies and would split context.
+That is a placement direction, not a measured defect: the existing snapshot
+controls stay bounded and correctly scoped, so the review files no second row.
 
 ## Proposed
 
 Styleguide §3j gives hidden interactive DOM the same population bound as
 visible cards. Keep lightweight anchor shells, hydrate one on fragment entry,
 and hydrate all only after **Show all**.
-
-Styleguide §3k separates snapshot navigation from management. Collapse the run
-selector, Previous and Latest under a one-row Run summary in the rail, with a
-single **Snapshots…** link to the Store section. Put whole-store facts,
-protected-run explanation and copyable list/dry-run commands there. Pruning
-remains CLI-only; export omits served-store controls.
 
 ## Controls
 
@@ -90,10 +86,8 @@ remains CLI-only; export omits served-store controls.
 
 ## Findings
 
-1. `UX-917` — hidden findings keep live controls. Nearest closed rows:
+1. `UX-921` — hidden findings keep live controls. Nearest closed rows:
    `UX-413` and `UX-526`.
-2. `UX-918` — snapshot navigation and management need separate loci. Nearest
-   closed rows: `UX-394`, `UX-528` and `UX-300`.
 
 ## Agents
 

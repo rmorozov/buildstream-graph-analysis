@@ -9,8 +9,14 @@
 # rather than exec'ing into it) to give them back. A wrapper killed
 # itself leaks until UX-852's audit.
 
-bga_self_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
-bga_tool=$(basename -- "$0")
+# UX-918: parameter expansion, not `dirname`/`basename` - a sandbox
+# staged by `examples/stage_cpp_toolchain.sh` has no coreutils, and this
+# line runs at source time under `set -eu`, so an absent `dirname` failed
+# the build before any wrapper logic ran (bst-examples exit 255).
+bga_dir0=${0%/*}
+if [ "$bga_dir0" = "$0" ]; then bga_dir0=.; fi
+bga_self_dir=$(CDPATH= cd -- "$bga_dir0" && pwd)
+bga_tool=${0##*/}
 bga_held=0
 bga_wfd=
 
@@ -26,6 +32,19 @@ bga_resolve() {
     readlink -f -- "$1" 2>/dev/null || printf '%s\n' "$1"
 }
 
+# UX-918: the marker scan, in the shell - `head -3 | grep` needs two
+# binaries a staged sandbox has not got, and a pipeline that dies 127
+# reads as "no marker", which silently disarms UX-846's recursion guard.
+bga_marks_self() {
+    [ -r "$1" ] || return 1
+    bga_seen=0
+    while [ "$bga_seen" -lt 3 ] && IFS= read -r bga_line; do
+        bga_seen=$((bga_seen + 1))
+        case $bga_line in *UX-846*) return 0 ;; esac
+    done < "$1"
+    return 1
+}
+
 bga_find_real() {
     self_resolved=$(bga_resolve "$0")
     old_ifs=$IFS
@@ -38,7 +57,7 @@ bga_find_real() {
         candidate="$dir/$bga_tool"
         [ -x "$candidate" ] || continue
         [ "$(bga_resolve "$candidate")" = "$self_resolved" ] && continue
-        head -3 -- "$candidate" 2>/dev/null | grep -q "UX-846" && continue
+        bga_marks_self "$candidate" && continue
         printf '%s\n' "$candidate"
         return 0
     done
@@ -48,7 +67,7 @@ bga_find_real() {
 bga_ledger() {
     [ -n "${BST_TRACE_JOBSERVER_LEDGER:-}" ] || return 0
     printf '{"event":"%s","tool":"%s","pid":%s,"tokens":%s,"t":%s}\n' \
-        "$1" "$bga_tool" "$$" "$bga_held" "$(date +%s.%N)" \
+        "$1" "$bga_tool" "$$" "$bga_held" "$(date +%s.%N 2>/dev/null || echo 0)" \
         >>"$BST_TRACE_JOBSERVER_LEDGER" 2>/dev/null || :
 }
 

@@ -2,6 +2,9 @@
 # UX-846: lld does not read a jobserver pipe below LLVM 22 (or ever,
 # for gold/mold) - this holds tokens for it instead of oversubscribing.
 set -eu
+# UX-918: `${var%/*}`, not `dirname` - a staged sandbox has no coreutils.
 _bga_self=$(readlink -f -- "$0" 2>/dev/null || printf '%s\n' "$0")
-. "$(CDPATH= cd -- "$(dirname -- "$_bga_self")" && pwd)/_common.sh"
+_bga_dir=${_bga_self%/*}
+if [ "$_bga_dir" = "$_bga_self" ]; then _bga_dir=.; fi
+. "$(CDPATH= cd -- "$_bga_dir" && pwd)/_common.sh"
 bga_run_wrapped threads "$@"

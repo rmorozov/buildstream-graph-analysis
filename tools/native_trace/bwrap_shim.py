@@ -444,6 +444,15 @@ _MAKE_CONSUMER_POLICIES = frozenset({"make", "cargo", "cmake_meson", "jobs_env"}
 # a raw fd is valid.
 _COMPILER_SAFE_POLICIES = frozenset({"cmake_meson", "jobs_env", "cargo"})
 
+# UX-913: of those, the policies whose MAKEFLAGS consumer is `make`
+# itself - a direct child, for which a raw fd is valid - so the scrub
+# does not apply and the auth stands (it cost every make-4.3 cmake
+# element its jobserver: `11-serial-giant` read `peak 2` against a
+# ceiling of 4). The `flto/` shims are NOT mounted with it - they need
+# `dirname`, which a staged-toolchain sandbox has not got; an element
+# that also drives LTO takes the `flto` override.
+_FD_DIRECT_POLICIES = frozenset({"cmake_meson"})
+
 # UX-879: the styles a per-element override may force. UX-880: `flto`
 # added - keeps the raw auth like `fd` (falls through `_forced_auth`
 # the same way), and is the glob a wrapper-directory GCC-driver shim
@@ -682,6 +691,10 @@ def _compiler_safe_makeflags(auth_value: str, policy: str, opts: list[str],
     when nothing names one (a bare fd with no FIFO behind it, e.g. a
     unit test's own pipe) or `real_bwrap` is unknown, in which case no
     `fifo:` rewrite is possible and `auth_value` stands, same as today.
+
+    UX-913: a `_FD_DIRECT_POLICIES` policy keeps its auth where the
+    scrub would have dropped it - `make` is a direct child and the raw
+    fd is valid for it.
     """
     if policy not in _COMPILER_SAFE_POLICIES or "fifo:" in auth_value:
         return auth_value
@@ -696,7 +709,10 @@ def _compiler_safe_makeflags(auth_value: str, policy: str, opts: list[str],
     probe = probe_make(real_bwrap, opts, cache_path)
     make_below_44 = bool(probe.get("available")) and \
         style_for_make_version(probe.get("version")) == "fd"
-    return compiler_safe_auth(auth_value, sandbox_fifo_path, make_below_44)
+    safe = compiler_safe_auth(auth_value, sandbox_fifo_path, make_below_44)
+    if safe is None and policy in _FD_DIRECT_POLICIES:
+        return auth_value
+    return safe
 
 
 def _jobserver_injection(opts: list[str], binds: tuple, decision: str,
@@ -761,7 +777,8 @@ def _jobserver_injection(opts: list[str], binds: tuple, decision: str,
         # that survives the sandbox boundary - `None` scrubs it outright
         # rather than hand a raw fd to a deep grandchild that cannot use
         # it.
-        safe_auth = _compiler_safe_makeflags(auth_value, policy, opts, ctx=ctx)
+        safe_auth = _compiler_safe_makeflags(
+            auth_value, policy, opts, ctx=ctx)
     if safe_auth != auth_value:
         pairs = [pair for pair in pairs if pair[0] != "MAKEFLAGS"]
         if safe_auth is not None:

@@ -1,4 +1,4 @@
-# UX-917: hidden findings keep live controls
+# UX-921: hidden findings keep live controls
 
 **Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-413 (card populations open bounded) | **Found by:** round 130 design review | **Serves:** R1, R4 and assistive-technology users reading a report with many findings | **Topic:** viewer | **Area:** bga/viewer | **Shape:** judgement
 

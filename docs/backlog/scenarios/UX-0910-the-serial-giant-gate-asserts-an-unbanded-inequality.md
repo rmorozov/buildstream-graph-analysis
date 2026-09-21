@@ -30,9 +30,13 @@ re-run, so they measure the noise directly rather than by inference:
 `off` moved 219.02s → 217.88s and `auto` moved 220.15s → 217.98s, a
 0.5% and a 1.0% swing with nothing changed at all. The four ~218s
 pairs are one machine class and the two ~172s pairs another, so the
-+2.2% outlier is not even from the same population as the rest; within
-the ~218s class alone the deltas still span +0.5% to -1.2% and still
-straddle zero.
++2.2% outlier is not drawn from the same population as the rest;
+within the ~218s class alone the deltas still span +0.5% to -1.2% and
+still straddle zero. That cuts two ways and both matter. The outlier
+is bad evidence for how wide the noise is, because reading it that way
+pools two populations — but it is fair evidence for what a band would
+have to survive, because the step runs on whichever runner it draws
+and cannot choose its class.
 
 `bga compare`, which the step itself calls, already applies the band
 (`_SIGNIFICANCE_PCT = 1`) and the step discards its verdict to
@@ -70,12 +74,13 @@ guard — replaced by one holding that the step still prints both walls.
 `10-jobserver`'s step (`UX-848`) is the shape to match: it greps for
 the walls and asserts no ordering.
 
-Banding it instead is not available today: a band has to be chosen
-against a measured spread, and the six pairs above are the only ones
-there are. `bga compare`'s own ±1% would still fail the +2.2% pair, and
-the same-sha re-run already moved `auto` by 1.0% on its own, so
-adopting that band here would trade an assertion that fails five times
-in six for one that fails on whichever run drifts furthest.
+Banding it instead is not available today, and the same-sha pair is
+why: a bare re-run of `d64d67f2` moved `auto` by 1.0% with nothing
+changed, so ±1% is already inside this example's idle variance on one
+machine class, before the other class is considered at all. `bga
+compare`'s own ±1% would also still fail the +2.2% pair, which the
+step cannot decline to run on. A band has to be chosen against a
+measured spread, and the six pairs above are the only ones there are.
 
 Removing the gate is not a verdict that the jobserver is fine, and this
 task must not be read as one. The six readings say nothing about the

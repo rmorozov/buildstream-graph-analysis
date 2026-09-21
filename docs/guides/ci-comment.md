@@ -50,6 +50,32 @@ capture; `--exclude <run-id or ref glob>` drops it, and the set listing
 says how many were dropped, because a band over a population the caller
 edited is a different claim from a band over everything published.
 
+**The seconds a review build owes, and where the band comes from**
+(`UX-899`). A per-PR claim of "this change cost N seconds" needs a
+population, not a predecessor: five captures of one unchanged
+freedesktop-sdk commit span **33%**, so one build against one previous
+build is a coin toss with a decimal point on it. Where the pipeline
+keeps its runs in the project's own store, `--band-from-class` selects
+that population itself — the last N runs declaring the candidate's own
+`build_class` (`UX-898`), newest first, with the baseline and candidate
+excluded so neither votes on the band it is judged against:
+
+```bash
+# the band is the last 10 review builds of this variant, not the last build
+bga compare @prev .bga/runs/<stamp>/run --band-from-class \
+    --fail-on-regression --format ci-comment
+```
+
+The default window is 10; `--band-from-class 25` states another. Below
+three runs of that class the gate **refuses** with exit `8` and names
+the class and the count, rather than falling back to the fixed 1% rule —
+that fallback is the cries-wolf comparison the band exists to replace.
+A nightly does not enter a review build's band and a sanitizer build
+does not enter a release one: the class is compared exactly, so a store
+that mixes them still yields one population per class. The comment names
+the runs the band was drawn from, so a reviewer can see a window that
+reached back across a toolchain bump.
+
 **Which gate to reach for.** `--fail-on-regression` asks "did it get
 slower", which a growing project fails legitimately.
 `--fail-on-efficiency-regression` asks "did it get *worse*", and
@@ -118,8 +144,10 @@ edge that cost 2.0s of critical path is not carrying anything.
 ## Reading it
 
 - **The headline** is the band verdict. With `--baseline-run` supplied
-  three or more times (or via `bga baseline`) the second line names the
-  measured noise band instead of the fixed 1% rule.
+  three or more times (or via `bga baseline`, or selected by
+  `--band-from-class`) the second line names the measured noise band
+  instead of the fixed 1% rule, and then names the runs it was computed
+  from (`UX-899`) — "band from 10 runs" does not say *which* ten.
 - **Every gate appears, every time.** A gate the invocation did not ask
   for reads `not requested`; a gate that could not run — no
   `occupancy_share` in a run, or a change that added no measured work —

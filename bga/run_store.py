@@ -206,6 +206,56 @@ def resolve_plane2(token: str, start: Optional[str] = None) -> str:
     return plane2
 
 
+def declared_class(run_dir: str) -> Optional[dict]:
+    """The `build_class` this run declared, or `None`.
+
+    Read straight from `run-context.json` rather than through the
+    analyzer, for `_band_sample`'s reason (`UX-296`): selecting a band
+    out of a store must not parse one trace per candidate row.
+    """
+    for name in ("run-context.json", "run_context.json"):
+        path = os.path.join(run_dir, name)
+        if not os.path.isfile(path):
+            continue
+        try:
+            with open(path, encoding="utf-8") as handle:
+                return json.load(handle).get("build_class")
+        except (OSError, ValueError):
+            return None
+    return None
+
+
+def runs_of_class(project: str, declared: Optional[dict], window: int,
+                  exclude: tuple = ()) -> list[str]:
+    """The `window` most recent runs in this store declaring `declared`.
+
+    `UX-899`: the population a noise band is drawn from is the
+    candidate's own class, so the selection is exact - `buildclass`'s
+    comparison, not a substring or a prefix of the stamp. Newest first,
+    because a window of the last N is what a gate wants and the oldest
+    runs are the ones describing a different tree.
+
+    An undeclared candidate selects undeclared runs: a store whose
+    pipeline never declared a class is still one population, and
+    refusing it would make the gate unavailable to every store that
+    predates `UX-898`.
+    """
+    from . import buildclass
+
+    skip = {os.path.realpath(path) for path in exclude if path}
+    selected = []
+    for snapshot in reversed(list_runs(project)):
+        run_dir = os.path.join(snapshot, RUN_SUBDIR)
+        if os.path.realpath(run_dir) in skip:
+            continue
+        if not buildclass.same_class(declared, declared_class(run_dir)):
+            continue
+        selected.append(run_dir)
+        if len(selected) >= window:
+            break
+    return selected
+
+
 def read_resource_profile(snapshot: str) -> dict:
     """The capacity scalars a capture recorded beside its report.
 

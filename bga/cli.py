@@ -36,15 +36,18 @@ from .analyzer import (
 from .compare import (
     _EFFICIENCY_DROP_PP,
     DEFAULT_BAND_K,
+    DEFAULT_BAND_WINDOW,
     DEFAULT_MAX_ADDITION_STRETCH,
+    MIN_BASELINE_RUNS,
     RunsNotComparableError,
     compare_runs,
     efficiency_below_floor,
     efficiency_regression_exceeds_threshold,
     efficiency_signal_status,
-    regression_exceeds_threshold,
+    regression_gate_failed,
 )
 from .exceptions import (
+    EXIT_BAND_UNAVAILABLE,
     EXIT_EFFICIENCY_REGRESSION,
     EXIT_GENERAL,
     EXIT_MISMATCHED_RUNS,
@@ -998,7 +1001,97 @@ EXIT_CODE_MISMATCHED_RUNS = EXIT_MISMATCHED_RUNS
 # `--fail-on-low-confidence` (UX-40) keeps returning 4 despite being the
 # same shape of flag - it shipped that way and a pipeline may key on it.
 EXIT_CODE_SIGNAL_UNAVAILABLE = EXIT_SIGNAL_UNAVAILABLE
+# UX-899: and neither is "the band you asked for does not exist yet".
+# `--band-from-class` is a request for a *measured* comparison; a store
+# with two same-class runs in it cannot answer one, and the three codes
+# above would each assert something that was not determined - 4 that the
+# build got slower, 6 that the runs are not comparable (they are; there
+# are just too few), 7 that a signal is missing from a run. The refusal
+# is the deliverable the row asked for: a gate that guesses at n=2 is
+# the cries-wolf failure the band exists to remove.
+EXIT_CODE_BAND_UNAVAILABLE = EXIT_BAND_UNAVAILABLE
 
+
+
+def _resolve_band_from_class(args: argparse.Namespace) -> Optional[int]:
+    """UX-899: fill `--baseline-run` from the candidate's own class.
+
+    The review gate the rollout asks for says seconds, and a seconds
+    claim from one build against one predecessor is a coin toss with a
+    decimal point on it - the README's five captures of one unchanged
+    `freedesktop-sdk` commit span 33%. The honest instrument is the band
+    the tool already has, pointed at the population the candidate
+    belongs to: the last N runs of this store that declare the
+    candidate's `build_class` (UX-898), newest first, the two principals
+    excluded so neither votes on the band it is judged against.
+
+    Returns an exit code when the request cannot be met, `None` when it
+    was met or never made. Refusing below `MIN_BASELINE_RUNS` rather
+    than falling back to the fixed 1% rule is the point of the flag: a
+    pipeline that asked for a measured band and silently got the rule
+    that cries wolf would be gating on the thing this row exists to
+    replace.
+    """
+    window = getattr(args, 'band_from_class', None)
+    if window is None:
+        return None
+    if window < MIN_BASELINE_RUNS:
+        print(
+            f"Error: --band-from-class {window} asks for a band from fewer than "
+            f"{MIN_BASELINE_RUNS} runs, which compute_band refuses by "
+            f"construction - below that a band is a restatement of one or two "
+            f"numbers.",
+            file=sys.stderr,
+        )
+        return EXIT_GENERAL
+    if getattr(args, 'baseline_run', None):
+        print(
+            "Error: --band-from-class and --baseline-run both name the band's "
+            "members. Pass one: the flag selects them from the store by class, "
+            "the option lists them by path.",
+            file=sys.stderr,
+        )
+        return EXIT_GENERAL
+
+    from . import run_store
+    from .buildclass import label as class_label
+
+    candidate = str(Path(args.candidate).resolve())
+    project = run_store.project_root(candidate)
+    if project is None:
+        print(
+            f"Error: --band-from-class needs a run store to select from, and no "
+            f"BuildStream project (a directory holding project.conf) encloses "
+            f"{candidate}. Point the candidate at a run inside the project's "
+            f"`.bga` store, or list the band's members with --baseline-run.",
+            file=sys.stderr,
+        )
+        return EXIT_CODE_BAND_UNAVAILABLE
+
+    declared = run_store.declared_class(candidate)
+    selected = run_store.runs_of_class(
+        project, declared, window,
+        exclude=(candidate, str(Path(args.baseline).resolve())),
+    )
+    if len(selected) < MIN_BASELINE_RUNS:
+        print(
+            f"Band gate REFUSED: the candidate declares "
+            f"{class_label(declared) or 'no build class'} "
+            f"and this store holds {len(selected)} other run(s) of that class "
+            f"within the last {window}, below the {MIN_BASELINE_RUNS} a measured "
+            f"band needs. This is a refusal to judge, not a verdict about the "
+            f"build: falling back to the fixed 1% rule is exactly the "
+            f"cries-wolf comparison --band-from-class exists to replace. "
+            f"Capture more runs of this class, widen the window, or drop the "
+            f"flag to accept the fixed rule. "
+            f"See docs/backlog/scenarios/"
+            f"UX-0899-the-seconds-slower-gate-needs-a-band-not-a-pair.md.",
+            file=sys.stderr,
+        )
+        return EXIT_CODE_BAND_UNAVAILABLE
+
+    args.baseline_run = selected
+    return None
 
 
 def _compare_exit_code(args: argparse.Namespace, comparison) -> int:
@@ -1231,9 +1324,15 @@ def _compare_exit_code(args: argparse.Namespace, comparison) -> int:
     if not getattr(args, 'fail_on_regression', False):
         return 0
 
-    if regression_exceeds_threshold(comparison, args.regression_threshold):
+    against_band = bool(getattr(args, 'band_from_class', None))
+    if regression_gate_failed(comparison, args.regression_threshold,
+                              against_band=against_band):
         threshold_desc = (
-            f"{args.regression_threshold}%" if args.regression_threshold is not None
+            # UX-899: the band the gate was actually judged against, not
+            # a percentage it did not read.
+            f"the band from {comparison.baseline_band['n']} run(s) of its class"
+            if against_band and comparison.baseline_band
+            else f"{args.regression_threshold}%" if args.regression_threshold is not None
             else "the default significance threshold"
         )
         print(
@@ -1276,6 +1375,13 @@ def _execute_compare_and_write(args: argparse.Namespace) -> int:
             file=sys.stderr,
         )
         return EXIT_CODE_MISMATCHED_RUNS
+
+    # UX-899: before the comparison, because a refusal here is a refusal
+    # to judge - printing a fixed-rule verdict beside it would leave a
+    # reader to decide which to believe (UX-78's rule).
+    refusal = _resolve_band_from_class(args)
+    if refusal is not None:
+        return refusal
 
     try:
         output, comparison = _produce_compare_output(args)
@@ -2286,6 +2392,13 @@ def _add_compare_subcommand(subparsers) -> None:
     compare_parser.add_argument(
         '--band-k', type=float, default=DEFAULT_BAND_K, metavar='K',
         help='Noise-band width, in scaled-MAD units.'
+    )
+    compare_parser.add_argument(
+        '--band-from-class', nargs='?', type=int, default=None,
+        const=DEFAULT_BAND_WINDOW, metavar='N',
+        help=f'Band from the last N (default {DEFAULT_BAND_WINDOW}) store runs '
+             f'of the candidate\'s own class; exit {EXIT_CODE_BAND_UNAVAILABLE} '
+             f'below {MIN_BASELINE_RUNS}.'
     )
     # UX-104 item 2: a memory *note*, not a gate. Two flags rather than
     # one because the envelope is a fact about a run and the two runs are

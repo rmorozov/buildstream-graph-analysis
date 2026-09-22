@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-934 scenarios: **22 open**, 912 closed.
+936 scenarios: **23 open**, 913 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -27,7 +27,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | cli | 0 | 22 |
 | store | 1 | 17 |
 | docs | 1 | 146 |
-| guards | 13 | 258 |
+| guards | 14 | 260 |
 
 ## Open scenarios
 
@@ -58,6 +58,7 @@ task file, which is the only place it ever lived twice.
 | UX-936 | [a heavy-fixture guard excurses three times on a record that is not too low, so the ledger is reading the runner](UX-0936-a-heavy-fixture-guard-excurses-on-a-record-that-is-not-too-low.md) | guards | Medium | every branch whose push gate reads a suite `main` has already reddened | 🔴 Not Started |
 | UX-937 | [the area vocabulary is derived by a regex that admits two of the tree's three top-level directories, so no row can declare `tests`](UX-0937-the-area-vocabulary-cannot-spell-tests.md) | guards | Low | every row whose change lives under `tests/`, and the area pages meant to say where work lands | 🔴 Not Started |
 | UX-938 | [an acceptance clause can name a reading that no environment in this project ever takes, and nothing says so until the round that owes it](UX-0938-an-acceptance-clause-can-name-a-reading-no-environment-takes.md) | guards | Medium | every clause that asks for a reading, and every round that reports one unpaid | 🔴 Not Started |
+| UX-940 | [the BuildStream behaviour claims are pinned to three versions and nothing says which were re-confirmed](UX-0940-the-versions-the-behaviour-claims-were-confirmed-on-are-three.md) | guards | Medium | whoever reads a BuildStream behaviour claim and has to decide whether it still holds | 🔴 Not Started |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

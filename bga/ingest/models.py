@@ -13,7 +13,7 @@ from typing import Optional
 # typically thin structural/aggregation elements - no real compilation of
 # their own (junction: reference to another project; import/filter/compose:
 # no-transform passthroughs; stack: BST_ELEMENT_HAS_ARTIFACT=False,
-# get_unique_key() returns a constant - confirmed via BuildStream 2.7.0
+# get_unique_key() returns a constant - BuildStream 2.7.0 and 2.8.1
 # source, see docs/backlog/tasks/P4-15-stack-consolidation-heuristic.md). Used
 # only to *annotate/flag* diagnostic signal listings (P4-12 Direction 2/
 # P4-15 Direction 2) - never to silently exclude or reweight a directly

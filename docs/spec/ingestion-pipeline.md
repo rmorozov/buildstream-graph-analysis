@@ -96,12 +96,15 @@ real `bst show`/`bst build` (BuildStream 2.7.0).
 
 ## Empirically confirmed facts (2026-08-14, against real `bst` 2.7.0)
 
-**Last exercised on `bst` 2.8.0, 2.7.0, 2026-09-03.** The tier runs in two
-environments with two binaries - CI's runner and the development
-container - so the line names both. Each is read from the binary by
+**Last exercised on `bst` 2.8.1, 2026-09-22.** One version, because
+`ci.yml`'s `BST_VERSION` now pins what the tier installs and a runner
+image can no longer move it underneath (`UX-939`; before that the line
+carried a second entry naming a session's scratch install, which no
+container could witness). It is read from the binary by
 `tests/unit/test_bst_extract_run.py` (`bst --version`), not restated here
 by hand; `tests/unit/test_the_ingestion_facts_name_the_bst_they_ran_on.py`
-fails if the binary running now is not one of them (`UX-571`).
+fails if the binary running now is not it (`UX-571`). A container with no
+`bst` skips that clause rather than guessing.
 
 Do not re-guess these from documentation alone - they were confirmed by
 actually installing BuildStream (`pip install buildstream
@@ -194,12 +197,15 @@ commands against a small from-scratch project
 
 ## Empirically confirmed facts about real BuildStream *logs* (2026-08-14, against real `bst` 2.7.0)
 
-**Last exercised on `bst` 2.8.0, 2.7.0, 2026-09-03.** The tier runs in two
-environments with two binaries - CI's runner and the development
-container - so the line names both. Each is read from the binary by
+**Last exercised on `bst` 2.8.1, 2026-09-22.** One version, because
+`ci.yml`'s `BST_VERSION` now pins what the tier installs and a runner
+image can no longer move it underneath (`UX-939`; before that the line
+carried a second entry naming a session's scratch install, which no
+container could witness). It is read from the binary by
 `tests/unit/test_bst_extract_run.py` (`bst --version`), not restated here
 by hand; `tests/unit/test_the_ingestion_facts_name_the_bst_they_ran_on.py`
-fails if the binary running now is not one of them (`UX-571`).
+fails if the binary running now is not it (`UX-571`). A container with no
+`bst` skips that clause rather than guessing.
 
 Confirmed by actually running real builds (success and failure cases)
 against `tests/fixtures/bst_show_project/` and a throwaway `kind: manual`

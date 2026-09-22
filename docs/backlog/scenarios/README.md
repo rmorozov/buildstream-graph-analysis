@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-927 scenarios: **17 open**, 910 closed.
+928 scenarios: **18 open**, 910 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -27,7 +27,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | cli | 0 | 22 |
 | store | 1 | 17 |
 | docs | 1 | 146 |
-| guards | 8 | 251 |
+| guards | 9 | 252 |
 
 ## Open scenarios
 
@@ -53,6 +53,7 @@ task file, which is the only place it ever lived twice.
 | UX-928 | [the routing rule sends a prose diff to a protocol that opens on a served page](UX-0928-the-routing-rule-sends-a-prose-diff-to-a-protocol-that-opens-on-a-page.md) | guards | Medium | every diff that edits a skill, a hook or the spec without touching the report | 🔴 Not Started |
 | UX-929 | [two population-sized guards reach three excursions in one run, and both records were frozen](UX-0929-two-population-sized-guards-reach-three-excursions-in-one-run.md) | guards | Medium | every branch whose push gate reads a suite `main` has already reddened | 🔴 Not Started |
 | UX-937 | [the area vocabulary is derived by a regex that admits two of the tree's three top-level directories, so no row can declare `tests`](UX-0937-the-area-vocabulary-cannot-spell-tests.md) | guards | Low | every row whose change lives under `tests/`, and the area pages meant to say where work lands | 🔴 Not Started |
+| UX-938 | [an acceptance clause can name a reading that no environment in this project ever takes, and nothing says so until the round that owes it](UX-0938-an-acceptance-clause-can-name-a-reading-no-environment-takes.md) | guards | Medium | every clause that asks for a reading, and every round that reports one unpaid | 🔴 Not Started |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

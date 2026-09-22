@@ -170,10 +170,21 @@ jobs:
             tier-carry-refs/heads/${{ github.event.repository.default_branch }}-
         if: matrix.python-version == '3.11' && github.ref != format('refs/heads/{0}', github.event.repository.default_branch)
 
+      # The notice is not decoration. `UX-912` spent four runs reading
+      # this restore wrong because the only witness was a log line, and
+      # a log line is not reachable from a session: the run archive is
+      # 403 at CONNECT here, and the jobs API caps a tail at 5,000
+      # lines, which the gate step below overruns on its own. An
+      # annotation is reachable (`UX-621`, same route), so the step says
+      # whether the carry arrived where the answer can be read.
       - name: Set aside what the default branch carried
         run: |
-          mv "${{ runner.temp }}/tier_carry.json" \
-             "${{ runner.temp }}/tier_carry_base.json" || true
+          if mv "${{ runner.temp }}/tier_carry.json" \
+                "${{ runner.temp }}/tier_carry_base.json" 2>/dev/null; then
+            echo "::notice::tier carry: the default branch's carry restored"
+          else
+            echo "::notice::tier carry: no carry restored for the default branch"
+          fi
         if: matrix.python-version == '3.11' && github.ref != format('refs/heads/{0}', github.event.repository.default_branch)
 
       - name: What the last run of this branch found over the gates

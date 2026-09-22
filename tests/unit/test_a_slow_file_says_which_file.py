@@ -2132,11 +2132,22 @@ class TestCiSuppliesTheMemoryTheRuleNeeds:
         # Not the gate step itself: `--base-carry <path>` names the path
         # too, and reading the whole job let this clause pass a mutation
         # that deleted the only step placing the file.
-        assert [step for step in steps
-                if base in str(step.get("run", ""))
-                and "--base-carry" not in str(step.get("run", ""))], (
+        placing = [step for step in steps
+                   if base in str(step.get("run", ""))
+                   and "--base-carry" not in str(step.get("run", ""))]
+        assert placing, (
             f"nothing in the job produces {base}, so --base-carry reads "
             f"a file that is never written")
+        # `UX-923`: and it says which way it went where that can be
+        # read. The run archive answers 403 at CONNECT from a session
+        # and the jobs API caps a log tail at 5,000 lines, which the
+        # gate step overruns by itself - so the restore's own line is
+        # unreachable, which is how `UX-912` misread it for four runs.
+        # An annotation is reachable (`UX-621`).
+        assert all("::notice::" in str(step["run"]) for step in placing), (
+            "the step placing the base carry does not annotate whether "
+            "one arrived, so the only witness is a log line no session "
+            "can read (UX-923)")
         own = [i for i, step in enumerate(steps)
                if "github.ref }}-${{ github.run_id" in
                str(step.get("with", {}).get("key", ""))

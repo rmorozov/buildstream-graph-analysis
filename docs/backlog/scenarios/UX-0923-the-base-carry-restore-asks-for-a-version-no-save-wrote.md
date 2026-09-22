@@ -131,25 +131,18 @@ service for a cache version no save had ever written.
 
 ```text
 getCacheVersion(paths, method, ...) = sha256(paths|method|versionSalt)
-restoreCacheV2: request = {key, restoreKeys, version: getCacheVersion(paths, ...)}
-saveCacheV2:    version = getCacheVersion(paths, ...)   # `paths`, not `cachePaths`
+restore/saveCacheV2 both send it, from `paths` - not `cachePaths`
 save    $RUNNER_TEMP/tier_carry.json      -> d1e90db57d1530e4..
 restore $RUNNER_TEMP/tier_carry_base.json -> a3a89e944c9c3fa0..
 ```
 
-The placement, with the action's own tar arguments:
-
-```text
-member ../_temp/tier_carry.json
-tar -xf cache.tzst -P -C $GITHUB_WORKSPACE
-  tier_carry.json      exists: YES
-  tier_carry_base.json exists: no
-```
-
-So the miss is a version mismatch, and a hit would have overwritten
-the branch's own carry rather than producing the file `--base-carry`
-reads. Both are invisible in the log the four runs left: the version
-is printed at `core.debug` only.
+The placement, with the action's own tar arguments — `tar -xf
+cache.tzst -P -C $GITHUB_WORKSPACE` on an archive whose one member is
+`../_temp/tier_carry.json` leaves `tier_carry.json` and no
+`tier_carry_base.json`. So a hit would have overwritten the branch's
+own carry rather than producing the file `--base-carry` reads. Both
+are invisible in the log those runs left: the version prints at
+`core.debug` only.
 
 Third reading, on the tool: one file at 50s against a 2.4s record, a
 carry naming it, `--base-carry` pointed at a copy of `--carry` — what
@@ -163,19 +156,17 @@ the default branch would restore for itself:
 ### After
 
 The base restore names the save's path, runs before the branch's own,
-hands its file to a `mv`, and is skipped on the default branch; the
-guard that read every carry step's `key` reads its `path` too.
+hands its file to a `mv`, is skipped on the default branch, and says
+which way it went as an annotation; the guard that read every carry
+step's `key` reads its `path` too.
 
 ```text
 $ python3 -m pytest tests/unit/test_a_slow_file_says_which_file.py \
     -k "TestCiSuppliesTheMemoryTheRuleNeeds or TestABaseExcursionIsReportedNotFailed" -q
-13 passed, 136 deselected in 0.59s
+14 passed, 136 deselected in 0.59s
 ```
 
-The Acceptance Test's live clause — a run reporting a restored
-`tier_carry_base.json` — is read off this branch's own CI run below.
-
-### Mutations verified red and reverted (5)
+### Mutations verified red and reverted (6)
 
 | # | mutation | reddened |
 |---|---|---|
@@ -184,17 +175,26 @@ The Acceptance Test's live clause — a run reporting a restored
 | A3 | base restore moved below the branch's own | same clause, its ordering assert |
 | A4 | `github.ref != …default_branch` dropped from the base restore's `if:` | `test_the_default_branch_does_not_excuse_itself` |
 | A5 | `based_rows` returns no rows | `test_a_base_carry_equal_to_this_runs_own_excuses_everything` |
+| A6 | the placing step echoes without `::notice::` | `test_the_base_carry_is_placed_by_a_step_that_can_place_it` |
 
 The clause A2 tests passed A2 as first written: the gate step's own
 `--base-carry <path>` names the path, so "some step mentions it" was
-satisfied by the step that *reads* the file. It excludes any `run:`
-carrying `--base-carry` now.
+satisfied by the step that *reads* the file.
 
 ### Deviation
+
+The Acceptance Test's live clause is **not** satisfiable the way it
+was written, and run 35680793877 is why: the gate returned `tiers ok`
+at `dev_tier_drift.py:1150`, which is *before* `--base-carry` is read
+at `:1155`, so a clean run prints neither message. Nor is the restore's
+own log line reachable — the run archive answers 403 at CONNECT here
+and the jobs API caps a tail at 5,000 lines, which the gate step
+overruns alone. Hence A6: the step now annotates the outcome
+unconditionally, which is the clause's readable form and is what the
+next run answers. Whether a `refs/pull/N/merge` run can read a
+`refs/heads/main` entry stays untested until then.
 
 `UX-912`'s reference-refresh half is untouched and still owed: it
 needs a CI run's own `ci-reference-candidate` artifact, and Actions
 artifact downloads are 403 through this proxy, so only the owner can
-pull it. Whether a `refs/pull/N/merge` run can read a `refs/heads/main`
-entry at all is untested — the version mismatch explains every miss on
-record — and this branch's run is the first test of it.
+pull it.

@@ -136,11 +136,18 @@ def _node(reader: _Reader, path: str) -> None:
         raise ValueError(f"unsupported NAR node type {kind!r}")
 
 
-def unpack_nar(compressed: bytes, dest: str) -> None:
-    """One `.nar.xz`'s single root node, written at `dest`."""
-    reader = _Reader(lzma.decompress(compressed))
+def unpack_nar_data(raw: bytes, dest: str) -> None:
+    """One decompressed NAR's single root node, written at `dest`. Split
+    from `unpack_nar` for UX-927, whose closures are `zstd`: the reader
+    is the same, only the decompressor in front of it differs."""
+    reader = _Reader(raw)
     _expect(reader, "nix-archive-1")
     _node(reader, dest)
+
+
+def unpack_nar(compressed: bytes, dest: str) -> None:
+    """One `.nar.xz`'s single root node, written at `dest`."""
+    unpack_nar_data(lzma.decompress(compressed), dest)
 
 
 def fetch(url: str, sha256: str, cache_dir: str) -> bytes:

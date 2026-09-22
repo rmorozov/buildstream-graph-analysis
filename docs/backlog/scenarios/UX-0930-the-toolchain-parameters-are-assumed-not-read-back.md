@@ -215,6 +215,6 @@ one more `execve` per compile (16 to 17) for no change in what is
 compiled, re-dating every figure. It installs when the pin moves.
 
 ```text
-9233 passed, 175 skipped in 415.42s     make test
+9242 passed, 175 skipped in 403.72s     make test
 All checks passed!                      make lint
 ```

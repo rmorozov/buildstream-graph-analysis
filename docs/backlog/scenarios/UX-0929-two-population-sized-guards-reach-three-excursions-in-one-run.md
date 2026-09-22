@@ -47,7 +47,11 @@ Four carried copies and one real reading of **13.41 s** against a
 committed 9.19 — the record is 1.46x low, and the excursion ratios
 creep in exactly that direction. It is named in the `**Flake:**` field
 above rather than filed apart, because it is this row's claim with a
-third instance, not a new one.
+third instance, not a new one. A `**Flake:**` field that keeps
+taking names is the mechanism admitting it has no fix: what the ledger
+is actually naming is files whose cost the reference cannot follow, and
+`UX-924` only landed today, so whether it ever can is a question three
+adopt commits old.
 
 So the diagnosis is a hypothesis with a cheap test, not a finding:
 after `UX-924` lands, three adopt commits on `main` put real readings

@@ -28,9 +28,22 @@ cbcdae85  15   UX-927: a pin's whole closure ... (#260)
 32bf9893  14   Merge pull request #259
 ```
 
-`2a3f2ee7`, `c19560d6` and `a002fb71` landed on one afternoon, two of
-the three jobs between them. The row is not "an adopt job once redded
-`main`": every adopt commit lands unchecked, and one of them redded it.
+`2a3f2ee7`, `c19560d6`, `a002fb71` and `408235c7` landed on one
+afternoon, all three jobs between them. The row is not "an adopt job
+once redded `main`": every adopt commit lands unchecked, and **two of
+the four reddened it** — `2a3f2ee7` at 09:12 and `408235c7` at 17:03,
+each taking files to `UX-691`'s floor with no task declaring them, each
+first witnessed by another branch's push gate rather than by anything
+on GitHub.
+
+The missing check is at **write time**, not at read time. A job that
+writes a register a guard reads, and pushes it without running that
+guard, has no reader until someone else's branch inherits it. That is
+the family `UX-924` (adopt feeding its own median back), `UX-932` (a
+sandboxed writer escaping into the tree it guards) and `UX-935` (a
+count derived from an index mid-merge) belong to: a write path that
+escapes the thing meant to check it. `UX-929` and `UX-936` are what
+this one costs, filed twice in one day.
 
 It is not a rare shape — one in five, none of them read by any check:
 

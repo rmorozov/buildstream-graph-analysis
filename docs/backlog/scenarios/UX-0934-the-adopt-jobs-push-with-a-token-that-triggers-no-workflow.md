@@ -1,6 +1,6 @@
 # UX-934: the adopt jobs push with a token that triggers no workflow, so a commit that reds main carries no CI
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-503, UX-524, UX-691 | **Blocks:** — | **Found by:** round 136 — `2a3f2ee7` took two files to `EXCURSION_FLOOR` and left `main` red on `test_a_file_with_three_excursions_has_a_filed_task.py`; GitHub shows that commit with **zero** check runs, and the first thing to notice was another thread's push gate refusing | **Serves:** every branch that inherits a red `main` it cannot see and did not cause | **Topic:** guards | **Area:** tools | **Shape:** judgement
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-503, UX-524, UX-691 | **Blocks:** — | **Found by:** round 136 — `2a3f2ee7` took two files to `EXCURSION_FLOOR` and left `main` red on `test_a_file_with_three_excursions_has_a_filed_task.py`; GitHub shows that commit with **zero** check runs, and the first thing to notice was another thread's push gate refusing; the same again at `408235c7` and `8090a99d`, which took `test_every_skip_reason_is_declared.py` to three, and `461c9c6b` unchecked with the reference's 46.28 s entry (`UX-944`) | **Serves:** every branch that inherits a red `main` it cannot see and did not cause | **Topic:** guards | **Area:** tools | **Shape:** judgement
 
 ## Motivation
 
@@ -124,4 +124,71 @@ without pushing, and a guard reads that the workflow calls that check
 in that job — a mutation removing the step reddens, and a mutation
 pointing the step at a different file reddens too.
 
-## Outcome
+## Outcome (round 136, 2026-09-22) — 🟢 Done
+
+**Premise:** held — a third instance landed while this was worked.
+
+### The gap, measured
+
+```text
+$ GET /repos/.../commits/<sha>/check-runs  ->  total_count
+8090a99d   0   CI: append this run's excursions to the flake ledger (UX-691)
+7b8da86e  15   UX-939: pin BuildStream at 2.8.1 everywhere ... (#267)
+$ python3 -m pytest -q tests/unit/test_a_file_with_three_excursions_has_a_filed_task.py   # at 8090a99d
+E     Left contains one more item: ('tests/unit/test_every_skip_reason_is_declared.py', 3)
+1 failed, 7 passed in 0.24s
+```
+
+The merge got 15 checks; the ledger commit its run pushed got none and
+reddened the census guard.
+
+### After
+
+Each adopt job runs `tools/dev_adopt_check.py` on exactly the records it
+`git add`s, after the local commit and before `git push`; a red exits the step
+non-zero with an `::error::` annotation, on the run GitHub does check.
+
+```text
+$ python3 tools/dev_adopt_check.py <records>        # this tree, 4 cores, serial
+flake-ledger-adopt   tests/flake_ledger.json                          rc=1   0.5s   1 failed, 7 passed
+tier-reference-adopt tests/ci_reference.json                          rc=0   7.5s   180 passed
+touch-map-adopt      tests/touch_map.json tests/ci_reference.json     rc=0  19.5s   252 passed
+```
+
+| record | guard files run |
+|---|---|
+| `tests/flake_ledger.json` | `test_a_file_with_three_excursions_has_a_filed_task.py` |
+| `tests/ci_reference.json` | `test_a_slow_file_says_which_file.py`, `test_the_process_documents_derive_their_figures.py` |
+| `tests/touch_map.json` | `test_the_touching_map_is_measured.py`, `test_the_loop_stays_fast.py` |
+
+The same three sets pass on a `--depth 1` clone (what `actions/checkout`
+gives these jobs). `test_an_adopt_job_reads_its_record_before_it_pushes.py`
+runs the ledger job's own script against a scratch bare remote: two
+excursions push, three exit non-zero with the remote's `main` unmoved.
+
+### Mutations verified red and reverted (5)
+
+| # | mutation | reddened |
+|---|---|---|
+| A1 | the ledger job's check line deleted | 2 of 10: the wiring, the rejected-ledger run |
+| A2 | the ledger job checks `tests/ci_reference.json` instead | 3 of 10 |
+| A3 | the ledger check suffixed `\|\| true` | 2 of 10 |
+| A4 | `dev_adopt_check.main` returns 0 on a red guard | 1 of 10: the rejected-ledger run |
+| A5 | the touch-map job checks only `tests/touch_map.json` | 1 of 10 |
+
+### Deviation from the Required Fix
+
+The guards are a declared map (5 files, 0.5-19.5 s), not derived: the
+widest derivation measured 12-15 files and 40 s per record, and names
+files that do not read the record. `UX-942` files the selector gap that
+choice exposed. A record already red on `main` fails every later adopt
+of it, the harmless ones too, until the filing lands — by design.
+`UX-943` files the `always()` that runs all three jobs after a run whose
+whole suite failed (`98c387bc`), which this check cannot see past.
+
+```text
+$ make test      # the commit before the fixing-guide map row and the spread figure
+4 failed, 9262 passed, 184 skipped in 295.33s     # 3 were this diff's, fixed; 1 is main's ledger
+$ make lint
+All checks passed!
+```

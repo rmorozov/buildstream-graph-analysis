@@ -351,6 +351,7 @@ pairing for every merged row from round 103 on.
 | 129 | verifier | sonnet | UX-886 (verifier) | 44k | 24 | 3.6 m | PASS: bounded retry returns early (1.2 s unloaded), the refill-skip mutation reddens at `assert 2 == 4` after the full bound, revert green; only the two declared surfaces touched | flagged the stale `…WithinTwoSeconds` class name (already renamed in the close tree); a dirty/shared worktree at close makes "what does HEAD contain" ambiguous for the verifier |
 | 130 | design-reviewer | GPT-5.6 Sol | control growth and snapshot-management locus | unmetered | unmetered | 24 m | one filing, UX-921 | split all-plane/served fixtures; the checkout needed an explicit main fetch |
 | 134 | general-purpose | sonnet | UX-915/UX-916 (self-review) | 159k | 61 | 10.3 m | one Important - UX-916's Outcome read a pre-#248 tree and declared its third clause blocked - plus three nits; all four acted on, and the clause landed as two live arms | the Important finding needed a direct call into `_compiler_safe_makeflags` with a cached 4.2.1 probe: the Outcome's claim was about behaviour no guard in the diff reads, so reading the diff could not have caught it |
+| 131 | self-review | sonnet | UX-908 close + UX-922 filing | 151k | 58 | 8.5 m | no Important, two nits - ci_reference.json's re-record confirmed inside UX-908's own scope against UX-912's Out of Scope; the hand-append figures verified equal to the verify skill's raw/shift rule by reading dev_tier_drift.py's own arithmetic; UX-922's two central claims (543/566 full windows, 399 flat; adopt reads candidate.files) reproduced independently; the round-130 dateline waiver reverted and reproduced red on 74fb2712, justification accurate | confirming the hand-append matched the verify skill's rule needed tracing flake_ledger.json's stored `shift` field back through `dev_tier_drift.py`'s `ratio / shift`, since it is not literally the run's printed drift shift (the three cells are the harness's own `subagent_tokens`/`tool_uses`/`duration_ms` for the run, not `dev_track_cost.py`'s transcript-derived fresh count) |
 
 Round 101's four tracks are **not** here: this session could not
 identify their transcripts with certainty after a context rebuild, and
@@ -363,7 +364,7 @@ committed cleanly once told to run in the foreground. Three of the five
 left a derived figure or a §6 context-map row behind - the same class
 the round itself was about, arriving in the tracks' own work.
 
-What the three hundred and thirty-four rows already say: a researcher that reads a document
+What the three hundred and thirty-five rows already say: a researcher that reads a document
 whole costs 100-180k; a walker that drives every control costs 336k;
 the two cuts cost a re-run each. The `walk` and `design-review`
 skills fix the report shape so the next rows are smaller, and the

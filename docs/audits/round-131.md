@@ -1,8 +1,11 @@
 # Round 131 — a rising ratio that was a stale record
 
 Run on 2026-09-22 from `74fb2712`. One row closed (`UX-908`), one
-filed (`UX-922`). There were no agents launched — the reading is four
-commands and two records, and the bisect is `git show` over one file.
+filed (`UX-922`), and one guard waived so the round could reach a green
+gate at all: `main` was red on `round-130.md`'s dateline, which #249's
+merge moved a day past the round's own work date. The reading itself is
+four commands and two records, and the bisect is `git show` over one
+file; the only track was `self-review`.
 
 ```text
 closed   UX-908   the drawing-grade guard's four CI excursions
@@ -78,4 +81,10 @@ move.
 
 ## Agents
 
-There were no agents launched.
+| agent | model | task | tokens | calls | wall | friction |
+|---|---|---|---|---|---|---|
+| self-review | sonnet | `UX-908` close + `UX-922` filing | 151k | 58 | 8.5 m | confirming the hand-append matched the `verify` skill's raw/shift rule needed tracing `flake_ledger.json`'s stored `shift` field back through `dev_tier_drift.py`'s own `ratio / shift`, since it is not the run's printed drift shift |
+
+No Important findings, two nits, both taken: this document did not name
+the waiver commit, and the note below showed the shift derivation for
+one of the three readings rather than the identity behind all three.

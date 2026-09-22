@@ -151,10 +151,28 @@ class TestEveryClassAnswersFromTheStagedTree:
         assert exit_code == 0
 
     def test_each_class_answers_from_the_half_it_declares(self, mini):
+        """Against `declared`, not against `CLASSES` directly: two rows
+        read differently on the two toolchains and the table says so
+        rather than one of them being excused. `mini` is host-staged,
+        so `as` and `ld` are not asked at all (nothing answers
+        `-print-prog-name` for them) and the C++ headers are the
+        target's - `UX-925`'s pinned tree is the other reading, and
+        `test_the_pinned_tree_reads_the_other_half` takes it."""
         measured = tp.measure(mini)
 
-        assert {name: owner for name, (_path, owner) in measured.items()} == {
-            row["name"]: row["owner"] for row in tp.CLASSES}
+        assert not tp.is_pinned(mini)
+        assert {name: owner
+                for name, (_path, owner) in measured.items()} == tp.declared(mini)
+
+    def test_the_two_toolchains_declare_the_same_classes_differently(self):
+        """The flip `UX-925` predicted and measured: Ubuntu packages
+        libstdc++'s headers under `/usr/include`, and an unwrapped nix
+        gcc carries them inside its own store prefix."""
+        assert tp.declared("/", pinned=True)["cxx-headers"] == tp.TOOLCHAIN
+        assert tp.declared("/", pinned=False)["cxx-headers"] == tp.SYSROOT
+        for name in ("assembler", "linker"):
+            assert name in tp.declared("/", pinned=True)
+            assert name not in tp.declared("/", pinned=False)
 
     def test_a_header_reads_the_search_path_not_its_realpath(self,
                                                              mini_symlinked):

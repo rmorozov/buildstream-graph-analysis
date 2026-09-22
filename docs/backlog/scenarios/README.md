@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-934 scenarios: **22 open**, 912 closed.
+936 scenarios: **23 open**, 913 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -27,7 +27,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | cli | 0 | 22 |
 | store | 1 | 17 |
 | docs | 1 | 146 |
-| guards | 13 | 258 |
+| guards | 14 | 260 |
 
 ## Open scenarios
 
@@ -49,7 +49,6 @@ task file, which is the only place it ever lived twice.
 | UX-917 | [the fold-depth guard has three unconfirmed CI excursions, spread over three weeks](UX-0917-the-fold-depth-guard-has-three-unconfirmed-excursions.md) | guards | Medium | the round whose push gate is blocked by a file nobody has named | 🔴 Not Started |
 | UX-920 | [two task files can share one backlog id, and no guard reads ids for uniqueness](UX-0920-two-task-files-can-share-one-id-and-nothing-reads-it.md) | guards | Medium | every round that runs more than one branch at a time, which is now the normal case | 🔴 Not Started |
 | UX-921 | [hidden findings keep live controls](UX-0921-hidden-findings-keep-live-controls.md) | viewer | Medium | R1, R4 and assistive-technology users reading a report with many findings | 🔴 Not Started |
-| UX-925 | [the toolchain axis is this host's gcc, because gcc's search paths are not relocatable](UX-0925-the-toolchain-axis-is-host-gcc-because-gcc-is-not-relocatable.md) | guards | Medium | every example, and the comparison class a `variant` dimension names | 🔴 Not Started |
 | UX-926 | [a round that leaves neither a document nor a ledger row is invisible to the register, and so to the guard whose job is to demand its document](UX-0926-a-round-that-leaves-no-trace-is-invisible-to-the-register.md) | guards | Medium | every later round, which reads a round's record instead of its code | 🔴 Not Started |
 | UX-928 | [the routing rule sends a prose diff to a protocol that opens on a served page](UX-0928-the-routing-rule-sends-a-prose-diff-to-a-protocol-that-opens-on-a-page.md) | guards | Medium | every diff that edits a skill, a hook or the spec without touching the report | 🔴 Not Started |
 | UX-929 | [population-sized guards reach three excursions in one run, and their records were frozen](UX-0929-two-population-sized-guards-reach-three-excursions-in-one-run.md) | guards | Medium | every branch whose push gate reads a suite `main` has already reddened | 🔴 Not Started |
@@ -57,6 +56,8 @@ task file, which is the only place it ever lived twice.
 | UX-934 | [the three adopt jobs push with a token that triggers no workflow, so a commit that reds `main` carries no CI](UX-0934-the-adopt-jobs-push-with-a-token-that-triggers-no-workflow.md) | guards | High | every branch that inherits a red `main` it cannot see and did not cause | 🔴 Not Started |
 | UX-935 | [a conflicted path is counted once per stage, so `--check --write` bakes a wrong number and calls the tree clean](UX-0935-a-conflicted-path-is-counted-once-per-stage.md) | guards | Medium | every catch-up merge, which is the step this repository runs before every landing | 🔴 Not Started |
 | UX-936 | [a heavy-fixture guard excurses three times on a record that is not too low, so the ledger is reading the runner](UX-0936-a-heavy-fixture-guard-excurses-on-a-record-that-is-not-too-low.md) | guards | Medium | every branch whose push gate reads a suite `main` has already reddened | 🔴 Not Started |
+| UX-937 | [the area vocabulary is derived by a regex that admits two of the tree's three top-level directories, so no row can declare `tests`](UX-0937-the-area-vocabulary-cannot-spell-tests.md) | guards | Low | every row whose change lives under `tests/`, and the area pages meant to say where work lands | 🔴 Not Started |
+| UX-938 | [an acceptance clause can name a reading that no environment in this project ever takes, and nothing says so until the round that owes it](UX-0938-an-acceptance-clause-can-name-a-reading-no-environment-takes.md) | guards | Medium | every clause that asks for a reading, and every round that reports one unpaid | 🔴 Not Started |
 | UX-940 | [the BuildStream behaviour claims are pinned to three versions and nothing says which were re-confirmed](UX-0940-the-versions-the-behaviour-claims-were-confirmed-on-are-three.md) | guards | Medium | whoever reads a BuildStream behaviour claim and has to decide whether it still holds | 🔴 Not Started |
 
 **The narrative round headings below are retired at round 94**

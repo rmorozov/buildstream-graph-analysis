@@ -1,6 +1,6 @@
 # UX-925: the examples' toolchain axis is this host's gcc because gcc's search paths are not relocatable, so a second `arch=` variant needs a second machine
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-914 | **Blocks:** — | **Found by:** `UX-914` — it took the runtime axis and recorded why the toolchain is a separate question | **Serves:** every example, and the comparison class a `variant` dimension names | **Topic:** guards | **Area:** tools | **Shape:** mechanical
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-914 | **Blocks:** — | **Found by:** `UX-914` — it took the runtime axis and recorded why the toolchain is a separate question | **Serves:** every example, and the comparison class a `variant` dimension names | **Topic:** guards | **Area:** tools | **Shape:** mechanical
 
 ## Motivation
 
@@ -237,4 +237,211 @@ recorded, because a different compiler is a different program.
 and after, which is the claim that the two axes really are
 independent.
 
-## Outcome
+## Outcome (round 137, 2026-09-22) — 🟢 Done
+
+**Premise:** falsified, in the title. gcc's search paths are compiled
+in, but that never required a second machine - it required a prefix
+this repository can *name*. Its own prediction held too: an unwrapped
+nix gcc keeps `include/c++` in its store prefix, so the C++ headers
+are **toolchain-owned**, reached with no flag at all.
+
+### The gap, measured
+
+```text
+$ python3 -m tools.sysroot_manifest <sysroot>          # before
+  gcc  host 13.3.0   binutils  host 2.42   cmake  host 3.28.3
+```
+
+Three declared host facts: every runner-image roll re-dates every
+figure, and a second `arch=` example had nowhere to come from.
+
+### After
+
+```text
+$ examples/stage_cpp_toolchain.sh                      # 37 store paths
+  gcc pinned 14.3.0  binutils pinned 2.44  cmake pinned 4.1.2
+  glibc-pinned pinned 2.40
+$ python3 -m tools.toolchain_params --check <sysroot>
+  exec-prefix toolchain toolchain  .../gcc-14.3.0/libexec/.../cc1
+  assembler   toolchain toolchain  .../binutils-2.44/bin/as
+  linker      toolchain toolchain  .../binutils-2.44/bin/ld
+  libgcc      toolchain toolchain  .../gcc-14.3.0/lib/gcc/.../libgcc.a
+  gcc-headers toolchain toolchain  .../gcc-14.3.0/lib/gcc/.../stddef.h
+  start-files sysroot   sysroot    .../glibc-2.40-224/lib/crt1.o
+  libstdc++   toolchain toolchain  .../gcc-14.3.0-lib/lib/libstdc++.so
+  c-headers   sysroot   sysroot    .../glibc-2.40-224-dev/.../stdio.h
+  cxx-headers toolchain toolchain  .../gcc-14.3.0/include/c++/14.3.0
+$ python3 -m tools.nix_closure --check <sysroot>       # 0 dangling refs
+```
+
+**`-B` is five directories, not `UX-930`'s three**: without
+`gcc-14.3.0-lib` the link cannot find `-lgcc_s`, and without binutils'
+`bin` the assembler answers the bare name `as` - which is why
+`assembler` and `linker` are classes at all, readable only once a pin
+puts them on a prefix. **Nine classes of nine** read from the half
+they declare, against seven on a host-staged tree; **37 store paths,
+420 MiB**, and the sysroot goes 272M -> 452M. The isolation reading,
+which no build succeeding can give: example 05's six cmake projects
+configured, compiled, linked, installed and the app **ran** inside a
+`chroot` of the staged tree alone - nothing of this host but `/proc` and `/dev/null`.
+
+### Mutations verified red and reverted (6)
+
+| # | mutation | reddened |
+|---|---|---|
+| A1 | a host `gcc` copied over the driver shim | `...StagedOverThePin`, 2 |
+| A2 | a host `cc1plus` over the pin's | `...StagedOverThePin`, 1 |
+| A3 | the binutils store path removed | `...StagedOverThePin`, 1 |
+| A4 | `ld.bfd` gone, so `-B` writes at nothing | `...FromTheClosure`, 2 |
+| A5 | the shim rooted at the staging tree, not `/` | `...TheSandbox`, 1 |
+| A6 | a host path back in `TOOLCHAIN_BINARIES` | `...PinIsDeclared`, 1 |
+
+Two of mine did not discriminate. The version probes **cannot** catch
+A1: a shim is a shell script whose `/nix/store` flags resolve only in
+the sandbox, so they ask the pin's own binary and a host driver over
+the shim answers every one correctly - `shim_divergences` reads the
+file instead, and the stager runs it. And the mutation fixture wrote
+*through* its hardlink clone into the real sysroot; `_replace` unlinks
+first. One defect next door: `sysroot_manifest.measure` probes in a
+scratch directory, so a **relative** `dest` made a relative argv
+resolving against it and all nineteen rows read `did not run`.
+
+### Deviation from the Required Fix
+
+Two, named rather than absorbed. **The examples are not captured
+here**: this container has neither `bst` nor `bwrap`, so "every figure
+re-derived" is owed and unpaid - the chroot build replaced it. **The
+produced binaries' loader moves**: the pin bakes its own
+`/nix/store/<glibc>/lib64/ld-linux-x86-64.so.2` into everything it
+links, so example output loads glibc 2.40 while the tree's `sh` and
+coreutils load the host-staged 2.39. Both are declared, the runtime
+rows byte-identical against a written-out copy, and the linked app
+needs at most `GLIBC_2.34`.
+
+## Verification Log
+
+The round-documents commit is committed with `BGA_SKIP_SELECTOR=1`.
+`test_a_documents_dateline_matches_its_own_first_commit` reads a
+document's first commit date, which is `None` until the document *is*
+committed, so a new `round-N.md` cannot be green before the commit
+that adds it. The selector is green on the commit after it, which is
+the one carrying the code. Rounds 136 and 137 are both new here:
+`UX-926`'s silence meant round 136 closed three rows in three threads
+and none wrote its document, and round 137 taking the highest number
+is what made the register demand it.
+
+The gate, on `9dc204ac`:
+
+```text
+$ make test
+All checks passed!    make lint: 572 finding(s) match the baseline
+9277 passed, 172 skipped, 1 warning in 316.30s (0:05:16)
+$ python3 tools/dev_sizes.py --check
+sizes ok: 132 file(s) measured, none above the cell it records
+```
+
+Six of those tests were red on the first attempt for a reason outside
+the diff: this container arrived with `bga` uninstalled and with stale
+`uv` shims for `ruff` (0.15.8) and `pyright` (1.1.414 pinned, 1.1.408
+on `PATH`), which also invented a `new` baseline finding on
+`tools/bst_cache_logs.py`, a file nothing here touches.
+`tools/dev_env_check.py` names all three and their remedies, and is
+worth running before anything else in a fresh container.
+
+### What this costs CI, and what it does not
+
+The `bst-examples` job runs `examples/stage_cpp_toolchain.sh`, so the
+pin is fetched there too. Three readings, because two plausible
+sentences about it are false.
+
+**The `cache.nixos.org` dependency is not new.** `UX-915` put it in
+the stager in round 134, and it is on `main` with none of this applied:
+
+```text
+$ git show 3fa407a:examples/stage_cpp_toolchain.sh | grep -n nix_store_fetch
+263:PINNED_MAKE="$(... python3 -m tools.nix_store_fetch "$DEST")"
+266:INTERPRETER_DIR="$(... python3 -m tools.nix_store_fetch --interpreter-dir "$DEST")"
+```
+
+What moves is the surface: **5 store paths and 34,436,496 bytes become
+37 and 420 MiB**, so 37 narinfo fetches and 37 NARs where there were 5
+and 5. The interesting failure stops being "the pin did not arrive" and
+becomes "the closure arrived incomplete" - caught by `nix_closure
+--check` as a hard `exit 1` in the stager. **This row is the first to
+put that check in front of a real staged closure on a runner**;
+`main`'s stager never calls it (`git grep -ln nix_closure 91126c14`
+reaches only its own unit file), so it has been exercised against
+fixtures and against this container, and nowhere else.
+
+**The wall cost is not measurable here and none is claimed.** Seven
+completed `bst-examples` jobs, read off the jobs API:
+
+```text
+620s  623s  658s  678s  849s  876s  964s     all success
+median 678s, spread 344s (+/-25%)
+```
+
+A 420 MiB pull is tens of seconds against that, an order of magnitude
+under the noise. A job of population one has no median shift to divide
+out, which is the one technique `dev_tier_drift.py` uses to make a CI
+timing readable, so any cost worth watching here has to be structural -
+paths staged, bytes fetched - and `nix_closure` already computes both.
+
+### The guards go quiet where the pin is not staged
+
+The first CI this branch ever received went red, and not on a test:
+`test (3.11)` reported 9464 recorded, 0 failures, 0 errors, and exited
+non-zero from `tests/conftest.py`'s skip census.
+
+```text
+20 tests skipped for one reason ("examples/05-cmake-cpp-toolchain's
+toolchain isn't staged - run stage_cpp_toolchain.sh first") - more than
+the 8 this suite allows it (0 measured + 8 headroom).
+```
+
+Reproduced here by moving the staged tree aside, which is the runner's
+`test` job exactly — `9270 passed, 194 skipped`, the same twenty, and
+the same complaint. The twenty are 14 from
+`test_the_toolchain_axis_is_pinned.py`, 3 from
+`test_the_sysroot_declares_both_axes.py` and 3 from
+`test_the_staged_make_is_the_pinned_one.py`; the last six are `main`'s
+and sit under the headroom on their own.
+
+This is the row's own thesis a third time, after `UX-930`'s `cp -al`
+and this round's hardlinked `_replace`. The file written to prove the
+toolchain is pinned is the file that disappears wherever the pin is not
+staged, and the one tree that reads 0 is the author's — because staging
+the closure is how the row gets worked at all.
+
+The declaration is corrected rather than the tests re-marked, which is
+what the reason's own comment says to do (*"a count that turns out to
+be wrong is the census doing its job, and is a measurement to correct
+rather than a reason not to declare"*), and what the `bst not found on
+PATH` entries at 12, 8, 5 and 2 already do: the baseline is per
+environment. Marking the fourteen `bst` would not have moved them —
+`make test` collects every marker, so they would skip in the same job
+under `bst not found on PATH`, taking *that* reason from 12 to 26. They
+do run on a runner, in one place: `bst-tests` stages
+`stage_cpp_toolchain.sh` (`ci.yml:1118`) and then runs the whole suite
+(`ci.yml:1182`), where the reason reads 0.
+
+That step is skipped today, and not for a reason of this row's. On
+`d9bbaea1`, `main`'s own head, `bst-tests` fails at step 10, the
+`bst`-gated tier, on the 2.8.1 line `UX-939` exists to pin:
+
+```text
+ 9 success  The environment doctor agrees this job can capture
+10 failure  The bst-gated tier runs, and every one of it passes
+11 skipped  No test was skipped for a missing bst
+12 skipped  The whole suite, with bst present
+```
+
+So the twenty are witnessed from the commit that lands `UX-939` and
+not before — which is why this row waits behind it rather than
+declaring a count nothing yet reads.
+
+```text
+toolchain moved aside, before   20 skips for the reason, exit 1
+toolchain moved aside, after    9270 passed, 194 skipped, exit 0
+toolchain staged, after         9291 passed, 173 skipped, exit 0
+```

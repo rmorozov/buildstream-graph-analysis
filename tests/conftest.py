@@ -117,6 +117,16 @@ KNOWN_SKIP_REASONS = {
     # constant in that file so this census can read it without running.
     "no host toolchain to clone a sysroot off": (
         "a host with no gcc cannot answer where a file class came from", 0),
+    # `UX-925`: the pin's own mutations need something of this host
+    # to stage *over* the pin, and the closure to stage it into.
+    # All three read 0 here and on `ubuntu-latest`, which have a
+    # gcc and a staged tree; a runner with neither skips 3.
+    "the toolchain closure isn't staged": (
+        "the closure is fetched by the stager, not committed", 0),
+    "no host gcc to stage over the pin": (
+        "the shim mutation needs a second driver to put over it", 0),
+    "this host resolves no cc1plus to stage over the pin": (
+        "the helper mutation needs a host cc1plus to read back", 0),
     "trace_processor_shell is not installed": (
         "Perfetto's shell is an optional local tool, not a dependency", 16),
     # `UX-637`: the reachability clause refuses to answer from a
@@ -312,17 +322,27 @@ KNOWN_SKIP_REASONS = {
     # The other two ride a `skipif` marker over a tool this machine
     # happens to have, which is the blind spot `UX-449` was filed for.
     #
-    # All of them are 0 because none fired in `make test` here or in
-    # round 70's CI (144 skips, every one declared). A count that turns
-    # out to be wrong is the census doing its job, and is a measurement
-    # to correct rather than a reason not to declare.
+    # All of them were filed at 0 because none fired in `make test`
+    # here or in round 70's CI (144 skips, every one declared). A count
+    # that turns out to be wrong is the census doing its job, and is a
+    # measurement to correct rather than a reason not to declare - the
+    # staged-toolchain row below is the first one corrected.
     "bst or a staged runtime is missing": (
         "the capture chain needs both, and reports which is absent", 0),
     "examples/01 is not staged - run examples/stage_runtimes.sh": (
         "example 01's runtime is generated, not committed (`UX-189`)", 0),
+    # `UX-925`: 20 with the closure unstaged - 14 from
+    # `test_the_toolchain_axis_is_pinned.py`, 3 each from
+    # `test_the_sysroot_declares_both_axes.py` and
+    # `test_the_staged_make_is_the_pinned_one.py`. The baseline is per
+    # environment and the author's tree is the one that reads 0, because
+    # staging the closure is how the row gets worked at all. The runner
+    # that witnesses them is `bst-tests`' last step (`ci.yml:1182`), the
+    # whole suite after `stage_cpp_toolchain.sh` - skipped while that
+    # job's earlier `bst` step is red, which `UX-939` clears.
     "examples/05-cmake-cpp-toolchain's toolchain isn't staged - run "
     "stage_cpp_toolchain.sh first": (
-        "example 05's toolchain is generated, not committed", 0),
+        "example 05's toolchain is generated, not committed", 20),
     "examples/06 is not staged - run examples/stage_cpp_toolchain.sh": (
         "example 06's toolchain is generated, not committed", 0),
     "golden has no Plane 2 sibling to lose": (

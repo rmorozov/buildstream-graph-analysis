@@ -1,17 +1,20 @@
 #!/usr/bin/env bash
 # Populates examples/05-cmake-cpp-toolchain/files/toolchain/ with a real,
-# working GCC + CMake + GNU Make toolchain, staged from this *host's* own
-# installed packages (Ubuntu) rather than a container/Alpine pull - no
-# docker/debootstrap/network image pull needed, and this host already has
-# real gcc/g++/cmake/make/binutils installed (confirmed: this is how
-# examples/05's own real C/C++ builds actually compile). BuildStream's
-# sandbox binds in nothing from the host except staged dependencies (same
-# reasoning as stage_runtimes.sh's busybox staging, scaled up to a full
-# toolchain) - so every binary, shared library, gcc-internal helper
-# (cc1/cc1plus/collect2), and header search path gcc/cmake hardcode has to
-# be present in the sandbox at the exact same absolute path it has on the
-# host (gcc's internal search paths are compiled in, not relocatable), so
-# this stages a full mini sysroot preserving absolute paths.
+# working GCC + CMake + GNU Make toolchain. BuildStream's sandbox binds
+# in nothing from the host except staged dependencies (same reasoning as
+# stage_runtimes.sh's busybox staging, scaled up to a full toolchain) -
+# so every binary, shared library, gcc-internal helper and search path
+# gcc/cmake hardcode has to be present in the sandbox at the exact same
+# absolute path it has where it was built. Nothing here is relocatable,
+# so nothing is relocated: this stages a mini sysroot at absolute paths.
+#
+# Two axes (UX-914). The RUNTIME - glibc, the shell, coreutils - is
+# still this host's, copied in at its own /usr paths. The TOOLCHAIN -
+# gcc, binutils, cmake - is a pinned nix closure (UX-925/UX-927) staged
+# at its own /nix/store/<hash> prefixes with its content-address intact,
+# and reached through -B and --sysroot baked into a PATH shim (UX-930),
+# since a nix gcc is no more relocatable than Ubuntu's - it simply has a
+# prefix this repository can name and check.
 #
 # See examples/README.md's own `05-cmake-cpp-toolchain` section for how
 # to use the result (an earlier revision of this header pointed at a
@@ -43,16 +46,14 @@ mkdir -p "$DEST"
 # touching the runtime. tools/sysroot_manifest.py declares which package
 # each name comes from and at what version, and verifies it below.
 # UX-915: `make` is in neither array - it is pinned, not taken from this
-# host.
+# host. UX-925: neither is anything on the toolchain axis any more -
+# gcc, binutils and cmake are one pinned closure, staged below at their
+# own /nix/store prefixes, so TOOLCHAIN_BINARIES is empty and the
+# axis array stays as the place a *host* toolchain would reappear.
 RUNTIME_BINARIES=(
   /usr/bin/env /usr/bin/sh /usr/bin/uname /usr/bin/sort /usr/bin/cat
 )
 TOOLCHAIN_BINARIES=(
-  /usr/bin/gcc /usr/bin/g++ /usr/bin/cc /usr/bin/c++
-  /usr/bin/cmake /usr/bin/ld /usr/bin/ld.bfd
-  /usr/bin/as /usr/bin/ar /usr/bin/ranlib /usr/bin/nm /usr/bin/strip
-  $(gcc -print-prog-name=cc1) $(gcc -print-prog-name=cc1plus)
-  $(gcc -print-prog-name=collect2)
 )
 BINARIES=( "${RUNTIME_BINARIES[@]}" "${TOOLCHAIN_BINARIES[@]}" )
 
@@ -128,119 +129,21 @@ for interp in /lib64/ld-linux-x86-64.so.2 /lib/ld-linux.so.2; do
   [ -e "$interp" ] && copy_symlink_chain "$interp"
 done
 
-# gcc/g++'s own internal tree (crt*.o startup objects, libgcc.a,
-# target-specific headers) - hardcoded search path, must exist verbatim.
-# Staged wholesale (not just the specific binaries BINARIES cherry-picks)
-# because collect2 (the real link driver, confirmed via `g++ -v`) also
-# needs liblto_plugin.so from *both* /usr/lib/gcc/.../<ver>/ and
-# /usr/libexec/gcc/.../<ver>/ - cherry-picking individual binaries missed
-# it (confirmed via a real "liblto_plugin.so not found" link failure).
-GCC_VER="$(gcc -dumpversion | cut -d. -f1)"
-GCC_LIBDIR="/usr/lib/gcc/x86_64-linux-gnu/$GCC_VER"
-GCC_LIBEXECDIR="/usr/libexec/gcc/x86_64-linux-gnu/$GCC_VER"
-[ -d "$GCC_LIBDIR" ] && cp -a --parents "$GCC_LIBDIR" "$DEST"
-[ -d "$GCC_LIBEXECDIR" ] && cp -a --parents "$GCC_LIBEXECDIR" "$DEST"
-cp -a --parents /usr/lib/bfd-plugins "$DEST" 2>/dev/null || true
+# UX-925: the host gcc's internal tree, the multiarch link-time files
+# (crt*.o and the unversioned dev .so linker scripts) and /usr/include
+# used to be staged here, because the host compiler reached them at
+# those absolute paths. The pinned closure brings its own of every one
+# - start files from glibc's store path, libgcc and the C++ headers
+# from gcc's, the C headers from glibc's `dev` - and
+# `tools/toolchain_params.py --check` reads back that each class really
+# answered from there. Staging the host's copies beside them is the
+# mixture UX-925 forbids: it links and means nothing.
 
-# Link-time-only files: crt*.o startup objects and the unversioned dev
-# `.so`/.a symlinks/archives for libc/libm/libpthread/libdl/libgcc_s/
-# libstdc++ - `ldd`'s runtime closure above only captures the *versioned*
-# `.so.N` files an already-linked binary needs, never the unversioned dev
-# symlinks or `.o`/`.a` files a *fresh link* needs (confirmed via a real
-# "cannot find Scrt1.o"/"-lm: No such file" link failure - these are a
-# genuinely separate dependency class from ldd's runtime closure).
-MULTIARCH_LIBDIR="/usr/lib/x86_64-linux-gnu"
-# Modern glibc's libc.so/libm.so "dev" files aren't symlinks or ELF at
-# all - they're plain-text GNU ld linker scripts (`GROUP ( real.so.N
-# AS_NEEDED ( other.so.N ) )`) that embed further absolute paths inline
-# (confirmed via a real "cannot find libmvec.so.1" link failure - libm.so
-# is textually `GROUP ( .../libm.so.6 AS_NEEDED ( .../libmvec.so.1 ) )`,
-# and neither symlink-chain-walking nor ldd against an already-linked
-# binary discovers a AS_NEEDED-only, link-time-only reference like this).
-stage_maybe_linker_script() {
-  local f="$1"
-  copy_symlink_chain "$f"
-  [ -e "$f" ] || return 0
-  local real_f
-  real_f="$(readlink -f -- "$f")"
-  if file "$real_f" 2>/dev/null | grep -q "ASCII text"; then
-    while read -r ref; do
-      [ -z "$ref" ] && continue
-      [ -n "${SEEN[$ref]:-}" ] && continue
-      SEEN[$ref]=1
-      stage_maybe_linker_script "$ref"
-    done < <(grep -oP '/\S+\.(so|so\.\d+|a)\b' "$real_f" 2>/dev/null)
-  else
-    # A real ELF .so.N can still pull in further transitive runtime libs
-    # ldd against the BINARIES list above never exercised (nothing in it
-    # links this library directly).
-    while read -r lib; do
-      [ -z "$lib" ] && continue
-      [ -n "${SEEN[$lib]:-}" ] && continue
-      SEEN[$lib]=1
-      copy_symlink_chain "$lib"
-    done < <(ldd "$real_f" 2>/dev/null | grep -oP '(?<==> )/\S+|^\s*/\S+' | sed 's/^\s*//')
-  fi
-}
-
-for f in "$MULTIARCH_LIBDIR"/crt1.o "$MULTIARCH_LIBDIR"/crti.o "$MULTIARCH_LIBDIR"/crtn.o \
-         "$MULTIARCH_LIBDIR"/Scrt1.o "$MULTIARCH_LIBDIR"/gcrt1.o "$MULTIARCH_LIBDIR"/Mcrt1.o \
-         "$MULTIARCH_LIBDIR"/libc.so "$MULTIARCH_LIBDIR"/libc_nonshared.a \
-         "$MULTIARCH_LIBDIR"/libm.so "$MULTIARCH_LIBDIR"/libpthread.so \
-         "$MULTIARCH_LIBDIR"/libdl.so "$MULTIARCH_LIBDIR"/libgcc_s.so \
-         "$MULTIARCH_LIBDIR"/libstdc++.so "$MULTIARCH_LIBDIR"/libstdc++.so.6 \
-         "$MULTIARCH_LIBDIR"/librt.so "$MULTIARCH_LIBDIR"/libutil.so; do
-  stage_maybe_linker_script "$f"
-done
-
-# Standard C/C++ headers (multiarch bits-* headers included).
-cp -a --parents /usr/include "$DEST"
-
-# cmake's own data files (Modules/, Templates/) - located relative to the
-# cmake binary's real install prefix, required at runtime.
-#
-# Two real, failed attempts before this one, both against `cmake
-# --system-information`'s own reported CMAKE_ROOT (parsed via regex):
-#   1. Plain `cp -a --parents "$CMAKE_ROOT"` - a real CI run on a
-#      different host copied "successfully" (no error) but the Modules/
-#      subtree was unusable at build time ("CMake Error: Could not find
-#      CMAKE_ROOT !!! ... Modules directory not found").
-#   2. `cp -aL` (dereference symlinks) instead, on the theory the tree
-#      was nested behind a symlink `-a` preserved as a dangling shell -
-#      identical failure on a re-run, so that theory was wrong.
-# Root cause, from actually reading `dpkg -L cmake-data` on this host:
-# cmake-data is a real, dpkg-authoritative package that owns this exact
-# directory - using it directly sidesteps needing `--system-information`
-# to work correctly (it launches cmake and does a real trial compile,
-# more moving parts than a plain dpkg query) or its text output to be
-# regex-parseable in the exact expected shape on every host.
-CMAKE_VER_DIR=""
-if command -v dpkg >/dev/null 2>&1 && dpkg -s cmake-data >/dev/null 2>&1; then
-  # `pipefail` + `grep -m1` is a real footgun here: grep exiting after its
-  # first match closes the pipe early, so `dpkg` gets SIGPIPE and exits
-  # 141 - under `pipefail` that's the pipeline's reported status even
-  # though grep itself succeeded, which `set -e` then treats as this
-  # whole command failing (confirmed via a real silent-abort right after
-  # this line). Disable pipefail for just this one command instead of
-  # restructuring around `-m1`.
-  set +o pipefail
-  CMAKE_VER_DIR="$(dpkg -L cmake-data 2>/dev/null | grep -m1 -P '^/usr/share/cmake-[0-9][0-9.]*$' || true)"
-  set -o pipefail
-  while IFS= read -r f; do
-    [ -f "$f" ] || continue
-    copy_file_only "$f"
-  done < <(dpkg -L cmake-data 2>/dev/null | grep '^/usr/share/cmake-')
-fi
-# Fallback for non-dpkg hosts (or if the package query above found
-# nothing) - the original detection approach, kept only as a last resort.
-if [ -z "$CMAKE_VER_DIR" ]; then
-  CMAKE_DATADIR="$(cmake --system-information 2>/dev/null | grep -oP '(?<=CMAKE_ROOT ")[^"]+' | head -1)"
-  rm -rf "$HERE/__cmake_systeminformation"
-  if [ -n "${CMAKE_DATADIR:-}" ] && [ -d "$CMAKE_DATADIR" ]; then
-    cp -aL --parents "$CMAKE_DATADIR" "$DEST"
-    CMAKE_VER_DIR="$CMAKE_DATADIR"
-  fi
-fi
+# UX-925: cmake's own Modules/ used to be located through `dpkg -L
+# cmake-data` and staged from this host. The pin carries them inside
+# its own store path, where cmake finds them relative to the binary it
+# resolves - so the dpkg query, its two failed predecessors and the
+# `cmake --system-information` fallback are all gone with it.
 
 # `make`'s own recipe shell is hardcoded to /bin/sh (confirmed via a real
 # "make[1]: /bin/sh: No such file or directory" failure) - this host
@@ -260,6 +163,24 @@ ln -sfn usr/bin "$DEST/bin"
 # UX-916 stages a 4.2 beside it, at /usr/lib/bga-make/<series>/make,
 # so an element can name a version series without naming a pin hash;
 # /usr/bin/make - what every element resolves by default - is the 4.4.
+# UX-925: the toolchain axis, one pinned closure at its own absolute
+# /nix/store prefixes. Before the make pins, because the closure
+# carries the real glibc those pins' interpreter symlink stands in for
+# - staged for real, it is what answers, and nix_store_fetch leaves it
+# alone rather than pointing the closure's loader at this host's copy.
+(cd "$HERE/.." && python3 -m tools.nix_toolchain "$DEST" >/dev/null)
+
+# The drivers are shims rather than symlinks: neither -B nor --sysroot
+# is loud when it is wrong, and the examples' own build commands invoke
+# `gcc`, not a wrapper this repository controls. --shim-root defaults
+# to `/`, so the flags baked in name the sandbox's paths and not this
+# staging tree's (UX-930 wrote the shim; UX-925 installs it).
+for driver in gcc g++ cc c++; do
+  (cd "$HERE/.." && python3 -m tools.toolchain_params --shim "$driver" \
+     "$DEST") > "$DEST/usr/bin/$driver"
+  chmod 0755 "$DEST/usr/bin/$driver"
+done
+
 PINNED_MAKE="$(cd "$HERE/.." && python3 -m tools.nix_store_fetch "$DEST")"
 MAKE_STORE_PATH="$(printf '%s\n' "$PINNED_MAKE" | awk -F'\t' '$1 == "make-4.4" {print $2}')"
 PINNED_MAKE_VERSION="$(printf '%s\n' "$PINNED_MAKE" | awk -F'\t' '$1 == "make-4.4" {print $3}')"
@@ -277,8 +198,13 @@ ln -s "../..$MAKE_STORE_PATH/bin/make" "$DEST/usr/bin/make"
 # whole script's loud-verification posture exists to catch early, and
 # both pins stop at GLIBC_2.38 (`objdump -T`), which is what makes the
 # host's own glibc a valid answer at all.
+# UX-925: and told where this tree keeps the rest of the closure. The
+# pinned glibc is staged for real now, so the loader is the *pin's*,
+# whose own RUNPATH is an absolute /nix/store that resolves only once
+# the sandbox mounts this tree at /.
+STORE_LIBS="$(cd "$HERE/.." && python3 -m tools.nix_toolchain --library-path "$DEST")"
 STAGED_MAKE_VERSION="$("$DEST$INTERPRETER_DIR/ld-linux-x86-64.so.2" \
-  "$DEST/usr/bin/make" --version 2>&1 | head -1)"
+  --library-path "$STORE_LIBS" "$DEST/usr/bin/make" --version 2>&1 | head -1)"
 if [ "$STAGED_MAKE_VERSION" != "$PINNED_MAKE_VERSION" ]; then
   echo "stage_cpp_toolchain.sh: the staged make reports" >&2
   echo "  $STAGED_MAKE_VERSION" >&2
@@ -294,10 +220,12 @@ printf '%s\n' "$PINNED_MAKE" | awk -F'\t' '{print "  staged " $3 " as /usr/lib/b
 # fail *here*, with a clear list of what's missing, not inside a cryptic
 # cmake/gcc error during the real bst build this is staged for.
 MISSING=()
+CMAKE_MODULES="$(echo "$DEST"/nix/store/*-cmake-*/share/cmake-*/Modules/CMakeCXXInformation.cmake)"
+CXX_HEADERS="$(echo "$DEST"/nix/store/*-gcc-*/include/c++)"
 for f in "$DEST/usr/bin/gcc" "$DEST/usr/bin/g++" "$DEST/usr/bin/cmake" "$DEST/usr/bin/make" \
-         "$DEST/usr/bin/ld" "$DEST$CMAKE_VER_DIR/Modules/CMakeCXXInformation.cmake" \
+         "$DEST/usr/bin/ld" "$DEST/usr/bin/as" "$CMAKE_MODULES" \
          "$DEST$INTERPRETER_DIR/ld-linux-x86-64.so.2" \
-         "$DEST/usr/include/c++"; do
+         "$CXX_HEADERS"; do
   [ -e "$f" ] || MISSING+=("$f")
 done
 if [ "${#MISSING[@]}" -gt 0 ]; then
@@ -305,6 +233,18 @@ if [ "${#MISSING[@]}" -gt 0 ]; then
   printf '  %s\n' "${MISSING[@]}" >&2
   exit 1
 fi
+
+# UX-925: and each driver at /usr/bin really leads to the pin. The
+# version probes below ask the pin's own binary, because a shim is a
+# shell script whose /nix/store paths resolve only in the sandbox - so
+# a host gcc copied over a shim would answer all of them correctly.
+(cd "$HERE/.." && python3 -m tools.nix_toolchain --check-shims "$DEST")
+
+# UX-927/UX-925: every /nix/store path the staged tree names is one the
+# tree carries. A reference it does not carry is one the staging host
+# answered, and this reads it off the bytes rather than off a build
+# that happened to succeed.
+(cd "$HERE/.." && python3 -m tools.nix_closure --check "$DEST")
 
 # UX-914: what this sysroot actually is, per package and per axis, read
 # off the staged copies rather than off this host. A *pinned* row that

@@ -206,15 +206,24 @@ def host_arch(arch: Optional[str] = None) -> dict:
     return PINS[arch]
 
 
+#: The staged store, which `sysroot_lib_dir` does not look in.
+#: `UX-925`'s closure carries a second real loader there - the pinned
+#: toolchain's - and this function means the *target's* glibc, the one
+#: the tree's own host-staged binaries load through.
+_STORE = "/nix/store"
+
+
 def sysroot_lib_dir(dest: str, group: dict) -> str:
     """Where `dest` really keeps glibc, read off the one staged copy of
     the dynamic linker rather than assumed. `stage_cpp_toolchain.sh`
     resolves symlink chains lexically, so on a usrmerged host the real
     file lands under `/lib/...` while `/usr/lib/...` holds only the
     link-time files - a hardcoded guess picks the wrong one."""
+    skip = os.path.abspath(dest) + _STORE
     found = [os.path.join(root, group["loader"])
              for root, _dirs, files in os.walk(dest)
              if group["loader"] in files
+             and not os.path.abspath(root).startswith(skip)
              and not os.path.islink(os.path.join(root, group["loader"]))]
     if len(found) != 1:
         raise SystemExit(
@@ -231,6 +240,12 @@ def stage_interpreter_link(dest: str, group: dict) -> str:
     the staging host, which is what lets the script verify the staged
     make by running it before any sandbox exists."""
     link = dest + group["interpreter_dir"]
+    # UX-925 stages that glibc for real, and the pinned compiler links
+    # every binary against it. A symlink written over it would point
+    # the closure's own loader at the host's copy, which is the one
+    # thing this link exists to avoid needing.
+    if os.path.isdir(link) and not os.path.islink(link):
+        return link
     os.makedirs(os.path.dirname(link), exist_ok=True)
     if os.path.lexists(link):
         os.unlink(link)

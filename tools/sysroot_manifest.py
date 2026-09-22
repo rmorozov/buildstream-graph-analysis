@@ -32,7 +32,7 @@ import sys
 import tempfile
 from typing import Optional
 
-from tools import nix_store_fetch
+from tools import nix_closure, nix_store_fetch, nix_toolchain
 
 AXES = ("runtime", "toolchain")
 
@@ -61,19 +61,11 @@ HOST_COMPONENTS = (
     # catches. Each names its own flag and stream, because all three
     # differ from the drivers' and `collect2`'s stdout is *binutils*' -
     # it execs `ld --version` after printing its own to stderr, so
-    # reading stdout would report 2.42 as gcc's version.
-    {"name": "gcc", "axis": "toolchain", "version": "13.3.0",
-     "binaries": ("/usr/bin/gcc", "/usr/bin/g++", "/usr/bin/cc",
-                  "/usr/bin/c++"),
-     "helpers": {"cc1": ("-version", "stderr"),
-                 "cc1plus": ("-version", "stderr"),
-                 "collect2": ("--version", "stderr")}},
-    {"name": "binutils", "axis": "toolchain", "version": "2.42",
-     "binaries": ("/usr/bin/ld", "/usr/bin/ld.bfd", "/usr/bin/as",
-                  "/usr/bin/ar", "/usr/bin/ranlib", "/usr/bin/nm",
-                  "/usr/bin/strip")},
-    {"name": "cmake", "axis": "toolchain", "version": "3.28.3",
-     "binaries": ("/usr/bin/cmake",)},
+    # reading stdout would report the linker's version as gcc's.
+    #
+    # UX-925: gcc, binutils and cmake are no longer here. They are
+    # pinned, so `components` reads them out of `nix_toolchain` the
+    # way it already reads the `make` pins out of `nix_store_fetch`.
 )
 
 
@@ -82,6 +74,17 @@ def components(arch: Optional[str] = None) -> list:
     pin, read out of `nix_store_fetch.PINS` rather than restated, so a
     pin bump cannot drift from this table."""
     rows: list[dict] = [dict(row, origin="host") for row in HOST_COMPONENTS]
+    for name, pin in sorted(nix_toolchain.pins(arch).items()):
+        rows.append(dict(pin, name=name, origin="pinned"))
+    # The closure's own glibc, on the toolchain axis because it arrives
+    # with the compiler and is replaced when the compiler is: the pinned
+    # gcc bakes *its* `lib64/ld-linux-x86-64.so.2` into every binary it
+    # links, so it is what the examples' own output loads. The runtime
+    # row above is untouched - it is what the host-staged `sh` and
+    # coreutils still load, and the two coexist (UX-925).
+    rows.append({"name": "glibc-pinned", "axis": "toolchain",
+                 "origin": "pinned", "version": "2.40", "binaries": (),
+                 "lib_probe": nix_store_fetch.host_arch(arch)["loader"]})
     for name, pin in sorted(nix_store_fetch.host_arch(arch)["paths"].items()):
         alias = nix_store_fetch.alias_path(name)
         # `/usr/bin/make` - what an element resolves by default - is the
@@ -137,34 +140,60 @@ def helper_path(dest: str, name: str) -> Optional[str]:
     found = sorted(glob.glob(os.path.join(dest, "usr", "libexec", "gcc",
                                           "*", "*", name))
                    + glob.glob(os.path.join(dest, "usr", "lib", "gcc",
-                                            "*", "*", name)))
+                                            "*", "*", name))
+                   # UX-925: the pin keeps them at its own store prefix.
+                   + glob.glob(os.path.join(dest + nix_closure.STORE, "*",
+                                            "libexec", "gcc", "*", "*", name)))
     return found[0] if len(found) == 1 else None
 
 
 def probes(dest: str, arch: Optional[str] = None) -> list:
     """`(row, label, argv)` for each of `probe_labels`. A pinned binary
-    names an absolute Nix interpreter, so it runs through the staged
-    loader the way `stage_cpp_toolchain.sh` verifies its own make; a
-    host binary names this host's, which `dest` stages at the same
-    absolute path. glibc is asked through the one real copy of the
-    loader `nix_store_fetch.sysroot_lib_dir` finds, because the staging
-    script's lexical symlink resolution decides where that lands. A
-    helper is located in the staged tree, and gets `None` when it is not
-    there so `measure` records that rather than guessing a path."""
+    names an absolute Nix interpreter and RUNPATH, neither of which
+    resolves until the sandbox mounts this tree at `/`, so every one is
+    run through the staged loader with the tree's own store lib
+    directories named (`nix_toolchain.run_prefix`). A *driver* label is
+    a shim (`UX-925`), which is a shell script rather than an ELF file:
+    the version comes off the pin's own binary that the shim execs,
+    and `test_the_sysroot_declares_both_axes` reads that the shim execs
+    it. glibc's runtime row is asked through the one real copy of the
+    loader `nix_store_fetch.sysroot_lib_dir` finds; the pinned row
+    through the closure's own, which answers `--version` itself. A
+    helper is located in the staged tree, and gets `None` when it is
+    not there so `measure` records that rather than guessing a path."""
+    # Absolute first: every probe runs in a scratch directory (`cc1
+    # -version` writes `<stdin>.s` into the cwd), so a relative `dest`
+    # makes a relative argv that resolves against *that* directory and
+    # every row reads "did not run" - UX-930's relative-`-B` shape, one
+    # module over.
+    dest = os.path.abspath(dest)
     group = nix_store_fetch.host_arch(arch)
     loader = os.path.join(dest + group["interpreter_dir"], group["loader"])
+    through = nix_toolchain.run_prefix(dest, arch)
     found = []
     for row, label in probe_labels(arch):
         if label in row.get("helpers", ()):
             binary = helper_path(dest, label)
-            argv = None if binary is None else [binary, row["helpers"][label][0]]
+            argv = (None if binary is None
+                    else through + [binary]
+                    + row["helpers"][label][0].split())
         elif label == row.get("lib_probe"):
-            argv = [os.path.join(nix_store_fetch.sysroot_lib_dir(dest, group),
-                                 label), "--version"]
-        elif row["origin"] == "pinned":
-            argv = [loader, dest + label, "--version"]
-        else:
+            store = (nix_toolchain.glibc_store_path(dest, arch)
+                     if row["origin"] == "pinned" else None)
+            where = (os.path.join(store, "lib") if store is not None
+                     else nix_store_fetch.sysroot_lib_dir(dest, group)
+                     if row["origin"] != "pinned" else None)
+            argv = None if where is None else [os.path.join(where, label),
+                                               "--version"]
+        elif row["origin"] != "pinned":
             argv = [dest + label, "--version"]
+        elif os.path.basename(label) in nix_toolchain.DRIVERS:
+            argv = through + [nix_toolchain.driver_target(
+                dest, os.path.basename(label), arch), "--version"]
+        elif through:
+            argv = through + [dest + label, "--version"]
+        else:
+            argv = [loader, dest + label, "--version"]
         found.append((row, label, argv))
     return found
 

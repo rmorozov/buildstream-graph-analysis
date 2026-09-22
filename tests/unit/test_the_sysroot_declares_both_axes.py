@@ -20,7 +20,7 @@ import re
 
 import pytest
 
-from tools import nix_store_fetch, sysroot_manifest
+from tools import nix_store_fetch, nix_toolchain, sysroot_manifest
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 STAGER = REPO / "examples/stage_cpp_toolchain.sh"
@@ -53,15 +53,31 @@ def _axis_helpers(name):
 
 class TestTheDeclarationCoversWhatIsStaged:
     def test_every_staged_helper_is_claimed_too(self):
-        """The three `$(gcc -print-prog-name=...)` binaries. A helper
-        the stager adds without a declaration reddens here, and one
-        declared but no longer staged reddens too."""
+        """The binaries gcc execs rather than resolves through PATH.
+        `UX-914` staged them as `$(gcc -print-prog-name=...)` off the
+        staging host; `UX-925` gets them inside the pin's own closure,
+        so the declaration is the pin's and the stager names none. A
+        helper either table adds without a declaration reddens here,
+        and one declared but reachable from neither reddens too."""
         staged = _axis_helpers("RUNTIME_BINARIES") | _axis_helpers("TOOLCHAIN_BINARIES")
+        pinned = {name for row in nix_toolchain.pins().values()
+                  for name in row.get("helpers", ())}
         declared = {name for row in sysroot_manifest.components()
                     for name in row.get("helpers", ())}
 
-        assert staged, "the stager stages no -print-prog-name helper any more"
-        assert staged == declared
+        assert pinned, "the pin declares no gcc-internal helper any more"
+        assert staged | pinned == declared
+
+    def test_a_pinned_helper_is_really_in_the_closure(self):
+        """The declaration's other end. A helper named but absent is
+        `not staged, or staged more than once` in every version probe,
+        which reads as a pin that did not take rather than as a stale
+        row."""
+        if not os.path.isdir(os.path.join(SYSROOT, "nix", "store")):
+            pytest.skip("the toolchain closure isn't staged")
+        for name in {one for row in nix_toolchain.pins().values()
+                     for one in row.get("helpers", ())}:
+            assert sysroot_manifest.helper_path(str(SYSROOT), name), name
 
     def test_each_helper_names_its_own_flag_and_stream(self):
         """`collect2 --version` prints its own version to stderr and
@@ -117,14 +133,36 @@ class TestTheDeclarationCoversWhatIsStaged:
                 assert row["version"], row["name"]
 
     def test_the_pinned_rows_carry_the_pin_tables_own_versions(self):
+        """Two pin tables now, one per axis, and neither is restated
+        here: `nix_store_fetch.PINS` carries the runtime's `make`
+        (UX-915) and `nix_toolchain.TOOLCHAIN_PINS` the compiler,
+        linker and cmake (UX-925). `glibc-pinned` is the closure's own
+        glibc, which no table names as a root - it arrives through
+        gcc's `References`."""
         pinned = {row["name"]: row for row in sysroot_manifest.components()
                   if row["origin"] == "pinned"}
         paths = nix_store_fetch.host_arch()["paths"]
+        toolchain = nix_toolchain.pins()
 
-        assert set(pinned) == set(paths)
+        assert set(pinned) == set(paths) | set(toolchain) | {"glibc-pinned"}
         for name, pin in paths.items():
             assert pinned[name]["version"] == pin["version"].rsplit(" ", 1)[-1]
             assert pinned[name]["axis"] == "runtime", name
+        for name, pin in toolchain.items():
+            assert pinned[name]["version"] == pin["version"], name
+            assert pinned[name]["axis"] == "toolchain", name
+            assert pin["store_path"].startswith("/nix/store/"), name
+
+    def test_no_toolchain_row_is_the_staging_hosts_any_more(self):
+        """`UX-925`'s own claim, in one line. A toolchain package
+        reappearing as `host` is a staging host deciding what the
+        examples compile with, which is what the row closed."""
+        origins = {row["name"]: row["origin"]
+                   for row in sysroot_manifest.components()
+                   if row["axis"] == "toolchain"}
+
+        assert origins, "the toolchain axis has no rows at all"
+        assert set(origins.values()) == {"pinned"}, origins
 
     def test_the_default_make_belongs_to_the_44_pin(self):
         """`/usr/bin/make` is in neither axis array (the script pins it),
@@ -155,6 +193,10 @@ class TestTheDeclarationCoversWhatIsStaged:
 
     def test_the_version_token_rule_reads_all_six_formats(self):
         lines = {
+            "gcc (GCC) 14.3.0": "14.3.0",
+            "GNU ld (GNU Binutils) 2.44": "2.44",
+            "cmake version 4.1.2": "4.1.2",
+            "ld.so (GNU libc) stable release version 2.40.": "2.40",
             "gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0": "13.3.0",
             "cmake version 3.28.3": "3.28.3",
             "GNU ld (GNU Binutils for Ubuntu) 2.42": "2.42",
@@ -181,6 +223,16 @@ class TestTheDeclarationCoversWhatIsStaged:
 class TestTheStagedSysrootMatchesItsDeclaration:
     def test_no_component_disagrees_with_what_is_declared_for_it(self):
         assert sysroot_manifest.divergences(str(SYSROOT)) == []
+
+    def test_a_relative_dest_reads_the_same_as_an_absolute_one(self):
+        """Every probe runs in a scratch directory, because `cc1
+        -version` writes `<stdin>.s` into the cwd. A relative `dest`
+        then makes a relative argv that resolves against that scratch
+        directory, and all nineteen rows read `did not run`."""
+        here = os.path.relpath(SYSROOT, os.getcwd())
+
+        assert sysroot_manifest.measure(here) == \
+            sysroot_manifest.measure(str(SYSROOT))
 
     def test_every_probeable_row_really_ran(self):
         """A probe that cannot exec records its own error string, which

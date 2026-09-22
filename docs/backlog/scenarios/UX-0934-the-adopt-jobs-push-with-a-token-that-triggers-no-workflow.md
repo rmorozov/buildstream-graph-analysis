@@ -22,17 +22,23 @@ $ GET /repos/.../commits/<sha>/check-runs  ->  total_count
 2a3f2ee7   0   CI: append this run's excursions to the flake ledger (UX-691)
 6d78912d   0   CI: append this run's excursions to the flake ledger (UX-691)
 be558ccb   0   CI: adopt the tier rows this run measured (UX-503)
+c19560d6   0   CI: adopt the tier rows this run measured (UX-503)
+a002fb71   0   CI: adopt the touching map this run measured (UX-524, UX-662)
 cbcdae85  15   UX-927: a pin's whole closure ... (#260)
 32bf9893  14   Merge pull request #259
 ```
 
+`2a3f2ee7`, `c19560d6` and `a002fb71` landed on one afternoon, two of
+the three jobs between them. The row is not "an adopt job once redded
+`main`": every adopt commit lands unchecked, and one of them redded it.
+
 It is not a rare shape — one in five, none of them read by any check:
 
 ```text
-$ git log --first-parent --since=2026-09-08 --format=%s c8b2f781 | wc -l
-336
-$ git log --first-parent --since=2026-09-08 --format=%s c8b2f781 | grep -c '^CI: '
-66
+$ git log --first-parent --since=2026-09-08 --format=%s 3fa407a0 | wc -l
+339
+$ git log --first-parent --since=2026-09-08 --format=%s 3fa407a0 | grep -c '^CI: '
+68
 ```
 
 `2a3f2ee7` is the demonstration rather than the argument: it appended

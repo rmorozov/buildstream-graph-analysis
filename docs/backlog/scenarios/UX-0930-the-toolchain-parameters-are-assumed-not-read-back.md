@@ -42,9 +42,11 @@ C++ headers   /usr/include/c++/13                unmoved
 `-B` moves the link-time file search as well as the programs
 (`-B <dir> -print-file-name=crt1.o` reports `<dir>/crt1.o`), and the
 C++ headers move under neither flag — they are an absolute
-`--with-gxx-include-dir`. A differently configured driver answers
-differently, so the per-file-class ownership `UX-925` asks for is a
-**reading**, not a table anyone can write once.
+`--with-gxx-include-dir`, and the table above is a *host* driver's
+answer. Which is the point: a differently configured driver, or the
+same driver invoked from inside the tree, answers differently, so the
+per-file-class ownership `UX-925` asks for is a **reading**, not a
+table anyone can write once.
 
 **`-print-file-name` answers with `..` hops.** `crt1.o` comes back as
 `/usr/lib/gcc/x86_64-linux-gnu/13/../../../x86_64-linux-gnu/crt1.o`,
@@ -142,41 +144,51 @@ both flags through to the driver with the argv unchanged.
 
 ## Outcome (round 136, 2026-09-22) — 🟢 Done
 
-**Premise:** held — and half of `UX-925`'s title falsified with it.
-`make_relative_prefix` **does** relocate a whole-tree move through
-`argv[0]`: a copied tree's driver found its own `cc1`, `libgcc` and
-internal headers and linked a running binary. Only the target's half
-stays absolute.
+**Premise:** held, and half of `UX-925`'s title falsified with it:
+`make_relative_prefix` **does** relocate a whole-tree move, through
+`argv[0]` — a copied tree's driver found its own helpers and linked.
 
-### The gap, measured
+### The gap, and what closed it
 
-Nothing asked where a file class came from, and the Motivation's own
-block is the reason: `-B` at a directory with no `cc1` compiles the
-whole example against the host's compiler at exit 0 and 0 bytes of
-stderr, where `--sysroot` at least fails the `#include`.
-
-### After
+Nothing asked where a file class came from: `-B` at a directory with
+no `cc1` compiles the example against the host's compiler silently,
+where `--sysroot` at least fails the `#include`.
 
 ```text
 $ python3 -m tools.toolchain_params --check <sysroot>
 -B<sysroot>/usr/libexec/gcc/<triple>/13/  -B<sysroot>/usr/lib/<triple>/
 -B<sysroot>/usr/lib/gcc/<triple>/13/      --sysroot=<sysroot>
   exec-prefix  toolchain toolchain  <sysroot>/usr/libexec/.../13/cc1
-  libgcc       toolchain toolchain  <sysroot>/usr/lib/gcc/.../13/libgcc.a
-  gcc-headers  toolchain toolchain  <sysroot>/usr/lib/gcc/.../include/stddef.h
+  libgcc       toolchain toolchain  <sysroot>/usr/lib/gcc/.../libgcc.a
+  gcc-headers  toolchain toolchain  <sysroot>/usr/lib/gcc/.../stddef.h
   start-files  sysroot   sysroot    <sysroot>/usr/lib/<triple>/crt1.o
-  libstdc++    toolchain toolchain  <sysroot>/usr/lib/gcc/.../13/libstdc++.so
+  libstdc++    toolchain toolchain  <sysroot>/usr/lib/gcc/.../libstdc++.so
   c-headers    sysroot   sysroot    <sysroot>/usr/include/stdio.h
-  cxx-headers  sysroot   mounted    /usr/include/c++/13/vector
-toolchain_params: cxx-headers answers a path no parameter moves - the
-sandbox answers it from the tree (UX-930).     exit 0
+  cxx-headers  sysroot   sysroot    <sysroot>/usr/include/c++/13/vector
 ```
 
-Two numbers came out of it. **`-B` is three directories, not one**:
-the libexec prefix alone leaves five of seven classes on the host, and
-adding the gcc libdir still leaves the start files. And **six of seven
-carry** — the C++ headers move under neither flag, so they are
-declared in `UNREADABLE_HERE` rather than excused silently.
+`bst-examples`' own log on `03258991` (exit 0), the first run in which
+it executed rather than skipping. **`-B` is three directories, not
+one**: libexec alone leaves five of seven on the host, the gcc libdir
+the start files.
+
+### The correction the runner forced
+
+This row said six of seven carried and the C++ headers were excused
+through `UNREADABLE_HERE`. The runner read all seven; three arms say why:
+
+```text
+host driver, --sysroot=<tree with NO c++>   /usr/include/c++/13/vector
+host driver, --sysroot=<tree WITH c++>      /usr/include/c++/13/vector
+driver staged INSIDE the tree, no flags     <tree>/usr/include/c++/13/vector
+```
+
+The narrow claim survives — **`--sysroot` does not move the C++
+headers even when the tree carries them**, and no `-B` reaches them.
+What carries them is the driver's own `argv[0]` relocation, this row's
+other finding, and on the staged path the driver is in the tree. So
+`UNREADABLE_HERE` covers a driver outside the tree and nothing else,
+and `UX-925`'s unwrapped nix gcc needs none for this class.
 
 ### Mutations verified red and reverted (7)
 
@@ -190,31 +202,23 @@ declared in `UNREADABLE_HERE` rather than excused silently.
 | A6 | the `rmtree` between the fixture's clone attempts removed | `...CannotBuildTheWrongTree`, 1 |
 | A7 | the absent-driver diagnosis removed | `...names_it_instead_of_raising`, 1 |
 
-Two guards of my own that did not discriminate. g++'s **first**
-include directory as the C++ header class reads gcc's internal
-directory whenever the C++ ones are absent — replaced by `-H` on a
-real `#include <vector>`. And the fixture's clone: a cross-device
-`cp -al` **creates the destination and then fails per file**, so the
-`cp -a` retry copied into the leftover and nested the tree one level
-down, and every glob missed. Green wherever `/usr` and `tmp_path`
-share a filesystem, red on all four CI Pythons. `--basetemp=/dev/shm`
-forces it: 7 failed before, 19 pass after.
+Two guards of my own that did not discriminate: g++'s **first**
+include directory as the C++ header class, replaced by `-H` on a real
+`#include <vector>`; and the fixture's clone, where a cross-device
+`cp -al` creates the destination and only then fails per file, so the
+`cp -a` retry nested the tree. `--basetemp=/dev/shm` forces that one:
+7 failed before, 19 pass after.
 
-One defect it found in its own instrument: a **relative** `dest` made
-relative `-B` flags whose answers sat outside the absolute tree and
-read as the host's — this row's failure shape, from the inside. Each
-prefix is found under either layout, `/usr` or a closure's own
-`/nix/store/<hash>`, since `UX-925`'s closure keeps the start files in
-**glibc's**. And the stager runs `--check` as a hard `exit 1`, so an
-absent driver names its own path rather than raising.
+A defect in its own instrument: a **relative** `dest` made relative
+`-B` flags whose answers sat outside the tree and read as the host's.
+The stager's `--check` is a hard `exit 1`, so an absent driver now
+names its path rather than raising.
 
-### Deviation from the Required Fix
-
-The shim is written by `--shim` and **not installed**: it would cost
+**Deviation:** the shim is written by `--shim` and **not installed** —
 one more `execve` per compile (16 to 17) for no change in what is
-compiled, re-dating every figure. It installs when the pin moves.
+compiled would re-date every figure. It installs when the pin moves.
 
 ```text
-9242 passed, 175 skipped in 403.72s     make test
+9242 passed, 175 skipped in 406.37s     make test
 All checks passed!                      make lint
 ```

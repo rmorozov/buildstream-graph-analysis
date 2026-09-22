@@ -70,16 +70,19 @@ CLASSES = (
 #: sysroot root. Everything else inside the tree is the target's.
 TOOLCHAIN_ROOTS = ("/usr/lib/gcc", "/usr/libexec/gcc")
 
-#: The classes this host is allowed not to be able to read, because no
+#: The classes a caller is allowed not to be able to read, because no
 #: parameter moves them and the sandbox answers them from the tree at
-#: the same absolute path. `stage_cpp_toolchain.sh` stages the drivers
-#: as the host's symlink chains through `/etc/alternatives`, so the
-#: prefix they relocate against is the host's - the C++ header
-#: directory is the one class no `-B` then reaches. A class that
-#: goes the same way and is not named here exits 1, because a
-#: parameter was passed for it and did not take - which is the whole
-#: of what this row guards. The warning is a declaration, not a
-#: ritual (`UX-914`'s two verdicts).
+#: the same absolute path. Measured: `--sysroot` does not move the C++
+#: headers even when the tree carries them, and no `-B` reaches them
+#: either - what carries them is the driver's own `argv[0]` relocation,
+#: so the class reads `sysroot` whenever the driver is *inside* the
+#: tree and falls back to the host only for a `--driver-root` outside
+#: it. On the staged path it is never excused: `bst-examples` on
+#: `03258991` read all seven from the tree. A class that goes the same
+#: way and is not named here exits 1, because a parameter was passed
+#: for it and did not take - which is the whole of what this row
+#: guards. The warning is a declaration, not a ritual (`UX-914`'s two
+#: verdicts).
 UNREADABLE_HERE = ("cxx-headers",)
 
 

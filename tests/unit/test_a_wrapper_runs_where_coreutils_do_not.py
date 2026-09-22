@@ -27,12 +27,19 @@ FLTO_TOOLS = ("flto/cc", "flto/gcc", "flto/g++", "flto/c++")
 
 
 def _staged_names():
-    """The basenames `stage_cpp_toolchain.sh` puts in the sandbox."""
-    block = re.search(r"^BINARIES=\((.*?)^\)", STAGER.read_text(),
-                      re.DOTALL | re.MULTILINE)
-    assert block, "stage_cpp_toolchain.sh no longer declares BINARIES=(...)"
-    return {pathlib.PurePosixPath(word).name
-            for word in block.group(1).split() if word.startswith("/")}
+    """The basenames `stage_cpp_toolchain.sh` puts in the sandbox, read
+    from both of its axis arrays (`UX-914` split the one list in two; a
+    regex that still matched only the composed `BINARIES=(...)` would
+    read a set of zero paths and pass whatever the wrappers do)."""
+    text = STAGER.read_text()
+    names = set()
+    for array in ("RUNTIME_BINARIES", "TOOLCHAIN_BINARIES"):
+        block = re.search(rf"^{array}=\((.*?)^\)", text, re.DOTALL | re.MULTILINE)
+        assert block, f"stage_cpp_toolchain.sh no longer declares {array}=(...)"
+        names |= {pathlib.PurePosixPath(word).name
+                  for word in block.group(1).split() if word.startswith("/")}
+    assert names, "no absolute paths read out of the stager's axis arrays"
+    return names
 
 
 def _sandbox_path(tmp_path, tool_name):

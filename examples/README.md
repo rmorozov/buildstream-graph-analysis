@@ -118,6 +118,42 @@ carrying whatever the staging host installed would let the host decide
 what the examples measure. `tools/nix_store_fetch.py` holds the store
 path, its checksum, and the one download the staging needs.
 
+The rest is this host's, but it is no longer *silently* this host's
+(`UX-914`). The sysroot is two independent axes - a **runtime** (glibc,
+the shell, coreutils, `make`) and a **toolchain** (gcc, binutils, cmake
+and the headers that travel with them) - and `tools/sysroot_manifest.py`
+declares, per package, which axis it is on, whether it is pinned or
+host-staged, and what version this repository says it is. Staging prints
+that table and checks it against the staged copies:
+
+```text
+runtime:
+  glibc      host    2.39  (1 probed, 0 staged)
+  coreutils  host    9.4  (4 probed, 4 staged)
+  dash       host    dash answers no --version, so the sysroot cannot state it  (0 probed, 1 staged)
+  make-4.2   pinned  4.2.1  (1 probed, 1 staged)
+  make-4.4   pinned  4.4.1  (2 probed, 2 staged)
+toolchain:
+  gcc        host    13.3.0  (4 probed, 4 staged)
+  binutils   host    2.42  (7 probed, 7 staged)
+  cmake      host    3.28.3  (1 probed, 1 staged)
+```
+
+A **pinned** row that disagrees fails the staging - the pin did not
+take. A **host** row that disagrees only warns, because a different
+working host is not a broken sysroot; it is a different program under
+measurement, and `tests/unit/test_the_sysroot_declares_both_axes.py` is
+what reddens. If you stage on a host outside Ubuntu 24.04, expect that
+warning: the figures the documents carry were measured against the
+versions above, and re-declaring them means re-deriving the figures.
+
+Adopting a whole pinned base instead (Debian, Alpine, freedesktop-sdk)
+was weighed and declined in `UX-914`: every mirror those need is refused
+at CONNECT from the development container, and two of them would change
+the libc, so a component becomes a pin when its version is shown to
+decide a reading rather than all at once. Replacing the toolchain axis
+with a relocatable cross toolchain is `UX-922`.
+
 ```
 sudo apt-get install -y build-essential cmake
 ../examples/stage_cpp_toolchain.sh   # (or ./stage_cpp_toolchain.sh from examples/)

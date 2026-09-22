@@ -139,6 +139,18 @@ append bakes that run's slowness into the row as permanent slack.
 `tests/ci_reference.json`'s own `note` carries every append made that
 way, with the run id and the shift each was taken from.
 
+`UX-924`: for an entry the document **already holds**, wait before
+doing either. `--adopt` leaves this run's own reading in that entry's
+window on every push to the default branch, so a file that really got
+slower moves its own figure in **three** adopt commits, or **two** when
+the readings clear both gates - about a day at the rate main adopts.
+The five hand-refreshes this repository made before that item are all
+the same defect: `--adopt` was reading the candidate's `files`, which
+is the median the reference itself set, so the entry could not move.
+The wait starts when the diff **lands**: that job runs on pushes to the
+default branch and never on a pull request, so an open branch's own red
+run is not resolved by waiting on it.
+
 Do not run `--record` locally and commit the result. It is not the same
 document: it is this machine's clock replacing CI's, row for row, and
 the gate will be quiet for the wrong reason. (`UX-584` removed the

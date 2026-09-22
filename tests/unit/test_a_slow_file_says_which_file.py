@@ -1637,6 +1637,140 @@ class TestAStepRestartsTheSamples:
         assert self.NAME not in (after_one.get("adopted") or [])
 
 
+class TestTheReadingAdoptedIsTheRunsOwn:
+    """`UX-924`: `adopt` took the candidate's `files`, and a candidate's
+    `files` is already `median_low` of that candidate's own `samples` -
+    four carried copies of the committed value rescaled onto this run's
+    clock, plus one real reading. So the number the reference adopted
+    was the number it already held, and a flat window could never leave
+    the value one run first wrote: 399 of 566 entries were frozen, and
+    `UX-496`'s median and `UX-803`'s restart had never once run on the
+    real document.
+
+    The run is 35664785880, whose `tier-reference` job log is the
+    candidate `--adopt` was given, and the entry is the one `UX-908`
+    re-recorded by hand while 37 consecutive adopt commits carried it
+    unchanged at 6.47.
+    """
+
+    NAME = "tests/unit/test_a_drawing_is_graded.py"
+
+    #: What `tests/ci_reference.json` held at `5a10155e`, the head that
+    #: run measured: a full window, flat, never a reading.
+    RECORDED = 6.47
+
+    #: The run's own `spread.shift`, so the replay is on its clock.
+    SHIFT = 0.971
+
+    #: What the run read the file at, and that figure on the
+    #: reference's clock - `13.28 / 0.971`, the arithmetic `against`
+    #: does when it judges the file.
+    READ = 13.28
+    ON_THIS_CLOCK = 13.68
+
+    def _that_run(self):
+        """`(reference, candidate)` - the committed document and the
+        one `--record` wrote from this run, built the way CI builds it:
+        the candidate's prior *is* the reference, which is where the
+        carried copies come from."""
+        reference = drift.record(dict(tiers.recorded()))
+        reference["files"][self.NAME] = self.RECORDED
+        reference["samples"][self.NAME] = [
+            self.RECORDED] * drift.CI_REFERENCE_SAMPLES
+        times = {name: round(seconds * self.SHIFT, 2)
+                 for name, seconds in tiers.recorded().items()}
+        times[self.NAME] = self.READ
+        return reference, drift.record(times, "run 35664785880", reference)
+
+    def test_the_replay_really_is_that_run(self):
+        """The premise, against the two lines the job log carries. If
+        the replayed candidate does not hold 6.28 beside its real
+        13.28, this class is replaying something else."""
+        _reference, candidate = self._that_run()
+        assert candidate["spread"]["shift"] == pytest.approx(
+            self.SHIFT, abs=0.005), candidate["spread"]["shift"]
+        assert candidate["files"][self.NAME] == pytest.approx(6.28), (
+            f"the log's candidate reads 6.28 here: "
+            f"{candidate['files'][self.NAME]}")
+        assert candidate["samples"][self.NAME] == [
+            6.28, 6.28, 6.28, 6.28, self.READ], (
+            candidate["samples"][self.NAME])
+
+    def test_the_acceptance_case(self):
+        """The reading lands in the window, and the run after it - over
+        both gates against 6.47, and agreeing with the one before it -
+        restarts the window at it. `UX-803`'s own path, reached for the
+        first time."""
+        reference, candidate = self._that_run()
+        after_one, _added = drift.adopt(reference, candidate)
+        assert after_one["samples"][self.NAME][-1] == pytest.approx(
+            self.ON_THIS_CLOCK, abs=0.01), (
+            f"the run read {self.READ}s and the window took "
+            f"{after_one['samples'][self.NAME][-1]} - the entry is "
+            f"adopting its own committed number back (UX-924)")
+        assert after_one["files"][self.NAME] == self.RECORDED, (
+            "one reading is not meant to move a five-wide median")
+        times = {name: round(seconds * self.SHIFT, 2)
+                 for name, seconds in tiers.recorded().items()}
+        times[self.NAME] = self.READ
+        after_two, _added = drift.adopt(
+            after_one, drift.record(times, "the run after it", after_one))
+        assert after_two["samples"][self.NAME] == [pytest.approx(
+            self.ON_THIS_CLOCK, abs=0.02)], after_two["samples"][self.NAME]
+        assert self.NAME in after_two["adopted"]
+
+    def test_the_three_numbers_a_window_offers_are_told_apart(self):
+        """The discriminator. `files`, the oldest sample and the newest
+        are 7.0, 9.0 and 13.28 here on purpose: an `adopt` reading any
+        of the three lands a different figure, and only the newest is
+        this run's own seconds."""
+        reference = drift.record(dict(tiers.recorded()))
+        reference["files"][self.NAME] = self.RECORDED
+        reference["samples"][self.NAME] = [
+            self.RECORDED] * drift.CI_REFERENCE_SAMPLES
+        candidate = drift.record(dict(tiers.recorded()), "a run at 1.0")
+        candidate["files"][self.NAME] = 7.0
+        candidate["samples"][self.NAME] = [9.0, 5.0, 6.0, 7.0, self.READ]
+        assert statistics.median_low(
+            candidate["samples"][self.NAME]) == candidate["files"][self.NAME]
+        after, _added = drift.adopt(reference, candidate)
+        assert after["samples"][self.NAME][-1] == pytest.approx(
+            self.READ, abs=0.05), (
+            f"7.0 is the candidate's own median and 9.0 its oldest "
+            f"reading; the window took "
+            f"{after['samples'][self.NAME][-1]}")
+
+    def test_a_candidate_with_no_samples_keeps_its_files(self):
+        """Every document written before `UX-496` is that shape, and
+        one reading is better than none."""
+        reference = drift.record(dict(tiers.recorded()))
+        candidate = drift.record(dict(tiers.recorded()), "a run at 1.0")
+        candidate["files"][self.NAME] = 7.0
+        del candidate["samples"]
+        after, _added = drift.adopt(reference, candidate)
+        assert after["samples"][self.NAME][-1] == pytest.approx(7.0,
+                                                               abs=0.05)
+
+    def test_the_shift_is_still_the_medians_and_not_the_readings(self):
+        """`UX-924`'s stated fork. This candidate's `files` sit at the
+        reference's clock and every newest sample is twice them, so the
+        two estimators read 1.0 and 2.0 - and the row adopted at its
+        raw seconds says the median comparison is the one that ran.
+        `IMAGE_BAND` refuses on that number, and `shift_of` is sized for
+        it; on the real candidate they differ by 0.0001."""
+        reference = drift.record(dict(tiers.recorded()))
+        times = dict(tiers.recorded())
+        times[SMALL_FILE] = 40.0
+        candidate = drift.record(times, "a run at 1.0")
+        candidate["samples"] = {name: [seconds * 2]
+                                for name, seconds in times.items()}
+        _document, added = drift.adopt(reference, candidate)
+        assert added[SMALL_FILE] == pytest.approx(80.0, abs=0.05), (
+            f"the new row landed at {added[SMALL_FILE]}s, so the shift "
+            f"was estimated on the readings (2.0) and not on the "
+            f"medians (1.0)")
+
+
 class TestTheRunnerVerdictNeedsASeriesToo:
     """`UX-508`: `stale` was the third one-sample verdict in this tool.
 

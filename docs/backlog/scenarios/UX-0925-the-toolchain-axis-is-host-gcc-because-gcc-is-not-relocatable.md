@@ -65,6 +65,52 @@ costs, not re-derived here:
   store paths, so **preserving the `/nix/store/<hash>` prefix is
   necessary and fetching one NAR is not sufficient**.
 
+- **`-B` plus `--sysroot` on a stock pinned gcc**, proposed by
+  `rmorozov` on `#257` and the leading candidate: do not relocate the
+  toolchain at all, parameterize it. Measured 2026-09-22 on the host's
+  gcc 13.3.0:
+
+  ```text
+  A. --sysroot moves the target headers, only those
+     #include <...> search starts here:
+      /usr/lib/gcc/x86_64-linux-gnu/13/include   <- untouched, install prefix
+      <sysroot>/usr/include                       <- moved
+  B. --sysroot does not move the exec prefix
+     no flags      cc1 -> /usr/libexec/gcc/x86_64-linux-gnu/13/cc1
+     --sysroot     cc1 -> /usr/libexec/gcc/x86_64-linux-gnu/13/cc1
+     -B <empty>    cc1 -> /usr/libexec/gcc/x86_64-linux-gnu/13/cc1
+     -B <real cc1> cc1 -> <dir>/cc1
+  ```
+
+  Both flags, then, not either: `--sysroot` decides where the build
+  shops for target parts, `-B` which toolbox the driver reaches into.
+  That also answers part of the file-class question below for free —
+  gcc's **own** internal include dir and `libgcc` stay with the
+  toolchain under both flags, so they are the pinned toolchain's and
+  never the BuildStream-staged target sysroot's.
+
+  **This dissolves the row's own premise.** If the flags carry it, no
+  relocatable, cross-built or rewritten toolchain is needed: the stock
+  nix gcc closure stays at its own `/nix/store/<hash>`, its
+  content-address intact, and the *invocation* moves rather than the
+  tree. The closure requirements below are unchanged by that — they are
+  about staging the closure, not about relocating it.
+
+  **The hazard is row three, and it is this repository's own shape.**
+  A `-B` pointing at a directory that holds no `cc1` falls back to the
+  compiled-in prefix and prints nothing, so the mechanism looks like it
+  works while reading the host — exactly what `UX-914` exists to catch.
+  It gets the same treatment staging got: declared, then probed, with a
+  mutation that points `-B` at an empty directory and expects red.
+
+  **What it costs to deliver.** The examples' own build commands invoke
+  the compiler, not a wrapper this repository controls, so the flags
+  arrive through a PATH shim — the shape `bga-make` and `UX-913`'s GCC
+  driver shim already established. With `exec` it adds no process, but
+  it adds one `execve` to plane 2's ledger, and it must be shell-only:
+  the sandbox stages no `dirname` or `basename`, the trap `UX-880` and
+  `UX-913` both hit and `UX-918` still carries.
+
 - **`pkgsCross` plus `patchelf`**, proposed by `rmorozov` on `#257`:
   cross-build the toolchain with nixpkgs' own infrastructure, then
   strip the store paths out of the result so nothing carries a

@@ -118,6 +118,31 @@ def mini_symlinked(tmp_path_factory):
     return str(dest)
 
 
+class TestTheFixtureCannotBuildTheWrongTree:
+    """`UX-930`'s own thesis from the inside. A parameterized path that
+    is empty falls back and says nothing; a clone that fails and
+    retries lands elsewhere and says nothing. The runner's `cp -al`
+    fails cross-device *after* creating the destination, and `cp` then
+    copies **into** what it left - nesting the tree under the source's
+    own basename, where every mark globs to zero. Forced here rather
+    than left to the runner's filesystem."""
+
+    def test_the_retry_does_not_copy_into_what_the_first_attempt_left(
+            self, tmp_path):
+        source = tmp_path / "source" / "13"
+        source.mkdir(parents=True)
+        (source / "libgcc.a").touch()
+        dest = tmp_path / "dest" / "13"
+        dest.mkdir(parents=True)
+        (dest / "what-a-failed-attempt-left").touch()
+
+        _clone(source, dest)
+
+        assert (dest / "libgcc.a").exists()
+        assert not (dest / "13").exists(), "the retry nested the tree"
+        assert not (dest / "what-a-failed-attempt-left").exists()
+
+
 class TestEveryClassAnswersFromTheStagedTree:
 
     def test_the_check_passes_on_a_tree_that_carries_all_seven(self, mini):

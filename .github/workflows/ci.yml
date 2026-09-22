@@ -539,11 +539,14 @@ jobs:
   # somebody's branch and its numbers are not merged yet; on the default
   # branch the run measured what is actually there.
   #
-  # `--adopt` adds names the reference lacks and rewrites no entry it
-  # holds, so this can never quietly move a figure a human recorded - a
-  # refresh stays a human's decision (UX-447). Every refusal inside it
-  # exits 0, and a rejected push is a warning rather than a red: a
-  # bookkeeping job failing the default branch buys nothing.
+  # `--adopt` adds names the reference lacks, and leaves this run's own
+  # reading in the window of every entry it already holds (UX-496).
+  # UX-924: that reading is the candidate's newest sample, not its
+  # `files`, which is the median the reference itself set - so no single
+  # run moves an entry, and a wholesale refresh is still a human's
+  # decision (UX-447). Every refusal inside it exits 0, and a rejected
+  # push is a warning rather than a red: a bookkeeping job failing the
+  # default branch buys nothing.
   tier-reference-adopt:
     runs-on: ubuntu-latest
     needs: test

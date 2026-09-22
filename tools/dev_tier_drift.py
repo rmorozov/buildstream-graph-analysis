@@ -508,6 +508,25 @@ def _next_sample(name, known, before, reading, shift):
     return seen + [normalised], False
 
 
+def readings_of(candidate):
+    """`UX-924`: what a candidate run actually measured, per name.
+
+    A candidate's `files` is already `median_low` of that candidate's
+    own `samples` - four carried copies of the committed value rescaled
+    onto this run's clock, plus one real reading - so a reference that
+    adopts it adopts its own number back, and a flat window can never
+    leave the value one run first wrote. The newest sample is the run's
+    own seconds, which is what `_next_sample` expects.
+
+    A name the candidate carries no samples for keeps its `files`
+    figure: a document written before `UX-496` has no `samples` at all,
+    and one reading is better than none.
+    """
+    samples = candidate.get("samples") or {}
+    return {name: (samples.get(name) or [seconds])[-1]
+            for name, seconds in (candidate.get("files") or {}).items()}
+
+
 def adopt(reference, candidate):
     """`UX-503`: the rows the reference does not carry yet, added to it.
 
@@ -519,7 +538,9 @@ def adopt(reference, candidate):
     `files` is the median of the list. No single run sets a number, so
     this is not the human refresh decision `UX-503` kept out of an
     unattended job - it is the accumulation that makes the entry more
-    than one afternoon.
+    than one afternoon. `UX-924`: the reading is `readings_of`, the
+    candidate's newest sample, and not its `files`, which is the
+    reference's own number coming back.
 
     The candidate's seconds are the *candidate run's* clock, so each
     added row is divided by the shift between the two documents before
@@ -551,9 +572,16 @@ def adopt(reference, candidate):
     perf_added = {key: candidate[key] for key in PERF_KEYS
                   if key not in reference and key in candidate}
     known = reference.get("files") or {}
-    times = candidate.get("files") or {}
-    ratios = {name: times[name] / known[name] for name in known
-              if times.get(name) and known[name] > 0}
+    times = readings_of(candidate)
+    # `UX-924`: the shift stays **median against median**. It is a
+    # statement about the runner, `shift_of` is sized for that
+    # comparison and `IMAGE_BAND`'s refusal is calibrated on it; on run
+    # 35664785880's real candidate the two estimators read 0.9712 and
+    # 0.9713, so reading-against-median buys 0.01 % and moves a
+    # threshold. Only the number that enters `samples` changes.
+    medians = candidate.get("files") or {}
+    ratios = {name: medians[name] / known[name] for name in known
+              if medians.get(name) and known[name] > 0}
     if not ratios:
         if not perf_added:
             return reference, {}

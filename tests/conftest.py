@@ -110,6 +110,13 @@ KNOWN_SKIP_REASONS = {
     # while every test passed. They ask `tests/trace_processor.py` now.
     # Re-measured 2026-08-31 (the three files that use the gate,
     # `-rs`): 16. 14 -> 16.
+    # `UX-930`: the toolchain-parameter guard clones its sysroot off
+    # this host's own gcc, so in a clone with no compiler installed
+    # there is nothing to read. 0 on this container and on
+    # `ubuntu-latest`, both of which have one; the wording is a module
+    # constant in that file so this census can read it without running.
+    "no host toolchain to clone a sysroot off": (
+        "a host with no gcc cannot answer where a file class came from", 0),
     "trace_processor_shell is not installed": (
         "Perfetto's shell is an optional local tool, not a dependency", 16),
     # `UX-637`: the reachability clause refuses to answer from a

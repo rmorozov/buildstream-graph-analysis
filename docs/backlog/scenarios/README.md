@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-925 scenarios: **16 open**, 909 closed.
+926 scenarios: **17 open**, 909 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -27,7 +27,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | cli | 0 | 22 |
 | store | 1 | 17 |
 | docs | 1 | 146 |
-| guards | 7 | 249 |
+| guards | 8 | 250 |
 
 ## Open scenarios
 
@@ -49,9 +49,10 @@ task file, which is the only place it ever lived twice.
 | UX-917 | [the fold-depth guard has three unconfirmed CI excursions, spread over three weeks](UX-0917-the-fold-depth-guard-has-three-unconfirmed-excursions.md) | guards | Medium | the round whose push gate is blocked by a file nobody has named | 🔴 Not Started |
 | UX-920 | [two task files can share one backlog id, and no guard reads ids for uniqueness](UX-0920-two-task-files-can-share-one-id-and-nothing-reads-it.md) | guards | Medium | every round that runs more than one branch at a time, which is now the normal case | 🔴 Not Started |
 | UX-921 | [hidden findings keep live controls](UX-0921-hidden-findings-keep-live-controls.md) | viewer | Medium | R1, R4 and assistive-technology users reading a report with many findings | 🔴 Not Started |
-| UX-924 | [the adopt route feeds the committed median back to itself, so a reference entry is write-once](UX-0924-the-adopt-route-feeds-the-committed-median-back-to-itself.md) | guards | High | every branch charged for a cost `main` carries, and every round that re-records a cell by hand | 🔴 Not Started |
 | UX-925 | [the toolchain axis is this host's gcc, because gcc's search paths are not relocatable](UX-0925-the-toolchain-axis-is-host-gcc-because-gcc-is-not-relocatable.md) | guards | Medium | every example, and the comparison class a `variant` dimension names | 🔴 Not Started |
 | UX-926 | [a round that leaves neither a document nor a ledger row is invisible to the register, and so to the guard whose job is to demand its document](UX-0926-a-round-that-leaves-no-trace-is-invisible-to-the-register.md) | guards | Medium | every later round, which reads a round's record instead of its code | 🔴 Not Started |
+| UX-928 | [the routing rule sends a prose diff to a protocol that opens on a served page](UX-0928-the-routing-rule-sends-a-prose-diff-to-a-protocol-that-opens-on-a-page.md) | guards | Medium | every diff that edits a skill, a hook or the spec without touching the report | 🔴 Not Started |
+| UX-929 | [two population-sized guards reach three excursions in one run, and both records were frozen](UX-0929-two-population-sized-guards-reach-three-excursions-in-one-run.md) | guards | Medium | every branch whose push gate reads a suite `main` has already reddened | 🔴 Not Started |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

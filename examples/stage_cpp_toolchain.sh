@@ -314,6 +314,14 @@ fi
 # measurement, and the guard is what reddens for that.
 (cd "$HERE/.." && python3 -m tools.sysroot_manifest --check "$DEST")
 
+# UX-930: the versions above say what the sysroot is; this says where
+# its own driver actually reaches. Every one of gcc's path parameters
+# falls back to a host absolute path when the parameterized location
+# is empty, and none of them says so, so each file class is asked
+# rather than assumed - the reading UX-925's -B/--sysroot route needs
+# before it can move the driver out of this tree.
+(cd "$HERE/.." && python3 -m tools.toolchain_params --check "$DEST")
+
 echo "Staged toolchain to $DEST ($(du -sh "$DEST" | cut -f1))"
 
 # Every other example project that needs the identical sysroot. Hardlink

@@ -137,6 +137,45 @@ jobs:
       # when consecutive runs agree, and the carry file is where a run
       # leaves its finding for the next one. Keyed by ref, so a branch
       # reads its own series and not another branch's.
+      # `UX-803`: on a PR, `github.ref` below is the PR's own ref, so
+      # that restore never reaches main's carry - a separate key, always
+      # main's, so a file main's own last run already read past the
+      # gates is the base's excursion and not this diff's.
+      #
+      # `UX-922`: three things about this step, each measured, and the
+      # reason it now sits *above* the branch's own restore.
+      #
+      # Its `path` is the **save's** path, not a second file. The cache
+      # version the restore asks for is `sha256(paths|method|salt)`
+      # (`getCacheVersion`, actions/cache v6), and the service matches
+      # key *and* version - so `tier_carry_base.json` asked for
+      # a3a89e94.. where every save wrote d1e90db5.. , and no key could
+      # have hit. That, not cross-ref scoping, is the miss UX-912 read.
+      #
+      # `extractTar` is `tar -xf <archive> -P -C $GITHUB_WORKSPACE` with
+      # no member list, so a hit lands where it was saved whatever
+      # `path` says: hence the move below, and hence this step first -
+      # below the branch's own restore a hit would overwrite it.
+      #
+      # And not on the default branch, where the two keys are the same
+      # series: a base carry equal to this run's own carry excuses every
+      # row agreement would confirm - measured, exit 1 -> exit 0 on one
+      # 50s-against-2.4s file - which is the gate turned off on main.
+      - name: What the last run of the default branch found over the gates
+        uses: actions/cache/restore@v6
+        with:
+          path: ${{ runner.temp }}/tier_carry.json
+          key: tier-carry-refs/heads/${{ github.event.repository.default_branch }}-
+          restore-keys: |
+            tier-carry-refs/heads/${{ github.event.repository.default_branch }}-
+        if: matrix.python-version == '3.11' && github.ref != format('refs/heads/{0}', github.event.repository.default_branch)
+
+      - name: Set aside what the default branch carried
+        run: |
+          mv "${{ runner.temp }}/tier_carry.json" \
+             "${{ runner.temp }}/tier_carry_base.json" || true
+        if: matrix.python-version == '3.11' && github.ref != format('refs/heads/{0}', github.event.repository.default_branch)
+
       - name: What the last run of this branch found over the gates
         uses: actions/cache/restore@v6
         with:
@@ -144,19 +183,6 @@ jobs:
           key: tier-carry-${{ github.ref }}-${{ github.run_id }}
           restore-keys: |
             tier-carry-${{ github.ref }}-
-        if: matrix.python-version == '3.11'
-
-      # `UX-803`: on a PR, `github.ref` above is the PR's own ref, so
-      # that restore never reaches main's carry - a separate key, always
-      # main's, so a file main's own last run already read past the
-      # gates is the base's excursion and not this diff's.
-      - name: What the last run of the default branch found over the gates
-        uses: actions/cache/restore@v6
-        with:
-          path: ${{ runner.temp }}/tier_carry_base.json
-          key: tier-carry-refs/heads/${{ github.event.repository.default_branch }}-
-          restore-keys: |
-            tier-carry-refs/heads/${{ github.event.repository.default_branch }}-
         if: matrix.python-version == '3.11'
 
       # UX-476: `--base` is the other half of the rule. Two runs read

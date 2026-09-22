@@ -28,11 +28,31 @@ exists because of what that rules out. `models.py` asserts that a
 `stack` element's `get_unique_key()` returns a constant, which is why
 `stack` is in the closed list of kinds the analysis flags.
 
-Both were confirmed on 2.7.0. CI now runs **2.8.1**. Nothing in the
-tree re-checked either on 2.8.0, and nothing will notice on 2.8.2: a
-behaviour claim carries the version it was confirmed on and no
-expiry, so the same sentence reads identically whether it was
-re-confirmed yesterday or never since round 31.
+Both were confirmed on 2.7.0, and `UX-939` re-read both in 2.8.1's own
+wheel before moving the pins:
+
+```text
+buildstream/plugins/elements/stack.py   def get_unique_key: return 1
+                                        BST_ELEMENT_HAS_ARTIFACT = False
+buildstream/element.py:3103             for var in ("project-name",
+                                          "element-name", "max-jobs"):
+                                        "invalid redefinition of
+                                        protected variable"
+grep max-jobs, whole wheel           no read of it from `public:`
+```
+
+**They hold.** The row is not that the claims are wrong; it is that
+nothing in the tree records that anyone checked. The same two sentences
+read identically whether they were re-confirmed today or never since
+round 31, and nothing will notice on 2.8.2.
+
+`UX-939` met the cost of that directly. The natural place for the
+record is beside each claim, and `bga/structural/serialization_points.py`'s
+module docstring is already 36 lines against the register's 25, which
+older files may only shrink — so the re-read went into a task file's
+Outcome instead, which is the one place a later round will not think
+to look. `bga/ingest/models.py` had room and now names both versions.
+A record with no cheap home is the argument for giving it one.
 
 That the claims are *stated with* their version is right, and better
 than the exercised line `UX-939` is about, because a reader can check
@@ -47,10 +67,9 @@ happens when the runner's version moves past it — a warning that names
 the unre-checked claims is enough; a red that nobody can clear is what
 `UX-939` is filed against.
 
-Then re-check the two 2.7.0 claims on the version CI actually runs and
-record the result, whichever way it goes. `max-jobs` being a protected
-base variable and `stack`'s constant unique key are both cheap to read
-out of the installed source.
+`UX-939` has already done the re-checking once, by hand, for two
+claims. What is missing is the place to put it and the thing that asks
+again.
 
 ## Out of Scope
 

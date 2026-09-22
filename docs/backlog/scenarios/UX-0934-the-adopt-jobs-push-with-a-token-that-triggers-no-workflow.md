@@ -1,0 +1,75 @@
+# UX-934: the adopt jobs push with a token that triggers no workflow, so a commit that reds main carries no CI
+
+**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-503, UX-524, UX-691 | **Blocks:** — | **Found by:** round 136 — `2a3f2ee7` took two files to `EXCURSION_FLOOR` and left `main` red on `test_a_file_with_three_excursions_has_a_filed_task.py`; GitHub shows that commit with **zero** check runs, and the first thing to notice was another thread's push gate refusing | **Serves:** every branch that inherits a red `main` it cannot see and did not cause | **Topic:** guards | **Area:** tools | **Shape:** judgement
+
+## Motivation
+
+A push authenticated with `GITHUB_TOKEN` does not trigger a workflow —
+GitHub's own recursion guard — and three jobs write to the default
+branch that way:
+
+```text
+ci.yml:550  tier-reference-adopt   tests/ci_reference.json    UX-503
+ci.yml:600  touch-map-adopt        tests/touch_map.json       UX-524
+ci.yml:652  flake-ledger-adopt     tests/flake_ledger.json    UX-691
+```
+
+Each writes a **committed record a guard reads**, so each can redden
+the branch it writes to with a commit nothing then reads:
+
+```text
+$ GET /repos/.../commits/<sha>/check-runs  ->  total_count
+2a3f2ee7   0   CI: append this run's excursions to the flake ledger (UX-691)
+6d78912d   0   CI: append this run's excursions to the flake ledger (UX-691)
+be558ccb   0   CI: adopt the tier rows this run measured (UX-503)
+cbcdae85  15   UX-927: a pin's whole closure ... (#260)
+32bf9893  14   Merge pull request #259
+```
+
+It is not a rare shape — one in five, none of them read by any check:
+
+```text
+$ git log --first-parent --since=2026-09-08 --format=%s c8b2f781 | wc -l
+336
+$ git log --first-parent --since=2026-09-08 --format=%s c8b2f781 | grep -c '^CI: '
+66
+```
+
+`2a3f2ee7` is the demonstration rather than the argument: it appended
+run 35735148844's two excursions, `UX-691`'s census guard went red on
+`main` with nothing on any branch applied, GitHub showed a green page
+because the newest checks belong to `cbcdae85` before it, and the
+witness was the **next thread's push gate** refusing a sha that had
+never been red locally. `UX-929` clears that instance; this row is the
+mechanism, which is `UX-917`'s shape one level up — a record a job
+writes unattended, with nobody reading what it wrote.
+
+## Required Fix
+
+The job reads its own record before it pushes, and fails instead of
+pushing when the record it just wrote is one a guard rejects. The
+cheapest form is each adopt job running the one guard that reads its
+own file, not the suite — `dev_flake_census.unaccounted` for the
+ledger, `dev_close_task.py --check` for the counts, the tier file's own
+guard for the reference. Say which guard each job runs, and the wall
+clock it adds to a job that today is a `pip install` and a commit.
+
+The alternatives are a row each, with the cost stated rather than
+assumed: the job opening a pull request instead of pushing (CI runs,
+but an unattended PR is a queue nobody drains), or a scheduled run on
+the default branch (it finds the red, one schedule period late).
+
+## Out of Scope
+
+What the adopt jobs write, and whether they should write it — `UX-924`
+is the tier file's own defect. `UX-929`'s two files. Changing the push
+gate, which behaved correctly here: it is the thing that noticed.
+
+## Acceptance Test
+
+A candidate record that its own guard rejects makes the adopt job fail
+without pushing, and a guard reads that the workflow calls that check
+in that job — a mutation removing the step reddens, and a mutation
+pointing the step at a different file reddens too.
+
+## Outcome

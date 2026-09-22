@@ -234,3 +234,4 @@ Mechanism: [docs/design/areas/tools.md](../../design/areas/tools.md)
 | [UX-920](../scenarios/UX-0920-two-task-files-can-share-one-id-and-nothing-reads-it.md) | guards |
 | [UX-922](../scenarios/UX-0922-a-squash-merge-redates-a-round-document.md) | guards |
 | [UX-923](../scenarios/UX-0923-the-base-carry-restore-asks-for-a-version-no-save-wrote.md) | guards |
+| [UX-924](../scenarios/UX-0924-the-adopt-route-feeds-the-committed-median-back-to-itself.md) | guards |

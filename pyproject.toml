@@ -36,6 +36,10 @@ dependencies = [
 dev = [
     "pytest>=7.0",
     "pytest-cov>=4.0",
+    # UX-927: in `dev` as well as in `nix` below, because a guard that
+    # skips where nobody looks is the shape this repository keeps
+    # catching - the closure guard's `zstd` clause has to really run.
+    "zstandard>=0.22",
     "ruff==0.16.8",
     # UX-697: the type ratchet reads pyright; pinned like ruff, so the
     # baseline's identities do not move with a release.
@@ -108,6 +112,16 @@ all = ["buildstream>=2.0", "pyyaml>=6.0", "argcomplete>=3.0"]
 bst = [
     "buildstream>=2.0",
     "pyyaml>=6.0",
+]
+
+# UX-927: staging a store closure off `cache.nixos.org`. Measured
+# 2026-09-22 on `ipr6y28...-gcc-14.3.0`: 15 paths, 298.6 MiB unpacked,
+# every one `zstd` - so `UX-915`'s stdlib-`lzma` reader stages none of
+# a compiler. `tools/nix_closure.py` probes four backends in order and
+# this is the one it can install; a host that already answers (stdlib
+# on 3.14, or `zstd(1)`) needs none of it.
+nix = [
+    "zstandard>=0.22",
 ]
 
 [project.scripts]

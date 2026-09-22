@@ -228,6 +228,12 @@
       "run_id": "35755437814",
       "shift": 1.517,
       "confirmed": false
+    },
+    {
+      "file": "tests/unit/test_the_trace_census_reads_both_ends.py",
+      "run_id": "35773916368",
+      "shift": 1.657,
+      "confirmed": false
     }
   ],
   "declared": {}

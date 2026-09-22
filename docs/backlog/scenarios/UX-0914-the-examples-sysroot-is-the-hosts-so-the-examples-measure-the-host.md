@@ -1,6 +1,6 @@
 # UX-914: the examples' sysroot is the host's own /usr/bin, so what the examples measure is decided by whichever machine staged them
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-913 | **Blocks:** UX-910 | **Found by:** round 132 — `UX-913`'s scrub chain starts at "the sandbox's `make` is the host's", and no row owned that | **Serves:** every example, and every reading taken from one | **Topic:** guards | **Area:** tools | **Shape:** judgement
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-913 | **Blocks:** UX-910 | **Found by:** round 132 — `UX-913`'s scrub chain starts at "the sandbox's `make` is the host's", and no row owned that | **Serves:** every example, and every reading taken from one | **Topic:** guards | **Area:** tools | **Shape:** judgement
 
 ## Motivation
 
@@ -202,3 +202,81 @@ deviation recorded, because whichever option wins changes the program
 being measured.
 
 ## Outcome
+
+**Round 135, 2026-09-22 — the base chosen: per-package pins, not a
+base image.** A1-A4 each need a mirror still refused at CONNECT:
+
+```text
+deb.debian.org 000  dl-cdn.alpinelinux.org 000  ftp.gnu.org 000
+cdn.registry.gitlab-static.net 000  cache.nixos.org 200  channels.nixos.org 200
+```
+
+The last two rows dissolve the four-way pick. `UX-915` proved a Nix
+store path fetches and unpacks with no Nix, daemon or root, so a
+*component* can be pinned without a base distro and without touching
+libc — what made A3 cost every recorded figure. The base stays
+host-staged; a component becomes a pin when its version is shown to
+decide a reading. `make` is the first.
+
+**The gap.** `make` alone was declared. Three verification logs name
+`gcc 13 / cmake 3.28` in prose; nothing read them against a sysroot,
+and glibc, binutils, coreutils and the shell were named nowhere.
+
+**The close.** The one `BINARIES` array is now `RUNTIME_BINARIES` and
+`TOOLCHAIN_BINARIES`; `tools/sysroot_manifest.py` declares one row per
+package — axis, origin, version — pinned rows read from `PINS`:
+
+```text
+runtime:
+  glibc      host    2.39  (1 probed of 1 declared)
+  coreutils  host    9.4  (4 probed of 4 declared)
+  dash       host    dash answers no --version, so the sysroot cannot state it  (0 probed of 1 declared)
+  make-4.2   pinned  4.2.1  (1 probed of 1 declared)
+  make-4.4   pinned  4.4.1  (2 probed of 2 declared)
+toolchain:
+  gcc        host    13.3.0  (7 probed of 7 declared)
+  binutils   host    2.42  (7 probed of 7 declared)
+  cmake      host    3.28.3  (1 probed of 1 declared)
+```
+
+Twenty-three probes over twenty-one staged names, one per binary. A
+package-level probe is a proxy for its own members (fixing guide §5),
+and two drafts were caught by it: the first asked the 4.4 alias for
+`make-4.4`, so the host's `/usr/bin/make` over the pin read `4.4.1`
+and exited 0; the second kept the stager's `startswith("/")` filter,
+which drops `$(gcc -print-prog-name=cc1)` and its two siblings, so
+`cc1`, `cc1plus` and `collect2` were staged with **no owner and no
+probe** while the guard said every staged path had one (`rmorozov` on
+`#257`) — a host can resolve a `cc1plus` disagreeing with the `gcc`
+beside it. They are owned by *name* and found in the staged tree.
+`collect2` prints its version to stderr then execs `ld --version`, so
+its stdout is binutils' `2.42`: each helper names flag and stream.
+
+**Two verdicts, not one.** A *pinned* divergence exits 1: the pin did
+not take. A *host* divergence warns and reddens the guard — a working
+host that differs is a different program, not a broken sysroot.
+
+**The mutation table.** Each applied, reddened, reverted, re-run green:
+
+```text
+M1  declare gcc 13.2.0                      1 failed (staged), check warns, exit 0
+M2  drop /usr/bin/cat from the declaration  2 failed (claim + axis)
+M3  coreutils onto the toolchain axis       1 failed (axis)
+M4  probe one binary per package            1 failed (probed-rather-than-sibling)
+M5  host /usr/bin/make over the pin         1 failed, check exit=1
+M6  fuse the axes back into one BINARIES    13 failed (the wrapper guard)
+M7  drop cc1plus from the declaration       1 failed (helper-claimed)
+M8  a cc1plus reporting 12.3.0 in the tree  1 failed, gcc reads "12.3.0, 13.3.0"
+M9  read collect2 off stdout, not stderr    1 failed, collect2 reads 2.42
+M10 stage a fourth helper, undeclared       1 failed (helper-claimed)
+```
+
+M6 matters most: the wrapper guard builds its `PATH` from the script's
+array, so a regex matching only `BINARIES=(...)` passes on zero paths.
+
+**The deviation: no figure moved.** Re-run end to end, staging reports
+the same `272M` and the same pin; the declaration lives in `examples/`,
+outside every `files/toolchain` tree, so no cache key moves. Clause 2
+was answered by `UX-916`'s own capture — `switch-4-2.bst -> 'fd'`
+beside `switch-4-4.bst -> 'fifo'` in one run on a runner whose `make`
+is 4.3. Clause 3 is vacuous here, and is `UX-925`'s live cost.

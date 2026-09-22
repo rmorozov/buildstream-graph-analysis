@@ -118,7 +118,7 @@
     "tools/dev_shape_budget.py": {"duplicate_blocks": 0, "file_lines": 212, "longest_function": 28},
     "tools/dev_sizes.py": {"duplicate_blocks": 0, "file_lines": 250, "longest_function": 35},
     "tools/dev_symbols.py": {"duplicate_blocks": 0, "file_lines": 307, "longest_function": 36},
-    "tools/dev_tier_drift.py": {"duplicate_blocks": 0, "file_lines": 1518, "longest_function": 244},
+    "tools/dev_tier_drift.py": {"duplicate_blocks": 0, "file_lines": 1490, "longest_function": 244},
     "tools/dev_touch_map.py": {"duplicate_blocks": 0, "file_lines": 171, "longest_function": 41},
     "tools/dev_touching.py": {"duplicate_blocks": 0, "file_lines": 459, "longest_function": 90},
     "tools/dev_trace_coverage.py": {"duplicate_blocks": 0, "file_lines": 592, "longest_function": 60},
@@ -128,7 +128,8 @@
     "tools/native_trace/bwrap_shim.py": {"duplicate_blocks": 0, "file_lines": 1752, "longest_function": 156},
     "tools/native_trace/trackevent.py": {"duplicate_blocks": 0, "file_lines": 576, "longest_function": 31},
     "tools/native_trace_to_chrome_trace.py": {"duplicate_blocks": 0, "file_lines": 303, "longest_function": 80},
-    "tools/nix_store_fetch.py": {"duplicate_blocks": 0, "file_lines": 278, "longest_function": 40},
+    "tools/nix_closure.py": {"duplicate_blocks": 0, "file_lines": 355, "longest_function": 40},
+    "tools/nix_store_fetch.py": {"duplicate_blocks": 0, "file_lines": 285, "longest_function": 40},
     "tools/sysroot_manifest.py": {"duplicate_blocks": 0, "file_lines": 264, "longest_function": 35}
   }
 }

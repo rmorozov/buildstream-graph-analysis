@@ -237,4 +237,5 @@ Mechanism: [docs/design/areas/tools.md](../../design/areas/tools.md)
 | [UX-924](../scenarios/UX-0924-the-adopt-route-feeds-the-committed-median-back-to-itself.md) | guards |
 | [UX-925](../scenarios/UX-0925-the-toolchain-axis-is-host-gcc-because-gcc-is-not-relocatable.md) | guards |
 | [UX-926](../scenarios/UX-0926-a-round-that-leaves-no-trace-is-invisible-to-the-register.md) | guards |
+| [UX-927](../scenarios/UX-0927-a-pin-is-one-nar-so-a-staged-compiler-reaches-outside-itself.md) | guards |
 | [UX-928](../scenarios/UX-0928-the-routing-rule-sends-a-prose-diff-to-a-protocol-that-opens-on-a-page.md) | guards |

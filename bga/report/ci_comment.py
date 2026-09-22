@@ -25,7 +25,7 @@ from ..compare import (
     DEFAULT_MAX_ADDITION_STRETCH,
     efficiency_below_floor,
     efficiency_regression_exceeds_threshold,
-    regression_exceeds_threshold,
+    regression_gate_failed,
 )
 
 # The handle a CI job greps for to decide between editing its existing
@@ -135,7 +135,9 @@ def _gate_rows(comparison, args) -> list[dict]:
                      'why': '`--fail-on-regression` not passed'})
     else:
         threshold = getattr(args, 'regression_threshold', None)
-        failed = regression_exceeds_threshold(comparison, threshold)
+        failed = regression_gate_failed(
+            comparison, threshold,
+            against_band=bool(getattr(args, 'band_from_class', None)))
         baseline_total = (comparison.baseline_metrics or {}).get('total_duration_us')
         delta = (comparison.deltas or {}).get('total_duration_us')
         pct = (delta / baseline_total * 100) if (baseline_total and delta is not None) else None
@@ -169,9 +171,28 @@ def _band_reason(comparison) -> str:
         return "judged against the fixed 1% rule (no baseline set supplied)"
     if band.get('widened_to_fixed_pct'):
         return (f"band from {band['n']} baseline run(s), widened to the fixed 1% "
-                f"rule: {_s(band['low_us'])} .. {_s(band['high_us'])}")
+                f"rule: {_s(band['low_us'])} .. {_s(band['high_us'])}"
+                + _band_members(comparison))
     return (f"band from {band['n']} baseline run(s): {_s(band['low_us'])} .. "
-            f"{_s(band['high_us'])} (median ±{band['k']:g}× scaled MAD)")
+            f"{_s(band['high_us'])} (median ±{band['k']:g}× scaled MAD)"
+            + _band_members(comparison))
+
+
+def _band_members(comparison) -> str:
+    """`UX-899`: which runs the band was computed from.
+
+    A reviewer reads the comment to decide whether to believe a seconds
+    claim, and "band from 10 runs" does not say *which* ten - a window
+    that reached back across a toolchain bump is the failure the number
+    cannot show by itself. Named, so the selection is auditable from the
+    comment alone. Empty when no baseline set was supplied - there is
+    then no selection to audit, and the fixed-rule sentence above says so.
+    """
+    sources = getattr(comparison, 'baseline_band_sources', None) or []
+    if not sources:
+        return ""
+    names = ", ".join(f"`{source['run']}`" for source in sources)
+    return f" — from {names}"
 
 
 def _never_read_by_element(native_report: Optional[dict]) -> Optional[dict]:

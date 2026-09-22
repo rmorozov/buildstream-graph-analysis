@@ -40,6 +40,7 @@ EXIT_REGRESSION = 4
 EXIT_EFFICIENCY_REGRESSION = 5
 EXIT_MISMATCHED_RUNS = 6
 EXIT_SIGNAL_UNAVAILABLE = 7
+EXIT_BAND_UNAVAILABLE = 8
 EXIT_INTERRUPTED = 130
 
 EXIT_CODES: dict[str, int] = {
@@ -51,5 +52,6 @@ EXIT_CODES: dict[str, int] = {
     "efficiency regression": EXIT_EFFICIENCY_REGRESSION,
     "mismatched runs": EXIT_MISMATCHED_RUNS,
     "signal unavailable": EXIT_SIGNAL_UNAVAILABLE,
+    "band unavailable": EXIT_BAND_UNAVAILABLE,
     "interrupted": EXIT_INTERRUPTED,
 }

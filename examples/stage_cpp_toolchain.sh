@@ -33,9 +33,11 @@ mkdir -p "$DEST"
 # Real binaries this project's cmake/make elements invoke directly, plus
 # the gcc-internal helpers gcc itself execs (cc1/cc1plus/collect2 - found
 # via `gcc -print-prog-name=...`, not on $PATH).
+# UX-915: `make` is deliberately absent - it is pinned below, not
+# taken from this host.
 BINARIES=(
   /usr/bin/gcc /usr/bin/g++ /usr/bin/cc /usr/bin/c++
-  /usr/bin/cmake /usr/bin/make /usr/bin/ld /usr/bin/ld.bfd
+  /usr/bin/cmake /usr/bin/ld /usr/bin/ld.bfd
   /usr/bin/as /usr/bin/ar /usr/bin/ranlib /usr/bin/nm /usr/bin/strip
   /usr/bin/env /usr/bin/sh /usr/bin/uname /usr/bin/sort /usr/bin/cat
   $(gcc -print-prog-name=cc1) $(gcc -print-prog-name=cc1plus)
@@ -235,6 +237,45 @@ fi
 # not something supplied by a bwrap flag at smoke-test time.
 ln -sfn usr/bin "$DEST/bin"
 
+# UX-915: the sandbox's `make` version decides every example's jobserver
+# auth style (`style_for_make_version`, UX-874), so it is pinned here
+# rather than copied from whatever the staging host installed. Ubuntu
+# 24.04 ships 4.3, below UX-841's 4.4 cutoff, so the `fifo` branch had
+# never run in this repository's own examples and each jobserver
+# element carried a `public: bga: jobserver-auth: fd` override standing
+# in for that host fact. tools/nix_store_fetch.py carries the pin, its
+# checksum, and why a download beats a source build here.
+# UX-916 stages a 4.2 beside it, at /usr/lib/bga-make/<series>/make,
+# so an element can name a version series without naming a pin hash;
+# /usr/bin/make - what every element resolves by default - is the 4.4.
+PINNED_MAKE="$(cd "$HERE/.." && python3 -m tools.nix_store_fetch "$DEST")"
+MAKE_STORE_PATH="$(printf '%s\n' "$PINNED_MAKE" | awk -F'\t' '$1 == "make-4.4" {print $2}')"
+PINNED_MAKE_VERSION="$(printf '%s\n' "$PINNED_MAKE" | awk -F'\t' '$1 == "make-4.4" {print $3}')"
+INTERPRETER_DIR="$(cd "$HERE/.." && python3 -m tools.nix_store_fetch --interpreter-dir "$DEST")"
+# Relative, not absolute: an absolute /nix/store link dangles on the
+# staging host, so the verification below - and `-e` in the MISSING
+# check - could not follow it. Inside the sandbox both read the same.
+rm -f "$DEST/usr/bin/make"
+ln -s "../..$MAKE_STORE_PATH/bin/make" "$DEST/usr/bin/make"
+
+# The pinned binary names an absolute Nix interpreter and RUNPATH, both
+# answered by nix_store_fetch's one symlink into this sysroot's own
+# glibc. Run it through exactly that path rather than trusting the
+# symlink's shape: a staged make that cannot exec is the failure this
+# whole script's loud-verification posture exists to catch early, and
+# both pins stop at GLIBC_2.38 (`objdump -T`), which is what makes the
+# host's own glibc a valid answer at all.
+STAGED_MAKE_VERSION="$("$DEST$INTERPRETER_DIR/ld-linux-x86-64.so.2" \
+  "$DEST/usr/bin/make" --version 2>&1 | head -1)"
+if [ "$STAGED_MAKE_VERSION" != "$PINNED_MAKE_VERSION" ]; then
+  echo "stage_cpp_toolchain.sh: the staged make reports" >&2
+  echo "  $STAGED_MAKE_VERSION" >&2
+  echo "but this repository pins $PINNED_MAKE_VERSION" >&2
+  exit 1
+fi
+echo "Pinned $STAGED_MAKE_VERSION from $MAKE_STORE_PATH"
+printf '%s\n' "$PINNED_MAKE" | awk -F'\t' '{print "  staged " $3 " as /usr/lib/bga-make/" substr($1, 6) "/make"}'
+
 # Loud, early verification rather than a silent, "succeeded" staging step
 # that turns out unusable three layers deep into a real build (exactly
 # what happened above with cmake's Modules/ dir on a different host) -
@@ -243,6 +284,7 @@ ln -sfn usr/bin "$DEST/bin"
 MISSING=()
 for f in "$DEST/usr/bin/gcc" "$DEST/usr/bin/g++" "$DEST/usr/bin/cmake" "$DEST/usr/bin/make" \
          "$DEST/usr/bin/ld" "$DEST$CMAKE_VER_DIR/Modules/CMakeCXXInformation.cmake" \
+         "$DEST$INTERPRETER_DIR/ld-linux-x86-64.so.2" \
          "$DEST/usr/include/c++"; do
   [ -e "$f" ] || MISSING+=("$f")
 done

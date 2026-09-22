@@ -9,6 +9,7 @@ already-correct single-run analyses) and reports signed deltas plus a
 verdict, gated on confidence and on whether the two runs' graphs are
 even the same project.
 """
+import json
 import logging
 import statistics
 from dataclasses import dataclass, field
@@ -59,6 +60,15 @@ MIN_BASELINE_RUNS = 3
 # distance and, measured on seven real repeated builds of one unchanged
 # commit, contains all seven while still catching a +15% regression.
 DEFAULT_BAND_K = 3.0
+
+# UX-899: how far back `--band-from-class` reaches by default. The
+# review population the gate is for runs several hundred builds a day
+# (the owner, 2026-09-20), so ten runs is under an hour of wall clock -
+# far enough to have a band at all, near enough that the runs still
+# describe the tree the candidate branched from. Not a measurement: a
+# store of real review builds is what would settle it, and the flag
+# takes a window so a pipeline can state its own.
+DEFAULT_BAND_WINDOW = 10
 
 
 # UX-201 put the sentence and the enum in one branch; UX-214 keeps that
@@ -286,6 +296,13 @@ class ComparisonResult:
     # silent, so a pipeline that asked for a band got the rule it was
     # trying to replace and no way to know. `{supplied, required}`.
     baseline_band_shortfall: Optional[dict] = None
+    # UX-899: which runs the band was computed from, in the order they
+    # were supplied (`--band-from-class` supplies them newest first) -
+    # `{"run", "manifest_hash"}` each. A gate that reports a delta
+    # against a band has to be able to say what the band was, or a
+    # reviewer cannot tell a wide band from a stale one. Empty when no
+    # baseline set was supplied.
+    baseline_band_sources: list = field(default_factory=list)
     # UX-79: what this change added, removed or moved, and how much of
     # the added work landed on the critical path. The whole-build gate is
     # an average and dilutes with project size; these two are marginal.
@@ -326,6 +343,7 @@ class ComparisonResult:
             'candidate_run_id': self.candidate_run_id,
             'host_comparison': self.host_comparison,
             'build_class_comparison': self.build_class_comparison,
+            'baseline_band_sources': self.baseline_band_sources,
             'baseline_run_instance': self.baseline_run_instance,
             'candidate_run_instance': self.candidate_run_instance,
             'memory_envelope_delta': self.memory_envelope_delta,
@@ -947,6 +965,7 @@ def _compare_results(
     candidate_elements: list[Element],
     baseline_band: Optional[dict] = None,
     baseline_band_shortfall: Optional[dict] = None,
+    baseline_band_sources: Optional[list] = None,
     candidate_dependencies: Optional[list] = None,
 ) -> ComparisonResult:
     baseline_metrics = _numeric_metrics(baseline_result)
@@ -1225,11 +1244,39 @@ def _compare_results(
         failed_run_details=failed_run_details,
         baseline_band=baseline_band,
         baseline_band_shortfall=baseline_band_shortfall,
+        baseline_band_sources=list(baseline_band_sources or []),
         element_diff=element_diff,
         element_deltas=element_deltas,
         marginal_efficiency=marginal_efficiency,
         cache_churn=cache_churn,
     )
+
+
+def _band_source(run_dir: Path) -> dict:
+    """One band member, as a reviewer would name it.
+
+    `UX-899`: the snapshot directory (which is the capture's stamp) and
+    the run id it recorded. Read from the same small file `_band_sample`
+    reads, and never the trace.
+    """
+    path = Path(run_dir)
+    # A store run lives at `<stamp>/run`, and the stamp is what a user
+    # types and reads; a run directory named anything else is its own
+    # name.
+    label = path.parent.name if path.name == "run" else path.name
+    source = {"run": label or path.name, "manifest_hash": None}
+    for name in ("run-context.json", "run_context.json"):
+        context_path = path / name
+        if not context_path.exists():
+            continue
+        try:
+            context = json.loads(context_path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            break
+        source["manifest_hash"] = (
+            context.get("run_identity") or {}).get("manifest_hash")
+        break
+    return source
 
 
 def _band_sample(run_dir: Path, analyzer_kwargs: dict):
@@ -1298,6 +1345,7 @@ def compare_runs(baseline_dir: Path, candidate_dir: Path,
     # arithmetic.
     band = None
     band_shortfall = None
+    band_sources: list = []
     if baseline_runs:
         candidate_mode = (candidate_result.confidence or {}).get('run_mode')
         durations = []
@@ -1326,6 +1374,7 @@ def compare_runs(baseline_dir: Path, candidate_dir: Path,
                     "the same kind"
                 )
             durations.append(duration)
+            band_sources.append(_band_source(run_dir))
         band = compute_band(durations, k=band_k)
         if band is None:
             # UX-81: name what is missing. The capture infrastructure
@@ -1341,6 +1390,7 @@ def compare_runs(baseline_dir: Path, candidate_dir: Path,
         baseline_analyzer.graph.elements, candidate_analyzer.graph.elements,
         baseline_band=band,
         baseline_band_shortfall=band_shortfall,
+        baseline_band_sources=band_sources,
         candidate_dependencies=candidate_analyzer.graph.dependencies,
     )
 
@@ -1390,6 +1440,28 @@ def regression_exceeds_threshold(comparison: ComparisonResult, threshold_pct: Op
         return False
     pct = _SIGNIFICANCE_PCT if threshold_pct is None else threshold_pct
     return delta_total > 0 and abs(delta_total) * 100 >= baseline_total * pct
+
+
+def regression_gate_failed(comparison: ComparisonResult,
+                           threshold_pct: Optional[float] = None,
+                           against_band: bool = False) -> bool:
+    """The one predicate the exit code and the CI comment both read.
+
+    `UX-899`: `--band-from-class` is the gate mode that closes the seam
+    `UX-180`'s docstring above names and leaves open - the verdict
+    judged against the band while the gate judged a percentage, so a
+    delta inside a measured band could still fail a pipeline. Closing it
+    for every caller would change behaviour under every existing
+    `--baseline-run` pipeline, so it is closed for the new flag only:
+    ask for the band and the gate is the band, including `UX-170`'s
+    disputed region, which is a withheld verdict and therefore not a
+    regression.
+
+    Without the flag this is `regression_exceeds_threshold`, unchanged.
+    """
+    if against_band and comparison.baseline_band:
+        return comparison.verdict_kind == "regressed"
+    return regression_exceeds_threshold(comparison, threshold_pct)
 
 
 # UX-39: how far `occupancy_share` (UX-27) may fall, in percentage

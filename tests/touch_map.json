@@ -211,6 +211,9 @@
   "tests/unit/test_why_is_this_ranked_first.py",
   "tests/unit/test_width_uniformity.py"
  ],
+ "bga/artifact_weight.py": [
+  "tests/unit/test_an_artifact_has_a_weight.py"
+ ],
  "bga/attribution/blame_chain.py": [
   "tests/test_e2e.py",
   "tests/test_synthetic_multi_subproject.py",
@@ -495,7 +498,8 @@
   "tests/unit/test_a_pulled_dependency_gates_the_build.py",
   "tests/unit/test_bst_extract_run.py",
   "tests/unit/test_every_finding_reaches_a_fixture.py",
-  "tests/unit/test_the_cache_has_a_ceiling.py"
+  "tests/unit/test_the_cache_has_a_ceiling.py",
+  "tests/unit/test_the_foundation_tier_is_declared.py"
  ],
  "bga/cache_effectiveness.py": [
   "tests/test_e2e.py",
@@ -530,6 +534,7 @@
   "tests/unit/test_a_span_under_the_grid_says_so.py",
   "tests/unit/test_a_task_uid_is_not_a_label.py",
   "tests/unit/test_all_rows_means_all_rows.py",
+  "tests/unit/test_an_artifact_has_a_weight.py",
   "tests/unit/test_apparatus_in_its_place.py",
   "tests/unit/test_attribution_hints.py",
   "tests/unit/test_attribution_identity.py",
@@ -1406,6 +1411,7 @@
   "tests/unit/test_a_span_under_the_grid_says_so.py",
   "tests/unit/test_a_task_uid_is_not_a_label.py",
   "tests/unit/test_all_rows_means_all_rows.py",
+  "tests/unit/test_an_artifact_has_a_weight.py",
   "tests/unit/test_apparatus_in_its_place.py",
   "tests/unit/test_attribution_hints.py",
   "tests/unit/test_attribution_identity.py",
@@ -7540,6 +7546,7 @@
   "tests/unit/test_a_span_under_the_grid_says_so.py",
   "tests/unit/test_a_task_uid_is_not_a_label.py",
   "tests/unit/test_all_rows_means_all_rows.py",
+  "tests/unit/test_an_artifact_has_a_weight.py",
   "tests/unit/test_apparatus_in_its_place.py",
   "tests/unit/test_bst_extract_run.py",
   "tests/unit/test_bst_run_context.py",
@@ -7634,6 +7641,7 @@
   "tests/unit/test_the_views_that_draw.py",
   "tests/unit/test_the_vocabulary_has_the_shape.py",
   "tests/unit/test_three_reasons_for_no_timeline.py",
+  "tests/unit/test_what_a_snapshot_weighs.py",
   "tests/unit/test_what_an_element_pulls_in.py",
   "tests/unit/test_whatifs_saving_is_in_the_teams_units.py"
  ],
@@ -8901,6 +8909,7 @@
   "tests/unit/test_the_population_that_had_no_ceiling.py",
   "tests/unit/test_the_questions_ask_what_the_trace_answers.py",
   "tests/unit/test_the_record_list_is_the_floor.py",
+  "tests/unit/test_the_report_names_the_make_that_decided.py",
   "tests/unit/test_the_report_you_can_attach.py",
   "tests/unit/test_the_served_scratch_is_not_leaked.py",
   "tests/unit/test_the_slice_says_what_bga_knows.py",
@@ -9113,6 +9122,7 @@
   "tests/unit/test_the_broker_grants_by_slack.py",
   "tests/unit/test_the_jobserver_fifo_has_a_lifecycle.py",
   "tests/unit/test_the_lto_link_survives_the_jobserver.py",
+  "tests/unit/test_the_report_names_the_make_that_decided.py",
   "tests/unit/test_trace_stream_and_census_scale.py"
  ],
  "tools/native_trace/trackevent.py": [
@@ -9166,5 +9176,9 @@
   "tests/unit/test_the_timeline_speaks_perfetto.py",
   "tests/unit/test_the_trace_knows_whose_build.py",
   "tests/unit/test_three_reasons_for_no_timeline.py"
+ ],
+ "tools/nix_store_fetch.py": [
+  "tests/unit/test_the_staged_make_is_the_pinned_one.py",
+  "tests/unit/test_the_version_switch_has_two_live_arms.py"
  ]
 }

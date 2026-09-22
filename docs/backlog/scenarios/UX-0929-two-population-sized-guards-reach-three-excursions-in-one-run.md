@@ -1,6 +1,6 @@
 # UX-929: population-sized guards reach three excursions in one run, and their records were frozen
 
-**Flake:** tests/unit/test_the_size_ledger_only_shrinks.py, tests/unit/test_docs_links_and_commands.py, tests/unit/test_the_documented_invocations_parse.py
+**Flake:** tests/unit/test_the_size_ledger_only_shrinks.py, tests/unit/test_docs_links_and_commands.py, tests/unit/test_the_documented_invocations_parse.py, tests/unit/test_every_skip_reason_is_declared.py
 **Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-691, UX-716, UX-924 | **Blocks:** — | **Found by:** round 136 — `2a3f2ee7` appended run 35735148844's excursions and shipped `main` red on `test_a_file_with_three_excursions_has_a_filed_task.py`, which every branch's `make test` then inherits | **Serves:** every branch whose push gate reads a suite `main` has already reddened | **Topic:** guards | **Area:** tools | **Shape:** judgement
 
 ## Motivation
@@ -52,6 +52,23 @@ taking names is the mechanism admitting it has no fix: what the ledger
 is actually naming is files whose cost the reference cannot follow, and
 `UX-924` only landed today, so whether it ever can is a question three
 adopt commits old.
+
+**A fourth, and the freeze in plain sight.** `8090a99d` appended run
+35782031437's excursions and put
+`tests/unit/test_every_skip_reason_is_declared.py` over the floor. It is
+population-sized the same way: `skip_reasons.scan()` parses every `.py`
+under `tests/`, 398 files when the entry entered the reference
+(`500e1072`) and 597 on `8090a99d`.
+
+```text
+tests/ci_reference.json    files 11.1   samples [11.1, 11.1, 11.1, 16.12, 14.60]
+ledger, none confirmed     34888036702 x1.54  35507451517 x1.611  35782031437 x1.504
+```
+
+The other three windows each hold one real reading against four carried
+copies; this one holds **two**, 16.12 and 14.60, both above a committed
+11.1, and `median_low` still returns 11.1. That is `UX-924`'s freeze
+demonstrated rather than inferred, on the row that already depends on it.
 
 So the diagnosis is a hypothesis with a cheap test, not a finding:
 after `UX-924` lands, three adopt commits on `main` put real readings

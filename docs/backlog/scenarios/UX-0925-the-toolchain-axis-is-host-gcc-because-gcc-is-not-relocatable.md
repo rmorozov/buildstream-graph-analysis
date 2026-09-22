@@ -347,3 +347,42 @@ on `PATH`), which also invented a `new` baseline finding on
 `tools/bst_cache_logs.py`, a file nothing here touches.
 `tools/dev_env_check.py` names all three and their remedies, and is
 worth running before anything else in a fresh container.
+
+### What this costs CI, and what it does not
+
+The `bst-examples` job runs `examples/stage_cpp_toolchain.sh`, so the
+pin is fetched there too. Three readings, because two plausible
+sentences about it are false.
+
+**The `cache.nixos.org` dependency is not new.** `UX-915` put it in
+the stager in round 134, and it is on `main` with none of this applied:
+
+```text
+$ git show 3fa407a:examples/stage_cpp_toolchain.sh | grep -n nix_store_fetch
+263:PINNED_MAKE="$(... python3 -m tools.nix_store_fetch "$DEST")"
+266:INTERPRETER_DIR="$(... python3 -m tools.nix_store_fetch --interpreter-dir "$DEST")"
+```
+
+What moves is the surface: **5 store paths and 34,436,496 bytes become
+37 and 420 MiB**, so 37 narinfo fetches and 37 NARs where there were 5
+and 5. The interesting failure stops being "the pin did not arrive" and
+becomes "the closure arrived incomplete" - caught by `nix_closure
+--check` as a hard `exit 1` in the stager. **This row is the first to
+put that check in front of a real staged closure on a runner**;
+`main`'s stager never calls it (`git grep -ln nix_closure 91126c14`
+reaches only its own unit file), so it has been exercised against
+fixtures and against this container, and nowhere else.
+
+**The wall cost is not measurable here and none is claimed.** Seven
+completed `bst-examples` jobs, read off the jobs API:
+
+```text
+620s  623s  658s  678s  849s  876s  964s     all success
+median 678s, spread 344s (+/-25%)
+```
+
+A 420 MiB pull is tens of seconds against that, an order of magnitude
+under the noise. A job of population one has no median shift to divide
+out, which is the one technique `dev_tier_drift.py` uses to make a CI
+timing readable, so any cost worth watching here has to be structural -
+paths staged, bytes fetched - and `nix_closure` already computes both.

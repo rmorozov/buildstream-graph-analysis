@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-932 scenarios: **21 open**, 911 closed.
+934 scenarios: **22 open**, 912 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -27,7 +27,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | cli | 0 | 22 |
 | store | 1 | 17 |
 | docs | 1 | 146 |
-| guards | 12 | 256 |
+| guards | 13 | 258 |
 
 ## Open scenarios
 
@@ -57,6 +57,7 @@ task file, which is the only place it ever lived twice.
 | UX-934 | [the three adopt jobs push with a token that triggers no workflow, so a commit that reds `main` carries no CI](UX-0934-the-adopt-jobs-push-with-a-token-that-triggers-no-workflow.md) | guards | High | every branch that inherits a red `main` it cannot see and did not cause | 🔴 Not Started |
 | UX-935 | [a conflicted path is counted once per stage, so `--check --write` bakes a wrong number and calls the tree clean](UX-0935-a-conflicted-path-is-counted-once-per-stage.md) | guards | Medium | every catch-up merge, which is the step this repository runs before every landing | 🔴 Not Started |
 | UX-936 | [a heavy-fixture guard excurses three times on a record that is not too low, so the ledger is reading the runner](UX-0936-a-heavy-fixture-guard-excurses-on-a-record-that-is-not-too-low.md) | guards | Medium | every branch whose push gate reads a suite `main` has already reddened | 🔴 Not Started |
+| UX-940 | [the BuildStream behaviour claims are pinned to three versions and nothing says which were re-confirmed](UX-0940-the-versions-the-behaviour-claims-were-confirmed-on-are-three.md) | guards | Medium | whoever reads a BuildStream behaviour claim and has to decide whether it still holds | 🔴 Not Started |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

@@ -234,6 +234,18 @@
       "run_id": "35773916368",
       "shift": 1.657,
       "confirmed": false
+    },
+    {
+      "file": "tests/unit/test_the_view_parses_nothing.py",
+      "run_id": "35782031437",
+      "shift": 1.946,
+      "confirmed": false
+    },
+    {
+      "file": "tests/unit/test_every_skip_reason_is_declared.py",
+      "run_id": "35782031437",
+      "shift": 1.504,
+      "confirmed": false
     }
   ],
   "declared": {}

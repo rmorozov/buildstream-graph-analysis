@@ -48,9 +48,20 @@ def _ask_host(*argv):
 
 def _clone(real: pathlib.Path, dest: pathlib.Path) -> None:
     """`cp -al` where it works, `cp -a` where the two trees are on
-    different filesystems."""
+    different filesystems.
+
+    The `rmtree` between the attempts is the whole of it. A
+    cross-device `cp -al` **creates the destination directory** and
+    only then fails per file (`Invalid cross-device link`, exit 1), so
+    a plain retry copies *into* what it left behind and nests the tree
+    one level down - every glob then misses and the file reads as a
+    host with no toolchain. Run 35734149048, where the runner's `/usr`
+    and its temporary directory are on different filesystems.
+    """
     dest.parent.mkdir(parents=True, exist_ok=True)
     for flags in ("-al", "-a"):
+        if dest.exists():
+            shutil.rmtree(dest)
         done = subprocess.run(["cp", flags, str(real), str(dest)],
                               capture_output=True, text=True)
         if done.returncode == 0:
@@ -76,6 +87,12 @@ def mini(tmp_path_factory):
     for real in (cc1.parent, libgcc.parent, crt1.parent,
                  HOST_HEADERS):
         _clone(real, dest / str(real).lstrip("/"))
+    # The clone is the fixture's one claim, so it is checked here
+    # rather than left to surface as seven unrelated-looking failures
+    # about a host that has a toolchain.
+    for marker in (cc1, libgcc, crt1):
+        landed = dest / str(marker).lstrip("/")
+        assert landed.exists(), f"the clone did not land {marker} at {landed}"
     return str(dest)
 
 

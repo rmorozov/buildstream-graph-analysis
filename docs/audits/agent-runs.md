@@ -352,6 +352,8 @@ pairing for every merged row from round 103 on.
 | 130 | design-reviewer | GPT-5.6 Sol | control growth and snapshot-management locus | unmetered | unmetered | 24 m | one filing, UX-921 | split all-plane/served fixtures; the checkout needed an explicit main fetch |
 | 134 | general-purpose | sonnet | UX-915/UX-916 (self-review) | 159k | 61 | 10.3 m | one Important - UX-916's Outcome read a pre-#248 tree and declared its third clause blocked - plus three nits; all four acted on, and the clause landed as two live arms | the Important finding needed a direct call into `_compiler_safe_makeflags` with a cached 4.2.1 probe: the Outcome's claim was about behaviour no guard in the diff reads, so reading the diff could not have caught it |
 | 131 | self-review | sonnet | UX-908 close + UX-924 filing | 151k | 58 | 8.5 m | no Important, two nits - ci_reference.json's re-record confirmed inside UX-908's own scope against UX-912's Out of Scope; the hand-append figures verified equal to the verify skill's raw/shift rule by reading dev_tier_drift.py's own arithmetic; UX-924's two central claims (543/566 full windows, 399 flat; adopt reads candidate.files) reproduced independently; the round-130 dateline waiver reverted and reproduced red on 74fb2712, justification accurate | confirming the hand-append matched the verify skill's rule needed tracing flake_ledger.json's stored `shift` field back through `dev_tier_drift.py`'s `ratio / shift`, since it is not literally the run's printed drift shift (the three cells are the harness's own `subagent_tokens`/`tool_uses`/`duration_ms` for the run, not `dev_track_cost.py`'s transcript-derived fresh count) |
+| 136 | self-review | sonnet | UX-924 close | 110k | 30 | 6.2 m | one Important - the Outcome's `make test` line was a placeholder while both status markers already read 🟢 - and one nit, the adopt-commit cadence uncited; both acted on, and it reproduced mutation A1 itself | its first `git diff origin/main -- .` silently dropped a changed file and cost a re-read of the whole diff; `ci_reference.json`'s note is one multi-KB line, read in full twice |
+| 136 | researcher | sonnet | UX-924 the three prose surfaces, in place of the `design-review` the route asks for and has no protocol for (UX-928) | 61k | 14 | 3.6 m | two corrections taken: the verify skill's wait needed "once the diff lands" (the adopt job runs only on pushes to the default branch), and the note's blanket "the sentences above describe the route before this item" folded pre-UX-496 and pre-UX-924 into one | hand-simulating five adoptions of a window to check the three/five/two counts, which no comment or guard states directly |
 
 Round 101's four tracks are **not** here: this session could not
 identify their transcripts with certainty after a context rebuild, and
@@ -364,7 +366,7 @@ committed cleanly once told to run in the foreground. Three of the five
 left a derived figure or a §6 context-map row behind - the same class
 the round itself was about, arriving in the tracks' own work.
 
-What the three hundred and thirty-five rows already say: a researcher that reads a document
+What the three hundred and thirty-seven rows already say: a researcher that reads a document
 whole costs 100-180k; a walker that drives every control costs 336k;
 the two cuts cost a re-run each. The `walk` and `design-review`
 skills fix the report shape so the next rows are smaller, and the

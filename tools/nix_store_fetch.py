@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """UX-915: a pinned GNU Make, fetched from `cache.nixos.org` without Nix.
 
-Every Nix store path is served as one content-addressed `.nar.xz`, so a
-pin here is (url, sha256 of the compressed file, store path, version)
-and a fetch verifies before it unpacks - no Nix, no daemon, no root.
+A store path is content-addressed, so a pin is (url, the NAR's digest,
+the file's, size, version) - no Nix, no daemon, no root. UX-931 gates
+on `nar_sha256`, warning on `file_sha256`: a cache may re-compress.
 The alternative was building make from source: `ftp.gnu.org` is refused
 at CONNECT from the dev container (measured 2026-09-21), and the GitHub
 mirror route needs a gnulib bootstrap this host has no `autopoint` for.
@@ -48,8 +48,11 @@ PINS = {
                     "/nix/store/fnvsac4yaw2146ig4p54xnnm6b6alkjw-gnumake-4.4.1"),
                 "url": ("https://cache.nixos.org/nar/07k5xiavdyhv9v0qp7r5zjca5"
                         "1sfp0r7779ikhvcrwrafr5wm3qf.nar.xz"),
-                "sha256": ("0e8fca4b762af3cc369c319d7332b84e"
-                           "87a298fc259f8bc14e1bfab655ec651e"),
+                "file_sha256": ("0e8fca4b762af3cc369c319d7332b84e"
+                                "87a298fc259f8bc14e1bfab655ec651e"),
+                "nar_sha256": ("3e0be8bceefe0a442f07871971a061a4"
+                               "30affed174b37de273843a535e262f75"),
+                "nar_size": 1607448,
             },
             # UX-916: the other side of `style_for_make_version`. Same
             # channel, same glibc reference, so it costs one more nar.
@@ -59,8 +62,11 @@ PINS = {
                     "/nix/store/4320g8b6bl4wpgbmk0mdjr3rr2jr4xh6-gnumake-4.2.1"),
                 "url": ("https://cache.nixos.org/nar/095yb6353v0ww7pjjyqwvaiqj"
                         "8i36qabanbhvk3dwm64gxvym5x3.nar.xz"),
-                "sha256": ("a397ea777fc454dec6dc7059b5143623"
-                           "2289a3da1c7b29efe11cec518659be24"),
+                "file_sha256": ("a397ea777fc454dec6dc7059b5143623"
+                                "2289a3da1c7b29efe11cec518659be24"),
+                "nar_sha256": ("1ae2768251e17505f0cf13173bcb96b2"
+                               "05c9a37fcbb8e2e2702076f52e8d3457"),
+                "nar_size": 1207592,
             },
         },
     },
@@ -145,32 +151,46 @@ def unpack_nar_data(raw: bytes, dest: str) -> None:
     _node(reader, dest)
 
 
-def unpack_nar(compressed: bytes, dest: str) -> None:
-    """One `.nar.xz`'s single root node, written at `dest`."""
-    unpack_nar_data(lzma.decompress(compressed), dest)
+def fetch_nar(pin: dict, cache_dir: str) -> bytes:
+    """The pinned store path's NAR, gated on `nar_sha256`.
 
-
-def fetch(url: str, sha256: str, cache_dir: str) -> bytes:
-    """The pinned `.nar.xz`, from `cache_dir` when its digest already
-    matches, else downloaded and cached. A digest that disagrees is a
-    hard error either way: a pin nothing verifies is a host fact again."""
-    cached = os.path.join(cache_dir, sha256 + ".nar.xz")
+    UX-931: the gate used to be `file_sha256`, the digest of the
+    `.nar.xz`. That is the *wrapper*, and a binary cache may re-compress
+    a path without its content moving - measured 2026-09-22 on four
+    paths, `glibc-2.40-224` among them, where the served bytes and
+    `FileHash` disagreed while `NarHash` and `NarSize` were exact. Both
+    `make` pins pass either way today, so this buys no fix; it stops a
+    future red from naming the wrong thing. `file_sha256` stays and
+    still warns, because a wrapper that moves is worth knowing about.
+    """
+    cached = os.path.join(cache_dir, pin["nar_sha256"] + ".nar")
     if os.path.exists(cached):
         with open(cached, "rb") as handle:
-            data = handle.read()
-        if hashlib.sha256(data).hexdigest() == sha256:
-            return data
+            raw = handle.read()
+        if hashlib.sha256(raw).hexdigest() == pin["nar_sha256"]:
+            return raw
+    url = pin["url"]
     if not url.startswith(("https:", "file:")):
         raise ValueError(f"{url}: only https (the cache) and file (tests) are fetched")
     with urllib.request.urlopen(url, timeout=120) as response:
         data = response.read()
     digest = hashlib.sha256(data).hexdigest()
-    if digest != sha256:
-        raise ValueError(f"{url}: sha256 {digest}, pinned {sha256}")
+    if digest != pin["file_sha256"]:
+        print(f"nix_store_fetch: {url} sha256 {digest}, pinned "
+              f"{pin['file_sha256']} - recompressed; nar_sha256 decides",
+              file=sys.stderr)
+    raw = lzma.decompress(data)
+    digest = hashlib.sha256(raw).hexdigest()
+    if digest != pin["nar_sha256"]:
+        raise ValueError(
+            f"{pin['store_path']}: NAR sha256 {digest}, pinned {pin['nar_sha256']}")
+    if len(raw) != pin["nar_size"]:
+        raise ValueError(
+            f"{pin['store_path']}: NAR is {len(raw)} bytes, pinned {pin['nar_size']}")
     os.makedirs(cache_dir, exist_ok=True)
     with open(cached, "wb") as handle:
-        handle.write(data)
-    return data
+        handle.write(raw)
+    return raw
 
 
 def host_arch(arch: Optional[str] = None) -> dict:
@@ -255,7 +275,7 @@ def stage(dest: str, names=None, arch: Optional[str] = None,
         pin = group["paths"][name]
         target = dest + pin["store_path"]
         if not os.path.isdir(target):
-            unpack_nar(fetch(pin["url"], pin["sha256"], cache_dir), target)
+            unpack_nar_data(fetch_nar(pin, cache_dir), target)
         record = dict(pin, name=name)
         stage_alias(dest, record)
         staged.append(record)

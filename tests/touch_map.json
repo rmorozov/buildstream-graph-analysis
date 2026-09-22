@@ -9005,6 +9005,9 @@
   "tests/unit/test_the_foundation_tier_is_declared.py",
   "tests/unit/test_the_start_clock_says_where_it_came_from.py"
  ],
+ "tools/dev_adopt_check.py": [
+  "tests/unit/test_an_adopt_job_reads_its_record_before_it_pushes.py"
+ ],
  "tools/dev_audit_reports.py": [
   "tests/unit/test_a_release_records_a_contract_state.py",
   "tests/unit/test_a_scenario_is_named_by_its_seed.py"

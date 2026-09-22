@@ -9222,7 +9222,11 @@
   "tests/unit/test_the_trace_knows_whose_build.py",
   "tests/unit/test_three_reasons_for_no_timeline.py"
  ],
+ "tools/nix_closure.py": [
+  "tests/unit/test_the_staged_closure_is_complete.py"
+ ],
  "tools/nix_store_fetch.py": [
+  "tests/unit/test_the_staged_closure_is_complete.py",
   "tests/unit/test_the_staged_make_is_the_pinned_one.py",
   "tests/unit/test_the_sysroot_declares_both_axes.py",
   "tests/unit/test_the_version_switch_has_two_live_arms.py"

@@ -1121,7 +1121,7 @@ class TestABaseExcursionIsReportedNotFailed:
 
     def test_a_base_carry_equal_to_this_runs_own_excuses_everything(
             self, tmp_path, capsys):
-        """`UX-922`: the cost of restoring the default branch's carry
+        """`UX-923`: the cost of restoring the default branch's carry
         *on* the default branch, where the base key and the own key are
         one series.
 
@@ -2069,7 +2069,7 @@ class TestCiSuppliesTheMemoryTheRuleNeeds:
                 and "-carry-" in str(step.get("with", {}).get("key", ""))]
 
     def test_a_restore_asks_for_the_version_its_save_wrote(self):
-        """`UX-922`: the key is not what decides whether a restore hits.
+        """`UX-923`: the key is not what decides whether a restore hits.
 
         `actions/cache` v6 sends `version:
         sha256(paths|compression|salt)` beside the key
@@ -2103,10 +2103,10 @@ class TestCiSuppliesTheMemoryTheRuleNeeds:
                 f"{step['with']['path']!r}, which no {family}-carry- save "
                 f"writes - the cache version is a hash of that path, so "
                 f"this restore cannot hit whatever its key matches "
-                f"(UX-922); saves write {sorted(saved.get(family, ()))}")
+                f"(UX-923); saves write {sorted(saved.get(family, ()))}")
 
     def test_the_base_carry_is_placed_by_a_step_that_can_place_it(self):
-        """`UX-922`: `extractTar` is `tar -xf <archive> -P -C
+        """`UX-923`: `extractTar` is `tar -xf <archive> -P -C
         $GITHUB_WORKSPACE` with no member list, so a hit restores every
         member to the path it was saved from and the restore's own
         `path` input never places anything. Reproduced locally with the
@@ -2128,7 +2128,7 @@ class TestCiSuppliesTheMemoryTheRuleNeeds:
                     and str(step.get("with", {}).get("path", "")) == base], (
             f"a cache step names {base} as its path, which restores "
             f"nothing there - the archive's members carry the path they "
-            f"were saved from (UX-922)")
+            f"were saved from (UX-923)")
         # Not the gate step itself: `--base-carry <path>` names the path
         # too, and reading the whole job let this clause pass a mutation
         # that deleted the only step placing the file.
@@ -2146,10 +2146,10 @@ class TestCiSuppliesTheMemoryTheRuleNeeds:
                  str(step.get("with", {}).get("key", ""))]
         assert own and cross and min(cross) < min(own), (
             "the base-branch restore runs after the branch's own, so a "
-            "hit overwrites this branch's carry with the base's (UX-922)")
+            "hit overwrites this branch's carry with the base's (UX-923)")
 
     def test_the_default_branch_does_not_excuse_itself(self):
-        """`UX-922`: on the default branch the two keys are one series,
+        """`UX-923`: on the default branch the two keys are one series,
         so the base carry a run restores is its own last carry - and
         `based_rows` then splits off exactly the rows agreement would
         have confirmed. Measured on one 50s-against-2.4s file with a
@@ -2169,7 +2169,7 @@ class TestCiSuppliesTheMemoryTheRuleNeeds:
             assert "github.ref !=" in gate and "default_branch" in gate, (
                 f"{step['name']!r} restores the default branch's own "
                 f"carry on the default branch itself, where it excuses "
-                f"every row agreement would confirm (UX-922): if {gate!r}")
+                f"every row agreement would confirm (UX-923): if {gate!r}")
 
 
 class TestTheRecordStepDoesNotBuryTheFailure:

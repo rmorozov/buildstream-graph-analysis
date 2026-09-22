@@ -266,14 +266,13 @@ DATE_MISMATCH_WAIVER = dict.fromkeys(
                    "on 2026-09-07, retroactively, from committed "
                    "material; each document's own dateline states "
                    "2026-09-06, the round's actual work date"))
-#: Not retroactive - a squash that crossed midnight UTC. Round 130 ran
-#: on 2026-09-21, which its own "Run on" states; `#249` merged at
-#: 02:07 UTC on the 22nd, so `first_commit_date` reads the later day.
-#: Red on `origin/main` itself, and on every branch under it.
+
+#: `UX-922`: a squash merge keeps one commit, dated when it landed, so
+#: a round document merged across a UTC midnight reads a day late.
 DATE_MISMATCH_WAIVER["130"] = (
-    "2026-09-22", "#249 squash-merged round 130 at 02:07 UTC on "
-                  "2026-09-22; the document's own dateline states "
-                  "2026-09-21, the round's actual work date")
+    "2026-09-22", "round 130's document states 2026-09-21, the round's "
+                  "work date and the date of its own commit on the "
+                  "branch; #249 squash-merged it on 2026-09-22")
 
 
 #: `UX-772`'s verifier: a round whose document states no recognized

@@ -167,7 +167,7 @@ succeeds within a ref and fails across one**, which leaves cache
 scoping and rules out the key and a missing save.
 
 **And the narrowing itself was wrong — retracted 2026-09-22 by
-`UX-922`.** In all four readings above the ref and the restore's
+`UX-923`.** In all four readings above the ref and the restore's
 `path` co-vary: both same-ref hits name the same `path` their save
 wrote, and the one cross-ref miss names a different one. `actions/cache`
 v6 sends `version: sha256(paths|method|salt)` beside the key, from the
@@ -175,7 +175,7 @@ literal `path:` input on both sides, and the service matches both — so
 `tier_carry_base.json` asked for `a3a89e94..` where every save wrote
 `d1e90db5..`, and no key could have hit. The version is printed at
 `core.debug` only, which is why four runs read a key problem. Scoping
-is untested rather than ruled out; `UX-922` makes it readable.
+is untested rather than ruled out; `UX-923` makes it readable.
 
 What it does change is the fix's shape. If the base carry can only
 arrive by a cross-ref cache read, `UX-803` is inert on every pull
@@ -189,10 +189,10 @@ answer.
 Two parts, in this order, because the second is worthless without the
 first.
 
-**Decide how the base carry travels — done in `UX-922`.** The
+**Decide how the base carry travels — done in `UX-923`.** The
 decision this row framed as cache against artifact was answered by
 measuring instead: the cache was never the defect, the restore's
-`path` was. `UX-922` carries the fix, its guards and what it leaves
+`path` was. `UX-923` carries the fix, its guards and what it leaves
 open. Nothing here is owed on this part.
 
 It is the second gate, not the first. `over_gate` needs an absolute

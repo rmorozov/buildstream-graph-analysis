@@ -142,7 +142,7 @@ jobs:
       # main's, so a file main's own last run already read past the
       # gates is the base's excursion and not this diff's.
       #
-      # `UX-922`: three things about this step, each measured, and the
+      # `UX-923`: three things about this step, each measured, and the
       # reason it now sits *above* the branch's own restore.
       #
       # Its `path` is the **save's** path, not a second file. The cache

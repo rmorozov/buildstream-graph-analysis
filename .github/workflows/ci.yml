@@ -13,6 +13,12 @@ on:
 # else, which is backwards for a guard against schema drift.
 env:
   BGA_EXPECT_DEV: "1"
+  # `UX-939`: pinned so a runner image cannot move the version
+  # under the tier. The two track separately - buildstream-plugins
+  # has no 2.8.1 - so they are two keys, and the release-watch
+  # routine edits these lines and nothing else.
+  BST_VERSION: "2.8.1"
+  BST_PLUGINS_VERSION: "2.8.0"
 
 jobs:
   test:
@@ -946,7 +952,7 @@ jobs:
           python -m pip install --upgrade pip build
           python -m build --wheel --outdir dist/
           python -m venv /tmp/projvenv
-          /tmp/projvenv/bin/pip install "BuildStream==2.7.0" buildstream-plugins
+          /tmp/projvenv/bin/pip install "BuildStream==${BST_VERSION}" "buildstream-plugins==${BST_PLUGINS_VERSION}"
           # The wheel, by path, the way a user installs this repo into
           # their own project's venv - not `-e .`, not from the checkout.
           /tmp/projvenv/bin/pip install dist/*.whl
@@ -1099,7 +1105,7 @@ jobs:
         # test_real_project_refs_lifecycle_clean_then_dirtied needs.
         run: |
           pip install -e ".[dev,bst]"
-          pip install buildstream-plugins
+          pip install "buildstream==${BST_VERSION}" "buildstream-plugins==${BST_PLUGINS_VERSION}"
 
       - name: bst --version
         run: bst --version
@@ -1217,7 +1223,7 @@ jobs:
         # buildstream package as of 2.x (docs/spec/ingestion-pipeline.md #7) -
         # confirmed via a real CI failure ("No source plugin registered for
         # kind 'git'" / "No element plugin registered for kind 'cmake'").
-        run: pip install buildstream-plugins
+        run: pip install "buildstream==${BST_VERSION}" "buildstream-plugins==${BST_PLUGINS_VERSION}"
 
       - name: Stage runtime shells for manual/compose elements
         run: examples/stage_runtimes.sh

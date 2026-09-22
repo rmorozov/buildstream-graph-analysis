@@ -1,6 +1,6 @@
 # UX-939: the exercised line names an environment nothing can read, so a version bump in CI reds every branch with no way to clear it
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-571 | **Blocks:** — | **Found by:** round 136 — CI's BuildStream moved to 2.8.1 and `bst-tests` went red on `#264`, on `main` and on every open branch, and no session could produce the second reading the line asks for | **Serves:** every branch whose CI runs the bst tier, and the next round that meets a red nobody can measure away | **Topic:** guards | **Area:** tools | **Shape:** judgement
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-571 | **Blocks:** — | **Found by:** round 136 — CI's BuildStream moved to 2.8.1 and `bst-tests` went red on `#264`, on `main` and on every open branch, and no session could produce the second reading the line asks for | **Serves:** every branch whose CI runs the bst tier, and the next round that meets a red nobody can measure away | **Topic:** guards | **Area:** tools | **Shape:** judgement
 
 ## Motivation
 
@@ -112,3 +112,73 @@ facts` headings still have to agree, which `UX-571`'s other clause
 already asserts.
 
 ## Outcome
+
+**The gap.** CI's BuildStream moved to 2.8.1 on 2026-09-22 and
+`bst-tests` went red on every branch. The cause was a floor, not a
+version: `pyproject.toml`'s `all` and `bst` extras both declared
+`buildstream>=2.0`, and CI's bst jobs install through
+`pip install -e ".[dev,bst]"`, so the runner took whatever was newest
+that day. Two other sites pinned *behind* it - `ci.yml`'s real-project
+venv and `real-project-capture.yml` both installed
+`BuildStream==2.7.0` - so the repository ran two versions and
+asserted about a third.
+
+**The close.** One pin, read from one place:
+
+```text
+.github/workflows/ci.yml    env: BST_VERSION "2.8.1"
+                                 BST_PLUGINS_VERSION "2.8.0"
+```
+
+Two keys because they do not track: PyPI's newest `buildstream` is
+2.8.1 and its newest `buildstream-plugins` is 2.8.0. Every install site
+in `ci.yml` now uses them, `real-project-capture.yml` pins the same
+pair literally, and both extras declare `buildstream>=2.8.1`. The
+exercised line carries **one** version, dated today, because the second
+entry was the finding: it named a session's scratch install and no
+container could witness it.
+
+The runner's half needed no binary of ours, because the re-run
+`UX-571`'s own message asks for has already happened - this branch's
+run 35764660641, job 106881230092 on `1119f4c1`:
+
+```text
+AssertionError: the document says it was last exercised on bst
+2.8.0, 2.7.0; this binary reports 2.8.1.
+1 failed, 50 passed, 9379 deselected in 122.83s
+```
+
+So 50 of the 51 bst-gated tests pass on 2.8.1 and the one failure is
+the line itself. The date above is that run's.
+
+**The new guard**, `tests/unit/test_the_pinned_bst_is_the_documented_one.py`,
+asks the one question that needs no binary - does the pin say what the
+document says - so a session without `bst` catches the drift `UX-571`'s
+guard can only catch in CI.
+
+| # | mutation | reddened |
+|---|---|---|
+| M1 | `BST_VERSION` moved to 2.8.0 | the pin/document clause |
+| M2 | one exercised line moved to 2.8.0 | the same clause, on the set |
+| M3 | one install returned to a bare `pip install buildstream` | the floor clause |
+| M4 | `BST_VERSION` deleted | two clauses |
+
+**Deviations.** Three, all stated rather than hidden.
+
+1. `UX-940`'s two behaviour claims were re-read *before* the pins moved,
+   in 2.8.1's own wheel rather than by running it: `stack.py`'s
+   `get_unique_key` returns `1` and `BST_ELEMENT_HAS_ARTIFACT` is
+   `False`; `element.py:3103` still refuses a redefinition of
+   `max-jobs`, and no file in the wheel reads `max-jobs` from `public:`.
+   Both hold, so the bump removes no version they were true of.
+2. `real-project-capture.yml`'s pin carried a comment saying it was the
+   version every capture here was taken with. Captures already in the
+   repository stay on 2.7.0; a capture taken after this lands is on
+   2.8.1 and its `run_context` says so. The comment now says that.
+3. The extras' floor moved from `>=2.0` to `>=2.8.1`, which is a
+   user-facing change: it is the smallest floor that matches what is
+   exercised, and `requirements.lock` is compiled with `--extra dev`
+   only, so no lock recompile follows.
+
+`make lint` clean. `make test` on the pushed sha is in the pull request.
+

@@ -101,7 +101,7 @@ completion = ["argcomplete>=3.0"]
 # `dev` is the contributor set and stays out of it - jsonschema is a
 # dev-only concern, because the runtime emits schemas and never
 # validates against them.
-all = ["buildstream>=2.0", "pyyaml>=6.0", "argcomplete>=3.0"]
+all = ["buildstream>=2.8.1", "pyyaml>=6.0", "argcomplete>=3.0"]
 
 # Real BuildStream, for tools/bst_show_to_graph.py's end-to-end tests
 # (tests/unit/test_bst_show_to_graph.py) - skipped automatically when
@@ -110,7 +110,7 @@ all = ["buildstream>=2.0", "pyyaml>=6.0", "argcomplete>=3.0"]
 # equivalent) and, for real (non-`kind: local`) projects,
 # buildstream-plugins - see docs/spec/ingestion-pipeline.md.
 bst = [
-    "buildstream>=2.0",
+    "buildstream>=2.8.1",
     "pyyaml>=6.0",
 ]
 

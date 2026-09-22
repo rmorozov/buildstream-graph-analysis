@@ -259,11 +259,12 @@ jobs:
       - name: Install BuildStream and bga
         run: |
           pip install -e ".[dev]"
-          # Pinned: the version every capture in this repository was taken
-          # with, and the one docs/design/architecture.md's claims are checked
-          # against. dulwich/requests are freedesktop-sdk's own plugin
+          # Pinned so a runner image cannot move it (`UX-939`). Captures
+          # already in this repository were taken on 2.7.0; a capture taken
+          # after this line moved is on 2.8.1, and `run_context` records
+          # which. dulwich/requests are freedesktop-sdk's own plugin
           # dependencies (git and docker sources).
-          pip install 'BuildStream==2.7.0' 'buildstream-plugins==2.7.0' dulwich requests
+          pip install 'BuildStream==2.8.1' 'buildstream-plugins==2.8.0' dulwich requests
           bst --version
 
       - name: Clone freedesktop-sdk

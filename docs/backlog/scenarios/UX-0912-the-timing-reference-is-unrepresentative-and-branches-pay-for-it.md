@@ -174,15 +174,15 @@ v6 sends `version: sha256(paths|method|salt)` beside the key, from the
 literal `path:` input on both sides, and the service matches both — so
 `tier_carry_base.json` asked for `a3a89e94..` where every save wrote
 `d1e90db5..`, and no key could have hit. The version is printed at
-`core.debug` only, which is why four runs read a key problem. Scoping
-is untested rather than ruled out; `UX-923` makes it readable.
+`core.debug` only, which is why four runs read a key problem.
 
-What it does change is the fix's shape. If the base carry can only
-arrive by a cross-ref cache read, `UX-803` is inert on every pull
-request for reasons outside this repository. A carry that travels by a
-means the repository controls — committed beside the reference, or
-published as an artifact the PR job downloads — does not depend on the
-answer.
+**And scoping is not the defect either — measured 2026-09-22.**
+`UX-923` made the restore report itself below the gate; on run
+35686105692, `event=pull_request` on #255 and so `github.ref` =
+`refs/pull/255/merge`, the check run's annotation reads `tier carry:
+the default branch's carry restored`. A pull request run does read a
+`refs/heads/main` entry, so `UX-803` is not inert on pull requests and
+the carry needs no route the repository controls.
 
 ## Required Fix
 

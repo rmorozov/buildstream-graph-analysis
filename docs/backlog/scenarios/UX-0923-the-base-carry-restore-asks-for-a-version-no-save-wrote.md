@@ -106,7 +106,8 @@ A guard reads every `*-carry-` cache step's `path`, not only its
 through this environment's proxy, so it is owner-side. Publishing the
 carry as an artifact or committing it, which `UX-912` weighed: the
 cache is not the defect. Whether cross-ref cache reads are scoped,
-which this fix makes readable and does not answer.
+which this fix only makes readable; the Outcome records what the
+first run said.
 
 ## Acceptance Test
 
@@ -137,14 +138,12 @@ restore $RUNNER_TEMP/tier_carry_base.json -> a3a89e944c9c3fa0..
 ```
 
 Placement, with the action's own tar arguments: `tar -xf cache.tzst
--P -C $GITHUB_WORKSPACE` on an archive whose one member is
-`../_temp/tier_carry.json` leaves `tier_carry.json` and no
-`tier_carry_base.json`, so a hit would have overwritten the branch's
-own carry. Both defects are invisible in those runs' logs.
+-P -C $GITHUB_WORKSPACE` on a member `../_temp/tier_carry.json` leaves
+`tier_carry.json` — a hit would have clobbered the branch's own carry.
 
-Third reading, on the tool: one 50s file against a 2.4s record, a
-carry naming it, `--base-carry` a copy of `--carry` — what the default
-branch would restore for itself:
+Third reading, on the tool: a 50s file against a 2.4s record, with
+`--base-carry` a copy of `--carry` — what the default branch restores
+for itself:
 
 ```text
 --base-carry=absent                 exit=1  1 file(s) slower than CI's own record
@@ -154,9 +153,8 @@ branch would restore for itself:
 ### After
 
 The base restore names the save's path, runs before the branch's own,
-hands its file to a `mv`, is skipped on the default branch, and a step
-below the gate says whether a carry arrived; the guard that read every
-carry step's `key` reads its `path` too.
+hands it to a `mv`, is skipped on the default branch, and a step below
+the gate says whether a carry arrived; the guard reads `path` now.
 
 ```text
 $ python3 -m pytest tests/unit/test_a_slow_file_says_which_file.py \
@@ -177,24 +175,27 @@ $ python3 -m pytest tests/unit/test_a_slow_file_says_which_file.py \
 | A7 | that step moved above the gate, beside the `mv` | same clause, its ordering assert |
 | A8 | `always()` dropped from it | same clause, its `if` assert |
 
-The clause A2 tests passed A2 as first written: the gate's own
-`--base-carry <path>` names the path, so "some step mentions it" was
-satisfied by the step that *reads* it.
+A2's clause passed A2 as first written: the gate's own `--base-carry
+<path>` satisfied "some step mentions it" — the step that *reads* it.
 
 ### Deviation
 
-The Acceptance Test's live clause is **not** satisfiable as written,
-and run 35680793877 is why: the gate returned `tiers ok` at
+The Acceptance Test's live clause is not satisfiable as written, and
+run 35680793877 is why: the gate returns `tiers ok` at
 `dev_tier_drift.py:1150`, *before* `--base-carry` is read at `:1155`,
-so a clean run prints neither message. Nor is the restore's own log
-line reachable — the run archive answers 403 at CONNECT here and the
-jobs API caps a tail at 5,000 lines, which the gate step overruns
-alone. Hence A6-A8: a step *below* the gate says either way, under
-`always()`, inside that window. Beside the `mv` it is unreadable again,
-which A7 pins. Whether a `refs/pull/N/merge` run reads a
-`refs/heads/main` entry stays untested until that runs.
+so a clean run prints neither message. Hence A6-A8 — a step *below*
+the gate says either way, under `always()`. The tail still missed it,
+that job being 6,745 lines against 5,000 served, so the `::notice::`
+beside it carried instead, `UX-621`'s route:
+
+```text
+$ GET /check-runs/106613117915/annotations     (run 35686105692)
+notice | tier carry: the default branch's carry restored
+```
+
+That run is `event=pull_request` on #255, so `github.ref` was
+`refs/pull/255/merge` reading main's entry: scoping was never it.
 
 `UX-912`'s reference-refresh half is untouched and still owed: it
-needs a CI run's own `ci-reference-candidate` artifact, and Actions
-artifact downloads are 403 through this proxy, so only the owner can
-pull it.
+needs a run's own `ci-reference-candidate` artifact, and artifact
+downloads are 403 through this proxy, so only the owner can pull it.

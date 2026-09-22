@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-929 scenarios: **20 open**, 909 closed.
+930 scenarios: **21 open**, 909 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -27,7 +27,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | cli | 0 | 22 |
 | store | 1 | 17 |
 | docs | 1 | 146 |
-| guards | 11 | 253 |
+| guards | 12 | 254 |
 
 ## Open scenarios
 
@@ -52,10 +52,11 @@ task file, which is the only place it ever lived twice.
 | UX-925 | [the toolchain axis is this host's gcc, because gcc's search paths are not relocatable](UX-0925-the-toolchain-axis-is-host-gcc-because-gcc-is-not-relocatable.md) | guards | Medium | every example, and the comparison class a `variant` dimension names | 🔴 Not Started |
 | UX-926 | [a round that leaves neither a document nor a ledger row is invisible to the register, and so to the guard whose job is to demand its document](UX-0926-a-round-that-leaves-no-trace-is-invisible-to-the-register.md) | guards | Medium | every later round, which reads a round's record instead of its code | 🔴 Not Started |
 | UX-928 | [the routing rule sends a prose diff to a protocol that opens on a served page](UX-0928-the-routing-rule-sends-a-prose-diff-to-a-protocol-that-opens-on-a-page.md) | guards | Medium | every diff that edits a skill, a hook or the spec without touching the report | 🔴 Not Started |
-| UX-929 | [two population-sized guards reach three excursions in one run, and both records were frozen](UX-0929-two-population-sized-guards-reach-three-excursions-in-one-run.md) | guards | Medium | every branch whose push gate reads a suite `main` has already reddened | 🔴 Not Started |
+| UX-929 | [population-sized guards reach three excursions in one run, and their records were frozen](UX-0929-two-population-sized-guards-reach-three-excursions-in-one-run.md) | guards | Medium | every branch whose push gate reads a suite `main` has already reddened | 🔴 Not Started |
 | UX-932 | [a sandboxed `--check --write` escapes into the tree it guards, so `make test` is not read-only](UX-0932-a-sandboxed-check-write-escapes-into-the-tree-it-guards.md) | guards | Medium | every session that reads a red as a finding, and every gate run taken as a reading of its own sha | 🔴 Not Started |
 | UX-934 | [the three adopt jobs push with a token that triggers no workflow, so a commit that reds `main` carries no CI](UX-0934-the-adopt-jobs-push-with-a-token-that-triggers-no-workflow.md) | guards | High | every branch that inherits a red `main` it cannot see and did not cause | 🔴 Not Started |
 | UX-935 | [a conflicted path is counted once per stage, so `--check --write` bakes a wrong number and calls the tree clean](UX-0935-a-conflicted-path-is-counted-once-per-stage.md) | guards | Medium | every catch-up merge, which is the step this repository runs before every landing | 🔴 Not Started |
+| UX-936 | [a heavy-fixture guard excurses three times on a record that is not too low, so the ledger is reading the runner](UX-0936-a-heavy-fixture-guard-excurses-on-a-record-that-is-not-too-low.md) | guards | Medium | every branch whose push gate reads a suite `main` has already reddened | 🔴 Not Started |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

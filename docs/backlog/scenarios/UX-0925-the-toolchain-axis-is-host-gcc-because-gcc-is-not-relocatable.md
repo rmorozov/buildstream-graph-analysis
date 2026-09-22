@@ -103,6 +103,11 @@ costs, not re-derived here:
   It gets the same treatment staging got: declared, then probed, with a
   mutation that points `-B` at an empty directory and expects red.
 
+  **This half is `UX-930`**, which declares the parameters, reads back
+  where each file class actually came from, and carries the shim - and
+  which measured that `-B` needs *three* directories rather than one,
+  and that the C++ headers move under neither flag.
+
   **What it costs to deliver.** The examples' own build commands invoke
   the compiler, not a wrapper this repository controls, so the flags
   arrive through a PATH shim — the shape `bga-make` and `UX-913`'s GCC

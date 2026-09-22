@@ -267,6 +267,18 @@ DATE_MISMATCH_WAIVER = dict.fromkeys(
                    "material; each document's own dateline states "
                    "2026-09-06, the round's actual work date"))
 
+#: `UX-926`: round 134 shipped with no document and left a ledger row
+#: but no `docs/audits/round-134.md`, so the register did not list it
+#: and this class never asked. Round 135's document registered 135,
+#: which un-shielded 134 from the in-progress exemption; its document
+#: was then written from this round's own committed records, the way
+#: `UX-757` wrote rounds 99-102.
+DATE_MISMATCH_WAIVER["134"] = (
+    "2026-09-22", "round 134's document states 2026-09-21, the round's "
+                  "actual work date as its two closed rows record it; "
+                  "round 135 wrote the document on 2026-09-22 from "
+                  "UX-915's and UX-916's Outcomes and the ledger row")
+
 #: `UX-922`: a squash merge keeps one commit, dated when it landed, so
 #: a round document merged across a UTC midnight reads a day late.
 DATE_MISMATCH_WAIVER["130"] = (

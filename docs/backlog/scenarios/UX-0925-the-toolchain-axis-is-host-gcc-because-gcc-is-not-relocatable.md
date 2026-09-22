@@ -386,3 +386,62 @@ under the noise. A job of population one has no median shift to divide
 out, which is the one technique `dev_tier_drift.py` uses to make a CI
 timing readable, so any cost worth watching here has to be structural -
 paths staged, bytes fetched - and `nix_closure` already computes both.
+
+### The guards go quiet where the pin is not staged
+
+The first CI this branch ever received went red, and not on a test:
+`test (3.11)` reported 9464 recorded, 0 failures, 0 errors, and exited
+non-zero from `tests/conftest.py`'s skip census.
+
+```text
+20 tests skipped for one reason ("examples/05-cmake-cpp-toolchain's
+toolchain isn't staged - run stage_cpp_toolchain.sh first") - more than
+the 8 this suite allows it (0 measured + 8 headroom).
+```
+
+Reproduced here by moving the staged tree aside, which is the runner's
+`test` job exactly — `9270 passed, 194 skipped`, the same twenty, and
+the same complaint. The twenty are 14 from
+`test_the_toolchain_axis_is_pinned.py`, 3 from
+`test_the_sysroot_declares_both_axes.py` and 3 from
+`test_the_staged_make_is_the_pinned_one.py`; the last six are `main`'s
+and sit under the headroom on their own.
+
+This is the row's own thesis a third time, after `UX-930`'s `cp -al`
+and this round's hardlinked `_replace`. The file written to prove the
+toolchain is pinned is the file that disappears wherever the pin is not
+staged, and the one tree that reads 0 is the author's — because staging
+the closure is how the row gets worked at all.
+
+The declaration is corrected rather than the tests re-marked, which is
+what the reason's own comment says to do (*"a count that turns out to
+be wrong is the census doing its job, and is a measurement to correct
+rather than a reason not to declare"*), and what the `bst not found on
+PATH` entries at 12, 8, 5 and 2 already do: the baseline is per
+environment. Marking the fourteen `bst` would not have moved them —
+`make test` collects every marker, so they would skip in the same job
+under `bst not found on PATH`, taking *that* reason from 12 to 26. They
+do run on a runner, in one place: `bst-tests` stages
+`stage_cpp_toolchain.sh` (`ci.yml:1118`) and then runs the whole suite
+(`ci.yml:1182`), where the reason reads 0.
+
+That step is skipped today, and not for a reason of this row's. On
+`d9bbaea1`, `main`'s own head, `bst-tests` fails at step 10, the
+`bst`-gated tier, on the 2.8.1 line `UX-939` exists to pin:
+
+```text
+ 9 success  The environment doctor agrees this job can capture
+10 failure  The bst-gated tier runs, and every one of it passes
+11 skipped  No test was skipped for a missing bst
+12 skipped  The whole suite, with bst present
+```
+
+So the twenty are witnessed from the commit that lands `UX-939` and
+not before — which is why this row waits behind it rather than
+declaring a count nothing yet reads.
+
+```text
+toolchain moved aside, before   20 skips for the reason, exit 1
+toolchain moved aside, after    9270 passed, 194 skipped, exit 0
+toolchain staged, after         9291 passed, 173 skipped, exit 0
+```

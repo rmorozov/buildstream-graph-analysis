@@ -17,9 +17,13 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[2]
 DOC = REPO / "docs" / "spec" / "ingestion-pipeline.md"
 WORKFLOW = REPO / ".github" / "workflows" / "ci.yml"
+# A second workflow file cannot read `ci.yml`'s `env:`, so it repeats the
+# version literally - which is the drift this row is about, one file over.
+CAPTURE = REPO / ".github" / "workflows" / "real-project-capture.yml"
 
 PINNED = re.compile(r'^\s*BST_VERSION:\s*"(?P<version>[0-9]+(?:\.[0-9]+)*)"\s*$', re.M)
 EXERCISED = re.compile(r"\*\*Last exercised on `bst` (?P<version>[0-9]+(?:\.[0-9]+)*), ")
+LITERAL = re.compile(r"\bBuildStream==(?P<version>[0-9]+(?:\.[0-9]+)*)", re.I)
 
 
 def pinned():
@@ -48,12 +52,25 @@ def test_every_exercised_line_names_the_pinned_version():
         f"Bump both - they are one decision")
 
 
+def test_the_other_workflow_repeats_the_same_version():
+    """`real-project-capture.yml` cannot read `ci.yml`'s `env:`, so its
+    literal pin is the one place the two files can disagree - and two
+    pinned sites naming different versions is `UX-939`'s own finding."""
+    found = LITERAL.findall(CAPTURE.read_text(encoding="utf-8"))
+    assert found, "real-project-capture.yml pins no BuildStream version"
+    assert set(found) == {pinned()}, (
+        f"ci.yml pins {pinned()}; real-project-capture.yml says "
+        f"{sorted(set(found))}. Two pinned sites, one version")
+
+
 def test_every_install_uses_the_pin_rather_than_a_floor():
     """A `pip install buildstream` with no version is what let the
     runner move: the floor in `pyproject.toml`'s extras resolves to
     whatever is newest that day."""
-    body = WORKFLOW.read_text(encoding="utf-8")
-    loose = [line.strip() for line in body.splitlines()
-             if re.search(r"pip install\b.*\bbuildstream(-plugins)?\b", line, re.I)
-             and "==" not in line]
-    assert loose == [], f"unpinned buildstream install(s) in ci.yml: {loose}"
+    loose = []
+    for path in (WORKFLOW, CAPTURE):
+        loose += [f"{path.name}: {line.strip()}"
+                  for line in path.read_text(encoding="utf-8").splitlines()
+                  if re.search(r"pip install\b.*\bbuildstream(-plugins)?\b", line, re.I)
+                  and "==" not in line]
+    assert loose == [], f"unpinned buildstream install(s): {loose}"

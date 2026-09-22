@@ -162,6 +162,13 @@ guard can only catch in CI.
 | M2 | one exercised line moved to 2.8.0 | the same clause, on the set |
 | M3 | one install returned to a bare `pip install buildstream` | the floor clause |
 | M4 | `BST_VERSION` deleted | two clauses |
+| M5 | the capture workflow's literal moved to 2.8.0 | the second-file clause |
+| M6 | the capture workflow's install unpinned | that clause and the floor one |
+
+M5 and M6 cover the one site that cannot read the key: no workflow
+file sees another's `env:`, so `real-project-capture.yml` repeats the
+version literally, and two pinned sites disagreeing is this row's own
+finding one file over.
 
 **Deviations.** Three, all stated rather than hidden.
 
@@ -178,7 +185,9 @@ guard can only catch in CI.
 3. The extras' floor moved from `>=2.0` to `>=2.8.1`, which is a
    user-facing change: it is the smallest floor that matches what is
    exercised, and `requirements.lock` is compiled with `--extra dev`
-   only, so no lock recompile follows.
+   only. Measured, not argued: `quality.yml`'s own freshness command,
+   `uv pip compile pyproject.toml --extra dev`, diffs zero lines
+   against the committed lock, which holds no `buildstream` line.
 
 `make lint` clean. `make test` on the pushed sha is in the pull request.
 

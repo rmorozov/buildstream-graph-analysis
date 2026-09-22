@@ -342,6 +342,9 @@ tools/bga_timeline.py        one trace, both planes
 tools/bst_baseline_set.py    assembling a baseline set from published refs
 tools/nix_store_fetch.py     the examples' pinned make, fetched and
                          unpacked without Nix (UX-915)
+tools/nix_closure.py         a pin's whole closure, walked through the
+                         narinfos and staged at its own store paths, so
+                         the tree names nothing it does not carry (UX-927)
 tools/sysroot_manifest.py    what the examples' sysroot is - one row per
                          package, its axis (runtime or toolchain), whether
                          it is pinned or this host's, and the version its

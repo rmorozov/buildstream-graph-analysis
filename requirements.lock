@@ -100,3 +100,5 @@ typing-extensions==4.16.0
     #   referencing
 wcwidth==0.8.4
     # via columnar
+zstandard==0.25.0
+    # via bga (pyproject.toml)

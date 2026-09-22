@@ -27,17 +27,54 @@ STAGER = REPO / "examples/stage_cpp_toolchain.sh"
 SYSROOT = REPO / "examples/05-cmake-cpp-toolchain/files/toolchain"
 
 
-def _axis_array(name):
-    """The absolute paths one `<AXIS>_BINARIES=(...)` array declares.
-    `$(gcc -print-prog-name=...)` words are not paths in the text and
-    are excluded here the same way they are everywhere else."""
+def _axis_block(name):
     block = re.search(rf"^{name}=\((.*?)^\)", STAGER.read_text(),
                       re.DOTALL | re.MULTILINE)
     assert block, f"stage_cpp_toolchain.sh no longer declares {name}=(...)"
-    return {word for word in block.group(1).split() if word.startswith("/")}
+    return block.group(1)
+
+
+def _axis_array(name):
+    """The absolute paths one `<AXIS>_BINARIES=(...)` array declares."""
+    return {word for word in _axis_block(name).split() if word.startswith("/")}
+
+
+def _axis_helpers(name):
+    """The gcc-internal helpers the same array stages as
+    `$(gcc -print-prog-name=X)`. These are staged binaries whose path is
+    only known on the staging host, so the earlier revision of this file
+    dropped them for not starting with `/` - and three staged binaries
+    then had no owner while the class below said every one had
+    (`rmorozov` on #257). The *name* is literal in the source, so it is
+    what the declaration is checked against."""
+    return set(re.findall(r"-print-prog-name=([A-Za-z0-9_+.-]+)\)",
+                          _axis_block(name)))
 
 
 class TestTheDeclarationCoversWhatIsStaged:
+    def test_every_staged_helper_is_claimed_too(self):
+        """The three `$(gcc -print-prog-name=...)` binaries. A helper
+        the stager adds without a declaration reddens here, and one
+        declared but no longer staged reddens too."""
+        staged = _axis_helpers("RUNTIME_BINARIES") | _axis_helpers("TOOLCHAIN_BINARIES")
+        declared = {name for row in sysroot_manifest.components()
+                    for name in row.get("helpers", ())}
+
+        assert staged, "the stager stages no -print-prog-name helper any more"
+        assert staged == declared
+
+    def test_each_helper_names_its_own_flag_and_stream(self):
+        """`collect2 --version` prints its own version to stderr and
+        then execs `ld --version`, so its *stdout* is binutils' 2.42.
+        Reading a helper off whichever stream happened to be non-empty
+        would report the linker's version as gcc's."""
+        for row in sysroot_manifest.components():
+            for name, spec in row.get("helpers", {}).items():
+                flag, stream = spec
+
+                assert flag.startswith("-"), (row["name"], name)
+                assert stream in ("stdout", "stderr"), (row["name"], name)
+
     def test_every_staged_path_is_claimed_by_exactly_one_package(self):
         """Both directions. A staged path nobody claims is a component
         this repository does not say the version of; a claimed path
@@ -110,6 +147,7 @@ class TestTheDeclarationCoversWhatIsStaged:
 
         for row in sysroot_manifest.components():
             want = set(row["binaries"]) - set(row.get("unreadable", ()))
+            want |= set(row.get("helpers", ()))
             if row.get("lib_probe"):
                 want.add(row["lib_probe"])
 

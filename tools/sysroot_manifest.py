@@ -25,9 +25,11 @@ working host, so it warns and
 `tests/unit/test_the_sysroot_declares_both_axes.py` reddens.
 """
 import argparse
+import glob
 import os
 import subprocess
 import sys
+import tempfile
 from typing import Optional
 
 from tools import nix_store_fetch
@@ -50,9 +52,22 @@ HOST_COMPONENTS = (
     {"name": "dash", "axis": "runtime", "version": None,
      "binaries": ("/usr/bin/sh",), "unreadable": ("/usr/bin/sh",),
      "why": "dash answers no --version, so the sysroot cannot state it"},
+    # `helpers` are the binaries gcc itself execs, staged by the script
+    # as `$(gcc -print-prog-name=...)` - their absolute path carries the
+    # staging host's triple and gcc major, so they are owned by name and
+    # located inside the sysroot rather than declared as literal paths.
+    # They are not the drivers: a host can resolve a cc1plus that
+    # disagrees with the `gcc` beside it, which is what probing each one
+    # catches. Each names its own flag and stream, because all three
+    # differ from the drivers' and `collect2`'s stdout is *binutils*' -
+    # it execs `ld --version` after printing its own to stderr, so
+    # reading stdout would report 2.42 as gcc's version.
     {"name": "gcc", "axis": "toolchain", "version": "13.3.0",
      "binaries": ("/usr/bin/gcc", "/usr/bin/g++", "/usr/bin/cc",
-                  "/usr/bin/c++")},
+                  "/usr/bin/c++"),
+     "helpers": {"cc1": ("-version", "stderr"),
+                 "cc1plus": ("-version", "stderr"),
+                 "collect2": ("--version", "stderr")}},
     {"name": "binutils", "axis": "toolchain", "version": "2.42",
      "binaries": ("/usr/bin/ld", "/usr/bin/ld.bfd", "/usr/bin/as",
                   "/usr/bin/ar", "/usr/bin/ranlib", "/usr/bin/nm",
@@ -80,11 +95,19 @@ def components(arch: Optional[str] = None) -> list:
 
 
 def declared_version_token(line: str) -> str:
-    """The version out of a `--version` first line: its last token,
-    without a trailing period. One rule for all six formats - gcc's
-    `) 13.3.0`, cmake's `version 3.28.3`, binutils' and coreutils'
-    `) N`, glibc's `version 2.39.`, make's `GNU Make 4.4.1`."""
-    return line.split()[-1].rstrip(".")
+    """The version out of a version line: the token after the last
+    standalone `version` word, else the last token, without a trailing
+    period. One rule for all eight formats - gcc's `) 13.3.0`, cmake's
+    `version 3.28.3`, binutils' and coreutils' `) N`, glibc's `version
+    2.39.`, make's `GNU Make 4.4.1`, collect2's `version 13.3.0` and
+    cc1's `version 13.3.0 (x86_64-linux-gnu)`, where the last token is
+    the triple rather than the version."""
+    words = line.split()
+    if "version" in words:
+        after = words.index("version") + 1
+        if after < len(words):
+            return words[after].rstrip(".")
+    return words[-1].rstrip(".")
 
 
 def probe_labels(arch: Optional[str] = None) -> list:
@@ -92,15 +115,30 @@ def probe_labels(arch: Optional[str] = None) -> list:
     owned binary, not one standing in for its package. Asking `env` and
     declaring `cat` answered is a proxy, and one binary of a package can
     be the host's while its siblings are not (`/usr/bin/make` over the
-    4.4 pin is exactly that). Pure, so a clone can read it with no
-    sysroot staged; `probes` turns each label into an argv."""
+    4.4 pin is exactly that). A helper's label is its bare name; every
+    other label is a sysroot-absolute path. Pure, so a clone can read it
+    with no sysroot staged; `probes` turns each label into an argv."""
     found = []
     for row in components(arch):
         if row.get("lib_probe"):
             found.append((row, row["lib_probe"]))
         found.extend((row, path) for path in row["binaries"]
                      if path not in row.get("unreadable", ()))
+        found.extend((row, name) for name in sorted(row.get("helpers", ())))
     return found
+
+
+def helper_path(dest: str, name: str) -> Optional[str]:
+    """Where `dest` really keeps one gcc-internal helper. Read off the
+    staged tree rather than re-derived from this host's `gcc
+    -print-prog-name`: the sysroot's own triple and gcc major are what
+    decide it, and a staging host that resolved a different pair is
+    exactly what this is here to notice."""
+    found = sorted(glob.glob(os.path.join(dest, "usr", "libexec", "gcc",
+                                          "*", "*", name))
+                   + glob.glob(os.path.join(dest, "usr", "lib", "gcc",
+                                            "*", "*", name)))
+    return found[0] if len(found) == 1 else None
 
 
 def probes(dest: str, arch: Optional[str] = None) -> list:
@@ -110,12 +148,17 @@ def probes(dest: str, arch: Optional[str] = None) -> list:
     host binary names this host's, which `dest` stages at the same
     absolute path. glibc is asked through the one real copy of the
     loader `nix_store_fetch.sysroot_lib_dir` finds, because the staging
-    script's lexical symlink resolution decides where that lands."""
+    script's lexical symlink resolution decides where that lands. A
+    helper is located in the staged tree, and gets `None` when it is not
+    there so `measure` records that rather than guessing a path."""
     group = nix_store_fetch.host_arch(arch)
     loader = os.path.join(dest + group["interpreter_dir"], group["loader"])
     found = []
     for row, label in probe_labels(arch):
-        if label == row.get("lib_probe"):
+        if label in row.get("helpers", ()):
+            binary = helper_path(dest, label)
+            argv = None if binary is None else [binary, row["helpers"][label][0]]
+        elif label == row.get("lib_probe"):
             argv = [os.path.join(nix_store_fetch.sysroot_lib_dir(dest, group),
                                  label), "--version"]
         elif row["origin"] == "pinned":
@@ -131,19 +174,35 @@ def measure(dest: str, arch: Optional[str] = None) -> dict:
     recorded as its own error string rather than raising, so `--check`
     names every divergence at once."""
     measured = {}
-    for _row, label, argv in probes(dest, arch):
+    # `cc1 -version` compiles whatever stdin holds and writes `<stdin>.s`
+    # beside it, so every probe runs in a directory thrown away after.
+    scratch = tempfile.TemporaryDirectory(prefix="sysroot-manifest-")
+    for row, label, argv in probes(dest, arch):
+        if argv is None:
+            measured[label] = "not staged, or staged more than once"
+            continue
         try:
+            # stdin closed, not inherited: `cc1 -version` reads a
+            # translation unit from it and waits forever otherwise.
             result = subprocess.run(argv, capture_output=True, text=True,
-                                    timeout=60)
+                                    stdin=subprocess.DEVNULL, timeout=60,
+                                    cwd=scratch.name)
+        except subprocess.TimeoutExpired:
+            measured[label] = "timed out - it is waiting on something"
+            continue
         except OSError as error:
             measured[label] = f"did not run: {error}"
             continue
         if result.returncode != 0:
             measured[label] = f"exit {result.returncode}: {result.stderr.strip()}"
             continue
-        first = result.stdout.splitlines()
+        stream = result.stdout
+        if label in row.get("helpers", ()) and row["helpers"][label][1] == "stderr":
+            stream = result.stderr
+        first = stream.splitlines()
         measured[label] = (declared_version_token(first[0]) if first
                            else "exit 0 and said nothing")
+    scratch.cleanup()
     return measured
 
 
@@ -169,9 +228,11 @@ def _report(dest: str, arch: Optional[str], measured: dict) -> None:
                 continue
             read = sorted({measured[label] for label in labels.get(row["name"], ())})
             state = ", ".join(read) if read else row.get("why", "")
+            declared = (len(row["binaries"]) + len(row.get("helpers", ()))
+                        + bool(row.get("lib_probe")))
             print(f"  {row['name']:<10} {row['origin']:<7} "
-                  f"{state}  ({len(labels.get(row['name'], ()))} probed, "
-                  f"{len(row['binaries'])} staged)")
+                  f"{state}  ({len(labels.get(row['name'], ()))} probed "
+                  f"of {declared} declared)")
 
 
 def main(argv=None) -> int:

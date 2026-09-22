@@ -122,9 +122,10 @@ class TestNixBase32:
     def test_a_pins_hex_digest_is_its_narinfo_spelling(self, name):
         pin = nix_store_fetch.PINS["x86_64"]["paths"][name]
         # The `nar/<nix32>.nar.xz` URL carries the same digest the pin
-        # states as hex - UX-915 typed one and UX-927 reads the other.
+        # states as `file_sha256` - UX-915 typed one, UX-927 reads the
+        # other, and UX-931 demoted it from gate to warning.
         nix32 = pin["url"].rsplit("/", 1)[1].split(".", 1)[0]
-        assert nix_closure.nix32_decode(nix32).hex() == pin["sha256"]
+        assert nix_closure.nix32_decode(nix32).hex() == pin["file_sha256"]
 
     def test_the_encoder_in_this_file_inverts_the_decoder(self):
         raw = hashlib.sha256(b"UX-927").digest()

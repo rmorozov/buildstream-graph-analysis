@@ -136,17 +136,15 @@ save    $RUNNER_TEMP/tier_carry.json      -> d1e90db57d1530e4..
 restore $RUNNER_TEMP/tier_carry_base.json -> a3a89e944c9c3fa0..
 ```
 
-The placement, with the action's own tar arguments — `tar -xf
-cache.tzst -P -C $GITHUB_WORKSPACE` on an archive whose one member is
+Placement, with the action's own tar arguments: `tar -xf cache.tzst
+-P -C $GITHUB_WORKSPACE` on an archive whose one member is
 `../_temp/tier_carry.json` leaves `tier_carry.json` and no
-`tier_carry_base.json`. So a hit would have overwritten the branch's
-own carry rather than producing the file `--base-carry` reads. Both
-are invisible in the log those runs left: the version prints at
-`core.debug` only.
+`tier_carry_base.json`, so a hit would have overwritten the branch's
+own carry. Both defects are invisible in those runs' logs.
 
-Third reading, on the tool: one file at 50s against a 2.4s record, a
-carry naming it, `--base-carry` pointed at a copy of `--carry` — what
-the default branch would restore for itself:
+Third reading, on the tool: one 50s file against a 2.4s record, a
+carry naming it, `--base-carry` a copy of `--carry` — what the default
+branch would restore for itself:
 
 ```text
 --base-carry=absent                 exit=1  1 file(s) slower than CI's own record
@@ -156,9 +154,9 @@ the default branch would restore for itself:
 ### After
 
 The base restore names the save's path, runs before the branch's own,
-hands its file to a `mv`, is skipped on the default branch, and says
-which way it went as an annotation; the guard that read every carry
-step's `key` reads its `path` too.
+hands its file to a `mv`, is skipped on the default branch, and a step
+below the gate says whether a carry arrived; the guard that read every
+carry step's `key` reads its `path` too.
 
 ```text
 $ python3 -m pytest tests/unit/test_a_slow_file_says_which_file.py \
@@ -166,7 +164,7 @@ $ python3 -m pytest tests/unit/test_a_slow_file_says_which_file.py \
 14 passed, 136 deselected in 0.59s
 ```
 
-### Mutations verified red and reverted (6)
+### Mutations verified red and reverted (8)
 
 | # | mutation | reddened |
 |---|---|---|
@@ -175,24 +173,26 @@ $ python3 -m pytest tests/unit/test_a_slow_file_says_which_file.py \
 | A3 | base restore moved below the branch's own | same clause, its ordering assert |
 | A4 | `github.ref != …default_branch` dropped from the base restore's `if:` | `test_the_default_branch_does_not_excuse_itself` |
 | A5 | `based_rows` returns no rows | `test_a_base_carry_equal_to_this_runs_own_excuses_everything` |
-| A6 | the placing step echoes without `::notice::` | `test_the_base_carry_is_placed_by_a_step_that_can_place_it` |
+| A6 | the step saying whether the carry arrived, deleted | `test_the_base_carrys_arrival_is_said_below_the_gate` |
+| A7 | that step moved above the gate, beside the `mv` | same clause, its ordering assert |
+| A8 | `always()` dropped from it | same clause, its `if` assert |
 
-The clause A2 tests passed A2 as first written: the gate step's own
+The clause A2 tests passed A2 as first written: the gate's own
 `--base-carry <path>` names the path, so "some step mentions it" was
-satisfied by the step that *reads* the file.
+satisfied by the step that *reads* it.
 
 ### Deviation
 
-The Acceptance Test's live clause is **not** satisfiable the way it
-was written, and run 35680793877 is why: the gate returned `tiers ok`
-at `dev_tier_drift.py:1150`, which is *before* `--base-carry` is read
-at `:1155`, so a clean run prints neither message. Nor is the restore's
-own log line reachable — the run archive answers 403 at CONNECT here
-and the jobs API caps a tail at 5,000 lines, which the gate step
-overruns alone. Hence A6: the step now annotates the outcome
-unconditionally, which is the clause's readable form and is what the
-next run answers. Whether a `refs/pull/N/merge` run can read a
-`refs/heads/main` entry stays untested until then.
+The Acceptance Test's live clause is **not** satisfiable as written,
+and run 35680793877 is why: the gate returned `tiers ok` at
+`dev_tier_drift.py:1150`, *before* `--base-carry` is read at `:1155`,
+so a clean run prints neither message. Nor is the restore's own log
+line reachable — the run archive answers 403 at CONNECT here and the
+jobs API caps a tail at 5,000 lines, which the gate step overruns
+alone. Hence A6-A8: a step *below* the gate says either way, under
+`always()`, inside that window. Beside the `mv` it is unreadable again,
+which A7 pins. Whether a `refs/pull/N/merge` run reads a
+`refs/heads/main` entry stays untested until that runs.
 
 `UX-912`'s reference-refresh half is untouched and still owed: it
 needs a CI run's own `ci-reference-candidate` artifact, and Actions

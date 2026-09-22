@@ -2138,16 +2138,44 @@ class TestCiSuppliesTheMemoryTheRuleNeeds:
         assert placing, (
             f"nothing in the job produces {base}, so --base-carry reads "
             f"a file that is never written")
-        # `UX-923`: and it says which way it went where that can be
-        # read. The run archive answers 403 at CONNECT from a session
-        # and the jobs API caps a log tail at 5,000 lines, which the
-        # gate step overruns by itself - so the restore's own line is
-        # unreachable, which is how `UX-912` misread it for four runs.
-        # An annotation is reachable (`UX-621`).
-        assert all("::notice::" in str(step["run"]) for step in placing), (
-            "the step placing the base carry does not annotate whether "
-            "one arrived, so the only witness is a log line no session "
-            "can read (UX-923)")
+
+    def test_the_base_carrys_arrival_is_said_below_the_gate(self):
+        """`UX-923`: and where a session can read it.
+
+        The restore's own `Cache hit`/`Cache not found` line is the only
+        witness today, and it is unreachable: the run archive answers
+        403 at CONNECT here, and the jobs API caps a log tail at 5,000
+        lines - which the gate step overruns by itself, so every step
+        above it is outside the window. That is how `UX-912` read this
+        restore wrong for four runs.
+
+        So the report has to sit *below* the gate, not beside the `mv`,
+        or it lands outside the window again - which is what this clause
+        pins, ordering included. `::notice::` as well, `UX-621`'s route
+        for the same reason.
+        """
+        text = self._text()
+        base = re.search(r'--base-carry "([^"]+)"', text).group(1)
+        steps = [step for job in yaml.safe_load(text)["jobs"].values()
+                 for step in job.get("steps") or []]
+        gate = [i for i, step in enumerate(steps)
+                if "dev_tier_drift.py" in str(step.get("run", ""))
+                and "--against" in str(step.get("run", ""))]
+        saying = [i for i, step in enumerate(steps)
+                  if base in str(step.get("run", ""))
+                  and "::notice::" in str(step.get("run", ""))]
+        assert gate and saying, (
+            "no step says whether the base carry arrived, so the only "
+            "witness is a log line no session can read (UX-923)")
+        assert min(saying) > min(gate), (
+            "the base carry's arrival is announced above the gate, "
+            "which is outside the 5,000-line window the jobs API "
+            "returns - unreadable, the same as not saying it (UX-923)")
+        for step in (steps[i] for i in saying):
+            assert "always()" in str(step.get("if", "")), (
+                f"{step['name']!r} does not run under always(), so a "
+                f"run the gate failed never says whether the carry it "
+                f"read arrived")
         own = [i for i, step in enumerate(steps)
                if "github.ref }}-${{ github.run_id" in
                str(step.get("with", {}).get("key", ""))

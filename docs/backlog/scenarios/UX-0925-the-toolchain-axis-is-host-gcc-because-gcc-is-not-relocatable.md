@@ -329,3 +329,21 @@ the one carrying the code. Rounds 136 and 137 are both new here:
 `UX-926`'s silence meant round 136 closed three rows in three threads
 and none wrote its document, and round 137 taking the highest number
 is what made the register demand it.
+
+The gate, on `9dc204ac`:
+
+```text
+$ make test
+All checks passed!    make lint: 572 finding(s) match the baseline
+9277 passed, 172 skipped, 1 warning in 316.30s (0:05:16)
+$ python3 tools/dev_sizes.py --check
+sizes ok: 132 file(s) measured, none above the cell it records
+```
+
+Six of those tests were red on the first attempt for a reason outside
+the diff: this container arrived with `bga` uninstalled and with stale
+`uv` shims for `ruff` (0.15.8) and `pyright` (1.1.414 pinned, 1.1.408
+on `PATH`), which also invented a `new` baseline finding on
+`tools/bst_cache_logs.py`, a file nothing here touches.
+`tools/dev_env_check.py` names all three and their remedies, and is
+worth running before anything else in a fresh container.

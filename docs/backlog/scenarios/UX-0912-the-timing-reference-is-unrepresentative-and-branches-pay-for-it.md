@@ -209,10 +209,17 @@ scan cheap first, then record the result, or the refresh banks a 45x
 regression as normal.
 
 For each of the other three, the reading decides: a file whose cost
-grew for a reason (`test_a_drawing_is_graded.py` is already `UX-908`,
-and its excursions rise rather than sit flat) is a defect and keeps
-its own row; a file whose record was simply taken on a quieter runner
-is a reference to refresh.
+grew for a reason (`test_a_drawing_is_graded.py` is already `UX-908`)
+is a defect and keeps its own row; a file whose record was simply
+taken on a quieter runner is a reference to refresh.
+
+**Two figures above moved in round 131** (`UX-908`). Its excursions do
+not rise: the ledger's four ratios are 1.701, 2.142, 2.245 and 2.114,
+one step on 2026-09-15 where the file went 26 -> 36 tests, then a band
+spanning 6%. And its `ci_reference.json` entry is 13.86 now, not the
+6.5 the run above reads against, so that row's x2.30 is x1.05 today.
+`UX-908` also names why the unattended route never refreshed it —
+`UX-922`.
 
 ## Out of Scope
 

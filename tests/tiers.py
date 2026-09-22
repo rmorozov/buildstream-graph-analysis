@@ -892,7 +892,9 @@ MEDIUM = (
     "tests/unit/test_the_documented_invocations_parse.py",           #    5.6s
     "tests/unit/test_the_fold_says_how_deep_it_goes.py",             #    4.4s
     "tests/unit/test_the_shape_before_the_rows.py",                  #    3.6s
-    "tests/unit/test_a_drawing_is_graded.py",                        #    3.1s
+    # `UX-908`: 3.1s was recorded at 25 tests; three commits on
+    # 2026-09-15 took the file to 36 and its first two browser cases.
+    "tests/unit/test_a_drawing_is_graded.py",                        #    8.7s
     "tests/unit/test_the_mapping_is_law.py",                         #    2.2s
     "tests/unit/test_the_page_conforms_to_its_sections.py",          #    2.1s
     "tests/unit/test_a_guard_reads_only_what_a_clone_has.py",        #    6.2s

@@ -266,6 +266,11 @@ DATE_MISMATCH_WAIVER = dict.fromkeys(
                    "on 2026-09-07, retroactively, from committed "
                    "material; each document's own dateline states "
                    "2026-09-06, the round's actual work date"))
+DATE_MISMATCH_WAIVER["130"] = (
+    "2026-09-22", "round 130 ran on 2026-09-21, which its own dateline "
+                  "states; its document reached main inside #249's merge "
+                  "at 05:07+03:00 on 2026-09-22, so the file's own first "
+                  "commit is a day later than the work")
 
 
 #: `UX-772`'s verifier: a round whose document states no recognized

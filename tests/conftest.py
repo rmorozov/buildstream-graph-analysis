@@ -174,6 +174,13 @@ KNOWN_SKIP_REASONS = {
         "UX-314's friendly-port arm, where the port is already taken", 0),
     "jsonschema is not installed - `pip install -e '.[dev]'`": (
         "schema validation is a dev extra", 0),
+    # UX-933: the same shape one round later. `zstandard` reads the
+    # `zstd` NARs a store closure is made of (UX-927); it is in `dev`
+    # and in `nix`, so this never fires where the extras are installed,
+    # and the canary beside the clauses reds instead wherever
+    # `BGA_EXPECT_DEV` says the extras are claimed.
+    "zstandard is not installed - `pip install -e '.[dev]'`": (
+        "reading a `zstd` NAR is a dev extra", 0),
     "buildstream is not installed": (
         "the bst-dependent guards run in the bst-* CI jobs", 0),
     # UX-213's real-capture arm. These three were undeclared until the

@@ -219,7 +219,7 @@ one step on 2026-09-15 where the file went 26 -> 36 tests, then a band
 spanning 6%. And its `ci_reference.json` entry is 13.86 now, not the
 6.5 the run above reads against, so that row's x2.30 is x1.05 today.
 `UX-908` also names why the unattended route never refreshed it —
-`UX-922`.
+`UX-924`.
 
 ## Out of Scope
 

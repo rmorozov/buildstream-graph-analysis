@@ -124,9 +124,9 @@ both gates — four ledger rows and this task.
 
 **No guard reads either number this task moved.** Nothing in the suite
 asserts that a `ci_reference.json` entry still matches what the runner
-reads, and the entry sat 2.1x low for seven days while 36 adopt commits
+reads, and the entry sat 2.1x low for seven days while 37 adopt commits
 carried it at 6.47/6.48. Why it could not correct itself is measured
-and filed as `UX-922`: `adopt` reads the candidate's `files`, which is
+and filed as `UX-924`: `adopt` reads the candidate's `files`, which is
 already `median_low` of that candidate's own samples, so a full flat
 window feeds the committed value back into itself.
 

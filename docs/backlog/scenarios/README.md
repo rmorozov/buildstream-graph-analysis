@@ -50,7 +50,7 @@ task file, which is the only place it ever lived twice.
 | UX-917 | [the fold-depth guard has three unconfirmed CI excursions, spread over three weeks](UX-0917-the-fold-depth-guard-has-three-unconfirmed-excursions.md) | guards | Medium | the round whose push gate is blocked by a file nobody has named | 🔴 Not Started |
 | UX-920 | [two task files can share one backlog id, and no guard reads ids for uniqueness](UX-0920-two-task-files-can-share-one-id-and-nothing-reads-it.md) | guards | Medium | every round that runs more than one branch at a time, which is now the normal case | 🔴 Not Started |
 | UX-921 | [hidden findings keep live controls](UX-0921-hidden-findings-keep-live-controls.md) | viewer | Medium | R1, R4 and assistive-technology users reading a report with many findings | 🔴 Not Started |
-| UX-922 | [the adopt route feeds the committed median back to itself, so a reference entry is write-once](UX-0922-the-adopt-route-feeds-the-committed-median-back-to-itself.md) | guards | High | every branch charged for a cost `main` carries, and every round that re-records a cell by hand | 🔴 Not Started |
+| UX-924 | [the adopt route feeds the committed median back to itself, so a reference entry is write-once](UX-0924-the-adopt-route-feeds-the-committed-median-back-to-itself.md) | guards | High | every branch charged for a cost `main` carries, and every round that re-records a cell by hand | 🔴 Not Started |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

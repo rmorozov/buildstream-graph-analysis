@@ -1,6 +1,6 @@
-# UX-922: the adopt route feeds the committed median back to itself, so a reference entry is write-once
+# UX-924: the adopt route feeds the committed median back to itself, so a reference entry is write-once
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-496, UX-503, UX-803 | **Found by:** round 131 — `UX-908`'s re-record: 36 consecutive adopt commits carried a 2.1x-stale entry at 6.47 while the gate read the file at 13.3-14.5s | **Serves:** every branch charged for a cost `main` carries, and every round that re-records a cell by hand | **Topic:** guards | **Area:** tools | **Shape:** judgement
+**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-496, UX-503, UX-803 | **Found by:** round 131 — `UX-908`'s re-record: 37 consecutive adopt commits on `main`, `6ad0d884`..`4145a45c`, carried a 2.1x-stale entry at 6.47 while the gate read the file at 13.3-14.5s | **Serves:** every branch charged for a cost `main` carries, and every round that re-records a cell by hand | **Topic:** guards | **Area:** tools | **Shape:** judgement
 
 ## Motivation
 
@@ -42,11 +42,12 @@ had it carried 13.28: files 6.47  samples [6.47, 6.47, 6.47, 6.47, 13.68]
 
 The second line is what `UX-496` was built for, and `UX-803`'s restart
 fires on the run after it. The first line is what ships. It matches
-`main` exactly: over the 36 commits the adopt job made to
-`tests/ci_reference.json` between 2026-09-14 and 2026-09-22, this
-entry's five samples only ever held 6.47 and a single 6.48 walking
-through the window — the rounding of the carried values, never a
-reading.
+`main` exactly: over the 37 commits the adopt job made to
+`tests/ci_reference.json` between `6ad0d884` (2026-09-14) and
+`4145a45c` (2026-09-22), this entry's five samples only ever held 6.47
+and a single 6.48 walking through the window — the rounding of the
+carried values, never a reading. The last of those landed after this
+row was written.
 
 The population is not one entry. 543 of 566 entries have a full
 five-sample window and 399 of those are flat, so every one of them is

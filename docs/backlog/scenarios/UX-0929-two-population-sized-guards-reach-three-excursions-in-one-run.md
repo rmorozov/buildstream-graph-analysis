@@ -1,6 +1,6 @@
-# UX-929: two population-sized guards reach three excursions in one run, and both records were frozen
+# UX-929: population-sized guards reach three excursions in one run, and their records were frozen
 
-**Flake:** tests/unit/test_the_size_ledger_only_shrinks.py, tests/unit/test_docs_links_and_commands.py
+**Flake:** tests/unit/test_the_size_ledger_only_shrinks.py, tests/unit/test_docs_links_and_commands.py, tests/unit/test_the_documented_invocations_parse.py
 **Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-691, UX-716, UX-924 | **Blocks:** — | **Found by:** round 136 — `2a3f2ee7` appended run 35735148844's excursions and shipped `main` red on `test_a_file_with_three_excursions_has_a_filed_task.py`, which every branch's `make test` then inherits | **Serves:** every branch whose push gate reads a suite `main` has already reddened | **Topic:** guards | **Area:** tools | **Shape:** judgement
 
 ## Motivation
@@ -30,6 +30,24 @@ files `tests/quality_reference.json` measures. Both populations have
 grown since the entries were last set, and until `UX-924` the entry
 could not follow: `adopt` fed the committed median back to itself, so
 543 of 566 entries never moved.
+
+**A third file, same shape, three hours later.** `408235c7` appended
+run 35755437814's six excursions and put
+`tests/unit/test_the_documented_invocations_parse.py` over the floor.
+It is `test_docs_links_and_commands.py`'s own sibling — `UX-327` wrote
+it to parse the 220 invocations the first one only names — and its
+window says the record, not the file:
+
+```text
+tests/ci_reference.json    files 9.19   samples [9.19, 9.19, 9.19, 9.19, 13.41]
+ledger, none confirmed     35605347763 x1.51  35723802038 x1.554  35755437814 x1.656
+```
+
+Four carried copies and one real reading of **13.41 s** against a
+committed 9.19 — the record is 1.46x low, and the excursion ratios
+creep in exactly that direction. It is named in the `**Flake:**` field
+above rather than filed apart, because it is this row's claim with a
+third instance, not a new one.
 
 So the diagnosis is a hypothesis with a cheap test, not a finding:
 after `UX-924` lands, three adopt commits on `main` put real readings

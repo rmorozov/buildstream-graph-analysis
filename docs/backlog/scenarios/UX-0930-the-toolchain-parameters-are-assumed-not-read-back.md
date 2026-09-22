@@ -145,49 +145,40 @@ both flags through to the driver with the argv unchanged.
 **Premise:** held — and half of `UX-925`'s title falsified with it.
 `make_relative_prefix` **does** relocate a whole-tree move through
 `argv[0]`: a copied tree's driver found its own `cc1`, `libgcc` and
-internal headers and linked a running binary, through `PATH`, an
-absolute path and `./gcc` alike. Only the target's half stays.
+internal headers and linked a running binary. Only the target's half
+stays absolute.
 
 ### The gap, measured
 
-Nothing asked where a file class came from, and neither flag says:
-
-```text
-$ gcc -B <empty> -print-prog-name=cc1
-/usr/libexec/gcc/x86_64-linux-gnu/13/cc1       <- the compiled-in prefix
-$ gcc -B <empty> h.c -o h    exit 0, 0 bytes on stderr
-```
-
-`-B` at a directory with no `cc1` compiles the whole example against
-the host's compiler; `--sysroot` at least fails the `#include`.
+Nothing asked where a file class came from, and the Motivation's own
+block is the reason: `-B` at a directory with no `cc1` compiles the
+whole example against the host's compiler at exit 0 and 0 bytes of
+stderr, where `--sysroot` at least fails the `#include`.
 
 ### After
 
 ```text
 $ python3 -m tools.toolchain_params --check <sysroot>
--B<sysroot>/usr/libexec/gcc/x86_64-linux-gnu/13/
--B<sysroot>/usr/lib/x86_64-linux-gnu/
--B<sysroot>/usr/lib/gcc/x86_64-linux-gnu/13/
---sysroot=<sysroot>
+-B<sysroot>/usr/libexec/gcc/<triple>/13/  -B<sysroot>/usr/lib/<triple>/
+-B<sysroot>/usr/lib/gcc/<triple>/13/      --sysroot=<sysroot>
   exec-prefix  toolchain toolchain  <sysroot>/usr/libexec/.../13/cc1
   libgcc       toolchain toolchain  <sysroot>/usr/lib/gcc/.../13/libgcc.a
-  gcc-headers  toolchain toolchain  <sysroot>/usr/lib/gcc/.../13/include/stddef.h
-  start-files  sysroot   sysroot    <sysroot>/usr/lib/x86_64-linux-gnu/crt1.o
+  gcc-headers  toolchain toolchain  <sysroot>/usr/lib/gcc/.../include/stddef.h
+  start-files  sysroot   sysroot    <sysroot>/usr/lib/<triple>/crt1.o
   libstdc++    toolchain toolchain  <sysroot>/usr/lib/gcc/.../13/libstdc++.so
   c-headers    sysroot   sysroot    <sysroot>/usr/include/stdio.h
   cxx-headers  sysroot   mounted    /usr/include/c++/13/vector
-toolchain_params: cxx-headers answers /usr/include/c++/13/vector, which
-no parameter moves - the sandbox answers it from the tree (UX-930).
-exit 0
+toolchain_params: cxx-headers answers a path no parameter moves - the
+sandbox answers it from the tree (UX-930).     exit 0
 ```
 
 Two numbers came out of it. **`-B` is three directories, not one**:
 the libexec prefix alone leaves five of seven classes on the host, and
-adding the gcc libdir still leaves the start files. And **six classes
-of seven carry** — the C++ headers move under neither flag, so they
-are declared in `UNREADABLE_HERE` rather than excused silently.
+adding the gcc libdir still leaves the start files. And **six of seven
+carry** — the C++ headers move under neither flag, so they are
+declared in `UNREADABLE_HERE` rather than excused silently.
 
-### Mutations verified red and reverted (5)
+### Mutations verified red and reverted (7)
 
 | # | mutation | reddened |
 |---|---|---|
@@ -196,27 +187,34 @@ are declared in `UNREADABLE_HERE` rather than excused silently.
 | A3 | `flags_for` writes a `-B` for a prefix that is not there | `...NeverWrittenAtNothing`, 1 |
 | A4 | every `mounted` answer excused, not only the declared one | `...OnlyAClassNoParameter...`, 2 |
 | A5 | the header probe left canonicalizing | `...not_its_realpath`, 1 |
+| A6 | the `rmtree` between the fixture's clone attempts removed | `...CannotBuildTheWrongTree`, 1 |
+| A7 | the absent-driver diagnosis removed | `...names_it_instead_of_raising`, 1 |
 
-A guard of my own that did not discriminate: g++'s **first** include
-directory as the C++ header class. It reads gcc's internal directory
-whenever the C++ ones are absent, and they go absent without a word.
-Replaced by `-H` on a real `#include <vector>`.
+Two guards of my own that did not discriminate. g++'s **first**
+include directory as the C++ header class reads gcc's internal
+directory whenever the C++ ones are absent — replaced by `-H` on a
+real `#include <vector>`. And the fixture's clone: a cross-device
+`cp -al` **creates the destination and then fails per file**, so the
+`cp -a` retry copied into the leftover and nested the tree one level
+down, and every glob missed. Green wherever `/usr` and `tmp_path`
+share a filesystem, red on all four CI Pythons. `--basetemp=/dev/shm`
+forces it: 7 failed before, 19 pass after.
 
 One defect it found in its own instrument: a **relative** `dest` made
 relative `-B` flags whose answers sat outside the absolute tree and
 read as the host's — this row's failure shape, from the inside. Each
-prefix is found under either layout now, `/usr` or a closure's own
-`/nix/store/<hash>`: `UX-925`'s staged closure keeps the start files
-in **glibc's** path, not gcc's.
+prefix is found under either layout, `/usr` or a closure's own
+`/nix/store/<hash>`, since `UX-925`'s closure keeps the start files in
+**glibc's**. And the stager runs `--check` as a hard `exit 1`, so an
+absent driver names its own path rather than raising.
 
 ### Deviation from the Required Fix
 
-The shim is written by `--shim` and **not installed**. Installing it
-today shadows the driver with a shim pointing at the same tree: one
-more `execve` per compile (measured 16 to 17) for no change in what is
+The shim is written by `--shim` and **not installed**: it would cost
+one more `execve` per compile (16 to 17) for no change in what is
 compiled, re-dating every figure. It installs when the pin moves.
 
 ```text
-9210 passed, 175 skipped in 400.73s     make test
+9233 passed, 175 skipped in 415.42s     make test
 All checks passed!                      make lint
 ```

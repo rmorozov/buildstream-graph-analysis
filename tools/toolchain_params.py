@@ -294,6 +294,16 @@ def main(argv=None) -> int:
         sys.stdout.write(shim_text(os.path.join(root, "usr", "bin", args.shim),
                                    params))
         return 0
+    # The stager calls this as a hard gate, so a driver that is not
+    # there names itself rather than arriving as a traceback (UX-930).
+    absent = sorted({path for path in
+                     (driver_path(row, args.driver_root or args.dest)
+                      for row in CLASSES) if not os.path.exists(path)})
+    if absent:
+        print(f"toolchain_params: no driver at {', '.join(absent)} - "
+              "nothing to ask, so nothing is read back (UX-930).",
+              file=sys.stderr)
+        return 1
     measured = measure(args.dest, driver_root=args.driver_root)
     for flag in flags_for(params):
         print(flag)

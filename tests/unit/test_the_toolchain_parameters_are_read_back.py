@@ -367,6 +367,18 @@ class TestAPrefixIsNeverWrittenAtNothing:
         assert exit_code == 1
         assert "cc1" in capsys.readouterr().err
 
+    def test_a_check_with_no_driver_names_it_instead_of_raising(self,
+                                                                tmp_path,
+                                                                capsys):
+        """`stage_cpp_toolchain.sh` runs `--check` as a hard `exit 1`,
+        so its stderr is the diagnosis the staging operator reads."""
+        exit_code = tp.main([str(tmp_path), "--check"])
+
+        assert exit_code == 1
+        told = capsys.readouterr().err
+        assert str(tmp_path / "usr" / "bin" / "gcc") in told, told
+        assert "Traceback" not in told
+
     def test_and_flags_for_leaves_a_missing_prefix_out(self, tmp_path):
         flags = tp.flags_for(tp.parameters(str(tmp_path)))
 

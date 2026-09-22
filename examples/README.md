@@ -152,7 +152,7 @@ was weighed and declined in `UX-914`: every mirror those need is refused
 at CONNECT from the development container, and two of them would change
 the libc, so a component becomes a pin when its version is shown to
 decide a reading rather than all at once. Replacing the toolchain axis
-with a relocatable cross toolchain is `UX-922`.
+with a relocatable cross toolchain is `UX-925`.
 
 ```
 sudo apt-get install -y build-essential cmake

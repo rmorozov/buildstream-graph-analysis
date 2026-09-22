@@ -10,7 +10,7 @@ sysroot's own copy reports when run.
 The axes are independent. The **runtime** - glibc, the shell,
 coreutils, `make` - is what `style_for_make_version` reads (UX-874);
 the **toolchain** - gcc, binutils, cmake and the headers that travel
-with them - is what a cross toolchain would replace (UX-922). A pin on
+with them - is what a cross toolchain would replace (UX-925). A pin on
 one costs nothing on the other: `make` is pinned from
 `cache.nixos.org` (UX-915) while gcc stays this host's.
 

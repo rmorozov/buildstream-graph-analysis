@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-919 scenarios: **16 open**, 903 closed.
+919 scenarios: **15 open**, 904 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -27,7 +27,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | cli | 0 | 22 |
 | store | 1 | 17 |
 | docs | 1 | 146 |
-| guards | 7 | 243 |
+| guards | 6 | 243 |
 
 ## Open scenarios
 
@@ -50,8 +50,7 @@ task file, which is the only place it ever lived twice.
 | UX-917 | [the fold-depth guard has three unconfirmed CI excursions, spread over three weeks](UX-0917-the-fold-depth-guard-has-three-unconfirmed-excursions.md) | guards | Medium | the round whose push gate is blocked by a file nobody has named | 🔴 Not Started |
 | UX-920 | [two task files can share one backlog id, and no guard reads ids for uniqueness](UX-0920-two-task-files-can-share-one-id-and-nothing-reads-it.md) | guards | Medium | every round that runs more than one branch at a time, which is now the normal case | 🔴 Not Started |
 | UX-921 | [hidden findings keep live controls](UX-0921-hidden-findings-keep-live-controls.md) | viewer | Medium | R1, R4 and assistive-technology users reading a report with many findings | 🔴 Not Started |
-| UX-922 | [the toolchain axis is this host's gcc, because gcc's search paths are not relocatable](UX-0922-the-toolchain-axis-is-host-gcc-because-gcc-is-not-relocatable.md) | guards | Medium | every example, and the comparison class a `variant` dimension names | 🔴 Not Started |
-| UX-923 | [the round-dateline guard reads a merge date, not a work date](UX-0923-the-dateline-guard-reads-a-merge-date-not-a-work-date.md) | guards | Medium | every branch cut after a round is merged past midnight UTC | 🟡 In Progress |
+| UX-925 | [the toolchain axis is this host's gcc, because gcc's search paths are not relocatable](UX-0925-the-toolchain-axis-is-host-gcc-because-gcc-is-not-relocatable.md) | guards | Medium | every example, and the comparison class a `variant` dimension names | 🔴 Not Started |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

@@ -39,7 +39,7 @@ mkdir -p "$DEST"
 # recipe's own shell and `make` do - it is where `style_for_make_version`
 # reads (UX-874) and where the one pin below lives. The TOOLCHAIN decides
 # what the compiled program is; replacing it with a relocatable cross
-# toolchain is UX-922, and this split is what lets that happen without
+# toolchain is UX-925, and this split is what lets that happen without
 # touching the runtime. tools/sysroot_manifest.py declares which package
 # each name comes from and at what version, and verifies it below.
 # UX-915: `make` is in neither array - it is pinned, not taken from this

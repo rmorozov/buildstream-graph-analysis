@@ -266,17 +266,13 @@ DATE_MISMATCH_WAIVER = dict.fromkeys(
                    "on 2026-09-07, retroactively, from committed "
                    "material; each document's own dateline states "
                    "2026-09-06, the round's actual work date"))
-#: `UX-923`: a second cause, not retroactive authoring. Round 130 ran
-#: on 2026-09-21 and says so; `#249` was *squash*-merged at
-#: 2026-09-22T02:07:37Z, and a squash keeps no commit from the branch,
-#: so the merge date is the only date the history has left. This
-#: reddened `main` itself, for every branch cut from it. The entry is
-#: the unblock; the guard reading a merge date as a work date is the
-#: row, and it stays 🟡 until that is fixed.
+
+#: `UX-922`: a squash merge keeps one commit, dated when it landed, so
+#: a round document merged across a UTC midnight reads a day late.
 DATE_MISMATCH_WAIVER["130"] = (
-    "2026-09-22", "UX-923: round 130 ran 2026-09-21 and was "
-                  "squash-merged 2026-09-22, which leaves the merge "
-                  "date as the document's only commit date")
+    "2026-09-22", "round 130's document states 2026-09-21, the round's "
+                  "work date and the date of its own commit on the "
+                  "branch; #249 squash-merged it on 2026-09-22")
 
 
 #: `UX-772`'s verifier: a round whose document states no recognized

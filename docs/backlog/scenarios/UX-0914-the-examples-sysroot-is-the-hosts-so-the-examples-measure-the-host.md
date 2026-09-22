@@ -279,5 +279,5 @@ outside every `files/toolchain` tree, so no cache key moves. Clause 2
 was already answered by `UX-916`'s own capture, quoted in its Outcome —
 `switch-4-2.bst -> 'fd'` beside `switch-4-4.bst -> 'fifo'` in one run
 on a runner whose own `make` is 4.3. Clause 3 is therefore vacuous here
-and is the live cost of `UX-922`, which adds one thing to this row's
+and is the live cost of `UX-925`, which adds one thing to this row's
 axis B survey: the nix cache carries gcc 14.3.0 and 15.1.0.

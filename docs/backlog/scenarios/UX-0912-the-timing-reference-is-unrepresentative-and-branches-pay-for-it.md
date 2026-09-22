@@ -207,7 +207,16 @@ decides who pays; the floor decides whether anyone does.
 
 **Refresh the reference.** Take a CI run's own `ci-reference-candidate`
 artifact and adopt it, so the record is what the runner reads. Never
-`--record` locally. `UX-911`'s file is excluded from this: make that
+`--record` locally.
+
+`UX-924` blocks this, filed from the `UX-908` thread and confirmed by
+reading the code: `adopt()` takes `times = candidate.get("files")`,
+and `files` is `median_low` of that candidate's own samples, so a full
+flat window adopts the committed value back onto itself. The normal
+adopt route would bank the frozen medians rather than the run's
+readings, which is the opposite of a refresh. Land `UX-924` first, or
+bypass `adopt()`. (The structure is read here; that row's own 37-commit
+and 399-of-566 figures are its measurement, not re-taken.) `UX-911`'s file is excluded from this: make that
 scan cheap first, then record the result, or the refresh banks a 45x
 regression as normal.
 

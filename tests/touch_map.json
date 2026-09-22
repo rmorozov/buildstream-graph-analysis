@@ -9231,11 +9231,15 @@
   "tests/unit/test_the_sysroot_declares_both_axes.py",
   "tests/unit/test_the_version_switch_has_two_live_arms.py"
  ],
+ "tools/nix_toolchain.py": [
+  "tests/unit/test_the_toolchain_axis_is_pinned.py"
+ ],
  "tools/sysroot_manifest.py": [
   "tests/unit/test_the_sysroot_declares_both_axes.py",
   "tests/unit/test_the_toolchain_parameters_are_read_back.py"
  ],
  "tools/toolchain_params.py": [
+  "tests/unit/test_the_toolchain_axis_is_pinned.py",
   "tests/unit/test_the_toolchain_parameters_are_read_back.py"
  ]
 }

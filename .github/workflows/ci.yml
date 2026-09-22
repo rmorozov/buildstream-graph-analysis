@@ -553,6 +553,11 @@ jobs:
   # decision (UX-447). Every refusal inside it exits 0, and a rejected
   # push is a warning rather than a red: a bookkeeping job failing the
   # default branch buys nothing.
+  #
+  # `UX-934`: except a record its own guards reject. A push made with
+  # `GITHUB_TOKEN` starts no workflow, so the commit would land with no
+  # check at all; `dev_adopt_check.py` fails the job here, on the run
+  # that is checked, and nothing is pushed.
   tier-reference-adopt:
     runs-on: ubuntu-latest
     needs: test
@@ -585,6 +590,7 @@ jobs:
             "41898282+github-actions[bot]@users.noreply.github.com"
           git add tests/ci_reference.json
           git commit -m "CI: adopt the tier rows this run measured (UX-503)"
+          python tools/dev_adopt_check.py tests/ci_reference.json
           git push origin "HEAD:${{ github.ref }}" || \
             echo "::warning::the branch refused the update; the rows printed above need a hand"
 
@@ -595,8 +601,8 @@ jobs:
   # round adds a module. Only on `push` to the default branch, because
   # on a pull request the head is somebody's branch; `--adopt` adds
   # edges and removes none, so a run that could not reach a module - no
-  # browser, no `bst` - narrows nothing. Every refusal exits 0: a
-  # bookkeeping job failing the default branch buys nothing.
+  # browser, no `bst` - narrows nothing. Every refusal exits 0 but
+  # `UX-934`'s: a bookkeeping job failing the default branch buys nothing.
   #
   # `UX-662`: **after** `tier-reference-adopt`, never beside it. That job
   # adopts rows from a candidate `test (3.11)` measured with the map as
@@ -646,6 +652,7 @@ jobs:
             "41898282+github-actions[bot]@users.noreply.github.com"
           git add tests/touch_map.json tests/ci_reference.json
           git commit -m "CI: adopt the touching map this run measured, and retire the drift entries its readers own (UX-524, UX-662)"
+          python tools/dev_adopt_check.py tests/touch_map.json tests/ci_reference.json
           git push origin "HEAD:${{ github.ref }}" || \
             echo "::warning::the branch refused the update; re-run to retry"
 
@@ -654,7 +661,7 @@ jobs:
   # reference lacks, so every row the candidate holds that this ledger
   # does not already carry for that (file, run id) is added. Only on
   # `push` to the default branch, and every refusal exits 0, for the
-  # same reason as the two adopt jobs above.
+  # same reason as the two adopt jobs above - `UX-934`'s red included.
   flake-ledger-adopt:
     needs: test
     if: >-
@@ -693,6 +700,7 @@ jobs:
             "41898282+github-actions[bot]@users.noreply.github.com"
           git add tests/flake_ledger.json
           git commit -m "CI: append this run's excursions to the flake ledger (UX-691)"
+          python tools/dev_adopt_check.py tests/flake_ledger.json
           git push origin "HEAD:${{ github.ref }}" || \
             echo "::warning::the branch refused the update; re-run to retry"
 

@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-938 scenarios: **25 open**, 913 closed.
+940 scenarios: **26 open**, 914 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -27,7 +27,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | cli | 0 | 22 |
 | store | 1 | 17 |
 | docs | 1 | 146 |
-| guards | 16 | 262 |
+| guards | 17 | 264 |
 
 ## Open scenarios
 
@@ -53,13 +53,14 @@ task file, which is the only place it ever lived twice.
 | UX-928 | [the routing rule sends a prose diff to a protocol that opens on a served page](UX-0928-the-routing-rule-sends-a-prose-diff-to-a-protocol-that-opens-on-a-page.md) | guards | Medium | every diff that edits a skill, a hook or the spec without touching the report | 🔴 Not Started |
 | UX-929 | [population-sized guards reach three excursions in one run, and their records were frozen](UX-0929-two-population-sized-guards-reach-three-excursions-in-one-run.md) | guards | Medium | every branch whose push gate reads a suite `main` has already reddened | 🔴 Not Started |
 | UX-932 | [a sandboxed `--check --write` escapes into the tree it guards, so `make test` is not read-only](UX-0932-a-sandboxed-check-write-escapes-into-the-tree-it-guards.md) | guards | Medium | every session that reads a red as a finding, and every gate run taken as a reading of its own sha | 🔴 Not Started |
-| UX-934 | [the three adopt jobs push with a token that triggers no workflow, so a commit that reds `main` carries no CI](UX-0934-the-adopt-jobs-push-with-a-token-that-triggers-no-workflow.md) | guards | High | every branch that inherits a red `main` it cannot see and did not cause | 🔴 Not Started |
 | UX-935 | [a conflicted path is counted once per stage, so `--check --write` bakes a wrong number and calls the tree clean](UX-0935-a-conflicted-path-is-counted-once-per-stage.md) | guards | Medium | every catch-up merge, which is the step this repository runs before every landing | 🔴 Not Started |
 | UX-936 | [a heavy-fixture guard excurses three times on a record that is not too low, so the ledger is reading the runner](UX-0936-a-heavy-fixture-guard-excurses-on-a-record-that-is-not-too-low.md) | guards | Medium | every branch whose push gate reads a suite `main` has already reddened | 🔴 Not Started |
 | UX-937 | [the area vocabulary is derived by a regex that admits two of the tree's three top-level directories, so no row can declare `tests`](UX-0937-the-area-vocabulary-cannot-spell-tests.md) | guards | Low | every row whose change lives under `tests/`, and the area pages meant to say where work lands | 🔴 Not Started |
 | UX-938 | [an acceptance clause can name a reading that no environment in this project ever takes, and nothing says so until the round that owes it](UX-0938-an-acceptance-clause-can-name-a-reading-no-environment-takes.md) | guards | Medium | every clause that asks for a reading, and every round that reports one unpaid | 🔴 Not Started |
 | UX-940 | [the BuildStream behaviour claims are pinned to three versions and nothing says which were re-confirmed](UX-0940-the-versions-the-behaviour-claims-were-confirmed-on-are-three.md) | guards | Medium | whoever reads a BuildStream behaviour claim and has to decide whether it still holds | 🔴 Not Started |
 | UX-941 | [the one job that builds anything real produces a single number per run and records none of them, so no instrument in this repository can read its clock](UX-0941-the-only-job-that-builds-anything-is-a-population-of-one.md) | guards | Medium | every round asked what a change costs the example builds, and `UX-895`'s repeats rule | 🔴 Not Started |
+| UX-942 | [the touching selector misses a guard that reads a record through a tool's constant](UX-0942-the-selector-misses-a-guard-that-reads-a-record-through-a-tool.md) | guards | Medium | every session whose inner loop is `make test-touching` on a change to a committed record | 🔴 Not Started |
+| UX-943 | [the adopt jobs write to the default branch from a run whose whole suite failed](UX-0943-the-adopt-jobs-run-on-a-run-whose-suite-failed.md) | guards | Medium | every branch that inherits a record the default branch adopted from a run nothing vouched for | 🔴 Not Started |
 | UX-944 | [the sysroot fixture clones 910 MB to read nine files, so its cost has two modes 30x apart and the reference entry is the median of both](UX-0944-the-sysroot-fixture-clones-910mb-to-read-nine-files.md) | guards | Medium | every run of the `test` job, which pays the dear mode whenever the runner's `/usr` and its temporary directory are on different filesystems | 🔴 Not Started |
 
 **The narrative round headings below are retired at round 94**

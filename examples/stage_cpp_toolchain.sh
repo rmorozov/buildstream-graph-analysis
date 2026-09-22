@@ -33,16 +33,28 @@ mkdir -p "$DEST"
 # Real binaries this project's cmake/make elements invoke directly, plus
 # the gcc-internal helpers gcc itself execs (cc1/cc1plus/collect2 - found
 # via `gcc -print-prog-name=...`, not on $PATH).
-# UX-915: `make` is deliberately absent - it is pinned below, not
-# taken from this host.
-BINARIES=(
+#
+# UX-914: two axes, declared separately rather than one list, because
+# they are blocked on different questions. The RUNTIME decides what a
+# recipe's own shell and `make` do - it is where `style_for_make_version`
+# reads (UX-874) and where the one pin below lives. The TOOLCHAIN decides
+# what the compiled program is; replacing it with a relocatable cross
+# toolchain is UX-925, and this split is what lets that happen without
+# touching the runtime. tools/sysroot_manifest.py declares which package
+# each name comes from and at what version, and verifies it below.
+# UX-915: `make` is in neither array - it is pinned, not taken from this
+# host.
+RUNTIME_BINARIES=(
+  /usr/bin/env /usr/bin/sh /usr/bin/uname /usr/bin/sort /usr/bin/cat
+)
+TOOLCHAIN_BINARIES=(
   /usr/bin/gcc /usr/bin/g++ /usr/bin/cc /usr/bin/c++
   /usr/bin/cmake /usr/bin/ld /usr/bin/ld.bfd
   /usr/bin/as /usr/bin/ar /usr/bin/ranlib /usr/bin/nm /usr/bin/strip
-  /usr/bin/env /usr/bin/sh /usr/bin/uname /usr/bin/sort /usr/bin/cat
   $(gcc -print-prog-name=cc1) $(gcc -print-prog-name=cc1plus)
   $(gcc -print-prog-name=collect2)
 )
+BINARIES=( "${RUNTIME_BINARIES[@]}" "${TOOLCHAIN_BINARIES[@]}" )
 
 copy_file_only() {
   local src="$1"
@@ -293,6 +305,14 @@ if [ "${#MISSING[@]}" -gt 0 ]; then
   printf '  %s\n' "${MISSING[@]}" >&2
   exit 1
 fi
+
+# UX-914: what this sysroot actually is, per package and per axis, read
+# off the staged copies rather than off this host. A *pinned* row that
+# disagrees exits 1 (the pin did not take, same posture as the make check
+# above); a *host* row that disagrees only warns, because a different
+# working host is not a broken sysroot - it is a different program under
+# measurement, and the guard is what reddens for that.
+(cd "$HERE/.." && python3 -m tools.sysroot_manifest --check "$DEST")
 
 echo "Staged toolchain to $DEST ($(du -sh "$DEST" | cut -f1))"
 

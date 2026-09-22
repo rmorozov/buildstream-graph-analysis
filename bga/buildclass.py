@@ -145,6 +145,23 @@ def classify(baseline: Optional[dict], candidate: Optional[dict]) -> dict:
     }
 
 
+def same_class(one: Optional[dict], other: Optional[dict]) -> bool:
+    """Whether two runs belong to one population.
+
+    `UX-899` selects a band out of a store with this, where `classify`'s
+    three-way answer is not what a selection wants: `unknown` - one side
+    declaring and the other not - is a caveat on a comparison a user
+    asked for, and it is a *rejection* when the question is which runs
+    may be pooled. Two undeclared runs are one population, which is
+    every store that predates `UX-898`.
+    """
+    if not one and not other:
+        return True
+    if not one or not other:
+        return False
+    return not differing_fields(one, other)
+
+
 def _value_clause(field: str, baseline: Optional[dict],
                   candidate: Optional[dict]) -> str:
     """One `label: a vs b` clause, naming both values it saw."""

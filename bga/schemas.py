@@ -1450,7 +1450,8 @@ _COMPARE_REQUIRED = {
 # live id stops a document a consumer already wrote from validating.
 # The guarantee is the emitter's, held against the real payload by
 # `tests/unit/test_a_required_set_grew_under_an_unchanged_id.py`.
-_COMPARE_ALWAYS_WRITTEN = ("verdict_provenance", "build_class_comparison")
+_COMPARE_ALWAYS_WRITTEN = ("verdict_provenance", "build_class_comparison",
+                           "baseline_band_sources")
 
 # UX-221: `element_diff` has been emitted since UX-79 and declared by
 # nothing, so `UX-190`'s contract never covered it and `bga view` had no
@@ -1481,6 +1482,11 @@ _COMPARE_OPTIONAL = {
     # state `verdict_provenance` above is in and the same shape
     # `host_comparison` already has.
     "build_class_comparison": "object",
+    # `UX-899`: which runs the band was computed from. Written on every
+    # comparison and empty when no baseline set was supplied, so
+    # `_COMPARE_ALWAYS_WRITTEN` rather than required - the same third
+    # state the two keys above are in.
+    "baseline_band_sources": "array",
 }
 
 _BLAST_REQUIRED = {

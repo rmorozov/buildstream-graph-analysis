@@ -18,6 +18,18 @@ import pytest
 
 from tools import nix_closure, nix_store_fetch
 
+try:
+    import zstandard
+except ImportError:                      # pragma: no cover - the point
+    zstandard = None
+
+#: UX-933: every other environment-dependent file here skips on a
+#: missing prerequisite (UX-213's rule); this one imported `zstandard`
+#: and failed, so a correct tree without the extra read as a broken one.
+needs_zstandard = pytest.mark.skipif(
+    zstandard is None,
+    reason="zstandard is not installed - `pip install -e '.[dev]'`")
+
 ALPHABET = nix_closure.ALPHABET
 
 
@@ -103,8 +115,7 @@ def _zstd_compress(raw):
     """`zstandard` is a `[dev]`/`[nix]` dependency (UX-927): a closure
     off `cache.nixos.org` is `zstd` and stdlib `lzma` stages none of it,
     so a suite that could not compress one could not test the path
-    that matters."""
-    import zstandard
+    that matters. Reached only under `needs_zstandard`."""
     return zstandard.ZstdCompressor().compress(raw)
 
 
@@ -122,9 +133,10 @@ class TestNixBase32:
     def test_a_pins_hex_digest_is_its_narinfo_spelling(self, name):
         pin = nix_store_fetch.PINS["x86_64"]["paths"][name]
         # The `nar/<nix32>.nar.xz` URL carries the same digest the pin
-        # states as hex - UX-915 typed one and UX-927 reads the other.
+        # states as `file_sha256` - UX-915 typed one, UX-927 reads the
+        # other, and UX-931 demoted it from gate to warning.
         nix32 = pin["url"].rsplit("/", 1)[1].split(".", 1)[0]
-        assert nix_closure.nix32_decode(nix32).hex() == pin["sha256"]
+        assert nix_closure.nix32_decode(nix32).hex() == pin["file_sha256"]
 
     def test_the_encoder_in_this_file_inverts_the_decoder(self):
         raw = hashlib.sha256(b"UX-927").digest()
@@ -227,8 +239,17 @@ class TestTheDecompressorIsDeclared:
         with pytest.raises(SystemExit, match="brotli"):
             nix_closure.decompress("brotli", b"")
 
-    @pytest.mark.parametrize("compression", ("none", "xz", "zstd"))
-    def test_each_declared_compression_round_trips(self, compression, tmp_path):
+    @pytest.mark.parametrize("compression", ("none", "xz"))
+    def test_each_stdlib_compression_round_trips(self, compression, tmp_path):
+        self._round_trip(compression, tmp_path)
+
+    @needs_zstandard
+    def test_the_zstd_compression_round_trips(self, tmp_path):
+        """The one a compiler's closure is actually made of - all 15
+        paths of `gcc-14.3.0` (UX-927)."""
+        self._round_trip("zstd", tmp_path)
+
+    def _round_trip(self, compression, tmp_path):
         cache = _Cache(str(tmp_path / "cache"))
         digest = _digest(compression)
         cache.add(digest, compression, contents=b"UX-927" * 64,
@@ -237,11 +258,26 @@ class TestTheDecompressorIsDeclared:
         raw = nix_closure.fetch_nar(fields, str(tmp_path / "dl"), cache.base)
         assert raw.startswith(struct.pack("<Q", len("nix-archive-1")))
 
+    @needs_zstandard
     def test_the_zstd_backend_is_named(self):
         """`--check` prints it, so a staged tree says what read it -
         UX-914's rule, one layer down."""
         assert nix_closure.zstd_backend() in \
             [name for name, _ in nix_closure._zstd_backends()]
+
+    def test_the_dev_extras_are_actually_here(self):
+        """UX-933: skipping is right on a tree that never claimed the
+        extras, and wrong wherever it did. `BGA_EXPECT_DEV` is what
+        claims them, and CI sets it - the same canary `jsonschema` has
+        carried since UX-190, which `conftest.py` notes knew about
+        `jsonschema` only."""
+        if not os.environ.get("BGA_EXPECT_DEV"):
+            pytest.skip("not a dev environment by its own account "
+                        "(BGA_EXPECT_DEV is unset)")
+        assert zstandard is not None, (
+            "BGA_EXPECT_DEV is set, so this environment claims the dev "
+            "extras, but `zstandard` is missing and the `zstd` clauses "
+            "here just skipped. `pip install -e '.[dev]'`.")
 
 
 class TestTheStagedTreeIsCheckedAgainstItself:

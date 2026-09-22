@@ -1119,6 +1119,46 @@ class TestABaseExcursionIsReportedNotFailed:
         assert "no carry from the base branch's own runs reachable" in said
 
 
+    def test_a_base_carry_equal_to_this_runs_own_excuses_everything(
+            self, tmp_path, capsys):
+        """`UX-923`: the cost of restoring the default branch's carry
+        *on* the default branch, where the base key and the own key are
+        one series.
+
+        `based_rows` splits off every row the base's newest run names,
+        and on that branch the base's newest run is this branch's own -
+        so it splits off exactly the rows `repeated` would confirm. The
+        same run, same file, same reference, once with `--base-carry`
+        absent and once pointed at a copy of `--carry`: exit 1 and exit
+        0. The workflow's own condition is guarded in
+        `TestCiSuppliesTheMemoryTheRuleNeeds`.
+        """
+        reference = tmp_path / "ref.json"
+        reference.write_text(json.dumps(self._reference(2.4)),
+                             encoding="utf-8")
+        times = dict(tiers.recorded())
+        times[self.NAME] = 50.0
+        report = str(_report(tmp_path, times))
+        own = tmp_path / "own_carry.json"
+        drift.carry(own, {self.NAME: round(50.0 / 2.4, 2)},
+                    "github-actions", [], shift=1.0)
+        argv = [report, "--against", str(reference), "--carry", str(own)]
+        alone = drift.main(list(argv))
+        said = capsys.readouterr().err
+        assert alone == 1, (
+            f"the agreeing run did not confirm on its own, so this "
+            f"clause measures nothing: {said}")
+        base = tmp_path / "base_carry.json"
+        base.write_text(own.read_text(encoding="utf-8"), encoding="utf-8")
+        drift.carry(own, {self.NAME: round(50.0 / 2.4, 2)},
+                    "github-actions", [], shift=1.0)
+        with_base = drift.main(argv + ["--base-carry", str(base)])
+        said = capsys.readouterr().err
+        assert with_base == 0 and "the base's" in said, (
+            f"expected the self-equal base carry to excuse the row it "
+            f"just confirmed: exit {with_base}: {said}")
+
+
 class TestAgreementIsNotEvidenceOnItsOwn:
     """`UX-476`: what `UX-442`'s two-run rule was actually doing.
 
@@ -2021,6 +2061,155 @@ class TestCiSuppliesTheMemoryTheRuleNeeds:
                     f"{family!r}'s save step does not run under always(), "
                     f"so a red run's carry - the one worth remembering - "
                     f"is never saved")
+
+    def _carry_steps(self):
+        jobs = yaml.safe_load(self._text())["jobs"]
+        return [step for job in jobs.values() for step in job.get("steps") or []
+                if str(step.get("uses", "")).startswith("actions/cache")
+                and "-carry-" in str(step.get("with", {}).get("key", ""))]
+
+    def test_a_restore_asks_for_the_version_its_save_wrote(self):
+        """`UX-923`: the key is not what decides whether a restore hits.
+
+        `actions/cache` v6 sends `version:
+        sha256(paths|compression|salt)` beside the key
+        (`getCacheVersion`, `dist/restore/index.js`), built from the
+        `path` input *verbatim* on both sides - `saveCacheV2` hashes
+        `paths`, not the `cachePaths` it resolved. The service matches
+        both, so a restore whose `path` differs from its save's asks
+        for a version no save ever wrote and misses whatever its key
+        says. The base-carry step read `tier_carry_base.json` against
+        a save of `tier_carry.json`: version `a3a89e94..` against
+        `d1e90db5..`, which is the miss `UX-912` recorded as cache
+        scoping for four runs.
+
+        The clause above this one reads every carry step's `key`. That
+        is the field the log prints and the field a reader checks; the
+        `path` is the one that decides.
+        """
+        steps = self._carry_steps()
+        saved = {}
+        for step in steps:
+            if str(step["uses"]).startswith("actions/cache/save"):
+                saved.setdefault(step["with"]["key"].split("-carry-")[0],
+                                 set()).add(step["with"]["path"])
+        assert saved, "no cache/save step carries a *-carry- key"
+        for step in steps:
+            if str(step["uses"]).startswith("actions/cache/save"):
+                continue
+            family = step["with"]["key"].split("-carry-")[0]
+            assert step["with"]["path"] in saved.get(family, set()), (
+                f"{step['name']!r} restores path "
+                f"{step['with']['path']!r}, which no {family}-carry- save "
+                f"writes - the cache version is a hash of that path, so "
+                f"this restore cannot hit whatever its key matches "
+                f"(UX-923); saves write {sorted(saved.get(family, ()))}")
+
+    def test_the_base_carry_is_placed_by_a_step_that_can_place_it(self):
+        """`UX-923`: `extractTar` is `tar -xf <archive> -P -C
+        $GITHUB_WORKSPACE` with no member list, so a hit restores every
+        member to the path it was saved from and the restore's own
+        `path` input never places anything. Reproduced locally with the
+        action's own arguments: an archive whose one member is
+        `../_temp/tier_carry.json` extracts to `tier_carry.json` and
+        leaves no `tier_carry_base.json`.
+
+        So the file `--base-carry` reads has to be produced by a step
+        that can produce it, and the restore that feeds it has to run
+        before the branch's own restore of the same path - after it, a
+        hit overwrites the branch's own series with the base's.
+        """
+        text = self._text()
+        base = re.search(r'--base-carry "([^"]+)"', text).group(1)
+        steps = [step for job in yaml.safe_load(text)["jobs"].values()
+                 for step in job.get("steps") or []]
+        assert not [step for step in steps
+                    if str(step.get("uses", "")).startswith("actions/cache")
+                    and str(step.get("with", {}).get("path", "")) == base], (
+            f"a cache step names {base} as its path, which restores "
+            f"nothing there - the archive's members carry the path they "
+            f"were saved from (UX-923)")
+        # Not the gate step itself: `--base-carry <path>` names the path
+        # too, and reading the whole job let this clause pass a mutation
+        # that deleted the only step placing the file.
+        placing = [step for step in steps
+                   if base in str(step.get("run", ""))
+                   and "--base-carry" not in str(step.get("run", ""))]
+        assert placing, (
+            f"nothing in the job produces {base}, so --base-carry reads "
+            f"a file that is never written")
+
+    def test_the_base_carrys_arrival_is_said_below_the_gate(self):
+        """`UX-923`: and where a session can read it.
+
+        The restore's own `Cache hit`/`Cache not found` line is the only
+        witness today, and it is unreachable: the run archive answers
+        403 at CONNECT here, and the jobs API caps a log tail at 5,000
+        lines - which the gate step overruns by itself, so every step
+        above it is outside the window. That is how `UX-912` read this
+        restore wrong for four runs.
+
+        So the report has to sit *below* the gate, not beside the `mv`,
+        or it lands outside the window again - which is what this clause
+        pins, ordering included. `::notice::` as well, `UX-621`'s route
+        for the same reason.
+        """
+        text = self._text()
+        base = re.search(r'--base-carry "([^"]+)"', text).group(1)
+        steps = [step for job in yaml.safe_load(text)["jobs"].values()
+                 for step in job.get("steps") or []]
+        gate = [i for i, step in enumerate(steps)
+                if "dev_tier_drift.py" in str(step.get("run", ""))
+                and "--against" in str(step.get("run", ""))]
+        saying = [i for i, step in enumerate(steps)
+                  if base in str(step.get("run", ""))
+                  and "::notice::" in str(step.get("run", ""))]
+        assert gate and saying, (
+            "no step says whether the base carry arrived, so the only "
+            "witness is a log line no session can read (UX-923)")
+        assert min(saying) > min(gate), (
+            "the base carry's arrival is announced above the gate, "
+            "which is outside the 5,000-line window the jobs API "
+            "returns - unreadable, the same as not saying it (UX-923)")
+        for step in (steps[i] for i in saying):
+            assert "always()" in str(step.get("if", "")), (
+                f"{step['name']!r} does not run under always(), so a "
+                f"run the gate failed never says whether the carry it "
+                f"read arrived")
+        own = [i for i, step in enumerate(steps)
+               if "github.ref }}-${{ github.run_id" in
+               str(step.get("with", {}).get("key", ""))
+               and "tier-carry-" in str(step.get("with", {}).get("key", ""))]
+        cross = [i for i, step in enumerate(steps)
+                 if "tier-carry-refs/heads/" in
+                 str(step.get("with", {}).get("key", ""))]
+        assert own and cross and min(cross) < min(own), (
+            "the base-branch restore runs after the branch's own, so a "
+            "hit overwrites this branch's carry with the base's (UX-923)")
+
+    def test_the_default_branch_does_not_excuse_itself(self):
+        """`UX-923`: on the default branch the two keys are one series,
+        so the base carry a run restores is its own last carry - and
+        `based_rows` then splits off exactly the rows agreement would
+        have confirmed. Measured on one 50s-against-2.4s file with a
+        carry naming it: exit 1 with `--base-carry` absent, exit 0 with
+        it pointed at a copy of `--carry`. That is `UX-442`'s two-run
+        rule switched off on `main`, which is the branch whose readings
+        every other branch is excused against.
+
+        `TestABaseExcursionIsReportedNotFailed` holds the measurement;
+        this clause holds the condition that keeps it off `main`.
+        """
+        for step in self._carry_steps():
+            key = step["with"]["key"]
+            if "github.event.repository.default_branch" not in key:
+                continue
+            gate = str(step.get("if", ""))
+            assert "github.ref !=" in gate and "default_branch" in gate, (
+                f"{step['name']!r} restores the default branch's own "
+                f"carry on the default branch itself, where it excuses "
+                f"every row agreement would confirm (UX-923): if {gate!r}")
+
 
 class TestTheRecordStepDoesNotBuryTheFailure:
     """`UX-441`. `UX-427`'s step prints this run's timings so the

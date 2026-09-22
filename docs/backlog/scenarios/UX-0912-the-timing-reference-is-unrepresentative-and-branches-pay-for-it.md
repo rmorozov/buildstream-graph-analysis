@@ -166,31 +166,34 @@ two different refs — and `main` does run its save step. **A restore
 succeeds within a ref and fails across one**, which leaves cache
 scoping and rules out the key and a missing save.
 
-The remaining unknown is *why* the cross-ref read is refused, and it
-is not answerable from here: this repository's tooling can read job
-logs but not the cache registry, so nothing available says whether the
-entry is scoped, evicted or simply unreadable from a `refs/pull/N/merge`
-run. **This row does not guess past that.**
+**And the narrowing itself was wrong — retracted 2026-09-22 by
+`UX-923`.** In all four readings above the ref and the restore's
+`path` co-vary: both same-ref hits name the same `path` their save
+wrote, and the one cross-ref miss names a different one. `actions/cache`
+v6 sends `version: sha256(paths|method|salt)` beside the key, from the
+literal `path:` input on both sides, and the service matches both — so
+`tier_carry_base.json` asked for `a3a89e94..` where every save wrote
+`d1e90db5..`, and no key could have hit. The version is printed at
+`core.debug` only, which is why four runs read a key problem.
 
-What it does change is the fix's shape. If the base carry can only
-arrive by a cross-ref cache read, `UX-803` is inert on every pull
-request for reasons outside this repository. A carry that travels by a
-means the repository controls — committed beside the reference, or
-published as an artifact the PR job downloads — does not depend on the
-answer.
+**And scoping is not the defect either — measured 2026-09-22.**
+`UX-923` made the restore report itself below the gate; on run
+35686105692, `event=pull_request` on #255 and so `github.ref` =
+`refs/pull/255/merge`, the check run's annotation reads `tier carry:
+the default branch's carry restored`. A pull request run does read a
+`refs/heads/main` entry, so `UX-803` is not inert on pull requests and
+the carry needs no route the repository controls.
 
 ## Required Fix
 
 Two parts, in this order, because the second is worthless without the
 first.
 
-**Decide how the base carry travels.** The Motivation narrows the miss
-to cross-ref cache scoping and says why the last step is not
-answerable from here. The decision this row owes is therefore not
-"which of the three" but whether to keep depending on a cross-ref
-cache read at all, against publishing `main`'s carry as an artifact
-the pull-request job downloads. `UX-803`'s excusal is inert on every
-pull request until one of them holds.
+**Decide how the base carry travels — done in `UX-923`.** The
+decision this row framed as cache against artifact was answered by
+measuring instead: the cache was never the defect, the restore's
+`path` was. `UX-923` carries the fix, its guards and what it leaves
+open. Nothing here is owed on this part.
 
 It is the second gate, not the first. `over_gate` needs an absolute
 `seconds - expected >= CI_DRIFT_SECONDS` (5.0s), so a stale cell only
@@ -207,6 +210,15 @@ artifact and adopt it, so the record is what the runner reads. Never
 `--record` locally. `UX-911`'s file is excluded from this: make that
 scan cheap first, then record the result, or the refresh banks a 45x
 regression as normal.
+
+`UX-924` blocks this, filed from the `UX-908` thread and confirmed by
+reading the code: `adopt()` takes `times = candidate.get("files")`,
+and `files` is `median_low` of that candidate's own samples, so a full
+flat window adopts the committed value back onto itself. The normal
+adopt route would bank the frozen medians rather than the run's
+readings, which is the opposite of a refresh. Land `UX-924` first, or
+bypass `adopt()`. (The structure is read here; that row's own 37-commit
+and 399-of-566 figures are its measurement, not re-taken.)
 
 For each of the other three, the reading decides: a file whose cost
 grew for a reason (`test_a_drawing_is_graded.py` is already `UX-908`)

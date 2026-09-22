@@ -1,6 +1,6 @@
 # UX-924: the adopt route feeds the committed median back to itself, so a reference entry is write-once
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-496, UX-503, UX-803 | **Found by:** round 131 — `UX-908`'s re-record: 37 consecutive adopt commits on `main`, `6ad0d884`..`4145a45c`, carried a 2.1x-stale entry at 6.47 while the gate read the file at 13.3-14.5s | **Serves:** every branch charged for a cost `main` carries, and every round that re-records a cell by hand | **Topic:** guards | **Area:** tools | **Shape:** judgement
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-496, UX-503, UX-803 | **Found by:** round 131 — `UX-908`'s re-record: 37 consecutive adopt commits on `main`, `6ad0d884`..`4145a45c`, carried a 2.1x-stale entry at 6.47 while the gate read the file at 13.3-14.5s | **Serves:** every branch charged for a cost `main` carries, and every round that re-records a cell by hand | **Topic:** guards | **Area:** tools | **Shape:** judgement
 
 ## Motivation
 
@@ -104,3 +104,81 @@ say what the route does after the fix; `test_docs_links_and_commands.py`
 already reads two of the three.
 
 ## Outcome
+
+## Outcome (round 136, 2026-09-22) — 🟢 Done
+
+**Premise:** held. Run 35664785880's own candidate, read out of its
+`tier-reference` job log, replayed against `tests/ci_reference.json` as
+`5a10155e` held it.
+
+### The gap, measured
+
+```text
+$ python3 -c "...; d.adopt(ref, cand)"   # committed code, both real documents
+ref    files 6.47  samples [6.48, 6.47, 6.47, 6.47, 6.47]
+cand   files 6.28  samples [6.28, 6.28, 6.28, 6.28, 13.28]
+adopt  files 6.47  samples [6.47, 6.47, 6.47, 6.47, 6.47]
+538 of 561 entries hold a full window, 367 of those are flat
+```
+
+The run read the file at 13.28s and the document learned nothing: the
+value adopted is `median_low` of the candidate's own window, which is
+this document's own 6.47 rescaled and rescaled back.
+
+### After
+
+```text
+adopt  files 6.47  samples [6.47, 6.47, 6.47, 6.47, 13.67]
+adopt again (the same candidate, over both gates twice running)
+       files 13.67 samples [13.67]   adopted: yes      <- UX-803, first run
+431 of 571 windows take a value that is not the carried copy
+the 367 flat windows, same candidate replayed: the median moves at
+adoption 3 for 258, at 6 for 7, never for 102 (reading == committed)
+```
+
+`adopt` takes `readings_of(candidate)` — the newest sample, that run's
+own seconds — divided by the run's shift as every adopted row is.
+
+### Mutations verified red and reverted (3)
+
+| # | mutation | reddened |
+|---|---|---|
+| A1 | `times = candidate.get("files")`, the defect | 3 of 5 clauses |
+| A2 | `readings_of` takes `[0]`, the oldest sample | 2 of 5 |
+| A3 | `ratios` from the readings, not the medians | 1 of 5 |
+
+### Deviation from the Required Fix
+
+**The shift stays median-against-median.** On the real candidate the
+two estimators read **0.9712** (544 ratios) and **0.9713** (508), a
+0.01 % difference, and `IMAGE_BAND`'s refusal is calibrated on the
+first. Only the number entering `samples` changed.
+
+**The acceptance clause's 13.68 is 13.67 on the real document.**
+`adopt` recomputes the shift at full precision; 13.28/0.9712 = 13.67,
+where the clause divided by the 0.971 the candidate's own `spread`
+rounds to. The guard replays the run from the shift it reported and so
+lands the clause's 13.68 — 0.01s apart, and neither is wrong. The real
+candidate is not committed (222 KB for the pair): the guard
+reconstructs the run and pins the reconstruction to the two numbers its
+log carries, `TestTheFirstArmedRunIsTheRegressionSuite`'s shape.
+
+**The 399 frozen entries get no refresh.** A wholesale `--record`
+banks one sample again (`UX-496`'s finding), so the route now unfreezes
+them itself: three adopt commits on `main` for a median to move, two
+where both gates are cleared, five for a window of readings only —
+against 24 in the seven days to 2026-09-22 (`git log --format=%ad
+--date=short --grep="adopt the tier rows this run measured" | sort |
+uniq -c`: 4, 3, 0, 0, 3, 6, 8). Said in `ci_reference.json`'s note,
+`ci.yml`'s comment and the `verify` skill.
+
+**`design-review` was routed to and not run.** `dev_impact.py --route`
+sends this diff there for one paragraph in `.claude/skills/verify/`,
+and that skill's protocol opens on a served page this diff never
+touches. A reader pass ran instead and took two corrections off it;
+the seam is filed as `UX-928`.
+
+```text
+make lint   clean: 567 finding(s) match tests/quality_baseline.json
+make test   9191 passed, 180 skipped, 1 warning in 357.37s (0:05:57)
+```

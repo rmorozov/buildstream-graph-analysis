@@ -42,6 +42,12 @@ same ratio (x1.73) on a different file and concluded the gate "was
 right to" confirm; what it did not record is that nothing downstream
 of the gate can act on it.
 
+`UX-924`: the quotation was already stale the day it was written —
+`UX-496` landed the day before and gave every held entry a window — and
+the conclusion held anyway, because that window fed itself. `adopt` now
+leaves the run's own reading in it, so a real step moves the figure in
+three pushes to the default branch without a person editing it.
+
 ## Required Fix
 
 The entry refreshed from the run that measured it, with the reading and

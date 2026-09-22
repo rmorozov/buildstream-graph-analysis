@@ -1,6 +1,6 @@
 # UX-925: the examples' toolchain axis is this host's gcc because gcc's search paths are not relocatable, so a second `arch=` variant needs a second machine
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-914 | **Blocks:** — | **Found by:** `UX-914` — it took the runtime axis and recorded why the toolchain is a separate question | **Serves:** every example, and the comparison class a `variant` dimension names | **Topic:** guards | **Area:** tools | **Shape:** mechanical
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-914 | **Blocks:** — | **Found by:** `UX-914` — it took the runtime axis and recorded why the toolchain is a separate question | **Serves:** every example, and the comparison class a `variant` dimension names | **Topic:** guards | **Area:** tools | **Shape:** mechanical
 
 ## Motivation
 
@@ -237,4 +237,95 @@ recorded, because a different compiler is a different program.
 and after, which is the claim that the two axes really are
 independent.
 
-## Outcome
+## Outcome (round 137, 2026-09-22) — 🟢 Done
+
+**Premise:** falsified, in the title. gcc's search paths are compiled
+in, but that never required a second machine - it required a prefix
+this repository can *name*. Its own prediction held too: an unwrapped
+nix gcc keeps `include/c++` in its store prefix, so the C++ headers
+are **toolchain-owned**, reached with no flag at all.
+
+### The gap, measured
+
+```text
+$ python3 -m tools.sysroot_manifest <sysroot>          # before
+  gcc  host 13.3.0   binutils  host 2.42   cmake  host 3.28.3
+```
+
+Three declared host facts: every runner-image roll re-dates every
+figure, and a second `arch=` example had nowhere to come from.
+
+### After
+
+```text
+$ examples/stage_cpp_toolchain.sh                      # 37 store paths
+  gcc pinned 14.3.0  binutils pinned 2.44  cmake pinned 4.1.2
+  glibc-pinned pinned 2.40
+$ python3 -m tools.toolchain_params --check <sysroot>
+  exec-prefix toolchain toolchain  .../gcc-14.3.0/libexec/.../cc1
+  assembler   toolchain toolchain  .../binutils-2.44/bin/as
+  linker      toolchain toolchain  .../binutils-2.44/bin/ld
+  libgcc      toolchain toolchain  .../gcc-14.3.0/lib/gcc/.../libgcc.a
+  gcc-headers toolchain toolchain  .../gcc-14.3.0/lib/gcc/.../stddef.h
+  start-files sysroot   sysroot    .../glibc-2.40-224/lib/crt1.o
+  libstdc++   toolchain toolchain  .../gcc-14.3.0-lib/lib/libstdc++.so
+  c-headers   sysroot   sysroot    .../glibc-2.40-224-dev/.../stdio.h
+  cxx-headers toolchain toolchain  .../gcc-14.3.0/include/c++/14.3.0
+$ python3 -m tools.nix_closure --check <sysroot>       # 0 dangling refs
+```
+
+**`-B` is five directories, not `UX-930`'s three**: without
+`gcc-14.3.0-lib` the link cannot find `-lgcc_s`, and without binutils'
+`bin` the assembler answers the bare name `as` - which is why
+`assembler` and `linker` are classes at all, readable only once a pin
+puts them on a prefix. **Nine classes of nine** read from the half
+they declare, against seven on a host-staged tree; **37 store paths,
+420 MiB**, and the sysroot goes 272M -> 452M. The isolation reading,
+which no build succeeding can give: example 05's six cmake projects
+configured, compiled, linked, installed and the app **ran** inside a
+`chroot` of the staged tree alone - nothing of this host but `/proc` and `/dev/null`.
+
+### Mutations verified red and reverted (6)
+
+| # | mutation | reddened |
+|---|---|---|
+| A1 | a host `gcc` copied over the driver shim | `...StagedOverThePin`, 2 |
+| A2 | a host `cc1plus` over the pin's | `...StagedOverThePin`, 1 |
+| A3 | the binutils store path removed | `...StagedOverThePin`, 1 |
+| A4 | `ld.bfd` gone, so `-B` writes at nothing | `...FromTheClosure`, 2 |
+| A5 | the shim rooted at the staging tree, not `/` | `...TheSandbox`, 1 |
+| A6 | a host path back in `TOOLCHAIN_BINARIES` | `...PinIsDeclared`, 1 |
+
+Two of mine did not discriminate. The version probes **cannot** catch
+A1: a shim is a shell script whose `/nix/store` flags resolve only in
+the sandbox, so they ask the pin's own binary and a host driver over
+the shim answers every one correctly - `shim_divergences` reads the
+file instead, and the stager runs it. And the mutation fixture wrote
+*through* its hardlink clone into the real sysroot; `_replace` unlinks
+first. One defect next door: `sysroot_manifest.measure` probes in a
+scratch directory, so a **relative** `dest` made a relative argv
+resolving against it and all nineteen rows read `did not run`.
+
+### Deviation from the Required Fix
+
+Two, named rather than absorbed. **The examples are not captured
+here**: this container has neither `bst` nor `bwrap`, so "every figure
+re-derived" is owed and unpaid - the chroot build replaced it. **The
+produced binaries' loader moves**: the pin bakes its own
+`/nix/store/<glibc>/lib64/ld-linux-x86-64.so.2` into everything it
+links, so example output loads glibc 2.40 while the tree's `sh` and
+coreutils load the host-staged 2.39. Both are declared, the runtime
+rows byte-identical against a written-out copy, and the linked app
+needs at most `GLIBC_2.34`.
+
+## Verification Log
+
+The round-documents commit is committed with `BGA_SKIP_SELECTOR=1`.
+`test_a_documents_dateline_matches_its_own_first_commit` reads a
+document's first commit date, which is `None` until the document *is*
+committed, so a new `round-N.md` cannot be green before the commit
+that adds it. The selector is green on the commit after it, which is
+the one carrying the code. Rounds 136 and 137 are both new here:
+`UX-926`'s silence meant round 136 closed three rows in three threads
+and none wrote its document, and round 137 taking the highest number
+is what made the register demand it.

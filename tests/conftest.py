@@ -117,6 +117,16 @@ KNOWN_SKIP_REASONS = {
     # constant in that file so this census can read it without running.
     "no host toolchain to clone a sysroot off": (
         "a host with no gcc cannot answer where a file class came from", 0),
+    # `UX-925`: the pin's own mutations need something of this host
+    # to stage *over* the pin, and the closure to stage it into.
+    # All three read 0 here and on `ubuntu-latest`, which have a
+    # gcc and a staged tree; a runner with neither skips 3.
+    "the toolchain closure isn't staged": (
+        "the closure is fetched by the stager, not committed", 0),
+    "no host gcc to stage over the pin": (
+        "the shim mutation needs a second driver to put over it", 0),
+    "this host resolves no cc1plus to stage over the pin": (
+        "the helper mutation needs a host cc1plus to read back", 0),
     "trace_processor_shell is not installed": (
         "Perfetto's shell is an optional local tool, not a dependency", 16),
     # `UX-637`: the reachability clause refuses to answer from a

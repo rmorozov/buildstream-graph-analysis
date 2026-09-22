@@ -31,7 +31,7 @@ import subprocess
 import sys
 from typing import Optional
 
-from tools import sysroot_manifest
+from tools import nix_closure, nix_toolchain, sysroot_manifest
 
 TOOLCHAIN, SYSROOT, MOUNTED = "toolchain", "sysroot", "mounted"
 
@@ -45,6 +45,15 @@ TOOLCHAIN, SYSROOT, MOUNTED = "toolchain", "sysroot", "mounted"
 CLASSES = (
     {"name": "exec-prefix", "owner": TOOLCHAIN, "driver": "gcc",
      "ask": ("program", "cc1")},
+    # `as` and `ld` are the two the driver execs but does not carry.
+    # An unwrapped host driver resolves them through `PATH` at exec
+    # time, where `-print-prog-name` answers the bare name and reads
+    # nothing - so they become readable only once a `-B` names the
+    # pin's own `bin` (`UX-925`), which is `host_owner: None`.
+    {"name": "assembler", "owner": TOOLCHAIN, "host_owner": None,
+     "driver": "gcc", "ask": ("program", "as")},
+    {"name": "linker", "owner": TOOLCHAIN, "host_owner": None,
+     "driver": "gcc", "ask": ("program", "ld")},
     {"name": "libgcc", "owner": TOOLCHAIN, "driver": "gcc",
      "ask": ("file", "libgcc.a")},
     {"name": "gcc-headers", "owner": TOOLCHAIN, "driver": "gcc",
@@ -59,11 +68,13 @@ CLASSES = (
      "ask": ("file", "libstdc++.so")},
     {"name": "c-headers", "owner": SYSROOT, "driver": "gcc",
      "ask": ("header", "stdio.h")},
-    # `sysroot` is Ubuntu's answer, where libstdc++'s headers are
-    # their own package under `/usr/include`. A pinned gcc carries its
-    # own inside the store path, and `UX-925` flips this one word.
-    {"name": "cxx-headers", "owner": SYSROOT, "driver": "g++",
-     "ask": ("header", "vector")},
+    # The one class whose owner the *toolchain* decides rather than
+    # the parameters: Ubuntu packages libstdc++'s headers separately
+    # under `/usr/include`, and an unwrapped nix gcc carries them
+    # inside its own store prefix, where `argv[0]` relocation reaches
+    # them with no flag at all (measured 2026-09-22, both trees).
+    {"name": "cxx-headers", "owner": TOOLCHAIN, "host_owner": SYSROOT,
+     "driver": "g++", "ask": ("header", "vector")},
 )
 
 #: The directories the driver's own half lives in, relative to the
@@ -83,14 +94,36 @@ TOOLCHAIN_ROOTS = ("/usr/lib/gcc", "/usr/libexec/gcc")
 UNREADABLE_HERE = ("cxx-headers",)
 
 
+def is_pinned(dest: str) -> bool:
+    """Whether `dest` carries the pinned toolchain closure rather than
+    a host-staged compiler."""
+    return nix_toolchain.prefixes(dest) is not None
+
+
+def declared(dest: str, pinned=None) -> dict:
+    """`{class: owner}` for the classes this tree can be asked about.
+    Two rows read differently on the two toolchains and say so rather
+    than being excused: `host_owner` is what a host-staged driver
+    answers, and `None` there means the class is not readable at all
+    on that one - `-print-prog-name=as` answers the bare name."""
+    pinned = is_pinned(dest) if pinned is None else pinned
+    found = {}
+    for row in CLASSES:
+        owner = row["owner"] if pinned else row.get("host_owner", row["owner"])
+        if owner is not None:
+            found[row["name"]] = owner
+    return found
+
+
 def parameters(dest: str) -> dict:
     """The values a shim passes, derived from the staged tree rather
     than from this host. `--sysroot` is the tree's own root. `-B` is
-    **three** directories, not one: measured with the driver outside
-    the tree, the libexec prefix alone leaves `libgcc`, gcc's own
-    headers, `libstdc++` and the C++ headers answering from the host,
-    and adding the gcc libdir still leaves the start files. Each is
-    read off a file only that directory has, so a tree with a
+    **three** directories on a host-staged tree and **five** on the
+    pinned closure (`nix_toolchain.PREFIXES`): measured with the driver
+    outside the tree, the libexec prefix alone leaves `libgcc`, gcc's
+    own headers, `libstdc++` and the C++ headers answering from the
+    host, and adding the gcc libdir still leaves the start files. Each
+    is read off a file only that directory has, so a tree with a
     different triple or gcc major is read rather than assumed.
 
     `dest` is made absolute first: a relative one produces relative
@@ -98,6 +131,13 @@ def parameters(dest: str) -> dict:
     tree and read as the host's - this row's own failure shape, from
     the inside."""
     dest = os.path.abspath(dest)
+    pinned = nix_toolchain.prefixes(dest)
+    if pinned is not None:
+        # `gcc-14.3.0-lib` is on no default search path, so the
+        # binaries the pin links carry it as a RUNPATH - the one thing
+        # `-B` cannot do, since it moves the link and not the load.
+        return {"prefixes": pinned, "sysroot": dest, "root": dest,
+                "rpath": pinned["gcc-lib"]}
     # Each prefix is found by a file only its directory has, under
     # either layout: this host's `/usr` tree, or a pinned closure's
     # own `/nix/store/<hash>` (`UX-925`). The start files are the
@@ -117,17 +157,45 @@ def parameters(dest: str) -> dict:
     # it: `helper_path` already locates a staged helper by name.
     cc1 = sysroot_manifest.helper_path(dest, "cc1")
     prefixes["cc1"] = None if cc1 is None else os.path.dirname(cc1) + os.sep
-    return {"prefixes": prefixes, "sysroot": os.path.abspath(dest)}
+    return {"prefixes": prefixes, "sysroot": dest, "root": dest}
+
+
+def reroot(params: dict, root: str) -> dict:
+    """The same parameters read from `root`. The shim runs inside the
+    sandbox, where the staged tree *is* the filesystem root, so the
+    flags it bakes name `/nix/store/...` while the same check on the
+    staging host names `<dest>/nix/store/...` - one derivation, two
+    renderings, rather than a second table."""
+    old = params["root"]
+
+    def moved(path):
+        if path is None:
+            return None
+        tail = path if old == os.sep else path[len(old):]
+        return (os.path.join(root, tail.strip(os.sep))
+                + (os.sep if path.endswith(os.sep) else ""))
+
+    found = dict(params, root=root, sysroot=moved(params["sysroot"]) or root,
+                 prefixes={name: moved(path)
+                           for name, path in params["prefixes"].items()})
+    rpath = params.get("rpath")
+    if rpath:
+        found["rpath"] = moved(rpath) or rpath
+    return found
 
 
 def flags_for(params: dict) -> list:
-    """`-B` per found prefix, then `--sysroot`. A prefix that is not in
-    the tree is left out rather than passed empty - `-B` at a directory
-    with no `cc1` is the silent fallback this row exists for, so it is
-    never written by this code."""
-    return ([f"-B{path}" for _name, path in sorted(params["prefixes"].items())
+    """`-B` per found prefix, then `--sysroot`, then the RUNPATH the
+    pin needs. A prefix that is not in the tree is left out rather
+    than passed empty - `-B` at a directory with no `cc1` is the
+    silent fallback this row exists for, so it is never written by
+    this code."""
+    flags = [f"-B{path}" for _name, path in sorted(params["prefixes"].items())
              if path is not None]
-            + ["--sysroot=" + params["sysroot"]])
+    flags.append("--sysroot=" + params["sysroot"])
+    if params.get("rpath"):
+        flags.append("-Wl,-rpath," + params["rpath"].rstrip(os.sep))
+    return flags
 
 
 def _header_path(argv: list, language: str, name: str) -> Optional[str]:
@@ -149,11 +217,26 @@ def _header_path(argv: list, language: str, name: str) -> Optional[str]:
 
 
 def driver_path(row: dict, driver_root: str) -> str:
-    """The driver to ask. `driver_root` is where the toolchain's own
-    `bin` lives - the staged tree today, the pin's own store path when
-    `UX-925` lands, and `/` for the guard that exercises the shim's
-    case: a driver outside the tree, pulled into it by `-B` alone."""
-    return os.path.join(driver_root, "usr", "bin", row["driver"])
+    """The driver to ask: the pin's own binary when one is staged
+    under `driver_root`, else that tree's `/usr/bin`. `driver_root` is
+    the staged tree, or `/` for the guard that exercises the shim's
+    case - a driver outside the tree, pulled into it by `-B` alone.
+
+    The pin is asked directly rather than through the shim at
+    `/usr/bin/gcc`: the shim bakes the flags the *sandbox* reads, and
+    on the staging host its `/nix/store` paths resolve to nothing."""
+    pinned = nix_toolchain.driver_path(driver_root, row["driver"])
+    return pinned or os.path.join(driver_root, "usr", "bin", row["driver"])
+
+
+def driver_argv(row: dict, driver_root: str) -> list:
+    """How to run that driver from here. A pinned one goes through the
+    staged loader (`nix_toolchain.run_prefix`), a host-staged one
+    directly."""
+    pinned = nix_toolchain.driver_path(driver_root, row["driver"])
+    if pinned is None:
+        return [os.path.join(driver_root, "usr", "bin", row["driver"])]
+    return nix_toolchain.run_prefix(driver_root) + [pinned]
 
 
 def resolve(dest: str, row: dict, flags: Optional[list] = None,
@@ -167,7 +250,7 @@ def resolve(dest: str, row: dict, flags: Optional[list] = None,
     if flags is None:
         flags = flags_for(parameters(dest))
     root = dest if driver_root is None else driver_root
-    argv = [driver_path(row, root)] + flags
+    argv = driver_argv(row, root) + flags + nix_toolchain.probe_flags(root)
     if kind == "header":
         return _header_path(argv, "c++" if row["driver"] == "g++" else "c", what)
     flag = "-print-prog-name=" if kind == "program" else "-print-file-name="
@@ -201,8 +284,26 @@ def owner_of(dest: str, path: Optional[str]) -> Optional[str]:
         inside = path[len(root):] or os.sep
     else:
         return MOUNTED if os.path.exists(root + path) else None
+    if inside.startswith(nix_closure.STORE + os.sep):
+        return _store_owner(dest, inside)
     return (TOOLCHAIN if any(inside.startswith(part + os.sep) or inside == part
                              for part in TOOLCHAIN_ROOTS) else SYSROOT)
+
+
+def _store_owner(dest: str, inside: str) -> str:
+    """Which half a staged `/nix/store` path belongs to. Both halves
+    sit under one store once the toolchain is pinned, so the seam is
+    read off the target half's own marks - glibc's loader and its C
+    headers (`nix_toolchain.target_store_paths`) - rather than off the
+    store path's name. Everything else the closure stages is the
+    compiler's."""
+    absolute = os.path.abspath(dest).rstrip(os.sep) + inside
+    if os.path.abspath(dest) == os.sep:
+        absolute = inside
+    for target in nix_toolchain.target_store_paths(dest):
+        if absolute == target or absolute.startswith(target + os.sep):
+            return SYSROOT
+    return TOOLCHAIN
 
 
 def mounted_owner(dest: str, path: str) -> Optional[str]:
@@ -214,8 +315,11 @@ def measure(dest: str, flags: Optional[list] = None,
             driver_root: Optional[str] = None) -> dict:
     """`{class: (path, owner)}` for every row."""
     dest = os.path.abspath(dest)
+    asked = declared(dest)
     measured = {}
     for row in CLASSES:
+        if row["name"] not in asked:
+            continue
         path = resolve(dest, row, flags, driver_root)
         measured[row["name"]] = (path, owner_of(dest, path))
     return measured
@@ -228,14 +332,16 @@ def divergences(dest: str, measured: Optional[dict] = None) -> list:
     instead, as a warning."""
     measured = measure(dest) if measured is None else measured
     found = []
-    for row in CLASSES:
-        path, owner = measured[row["name"]]
-        if owner == row["owner"]:
+    for name, declared_owner in declared(dest).items():
+        if name not in measured:
             continue
-        if (owner == MOUNTED and row["name"] in UNREADABLE_HERE
-                and mounted_owner(dest, path) == row["owner"]):
+        path, owner = measured[name]
+        if owner == declared_owner:
             continue
-        found.append((row["name"], row["owner"], path, owner))
+        if (owner == MOUNTED and name in UNREADABLE_HERE
+                and mounted_owner(dest, path) == declared_owner):
+            continue
+        found.append((name, declared_owner, path, owner))
     return found
 
 
@@ -245,10 +351,11 @@ def unreadable_here(dest: str, measured: Optional[dict] = None) -> list:
     the host's own copy of what the sandbox mounts from the tree."""
     dest = os.path.abspath(dest)
     measured = measure(dest) if measured is None else measured
-    return [(row["name"], measured[row["name"]][0]) for row in CLASSES
-            if measured[row["name"]][1] == MOUNTED
-            and row["name"] in UNREADABLE_HERE
-            and mounted_owner(dest, measured[row["name"]][0]) == row["owner"]]
+    asked = declared(dest)
+    return [(name, measured[name][0]) for name in asked
+            if name in measured and measured[name][1] == MOUNTED
+            and name in UNREADABLE_HERE
+            and mounted_owner(dest, measured[name][0]) == asked[name]]
 
 
 def shim_text(driver: str, params: dict) -> str:
@@ -280,6 +387,9 @@ def main(argv=None) -> int:
     parser.add_argument("--driver-root", default=None,
                         help="where the toolchain's own bin lives, when it is "
                              "not the staged tree (default: the staged tree)")
+    parser.add_argument("--shim-root", default=os.sep,
+                        help="the root the shim's own flags name (default: /, "
+                             "the sandbox, where the staged tree is the root)")
     args = parser.parse_args(argv)
     params = parameters(args.dest)
     if args.shim:
@@ -290,27 +400,31 @@ def main(argv=None) -> int:
                   "- a shim written now would carry a -B short of the tree, "
                   "which is the silent case (UX-930).", file=sys.stderr)
             return 1
-        root = args.driver_root or args.dest
-        sys.stdout.write(shim_text(os.path.join(root, "usr", "bin", args.shim),
-                                   params))
+        shim = reroot(params, args.shim_root)
+        driver = (nix_toolchain.driver_target(args.shim_root, args.shim)
+                  or os.path.join(args.shim_root, "usr", "bin", args.shim))
+        sys.stdout.write(shim_text(driver, shim))
         return 0
     # The stager calls this as a hard gate, so a driver that is not
     # there names itself rather than arriving as a traceback (UX-930).
+    asked = declared(args.dest)
     absent = sorted({path for path in
                      (driver_path(row, args.driver_root or args.dest)
-                      for row in CLASSES) if not os.path.exists(path)})
+                      for row in CLASSES if row["name"] in asked)
+                     if not os.path.exists(path)})
     if absent:
         print(f"toolchain_params: no driver at {', '.join(absent)} - "
               "nothing to ask, so nothing is read back (UX-930).",
               file=sys.stderr)
         return 1
     measured = measure(args.dest, driver_root=args.driver_root)
+    print("toolchain\t" + ("pinned" if is_pinned(args.dest) else "host"))
     for flag in flags_for(params):
         print(flag)
-    for row in CLASSES:
-        path, owner = measured[row["name"]]
+    for name, declared_owner in asked.items():
+        path, owner = measured[name]
         state = "not found" if path is None else f"{owner or 'HOST'}  {path}"
-        print(f"  {row['name']:<12} {row['owner']:<9} {state}")
+        print(f"  {name:<12} {declared_owner:<9} {state}")
     if not args.check:
         return 0
     for name, path in unreadable_here(args.dest, measured):
@@ -319,11 +433,11 @@ def main(argv=None) -> int:
               f"from the staged tree at the same path (UX-930).",
               file=sys.stderr)
     found = divergences(args.dest, measured)
-    for name, declared, path, owner in found:
+    for name, half, path, owner in found:
         where = ("with nothing - no such name anywhere the parameters reach"
                  if path is None
                  else f"from {owner or 'this host'}, at {path}")
-        print(f"toolchain_params: {name} declares {declared} and answers "
+        print(f"toolchain_params: {name} declares {half} and answers "
               f"{where}. Neither flag says so on its own (UX-930).",
               file=sys.stderr)
     return 1 if found else 0

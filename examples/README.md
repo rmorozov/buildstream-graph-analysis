@@ -105,38 +105,70 @@ that.
 **Needs a real toolchain staged into the sandbox** (BuildStream's sandbox
 binds in nothing from the host, and a real C/C++ build needs a real
 gcc/g++/cmake/make/binutils sysroot, not just a shell) - see
-`../stage_cpp_toolchain.sh`, which stages one from *this host's own*
-installed packages (no docker/debootstrap/network pull needed - see that
-script's own header for the real trial-and-error this took to get
-working: symlink chains through `/etc/alternatives`, this host's usrmerge
-layout, GNU ld linker scripts with embedded `AS_NEEDED` paths, and
-liblto_plugin.so's two real install locations all had to be handled).
+`../stage_cpp_toolchain.sh`.
 
-`make` is the one exception, pinned rather than copied (`UX-915`): its
-version decides every example's jobserver auth style, so a sysroot
-carrying whatever the staging host installed would let the host decide
-what the examples measure. `tools/nix_store_fetch.py` holds the store
-path, its checksum, and the one download the staging needs.
-
-The rest is this host's, but it is no longer *silently* this host's
-(`UX-914`). The sysroot is two independent axes - a **runtime** (glibc,
+The sysroot is two independent axes (`UX-914`) - a **runtime** (glibc,
 the shell, coreutils, `make`) and a **toolchain** (gcc, binutils, cmake
 and the headers that travel with them) - and `tools/sysroot_manifest.py`
 declares, per package, which axis it is on, whether it is pinned or
-host-staged, and what version this repository says it is. Staging prints
-that table and checks it against the staged copies:
+host-staged, and what version this repository says it is.
+
+The **toolchain axis is entirely pinned** (`UX-925`): gcc, binutils and
+cmake are fetched from `cache.nixos.org` as one 37-path closure and
+staged at their own `/nix/store/<hash>` prefixes, content-addresses
+intact. Nothing is relocated, because a nix gcc is no more relocatable
+than Ubuntu's - the *invocation* moves instead, through five `-B`
+prefixes and a `--sysroot` baked into a PATH shim at `/usr/bin/gcc`
+(`UX-930` wrote the shim, `tools/nix_toolchain.py` carries the pins).
+
+On the **runtime axis** `make` is pinned too (`UX-915`): its version
+decides every example's jobserver auth style. glibc, the shell and
+coreutils are still this host's, copied in at their own absolute paths -
+see the stager's header for the trial-and-error that took (symlink
+chains through `/etc/alternatives`, this host's usrmerge layout, GNU ld
+linker scripts with embedded `AS_NEEDED` paths).
+
+Staging prints that table and checks it against the staged copies:
 
 ```text
 runtime:
-  glibc      host    2.39  (1 probed, 0 staged)
-  coreutils  host    9.4  (4 probed, 4 staged)
-  dash       host    dash answers no --version, so the sysroot cannot state it  (0 probed, 1 staged)
-  make-4.2   pinned  4.2.1  (1 probed, 1 staged)
-  make-4.4   pinned  4.4.1  (2 probed, 2 staged)
+  glibc      host    2.39  (1 probed of 1 declared)
+  coreutils  host    9.4  (4 probed of 4 declared)
+  dash       host    dash answers no --version, so the sysroot cannot state it  (0 probed of 1 declared)
+  make-4.2   pinned  4.2.1  (1 probed of 1 declared)
+  make-4.4   pinned  4.4.1  (2 probed of 2 declared)
 toolchain:
-  gcc        host    13.3.0  (4 probed, 4 staged)
-  binutils   host    2.42  (7 probed, 7 staged)
-  cmake      host    3.28.3  (1 probed, 1 staged)
+  binutils   pinned  2.44  (7 probed of 7 declared)
+  cmake      pinned  4.1.2  (1 probed of 1 declared)
+  gcc        pinned  14.3.0  (7 probed of 7 declared)
+  glibc-pinned pinned  2.40  (1 probed of 1 declared)
+```
+
+Two glibcs, and both are declared. The host-staged 2.39 loads the
+tree's own `sh` and coreutils; the closure's 2.40 loads the pinned
+compiler **and everything the pinned compiler links**, because an
+unwrapped nix gcc bakes its own `ld-linux-x86-64.so.2` into every
+binary it produces. That is why the pin brings the C headers and the
+start files with it, and why staging the host's `/usr/include` beside
+them was removed rather than left: a build that found both would link
+and mean nothing.
+
+`tools/toolchain_params.py --check` then reads back, per file class,
+which half really answered - the parameters are silent when they are
+wrong, and `-B` at a directory with no `cc1` falls back to the
+compiled-in prefix at exit 0:
+
+```text
+toolchain	pinned
+  exec-prefix  toolchain toolchain  .../gcc-14.3.0/libexec/gcc/<triple>/14.3.0/cc1
+  assembler    toolchain toolchain  .../binutils-2.44/bin/as
+  linker       toolchain toolchain  .../binutils-2.44/bin/ld
+  libgcc       toolchain toolchain  .../gcc-14.3.0/lib/gcc/<triple>/14.3.0/libgcc.a
+  gcc-headers  toolchain toolchain  .../gcc-14.3.0/lib/gcc/<triple>/14.3.0/include/stddef.h
+  start-files  sysroot   sysroot    .../glibc-2.40-224/lib/crt1.o
+  libstdc++    toolchain toolchain  .../gcc-14.3.0-lib/lib/libstdc++.so
+  c-headers    sysroot   sysroot    .../glibc-2.40-224-dev/include/stdio.h
+  cxx-headers  toolchain toolchain  .../gcc-14.3.0/include/c++/14.3.0/vector
 ```
 
 A **pinned** row that disagrees fails the staging - the pin did not
@@ -151,8 +183,9 @@ Adopting a whole pinned base instead (Debian, Alpine, freedesktop-sdk)
 was weighed and declined in `UX-914`: every mirror those need is refused
 at CONNECT from the development container, and two of them would change
 the libc, so a component becomes a pin when its version is shown to
-decide a reading rather than all at once. Replacing the toolchain axis
-with a relocatable cross toolchain is `UX-925`.
+decide a reading rather than all at once - which is what `UX-925` then
+did for the whole toolchain axis at once, since a compiler's closure
+arrives as one unit.
 
 ```
 sudo apt-get install -y build-essential cmake

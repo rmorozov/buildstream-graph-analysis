@@ -14,7 +14,7 @@ import subprocess
 
 import pytest
 
-from tools import nix_store_fetch
+from tools import nix_store_fetch, nix_toolchain
 
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 SYSROOT = os.path.join(REPO, "examples", "05-cmake-cpp-toolchain", "files", "toolchain")
@@ -103,8 +103,15 @@ class TestTheStagedMake:
         assert target.endswith(pin["store_path"] + "/bin/make"), target
 
     def _version_of(self, group, binary):
+        """Through the staged loader, told where this tree keeps the
+        closure. `UX-925` stages the pinned glibc for real at the path
+        `stage_interpreter_link` used to symlink, so the loader here is
+        the pin's own and its RUNPATH is an absolute `/nix/store` that
+        resolves only once the sandbox mounts the tree at `/`."""
         loader = os.path.join(SYSROOT + group["interpreter_dir"], group["loader"])
-        result = subprocess.run([loader, binary, "--version"],
+        result = subprocess.run([loader, "--library-path",
+                                 nix_toolchain.library_path(SYSROOT),
+                                 binary, "--version"],
                                 capture_output=True, text=True, timeout=30)
         assert result.returncode == 0, result.stderr
         return result.stdout.splitlines()[0]

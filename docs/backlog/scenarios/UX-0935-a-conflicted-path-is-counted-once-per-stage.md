@@ -43,9 +43,39 @@ $ git ls-files docs/backlog/scenarios | wc -l      # after `git add`
 
 `0 problem(s) over 10 propert(y/ies)` was printed over a number that is
 wrong by exactly twice the conflict count, and the merge commit carried
-it. The derived-count discipline (`UX-501`, `UX-688`) exists so nobody
+it. **What clears the inflation is `git add`, not the text
+edit**, measured on the same replay:
+
+```text
+$ git ls-files docs/backlog/scenarios | wc -l   # conflicted
+932
+$ git checkout --ours <the three>; git ls-files docs/backlog/scenarios | wc -l
+932
+$ git add <the three>;             git ls-files docs/backlog/scenarios | wc -l
+930                                             # MERGE_HEAD still present
+```
+
+So the protecting habit is not "re-derive after the merge" — it is
+re-derive once the resolution is **staged**, with `git status --short`
+showing no `UU`; a merge commit implies that and is the simplest form
+of it. `#263`'s thread ran its derive after committing its merge and
+read 930 against 930 on the same base, which is the control.
+ The derived-count discipline (`UX-501`, `UX-688`) exists so nobody
 types these figures; a derivation that reads a conflicted index derives
 a figure nobody typed and nobody can check either.
+
+Three of this afternoon's four findings are one shape, and it is a
+shape the fixing guide already names: **the wrong artifact or
+population** (§5's proxy rule, `UX-359`'s row). The quantity read is
+right; the tree it is read from is not the tree the name claims.
+`UX-930`'s fixture cloned one level under its own basename, `UX-932`'s
+guard writes the live tree from a tmp copy, and this row derives from
+an index mid-merge. `UX-934` is the odd one out and worth keeping
+separate: there the record is fine and **no instrument reads it at
+all**. The family is worth stating because the proxy rule is written
+about measurements, and all three of these read a *tree* — the same
+question ("what is actually being read?") asked of an input nobody
+thinks of as an instrument's input.
 
 The repository merges the base branch into a branch before every
 landing — that is the trial-merge step round 135 adopted — so this is

@@ -236,9 +236,10 @@ will read it instead of the code:
   that file (§3.6); `git grep <old figure> docs/backlog/scenarios`.
 - **Last, run the `self-review` skill on the diff** (`UX-701`). It
   routes first — a diff reaching a contract, the spec, a hook or a
-  skill goes to `design-review` as well — then reads `REVIEW.md`'s
-  four passes against what you wrote. The session's own model reading
-  its own diff is what that replaces.
+  skill goes to `design-review` as well if it touches the page, and
+  to `review`'s routed-diff section if it does not (`UX-928`) — then
+  reads `REVIEW.md`'s four passes against what you wrote. The
+  session's own model reading its own diff is what that replaces.
 
 ## 7. When the gate is not on this machine
 

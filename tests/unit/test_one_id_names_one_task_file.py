@@ -53,7 +53,7 @@ class TestOneIdNamesOneTaskFile:
     def test_a_heading_that_names_another_id_fails_naming_both(
             self, tmp_path):
         scenarios = _copy(tmp_path)
-        stray = scenarios / "UX-0999-a-row-filed-under-a-taken-id.md"
+        stray = scenarios / "UX-9999-a-row-filed-under-a-taken-id.md"
         stray.write_text("# UX-917: a row filed under a taken id\n",
                          encoding="utf-8")
         found = checks.id_problems(scenarios, REPO)

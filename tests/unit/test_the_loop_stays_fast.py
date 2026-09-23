@@ -568,7 +568,7 @@ class TestTheCloseHelperRefusesTheJudgementParts:
 
         scenarios = tmp_path / "scenarios"
         shutil.copytree(REPO / "docs/backlog/scenarios", scenarios)
-        uid, slug = "UX-999", "UX-0999-a-row-this-guard-wrote"
+        uid, slug = "UX-9999", "UX-9999-a-row-this-guard-wrote"
         (scenarios / f"{slug}.md").write_text(
             f"# {uid}: a row this guard wrote\n\n"
             f"**Priority:** Low | **Status:** \U0001f534 Not Started | "

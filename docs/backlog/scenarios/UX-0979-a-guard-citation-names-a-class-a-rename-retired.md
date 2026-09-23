@@ -1,6 +1,6 @@
 # UX-979: §7a cites a guard class a rename retired, and no guard resolves the part after `::`
 
-**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** UX-744, UX-749 | **Blocks:** — | **Found by:** architecture review 26 (2026-09-23) — the fixing guide's round-closing step 5 names `TestEveryRoundDocumentPricesItsAgents`, which `UX-744` renamed | **Serves:** a session closing a round from §7a, which is sent to the guard by name | **Topic:** guards | **Area:** unassigned | **Shape:** mechanical
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-744, UX-749 | **Blocks:** — | **Found by:** architecture review 26 (2026-09-23) — the fixing guide's round-closing step 5 names `TestEveryRoundDocumentPricesItsAgents`, which `UX-744` renamed | **Serves:** a session closing a round from §7a, which is sent to the guard by name | **Topic:** guards | **Area:** unassigned | **Shape:** mechanical
 
 ## Motivation
 

@@ -1,6 +1,6 @@
 # UX-992: the push gate reads the main checkout's `HEAD` from a worktree
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-762, UX-948 | **Blocks:** — | **Found by:** round 139 — a live push from a track's worktree, always blocked | **Serves:** every track that runs `make push-check` in a worktree and then pushes | **Topic:** guards | **Area:** unassigned | **Shape:** mechanical
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-762, UX-948 | **Blocks:** — | **Found by:** round 139 — a live push from a track's worktree, always blocked | **Serves:** every track that runs `make push-check` in a worktree and then pushes | **Topic:** guards | **Area:** unassigned | **Shape:** mechanical
 
 ## Motivation
 

@@ -8522,6 +8522,7 @@
   "tests/unit/test_one_id_names_one_task_file.py"
  ],
  "tools/_record_readers.py": [
+  "tests/unit/test_a_docs_only_diff_runs_its_guards.py",
   "tests/unit/test_a_record_selects_the_guard_that_loads_it.py",
   "tests/unit/test_a_slow_file_says_which_file.py",
   "tests/unit/test_the_cost_row_is_derived_from_the_selector.py",
@@ -9061,6 +9062,14 @@
   "tests/unit/test_the_commit_body_gate_runs_before_ci.py",
   "tests/unit/test_the_context_map_is_the_tree.py"
  ],
+ "tools/dev_docs_lane.py": [
+  "tests/unit/test_a_docs_only_diff_runs_its_guards.py",
+  "tests/unit/test_the_context_map_is_the_tree.py"
+ ],
+ "tools/dev_docs_only.py": [
+  "tests/unit/test_a_docs_only_diff_runs_its_guards.py",
+  "tests/unit/test_the_context_map_is_the_tree.py"
+ ],
  "tools/dev_env_check.py": [
   "tests/unit/test_the_env_check_catches_a_repoint.py"
  ],
@@ -9152,6 +9161,7 @@
   "tests/unit/test_the_touching_map_is_measured.py"
  ],
  "tools/dev_touching.py": [
+  "tests/unit/test_a_docs_only_diff_runs_its_guards.py",
   "tests/unit/test_a_guard_reads_only_what_a_clone_has.py",
   "tests/unit/test_a_record_selects_the_guard_that_loads_it.py",
   "tests/unit/test_a_slow_file_says_which_file.py",

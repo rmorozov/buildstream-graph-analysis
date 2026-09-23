@@ -282,6 +282,12 @@
       "run_id": "35860030664",
       "shift": 2.493,
       "confirmed": false
+    },
+    {
+      "file": "tests/unit/test_the_size_ledger_only_shrinks.py",
+      "run_id": "35860528150",
+      "shift": 1.64,
+      "confirmed": false
     }
   ],
   "declared": {

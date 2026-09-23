@@ -151,7 +151,10 @@ class TestTheSelectorStillSelects:
     # modules this branch's files already name: measured over that
     # merge median 36, p90 59, max 162 over 570 files (106 modules).
     # Max 162 -> 164, +2 headroom as above.
-    CEILING = {"median": 38, "p90": 60, "max": 164}
+    #
+    # Round 138's chain, with `UX-956`'s lane guard naming the docs:
+    # measured median 37, p90 57, max 165 over 590 files. Max 164 -> 167.
+    CEILING = {"median": 38, "p90": 60, "max": 167}
     POPULATION_FLOOR = 60
     #: `UX-645`: **13 census + 14 of your own**. The census floor is
     #: inside this bound because those files run - the figure is what

@@ -402,6 +402,14 @@ AREA_UNKNOWN = "unassigned"
 
 _AREA_HEADER = re.compile(r"\*\*Area:\*\*\s*([a-z0-9_/]+)")
 
+#: `UX-937`: a §6 line opening with a path - its top-level directory, and
+#: its first subdirectory when it has one.
+_AREA_PATH = re.compile(r"^([a-z][a-z0-9_]*)/(?:([a-z][a-z0-9_]*)/)?", re.M)
+
+#: `UX-688`: areas are code, not documents - the one top-level directory
+#: §6 names that is not an area (`test_every_task_names_its_area.py`).
+NOT_AN_AREA = frozenset({"docs"})
+
 
 def declared_areas():
     """The area vocabulary, read out of the fixing guide's §6 tree."""
@@ -410,9 +418,11 @@ def declared_areas():
     except OSError:
         return set()
     section = body.split("## 6.")[-1].split("\n## 7.")[0]
-    found = {m.rstrip("/") for m in re.findall(
-        r"^((?:bga|tools)/[a-z_]+/)", section, re.M)}
-    return found | {"bga", "tools", "bga/viewer", AREA_UNKNOWN}
+    found = {AREA_UNKNOWN}
+    for top, sub in _AREA_PATH.findall(section):
+        if top not in NOT_AN_AREA:
+            found |= {top, f"{top}/{sub}"} if sub else {top}
+    return found
 
 
 def header_area(text):

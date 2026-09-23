@@ -95,3 +95,61 @@ The first is the one that discriminates: a fix that hard-codes
 fails this mutation.
 
 ## Outcome
+
+**Round 138, 2026-09-23**
+
+**Premise:** held — `HEAD`'s reader rejects both spellings.
+
+### The gap, measured
+
+`HEAD`'s `dev_close_task.py` loaded beside this tree's §6, with two rows
+declaring `tests` and `tests/unit`:
+
+```text
+head tests in vocabulary: False | tests/unit: False
+   UX-1: area 'tests' is not in the fixing guide's §6 tree
+   UX-2: area 'tests/unit' is not in the fixing guide's §6 tree
+   2 problem(s)
+```
+
+### After
+
+`declared_areas()` reads every §6 line that opens with a path - its
+top-level directory, and its first subdirectory - through
+`_AREA_PATH`; nothing is added by hand but `unassigned`.
+
+```text
+now tests in vocabulary: True | tests/unit: True
+   0 problem(s)
+$ python3 -c "...print(sorted(d.declared_areas()))"   # 17 -> 20
+added: tests, tests/support, tests/unit      dropped: none
+```
+
+`bga`, `tools` and `bga/viewer`, typed until now, all fall out of the
+read. `UX-945` below declares `**Area:** tests/unit`, the first row to.
+
+### Mutations verified red and reverted (4)
+
+| # | mutation | reddened |
+|---|---|---|
+| D1 | §6's `tests/unit/` line deleted | `tests/unit` left the vocabulary, `tests` stayed; 3 of 14: `test_tests_is_an_area`, the declaring-row clause, and the joining clause (its edit anchors on that line) |
+| D2 | a `nowhere/deep/` line added to §6 | the vocabulary took `nowhere` and `nowhere/deep`; `test_the_context_map_is_the_tree.py` **stayed green**, 48 passed - see Deviation |
+| D3 | `return found \| {"tests", "tests/unit"}` - the hard-coded fix | 1 of 14: `test_a_line_leaving_the_tree_leaves_the_vocabulary`, the discriminating clause |
+| D4 | `_AREA_PATH` restricted back to `^(bga\|tools)/` | 4 of 14: every `TestEveryTopLevelDirectoryIsRead` clause |
+
+### Deviation from the Required Fix
+
+Two. **`docs` is not an area**: §6 names `docs/` too, and reading it
+would add `docs`, `docs/spec`, `docs/design`, `docs/backlog`, which
+`test_the_areas_come_from_the_fixing_guide` (`UX-688`: "areas are code,
+not documents") forbids; `NOT_AN_AREA = {"docs"}` keeps that guard's
+rule, one entry, reversible. `.github/` is not read either: an area
+header cannot spell a `.` (`_AREA_HEADER`). **D2 is not caught**: the
+context map's existence check finds paths with its own
+`(bga|tools|tests|docs|\.github)/` alternation - this row's defect, in
+the guard - filed as `UX-945`.
+
+```text
+$ make test-touching
+87 file(s) selected (18 census + 69 naming the change) · 2607 passed, 4 skipped in 338.89s
+```

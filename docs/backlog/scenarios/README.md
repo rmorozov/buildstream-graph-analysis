@@ -48,6 +48,8 @@ task file, which is the only place it ever lived twice.
 | UX-995 | [a pull request runs the suite on the newest Python only; main keeps the matrix](UX-0995-a-pull-request-runs-the-suite-on-the-newest-python-only.md) | guards | Medium | every pull request waiting in the queue behind another's matrix | 🔴 Not Started |
 | UX-996 | [a derived figure is computed where it is read, never committed](UX-0996-a-derived-figure-is-computed-where-it-is-read-never-committed.md) | guards | High | every pair of branches that close rows in the same round | 🔴 Not Started |
 | UX-997 | [a record CI measures lives outside main, and main carries only reviewed commits](UX-0997-a-record-ci-measures-lives-outside-main.md) | guards | High | every branch that inherits main, and every commit on main that should have CI | 🔴 Not Started |
+| UX-998 | [a bookkeeping finding is one line in a ledger, swept once a round](UX-0998-a-bookkeeping-finding-is-one-line-swept-once-a-round.md) | guards | High | every round, through the cost a bookkeeping row pays today | 🔴 Not Started |
+| UX-999 | [a weekly retro turns repeated bookkeeping into automation](UX-0999-a-weekly-retro-turns-repeated-bookkeeping-into-automation.md) | guards | High | every later round, through the bookkeeping it no longer files | 🔴 Not Started |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

@@ -9034,6 +9034,10 @@
   "tests/unit/test_a_suppression_is_a_finding.py",
   "tests/unit/test_the_context_map_is_the_tree.py"
  ],
+ "tools/dev_bst_examples_spread.py": [
+  "tests/unit/test_the_context_map_is_the_tree.py",
+  "tests/unit/test_the_examples_clock_is_a_spread.py"
+ ],
  "tools/dev_close_task.py": [
   "tests/unit/test_a_batch_closes_in_one_move.py",
   "tests/unit/test_a_counted_figure_is_derived.py",

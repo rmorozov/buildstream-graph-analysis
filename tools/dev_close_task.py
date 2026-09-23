@@ -811,7 +811,17 @@ def shape_signals(text):
     }
 
 
+def shaped_by_architect(text):
+    """UX-993: a `## Decision` naming its files, a guard and a mutation
+    has taken the judgement, so the process surface no longer holds it."""
+    decision = _section(text, "Decision")
+    return ("Files:" in decision and "Mutation:" in decision
+            and bool(_SHAPE_GUARD.search(decision)))
+
+
 def derived_shape(text):
+    if shaped_by_architect(text):
+        return "mechanical"
     a, b, c = shape_signals(text).values()
     if c or not a:
         return "judgement"

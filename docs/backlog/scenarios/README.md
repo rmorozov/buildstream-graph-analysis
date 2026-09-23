@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-951 scenarios: **19 open**, 932 closed.
+956 scenarios: **22 open**, 934 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -27,7 +27,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | cli | 0 | 22 |
 | store | 1 | 17 |
 | docs | 4 | 149 |
-| guards | 7 | 272 |
+| guards | 10 | 277 |
 
 ## Open scenarios
 
@@ -55,6 +55,9 @@ task file, which is the only place it ever lived twice.
 | UX-978 | [the serial-giant README describes an `auto < off` assertion CI no longer makes](UX-0978-the-serial-giant-readme-describes-an-assertion-ci-no-longer-makes.md) | docs | Medium | whoever reads why `bst-examples` passes or fails on `11-serial-giant` | 🔴 Not Started |
 | UX-979 | [§7a cites a guard class a rename retired, and no guard resolves the part after `::`](UX-0979-a-guard-citation-names-a-class-a-rename-retired.md) | guards | Low | a session closing a round from §7a, which is sent to the guard by name | 🔴 Not Started |
 | UX-990 | [the BuildStream behaviour claims in `tools/` are outside the register `UX-940` built for `bga/`](UX-0990-the-tools-behaviour-claims-are-outside-the-register.md) | guards | Medium | whoever reads a BuildStream behaviour claim in the capture tools and has to decide whether it still holds | 🔴 Not Started |
+| UX-995 | [a pull request runs the suite on the newest Python only; main keeps the matrix](UX-0995-a-pull-request-runs-the-suite-on-the-newest-python-only.md) | guards | Medium | every pull request waiting in the queue behind another's matrix | 🔴 Not Started |
+| UX-996 | [a derived figure is computed where it is read, never committed](UX-0996-a-derived-figure-is-computed-where-it-is-read-never-committed.md) | guards | High | every pair of branches that close rows in the same round | 🔴 Not Started |
+| UX-997 | [a record CI measures lives outside main, and main carries only reviewed commits](UX-0997-a-record-ci-measures-lives-outside-main.md) | guards | High | every branch that inherits main, and every commit on main that should have CI | 🔴 Not Started |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

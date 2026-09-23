@@ -26,8 +26,8 @@ file is the day-one summary, and
 
 ## The pipeline
 
-`orient` → `decompose` (the **shape**, derived by `dev_close_task.py --shape`) → tracks → `verifier` → merge → close (row moves, derived counts, ledger rows, round document — fixing guide §7a) → `make push-check`, push; CI's matrix gates the merge.
-Mechanical and bounded shapes are `implementer` tracks on `sonnet` in worktrees; a judgement shape is the session's own — the *judgement*, not the work: the rows that say the session took it in the brief ran on `sonnet` for a 318k median against bounded's 228k (73 of 150 runs, four whose own cell disagrees; `dev_process_bands.py --runs`).
+`orient` → `architect` shapes each row, at most 40% of a round's rows process (`UX-993`, `UX-994`) → `decompose` (the **shape**, derived by `dev_close_task.py --shape`) → tracks → `verifier` → merge → close (row moves, derived counts, ledger rows, round document — fixing guide §7a) → `make push-check`, push; CI's matrix gates the merge.
+Mechanical and bounded shapes are `implementer` tracks on `sonnet` in worktrees; a judgement shape the `architect` has not shaped is the session's own — the *judgement*, not the work: those rows ran for a 318k median against bounded's 228k (73 of 150 runs; `dev_process_bands.py --runs`). The architect is pulled, never a gate.
 `researcher` and `verifier` read on `sonnet`; the session judges, briefs and merges, and reads reports, never diffs or logs — its cost is the live
 context at each rebuild — the `decompose` skill carries the measured share, with its window; a result over a screen goes to the scratchpad (`UX-711`). `measure`, `falsify`, `verify`
 (which calls `self-review` last) run inside a track; `derive` before moving viewer code; `walk` and `design-review` audit the page and `review` the documents and a surface diff with no page; every run is a row in `docs/audits/agent-runs.md`.

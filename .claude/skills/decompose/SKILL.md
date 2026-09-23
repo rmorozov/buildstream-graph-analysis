@@ -24,7 +24,9 @@ Required Fix names a file; the Acceptance Test names a guard and a
 mutation; either names a contract or process surface. **mechanical**
 (all three the right way) and **bounded** (a file, no named guard) are
 tracks for the `implementer` on `sonnet`; **judgement** (no file, or a
-contract or process surface) is the session's own work. Measured on
+contract or process surface) goes to the `architect` first (`UX-993`):
+its `## Decision` names the file, the guard and the mutation, so the
+re-derived shape is bounded. Unshaped, it is the session's own work. Measured on
 the open backlog the day it landed: 8 bounded, 35 judgement, 0
 mechanical — a filing that wants to be a track names its surface in
 the Required Fix and its guard in the Acceptance Test.

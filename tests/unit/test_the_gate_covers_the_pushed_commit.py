@@ -182,6 +182,18 @@ PUSH_CHECKS = ("pymarkdown", "ruff", "dev_baseline.py", "dev_touching.py",
 
 STUB = '#!/bin/sh\ncase "${0##*/} $*" in *"$BGA_FAIL_ON"*) exit 1;; esac\nexit 0\n'
 
+#: A pytest run under `make` (CI's steps) exports these; a child make
+#: that inherits them prints `Leaving directory` as its last line.
+PARENT_MAKE = ("MAKEFLAGS", "MFLAGS", "MAKELEVEL", "MAKEFILES", "MAKEOVERRIDES")
+
+
+def _make(*args, cwd, env=None):
+    """A top-level, serial `make`, whatever make is running pytest."""
+    clean = {k: v for k, v in (env or os.environ).items() if k not in PARENT_MAKE}
+    return subprocess.run(["make", "-j1", "--no-print-directory", *args],
+                          cwd=cwd, env=clean, capture_output=True, text=True,
+                          timeout=30)
+
 
 class TestThePushCheckWritesTheMarkerOnlyOnGreen:
     """`UX-948`: the push gate is the four fast checks, not the suite.
@@ -204,14 +216,10 @@ class TestThePushCheckWritesTheMarkerOnlyOnGreen:
                             "refs/remotes/origin/main", "HEAD~1"], check=True)
         env = {**os.environ, "PATH": f"{stubs}{os.pathsep}{os.environ['PATH']}",
                "BGA_FAIL_ON": fail_on}
-        done = subprocess.run(["make", "-f", str(REPO / "Makefile"), "push-check"],
-                              cwd=repo, env=env, capture_output=True, text=True,
-                              timeout=30)
-        return done
+        return _make("-f", str(REPO / "Makefile"), "push-check", cwd=repo, env=env)
 
     def test_every_check_is_in_the_recipe(self):
-        done = subprocess.run(["make", "-n", "push-check"], cwd=REPO,
-                              capture_output=True, text=True, timeout=30)
+        done = _make("-n", "push-check", cwd=REPO)
         assert done.returncode == 0, done.stderr
         missing = [one for one in PUSH_CHECKS if one not in done.stdout]
         assert not missing, (missing, done.stdout)

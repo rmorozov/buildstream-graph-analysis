@@ -937,11 +937,13 @@
   "tests/unit/test_a_required_set_grew_under_an_unchanged_id.py",
   "tests/unit/test_a_run_bundle_you_can_carry.py",
   "tests/unit/test_a_runbook_is_not_a_table.py",
+  "tests/unit/test_a_sandboxed_write_stays_in_the_sandbox.py",
   "tests/unit/test_a_sentence_lives_on_its_door.py",
   "tests/unit/test_a_shapeable_population_is_drawn.py",
   "tests/unit/test_a_task_uid_is_not_a_label.py",
   "tests/unit/test_all_rows_means_all_rows.py",
   "tests/unit/test_an_artifact_says_what_wrote_it.py",
+  "tests/unit/test_an_unmerged_index_derives_nothing.py",
   "tests/unit/test_apparatus_in_its_place.py",
   "tests/unit/test_attribution_hints.py",
   "tests/unit/test_band_observed_range.py",
@@ -5828,12 +5830,14 @@
   "tests/unit/test_a_required_set_grew_under_an_unchanged_id.py",
   "tests/unit/test_a_run_bundle_you_can_carry.py",
   "tests/unit/test_a_runbook_is_not_a_table.py",
+  "tests/unit/test_a_sandboxed_write_stays_in_the_sandbox.py",
   "tests/unit/test_a_sentence_lives_on_its_door.py",
   "tests/unit/test_a_shapeable_population_is_drawn.py",
   "tests/unit/test_a_task_uid_is_not_a_label.py",
   "tests/unit/test_a_variant_is_a_second_axis.py",
   "tests/unit/test_all_rows_means_all_rows.py",
   "tests/unit/test_an_artifact_says_what_wrote_it.py",
+  "tests/unit/test_an_unmerged_index_derives_nothing.py",
   "tests/unit/test_any_element_can_be_inspected.py",
   "tests/unit/test_apparatus_in_its_place.py",
   "tests/unit/test_attribution_hints.py",
@@ -8511,6 +8515,12 @@
   "tests/unit/test_what_if_you_could_choose_the_fixes.py",
   "tests/unit/test_whatifs_saving_is_in_the_teams_units.py"
  ],
+ "tools/_close_task_checks.py": [
+  "tests/unit/test_a_sandboxed_write_stays_in_the_sandbox.py",
+  "tests/unit/test_an_unmerged_index_derives_nothing.py",
+  "tests/unit/test_every_task_names_its_area.py",
+  "tests/unit/test_one_id_names_one_task_file.py"
+ ],
  "tools/_run_context_common.py": [
   "tests/unit/test_a_capture_says_when_it_was_requested.py",
   "tests/unit/test_a_comparison_class_is_the_host_and_the_build_type.py",
@@ -9021,9 +9031,11 @@
   "tests/unit/test_a_counted_figure_is_derived.py",
   "tests/unit/test_a_guard_reads_only_what_a_clone_has.py",
   "tests/unit/test_a_run_is_priced.py",
+  "tests/unit/test_a_sandboxed_write_stays_in_the_sandbox.py",
   "tests/unit/test_a_scenario_is_named_by_its_seed.py",
   "tests/unit/test_a_slow_file_says_which_file.py",
   "tests/unit/test_a_task_declares_its_shape.py",
+  "tests/unit/test_an_unmerged_index_derives_nothing.py",
   "tests/unit/test_docs_links_and_commands.py",
   "tests/unit/test_every_task_names_its_area.py",
   "tests/unit/test_the_context_map_is_the_tree.py",
@@ -9101,6 +9113,8 @@
   "tests/unit/test_a_scenario_is_named_by_its_seed.py"
  ],
  "tools/dev_shape_budget.py": [
+  "tests/unit/test_a_sandboxed_write_stays_in_the_sandbox.py",
+  "tests/unit/test_an_unmerged_index_derives_nothing.py",
   "tests/unit/test_the_context_map_is_the_tree.py",
   "tests/unit/test_the_suite_holds_its_shape_budget.py"
  ],

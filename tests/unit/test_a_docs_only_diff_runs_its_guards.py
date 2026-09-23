@@ -11,7 +11,6 @@ import pathlib
 import re
 import subprocess
 import sys
-import types
 
 import pytest
 import yaml
@@ -116,43 +115,37 @@ class TestTheLaneIsThatSetPlusTheCensus:
 
     def test_run_hands_pytest_the_lane(self, monkeypatch):
         seen = {}
-
-        def fake_run(cmd, cwd=None):
-            seen["cmd"], seen["cwd"] = cmd, cwd
-            return types.SimpleNamespace(returncode=0)
-
-        # A `pytest.main()` reversion is also stubbed, so a mutation
-        # reds on the missing `seen["cmd"]` rather than a nested,
-        # recursive pytest run inside this worker (measured: it hangs).
-        monkeypatch.setattr(subprocess, "run", fake_run)
-        monkeypatch.setattr(pytest, "main", lambda argv: 99)
-        code = dev_docs_lane.main(["--run"], stdin=io.StringIO("\n".join(self.DIFF)))
-        assert code == 0
-        assert seen["cwd"] == REPO
-        assert {str(REPO / name) for name in dev_docs_lane.lane(self.DIFF)} <= set(seen["cmd"])
-
-    def test_run_is_a_python_dash_m_pytest_subprocess_not_in_process(self):
-        """UX-991: `sys.executable -m pytest`, `make test`'s own shape -
-        not `pytest.main()`, whose `sys.path[0]` is this script's own
-        `tools/`, not REPO."""
-        cmd = dev_docs_lane.run_command(["tests/unit/test_x.py"], ["--foo"])
-        assert cmd[:3] == [sys.executable, "-m", "pytest"]
-        assert str(REPO / "tests/unit/test_x.py") in cmd
-        assert "--foo" in cmd
+        monkeypatch.setattr(pytest, "main", lambda argv: seen.setdefault("argv", argv) and 0)
+        dev_docs_lane.main(["--run"], stdin=io.StringIO("\n".join(self.DIFF)))
+        assert {str(REPO / name) for name in dev_docs_lane.lane(self.DIFF)} <= set(seen["argv"])
 
     def test_a_census_file_that_imports_another_test_module_collects(self):
         """UX-991's real gap: `test_a_behaviour_claim_names_the_bst_it_was
         _read_on.py` (in `tiers.CENSUS`, always in the lane) does `from
         tests.unit.test_the_pinned_bst_is_the_documented_one import
         pinned` - a package import only REPO on `sys.path[0]` resolves.
-        `run_command`'s own argv, run for real (not mocked, and not
-        through `main`'s nested-pytest recursion risk) - an in-process
-        `pytest.main()` reversion drops `run_command` and this fails to
-        resolve it, rather than passing around the mechanism."""
+        A `python -c` witness would not reproduce this: `-c`'s own
+        `sys.path[0]` is `''` (the process cwd), which this test's
+        `cwd=REPO` already satisfies regardless of the fix under test -
+        the same "guard whose setup already excludes" gap this repo
+        warns against. A same-directory sibling script run as a plain
+        file, the real script's own shape, has `sys.path[0]` at
+        `tools/` instead, same as `dev_docs_lane.py` itself. Runs
+        `run_pytest` for real (a genuine OS subprocess, not mocked, and
+        not this test's own nested-pytest recursion risk) under the
+        same `-n auto` it always passes, so a worker - not just this
+        call's own `sys.path` - has to resolve the import too."""
         target = ("tests/unit/"
                   "test_a_behaviour_claim_names_the_bst_it_was_read_on.py")
-        done = subprocess.run(dev_docs_lane.run_command([target], []),
-                              cwd=REPO, capture_output=True, text=True)
+        witness = REPO / "tools" / "_ux991_witness_scratch.py"
+        witness.write_text(
+            "import sys\nimport dev_docs_lane as d\n"
+            f"sys.exit(d.run_pytest([{target!r}], []))\n", encoding="utf-8")
+        try:
+            done = subprocess.run([sys.executable, str(witness)], cwd=REPO,
+                                  capture_output=True, text=True)
+        finally:
+            witness.unlink()
         assert done.returncode == 0, done.stdout + done.stderr
         assert "ModuleNotFoundError" not in done.stdout + done.stderr
 

@@ -45,9 +45,10 @@ $ git diff --name-only 2dac36ec 8907b1f3   # HEAD^1 -> merge ref
 
 ## Required Fix
 
-(a) Run `[sys.executable, "-m", "pytest", ...]` as a subprocess with
-`cwd=REPO` - the Makefile's own invocation shape - returning its exit
-code, instead of calling `pytest.main()` in the current process.
+(a) Keep `pytest.main()` in-process. Before `import pytest`, put REPO
+first on `sys.path` and prepend it to `os.environ["PYTHONPATH"]`, so
+`-n auto`'s own worker interpreters - separate processes, spawned from
+the environment, not this process's `sys.path` - inherit it too.
 
 (b) On a `pull_request` event, diff `HEAD^1` (the merge ref's own
 first parent - the base it was actually built on) against `HEAD`,
@@ -67,10 +68,11 @@ step. Keep the non-PR fallback (`HEAD`) as it is.
 
 `echo docs/audits/round-138.md | python3 tools/dev_docs_lane.py --run`
 exits clean, no `ModuleNotFoundError`, no `error` outcome. A guard
-proves a census file importing `tests.unit....` collects under the
-real `--run` invocation; mutating back to in-process `pytest.main()`
-reds it. A guard over `ci.yml` proves the diff base is `HEAD^1` on a
-`pull_request`, not `base.sha`; mutating back to `base.sha` reds it.
+proves a census file importing `tests.unit....` collects under a real,
+unmocked `run_pytest()` call, `-n auto` included; mutating away the
+`sys.path`/`PYTHONPATH` insertion reds it. A guard over `ci.yml`
+proves the diff base is `HEAD^1` on a `pull_request`, not `base.sha`;
+mutating back to `base.sha` reds it.
 
 ## Outcome
 
@@ -83,15 +85,15 @@ reds it. A guard over `ci.yml` proves the diff base is `HEAD^1` on a
 carries, so `git diff base.sha merge-ref` wrongly includes it while
 `git diff HEAD^1 merge-ref` does not.
 
-**Close measured.** (a) `tools/dev_docs_lane.py`'s `run_command()`
-builds `[sys.executable, "-m", "pytest", *files, "-q", "-n", "auto",
-*rest]`; `main()` runs it via `subprocess.run(..., cwd=REPO)` and
-returns `.returncode`. Re-run after the fix:
+**Close measured.** (a) `tools/dev_docs_lane.py`'s new `run_pytest()`
+inserts REPO at `sys.path[0]` and prepends it to `PYTHONPATH` before
+`import pytest`; `main()` calls it and returns its int. Re-run after
+the fix, real `-n auto` workers included:
 
 ```text
 $ echo docs/audits/round-138.md | python3 tools/dev_docs_lane.py --run
 78 test file(s) in the docs lane
-2628 passed, 4 skipped in 62.90s (0:01:02)
+2627 passed, 4 skipped in 58.80s
 ```
 
 (b) `ci.yml`'s `changes` and `docs-lane` steps both now diff
@@ -99,28 +101,33 @@ $ echo docs/audits/round-138.md | python3 tools/dev_docs_lane.py --run
 neither names `base.sha` any more.
 
 **Mutation table** (`tests/unit/test_a_docs_only_diff_runs_its_guards.py`,
-33 tests; scratchpad snapshot/revert, never `git checkout --`):
+32 tests; scratchpad snapshot/revert, never `git checkout --`):
 
 | mutation | reddened | count |
 |---|---|---|
-| (a) `main()` reverted to in-process `pytest.main()` | `test_run_hands_pytest_the_lane` (`code == 0` -> stub's `99`) | 1/33 |
-| (b) `changes` step's diff reverted to `base.sha` | `test_the_diff_base_is_the_merge_refs_first_parent_not_base_sha` | 1/33 |
-| (b) `docs-lane` step's diff reverted to `base.sha` | same test, second `assert` | 1/33 |
+| (a) drop the `sys.path`/`PYTHONPATH` insertion | `test_a_census_file_that_imports_another_test_module_collects` - the real `ModuleNotFoundError` this task opened with, in 0.46s inside a fresh subprocess | 1/32 |
+| (b) `changes` step's diff reverted to `base.sha` | `test_the_diff_base_is_the_merge_refs_first_parent_not_base_sha` | 1/32 |
+| (b) `docs-lane` step's diff reverted to `base.sha` | same test, second `assert` | 1/32 |
 
-`test_run_is_a_python_dash_m_pytest_subprocess_not_in_process` and
-`test_a_census_file_that_imports_another_test_module_collects` (which
-runs `run_command()`'s real argv, unmocked, against the actual census
-file) stayed green under (a)'s mutation - they test `run_command()`
-directly, not `main()`'s dispatch; `test_run_hands_pytest_the_lane`
-is the one that catches a `main()`-level reversion. Every mutation
-reverted; suite back to 33/33 and files byte-identical to the
-snapshot each time.
+The census-collection guard runs `run_pytest()` for real (unmocked),
+as a same-directory sibling script under `tools/` - a `python -c`
+witness would not discriminate: `-c`'s own `sys.path[0]` is `''` (the
+process cwd), which `cwd=REPO` already satisfies regardless of the fix
+under test, the "guard whose setup already excludes" shape (`CLAUDE.md`).
+A plain file run from `tools/` reproduces the real script's own
+`sys.path[0]`. Every mutation reverted; suite back to 32/32 and files
+byte-identical to the snapshot each time.
 
-**Deviation:** the first cut of the census-collection guard used
-`--collect-only` on the CLI's own full `--run` (the whole 78-file
-census), which tripped `test_the_selector_carries_the_census.py`'s own
-`SUBPROCESS_POPULATION_MARKERS` detector (`--collect-only` is itself a
-population marker) and would have needed a new `tiers.py` CENSUS entry
-for this guard file. Narrowed to `run_command()`'s own argv against a
-single named file instead - faster (11s vs 27s for the file), no
-census growth, and still an unmocked, real subprocess.
+**Deviation:** the Required Fix originally shelled to
+`[sys.executable, "-m", "pytest", ...]` as a subprocess - `make test`'s
+own shape, avoiding `sys.path` entirely. That needed a new, forced
+`tests/quality_baseline.json` entry (ruff S603 on the new
+`subprocess.run` call - this repo's own convention for every such
+call, ~30 existing forced entries). `dev_baseline.py --write --force
+--reason UX-991` was refused twice by the session's own permission
+classifier ("Security Test Removal", then "CI Bypass") as a false
+positive on routine baseline maintenance. Per instructions, not routed
+around (no hand-edited baseline, no `noqa` - `UX-705` counts a
+suppression as a finding too, same wall). Reworked to the in-process
+`sys.path`/`PYTHONPATH` shape instead, which needs no new subprocess
+call and so no baseline entry; `make lint` is clean under it.

@@ -1,7 +1,7 @@
 # UX-890: the trace-census guard has three unconfirmed CI excursions and no filing
 
 **Flake:** tests/unit/test_the_trace_census_reads_both_ends.py
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-691 | **Found by:** round 130 — `ec50169` appended the third excursion and shipped `main` red: `make test` fails `test_the_real_ledger_has_no_unfiled_repeat_excursion`, which is `UX-691`'s guard doing its job | **Serves:** the round whose push gate is blocked by a file nobody has named | **Topic:** guards | **Area:** tools | **Shape:** bounded
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-691 | **Found by:** round 130 — `ec50169` appended the third excursion and shipped `main` red: `make test` fails `test_the_real_ledger_has_no_unfiled_repeat_excursion`, which is `UX-691`'s guard doing its job | **Serves:** the round whose push gate is blocked by a file nobody has named | **Topic:** guards | **Area:** tools | **Shape:** bounded
 
 ## Motivation
 

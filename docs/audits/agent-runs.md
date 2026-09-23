@@ -354,6 +354,19 @@ pairing for every merged row from round 103 on.
 | 131 | self-review | sonnet | UX-908 close + UX-924 filing | 151k | 58 | 8.5 m | no Important, two nits - ci_reference.json's re-record confirmed inside UX-908's own scope against UX-912's Out of Scope; the hand-append figures verified equal to the verify skill's raw/shift rule by reading dev_tier_drift.py's own arithmetic; UX-924's two central claims (543/566 full windows, 399 flat; adopt reads candidate.files) reproduced independently; the round-130 dateline waiver reverted and reproduced red on 74fb2712, justification accurate | confirming the hand-append matched the verify skill's rule needed tracing flake_ledger.json's stored `shift` field back through `dev_tier_drift.py`'s `ratio / shift`, since it is not literally the run's printed drift shift (the three cells are the harness's own `subagent_tokens`/`tool_uses`/`duration_ms` for the run, not `dev_track_cost.py`'s transcript-derived fresh count) |
 | 136 | self-review | sonnet | UX-924 close | 110k | 30 | 6.2 m | one Important - the Outcome's `make test` line was a placeholder while both status markers already read 🟢 - and one nit, the adopt-commit cadence uncited; both acted on, and it reproduced mutation A1 itself | its first `git diff origin/main -- .` silently dropped a changed file and cost a re-read of the whole diff; `ci_reference.json`'s note is one multi-KB line, read in full twice |
 | 136 | researcher | sonnet | UX-924 the three prose surfaces, in place of the `design-review` the route asks for and has no protocol for (UX-928) | 61k | 14 | 3.6 m | two corrections taken: the verify skill's wait needed "once the diff lands" (the adopt job runs only on pushes to the default branch), and the note's blanket "the sentences above describe the route before this item" folded pre-UX-496 and pre-UX-924 into one | hand-simulating five adoptions of a window to check the three/five/two counts, which no comment or guard states directly |
+| 138 | general-purpose | opus | UX-935/UX-932/UX-920/UX-937 | 5343k | 258 | 253.4 m | #275 merged | grew `dev_close_task.py` past the size ratchet; the code moved to `tools/_close_task_checks.py` |
+| 138 | general-purpose | opus | UX-936/UX-890/UX-917 | 1491k | 151 | 86.3 m | #272 merged | none reported |
+| 138 | general-purpose | opus | UX-929/UX-912 | 1853k | 146 | 99.4 m | #274 merged | none reported |
+| 138 | general-purpose | opus | UX-943 | 578k | 66 | 55.6 m | #271 merged | none reported |
+| 138 | general-purpose | sonnet | UX-944 | 1616k | 194 | 92.7 m | #273 merged | repointed the shared editable install at its worktree |
+| 138 | general-purpose | opus | UX-942 | 2077k | 147 | 293 m | #276 merged | the size ratchet; the readers moved to `tools/_record_readers.py` |
+| 138 | general-purpose | opus | architecture review 26 | 700k | 138 | 51.7 m | #277, this PR | none reported |
+| 138 | general-purpose | opus | UX-926 | 2234k | 142 | 190.1 m | #280 merged | found round 96 undocumented |
+| 138 | general-purpose | opus | UX-928 | 1074k | 93 | 186 m | #282 merged | push refused by the permission classifier until Ruslan's word |
+| 138 | general-purpose | opus | UX-940 | 1276k | 136 | 211.1 m | #278 merged | its own tip was red: the new guard was not declared census |
+| 138 | general-purpose | opus | UX-941 | 955k | 125 | 113.3 m | #279 merged | none reported |
+| 138 | general-purpose | opus | UX-948 | 496k | 166 | 116.9 m | #281 merged | its guard's inner make inherited MAKELEVEL on CI |
+| 138 | general-purpose | opus | UX-956 | 255k | 143 | 46.4 m | #283 merged | none reported |
 
 Round 101's four tracks are **not** here: this session could not
 identify their transcripts with certainty after a context rebuild, and
@@ -366,7 +379,7 @@ committed cleanly once told to run in the foreground. Three of the five
 left a derived figure or a §6 context-map row behind - the same class
 the round itself was about, arriving in the tracks' own work.
 
-What the three hundred and thirty-seven rows already say: a researcher that reads a document
+What the three hundred and fifty rows already say: a researcher that reads a document
 whole costs 100-180k; a walker that drives every control costs 336k;
 the two cuts cost a re-run each. The `walk` and `design-review`
 skills fix the report shape so the next rows are smaller, and the

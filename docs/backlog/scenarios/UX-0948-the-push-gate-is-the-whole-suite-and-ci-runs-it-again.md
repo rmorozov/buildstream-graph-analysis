@@ -1,6 +1,6 @@
 # UX-948: the push gate is the whole suite, and CI runs the same suite again before anything merges
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-762, UX-885 | **Blocks:** — | **Found by:** round 138 — Ruslan in the project thread, 2026-09-23 08:42 and 08:43 | **Serves:** every track that pushes a `claude/*` branch from a shared 4-core box | **Topic:** guards | **Area:** unassigned | **Shape:** judgement
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-762, UX-885 | **Blocks:** — | **Found by:** round 138 — Ruslan in the project thread, 2026-09-23 08:42 and 08:43 | **Serves:** every track that pushes a `claude/*` branch from a shared 4-core box | **Topic:** guards | **Area:** unassigned | **Shape:** judgement
 
 ## Motivation
 

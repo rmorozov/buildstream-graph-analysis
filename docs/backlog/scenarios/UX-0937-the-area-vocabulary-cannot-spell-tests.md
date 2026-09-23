@@ -1,6 +1,6 @@
 # UX-937: the area vocabulary is read from the fixing guide's tree by a regex that admits only two of its three top-level directories, so no row can declare `tests`
 
-**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** UX-688 | **Blocks:** — | **Found by:** round 137 — `UX-925`'s close put three new skip reasons in `tests/conftest.py` and a new guard file in `tests/unit/`, and there was no area to declare for either | **Serves:** every row whose change lives under `tests/`, and the area pages that are meant to say where work lands | **Topic:** guards | **Area:** tools | **Shape:** mechanical
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-688 | **Blocks:** — | **Found by:** round 137 — `UX-925`'s close put three new skip reasons in `tests/conftest.py` and a new guard file in `tests/unit/`, and there was no area to declare for either | **Serves:** every row whose change lives under `tests/`, and the area pages that are meant to say where work lands | **Topic:** guards | **Area:** tools | **Shape:** mechanical
 
 ## Motivation
 

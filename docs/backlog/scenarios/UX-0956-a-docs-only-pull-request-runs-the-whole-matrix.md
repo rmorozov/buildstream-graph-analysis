@@ -1,6 +1,6 @@
 # UX-956: a docs-only pull request runs the whole matrix, and the selector that could narrow it misses the guards that read documents by glob
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-522, UX-943 | **Blocks:** — | **Found by:** round 138 — Ruslan, 2026-09-23: "for docs only changes i also propose making lighter ci gate" | **Serves:** every docs-only pull request, which waits on four interpreters and three `bst` jobs | **Topic:** guards | **Area:** tools | **Shape:** judgement
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-522, UX-943 | **Blocks:** — | **Found by:** round 138 — Ruslan, 2026-09-23: "for docs only changes i also propose making lighter ci gate" | **Serves:** every docs-only pull request, which waits on four interpreters and three `bst` jobs | **Topic:** guards | **Area:** tools | **Shape:** judgement
 
 ## Motivation
 

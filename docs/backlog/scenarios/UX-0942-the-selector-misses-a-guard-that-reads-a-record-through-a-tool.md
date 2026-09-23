@@ -1,6 +1,6 @@
 # UX-942: the touching selector misses a guard that reads a record through a tool's constant
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-336, UX-730 | **Blocks:** — | **Found by:** round 136 — choosing which guard `UX-934`'s ledger adopt job runs; `make test-touching` on a `tests/flake_ledger.json` edit selects 31 files and not the one that reds | **Serves:** every session whose inner loop is `make test-touching` on a change to a committed record | **Topic:** guards | **Area:** tools | **Shape:** judgement
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-336, UX-730 | **Blocks:** — | **Found by:** round 136 — choosing which guard `UX-934`'s ledger adopt job runs; `make test-touching` on a `tests/flake_ledger.json` edit selects 31 files and not the one that reds | **Serves:** every session whose inner loop is `make test-touching` on a change to a committed record | **Topic:** guards | **Area:** tools | **Shape:** judgement
 
 ## Motivation
 

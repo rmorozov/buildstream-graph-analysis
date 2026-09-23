@@ -1,6 +1,6 @@
 # UX-941: the only job that builds anything real is a population of one, so every instrument this repository uses to read a CI clock is unavailable exactly where the questions that need one are asked
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-420 | **Blocks:** — | **Found by:** round 137 — `UX-925` had to say what a 420 MiB pinned closure costs CI, and found that the job it is staged in has no instrument that could answer | **Serves:** every round asked what a change costs the example builds, and `UX-895`'s repeats rule, which this job is the one place in the repository that cannot follow | **Topic:** guards | **Area:** tools | **Shape:** judgement
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-420 | **Blocks:** — | **Found by:** round 137 — `UX-925` had to say what a 420 MiB pinned closure costs CI, and found that the job it is staged in has no instrument that could answer | **Serves:** every round asked what a change costs the example builds, and `UX-895`'s repeats rule, which this job is the one place in the repository that cannot follow | **Topic:** guards | **Area:** tools | **Shape:** judgement
 
 ## Motivation
 

@@ -1,6 +1,6 @@
 # UX-928: the routing rule sends a prose diff to a protocol that opens on a served page
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-701, UX-664, UX-727 | **Blocks:** — | **Found by:** round 136 — `UX-924`'s diff routed to `design-review` for one paragraph added to `.claude/skills/verify/SKILL.md`, and touched no page at all | **Serves:** every diff that edits a skill, a hook or the spec without touching the report | **Topic:** guards | **Area:** tools | **Shape:** judgement
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-701, UX-664, UX-727 | **Blocks:** — | **Found by:** round 136 — `UX-924`'s diff routed to `design-review` for one paragraph added to `.claude/skills/verify/SKILL.md`, and touched no page at all | **Serves:** every diff that edits a skill, a hook or the spec without touching the report | **Topic:** guards | **Area:** tools | **Shape:** judgement
 
 ## Motivation
 

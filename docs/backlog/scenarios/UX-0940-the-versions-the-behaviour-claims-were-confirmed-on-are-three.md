@@ -1,6 +1,6 @@
 # UX-940: the repository's BuildStream behaviour claims are pinned to three versions and nothing says which were re-confirmed
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-571 | **Blocks:** — | **Found by:** round 136 — reading the durable version claims while filing `UX-939`, after CI's binary moved to 2.8.1 | **Serves:** whoever reads a BuildStream behaviour claim in this codebase and has to decide whether it still holds | **Topic:** guards | **Area:** bga | **Shape:** judgement
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-571 | **Blocks:** — | **Found by:** round 136 — reading the durable version claims while filing `UX-939`, after CI's binary moved to 2.8.1 | **Serves:** whoever reads a BuildStream behaviour claim in this codebase and has to decide whether it still holds | **Topic:** guards | **Area:** bga | **Shape:** judgement
 
 ## Motivation
 

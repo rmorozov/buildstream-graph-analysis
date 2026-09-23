@@ -24,7 +24,8 @@ make test-touching   # the files that name the modules your diff touched
 
 Measured on a one-module diff: **4s**, 7 files, 123 tests (`UX-336`).
 A *selector*, not a gate - a grep-derived set can miss a test that
-exercises a module without naming it, which is why CI's full matrix gates the merge (step 3).
+exercises a module without naming it, which is why CI on the pull
+request gates the merge (step 3), on the newest Python alone (`UX-995`).
 `make test-touching ARGS=--why` says what selected each file.
 
 Then the tier, when the change is wider than one module:
@@ -54,9 +55,11 @@ python3 -m pytest tests/unit/test_<file>.py -q -k <substring>
 
 ## 3. The push gate, and the whole suite
 
-`UX-948` (Ruslan, round 138): **CI's full matrix is the gate before
-merge**, and nothing merges red. The gate before a push is the four
-fast checks, and they write the push hook's marker only when all pass:
+`UX-948` (Ruslan, round 138): **CI on the pull request is the gate
+before merge**, and nothing merges red - the newest Python alone;
+push to main still runs all four (`UX-995`). The gate before a push
+is the four fast checks, and they write the push hook's marker only
+when all pass:
 
 ```bash
 make push-check  # lint, the touching selector against the merge-base,

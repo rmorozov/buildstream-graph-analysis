@@ -89,9 +89,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # pyproject.toml's own classifiers declare 3.9-3.12 as supported -
-        # matrix across all four rather than pinning to one (P4-06).
-        python-version: ["3.9", "3.10", "3.11", "3.12"]
+        # pyproject.toml's own classifiers declare 3.9-3.12 as supported
+        # (P4-06). `UX-995`: a pull request queues behind another's
+        # matrix, and the owner chose the newest Python for it alone -
+        # a push to the default branch still runs all four.
+        python-version: ${{ fromJSON(github.event_name == 'pull_request' && '["3.12"]' || '["3.9","3.10","3.11","3.12"]') }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -161,20 +163,22 @@ jobs:
       # which module lines - the import chain `dev_touching`'s grep
       # cannot see, which is the class `UX-500`'s round could not close.
       #
-      # On 3.12 and never on 3.11: measured at **+20%** wall clock
-      # (33.2s -> 40.0s on a twelve-file subset here), and 3.11 is the
+      # On 3.11 and never on 3.12: measured at **+20%** wall clock
+      # (33.2s -> 40.0s on a twelve-file subset here), and 3.12 is the
       # interpreter whose seconds `UX-503`'s reference is made of. A
       # timing record taken under coverage would move every row in it.
+      # `UX-995`: push only - the map's one reader, `touch-map-adopt`,
+      # already runs on push alone.
       - name: Test (with a coverage-derived touching map)
         run: |
           make test PYTEST_ARGS="--cov=bga --cov=tools \
             --cov-context=test --cov-report= \
             --junitxml=${{ runner.temp }}/junit.xml"
-        if: matrix.python-version == '3.12'
+        if: matrix.python-version == '3.11' && github.event_name == 'push'
 
       - name: Test (with a timing report)
         run: make test PYTEST_ARGS="--junitxml=${{ runner.temp }}/junit.xml"
-        if: matrix.python-version == '3.11'
+        if: matrix.python-version == '3.12'
 
       - name: Keep the junit whatever the suite did
         if: always()
@@ -237,13 +241,13 @@ jobs:
           key: tier-carry-refs/heads/${{ github.event.repository.default_branch }}-
           restore-keys: |
             tier-carry-refs/heads/${{ github.event.repository.default_branch }}-
-        if: matrix.python-version == '3.11' && github.ref != format('refs/heads/{0}', github.event.repository.default_branch)
+        if: matrix.python-version == '3.12' && github.ref != format('refs/heads/{0}', github.event.repository.default_branch)
 
       - name: Set aside what the default branch carried
         run: |
           mv "${{ runner.temp }}/tier_carry.json" \
              "${{ runner.temp }}/tier_carry_base.json" || true
-        if: matrix.python-version == '3.11' && github.ref != format('refs/heads/{0}', github.event.repository.default_branch)
+        if: matrix.python-version == '3.12' && github.ref != format('refs/heads/{0}', github.event.repository.default_branch)
 
       - name: What the last run of this branch found over the gates
         uses: actions/cache/restore@v6
@@ -252,7 +256,7 @@ jobs:
           key: tier-carry-${{ github.ref }}-${{ github.run_id }}
           restore-keys: |
             tier-carry-${{ github.ref }}-
-        if: matrix.python-version == '3.11'
+        if: matrix.python-version == '3.12'
 
       # UX-476: `--base` is the other half of the rule. Two runs read
       # against one recording run are one measurement counted twice, so
@@ -272,7 +276,7 @@ jobs:
         run: |
           git fetch --no-tags origin \
             "${{ github.event.repository.default_branch }}" || true
-        if: always() && matrix.python-version == '3.11'
+        if: always() && matrix.python-version == '3.12'
         continue-on-error: true
 
       # `UX-621`: `--annotate` is the same line again, where the log body
@@ -299,10 +303,10 @@ jobs:
             --base "origin/${{ github.event.repository.default_branch }}" \
             --base-carry "${{ runner.temp }}/tier_carry_base.json" \
             --summary "${{ runner.temp }}/tier_gate.txt" --annotate \
-            --source "github-actions ubuntu-latest, test (3.11), -n auto" \
+            --source "github-actions ubuntu-latest, test (${{ matrix.python-version }}), -n auto" \
             --flake-ledger "${{ runner.temp }}/flake_ledger.candidate.json" \
             --run-id "${{ github.run_id }}"
-        if: matrix.python-version == '3.11'
+        if: matrix.python-version == '3.12'
 
       # `UX-923`: whether the base carry arrived, said after the gate.
       # `UX-912` spent four runs reading this restore wrong because the
@@ -320,7 +324,7 @@ jobs:
           else
             echo "::notice::tier carry: no carry restored for the default branch"
           fi
-        if: always() && matrix.python-version == '3.11' && github.ref != format('refs/heads/{0}', github.event.repository.default_branch)
+        if: always() && matrix.python-version == '3.12' && github.ref != format('refs/heads/{0}', github.event.repository.default_branch)
 
       # `always()`, because the run this most needs to remember is the
       # one that just reported - and the step above exits 1 on it.
@@ -329,7 +333,7 @@ jobs:
         with:
           path: ${{ runner.temp }}/tier_carry.json
           key: tier-carry-${{ github.ref }}-${{ github.run_id }}
-        if: always() && matrix.python-version == '3.11'
+        if: always() && matrix.python-version == '3.12'
 
       # `UX-691`: the gate step above writes this candidate on every
       # return, including a clean run - `if-no-files-found: warn` rather
@@ -337,7 +341,7 @@ jobs:
       # is the same "no candidate" state `touch-map-adopt` already
       # tolerates below.
       - name: This run's flake ledger, for adopting
-        if: always() && matrix.python-version == '3.11'
+        if: always() && matrix.python-version == '3.12'
         uses: actions/upload-artifact@v7
         with:
           name: flake-ledger-candidate
@@ -371,7 +375,7 @@ jobs:
         run: |
           python tools/dev_tier_drift.py "${{ runner.temp }}/junit.xml" \
             --record "${{ runner.temp }}/ci_reference.candidate.json" \
-            --source "github-actions ubuntu-latest, test (3.11), -n auto"
+            --source "github-actions ubuntu-latest, test (${{ matrix.python-version }}), -n auto"
           echo "Refresh tests/ci_reference.json from the" \
                "ci-reference-candidate artifact on this run."
           # UX-476: and from the log, for a reader who has the log and
@@ -394,7 +398,7 @@ jobs:
           echo "the drift gate's line, repeated for a log-tail reader:"
           cat "${{ runner.temp }}/tier_gate.txt" \
             || echo "the gate step wrote no summary - it did not run."
-        if: always() && matrix.python-version == '3.11'
+        if: always() && matrix.python-version == '3.12'
 
       # `UX-702`: `bga analyze` was measured superlinear (`UX-531`) and
       # nothing recorded whether a round moves it. Two commands, because
@@ -411,7 +415,7 @@ jobs:
           key: perf-carry-${{ github.ref }}-${{ github.run_id }}
           restore-keys: |
             perf-carry-${{ github.ref }}-
-        if: matrix.python-version == '3.11'
+        if: matrix.python-version == '3.12'
 
       - name: The largest fixture, for the analyzer's own clock
         run: |
@@ -419,7 +423,7 @@ jobs:
             --seed 1 --layers 20 --width 200
           python -m bga.cli gen-synthetic "${{ runner.temp }}/perf_export" \
             --seed 1 --layers 20 --width 200
-        if: always() && matrix.python-version == '3.11'
+        if: always() && matrix.python-version == '3.12'
 
       - name: The analyzer's own wall clock and peak RSS, on the largest fixture
         run: |
@@ -431,7 +435,7 @@ jobs:
             "${{ runner.temp }}/perf_export.html" \
             "${{ runner.temp }}/perf_export" \
             2> "${{ runner.temp }}/perf_export.time"
-        if: always() && matrix.python-version == '3.11'
+        if: always() && matrix.python-version == '3.12'
 
       # Beside the tier rows, in the same candidate this job already
       # writes and uploads a few steps below - one artifact, one
@@ -442,8 +446,8 @@ jobs:
             "${{ runner.temp }}/ci_reference.candidate.json" \
             "${{ runner.temp }}/perf_analyze.time" \
             "${{ runner.temp }}/perf_export.time" \
-            --source "github-actions ubuntu-latest, test (3.11), -n auto"
-        if: always() && matrix.python-version == '3.11'
+            --source "github-actions ubuntu-latest, test (${{ matrix.python-version }}), -n auto"
+        if: always() && matrix.python-version == '3.12'
 
       # `UX-420`'s Motivation, replayed on this gate's own two numbers:
       # absolute margin, never a ratio. Two consecutive runs (`UX-442`)
@@ -455,20 +459,20 @@ jobs:
             --carry "${{ runner.temp }}/perf_carry.json" \
             --base "origin/${{ github.event.repository.default_branch }}" \
             --summary "${{ runner.temp }}/perf_gate.txt" --annotate \
-            --source "github-actions ubuntu-latest, test (3.11), -n auto" \
+            --source "github-actions ubuntu-latest, test (${{ matrix.python-version }}), -n auto" \
             "${{ runner.temp }}/perf_analyze.time" \
             "${{ runner.temp }}/perf_export.time"
-        if: always() && matrix.python-version == '3.11'
+        if: always() && matrix.python-version == '3.12'
 
       - name: Leave it for the next run (analyzer gate)
         uses: actions/cache/save@v6
         with:
           path: ${{ runner.temp }}/perf_carry.json
           key: perf-carry-${{ github.ref }}-${{ github.run_id }}
-        if: always() && matrix.python-version == '3.11'
+        if: always() && matrix.python-version == '3.12'
 
       - name: Upload it, so refreshing the reference needs no scrolling
-        if: always() && matrix.python-version == '3.11'
+        if: always() && matrix.python-version == '3.12'
         uses: actions/upload-artifact@v7
         with:
           name: ci-reference-candidate
@@ -478,16 +482,18 @@ jobs:
       # `UX-524`: the same shape one file over. `--write` reads the
       # coverage database this run left and prints one line; the map
       # itself travels as an artifact, because it is ~60 KB of rows no
-      # log reader wants after a failure (`UX-441`).
+      # log reader wants after a failure (`UX-441`). `UX-995`: on 3.11
+      # now, beside the coverage step it reads, and push only - the
+      # map's one reader, `touch-map-adopt`, already runs on push alone.
       - name: This run's touching map, for adopting
         run: |
           python tools/dev_touch_map.py \
             --write "${{ runner.temp }}/touch_map.candidate.json"
-        if: always() && matrix.python-version == '3.12'
+        if: always() && matrix.python-version == '3.11' && github.event_name == 'push'
         continue-on-error: true
 
       - name: Upload it, so the adopt job can merge it
-        if: always() && matrix.python-version == '3.12'
+        if: always() && matrix.python-version == '3.11' && github.event_name == 'push'
         uses: actions/upload-artifact@v7
         with:
           name: touch-map-candidate
@@ -597,7 +603,7 @@ jobs:
     # above is `always()`.
     if: always()
     steps:
-      - name: Fetch what test (3.11) recorded
+      - name: Fetch what test (3.12) recorded
         id: fetch
         continue-on-error: true
         uses: actions/download-artifact@v8
@@ -611,7 +617,7 @@ jobs:
       - name: The candidate, and nothing else
         run: |
           cat ci_reference.candidate.json \
-            || echo "no candidate on this run - test (3.11) did not reach the record step"
+            || echo "no candidate on this run - test (3.12) did not reach the record step"
 
   # UX-503: the reference gives itself the rows it does not carry yet.
   #
@@ -659,7 +665,7 @@ jobs:
           python-version: "3.11"
       - name: Install what the tool imports (UX-821)
         run: pip install -e ".[dev]"
-      - name: Fetch what test (3.11) recorded
+      - name: Fetch what test (3.12) recorded
         continue-on-error: true
         uses: actions/download-artifact@v8
         with:
@@ -690,7 +696,7 @@ jobs:
   # `UX-934`'s: a bookkeeping job failing the default branch buys nothing.
   #
   # `UX-662`: **after** `tier-reference-adopt`, never beside it. That job
-  # adopts rows from a candidate `test (3.11)` measured with the map as
+  # adopts rows from a candidate `test (3.12)` measured with the map as
   # it was *before* this run, so a retire landing first would be undone
   # by pre-map numbers arriving second. Sequenced, and the pull below
   # puts this job's retire on top of whatever that one pushed.
@@ -712,7 +718,7 @@ jobs:
           python-version: "3.11"
       - name: Install what the tool imports (UX-821)
         run: pip install -e ".[dev]"
-      - name: Fetch what test (3.12) measured
+      - name: Fetch what test (3.11) measured
         continue-on-error: true
         uses: actions/download-artifact@v8
         with:
@@ -720,7 +726,7 @@ jobs:
       - name: Merge it into tests/touch_map.json
         run: |
           test -f touch_map.candidate.json || {
-            echo "no candidate on this run - test (3.12) did not reach it"
+            echo "no candidate on this run - test (3.11) did not reach it"
             exit 0
           }
           # Before any edit, so the tree is clean to rebase and the
@@ -771,7 +777,7 @@ jobs:
           python-version: "3.11"
       - name: Install what the tool imports (UX-821)
         run: pip install -e ".[dev]"
-      - name: Fetch what test (3.11) recorded
+      - name: Fetch what test (3.12) recorded
         continue-on-error: true
         uses: actions/download-artifact@v8
         with:
@@ -779,7 +785,7 @@ jobs:
       - name: Append this run's excursions to the ledger
         run: |
           test -f flake_ledger.candidate.json || {
-            echo "no candidate on this run - test (3.11) did not reach the ledger step"
+            echo "no candidate on this run - test (3.12) did not reach the ledger step"
             exit 0
           }
           git pull --rebase origin "${{ github.ref }}"

@@ -60,3 +60,59 @@ The five guards that read the cells: `test_a_run_red_for_another_reason_adopts_n
 `test_a_slow_file_says_which_file.py`, `test_the_analyzer_gate_needs_two_runs_and_a_cause.py`,
 `test_the_touching_map_is_measured.py`, `test_the_floor_is_stated_where_it_is_read.py`.
 `#284` edits `ci.yml` only above line 72, so no hunk overlaps.
+
+## Outcome
+
+### The gap, measured
+
+Before: `python-version: ["3.9", "3.10", "3.11", "3.12"]`, one literal
+list read for both `push` and `pull_request` - every queued PR ran all
+four `test` cells, measured at 68.5% of a run's job-seconds (Motivation).
+Two of the five guards that read the cells could not have run at all
+after the route landed without their own fix: `_jobs()["test"]["strategy"]
+["matrix"]["python-version"]` returned the literal four-item list they
+iterated directly, which a `${{ fromJSON(...) }}` expression string
+would turn into 66 one-character "cells" and an `itertools.permutations`
+over them - reproduced live, killed after 120s with 0 of 7 tests
+collected-and-run.
+
+### The close, measured
+
+```text
+$ python3 -m pytest -q -n 4 $(grep -l ci.yml tests/unit/*.py)
+810 passed
+$ python3 -m pytest -q tests/unit/test_a_pull_request_runs_the_newest_python_only.py
+4 passed
+$ python3 tools/dev_touching.py --base 49a29a29 --loud
+2691 passed, 5 skipped
+$ make lint
+clean: 575 finding(s) match tests/quality_baseline.json; ... (unchanged forced counts)
+```
+
+`push` matrix now evaluates (via the replay harness's own `fromJSON`)
+to `['3.9', '3.10', '3.11', '3.12']`, equal to `pyproject.toml`'s four
+classifiers; `pull_request` to `['3.12']` alone. The timing role (drift
+gate, both carries, the base diff, the perf gate and its own carry, both
+candidate uploads, `--source`) now reads `matrix.python-version == '3.12'`
+throughout, `--source` itself now `test (${{ matrix.python-version }})`
+rather than typed. Coverage and the touching map now read
+`matrix.python-version == '3.11' && github.event_name == 'push'`.
+
+### Mutations verified red and reverted (3)
+
+| # | mutation | reddened |
+|---|---|---|
+| M1 | rebind "Tiers match CI's own record of them" to `== '3.11'` | `test_every_pull_request_step_moves_to_the_cell_it_keeps` (new guard) and `test_a_run_red_only_at_the_drift_step_appends_the_ledger_alone` (pre-existing) |
+| M2 | drop `"3.10"` from the push branch's list | `test_the_push_matrix_equals_pyprojects_classifiers` (new guard) alone |
+| M3 | append `&& github.event_name == 'push'` to the 3.12 perf-carry restore (ci.yml:412), a step outside `PUSH_ONLY_STEPS` | `test_every_pull_request_step_moves_to_the_cell_it_keeps` (new guard) |
+
+M3 is the round-139 verifier's hold: the clause's first draft exempted
+any step whose `if:` contained the substring `event_name == 'push'`,
+so this same mutation stayed green. Fixed by exempting only the three
+named `PUSH_ONLY_STEPS` and computing "needed by a pull request" off
+the real **push** matrix (not a hypothetical pull-request context,
+which a genuine push-only condition also fails under - the mutation
+and the legitimate case are indistinguishable there).
+
+All three reverted from the pre-mutation copy and confirmed green
+(`810 passed`) before commit.

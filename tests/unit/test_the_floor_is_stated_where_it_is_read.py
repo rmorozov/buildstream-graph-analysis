@@ -33,11 +33,16 @@ def _floor():
 
 
 def _matrix():
-    """Every Python the CI matrix runs, in the order it lists them."""
+    """Every Python the CI matrix can run, on either event, low to
+    high (`UX-995`: the matrix is a `fromJSON` expression over two
+    lists - the pull-request branch and the push branch - not one
+    literal list)."""
     text = CI.read_text(encoding="utf-8")
-    found = re.search(r"python-version:\s*\[([^\]]*)\]", text)
+    found = re.search(r"python-version:\s*\$\{\{\s*fromJSON\(([^)]*)\)", text)
     assert found, f"{CI.name} declares no python-version matrix"
-    return re.findall(r"\d+\.\d+", found.group(1))
+    versions = {tuple(int(part) for part in one.split("."))
+                for one in re.findall(r"\d+\.\d+", found.group(1))}
+    return [f"{major}.{minor}" for major, minor in sorted(versions)]
 
 
 def _versions_named(path):

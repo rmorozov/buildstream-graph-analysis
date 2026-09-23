@@ -2553,8 +2553,9 @@ class TestTheFailureNameIsTheLastThingInTheLog:
 
     @classmethod
     def _the_red_path(cls, job="test"):
-        """The `run:` scripts GitHub executes on a 3.11 job whose suite
-        failed, in the workflow's own order.
+        """The `run:` scripts GitHub executes on a 3.12 job whose suite
+        failed, in the workflow's own order. `UX-995` moved the timing
+        role, and its long reference document, from 3.11 onto 3.12.
 
         A step with no `if:` is `success()` and is skipped after a red;
         so is one conditioned on the interpreter alone, which is why
@@ -2562,16 +2563,16 @@ class TestTheFailureNameIsTheLastThingInTheLog:
         """
         for step in cls._jobs()[job]["steps"]:
             condition = str(step.get("if", "")).strip()
-            if "run" not in step or "3.12" in condition:
+            if "run" not in step or "3.11" in condition:
                 continue
-            if "!= '3.11'" in condition:
+            if "!= '3.12'" in condition:
                 continue
             if "failure()" in condition or "always()" in condition:
                 yield step["name"], step["run"]
 
     def test_the_ordered_steps_leave_the_id_in_the_tail(self, tmp_path):
         """`UX-558`'s Acceptance Test, replayed off the workflow: the
-        last 40 lines of a red 3.11 job's log carry the failing id."""
+        last 40 lines of a red 3.12 job's log carry the failing id."""
         self._a_red_junit(tmp_path / "junit.xml", dict(tiers.recorded()))
         log = []
         for _name, script in self._the_red_path():
@@ -2579,6 +2580,10 @@ class TestTheFailureNameIsTheLastThingInTheLog:
                 continue                      # the network, not the log
             script = re.sub(r"\$\{\{\s*runner\.temp\s*\}\}", str(tmp_path),
                             script)
+            # `UX-995`: `--source` is now derived, not typed, so the
+            # replay has to fill in the cell this red path simulates.
+            script = re.sub(r"\$\{\{\s*matrix\.python-version\s*\}\}",
+                            "3.12", script)
             # `python` is not a name every environment binds; the
             # workflow's own runner does.
             script = re.sub(r"(?m)^(\s*)python ", rf"\1{sys.executable} ",

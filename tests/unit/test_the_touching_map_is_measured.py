@@ -22,8 +22,8 @@ every push:
 
 Measured before it was believed: **+20% wall clock** with the coverage
 context (33.2s -> 40.0s on a twelve-file subset), which is why it runs
-on 3.12 and never on 3.11 - the interpreter whose seconds `UX-503`'s
-tier reference is made of.
+on 3.11 and never on 3.12 - the interpreter whose seconds `UX-503`'s
+tier reference is made of (`UX-995`).
 """
 import json
 import pathlib
@@ -159,9 +159,9 @@ class TestTheSelectorUnionsIt:
 
 class TestItComesFromCIAndNotFromHere:
     def test_the_workflow_measures_it_off_the_timing_interpreter(self):
-        """`UX-503`'s tier reference is 3.11's seconds. Coverage costs
-        +20%, so measuring the map there would move every row in a
-        document this repository compares runs against."""
+        """`UX-503`'s tier reference is 3.12's seconds (`UX-995`).
+        Coverage costs +20%, so measuring the map there would move
+        every row in a document this repository compares runs against."""
         held = WORKFLOW.read_text(encoding="utf-8")
         # The `if:` that *follows* the flags, not the one before them:
         # reading backwards found the previous step's condition, and
@@ -169,8 +169,8 @@ class TestItComesFromCIAndNotFromHere:
         after = held.split("--cov-context=test", 1)[1]
         condition = [line for line in after.splitlines()
                      if line.strip().startswith("if:")][0]
-        assert "3.12" in condition, condition
-        assert "3.11" not in condition, condition
+        assert "3.11" in condition, condition
+        assert "3.12" not in condition, condition
 
     def test_the_workflow_adopts_it_only_on_the_default_branch(self):
         held = WORKFLOW.read_text(encoding="utf-8")

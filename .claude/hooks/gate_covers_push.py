@@ -1,9 +1,9 @@
 """UX-762: the gate covers the commit you push, not the branch you ran it on.
 
-`make test`'s recipe writes `.gate-covered` (gitignored) with HEAD's
-sha, only on a green run - a red suite covers nothing, so the write is
-the recipe's last line, reached only if pytest exits 0. This hook reads
-that marker on `git push` and blocks a HEAD the marker does not name:
+`make push-check` (UX-948: the four fast checks; CI's matrix gates the
+merge) and `make test` write `.gate-covered` (gitignored) with HEAD's
+sha as the recipe's last line, so only a green run reaches it. This hook
+reads that marker on `git push` and blocks a HEAD it does not name:
 round 104's gap, a commit after the gate that shipped uncovered.
 
 Scans the **whole** command, in `no_bulk_add.is_bulk_add`'s loop: a
@@ -100,13 +100,13 @@ def covered_sha(root):
     return marker.read_text(encoding="utf-8").strip()
 
 
-MESSAGE = """Blocked: HEAD ({head}) was never covered by a green `make test`.
+MESSAGE = """Blocked: HEAD ({head}) was never covered by a green `make push-check`.
 
 The gate covers the commit you push, not the branch you ran it on
-(UX-762). `make test` writes {marker} with the sha it last passed on
-- that sha is {covered}, not this one.
+(UX-762). `make push-check` (or `make test`) writes {marker} with the
+sha it last passed on - that sha is {covered}, not this one.
 
-Run `make test` again on this commit before pushing it. If the push
+Run `make push-check` on this commit before pushing it. If the push
 legitimately precedes the gate - a WIP branch, a fix you want CI to
 see - set {escape}=UX-NNN, the row that authorises it, for the one
 command. Exporting it (rather than setting it once) disables the gate
@@ -115,13 +115,13 @@ for every push in that shell until it is unset.
 
 BAD_REASON = """Blocked: {escape}={reason!r} does not name a task ({escape}=UX-NNN).
 
-HEAD ({head}) is uncovered by any green `make test`. A bare flag is
+HEAD ({head}) is uncovered by any green `make push-check`. A bare flag is
 not a record anyone can find later - name the row that authorises
 this push ahead of the gate.
 """
 
 BYPASS = ("GATE BYPASSED by {escape}={reason}: pushing {head}, uncovered "
-          "by any green `make test`. Holds for every push in this shell "
+          "by any green `make push-check`. Holds for every push in this shell "
           "until {escape} is unset.\n")
 
 

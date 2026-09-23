@@ -179,15 +179,15 @@ DESIGN_SURFACES = (
 
 
 def route(paths):
-    """`(destination, reasons)` for a diff - `UX-701`'s routing rule.
-
-    `design-review` when the diff reaches a surface whose reader is
-    somebody other than its author, `self-review` otherwise. The rule
-    is here rather than in the skill's prose so a guard can run it.
-    """
+    """`(destination, reasons)`: `UX-701`'s rule, `UX-928`'s split - with a
+    page path `design-review`, without `review`, no surface `self-review`."""
     reasons = sorted({name for name, matches in DESIGN_SURFACES
                       for path in paths if matches(path)})
-    return ("design-review" if reasons else "self-review"), reasons
+    page = any(p.startswith("bga/viewer/") or p.endswith((".mjs", ".css"))
+               for p in paths)
+    if reasons and page:
+        return "design-review", reasons + ["the page"]
+    return ("review" if reasons else "self-review"), reasons
 
 
 def report(module):

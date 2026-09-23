@@ -68,7 +68,7 @@ For every task, before marking it done:
 
 1. Run the exact command(s) given in the task's **Acceptance Test** section.
 2. Paste the actual command and actual output into the task file's **Verification Log** section (append, don't overwrite prior entries).
-3. **While you work, run the tests that touch what you changed** (`UX-336`): `make test-touching` maps the working diff to the test files that name it - 31-164 of 584 test files, over every module the map names, not the seconds one machine spent on one of them (`UX-632`). `python3 tools/dev_touching.py --spread --write` is the only thing that writes that figure. It moves whenever the set of (test file, module named) pairs changes - a new test file, a new import, a renamed module, a deleted file - not only the first of those (`UX-756`: round 103 moved it with two imports and no new file, and CI reddened on the stale row). Wider than one module, run the tier (`UX-238`). Every target runs `-n auto`. **The suite's wall clock is a property of the machine, not of the suite** (`UX-551`), so budget a round against the spread and not a figure:
+3. **While you work, run the tests that touch what you changed** (`UX-336`): `make test-touching` maps the working diff to the test files that name it - 32-165 of 590 test files, over every module the map names, not the seconds one machine spent on one of them (`UX-632`). `python3 tools/dev_touching.py --spread --write` is the only thing that writes that figure. It moves whenever the set of (test file, module named) pairs changes - a new test file, a new import, a renamed module, a deleted file - not only the first of those (`UX-756`: round 103 moved it with two imports and no new file, and CI reddened on the stale row). Wider than one module, run the tier (`UX-238`). Every target runs `-n auto`. **The suite's wall clock is a property of the machine, not of the suite** (`UX-551`), so budget a round against the spread and not a figure:
 
 ```text
 round 46   3m15s                                     4 cores
@@ -83,7 +83,7 @@ Round 80's 8m52s is **not reproducible on the tree that produced it**: the same 
 
    | target | measured at `-n auto` | what is in it |
    |---|---|---|
-   | `make test-touching` | 31-164 of 584 test files | the test files that name what your diff touched |
+   | `make test-touching` | 32-165 of 590 test files | the test files that name what your diff touched |
    | `make test-small` | **20s** | pure Python over in-memory fixtures — the default tier |
    | `make test-medium` | ~2m50s | spawns a process or a node harness |
    | `make test-large` | ~2m05s | scale fixtures, real process trees |
@@ -130,7 +130,7 @@ Round 80's 8m52s is **not reproducible on the tree that produced it**: the same 
 12. **`docs/spec/specification.md` is ground truth, and Part 32 is the one Part a round may edit.** `UX-556` is what settled the boundary, because a round hit it and read it two ways. The spec's contract registry said "The last four are **written but not printable**" of a set that is six (`unprintable()` less `superseded()`) and that four rows follow; `UX-549` fixed the architecture's copy of the same sentence and filed the spec's, reading the rule as forbidding the edit. It does not: the sentence is at line 1690 and Part 32 spans 1515-1958, so it was inside the permitted region the whole time (the range is derived by `test_the_spec_outside_part_32_is_read_only.py`, which also digests everything outside it). **The Part, not the table** — a rule that lets you correct a registry row but not the sentence counting the rows is not a boundary, it is an accident of where someone drew the line. Everything outside Part 32 stays read-only for a round; a factual error there is filed, not fixed. And the second half, which is what stops this recurring: **a counted figure in Part 32 is derived by a guard, never restated in prose.** Both copies of this error were prose nothing checked. `tests/unit/test_a_counted_figure_is_derived.py::TestTheSpecCountsItsOwnTable` reads the count and the position off the table's own rows.
 
 13. If the acceptance test does **not** pass after your change, leave status at 🟡 (In Progress) with a note on what's blocking, and stop — do not mark it 🟢 "mostly working."
-14. **`make test` before anything is marked done" covers the commit you push, not the branch you ran it on** (`UX-762`). Round 104 ran the gate at `67cc0d1` and then pushed `4879bcc`, a round-document commit that followed it and that CI reddened on — the gate had covered a commit that was never the one that shipped. `make test`'s own recipe now writes `.gate-covered` (gitignored) with `HEAD`'s sha, only when pytest exits 0, and `.claude/hooks/gate-covers-push.sh` reads it on `git push`, refusing a `HEAD` the marker does not name and printing both shas. `UX-885`: `lint` is a prerequisite of `test`, so a lint-red tree (ruff, or the markdown/baseline checks) never reaches the write either — round 125 pushed a blob a local `make test` passed and CI's pinned PyMarkdown reddened, skipping the whole matrix, because the gate ran `make test` without lint. An amend or a further commit after the gate correctly reds — that is the point, not a bug. `BGA_SKIP_PUSH_GATE=UX-NNN` is the named escape for a push that legitimately precedes the gate (a WIP branch, a fix you want CI to see) — a bare flag is refused, the bypass is printed loudly to stderr naming the reason and the sha, and **exporting it, rather than setting it for one command, disables the gate for every push in that shell until it is unset.** It does not fire on `--dry-run`, a branch or tag delete, or anything that is not `git commit`/`git push`, and it scans a whole compound command the way `no_bulk_add.is_bulk_add` does — `git status && git push` is still seen — sharing that guard's own gap that `git -C x push`, `VAR=1 git push` and `command git push` bypass both. It also only ever fires on a `git push` inside a Bash tool call in *this* session, so it is not total — the channel mix behind the 41 pushes that reached this branch across rounds 103-105 is not recoverable from committed material, but at least one used this covered channel, which is why CI on the pushed commit, not this hook, is the real backstop regardless (`UX-767`).
+14. **The push gate covers the commit you push, not the branch you ran it on** (`UX-762`). Round 104 ran the gate at `67cc0d1` and then pushed `4879bcc`, a round-document commit that followed it and that CI reddened on — the gate had covered a commit that was never the one that shipped. `make test`'s own recipe now writes `.gate-covered` (gitignored) with `HEAD`'s sha, only when pytest exits 0, and `.claude/hooks/gate-covers-push.sh` reads it on `git push`, refusing a `HEAD` the marker does not name and printing both shas. `UX-885`: `lint` is a prerequisite of `test`, so a lint-red tree (ruff, or the markdown/baseline checks) never reaches the write either — round 125 pushed a blob a local `make test` passed and CI's pinned PyMarkdown reddened, skipping the whole matrix, because the gate ran `make test` without lint. `UX-948` (Ruslan, round 138): `make push-check` — `lint`, the touching selector against the merge-base, `dev_sizes.py --check` and `dev_close_task.py --check` — writes the same marker, last and only on green, and is the push gate; CI's full matrix is the gate before merge, and nothing merges red. One local `make test` measured 17.5 min alone and 22-26 min beside other tracks on 4 cores. An amend or a further commit after the gate correctly reds — that is the point, not a bug. `BGA_SKIP_PUSH_GATE=UX-NNN` is the named escape for a push that legitimately precedes the gate (a WIP branch, a fix you want CI to see) — a bare flag is refused, the bypass is printed loudly to stderr naming the reason and the sha, and **exporting it, rather than setting it for one command, disables the gate for every push in that shell until it is unset.** It does not fire on `--dry-run`, a branch or tag delete, or anything that is not `git commit`/`git push`, and it scans a whole compound command the way `no_bulk_add.is_bulk_add` does — `git status && git push` is still seen — sharing that guard's own gap that `git -C x push`, `VAR=1 git push` and `command git push` bypass both. It also only ever fires on a `git push` inside a Bash tool call in *this* session, so it is not total — the channel mix behind the 41 pushes that reached this branch across rounds 103-105 is not recoverable from committed material, but at least one used this covered channel, which is why CI on the pushed commit, not this hook, is the real backstop regardless (`UX-767`).
 
 Status legend (same as the tracker):
 
@@ -362,13 +362,14 @@ tools/native_trace_to_chrome_trace.py, bst_log_to_chrome_trace.py,
 tools/bst_run_context.py, _run_context_common.py
 tools/dev_touching.py        the tests that name what your diff touched, plus the census
                              they can never name (UX-336, UX-522)
+tools/_record_readers.py     its clause for a record a guard loads through a tool (UX-942)
 tools/dev_docs_only.py, dev_docs_lane.py  whether a PR is docs only, and the doc
                              guards its one-Python CI lane runs (UX-956 (open))
 tools/dev_touch_map.py       which test files executed which module, off CI's own
                              coverage run - the import chain a grep cannot see (UX-524)
 tools/dev_impact.py          what a change reaches - contracts, findings, guides,
                              guards, open filings - and where it routes (UX-687, UX-701)
-tools/dev_close_task.py, dev_shape_budget.py  closing a row and its shape budget (UX-336, UX-690)
+tools/dev_close_task.py, dev_shape_budget.py  closing a row and its shape budget (UX-336, UX-690) · _close_task_checks.py  its newer `--check` properties
 tools/dev_refresh_analysis.py  the rule a committed analysis is written
                              under, and the command that rewrites one
                              from a fresh run (UX-486)
@@ -377,6 +378,8 @@ tools/dev_round_register.py  which rounds happened, derived from the
                              committed union, never git log (UX-744, UX-782)
 tools/dev_tier_drift.py      which files outgrew their tier, from the
                              suite's own junit report (UX-418)
+tools/dev_bst_examples_spread.py  bst-examples' wall clock as a spread from the
+                             jobs API, and its exact figures as notices (UX-941 (open))
 tools/dev_mutation.py        mutmut over the modules a diff touched, weekly -
                              survivors into a ledger under docs/audits/ (UX-703)
 tools/dev_perf_ratchet.py    whether `bga analyze` and `bga view --export`
@@ -483,6 +486,10 @@ tests/flake_ledger.json    every unconfirmed excursion and confirmed drift the t
                            own run - `--adopt-flake` - and read by dev_flake_census.py (UX-691)
 tests/quality_baseline.json  every finding the widened families report today, by
                            identity; reds a new one (UX-694, shape_ledger.json UX-690)
+tests/bst_claims.json      each BuildStream behaviour claim in bga/, where it is written and
+                           the version it was last read on; older than BST_VERSION warns (UX-940 (open))
+tests/bst_examples_clock.json  the jobs API's bst-examples spans `--fetch` read;
+                           ci.yml's clock line is derived from it (UX-941 (open))
 tests/dom_shim.mjs         the one DOM every viewer guard runs on (UX-264)
 tests/viewer.mjs           the viewer's exports as one namespace, so a guard names a symbol not a module (UX-337)
 tests/cdp.mjs              headless Chrome over CDP, no dependencies (UX-257)
@@ -583,9 +590,10 @@ missed two, both caught by CI (`UX-763`). In order:
    `test_a_run_is_priced.py::TestEveryRoundDocumentPricesItsAgents`.
 6. `directions.md`'s history row and the `docs/README.md` link —
    `test_the_round_history_names_every_audit.py` (`UX-583`).
-7. The gate, last: `make test` on the commit about to push —
-   `test_the_gate_covers_the_pushed_commit.py` (`UX-762`). Steps 1-6
-   are commits too, so a gate before them is stale by ship time.
+7. The gate, last: `make push-check` on the commit about to push —
+   `test_the_gate_covers_the_pushed_commit.py` (`UX-762`, `UX-948`).
+   Steps 1-6 are commits too, so a gate before them is stale by ship
+   time. CI's full matrix is the gate before merge; nothing merges red.
 
 **Self-reference (`UX-744`):** a history-derived figure cannot name
 the commit that first states it. Step 2 counts rows, not commits

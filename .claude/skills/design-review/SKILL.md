@@ -12,6 +12,9 @@ are [`docs/design/roles.md`](../../../docs/design/roles.md). A review
 adds rules to the guide and files their implementation; it does not
 restyle the page in passing.
 
+A skill, hook, spec or contract diff that touches no page is routed to
+`review`'s routed-diff section instead (`dev_impact.route()`, `UX-928`).
+
 ## Who runs it
 
 One subagent that can read images, so the pictures never enter the

@@ -13,7 +13,8 @@ file is the day-one summary, and
 
 | | |
 |---|---|
-| `make test` | the whole suite. **Required before marking anything done.** Wall clock moves >2x with the machine — the guide carries the readings |
+| `make test` | the whole suite, which CI's matrix runs: **CI is the gate before merge**, and nothing merges red. Wall clock moves >2x with the machine — the guide carries the readings |
+| `make push-check` | **the gate before a push** (`UX-948`): `lint`, the touching selector against the merge-base, `dev_sizes.py --check`, `dev_close_task.py --check`; writes the push hook's marker only when all four pass |
 | `make test-touching` | just the files naming the modules your diff touched — a spread over the tree, not a duration; the guide carries it |
 | `make test-small` \| `-medium` \| `-large` \| `-fast` | tiers, from measured duration in `tests/tiers.py` |
 | `make test-tiers` | the suite plus a tier-drift parse, in one run |
@@ -25,11 +26,11 @@ file is the day-one summary, and
 
 ## The pipeline
 
-`orient` → `decompose` (the **shape**, derived by `dev_close_task.py --shape`) → tracks → `verifier` → merge → close (row moves, derived counts, ledger rows, round document — fixing guide §7a) → one `make test`, push.
+`orient` → `decompose` (the **shape**, derived by `dev_close_task.py --shape`) → tracks → `verifier` → merge → close (row moves, derived counts, ledger rows, round document — fixing guide §7a) → `make push-check`, push; CI's matrix gates the merge.
 Mechanical and bounded shapes are `implementer` tracks on `sonnet` in worktrees; a judgement shape is the session's own — the *judgement*, not the work: the rows that say the session took it in the brief ran on `sonnet` for a 318k median against bounded's 228k (73 of 150 runs, four whose own cell disagrees; `dev_process_bands.py --runs`).
 `researcher` and `verifier` read on `sonnet`; the session judges, briefs and merges, and reads reports, never diffs or logs — its cost is the live
 context at each rebuild — the `decompose` skill carries the measured share, with its window; a result over a screen goes to the scratchpad (`UX-711`). `measure`, `falsify`, `verify`
-(which calls `self-review` last) run inside a track; `derive` before moving viewer code; `walk` and `design-review` audit the page and `review` the documents; every run is a row in `docs/audits/agent-runs.md`.
+(which calls `self-review` last) run inside a track; `derive` before moving viewer code; `walk` and `design-review` audit the page and `review` the documents and a surface diff with no page; every run is a row in `docs/audits/agent-runs.md`.
 
 ## Conventions
 
@@ -71,8 +72,7 @@ Fixing guide §6 is the full map. Don't re-derive it.
 
 ## Things Claude gets wrong
 
-- **Runs a tier and commits.** A tier is a *selector*. `make test` is
-  the gate, and skipping it shipped a slack budget in round 66.
+- **Runs a tier and pushes.** A tier is a *selector*: `make push-check` gates the push, CI's matrix the merge; skipping the gate shipped a slack budget in round 66.
 - **Builds an instrument that reads a proxy** for the thing it names —
   four shapes, fixing guide §5; the three questions are in `measure`.
 - **Writes a guard whose setup another gate already excludes**, so it

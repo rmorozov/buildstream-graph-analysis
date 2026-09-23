@@ -41,6 +41,47 @@ class TestTheVocabularyIsTheModuleTree:
         assert "bga/nowhere" not in dev_close_task.declared_areas()
 
 
+class TestEveryTopLevelDirectoryIsRead:
+    """`UX-937`: the vocabulary is every top-level directory §6's tree
+    names, with its subdirectories - not an alternation of two of them."""
+
+    @staticmethod
+    def _guide(tmp_path, monkeypatch, edit):
+        guide = tmp_path / "fixing-guide.md"
+        text = dev_close_task.AREA_GUIDE.read_text(encoding="utf-8")
+        edited = edit(text)
+        assert edited != text, "the edit did not land"
+        guide.write_text(edited, encoding="utf-8")
+        monkeypatch.setattr(dev_close_task, "AREA_GUIDE", guide)
+
+    def test_tests_is_an_area(self):
+        areas = dev_close_task.declared_areas()
+        assert {"tests", "tests/unit"} <= areas, sorted(areas)
+
+    def test_a_row_declaring_tests_passes_and_a_stray_one_does_not(
+            self, monkeypatch):
+        monkeypatch.setattr(dev_close_task, "file_areas", lambda: {
+            "UX-1": "tests", "UX-2": "tests/unit", "UX-3": "bga/nowhere"})
+        found = dev_close_task.area_problems()
+        assert len(found) == 1 and "UX-3" in found[0], found
+
+    def test_a_line_leaving_the_tree_leaves_the_vocabulary(
+            self, tmp_path, monkeypatch):
+        """The discriminating one: a fix that types `tests/unit` passes
+        the clauses above and fails this."""
+        self._guide(tmp_path, monkeypatch, lambda text: "\n".join(
+            line for line in text.splitlines()
+            if not line.startswith("tests/unit/ ")))
+        areas = dev_close_task.declared_areas()
+        assert "tests/unit" not in areas and "tests" in areas, sorted(areas)
+
+    def test_a_line_joining_the_tree_joins_the_vocabulary(
+            self, tmp_path, monkeypatch):
+        self._guide(tmp_path, monkeypatch, lambda text: text.replace(
+            "\ntests/unit/ ", "\nnowhere/deep/  x\ntests/unit/ ", 1))
+        assert {"nowhere", "nowhere/deep"} <= dev_close_task.declared_areas()
+
+
 class TestEveryRowFiledSinceCarriesOne:
 
     def test_the_rows_this_item_introduced_declare_an_area(self):

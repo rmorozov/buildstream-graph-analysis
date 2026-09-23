@@ -8525,6 +8525,7 @@
   "tests/unit/test_a_record_selects_the_guard_that_loads_it.py",
   "tests/unit/test_a_slow_file_says_which_file.py",
   "tests/unit/test_the_cost_row_is_derived_from_the_selector.py",
+  "tests/unit/test_the_impact_set_is_derived.py",
   "tests/unit/test_the_loop_stays_fast.py",
   "tests/unit/test_the_selector_carries_the_census.py"
  ],

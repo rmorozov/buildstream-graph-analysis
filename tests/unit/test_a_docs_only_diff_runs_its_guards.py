@@ -29,7 +29,8 @@ RUNS = "needs.changes.outputs.docs_only == 'true'"
 HEAVY = {"test", "bst-smoke", "bst-tests", "bst-examples"}
 #: Jobs that run whatever the diff is; a new job has to be put in one set.
 EITHER = {"changes", "tier-reference", "tier-reference-adopt", "touch-map-adopt",
-          "flake-ledger-adopt", "agent-config", "packaging", "installed-capture"}
+          "flake-ledger-adopt", "area-pages-publish", "agent-config", "packaging",
+          "installed-capture"}
 
 #: The textual witness: a line that walks or lists the tree, and a docs
 #: marker on it or on the definition of the name it walks.

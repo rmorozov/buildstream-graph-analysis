@@ -2,7 +2,7 @@
 """`UX-997`: CI's measured records live on `refs/heads/records`, not main.
 
     python tools/dev_records.py fetch [--at SHA]
-    python tools/dev_records.py publish
+    python tools/dev_records.py publish [--pages DIR]
 
 `fetch` writes the four record paths (`tests/ci_reference.json`,
 `tests/touch_map.json`, `tests/flake_ledger.json`,
@@ -20,7 +20,10 @@ commit on the records tip (or seeds an orphan root from the tree's own
 copies, the first time), and pushes it there - never to main, and never
 force. T2 (`UX-997`): the four paths are `git rm --cached` and
 gitignored, so `_dirty` hashes rather than trusting `git diff`, which
-reads nothing for a path outside the index at all.
+reads nothing for a path outside the index at all. `--pages DIR`
+(`UX-1000` T2) overlays `docs/backlog/areas/` from that directory's
+`.md` files onto the same commit, beside whichever of the four paths
+this run also changed.
 """
 import argparse
 import hashlib
@@ -168,12 +171,29 @@ def _records_tip():
             if _git("fetch", "--quiet", "origin", RECORDS_REF).returncode == 0 else None)
 
 
+def _pages_dirty(pages_dir, tip):
+    """Whether `pages_dir`'s `.md` files differ from `docs/backlog/areas/`
+    at `tip` - name set or content, either counts (`UX-1000` T2).
+    `tip is None` (nothing ever published) counts any local page as new,
+    same as `_dirty` reading `None` for the four record paths."""
+    local = sorted(pathlib.Path(pages_dir).glob("*.md"))
+    if tip is None:
+        return bool(local)
+    names = {p.name for p in local}
+    listed = _git("ls-tree", "--name-only", tip, "docs/backlog/areas/")
+    tip_names = {pathlib.Path(n).name for n in listed.stdout.split()}
+    if names != tip_names:
+        return True
+    return any(_git("show", f"{tip}:docs/backlog/areas/{p.name}").stdout
+               != p.read_text(encoding="utf-8") for p in local)
+
+
 def publish(argv=None):
-    argparse.ArgumentParser(description="push the records this run changed").parse_args(argv)
+    parser = argparse.ArgumentParser(description="push the records this run changed")
+    parser.add_argument("--pages", default=None, metavar="DIR",
+                        help="overlay docs/backlog/areas/ from DIR (UX-1000)")
+    args = parser.parse_args(argv)
     changed = [path for path in RECORD_PATHS if _dirty(path)]
-    if not changed:
-        print("nothing to publish - no record changed")
-        return 0
     # `changed` only means anything relative to the tip `fetch` last
     # confirmed: overlay it onto a *different*, newer tip and whatever
     # that tip gained since goes missing from the commit built here
@@ -192,6 +212,13 @@ def publish(argv=None):
               f"it (read {base or 'none'}, now {tip or 'none'}) - nothing "
               f"was published (UX-997)")
         return 1
+    # The pages check needs `tip`, so the early return waits for it too -
+    # ahead of it, a run that only changed pages would report nothing to
+    # publish and never reach the overlay below (`UX-1000` T2).
+    pages_changed = bool(args.pages) and _pages_dirty(args.pages, tip)
+    if not changed and not pages_changed:
+        print("nothing to publish - no record changed")
+        return 0
     guarded = [path for path in changed if path in dev_adopt_check.GUARDS]
     if guarded and (code := dev_adopt_check.main(guarded)):
         return code
@@ -205,13 +232,21 @@ def publish(argv=None):
             blob = _git("hash-object", "-w", "--", path, env=index_env, check=True).stdout.strip()
             _git("update-index", "--add", "--cacheinfo", f"100644,{blob},{path}",
                  env=index_env, check=True)
+        if args.pages:
+            for src in sorted(pathlib.Path(args.pages).glob("*.md")):
+                blob = _git("hash-object", "-w", "--", str(src), env=index_env,
+                            check=True).stdout.strip()
+                _git("update-index", "--add", "--cacheinfo",
+                     f"100644,{blob},docs/backlog/areas/{src.name}",
+                     env=index_env, check=True)
         tree = _git("write-tree", env=index_env, check=True).stdout.strip()
     finally:
         shutil.rmtree(scratch, ignore_errors=True)
     parents = [] if seeding else ["-p", tip]
     commit_env = {**os.environ, **BOT_ENV}
+    label = ", ".join(changed + (["docs/backlog/areas/"] if pages_changed else []))
     commit = _git("commit-tree", tree, *parents, "-m",
-                  f"records: {', '.join(changed)}", env=commit_env,
+                  f"records: {label}", env=commit_env,
                   check=True).stdout.strip()
     pushed = _git("push", "origin", f"{commit}:{RECORDS_REF}")
     if pushed.returncode:

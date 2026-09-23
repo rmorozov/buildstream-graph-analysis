@@ -120,3 +120,26 @@ UX-545 et al) are unchanged, still uncovered, still not chased.
 
 All ten reverted from a saved copy (`cp` before mutating, restored
 after); green again each time.
+
+### T2 (round 140) — CI publishes the area pages
+
+Gap: `publish` wrote only the four record paths; nothing overlaid
+`docs/backlog/areas/`, and `ci.yml` called `dev_area_pages` nowhere.
+
+Close: `publish --pages DIR` diffs `DIR`'s `.md`s against
+`docs/backlog/areas/` at the tip (name or content) and overlays them
+beside whichever of the four paths changed; the "nothing changed"
+return now waits on `tip`, so a pages-only run still publishes.
+`area-pages-publish` needs `[touch-map-adopt, flake-ledger-adopt]`,
+push-only, `concurrency: records`, writes pages to `$RUNNER_TEMP` with
+links pinned to `github.sha`, then `publish --pages`. `pytest -q
+tests/unit/test_ci_publishes_the_area_pages.py`: 5 passed - pages push
+beside untouched records, a repeat publishes nothing, the job needs
+both adopt jobs, shares `concurrency: records`, fetches first.
+
+| # | mutation | reddened |
+|---|---|---|
+| D1 | return moved back ahead of `tip`/pages check | both `TestPublishPages` - error, no `refs/heads/records` |
+| D2 | delete `concurrency: records` | `test_it_shares_the_records_concurrency_group` - `KeyError` |
+
+Both reverted from a saved copy; green again.

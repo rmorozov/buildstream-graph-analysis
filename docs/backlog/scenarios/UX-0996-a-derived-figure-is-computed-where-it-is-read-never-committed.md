@@ -1,6 +1,6 @@
 # UX-996: a derived figure is computed where it is read, never committed
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-501, UX-688, UX-756 | **Blocks:** — | **Found by:** round 139 — Ruslan in the project thread, 2026-09-23 14:44, answering the workflow review ([doc](https://claude.ai/code/artifact/7f65768e-b4bb-405a-b3e1-90a672a249f5)) | **Serves:** every pair of branches that close rows in the same round | **Topic:** guards | **Area:** tools | **Shape:** mechanical
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-501, UX-688, UX-756 | **Blocks:** — | **Found by:** round 139 — Ruslan in the project thread, 2026-09-23 14:44, answering the workflow review ([doc](https://claude.ai/code/artifact/7f65768e-b4bb-405a-b3e1-90a672a249f5)) | **Serves:** every pair of branches that close rows in the same round | **Topic:** guards | **Area:** tools | **Shape:** mechanical
 
 ## Motivation
 

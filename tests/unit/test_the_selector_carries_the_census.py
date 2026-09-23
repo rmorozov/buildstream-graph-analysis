@@ -296,12 +296,13 @@ class TestTheDeclarationIsTheDerivation:
 
     def test_the_set_stays_the_size_it_was_measured_at(self):
         """The price, asserted. Every `test-touching` run pays this
-        set; at 31 files it is 891 tests/24.2s at `-n auto` (`UX-730`:
+        set; at 32 files it is 1562 tests/34.8s at `-n auto`, load 3.4
+        (`UX-940`; 31 files/891 tests/24.2s before that; `UX-730`:
         19 files/716 tests/36.6s before - seconds are the machine
         (`UX-551`), not comparable across rounds) against a ~4s
         selection, and the round that doubles it should have to say
         so. The bound is a ceiling, not a target."""
-        assert len(tiers.CENSUS) <= 31, (
+        assert len(tiers.CENSUS) <= 32, (
             f"{len(tiers.CENSUS)} census files - re-measure the set's "
             f"seconds and move this bound with the number")
 

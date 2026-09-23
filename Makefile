@@ -1,12 +1,13 @@
 # BuildStream Build Efficiency Analyzer - Makefile
 
-.PHONY: test test-tiers test-small test-medium test-large test-fast test-touching test-e2e lint lint-docs sizes dev-run clean check-clean install dev help
+.PHONY: test push-check test-tiers test-small test-medium test-large test-fast test-touching test-e2e lint lint-docs sizes dev-run clean check-clean install dev help
 
 # Default target
 help:
 	@echo "BuildStream Build Efficiency Analyzer (bga) - Available targets:"
 	@echo ""
-	@echo "  make test          - Run the whole suite - required before marking a task done"
+	@echo "  make test          - Run the whole suite - CI's matrix is the gate before merge"
+	@echo "  make push-check    - The four fast checks - the gate before a push (UX-948)"
 	@echo "  make test-touching - Just the tests that name what your diff touched (the inner loop)"
 	@echo "  make test-small    - The small tier"
 	@echo "  make test-medium   - Process/node harnesses"
@@ -24,8 +25,8 @@ help:
 	@echo ""
 
 # UX-238: four tiers, assigned from measured per-file duration in
-# tests/tiers.py. `test` still runs everything and is what a task's
-# Definition of Done requires; the tiers are for the inner loop.
+# tests/tiers.py. `test` still runs everything, as CI's matrix does before
+# a merge (UX-948); the tiers are for the inner loop.
 #
 #   small   160 files    18.2s   pure Python over in-memory fixtures
 #   medium   53 files   184.0s   spawns a process or a node harness
@@ -40,8 +41,8 @@ help:
 # process - `-x` with a readable ordering, or a `pdb` session.
 PYTEST_XDIST ?= -n auto
 
-# Run the tier your change touches while you work; run `make test`
-# before you mark anything done.
+# Run the tier your change touches while you work; `make push-check`
+# before a push, CI's matrix before a merge (UX-948).
 # `PYTEST_ARGS` is for a caller that needs one more flag on the same
 # run - `test-tiers` below passes `--junitxml=...` so
 # `tools/dev_tier_drift.py` can read the timings the suite already
@@ -56,6 +57,15 @@ PYTEST_ARGS ?=
 # gate ran `make test` alone. `.claude/hooks/gate-covers-push.sh` reads it.
 test: lint
 	python -m pytest tests/ -q $(PYTEST_XDIST) $(PYTEST_ARGS)
+	@git rev-parse HEAD > .gate-covered
+
+# UX-948: the gate before a push; CI's full matrix is the gate before merge.
+# The selector diffs against the merge-base: HEAD's own diff is empty once
+# the change is committed. The marker line is last, so any red skips it.
+push-check: lint
+	base=$$(git merge-base HEAD origin/main) && python tools/dev_touching.py --base "$$base"
+	python3 tools/dev_sizes.py --check
+	python3 tools/dev_close_task.py --check
 	@git rev-parse HEAD > .gate-covered
 
 # UX-418: the full suite, then which files have outgrown their tier.
@@ -85,7 +95,7 @@ test-fast:
 # UX-336: the inner loop. Maps the working diff to the test files that
 # name the modules it touched (tools/dev_touching.py explains why grep
 # and not the import graph) and runs those. A *selector*, not a gate:
-# `make test` before a commit is unchanged.
+# `make push-check` runs it against the merge-base as the push gate.
 #
 #   make test-touching            # what changed against HEAD
 #   make test-touching ARGS=--why # and what selected each file

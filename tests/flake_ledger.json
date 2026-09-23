@@ -264,7 +264,15 @@
       "run_id": "35801932452",
       "shift": 2.327,
       "confirmed": false
+    },
+    {
+      "file": "tests/unit/test_the_shape_before_the_rows.py",
+      "run_id": "35833387614",
+      "shift": 1.776,
+      "confirmed": false
     }
   ],
-  "declared": {}
+  "declared": {
+    "tests/unit/test_the_view_parses_nothing.py": "UX-936: a variable file, not a runner event and not a stale record. Alone and single-process it writes 250.1 MB (wait4 ru_oublock), 3.1x the next of 57 files measured; its 5 excursions fall on 5 runs whose 10 other rows (9 files) write 0.1-23.6 MB, and the other three files over 50 MB never shared one. CI readings since UX-924 are 7.38, 16.5 and 10.39 s against a record of 8.91, so the spread is its own; re-recording would hide a regression by the margin raised."
+  }
 }

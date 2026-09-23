@@ -1,6 +1,6 @@
 # Round register
 
-Derived by `tools/dev_round_register.py --write` from the committed union: every docs/audits/round-N.md plus every round the ledger's round column names - never `git log`, whose reachability is a property of the clone (UX-782). 13 round(s) (26-69) exist only as a commit subject - no document, no ledger row - and are accepted as lost, not re-derived from `git log`. A round's date is its own document's dateline (UX-772); a round that states none is an empty cell, never a commit date. A round still in progress - the newest number, unless its own document already exists - is never written here. Never hand-edit; `--check` reds when this disagrees with the derivation.
+Derived by `tools/dev_round_register.py --write` from the committed union: every docs/audits/round-N.md, every round the ledger's round column names, and every round a task file names in its Outcome or its `Found by` (UX-926) - never `git log`, whose reachability is a property of the clone (UX-782). 3 round(s) (31-60) exist only as a commit subject - no document, no ledger row, no task file - and are accepted as lost, not re-derived from `git log`. A round's date is its own document's dateline (UX-772); a round that states none is an empty cell, never a commit date. At most one round is held back as still in progress - the newest number, when it has no document and is the one after the newest document - and it is never written here. Never hand-edit; `--check` reds when this disagrees with the derivation.
 
 | round | date |
 |---|---|
@@ -27,15 +27,41 @@ Derived by `tools/dev_round_register.py --write` from the committed union: every
 | 22 | 2026-08-21 |
 | 23 | 2026-08-22 |
 | 24 | 2026-08-22 |
+| 25 |  |
+| 26 |  |
 | 27 | 2026-08-23 |
+| 28 |  |
+| 29 |  |
 | 40 | 2026-08-25 |
 | 41 | 2026-08-25 |
 | 43 | 2026-08-26 |
 | 44 | 2026-08-26 |
 | 45 | 2026-08-27 |
 | 46 | 2026-08-27 |
+| 47 |  |
+| 48 |  |
+| 49 |  |
+| 50 |  |
+| 51 |  |
+| 52 |  |
+| 53 |  |
+| 54 |  |
+| 56 |  |
+| 57 |  |
+| 58 |  |
+| 59 |  |
+| 62 |  |
 | 63 | 2026-08-29 |
 | 64 | 2026-08-29 |
+| 65 |  |
+| 66 |  |
+| 67 |  |
+| 68 |  |
+| 69 |  |
+| 70 |  |
+| 71 |  |
+| 72 |  |
+| 73 |  |
 | 74 | 2026-09-01 |
 | 75 |  |
 | 76 |  |
@@ -58,6 +84,7 @@ Derived by `tools/dev_round_register.py --write` from the committed union: every
 | 93 | 2026-09-05 |
 | 94 | 2026-09-05 |
 | 95 | 2026-09-05 |
+| 96 |  |
 | 99 | 2026-09-06 |
 | 100 | 2026-09-06 |
 | 101 | 2026-09-06 |
@@ -91,6 +118,8 @@ Derived by `tools/dev_round_register.py --write` from the committed union: every
 | 129 | 2026-09-17 |
 | 130 | 2026-09-21 |
 | 131 | 2026-09-22 |
+| 132 |  |
+| 133 |  |
 | 134 | 2026-09-21 |
 | 135 | 2026-09-22 |
 | 136 | 2026-09-22 |

@@ -9,8 +9,8 @@ agents it launched.
 
 The population is `UX-744`'s round register, not a glob over
 `docs/audits/round-*.md`: a glob cannot see a round that skipped its
-document, which is the shape `CLAUDE.md` warns about. The register's
-own newest round is excluded by construction (fixing-guide.md §7a),
+document, which is the shape `CLAUDE.md` warns about. The register
+holds back at most its one next round (fixing-guide.md §7a, UX-926),
 so this file never demands a document from a round still in progress.
 """
 import pathlib
@@ -160,6 +160,43 @@ UNPRICEABLE_ROUND_WAIVER = {
 }
 
 
+#: `UX-926`: rounds a task file names and no document records - named,
+#: not patterned, so any other round without one still reds. Writing
+#: them is `docs/audits/` history's, not the row that found them.
+NO_DOCUMENT_WAIVER = {
+    "96": ("2026-09-23", "UX-716's Found by names it (filed 2026-09-05); "
+                         "no document was written, and UX-926's "
+                         "widening is what first read it"),
+    "132": ("2026-09-23", "UX-891..UX-894's Outcomes name it; shipped "
+                          "with no document (UX-926's Motivation)"),
+    "133": ("2026-09-23", "UX-915's and UX-916's Found by name it; "
+                          "shipped with no document (UX-926's "
+                          "Motivation)"),
+}
+
+
+class TestTheInProgressExemptionIsOneRound:
+    """`UX-926`: the exemption is where this guard becomes a no-op - one
+    written as a range, or as "any round with no document yet", passes
+    whatever any round does. At most the single highest number."""
+
+    def test_at_most_the_newest_round_is_held_back(self):
+        registered = dev_round_register.rounds()
+        held = set(registered) - set(dev_round_register.written_rounds())
+        assert held <= {max(registered, key=int)} and len(held) <= 1, (
+            f"the register holds back {sorted(held, key=int)} as in "
+            "progress; only the one newest number may be")
+
+    def test_a_waived_round_is_still_owed_its_document(self):
+        written = set(dev_round_register.written_rounds())
+        stale = [n for n in NO_DOCUMENT_WAIVER
+                 if n not in written or (AUDITS / f"round-{n}.md").exists()]
+        assert not stale, (
+            f"NO_DOCUMENT_WAIVER names {stale}, which the written "
+            "register no longer lists or which now has a document - "
+            "drop it from the waiver")
+
+
 class TestEveryRegisteredRoundPricesItsAgents:
     """`UX-666`'s third bullet, over `UX-744`'s register rather than a
     glob: a glob cannot see a round that skipped its document, which
@@ -177,6 +214,8 @@ class TestEveryRegisteredRoundPricesItsAgents:
     @pytest.mark.parametrize("number", _registered_rounds())
     def test_it_carries_a_document_or_is_waived(self, number):
         path = AUDITS / f"round-{number}.md"
+        if number in NO_DOCUMENT_WAIVER:
+            return
         assert path.exists(), (
             f"round {number} is in the register and has no "
             f"docs/audits/round-{number}.md - UX-666 was filed on "

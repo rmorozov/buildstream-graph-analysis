@@ -1094,11 +1094,10 @@ promise:
   depth — and a key added to one of those schemas has prose or the
   guard reddens naming it;
 - what is *not* in it is anything more than one level below a
-  top-level key that is not also a row: 514 distinct keys over the
-  nine printable schemas if every nested `properties` object is
-  walked, against the 562 above. `--schema` stays the complete list,
-  and a document reproducing all of them would be the second copy of
-  the schemas `UX-384` banned (`UX-628` declined it, `UX-655`
+  top-level key that is not also a row: the reader has `--schema`,
+  the complete list, for the shape beneath that, and a document
+  reproducing it would be the second copy of the schemas `UX-384`
+  banned (`UX-628` declined it, `UX-655`
   re-measured it, and `UX-909` moved the line down one level rather
   than removing it);
 - a document that **argues for** a key is not a document that

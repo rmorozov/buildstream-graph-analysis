@@ -80,3 +80,33 @@ Class:     bookkeeping (batch with UX-979, UX-945)
 ```
 
 ## Outcome
+
+**Gap measured:**
+
+```text
+$ grep -c "562" docs/guides/cli.md   # before the fix
+1
+```
+
+**Close measured (revised per the architect's Decision):** the Decision
+found the phrase-presence check insufficient (a mutation could restate
+a figure - even the correct `563` - without removing the referring-back
+phrase), so it is replaced by `test_the_section_states_the_surface_once`:
+nothing after the bold `**{n} keys**` in `_coverage_section()` matches
+`(?<![\w-])\d{3,}(?![\w-])`. The unguarded `514 distinct keys` figure
+is also dropped from `:1097-99` ("the reader has `--schema`" instead):
+
+```text
+$ grep -c "562" docs/guides/cli.md
+0
+$ python3 -m pytest tests/unit/test_the_documents_keep_up_with_the_contracts.py -q -n 2
+30 passed in 1.91s
+```
+
+**Mutation table:**
+
+| mutation | reddened | count |
+|---|---|---|
+| restore `514 distinct keys ... against the 562 above` | `test_the_section_states_the_surface_once` (`['514', '562']`) | 1 failed |
+| `... against the 563 above` (the correct, non-stale value, restated) | same clause (`['563']`) - the case a phrase-presence check missed | 1 failed |
+| revert (saved copy) | same clause | 30 passed |

@@ -1,6 +1,6 @@
 # UX-992: the push gate reads the main checkout's `HEAD` from a worktree
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-762, UX-948 | **Blocks:** — | **Found by:** round 139 — a live push from a track's worktree, always blocked | **Serves:** every track that runs `make push-check` in a worktree and then pushes | **Topic:** guards | **Area:** unassigned | **Shape:** judgement
+**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-762, UX-948 | **Blocks:** — | **Found by:** round 139 — a live push from a track's worktree, always blocked | **Serves:** every track that runs `make push-check` in a worktree and then pushes | **Topic:** guards | **Area:** unassigned | **Shape:** mechanical
 
 ## Motivation
 
@@ -48,6 +48,32 @@ naming its own `HEAD`), feeding the hook a `git push` payload returns
 exit 0 - today it returns 2, naming the main checkout's `HEAD` as
 "never covered", not the worktree's covered sha. Mutation: revert the
 fix (drop the payload `cwd`) and confirm the guard reds again.
+
+## Decision
+
+The `architect`, round 140, at `398b4db9`.
+
+```text
+Route:     gate_covers_push.repo_root takes the PreToolUse payload's `cwd` and passes it as
+           cwd= to `git rev-parse --show-toplevel`; no payload cwd, or one that raises
+           OSError, falls back to the process cwd, then parents[2]. Line 53's text stays
+           byte-identical (cwd= on the continuation line) so UX-762's forced baseline
+           identity still matches; the module docstring does not grow (26 lines already).
+Rejected:  parse a `cd X &&` prefix - fragile, the payload carries the real cwd
+           per-worktree .gate-covered via --git-path - still resolved from the wrong tree
+           a settings.json wrapper that cds first - it cannot know the tree either
+           selector_before_commit.repo_root (same shape, :47) - Out of Scope; a sibling row
+Files:     .claude/hooks/gate_covers_push.py; tests/unit/test_the_gate_covers_the_pushed_commit.py;
+           this Outcome
+Guard:     test_the_gate_covers_the_pushed_commit.py::TestItJudgesThePayloadsTree - main repo
+           plus a worktree with divergent HEADs, hook run from main: (a) worktree covered by
+           its own marker -> 0; (b) worktree uncovered, main covered -> 2 naming the worktree
+           sha; (c) a payload cwd that does not exist falls back -> 2, never 1
+Mutation:  drop cwd=start -> (a) 2 and (b) 0; drop the OSError catch -> (c) exits 1
+Class:     bookkeeping - restores a gate every worktree track bypasses; no cost measured
+Split:     one mechanical track, parallel with UX-998, UX-999, UX-950, UX-955
+Question:  none
+```
 
 ## Outcome
 

@@ -15,19 +15,9 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-953 scenarios: **20 open**, 933 closed.
-Closed rows live in [closed.md](closed.md), verbatim.
-
-| Topic | Open | Total |
-|---|---|---|
-| capture | 5 | 140 |
-| analysis | 1 | 121 |
-| contracts | 0 | 52 |
-| viewer | 1 | 178 |
-| cli | 0 | 22 |
-| store | 1 | 17 |
-| docs | 4 | 149 |
-| guards | 8 | 274 |
+Closed rows live in [closed.md](closed.md), verbatim. The counts
+sentence and the per-topic table are derived, never committed
+(`UX-996`) - run `python3 tools/dev_close_task.py --counts` for both.
 
 ## Open scenarios
 
@@ -56,6 +46,10 @@ task file, which is the only place it ever lived twice.
 | UX-979 | [§7a cites a guard class a rename retired, and no guard resolves the part after `::`](UX-0979-a-guard-citation-names-a-class-a-rename-retired.md) | guards | Low | a session closing a round from §7a, which is sent to the guard by name | 🔴 Not Started |
 | UX-990 | [the BuildStream behaviour claims in `tools/` are outside the register `UX-940` built for `bga/`](UX-0990-the-tools-behaviour-claims-are-outside-the-register.md) | guards | Medium | whoever reads a BuildStream behaviour claim in the capture tools and has to decide whether it still holds | 🔴 Not Started |
 | UX-992 | [the push gate reads the main checkout's `HEAD` from a worktree](UX-0992-the-push-gate-reads-the-main-checkouts-head-from-a-worktree.md) | guards | High | every track that runs `make push-check` in a worktree and then pushes | 🔴 Not Started |
+| UX-997 | [a record CI measures lives outside main, and main carries only reviewed commits](UX-0997-a-record-ci-measures-lives-outside-main.md) | guards | High | every branch that inherits main, and every commit on main that should have CI | 🔴 Not Started |
+| UX-998 | [a bookkeeping finding is one line in a ledger, swept once a round](UX-0998-a-bookkeeping-finding-is-one-line-swept-once-a-round.md) | guards | High | every round, through the cost a bookkeeping row pays today | 🔴 Not Started |
+| UX-999 | [a weekly retro turns repeated bookkeeping into automation](UX-0999-a-weekly-retro-turns-repeated-bookkeeping-into-automation.md) | guards | High | every later round, through the bookkeeping it no longer files | 🔴 Not Started |
+| UX-1000 | [an area page names each scenario's guard, and CI publishes it where it can be read](UX-1000-an-area-page-names-each-scenarios-guard-and-ci-publishes-it.md) | guards | High | whoever assesses an area's test plan, and reads it on GitHub rather than from a checkout | 🔴 Not Started |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

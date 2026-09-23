@@ -22,8 +22,8 @@ every push:
 
 Measured before it was believed: **+20% wall clock** with the coverage
 context (33.2s -> 40.0s on a twelve-file subset), which is why it runs
-on 3.12 and never on 3.11 - the interpreter whose seconds `UX-503`'s
-tier reference is made of.
+on 3.11 and never on 3.12 - the interpreter whose seconds `UX-503`'s
+tier reference is made of (`UX-995`).
 """
 import json
 import pathlib
@@ -159,9 +159,9 @@ class TestTheSelectorUnionsIt:
 
 class TestItComesFromCIAndNotFromHere:
     def test_the_workflow_measures_it_off_the_timing_interpreter(self):
-        """`UX-503`'s tier reference is 3.11's seconds. Coverage costs
-        +20%, so measuring the map there would move every row in a
-        document this repository compares runs against."""
+        """`UX-503`'s tier reference is 3.12's seconds (`UX-995`).
+        Coverage costs +20%, so measuring the map there would move
+        every row in a document this repository compares runs against."""
         held = WORKFLOW.read_text(encoding="utf-8")
         # The `if:` that *follows* the flags, not the one before them:
         # reading backwards found the previous step's condition, and
@@ -169,8 +169,8 @@ class TestItComesFromCIAndNotFromHere:
         after = held.split("--cov-context=test", 1)[1]
         condition = [line for line in after.splitlines()
                      if line.strip().startswith("if:")][0]
-        assert "3.12" in condition, condition
-        assert "3.11" not in condition, condition
+        assert "3.11" in condition, condition
+        assert "3.12" not in condition, condition
 
     def test_the_workflow_adopts_it_only_on_the_default_branch(self):
         held = WORKFLOW.read_text(encoding="utf-8")
@@ -252,13 +252,17 @@ class TestTheAdoptedMapPaysForItsReaders:
         assert rows[0][2] is None, "and carried with no number to fail on"
 
     def test_the_adopting_commit_carries_the_reference_it_retired_from(self):
-        """One commit, or the retire is a change nobody pushed."""
+        """`UX-997`: `dev_records.py publish` builds one commit from every
+        record `git diff` finds dirty, so both paths land together or
+        neither does - the diff gate the job checks before it publishes
+        must name both, or the retire could be a change nobody pushed."""
         held = WORKFLOW.read_text(encoding="utf-8")
         job = held.split("touch-map-adopt:")[1].split("\n  agent-config:")[0]
-        add = [line for line in job.splitlines()
-               if line.strip().startswith("git add")][0]
-        assert "tests/ci_reference.json" in add, add
-        assert "tests/touch_map.json" in add, add
+        diffed = [line for line in job.splitlines()
+                 if "git diff --quiet" in line][0]
+        assert "tests/ci_reference.json" in diffed, diffed
+        assert "tests/touch_map.json" in diffed, diffed
+        assert "dev_records.py publish" in job, job
 
     def test_the_map_is_adopted_after_the_rows_measured_without_it(self):
         """`tier-reference-adopt` adopts from a candidate measured with

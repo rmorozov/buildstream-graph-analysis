@@ -367,6 +367,18 @@ pairing for every merged row from round 103 on.
 | 138 | general-purpose | opus | UX-941 | 955k | 125 | 113.3 m | #279 merged | none reported |
 | 138 | general-purpose | opus | UX-948 | 496k | 166 | 116.9 m | #281 merged | its guard's inner make inherited MAKELEVEL on CI |
 | 138 | general-purpose | opus | UX-956 | 255k | 143 | 46.4 m | #283 merged | none reported |
+| 139 | researcher | sonnet | workflow review: agent-runs ledger statistics | 66k | 23 | 3.5 m | complete | none reported |
+| 139 | researcher | sonnet | workflow review: CI and merge-cycle timing | 44k | 25 | 3.9 m | complete | run-log archive 403; job tails only |
+| 139 | researcher | sonnet | workflow review: backlog process vs product share | 52k | 37 | 3.9 m | complete | none reported |
+| 139 | general-purpose | opus | architect: UX-996 derived figures | 88k | 35 | 5.5 m | complete | missed dev_tier_drift.py reading _backlog_counts() |
+| 139 | general-purpose | opus | architect: UX-995 PR matrix | 95k | 16 | 2.8 m | complete | none reported |
+| 139 | general-purpose | opus | architect: UX-997 records branch | 64k | 26 | 3.7 m | complete | artifacts and caches 403 through the proxy, so a branch |
+| 139 | implementer | sonnet | UX-996 derived figures (mechanical) | 340k | 283 | 44 m | merged after a hold | MD032 and three census bounds a new guard moves together |
+| 139 | verifier | sonnet | UX-996 verifier | 104k | 50 | 11.7 m | HOLD, then merged | none reported |
+| 139 | implementer | sonnet | UX-995 PR matrix (mechanical) | 505k | 243 | 72.4 m | merged after a hold | a substring exemption; fromJSON broke two guards' cell loops |
+| 139 | verifier | sonnet | UX-995 verifier | 108k | 47 | 13.9 m | HOLD, then merged | none reported |
+| 139 | implementer | sonnet | UX-997 T1 records branch (mechanical) | 601k | 231 | 103.8 m | merged after a hold | fetch-then-stage for publish; git's stderr wording tells absent from unreachable |
+| 139 | verifier | sonnet | UX-997 verifier | 86k | 52 | 12.8 m | HOLD, then merged | the dropped-row case needed a hand-built bare-remote repro |
 
 Round 101's four tracks are **not** here: this session could not
 identify their transcripts with certainty after a context rebuild, and
@@ -379,7 +391,7 @@ committed cleanly once told to run in the foreground. Three of the five
 left a derived figure or a §6 context-map row behind - the same class
 the round itself was about, arriving in the tracks' own work.
 
-What the three hundred and fifty rows already say: a researcher that reads a document
+What the three hundred and sixty-two rows already say: a researcher that reads a document
 whole costs 100-180k; a walker that drives every control costs 336k;
 the two cuts cost a re-run each. The `walk` and `design-review`
 skills fix the report shape so the next rows are smaller, and the

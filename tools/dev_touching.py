@@ -266,16 +266,9 @@ def naming(selected, why):
     return [name for name in selected if why.get(name, ["*"]) != ["census"]]
 
 
-# `UX-632`: the documents carrying the figure. `CLAUDE.md` is not one -
-# `UX-471`'s guard there forbids a count the tree changes under it, so
-# that row defers to the guide the way its `make test` row already does.
-COST_SITES = ("docs/contributing/fixing-guide.md",)
-
-#: The sentence those documents carry, and the shape `--write` finds.
+#: The spread's shape - `--spread` prints it, and nothing commits it
+#: (`UX-996`): the fixing guide names the command instead of a figure.
 FIGURE = "{min}-{max} of {files} test files"
-# UX-770: the optional tail consumes the retired `, median N` so a
-# rewrite leaves no residue the figure check cannot see.
-FIGURE_RE = re.compile(r"\d+-\d+ of \d+ test files(?:, median \d+)?")
 
 
 @functools.lru_cache(maxsize=1)
@@ -304,11 +297,6 @@ def spread():
 def figure(values=None):
     """The cost row's sentence, from `spread()`."""
     return FIGURE.format(**(values or spread()))
-
-
-def write_figure(text: str, row: str) -> str:
-    """`text` with every stale copy of the figure replaced by `row`."""
-    return FIGURE_RE.sub(row, text)
 
 
 # `UX-774`: the guide's own size, stated by the same shape as the cost
@@ -377,18 +365,17 @@ def main(argv=None) -> int:
                         help="print pytest's output even when it passes")
     parser.add_argument("--spread", action="store_true",
                         help="print what a one-module diff selects, over "
-                             "every module the map names")
+                             "every module the map names - never written "
+                             "(UX-996)")
     parser.add_argument("--size", action="store_true",
                         help="print the guide's stated size")
     parser.add_argument("--write", action="store_true",
-                        help="with --spread or --size, put that figure in "
-                             "the documents that state it")
+                        help="with --size, put that figure in the documents "
+                             "that state it")
     args, rest = parser.parse_known_args(argv)
 
     if args.spread:
-        row = figure()
-        _rewrite_sites(COST_SITES, row, lambda text: write_figure(text, row),
-                       args.write)
+        print(figure())
         return 0
 
     if args.size:

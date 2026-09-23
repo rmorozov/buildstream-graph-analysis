@@ -191,8 +191,10 @@ class TestTheSelectorStillSelects:
     #:
     #: `UX-940` moved it 31 -> 32 (its register guard walks `bga/`).
     #: Same arithmetic: 45 -> 46; `WIDE` unchanged at 46.
-    HANDFUL = 46
-    CENSUS_FLOOR = 32
+    #: `UX-996` moved it 32 -> 33 (its guard walks every tracked `.md`).
+    #: Same arithmetic: 46 -> 47.
+    HANDFUL = 47
+    CENSUS_FLOOR = 33
 
     # Wide because the module's name is how a test invokes it, not
     # because the selector is wrong. `UX-606` argued each one.
@@ -566,7 +568,7 @@ class TestTheCloseHelperRefusesTheJudgementParts:
 
         scenarios = tmp_path / "scenarios"
         shutil.copytree(REPO / "docs/backlog/scenarios", scenarios)
-        uid, slug = "UX-999", "UX-0999-a-row-this-guard-wrote"
+        uid, slug = "UX-9999", "UX-9999-a-row-this-guard-wrote"
         (scenarios / f"{slug}.md").write_text(
             f"# {uid}: a row this guard wrote\n\n"
             f"**Priority:** Low | **Status:** \U0001f534 Not Started | "
@@ -609,7 +611,8 @@ class TestTheCloseHelperRefusesTheJudgementParts:
 
 
 class TestTheIndexIsDerivedNotMerged:
-    """`UX-501`: the two aggregates at the top of the backlog index.
+    """`UX-501`/`UX-996`: the two aggregates at the top of the backlog
+    index.
 
     The `N scenarios: **M open**` sentence and the per-topic table say
     nothing the row lists do not already say. Hand-maintained, they were
@@ -626,11 +629,11 @@ class TestTheIndexIsDerivedNotMerged:
     topic rows are adjacent, so git reads them as one hunk) and the
     counts sentence *auto-merged* - both sides had written the same
     decrement from the same base - into a number neither branch meant
-    and nothing then checked.
-
-    So `move` stops writing them, `--check --write` derives them from
-    the rows once after the merge, and a fourth `--check` property
-    asserts the derivation ran.
+    and nothing then checked. `UX-996` went further: `move` never wrote
+    them and `--check --write` still re-derived them into the index -
+    the same collision one merge later. Now nothing commits them at
+    all; `--counts` prints `index_header()` and the index carries
+    neither sentence nor table.
     """
 
     def _run(self, *argv):
@@ -638,19 +641,29 @@ class TestTheIndexIsDerivedNotMerged:
             [sys.executable, str(REPO / "tools/dev_close_task.py"), *argv],
             capture_output=True, text=True, cwd=str(REPO), timeout=120)
 
-    def test_the_index_says_what_its_rows_say(self):
-        """The tree's own header against the derivation. This is the
-        clause that catches a header edited by hand, in either
-        direction."""
-        sentence, table = close_task.index_header()
+    def test_the_index_carries_neither_aggregate(self):
+        """The figure is printed, never committed (`UX-996`) - the
+        clause that used to catch a header edited by hand in the index
+        now catches the header ever reappearing there at all."""
         text = (REPO / "docs/backlog/scenarios/README.md").read_text(
             encoding="utf-8")
-        assert sentence in text, (
-            "the counts sentence is not what the rows say; run "
-            "`python tools/dev_close_task.py --check --write`")
-        assert table in text, (
-            "the topic table is not what the rows say; run "
-            "`python tools/dev_close_task.py --check --write`")
+        assert not re.search(r"^\d+ scenarios: \*\*\d+ open\*\*", text,
+                             re.M), (
+            "the counts sentence is committed in the index; `--counts` "
+            "prints it instead (UX-996)")
+        assert "| Topic | Open | Total |" not in text, (
+            "the topic table is committed in the index; `--counts` "
+            "prints it instead (UX-996)")
+
+    def test_counts_prints_what_the_rows_say(self):
+        """`--counts` against the derivation it wraps - the read half of
+        the old committed-header check, aimed at the command instead of
+        a file."""
+        sentence, table = close_task.index_header()
+        done = self._run("--counts")
+        assert done.returncode == 0, done.stdout + done.stderr
+        assert sentence in done.stdout, done.stdout
+        assert table in done.stdout, done.stdout
 
     def test_the_totals_account_for_every_row(self):
         """The property the hand-written table failed: its Total column
@@ -720,38 +733,30 @@ class TestTheIndexIsDerivedNotMerged:
         _sentence, table = close_task.index_header()
         assert "| unclassified | 0 | 1 |" in table, table
 
-    def test_a_hand_edited_count_is_reported_and_then_restored(
-            self, tmp_path):
-        """The acceptance test's mutation, on a copy. `--check` alone
-        must report and not repair: a checker that silently fixed what
-        it checks could never fail, which is the rot the whole `--check`
-        list exists to avoid."""
+    def test_check_does_not_write(self, tmp_path):
+        """`UX-996`: `--check` is read-only. A hand-edited README - the
+        old mutation - is no longer a thing `--check` even reads, and
+        `--check` must not touch the file it was pointed at either way."""
         import shutil
         scenarios = tmp_path / "scenarios"
         shutil.copytree(REPO / "docs/backlog/scenarios", scenarios)
         readme = scenarios / "README.md"
         was = readme.read_text(encoding="utf-8")
-        readme.write_text(
-            re.sub(r"^\d+ scenarios: \*\*\d+ open\*\*", "999 scenarios: **7 open**",
-                   was, count=1, flags=re.M), encoding="utf-8")
 
         told = self._run("--check", "--scenarios", str(scenarios))
-        assert told.returncode == 1, told.stdout
-        assert "the counts sentence says" in told.stdout, told.stdout
-        assert readme.read_text(encoding="utf-8") != was, (
-            "`--check` repaired the file it was asked to check")
-
-        fixed = self._run("--check", "--write", "--scenarios", str(scenarios))
-        assert fixed.returncode == 0, fixed.stdout
+        assert told.returncode == 0, told.stdout
         assert readme.read_text(encoding="utf-8") == was, (
-            "`--write` did not restore the header the rows imply")
+            "`--check` wrote to the index it was asked to check")
 
-    def test_write_needs_check(self):
-        """`--write` on its own would be a command that edits the index
-        and says nothing about it."""
+    def test_write_needs_shape(self):
+        """`--write` on its own would be a command that edits something
+        and says nothing about it - and `--check` no longer takes it."""
         done = self._run("--write")
         assert done.returncode != 0
-        assert "give both" in done.stderr, done.stderr
+        assert "--shape" in done.stderr, done.stderr
+        done = self._run("--check", "--write")
+        assert done.returncode != 0, done.stdout
+        assert "--shape" in done.stderr, done.stderr
 
     def test_closing_a_task_no_longer_writes_the_aggregates(self):
         """The change itself, read off the source rather than run: a
@@ -763,20 +768,20 @@ class TestTheIndexIsDerivedNotMerged:
         merge, and this file is the fast tier."""
         body = (REPO / "tools/dev_close_task.py").read_text(encoding="utf-8")
         move = body.split("def move(", 1)[1].split("\ndef ", 1)[0]
-        assert "write_index()" not in move, (
+        assert "write_index" not in move, (
             "`move` writes the derived header again, so two tracks each "
             "closing one item collide on it - UX-501's own measurement")
-        assert "--check --write" in move, (
-            "`move` neither writes the header nor says what does")
+        assert "--counts" in move, (
+            "`move` neither writes the header nor says what prints it")
 
     def test_the_merge_recipe_is_written_down(self):
         """A tool nobody is told to run after a merge is a tool that
         does not run after a merge."""
         skill = (REPO / ".claude/skills/decompose/SKILL.md").read_text(
             encoding="utf-8")
-        assert "--check --write" in skill, (
+        assert "--counts" in skill, (
             "the decompose skill's shared-files section does not name the "
-            "command that resolves the counts")
+            "command that prints the counts")
 
 
 class TestTheSkeletonFitsTheRegister:
@@ -855,150 +860,6 @@ class TestTheSkeletonFitsTheRegister:
         for asked in ("why that shape", "Counts are what the run printed"):
             assert asked not in printed, (
                 f"the skeleton still asks for {asked!r}")
-class TestTheDerivedCountSeesAnUnstagedRow:
-    """`UX-617`: `--check` answers "is the tree I am about to commit
-    consistent", and `git ls-files` reads the **index**.
-
-    A task file written and not yet staged is invisible to it, so the
-    natural order - write the row, derive the counts, stage, commit -
-    shipped the count one short and the helper reported clean:
-
-    ```text
-    $ python tools/dev_close_task.py --check
-    0 problem(s) over 5 propert(y/ies), 617 backlog row(s)
-    $ git add … && make test
-    FAILED test_a_counted_figure_is_derived.py::…[scenarios]
-      architecture.md says 619 …; git has 620
-    ```
-
-    Four times in round 84, each costing a full-suite run. The
-    population is now the index **plus** untracked and non-ignored -
-    what a commit from here would carry.
-    """
-
-    @staticmethod
-    def _repo(tmp_path):
-        """A git repo with one committed scenario file and one written
-        but unstaged, plus the opening sentence that counts them."""
-        repo = tmp_path / "repo"
-        (repo / "docs/backlog/scenarios").mkdir(parents=True)
-        (repo / "docs/backlog/tasks").mkdir(parents=True)
-        (repo / "docs/design").mkdir(parents=True)
-        (repo / "docs/backlog/scenarios/UX-0001-committed.md").write_text(
-            "# UX-1\n", encoding="utf-8")
-        (repo / "docs/design/architecture.md").write_text(
-            "It counts 1 `docs/backlog/scenarios/` files and "
-            "0 `docs/backlog/tasks/` files.\n\n## Chapter\n\n1 more.\n",
-            encoding="utf-8")
-        for argv in (["init", "-q"],
-                     ["config", "user.email", "a@b"],
-                     ["config", "user.name", "a"],
-                     ["add", "docs", "-f"],
-                     ["commit", "-qm", "one"]):
-            subprocess.run(["git", *argv], cwd=repo, check=True,
-                           capture_output=True, text=True)
-        (repo / "docs/backlog/scenarios/UX-0002-unstaged.md").write_text(
-            "# UX-2\n", encoding="utf-8")
-        return repo
-
-    @staticmethod
-    def _pointed_at(repo, monkeypatch):
-        monkeypatch.setattr(close_task, "REPO", repo)
-        monkeypatch.setattr(close_task, "SCENARIOS",
-                            repo / "docs/backlog/scenarios")
-        monkeypatch.setattr(close_task, "ARCHITECTURE",
-                            repo / "docs/design/architecture.md")
-
-    def test_the_count_is_what_a_commit_from_here_would_carry(
-            self, tmp_path, monkeypatch):
-        """One file in the index, one written beside it. The index's
-        answer is 1 and the commit's is 2."""
-        repo = self._repo(tmp_path)
-        self._pointed_at(repo, monkeypatch)
-        assert close_task._backlog_counts()["scenarios"] == 2, (
-            "the derived count still reads the index alone, so a row "
-            "written and not yet staged ships the count one short")
-
-    def test_check_names_the_unstaged_row_instead_of_reporting_clean(
-            self, tmp_path, monkeypatch):
-        """`UX-617`'s acceptance test. The count alone reads as "the
-        sentence is stale"; the name says which half of the tree
-        moved, which is the thing four sessions had to work out."""
-        repo = self._repo(tmp_path)
-        self._pointed_at(repo, monkeypatch)
-        problems = close_task._architecture_is_derived()
-        assert len(problems) == 1, problems
-        assert "UX-0002-unstaged.md" in problems[0], (
-            f"`--check` reported a count mismatch without naming the "
-            f"file that is not staged: {problems[0]}")
-
-    def test_a_nested_worktree_and_an_ignored_file_are_not_counted(
-            self, tmp_path, monkeypatch):
-        """The half `UX-577` bought and this widening could have spent.
-        A checkout holds `.claude/worktrees/<agent>/`, a whole second
-        copy of the tree; git lists it as one entry and does not
-        descend, and `--exclude-standard` drops what `.gitignore`
-        names. A recursive glob counts both."""
-        repo = self._repo(tmp_path)
-        (repo / ".gitignore").write_text(
-            "*.scratch.md\n", encoding="utf-8")
-        (repo / "docs/backlog/scenarios/notes.scratch.md").write_text(
-            "x\n", encoding="utf-8")
-        subprocess.run(["git", "worktree", "add", "-q",
-                        ".claude/worktrees/agent-1", "-b", "w1"],
-                       cwd=repo, check=True, capture_output=True, text=True)
-        self._pointed_at(repo, monkeypatch)
-        assert close_task._backlog_counts()["scenarios"] == 2, (
-            "the count grew past the two files in `docs/backlog/"
-            "scenarios/` - an ignored file or the copy of the whole "
-            "tree under `.claude/worktrees/` is being counted (UX-577)")
-
-    def _run(self, *argv):
-        return subprocess.run(
-            [sys.executable, str(REPO / "tools/dev_close_task.py"), *argv],
-            capture_output=True, text=True, cwd=str(REPO), timeout=120)
-
-    @staticmethod
-    def _index_off_by_a_count(tmp_path):
-        """A backlog copy whose counts sentence disagrees with its rows."""
-        import shutil
-        scenarios = tmp_path / "scenarios"
-        shutil.copytree(REPO / "docs/backlog/scenarios", scenarios)
-        # UX-932: the area pages are written beside the sandbox now.
-        shutil.copytree(REPO / "docs/backlog/areas", tmp_path / "areas")
-        readme = scenarios / "README.md"
-        readme.write_text(
-            re.sub(r"^\d+ scenarios: \*\*\d+ open\*\*",
-                   "999 scenarios: **7 open**",
-                   readme.read_text(encoding="utf-8"), count=1, flags=re.M),
-            encoding="utf-8")
-        return scenarios
-
-    def test_write_names_the_files_it_changed(self, tmp_path):
-        """The second shape, and the one that caught the row filing
-        `UX-617`: `--write` also rewrites the index's counts sentence,
-        so a caller who staged before deriving ships the rewrite
-        unstaged. A `--write` that says nothing cannot be re-staged
-        after."""
-        scenarios = self._index_off_by_a_count(tmp_path)
-        done = self._run("--check", "--write", "--scenarios", str(scenarios))
-        assert done.returncode == 0, done.stdout + done.stderr
-        assert "--write changed 1 file(s)" in done.stdout, (
-            "`--write` rewrote the index and did not say so\n" + done.stdout)
-        assert "README.md" in done.stdout.split("--write changed")[1], (
-            "`--write` says it changed something without naming it\n"
-            + done.stdout)
-
-    def test_write_says_so_when_it_changed_nothing(self, tmp_path):
-        """The clause that stops the report becoming "it always writes".
-        Measured on the tree: a derived index rewrites nothing, and a
-        caller told to stage a file that did not move stages noise."""
-        scenarios = self._index_off_by_a_count(tmp_path)
-        self._run("--check", "--write", "--scenarios", str(scenarios))
-        again = self._run("--check", "--write", "--scenarios", str(scenarios))
-        assert "--write changed no file(s)." in again.stdout, (
-            "a second `--write` over a derived index still reports a "
-            "change\n" + again.stdout)
 
 
 class TestTheCloseHelperRunsTheGrepNobodyRan:

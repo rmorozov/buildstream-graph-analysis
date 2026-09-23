@@ -11,6 +11,7 @@ trusted (`UX-505`). One exception: `CLAUDE.md`'s Register table's fourth row, th
 
 | rule | guard |
 |---|---|
+| A judgement row goes to the `architect` first, and at most 40% of a round's rows are process bookkeeping; a process row that cuts a measured cost is exempt (`UX-993`, `UX-994`) | `test_the_agent_configuration_holds.py` — that the architect cannot edit; the share is judgement |
 | Read the task file fully, then only the line ranges it cites | — |
 | Replace the placeholder; a removed comment is not an implementation | — |
 | Stay inside the declared scope; a bug you notice becomes a row | — |
@@ -26,7 +27,7 @@ trusted (`UX-505`). One exception: `CLAUDE.md`'s Register table's fourth row, th
 | Some claims have no local instrument — open the PR first (§7) | — |
 | A history figure from a shallow clone is worth nothing — ask `--is-shallow-repository` first | `test_a_guard_that_reads_history_declares_its_depth.py` |
 | `make test-touching` while you work; the tier when it is wider | `test_the_loop_stays_fast.py` — the selector, not that you ran it |
-| `make push-check` before a push, CI's full matrix before a merge. A tier is a selector | `.claude/hooks/gate-covers-push.sh` — covers the commit you push, not the branch you ran it on (`UX-762`); `make push-check` writes its marker only on green (`UX-948`) |
+| `make push-check` before a push, CI on the pull request before a merge - the newest Python alone (`UX-995`). A tier is a selector | `.claude/hooks/gate-covers-push.sh` — covers the commit you push, not the branch you ran it on (`UX-762`); `make push-check` writes its marker only on green (`UX-948`) |
 | Both status markers, same commit; the counts are derived | `test_docs_links_and_commands.py` |
 | A number or mechanism you moved: annotate the file asserting it | `tools/dev_close_task.py --figures`, held by `test_the_loop_stays_fast.py` |
 | A renamed or removed published key bumps its schema version | `test_output_schemas.py` |
@@ -60,8 +61,7 @@ trusted (`UX-505`). One exception: `CLAUDE.md`'s Register table's fourth row, th
 | **Never let an instrument read a proxy for the thing it names** | `test_the_agent_configuration_holds.py` — the `measure` skill states the three questions; asking them is judgement |
 | Exact integer arithmetic for anything invariant-related | — |
 
-The proxy rule is the one this repository breaks most — about thirty
-sightings across twenty-six items, in four shapes. §5 names all four with a worked example each; read it before writing a guard.
+The proxy rule is the one this repository breaks most — about thirty sightings across twenty-six items, in four shapes. §5 names all four with a worked example each; read it before writing a guard.
 
 ## Which kind of session is this? — §6a
 

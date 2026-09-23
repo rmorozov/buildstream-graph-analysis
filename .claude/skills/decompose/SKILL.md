@@ -24,7 +24,9 @@ Required Fix names a file; the Acceptance Test names a guard and a
 mutation; either names a contract or process surface. **mechanical**
 (all three the right way) and **bounded** (a file, no named guard) are
 tracks for the `implementer` on `sonnet`; **judgement** (no file, or a
-contract or process surface) is the session's own work. Measured on
+contract or process surface) goes to the `architect` first (`UX-993`):
+its `## Decision` names the file, the guard and the mutation, so the
+re-derived shape is bounded. Unshaped, it is the session's own work. Measured on
 the open backlog the day it landed: 8 bounded, 35 judgement, 0
 mechanical — a filing that wants to be a track names its surface in
 the Required Fix and its guard in the Acceptance Test.
@@ -78,12 +80,13 @@ tests/tiers.py                      a new file's tier
 tests/ci_reference.json             a new file's CI seconds
 ```
 
-Two of those four have stopped being merge hotspots. `UX-501`: the
-index's counts sentence and topic table are **derived**, `dev_close_task
---move` no longer writes them, and the recipe after merging tracks is
+Two of those four have stopped being merge hotspots. `UX-501`/`UX-996`:
+the index's counts sentence and topic table are **derived** and never
+committed - `dev_close_task --move` does not write them, and neither
+does anything else. Where a reader needs them:
 
 ```bash
-python tools/dev_close_task.py --check --write   # then commit
+python tools/dev_close_task.py --counts
 ```
 
 — never a hand-resolved count. `UX-503`: a new test file's row in
@@ -162,9 +165,10 @@ Read the widest of the three when pricing a batch.
 Per item, the inner loop: `make test-touching`, then every new guard
 mutated red (falsify skill). Per batch: one PR opened *first* (verify
 §7 — a branch with no PR collects no CI), one merge, `make push-check`
-here. CI's full matrix on the PR is the gate before merge (`UX-948`,
-Ruslan's decision in round 138), so no item or batch runs the whole
-suite locally; nothing merges red.
+here. CI on the pull request is the gate before merge (`UX-948`,
+Ruslan's decision in round 138) — the newest Python alone; push to
+main still runs all four (`UX-995`) — so no item or batch runs the
+whole suite locally; nothing merges red.
 
 ## 5. The batch — what the orchestrator pays
 

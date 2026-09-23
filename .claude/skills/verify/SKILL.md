@@ -24,7 +24,8 @@ make test-touching   # the files that name the modules your diff touched
 
 Measured on a one-module diff: **4s**, 7 files, 123 tests (`UX-336`).
 A *selector*, not a gate - a grep-derived set can miss a test that
-exercises a module without naming it, which is why CI's full matrix gates the merge (step 3).
+exercises a module without naming it, which is why CI on the pull
+request gates the merge (step 3), on the newest Python alone (`UX-995`).
 `make test-touching ARGS=--why` says what selected each file.
 
 Then the tier, when the change is wider than one module:
@@ -54,9 +55,11 @@ python3 -m pytest tests/unit/test_<file>.py -q -k <substring>
 
 ## 3. The push gate, and the whole suite
 
-`UX-948` (Ruslan, round 138): **CI's full matrix is the gate before
-merge**, and nothing merges red. The gate before a push is the four
-fast checks, and they write the push hook's marker only when all pass:
+`UX-948` (Ruslan, round 138): **CI on the pull request is the gate
+before merge**, and nothing merges red - the newest Python alone;
+push to main still runs all four (`UX-995`). The gate before a push
+is the four fast checks, and they write the push hook's marker only
+when all pass:
 
 ```bash
 make push-check  # lint, the touching selector against the merge-base,
@@ -180,27 +183,27 @@ have drifted in three separate rounds. Change both in the same commit,
 and move the row to
 [`closed.md`](../../../docs/backlog/scenarios/closed.md) when it closes
 — open rows live in `README.md`, closed ones verbatim in `closed.md`.
-The index counts at the top of `README.md` (`N open`, and the per-topic
-table) change too.
 
 `tests/unit/test_docs_links_and_commands.py::test_the_table_status_matches_the_task_files`
 fails naming the item if you miss one, and
 
 ```bash
 python tools/dev_close_task.py UX-NNN --move --note-file /tmp/note.md
-python tools/dev_close_task.py --check --write
+python tools/dev_close_task.py --check
 ```
 
 does the mechanical edits and reports what disagrees (`UX-336`).
 `--move` refuses when the task file has no Outcome section, and refuses
 a note with an embedded newline as a substituted note, not a written
 one (`UX-768`) - `--note-file` keeps the note off the command line
-entirely, where a backtick in it would otherwise run.
+entirely, where a backtick in it would otherwise run. `--check` is
+read-only (`UX-996`).
 
-`UX-501`: `--move` touches only the rows. The counts sentence and the
-topic table above them are *derived* - `--check --write` regenerates
-them from the rows, which is also how two merged tracks get one right
-answer instead of a conflict on a line neither of them meant to touch.
+`UX-501`/`UX-996`: `--move` touches only the rows. The counts sentence
+and the per-topic table are *derived* and never committed - `--counts`
+prints them from the rows, which is also how two merged tracks get one
+right answer instead of a conflict on a line neither of them meant to
+touch.
 
 ## 5. The Outcome section
 

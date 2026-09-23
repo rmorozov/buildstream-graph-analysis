@@ -230,14 +230,13 @@ def _test_job_steps():
     return jobs["test"]["steps"]
 
 
-def test_the_ci_steps_are_gated_to_the_3_11_runner():
-    """The Required Fix names one CI step on the 3.11 runner - every
+def test_the_ci_steps_are_gated_to_the_3_12_runner():
+    """The Required Fix names one CI step on the timing runner - every
     step this feature adds, not only the one invoking the tool by name:
     a fixture-generation step left ungated would run the analyzer's own
     cold path on all four interpreters, four times the cost for the
     same reading (`fixing-guide` §5's "an instrument that runs more
-    than it needs to").
-    """
+    than it needs to"). `UX-995` moved the timing role onto 3.12."""
     steps = _test_job_steps()
     perf_related = [step for step in steps
                     if "perf_analyze" in (step.get("run") or "")
@@ -245,8 +244,8 @@ def test_the_ci_steps_are_gated_to_the_3_11_runner():
                     or "dev_perf_ratchet.py" in (step.get("run") or "")]
     assert perf_related, "no CI step in the `test` job touches the fixture"
     for step in perf_related:
-        assert step.get("if", "").find("3.11") != -1, (
-            f"{step.get('name')!r} is not gated to the 3.11 runner: "
+        assert step.get("if", "").find("3.12") != -1, (
+            f"{step.get('name')!r} is not gated to the 3.12 runner: "
             f"if: {step.get('if')!r}")
 
 

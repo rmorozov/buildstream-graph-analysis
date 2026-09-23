@@ -495,6 +495,9 @@ from tools.dev_close_task import (
     header_topic as _header_topic,
 )
 from tools.dev_close_task import (
+    index_header as _index_header,
+)
+from tools.dev_close_task import (
     priority_disagreements as _priority_disagreements,
 )
 from tools.dev_close_task import (
@@ -1245,19 +1248,23 @@ def test_no_task_file_declares_a_topic_outside_the_set():
 
 
 def test_the_index_counts_match_the_rows_they_index():
-    """An index that has drifted from what it indexes is worse than no
-    index - it is the two-hand-maintained-copies defect UX-131 filed,
-    one document up."""
+    """`UX-996`: the index carries neither the counts sentence nor the
+    topic table any more - `--counts` prints them, derived, and this
+    holds the derivation itself to the rows it is about, the way the
+    committed pair used to be held to each other (`UX-131`)."""
     path = REPO / "docs/backlog/scenarios/README.md"
     text = path.read_text(encoding="utf-8")
     rows = [line for line in text.splitlines() if _TABLE_ROW.match(line)]
-    claimed = re.search(r"\*\*(\d+) open\*\*", text)
-    assert claimed, "the index does not state how many are open"
-    assert int(claimed.group(1)) == len(rows), (
-        f"the index claims {claimed.group(1)} open rows and the table has "
-        f"{len(rows)}")
+    assert not re.search(r"\*\*\d+ open\*\*", text), (
+        "the index states the open count; `--counts` prints it instead")
+    assert "| Topic | Open | Total |" not in text, (
+        "the index states the topic table; `--counts` prints it instead")
+    sentence, table = _index_header()
+    assert f"**{len(rows)} open**" in sentence, (
+        f"index_header() claims a different open count than the "
+        f"{len(rows)} rows in the table")
     per_topic = {}
-    for line in text.splitlines():
+    for line in table.splitlines():
         match = re.match(r"^\| (\w+) \| (\d+) \| (\d+) \|$", line)
         if match:
             per_topic[match.group(1)] = int(match.group(2))
@@ -1267,7 +1274,7 @@ def test_the_index_counts_match_the_rows_they_index():
         counted[cells[2]] = counted.get(cells[2], 0) + 1
     for topic, number in counted.items():
         assert per_topic.get(topic) == number, (
-            f"the index says {per_topic.get(topic)} open {topic} rows; "
+            f"index_header() says {per_topic.get(topic)} open {topic} rows; "
             f"the table has {number}")
 
 

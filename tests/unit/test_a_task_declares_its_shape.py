@@ -48,6 +48,17 @@ class TestTheThreeSignalsGiveThreeShapes:
                      "`test_x.py` red under the mutation.")
         assert close.derived_shape(text) == "judgement"
 
+    def test_an_architects_decision_takes_the_judgement(self):
+        """UX-993: files, a guard and a mutation in `## Decision` make a
+        process-surface row a track; missing any one leaves it judgement."""
+        text = _task("Edit `.github/workflows/ci.yml`.", "the matrix moves.")
+        full = ("Files:     .github/workflows/ci.yml\n"
+                "Guard:     test_the_matrix_is_newest.py\nMutation:  drop 3.12\n")
+        assert close.derived_shape(text + "\n## Decision\n\n" + full) == "mechanical"
+        for line in full.splitlines():
+            partial = full.replace(line + "\n", "")
+            assert close.derived_shape(text + "\n## Decision\n\n" + partial) == "judgement"
+
     def test_a_mutation_without_a_named_guard_is_not_mechanical(self):
         text = _task("Edit `bga/blast.py`.", "mutation: drop the rank - red.")
         assert close.shape_signals(text)["names a guard and a mutation"] is False

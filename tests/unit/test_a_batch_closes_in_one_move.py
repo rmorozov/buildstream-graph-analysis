@@ -66,15 +66,19 @@ class TestABatchClosesInOneMove:
             status = (scenarios / f"{slug}.md").read_text(encoding="utf-8")
             assert "**Status:** \U0001f7e2 Done" in status, uid
 
-        # UX-501: derived once, not per id - the header the rows now say.
-        # `monkeypatch` restores the module globals on teardown, so this
-        # subprocess-shaped assertion can't leak into another file's run.
+        # UX-501/UX-996: derived once, not per id, and printed - never
+        # committed. `monkeypatch` restores the module globals on
+        # teardown, so this subprocess-shaped assertion can't leak into
+        # another file's run.
         monkeypatch.setattr(close_task, "SCENARIOS", scenarios)
         monkeypatch.setattr(close_task, "INDEX", scenarios / "README.md")
         monkeypatch.setattr(close_task, "CLOSED", scenarios / "closed.md")
         sentence, table = close_task.index_header()
-        assert sentence in readme
-        assert table in readme
+        assert sentence in done.stdout, done.stdout
+        assert sentence not in readme, (
+            "the batch committed the counts sentence to the index")
+        assert table not in readme, (
+            "the batch committed the topic table to the index")
 
     def test_a_missing_note_refuses_the_whole_batch(self, tmp_path):
         ids, scenarios = _two_open_rows(tmp_path)

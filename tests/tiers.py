@@ -122,6 +122,7 @@ CENSUS = (
     # fixed pair - a diff to the analyzer or a schema names neither.
     # Reddened all four CI jobs on `89b1ddf`, quiet at 251 files locally.
     "tests/unit/test_a_committed_analysis_matches_the_analyzer.py",
+    "tests/unit/test_a_derived_figure_is_printed_not_committed.py",
     "tests/unit/test_a_guard_reads_only_what_a_clone_has.py",
     "tests/unit/test_capture_ref_patterns.py",
     "tests/unit/test_every_direction_names_its_reader.py",

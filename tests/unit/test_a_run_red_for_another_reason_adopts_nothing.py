@@ -7,6 +7,7 @@ result. The tier reference and the touch map adopt from a green run;
 the flake ledger from a green run or one red at the drift step alone.
 """
 import itertools
+import json
 import os
 import pathlib
 import re
@@ -110,6 +111,8 @@ class _Expr:
             if name == "format":
                 return re.sub(r"\{(\d+)\}", lambda m: str(args[1 + int(m[1])]),
                               args[0])
+            if name == "fromJSON":
+                return json.loads(args[0])
             return self.functions[name]()
         value = self.context.get(name, "")
         while self._peek() == ".":
@@ -181,12 +184,19 @@ def _cell(job, python, red, github, tmp_path):
     return ("failure" if failed else "success"), {k: v for k, v in sent.items() if v}
 
 
+def _matrix_cells(jobs, github):
+    """`UX-995`: the matrix is an expression now, evaluated per event -
+    a pull request gets the newest Python alone, a push all four."""
+    return _Expr(jobs["test"]["strategy"]["matrix"]["python-version"],
+                {"github": github}, {}).value()
+
+
 def _adopted(red_by_cell, tmp_path, github=MAIN):
     """Which adopt jobs run, once per order the cells could finish in."""
     jobs = _jobs()
     cells = {python: _cell(jobs["test"], python, red_by_cell.get(python, ()),
                            github, tmp_path)
-             for python in jobs["test"]["strategy"]["matrix"]["python-version"]}
+             for python in _matrix_cells(jobs, github)}
     result = "failure" if any(r == "failure" for r, _ in cells.values()) else "success"
     verdicts = set()
     for order in itertools.permutations(cells):
@@ -223,7 +233,7 @@ def _suites():
 
 DRIFT = _step(lambda run: "dev_tier_drift.py" in run and "--against" in run)
 PERF = _step(lambda run: "dev_perf_ratchet.py --against" in run)
-CELLS = _jobs()["test"]["strategy"]["matrix"]["python-version"]
+CELLS = _matrix_cells(_jobs(), MAIN)
 
 
 def test_a_green_run_adopts_all_three(tmp_path):
@@ -239,8 +249,9 @@ def test_a_green_pull_request_adopts_nothing(tmp_path):
 @pytest.mark.parametrize("red_by_cell", [
     pytest.param({python: set(_suites()) for python in CELLS}, id="every-suite"),
     pytest.param({CELLS[0]: set(_suites())}, id="one-suite"),
-    pytest.param({"3.11": {DRIFT, PERF}}, id="drift-and-perf"),
-    pytest.param({"3.11": {DRIFT}, "3.12": set(_suites())}, id="drift-and-3.12"),
+    # `UX-995`: DRIFT and PERF moved onto 3.12.
+    pytest.param({"3.12": {DRIFT, PERF}}, id="drift-and-perf"),
+    pytest.param({"3.12": {DRIFT}, "3.11": set(_suites())}, id="drift-and-3.11"),
 ])
 def test_a_run_red_for_another_reason_adopts_nothing(red_by_cell, tmp_path):
     assert _adopted(red_by_cell, tmp_path) == ("failure", set())
@@ -249,5 +260,5 @@ def test_a_run_red_for_another_reason_adopts_nothing(red_by_cell, tmp_path):
 def test_a_run_red_only_at_the_drift_step_appends_the_ledger_alone(tmp_path):
     """Still red - the gate's verdict is raised - and the ledger's rows are
     exactly that step's excursions."""
-    assert _adopted({"3.11": {DRIFT}}, tmp_path) == (
+    assert _adopted({"3.12": {DRIFT}}, tmp_path) == (
         "failure", {"flake-ledger-adopt"})

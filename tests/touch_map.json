@@ -9232,10 +9232,13 @@
   "tests/unit/test_the_staged_closure_is_complete.py",
   "tests/unit/test_the_staged_make_is_the_pinned_one.py",
   "tests/unit/test_the_sysroot_declares_both_axes.py",
+  "tests/unit/test_the_toolchain_parameters_are_read_back.py",
   "tests/unit/test_the_version_switch_has_two_live_arms.py"
  ],
  "tools/nix_toolchain.py": [
-  "tests/unit/test_the_toolchain_axis_is_pinned.py"
+  "tests/unit/test_the_sysroot_declares_both_axes.py",
+  "tests/unit/test_the_toolchain_axis_is_pinned.py",
+  "tests/unit/test_the_toolchain_parameters_are_read_back.py"
  ],
  "tools/sysroot_manifest.py": [
   "tests/unit/test_the_sysroot_declares_both_axes.py",

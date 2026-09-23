@@ -85,7 +85,7 @@ here: this container has no `gh`.
 
 ## The docs-only lane
 
-This PR's diff against `origin/main` is 33 paths, all under `docs/`:
+This PR's diff against `origin/main` is 34 paths, all under `docs/`:
 `git diff --name-only origin/main | tools/dev_docs_only.py` prints
 `docs_only=true`. It is the first PR to run `UX-956`'s one-Python
 lane.

@@ -288,6 +288,18 @@
       "run_id": "35860528150",
       "shift": 1.64,
       "confirmed": false
+    },
+    {
+      "file": "tests/unit/test_the_selector_carries_the_census.py",
+      "run_id": "35906859247",
+      "shift": 1.582,
+      "confirmed": false
+    },
+    {
+      "file": "tests/unit/test_the_cost_row_is_derived_from_the_selector.py",
+      "run_id": "35906859247",
+      "shift": 1.783,
+      "confirmed": false
     }
   ],
   "declared": {

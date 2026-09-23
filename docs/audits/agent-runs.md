@@ -402,6 +402,9 @@ pairing for every merged row from round 103 on.
 | 140 | implementer | sonnet | UX-997 T2 records off main (mechanical) | 1367k | 485 | 136 m | merged after two holds | git diff reads an untracked path clean; the fixture had no .gitignore |
 | 140 | implementer | sonnet | UX-1000 T1 area pages (mechanical) | 1066k | 472 | 132.4 m | merged after three holds | every pass over free prose found a new citation shape |
 | 140 | verifier | sonnet | UX-997 T2 verifier (second) | 226k | 65 | 31.6 m | HOLD on MD032, fixed at merge | a 16-minute full suite on two workers |
+| 140 | implementer | sonnet | UX-1000 T2 CI publishes the area pages (mechanical) | 154k | 111 | 27.9 m | merged | a fourth publishing job broke two generic guards the Decision did not name |
+| 140 | verifier | sonnet | UX-1000 T2 verifier | 78k | 59 | 14 m | MERGE | the push hook blocked pushes to throwaway bare remotes |
+| 140 | general-purpose | sonnet | architecture review 27 (the cadence guard came due) | 194k | 120 | 10.3 m | complete, one finding | claimed directions.md lacks rows 138-139; both exist |
 
 Round 101's four tracks are **not** here: this session could not
 identify their transcripts with certainty after a context rebuild, and
@@ -414,7 +417,7 @@ committed cleanly once told to run in the foreground. Three of the five
 left a derived figure or a §6 context-map row behind - the same class
 the round itself was about, arriving in the tracks' own work.
 
-What the three hundred and eighty-five rows already say: a researcher that reads a document
+What the three hundred and eighty-eight rows already say: a researcher that reads a document
 whole costs 100-180k; a walker that drives every control costs 336k;
 the two cuts cost a re-run each. The `walk` and `design-review`
 skills fix the report shape so the next rows are smaller, and the

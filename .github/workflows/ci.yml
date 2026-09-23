@@ -37,8 +37,13 @@ jobs:
           python-version: "3.11"
       - name: Is this diff docs only
         id: kind
+        # `UX-991`: `HEAD^1` on a `pull_request` - the merge ref's own
+        # first parent, the base it actually merged onto - not
+        # `base.sha`, which the event carries from the push and goes
+        # stale the moment main moves before the run starts (CI's own
+        # adopt commits do this constantly). Non-PR events keep `HEAD`.
         run: |
-          git diff --name-only "${{ github.event.pull_request.base.sha || 'HEAD' }}" \
+          git diff --name-only "${{ github.event_name == 'pull_request' && 'HEAD^1' || 'HEAD' }}" \
             | python3 tools/dev_docs_only.py --event "${{ github.event_name }}" \
             | tee -a "$GITHUB_OUTPUT"
 
@@ -64,9 +69,10 @@ jobs:
       - name: The index counts are derived
         run: python3 tools/dev_close_task.py --check
       - name: The doc guards this diff can redden
+        # `UX-991`: same `HEAD^1` fix as the `changes` job's own diff.
         run: |
           set -o pipefail
-          git diff --name-only "${{ github.event.pull_request.base.sha }}" \
+          git diff --name-only "${{ github.event_name == 'pull_request' && 'HEAD^1' || 'HEAD' }}" \
             | python3 tools/dev_docs_lane.py --run
 
   test:

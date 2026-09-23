@@ -9,7 +9,9 @@ run on a lane run.
 import io
 import pathlib
 import re
+import subprocess
 import sys
+import types
 
 import pytest
 import yaml
@@ -114,9 +116,45 @@ class TestTheLaneIsThatSetPlusTheCensus:
 
     def test_run_hands_pytest_the_lane(self, monkeypatch):
         seen = {}
-        monkeypatch.setattr(pytest, "main", lambda argv: seen.setdefault("argv", argv) and 0)
-        dev_docs_lane.main(["--run"], stdin=io.StringIO("\n".join(self.DIFF)))
-        assert {str(REPO / name) for name in dev_docs_lane.lane(self.DIFF)} <= set(seen["argv"])
+
+        def fake_run(cmd, cwd=None):
+            seen["cmd"], seen["cwd"] = cmd, cwd
+            return types.SimpleNamespace(returncode=0)
+
+        # A `pytest.main()` reversion is also stubbed, so a mutation
+        # reds on the missing `seen["cmd"]` rather than a nested,
+        # recursive pytest run inside this worker (measured: it hangs).
+        monkeypatch.setattr(subprocess, "run", fake_run)
+        monkeypatch.setattr(pytest, "main", lambda argv: 99)
+        code = dev_docs_lane.main(["--run"], stdin=io.StringIO("\n".join(self.DIFF)))
+        assert code == 0
+        assert seen["cwd"] == REPO
+        assert {str(REPO / name) for name in dev_docs_lane.lane(self.DIFF)} <= set(seen["cmd"])
+
+    def test_run_is_a_python_dash_m_pytest_subprocess_not_in_process(self):
+        """UX-991: `sys.executable -m pytest`, `make test`'s own shape -
+        not `pytest.main()`, whose `sys.path[0]` is this script's own
+        `tools/`, not REPO."""
+        cmd = dev_docs_lane.run_command(["tests/unit/test_x.py"], ["--foo"])
+        assert cmd[:3] == [sys.executable, "-m", "pytest"]
+        assert str(REPO / "tests/unit/test_x.py") in cmd
+        assert "--foo" in cmd
+
+    def test_a_census_file_that_imports_another_test_module_collects(self):
+        """UX-991's real gap: `test_a_behaviour_claim_names_the_bst_it_was
+        _read_on.py` (in `tiers.CENSUS`, always in the lane) does `from
+        tests.unit.test_the_pinned_bst_is_the_documented_one import
+        pinned` - a package import only REPO on `sys.path[0]` resolves.
+        `run_command`'s own argv, run for real (not mocked, and not
+        through `main`'s nested-pytest recursion risk) - an in-process
+        `pytest.main()` reversion drops `run_command` and this fails to
+        resolve it, rather than passing around the mechanism."""
+        target = ("tests/unit/"
+                  "test_a_behaviour_claim_names_the_bst_it_was_read_on.py")
+        done = subprocess.run(dev_docs_lane.run_command([target], []),
+                              cwd=REPO, capture_output=True, text=True)
+        assert done.returncode == 0, done.stdout + done.stderr
+        assert "ModuleNotFoundError" not in done.stdout + done.stderr
 
     def test_the_workflow_runs_it_on_one_python(self, jobs):
         lane = jobs["docs-lane"]
@@ -157,6 +195,16 @@ class TestTheDetector:
         text = _steps(jobs["changes"])
         assert "git diff --name-only" in text
         assert "dev_docs_only.py --event \"${{ github.event_name }}\"" in text
+
+    def test_the_diff_base_is_the_merge_refs_first_parent_not_base_sha(self, jobs):
+        """UX-991: `base.sha` is the event's push-time snapshot, stale
+        the moment main moves before the run starts - `HEAD^1` is the
+        merge ref's own first parent, the base actually checked out."""
+        expr = "${{ github.event_name == 'pull_request' && 'HEAD^1' || 'HEAD' }}"
+        for name in ("changes", "docs-lane"):
+            text = _steps(jobs[name])
+            assert f'git diff --name-only "{expr}"' in text, name
+            assert "base.sha" not in text, name
 
 
 class TestTheHeavyJobsSkip:

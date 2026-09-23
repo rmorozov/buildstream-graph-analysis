@@ -214,6 +214,17 @@ def lane(paths):
     return sorted(set(selected) | set(doc_readers()))
 
 
+def run_command(chosen, rest):
+    """The subprocess argv `--run` invokes, `make test`'s own shape
+    (`python -m pytest ... -q -n auto`): `-m pytest` puts REPO, not
+    `tools/`, at `sys.path[0]`, which a census file reading another
+    test module by its `tests.unit....` package path needs (UX-991 -
+    `pytest.main()` in-process left `sys.path[0]` at this script's own
+    directory, so that import raised `ModuleNotFoundError`)."""
+    return [sys.executable, "-m", "pytest", *(str(REPO / c) for c in chosen),
+            "-q", "-n", "auto", *rest]
+
+
 def main(argv=None, stdin=None) -> int:
     parser = argparse.ArgumentParser(description="the docs lane's test files")
     mode = parser.add_mutually_exclusive_group(required=True)
@@ -226,10 +237,9 @@ def main(argv=None, stdin=None) -> int:
         print("\n".join(chosen))
         return 0
     print(f"{len(chosen)} test file(s) in the docs lane", file=sys.stderr)
-    import pytest
+    import subprocess
 
-    return int(pytest.main([*(str(REPO / c) for c in chosen), "-q", "-n", "auto",
-                            *rest]))
+    return subprocess.run(run_command(chosen, rest), cwd=REPO).returncode
 
 
 if __name__ == "__main__":

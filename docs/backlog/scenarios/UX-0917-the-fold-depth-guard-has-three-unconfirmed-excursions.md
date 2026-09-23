@@ -1,7 +1,7 @@
 # UX-917: the fold-depth guard has three unconfirmed CI excursions, spread over three weeks
 
 **Flake:** tests/unit/test_the_fold_says_how_deep_it_goes.py
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-691 | **Found by:** `640325d3` appended the third excursion and shipped `main` red — `#248`'s `test (3.12)` failed `test_the_real_ledger_has_no_unfiled_repeat_excursion` on a merge commit whose branch side was green | **Serves:** the round whose push gate is blocked by a file nobody has named | **Topic:** guards | **Area:** tools | **Shape:** judgement
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-691 | **Found by:** `640325d3` appended the third excursion and shipped `main` red — `#248`'s `test (3.12)` failed `test_the_real_ledger_has_no_unfiled_repeat_excursion` on a merge commit whose branch side was green | **Serves:** the round whose push gate is blocked by a file nobody has named | **Topic:** guards | **Area:** tools | **Shape:** judgement
 
 ## Motivation
 

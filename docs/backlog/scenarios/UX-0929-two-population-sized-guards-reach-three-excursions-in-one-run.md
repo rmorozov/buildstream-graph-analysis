@@ -1,7 +1,7 @@
 # UX-929: population-sized guards reach three excursions in one run, and their records were frozen
 
 **Flake:** tests/unit/test_the_size_ledger_only_shrinks.py, tests/unit/test_docs_links_and_commands.py, tests/unit/test_the_documented_invocations_parse.py, tests/unit/test_every_skip_reason_is_declared.py
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-691, UX-716, UX-924 | **Blocks:** — | **Found by:** round 136 — `2a3f2ee7` appended run 35735148844's excursions and shipped `main` red on `test_a_file_with_three_excursions_has_a_filed_task.py`, which every branch's `make test` then inherits | **Serves:** every branch whose push gate reads a suite `main` has already reddened | **Topic:** guards | **Area:** tools | **Shape:** judgement
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-691, UX-716, UX-924 | **Blocks:** — | **Found by:** round 136 — `2a3f2ee7` appended run 35735148844's excursions and shipped `main` red on `test_a_file_with_three_excursions_has_a_filed_task.py`, which every branch's `make test` then inherits | **Serves:** every branch whose push gate reads a suite `main` has already reddened | **Topic:** guards | **Area:** tools | **Shape:** judgement
 
 ## Motivation
 

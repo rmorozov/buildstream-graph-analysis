@@ -1,6 +1,6 @@
 # UX-912: the timing reference is unrepresentative on four files, and the base-carry miss makes branches pay for it
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-442, UX-476, UX-503, UX-803 | **Found by:** round 132 — one `test (3.11)` run reported four files whose records the runner disagrees with, none named by the diff | **Serves:** every branch charged for a cost `main` carries | **Topic:** guards | **Area:** tools | **Shape:** judgement
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-442, UX-476, UX-503, UX-803 | **Found by:** round 132 — one `test (3.11)` run reported four files whose records the runner disagrees with, none named by the diff | **Serves:** every branch charged for a cost `main` carries | **Topic:** guards | **Area:** tools | **Shape:** judgement
 
 ## What the gate actually costs, measured 2026-09-21
 

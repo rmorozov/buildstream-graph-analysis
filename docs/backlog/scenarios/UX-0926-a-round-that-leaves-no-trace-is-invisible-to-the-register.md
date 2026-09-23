@@ -1,6 +1,6 @@
 # UX-926: a round that leaves neither a document nor a ledger row is invisible to the register, and so to the guard whose job is to demand its document
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-666, UX-744, UX-757 | **Blocks:** — | **Found by:** round 135 — `UX-914` closed and shipped with no round document and `make test` stayed green; rounds 132 and 133 had already done the same, and round 134 was caught only because it happened to have priced an agent | **Serves:** every later round, which reads a round's record instead of its code | **Topic:** guards | **Area:** tools | **Shape:** judgement
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-666, UX-744, UX-757 | **Blocks:** — | **Found by:** round 135 — `UX-914` closed and shipped with no round document and `make test` stayed green; rounds 132 and 133 had already done the same, and round 134 was caught only because it happened to have priced an agent | **Serves:** every later round, which reads a round's record instead of its code | **Topic:** guards | **Area:** tools | **Shape:** judgement
 
 ## Motivation
 

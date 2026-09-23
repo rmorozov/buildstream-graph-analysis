@@ -1,6 +1,6 @@
 # UX-943: the adopt jobs write to the default branch from a run whose whole suite failed
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-503, UX-524, UX-691, UX-934 | **Blocks:** — | **Found by:** round 136 — the merge thread reading `98c387bc`'s checks while `UX-934` was worked | **Serves:** every branch that inherits a record the default branch adopted from a run nothing vouched for | **Topic:** guards | **Area:** tools | **Shape:** judgement
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-503, UX-524, UX-691, UX-934 | **Blocks:** — | **Found by:** round 136 — the merge thread reading `98c387bc`'s checks while `UX-934` was worked | **Serves:** every branch that inherits a record the default branch adopted from a run nothing vouched for | **Topic:** guards | **Area:** tools | **Shape:** judgement
 
 ## Motivation
 

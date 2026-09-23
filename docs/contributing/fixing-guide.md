@@ -364,7 +364,7 @@ tools/dev_touching.py        the tests that name what your diff touched, plus th
                              they can never name (UX-336, UX-522)
 tools/_record_readers.py     its clause for a record a guard loads through a tool (UX-942)
 tools/dev_docs_only.py, dev_docs_lane.py  whether a PR is docs only, and the doc
-                             guards its one-Python CI lane runs (UX-956 (open))
+                             guards its one-Python CI lane runs (UX-956)
 tools/dev_touch_map.py       which test files executed which module, off CI's own
                              coverage run - the import chain a grep cannot see (UX-524)
 tools/dev_impact.py          what a change reaches - contracts, findings, guides,
@@ -379,7 +379,7 @@ tools/dev_round_register.py  which rounds happened, derived from the
 tools/dev_tier_drift.py      which files outgrew their tier, from the
                              suite's own junit report (UX-418)
 tools/dev_bst_examples_spread.py  bst-examples' wall clock as a spread from the
-                             jobs API, and its exact figures as notices (UX-941 (open))
+                             jobs API, and its exact figures as notices (UX-941)
 tools/dev_mutation.py        mutmut over the modules a diff touched, weekly -
                              survivors into a ledger under docs/audits/ (UX-703)
 tools/dev_perf_ratchet.py    whether `bga analyze` and `bga view --export`
@@ -487,9 +487,9 @@ tests/flake_ledger.json    every unconfirmed excursion and confirmed drift the t
 tests/quality_baseline.json  every finding the widened families report today, by
                            identity; reds a new one (UX-694, shape_ledger.json UX-690)
 tests/bst_claims.json      each BuildStream behaviour claim in bga/, where it is written and
-                           the version it was last read on; older than BST_VERSION warns (UX-940 (open))
+                           the version it was last read on; older than BST_VERSION warns (UX-940)
 tests/bst_examples_clock.json  the jobs API's bst-examples spans `--fetch` read;
-                           ci.yml's clock line is derived from it (UX-941 (open))
+                           ci.yml's clock line is derived from it (UX-941)
 tests/dom_shim.mjs         the one DOM every viewer guard runs on (UX-264)
 tests/viewer.mjs           the viewer's exports as one namespace, so a guard names a symbol not a module (UX-337)
 tests/cdp.mjs              headless Chrome over CDP, no dependencies (UX-257)

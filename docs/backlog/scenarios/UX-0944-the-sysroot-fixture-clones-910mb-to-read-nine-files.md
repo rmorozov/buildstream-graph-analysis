@@ -1,6 +1,6 @@
 # UX-944: the sysroot fixture clones 910 MB to read nine files, so its cost has two modes 30x apart and the reference entry is the median of both
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-930 | **Blocks:** — | **Found by:** round 137 — `#266` moved `tests/ci_reference.json`'s entry for `tests/unit/test_the_toolchain_parameters_are_read_back.py` from 3.15 to 46.28, and the window behind that number reads `[46.28, 3.15, 94.23]` | **Serves:** the next reader of that entry, and every run of the `test` job, which pays the dear mode whenever the runner's `/usr` and its temporary directory are on different filesystems | **Topic:** guards | **Area:** unassigned | **Shape:** mechanical
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-930 | **Blocks:** — | **Found by:** round 137 — `#266` moved `tests/ci_reference.json`'s entry for `tests/unit/test_the_toolchain_parameters_are_read_back.py` from 3.15 to 46.28, and the window behind that number reads `[46.28, 3.15, 94.23]` | **Serves:** the next reader of that entry, and every run of the `test` job, which pays the dear mode whenever the runner's `/usr` and its temporary directory are on different filesystems | **Topic:** guards | **Area:** unassigned | **Shape:** mechanical
 
 ## Motivation
 

@@ -1,6 +1,6 @@
 # UX-920: two task files can share one backlog id, and no guard reads ids for uniqueness
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-501 | **Found by:** four concurrent PRs on 2026-09-21 filed six rows under four ids; `UX-917` and `UX-918` each name two unrelated defects | **Serves:** every round that runs more than one branch at a time, which is now the normal case | **Topic:** guards | **Area:** tools | **Shape:** bounded
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-501 | **Found by:** four concurrent PRs on 2026-09-21 filed six rows under four ids; `UX-917` and `UX-918` each name two unrelated defects | **Serves:** every round that runs more than one branch at a time, which is now the normal case | **Topic:** guards | **Area:** tools | **Shape:** bounded
 
 ## Motivation
 

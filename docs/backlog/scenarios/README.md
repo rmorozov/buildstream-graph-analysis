@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-942 scenarios: **28 open**, 914 closed.
+943 scenarios: **29 open**, 914 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -27,7 +27,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | cli | 0 | 22 |
 | store | 1 | 17 |
 | docs | 1 | 146 |
-| guards | 19 | 266 |
+| guards | 20 | 267 |
 
 ## Open scenarios
 
@@ -64,6 +64,7 @@ task file, which is the only place it ever lived twice.
 | UX-944 | [the sysroot fixture clones 910 MB to read nine files, so its cost has two modes 30x apart and the reference entry is the median of both](UX-0944-the-sysroot-fixture-clones-910mb-to-read-nine-files.md) | guards | Medium | every run of the `test` job, which pays the dear mode whenever the runner's `/usr` and its temporary directory are on different filesystems | 🔴 Not Started |
 | UX-950 | [the flake ledger's excursions cluster by run, and the census counts a runner event once per file](UX-0950-the-flake-ledger-counts-a-runner-event-once-per-file.md) | guards | Medium | the next round whose push gate reads a file the census names | 🔴 Not Started |
 | UX-955 | [a population entry keeps the tree size its seconds no longer describe, so the gate scales the growth twice](UX-0955-a-population-entry-keeps-the-size-its-seconds-no-longer-describe.md) | guards | Medium | every branch that makes the backlog guard slower, which the gate should name | 🔴 Not Started |
+| UX-956 | [a docs-only pull request runs the whole matrix, and the selector that could narrow it misses the guards that read documents by glob](UX-0956-a-docs-only-pull-request-runs-the-whole-matrix.md) | guards | Medium | every docs-only pull request, which waits on four interpreters and three `bst` jobs | 🔴 Not Started |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

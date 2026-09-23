@@ -40,18 +40,53 @@ class TestRoundsJoinsTwoSources:
 
     def test_a_ledger_only_round_has_no_dateline_to_read(self):
         result = reg.rounds(documented=set(), ledger_runs=[{"round": "5"}],
+                            named=set(),
                             dates=lambda n: None)
         assert result == {"5": {"date": ""}}
 
     def test_a_document_only_round_reads_its_own_dateline(self):
-        result = reg.rounds(documented={"7"}, ledger_runs=[],
+        result = reg.rounds(documented={"7"}, ledger_runs=[], named=set(),
                             dates=lambda n: "2026-01-01" if n == "7" else None)
         assert result == {"7": {"date": "2026-01-01"}}
 
     def test_a_round_in_both_is_named_once(self):
         result = reg.rounds(documented={"7"}, ledger_runs=[{"round": "7"}],
+                            named=set(),
                             dates=lambda n: "2026-01-01")
         assert set(result) == {"7"}
+
+    def test_a_task_file_only_round_is_named(self):
+        """`UX-926`: the third source - a round no document and no
+        ledger row records, claimed only by a task file."""
+        result = reg.rounds(documented=set(), ledger_runs=[], named={"200"},
+                            dates=lambda n: None)
+        assert result == {"200": {"date": ""}}
+
+
+def _task(root, name, body):
+    root.mkdir(parents=True, exist_ok=True)
+    (root / name).write_text(body, encoding="utf-8")
+
+
+HEADER = ("# UX-9: x\n\n**Priority:** Low | **Status:** 🟢 Done | "
+          "**Found by:** round {found} — a note | **Topic:** guards\n\n"
+          "## Motivation\n\n**Round 7, 2026-01-01** is a mention here.\n\n")
+
+
+class TestTaskFileRoundsReadsTheThreeMarkers:
+    """`UX-926`: an Outcome heading's `(round N`, an Outcome's bold
+    `**Round N`, and the header's `Found by: round N` - and nothing
+    above the Outcome, where a bold round is prose."""
+
+    def test_each_marker_is_read(self, tmp_path):
+        _task(tmp_path, "UX-0009-a.md", HEADER.format(found=11)
+              + "## Outcome (round 12, 2026-01-02) — 🟢 Done\n\nx\n\n"
+              "**Round 13, 2026-01-03.** more\n")
+        assert reg.task_file_rounds(tmp_path) == {"11", "12", "13"}
+
+    def test_a_bold_round_above_the_outcome_is_a_mention(self, tmp_path):
+        _task(tmp_path, "UX-0009-a.md", HEADER.format(found=11))
+        assert reg.task_file_rounds(tmp_path) == {"11"}
 
 
 class TestDocumentDate:
@@ -104,6 +139,29 @@ class TestWrittenRoundsExcludesOnlyAnUndocumentedNewest:
         assert reg.written_rounds({}, documented=lambda n: False) == {}
 
 
+class TestTheExemptionIsTheOneNextRound:
+    """`UX-926`: held back is at most the newest number, and only when
+    it is the one after the newest document - a round claimed past
+    that, or any round below the newest, is owed its document."""
+
+    @staticmethod
+    def _held(numbers, documented):
+        full = {str(n): {"date": ""} for n in numbers}
+        written = reg.written_rounds(full, documented=lambda n: n in documented)
+        return sorted(set(full) - set(written), key=int)
+
+    def test_the_next_round_is_held(self):
+        assert self._held((136, 137, 138), {"136", "137"}) == ["138"]
+
+    def test_a_claimed_round_past_the_next_is_not_held(self):
+        assert self._held((136, 137, 200), {"136", "137"}) == []
+
+    def test_only_the_highest_of_two_undocumented_is_held(self):
+        assert self._held((136, 137, 138), {"136"}) == []
+        assert self._held((137, 138), {"137"}) == ["138"]
+        assert self._held((131, 132, 133), {"131"}) == []
+
+
 class TestRenderAndCheckRoundTrip:
     def test_check_reds_when_the_file_is_stale(self, tmp_path, monkeypatch):
         path = tmp_path / "round-register.md"
@@ -130,29 +188,32 @@ class TestGitOnlyRoundsAreCheckedAgainstTheTree:
 
     def test_a_conflict_names_the_round_and_where(self):
         found = dict(reg.git_only_conflicts(
-            documented={"29"}, ledger_runs=[{"round": "31"}]))
-        assert found == {29: "docs/audits/round-29.md",
-                         31: "the ledger's round column"}
+            documented={"55"}, ledger_runs=[{"round": "31"}],
+            named={"60"}))
+        assert found == {55: "docs/audits/round-55.md",
+                         31: "the ledger's round column",
+                         60: "a task file"}
 
     def test_a_round_with_neither_is_not_a_conflict(self):
-        assert reg.git_only_conflicts(documented=set(), ledger_runs=[]) == []
+        assert reg.git_only_conflicts(documented=set(), ledger_runs=[],
+                                      named=set()) == []
 
     def test_the_header_note_drops_a_conflicted_round(self):
-        effective = reg._effective_git_only(documented={"26"},
-                                            ledger_runs=[])
-        assert 26 not in effective
-        assert set(effective) == set(reg.GIT_ONLY_ROUNDS) - {26}
+        effective = reg._effective_git_only(documented={"31"},
+                                            ledger_runs=[], named=set())
+        assert 31 not in effective
+        assert set(effective) == set(reg.GIT_ONLY_ROUNDS) - {31}
 
     def test_check_reds_naming_the_round_and_where(self, tmp_path,
                                                     monkeypatch):
         (tmp_path / "docs" / "audits").mkdir(parents=True)
-        (tmp_path / "docs/audits/round-26.md").write_text(
+        (tmp_path / "docs/audits/round-31.md").write_text(
             "x\n", encoding="utf-8")
         monkeypatch.setattr(reg, "REPO", tmp_path)
         monkeypatch.setattr(reg, "REGISTER", tmp_path / "round-register.md")
         problems = reg.check()
-        assert any("round 26" in p and "round-26.md" in p for p in problems), (
-            f"a synthetic round-26.md must red naming 26 and where: {problems}")
+        assert any("round 31" in p and "round-31.md" in p for p in problems), (
+            f"a synthetic round-31.md must red naming 31 and where: {problems}")
 
 
 class TestFirstCommitDateReadsTheFilesOwnHistory:

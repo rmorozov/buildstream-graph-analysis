@@ -35,7 +35,7 @@ same function.
 (`UX-793`): check out the track's close commit first (`git checkout
 <close sha>`), so `--base` diffs the track and not every round since;
 run the guard files the commits touched, not the touching sweep — the
-merge's `make test` already ran it, and nine sweeps at once on four
+merge's CI matrix already ran it, and nine sweeps at once on four
 cores never finished; `make lint` in its three pieces if the whole
 stalls. Round 109's readings are in `UX-793`.
 

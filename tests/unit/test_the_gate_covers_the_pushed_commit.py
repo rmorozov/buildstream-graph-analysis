@@ -4,9 +4,9 @@ Round 104 ran `make test` at `67cc0d1` and then pushed `4879bcc`, a
 commit the gate never saw. `gate-covers-push.sh` reads `.gate-covered`
 (the sha `make test` last passed on) and refuses a `HEAD` it does not
 name. These clauses hold the matching (including a compound command,
-`no_bulk_add.is_bulk_add`'s own failure mode), the marker comparison
-and the escape hatch - not `make test`'s own recipe, which
-`test_the_loop_stays_fast.py` already reads for its other clauses.
+`no_bulk_add.is_bulk_add`'s own failure mode), the marker comparison,
+the escape hatch, and `UX-948`'s `make push-check` - the push gate,
+run against stub checks, writing the marker only when all of them pass.
 
 `.claude/hooks/gate-covers-push.sh` carries the row's marker; this
 holds the decision the marker names.
@@ -173,6 +173,84 @@ class TestTheEscapeHatch:
     def test_the_bypass_message_warns_it_holds_for_the_shell(self):
         source = HOOK_MODULE.read_text(encoding="utf-8")
         assert "shell" in source.split("MESSAGE = ")[1].split('"""')[1]
+
+
+#: Every check `make push-check` runs, prerequisites included, as a
+#: substring of the stubbed command line that runs it.
+PUSH_CHECKS = ("pymarkdown", "ruff", "dev_baseline.py", "dev_touching.py",
+               "dev_sizes.py", "dev_close_task.py")
+
+STUB = '#!/bin/sh\ncase "${0##*/} $*" in *"$BGA_FAIL_ON"*) exit 1;; esac\nexit 0\n'
+
+#: A pytest run under `make` (CI's steps) exports these; a child make
+#: that inherits them prints `Leaving directory` as its last line.
+PARENT_MAKE = ("MAKEFLAGS", "MFLAGS", "MAKELEVEL", "MAKEFILES", "MAKEOVERRIDES")
+
+
+def _make(*args, cwd, env=None):
+    """A top-level, serial `make`, whatever make is running pytest."""
+    clean = {k: v for k, v in (env or os.environ).items() if k not in PARENT_MAKE}
+    return subprocess.run(["make", "-j1", "--no-print-directory", *args],
+                          cwd=cwd, env=clean, capture_output=True, text=True,
+                          timeout=30)
+
+
+class TestThePushCheckWritesTheMarkerOnlyOnGreen:
+    """`UX-948`: the push gate is the four fast checks, not the suite.
+    The real Makefile, run in a scratch repo whose `python`, `python3`
+    and `ruff` are stubs that fail on one named check."""
+
+    @staticmethod
+    def _push_check(repo, tmp_path, fail_on, merge_base=True):
+        stubs = tmp_path / "stubs"
+        stubs.mkdir(exist_ok=True)
+        for name in ("python", "python3", "ruff"):
+            (stubs / name).write_text(STUB)
+            (stubs / name).chmod(0o755)
+        (repo / "README.md").write_text("x\n")
+        subprocess.run(["git", "-C", str(repo), "add", "README.md"], check=True)
+        subprocess.run(["git", "-C", str(repo), "commit", "-q", "-m", "md"],
+                       check=True)
+        if merge_base:
+            subprocess.run(["git", "-C", str(repo), "update-ref",
+                            "refs/remotes/origin/main", "HEAD~1"], check=True)
+        env = {**os.environ, "PATH": f"{stubs}{os.pathsep}{os.environ['PATH']}",
+               "BGA_FAIL_ON": fail_on}
+        return _make("-f", str(REPO / "Makefile"), "push-check", cwd=repo, env=env)
+
+    def test_every_check_is_in_the_recipe(self):
+        done = _make("-n", "push-check", cwd=REPO)
+        assert done.returncode == 0, done.stderr
+        missing = [one for one in PUSH_CHECKS if one not in done.stdout]
+        assert not missing, (missing, done.stdout)
+        assert "merge-base HEAD origin/main" in done.stdout, done.stdout
+        assert "dev_touching.py --base \"$base\"" in done.stdout, done.stdout
+
+    def test_all_green_writes_the_marker_naming_head(self, repo, tmp_path):
+        done = self._push_check(repo, tmp_path, "no-such-check")
+        assert done.returncode == 0, done.stdout + done.stderr
+        assert (repo / ".gate-covered").read_text().strip() == _head(repo)
+
+    @pytest.mark.parametrize("check", PUSH_CHECKS)
+    def test_one_red_check_writes_no_marker(self, repo, tmp_path, check):
+        done = self._push_check(repo, tmp_path, check)
+        assert done.returncode != 0, (check, done.stdout)
+        assert check in done.stdout.strip().splitlines()[-1], (
+            f"the run stopped before {check}, so it proves nothing about it",
+            done.stdout)
+        assert not (repo / ".gate-covered").exists(), (
+            f"`make push-check` wrote the marker with {check} red")
+
+    def test_no_merge_base_writes_no_marker(self, repo, tmp_path):
+        """The selector with no base would diff HEAD and select nothing."""
+        done = self._push_check(repo, tmp_path, "no-such-check",
+                                merge_base=False)
+        assert done.returncode != 0, done.stdout
+        assert not (repo / ".gate-covered").exists()
+
+    def test_the_hook_names_the_push_check(self):
+        source = HOOK_MODULE.read_text(encoding="utf-8")
+        assert "make push-check" in source.split("MESSAGE = ")[1].split('"""')[1]
 
 
 class TestSettingsDeclaresIt:

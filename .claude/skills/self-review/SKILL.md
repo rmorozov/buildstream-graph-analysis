@@ -22,10 +22,13 @@ own model reading its own diff is the thing this replaces.
 git diff --name-only <base> | python3 tools/dev_impact.py - --route
 ```
 
-`design-review` means the diff reaches a surface whose reader is not
-its author — a contract, the spec, a hook, a skill — and that diff
-goes to the `design-review` skill **on the session's model** as well
-as here. `self-review` means it stops at this skill and the gate.
+A diff reaching a surface whose reader is not its author — a
+contract, the spec, a hook, a skill — goes on **on the session's
+model** as well as here: to `design-review` when it touches the page
+too (a `bga/viewer/`, `.mjs` or `.css` path), to `review`'s
+routed-diff section when it does not, since the page protocol opens
+on a served page (`UX-928`).
+`self-review` means it stops at this skill and the gate.
 The rule is `dev_impact.route()`, so it is run and not remembered.
 
 ## 2. Read exactly four things

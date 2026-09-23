@@ -147,3 +147,80 @@ The second mutation is what rules out the cheap fix: a paragraph in
 `CLAUDE.md` with no property behind it changes nothing (`UX-938`).
 
 ## Outcome
+
+**Round 138, 2026-09-23**
+
+**The gap, re-measured.** `bst-examples` wrote no record of its clock,
+and nothing beside the job said the clock was not a reading. Every
+successful `bst-examples` job on a `main` push since the staged
+toolchain, read from the jobs API (`started_at..completed_at`):
+
+```text
+$ python3 tools/dev_bst_examples_spread.py --fetch --since 2026-09-15 --limit 30
+26 runs of main, median 816s, 620-964s, max/min 1.55, read 2026-09-23  (CI_DRIFT_FACTOR 1.5)
+```
+
+Four more runs than the filing's 22, same range. Consecutive deltas over
+the 26, oldest first: max 306s, median 78s. The seven runs of
+2026-09-08..14 read 216-315s and sit before `--since`: another workload.
+
+**The close.** `ci.yml` carries one paragraph beside the job: the clock
+is not a measurement, the figure line above, the command. `--write`
+rewrites that line from `tests/bst_examples_clock.json`, the readings
+`--fetch` stored. `examples/README.md` names the job twice and prices
+it in neither, so it was left alone.
+`test_the_examples_clock_is_a_spread.py` holds the line to the data,
+and refuses any sentence or table row in `docs/**/*.md`, the two
+READMEs or `CLAUDE.md` that names `bst-examples` with a duration and
+not `620-964s`. It flagged one: this Outcome's own first draft of the
+mutation table below, which quoted the planted sentence verbatim.
+
+The structural half: a last step, `UX-941 structural figures as
+notices`, under `if: always()`, prints one `::notice title=UX-941
+structural::` line per figure: store paths staged under examples/05's
+toolchain (`nix_closure.staged_hashes`, what `--check` prints as
+`staged paths`) and `graph_metrics.num_elements` of each of the six
+`report*.json` the job writes. A missing input prints `absent`.
+
+```text
+$ bga analyze -f json -o <art>/06-macro-micro-optimization/report-baseline.json -d -r tests/fixtures/macro_micro/run
+$ python3 tools/dev_bst_examples_spread.py --notices <art> <none> | sed -n '1p;6p'
+::notice title=UX-941 structural::examples/05 toolchain: absent store paths staged (nix_closure.staged_hashes)
+::notice title=UX-941 structural::examples/06-macro-micro-optimization/report-baseline.json: 11 elements (graph_metrics.num_elements)
+```
+
+| mutation | red |
+|---|---|
+| `ci.yml`'s figure narrowed to `700-900s, max/min 1.29` | `test_the_paragraph_is_what_the_tool_would_write` |
+| fixing guide gains a sentence pricing the job at 120s, no range | `test_no_document_prices_the_job_without_its_range`, naming the sentence |
+| `MIN_RUNS` check made `< 1` (a population of one gets a median) | `test_one_reading_is_refused`, `test_the_tool_prints_no_median_for_one_run` |
+| notice lines print an empty figure | `test_the_command_prints_one_figure_per_line`, `test_a_missing_input_is_reported_absent_never_silent` |
+| `if: always()` removed from the step | `test_it_follows_every_build_step_and_runs_always` |
+
+Each applied, red, reverted, then 20 passed. The data cut to one run:
+`dev_bst_examples_spread: 1 run(s) of bst-examples: fewer than 3, so no
+median - one run of each sha is not a population`, exit 1.
+
+**Deviations.** Bytes fetched and CAS bytes are not in the notice
+step: the job computes neither. `nix_closure` counts no wire bytes, and
+`FileSize` is a declaration its own `fetch_nar` records as 2,830 bytes
+off for glibc; CAS bytes are `UX-907`'s opt-in walk, which no
+`bst-examples` step turns on. The step is an edit to `ci.yml` beyond
+the comment, which Out of Scope declined; the brief took it, as its
+own step named for this row. A sentence naming an element (`\w+.bst`)
+is exempt from the guard: `round-124.md`'s `giant.bst` +40.1s is a
+paired reading inside one capture, not the job's clock. `MIN_RUNS` is
+3, `UX-895`'s repeats per arm. The cap of 10 notices per step is
+GitHub's documented one, not measured here; the step prints 7.
+`--fetch`'s two `urllib` calls are ruff S310, force-added to
+`tests/quality_baseline.json` under this id (`dev_baseline.py --write
+--force --reason UX-941`: 2 authorised, 3+/1- lines). The fixing
+guide's §6 map names the tool and the data file, and its derived
+`make test-touching` spread moved to 31-163 of 584 test files.
+
+**Not closed.** No annotation has been read back: `ci.yml` runs on
+`main` pushes and pull requests, not on this branch's push, so the
+first notices land on this row's PR run
+(`GET .../check-runs/<id>/annotations`). A wall figure for a change
+needs N runs of one sha; the route is a dispatchable matrix over the
+same commit, which this row did not add.

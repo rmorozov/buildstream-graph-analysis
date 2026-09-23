@@ -99,3 +99,78 @@ file. The deletion half needs a fixture *narrower* than the live tree,
 which is the case this round read but did not run.
 
 ## Outcome
+
+**Round 138, 2026-09-23**
+
+**Premise:** held — and the deletion half, read but not run when filed,
+reproduces: a narrow sandbox removes 10 of 11 real area pages.
+
+### The gap, measured
+
+A replica of `tools/` and `docs/backlog/areas/` in the scratchpad (so
+`REPO` is the replica), and a sandbox of one task file under `tools`:
+
+```text
+$ python3 replica/tools/dev_close_task.py --check --write --scenarios sandbox/scenarios
+before: 11 pages
+after: 1 pages
+removed: ['bga-attribution.md', 'bga-diagnostics.md', 'bga-normalize.md', 'bga-replay.md',
+  'bga-report.md', 'bga-structural.md', 'bga-viewer.md', 'bga.md', 'tools-native_trace.md', 'unassigned.md']
+changed: ['tools.md']
+sandbox areas: none
+```
+
+The first cut of the guard below ran that same mutation against this
+worktree and took the real pages with it (`git status`: 10 `D`, 1 `M`,
+restored by `git checkout -- docs/backlog/areas`) - so the guard now
+points `REPO` at a tmp decoy too, and neither spelling of the old
+constant can reach the tree from a red run.
+
+### After
+
+`AREA_PAGES = SCENARIOS.parent / "areas"` at import (the repository's
+`docs/backlog/areas` when no `--scenarios` is given) and rebound beside
+`SCENARIOS`, `INDEX` and `CLOSED` when one is.
+`tests/unit/test_a_sandboxed_write_stays_in_the_sandbox.py`: the narrow
+sandbox against a decoy holding `tools.md` and `bga.md` - the decoy is
+byte-identical afterwards, nothing added or removed, and
+`<tmp>/sandbox/areas/` holds exactly `tools.md` listing `UX-1`.
+
+```text
+$ printf '...**Area:** tools...' > docs/backlog/scenarios/UX-0999-probe.md
+$ PYTEST_XDIST= python3 -m pytest tests/unit/test_the_loop_stays_fast.py -q
+2 failed, 48 passed in 26.08s      # both read the probe: the unstaged-row report, and the sandbox's own tools.md
+$ git status --short
+ M docs/contributing/fixing-guide.md          # this diff
+ M tests/unit/test_the_loop_stays_fast.py     # this diff
+ M tools/dev_close_task.py                    # this diff
+?? docs/backlog/scenarios/UX-0999-probe.md
+?? tests/unit/test_a_sandboxed_write_stays_in_the_sandbox.py
+```
+
+`docs/backlog/areas/` is not in it. `_index_off_by_a_count` now copies
+the area pages beside its sandbox, so `--write changed 1 file(s)` still
+names only `README.md` on a clean tree.
+
+### Mutations verified red and reverted (2)
+
+| # | mutation | reddened |
+|---|---|---|
+| B1 | `main`'s rebinding restored to `REPO / "docs/backlog/areas"` | 1 of 2: the decoy lost `bga.md` and `tools.md` was rewritten |
+| B2 | `main`'s rebinding line deleted (the module value stands) | 1 of 2: the same clause |
+
+`test_the_default_is_the_repository_s_pages` does not discriminate
+against either: the default is the same path by both spellings.
+
+### Deviation from the Required Fix
+
+None. `tools/dev_close_task.py` joins `test_the_loop_stays_fast.py`'s
+`WIDE` set at 46 against 45: this row's and `UX-935`'s guards are the
+45th and 46th files naming it. The row is not moved here: a move is
+the 26th close since review 25 and reds `test_the_review_has_a_cadence.py`,
+so the orchestrator moves it after review 26.
+
+```text
+$ make test-touching     # taken with UX-935's row moved, since withdrawn
+1 failed, 2231 passed, 4 skipped in 258.32s     # the review cadence, 26 against 25
+```

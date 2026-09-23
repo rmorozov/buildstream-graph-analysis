@@ -67,4 +67,73 @@ with other fixture-heavy files. If they do, the per-run finding is
 filed with its own guard; if they do not, this file gets a `declared`
 reason in the ledger naming the measurement that cleared it.
 
-## Outcome
+## Outcome (round 138, 2026-09-23)
+
+**Round 138, 2026-09-23.** **Premise:** falsified for this file, held for
+the ledger — runs do cluster, but not on the fixture-heavy files, and
+this file's excursions are its own.
+
+### The gap, measured
+
+```text
+$ python3 -c "import json,collections as C;d=json.load(open('tests/flake_ledger.json'));
+  r=C.defaultdict(list);[r[e['run_id']].append(e['file'][16:-3]) for e in d['entries']];
+  [print(k,len(v),' '.join(v)) for k,v in r.items()]"     # view's runs, then files per run
+34888036702 3 the_view_parses_nothing every_skip_reason_is_declared the_size_ledger_only_shrinks
+35536366563 3 the_view_parses_nothing a_drawing_is_graded the_styleguide_names_its_guards
+35755437814 6 docs_links_and_commands the_mapping_is_law the_page_conforms_to_its_sections
+              the_view_parses_nothing the_documented_invocations_parse the_trace_census_reads_both_ends
+35782031437 2 the_view_parses_nothing every_skip_reason_is_declared
+35801932452 1 the_view_parses_nothing
+21 runs: {1 file: 8, 2: 6, 3: 6, 6: 1}, 44 rows
+```
+
+**Runs cluster.** 58 `CI` push runs on `main` from the first ledger run
+on (Actions runs API; 37 known to reach the gate). Each file drawn as an
+independent Bernoulli at its ledger rate, 20,000 draws: variance/mean
+1.58 (N=37) and 2.01 (N=58) against P=0.0029 and 0.0001; six in one run
+P=0.021 and 0.003. That is filed as `UX-950`.
+
+**Heavy fixtures do not.** Bytes written, each file alone and
+single-process (`os.wait4` `ru_oublock`, children included), for the 17
+ledger files and the 40 never-excursed files whose CI record is 7-17 s:
+
+```text
+250.1 MB  5 exc  test_the_view_parses_nothing.py
+ 80.6 MB  0      test_the_fast_check_holds_what_the_suite_holds.py
+ 76.5 MB  0      test_the_report_you_can_attach.py
+ 59.3 MB  2      test_the_loop_stays_fast.py        (runs 35330268532, 35793201794)
+median: ledger files 4.4 MB, band controls 12.95 MB
+view's ten run-mate rows (nine files) write 0.1-23.6 MB
+```
+
+No other file over 50 MB shares a run with it, and the excursing files
+write *less* than their never-excursing peers. On the one full post-
+`UX-924` adopt where it read 16.5 s (`c2fbf2b6`), the 86 files >= 5 s
+read at most x1.37 of their own three-run median besides it (x1.59);
+`UX-944`'s 910 MB clone was in its cheap mode (3.15 s) on that run.
+
+### After
+
+`tests/flake_ledger.json`'s `declared` names the file with that
+measurement. CI readings since `UX-924`, `[8.91, 8.91, 7.38, 16.5,
+10.39]`: the record 8.91 sits inside its own spread, so it is not
+re-recorded.
+
+```text
+$ python3 -c "from tools import dev_flake_census as c; print(c.unaccounted(c.load()))"
+[]
+```
+
+### Mutations verified red and reverted (3)
+
+| # | mutation | reddened |
+|---|---|---|
+| A1 | this task's `**Flake:**` field and the `declared` entry both removed | `test_the_real_ledger_has_no_unfiled_repeat_excursion`, 1 of 8 |
+| A2 | `**Flake:**` removed, the `declared` reason emptied to `""` | the same clause, 1 of 8 |
+| A3 | `**Flake:**` removed, `declared` kept | nothing, 8 of 8 — the reason alone clears it |
+
+### Deviation from the Required Fix
+
+"Fixture-heavy" is read as bytes written, measured here; CI's disk is not
+readable from a session, so the per-run cause is `UX-950`'s to name.

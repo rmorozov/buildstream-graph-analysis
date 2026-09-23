@@ -366,7 +366,7 @@ tools/dev_touch_map.py       which test files executed which module, off CI's ow
                              coverage run - the import chain a grep cannot see (UX-524)
 tools/dev_impact.py          what a change reaches - contracts, findings, guides,
                              guards, open filings - and where it routes (UX-687, UX-701)
-tools/dev_close_task.py, dev_shape_budget.py  closing a row and its shape budget (UX-336, UX-690)
+tools/dev_close_task.py, dev_shape_budget.py  closing a row and its shape budget (UX-336, UX-690) · _close_task_checks.py  its newer `--check` properties
 tools/dev_refresh_analysis.py  the rule a committed analysis is written
                              under, and the command that rewrites one
                              from a fresh run (UX-486)

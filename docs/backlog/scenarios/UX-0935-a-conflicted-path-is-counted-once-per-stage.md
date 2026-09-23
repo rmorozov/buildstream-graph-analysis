@@ -140,7 +140,7 @@ Clean report, and a count wrong by twice the one conflict, written.
 
 ### After
 
-`--check` asks `unmerged_paths()` (`git ls-files -u`) first, on the real
+`--check` asks `index_is_merged()` (`git ls-files -u`, in `tools/_close_task_checks.py`) first, on the real
 index only, and refuses before any derive or write:
 
 ```text

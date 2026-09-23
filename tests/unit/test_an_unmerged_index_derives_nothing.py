@@ -94,9 +94,12 @@ class TestAnUnmergedIndexIsRefused:
         repo = _mid_merge(tmp_path)
         _pointed_at(repo, monkeypatch)
         before = _written(repo)
-        code = close_task.main(["--check", "--write"])
+        try:
+            code = close_task.main(["--check", "--write"])
+        except SystemExit as exited:
+            code = exited.code
         err = capsys.readouterr().err
-        assert code != 0, "`--check` derived from a mid-merge index"
+        assert code not in (0, None), "`--check` derived from a mid-merge index"
         assert "unmerged" in err and "UX-0001-a-row.md" in err, err
         assert len(err.strip().splitlines()) == 1, err
         assert _written(repo) == before, (

@@ -114,7 +114,7 @@ head tests in vocabulary: False | tests/unit: False
 
 ### After
 
-`declared_areas()` reads every §6 line that opens with a path - its
+`declared_areas()` (in `tools/_close_task_checks.py`, so the size ledger holds) reads every §6 line that opens with a path - its
 top-level directory, and its first subdirectory - through
 `_AREA_PATH`; nothing is added by hand but `unassigned`.
 
@@ -132,10 +132,10 @@ read. `UX-945` below declares `**Area:** tests/unit`, the first row to.
 
 | # | mutation | reddened |
 |---|---|---|
-| D1 | §6's `tests/unit/` line deleted | `tests/unit` left the vocabulary, `tests` stayed; 3 of 14: `test_tests_is_an_area`, the declaring-row clause, and the joining clause (its edit anchors on that line) |
+| D1 | §6's `tests/unit/` line deleted | `tests/unit` left the vocabulary, `tests` stayed; 4 of 14: `test_tests_is_an_area`, the declaring-row clause, the joining clause (its edit anchors on that line), and `test_every_declared_area_is_known` (`UX-945` declares `tests/unit`) |
 | D2 | a `nowhere/deep/` line added to §6 | the vocabulary took `nowhere` and `nowhere/deep`; `test_the_context_map_is_the_tree.py` **stayed green**, 48 passed - see Deviation |
 | D3 | `return found \| {"tests", "tests/unit"}` - the hard-coded fix | 1 of 14: `test_a_line_leaving_the_tree_leaves_the_vocabulary`, the discriminating clause |
-| D4 | `_AREA_PATH` restricted back to `^(bga\|tools)/` | 4 of 14: every `TestEveryTopLevelDirectoryIsRead` clause |
+| D4 | `_AREA_PATH` restricted back to `^(bga\|tools)/` | 5 of 14: every `TestEveryTopLevelDirectoryIsRead` clause, and `test_every_declared_area_is_known` |
 
 ### Deviation from the Required Fix
 

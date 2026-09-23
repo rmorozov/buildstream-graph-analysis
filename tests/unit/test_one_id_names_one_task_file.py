@@ -14,6 +14,7 @@ import sys
 REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO / "tools"))
 
+import _close_task_checks as checks
 import dev_close_task as close_task
 
 FIRST = "UX-0917-the-fold-depth-guard-has-three-unconfirmed-excursions.md"
@@ -36,7 +37,7 @@ def _run(*argv):
 class TestOneIdNamesOneTaskFile:
 
     def test_the_tree_is_silent(self):
-        assert close_task.id_problems() == []
+        assert checks.id_problems(close_task.SCENARIOS, REPO) == []
 
     def test_a_second_file_under_an_existing_id_fails_naming_both(
             self, tmp_path):
@@ -50,12 +51,11 @@ class TestOneIdNamesOneTaskFile:
         assert FIRST in line and SECOND in line, done.stdout
 
     def test_a_heading_that_names_another_id_fails_naming_both(
-            self, tmp_path, monkeypatch):
+            self, tmp_path):
         scenarios = _copy(tmp_path)
         stray = scenarios / "UX-0999-a-row-filed-under-a-taken-id.md"
         stray.write_text("# UX-917: a row filed under a taken id\n",
                          encoding="utf-8")
-        monkeypatch.setattr(close_task, "SCENARIOS", scenarios)
-        found = close_task.id_problems()
+        found = checks.id_problems(scenarios, REPO)
         assert len(found) == 1, found
         assert stray.name in found[0] and FIRST in found[0], found

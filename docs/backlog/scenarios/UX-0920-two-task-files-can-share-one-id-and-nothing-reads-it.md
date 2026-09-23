@@ -108,7 +108,7 @@ sorts first.
 
 ### After
 
-An eleventh `--check` property, `id_problems()`: each filename's id
+An eleventh `--check` property, `id_problems()` in `tools/_close_task_checks.py`: each filename's id
 against every other file's, and each file's first `# ` heading against
 its own filename.
 

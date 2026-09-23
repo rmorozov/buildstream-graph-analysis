@@ -32,6 +32,9 @@ import subprocess
 import sys
 
 REPO = pathlib.Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPO / "tools"))
+import _close_task_checks as checks
+
 SCENARIOS = REPO / "docs/backlog/scenarios"
 INDEX = SCENARIOS / "README.md"
 CLOSED = SCENARIOS / "closed.md"
@@ -402,27 +405,10 @@ AREA_UNKNOWN = "unassigned"
 
 _AREA_HEADER = re.compile(r"\*\*Area:\*\*\s*([a-z0-9_/]+)")
 
-#: `UX-937`: a §6 line opening with a path - its top-level directory, and
-#: its first subdirectory when it has one.
-_AREA_PATH = re.compile(r"^([a-z][a-z0-9_]*)/(?:([a-z][a-z0-9_]*)/)?", re.M)
-
-#: `UX-688`: areas are code, not documents - the one top-level directory
-#: §6 names that is not an area (`test_every_task_names_its_area.py`).
-NOT_AN_AREA = frozenset({"docs"})
-
 
 def declared_areas():
     """The area vocabulary, read out of the fixing guide's §6 tree."""
-    try:
-        body = AREA_GUIDE.read_text(encoding="utf-8")
-    except OSError:
-        return set()
-    section = body.split("## 6.")[-1].split("\n## 7.")[0]
-    found = {AREA_UNKNOWN}
-    for top, sub in _AREA_PATH.findall(section):
-        if top not in NOT_AN_AREA:
-            found |= {top, f"{top}/{sub}"} if sub else {top}
-    return found
+    return checks.declared_areas(AREA_GUIDE, AREA_UNKNOWN)
 
 
 def header_area(text):
@@ -465,9 +451,7 @@ def area_pages():
             for a, u in sorted(pages.items())}
 
 
-#: `UX-932`: the scenarios directory's sibling, so `--scenarios` moves the
-#: writes and the deletions with it; with no `--scenarios` it is the
-#: repository's `docs/backlog/areas`.
+#: `UX-932`: beside the scenarios, so `--scenarios` moves writes and deletions.
 AREA_PAGES = SCENARIOS.parent / "areas"
 DESIGN_AREA_PAGES = REPO / "docs/design/areas"
 
@@ -600,39 +584,6 @@ DECOMPOSITION_GRANDFATHERED = frozenset({
 })
 
 
-_TITLE = re.compile(r"^# (.*)$", re.M)
-
-
-def id_problems():
-    """`UX-920`: an id that names two files, or a heading naming another id.
-
-    Two branches filing under one id merge clean - two new files - and
-    `task_file` then answers with the first, so the second is unreachable.
-    """
-    by_number, headings = {}, {}
-    for path in sorted(SCENARIOS.glob("UX-*.md")):
-        match = _FILE_ID.match(path.name)
-        if match:
-            number = int(match.group(1))
-            by_number.setdefault(number, []).append(path)
-            title = _TITLE.search(path.read_text(encoding="utf-8"))
-            said = re.match(r"UX-0*(\d+):", title.group(1)) if title else None
-            headings[path] = (number, int(said.group(1)) if said else None)
-    problems = [f"UX-{number} names {len(paths)} files: "
-                + ", ".join(_shown(p) for p in paths)
-                for number, paths in sorted(by_number.items())
-                if len(paths) > 1]
-    for path, (number, said) in headings.items():
-        if said is None:
-            problems.append(f"{_shown(path)}: no `# UX-NNN:` heading")
-        elif said != number:
-            other = ", ".join(_shown(p) for p in by_number.get(said, []))
-            problems.append(f"{_shown(path)}: heading says UX-{said}, "
-                            f"filename says UX-{number}"
-                            + (f"; UX-{said} is {other}" if other else ""))
-    return problems
-
-
 def decomposition_problems():
     """A `Topic: analysis|viewer|capture` filing past `DECOMPOSITION_FLOOR`
     with no `## Decomposition` block, naming its number.
@@ -744,19 +695,13 @@ def _backlog_counts():
             for one in ("scenarios", "tasks")}
 
 
-def _git_ls_files(*extra):
-    """The lines `git ls-files` prints, run in `REPO`."""
+def _ls_files(*extra):
+    """`docs/backlog/<one>/` paths git lists, per directory; `"all"`, every line."""
     out = subprocess.run(["git", "ls-files", *extra], cwd=REPO, check=True,
                          capture_output=True, text=True).stdout.splitlines()
-    return out
-
-
-def _ls_files(*extra):
-    """`docs/backlog/<one>/` paths git lists, per directory."""
-    out = _git_ls_files(*extra)
     # A wholly untracked subdirectory is one entry with a trailing
     # slash, not the files under it - so is a nested worktree.
-    return {one: [p for p in out if p.startswith(f"docs/backlog/{one}/")
+    return {"all": out} | {one: [p for p in out if p.startswith(f"docs/backlog/{one}/")
                   and not p.endswith("/")]
             for one in ("scenarios", "tasks")}
 
@@ -777,16 +722,6 @@ def _on_the_real_index():
     tree from a test's temp directory is what `test_the_loop_stays_fast`
     caught."""
     return SCENARIOS == REPO / "docs/backlog/scenarios"
-
-
-def unmerged_paths():
-    """The paths `git ls-files -u` holds at a merge stage, once each.
-
-    `UX-935`: an unmerged path is listed once per stage, so every count
-    read from `git ls-files` mid-merge is inflated by two per conflict.
-    """
-    return sorted({line.split("\t", 1)[1] for line in _git_ls_files("-u")
-                   if "\t" in line})
 
 
 def _architecture_is_derived():
@@ -955,7 +890,7 @@ CHECKS = (
     ("every analysis/viewer/capture filing past UX-690 names its "
      "Decomposition", lambda: decomposition_problems()),
     ("every id names one task file, and its heading names that id",
-     lambda: id_problems()),
+     lambda: checks.id_problems(SCENARIOS, REPO)),
 )
 
 
@@ -1358,8 +1293,7 @@ def main(argv=None) -> int:
         global SCENARIOS, INDEX, CLOSED, AREA_PAGES
         SCENARIOS = pathlib.Path(args.scenarios).resolve()
         INDEX = SCENARIOS / "README.md"
-        CLOSED = SCENARIOS / "closed.md"
-        AREA_PAGES = SCENARIOS.parent / "areas"
+        CLOSED, AREA_PAGES = SCENARIOS / "closed.md", SCENARIOS.parent / "areas"
 
     if args.write and not (args.check or args.shape):
         parser.error("--write is what --check (or --shape) does instead of "
@@ -1368,15 +1302,7 @@ def main(argv=None) -> int:
         numbers = ([int(re.sub(r"[^0-9]", "", args.uid))] if args.uid
                    else open_uids())
         return report_shapes(numbers, args.write)
-    if args.check:
-        # UX-935: a mid-merge index is not the tree the counts name.
-        unmerged = unmerged_paths() if _on_the_real_index() else []
-        if unmerged:
-            print(f"refused: the git index is unmerged ({len(unmerged)} "
-                  f"path(s) mid-merge: {', '.join(unmerged)}) - stage the "
-                  f"resolution with `git add`, then derive; nothing was "
-                  f"checked or written", file=sys.stderr)
-            return 2
+    if args.check and checks.index_is_merged(_ls_files, _on_the_real_index()):
         wrote = []
         if args.write:
             wrote = [p for p in (write_index(), write_architecture()) if p]

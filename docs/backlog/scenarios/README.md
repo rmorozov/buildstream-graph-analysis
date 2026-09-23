@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-940 scenarios: **26 open**, 914 closed.
+943 scenarios: **29 open**, 914 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -27,7 +27,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | cli | 0 | 22 |
 | store | 1 | 17 |
 | docs | 1 | 146 |
-| guards | 17 | 264 |
+| guards | 20 | 267 |
 
 ## Open scenarios
 
@@ -62,6 +62,9 @@ task file, which is the only place it ever lived twice.
 | UX-942 | [the touching selector misses a guard that reads a record through a tool's constant](UX-0942-the-selector-misses-a-guard-that-reads-a-record-through-a-tool.md) | guards | Medium | every session whose inner loop is `make test-touching` on a change to a committed record | 🔴 Not Started |
 | UX-943 | [the adopt jobs write to the default branch from a run whose whole suite failed](UX-0943-the-adopt-jobs-run-on-a-run-whose-suite-failed.md) | guards | Medium | every branch that inherits a record the default branch adopted from a run nothing vouched for | 🔴 Not Started |
 | UX-944 | [the sysroot fixture clones 910 MB to read nine files, so its cost has two modes 30x apart and the reference entry is the median of both](UX-0944-the-sysroot-fixture-clones-910mb-to-read-nine-files.md) | guards | Medium | every run of the `test` job, which pays the dear mode whenever the runner's `/usr` and its temporary directory are on different filesystems | 🔴 Not Started |
+| UX-945 | [the context map's existence check reads five typed top-level names, so a §6 line under any other directory is never checked against the tree](UX-0945-the-context-map-existence-check-reads-five-typed-top-level-names.md) | guards | Low | every row that declares an area, now that the area vocabulary is whatever top-level directory §6 names | 🔴 Not Started |
+| UX-950 | [the flake ledger's excursions cluster by run, and the census counts a runner event once per file](UX-0950-the-flake-ledger-counts-a-runner-event-once-per-file.md) | guards | Medium | the next round whose push gate reads a file the census names | 🔴 Not Started |
+| UX-955 | [a population entry keeps the tree size its seconds no longer describe, so the gate scales the growth twice](UX-0955-a-population-entry-keeps-the-size-its-seconds-no-longer-describe.md) | guards | Medium | every branch that makes the backlog guard slower, which the gate should name | 🔴 Not Started |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

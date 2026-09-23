@@ -252,6 +252,10 @@ class TestTheSelectorStillSelects:
         # the same shape `edg`/`fan_in` already carry: the tree's own
         # growth, not a loose rule.
         "tools/native_trace/bwrap_shim.py",
+        # `UX-932`: 46 against 45, wide by **name** - every backlog guard
+        # imports the one tool that reads and derives the backlog, and
+        # `UX-935`'s and `UX-932`'s own guards are the 45th and 46th.
+        "tools/dev_close_task.py",
     }
 
     def test_a_one_module_change_selects_a_handful_not_the_suite(self):
@@ -954,6 +958,8 @@ class TestTheDerivedCountSeesAnUnstagedRow:
         import shutil
         scenarios = tmp_path / "scenarios"
         shutil.copytree(REPO / "docs/backlog/scenarios", scenarios)
+        # UX-932: the area pages are written beside the sandbox now.
+        shutil.copytree(REPO / "docs/backlog/areas", tmp_path / "areas")
         readme = scenarios / "README.md"
         readme.write_text(
             re.sub(r"^\d+ scenarios: \*\*\d+ open\*\*",

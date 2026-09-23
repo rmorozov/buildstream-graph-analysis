@@ -133,4 +133,70 @@ names it - the prune must not be able to omit a mark silently, which
 is `UX-930`'s own thesis and the reason its `_clone` already asserts
 its three markers landed.
 
-## Outcome
+## Outcome (round 138, 2026-09-23) — 🟢 Done
+
+**Premise:** held - `mini` cloned four whole directories (`cc1.parent`,
+`libgcc.parent`, the multiarch libdir, `/usr/include`) to read nine
+file names.
+
+### The gap, measured
+
+```text
+$ python3 <the four-dir clone `mini` used, this container>
+full     1564.3 MB   7420 files   build (cp -al/-a, warm) 0.23s
+```
+
+### After
+
+```text
+$ python3 <cc1.parent + libgcc.parent whole, crt*/Scrt*/libstdc++.so*
+  from the multiarch libdir, the two -H closures>
+pruned    133.0 MB    292 files   build (cp -al/-a, warm) 0.11s
+
+$ python3 -c 'tp.main([mini, "--check"])'   # same seven owners, both trees
+  exec-prefix  toolchain toolchain  .../usr/libexec/gcc/x86_64-linux-gnu/13/cc1
+  libgcc       toolchain toolchain  .../usr/lib/gcc/x86_64-linux-gnu/13/libgcc.a
+  gcc-headers  toolchain toolchain  .../usr/lib/gcc/x86_64-linux-gnu/13/include/stddef.h
+  start-files  sysroot   sysroot    .../usr/lib/x86_64-linux-gnu/crt1.o
+  libstdc++    toolchain toolchain  .../usr/lib/gcc/x86_64-linux-gnu/13/libstdc++.so
+  c-headers    sysroot   sysroot    .../usr/include/stdio.h
+  cxx-headers  sysroot   sysroot    .../usr/include/c++/13/vector
+check exit 0 (full and pruned)
+
+$ PYTEST_XDIST= python3 -m pytest tests/unit/test_the_toolchain_parameters_are_read_back.py -q
+22 passed in 0.82s
+```
+
+### Mutations verified red and reverted (1)
+
+| # | mutation | reddened |
+|---|---|---|
+| A1 | `mini`'s `crt*` copy loop skips `crt1.o` - one of the nine named files, silently | 15 of 22 tests error at `mini`'s own setup, naming `crt1.o` did not land at its path |
+
+Reverted; the same 22-test command above is the green re-run.
+
+### Deviation from the Required Fix
+
+`as`/`ld` are two of the nine named files, but never landed in `mini`
+before or after this change: a host-staged driver resolves them
+through `PATH` at exec time, not from any cloned directory, and
+`declared()` excludes both for a host-staged tree (`host_owner: None`).
+The marker list covers the seven files `mini` actually stages - the
+same seven `tp.main([mini, "--check"])` prints either way.
+
+Not re-recording `tests/ci_reference.json`'s entry: CI's adopt job
+re-records it after this lands.
+
+```text
+$ make test-touching
+32 file(s) selected (31 census + 1 naming the change) - 1578 passed,
+3 skipped in 199.94s
+
+$ make lint
+ruff clean; dev_baseline.py --check: 573 finding(s) match
+tests/quality_baseline.json, the rest pre-existing forced findings -
+none from this diff - exit 0
+
+$ make test
+9290 passed, 197 skipped, 1 warning in 1460.18s (0:24:20)
+```

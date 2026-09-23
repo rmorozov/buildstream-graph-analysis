@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-945 scenarios: **31 open**, 914 closed.
+946 scenarios: **32 open**, 914 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -27,7 +27,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | cli | 0 | 22 |
 | store | 1 | 17 |
 | docs | 1 | 146 |
-| guards | 22 | 269 |
+| guards | 23 | 270 |
 
 ## Open scenarios
 
@@ -66,6 +66,7 @@ task file, which is the only place it ever lived twice.
 | UX-948 | [the push gate is the whole suite, and CI runs the same suite again before anything merges](UX-0948-the-push-gate-is-the-whole-suite-and-ci-runs-it-again.md) | guards | High | every track that pushes a `claude/*` branch from a shared 4-core box | 🔴 Not Started |
 | UX-950 | [the flake ledger's excursions cluster by run, and the census counts a runner event once per file](UX-0950-the-flake-ledger-counts-a-runner-event-once-per-file.md) | guards | Medium | the next round whose push gate reads a file the census names | 🔴 Not Started |
 | UX-955 | [a population entry keeps the tree size its seconds no longer describe, so the gate scales the growth twice](UX-0955-a-population-entry-keeps-the-size-its-seconds-no-longer-describe.md) | guards | Medium | every branch that makes the backlog guard slower, which the gate should name | 🔴 Not Started |
+| UX-956 | [a docs-only pull request runs the whole matrix, and the selector that could narrow it misses the guards that read documents by glob](UX-0956-a-docs-only-pull-request-runs-the-whole-matrix.md) | guards | Medium | every docs-only pull request, which waits on four interpreters and three `bst` jobs | 🔴 Not Started |
 | UX-990 | [the BuildStream behaviour claims in `tools/` are outside the register `UX-940` built for `bga/`](UX-0990-the-tools-behaviour-claims-are-outside-the-register.md) | guards | Medium | whoever reads a BuildStream behaviour claim in the capture tools and has to decide whether it still holds | 🔴 Not Started |
 
 **The narrative round headings below are retired at round 94**

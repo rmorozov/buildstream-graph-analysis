@@ -15,7 +15,7 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-943 scenarios: **29 open**, 914 closed.
+944 scenarios: **30 open**, 914 closed.
 Closed rows live in [closed.md](closed.md), verbatim.
 
 | Topic | Open | Total |
@@ -27,7 +27,7 @@ Closed rows live in [closed.md](closed.md), verbatim.
 | cli | 0 | 22 |
 | store | 1 | 17 |
 | docs | 1 | 146 |
-| guards | 20 | 267 |
+| guards | 21 | 268 |
 
 ## Open scenarios
 
@@ -65,6 +65,7 @@ task file, which is the only place it ever lived twice.
 | UX-945 | [the context map's existence check reads five typed top-level names, so a §6 line under any other directory is never checked against the tree](UX-0945-the-context-map-existence-check-reads-five-typed-top-level-names.md) | guards | Low | every row that declares an area, now that the area vocabulary is whatever top-level directory §6 names | 🔴 Not Started |
 | UX-950 | [the flake ledger's excursions cluster by run, and the census counts a runner event once per file](UX-0950-the-flake-ledger-counts-a-runner-event-once-per-file.md) | guards | Medium | the next round whose push gate reads a file the census names | 🔴 Not Started |
 | UX-955 | [a population entry keeps the tree size its seconds no longer describe, so the gate scales the growth twice](UX-0955-a-population-entry-keeps-the-size-its-seconds-no-longer-describe.md) | guards | Medium | every branch that makes the backlog guard slower, which the gate should name | 🔴 Not Started |
+| UX-990 | [the BuildStream behaviour claims in `tools/` are outside the register `UX-940` built for `bga/`](UX-0990-the-tools-behaviour-claims-are-outside-the-register.md) | guards | Medium | whoever reads a BuildStream behaviour claim in the capture tools and has to decide whether it still holds | 🔴 Not Started |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

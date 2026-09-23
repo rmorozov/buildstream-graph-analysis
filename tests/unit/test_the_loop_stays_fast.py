@@ -185,8 +185,11 @@ class TestTheSelectorStillSelects:
     #: 45 because 4 of the 14 are now also census members, but `HANDFUL`
     #: keeps the stated formula's headroom rather than the tighter
     #: measured one.
-    HANDFUL = 45
-    CENSUS_FLOOR = 31
+    #:
+    #: `UX-940` moved it 31 -> 32 (its register guard walks `bga/`).
+    #: Same arithmetic: 45 -> 46; `WIDE` unchanged at 46.
+    HANDFUL = 46
+    CENSUS_FLOOR = 32
 
     # Wide because the module's name is how a test invokes it, not
     # because the selector is wrong. `UX-606` argued each one.

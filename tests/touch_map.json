@@ -8527,7 +8527,8 @@
   "tests/unit/test_the_cost_row_is_derived_from_the_selector.py",
   "tests/unit/test_the_impact_set_is_derived.py",
   "tests/unit/test_the_loop_stays_fast.py",
-  "tests/unit/test_the_selector_carries_the_census.py"
+  "tests/unit/test_the_selector_carries_the_census.py",
+  "tests/unit/test_the_touching_map_is_measured.py"
  ],
  "tools/_run_context_common.py": [
   "tests/unit/test_a_capture_says_when_it_was_requested.py",

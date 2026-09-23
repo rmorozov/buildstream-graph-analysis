@@ -276,6 +276,12 @@
       "run_id": "35853099135",
       "shift": 1.655,
       "confirmed": false
+    },
+    {
+      "file": "tests/unit/test_a_candidate_is_confirmed_alone.py",
+      "run_id": "35860030664",
+      "shift": 2.493,
+      "confirmed": false
     }
   ],
   "declared": {

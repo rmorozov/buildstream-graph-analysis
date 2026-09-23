@@ -30,7 +30,7 @@ file is the day-one summary, and
 Mechanical and bounded shapes are `implementer` tracks on `sonnet` in worktrees; a judgement shape the `architect` has not shaped is the session's own — the *judgement*, not the work: those rows ran for a 318k median against bounded's 228k (73 of 153 runs; `dev_process_bands.py --runs`). The architect is pulled, never a gate.
 `researcher` and `verifier` read on `sonnet`; the session judges, briefs and merges, and reads reports, never diffs or logs — its cost is the live
 context at each rebuild — the `decompose` skill carries the measured share, with its window; a result over a screen goes to the scratchpad (`UX-711`). `measure`, `falsify`, `verify`
-(which calls `self-review` last) run inside a track; `derive` before moving viewer code; `walk` and `design-review` audit the page and `review` the documents and a surface diff with no page; every run is a row in `docs/audits/agent-runs.md`.
+(which calls `self-review` last) run inside a track; `derive` before moving viewer code; `walk` and `design-review` audit the page and `review` the documents and a surface diff with no page; `retro` runs weekly, grouping bookkeeping into proposals; every run is a row in `docs/audits/agent-runs.md`.
 
 ## Conventions
 

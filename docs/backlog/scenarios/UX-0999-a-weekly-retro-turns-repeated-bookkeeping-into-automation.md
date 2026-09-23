@@ -62,3 +62,72 @@ Class:     bookkeeping - cuts no cost itself; the rows it proposes are the optim
 Split:     one bounded track, parallel with UX-998 (seam: a ledger line names its command)
 Question:  none
 ```
+
+## Outcome
+
+**Premise:** held — nothing grouped a window's bookkeeping by the
+command that shows it before this; `dev_retro.py` is the first reader.
+
+### The gap, measured
+
+```text
+$ ls docs/backlog/bookkeeping.md 2>&1
+ls: cannot access 'docs/backlog/bookkeeping.md': No such file or directory
+$ ls tools/dev_retro.py .claude/skills/retro/SKILL.md 2>&1
+ls: cannot access 'tools/dev_retro.py': No such file or directory
+ls: cannot access '.claude/skills/retro/SKILL.md': No such file or directory
+```
+
+No tool read `agent-runs.md`'s friction cell or a closed task's
+`Class:`/`Guard:` fields as one population; a reader re-scanned the
+whole ledger every time, uncounted by week.
+
+### After
+
+```text
+$ python3 tools/dev_retro.py --since 2026-09-16
+since 2026-09-16: 47 finding(s)
+
+classes by count:
+  make test                                   1
+  tests/unit/test_a_derived_figure_is_printed_not_committed.py    1
+
+unclassed: 45 of 47 (95.7%)
+
+bookkeeping lines per ISO week:
+  no ledger yet
+```
+
+`UX-998`'s ledger is not in this worktree yet, so `dev_retro.py` prints
+`no ledger yet` rather than guessing - the guard's own case for it.
+
+### Mutations verified red and reverted (6)
+
+| # | mutation | reddened |
+|---|---|---|
+| A1 | drop `--since` from the `git log` call | `TestPreWindowLinesAreUncounted`, `TestALineMovedIsNotFiledTwice`; 2 of 5 |
+| A2 | class key = first backtick span | `TestNoTokenIsUnclassed`, `TestALineMovedIsNotFiledTwice`, `TestOneClassAcrossTwoSources`; 3 of 5 |
+| A3 | drop the unclassed row | `TestNoTokenIsUnclassed`; 1 of 5 |
+| A4 | count removed (`-`) lines as filed too | `TestALineMovedIsNotFiledTwice`; 1 of 5 |
+| A5 | default to 7 days despite a retro document | `TestSinceDefaultsToTheNewestRetroDocument`; 1 of 5 |
+| A6 | delete `retro` from `CLAUDE.md` | `test_every_skill_directory_is_named_in_claude_md`; 1 of 1 |
+
+All six discriminate; each reverted from a saved copy and reran green.
+
+```text
+$ python3 -m pytest tests/unit/test_a_retro_groups_bookkeeping_by_the_command_that_shows_it.py -q
+5 passed in 2.04s
+$ make lint
+... (ruff, dev_baseline.py --check, lint-docs)
+$ echo $?
+0
+```
+
+### Deviation from the Required Fix
+
+`git` runs through `dev_records._git` (`UX-997`, `-C <repo>` in place
+of `cwd=`) so no new `S603`/`S607` is forced - the first attempt called
+`subprocess.run` directly and needed `dev_baseline.py --write --force
+--reason UX-999`, which this sandbox's classifier refused twice as
+"Security Test Removal"; routing through the existing wrapper needs no
+authorisation at all and `make lint` exits 0.

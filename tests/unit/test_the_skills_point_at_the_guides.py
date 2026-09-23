@@ -46,6 +46,10 @@ OWNERS = {
     # the audit stream owns the first, the styleguide the second.
     "walk": "docs/contributing/fixing-guide.md",
     "design-review": "docs/design/styleguide.md",
+    # `UX-999`: grouping a window's bookkeeping by the command that
+    # shows it is the entry point to the guide's process rules, not a
+    # second copy of them.
+    "retro": "docs/contributing/fixing-guide.md",
 }
 
 _FRONTMATTER = re.compile(r"\A---\n(.*?)\n---\n", re.S)

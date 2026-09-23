@@ -431,6 +431,8 @@ tools/dev_env_check.py       the pre-gate env check: `import bga` resolves
                              and node are the pinned ones (UX-887/889)
 tools/dev_trace_coverage.py  which captured field reaches the emitted
                              trace, and which Perfetto carriers it uses (UX-466)
+tools/dev_retro.py           a window's bookkeeping, grouped by the command
+                             that shows it, for the weekly `retro` skill (UX-999 (open))
 tools/dev_page_census.py     the page's structure and control classes, one
                              boot, printed as JSON for a walk to read (UX-665)
 tools/dev_scenario.py        a walk's scenario, drawn from a seed - the area

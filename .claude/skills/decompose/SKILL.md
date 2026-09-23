@@ -80,12 +80,13 @@ tests/tiers.py                      a new file's tier
 tests/ci_reference.json             a new file's CI seconds
 ```
 
-Two of those four have stopped being merge hotspots. `UX-501`: the
-index's counts sentence and topic table are **derived**, `dev_close_task
---move` no longer writes them, and the recipe after merging tracks is
+Two of those four have stopped being merge hotspots. `UX-501`/`UX-996`:
+the index's counts sentence and topic table are **derived** and never
+committed - `dev_close_task --move` does not write them, and neither
+does anything else. Where a reader needs them:
 
 ```bash
-python tools/dev_close_task.py --check --write   # then commit
+python tools/dev_close_task.py --counts
 ```
 
 — never a hand-resolved count. `UX-503`: a new test file's row in

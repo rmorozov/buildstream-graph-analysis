@@ -15,19 +15,9 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 ## Index
 
-956 scenarios: **22 open**, 934 closed.
-Closed rows live in [closed.md](closed.md), verbatim.
-
-| Topic | Open | Total |
-|---|---|---|
-| capture | 5 | 140 |
-| analysis | 1 | 121 |
-| contracts | 0 | 52 |
-| viewer | 1 | 178 |
-| cli | 0 | 22 |
-| store | 1 | 17 |
-| docs | 4 | 149 |
-| guards | 10 | 277 |
+Closed rows live in [closed.md](closed.md), verbatim. The counts
+sentence and the per-topic table are derived, never committed
+(`UX-996`) - run `python3 tools/dev_close_task.py --counts` for both.
 
 ## Open scenarios
 

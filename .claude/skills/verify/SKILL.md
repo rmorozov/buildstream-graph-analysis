@@ -180,27 +180,27 @@ have drifted in three separate rounds. Change both in the same commit,
 and move the row to
 [`closed.md`](../../../docs/backlog/scenarios/closed.md) when it closes
 — open rows live in `README.md`, closed ones verbatim in `closed.md`.
-The index counts at the top of `README.md` (`N open`, and the per-topic
-table) change too.
 
 `tests/unit/test_docs_links_and_commands.py::test_the_table_status_matches_the_task_files`
 fails naming the item if you miss one, and
 
 ```bash
 python tools/dev_close_task.py UX-NNN --move --note-file /tmp/note.md
-python tools/dev_close_task.py --check --write
+python tools/dev_close_task.py --check
 ```
 
 does the mechanical edits and reports what disagrees (`UX-336`).
 `--move` refuses when the task file has no Outcome section, and refuses
 a note with an embedded newline as a substituted note, not a written
 one (`UX-768`) - `--note-file` keeps the note off the command line
-entirely, where a backtick in it would otherwise run.
+entirely, where a backtick in it would otherwise run. `--check` is
+read-only (`UX-996`).
 
-`UX-501`: `--move` touches only the rows. The counts sentence and the
-topic table above them are *derived* - `--check --write` regenerates
-them from the rows, which is also how two merged tracks get one right
-answer instead of a conflict on a line neither of them meant to touch.
+`UX-501`/`UX-996`: `--move` touches only the rows. The counts sentence
+and the per-topic table are *derived* and never committed - `--counts`
+prints them from the rows, which is also how two merged tracks get one
+right answer instead of a conflict on a line neither of them meant to
+touch.
 
 ## 5. The Outcome section
 

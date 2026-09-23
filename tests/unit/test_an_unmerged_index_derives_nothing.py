@@ -1,9 +1,10 @@
-"""UX-935: `--check` derives nothing from an index that is mid-merge.
+"""UX-935: `--check` reads nothing from an index that is mid-merge.
 
-`git ls-files` lists an unmerged path once per stage, so the backlog
-count mid-merge is the file count plus two per conflict. The quiet case
-is `git checkout --ours`: the text is resolved, the index is not, and
-`--check --write` baked the inflated count and printed 0 problems.
+`git ls-files` lists an unmerged path once per stage, so a count taken
+mid-merge is the file count plus two per conflict. The quiet case is
+`git checkout --ours`: the text is resolved, the index is not, and
+`--check` (`UX-996`: read-only throughout) must refuse rather than
+print "0 problem(s)" over a git index it cannot answer for.
 """
 import pathlib
 import subprocess
@@ -69,16 +70,14 @@ def _pointed_at(repo, monkeypatch):
     monkeypatch.setattr(close_task, "SCENARIOS", scenarios)
     monkeypatch.setattr(close_task, "INDEX", scenarios / "README.md")
     monkeypatch.setattr(close_task, "CLOSED", scenarios / "closed.md")
-    monkeypatch.setattr(close_task, "ARCHITECTURE",
-                        repo / "docs/design/architecture.md")
-    monkeypatch.setattr(close_task, "AREA_PAGES", repo / "docs/backlog/areas")
 
 
-def _written(repo):
-    return {p.relative_to(repo).as_posix(): p.read_bytes() for p in (
-        repo / "docs/design/architecture.md",
-        repo / "docs/backlog/scenarios/README.md",
-        *sorted((repo / "docs/backlog/areas").glob("*.md")))}
+def _snapshot(repo):
+    """`{path: bytes}` for every tracked-directory file - `UX-996`:
+    nothing `--check` reads is ever written, so nothing here should
+    move either way."""
+    return {p.relative_to(repo).as_posix(): p.read_bytes()
+            for p in sorted((repo / "docs").rglob("*")) if p.is_file()}
 
 
 class TestAnUnmergedIndexIsRefused:
@@ -89,34 +88,31 @@ class TestAnUnmergedIndexIsRefused:
         listed = _git(repo, "ls-files", "docs/backlog/scenarios").stdout
         assert len(listed.splitlines()) == 5, listed
 
-    def test_check_refuses_and_write_writes_nothing(
+    def test_check_refuses_mid_merge(
             self, tmp_path, monkeypatch, capsys):
         repo = _mid_merge(tmp_path)
         _pointed_at(repo, monkeypatch)
-        before = _written(repo)
+        before = _snapshot(repo)
         try:
-            code = close_task.main(["--check", "--write"])
+            code = close_task.main(["--check"])
         except SystemExit as exited:
             code = exited.code
         err = capsys.readouterr().err
-        assert code not in (0, None), "`--check` derived from a mid-merge index"
+        assert code not in (0, None), "`--check` read from a mid-merge index"
         assert "unmerged" in err and "UX-0001-a-row.md" in err, err
         assert len(err.strip().splitlines()) == 1, err
-        assert _written(repo) == before, (
-            "`--write` changed a file while the index was unmerged")
+        assert _snapshot(repo) == before, (
+            "`--check` changed a file while the index was unmerged")
 
-    def test_a_staged_resolution_derives_as_before(
+    def test_a_staged_resolution_checks_as_before(
             self, tmp_path, monkeypatch, capsys):
         repo = _mid_merge(tmp_path)
         _git(repo, "add", "docs/backlog/scenarios/UX-0001-a-row.md")
         _pointed_at(repo, monkeypatch)
-        close_task.main(["--check", "--write"])
+        before = _snapshot(repo)
+        code = close_task.main(["--check"])
         captured = capsys.readouterr()
         assert "unmerged" not in captured.err, captured.err
-        text = (repo / "docs/backlog/scenarios/README.md").read_text(
-            encoding="utf-8")
-        assert "1 scenarios: **1 open**, 0 closed." in text, text
-        assert (repo / "docs/design/architecture.md").read_text(
-            encoding="utf-8") == ARCHITECTURE, "3 files, and it says 3"
-        assert "UX-1" in (repo / "docs/backlog/areas/tools.md").read_text(
-            encoding="utf-8")
+        assert code == 0, captured.out + captured.err
+        assert _snapshot(repo) == before, (
+            "`--check` wrote a file once the index was staged")

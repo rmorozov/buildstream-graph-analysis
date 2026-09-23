@@ -1,13 +1,17 @@
-"""UX-932: `--check --write --scenarios <tmp>` writes and deletes only in `<tmp>`.
+"""UX-932/UX-996: `--check` writes no file, anywhere.
 
-The area pages are written, and pages no area keeps are deleted, under
-`AREA_PAGES`. It was `REPO`-based while `--scenarios` moved only what the
-tool reads, so a sandboxed run rewrote the real pages and a fixture
-narrower than the tree deleted them.
+`UX-932` filed the defect: `--check --write --scenarios <tmp>` wrote the
+area pages under the real `docs/backlog/areas/`, `AREA_PAGES` being
+`REPO`-based while `--scenarios` moved only what the tool reads.
+`UX-996` removed `--check`'s write path entirely - it no longer takes
+`--write` at all - so there is nowhere left for that defect to recur.
+This holds the read-only property directly, sandboxed or not.
 """
 import hashlib
 import pathlib
 import sys
+
+import pytest
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO / "tools"))
@@ -18,8 +22,9 @@ from test_an_unmerged_index_derives_nothing import README, TASK
 
 
 def _listing(directory):
-    return {p.name: hashlib.sha256(p.read_bytes()).hexdigest()
-            for p in sorted(directory.glob("*.md"))}
+    return {str(p.relative_to(directory)): hashlib.sha256(
+                p.read_bytes()).hexdigest()
+            for p in sorted(directory.rglob("*")) if p.is_file()}
 
 
 def _narrow_sandbox(tmp_path):
@@ -33,39 +38,36 @@ def _narrow_sandbox(tmp_path):
     return scenarios
 
 
-def _decoy(tmp_path):
-    """Stands in for the repository's pages: `tools.md` a sandboxed write
-    would rewrite, `bga.md` a narrow one would delete."""
-    decoy = tmp_path / "repo/docs/backlog/areas"
-    decoy.mkdir(parents=True)
-    (decoy / "tools.md").write_text("the real tools page\n", encoding="utf-8")
-    (decoy / "bga.md").write_text("the real bga page\n", encoding="utf-8")
-    return decoy
+class TestCheckWritesNoFile:
 
+    def test_check_has_no_write_flag(self):
+        """`--write` is now `--shape`'s alone (`UX-996`)."""
+        with pytest.raises(SystemExit):
+            close_task.main(["--check", "--write"])
 
-class TestASandboxedWriteStaysInTheSandbox:
-
-    def test_the_default_is_the_repository_s_pages(self):
-        assert close_task.AREA_PAGES == REPO / "docs/backlog/areas"
-
-    def test_a_narrow_sandbox_adds_removes_and_rewrites_nothing_outside(
+    def test_a_sandboxed_check_adds_removes_or_rewrites_nothing(
             self, tmp_path, monkeypatch, capsys):
         scenarios = _narrow_sandbox(tmp_path)
-        decoy = _decoy(tmp_path)
-        # `main` rebinds these with `global`; setattr first so they are restored.
         for name in ("SCENARIOS", "INDEX", "CLOSED"):
             monkeypatch.setattr(close_task, name, getattr(close_task, name))
-        # Both spellings of the old constant land in the decoy, never the tree.
-        monkeypatch.setattr(close_task, "REPO", tmp_path / "repo")
-        monkeypatch.setattr(close_task, "AREA_PAGES", decoy)
-        before = _listing(decoy)
+        before = _listing(tmp_path)
 
-        close_task.main(["--check", "--write", "--scenarios", str(scenarios)])
+        close_task.main(["--check", "--scenarios", str(scenarios)])
         capsys.readouterr()
 
-        assert _listing(decoy) == before, (
-            "a sandboxed `--write` added, removed or rewrote a page outside "
-            "the sandbox")
-        inside = tmp_path / "sandbox/areas"
-        assert sorted(_listing(inside)) == ["tools.md"], sorted(_listing(inside))
-        assert "UX-1" in (inside / "tools.md").read_text(encoding="utf-8")
+        assert _listing(tmp_path) == before, (
+            "`--check` added, removed or rewrote a file under the sandbox")
+
+    def test_areas_prints_and_writes_nothing(
+            self, tmp_path, monkeypatch, capsys):
+        scenarios = _narrow_sandbox(tmp_path)
+        for name in ("SCENARIOS", "INDEX", "CLOSED"):
+            monkeypatch.setattr(close_task, name, getattr(close_task, name))
+        before = _listing(tmp_path)
+
+        close_task.main(["--areas", "--scenarios", str(scenarios)])
+        printed = capsys.readouterr().out
+
+        assert _listing(tmp_path) == before, (
+            "`--areas` added, removed or rewrote a file under the sandbox")
+        assert "UX-1" in printed, printed

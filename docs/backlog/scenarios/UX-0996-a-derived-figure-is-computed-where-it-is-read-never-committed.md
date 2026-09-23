@@ -76,3 +76,79 @@ Guards that retire or re-point: `test_the_loop_stays_fast.py` (the committed-cou
 Measured on 62 catch-up merges since 09-10: README 34, `areas/tools.md` 28, `architecture.md` 22,
 `closed.md` 18, the fixing guide 14 conflicted paths; 44 of `architecture.md`'s 48 conflicted
 lines are its `:3` count.
+
+## Outcome (round 139, 2026-09-23)
+
+### The gap, measured
+
+```text
+$ git ls-tree -r --name-only 49a29a29 -- docs/backlog/areas | wc -l
+12
+$ git show 49a29a29:tools/dev_close_task.py | grep -n "^def write_index\|^def write_architecture\|^def write_area_pages"
+459:def write_area_pages():
+762:def write_architecture():
+774:def write_index():
+$ git show 49a29a29:tools/dev_close_task.py | grep -c "check --write"
+7
+```
+
+12 area pages were committed under `docs/backlog/areas/`, `dev_close_task.py`
+carried three write functions (`write_index`, `write_architecture`,
+`write_area_pages`), and `--check --write` was named 7 times in the file
+that runs it - all sites a closing branch re-derived from its own view.
+
+### After
+
+```text
+$ git ls-files docs/backlog/areas | wc -l
+0
+$ python3 tools/dev_close_task.py --check --write
+dev_close_task.py: error: --write is what --shape does instead of reporting;
+give both - nothing else writes (UX-996)
+$ python3 tools/dev_close_task.py --counts | head -1
+956 scenarios: **22 open**, 934 closed.
+```
+
+`docs/backlog/areas/` is `git rm`ed (0 tracked files), `--check` refuses
+`--write`, and `--counts` prints the sentence `--check --write` used to
+commit. `test_a_derived_figure_is_printed_not_committed.py`'s acceptance
+clause: two scratch branches each `--move` a non-adjacent row
+(`UX-9801`, `UX-9805`), merge with `returncode == 0`, `--check` exits 0.
+
+### Mutations verified red and reverted (6)
+
+| # | mutation | reddened |
+|---|---|---|
+| A1 | put back README's counts sentence | `test_a_derived_figure_is_printed_not_committed.py::TestNoTrackedDocumentCommitsADerivedFigure::test_no_counts_sentence`, 1 |
+| A2 | fixing-guide's `32-165 of 590` | `…::test_no_spread_figure`, 1 |
+| A3 | architecture's count (958/75) | `…::test_no_backlog_count`, 1 |
+| A4 | `git add -f` one areas page | `…::TestAreaPagesAreNeverCommitted::test_git_ls_files_carries_no_area_page`, 1 (also `test_every_task_names_its_area.py::…::test_the_directory_is_gone`) |
+| A5 | `--counts` prints a constant sentence | `…::TestCountsPrintsTheDerivation::test_counts_prints_index_header`, 1 (also `test_the_loop_stays_fast.py::…::test_counts_prints_what_the_rows_say`) |
+| A6 | drop `.gitattributes`' union line | `…::TestTwoClosesMergeCleanly::test_two_non_adjacent_closes_merge_and_check_green`, 1 |
+
+All six discriminate. `dev_tier_drift.py` turned out to still call
+`dev_close_task._backlog_counts()` live for population scaling (`UX-716`),
+which is not a committed figure, so it was restored (narrower: no
+`architecture.md`-write coupling) rather than left broken.
+
+```text
+$ python3 -m pytest tests/unit/test_a_derived_figure_is_printed_not_committed.py \
+    tests/unit/test_the_loop_stays_fast.py tests/unit/test_docs_links_and_commands.py \
+    tests/unit/test_every_task_names_its_area.py tests/unit/test_a_sandboxed_write_stays_in_the_sandbox.py \
+    tests/unit/test_an_unmerged_index_derives_nothing.py tests/unit/test_a_batch_closes_in_one_move.py \
+    tests/unit/test_a_counted_figure_is_derived.py tests/unit/test_the_cost_row_is_derived_from_the_selector.py -q
+177 passed in 54.83s
+$ make lint    # after the verifier's hold: MD032 on this file's own line 131, fixed
+exit 0
+$ python3 tools/dev_touching.py --base 49a29a29 --loud
+2976 passed, 4 skipped in 154.21s - 1 known gap: tests/tiers.py::CENSUS needs
+test_a_derived_figure_is_printed_not_committed.py (orchestrator's, per
+implementer.md)
+```
+
+### Deviation from the Required Fix
+
+`_backlog_counts()` stays, narrowed: `dev_tier_drift.py` scales by it
+(`UX-716`), which the Decision's Files missed. The new guard walks every
+tracked `.md`, so it joins `tests/tiers.py`'s census: the census bound,
+`CENSUS_FLOOR` and `HANDFUL` each move by one, as `UX-940` did.

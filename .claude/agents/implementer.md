@@ -39,15 +39,17 @@ after the merge. Editing one is how two tracks collide on a line
 neither of them meant to change:
 
 ```text
-docs/backlog/scenarios/README.md      the index row and its counts
+docs/backlog/scenarios/README.md      the row (the counts are derived, never committed)
 docs/backlog/scenarios/closed.md      the closed row
 tests/tiers.py                        a new file's tier
 tests/ci_reference.json               a new file's CI seconds
 ```
 
-`UX-501` measured what happens otherwise: two branches each closing one
-item conflicted on the topic table and *silently* auto-merged the
-counts sentence to a number neither meant. `UX-503` does the same for
+`UX-501`/`UX-996` measured what happens otherwise: two branches each
+closing one item conflicted on the topic table and *silently*
+auto-merged the counts sentence to a number neither meant - now
+`dev_close_task.py --counts` prints it and nothing commits it.
+`UX-503` does the same for
 the reference — the default branch adopts a new file's row itself.
 
 You do not close the task: the row move and the batch's one `make
